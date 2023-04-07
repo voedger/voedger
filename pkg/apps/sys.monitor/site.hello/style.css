@@ -1,0 +1,170 @@
+BODY {
+    perspective: 1000px;
+    perspective-origin: center -5em;
+
+    background-color: rgba(52, 70, 24, 0.678);
+    font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
+
+    padding: 0px;
+    margin: 0px;
+}
+
+.page {
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+    height: 100%;
+}
+
+
+.header {
+    height: 140px;
+
+    text-align: center;
+
+    color: #fff;
+    font-size: 50px;
+
+    font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    text-transform: uppercase;
+
+    opacity: .8;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    line-height: 1.2;
+}
+
+.header .sub {
+    font-size: 34px;
+    text-transform: none;
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+}
+
+.footer {
+
+    height: 140px;
+
+    text-align: center;
+    color: #fff;
+    font-size: 13px;
+
+    opacity: 0.7;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+
+/* cube */
+
+
+.container {
+    width: 20vh;
+    height: 20vh;
+
+    position: relative;
+}
+
+.container {
+    transform-style: preserve-3d;
+    animation: rotate 10s infinite linear;
+    /* transform: rotatex(120deg) rotateY(120deg) rotateZ(120deg); */
+}
+.container:before,
+.container:after {
+    content: "";
+    display: block;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+.container:before {
+    transform: rotateX(90deg);
+}
+.container:after {
+    transform: rotatey(90deg);
+}
+
+.side {
+    left: 0px;top: 0px;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 2px solid white;
+    opacity: 0.7;
+
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+}
+
+.side svg {
+    width: 80%;
+    height: 80%;
+
+    max-width: 150px;
+    max-width: 150px;
+
+    fill: #fff;
+}
+
+.back {
+    transform: translateZ(-10vh);
+    /* background: orange; */
+}
+
+.left {
+    transform: translateX(-10vh) rotateY(90deg);
+    /* background: lightgreen; */
+}
+
+.right {
+    transform: translateX(10vh) rotateY(90deg);
+    /* background: yellowgreen; */
+}
+.top {
+    transform: translateY(-10vh) rotateX(90deg);
+    /* background: skyblue; */
+}
+
+.bottom {
+    transform: translateY(10vh) rotateX(90deg);
+    /* background: steelblue; */
+}
+
+.front {
+    transform: translateZ(10vh);
+    /* background: gold; */
+}
+
+@keyframes rotate {
+    100% {
+        transform: rotatex(360deg) rotateY(360deg) rotateZ(360deg);
+    }
+}
+
+HTML,
+BODY {
+    height: 100%;
+}
+
+BODY {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
