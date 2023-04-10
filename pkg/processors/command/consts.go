@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/untillpro/voedger/pkg/istructs"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
 )
 
 const (
