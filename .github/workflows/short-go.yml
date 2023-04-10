@@ -6,7 +6,7 @@ jobs:
   call-workflow-ci:
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
     with: 
-      ignore_copyright: 'apps/sys.monitor/site.main'
+      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
