@@ -1,0 +1,125 @@
+/*
+ * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * @author: Nikolay Nikitin
+ */
+
+package istructsmem
+
+import (
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/untillpro/voedger/pkg/iratesce"
+	"github.com/untillpro/voedger/pkg/istorage"
+	"github.com/untillpro/voedger/pkg/istorageimpl"
+	"github.com/untillpro/voedger/pkg/istructs"
+)
+
+func TestAppConfigsType(t *testing.T) {
+
+	require := require.New(t)
+
+	asf := istorage.ProvideMem()
+	storages := istorageimpl.Provide(asf)
+
+	cfgs := make(AppConfigsType)
+	for app, id := range istructs.ClusterApps {
+		cfg := cfgs.AddConfig(app)
+		require.NotNil(cfg)
+		require.Equal(cfg.Name, app)
+		require.Equal(cfg.QNameID, id)
+	}
+
+	appStructsProvider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storages)
+	require.NoError(err)
+
+	t.Run("Create configs for all known cluster apps", func(t *testing.T) {
+
+		for app := range istructs.ClusterApps {
+			appStructs, err := appStructsProvider.AppStructs(app)
+			require.NotNil(appStructs)
+			require.NoError(err)
+		}
+	})
+
+	t.Run("Panic if create config for unknown app", func(t *testing.T) {
+		app := istructs.NewAppQName("unknownOwner", "unknownApplication")
+		appStructs, err := appStructsProvider.AppStructs(app)
+		require.Nil(appStructs)
+		require.ErrorIs(err, istructs.ErrAppNotFound)
+	})
+
+	t.Run("Retrieve configs for all known cluster apps", func(t *testing.T) {
+		for app, id := range istructs.ClusterApps {
+			cfg := cfgs.GetConfig(app)
+			require.NotNil(cfg)
+			require.Equal(cfg.Name, app)
+			require.Equal(cfg.QNameID, id)
+
+			storage, err := storages.AppStorage(app)
+			require.NotNil(storage)
+			require.NoError(err)
+			require.Equal(cfg.storage, storage)
+		}
+	})
+
+	t.Run("Panic if retrieve config for unknown app", func(t *testing.T) {
+		app := istructs.NewAppQName("unknownOwner", "unknownApplication")
+		require.Panics(func() {
+			_ = cfgs.GetConfig(app)
+		})
+	})
+
+}
+
+func TestErrorsAppConfigsType(t *testing.T) {
+	require := require.New(t)
+
+	storage := newTestStorage()
+	storageProvider := newTestStorageProvider(storage)
+
+	t.Run("must error if error while read versions", func(t *testing.T) {
+		cfgs1 := make(AppConfigsType, 1)
+		cfg := cfgs1.AddConfig(istructs.AppQName_test1_app1)
+		cfg.Schemas.Add(istructs.NewQName("test", "obj"), istructs.SchemaKind_Object)
+		provider1, err := Provide(cfgs1, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		require.NoError(err)
+
+		_, err = provider1.AppStructs(istructs.AppQName_test1_app1)
+		require.NoError(err, err)
+
+		testError := errors.New("test error")
+		pKey := toBytes(uint16(QNameIDSysVesions))
+		storage.sheduleGetError(testError, pKey, nil) // error here
+		defer storage.reset()
+
+		cfgs2 := make(AppConfigsType, 1)
+		_ = cfgs2.AddConfig(istructs.AppQName_test1_app1)
+		provider2, err := Provide(cfgs2, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		require.NoError(err)
+		_, err = provider2.AppStructs(istructs.AppQName_test1_app1)
+		require.ErrorIs(err, testError)
+	})
+
+	t.Run("must error if damaged data while read versions", func(t *testing.T) {
+		cfgs1 := make(AppConfigsType, 1)
+		cfg := cfgs1.AddConfig(istructs.AppQName_test1_app1)
+		cfg.Schemas.Add(istructs.NewQName("test", "obj"), istructs.SchemaKind_Object)
+		provider1, err := Provide(cfgs1, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		require.NoError(err)
+
+		_, err = provider1.AppStructs(istructs.AppQName_test1_app1)
+		require.NoError(err, err)
+
+		pKey := toBytes(uint16(QNameIDSysVesions))
+		storage.sheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, pKey, nil)
+
+		cfgs2 := make(AppConfigsType, 1)
+		_ = cfgs2.AddConfig(istructs.AppQName_test1_app1)
+		provider2, err := Provide(cfgs2, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		require.NoError(err)
+		_, err = provider2.AppStructs(istructs.AppQName_test1_app1)
+		require.ErrorIs(err, ErrorInvalidVersion)
+	})
+}

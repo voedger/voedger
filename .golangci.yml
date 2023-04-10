@@ -1,0 +1,48 @@
+# options for analysis running
+linters:
+  disable-all: true
+  enable:
+    - megacheck
+    - govet
+    - revive
+    - gosec
+    - nakedret
+    - stylecheck
+    - misspell
+    - errcheck
+    - unparam
+    - deadcode
+    - structcheck
+    - unparam
+  fast: true
+linters-settings:
+  stylecheck:
+    checks: [ "all", "-ST1003", "-ST1023" ]    
+  misspell:
+    ignore-words:
+      - untill
+  revive:
+  # see https://github.com/mgechev/revive#available-rules for details.
+    ignore-generated-header: true
+    exclude: "*_test.go"
+    severity: warning
+    rules:
+      - name: indent-error-flow
+        severity: warning	
+      - name: add-constant
+        severity: warning
+        arguments:
+          - maxLitCount: "3"
+            allowStrs: '""'
+            allowInts: "0,1,2"
+            allowFloats: "0.0,0.,1.0,1.,2.0,2."
+issues:
+  exclude:
+   - underscore
+   - underscores
+  exclude-rules:
+   - path: _test.go
+     linters:
+       - revive
+       - gosec
+       - errcheck

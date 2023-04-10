@@ -1,0 +1,11 @@
+/*
+ * Copyright (c) 2020-present unTill Pro, Ltd.
+ */
+
+package payloads
+
+import itokens "github.com/untillpro/voedger/pkg/itokens"
+
+var TestAppTokensFactory = func(tokens itokens.ITokens) IAppTokensFactory {
+	return ProvideIAppTokensFactory(tokens)
+}
