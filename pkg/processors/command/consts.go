@@ -22,12 +22,13 @@ var (
 	errWSNotInited            = coreutils.NewHTTPErrorf(http.StatusForbidden, "workspace is not initialized")
 )
 
-// TODO: should be in separate package
+// TODO: should be in a separate package
 const (
 	Field_InitError         = "InitError"
 	Field_InitCompletedAtMs = "InitCompletedAtMs"
 )
 
+// TODO: should be in a separate package
 var (
 	QNameCDocWorkspaceDescriptor  = istructs.NewQName(istructs.SysPackage, "WorkspaceDescriptor")
 	QNameCommandCreateWorkspaceID = istructs.NewQName(istructs.SysPackage, "CreateWorkspaceID")

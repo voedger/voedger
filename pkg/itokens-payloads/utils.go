@@ -27,3 +27,7 @@ func GetSystemPrincipalTokenApp(appTokens istructs.IAppTokens) (string, error) {
 	}
 	return systemPrincipalToken, nil
 }
+
+func IsSystemPrincipal(principalPayload *PrincipalPayload) bool {
+	return principalPayload != nil && principalPayload.ProfileWSID == istructs.NullWSID
+}
