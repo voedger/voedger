@@ -20,7 +20,9 @@ func TestSubjectStorage_BasicUsage(t *testing.T) {
 		WSID: 42,
 		Name: "john.doe@acme.com",
 	}}
-	s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} }, nil, nil, nil, nil, func() []iauthnz.Principal { return principals }, 1)
+	token := "token"
+	tokenFunc := func() string { return token }
+	s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} }, nil, nil, nil, nil, func() []iauthnz.Principal { return principals }, tokenFunc, 1)
 	k, err := s.KeyBuilder(SubjectStorage, istructs.NullQName)
 	require.Nil(err)
 
@@ -30,6 +32,7 @@ func TestSubjectStorage_BasicUsage(t *testing.T) {
 	require.Equal(int64(principals[0].WSID), v.AsInt64(Field_ProfileWSID))
 	require.Equal(int32(istructs.SubjectKind_User), v.AsInt32(Field_Kind))
 	require.Equal(principals[0].Name, v.AsString(Field_Name))
+	require.Equal(token, v.AsString(Field_Token))
 	json, _ := v.ToJSON()
-	require.Equal(`{"ProfileWSID":42,"Kind":1,"Name":"john.doe@acme.com"}`, json)
+	require.JSONEq(`{"ProfileWSID":42,"Kind":1,"Name":"john.doe@acme.com","Token":"token"}`, json)
 }

@@ -5,21 +5,24 @@
 package state
 
 import (
-	"fmt"
-
+	"encoding/json"
 	"github.com/untillpro/voedger/pkg/iauthnz"
 	"github.com/untillpro/voedger/pkg/istructs"
 )
 
 type subjectStorage struct {
-	principalsFunc func() []iauthnz.Principal
+	principalsFunc PrincipalsFunc
+	tokenFunc      TokenFunc
 }
 
 func (s *subjectStorage) NewKeyBuilder(_ istructs.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return newKeyBuilder(SubjectStorage, istructs.NullQName)
 }
 func (s *subjectStorage) GetBatch(items []GetBatchItem) (err error) {
-	ssv := &subjectStorageValue{toJSONFunc: s.toJSON}
+	ssv := &subjectStorageValue{
+		token:      s.tokenFunc(),
+		toJSONFunc: s.toJSON,
+	}
 	for _, principal := range s.principalsFunc() {
 		if principal.Kind == iauthnz.PrincipalKind_Device || principal.Kind == iauthnz.PrincipalKind_User {
 			ssv.profileWSID = int64(principal.WSID)
@@ -39,5 +42,14 @@ func (s *subjectStorage) GetBatch(items []GetBatchItem) (err error) {
 }
 func (s *subjectStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
 	value := sv.(*subjectStorageValue)
-	return fmt.Sprintf(`{"%s":%d,"%s":%d,"%s":"%s"}`, Field_ProfileWSID, value.profileWSID, Field_Kind, value.kind, Field_Name, value.name), nil
+	obj := make(map[string]interface{})
+	obj[Field_ProfileWSID] = value.profileWSID
+	obj[Field_Kind] = value.kind
+	obj[Field_Name] = value.name
+	obj[Field_Token] = value.token
+	bb, err := json.Marshal(obj)
+	if err != nil {
+		return "", err
+	}
+	return string(bb), nil
 }

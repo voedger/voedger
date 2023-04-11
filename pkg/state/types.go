@@ -25,9 +25,10 @@ type N10nFunc func(view istructs.QName, wsid istructs.WSID, offset istructs.Offs
 type AppStructsFunc func() istructs.IAppStructs
 type CUDFunc func() istructs.ICUD
 type PrincipalsFunc func() []iauthnz.Principal
-type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, intentsLimit int) IHostState
+type TokenFunc func() string
+type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int) IHostState
 type SyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit int) IHostState
-type QueryProcessorStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader) IHostState
+type QueryProcessorStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc) IHostState
 type AsyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit, bundlesLimit int,
 	opts ...ActualizerStateOptFunc) IBundledHostState
 
@@ -594,12 +595,36 @@ type subjectStorageValue struct {
 	kind        int32
 	profileWSID int64
 	name        string
+	token       string
 	toJSONFunc  toJSONFunc
 }
 
-func (v *subjectStorageValue) AsInt64(string) int64   { return v.profileWSID }
-func (v *subjectStorageValue) AsInt32(string) int32   { return v.kind }
-func (v *subjectStorageValue) AsString(string) string { return v.name }
+func (v *subjectStorageValue) AsInt64(name string) int64 {
+	switch name {
+	case Field_ProfileWSID:
+		return v.profileWSID
+	default:
+		return 0
+	}
+}
+func (v *subjectStorageValue) AsInt32(name string) int32 {
+	switch name {
+	case Field_Kind:
+		return v.kind
+	default:
+		return 0
+	}
+}
+func (v *subjectStorageValue) AsString(name string) string {
+	switch name {
+	case Field_Name:
+		return v.name
+	case Field_Token:
+		return v.token
+	default:
+		return ""
+	}
+}
 func (v *subjectStorageValue) ToJSON(opts ...interface{}) (string, error) {
 	return v.toJSONFunc(v, opts...)
 }

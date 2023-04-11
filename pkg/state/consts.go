@@ -61,6 +61,7 @@ const (
 	Field_CUDs                          = "CUDs"
 	Field_IsNew                         = "IsNew"
 	Field_Name                          = "Name"
+	Field_Token                         = "Token"
 )
 
 const (

@@ -8,9 +8,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/untillpro/voedger/pkg/istructs"
 )
 
 func TestViewRecordsStorage_GetBatch(t *testing.T) {
@@ -69,7 +69,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 		k, e := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
 		require.Nil(e)
 		k.PutString("pkk", "pkv")
@@ -96,7 +96,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 		k, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
 		k.PutString("pkk", "pkv")
 
@@ -125,7 +125,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 		k, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
 
 		_ = s.Read(k, func(istructs.IKey, istructs.IStateValue) error {
@@ -148,7 +148,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 		k, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
 
 		err := s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
