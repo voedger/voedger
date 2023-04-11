@@ -22,6 +22,7 @@ import (
 	"github.com/untillpro/voedger/pkg/iauthnz"
 	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/untillpro/voedger/pkg/istructsmem"
+	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
 	coreutils "github.com/untillpro/voedger/pkg/utils"
 	"golang.org/x/exp/maps"
 )
@@ -74,6 +75,11 @@ func (c *cmdWorkpiece) Context() context.Context {
 // used by ProvideSyncActualizerFactory
 func (c *cmdWorkpiece) WSID() istructs.WSID {
 	return c.cmdMes.WSID()
+}
+
+// used by c.air.RegenerateUPProfileApiToken
+func (c *cmdWorkpiece) GetPrincipalPayload() payloads.PrincipalPayload {
+	return c.principalPayload
 }
 
 func (ws *workspace) nextRecordID(schema istructs.ISchema) (res istructs.RecordID) {
