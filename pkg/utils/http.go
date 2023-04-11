@@ -8,8 +8,10 @@ package coreutils
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	ibus "github.com/untillpro/airs-ibus"
+	"golang.org/x/exp/slices"
 )
 
 func NewHTTPErrorf(httpStatus int, args ...interface{}) SysError {
@@ -43,3 +45,41 @@ func ReplyJSON(bus ibus.IBus, sender interface{}, httpCode int, body string) {
 		Data:        []byte(body),
 	})
 }
+
+func ReplyBadRequest(bus ibus.IBus, sender interface{}, message string) {
+	ReplyErrf(bus, sender, http.StatusBadRequest, message)
+}
+
+func replyAccessDenied(bus ibus.IBus, sender interface{}, code int, message string) {
+	msg := "access denied"
+	if len(message) > 0 {
+		msg += ": " + message
+	}
+	ReplyErrf(bus, sender, code, msg)
+}
+
+func ReplyAccessDeniedUnauthorized(bus ibus.IBus, sender interface{}, message string) {
+	replyAccessDenied(bus, sender, http.StatusUnauthorized, message)
+}
+
+func ReplyAccessDeniedForbidden(bus ibus.IBus, sender interface{}, message string) {
+	replyAccessDenied(bus, sender, http.StatusForbidden, message)
+}
+
+func ReplyUnauthorized(bus ibus.IBus, sender interface{}, message string) {
+	ReplyErrf(bus, sender, http.StatusUnauthorized, message)
+}
+
+func ReplyInternalServerError(bus ibus.IBus, sender interface{}, message string, err error) {
+	ReplyErrf(bus, sender, http.StatusInternalServerError, message, ":", err)
+}
+
+func ReplyForbidden(bus ibus.IBus, sender interface{}, err error) {
+	ReplyErrf(bus, sender, http.StatusForbidden, err.Error())
+}
+
+func SkipSlowTests() bool {
+	_, ok := os.LookupEnv("HEEUS_SKIP_SLOW_TESTS")
+	return ok || slices.Contains(os.Args, "skip-slow-tests")
+}
+
