@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/untillpro/voedger/pkg/schemas"
 )
 
 type implIUnique struct {
@@ -81,7 +82,7 @@ type fieldDesc struct {
 func (u implIUniques) validate(cfg *AppConfigType) error {
 	for qName, uniques := range u.uniques {
 		s := cfg.Schemas.Schema(qName)
-		if s == NullSchema {
+		if s == schemas.NullSchema {
 			return uniqueError(qName, ErrUnknownSchemaQName, "")
 		}
 		switch s.Kind() {

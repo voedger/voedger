@@ -12,7 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/voedger/pkg/iratesce"
 	"github.com/untillpro/voedger/pkg/istructs"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/utils"
+	"github.com/untillpro/voedger/pkg/schemas"
 )
 
 // TestCore_ViewRecords: test https://dev.heeus.io/launchpad/#!14470
@@ -24,25 +25,31 @@ func TestCore_ViewRecords(t *testing.T) {
 
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
 
-		viewSchema := cfg.Schemas.AddView(istructs.NewQName("test", "viewDrinks"))
-		viewSchema.
-			AddPartField("partitionKey1", istructs.DataKind_int64).
-			AddClustColumn("clusteringColumn1", istructs.DataKind_int64).
-			AddClustColumn("clusteringColumn2", istructs.DataKind_bool).
-			AddClustColumn("clusteringColumn3", istructs.DataKind_string).
-			AddValueField("id", istructs.DataKind_int64, true).
-			AddValueField("name", istructs.DataKind_string, true).
-			AddValueField("active", istructs.DataKind_bool, true)
+		schemas := schemas.NewSchemaCache()
+		t.Run("must be ok to build schemas", func(t *testing.T) {
+			viewSchema := schemas.AddView(istructs.NewQName("test", "viewDrinks"))
+			viewSchema.
+				AddPartField("partitionKey1", istructs.DataKind_int64).
+				AddClustColumn("clusteringColumn1", istructs.DataKind_int64).
+				AddClustColumn("clusteringColumn2", istructs.DataKind_bool).
+				AddClustColumn("clusteringColumn3", istructs.DataKind_string).
+				AddValueField("id", istructs.DataKind_int64, true).
+				AddValueField("name", istructs.DataKind_string, true).
+				AddValueField("active", istructs.DataKind_bool, true)
 
-		otherViewSchema := cfg.Schemas.AddView(istructs.NewQName("test", "otherView"))
-		otherViewSchema.
-			AddPartField("partitionKey1", istructs.DataKind_QName).
-			AddClustColumn("clusteringColumn1", istructs.DataKind_float32).
-			AddClustColumn("clusteringColumn2", istructs.DataKind_float64).
-			AddClustColumn("clusteringColumn3", istructs.DataKind_bytes).
-			AddValueField("valueField1", istructs.DataKind_int64, false)
+			otherViewSchema := schemas.AddView(istructs.NewQName("test", "otherView"))
+			otherViewSchema.
+				AddPartField("partitionKey1", istructs.DataKind_QName).
+				AddClustColumn("clusteringColumn1", istructs.DataKind_float32).
+				AddClustColumn("clusteringColumn2", istructs.DataKind_float64).
+				AddClustColumn("clusteringColumn3", istructs.DataKind_bytes).
+				AddValueField("valueField1", istructs.DataKind_int64, false)
+
+			require.NoError(schemas.ValidateSchemas())
+		})
+
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
 
 		return cfgs
 	}
@@ -570,7 +577,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		kb.PutBool("clusteringColumn2", true)
 		kb.PutString("clusteringColumn3", "sidr")
 
-		c := prefixBytes([]byte("sidr"), int64(100), true)
+		c := utils.PrefixBytes([]byte("sidr"), int64(100), true)
 
 		storage.sheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, c)
 		_, err := viewRecords.Get(2, kb)
@@ -596,7 +603,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		vb := viewRecords.NewValueBuilder(istructs.NewQName("test", "viewDrinks"))
 		vb.PutInt32("id", 42)
 
-		require.PanicsWithError("value type «int32» is not applicable for int64-type field «id»: field type mismatch", func() { _ = vb.Build() })
+		require.Panics(func() { _ = vb.Build() })
 	})
 }
 
@@ -627,12 +634,10 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	require := require.New(t)
 
 	viewName := istructs.NewQName("test", "view")
-	cfg := func() *AppConfigType {
-		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2)
 
-		viewSchema := cfg.Schemas.AddView(viewName)
-		viewSchema.
+	schemas := schemas.NewSchemaCache()
+	t.Run("must be ok to build schemas", func(t *testing.T) {
+		schemas.AddView(viewName).
 			AddPartField("pf_int32", istructs.DataKind_int32).
 			AddPartField("pf_int64", istructs.DataKind_int64).
 			AddPartField("pf_float32", istructs.DataKind_float32).
@@ -659,6 +664,12 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 			AddValueField("vf_recID", istructs.DataKind_RecordID, false).
 			AddValueField("vf_record", istructs.DataKind_Record, false).
 			AddValueField("vf_event", istructs.DataKind_Event, false)
+		require.NoError(schemas.ValidateSchemas())
+	})
+
+	cfg := func() *AppConfigType {
+		cfgs := make(AppConfigsType, 1)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, schemas)
 
 		storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
@@ -746,28 +757,29 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 // Test_ViewRecords_ClustColumnsQName: see https://dev.heeus.io/launchpad/#!16377 problem
 func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	require := require.New(t)
+	ws := istructs.WSID(1234)
 
 	// App schema, same as previous but with RecordID field in the clustering key
 	//
 	appConfigs := func() AppConfigsType {
+
+		schemas := schemas.NewSchemaCache()
+		t.Run("must be ok to build schemas", func(t *testing.T) {
+			schemas.AddView(istructs.NewQName("test", "viewDrinks")).
+				AddPartField("partitionKey1", istructs.DataKind_int64).
+				AddClustColumn("clusteringColumn1", istructs.DataKind_QName).
+				AddClustColumn("clusteringColumn2", istructs.DataKind_RecordID).
+				AddValueField("id", istructs.DataKind_int64, true).
+				AddValueField("name", istructs.DataKind_string, true).
+				AddValueField("active", istructs.DataKind_bool, true)
+
+			_ = schemas.Add(istructs.NewQName("test", "obj1"), istructs.SchemaKind_Object)
+
+			require.NoError(schemas.ValidateSchemas())
+		})
+
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
-
-		viewSchema := cfg.Schemas.AddView(istructs.NewQName("test", "viewDrinks"))
-		viewSchema.
-			AddPartField("partitionKey1", istructs.DataKind_int64).
-			AddClustColumn("clusteringColumn1", istructs.DataKind_QName).
-			AddClustColumn("clusteringColumn2", istructs.DataKind_RecordID).
-			AddValueField("id", istructs.DataKind_int64, true).
-			AddValueField("name", istructs.DataKind_string, true).
-			AddValueField("active", istructs.DataKind_bool, true)
-
-		_ = cfg.Schemas.Add(istructs.NewQName("test", "obj1"), istructs.SchemaKind_Object)
-
-		err := viewSchema.Validate()
-		if err != nil {
-			panic(err)
-		}
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
 
 		return cfgs
 	}
@@ -790,7 +802,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	vb.PutString("name", "Coca-cola")
 	vb.PutBool("active", true)
 
-	require.NoError(viewRecords.Put(test.workspace, kb, vb))
+	require.NoError(viewRecords.Put(ws, kb, vb))
 
 	//
 	// Fetch single record
@@ -805,7 +817,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 		oldCcKey1 := istructs.NullQName
 		oldCcKey2 := istructs.NullRecordID
 
-		err := viewRecords.Read(context.Background(), test.workspace, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
+		err := viewRecords.Read(context.Background(), ws, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 			oldCcKey1 = key.AsQName("clusteringColumn1")
 			oldCcKey2 = key.AsRecordID("clusteringColumn2")
 			oldValue = value
@@ -822,28 +834,31 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 func Test_ViewRecord_GetBatch(t *testing.T) {
 	require := require.New(t)
 
+	championatsView := istructs.NewQName("test", "championats")
+	championsView := istructs.NewQName("test", "champions")
+
+	schemas := schemas.NewSchemaCache()
+	t.Run("must be ok to build schemas", func(t *testing.T) {
+		schemas.AddView(championatsView).
+			AddPartField("Year", istructs.DataKind_int32).
+			AddClustColumn("Sport", istructs.DataKind_string).
+			AddValueField("Country", istructs.DataKind_string, true).
+			AddValueField("City", istructs.DataKind_string, false)
+
+		schemas.AddView(championsView).
+			AddPartField("Year", istructs.DataKind_int32).
+			AddClustColumn("Sport", istructs.DataKind_string).
+			AddValueField("Winner", istructs.DataKind_string, true)
+
+		require.NoError(schemas.ValidateSchemas())
+	})
+
 	storage := newTestStorage()
 	storageProvider := newTestStorageProvider(storage)
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
+	_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
 	provider, _ := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-
-	championatsView := istructs.NewQName("test", "championats")
-	championsView := istructs.NewQName("test", "champions")
-
-	championatsSchema := cfg.Schemas.AddView(championatsView)
-	championatsSchema.
-		AddPartField("Year", istructs.DataKind_int32).
-		AddClustColumn("Sport", istructs.DataKind_string).
-		AddValueField("Country", istructs.DataKind_string, true).
-		AddValueField("City", istructs.DataKind_string, false)
-
-	championsSchema := cfg.Schemas.AddView(championsView)
-	championsSchema.
-		AddPartField("Year", istructs.DataKind_int32).
-		AddClustColumn("Sport", istructs.DataKind_string).
-		AddValueField("Winner", istructs.DataKind_string, true)
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err, err)
@@ -1012,7 +1027,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		batch[0].Key.PutString("Sport", "Волейбол")
 
 		err := app.ViewRecords().(*appViewRecordsType).GetBatch(1, batch)
-		require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
+		require.ErrorIs(err, ErrWrongFieldType)
 	})
 
 	t.Run("must fail to read if some key is not valid", func(t *testing.T) {

@@ -8,10 +8,13 @@ package istructsmem
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/untillpro/voedger/pkg/istorage"
 	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/utils"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/vers"
 )
 
 // QNameID is identificator for QNames
@@ -19,16 +22,16 @@ type QNameID uint16
 
 // qNameCacheType is cache for QName IDs conversions
 type qNameCacheType struct {
-	app     *AppConfigType
+	cfg     *AppConfigType
 	qNames  map[istructs.QName]QNameID
 	ids     map[QNameID]istructs.QName
 	lastID  QNameID
 	changes uint32
 }
 
-func newQNameCache(app *AppConfigType) qNameCacheType {
+func newQNameCache(cfg *AppConfigType) qNameCacheType {
 	return qNameCacheType{
-		app:    app,
+		cfg:    cfg,
 		qNames: make(map[istructs.QName]QNameID),
 		ids:    make(map[QNameID]istructs.QName),
 		lastID: QNameIDSysLast,
@@ -53,19 +56,19 @@ func (names *qNameCacheType) collectAllQNames() (err error) {
 		collectSysQName(istructs.QNameCommandCUD, QNameIDCommandCUD)
 
 	// schemas
-	for qn := range names.app.Schemas.schemas {
-		if err = names.collectAppQName(qn); err != nil {
-			return err
-		}
-	}
+	names.cfg.Schemas.Schemas(
+		func(q istructs.QName) {
+			err = errors.Join(err,
+				names.collectAppQName(q))
+		})
+
 	// resources
-	for qn := range names.app.Resources.resources {
-		if err = names.collectAppQName(qn); err != nil {
-			return err
-		}
+	for q := range names.cfg.Resources.resources {
+		err = errors.Join(err,
+			names.collectAppQName(q))
 	}
 
-	return nil
+	return err
 }
 
 // collectAppQName checks is exists ID for application QName in cache. If not then adds it with new ID
@@ -110,9 +113,9 @@ func (names *qNameCacheType) idToQName(id QNameID) (qName istructs.QName, err er
 func (names *qNameCacheType) load() (err error) {
 	names.clear()
 
-	ver := names.app.versions.getVersion(verSysQNames)
+	ver := names.cfg.versions.GetVersion(vers.SysQNamesVersion)
 	switch ver {
-	case verUnknown: // no sys.QName storage exists
+	case vers.UnknownVersion: // no sys.QName storage exists
 		return nil
 	case verSysQNames01:
 		return names.load01()
@@ -143,8 +146,8 @@ func (names *qNameCacheType) load01() error {
 
 		return nil
 	}
-	pKey := toBytes(uint16(QNameIDSysQNames), uint16(verSysQNames01))
-	return names.app.storage.Read(context.Background(), pKey, nil, nil, readQName)
+	pKey := utils.ToBytes(uint16(QNameIDSysQNames), uint16(verSysQNames01))
+	return names.cfg.storage.Read(context.Background(), pKey, nil, nil, readQName)
 }
 
 // prepare loads all QNames from storage, add all known system and application QName IDs and store cache if some changes. Must be called at application starts
@@ -176,7 +179,7 @@ func (names *qNameCacheType) qNameToID(qName istructs.QName) (QNameID, error) {
 
 // store stores all known QNames to storage using verSysQNamesLastest codec
 func (names *qNameCacheType) store() (err error) {
-	pKey := toBytes(uint16(QNameIDSysQNames), uint16(verSysQNamesLastest))
+	pKey := utils.ToBytes(uint16(QNameIDSysQNames), uint16(verSysQNamesLastest))
 
 	batch := make([]istorage.BatchItem, 0)
 	for qName, id := range names.qNames {
@@ -184,18 +187,18 @@ func (names *qNameCacheType) store() (err error) {
 			item := istorage.BatchItem{
 				PKey:  pKey,
 				CCols: []byte(qName.String()),
-				Value: toBytes(uint16(id)),
+				Value: utils.ToBytes(uint16(id)),
 			}
 			batch = append(batch, item)
 		}
 	}
 
-	if err = names.app.storage.PutBatch(batch); err != nil {
+	if err = names.cfg.storage.PutBatch(batch); err != nil {
 		return fmt.Errorf("error store application QName IDs to storage: %w", err)
 	}
 
-	if ver := names.app.versions.getVersion(verSysQNames); ver != verSysQNamesLastest {
-		if err = names.app.versions.putVersion(verSysQNames, verSysQNamesLastest); err != nil {
+	if ver := names.cfg.versions.GetVersion(vers.SysQNamesVersion); ver != verSysQNamesLastest {
+		if err = names.cfg.versions.PutVersion(vers.SysQNamesVersion, verSysQNamesLastest); err != nil {
 			return fmt.Errorf("error store «sys.QNames» system view version: %w", err)
 		}
 	}

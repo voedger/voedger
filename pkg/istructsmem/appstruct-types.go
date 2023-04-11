@@ -11,14 +11,17 @@ import (
 	"github.com/untillpro/voedger/pkg/irates"
 	istorage "github.com/untillpro/voedger/pkg/istorage"
 	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/dynobuf"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/vers"
+	"github.com/untillpro/voedger/pkg/schemas"
 )
 
 // AppConfigsType: map of applications configurators
 type AppConfigsType map[istructs.AppQName]*AppConfigType
 
 // AddConfig: adds new config for specified application
-func (cfgs *AppConfigsType) AddConfig(appName istructs.AppQName) *AppConfigType {
-	c := newAppConfig(appName)
+func (cfgs *AppConfigsType) AddConfig(appName istructs.AppQName, schemas *schemas.SchemasCache) *AppConfigType {
+	c := newAppConfig(appName, schemas)
 
 	(*cfgs)[appName] = c
 	return c
@@ -35,13 +38,17 @@ func (cfgs *AppConfigsType) GetConfig(appName istructs.AppQName) *AppConfigType 
 
 // AppConfigType: configuration for application workflow (resources, schemas, etc.)
 type AppConfigType struct {
-	Name                    istructs.AppQName
-	QNameID                 istructs.ClusterAppID
-	Resources               ResourcesType
-	Schemas                 SchemasCacheType
-	Uniques                 *implIUniques
+	Name      istructs.AppQName
+	QNameID   istructs.ClusterAppID
+	Schemas   *schemas.SchemasCache
+	Resources ResourcesType
+	Uniques   *implIUniques
+
+	dbSchemas  dynobuf.DynoBufSchemasCache
+	validators *validators
+
 	storage                 istorage.IAppStorage // will be initialized on prepare()
-	versions                verionsCacheType
+	versions                *vers.Versions
 	qNames                  qNameCacheType
 	cNames                  containerNameCacheType
 	singletons              singletonsCacheType
@@ -54,7 +61,7 @@ type AppConfigType struct {
 	eventValidators         []istructs.EventValidator
 }
 
-func newAppConfig(appName istructs.AppQName) *AppConfigType {
+func newAppConfig(appName istructs.AppQName, schemas *schemas.SchemasCache) *AppConfigType {
 	cfg := AppConfigType{Name: appName}
 
 	qNameID, ok := istructs.ClusterApps[appName]
@@ -63,16 +70,20 @@ func newAppConfig(appName istructs.AppQName) *AppConfigType {
 	}
 	cfg.QNameID = qNameID
 
+	cfg.Schemas = schemas
 	cfg.Resources = newResources(&cfg)
-	cfg.Schemas = newSchemaCache(&cfg)
-	cfg.versions = newVerionsCache(&cfg)
+	cfg.Uniques = newUniques()
+
+	cfg.dbSchemas = dynobuf.NewSchemasCache(schemas)
+	cfg.validators = newValidators(schemas)
+
+	cfg.versions = vers.NewVersions()
 	cfg.qNames = newQNameCache(&cfg)
 	cfg.cNames = newContainerNameCache(&cfg)
 	cfg.singletons = newSingletonsCache(&cfg)
 	cfg.FunctionRateLimits = functionRateLimits{
 		limits: map[istructs.QName]map[istructs.RateLimitKind]istructs.RateLimit{},
 	}
-	cfg.Uniques = newUniques()
 	return &cfg
 }
 
@@ -87,21 +98,8 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	// prepare IAppStorage
 	cfg.storage = appStorage
 
-	// build key schemas for all views
-	if err := cfg.Schemas.buildViewKeySchemas(); err != nil {
-		return err
-	}
-
-	// validate schemas
-	if err := cfg.Schemas.ValidateSchemas(); err != nil {
-		return err
-	}
-
-	// create dynoBufferSchemes
-	cfg.Schemas.createDynoBufferSchemes()
-
 	// prepare system views versions
-	if err := cfg.versions.prepare(); err != nil {
+	if err := cfg.versions.Prepare(cfg.storage); err != nil {
 		return err
 	}
 

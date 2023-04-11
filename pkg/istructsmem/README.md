@@ -60,5 +60,3 @@
     + Reads view records (key and value) for specified key from the storage by calling callback function.
     + Key may be build partially. In this case all view records, witch keys starts with specified key, will be reads
 
-# Schemas
-

@@ -16,6 +16,7 @@ import (
 	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
 
 	"github.com/untillpro/voedger/pkg/istructsmem/internal/descr"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/utils"
 )
 
 // appStructsProviderType implements IAppStructsProvider interface
@@ -115,7 +116,7 @@ func (app *appStructsType) Resources() istructs.IResources {
 
 // istructs.IAppStructs.Schemas
 func (app *appStructsType) Schemas() istructs.ISchemas {
-	return &app.config.Schemas
+	return app.config.Schemas
 }
 
 // istructs.IAppStructs.ClusterAppID
@@ -260,7 +261,7 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 	var evData []byte
 	if evData, err = dbEvent.storeToBytes(); err == nil {
 		pKey, cCols := splitLogOffset(ev.PLogOffset())
-		pKey = prefixBytes(pKey, uint16(QNameIDSysPLog), uint16(ev.HandlingPartition())) // + partition! see #18047
+		pKey = utils.PrefixBytes(pKey, uint16(QNameIDSysPLog), uint16(ev.HandlingPartition())) // + partition! see #18047
 		if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
 			event = &dbEvent
 		}
@@ -278,7 +279,7 @@ func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (event istructs.IWLogEve
 	var evData []byte
 	if evData, err = dbEvent.storeToBytes(); err == nil {
 		pKey, cCols := splitLogOffset(ev.WLogOffset())
-		pKey = prefixBytes(pKey, uint16(QNameIDSysWLog), uint64(ev.Workspace()))
+		pKey = utils.PrefixBytes(pKey, uint16(QNameIDSysWLog), uint64(ev.Workspace()))
 		if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
 			event = &dbEvent
 		}
@@ -303,7 +304,7 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 			return err
 		}
 
-		pKey := prefixBytes(pk, uint16(QNameIDSysPLog), uint16(partition)) // + partition! see #18047
+		pKey := utils.PrefixBytes(pk, uint16(QNameIDSysPLog), uint16(partition)) // + partition! see #18047
 		err = e.app.config.storage.Read(ctx, pKey, clustFrom, clustTo, readEvent)
 
 		return (err == nil) && (count > 0), err // stop iterate parts if error or no events in last partition
@@ -328,7 +329,7 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 			return err
 		}
 
-		pKey := prefixBytes(pk, uint16(QNameIDSysWLog), uint64(workspace))
+		pKey := utils.PrefixBytes(pk, uint16(QNameIDSysWLog), uint64(workspace))
 		err = e.app.config.storage.Read(ctx, pKey, clustFrom, clustTo, readEvent)
 
 		return (err == nil) && (count > 0), err // stop iterate parts if error or no events in last partition
@@ -353,7 +354,7 @@ func newRecords(app *appStructsType) appRecordsType {
 // getRecord reads record from application storage througth view-records methods
 func (recs *appRecordsType) getRecord(workspace istructs.WSID, id istructs.RecordID, data *[]byte) (ok bool, err error) {
 	idHi, idLow := splitRecordID(id)
-	pk := prefixBytes(idHi, uint16(QNameIDSysRecords), uint64(workspace))
+	pk := utils.PrefixBytes(idHi, uint16(QNameIDSysRecords), uint64(workspace))
 	return recs.app.config.storage.Get(pk, idLow, data)
 }
 
@@ -376,7 +377,7 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 		batches[i] = &batch[len(batch)-1]
 	}
 	for idHi, batch := range plan {
-		pk := prefixBytes([]byte(idHi), uint16(QNameIDSysRecords), uint64(workspace))
+		pk := utils.PrefixBytes([]byte(idHi), uint16(QNameIDSysRecords), uint64(workspace))
 		if err = recs.app.config.storage.GetBatch(pk, batch); err != nil {
 			return err
 		}
@@ -397,7 +398,7 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 // putRecord puts record to application storage througth view-records methods
 func (recs *appRecordsType) putRecord(workspace istructs.WSID, id istructs.RecordID, data []byte) (err error) {
 	idHi, idLow := splitRecordID(id)
-	pk := prefixBytes(idHi, uint16(QNameIDSysRecords), uint64(workspace))
+	pk := utils.PrefixBytes(idHi, uint16(QNameIDSysRecords), uint64(workspace))
 	return recs.app.config.storage.Put(pk, idLow, data)
 }
 
@@ -411,7 +412,7 @@ func (recs *appRecordsType) putRecordsBatch(workspace istructs.WSID, records []r
 	batch := make([]istorage.BatchItem, len(records))
 	for i, r := range records {
 		idHi, idLow := splitRecordID(r.id)
-		batch[i].PKey = prefixBytes(idHi, uint16(QNameIDSysRecords), uint64(workspace))
+		batch[i].PKey = utils.PrefixBytes(idHi, uint16(QNameIDSysRecords), uint64(workspace))
 		batch[i].CCols = idLow
 		batch[i].Value = r.data
 	}
@@ -428,9 +429,13 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 	}
 
 	for _, rec := range ev.cud.creates {
-		if rec.schema.singleton.enabled {
-			if existsRecord(rec.schema.singleton.id) {
-				return fmt.Errorf("can not create singleton, CDOC «%v» record «%d» already exists: %w", rec.QName(), rec.schema.singleton.id, ErrRecordIDUniqueViolation)
+		if rec.schema.Singleton() {
+			id, err := recs.app.config.singletons.qNameToID(rec.QName())
+			if err != nil {
+				return err
+			}
+			if existsRecord(id) {
+				return fmt.Errorf("can not create singleton, CDOC «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
 			}
 		}
 	}

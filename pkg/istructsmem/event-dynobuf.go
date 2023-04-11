@@ -12,6 +12,7 @@ import (
 	"io"
 
 	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/utils"
 )
 
 func storeEvent(ev *dbEventType, buf *bytes.Buffer) (err error) {
@@ -58,9 +59,9 @@ func storeEventBuildError(ev *dbEventType, buf *bytes.Buffer) {
 		return
 	}
 
-	writeShortString(buf, ev.buildErr.ErrStr())
+	utils.WriteShortString(buf, ev.buildErr.ErrStr())
 
-	writeShortString(buf, ev.name.String())
+	utils.WriteShortString(buf, ev.name.String())
 
 	bytes := ev.buildErr.OriginalEventBytes()
 	bytesLen := uint32(len(bytes))
@@ -205,12 +206,12 @@ func loadEventBuildError(ev *dbEventType, buf *bytes.Buffer) (err error) {
 		return nil
 	}
 
-	if ev.buildErr.errStr, err = readShortString(buf); err != nil {
+	if ev.buildErr.errStr, err = utils.ReadShortString(buf); err != nil {
 		return fmt.Errorf("error read build error message: %w", err)
 	}
 
 	qName := ""
-	if qName, err = readShortString(buf); err != nil {
+	if qName, err = utils.ReadShortString(buf); err != nil {
 		return fmt.Errorf("error read original event name: %w", err)
 	}
 	if ev.buildErr.qName, err = istructs.ParseQName(qName); err != nil {

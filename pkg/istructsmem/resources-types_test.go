@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/voedger/pkg/iratesce"
 	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/untillpro/voedger/pkg/schemas"
 )
 
 func Test_nullResource(t *testing.T) {
@@ -39,28 +40,29 @@ func TestResourceEnumerator(t *testing.T) {
 	)
 
 	t.Run("builds app", func(t *testing.T) {
-		cfgs := make(AppConfigsType, 1)
-		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1)
 
-		t.Run("builds schemas and resources", func(t *testing.T) {
-			CDocSchema := cfg.Schemas.Add(cDocName, istructs.SchemaKind_CDoc)
+		schemas := schemas.NewSchemaCache()
+		t.Run("must be ok to build schemas and resources", func(t *testing.T) {
+			CDocSchema := schemas.Add(cDocName, istructs.SchemaKind_CDoc)
 			CDocSchema.
 				AddField("Int32", istructs.DataKind_int32, true).
 				AddField("String", istructs.DataKind_string, false)
 
-			ObjSchema := cfg.Schemas.Add(oObjName, istructs.SchemaKind_Object)
+			ObjSchema := schemas.Add(oObjName, istructs.SchemaKind_Object)
 			ObjSchema.
 				AddField("Int32", istructs.DataKind_int32, true).
 				AddField("String", istructs.DataKind_string, false)
 
-			err := cfg.Schemas.ValidateSchemas()
-			require.NoError(err)
-
-			cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, istructs.NullQName, istructs.NullQName, NullCommandExec))
-			cfg.Resources.Add(NewCommandFunction(cmdCreateObj, oObjName, istructs.NullQName, istructs.NullQName, NullCommandExec))
-			cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, istructs.NullQName, oObjName, istructs.NullQName, NullCommandExec))
-			cfg.Resources.Add(NewCommandFunction(cmdCUD, istructs.NullQName, istructs.NullQName, istructs.NullQName, NullCommandExec))
+			require.NoError(schemas.ValidateSchemas())
 		})
+
+		cfgs := make(AppConfigsType, 1)
+		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+
+		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, istructs.NullQName, istructs.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateObj, oObjName, istructs.NullQName, istructs.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, istructs.NullQName, oObjName, istructs.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCUD, istructs.NullQName, istructs.NullQName, istructs.NullQName, NullCommandExec))
 
 		storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)

@@ -9,7 +9,7 @@ import (
 	"bytes"
 	"context"
 
-	istorage "github.com/untillpro/voedger/pkg/istorage"
+	"github.com/untillpro/voedger/pkg/istorage"
 	"github.com/untillpro/voedger/pkg/istorageimpl"
 	"github.com/untillpro/voedger/pkg/istructs"
 )

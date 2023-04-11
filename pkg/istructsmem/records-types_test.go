@@ -14,15 +14,17 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/voedger/pkg/iratesce"
 	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/untillpro/voedger/pkg/schemas"
 )
 
 func Test_RecordsRead(t *testing.T) {
 	require := require.New(t)
+	test := test()
 
 	storage := newTestStorage()
 	storageProvider := newTestStorageProvider(storage)
 
-	provider, err := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 	require.NoError(err)
 
 	app, err := provider.AppStructs(test.appName)
@@ -140,7 +142,7 @@ func Test_RecordsRead(t *testing.T) {
 		defer storage.reset()
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())
 		provider, _ := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
@@ -163,7 +165,7 @@ func Test_RecordsRead(t *testing.T) {
 		defer storage.reset()
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())
 		provider, _ := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)

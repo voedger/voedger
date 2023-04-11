@@ -8,10 +8,14 @@ package istructsmem
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	istorage "github.com/untillpro/voedger/pkg/istorage"
 	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/utils"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/vers"
+	"github.com/untillpro/voedger/pkg/schemas"
 )
 
 // containerNameIDType is identificator for container names
@@ -19,16 +23,16 @@ type containerNameIDType uint16
 
 // containerNameCacheType is cache for container name to ID conversions
 type containerNameCacheType struct {
-	app     *AppConfigType
+	cfg     *AppConfigType
 	names   map[string]containerNameIDType
 	ids     map[containerNameIDType]string
 	lastID  containerNameIDType
 	changes uint32
 }
 
-func newContainerNameCache(app *AppConfigType) containerNameCacheType {
+func newContainerNameCache(cfg *AppConfigType) containerNameCacheType {
 	return containerNameCacheType{
-		app:    app,
+		cfg:    cfg,
 		names:  make(map[string]containerNameIDType),
 		ids:    make(map[containerNameIDType]string),
 		lastID: containerNameIDSysLast,
@@ -48,18 +52,21 @@ func (names *containerNameCacheType) collectAllContainers() (err error) {
 
 	// global constants
 	names.collectSysContainer("", nullContainerNameID)
+	names.collectSysContainer(istructs.SystemContainer_ViewPartitionKey, viewPKeyContainerID)
+	names.collectSysContainer(istructs.SystemContainer_ViewClusteringCols, viewCColsContainerID)
+	names.collectSysContainer(istructs.SystemContainer_ViewValue, viewValueContainerID)
 
 	// schemas
-	for _, schema := range names.app.Schemas.schemas {
-		if schema.kind != istructs.SchemaKind_ViewRecord { // skip view container names (sys.pkey, sys.ccols and sys.val)
-			for name := range schema.containers {
-				if err = names.collectAppContainer(name); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
+	names.cfg.Schemas.EnumSchemas(
+		func(schema *schemas.Schema) {
+			schema.EnumContainers(
+				func(c *schemas.Container) {
+					if !c.IsSys() {
+						err = errors.Join(err, names.collectAppContainer(c.Name()))
+					}
+				})
+		})
+	return err
 }
 
 // collectAppContainer retrieves and stores ID for specified application-level container name
@@ -104,9 +111,9 @@ func (names *containerNameCacheType) idToName(id containerNameIDType) (name stri
 func (names *containerNameCacheType) load() (err error) {
 	names.clear()
 
-	ver := names.app.versions.getVersion(verSysContainers)
+	ver := names.cfg.versions.GetVersion(vers.SysContainersVersion)
 	switch ver {
-	case verUnknown: // no sys.Container storage exists
+	case vers.UnknownVersion: // no sys.Container storage exists
 		return nil
 	case verSysContainers01:
 		return names.load01()
@@ -120,7 +127,7 @@ func (names *containerNameCacheType) load01() error {
 
 	readName := func(cCols, value []byte) error {
 		name := string(cCols)
-		if ok, err := validIdent(name); !ok {
+		if ok, err := schemas.ValidIdent(name); !ok {
 			return err
 		}
 
@@ -136,8 +143,8 @@ func (names *containerNameCacheType) load01() error {
 		return nil
 	}
 
-	pKey := toBytes(uint16(QNameIDSysContainers), uint16(verSysContainers01))
-	return names.app.storage.Read(context.Background(), pKey, nil, nil, readName)
+	pKey := utils.ToBytes(uint16(QNameIDSysContainers), uint16(verSysContainers01))
+	return names.cfg.storage.Read(context.Background(), pKey, nil, nil, readName)
 }
 
 // nameToID retrieve ID for specified container name
@@ -169,26 +176,26 @@ func (names *containerNameCacheType) prepare() (err error) {
 
 // store stores all known container names to storage using verSysContainersLastest codec
 func (names *containerNameCacheType) store() (err error) {
-	pKey := toBytes(uint16(QNameIDSysContainers), uint16(verSysContainersLastest))
+	pKey := utils.ToBytes(uint16(QNameIDSysContainers), uint16(verSysContainersLastest))
 
 	batch := make([]istorage.BatchItem, 0)
 	for name, id := range names.names {
-		if ok, _ := validIdent(name); ok {
+		if ok, _ := schemas.ValidIdent(name); ok {
 			item := istorage.BatchItem{
 				PKey:  pKey,
 				CCols: []byte(name),
-				Value: toBytes(uint16(id)),
+				Value: utils.ToBytes(uint16(id)),
 			}
 			batch = append(batch, item)
 		}
 	}
 
-	if err = names.app.storage.PutBatch(batch); err != nil {
+	if err = names.cfg.storage.PutBatch(batch); err != nil {
 		return fmt.Errorf("error store application containers to storage: %w", err)
 	}
 
-	if ver := names.app.versions.getVersion(verSysContainers); ver != verSysContainersLastest {
-		if err = names.app.versions.putVersion(verSysContainers, verSysContainersLastest); err != nil {
+	if ver := names.cfg.versions.GetVersion(vers.SysContainersVersion); ver != verSysContainersLastest {
+		if err = names.cfg.versions.PutVersion(vers.SysContainersVersion, verSysContainersLastest); err != nil {
 			return fmt.Errorf("error store sys.Containers system view version: %w", err)
 		}
 	}

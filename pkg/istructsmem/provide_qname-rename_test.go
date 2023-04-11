@@ -14,6 +14,10 @@ import (
 	"github.com/untillpro/voedger/pkg/iratesce"
 	"github.com/untillpro/voedger/pkg/istorage"
 	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/consts"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/utils"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/vers"
+	"github.com/untillpro/voedger/pkg/schemas"
 )
 
 func TestRenameQName(t *testing.T) {
@@ -29,11 +33,12 @@ func TestRenameQName(t *testing.T) {
 		storage := newTestStorage()
 		storageProvider := newTestStorageProvider(storage)
 
-		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
+		schemas := schemas.NewSchemaCache()
+		_ = schemas.Add(old, istructs.SchemaKind_Object)
+		_ = schemas.Add(other, istructs.SchemaKind_Object)
 
-		_ = cfg.Schemas.Add(old, istructs.SchemaKind_Object)
-		_ = cfg.Schemas.Add(other, istructs.SchemaKind_Object)
+		cfgs := make(AppConfigsType, 1)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
 
 		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		require.NoError(err, err)
@@ -51,7 +56,7 @@ func TestRenameQName(t *testing.T) {
 		require.NoError(err, err)
 
 		t.Run("check result", func(t *testing.T) {
-			pKey := toBytes(uint16(QNameIDSysQNames), uint16(verSysQNames01))
+			pKey := utils.ToBytes(uint16(QNameIDSysQNames), uint16(verSysQNames01))
 
 			t.Run("check old is null", func(t *testing.T) {
 				data := make([]byte, 0)
@@ -126,8 +131,8 @@ func TestRenameQName(t *testing.T) {
 
 		t.Run("must error if unsupported version of QNames system view", func(t *testing.T) {
 			storage := newTestStorage()
-			data := toBytes(uint16(verSysQNamesLastest + 1)) // future version
-			storage.Put(toBytes(uint16(QNameIDSysVesions)), toBytes(uint16(verSysQNames)), data)
+			data := utils.ToBytes(uint16(verSysQNamesLastest + 1)) // future version
+			storage.Put(utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysQNamesVersion), data)
 
 			err := RenameQName(storage, old, new)
 			require.ErrorContains(err, "unsupported version")

@@ -5,31 +5,9 @@
 package istructsmem
 
 import (
-	dynobuffers "github.com/untillpro/dynobuffers"
 	"github.com/untillpro/voedger/pkg/istructs"
-	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
-)
-
-// validate error codes, see ValidateError.Code()
-const (
-	ECode_UnknownError = iota
-
-	ECode_EmptySchemaName
-	ECode_InvalidSchemaName
-	ECode_InvalidSchemaKind
-
-	ECode_EmptyData
-
-	ECode_InvalidRawRecordID
-	ECode_InvalidRecordID
-	ECode_InvalidRefRecordID
-
-	ECode_EEmptyCUDs
-
-	ECode_EmptyElementName
-	ECode_InvalidElementName
-	ECode_InvalidOccursMin
-	ECode_InvalidOccursMax
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/vers"
+	"github.com/untillpro/voedger/pkg/schemas"
 )
 
 // nullResource is result then resource not found
@@ -70,26 +48,15 @@ var dataKindToStr = map[istructs.DataKindType]string{
 	istructs.DataKind_Event:    dk_Event,
 }
 
-var dynobufferFieldTypeToStr = map[dynobuffers.FieldType]string{
-	dynobuffers.FieldTypeUnspecified: dk_null,
-	dynobuffers.FieldTypeInt32:       dk_int32,
-	dynobuffers.FieldTypeInt64:       dk_int64,
-	dynobuffers.FieldTypeFloat32:     dk_float32,
-	dynobuffers.FieldTypeFloat64:     dk_float64,
-	dynobuffers.FieldTypeString:      dk_string,
-	dynobuffers.FieldTypeBool:        dk_bool,
-	dynobuffers.FieldTypeByte:        dk_bytes,
-}
+// const ( // verification kind mnemonics
+// 	verify_byEmail = "EMail"
+// 	verify_ByPhone = "Phone"
+// )
 
-const ( // verification kind mnemonics
-	verify_byEmail = "EMail"
-	verify_ByPhone = "Phone"
-)
-
-var verificationKindToStr = map[payloads.VerificationKindType]string{
-	payloads.VerificationKind_EMail: verify_byEmail,
-	payloads.VerificationKind_Phone: verify_ByPhone,
-}
+// var verificationKindToStr = map[payloads.VerificationKindType]string{
+// 	payloads.VerificationKind_EMail: verify_byEmail,
+// 	payloads.VerificationKind_Phone: verify_ByPhone,
+// }
 
 const (
 	// schema kind mnemonics
@@ -113,7 +80,7 @@ const (
 )
 
 // shemaKindToStr is map to return schema kind mnemonics. Useful to format error messages
-var shemaKindToStr = map[istructs.SchemaKindType]string{
+var shemaKindToStr = map[schemas.SchemaKind]string{
 	istructs.SchemaKind_null:                         sk_null,
 	istructs.SchemaKind_GDoc:                         sk_GDoc,
 	istructs.SchemaKind_CDoc:                         sk_CDoc,
@@ -162,6 +129,9 @@ const (
 // constants for system container names
 const (
 	nullContainerNameID containerNameIDType = 0 + iota
+	viewPKeyContainerID
+	viewCColsContainerID
+	viewValueContainerID
 
 	containerNameIDSysLast containerNameIDType = 63
 )
@@ -179,30 +149,22 @@ const (
 	QNameIDSysLast QNameID = 255
 )
 
-// MaxIdentLen is maximum identificator length
-const MaxIdentLen = 255
-
 // maxGetBatchRecordCount is maximum records that can be retrieved by ReadBatch GetBatch
 const maxGetBatchRecordCount = 256
 
 // versions of system views
 const (
-	verUnknown versionValueType = 0
-
 	// sys.QName
-	verSysQNames        versionKeyType   = 1
-	verSysQNames01      versionValueType = 1
-	verSysQNamesLastest versionValueType = verSysQNames01
+	verSysQNames01      vers.VersionValue = 1
+	verSysQNamesLastest vers.VersionValue = verSysQNames01
 
 	// sys.Containers
-	verSysContainers        versionKeyType   = 2
-	verSysContainers01      versionValueType = 1
-	verSysContainersLastest versionValueType = verSysContainers01
+	verSysContainers01      vers.VersionValue = 1
+	verSysContainersLastest vers.VersionValue = verSysContainers01
 
 	// sys.Singletons
-	verSysSingletons        versionKeyType   = 3
-	verSysSingletons01      versionValueType = 1
-	verSysSingletonsLastest versionValueType = verSysSingletons01
+	verSysSingletons01      vers.VersionValue = 1
+	verSysSingletonsLastest vers.VersionValue = verSysSingletons01
 )
 
 // system fields mask values

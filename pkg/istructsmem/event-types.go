@@ -8,6 +8,7 @@ package istructsmem
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/untillpro/voedger/pkg/istructs"
@@ -114,17 +115,13 @@ func (ev *eventType) build() (err error) {
 		return validateErrorf(ECode_InvalidSchemaName, "unknown event command name «%v»: %w", ev.name, err)
 	}
 
-	if err = ev.argObject.build(); err != nil {
-		return err
-	}
-	if err = ev.argUnlObj.build(); err != nil {
-		return err
-	}
-	if err = ev.cud.build(); err != nil {
-		return err
-	}
+	err = errors.Join(
+		ev.argObject.build(),
+		ev.argUnlObj.build(),
+		ev.cud.build(),
+	)
 
-	return nil
+	return err
 }
 
 // copyFrom copies event from specified source
@@ -194,7 +191,7 @@ func (ev *eventType) BuildRawEvent() (raw istructs.IRawEvent, err error) {
 		return ev, err
 	}
 
-	if err = ev.appCfg.Schemas.validEvent(ev); err != nil {
+	if err = ev.appCfg.validators.validEvent(ev); err != nil {
 		return ev, err
 	}
 
@@ -392,9 +389,13 @@ func newCUD(appCfg *AppConfigType) cudType {
 func (cud *cudType) applyRecs(exists existsRecordType, load loadRecordFuncType, store storeRecordFuncType) (err error) {
 
 	for _, rec := range cud.creates {
-		if rec.schema.singleton.enabled {
-			if exists(rec.schema.singleton.id) {
-				return fmt.Errorf("can not create singleton, CDOC «%v» record «%d» already exists: %w", rec.QName(), rec.schema.singleton.id, ErrRecordIDUniqueViolation)
+		if rec.schema.Singleton() {
+			id, err := cud.appCfg.singletons.qNameToID(rec.QName())
+			if err != nil {
+				return err
+			}
+			if exists(id) {
+				return fmt.Errorf("can not create singleton, CDOC «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
 			}
 		}
 		if err = store(rec); err != nil {
@@ -488,8 +489,10 @@ func (cud *cudType) regenerateIDsPlan(generator istructs.IDGenerator) (newIDs ne
 
 		var storeID istructs.RecordID
 
-		if rec.schema.singleton.enabled {
-			storeID = rec.schema.singleton.id
+		if rec.schema.Singleton() {
+			if storeID, err = cud.appCfg.singletons.qNameToID(rec.QName()); err != nil {
+				return nil, err
+			}
 		} else {
 			if storeID, err = generator(id, rec.schema); err != nil {
 				return nil, err
@@ -803,13 +806,14 @@ func (el *elementType) ElementBuilder(containerName string) istructs.IElementBui
 	c := newElement(el)
 	el.childs = append(el.childs, &c)
 	if el.QName() != istructs.NullQName {
-		c.setQName(el.schema.containerQName(containerName))
-
-		if c.QName() != istructs.NullQName {
-			if el.ID() != istructs.NullRecordID {
-				c.setParent(el.ID())
+		if cont := el.schema.Container(containerName); cont != nil {
+			c.setQName(cont.Schema())
+			if c.QName() != istructs.NullQName {
+				if el.ID() != istructs.NullRecordID {
+					c.setParent(el.ID())
+				}
+				c.setContainer(containerName)
 			}
-			c.setContainer(containerName)
 		}
 	}
 	return &c
@@ -821,6 +825,13 @@ func (el *elementType) Elements(container string, cb func(nestedPart istructs.IE
 		if c.Container() == container {
 			cb(c)
 		}
+	}
+}
+
+// enumerates all child elements
+func (el *elementType) EnumElements(cb func(*elementType)) {
+	for _, c := range el.childs {
+		cb(c)
 	}
 }
 
@@ -842,7 +853,7 @@ func (el *elementType) Build() (doc istructs.IObject, err error) {
 	if err = el.build(); err != nil {
 		return nil, err
 	}
-	if err = el.appCfg.Schemas.validObject(el); err != nil {
+	if err = el.appCfg.validators.validObject(el); err != nil {
 		return nil, err
 	}
 

@@ -14,7 +14,7 @@ import (
 
 	dynobuffers "github.com/untillpro/dynobuffers"
 	"github.com/untillpro/voedger/pkg/istructs"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	"github.com/untillpro/voedger/pkg/schemas"
 )
 
 // dynoBufValue converts specified value to dynobuffer compatable type using specified data kind.
@@ -122,7 +122,7 @@ func (row *rowType) dynoBufValue(value interface{}, kind istructs.DataKindType) 
 			return bytes, nil
 		}
 	}
-	return nil, fmt.Errorf("value has type «%T», but «%s» expected: %w", value, dataKindToStr[kind], coreutils.ErrFieldTypeMismatch)
+	return nil, fmt.Errorf("value has type «%T», but «%s» expected: %w", value, dataKindToStr[kind], ErrWrongFieldType)
 }
 
 func dynoBufGetWord(dyB *dynobuffers.Buffer, fieldName string) (value uint16, ok bool) {
@@ -227,11 +227,29 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 	return nil
 }
 
+// Returns system fields mask combination for schema kind, see sfm_××× consts
+func schemaSysFieldsMask(schema *schemas.Schema) uint16 {
+	sfm := uint16(0)
+	if schema.Props().HasSystemField(istructs.SystemField_ID) {
+		sfm |= sfm_ID
+	}
+	if schema.Props().HasSystemField(istructs.SystemField_ParentID) {
+		sfm |= sfm_ParentID
+	}
+	if schema.Props().HasSystemField(istructs.SystemField_Container) {
+		sfm |= sfm_Container
+	}
+	if schema.Props().HasSystemField(istructs.SystemField_IsActive) {
+		sfm |= sfm_IsActive
+	}
+	return sfm
+}
+
 func loadRowSysFields(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 	var sysFieldMask uint16
 
 	if codecVer == codec_RawDynoBuffer {
-		sysFieldMask = schemaNeedSysFieldMask(row.schema.kind)
+		sysFieldMask = schemaSysFieldsMask(row.schema)
 	} else {
 		if err = binary.Read(buf, binary.BigEndian, &sysFieldMask); err != nil {
 			return fmt.Errorf("error read system fields mask: %w", err)

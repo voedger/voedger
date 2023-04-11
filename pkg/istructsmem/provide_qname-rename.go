@@ -11,6 +11,9 @@ import (
 
 	"github.com/untillpro/voedger/pkg/istorage"
 	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/consts"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/utils"
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/vers"
 )
 
 func RenameQName(storage istorage.IAppStorage, old, new istructs.QName) error {
@@ -22,15 +25,15 @@ func RenameQName(storage istorage.IAppStorage, old, new istructs.QName) error {
 	}
 
 	data := make([]byte, 0)
-	if ok, err := storage.Get(toBytes(uint16(QNameIDSysVesions)), toBytes(uint16(verSysQNames)), &data); !ok {
+	if ok, err := storage.Get(utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysQNamesVersion), &data); !ok {
 		return fmt.Errorf("error read version of QNames system view: %w", err)
 	}
 
-	ver := versionValueType(binary.BigEndian.Uint16(data))
+	ver := vers.VersionValue(binary.BigEndian.Uint16(data))
 
 	switch ver {
 	case verSysQNames01:
-		pKey := toBytes(uint16(QNameIDSysQNames), uint16(verSysQNames01))
+		pKey := utils.ToBytes(uint16(QNameIDSysQNames), uint16(verSysQNames01))
 
 		ok, err := storage.Get(pKey, []byte(old.String()), &data)
 		if err != nil {
@@ -57,7 +60,7 @@ func RenameQName(storage istorage.IAppStorage, old, new istructs.QName) error {
 		if err := storage.Put(pKey, []byte(new.String()), data); err != nil {
 			return fmt.Errorf(errFmt+"error write new QName ID: %w", old, new, err)
 		}
-		if err := storage.Put(pKey, []byte(old.String()), toBytes(uint16(NullQNameID))); err != nil {
+		if err := storage.Put(pKey, []byte(old.String()), utils.ToBytes(uint16(NullQNameID))); err != nil {
 			return fmt.Errorf(errFmt+"error write old QName ID: %w", old, new, err)
 		}
 	default:
