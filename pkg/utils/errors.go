@@ -6,6 +6,7 @@ package coreutils
 
 import "errors"
 
-var ErrFieldsMissed = errors.New("fields are missed")
-
-var ErrFieldTypeMismatch = errors.New("field type mismatch")
+var (
+	ErrFieldsMissed      = errors.New("fields are missed")
+	ErrFieldTypeMismatch = errors.New("field type mismatch")
+)
