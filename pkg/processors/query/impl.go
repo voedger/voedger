@@ -181,7 +181,9 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				qw.appStructs,
 				state.SimplePartitionIDFunc(qw.msg.Partition()),
 				state.SimpleWSIDFunc(qw.msg.WSID()),
-				qw.secretReader)
+				qw.secretReader,
+				func() []iauthnz.Principal { return qw.principals },
+				func() string { return qw.msg.Token() })
 			qw.execQueryArgs.State = qw.state
 			return
 		}),

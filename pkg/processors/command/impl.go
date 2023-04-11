@@ -116,7 +116,7 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (
 
 func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(), cmd.principals)
+	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(), cmd.principals, cmd.cmdMes.Token())
 	hs.ClearIntents()
 	cmd.eca = istructs.ExecCommandArgs{
 		CommandPrepareArgs: istructs.CommandPrepareArgs{

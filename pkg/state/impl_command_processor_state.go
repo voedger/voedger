@@ -11,8 +11,9 @@ import (
 	"github.com/untillpro/voedger/pkg/istructs"
 )
 
-func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc,
-	secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalsFunc PrincipalsFunc, intentsLimit int) IHostState {
+func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc,
+	wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalsFunc PrincipalsFunc,
+	tokenFunc TokenFunc, intentsLimit int) IHostState {
 	bs := newHostState("CommandProcessor", intentsLimit)
 
 	bs.addStorage(ViewRecordsStorage, &viewRecordsStorage{
@@ -45,7 +46,10 @@ func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStr
 
 	bs.addStorage(AppSecretsStorage, &appSecretsStorage{secretReader: secretReader}, S_GET_BATCH)
 
-	bs.addStorage(SubjectStorage, &subjectStorage{principalsFunc: principalsFunc}, S_GET_BATCH)
+	bs.addStorage(SubjectStorage, &subjectStorage{
+		principalsFunc: principalsFunc,
+		tokenFunc:      tokenFunc,
+	}, S_GET_BATCH)
 
 	return bs
 }

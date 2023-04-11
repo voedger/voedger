@@ -9,16 +9,16 @@ import (
 	"math"
 	"testing"
 
-	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/untillpro/voedger/pkg/istructs"
 )
 
 func TestHostState_BasicUsage(t *testing.T) {
 	require := require.New(t)
 
 	factory := ProvideQueryProcessorStateFactory()
-	hostState := factory(context.Background(), mockedHostStateStructs(), nil, SimpleWSIDFunc(istructs.WSID(1)), nil)
+	hostState := factory(context.Background(), mockedHostStateStructs(), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 
 	// Declare simple extension
 	extension := func(state istructs.IState) {
@@ -588,7 +588,7 @@ func hostStateForTest(s IStateStorage) IHostState {
 	return hs
 }
 func emptyHostStateForTest(s IStateStorage) (istructs.IState, istructs.IIntents) {
-	bs := ProvideQueryProcessorStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil).(*hostState)
+	bs := ProvideQueryProcessorStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, nil).(*hostState)
 	bs.addStorage(testStorage, s, math.MinInt)
 	return bs, bs
 }
