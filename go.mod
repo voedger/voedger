@@ -3,6 +3,7 @@ module github.com/untillpro/voedger
 go 1.20
 
 require (
+	github.com/aptible/supercronic v0.2.2
 	github.com/emersion/go-smtp v0.15.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.3.0
