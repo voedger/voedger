@@ -14,6 +14,7 @@ import (
 
 	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/untillpro/voedger/pkg/state"
+	coreutils "github.com/untillpro/voedger/pkg/utils"
 )
 
 var errTestIOError = errors.New("test i/o error")
@@ -59,25 +60,25 @@ func (s *mockIo) KeyBuilder(storage, entity istructs.QName) (builder istructs.IS
 
 func mockedValue(name string, value interface{}) istructs.IStateValue {
 	mv := mockValue{
-		values: make(map[string]interface{}),
+		TestObject: coreutils.TestObject{Data: map[string]interface{}{}},
 	}
-	mv.values[name] = value
+	mv.Data[name] = value
 	return &mv
 }
 
 func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, ok bool, err error) {
 	k := key.(*mockKeyBuilder)
 	mv := mockValue{
-		values: make(map[string]interface{}),
+		TestObject: coreutils.TestObject{Data: map[string]interface{}{}},
 	}
 	if k.storage == storageIoError {
 		return nil, false, errTestIOError
 	}
 	if k.storage == storageEvent {
 		if projectorMode {
-			mv.values["offs"] = int32(12345)
-			mv.values["qname"] = "air.UpdateSubscription"
-			mv.values["arg"] = newJsonValue(`
+			mv.Data["offs"] = int32(12345)
+			mv.Data["qname"] = "air.UpdateSubscription"
+			mv.Data["arg"] = newJsonValue(`
 				{
 					"subscription": {
 						"status": "active"
@@ -90,14 +91,14 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 			return &mv, true, nil
 
 		}
-		mv.values["qname"] = "sys.InvitationAccepted"
-		mv.values["arg"] = mockedValue("UserEmail", "email@user.com")
-		mv.values["offs"] = int32(12345)
+		mv.Data["qname"] = "sys.InvitationAccepted"
+		mv.Data["arg"] = mockedValue("UserEmail", "email@user.com")
+		mv.Data["offs"] = int32(12345)
 		return &mv, true, nil
 	}
 	if k.storage == storageTest {
-		mv.values["500c"] = "01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-		mv.values["bytes"] = make([]byte, WasmPreallocatedBufferSize*2)
+		mv.Data["500c"] = "01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
+		mv.Data["bytes"] = make([]byte, WasmPreallocatedBufferSize*2)
 		return &mv, true, nil
 	}
 	if k.storage == storageTest3 {
@@ -109,36 +110,36 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 	}
 	if k.storage == storageTest2 {
 		const vvv = "012345678901234567890"
-		mv.values["а10"] = vvv
-		mv.values["а11"] = vvv
-		mv.values["а12"] = vvv
-		mv.values["а13"] = vvv
-		mv.values["а14"] = vvv
-		mv.values["а15"] = vvv
-		mv.values["а16"] = vvv
-		mv.values["а17"] = vvv
-		mv.values["а18"] = vvv
-		mv.values["а19"] = vvv
-		mv.values["а20"] = vvv
-		mv.values["а21"] = vvv
-		mv.values["а22"] = vvv
-		mv.values["а23"] = vvv
-		mv.values["а24"] = vvv
-		mv.values["а25"] = vvv
-		mv.values["а26"] = vvv
-		mv.values["а27"] = vvv
-		mv.values["а28"] = vvv
-		mv.values["а29"] = vvv
-		mv.values["а30"] = vvv
-		mv.values["а31"] = vvv
-		mv.values["а32"] = vvv
-		mv.values["а33"] = vvv
-		mv.values["а34"] = vvv
-		mv.values["а35"] = vvv
-		mv.values["а36"] = vvv
-		mv.values["а37"] = vvv
-		mv.values["а38"] = vvv
-		mv.values["а39"] = vvv
+		mv.Data["а10"] = vvv
+		mv.Data["а11"] = vvv
+		mv.Data["а12"] = vvv
+		mv.Data["а13"] = vvv
+		mv.Data["а14"] = vvv
+		mv.Data["а15"] = vvv
+		mv.Data["а16"] = vvv
+		mv.Data["а17"] = vvv
+		mv.Data["а18"] = vvv
+		mv.Data["а19"] = vvv
+		mv.Data["а20"] = vvv
+		mv.Data["а21"] = vvv
+		mv.Data["а22"] = vvv
+		mv.Data["а23"] = vvv
+		mv.Data["а24"] = vvv
+		mv.Data["а25"] = vvv
+		mv.Data["а26"] = vvv
+		mv.Data["а27"] = vvv
+		mv.Data["а28"] = vvv
+		mv.Data["а29"] = vvv
+		mv.Data["а30"] = vvv
+		mv.Data["а31"] = vvv
+		mv.Data["а32"] = vvv
+		mv.Data["а33"] = vvv
+		mv.Data["а34"] = vvv
+		mv.Data["а35"] = vvv
+		mv.Data["а36"] = vvv
+		mv.Data["а37"] = vvv
+		mv.Data["а38"] = vvv
+		mv.Data["а39"] = vvv
 		return &mv, true, nil
 	}
 	if k.storage == storageSendmail {
@@ -192,29 +193,27 @@ func (s *mockIo) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCall
 	}
 	if k.storage == storageTest {
 		for i := 1; i <= 3; i++ {
-			mk := mockKey{
-				values: make(map[string]interface{}),
-			}
-			mk.values["i32"] = int32(i)
-			mk.values["i64"] = 10 + int64(i)
-			mk.values["f32"] = float32(i) + 0.1
-			mk.values["f64"] = float64(i) + 0.01
-			mk.values["str"] = fmt.Sprintf("key%d", i)
-			mk.values["bytes"] = []byte{byte(i), 2, 3}
-			mk.values["qname"] = istructs.NewQName("keypkg", fmt.Sprintf("e%d", i))
-			mk.values["bool"] = true
+			mk := coreutils.TestObject{Data: map[string]interface{}{}}
+			mk.Data["i32"] = int32(i)
+			mk.Data["i64"] = 10 + int64(i)
+			mk.Data["f32"] = float32(i) + 0.1
+			mk.Data["f64"] = float64(i) + 0.01
+			mk.Data["str"] = fmt.Sprintf("key%d", i)
+			mk.Data["bytes"] = []byte{byte(i), 2, 3}
+			mk.Data["qname"] = istructs.NewQName("keypkg", fmt.Sprintf("e%d", i))
+			mk.Data["bool"] = true
 
 			mv := mockValue{
-				values: make(map[string]interface{}),
+				TestObject: coreutils.TestObject{Data: map[string]interface{}{}},
 			}
-			mv.values["i32"] = 100 + int32(i)
-			mv.values["i64"] = 1000 + int64(i)
-			mv.values["f32"] = float32(i) + 0.001
-			mv.values["f64"] = float64(i) + 0.0001
-			mv.values["str"] = fmt.Sprintf("value%d", i)
-			mv.values["bytes"] = []byte{3, 2, 1}
-			mv.values["qname"] = istructs.NewQName("valuepkg", fmt.Sprintf("ee%d", i))
-			mv.values["bool"] = false
+			mv.Data["i32"] = 100 + int32(i)
+			mv.Data["i64"] = 1000 + int64(i)
+			mv.Data["f32"] = float32(i) + 0.001
+			mv.Data["f64"] = float64(i) + 0.0001
+			mv.Data["str"] = fmt.Sprintf("value%d", i)
+			mv.Data["bytes"] = []byte{3, 2, 1}
+			mv.Data["qname"] = istructs.NewQName("valuepkg", fmt.Sprintf("ee%d", i))
+			mv.Data["bool"] = false
 			if err := callback(&mk, &mv); err != nil {
 				return err
 			}
@@ -250,51 +249,22 @@ func (kb *mockKeyBuilder) PutNumber(name string, value float64) {}
 func (kb *mockKeyBuilder) PutChars(name string, value string) {}
 
 func newJsonValue(jsonString string) istructs.IStateValue {
-	v := mockValue{}
-	err := json.Unmarshal([]byte(jsonString), &v.values)
+	v := mockValue{TestObject: coreutils.TestObject{Data: map[string]interface{}{}}}
+	err := json.Unmarshal([]byte(jsonString), &v.Data)
 	if err != nil {
 		panic(err)
 	}
 	return &v
 }
 
-type mockKey struct {
-	istructs.IKey
-	values map[string]interface{}
-}
-
-func (k *mockKey) AsInt32(name string) int32          { return k.values[name].(int32) }
-func (k *mockKey) AsInt64(name string) int64          { return k.values[name].(int64) }
-func (k *mockKey) AsFloat32(name string) float32      { return k.values[name].(float32) }
-func (k *mockKey) AsFloat64(name string) float64      { return k.values[name].(float64) }
-func (k *mockKey) AsBytes(name string) []byte         { return k.values[name].([]byte) }
-func (k *mockKey) AsString(name string) string        { return k.values[name].(string) }
-func (k *mockKey) AsQName(name string) istructs.QName { return k.values[name].(istructs.QName) }
-func (k *mockKey) AsBool(name string) bool            { return k.values[name].(bool) }
-func (k *mockKey) AsRecordID(name string) istructs.RecordID {
-	return k.values[name].(istructs.RecordID)
-}
-func (k *mockKey) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {}
-func (k *mockKey) FieldNames(cb func(fieldName string))                                       {}
-
 type mockValue struct {
-	istructs.IStateValue
-	values map[string]interface{}
-	index  []interface{}
+	coreutils.TestObject
+	index []interface{}
 }
 
 func (v *mockValue) ToJSON(opts ...interface{}) (string, error)     { return "", nil }
 func (v *mockValue) AsRecord(name string) (record istructs.IRecord) { return nil }
 func (v *mockValue) AsEvent(name string) (event istructs.IDbEvent)  { return nil }
-
-func (v *mockValue) AsInt32(name string) int32          { return v.values[name].(int32) }
-func (v *mockValue) AsInt64(name string) int64          { return 0 }
-func (v *mockValue) AsFloat32(name string) float32      { return 0 }
-func (v *mockValue) AsFloat64(name string) float64      { return 0 }
-func (v *mockValue) AsBytes(name string) []byte         { return v.values[name].([]byte) }
-func (v *mockValue) AsString(name string) string        { return v.values[name].(string) }
-func (v *mockValue) AsQName(name string) istructs.QName { return istructs.NullQName }
-func (v *mockValue) AsBool(name string) bool            { return false }
 
 func (v *mockValue) GetAsInt32(index int) int32          { return v.index[index].(int32) }
 func (v *mockValue) GetAsInt64(index int) int64          { return 0 }
@@ -321,23 +291,21 @@ func (v *mockValue) GetAsValue(index int) istructs.IStateValue {
 	panic(fmt.Sprintf("unsupported value stored under index: %d", index))
 }
 func (v *mockValue) AsValue(name string) istructs.IStateValue {
-	iv, ok := v.values[name].(istructs.IStateValue)
+	iv, ok := v.Data[name].(istructs.IStateValue)
 	if ok {
 		return iv
 	}
-	mv, ok := v.values[name].(map[string]interface{})
+	mv, ok := v.Data[name].(map[string]interface{})
 	if ok {
 		return &mockValue{
-			values: mv,
+			TestObject: coreutils.TestObject{Data: mv},
 		}
 	}
 	panic("unsupported value stored under key: " + name)
 }
 func (v *mockValue) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {}
 func (v *mockValue) FieldNames(cb func(fieldName string)) {
-	for i := range v.values {
-		cb(i)
-	}
+	v.TestObject.FieldNames(cb)
 }
 
 type intent struct {
@@ -369,7 +337,7 @@ func (s *mockIo) UpdateValue(key istructs.IStateKeyBuilder, existingValue istruc
 		items: make(map[string]interface{}),
 	}
 	mv := existingValue.(*mockValue)
-	for k, v := range mv.values {
+	for k, v := range mv.Data {
 		vb.items[k] = v
 	}
 	s.intents = append(s.intents, intent{
