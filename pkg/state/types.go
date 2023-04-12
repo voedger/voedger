@@ -51,26 +51,6 @@ type GetBatchItem struct {
 	value istructs.IStateValue
 }
 
-type rowWriter struct {
-	data map[string]interface{}
-}
-
-func newRowWriter() rowWriter {
-	return rowWriter{data: make(map[string]interface{})}
-}
-
-func (w *rowWriter) PutInt32(name string, value int32)                { w.data[name] = value }
-func (w *rowWriter) PutInt64(name string, value int64)                { w.data[name] = value }
-func (w *rowWriter) PutFloat32(name string, value float32)            { w.data[name] = value }
-func (w *rowWriter) PutFloat64(name string, value float64)            { w.data[name] = value }
-func (w *rowWriter) PutBytes(name string, value []byte)               { w.data[name] = value }
-func (w *rowWriter) PutString(name string, value string)              { w.data[name] = value }
-func (w *rowWriter) PutQName(name string, value istructs.QName)       { w.data[name] = value }
-func (w *rowWriter) PutBool(name string, value bool)                  { w.data[name] = value }
-func (w *rowWriter) PutRecordID(name string, value istructs.RecordID) { w.data[name] = value }
-func (w *rowWriter) PutNumber(string, float64)                        { panic(ErrNotSupported) }
-func (w *rowWriter) PutChars(string, string)                          { panic(ErrNotSupported) }
-
 type keyBuilder struct {
 	data    map[string]interface{}
 	storage istructs.QName

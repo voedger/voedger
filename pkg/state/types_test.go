@@ -7,8 +7,8 @@ package state
 import (
 	"testing"
 
-	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/stretchr/testify/require"
+	"github.com/untillpro/voedger/pkg/istructs"
 )
 
 func TestBundle(t *testing.T) {
@@ -76,33 +76,7 @@ func TestBundle(t *testing.T) {
 		require.Equal(5, b.size(), "remain bundle size")
 	})
 }
-func TestRowWriter(t *testing.T) {
-	require := require.New(t)
 
-	rw := newRowWriter()
-
-	rw.PutInt32("Int32", int32(1))
-	rw.PutInt64("Int64", int64(2))
-	rw.PutFloat32("Float32", float32(3.1))
-	rw.PutFloat64("Float64", 4.2)
-	rw.PutBytes("Bytes", []byte{5})
-	rw.PutString("String", "string")
-	rw.PutQName("QName", testRecordQName1)
-	rw.PutBool("Bool", true)
-	rw.PutRecordID("RecordID", istructs.RecordID(6))
-
-	require.Equal(int32(1), rw.data["Int32"])
-	require.Equal(int64(2), rw.data["Int64"])
-	require.Equal(float32(3.1), rw.data["Float32"])
-	require.Equal(4.2, rw.data["Float64"])
-	require.Equal([]byte{5}, rw.data["Bytes"])
-	require.Equal("string", rw.data["String"])
-	require.Equal(testRecordQName1, rw.data["QName"])
-	require.Equal(true, rw.data["Bool"])
-	require.Equal(istructs.RecordID(6), rw.data["RecordID"])
-	require.PanicsWithValue(ErrNotSupported, func() { rw.PutNumber("", 0.0) })
-	require.PanicsWithValue(ErrNotSupported, func() { rw.PutChars("", "") })
-}
 func TestKeyBuilder(t *testing.T) {
 	require := require.New(t)
 

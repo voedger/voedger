@@ -16,6 +16,7 @@ import (
 	"github.com/untillpro/voedger/pkg/istructsmem"
 	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
 	"github.com/untillpro/voedger/pkg/itokensjwt"
+	coreutils "github.com/untillpro/voedger/pkg/utils"
 )
 
 const (
@@ -1008,7 +1009,7 @@ func (r *implIRecords) Get(wsid istructs.WSID, _ bool, id istructs.RecordID) (re
 		for qName, qNameRecs := range wsData {
 			for recID, recData := range qNameRecs {
 				if recID == id {
-					return &implIRecord{implIRowReader: &implIRowReader{data: recData}, qName: qName}, nil
+					return &implIRecord{TestObject: coreutils.TestObject{Data: recData}, qName: qName}, nil
 				}
 			}
 		}
@@ -1025,7 +1026,7 @@ func (r *implIRecords) GetSingleton(wsid istructs.WSID, qName istructs.QName) (r
 				panic(">1 records for a signleton")
 			}
 			for _, data := range qNameRecs {
-				return &implIRecord{qName: qName, implIRowReader: &implIRowReader{data: data}}, nil
+				return &implIRecord{qName: qName, TestObject: coreutils.TestObject{Data: data}}, nil
 			}
 		}
 	}
@@ -1036,7 +1037,7 @@ func (r *implIRecords) Read(workspace istructs.WSID, highConsistency bool, id is
 }
 
 type implIRecord struct {
-	*implIRowReader
+	coreutils.TestObject
 	qName istructs.QName
 }
 
@@ -1047,90 +1048,14 @@ func (r *implIRecord) Container() string         { panic("") }
 func (r *implIRecord) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {
 	panic("")
 }
-func (r *implIRecord) FieldNames(cb func(fieldName string)) { r.implIRowReader.FieldNames(cb) }
-
-type implIRowReader struct {
-	data map[string]interface{}
-}
-
-func (rr *implIRowReader) AsInt32(name string) int32 {
-	val, ok := rr.data[name]
-	if ok {
-		return val.(int32)
-	}
-	return 0
-}
-func (rr *implIRowReader) AsInt64(name string) int64 {
-	val, ok := rr.data[name]
-	if ok {
-		return val.(int64)
-	}
-	return 0
-}
-func (rr *implIRowReader) AsFloat32(name string) float32 {
-	val, ok := rr.data[name]
-	if ok {
-		return val.(float32)
-	}
-	return 0
-}
-func (rr *implIRowReader) AsFloat64(name string) float64 {
-	val, ok := rr.data[name]
-	if ok {
-		return val.(float64)
-	}
-	return 0
-}
-func (rr *implIRowReader) AsBytes(name string) []byte {
-	val, ok := rr.data[name]
-	if ok {
-		return val.([]byte)
-	}
-	return nil
-}
-func (rr *implIRowReader) AsString(name string) string {
-	val, ok := rr.data[name]
-	if ok {
-		return val.(string)
-	}
-	return ""
-}
-func (rr *implIRowReader) AsQName(name string) istructs.QName {
-	val, ok := rr.data[name]
-	if ok {
-		return val.(istructs.QName)
-	}
-	return istructs.NullQName
-}
-func (rr *implIRowReader) AsBool(name string) bool {
-	val, ok := rr.data[name]
-	if ok {
-		return val.(bool)
-	}
-	return false
-}
-func (rr *implIRowReader) AsRecordID(name string) istructs.RecordID {
-	val, ok := rr.data[name]
-	if ok {
-		return val.(istructs.RecordID)
-	}
-	return istructs.NullRecordID
-}
-func (rr *implIRowReader) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {
-	panic("")
-}
-func (rr *implIRowReader) FieldNames(cb func(fieldName string)) {
-	for fieldName := range rr.data {
-		cb(fieldName)
-	}
-}
+func (r *implIRecord) FieldNames(cb func(fieldName string)) { r.TestObject.FieldNames(cb) }
 
 type implIViewRecords struct {
 	records *implIRecords
 }
 
 func (vr *implIViewRecords) KeyBuilder(view istructs.QName) istructs.IKeyBuilder {
-	return &implIKeyBuilder{qName: view, implIRowWriter: &implIRowWriter{data: map[string]any{}}}
+	return &implIKeyBuilder{qName: view, TestObject: coreutils.TestObject{Data: map[string]interface{}{}}}
 }
 func (vr *implIViewRecords) NewValueBuilder(view istructs.QName) istructs.IValueBuilder { panic("") }
 func (vr *implIViewRecords) UpdateValueBuilder(view istructs.QName, existing istructs.IValue) istructs.IValueBuilder {
@@ -1152,16 +1077,16 @@ func (vr *implIViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.View
 			if qNameRecs, ok := wsData[kb.qName]; ok {
 				for _, qNameRec := range qNameRecs {
 					matchedFields := 0
-					for keyField, keyValue := range kb.data {
+					for keyField, keyValue := range kb.Data {
 						if recFieldValue, ok := qNameRec[keyField]; ok {
 							if recFieldValue == keyValue {
 								matchedFields++
 							}
 						}
 					}
-					if len(kb.data) == matchedFields {
+					if len(kb.Data) == matchedFields {
 						kv[biIdx].Ok = true
-						kv[biIdx].Value = &implIValue{implIRowReader: &implIRowReader{data: qNameRec}}
+						kv[biIdx].Value = &implIValue{TestObject: coreutils.TestObject{Data: qNameRec}}
 						break
 					}
 				}
@@ -1174,33 +1099,17 @@ func (vr *implIViewRecords) Read(ctx context.Context, workspace istructs.WSID, k
 	panic("")
 }
 
-type implIRowWriter struct {
-	data map[string]any
-}
-
-func (kb *implIRowWriter) PutInt32(name string, value int32)                { kb.data[name] = value }
-func (kb *implIRowWriter) PutInt64(name string, value int64)                { kb.data[name] = value }
-func (kb *implIRowWriter) PutFloat32(name string, value float32)            { kb.data[name] = value }
-func (kb *implIRowWriter) PutFloat64(name string, value float64)            { kb.data[name] = value }
-func (kb *implIRowWriter) PutBytes(name string, value []byte)               { kb.data[name] = value }
-func (kb *implIRowWriter) PutString(name, value string)                     { kb.data[name] = value }
-func (kb *implIRowWriter) PutQName(name string, value istructs.QName)       { kb.data[name] = value }
-func (kb *implIRowWriter) PutBool(name string, value bool)                  { kb.data[name] = value }
-func (kb *implIRowWriter) PutRecordID(name string, value istructs.RecordID) { kb.data[name] = value }
-func (kb *implIRowWriter) PutNumber(name string, value float64)             { kb.data[name] = value }
-func (kb *implIRowWriter) PutChars(name string, value string)               { kb.data[name] = value }
-
 type implIKeyBuilder struct {
-	*implIRowWriter
+	coreutils.TestObject
 	qName istructs.QName
 }
 
-func (kb *implIKeyBuilder) PartitionKey() istructs.IRowWriter      { return kb.implIRowWriter }
-func (kb *implIKeyBuilder) ClusteringColumns() istructs.IRowWriter { return kb.implIRowWriter }
+func (kb *implIKeyBuilder) PartitionKey() istructs.IRowWriter      { return &kb.TestObject }
+func (kb *implIKeyBuilder) ClusteringColumns() istructs.IRowWriter { return &kb.TestObject }
 func (kb *implIKeyBuilder) Equals(istructs.IKeyBuilder) bool       { panic("implement me") }
 
 type implIValue struct {
-	*implIRowReader
+	coreutils.TestObject
 }
 
 func (v *implIValue) AsRecord(name string) (record istructs.IRecord) { panic("") }

@@ -58,7 +58,6 @@ func NewSchemaFields(schema istructs.ISchema) SchemaFields {
 }
 
 type mapperOpts struct {
-	// filterByName     func(name string) bool
 	filter      func(name string, kind istructs.DataKindType) bool
 	nonNilsOnly bool
 }
