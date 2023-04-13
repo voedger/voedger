@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	iprocbus "github.com/heeus/core-iprocbus"
 	"github.com/untillpro/voedger/pkg/iauthnz"
+	"github.com/untillpro/voedger/pkg/iprocbus"
 	"github.com/untillpro/voedger/pkg/isecrets"
 	"github.com/untillpro/voedger/pkg/isecretsimpl"
 	"github.com/untillpro/voedger/pkg/istructs"

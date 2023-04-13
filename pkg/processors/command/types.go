@@ -8,8 +8,8 @@ import (
 	"context"
 	"time"
 
-	iprocbus "github.com/heeus/core-iprocbus"
 	"github.com/untillpro/voedger/pkg/iauthnz"
+	"github.com/untillpro/voedger/pkg/iprocbus"
 	"github.com/untillpro/voedger/pkg/isecrets"
 	"github.com/untillpro/voedger/pkg/istructs"
 	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"

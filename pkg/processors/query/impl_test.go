@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	iprocbus "github.com/heeus/core-iprocbus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/voedger/pkg/iauthnzimpl"
+	"github.com/untillpro/voedger/pkg/iprocbus"
 	"github.com/untillpro/voedger/pkg/iratesce"
 	"github.com/untillpro/voedger/pkg/istorage"
 	"github.com/untillpro/voedger/pkg/istorageimpl"

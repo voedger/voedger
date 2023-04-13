@@ -9,8 +9,8 @@ package queryprocessor
 import (
 	"context"
 
-	iprocbus "github.com/heeus/core-iprocbus"
 	"github.com/untillpro/voedger/pkg/iauthnz"
+	"github.com/untillpro/voedger/pkg/iprocbus"
 	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/untillpro/voedger/pkg/istructsmem"
 	imetrics "github.com/untillpro/voedger/pkg/metrics"
