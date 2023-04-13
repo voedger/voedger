@@ -3,6 +3,7 @@ module github.com/untillpro/voedger
 go 1.20
 
 require (
+	github.com/VictoriaMetrics/fastcache v1.12.1
 	github.com/aptible/supercronic v0.2.2
 	github.com/emersion/go-smtp v0.15.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
@@ -22,14 +23,16 @@ require (
 )
 
 require (
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/emersion/go-sasl v0.0.0-20220912192320-0145f2c60ead // indirect
-	github.com/google/flatbuffers v23.3.3+incompatible // indirect
-	github.com/heeus/core-logger v0.0.0-20230208104058-9f68e6eb1ca8 // indirect
+	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
+	github.com/google/flatbuffers v1.12.0 // indirect
+	github.com/heeus/core-logger v0.0.0-20211015110533-1499b5b04842 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c // indirect
-	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
