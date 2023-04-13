@@ -15,12 +15,12 @@ import (
 	"github.com/untillpro/goutils/logger"
 )
 
-// TODO: add idleCh param for signaling about finishing all scheduled items
 func scheduler[Key comparable, SP any, State any](in chan OriginalMessage[Key, SP], dedupInCh chan statefulMessage[Key, SP, State], repeatCh chan scheduledMessage[Key, SP, State], nowTimeFunc nowTimeFunction) {
 	defer close(dedupInCh)
 
 	ScheduledItems := list.New()
-	KeySerialNumbers := make(map[Key]uint64)
+	var serialNumber uint64
+
 	timer := time.NewTimer(0)
 	<-timer.C
 
@@ -34,15 +34,13 @@ func scheduler[Key comparable, SP any, State any](in chan OriginalMessage[Key, S
 				return
 			}
 
-			// versioning every came Key
-			KeySerialNumbers[m.Key] += 1
-
 			logger.Verbose(fmt.Sprintf("<-in. %v", m))
 
+			serialNumber++
 			item := scheduledMessage[Key, SP, State]{
 				Key:          m.Key,
 				SP:           m.SP,
-				serialNumber: KeySerialNumbers[m.Key],
+				serialNumber: serialNumber,
 				StartTime:    nextStartTimeFunc(m.CronSchedule, m.StartTimeTolerance, now),
 			}
 
@@ -53,7 +51,6 @@ func scheduler[Key comparable, SP any, State any](in chan OriginalMessage[Key, S
 
 			element := ScheduledItems.Front()
 			if element == nil {
-
 				break
 			}
 

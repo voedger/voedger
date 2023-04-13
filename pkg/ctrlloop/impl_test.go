@@ -149,13 +149,13 @@ func Test_Scheduler(t *testing.T) {
 				{
 					Key:          `D`,
 					SP:           1,
-					serialNumber: 1,
+					serialNumber: 4,
 					StartTime:    time.Now(),
 				},
 				{
 					Key:          `E`,
 					SP:           1,
-					serialNumber: 1,
+					serialNumber: 5,
 					StartTime:    time.Now(),
 				},
 			},
@@ -168,35 +168,29 @@ func Test_Scheduler(t *testing.T) {
 			dedupInCh := make(chan statefulMessage[string, int, struct{}])
 			repeatCh := make(chan scheduledMessage[string, int, struct{}], 3)
 
-			schedulerWG := sync.WaitGroup{}
-			schedulerWG.Add(1)
-			go func() {
-				defer schedulerWG.Done()
+			go scheduler(inCh, dedupInCh, repeatCh, time.Now)
 
-				scheduler(inCh, dedupInCh, repeatCh, time.Now)
-			}()
+			go testMessagesWriter(inCh, test.originalMessages)
 
-			messageReaderWG := sync.WaitGroup{}
-			messageReaderWG.Add(len(test.messagesFromRepeater) + len(test.originalMessages))
-
-			// mock dedupIn
-			dedupInMessagesCounter := 0
-			go testMessagesReader(dedupInCh, &messageReaderWG, &dedupInMessagesCounter)
-
-			// mock repeater
 			go testMessagesWriter(repeatCh, test.messagesFromRepeater)
 
-			testMessagesWriter(inCh, test.originalMessages)
-
-			messageReaderWG.Wait()
+			maxSerialNumber := uint64(0)
+			messageCounter := 0
+			for m := range dedupInCh {
+				if m.serialNumber > maxSerialNumber {
+					maxSerialNumber = m.serialNumber
+				}
+				messageCounter++
+				if messageCounter == len(test.originalMessages)+len(test.messagesFromRepeater) {
+					break
+				}
+			}
 
 			// closing channels
 			close(inCh)
 			close(repeatCh)
 
-			schedulerWG.Wait()
-			// asserts
-			require.Equal(t, len(test.messagesFromRepeater)+len(test.originalMessages), dedupInMessagesCounter)
+			require.Equal(t, uint64(len(test.originalMessages)+len(test.messagesFromRepeater)), maxSerialNumber)
 		})
 	}
 }
@@ -248,36 +242,23 @@ func Test_Dedupin(t *testing.T) {
 			callerCh := make(chan statefulMessage[string, int, struct{}])
 			repeatCh := make(chan scheduledMessage[string, int, struct{}], 3)
 
-			dedupInWG := sync.WaitGroup{}
-			dedupInWG.Add(1)
-			go func() {
-				defer dedupInWG.Done()
+			go dedupIn(dedupInCh, callerCh, repeatCh, &InProcess, time.Now)
 
-				dedupIn(dedupInCh, callerCh, repeatCh, &InProcess, time.Now)
-			}()
+			go testMessagesWriter(dedupInCh, test.messages)
 
-			messageReaderWG := sync.WaitGroup{}
-			messageReaderWG.Add(len(test.messages))
-
-			// mock caller
-			callerMessagesCounter := 0
-			go testMessagesReader(callerCh, &messageReaderWG, &callerMessagesCounter)
-
-			// mock repeater
-			repeaterMessagesCounter := 0
-			go testMessagesReader(repeatCh, &messageReaderWG, &repeaterMessagesCounter)
-
-			testMessagesWriter(dedupInCh, test.messages)
-
-			messageReaderWG.Wait()
+			messageCounter := 0
+			for messageCounter < len(test.messages) {
+				select {
+				case <-callerCh:
+					messageCounter++
+				case <-repeatCh:
+					messageCounter++
+				}
+			}
 
 			// closing channels
 			close(dedupInCh)
 			close(repeatCh)
-
-			dedupInWG.Wait()
-			// asserts
-			require.Equal(t, len(test.messages), callerMessagesCounter+repeaterMessagesCounter)
 		})
 	}
 }
@@ -339,43 +320,23 @@ func Test_Repeater(t *testing.T) {
 			repeatCh := make(chan scheduledMessage[string, int, struct{}], 3)
 			reporterCh := make(chan reportInfo[string, int])
 
-			repeaterWG := sync.WaitGroup{}
-			repeaterWG.Add(1)
-			go func() {
-				defer repeaterWG.Done()
+			go repeater(repeaterCh, repeatCh, reporterCh)
 
-				repeater(repeaterCh, repeatCh, reporterCh)
-			}()
+			go testMessagesWriter(repeaterCh, test.messages)
 
-			messageReaderWG := sync.WaitGroup{}
-			messageReaderWG.Add(len(test.messages))
-
-			// mock reporter
-			reporterMessagesCounter := 0
-			go testMessagesReader(reporterCh, &messageReaderWG, &reporterMessagesCounter)
-
-			// mock scheduler's repeatCh
-			repeatMessagesCounter := 0
-			go testMessagesReader(repeatCh, &messageReaderWG, &repeatMessagesCounter)
-
-			testMessagesWriter(repeaterCh, test.messages)
-
-			messageReaderWG.Wait()
+			messageCounter := 0
+			for messageCounter < len(test.messages) {
+				select {
+				case <-reporterCh:
+					messageCounter++
+				case <-repeatCh:
+					messageCounter++
+				}
+			}
 
 			// closing channels
 			close(repeaterCh)
-
-			repeaterWG.Wait()
-			// asserts
-			require.Equal(t, len(test.messages), repeatMessagesCounter+reporterMessagesCounter)
 		})
-	}
-}
-
-func testMessagesReader[T any](ch <-chan T, wg *sync.WaitGroup, counter *int) {
-	for range ch {
-		*counter = *counter + 1
-		wg.Done()
 	}
 }
 
