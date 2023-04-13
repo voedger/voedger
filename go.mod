@@ -9,7 +9,6 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.3.0
 	github.com/google/wire v0.5.0
-	github.com/heeus/core-iprocbus v0.0.0-20221105102555-790258e6ff69
 	github.com/heeus/wazero v0.0.0-20230312183541-2ba001e0d7c0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
