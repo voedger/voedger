@@ -16,13 +16,13 @@ import (
 
 	in10n "github.com/heeus/core-in10n"
 	pipeline "github.com/heeus/core-pipeline"
-	projectors "github.com/heeus/core-projectors"
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
 	"github.com/untillpro/voedger/pkg/iauthnz"
 	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/untillpro/voedger/pkg/istructsmem"
 	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
+	"github.com/untillpro/voedger/pkg/projectors"
 	coreutils "github.com/untillpro/voedger/pkg/utils"
 	"golang.org/x/exp/maps"
 )

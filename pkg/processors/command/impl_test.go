@@ -18,8 +18,8 @@ import (
 	in10n "github.com/heeus/core-in10n"
 	in10nmem "github.com/heeus/core-in10nmem"
 	pipeline "github.com/heeus/core-pipeline"
-	projectors "github.com/heeus/core-projectors"
 	"github.com/stretchr/testify/require"
+	"github.com/untillpro/voedger/pkg/projectors"
 
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/ibusmem"
