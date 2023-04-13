@@ -11,7 +11,6 @@ import (
 	"errors"
 	"testing"
 
-	pipeline "github.com/heeus/core-pipeline"
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/voedger/pkg/iratesce"
 	"github.com/untillpro/voedger/pkg/istorage"
@@ -20,6 +19,7 @@ import (
 	"github.com/untillpro/voedger/pkg/istructsmem"
 	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
 	"github.com/untillpro/voedger/pkg/itokensjwt"
+	"github.com/untillpro/voedger/pkg/pipeline"
 	"github.com/untillpro/voedger/pkg/state"
 )
 

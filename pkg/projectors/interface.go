@@ -11,9 +11,9 @@ import (
 	"time"
 
 	in10n "github.com/heeus/core-in10n"
-	pipeline "github.com/heeus/core-pipeline"
 	"github.com/untillpro/voedger/pkg/isecrets"
 	istructs "github.com/untillpro/voedger/pkg/istructs"
+	"github.com/untillpro/voedger/pkg/pipeline"
 	"github.com/untillpro/voedger/pkg/state"
 )
 

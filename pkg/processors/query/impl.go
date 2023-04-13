@@ -18,7 +18,6 @@ import (
 	"time"
 
 	iprocbus "github.com/heeus/core-iprocbus"
-	pipeline "github.com/heeus/core-pipeline"
 	"github.com/untillpro/voedger/pkg/iauthnz"
 	"github.com/untillpro/voedger/pkg/isecrets"
 	"github.com/untillpro/voedger/pkg/isecretsimpl"
@@ -26,6 +25,7 @@ import (
 	"github.com/untillpro/voedger/pkg/istructsmem"
 	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
 	imetrics "github.com/untillpro/voedger/pkg/metrics"
+	"github.com/untillpro/voedger/pkg/pipeline"
 	"github.com/untillpro/voedger/pkg/state"
 	coreutils "github.com/untillpro/voedger/pkg/utils"
 )

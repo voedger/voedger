@@ -10,9 +10,9 @@ import (
 	"context"
 	"fmt"
 
-	pipeline "github.com/heeus/core-pipeline"
 	istructs "github.com/untillpro/voedger/pkg/istructs"
 	istructsmem "github.com/untillpro/voedger/pkg/istructsmem"
+	"github.com/untillpro/voedger/pkg/pipeline"
 	"github.com/untillpro/voedger/pkg/state"
 )
 

@@ -15,10 +15,10 @@ import (
 
 	in10n "github.com/heeus/core-in10n"
 	in10nmem "github.com/heeus/core-in10nmem"
-	pipeline "github.com/heeus/core-pipeline"
+	"github.com/stretchr/testify/require"
 	istructs "github.com/untillpro/voedger/pkg/istructs"
 	istructsmem "github.com/untillpro/voedger/pkg/istructsmem"
-	"github.com/stretchr/testify/require"
+	"github.com/untillpro/voedger/pkg/pipeline"
 )
 
 // Design: Projection Actualizers

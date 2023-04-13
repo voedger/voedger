@@ -11,8 +11,6 @@ require (
 	github.com/heeus/core-in10n v0.0.0-20230410112743-a8191b250834
 	github.com/heeus/core-in10nmem v0.0.0-20230410113003-b5760300c90f
 	github.com/heeus/core-iprocbus v0.0.0-20221105102555-790258e6ff69
-	github.com/heeus/core-pipeline v0.0.0-20230410131015-224a7a8284b6
-	github.com/heeus/core-projectors v0.0.0-20230410113204-6439cad2caa9
 	github.com/heeus/wazero v0.0.0-20230312183541-2ba001e0d7c0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2

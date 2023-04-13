@@ -13,7 +13,6 @@ import (
 	"time"
 
 	iprocbus "github.com/heeus/core-iprocbus"
-	pipeline "github.com/heeus/core-pipeline"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/voedger/pkg/iauthnzimpl"
@@ -25,6 +24,7 @@ import (
 	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
 	"github.com/untillpro/voedger/pkg/itokensjwt"
 	imetrics "github.com/untillpro/voedger/pkg/metrics"
+	"github.com/untillpro/voedger/pkg/pipeline"
 	"github.com/untillpro/voedger/pkg/state"
 	coreutils "github.com/untillpro/voedger/pkg/utils"
 )

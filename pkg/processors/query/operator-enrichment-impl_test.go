@@ -8,10 +8,10 @@ import (
 	"context"
 	"testing"
 
-	pipeline "github.com/heeus/core-pipeline"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/untillpro/voedger/pkg/pipeline"
 	"github.com/untillpro/voedger/pkg/state"
 	coreutils "github.com/untillpro/voedger/pkg/utils"
 )

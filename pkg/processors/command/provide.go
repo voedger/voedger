@@ -9,7 +9,6 @@ import (
 	"time"
 
 	in10n "github.com/heeus/core-in10n"
-	pipeline "github.com/heeus/core-pipeline"
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
 	"github.com/untillpro/voedger/pkg/iauthnz"
@@ -17,6 +16,7 @@ import (
 	"github.com/untillpro/voedger/pkg/istructs"
 	istructsmem "github.com/untillpro/voedger/pkg/istructsmem"
 	imetrics "github.com/untillpro/voedger/pkg/metrics"
+	"github.com/untillpro/voedger/pkg/pipeline"
 	coreutils "github.com/untillpro/voedger/pkg/utils"
 )
 
