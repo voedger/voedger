@@ -8,10 +8,10 @@ import (
 	"context"
 	"time"
 
-	in10n "github.com/heeus/core-in10n"
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
 	"github.com/untillpro/voedger/pkg/iauthnz"
+	"github.com/untillpro/voedger/pkg/in10n"
 	"github.com/untillpro/voedger/pkg/isecrets"
 	"github.com/untillpro/voedger/pkg/istructs"
 	istructsmem "github.com/untillpro/voedger/pkg/istructsmem"

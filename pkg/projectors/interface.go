@@ -10,7 +10,7 @@ import (
 	"context"
 	"time"
 
-	in10n "github.com/heeus/core-in10n"
+	"github.com/untillpro/voedger/pkg/in10n"
 	"github.com/untillpro/voedger/pkg/isecrets"
 	istructs "github.com/untillpro/voedger/pkg/istructs"
 	"github.com/untillpro/voedger/pkg/pipeline"
