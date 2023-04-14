@@ -16,7 +16,6 @@ import (
 )
 
 func Test_BasicUsage(t *testing.T) {
-	// TODO: add serial number related tests
 	logger.SetLogLevel(logger.LogLevelVerbose)
 
 	mockGetNextTimeFunc := func(cronSchedule string, startTimeTolerance time.Duration, nowTime time.Time) time.Time {
@@ -119,12 +118,11 @@ func Test_Scheduler(t *testing.T) {
 	nextStartTimeFunc = mockGetNextTimeFunc
 
 	tests := []struct {
-		name                 string
-		originalMessages     []OriginalMessage[string, int]
-		messagesFromRepeater []scheduledMessage[string, int, struct{}]
+		name             string
+		originalMessages []OriginalMessage[string, int]
 	}{
 		{
-			name: `in<-A,B,C;repeat<-D,E`,
+			name: `in<-A,B,C,D,E`,
 			originalMessages: []OriginalMessage[string, int]{
 				{
 					Key:                `A`,
@@ -144,19 +142,17 @@ func Test_Scheduler(t *testing.T) {
 					CronSchedule:       `*/1 * * * *`,
 					StartTimeTolerance: 5 * time.Second,
 				},
-			},
-			messagesFromRepeater: []scheduledMessage[string, int, struct{}]{
 				{
-					Key:          `D`,
-					SP:           1,
-					serialNumber: 4,
-					StartTime:    time.Now(),
+					Key:                `D`,
+					SP:                 3,
+					CronSchedule:       `*/1 * * * *`,
+					StartTimeTolerance: 5 * time.Second,
 				},
 				{
-					Key:          `E`,
-					SP:           1,
-					serialNumber: 5,
-					StartTime:    time.Now(),
+					Key:                `E`,
+					SP:                 4,
+					CronSchedule:       `*/1 * * * *`,
+					StartTimeTolerance: time.Second,
 				},
 			},
 		},
@@ -172,16 +168,9 @@ func Test_Scheduler(t *testing.T) {
 
 			go testMessagesWriter(inCh, test.originalMessages)
 
-			go testMessagesWriter(repeatCh, test.messagesFromRepeater)
-
-			maxSerialNumber := uint64(0)
-			messageCounter := 0
+			maxSerialNumber := uint64(len(test.originalMessages))
 			for m := range dedupInCh {
-				if m.serialNumber > maxSerialNumber {
-					maxSerialNumber = m.serialNumber
-				}
-				messageCounter++
-				if messageCounter == len(test.originalMessages)+len(test.messagesFromRepeater) {
+				if m.serialNumber == maxSerialNumber {
 					break
 				}
 			}
@@ -190,7 +179,9 @@ func Test_Scheduler(t *testing.T) {
 			close(inCh)
 			close(repeatCh)
 
-			require.Equal(t, uint64(len(test.originalMessages)+len(test.messagesFromRepeater)), maxSerialNumber)
+			if _, ok := <-dedupInCh; ok {
+				t.Fatal(`dedupIn channel must be closed`)
+			}
 		})
 	}
 }
@@ -246,19 +237,35 @@ func Test_Dedupin(t *testing.T) {
 
 			go testMessagesWriter(dedupInCh, test.messages)
 
+			callerMessageCounter := 0
+			repeatMessageCounter := 0
 			messageCounter := 0
 			for messageCounter < len(test.messages) {
+				messageCounter++
 				select {
 				case <-callerCh:
-					messageCounter++
+					callerMessageCounter++
 				case <-repeatCh:
-					messageCounter++
+					repeatMessageCounter++
 				}
 			}
 
 			// closing channels
 			close(dedupInCh)
 			close(repeatCh)
+
+			if _, ok := <-callerCh; ok {
+				t.Fatal(`callerCh channel must be closed`)
+			}
+
+			inProcessKeyCounter := 0
+			InProcess.Range(func(_, _ any) bool {
+				inProcessKeyCounter++
+				return true
+			})
+
+			require.Equal(t, callerMessageCounter, inProcessKeyCounter)
+			require.Equal(t, repeatMessageCounter, 1)
 		})
 	}
 }
@@ -279,7 +286,7 @@ func Test_Repeater(t *testing.T) {
 		messages      []answer[string, int, int, struct{}]
 	}{
 		{
-			name:          `repeater<-A,B,B,C`,
+			name:          `repeater<-A,B,C,D`,
 			inProcessKeys: []string{``},
 			messages: []answer[string, int, int, struct{}]{
 				{
@@ -297,14 +304,14 @@ func Test_Repeater(t *testing.T) {
 					PV:           nil,
 				},
 				{
-					Key:          `B`,
+					Key:          `C`,
 					SP:           2,
 					serialNumber: 1,
 					StartTime:    nil,
 					PV:           &pv,
 				},
 				{
-					Key:          `C`,
+					Key:          `D`,
 					SP:           2,
 					serialNumber: 1,
 					StartTime:    nil,
@@ -324,18 +331,31 @@ func Test_Repeater(t *testing.T) {
 
 			go testMessagesWriter(repeaterCh, test.messages)
 
+			reporterMessageCounter := 0
+			repeatMessageCounter := 0
 			messageCounter := 0
 			for messageCounter < len(test.messages) {
+				messageCounter++
 				select {
 				case <-reporterCh:
-					messageCounter++
+					reporterMessageCounter++
 				case <-repeatCh:
-					messageCounter++
+					repeatMessageCounter++
 				}
 			}
 
 			// closing channels
 			close(repeaterCh)
+
+			if _, ok := <-repeatCh; ok {
+				t.Fatal(`repeatCh channel must be closed`)
+			}
+			if _, ok := <-reporterCh; ok {
+				t.Fatal(`reporterCh channel must be closed`)
+			}
+
+			require.Equal(t, reporterMessageCounter, 2)
+			require.Equal(t, repeatMessageCounter, 2)
 		})
 	}
 }
