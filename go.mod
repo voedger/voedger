@@ -11,7 +11,6 @@ require (
 	github.com/google/wire v0.5.0
 	github.com/heeus/wazero v0.0.0-20230312183541-2ba001e0d7c0
 	github.com/spf13/cobra v1.6.1
-	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
 	github.com/untillpro/airs-ibus v0.0.0-20221105121917-d13e0967180d
 	github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195
@@ -31,6 +30,7 @@ require (
 	github.com/heeus/core-logger v0.0.0-20211015110533-1499b5b04842 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c // indirect
 	golang.org/x/sys v0.5.0 // indirect
