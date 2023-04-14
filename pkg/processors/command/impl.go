@@ -186,7 +186,7 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, work interface{}) (err error)
 
 func getWSDesc(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if !isDummyWS(cmd.cmdMes.WSID()) {
+	if !IsDummyWS(cmd.cmdMes.WSID()) {
 		cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), QNameCDocWorkspaceDescriptor)
 	}
 	return
@@ -196,7 +196,7 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	wsDesc := work.(*cmdWorkpiece).wsDesc
 	funcQName := cmd.cmdMes.Resource().(istructs.ICommandFunction).QName()
-	if isDummyWS(cmd.cmdMes.WSID()) {
+	if IsDummyWS(cmd.cmdMes.WSID()) {
 		return nil
 	}
 	if funcQName == QNameCommandCreateWorkspace || funcQName == QNameCommandCreateWorkspaceID || funcQName == QNameCommandInit {
@@ -480,6 +480,19 @@ func checkWorkspaceDescriptorUpdating(_ context.Context, work interface{}) (err 
 			continue
 		}
 		return errWSNotInited
+	}
+	return nil
+}
+
+func checkArgsRefIntegrity(_ context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	if cmd.argsObject != nil {
+		if err = istructsmem.CheckRefIntegrity(cmd.argsObject, cmd.appStructs, cmd.cmdMes.WSID()); err != nil {
+			return err
+		}
+	}
+	if cmd.unloggedArgsObject != nil {
+		return istructsmem.CheckRefIntegrity(cmd.unloggedArgsObject, cmd.appStructs, cmd.cmdMes.WSID())
 	}
 	return nil
 }
