@@ -10,11 +10,12 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/google/wire v0.5.0
 	github.com/heeus/wazero v0.0.0-20230312183541-2ba001e0d7c0
+	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
 	github.com/untillpro/airs-ibus v0.0.0-20221105121917-d13e0967180d
 	github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195
-	github.com/untillpro/goutils v0.0.0-20230403105144-8ee1090b2167
+	github.com/untillpro/goutils v0.0.0-20230413153406-ba6af4dbd062
 	github.com/untillpro/ibusmem v0.0.0-20221105120342-e51c7ee7020c
 	github.com/wneessen/go-mail v0.3.9
 	go.etcd.io/bbolt v1.3.7
@@ -28,6 +29,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/flatbuffers v1.12.0 // indirect
 	github.com/heeus/core-logger v0.0.0-20211015110533-1499b5b04842 // indirect
+	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c // indirect

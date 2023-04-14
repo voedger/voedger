@@ -3,7 +3,7 @@
 * @author Maxim Geraskin
  */
 
-package ce
+package main
 
 import (
 	"github.com/untillpro/voedger/pkg/ibus"
