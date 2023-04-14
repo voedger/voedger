@@ -4,7 +4,7 @@
 //go:build !wireinject
 // +build !wireinject
 
-package ce
+package main
 
 import (
 	"github.com/untillpro/voedger/pkg/apps"
