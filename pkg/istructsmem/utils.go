@@ -299,3 +299,27 @@ func NewIObjectBuilder(cfg *AppConfigType, qName istructs.QName) istructs.IObjec
 	obj := newObject(cfg, qName)
 	return &obj
 }
+
+func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
+	schemas := appStructs.Schemas()
+	schema := schemas.Schema(obj.AsQName(istructs.SystemField_QName))
+	schema.ForEachField(func(field istructs.IFieldDescr) {
+		if err != nil || field.DataKind() != istructs.DataKind_RecordID {
+			return
+		}
+		recID := obj.AsRecordID(field.Name())
+		if recID.IsRaw() || recID == istructs.NullRecordID {
+			return
+		}
+		var rec istructs.IRecord
+		rec, err = appStructs.Records().Get(wsid, true, recID)
+		if err != nil {
+			return
+		}
+		if rec.QName() == istructs.NullQName {
+			err = fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, recID,
+				obj.AsQName(istructs.SystemField_QName), field.Name())
+		}
+	})
+	return err
+}

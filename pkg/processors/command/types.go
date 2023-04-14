@@ -75,6 +75,7 @@ type cmdWorkpiece struct {
 	wsDesc              istructs.IRecord
 	checkWSDescUpdating bool
 	hostStateProvider   *hostStateProvider
+	refIntegrityToCheck map[string]istructs.RecordID
 }
 
 type parsedCUD struct {

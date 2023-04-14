@@ -14,7 +14,7 @@ import (
 var dummyWSLock = sync.RWMutex{}
 var dummyWSes = map[istructs.WSID]bool{}
 
-func isDummyWS(wsid istructs.WSID) (res bool) {
+func IsDummyWS(wsid istructs.WSID) (res bool) {
 	if !coreutils.IsTest() {
 		return false
 	}
