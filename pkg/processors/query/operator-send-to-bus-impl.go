@@ -8,7 +8,7 @@ import (
 	"context"
 	"time"
 
-	pipeline "github.com/heeus/core-pipeline"
+	"github.com/untillpro/voedger/pkg/pipeline"
 )
 
 type SendToBusOperator struct {

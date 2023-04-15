@@ -10,7 +10,7 @@ import (
 	"sort"
 	"time"
 
-	pipeline "github.com/heeus/core-pipeline"
+	"github.com/untillpro/voedger/pkg/pipeline"
 )
 
 type OrderOperator struct {

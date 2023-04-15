@@ -8,15 +8,15 @@ import (
 	"context"
 	"time"
 
-	in10n "github.com/heeus/core-in10n"
-	pipeline "github.com/heeus/core-pipeline"
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
 	"github.com/untillpro/voedger/pkg/iauthnz"
+	"github.com/untillpro/voedger/pkg/in10n"
 	"github.com/untillpro/voedger/pkg/isecrets"
 	"github.com/untillpro/voedger/pkg/istructs"
 	istructsmem "github.com/untillpro/voedger/pkg/istructsmem"
 	imetrics "github.com/untillpro/voedger/pkg/metrics"
+	"github.com/untillpro/voedger/pkg/pipeline"
 	coreutils "github.com/untillpro/voedger/pkg/utils"
 )
 
@@ -75,6 +75,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("getRawEventBuilderBuilders", cmdProc.getRawEventBuilder),
 				pipeline.WireFunc("getArgsObject", getArgsObject),
 				pipeline.WireFunc("getUnloggedArgsObject", getUnloggedArgsObject),
+				pipeline.WireFunc("checkArgsRefIntegrity", checkArgsRefIntegrity),
 				pipeline.WireFunc("parseCUDs", parseCUDs),
 				pipeline.WireSyncOperator("wrongArgsCatcher", &wrongArgsCatcher{}), // any error before -> wrap error into bad request http error
 				pipeline.WireFunc("checkWSDescUpdating", checkWorkspaceDescriptorUpdating),

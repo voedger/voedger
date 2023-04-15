@@ -8,9 +8,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/untillpro/voedger/pkg/istructs"
 )
 
 func TestPLogStorage_Read(t *testing.T) {
@@ -28,7 +28,7 @@ func TestPLogStorage_Read(t *testing.T) {
 		appStructs.On("Schemas").Return(&nilSchemas{})
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil)
 		kb, err := s.KeyBuilder(PLogStorage, istructs.NullQName)
 		require.Nil(err)
 		kb.PutInt64(Field_Offset, 1)
@@ -51,7 +51,7 @@ func TestPLogStorage_Read(t *testing.T) {
 		appStructs.On("Schemas").Return(&nilSchemas{})
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil)
 		k, _ := s.KeyBuilder(PLogStorage, istructs.NullQName)
 		k.PutInt64(Field_Offset, 1)
 		k.PutInt64(Field_Count, 1)
@@ -78,7 +78,7 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Schemas").Return(&nilSchemas{})
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
-		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, 0)
+		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, nil, 0)
 		kb, _ := s.KeyBuilder(PLogStorage, istructs.NullQName)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
@@ -104,7 +104,7 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Schemas").Return(&nilSchemas{})
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
-		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, 0)
+		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, nil, 0)
 		kb1, _ := s.KeyBuilder(PLogStorage, istructs.NullQName)
 		kb1.PutInt64(Field_Offset, 1)
 		kb1.PutInt64(Field_Count, 1)

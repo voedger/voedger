@@ -8,8 +8,8 @@ import (
 	"context"
 	"time"
 
-	pipeline "github.com/heeus/core-pipeline"
 	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/untillpro/voedger/pkg/pipeline"
 	coreutils "github.com/untillpro/voedger/pkg/utils"
 )
 

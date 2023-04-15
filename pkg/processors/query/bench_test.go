@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	iprocbus "github.com/heeus/core-iprocbus"
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/voedger/pkg/iauthnzimpl"
+	"github.com/untillpro/voedger/pkg/iprocbus"
 	"github.com/untillpro/voedger/pkg/istructs"
 	imetrics "github.com/untillpro/voedger/pkg/metrics"
 )

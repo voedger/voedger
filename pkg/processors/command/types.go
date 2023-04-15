@@ -8,13 +8,13 @@ import (
 	"context"
 	"time"
 
-	iprocbus "github.com/heeus/core-iprocbus"
-	pipeline "github.com/heeus/core-pipeline"
 	"github.com/untillpro/voedger/pkg/iauthnz"
+	"github.com/untillpro/voedger/pkg/iprocbus"
 	"github.com/untillpro/voedger/pkg/isecrets"
 	"github.com/untillpro/voedger/pkg/istructs"
 	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
 	imetrics "github.com/untillpro/voedger/pkg/metrics"
+	"github.com/untillpro/voedger/pkg/pipeline"
 	"github.com/untillpro/voedger/pkg/state"
 	coreutils "github.com/untillpro/voedger/pkg/utils"
 )
@@ -108,11 +108,12 @@ type hostStateProvider struct {
 	wsid       istructs.WSID
 	principals []iauthnz.Principal
 	state      state.IHostState
+	token      string
 }
 
 func newHostStateProvider(ctx context.Context, pid istructs.PartitionID, secretReader isecrets.ISecretReader) *hostStateProvider {
 	p := &hostStateProvider{}
-	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid), p.getWSID, secretReader, p.getCUD, p.getPrincipals, intentsLimit)
+	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid), p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, intentsLimit)
 	return p
 }
 
@@ -122,10 +123,12 @@ func (p *hostStateProvider) getCUD() istructs.ICUD               { return p.cud 
 func (p *hostStateProvider) getPrincipals() []iauthnz.Principal {
 	return p.principals
 }
-func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.WSID, cud istructs.ICUD, principals []iauthnz.Principal) state.IHostState {
+func (p *hostStateProvider) getToken() string { return p.token }
+func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.WSID, cud istructs.ICUD, principals []iauthnz.Principal, token string) state.IHostState {
 	p.as = appStructs
 	p.wsid = wsid
 	p.cud = cud
 	p.principals = principals
+	p.token = token
 	return p.state
 }

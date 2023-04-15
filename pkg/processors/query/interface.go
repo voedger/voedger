@@ -9,12 +9,12 @@ package queryprocessor
 import (
 	"context"
 
-	iprocbus "github.com/heeus/core-iprocbus"
-	pipeline "github.com/heeus/core-pipeline"
 	"github.com/untillpro/voedger/pkg/iauthnz"
+	"github.com/untillpro/voedger/pkg/iprocbus"
 	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/untillpro/voedger/pkg/istructsmem"
 	imetrics "github.com/untillpro/voedger/pkg/metrics"
+	"github.com/untillpro/voedger/pkg/pipeline"
 )
 
 // RowsProcessorFactory is the function for building pipeline from query params and row meta

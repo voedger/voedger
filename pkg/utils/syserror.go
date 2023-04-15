@@ -13,6 +13,13 @@ import (
 	"github.com/untillpro/voedger/pkg/istructs"
 )
 
+type SysError struct {
+	HTTPStatus int
+	QName      istructs.QName
+	Message    string
+	Data       string
+}
+
 func NewSysError(statusCode int) error {
 	return SysError{HTTPStatus: statusCode}
 }

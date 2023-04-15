@@ -8,8 +8,8 @@ import (
 	"context"
 	"testing"
 
-	pipeline "github.com/heeus/core-pipeline"
 	"github.com/stretchr/testify/require"
+	"github.com/untillpro/voedger/pkg/pipeline"
 )
 
 func TestOrderOperator_Flush(t *testing.T) {

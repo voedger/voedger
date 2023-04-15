@@ -52,6 +52,18 @@ func (s TestSchemas) Schemas(cb func(istructs.QName)) {
 	}
 }
 
+func (o *TestObject) PutInt32(name string, value int32)                { o.Data[name] = value }
+func (o *TestObject) PutInt64(name string, value int64)                { o.Data[name] = value }
+func (o *TestObject) PutFloat32(name string, value float32)            { o.Data[name] = value }
+func (o *TestObject) PutFloat64(name string, value float64)            { o.Data[name] = value }
+func (o *TestObject) PutBytes(name string, value []byte)               { o.Data[name] = value }
+func (o *TestObject) PutString(name, value string)                     { o.Data[name] = value }
+func (o *TestObject) PutQName(name string, value istructs.QName)       { o.Data[name] = value }
+func (o *TestObject) PutBool(name string, value bool)                  { o.Data[name] = value }
+func (o *TestObject) PutRecordID(name string, value istructs.RecordID) { o.Data[name] = value }
+func (o *TestObject) PutNumber(name string, value float64)             { o.Data[name] = value }
+func (o *TestObject) PutChars(name string, value string)               { o.Data[name] = value }
+
 func (o *TestObject) ID() istructs.RecordID      { return o.Id }
 func (o *TestObject) QName() istructs.QName      { return o.Name }
 func (o *TestObject) Parent() istructs.RecordID  { return o.Parent_ }

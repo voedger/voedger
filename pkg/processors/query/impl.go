@@ -17,15 +17,15 @@ import (
 	"sync"
 	"time"
 
-	iprocbus "github.com/heeus/core-iprocbus"
-	pipeline "github.com/heeus/core-pipeline"
 	"github.com/untillpro/voedger/pkg/iauthnz"
+	"github.com/untillpro/voedger/pkg/iprocbus"
 	"github.com/untillpro/voedger/pkg/isecrets"
 	"github.com/untillpro/voedger/pkg/isecretsimpl"
 	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/untillpro/voedger/pkg/istructsmem"
 	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
 	imetrics "github.com/untillpro/voedger/pkg/metrics"
+	"github.com/untillpro/voedger/pkg/pipeline"
 	"github.com/untillpro/voedger/pkg/state"
 	coreutils "github.com/untillpro/voedger/pkg/utils"
 )
@@ -181,7 +181,9 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				qw.appStructs,
 				state.SimplePartitionIDFunc(qw.msg.Partition()),
 				state.SimpleWSIDFunc(qw.msg.WSID()),
-				qw.secretReader)
+				qw.secretReader,
+				func() []iauthnz.Principal { return qw.principals },
+				func() string { return qw.msg.Token() })
 			qw.execQueryArgs.State = qw.state
 			return
 		}),

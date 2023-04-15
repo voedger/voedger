@@ -25,9 +25,10 @@ type N10nFunc func(view istructs.QName, wsid istructs.WSID, offset istructs.Offs
 type AppStructsFunc func() istructs.IAppStructs
 type CUDFunc func() istructs.ICUD
 type PrincipalsFunc func() []iauthnz.Principal
-type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, intentsLimit int) IHostState
+type TokenFunc func() string
+type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int) IHostState
 type SyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit int) IHostState
-type QueryProcessorStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader) IHostState
+type QueryProcessorStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc) IHostState
 type AsyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit, bundlesLimit int,
 	opts ...ActualizerStateOptFunc) IBundledHostState
 
@@ -49,26 +50,6 @@ type GetBatchItem struct {
 	key   istructs.IStateKeyBuilder
 	value istructs.IStateValue
 }
-
-type rowWriter struct {
-	data map[string]interface{}
-}
-
-func newRowWriter() rowWriter {
-	return rowWriter{data: make(map[string]interface{})}
-}
-
-func (w *rowWriter) PutInt32(name string, value int32)                { w.data[name] = value }
-func (w *rowWriter) PutInt64(name string, value int64)                { w.data[name] = value }
-func (w *rowWriter) PutFloat32(name string, value float32)            { w.data[name] = value }
-func (w *rowWriter) PutFloat64(name string, value float64)            { w.data[name] = value }
-func (w *rowWriter) PutBytes(name string, value []byte)               { w.data[name] = value }
-func (w *rowWriter) PutString(name string, value string)              { w.data[name] = value }
-func (w *rowWriter) PutQName(name string, value istructs.QName)       { w.data[name] = value }
-func (w *rowWriter) PutBool(name string, value bool)                  { w.data[name] = value }
-func (w *rowWriter) PutRecordID(name string, value istructs.RecordID) { w.data[name] = value }
-func (w *rowWriter) PutNumber(string, float64)                        { panic(ErrNotSupported) }
-func (w *rowWriter) PutChars(string, string)                          { panic(ErrNotSupported) }
 
 type keyBuilder struct {
 	data    map[string]interface{}
@@ -594,12 +575,36 @@ type subjectStorageValue struct {
 	kind        int32
 	profileWSID int64
 	name        string
+	token       string
 	toJSONFunc  toJSONFunc
 }
 
-func (v *subjectStorageValue) AsInt64(string) int64   { return v.profileWSID }
-func (v *subjectStorageValue) AsInt32(string) int32   { return v.kind }
-func (v *subjectStorageValue) AsString(string) string { return v.name }
+func (v *subjectStorageValue) AsInt64(name string) int64 {
+	switch name {
+	case Field_ProfileWSID:
+		return v.profileWSID
+	default:
+		return 0
+	}
+}
+func (v *subjectStorageValue) AsInt32(name string) int32 {
+	switch name {
+	case Field_Kind:
+		return v.kind
+	default:
+		return 0
+	}
+}
+func (v *subjectStorageValue) AsString(name string) string {
+	switch name {
+	case Field_Name:
+		return v.name
+	case Field_Token:
+		return v.token
+	default:
+		return ""
+	}
+}
 func (v *subjectStorageValue) ToJSON(opts ...interface{}) (string, error) {
 	return v.toJSONFunc(v, opts...)
 }

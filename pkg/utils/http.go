@@ -8,10 +8,8 @@ package coreutils
 import (
 	"fmt"
 	"net/http"
-	"os"
 
 	ibus "github.com/untillpro/airs-ibus"
-	"golang.org/x/exp/slices"
 )
 
 func NewHTTPErrorf(httpStatus int, args ...interface{}) SysError {
@@ -71,15 +69,5 @@ func ReplyUnauthorized(bus ibus.IBus, sender interface{}, message string) {
 }
 
 func ReplyInternalServerError(bus ibus.IBus, sender interface{}, message string, err error) {
-	ReplyErrf(bus, sender, http.StatusInternalServerError, message, ":", err)
+	ReplyErrf(bus, sender, http.StatusInternalServerError, message, ": ", err)
 }
-
-func ReplyForbidden(bus ibus.IBus, sender interface{}, err error) {
-	ReplyErrf(bus, sender, http.StatusForbidden, err.Error())
-}
-
-func SkipSlowTests() bool {
-	_, ok := os.LookupEnv("HEEUS_SKIP_SLOW_TESTS")
-	return ok || slices.Contains(os.Args, "skip-slow-tests")
-}
-

@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/stretchr/testify/require"
+	"github.com/untillpro/voedger/pkg/istructs"
 )
 
 func TestBasicUsage_SysError(t *testing.T) {
@@ -52,5 +52,13 @@ func TestBasicUsage_SysError(t *testing.T) {
 			Data:       "data",
 		}
 		require.Equal(`{"sys.Error":{"HTTPStatus":200,"Message":"test","QName":"my.test","Data":"data"}}`, err.ToJSON())
+	})
+
+	t.Run("NewSysError", func(t *testing.T) {
+		sysErr := NewSysError(http.StatusContinue).(SysError)
+		require.Empty(sysErr.Data)
+		require.Equal(http.StatusContinue, sysErr.HTTPStatus)
+		require.Empty(sysErr.Message)
+		require.Equal(istructs.NullQName, sysErr.QName)
 	})
 }

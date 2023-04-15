@@ -14,14 +14,15 @@ import (
 	"strconv"
 	"time"
 
-	in10n "github.com/heeus/core-in10n"
-	pipeline "github.com/heeus/core-pipeline"
-	projectors "github.com/heeus/core-projectors"
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
 	"github.com/untillpro/voedger/pkg/iauthnz"
+	"github.com/untillpro/voedger/pkg/in10n"
 	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/untillpro/voedger/pkg/istructsmem"
+	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
+	"github.com/untillpro/voedger/pkg/pipeline"
+	"github.com/untillpro/voedger/pkg/projectors"
 	coreutils "github.com/untillpro/voedger/pkg/utils"
 	"golang.org/x/exp/maps"
 )
@@ -76,6 +77,11 @@ func (c *cmdWorkpiece) WSID() istructs.WSID {
 	return c.cmdMes.WSID()
 }
 
+// used by c.air.RegenerateUPProfileApiToken
+func (c *cmdWorkpiece) GetPrincipalPayload() payloads.PrincipalPayload {
+	return c.principalPayload
+}
+
 func (ws *workspace) nextRecordID(schema istructs.ISchema) (res istructs.RecordID) {
 	if schema.Kind() == istructs.SchemaKind_CDoc || schema.Kind() == istructs.SchemaKind_CRecord {
 		res = istructs.NewCDocCRecordID(ws.NextCDocCRecordBaseID)
@@ -116,7 +122,7 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (
 
 func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(), cmd.principals)
+	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(), cmd.principals, cmd.cmdMes.Token())
 	hs.ClearIntents()
 	cmd.eca = istructs.ExecCommandArgs{
 		CommandPrepareArgs: istructs.CommandPrepareArgs{
@@ -180,7 +186,7 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, work interface{}) (err error)
 
 func getWSDesc(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if !isDummyWS(cmd.cmdMes.WSID()) {
+	if !IsDummyWS(cmd.cmdMes.WSID()) {
 		cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), QNameCDocWorkspaceDescriptor)
 	}
 	return
@@ -190,7 +196,7 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	wsDesc := work.(*cmdWorkpiece).wsDesc
 	funcQName := cmd.cmdMes.Resource().(istructs.ICommandFunction).QName()
-	if isDummyWS(cmd.cmdMes.WSID()) {
+	if IsDummyWS(cmd.cmdMes.WSID()) {
 		return nil
 	}
 	if funcQName == QNameCommandCreateWorkspace || funcQName == QNameCommandCreateWorkspaceID || funcQName == QNameCommandInit {
@@ -474,6 +480,19 @@ func checkWorkspaceDescriptorUpdating(_ context.Context, work interface{}) (err 
 			continue
 		}
 		return errWSNotInited
+	}
+	return nil
+}
+
+func checkArgsRefIntegrity(_ context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	if cmd.argsObject != nil {
+		if err = istructsmem.CheckRefIntegrity(cmd.argsObject, cmd.appStructs, cmd.cmdMes.WSID()); err != nil {
+			return err
+		}
+	}
+	if cmd.unloggedArgsObject != nil {
+		return istructsmem.CheckRefIntegrity(cmd.unloggedArgsObject, cmd.appStructs, cmd.cmdMes.WSID())
 	}
 	return nil
 }
