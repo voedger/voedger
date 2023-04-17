@@ -8,8 +8,8 @@ package istructsmem
 import (
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/istructs"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // ValidateSchemas: validates all schemas in the cache. Schemas used recursively multiple times are validated once.

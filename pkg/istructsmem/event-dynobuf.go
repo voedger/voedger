@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func storeEvent(ev *dbEventType, buf *bytes.Buffer) (err error) {

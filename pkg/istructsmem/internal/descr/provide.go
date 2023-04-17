@@ -6,7 +6,7 @@
 package descr
 
 import (
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func Provide(app istructs.IAppStructs, rateLimits map[istructs.QName]map[istructs.RateLimitKind]istructs.RateLimit, uniques map[istructs.QName][][]string) *Application {

@@ -8,7 +8,7 @@ package ihttpctl
 import (
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/ihttp"
 )
 
 func NewHTTPProcessorController(api ihttp.IHTTPProcessorAPI, staticResources []StaticResourcesType) (IHTTPProcessorController, error) {

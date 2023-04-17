@@ -13,8 +13,8 @@ import (
 	"io"
 
 	dynobuffers "github.com/untillpro/dynobuffers"
-	"github.com/untillpro/voedger/pkg/istructs"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // dynoBufValue converts specified value to dynobuffer compatable type using specified data kind.

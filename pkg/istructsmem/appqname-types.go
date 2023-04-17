@@ -10,8 +10,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/istorage"
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // QNameID is identificator for QNames

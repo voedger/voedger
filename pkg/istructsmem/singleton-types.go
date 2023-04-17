@@ -10,8 +10,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	istorage "github.com/untillpro/voedger/pkg/istorage"
-	"github.com/untillpro/voedger/pkg/istructs"
+	istorage "github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // singletonsCacheType is cache for CDoc singleton IDs

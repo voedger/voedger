@@ -11,7 +11,7 @@ import (
 	"unicode"
 
 	"github.com/google/uuid"
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type AppStorageDesc struct {

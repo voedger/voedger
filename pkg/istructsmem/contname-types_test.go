@@ -11,10 +11,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/voedger/pkg/iratesce"
-	istorage "github.com/untillpro/voedger/pkg/istorage"
-	"github.com/untillpro/voedger/pkg/istorageimpl"
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/iratesce"
+	istorage "github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func Test_containerNameCache_nameToID(t *testing.T) {

@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	irates "github.com/untillpro/voedger/pkg/irates"
-	"github.com/untillpro/voedger/pkg/istructs"
+	irates "github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestRace_Buckets(t *testing.T) {

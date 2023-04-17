@@ -6,8 +6,8 @@ package istorageimpl
 
 import (
 	"github.com/google/uuid"
-	"github.com/untillpro/voedger/pkg/istorage"
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // keyspaceNameSuffix is used in tests only

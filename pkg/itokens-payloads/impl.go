@@ -7,7 +7,7 @@ package payloads
 import (
 	"time"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func (at *implIAppTokens) IssueToken(duration time.Duration, pointerToPayload interface{}) (token string, err error) {

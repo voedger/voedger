@@ -8,7 +8,7 @@ package istorage
 import (
 	"context"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // Same as IAppStructsProvider, called per request or frequently inside services

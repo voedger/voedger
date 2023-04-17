@@ -11,10 +11,10 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/logger"
-	"github.com/untillpro/voedger/pkg/ibus"
-	"github.com/untillpro/voedger/pkg/ihttp"
-	"github.com/untillpro/voedger/pkg/iservices"
-	"github.com/untillpro/voedger/pkg/iservicesctl"
+	"github.com/voedger/voedger/pkg/ibus"
+	"github.com/voedger/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/iservices"
+	"github.com/voedger/voedger/pkg/iservicesctl"
 )
 
 func newServerCmd() *cobra.Command {

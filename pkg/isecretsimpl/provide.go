@@ -4,7 +4,7 @@
 
 package isecretsimpl
 
-import "github.com/untillpro/voedger/pkg/isecrets"
+import "github.com/voedger/voedger/pkg/isecrets"
 
 func ProvideSecretReader() isecrets.ISecretReader {
 	return implSecretReader()

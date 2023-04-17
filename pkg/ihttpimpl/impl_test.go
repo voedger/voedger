@@ -22,12 +22,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/untillpro/voedger/pkg/ibus"
-	"github.com/untillpro/voedger/pkg/ibusmem"
-	"github.com/untillpro/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/ibus"
+	"github.com/voedger/voedger/pkg/ibusmem"
+	"github.com/voedger/voedger/pkg/ihttp"
 
 	"github.com/stretchr/testify/require"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestBasicUsage_HTTPProcessor(t *testing.T) {

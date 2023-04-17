@@ -5,8 +5,8 @@
 package istoragecache
 
 import (
-	istorage "github.com/untillpro/voedger/pkg/istorage"
-	imetrics "github.com/untillpro/voedger/pkg/metrics"
+	istorage "github.com/voedger/voedger/pkg/istorage"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
 
 // Provide s.e.

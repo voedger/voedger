@@ -6,8 +6,9 @@ package state
 
 import (
 	"encoding/json"
-	"github.com/untillpro/voedger/pkg/iauthnz"
-	"github.com/untillpro/voedger/pkg/istructs"
+
+	"github.com/voedger/voedger/pkg/iauthnz"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type subjectStorage struct {

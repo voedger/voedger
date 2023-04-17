@@ -7,8 +7,8 @@ package iblobstoragestg
 import (
 	"time"
 
-	"github.com/untillpro/voedger/pkg/iblobstorage"
-	"github.com/untillpro/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/istorage"
 )
 
 func Provide(storage istorage.IAppStorage, now func() time.Time) iblobstorage.IBLOBStorage {

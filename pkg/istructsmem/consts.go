@@ -6,8 +6,8 @@ package istructsmem
 
 import (
 	dynobuffers "github.com/untillpro/dynobuffers"
-	"github.com/untillpro/voedger/pkg/istructs"
-	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/istructs"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
 
 // validate error codes, see ValidateError.Code()

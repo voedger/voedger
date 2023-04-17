@@ -8,7 +8,7 @@
 
 package state
 
-import "github.com/untillpro/voedger/pkg/istructs"
+import "github.com/voedger/voedger/pkg/istructs"
 
 type IStateStorage interface {
 	NewKeyBuilder(entity istructs.QName, existingKeyBuilder istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder)

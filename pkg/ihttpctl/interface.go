@@ -6,8 +6,8 @@
 package ihttpctl
 
 import (
-	"github.com/untillpro/voedger/pkg/ihttp"
-	"github.com/untillpro/voedger/pkg/iservices"
+	"github.com/voedger/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/iservices"
 )
 
 // Proposed factory signature

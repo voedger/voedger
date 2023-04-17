@@ -7,7 +7,7 @@ package irates
 import (
 	"time"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // Interface should be obtained once

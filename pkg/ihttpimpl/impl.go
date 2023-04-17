@@ -19,12 +19,12 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/untillpro/voedger/pkg/istructs"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 
 	"github.com/untillpro/goutils/logger"
-	"github.com/untillpro/voedger/pkg/ibus"
-	"github.com/untillpro/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/ibus"
+	"github.com/voedger/voedger/pkg/ihttp"
 )
 
 type httpProcessor struct {

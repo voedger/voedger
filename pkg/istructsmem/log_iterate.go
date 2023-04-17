@@ -6,7 +6,7 @@
 package istructsmem
 
 import (
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // logReadPartFuncType is function type to read log part (≤ 4096 events). Must return ok and nil error to read next part.

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/untillpro/goutils/logger"
-	"github.com/untillpro/voedger/pkg/ibus"
+	"github.com/voedger/voedger/pkg/ibus"
 )
 
 func New(params ibus.CLIParams) (impl ibus.IBus, cleanup func()) {

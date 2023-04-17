@@ -8,9 +8,9 @@ import (
 	"fmt"
 
 	"github.com/untillpro/goutils/logger"
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/state/smtptest"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state/smtptest"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/wneessen/go-mail"
 )
 

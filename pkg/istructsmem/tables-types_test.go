@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	log "github.com/untillpro/goutils/logger"
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func Test_newRecord(t *testing.T) {

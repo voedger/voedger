@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/untillpro/voedger/pkg/iauthnz"
-	"github.com/untillpro/voedger/pkg/isecrets"
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/iauthnz"
+	"github.com/voedger/voedger/pkg/isecrets"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type PartitionIDFunc func() istructs.PartitionID

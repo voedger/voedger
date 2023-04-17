@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/state/smtptest"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state/smtptest"
 )
 
 func TestSendMailStorage_BasicUsage(t *testing.T) {

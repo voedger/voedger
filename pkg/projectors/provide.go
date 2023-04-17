@@ -7,8 +7,8 @@
 package projectors
 
 import (
-	istructs "github.com/untillpro/voedger/pkg/istructs"
-	istructsmem "github.com/untillpro/voedger/pkg/istructsmem"
+	istructs "github.com/voedger/voedger/pkg/istructs"
+	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 )
 
 func ProvideAsyncActualizerFactory() AsyncActualizerFactory {

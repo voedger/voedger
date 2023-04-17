@@ -5,7 +5,7 @@
 package iprocbusmem
 
 import (
-	"github.com/untillpro/voedger/pkg/iprocbus"
+	"github.com/voedger/voedger/pkg/iprocbus"
 )
 
 type ChannelGroup struct {

@@ -15,8 +15,8 @@ import (
 	logger "github.com/heeus/core-logger"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/voedger/cmd/edger/internal/metrics"
-	"github.com/untillpro/voedger/cmd/edger/internal/states"
+	"github.com/voedger/voedger/cmd/edger/internal/metrics"
+	"github.com/voedger/voedger/cmd/edger/internal/states"
 )
 
 const TestVersion = "0.0.1-alpha"

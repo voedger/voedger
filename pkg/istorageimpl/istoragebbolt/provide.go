@@ -6,7 +6,7 @@
 package istoragebbolt
 
 import (
-	istorage "github.com/untillpro/voedger/pkg/istorage"
+	istorage "github.com/voedger/voedger/pkg/istorage"
 )
 
 func Provide(params ParamsType) istorage.IAppStorageFactory {

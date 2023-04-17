@@ -12,9 +12,9 @@ import (
 	"net/url"
 	"path/filepath"
 
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/state"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var errTestIOError = errors.New("test i/o error")

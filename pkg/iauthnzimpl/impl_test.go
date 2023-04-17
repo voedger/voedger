@@ -11,12 +11,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/goutils/logger"
-	"github.com/untillpro/voedger/pkg/iauthnz"
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/istructsmem"
-	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
-	"github.com/untillpro/voedger/pkg/itokensjwt"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/iauthnz"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/itokensjwt"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 const (

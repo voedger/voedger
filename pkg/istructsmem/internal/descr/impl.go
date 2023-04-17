@@ -6,7 +6,7 @@
 package descr
 
 import (
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func newApplication() *Application {

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	irates "github.com/untillpro/voedger/pkg/irates"
+	irates "github.com/voedger/voedger/pkg/irates"
 )
 
 // bucket, соответствующий некому ключу irates.BucketKey

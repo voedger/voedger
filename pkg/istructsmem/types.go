@@ -12,9 +12,9 @@ import (
 	"fmt"
 
 	dynobuffers "github.com/untillpro/dynobuffers"
-	"github.com/untillpro/voedger/pkg/istructs"
-	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/istructs"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // rowType is type to implement istructs row interfaces.

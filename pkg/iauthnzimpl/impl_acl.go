@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/untillpro/goutils/logger"
-	"github.com/untillpro/voedger/pkg/iauthnz"
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/iauthnz"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func (acl ACL) IsAllowed(principals []iauthnz.Principal, req iauthnz.AuthzRequest) bool {

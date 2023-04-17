@@ -6,9 +6,9 @@
 package main
 
 import (
-	"github.com/untillpro/voedger/pkg/ibus"
-	"github.com/untillpro/voedger/pkg/ihttp"
-	"github.com/untillpro/voedger/pkg/ihttpctl"
+	"github.com/voedger/voedger/pkg/ibus"
+	"github.com/voedger/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/ihttpctl"
 )
 
 type WiredServer struct {

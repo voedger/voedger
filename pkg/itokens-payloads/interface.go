@@ -7,7 +7,7 @@
 package payloads
 
 import (
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type IAppTokensFactory interface {

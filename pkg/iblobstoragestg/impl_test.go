@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/voedger/pkg/iblobstorage"
-	"github.com/untillpro/voedger/pkg/istorage"
-	"github.com/untillpro/voedger/pkg/istorageimpl"
-	istructs "github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorageimpl"
+	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
 var (

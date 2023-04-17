@@ -8,9 +8,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 var (
@@ -449,7 +449,9 @@ type mockCUD struct {
 	mock.Mock
 }
 
-func (c *mockCUD) Create(qName istructs.QName) istructs.IRowWriter { return c.Called().Get(0).(istructs.IRowWriter) }
+func (c *mockCUD) Create(qName istructs.QName) istructs.IRowWriter {
+	return c.Called().Get(0).(istructs.IRowWriter)
+}
 func (c *mockCUD) Update(record istructs.IRecord) istructs.IRowWriter {
 	return c.Called(record).Get(0).(istructs.IRowWriter)
 }

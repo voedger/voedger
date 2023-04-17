@@ -5,7 +5,7 @@
 
 package iauthnz
 
-import "github.com/untillpro/voedger/pkg/istructs"
+import "github.com/voedger/voedger/pkg/istructs"
 
 // Proposed NewDefaultAuthorizer() signature
 // One per HVM

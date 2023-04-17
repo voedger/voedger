@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type SysError struct {

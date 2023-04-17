@@ -7,7 +7,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/untillpro/voedger/cmd/edger/internal/edger"
+	"github.com/voedger/voedger/cmd/edger/internal/edger"
 )
 
 func newServerCmd() *cobra.Command {
@@ -27,7 +27,7 @@ If not assigned, then "edger-state.json" in current working directory is used.`)
 
 	cmd.Flags().DurationVarP(&edgerPars.AchieveAttemptInterval, "edger.AchieveAttemptInterval", "a", edger.DefaultAchieveAttemptInterval,
 		`time interval between achieving attempts if first attempt has finished with errors.
-Minimum valid value is 10ms. 
+Minimum valid value is 10ms.
 Maximum valid value is 1h.
 Default value is 500ms.`)
 

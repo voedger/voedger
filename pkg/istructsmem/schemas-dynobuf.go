@@ -7,7 +7,7 @@ package istructsmem
 
 import (
 	dynobuffers "github.com/untillpro/dynobuffers"
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 var dataKindToDynoFieldType = map[istructs.DataKindType]dynobuffers.FieldType{

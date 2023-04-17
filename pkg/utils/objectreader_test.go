@@ -7,8 +7,8 @@ package coreutils
 import (
 	"testing"
 
-	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 var (

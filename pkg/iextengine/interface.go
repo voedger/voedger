@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"time"
 
-	istructs "github.com/untillpro/voedger/pkg/istructs"
+	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
 type IExtensionsModule interface {

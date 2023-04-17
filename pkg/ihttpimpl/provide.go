@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/untillpro/voedger/pkg/ibus"
-	"github.com/untillpro/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/ibus"
+	"github.com/voedger/voedger/pkg/ihttp"
 )
 
 func NewProcessor(params ihttp.CLIParams, bus ibus.IBus) (server ihttp.IHTTPProcessor, cleanup func(), err error) {

@@ -17,7 +17,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/goutils/logger"
-	"github.com/untillpro/voedger/pkg/ibus"
+	"github.com/voedger/voedger/pkg/ibus"
 )
 
 func Test_BasicUsage_RegisterReceivers_QuerySender(t *testing.T) {

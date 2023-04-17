@@ -8,15 +8,15 @@ import (
 	"context"
 	"time"
 
-	"github.com/untillpro/voedger/pkg/iauthnz"
-	"github.com/untillpro/voedger/pkg/iprocbus"
-	"github.com/untillpro/voedger/pkg/isecrets"
-	"github.com/untillpro/voedger/pkg/istructs"
-	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
-	imetrics "github.com/untillpro/voedger/pkg/metrics"
-	"github.com/untillpro/voedger/pkg/pipeline"
-	"github.com/untillpro/voedger/pkg/state"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/iauthnz"
+	"github.com/voedger/voedger/pkg/iprocbus"
+	"github.com/voedger/voedger/pkg/isecrets"
+	"github.com/voedger/voedger/pkg/istructs"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
+	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/state"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type ServiceFactory func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService

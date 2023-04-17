@@ -9,8 +9,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/istructs"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // istructs.IViewRecords.Put

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	itokens "github.com/untillpro/voedger/pkg/itokens"
+	itokens "github.com/voedger/voedger/pkg/itokens"
 )
 
 // jwt.TimeFunc will be set to timeFunc but jwt.TimeFunc can not be protected from simulaneous access -> must be set only once

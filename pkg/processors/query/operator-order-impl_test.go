@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 func TestOrderOperator_Flush(t *testing.T) {

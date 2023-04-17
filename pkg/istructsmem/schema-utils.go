@@ -8,7 +8,7 @@ package istructsmem
 import (
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // schemaSystemFieldsRequireType: schema system fields requirements

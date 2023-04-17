@@ -8,7 +8,7 @@ package ctrls
 import (
 	"context"
 
-	"github.com/untillpro/voedger/cmd/edger/internal/states"
+	"github.com/voedger/voedger/cmd/edger/internal/states"
 )
 
 // DefaultAchievedStateFileName is default file name used by SuperController to load and store last achieved state

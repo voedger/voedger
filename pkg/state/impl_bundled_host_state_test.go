@@ -8,9 +8,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestBundledHostState_BasicUsage(t *testing.T) {

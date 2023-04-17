@@ -14,12 +14,12 @@ import (
 	"strings"
 
 	dynobuffers "github.com/untillpro/dynobuffers"
-	"github.com/untillpro/voedger/pkg/irates"
-	"github.com/untillpro/voedger/pkg/istorage"
-	"github.com/untillpro/voedger/pkg/istorageimpl"
-	"github.com/untillpro/voedger/pkg/istructs"
-	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
-	"github.com/untillpro/voedger/pkg/itokensjwt"
+	"github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istructs"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/itokensjwt"
 )
 
 var NullAppConfig = newAppConfig(istructs.AppQName_null)

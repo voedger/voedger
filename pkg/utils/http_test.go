@@ -18,7 +18,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	ibus "github.com/untillpro/airs-ibus"
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestNewHTTPError(t *testing.T) {

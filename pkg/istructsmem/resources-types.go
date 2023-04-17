@@ -9,7 +9,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // ResourcesType is type for application resources

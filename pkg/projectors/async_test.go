@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/voedger/pkg/in10n"
-	"github.com/untillpro/voedger/pkg/in10nmem"
-	istructs "github.com/untillpro/voedger/pkg/istructs"
-	istructsmem "github.com/untillpro/voedger/pkg/istructsmem"
-	"github.com/untillpro/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/in10n"
+	"github.com/voedger/voedger/pkg/in10nmem"
+	istructs "github.com/voedger/voedger/pkg/istructs"
+	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 // Design: Projection Actualizers

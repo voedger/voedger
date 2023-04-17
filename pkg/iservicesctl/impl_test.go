@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/voedger/pkg/iservices"
+	"github.com/voedger/voedger/pkg/iservices"
 )
 
 func Test_BasicUsage(t *testing.T) {

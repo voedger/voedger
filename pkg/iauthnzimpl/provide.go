@@ -5,7 +5,7 @@
 package iauthnzimpl
 
 import (
-	"github.com/untillpro/voedger/pkg/iauthnz"
+	"github.com/voedger/voedger/pkg/iauthnz"
 )
 
 func NewDefaultAuthorizer() iauthnz.IAuthorizer {

@@ -4,7 +4,7 @@
 
 package queryprocessor
 
-import coreutils "github.com/untillpro/voedger/pkg/utils"
+import coreutils "github.com/voedger/voedger/pkg/utils"
 
 type OrFilter struct {
 	filters []IFilter

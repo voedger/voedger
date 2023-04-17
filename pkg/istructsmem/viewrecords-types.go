@@ -9,8 +9,8 @@ import (
 	"context"
 	"fmt"
 
-	istorage "github.com/untillpro/voedger/pkg/istorage"
-	"github.com/untillpro/voedger/pkg/istructs"
+	istorage "github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // appViewRecordsType access to all application views

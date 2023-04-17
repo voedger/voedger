@@ -7,7 +7,7 @@ package state
 import (
 	"time"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 var (

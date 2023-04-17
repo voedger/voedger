@@ -7,7 +7,7 @@ package coreutils
 import (
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type SchemaFields map[string]istructs.DataKindType

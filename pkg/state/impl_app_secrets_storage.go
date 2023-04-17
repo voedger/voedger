@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"io/fs"
 
-	"github.com/untillpro/voedger/pkg/isecrets"
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/isecrets"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type appSecretsStorage struct {

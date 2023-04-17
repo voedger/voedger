@@ -11,11 +11,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 	dynobuffers "github.com/untillpro/dynobuffers"
-	"github.com/untillpro/voedger/pkg/iratesce"
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/itokens"
-	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/itokens"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestSchemaValidEvent(t *testing.T) {

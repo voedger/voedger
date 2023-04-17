@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/voedger/pkg/iauthnzimpl"
-	"github.com/untillpro/voedger/pkg/iprocbus"
-	"github.com/untillpro/voedger/pkg/istructs"
-	imetrics "github.com/untillpro/voedger/pkg/metrics"
+	"github.com/voedger/voedger/pkg/iauthnzimpl"
+	"github.com/voedger/voedger/pkg/iprocbus"
+	"github.com/voedger/voedger/pkg/istructs"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
 
 func Benchmark_pipelineIService_Sequential(b *testing.B) {

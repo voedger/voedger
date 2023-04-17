@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/untillpro/voedger/pkg/iauthnz"
-	"github.com/untillpro/voedger/pkg/istructs"
-	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/iauthnz"
+	"github.com/voedger/voedger/pkg/istructs"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"golang.org/x/exp/slices"
 )
 

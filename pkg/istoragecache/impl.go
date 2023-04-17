@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
-	istorage "github.com/untillpro/voedger/pkg/istorage"
-	istructs "github.com/untillpro/voedger/pkg/istructs"
-	imetrics "github.com/untillpro/voedger/pkg/metrics"
+	istorage "github.com/voedger/voedger/pkg/istorage"
+	istructs "github.com/voedger/voedger/pkg/istructs"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
 
 type cachedAppStorage struct {
