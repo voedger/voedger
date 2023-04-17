@@ -51,7 +51,7 @@ func TestBasicUsage(t *testing.T) {
 	defer tearDown(app)
 
 	channelID, err := app.n10nBroker.NewChannel("test", 24*time.Hour)
-	require.Nil(err)
+	require.NoError(err)
 	projectionKey := in10n.ProjectionKey{
 		App:        istructs.AppQName_untill_airs_bp,
 		Projection: projectors.PlogQName,
@@ -608,9 +608,9 @@ func setUp(t *testing.T, cfgFuncs ...func(*istructsmem.AppConfigType)) testApp {
 	bus = ibusmem.Provide(func(ctx context.Context, sender interface{}, request ibus.Request) {
 		// сымитируем работу airs-bp3 при приеме запроса-команды
 		cmdQName, err := istructs.ParseQName(request.Resource[2:])
-		require.Nil(t, err, err)
+		require.NoError(t, err)
 		appQName, err := istructs.ParseAppQName(request.AppQName)
-		require.Nil(t, err, err)
+		require.NoError(t, err)
 		as, err := appStructsProvider.AppStructs(appQName)
 		if err != nil {
 			replyBadRequest(bus, sender, err.Error())

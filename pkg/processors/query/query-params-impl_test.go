@@ -263,7 +263,7 @@ func TestWrongTypes(t *testing.T) {
 		},
 	}
 	as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
-	require.Nil(err)
+	require.NoError(err)
 	funcResource := as.Resources().QueryResource(qNameFunction)
 	sysToken := getSystemToken(appTokens)
 	for _, test := range tests {

@@ -14,7 +14,7 @@ import (
 func TestAndFilter_IsMatch(t *testing.T) {
 	t.Run("Truth table", func(t *testing.T) {
 		match := func(match bool, err error) bool {
-			require.Nil(t, err)
+			require.NoError(t, err)
 			return match
 		}
 		template := "First %t second %t want %t"

@@ -785,9 +785,9 @@ func Test_VerifiedFields(t *testing.T) {
 	require.NoError(err)
 	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 	err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
-	require.NoError(err, err)
+	require.NoError(err)
 	_, err = asp.AppStructs(test.appName) // need to set cfg.app because IAppTokens are taken from cfg.app
-	require.NoError(err, err)
+	require.NoError(err)
 
 	t.Run("test row verification", func(t *testing.T) {
 

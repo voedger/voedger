@@ -30,7 +30,7 @@ func TestWLogStorage_Read(t *testing.T) {
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 		kb, err := s.KeyBuilder(WLogStorage, istructs.NullQName)
-		require.Nil(err)
+		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
 

@@ -127,7 +127,7 @@ func TestHostState_CanExist(t *testing.T) {
 			})
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
-		require.Nil(err)
+		require.NoError(err)
 
 		_, ok, err := s.CanExist(k)
 		require.NoError(err)
@@ -142,7 +142,7 @@ func TestHostState_CanExist(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
-		require.Nil(err)
+		require.NoError(err)
 
 		_, _, err = s.CanExist(k)
 
@@ -175,7 +175,7 @@ func TestHostState_CanExistAll(t *testing.T) {
 			})
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
-		require.Nil(err)
+		require.NoError(err)
 
 		_ = s.CanExistAll([]istructs.IStateKeyBuilder{k}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
 			times++

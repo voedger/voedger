@@ -41,7 +41,7 @@ func TestForkOperator_DoSync(t *testing.T) {
 
 		err := operator.DoSync(context.Background(), newTestWork())
 
-		require.Nil(t, err)
+		require.NoError(t, err)
 	})
 	t.Run("Should be not ok because fork logic return error", func(t *testing.T) {
 		testErr := errors.New("fork error")

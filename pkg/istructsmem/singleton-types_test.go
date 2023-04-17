@@ -19,7 +19,7 @@ func testSchemasSingletons(t *testing.T, cfg *AppConfigType) {
 	for _, schema := range cfg.Schemas.schemas {
 		if schema.singleton.enabled {
 			id, err := cfg.singletons.qNameToID(schema.name)
-			require.NoError(err, err)
+			require.NoError(err)
 			require.Equal(id, schema.singleton.id)
 		}
 	}
@@ -39,7 +39,7 @@ func Test_singletonsCacheType_qNamesToID(t *testing.T) {
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
-		require.NoError(err, err)
+		require.NoError(err)
 
 		testSchemasSingletons(t, cfg)
 
@@ -50,7 +50,7 @@ func Test_singletonsCacheType_qNamesToID(t *testing.T) {
 		t.Run(fmt.Sprintf("test idToQName(%v)", id), func(t *testing.T) {
 			qName, err := cfg.singletons.idToQName(id)
 			if known {
-				require.NoError(err, err)
+				require.NoError(err)
 				require.Equal(qname, qName)
 			} else {
 				require.ErrorIs(err, ErrIDNotFound)
@@ -66,7 +66,7 @@ func Test_singletonsCacheType_qNamesToID(t *testing.T) {
 
 			id, err = cfg.singletons.qNameToID(qname)
 			if known {
-				require.NoError(err, err)
+				require.NoError(err)
 				require.NotNil(id)
 
 				testID(id, true, qname)
@@ -107,7 +107,7 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 		cfg.storage = storage
 
 		err := cfg.versions.putVersion(verSysSingletons, 0xFF)
-		require.NoError(err, err)
+		require.NoError(err)
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
@@ -195,14 +195,14 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 				toBytes(uint16(verSysSingletons)),
 				toBytes(uint16(verSysSingletonsLastest)),
 			)
-			require.NoError(err, err)
+			require.NoError(err)
 
 			err = storage.Put(
 				toBytes(uint16(QNameIDSysSingletonIDs), uint16(verSysSingletonsLastest)),
 				[]byte("error.CDoc.be-e-e"),
 				toBytes(uint64(istructs.MaxSingletonID)),
 			)
-			require.NoError(err, err)
+			require.NoError(err)
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -234,7 +234,7 @@ func Test_singletonsCacheType_ReuseStorage(t *testing.T) {
 		cfg.Schemas.Add(testQNameC, istructs.SchemaKind_CDoc).SetSingleton()
 
 		err := cfg.prepare(nil, storage)
-		require.NoError(err, err)
+		require.NoError(err)
 		return cfg
 	}
 
@@ -245,16 +245,16 @@ func Test_singletonsCacheType_ReuseStorage(t *testing.T) {
 		cfg.Schemas.Add(testQNameB, istructs.SchemaKind_CDoc).SetSingleton()
 		cfg.Schemas.Add(testQNameC, istructs.SchemaKind_CDoc).SetSingleton()
 		err := cfg.prepare(nil, storage)
-		require.NoError(err, err)
+		require.NoError(err)
 		return cfg
 	}
 
 	t.Run("must use equal singleton IDs if storage reused", func(t *testing.T) {
 		cfg1 := appCfg1()
 		idA1, err := cfg1.singletons.qNameToID(testQNameA)
-		require.NoError(err, err)
+		require.NoError(err)
 		idC1, err := cfg1.singletons.qNameToID(testQNameC)
-		require.NoError(err, err)
+		require.NoError(err)
 		testSchemasSingletons(t, cfg1)
 
 		_, err = cfg1.singletons.qNameToID(testQNameB)
@@ -262,14 +262,14 @@ func Test_singletonsCacheType_ReuseStorage(t *testing.T) {
 
 		cfg2 := appCfg2()
 		idA2, err := cfg2.singletons.qNameToID(testQNameA)
-		require.NoError(err, err)
+		require.NoError(err)
 		require.Equal(idA1, idA2)
 		idC2, err := cfg2.singletons.qNameToID(testQNameC)
-		require.NoError(err, err)
+		require.NoError(err)
 		require.Equal(idC1, idC2)
 		testSchemasSingletons(t, cfg2)
 
 		_, err = cfg2.singletons.qNameToID(testQNameB)
-		require.NoError(err, err)
+		require.NoError(err)
 	})
 }

@@ -182,7 +182,7 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 	require.NoError(err)
 	readyToFlush, err := s.ApplyIntents()
 	require.False(readyToFlush)
-	require.Nil(err)
+	require.NoError(err)
 
 	err = s.FlushBundles()
 

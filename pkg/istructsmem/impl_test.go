@@ -477,7 +477,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
-		require.Nil(err)
+		require.NoError(err)
 
 		return app
 	}()

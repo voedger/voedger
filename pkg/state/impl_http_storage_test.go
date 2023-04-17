@@ -32,7 +32,7 @@ func TestHttpStorage_BasicUsage(t *testing.T) {
 	defer ts.Close()
 
 	k, err := s.KeyBuilder(HTTPStorage, istructs.NullQName)
-	require.Nil(err)
+	require.NoError(err)
 
 	k.PutString(Field_Url, ts.URL)
 	k.PutString(Field_Method, http.MethodPost)

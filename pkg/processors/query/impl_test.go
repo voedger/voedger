@@ -354,7 +354,7 @@ func Test_epsilon(t *testing.T) {
 		epsilon, err := epsilon(args(options(math.E)))
 
 		require.Equal(t, math.E, epsilon)
-		require.Nil(t, err)
+		require.NoError(t, err)
 	})
 	t.Run("Should return error when options is nil", func(t *testing.T) {
 		//TODO (FILTER0001)

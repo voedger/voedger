@@ -218,7 +218,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		kb.PutString("clusteringColumn3", "sidr")
 
 		value, err := viewRecords.Get(2, kb)
-		require.NoError(err, err)
+		require.NoError(err)
 		require.Equal(int64(2), value.AsInt64("id"))
 		require.Equal("Apple sidr", value.AsString("name"))
 		require.True(value.AsBool("active"))
@@ -512,7 +512,7 @@ func TestCore_ViewRecords(t *testing.T) {
 				vb.PutInt64("valueField1", 1)
 
 				err := viewRecords.Put(1, kb, vb)
-				require.NoError(err, err)
+				require.NoError(err)
 
 				counter := 0
 				err = viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
@@ -524,7 +524,7 @@ func TestCore_ViewRecords(t *testing.T) {
 					counter++
 					return nil
 				})
-				require.NoError(err, err)
+				require.NoError(err)
 				require.Equal(1, counter)
 			})
 
@@ -539,7 +539,7 @@ func TestCore_ViewRecords(t *testing.T) {
 				vb.PutInt64("valueField1", 7)
 
 				err := viewRecords.Put(1, kb, vb)
-				require.NoError(err, err)
+				require.NoError(err)
 
 				readKey := viewRecords.KeyBuilder(istructs.NewQName("test", "otherView"))
 				readKey.PutQName("partitionKey1", istructs.QNameForError)
@@ -557,7 +557,7 @@ func TestCore_ViewRecords(t *testing.T) {
 					counter++
 					return nil
 				})
-				require.NoError(err, err)
+				require.NoError(err)
 				require.Equal(1, counter)
 			})
 		})
@@ -687,7 +687,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	k1.PutRecordID("cc_recID", istructs.RecordID(101501))
 	k1.PutBytes("cc_bytes", []byte("test"))
 	err := k1.build()
-	require.NoError(err, err)
+	require.NoError(err)
 
 	p, c := k1.storeToBytes()
 	require.NotNil(p)
@@ -696,7 +696,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	t.Run("should be success load", func(t *testing.T) {
 		k2 := newKey(cfg, viewName)
 		err := k2.loadFromBytes(p, c)
-		require.NoError(err, err)
+		require.NoError(err)
 
 		testRowsIsEqual(t, &k1.partRow, &k2.partRow)
 		testRowsIsEqual(t, &k1.clustRow, &k2.clustRow)
@@ -734,11 +734,11 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	require.NoError(v1.build())
 
 	v, err := v1.storeToBytes()
-	require.NoError(err, err)
+	require.NoError(err)
 
 	v2 := newValue(cfg, viewName)
 	err = v2.loadFromBytes(v)
-	require.NoError(err, err)
+	require.NoError(err)
 
 	testRowsIsEqual(t, &v1.rowType, &v2.rowType)
 }
@@ -845,7 +845,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		AddValueField("Winner", istructs.DataKind_string, true)
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
-	require.NoError(err, err)
+	require.NoError(err)
 
 	type championat struct {
 		year              int32
@@ -929,7 +929,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		}
 
 		err := app.ViewRecords().PutBatch(1, batch)
-		require.NoError(err, err)
+		require.NoError(err)
 	})
 
 	t.Run("must ok to read all recs by batch", func(t *testing.T) {
@@ -950,7 +950,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		}
 
 		err := app.ViewRecords().(*appViewRecordsType).GetBatch(1, batch)
-		require.NoError(err, err)
+		require.NoError(err)
 
 		i := 0
 		for _, c := range championats {
@@ -981,7 +981,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		batch[2].Key.PutString("Sport", "Футбол")
 
 		err := app.ViewRecords().(*appViewRecordsType).GetBatch(1, batch)
-		require.NoError(err, err)
+		require.NoError(err)
 
 		require.True(batch[0].Ok)
 		require.Equal("СССР", batch[0].Value.AsString("Winner"))

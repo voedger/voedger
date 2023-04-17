@@ -47,7 +47,7 @@ func TestBasicUsage(t *testing.T) {
 	t.Run("Create channel.", func(t *testing.T) {
 		var subject istructs.SubjectLogin = "paa"
 		channel, err := broker.NewChannel(subject, 24*time.Hour)
-		req.Nil(err)
+		req.NoError(err)
 		req.NotNil(channel)
 	})
 
@@ -84,7 +84,7 @@ func TestBasicUsage(t *testing.T) {
 
 		// Unsubscribe from exist channel
 		err = broker.Unsubscribe(channel, projectionKeyExample)
-		req.Nil(err)
+		req.NoError(err)
 		// After unsubscribe numSubscriptions must be equal 0
 		numSubscriptions = broker.MetricNumSubcriptions()
 		req.Equal(0, numSubscriptions)
@@ -136,7 +136,7 @@ func TestWatchNotExistsChannel(t *testing.T) {
 	t.Run("Create channel.", func(t *testing.T) {
 		var subject istructs.SubjectLogin = "paa"
 		channel, err := broker.NewChannel(subject, 24*time.Hour)
-		req.Nil(err)
+		req.NoError(err)
 		req.NotNil(channel)
 	})
 
@@ -192,11 +192,11 @@ func TestQuotas(t *testing.T) {
 		for i := 0; i < 100; i++ {
 			subject = istructs.SubjectLogin("paa" + strconv.Itoa(i))
 			channel, err := broker.NewChannel(subject, 24*time.Hour)
-			req.Nil(err)
+			req.NoError(err)
 			for g := 0; g < 10; g++ {
 				projectionKeyExample.WS = istructs.WSID(i + g)
 				err = broker.Subscribe(channel, projectionKeyExample)
-				req.Nil(err)
+				req.NoError(err)
 				if i == 99 && g == 9 {
 					numSubscriptions := broker.MetricNumSubcriptions()
 					req.Equal(1000, numSubscriptions)

@@ -85,7 +85,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		provider1 := Provide(cfgs1, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err := provider1.AppStructs(istructs.AppQName_test1_app1)
-		require.NoError(err, err)
+		require.NoError(err)
 
 		testError := errors.New("test error")
 		pKey := toBytes(uint16(QNameIDSysVesions))
@@ -106,7 +106,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		provider1 := Provide(cfgs1, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err := provider1.AppStructs(istructs.AppQName_test1_app1)
-		require.NoError(err, err)
+		require.NoError(err)
 
 		pKey := toBytes(uint16(QNameIDSysVesions))
 		storage.sheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, pKey, nil)

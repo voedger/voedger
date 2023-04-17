@@ -30,7 +30,7 @@ func TestPLogStorage_Read(t *testing.T) {
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil)
 		kb, err := s.KeyBuilder(PLogStorage, istructs.NullQName)
-		require.Nil(err)
+		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
 

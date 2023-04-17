@@ -24,10 +24,10 @@ func TestSubjectStorage_BasicUsage(t *testing.T) {
 	tokenFunc := func() string { return token }
 	s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} }, nil, nil, nil, nil, func() []iauthnz.Principal { return principals }, tokenFunc, 1)
 	k, err := s.KeyBuilder(SubjectStorage, istructs.NullQName)
-	require.Nil(err)
+	require.NoError(err)
 
 	v, err := s.MustExist(k)
-	require.Nil(err)
+	require.NoError(err)
 
 	require.Equal(int64(principals[0].WSID), v.AsInt64(Field_ProfileWSID))
 	require.Equal(int32(istructs.SubjectKind_User), v.AsInt32(Field_Kind))

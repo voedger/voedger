@@ -187,7 +187,7 @@ func TestAppStorage_Put(t *testing.T) {
 	ok, err := storage.Get([]byte("UK"), []byte("Article"), &[]byte{})
 
 	require.False(ok)
-	require.Nil(err)
+	require.NoError(err)
 }
 
 func TestAppStorage_PutBatch(t *testing.T) {
@@ -217,7 +217,7 @@ func TestAppStorage_PutBatch(t *testing.T) {
 	ok, err := storage.Get([]byte("UK"), []byte("Article"), &[]byte{})
 
 	require.False(ok)
-	require.Nil(err)
+	require.NoError(err)
 }
 
 func TestAppStorage_Get(t *testing.T) {

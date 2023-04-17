@@ -32,7 +32,7 @@ func Test_BasicUsage_RegisterReceivers_QuerySender(t *testing.T) {
 	require.True(ok)
 
 	response, _, err := sender.Send(context.Background(), "hello123", ibus.NullHandler)
-	require.Nil(err)
+	require.NoError(err)
 
 	require.Equal("hello123", response)
 
@@ -66,7 +66,7 @@ func Test_BasicUsage_Sections(t *testing.T) {
 
 		response, _, err := sender.Send(context.Background(), requestedNumSections, sectionsWriter)
 
-		require.Nil(err)
+		require.NoError(err)
 		require.Equal(requestedNumSections, response)
 		require.Equal(requestedNumSections, len(sections))
 		for i := 0; i < requestedNumSections; i++ {
@@ -381,7 +381,7 @@ func Test_Bug_ErrReadTimeoutExpired_Sections(t *testing.T) {
 
 		response, _, err := sender.Send(context.Background(), requestedNumSections, sectionsWriter)
 
-		require.Nil(err)
+		require.NoError(err)
 		require.Equal(requestedNumSections, response)
 		require.Equal(requestedNumSections, len(sections))
 		for i := 0; i < requestedNumSections; i++ {

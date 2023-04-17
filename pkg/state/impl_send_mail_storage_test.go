@@ -20,7 +20,7 @@ func TestSendMailStorage_BasicUsage(t *testing.T) {
 	defer ts.Close()
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 1, 0)
 	k, err := s.KeyBuilder(SendMailStorage, istructs.NullQName)
-	require.Nil(err)
+	require.NoError(err)
 
 	k.PutInt32(Field_Port, ts.Port())
 	k.PutString(Field_Host, "localhost")

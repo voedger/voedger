@@ -174,11 +174,11 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	actualizer, err := actualizerFactory(conf, incrementorFactory)
-	require.Nil(err)
+	require.NoError(err)
 
 	t0 := time.Now()
 	err = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
-	require.Nil(err)
+	require.NoError(err)
 
 	// Wait for the projectors
 	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
@@ -236,11 +236,11 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	actualizer, err := actualizerFactory(conf, incrementorFactory)
-	require.Nil(err)
+	require.NoError(err)
 
 	t0 := time.Now()
 	err = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
-	require.Nil(err)
+	require.NoError(err)
 
 	// Wait for the projectors
 	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
@@ -400,7 +400,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	actualizer, err := actualizerFactory(conf, incrementorFactory)
-	require.Nil(err)
+	require.NoError(err)
 
 	_ = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
 
@@ -655,11 +655,11 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 		return istructs.Projector{Name: incrementorName, NonBuffered: true, Func: incrementor}
 	}
 	actualizer, err := actualizerFactory(conf, projectorFactory)
-	require.Nil(err)
+	require.NoError(err)
 
 	t0 := time.Now()
 	err = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
-	require.Nil(err)
+	require.NoError(err)
 
 	// Wait for the projectors
 	for atomic.LoadInt64(&metrics.storedOffset) < int64(topOffset) {

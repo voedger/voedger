@@ -189,11 +189,11 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		rec1 := newTestCDoc(100500)
 
 		b, err := rec1.storeToBytes()
-		require.NoError(err, err)
+		require.NoError(err)
 
 		rec2 := newRecord(test.AppCfg)
 		err = rec2.loadFromBytes(b)
-		require.NoError(err, err)
+		require.NoError(err)
 		testTestCDoc(t, &rec2, 100500)
 
 		testRecsIsEqual(t, rec1, &rec2)
@@ -204,11 +204,11 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		rec1.PutBool(istructs.SystemField_IsActive, false)
 
 		b, err := rec1.storeToBytes()
-		require.NoError(err, err)
+		require.NoError(err)
 
 		rec2 := newRecord(test.AppCfg)
 		err = rec2.loadFromBytes(b)
-		require.NoError(err, err)
+		require.NoError(err)
 		testTestCDoc(t, &rec2, 100501)
 		require.False(rec2.AsBool(istructs.SystemField_IsActive))
 
@@ -255,7 +255,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 			doc2 := newRecord(test.AppCfg)
 			err := doc2.loadFromBytes(bytes)
-			require.NoError(err, err)
+			require.NoError(err)
 			testTestCDoc(t, &doc2, 100502)
 
 			testRecsIsEqual(t, doc1, &doc2)
@@ -270,7 +270,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 			rec2 := newRecord(test.AppCfg)
 			err := rec2.loadFromBytes(bytes)
-			require.NoError(err, err)
+			require.NoError(err)
 
 			testRecsIsEqual(t, rec1, &rec2)
 		})
@@ -279,11 +279,11 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 	t.Run("null records (with NullQName) must be success storeToBytes() and success loadFromBytes()", func(t *testing.T) {
 		rec1 := newRecord(test.AppCfg)
 		b, err := rec1.storeToBytes()
-		require.NoError(err, err)
+		require.NoError(err)
 
 		rec2 := newEmptyTestCDoc()
 		err = rec2.loadFromBytes(b)
-		require.NoError(err, err)
+		require.NoError(err)
 
 		require.Equal(istructs.NullQName, rec2.QName())
 		require.Equal(istructs.NullRecordID, rec2.ID())
@@ -292,11 +292,11 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 	t.Run("empty records (with «test.record» QName) must be success storeToBytes() and success loadFromBytes()", func(t *testing.T) {
 		rec1 := newEmptyTestCDoc()
 		b, err := rec1.storeToBytes()
-		require.NoError(err, err)
+		require.NoError(err)
 
 		rec2 := newRecord(test.AppCfg)
 		err = rec2.loadFromBytes(b)
-		require.NoError(err, err)
+		require.NoError(err)
 
 		require.Equal(test.testCDoc, rec2.QName())
 		require.Equal(istructs.NullRecordID, rec2.ID())
@@ -306,7 +306,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		rec1 := newTestCDoc(100500)
 
 		b, err := rec1.storeToBytes()
-		require.NoError(err, err)
+		require.NoError(err)
 
 		len := len(b)
 		for i := 0; i < len; i++ {
@@ -325,7 +325,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			rec1 := newTestCDoc(100500)
 
 			b, err := rec1.storeToBytes()
-			require.NoError(err, err)
+			require.NoError(err)
 
 			len := len(b)
 			stat := make(map[string]int)
@@ -361,7 +361,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		rec1 := newTestCDoc(100500)
 
 		b, err := rec1.storeToBytes()
-		require.NoError(err, err)
+		require.NoError(err)
 
 		newConfig := newAppConfig(test.AppCfg.Name)
 		recSchema := newConfig.Schemas.Add(test.testCDoc, istructs.SchemaKind_CDoc)
@@ -384,7 +384,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 		rec2 := newRecord(newConfig)
 		err = rec2.loadFromBytes(b)
-		require.NoError(err, err)
+		require.NoError(err)
 
 		require.Equal(rec1.QName(), rec2.QName())
 		rec1.dyB.IterateFields(nil, func(name string, val1 interface{}) bool {

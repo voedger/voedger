@@ -134,10 +134,10 @@ func Test_superController_loadStoreState(t *testing.T) {
 		defer func() { os.Remove(fn) }()
 
 		err := super.storeState()
-		require.NoError(err, err)
+		require.NoError(err)
 
 		err = super.loadState()
-		require.NoError(err, err)
+		require.NoError(err)
 
 		require.Equal(testState(), super.currentState)
 	})
