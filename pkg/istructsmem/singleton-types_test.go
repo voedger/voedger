@@ -36,10 +36,9 @@ func Test_singletonsCacheType_qNamesToID(t *testing.T) {
 		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1)
 		cfg.Schemas.Add(cDocName, istructs.SchemaKind_CDoc).SetSingleton()
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-		require.NoError(err, err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
-		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err, err)
 
 		testSchemasSingletons(t, cfg)
@@ -110,8 +109,7 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 		err := cfg.versions.putVersion(verSysSingletons, 0xFF)
 		require.NoError(err, err)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-		require.NoError(err, err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, ErrorInvalidVersion)
@@ -131,8 +129,7 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
 		schema := cfg.Schemas.Add(istructs.NewQName("test", "CDoc"), istructs.SchemaKind_CDoc)
 		schema.SetSingleton()
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err, err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, testError)
@@ -147,8 +144,7 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 			schema.SetSingleton()
 		}
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-		require.NoError(err, err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, ErrSingletonIDsExceeds)
@@ -165,8 +161,7 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 		schema := cfg.Schemas.Add(schemaName, istructs.SchemaKind_CDoc)
 		schema.SetSingleton()
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err, err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, testError)
@@ -184,8 +179,7 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 		schema := cfg.Schemas.Add(schemaName, istructs.SchemaKind_CDoc)
 		schema.SetSingleton()
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err, err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, testError)
@@ -214,8 +208,7 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err, err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.Error(err)

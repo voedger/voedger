@@ -118,8 +118,7 @@ func Test_containerNameCache_Errors(t *testing.T) {
 		err := cfg.versions.putVersion(verSysContainers, 0xFF)
 		require.NoError(err)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, ErrorInvalidVersion)
@@ -138,10 +137,9 @@ func Test_containerNameCache_Errors(t *testing.T) {
 		obj := cfg.Schemas.Add(istructs.NewQName("test", "object"), istructs.SchemaKind_Object)
 		obj.AddContainer("containerName", istructs.NewQName("test", "element"), 0, 1)
 		_ = cfg.Schemas.Add(istructs.NewQName("test", "element"), istructs.SchemaKind_Element)
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, testError)
 	})
 
@@ -155,10 +153,9 @@ func Test_containerNameCache_Errors(t *testing.T) {
 		}
 		_ = cfg.Schemas.Add(istructs.NewQName("test", "element"), istructs.SchemaKind_Element)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, ErrContainerNameIDsExceeds)
 	})
 
@@ -176,10 +173,9 @@ func Test_containerNameCache_Errors(t *testing.T) {
 		schema.AddContainer(containerName, istructs.NewQName("test", "element"), 0, 1)
 		_ = cfg.Schemas.Add(istructs.NewQName("test", "element"), istructs.SchemaKind_Element)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, testError)
 	})
 
@@ -204,10 +200,9 @@ func Test_containerNameCache_Errors(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, ErrInvalidName)
 	})
 }

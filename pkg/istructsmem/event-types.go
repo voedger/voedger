@@ -14,7 +14,7 @@ import (
 )
 
 type (
-	existsRecordType    func(id istructs.RecordID) bool
+	existsRecordType    func(id istructs.RecordID) (bool, error)
 	loadRecordFuncType  func(rec *recordType) error
 	storeRecordFuncType func(rec *recordType) error
 )
@@ -393,7 +393,11 @@ func (cud *cudType) applyRecs(exists existsRecordType, load loadRecordFuncType, 
 
 	for _, rec := range cud.creates {
 		if rec.schema.singleton.enabled {
-			if exists(rec.schema.singleton.id) {
+			isExists, err := exists(rec.schema.singleton.id)
+			if err != nil {
+				return err
+			}
+			if isExists {
 				return fmt.Errorf("can not create singleton, CDOC «%v» record «%d» already exists: %w", rec.QName(), rec.schema.singleton.id, ErrRecordIDUniqueViolation)
 			}
 		}

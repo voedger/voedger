@@ -21,7 +21,7 @@ func TestPLogStorage_Read(t *testing.T) {
 		events.On("ReadPLog", context.Background(), istructs.PartitionID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.PLogEventsReaderCallback")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				_ = args.Get(4).(istructs.PLogEventsReaderCallback)(istructs.FirstOffset, nil)
+				require.NoError(args.Get(4).(istructs.PLogEventsReaderCallback)(istructs.FirstOffset, nil))
 			})
 		appStructs := &mockAppStructs{}
 		appStructs.On("Events").Return(events)
@@ -52,11 +52,12 @@ func TestPLogStorage_Read(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil)
-		k, _ := s.KeyBuilder(PLogStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(PLogStorage, istructs.NullQName)
+		require.NoError(err)
 		k.PutInt64(Field_Offset, 1)
 		k.PutInt64(Field_Count, 1)
 
-		err := s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
+		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
 
 		require.ErrorIs(err, errTest)
 	})
@@ -69,9 +70,9 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				cb := args.Get(4).(istructs.PLogEventsReaderCallback)
-				_ = cb(istructs.FirstOffset, nil)
-				_ = cb(istructs.Offset(2), nil)
-				_ = cb(istructs.Offset(3), nil)
+				require.NoError(cb(istructs.FirstOffset, nil))
+				require.NoError(cb(istructs.Offset(2), nil))
+				require.NoError(cb(istructs.Offset(3), nil))
 			})
 		appStructs := &mockAppStructs{}
 		appStructs.On("Events").Return(events)
@@ -79,11 +80,13 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, nil, 0)
-		kb, _ := s.KeyBuilder(PLogStorage, istructs.NullQName)
+		kb, err := s.KeyBuilder(PLogStorage, istructs.NullQName)
+		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
 
-		sv, ok, _ := s.CanExist(kb)
+		sv, ok, err := s.CanExist(kb)
+		require.NoError(err)
 
 		require.True(ok)
 		require.Equal(int64(1), sv.AsInt64(Field_Offset))
@@ -95,7 +98,7 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 			On("ReadPLog", context.Background(), istructs.PartitionID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.PLogEventsReaderCallback")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				_ = args.Get(4).(istructs.PLogEventsReaderCallback)(istructs.FirstOffset, nil)
+				require.NoError(args.Get(4).(istructs.PLogEventsReaderCallback)(istructs.FirstOffset, nil))
 			}).
 			On("ReadPLog", context.Background(), istructs.PartitionID(1), istructs.Offset(2), 1, mock.AnythingOfType("istructs.PLogEventsReaderCallback")).
 			Return(errTest)
@@ -105,14 +108,16 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, nil, 0)
-		kb1, _ := s.KeyBuilder(PLogStorage, istructs.NullQName)
+		kb1, err := s.KeyBuilder(PLogStorage, istructs.NullQName)
+		require.NoError(err)
 		kb1.PutInt64(Field_Offset, 1)
 		kb1.PutInt64(Field_Count, 1)
-		kb2, _ := s.KeyBuilder(PLogStorage, istructs.NullQName)
+		kb2, err := s.KeyBuilder(PLogStorage, istructs.NullQName)
+		require.NoError(err)
 		kb2.PutInt64(Field_Offset, 2)
 		kb2.PutInt64(Field_Count, 1)
 
-		err := s.CanExistAll([]istructs.IStateKeyBuilder{kb1, kb2}, nil)
+		err = s.CanExistAll([]istructs.IStateKeyBuilder{kb1, kb2}, nil)
 
 		require.ErrorIs(err, errTest)
 	})
@@ -145,7 +150,8 @@ func TestPLogStorage_ToJSON(t *testing.T) {
 		toJSONFunc: s.toJSON,
 	}
 
-	json, _ := sv.ToJSON()
+	json, err := sv.ToJSON()
+	require.NoError(err)
 
 	require.JSONEq(`
 						{

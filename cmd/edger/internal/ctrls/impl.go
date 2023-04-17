@@ -24,15 +24,14 @@ type superController struct {
 	params           SuperControllerParams
 }
 
-func newSuperController(factories map[states.AttributeKind]MicroControllerFactory, params SuperControllerParams) ISuperController {
+func newSuperController(factories map[states.AttributeKind]MicroControllerFactory, params SuperControllerParams) (ISuperController, error) {
 	super := superController{
 		factories:        factories,
 		microControllers: make(map[string]MicroController),
 		currentState:     states.MakeActualState(),
 		params:           params,
 	}
-	_ = super.loadState()
-	return &super
+	return &super, super.loadState()
 }
 
 // ISuperController.AchieveState()

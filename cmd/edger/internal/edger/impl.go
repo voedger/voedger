@@ -19,14 +19,14 @@ import (
 
 var signals = make(chan os.Signal, 1)
 
-func runEdger(pars EdgerParams) {
+func runEdger(pars EdgerParams) error {
 	signal.Notify(signals, os.Interrupt)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	nodeStates := states.New()
 
-	superController := ctrls.New(
+	superController, err := ctrls.New(
 		map[states.AttributeKind]ctrls.MicroControllerFactory{
 			//TODO: replace this mocks with real microcontrollers
 			states.DockerStackAttribute: ctrls.MockMicroControllerFactory,
@@ -35,6 +35,9 @@ func runEdger(pars EdgerParams) {
 		},
 		ctrls.SuperControllerParams{AchievedStateFile: pars.AchievedStateFilePath},
 	)
+	if err != nil {
+		return err
+	}
 
 	metricCollectors := metrics.MetricCollectors()
 	metricReporters := metrics.MetricReporters()
@@ -52,6 +55,7 @@ func runEdger(pars EdgerParams) {
 	cancel()
 
 	wg.Wait()
+	return nil
 }
 
 const (

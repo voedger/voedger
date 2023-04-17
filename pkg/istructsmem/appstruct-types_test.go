@@ -31,8 +31,7 @@ func TestAppConfigsType(t *testing.T) {
 		require.Equal(cfg.QNameID, id)
 	}
 
-	appStructsProvider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storages)
-	require.NoError(err)
+	appStructsProvider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storages)
 
 	t.Run("Create configs for all known cluster apps", func(t *testing.T) {
 
@@ -83,10 +82,9 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		cfgs1 := make(AppConfigsType, 1)
 		cfg := cfgs1.AddConfig(istructs.AppQName_test1_app1)
 		cfg.Schemas.Add(istructs.NewQName("test", "obj"), istructs.SchemaKind_Object)
-		provider1, err := Provide(cfgs1, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider1 := Provide(cfgs1, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err = provider1.AppStructs(istructs.AppQName_test1_app1)
+		_, err := provider1.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err, err)
 
 		testError := errors.New("test error")
@@ -96,8 +94,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 
 		cfgs2 := make(AppConfigsType, 1)
 		_ = cfgs2.AddConfig(istructs.AppQName_test1_app1)
-		provider2, err := Provide(cfgs2, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider2 := Provide(cfgs2, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		_, err = provider2.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, testError)
 	})
@@ -106,10 +103,9 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		cfgs1 := make(AppConfigsType, 1)
 		cfg := cfgs1.AddConfig(istructs.AppQName_test1_app1)
 		cfg.Schemas.Add(istructs.NewQName("test", "obj"), istructs.SchemaKind_Object)
-		provider1, err := Provide(cfgs1, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider1 := Provide(cfgs1, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err = provider1.AppStructs(istructs.AppQName_test1_app1)
+		_, err := provider1.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err, err)
 
 		pKey := toBytes(uint16(QNameIDSysVesions))
@@ -117,8 +113,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 
 		cfgs2 := make(AppConfigsType, 1)
 		_ = cfgs2.AddConfig(istructs.AppQName_test1_app1)
-		provider2, err := Provide(cfgs2, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider2 := Provide(cfgs2, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		_, err = provider2.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, ErrorInvalidVersion)
 	})

@@ -267,7 +267,8 @@ func Test_ErrBusUnavailable(t *testing.T) {
 		defer wg.Done()
 		sender, ok := busimpl.QuerySender("owner", "app", 0, "q")
 		require.True(ok)
-		_, _, _ = sender.Send(ctx, 1, ibus.NullHandler)
+		_, _, err := sender.Send(ctx, 1, ibus.NullHandler)
+		require.NoError(err)
 		logger.Info("request", 1, "sent")
 	}()
 

@@ -75,7 +75,8 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		k.PutString("pkk", "pkv")
 		k.PutString("cck", "ccv")
 
-		sv, ok, _ := s.CanExist(k)
+		sv, ok, err := s.CanExist(k)
+		require.NoError(err)
 
 		require.True(ok)
 		require.Equal("value", sv.AsString("vk"))
@@ -97,7 +98,8 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		k, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		require.NoError(err)
 		k.PutString("pkk", "pkv")
 
 		_, ok, err := s.CanExist(k)
@@ -117,7 +119,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				require.NotNil(args.Get(2))
-				_ = args.Get(3).(istructs.ValuesCallback)(nil, nil)
+				require.NoError(args.Get(3).(istructs.ValuesCallback)(nil, nil))
 			})
 		appStructs := &mockAppStructs{}
 		appStructs.
@@ -126,7 +128,8 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		k, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		require.NoError(err)
 
 		_ = s.Read(k, func(istructs.IKey, istructs.IStateValue) error {
 			touched = true
@@ -149,9 +152,10 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		k, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		err := s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
+		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
 
 		require.ErrorIs(err, errTest)
 	})
@@ -172,8 +176,10 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 		On("Records").Return(&nilRecords{}).
 		On("Events").Return(&nilEvents{})
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
-	kb, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
-	_, _ = s.NewValue(kb)
+	kb, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+	require.NoError(err)
+	_, err = s.NewValue(kb)
+	require.NoError(err)
 	readyToFlush, err := s.ApplyIntents()
 	require.False(readyToFlush)
 	require.Nil(err)
@@ -232,7 +238,8 @@ func TestViewRecordsStorage_toJSON(t *testing.T) {
 			toJSONFunc: s.toJSON,
 		}
 
-		json, _ := sv.ToJSON()
+		json, err := sv.ToJSON()
+		require.NoError(err)
 
 		require.JSONEq(`{
 								  "Count": 1001,
@@ -247,7 +254,8 @@ func TestViewRecordsStorage_toJSON(t *testing.T) {
 			toJSONFunc: s.toJSON,
 		}
 
-		json, _ := sv.ToJSON(WithExcludeFields("ID", "Count"))
+		json, err := sv.ToJSON(WithExcludeFields("ID", "Count"))
+		require.NoError(err)
 
 		require.JSONEq(`{"Name": "John"}`, json)
 	})

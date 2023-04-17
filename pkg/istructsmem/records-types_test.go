@@ -22,8 +22,7 @@ func Test_RecordsRead(t *testing.T) {
 	storage := newTestStorage()
 	storageProvider := newTestStorageProvider(storage)
 
-	provider, err := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-	require.NoError(err)
+	provider := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -141,7 +140,7 @@ func Test_RecordsRead(t *testing.T) {
 
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1)
-		provider, _ := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
@@ -151,7 +150,7 @@ func Test_RecordsRead(t *testing.T) {
 		recs[1].ID = testID
 		recs[2].ID = testID + 1
 
-		err := app.Records().GetBatch(test.workspace, true, recs)
+		err = app.Records().GetBatch(test.workspace, true, recs)
 		require.ErrorIs(err, testError)
 	})
 
@@ -164,7 +163,7 @@ func Test_RecordsRead(t *testing.T) {
 
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1)
-		provider, _ := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)

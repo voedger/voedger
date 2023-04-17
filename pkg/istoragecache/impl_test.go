@@ -41,10 +41,12 @@ func TestBasicUsage(t *testing.T) {
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
-		_ = storage.Put([]byte("UK"), []byte("Article"), []byte("Cola"))
+		require.NoError(storage.Put([]byte("UK"), []byte("Article"), []byte("Cola")))
 
-		_, _ = storage.Get([]byte("UK"), []byte("Article"), &[]byte{})
-		_, _ = storage.Get([]byte("UK"), []byte("Article"), &[]byte{})
+		_, err = storage.Get([]byte("UK"), []byte("Article"), &[]byte{})
+		require.NoError(err)
+		_, err = storage.Get([]byte("UK"), []byte("Article"), &[]byte{})
+		require.NoError(err)
 
 		require.Equal(0, times)
 	})
@@ -66,14 +68,16 @@ func TestBasicUsage(t *testing.T) {
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
-		_ = storage.PutBatch([]istorage.BatchItem{{
+		require.NoError(storage.PutBatch([]istorage.BatchItem{{
 			PKey:  []byte("UK"),
 			CCols: []byte("Article"),
 			Value: []byte("Cola"),
-		}})
+		}}))
 
-		_, _ = storage.Get([]byte("UK"), []byte("Article"), &[]byte{})
-		_, _ = storage.Get([]byte("UK"), []byte("Article"), &[]byte{})
+		_, err = storage.Get([]byte("UK"), []byte("Article"), &[]byte{})
+		require.NoError(err)
+		_, err = storage.Get([]byte("UK"), []byte("Article"), &[]byte{})
+		require.NoError(err)
 
 		require.Equal(0, times)
 	})
@@ -91,11 +95,13 @@ func TestBasicUsage(t *testing.T) {
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
-		_, _ = storage.Get([]byte("UK"), []byte("Article"), &data)
+		_, err = storage.Get([]byte("UK"), []byte("Article"), &data)
+		require.NoError(err)
 		require.Equal([]byte("Cola"), data)
 
 		data = make([]byte, 0, 100)
-		_, _ = storage.Get([]byte("UK"), []byte("Article"), &data)
+		_, err = storage.Get([]byte("UK"), []byte("Article"), &data)
+		require.NoError(err)
 		require.Equal([]byte("Cola"), data)
 
 		require.Equal(1, times)
@@ -118,7 +124,7 @@ func TestBasicUsage(t *testing.T) {
 		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "hvm")
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
-		_ = storage.Put([]byte("NL"), []byte("Beverage"), []byte("Cola"))
+		require.NoError(storage.Put([]byte("NL"), []byte("Beverage"), []byte("Cola")))
 		items := []istorage.GetBatchItem{
 			{
 				CCols: []byte("Beverage"),
@@ -134,15 +140,17 @@ func TestBasicUsage(t *testing.T) {
 			},
 		}
 
-		_ = storage.GetBatch([]byte("NL"), items)
+		require.NoError(storage.GetBatch([]byte("NL"), items))
 
 		require.Equal([]byte("Cola"), *items[0].Data)
 		require.Empty(items[1].Data)
 		require.Equal([]byte("Napkin"), *items[2].Data)
 
-		_, _ = storage.Get([]byte("NL"), items[0].CCols, &data)
+		_, err = storage.Get([]byte("NL"), items[0].CCols, &data)
+		require.NoError(err)
 		require.Equal([]byte("Cola"), data)
-		_, _ = storage.Get([]byte("NL"), items[2].CCols, &data)
+		_, err = storage.Get([]byte("NL"), items[2].CCols, &data)
+		require.NoError(err)
 		require.Equal([]byte("Napkin"), data)
 	})
 
@@ -270,10 +278,10 @@ func TestAppStorage_GetBatch(t *testing.T) {
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
-		_ = storage.Put([]byte("UK"), []byte("Beverage"), []byte("Cola ver.1.0"))
-		_ = storage.Put([]byte("UK"), []byte("Food"), []byte("Burger ver.1.0"))
+		require.NoError(storage.Put([]byte("UK"), []byte("Beverage"), []byte("Cola ver.1.0")))
+		require.NoError(storage.Put([]byte("UK"), []byte("Food"), []byte("Burger ver.1.0")))
 
-		_ = storage.GetBatch([]byte("UK"), []istorage.GetBatchItem{
+		require.NoError(storage.GetBatch([]byte("UK"), []istorage.GetBatchItem{
 			{
 				CCols: []byte("Beverage"),
 				Data:  &[]byte{},
@@ -286,15 +294,18 @@ func TestAppStorage_GetBatch(t *testing.T) {
 				CCols: []byte("Misc"),
 				Data:  &[]byte{},
 			},
-		})
+		}))
 
 		data := make([]byte, 0, 100)
 
-		ok, _ := storage.Get([]byte("UK"), []byte("Beverage"), &data)
+		ok, err := storage.Get([]byte("UK"), []byte("Beverage"), &data)
+		require.NoError(err)
 		require.False(ok)
-		_, _ = storage.Get([]byte("UK"), []byte("Food"), &data)
+		_, err = storage.Get([]byte("UK"), []byte("Food"), &data)
+		require.NoError(err)
 		require.Equal([]byte("Burger ver.1.1"), data)
-		_, _ = storage.Get([]byte("UK"), []byte("Misc"), &data)
+		_, err = storage.Get([]byte("UK"), []byte("Misc"), &data)
+		require.NoError(err)
 		require.Equal([]byte("Napkin ver.1.0"), data)
 	})
 }

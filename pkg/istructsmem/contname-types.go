@@ -173,7 +173,11 @@ func (names *containerNameCacheType) store() (err error) {
 
 	batch := make([]istorage.BatchItem, 0)
 	for name, id := range names.names {
-		if ok, _ := validIdent(name); ok {
+		ok, err := validIdent(name)
+		if err != nil {
+			return err
+		}
+		if ok {
 			item := istorage.BatchItem{
 				PKey:  pKey,
 				CCols: []byte(name),

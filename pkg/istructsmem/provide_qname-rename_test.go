@@ -35,10 +35,9 @@ func TestRenameQName(t *testing.T) {
 		_ = cfg.Schemas.Add(old, istructs.SchemaKind_Object)
 		_ = cfg.Schemas.Add(other, istructs.SchemaKind_Object)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err, err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err, err)
 
 		return storage

@@ -30,7 +30,8 @@ func TestBundledHostState_BasicUsage(t *testing.T) {
 		kb.PutString("pkFld", "pkVal")
 
 		// Create new value
-		eb, _ := intents.NewValue(kb)
+		eb, err := intents.NewValue(kb)
+		require.NoError(err)
 		eb.PutInt64("vFld", 10)
 		eb.PutInt64(ColOffset, 45)
 	}
@@ -39,7 +40,8 @@ func TestBundledHostState_BasicUsage(t *testing.T) {
 	extension(aaState, aaState)
 
 	// Apply intents
-	readyToFlush, _ := aaState.ApplyIntents()
+	readyToFlush, err := aaState.ApplyIntents()
+	require.NoError(err)
 	require.True(readyToFlush)
 
 	_ = aaState.FlushBundles()
@@ -153,15 +155,19 @@ func TestAsyncActualizerState_BasicUsage_Old(t *testing.T) {
 	kb.PutString("pkFld", "pkVal")
 
 	//Create new value and put it to bundle
-	eb, _ := s.NewValue(kb)
+	eb, err := s.NewValue(kb)
+	require.NoError(err)
 	eb.PutInt64("vFld", 10)
 	eb.PutInt64(ColOffset, 45)
-	readyToFlush, _ := s.ApplyIntents()
+	readyToFlush, err := s.ApplyIntents()
+	require.NoError(err)
 	require.True(readyToFlush)
 
 	//Get value from bundle by key
-	el, _ := s.MustExist(kb)
-	eb, _ = s.UpdateValue(kb, el)
+	el, err := s.MustExist(kb)
+	require.NoError(err)
+	eb, err = s.UpdateValue(kb, el)
+	require.NoError(err)
 	eb.PutInt64("vFld", el.AsInt64("vFld")+int64(7))
 	eb.PutInt64(ColOffset, 46)
 
@@ -187,9 +193,11 @@ func TestAsyncActualizerState_CanExist(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
-		kb, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
+		kb, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		_, ok, _ := s.CanExist(kb)
+		_, ok, err := s.CanExist(kb)
+		require.NoError(err)
 
 		require.True(ok)
 	})
@@ -200,9 +208,10 @@ func TestAsyncActualizerState_CanExist(t *testing.T) {
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
-		kb, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
+		kb, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		_, _, err := s.CanExist(kb)
+		_, _, err = s.CanExist(kb)
 
 		require.ErrorIs(err, errTest)
 	})
@@ -216,8 +225,10 @@ func TestAsyncActualizerState_CanExistAll(t *testing.T) {
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(nil)
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
-		kb1, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
-		kb2, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
+		kb1, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
+		kb2, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
 
 		_ = s.CanExistAll([]istructs.IStateKeyBuilder{kb1, kb2}, func(istructs.IKeyBuilder, istructs.IStateValue, bool) error {
 			times++
@@ -233,10 +244,12 @@ func TestAsyncActualizerState_CanExistAll(t *testing.T) {
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
-		kb1, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
-		kb2, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
+		kb1, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
+		kb2, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		err := s.CanExistAll([]istructs.IStateKeyBuilder{kb1, kb2}, nil)
+		err = s.CanExistAll([]istructs.IStateKeyBuilder{kb1, kb2}, nil)
 
 		require.ErrorIs(err, errTest)
 	})
@@ -253,9 +266,10 @@ func TestAsyncActualizerState_MustExist(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
-		kb, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
+		kb, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		_, err := s.MustExist(kb)
+		_, err = s.MustExist(kb)
 
 		require.NoError(err)
 	})
@@ -270,9 +284,10 @@ func TestAsyncActualizerState_MustExist(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[0].value = nil
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
-		kb, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
+		kb, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		_, err := s.MustExist(kb)
+		_, err = s.MustExist(kb)
 
 		require.ErrorIs(err, ErrNotExists)
 	})
@@ -283,9 +298,10 @@ func TestAsyncActualizerState_MustExist(t *testing.T) {
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
-		kb, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
+		kb, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		_, err := s.MustExist(kb)
+		_, err = s.MustExist(kb)
 
 		require.ErrorIs(err, errTest)
 	})
@@ -302,8 +318,10 @@ func TestAsyncActualizerState_MustExistAll(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
-		k1, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
-		k2, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
+		k1, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
+		k2, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
 		kk := make([]istructs.IKeyBuilder, 0, 2)
 
 		_ = s.MustExistAll([]istructs.IStateKeyBuilder{k1, k2}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
@@ -326,10 +344,12 @@ func TestAsyncActualizerState_MustExistAll(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[0].value = nil
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
-		k1, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
-		k2, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
+		k1, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
+		k2, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		err := s.MustExistAll([]istructs.IStateKeyBuilder{k1, k2}, nil)
+		err = s.MustExistAll([]istructs.IStateKeyBuilder{k1, k2}, nil)
 
 		require.ErrorIs(err, ErrNotExists)
 	})
@@ -346,9 +366,10 @@ func TestAsyncActualizerState_MustNotExist(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[0].value = nil
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
-		k, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
+		k, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		err := s.MustNotExist(k)
+		err = s.MustNotExist(k)
 
 		require.NoError(err)
 	})
@@ -363,9 +384,10 @@ func TestAsyncActualizerState_MustNotExist(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
-		k, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
+		k, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		err := s.MustNotExist(k)
+		err = s.MustNotExist(k)
 
 		require.ErrorIs(err, ErrExists)
 	})
@@ -376,9 +398,10 @@ func TestAsyncActualizerState_MustNotExist(t *testing.T) {
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
-		kb, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
+		kb, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		err := s.MustNotExist(kb)
+		err = s.MustNotExist(kb)
 
 		require.ErrorIs(err, errTest)
 	})
@@ -395,10 +418,12 @@ func TestAsyncActualizerState_MustNotExistAll(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[0].value = nil
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
-		k1, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
-		k2, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
+		k1, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
+		k2, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		err := s.MustNotExistAll([]istructs.IStateKeyBuilder{k1, k2})
+		err = s.MustNotExistAll([]istructs.IStateKeyBuilder{k1, k2})
 
 		require.NoError(err)
 	})
@@ -413,10 +438,12 @@ func TestAsyncActualizerState_MustNotExistAll(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
-		k1, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
-		k2, _ := s.KeyBuilder(testStorage, testViewRecordQName1)
+		k1, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
+		k2, err := s.KeyBuilder(testStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		err := s.MustNotExistAll([]istructs.IStateKeyBuilder{k1, k2})
+		err = s.MustNotExistAll([]istructs.IStateKeyBuilder{k1, k2})
 
 		require.ErrorIs(err, ErrExists)
 	})
@@ -450,8 +477,10 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{})
 		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
-		kb1, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
-		kb2, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName2)
+		kb1, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		require.NoError(err)
+		kb2, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName2)
+		require.NoError(err)
 
 		_, _ = s.NewValue(kb1)
 		_, _ = s.NewValue(kb2)
@@ -486,8 +515,10 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{})
 		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
-		kb1, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
-		kb2, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName2)
+		kb1, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		require.NoError(err)
+		kb2, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName2)
+		require.NoError(err)
 
 		_, _ = s.NewValue(kb1)
 		_, _ = s.NewValue(kb2)

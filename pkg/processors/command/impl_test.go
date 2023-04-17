@@ -600,9 +600,8 @@ func setUp(t *testing.T, cfgFuncs ...func(*istructsmem.AppConfigType)) testApp {
 		cfgFunc(cfg)
 	}
 
-	appStructsProvider, err := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
+	appStructsProvider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider)
-	require.Nil(t, err, err)
 
 	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus
 	var bus ibus.IBus
@@ -629,13 +628,12 @@ func setUp(t *testing.T, cfgFuncs ...func(*istructsmem.AppConfigType)) testApp {
 		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, 1, resource, token, "")
 		serviceChannel <- icm
 	})
-	n10nBroker, err := in10nmem.Provide(in10n.Quotas{
+	n10nBroker := in10nmem.Provide(in10n.Quotas{
 		Channels:               1000,
 		ChannelsPerSubject:     10,
 		Subsciptions:           1000,
 		SubsciptionsPerSubject: 10,
 	})
-	require.Nil(t, err)
 	ProvideJSONFuncParamsSchema(cfg)
 
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)

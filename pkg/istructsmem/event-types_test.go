@@ -23,8 +23,7 @@ func TestEventBuilder_Core(t *testing.T) {
 
 	// gets AppStructProvider and AppStructs
 	require.Equal(test.AppCfg, test.AppConfigs.GetConfig(test.appName))
-	provider, err := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -654,8 +653,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 		testScenarioCount
 	)
 
-	provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	ws := istructs.WSID(1)
 	docName := istructs.NewQName("test", "cdoc")
@@ -825,8 +823,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		return cfgs
 	}()
 
-	provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	docName := istructs.NewQName("test", "cdoc")
 	docID := istructs.NullRecordID
@@ -1034,8 +1031,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 func TestEventBuild_Error(t *testing.T) {
 	require := require.New(t)
 
-	provider, err := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -1399,8 +1395,7 @@ func Test_LoadEvent_CorruptedBytes(t *testing.T) {
 func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 	require := require.New(t)
 
-	provider, err := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)

@@ -24,7 +24,8 @@ func TestHttpStorage_BasicUsage(t *testing.T) {
 		require.Equal(http.MethodPost, r.Method)
 		require.Equal("my-value", r.Header.Get("my-header"))
 		require.Equal("application/json", r.Header.Get("Content-Type"))
-		bb, _ := io.ReadAll(r.Body)
+		bb, err := io.ReadAll(r.Body)
+		require.NoError(err)
 		require.Equal(`{"hello":"api"}`, string(bb))
 		_, _ = w.Write([]byte(`{"hello":"storage"}`))
 	}))
@@ -49,14 +50,16 @@ func TestHttpStorage_BasicUsage(t *testing.T) {
 	require.Equal(int32(http.StatusOK), v.AsInt32(Field_StatusCode))
 	require.Contains(v.AsString(Field_Header), "Content-Length: 19")
 	require.Contains(v.AsString(Field_Header), "Content-Type: text/plain")
-	json, _ := v.ToJSON()
+	json, err := v.ToJSON()
+	require.NoError(err)
 	require.NotEmpty(json)
 }
 func TestHttpStorage_Timeout(t *testing.T) {
 	t.Run("Should panic when url not found", func(t *testing.T) {
 		require := require.New(t)
 		s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 0, 0)
-		k, _ := s.KeyBuilder(HTTPStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(HTTPStorage, istructs.NullQName)
+		require.NoError(err)
 
 		require.ErrorIs(errorFromPanic(func() { _ = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil }) }), ErrNotFound)
 	})
@@ -68,11 +71,12 @@ func TestHttpStorage_Timeout(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		k, _ := s.KeyBuilder(HTTPStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(HTTPStorage, istructs.NullQName)
+		require.NoError(err)
 		k.PutString(Field_Url, ts.URL)
 		k.PutInt64(Field_HTTPClientTimeoutMilliseconds, 100)
 
-		err := s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
+		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
 
 		require.Error(err)
 	})

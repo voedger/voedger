@@ -113,8 +113,7 @@ func Test_qNameCache_Errors(t *testing.T) {
 		err := cfg.versions.putVersion(verSysQNames, 0xFF)
 		require.NoError(err)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, ErrorInvalidVersion)
@@ -129,10 +128,9 @@ func Test_qNameCache_Errors(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
 		_ = cfg.Schemas.Add(istructs.NewQName("test", "object"), istructs.SchemaKind_Object)
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, testError)
 	})
 
@@ -147,10 +145,9 @@ func Test_qNameCache_Errors(t *testing.T) {
 			_ = cfg.Schemas.Add(istructs.NewQName("test", fmt.Sprintf("object%d", i)), istructs.SchemaKind_Object)
 		}
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, ErrQNameIDsExceeds)
 	})
 
@@ -167,10 +164,9 @@ func Test_qNameCache_Errors(t *testing.T) {
 				istructs.NullQName, istructs.NullQName, istructs.NullQName, NullCommandExec))
 		}
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, ErrQNameIDsExceeds)
 	})
 
@@ -185,10 +181,9 @@ func Test_qNameCache_Errors(t *testing.T) {
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
 		cfg.Schemas.Add(schemaName, istructs.SchemaKind_Object)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, testError)
 	})
 
@@ -202,10 +197,9 @@ func Test_qNameCache_Errors(t *testing.T) {
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
 		cfg.Resources.Add(NewQueryFunction(resourceName, istructs.NullQName, istructs.NullQName, NullQueryExec))
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, testError)
 	})
 
@@ -232,10 +226,9 @@ func Test_qNameCache_Errors(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.Error(err)
 		require.Contains(err.Error(), "invalid string representation")
 	})

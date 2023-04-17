@@ -49,9 +49,9 @@ func TestCore_ViewRecords(t *testing.T) {
 
 	appCfgs := appConfigs()
 	appCfg := appCfgs.GetConfig(istructs.AppQName_test1_app1)
-	p, err := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+	p := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+	app, err := p.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
-	app, _ := p.AppStructs(istructs.AppQName_test1_app1)
 	viewRecords := app.ViewRecords()
 
 	t.Run("must be ok put records one-by-one", func(t *testing.T) {
@@ -772,8 +772,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 		return cfgs
 	}
 
-	p, err := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 	as, err := p.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
@@ -827,7 +826,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 
 	cfgs := make(AppConfigsType, 1)
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
-	provider, _ := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 	championatsView := istructs.NewQName("test", "championats")
 	championsView := istructs.NewQName("test", "champions")

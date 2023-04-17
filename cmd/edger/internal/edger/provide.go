@@ -4,6 +4,6 @@
 
 package edger
 
-func Run(pars EdgerParams) {
-	runEdger(pars)
+func Run(pars EdgerParams) error {
+	return runEdger(pars)
 }

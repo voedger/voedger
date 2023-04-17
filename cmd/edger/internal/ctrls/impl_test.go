@@ -21,7 +21,7 @@ import (
 func Test_BasicUsageSuperController(t *testing.T) {
 	require := require.New(t)
 
-	super := New(
+	super, err := New(
 		map[states.AttributeKind]MicroControllerFactory{
 			states.DockerStackAttribute: MockMicroControllerFactory,
 			states.CommandAttribute:     MockMicroControllerFactory,
@@ -29,6 +29,7 @@ func Test_BasicUsageSuperController(t *testing.T) {
 		},
 		SuperControllerParams{},
 	)
+	require.NoError(err)
 
 	desired := states.MakeDesiredState()
 	desired["id"] = states.DesiredAttribute{

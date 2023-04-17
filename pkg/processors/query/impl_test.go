@@ -144,8 +144,7 @@ func getTestCfg(require *require.Assertions, cfgFunc ...func(cfg *istructsmem.Ap
 	storageProvider := istorageimpl.Provide(asf)
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeFunc)
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
-	asp, err := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, payloads.TestAppTokensFactory(tokens), storageProvider)
-	require.NoError(err)
+	asp = istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, payloads.TestAppTokensFactory(tokens), storageProvider)
 
 	article := func(id, idDepartment istructs.RecordID, name string) istructs.IObject {
 		return &coreutils.TestObject{
