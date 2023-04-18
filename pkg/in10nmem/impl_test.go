@@ -46,7 +46,8 @@ func TestBasicUsage(t *testing.T) {
 	var channel in10n.ChannelID
 	t.Run("Create channel.", func(t *testing.T) {
 		var subject istructs.SubjectLogin = "paa"
-		channel, err := broker.NewChannel(subject, 24*time.Hour)
+		var err error
+		channel, err = broker.NewChannel(subject, 24*time.Hour)
 		req.NoError(err)
 		req.NotNil(channel)
 	})
