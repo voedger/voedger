@@ -45,8 +45,6 @@ func TestCore_ViewRecords(t *testing.T) {
 				AddClustColumn("clusteringColumn2", istructs.DataKind_float64).
 				AddClustColumn("clusteringColumn3", istructs.DataKind_bytes).
 				AddValueField("valueField1", istructs.DataKind_int64, false)
-
-			require.NoError(schemas.ValidateSchemas())
 		})
 
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
@@ -664,7 +662,6 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 			AddValueField("vf_recID", istructs.DataKind_RecordID, false).
 			AddValueField("vf_record", istructs.DataKind_Record, false).
 			AddValueField("vf_event", istructs.DataKind_Event, false)
-		require.NoError(schemas.ValidateSchemas())
 	})
 
 	cfg := func() *AppConfigType {
@@ -774,8 +771,6 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 				AddValueField("active", istructs.DataKind_bool, true)
 
 			_ = schemas.Add(istructs.NewQName("test", "obj1"), istructs.SchemaKind_Object)
-
-			require.NoError(schemas.ValidateSchemas())
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -849,8 +844,6 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 			AddPartField("Year", istructs.DataKind_int32).
 			AddClustColumn("Sport", istructs.DataKind_string).
 			AddValueField("Winner", istructs.DataKind_string, true)
-
-		require.NoError(schemas.ValidateSchemas())
 	})
 
 	storage := newTestStorage()

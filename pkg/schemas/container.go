@@ -5,8 +5,16 @@
 
 package schemas
 
-func newContainer(name string, schema QName, minOccurs, maxOccurs Occurs) Container {
-	return Container{
+// Implements Container interface
+type container struct {
+	name      string
+	schema    QName
+	minOccurs Occurs
+	maxOccurs Occurs
+}
+
+func newContainer(name string, schema QName, minOccurs, maxOccurs Occurs) container {
+	return container{
 		name:      name,
 		schema:    schema,
 		minOccurs: minOccurs,
@@ -14,15 +22,12 @@ func newContainer(name string, schema QName, minOccurs, maxOccurs Occurs) Contai
 	}
 }
 
-// Returns is container system
-func (cont *Container) IsSys() bool { return IsSysContainer(cont.name) }
+func (cont *container) IsSys() bool { return IsSysContainer(cont.name) }
 
-// —————————— istructs.IContainerDesc ——————————
+func (cont *container) MaxOccurs() Occurs { return cont.maxOccurs }
 
-func (cont *Container) Name() string { return cont.name }
+func (cont *container) MinOccurs() Occurs { return cont.minOccurs }
 
-func (cont *Container) Schema() QName { return cont.schema }
+func (cont *container) Name() string { return cont.name }
 
-func (cont *Container) MinOccurs() Occurs { return cont.minOccurs }
-
-func (cont *Container) MaxOccurs() Occurs { return cont.maxOccurs }
+func (cont *container) Schema() QName { return cont.schema }

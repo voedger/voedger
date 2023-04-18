@@ -6,6 +6,6 @@
 package schemas
 
 // Creates and return new application schemas cache
-func NewSchemaCache() *SchemasCache {
+func NewSchemaCache() SchemaCacheBuilder {
 	return newSchemaCache()
 }

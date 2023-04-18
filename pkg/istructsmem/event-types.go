@@ -97,7 +97,7 @@ func (ev *eventType) argumentNames() (arg, argUnl istructs.QName, err error) {
 		argUnl = cmd.UnloggedParamsSchema()
 	} else {
 		// #!16208: Must be possible to use SchemaKind_ODoc as Event.QName
-		if schema := ev.appCfg.Schemas.Schema(ev.name); schema.Kind() != istructs.SchemaKind_ODoc {
+		if schema := ev.appCfg.Schemas.SchemaByName(ev.name); (schema == nil) || (schema.Kind() != istructs.SchemaKind_ODoc) {
 			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
 		}
 		arg = ev.name

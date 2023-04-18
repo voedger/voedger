@@ -6,84 +6,89 @@
 package schemas
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// Application schemas cache
-//
 // Implements ISchema and ISchemaBuilder interfaces
-type SchemasCache struct {
-	schemas map[QName]*Schema
+type schemasCache struct {
+	schemas map[QName]*schema
 }
 
-func newSchemaCache() *SchemasCache {
-	cache := SchemasCache{
-		schemas: make(map[QName]*Schema),
+func newSchemaCache() *schemasCache {
+	cache := schemasCache{
+		schemas: make(map[QName]*schema),
 	}
 	return &cache
 }
 
-// Adds new schema specified name and kind.
-//
-// # Panics:
-//   - if name is empty (istructs.NullQName),
-//   - if schema with name already exists.
-func (cache *SchemasCache) Add(name QName, kind SchemaKind) (schema *Schema) {
+func (cache *schemasCache) Add(name QName, kind SchemaKind) SchemaBuilder {
 	if name == istructs.NullQName {
 		panic(fmt.Errorf("schema name cannot be empty: %w", ErrNameMissed))
 	}
 	if cache.SchemaByName(name) != nil {
 		panic(fmt.Errorf("schema name «%s» already used: %w", name, ErrNameUniqueViolation))
 	}
-	schema = newSchema(cache, name, kind)
+	schema := newSchema(cache, name, kind)
 	cache.schemas[name] = schema
 	return schema
 }
 
-// Adds new schemas for view.
-func (cache *SchemasCache) AddView(name QName) *ViewSchema {
-	v := newViewSchema(cache, name)
+func (cache *schemasCache) AddView(name QName) ViewBuilder {
+	v := newViewBuilder(cache, name)
 	return &v
 }
 
-// Enumerates all schemas from cache.
-func (cache *SchemasCache) EnumSchemas(enum func(*Schema)) {
-	for _, schema := range cache.schemas {
-		enum(schema)
+func (cache *schemasCache) Build() (result SchemaCache, err error) {
+	cache.prepare()
+
+	validator := newValidator()
+	cache.EnumSchemas(func(schema Schema) {
+		err = errors.Join(err, validator.validate(schema))
+	})
+	if err != nil {
+		return nil, err
 	}
+
+	return cache, nil
 }
 
-// Returns schema by name.
-//
-// Returns nil if not found.
-func (cache *SchemasCache) SchemaByName(name QName) *Schema {
+func (cache *schemasCache) SchemaByName(name QName) Schema {
 	if schema, ok := cache.schemas[name]; ok {
 		return schema
 	}
 	return nil
 }
 
-// Prepares cache for use. Automaticaly called from ValidateSchemas method.
-func (cache *SchemasCache) Prepare() {
-	cache.EnumSchemas(func(s *Schema) {
+func (cache *schemasCache) SchemaCount() int {
+	return len(cache.schemas)
+}
+
+func (cache *schemasCache) EnumSchemas(enum func(Schema)) {
+	for _, schema := range cache.schemas {
+		enum(schema)
+	}
+}
+
+func (cache *schemasCache) prepare() {
+	cache.EnumSchemas(func(s Schema) {
 		if s.Kind() == istructs.SchemaKind_ViewRecord {
 			cache.prepareViewFullKeySchema(s)
 		}
 	})
 }
 
-// —————————— istructs.ISchemas ——————————
+//————— istructs.ISchemas —————
 
-func (cache *SchemasCache) Schema(schema QName) istructs.ISchema {
-	s := cache.SchemaByName(schema)
-	if s == nil {
-		return NullSchema
+func (cache *schemasCache) Schema(name istructs.QName) istructs.ISchema {
+	if schema, ok := cache.schemas[name]; ok {
+		return schema
 	}
-	return s
+	return NullSchema
 }
 
-func (cache *SchemasCache) Schemas(enum func(QName)) {
-	cache.EnumSchemas(func(schema *Schema) { enum(schema.QName()) })
+func (cache *schemasCache) Schemas(cb func(schemaName istructs.QName)) {
+	cache.EnumSchemas(func(s Schema) { cb(s.QName()) })
 }

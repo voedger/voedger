@@ -30,9 +30,10 @@ func TestQNames(t *testing.T) {
 	}
 
 	schemaName := istructs.NewQName("test", "schema")
-	s := schemas.NewSchemaCache()
-	s.Add(schemaName, istructs.SchemaKind_CDoc)
-	if err := s.ValidateSchemas(); err != nil {
+	bld := schemas.NewSchemaCache()
+	bld.Add(schemaName, istructs.SchemaKind_CDoc)
+	schemas, err := bld.Build()
+	if err != nil {
 		panic(err)
 	}
 
@@ -45,14 +46,14 @@ func TestQNames(t *testing.T) {
 		})
 
 	names := NewQNames()
-	if err := names.Prepare(storage, versions, s, &r); err != nil {
+	if err := names.Prepare(storage, versions, schemas, &r); err != nil {
 		panic(err)
 	}
 
 	require := require.New(t)
 	t.Run("basic QNames methods", func(t *testing.T) {
 
-		check := func(names *QNames, name schemas.QName) QNameID {
+		check := func(names *QNames, name istructs.QName) QNameID {
 			id, err := names.GetID(name)
 			require.NoError(err)
 			require.NotEqual(NullQNameID, id)

@@ -18,10 +18,10 @@ import (
 // validator provides validation application structures by single schema
 type validator struct {
 	validators *validators
-	schema     *schemas.Schema
+	schema     schemas.Schema
 }
 
-func newValidator(validators *validators, schema *schemas.Schema) *validator {
+func newValidator(validators *validators, schema schemas.Schema) *validator {
 	return &validator{validators, schema}
 }
 
@@ -132,7 +132,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 // Validates element containers occurses
 func (v *validator) validElementContOccurses(el *elementType) (err error) {
 	v.schema.EnumContainers(
-		func(cont *schemas.Container) {
+		func(cont schemas.Container) {
 			occurs := schemas.Occurs(0)
 			el.EnumElements(
 				func(child *elementType) {
@@ -169,7 +169,7 @@ func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error)
 // Validates specified row
 func (v *validator) validRow(row *rowType) (err error) {
 	v.schema.EnumFields(
-		func(f *schemas.Field) {
+		func(f schemas.Field) {
 			if f.Required() {
 				if !row.hasValue(f.Name()) {
 					err = errors.Join(err,
@@ -187,17 +187,17 @@ func (v *validator) validObject(obj *elementType) error {
 }
 
 type validators struct {
-	schemas    *schemas.SchemasCache
+	schemas    schemas.SchemaCache
 	validators map[schemas.QName]*validator
 }
 
-func newValidators(schemaCache *schemas.SchemasCache) *validators {
+func newValidators(schemaCache schemas.SchemaCache) *validators {
 	v := validators{
 		schemas:    schemaCache,
 		validators: make(map[istructs.QName]*validator),
 	}
 	schemaCache.EnumSchemas(
-		func(s *schemas.Schema) {
+		func(s schemas.Schema) {
 			v.validators[s.QName()] = newValidator(&v, s)
 		})
 	return &v

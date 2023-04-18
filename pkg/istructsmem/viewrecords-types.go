@@ -269,11 +269,11 @@ func (key *keyType) keyRow() (istructs.IRowReader, error) {
 	row.setQName(key.fullKeySchema())
 
 	key.partRow.schema.EnumFields(
-		func(f *schemas.Field) {
+		func(f schemas.Field) {
 			row.dyB.Set(f.Name(), key.partRow.dyB.Get(f.Name()))
 		})
 	key.clustRow.schema.EnumFields(
-		func(f *schemas.Field) {
+		func(f schemas.Field) {
 			row.dyB.Set(f.Name(), key.clustRow.dyB.Get(f.Name()))
 		})
 
@@ -380,7 +380,7 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 
 					result := true
 					r1.schema.EnumFields(
-						func(f *schemas.Field) {
+						func(f schemas.Field) {
 							result = result && equalVal(r1.dyB.Get(f.Name()), r2.dyB.Get(f.Name()))
 						})
 					return result

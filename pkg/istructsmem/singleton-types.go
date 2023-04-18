@@ -48,7 +48,7 @@ func (stons *singletonsCacheType) clear() {
 // collectAllSingletons collect all application singlton IDs
 func (stons *singletonsCacheType) collectAllSingletons() (err error) {
 	stons.cfg.Schemas.EnumSchemas(
-		func(schema *schemas.Schema) {
+		func(schema schemas.Schema) {
 			if schema.Singleton() {
 				err = errors.Join(err,
 					stons.collectSingleton(schema))
@@ -59,7 +59,7 @@ func (stons *singletonsCacheType) collectAllSingletons() (err error) {
 }
 
 // collectSingleton checks is application schema singleton in cache. If not then adds it with new ID
-func (stons *singletonsCacheType) collectSingleton(schema *schemas.Schema) (err error) {
+func (stons *singletonsCacheType) collectSingleton(schema schemas.Schema) (err error) {
 
 	name := schema.QName()
 

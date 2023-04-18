@@ -26,7 +26,6 @@ func TestBasicUsage_Uniques(t *testing.T) {
 			AddField("a", istructs.DataKind_int32, true).
 			AddField("b", istructs.DataKind_int32, true).
 			AddField("c", istructs.DataKind_int32, true)
-		require.NoError(schemas.ValidateSchemas())
 	})
 
 	cfgs := AppConfigsType{}

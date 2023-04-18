@@ -38,7 +38,7 @@ func (names *QNames) GetQName(id QNameID) (qName istructs.QName, err error) {
 }
 
 // Reads all application QNames from storage, add all system and application QNames and write result to storage if some changes. Must be called at application starts
-func (names *QNames) Prepare(storage istorage.IAppStorage, versions *vers.Versions, schemas *schemas.SchemasCache, resources istructs.IResources) error {
+func (names *QNames) Prepare(storage istorage.IAppStorage, versions *vers.Versions, schemas schemas.SchemaCache, resources istructs.IResources) error {
 	if err := names.load(storage, versions); err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (names *QNames) Prepare(storage istorage.IAppStorage, versions *vers.Versio
 }
 
 // Collect all system and application QName IDs
-func (names *QNames) collectAllQNames(s *schemas.SchemasCache, r istructs.IResources) (err error) {
+func (names *QNames) collectAllQNames(s schemas.SchemaCache, r istructs.IResources) (err error) {
 
 	// system QNames
 	names.
@@ -66,10 +66,10 @@ func (names *QNames) collectAllQNames(s *schemas.SchemasCache, r istructs.IResou
 		collectSysQName(istructs.QNameCommandCUD, QNameIDCommandCUD)
 
 	if s != nil {
-		s.Schemas(
-			func(q schemas.QName) {
+		s.EnumSchemas(
+			func(schema schemas.Schema) {
 				err = errors.Join(err,
-					names.collectAppQName(q))
+					names.collectAppQName(schema.QName()))
 			})
 	}
 

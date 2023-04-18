@@ -21,7 +21,7 @@ import (
 func test_SchemasSingletons(t *testing.T, cfg *AppConfigType) {
 	require := require.New(t)
 	cfg.Schemas.EnumSchemas(
-		func(s *schemas.Schema) {
+		func(s schemas.Schema) {
 			if s.Singleton() {
 				_, err := cfg.singletons.qNameToID(s.QName())
 				require.NoError(err)
@@ -43,8 +43,6 @@ func Test_singletonsCacheType_qNamesToID(t *testing.T) {
 			schema := schemas.Add(cDocName, istructs.SchemaKind_CDoc)
 			schema.AddField("f1", istructs.DataKind_QName, true)
 			schema.SetSingleton()
-
-			require.NoError(schemas.ValidateSchemas())
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -144,7 +142,6 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 		t.Run("must be ok to build schemas", func(t *testing.T) {
 			schema := schemas.Add(istructs.NewQName("test", "CDoc"), istructs.SchemaKind_CDoc)
 			schema.SetSingleton()
-			require.NoError(schemas.ValidateSchemas())
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -164,7 +161,6 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 			for i := 0; i <= 0x200; i++ {
 				schemas.Add(istructs.NewQName("test", fmt.Sprintf("CDoc%d", i)), istructs.SchemaKind_CDoc).SetSingleton()
 			}
-			require.NoError(schemas.ValidateSchemas())
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -188,7 +184,6 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 
 		t.Run("must be ok to build schemas", func(t *testing.T) {
 			schemas.Add(schemaName, istructs.SchemaKind_CDoc).SetSingleton()
-			require.NoError(schemas.ValidateSchemas())
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -213,7 +208,6 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 
 		t.Run("must be ok to build schemas", func(t *testing.T) {
 			schemas.Add(schemaName, istructs.SchemaKind_CDoc).SetSingleton()
-			require.NoError(schemas.ValidateSchemas())
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -275,7 +269,6 @@ func Test_singletonsCacheType_ReuseStorage(t *testing.T) {
 		t.Run("must be ok to build schemas", func(t *testing.T) {
 			schemas.Add(testQNameA, istructs.SchemaKind_CDoc).SetSingleton()
 			schemas.Add(testQNameC, istructs.SchemaKind_CDoc).SetSingleton()
-			require.NoError(schemas.ValidateSchemas())
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -293,7 +286,6 @@ func Test_singletonsCacheType_ReuseStorage(t *testing.T) {
 			schemas.Add(testQNameA, istructs.SchemaKind_CDoc).SetSingleton()
 			schemas.Add(testQNameB, istructs.SchemaKind_CDoc).SetSingleton()
 			schemas.Add(testQNameC, istructs.SchemaKind_CDoc).SetSingleton()
-			require.NoError(schemas.ValidateSchemas())
 		})
 
 		cfgs := make(AppConfigsType, 1)

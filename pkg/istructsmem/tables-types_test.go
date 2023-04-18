@@ -90,7 +90,7 @@ func Test_newRecord(t *testing.T) {
 		t.Run("system field counters for test CDoc", func(t *testing.T) {
 			sysCnt := 0
 			doc.schema.EnumFields(
-				func(f *schemas.Field) {
+				func(f schemas.Field) {
 					require.True(doc.hasValue(f.Name()))
 					if f.IsSys() {
 						sysCnt++
@@ -111,7 +111,7 @@ func Test_newRecord(t *testing.T) {
 			sysCnt := 0
 
 			doc.schema.EnumFields(
-				func(f *schemas.Field) {
+				func(f schemas.Field) {
 					require.True(doc.hasValue(f.Name()))
 					if f.IsSys() {
 						sysCnt++
@@ -148,7 +148,7 @@ func Test_newRecord(t *testing.T) {
 				sysCnt := 0
 
 				rec.schema.EnumFields(
-					func(f *schemas.Field) {
+					func(f schemas.Field) {
 						require.True(rec.hasValue(f.Name()))
 						if f.IsSys() {
 							sysCnt++
@@ -170,7 +170,7 @@ func Test_newRecord(t *testing.T) {
 				sysCnt := 0
 
 				rec.schema.EnumFields(
-					func(f *schemas.Field) {
+					func(f schemas.Field) {
 						require.True(rec.hasValue(f.Name()))
 						if f.IsSys() {
 							sysCnt++
@@ -377,7 +377,6 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 				AddField("bool_1", istructs.DataKind_bool, false).
 				AddField("RecordID_1", istructs.DataKind_RecordID, false)
 			schemas.Add(test.tablePhotos, istructs.SchemaKind_Object) // for reading QName_1 field value
-			require.NoError(schemas.ValidateSchemas())
 		})
 
 		newConfig := newAppConfig(test.AppCfg.Name, schemas)

@@ -10,21 +10,21 @@ import (
 	"github.com/voedger/voedger/pkg/schemas"
 )
 
-func newSchemasCache(s *schemas.SchemasCache) DynoBufSchemasCache {
+func newSchemasCache(s schemas.SchemaCache) DynoBufSchemasCache {
 	cache := DynoBufSchemasCache{}
 	s.EnumSchemas(
-		func(schema *schemas.Schema) {
+		func(schema schemas.Schema) {
 			cache.add(schema)
 		})
 	return cache
 }
 
-func (cache DynoBufSchemasCache) add(schema *schemas.Schema) {
+func (cache DynoBufSchemasCache) add(schema schemas.Schema) {
 	db := dynobuffers.NewScheme()
 
 	db.Name = schema.QName().String()
 	schema.EnumFields(
-		func(f *schemas.Field) {
+		func(f schemas.Field) {
 			if !f.IsSys() { // #18142: extract system fields from dynobuffer
 				fieldType := DataKindToFieldType(f.DataKind())
 				if fieldType == dynobuffers.FieldTypeByte {

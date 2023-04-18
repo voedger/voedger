@@ -8,6 +8,7 @@ package schemas
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -50,7 +51,12 @@ func TestBasicUsage(t *testing.T) {
 		AddClustColumn("Buyer", istructs.DataKind_string).
 		AddValueField("BuyerID", istructs.DataKind_RecordID, true)
 
-	if err := schemas.ValidateSchemas(); err != nil {
-		panic(err)
-	}
+	result, err := schemas.Build()
+
+	t.Run("test results", func(t *testing.T) {
+		require := require.New(t)
+		require.NoError(err)
+		require.NotNil(result)
+	})
+
 }

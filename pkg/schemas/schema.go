@@ -11,44 +11,35 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// Schema describes the entity, such as document, record or view. Schema has fields and containers.
-//
 // Implements ISchema and ISchemaBuilder interfaces
-type Schema struct {
-	cache             *SchemasCache
+type schema struct {
+	cache             *schemasCache
 	name              QName
 	kind              SchemaKind
 	props             SchemaKindProps
-	fields            map[string]*Field
+	fields            map[string]*field
 	fieldsOrdered     []string
-	containers        map[string]*Container
+	containers        map[string]*container
 	containersOrdered []string
 	singleton         bool
 }
 
-func newSchema(cache *SchemasCache, name QName, kind SchemaKind) *Schema {
-	schema := Schema{
+func newSchema(cache *schemasCache, name QName, kind SchemaKind) *schema {
+	schema := schema{
 		cache:             cache,
 		name:              name,
 		kind:              kind,
 		props:             schemaKindProps[kind],
-		fields:            make(map[string]*Field),
+		fields:            make(map[string]*field),
 		fieldsOrdered:     make([]string, 0),
-		containers:        make(map[string]*Container),
+		containers:        make(map[string]*container),
 		containersOrdered: make([]string, 0),
 	}
 	schema.makeSysFields()
 	return &schema
 }
 
-// Adds container specified name and occurs.
-//
-// # Panics:
-//   - if name is empty,
-//   - if container with name already exists,
-//   - if invalid occurrences,
-//   - if schema kind does not allow containers.
-func (sch *Schema) AddContainer(name string, schema QName, minOccurs, maxOccurs Occurs) *Schema {
+func (sch *schema) AddContainer(name string, schema QName, minOccurs, maxOccurs Occurs) SchemaBuilder {
 	if name == "" {
 		panic(fmt.Errorf("empty container name: %w", ErrNameMissed))
 	}
@@ -84,110 +75,84 @@ func (sch *Schema) AddContainer(name string, schema QName, minOccurs, maxOccurs 
 	return sch
 }
 
-// Adds field specified name and kind.
-//
-// # Panics:
-//   - if field is empty,
-//   - if field with name is already exists,
-//   - if schema kind not supports fields,
-//   - if data kind is not allowed by schema kind.
-func (sch *Schema) AddField(name string, kind DataKind, required bool) *Schema {
+func (sch *schema) AddField(name string, kind DataKind, required bool) SchemaBuilder {
 	sch.addField(name, kind, required, false)
 	return sch
 }
 
-// Adds verified field specified name and kind.
-//
-// # Panics:
-//   - if field is empty,
-//   - if field with name is already exists,
-//   - if schema kind not supports fields,
-//   - if data kind is not allowed by schema kind.
-func (sch *Schema) AddVerifiedField(name string, kind DataKind, required bool) *Schema {
+func (sch *schema) AddVerifiedField(name string, kind DataKind, required bool) SchemaBuilder {
 	sch.addField(name, kind, required, true)
 	return sch
 }
 
-// Finds container by name.
-//
-// Returns nil if not found.
-func (sch *Schema) Container(name string) *Container {
-	return sch.containers[name]
+func (sch *schema) Cache() SchemaCache {
+	return sch.cache
 }
 
-// Return container by index
-func (sch *Schema) ContainerAt(idx int) *Container {
-	return sch.Container(sch.containersOrdered[idx])
+func (sch *schema) Container(name string) Container {
+	if c, ok := sch.containers[name]; ok {
+		return c
+	}
+	return nil
 }
 
-// Returns containers count
-func (sch *Schema) ContainerCount() int {
+func (sch *schema) ContainerCount() int {
 	return len(sch.containersOrdered)
 }
 
-// Finds container schema by constinaer name.
-//
-// Returns nil if not found.
-func (sch *Schema) ContainerSchema(contName string) *Schema {
+func (sch *schema) EnumContainers(cb func(Container)) {
+	for _, n := range sch.containersOrdered {
+		cb(sch.Container(n))
+	}
+}
+func (sch *schema) ContainerSchema(contName string) Schema {
 	if cont := sch.Container(contName); cont != nil {
 		return sch.cache.SchemaByName(cont.Schema())
 	}
 	return nil
 }
 
-// Enumerates all containers in add order.
-func (sch *Schema) EnumContainers(cb func(*Container)) {
-	for _, n := range sch.containersOrdered {
-		cb(sch.Container(n))
+func (sch *schema) Field(name string) Field {
+	if f, ok := sch.fields[name]; ok {
+		return f
 	}
+	return nil
 }
 
-// Enumerates all fields in add order.
-func (sch *Schema) EnumFields(cb func(*Field)) {
+func (sch *schema) EnumFields(cb func(Field)) {
 	for _, n := range sch.fieldsOrdered {
 		cb(sch.Field(n))
 	}
 }
 
-// Finds field by name.
-//
-// Returns nil if not found.
-func (sch *Schema) Field(name string) *Field {
-	return sch.fields[name]
-}
-
-// Returns fields count
-func (sch *Schema) FieldCount() int {
+func (sch *schema) FieldCount() int {
 	return len(sch.fieldsOrdered)
 }
 
-// Return field by index
-func (sch *Schema) FieldAt(idx int) *Field {
-	return sch.Field(sch.fieldsOrdered[idx])
+func (sch *schema) Kind() SchemaKind {
+	return sch.kind
 }
 
-// Schema kind properties.
-func (sch *Schema) Props() SchemaKindProps {
+func (sch *schema) Props() SchemaKindProps {
 	return sch.props
 }
 
-// Sets the singleton document flag for CDoc schemas.
-//
-// # Panics:
-//   - if not CDoc schema.
-func (sch *Schema) SetSingleton() {
+func (sch *schema) QName() QName {
+	return sch.name
+}
+
+func (sch *schema) SetSingleton() {
 	if sch.Kind() != istructs.SchemaKind_CDoc {
 		panic(fmt.Errorf("only CDocs can be singletons: %w", ErrInvalidSchemaKind))
 	}
 	sch.singleton = true
 }
 
-// Returns is schema CDoc singleton
-func (sch *Schema) Singleton() bool {
+func (sch *schema) Singleton() bool {
 	return sch.singleton && (sch.Kind() == istructs.SchemaKind_CDoc)
 }
 
-func (sch *Schema) addField(name string, kind DataKind, required, verified bool) {
+func (sch *schema) addField(name string, kind DataKind, required, verified bool) {
 	if name == "" {
 		panic(fmt.Errorf("empty field name: %w", ErrNameMissed))
 	}
@@ -203,16 +168,19 @@ func (sch *Schema) addField(name string, kind DataKind, required, verified bool)
 	}
 
 	fld := newField(name, kind, required, verified)
-	sch.fields[name] = &fld
+	sch.fields[name] = fld
 	sch.fieldsOrdered = append(sch.fieldsOrdered, name)
 }
 
-func (sch *Schema) clearFields() {
-	sch.fields = make(map[string]*Field)
+// clears fields and containers
+func (sch *schema) clear() {
+	sch.fields = make(map[string]*field)
 	sch.fieldsOrdered = make([]string, 0)
+	sch.containers = make(map[string]*container)
+	sch.containersOrdered = make([]string, 0)
 }
 
-func (sch *Schema) makeSysFields() {
+func (sch *schema) makeSysFields() {
 	if sch.Props().HasSystemField(istructs.SystemField_QName) {
 		sch.AddField(istructs.SystemField_QName, istructs.DataKind_QName, true)
 	}
@@ -234,28 +202,19 @@ func (sch *Schema) makeSysFields() {
 	}
 }
 
-// —————————— istructs.ISchema ——————————
-
-func (sch *Schema) Kind() SchemaKind {
-	return sch.kind
+// ————— istrucst.ISchema —————
+func (sch *schema) Fields(cb func(fieldName string, kind istructs.DataKindType)) {
+	sch.EnumFields(func(f Field) { cb(f.Name(), f.DataKind()) })
 }
 
-func (sch *Schema) QName() QName {
-	return sch.name
+func (sch *schema) ForEachField(cb func(field istructs.IFieldDescr)) {
+	sch.EnumFields(func(f Field) { cb(f) })
 }
 
-func (sch *Schema) Fields(cb func(fieldName string, kind DataKind)) {
-	sch.EnumFields(func(f *Field) { cb(f.Name(), f.DataKind()) })
+func (sch *schema) Containers(cb func(containerName string, schema QName)) {
+	sch.EnumContainers(func(c Container) { cb(c.Name(), c.Schema()) })
 }
 
-func (sch *Schema) ForEachField(cb func(istructs.IFieldDescr)) {
-	sch.EnumFields(func(f *Field) { cb(f) })
-}
-
-func (sch *Schema) Containers(cb func(containerName string, schema QName)) {
-	sch.EnumContainers(func(c *Container) { cb(c.Name(), c.Schema()) })
-}
-
-func (sch *Schema) ForEachContainer(cb func(istructs.IContainerDescr)) {
-	sch.EnumContainers(func(c *Container) { cb(c) })
+func (sch *schema) ForEachContainer(cb func(cont istructs.IContainerDescr)) {
+	sch.EnumContainers(func(c Container) { cb(c) })
 }

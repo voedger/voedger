@@ -229,7 +229,7 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 }
 
 // Returns system fields mask combination for schema kind, see sfm_××× consts
-func schemaSysFieldsMask(schema *schemas.Schema) uint16 {
+func schemaSysFieldsMask(schema schemas.Schema) uint16 {
 	sfm := uint16(0)
 	if schema.Props().HasSystemField(istructs.SystemField_ID) {
 		sfm |= sfm_ID

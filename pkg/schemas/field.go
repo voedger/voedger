@@ -5,26 +5,30 @@
 
 package schemas
 
-func newField(name string, kind DataKind, required, verified bool) Field {
-	return Field{name, kind, required, verified}
+// Implements IField interface
+type field struct {
+	name       string
+	kind       DataKind
+	required   bool
+	verifiable bool
 }
 
-// Returns is field system
-func (fld *Field) IsSys() bool {
+func newField(name string, kind DataKind, required, verified bool) *field {
+	return &field{name, kind, required, verified}
+}
+
+func (fld *field) IsSys() bool {
 	return IsSysField(fld.Name())
 }
 
-// Returns is field has fixed width data kind
-func (fld *Field) IsFixedWidth() bool {
+func (fld *field) IsFixedWidth() bool {
 	return IsFixedWidthDataKind(fld.DataKind())
 }
 
-// ————————— istructs.IFieldDescr ——————————
+func (fld *field) DataKind() DataKind { return fld.kind }
 
-func (fld *Field) Name() string { return fld.name }
+func (fld *field) Name() string { return fld.name }
 
-func (fld *Field) DataKind() DataKind { return fld.kind }
+func (fld *field) Required() bool { return fld.required }
 
-func (fld *Field) Required() bool { return fld.required }
-
-func (fld *Field) Verifiable() bool { return fld.verifiable }
+func (fld *field) Verifiable() bool { return fld.verifiable }

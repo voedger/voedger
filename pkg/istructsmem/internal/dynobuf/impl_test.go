@@ -17,10 +17,11 @@ import (
 func Test_DynoBufSchemasCache(t *testing.T) {
 	require := require.New(t)
 
-	schemaCache := schemas.NewSchemaCache()
+	var schemaCache schemas.SchemaCache
 
 	t.Run("must ok to build schemas", func(t *testing.T) {
-		rootSchema := schemaCache.Add(istructs.NewQName("test", "rootSchema"), istructs.SchemaKind_Object)
+		schemas := schemas.NewSchemaCache()
+		rootSchema := schemas.Add(istructs.NewQName("test", "rootSchema"), istructs.SchemaKind_Object)
 		rootSchema.
 			AddField("int32Field", istructs.DataKind_int32, true).
 			AddField("int64Field", istructs.DataKind_int64, false).
@@ -32,7 +33,7 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 			AddField("recIDField", istructs.DataKind_RecordID, false).
 			AddContainer("child", istructs.NewQName("test", "childSchema"), 1, istructs.ContainerOccurs_Unbounded)
 
-		childSchema := schemaCache.Add(istructs.NewQName("test", "childSchema"), istructs.SchemaKind_Element)
+		childSchema := schemas.Add(istructs.NewQName("test", "childSchema"), istructs.SchemaKind_Element)
 		childSchema.
 			AddField("int32Field", istructs.DataKind_int32, true).
 			AddField("int64Field", istructs.DataKind_int64, false).
@@ -45,11 +46,14 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 			AddField("recIDField", istructs.DataKind_RecordID, false).
 			AddContainer("grandChild", istructs.NewQName("test", "grandChild"), 0, 1)
 
-		grandSchema := schemaCache.Add(istructs.NewQName("test", "grandChild"), istructs.SchemaKind_Element)
+		grandSchema := schemas.Add(istructs.NewQName("test", "grandChild"), istructs.SchemaKind_Element)
 		grandSchema.
 			AddField("recIDField", istructs.DataKind_RecordID, false)
 
-		require.NoError(schemaCache.ValidateSchemas())
+		s, err := schemas.Build()
+		require.NoError(err)
+
+		schemaCache = s
 	})
 
 	dynoSchemas := newSchemasCache(schemaCache)
@@ -89,7 +93,7 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 	}
 
 	schemaCache.EnumSchemas(
-		func(s *schemas.Schema) {
+		func(s schemas.Schema) {
 			checkDynoScheme(dynoSchemas[s.QName()])
 		})
 }

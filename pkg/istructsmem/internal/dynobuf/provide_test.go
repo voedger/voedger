@@ -18,7 +18,7 @@ func Test_BasicUsage(t *testing.T) {
 	name := istructs.NewQName("test", "test")
 
 	dynoSchemas := NewSchemasCache(
-		func() *schemas.SchemasCache {
+		func() schemas.SchemaCache {
 			schemas := schemas.NewSchemaCache()
 			schema := schemas.Add(name, istructs.SchemaKind_CDoc)
 			schema.AddField("f1", istructs.DataKind_int32, true)

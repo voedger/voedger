@@ -80,9 +80,9 @@ func Test_containerNameCache_nameToID(t *testing.T) {
 
 		testerGood := func() {
 			test.AppCfg.Schemas.EnumSchemas(
-				func(s *schemas.Schema) {
+				func(s schemas.Schema) {
 					s.EnumContainers(
-						func(c *schemas.Container) {
+						func(c schemas.Container) {
 							testName(c.Name(), true)
 						})
 				})
@@ -140,7 +140,7 @@ func Test_containerNameCache_Errors(t *testing.T) {
 
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1,
-			func() *schemas.SchemasCache {
+			func() schemas.SchemaCacheBuilder {
 				s := schemas.NewSchemaCache()
 				obj := s.Add(istructs.NewQName("test", "object"), istructs.SchemaKind_Object)
 				obj.AddContainer("containerName", istructs.NewQName("test", "element"), 0, 1)
@@ -158,7 +158,7 @@ func Test_containerNameCache_Errors(t *testing.T) {
 	t.Run("must error if maximum container names is exceeded", func(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1,
-			func() *schemas.SchemasCache {
+			func() schemas.SchemaCacheBuilder {
 				s := schemas.NewSchemaCache()
 				obj := s.Add(istructs.NewQName("test", "object"), istructs.SchemaKind_Object)
 				for i := 0; i <= 0xFFFF; i++ {
@@ -185,7 +185,7 @@ func Test_containerNameCache_Errors(t *testing.T) {
 
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1,
-			func() *schemas.SchemasCache {
+			func() schemas.SchemaCacheBuilder {
 				s := schemas.NewSchemaCache()
 				obj := s.Add(istructs.NewQName("test", "object"), istructs.SchemaKind_Object)
 				obj.AddContainer(containerName, istructs.NewQName("test", "element"), 0, 1)
@@ -236,7 +236,7 @@ func Test_containerNameCache_ReuseStorage(t *testing.T) {
 	appCfgWithStorage := func(storage istorage.IAppStorage) *AppConfigType {
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1,
-			func() *schemas.SchemasCache {
+			func() schemas.SchemaCacheBuilder {
 				s := schemas.NewSchemaCache()
 				schema := s.Add(istructs.NewQName("test", "object"), istructs.SchemaKind_Object)
 				schema.AddContainer("element", istructs.NewQName("test", "element"), 0, 1)

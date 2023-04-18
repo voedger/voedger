@@ -52,8 +52,6 @@ func TestResourceEnumerator(t *testing.T) {
 			ObjSchema.
 				AddField("Int32", istructs.DataKind_int32, true).
 				AddField("String", istructs.DataKind_string, false)
-
-			require.NoError(schemas.ValidateSchemas())
 		})
 
 		cfgs := make(AppConfigsType, 1)

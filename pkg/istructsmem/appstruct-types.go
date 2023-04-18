@@ -21,7 +21,7 @@ import (
 type AppConfigsType map[istructs.AppQName]*AppConfigType
 
 // AddConfig: adds new config for specified application
-func (cfgs *AppConfigsType) AddConfig(appName istructs.AppQName, schemas *schemas.SchemasCache) *AppConfigType {
+func (cfgs *AppConfigsType) AddConfig(appName istructs.AppQName, schemas schemas.SchemaCacheBuilder) *AppConfigType {
 	c := newAppConfig(appName, schemas)
 
 	(*cfgs)[appName] = c
@@ -41,7 +41,7 @@ func (cfgs *AppConfigsType) GetConfig(appName istructs.AppQName) *AppConfigType 
 type AppConfigType struct {
 	Name      istructs.AppQName
 	QNameID   istructs.ClusterAppID
-	Schemas   *schemas.SchemasCache
+	Schemas   schemas.SchemaCache
 	Resources ResourcesType
 	Uniques   *implIUniques
 
@@ -62,7 +62,7 @@ type AppConfigType struct {
 	eventValidators         []istructs.EventValidator
 }
 
-func newAppConfig(appName istructs.AppQName, schemas *schemas.SchemasCache) *AppConfigType {
+func newAppConfig(appName istructs.AppQName, schemas schemas.SchemaCacheBuilder) *AppConfigType {
 	cfg := AppConfigType{Name: appName}
 
 	qNameID, ok := istructs.ClusterApps[appName]
@@ -71,7 +71,11 @@ func newAppConfig(appName istructs.AppQName, schemas *schemas.SchemasCache) *App
 	}
 	cfg.QNameID = qNameID
 
-	cfg.Schemas = schemas
+	sch, err := schemas.Build()
+	if err != nil {
+		panic(fmt.Errorf("unable build application «%v» schemas: %w", appName, err))
+	}
+	cfg.Schemas = sch
 	cfg.Resources = newResources(&cfg)
 	cfg.Uniques = newUniques()
 

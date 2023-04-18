@@ -32,7 +32,7 @@ import (
 //     — istructs.IEditableRecord
 type rowType struct {
 	appCfg    *AppConfigType
-	schema    *schemas.Schema
+	schema    schemas.Schema
 	id        istructs.RecordID
 	parentID  istructs.RecordID
 	container string
@@ -329,13 +329,17 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 }
 
 // setSchema assign specified schema to row and rebuild row. Schema can not to be nil and must be valid
-func (row *rowType) setSchema(value *schemas.Schema) {
-	row.schema = value
+func (row *rowType) setSchema(value schemas.Schema) {
+	if value == nil {
+		row.schema = schemas.NullSchema
+	} else {
+		row.schema = value
+	}
 
-	if value.QName() == istructs.NullQName {
+	if row.schema.QName() == istructs.NullQName {
 		row.dyB = nullDynoBuffer
 	} else {
-		row.dyB = dynobuffers.NewBuffer(row.appCfg.dbSchemas[value.QName()])
+		row.dyB = dynobuffers.NewBuffer(row.appCfg.dbSchemas[row.schema.QName()])
 	}
 }
 
@@ -744,13 +748,16 @@ func (row *rowType) PutEvent(name string, event istructs.IDbEvent) {
 
 // istructs.IRecord.QName: returns row qualified name
 func (row *rowType) QName() istructs.QName {
-	return row.schema.QName()
+	if row.schema != nil {
+		return row.schema.QName()
+	}
+	return istructs.NullQName
 }
 
 // istructs.IRowReader.RecordIDs
 func (row *rowType) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {
 	row.schema.EnumFields(
-		func(fld *schemas.Field) {
+		func(fld schemas.Field) {
 			if fld.DataKind() == istructs.DataKind_RecordID {
 				id := row.AsRecordID(fld.Name())
 				if (id != istructs.NullRecordID) || includeNulls {

@@ -660,8 +660,6 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 		rec := schemas.Add(recName, istructs.SchemaKind_CRecord)
 		rec.AddField("data", istructs.DataKind_string, false)
-
-		require.NoError(schemas.ValidateSchemas())
 	})
 
 	cfgs := func() AppConfigsType {
@@ -835,7 +833,6 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		schema := schemas.Add(docName, istructs.SchemaKind_CDoc)
 		schema.SetSingleton()
 		schema.AddField("option", istructs.DataKind_int64, true)
-		require.NoError(schemas.ValidateSchemas())
 	})
 
 	cfgs := func() AppConfigsType {

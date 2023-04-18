@@ -53,9 +53,6 @@ func Test_ValidEvent(t *testing.T) {
 			ObjSchema.
 				AddField("Int32", istructs.DataKind_int32, true).
 				AddField("String", istructs.DataKind_string, false)
-
-			err := schemas.ValidateSchemas()
-			require.NoError(err)
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -407,8 +404,6 @@ func Test_ValidElement(t *testing.T) {
 				AddField("boolField", istructs.DataKind_bool, false).
 				AddField("recIDField", istructs.DataKind_RecordID, false)
 		})
-
-		require.NoError(schemas.ValidateSchemas())
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -585,8 +580,6 @@ func Test_ValidCUD(t *testing.T) {
 				AddField("qnameField", istructs.DataKind_QName, false).
 				AddField("recIDField", istructs.DataKind_RecordID, false)
 		})
-
-		require.NoError(schemas.ValidateSchemas())
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -694,7 +687,6 @@ func Test_VerifiedFields(t *testing.T) {
 			AddField("int32", istructs.DataKind_int32, true).
 			AddVerifiedField("email", istructs.DataKind_string, false).
 			AddVerifiedField("age", istructs.DataKind_int32, false)
-		require.NoError(schemas.ValidateSchemas())
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -920,7 +912,6 @@ func Test_ValidateErrors(t *testing.T) {
 			t.Run("must be ok to build schemas", func(t *testing.T) {
 				CDocSchema := schemas.Add(cDocName, istructs.SchemaKind_CDoc)
 				CDocSchema.AddField("Int32", istructs.DataKind_int32, false)
-				require.NoError(schemas.ValidateSchemas())
 			})
 
 			cfgs := make(AppConfigsType, 1)

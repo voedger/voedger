@@ -76,10 +76,6 @@ func TestBasicUsage(t *testing.T) {
 			AddField("isHuman", istructs.DataKind_bool, false).
 			AddField("Photo", istructs.DataKind_bytes, false)
 
-		if err := schemas.ValidateSchemas(); err != nil {
-			panic(err)
-		}
-
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
 
@@ -214,8 +210,6 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 			AddValueField("id", istructs.DataKind_int64, true).
 			AddValueField("name", istructs.DataKind_string, true).
 			AddValueField("active", istructs.DataKind_bool, true)
-
-		require.NoError(schemas.ValidateSchemas())
 
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)

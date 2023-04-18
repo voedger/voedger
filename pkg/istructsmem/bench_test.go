@@ -67,7 +67,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	stringFieldValues := make(map[string]string)
 
 	// Schemas
-	schemas := func() *schemas.SchemasCache {
+	schemas := func() schemas.SchemaCacheBuilder {
 		cache := schemas.NewSchemaCache()
 
 		s := cache.Add(odocQName, istructs.SchemaKind_ODoc)

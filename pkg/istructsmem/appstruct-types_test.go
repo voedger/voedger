@@ -87,7 +87,6 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		schemas := schemas.NewSchemaCache()
 		t.Run("must be ok to build schemas", func(t *testing.T) {
 			schemas.Add(istructs.NewQName("test", "CDoc"), istructs.SchemaKind_CDoc)
-			require.NoError(schemas.ValidateSchemas())
 		})
 
 		cfgs1 := make(AppConfigsType, 1)

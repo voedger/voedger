@@ -206,7 +206,7 @@ var data = testDataType{
 
 var test func() *testDataType = func() *testDataType {
 
-	prepareSchemas := func() *schemas.SchemasCache {
+	prepareSchemas := func() schemas.SchemaCacheBuilder {
 		schemas := schemas.NewSchemaCache()
 
 		{
@@ -312,10 +312,6 @@ var test func() *testDataType = func() *testDataType {
 				AddValueField(data.testViewRecord.valueFields.record, istructs.DataKind_Record, false).
 				AddValueField(data.testViewRecord.valueFields.event, istructs.DataKind_Event, false)
 			data.testViewRecord.valueName = viewSchema.ValueSchema().QName()
-		}
-
-		if err := schemas.ValidateSchemas(); err != nil {
-			panic(err)
 		}
 
 		return schemas
