@@ -32,7 +32,7 @@ func TestWrongTypes(t *testing.T) {
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 
-	cfgs, appStructsProvider, appTokens := getTestCfg(require)
+	cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
 	queryProcessor := ProvideServiceFactory()(serviceChannel, resultSenderClosableFactory, appStructsProvider, 3, imetrics.Provide(),
 		"hvm", authn, authz, cfgs)
 	ctx, cancel := context.WithCancel(context.Background())

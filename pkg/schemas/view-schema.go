@@ -116,11 +116,9 @@ func (cache *schemasCache) prepareViewFullKeySchema(sch Schema) {
 
 	fkName := ViewFullKeyColumsSchemaName(sch.QName())
 	var fkSchema SchemaBuilder
-	fkSchema = cache.schemas[fkName]
+	fkSchema, ok := cache.schemas[fkName]
 
-	if fkSchema == nil {
-		fkSchema = cache.Add(fkName, istructs.SchemaKind_ViewRecord_ClusteringColumns)
-	} else {
+	if ok {
 		if fkSchema.Kind() != istructs.SchemaKind_ViewRecord_ClusteringColumns {
 			panic(fmt.Errorf("schema «%v» has unvalid kind «%v», expected kind «%v»: %w", fkName, fkSchema.Kind(), istructs.SchemaKind_ViewRecord_ClusteringColumns, ErrInvalidSchemaKind))
 		}
@@ -128,6 +126,8 @@ func (cache *schemasCache) prepareViewFullKeySchema(sch Schema) {
 			return // already exists schema is ok
 		}
 		fkSchema.clear()
+	} else {
+		fkSchema = cache.Add(fkName, istructs.SchemaKind_ViewRecord_ClusteringColumns)
 	}
 
 	// recreate full key schema fields
