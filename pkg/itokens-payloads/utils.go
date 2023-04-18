@@ -8,8 +8,8 @@ package payloads
 import (
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/istructs"
-	itokens "github.com/untillpro/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/istructs"
+	itokens "github.com/voedger/voedger/pkg/itokens"
 )
 
 func GetSystemPrincipalToken(itokens itokens.ITokens, appQName istructs.AppQName) (string, error) {

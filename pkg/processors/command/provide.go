@@ -10,14 +10,14 @@ import (
 
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
-	"github.com/untillpro/voedger/pkg/iauthnz"
-	"github.com/untillpro/voedger/pkg/in10n"
-	"github.com/untillpro/voedger/pkg/isecrets"
-	"github.com/untillpro/voedger/pkg/istructs"
-	istructsmem "github.com/untillpro/voedger/pkg/istructsmem"
-	imetrics "github.com/untillpro/voedger/pkg/metrics"
-	"github.com/untillpro/voedger/pkg/pipeline"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/iauthnz"
+	"github.com/voedger/voedger/pkg/in10n"
+	"github.com/voedger/voedger/pkg/isecrets"
+	"github.com/voedger/voedger/pkg/istructs"
+	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
+	"github.com/voedger/voedger/pkg/pipeline"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type workspace struct {

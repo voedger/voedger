@@ -12,8 +12,8 @@ import (
 
 	"github.com/heeus/wazero/api"
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/voedger/pkg/iextengine"
-	"github.com/untillpro/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/iextengine"
+	"github.com/voedger/voedger/pkg/state"
 )
 
 var limits = iextengine.ExtensionLimits{

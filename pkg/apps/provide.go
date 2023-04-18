@@ -5,8 +5,8 @@
 package apps
 
 import (
-	sysmonitor "github.com/untillpro/voedger/pkg/apps/sys.monitor"
-	"github.com/untillpro/voedger/pkg/ihttpctl"
+	sysmonitor "github.com/voedger/voedger/pkg/apps/sys.monitor"
+	"github.com/voedger/voedger/pkg/ihttpctl"
 )
 
 func ProvideStaticEmbeddedResources() []ihttpctl.StaticResourcesType {

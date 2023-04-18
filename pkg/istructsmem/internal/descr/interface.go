@@ -5,7 +5,7 @@
 
 package descr
 
-import "github.com/untillpro/voedger/pkg/istructs"
+import "github.com/voedger/voedger/pkg/istructs"
 
 type Application struct {
 	Name     istructs.AppQName

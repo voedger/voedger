@@ -5,7 +5,7 @@
 
 package coreutils
 
-import "github.com/untillpro/voedger/pkg/istructs"
+import "github.com/voedger/voedger/pkg/istructs"
 
 func GetAppWSID(wsid istructs.WSID, appWSAmount istructs.AppWSAmount) istructs.WSID {
 	baseWSID := wsid.BaseWSID()

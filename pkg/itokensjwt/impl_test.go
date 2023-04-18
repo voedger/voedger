@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/voedger/pkg/istructs"
-	itokens "github.com/untillpro/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/istructs"
+	itokens "github.com/voedger/voedger/pkg/itokens"
 )
 
 var SecretKeyTooShortExample = SecretKeyType{

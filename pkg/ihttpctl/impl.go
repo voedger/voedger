@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/untillpro/goutils/logger"
-	"github.com/untillpro/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/ihttp"
 )
 
 type httpProcessorController struct {

@@ -8,12 +8,12 @@ package istructsmem
 import (
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/irates"
-	istorage "github.com/untillpro/voedger/pkg/istorage"
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/istructsmem/internal/dynobuf"
-	"github.com/untillpro/voedger/pkg/istructsmem/internal/vers"
-	"github.com/untillpro/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/irates"
+	istorage "github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // AppConfigsType: map of applications configurators

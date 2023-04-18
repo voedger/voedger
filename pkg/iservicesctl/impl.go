@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"github.com/untillpro/goutils/logger"
-	"github.com/untillpro/voedger/pkg/iservices"
+	"github.com/voedger/voedger/pkg/iservices"
 )
 
 type servicesController struct {

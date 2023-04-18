@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/istructsmem/internal/utils"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
 func storeEvent(ev *dbEventType, buf *bytes.Buffer) (err error) {

@@ -7,7 +7,7 @@ package coreutils
 import (
 	"time"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 var (

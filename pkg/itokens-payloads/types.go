@@ -7,8 +7,8 @@
 package payloads
 
 import (
-	"github.com/untillpro/voedger/pkg/istructs"
-	itokens "github.com/untillpro/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/istructs"
+	itokens "github.com/voedger/voedger/pkg/itokens"
 )
 
 // Principal can be referenced by WSID

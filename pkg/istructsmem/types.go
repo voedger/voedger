@@ -13,11 +13,11 @@ import (
 	"fmt"
 
 	dynobuffers "github.com/untillpro/dynobuffers"
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/istructsmem/internal/dynobuf"
-	"github.com/untillpro/voedger/pkg/istructsmem/internal/utils"
-	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
-	"github.com/untillpro/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // rowType is type to implement istructs row interfaces.

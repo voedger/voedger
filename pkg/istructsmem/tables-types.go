@@ -6,7 +6,7 @@
 package istructsmem
 
 import (
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // recordType implements record that stored in database

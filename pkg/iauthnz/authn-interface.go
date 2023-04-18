@@ -8,8 +8,8 @@ package iauthnz
 import (
 	"context"
 
-	"github.com/untillpro/voedger/pkg/istructs"
-	payloads "github.com/untillpro/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/istructs"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
 
 // Proposed NewDefaultAuthenticator() signature

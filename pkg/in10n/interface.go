@@ -8,7 +8,7 @@ import (
 	"context"
 	"time"
 
-	istructs "github.com/untillpro/voedger/pkg/istructs"
+	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
 // Design: N10n https://dev.heeus.io/launchpad/#!13813

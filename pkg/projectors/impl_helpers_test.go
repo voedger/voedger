@@ -8,8 +8,8 @@ package projectors
 
 import (
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
 const (

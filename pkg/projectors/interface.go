@@ -10,11 +10,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/untillpro/voedger/pkg/in10n"
-	"github.com/untillpro/voedger/pkg/isecrets"
-	istructs "github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/pipeline"
-	"github.com/untillpro/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/in10n"
+	"github.com/voedger/voedger/pkg/isecrets"
+	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/state"
 )
 
 type TimeAfterFunc func(d time.Duration) <-chan time.Time

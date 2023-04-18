@@ -8,7 +8,7 @@ package iratesce
 import (
 	"time"
 
-	irates "github.com/untillpro/voedger/pkg/irates"
+	irates "github.com/voedger/voedger/pkg/irates"
 )
 
 // является ли состояние bucket'а неопределенным (нулевым)

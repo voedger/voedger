@@ -10,7 +10,7 @@ import (
 	"context"
 	"sync"
 
-	istructs "github.com/untillpro/voedger/pkg/istructs"
+	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
 type asyncActualizerContextState struct {

@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestHttpStorage_BasicUsage(t *testing.T) {

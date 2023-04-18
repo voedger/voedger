@@ -10,10 +10,10 @@ import (
 	"context"
 	"fmt"
 
-	istructs "github.com/untillpro/voedger/pkg/istructs"
-	istructsmem "github.com/untillpro/voedger/pkg/istructsmem"
-	"github.com/untillpro/voedger/pkg/pipeline"
-	"github.com/untillpro/voedger/pkg/state"
+	istructs "github.com/voedger/voedger/pkg/istructs"
+	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/state"
 )
 
 func asyncActualizerFactory(conf AsyncActualizerConf, factory istructs.ProjectorFactory) (pipeline.ISyncOperator, error) {

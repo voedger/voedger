@@ -6,7 +6,7 @@
 package iauthnz
 
 import (
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 	"golang.org/x/exp/slices"
 )
 

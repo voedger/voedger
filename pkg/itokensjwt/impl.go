@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 
 	"github.com/golang-jwt/jwt"
-	itokens "github.com/untillpro/voedger/pkg/itokens"
+	itokens "github.com/voedger/voedger/pkg/itokens"
 )
 
 var (

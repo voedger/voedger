@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/untillpro/goutils/logger"
-	"github.com/untillpro/voedger/pkg/ibus"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/ibus"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type bus struct {

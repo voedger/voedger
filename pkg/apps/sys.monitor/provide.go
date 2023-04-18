@@ -8,7 +8,7 @@ import (
 	"embed"
 	"io/fs"
 
-	"github.com/untillpro/voedger/pkg/ihttpctl"
+	"github.com/voedger/voedger/pkg/ihttpctl"
 )
 
 //go:embed site.hello/*

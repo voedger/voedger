@@ -9,9 +9,9 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/untillpro/voedger/pkg/istorage"
-	"github.com/untillpro/voedger/pkg/istorageimpl"
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // testStorageType is test storage. Trained to return the specified error

@@ -4,7 +4,7 @@
 
 package iauthnzimpl
 
-import "github.com/untillpro/voedger/pkg/istructs"
+import "github.com/voedger/voedger/pkg/istructs"
 
 var (
 	qNameViewDeviceProfileWSIDIdx                   = istructs.NewQName(airPackage, "DeviceProfileWSIDIdx")

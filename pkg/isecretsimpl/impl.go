@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/untillpro/voedger/pkg/isecrets"
+	"github.com/voedger/voedger/pkg/isecrets"
 )
 
 func implSecretReader() isecrets.ISecretReader {

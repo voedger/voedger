@@ -9,9 +9,9 @@ import (
 	"context"
 	"io/fs"
 
-	"github.com/untillpro/voedger/pkg/ibus"
-	"github.com/untillpro/voedger/pkg/iservices"
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/ibus"
+	"github.com/voedger/voedger/pkg/iservices"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type CLIParams struct {

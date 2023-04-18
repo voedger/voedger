@@ -4,7 +4,7 @@
 
 package queryprocessor
 
-import "github.com/untillpro/voedger/pkg/istructs"
+import "github.com/voedger/voedger/pkg/istructs"
 
 const (
 	filterKind_Eq    = "eq"

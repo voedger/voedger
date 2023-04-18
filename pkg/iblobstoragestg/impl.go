@@ -14,9 +14,9 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/untillpro/voedger/pkg/iblobstorage"
-	"github.com/untillpro/voedger/pkg/istorage"
-	istructs "github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/istorage"
+	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
 type bStorageType struct {

@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/untillpro/voedger/pkg/in10n"
-	istructs "github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/in10n"
+	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
 type N10nBroker struct {

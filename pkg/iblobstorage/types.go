@@ -4,7 +4,7 @@
 
 package iblobstorage
 
-import istructs "github.com/untillpro/voedger/pkg/istructs"
+import istructs "github.com/voedger/voedger/pkg/istructs"
 
 type BLOBState struct {
 	Descr      DescrType

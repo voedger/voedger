@@ -18,8 +18,8 @@ import (
 	"github.com/heeus/wazero"
 	"github.com/heeus/wazero/api"
 	"github.com/heeus/wazero/wasi"
-	"github.com/untillpro/voedger/pkg/iextengine"
-	istructs "github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/iextengine"
+	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
 type wazeroExtEngine struct {

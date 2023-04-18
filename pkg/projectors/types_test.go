@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	istructs "github.com/untillpro/voedger/pkg/istructs"
+	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestProjector_isAcceptable(t *testing.T) {

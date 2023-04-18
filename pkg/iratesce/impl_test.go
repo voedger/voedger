@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	irates "github.com/untillpro/voedger/pkg/irates"
-	"github.com/untillpro/voedger/pkg/istructs"
+	irates "github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // пример ограничения общего количества регистраций (не более 1000) и регистраций с одного адреса (10) в день

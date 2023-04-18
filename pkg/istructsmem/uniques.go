@@ -7,8 +7,8 @@ package istructsmem
 import (
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type implIUnique struct {

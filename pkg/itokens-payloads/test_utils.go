@@ -4,7 +4,7 @@
 
 package payloads
 
-import itokens "github.com/untillpro/voedger/pkg/itokens"
+import itokens "github.com/voedger/voedger/pkg/itokens"
 
 var TestAppTokensFactory = func(tokens itokens.ITokens) IAppTokensFactory {
 	return ProvideIAppTokensFactory(tokens)

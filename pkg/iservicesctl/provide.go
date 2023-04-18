@@ -6,7 +6,7 @@
 package iservicesctl
 
 import (
-	"github.com/untillpro/voedger/pkg/iservices"
+	"github.com/voedger/voedger/pkg/iservices"
 )
 
 func New() (impl iservices.IServicesController) {

@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type metric struct {

@@ -9,8 +9,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/untillpro/voedger/pkg/istructs"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestBasicUsage(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
-	istorage "github.com/untillpro/voedger/pkg/istorage"
+	istorage "github.com/voedger/voedger/pkg/istorage"
 	bolt "go.etcd.io/bbolt"
 )
 
