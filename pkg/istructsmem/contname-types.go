@@ -175,7 +175,7 @@ func (names *containerNameCacheType) store() (err error) {
 	for name, id := range names.names {
 		ok, err := validIdent(name)
 		if err != nil {
-			return err
+			// return err
 		}
 		if ok {
 			item := istorage.BatchItem{
