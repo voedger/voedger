@@ -9,7 +9,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func Test_ValidIdent(t *testing.T) {

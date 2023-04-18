@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 )
 
 func Test_dynoBufValue(t *testing.T) {
@@ -90,7 +91,7 @@ func Test_dynoBufValue(t *testing.T) {
 	})
 
 	t.Run("test QName", func(t *testing.T) {
-		id, _ := test.AppCfg.qNames.qNameToID(test.saleCmdName)
+		id, _ := test.AppCfg.qNames.GetID(test.saleCmdName)
 		b := make([]byte, 2)
 		binary.BigEndian.PutUint16(b, uint16(id))
 
@@ -103,11 +104,11 @@ func Test_dynoBufValue(t *testing.T) {
 		require.EqualValues(b, v)
 
 		v, err = row.dynoBufValue(istructs.NewQName("test", "unknown"), istructs.DataKind_QName)
-		require.ErrorIs(err, ErrNameNotFound)
+		require.ErrorIs(err, qnames.ErrNameNotFound)
 		require.Nil(v)
 
 		v, err = row.dynoBufValue("test.unknown", istructs.DataKind_QName)
-		require.ErrorIs(err, ErrNameNotFound)
+		require.ErrorIs(err, qnames.ErrNameNotFound)
 		require.Nil(v)
 
 		v, err = row.dynoBufValue("ups!", istructs.DataKind_QName)
@@ -362,7 +363,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 		row.PutQName("QName", istructs.NewQName("unknown", "unknown"))
 
 		err := row.build()
-		require.ErrorIs(err, ErrNameNotFound)
+		require.ErrorIs(err, qnames.ErrNameNotFound)
 	})
 
 	t.Run("PutChars error handling", func(t *testing.T) {

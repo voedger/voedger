@@ -11,11 +11,12 @@ import (
 	"errors"
 	"fmt"
 
-	istorage "github.com/untillpro/voedger/pkg/istorage"
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/istructsmem/internal/utils"
-	"github.com/untillpro/voedger/pkg/istructsmem/internal/vers"
-	"github.com/untillpro/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // containerNameIDType is identificator for container names
@@ -143,7 +144,7 @@ func (names *containerNameCacheType) load01() error {
 		return nil
 	}
 
-	pKey := utils.ToBytes(uint16(QNameIDSysContainers), uint16(verSysContainers01))
+	pKey := utils.ToBytes(consts.SysView_Containers, verSysContainers01)
 	return names.cfg.storage.Read(context.Background(), pKey, nil, nil, readName)
 }
 
@@ -176,7 +177,7 @@ func (names *containerNameCacheType) prepare() (err error) {
 
 // store stores all known container names to storage using verSysContainersLastest codec
 func (names *containerNameCacheType) store() (err error) {
-	pKey := utils.ToBytes(uint16(QNameIDSysContainers), uint16(verSysContainersLastest))
+	pKey := utils.ToBytes(consts.SysView_Containers, verSysContainersLastest)
 
 	batch := make([]istorage.BatchItem, 0)
 	for name, id := range names.names {
@@ -184,7 +185,7 @@ func (names *containerNameCacheType) store() (err error) {
 			item := istorage.BatchItem{
 				PKey:  pKey,
 				CCols: []byte(name),
-				Value: utils.ToBytes(uint16(id)),
+				Value: utils.ToBytes(id),
 			}
 			batch = append(batch, item)
 		}

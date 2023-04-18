@@ -5,7 +5,7 @@
 
 package vers
 
-import "github.com/untillpro/voedger/pkg/istorage"
+import "github.com/voedger/voedger/pkg/istorage"
 
 type (
 	// Version key

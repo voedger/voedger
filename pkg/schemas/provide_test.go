@@ -8,7 +8,7 @@ package schemas
 import (
 	"testing"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestBasicUsage(t *testing.T) {

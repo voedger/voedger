@@ -181,7 +181,7 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 		schemaName := istructs.NewQName("test", "ErrorSchema")
 
 		storage := newTestStorage()
-		storage.shedulePutError(testError, utils.ToBytes(uint16(QNameIDSysSingletonIDs), uint16(verSysSingletonsLastest)), []byte(schemaName.String()))
+		storage.shedulePutError(testError, utils.ToBytes(consts.SysView_SingletonIDs, verSysSingletonsLastest), []byte(schemaName.String()))
 		storageProvider := newTestStorageProvider(storage)
 
 		schemas := schemas.NewSchemaCache()
@@ -234,12 +234,12 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 			err := storage.Put(
 				utils.ToBytes(consts.SysView_Versions),
 				utils.ToBytes(vers.SysSingletonsVersion),
-				utils.ToBytes(uint16(verSysSingletonsLastest)),
+				utils.ToBytes(verSysSingletonsLastest),
 			)
 			require.NoError(err)
 
 			err = storage.Put(
-				utils.ToBytes(consts.SysView_SingletonIDs, uint16(verSysSingletonsLastest)),
+				utils.ToBytes(consts.SysView_SingletonIDs, verSysSingletonsLastest),
 				[]byte("error.CDoc.be-e-e"),
 				utils.ToBytes(uint64(istructs.MaxSingletonID)),
 			)

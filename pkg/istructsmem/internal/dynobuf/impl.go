@@ -7,7 +7,7 @@ package dynobuf
 
 import (
 	"github.com/untillpro/dynobuffers"
-	"github.com/untillpro/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func newSchemasCache(s *schemas.SchemasCache) DynoBufSchemasCache {

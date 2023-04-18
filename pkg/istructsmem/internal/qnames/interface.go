@@ -6,8 +6,8 @@
 package qnames
 
 import (
-	"github.com/untillpro/voedger/pkg/istorage"
-	"github.com/untillpro/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // Identificator for QNames

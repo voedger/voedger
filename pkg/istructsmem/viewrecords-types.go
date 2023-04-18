@@ -11,6 +11,7 @@ import (
 
 	istorage "github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/schemas"
 )
@@ -70,7 +71,7 @@ func (vr *appViewRecordsType) Get(workspace istructs.WSID, key istructs.IKeyBuil
 	}
 
 	pKey, cKey := k.storeToBytes()
-	pKey = utils.PrefixBytes(pKey, uint16(k.viewID), uint64(workspace))
+	pKey = utils.PrefixBytes(pKey, k.viewID, workspace)
 
 	data := make([]byte, 0)
 	if ok, err := vr.app.config.storage.Get(pKey, cKey, &data); !ok {
@@ -111,7 +112,7 @@ func (vr *appViewRecordsType) GetBatch(workspace istructs.WSID, kv []istructs.Vi
 			return fmt.Errorf("not valid key at batch item %d: %w", i, err)
 		}
 		pKey, cKey := k.storeToBytes()
-		pKey = utils.PrefixBytes(pKey, uint16(k.viewID), uint64(workspace))
+		pKey = utils.PrefixBytes(pKey, k.viewID, workspace)
 		batch, ok := plan[string(pKey)]
 		if !ok {
 			batch = make([]istorage.GetBatchItem, 0, len(kv)) // to prevent reallocation
@@ -191,7 +192,7 @@ func (vr *appViewRecordsType) Read(ctx context.Context, workspace istructs.WSID,
 		return cb(keyRow, valRow)
 	}
 
-	pk := utils.PrefixBytes(pKey, uint16(k.viewID), uint64(workspace))
+	pk := utils.PrefixBytes(pKey, k.viewID, workspace)
 	return vr.app.config.storage.Read(ctx, pk, cKey, utils.SuccBytes(cKey), readRecord)
 }
 
@@ -201,7 +202,7 @@ func (vr *appViewRecordsType) Read(ctx context.Context, workspace istructs.WSID,
 type keyType struct {
 	rowType
 	viewName istructs.QName
-	viewID   QNameID
+	viewID   qnames.QNameID
 	partRow  rowType
 	clustRow rowType
 }
@@ -337,7 +338,7 @@ func (key *keyType) validSchemas() (ok bool, err error) {
 		return false, fmt.Errorf("missed view schema: %w", ErrNameMissed)
 	}
 
-	if key.viewID, err = key.appCfg.qNames.qNameToID(key.viewName); err != nil {
+	if key.viewID, err = key.appCfg.qNames.GetID(key.viewName); err != nil {
 		return false, err
 	}
 

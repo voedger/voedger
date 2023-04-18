@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 	"github.com/voedger/voedger/pkg/schemas"
@@ -124,7 +125,7 @@ func (stons *singletonsCacheType) load01() error {
 		return nil
 	}
 
-	pKey := utils.ToBytes(uint16(QNameIDSysSingletonIDs), uint16(verSysSingletons01))
+	pKey := utils.ToBytes(consts.SysView_SingletonIDs, verSysSingletons01)
 	return stons.cfg.storage.Read(context.Background(), pKey, nil, nil, readSingleton)
 }
 
@@ -157,7 +158,7 @@ func (stons *singletonsCacheType) qNameToID(qName istructs.QName) (istructs.Reco
 
 // store stores all known singleton IDs to storage using verSysSingletonsLastest codec
 func (stons *singletonsCacheType) store() (err error) {
-	pKey := utils.ToBytes(uint16(QNameIDSysSingletonIDs), uint16(verSysSingletonsLastest))
+	pKey := utils.ToBytes(consts.SysView_SingletonIDs, verSysSingletonsLastest)
 
 	batch := make([]istorage.BatchItem, 0)
 	for qName, id := range stons.qNames {

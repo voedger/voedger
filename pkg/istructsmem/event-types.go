@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 )
 
 type (
@@ -111,7 +112,7 @@ func (ev *eventType) build() (err error) {
 		return validateErrorf(ECode_EmptySchemaName, "empty event command name: %w", ErrNameMissed)
 	}
 
-	if _, err = ev.appCfg.qNames.qNameToID(ev.name); err != nil {
+	if _, err = ev.appCfg.qNames.GetID(ev.name); err != nil {
 		return validateErrorf(ECode_InvalidSchemaName, "unknown event command name «%v»: %w", ev.name, err)
 	}
 
@@ -318,13 +319,13 @@ func (ev *dbEventType) loadFromBytes(in []byte) (err error) {
 }
 
 // qNameID retrieves ID for event command name
-func (ev *dbEventType) qNameID() QNameID {
+func (ev *dbEventType) qNameID() qnames.QNameID {
 	if ev.valid() {
-		if id, err := ev.appCfg.qNames.qNameToID(ev.QName()); err == nil {
+		if id, err := ev.appCfg.qNames.GetID(ev.QName()); err == nil {
 			return id
 		}
 	}
-	return QNameIDForError
+	return qnames.QNameIDForError
 }
 
 // setBuildError sets specified error as build event error

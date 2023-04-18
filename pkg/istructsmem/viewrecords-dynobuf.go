@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/schemas"
 )
@@ -38,7 +39,7 @@ func (vr *appViewRecordsType) storeViewRecord(workspace istructs.WSID, key istru
 	}
 
 	partKey, clustCols = k.storeToBytes()
-	partKey = utils.PrefixBytes(partKey, uint16(k.viewID), uint64(workspace))
+	partKey = utils.PrefixBytes(partKey, k.viewID, workspace)
 
 	if data, err = v.storeToBytes(); err != nil {
 		return nil, nil, nil, err
@@ -152,7 +153,7 @@ func loadFixedLenCellFromBuffer_00(row *rowType, field *schemas.Field, appCfg *A
 			return err
 		}
 		var name istructs.QName
-		if name, err = appCfg.qNames.idToQName(QNameID(v)); err != nil {
+		if name, err = appCfg.qNames.GetQName(qnames.QNameID(v)); err != nil {
 			return err
 		}
 		row.PutQName(field.Name(), name)

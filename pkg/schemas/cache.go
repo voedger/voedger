@@ -8,8 +8,15 @@ package schemas
 import (
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
+
+// Application schemas cache
+//
+// Implements ISchema and ISchemaBuilder interfaces
+type SchemasCache struct {
+	schemas map[QName]*Schema
+}
 
 func newSchemaCache() *SchemasCache {
 	cache := SchemasCache{

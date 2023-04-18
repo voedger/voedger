@@ -11,11 +11,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/istorage"
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/istructsmem/internal/utils"
-	"github.com/untillpro/voedger/pkg/istructsmem/internal/vers"
-	"github.com/untillpro/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func newQNames() *QNames {
@@ -74,7 +75,7 @@ func (names *QNames) collectAllQNames(s *schemas.SchemasCache, r istructs.IResou
 
 	if r != nil {
 		r.Resources(
-			func(q schemas.QName) {
+			func(q istructs.QName) {
 				err = errors.Join(err,
 					names.collectAppQName(q))
 			})
@@ -149,7 +150,7 @@ func (names *QNames) load01(storage istorage.IAppStorage) error {
 
 		return nil
 	}
-	pKey := utils.ToBytes(vers.SysQNamesVersion, ver01)
+	pKey := utils.ToBytes(consts.SysView_QNames, ver01)
 	return storage.Read(context.Background(), pKey, nil, nil, readQName)
 }
 
@@ -163,7 +164,7 @@ func (names *QNames) GetID(qName schemas.QName) (QNameID, error) {
 
 // Stores all known QNames to storage
 func (names *QNames) store(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
-	pKey := utils.ToBytes(vers.SysQNamesVersion, ver01)
+	pKey := utils.ToBytes(consts.SysView_QNames, ver01)
 
 	batch := make([]istorage.BatchItem, 0)
 	for qName, id := range names.qNames {

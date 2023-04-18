@@ -14,7 +14,9 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 	"github.com/voedger/voedger/pkg/schemas"
 )
 
@@ -97,7 +99,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		require.NoError(err, err)
 
 		testError := errors.New("test error")
-		pKey := utils.ToBytes(uint16(QNameIDSysVesions))
+		pKey := utils.ToBytes(consts.SysView_Versions)
 		storage.sheduleGetError(testError, pKey, nil) // error here
 		defer storage.reset()
 
@@ -118,7 +120,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		_, err = provider1.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err, err)
 
-		pKey := utils.ToBytes(uint16(QNameIDSysVesions))
+		pKey := utils.ToBytes(consts.SysView_Versions)
 		storage.sheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, pKey, nil)
 
 		cfgs2 := make(AppConfigsType, 1)
@@ -126,6 +128,6 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		provider2, err := Provide(cfgs2, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		require.NoError(err)
 		_, err = provider2.AppStructs(istructs.AppQName_test1_app1)
-		require.ErrorIs(err, ErrorInvalidVersion)
+		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
 }

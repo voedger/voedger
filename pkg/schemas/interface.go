@@ -6,7 +6,7 @@
 package schemas
 
 import (
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // TODO: this types must moved here from istructs package
@@ -17,43 +17,47 @@ type (
 	Occurs     = istructs.ContainerOccursType
 )
 
-// Application schemas cache
-type SchemasCache struct {
-	schemas map[QName]*Schema
-}
+// // Application schema cache
+// type ISchemasCache interface {
+// 	Schemas(func(ISchema))
+// 	SchemaCount() uint
+// 	Schema(name QName) ISchema
+// }
 
-// Schema describes the entity, such as document, record or view. Schema has fields and containers.
-//
-// Implements istructs.ISchema interface
-type Schema struct {
-	cache             *SchemasCache
-	name              QName
-	kind              SchemaKind
-	props             SchemaKindProps
-	fields            map[string]*Field
-	fieldsOrdered     []string
-	containers        map[string]*Container
-	containersOrdered []string
-	singleton         bool
-}
+// // Application schema cache builder
+// type ISchemasCacheBuilder interface {
+// 	ISchemasCache
+// 	Add(name QName, kind SchemaKind) ISchemaBuilder
+// 	AddView(QName) IViewBuilder
+// }
 
-// ViewSchema service view schema struct.
-//
-// View consists from next schemas:
-//   - view schema,
-//   - partition key schema,
-//   - clustering columns schema,
-//   - full key schema and
-//   - value schema
-type ViewSchema struct {
-	cache *SchemasCache
-	name  QName
-	viewSchema,
-	partSchema,
-	clustSchema,
-	keySchema, // partition key + clustering columns
-	valueSchema *Schema
-}
+// // Schema describes the entity, such as document, record or view. Schema has fields and containers.
+// type ISchema interface {
+// 	Name() QName
+// 	Kind() SchemaKind
+
+// 	Fields(func(IField))
+// 	FieldCount() uint
+// 	Field(name string) IField
+
+// 	Containers(func(IContainer))
+// 	ContainerCount() uint
+// 	Container(name string) IContainer
+// }
+
+// // Schema builder
+// type ISchemaBuilder interface {
+// 	ISchema
+// 	AddField(name string, kind DataKind, required bool) IField
+// 	AddContainer(name string, schema QName, min, max Occurs) IContainer
+// }
+
+// // View builder
+// type IViewBuilder interface {
+// 	AddPartField(name string, kind DataKind) IViewBuilder
+// 	AddClustColumn(name string, kind DataKind) IViewBuilder
+// 	AddValueField(name string, kind DataKind, required bool) IViewBuilder
+// }
 
 // Describe single field.
 //

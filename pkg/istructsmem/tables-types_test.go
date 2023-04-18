@@ -376,13 +376,11 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 				AddField("QName_1", istructs.DataKind_QName, false).
 				AddField("bool_1", istructs.DataKind_bool, false).
 				AddField("RecordID_1", istructs.DataKind_RecordID, false)
+			schemas.Add(test.tablePhotos, istructs.SchemaKind_Object) // for reading QName_1 field value
 			require.NoError(schemas.ValidateSchemas())
 		})
 
 		newConfig := newAppConfig(test.AppCfg.Name, schemas)
-
-		newConfig.qNames.collectAppQName(test.testCDoc)
-		newConfig.qNames.collectAppQName(test.tablePhotos) // for reading QName_1 field value
 
 		err = newConfig.prepare(nil, test.AppCfg.storage)
 		require.NoError(err)

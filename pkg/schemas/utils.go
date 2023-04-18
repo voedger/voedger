@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // Returns is fixed width data kind

@@ -8,8 +8,28 @@ package schemas
 import (
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
+
+// ViewSchema service view schema struct.
+//
+// View consists from next schemas:
+//   - view schema,
+//   - partition key schema,
+//   - clustering columns schema,
+//   - full key schema and
+//   - value schema
+//
+// Implements IViewBuilder interface
+type ViewSchema struct {
+	cache *SchemasCache
+	name  QName
+	viewSchema,
+	partSchema,
+	clustSchema,
+	keySchema, // partition key + clustering columns
+	valueSchema *Schema
+}
 
 func newViewSchema(cache *SchemasCache, name QName) ViewSchema {
 	view := ViewSchema{

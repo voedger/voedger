@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 	"github.com/voedger/voedger/pkg/schemas"
@@ -56,15 +57,15 @@ func TestRenameQName(t *testing.T) {
 		require.NoError(err, err)
 
 		t.Run("check result", func(t *testing.T) {
-			pKey := utils.ToBytes(uint16(QNameIDSysQNames), uint16(verSysQNames01))
+			pKey := utils.ToBytes(consts.SysView_QNames, verSysQNames01)
 
 			t.Run("check old is null", func(t *testing.T) {
 				data := make([]byte, 0)
 				ok, err := storage.Get(pKey, []byte(old.String()), &data)
 				require.True(ok)
 				require.NoError(err, err)
-				id := QNameID(binary.BigEndian.Uint16(data))
-				require.EqualValues(id, NullQNameID)
+				id := qnames.QNameID(binary.BigEndian.Uint16(data))
+				require.EqualValues(id, qnames.NullQNameID)
 			})
 
 			t.Run("check new is not null", func(t *testing.T) {
@@ -72,8 +73,8 @@ func TestRenameQName(t *testing.T) {
 				ok, err := storage.Get(pKey, []byte(new.String()), &data)
 				require.True(ok)
 				require.NoError(err, err)
-				id := QNameID(binary.BigEndian.Uint16(data))
-				require.Greater(id, QNameIDSysLast)
+				id := qnames.QNameID(binary.BigEndian.Uint16(data))
+				require.Greater(id, qnames.QNameIDSysLast)
 			})
 		})
 	})
@@ -131,7 +132,7 @@ func TestRenameQName(t *testing.T) {
 
 		t.Run("must error if unsupported version of QNames system view", func(t *testing.T) {
 			storage := newTestStorage()
-			data := utils.ToBytes(uint16(verSysQNamesLastest + 1)) // future version
+			data := utils.ToBytes(verSysQNamesLastest + 1) // future version
 			storage.Put(utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysQNamesVersion), data)
 
 			err := RenameQName(storage, old, new)

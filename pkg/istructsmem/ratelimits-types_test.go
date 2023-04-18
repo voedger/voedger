@@ -9,16 +9,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-<<<<<<< HEAD
-	"github.com/untillpro/voedger/pkg/iratesce"
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/schemas"
-	coreutils "github.com/untillpro/voedger/pkg/utils"
-=======
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
->>>>>>> 872556225d3504a3651ea63e8097e7d1381a7da1
 )
 
 func TestRateLimits_BasicUsage(t *testing.T) {

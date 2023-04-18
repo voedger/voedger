@@ -11,8 +11,6 @@ import (
 
 var ErrorInvalidVersion = errors.New("invalid version")
 
-var ErrorEventNotFound = errors.New("event with specified offset cannot be found")
-
 var ErrorEventNotValid = errors.New("event is not valid")
 
 var ErrNameMissed = errors.New("name is empty")

@@ -9,9 +9,9 @@ import (
 	"context"
 	"encoding/binary"
 
-	"github.com/untillpro/voedger/pkg/istorage"
-	"github.com/untillpro/voedger/pkg/istructsmem/internal/consts"
-	"github.com/untillpro/voedger/pkg/istructsmem/internal/utils"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
 func newVersions() *Versions {

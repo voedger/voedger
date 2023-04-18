@@ -8,8 +8,23 @@ package schemas
 import (
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
+
+// Schema describes the entity, such as document, record or view. Schema has fields and containers.
+//
+// Implements ISchema and ISchemaBuilder interfaces
+type Schema struct {
+	cache             *SchemasCache
+	name              QName
+	kind              SchemaKind
+	props             SchemaKindProps
+	fields            map[string]*Field
+	fieldsOrdered     []string
+	containers        map[string]*Container
+	containersOrdered []string
+	singleton         bool
+}
 
 func newSchema(cache *SchemasCache, name QName, kind SchemaKind) *Schema {
 	schema := Schema{

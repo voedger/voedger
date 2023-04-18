@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // TODO: move to internal/validate package

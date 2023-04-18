@@ -7,7 +7,7 @@ package descr
 import (
 	"time"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type RateLimit struct {

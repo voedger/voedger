@@ -15,6 +15,7 @@ import (
 	dynobuffers "github.com/untillpro/dynobuffers"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/schemas"
@@ -234,12 +235,12 @@ func (row *rowType) putValue(name string, kind dynobuffers.FieldType, value inte
 }
 
 // qNameID returns storage ID of row QName
-func (row *rowType) qNameID() (QNameID, error) {
+func (row *rowType) qNameID() (qnames.QNameID, error) {
 	name := row.QName()
 	if name == istructs.NullQName {
-		return NullQNameID, nil
+		return qnames.NullQNameID, nil
 	}
-	return row.appCfg.qNames.qNameToID(name)
+	return row.appCfg.qNames.GetID(name)
 }
 
 // setActive sets record IsActive activity flag
@@ -301,14 +302,14 @@ func (row *rowType) setQName(value istructs.QName) {
 }
 
 // setQNameID same as setQName, useful from loadFromBytes()
-func (row *rowType) setQNameID(value QNameID) (err error) {
+func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 	if id, err := row.qNameID(); (err == nil) && (id == value) {
 		return nil
 	}
 
 	row.clear()
 
-	qName, err := row.appCfg.qNames.idToQName(value)
+	qName, err := row.appCfg.qNames.GetQName(value)
 	if err != nil {
 		row.collectError(err)
 		return err
@@ -461,7 +462,7 @@ func (row *rowType) AsQName(name string) istructs.QName {
 	}
 
 	if id, ok := dynoBufGetWord(row.dyB, name); ok {
-		qName, err := row.appCfg.qNames.idToQName(QNameID(id))
+		qName, err := row.appCfg.qNames.GetQName(qnames.QNameID(id))
 		if err != nil {
 			panic(err)
 		}
@@ -658,7 +659,7 @@ func (row *rowType) PutQName(name string, value istructs.QName) {
 		return
 	}
 
-	id, err := row.appCfg.qNames.qNameToID(value)
+	id, err := row.appCfg.qNames.GetID(value)
 	if err != nil {
 		row.collectErrorf(errCantGetFieldQNameIDWrap, name, value, err)
 		return

@@ -5,7 +5,7 @@
 
 package schemas
 
-import "github.com/untillpro/voedger/pkg/istructs"
+import "github.com/voedger/voedger/pkg/istructs"
 
 // MaxIdentLen is maximum identificator length
 const MaxIdentLen = 255

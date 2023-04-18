@@ -14,6 +14,7 @@ import (
 
 	dynobuffers "github.com/untillpro/dynobuffers"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/schemas"
 )
 
@@ -75,7 +76,7 @@ func (row *rowType) dynoBufValue(value interface{}, kind istructs.DataKindType) 
 			if err != nil {
 				return nil, err
 			}
-			id, err := row.appCfg.qNames.qNameToID(qName)
+			id, err := row.appCfg.qNames.GetID(qName)
 			if err != nil {
 				return nil, err
 			}
@@ -83,7 +84,7 @@ func (row *rowType) dynoBufValue(value interface{}, kind istructs.DataKindType) 
 			binary.BigEndian.PutUint16(b, uint16(id))
 			return b, nil
 		case istructs.QName:
-			id, err := row.appCfg.qNames.qNameToID(v)
+			id, err := row.appCfg.qNames.GetID(v)
 			if err != nil {
 				return nil, err
 			}
@@ -204,7 +205,7 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 	if err = binary.Read(buf, binary.BigEndian, &qnameId); err != nil {
 		return fmt.Errorf("error read row QNameID: %w", err)
 	}
-	if err = row.setQNameID(QNameID(qnameId)); err != nil {
+	if err = row.setQNameID(qnames.QNameID(qnameId)); err != nil {
 		return err
 	}
 	if row.QName() == istructs.NullQName {

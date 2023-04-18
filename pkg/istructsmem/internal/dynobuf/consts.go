@@ -7,8 +7,8 @@ package dynobuf
 
 import (
 	"github.com/untillpro/dynobuffers"
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 var dataKindToDynoFieldType = map[schemas.DataKind]dynobuffers.FieldType{

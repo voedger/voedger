@@ -11,12 +11,13 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/voedger/pkg/istorage"
-	"github.com/untillpro/voedger/pkg/istorageimpl"
-	"github.com/untillpro/voedger/pkg/istructs"
-	"github.com/untillpro/voedger/pkg/istructsmem/internal/utils"
-	"github.com/untillpro/voedger/pkg/istructsmem/internal/vers"
-	"github.com/untillpro/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestQNames(t *testing.T) {
@@ -125,7 +126,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 
 		versions.PutVersion(vers.SysQNamesVersion, lastestVersion)
 		const badName = "-test.error.qname-"
-		storage.Put(utils.ToBytes(vers.SysQNamesVersion, ver01), []byte(badName), utils.ToBytes(QNameID(512)))
+		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(badName), utils.ToBytes(QNameID(512)))
 
 		names := NewQNames()
 		err := names.Prepare(storage, versions, nil, nil)
@@ -143,7 +144,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		}
 
 		versions.PutVersion(vers.SysQNamesVersion, lastestVersion)
-		storage.Put(utils.ToBytes(vers.SysQNamesVersion, ver01), []byte("test.deleted"), utils.ToBytes(NullQNameID))
+		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte("test.deleted"), utils.ToBytes(NullQNameID))
 
 		names := NewQNames()
 		err := names.Prepare(storage, versions, nil, nil)
@@ -160,7 +161,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		}
 
 		versions.PutVersion(vers.SysQNamesVersion, lastestVersion)
-		storage.Put(utils.ToBytes(vers.SysQNamesVersion, ver01), []byte(istructs.QNameForError.String()), utils.ToBytes(QNameIDForError))
+		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(istructs.QNameForError.String()), utils.ToBytes(QNameIDForError))
 
 		names := NewQNames()
 		err := names.Prepare(storage, versions, nil, nil)
@@ -174,7 +175,7 @@ type mockResources struct {
 	mock.Mock
 }
 
-func (r *mockResources) QueryResource(resource schemas.QName) istructs.IResource {
+func (r *mockResources) QueryResource(resource istructs.QName) istructs.IResource {
 	return r.Called(resource).Get(0).(istructs.IResource)
 }
 
@@ -182,6 +183,6 @@ func (r *mockResources) QueryFunctionArgsBuilder(query istructs.IQueryFunction) 
 	return r.Called(query).Get(0).(istructs.IObjectBuilder)
 }
 
-func (r *mockResources) Resources(cb func(schemas.QName)) {
+func (r *mockResources) Resources(cb func(istructs.QName)) {
 	r.Called(cb)
 }

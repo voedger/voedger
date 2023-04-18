@@ -6,7 +6,7 @@
 package schemas
 
 import (
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // Schema kind properties

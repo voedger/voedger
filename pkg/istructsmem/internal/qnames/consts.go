@@ -5,7 +5,7 @@
 
 package qnames
 
-import "github.com/untillpro/voedger/pkg/istructsmem/internal/vers"
+import "github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 
 // IDs for wellknown QNames
 const (

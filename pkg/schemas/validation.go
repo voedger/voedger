@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/untillpro/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // Validates all schemas in the cache. Schemas used recursively multiple times are validated once.

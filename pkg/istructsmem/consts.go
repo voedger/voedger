@@ -119,13 +119,6 @@ const (
 	partitionRecordCount = 1 << partitionBits
 )
 
-// constants for system QNames
-const (
-	NullQNameID QNameID = 0 + iota
-	QNameIDForError
-	QNameIDCommandCUD
-)
-
 // constants for system container names
 const (
 	nullContainerNameID containerNameIDType = 0 + iota
@@ -134,19 +127,6 @@ const (
 	viewValueContainerID
 
 	containerNameIDSysLast containerNameIDType = 63
-)
-
-// QNames for system views
-const (
-	QNameIDSysVesions      QNameID = 16 + iota // system view versions
-	QNameIDSysQNames                           // application QNames system view
-	QNameIDSysContainers                       // application container names view
-	QNameIDSysRecords                          // application Records view
-	QNameIDSysPLog                             // application PLog view
-	QNameIDSysWLog                             // application WLog view
-	QNameIDSysSingletonIDs                     // application singletons IDs view
-
-	QNameIDSysLast QNameID = 255
 )
 
 // maxGetBatchRecordCount is maximum records that can be retrieved by ReadBatch GetBatch
