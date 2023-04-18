@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	participle "github.com/alecthomas/participle/v2"
 	"github.com/stretchr/testify/require"
 )
 
@@ -72,10 +71,7 @@ func Test_WorkspaceStatements(t *testing.T) {
 	require := require.New(t)
 	var schema = &schemaAST{}
 
-	parser, err := participle.Build[schemaAST]()
-	require.Nil(err)
-
-	schema, err = parser.ParseString("", `
+	schema, err := ParseString2(`
 	SCHEMA test; 
 	WORKSPACE MyWorkspace (
 		FUNCTION MyFunc(param int) RETURNS void ENGINE WASM; 
@@ -108,10 +104,7 @@ func Test_Functions(t *testing.T) {
 	require := require.New(t)
 	var ast = &schemaAST{}
 
-	parser, err := participle.Build[schemaAST]()
-	require.Nil(err)
-
-	ast, err = parser.ParseString("", `
+	ast, err := ParseString2(`
 	SCHEMA test;
 	FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
 	FUNCTION MyTableValidator(TableRow) RETURNS string ENGINE WASM;
@@ -250,7 +243,7 @@ func Test_Grants(t *testing.T) {
 	require := require.New(t)
 	var ast = &schemaAST{}
 
-	ast, err := ParseString(`
+	ast, err := ParseString2(`
 	SCHEMA test;
 	WORKSPACE MyWs (
 		GRANT ALL ON ALL TABLES WITH TAG untill.Backoffice TO LocationManager;
@@ -321,7 +314,7 @@ func Test_Roles(t *testing.T) {
 	require := require.New(t)
 	var ast = &schemaAST{}
 
-	ast, err := ParseString(`
+	ast, err := ParseString2(`
 	SCHEMA test;
 	ROLE UntillPaymentsUser;
 	WORKSPACE MyWs (
@@ -345,7 +338,7 @@ func Test_UseTable(t *testing.T) {
 	require := require.New(t)
 	var ast = &schemaAST{}
 
-	ast, err := ParseString(`
+	ast, err := ParseString2(`
 	SCHEMA test;
 	WORKSPACE MyWs (
 		USE TABLE somepackage.sometable;
@@ -378,7 +371,7 @@ func Test_Tags(t *testing.T) {
 	require := require.New(t)
 	var ast = &schemaAST{}
 
-	ast, err := ParseString(`
+	ast, err := ParseString2(`
 	SCHEMA test;
 	TAG Backoffice;
 	WORKSPACE MyWs (
@@ -402,7 +395,7 @@ func Test_Comments(t *testing.T) {
 	require := require.New(t)
 	var ast = &schemaAST{}
 
-	ast, err := ParseString(`
+	ast, err := ParseString2(`
 	SCHEMA test;
 	COMMENT BackofficeComment "This is a backoffice tool";
 	WORKSPACE MyWs (
@@ -428,7 +421,7 @@ func Test_Sequence(t *testing.T) {
 	require := require.New(t)
 	var ast = &schemaAST{}
 
-	ast, err := ParseString(`
+	ast, err := ParseString2(`
 	SCHEMA test;
 	SEQUENCE bill_numbers int START WITH 1;
 	SEQUENCE bill_numbers2 int MINVALUE 1;
@@ -446,21 +439,19 @@ func Test_Sequence(t *testing.T) {
 	require.Equal("bill_numbers2", v.Name)
 	require.Equal("int", v.Type)
 	require.Equal(1, *v.MinValue)
-	require.False(v.Decrement)
 
 	v = ast.Statements[2].Sequence
 	require.Equal("SomeDecrementSeqneuce", v.Name)
 	require.Equal("int", v.Type)
 	require.Equal(1000000, *v.MaxValue)
-	require.Equal(1, *v.IncrementBy)
-	require.True(v.Decrement)
+	require.Equal(-1, *v.IncrementBy)
 }
 
 func Test_Rate(t *testing.T) {
 	require := require.New(t)
 	var ast = &schemaAST{}
 
-	ast, err := ParseString(`
+	ast, err := ParseString2(`
 	SCHEMA test;
 	WORKSPACE MyWs (
 		RATE BackofficeFuncRate1 1000 PER HOUR;
@@ -490,7 +481,7 @@ func Test_Commands(t *testing.T) {
 	require := require.New(t)
 	var ast = &schemaAST{}
 
-	ast, err := ParseString(`
+	ast, err := ParseString2(`
 	SCHEMA test;
 	WORKSPACE MyWs (
 		COMMAND Orders AS PbillFunc;

@@ -23,7 +23,10 @@ func ParseString2(s string) (*schemaAST, error) {
 
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
 		{Name: "SEMICOLON", Pattern: `;`},
+		{Name: "COMMA", Pattern: `,`},
 		{Name: "PKGSEPARATOR", Pattern: `\.`},
+		{Name: "ALLSYMBOL", Pattern: `\*`},
+		{Name: "EQUAL", Pattern: `=`},
 		{Name: "LEFTBRACKET", Pattern: `\(`},
 		{Name: "RIGHTBRACKET", Pattern: `\)`},
 		{Name: "ON", Pattern: `ON`},

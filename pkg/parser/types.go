@@ -52,7 +52,7 @@ type workspaceStatement struct {
 
 type workspaceStmt struct {
 	Name       string                `parser:"'WORKSPACE' @Ident '('"`
-	Statements []*workspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
+	Statements []*workspaceStatement `parser:"@@? (SEMICOLON @@)* SEMICOLON? ')'"`
 }
 
 type optQName struct {
@@ -93,24 +93,23 @@ type useTableStmt struct {
 }
 
 type useTableItem struct {
-	Package   string `parser:"(@Ident'.')?"`
+	Package   string `parser:"(@Ident PKGSEPARATOR)?"`
 	Name      string `parser:"(@Ident "`
-	AllTables bool   `parser:"| @'*')"`
+	AllTables bool   `parser:"| @ALLSYMBOL)"`
 }
 
 type sequenceStmt struct {
 	Name        string `parser:"'SEQUENCE' @Ident"`
 	Type        string `parser:"@Ident"`
-	StartWith   *int   `parser:"(('START' 'WITH' @Int)"`
-	MinValue    *int   `parser:"| ('MINVALUE' @Int)"`
-	MaxValue    *int   `parser:"| ('MAXVALUE' @Int)"`
-	Decrement   bool   `parser:"| ('INCREMENT' 'BY' (@'-')?"`
-	IncrementBy *int   `parser:"@Int) )*"`
+	StartWith   *int   `parser:"(('START' 'WITH' @Number)"`
+	MinValue    *int   `parser:"| ('MINVALUE' @Number)"`
+	MaxValue    *int   `parser:"| ('MAXVALUE' @Number)"`
+	IncrementBy *int   `parser:"| ('INCREMENT' 'BY' @Number) )*"`
 }
 
 type rateStmt struct {
 	Name   string `parser:"'RATE' @Ident"`
-	Amount int    `parser:"@Int"`
+	Amount int    `parser:"@Number"`
 	Per    string `parser:"'PER' @('SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'YEAR')"`
 	PerIP  bool   `parser:"(@('PER' 'IP'))?"`
 }
@@ -124,21 +123,21 @@ type grantStmt struct {
 
 type functionStmt struct {
 	Name    string          `parser:"'FUNCTION' @Ident"`
-	Params  []functionParam `parser:"LEFTBRACKET @@? (',' @@)* RIGHTBRACKET"`
+	Params  []functionParam `parser:"LEFTBRACKET @@? (COMMA @@)* RIGHTBRACKET"`
 	Returns optQName        `parser:"'RETURNS' @@"`
 	Engine  engineType      `parser:"'ENGINE' @@"`
 }
 
 type commandStmt struct {
 	Name   string          `parser:"'COMMAND' @Ident"`
-	Params []functionParam `parser:"('(' @@? (',' @@)* ')')?"`
+	Params []functionParam `parser:"(LEFTBRACKET @@? (',' @@)* RIGHTBRACKET)?"`
 	Func   string          `parser:"'AS' @Ident"`
-	With   []tcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
+	With   []tcqWithItem   `parser:"('WITH' @@ (COMMA @@)* )?"`
 }
 
 type tcqWithItem struct {
-	Comment *optQName  `parser:"('Comment' '=' @@)"`
-	Tags    []optQName `parser:"| ('Tags' '=' '[' @@ (',' @@)* ']')"`
+	Comment *optQName  `parser:"('Comment' EQUAL @@)"`
+	Tags    []optQName `parser:"| ('Tags' EQUAL '[' @@ (COMMA @@)* ']')"`
 }
 
 type queryStmt struct {
