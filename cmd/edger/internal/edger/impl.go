@@ -22,8 +22,6 @@ var signals = make(chan os.Signal, 1)
 func runEdger(pars EdgerParams) error {
 	signal.Notify(signals, os.Interrupt)
 
-	ctx, cancel := context.WithCancel(context.Background())
-
 	nodeStates := states.New()
 
 	superController, err := ctrls.New(
@@ -38,6 +36,8 @@ func runEdger(pars EdgerParams) error {
 	if err != nil {
 		return err
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
 
 	metricCollectors := metrics.MetricCollectors()
 	metricReporters := metrics.MetricReporters()
