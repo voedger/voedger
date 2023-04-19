@@ -25,33 +25,15 @@ var ErrorRecordIDNotFound = fmt.Errorf("recordID cannot be found: %w", ErrIDNotF
 
 var ErrRecordNotFound = errors.New("record cannot be found")
 
-var ErrNameUniqueViolation = errors.New("duplicate name")
-
 var ErrMinOccursViolation = errors.New("minimum occurs violated")
 
 var ErrMaxOccursViolation = errors.New("maximum occurs violated")
 
-var ErrFieldsUnavailable = errors.New("fields are not availabled")
-
 var ErrFieldIsEmpty = errors.New("field is empty")
-
-var ErrVerificationKindMissed = errors.New("at least one verification kind must be specified")
-
-var ErrInvalidVerificationKind = errors.New("invalid verification kind")
 
 var ErrCUDsMissed = errors.New("CUDs are missed")
 
-var ErrContainersUnavailable = errors.New("containers are not availabled")
-
-var ErrMaxOccursMissed = errors.New("max occurs missed (zero value)")
-
-var ErrMaxOccursLessMinOccurs = errors.New("max occurs less than min occurs")
-
-var ErrRecordIDMissed = errors.New("record ID missed")
-
 var ErrRawRecordIDExpected = errors.New("raw record ID expected")
-
-var ErrRawRecordIDUnavailable = errors.New("raw record ID unavailable")
 
 var ErrRecordIDUniqueViolation = errors.New("record ID duplicates")
 
@@ -61,17 +43,9 @@ var ErrUnableToUpdateSystemField = errors.New("unable to update system field")
 
 var ErrWrongSchema = errors.New("wrong schema")
 
-var ErrWrongSchemaStruct = errors.New("wrong schema structure")
-
-var ErrCannotValidateType = errors.New("can't validate entity of unknown type")
-
 var ErrUnexpectedShemaKind = errors.New("unexpected schema kind")
 
-var ErrConvertError = errors.New("convert error")
-
 var ErrUnknownCodec = errors.New("unknown codec")
-
-var ErrQNameIDsExceeds = errors.New("the maximum number of QName identifiers has been exceeded")
 
 var ErrContainerNameIDsExceeds = errors.New("the maximum number of container identifiers has been exceeded")
 
@@ -112,8 +86,6 @@ const errFieldConvertErrorWrap = "field «%s» value type «%T» can not to be c
 const errCantGetFieldQNameIDWrap = "QName field «%s» can not get ID for value «%v»: %w"
 
 const errSchemaNotFoundWrap = "schema «%v» not found: %w"
-
-const errViewMissesContainerWrap = "view schema «%v» misses container «%s»: %w"
 
 // ValidateError: an interface for describing errors that occurred during validation
 //   - methods:

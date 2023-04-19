@@ -170,6 +170,53 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		require.ErrorContains(err, fmt.Sprintf("unexpected ID (%v)", QNameIDForError))
 	})
 
+	t.Run("must be error if too many QNames", func(t *testing.T) {
+		sp := istorageimpl.Provide(istorage.ProvideMem())
+		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
+
+		versions := vers.NewVersions()
+		if err := versions.Prepare(storage); err != nil {
+			panic(err)
+		}
+
+		names := NewQNames()
+		err := names.Prepare(storage, versions,
+			func() schemas.SchemaCache {
+				bld := schemas.NewSchemaCache()
+				for i := 0; i <= MaxAvailableQNameID; i++ {
+					bld.Add(istructs.NewQName("test", fmt.Sprintf("name_%d", i)), istructs.SchemaKind_Object)
+				}
+				schemas, err := bld.Build()
+				require.NoError(err)
+				return schemas
+			}(),
+			nil)
+		require.ErrorIs(err, ErrQNameIDsExceeds)
+	})
+
+	t.Run("must be error if write to storage failed", func(t *testing.T) {
+		sp := istorageimpl.Provide(istorage.ProvideMem())
+		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
+
+		versions := vers.NewVersions()
+		if err := versions.Prepare(storage); err != nil {
+			panic(err)
+		}
+
+		names := NewQNames()
+		err := names.Prepare(storage, versions,
+			func() schemas.SchemaCache {
+				bld := schemas.NewSchemaCache()
+				for i := 0; i <= MaxAvailableQNameID; i++ {
+					bld.Add(istructs.NewQName("test", fmt.Sprintf("name_%d", i)), istructs.SchemaKind_Object)
+				}
+				schemas, err := bld.Build()
+				require.NoError(err)
+				return schemas
+			}(),
+			nil)
+		require.ErrorIs(err, ErrQNameIDsExceeds)
+	})
 }
 
 type mockResources struct {
