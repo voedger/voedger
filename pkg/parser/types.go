@@ -6,9 +6,9 @@
 package sqlschema
 
 type schemaAST struct {
-	Package    string          `parser:"'SCHEMA' @Ident C_SEMICOLON"`
-	Imports    []sqlImportStmt `parser:"@@? (C_SEMICOLON @@)* C_SEMICOLON?"`
-	Statements []rootStatement `parser:"@@? (C_SEMICOLON @@)* C_SEMICOLON?"`
+	Package    string          `parser:"'SCHEMA' @Ident ';'"`
+	Imports    []sqlImportStmt `parser:"@@? (';' @@)* ';'?"`
+	Statements []rootStatement `parser:"@@? (';' @@)* ';'?"`
 }
 
 type sqlImportStmt struct {
@@ -27,7 +27,7 @@ type rootStatement struct {
 	Function  *functionStmt  `parser:"| @@"`
 	Workspace *workspaceStmt `parser:"| @@"`
 	Table     *tableStmt     `parser:"| @@"`
-	Sequence  *sequenceStmt  `parser:"| @@"`
+	// Sequence  *sequenceStmt  `parser:"| @@"`
 }
 
 type workspaceStatement struct {
@@ -46,8 +46,8 @@ type workspaceStatement struct {
 	Function  *functionStmt  `parser:"| @@"`
 	Workspace *workspaceStmt `parser:"| @@"`
 	Table     *tableStmt     `parser:"| @@"`
-	Sequence  *sequenceStmt  `parser:"| @@"`
-	Grant     *grantStmt     `parser:"| @@"`
+	//Sequence  *sequenceStmt  `parser:"| @@"`
+	Grant *grantStmt `parser:"| @@"`
 }
 
 type workspaceStmt struct {
@@ -98,18 +98,18 @@ type useTableItem struct {
 	AllTables bool   `parser:"| @C_ALL)"`
 }
 
-type sequenceStmt struct {
+/*type sequenceStmt struct {
 	Name        string `parser:"'SEQUENCE' @Ident"`
 	Type        string `parser:"@Ident"`
 	StartWith   *int   `parser:"(('START' 'WITH' @Number)"`
 	MinValue    *int   `parser:"| ('MINVALUE' @Number)"`
 	MaxValue    *int   `parser:"| ('MAXVALUE' @Number)"`
 	IncrementBy *int   `parser:"| ('INCREMENT' 'BY' @Number) )*"`
-}
+}*/
 
 type rateStmt struct {
 	Name   string `parser:"'RATE' @Ident"`
-	Amount int    `parser:"@Number"`
+	Amount int    `parser:"@Int"`
 	Per    string `parser:"'PER' @('SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'YEAR')"`
 	PerIP  bool   `parser:"(@('PER' 'IP'))?"`
 }
