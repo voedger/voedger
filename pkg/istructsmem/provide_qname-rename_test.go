@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 	"github.com/voedger/voedger/pkg/schemas"
@@ -31,8 +32,8 @@ func TestRenameQName(t *testing.T) {
 	other := istructs.NewQName("test", "other")
 
 	testStorage := func() istorage.IAppStorage {
-		storage := newTestStorage()
-		storageProvider := newTestStorageProvider(storage)
+		storage := teststore.NewTestStorage()
+		storageProvider := teststore.NewTestStorageProvider(storage)
 
 		schemas := schemas.NewSchemaCache()
 		_ = schemas.Add(old, istructs.SchemaKind_Object)
@@ -124,14 +125,14 @@ func TestRenameQName(t *testing.T) {
 
 	t.Run("test system level errors", func(t *testing.T) {
 		t.Run("must error if no QNames system view", func(t *testing.T) {
-			storage := newTestStorage()
+			storage := teststore.NewTestStorage()
 
 			err := RenameQName(storage, old, new)
 			require.ErrorContains(err, "read version")
 		})
 
 		t.Run("must error if unsupported version of QNames system view", func(t *testing.T) {
-			storage := newTestStorage()
+			storage := teststore.NewTestStorage()
 			data := utils.ToBytes(verSysQNamesLastest + 1) // future version
 			storage.Put(utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysQNamesVersion), data)
 
@@ -143,7 +144,7 @@ func TestRenameQName(t *testing.T) {
 			testError := errors.New("test error")
 
 			storage := testStorage()
-			storage.(*testStorageType).shedulePutError(testError, nil, []byte(old.String()))
+			storage.(*teststore.TestMemStorage).SchedulePutError(testError, nil, []byte(old.String()))
 
 			err := RenameQName(storage, old, new)
 			require.ErrorIs(err, testError)
@@ -153,7 +154,7 @@ func TestRenameQName(t *testing.T) {
 			testError := errors.New("test error")
 
 			storage := testStorage()
-			storage.(*testStorageType).shedulePutError(testError, nil, []byte(new.String()))
+			storage.(*teststore.TestMemStorage).SchedulePutError(testError, nil, []byte(new.String()))
 
 			err := RenameQName(storage, old, new)
 			require.ErrorIs(err, testError)

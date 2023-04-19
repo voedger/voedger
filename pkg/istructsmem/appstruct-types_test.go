@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 	"github.com/voedger/voedger/pkg/schemas"
@@ -80,8 +81,8 @@ func TestAppConfigsType(t *testing.T) {
 func TestErrorsAppConfigsType(t *testing.T) {
 	require := require.New(t)
 
-	storage := newTestStorage()
-	storageProvider := newTestStorageProvider(storage)
+	storage := teststore.NewTestStorage()
+	storageProvider := teststore.NewTestStorageProvider(storage)
 
 	t.Run("must error if error while read versions", func(t *testing.T) {
 		schemas := schemas.NewSchemaCache()
@@ -99,8 +100,8 @@ func TestErrorsAppConfigsType(t *testing.T) {
 
 		testError := errors.New("test error")
 		pKey := utils.ToBytes(consts.SysView_Versions)
-		storage.sheduleGetError(testError, pKey, nil) // error here
-		defer storage.reset()
+		storage.ScheduleGetError(testError, pKey, nil) // error here
+		defer storage.Reset()
 
 		cfgs2 := make(AppConfigsType, 1)
 		_ = cfgs2.AddConfig(istructs.AppQName_test1_app1, schemas)
@@ -120,7 +121,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		require.NoError(err, err)
 
 		pKey := utils.ToBytes(consts.SysView_Versions)
-		storage.sheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, pKey, nil)
+		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, pKey, nil)
 
 		cfgs2 := make(AppConfigsType, 1)
 		_ = cfgs2.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/schemas"
 )
@@ -20,8 +21,8 @@ import (
 func TestCore_ViewRecords(t *testing.T) {
 	require := require.New(t)
 
-	storage := newTestStorage()
-	storageProvider := newTestStorageProvider(storage)
+	storage := teststore.NewTestStorage()
+	storageProvider := teststore.NewTestStorageProvider(storage)
 
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
@@ -577,11 +578,11 @@ func TestCore_ViewRecords(t *testing.T) {
 
 		c := utils.PrefixBytes([]byte("sidr"), int64(100), true)
 
-		storage.sheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, c)
+		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, c)
 		_, err := viewRecords.Get(2, kb)
 		require.ErrorIs(err, ErrUnknownCodec)
 
-		storage.sheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, c)
+		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, c)
 		err = viewRecords.Read(context.Background(), 2, kb, func(key istructs.IKey, value istructs.IValue) (err error) { return nil })
 		require.ErrorIs(err, ErrUnknownCodec)
 	})
@@ -846,8 +847,8 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 			AddValueField("Winner", istructs.DataKind_string, true)
 	})
 
-	storage := newTestStorage()
-	storageProvider := newTestStorageProvider(storage)
+	storage := teststore.NewTestStorage()
+	storageProvider := teststore.NewTestStorageProvider(storage)
 
 	cfgs := make(AppConfigsType, 1)
 	_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
@@ -1041,7 +1042,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		batch[0].Key.PutInt32("Year", 1962)
 		batch[0].Key.PutString("Sport", "Волейбол")
 
-		storage.sheduleGetError(testError, nil, []byte("Волейбол")) // error here
+		storage.ScheduleGetError(testError, nil, []byte("Волейбол")) // error here
 
 		err := app.ViewRecords().(*appViewRecordsType).GetBatch(1, batch)
 		require.ErrorIs(err, testError)
@@ -1053,7 +1054,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		batch[0].Key.PutInt32("Year", 1962)
 		batch[0].Key.PutString("Sport", "Волейбол")
 
-		storage.sheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, []byte("Волейбол"))
+		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, []byte("Волейбол"))
 
 		err := app.ViewRecords().(*appViewRecordsType).GetBatch(1, batch)
 		require.ErrorIs(err, ErrUnknownCodec)

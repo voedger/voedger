@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 	"github.com/voedger/voedger/pkg/schemas"
@@ -112,8 +113,8 @@ func Test_containerNameCache_nameToID(t *testing.T) {
 func Test_containerNameCache_Errors(t *testing.T) {
 	require := require.New(t)
 	testError := fmt.Errorf("test error")
-	storage := newTestStorage()
-	storageProvider := newTestStorageProvider(storage)
+	storage := teststore.NewTestStorage()
+	storageProvider := teststore.NewTestStorageProvider(storage)
 
 	t.Run("must error if unknown version of sys.Container view", func(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
@@ -130,13 +131,13 @@ func Test_containerNameCache_Errors(t *testing.T) {
 		require.ErrorIs(err, ErrorInvalidVersion)
 
 		// clear the storage
-		storage = newTestStorage()
-		storageProvider = newTestStorageProvider(storage)
+		storage = teststore.NewTestStorage()
+		storageProvider = teststore.NewTestStorageProvider(storage)
 	})
 
 	t.Run("must error if unable store version of sys.Containers view", func(t *testing.T) {
-		storage.shedulePutError(testError, utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysContainersVersion))
-		defer storage.reset()
+		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysContainersVersion))
+		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1,
@@ -179,9 +180,9 @@ func Test_containerNameCache_Errors(t *testing.T) {
 		containerName := "ErrorContainerName"
 		testError := fmt.Errorf("test error")
 
-		storage.sheduleGetError(testError, nil, []byte(containerName))
-		storage.shedulePutError(testError, nil, []byte(containerName))
-		defer storage.reset()
+		storage.ScheduleGetError(testError, nil, []byte(containerName))
+		storage.SchedulePutError(testError, nil, []byte(containerName))
+		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1,

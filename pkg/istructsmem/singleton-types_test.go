@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 	"github.com/voedger/voedger/pkg/schemas"
@@ -133,9 +134,9 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 
 	t.Run("must error if unable store version of sys.Singletons view", func(t *testing.T) {
 
-		storage := newTestStorage()
-		storage.shedulePutError(testError, utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysSingletonsVersion))
-		storageProvider := newTestStorageProvider(storage)
+		storage := teststore.NewTestStorage()
+		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysSingletonsVersion))
+		storageProvider := teststore.NewTestStorageProvider(storage)
 
 		schemas := schemas.NewSchemaCache()
 
@@ -176,9 +177,9 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 	t.Run("must error if store ID for some singledoc to storage is failed", func(t *testing.T) {
 		schemaName := istructs.NewQName("test", "ErrorSchema")
 
-		storage := newTestStorage()
-		storage.shedulePutError(testError, utils.ToBytes(consts.SysView_SingletonIDs, verSysSingletonsLastest), []byte(schemaName.String()))
-		storageProvider := newTestStorageProvider(storage)
+		storage := teststore.NewTestStorage()
+		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_SingletonIDs, verSysSingletonsLastest), []byte(schemaName.String()))
+		storageProvider := teststore.NewTestStorageProvider(storage)
 
 		schemas := schemas.NewSchemaCache()
 
@@ -199,10 +200,10 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 	t.Run("must error if retrieve ID for some singledoc from storage is failed", func(t *testing.T) {
 		schemaName := istructs.NewQName("test", "ErrorSchema")
 
-		storage := newTestStorage()
-		storage.sheduleGetError(testError, nil, []byte(schemaName.String()))
-		storage.shedulePutError(testError, nil, []byte(schemaName.String()))
-		storageProvider := newTestStorageProvider(storage)
+		storage := teststore.NewTestStorage()
+		storage.ScheduleGetError(testError, nil, []byte(schemaName.String()))
+		storage.SchedulePutError(testError, nil, []byte(schemaName.String()))
+		storageProvider := teststore.NewTestStorageProvider(storage)
 
 		schemas := schemas.NewSchemaCache()
 
@@ -221,8 +222,8 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 	})
 
 	t.Run("must error if some some CDoc singleton QName from storage is not well formed", func(t *testing.T) {
-		storage := newTestStorage()
-		storageProvider := newTestStorageProvider(storage)
+		storage := teststore.NewTestStorage()
+		storageProvider := teststore.NewTestStorageProvider(storage)
 
 		t.Run("crack storage by put invalid QName string into sys.Singletons view", func(t *testing.T) {
 			err := storage.Put(
