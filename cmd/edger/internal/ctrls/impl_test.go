@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/cmd/edger/internal/states"
+	"github.com/untillpro/voedger/cmd/edger/internal/states"
 )
 
 func Test_BasicUsageSuperController(t *testing.T) {

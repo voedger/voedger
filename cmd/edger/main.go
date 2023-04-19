@@ -9,7 +9,7 @@ import (
 	_ "embed"
 	"os"
 
-	"github.com/voedger/voedger/cmd/edger/internal/cmd"
+	"github.com/untillpro/voedger/cmd/edger/internal/cmd"
 )
 
 //go:embed version

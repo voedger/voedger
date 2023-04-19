@@ -10,12 +10,11 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/untillpro/voedger/pkg/istructsmem/internal/descr"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-
-	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
 )
 
 // appStructsProviderType implements IAppStructsProvider interface
