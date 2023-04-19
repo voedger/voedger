@@ -12,16 +12,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func (cache *schemasCache) validateSchemas() (err error) {
-	cache.prepare()
-
-	validator := newValidator()
-	cache.EnumSchemas(func(schema Schema) {
-		err = errors.Join(err, validator.validate(schema))
-	})
-	return err
-}
-
 func (sch *schema) validate() (err error) {
 	return errors.Join(
 		sch.validateFields(),

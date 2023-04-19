@@ -175,7 +175,7 @@ func Test_dynoBufValue(t *testing.T) {
 	})
 
 	t.Run("test Event", func(t *testing.T) {
-		var testEvent istructs.IDbEvent = newTestEvent(100500, 100500700)
+		var testEvent istructs.IDbEvent = newTestEvent(100501, 100500700)
 
 		checkEvent := func(data interface{}) {
 			b, ok := data.([]byte)
@@ -184,7 +184,7 @@ func Test_dynoBufValue(t *testing.T) {
 			e := newEmptyTestEvent()
 			err := e.loadFromBytes(b)
 			require.NoError(err)
-			testTestEvent(t, testEvent, 100500, 100500700, false)
+			testTestEvent(t, testEvent, 100501, 100500700, false)
 		}
 
 		v, err := row.dynoBufValue(testEvent, istructs.DataKind_Event)
