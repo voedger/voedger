@@ -8,7 +8,7 @@ package ctrls
 import (
 	"context"
 
-	"github.com/voedger/voedger/cmd/edger/internal/states"
+	"github.com/untillpro/voedger/cmd/edger/internal/states"
 )
 
 // MicroController is used by SuperController to achieve desired state attribute

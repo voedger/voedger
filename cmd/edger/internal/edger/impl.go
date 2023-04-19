@@ -12,9 +12,9 @@ import (
 	"time"
 
 	logger "github.com/heeus/core-logger"
-	"github.com/voedger/voedger/cmd/edger/internal/ctrls"
-	"github.com/voedger/voedger/cmd/edger/internal/metrics"
-	"github.com/voedger/voedger/cmd/edger/internal/states"
+	"github.com/untillpro/voedger/cmd/edger/internal/ctrls"
+	"github.com/untillpro/voedger/cmd/edger/internal/metrics"
+	"github.com/untillpro/voedger/cmd/edger/internal/states"
 )
 
 var signals = make(chan os.Signal, 1)
