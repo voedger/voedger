@@ -163,8 +163,8 @@ github.com/viant/assertly v0.4.8/go.mod h1:aGifi++jvCrUaklKEKT0BU95igDNaqkvz+49u
 github.com/viant/assertly v0.5.4/go.mod h1:aGifi++jvCrUaklKEKT0BU95igDNaqkvz+49uaYMPRU=
 github.com/viant/toolbox v0.24.0/go.mod h1:OxMCG57V0PXuIP2HNQrtJf2CjqdmbrOx5EkMILuUhzM=
 github.com/viant/toolbox v0.33.0/go.mod h1:OxMCG57V0PXuIP2HNQrtJf2CjqdmbrOx5EkMILuUhzM=
-github.com/voedger/voedger v0.0.0-20230418154415-a8e6b98b935c h1:7E4vCIWB0tpPju011dNMo3/4Zw/NA+99JYvO+zFEGtA=
-github.com/voedger/voedger v0.0.0-20230418154415-a8e6b98b935c/go.mod h1:kGjAj9anZMk0VLzKACkpJNN+ALr0n/hz0J5I1MyuMF8=
+github.com/voedger/voedger v0.0.0-20230419092753-7ebfeae3d15b h1:fKIuSFDnoiTDQKOpgXIhMdpShXqVVDmBXKPOnRBmI5A=
+github.com/voedger/voedger v0.0.0-20230419092753-7ebfeae3d15b/go.mod h1:kGjAj9anZMk0VLzKACkpJNN+ALr0n/hz0J5I1MyuMF8=
 github.com/wneessen/go-mail v0.3.9 h1:Q4DbCk3htT5DtDWKeMgNXCiHc4bBY/vv/XQPT6XDXzc=
 github.com/wneessen/go-mail v0.3.9/go.mod h1:zxOlafWCP/r6FEhAaRgH4IC1vg2YXxO0Nar9u0IScZ8=
 go.etcd.io/bbolt v1.3.7 h1:j+zJOnnEjF/kyHlDDgGnVL/AIqIJPq8UoB2GSNfkUfQ=
