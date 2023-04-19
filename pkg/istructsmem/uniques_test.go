@@ -10,18 +10,26 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestBasicUsage_Uniques(t *testing.T) {
 	require := require.New(t)
-	cfgs := AppConfigsType{}
-	cfg := cfgs.AddConfig(test.appName)
+	test := test()
+
 	qName := istructs.NewQName("my", "name")
 	qName2 := istructs.NewQName("my", "name2")
-	cfg.Schemas.Add(qName, istructs.SchemaKind_CDoc).
-		AddField("a", istructs.DataKind_int32, true).
-		AddField("b", istructs.DataKind_int32, true).
-		AddField("c", istructs.DataKind_int32, true)
+	schemas := schemas.NewSchemaCache()
+
+	t.Run("must be ok to build schemas", func(t *testing.T) {
+		schemas.Add(qName, istructs.SchemaKind_CDoc).
+			AddField("a", istructs.DataKind_int32, true).
+			AddField("b", istructs.DataKind_int32, true).
+			AddField("c", istructs.DataKind_int32, true)
+	})
+
+	cfgs := AppConfigsType{}
+	cfg := cfgs.AddConfig(test.appName, schemas)
 
 	// add Uniques in AppConfigType
 	cfg.Uniques.Add(qName, []string{"a"})

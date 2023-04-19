@@ -8,7 +8,7 @@ package projectors
 
 import (
 	istructs "github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func ProvideAsyncActualizerFactory() AsyncActualizerFactory {
@@ -19,10 +19,10 @@ func ProvideSyncActualizerFactory() SyncActualizerFactory {
 	return syncActualizerFactory
 }
 
-func ProvideOffsetsSchema(cfg *istructsmem.AppConfigType) {
-	provideOffsetsSchemaImpl(cfg)
+func ProvideOffsetsSchema(schemas schemas.SchemaCacheBuilder) {
+	provideOffsetsSchemaImpl(schemas)
 }
 
-func ProvideViewSchema(app *istructsmem.AppConfigType, qname istructs.QName, buildFunc BuildViewSchemaFunc) {
-	provideViewSchemaImpl(app, qname, buildFunc)
+func ProvideViewSchema(schemas schemas.SchemaCacheBuilder, qname istructs.QName, buildFunc BuildViewSchemaFunc) {
+	provideViewSchemaImpl(schemas, qname, buildFunc)
 }

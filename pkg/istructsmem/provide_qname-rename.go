@@ -11,6 +11,10 @@ import (
 
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 )
 
 func RenameQName(storage istorage.IAppStorage, old, new istructs.QName) error {
@@ -22,15 +26,15 @@ func RenameQName(storage istorage.IAppStorage, old, new istructs.QName) error {
 	}
 
 	data := make([]byte, 0)
-	if ok, err := storage.Get(toBytes(uint16(QNameIDSysVesions)), toBytes(uint16(verSysQNames)), &data); !ok {
+	if ok, err := storage.Get(utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysQNamesVersion), &data); !ok {
 		return fmt.Errorf("error read version of QNames system view: %w", err)
 	}
 
-	ver := versionValueType(binary.BigEndian.Uint16(data))
+	ver := vers.VersionValue(binary.BigEndian.Uint16(data))
 
 	switch ver {
 	case verSysQNames01:
-		pKey := toBytes(uint16(QNameIDSysQNames), uint16(verSysQNames01))
+		pKey := utils.ToBytes(consts.SysView_QNames, verSysQNames01)
 
 		ok, err := storage.Get(pKey, []byte(old.String()), &data)
 		if err != nil {
@@ -39,7 +43,7 @@ func RenameQName(storage istorage.IAppStorage, old, new istructs.QName) error {
 		if !ok {
 			return fmt.Errorf(errFmt+"old QName ID not found", old, new)
 		}
-		if id := QNameID(binary.BigEndian.Uint16(data)); id == NullQNameID {
+		if id := qnames.QNameID(binary.BigEndian.Uint16(data)); id == qnames.NullQNameID {
 			return fmt.Errorf(errFmt+"old QName already deleted, ID %v", old, new, id)
 		}
 
@@ -49,7 +53,7 @@ func RenameQName(storage istorage.IAppStorage, old, new istructs.QName) error {
 			return fmt.Errorf(errFmt+"error checking existence of new QName ID: %w", old, new, err)
 		}
 		if ok {
-			if id := QNameID(binary.BigEndian.Uint16(newData)); id != NullQNameID {
+			if id := qnames.QNameID(binary.BigEndian.Uint16(newData)); id != qnames.NullQNameID {
 				return fmt.Errorf(errFmt+"new QName already exists, ID %v", old, new, id)
 			}
 		}
@@ -57,7 +61,7 @@ func RenameQName(storage istorage.IAppStorage, old, new istructs.QName) error {
 		if err := storage.Put(pKey, []byte(new.String()), data); err != nil {
 			return fmt.Errorf(errFmt+"error write new QName ID: %w", old, new, err)
 		}
-		if err := storage.Put(pKey, []byte(old.String()), toBytes(uint16(NullQNameID))); err != nil {
+		if err := storage.Put(pKey, []byte(old.String()), utils.ToBytes(qnames.NullQNameID)); err != nil {
 			return fmt.Errorf(errFmt+"error write old QName ID: %w", old, new, err)
 		}
 	default:

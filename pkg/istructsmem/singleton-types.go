@@ -8,24 +8,29 @@ package istructsmem
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 
-	istorage "github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // singletonsCacheType is cache for CDoc singleton IDs
 type singletonsCacheType struct {
-	app     *AppConfigType
+	cfg     *AppConfigType
 	qNames  map[istructs.QName]istructs.RecordID
 	ids     map[istructs.RecordID]istructs.QName
 	lastID  istructs.RecordID
 	changes uint32
 }
 
-func newSingletonsCache(app *AppConfigType) singletonsCacheType {
+func newSingletonsCache(cfg *AppConfigType) singletonsCacheType {
 	return singletonsCacheType{
-		app:    app,
+		cfg:    cfg,
 		qNames: make(map[istructs.QName]istructs.RecordID),
 		ids:    make(map[istructs.RecordID]istructs.QName),
 		lastID: istructs.FirstSingletonID - 1,
@@ -42,31 +47,32 @@ func (stons *singletonsCacheType) clear() {
 
 // collectAllSingletons collect all application singlton IDs
 func (stons *singletonsCacheType) collectAllSingletons() (err error) {
-	for _, sch := range stons.app.Schemas.schemas {
-		if sch.singleton.enabled {
-			if err = stons.collectSingleton(sch); err != nil {
-				return err
+	stons.cfg.Schemas.EnumSchemas(
+		func(schema schemas.Schema) {
+			if schema.Singleton() {
+				err = errors.Join(err,
+					stons.collectSingleton(schema))
 			}
-		}
-	}
-	return nil
+		})
+
+	return err
 }
 
 // collectSingleton checks is application schema singleton in cache. If not then adds it with new ID
-func (stons *singletonsCacheType) collectSingleton(schema *SchemaType) (err error) {
+func (stons *singletonsCacheType) collectSingleton(schema schemas.Schema) (err error) {
 
-	if id, ok := stons.qNames[schema.name]; ok {
-		schema.singleton.id = id
+	name := schema.QName()
+
+	if _, ok := stons.qNames[name]; ok {
 		return nil // already known schema
 	}
 
 	for id := stons.lastID + 1; id < istructs.MaxSingletonID; id++ {
 		if _, ok := stons.ids[id]; !ok {
-			stons.qNames[schema.name] = id
-			stons.ids[id] = schema.name
+			stons.qNames[name] = id
+			stons.ids[id] = name
 			stons.lastID = id
 			stons.changes++
-			schema.singleton.id = id
 			return nil
 		}
 	}
@@ -88,9 +94,9 @@ func (stons *singletonsCacheType) idToQName(id istructs.RecordID) (istructs.QNam
 func (stons *singletonsCacheType) load() (err error) {
 	stons.clear()
 
-	ver := stons.app.versions.getVersion(verSysSingletons)
+	ver := stons.cfg.versions.GetVersion(vers.SysSingletonsVersion)
 	switch ver {
-	case verUnknown: // no sys.QName storage exists
+	case vers.UnknownVersion: // no sys.QName storage exists
 		return nil
 	case verSysSingletonsLastest:
 		return stons.load01()
@@ -119,8 +125,8 @@ func (stons *singletonsCacheType) load01() error {
 		return nil
 	}
 
-	pKey := toBytes(uint16(QNameIDSysSingletonIDs), uint16(verSysSingletons01))
-	return stons.app.storage.Read(context.Background(), pKey, nil, nil, readSingleton)
+	pKey := utils.ToBytes(consts.SysView_SingletonIDs, verSysSingletons01)
+	return stons.cfg.storage.Read(context.Background(), pKey, nil, nil, readSingleton)
 }
 
 // prepare loads all singleton IDs from storage, add all known application singletons and store cache if some changes. Must be called at application starts
@@ -152,7 +158,7 @@ func (stons *singletonsCacheType) qNameToID(qName istructs.QName) (istructs.Reco
 
 // store stores all known singleton IDs to storage using verSysSingletonsLastest codec
 func (stons *singletonsCacheType) store() (err error) {
-	pKey := toBytes(uint16(QNameIDSysSingletonIDs), uint16(verSysSingletonsLastest))
+	pKey := utils.ToBytes(consts.SysView_SingletonIDs, verSysSingletonsLastest)
 
 	batch := make([]istorage.BatchItem, 0)
 	for qName, id := range stons.qNames {
@@ -160,18 +166,18 @@ func (stons *singletonsCacheType) store() (err error) {
 			item := istorage.BatchItem{
 				PKey:  pKey,
 				CCols: []byte(qName.String()),
-				Value: toBytes(uint64(id)),
+				Value: utils.ToBytes(uint64(id)),
 			}
 			batch = append(batch, item)
 		}
 	}
 
-	if err = stons.app.storage.PutBatch(batch); err != nil {
+	if err = stons.cfg.storage.PutBatch(batch); err != nil {
 		return fmt.Errorf("error store application singleton IDs to storage: %w", err)
 	}
 
-	if ver := stons.app.versions.getVersion(verSysSingletons); ver != verSysSingletonsLastest {
-		if err = stons.app.versions.putVersion(verSysSingletons, verSysSingletonsLastest); err != nil {
+	if ver := stons.cfg.versions.GetVersion(vers.SysSingletonsVersion); ver != verSysSingletonsLastest {
+		if err = stons.cfg.versions.PutVersion(vers.SysSingletonsVersion, verSysSingletonsLastest); err != nil {
 			return fmt.Errorf("error store «sys.Singletons» system view version: %w", err)
 		}
 	}

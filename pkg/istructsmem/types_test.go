@@ -7,16 +7,17 @@ package istructsmem
 
 import (
 	"encoding/binary"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 )
 
 func Test_dynoBufValue(t *testing.T) {
 	require := require.New(t)
+	test := test()
+
 	row := newTestRow()
 
 	t.Run("test int32", func(t *testing.T) {
@@ -29,7 +30,7 @@ func Test_dynoBufValue(t *testing.T) {
 		require.EqualValues(7, v)
 
 		v, err = row.dynoBufValue("7", istructs.DataKind_int32)
-		require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
+		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
@@ -43,7 +44,7 @@ func Test_dynoBufValue(t *testing.T) {
 		require.EqualValues(7, v)
 
 		v, err = row.dynoBufValue("7", istructs.DataKind_int64)
-		require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
+		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
@@ -57,7 +58,7 @@ func Test_dynoBufValue(t *testing.T) {
 		require.EqualValues(7.7, v)
 
 		v, err = row.dynoBufValue("7.7", istructs.DataKind_float32)
-		require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
+		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
@@ -67,7 +68,7 @@ func Test_dynoBufValue(t *testing.T) {
 		require.EqualValues(7.7, v)
 
 		v, err = row.dynoBufValue(7, istructs.DataKind_float64)
-		require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
+		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
@@ -85,12 +86,12 @@ func Test_dynoBufValue(t *testing.T) {
 		require.Nil(v)
 
 		v, err = row.dynoBufValue(7, istructs.DataKind_bytes)
-		require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
+		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
 	t.Run("test QName", func(t *testing.T) {
-		id, _ := test.AppCfg.qNames.qNameToID(test.saleCmdName)
+		id, _ := test.AppCfg.qNames.GetID(test.saleCmdName)
 		b := make([]byte, 2)
 		binary.BigEndian.PutUint16(b, uint16(id))
 
@@ -103,11 +104,11 @@ func Test_dynoBufValue(t *testing.T) {
 		require.EqualValues(b, v)
 
 		v, err = row.dynoBufValue(istructs.NewQName("test", "unknown"), istructs.DataKind_QName)
-		require.ErrorIs(err, ErrNameNotFound)
+		require.ErrorIs(err, qnames.ErrNameNotFound)
 		require.Nil(v)
 
 		v, err = row.dynoBufValue("test.unknown", istructs.DataKind_QName)
-		require.ErrorIs(err, ErrNameNotFound)
+		require.ErrorIs(err, qnames.ErrNameNotFound)
 		require.Nil(v)
 
 		v, err = row.dynoBufValue("ups!", istructs.DataKind_QName)
@@ -115,7 +116,7 @@ func Test_dynoBufValue(t *testing.T) {
 		require.Nil(v)
 
 		v, err = row.dynoBufValue(7, istructs.DataKind_bytes)
-		require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
+		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
@@ -129,7 +130,7 @@ func Test_dynoBufValue(t *testing.T) {
 		require.Equal(true, v)
 
 		v, err = row.dynoBufValue(7, istructs.DataKind_bool)
-		require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
+		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
@@ -147,7 +148,7 @@ func Test_dynoBufValue(t *testing.T) {
 		require.EqualValues(100500700, v)
 
 		v, err = row.dynoBufValue("100500700", istructs.DataKind_RecordID)
-		require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
+		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
@@ -169,7 +170,7 @@ func Test_dynoBufValue(t *testing.T) {
 		checkRecord(v)
 
 		v, err = row.dynoBufValue("ups", istructs.DataKind_Record)
-		require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
+		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
@@ -191,12 +192,14 @@ func Test_dynoBufValue(t *testing.T) {
 		checkEvent(v)
 
 		v, err = row.dynoBufValue("ups", istructs.DataKind_Event)
-		require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
+		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 }
 
 func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
+	require := require.New(t)
+	test := test()
 
 	t.Run("Put××× and As××× row methods for simple types", func(t *testing.T) {
 		row1 := newTestRow()
@@ -212,8 +215,6 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 	})
 
 	t.Run("As××× row methods must return default values if not calls Put×××", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newEmptyTestRow()
 
 		require.Equal(int32(0), row.AsInt32("int32"))
@@ -233,8 +234,6 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 	})
 
 	t.Run("PutNumber to numeric-type fields must be available (json)", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newRow(test.AppCfg)
 		row.setQName(test.testRow)
 
@@ -255,8 +254,6 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 	})
 
 	t.Run("PutChars to char-type fields (string, bytes and QName) must be available (json)", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newRow(test.AppCfg)
 		row.setQName(test.testRow)
 
@@ -274,6 +271,8 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 }
 
 func Test_rowType_PutAs_ComplexTypes(t *testing.T) {
+	require := require.New(t)
+	test := test()
 
 	t.Run("PutRecord and PutEvent / AsRecord and AsEvent row methods (via IValue)", func(t *testing.T) {
 		row1 := newTestViewValue()
@@ -287,8 +286,6 @@ func Test_rowType_PutAs_ComplexTypes(t *testing.T) {
 	})
 
 	t.Run("must success NullRecord value for PutRecord / AsRecord methods", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newEmptyViewValue()
 		row.PutString(test.testViewRecord.valueFields.buyer, "buyer")
 		row.PutRecord(test.testViewRecord.valueFields.record, NewNullRecord(istructs.NullRecordID))
@@ -302,81 +299,74 @@ func Test_rowType_PutAs_ComplexTypes(t *testing.T) {
 }
 
 func Test_rowType_PutErrors(t *testing.T) {
+	require := require.New(t)
+	test := test()
 
 	t.Run("Put××× to unknown field names must be error", func(t *testing.T) {
-		require := require.New(t)
 
-		row := newRow(test.AppCfg)
-		row.setQName(test.testRow)
+		testPut := func(put func(row istructs.IRowWriter)) {
+			row := newRow(test.AppCfg)
+			row.setQName(test.testRow)
+			put(&row)
+			require.ErrorIs(row.build(), ErrNameNotFound)
+		}
 
-		row.PutInt32("unknown_field", 1)
-		row.PutInt64("unknown_field", 2)
-		row.PutFloat32("unknown_field", 3)
-		row.PutFloat64("unknown_field", 4)
-		row.PutBytes("unknown_field", []byte{1, 2, 3})
-		row.PutString("unknown_field", "abc")
-		row.PutQName("unknown_field", istructs.QNameForError)
-		row.PutBool("unknown_field", true)
-		row.PutRecordID("unknown_field", istructs.NullRecordID)
-		row.PutRecord("unknown_field", func() istructs.IRecord { return NewNullRecord(777) }())
-		row.PutEvent("unknown_field", newTestEvent(7, 7))
+		testPut(func(row istructs.IRowWriter) { row.PutInt32("unknown_field", 1) })
+		testPut(func(row istructs.IRowWriter) { row.PutInt32("unknown_field", 1) })
+		testPut(func(row istructs.IRowWriter) { row.PutInt64("unknown_field", 2) })
+		testPut(func(row istructs.IRowWriter) { row.PutFloat32("unknown_field", 3) })
+		testPut(func(row istructs.IRowWriter) { row.PutFloat64("unknown_field", 4) })
+		testPut(func(row istructs.IRowWriter) { row.PutBytes("unknown_field", []byte{1, 2, 3}) })
+		testPut(func(row istructs.IRowWriter) { row.PutString("unknown_field", "abc") })
+		testPut(func(row istructs.IRowWriter) { row.PutQName("unknown_field", istructs.QNameForError) })
+		testPut(func(row istructs.IRowWriter) { row.PutBool("unknown_field", true) })
+		testPut(func(row istructs.IRowWriter) { row.PutRecordID("unknown_field", istructs.NullRecordID) })
 
-		row.PutNumber("unknown_field", 888)
-		row.PutChars("unknown_field", "c.h.a.r.s.")
-
-		err := row.build()
-		require.Error(err)
-		require.True(strings.HasPrefix(err.Error(), "13 errors:"))
+		testPut(func(row istructs.IRowWriter) { row.PutNumber("unknown_field", 888) })
+		testPut(func(row istructs.IRowWriter) { row.PutChars("unknown_field", "c.h.a.r.s.") })
 	})
 
 	t.Run("Put××× with wrong types must be error", func(t *testing.T) {
-		require := require.New(t)
 
-		row := newRow(test.AppCfg)
-		row.setQName(test.testRow)
+		testPut := func(put func(row istructs.IRowWriter)) {
+			row := newRow(test.AppCfg)
+			row.setQName(test.testRow)
+			put(&row)
+			require.ErrorIs(row.build(), ErrWrongFieldType)
+		}
 
-		row.PutInt32("int64", 1)
-		row.PutInt64("float32", 2)
-		row.PutFloat32("int32", 3)
-		row.PutFloat64("string", 4)
-		row.PutBytes("float64", []byte{1, 2, 3})
-		row.PutString("bytes", "abc")
-		row.PutQName("RecordID", istructs.QNameForError)
-		row.PutBool("QName", true)
-		row.PutRecordID("bool", istructs.NullRecordID)
-
-		err := row.build()
-		require.Error(err)
-		require.True(strings.HasPrefix(err.Error(), "9 errors:"))
+		testPut(func(row istructs.IRowWriter) { row.PutInt32("int64", 1) })
+		testPut(func(row istructs.IRowWriter) { row.PutInt64("float32", 2) })
+		testPut(func(row istructs.IRowWriter) { row.PutFloat32("int32", 3) })
+		testPut(func(row istructs.IRowWriter) { row.PutFloat64("string", 4) })
+		testPut(func(row istructs.IRowWriter) { row.PutBytes("float64", []byte{1, 2, 3}) })
+		testPut(func(row istructs.IRowWriter) { row.PutString("bytes", "abc") })
+		testPut(func(row istructs.IRowWriter) { row.PutQName("RecordID", istructs.QNameForError) })
+		testPut(func(row istructs.IRowWriter) { row.PutBool("QName", true) })
+		testPut(func(row istructs.IRowWriter) { row.PutRecordID("bool", istructs.NullRecordID) })
 	})
 
 	t.Run("PutNumber to non-numeric type field must be error", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutNumber("bytes", 29)
 
 		err := row.build()
-		require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
+		require.ErrorIs(err, ErrWrongFieldType)
 	})
 
 	t.Run("PutQName with unknown QName value must be error", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutQName("QName", istructs.NewQName("unknown", "unknown"))
 
 		err := row.build()
-		require.ErrorIs(err, ErrNameNotFound)
+		require.ErrorIs(err, qnames.ErrNameNotFound)
 	})
 
 	t.Run("PutChars error handling", func(t *testing.T) {
-		require := require.New(t)
-
 		t.Run("PutChars to non-char type fields must be error", func(t *testing.T) {
 			row := newRow(test.AppCfg)
 			row.setQName(test.testRow)
@@ -384,7 +374,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 			row.PutChars("int32", "29")
 
 			err := row.build()
-			require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
+			require.ErrorIs(err, ErrWrongFieldType)
 		})
 
 		t.Run("PutChars to QName-type fields non-covertable value must be error", func(t *testing.T) {
@@ -409,17 +399,15 @@ func Test_rowType_PutErrors(t *testing.T) {
 	})
 
 	t.Run("Multiply Put××× errors must be concatenated in build error", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutFloat32("unknown_field", 555.5)
-		row.PutFloat64("unknown_field", 555.5)
+		row.PutInt32("int64", 1)
 
 		err := row.build()
-		require.Error(err)
-		require.True(strings.HasPrefix(err.Error(), "2 errors:"))
+		require.ErrorIs(err, ErrNameNotFound)
+		require.ErrorIs(err, ErrWrongFieldType)
 	})
 }
 
@@ -443,9 +431,10 @@ func Test_rowType_AsPanics(t *testing.T) {
 }
 
 func Test_rowType_RecordIDs(t *testing.T) {
+	require := require.New(t)
+	test := test()
 
 	t.Run("RecordIDs must iterate all IDs", func(t *testing.T) {
-		require := require.New(t)
 
 		row := newRow(test.AppCfg)
 		row.setQName(test.testRow)
@@ -474,8 +463,6 @@ func Test_rowType_RecordIDs(t *testing.T) {
 	})
 
 	t.Run("RecordIDs must iterate not null IDs", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newRow(test.AppCfg)
 		row.setQName(test.testRow)
 
@@ -502,10 +489,9 @@ func Test_rowType_RecordIDs(t *testing.T) {
 }
 
 func Test_rowType_maskValues(t *testing.T) {
+	require := require.New(t)
 
 	t.Run("maskValues must hide all rows data", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newTestRow()
 
 		row.maskValues()
@@ -520,14 +506,13 @@ func Test_rowType_maskValues(t *testing.T) {
 		require.Equal(false, row.AsBool("bool"))
 		require.Equal(istructs.NullRecordID, row.AsRecordID("RecordID"))
 	})
-
 }
 
 func Test_rowType_FieldNames(t *testing.T) {
+	require := require.New(t)
+	test := test()
 
 	t.Run("new [or null] row must have hot fields", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newRow(test.AppCfg)
 
 		cnt := 0
@@ -538,8 +523,6 @@ func Test_rowType_FieldNames(t *testing.T) {
 	})
 
 	t.Run("new test row must have only QName field", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newRow(test.AppCfg)
 		row.setQName(test.testRow)
 
@@ -552,8 +535,6 @@ func Test_rowType_FieldNames(t *testing.T) {
 	})
 
 	t.Run("filled test row must iterate all fields without duplicates", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newTestRow()
 
 		cnt := 0
@@ -568,10 +549,10 @@ func Test_rowType_FieldNames(t *testing.T) {
 }
 
 func Test_rowType_BuildErrors(t *testing.T) {
+	require := require.New(t)
+	test := test()
 
 	t.Run("Put××× unknown field name must have build error", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newRow(test.AppCfg)
 		row.setQName(test.testRow)
 
@@ -581,8 +562,6 @@ func Test_rowType_BuildErrors(t *testing.T) {
 	})
 
 	t.Run("Put××× invalid field value type must have build error", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newRow(test.AppCfg)
 		row.setQName(test.testRow)
 
@@ -592,8 +571,6 @@ func Test_rowType_BuildErrors(t *testing.T) {
 	})
 
 	t.Run("PutString to []byte type must collect convert error", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newRow(test.AppCfg)
 		row.setQName(test.testRow)
 
@@ -604,8 +581,6 @@ func Test_rowType_BuildErrors(t *testing.T) {
 	})
 
 	t.Run("PutQName invalid QName must have build error", func(t *testing.T) {
-		require := require.New(t)
-
 		row := newRow(test.AppCfg)
 		row.setQName(test.testRow)
 
