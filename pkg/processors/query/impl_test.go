@@ -156,6 +156,7 @@ func getTestCfg(require *require.Assertions, cfgSchemas func(schemas schemas.Sch
 	schemas.Add(qNameDepartment, istructs.SchemaKind_CDoc).
 		AddField("name", istructs.DataKind_string, true)
 	schemas.Add(qNameArticle, istructs.SchemaKind_Object).
+		AddField("sys.ID", istructs.DataKind_RecordID, true).
 		AddField("name", istructs.DataKind_string, true).
 		AddField("id_department", istructs.DataKind_int64, true)
 
