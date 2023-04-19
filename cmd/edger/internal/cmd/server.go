@@ -7,7 +7,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/untillpro/voedger/cmd/edger/internal/edger"
+	"github.com/voedger/voedger/cmd/edger/internal/edger"
 )
 
 func newServerCmd() *cobra.Command {

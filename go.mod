@@ -1,4 +1,4 @@
-module github.com/untillpro/voedger
+module github.com/voedger/voedger
 
 go 1.20
 
