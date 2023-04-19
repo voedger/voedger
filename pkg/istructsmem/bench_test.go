@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // Ref. bench.md for results
@@ -65,14 +66,11 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	stringFieldNames := make([]string, numOfIntFields)
 	stringFieldValues := make(map[string]string)
 
-	// Con
+	// Schemas
+	schemas := func() schemas.SchemaCacheBuilder {
+		cache := schemas.NewSchemaCache()
 
-	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName)
-
-	// Register odoc schema
-	{
-		s := cfg.Schemas.Add(odocQName, istructs.SchemaKind_ODoc)
+		s := cache.Add(odocQName, istructs.SchemaKind_ODoc)
 		for i := 0; i < numOfIntFields; i++ {
 
 			intFieldName := fmt.Sprintf("i%v", i)
@@ -86,7 +84,13 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 			stringFieldValues[stringFieldName] = stringFieldName
 
 		}
+		return cache
 	}
+
+	// Con
+
+	cfgs := make(AppConfigsType, 1)
+	cfg := cfgs.AddConfig(appName, schemas())
 
 	// Register command
 	{

@@ -12,6 +12,8 @@ import (
 	"io"
 
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
 func storeEvent(ev *dbEventType, buf *bytes.Buffer) (err error) {
@@ -58,9 +60,9 @@ func storeEventBuildError(ev *dbEventType, buf *bytes.Buffer) {
 		return
 	}
 
-	writeShortString(buf, ev.buildErr.ErrStr())
+	utils.WriteShortString(buf, ev.buildErr.ErrStr())
 
-	writeShortString(buf, ev.name.String())
+	utils.WriteShortString(buf, ev.name.String())
 
 	bytes := ev.buildErr.OriginalEventBytes()
 	bytesLen := uint32(len(bytes))
@@ -135,7 +137,7 @@ func loadEvent(ev *dbEventType, codecVer byte, buf *bytes.Buffer) (err error) {
 	if err := binary.Read(buf, binary.BigEndian, &id); err != nil {
 		return fmt.Errorf("error read event name ID: %w", err)
 	}
-	if ev.name, err = ev.appCfg.qNames.idToQName(QNameID(id)); err != nil {
+	if ev.name, err = ev.appCfg.qNames.GetQName(qnames.QNameID(id)); err != nil {
 		return fmt.Errorf("error read event name: %w", err)
 	}
 
@@ -205,12 +207,12 @@ func loadEventBuildError(ev *dbEventType, buf *bytes.Buffer) (err error) {
 		return nil
 	}
 
-	if ev.buildErr.errStr, err = readShortString(buf); err != nil {
+	if ev.buildErr.errStr, err = utils.ReadShortString(buf); err != nil {
 		return fmt.Errorf("error read build error message: %w", err)
 	}
 
 	qName := ""
-	if qName, err = readShortString(buf); err != nil {
+	if qName, err = utils.ReadShortString(buf); err != nil {
 		return fmt.Errorf("error read original event name: %w", err)
 	}
 	if ev.buildErr.qName, err = istructs.ParseQName(qName); err != nil {

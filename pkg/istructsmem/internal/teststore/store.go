@@ -3,38 +3,38 @@
  * @author: Nikolay Nikitin
  */
 
-package istructsmem
+package teststore
 
 import (
 	"bytes"
 	"context"
 
-	istorage "github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// testStorageType is test storage. Trained to return the specified error
+// Test storage. Trained to return the specified error
 type (
-	scheduleErrorType struct {
+	scheduleStorageError struct {
 		err         error
 		pKey, cCols []byte
 	}
 
-	damageFuncType     func(*[]byte)
-	scheduleDamageType struct {
-		dam damageFuncType
-		scheduleErrorType
+	damagedStorageFunc    func(*[]byte)
+	scheduleStorageDamage struct {
+		dam damagedStorageFunc
+		scheduleStorageError
 	}
 
-	testStorageType struct {
+	TestMemStorage struct {
 		storage  istorage.IAppStorage
-		get, put scheduleErrorType
-		damage   scheduleDamageType
+		get, put scheduleStorageError
+		damage   scheduleStorageDamage
 	}
 
 	testStorageProvider struct {
-		testStorage *testStorageType
+		testStorage *TestMemStorage
 	}
 )
 
@@ -42,12 +42,12 @@ func (tsp *testStorageProvider) AppStorage(appName istructs.AppQName) (structs i
 	return tsp.testStorage, nil
 }
 
-func newTestStorageProvider(ts *testStorageType) istorage.IAppStorageProvider {
+func NewTestStorageProvider(ts *TestMemStorage) istorage.IAppStorageProvider {
 	return &testStorageProvider{testStorage: ts}
 }
 
-func newTestStorage() *testStorageType {
-	s := testStorageType{get: scheduleErrorType{}, put: scheduleErrorType{}}
+func NewTestStorage() *TestMemStorage {
+	s := TestMemStorage{get: scheduleStorageError{}, put: scheduleStorageError{}}
 	asf := istorage.ProvideMem()
 	sp := istorageimpl.Provide(asf)
 	var err error
@@ -58,19 +58,21 @@ func newTestStorage() *testStorageType {
 	return &s
 }
 
-// occurs returns that primary key and clustering columns matches the shedduled error
-func (e *scheduleErrorType) match(pKey, cCols []byte) bool {
+// Returns is partition key and clustering columns matches the scheduled error
+func (e *scheduleStorageError) match(pKey, cCols []byte) bool {
 	return ((len(e.pKey) == 0) || bytes.Equal(e.pKey, pKey)) &&
 		((len(e.cCols) == 0) || bytes.Equal(e.cCols, cCols))
 }
 
-func (s *testStorageType) reset() {
-	s.get = scheduleErrorType{}
-	s.put = scheduleErrorType{}
-	s.damage = scheduleDamageType{}
+// Clear all scheduled errors
+func (s *TestMemStorage) Reset() {
+	s.get = scheduleStorageError{}
+	s.put = scheduleStorageError{}
+	s.damage = scheduleStorageDamage{}
 }
 
-func (s *testStorageType) sheduleGetError(err error, pKey, cCols []byte) {
+// Schedule Get() to return error
+func (s *TestMemStorage) ScheduleGetError(err error, pKey, cCols []byte) {
 	s.get.err = err
 	s.get.pKey = make([]byte, len(pKey))
 	copy(s.get.pKey, pKey)
@@ -78,7 +80,8 @@ func (s *testStorageType) sheduleGetError(err error, pKey, cCols []byte) {
 	copy(s.get.cCols, cCols)
 }
 
-func (s *testStorageType) sheduleGetDamage(dam damageFuncType, pKey, cCols []byte) {
+// Schedule Get() to return damaged data
+func (s *TestMemStorage) ScheduleGetDamage(dam damagedStorageFunc, pKey, cCols []byte) {
 	s.damage.dam = dam
 	s.damage.pKey = make([]byte, len(pKey))
 	copy(s.damage.pKey, pKey)
@@ -86,7 +89,8 @@ func (s *testStorageType) sheduleGetDamage(dam damageFuncType, pKey, cCols []byt
 	copy(s.damage.cCols, cCols)
 }
 
-func (s *testStorageType) shedulePutError(err error, pKey, cCols []byte) {
+// Schedule Put() to return error
+func (s *TestMemStorage) SchedulePutError(err error, pKey, cCols []byte) {
 	s.put.err = err
 	s.put.pKey = make([]byte, len(pKey))
 	copy(s.put.pKey, pKey)
@@ -94,7 +98,7 @@ func (s *testStorageType) shedulePutError(err error, pKey, cCols []byte) {
 	copy(s.put.cCols, cCols)
 }
 
-func (s *testStorageType) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+func (s *TestMemStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
 	if s.get.err != nil {
 		if s.get.match(pKey, cCols) {
 			err = s.get.err
@@ -116,7 +120,7 @@ func (s *testStorageType) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool,
 	return ok, err
 }
 
-func (s *testStorageType) GetBatch(pKey []byte, items []istorage.GetBatchItem) (err error) {
+func (s *TestMemStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) (err error) {
 	if s.get.err != nil {
 		for _, item := range items {
 			if s.get.match(pKey, item.CCols) {
@@ -143,7 +147,7 @@ func (s *testStorageType) GetBatch(pKey []byte, items []istorage.GetBatchItem) (
 	return err
 }
 
-func (s *testStorageType) Put(pKey []byte, cCols []byte, value []byte) (err error) {
+func (s *TestMemStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 	if s.put.err != nil {
 		if s.put.match(pKey, cCols) {
 			err = s.put.err
@@ -154,7 +158,7 @@ func (s *testStorageType) Put(pKey []byte, cCols []byte, value []byte) (err erro
 	return s.storage.Put(pKey, cCols, value)
 }
 
-func (s *testStorageType) PutBatch(items []istorage.BatchItem) (err error) {
+func (s *TestMemStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	for _, p := range items {
 		if err = s.Put(p.PKey, p.CCols, p.Value); err != nil {
 			return err
@@ -163,7 +167,7 @@ func (s *testStorageType) PutBatch(items []istorage.BatchItem) (err error) {
 	return nil
 }
 
-func (s *testStorageType) Read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+func (s *TestMemStorage) Read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
 	cbWrap := func(cCols []byte, data []byte) (err error) {
 		if s.get.err != nil {
 			if s.get.match(pKey, cCols) {

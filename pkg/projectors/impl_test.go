@@ -20,6 +20,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state"
 )
 
@@ -42,10 +43,12 @@ import (
 func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
-	app := appStructs(func(cfg *istructsmem.AppConfigType) {
-		ProvideViewSchema(cfg, incProjectionView, buildProjectionSchema)
-		ProvideViewSchema(cfg, decProjectionView, buildProjectionSchema)
-	})
+	app := appStructs(
+		func(schemas schemas.SchemaCacheBuilder) {
+			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
+			ProvideViewSchema(schemas, decProjectionView, buildProjectionSchema)
+		},
+		nil)
 	actualizerFactory := ProvideSyncActualizerFactory()
 
 	// create actualizer with two factories
@@ -150,14 +153,25 @@ var buildProjectionSchema = func(builder IViewSchemaBuilder) {
 	builder.ValueField(colValue, istructs.DataKind_int32, true)
 }
 
-type cfgCallback func(cfg *istructsmem.AppConfigType)
+type (
+	schemasCfgCallback func(schemas schemas.SchemaCacheBuilder)
+	appCfgCallback     func(cfg *istructsmem.AppConfigType)
+)
 
-func appStructs(cb cfgCallback) istructs.IAppStructs {
+func appStructs(schemasCfg schemasCfgCallback, appCfg appCfgCallback) istructs.IAppStructs {
+	schemas := schemas.NewSchemaCache()
+	schemas.Add(incrementorName, istructs.SchemaKind_Object)
+	schemas.Add(decrementorName, istructs.SchemaKind_Object)
+	if schemasCfg != nil {
+		schemasCfg(schemas)
+	}
+
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
-	cb(cfg)
-	cfg.Schemas.Add(incrementorName, istructs.SchemaKind_Object)
-	cfg.Schemas.Add(decrementorName, istructs.SchemaKind_Object)
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+	if appCfg != nil {
+		appCfg(cfg)
+	}
+
 	asf := istorage.ProvideMem()
 	storageProvider := istorageimpl.Provide(asf)
 	prov, _ := istructsmem.Provide(
@@ -172,10 +186,12 @@ func appStructs(cb cfgCallback) istructs.IAppStructs {
 func Test_ErrorInSyncActualizer(t *testing.T) {
 	require := require.New(t)
 
-	app := appStructs(func(cfg *istructsmem.AppConfigType) {
-		ProvideViewSchema(cfg, incProjectionView, buildProjectionSchema)
-		ProvideViewSchema(cfg, decProjectionView, buildProjectionSchema)
-	})
+	app := appStructs(
+		func(schemas schemas.SchemaCacheBuilder) {
+			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
+			ProvideViewSchema(schemas, decProjectionView, buildProjectionSchema)
+		},
+		nil)
 	actualizerFactory := ProvideSyncActualizerFactory()
 
 	// create actualizer with two factories

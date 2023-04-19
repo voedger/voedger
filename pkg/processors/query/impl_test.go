@@ -25,6 +25,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -138,12 +139,33 @@ var (
 	qNameQryDenied = istructs.NewQName(istructs.SysPackage, "TestDeniedQry") // same as in ACL
 )
 
-func getTestCfg(require *require.Assertions, cfgFunc ...func(cfg *istructsmem.AppConfigType)) (cfgs istructsmem.AppConfigsType, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
+func getTestCfg(require *require.Assertions, cfgSchemas func(schemas schemas.SchemaCacheBuilder), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (cfgs istructsmem.AppConfigsType, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
 	cfgs = make(istructsmem.AppConfigsType)
 	asf := istorage.ProvideMem()
 	storageProvider := istorageimpl.Provide(asf)
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeFunc)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
+
+	qNameFindArticlesByModificationTimeStampRangeParams := istructs.NewQName("bo", "FindArticlesByModificationTimeStampRangeParamsSchema")
+	qNameDepartment := istructs.NewQName("bo", "Department")
+	qNameArticle := istructs.NewQName("bo", "Article")
+
+	schemas := schemas.NewSchemaCache()
+	schemas.Add(qNameFindArticlesByModificationTimeStampRangeParams, istructs.SchemaKind_Object).
+		AddField("from", istructs.DataKind_int64, false).
+		AddField("till", istructs.DataKind_int64, false)
+	schemas.Add(qNameDepartment, istructs.SchemaKind_CDoc).
+		AddField("name", istructs.DataKind_string, true)
+	schemas.Add(qNameArticle, istructs.SchemaKind_Object).
+		AddField("sys.ID", istructs.DataKind_RecordID, true).
+		AddField("name", istructs.DataKind_string, true).
+		AddField("id_department", istructs.DataKind_int64, true)
+
+	if cfgSchemas != nil {
+		cfgSchemas(schemas)
+	}
+
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+
 	asp, err := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, payloads.TestAppTokensFactory(tokens), storageProvider)
 	require.NoError(err)
 
@@ -155,9 +177,7 @@ func getTestCfg(require *require.Assertions, cfgFunc ...func(cfg *istructsmem.Ap
 	}
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameFunction,
-		cfg.Schemas.Add(istructs.NewQName("bo", "FindArticlesByModificationTimeStampRangeParamsSchema"), istructs.SchemaKind_Object).
-			AddField("from", istructs.DataKind_int64, false).
-			AddField("till", istructs.DataKind_int64, false).QName(),
+		qNameFindArticlesByModificationTimeStampRangeParams,
 		istructs.NewQName("bo", "Article"),
 		func(_ context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			require.Equal(int64(1257894000), args.ArgumentObject.AsInt64("from"))
@@ -179,14 +199,6 @@ func getTestCfg(require *require.Assertions, cfgFunc ...func(cfg *istructsmem.Ap
 	))
 	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
 	cfg.Resources.Add(istructsmem.NewQueryFunction(qNameQryDenied, istructs.NullQName, istructs.NullQName, istructsmem.NullQueryExec))
-	qNameDepartment := istructs.NewQName("bo", "Department")
-	cfg.Schemas.Add(qNameDepartment, istructs.SchemaKind_CDoc).
-		AddField("sys.ID", istructs.DataKind_RecordID, true).
-		AddField("name", istructs.DataKind_string, true)
-	cfg.Schemas.Add(istructs.NewQName("bo", "Article"), istructs.SchemaKind_Object).
-		AddField("sys.ID", istructs.DataKind_RecordID, true).
-		AddField("name", istructs.DataKind_string, true).
-		AddField("id_department", istructs.DataKind_int64, true)
 
 	for _, f := range cfgFunc {
 		f(cfg)
@@ -271,7 +283,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 	metrics := imetrics.Provide()
 	metricNames := make([]string, 0)
 
-	cfgs, appStructsProvider, appTokens := getTestCfg(require)
+	cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
 
 	as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -984,26 +996,33 @@ func TestRateLimiter(t *testing.T) {
 		},
 	}
 
+	qNameMyFuncParams := istructs.NewQName(istructs.SysPackage, "myFuncParams")
+	qNameMyFuncResults := istructs.NewQName(istructs.SysPackage, "results")
 	var myFunc istructs.IResource
-	cfgs, appStructsProvider, appTokens := getTestCfg(require, func(cfg *istructsmem.AppConfigType) {
+	cfgs, appStructsProvider, appTokens := getTestCfg(require,
+		func(schemas schemas.SchemaCacheBuilder) {
+			schemas.Add(qNameMyFuncParams, istructs.SchemaKind_Object)
+			schemas.Add(qNameMyFuncResults, istructs.SchemaKind_Object).
+				AddField("fld", istructs.DataKind_string, false)
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			qName := istructs.NewQName(istructs.SysPackage, "myFunc")
+			myFunc = istructsmem.NewQueryFunction(
+				qName,
+				qNameMyFuncParams,
+				qNameMyFuncResults,
+				istructsmem.NullQueryExec,
+			)
+			// declare a test func
 
-		qName := istructs.NewQName(istructs.SysPackage, "myFunc")
-		myFunc = istructsmem.NewQueryFunction(
-			qName,
-			cfg.Schemas.Add(istructs.NewQName(istructs.SysPackage, "myFuncParams"), istructs.SchemaKind_Object).QName(),
-			cfg.Schemas.Add(istructs.NewQName(istructs.SysPackage, "results"), istructs.SchemaKind_Object).AddField("fld", istructs.DataKind_string, false).QName(),
-			istructsmem.NullQueryExec,
-		)
-		// declare a test func
+			cfg.Resources.Add(myFunc)
 
-		cfg.Resources.Add(myFunc)
-
-		// declare rate limits
-		cfg.FunctionRateLimits.AddWorkspaceLimit(qName, istructs.RateLimit{
-			Period:                time.Minute,
-			MaxAllowedPerDuration: 2,
+			// declare rate limits
+			cfg.FunctionRateLimits.AddWorkspaceLimit(qName, istructs.RateLimit{
+				Period:                time.Minute,
+				MaxAllowedPerDuration: 2,
+			})
 		})
-	})
 
 	// create aquery processor
 	metrics := imetrics.Provide()
@@ -1049,7 +1068,7 @@ func TestAuthnz(t *testing.T) {
 
 	metrics := imetrics.Provide()
 
-	cfgs, appStructsProvider, appTokens := getTestCfg(require)
+	cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
 
 	as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
