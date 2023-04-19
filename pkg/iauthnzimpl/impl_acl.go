@@ -247,4 +247,18 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
+	{
+		// https://dev.untill.com/projects/#!640535
+		desc: "grant exec on c.air.RegenerateUPProfileApiToken to role air.UntillPaymentsReseller and air.UntillPaymentsUser",
+		pattern: PatternType{
+			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_EXECUTE},
+			qNamesPattern:  []istructs.QName{qNameCmdRegenerateUPProfileApiToken},
+			principalsPattern: [][]iauthnz.Principal{
+				// OR
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
+			},
+		},
+		policy: ACPolicy_Allow,
+	},
 }
