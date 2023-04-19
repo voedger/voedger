@@ -5,13 +5,16 @@
 package sqlschema
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
+	"github.com/alecthomas/repr"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_BasicUsage(t *testing.T) {
+	// TODO: 1 file, not many
 	require := require.New(t)
 
 	path, err := filepath.Abs("./_testdata/app1")
@@ -34,6 +37,9 @@ func Test_Basic(t *testing.T) {
 	IMPORT SCHEMA "github.com/untillpro/untill";
 	IMPORT SCHEMA "github.com/untillpro/airsbp" AS air;		
 	`)
+
+	fmt.Println(repr.String(schema, repr.Indent(" ")))
+
 	require.Nil(err)
 	require.Equal("test", schema.Package)
 	require.Equal(2, len(schema.Imports))
@@ -545,7 +551,7 @@ func Test_Queries(t *testing.T) {
 	require := require.New(t)
 	var ast = &schemaAST{}
 
-	ast, err := ParseString(`
+	ast, err := ParseString2(`
 	SCHEMA test;
 	WORKSPACE MyWs (
 		QUERY Query1 RETURNS QueryResellerInfoResult AS PbillFunc;
@@ -617,7 +623,7 @@ func Test_Tables(t *testing.T) {
 	require := require.New(t)
 	var ast = &schemaAST{}
 
-	ast, err := ParseString(`
+	ast, err := ParseString2(`
 	SCHEMA test;
 	TABLE air_table_plan OF CDOC (
         fstate int,

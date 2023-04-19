@@ -4,6 +4,8 @@ go 1.20
 
 require (
 	github.com/VictoriaMetrics/fastcache v1.12.1
+	github.com/alecthomas/participle/v2 v2.0.0
+	github.com/alecthomas/repr v0.2.0
 	github.com/aptible/supercronic v0.2.2
 	github.com/emersion/go-smtp v0.15.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
@@ -23,7 +25,6 @@ require (
 )
 
 require (
-	github.com/alecthomas/participle/v2 v2.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21 // indirect
