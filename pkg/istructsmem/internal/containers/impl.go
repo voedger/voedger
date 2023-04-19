@@ -109,10 +109,9 @@ func (cnt *Containers) collectAppContainer(name string) (err error) {
 }
 
 // Remember ID for specified system container
-func (cnt *Containers) collectSysContainer(name string, id ContainerID) *Containers {
+func (cnt *Containers) collectSysContainer(name string, id ContainerID) {
 	cnt.containers[name] = id
 	cnt.ids[id] = name
-	return cnt
 }
 
 // Loads all stored container from storage
