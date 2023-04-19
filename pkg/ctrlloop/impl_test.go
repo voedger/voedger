@@ -6,6 +6,8 @@
 package ctrlloop
 
 import (
+	"container/list"
+	"sort"
 	"sync"
 	"testing"
 	"time"
@@ -110,7 +112,7 @@ func Test_BasicUsage(t *testing.T) {
 	}
 }
 
-func Test_Scheduler(t *testing.T) {
+func Test_SchedulerOnIn(t *testing.T) {
 	mockGetNextTimeFunc := func(cronSchedule string, startTimeTolerance time.Duration, nowTime time.Time) time.Time {
 		return nowTime
 	}
@@ -120,9 +122,12 @@ func Test_Scheduler(t *testing.T) {
 	tests := []struct {
 		name             string
 		originalMessages []OriginalMessage[string, int]
+		scheduledItems   []scheduledMessage[string, int, struct{}]
+		resultKeys       []string
+		maxSerialNumber  uint64
 	}{
 		{
-			name: `in<-A,B,C,D,E`,
+			name: `ok`,
 			originalMessages: []OriginalMessage[string, int]{
 				{
 					Key:                `A`,
@@ -155,33 +160,164 @@ func Test_Scheduler(t *testing.T) {
 					StartTimeTolerance: time.Second,
 				},
 			},
+			scheduledItems: []scheduledMessage[string, int, struct{}]{
+				{
+					Key:          `A`,
+					SP:           0,
+					serialNumber: 1,
+				},
+				{
+					Key:          `E`,
+					SP:           1,
+					serialNumber: 8,
+				},
+			},
+			resultKeys:      []string{`A`, `B`, `C`, `D`, `E`},
+			maxSerialNumber: 8,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			inCh := make(chan OriginalMessage[string, int])
+			initList := list.New()
+			for _, i := range test.scheduledItems {
+				initList.PushBack(i)
+			}
+
+			schedulerObj := newScheduler[string, int, struct{}](initList)
+
+			for i, m := range test.originalMessages {
+				schedulerObj.OnIn(uint64(i+1), m, time.Now())
+			}
+
+			maxSerialNumber := uint64(0)
+			resultKeys := make([]string, 0)
+			for element := schedulerObj.ScheduledItems.Front(); element != nil; element = element.Next() {
+				m := element.Value.(scheduledMessage[string, int, struct{}])
+				if m.serialNumber > maxSerialNumber {
+					maxSerialNumber = m.serialNumber
+				}
+				resultKeys = append(resultKeys, m.Key)
+			}
+
+			sort.Strings(resultKeys)
+			require.Equal(t, test.resultKeys, resultKeys)
+			require.Equal(t, test.maxSerialNumber, maxSerialNumber)
+		})
+	}
+}
+
+func Test_SchedulerOnRepeat(t *testing.T) {
+	mockGetNextTimeFunc := func(cronSchedule string, startTimeTolerance time.Duration, nowTime time.Time) time.Time {
+		return nowTime
+	}
+
+	nextStartTimeFunc = mockGetNextTimeFunc
+
+	tests := []struct {
+		name             string
+		messagesToRepeat []scheduledMessage[string, int, struct{}]
+		resultKeys       []string
+	}{
+		{
+			name: `ok`,
+			messagesToRepeat: []scheduledMessage[string, int, struct{}]{
+				{
+					Key:          `A`,
+					SP:           0,
+					serialNumber: 1,
+				},
+				{
+					Key:          `B`,
+					SP:           1,
+					serialNumber: 2,
+				},
+				{
+					Key:          `C`,
+					SP:           1,
+					serialNumber: 2,
+				},
+			},
+			resultKeys: []string{`A`, `B`, `C`},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			initList := list.New()
+			schedulerObj := newScheduler[string, int, struct{}](initList)
+
+			for _, m := range test.messagesToRepeat {
+				schedulerObj.OnRepeat(m, time.Now())
+			}
+
+			resultKeys := make([]string, 0)
+			for element := schedulerObj.ScheduledItems.Front(); element != nil; element = element.Next() {
+				m := element.Value.(scheduledMessage[string, int, struct{}])
+				resultKeys = append(resultKeys, m.Key)
+			}
+
+			sort.Strings(resultKeys)
+			require.Equal(t, test.resultKeys, resultKeys)
+		})
+	}
+}
+
+func Test_SchedulerOnTimer(t *testing.T) {
+	mockGetNextTimeFunc := func(cronSchedule string, startTimeTolerance time.Duration, nowTime time.Time) time.Time {
+		return nowTime
+	}
+
+	nextStartTimeFunc = mockGetNextTimeFunc
+
+	tests := []struct {
+		name           string
+		scheduledItems []scheduledMessage[string, int, struct{}]
+	}{
+		{
+			name: `ok`,
+			scheduledItems: []scheduledMessage[string, int, struct{}]{
+				{
+					Key:          `A`,
+					SP:           0,
+					serialNumber: 1,
+				},
+				{
+					Key:          `E`,
+					SP:           1,
+					serialNumber: 8,
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			dedupInCh := make(chan statefulMessage[string, int, struct{}])
-			repeatCh := make(chan scheduledMessage[string, int, struct{}], 3)
 
-			go scheduler(inCh, dedupInCh, repeatCh, time.Now)
+			initList := list.New()
+			for _, i := range test.scheduledItems {
+				initList.PushBack(i)
+			}
 
-			go testMessagesWriter(inCh, test.originalMessages)
+			schedulerObj := newScheduler[string, int, struct{}](initList)
 
-			maxSerialNumber := uint64(len(test.originalMessages))
-			for m := range dedupInCh {
-				if m.serialNumber == maxSerialNumber {
+			go func() {
+				for i := 0; i < len(test.scheduledItems); i++ {
+					schedulerObj.OnTimer(dedupInCh, time.Now())
+				}
+			}()
+
+			messageCounter := 0
+			for range dedupInCh {
+				messageCounter++
+				if messageCounter == len(test.scheduledItems) {
 					break
 				}
 			}
 
 			// closing channels
-			close(inCh)
-			close(repeatCh)
-
-			if _, ok := <-dedupInCh; ok {
-				t.Fatal(`dedupIn channel must be closed`)
-			}
+			close(dedupInCh)
 		})
 	}
 }
