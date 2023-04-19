@@ -14,6 +14,7 @@ import (
 
 	dynobuffers "github.com/untillpro/dynobuffers"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
@@ -97,8 +98,8 @@ func (row *rowType) collectErrorf(format string, a ...interface{}) {
 }
 
 // containerID returns row container id
-func (row *rowType) containerID() (id containerNameIDType, err error) {
-	return row.appCfg.cNames.nameToID(row.Container())
+func (row *rowType) containerID() (id containers.ContainerID, err error) {
+	return row.appCfg.cNames.GetID(row.Container())
 }
 
 // copyFrom assigns from specified row
@@ -259,8 +260,8 @@ func (row *rowType) setContainer(value string) {
 }
 
 // setContainerID sets record container by ID. Useful from loadFromBytes()
-func (row *rowType) setContainerID(value containerNameIDType) (err error) {
-	cont, err := row.appCfg.cNames.idToName(value)
+func (row *rowType) setContainerID(value containers.ContainerID) (err error) {
+	cont, err := row.appCfg.cNames.GetContainer(value)
 	if err != nil {
 		row.collectError(err)
 		return err

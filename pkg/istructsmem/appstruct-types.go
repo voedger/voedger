@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/irates"
 	istorage "github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
@@ -51,7 +52,7 @@ type AppConfigType struct {
 	storage                 istorage.IAppStorage // will be initialized on prepare()
 	versions                *vers.Versions
 	qNames                  *qnames.QNames
-	cNames                  containerNameCacheType
+	cNames                  *containers.Containers
 	singletons              singletonsCacheType
 	prepared                bool
 	app                     *appStructsType
@@ -84,7 +85,7 @@ func newAppConfig(appName istructs.AppQName, schemas schemas.SchemaCacheBuilder)
 
 	cfg.versions = vers.NewVersions()
 	cfg.qNames = qnames.NewQNames()
-	cfg.cNames = newContainerNameCache(&cfg)
+	cfg.cNames = containers.NewContainers()
 	cfg.singletons = newSingletonsCache(&cfg)
 	cfg.FunctionRateLimits = functionRateLimits{
 		limits: map[istructs.QName]map[istructs.RateLimitKind]istructs.RateLimit{},
@@ -114,7 +115,7 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	}
 
 	// prepare container names
-	if err := cfg.cNames.prepare(); err != nil {
+	if err := cfg.cNames.Prepare(cfg.storage, cfg.versions, cfg.Schemas); err != nil {
 		return err
 	}
 

@@ -27,6 +27,14 @@ func newQNames() *QNames {
 	}
 }
 
+// Returns ID for specified QName
+func (names *QNames) GetID(qName schemas.QName) (QNameID, error) {
+	if id, ok := names.qNames[qName]; ok {
+		return id, nil
+	}
+	return 0, fmt.Errorf("unknown QName «%v»: %w", qName, ErrNameNotFound)
+}
+
 // Retrieve QName for specified ID
 func (names *QNames) GetQName(id QNameID) (qName istructs.QName, err error) {
 	qName, ok := names.ids[id]
@@ -152,14 +160,6 @@ func (names *QNames) load01(storage istorage.IAppStorage) error {
 	}
 	pKey := utils.ToBytes(consts.SysView_QNames, ver01)
 	return storage.Read(context.Background(), pKey, nil, nil, readQName)
-}
-
-// Returns ID for specified QName
-func (names *QNames) GetID(qName schemas.QName) (QNameID, error) {
-	if id, ok := names.qNames[qName]; ok {
-		return id, nil
-	}
-	return 0, fmt.Errorf("unknown QName «%v»: %w", qName, ErrNameNotFound)
 }
 
 // Stores all known QNames to storage

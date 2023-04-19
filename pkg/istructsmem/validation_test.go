@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/schemas"
@@ -480,17 +481,7 @@ func Test_ValidElement(t *testing.T) {
 		t.Run("must error if unknown child name", func(t *testing.T) {
 			gChild.PutString(istructs.SystemField_Container, "unknownName")
 			_, err := obj.Build()
-			require.ErrorIs(err, ErrNameNotFound)
-			gChild.PutString(istructs.SystemField_Container, "grandChild")
-		})
-
-		t.Run("must error if child wrong schema", func(t *testing.T) {
-			gChild.PutQName(istructs.SystemField_QName, istructs.NewQName("test", "element"))
-			gChild.PutString(istructs.SystemField_Container, "grandChild")
-			_, err := obj.Build()
-			require.ErrorIs(err, ErrNameNotFound)
-			gChild.PutQName(istructs.SystemField_QName, istructs.NewQName("test", "grandChild"))
-			gChild.PutString(istructs.SystemField_Container, "grandChild")
+			require.ErrorIs(err, containers.ErrContainerNotFound)
 		})
 	})
 

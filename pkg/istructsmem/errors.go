@@ -47,8 +47,6 @@ var ErrUnexpectedShemaKind = errors.New("unexpected schema kind")
 
 var ErrUnknownCodec = errors.New("unknown codec")
 
-var ErrContainerNameIDsExceeds = errors.New("the maximum number of container identifiers has been exceeded")
-
 var ErrSingletonIDsExceeds = errors.New("the maximum number of singleton document identifiers has been exceeded")
 
 var ErrMaxGetBatchRecordCountExceeds = errors.New("the maximum count of records to batch is exceeded")

@@ -119,16 +119,6 @@ const (
 	partitionRecordCount = 1 << partitionBits
 )
 
-// constants for system container names
-const (
-	nullContainerNameID containerNameIDType = 0 + iota
-	viewPKeyContainerID
-	viewCColsContainerID
-	viewValueContainerID
-
-	containerNameIDSysLast containerNameIDType = 63
-)
-
 // maxGetBatchRecordCount is maximum records that can be retrieved by ReadBatch GetBatch
 const maxGetBatchRecordCount = 256
 
@@ -137,10 +127,6 @@ const (
 	// sys.QName
 	verSysQNames01      vers.VersionValue = 1
 	verSysQNamesLastest vers.VersionValue = verSysQNames01
-
-	// sys.Containers
-	verSysContainers01      vers.VersionValue = 1
-	verSysContainersLastest vers.VersionValue = verSysContainers01
 
 	// sys.Singletons
 	verSysSingletons01      vers.VersionValue = 1

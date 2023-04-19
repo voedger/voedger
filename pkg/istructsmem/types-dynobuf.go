@@ -14,6 +14,7 @@ import (
 
 	dynobuffers "github.com/untillpro/dynobuffers"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/schemas"
 )
@@ -276,7 +277,7 @@ func loadRowSysFields(row *rowType, codecVer byte, buf *bytes.Buffer) (err error
 		if err = binary.Read(buf, binary.BigEndian, &id); err != nil {
 			return fmt.Errorf("error read record container ID: %w", err)
 		}
-		if err = row.setContainerID(containerNameIDType(id)); err != nil {
+		if err = row.setContainerID(containers.ContainerID(id)); err != nil {
 			return fmt.Errorf("error read record container: %w", err)
 		}
 	}
