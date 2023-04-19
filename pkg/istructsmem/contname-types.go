@@ -92,10 +92,9 @@ func (names *containerNameCacheType) collectAppContainer(name string) (err error
 }
 
 // collectSysContainer stores ID for specified system-level container name
-func (names *containerNameCacheType) collectSysContainer(qName string, id containerNameIDType) *containerNameCacheType {
+func (names *containerNameCacheType) collectSysContainer(qName string, id containerNameIDType) {
 	names.names[qName] = id
 	names.ids[id] = qName
-	return names
 }
 
 // idToName retrieve container name for specified ID

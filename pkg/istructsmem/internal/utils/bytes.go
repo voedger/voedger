@@ -103,7 +103,7 @@ func FullBytes(b []byte) bool {
 
 // Increments by one bit low byte and returns the result.
 //
-// Usefull to obtain right margin of half-open range of partially filled clustering columns
+// Useful to obtain right margin of half-open range of partially filled clustering columns
 func SuccBytes(cur []byte) (next []byte) {
 	if FullBytes(cur) {
 		return nil
