@@ -5,8 +5,7 @@
 package sqlschema
 
 import (
-	"io/ioutil"
-	"os"
+	"embed"
 	"path/filepath"
 	"strings"
 
@@ -14,13 +13,7 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 )
 
-func ParseString(s string) (*schemaAST, error) {
-	parser := participle.MustBuild[schemaAST]()
-	return parser.ParseString("", s)
-}
-
-func ParseString2(s string) (*schemaAST, error) {
-
+func parse(s string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
 		{Name: "C_SEMICOLON", Pattern: `;`},
 		{Name: "C_COMMA", Pattern: `,`},
@@ -46,30 +39,53 @@ func ParseString2(s string) (*schemaAST, error) {
 		{Name: "Comment", Pattern: `--.*`},
 	})
 
-	parser := participle.MustBuild[schemaAST](participle.Lexer(basicLexer), participle.Elide("Whitespace", "Comment"))
+	parser := participle.MustBuild[SchemaAST](participle.Lexer(basicLexer), participle.Elide("Whitespace", "Comment"))
 	return parser.ParseString("", s)
 }
 
-func ParseDir(dir string) ([]*schemaAST, error) {
-	parser := participle.MustBuild[schemaAST]()
-	schemas := make([]*schemaAST, 0)
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if strings.ToLower(filepath.Ext(path)) == ".sql" {
-			fileBytes, err := ioutil.ReadFile(path)
+func stringParserImpl(s string) (*SchemaAST, error) {
+	return parse(s)
+}
+
+func mergeSchemas(mergeFrom, mergeTo *SchemaAST) {
+	// imports
+	// TODO: check for import duplicates
+	mergeTo.Imports = append(mergeTo.Imports, mergeFrom.Imports...)
+
+	// statements
+	mergeTo.Statements = append(mergeTo.Statements, mergeFrom.Statements...)
+}
+
+func embedParserImpl(fs embed.FS, dir string) (*SchemaAST, error) {
+	entries, err := fs.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	schemas := make([]*SchemaAST, 0)
+	for _, entry := range entries {
+		if strings.ToLower(filepath.Ext(entry.Name())) == ".sql" {
+			fp := filepath.Join(dir, entry.Name())
+			bytes, err := fs.ReadFile(fp)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			schema, err := parser.ParseBytes(path, fileBytes)
+			schema, err := parse(string(bytes))
 			if err != nil {
-				return err
+				return nil, err
 			}
 			schemas = append(schemas, schema)
 		}
-		return nil
-	})
-
-	return schemas, err
+	}
+	if len(schemas) == 0 {
+		return nil, ErrDirContainsNoSchemaFiles
+	}
+	firstSchema := schemas[0]
+	for i := 1; i < len(schemas); i++ {
+		schema := schemas[i]
+		if schema.Package != firstSchema.Package {
+			return nil, ErrDirContainsDifferentSchemas
+		}
+		mergeSchemas(schema, firstSchema)
+	}
+	return firstSchema, nil
 }

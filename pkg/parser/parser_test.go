@@ -5,33 +5,33 @@
 package sqlschema
 
 import (
+	"embed"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
+//go:embed testapp1/*.sql
+var testapp1 embed.FS
+
 func Test_BasicUsage(t *testing.T) {
 
-	// TODO: 1 file, not many
-	// require := require.New(t)
+	schema, err := embedParserImpl(testapp1, "testapp1")
 
-	// path, err := filepath.Abs("./_testdata/app1")
-	// require.NoError(err)
-	// schemas, err := ParseDir(path)
-	// require.NoError(err)
+	require.NoError(t, err)
 
-	// require.Equal(2, len(schemas))
+	require.Equal(t, 6, len(schema.Statements))
 }
 
 func Test_Basic(t *testing.T) {
 	require := require.New(t)
-	var schema = &schemaAST{}
+	var schema = &SchemaAST{}
 
-	schema, err := ParseString2(`SCHEMA test;`)
+	schema, err := stringParserImpl(`SCHEMA test;`)
 	require.Nil(err)
 	require.Equal("test", schema.Package)
 
-	schema, err = ParseString2(`SCHEMA test; 
+	schema, err = stringParserImpl(`SCHEMA test; 
 	IMPORT SCHEMA "github.com/untillpro/untill";
 	IMPORT SCHEMA "github.com/untillpro/airsbp" AS air;		
 	`)
@@ -51,9 +51,9 @@ func Test_Basic(t *testing.T) {
 
 func Test_RootStatements(t *testing.T) {
 	require := require.New(t)
-	var schema = &schemaAST{}
+	var schema = &SchemaAST{}
 
-	schema, err := ParseString2(`
+	schema, err := stringParserImpl(`
 	SCHEMA test; 
 	TEMPLATE demo OF WORKSPACE air.Restaurant SOURCE wsTemplate_demo;
 	FUNCTION MyTableValidator(TableRow) RETURNS void ENGINE WASM; 
@@ -73,9 +73,9 @@ func Test_RootStatements(t *testing.T) {
 
 func Test_WorkspaceStatements(t *testing.T) {
 	require := require.New(t)
-	var schema = &schemaAST{}
+	var schema = &SchemaAST{}
 
-	schema, err := ParseString2(`
+	schema, err := stringParserImpl(`
 	SCHEMA test; 
 	WORKSPACE MyWorkspace (
 		FUNCTION MyFunc(param int) RETURNS void ENGINE WASM; 
@@ -106,9 +106,9 @@ func Test_WorkspaceStatements(t *testing.T) {
 
 func Test_Functions(t *testing.T) {
 	require := require.New(t)
-	var ast = &schemaAST{}
+	var ast = &SchemaAST{}
 
-	ast, err := ParseString2(`
+	ast, err := stringParserImpl(`
 	SCHEMA test;
 	FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
 	FUNCTION MyTableValidator(TableRow) RETURNS string ENGINE WASM;
@@ -156,10 +156,10 @@ func Test_Functions(t *testing.T) {
 
 func Test_Projectors(t *testing.T) {
 	require := require.New(t)
-	var ast = &schemaAST{}
+	var ast = &SchemaAST{}
 
 	// TODO: UPDATE OR INSERT OR DELETE? (UPDATE, INSERT, DEACTIVATE)?
-	ast, err := ParseString2(`
+	ast, err := stringParserImpl(`
 	SCHEMA test;
 	WORKSPACE MyWs (
 		PROJECTOR ON COMMAND air.CreateUPProfile AS SomeFunc;
@@ -245,9 +245,9 @@ func Test_Projectors(t *testing.T) {
 
 func Test_Grants(t *testing.T) {
 	require := require.New(t)
-	var ast = &schemaAST{}
+	var ast = &SchemaAST{}
 
-	ast, err := ParseString2(`
+	ast, err := stringParserImpl(`
 	SCHEMA test;
 	WORKSPACE MyWs (
 		GRANT ALL ON ALL TABLES WITH TAG untill.Backoffice TO LocationManager;
@@ -316,9 +316,9 @@ func Test_Grants(t *testing.T) {
 
 func Test_Roles(t *testing.T) {
 	require := require.New(t)
-	var ast = &schemaAST{}
+	var ast = &SchemaAST{}
 
-	ast, err := ParseString2(`
+	ast, err := stringParserImpl(`
 	SCHEMA test;
 	ROLE UntillPaymentsUser;
 	WORKSPACE MyWs (
@@ -340,9 +340,9 @@ func Test_Roles(t *testing.T) {
 
 func Test_UseTable(t *testing.T) {
 	require := require.New(t)
-	var ast = &schemaAST{}
+	var ast = &SchemaAST{}
 
-	ast, err := ParseString2(`
+	ast, err := stringParserImpl(`
 	SCHEMA test;
 	WORKSPACE MyWs (
 		USE TABLE somepackage.sometable;
@@ -373,9 +373,9 @@ func Test_UseTable(t *testing.T) {
 
 func Test_Tags(t *testing.T) {
 	require := require.New(t)
-	var ast = &schemaAST{}
+	var ast = &SchemaAST{}
 
-	ast, err := ParseString2(`
+	ast, err := stringParserImpl(`
 	SCHEMA test;
 	TAG Backoffice;
 	WORKSPACE MyWs (
@@ -397,9 +397,9 @@ func Test_Tags(t *testing.T) {
 
 func Test_Comments(t *testing.T) {
 	require := require.New(t)
-	var ast = &schemaAST{}
+	var ast = &SchemaAST{}
 
-	ast, err := ParseString2(`
+	ast, err := stringParserImpl(`
 	SCHEMA test;
 	COMMENT BackofficeComment "This is a backoffice tool";
 	WORKSPACE MyWs (
@@ -453,9 +453,9 @@ func Test_Comments(t *testing.T) {
 
 func Test_Rate(t *testing.T) {
 	require := require.New(t)
-	var ast = &schemaAST{}
+	var ast = &SchemaAST{}
 
-	ast, err := ParseString2(`
+	ast, err := stringParserImpl(`
 	SCHEMA test;
 	WORKSPACE MyWs (
 		RATE BackofficeFuncRate1 1000 PER HOUR;
@@ -483,9 +483,9 @@ func Test_Rate(t *testing.T) {
 
 func Test_Commands(t *testing.T) {
 	require := require.New(t)
-	var ast = &schemaAST{}
+	var ast = &SchemaAST{}
 
-	ast, err := ParseString2(`
+	ast, err := stringParserImpl(`
 	SCHEMA test;
 	WORKSPACE MyWs (
 		COMMAND Orders AS PbillFunc;
@@ -547,9 +547,9 @@ func Test_Commands(t *testing.T) {
 
 func Test_Queries(t *testing.T) {
 	require := require.New(t)
-	var ast = &schemaAST{}
+	var ast = &SchemaAST{}
 
-	ast, err := ParseString2(`
+	ast, err := stringParserImpl(`
 	SCHEMA test;
 	WORKSPACE MyWs (
 		QUERY Query1 RETURNS QueryResellerInfoResult AS PbillFunc;
@@ -619,9 +619,9 @@ func Test_Queries(t *testing.T) {
 
 func Test_Tables(t *testing.T) {
 	require := require.New(t)
-	var ast = &schemaAST{}
+	var ast = &SchemaAST{}
 
-	ast, err := ParseString2(`
+	ast, err := stringParserImpl(`
 	SCHEMA test;
 	TABLE air_table_plan OF CDOC (
         fstate int,
@@ -752,9 +752,9 @@ func Test_Tables(t *testing.T) {
 
 func Test_ViewsAsResultOfProjectors(t *testing.T) {
 	require := require.New(t)
-	var ast = &schemaAST{}
+	var ast = &SchemaAST{}
 
-	ast, err := ParseString2(`
+	ast, err := stringParserImpl(`
 	SCHEMA test;
 	WORKSPACE MyWs (
 		VIEW XZReports(

@@ -5,94 +5,99 @@
 
 package sqlschema
 
-type schemaAST struct {
+import "embed"
+
+type EmbedParser func(fs embed.FS, dir string) (*SchemaAST, error)
+type StringParser func(string) (*SchemaAST, error)
+
+type SchemaAST struct {
 	Package    string          `parser:"'SCHEMA' @Ident ';'"`
-	Imports    []sqlImportStmt `parser:"@@? (';' @@)* ';'?"`
-	Statements []rootStatement `parser:"@@? (';' @@)* ';'?"`
+	Imports    []ImportStmt    `parser:"@@? (';' @@)* ';'?"`
+	Statements []RootStatement `parser:"@@? (';' @@)* ';'?"`
 }
 
-type sqlImportStmt struct {
+type ImportStmt struct {
 	Name  string  `parser:"'IMPORT' 'SCHEMA' @String"`
 	Alias *string `parser:"('AS' @Ident)?"`
 }
 
-type rootStatement struct {
+type RootStatement struct {
 	// Only allowed in root
-	Template *templateStmt `parser:"@@"`
+	Template *TemplateStmt `parser:"@@"`
 
 	// Also allowed in root
-	Role      *roleStmt      `parser:"| @@"`
-	Comment   *commentStmt   `parser:"| @@"`
-	Tag       *tagStmt       `parser:"| @@"`
-	Function  *functionStmt  `parser:"| @@"`
-	Workspace *workspaceStmt `parser:"| @@"`
-	Table     *tableStmt     `parser:"| @@"`
+	Role      *RoleStmt      `parser:"| @@"`
+	Comment   *CommentStmt   `parser:"| @@"`
+	Tag       *TagStmt       `parser:"| @@"`
+	Function  *FunctionStmt  `parser:"| @@"`
+	Workspace *WorkspaceStmt `parser:"| @@"`
+	Table     *TableStmt     `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
 }
 
-type workspaceStatement struct {
+type WorkspaceStatement struct {
 	// Only allowed in workspace
-	Projector *projectorStmt `parser:"@@"`
-	Command   *commandStmt   `parser:"| @@"`
-	Query     *queryStmt     `parser:"| @@"`
-	Rate      *rateStmt      `parser:"| @@"`
-	View      *viewStmt      `parser:"| @@"`
-	UseTable  *useTableStmt  `parser:"| @@"`
+	Projector *ProjectorStmt `parser:"@@"`
+	Command   *CommandStmt   `parser:"| @@"`
+	Query     *QueryStmt     `parser:"| @@"`
+	Rate      *RateStmt      `parser:"| @@"`
+	View      *ViewStmt      `parser:"| @@"`
+	UseTable  *UseTableStmt  `parser:"| @@"`
 
 	// Also allowed in workspace
-	Role      *roleStmt      `parser:"| @@"`
-	Comment   *commentStmt   `parser:"| @@"`
-	Tag       *tagStmt       `parser:"| @@"`
-	Function  *functionStmt  `parser:"| @@"`
-	Workspace *workspaceStmt `parser:"| @@"`
-	Table     *tableStmt     `parser:"| @@"`
+	Role      *RoleStmt      `parser:"| @@"`
+	Comment   *CommentStmt   `parser:"| @@"`
+	Tag       *TagStmt       `parser:"| @@"`
+	Function  *FunctionStmt  `parser:"| @@"`
+	Workspace *WorkspaceStmt `parser:"| @@"`
+	Table     *TableStmt     `parser:"| @@"`
 	//Sequence  *sequenceStmt  `parser:"| @@"`
-	Grant *grantStmt `parser:"| @@"`
+	Grant *GrantStmt `parser:"| @@"`
 }
 
-type workspaceStmt struct {
+type WorkspaceStmt struct {
 	Name       string                `parser:"'WORKSPACE' @Ident '('"`
-	Statements []*workspaceStatement `parser:"@@? (C_SEMICOLON @@)* C_SEMICOLON? ')'"`
+	Statements []*WorkspaceStatement `parser:"@@? (C_SEMICOLON @@)* C_SEMICOLON? ')'"`
 }
 
-type optQName struct {
+type OptQName struct {
 	Package string `parser:"(@Ident C_PKGSEPARATOR)?"`
 	Name    string `parser:"@Ident"`
 }
 
-type projectorStmt struct {
+type ProjectorStmt struct {
 	Name string `parser:"'PROJECTOR' ('ON' | @Ident 'ON')"`
 	// TODO
 	// On string     `parser:"@(('COMMAND' 'ARGUMENT'?) |  'COMMAND' | 'INSERT'| 'UPDATE' | 'ACTIVATE'| 'DEACTIVATE' ))"`
 	On      string     `parser:"@(('COMMAND' 'ARGUMENT'?) |  'COMMAND' | ('INSERT' ('OR' 'UPDATE')?)  | ('UPDATE' ('OR' 'INSERT')?))"`
-	Targets []optQName `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
-	Func    optQName   `parser:"'AS' @@"`
+	Targets []OptQName `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
+	Func    OptQName   `parser:"'AS' @@"`
 }
 
-type templateStmt struct {
+type TemplateStmt struct {
 	Name      string   `parser:"'TEMPLATE' @Ident 'OF' 'WORKSPACE'" `
-	Workspace optQName `parser:"@@"`
+	Workspace OptQName `parser:"@@"`
 	Source    string   `parser:"'SOURCE' @Ident "`
 }
 
-type roleStmt struct {
+type RoleStmt struct {
 	Name string `parser:"'ROLE' @Ident"`
 }
 
-type tagStmt struct {
+type TagStmt struct {
 	Name string `parser:"'TAG' @Ident"`
 }
 
-type commentStmt struct {
+type CommentStmt struct {
 	Name  string `parser:"'COMMENT' @Ident"`
 	Value string `parser:"@String"`
 }
 
-type useTableStmt struct {
-	Table useTableItem `parser:"'USE' 'TABLE' @@"`
+type UseTableStmt struct {
+	Table UseTableItem `parser:"'USE' 'TABLE' @@"`
 }
 
-type useTableItem struct {
+type UseTableItem struct {
 	Package   string `parser:"(@Ident C_PKGSEPARATOR)?"`
 	Name      string `parser:"(@Ident "`
 	AllTables bool   `parser:"| @C_ALL)"`
@@ -107,107 +112,107 @@ type useTableItem struct {
 	IncrementBy *int   `parser:"| ('INCREMENT' 'BY' @Number) )*"`
 }*/
 
-type rateStmt struct {
+type RateStmt struct {
 	Name   string `parser:"'RATE' @Ident"`
 	Amount int    `parser:"@Int"`
 	Per    string `parser:"'PER' @('SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'YEAR')"`
 	PerIP  bool   `parser:"(@('PER' 'IP'))?"`
 }
 
-type grantStmt struct {
+type GrantStmt struct {
 	Grants []string `parser:"'GRANT' @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE') (','  @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE'))*"`
 	On     string   `parser:"'ON' @('TABLE' | ('ALL' 'TABLES' 'WITH' 'TAG') | 'COMMAND' | ('ALL' 'COMMANDS' 'WITH' 'TAG') | 'QUERY' | ('ALL' 'QUERIES' 'WITH' 'TAG'))"`
-	Target optQName `parser:"@@"`
+	Target OptQName `parser:"@@"`
 	To     string   `parser:"'TO' @Ident"`
 }
 
-type functionStmt struct {
+type FunctionStmt struct {
 	Name    string          `parser:"'FUNCTION' @Ident"`
-	Params  []functionParam `parser:"C_LEFTBRACKET @@? (C_COMMA @@)* C_RIGHTBRACKET"`
-	Returns optQName        `parser:"'RETURNS' @@"`
-	Engine  engineType      `parser:"'ENGINE' @@"`
+	Params  []FunctionParam `parser:"C_LEFTBRACKET @@? (C_COMMA @@)* C_RIGHTBRACKET"`
+	Returns OptQName        `parser:"'RETURNS' @@"`
+	Engine  EngineType      `parser:"'ENGINE' @@"`
 }
 
-type commandStmt struct {
+type CommandStmt struct {
 	Name   string          `parser:"'COMMAND' @Ident"`
-	Params []functionParam `parser:"(C_LEFTBRACKET @@? (C_COMMA @@)* C_RIGHTBRACKET)?"`
+	Params []FunctionParam `parser:"(C_LEFTBRACKET @@? (C_COMMA @@)* C_RIGHTBRACKET)?"`
 	Func   string          `parser:"'AS' @Ident"`
-	With   []tcqWithItem   `parser:"('WITH' @@ (C_COMMA @@)* )?"`
+	With   []TcqWithItem   `parser:"('WITH' @@ (C_COMMA @@)* )?"`
 }
 
-type tcqWithItem struct {
-	Comment *optQName  `parser:"('Comment' C_EQUAL @@)"`
-	Tags    []optQName `parser:"| ('Tags' C_EQUAL C_LEFTSQBRACKET @@ (C_COMMA @@)* C_RIGHTSQBRACKET)"`
+type TcqWithItem struct {
+	Comment *OptQName  `parser:"('Comment' C_EQUAL @@)"`
+	Tags    []OptQName `parser:"| ('Tags' C_EQUAL C_LEFTSQBRACKET @@ (C_COMMA @@)* C_RIGHTSQBRACKET)"`
 }
 
-type queryStmt struct {
+type QueryStmt struct {
 	Name    string          `parser:"'QUERY' @Ident"`
-	Params  []functionParam `parser:"(C_LEFTBRACKET @@? (C_COMMA @@)* C_RIGHTBRACKET)?"`
-	Returns optQName        `parser:"'RETURNS' @@"`
+	Params  []FunctionParam `parser:"(C_LEFTBRACKET @@? (C_COMMA @@)* C_RIGHTBRACKET)?"`
+	Returns OptQName        `parser:"'RETURNS' @@"`
 	Func    string          `parser:"'AS' @Ident"`
-	With    []tcqWithItem   `parser:"('WITH' @@ (C_COMMA @@)* )?"`
+	With    []TcqWithItem   `parser:"('WITH' @@ (C_COMMA @@)* )?"`
 }
 
-type engineType struct {
+type EngineType struct {
 	WASM    bool `parser:"@'WASM'"`
 	Builtin bool `parser:"| @'BUILTIN'"`
 }
 
-type functionParam struct {
-	NamedParam       *namedParam `parser:"@@"`
-	UnnamedParamType *optQName   `parser:"| @@"`
+type FunctionParam struct {
+	NamedParam       *NamedParam `parser:"@@"`
+	UnnamedParamType *OptQName   `parser:"| @@"`
 }
 
-type namedParam struct {
+type NamedParam struct {
 	Name string   `parser:"@Ident"`
-	Type optQName `parser:"@@"`
+	Type OptQName `parser:"@@"`
 }
 
-type tableStmt struct {
+type TableStmt struct {
 	Name  string          `parser:"'TABLE' @Ident"`
-	Of    []optQName      `parser:"('OF' @@ (C_COMMA @@)*)?"`
-	Items []tableItemExpr `parser:"C_LEFTBRACKET @@ (C_COMMA @@)* C_RIGHTBRACKET"`
-	With  []tcqWithItem   `parser:"('WITH' @@ (C_COMMA @@)* )?"`
+	Of    []OptQName      `parser:"('OF' @@ (C_COMMA @@)*)?"`
+	Items []TableItemExpr `parser:"C_LEFTBRACKET @@ (C_COMMA @@)* C_RIGHTBRACKET"`
+	With  []TcqWithItem   `parser:"('WITH' @@ (C_COMMA @@)* )?"`
 }
 
-type tableItemExpr struct {
-	Table  *tableStmt  `parser:"@@"`
-	Unique *uniqueExpr `parser:"| @@"`
-	Field  *fieldExpr  `parser:"| @@"`
+type TableItemExpr struct {
+	Table  *TableStmt  `parser:"@@"`
+	Unique *UniqueExpr `parser:"| @@"`
+	Field  *FieldExpr  `parser:"| @@"`
 }
 
-type uniqueExpr struct {
+type UniqueExpr struct {
 	Fields []string `parser:"'UNIQUE' @Ident (',' @Ident)*"`
 }
 
 // TODO: TABLE: NEXTVAL is unquoted
 // TODO: TABLE: FIELD CHECK(expression)
 // TODO: TABLE: TABLE CHECK
-type fieldExpr struct {
+type FieldExpr struct {
 	Name               string    `parser:"@Ident"`
-	Type               optQName  `parser:"@@"`
+	Type               OptQName  `parser:"@@"`
 	NotNull            bool      `parser:"@(NOTNULL)?"`
 	Verifiable         bool      `parser:"@(VERIFIABLE)?"`
 	DefaultIntValue    *int      `parser:"(DEFAULT @Int)?"`
 	DefaultStringValue *string   `parser:"(DEFAULT @String)?"`
 	DefaultNextVal     *string   `parser:"(DEFAULTNEXTVAL C_LEFTBRACKET @Ident C_RIGHTBRACKET)?"`
-	References         *optQName `parser:"(REFERENCES @@)?"`
+	References         *OptQName `parser:"(REFERENCES @@)?"`
 	CheckRegexp        *string   `parser:"(CHECK @String)?"`
 }
 
-type viewStmt struct {
+type ViewStmt struct {
 	Name     string         `parser:"'VIEW' @Ident"`
-	Fields   []viewField    `parser:"'(' @@? (',' @@)* ')'"`
-	ResultOf optQName       `parser:"'AS' 'RESULT' 'OF' @@"`
-	With     []viewWithItem `parser:"'WITH' @@ (',' @@)* "`
+	Fields   []ViewField    `parser:"'(' @@? (',' @@)* ')'"`
+	ResultOf OptQName       `parser:"'AS' 'RESULT' 'OF' @@"`
+	With     []ViewWithItem `parser:"'WITH' @@ (',' @@)* "`
 }
 
-type viewField struct {
+type ViewField struct {
 	Name string `parser:"@Ident"`
 	Type string `parser:"@Ident"` // TODO: viewField: predefined types?
 }
 
-type viewWithItem struct {
+type ViewWithItem struct {
 	PrimaryKey *string   `parser:"('PrimaryKey' '=' @String)"`
-	Comment    *optQName `parser:"| ('Comment' '=' @@)"`
+	Comment    *OptQName `parser:"| ('Comment' '=' @@)"`
 }
