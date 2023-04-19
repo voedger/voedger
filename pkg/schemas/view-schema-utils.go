@@ -7,13 +7,6 @@ package schemas
 
 import "github.com/voedger/voedger/pkg/istructs"
 
-const (
-	pk  = "_PartitionKey"
-	cc  = "_ClusteringColumns"
-	key = "_FullKey"
-	val = "_Value"
-)
-
 // Appends suffix to QName entity name and returns new QName
 func suffixedQName(q istructs.QName, suff string) QName {
 	return istructs.NewQName(q.Pkg(), q.Entity()+suff)
