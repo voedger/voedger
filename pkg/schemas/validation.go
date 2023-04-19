@@ -32,11 +32,11 @@ func (sch *schema) validateFields() (err error) {
 
 	switch sch.Kind() {
 	case istructs.SchemaKind_ViewRecord:
-		errors.Join(err, sch.validateViewFields())
+		err = errors.Join(err, sch.validateViewFields())
 	case istructs.SchemaKind_ViewRecord_PartitionKey:
-		errors.Join(err, sch.validateViewPartKeyFields())
+		err = errors.Join(err, sch.validateViewPartKeyFields())
 	case istructs.SchemaKind_ViewRecord_ClusteringColumns:
-		errors.Join(err, sch.validateViewClustKeyFields())
+		err = errors.Join(err, sch.validateViewClustKeyFields())
 	}
 
 	return err
