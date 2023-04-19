@@ -18,11 +18,8 @@ import (
 func scheduler[Key comparable, SP any, State any](in chan OriginalMessage[Key, SP], dedupInCh chan statefulMessage[Key, SP, State], repeatCh chan scheduledMessage[Key, SP, State], nowTimeFunc nowTimeFunction) {
 	defer close(dedupInCh)
 
-	ScheduledItems := list.New()
+	schedulerObj := newScheduler[Key, SP, State](nil)
 	var serialNumber uint64
-
-	timer := time.NewTimer(0)
-	<-timer.C
 
 	ok := true
 	var m OriginalMessage[Key, SP]
@@ -37,82 +34,17 @@ func scheduler[Key comparable, SP any, State any](in chan OriginalMessage[Key, S
 			logger.Verbose(fmt.Sprintf("<-in. %v", m))
 
 			serialNumber++
-			item := scheduledMessage[Key, SP, State]{
-				Key:          m.Key,
-				SP:           m.SP,
-				serialNumber: serialNumber,
-				StartTime:    nextStartTimeFunc(m.CronSchedule, m.StartTimeTolerance, now),
-			}
-
-			addItemToSchedule(ScheduledItems, item)
-			resetTimerToTop[Key, SP, State](timer, ScheduledItems, now)
-		case <-timer.C:
+			schedulerObj.OnIn(serialNumber, m, now)
+		case <-schedulerObj.Tick():
 			logger.Verbose(`<-timer.C`)
 
-			element := ScheduledItems.Front()
-			if element == nil {
-				break
-			}
-
-			item := element.Value.(scheduledMessage[Key, SP, State])
-
-			// non-blocking send to dedupIn
-			select {
-			case dedupInCh <- statefulMessage[Key, SP, State]{
-				Key:          item.Key,
-				SP:           item.SP,
-				serialNumber: item.serialNumber,
-			}:
-				ScheduledItems.Remove(element)
-			default:
-			}
-
-			resetTimerToTop[Key, SP, State](timer, ScheduledItems, now)
+			schedulerObj.OnTimer(dedupInCh, now)
 		case m := <-repeatCh:
 			logger.Verbose(fmt.Sprintf("<-repeatCh. %v", m))
 
-			addItemToSchedule(ScheduledItems, m)
-			resetTimerToTop[Key, SP, State](timer, ScheduledItems, now)
+			schedulerObj.OnRepeat(m, now)
 		}
 	}
-}
-
-func resetTimerToTop[Key comparable, SP any, State any](timer *time.Timer, l *list.List, now time.Time) {
-	item := l.Front()
-	if item == nil {
-		return
-	}
-
-	resetTimer(timer, item.Value.(scheduledMessage[Key, SP, State]).StartTime.Sub(now))
-}
-
-// addItemToSchedule adds new item to schedule
-func addItemToSchedule[Key comparable, SP any, State any](l *list.List, m scheduledMessage[Key, SP, State]) {
-	logger.Log(1, logger.LogLevelVerbose, m.String())
-	// serial number controlling
-	for element := l.Front(); element != nil; element = element.Next() {
-		currentScheduledMessage := element.Value.(scheduledMessage[Key, SP, State])
-		if m.Key == currentScheduledMessage.Key {
-			if m.serialNumber > currentScheduledMessage.serialNumber {
-				l.Remove(element)
-				break
-			}
-			// skip scheduling old serial number
-			logger.Log(1, logger.LogLevelVerbose, fmt.Sprintf("skipped old serialNumber of the message: %v", m))
-			return
-		}
-	}
-	// scheduling is going here
-	index := 0
-	for element := l.Front(); element != nil; element = element.Next() {
-		if m.StartTime.Before(element.Value.(scheduledMessage[Key, SP, State]).StartTime) {
-			l.InsertBefore(m, element)
-			return
-		}
-		index++
-	}
-
-	l.PushBack(m)
 }
 
 func dedupIn[Key comparable, SP any, State any](in chan statefulMessage[Key, SP, State], callerCh chan statefulMessage[Key, SP, State], repeatCh chan scheduledMessage[Key, SP, State], InProcess *sync.Map, nowTimeFunc nowTimeFunction) {
