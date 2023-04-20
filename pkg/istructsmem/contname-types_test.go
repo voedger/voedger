@@ -12,12 +12,18 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/iratesce"
-	istorage "github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func Test_containerNameCache_nameToID(t *testing.T) {
+	test := test()
 
 	cNames := &test.AppCfg.cNames
 
@@ -74,19 +80,19 @@ func Test_containerNameCache_nameToID(t *testing.T) {
 		wg := sync.WaitGroup{}
 
 		testerGood := func() {
-			for _, schema := range test.AppCfg.Schemas.schemas {
-				if schema.kind != istructs.SchemaKind_ViewRecord {
-					for n := range schema.containers {
-						testName(n, true)
-					}
-				}
-			}
+			test.AppCfg.Schemas.EnumSchemas(
+				func(s schemas.Schema) {
+					s.EnumContainers(
+						func(c schemas.Container) {
+							testName(c.Name(), true)
+						})
+				})
 			wg.Done()
 		}
 
 		testerBad := func(num int) {
 			for i := 0; i < 15; i++ {
-				testName(fmt.Sprintf("test%dErrorName%d", num, i), false)
+				testName(fmt.Sprintf("test%d_ErrorName_%d", num, i), false)
 			}
 			wg.Done()
 		}
@@ -107,15 +113,15 @@ func Test_containerNameCache_nameToID(t *testing.T) {
 func Test_containerNameCache_Errors(t *testing.T) {
 	require := require.New(t)
 	testError := fmt.Errorf("test error")
-	storage := newTestStorage()
-	storageProvider := newTestStorageProvider(storage)
+	storage := teststore.NewTestStorage()
+	storageProvider := teststore.NewTestStorageProvider(storage)
 
 	t.Run("must error if unknown version of sys.Container view", func(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
-		cfg.storage = storage
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())
 
-		err := cfg.versions.putVersion(verSysContainers, 0xFF)
+		cfg.versions.Prepare(storage)
+		err := cfg.versions.PutVersion(vers.SysContainersVersion, 0xFF)
 		require.NoError(err)
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
@@ -124,19 +130,24 @@ func Test_containerNameCache_Errors(t *testing.T) {
 		require.ErrorIs(err, ErrorInvalidVersion)
 
 		// clear the storage
-		storage = newTestStorage()
-		storageProvider = newTestStorageProvider(storage)
+		storage = teststore.NewTestStorage()
+		storageProvider = teststore.NewTestStorageProvider(storage)
 	})
 
 	t.Run("must error if unable store version of sys.Containers view", func(t *testing.T) {
-		storage.shedulePutError(testError, toBytes(uint16(QNameIDSysVesions)), toBytes(uint16(verSysContainers)))
-		defer storage.reset()
+		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysContainersVersion))
+		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
-		obj := cfg.Schemas.Add(istructs.NewQName("test", "object"), istructs.SchemaKind_Object)
-		obj.AddContainer("containerName", istructs.NewQName("test", "element"), 0, 1)
-		_ = cfg.Schemas.Add(istructs.NewQName("test", "element"), istructs.SchemaKind_Element)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1,
+			func() schemas.SchemaCacheBuilder {
+				s := schemas.NewSchemaCache()
+				obj := s.Add(istructs.NewQName("test", "object"), istructs.SchemaKind_Object)
+				obj.AddContainer("containerName", istructs.NewQName("test", "element"), 0, 1)
+				_ = s.Add(istructs.NewQName("test", "element"), istructs.SchemaKind_Element)
+				return s
+			}())
+
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
@@ -145,13 +156,16 @@ func Test_containerNameCache_Errors(t *testing.T) {
 
 	t.Run("must error if maximum container names is exceeded", func(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
-
-		schema := cfg.Schemas.Add(istructs.NewQName("test", "object"), istructs.SchemaKind_Object)
-		for i := 0; i <= 0xFFFF; i++ {
-			schema.AddContainer(fmt.Sprintf("cont%d", i), istructs.NewQName("test", "element"), 0, 1)
-		}
-		_ = cfg.Schemas.Add(istructs.NewQName("test", "element"), istructs.SchemaKind_Element)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1,
+			func() schemas.SchemaCacheBuilder {
+				s := schemas.NewSchemaCache()
+				obj := s.Add(istructs.NewQName("test", "object"), istructs.SchemaKind_Object)
+				for i := 0; i <= 0xFFFF; i++ {
+					obj.AddContainer(fmt.Sprintf("cont%d", i), istructs.NewQName("test", "element"), 0, 1)
+				}
+				_ = s.Add(istructs.NewQName("test", "element"), istructs.SchemaKind_Element)
+				return s
+			}())
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
@@ -163,15 +177,19 @@ func Test_containerNameCache_Errors(t *testing.T) {
 		containerName := "ErrorContainerName"
 		testError := fmt.Errorf("test error")
 
-		storage.sheduleGetError(testError, nil, []byte(containerName))
-		storage.shedulePutError(testError, nil, []byte(containerName))
-		defer storage.reset()
+		storage.ScheduleGetError(testError, nil, []byte(containerName))
+		storage.SchedulePutError(testError, nil, []byte(containerName))
+		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
-		schema := cfg.Schemas.Add(istructs.NewQName("test", "object"), istructs.SchemaKind_Object)
-		schema.AddContainer(containerName, istructs.NewQName("test", "element"), 0, 1)
-		_ = cfg.Schemas.Add(istructs.NewQName("test", "element"), istructs.SchemaKind_Element)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1,
+			func() schemas.SchemaCacheBuilder {
+				s := schemas.NewSchemaCache()
+				obj := s.Add(istructs.NewQName("test", "object"), istructs.SchemaKind_Object)
+				obj.AddContainer(containerName, istructs.NewQName("test", "element"), 0, 1)
+				_ = s.Add(istructs.NewQName("test", "element"), istructs.SchemaKind_Element)
+				return s
+			}())
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
@@ -183,27 +201,27 @@ func Test_containerNameCache_Errors(t *testing.T) {
 
 		t.Run("crack storage by put invalid container identifier into sys.Containers view", func(t *testing.T) {
 			err := storage.Put(
-				toBytes(uint16(QNameIDSysVesions)),
-				toBytes(uint16(verSysContainers)),
-				toBytes(uint16(verSysContainersLastest)),
+				utils.ToBytes(consts.SysView_Versions),
+				utils.ToBytes(vers.SysContainersVersion),
+				utils.ToBytes(uint16(verSysContainersLastest)),
 			)
 			require.NoError(err)
 
 			err = storage.Put(
-				toBytes(uint16(QNameIDSysContainers), uint16(verSysContainersLastest)),
+				utils.ToBytes(consts.SysView_Containers, uint16(verSysContainersLastest)),
 				[]byte("error-container-name"),
-				toBytes(uint16(0xFFFE)),
+				utils.ToBytes(uint16(0xFFFE)),
 			)
 			require.NoError(err)
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
-		require.ErrorIs(err, ErrInvalidName)
+		require.ErrorIs(err, schemas.ErrInvalidName)
 	})
 }
 
@@ -213,11 +231,14 @@ func Test_containerNameCache_ReuseStorage(t *testing.T) {
 
 	appCfgWithStorage := func(storage istorage.IAppStorage) *AppConfigType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
-
-		schema := cfg.Schemas.Add(istructs.NewQName("test", "object"), istructs.SchemaKind_Object)
-		schema.AddContainer("element", istructs.NewQName("test", "element"), 0, 1)
-		_ = cfg.Schemas.Add(istructs.NewQName("test", "element"), istructs.SchemaKind_Element)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1,
+			func() schemas.SchemaCacheBuilder {
+				s := schemas.NewSchemaCache()
+				schema := s.Add(istructs.NewQName("test", "object"), istructs.SchemaKind_Object)
+				schema.AddContainer("element", istructs.NewQName("test", "element"), 0, 1)
+				_ = s.Add(istructs.NewQName("test", "element"), istructs.SchemaKind_Element)
+				return s
+			}())
 
 		err := cfg.prepare(nil, storage)
 		require.NoError(err)

@@ -56,6 +56,7 @@ var (
 	qNameQryGetUPStatus                             = istructs.NewQName(airPackage, "GetUPStatus")
 	qNameQryQueryResellerInfo                       = istructs.NewQName(airPackage, "QueryResellerInfo")
 	qNameCmdCreateUntillPayment                     = istructs.NewQName(airPackage, "CreateUntillPayment")
+	qNameCmdRegenerateUPProfileApiToken             = istructs.NewQName(airPackage, "RegenerateUPProfileApiToken")
 
 	// Air roles
 	qNameRoleResellersAdmin         = istructs.NewQName(airPackage, "ResellersAdmin")

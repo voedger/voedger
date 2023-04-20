@@ -14,15 +14,19 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func Test_RecordsRead(t *testing.T) {
 	require := require.New(t)
+	test := test()
 
-	storage := newTestStorage()
-	storageProvider := newTestStorageProvider(storage)
+	storage := teststore.NewTestStorage()
+	storageProvider := teststore.NewTestStorageProvider(storage)
 
-	provider := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+	require.NoError(err)
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -135,11 +139,11 @@ func Test_RecordsRead(t *testing.T) {
 		testID := istructs.RecordID(100500)
 		_, cc := splitRecordID(testID)
 
-		storage.sheduleGetError(testError, nil, cc)
-		defer storage.reset()
+		storage.ScheduleGetError(testError, nil, cc)
+		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
@@ -158,11 +162,11 @@ func Test_RecordsRead(t *testing.T) {
 		testID := istructs.RecordID(100500)
 		_, cc := splitRecordID(testID)
 
-		storage.sheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, cc)
-		defer storage.reset()
+		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, cc)
+		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)

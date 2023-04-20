@@ -11,6 +11,9 @@ import (
 
 	istorage "github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // appViewRecordsType access to all application views
@@ -63,12 +66,12 @@ func (vr *appViewRecordsType) Get(workspace istructs.WSID, key istructs.IKeyBuil
 	if err = k.build(); err != nil {
 		return value, err
 	}
-	if err = vr.app.config.Schemas.validKey(k, false); err != nil {
+	if err = vr.app.config.validators.validKey(k, false); err != nil {
 		return value, err
 	}
 
 	pKey, cKey := k.storeToBytes()
-	pKey = prefixBytes(pKey, uint16(k.viewID), uint64(workspace))
+	pKey = utils.PrefixBytes(pKey, k.viewID, workspace)
 
 	data := make([]byte, 0)
 	if ok, err := vr.app.config.storage.Get(pKey, cKey, &data); !ok {
@@ -105,11 +108,11 @@ func (vr *appViewRecordsType) GetBatch(workspace istructs.WSID, kv []istructs.Vi
 		if err = k.build(); err != nil {
 			return fmt.Errorf("error building key at batch item %d: %w", i, err)
 		}
-		if err = vr.app.config.Schemas.validKey(k, false); err != nil {
+		if err = vr.app.config.validators.validKey(k, false); err != nil {
 			return fmt.Errorf("not valid key at batch item %d: %w", i, err)
 		}
 		pKey, cKey := k.storeToBytes()
-		pKey = prefixBytes(pKey, uint16(k.viewID), uint64(workspace))
+		pKey = utils.PrefixBytes(pKey, k.viewID, workspace)
 		batch, ok := plan[string(pKey)]
 		if !ok {
 			batch = make([]istorage.GetBatchItem, 0, len(kv)) // to prevent reallocation
@@ -165,7 +168,7 @@ func (vr *appViewRecordsType) Read(ctx context.Context, workspace istructs.WSID,
 	if err = k.build(); err != nil {
 		return err
 	}
-	if err = vr.app.config.Schemas.validKey(k, true); err != nil {
+	if err = vr.app.config.validators.validKey(k, true); err != nil {
 		return err
 	}
 
@@ -189,8 +192,8 @@ func (vr *appViewRecordsType) Read(ctx context.Context, workspace istructs.WSID,
 		return cb(keyRow, valRow)
 	}
 
-	pk := prefixBytes(pKey, uint16(k.viewID), uint64(workspace))
-	return vr.app.config.storage.Read(ctx, pk, cKey, rightMarginCCols(cKey), readRecord)
+	pk := utils.PrefixBytes(pKey, k.viewID, workspace)
+	return vr.app.config.storage.Read(ctx, pk, cKey, utils.SuccBytes(cKey), readRecord)
 }
 
 // keyType is complex key from two parts (partition key and clustering key)
@@ -199,7 +202,7 @@ func (vr *appViewRecordsType) Read(ctx context.Context, workspace istructs.WSID,
 type keyType struct {
 	rowType
 	viewName istructs.QName
-	viewID   QNameID
+	viewID   qnames.QNameID
 	partRow  rowType
 	clustRow rowType
 }
@@ -240,16 +243,24 @@ func (key *keyType) build() (err error) {
 
 // clustColsSchema returns name of clustering columns key schema
 func (key *keyType) clustColsSchema() istructs.QName {
-	schema := key.appCfg.Schemas.schemaByName(key.viewName)
-	if schema == nil {
-		return istructs.NullQName
+	if schema := key.appCfg.Schemas.SchemaByName(key.viewName); schema != nil {
+		if schema.Kind() == istructs.SchemaKind_ViewRecord {
+			// There are no invalid schemas in the cache. Therefore, if schema is found and good kind, then no more checks necessary
+			return schema.Container(istructs.SystemContainer_ViewClusteringCols).Schema()
+		}
 	}
-	return schema.containerQName(istructs.SystemContainer_ViewClusteringCols)
+	return istructs.NullQName
 }
 
 // fullKeySchema returns name of full key schema
 func (key *keyType) fullKeySchema() istructs.QName {
-	return fullKeyName(key.viewName)
+	if schema := key.appCfg.Schemas.SchemaByName(key.viewName); schema != nil {
+		if schema.Kind() == istructs.SchemaKind_ViewRecord {
+			// There are no invalid schemas in the cache. Therefore, if schema is found and good kind, then no more checks necessary
+			return schemas.ViewFullKeyColumsSchemaName(key.viewName)
+		}
+	}
+	return istructs.NullQName
 }
 
 // keyRow return new key row, contained all fields from partitional key and clustering columns
@@ -257,12 +268,14 @@ func (key *keyType) keyRow() (istructs.IRowReader, error) {
 	row := newRow(key.appCfg)
 	row.setQName(key.fullKeySchema())
 
-	for _, name := range key.partRow.schema.fieldsOrder {
-		row.dyB.Set(name, key.partRow.dyB.Get(name))
-	}
-	for _, name := range key.clustRow.schema.fieldsOrder {
-		row.dyB.Set(name, key.clustRow.dyB.Get(name))
-	}
+	key.partRow.schema.EnumFields(
+		func(f schemas.Field) {
+			row.dyB.Set(f.Name(), key.partRow.dyB.Get(f.Name()))
+		})
+	key.clustRow.schema.EnumFields(
+		func(f schemas.Field) {
+			row.dyB.Set(f.Name(), key.clustRow.dyB.Get(f.Name()))
+		})
 
 	if err := row.build(); err != nil {
 		return nil, err
@@ -288,24 +301,26 @@ func (key *keyType) loadFromBytes(pKey, cKey []byte) (err error) {
 
 // partKeySchema returns name of partitional key schema
 func (key *keyType) partKeySchema() istructs.QName {
-	schema := key.appCfg.Schemas.schemaByName(key.viewName)
-	if schema == nil {
-		return istructs.NullQName
+	if schema := key.appCfg.Schemas.SchemaByName(key.viewName); schema != nil {
+		if schema.Kind() == istructs.SchemaKind_ViewRecord {
+			// There are no invalid schemas in the cache. Therefore, if schema is found and good kind, then no more checks necessary
+			return schema.Container(istructs.SystemContainer_ViewPartitionKey).Schema()
+		}
 	}
-	return schema.containerQName(istructs.SystemContainer_ViewPartitionKey)
+	return istructs.NullQName
 }
 
 // splitRow splits solid key row to partition key row and clustering columns row using view schemas
 func (key *keyType) splitRow() {
-	partSchema := key.appCfg.Schemas.schemaByName(key.partKeySchema())
-	clustSchema := key.appCfg.Schemas.schemaByName(key.clustColsSchema())
+	partSchema := key.appCfg.Schemas.SchemaByName(key.partKeySchema())
+	clustSchema := key.appCfg.Schemas.SchemaByName(key.clustColsSchema())
 
 	key.rowType.dyB.IterateFields(nil,
 		func(name string, data interface{}) bool {
-			if _, ok := partSchema.fields[name]; ok {
+			if partSchema.Field(name) != nil {
 				key.partRow.dyB.Set(name, data)
 			}
-			if _, ok := clustSchema.fields[name]; ok {
+			if clustSchema.Field(name) != nil {
 				key.clustRow.dyB.Set(name, data)
 			}
 			return true
@@ -323,15 +338,15 @@ func (key *keyType) validSchemas() (ok bool, err error) {
 		return false, fmt.Errorf("missed view schema: %w", ErrNameMissed)
 	}
 
-	if key.viewID, err = key.appCfg.qNames.qNameToID(key.viewName); err != nil {
+	if key.viewID, err = key.appCfg.qNames.GetID(key.viewName); err != nil {
 		return false, err
 	}
 
-	schema := key.appCfg.Schemas.schemaByName(key.viewName)
+	schema := key.appCfg.Schemas.SchemaByName(key.viewName)
 	if schema == nil {
 		return false, fmt.Errorf("unknown view key schema «%v»: %w", key.viewName, ErrNameNotFound)
 	}
-	if schema.kind != istructs.SchemaKind_ViewRecord {
+	if schema.Kind() != istructs.SchemaKind_ViewRecord {
 		return false, fmt.Errorf("invalid view key schema «%v» kind: %w", key.viewName, ErrUnexpectedShemaKind)
 	}
 
@@ -352,28 +367,26 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 		if err := key.build(); err == nil {
 			if err := k.build(); err == nil {
 
-				cmp := func(d1, d2 interface{}) bool {
-					switch v := d1.(type) {
-					case []byte: // uncomparable type
-						return bytes.Equal(d2.([]byte), v)
-					default: // comparable types: int32, int64, float32, float64, string, bool
-						return d2 == v
+				equalRow := func(r1, r2 rowType) bool {
+
+					equalVal := func(d1, d2 interface{}) bool {
+						switch v := d1.(type) {
+						case []byte: // uncomparable type
+							return bytes.Equal(d2.([]byte), v)
+						default: // comparable types: int32, int64, float32, float64, string, bool
+							return d2 == v
+						}
 					}
+
+					result := true
+					r1.schema.EnumFields(
+						func(f schemas.Field) {
+							result = result && equalVal(r1.dyB.Get(f.Name()), r2.dyB.Get(f.Name()))
+						})
+					return result
 				}
 
-				for _, name := range key.partRow.schema.fieldsOrder {
-					if !cmp(key.partRow.dyB.Get(name), k.partRow.dyB.Get(name)) {
-						return false
-					}
-				}
-
-				for _, name := range key.clustRow.schema.fieldsOrder {
-					if !cmp(key.clustRow.dyB.Get(name), k.clustRow.dyB.Get(name)) {
-						return false
-					}
-				}
-
-				return true
+				return equalRow(key.partRow, k.partRow) && equalRow(key.clustRow, k.clustRow)
 			}
 		}
 	}
@@ -422,11 +435,13 @@ func newNullValue() istructs.IValue {
 
 // valueSchema returns name of view value schema
 func (val *valueType) valueSchema() istructs.QName {
-	schema := val.appCfg.Schemas.schemaByName(val.viewName)
-	if schema == nil {
-		return istructs.NullQName
+	if schema := val.appCfg.Schemas.SchemaByName(val.viewName); schema != nil {
+		if schema.Kind() == istructs.SchemaKind_ViewRecord {
+			// There are no invalid schemas in the cache. Therefore, if schema is found and good kind, then no more checks necessary
+			return schema.Container(istructs.SystemContainer_ViewValue).Schema()
+		}
 	}
-	return schema.containerQName(istructs.SystemContainer_ViewValue)
+	return istructs.NullQName
 }
 
 // validSchemas checks what value has correct view and value schemas and returns error if not
@@ -435,11 +450,11 @@ func (val *valueType) validSchemas() (ok bool, err error) {
 		return false, fmt.Errorf("missed view schema: %w", ErrNameMissed)
 	}
 
-	schema := val.appCfg.Schemas.schemaByName(val.viewName)
+	schema := val.appCfg.Schemas.SchemaByName(val.viewName)
 	if schema == nil {
 		return false, fmt.Errorf("unknown view schema «%v»: %w", val.viewName, ErrNameNotFound)
 	}
-	if schema.kind != istructs.SchemaKind_ViewRecord {
+	if schema.Kind() != istructs.SchemaKind_ViewRecord {
 		return false, fmt.Errorf("invalid view schema «%v» kind: %w", val.viewName, ErrUnexpectedShemaKind)
 	}
 

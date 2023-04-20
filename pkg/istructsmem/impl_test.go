@@ -13,6 +13,7 @@ import (
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 
 	"testing"
 )
@@ -43,10 +44,9 @@ func TestBasicUsage(t *testing.T) {
 
 	// create app configuration
 	appConfigs := func() AppConfigsType {
-		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
+		schemas := schemas.NewSchemaCache()
 
-		saleParamsSchema := cfg.Schemas.Add(istructs.NewQName("test", "Sale"), istructs.SchemaKind_ODoc)
+		saleParamsSchema := schemas.Add(istructs.NewQName("test", "Sale"), istructs.SchemaKind_ODoc)
 		saleParamsSchema.
 			AddField("Buyer", istructs.DataKind_string, true).
 			AddField("Age", istructs.DataKind_int32, false).
@@ -55,20 +55,20 @@ func TestBasicUsage(t *testing.T) {
 			AddField("Photo", istructs.DataKind_bytes, false).
 			AddContainer("Basket", istructs.NewQName("test", "Basket"), 1, 1)
 
-		basketSchema := cfg.Schemas.Add(istructs.NewQName("test", "Basket"), istructs.SchemaKind_ORecord)
+		basketSchema := schemas.Add(istructs.NewQName("test", "Basket"), istructs.SchemaKind_ORecord)
 		basketSchema.AddContainer("Good", istructs.NewQName("test", "Good"), 0, istructs.ContainerOccurs_Unbounded)
 
-		goodSchema := cfg.Schemas.Add(istructs.NewQName("test", "Good"), istructs.SchemaKind_ORecord)
+		goodSchema := schemas.Add(istructs.NewQName("test", "Good"), istructs.SchemaKind_ORecord)
 		goodSchema.
 			AddField("Name", istructs.DataKind_string, true).
 			AddField("Code", istructs.DataKind_int64, true).
 			AddField("Weight", istructs.DataKind_float64, false)
 
-		saleSecurParamsSchema := cfg.Schemas.Add(istructs.NewQName("test", "saleSecureArgs"), istructs.SchemaKind_Object)
+		saleSecurParamsSchema := schemas.Add(istructs.NewQName("test", "saleSecureArgs"), istructs.SchemaKind_Object)
 		saleSecurParamsSchema.
 			AddField("password", istructs.DataKind_string, true)
 
-		docSchema := cfg.Schemas.Add(istructs.NewQName("test", "photos"), istructs.SchemaKind_CDoc)
+		docSchema := schemas.Add(istructs.NewQName("test", "photos"), istructs.SchemaKind_CDoc)
 		docSchema.
 			AddField("Buyer", istructs.DataKind_string, true).
 			AddField("Age", istructs.DataKind_int32, false).
@@ -76,9 +76,8 @@ func TestBasicUsage(t *testing.T) {
 			AddField("isHuman", istructs.DataKind_bool, false).
 			AddField("Photo", istructs.DataKind_bytes, false)
 
-		if err := cfg.Schemas.ValidateSchemas(); err != nil {
-			panic(err)
-		}
+		cfgs := make(AppConfigsType, 1)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
 
 		cfg.Resources.Add(
 			NewCommandFunction(istructs.NewQName("test", "Sale"),
@@ -91,7 +90,7 @@ func TestBasicUsage(t *testing.T) {
 	// gets AppStructProvider and AppStructs
 	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
-	app, err := provider.AppStructs(test.appName)
+	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
 	// Build raw event demo
@@ -200,10 +199,8 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	require := require.New(t)
 
 	appConfigs := func() AppConfigsType {
-		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
-
-		viewSchema := cfg.Schemas.AddView(istructs.NewQName("test", "viewDrinks"))
+		schemas := schemas.NewSchemaCache()
+		viewSchema := schemas.AddView(istructs.NewQName("test", "viewDrinks"))
 		viewSchema.
 			AddPartField("partitionKey1", istructs.DataKind_int64).
 			AddClustColumn("clusteringColumn1", istructs.DataKind_int64).
@@ -213,7 +210,8 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 			AddValueField("name", istructs.DataKind_string, true).
 			AddValueField("active", istructs.DataKind_bool, true)
 
-		require.NoError(viewSchema.Validate())
+		cfgs := make(AppConfigsType, 1)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
 
 		return cfgs
 	}
@@ -294,9 +292,11 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 // TestBasicUsage_Resources: Demonstrates basic usage resources
 func TestBasicUsage_Resources(t *testing.T) {
 	require := require.New(t)
+	test := test()
 
 	// gets AppStructProvider and AppStructs
-	provider := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	require.NoError(err)
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -363,9 +363,11 @@ func TestBasicUsage_Resources(t *testing.T) {
 // TestBasicUsage_Schemas: Demonstrates basic usage schemas
 func TestBasicUsage_Schemas(t *testing.T) {
 	require := require.New(t)
+	test := test()
 
 	// gets AppStructProvider and AppStructs
-	provider := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	require.NoError(err)
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -426,26 +428,28 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 	require := require.New(t)
 
 	app := func() istructs.IAppStructs {
-		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
+		schemas := schemas.NewSchemaCache()
 
-		recSchema := cfg.Schemas.Add(istructs.NewQName("types", "CRec"), istructs.SchemaKind_CRecord)
+		recSchema := schemas.Add(istructs.NewQName("types", "CRec"), istructs.SchemaKind_CRecord)
 		recSchema.AddField("int", istructs.DataKind_int64, false)
 
 		docQName := istructs.NewQName("types", "CDoc")
-		docSchema := cfg.Schemas.Add(docQName, istructs.SchemaKind_CDoc)
+		docSchema := schemas.Add(docQName, istructs.SchemaKind_CDoc)
 		docSchema.AddField("str", istructs.DataKind_string, true)
 		docSchema.AddField("fld", istructs.DataKind_int32, true)
 
 		docSchema.AddContainer("rec", recSchema.QName(), 0, istructs.ContainerOccurs_Unbounded)
 
-		viewSchema := cfg.Schemas.AddView(istructs.NewQName("types", "View"))
+		viewSchema := schemas.AddView(istructs.NewQName("types", "View"))
 		viewSchema.AddPartField("int", istructs.DataKind_int64)
 		viewSchema.AddClustColumn("str", istructs.DataKind_string)
 		viewSchema.AddValueField("bool", istructs.DataKind_bool, false)
 
-		argSchema := cfg.Schemas.Add(istructs.NewQName("types", "Arg"), istructs.SchemaKind_Object)
+		argSchema := schemas.Add(istructs.NewQName("types", "Arg"), istructs.SchemaKind_Object)
 		argSchema.AddField("bool", istructs.DataKind_bool, false)
+
+		cfgs := make(AppConfigsType)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
 
 		cfg.Resources.Add(
 			NewCommandFunction(
@@ -500,10 +504,11 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 func Test_Provide(t *testing.T) {
 	require := require.New(t)
+	test := test()
 
 	t.Run("AppStructs() must error if unknown app name", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		cfgs.AddConfig(istructs.AppQName_test1_app1)
+		cfgs.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())
 		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil)
 		require.NotNil(p)
 
@@ -512,7 +517,8 @@ func Test_Provide(t *testing.T) {
 	})
 
 	t.Run("check application ClusterAppID() and AppQName()", func(t *testing.T) {
-		provider := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+		provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+		require.NoError(err)
 
 		app, err := provider.AppStructs(test.appName)
 		require.NoError(err)

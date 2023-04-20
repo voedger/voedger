@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type (
@@ -120,7 +121,7 @@ type (
 	}
 )
 
-var test = testDataType{
+var data = testDataType{
 	appName: istructs.AppQName_test1_app1,
 	pkgName: "test",
 
@@ -203,175 +204,154 @@ var test = testDataType{
 	},
 }
 
-func testAppConfig(cfg *AppConfigType) {
+var test func() *testDataType = func() *testDataType {
 
-	var err error
-	asf := istorage.ProvideMem()
-	sp := istorageimpl.Provide(asf)
-	storage, err := sp.AppStorage(test.appName)
-	if err != nil {
-		panic(err)
-	}
+	prepareSchemas := func() schemas.SchemaCacheBuilder {
+		schemas := schemas.NewSchemaCache()
 
-	{
-		cfg.Resources.Add(NewCommandFunction(test.saleCmdName, test.saleCmdDocName, test.saleSecurParsName, istructs.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewCommandFunction(test.changeCmdName, istructs.NullQName, istructs.NullQName, istructs.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewQueryFunction(test.queryPhotoFunctionName, test.queryPhotoFunctionParamsSchema, istructs.NullQName, NullQueryExec))
-	}
+		{
+			saleParamsSchema := schemas.Add(data.saleCmdDocName, istructs.SchemaKind_ODoc)
+			saleParamsSchema.
+				AddField(data.buyerIdent, istructs.DataKind_string, true).
+				AddField(data.ageIdent, istructs.DataKind_int32, false).
+				AddField(data.heightIdent, istructs.DataKind_float32, false).
+				AddField(data.humanIdent, istructs.DataKind_bool, false).
+				AddField(data.photoIdent, istructs.DataKind_bytes, false).
+				AddContainer(data.basketIdent, istructs.NewQName(data.pkgName, data.basketIdent), 1, 1)
 
-	{
-		saleParamsSchema := cfg.Schemas.Add(test.saleCmdDocName, istructs.SchemaKind_ODoc)
-		saleParamsSchema.
-			AddField(test.buyerIdent, istructs.DataKind_string, true).
-			AddField(test.ageIdent, istructs.DataKind_int32, false).
-			AddField(test.heightIdent, istructs.DataKind_float32, false).
-			AddField(test.humanIdent, istructs.DataKind_bool, false).
-			AddField(test.photoIdent, istructs.DataKind_bytes, false).
-			AddContainer(test.basketIdent, istructs.NewQName(test.pkgName, test.basketIdent), 1, 1)
+			basketSchema := schemas.Add(istructs.NewQName(data.pkgName, data.basketIdent), istructs.SchemaKind_ORecord)
+			basketSchema.
+				AddContainer(data.goodIdent, istructs.NewQName(data.pkgName, data.goodIdent), 0, istructs.ContainerOccurs_Unbounded)
 
-		basketSchema := cfg.Schemas.Add(istructs.NewQName(test.pkgName, test.basketIdent), istructs.SchemaKind_ORecord)
-		basketSchema.
-			AddContainer(test.goodIdent, istructs.NewQName(test.pkgName, test.goodIdent), 0, istructs.ContainerOccurs_Unbounded)
+			goodSchema := schemas.Add(istructs.NewQName(data.pkgName, data.goodIdent), istructs.SchemaKind_ORecord)
+			goodSchema.
+				AddField(data.saleIdent, istructs.DataKind_RecordID, true).
+				AddField(data.nameIdent, istructs.DataKind_string, true).
+				AddField(data.codeIdent, istructs.DataKind_int64, true).
+				AddField(data.weightIdent, istructs.DataKind_float64, false)
 
-		goodSchema := cfg.Schemas.Add(istructs.NewQName(test.pkgName, test.goodIdent), istructs.SchemaKind_ORecord)
-		goodSchema.
-			AddField(test.saleIdent, istructs.DataKind_RecordID, true).
-			AddField(test.nameIdent, istructs.DataKind_string, true).
-			AddField(test.codeIdent, istructs.DataKind_int64, true).
-			AddField(test.weightIdent, istructs.DataKind_float64, false)
+			saleSecurParamsSchema := schemas.Add(data.saleSecurParsName, istructs.SchemaKind_Object)
+			saleSecurParamsSchema.
+				AddField(data.passwordIdent, istructs.DataKind_string, true)
 
-		saleSecurParamsSchema := cfg.Schemas.Add(test.saleSecurParsName, istructs.SchemaKind_Object)
-		saleSecurParamsSchema.
-			AddField(test.passwordIdent, istructs.DataKind_string, true)
-
-		photoParamsSchema := cfg.Schemas.Add(test.queryPhotoFunctionParamsSchema, istructs.SchemaKind_Object)
-		photoParamsSchema.
-			AddField(test.buyerIdent, istructs.DataKind_string, true)
-
-		err := saleParamsSchema.Validate(true)
-		if err != nil {
-			panic(err)
+			photoParamsSchema := schemas.Add(data.queryPhotoFunctionParamsSchema, istructs.SchemaKind_Object)
+			photoParamsSchema.
+				AddField(data.buyerIdent, istructs.DataKind_string, true)
 		}
-	}
 
-	{
-		recSchema := cfg.Schemas.Add(test.tablePhotos, istructs.SchemaKind_CDoc)
-		recSchema.
-			AddField(test.buyerIdent, istructs.DataKind_string, true).
-			AddField(test.ageIdent, istructs.DataKind_int32, false).
-			AddField(test.heightIdent, istructs.DataKind_float32, false).
-			AddField(test.humanIdent, istructs.DataKind_bool, false).
-			AddField(test.photoIdent, istructs.DataKind_bytes, false).
-			AddContainer(test.remarkIdent, test.tablePhotoRems, 0, istructs.ContainerOccurs_Unbounded)
+		{
+			recSchema := schemas.Add(data.tablePhotos, istructs.SchemaKind_CDoc)
+			recSchema.
+				AddField(data.buyerIdent, istructs.DataKind_string, true).
+				AddField(data.ageIdent, istructs.DataKind_int32, false).
+				AddField(data.heightIdent, istructs.DataKind_float32, false).
+				AddField(data.humanIdent, istructs.DataKind_bool, false).
+				AddField(data.photoIdent, istructs.DataKind_bytes, false).
+				AddContainer(data.remarkIdent, data.tablePhotoRems, 0, istructs.ContainerOccurs_Unbounded)
 
-		recSchemaChild := cfg.Schemas.Add(test.tablePhotoRems, istructs.SchemaKind_CRecord)
-		recSchemaChild.
-			AddField(test.photoIdent, istructs.DataKind_RecordID, true).
-			AddField(test.remarkIdent, istructs.DataKind_string, true)
-
-		err := recSchema.Validate(true)
-		if err != nil {
-			panic(err)
+			recSchemaChild := schemas.Add(data.tablePhotoRems, istructs.SchemaKind_CRecord)
+			recSchemaChild.
+				AddField(data.photoIdent, istructs.DataKind_RecordID, true).
+				AddField(data.remarkIdent, istructs.DataKind_string, true)
 		}
-	}
 
-	{
-		rowSchema := cfg.Schemas.Add(test.testRow, istructs.SchemaKind_Element)
-		rowSchema.
-			AddField("int32", istructs.DataKind_int32, false).
-			AddField("int64", istructs.DataKind_int64, false).
-			AddField("float32", istructs.DataKind_float32, false).
-			AddField("float64", istructs.DataKind_float64, false).
-			AddField("bytes", istructs.DataKind_bytes, false).
-			AddField("string", istructs.DataKind_string, false).
-			AddField("QName", istructs.DataKind_QName, false).
-			AddField("bool", istructs.DataKind_bool, false).
-			AddField("RecordID", istructs.DataKind_RecordID, false).
-			AddField("RecordID_2", istructs.DataKind_RecordID, false)
-
-		err := rowSchema.Validate(true)
-		if err != nil {
-			panic(err)
+		{
+			rowSchema := schemas.Add(data.testRow, istructs.SchemaKind_Element)
+			rowSchema.
+				AddField("int32", istructs.DataKind_int32, false).
+				AddField("int64", istructs.DataKind_int64, false).
+				AddField("float32", istructs.DataKind_float32, false).
+				AddField("float64", istructs.DataKind_float64, false).
+				AddField("bytes", istructs.DataKind_bytes, false).
+				AddField("string", istructs.DataKind_string, false).
+				AddField("QName", istructs.DataKind_QName, false).
+				AddField("bool", istructs.DataKind_bool, false).
+				AddField("RecordID", istructs.DataKind_RecordID, false).
+				AddField("RecordID_2", istructs.DataKind_RecordID, false)
 		}
-	}
 
-	{
-		cDocSchema := cfg.Schemas.Add(test.testCDoc, istructs.SchemaKind_CDoc)
-		cDocSchema.
-			AddField("int32", istructs.DataKind_int32, false).
-			AddField("int64", istructs.DataKind_int64, false).
-			AddField("float32", istructs.DataKind_float32, false).
-			AddField("float64", istructs.DataKind_float64, false).
-			AddField("bytes", istructs.DataKind_bytes, false).
-			AddField("string", istructs.DataKind_string, false).
-			AddField("QName", istructs.DataKind_QName, false).
-			AddField("bool", istructs.DataKind_bool, false).
-			AddField("RecordID", istructs.DataKind_RecordID, false).
-			AddContainer("record", test.testCRec, 0, istructs.ContainerOccurs_Unbounded)
+		{
+			cDocSchema := schemas.Add(data.testCDoc, istructs.SchemaKind_CDoc)
+			cDocSchema.
+				AddField("int32", istructs.DataKind_int32, false).
+				AddField("int64", istructs.DataKind_int64, false).
+				AddField("float32", istructs.DataKind_float32, false).
+				AddField("float64", istructs.DataKind_float64, false).
+				AddField("bytes", istructs.DataKind_bytes, false).
+				AddField("string", istructs.DataKind_string, false).
+				AddField("QName", istructs.DataKind_QName, false).
+				AddField("bool", istructs.DataKind_bool, false).
+				AddField("RecordID", istructs.DataKind_RecordID, false).
+				AddContainer("record", data.testCRec, 0, istructs.ContainerOccurs_Unbounded)
 
-		cRecSchema := cfg.Schemas.Add(test.testCRec, istructs.SchemaKind_CRecord)
-		cRecSchema.
-			AddField("int32", istructs.DataKind_int32, false).
-			AddField("int64", istructs.DataKind_int64, false).
-			AddField("float32", istructs.DataKind_float32, false).
-			AddField("float64", istructs.DataKind_float64, false).
-			AddField("bytes", istructs.DataKind_bytes, false).
-			AddField("string", istructs.DataKind_string, false).
-			AddField("QName", istructs.DataKind_QName, false).
-			AddField("bool", istructs.DataKind_bool, false).
-			AddField("RecordID", istructs.DataKind_RecordID, false)
-
-		err := cDocSchema.Validate(true)
-		if err != nil {
-			panic(err)
+			cRecSchema := schemas.Add(data.testCRec, istructs.SchemaKind_CRecord)
+			cRecSchema.
+				AddField("int32", istructs.DataKind_int32, false).
+				AddField("int64", istructs.DataKind_int64, false).
+				AddField("float32", istructs.DataKind_float32, false).
+				AddField("float64", istructs.DataKind_float64, false).
+				AddField("bytes", istructs.DataKind_bytes, false).
+				AddField("string", istructs.DataKind_string, false).
+				AddField("QName", istructs.DataKind_QName, false).
+				AddField("bool", istructs.DataKind_bool, false).
+				AddField("RecordID", istructs.DataKind_RecordID, false)
 		}
+
+		{
+			viewSchema := schemas.AddView(data.testViewRecord.name)
+			viewSchema.
+				AddPartField(data.testViewRecord.partFields.partition, istructs.DataKind_int32).
+				AddPartField(data.testViewRecord.partFields.workspace, istructs.DataKind_int64).
+				AddClustColumn(data.testViewRecord.clustFields.device, istructs.DataKind_int32).
+				AddClustColumn(data.testViewRecord.clustFields.sorter, istructs.DataKind_string).
+				AddValueField(data.testViewRecord.valueFields.buyer, istructs.DataKind_string, true).
+				AddValueField(data.testViewRecord.valueFields.age, istructs.DataKind_int32, false).
+				AddValueField(data.testViewRecord.valueFields.heights, istructs.DataKind_float32, false).
+				AddValueField(data.testViewRecord.valueFields.human, istructs.DataKind_bool, false).
+				AddValueField(data.testViewRecord.valueFields.photo, istructs.DataKind_bytes, false).
+				AddValueField(data.testViewRecord.valueFields.record, istructs.DataKind_Record, false).
+				AddValueField(data.testViewRecord.valueFields.event, istructs.DataKind_Event, false)
+			data.testViewRecord.valueName = viewSchema.ValueSchema().QName()
+		}
+
+		return schemas
 	}
 
-	{
-		viewSchema := cfg.Schemas.AddView(test.testViewRecord.name)
-		viewSchema.
-			AddPartField(test.testViewRecord.partFields.partition, istructs.DataKind_int32).
-			AddPartField(test.testViewRecord.partFields.workspace, istructs.DataKind_int64).
-			AddClustColumn(test.testViewRecord.clustFields.device, istructs.DataKind_int32).
-			AddClustColumn(test.testViewRecord.clustFields.sorter, istructs.DataKind_string).
-			AddValueField(test.testViewRecord.valueFields.buyer, istructs.DataKind_string, true).
-			AddValueField(test.testViewRecord.valueFields.age, istructs.DataKind_int32, false).
-			AddValueField(test.testViewRecord.valueFields.heights, istructs.DataKind_float32, false).
-			AddValueField(test.testViewRecord.valueFields.human, istructs.DataKind_bool, false).
-			AddValueField(test.testViewRecord.valueFields.photo, istructs.DataKind_bytes, false).
-			AddValueField(test.testViewRecord.valueFields.record, istructs.DataKind_Record, false).
-			AddValueField(test.testViewRecord.valueFields.event, istructs.DataKind_Event, false)
+	prepareConfig := func(cfg *AppConfigType) {
 
-		err := viewSchema.Validate()
+		sp := istorageimpl.Provide(istorage.ProvideMem())
+		storage, err := sp.AppStorage(data.appName)
 		if err != nil {
 			panic(err)
 		}
 
-		test.testViewRecord.valueName = viewSchema.ValueSchema().name
+		cfg.Resources.Add(NewCommandFunction(data.saleCmdName, data.saleCmdDocName, data.saleSecurParsName, istructs.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(data.changeCmdName, istructs.NullQName, istructs.NullQName, istructs.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewQueryFunction(data.queryPhotoFunctionName, data.queryPhotoFunctionParamsSchema, istructs.NullQName, NullQueryExec))
+
+		if err := cfg.prepare(iratesce.TestBucketsFactory(), storage); err != nil {
+			panic(err)
+		}
 	}
 
-	if err := cfg.prepare(iratesce.TestBucketsFactory(), storage); err != nil {
-		panic(err)
-	}
-}
-
-func testAppConfigs() AppConfigsType {
-	if test.AppConfigs == nil {
-		test.AppConfigs = make(AppConfigsType, 1)
-		test.AppCfg = test.AppConfigs.AddConfig(test.appName)
-		testAppConfig(test.AppCfg)
+	if data.AppConfigs == nil {
+		data.AppConfigs = make(AppConfigsType, 1)
+		data.AppCfg = data.AppConfigs.AddConfig(data.appName, prepareSchemas())
+		prepareConfig(data.AppCfg)
 	}
 
-	return test.AppConfigs
+	return &data
 }
 
 func newEmptyTestRow() (row *rowType) {
+	test := test()
 	r := newRow(test.AppCfg)
 	r.setQName(test.testRow)
 	return &r
 }
 
 func newTestRow() (row *rowType) {
+	test := test()
 	r := newRow(test.AppCfg)
 	r.setQName(test.testRow)
 
@@ -380,6 +360,8 @@ func newTestRow() (row *rowType) {
 }
 
 func fillTestRow(row *rowType) {
+	test := test()
+
 	row.PutInt32("int32", 1)
 	row.PutInt64("int64", 2)
 	row.PutFloat32("float32", 3)
@@ -460,6 +442,7 @@ func rowsIsEqual(r1, r2 istructs.IRowReader) (ok bool, err error) {
 
 func testTestRow(t *testing.T, row istructs.IRowReader) {
 	require := require.New(t)
+	test := test()
 
 	require.Equal(int32(1), row.AsInt32("int32"))
 	require.Equal(int64(2), row.AsInt64("int64"))
@@ -473,6 +456,7 @@ func testTestRow(t *testing.T, row istructs.IRowReader) {
 }
 
 func newTestCRecord(id istructs.RecordID) *recordType {
+	test := test()
 	rec := newRecord(test.AppCfg)
 	rec.setQName(test.testCRec)
 	fillTestCRecord(&rec, id)
@@ -480,6 +464,7 @@ func newTestCRecord(id istructs.RecordID) *recordType {
 }
 
 func newEmptyTestCRecord() *recordType {
+	test := test()
 	rec := newRecord(test.AppCfg)
 	rec.setQName(test.testCRec)
 	return &rec
@@ -498,6 +483,7 @@ func testTestCRec(t *testing.T, rec istructs.IRecord, id istructs.RecordID) {
 }
 
 func newTestCDoc(id istructs.RecordID) *recordType {
+	test := test()
 	rec := newRecord(test.AppCfg)
 	rec.setQName(test.testCDoc)
 	fillTestCDoc(&rec, id)
@@ -505,6 +491,7 @@ func newTestCDoc(id istructs.RecordID) *recordType {
 }
 
 func newEmptyTestCDoc() *recordType {
+	test := test()
 	rec := newRecord(test.AppCfg)
 	rec.setQName(test.testCDoc)
 	return &rec
@@ -549,6 +536,7 @@ func recsIsEqual(record1, record2 istructs.IRecord) (ok bool, err error) {
 }
 
 func fillTestObject(obj *elementType) {
+	test := test()
 	obj.PutRecordID(istructs.SystemField_ID, test.tempSaleID)
 	obj.PutString(test.buyerIdent, test.buyerValue)
 	obj.PutInt32(test.ageIdent, test.ageValue)
@@ -576,6 +564,7 @@ func fillTestObject(obj *elementType) {
 
 func testTestObject(t *testing.T, value istructs.IObject) {
 	require := require.New(t)
+	test := test()
 
 	require.Equal(test.buyerValue, value.AsString(test.buyerIdent))
 	require.Equal(test.ageValue, value.AsInt32(test.ageIdent))
@@ -600,6 +589,7 @@ func testTestObject(t *testing.T, value istructs.IObject) {
 }
 
 func fillTestUnloggedObject(obj *elementType) {
+	test := test()
 	obj.PutString(test.passwordIdent, "12345")
 
 	err := obj.build()
@@ -610,11 +600,14 @@ func fillTestUnloggedObject(obj *elementType) {
 
 func testTestUnloggedObject(t *testing.T, obj *elementType) {
 	require := require.New(t)
+	test := test()
 
 	require.Equal(obj.AsString(test.passwordIdent), maskString)
 }
 
 func fillTestCUD(cud *cudType) {
+	test := test()
+
 	rec := cud.Create(test.tablePhotos)
 	rec.PutRecordID(istructs.SystemField_ID, test.tempPhotoID)
 	rec.PutString(test.buyerIdent, test.buyerValue)
@@ -632,6 +625,7 @@ func fillTestCUD(cud *cudType) {
 }
 
 func newTestEvent(pLogOffs, wLogOffs istructs.Offset) *dbEventType {
+	test := test()
 	ev := newDbEvent(test.AppCfg)
 
 	ev.pLogOffs = pLogOffs
@@ -643,6 +637,7 @@ func newTestEvent(pLogOffs, wLogOffs istructs.Offset) *dbEventType {
 }
 
 func fillTestEvent(ev *dbEventType) {
+	test := test()
 	ev.setName(test.saleCmdName)
 
 	ev.rawBytes = test.eventRawBytes
@@ -666,6 +661,7 @@ func fillTestEvent(ev *dbEventType) {
 
 func testTestEvent(t *testing.T, value istructs.IDbEvent, pLogOffs, wLogOffs istructs.Offset, unlogged bool) {
 	require := require.New(t)
+	test := test()
 
 	event := value.(*dbEventType)
 
@@ -694,18 +690,21 @@ func testTestEvent(t *testing.T, value istructs.IDbEvent, pLogOffs, wLogOffs ist
 }
 
 func newEmptyTestEvent() *dbEventType {
+	test := test()
 	ev := newDbEvent(test.AppCfg)
 	ev.name = istructs.NullQName
 	return &ev
 }
 
 func newEmptyViewValue() (val *rowType) {
+	test := test()
 	v := newRow(test.AppCfg)
 	v.setQName(test.testViewRecord.valueName)
 	return &v
 }
 
 func newTestViewValue() (val *rowType) {
+	test := test()
 	v := newRow(test.AppCfg)
 
 	v.setQName(test.testViewRecord.valueName)
@@ -715,6 +714,8 @@ func newTestViewValue() (val *rowType) {
 }
 
 func fillTestViewValue(value *rowType) {
+	test := test()
+
 	value.PutString(test.testViewRecord.valueFields.buyer, test.buyerValue)
 	value.PutInt32(test.testViewRecord.valueFields.age, test.ageValue)
 	value.PutFloat32(test.testViewRecord.valueFields.heights, test.heightValue)
@@ -735,6 +736,7 @@ func fillTestViewValue(value *rowType) {
 
 func testTestViewValue(t *testing.T, value istructs.IValue) {
 	require := require.New(t)
+	test := test()
 
 	require.Equal(test.buyerValue, value.AsString(test.testViewRecord.valueFields.buyer))
 	require.Equal(test.ageValue, value.AsInt32(test.testViewRecord.valueFields.age))
@@ -747,8 +749,4 @@ func testTestViewValue(t *testing.T, value istructs.IValue) {
 
 	e := value.AsEvent(test.testViewRecord.valueFields.event)
 	testTestEvent(t, e, 100500, 1050, true)
-}
-
-func init() {
-	test.AppConfigs = testAppConfigs()
 }

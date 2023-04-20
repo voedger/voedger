@@ -16,12 +16,12 @@ import (
 //   - interfaces:
 //     — istructs.IResources
 type ResourcesType struct {
-	appCfg    *AppConfigType
+	cfg       *AppConfigType
 	resources map[istructs.QName]istructs.IResource
 }
 
-func newResources(appCfg *AppConfigType) ResourcesType {
-	return ResourcesType{appCfg, make(map[istructs.QName]istructs.IResource)}
+func newResources(cfg *AppConfigType) ResourcesType {
+	return ResourcesType{cfg, make(map[istructs.QName]istructs.IResource)}
 }
 
 // Add adds new resource to application resources
@@ -41,7 +41,7 @@ func (res *ResourcesType) QueryResource(resource istructs.QName) (r istructs.IRe
 
 // QueryFunctionArgsBuilder returns argument object builder for query function
 func (res *ResourcesType) QueryFunctionArgsBuilder(query istructs.IQueryFunction) istructs.IObjectBuilder {
-	r := newObject(res.appCfg, query.ParamsSchema())
+	r := newObject(res.cfg, query.ParamsSchema())
 	return &r
 }
 

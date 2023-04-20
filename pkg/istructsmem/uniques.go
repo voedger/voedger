@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type implIUnique struct {
@@ -80,8 +81,8 @@ type fieldDesc struct {
 
 func (u implIUniques) validate(cfg *AppConfigType) error {
 	for qName, uniques := range u.uniques {
-		s := cfg.Schemas.Schema(qName)
-		if s == NullSchema {
+		s := cfg.Schemas.SchemaByName(qName)
+		if s == nil {
 			return uniqueError(qName, ErrUnknownSchemaQName, "")
 		}
 		switch s.Kind() {
@@ -91,10 +92,10 @@ func (u implIUniques) validate(cfg *AppConfigType) error {
 			return uniqueError(qName, ErrSchemaKindMayNotHaveUniques, "")
 		}
 		sf := map[string]fieldDesc{}
-		s.ForEachField(func(field istructs.IFieldDescr) {
-			sf[field.Name()] = fieldDesc{
-				kind:       field.DataKind(),
-				isRequired: field.Required(),
+		s.EnumFields(func(fld schemas.Field) {
+			sf[fld.Name()] = fieldDesc{
+				kind:       fld.DataKind(),
+				isRequired: fld.Required(),
 			}
 		})
 		duplicateUnique := []map[string]bool{}

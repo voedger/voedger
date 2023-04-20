@@ -14,9 +14,9 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -41,8 +41,8 @@ type appPartition struct {
 	nextPLogOffset istructs.Offset
 }
 
-func ProvideJSONFuncParamsSchema(cfg *istructsmem.AppConfigType) {
-	cfg.Schemas.Add(istructs.QNameJSON, istructs.SchemaKind_Object).
+func ProvideJSONFuncParamsSchema(schemas schemas.SchemaCacheBuilder) {
+	schemas.Add(istructs.QNameJSON, istructs.SchemaKind_Object).
 		AddField(Field_JSONSchemaBody, istructs.DataKind_string, true)
 }
 

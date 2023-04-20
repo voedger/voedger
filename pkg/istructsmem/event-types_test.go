@@ -16,14 +16,16 @@ import (
 	log "github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestEventBuilder_Core(t *testing.T) {
 	require := require.New(t)
+	test := test()
 
 	// gets AppStructProvider and AppStructs
-	require.Equal(test.AppCfg, test.AppConfigs.GetConfig(test.appName))
-	provider := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	require.NoError(err)
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -522,6 +524,7 @@ func TestEventBuilder_Core(t *testing.T) {
 
 func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 	require := require.New(t)
+	test := test()
 
 	t.Run("test command", func(t *testing.T) {
 		require.NotNil(cmd)
@@ -574,6 +577,7 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 
 func testUnloggedObject(t *testing.T, cmd istructs.IObject) {
 	require := require.New(t)
+	test := test()
 
 	hasPassword := false
 	cmd.FieldNames(func(fieldName string) {
@@ -589,6 +593,7 @@ func testUnloggedObject(t *testing.T, cmd istructs.IObject) {
 
 func testPhotoRow(t *testing.T, photo istructs.IRowReader) {
 	require := require.New(t)
+	test := test()
 	require.Equal(test.buyerValue, photo.AsString(test.buyerIdent))
 	require.Equal(test.ageValue, photo.AsInt32(test.ageIdent))
 	require.Equal(test.heightValue, photo.AsFloat32(test.heightIdent))
@@ -597,6 +602,8 @@ func testPhotoRow(t *testing.T, photo istructs.IRowReader) {
 
 func testDbEvent(t *testing.T, event istructs.IDbEvent) {
 	require := require.New(t)
+	test := test()
+
 	// test DBEvent event general entities
 	require.Equal(test.saleCmdName, event.QName())
 	require.Equal(test.registeredTime, event.RegisteredAt())
@@ -640,9 +647,24 @@ func Test_EventUpdateRawCud(t *testing.T) {
 	// this test for https://dev.heeus.io/launchpad/#!25853
 	require := require.New(t)
 
+	docName := istructs.NewQName("test", "cdoc")
+	recName := istructs.NewQName("test", "crec")
+
+	schemas := schemas.NewSchemaCache()
+
+	t.Run("must ok to construct schemas", func(t *testing.T) {
+		doc := schemas.Add(docName, istructs.SchemaKind_CDoc)
+		doc.AddField("new", istructs.DataKind_bool, true)
+		doc.AddField("rec", istructs.DataKind_RecordID, false)
+		doc.AddContainer("rec", recName, 0, 1)
+
+		rec := schemas.Add(recName, istructs.SchemaKind_CRecord)
+		rec.AddField("data", istructs.DataKind_string, false)
+	})
+
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfgs.AddConfig(istructs.AppQName_test1_app1)
+		cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
 		return cfgs
 	}()
 
@@ -656,22 +678,6 @@ func Test_EventUpdateRawCud(t *testing.T) {
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	ws := istructs.WSID(1)
-	docName := istructs.NewQName("test", "cdoc")
-	recName := istructs.NewQName("test", "crec")
-
-	t.Run("must ok to construct schemas", func(t *testing.T) {
-		cfg := cfgs.GetConfig(istructs.AppQName_test1_app1)
-
-		doc := cfg.Schemas.Add(docName, istructs.SchemaKind_CDoc)
-		doc.AddField("new", istructs.DataKind_bool, true)
-		doc.AddField("rec", istructs.DataKind_RecordID, false)
-		doc.AddContainer("rec", recName, 0, 1)
-
-		rec := cfg.Schemas.Add(recName, istructs.SchemaKind_CRecord)
-		rec.AddField("data", istructs.DataKind_string, false)
-
-		require.NoError(cfg.Schemas.ValidateSchemas())
-	})
 
 	for testScenario := testScenarioIndirectPLogApply; testScenario < testScenarioCount; testScenario++ {
 
@@ -817,24 +823,24 @@ func Test_EventUpdateRawCud(t *testing.T) {
 func Test_SingletonCDocEvent(t *testing.T) {
 	require := require.New(t)
 
+	docName := istructs.NewQName("test", "cdoc")
+	docID := istructs.NullRecordID
+
+	schemas := schemas.NewSchemaCache()
+
+	t.Run("must ok to construct singleton CDOC schema", func(t *testing.T) {
+		schema := schemas.Add(docName, istructs.SchemaKind_CDoc)
+		schema.SetSingleton()
+		schema.AddField("option", istructs.DataKind_int64, true)
+	})
+
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfgs.AddConfig(istructs.AppQName_test1_app1)
+		cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
 		return cfgs
 	}()
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-
-	docName := istructs.NewQName("test", "cdoc")
-	docID := istructs.NullRecordID
-
-	t.Run("must ok to construct singleton CDOC schema", func(t *testing.T) {
-		cfg := cfgs.GetConfig(istructs.AppQName_test1_app1)
-		schema := cfg.Schemas.Add(docName, istructs.SchemaKind_CDoc)
-		schema.SetSingleton()
-		schema.AddField("option", istructs.DataKind_int64, true)
-		require.NoError(cfg.Schemas.ValidateSchemas())
-	})
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -1030,8 +1036,10 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 func TestEventBuild_Error(t *testing.T) {
 	require := require.New(t)
+	test := test()
 
-	provider := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	require.NoError(err)
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -1394,8 +1402,10 @@ func Test_LoadEvent_CorruptedBytes(t *testing.T) {
 
 func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 	require := require.New(t)
+	test := test()
 
-	provider := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	require.NoError(err)
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -1526,6 +1536,7 @@ func Test_LoadStoreNullEvent_Bytes(t *testing.T) {
 
 func Test_ObjectMask(t *testing.T) {
 	require := require.New(t)
+	test := test()
 
 	value := newObject(test.AppCfg, test.saleCmdDocName)
 	fillTestObject(&value)

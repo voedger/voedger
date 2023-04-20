@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/projectors"
+	"github.com/voedger/voedger/pkg/schemas"
 
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/ibusmem"
@@ -47,7 +48,23 @@ func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	check := make(chan interface{}, 1)
 	cudsCheck := make(chan interface{})
-	app := setUp(t)
+
+	// схема параметров тестовой команды
+	testCmdQNameParams := istructs.NewQName(istructs.SysPackage, "TestParams")
+	// схема unloged-параметров тестовой команды
+	testCmdQNameParamsUnlogged := istructs.NewQName(istructs.SysPackage, "TestParamsUnlogged")
+	buildSchemas := func(schemas schemas.SchemaCacheBuilder) {
+		testCmdParamsScheme := schemas.Add(testCmdQNameParams, istructs.SchemaKind_Object)
+		testCmdParamsScheme.AddField("Text", istructs.DataKind_string, true)
+
+		testCmdParamsUnloggedScheme := schemas.Add(testCmdQNameParamsUnlogged, istructs.SchemaKind_Object)
+		testCmdParamsUnloggedScheme.AddField("Password", istructs.DataKind_string, true)
+
+		schemas.Add(testCDoc, istructs.SchemaKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+		schemas.Add(testCRecord, istructs.SchemaKind_CRecord)
+	}
+
+	app := setUp(t, buildSchemas)
 	defer tearDown(app)
 
 	channelID, err := app.n10nBroker.NewChannel("test", 24*time.Hour)
@@ -63,16 +80,6 @@ func TestBasicUsage(t *testing.T) {
 	})
 	app.n10nBroker.Subscribe(channelID, projectionKey)
 	defer app.n10nBroker.Unsubscribe(channelID, projectionKey)
-
-	// схема параметров тестовой команды
-	testCmdQNameParams := istructs.NewQName(istructs.SysPackage, "TestParams")
-	testCmdParamsScheme := app.cfg.Schemas.Add(testCmdQNameParams, istructs.SchemaKind_Object)
-	testCmdParamsScheme.AddField("Text", istructs.DataKind_string, true)
-
-	// схема unloged-параметров тестовой команды
-	testCmdQNameParamsUnlogged := istructs.NewQName(istructs.SysPackage, "TestParamsUnlogged")
-	testCmdParamsUnloggedScheme := app.cfg.Schemas.Add(testCmdQNameParamsUnlogged, istructs.SchemaKind_Object)
-	testCmdParamsUnloggedScheme.AddField("Password", istructs.DataKind_string, true)
 
 	// сама тестовая команда
 	testCmdQName := istructs.NewQName(istructs.SysPackage, "Test")
@@ -101,8 +108,6 @@ func TestBasicUsage(t *testing.T) {
 	}
 	testCmd := istructsmem.NewCommandFunction(testCmdQName, testCmdQNameParams, testCmdQNameParamsUnlogged, istructs.NullQName, testExec)
 	app.cfg.Resources.Add(testCmd)
-	app.cfg.Schemas.Add(testCDoc, istructs.SchemaKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
-	app.cfg.Schemas.Add(testCRecord, istructs.SchemaKind_CRecord)
 
 	t.Run("basic usage", func(t *testing.T) {
 		// commandprocessor работает через ibus.SendResponse -> нам нужен sender -> тестируем через ibus.SendRequest2()
@@ -174,16 +179,17 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp) map[string]interface
 
 func TestRecovery(t *testing.T) {
 	require := require.New(t)
-	app := setUp(t)
+
+	app := setUp(t, func(schemas schemas.SchemaCacheBuilder) {
+		_ = schemas.Add(testCRecord, istructs.SchemaKind_CRecord)
+		_ = schemas.Add(testCDoc, istructs.SchemaKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+		_ = schemas.Add(testWDoc, istructs.SchemaKind_WDoc)
+	})
 	defer tearDown(app)
 
 	cudQName := istructs.NewQName(istructs.SysPackage, "CUD")
 	cmdCUD := istructsmem.NewCommandFunction(cudQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec)
 	app.cfg.Resources.Add(cmdCUD)
-
-	_ = app.cfg.Schemas.Add(testCRecord, istructs.SchemaKind_CRecord)
-	_ = app.cfg.Schemas.Add(testCDoc, istructs.SchemaKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
-	_ = app.cfg.Schemas.Add(testWDoc, istructs.SchemaKind_WDoc)
 
 	respData := sendCUD(t, 1, app)
 	require.Equal(1, int(respData["CurrentWLogOffset"].(float64)))
@@ -229,15 +235,17 @@ func restartCmdProc(app *testApp) {
 
 func TestCUDUpdate(t *testing.T) {
 	require := require.New(t)
-	app := setUp(t)
+
+	testQName := istructs.NewQName("test", "test")
+
+	app := setUp(t, func(schemas schemas.SchemaCacheBuilder) {
+		_ = schemas.Add(testQName, istructs.SchemaKind_CDoc).AddField("IntFld", istructs.DataKind_int32, false)
+	})
 	defer tearDown(app)
 
 	cudQName := istructs.NewQName(istructs.SysPackage, "CUD")
 	cmdCUD := istructsmem.NewCommandFunction(cudQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec)
 	app.cfg.Resources.Add(cmdCUD)
-
-	testQName := istructs.NewQName("test", "test")
-	_ = app.cfg.Schemas.Add(testQName, istructs.SchemaKind_CDoc).AddField("IntFld", istructs.DataKind_int32, false)
 
 	// insert
 	req := ibus.Request{
@@ -280,15 +288,17 @@ func TestCUDUpdate(t *testing.T) {
 
 func Test400BadRequestOnCUDErrors(t *testing.T) {
 	require := require.New(t)
-	app := setUp(t)
+
+	testQName := istructs.NewQName("test", "test")
+
+	app := setUp(t, func(schemas schemas.SchemaCacheBuilder) {
+		_ = schemas.Add(testQName, istructs.SchemaKind_CDoc)
+	})
 	defer tearDown(app)
 
 	cudQName := istructs.NewQName(istructs.SysPackage, "CUD")
 	cmdCUD := istructsmem.NewCommandFunction(cudQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec)
 	app.cfg.Resources.Add(cmdCUD)
-
-	testQName := istructs.NewQName("test", "test")
-	_ = app.cfg.Schemas.Add(testQName, istructs.SchemaKind_CDoc)
 
 	cases := []struct {
 		desc                string
@@ -328,16 +338,18 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 
 func Test400BadRequests(t *testing.T) {
 	require := require.New(t)
-	app := setUp(t)
-	defer tearDown(app)
 
 	testCmdQNameParams := istructs.NewQName(istructs.SysPackage, "TestParams")
-	testCmdParamsScheme := app.cfg.Schemas.Add(testCmdQNameParams, istructs.SchemaKind_Object)
-	testCmdParamsScheme.AddField("Text", istructs.DataKind_string, true)
-
 	testCmdQNameParamsUnlogged := istructs.NewQName(istructs.SysPackage, "TestParamsUnlogged")
-	testCmdParamsUnloggedScheme := app.cfg.Schemas.Add(testCmdQNameParamsUnlogged, istructs.SchemaKind_Object)
-	testCmdParamsUnloggedScheme.AddField("Password", istructs.DataKind_string, true)
+
+	app := setUp(t, func(schemas schemas.SchemaCacheBuilder) {
+		schemas.Add(testCmdQNameParams, istructs.SchemaKind_Object).
+			AddField("Text", istructs.DataKind_string, true)
+
+		schemas.Add(testCmdQNameParamsUnlogged, istructs.SchemaKind_Object).
+			AddField("Password", istructs.DataKind_string, true)
+	})
+	defer tearDown(app)
 
 	testCmdQName := istructs.NewQName(istructs.SysPackage, "Test")
 	qryGreeter := istructsmem.NewCommandFunction(testCmdQName, testCmdQNameParams, testCmdQNameParamsUnlogged, istructs.NullQName, func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
@@ -363,11 +375,11 @@ func Test400BadRequests(t *testing.T) {
 		{"unknown app", ibus.Request{AppQName: "untill/unknown"}, "application not found"}, // TODO: simplify
 		{"bad request body", ibus.Request{Body: []byte("{wrong")}, "failed to unmarshal request body: invalid character 'w' looking for beginning of object key string"},
 		{"unknown func", ibus.Request{Resource: "c.sys.Unknown"}, "unknown function"},
-		{"args: field of wrong type provided", ibus.Request{Body: []byte(`{"args":{"Text":42}}`)}, "field type mismatch"},
+		{"args: field of wrong type provided", ibus.Request{Body: []byte(`{"args":{"Text":42}}`)}, "wrong field type"},
 		{"args: not an object", ibus.Request{Body: []byte(`{"args":42}`)}, `"args" field must be an object`},
 		{"args: missing at all with a required field", ibus.Request{Body: []byte(`{}`)}, ""},
 		{"unloggedArgs: not an object", ibus.Request{Body: []byte(`{"unloggedArgs":42,"args":{"Text":"txt"}}`)}, `"unloggedArgs" field must be an object`},
-		{"unloggedArgs: field of wrong type provided", ibus.Request{Body: []byte(`{"unloggedArgs":{"Password":42},"args":{"Text":"txt"}}`)}, "field type mismatch"},
+		{"unloggedArgs: field of wrong type provided", ibus.Request{Body: []byte(`{"unloggedArgs":{"Password":42},"args":{"Text":"txt"}}`)}, "wrong field type"},
 		{"unloggedArgs: missing required field of unlogged args, no unlogged args at all", ibus.Request{Body: []byte(`{"args":{"Text":"txt"}}`)}, ""},
 		{"cuds: not an object", ibus.Request{Body: []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"123"},"cuds":42}`)}, `field 'cuds' must be an array of objects`},
 	}
@@ -401,15 +413,18 @@ func Test400BadRequests(t *testing.T) {
 
 func TestAuthnz(t *testing.T) {
 	require := require.New(t)
-	app := setUp(t)
+
+	qNameTestDeniedCDoc := istructs.NewQName(istructs.SysPackage, "TestDeniedCDoc") // the same in core/iauthnzimpl
+
+	app := setUp(t, func(schemas schemas.SchemaCacheBuilder) {
+		schemas.Add(qNameTestDeniedCDoc, istructs.SchemaKind_CDoc)
+	})
 	defer tearDown(app)
 
 	qNameAllowedCmd := istructs.NewQName(istructs.SysPackage, "TestAllowedCmd")
-	qNameDeniedCmd := istructs.NewQName(istructs.SysPackage, "TestDeniedCmd")       // the same in core/iauthnzimpl
-	qNameTestDeniedCDoc := istructs.NewQName(istructs.SysPackage, "TestDeniedCDoc") // the same in core/iauthnzimpl
+	qNameDeniedCmd := istructs.NewQName(istructs.SysPackage, "TestDeniedCmd") // the same in core/iauthnzimpl
 	app.cfg.Resources.Add(istructsmem.NewCommandFunction(qNameDeniedCmd, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
 	app.cfg.Resources.Add(istructsmem.NewCommandFunction(qNameAllowedCmd, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
-	app.cfg.Schemas.Add(qNameTestDeniedCDoc, istructs.SchemaKind_CDoc)
 
 	pp := payloads.PrincipalPayload{
 		Login:       "testlogin",
@@ -478,7 +493,7 @@ func getAuthHeader(token string) map[string][]string {
 
 func TestBasicUsage_QNameJSONFunc(t *testing.T) {
 	require := require.New(t)
-	app := setUp(t)
+	app := setUp(t, func(schemas schemas.SchemaCacheBuilder) {})
 	defer tearDown(app)
 
 	ch := make(chan interface{})
@@ -510,21 +525,28 @@ func TestBasicUsage_QNameJSONFunc(t *testing.T) {
 
 func TestRateLimit(t *testing.T) {
 	require := require.New(t)
-	qName := istructs.NewQName(istructs.SysPackage, "MyCmd")
-	app := setUp(t, func(cfg *istructsmem.AppConfigType) {
-		cfg.Resources.Add(istructsmem.NewCommandFunction(
-			qName,
-			cfg.Schemas.Add(istructs.NewQName(istructs.SysPackage, "Params"), istructs.SchemaKind_Object).QName(),
-			istructs.NullQName,
-			istructs.NullQName,
-			istructsmem.NullCommandExec,
-		))
 
-		cfg.FunctionRateLimits.AddWorkspaceLimit(qName, istructs.RateLimit{
-			Period:                time.Minute,
-			MaxAllowedPerDuration: 2,
+	qName := istructs.NewQName(istructs.SysPackage, "MyCmd")
+	parsQName := istructs.NewQName(istructs.SysPackage, "Params")
+
+	app := setUp(t,
+		func(schemas schemas.SchemaCacheBuilder) {
+			schemas.Add(parsQName, istructs.SchemaKind_Object)
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(
+				qName,
+				parsQName,
+				istructs.NullQName,
+				istructs.NullQName,
+				istructsmem.NullCommandExec,
+			))
+
+			cfg.FunctionRateLimits.AddWorkspaceLimit(qName, istructs.RateLimit{
+				Period:                time.Minute,
+				MaxAllowedPerDuration: 2,
+			})
 		})
-	})
 	defer tearDown(app)
 
 	request := ibus.Request{
@@ -581,7 +603,7 @@ func replyBadRequest(bus ibus.IBus, sender interface{}, message string) {
 	})
 }
 
-func setUp(t *testing.T, cfgFuncs ...func(*istructsmem.AppConfigType)) testApp {
+func setUp(t *testing.T, cfgSchemas func(schemas schemas.SchemaCacheBuilder), cfgFuncs ...func(*istructsmem.AppConfigType)) testApp {
 	if coreutils.IsDebug() {
 		testTimeout = time.Hour
 	}
@@ -594,8 +616,16 @@ func setUp(t *testing.T, cfgFuncs ...func(*istructsmem.AppConfigType)) testApp {
 	cfgs := istructsmem.AppConfigsType{}
 	asf := istorage.ProvideMem()
 	appStorageProvider := istorageimpl.Provide(asf)
+
+	// schema constructions
+	schemas := schemas.NewSchemaCache()
+	ProvideJSONFuncParamsSchema(schemas)
+	if cfgSchemas != nil {
+		cfgSchemas(schemas)
+	}
+
 	// конфиг приложения airs-bp
-	cfg := cfgs.AddConfig(istructs.AppQName_untill_airs_bp)
+	cfg := cfgs.AddConfig(istructs.AppQName_untill_airs_bp, schemas)
 	for _, cfgFunc := range cfgFuncs {
 		cfgFunc(cfg)
 	}
@@ -634,7 +664,6 @@ func setUp(t *testing.T, cfgFuncs ...func(*istructsmem.AppConfigType)) testApp {
 		Subsciptions:           1000,
 		SubsciptionsPerSubject: 10,
 	})
-	ProvideJSONFuncParamsSchema(cfg)
 
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_untill_airs_bp)
