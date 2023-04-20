@@ -58,17 +58,17 @@ type WorkspaceStatement struct {
 type WorkspaceStmt struct {
 	Comment    *string               `parser:"@Comment?"`
 	Name       string                `parser:"'WORKSPACE' @Ident '('"`
-	Statements []*WorkspaceStatement `parser:"@@? (C_SEMICOLON @@)* C_SEMICOLON? ')'"`
+	Statements []*WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 }
 
 type OptQName struct {
-	Package string `parser:"(@Ident C_PKGSEPARATOR)?"`
+	Package string `parser:"(@Ident '.')?"`
 	Name    string `parser:"@Ident"`
 }
 
 type ProjectorStmt struct {
 	Comment *string `parser:"@Comment?"`
-	Name    string  `parser:"'PROJECTOR' ('ON' | @Ident 'ON')"`
+	Name    string  `parser:"'PROJECTOR' @Ident? ON"`
 	// TODO
 	// On string     `parser:"@(('COMMAND' 'ARGUMENT'?) |  'COMMAND' | 'INSERT'| 'UPDATE' | 'ACTIVATE'| 'DEACTIVATE' ))"`
 	On      string     `parser:"@(('COMMAND' 'ARGUMENT'?) |  'COMMAND' | ('INSERT' ('OR' 'UPDATE')?)  | ('UPDATE' ('OR' 'INSERT')?))"`
@@ -80,7 +80,7 @@ type TemplateStmt struct {
 	Comment   *string  `parser:"@Comment?"`
 	Name      string   `parser:"'TEMPLATE' @Ident 'OF' 'WORKSPACE'" `
 	Workspace OptQName `parser:"@@"`
-	Source    string   `parser:"'SOURCE' @Ident "`
+	Source    string   `parser:"'SOURCE' @Ident"`
 }
 
 type RoleStmt struct {
@@ -105,9 +105,9 @@ type UseTableStmt struct {
 }
 
 type UseTableItem struct {
-	Package   string `parser:"(@Ident C_PKGSEPARATOR)?"`
+	Package   string `parser:"(@Ident '.')?"`
 	Name      string `parser:"(@Ident "`
-	AllTables bool   `parser:"| @C_ALL)"`
+	AllTables bool   `parser:"| @'*')"`
 }
 
 /*type sequenceStmt struct {
@@ -138,7 +138,7 @@ type GrantStmt struct {
 type FunctionStmt struct {
 	Comment *string         `parser:"@Comment?"`
 	Name    string          `parser:"'FUNCTION' @Ident"`
-	Params  []FunctionParam `parser:"C_LEFTBRACKET @@? (C_COMMA @@)* C_RIGHTBRACKET"`
+	Params  []FunctionParam `parser:"'(' @@? (',' @@)* ')'"`
 	Returns OptQName        `parser:"'RETURNS' @@"`
 	Engine  EngineType      `parser:"'ENGINE' @@"`
 }
@@ -146,23 +146,23 @@ type FunctionStmt struct {
 type CommandStmt struct {
 	Comment *string         `parser:"@Comment?"`
 	Name    string          `parser:"'COMMAND' @Ident"`
-	Params  []FunctionParam `parser:"(C_LEFTBRACKET @@? (C_COMMA @@)* C_RIGHTBRACKET)?"`
+	Params  []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
 	Func    string          `parser:"'AS' @Ident"`
-	With    []TcqWithItem   `parser:"('WITH' @@ (C_COMMA @@)* )?"`
+	With    []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
 type TcqWithItem struct {
-	Comment *OptQName  `parser:"('Comment' C_EQUAL @@)"`
-	Tags    []OptQName `parser:"| ('Tags' C_EQUAL C_LEFTSQBRACKET @@ (C_COMMA @@)* C_RIGHTSQBRACKET)"`
+	Comment *OptQName  `parser:"('Comment' '=' @@)"`
+	Tags    []OptQName `parser:"| ('Tags' '=' '[' @@ (',' @@)* ']')"`
 }
 
 type QueryStmt struct {
 	Comment *string         `parser:"@Comment?"`
 	Name    string          `parser:"'QUERY' @Ident"`
-	Params  []FunctionParam `parser:"(C_LEFTBRACKET @@? (C_COMMA @@)* C_RIGHTBRACKET)?"`
+	Params  []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
 	Returns OptQName        `parser:"'RETURNS' @@"`
 	Func    string          `parser:"'AS' @Ident"`
-	With    []TcqWithItem   `parser:"('WITH' @@ (C_COMMA @@)* )?"`
+	With    []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
 type EngineType struct {
@@ -183,9 +183,9 @@ type NamedParam struct {
 type TableStmt struct {
 	Comment *string         `parser:"@Comment?"`
 	Name    string          `parser:"'TABLE' @Ident"`
-	Of      []OptQName      `parser:"('OF' @@ (C_COMMA @@)*)?"`
-	Items   []TableItemExpr `parser:"C_LEFTBRACKET @@ (C_COMMA @@)* C_RIGHTBRACKET"`
-	With    []TcqWithItem   `parser:"('WITH' @@ (C_COMMA @@)* )?"`
+	Of      []OptQName      `parser:"('OF' @@ (',' @@)*)?"`
+	Items   []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
+	With    []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
 type TableItemExpr struct {
@@ -205,12 +205,12 @@ type FieldExpr struct {
 	Name               string    `parser:"@Ident"`
 	Type               OptQName  `parser:"@@"`
 	NotNull            bool      `parser:"@(NOTNULL)?"`
-	Verifiable         bool      `parser:"@(VERIFIABLE)?"`
-	DefaultIntValue    *int      `parser:"(DEFAULT @Int)?"`
-	DefaultStringValue *string   `parser:"(DEFAULT @String)?"`
-	DefaultNextVal     *string   `parser:"(DEFAULTNEXTVAL C_LEFTBRACKET @Ident C_RIGHTBRACKET)?"`
-	References         *OptQName `parser:"(REFERENCES @@)?"`
-	CheckRegexp        *string   `parser:"(CHECK @String)?"`
+	Verifiable         bool      `parser:"@('VERIFIABLE')?"`
+	DefaultIntValue    *int      `parser:"('DEFAULT' @Int)?"`
+	DefaultStringValue *string   `parser:"('DEFAULT' @String)?"`
+	DefaultNextVal     *string   `parser:"(DEFAULTNEXTVAL  '(' @Ident ')')?"`
+	References         *OptQName `parser:"('REFERENCES' @@)?"`
+	CheckRegexp        *string   `parser:"('CHECK' @String)?"`
 }
 
 type ViewStmt struct {
