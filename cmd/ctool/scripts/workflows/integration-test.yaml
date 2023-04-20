@@ -1,0 +1,76 @@
+# Copyright (c) 2023 Sigma-Soft, Ltd.
+# @author Aleksei Ponomarev
+#
+# To set up a secret in your GitHub repository, follow these steps:
+#    - Go to your repository in GitHub and click on the "Settings" tab.
+#    - In the left sidebar, click on "Secrets".
+#    - Click on the "New secret" button.
+#    - Enter a name for your secret (e.g., "AWS_ACCESS_KEY_ID"), and paste in the value of your AWS access key ID.
+#    - Click on the "Add secret" button to save the secret.
+# You can repeat these steps for each secret you need to store:
+#    -  such as your AWS secret access key
+#    -  SSH private key
+#    -  and any other sensitive information.
+# To use the secrets in your GitHub Actions workflow, you can reference them using the syntax ${{ secrets.SECRET_NAME }}.
+
+name: Terraform Deployment
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check Issue
+      run: |
+        if [ "${{ github.event.issue.title }}" != "ctoolintegrationtest" ]; then
+          echo "Issue title is not 'paatest', skipping deployment"
+          exit 0
+        fi
+        if [ "${{ github.event.issue.user.login }}" != "expected_user" ]; then
+          echo "Issue opened by wrong user, skipping deployment"
+          exit 0
+        fi
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        backend-config: 'terraform/backend.hcl'
+
+    - name: Terraform Init
+      run: terraform init terraform/
+
+    - name: Apply Terraform
+      uses: terraform-actions/terraform-apply@v1
+      with:
+        aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        working-directory: 'terraform/'
+        args: -auto-approve
+ 
+    - name: Run ctool init
+      run: |
+        ctool init --key=key1
+
+    - name: Run ctool deploy
+      run: |
+        ctool deploy --key=key2
+
+   - name: Wait for ctool initialization
+     run: |
+       count=0
+       while [ $count -lt 10 ]; do
+         if ctool status | grep "initialized"; then
+           break
+         fi
+         sleep 5
+         count=$((count+1))
+       done
+       if [ $count -eq 20 ]; then
+         echo "ctool initialization timed out"
+         exit 1
+       fi
