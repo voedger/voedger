@@ -13,16 +13,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//go:embed testapp1/*.sql
+//go:embed example_app/*.sql
 var fs embed.FS
 
-//go:embed testapp1/expectedParsed.schema
+//go:embed example_app/expectedParsed.schema
 var expectedParsedExampledSchemaStr string
 
 func Test_BasicUsage(t *testing.T) {
 
 	parser := ProvideEmbedParser()
-	parsedSchema, err := parser(fs, "testapp1")
+	parsedSchema, err := parser(fs, "example_app")
 	require.NoError(t, err)
 
 	parsedSchemaStr := repr.String(parsedSchema, repr.Indent(" "))
