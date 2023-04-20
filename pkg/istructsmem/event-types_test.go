@@ -24,8 +24,7 @@ func TestEventBuilder_Core(t *testing.T) {
 	test := test()
 
 	// gets AppStructProvider and AppStructs
-	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -1038,8 +1037,7 @@ func TestEventBuild_Error(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -1404,8 +1402,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)

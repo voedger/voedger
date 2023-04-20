@@ -34,11 +34,12 @@ func TestPLogStorage_Read(t *testing.T) {
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
 
-		_ = s.Read(kb, func(key istructs.IKey, _ istructs.IStateValue) (err error) {
+		err = s.Read(kb, func(key istructs.IKey, _ istructs.IStateValue) (err error) {
 			touched = true
 			require.Equal(int64(1), key.AsInt64(Field_Offset))
 			return
 		})
+		require.NoError(err)
 
 		require.True(touched)
 	})

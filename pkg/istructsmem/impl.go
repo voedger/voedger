@@ -438,7 +438,11 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 			if err != nil {
 				return err
 			}
-			if existsRecord(id) {
+			isExists, err := existsRecord(id)
+			if err != nil {
+				return err
+			}
+			if isExists {
 				return fmt.Errorf("can not create singleton, CDOC «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
 			}
 		}

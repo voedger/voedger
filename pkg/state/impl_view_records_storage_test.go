@@ -131,10 +131,11 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 		k, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
 		require.NoError(err)
 
-		_ = s.Read(k, func(istructs.IKey, istructs.IStateValue) error {
+		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error {
 			touched = true
 			return nil
 		})
+		require.NoError(err)
 
 		require.True(touched)
 	})

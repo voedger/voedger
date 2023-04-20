@@ -81,7 +81,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		k3.PutInt64(Field_WSID, 2)
 
 		rr := make([]result, 0)
-		_ = s.CanExistAll([]istructs.IStateKeyBuilder{k1, k2, k3}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
+		err = s.CanExistAll([]istructs.IStateKeyBuilder{k1, k2, k3}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
 			rr = append(rr, result{
 				key:    key.(*recordsKeyBuilder),
 				value:  value,
@@ -89,6 +89,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 			})
 			return
 		})
+		require.NoError(err)
 
 		require.Len(rr, 3)
 		require.Equal(istructs.RecordID(1), rr[0].key.(*recordsKeyBuilder).id)
@@ -172,7 +173,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		k3.PutInt64(Field_WSID, 3)
 
 		rr := make([]result, 0)
-		_ = s.CanExistAll([]istructs.IStateKeyBuilder{k1, k2, k3}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
+		err = s.CanExistAll([]istructs.IStateKeyBuilder{k1, k2, k3}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
 			rr = append(rr, result{
 				key:    key.(*recordsKeyBuilder),
 				value:  value,
@@ -180,6 +181,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 			})
 			return
 		})
+		require.NoError(err)
 
 		require.Len(rr, 3)
 		require.Equal(int64(10), rr[0].value.AsInt64("number"))

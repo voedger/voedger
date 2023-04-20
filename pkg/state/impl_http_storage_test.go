@@ -41,10 +41,11 @@ func TestHttpStorage_BasicUsage(t *testing.T) {
 	k.PutBytes(Field_Body, []byte(`{"hello":"api"}`))
 	require.Equal(fmt.Sprintf(`%s %s {"hello":"api"}`, http.MethodPost, ts.URL), k.(fmt.Stringer).String())
 	var v istructs.IStateValue
-	_ = s.Read(k, func(_ istructs.IKey, value istructs.IStateValue) (err error) {
+	err = s.Read(k, func(_ istructs.IKey, value istructs.IStateValue) (err error) {
 		v = value
 		return
 	})
+	require.NoError(err)
 	require.Equal([]byte(`{"hello":"storage"}`), v.AsBytes(Field_Body))
 	require.Equal(`{"hello":"storage"}`, v.AsString(Field_Body))
 	require.Equal(int32(http.StatusOK), v.AsInt32(Field_StatusCode))

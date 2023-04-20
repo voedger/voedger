@@ -28,14 +28,14 @@ func TestHostState_BasicUsage(t *testing.T) {
 		key.PutString("pkFld", "pkVal")
 
 		// Call to storage
-		_ = state.MustNotExist(key)
+		require.NoError(state.MustNotExist(key))
 	}
 
 	// Run extension
 	extension(hostState)
 
-	_ = hostState.ValidateIntents()
-	_ = hostState.ApplyIntents()
+	require.NoError(hostState.ValidateIntents())
+	require.NoError(hostState.ApplyIntents())
 }
 
 func mockedHostStateStructs() istructs.IAppStructs {
@@ -177,12 +177,13 @@ func TestHostState_CanExistAll(t *testing.T) {
 		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
 		require.NoError(err)
 
-		_ = s.CanExistAll([]istructs.IStateKeyBuilder{k}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
+		err = s.CanExistAll([]istructs.IStateKeyBuilder{k}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
 			times++
 			require.Equal(k, key)
 			require.True(ok)
 			return
 		})
+		require.NoError(err)
 
 		require.Equal(1, times)
 	})
@@ -284,11 +285,12 @@ func TestHostState_MustExistAll(t *testing.T) {
 		require.NoError(err)
 		kk := make([]istructs.IKeyBuilder, 0, 2)
 
-		_ = s.MustExistAll([]istructs.IStateKeyBuilder{k1, k2}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
+		err = s.MustExistAll([]istructs.IStateKeyBuilder{k1, k2}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
 			kk = append(kk, key)
 			require.True(ok)
 			return
 		})
+		require.NoError(err)
 
 		require.Equal(k1, kk[0])
 		require.Equal(k1, kk[1])

@@ -850,8 +850,7 @@ func Test_ValidateErrors(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)

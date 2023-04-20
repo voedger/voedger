@@ -295,8 +295,7 @@ func TestBasicUsage_Resources(t *testing.T) {
 	test := test()
 
 	// gets AppStructProvider and AppStructs
-	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -366,8 +365,7 @@ func TestBasicUsage_Schemas(t *testing.T) {
 	test := test()
 
 	// gets AppStructProvider and AppStructs
-	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -517,8 +515,7 @@ func Test_Provide(t *testing.T) {
 	})
 
 	t.Run("check application ClusterAppID() and AppQName()", func(t *testing.T) {
-		provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-		require.NoError(err)
+		provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 		app, err := provider.AppStructs(test.appName)
 		require.NoError(err)

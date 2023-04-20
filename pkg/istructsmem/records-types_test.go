@@ -25,8 +25,7 @@ func Test_RecordsRead(t *testing.T) {
 	storage := teststore.NewTestStorage()
 	storageProvider := teststore.NewTestStorageProvider(storage)
 
-	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)

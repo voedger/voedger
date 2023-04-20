@@ -395,7 +395,11 @@ func (cud *cudType) applyRecs(exists existsRecordType, load loadRecordFuncType, 
 			if err != nil {
 				return err
 			}
-			if exists(id) {
+			isExists, err := exists(id)
+			if err != nil {
+				return err
+			}
+			if isExists {
 				return fmt.Errorf("can not create singleton, CDOC «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
 			}
 		}
