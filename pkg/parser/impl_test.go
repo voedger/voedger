@@ -13,14 +13,15 @@ import (
 )
 
 //go:embed testapp1/*.sql
-var testapp1 embed.FS
+var fs embed.FS
 
 //go:embed testapp1/expectedParsed.schema
 var expectedParsedExampledSchemaStr string
 
 func Test_BasicUsage(t *testing.T) {
 
-	parsedSchema, err := embedParserImpl(testapp1, "testapp1")
+	parser := ProvideEmbedParser()
+	parsedSchema, err := parser(fs, "testapp1")
 	require.NoError(t, err)
 
 	parsedSchemaStr := repr.String(parsedSchema, repr.Indent(" "))
