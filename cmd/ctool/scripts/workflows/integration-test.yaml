@@ -51,7 +51,7 @@ jobs:
         aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         working-directory: 'terraform/'
         args: -auto-approve
- 
+        
     - name: Run ctool init
       run: |
         ctool init --key=key1
@@ -59,12 +59,12 @@ jobs:
     - name: Run ctool deploy
       run: |
         ctool deploy --key=key2
-
-   - name: Wait for ctool initialization
+ 
+   - name: Smoke test: wait for scylla initialization
      run: |
        count=0
        while [ $count -lt 10 ]; do
-         if ctool status | grep "initialized"; then
+         if ssh user@host nodetool staus | grep "UN" | wc -l 3; then
            break
          fi
          sleep 5
@@ -74,3 +74,4 @@ jobs:
          echo "ctool initialization timed out"
          exit 1
        fi
+      
