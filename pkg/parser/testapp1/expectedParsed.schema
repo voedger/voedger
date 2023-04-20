@@ -23,6 +23,7 @@
   },
   {
    Function: &sqlschema.FunctionStmt{
+    Comment: &"-- Comment for function",
     Name: "MyTableValidator",
     Returns: sqlschema.OptQName{
      Name: "void",
@@ -86,6 +87,7 @@
   },
   {
    Table: &sqlschema.TableStmt{
+    Comment: &"-- Comment for table",
     Name: "air_table_plan",
     Of: []sqlschema.OptQName{
      {

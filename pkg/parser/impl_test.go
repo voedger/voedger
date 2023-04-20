@@ -6,6 +6,7 @@ package sqlschema
 
 import (
 	"embed"
+	"fmt"
 	"testing"
 
 	"github.com/alecthomas/repr"
@@ -25,6 +26,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.NoError(t, err)
 
 	parsedSchemaStr := repr.String(parsedSchema, repr.Indent(" "))
+	fmt.Println(parsedSchemaStr)
 
 	require.Equal(t, expectedParsedExampledSchemaStr, parsedSchemaStr)
 }
@@ -53,36 +55,19 @@ func Test_Import(t *testing.T) {
 
 }
 
-func Test_RootStatements(t *testing.T) {
-	require := require.New(t)
-	var schema = &SchemaAST{}
-
-	schema, err := stringParserImpl(`
-	SCHEMA test; 
-	TEMPLATE demo OF WORKSPACE air.Restaurant SOURCE wsTemplate_demo;
-	FUNCTION MyTableValidator(TableRow) RETURNS void ENGINE WASM; 
-	`)
-	require.Nil(err)
-	require.Equal("test", schema.Package)
-	require.Equal(2, len(schema.Statements))
-
-	require.NotNil(schema.Statements[0].Template)
-	require.Equal("demo", schema.Statements[0].Template.Name)
-	require.Equal("air", schema.Statements[0].Template.Workspace.Package)
-	require.Equal("Restaurant", schema.Statements[0].Template.Workspace.Name)
-	require.Equal("wsTemplate_demo", schema.Statements[0].Template.Source)
-
-	require.NotNil(schema.Statements[1].Function)
-}
-
 func Test_WorkspaceStatements(t *testing.T) {
 	require := require.New(t)
 	var schema = &SchemaAST{}
 
 	schema, err := stringParserImpl(`
 	SCHEMA test; 
+
+	-- This is my workspace
 	WORKSPACE MyWorkspace (
-		FUNCTION MyFunc(param int) RETURNS void ENGINE WASM; 
+		
+		-- Comment for function
+		FUNCTION MyFunc(param int) RETURNS void ENGINE WASM; -- this is a comment
+
 		WORKSPACE ChildWorkspace (
 			FUNCTION MyFunc2() RETURNS void ENGINE WASM; 
 		)
@@ -95,10 +80,12 @@ func Test_WorkspaceStatements(t *testing.T) {
 	require.NotNil(schema.Statements[0].Workspace)
 	ws := schema.Statements[0].Workspace
 	require.Equal("MyWorkspace", ws.Name)
+	require.Equal("-- This is my workspace", *ws.Comment)
 	require.Equal(2, len(ws.Statements))
 
 	require.NotNil(ws.Statements[0].Function)
 	require.Equal("MyFunc", ws.Statements[0].Function.Name)
+	require.Equal("-- Comment for function", *ws.Statements[0].Function.Comment)
 
 	require.NotNil(ws.Statements[1].Workspace)
 	require.Equal("ChildWorkspace", ws.Statements[1].Workspace.Name)

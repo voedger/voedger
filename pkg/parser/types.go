@@ -56,6 +56,7 @@ type WorkspaceStatement struct {
 }
 
 type WorkspaceStmt struct {
+	Comment    *string               `parser:"@Comment?"`
 	Name       string                `parser:"'WORKSPACE' @Ident '('"`
 	Statements []*WorkspaceStatement `parser:"@@? (C_SEMICOLON @@)* C_SEMICOLON? ')'"`
 }
@@ -66,7 +67,8 @@ type OptQName struct {
 }
 
 type ProjectorStmt struct {
-	Name string `parser:"'PROJECTOR' ('ON' | @Ident 'ON')"`
+	Comment *string `parser:"@Comment?"`
+	Name    string  `parser:"'PROJECTOR' ('ON' | @Ident 'ON')"`
 	// TODO
 	// On string     `parser:"@(('COMMAND' 'ARGUMENT'?) |  'COMMAND' | 'INSERT'| 'UPDATE' | 'ACTIVATE'| 'DEACTIVATE' ))"`
 	On      string     `parser:"@(('COMMAND' 'ARGUMENT'?) |  'COMMAND' | ('INSERT' ('OR' 'UPDATE')?)  | ('UPDATE' ('OR' 'INSERT')?))"`
@@ -75,26 +77,31 @@ type ProjectorStmt struct {
 }
 
 type TemplateStmt struct {
+	Comment   *string  `parser:"@Comment?"`
 	Name      string   `parser:"'TEMPLATE' @Ident 'OF' 'WORKSPACE'" `
 	Workspace OptQName `parser:"@@"`
 	Source    string   `parser:"'SOURCE' @Ident "`
 }
 
 type RoleStmt struct {
-	Name string `parser:"'ROLE' @Ident"`
+	Comment *string `parser:"@Comment?"`
+	Name    string  `parser:"'ROLE' @Ident"`
 }
 
 type TagStmt struct {
-	Name string `parser:"'TAG' @Ident"`
+	Comment *string `parser:"@Comment?"`
+	Name    string  `parser:"'TAG' @Ident"`
 }
 
 type CommentStmt struct {
-	Name  string `parser:"'COMMENT' @Ident"`
-	Value string `parser:"@String"`
+	Comment *string `parser:"@Comment?"`
+	Name    string  `parser:"'COMMENT' @Ident"`
+	Value   string  `parser:"@String"`
 }
 
 type UseTableStmt struct {
-	Table UseTableItem `parser:"'USE' 'TABLE' @@"`
+	Comment *string      `parser:"@Comment?"`
+	Table   UseTableItem `parser:"'USE' 'TABLE' @@"`
 }
 
 type UseTableItem struct {
@@ -113,20 +120,23 @@ type UseTableItem struct {
 }*/
 
 type RateStmt struct {
-	Name   string `parser:"'RATE' @Ident"`
-	Amount int    `parser:"@Int"`
-	Per    string `parser:"'PER' @('SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'YEAR')"`
-	PerIP  bool   `parser:"(@('PER' 'IP'))?"`
+	Comment *string `parser:"@Comment?"`
+	Name    string  `parser:"'RATE' @Ident"`
+	Amount  int     `parser:"@Int"`
+	Per     string  `parser:"'PER' @('SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'YEAR')"`
+	PerIP   bool    `parser:"(@('PER' 'IP'))?"`
 }
 
 type GrantStmt struct {
-	Grants []string `parser:"'GRANT' @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE') (','  @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE'))*"`
-	On     string   `parser:"'ON' @('TABLE' | ('ALL' 'TABLES' 'WITH' 'TAG') | 'COMMAND' | ('ALL' 'COMMANDS' 'WITH' 'TAG') | 'QUERY' | ('ALL' 'QUERIES' 'WITH' 'TAG'))"`
-	Target OptQName `parser:"@@"`
-	To     string   `parser:"'TO' @Ident"`
+	Comment *string  `parser:"@Comment?"`
+	Grants  []string `parser:"'GRANT' @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE') (','  @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE'))*"`
+	On      string   `parser:"'ON' @('TABLE' | ('ALL' 'TABLES' 'WITH' 'TAG') | 'COMMAND' | ('ALL' 'COMMANDS' 'WITH' 'TAG') | 'QUERY' | ('ALL' 'QUERIES' 'WITH' 'TAG'))"`
+	Target  OptQName `parser:"@@"`
+	To      string   `parser:"'TO' @Ident"`
 }
 
 type FunctionStmt struct {
+	Comment *string         `parser:"@Comment?"`
 	Name    string          `parser:"'FUNCTION' @Ident"`
 	Params  []FunctionParam `parser:"C_LEFTBRACKET @@? (C_COMMA @@)* C_RIGHTBRACKET"`
 	Returns OptQName        `parser:"'RETURNS' @@"`
@@ -134,10 +144,11 @@ type FunctionStmt struct {
 }
 
 type CommandStmt struct {
-	Name   string          `parser:"'COMMAND' @Ident"`
-	Params []FunctionParam `parser:"(C_LEFTBRACKET @@? (C_COMMA @@)* C_RIGHTBRACKET)?"`
-	Func   string          `parser:"'AS' @Ident"`
-	With   []TcqWithItem   `parser:"('WITH' @@ (C_COMMA @@)* )?"`
+	Comment *string         `parser:"@Comment?"`
+	Name    string          `parser:"'COMMAND' @Ident"`
+	Params  []FunctionParam `parser:"(C_LEFTBRACKET @@? (C_COMMA @@)* C_RIGHTBRACKET)?"`
+	Func    string          `parser:"'AS' @Ident"`
+	With    []TcqWithItem   `parser:"('WITH' @@ (C_COMMA @@)* )?"`
 }
 
 type TcqWithItem struct {
@@ -146,6 +157,7 @@ type TcqWithItem struct {
 }
 
 type QueryStmt struct {
+	Comment *string         `parser:"@Comment?"`
 	Name    string          `parser:"'QUERY' @Ident"`
 	Params  []FunctionParam `parser:"(C_LEFTBRACKET @@? (C_COMMA @@)* C_RIGHTBRACKET)?"`
 	Returns OptQName        `parser:"'RETURNS' @@"`
@@ -169,10 +181,11 @@ type NamedParam struct {
 }
 
 type TableStmt struct {
-	Name  string          `parser:"'TABLE' @Ident"`
-	Of    []OptQName      `parser:"('OF' @@ (C_COMMA @@)*)?"`
-	Items []TableItemExpr `parser:"C_LEFTBRACKET @@ (C_COMMA @@)* C_RIGHTBRACKET"`
-	With  []TcqWithItem   `parser:"('WITH' @@ (C_COMMA @@)* )?"`
+	Comment *string         `parser:"@Comment?"`
+	Name    string          `parser:"'TABLE' @Ident"`
+	Of      []OptQName      `parser:"('OF' @@ (C_COMMA @@)*)?"`
+	Items   []TableItemExpr `parser:"C_LEFTBRACKET @@ (C_COMMA @@)* C_RIGHTBRACKET"`
+	With    []TcqWithItem   `parser:"('WITH' @@ (C_COMMA @@)* )?"`
 }
 
 type TableItemExpr struct {
@@ -201,6 +214,7 @@ type FieldExpr struct {
 }
 
 type ViewStmt struct {
+	Comment  *string        `parser:"@Comment?"`
 	Name     string         `parser:"'VIEW' @Ident"`
 	Fields   []ViewField    `parser:"'(' @@? (',' @@)* ')'"`
 	ResultOf OptQName       `parser:"'AS' 'RESULT' 'OF' @@"`

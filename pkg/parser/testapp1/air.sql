@@ -6,16 +6,18 @@ IMPORT SCHEMA "github.com/untillpro/airsbp" AS air;
 COMMENT BackofficeComment "Backoffice Comment";
 TAG BackofficeTag;
 
+-- Comment for function
 FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
 FUNCTION MyTableValidator(TableRow) RETURNS string ENGINE WASM;
 FUNCTION MyTableValidator(param1 aaa.TableRow, bbb.string) RETURNS ccc.TableRow ENGINE WASM;
 
 ROLE UntillPaymentsUser;
 
+-- Comment for table
 TABLE air_table_plan OF CDOC (
     fstate int,
     name text NOT NULL,
-    vf text NOT NULL VERIFIABLE,
+    vf text NOT NULL VERIFIABLE, -- Comment
     i1 int DEFAULT 1,
     s1 text DEFAULT "a",
     ii int DEFAULT NEXTVAL(sequence),
