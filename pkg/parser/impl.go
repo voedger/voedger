@@ -40,7 +40,11 @@ func parse(s string) (*SchemaAST, error) {
 }
 
 func stringParserImpl(s string) (*SchemaAST, error) {
-	return parse(s)
+	parsed, err := parse(s)
+	if err != nil {
+		return nil, err
+	}
+	return analyse(parsed)
 }
 
 func mergeSchemas(mergeFrom, mergeTo *SchemaAST) {
@@ -75,13 +79,36 @@ func embedParserImpl(fs embed.FS, dir string) (*SchemaAST, error) {
 	if len(schemas) == 0 {
 		return nil, ErrDirContainsNoSchemaFiles
 	}
-	firstSchema := schemas[0]
+	head := schemas[0]
 	for i := 1; i < len(schemas); i++ {
 		schema := schemas[i]
-		if schema.Package != firstSchema.Package {
+		if schema.Package != head.Package {
 			return nil, ErrDirContainsDifferentSchemas
 		}
-		mergeSchemas(schema, firstSchema)
+		mergeSchemas(schema, head)
 	}
-	return firstSchema, nil
+	return analyse(head)
+}
+
+func analyse(schema *SchemaAST) (*SchemaAST, error) {
+
+	// TODO: include pos
+	namedIndex := make(map[string]int)
+
+	for i := 0; i < len(schema.Statements); i++ {
+		var ii interface{} = &schema.Statements[i]
+
+		if statement, ok := ii.(IStatement); ok {
+			stmt := statement.Stmt()
+			// TODO: recurse into workspaces
+			if named, ok := stmt.(INamedStatement); ok {
+				if _, ok := namedIndex[named.GetName()]; ok {
+					return schema, ErrSchemaContainsDuplicateName(schema.Package, named.GetName())
+				}
+				namedIndex[named.GetName()] = i
+			}
+		}
+
+	}
+	return schema, nil
 }

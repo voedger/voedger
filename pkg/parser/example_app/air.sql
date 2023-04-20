@@ -8,8 +8,8 @@ TAG BackofficeTag;
 
 -- Comment for function
 FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
-FUNCTION MyTableValidator(TableRow) RETURNS string ENGINE WASM;
-FUNCTION MyTableValidator(param1 aaa.TableRow, bbb.string) RETURNS ccc.TableRow ENGINE WASM;
+FUNCTION MyTableValidator2(TableRow) RETURNS string ENGINE WASM;
+FUNCTION MyTableValidator3(param1 aaa.TableRow, bbb.string) RETURNS ccc.TableRow ENGINE WASM;
 
 ROLE UntillPaymentsUser;
 

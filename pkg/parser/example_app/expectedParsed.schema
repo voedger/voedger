@@ -35,7 +35,7 @@
   },
   {
    Function: &sqlschema.FunctionStmt{
-    Name: "MyTableValidator",
+    Name: "MyTableValidator2",
     Params: []sqlschema.FunctionParam{
      {
       UnnamedParamType: &sqlschema.OptQName{
@@ -53,7 +53,7 @@
   },
   {
    Function: &sqlschema.FunctionStmt{
-    Name: "MyTableValidator",
+    Name: "MyTableValidator3",
     Params: []sqlschema.FunctionParam{
      {
       NamedParam: &sqlschema.NamedParam{

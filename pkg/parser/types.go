@@ -5,10 +5,23 @@
 
 package sqlschema
 
-import "embed"
+import (
+	"embed"
+)
 
 type EmbedParser func(fs embed.FS, dir string) (*SchemaAST, error)
 type StringParser func(string) (*SchemaAST, error)
+
+type IStatement interface {
+	Stmt() interface{}
+}
+
+type INamedStatement interface {
+	GetName() string
+}
+type IWorkspace interface {
+	GetStatements() []*WorkspaceStatement
+}
 
 type SchemaAST struct {
 	Package    string          `parser:"'SCHEMA' @Ident ';'"`
@@ -35,6 +48,31 @@ type RootStatement struct {
 	// Sequence  *sequenceStmt  `parser:"| @@"`
 }
 
+func (s *RootStatement) Stmt() interface{} {
+	if s.Template != nil {
+		return s.Template
+	}
+	if s.Role != nil {
+		return s.Role
+	}
+	if s.Comment != nil {
+		return s.Comment
+	}
+	if s.Tag != nil {
+		return s.Tag
+	}
+	if s.Function != nil {
+		return s.Function
+	}
+	if s.Workspace != nil {
+		return s.Workspace
+	}
+	if s.Table != nil {
+		return s.Table
+	}
+	return nil
+}
+
 type WorkspaceStatement struct {
 	// Only allowed in workspace
 	Projector *ProjectorStmt `parser:"@@"`
@@ -55,11 +93,57 @@ type WorkspaceStatement struct {
 	Grant *GrantStmt `parser:"| @@"`
 }
 
+func (s *WorkspaceStatement) Stmt() interface{} {
+	if s.Projector != nil {
+		return s.Projector
+	}
+	if s.Command != nil {
+		return s.Command
+	}
+	if s.Query != nil {
+		return s.Query
+	}
+	if s.Rate != nil {
+		return s.Rate
+	}
+	if s.View != nil {
+		return s.View
+	}
+	if s.UseTable != nil {
+		return s.UseTable
+	}
+	if s.Role != nil {
+		return s.Role
+	}
+	if s.Comment != nil {
+		return s.Comment
+	}
+	if s.Tag != nil {
+		return s.Tag
+	}
+	if s.Function != nil {
+		return s.Function
+	}
+	if s.Workspace != nil {
+		return s.Workspace
+	}
+	if s.Table != nil {
+		return s.Table
+	}
+	if s.Grant != nil {
+		return s.Grant
+	}
+	return nil
+}
+
 type WorkspaceStmt struct {
 	Comment    *string               `parser:"@Comment?"`
 	Name       string                `parser:"'WORKSPACE' @Ident '('"`
 	Statements []*WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 }
+
+func (s WorkspaceStmt) GetName() string                      { return s.Name }
+func (s WorkspaceStmt) GetStatements() []*WorkspaceStatement { return s.Statements }
 
 type OptQName struct {
 	Package string `parser:"(@Ident '.')?"`
@@ -76,6 +160,8 @@ type ProjectorStmt struct {
 	Func    OptQName   `parser:"'AS' @@"`
 }
 
+func (s ProjectorStmt) GetName() string { return s.Name }
+
 type TemplateStmt struct {
 	Comment   *string  `parser:"@Comment?"`
 	Name      string   `parser:"'TEMPLATE' @Ident 'OF' 'WORKSPACE'" `
@@ -83,21 +169,29 @@ type TemplateStmt struct {
 	Source    string   `parser:"'SOURCE' @Ident"`
 }
 
+func (s TemplateStmt) GetName() string { return s.Name }
+
 type RoleStmt struct {
 	Comment *string `parser:"@Comment?"`
 	Name    string  `parser:"'ROLE' @Ident"`
 }
+
+func (s RoleStmt) GetName() string { return s.Name }
 
 type TagStmt struct {
 	Comment *string `parser:"@Comment?"`
 	Name    string  `parser:"'TAG' @Ident"`
 }
 
+func (s TagStmt) GetName() string { return s.Name }
+
 type CommentStmt struct {
 	Comment *string `parser:"@Comment?"`
 	Name    string  `parser:"'COMMENT' @Ident"`
 	Value   string  `parser:"@String"`
 }
+
+func (s CommentStmt) GetName() string { return s.Name }
 
 type UseTableStmt struct {
 	Comment *string      `parser:"@Comment?"`
@@ -127,6 +221,8 @@ type RateStmt struct {
 	PerIP   bool    `parser:"(@('PER' 'IP'))?"`
 }
 
+func (s RateStmt) GetName() string { return s.Name }
+
 type GrantStmt struct {
 	Comment *string  `parser:"@Comment?"`
 	Grants  []string `parser:"'GRANT' @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE') (','  @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE'))*"`
@@ -143,6 +239,8 @@ type FunctionStmt struct {
 	Engine  EngineType      `parser:"'ENGINE' @@"`
 }
 
+func (s FunctionStmt) GetName() string { return s.Name }
+
 type CommandStmt struct {
 	Comment *string         `parser:"@Comment?"`
 	Name    string          `parser:"'COMMAND' @Ident"`
@@ -150,6 +248,8 @@ type CommandStmt struct {
 	Func    string          `parser:"'AS' @Ident"`
 	With    []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
 }
+
+func (s CommandStmt) GetName() string { return s.Name }
 
 type TcqWithItem struct {
 	Comment *OptQName  `parser:"('Comment' '=' @@)"`
@@ -164,6 +264,8 @@ type QueryStmt struct {
 	Func    string          `parser:"'AS' @Ident"`
 	With    []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
 }
+
+func (s QueryStmt) GetName() string { return s.Name }
 
 type EngineType struct {
 	WASM    bool `parser:"@'WASM'"`
@@ -187,6 +289,8 @@ type TableStmt struct {
 	Items   []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
 	With    []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
 }
+
+func (s TableStmt) GetName() string { return s.Name }
 
 type TableItemExpr struct {
 	Table  *TableStmt  `parser:"@@"`
@@ -220,6 +324,8 @@ type ViewStmt struct {
 	ResultOf OptQName       `parser:"'AS' 'RESULT' 'OF' @@"`
 	With     []ViewWithItem `parser:"'WITH' @@ (',' @@)* "`
 }
+
+func (s ViewStmt) GetName() string { return s.Name }
 
 type ViewField struct {
 	Name string `parser:"@Ident"`
