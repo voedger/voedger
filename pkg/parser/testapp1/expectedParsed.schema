@@ -1,0 +1,672 @@
+&sqlschema.SchemaAST{
+ Package: "air",
+ Imports: []sqlschema.ImportStmt{
+  {
+   Name: "\"github.com/untillpro/untill\"",
+  },
+  {
+   Name: "\"github.com/untillpro/airsbp\"",
+   Alias: &"air",
+  },
+ },
+ Statements: []sqlschema.RootStatement{
+  {
+   Comment: &sqlschema.CommentStmt{
+    Name: "BackofficeComment",
+    Value: "\"Backoffice Comment\"",
+   },
+  },
+  {
+   Tag: &sqlschema.TagStmt{
+    Name: "BackofficeTag",
+   },
+  },
+  {
+   Function: &sqlschema.FunctionStmt{
+    Name: "MyTableValidator",
+    Returns: sqlschema.OptQName{
+     Name: "void",
+    },
+    Engine: sqlschema.EngineType{
+     Builtin: true,
+    },
+   },
+  },
+  {
+   Function: &sqlschema.FunctionStmt{
+    Name: "MyTableValidator",
+    Params: []sqlschema.FunctionParam{
+     {
+      UnnamedParamType: &sqlschema.OptQName{
+       Name: "TableRow",
+      },
+     },
+    },
+    Returns: sqlschema.OptQName{
+     Name: "string",
+    },
+    Engine: sqlschema.EngineType{
+     WASM: true,
+    },
+   },
+  },
+  {
+   Function: &sqlschema.FunctionStmt{
+    Name: "MyTableValidator",
+    Params: []sqlschema.FunctionParam{
+     {
+      NamedParam: &sqlschema.NamedParam{
+       Name: "param1",
+       Type: sqlschema.OptQName{
+        Package: "aaa",
+        Name: "TableRow",
+       },
+      },
+     },
+     {
+      UnnamedParamType: &sqlschema.OptQName{
+       Package: "bbb",
+       Name: "string",
+      },
+     },
+    },
+    Returns: sqlschema.OptQName{
+     Package: "ccc",
+     Name: "TableRow",
+    },
+    Engine: sqlschema.EngineType{
+     WASM: true,
+    },
+   },
+  },
+  {
+   Role: &sqlschema.RoleStmt{
+    Name: "UntillPaymentsUser",
+   },
+  },
+  {
+   Table: &sqlschema.TableStmt{
+    Name: "air_table_plan",
+    Of: []sqlschema.OptQName{
+     {
+      Name: "CDOC",
+     },
+    },
+    Items: []sqlschema.TableItemExpr{
+     {
+      Field: &sqlschema.FieldExpr{
+       Name: "fstate",
+       Type: sqlschema.OptQName{
+        Name: "int",
+       },
+      },
+     },
+     {
+      Field: &sqlschema.FieldExpr{
+       Name: "name",
+       Type: sqlschema.OptQName{
+        Name: "text",
+       },
+       NotNull: true,
+      },
+     },
+     {
+      Field: &sqlschema.FieldExpr{
+       Name: "vf",
+       Type: sqlschema.OptQName{
+        Name: "text",
+       },
+       NotNull: true,
+       Verifiable: true,
+      },
+     },
+     {
+      Field: &sqlschema.FieldExpr{
+       Name: "i1",
+       Type: sqlschema.OptQName{
+        Name: "int",
+       },
+       DefaultIntValue: &1,
+      },
+     },
+     {
+      Field: &sqlschema.FieldExpr{
+       Name: "s1",
+       Type: sqlschema.OptQName{
+        Name: "text",
+       },
+       DefaultStringValue: &"\"a\"",
+      },
+     },
+     {
+      Field: &sqlschema.FieldExpr{
+       Name: "ii",
+       Type: sqlschema.OptQName{
+        Name: "int",
+       },
+       DefaultNextVal: &"sequence",
+      },
+     },
+     {
+      Field: &sqlschema.FieldExpr{
+       Name: "id_bill",
+       Type: sqlschema.OptQName{
+        Name: "int64",
+       },
+       References: &sqlschema.OptQName{
+        Package: "air",
+        Name: "bill",
+       },
+      },
+     },
+     {
+      Field: &sqlschema.FieldExpr{
+       Name: "ckf",
+       Type: sqlschema.OptQName{
+        Name: "text",
+       },
+       CheckRegexp: &"\"^[0-9]{8}$\"",
+      },
+     },
+     {
+      Unique: &sqlschema.UniqueExpr{
+       Fields: []string{
+        "fstate",
+        "name",
+       },
+      },
+     },
+    },
+    With: []sqlschema.TcqWithItem{
+     {
+      Comment: &sqlschema.OptQName{
+       Name: "BackofficeComment",
+      },
+     },
+     {
+      Tags: []sqlschema.OptQName{
+       {
+        Name: "BackofficeTag",
+       },
+      },
+     },
+    },
+   },
+  },
+  {
+   Workspace: &sqlschema.WorkspaceStmt{
+    Name: "ws",
+    Statements: []*sqlschema.WorkspaceStatement{
+     {
+      Comment: &sqlschema.CommentStmt{
+       Name: "PosComment",
+       Value: "\"Pos Comment\"",
+      },
+     },
+     {
+      Tag: &sqlschema.TagStmt{
+       Name: "PosTag",
+      },
+     },
+     {
+      UseTable: &sqlschema.UseTableStmt{
+       Table: sqlschema.UseTableItem{
+        Package: "somepackage",
+        Name: "sometable",
+       },
+      },
+     },
+     {
+      UseTable: &sqlschema.UseTableStmt{
+       Table: sqlschema.UseTableItem{
+        Name: "mytable",
+       },
+      },
+     },
+     {
+      UseTable: &sqlschema.UseTableStmt{
+       Table: sqlschema.UseTableItem{
+        Package: "untill",
+        AllTables: true,
+       },
+      },
+     },
+     {
+      Role: &sqlschema.RoleStmt{
+       Name: "LocationManager",
+      },
+     },
+     {
+      Projector: &sqlschema.ProjectorStmt{
+       On: "COMMAND",
+       Targets: []sqlschema.OptQName{
+        {
+         Package: "air",
+         Name: "CreateUPProfile",
+        },
+       },
+       Func: sqlschema.OptQName{
+        Name: "SomeFunc",
+       },
+      },
+     },
+     {
+      Projector: &sqlschema.ProjectorStmt{
+       On: "COMMANDARGUMENT",
+       Targets: []sqlschema.OptQName{
+        {
+         Package: "untill",
+         Name: "QNameOrders",
+        },
+       },
+       Func: sqlschema.OptQName{
+        Package: "xyz",
+        Name: "SomeFunc2",
+       },
+      },
+     },
+     {
+      Projector: &sqlschema.ProjectorStmt{
+       On: "INSERT",
+       Targets: []sqlschema.OptQName{
+        {
+         Package: "untill",
+         Name: "bill",
+        },
+       },
+       Func: sqlschema.OptQName{
+        Name: "SomeFunc",
+       },
+      },
+     },
+     {
+      Projector: &sqlschema.ProjectorStmt{
+       On: "INSERTORUPDATE",
+       Targets: []sqlschema.OptQName{
+        {
+         Package: "untill",
+         Name: "bill",
+        },
+       },
+       Func: sqlschema.OptQName{
+        Name: "SomeFunc",
+       },
+      },
+     },
+     {
+      Projector: &sqlschema.ProjectorStmt{
+       On: "UPDATE",
+       Targets: []sqlschema.OptQName{
+        {
+         Package: "untill",
+         Name: "bill",
+        },
+       },
+       Func: sqlschema.OptQName{
+        Name: "SomeFunc",
+       },
+      },
+     },
+     {
+      Projector: &sqlschema.ProjectorStmt{
+       On: "UPDATEORINSERT",
+       Targets: []sqlschema.OptQName{
+        {
+         Package: "untill",
+         Name: "bill",
+        },
+       },
+       Func: sqlschema.OptQName{
+        Name: "SomeFunc",
+       },
+      },
+     },
+     {
+      Projector: &sqlschema.ProjectorStmt{
+       Name: "ApplyUPProfile",
+       On: "COMMAND",
+       Targets: []sqlschema.OptQName{
+        {
+         Package: "air",
+         Name: "CreateUPProfile",
+        },
+        {
+         Package: "air",
+         Name: "UpdateUPProfile",
+        },
+       },
+       Func: sqlschema.OptQName{
+        Package: "air",
+        Name: "FillUPProfile",
+       },
+      },
+     },
+     {
+      Command: &sqlschema.CommandStmt{
+       Name: "Orders",
+       Func: "PbillFunc",
+      },
+     },
+     {
+      Command: &sqlschema.CommandStmt{
+       Name: "Orders",
+       Func: "PbillFunc",
+       With: []sqlschema.TcqWithItem{
+        {
+         Comment: &sqlschema.OptQName{
+          Package: "air",
+          Name: "PosComment",
+         },
+        },
+        {
+         Tags: []sqlschema.OptQName{
+          {
+           Name: "Tag1",
+          },
+          {
+           Package: "air",
+           Name: "Tag2",
+          },
+         },
+        },
+       },
+      },
+     },
+     {
+      Command: &sqlschema.CommandStmt{
+       Name: "Orders2",
+       Params: []sqlschema.FunctionParam{
+        {
+         UnnamedParamType: &sqlschema.OptQName{
+          Package: "untill",
+          Name: "orders",
+         },
+        },
+       },
+       Func: "PbillFunc",
+      },
+     },
+     {
+      Command: &sqlschema.CommandStmt{
+       Name: "Orders3",
+       Params: []sqlschema.FunctionParam{
+        {
+         NamedParam: &sqlschema.NamedParam{
+          Name: "order",
+          Type: sqlschema.OptQName{
+           Package: "untill",
+           Name: "orders",
+          },
+         },
+        },
+        {
+         UnnamedParamType: &sqlschema.OptQName{
+          Package: "untill",
+          Name: "pbill",
+         },
+        },
+       },
+       Func: "PbillFunc",
+      },
+     },
+     {
+      Query: &sqlschema.QueryStmt{
+       Name: "Query1",
+       Returns: sqlschema.OptQName{
+        Name: "QueryResellerInfoResult",
+       },
+       Func: "PbillFunc",
+      },
+     },
+     {
+      Query: &sqlschema.QueryStmt{
+       Name: "Query1",
+       Returns: sqlschema.OptQName{
+        Package: "air",
+        Name: "QueryResellerInfoResult",
+       },
+       Func: "PbillFunc",
+       With: []sqlschema.TcqWithItem{
+        {
+         Comment: &sqlschema.OptQName{
+          Package: "air",
+          Name: "PosComment",
+         },
+        },
+        {
+         Tags: []sqlschema.OptQName{
+          {
+           Name: "Tag1",
+          },
+          {
+           Package: "air",
+           Name: "Tag2",
+          },
+         },
+        },
+       },
+      },
+     },
+     {
+      Query: &sqlschema.QueryStmt{
+       Name: "Query2",
+       Params: []sqlschema.FunctionParam{
+        {
+         UnnamedParamType: &sqlschema.OptQName{
+          Package: "untill",
+          Name: "orders",
+         },
+        },
+       },
+       Returns: sqlschema.OptQName{
+        Name: "QueryResellerInfoResult",
+       },
+       Func: "PbillFunc",
+      },
+     },
+     {
+      Query: &sqlschema.QueryStmt{
+       Name: "Query3",
+       Params: []sqlschema.FunctionParam{
+        {
+         NamedParam: &sqlschema.NamedParam{
+          Name: "order",
+          Type: sqlschema.OptQName{
+           Package: "untill",
+           Name: "orders",
+          },
+         },
+        },
+        {
+         UnnamedParamType: &sqlschema.OptQName{
+          Package: "untill",
+          Name: "pbill",
+         },
+        },
+       },
+       Returns: sqlschema.OptQName{
+        Name: "QueryResellerInfoResult",
+       },
+       Func: "PbillFunc",
+      },
+     },
+     {
+      Grant: &sqlschema.GrantStmt{
+       Grants: []string{
+        "ALL",
+       },
+       On: "ALLTABLESWITHTAG",
+       Target: sqlschema.OptQName{
+        Package: "untill",
+        Name: "Backoffice",
+       },
+       To: "LocationManager",
+      },
+     },
+     {
+      Grant: &sqlschema.GrantStmt{
+       Grants: []string{
+        "INSERT",
+        "UPDATE",
+       },
+       On: "ALLTABLESWITHTAG",
+       Target: sqlschema.OptQName{
+        Package: "sys",
+        Name: "ODoc",
+       },
+       To: "LocationUser",
+      },
+     },
+     {
+      Grant: &sqlschema.GrantStmt{
+       Grants: []string{
+        "SELECT",
+       },
+       On: "TABLE",
+       Target: sqlschema.OptQName{
+        Package: "untill",
+        Name: "orders",
+       },
+       To: "LocationUser",
+      },
+     },
+     {
+      Grant: &sqlschema.GrantStmt{
+       Grants: []string{
+        "EXECUTE",
+       },
+       On: "COMMAND",
+       Target: sqlschema.OptQName{
+        Name: "Orders",
+       },
+       To: "LocationUser",
+      },
+     },
+     {
+      Grant: &sqlschema.GrantStmt{
+       Grants: []string{
+        "EXECUTE",
+       },
+       On: "QUERY",
+       Target: sqlschema.OptQName{
+        Name: "TransactionHistory",
+       },
+       To: "LocationUser",
+      },
+     },
+     {
+      Grant: &sqlschema.GrantStmt{
+       Grants: []string{
+        "EXECUTE",
+       },
+       On: "ALLQUERIESWITHTAG",
+       Target: sqlschema.OptQName{
+        Name: "PosTag",
+       },
+       To: "LocationUser",
+      },
+     },
+     {
+      Table: &sqlschema.TableStmt{
+       Name: "ws_table",
+       Of: []sqlschema.OptQName{
+        {
+         Name: "CDOC",
+        },
+        {
+         Package: "air",
+         Name: "SomeType",
+        },
+       },
+       Items: []sqlschema.TableItemExpr{
+        {
+         Field: &sqlschema.FieldExpr{
+          Name: "psname",
+          Type: sqlschema.OptQName{
+           Name: "text",
+          },
+         },
+        },
+        {
+         Table: &sqlschema.TableStmt{
+          Name: "child",
+          Items: []sqlschema.TableItemExpr{
+           {
+            Field: &sqlschema.FieldExpr{
+             Name: "number",
+             Type: sqlschema.OptQName{
+              Name: "int",
+             },
+            },
+           },
+          },
+         },
+        },
+       },
+      },
+     },
+     {
+      View: &sqlschema.ViewStmt{
+       Name: "XZReports",
+       Fields: []sqlschema.ViewField{
+        {
+         Name: "Year",
+         Type: "int32",
+        },
+        {
+         Name: "Month",
+         Type: "int32",
+        },
+        {
+         Name: "Day",
+         Type: "int32",
+        },
+        {
+         Name: "Kind",
+         Type: "int32",
+        },
+        {
+         Name: "Number",
+         Type: "int32",
+        },
+        {
+         Name: "XZReportWDocID",
+         Type: "id",
+        },
+       },
+       ResultOf: sqlschema.OptQName{
+        Package: "air",
+        Name: "UpdateXZReportsView",
+       },
+       With: []sqlschema.ViewWithItem{
+        {
+         PrimaryKey: &"\"(Year), Month, Day, Kind, Number\"",
+        },
+        {
+         Comment: &sqlschema.OptQName{
+          Name: "PosComment",
+         },
+        },
+       },
+      },
+     },
+     {
+      Rate: &sqlschema.RateStmt{
+       Name: "BackofficeFuncRate1",
+       Amount: 1000,
+       Per: "HOUR",
+      },
+     },
+     {
+      Rate: &sqlschema.RateStmt{
+       Name: "BackofficeFuncRate2",
+       Amount: 100,
+       Per: "MINUTE",
+       PerIP: true,
+      },
+     },
+    },
+   },
+  },
+ },
+}

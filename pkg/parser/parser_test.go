@@ -8,22 +8,27 @@ import (
 	"embed"
 	"testing"
 
+	"github.com/alecthomas/repr"
 	"github.com/stretchr/testify/require"
 )
 
 //go:embed testapp1/*.sql
 var testapp1 embed.FS
 
+//go:embed testapp1/expectedParsed.schema
+var expectedParsedExampledSchemaStr string
+
 func Test_BasicUsage(t *testing.T) {
 
-	schema, err := embedParserImpl(testapp1, "testapp1")
-
+	parsedSchema, err := embedParserImpl(testapp1, "testapp1")
 	require.NoError(t, err)
 
-	require.Equal(t, 6, len(schema.Statements))
+	parsedSchemaStr := repr.String(parsedSchema, repr.Indent(" "))
+
+	require.Equal(t, expectedParsedExampledSchemaStr, parsedSchemaStr)
 }
 
-func Test_Basic(t *testing.T) {
+func Test_Import(t *testing.T) {
 	require := require.New(t)
 	var schema = &SchemaAST{}
 
@@ -35,8 +40,6 @@ func Test_Basic(t *testing.T) {
 	IMPORT SCHEMA "github.com/untillpro/untill";
 	IMPORT SCHEMA "github.com/untillpro/airsbp" AS air;		
 	`)
-
-	//fmt.Println(repr.String(schema, repr.Indent(" ")))
 
 	require.Nil(err)
 	require.Equal("test", schema.Package)
