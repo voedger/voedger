@@ -6,6 +6,8 @@
 
 package istructs
 
+import "github.com/voedger/voedger/pkg/schemas"
+
 type IRawEventBuilder interface {
 
 	// ****** Argument-related builders
@@ -23,7 +25,7 @@ type IRawEventBuilder interface {
 
 type ICUD interface {
 	// Container argument can be empty for root records (documents)
-	Create(qName QName) IRowWriter
+	Create(qName schemas.QName) IRowWriter
 
 	// Only record's ID and QName will be kept in the resulting event
 	// It is possible to submit NullRecord (when record not found)
@@ -47,7 +49,7 @@ type IAbstractEvent interface {
 
 	// If event contains error QName is consts.QNameForError
 	// Otherwise is taken from params
-	QName() QName
+	QName() schemas.QName
 
 	ArgumentObject() IObject
 
@@ -65,7 +67,7 @@ type IAbstractEvent interface {
 type ICUDRow interface {
 	IRowReader
 	IsNew() bool
-	QName() QName
+	QName() schemas.QName
 	ID() RecordID
 	ModifiedFields(cb func(fieldName string, newValue interface{}))
 }
@@ -95,7 +97,7 @@ type IDbEvent interface {
 
 type IEventError interface {
 	ErrStr() string
-	QNameFromParams() QName
+	QNameFromParams() schemas.QName
 
 	// If true event data can be taken from I*Event fields
 	ValidEvent() bool
@@ -127,7 +129,7 @@ type IObject interface {
 type IElement interface {
 	IRowReader
 
-	QName() QName
+	QName() schemas.QName
 	// Elements in given container
 	Elements(container string, cb func(el IElement))
 	// First level qname-s
@@ -156,7 +158,7 @@ type GenericRawEventBuilderParams struct {
 	Workspace         WSID
 	WLogOffset        Offset
 
-	QName QName
+	QName schemas.QName
 
 	// Payload
 

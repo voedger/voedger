@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	SystemField_ID        = SystemFieldPrefix + "ID"
-	SystemField_ParentID  = SystemFieldPrefix + "ParentID"
-	SystemField_IsActive  = SystemFieldPrefix + "IsActive"
-	SystemField_Container = SystemFieldPrefix + "Container"
-	SystemField_QName     = SystemFieldPrefix + "QName"
+	SystemField_ID        = SystemPackagePrefix + "ID"
+	SystemField_ParentID  = SystemPackagePrefix + "ParentID"
+	SystemField_IsActive  = SystemPackagePrefix + "IsActive"
+	SystemField_Container = SystemPackagePrefix + "Container"
+	SystemField_QName     = SystemPackagePrefix + "QName"
 )
 
 // Implements IField interface
@@ -48,7 +48,7 @@ func (fld *field) Verifiable() bool { return fld.verifiable }
 
 // Returns is field system
 func IsSysField(n string) bool {
-	return strings.HasPrefix(n, SystemFieldPrefix) && // fast check
+	return strings.HasPrefix(n, SystemPackagePrefix) && // fast check
 		// then more accuracy
 		((n == SystemField_QName) ||
 			(n == SystemField_ID) ||

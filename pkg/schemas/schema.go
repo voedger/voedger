@@ -41,7 +41,7 @@ func newSchema(cache *schemasCache, name QName, kind SchemaKind) *schema {
 }
 
 func (sch *schema) AddContainer(name string, schema QName, minOccurs, maxOccurs Occurs) SchemaBuilder {
-	if name == "" {
+	if name == NullName {
 		panic(fmt.Errorf("empty container name: %w", ErrNameMissed))
 	}
 	if !IsSysContainer(name) {
@@ -154,7 +154,7 @@ func (sch *schema) Singleton() bool {
 }
 
 func (sch *schema) addField(name string, kind DataKind, required, verified bool) {
-	if name == "" {
+	if name == NullName {
 		panic(fmt.Errorf("empty field name: %w", ErrNameMissed))
 	}
 	if sch.Field(name) != nil {

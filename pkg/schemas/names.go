@@ -15,10 +15,6 @@ const NullName = ""
 // MaxIdentLen is maximum identificator length
 const MaxIdentLen = 255
 
-// The underscore prefix is reserved for functions and types used by the compiler and standard library
-// The standard library can use these names freely because they will never conflict with correct user programs.
-const SystemFieldPrefix = "sys."
-
 // Returns is string is valid identifier and error if not
 func ValidIdent(ident string) (bool, error) {
 	if len(ident) < 1 {

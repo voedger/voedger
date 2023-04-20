@@ -9,9 +9,9 @@ import (
 	"strings"
 )
 
-const SystemContainer_ViewPartitionKey = SystemFieldPrefix + "pkey"
-const SystemContainer_ViewClusteringCols = SystemFieldPrefix + "ccols"
-const SystemContainer_ViewValue = SystemFieldPrefix + "val"
+const SystemContainer_ViewPartitionKey = SystemPackagePrefix + "pkey"
+const SystemContainer_ViewClusteringCols = SystemPackagePrefix + "ccols"
+const SystemContainer_ViewValue = SystemPackagePrefix + "val"
 
 // Implements Container interface
 type container struct {
@@ -42,7 +42,7 @@ func (cont *container) Schema() QName { return cont.schema }
 
 // Returns is container system
 func IsSysContainer(n string) bool {
-	return strings.HasPrefix(n, SystemFieldPrefix) && // fast check
+	return strings.HasPrefix(n, SystemPackagePrefix) && // fast check
 		// then more accuracy
 		((n == SystemContainer_ViewPartitionKey) ||
 			(n == SystemContainer_ViewClusteringCols) ||

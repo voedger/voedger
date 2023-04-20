@@ -13,8 +13,16 @@ import (
 	"strings"
 )
 
-// Used as separator in qualified names
-const QNameQualifierChar = "."
+const (
+	// System package name
+	SysPackage = "sys"
+
+	// Used as delimiter in qualified names
+	QNameQualifierChar = "."
+
+	// Used as prefix for names of system fields and containers
+	SystemPackagePrefix = SysPackage + QNameQualifierChar
+)
 
 // Null (empty) QName
 var (
@@ -29,8 +37,17 @@ func NewQName(pkgName, entityName string) QName {
 
 // Parse a qualified name from string
 func ParseQName(val string) (res QName, err error) {
-	s1, s2, err := qname_parse(val, QNameQualifierChar)
+	s1, s2, err := ParseQualifiedName(val, QNameQualifierChar)
 	return NewQName(s1, s2), err
+}
+
+// Parse a qualified name from string using specified delimiter
+func ParseQualifiedName(val, delimiter string) (part1, part2 string, err error) {
+	s := strings.Split(val, delimiter)
+	if len(s) != 2 {
+		return NullName, NullName, fmt.Errorf("%w: %v", ErrInvalidQNameStringRepresentation, val)
+	}
+	return s[0], s[1], nil
 }
 
 // Returns package name
@@ -70,7 +87,7 @@ func (qn *QName) UnmarshalJSON(text []byte) (err error) {
 	if err != nil {
 		return err
 	}
-	qn.pkg, qn.entity, err = qname_parse(string(str), QNameQualifierChar)
+	qn.pkg, qn.entity, err = ParseQualifiedName(string(str), QNameQualifierChar)
 	return err
 }
 
@@ -95,12 +112,4 @@ func ValidQName(qName QName) (bool, error) {
 		return false, err
 	}
 	return true, nil
-}
-
-func qname_parse(val, delimiter string) (part1, part2 string, err error) {
-	s := strings.Split(val, delimiter)
-	if len(s) != 2 {
-		return NullName, NullName, fmt.Errorf("%w: %v", ErrInvalidQNameStringRepresentation, val)
-	}
-	return s[0], s[1], nil
 }
