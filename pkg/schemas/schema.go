@@ -7,9 +7,10 @@ package schemas
 
 import (
 	"fmt"
-
-	"github.com/voedger/voedger/pkg/istructs"
 )
+
+// NullSchema is used for return then schema	is not founded
+var NullSchema = newSchema(nil, NullQName, SchemaKind_null)
 
 // Implements ISchema and ISchemaBuilder interfaces
 type schema struct {
@@ -142,14 +143,14 @@ func (sch *schema) QName() QName {
 }
 
 func (sch *schema) SetSingleton() {
-	if sch.Kind() != istructs.SchemaKind_CDoc {
+	if sch.Kind() != SchemaKind_CDoc {
 		panic(fmt.Errorf("only CDocs can be singletons: %w", ErrInvalidSchemaKind))
 	}
 	sch.singleton = true
 }
 
 func (sch *schema) Singleton() bool {
-	return sch.singleton && (sch.Kind() == istructs.SchemaKind_CDoc)
+	return sch.singleton && (sch.Kind() == SchemaKind_CDoc)
 }
 
 func (sch *schema) addField(name string, kind DataKind, required, verified bool) {
@@ -181,40 +182,23 @@ func (sch *schema) clear() {
 }
 
 func (sch *schema) makeSysFields() {
-	if sch.Props().HasSystemField(istructs.SystemField_QName) {
-		sch.AddField(istructs.SystemField_QName, istructs.DataKind_QName, true)
+	if sch.Props().HasSystemField(SystemField_QName) {
+		sch.AddField(SystemField_QName, DataKind_QName, true)
 	}
 
-	if sch.Props().HasSystemField(istructs.SystemField_ID) {
-		sch.AddField(istructs.SystemField_ID, istructs.DataKind_RecordID, true)
+	if sch.Props().HasSystemField(SystemField_ID) {
+		sch.AddField(SystemField_ID, DataKind_RecordID, true)
 	}
 
-	if sch.Props().HasSystemField(istructs.SystemField_ParentID) {
-		sch.AddField(istructs.SystemField_ParentID, istructs.DataKind_RecordID, true)
+	if sch.Props().HasSystemField(SystemField_ParentID) {
+		sch.AddField(SystemField_ParentID, DataKind_RecordID, true)
 	}
 
-	if sch.Props().HasSystemField(istructs.SystemField_Container) {
-		sch.AddField(istructs.SystemField_Container, istructs.DataKind_string, true)
+	if sch.Props().HasSystemField(SystemField_Container) {
+		sch.AddField(SystemField_Container, DataKind_string, true)
 	}
 
-	if sch.Props().HasSystemField(istructs.SystemField_IsActive) {
-		sch.AddField(istructs.SystemField_IsActive, istructs.DataKind_bool, false)
+	if sch.Props().HasSystemField(SystemField_IsActive) {
+		sch.AddField(SystemField_IsActive, DataKind_bool, false)
 	}
-}
-
-// ————— istrucst.ISchema —————
-func (sch *schema) Fields(cb func(fieldName string, kind istructs.DataKindType)) {
-	sch.EnumFields(func(f Field) { cb(f.Name(), f.DataKind()) })
-}
-
-func (sch *schema) ForEachField(cb func(field istructs.IFieldDescr)) {
-	sch.EnumFields(func(f Field) { cb(f) })
-}
-
-func (sch *schema) Containers(cb func(containerName string, schema QName)) {
-	sch.EnumContainers(func(c Container) { cb(c.Name(), c.Schema()) })
-}
-
-func (sch *schema) ForEachContainer(cb func(cont istructs.IContainerDescr)) {
-	sch.EnumContainers(func(c Container) { cb(c) })
 }

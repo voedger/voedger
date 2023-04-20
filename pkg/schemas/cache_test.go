@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func Test_SchemasCache_Add(t *testing.T) {
@@ -19,15 +18,15 @@ func Test_SchemasCache_Add(t *testing.T) {
 
 	t.Run("panic if name is empty", func(t *testing.T) {
 		require.Panics(func() {
-			cache.Add(istructs.NullQName, istructs.SchemaKind_CDoc)
+			cache.Add(NullQName, SchemaKind_CDoc)
 		})
 	})
 
 	t.Run("if schema with name already exists", func(t *testing.T) {
-		testName := istructs.NewQName("test", "test")
-		cache.Add(testName, istructs.SchemaKind_CDoc)
+		testName := NewQName("test", "test")
+		cache.Add(testName, SchemaKind_CDoc)
 		require.Panics(func() {
-			cache.Add(testName, istructs.SchemaKind_CDoc)
+			cache.Add(testName, SchemaKind_CDoc)
 		})
 	})
 }

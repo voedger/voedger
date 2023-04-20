@@ -7,8 +7,6 @@ package schemas
 
 import (
 	"fmt"
-
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // Implements IViewBuilder interface
@@ -26,16 +24,16 @@ func newViewBuilder(cache *schemasCache, name QName) viewBuilder {
 	view := viewBuilder{
 		cache:       cache,
 		name:        name,
-		viewSchema:  cache.Add(name, istructs.SchemaKind_ViewRecord),
-		partSchema:  cache.Add(ViewPartitionKeySchemaName(name), istructs.SchemaKind_ViewRecord_PartitionKey),
-		clustSchema: cache.Add(ViewClusteringColumsSchemaName(name), istructs.SchemaKind_ViewRecord_ClusteringColumns),
-		keySchema:   cache.Add(ViewFullKeyColumsSchemaName(name), istructs.SchemaKind_ViewRecord_ClusteringColumns),
-		valueSchema: cache.Add(ViewValueSchemaName(name), istructs.SchemaKind_ViewRecord_Value),
+		viewSchema:  cache.Add(name, SchemaKind_ViewRecord),
+		partSchema:  cache.Add(ViewPartitionKeySchemaName(name), SchemaKind_ViewRecord_PartitionKey),
+		clustSchema: cache.Add(ViewClusteringColumsSchemaName(name), SchemaKind_ViewRecord_ClusteringColumns),
+		keySchema:   cache.Add(ViewFullKeyColumsSchemaName(name), SchemaKind_ViewRecord_ClusteringColumns),
+		valueSchema: cache.Add(ViewValueSchemaName(name), SchemaKind_ViewRecord_Value),
 	}
 	view.viewSchema.
-		AddContainer(istructs.SystemContainer_ViewPartitionKey, view.partSchema.QName(), 1, 1).
-		AddContainer(istructs.SystemContainer_ViewClusteringCols, view.clustSchema.QName(), 1, 1).
-		AddContainer(istructs.SystemContainer_ViewValue, view.valueSchema.QName(), 1, 1)
+		AddContainer(SystemContainer_ViewPartitionKey, view.partSchema.QName(), 1, 1).
+		AddContainer(SystemContainer_ViewClusteringCols, view.clustSchema.QName(), 1, 1).
+		AddContainer(SystemContainer_ViewValue, view.valueSchema.QName(), 1, 1)
 
 	return view
 }
@@ -90,7 +88,7 @@ func (view *viewBuilder) ValueSchema() SchemaBuilder {
 }
 
 func (cache *schemasCache) prepareViewFullKeySchema(sch Schema) {
-	if sch.Kind() != istructs.SchemaKind_ViewRecord {
+	if sch.Kind() != SchemaKind_ViewRecord {
 		panic(fmt.Errorf("not view schema «%v» kind «%v» passed: %w", sch.QName(), sch.Kind(), ErrInvalidSchemaKind))
 	}
 
@@ -105,11 +103,11 @@ func (cache *schemasCache) prepareViewFullKeySchema(sch Schema) {
 		return contSchema
 	}
 
-	pkSchema := contSchema(istructs.SystemContainer_ViewPartitionKey, istructs.SchemaKind_ViewRecord_PartitionKey)
+	pkSchema := contSchema(SystemContainer_ViewPartitionKey, SchemaKind_ViewRecord_PartitionKey)
 	if pkSchema == nil {
 		return
 	}
-	ccSchema := contSchema(istructs.SystemContainer_ViewClusteringCols, istructs.SchemaKind_ViewRecord_ClusteringColumns)
+	ccSchema := contSchema(SystemContainer_ViewClusteringCols, SchemaKind_ViewRecord_ClusteringColumns)
 	if ccSchema == nil {
 		return
 	}
@@ -119,15 +117,15 @@ func (cache *schemasCache) prepareViewFullKeySchema(sch Schema) {
 	fkSchema, ok := cache.schemas[fkName]
 
 	if ok {
-		if fkSchema.Kind() != istructs.SchemaKind_ViewRecord_ClusteringColumns {
-			panic(fmt.Errorf("schema «%v» has unvalid kind «%v», expected kind «%v»: %w", fkName, fkSchema.Kind(), istructs.SchemaKind_ViewRecord_ClusteringColumns, ErrInvalidSchemaKind))
+		if fkSchema.Kind() != SchemaKind_ViewRecord_ClusteringColumns {
+			panic(fmt.Errorf("schema «%v» has unvalid kind «%v», expected kind «%v»: %w", fkName, fkSchema.Kind(), SchemaKind_ViewRecord_ClusteringColumns, ErrInvalidSchemaKind))
 		}
 		if fkSchema.FieldCount() == pkSchema.FieldCount()+ccSchema.FieldCount() {
 			return // already exists schema is ok
 		}
 		fkSchema.clear()
 	} else {
-		fkSchema = cache.Add(fkName, istructs.SchemaKind_ViewRecord_ClusteringColumns)
+		fkSchema = cache.Add(fkName, SchemaKind_ViewRecord_ClusteringColumns)
 	}
 
 	// recreate full key schema fields
@@ -137,4 +135,33 @@ func (cache *schemasCache) prepareViewFullKeySchema(sch Schema) {
 	ccSchema.EnumFields(func(f Field) {
 		fkSchema.AddField(f.Name(), f.DataKind(), false)
 	})
+}
+
+// Returns partition key schema name for specified view
+func ViewPartitionKeySchemaName(view QName) QName {
+	const suff = "_PartitionKey"
+	return suffixedQName(view, suff)
+}
+
+// Returns clustering columns schema name for specified view
+func ViewClusteringColumsSchemaName(view QName) QName {
+	const suff = "_ClusteringColumns"
+	return suffixedQName(view, suff)
+}
+
+// Returns full key schema name for specified view
+func ViewFullKeyColumsSchemaName(view QName) QName {
+	const suff = "_FullKey"
+	return suffixedQName(view, suff)
+}
+
+// Returns value schema name for specified view
+func ViewValueSchemaName(view QName) QName {
+	const suff = "_Value"
+	return suffixedQName(view, suff)
+}
+
+// Appends suffix to QName entity name and returns new QName
+func suffixedQName(q QName, suff string) QName {
+	return NewQName(q.Pkg(), q.Entity()+suff)
 }

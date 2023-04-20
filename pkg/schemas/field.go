@@ -1,9 +1,22 @@
 /*
  * Copyright (c) 2021-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
+ * @author: Maxim Geraskin
  */
 
 package schemas
+
+import (
+	"strings"
+)
+
+const (
+	SystemField_ID        = SystemFieldPrefix + "ID"
+	SystemField_ParentID  = SystemFieldPrefix + "ParentID"
+	SystemField_IsActive  = SystemFieldPrefix + "IsActive"
+	SystemField_Container = SystemFieldPrefix + "Container"
+	SystemField_QName     = SystemFieldPrefix + "QName"
+)
 
 // Implements IField interface
 type field struct {
@@ -22,7 +35,7 @@ func (fld *field) IsSys() bool {
 }
 
 func (fld *field) IsFixedWidth() bool {
-	return IsFixedWidthDataKind(fld.DataKind())
+	return fld.DataKind().IsFixed()
 }
 
 func (fld *field) DataKind() DataKind { return fld.kind }
@@ -32,3 +45,14 @@ func (fld *field) Name() string { return fld.name }
 func (fld *field) Required() bool { return fld.required }
 
 func (fld *field) Verifiable() bool { return fld.verifiable }
+
+// Returns is field system
+func IsSysField(n string) bool {
+	return strings.HasPrefix(n, SystemFieldPrefix) && // fast check
+		// then more accuracy
+		((n == SystemField_QName) ||
+			(n == SystemField_ID) ||
+			(n == SystemField_ParentID) ||
+			(n == SystemField_Container) ||
+			(n == SystemField_IsActive))
+}

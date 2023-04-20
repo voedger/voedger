@@ -8,10 +8,9 @@ package schemas
 import (
 	"errors"
 	"fmt"
-
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
+// Validate a schema entities
 func (sch *schema) validate() (err error) {
 	return errors.Join(
 		sch.validateFields(),
@@ -31,11 +30,11 @@ func (sch *schema) validateFields() (err error) {
 	})
 
 	switch sch.Kind() {
-	case istructs.SchemaKind_ViewRecord:
+	case SchemaKind_ViewRecord:
 		err = errors.Join(err, sch.validateViewFields())
-	case istructs.SchemaKind_ViewRecord_PartitionKey:
+	case SchemaKind_ViewRecord_PartitionKey:
 		err = errors.Join(err, sch.validateViewPartKeyFields())
-	case istructs.SchemaKind_ViewRecord_ClusteringColumns:
+	case SchemaKind_ViewRecord_ClusteringColumns:
 		err = errors.Join(err, sch.validateViewClustKeyFields())
 	}
 
@@ -56,9 +55,9 @@ func (sch *schema) validateViewFields() (err error) {
 	}
 
 	partSchema, clustSchema, valueSchema :=
-		findSchema(istructs.SystemContainer_ViewPartitionKey, istructs.SchemaKind_ViewRecord_PartitionKey),
-		findSchema(istructs.SystemContainer_ViewClusteringCols, istructs.SchemaKind_ViewRecord_ClusteringColumns),
-		findSchema(istructs.SystemContainer_ViewValue, istructs.SchemaKind_ViewRecord_Value)
+		findSchema(SystemContainer_ViewPartitionKey, SchemaKind_ViewRecord_PartitionKey),
+		findSchema(SystemContainer_ViewClusteringCols, SchemaKind_ViewRecord_ClusteringColumns),
+		findSchema(SystemContainer_ViewValue, SchemaKind_ViewRecord_Value)
 	if (partSchema == nil) || (clustSchema == nil) || (valueSchema == nil) {
 		return nil // extended error will return later; see validateViewContainers() method
 	}
@@ -67,15 +66,15 @@ func (sch *schema) validateViewFields() (err error) {
 
 	partSchema.EnumFields(func(f Field) {
 		if clustSchema.Field(f.Name()) != nil {
-			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), istructs.SystemContainer_ViewPartitionKey, istructs.SystemContainer_ViewClusteringCols, ErrNameUniqueViolation))
+			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), SystemContainer_ViewPartitionKey, SystemContainer_ViewClusteringCols, ErrNameUniqueViolation))
 		}
 		if valueSchema.Field(f.Name()) != nil {
-			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), istructs.SystemContainer_ViewPartitionKey, istructs.SystemContainer_ViewValue, ErrNameUniqueViolation))
+			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), SystemContainer_ViewPartitionKey, SystemContainer_ViewValue, ErrNameUniqueViolation))
 		}
 	})
 	clustSchema.EnumFields(func(f Field) {
 		if valueSchema.Field(f.Name()) != nil {
-			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), istructs.SystemContainer_ViewClusteringCols, istructs.SystemContainer_ViewValue, ErrNameUniqueViolation))
+			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), SystemContainer_ViewClusteringCols, SystemContainer_ViewValue, ErrNameUniqueViolation))
 		}
 	})
 
@@ -117,7 +116,7 @@ func (sch *schema) validateViewClustKeyFields() (err error) {
 // Validates schema containers
 func (sch *schema) validateContainers() (err error) {
 	switch sch.Kind() {
-	case istructs.SchemaKind_ViewRecord:
+	case SchemaKind_ViewRecord:
 		err = sch.validateViewContainers()
 	default:
 		sch.EnumContainers(func(c Container) {
@@ -168,9 +167,9 @@ func (sch *schema) validateViewContainers() (err error) {
 		}
 	}
 
-	checkCont(istructs.SystemContainer_ViewPartitionKey, istructs.SchemaKind_ViewRecord_PartitionKey)
-	checkCont(istructs.SystemContainer_ViewClusteringCols, istructs.SchemaKind_ViewRecord_ClusteringColumns)
-	checkCont(istructs.SystemContainer_ViewValue, istructs.SchemaKind_ViewRecord_Value)
+	checkCont(SystemContainer_ViewPartitionKey, SchemaKind_ViewRecord_PartitionKey)
+	checkCont(SystemContainer_ViewClusteringCols, SchemaKind_ViewRecord_ClusteringColumns)
+	checkCont(SystemContainer_ViewValue, SchemaKind_ViewRecord_Value)
 
 	return err
 }

@@ -5,22 +5,35 @@
 
 package schemas
 
-import (
-	"github.com/voedger/voedger/pkg/istructs"
-)
+// Qualified name
+//
+// <pkg>.<entity>
+//
+// Ref to qname.go for constants and methods
+type QName struct {
+	pkg    string
+	entity string
+}
 
-// TODO: this types must moved here from istructs package
-type (
-	QName      = istructs.QName
-	SchemaKind = istructs.SchemaKindType
-	DataKind   = istructs.DataKindType
-	Occurs     = istructs.ContainerOccursType
-)
+// Schema kind enumeration
+//
+// Ref. schema-kind.go for constants and methods
+type SchemaKind uint8
+
+// Data kind enumeration
+//
+// Ref. data-kind.go for constants and methods
+type DataKind uint8
+
+// Numeric with OccursUnbounded value
+//
+// Ref. occurs.go for constants and methods
+type Occurs uint16
 
 // Application schemas
+//
+// Ref to cache.go for implementation
 type SchemaCache interface {
-	istructs.ISchemas
-
 	// Enumerates all schemas from cache.
 	EnumSchemas(func(Schema))
 
@@ -34,6 +47,8 @@ type SchemaCache interface {
 }
 
 // Application schemas builder
+//
+// Ref to cache.go for implementation
 type SchemaCacheBuilder interface {
 	SchemaCache
 
@@ -52,9 +67,9 @@ type SchemaCacheBuilder interface {
 }
 
 // Schema describes the entity, such as document, record or view. Schema has fields and containers.
+//
+// Ref to schema.go for implementation
 type Schema interface {
-	istructs.ISchema
-
 	// Parent cache
 	Cache() SchemaCache
 
@@ -101,6 +116,8 @@ type Schema interface {
 }
 
 // Schema builder
+//
+// Ref to schema.go for implementation
 type SchemaBuilder interface {
 	Schema
 
@@ -141,6 +158,8 @@ type SchemaBuilder interface {
 }
 
 // View builder
+//
+// Ref to view.go for implementation
 type ViewBuilder interface {
 	// Returns view name
 	Name() QName
@@ -171,6 +190,8 @@ type ViewBuilder interface {
 }
 
 // Describe single field.
+//
+// Ref to field.go for constants and implementation
 type Field interface {
 	// Returns field name
 	Name() string
@@ -192,6 +213,8 @@ type Field interface {
 }
 
 // Describes single inclusion of child schema in parent schema.
+//
+// Ref to container.go for constants and implementation
 type Container interface {
 	// Returns name of container
 	Name() string

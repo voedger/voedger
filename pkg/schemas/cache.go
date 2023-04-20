@@ -8,8 +8,6 @@ package schemas
 import (
 	"errors"
 	"fmt"
-
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // Implements ISchema and ISchemaBuilder interfaces
@@ -25,7 +23,7 @@ func newSchemaCache() *schemasCache {
 }
 
 func (cache *schemasCache) Add(name QName, kind SchemaKind) SchemaBuilder {
-	if name == istructs.NullQName {
+	if name == NullQName {
 		panic(fmt.Errorf("schema name cannot be empty: %w", ErrNameMissed))
 	}
 	if cache.SchemaByName(name) != nil {
@@ -74,21 +72,8 @@ func (cache *schemasCache) EnumSchemas(enum func(Schema)) {
 
 func (cache *schemasCache) prepare() {
 	cache.EnumSchemas(func(s Schema) {
-		if s.Kind() == istructs.SchemaKind_ViewRecord {
+		if s.Kind() == SchemaKind_ViewRecord {
 			cache.prepareViewFullKeySchema(s)
 		}
 	})
-}
-
-//————— istructs.ISchemas —————
-
-func (cache *schemasCache) Schema(name istructs.QName) istructs.ISchema {
-	if schema, ok := cache.schemas[name]; ok {
-		return schema
-	}
-	return NullSchema
-}
-
-func (cache *schemasCache) Schemas(cb func(schemaName istructs.QName)) {
-	cache.EnumSchemas(func(s Schema) { cb(s.QName()) })
 }
