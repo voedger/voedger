@@ -150,3 +150,11 @@ func (cfg *AppConfigType) AddCUDValidators(cudValidators ...istructs.CUDValidato
 func (cfg *AppConfigType) AddEventValidators(eventValidators ...istructs.EventValidator) {
 	cfg.eventValidators = append(cfg.eventValidators, eventValidators...)
 }
+
+func (cfg *AppConfigType) BuildDynobuferSchemas(schemas schemas.SchemaCacheBuilder) {
+	cfg.dbSchemas = dynobuf.NewSchemasCache(schemas)
+}
+
+func (cfg *AppConfigType) BuildValidators(schemas schemas.SchemaCacheBuilder) {
+	cfg.validators = newValidators(schemas)
+}
