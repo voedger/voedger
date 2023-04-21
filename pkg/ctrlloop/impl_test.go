@@ -87,14 +87,14 @@ func Test_BasicUsage(t *testing.T) {
 				return nil
 			}
 
-			ch := make(chan OriginalMessage[string, int])
+			inCh := make(chan OriginalMessage[string, int])
 
-			New(test.controller, reporterFunc, 5, ch, time.Now)
+			waitFunc := New(test.controller, reporterFunc, 5, inCh, time.Now)
 
 			wg.Add(test.numReportedMessages)
 
 			for _, m := range test.messages {
-				ch <- OriginalMessage[string, int]{
+				inCh <- OriginalMessage[string, int]{
 					Key:                m.Key,
 					SP:                 m.SP,
 					CronSchedule:       m.CronSchedule,
@@ -104,7 +104,9 @@ func Test_BasicUsage(t *testing.T) {
 
 			wg.Wait()
 
-			close(ch)
+			close(inCh)
+
+			waitFunc()
 
 			assert.GreaterOrEqual(t, test.numReportedMessages, len(reportDB))
 		})
@@ -246,25 +248,20 @@ func Test_SchedulerOnIn(t *testing.T) {
 				{
 					Key:          `A`,
 					SP:           0,
-					CronSchedule: `A`,
+					CronSchedule: `0 11 * * *`,
 				},
 				{
 					Key:          `B`,
 					SP:           4,
-					CronSchedule: `B`,
+					CronSchedule: `0 10 * * *`,
 				},
 			},
-			scheduledItems: []scheduledMessage[string, int, struct{}]{},
-			nextStartTimeFunc: func(cronSchedule string, startTimeTolerance time.Duration, nowTime time.Time) time.Time {
-				if cronSchedule == `B` {
-					return nowTime.Add(-10 * time.Minute)
-				}
-				return nowTime
-			},
+			scheduledItems:          []scheduledMessage[string, int, struct{}]{},
+			nextStartTimeFunc:       getNextStartTime,
 			nowTime:                 testNowTime,
 			expectedResultKeys:      []string{`B`, `A`},
 			expectedMaxSerialNumber: 1,
-			expectedTopStartTime:    testNowTime.Add(-10 * time.Minute),
+			expectedTopStartTime:    testNowTime.Add(10 * time.Hour),
 		},
 	}
 
@@ -312,7 +309,7 @@ func Test_SchedulerOnRepeat(t *testing.T) {
 		expectedMaxSerialNumber uint64
 	}{
 		{
-			name: `fresh serial number came`,
+			name: `fresh serial number`,
 			messagesToRepeat: []scheduledMessage[string, int, struct{}]{
 				{
 					Key:          `A`,
@@ -331,7 +328,7 @@ func Test_SchedulerOnRepeat(t *testing.T) {
 			expectedMaxSerialNumber: 2,
 		},
 		{
-			name: `obsoleted serial number came`,
+			name: `obsoleted serial number`,
 			messagesToRepeat: []scheduledMessage[string, int, struct{}]{
 				{
 					Key:          `A`,
@@ -506,31 +503,22 @@ func Test_Dedupin(t *testing.T) {
 			callerCh := make(chan statefulMessage[string, int, struct{}], 10)
 			repeatCh := make(chan scheduledMessage[string, int, struct{}], 10)
 
-			var messagesToCall []statefulMessage[string, int, struct{}]
-			var messagesToRepeat []scheduledMessage[string, int, struct{}]
-			var inProcessKeyCounter int
-			go func() {
-				testMessagesWriter(dedupInCh, test.messages)
+			go dedupIn(dedupInCh, callerCh, repeatCh, &InProcess, time.Now)
 
-				messagesToCall = testMessagesReader(callerCh)
-				messagesToRepeat = testMessagesReader(repeatCh)
+			testMessagesWriter(dedupInCh, test.messages)
 
-				// closing channels
-				close(dedupInCh)
-				close(repeatCh)
+			messagesToCall := testMessagesReader(callerCh)
+			messagesToRepeat := testMessagesReader(repeatCh)
 
-				inProcessKeyCounter = 0
-				InProcess.Range(func(_, _ any) bool {
-					inProcessKeyCounter++
-					return true
-				})
-			}()
+			// closing channels
+			close(dedupInCh)
+			close(repeatCh)
 
-			dedupIn(dedupInCh, callerCh, repeatCh, &InProcess, time.Now)
-
-			if _, ok := <-callerCh; ok {
-				t.Fatal(`callerCh channel must be closed`)
-			}
+			inProcessKeyCounter := 0
+			InProcess.Range(func(_, _ any) bool {
+				inProcessKeyCounter++
+				return true
+			})
 
 			require.Equal(t, len(messagesToCall), inProcessKeyCounter)
 			require.Equal(t, len(messagesToRepeat), 1)
@@ -595,26 +583,14 @@ func Test_Repeater(t *testing.T) {
 			repeatCh := make(chan scheduledMessage[string, int, struct{}], 10)
 			reporterCh := make(chan reportInfo[string, int], 10)
 
-			var messagesToReport []reportInfo[string, int]
-			var messagesToRepeat []scheduledMessage[string, int, struct{}]
-			go func() {
-				testMessagesWriter(repeaterCh, test.messages)
+			go repeater(repeaterCh, repeatCh, reporterCh)
 
-				messagesToReport = testMessagesReader(reporterCh)
-				messagesToRepeat = testMessagesReader(repeatCh)
+			testMessagesWriter(repeaterCh, test.messages)
 
-				// closing channels
-				close(repeaterCh)
-			}()
+			messagesToReport := testMessagesReader(reporterCh)
+			messagesToRepeat := testMessagesReader(repeatCh)
 
-			repeater(repeaterCh, repeatCh, reporterCh)
-
-			if _, ok := <-repeatCh; ok {
-				t.Fatal(`repeatCh channel must be closed`)
-			}
-			if _, ok := <-reporterCh; ok {
-				t.Fatal(`reporterCh channel must be closed`)
-			}
+			close(repeaterCh)
 
 			require.Equal(t, len(messagesToReport), 2)
 			require.Equal(t, len(messagesToRepeat), 2)

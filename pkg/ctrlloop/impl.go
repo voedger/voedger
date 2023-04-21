@@ -127,7 +127,11 @@ func repeater[Key comparable, SP any, PV any, State any](in chan answer[Key, SP,
 	}
 }
 
-func reporter[Key comparable, PV any](in chan reportInfo[Key, PV], reporterFunc ReporterFunction[Key, PV]) {
+func reporter[Key comparable, PV any](in chan reportInfo[Key, PV], finishCh chan<- struct{}, reporterFunc ReporterFunction[Key, PV]) {
+	defer func() {
+		finishCh <- struct{}{}
+	}()
+
 	ToBeReported := list.New()
 	timer := time.NewTimer(0)
 	<-timer.C
