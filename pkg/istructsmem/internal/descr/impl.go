@@ -23,7 +23,7 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[schemas.QNam
 
 	a.Name = app.AppQName()
 
-	app.Schemas().EnumSchemas(func(s schemas.Schema) {
+	app.Schemas().Schemas(func(s schemas.Schema) {
 		schemaName := s.QName()
 		pkg := getPkg(schemaName, a)
 		schema := newSchema()

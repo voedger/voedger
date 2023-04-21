@@ -47,7 +47,7 @@ func (stons *singletonsCacheType) clear() {
 
 // collectAllSingletons collect all application singlton IDs
 func (stons *singletonsCacheType) collectAllSingletons() (err error) {
-	stons.cfg.Schemas.EnumSchemas(
+	stons.cfg.Schemas.Schemas(
 		func(schema schemas.Schema) {
 			if schema.Singleton() {
 				err = errors.Join(err,

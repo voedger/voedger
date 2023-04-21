@@ -52,7 +52,7 @@ func (vr *appViewRecordsType) storeViewRecord(workspace istructs.WSID, key istru
 func (key *keyType) storeViewPartKey() []byte {
 	buf := new(bytes.Buffer)
 
-	key.partRow.schema.EnumFields(
+	key.partRow.schema.Fields(
 		func(f schemas.Field) {
 			utils.SafeWriteBuf(buf, key.partRow.dyB.Get(f.Name()))
 		})
@@ -64,7 +64,7 @@ func (key *keyType) storeViewPartKey() []byte {
 func (key *keyType) storeViewClustKey() []byte {
 	buf := new(bytes.Buffer)
 
-	key.clustRow.schema.EnumFields(
+	key.clustRow.schema.Fields(
 		func(f schemas.Field) {
 			utils.SafeWriteBuf(buf, key.clustRow.dyB.Get(f.Name()))
 		})
@@ -80,7 +80,7 @@ func loadViewPartKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 
 	schema := key.partRow.schema
 
-	schema.EnumFields(
+	schema.Fields(
 		func(f schemas.Field) {
 			if err != nil {
 				return // first error is enough
@@ -103,7 +103,7 @@ func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 
 	schema := key.clustRow.schema
 
-	schema.EnumFields(
+	schema.Fields(
 		func(f schemas.Field) {
 			if err != nil {
 				return // first error is enough

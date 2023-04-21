@@ -74,9 +74,9 @@ func (cnt *Containers) collectAllContainers(sch schemas.SchemaCache) (err error)
 
 	// application containers
 	if sch != nil {
-		sch.EnumSchemas(
+		sch.Schemas(
 			func(schema schemas.Schema) {
-				schema.EnumContainers(
+				schema.Containers(
 					func(c schemas.Container) {
 						if !c.IsSys() {
 							err = errors.Join(err, cnt.collectAppContainer(c.Name()))

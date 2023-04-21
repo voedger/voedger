@@ -52,7 +52,7 @@ func ReadByKind(name string, kind schemas.DataKind, rr istructs.IRowReader) inte
 
 func NewSchemaFields(schema schemas.Schema) SchemaFields {
 	fields := make(map[string]schemas.DataKind)
-	schema.EnumFields(
+	schema.Fields(
 		func(f schemas.Field) {
 			fields[f.Name()] = f.DataKind()
 		})
@@ -109,7 +109,7 @@ func FieldsToMap(obj istructs.IRowReader, schemaCache schemas.SchemaCache, optFu
 			}
 		})
 	} else {
-		schemaCache.Schema(obj.AsQName(schemas.SystemField_QName)).EnumFields(
+		schemaCache.Schema(obj.AsQName(schemas.SystemField_QName)).Fields(
 			func(f schemas.Field) {
 				fieldName, kind := f.Name(), f.DataKind()
 				if opts.filter != nil {

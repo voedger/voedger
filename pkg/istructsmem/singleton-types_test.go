@@ -21,7 +21,7 @@ import (
 
 func test_SchemasSingletons(t *testing.T, cfg *AppConfigType) {
 	require := require.New(t)
-	cfg.Schemas.EnumSchemas(
+	cfg.Schemas.Schemas(
 		func(s schemas.Schema) {
 			if s.Singleton() {
 				_, err := cfg.singletons.qNameToID(s.QName())

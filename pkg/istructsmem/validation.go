@@ -131,7 +131,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 
 // Validates element containers occurses
 func (v *validator) validElementContOccurses(el *elementType) (err error) {
-	v.schema.EnumContainers(
+	v.schema.Containers(
 		func(cont schemas.Container) {
 			occurs := schemas.Occurs(0)
 			el.EnumElements(
@@ -168,7 +168,7 @@ func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error)
 
 // Validates specified row
 func (v *validator) validRow(row *rowType) (err error) {
-	v.schema.EnumFields(
+	v.schema.Fields(
 		func(f schemas.Field) {
 			if f.Required() {
 				if !row.hasValue(f.Name()) {
@@ -201,7 +201,7 @@ func newValidators() *validators {
 // Prepares validator for specified schema cache
 func (v *validators) prepare(schemaCache schemas.SchemaCache) {
 	v.schemas = schemaCache
-	schemaCache.EnumSchemas(
+	schemaCache.Schemas(
 		func(s schemas.Schema) {
 			v.validators[s.QName()] = newValidator(v, s)
 		})
@@ -384,7 +384,7 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 		return validateErrorf(ECode_InvalidSchemaName, "wrong view clustering columns schema «%v», for view «%v» expected «%v»: %w", key.clustRow.QName(), key.viewName, clustSchema, ErrWrongSchema)
 	}
 
-	key.partRow.schema.EnumFields(
+	key.partRow.schema.Fields(
 		func(f schemas.Field) {
 			if !key.partRow.hasValue(f.Name()) {
 				err = errors.Join(err,
@@ -393,7 +393,7 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 		})
 
 	if !partialClust {
-		key.clustRow.schema.EnumFields(
+		key.clustRow.schema.Fields(
 			func(f schemas.Field) {
 				if !key.clustRow.hasValue(f.Name()) {
 					err = errors.Join(err,

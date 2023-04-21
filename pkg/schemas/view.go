@@ -73,10 +73,10 @@ func (view *viewBuilder) ClustColsSchema() SchemaBuilder {
 func (view *viewBuilder) FullKeySchema() SchemaBuilder {
 	if view.keySchema.FieldCount() != view.PartKeySchema().FieldCount()+view.ClustColsSchema().FieldCount() {
 		view.keySchema.clear()
-		view.PartKeySchema().EnumFields(func(fld Field) {
+		view.PartKeySchema().Fields(func(fld Field) {
 			view.keySchema.AddField(fld.Name(), fld.DataKind(), true)
 		})
-		view.ClustColsSchema().EnumFields(func(fld Field) {
+		view.ClustColsSchema().Fields(func(fld Field) {
 			view.keySchema.AddField(fld.Name(), fld.DataKind(), false)
 		})
 	}
@@ -129,10 +129,10 @@ func (cache *schemasCache) prepareViewFullKeySchema(sch Schema) {
 	}
 
 	// recreate full key schema fields
-	pkSchema.EnumFields(func(f Field) {
+	pkSchema.Fields(func(f Field) {
 		fkSchema.AddField(f.Name(), f.DataKind(), true)
 	})
-	ccSchema.EnumFields(func(f Field) {
+	ccSchema.Fields(func(f Field) {
 		fkSchema.AddField(f.Name(), f.DataKind(), false)
 	})
 

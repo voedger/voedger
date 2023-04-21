@@ -74,7 +74,7 @@ func (names *QNames) collectAllQNames(s schemas.SchemaCache, r istructs.IResourc
 		collectSysQName(istructs.QNameCommandCUD, QNameIDCommandCUD)
 
 	if s != nil {
-		s.EnumSchemas(
+		s.Schemas(
 			func(schema schemas.Schema) {
 				err = errors.Join(err,
 					names.collectAppQName(schema.QName()))

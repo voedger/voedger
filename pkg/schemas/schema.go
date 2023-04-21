@@ -101,11 +101,12 @@ func (sch *schema) ContainerCount() int {
 	return len(sch.containersOrdered)
 }
 
-func (sch *schema) EnumContainers(cb func(Container)) {
+func (sch *schema) Containers(cb func(Container)) {
 	for _, n := range sch.containersOrdered {
 		cb(sch.Container(n))
 	}
 }
+
 func (sch *schema) ContainerSchema(contName string) Schema {
 	if cont := sch.Container(contName); cont != nil {
 		return sch.cache.SchemaByName(cont.Schema())
@@ -120,14 +121,14 @@ func (sch *schema) Field(name string) Field {
 	return nil
 }
 
-func (sch *schema) EnumFields(cb func(Field)) {
+func (sch *schema) FieldCount() int {
+	return len(sch.fieldsOrdered)
+}
+
+func (sch *schema) Fields(cb func(Field)) {
 	for _, n := range sch.fieldsOrdered {
 		cb(sch.Field(n))
 	}
-}
-
-func (sch *schema) FieldCount() int {
-	return len(sch.fieldsOrdered)
 }
 
 func (sch *schema) Kind() SchemaKind {

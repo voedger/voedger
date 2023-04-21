@@ -34,21 +34,21 @@ type Occurs uint16
 //
 // Ref to cache.go for implementation
 type SchemaCache interface {
-	// Enumerates all schemas from cache.
-	EnumSchemas(func(Schema))
-
-	// Return count of schemas.
-	SchemaCount() int
+	// Returns schema by name.
+	//
+	// If not found empty Schema with SchemeKind_null is returned
+	Schema(name QName) Schema
 
 	// Returns schema by name.
 	//
 	// Returns nil if not found.
 	SchemaByName(name QName) Schema
 
-	// Returns schema by name.
-	//
-	// If not found empty Schema with SchemeKind_null is returned
-	Schema(name QName) Schema
+	// Return count of schemas.
+	SchemaCount() int
+
+	// Enumerates all schemas from cache.
+	Schemas(func(Schema))
 }
 
 // Application schemas builder
@@ -92,22 +92,22 @@ type Schema interface {
 	// Returns nil if not found.
 	Field(name string) Field
 
-	// Enumerates all fields in add order.
-	EnumFields(func(Field))
-
 	// Returns fields count
 	FieldCount() int
+
+	// Enumerates all fields in add order.
+	Fields(func(Field))
 
 	// Finds container by name.
 	//
 	// Returns nil if not found.
 	Container(name string) Container
 
-	// Enumerates all containers in add order.
-	EnumContainers(func(Container))
-
 	// Returns containers count
 	ContainerCount() int
+
+	// Enumerates all containers in add order.
+	Containers(func(Container))
 
 	// Finds container schema by constinaer name.
 	//

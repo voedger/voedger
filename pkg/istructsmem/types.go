@@ -757,7 +757,7 @@ func (row *rowType) QName() schemas.QName {
 
 // istructs.IRowReader.RecordIDs
 func (row *rowType) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {
-	row.schema.EnumFields(
+	row.schema.Fields(
 		func(fld schemas.Field) {
 			if fld.DataKind() == schemas.DataKind_RecordID {
 				id := row.AsRecordID(fld.Name())

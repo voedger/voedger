@@ -46,7 +46,7 @@ func (cache *schemasCache) Build() (result SchemaCache, err error) {
 	cache.prepare()
 
 	validator := newValidator()
-	cache.EnumSchemas(func(schema Schema) {
+	cache.Schemas(func(schema Schema) {
 		err = errors.Join(err, validator.validate(schema))
 	})
 	if err != nil {
@@ -79,7 +79,7 @@ func (cache *schemasCache) SchemaCount() int {
 	return len(cache.schemas)
 }
 
-func (cache *schemasCache) EnumSchemas(enum func(Schema)) {
+func (cache *schemasCache) Schemas(enum func(Schema)) {
 	for _, schema := range cache.schemas {
 		enum(schema)
 	}
@@ -90,7 +90,7 @@ func (cache *schemasCache) changed() {
 }
 
 func (cache *schemasCache) prepare() {
-	cache.EnumSchemas(func(s Schema) {
+	cache.Schemas(func(s Schema) {
 		if s.Kind() == SchemaKind_ViewRecord {
 			cache.prepareViewFullKeySchema(s)
 		}

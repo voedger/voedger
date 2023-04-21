@@ -93,7 +93,7 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 		}
 	}
 
-	schemaCache.EnumSchemas(
+	schemaCache.Schemas(
 		func(s schemas.Schema) {
 			checkDynoScheme(dynoSchemas[s.QName()])
 		})

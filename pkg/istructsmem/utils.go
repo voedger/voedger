@@ -125,7 +125,7 @@ func NewIObjectBuilder(cfg *AppConfigType, qName schemas.QName) istructs.IObject
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
 	schems := appStructs.Schemas()
 	schema := schems.Schema(obj.AsQName(schemas.SystemField_QName))
-	schema.EnumFields(
+	schema.Fields(
 		func(f schemas.Field) {
 			if err != nil || f.DataKind() != schemas.DataKind_RecordID {
 				return

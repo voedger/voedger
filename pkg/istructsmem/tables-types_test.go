@@ -89,7 +89,7 @@ func Test_newRecord(t *testing.T) {
 
 		t.Run("system field counters for test CDoc", func(t *testing.T) {
 			sysCnt := 0
-			doc.schema.EnumFields(
+			doc.schema.Fields(
 				func(f schemas.Field) {
 					require.True(doc.hasValue(f.Name()))
 					if f.IsSys() {
@@ -110,7 +110,7 @@ func Test_newRecord(t *testing.T) {
 			cnt := 0
 			sysCnt := 0
 
-			doc.schema.EnumFields(
+			doc.schema.Fields(
 				func(f schemas.Field) {
 					require.True(doc.hasValue(f.Name()))
 					if f.IsSys() {
@@ -147,7 +147,7 @@ func Test_newRecord(t *testing.T) {
 			t.Run("system field counters for test CRecord", func(t *testing.T) {
 				sysCnt := 0
 
-				rec.schema.EnumFields(
+				rec.schema.Fields(
 					func(f schemas.Field) {
 						require.True(rec.hasValue(f.Name()))
 						if f.IsSys() {
@@ -169,7 +169,7 @@ func Test_newRecord(t *testing.T) {
 				cnt := 0
 				sysCnt := 0
 
-				rec.schema.EnumFields(
+				rec.schema.Fields(
 					func(f schemas.Field) {
 						require.True(rec.hasValue(f.Name()))
 						if f.IsSys() {

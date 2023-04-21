@@ -20,7 +20,7 @@ func (sch *schema) Validate() (err error) {
 
 // Validates schema fields
 func (sch *schema) validateFields() (err error) {
-	sch.EnumFields(func(f Field) {
+	sch.Fields(func(f Field) {
 		if !f.IsSys() {
 			if !sch.Kind().DataKindAvailable(f.DataKind()) {
 				err = errors.Join(err,
@@ -64,7 +64,7 @@ func (sch *schema) validateViewFields() (err error) {
 
 	const errWrapFmt = "schema «%v»: view field «%s» unique violated in «%s» and in «%s»: %w"
 
-	partSchema.EnumFields(func(f Field) {
+	partSchema.Fields(func(f Field) {
 		if clustSchema.Field(f.Name()) != nil {
 			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), SystemContainer_ViewPartitionKey, SystemContainer_ViewClusteringCols, ErrNameUniqueViolation))
 		}
@@ -72,7 +72,7 @@ func (sch *schema) validateViewFields() (err error) {
 			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), SystemContainer_ViewPartitionKey, SystemContainer_ViewValue, ErrNameUniqueViolation))
 		}
 	})
-	clustSchema.EnumFields(func(f Field) {
+	clustSchema.Fields(func(f Field) {
 		if valueSchema.Field(f.Name()) != nil {
 			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), SystemContainer_ViewClusteringCols, SystemContainer_ViewValue, ErrNameUniqueViolation))
 		}
@@ -99,7 +99,7 @@ func (sch *schema) validateViewClustKeyFields() (err error) {
 	}
 
 	idx, cnt := 0, sch.FieldCount()
-	sch.EnumFields(func(fld Field) {
+	sch.Fields(func(fld Field) {
 		idx++
 		if idx == cnt {
 			return // last field may be any kind
@@ -119,7 +119,7 @@ func (sch *schema) validateContainers() (err error) {
 	case SchemaKind_ViewRecord:
 		err = sch.validateViewContainers()
 	default:
-		sch.EnumContainers(func(c Container) {
+		sch.Containers(func(c Container) {
 			schema := sch.cache.SchemaByName(c.Schema())
 			if schema != nil {
 				if !sch.Kind().ContainerKindAvailable(schema.Kind()) {
@@ -195,7 +195,7 @@ func (v *validator) validate(schema Schema) error {
 	v.results[schema.QName()] = err
 
 	// resolve externals
-	schema.EnumContainers(func(cont Container) {
+	schema.Containers(func(cont Container) {
 		if cont.Schema() == schema.QName() {
 			return
 		}

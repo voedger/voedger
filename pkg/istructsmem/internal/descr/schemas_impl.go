@@ -20,7 +20,7 @@ func (s *Schema) readAppSchema(schema schemas.Schema) {
 	s.Name = schema.QName()
 	s.Kind = schema.Kind()
 
-	schema.EnumFields(func(field schemas.Field) {
+	schema.Fields(func(field schemas.Field) {
 		f := newField()
 		f.Name = field.Name()
 		f.Kind = field.DataKind()
@@ -29,7 +29,7 @@ func (s *Schema) readAppSchema(schema schemas.Schema) {
 		s.Fields = append(s.Fields, f)
 	})
 
-	schema.EnumContainers(func(cont schemas.Container) {
+	schema.Containers(func(cont schemas.Container) {
 		c := newContainer()
 		c.Name = cont.Name()
 		c.Type = cont.Schema()

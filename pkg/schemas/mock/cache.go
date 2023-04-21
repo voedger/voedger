@@ -33,21 +33,16 @@ func (cache *MockSchemaCache) MockSchemas(sch ...*MockSchema) {
 	}
 }
 
-func (cache *MockSchemaCache) EnumSchemas(cb func(schemas.Schema)) {
+func (cache *MockSchemaCache) Schema(name schemas.QName) schemas.Schema {
 	if len(cache.sch) > 0 {
 		for _, s := range cache.sch {
-			cb(s)
+			if s.QName() == name {
+				return s
+			}
 		}
-		return
+		return schemas.NullSchema
 	}
-	cache.Called(cb)
-}
-
-func (cache *MockSchemaCache) SchemaCount() int {
-	if l := len(cache.sch); l > 0 {
-		return l
-	}
-	return cache.Called().Get(0).(int)
+	return cache.Called(name).Get(0).(schemas.Schema)
 }
 
 func (cache *MockSchemaCache) SchemaByName(name schemas.QName) schemas.Schema {
@@ -62,14 +57,19 @@ func (cache *MockSchemaCache) SchemaByName(name schemas.QName) schemas.Schema {
 	return cache.Called(name).Get(0).(schemas.Schema)
 }
 
-func (cache *MockSchemaCache) Schema(name schemas.QName) schemas.Schema {
+func (cache *MockSchemaCache) SchemaCount() int {
+	if l := len(cache.sch); l > 0 {
+		return l
+	}
+	return cache.Called().Get(0).(int)
+}
+
+func (cache *MockSchemaCache) Schemas(cb func(schemas.Schema)) {
 	if len(cache.sch) > 0 {
 		for _, s := range cache.sch {
-			if s.QName() == name {
-				return s
-			}
+			cb(s)
 		}
-		return schemas.NullSchema
+		return
 	}
-	return cache.Called(name).Get(0).(schemas.Schema)
+	cache.Called(cb)
 }

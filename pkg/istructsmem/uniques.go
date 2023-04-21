@@ -92,7 +92,7 @@ func (u implIUniques) validate(cfg *AppConfigType) error {
 			return uniqueError(qName, ErrSchemaKindMayNotHaveUniques, "")
 		}
 		sf := map[string]fieldDesc{}
-		s.EnumFields(func(fld schemas.Field) {
+		s.Fields(func(fld schemas.Field) {
 			sf[fld.Name()] = fieldDesc{
 				kind:       fld.DataKind(),
 				isRequired: fld.Required(),

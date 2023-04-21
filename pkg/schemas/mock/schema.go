@@ -59,7 +59,14 @@ func (s *MockSchema) Field(name string) schemas.Field {
 	return s.Called(name).Get(0).(schemas.Field)
 }
 
-func (s *MockSchema) EnumFields(cb func(schemas.Field)) {
+func (s *MockSchema) FieldCount() int {
+	if l := len(s.fields); l > 0 {
+		return l
+	}
+	return s.Called().Get(0).(int)
+}
+
+func (s *MockSchema) Fields(cb func(schemas.Field)) {
 	if len(s.fields) > 0 {
 		for _, f := range s.fields {
 			cb(f)
@@ -67,13 +74,6 @@ func (s *MockSchema) EnumFields(cb func(schemas.Field)) {
 		return
 	}
 	s.Called(cb)
-}
-
-func (s *MockSchema) FieldCount() int {
-	if l := len(s.fields); l > 0 {
-		return l
-	}
-	return s.Called().Get(0).(int)
 }
 
 func (s *MockSchema) Container(name string) schemas.Container {
@@ -88,7 +88,14 @@ func (s *MockSchema) Container(name string) schemas.Container {
 	return s.Called(name).Get(0).(schemas.Container)
 }
 
-func (s *MockSchema) EnumContainers(cb func(schemas.Container)) {
+func (s *MockSchema) ContainerCount() int {
+	if l := len(s.containers); l > 0 {
+		return l
+	}
+	return s.Called().Get(0).(int)
+}
+
+func (s *MockSchema) Containers(cb func(schemas.Container)) {
 	if len(s.containers) > 0 {
 		for _, c := range s.containers {
 			cb(c)
@@ -96,13 +103,6 @@ func (s *MockSchema) EnumContainers(cb func(schemas.Container)) {
 		return
 	}
 	s.Called(cb)
-}
-
-func (s *MockSchema) ContainerCount() int {
-	if l := len(s.containers); l > 0 {
-		return l
-	}
-	return s.Called().Get(0).(int)
 }
 
 func (s *MockSchema) ContainerSchema(name string) schemas.Schema {

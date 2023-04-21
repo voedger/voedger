@@ -382,7 +382,7 @@ func TestBasicUsage_Schemas(t *testing.T) {
 
 		// check fields
 		fields := make(map[string]schemas.DataKind)
-		schema.EnumFields(func(f schemas.Field) {
+		schema.Fields(func(f schemas.Field) {
 			fields[f.Name()] = f.DataKind()
 		})
 		require.Equal(7, len(fields)) // 2 system {sys.QName, sys.ID} + 5 user
@@ -392,7 +392,7 @@ func TestBasicUsage_Schemas(t *testing.T) {
 		require.Equal(schemas.DataKind_bool, fields[test.humanIdent])
 		require.Equal(schemas.DataKind_bytes, fields[test.photoIdent])
 
-		schema.EnumContainers(
+		schema.Containers(
 			func(c schemas.Container) {
 				require.Equal(test.basketIdent, c.Name())
 				require.Equal(schemas.NewQName(test.pkgName, test.basketIdent), c.Schema())
@@ -401,7 +401,7 @@ func TestBasicUsage_Schemas(t *testing.T) {
 					require.NotNil(schema)
 					require.Equal(schemas.SchemaKind_ORecord, schema.Kind())
 
-					schema.EnumContainers(
+					schema.Containers(
 						func(c schemas.Container) {
 							require.Equal(test.goodIdent, c.Name())
 							require.Equal(schemas.NewQName(test.pkgName, test.goodIdent), c.Schema())
@@ -412,7 +412,7 @@ func TestBasicUsage_Schemas(t *testing.T) {
 								require.Equal(schemas.SchemaKind_ORecord, schema.Kind())
 
 								fields := make(map[string]schemas.DataKind)
-								schema.EnumFields(func(f schemas.Field) {
+								schema.Fields(func(f schemas.Field) {
 									fields[f.Name()] = f.DataKind()
 								})
 								require.Equal(8, len(fields)) // 4 system {sys.QName, sys.ID, sys.ParentID, sys.Container} + 4 user

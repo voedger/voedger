@@ -111,7 +111,7 @@ func (s *viewRecordsStorage) toJSON(sv istructs.IStateValue, opts ...interface{}
 
 	obj := make(map[string]interface{})
 	s.schemaCacheFunc().Schema(sv.AsQName(schemas.SystemField_QName)).
-		EnumContainers(func(cont schemas.Container) {
+		Containers(func(cont schemas.Container) {
 			containerName := cont.Name()
 			if containerName == schemas.SystemContainer_ViewValue {
 				obj = coreutils.FieldsToMap(sv, s.schemaCacheFunc(), coreutils.Filter(func(name string, kidn schemas.DataKind) bool {

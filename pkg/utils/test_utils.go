@@ -47,7 +47,7 @@ func (v *TestValue) AsEvent(name string) (event istructs.IDbEvent) {
 	return v.Data[name].(istructs.IDbEvent)
 }
 
-func (s TestSchemas) EnumSchemas(cb func(schemas.Schema)) {
+func (s TestSchemas) Schemas(cb func(schemas.Schema)) {
 	for _, s := range s.Schemas_ {
 		cb(s)
 	}
@@ -161,13 +161,13 @@ func (s TestSchema) Field(name string) schemas.Field {
 	}
 	return nil
 }
-func (s TestSchema) EnumFields(cb func(schemas.Field)) {
+func (s TestSchema) FieldCount() int { return len(s.Fields_) }
+func (s TestSchema) Fields(cb func(schemas.Field)) {
 	for n, k := range s.Fields_ {
 		fld := feildDescr{name: n, kind: k}
 		cb(&fld)
 	}
 }
-func (s TestSchema) FieldCount() int { return len(s.Fields_) }
 func (s TestSchema) Container(name string) schemas.Container {
 	if s, ok := s.Containers_[name]; ok {
 		cont := contDescr{name: name, schema: s}
@@ -175,13 +175,13 @@ func (s TestSchema) Container(name string) schemas.Container {
 	}
 	return nil
 }
-func (s TestSchema) EnumContainers(cb func(schemas.Container)) {
+func (s TestSchema) ContainerCount() int { return len(s.Containers_) }
+func (s TestSchema) Containers(cb func(schemas.Container)) {
 	for n, s := range s.Containers_ {
 		cont := contDescr{name: n, schema: s}
 		cb(&cont)
 	}
 }
-func (s TestSchema) ContainerCount() int                        { return len(s.Containers_) }
 func (s TestSchema) ContainerSchema(name string) schemas.Schema { panic("implement me") }
 func (s TestSchema) Singleton() bool                            { return s.Signleton_ }
 func (s TestSchema) Validate() error                            { return nil }
