@@ -67,8 +67,7 @@ func Test_ValidEvent(t *testing.T) {
 		err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
 		require.NoError(err)
 
-		var provider istructs.IAppStructsProvider
-		provider = Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
