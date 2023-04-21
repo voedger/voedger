@@ -8,63 +8,65 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
-type SchemaFields map[string]istructs.DataKindType
+type SchemaFields map[string]schemas.DataKind
 
 func Read(fieldName string, sf SchemaFields, rr istructs.IRowReader) (val interface{}) {
 	return ReadByKind(fieldName, sf[fieldName], rr)
 }
 
-func ReadValue(fieldName string, sf SchemaFields, schemas istructs.ISchemas, val istructs.IValue) (res interface{}) {
-	if sf[fieldName] == istructs.DataKind_Record {
-		return FieldsToMap(val.AsRecord(fieldName), schemas)
+func ReadValue(fieldName string, sf SchemaFields, schemaCache schemas.SchemaCache, val istructs.IValue) (res interface{}) {
+	if sf[fieldName] == schemas.DataKind_Record {
+		return FieldsToMap(val.AsRecord(fieldName), schemaCache)
 	}
 	return ReadByKind(fieldName, sf[fieldName], val)
 }
 
 // panics on an unsupported kind guessing that pair <name, kind> could be taken from ISchema.Fields() callback only
-func ReadByKind(name string, kind istructs.DataKindType, rr istructs.IRowReader) interface{} {
+func ReadByKind(name string, kind schemas.DataKind, rr istructs.IRowReader) interface{} {
 	switch kind {
-	case istructs.DataKind_int32:
+	case schemas.DataKind_int32:
 		return rr.AsInt32(name)
-	case istructs.DataKind_int64:
+	case schemas.DataKind_int64:
 		return rr.AsInt64(name)
-	case istructs.DataKind_float32:
+	case schemas.DataKind_float32:
 		return rr.AsFloat32(name)
-	case istructs.DataKind_float64:
+	case schemas.DataKind_float64:
 		return rr.AsFloat64(name)
-	case istructs.DataKind_bytes:
+	case schemas.DataKind_bytes:
 		return rr.AsBytes(name)
-	case istructs.DataKind_string:
+	case schemas.DataKind_string:
 		return rr.AsString(name)
-	case istructs.DataKind_RecordID:
+	case schemas.DataKind_RecordID:
 		return rr.AsRecordID(name)
-	case istructs.DataKind_QName:
+	case schemas.DataKind_QName:
 		return rr.AsQName(name).String()
-	case istructs.DataKind_bool:
+	case schemas.DataKind_bool:
 		return rr.AsBool(name)
 	default:
 		panic("unsupported kind " + fmt.Sprint(kind) + " for field " + name)
 	}
 }
 
-func NewSchemaFields(schema istructs.ISchema) SchemaFields {
-	fields := make(map[string]istructs.DataKindType)
-	schema.Fields(func(fieldName string, kind istructs.DataKindType) {
-		fields[fieldName] = kind
-	})
+func NewSchemaFields(schema schemas.Schema) SchemaFields {
+	fields := make(map[string]schemas.DataKind)
+	schema.EnumFields(
+		func(f schemas.Field) {
+			fields[f.Name()] = f.DataKind()
+		})
 	return fields
 }
 
 type mapperOpts struct {
-	filter      func(name string, kind istructs.DataKindType) bool
+	filter      func(name string, kind schemas.DataKind) bool
 	nonNilsOnly bool
 }
 
 type MapperOpt func(opt *mapperOpts)
 
-func Filter(filterFunc func(name string, kind istructs.DataKindType) bool) MapperOpt {
+func Filter(filterFunc func(name string, kind schemas.DataKind) bool) MapperOpt {
 	return func(opts *mapperOpts) {
 		opts.filter = filterFunc
 	}
@@ -76,9 +78,9 @@ func WithNonNilsOnly() MapperOpt {
 	}
 }
 
-func FieldsToMap(obj istructs.IRowReader, schemas istructs.ISchemas, optFuncs ...MapperOpt) (res map[string]interface{}) {
+func FieldsToMap(obj istructs.IRowReader, schemaCache schemas.SchemaCache, optFuncs ...MapperOpt) (res map[string]interface{}) {
 	res = map[string]interface{}{}
-	if obj.AsQName(istructs.SystemField_QName) == istructs.NullQName {
+	if obj.AsQName(schemas.SystemField_QName) == schemas.NullQName {
 		return
 	}
 	opts := &mapperOpts{}
@@ -87,7 +89,7 @@ func FieldsToMap(obj istructs.IRowReader, schemas istructs.ISchemas, optFuncs ..
 	}
 
 	if opts.nonNilsOnly {
-		s := schemas.Schema(obj.AsQName(istructs.SystemField_QName))
+		s := schemaCache.Schema(obj.AsQName(schemas.SystemField_QName))
 		sf := NewSchemaFields(s)
 		obj.FieldNames(func(fieldName string) {
 			kind := sf[fieldName]
@@ -96,9 +98,9 @@ func FieldsToMap(obj istructs.IRowReader, schemas istructs.ISchemas, optFuncs ..
 					return
 				}
 			}
-			if kind == istructs.DataKind_Record {
+			if kind == schemas.DataKind_Record {
 				if ival, ok := obj.(istructs.IValue); ok {
-					res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), schemas, optFuncs...)
+					res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), schemaCache, optFuncs...)
 				} else {
 					panic("DataKind_Record field met -> IValue must be provided")
 				}
@@ -107,36 +109,38 @@ func FieldsToMap(obj istructs.IRowReader, schemas istructs.ISchemas, optFuncs ..
 			}
 		})
 	} else {
-		schemas.Schema(obj.AsQName(istructs.SystemField_QName)).Fields(func(fieldName string, kind istructs.DataKindType) {
-			if opts.filter != nil {
-				if !opts.filter(fieldName, kind) {
-					return
+		schemaCache.Schema(obj.AsQName(schemas.SystemField_QName)).EnumFields(
+			func(f schemas.Field) {
+				fieldName, kind := f.Name(), f.DataKind()
+				if opts.filter != nil {
+					if !opts.filter(fieldName, kind) {
+						return
+					}
 				}
-			}
-			if kind == istructs.DataKind_Record {
-				if ival, ok := obj.(istructs.IValue); ok {
-					res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), schemas, optFuncs...)
+				if kind == schemas.DataKind_Record {
+					if ival, ok := obj.(istructs.IValue); ok {
+						res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), schemaCache, optFuncs...)
+					} else {
+						panic("DataKind_Record field met -> IValue must be provided")
+					}
 				} else {
-					panic("DataKind_Record field met -> IValue must be provided")
+					res[fieldName] = ReadByKind(fieldName, kind, obj)
 				}
-			} else {
-				res[fieldName] = ReadByKind(fieldName, kind, obj)
-			}
-		})
+			})
 	}
 	return res
 }
 
-func ObjectToMap(obj istructs.IObject, schemas istructs.ISchemas, opts ...MapperOpt) (res map[string]interface{}) {
-	if obj.AsQName(istructs.SystemField_QName) == istructs.NullQName {
+func ObjectToMap(obj istructs.IObject, schemaCache schemas.SchemaCache, opts ...MapperOpt) (res map[string]interface{}) {
+	if obj.AsQName(schemas.SystemField_QName) == schemas.NullQName {
 		return map[string]interface{}{}
 	}
-	res = FieldsToMap(obj, schemas, opts...)
+	res = FieldsToMap(obj, schemaCache, opts...)
 	obj.Containers(func(container string) {
 		var elemMap map[string]interface{}
 		cont := []map[string]interface{}{}
 		obj.Elements(container, func(el istructs.IElement) {
-			elemMap = ObjectToMap(el, schemas, opts...)
+			elemMap = ObjectToMap(el, schemaCache, opts...)
 			cont = append(cont, elemMap)
 		})
 		res[container] = cont

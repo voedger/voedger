@@ -37,9 +37,9 @@ func TestContainers(t *testing.T) {
 	containers := NewContainers()
 	if err := containers.Prepare(storage, versions,
 		func() schemas.SchemaCache {
-			schemaName := istructs.NewQName("test", "schema")
+			schemaName := schemas.NewQName("test", "schema")
 			bld := schemas.NewSchemaCache()
-			bld.Add(schemaName, istructs.SchemaKind_Element).
+			bld.Add(schemaName, schemas.SchemaKind_Element).
 				AddContainer(containerName, schemaName, 0, 1)
 			schemas, err := bld.Build()
 			require.NoError(err)
@@ -87,9 +87,9 @@ func TestContainers(t *testing.T) {
 			containers2 := NewContainers()
 			if err := containers2.Prepare(storage, versions,
 				func() schemas.SchemaCache {
-					schemaName := istructs.NewQName("test", "schema")
+					schemaName := schemas.NewQName("test", "schema")
 					bld := schemas.NewSchemaCache()
-					bld.Add(schemaName, istructs.SchemaKind_Element).
+					bld.Add(schemaName, schemas.SchemaKind_Element).
 						AddContainer(containerName, schemaName, 0, 1)
 					schemas, err := bld.Build()
 					require.NoError(err)
@@ -200,8 +200,8 @@ func TestContainersPrepareErrors(t *testing.T) {
 		err := names.Prepare(storage, versions,
 			func() schemas.SchemaCache {
 				bld := schemas.NewSchemaCache()
-				qName := istructs.NewQName("test", "test")
-				schema := bld.Add(qName, istructs.SchemaKind_Element)
+				qName := schemas.NewQName("test", "test")
+				schema := bld.Add(qName, schemas.SchemaKind_Element)
 				for i := 0; i <= MaxAvailableContainerID; i++ {
 					schema.AddContainer(fmt.Sprintf("cont_%d", i), qName, 0, 1)
 				}
@@ -229,9 +229,9 @@ func TestContainersPrepareErrors(t *testing.T) {
 			names := NewContainers()
 			err := names.Prepare(storage, versions,
 				func() schemas.SchemaCache {
-					schemaName := istructs.NewQName("test", "schema")
+					schemaName := schemas.NewQName("test", "schema")
 					bld := schemas.NewSchemaCache()
-					bld.Add(schemaName, istructs.SchemaKind_Element).
+					bld.Add(schemaName, schemas.SchemaKind_Element).
 						AddContainer(containerName, schemaName, 0, 1)
 					schemas, err := bld.Build()
 					require.NoError(err)
@@ -253,9 +253,9 @@ func TestContainersPrepareErrors(t *testing.T) {
 			names := NewContainers()
 			err := names.Prepare(storage, versions,
 				func() schemas.SchemaCache {
-					schemaName := istructs.NewQName("test", "schema")
+					schemaName := schemas.NewQName("test", "schema")
 					bld := schemas.NewSchemaCache()
-					bld.Add(schemaName, istructs.SchemaKind_Element).
+					bld.Add(schemaName, schemas.SchemaKind_Element).
 						AddContainer(containerName, schemaName, 0, 1)
 					schemas, err := bld.Build()
 					require.NoError(err)

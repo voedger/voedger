@@ -9,6 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc,
@@ -19,28 +20,28 @@ func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStr
 	bs.addStorage(ViewRecordsStorage, &viewRecordsStorage{
 		ctx:             ctx,
 		viewRecordsFunc: func() istructs.IViewRecords { return appStructsFunc().ViewRecords() },
-		schemasFunc:     func() istructs.ISchemas { return appStructsFunc().Schemas() },
+		schemaCacheFunc: func() schemas.SchemaCache { return appStructsFunc().Schemas() },
 		wsidFunc:        wsidFunc,
 	}, S_GET_BATCH)
 
 	bs.addStorage(RecordsStorage, &recordsStorage{
-		recordsFunc: func() istructs.IRecords { return appStructsFunc().Records() },
-		cudFunc:     cudFunc,
-		schemasFunc: func() istructs.ISchemas { return appStructsFunc().Schemas() },
-		wsidFunc:    wsidFunc,
+		recordsFunc:     func() istructs.IRecords { return appStructsFunc().Records() },
+		cudFunc:         cudFunc,
+		schemaCacheFunc: func() schemas.SchemaCache { return appStructsFunc().Schemas() },
+		wsidFunc:        wsidFunc,
 	}, S_GET_BATCH|S_INSERT|S_UPDATE)
 
 	bs.addStorage(WLogStorage, &wLogStorage{
-		ctx:         ctx,
-		eventsFunc:  func() istructs.IEvents { return appStructsFunc().Events() },
-		schemasFunc: func() istructs.ISchemas { return appStructsFunc().Schemas() },
-		wsidFunc:    wsidFunc,
+		ctx:             ctx,
+		eventsFunc:      func() istructs.IEvents { return appStructsFunc().Events() },
+		schemaCacheFunc: func() schemas.SchemaCache { return appStructsFunc().Schemas() },
+		wsidFunc:        wsidFunc,
 	}, S_GET_BATCH)
 
 	bs.addStorage(PLogStorage, &pLogStorage{
 		ctx:             ctx,
 		eventsFunc:      func() istructs.IEvents { return appStructsFunc().Events() },
-		schemasFunc:     func() istructs.ISchemas { return appStructsFunc().Schemas() },
+		schemaCacheFunc: func() schemas.SchemaCache { return appStructsFunc().Schemas() },
 		partitionIDFunc: partitionIDFunc,
 	}, S_GET_BATCH)
 

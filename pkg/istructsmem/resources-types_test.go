@@ -19,7 +19,7 @@ func Test_nullResource(t *testing.T) {
 
 	n := newNullResource()
 	require.Equal(istructs.ResourceKind_null, n.Kind())
-	require.Equal(istructs.NullQName, n.QName())
+	require.Equal(schemas.NullQName, n.QName())
 }
 
 func TestResourceEnumerator(t *testing.T) {
@@ -29,38 +29,38 @@ func TestResourceEnumerator(t *testing.T) {
 		cfg *AppConfigType
 		app istructs.IAppStructs
 
-		cmdCreateDoc istructs.QName = istructs.NewQName("test", "CreateDoc")
-		cDocName     istructs.QName = istructs.NewQName("test", "CDoc")
+		cmdCreateDoc schemas.QName = schemas.NewQName("test", "CreateDoc")
+		cDocName     schemas.QName = schemas.NewQName("test", "CDoc")
 
-		cmdCreateObj         istructs.QName = istructs.NewQName("test", "CreateObj")
-		cmdCreateObjUnlogged istructs.QName = istructs.NewQName("test", "CreateObjUnlogged")
-		oObjName             istructs.QName = istructs.NewQName("test", "Object")
+		cmdCreateObj         schemas.QName = schemas.NewQName("test", "CreateObj")
+		cmdCreateObjUnlogged schemas.QName = schemas.NewQName("test", "CreateObjUnlogged")
+		oObjName             schemas.QName = schemas.NewQName("test", "Object")
 
-		cmdCUD istructs.QName = istructs.NewQName("test", "cudEvent")
+		cmdCUD schemas.QName = schemas.NewQName("test", "cudEvent")
 	)
 
 	t.Run("builds app", func(t *testing.T) {
 
-		schemas := schemas.NewSchemaCache()
+		bld := schemas.NewSchemaCache()
 		t.Run("must be ok to build schemas and resources", func(t *testing.T) {
-			CDocSchema := schemas.Add(cDocName, istructs.SchemaKind_CDoc)
+			CDocSchema := bld.Add(cDocName, schemas.SchemaKind_CDoc)
 			CDocSchema.
-				AddField("Int32", istructs.DataKind_int32, true).
-				AddField("String", istructs.DataKind_string, false)
+				AddField("Int32", schemas.DataKind_int32, true).
+				AddField("String", schemas.DataKind_string, false)
 
-			ObjSchema := schemas.Add(oObjName, istructs.SchemaKind_Object)
+			ObjSchema := bld.Add(oObjName, schemas.SchemaKind_Object)
 			ObjSchema.
-				AddField("Int32", istructs.DataKind_int32, true).
-				AddField("String", istructs.DataKind_string, false)
+				AddField("Int32", schemas.DataKind_int32, true).
+				AddField("String", schemas.DataKind_string, false)
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
 
-		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, istructs.NullQName, istructs.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewCommandFunction(cmdCreateObj, oObjName, istructs.NullQName, istructs.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, istructs.NullQName, oObjName, istructs.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewCommandFunction(cmdCUD, istructs.NullQName, istructs.NullQName, istructs.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, schemas.NullQName, schemas.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateObj, oObjName, schemas.NullQName, schemas.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, schemas.NullQName, oObjName, schemas.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCUD, schemas.NullQName, schemas.NullQName, schemas.NullQName, NullCommandExec))
 
 		storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
@@ -77,7 +77,7 @@ func TestResourceEnumerator(t *testing.T) {
 	t.Run("enumerate all resources", func(t *testing.T) {
 		cnt := 0
 		app.Resources().Resources(
-			func(resName istructs.QName) {
+			func(resName schemas.QName) {
 				cnt++
 				require.NotNil(app.Resources().QueryResource(resName))
 			})

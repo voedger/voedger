@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestSubjectStorage_BasicUsage(t *testing.T) {
@@ -23,7 +24,7 @@ func TestSubjectStorage_BasicUsage(t *testing.T) {
 	token := "token"
 	tokenFunc := func() string { return token }
 	s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} }, nil, nil, nil, nil, func() []iauthnz.Principal { return principals }, tokenFunc, 1)
-	k, err := s.KeyBuilder(SubjectStorage, istructs.NullQName)
+	k, err := s.KeyBuilder(SubjectStorage, schemas.NullQName)
 	require.Nil(err)
 
 	v, err := s.MustExist(k)

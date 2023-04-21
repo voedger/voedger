@@ -17,7 +17,6 @@ type schema struct {
 	cache             *schemasCache
 	name              QName
 	kind              SchemaKind
-	props             SchemaKindProps
 	fields            map[string]*field
 	fieldsOrdered     []string
 	containers        map[string]*container
@@ -30,7 +29,6 @@ func newSchema(cache *schemasCache, name QName, kind SchemaKind) *schema {
 		cache:             cache,
 		name:              name,
 		kind:              kind,
-		props:             schemaKindProps[kind],
 		fields:            make(map[string]*field),
 		fieldsOrdered:     make([]string, 0),
 		containers:        make(map[string]*container),
@@ -60,11 +58,11 @@ func (sch *schema) AddContainer(name string, schema QName, minOccurs, maxOccurs 
 		panic(fmt.Errorf("max occurs (%v) must be greater or equal to min occurs (%v): %w", maxOccurs, minOccurs, ErrInvalidOccurs))
 	}
 
-	if !sch.Props().ContainersAllowed() {
+	if !sch.Kind().ContainersAllowed() {
 		panic(fmt.Errorf("schema «%s» kind «%v» does not allow containers: %w", sch.QName(), sch.Kind(), ErrInvalidSchemaKind))
 	}
 	if contSchema := sch.cache.SchemaByName(schema); contSchema != nil {
-		if !sch.Props().ContainerKindAvailable(contSchema.Kind()) {
+		if !sch.Kind().ContainerKindAvailable(contSchema.Kind()) {
 			panic(fmt.Errorf("schema «%s» kind «%v» does not support child container kind «%v»: %w", sch.QName(), sch.Kind(), contSchema.Kind(), ErrInvalidSchemaKind))
 		}
 	}
@@ -134,10 +132,6 @@ func (sch *schema) Kind() SchemaKind {
 	return sch.kind
 }
 
-func (sch *schema) Props() SchemaKindProps {
-	return sch.props
-}
-
 func (sch *schema) QName() QName {
 	return sch.name
 }
@@ -161,10 +155,10 @@ func (sch *schema) addField(name string, kind DataKind, required, verified bool)
 		panic(fmt.Errorf("field «%v» is already exists: %w", name, ErrNameUniqueViolation))
 	}
 	// TODO: check name is valid
-	if !sch.Props().FieldsAllowed() {
+	if !sch.Kind().FieldsAllowed() {
 		panic(fmt.Errorf("schema «%s» kind «%v» does not allow fields: %w", sch.QName(), sch.Kind(), ErrInvalidSchemaKind))
 	}
-	if !sch.Props().DataKindAvailable(kind) {
+	if !sch.Kind().DataKindAvailable(kind) {
 		panic(fmt.Errorf("schema «%s» kind «%v» does not support fields kind «%v»: %w", sch.QName(), sch.Kind(), kind, ErrInvalidDataKind))
 	}
 
@@ -182,23 +176,23 @@ func (sch *schema) clear() {
 }
 
 func (sch *schema) makeSysFields() {
-	if sch.Props().HasSystemField(SystemField_QName) {
+	if sch.Kind().HasSystemField(SystemField_QName) {
 		sch.AddField(SystemField_QName, DataKind_QName, true)
 	}
 
-	if sch.Props().HasSystemField(SystemField_ID) {
+	if sch.Kind().HasSystemField(SystemField_ID) {
 		sch.AddField(SystemField_ID, DataKind_RecordID, true)
 	}
 
-	if sch.Props().HasSystemField(SystemField_ParentID) {
+	if sch.Kind().HasSystemField(SystemField_ParentID) {
 		sch.AddField(SystemField_ParentID, DataKind_RecordID, true)
 	}
 
-	if sch.Props().HasSystemField(SystemField_Container) {
+	if sch.Kind().HasSystemField(SystemField_Container) {
 		sch.AddField(SystemField_Container, DataKind_string, true)
 	}
 
-	if sch.Props().HasSystemField(SystemField_IsActive) {
+	if sch.Kind().HasSystemField(SystemField_IsActive) {
 		sch.AddField(SystemField_IsActive, DataKind_bool, false)
 	}
 }

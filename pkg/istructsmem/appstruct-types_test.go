@@ -85,13 +85,13 @@ func TestErrorsAppConfigsType(t *testing.T) {
 	storageProvider := teststore.NewTestStorageProvider(storage)
 
 	t.Run("must error if error while read versions", func(t *testing.T) {
-		schemas := schemas.NewSchemaCache()
+		bld := schemas.NewSchemaCache()
 		t.Run("must be ok to build schemas", func(t *testing.T) {
-			schemas.Add(istructs.NewQName("test", "CDoc"), istructs.SchemaKind_CDoc)
+			bld.Add(schemas.NewQName("test", "CDoc"), schemas.SchemaKind_CDoc)
 		})
 
 		cfgs1 := make(AppConfigsType, 1)
-		_ = cfgs1.AddConfig(istructs.AppQName_test1_app1, schemas)
+		_ = cfgs1.AddConfig(istructs.AppQName_test1_app1, bld)
 		provider1, err := Provide(cfgs1, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		require.NoError(err)
 
@@ -104,7 +104,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs2 := make(AppConfigsType, 1)
-		_ = cfgs2.AddConfig(istructs.AppQName_test1_app1, schemas)
+		_ = cfgs2.AddConfig(istructs.AppQName_test1_app1, bld)
 		provider2, err := Provide(cfgs2, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		require.NoError(err)
 		_, err = provider2.AppStructs(istructs.AppQName_test1_app1)

@@ -27,8 +27,8 @@ func Test_BasicUsage(t *testing.T) {
 
 	testName := "test"
 	bld := schemas.NewSchemaCache()
-	bld.Add(istructs.NewQName("test", "schema"), istructs.SchemaKind_Element).
-		AddContainer(testName, istructs.NewQName("test", "schema"), 0, istructs.ContainerOccurs_Unbounded)
+	bld.Add(schemas.NewQName("test", "schema"), schemas.SchemaKind_Element).
+		AddContainer(testName, schemas.NewQName("test", "schema"), 0, schemas.Occurs_Unbounded)
 	schemas, err := bld.Build()
 	if err != nil {
 		panic(err)

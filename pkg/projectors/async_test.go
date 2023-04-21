@@ -44,7 +44,7 @@ import (
 func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
-	cmdQName := istructs.NewQName("test", "test")
+	cmdQName := schemas.NewQName("test", "test")
 	app := appStructs(
 		func(schemas schemas.SchemaCacheBuilder) {
 			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
@@ -52,7 +52,7 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 			ProvideOffsetsSchema(schemas)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, schemas.NullQName, schemas.NullQName, schemas.NullQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -130,7 +130,7 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	require := require.New(t)
 
-	cmdQName := istructs.NewQName("test", "test")
+	cmdQName := schemas.NewQName("test", "test")
 	app := appStructs(
 		func(schemas schemas.SchemaCacheBuilder) {
 			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
@@ -138,7 +138,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 			ProvideOffsetsSchema(schemas)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, schemas.NullQName, schemas.NullQName, schemas.NullQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(2) // test within partition 2
 
@@ -204,7 +204,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	require := require.New(t)
 
-	cmdQName := istructs.NewQName("test", "test")
+	cmdQName := schemas.NewQName("test", "test")
 	app := appStructs(
 		func(schemas schemas.SchemaCacheBuilder) {
 			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
@@ -212,7 +212,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 			ProvideOffsetsSchema(schemas)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, schemas.NullQName, schemas.NullQName, schemas.NullQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -270,17 +270,17 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	require := require.New(t)
 
-	name := istructs.NewQName("test", "failing_projector")
-	cmdQName := istructs.NewQName("test", "test")
+	name := schemas.NewQName("test", "failing_projector")
+	cmdQName := schemas.NewQName("test", "test")
 	app := appStructs(
-		func(schemas schemas.SchemaCacheBuilder) {
-			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
-			ProvideViewSchema(schemas, decProjectionView, buildProjectionSchema)
-			ProvideOffsetsSchema(schemas)
-			schemas.Add(name, istructs.SchemaKind_Object)
+		func(cache schemas.SchemaCacheBuilder) {
+			ProvideViewSchema(cache, incProjectionView, buildProjectionSchema)
+			ProvideViewSchema(cache, decProjectionView, buildProjectionSchema)
+			ProvideOffsetsSchema(cache)
+			cache.Add(name, schemas.SchemaKind_Object)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, schemas.NullQName, schemas.NullQName, schemas.NullQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -370,7 +370,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	require := require.New(t)
 
-	cmdQName := istructs.NewQName("test", "test")
+	cmdQName := schemas.NewQName("test", "test")
 	app := appStructs(
 		func(schemas schemas.SchemaCacheBuilder) {
 			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
@@ -378,7 +378,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 			ProvideOffsetsSchema(schemas)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, schemas.NullQName, schemas.NullQName, schemas.NullQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -482,7 +482,7 @@ type pLogFiller struct {
 	app       istructs.IAppStructs
 	partition istructs.PartitionID
 	offset    istructs.Offset
-	cmdQName  istructs.QName
+	cmdQName  schemas.QName
 }
 
 func (f *pLogFiller) fill(WSID istructs.WSID) (offset istructs.Offset) {
@@ -500,7 +500,7 @@ func (f *pLogFiller) fill(WSID istructs.WSID) (offset istructs.Offset) {
 	}
 	offset = f.offset
 	f.offset++
-	generator := func(custom istructs.RecordID, schema istructs.ISchema) (storage istructs.RecordID, err error) {
+	generator := func(custom istructs.RecordID, schema schemas.Schema) (storage istructs.RecordID, err error) {
 		return istructs.NullRecordID, nil
 	}
 	_, err = f.app.Events().PutPlog(rawEvent, nil, generator)
@@ -525,7 +525,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 
 	require := require.New(t)
 
-	cmdQName := istructs.NewQName("test", "test")
+	cmdQName := schemas.NewQName("test", "test")
 	app := appStructs(
 		func(schemas schemas.SchemaCacheBuilder) {
 			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
@@ -533,7 +533,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 			ProvideOffsetsSchema(schemas)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, schemas.NullQName, schemas.NullQName, schemas.NullQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -603,7 +603,7 @@ type simpleMetrics struct {
 	storedOffset  int64
 }
 
-func (m *simpleMetrics) Increase(metricName string, partition istructs.PartitionID, projection istructs.QName, valueDelta float64) {
+func (m *simpleMetrics) Increase(metricName string, partition istructs.PartitionID, projection schemas.QName, valueDelta float64) {
 	if metricName == aaCurrentOffset {
 		atomic.AddInt64(&m.currentOffset, int64(valueDelta))
 	} else if metricName == aaFlushesTotal {
@@ -613,7 +613,7 @@ func (m *simpleMetrics) Increase(metricName string, partition istructs.Partition
 	}
 }
 
-func (m *simpleMetrics) Set(metricName string, partition istructs.PartitionID, projection istructs.QName, value float64) {
+func (m *simpleMetrics) Set(metricName string, partition istructs.PartitionID, projection schemas.QName, value float64) {
 	if metricName == aaCurrentOffset {
 		atomic.StoreInt64(&m.currentOffset, int64(value))
 	} else if metricName == aaFlushesTotal {
@@ -626,7 +626,7 @@ func (m *simpleMetrics) Set(metricName string, partition istructs.PartitionID, p
 func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 	require := require.New(t)
 
-	cmdQName := istructs.NewQName("test", "test")
+	cmdQName := schemas.NewQName("test", "test")
 	app := appStructs(
 		func(schemas schemas.SchemaCacheBuilder) {
 			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
@@ -634,7 +634,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 			ProvideOffsetsSchema(schemas)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, schemas.NullQName, schemas.NullQName, schemas.NullQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(2) // test within partition 2
 

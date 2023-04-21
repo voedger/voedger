@@ -25,9 +25,9 @@ func Test_BasicUsage(t *testing.T) {
 		panic(err)
 	}
 
-	testName := istructs.NewQName("test", "schema")
+	testName := schemas.NewQName("test", "schema")
 	bld := schemas.NewSchemaCache()
-	bld.Add(testName, istructs.SchemaKind_CDoc)
+	bld.Add(testName, schemas.SchemaKind_CDoc)
 	schemas, err := bld.Build()
 	if err != nil {
 		panic(err)

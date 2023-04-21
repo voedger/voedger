@@ -12,7 +12,6 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
@@ -69,9 +68,9 @@ func (cnt *Containers) collectAllContainers(sch schemas.SchemaCache) (err error)
 
 	// system containers
 	cnt.collectSysContainer("", NullContainerID)
-	cnt.collectSysContainer(istructs.SystemContainer_ViewPartitionKey, ViewPKeyContainerID)
-	cnt.collectSysContainer(istructs.SystemContainer_ViewClusteringCols, ViewCColsContainerID)
-	cnt.collectSysContainer(istructs.SystemContainer_ViewValue, ViewValueContainerID)
+	cnt.collectSysContainer(schemas.SystemContainer_ViewPartitionKey, ViewPKeyContainerID)
+	cnt.collectSysContainer(schemas.SystemContainer_ViewClusteringCols, ViewCColsContainerID)
+	cnt.collectSysContainer(schemas.SystemContainer_ViewValue, ViewValueContainerID)
 
 	// application containers
 	if sch != nil {

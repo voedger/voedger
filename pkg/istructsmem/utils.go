@@ -86,7 +86,7 @@ func IBucketsFromIAppStructs(as istructs.IAppStructs) irates.IBuckets {
 	return as.(interface{ Buckets() irates.IBuckets }).Buckets()
 }
 
-func FillElementFromJSON(data map[string]interface{}, s istructs.ISchema, b istructs.IElementBuilder, schemas istructs.ISchemas) error {
+func FillElementFromJSON(data map[string]interface{}, s schemas.Schema, b istructs.IElementBuilder) error {
 	for fieldName, fieldValue := range data {
 		switch fv := fieldValue.(type) {
 		case float64:
@@ -98,23 +98,17 @@ func FillElementFromJSON(data map[string]interface{}, s istructs.ISchema, b istr
 		case []interface{}:
 			// e.g. TestBasicUsage_Dashboard(), "order_item": [<2 elements>]
 			containerName := fieldName
-			var containerQName istructs.QName
-			s.Containers(func(cn string, schema istructs.QName) {
-				if containerName == cn {
-					containerQName = schema
-				}
-			})
-			if containerQName == istructs.NullQName {
+			containerSchema := s.ContainerSchema(containerName)
+			if containerSchema == nil {
 				return fmt.Errorf("container with name %s is not found", containerName)
 			}
-			containerSchema := schemas.Schema(containerQName)
 			for i, intf := range fv {
 				objContainerElem, ok := intf.(map[string]interface{})
 				if !ok {
 					return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
 				}
 				containerElemBuilder := b.ElementBuilder(fieldName)
-				if err := FillElementFromJSON(objContainerElem, containerSchema, containerElemBuilder, schemas); err != nil {
+				if err := FillElementFromJSON(objContainerElem, containerSchema, containerElemBuilder); err != nil {
 					return err
 				}
 			}
@@ -123,31 +117,32 @@ func FillElementFromJSON(data map[string]interface{}, s istructs.ISchema, b istr
 	return nil
 }
 
-func NewIObjectBuilder(cfg *AppConfigType, qName istructs.QName) istructs.IObjectBuilder {
+func NewIObjectBuilder(cfg *AppConfigType, qName schemas.QName) istructs.IObjectBuilder {
 	obj := newObject(cfg, qName)
 	return &obj
 }
 
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
-	schemas := appStructs.Schemas()
-	schema := schemas.Schema(obj.AsQName(istructs.SystemField_QName))
-	schema.ForEachField(func(field istructs.IFieldDescr) {
-		if err != nil || field.DataKind() != istructs.DataKind_RecordID {
-			return
-		}
-		recID := obj.AsRecordID(field.Name())
-		if recID.IsRaw() || recID == istructs.NullRecordID {
-			return
-		}
-		var rec istructs.IRecord
-		rec, err = appStructs.Records().Get(wsid, true, recID)
-		if err != nil {
-			return
-		}
-		if rec.QName() == istructs.NullQName {
-			err = fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, recID,
-				obj.AsQName(istructs.SystemField_QName), field.Name())
-		}
-	})
+	schems := appStructs.Schemas()
+	schema := schems.Schema(obj.AsQName(schemas.SystemField_QName))
+	schema.EnumFields(
+		func(f schemas.Field) {
+			if err != nil || f.DataKind() != schemas.DataKind_RecordID {
+				return
+			}
+			recID := obj.AsRecordID(f.Name())
+			if recID.IsRaw() || recID == istructs.NullRecordID {
+				return
+			}
+			var rec istructs.IRecord
+			rec, err = appStructs.Records().Get(wsid, true, recID)
+			if err != nil {
+				return
+			}
+			if rec.QName() == schemas.NullQName {
+				err = fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, recID,
+					obj.AsQName(schemas.SystemField_QName), f.Name())
+			}
+		})
 	return err
 }

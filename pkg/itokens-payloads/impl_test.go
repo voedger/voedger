@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/itokensjwt"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 var (
@@ -90,7 +91,7 @@ func TestBasicUsage_VerifiedValue(t *testing.T) {
 
 	require := require.New(t)
 	signer := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testTimeFunc)
-	testQName := istructs.NewQName("test", "entity")
+	testQName := schemas.NewQName("test", "entity")
 
 	token := ""
 	var err error

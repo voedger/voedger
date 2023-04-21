@@ -53,6 +53,13 @@ func (cache *schemasCache) Build() (result SchemaCache, err error) {
 	return cache, nil
 }
 
+func (cache *schemasCache) Schema(name QName) Schema {
+	if schema := cache.SchemaByName(name); schema != nil {
+		return schema
+	}
+	return NullSchema
+}
+
 func (cache *schemasCache) SchemaByName(name QName) Schema {
 	if schema, ok := cache.schemas[name]; ok {
 		return schema

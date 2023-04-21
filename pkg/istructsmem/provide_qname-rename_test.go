@@ -26,21 +26,21 @@ func TestRenameQName(t *testing.T) {
 
 	require := require.New(t)
 
-	old := istructs.NewQName("test", "old")
-	new := istructs.NewQName("test", "new")
+	old := schemas.NewQName("test", "old")
+	new := schemas.NewQName("test", "new")
 
-	other := istructs.NewQName("test", "other")
+	other := schemas.NewQName("test", "other")
 
 	testStorage := func() istorage.IAppStorage {
 		storage := teststore.NewTestStorage()
 		storageProvider := teststore.NewTestStorageProvider(storage)
 
-		schemas := schemas.NewSchemaCache()
-		_ = schemas.Add(old, istructs.SchemaKind_Object)
-		_ = schemas.Add(other, istructs.SchemaKind_Object)
+		bld := schemas.NewSchemaCache()
+		_ = bld.Add(old, schemas.SchemaKind_Object)
+		_ = bld.Add(other, schemas.SchemaKind_Object)
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
 
 		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		require.NoError(err, err)
@@ -111,7 +111,7 @@ func TestRenameQName(t *testing.T) {
 		t.Run("must error if old name not found", func(t *testing.T) {
 			storage := testStorage()
 
-			err := RenameQName(storage, istructs.NewQName("test", "unknown"), new)
+			err := RenameQName(storage, schemas.NewQName("test", "unknown"), new)
 			require.ErrorContains(err, "old QName ID not found")
 		})
 

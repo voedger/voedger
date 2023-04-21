@@ -42,7 +42,7 @@ type IAppStructs interface {
 	// Data schemas, kind of RTTI, reflection
 
 	// Schemas
-	Schemas() ISchemas
+	Schemas() schemas.SchemaCache
 
 	ClusterAppID() ClusterAppID
 	AppQName() AppQName
@@ -160,26 +160,6 @@ type IResources interface {
 
 	// Enumerates all application resources
 	Resources(func(resName schemas.QName))
-}
-
-type ISchemas interface {
-	// If not found empty Schema with SchemeKind_null is returned
-	Schema(schema schemas.QName) ISchema
-
-	// Enumerates all application schemas
-	Schemas(func(schemaName schemas.QName))
-}
-
-type ISchema interface {
-	Kind() schemas.SchemaKind
-	QName() schemas.QName
-
-	Fields(cb func(fieldName string, kind schemas.DataKind))
-	ForEachField(cb func(field IFieldDescr))
-
-	// If not found empty ContainerDescr with NullQName schema is returned
-	Containers(cb func(containerName string, schema schemas.QName))
-	ForEachContainer(cb func(cont IContainerDescr))
 }
 
 // Same as itokens.ITokens but works for App specified in IAppTokensFactory

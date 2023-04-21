@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type (
@@ -33,7 +34,7 @@ type eventType struct {
 	pLogOffs  istructs.Offset
 	ws        istructs.WSID
 	wLogOffs  istructs.Offset
-	name      istructs.QName
+	name      schemas.QName
 	regTime   istructs.UnixMilli
 	sync      bool
 	device    istructs.ConnectedDeviceID
@@ -47,8 +48,8 @@ type eventType struct {
 func newRawEvent(appCfg *AppConfigType) eventType {
 	event := eventType{
 		appCfg:    appCfg,
-		argObject: newObject(appCfg, istructs.NullQName),
-		argUnlObj: newObject(appCfg, istructs.NullQName),
+		argObject: newObject(appCfg, schemas.NullQName),
+		argUnlObj: newObject(appCfg, schemas.NullQName),
 		cud:       newCUD(appCfg),
 	}
 	return event
@@ -83,9 +84,9 @@ func newSyncEvent(appCfg *AppConfigType, params istructs.SyncRawEventBuilderPara
 }
 
 // argumentNames returns argnument and unlogged argument QNames
-func (ev *eventType) argumentNames() (arg, argUnl istructs.QName, err error) {
-	arg = istructs.NullQName
-	argUnl = istructs.NullQName
+func (ev *eventType) argumentNames() (arg, argUnl schemas.QName, err error) {
+	arg = schemas.NullQName
+	argUnl = schemas.NullQName
 
 	if ev.name == istructs.QNameCommandCUD {
 		return arg, argUnl, nil // #17664 — «sys.CUD» command has no arguments objects, only CUDs
@@ -97,7 +98,7 @@ func (ev *eventType) argumentNames() (arg, argUnl istructs.QName, err error) {
 		argUnl = cmd.UnloggedParamsSchema()
 	} else {
 		// #!16208: Must be possible to use SchemaKind_ODoc as Event.QName
-		if schema := ev.appCfg.Schemas.SchemaByName(ev.name); (schema == nil) || (schema.Kind() != istructs.SchemaKind_ODoc) {
+		if schema := ev.appCfg.Schemas.SchemaByName(ev.name); (schema == nil) || (schema.Kind() != schemas.SchemaKind_ODoc) {
 			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
 		}
 		arg = ev.name
@@ -108,7 +109,7 @@ func (ev *eventType) argumentNames() (arg, argUnl istructs.QName, err error) {
 
 // build build all event arguments and CUDs
 func (ev *eventType) build() (err error) {
-	if ev.name == istructs.NullQName {
+	if ev.name == schemas.NullQName {
 		return validateErrorf(ECode_EmptySchemaName, "empty event command name: %w", ErrNameMissed)
 	}
 
@@ -148,7 +149,7 @@ func (ev *eventType) copyFrom(src *eventType) {
 
 // regenerateIDs regenerates all raw IDs in event arguments and CUDs using specified generator
 func (ev *eventType) regenerateIDs(generator istructs.IDGenerator) (err error) {
-	if (ev.argObject.QName() != istructs.NullQName) && ev.argObject.isDocument() {
+	if (ev.argObject.QName() != schemas.NullQName) && ev.argObject.isDocument() {
 		if err := ev.argObject.regenerateIDs(generator); err != nil {
 			return err
 		}
@@ -161,7 +162,7 @@ func (ev *eventType) regenerateIDs(generator istructs.IDGenerator) (err error) {
 }
 
 // setName sets specified command name for event. Command name may be ODOC name, see #!16208
-func (ev *eventType) setName(n istructs.QName) {
+func (ev *eventType) setName(n schemas.QName) {
 	ev.name = n
 	if ev.appCfg != nil {
 		if arg, argUnl, err := ev.argumentNames(); err == nil {
@@ -204,7 +205,7 @@ func (ev *eventType) BuildRawEvent() (raw istructs.IRawEvent, err error) {
 }
 
 // istructs.IAbstractEvent.QName. Be careful — this method is overridden by dbEventType
-func (ev *eventType) QName() istructs.QName {
+func (ev *eventType) QName() schemas.QName {
 	return ev.name
 }
 
@@ -355,7 +356,7 @@ func (ev *dbEventType) Error() istructs.IEventError {
 }
 
 // istructs.IDbEvent.QName — overrides IAbstractEvent.QName()
-func (ev *dbEventType) QName() istructs.QName {
+func (ev *dbEventType) QName() schemas.QName {
 	qName := istructs.QNameForError
 	if ev.valid() {
 		qName = ev.name
@@ -571,7 +572,7 @@ func (cud *cudType) regenerateIDs(generator istructs.IDGenerator) error {
 }
 
 // istructs.ICUD.Create
-func (cud *cudType) Create(qName istructs.QName) istructs.IRowWriter {
+func (cud *cudType) Create(qName schemas.QName) istructs.IRowWriter {
 	r := newRecord(cud.appCfg)
 	r.isNew = true
 	r.setQName(qName)
@@ -631,7 +632,7 @@ func (upd *updateRecType) build() (err error) {
 
 	upd.result.copyFrom(&upd.originRec)
 
-	if upd.changes.QName() == istructs.NullQName {
+	if upd.changes.QName() == schemas.NullQName {
 		return nil
 	}
 
@@ -686,7 +687,7 @@ type elementType struct {
 	childs []*elementType
 }
 
-func newObject(appCfg *AppConfigType, qn istructs.QName) elementType {
+func newObject(appCfg *AppConfigType, qn schemas.QName) elementType {
 	obj := elementType{
 		recordType: newRecord(appCfg),
 		childs:     make([]*elementType, 0),
@@ -743,10 +744,10 @@ func (el *elementType) forEach(cb func(e *elementType) error) (err error) {
 // isDocument returns is document schema assigned to element record
 func (el *elementType) isDocument() bool {
 	kind := el.schema.Kind()
-	return (kind == istructs.SchemaKind_GDoc) ||
-		(kind == istructs.SchemaKind_CDoc) ||
-		(kind == istructs.SchemaKind_ODoc) ||
-		(kind == istructs.SchemaKind_WDoc)
+	return (kind == schemas.SchemaKind_GDoc) ||
+		(kind == schemas.SchemaKind_CDoc) ||
+		(kind == schemas.SchemaKind_ODoc) ||
+		(kind == schemas.SchemaKind_WDoc)
 }
 
 // maskValues masks element record row values and all elements chils recursive
@@ -806,10 +807,10 @@ func (el *elementType) regenerateIDs(generator istructs.IDGenerator) (err error)
 func (el *elementType) ElementBuilder(containerName string) istructs.IElementBuilder {
 	c := newElement(el)
 	el.childs = append(el.childs, &c)
-	if el.QName() != istructs.NullQName {
+	if el.QName() != schemas.NullQName {
 		if cont := el.schema.Container(containerName); cont != nil {
 			c.setQName(cont.Schema())
-			if c.QName() != istructs.NullQName {
+			if c.QName() != schemas.NullQName {
 				if el.ID() != istructs.NullRecordID {
 					c.setParent(el.ID())
 				}
@@ -862,7 +863,7 @@ func (el *elementType) Build() (doc istructs.IObject, err error) {
 }
 
 // istructs.IElement.QName()
-func (el *elementType) QName() istructs.QName {
+func (el *elementType) QName() schemas.QName {
 	return el.recordType.QName()
 }
 
@@ -877,14 +878,14 @@ func (el *elementType) AsRecord() istructs.IRecord {
 type eventErrorType struct {
 	validEvent bool
 	errStr     string
-	qName      istructs.QName
+	qName      schemas.QName
 	bytes      []byte
 }
 
 func newEventError() eventErrorType {
 	return eventErrorType{
 		validEvent: true,
-		qName:      istructs.NullQName,
+		qName:      schemas.NullQName,
 	}
 }
 
@@ -901,7 +902,7 @@ func (e *eventErrorType) setError(event *dbEventType, err error) {
 	if err == nil {
 		e.validEvent = true
 		e.errStr = ""
-		e.qName = istructs.NullQName
+		e.qName = schemas.NullQName
 		e.bytes = nil
 	} else {
 		e.validEvent = false
@@ -918,7 +919,7 @@ func (e *eventErrorType) ErrStr() string {
 }
 
 // istructs.IEventError.QNameFromParams
-func (e *eventErrorType) QNameFromParams() istructs.QName {
+func (e *eventErrorType) QNameFromParams() schemas.QName {
 	return e.qName
 }
 

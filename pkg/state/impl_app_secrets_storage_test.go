@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/isecrets"
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestAppSecretsStorage_BasicUsage(t *testing.T) {
@@ -22,7 +22,7 @@ func TestAppSecretsStorage_BasicUsage(t *testing.T) {
 	sr := &isecrets.SecretReaderMock{}
 	sr.On("ReadSecret", secret).Return([]byte(secretBody), nil)
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, sr, 0, 0)
-	kb, _ := s.KeyBuilder(AppSecretsStorage, istructs.NullQName)
+	kb, _ := s.KeyBuilder(AppSecretsStorage, schemas.NullQName)
 	kb.PutString(Field_Secret, secret)
 
 	sv, _ := s.MustExist(kb)
@@ -34,7 +34,7 @@ func TestAppSecretsStorage_BasicUsage(t *testing.T) {
 func TestAppSecretsStorage(t *testing.T) {
 	t.Run("Should return error when key invalid", func(t *testing.T) {
 		s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 0, 0)
-		kb, _ := s.KeyBuilder(AppSecretsStorage, istructs.NullQName)
+		kb, _ := s.KeyBuilder(AppSecretsStorage, schemas.NullQName)
 
 		_, err := s.MustExist(kb)
 
@@ -56,7 +56,7 @@ func TestAppSecretsStorage(t *testing.T) {
 				sr := &isecrets.SecretReaderMock{}
 				sr.On("ReadSecret", mock.Anything).Return(nil, test.err)
 				s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, sr, 0, 0)
-				kb, _ := s.KeyBuilder(AppSecretsStorage, istructs.NullQName)
+				kb, _ := s.KeyBuilder(AppSecretsStorage, schemas.NullQName)
 				kb.PutString(Field_Secret, "")
 
 				_, ok, _ := s.CanExist(kb)

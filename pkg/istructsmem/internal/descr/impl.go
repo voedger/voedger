@@ -7,6 +7,7 @@ package descr
 
 import (
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func newApplication() *Application {
@@ -16,13 +17,14 @@ func newApplication() *Application {
 	return &a
 }
 
-func (a *Application) read(app istructs.IAppStructs, rateLimits map[istructs.QName]map[istructs.RateLimitKind]istructs.RateLimit,
-	uniquesByQNames map[istructs.QName][][]string) {
+func (a *Application) read(app istructs.IAppStructs, rateLimits map[schemas.QName]map[istructs.RateLimitKind]istructs.RateLimit,
+	uniquesByQNames map[schemas.QName][][]string) {
 	a.Packages = make(map[string]*Package)
 
 	a.Name = app.AppQName()
 
-	app.Schemas().Schemas(func(schemaName istructs.QName) {
+	app.Schemas().EnumSchemas(func(s schemas.Schema) {
+		schemaName := s.QName()
 		pkg := getPkg(schemaName, a)
 		schema := newSchema()
 		schema.Name = schemaName
@@ -30,7 +32,7 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[istructs.QNa
 		schema.readAppSchema(app.Schemas().Schema(schemaName))
 	})
 
-	app.Resources().Resources(func(resName istructs.QName) {
+	app.Resources().Resources(func(resName schemas.QName) {
 		pkg := getPkg(resName, a)
 		resource := newResource()
 		resource.Name = resName
@@ -60,7 +62,7 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[istructs.QNa
 	}
 }
 
-func getPkg(schemaName istructs.QName, a *Application) *Package {
+func getPkg(schemaName schemas.QName, a *Application) *Package {
 	pkgName := schemaName.Pkg()
 	pkg := a.Packages[pkgName]
 	if pkg == nil {

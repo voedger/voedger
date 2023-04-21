@@ -6,7 +6,7 @@
 package descr
 
 import (
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func newSchema() *Schema {
@@ -16,11 +16,11 @@ func newSchema() *Schema {
 	}
 }
 
-func (s *Schema) readAppSchema(schema istructs.ISchema) {
+func (s *Schema) readAppSchema(schema schemas.Schema) {
 	s.Name = schema.QName()
 	s.Kind = schema.Kind()
 
-	schema.ForEachField(func(field istructs.IFieldDescr) {
+	schema.EnumFields(func(field schemas.Field) {
 		f := newField()
 		f.Name = field.Name()
 		f.Kind = field.DataKind()
@@ -29,7 +29,7 @@ func (s *Schema) readAppSchema(schema istructs.ISchema) {
 		s.Fields = append(s.Fields, f)
 	})
 
-	schema.ForEachContainer(func(cont istructs.IContainerDescr) {
+	schema.EnumContainers(func(cont schemas.Container) {
 		c := newContainer()
 		c.Name = cont.Name()
 		c.Type = cont.Schema()

@@ -10,20 +10,21 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/dynobuffers"
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func Test_BasicUsage(t *testing.T) {
-	name := istructs.NewQName("test", "test")
+	name := schemas.NewQName("test", "test")
 
-	dynoSchemas := NewSchemasCache(
+	dynoSchemas := NewSchemasCache()
+
+	dynoSchemas.Prepare(
 		func() schemas.SchemaCache {
-			schemas := schemas.NewSchemaCache()
-			schema := schemas.Add(name, istructs.SchemaKind_CDoc)
-			schema.AddField("f1", istructs.DataKind_int32, true)
-			schema.AddField("f2", istructs.DataKind_QName, false)
-			return schemas
+			bld := schemas.NewSchemaCache()
+			schema := bld.Add(name, schemas.SchemaKind_CDoc)
+			schema.AddField("f1", schemas.DataKind_int32, true)
+			schema.AddField("f2", schemas.DataKind_QName, false)
+			return bld
 		}())
 
 	t.Run("let test basic methods", func(t *testing.T) {

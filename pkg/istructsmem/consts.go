@@ -33,19 +33,19 @@ const (
 )
 
 // dataKindToStr is map to return data kind mnemonics. Useful to format error messages
-var dataKindToStr = map[istructs.DataKindType]string{
-	istructs.DataKind_null:     dk_null,
-	istructs.DataKind_int32:    dk_int32,
-	istructs.DataKind_int64:    dk_int64,
-	istructs.DataKind_float32:  dk_float32,
-	istructs.DataKind_float64:  dk_float64,
-	istructs.DataKind_bytes:    dk_bytes,
-	istructs.DataKind_string:   dk_string,
-	istructs.DataKind_QName:    dk_QName,
-	istructs.DataKind_bool:     dk_bool,
-	istructs.DataKind_RecordID: dk_RecordID,
-	istructs.DataKind_Record:   dk_Record,
-	istructs.DataKind_Event:    dk_Event,
+var dataKindToStr = map[schemas.DataKind]string{
+	schemas.DataKind_null:     dk_null,
+	schemas.DataKind_int32:    dk_int32,
+	schemas.DataKind_int64:    dk_int64,
+	schemas.DataKind_float32:  dk_float32,
+	schemas.DataKind_float64:  dk_float64,
+	schemas.DataKind_bytes:    dk_bytes,
+	schemas.DataKind_string:   dk_string,
+	schemas.DataKind_QName:    dk_QName,
+	schemas.DataKind_bool:     dk_bool,
+	schemas.DataKind_RecordID: dk_RecordID,
+	schemas.DataKind_Record:   dk_Record,
+	schemas.DataKind_Event:    dk_Event,
 }
 
 // const ( // verification kind mnemonics
@@ -81,23 +81,23 @@ const (
 
 // shemaKindToStr is map to return schema kind mnemonics. Useful to format error messages
 var shemaKindToStr = map[schemas.SchemaKind]string{
-	istructs.SchemaKind_null:                         sk_null,
-	istructs.SchemaKind_GDoc:                         sk_GDoc,
-	istructs.SchemaKind_CDoc:                         sk_CDoc,
-	istructs.SchemaKind_ODoc:                         sk_ODoc,
-	istructs.SchemaKind_WDoc:                         sk_WDoc,
-	istructs.SchemaKind_GRecord:                      sk_GRecord,
-	istructs.SchemaKind_CRecord:                      sk_CRecord,
-	istructs.SchemaKind_ORecord:                      sk_ORecord,
-	istructs.SchemaKind_WRecord:                      sk_WRecord,
-	istructs.SchemaKind_ViewRecord:                   sk_ViewRecord,
-	istructs.SchemaKind_ViewRecord_PartitionKey:      sk_ViewRecord_PartitionKey,
-	istructs.SchemaKind_ViewRecord_ClusteringColumns: sk_ViewRecord_ClusteringColumns,
-	istructs.SchemaKind_ViewRecord_Value:             sk_ViewRecord_Value,
-	istructs.SchemaKind_Object:                       sk_Object,
-	istructs.SchemaKind_Element:                      sk_Element,
-	istructs.SchemaKind_QueryFunction:                sk_QueryFunction,
-	istructs.SchemaKind_CommandFunction:              sk_CommandFunction,
+	schemas.SchemaKind_null:                         sk_null,
+	schemas.SchemaKind_GDoc:                         sk_GDoc,
+	schemas.SchemaKind_CDoc:                         sk_CDoc,
+	schemas.SchemaKind_ODoc:                         sk_ODoc,
+	schemas.SchemaKind_WDoc:                         sk_WDoc,
+	schemas.SchemaKind_GRecord:                      sk_GRecord,
+	schemas.SchemaKind_CRecord:                      sk_CRecord,
+	schemas.SchemaKind_ORecord:                      sk_ORecord,
+	schemas.SchemaKind_WRecord:                      sk_WRecord,
+	schemas.SchemaKind_ViewRecord:                   sk_ViewRecord,
+	schemas.SchemaKind_ViewRecord_PartitionKey:      sk_ViewRecord_PartitionKey,
+	schemas.SchemaKind_ViewRecord_ClusteringColumns: sk_ViewRecord_ClusteringColumns,
+	schemas.SchemaKind_ViewRecord_Value:             sk_ViewRecord_Value,
+	schemas.SchemaKind_Object:                       sk_Object,
+	schemas.SchemaKind_Element:                      sk_Element,
+	schemas.SchemaKind_QueryFunction:                sk_QueryFunction,
+	schemas.SchemaKind_CommandFunction:              sk_CommandFunction,
 }
 
 const (

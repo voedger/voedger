@@ -9,6 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 )
 
@@ -34,34 +35,34 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IA
 	state := &bundledHostState{
 		hostState:    newHostState("AsyncActualizer", intentsLimit),
 		bundlesLimit: bundlesLimit,
-		bundles:      make(map[istructs.QName]bundle),
+		bundles:      make(map[schemas.QName]bundle),
 	}
 
 	state.addStorage(ViewRecordsStorage, &viewRecordsStorage{
 		ctx:             ctx,
 		viewRecordsFunc: func() istructs.IViewRecords { return appStructs.ViewRecords() },
-		schemasFunc:     func() istructs.ISchemas { return appStructs.Schemas() },
+		schemaCacheFunc: func() schemas.SchemaCache { return appStructs.Schemas() },
 		wsidFunc:        wsidFunc,
 		n10nFunc:        n10nFunc,
 	}, S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
 
 	state.addStorage(RecordsStorage, &recordsStorage{
-		recordsFunc: func() istructs.IRecords { return appStructs.Records() },
-		schemasFunc: func() istructs.ISchemas { return appStructs.Schemas() },
-		wsidFunc:    wsidFunc,
+		recordsFunc:     func() istructs.IRecords { return appStructs.Records() },
+		schemaCacheFunc: func() schemas.SchemaCache { return appStructs.Schemas() },
+		wsidFunc:        wsidFunc,
 	}, S_GET_BATCH)
 
 	state.addStorage(WLogStorage, &wLogStorage{
-		ctx:         ctx,
-		eventsFunc:  func() istructs.IEvents { return appStructs.Events() },
-		schemasFunc: func() istructs.ISchemas { return appStructs.Schemas() },
-		wsidFunc:    wsidFunc,
+		ctx:             ctx,
+		eventsFunc:      func() istructs.IEvents { return appStructs.Events() },
+		schemaCacheFunc: func() schemas.SchemaCache { return appStructs.Schemas() },
+		wsidFunc:        wsidFunc,
 	}, S_GET_BATCH|S_READ)
 
 	state.addStorage(PLogStorage, &pLogStorage{
 		ctx:             ctx,
 		eventsFunc:      func() istructs.IEvents { return appStructs.Events() },
-		schemasFunc:     func() istructs.ISchemas { return appStructs.Schemas() },
+		schemaCacheFunc: func() schemas.SchemaCache { return appStructs.Schemas() },
 		partitionIDFunc: partitionIDFunc,
 	}, S_GET_BATCH|S_READ)
 

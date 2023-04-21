@@ -72,7 +72,7 @@ type ICUDRow interface {
 	ModifiedFields(cb func(fieldName string, newValue interface{}))
 }
 
-type IDGenerator func(custom RecordID, schema ISchema) (storage RecordID, err error)
+type IDGenerator func(custom RecordID, schema schemas.Schema) (storage RecordID, err error)
 
 type IRawEvent interface {
 	IAbstractEvent

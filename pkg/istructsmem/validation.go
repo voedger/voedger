@@ -33,10 +33,10 @@ func (v *validator) entName(e interface{}) string {
 	typeName := v.schema.QName()
 
 	if row, ok := e.(istructs.IRowReader); ok {
-		if qName := row.AsQName(istructs.SystemField_QName); qName != istructs.NullQName {
+		if qName := row.AsQName(schemas.SystemField_QName); qName != schemas.NullQName {
 			typeName = qName
-			if (qName == v.schema.QName()) && v.schema.Props().HasSystemField(istructs.SystemField_Container) {
-				if cont := row.AsString(istructs.SystemField_Container); cont != "" {
+			if (qName == v.schema.QName()) && v.schema.Kind().HasSystemField(schemas.SystemField_Container) {
+				if cont := row.AsString(schemas.SystemField_Container); cont != "" {
 					name = cont
 				}
 			}
@@ -156,7 +156,7 @@ func (v *validator) validElementContOccurses(el *elementType) (err error) {
 func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error) {
 	err = v.validRow(&rec.rowType)
 
-	if v.schema.Props().HasSystemField(istructs.SystemField_ID) {
+	if v.schema.Kind().HasSystemField(schemas.SystemField_ID) {
 		if rawIDexpected && !rec.ID().IsRaw() {
 			err = errors.Join(err,
 				validateErrorf(ECode_InvalidRawRecordID, "new %s ID «%d» is not raw: %w", v.entName(rec), rec.ID(), ErrRawRecordIDExpected))
@@ -191,16 +191,20 @@ type validators struct {
 	validators map[schemas.QName]*validator
 }
 
-func newValidators(schemaCache schemas.SchemaCache) *validators {
+func newValidators() *validators {
 	v := validators{
-		schemas:    schemaCache,
-		validators: make(map[istructs.QName]*validator),
+		validators: make(map[schemas.QName]*validator),
 	}
+	return &v
+}
+
+// Prepares validator for specified schema cache
+func (v *validators) prepare(schemaCache schemas.SchemaCache) {
+	v.schemas = schemaCache
 	schemaCache.EnumSchemas(
 		func(s schemas.Schema) {
-			v.validators[s.QName()] = newValidator(&v, s)
+			v.validators[s.QName()] = newValidator(v, s)
 		})
-	return &v
 }
 
 // Returns validator for specified schema
@@ -229,12 +233,12 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 	if ev.argObject.QName() != arg {
 		err = errors.Join(err,
 			validateErrorf(ECode_InvalidSchemaName, "event command argument «%v» uses wrong schema «%v», expected «%v»: %w", ev.name, ev.argObject.QName(), arg, ErrWrongSchema))
-	} else if arg != istructs.NullQName {
+	} else if arg != schemas.NullQName {
 		// #!17185: must be ODoc or Object only
 		schema := v.schemas.Schema(arg)
-		if (schema.Kind() != istructs.SchemaKind_ODoc) && (schema.Kind() != istructs.SchemaKind_Object) {
+		if (schema.Kind() != schemas.SchemaKind_ODoc) && (schema.Kind() != schemas.SchemaKind_Object) {
 			err = errors.Join(err,
-				validateErrorf(ECode_InvalidSchemaKind, "event command argument «%v» schema can not to be «%v», expected («%v» or «%v»): %w", arg, schema.Kind(), istructs.SchemaKind_ODoc, istructs.SchemaKind_Object, ErrWrongSchema))
+				validateErrorf(ECode_InvalidSchemaKind, "event command argument «%v» schema can not to be «%v», expected («%v» or «%v»): %w", arg, schema.Kind(), schemas.SchemaKind_ODoc, schemas.SchemaKind_Object, ErrWrongSchema))
 		}
 		err = errors.Join(err,
 			v.validObject(&ev.argObject))
@@ -243,7 +247,7 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 	if ev.argUnlObj.QName() != argUnl {
 		err = errors.Join(err,
 			validateErrorf(ECode_InvalidSchemaName, "event command unlogged argument «%v» uses wrong schema «%v», expected «%v»: %w", ev.name, ev.argUnlObj.QName(), argUnl, ErrWrongSchema))
-	} else if ev.argUnlObj.QName() != istructs.NullQName {
+	} else if ev.argUnlObj.QName() != schemas.NullQName {
 		err = errors.Join(err,
 			v.validObject(&ev.argUnlObj))
 	}
@@ -265,7 +269,7 @@ func (v *validators) validEventCUDs(ev *eventType) (err error) {
 
 // Validates specified document or object
 func (v *validators) validObject(obj *elementType) (err error) {
-	if obj.QName() == istructs.NullQName {
+	if obj.QName() == schemas.NullQName {
 		return validateErrorf(ECode_EmptySchemaName, "element «%s» has empty schema name: %w", obj.Container(), ErrNameMissed)
 	}
 
@@ -276,9 +280,9 @@ func (v *validators) validObject(obj *elementType) (err error) {
 	}
 
 	switch validator.schema.Kind() {
-	case istructs.SchemaKind_GDoc, istructs.SchemaKind_CDoc, istructs.SchemaKind_ODoc, istructs.SchemaKind_WDoc:
+	case schemas.SchemaKind_GDoc, schemas.SchemaKind_CDoc, schemas.SchemaKind_ODoc, schemas.SchemaKind_WDoc:
 		return validator.validDocument(obj)
-	case istructs.SchemaKind_Object:
+	case schemas.SchemaKind_Object:
 		return validator.validObject(obj)
 	}
 
@@ -380,20 +384,20 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 		return validateErrorf(ECode_InvalidSchemaName, "wrong view clustering columns schema «%v», for view «%v» expected «%v»: %w", key.clustRow.QName(), key.viewName, clustSchema, ErrWrongSchema)
 	}
 
-	key.partRow.schema.Fields(
-		func(fieldName string, _ schemas.DataKind) {
-			if !key.partRow.hasValue(fieldName) {
+	key.partRow.schema.EnumFields(
+		func(f schemas.Field) {
+			if !key.partRow.hasValue(f.Name()) {
 				err = errors.Join(err,
-					validateErrorf(ECode_EmptyData, "view «%v» partition key «%v» field «%s» is empty: %w", key.viewName, partSchema, fieldName, ErrFieldIsEmpty))
+					validateErrorf(ECode_EmptyData, "view «%v» partition key «%v» field «%s» is empty: %w", key.viewName, partSchema, f.Name(), ErrFieldIsEmpty))
 			}
 		})
 
 	if !partialClust {
-		key.clustRow.schema.Fields(
-			func(fieldName string, _ schemas.DataKind) {
-				if !key.clustRow.hasValue(fieldName) {
+		key.clustRow.schema.EnumFields(
+			func(f schemas.Field) {
+				if !key.clustRow.hasValue(f.Name()) {
 					err = errors.Join(err,
-						validateErrorf(ECode_EmptyData, "view «%v» clustering columns «%v» field «%s» is empty: %w", key.viewName, clustSchema, fieldName, ErrFieldIsEmpty))
+						validateErrorf(ECode_EmptyData, "view «%v» clustering columns «%v» field «%s» is empty: %w", key.viewName, clustSchema, f.Name(), ErrFieldIsEmpty))
 				}
 			})
 	}
@@ -418,7 +422,7 @@ func (v *validators) validViewValue(value *valueType) (err error) {
 
 // Validates specified record. If rawIDexpected then raw IDs is required
 func (v *validators) validRecord(rec *recordType, rawIDexpected bool) (err error) {
-	if rec.QName() == istructs.NullQName {
+	if rec.QName() == schemas.NullQName {
 		return validateErrorf(ECode_EmptySchemaName, "record «%s» has empty schema name: %w", rec.Container(), ErrNameMissed)
 	}
 
@@ -428,7 +432,7 @@ func (v *validators) validRecord(rec *recordType, rawIDexpected bool) (err error
 	}
 
 	switch validator.schema.Kind() {
-	case istructs.SchemaKind_GDoc, istructs.SchemaKind_CDoc, istructs.SchemaKind_ODoc, istructs.SchemaKind_WDoc, istructs.SchemaKind_GRecord, istructs.SchemaKind_CRecord, istructs.SchemaKind_ORecord, istructs.SchemaKind_WRecord:
+	case schemas.SchemaKind_GDoc, schemas.SchemaKind_CDoc, schemas.SchemaKind_ODoc, schemas.SchemaKind_WDoc, schemas.SchemaKind_GRecord, schemas.SchemaKind_CRecord, schemas.SchemaKind_ORecord, schemas.SchemaKind_WRecord:
 		return validator.validRecord(rec, rawIDexpected)
 	}
 

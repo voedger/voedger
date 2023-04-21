@@ -36,13 +36,13 @@ func (names *QNames) GetID(qName schemas.QName) (QNameID, error) {
 }
 
 // Retrieve QName for specified ID
-func (names *QNames) GetQName(id QNameID) (qName istructs.QName, err error) {
+func (names *QNames) GetQName(id QNameID) (qName schemas.QName, err error) {
 	qName, ok := names.ids[id]
 	if ok {
 		return qName, nil
 	}
 
-	return istructs.NullQName, fmt.Errorf("unknown QName ID «%v»: %w", id, ErrIDNotFound)
+	return schemas.NullQName, fmt.Errorf("unknown QName ID «%v»: %w", id, ErrIDNotFound)
 }
 
 // Reads all application QNames from storage, add all system and application QNames and write result to storage if some changes. Must be called at application starts
@@ -69,7 +69,7 @@ func (names *QNames) collectAllQNames(s schemas.SchemaCache, r istructs.IResourc
 
 	// system QNames
 	names.
-		collectSysQName(istructs.NullQName, NullQNameID).
+		collectSysQName(schemas.NullQName, NullQNameID).
 		collectSysQName(istructs.QNameForError, QNameIDForError).
 		collectSysQName(istructs.QNameCommandCUD, QNameIDCommandCUD)
 
@@ -83,7 +83,7 @@ func (names *QNames) collectAllQNames(s schemas.SchemaCache, r istructs.IResourc
 
 	if r != nil {
 		r.Resources(
-			func(q istructs.QName) {
+			func(q schemas.QName) {
 				err = errors.Join(err,
 					names.collectAppQName(q))
 			})
@@ -112,7 +112,7 @@ func (names *QNames) collectAppQName(qName schemas.QName) error {
 }
 
 // Adds system QName to cache
-func (names *QNames) collectSysQName(qName istructs.QName, id QNameID) *QNames {
+func (names *QNames) collectSysQName(qName schemas.QName, id QNameID) *QNames {
 	names.qNames[qName] = id
 	names.ids[id] = qName
 	return names
@@ -136,7 +136,7 @@ func (names *QNames) load(storage istorage.IAppStorage, versions *vers.Versions)
 func (names *QNames) load01(storage istorage.IAppStorage) error {
 
 	readQName := func(cCols, value []byte) error {
-		qName, err := istructs.ParseQName(string(cCols))
+		qName, err := schemas.ParseQName(string(cCols))
 		if err != nil {
 			return err
 		}

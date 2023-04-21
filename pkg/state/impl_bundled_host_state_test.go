@@ -11,12 +11,14 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
+	smock "github.com/voedger/voedger/pkg/schemas/mock"
 )
 
 func TestBundledHostState_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	factory := ProvideAsyncActualizerStateFactory()
-	n10nFn := func(view istructs.QName, wsid istructs.WSID, offset istructs.Offset) {}
+	n10nFn := func(view schemas.QName, wsid istructs.WSID, offset istructs.Offset) {}
 	appStructs := mockedAppStructs()
 
 	// Create instance of async actualizer state
@@ -70,38 +72,29 @@ func mockedAppStructs() istructs.IAppStructs {
 		On("NewValueBuilder", testViewRecordQName1).Return(mvb1).Once().
 		On("NewValueBuilder", testViewRecordQName1).Return(mvb2).Once().
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
-	pkSchema := &mockSchema{}
-	pkSchema.
-		On("Fields", mock.Anything).
-		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(fieldName string, kind istructs.DataKindType))
-			cb("pkFld", istructs.DataKind_string)
-		})
-	vSchema := &mockSchema{}
-	vSchema.
-		On("Fields", mock.Anything).
-		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(fieldName string, kind istructs.DataKindType))
-			cb("vFld", istructs.DataKind_int64)
-			cb(ColOffset, istructs.DataKind_int64)
-		})
-	schema := &mockSchema{}
-	schema.
-		On("Containers", mock.AnythingOfType("func(string, istructs.QName)")).
-		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(string, istructs.QName))
-			cb(istructs.SystemContainer_ViewPartitionKey, testViewRecordPkQName)
-			cb(istructs.SystemContainer_ViewValue, testViewRecordVQName)
-		})
-	schemas := &mockSchemas{}
-	schemas.
-		On("Schema", testViewRecordQName1).Return(schema).
-		On("Schema", testViewRecordPkQName).Return(pkSchema).
-		On("Schema", testViewRecordVQName).Return(vSchema)
+	pkSchema := smock.MockedSchema(testViewRecordPkQName, schemas.SchemaKind_ViewRecord_PartitionKey,
+		smock.MockedField("pkFld", schemas.DataKind_string, true),
+	)
+	valueSchema := smock.MockedSchema(testViewRecordVQName, schemas.SchemaKind_ViewRecord_Value,
+		smock.MockedField("vFld", schemas.DataKind_int64, true),
+		smock.MockedField(ColOffset, schemas.DataKind_int64, true),
+	)
+	viewSchema := smock.MockedSchema(testViewRecordQName1, schemas.SchemaKind_ViewRecord)
+	viewSchema.MockContainers(
+		smock.MockedContainer(schemas.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
+		smock.MockedContainer(schemas.SystemContainer_ViewValue, testViewRecordVQName, 1, 1),
+	)
+
+	cache := smock.MockedSchemaCache(
+		viewSchema,
+		pkSchema,
+		valueSchema,
+	)
+
 	appStructs := &mockAppStructs{}
 	appStructs.
 		On("ViewRecords").Return(viewRecords).
-		On("Schemas").Return(schemas).
+		On("Schemas").Return(cache).
 		On("Events").Return(&nilEvents{}).
 		On("Records").Return(&nilRecords{})
 	return appStructs
@@ -110,7 +103,7 @@ func mockedAppStructs() istructs.IAppStructs {
 func TestAsyncActualizerState_BasicUsage_Old(t *testing.T) {
 	require := require.New(t)
 	touched := false
-	n10nFn := func(view istructs.QName, wsid istructs.WSID, offset istructs.Offset) {
+	n10nFn := func(view schemas.QName, wsid istructs.WSID, offset istructs.Offset) {
 		touched = true
 		require.Equal(testViewRecordQName1, view)
 		require.Equal(istructs.WSID(1), wsid)
@@ -425,8 +418,8 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 	t.Run("Should flush bundle before read", func(t *testing.T) {
 		require := require.New(t)
 		touched := false
-		schemas := &mockSchemas{}
-		schemas.On("Schema", testViewRecordQName1).Return(&nilSchema{})
+		schemaCache := &smock.MockSchemaCache{}
+		schemaCache.On("Schema", testViewRecordQName1).Return(schemas.NullSchema)
 		viewRecords := &mockViewRecords{}
 		viewRecords.
 			On("KeyBuilder", testViewRecordQName1).Return(&nilKeyBuilder{}).
@@ -446,7 +439,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 		appStructs := &mockAppStructs{}
 		appStructs.
 			On("ViewRecords").Return(viewRecords).
-			On("Schemas").Return(schemas).
+			On("Schemas").Return(schemaCache).
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{})
 		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
@@ -470,8 +463,8 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 	t.Run("Should return error when error occurred on apply batch", func(t *testing.T) {
 		require := require.New(t)
 		touched := false
-		schemas := &mockSchemas{}
-		schemas.On("Schema", testViewRecordQName1).Return(&nilSchema{})
+		schemaCache := &smock.MockSchemaCache{}
+		schemaCache.On("Schema", testViewRecordQName1).Return(schemas.NullSchema)
 		viewRecords := &mockViewRecords{}
 		viewRecords.
 			On("KeyBuilder", testViewRecordQName1).Return(&nilKeyBuilder{}).
@@ -482,7 +475,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 		appStructs := &mockAppStructs{}
 		appStructs.
 			On("ViewRecords").Return(viewRecords).
-			On("Schemas").Return(schemas).
+			On("Schemas").Return(schemaCache).
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{})
 		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)

@@ -13,6 +13,7 @@ import (
 
 	irates "github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestRace_Buckets(t *testing.T) {
@@ -24,7 +25,7 @@ func TestRace_Buckets(t *testing.T) {
 	totalRegKey := irates.BucketKey{
 		RateLimitName: sTotalRegLimitName,
 		App:           istructs.AppQName_test1_app1,
-		QName:         istructs.NewQName("test", "test"),
+		QName:         schemas.NewQName("test", "test"),
 		RemoteAddr:    "",
 		Workspace:     1,
 	}
@@ -38,7 +39,7 @@ func TestRace_Buckets(t *testing.T) {
 	addrRegKey := irates.BucketKey{
 		RateLimitName: sAddrRegLimitName,
 		App:           istructs.AppQName_test1_app1,
-		QName:         istructs.NewQName("test", "test"),
+		QName:         schemas.NewQName("test", "test"),
 		RemoteAddr:    "addr",
 		Workspace:     1,
 	}

@@ -8,11 +8,12 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type bundledHostState struct {
 	*hostState
-	bundles      map[istructs.QName]bundle
+	bundles      map[schemas.QName]bundle
 	bundlesLimit int
 }
 
@@ -138,7 +139,7 @@ func (s *bundledHostState) FlushBundles() (err error) {
 	}
 	return
 }
-func (s *bundledHostState) addStorage(storageName istructs.QName, storage IStateStorage, ops int) {
+func (s *bundledHostState) addStorage(storageName schemas.QName, storage IStateStorage, ops int) {
 	s.hostState.addStorage(storageName, storage, ops)
 	if supports(ops, S_UPDATE) || supports(ops, S_INSERT) {
 		s.bundles[storageName] = newBundle()

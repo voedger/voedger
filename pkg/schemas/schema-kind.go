@@ -60,6 +60,31 @@ const (
 	SchemaKind_FakeLast
 )
 
+// Is fields allowed.
+func (k SchemaKind) FieldsAllowed() bool {
+	return schemaKindProps[k].fieldsAllowed
+}
+
+// Is data kind allowed.
+func (k SchemaKind) DataKindAvailable(d DataKind) bool {
+	return schemaKindProps[k].fieldsAllowed && schemaKindProps[k].availableFieldKinds[d]
+}
+
+// Is specified system field used.
+func (k SchemaKind) HasSystemField(f string) bool {
+	return schemaKindProps[k].fieldsAllowed && schemaKindProps[k].systemFields[f]
+}
+
+// Is containers allowed.
+func (k SchemaKind) ContainersAllowed() bool {
+	return schemaKindProps[k].containersAllowed
+}
+
+// Is specified schema kind may be used in child containers.
+func (k SchemaKind) ContainerKindAvailable(s SchemaKind) bool {
+	return schemaKindProps[k].containersAllowed && schemaKindProps[k].availableContainerKinds[s]
+}
+
 func (k SchemaKind) MarshalText() ([]byte, error) {
 	var s string
 	if k < SchemaKind_FakeLast {

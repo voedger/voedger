@@ -66,7 +66,7 @@ func Test_RecordsRead(t *testing.T) {
 			t.Run(fmt.Sprintf("must ok read not exists record %v", id), func(t *testing.T) {
 				rec, err := app.Records().Get(test.workspace, true, id)
 				require.NoError(err)
-				require.Equal(istructs.NullQName, rec.QName())
+				require.Equal(schemas.NullQName, rec.QName())
 				require.Equal(id, rec.ID())
 			})
 		}
@@ -93,7 +93,7 @@ func Test_RecordsRead(t *testing.T) {
 					if (rec.ID >= minTestRecordID) && (rec.ID <= maxTestRecordID) {
 						testTestCRec(t, rec.Record, rec.ID)
 					} else {
-						require.Equal(istructs.NullQName, rec.Record.QName())
+						require.Equal(schemas.NullQName, rec.Record.QName())
 					}
 				}
 			}

@@ -11,7 +11,7 @@ import (
 )
 
 // Validate a schema entities
-func (sch *schema) validate() (err error) {
+func (sch *schema) Validate() (err error) {
 	return errors.Join(
 		sch.validateFields(),
 		sch.validateContainers(),
@@ -22,7 +22,7 @@ func (sch *schema) validate() (err error) {
 func (sch *schema) validateFields() (err error) {
 	sch.EnumFields(func(f Field) {
 		if !f.IsSys() {
-			if !sch.Props().DataKindAvailable(f.DataKind()) {
+			if !sch.Kind().DataKindAvailable(f.DataKind()) {
 				err = errors.Join(err,
 					fmt.Errorf("schema «%v»: field «%s» has unexpected type «%v»: %w", sch.QName(), f.Name(), f.DataKind(), ErrInvalidDataKind))
 			}
@@ -122,7 +122,7 @@ func (sch *schema) validateContainers() (err error) {
 		sch.EnumContainers(func(c Container) {
 			schema := sch.cache.SchemaByName(c.Schema())
 			if schema != nil {
-				if !sch.Props().ContainerKindAvailable(schema.Kind()) {
+				if !sch.Kind().ContainerKindAvailable(schema.Kind()) {
 					err = errors.Join(err, fmt.Errorf("schema «%v» kind «%v»: container «%s» kind «%v» is not available: %w", sch.QName(), sch.Kind(), c.Name(), schema.Kind(), ErrInvalidSchemaKind))
 				}
 			}
@@ -191,7 +191,7 @@ func (v *validator) validate(schema Schema) error {
 		return err
 	}
 
-	err := schema.validate()
+	err := schema.Validate()
 	v.results[schema.QName()] = err
 
 	// resolve externals

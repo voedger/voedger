@@ -26,12 +26,13 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func implRowsProcessorFactory(ctx context.Context, schemas istructs.ISchemas, state istructs.IState, params IQueryParams,
-	resultMeta istructs.ISchema, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline {
+func implRowsProcessorFactory(ctx context.Context, cache schemas.SchemaCache, state istructs.IState, params IQueryParams,
+	resultMeta schemas.Schema, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline {
 	operators := make([]*pipeline.WiredOperator, 0)
 	if resultMeta.QName() == istructs.QNameJSON {
 		operators = append(operators, pipeline.WireAsyncOperator("Raw result", &RawResultOperator{
@@ -39,8 +40,8 @@ func implRowsProcessorFactory(ctx context.Context, schemas istructs.ISchemas, st
 		}))
 	} else {
 		schemasCache := &schemasCache{
-			schemas: schemas,
-			cache:   make(map[istructs.QName]coreutils.SchemaFields),
+			schemas: cache,
+			fields:  make(map[schemas.QName]coreutils.SchemaFields),
 		}
 		rootSchema := coreutils.NewSchemaFields(resultMeta)
 		operators = append(operators, pipeline.WireAsyncOperator("Result fields", &ResultFieldsOperator{
@@ -172,7 +173,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.queryFunction = qw.msg.Resource().(istructs.IQueryFunction)
 			paramsSchema := qw.appStructs.Schemas().Schema(qw.queryFunction.ParamsSchema())
-			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), paramsSchema, qw.appStructs.Schemas(), qw.appCfg, qw)
+			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), paramsSchema, qw.appCfg, qw)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("create state", func(ctx context.Context, qw *queryWork) (err error) {
@@ -190,7 +191,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		operator("validate: get result schema", func(ctx context.Context, qw *queryWork) (err error) {
 			schema := qw.queryFunction.ResultSchema(qw.execQueryArgs.PrepareArgs)
 			qw.resultSchema = qw.appStructs.Schemas().Schema(schema)
-			err = errIfFalse(qw.resultSchema.Kind() != istructs.SchemaKind_null, func() error {
+			err = errIfFalse(qw.resultSchema.Kind() != schemas.SchemaKind_null, func() error {
 				return fmt.Errorf("result schema %s: %w", schema, ErrNotFound)
 			})
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
@@ -255,7 +256,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 						keyToIdx: pathToIdx,
 						values:   make([]interface{}, len(pathToIdx)),
 					},
-					enrichedRootSchema: make(map[string]istructs.DataKindType),
+					enrichedRootSchema: make(map[string]schemas.DataKind),
 				})
 			})
 			return coreutils.WrapSysError(err, http.StatusInternalServerError)
@@ -275,7 +276,7 @@ type queryWork struct {
 	queryParams       IQueryParams
 	appStructs        istructs.IAppStructs
 	queryFunction     istructs.IQueryFunction
-	resultSchema      istructs.ISchema
+	resultSchema      schemas.Schema
 	execQueryArgs     istructs.ExecQueryArgs
 	maxPrepareQueries int
 	rowsProcessor     pipeline.IAsyncPipeline
@@ -375,7 +376,7 @@ type workpiece struct {
 func (w workpiece) Object() istructs.IObject                   { return w.object }
 func (w workpiece) OutputRow() IOutputRow                      { return w.outputRow }
 func (w workpiece) EnrichedRootSchema() coreutils.SchemaFields { return w.enrichedRootSchema }
-func (w workpiece) PutEnrichedRootSchemaField(name string, kind istructs.DataKindType) {
+func (w workpiece) PutEnrichedRootSchemaField(name string, kind schemas.DataKind) {
 	w.enrichedRootSchema[name] = kind
 }
 func (w workpiece) Release() {
@@ -393,7 +394,7 @@ func (r *outputRow) Values() []interface{}               { return r.values }
 func (r *outputRow) Value(alias string) interface{}      { return r.values[r.keyToIdx[alias]] }
 func (r *outputRow) MarshalJSON() ([]byte, error)        { return json.Marshal(r.values) }
 
-func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, argsSchema istructs.ISchema, schemas istructs.ISchemas, appCfg *istructsmem.AppConfigType,
+func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, argsSchema schemas.Schema, appCfg *istructsmem.AppConfigType,
 	qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
 	args, _, err := data.AsObject("args")
 	if err != nil {
@@ -401,13 +402,13 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, argsSchema i
 	}
 	requestArgs := istructs.NewNullObject()
 	switch argsSchema.QName() {
-	case istructs.NullQName:
+	case schemas.NullQName:
 		//Do nothing
 	case istructs.QNameJSON:
 		requestArgs, err = newJsonObject(data)
 	default:
 		requestArgsBuilder := istructsmem.NewIObjectBuilder(appCfg, argsSchema.QName())
-		if err := istructsmem.FillElementFromJSON(args, argsSchema, requestArgsBuilder, schemas); err != nil {
+		if err := istructsmem.FillElementFromJSON(args, argsSchema, requestArgsBuilder); err != nil {
 			return execQueryArgs, err
 		}
 		requestArgs, err = requestArgsBuilder.Build()
@@ -459,25 +460,25 @@ func (e element) ResultFields() []IResultField { return e.fields }
 func (e element) RefFields() []IRefField       { return e.refs }
 
 type schemasCache struct {
-	schemas istructs.ISchemas
-	cache   map[istructs.QName]coreutils.SchemaFields
+	schemas schemas.SchemaCache
+	fields  map[schemas.QName]coreutils.SchemaFields
 	lock    sync.Mutex
 }
 
-func newSchemasCache(schemas istructs.ISchemas) *schemasCache {
+func newSchemasCache(cache schemas.SchemaCache) *schemasCache {
 	return &schemasCache{
-		schemas: schemas,
-		cache:   make(map[istructs.QName]coreutils.SchemaFields),
+		schemas: cache,
+		fields:  make(map[schemas.QName]coreutils.SchemaFields),
 	}
 }
 
-func (c *schemasCache) get(name istructs.QName) coreutils.SchemaFields {
+func (c *schemasCache) get(name schemas.QName) coreutils.SchemaFields {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	value, ok := c.cache[name]
+	value, ok := c.fields[name]
 	if !ok {
 		value = coreutils.NewSchemaFields(c.schemas.Schema(name))
-		c.cache[name] = value
+		c.fields[name] = value
 	}
 	return value
 }

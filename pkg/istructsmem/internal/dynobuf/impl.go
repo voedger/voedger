@@ -10,15 +10,20 @@ import (
 	"github.com/voedger/voedger/pkg/schemas"
 )
 
-func newSchemasCache(s schemas.SchemaCache) DynoBufSchemasCache {
+func newSchemasCache() DynoBufSchemasCache {
 	cache := DynoBufSchemasCache{}
-	s.EnumSchemas(
-		func(schema schemas.Schema) {
-			cache.add(schema)
-		})
 	return cache
 }
 
+// Prepares schemas
+func (cache DynoBufSchemasCache) Prepare(sch schemas.SchemaCache) {
+	sch.EnumSchemas(
+		func(schema schemas.Schema) {
+			cache.add(schema)
+		})
+}
+
+// Adds schema
 func (cache DynoBufSchemasCache) add(schema schemas.Schema) {
 	db := dynobuffers.NewScheme()
 

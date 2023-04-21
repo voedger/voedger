@@ -63,7 +63,7 @@ type AppConfigType struct {
 	eventValidators         []istructs.EventValidator
 }
 
-func newAppConfig(appName istructs.AppQName, schemas schemas.SchemaCacheBuilder) *AppConfigType {
+func newAppConfig(appName istructs.AppQName, scb schemas.SchemaCacheBuilder) *AppConfigType {
 	cfg := AppConfigType{Name: appName}
 
 	qNameID, ok := istructs.ClusterApps[appName]
@@ -72,7 +72,7 @@ func newAppConfig(appName istructs.AppQName, schemas schemas.SchemaCacheBuilder)
 	}
 	cfg.QNameID = qNameID
 
-	sch, err := schemas.Build()
+	sch, err := scb.Build()
 	if err != nil {
 		panic(fmt.Errorf("unable build application «%v» schemas: %w", appName, err))
 	}
@@ -80,15 +80,15 @@ func newAppConfig(appName istructs.AppQName, schemas schemas.SchemaCacheBuilder)
 	cfg.Resources = newResources(&cfg)
 	cfg.Uniques = newUniques()
 
-	cfg.dbSchemas = dynobuf.NewSchemasCache(schemas)
-	cfg.validators = newValidators(schemas)
+	cfg.dbSchemas = dynobuf.NewSchemasCache()
+	cfg.validators = newValidators()
 
 	cfg.versions = vers.NewVersions()
 	cfg.qNames = qnames.NewQNames()
 	cfg.cNames = containers.NewContainers()
 	cfg.singletons = newSingletonsCache(&cfg)
 	cfg.FunctionRateLimits = functionRateLimits{
-		limits: map[istructs.QName]map[istructs.RateLimitKind]istructs.RateLimit{},
+		limits: map[schemas.QName]map[istructs.RateLimitKind]istructs.RateLimit{},
 	}
 	return &cfg
 }
@@ -103,6 +103,9 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 
 	// prepare IAppStorage
 	cfg.storage = appStorage
+
+	cfg.dbSchemas.Prepare(cfg.Schemas)
+	cfg.validators.prepare(cfg.Schemas)
 
 	// prepare system views versions
 	if err := cfg.versions.Prepare(cfg.storage); err != nil {

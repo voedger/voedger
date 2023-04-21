@@ -44,6 +44,11 @@ type SchemaCache interface {
 	//
 	// Returns nil if not found.
 	SchemaByName(name QName) Schema
+
+	// Returns schema by name.
+	//
+	// If not found empty Schema with SchemeKind_null is returned
+	Schema(name QName) Schema
 }
 
 // Application schemas builder
@@ -55,7 +60,7 @@ type SchemaCacheBuilder interface {
 	// Adds new schema specified name and kind.
 	//
 	// # Panics:
-	//   - if name is empty (istructs.NullQName),
+	//   - if name is empty (schemas.NullQName),
 	//   - if schema with name already exists.
 	Add(name QName, kind SchemaKind) SchemaBuilder
 
@@ -78,9 +83,6 @@ type Schema interface {
 
 	// Schema kind.
 	Kind() SchemaKind
-
-	// Schema kind properties.
-	Props() SchemaKindProps
 
 	// Finds field by name.
 	//
@@ -112,7 +114,8 @@ type Schema interface {
 	// Returns is schema CDoc singleton
 	Singleton() bool
 
-	validate() error
+	// Validates schema entities
+	Validate() error
 }
 
 // Schema builder

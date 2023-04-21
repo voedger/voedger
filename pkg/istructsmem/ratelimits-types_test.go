@@ -19,7 +19,7 @@ func TestRateLimits_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	cfgs := make(AppConfigsType)
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())
-	qName1 := istructs.NewQName(istructs.SysPackage, "myFunc")
+	qName1 := schemas.NewQName(schemas.SysPackage, "myFunc")
 
 	provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 	require.NoError(err)
@@ -67,15 +67,15 @@ func TestRateLimits_BasicUsage(t *testing.T) {
 	require.False(as.IsFunctionRateLimitsExceeded(qName1, 42))
 
 	t.Run("must be False if unknown (or unlimited) function", func(t *testing.T) {
-		require.False(as.IsFunctionRateLimitsExceeded(istructs.NewQName("test", "unknown"), 42))
+		require.False(as.IsFunctionRateLimitsExceeded(schemas.NewQName("test", "unknown"), 42))
 	})
 }
 
 func TestRateLimitsErrors(t *testing.T) {
 	unsupportedRateLimitKind := istructs.RateLimitKind(istructs.RateLimitKind_FakeLast)
 	rls := functionRateLimits{
-		limits: map[istructs.QName]map[istructs.RateLimitKind]istructs.RateLimit{
-			istructs.NewQName(istructs.SysPackage, "test"): {
+		limits: map[schemas.QName]map[istructs.RateLimitKind]istructs.RateLimit{
+			schemas.NewQName(schemas.SysPackage, "test"): {
 				unsupportedRateLimitKind: {},
 			},
 		},
@@ -86,7 +86,7 @@ func TestRateLimitsErrors(t *testing.T) {
 
 func TestGetFunctionRateLimitName(t *testing.T) {
 
-	testFn := istructs.NewQName(istructs.SysPackage, "test")
+	testFn := schemas.NewQName(schemas.SysPackage, "test")
 
 	tests := []struct {
 		name string

@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
+	smock "github.com/voedger/voedger/pkg/schemas/mock"
 )
 
 func TestHostState_BasicUsage(t *testing.T) {
@@ -70,38 +72,32 @@ func mockedHostStateStructs() istructs.IAppStructs {
 			args.Get(1).([]istructs.ViewRecordGetBatchItem)[0].Value = value
 		}).
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
-	pkSchema := &mockSchema{}
-	pkSchema.
-		On("Fields", mock.Anything).
-		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(fieldName string, kind istructs.DataKindType))
-			cb("pkFld", istructs.DataKind_string)
-		})
-	vSchema := &mockSchema{}
-	vSchema.
-		On("Fields", mock.Anything).
-		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(fieldName string, kind istructs.DataKindType))
-			cb("vFld", istructs.DataKind_int64)
-			cb(ColOffset, istructs.DataKind_int64)
-		})
-	schema := &mockSchema{}
-	schema.
-		On("Containers", mock.AnythingOfType("func(string, istructs.QName)")).
-		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(string, istructs.QName))
-			cb(istructs.SystemContainer_ViewPartitionKey, testViewRecordPkQName)
-			cb(istructs.SystemContainer_ViewValue, testViewRecordVQName)
-		})
-	schemas := &mockSchemas{}
-	schemas.
-		On("Schema", testViewRecordQName1).Return(schema).
-		On("Schema", testViewRecordPkQName).Return(pkSchema).
-		On("Schema", testViewRecordVQName).Return(vSchema)
+
+	pkSchema := smock.MockedSchema(testViewRecordPkQName, schemas.SchemaKind_ViewRecord_PartitionKey,
+		smock.MockedField("pkFld", schemas.DataKind_string, true),
+	)
+
+	valSchema := smock.MockedSchema(testViewRecordVQName, schemas.SchemaKind_ViewRecord_Value,
+		smock.MockedField("vFld", schemas.DataKind_int64, false),
+		smock.MockedField(ColOffset, schemas.DataKind_int64, false),
+	)
+
+	viewSchema := smock.MockedSchema(testViewRecordQName1, schemas.SchemaKind_ViewRecord)
+	viewSchema.MockContainers(
+		smock.MockedContainer(schemas.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
+		smock.MockedContainer(schemas.SystemContainer_ViewValue, testViewRecordVQName, 1, 1),
+	)
+
+	cache := smock.MockedSchemaCache(
+		viewSchema,
+		pkSchema,
+		valSchema,
+	)
+
 	appStructs := &mockAppStructs{}
 	appStructs.
 		On("ViewRecords").Return(viewRecords).
-		On("Schemas").Return(schemas).
+		On("Schemas").Return(cache).
 		On("Events").Return(&nilEvents{}).
 		On("Records").Return(&nilRecords{})
 	return appStructs
@@ -110,7 +106,7 @@ func TestHostState_KeyBuilder_Should_return_unknown_storage_ID_error(t *testing.
 	require := require.New(t)
 	s := hostStateForTest(&mockStorage{})
 
-	_, err := s.KeyBuilder(istructs.NullQName, istructs.NullQName)
+	_, err := s.KeyBuilder(schemas.NullQName, schemas.NullQName)
 
 	require.ErrorIs(err, ErrUnknownStorage)
 }
@@ -119,14 +115,14 @@ func TestHostState_CanExist(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
-		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(testStorage, schemas.NullQName)
 		require.Nil(err)
 
 		_, ok, _ := s.CanExist(k)
@@ -137,10 +133,10 @@ func TestHostState_CanExist(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := hostStateForTest(ms)
-		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(testStorage, schemas.NullQName)
 		require.Nil(err)
 
 		_, _, err = s.CanExist(k)
@@ -150,9 +146,9 @@ func TestHostState_CanExist(t *testing.T) {
 	t.Run("Should return get batch not supported by storage error", func(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
-		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
+		ms.On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName))
 		s, _ := emptyHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		_, _, err := s.CanExist(kb)
 
@@ -165,14 +161,14 @@ func TestHostState_CanExistAll(t *testing.T) {
 		times := 0
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
-		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(testStorage, schemas.NullQName)
 		require.Nil(err)
 
 		_ = s.CanExistAll([]istructs.IStateKeyBuilder{k}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
@@ -188,10 +184,10 @@ func TestHostState_CanExistAll(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		err := s.CanExistAll([]istructs.IStateKeyBuilder{k}, nil)
 
@@ -200,9 +196,9 @@ func TestHostState_CanExistAll(t *testing.T) {
 	t.Run("Should return get batch not supported by storage error", func(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
-		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
+		ms.On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName))
 		s, _ := emptyHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		err := s.CanExistAll([]istructs.IStateKeyBuilder{kb}, nil)
 
@@ -214,14 +210,14 @@ func TestHostState_MustExist(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		_, err := s.MustExist(k)
 
@@ -231,14 +227,14 @@ func TestHostState_MustExist(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				args.Get(0).([]GetBatchItem)[0].value = nil
 			})
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		_, err := s.MustExist(k)
 
@@ -248,10 +244,10 @@ func TestHostState_MustExist(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		_, err := s.MustExist(k)
 
@@ -263,7 +259,7 @@ func TestHostState_MustExistAll(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -271,8 +267,8 @@ func TestHostState_MustExistAll(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[1].value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
-		k1, _ := s.KeyBuilder(testStorage, istructs.NullQName)
-		k2, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k1, _ := s.KeyBuilder(testStorage, schemas.NullQName)
+		k2, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 		kk := make([]istructs.IKeyBuilder, 0, 2)
 
 		_ = s.MustExistAll([]istructs.IStateKeyBuilder{k1, k2}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
@@ -288,10 +284,10 @@ func TestHostState_MustExistAll(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		err := s.MustExistAll([]istructs.IStateKeyBuilder{k}, nil)
 
@@ -301,7 +297,7 @@ func TestHostState_MustExistAll(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -309,8 +305,8 @@ func TestHostState_MustExistAll(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[1].value = nil
 			})
 		s := hostStateForTest(ms)
-		k1, _ := s.KeyBuilder(testStorage, istructs.NullQName)
-		k2, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k1, _ := s.KeyBuilder(testStorage, schemas.NullQName)
+		k2, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		err := s.MustExistAll([]istructs.IStateKeyBuilder{k1, k2}, nil)
 
@@ -319,9 +315,9 @@ func TestHostState_MustExistAll(t *testing.T) {
 	t.Run("Should return get batch not supported by storage error", func(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
-		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
+		ms.On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName))
 		s, _ := emptyHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		err := s.MustExistAll([]istructs.IStateKeyBuilder{kb}, nil)
 
@@ -333,14 +329,14 @@ func TestHostState_MustNotExist(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				args.Get(0).([]GetBatchItem)[0].value = nil
 			})
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		err := s.MustNotExist(k)
 
@@ -350,14 +346,14 @@ func TestHostState_MustNotExist(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		err := s.MustNotExist(k)
 
@@ -367,10 +363,10 @@ func TestHostState_MustNotExist(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		err := s.MustNotExist(k)
 
@@ -382,7 +378,7 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -390,8 +386,8 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[1].value = nil
 			})
 		s := hostStateForTest(ms)
-		k1, _ := s.KeyBuilder(testStorage, istructs.NullQName)
-		k2, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k1, _ := s.KeyBuilder(testStorage, schemas.NullQName)
+		k2, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		err := s.MustNotExistAll([]istructs.IStateKeyBuilder{k1, k2})
 
@@ -401,10 +397,10 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		err := s.MustNotExistAll([]istructs.IStateKeyBuilder{k})
 
@@ -414,7 +410,7 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -422,8 +418,8 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[1].value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
-		k1, _ := s.KeyBuilder(testStorage, istructs.NullQName)
-		k2, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k1, _ := s.KeyBuilder(testStorage, schemas.NullQName)
+		k2, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		err := s.MustNotExistAll([]istructs.IStateKeyBuilder{k1, k2})
 
@@ -432,9 +428,9 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 	t.Run("Should return get batch not supported by storage error", func(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
-		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
+		ms.On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName))
 		s, _ := emptyHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		err := s.MustNotExistAll([]istructs.IStateKeyBuilder{kb})
 
@@ -445,10 +441,10 @@ func TestHostState_Read(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("Read", mock.Anything, mock.AnythingOfType("istructs.ValueCallback")).Return(nil)
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		_ = s.Read(k, nil)
 
@@ -457,9 +453,9 @@ func TestHostState_Read(t *testing.T) {
 	t.Run("Should return read not supported by storage error", func(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
-		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
+		ms.On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName))
 		s, _ := emptyHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		err := s.Read(kb, nil)
 
@@ -470,9 +466,9 @@ func TestHostState_NewValue(t *testing.T) {
 	t.Run("Should return error when intents limit exceeded", func(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
-		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
+		ms.On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName))
 		s, i := limitedIntentsHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		_, err := i.NewValue(kb)
 
@@ -481,9 +477,9 @@ func TestHostState_NewValue(t *testing.T) {
 	t.Run("Should return insert not supported by storage error", func(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
-		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
+		ms.On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName))
 		s, i := emptyHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		_, err := i.NewValue(kb)
 
@@ -494,9 +490,9 @@ func TestHostState_UpdateValue(t *testing.T) {
 	t.Run("Should return error when intents limit exceeded", func(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
-		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
+		ms.On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName))
 		s, i := limitedIntentsHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		_, err := i.UpdateValue(kb, nil)
 
@@ -505,9 +501,9 @@ func TestHostState_UpdateValue(t *testing.T) {
 	t.Run("Should return update not supported by storage error", func(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
-		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
+		ms.On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName))
 		s, i := emptyHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 
 		_, err := i.UpdateValue(kb, nil)
 
@@ -518,11 +514,11 @@ func TestHostState_ValidateIntents(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
 			On("Validate", mock.Anything).Return(nil)
 		s := hostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 		_, _ = s.NewValue(kb)
 
 		err := s.ValidateIntents()
@@ -540,11 +536,11 @@ func TestHostState_ValidateIntents(t *testing.T) {
 	t.Run("Should return validation error", func(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
 			On("Validate", mock.Anything).Return(errTest)
 		s := hostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 		_, _ = s.NewValue(kb)
 
 		err := s.ValidateIntents()
@@ -556,11 +552,11 @@ func TestHostState_ApplyIntents(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
 			On("ApplyBatch", mock.Anything).Return(nil)
 		s := hostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 		_, _ = s.NewValue(kb)
 
 		_ = s.ApplyIntents()
@@ -570,11 +566,11 @@ func TestHostState_ApplyIntents(t *testing.T) {
 	t.Run("Should return apply batch error", func(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
+			On("NewKeyBuilder", schemas.NullQName, nil).Return(newKeyBuilder(testStorage, schemas.NullQName)).
 			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
 			On("ApplyBatch", mock.Anything).Return(errTest)
 		s := hostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, _ := s.KeyBuilder(testStorage, schemas.NullQName)
 		_, _ = s.NewValue(kb)
 
 		err := s.ApplyIntents()
