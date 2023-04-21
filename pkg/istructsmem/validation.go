@@ -191,16 +191,18 @@ type validators struct {
 	validators map[schemas.QName]*validator
 }
 
-func newValidators(schemaCache schemas.SchemaCache) *validators {
-	v := validators{
-		schemas:    schemaCache,
+func newValidators() *validators {
+	return &validators{
 		validators: make(map[istructs.QName]*validator),
 	}
+}
+
+func (v *validators) prepare(schemaCache schemas.SchemaCache) {
+	v.schemas = schemaCache
 	schemaCache.EnumSchemas(
 		func(s schemas.Schema) {
-			v.validators[s.QName()] = newValidator(&v, s)
+			v.validators[s.QName()] = newValidator(v, s)
 		})
-	return &v
 }
 
 // Returns validator for specified schema

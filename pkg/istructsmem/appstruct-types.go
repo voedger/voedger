@@ -79,8 +79,8 @@ func newAppConfig(appName istructs.AppQName, schemas schemas.SchemaCacheBuilder)
 	cfg.Resources = newResources(&cfg)
 	cfg.Uniques = newUniques()
 
-	cfg.dbSchemas = dynobuf.NewSchemasCache(schemas)
-	cfg.validators = newValidators(schemas)
+	cfg.dbSchemas = dynobuf.NewSchemasCache()
+	cfg.validators = newValidators()
 
 	cfg.versions = vers.NewVersions()
 	cfg.qNames = qnames.NewQNames()
@@ -130,6 +130,10 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	if err := cfg.Uniques.validate(cfg); err != nil {
 		return err
 	}
+
+	// TODO: remove it after https://github.com/voedger/voedger/issues/56
+	cfg.dbSchemas.Prepare(cfg.Schemas)
+	cfg.validators.prepare(cfg.Schemas)
 
 	cfg.prepared = true
 	return nil
