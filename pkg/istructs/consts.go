@@ -17,7 +17,7 @@ import "github.com/voedger/voedger/pkg/schemas"
 // AppQNameQualifierChar: char to separate application owner (provider) from application name
 const AppQNameQualifierChar = "/"
 
-// NullAppQName
+// NullAppQName is undefined (or empty) application name
 var NullAppQName = NewAppQName(schemas.NullName, schemas.NullName)
 
 var (
