@@ -17,14 +17,14 @@ import (
 func Test_BasicUsage(t *testing.T) {
 	name := istructs.NewQName("test", "test")
 
-	dynoSchemas := NewSchemasCache(
-		func() schemas.SchemaCache {
-			schemas := schemas.NewSchemaCache()
-			schema := schemas.Add(name, istructs.SchemaKind_CDoc)
-			schema.AddField("f1", istructs.DataKind_int32, true)
-			schema.AddField("f2", istructs.DataKind_QName, false)
-			return schemas
-		}())
+	dynoSchemas := NewSchemasCache()
+	dynoSchemas.Prepare(func() schemas.SchemaCache {
+		schemas := schemas.NewSchemaCache()
+		schema := schemas.Add(name, istructs.SchemaKind_CDoc)
+		schema.AddField("f1", istructs.DataKind_int32, true)
+		schema.AddField("f2", istructs.DataKind_QName, false)
+		return schemas
+	}())
 
 	t.Run("let test basic methods", func(t *testing.T) {
 		require := require.New(t)

@@ -5,9 +5,7 @@
 
 package dynobuf
 
-import "github.com/voedger/voedger/pkg/schemas"
-
 // Returns new dynobuffer schemas cache
-func NewSchemasCache(schemas schemas.SchemaCache) DynoBufSchemasCache {
-	return newSchemasCache(schemas)
+func NewSchemasCache() DynoBufSchemasCache {
+	return newSchemasCache()
 }

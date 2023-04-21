@@ -56,7 +56,8 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 		schemaCache = s
 	})
 
-	dynoSchemas := newSchemasCache(schemaCache)
+	dynoSchemas := newSchemasCache()
+	dynoSchemas.Prepare(schemaCache)
 	require.NotNil(dynoSchemas)
 
 	var checkDynoScheme func(dynoScheme *dynobuffers.Scheme)
