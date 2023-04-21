@@ -503,22 +503,27 @@ func Test_Dedupin(t *testing.T) {
 			callerCh := make(chan statefulMessage[string, int, struct{}], 10)
 			repeatCh := make(chan scheduledMessage[string, int, struct{}], 10)
 
-			go dedupIn(dedupInCh, callerCh, repeatCh, &InProcess, time.Now)
+			var messagesToCall []statefulMessage[string, int, struct{}]
+			var messagesToRepeat []scheduledMessage[string, int, struct{}]
+			var inProcessKeyCounter int
+			go func() {
+				testMessagesWriter(dedupInCh, test.messages)
 
-			testMessagesWriter(dedupInCh, test.messages)
+				messagesToCall = testMessagesReader(callerCh)
+				messagesToRepeat = testMessagesReader(repeatCh)
 
-			messagesToCall := testMessagesReader(callerCh)
-			messagesToRepeat := testMessagesReader(repeatCh)
+				// closing channels
+				close(dedupInCh)
+				close(repeatCh)
 
-			// closing channels
-			close(dedupInCh)
-			close(repeatCh)
+				inProcessKeyCounter = 0
+				InProcess.Range(func(_, _ any) bool {
+					inProcessKeyCounter++
+					return true
+				})
+			}()
 
-			inProcessKeyCounter := 0
-			InProcess.Range(func(_, _ any) bool {
-				inProcessKeyCounter++
-				return true
-			})
+			dedupIn(dedupInCh, callerCh, repeatCh, &InProcess, time.Now)
 
 			require.Equal(t, len(messagesToCall), inProcessKeyCounter)
 			require.Equal(t, len(messagesToRepeat), 1)
@@ -583,14 +588,18 @@ func Test_Repeater(t *testing.T) {
 			repeatCh := make(chan scheduledMessage[string, int, struct{}], 10)
 			reporterCh := make(chan reportInfo[string, int], 10)
 
-			go repeater(repeaterCh, repeatCh, reporterCh)
+			var messagesToReport []reportInfo[string, int]
+			var messagesToRepeat []scheduledMessage[string, int, struct{}]
+			go func() {
+				testMessagesWriter(repeaterCh, test.messages)
 
-			testMessagesWriter(repeaterCh, test.messages)
+				messagesToReport = testMessagesReader(reporterCh)
+				messagesToRepeat = testMessagesReader(repeatCh)
 
-			messagesToReport := testMessagesReader(reporterCh)
-			messagesToRepeat := testMessagesReader(repeatCh)
+				close(repeaterCh)
+			}()
 
-			close(repeaterCh)
+			repeater(repeaterCh, repeatCh, reporterCh)
 
 			require.Equal(t, len(messagesToReport), 2)
 			require.Equal(t, len(messagesToRepeat), 2)
@@ -606,9 +615,12 @@ func testMessagesWriter[T any](ch chan<- T, arr []T) {
 
 func testMessagesReader[T any](ch <-chan T) []T {
 	results := make([]T, 0)
-	for {
+
+	var val T
+	ok := true
+	for ok {
 		select {
-		case val, ok := <-ch:
+		case val, ok = <-ch:
 			if ok {
 				results = append(results, val)
 			} else {
@@ -618,4 +630,5 @@ func testMessagesReader[T any](ch <-chan T) []T {
 			return results
 		}
 	}
+	return results
 }
