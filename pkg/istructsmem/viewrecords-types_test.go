@@ -740,7 +740,8 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	v1.PutBool("vf_bool", true)
 	v1.PutRecordID("vf_recID", istructs.RecordID(102502))
 	v1.PutRecord("vf_record", NewNullRecord(istructs.NullRecordID))
-	require.NoError(v1.build())
+	_, err = v1.build()
+	require.NoError(err)
 
 	v, err := v1.storeToBytes()
 	require.NoError(err)

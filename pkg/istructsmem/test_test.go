@@ -41,28 +41,30 @@ type (
 		syncTime          istructs.UnixMilli
 
 		// event command tree entities
-		buyerIdent  string
-		buyerValue  string
-		ageIdent    string
-		ageValue    int32
-		heightIdent string
-		heightValue float32
-		humanIdent  string
-		humanValue  bool
-		photoIdent  string
-		photoValue  []byte
-		remarkIdent string
-		remarkValue string
-		saleIdent   string
-		basketIdent string
-		goodIdent   string
-		nameIdent   string
-		codeIdent   string
-		weightIdent string
-		goodCount   int
-		goodNames   []string
-		goodCodes   []int64
-		goodWeights []float64
+		buyerIdent     string
+		buyerValue     string
+		ageIdent       string
+		ageValue       int32
+		heightIdent    string
+		heightValue    float32
+		humanIdent     string
+		humanValue     bool
+		photoIdent     string
+		photoValue     []byte
+		remarkIdent    string
+		remarkValue    string
+		emptiableIdent string
+		emptiableValue string
+		saleIdent      string
+		basketIdent    string
+		goodIdent      string
+		nameIdent      string
+		codeIdent      string
+		weightIdent    string
+		goodCount      int
+		goodNames      []string
+		goodCodes      []int64
+		goodWeights    []float64
 
 		passwordIdent string
 
@@ -138,18 +140,20 @@ var data = testDataType{
 	device:            762,
 	syncTime:          1005001,
 
-	buyerIdent:  "Buyer",
-	buyerValue:  "Карлосон 哇\"呀呀", // to test unicode issues
-	ageIdent:    "Age",
-	ageValue:    33,
-	heightIdent: "Height",
-	heightValue: 1.75,
-	humanIdent:  "isHuman",
-	humanValue:  true,
-	photoIdent:  "Photo",
-	photoValue:  []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 4, 4, 3, 2, 1, 0},
-	remarkIdent: "Remark",
-	remarkValue: "remark text Примечание",
+	buyerIdent:     "Buyer",
+	buyerValue:     "Карлосон 哇\"呀呀", // to test unicode issues
+	ageIdent:       "Age",
+	ageValue:       33,
+	heightIdent:    "Height",
+	heightValue:    1.75,
+	humanIdent:     "isHuman",
+	humanValue:     true,
+	photoIdent:     "Photo",
+	photoValue:     []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 4, 4, 3, 2, 1, 0},
+	remarkIdent:    "Remark",
+	remarkValue:    "remark text Примечание",
+	emptiableIdent: "Emptiable",
+	emptiableValue: "to be emptied",
 
 	saleIdent:   "Sale",
 	basketIdent: "Basket",
@@ -252,7 +256,8 @@ var test func() *testDataType = func() *testDataType {
 			recSchemaChild := schemas.Add(data.tablePhotoRems, istructs.SchemaKind_CRecord)
 			recSchemaChild.
 				AddField(data.photoIdent, istructs.DataKind_RecordID, true).
-				AddField(data.remarkIdent, istructs.DataKind_string, true)
+				AddField(data.remarkIdent, istructs.DataKind_string, true).
+				AddField(data.emptiableIdent, istructs.DataKind_string, false)
 		}
 
 		{
@@ -372,7 +377,7 @@ func fillTestRow(row *rowType) {
 	row.PutBool("bool", true)
 	row.PutRecordID("RecordID", 7777777)
 
-	if err := row.build(); err != nil {
+	if _, err := row.build(); err != nil {
 		panic(err)
 	}
 }
@@ -729,7 +734,7 @@ func fillTestViewValue(value *rowType) {
 	e.argUnlObj.maskValues()
 	value.PutEvent(test.testViewRecord.valueFields.event, e)
 
-	if err := value.build(); err != nil {
+	if _, err := value.build(); err != nil {
 		panic(err)
 	}
 }

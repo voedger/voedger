@@ -57,23 +57,26 @@ func newRow(appCfg *AppConfigType) rowType {
 
 // build builds the row. Must be called after all Put××× calls to build row. If there were errors during data puts, then their connection will be returned.
 // If there were no errors, then tries to form the dynobuffer and returns the result
-func (row *rowType) build() (err error) {
+func (row *rowType) build() (nilledFields []string, err error) {
 	if row.err != nil {
-		return row.error()
+		return nil, row.error()
 	}
 
 	if row.QName() == istructs.NullQName {
-		return nil
+		return nil, nil
 	}
 
 	if row.dyB.IsModified() {
 		var bytes []byte
-		if bytes, err = row.dyB.ToBytes(); err == nil {
+		if bytes, nilledFields, err = row.dyB.ToBytesNilled(); err == nil {
 			row.dyB.Reset(utils.CopyBytes(bytes))
+			for _, nilledFieldName := range nilledFields {
+				row.dyB.Set(nilledFieldName, nil)
+			}
 		}
 	}
 
-	return err
+	return nilledFields, err
 }
 
 // clear clears row by set QName to NullQName value
@@ -119,7 +122,7 @@ func (row *rowType) copyFrom(src *rowType) {
 			return true
 		})
 
-	_ = row.build()
+	_, _ = row.build()
 }
 
 // empty returns true if no data except system fields
