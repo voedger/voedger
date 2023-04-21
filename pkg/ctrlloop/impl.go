@@ -30,7 +30,6 @@ func scheduler[Key comparable, SP any, State any](in chan OriginalMessage[Key, S
 			if !ok {
 				return
 			}
-
 			logger.Verbose(fmt.Sprintf("<-in. %v", m))
 
 			serialNumber++
