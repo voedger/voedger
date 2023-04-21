@@ -12,6 +12,7 @@ import (
 
 // Implements ISchema and ISchemaBuilder interfaces
 type schemasCache struct {
+	changes int
 	schemas map[QName]*schema
 }
 
@@ -31,11 +32,13 @@ func (cache *schemasCache) Add(name QName, kind SchemaKind) SchemaBuilder {
 	}
 	schema := newSchema(cache, name, kind)
 	cache.schemas[name] = schema
+	cache.changed()
 	return schema
 }
 
 func (cache *schemasCache) AddView(name QName) ViewBuilder {
 	v := newViewBuilder(cache, name)
+	cache.changed()
 	return &v
 }
 
@@ -50,7 +53,12 @@ func (cache *schemasCache) Build() (result SchemaCache, err error) {
 		return nil, err
 	}
 
+	cache.changes = 0
 	return cache, nil
+}
+
+func (cache *schemasCache) HasChanges() bool {
+	return cache.changes > 0
 }
 
 func (cache *schemasCache) Schema(name QName) Schema {
@@ -75,6 +83,10 @@ func (cache *schemasCache) EnumSchemas(enum func(Schema)) {
 	for _, schema := range cache.schemas {
 		enum(schema)
 	}
+}
+
+func (cache *schemasCache) changed() {
+	cache.changes++
 }
 
 func (cache *schemasCache) prepare() {

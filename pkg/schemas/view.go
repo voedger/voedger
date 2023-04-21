@@ -135,6 +135,8 @@ func (cache *schemasCache) prepareViewFullKeySchema(sch Schema) {
 	ccSchema.EnumFields(func(f Field) {
 		fkSchema.AddField(f.Name(), f.DataKind(), false)
 	})
+
+	cache.changed()
 }
 
 // Returns partition key schema name for specified view

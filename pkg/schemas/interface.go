@@ -69,6 +69,9 @@ type SchemaCacheBuilder interface {
 
 	// Must be called after all schemas added. Validates schemas and returns builded schemas or error
 	Build() (SchemaCache, error)
+
+	// Has changes since last success build
+	HasChanges() bool
 }
 
 // Schema describes the entity, such as document, record or view. Schema has fields and containers.

@@ -71,6 +71,8 @@ func (sch *schema) AddContainer(name string, schema QName, minOccurs, maxOccurs 
 	sch.containers[name] = &cont
 	sch.containersOrdered = append(sch.containersOrdered, name)
 
+	sch.changed()
+
 	return sch
 }
 
@@ -141,6 +143,7 @@ func (sch *schema) SetSingleton() {
 		panic(fmt.Errorf("only CDocs can be singletons: %w", ErrInvalidSchemaKind))
 	}
 	sch.singleton = true
+	sch.changed()
 }
 
 func (sch *schema) Singleton() bool {
@@ -165,6 +168,14 @@ func (sch *schema) addField(name string, kind DataKind, required, verified bool)
 	fld := newField(name, kind, required, verified)
 	sch.fields[name] = fld
 	sch.fieldsOrdered = append(sch.fieldsOrdered, name)
+
+	sch.changed()
+}
+
+func (sch *schema) changed() {
+	if sch.cache != nil {
+		sch.cache.changed()
+	}
 }
 
 // clears fields and containers

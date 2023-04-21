@@ -40,8 +40,10 @@ func (cfgs *AppConfigsType) GetConfig(appName istructs.AppQName) *AppConfigType 
 
 // AppConfigType: configuration for application workflow (resources, schemas, etc.)
 type AppConfigType struct {
-	Name      istructs.AppQName
-	QNameID   istructs.ClusterAppID
+	Name    istructs.AppQName
+	QNameID istructs.ClusterAppID
+
+	scb       schemas.SchemaCacheBuilder
 	Schemas   schemas.SchemaCache
 	Resources ResourcesType
 	Uniques   *implIUniques
@@ -72,6 +74,7 @@ func newAppConfig(appName istructs.AppQName, scb schemas.SchemaCacheBuilder) *Ap
 	}
 	cfg.QNameID = qNameID
 
+	cfg.scb = scb
 	sch, err := scb.Build()
 	if err != nil {
 		panic(fmt.Errorf("unable build application «%v» schemas: %w", appName, err))
@@ -101,11 +104,18 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		return nil
 	}
 
-	// prepare IAppStorage
-	cfg.storage = appStorage
-
+	if cfg.scb.HasChanges() {
+		sch, err := cfg.scb.Build()
+		if err != nil {
+			panic(fmt.Errorf("unable rebuild application «%v» changed schemas: %w", cfg.Name, err))
+		}
+		cfg.Schemas = sch
+	}
 	cfg.dbSchemas.Prepare(cfg.Schemas)
 	cfg.validators.prepare(cfg.Schemas)
+
+	// prepare IAppStorage
+	cfg.storage = appStorage
 
 	// prepare system views versions
 	if err := cfg.versions.Prepare(cfg.storage); err != nil {
