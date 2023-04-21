@@ -131,6 +131,10 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		return err
 	}
 
+	// TODO: remove it after https://github.com/voedger/voedger/issues/56
+	cfg.dbSchemas = dynobuf.NewSchemasCache(cfg.Schemas)
+	cfg.validators = newValidators(cfg.Schemas)
+
 	cfg.prepared = true
 	return nil
 }
@@ -149,12 +153,4 @@ func (cfg *AppConfigType) AddCUDValidators(cudValidators ...istructs.CUDValidato
 
 func (cfg *AppConfigType) AddEventValidators(eventValidators ...istructs.EventValidator) {
 	cfg.eventValidators = append(cfg.eventValidators, eventValidators...)
-}
-
-func (cfg *AppConfigType) BuildDynobuferSchemas(schemas schemas.SchemaCacheBuilder) {
-	cfg.dbSchemas = dynobuf.NewSchemasCache(schemas)
-}
-
-func (cfg *AppConfigType) BuildValidators(schemas schemas.SchemaCacheBuilder) {
-	cfg.validators = newValidators(schemas)
 }
