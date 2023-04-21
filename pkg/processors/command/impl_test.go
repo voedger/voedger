@@ -68,7 +68,7 @@ func TestBasicUsage(t *testing.T) {
 	defer tearDown(app)
 
 	channelID, err := app.n10nBroker.NewChannel("test", 24*time.Hour)
-	require.Nil(err)
+	require.NoError(err)
 	projectionKey := in10n.ProjectionKey{
 		App:        istructs.AppQName_untill_airs_bp,
 		Projection: projectors.PlogQName,
@@ -630,18 +630,17 @@ func setUp(t *testing.T, cfgSchemas func(schemas schemas.SchemaCacheBuilder), cf
 		cfgFunc(cfg)
 	}
 
-	appStructsProvider, err := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
+	appStructsProvider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider)
-	require.Nil(t, err, err)
 
 	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus
 	var bus ibus.IBus
 	bus = ibusmem.Provide(func(ctx context.Context, sender interface{}, request ibus.Request) {
 		// сымитируем работу airs-bp3 при приеме запроса-команды
 		cmdQName, err := istructs.ParseQName(request.Resource[2:])
-		require.Nil(t, err, err)
+		require.NoError(t, err)
 		appQName, err := istructs.ParseAppQName(request.AppQName)
-		require.Nil(t, err, err)
+		require.NoError(t, err)
 		as, err := appStructsProvider.AppStructs(appQName)
 		if err != nil {
 			replyBadRequest(bus, sender, err.Error())
@@ -659,13 +658,12 @@ func setUp(t *testing.T, cfgSchemas func(schemas schemas.SchemaCacheBuilder), cf
 		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, 1, resource, token, "")
 		serviceChannel <- icm
 	})
-	n10nBroker, err := in10nmem.Provide(in10n.Quotas{
+	n10nBroker := in10nmem.Provide(in10n.Quotas{
 		Channels:               1000,
 		ChannelsPerSubject:     10,
 		Subsciptions:           1000,
 		SubsciptionsPerSubject: 10,
 	})
-	require.Nil(t, err)
 
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_untill_airs_bp)

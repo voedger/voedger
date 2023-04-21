@@ -24,8 +24,7 @@ func TestEventBuilder_Core(t *testing.T) {
 	test := test()
 
 	// gets AppStructProvider and AppStructs
-	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -675,15 +674,14 @@ func Test_EventUpdateRawCud(t *testing.T) {
 		testScenarioCount
 	)
 
-	provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	ws := istructs.WSID(1)
 
 	for testScenario := testScenarioIndirectPLogApply; testScenario < testScenarioCount; testScenario++ {
 
 		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
-		require.NoError(err, err)
+		require.NoError(err)
 
 		docID := istructs.RecordID(322685000131087 + testScenario)
 
@@ -705,7 +703,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			create.PutBool("new", true)
 
 			rawEvent, err := bld.BuildRawEvent()
-			require.NoError(err, err)
+			require.NoError(err)
 			require.NotNil(rawEvent)
 
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err,
@@ -754,14 +752,14 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			update := bld.CUDBuilder().Update(
 				func() istructs.IRecord {
 					rec, err := app.Records().Get(ws, true, docID)
-					require.NoError(err, err)
+					require.NoError(err)
 					return rec
 				}())
 			update.PutBool("new", false)
 			update.PutRecordID("rec", 1)
 
 			rawEvent, err := bld.BuildRawEvent()
-			require.NoError(err, err)
+			require.NoError(err)
 			require.NotNil(rawEvent)
 
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err,
@@ -783,7 +781,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 						pLogEvent = event
 						return nil
 					})
-					require.NoError(err, err)
+					require.NoError(err)
 					require.NotNil(pLogEvent)
 					require.True(pLogEvent.Error().ValidEvent())
 				})
@@ -811,7 +809,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 			t.Run("must ok to reread CDOC record", func(t *testing.T) {
 				rec, err := app.Records().Get(ws, true, docID)
-				require.NoError(err, err)
+				require.NoError(err)
 
 				require.EqualValues(docName, rec.QName())
 				require.EqualValues(rec.AsRecordID("rec"), recID, "error #25853 here!")
@@ -841,8 +839,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		return cfgs
 	}()
 
-	provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -1040,8 +1037,7 @@ func TestEventBuild_Error(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -1406,8 +1402,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)

@@ -14,7 +14,7 @@ import (
 
 func TestNotEqualsFilter_IsMatch(t *testing.T) {
 	match := func(match bool, err error) bool {
-		require.Nil(t, err)
+		require.NoError(t, err)
 		return match
 	}
 	t.Run("Compare int32", func(t *testing.T) {

@@ -174,12 +174,15 @@ func appStructs(schemasCfg schemasCfgCallback, appCfg appCfgCallback) istructs.I
 
 	asf := istorage.ProvideMem()
 	storageProvider := istorageimpl.Provide(asf)
-	prov, _ := istructsmem.Provide(
+	prov := istructsmem.Provide(
 		cfgs,
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
-	structs, _ := prov.AppStructs(istructs.AppQName_test1_app1)
+	structs, err := prov.AppStructs(istructs.AppQName_test1_app1)
+	if err != nil {
+		panic(err)
+	}
 	return structs
 }
 

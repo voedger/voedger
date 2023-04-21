@@ -224,28 +224,32 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		store_codec_RawDynoBuffer := func(row *recordType) (out []byte) {
 			buf := new(bytes.Buffer)
 			_ = binary.Write(buf, binary.BigEndian, codec_RawDynoBuffer)
-			id, _ := row.qNameID()
+			id, err := row.qNameID()
+			require.NoError(err)
 			_ = binary.Write(buf, binary.BigEndian, int16(id))
 			if row.QName() == istructs.NullQName {
 				return buf.Bytes()
 			}
 			if row.schema.Props().HasSystemField(istructs.SystemField_ID) {
-				_ = binary.Write(buf, binary.BigEndian, uint64(row.ID()))
+				require.NoError(binary.Write(buf, binary.BigEndian, uint64(row.ID())))
 			}
 			if row.schema.Props().HasSystemField(istructs.SystemField_ParentID) {
-				_ = binary.Write(buf, binary.BigEndian, uint64(row.parentID))
+				require.NoError(binary.Write(buf, binary.BigEndian, uint64(row.parentID)))
 			}
 			if row.schema.Props().HasSystemField(istructs.SystemField_Container) {
-				id, _ := row.containerID()
-				_ = binary.Write(buf, binary.BigEndian, int16(id))
+				id, err := row.containerID()
+				require.NoError(err)
+				require.NoError(binary.Write(buf, binary.BigEndian, int16(id)))
 			}
 			if row.schema.Props().HasSystemField(istructs.SystemField_IsActive) {
-				_ = binary.Write(buf, binary.BigEndian, row.isActive)
+				require.NoError(binary.Write(buf, binary.BigEndian, row.isActive))
 			}
-			b, _ := row.dyB.ToBytes()
+			b, err := row.dyB.ToBytes()
+			require.NoError(err)
 			len := uint32(len(b))
-			_ = binary.Write(buf, binary.BigEndian, &len)
-			_, _ = buf.Write(b)
+			require.NoError(binary.Write(buf, binary.BigEndian, &len))
+			_, err = buf.Write(b)
+			require.NoError(err)
 			return buf.Bytes()
 		}
 

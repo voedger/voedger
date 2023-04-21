@@ -20,7 +20,7 @@ func TestBasicUsage(t *testing.T) {
 	require.NoError(err)
 	require.NoError(os.Setenv(SecretRootEnv, dir))
 	defer func() {
-		_ = os.Remove(dir)
+		require.NoError(os.RemoveAll(dir))
 		require.NoError(os.Unsetenv(SecretRootEnv))
 	}()
 	secret := "secret.json"

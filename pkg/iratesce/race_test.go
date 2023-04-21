@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	irates "github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -69,7 +70,8 @@ func TestRace_Buckets(t *testing.T) {
 		defer finish.Done()
 		start.Done()
 		for ctx.Err() == nil {
-			_, _ = buckets.GetBucketState(totalRegKey)
+			_, err := buckets.GetBucketState(totalRegKey)
+			require.NoError(t, err)
 		}
 	}
 

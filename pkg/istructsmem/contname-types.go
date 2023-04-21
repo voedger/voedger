@@ -180,14 +180,15 @@ func (names *containerNameCacheType) store() (err error) {
 
 	batch := make([]istorage.BatchItem, 0)
 	for name, id := range names.names {
-		if ok, _ := schemas.ValidIdent(name); ok {
-			item := istorage.BatchItem{
-				PKey:  pKey,
-				CCols: []byte(name),
-				Value: utils.ToBytes(id),
-			}
-			batch = append(batch, item)
+		if len(name) == 0 || schemas.IsSysContainer(name) {
+			continue
 		}
+		item := istorage.BatchItem{
+			PKey:  pKey,
+			CCols: []byte(name),
+			Value: utils.ToBytes(id),
+		}
+		batch = append(batch, item)
 	}
 
 	if err = names.cfg.storage.PutBatch(batch); err != nil {

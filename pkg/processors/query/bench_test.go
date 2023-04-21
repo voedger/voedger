@@ -55,7 +55,7 @@ func Benchmark_pipelineIService_Sequential(b *testing.B) {
 		imetrics.Provide(), "hvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
 	as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
-	require.Nil(err)
+	require.NoError(err)
 	funcResource := as.Resources().QueryResource(qNameFunction)
 	start := time.Now()
 	sysToken := getSystemToken(appTokens)
@@ -117,7 +117,7 @@ func Benchmark_pipelineIService_Parallel(b *testing.B) {
 			appStructsProvider, 3, imetrics.Provide(), "hvm", authn, authz, cfgs)
 		go queryProcessor.Run(context.Background())
 		as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
-		require.Nil(err)
+		require.NoError(err)
 		funcResource := as.Resources().QueryResource(qNameFunction)
 		sysToken := getSystemToken(appTokens)
 

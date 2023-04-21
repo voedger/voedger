@@ -40,13 +40,13 @@ func TestBasicUsage_PrincipalPayload(t *testing.T) {
 	t.Run("Prepare token", func(t *testing.T) {
 		token, err = signer.IssueToken(testApp, testDuration, &srcPayload)
 		log.Printf("%+v", srcPayload)
-		require.Nil(err)
+		require.NoError(err)
 	})
 
 	t.Run("Verify token", func(t *testing.T) {
 		payload := PrincipalPayload{}
 		gp, err := signer.ValidateToken(token, &payload)
-		require.Nil(err)
+		require.NoError(err)
 		require.Equal(srcPayload, payload)
 		require.Greater(gp.IssuedAt.Unix(), int64(0))
 		require.Equal(testApp, gp.AppQName)
@@ -72,13 +72,13 @@ func TestBasicUsage_BLOBUploadingPayload(t *testing.T) {
 	t.Run("Prepare token", func(t *testing.T) {
 		token, err = signer.IssueToken(testApp, testDuration, &srcPayload)
 		log.Printf("%+v", srcPayload)
-		require.Nil(err)
+		require.NoError(err)
 	})
 
 	t.Run("Verify token", func(t *testing.T) {
 		payload := BLOBUploadingPayload{}
 		gp, err := signer.ValidateToken(token, &payload)
-		require.Nil(err)
+		require.NoError(err)
 		require.Equal(srcPayload, payload)
 		require.Greater(gp.IssuedAt.Unix(), int64(0))
 		require.Equal(testApp, gp.AppQName)
@@ -104,13 +104,13 @@ func TestBasicUsage_VerifiedValue(t *testing.T) {
 			Value:            42,
 		}
 		token, err = signer.IssueToken(testApp, testDuration, &payload)
-		require.Nil(err)
+		require.NoError(err)
 	})
 
 	t.Run("Verify token", func(t *testing.T) {
 		payload := VerifiedValuePayload{}
 		gp, err := signer.ValidateToken(token, &payload)
-		require.Nil(err)
+		require.NoError(err)
 		require.Equal(VerificationKind_EMail, payload.VerificationKind)
 		require.Equal(testQName, payload.Entity)
 		require.Equal("testName", payload.Field)
@@ -138,13 +138,13 @@ func TestBasicUsage_IAppTokens(t *testing.T) {
 			ProfileWSID: istructs.WSID(10),
 		}
 		token, err = at.IssueToken(testDuration, &srcPayload)
-		require.Nil(err)
+		require.NoError(err)
 	})
 
 	t.Run("Validate token", func(t *testing.T) {
 		payload := PrincipalPayload{}
 		gp, err := at.ValidateToken(token, &payload)
-		require.Nil(err)
+		require.NoError(err)
 		require.Greater(gp.IssuedAt.Unix(), int64(0))
 		require.Equal(testApp, gp.AppQName)
 		require.Equal(testDuration, gp.Duration)

@@ -16,8 +16,8 @@ func newServerCmd() *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "server",
 		Short: "Runs edger server cycle",
-		Run: func(*cobra.Command, []string) {
-			edger.Run(edgerPars)
+		RunE: func(*cobra.Command, []string) error {
+			return edger.Run(edgerPars)
 		},
 	}
 

@@ -443,7 +443,7 @@ func Test_rowType_RecordIDs(t *testing.T) {
 		row.PutRecordID("RecordID_2", 2)
 
 		err := row.build()
-		require.Nil(err)
+		require.NoError(err)
 
 		cnt := 0
 		row.RecordIDs(true,
@@ -470,7 +470,7 @@ func Test_rowType_RecordIDs(t *testing.T) {
 		row.PutRecordID("RecordID_2", istructs.NullRecordID)
 
 		err := row.build()
-		require.Nil(err)
+		require.NoError(err)
 
 		cnt := 0
 		row.RecordIDs(false,

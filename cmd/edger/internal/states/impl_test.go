@@ -82,7 +82,7 @@ func Test_BasicUsage(t *testing.T) {
 			select {
 			case a := <-actual:
 				if as, ok := a.Load().(ActualState); ok {
-					_ = states.ReportActualState(ctx, as)
+					require.NoError(t, states.ReportActualState(ctx, as))
 				}
 			case <-ctx.Done():
 				break

@@ -84,7 +84,7 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	// 5th (index 4 in pLog array)):
 	_ = storeProjectorOffset(app, partitionNr, decrementorName, istructs.Offset(4))
 
-	broker, _ := in10nmem.Provide(in10n.Quotas{
+	broker := in10nmem.Provide(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
@@ -101,8 +101,9 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 			AppStructs: func() istructs.IAppStructs { return app },
 			Broker:     broker,
 		}
-		actualizer, _ := actualizerFactory(conf, factory)
-		_ = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
+		actualizer, err := actualizerFactory(conf, factory)
+		require.NoError(err)
+		require.NoError(actualizer.DoSync(conf.Ctx, struct{}{})) // Start service
 		actualizers[i] = actualizer
 	}
 
@@ -161,7 +162,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker, _ := in10nmem.Provide(in10n.Quotas{
+	broker := in10nmem.Provide(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
@@ -180,11 +181,11 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	actualizer, err := actualizerFactory(conf, incrementorFactory)
-	require.Nil(err)
+	require.NoError(err)
 
 	t0 := time.Now()
 	err = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
-	require.Nil(err)
+	require.NoError(err)
 
 	// Wait for the projectors
 	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
@@ -228,7 +229,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker, _ := in10nmem.Provide(in10n.Quotas{
+	broker := in10nmem.Provide(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
@@ -245,11 +246,11 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	actualizer, err := actualizerFactory(conf, incrementorFactory)
-	require.Nil(err)
+	require.NoError(err)
 
 	t0 := time.Now()
 	err = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
-	require.Nil(err)
+	require.NoError(err)
 
 	// Wait for the projectors
 	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
@@ -298,7 +299,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	errors := make(chan string)
 	chanAfterError := make(chan time.Time)
 
-	broker, _ := in10nmem.Provide(in10n.Quotas{
+	broker := in10nmem.Provide(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
@@ -339,12 +340,13 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	}
 
 	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, _ := actualizerFactory(conf, factory)
-	_ = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
+	actualizer, err := actualizerFactory(conf, factory)
+	require.NoError(err)
+	require.NoError(actualizer.DoSync(conf.Ctx, struct{}{})) // Start service
 
 	// Wait for the logged error
-	err := <-errors
-	require.Equal("error: [test.failing_projector [1] [Projector/doAsync, outWork==nil] test error]", err)
+	errStr := <-errors
+	require.Equal("error: [test.failing_projector [1] [Projector/doAsync, outWork==nil] test error]", errStr)
 
 	// wait until the istructs.Projector version is updated with the 1st record
 	for getActualizerOffset(require, app, partitionNr, name) < istructs.Offset(1) {
@@ -394,7 +396,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker, _ := in10nmem.Provide(in10n.Quotas{
+	broker := in10nmem.Provide(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
@@ -414,7 +416,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	actualizer, err := actualizerFactory(conf, incrementorFactory)
-	require.Nil(err)
+	require.NoError(err)
 
 	_ = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
 
@@ -553,7 +555,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker, _ := in10nmem.Provide(in10n.Quotas{
+	broker := in10nmem.Provide(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
@@ -571,8 +573,9 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 		Broker:     broker,
 		Metrics:    &metrics,
 	}
-	actualizer, _ := actualizerFactory(conf, incrementorFactory)
-	_ = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
+	actualizer, err := actualizerFactory(conf, incrementorFactory)
+	require.NoError(err)
+	require.NoError(actualizer.DoSync(conf.Ctx, struct{}{})) // Start service
 
 	t0 := time.Now()
 	// Wait for the projectors
@@ -649,7 +652,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker, _ := in10nmem.Provide(in10n.Quotas{
+	broker := in10nmem.Provide(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
@@ -674,11 +677,11 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 		return istructs.Projector{Name: incrementorName, NonBuffered: true, Func: incrementor}
 	}
 	actualizer, err := actualizerFactory(conf, projectorFactory)
-	require.Nil(err)
+	require.NoError(err)
 
 	t0 := time.Now()
 	err = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
-	require.Nil(err)
+	require.NoError(err)
 
 	// Wait for the projectors
 	for atomic.LoadInt64(&metrics.storedOffset) < int64(topOffset) {

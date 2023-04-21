@@ -28,14 +28,14 @@ func TestHostState_BasicUsage(t *testing.T) {
 		key.PutString("pkFld", "pkVal")
 
 		// Call to storage
-		_ = state.MustNotExist(key)
+		require.NoError(state.MustNotExist(key))
 	}
 
 	// Run extension
 	extension(hostState)
 
-	_ = hostState.ValidateIntents()
-	_ = hostState.ApplyIntents()
+	require.NoError(hostState.ValidateIntents())
+	require.NoError(hostState.ApplyIntents())
 }
 
 func mockedHostStateStructs() istructs.IAppStructs {
@@ -127,9 +127,10 @@ func TestHostState_CanExist(t *testing.T) {
 			})
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
-		require.Nil(err)
+		require.NoError(err)
 
-		_, ok, _ := s.CanExist(k)
+		_, ok, err := s.CanExist(k)
+		require.NoError(err)
 
 		require.True(ok)
 	})
@@ -141,7 +142,7 @@ func TestHostState_CanExist(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
-		require.Nil(err)
+		require.NoError(err)
 
 		_, _, err = s.CanExist(k)
 
@@ -152,9 +153,10 @@ func TestHostState_CanExist(t *testing.T) {
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
 		s, _ := emptyHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		_, _, err := s.CanExist(kb)
+		_, _, err = s.CanExist(kb)
 
 		require.ErrorIs(err, ErrGetBatchNotSupportedByStorage)
 	})
@@ -173,14 +175,15 @@ func TestHostState_CanExistAll(t *testing.T) {
 			})
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
-		require.Nil(err)
+		require.NoError(err)
 
-		_ = s.CanExistAll([]istructs.IStateKeyBuilder{k}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
+		err = s.CanExistAll([]istructs.IStateKeyBuilder{k}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
 			times++
 			require.Equal(k, key)
 			require.True(ok)
 			return
 		})
+		require.NoError(err)
 
 		require.Equal(1, times)
 	})
@@ -191,9 +194,10 @@ func TestHostState_CanExistAll(t *testing.T) {
 			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		err := s.CanExistAll([]istructs.IStateKeyBuilder{k}, nil)
+		err = s.CanExistAll([]istructs.IStateKeyBuilder{k}, nil)
 
 		require.ErrorIs(err, errTest)
 	})
@@ -202,9 +206,10 @@ func TestHostState_CanExistAll(t *testing.T) {
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
 		s, _ := emptyHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		err := s.CanExistAll([]istructs.IStateKeyBuilder{kb}, nil)
+		err = s.CanExistAll([]istructs.IStateKeyBuilder{kb}, nil)
 
 		require.ErrorIs(err, ErrGetBatchNotSupportedByStorage)
 	})
@@ -221,9 +226,10 @@ func TestHostState_MustExist(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		_, err := s.MustExist(k)
+		_, err = s.MustExist(k)
 
 		require.NoError(err)
 	})
@@ -238,9 +244,10 @@ func TestHostState_MustExist(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[0].value = nil
 			})
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		_, err := s.MustExist(k)
+		_, err = s.MustExist(k)
 
 		require.ErrorIs(err, ErrNotExists)
 	})
@@ -251,9 +258,10 @@ func TestHostState_MustExist(t *testing.T) {
 			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		_, err := s.MustExist(k)
+		_, err = s.MustExist(k)
 
 		require.ErrorIs(err, errTest)
 	})
@@ -271,15 +279,18 @@ func TestHostState_MustExistAll(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[1].value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
-		k1, _ := s.KeyBuilder(testStorage, istructs.NullQName)
-		k2, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k1, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
+		k2, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 		kk := make([]istructs.IKeyBuilder, 0, 2)
 
-		_ = s.MustExistAll([]istructs.IStateKeyBuilder{k1, k2}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
+		err = s.MustExistAll([]istructs.IStateKeyBuilder{k1, k2}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
 			kk = append(kk, key)
 			require.True(ok)
 			return
 		})
+		require.NoError(err)
 
 		require.Equal(k1, kk[0])
 		require.Equal(k1, kk[1])
@@ -291,9 +302,10 @@ func TestHostState_MustExistAll(t *testing.T) {
 			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		err := s.MustExistAll([]istructs.IStateKeyBuilder{k}, nil)
+		err = s.MustExistAll([]istructs.IStateKeyBuilder{k}, nil)
 
 		require.ErrorIs(err, errTest)
 	})
@@ -309,10 +321,12 @@ func TestHostState_MustExistAll(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[1].value = nil
 			})
 		s := hostStateForTest(ms)
-		k1, _ := s.KeyBuilder(testStorage, istructs.NullQName)
-		k2, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k1, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
+		k2, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		err := s.MustExistAll([]istructs.IStateKeyBuilder{k1, k2}, nil)
+		err = s.MustExistAll([]istructs.IStateKeyBuilder{k1, k2}, nil)
 
 		require.ErrorIs(err, ErrNotExists)
 	})
@@ -321,9 +335,10 @@ func TestHostState_MustExistAll(t *testing.T) {
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
 		s, _ := emptyHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		err := s.MustExistAll([]istructs.IStateKeyBuilder{kb}, nil)
+		err = s.MustExistAll([]istructs.IStateKeyBuilder{kb}, nil)
 
 		require.ErrorIs(err, ErrGetBatchNotSupportedByStorage)
 	})
@@ -340,9 +355,10 @@ func TestHostState_MustNotExist(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[0].value = nil
 			})
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		err := s.MustNotExist(k)
+		err = s.MustNotExist(k)
 
 		require.NoError(err)
 	})
@@ -357,9 +373,10 @@ func TestHostState_MustNotExist(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		err := s.MustNotExist(k)
+		err = s.MustNotExist(k)
 
 		require.ErrorIs(err, ErrExists)
 	})
@@ -370,9 +387,10 @@ func TestHostState_MustNotExist(t *testing.T) {
 			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		err := s.MustNotExist(k)
+		err = s.MustNotExist(k)
 
 		require.ErrorIs(err, errTest)
 	})
@@ -390,10 +408,12 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[1].value = nil
 			})
 		s := hostStateForTest(ms)
-		k1, _ := s.KeyBuilder(testStorage, istructs.NullQName)
-		k2, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k1, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
+		k2, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		err := s.MustNotExistAll([]istructs.IStateKeyBuilder{k1, k2})
+		err = s.MustNotExistAll([]istructs.IStateKeyBuilder{k1, k2})
 
 		require.NoError(err)
 	})
@@ -404,9 +424,10 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		err := s.MustNotExistAll([]istructs.IStateKeyBuilder{k})
+		err = s.MustNotExistAll([]istructs.IStateKeyBuilder{k})
 
 		require.ErrorIs(err, errTest)
 	})
@@ -422,10 +443,12 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 				args.Get(0).([]GetBatchItem)[1].value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
-		k1, _ := s.KeyBuilder(testStorage, istructs.NullQName)
-		k2, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k1, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
+		k2, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		err := s.MustNotExistAll([]istructs.IStateKeyBuilder{k1, k2})
+		err = s.MustNotExistAll([]istructs.IStateKeyBuilder{k1, k2})
 
 		require.ErrorIs(err, ErrExists)
 	})
@@ -434,9 +457,10 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
 		s, _ := emptyHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		err := s.MustNotExistAll([]istructs.IStateKeyBuilder{kb})
+		err = s.MustNotExistAll([]istructs.IStateKeyBuilder{kb})
 
 		require.ErrorIs(err, ErrGetBatchNotSupportedByStorage)
 	})
@@ -448,9 +472,10 @@ func TestHostState_Read(t *testing.T) {
 			On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName)).
 			On("Read", mock.Anything, mock.AnythingOfType("istructs.ValueCallback")).Return(nil)
 		s := hostStateForTest(ms)
-		k, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(t, err)
 
-		_ = s.Read(k, nil)
+		require.NoError(t, s.Read(k, nil))
 
 		ms.AssertExpectations(t)
 	})
@@ -459,9 +484,10 @@ func TestHostState_Read(t *testing.T) {
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
 		s, _ := emptyHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		err := s.Read(kb, nil)
+		err = s.Read(kb, nil)
 
 		require.ErrorIs(err, ErrReadNotSupportedByStorage)
 	})
@@ -472,9 +498,10 @@ func TestHostState_NewValue(t *testing.T) {
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
 		s, i := limitedIntentsHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		_, err := i.NewValue(kb)
+		_, err = i.NewValue(kb)
 
 		require.ErrorIs(err, ErrIntentsLimitExceeded)
 	})
@@ -483,9 +510,10 @@ func TestHostState_NewValue(t *testing.T) {
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
 		s, i := emptyHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		_, err := i.NewValue(kb)
+		_, err = i.NewValue(kb)
 
 		require.ErrorIs(err, ErrInsertNotSupportedByStorage)
 	})
@@ -496,9 +524,10 @@ func TestHostState_UpdateValue(t *testing.T) {
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
 		s, i := limitedIntentsHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		_, err := i.UpdateValue(kb, nil)
+		_, err = i.UpdateValue(kb, nil)
 
 		require.ErrorIs(err, ErrIntentsLimitExceeded)
 	})
@@ -507,9 +536,10 @@ func TestHostState_UpdateValue(t *testing.T) {
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", istructs.NullQName, nil).Return(newKeyBuilder(testStorage, istructs.NullQName))
 		s, i := emptyHostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
+		kb, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(err)
 
-		_, err := i.UpdateValue(kb, nil)
+		_, err = i.UpdateValue(kb, nil)
 
 		require.ErrorIs(err, ErrUpdateNotSupportedByStorage)
 	})
@@ -522,10 +552,12 @@ func TestHostState_ValidateIntents(t *testing.T) {
 			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
 			On("Validate", mock.Anything).Return(nil)
 		s := hostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
-		_, _ = s.NewValue(kb)
+		kb, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(t, err)
+		_, err = s.NewValue(kb)
+		require.NoError(t, err)
 
-		err := s.ValidateIntents()
+		err = s.ValidateIntents()
 
 		require.NoError(t, err)
 	})
@@ -533,7 +565,7 @@ func TestHostState_ValidateIntents(t *testing.T) {
 		ms := &mockStorage{}
 		s := hostStateForTest(&mockStorage{})
 
-		_ = s.ValidateIntents()
+		require.NoError(t, s.ValidateIntents())
 
 		ms.AssertNotCalled(t, "Validate", mock.Anything)
 	})
@@ -544,10 +576,12 @@ func TestHostState_ValidateIntents(t *testing.T) {
 			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
 			On("Validate", mock.Anything).Return(errTest)
 		s := hostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
-		_, _ = s.NewValue(kb)
+		kb, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(t, err)
+		_, err = s.NewValue(kb)
+		require.NoError(t, err)
 
-		err := s.ValidateIntents()
+		err = s.ValidateIntents()
 
 		require.ErrorIs(t, err, errTest)
 	})
@@ -560,10 +594,12 @@ func TestHostState_ApplyIntents(t *testing.T) {
 			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
 			On("ApplyBatch", mock.Anything).Return(nil)
 		s := hostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
-		_, _ = s.NewValue(kb)
+		kb, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(t, err)
+		_, err = s.NewValue(kb)
+		require.NoError(t, err)
 
-		_ = s.ApplyIntents()
+		require.NoError(t, s.ApplyIntents())
 
 		ms.AssertExpectations(t)
 	})
@@ -574,10 +610,12 @@ func TestHostState_ApplyIntents(t *testing.T) {
 			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
 			On("ApplyBatch", mock.Anything).Return(errTest)
 		s := hostStateForTest(ms)
-		kb, _ := s.KeyBuilder(testStorage, istructs.NullQName)
-		_, _ = s.NewValue(kb)
+		kb, err := s.KeyBuilder(testStorage, istructs.NullQName)
+		require.NoError(t, err)
+		_, err = s.NewValue(kb)
+		require.NoError(t, err)
 
-		err := s.ApplyIntents()
+		err = s.ApplyIntents()
 
 		require.ErrorIs(t, err, errTest)
 	})
