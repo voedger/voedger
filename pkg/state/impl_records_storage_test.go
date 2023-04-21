@@ -136,7 +136,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		schema1 := smock.MockedSchema(testRecordQName1, schemas.SchemaKind_Object,
 			smock.MockedField("number", schemas.DataKind_int64, false),
 		)
-		schema2 := smock.MockedSchema(testRecordQName1, schemas.SchemaKind_Object,
+		schema2 := smock.MockedSchema(testRecordQName2, schemas.SchemaKind_Object,
 			smock.MockedField("age", schemas.DataKind_int64, false),
 		)
 		cache := smock.MockedSchemaCache(

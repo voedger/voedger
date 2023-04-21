@@ -19,7 +19,7 @@ func MockedField(name string, kind schemas.DataKind, req bool) *MockField {
 	fld := MockField{}
 	fld.
 		On("Name").Return(name).
-		On("Kind").Return(kind).
+		On("DataKind").Return(kind).
 		On("Required").Return(req)
 	return &fld
 }
