@@ -27,6 +27,9 @@ func (cache *schemasCache) Add(name QName, kind SchemaKind) SchemaBuilder {
 	if name == NullQName {
 		panic(fmt.Errorf("schema name cannot be empty: %w", ErrNameMissed))
 	}
+	if ok, err := ValidQName(name); !ok {
+		panic(fmt.Errorf("invalid schema name «%v»: %w", name, err))
+	}
 	if cache.SchemaByName(name) != nil {
 		panic(fmt.Errorf("schema name «%s» already used: %w", name, ErrNameUniqueViolation))
 	}

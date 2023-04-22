@@ -22,6 +22,12 @@ func Test_SchemasCache_Add(t *testing.T) {
 		})
 	})
 
+	t.Run("panic if name is invalid", func(t *testing.T) {
+		require.Panics(func() {
+			cache.Add(NewQName("naked", "🔫"), SchemaKind_CDoc)
+		})
+	})
+
 	t.Run("if schema with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "test")
 		cache.Add(testName, SchemaKind_CDoc)

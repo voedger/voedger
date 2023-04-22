@@ -61,6 +61,7 @@ type SchemaCacheBuilder interface {
 	//
 	// # Panics:
 	//   - if name is empty (schemas.NullQName),
+	//   - if name is invalid,
 	//   - if schema with name already exists.
 	Add(name QName, kind SchemaKind) SchemaBuilder
 
@@ -130,7 +131,8 @@ type SchemaBuilder interface {
 	// Adds field specified name and kind.
 	//
 	// # Panics:
-	//   - if field is empty,
+	//   - if name is empty,
+	//   - if name is invalid,
 	//   - if field with name is already exists,
 	//   - if schema kind not supports fields,
 	//   - if data kind is not allowed by schema kind.
@@ -139,7 +141,8 @@ type SchemaBuilder interface {
 	// Adds verified field specified name and kind.
 	//
 	// # Panics:
-	//   - if field is empty,
+	//   - if field name is empty,
+	//   - if field name is invalid,
 	//   - if field with name is already exists,
 	//   - if schema kind not supports fields,
 	//   - if data kind is not allowed by schema kind.
@@ -149,9 +152,11 @@ type SchemaBuilder interface {
 	//
 	// # Panics:
 	//   - if name is empty,
+	//   - if name is invalid,
 	//   - if container with name already exists,
 	//   - if invalid occurrences,
-	//   - if schema kind does not allow containers.
+	//   - if schema kind does not allow containers,
+	//   - if container schema kind is not compatable with schema kind.
 	AddContainer(name string, schema QName, min, max Occurs) SchemaBuilder
 
 	// Sets the singleton document flag for CDoc schemas.

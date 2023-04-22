@@ -155,13 +155,17 @@ func (sch *schema) addField(name string, kind DataKind, required, verified bool)
 	if name == NullName {
 		panic(fmt.Errorf("empty field name: %w", ErrNameMissed))
 	}
+	if !IsSysField(name) {
+		if ok, err := ValidIdent(name); !ok {
+			panic(fmt.Errorf("field name «%v» is invalid: %w", name, err))
+		}
+	}
 	if sch.Field(name) != nil {
 		if IsSysField(name) {
 			return
 		}
 		panic(fmt.Errorf("field «%v» is already exists: %w", name, ErrNameUniqueViolation))
 	}
-	// TODO: check name is valid
 	if !sch.Kind().FieldsAllowed() {
 		panic(fmt.Errorf("schema «%s» kind «%v» does not allow fields: %w", sch.QName(), sch.Kind(), ErrInvalidSchemaKind))
 	}
