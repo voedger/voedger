@@ -62,7 +62,7 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 	})
 	t.Run("Should get not existing", func(t *testing.T) {
 		require := require.New(t)
-		_ = storage.Put([]byte("*"), []byte("Month"), []byte("Dale - 24h"))
+		require.NoError(storage.Put([]byte("*"), []byte("Month"), []byte("Dale - 24h")))
 
 		data := make([]byte, 0)
 
@@ -88,9 +88,9 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 			resultCcols = append(resultCcols, string(ccols))
 			return err
 		}
-		_ = storage.Put([]byte("1"), []byte("Dale"), []byte("Dale - 24h"))
-		_ = storage.Put([]byte("1"), []byte("Chip"), []byte("Chip - 10h"))
-		_ = storage.Put([]byte("2"), []byte("John"), []byte("John - 24h"))
+		require.NoError(storage.Put([]byte("1"), []byte("Dale"), []byte("Dale - 24h")))
+		require.NoError(storage.Put([]byte("1"), []byte("Chip"), []byte("Chip - 10h")))
+		require.NoError(storage.Put([]byte("2"), []byte("John"), []byte("John - 24h")))
 
 		err := storage.Read(ctx, []byte("1"), nil, nil, reader)
 		require.NoError(err)
@@ -104,11 +104,11 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 
 	t.Run("Read method should read by clustering columns range", func(t *testing.T) {
 		require := require.New(t)
-		_ = storage.Put([]byte{0x0}, []byte{0x10, 0x11, 0x17}, []byte("100$"))
-		_ = storage.Put([]byte{0x0}, []byte{0x10, 0x12, 0x12}, []byte("200$"))
-		_ = storage.Put([]byte{0x0}, []byte{0x10, 0x11, 0x16}, []byte("300$"))
-		_ = storage.Put([]byte{0x0}, []byte{0x10, 0x10, 0x12}, []byte("400$"))
-		_ = storage.Put([]byte{0x0}, []byte{0x09, 0x07, 0x00}, []byte("500$"))
+		require.NoError(storage.Put([]byte{0x0}, []byte{0x10, 0x11, 0x17}, []byte("100$")))
+		require.NoError(storage.Put([]byte{0x0}, []byte{0x10, 0x12, 0x12}, []byte("200$")))
+		require.NoError(storage.Put([]byte{0x0}, []byte{0x10, 0x11, 0x16}, []byte("300$")))
+		require.NoError(storage.Put([]byte{0x0}, []byte{0x10, 0x10, 0x12}, []byte("400$")))
+		require.NoError(storage.Put([]byte{0x0}, []byte{0x09, 0x07, 0x00}, []byte("500$")))
 
 		t.Run("read closed range", func(t *testing.T) {
 			viewRecords := make([]string, 0, 5)
@@ -211,8 +211,8 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 			times++
 			return errCb
 		}
-		_ = storage.Put([]byte{1}, []byte{1}, []byte("100$"))
-		_ = storage.Put([]byte{1}, []byte{2}, []byte("200$"))
+		require.NoError(storage.Put([]byte{1}, []byte{1}, []byte("100$")))
+		require.NoError(storage.Put([]byte{1}, []byte{2}, []byte("200$")))
 
 		times = 0
 		err := storage.Read(ctx, []byte{1}, nil, nil, reader)
@@ -224,7 +224,7 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 	t.Run("Should get exists", func(t *testing.T) {
 		require := require.New(t)
 		data := make([]byte, 0, 100)
-		_ = storage.Put([]byte{123}, []byte{}, []byte("100$"))
+		require.NoError(storage.Put([]byte{123}, []byte{}, []byte("100$")))
 
 		ok, err := storage.Get([]byte{123}, []byte{}, &data)
 
@@ -236,9 +236,9 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 	t.Run("Should get be able to reuse data slice", func(t *testing.T) {
 		require := require.New(t)
 		data := make([]byte, 0, 100)
-		_ = storage.Put([]byte{1}, []byte{}, []byte("150$"))
-		_ = storage.Put([]byte{2}, []byte{}, []byte("20$"))
-		_ = storage.Put([]byte{3}, []byte{}, []byte("4000$"))
+		require.NoError(storage.Put([]byte{1}, []byte{}, []byte("150$")))
+		require.NoError(storage.Put([]byte{2}, []byte{}, []byte("20$")))
+		require.NoError(storage.Put([]byte{3}, []byte{}, []byte("4000$")))
 
 		ok, err := storage.Get([]byte{1}, []byte{}, &data)
 
@@ -268,9 +268,9 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 			cancel()
 			return err
 		}
-		_ = storage.Put([]byte("1-1"), []byte("20"), []byte("150$"))
-		_ = storage.Put([]byte("1-1"), []byte("21"), []byte("20$"))
-		_ = storage.Put([]byte("1-1"), []byte("22"), []byte("4000$"))
+		require.NoError(storage.Put([]byte("1-1"), []byte("20"), []byte("150$")))
+		require.NoError(storage.Put([]byte("1-1"), []byte("21"), []byte("20$")))
+		require.NoError(storage.Put([]byte("1-1"), []byte("22"), []byte("4000$")))
 
 		var ctx context.Context
 		ctx, cancel = context.WithCancel(context.Background())
@@ -291,8 +291,8 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 			return err
 		}
 
-		_ = storage.Put([]byte{0xaa}, []byte("33"), []byte("Pepsi"))
-		_ = storage.Put([]byte{0xaa}, nil, []byte("Cola"))
+		require.NoError(storage.Put([]byte{0xaa}, []byte("33"), []byte("Pepsi")))
+		require.NoError(storage.Put([]byte{0xaa}, nil, []byte("Cola")))
 
 		err := storage.Read(ctx, []byte{0xaa}, nil, nil, reader)
 		require.NoError(err)
@@ -309,7 +309,7 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 		require.Equal([]byte("Cola"), data)
 
 		t.Run("zero-length clust columns must be same as nil", func(t *testing.T) {
-			_ = storage.Put([]byte{0xaa}, []byte{}, []byte("Baikal"))
+			require.NoError(storage.Put([]byte{0xaa}, []byte{}, []byte("Baikal")))
 
 			viewRecords = make(map[string][]byte) // clear
 

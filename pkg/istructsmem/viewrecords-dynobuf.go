@@ -27,7 +27,7 @@ func (vr *appViewRecordsType) storeViewRecord(workspace istructs.WSID, key istru
 	}
 
 	v := value.(*valueType)
-	if err = v.build(); err != nil {
+	if _, err = v.build(); err != nil {
 		return nil, nil, nil, err
 	}
 	if err = vr.app.config.validators.validViewValue(v); err != nil {
@@ -94,7 +94,8 @@ func loadViewPartKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 		return err
 	}
 
-	return key.partRow.build()
+	_, err = key.partRow.build()
+	return err
 }
 
 // Loads clustering columns from buffer
@@ -117,7 +118,8 @@ func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 		return err
 	}
 
-	return key.clustRow.build()
+	_, err = key.clustRow.build()
+	return err
 }
 
 // Loads from buffer row fixed-width field

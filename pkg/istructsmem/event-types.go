@@ -17,7 +17,7 @@ import (
 )
 
 type (
-	existsRecordType    func(id istructs.RecordID) bool
+	existsRecordType    func(id istructs.RecordID) (bool, error)
 	loadRecordFuncType  func(rec *recordType) error
 	storeRecordFuncType func(rec *recordType) error
 )
@@ -396,7 +396,11 @@ func (cud *cudType) applyRecs(exists existsRecordType, load loadRecordFuncType, 
 			if err != nil {
 				return err
 			}
-			if exists(id) {
+			isExists, err := exists(id)
+			if err != nil {
+				return err
+			}
+			if isExists {
 				return fmt.Errorf("can not create singleton, CDOC «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
 			}
 		}
@@ -425,7 +429,7 @@ func (cud *cudType) applyRecs(exists existsRecordType, load loadRecordFuncType, 
 // build builds creates and updates and returns error if occurs
 func (cud *cudType) build() (err error) {
 	for _, rec := range cud.creates {
-		if err = rec.build(); err != nil {
+		if _, err = rec.build(); err != nil {
 			return err
 		}
 	}
@@ -522,7 +526,7 @@ func regenerateIDsInRecord(rec *recordType, newIDs newIDsPlanType) (err error) {
 	})
 	if changes {
 		// record must be rebuilded to apply changes to dynobuffer
-		err = rec.build()
+		_, err = rec.build()
 	}
 	return err
 }
@@ -636,7 +640,8 @@ func (upd *updateRecType) build() (err error) {
 		return nil
 	}
 
-	if err = upd.changes.build(); err != nil {
+	nilledFields, err := upd.changes.build()
+	if err != nil {
 		return err
 	}
 
@@ -654,15 +659,18 @@ func (upd *updateRecType) build() (err error) {
 		upd.result.setActive(upd.changes.IsActive())
 	}
 
-	userChanges := false
+	userChanges := len(nilledFields) > 0
 	upd.changes.dyB.IterateFields(nil, func(name string, newData interface{}) bool {
 		upd.result.dyB.Set(name, newData)
 		userChanges = true
 		return true
 	})
+	for _, nilledField := range nilledFields {
+		upd.result.dyB.Set(nilledField, nil)
+	}
 
 	if userChanges {
-		err = upd.result.build()
+		_, err = upd.result.build()
 	}
 
 	return err
@@ -708,7 +716,8 @@ func newElement(parent *elementType) elementType {
 // build builds element record and all childs recursive
 func (el *elementType) build() (err error) {
 	return el.forEach(func(e *elementType) error {
-		return e.rowType.build()
+		_, err := e.rowType.build()
+		return err
 	})
 }
 

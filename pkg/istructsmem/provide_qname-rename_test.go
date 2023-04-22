@@ -42,11 +42,10 @@ func TestRenameQName(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err, err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
-		require.NoError(err, err)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+		require.NoError(err)
 
 		return storage
 	}
@@ -55,7 +54,7 @@ func TestRenameQName(t *testing.T) {
 		storage := testStorage()
 
 		err := RenameQName(storage, old, new)
-		require.NoError(err, err)
+		require.NoError(err)
 
 		t.Run("check result", func(t *testing.T) {
 			pKey := utils.ToBytes(consts.SysView_QNames, verSysQNames01)
@@ -64,7 +63,7 @@ func TestRenameQName(t *testing.T) {
 				data := make([]byte, 0)
 				ok, err := storage.Get(pKey, []byte(old.String()), &data)
 				require.True(ok)
-				require.NoError(err, err)
+				require.NoError(err)
 				id := qnames.QNameID(binary.BigEndian.Uint16(data))
 				require.EqualValues(id, qnames.NullQNameID)
 			})
@@ -73,7 +72,7 @@ func TestRenameQName(t *testing.T) {
 				data := make([]byte, 0)
 				ok, err := storage.Get(pKey, []byte(new.String()), &data)
 				require.True(ok)
-				require.NoError(err, err)
+				require.NoError(err)
 				id := qnames.QNameID(binary.BigEndian.Uint16(data))
 				require.Greater(id, qnames.QNameIDSysLast)
 			})

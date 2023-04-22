@@ -21,8 +21,7 @@ func TestRateLimits_BasicUsage(t *testing.T) {
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())
 	qName1 := schemas.NewQName(schemas.SysPackage, "myFunc")
 
-	provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	// limit c.sys.myFunc func call:
 	// - per app:

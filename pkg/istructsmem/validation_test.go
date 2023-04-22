@@ -68,9 +68,7 @@ func Test_ValidEvent(t *testing.T) {
 		err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
 		require.NoError(err)
 
-		var provider istructs.IAppStructsProvider
-		provider, err = Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
@@ -688,12 +686,11 @@ func Test_VerifiedFields(t *testing.T) {
 	tokens := testTokensFactory().New(test.appName)
 	storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
-	asp, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 	err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
-	require.NoError(err, err)
+	require.NoError(err)
 	_, err = asp.AppStructs(test.appName) // need to set cfg.app because IAppTokens are taken from cfg.app
-	require.NoError(err, err)
+	require.NoError(err)
 
 	t.Run("test row verification", func(t *testing.T) {
 
@@ -843,8 +840,7 @@ func Test_ValidateErrors(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -914,8 +910,7 @@ func Test_ValidateErrors(t *testing.T) {
 			err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
 			require.NoError(err)
 
-			provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-			require.NoError(err)
+			provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 			app, err = provider.AppStructs(istructs.AppQName_test1_app1)
 			require.NoError(err)

@@ -42,14 +42,14 @@ func TestBasicUsage(t *testing.T) {
 	req := require.New(t)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	broker, err := Provide(quotasExample)
-	req.Nil(err)
+	broker := Provide(quotasExample)
 
 	var channel in10n.ChannelID
 	t.Run("Create channel.", func(t *testing.T) {
 		var subject istructs.SubjectLogin = "paa"
+		var err error
 		channel, err = broker.NewChannel(subject, 24*time.Hour)
-		req.Nil(err)
+		req.NoError(err)
 		req.NotNil(channel)
 	})
 
@@ -68,7 +68,7 @@ func TestBasicUsage(t *testing.T) {
 		var notExistsChannel = "NotExistChannel"
 		// Try to subscribe on projection in not exist channel
 		// must receive error ErrChannelNotExists
-		err = broker.Subscribe(in10n.ChannelID(notExistsChannel), projectionKeyExample)
+		err := broker.Subscribe(in10n.ChannelID(notExistsChannel), projectionKeyExample)
 		req.ErrorIs(err, in10n.ErrChannelDoesNotExist)
 
 		// check subscriptions, numSubscriptions must be equal 0
@@ -76,7 +76,7 @@ func TestBasicUsage(t *testing.T) {
 		req.Equal(0, numSubscriptions)
 
 		// Subscribe on exist channel numSubscriptions must be equal 1
-		err = broker.Subscribe(channel, projectionKeyExample)
+		require.NoError(t, broker.Subscribe(channel, projectionKeyExample))
 		numSubscriptions = broker.MetricNumSubcriptions()
 		req.Equal(1, numSubscriptions)
 
@@ -86,13 +86,13 @@ func TestBasicUsage(t *testing.T) {
 
 		// Unsubscribe from exist channel
 		err = broker.Unsubscribe(channel, projectionKeyExample)
-		req.Nil(err)
+		req.NoError(err)
 		// After unsubscribe numSubscriptions must be equal 0
 		numSubscriptions = broker.MetricNumSubcriptions()
 		req.Equal(0, numSubscriptions)
 
 		// Subscribe on exist channel numSubscriptions must be equal 1
-		err = broker.Subscribe(channel, projectionKeyExample)
+		require.NoError(t, broker.Subscribe(channel, projectionKeyExample))
 		numSubscriptions = broker.MetricNumSubcriptions()
 		req.Equal(1, numSubscriptions)
 
@@ -132,15 +132,13 @@ func TestWatchNotExistsChannel(t *testing.T) {
 		SubsciptionsPerSubject: 1,
 	}
 
-	broker, err := Provide(quotasExample)
-	req.Nil(err)
+	broker := Provide(quotasExample)
 	ctx := context.TODO()
 
-	var channel in10n.ChannelID
 	t.Run("Create channel.", func(t *testing.T) {
 		var subject istructs.SubjectLogin = "paa"
-		channel, err = broker.NewChannel(subject, 24*time.Hour)
-		req.Nil(err)
+		channel, err := broker.NewChannel(subject, 24*time.Hour)
+		req.NoError(err)
 		req.NotNil(channel)
 	})
 
@@ -162,8 +160,7 @@ func TestQuotas(t *testing.T) {
 	}
 
 	t.Run("Test channel quotas per subject. We create more channels than allowed for subject.", func(t *testing.T) {
-		broker, err := Provide(quotasExample)
-		req.Nil(err)
+		broker := Provide(quotasExample)
 		for i := 0; i <= 10; i++ {
 			_, err := broker.NewChannel("paa", 24*time.Hour)
 			if i == 10 {
@@ -173,8 +170,7 @@ func TestQuotas(t *testing.T) {
 	})
 
 	t.Run("Test channel quotas for the whole service. We create more channels than allowed for service.", func(t *testing.T) {
-		broker, err := Provide(quotasExample)
-		req.Nil(err)
+		broker := Provide(quotasExample)
 		var subject istructs.SubjectLogin
 		for i := 0; i < 10; i++ {
 			subject = istructs.SubjectLogin("paa" + strconv.Itoa(i))
@@ -193,17 +189,16 @@ func TestQuotas(t *testing.T) {
 			Projection: schemas.NewQName("test", "restaurant"),
 			WS:         istructs.WSID(1),
 		}
-		broker, err := Provide(quotasExample)
-		req.Nil(err)
+		broker := Provide(quotasExample)
 		var subject istructs.SubjectLogin
 		for i := 0; i < 100; i++ {
 			subject = istructs.SubjectLogin("paa" + strconv.Itoa(i))
 			channel, err := broker.NewChannel(subject, 24*time.Hour)
-			req.Nil(err)
+			req.NoError(err)
 			for g := 0; g < 10; g++ {
 				projectionKeyExample.WS = istructs.WSID(i + g)
 				err = broker.Subscribe(channel, projectionKeyExample)
-				req.Nil(err)
+				req.NoError(err)
 				if i == 99 && g == 9 {
 					numSubscriptions := broker.MetricNumSubcriptions()
 					req.Equal(1000, numSubscriptions)

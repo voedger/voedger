@@ -24,8 +24,7 @@ func TestEventBuilder_Core(t *testing.T) {
 	test := test()
 
 	// gets AppStructProvider and AppStructs
-	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -103,6 +102,7 @@ func TestEventBuilder_Core(t *testing.T) {
 			recRem.PutString(schemas.SystemField_Container, test.remarkIdent)
 			recRem.PutRecordID(test.photoIdent, test.tempPhotoID)
 			recRem.PutString(test.remarkIdent, test.remarkValue)
+			recRem.PutString(test.emptiableIdent, test.emptiableValue)
 		})
 
 		t.Run("test build raw event", func(t *testing.T) {
@@ -177,6 +177,7 @@ func TestEventBuilder_Core(t *testing.T) {
 				require.Equal(idR, remarkID)
 				require.Equal(photoID, r.AsRecordID(test.photoIdent))
 				require.Equal(test.remarkValue, r.AsString(test.remarkIdent))
+				require.Equal(test.emptiableValue, r.AsString(test.emptiableIdent))
 			}
 		})
 		require.NoError(err)
@@ -311,6 +312,7 @@ func TestEventBuilder_Core(t *testing.T) {
 
 			remRec := cuds.Update(oldRemRec)
 			remRec.PutString(test.remarkIdent, changedRems)
+			remRec.PutString(test.emptiableIdent, "")
 		})
 
 		t.Run("test build raw event", func(t *testing.T) {
@@ -429,6 +431,7 @@ func TestEventBuilder_Core(t *testing.T) {
 
 			require.Equal(test.tablePhotoRems, recRem.QName())
 			require.Equal(changedRems, recRem.AsString(test.remarkIdent))
+			require.Empty(recRem.AsString(test.emptiableIdent))
 		})
 	})
 
@@ -444,7 +447,7 @@ func TestEventBuilder_Core(t *testing.T) {
 			r.PutFloat32(test.heightIdent, test.heightValue) // revert -10 cm
 			require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 			r.PutBytes(test.photoIdent, test.photoValue) // revert to old photo
-			err = r.build()
+			_, err = r.build()
 			require.NoError(err)
 
 			// hack: use low level appRecordsType putRecord()
@@ -656,6 +659,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 		doc := bld.Add(docName, schemas.SchemaKind_CDoc)
 		doc.AddField("new", schemas.DataKind_bool, true)
 		doc.AddField("rec", schemas.DataKind_RecordID, false)
+		doc.AddField("emptiable", schemas.DataKind_string, false)
 		doc.AddContainer("rec", recName, 0, 1)
 
 		rec := bld.Add(recName, schemas.SchemaKind_CRecord)
@@ -675,15 +679,14 @@ func Test_EventUpdateRawCud(t *testing.T) {
 		testScenarioCount
 	)
 
-	provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	ws := istructs.WSID(1)
 
 	for testScenario := testScenarioIndirectPLogApply; testScenario < testScenarioCount; testScenario++ {
 
 		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
-		require.NoError(err, err)
+		require.NoError(err)
 
 		docID := istructs.RecordID(322685000131087 + testScenario)
 
@@ -703,9 +706,10 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			create := bld.CUDBuilder().Create(docName)
 			create.PutRecordID(schemas.SystemField_ID, 1)
 			create.PutBool("new", true)
+			create.PutString("emptiable", "to be emptied")
 
 			rawEvent, err := bld.BuildRawEvent()
-			require.NoError(err, err)
+			require.NoError(err)
 			require.NotNil(rawEvent)
 
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err,
@@ -754,14 +758,15 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			update := bld.CUDBuilder().Update(
 				func() istructs.IRecord {
 					rec, err := app.Records().Get(ws, true, docID)
-					require.NoError(err, err)
+					require.NoError(err)
 					return rec
 				}())
 			update.PutBool("new", false)
 			update.PutRecordID("rec", 1)
+			update.PutString("emptiable", "")
 
 			rawEvent, err := bld.BuildRawEvent()
-			require.NoError(err, err)
+			require.NoError(err)
 			require.NotNil(rawEvent)
 
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err,
@@ -783,7 +788,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 						pLogEvent = event
 						return nil
 					})
-					require.NoError(err, err)
+					require.NoError(err)
 					require.NotNil(pLogEvent)
 					require.True(pLogEvent.Error().ValidEvent())
 				})
@@ -811,8 +816,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 			t.Run("must ok to reread CDOC record", func(t *testing.T) {
 				rec, err := app.Records().Get(ws, true, docID)
-				require.NoError(err, err)
-
+				require.NoError(err)
 				require.EqualValues(docName, rec.QName())
 				require.EqualValues(rec.AsRecordID("rec"), recID, "error #25853 here!")
 			})
@@ -841,8 +845,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		return cfgs
 	}()
 
-	provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -1040,8 +1043,7 @@ func TestEventBuild_Error(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -1160,7 +1162,8 @@ func TestEventBuild_Error(t *testing.T) {
 			r.PutQName(schemas.SystemField_QName, test.tablePhotos)
 			r.PutRecordID(schemas.SystemField_ID, 100500)
 			r.PutString(test.buyerIdent, test.buyerValue)
-			require.NoError(r.build())
+			_, err := r.build()
+			require.NoError(err)
 			return &r
 		}
 
@@ -1203,7 +1206,8 @@ func TestEventBuild_Error(t *testing.T) {
 				r.PutString(schemas.SystemField_Container, test.remarkIdent)
 				r.PutRecordID(test.photoIdent, 100500)
 				r.PutString(test.remarkIdent, test.remarkValue)
-				require.NoError(r.build())
+				_, err := r.build()
+				require.NoError(err)
 				return &r
 			}
 
@@ -1406,8 +1410,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	provider, err := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)

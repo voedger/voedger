@@ -145,6 +145,10 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		return err
 	}
 
+	// TODO: remove it after https://github.com/voedger/voedger/issues/56
+	cfg.dbSchemas.Prepare(cfg.Schemas)
+	cfg.validators.prepare(cfg.Schemas)
+
 	cfg.prepared = true
 	return nil
 }

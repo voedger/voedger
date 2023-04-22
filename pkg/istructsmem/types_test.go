@@ -244,7 +244,7 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		row.PutNumber("float64", 4)
 		row.PutNumber("RecordID", 5)
 
-		err := row.build()
+		_, err := row.build()
 		require.NoError(err)
 
 		require.Equal(int32(1), row.AsInt32("int32"))
@@ -262,7 +262,7 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		row.PutChars("QName", test.saleCmdName.String())
 		row.PutChars("bytes", "AQIDBA==")
 
-		err := row.build()
+		_, err := row.build()
 		require.NoError(err)
 
 		require.Equal("test 🏐 тест", row.AsString("string"))
@@ -290,7 +290,8 @@ func Test_rowType_PutAs_ComplexTypes(t *testing.T) {
 		row := newEmptyViewValue()
 		row.PutString(test.testViewRecord.valueFields.buyer, "buyer")
 		row.PutRecord(test.testViewRecord.valueFields.record, NewNullRecord(istructs.NullRecordID))
-		require.NoError(row.build())
+		_, err := row.build()
+		require.NoError(err)
 
 		rec := row.AsRecord(test.testViewRecord.valueFields.record)
 		require.NotNil(rec)
@@ -309,7 +310,8 @@ func Test_rowType_PutErrors(t *testing.T) {
 			row := newRow(test.AppCfg)
 			row.setQName(test.testRow)
 			put(&row)
-			require.ErrorIs(row.build(), ErrNameNotFound)
+			_, err := row.build()
+			require.ErrorIs(err, ErrNameNotFound)
 		}
 
 		testPut(func(row istructs.IRowWriter) { row.PutInt32("unknown_field", 1) })
@@ -333,7 +335,8 @@ func Test_rowType_PutErrors(t *testing.T) {
 			row := newRow(test.AppCfg)
 			row.setQName(test.testRow)
 			put(&row)
-			require.ErrorIs(row.build(), ErrWrongFieldType)
+			_, err := row.build()
+			require.ErrorIs(err, ErrWrongFieldType)
 		}
 
 		testPut(func(row istructs.IRowWriter) { row.PutInt32("int64", 1) })
@@ -353,7 +356,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 		row.PutNumber("bytes", 29)
 
-		err := row.build()
+		_, err := row.build()
 		require.ErrorIs(err, ErrWrongFieldType)
 	})
 
@@ -363,7 +366,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 		row.PutQName("QName", schemas.NewQName("unknown", "unknown"))
 
-		err := row.build()
+		_, err := row.build()
 		require.ErrorIs(err, qnames.ErrNameNotFound)
 	})
 
@@ -374,7 +377,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 			row.PutChars("int32", "29")
 
-			err := row.build()
+			_, err := row.build()
 			require.ErrorIs(err, ErrWrongFieldType)
 		})
 
@@ -384,7 +387,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 			row.PutChars("QName", "wellcome.2.error")
 
-			err := row.build()
+			_, err := row.build()
 			require.ErrorIs(err, schemas.ErrInvalidQNameStringRepresentation)
 		})
 
@@ -394,7 +397,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 			row.PutChars("bytes", "wellcome.2.error")
 
-			err := row.build()
+			_, err := row.build()
 			require.Error(err)
 		})
 	})
@@ -406,7 +409,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 		row.PutFloat32("unknown_field", 555.5)
 		row.PutInt32("int64", 1)
 
-		err := row.build()
+		_, err := row.build()
 		require.ErrorIs(err, ErrNameNotFound)
 		require.ErrorIs(err, ErrWrongFieldType)
 	})
@@ -443,8 +446,8 @@ func Test_rowType_RecordIDs(t *testing.T) {
 		row.PutRecordID("RecordID", 1)
 		row.PutRecordID("RecordID_2", 2)
 
-		err := row.build()
-		require.Nil(err)
+		_, err := row.build()
+		require.NoError(err)
 
 		cnt := 0
 		row.RecordIDs(true,
@@ -470,8 +473,8 @@ func Test_rowType_RecordIDs(t *testing.T) {
 		row.PutRecordID("RecordID", 1)
 		row.PutRecordID("RecordID_2", istructs.NullRecordID)
 
-		err := row.build()
-		require.Nil(err)
+		_, err := row.build()
+		require.NoError(err)
 
 		cnt := 0
 		row.RecordIDs(false,
@@ -558,7 +561,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 		row.setQName(test.testRow)
 
 		row.PutInt32("unknown", 1)
-		err := row.build()
+		_, err := row.build()
 		require.Error(err)
 	})
 
@@ -567,7 +570,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 		row.setQName(test.testRow)
 
 		row.PutString("int32", "a")
-		err := row.build()
+		_, err := row.build()
 		require.Error(err)
 	})
 
@@ -577,7 +580,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 
 		row.PutString("bytes", "some string")
 
-		err := row.build()
+		_, err := row.build()
 		require.Error(err)
 	})
 
@@ -586,7 +589,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 		row.setQName(test.testRow)
 
 		row.PutString("QName", "zZz")
-		err := row.build()
+		_, err := row.build()
 		require.Error(err)
 	})
 }

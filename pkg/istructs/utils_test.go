@@ -36,7 +36,7 @@ func TestBasicUsage_AppQName(t *testing.T) {
 	// Parse string
 
 	appqname2, err := ParseAppQName("sys/registry")
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(appqname, appqname2)
 
 	// Errors. Only one slash allowed
@@ -56,13 +56,13 @@ func TestBasicUsage_AppQName_JSon(t *testing.T) {
 		// Marshal
 
 		j, err := json.Marshal(&appqname)
-		require.Nil(err)
+		require.NoError(err)
 
 		// Unmarshal
 
 		var appqname2 = AppQName{}
 		err = json.Unmarshal(j, &appqname2)
-		require.Nil(err)
+		require.NoError(err)
 
 		// Compare
 		require.Equal(appqname, appqname2)
@@ -85,13 +85,13 @@ func TestBasicUsage_AppQName_JSon(t *testing.T) {
 		// Marshal
 
 		j, err := json.Marshal(&ms)
-		require.Nil(err)
+		require.NoError(err)
 
 		// Unmarshal
 
 		var ms2 = myStruct{}
 		err = json.Unmarshal(j, &ms2)
-		require.Nil(err)
+		require.NoError(err)
 
 		// Compare
 		require.Equal(ms, ms2)
@@ -235,13 +235,13 @@ func TestAppQName_Json_NullQName(t *testing.T) {
 		// Marshal
 
 		j, err := json.Marshal(&aqn)
-		require.Nil(err)
+		require.NoError(err)
 
 		// Unmarshal
 
 		var aqn2 = AppQName{}
 		err = json.Unmarshal(j, &aqn2)
-		require.Nil(err)
+		require.NoError(err)
 
 		// Compare
 		require.Equal(aqn, aqn2)

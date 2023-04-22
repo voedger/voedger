@@ -48,7 +48,7 @@ func storeProjectorOffset(appStructs istructs.IAppStructs, partition istructs.Pa
 
 func getActualizerOffset(require *require.Assertions, appStructs istructs.IAppStructs, partition istructs.PartitionID, projectorName schemas.QName) istructs.Offset {
 	offs, err := ActualizerOffset(appStructs, partition, projectorName)
-	require.Nil(err)
+	require.NoError(err)
 	return offs
 }
 

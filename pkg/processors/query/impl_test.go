@@ -163,8 +163,7 @@ func getTestCfg(require *require.Assertions, cfgSchemas func(schemas schemas.Sch
 
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, cache)
 
-	asp, err := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, payloads.TestAppTokensFactory(tokens), storageProvider)
-	require.NoError(err)
+	asp = istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, payloads.TestAppTokensFactory(tokens), storageProvider)
 
 	article := func(id, idDepartment istructs.RecordID, name string) istructs.IObject {
 		return &coreutils.TestObject{
@@ -364,7 +363,7 @@ func Test_epsilon(t *testing.T) {
 		epsilon, err := epsilon(args(options(math.E)))
 
 		require.Equal(t, math.E, epsilon)
-		require.Nil(t, err)
+		require.NoError(t, err)
 	})
 	t.Run("Should return error when options is nil", func(t *testing.T) {
 		//TODO (FILTER0001)

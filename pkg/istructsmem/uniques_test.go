@@ -35,8 +35,7 @@ func TestBasicUsage_Uniques(t *testing.T) {
 	cfg.Uniques.Add(qName, []string{"b", "c"})
 
 	// use Uniques using IAppStructs
-	asp, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 	as, err := asp.AppStructs(test.appName)
 	require.NoError(err)
 	iu := as.Uniques()

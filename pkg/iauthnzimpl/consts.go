@@ -59,6 +59,7 @@ var (
 	qNameQryQueryResellerInfo                       = schemas.NewQName(airPackage, "QueryResellerInfo")
 	qNameCmdCreateUntillPayment                     = schemas.NewQName(airPackage, "CreateUntillPayment")
 	qNameCmdRegenerateUPProfileApiToken             = schemas.NewQName(airPackage, "RegenerateUPProfileApiToken")
+	qNameCmdEnsureUPPredefinedPaymentModesExist     = schemas.NewQName(airPackage, "EnsureUPPredefinedPaymentModesExist")
 
 	// Air roles
 	qNameRoleResellersAdmin         = schemas.NewQName(airPackage, "ResellersAdmin")

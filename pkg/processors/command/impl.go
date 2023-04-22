@@ -166,7 +166,12 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 	if err := cmd.appStructs.Events().ReadPLog(ctx, cmdProc.pNumber, istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
 		return nil, err
 	}
-	worskapcesJSON, _ := json.Marshal(ap.workspaces) // error impossible
+	worskapcesJSON, err := json.Marshal(ap.workspaces)
+	if err != nil {
+		// error impossible
+		// notest
+		return nil, err
+	}
 	logger.Info(fmt.Sprintf(`app "%s" partition %d recovered: nextPLogOffset %d, workspaces: %s`, cmd.cmdMes.AppQName(), cmdProc.pNumber, ap.nextPLogOffset, string(worskapcesJSON)))
 	return ap, nil
 }

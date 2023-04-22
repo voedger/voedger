@@ -97,11 +97,10 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 		cfg.Resources.Add(NewCommandFunction(cmdQName, odocQName, schemas.NullQName, schemas.NullQName, NullCommandExec))
 	}
 
-	provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.Nil(err)
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	appStructs, err := provider.AppStructs(appName)
-	require.Nil(err)
+	require.NoError(err)
 
 	start := time.Now()
 	b.ResetTimer()
@@ -136,7 +135,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 	}
 	b.ReportMetric(float64(b.N)/time.Since(start).Seconds(), "op/s")
-	require.Nil(err)
+	require.NoError(err)
 
 }
 
@@ -186,7 +185,7 @@ func bench_UnmarshallJSONForBuildRawEvent(b *testing.B, numOfIntFields int) {
 		}
 	}
 	bytes, err := json.Marshal(srcMap)
-	require.Nil(err)
+	require.NoError(err)
 
 	start := time.Now()
 	b.ResetTimer()

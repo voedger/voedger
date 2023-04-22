@@ -36,7 +36,8 @@ func TestFilterOperator_DoAsync(t *testing.T) {
 			metrics: &testMetrics{},
 		}
 
-		work, _ := operator.DoAsync(context.Background(), workpiece)
+		work, err := operator.DoAsync(context.Background(), workpiece)
+		require.NoError(err)
 
 		require.Nil(work)
 		require.True(release)
@@ -47,7 +48,8 @@ func TestFilterOperator_DoAsync(t *testing.T) {
 			metrics: &testMetrics{},
 		}
 
-		work, _ := operator.DoAsync(context.Background(), emptyWorkpiece())
+		work, err := operator.DoAsync(context.Background(), emptyWorkpiece())
+		require.NoError(t, err)
 
 		require.NotNil(t, work)
 	})

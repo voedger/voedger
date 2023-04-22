@@ -424,10 +424,13 @@ func (recs *appRecordsType) putRecordsBatch(workspace istructs.WSID, records []r
 // validEvent returns error if event has uncommitable data, such as singleton unique violations or invalid record id references
 func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
-	existsRecord := func(id istructs.RecordID) bool {
+	existsRecord := func(id istructs.RecordID) (bool, error) {
 		data := make([]byte, 0)
-		ok, _ := recs.getRecord(ev.ws, id, &data)
-		return ok
+		ok, err := recs.getRecord(ev.ws, id, &data)
+		if err != nil {
+			return false, err
+		}
+		return ok, nil
 	}
 
 	for _, rec := range ev.cud.creates {
@@ -436,7 +439,11 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 			if err != nil {
 				return err
 			}
-			if existsRecord(id) {
+			isExists, err := existsRecord(id)
+			if err != nil {
+				return err
+			}
+			if isExists {
 				return fmt.Errorf("can not create singleton, CDOC «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
 			}
 		}
@@ -458,10 +465,13 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 		panic(fmt.Errorf("can not apply not valid event: %s: %w", ev.Error().ErrStr(), ErrorEventNotValid))
 	}
 
-	existsRecord := func(id istructs.RecordID) bool {
+	existsRecord := func(id istructs.RecordID) (bool, error) {
 		data := make([]byte, 0)
-		ok, _ := recs.getRecord(ev.ws, id, &data)
-		return ok
+		ok, err := recs.getRecord(ev.ws, id, &data)
+		if err != nil {
+			return false, err
+		}
+		return ok, nil
 	}
 
 	loadRecord := func(rec *recordType) error {

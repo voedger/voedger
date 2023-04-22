@@ -192,10 +192,9 @@ type validators struct {
 }
 
 func newValidators() *validators {
-	v := validators{
+	return &validators{
 		validators: make(map[schemas.QName]*validator),
 	}
-	return &v
 }
 
 // Prepares validator for specified schema cache

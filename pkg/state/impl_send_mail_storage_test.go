@@ -21,7 +21,7 @@ func TestSendMailStorage_BasicUsage(t *testing.T) {
 	defer ts.Close()
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 1, 0)
 	k, err := s.KeyBuilder(SendMailStorage, schemas.NullQName)
-	require.Nil(err)
+	require.NoError(err)
 
 	k.PutInt32(Field_Port, ts.Port())
 	k.PutString(Field_Host, "localhost")
@@ -108,9 +108,11 @@ func TestSendMailStorage_Validate(t *testing.T) {
 		t.Run(fmt.Sprintf("Should return error when mandatory field '%s' not found", test.mandatoryField), func(t *testing.T) {
 			require := require.New(t)
 			s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 1, 0)
-			k, _ := s.KeyBuilder(SendMailStorage, schemas.NullQName)
+			k, err := s.KeyBuilder(SendMailStorage, schemas.NullQName)
+			require.NoError(err)
 			test.kbFiller(k)
-			_, _ = s.NewValue(k)
+			_, err = s.NewValue(k)
+			require.NoError(err)
 
 			readyToFlush, err := s.ApplyIntents()
 
