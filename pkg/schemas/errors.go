@@ -22,6 +22,8 @@ var ErrInvalidSchemaKind = errors.New("invalid schema kind")
 
 var ErrWrongSchemaStruct = errors.New("wrong schema structure")
 
+var ErrVerificationKindMissed = errors.New("verification kind is missed")
+
 var ErrInvalidDataKind = errors.New("invalid data kind")
 
 var ErrInvalidOccurs = errors.New("invalid occurs value")

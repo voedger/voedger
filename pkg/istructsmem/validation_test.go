@@ -674,8 +674,8 @@ func Test_VerifiedFields(t *testing.T) {
 		schema := bld.Add(objName, schemas.SchemaKind_Object)
 		schema.
 			AddField("int32", schemas.DataKind_int32, true).
-			AddVerifiedField("email", schemas.DataKind_string, false).
-			AddVerifiedField("age", schemas.DataKind_int32, false)
+			AddVerifiedField("email", schemas.DataKind_string, false, schemas.VerificationKind_EMail).
+			AddVerifiedField("age", schemas.DataKind_int32, false, schemas.VerificationKind_Any...)
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -697,7 +697,7 @@ func Test_VerifiedFields(t *testing.T) {
 		t.Run("ok verified value type in token", func(t *testing.T) {
 			okEmailToken := func() string {
 				p := payloads.VerifiedValuePayload{
-					VerificationKind: payloads.VerificationKind_EMail,
+					VerificationKind: schemas.VerificationKind_EMail,
 					Entity:           objName,
 					Field:            "email",
 					Value:            email,
@@ -709,7 +709,7 @@ func Test_VerifiedFields(t *testing.T) {
 
 			okAgeToken := func() string {
 				p := payloads.VerifiedValuePayload{
-					VerificationKind: payloads.VerificationKind_Phone,
+					VerificationKind: schemas.VerificationKind_Phone,
 					Entity:           objName,
 					Field:            "age",
 					Value:            7,
@@ -748,32 +748,31 @@ func Test_VerifiedFields(t *testing.T) {
 			require.ErrorIs(err, itokens.ErrInvalidToken)
 		})
 
-		// TODO: support payloads.VerificationKind in schemas
-		// t.Run("error if unexpected token kind", func(t *testing.T) {
-		// 	ukToken := func() string {
-		// 		p := payloads.VerifiedValuePayload{
-		// 			VerificationKind: payloads.VerificationKind_Phone,
-		// 			Entity:           objName,
-		// 			Field:            "email",
-		// 			Value:            email,
-		// 		}
-		// 		token, err := tokens.IssueToken(time.Minute, &p)
-		// 		require.NoError(err)
-		// 		return token
-		// 	}()
+		t.Run("error if unexpected token kind", func(t *testing.T) {
+			ukToken := func() string {
+				p := payloads.VerifiedValuePayload{
+					VerificationKind: schemas.VerificationKind_Phone,
+					Entity:           objName,
+					Field:            "email",
+					Value:            email,
+				}
+				token, err := tokens.IssueToken(time.Minute, &p)
+				require.NoError(err)
+				return token
+			}()
 
-		// 	row := newObject(cfg, objName)
-		// 	row.PutInt32("int32", 1)
-		// 	row.PutString("email", ukToken)
+			row := newObject(cfg, objName)
+			row.PutInt32("int32", 1)
+			row.PutString("email", ukToken)
 
-		// 	_, err := row.Build()
-		// 	require.ErrorIs(err, ErrInvalidVerificationKind)
-		// })
+			_, err := row.Build()
+			require.ErrorIs(err, ErrInvalidVerificationKind)
+		})
 
 		t.Run("error if wrong verified entity in token", func(t *testing.T) {
 			weToken := func() string {
 				p := payloads.VerifiedValuePayload{
-					VerificationKind: payloads.VerificationKind_EMail,
+					VerificationKind: schemas.VerificationKind_EMail,
 					Entity:           schemas.NewQName("test", "other"),
 					Field:            "email",
 					Value:            email,
@@ -794,7 +793,7 @@ func Test_VerifiedFields(t *testing.T) {
 		t.Run("error if wrong verified field in token", func(t *testing.T) {
 			wfToken := func() string {
 				p := payloads.VerifiedValuePayload{
-					VerificationKind: payloads.VerificationKind_EMail,
+					VerificationKind: schemas.VerificationKind_EMail,
 					Entity:           objName,
 					Field:            "otherField",
 					Value:            email,
@@ -815,7 +814,7 @@ func Test_VerifiedFields(t *testing.T) {
 		t.Run("error if wrong verified value type in token", func(t *testing.T) {
 			wtToken := func() string {
 				p := payloads.VerifiedValuePayload{
-					VerificationKind: payloads.VerificationKind_EMail,
+					VerificationKind: schemas.VerificationKind_EMail,
 					Entity:           objName,
 					Field:            "email",
 					Value:            3.141592653589793238,

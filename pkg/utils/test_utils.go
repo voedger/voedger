@@ -150,10 +150,9 @@ func (o *TestObject) Containers(cb func(container string)) {
 	}
 }
 
-func (s TestSchema) Cache() schemas.SchemaCache     { panic("implement me") }
-func (s TestSchema) QName() schemas.QName           { return s.QName_ }
-func (s TestSchema) Kind() schemas.SchemaKind       { return schemas.SchemaKind_FakeLast }
-func (s TestSchema) Props() schemas.SchemaKindProps { panic("implement me") }
+func (s TestSchema) Cache() schemas.SchemaCache { panic("implement me") }
+func (s TestSchema) QName() schemas.QName       { return s.QName_ }
+func (s TestSchema) Kind() schemas.SchemaKind   { return schemas.SchemaKind_FakeLast }
 func (s TestSchema) Field(name string) schemas.Field {
 	if k, ok := s.Fields_[name]; ok {
 		fld := feildDescr{name: name, kind: k}
@@ -191,12 +190,13 @@ type feildDescr struct {
 	kind schemas.DataKind
 }
 
-func (f feildDescr) Name() string               { return f.name }
-func (f feildDescr) DataKind() schemas.DataKind { return f.kind }
-func (f feildDescr) Required() bool             { return false }
-func (f feildDescr) Verifiable() bool           { return false }
-func (f feildDescr) IsFixedWidth() bool         { return f.kind.IsFixed() }
-func (f feildDescr) IsSys() bool                { return schemas.IsSysField(f.name) }
+func (f feildDescr) Name() string                                   { return f.name }
+func (f feildDescr) DataKind() schemas.DataKind                     { return f.kind }
+func (f feildDescr) Required() bool                                 { return false }
+func (f feildDescr) Verifiable() bool                               { return false }
+func (f feildDescr) VerificationKind(schemas.VerificationKind) bool { return false }
+func (f feildDescr) IsFixedWidth() bool                             { return f.kind.IsFixed() }
+func (f feildDescr) IsSys() bool                                    { return schemas.IsSysField(f.name) }
 
 type contDescr struct {
 	name   string

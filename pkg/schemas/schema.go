@@ -81,8 +81,8 @@ func (sch *schema) AddField(name string, kind DataKind, required bool) SchemaBui
 	return sch
 }
 
-func (sch *schema) AddVerifiedField(name string, kind DataKind, required bool) SchemaBuilder {
-	sch.addField(name, kind, required, true)
+func (sch *schema) AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) SchemaBuilder {
+	sch.addField(name, kind, required, true, vk...)
 	return sch
 }
 
@@ -151,7 +151,7 @@ func (sch *schema) Singleton() bool {
 	return sch.singleton && (sch.Kind() == SchemaKind_CDoc)
 }
 
-func (sch *schema) addField(name string, kind DataKind, required, verified bool) {
+func (sch *schema) addField(name string, kind DataKind, required, verified bool, vk ...VerificationKind) {
 	if name == NullName {
 		panic(fmt.Errorf("empty field name: %w", ErrNameMissed))
 	}
@@ -173,7 +173,11 @@ func (sch *schema) addField(name string, kind DataKind, required, verified bool)
 		panic(fmt.Errorf("schema «%s» kind «%v» does not support fields kind «%v»: %w", sch.QName(), sch.Kind(), kind, ErrInvalidDataKind))
 	}
 
-	fld := newField(name, kind, required, verified)
+	if verified && (len(vk) == 0) {
+		panic(fmt.Errorf("missed verification kind for field «%v»: %w", name, ErrVerificationKindMissed))
+	}
+
+	fld := newField(name, kind, required, verified, vk...)
 	sch.fields[name] = fld
 	sch.fieldsOrdered = append(sch.fieldsOrdered, name)
 

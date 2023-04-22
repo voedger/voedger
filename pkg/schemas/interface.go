@@ -25,6 +25,11 @@ type SchemaKind uint8
 // Ref. data-kind.go for constants and methods
 type DataKind uint8
 
+// Field Verification kind
+//
+// Ref. verify,go for constants and methods
+type VerificationKind uint8
+
 // Numeric with OccursUnbounded value
 //
 // Ref. occurs.go for constants and methods
@@ -145,8 +150,9 @@ type SchemaBuilder interface {
 	//   - if field name is invalid,
 	//   - if field with name is already exists,
 	//   - if schema kind not supports fields,
-	//   - if data kind is not allowed by schema kind.
-	AddVerifiedField(name string, kind DataKind, required bool) SchemaBuilder
+	//   - if data kind is not allowed by schema kind,
+	//   - if no verification kinds are specified
+	AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) SchemaBuilder
 
 	// Adds container specified name and occurs.
 	//
@@ -215,6 +221,9 @@ type Field interface {
 
 	// Returns is field verifable
 	Verifiable() bool
+
+	// Returns is field verifable by specified verification kind
+	VerificationKind(VerificationKind) bool
 
 	// Returns is field has fixed width data kind
 	IsFixedWidth() bool

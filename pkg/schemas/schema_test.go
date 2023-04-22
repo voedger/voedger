@@ -65,6 +65,39 @@ func Test_schema_AddField(t *testing.T) {
 	})
 }
 
+func Test_schema_AddVerifiedField(t *testing.T) {
+	require := require.New(t)
+
+	bld := NewSchemaCache().Add(NewQName("test", "object"), SchemaKind_Object)
+	require.NotNil(bld)
+
+	t.Run("must be ok to add verified field", func(t *testing.T) {
+		bld.AddVerifiedField("f1", DataKind_int64, true, VerificationKind_Phone)
+		bld.AddVerifiedField("f2", DataKind_int64, true, VerificationKind_Any...)
+
+		require.Equal(3, bld.FieldCount()) // + sys.QName
+		f1 := bld.Field("f1")
+		require.NotNil(f1)
+
+		require.True(f1.Verifiable())
+		require.False(f1.VerificationKind(VerificationKind_EMail))
+		require.True(f1.VerificationKind(VerificationKind_Phone))
+		require.False(f1.VerificationKind(VerificationKind_FakeLast))
+
+		f2 := bld.Field("f2")
+		require.NotNil(f2)
+
+		require.True(f2.Verifiable())
+		require.True(f2.VerificationKind(VerificationKind_EMail))
+		require.True(f2.VerificationKind(VerificationKind_Phone))
+		require.False(f2.VerificationKind(VerificationKind_FakeLast))
+	})
+
+	t.Run("must be panic if no verification kinds", func(t *testing.T) {
+		require.Panics(func() { bld.AddVerifiedField("f2", DataKind_int64, true) })
+	})
+}
+
 func Test_schema_AddContainer(t *testing.T) {
 	require := require.New(t)
 

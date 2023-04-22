@@ -98,7 +98,7 @@ func TestBasicUsage_VerifiedValue(t *testing.T) {
 
 	t.Run("Issue token", func(t *testing.T) {
 		payload := VerifiedValuePayload{
-			VerificationKind: VerificationKind_EMail,
+			VerificationKind: schemas.VerificationKind_EMail,
 			WSID:             43,
 			Entity:           testQName,
 			Field:            "testName",
@@ -112,7 +112,7 @@ func TestBasicUsage_VerifiedValue(t *testing.T) {
 		payload := VerifiedValuePayload{}
 		gp, err := signer.ValidateToken(token, &payload)
 		require.NoError(err)
-		require.Equal(VerificationKind_EMail, payload.VerificationKind)
+		require.Equal(schemas.VerificationKind_EMail, payload.VerificationKind)
 		require.Equal(testQName, payload.Entity)
 		require.Equal("testName", payload.Field)
 		require.Equal(float64(42), payload.Value)

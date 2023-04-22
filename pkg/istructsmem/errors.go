@@ -31,6 +31,8 @@ var ErrMaxOccursViolation = errors.New("maximum occurs violated")
 
 var ErrFieldIsEmpty = errors.New("field is empty")
 
+var ErrInvalidVerificationKind = errors.New("invalid verification kind")
+
 var ErrCUDsMissed = errors.New("CUDs are missed")
 
 var ErrRawRecordIDExpected = errors.New("raw record ID expected")

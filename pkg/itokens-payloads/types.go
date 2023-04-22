@@ -35,16 +35,8 @@ type BLOBUploadingPayload struct {
 	MaxSize   int64
 }
 
-type VerificationKindType uint8
-
-const (
-	VerificationKind_EMail VerificationKindType = iota
-	VerificationKind_Phone
-	VerificationKind_FakeLast
-)
-
 type VerifiedValuePayload struct {
-	VerificationKind VerificationKindType
+	VerificationKind schemas.VerificationKind
 	WSID             istructs.WSID
 	ID               istructs.RecordID
 	Entity           schemas.QName

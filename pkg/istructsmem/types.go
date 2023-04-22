@@ -372,10 +372,9 @@ func (row *rowType) verifyToken(name string, token string) (value interface{}, e
 
 	fld := row.schema.Field(name)
 
-	// TODO:
-	// if !fld.verify[payload.VerificationKind] {
-	// 	return nil, fmt.Errorf("unavailable verification method %v: %w", verificationKindToStr[payload.VerificationKind], ErrInvalidVerificationKind)
-	// }
+	if !fld.VerificationKind(payload.VerificationKind) {
+		return nil, fmt.Errorf("unavailable verification method %v: %w", payload.VerificationKind, ErrInvalidVerificationKind)
+	}
 
 	if payload.Entity != row.QName() {
 		return nil, fmt.Errorf("verified entity QName is «%v», but «%v» expected: %w", payload.Entity, row.QName(), ErrInvalidName)

@@ -6,40 +6,13 @@
 package schemas
 
 // Schema kind properties
-type SchemaKindProps struct {
+var schemaKindProps = map[SchemaKind]struct {
 	fieldsAllowed           bool
 	availableFieldKinds     map[DataKind]bool
 	systemFields            map[string]bool
 	containersAllowed       bool
 	availableContainerKinds map[SchemaKind]bool
-}
-
-// Is fields allowed.
-func (props SchemaKindProps) FieldsAllowed() bool {
-	return props.fieldsAllowed
-}
-
-// Is data kind allowed.
-func (props SchemaKindProps) DataKindAvailable(k DataKind) bool {
-	return props.fieldsAllowed && props.availableFieldKinds[k]
-}
-
-// Is specified system field used.
-func (props SchemaKindProps) HasSystemField(f string) bool {
-	return props.fieldsAllowed && props.systemFields[f]
-}
-
-// Is containers allowed.
-func (props SchemaKindProps) ContainersAllowed() bool {
-	return props.containersAllowed
-}
-
-// Is specified schema kind may be used in child containers.
-func (props SchemaKindProps) ContainerKindAvailable(k SchemaKind) bool {
-	return props.containersAllowed && props.availableContainerKinds[k]
-}
-
-var schemaKindProps = map[SchemaKind]SchemaKindProps{
+}{
 	SchemaKind_null: {
 		fieldsAllowed:           false,
 		availableFieldKinds:     map[DataKind]bool{},
