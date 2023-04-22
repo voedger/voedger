@@ -90,7 +90,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		})
 
 		cfgs1 := make(AppConfigsType, 1)
-		_ = cfgs1.AddConfig(istructs.AppQName_test1_app1, schemas)
+		_ = cfgs1.AddConfig(istructs.AppQName_test1_app1, bld)
 		provider1 := Provide(cfgs1, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err := provider1.AppStructs(istructs.AppQName_test1_app1)

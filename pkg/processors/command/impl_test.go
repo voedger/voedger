@@ -637,13 +637,8 @@ func setUp(t *testing.T, cfgSchemas func(schemas schemas.SchemaCacheBuilder), cf
 	var bus ibus.IBus
 	bus = ibusmem.Provide(func(ctx context.Context, sender interface{}, request ibus.Request) {
 		// сымитируем работу airs-bp3 при приеме запроса-команды
-<<<<<<< HEAD
 		cmdQName, err := schemas.ParseQName(request.Resource[2:])
-		require.Nil(t, err, err)
-=======
-		cmdQName, err := istructs.ParseQName(request.Resource[2:])
 		require.NoError(t, err)
->>>>>>> 5f8f45dd7d02b7a207bdaf5da7d245dbb6a93366
 		appQName, err := istructs.ParseAppQName(request.AppQName)
 		require.NoError(t, err)
 		as, err := appStructsProvider.AppStructs(appQName)

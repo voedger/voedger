@@ -156,9 +156,10 @@ func (sch *schema) addField(name string, kind DataKind, required, verified bool)
 		panic(fmt.Errorf("empty field name: %w", ErrNameMissed))
 	}
 	if sch.Field(name) != nil {
-		if name != istructs.SystemField_IsActive { // TODO: remove this then
-			panic(fmt.Errorf("field «%v» is already exists: %w", name, ErrNameUniqueViolation))
+		if IsSysField(name) {
+			return
 		}
+		panic(fmt.Errorf("field «%v» is already exists: %w", name, ErrNameUniqueViolation))
 	}
 	// TODO: check name is valid
 	if !sch.Kind().FieldsAllowed() {
