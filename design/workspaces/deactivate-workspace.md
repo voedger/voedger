@@ -5,16 +5,13 @@
 - [Deactivate Workspace](https://github.com/voedger/voedger/issues/53)
 
 
-
 ## Principles
 
 - If Workspace is not active it accepts only System??? token
 
-
 ## c.sys.DeactivateWorkspace()
 
 - AuthZ: role.sys.WorkspaceOwner ???
-
 
 ```mermaid
     sequenceDiagram
@@ -33,23 +30,23 @@
     note over ws: ap.sys.DeactivateWorkspaceReferences()
     ws ->> ws: Read cdoc.sys.WorkspaceDescriptor{OwnerApp, OwnerDoc, ParentWSID???}
 
-    ws ->> parent: c.sys.ChildWorkspaceDeactivated(OwnerDoc)
+    ws ->> parent: c.sys.OnChildWorkspaceDeactivated(OwnerDoc)
 
     opt Docs[OwnerDoc].IsActive
       parent ->> parent: Docs[OwnerDoc].IsActive = false
     end
 
     opt Foreach cdos.sys.Subject    
-        registry -->> ws : ProfileWSID by Subject.Login
-        ws ->> profile: c.sys.JoinedWorkspaceDeactivated()
+        registry -->> ws : ProfileWSIDByLogin
+        ws ->> profile: c.sys.OnJoinedWorkspaceDeactivated()
         opt JoinedWorkspace.IsActive
           profile ->> profile: JoinedWorkspace.IsActive = false
         end
     end
-
-
-
-    
-
-
 ```
+
+## c.sys.DeactivateWorkspace()
+
+- AuthNZ: System
+
+
