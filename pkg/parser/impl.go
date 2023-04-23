@@ -100,15 +100,16 @@ func analyse(schema *SchemaAST) (*SchemaAST, error) {
 
 	var iterate func(c IStatementCollection)
 	iterate = func(c IStatementCollection) {
-		c.Iterate(func(stmt interface{}) {
-			if named, ok := stmt.(INamedStatement); ok {
+		c.Iterate(func(stmt IStatement) {
+			value := stmt.GetValue()
+			if named, ok := value.(INamedStatement); ok {
 				if _, ok := namedIndex[named.GetName()]; ok {
-					errs = append(errs, ErrSchemaContainsDuplicateName(schema.Package, named.GetName()))
+					errs = append(errs, ErrSchemaContainsDuplicateName(schema.Package, named.GetName(), stmt.GetPos()))
 				} else {
 					namedIndex[named.GetName()] = stmt
 				}
 			}
-			if collection, ok := stmt.(IStatementCollection); ok {
+			if collection, ok := value.(IStatementCollection); ok {
 				iterate(collection)
 			}
 		})

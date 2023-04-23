@@ -50,7 +50,7 @@ func Test_Duplicates(t *testing.T) {
 	)
 	`)
 
-	require.ErrorContains(err, "schema test contains duplicated name MyTableValidator")
+	require.ErrorContains(err, "schema test contains duplicated name MyTableValidator at pos 3:2")
 	require.ErrorContains(err, "schema test contains duplicated name MyFunc2")
 	require.ErrorContains(err, "schema test contains duplicated name MyFunc4")
 }

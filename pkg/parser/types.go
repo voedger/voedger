@@ -7,17 +7,31 @@ package sqlschema
 
 import (
 	"embed"
+
+	"github.com/alecthomas/participle/v2/lexer"
 )
 
 type EmbedParser func(fs embed.FS, dir string) (*SchemaAST, error)
 type StringParser func(string) (*SchemaAST, error)
 
+type IStatement interface {
+	GetPos() *lexer.Position
+	GetValue() interface{}
+}
 type INamedStatement interface {
 	GetName() string
 }
 type IStatementCollection interface {
-	Iterate(callback func(stmt interface{}))
+	Iterate(callback func(stmt IStatement))
 }
+
+type statement struct {
+	pos   *lexer.Position
+	value interface{}
+}
+
+func (s *statement) GetPos() *lexer.Position { return s.pos }
+func (s *statement) GetValue() interface{}   { return s.value }
 
 type SchemaAST struct {
 	Package    string          `parser:"'SCHEMA' @Ident ';'"`
@@ -25,22 +39,27 @@ type SchemaAST struct {
 	Statements []RootStatement `parser:"@@? (';' @@)* ';'?"`
 }
 
-func (s *SchemaAST) Iterate(callback func(stmt interface{})) {
+func (s *SchemaAST) Iterate(callback func(stmt IStatement)) {
 	for i := 0; i < len(s.Statements); i++ {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
-			raw.stmt = extractStatement(*raw)
+			raw.stmt = &statement{
+				pos:   &raw.Pos,
+				value: extractStatement(*raw),
+			}
 		}
 		callback(raw.stmt)
 	}
 }
 
 type ImportStmt struct {
+	Pos   lexer.Position
 	Name  string  `parser:"'IMPORT' 'SCHEMA' @String"`
 	Alias *string `parser:"('AS' @Ident)?"`
 }
 
 type RootStatement struct {
+	Pos lexer.Position
 	// Only allowed in root
 	Template *TemplateStmt `parser:"@@"`
 
@@ -53,10 +72,12 @@ type RootStatement struct {
 	Table     *TableStmt     `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
 
-	stmt interface{}
+	stmt IStatement
 }
 
 type WorkspaceStatement struct {
+	Pos lexer.Position
+
 	// Only allowed in workspace
 	Projector *ProjectorStmt `parser:"@@"`
 	Command   *CommandStmt   `parser:"| @@"`
@@ -75,7 +96,7 @@ type WorkspaceStatement struct {
 	//Sequence  *sequenceStmt  `parser:"| @@"`
 	Grant *GrantStmt `parser:"| @@"`
 
-	stmt interface{}
+	stmt IStatement
 }
 
 type WorkspaceStmt struct {
@@ -85,11 +106,14 @@ type WorkspaceStmt struct {
 }
 
 func (s WorkspaceStmt) GetName() string { return s.Name }
-func (s *WorkspaceStmt) Iterate(callback func(stmt interface{})) {
+func (s *WorkspaceStmt) Iterate(callback func(stmt IStatement)) {
 	for i := 0; i < len(s.Statements); i++ {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
-			raw.stmt = extractStatement(*raw)
+			raw.stmt = &statement{
+				pos:   &raw.Pos,
+				value: extractStatement(*raw),
+			}
 		}
 		callback(raw.stmt)
 	}
