@@ -46,12 +46,12 @@ WORKSPACE ws (
     PROJECTOR ApplyUPProfile ON COMMAND IN (air.CreateUPProfile, air.UpdateUPProfile) AS air.FillUPProfile;
 
     COMMAND Orders AS PbillFunc;
-    COMMAND Orders() AS PbillFunc WITH Comment=air.PosComment, Tags=[Tag1, air.Tag2];
+    COMMAND _Orders() AS PbillFunc WITH Comment=air.PosComment, Tags=[Tag1, air.Tag2];
     COMMAND Orders2(untill.orders) AS PbillFunc;
     COMMAND Orders3(order untill.orders, untill.pbill) AS PbillFunc;
 
     QUERY Query1 RETURNS QueryResellerInfoResult AS PbillFunc;
-    QUERY Query1() RETURNS air.QueryResellerInfoResult AS PbillFunc WITH Comment=air.PosComment, Tags=[Tag1, air.Tag2];
+    QUERY _Query1() RETURNS air.QueryResellerInfoResult AS PbillFunc WITH Comment=air.PosComment, Tags=[Tag1, air.Tag2];
     QUERY Query2(untill.orders) RETURNS QueryResellerInfoResult AS PbillFunc;
     QUERY Query3(order untill.orders, untill.pbill) RETURNS QueryResellerInfoResult AS PbillFunc;
 

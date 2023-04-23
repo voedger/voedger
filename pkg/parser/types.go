@@ -16,22 +16,16 @@ type StringParser func(string) (*SchemaAST, error)
 
 type IStatement interface {
 	GetPos() *lexer.Position
-	GetValue() interface{}
+	GetComments() *string
 }
+
 type INamedStatement interface {
+	IStatement
 	GetName() string
 }
 type IStatementCollection interface {
-	Iterate(callback func(stmt IStatement))
+	Iterate(callback func(stmt interface{}))
 }
-
-type statement struct {
-	pos   *lexer.Position
-	value interface{}
-}
-
-func (s *statement) GetPos() *lexer.Position { return s.pos }
-func (s *statement) GetValue() interface{}   { return s.value }
 
 type SchemaAST struct {
 	Package    string          `parser:"'SCHEMA' @Ident ';'"`
@@ -39,14 +33,11 @@ type SchemaAST struct {
 	Statements []RootStatement `parser:"@@? (';' @@)* ';'?"`
 }
 
-func (s *SchemaAST) Iterate(callback func(stmt IStatement)) {
+func (s *SchemaAST) Iterate(callback func(stmt interface{})) {
 	for i := 0; i < len(s.Statements); i++ {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
-			raw.stmt = &statement{
-				pos:   &raw.Pos,
-				value: extractStatement(*raw),
-			}
+			raw.stmt = extractStatement(*raw)
 		}
 		callback(raw.stmt)
 	}
@@ -59,7 +50,6 @@ type ImportStmt struct {
 }
 
 type RootStatement struct {
-	Pos lexer.Position
 	// Only allowed in root
 	Template *TemplateStmt `parser:"@@"`
 
@@ -72,12 +62,10 @@ type RootStatement struct {
 	Table     *TableStmt     `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
 
-	stmt IStatement
+	stmt interface{}
 }
 
 type WorkspaceStatement struct {
-	Pos lexer.Position
-
 	// Only allowed in workspace
 	Projector *ProjectorStmt `parser:"@@"`
 	Command   *CommandStmt   `parser:"| @@"`
@@ -96,24 +84,21 @@ type WorkspaceStatement struct {
 	//Sequence  *sequenceStmt  `parser:"| @@"`
 	Grant *GrantStmt `parser:"| @@"`
 
-	stmt IStatement
+	stmt interface{}
 }
 
 type WorkspaceStmt struct {
-	Comment    *string              `parser:"@Comment?"`
+	Statement
 	Name       string               `parser:"'WORKSPACE' @Ident '('"`
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 }
 
 func (s WorkspaceStmt) GetName() string { return s.Name }
-func (s *WorkspaceStmt) Iterate(callback func(stmt IStatement)) {
+func (s *WorkspaceStmt) Iterate(callback func(stmt interface{})) {
 	for i := 0; i < len(s.Statements); i++ {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
-			raw.stmt = &statement{
-				pos:   &raw.Pos,
-				value: extractStatement(*raw),
-			}
+			raw.stmt = extractStatement(*raw)
 		}
 		callback(raw.stmt)
 	}
@@ -124,9 +109,22 @@ type OptQName struct {
 	Name    string `parser:"@Ident"`
 }
 
+type Statement struct {
+	Pos      lexer.Position
+	Comments *string `parser:"@Comment?"`
+}
+
+func (s *Statement) GetPos() *lexer.Position {
+	return &s.Pos
+}
+
+func (s *Statement) GetComments() *string {
+	return s.Comments
+}
+
 type ProjectorStmt struct {
-	Comment *string `parser:"@Comment?"`
-	Name    string  `parser:"'PROJECTOR' @Ident? ON"`
+	Statement
+	Name string `parser:"'PROJECTOR' @Ident? ON"`
 	// TODO
 	// On string     `parser:"@(('COMMAND' 'ARGUMENT'?) |  'COMMAND' | 'INSERT'| 'UPDATE' | 'ACTIVATE'| 'DEACTIVATE' ))"`
 	On      string     `parser:"@(('COMMAND' 'ARGUMENT'?) |  'COMMAND' | ('INSERT' ('OR' 'UPDATE')?)  | ('UPDATE' ('OR' 'INSERT')?))"`
@@ -137,7 +135,7 @@ type ProjectorStmt struct {
 func (s ProjectorStmt) GetName() string { return s.Name }
 
 type TemplateStmt struct {
-	Comment   *string  `parser:"@Comment?"`
+	Statement
 	Name      string   `parser:"'TEMPLATE' @Ident 'OF' 'WORKSPACE'" `
 	Workspace OptQName `parser:"@@"`
 	Source    string   `parser:"'SOURCE' @Ident"`
@@ -146,30 +144,31 @@ type TemplateStmt struct {
 func (s TemplateStmt) GetName() string { return s.Name }
 
 type RoleStmt struct {
-	Comment *string `parser:"@Comment?"`
-	Name    string  `parser:"'ROLE' @Ident"`
+	Statement
+	Name string `parser:"'ROLE' @Ident"`
 }
 
 func (s RoleStmt) GetName() string { return s.Name }
 
 type TagStmt struct {
-	Comment *string `parser:"@Comment?"`
-	Name    string  `parser:"'TAG' @Ident"`
+	Statement
+	Name string `parser:"'TAG' @Ident"`
 }
 
 func (s TagStmt) GetName() string { return s.Name }
 
 type CommentStmt struct {
-	Comment *string `parser:"@Comment?"`
-	Name    string  `parser:"'COMMENT' @Ident"`
-	Value   string  `parser:"@String"`
+	Statement
+	Name  string `parser:"'COMMENT' @Ident"`
+	Value string `parser:"@String"`
 }
 
 func (s CommentStmt) GetName() string { return s.Name }
 
+// TODO: improve?
 type UseTableStmt struct {
-	Comment *string      `parser:"@Comment?"`
-	Table   UseTableItem `parser:"'USE' 'TABLE' @@"`
+	Statement
+	Table UseTableItem `parser:"'USE' 'TABLE' @@"`
 }
 
 type UseTableItem struct {
@@ -188,25 +187,25 @@ type UseTableItem struct {
 }*/
 
 type RateStmt struct {
-	Comment *string `parser:"@Comment?"`
-	Name    string  `parser:"'RATE' @Ident"`
-	Amount  int     `parser:"@Int"`
-	Per     string  `parser:"'PER' @('SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'YEAR')"`
-	PerIP   bool    `parser:"(@('PER' 'IP'))?"`
+	Statement
+	Name   string `parser:"'RATE' @Ident"`
+	Amount int    `parser:"@Int"`
+	Per    string `parser:"'PER' @('SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'YEAR')"`
+	PerIP  bool   `parser:"(@('PER' 'IP'))?"`
 }
 
 func (s RateStmt) GetName() string { return s.Name }
 
 type GrantStmt struct {
-	Comment *string  `parser:"@Comment?"`
-	Grants  []string `parser:"'GRANT' @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE') (','  @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE'))*"`
-	On      string   `parser:"'ON' @('TABLE' | ('ALL' 'TABLES' 'WITH' 'TAG') | 'COMMAND' | ('ALL' 'COMMANDS' 'WITH' 'TAG') | 'QUERY' | ('ALL' 'QUERIES' 'WITH' 'TAG'))"`
-	Target  OptQName `parser:"@@"`
-	To      string   `parser:"'TO' @Ident"`
+	Statement
+	Grants []string `parser:"'GRANT' @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE') (','  @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE'))*"`
+	On     string   `parser:"'ON' @('TABLE' | ('ALL' 'TABLES' 'WITH' 'TAG') | 'COMMAND' | ('ALL' 'COMMANDS' 'WITH' 'TAG') | 'QUERY' | ('ALL' 'QUERIES' 'WITH' 'TAG'))"`
+	Target OptQName `parser:"@@"`
+	To     string   `parser:"'TO' @Ident"`
 }
 
 type FunctionStmt struct {
-	Comment *string         `parser:"@Comment?"`
+	Statement
 	Name    string          `parser:"'FUNCTION' @Ident"`
 	Params  []FunctionParam `parser:"'(' @@? (',' @@)* ')'"`
 	Returns OptQName        `parser:"'RETURNS' @@"`
@@ -216,11 +215,11 @@ type FunctionStmt struct {
 func (s FunctionStmt) GetName() string { return s.Name }
 
 type CommandStmt struct {
-	Comment *string         `parser:"@Comment?"`
-	Name    string          `parser:"'COMMAND' @Ident"`
-	Params  []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
-	Func    string          `parser:"'AS' @Ident"`
-	With    []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
+	Statement
+	Name   string          `parser:"'COMMAND' @Ident"`
+	Params []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
+	Func   string          `parser:"'AS' @Ident"`
+	With   []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
 func (s CommandStmt) GetName() string { return s.Name }
@@ -231,7 +230,7 @@ type TcqWithItem struct {
 }
 
 type QueryStmt struct {
-	Comment *string         `parser:"@Comment?"`
+	Statement
 	Name    string          `parser:"'QUERY' @Ident"`
 	Params  []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
 	Returns OptQName        `parser:"'RETURNS' @@"`
@@ -257,11 +256,11 @@ type NamedParam struct {
 }
 
 type TableStmt struct {
-	Comment *string         `parser:"@Comment?"`
-	Name    string          `parser:"'TABLE' @Ident"`
-	Of      []OptQName      `parser:"('OF' @@ (',' @@)*)?"`
-	Items   []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
-	With    []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
+	Statement
+	Name  string          `parser:"'TABLE' @Ident"`
+	Of    []OptQName      `parser:"('OF' @@ (',' @@)*)?"`
+	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
+	With  []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
 func (s TableStmt) GetName() string { return s.Name }
@@ -292,7 +291,7 @@ type FieldExpr struct {
 }
 
 type ViewStmt struct {
-	Comment  *string        `parser:"@Comment?"`
+	Statement
 	Name     string         `parser:"'VIEW' @Ident"`
 	Fields   []ViewField    `parser:"'(' @@? (',' @@)* ')'"`
 	ResultOf OptQName       `parser:"'AS' 'RESULT' 'OF' @@"`
