@@ -165,10 +165,11 @@ type CommentStmt struct {
 
 func (s CommentStmt) GetName() string { return s.Name }
 
-// TODO: improve?
 type UseTableStmt struct {
 	Statement
-	Table UseTableItem `parser:"'USE' 'TABLE' @@"`
+	Package   string `parser:"'USE' 'TABLE' (@Ident '.')?"`
+	Name      string `parser:"(@Ident "`
+	AllTables bool   `parser:"| @'*')"`
 }
 
 type UseTableItem struct {
