@@ -16,16 +16,9 @@ import (
 
 func parse(s string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
-		{Name: "C_SEMICOLON", Pattern: `;`},
-		{Name: "C_COMMA", Pattern: `,`},
-		{Name: "C_PKGSEPARATOR", Pattern: `\.`},
-		{Name: "C_ALL", Pattern: `\*`},
-		{Name: "C_EQUAL", Pattern: `=`},
-		{Name: "C_LEFTBRACKET", Pattern: `\(`},
-		{Name: "C_RIGHTBRACKET", Pattern: `\)`},
-		{Name: "C_LEFTSQBRACKET", Pattern: `\[`},
-		{Name: "C_RIGHTSQBRACKET", Pattern: `\]`},
-		{Name: "ON", Pattern: `ON`},
+
+		{Name: "PUNC_CHARS", Pattern: `(;|,|\.|\*|=|\(|\)|\[|\])`},
+		{Name: "KEYWORDS", Pattern: `ON`},
 		{Name: "DEFAULTNEXTVAL", Pattern: `DEFAULT[ \r\n\t]+NEXTVAL`},
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
 		{Name: "String", Pattern: `"(\\"|[^"])*"`},

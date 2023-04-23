@@ -124,7 +124,7 @@ func (s *Statement) GetComments() *string {
 
 type ProjectorStmt struct {
 	Statement
-	Name string `parser:"'PROJECTOR' @Ident? ON"`
+	Name string `parser:"'PROJECTOR' @Ident? 'ON'"`
 	// TODO
 	// On string     `parser:"@(('COMMAND' 'ARGUMENT'?) |  'COMMAND' | 'INSERT'| 'UPDATE' | 'ACTIVATE'| 'DEACTIVATE' ))"`
 	On      string     `parser:"@(('COMMAND' 'ARGUMENT'?) |  'COMMAND' | ('INSERT' ('OR' 'UPDATE')?)  | ('UPDATE' ('OR' 'INSERT')?))"`
