@@ -103,9 +103,5 @@ func (k SchemaKind) MarshalText() ([]byte, error) {
 // suitable for debugging or error messages
 func (k SchemaKind) ToString() string {
 	const pref = "SchemaKind_"
-	s := k.String()
-	if strings.HasPrefix(s, pref) {
-		s = s[len(pref):]
-	}
-	return s
+	return strings.TrimPrefix(k.String(), pref)
 }

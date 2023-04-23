@@ -35,11 +35,7 @@ func (k VerificationKind) MarshalJSON() ([]byte, error) {
 // suitable for debugging or error messages
 func (k VerificationKind) ToString() string {
 	const pref = "VerificationKind_"
-	s := k.String()
-	if strings.HasPrefix(s, pref) {
-		s = s[len(pref):]
-	}
-	return s
+	return strings.TrimPrefix(k.String(), pref)
 }
 
 func (k *VerificationKind) UnmarshalJSON(data []byte) (err error) {
