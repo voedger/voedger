@@ -2,7 +2,8 @@
 
 ## Motivation
 
-- `heeus.io`: [Deactivate Workspace](https://dev.heeus.io/launchpad/#!26491)
+- [Deactivate Workspace](https://github.com/voedger/voedger/issues/53)
+
 
 
 ## Principles
