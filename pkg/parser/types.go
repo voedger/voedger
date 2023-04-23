@@ -276,7 +276,6 @@ type UniqueExpr struct {
 	Fields []string `parser:"'UNIQUE' @Ident (',' @Ident)*"`
 }
 
-// TODO: TABLE: NEXTVAL is unquoted
 // TODO: TABLE: FIELD CHECK(expression)
 // TODO: TABLE: TABLE CHECK
 type FieldExpr struct {
@@ -286,7 +285,7 @@ type FieldExpr struct {
 	Verifiable         bool      `parser:"@('VERIFIABLE')?"`
 	DefaultIntValue    *int      `parser:"('DEFAULT' @Int)?"`
 	DefaultStringValue *string   `parser:"('DEFAULT' @String)?"`
-	DefaultNextVal     *string   `parser:"(DEFAULTNEXTVAL  '(' @Ident ')')?"`
+	DefaultNextVal     *string   `parser:"(DEFAULTNEXTVAL  '(' @String ')')?"`
 	References         *OptQName `parser:"('REFERENCES' @@)?"`
 	CheckRegexp        *string   `parser:"('CHECK' @String)?"`
 }

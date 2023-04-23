@@ -21,7 +21,7 @@ func parse(s string) (*SchemaAST, error) {
 		{Name: "KEYWORDS", Pattern: `ON`},
 		{Name: "DEFAULTNEXTVAL", Pattern: `DEFAULT[ \r\n\t]+NEXTVAL`},
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
-		{Name: "String", Pattern: `"(\\"|[^"])*"`},
+		{Name: "String", Pattern: `("(\\"|[^"])*")|('(\\'|[^'])*')`},
 		{Name: "Int", Pattern: `\d+`},
 		{Name: "Number", Pattern: `[-+]?(\d*\.)?\d+`},
 		{Name: "Ident", Pattern: `[a-zA-Z_]\w*`},
@@ -43,7 +43,6 @@ func stringParserImpl(s string) (*SchemaAST, error) {
 
 func mergeSchemas(mergeFrom, mergeTo *SchemaAST) {
 	// imports
-	// TODO: check for import duplicates
 	mergeTo.Imports = append(mergeTo.Imports, mergeFrom.Imports...)
 
 	// statements

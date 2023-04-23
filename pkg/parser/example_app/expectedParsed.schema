@@ -142,7 +142,7 @@
        Name: "Int2",
        Type: sqlschema.OptQName{
         Name: "int"       },
-       DefaultNextVal: &"sequence",
+       DefaultNextVal: &"'sequence'",
       }     },
      {
       Field: &sqlschema.FieldExpr{
@@ -181,14 +181,14 @@
   {
    Workspace: &sqlschema.WorkspaceStmt{
     Statement: sqlschema.Statement{
-     Pos: Position{Filename: "", Offset: 846, Line: 29, Column: 1},
+     Pos: Position{Filename: "", Offset: 848, Line: 29, Column: 1},
     },
     Name: "MyWorkspace",
     Statements: []sqlschema.WorkspaceStatement{
      {
       Comment: &sqlschema.CommentStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 875, Line: 31, Column: 5},
+        Pos: Position{Filename: "", Offset: 877, Line: 31, Column: 5},
        },
        Name: "PosComment",
        Value: "\"Pos Comment\""      },
@@ -196,14 +196,14 @@
      {
       Tag: &sqlschema.TagStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 913, Line: 32, Column: 5},
+        Pos: Position{Filename: "", Offset: 915, Line: 32, Column: 5},
        },
        Name: "PosTag"      },
      },
      {
       UseTable: &sqlschema.UseTableStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 927, Line: 34, Column: 2},
+        Pos: Position{Filename: "", Offset: 929, Line: 34, Column: 2},
        },
        Package: "SomeSchema",
        Name: "SomeTable",
@@ -212,7 +212,7 @@
      {
       UseTable: &sqlschema.UseTableStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 960, Line: 35, Column: 2},
+        Pos: Position{Filename: "", Offset: 962, Line: 35, Column: 2},
        },
        Name: "AirTablePlan",
       },
@@ -220,7 +220,7 @@
      {
       UseTable: &sqlschema.UseTableStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 985, Line: 36, Column: 2},
+        Pos: Position{Filename: "", Offset: 987, Line: 36, Column: 2},
        },
        Package: "Untill",
        AllTables: true      },
@@ -228,14 +228,14 @@
      {
       Role: &sqlschema.RoleStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1011, Line: 38, Column: 5},
+        Pos: Position{Filename: "", Offset: 1013, Line: 38, Column: 5},
        },
        Name: "LocationManager"      },
      },
      {
       Projector: &sqlschema.ProjectorStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1038, Line: 40, Column: 5},
+        Pos: Position{Filename: "", Offset: 1040, Line: 40, Column: 5},
        },
        On: "COMMAND",
        Targets: []sqlschema.OptQName{
@@ -249,7 +249,7 @@
      {
       Projector: &sqlschema.ProjectorStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1096, Line: 41, Column: 5},
+        Pos: Position{Filename: "", Offset: 1098, Line: 41, Column: 5},
        },
        On: "COMMANDARGUMENT",
        Targets: []sqlschema.OptQName{
@@ -264,7 +264,7 @@
      {
       Projector: &sqlschema.ProjectorStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1174, Line: 42, Column: 5},
+        Pos: Position{Filename: "", Offset: 1176, Line: 42, Column: 5},
        },
        On: "INSERT",
        Targets: []sqlschema.OptQName{
@@ -278,7 +278,7 @@
      {
       Projector: &sqlschema.ProjectorStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1223, Line: 43, Column: 5},
+        Pos: Position{Filename: "", Offset: 1225, Line: 43, Column: 5},
        },
        On: "INSERTORUPDATE",
        Targets: []sqlschema.OptQName{
@@ -292,7 +292,7 @@
      {
       Projector: &sqlschema.ProjectorStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1282, Line: 44, Column: 5},
+        Pos: Position{Filename: "", Offset: 1284, Line: 44, Column: 5},
        },
        On: "UPDATE",
        Targets: []sqlschema.OptQName{
@@ -306,7 +306,7 @@
      {
       Projector: &sqlschema.ProjectorStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1331, Line: 45, Column: 5},
+        Pos: Position{Filename: "", Offset: 1333, Line: 45, Column: 5},
        },
        On: "UPDATEORINSERT",
        Targets: []sqlschema.OptQName{
@@ -320,7 +320,7 @@
      {
       Projector: &sqlschema.ProjectorStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1390, Line: 46, Column: 5},
+        Pos: Position{Filename: "", Offset: 1392, Line: 46, Column: 5},
        },
        Name: "ApplyUPProfile",
        On: "COMMAND",
@@ -339,7 +339,7 @@
      {
       Command: &sqlschema.CommandStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1499, Line: 48, Column: 5},
+        Pos: Position{Filename: "", Offset: 1501, Line: 48, Column: 5},
        },
        Name: "Orders",
        Func: "PbillFunc",
@@ -348,7 +348,7 @@
      {
       Command: &sqlschema.CommandStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1532, Line: 49, Column: 5},
+        Pos: Position{Filename: "", Offset: 1534, Line: 49, Column: 5},
        },
        Name: "_Orders",
        Func: "PbillFunc",
@@ -371,7 +371,7 @@
      {
       Command: &sqlschema.CommandStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1619, Line: 50, Column: 5},
+        Pos: Position{Filename: "", Offset: 1621, Line: 50, Column: 5},
        },
        Name: "Orders2",
        Params: []sqlschema.FunctionParam{
@@ -386,7 +386,7 @@
      {
       Command: &sqlschema.CommandStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1668, Line: 51, Column: 5},
+        Pos: Position{Filename: "", Offset: 1670, Line: 51, Column: 5},
        },
        Name: "Orders3",
        Params: []sqlschema.FunctionParam{
@@ -408,7 +408,7 @@
      {
       Query: &sqlschema.QueryStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1738, Line: 53, Column: 5},
+        Pos: Position{Filename: "", Offset: 1740, Line: 53, Column: 5},
        },
        Name: "Query1",
        Returns: sqlschema.OptQName{
@@ -419,7 +419,7 @@
      {
       Query: &sqlschema.QueryStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1801, Line: 54, Column: 5},
+        Pos: Position{Filename: "", Offset: 1803, Line: 54, Column: 5},
        },
        Name: "_Query1",
        Returns: sqlschema.OptQName{
@@ -445,7 +445,7 @@
      {
       Query: &sqlschema.QueryStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 1922, Line: 55, Column: 5},
+        Pos: Position{Filename: "", Offset: 1924, Line: 55, Column: 5},
        },
        Name: "Query2",
        Params: []sqlschema.FunctionParam{
@@ -462,7 +462,7 @@
      {
       Query: &sqlschema.QueryStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 2000, Line: 56, Column: 5},
+        Pos: Position{Filename: "", Offset: 2002, Line: 56, Column: 5},
        },
        Name: "Query3",
        Params: []sqlschema.FunctionParam{
@@ -486,7 +486,7 @@
      {
       Grant: &sqlschema.GrantStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 2100, Line: 59, Column: 5},
+        Pos: Position{Filename: "", Offset: 2102, Line: 59, Column: 5},
        },
        Grants: []string{
         "ALL",
@@ -499,7 +499,7 @@
      {
       Grant: &sqlschema.GrantStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 2175, Line: 60, Column: 5},
+        Pos: Position{Filename: "", Offset: 2177, Line: 60, Column: 5},
        },
        Grants: []string{
         "INSERT",
@@ -513,7 +513,7 @@
      {
       Grant: &sqlschema.GrantStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 2248, Line: 61, Column: 5},
+        Pos: Position{Filename: "", Offset: 2250, Line: 61, Column: 5},
        },
        Grants: []string{
         "SELECT",
@@ -526,7 +526,7 @@
      {
       Grant: &sqlschema.GrantStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 2305, Line: 62, Column: 5},
+        Pos: Position{Filename: "", Offset: 2307, Line: 62, Column: 5},
        },
        Grants: []string{
         "EXECUTE",
@@ -538,7 +538,7 @@
      {
       Grant: &sqlschema.GrantStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 2358, Line: 63, Column: 5},
+        Pos: Position{Filename: "", Offset: 2360, Line: 63, Column: 5},
        },
        Grants: []string{
         "EXECUTE",
@@ -550,7 +550,7 @@
      {
       Grant: &sqlschema.GrantStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 2421, Line: 64, Column: 5},
+        Pos: Position{Filename: "", Offset: 2423, Line: 64, Column: 5},
        },
        Grants: []string{
         "EXECUTE",
@@ -562,7 +562,7 @@
      {
       Table: &sqlschema.TableStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 2488, Line: 66, Column: 5},
+        Pos: Position{Filename: "", Offset: 2490, Line: 66, Column: 5},
        },
        Name: "WsTable",
        Of: []sqlschema.OptQName{
@@ -582,7 +582,7 @@
         {
          Table: &sqlschema.TableStmt{
           Statement: sqlschema.Statement{
-           Pos: Position{Filename: "", Offset: 2555, Line: 68, Column: 9},
+           Pos: Position{Filename: "", Offset: 2557, Line: 68, Column: 9},
           },
           Name: "Child",
           Items: []sqlschema.TableItemExpr{
@@ -601,7 +601,7 @@
      {
       View: &sqlschema.ViewStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 2619, Line: 73, Column: 5},
+        Pos: Position{Filename: "", Offset: 2621, Line: 73, Column: 5},
        },
        Name: "XZReports",
        Fields: []sqlschema.ViewField{
@@ -639,7 +639,7 @@
      {
       Rate: &sqlschema.RateStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 2909, Line: 86, Column: 5},
+        Pos: Position{Filename: "", Offset: 2911, Line: 86, Column: 5},
        },
        Name: "BackofficeFuncRate1",
        Amount: 1000,
@@ -649,7 +649,7 @@
      {
       Rate: &sqlschema.RateStmt{
        Statement: sqlschema.Statement{
-        Pos: Position{Filename: "", Offset: 2953, Line: 87, Column: 5},
+        Pos: Position{Filename: "", Offset: 2955, Line: 87, Column: 5},
        },
        Name: "BackofficeFuncRate2",
        Amount: 100,

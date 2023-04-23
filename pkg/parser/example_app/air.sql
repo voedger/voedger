@@ -20,7 +20,7 @@ TABLE AirTablePlan OF CDOC (
     VerifiableField text NOT NULL VERIFIABLE, -- Comment
     Int1 int DEFAULT 1,
     Text1 text DEFAULT "a",
-    Int2 int DEFAULT NEXTVAL(sequence),
+    Int2 int DEFAULT NEXTVAL('sequence'),
     BillID int64 REFERENCES air.bill,
     CheckedField text CHECK "^[0-9]{8}$",
     UNIQUE fstate, name

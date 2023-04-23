@@ -16,7 +16,7 @@ import (
 //go:embed example_app/*.sql
 var fs embed.FS
 
-//-go:embed example_app/expectedParsed.schema
+//_go:embed example_app/expectedParsed.schema
 //var expectedParsedExampledSchemaStr string
 
 func Test_BasicUsage(t *testing.T) {
