@@ -17,8 +17,8 @@ import (
 func parse(s string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
 
-		{Name: "PUNC_CHARS", Pattern: `(;|,|\.|\*|=|\(|\)|\[|\])`},
-		{Name: "KEYWORDS", Pattern: `ON`},
+		{Name: "Punct", Pattern: `(;|,|\.|\*|=|\(|\)|\[|\])`},
+		{Name: "Keywords", Pattern: `ON`},
 		{Name: "DEFAULTNEXTVAL", Pattern: `DEFAULT[ \r\n\t]+NEXTVAL`},
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
 		{Name: "String", Pattern: `("(\\"|[^"])*")|('(\\'|[^'])*')`},
