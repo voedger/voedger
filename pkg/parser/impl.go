@@ -6,6 +6,7 @@ package sqlschema
 
 import (
 	"embed"
+	"errors"
 	"path/filepath"
 	"strings"
 
@@ -92,23 +93,22 @@ func embedParserImpl(fs embed.FS, dir string) (*SchemaAST, error) {
 
 func analyse(schema *SchemaAST) (*SchemaAST, error) {
 
+	errs := make([]error, 0)
+
 	// TODO: include pos
-	namedIndex := make(map[string]int)
+	namedIndex := make(map[string]interface{})
 
-	for i := 0; i < len(schema.Statements); i++ {
-		var ii interface{} = &schema.Statements[i]
+	schema.Iterate(func(stmt interface{}) {
 
-		if statement, ok := ii.(IStatement); ok {
-			stmt := statement.Stmt()
-			// TODO: recurse into workspaces
-			if named, ok := stmt.(INamedStatement); ok {
-				if _, ok := namedIndex[named.GetName()]; ok {
-					return schema, ErrSchemaContainsDuplicateName(schema.Package, named.GetName())
-				}
-				namedIndex[named.GetName()] = i
+		// TODO: recurse into workspaces
+		if named, ok := stmt.(INamedStatement); ok {
+			if _, ok := namedIndex[named.GetName()]; ok {
+				errs = append(errs, ErrSchemaContainsDuplicateName(schema.Package, named.GetName()))
+			} else {
+				namedIndex[named.GetName()] = stmt
 			}
 		}
+	})
 
-	}
-	return schema, nil
+	return schema, errors.Join(errs...)
 }

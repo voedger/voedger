@@ -12,21 +12,27 @@ import (
 type EmbedParser func(fs embed.FS, dir string) (*SchemaAST, error)
 type StringParser func(string) (*SchemaAST, error)
 
-type IStatement interface {
-	Stmt() interface{}
-}
-
 type INamedStatement interface {
 	GetName() string
 }
-type IWorkspace interface {
-	GetStatements() []*WorkspaceStatement
+type IStatementCollection interface {
+	Iterate(callback func(stmt interface{}))
 }
 
 type SchemaAST struct {
 	Package    string          `parser:"'SCHEMA' @Ident ';'"`
 	Imports    []ImportStmt    `parser:"@@? (';' @@)* ';'?"`
 	Statements []RootStatement `parser:"@@? (';' @@)* ';'?"`
+}
+
+func (s *SchemaAST) Iterate(callback func(stmt interface{})) {
+	for i := 0; i < len(s.Statements); i++ {
+		raw := &s.Statements[i]
+		if raw.stmt == nil {
+			raw.stmt = extractStatement(*raw)
+		}
+		callback(raw.stmt)
+	}
 }
 
 type ImportStmt struct {
@@ -46,31 +52,8 @@ type RootStatement struct {
 	Workspace *WorkspaceStmt `parser:"| @@"`
 	Table     *TableStmt     `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
-}
 
-func (s *RootStatement) Stmt() interface{} {
-	if s.Template != nil {
-		return s.Template
-	}
-	if s.Role != nil {
-		return s.Role
-	}
-	if s.Comment != nil {
-		return s.Comment
-	}
-	if s.Tag != nil {
-		return s.Tag
-	}
-	if s.Function != nil {
-		return s.Function
-	}
-	if s.Workspace != nil {
-		return s.Workspace
-	}
-	if s.Table != nil {
-		return s.Table
-	}
-	return nil
+	stmt interface{}
 }
 
 type WorkspaceStatement struct {
@@ -91,59 +74,26 @@ type WorkspaceStatement struct {
 	Table     *TableStmt     `parser:"| @@"`
 	//Sequence  *sequenceStmt  `parser:"| @@"`
 	Grant *GrantStmt `parser:"| @@"`
-}
 
-func (s *WorkspaceStatement) Stmt() interface{} {
-	if s.Projector != nil {
-		return s.Projector
-	}
-	if s.Command != nil {
-		return s.Command
-	}
-	if s.Query != nil {
-		return s.Query
-	}
-	if s.Rate != nil {
-		return s.Rate
-	}
-	if s.View != nil {
-		return s.View
-	}
-	if s.UseTable != nil {
-		return s.UseTable
-	}
-	if s.Role != nil {
-		return s.Role
-	}
-	if s.Comment != nil {
-		return s.Comment
-	}
-	if s.Tag != nil {
-		return s.Tag
-	}
-	if s.Function != nil {
-		return s.Function
-	}
-	if s.Workspace != nil {
-		return s.Workspace
-	}
-	if s.Table != nil {
-		return s.Table
-	}
-	if s.Grant != nil {
-		return s.Grant
-	}
-	return nil
+	stmt interface{}
 }
 
 type WorkspaceStmt struct {
-	Comment    *string               `parser:"@Comment?"`
-	Name       string                `parser:"'WORKSPACE' @Ident '('"`
-	Statements []*WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
+	Comment    *string              `parser:"@Comment?"`
+	Name       string               `parser:"'WORKSPACE' @Ident '('"`
+	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 }
 
-func (s WorkspaceStmt) GetName() string                      { return s.Name }
-func (s WorkspaceStmt) GetStatements() []*WorkspaceStatement { return s.Statements }
+func (s WorkspaceStmt) GetName() string { return s.Name }
+func (s *WorkspaceStmt) Iterate(callback func(stmt interface{})) {
+	for i := 0; i < len(s.Statements); i++ {
+		raw := &s.Statements[i]
+		if raw.stmt == nil {
+			raw.stmt = extractStatement(*raw)
+		}
+		callback(raw.stmt)
+	}
+}
 
 type OptQName struct {
 	Package string `parser:"(@Ident '.')?"`
