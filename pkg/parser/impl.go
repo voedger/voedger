@@ -95,6 +95,7 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 func analyse(schema *SchemaAST) (*SchemaAST, error) {
 	errs := make([]error, 0)
 	errs = analyseDuplicateNames(schema, errs)
+	errs = analyseReferences(schema, errs)
 	cleanupComments(schema)
 	return schema, errors.Join(errs...)
 }
@@ -103,17 +104,43 @@ func analyseReferences(schema *SchemaAST, errs []error) []error {
 	iterate(schema, func(stmt interface{}) {
 		switch v := stmt.(type) {
 		case *CommandStmt:
-			_ = v.Func
-			// here v has type T
+			f := resolveFunc(v.Func, schema)
+			if f == nil {
+				errs = append(errs, ErrFunctionNotFound(v.Func, v.GetPos()))
+			} else {
+				errs = CompareParams(v.Params, f, errs)
+			}
 		case *QueryStmt:
-			// here v has type S
+			f := resolveFunc(v.Func, schema)
+			if f == nil {
+				errs = append(errs, ErrFunctionNotFound(v.Func, v.GetPos()))
+			} else {
+				errs = CompareParams(v.Params, f, errs)
+			}
 		case *ProjectorStmt:
-			//
-		default:
-			// no match; here v has the same type as i
+			f := resolveFunc(v.Func, schema)
+			if f == nil {
+				errs = append(errs, ErrFunctionNotFound(v.Func, v.GetPos()))
+			} else {
+				// TODO: Check funtion params
+			}
 		}
 	})
 	return errs
+}
+
+func resolveFunc(name OptQName, schema *SchemaAST) (function *FunctionStmt) {
+	pkg := strings.TrimSpace(name.Package)
+	if pkg == "" || pkg == schema.Package {
+		iterate(schema, func(stmt interface{}) {
+			if f, ok := stmt.(*FunctionStmt); ok {
+				function = f
+			}
+		})
+	} else {
+		// TODO: resolve in other packages
+	}
+	return
 }
 
 func analyseDuplicateNames(schema *SchemaAST, errs []error) []error {

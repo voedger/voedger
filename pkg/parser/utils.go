@@ -19,3 +19,8 @@ func extractStatement(s any) interface{} {
 	}
 	panic("undefined statement")
 }
+
+func CompareParams(params []FunctionParam, f *FunctionStmt, errs []error) []error {
+	// TODO: compare params
+	return errs
+}
