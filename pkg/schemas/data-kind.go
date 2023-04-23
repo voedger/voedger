@@ -6,7 +6,10 @@
 
 package schemas
 
-import "strconv"
+import (
+	"strconv"
+	"strings"
+)
 
 //go:generate stringer -type=DataKind -output=data-kind_string.go
 
@@ -58,4 +61,15 @@ func (k DataKind) MarshalText() ([]byte, error) {
 		s = strconv.FormatUint(uint64(k), base)
 	}
 	return []byte(s), nil
+}
+
+// Renders an DataKind in human-readable form, without "DataKind_" prefix,
+// suitable for debugging or error messages
+func (k DataKind) ToString() string {
+	const pref = "DataKind_"
+	s := k.String()
+	if strings.HasPrefix(s, pref) {
+		s = s[len(pref):]
+	}
+	return s
 }

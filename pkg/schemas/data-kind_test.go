@@ -79,3 +79,21 @@ func TestDataKindType_MarshalText(t *testing.T) {
 		}
 	})
 }
+
+func TestDataKind_ToString(t *testing.T) {
+	tests := []struct {
+		name string
+		k    DataKind
+		want string
+	}{
+		{name: "vulgaris", k: DataKind_int32, want: "int32"},
+		{name: "out of range", k: DataKind_FakeLast + 1, want: (DataKind_FakeLast + 1).String()},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.k.ToString(); got != tt.want {
+				t.Errorf("DataKind.ToString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

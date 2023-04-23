@@ -28,7 +28,7 @@ func newValidator(validators *validators, schema schemas.Schema) *validator {
 // Return readable name of entity to validate.
 // If entity has only type QName, then the result will be short like `CDoc (sales.BillDocument)`, otherwise it will be complete like `CRecord «Price» (sales.PriceRecord)`
 func (v *validator) entName(e interface{}) string {
-	ent := shemaKindToStr[v.schema.Kind()]
+	ent := v.schema.Kind().ToString()
 	name := ""
 	typeName := v.schema.QName()
 

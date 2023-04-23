@@ -51,3 +51,21 @@ func TestSchemaKindType_MarshalText(t *testing.T) {
 		}
 	})
 }
+
+func TestSchemaKind_ToString(t *testing.T) {
+	tests := []struct {
+		name string
+		k    SchemaKind
+		want string
+	}{
+		{name: "vulgaris", k: SchemaKind_CDoc, want: "CDoc"},
+		{name: "out of range", k: SchemaKind_FakeLast + 1, want: (SchemaKind_FakeLast + 1).String()},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.k.ToString(); got != tt.want {
+				t.Errorf("SchemaKind.ToString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

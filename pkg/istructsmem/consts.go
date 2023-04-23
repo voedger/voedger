@@ -7,98 +7,10 @@ package istructsmem
 import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // nullResource is result then resource not found
 var nullResource istructs.IResource = newNullResource()
-
-const (
-	// data kind mnemonics
-	dk_null     = "null"
-	dk_int32    = "int32"
-	dk_int64    = "int64"
-	dk_float32  = "float32"
-	dk_float64  = "float64"
-	dk_bytes    = "[]byte"
-	dk_string   = "string"
-	dk_QName    = "QName"
-	dk_bool     = "bool"
-	dk_RecordID = "RecordID"
-	dk_Record   = "record"
-	dk_Event    = "event"
-	// abstracts if unknown type
-	dk_Number = "numeric"
-	dk_Chars  = "character"
-)
-
-// dataKindToStr is map to return data kind mnemonics. Useful to format error messages
-var dataKindToStr = map[schemas.DataKind]string{
-	schemas.DataKind_null:     dk_null,
-	schemas.DataKind_int32:    dk_int32,
-	schemas.DataKind_int64:    dk_int64,
-	schemas.DataKind_float32:  dk_float32,
-	schemas.DataKind_float64:  dk_float64,
-	schemas.DataKind_bytes:    dk_bytes,
-	schemas.DataKind_string:   dk_string,
-	schemas.DataKind_QName:    dk_QName,
-	schemas.DataKind_bool:     dk_bool,
-	schemas.DataKind_RecordID: dk_RecordID,
-	schemas.DataKind_Record:   dk_Record,
-	schemas.DataKind_Event:    dk_Event,
-}
-
-// const ( // verification kind mnemonics
-// 	verify_byEmail = "EMail"
-// 	verify_ByPhone = "Phone"
-// )
-
-// var verificationKindToStr = map[payloads.VerificationKindType]string{
-// 	payloads.VerificationKind_EMail: verify_byEmail,
-// 	payloads.VerificationKind_Phone: verify_ByPhone,
-// }
-
-const (
-	// schema kind mnemonics
-	sk_null                         = "null"
-	sk_GDoc                         = "GDoc"
-	sk_CDoc                         = "CDoc"
-	sk_ODoc                         = "ODoc"
-	sk_WDoc                         = "WDoc"
-	sk_GRecord                      = "GRecord"
-	sk_CRecord                      = "CRecord"
-	sk_ORecord                      = "ORecord"
-	sk_WRecord                      = "WRecord"
-	sk_ViewRecord                   = "ViewRecord"
-	sk_ViewRecord_PartitionKey      = "ViewRecord_PartitionKey"
-	sk_ViewRecord_ClusteringColumns = "ViewRecord_ClusteringColumns"
-	sk_ViewRecord_Value             = "ViewRecord_Value"
-	sk_Object                       = "Object"
-	sk_Element                      = "Element"
-	sk_QueryFunction                = "QueryFunction"
-	sk_CommandFunction              = "CommandFunction"
-)
-
-// shemaKindToStr is map to return schema kind mnemonics. Useful to format error messages
-var shemaKindToStr = map[schemas.SchemaKind]string{
-	schemas.SchemaKind_null:                         sk_null,
-	schemas.SchemaKind_GDoc:                         sk_GDoc,
-	schemas.SchemaKind_CDoc:                         sk_CDoc,
-	schemas.SchemaKind_ODoc:                         sk_ODoc,
-	schemas.SchemaKind_WDoc:                         sk_WDoc,
-	schemas.SchemaKind_GRecord:                      sk_GRecord,
-	schemas.SchemaKind_CRecord:                      sk_CRecord,
-	schemas.SchemaKind_ORecord:                      sk_ORecord,
-	schemas.SchemaKind_WRecord:                      sk_WRecord,
-	schemas.SchemaKind_ViewRecord:                   sk_ViewRecord,
-	schemas.SchemaKind_ViewRecord_PartitionKey:      sk_ViewRecord_PartitionKey,
-	schemas.SchemaKind_ViewRecord_ClusteringColumns: sk_ViewRecord_ClusteringColumns,
-	schemas.SchemaKind_ViewRecord_Value:             sk_ViewRecord_Value,
-	schemas.SchemaKind_Object:                       sk_Object,
-	schemas.SchemaKind_Element:                      sk_Element,
-	schemas.SchemaKind_QueryFunction:                sk_QueryFunction,
-	schemas.SchemaKind_CommandFunction:              sk_CommandFunction,
-}
 
 const (
 	// byte codec versions

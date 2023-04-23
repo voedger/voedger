@@ -124,7 +124,7 @@ func (row *rowType) dynoBufValue(value interface{}, kind schemas.DataKind) (inte
 			return bytes, nil
 		}
 	}
-	return nil, fmt.Errorf("value has type «%T», but «%s» expected: %w", value, dataKindToStr[kind], ErrWrongFieldType)
+	return nil, fmt.Errorf("value has type «%T», but «%s» expected: %w", value, kind.ToString(), ErrWrongFieldType)
 }
 
 func dynoBufGetWord(dyB *dynobuffers.Buffer, fieldName string) (value uint16, ok bool) {

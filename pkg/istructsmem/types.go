@@ -396,7 +396,7 @@ func (row *rowType) AsInt32(name string) (value int32) {
 		return value
 	}
 	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, dk_int32, name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_int32.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return 0
 }
@@ -407,7 +407,7 @@ func (row *rowType) AsInt64(name string) (value int64) {
 		return value
 	}
 	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, dk_int64, name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_int64.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return 0
 }
@@ -418,7 +418,7 @@ func (row *rowType) AsFloat32(name string) (value float32) {
 		return value
 	}
 	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, dk_float32, name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_float32.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return 0
 }
@@ -429,7 +429,7 @@ func (row *rowType) AsFloat64(name string) (value float64) {
 		return value
 	}
 	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, dk_float64, name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_float64.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return 0
 }
@@ -440,7 +440,7 @@ func (row *rowType) AsBytes(name string) (value []byte) {
 		return bytes.Bytes()
 	}
 	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, dk_bytes, name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_bytes.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return nil
 }
@@ -456,7 +456,7 @@ func (row *rowType) AsString(name string) (value string) {
 	}
 
 	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, dk_string, name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_string.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return ""
 }
@@ -477,7 +477,7 @@ func (row *rowType) AsQName(name string) schemas.QName {
 	}
 
 	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, dk_QName, name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_QName.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return schemas.NullQName
 }
@@ -493,7 +493,7 @@ func (row *rowType) AsBool(name string) bool {
 	}
 
 	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, dk_bool, name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_bool.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 
 	return false
@@ -514,7 +514,7 @@ func (row *rowType) AsRecordID(name string) istructs.RecordID {
 	}
 
 	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, dk_RecordID, name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_RecordID.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return istructs.NullRecordID
 }
@@ -529,7 +529,7 @@ func (row *rowType) AsRecord(name string) istructs.IRecord {
 		return &record
 	}
 	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, dk_Record, name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_Record.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return NewNullRecord(istructs.NullRecordID)
 }
@@ -544,7 +544,7 @@ func (row *rowType) AsEvent(name string) istructs.IDbEvent {
 		return &event
 	}
 	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, dk_Event, name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_Event.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return nil
 }
@@ -620,7 +620,7 @@ func (row *rowType) PutFloat64(name string, value float64) {
 func (row *rowType) PutNumber(name string, value float64) {
 	fld := row.schema.Field(name)
 	if fld == nil {
-		row.collectErrorf(errFieldNotFoundWrap, dk_Number, name, row.QName(), ErrNameNotFound)
+		row.collectErrorf(errFieldNotFoundWrap, "number", name, row.QName(), ErrNameNotFound)
 		return
 	}
 
@@ -636,7 +636,7 @@ func (row *rowType) PutNumber(name string, value float64) {
 	case schemas.DataKind_RecordID:
 		row.PutRecordID(name, istructs.RecordID(value))
 	default:
-		row.collectErrorf(errFieldValueTypeMismatchWrap, dk_float64, k, name, ErrWrongFieldType)
+		row.collectErrorf(errFieldValueTypeMismatchWrap, schemas.DataKind_float64.ToString(), k, name, ErrWrongFieldType)
 	}
 }
 
@@ -681,7 +681,7 @@ func (row *rowType) PutQName(name string, value schemas.QName) {
 func (row *rowType) PutChars(name string, value string) {
 	fld := row.schema.Field(name)
 	if fld == nil {
-		row.collectErrorf(errFieldNotFoundWrap, dk_Chars, name, row.QName(), ErrNameNotFound)
+		row.collectErrorf(errFieldNotFoundWrap, "chars", name, row.QName(), ErrNameNotFound)
 		return
 	}
 
@@ -689,7 +689,7 @@ func (row *rowType) PutChars(name string, value string) {
 	case schemas.DataKind_bytes:
 		bytes, err := base64.StdEncoding.DecodeString(value)
 		if err != nil {
-			row.collectErrorf(errFieldConvertErrorWrap, name, value, dk_bytes, err)
+			row.collectErrorf(errFieldConvertErrorWrap, name, value, schemas.DataKind_bytes.ToString(), err)
 			return
 		}
 		row.PutBytes(name, bytes)
@@ -698,12 +698,12 @@ func (row *rowType) PutChars(name string, value string) {
 	case schemas.DataKind_QName:
 		qName, err := schemas.ParseQName(value)
 		if err != nil {
-			row.collectErrorf(errFieldConvertErrorWrap, name, value, dk_QName, err)
+			row.collectErrorf(errFieldConvertErrorWrap, name, value, schemas.DataKind_QName.ToString(), err)
 			return
 		}
 		row.PutQName(name, qName)
 	default:
-		row.collectErrorf(errFieldValueTypeMismatchWrap, dk_string, k, name, ErrWrongFieldType)
+		row.collectErrorf(errFieldValueTypeMismatchWrap, schemas.DataKind_string.ToString(), k, name, ErrWrongFieldType)
 	}
 }
 

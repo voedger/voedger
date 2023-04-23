@@ -6,7 +6,10 @@
 
 package schemas
 
-import "strconv"
+import (
+	"strconv"
+	"strings"
+)
 
 //go:generate stringer -type=SchemaKind -output=schema-kind_string.go
 
@@ -94,4 +97,15 @@ func (k SchemaKind) MarshalText() ([]byte, error) {
 		s = strconv.FormatUint(uint64(k), base)
 	}
 	return []byte(s), nil
+}
+
+// Renders an SchemaKind in human-readable form, without "SchemaKind_" prefix,
+// suitable for debugging or error messages
+func (k SchemaKind) ToString() string {
+	const pref = "SchemaKind_"
+	s := k.String()
+	if strings.HasPrefix(s, pref) {
+		s = s[len(pref):]
+	}
+	return s
 }

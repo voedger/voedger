@@ -5,7 +5,10 @@
 
 package schemas
 
-import "strconv"
+import (
+	"strconv"
+	"strings"
+)
 
 //go:generate stringer -type=VerificationKind -output=verification-kind_string.go
 
@@ -26,6 +29,17 @@ func (k VerificationKind) MarshalJSON() ([]byte, error) {
 		s = strconv.FormatUint(uint64(k), base)
 	}
 	return []byte(s), nil
+}
+
+// Renders an VerificationKind in human-readable form, without "VerificationKind_" prefix,
+// suitable for debugging or error messages
+func (k VerificationKind) ToString() string {
+	const pref = "VerificationKind_"
+	s := k.String()
+	if strings.HasPrefix(s, pref) {
+		s = s[len(pref):]
+	}
+	return s
 }
 
 func (k *VerificationKind) UnmarshalJSON(data []byte) (err error) {

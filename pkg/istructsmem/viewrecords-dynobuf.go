@@ -188,7 +188,7 @@ func loadCellFromBuffer_00(row *rowType, field schemas.Field, appCfg *AppConfigT
 	case schemas.DataKind_string:
 		row.PutString(field.Name(), buf.String())
 	default:
-		return fmt.Errorf("unable load data type «%v»: %w", dataKindToStr[field.DataKind()], ErrWrongFieldType)
+		return fmt.Errorf("unable load data type «%s»: %w", field.DataKind().ToString(), ErrWrongFieldType)
 	}
 	return nil
 }
