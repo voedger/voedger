@@ -99,6 +99,23 @@ func analyse(schema *SchemaAST) (*SchemaAST, error) {
 	return schema, errors.Join(errs...)
 }
 
+func analyseReferences(schema *SchemaAST, errs []error) []error {
+	iterate(schema, func(stmt interface{}) {
+		switch v := stmt.(type) {
+		case *CommandStmt:
+			_ = v.Func
+			// here v has type T
+		case *QueryStmt:
+			// here v has type S
+		case *ProjectorStmt:
+			//
+		default:
+			// no match; here v has the same type as i
+		}
+	})
+	return errs
+}
+
 func analyseDuplicateNames(schema *SchemaAST, errs []error) []error {
 	namedIndex := make(map[string]interface{})
 

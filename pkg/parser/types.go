@@ -219,7 +219,7 @@ type CommandStmt struct {
 	Statement
 	Name   string          `parser:"'COMMAND' @Ident"`
 	Params []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
-	Func   string          `parser:"'AS' @Ident"`
+	Func   OptQName        `parser:"'AS' @@"`
 	With   []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
@@ -235,7 +235,7 @@ type QueryStmt struct {
 	Name    string          `parser:"'QUERY' @Ident"`
 	Params  []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
 	Returns OptQName        `parser:"'RETURNS' @@"`
-	Func    string          `parser:"'AS' @Ident"`
+	Func    OptQName        `parser:"'AS' @@"`
 	With    []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
