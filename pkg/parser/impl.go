@@ -98,17 +98,22 @@ func analyse(schema *SchemaAST) (*SchemaAST, error) {
 	// TODO: include pos
 	namedIndex := make(map[string]interface{})
 
-	schema.Iterate(func(stmt interface{}) {
-
-		// TODO: recurse into workspaces
-		if named, ok := stmt.(INamedStatement); ok {
-			if _, ok := namedIndex[named.GetName()]; ok {
-				errs = append(errs, ErrSchemaContainsDuplicateName(schema.Package, named.GetName()))
-			} else {
-				namedIndex[named.GetName()] = stmt
+	var iterate func(c IStatementCollection)
+	iterate = func(c IStatementCollection) {
+		c.Iterate(func(stmt interface{}) {
+			if named, ok := stmt.(INamedStatement); ok {
+				if _, ok := namedIndex[named.GetName()]; ok {
+					errs = append(errs, ErrSchemaContainsDuplicateName(schema.Package, named.GetName()))
+				} else {
+					namedIndex[named.GetName()] = stmt
+				}
 			}
-		}
-	})
+			if collection, ok := stmt.(IStatementCollection); ok {
+				iterate(collection)
+			}
+		})
+	}
+	iterate(schema)
 
 	return schema, errors.Join(errs...)
 }

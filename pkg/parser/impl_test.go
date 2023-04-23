@@ -38,8 +38,19 @@ func Test_Duplicates(t *testing.T) {
 
 	_, err := parser(`SCHEMA test; 
 	FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
-	FUNCTION MyTableValidator(TableRow) RETURNS string ENGINE WASM;		
+	FUNCTION MyTableValidator(TableRow) RETURNS string ENGINE WASM;	
+	FUNCTION MyFunc2() RETURNS void ENGINE BUILTIN;
+	WORKSPACE ChildWorkspace (
+		TAG MyFunc2; -- duplicate
+		FUNCTION MyFunc3() RETURNS void ENGINE BUILTIN;
+		FUNCTION MyFunc4() RETURNS void ENGINE BUILTIN;
+		WORKSPACE InnerWorkspace (
+			ROLE MyFunc4; -- duplicate
+		)
+	)
 	`)
 
 	require.ErrorContains(err, "schema test contains duplicated name MyTableValidator")
+	require.ErrorContains(err, "schema test contains duplicated name MyFunc2")
+	require.ErrorContains(err, "schema test contains duplicated name MyFunc4")
 }
