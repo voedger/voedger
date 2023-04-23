@@ -84,37 +84,53 @@ func embedParserImpl(fs embed.FS, dir string) (*SchemaAST, error) {
 	return analyse(head)
 }
 
+func iterate(c IStatementCollection, callback func(stmt interface{})) {
+	c.Iterate(func(stmt interface{}) {
+		callback(stmt)
+		if collection, ok := stmt.(IStatementCollection); ok {
+			iterate(collection, callback)
+		}
+	})
+}
+
 func analyse(schema *SchemaAST) (*SchemaAST, error) {
-
 	errs := make([]error, 0)
+	errs = analyseDuplicateNames(schema, errs)
+	cleanupComments(schema)
+	return schema, errors.Join(errs...)
+}
 
-	// TODO: include pos
+func analyseDuplicateNames(schema *SchemaAST, errs []error) []error {
 	namedIndex := make(map[string]interface{})
 
-	var iterate func(c IStatementCollection)
-	iterate = func(c IStatementCollection) {
-		c.Iterate(func(stmt interface{}) {
-			if named, ok := stmt.(INamedStatement); ok {
-				name := named.GetName()
-				if name == "" {
-					_, isProjector := stmt.(*ProjectorStmt)
-					if isProjector {
-						return // skip anonymous projectors
-					}
-				}
-				if _, ok := namedIndex[name]; ok {
-					s := stmt.(IStatement)
-					errs = append(errs, ErrSchemaContainsDuplicateName(schema.Package, name, s.GetPos()))
-				} else {
-					namedIndex[name] = stmt
+	iterate(schema, func(stmt interface{}) {
+		if named, ok := stmt.(INamedStatement); ok {
+			name := named.GetName()
+			if name == "" {
+				_, isProjector := stmt.(*ProjectorStmt)
+				if isProjector {
+					return // skip anonymous projectors
 				}
 			}
-			if collection, ok := stmt.(IStatementCollection); ok {
-				iterate(collection)
+			if _, ok := namedIndex[name]; ok {
+				s := stmt.(IStatement)
+				errs = append(errs, ErrSchemaContainsDuplicateName(schema.Package, name, s.GetPos()))
+			} else {
+				namedIndex[name] = stmt
 			}
-		})
-	}
-	iterate(schema)
+		}
+	})
+	return errs
+}
 
-	return schema, errors.Join(errs...)
+func cleanupComments(schema *SchemaAST) {
+	iterate(schema, func(stmt interface{}) {
+		if s, ok := stmt.(IStatement); ok {
+			comments := *s.GetComments()
+			for i := 0; i < len(comments); i++ {
+				comments[i], _ = strings.CutPrefix(comments[i], "--")
+				comments[i] = strings.TrimSpace(comments[i])
+			}
+		}
+	})
 }

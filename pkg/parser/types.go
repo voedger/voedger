@@ -16,7 +16,7 @@ type StringParser func(string) (*SchemaAST, error)
 
 type IStatement interface {
 	GetPos() *lexer.Position
-	GetComments() *string
+	GetComments() *[]string
 }
 
 type INamedStatement interface {
@@ -111,15 +111,15 @@ type OptQName struct {
 
 type Statement struct {
 	Pos      lexer.Position
-	Comments *string `parser:"@Comment?"`
+	Comments []string `parser:"@Comment*"`
 }
 
 func (s *Statement) GetPos() *lexer.Position {
 	return &s.Pos
 }
 
-func (s *Statement) GetComments() *string {
-	return s.Comments
+func (s *Statement) GetComments() *[]string {
+	return &s.Comments
 }
 
 type ProjectorStmt struct {
