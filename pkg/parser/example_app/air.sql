@@ -1,3 +1,5 @@
+-- package consists of schema and resources
+-- schema consists of few schema files
 SCHEMA Air;
 
 IMPORT SCHEMA "github.com/untillpro/untill";
