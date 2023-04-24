@@ -9,13 +9,14 @@ import (
 
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type functionRateLimits struct {
-	limits map[istructs.QName]map[istructs.RateLimitKind]istructs.RateLimit
+	limits map[schemas.QName]map[istructs.RateLimitKind]istructs.RateLimit
 }
 
-func (frl *functionRateLimits) addFuncLimit(funcQName istructs.QName) map[istructs.RateLimitKind]istructs.RateLimit {
+func (frl *functionRateLimits) addFuncLimit(funcQName schemas.QName) map[istructs.RateLimitKind]istructs.RateLimit {
 	kindLimits, ok := frl.limits[funcQName]
 	if !ok {
 		kindLimits = map[istructs.RateLimitKind]istructs.RateLimit{}
@@ -24,12 +25,12 @@ func (frl *functionRateLimits) addFuncLimit(funcQName istructs.QName) map[istruc
 	return kindLimits
 }
 
-func (frl *functionRateLimits) AddAppLimit(funcQName istructs.QName, rl istructs.RateLimit) {
+func (frl *functionRateLimits) AddAppLimit(funcQName schemas.QName, rl istructs.RateLimit) {
 	kindLimits := frl.addFuncLimit(funcQName)
 	kindLimits[istructs.RateLimitKind_byApp] = rl
 }
 
-func (frl *functionRateLimits) AddWorkspaceLimit(funcQName istructs.QName, rl istructs.RateLimit) {
+func (frl *functionRateLimits) AddWorkspaceLimit(funcQName schemas.QName, rl istructs.RateLimit) {
 	kindLimits := frl.addFuncLimit(funcQName)
 	kindLimits[istructs.RateLimitKind_byWorkspace] = rl
 }
@@ -47,7 +48,7 @@ func (frl *functionRateLimits) prepare(buckets irates.IBuckets) {
 	}
 }
 
-func GetFunctionRateLimitName(funcQName istructs.QName, rateLimitKind istructs.RateLimitKind) (res string) {
+func GetFunctionRateLimitName(funcQName schemas.QName, rateLimitKind istructs.RateLimitKind) (res string) {
 	if rateLimitKind >= istructs.RateLimitKind_FakeLast {
 		panic(fmt.Sprintf("unsupported limit kind %v", rateLimitKind))
 	}

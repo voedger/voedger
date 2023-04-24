@@ -71,7 +71,7 @@ func TestBasicUsage_SyncPipeline(t *testing.T) {
 
 	// SendSync blocks until all operator finish
 	err := pipeline.SendSync(work)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// Test that operators have worked
 	require.Equal(t, "michael", work.slots["name"])
@@ -101,7 +101,7 @@ func TestBasicUsage_CatchInSyncOperator(t *testing.T) {
 	// do
 	work := newTestWork()
 	err := pipeline.SendSync(work)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	perr := work.slots["error"].(IErrorPipeline)
 
@@ -215,7 +215,7 @@ func TestBasicUsage_ForkOperator(t *testing.T) {
 
 		err := operator.DoSync(context.Background(), work)
 
-		require.Nil(t, err)
+		require.NoError(t, err)
 	})
 	t.Run("Work should be invalid", func(t *testing.T) {
 		work := newTestWork()
@@ -543,13 +543,13 @@ func TestBasicUsage_ServiceOperator(t *testing.T) {
 	// NB: Only one SendSync is allowed
 	require.Nil(p.SendSync(workpiece))
 
-	select{
+	select {
 	case prep := <-prepareLog:
 		require.Equal(1, prep)
 	default:
 		t.Fatal()
 	}
-	select{
+	select {
 	case prep := <-prepareLog:
 		require.Equal(2, prep)
 	default:

@@ -9,17 +9,18 @@ import (
 	"encoding/json"
 
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type wLogStorage struct {
-	ctx         context.Context
-	eventsFunc  eventsFunc
-	schemasFunc schemasFunc
-	wsidFunc    WSIDFunc
+	ctx             context.Context
+	eventsFunc      eventsFunc
+	schemaCacheFunc schemaCacheFunc
+	wsidFunc        WSIDFunc
 }
 
-func (s *wLogStorage) NewKeyBuilder(istructs.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
+func (s *wLogStorage) NewKeyBuilder(schemas.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &wLogKeyBuilder{
 		logKeyBuilder: logKeyBuilder{
 			offset: istructs.FirstOffset,
@@ -63,13 +64,18 @@ func (s *wLogStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string,
 	value := sv.(*wLogStorageValue)
 	obj := make(map[string]interface{})
 	obj["QName"] = value.event.QName().String()
-	obj["ArgumentObject"] = coreutils.ObjectToMap(value.event.ArgumentObject(), s.schemasFunc())
+	obj["ArgumentObject"] = coreutils.ObjectToMap(value.event.ArgumentObject(), s.schemaCacheFunc())
 	cc := make([]map[string]interface{}, 0)
-	_ = value.event.CUDs(func(rec istructs.ICUDRow) (err error) { //no error returns
-		cudRowMap := cudRowToMap(rec, s.schemasFunc)
+	err := value.event.CUDs(func(rec istructs.ICUDRow) (err error) {
+		cudRowMap := cudRowToMap(rec, s.schemaCacheFunc)
 		cc = append(cc, cudRowMap)
 		return
 	})
+	if err != nil {
+		//no error returns
+		// notest
+		return "", err
+	}
 	obj["CUDs"] = cc
 	obj[Field_RegisteredAt] = value.event.RegisteredAt()
 	obj["Synced"] = value.event.Synced()

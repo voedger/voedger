@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/schemas"
 
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
@@ -116,7 +117,7 @@ func (app *appStructsType) Resources() istructs.IResources {
 }
 
 // istructs.IAppStructs.Schemas
-func (app *appStructsType) Schemas() istructs.ISchemas {
+func (app *appStructsType) Schemas() schemas.SchemaCache {
 	return app.config.Schemas
 }
 
@@ -159,7 +160,7 @@ func (app *appStructsType) AppTokens() istructs.IAppTokens {
 	return app.appTokens
 }
 
-func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName istructs.QName, wsid istructs.WSID) bool {
+func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName schemas.QName, wsid istructs.WSID) bool {
 	ratelimits, ok := app.config.FunctionRateLimits.limits[funcQName]
 	if !ok {
 		return false
@@ -187,7 +188,7 @@ func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName istructs.QName
 
 func (app *appStructsType) describe() *descr.Application {
 	if app.descr == nil {
-		stringedUniques := map[istructs.QName][][]string{}
+		stringedUniques := map[schemas.QName][][]string{}
 		for qName, uniques := range app.config.Uniques.uniques {
 			stringedUnque := stringedUniques[qName]
 			for _, u := range uniques {
@@ -255,7 +256,7 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 		}
 	}
 
-	if dbEvent.argUnlObj.QName() != istructs.NullQName {
+	if dbEvent.argUnlObj.QName() != schemas.NullQName {
 		dbEvent.argUnlObj.maskValues()
 	}
 
@@ -423,10 +424,13 @@ func (recs *appRecordsType) putRecordsBatch(workspace istructs.WSID, records []r
 // validEvent returns error if event has uncommitable data, such as singleton unique violations or invalid record id references
 func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
-	existsRecord := func(id istructs.RecordID) bool {
+	existsRecord := func(id istructs.RecordID) (bool, error) {
 		data := make([]byte, 0)
-		ok, _ := recs.getRecord(ev.ws, id, &data)
-		return ok
+		ok, err := recs.getRecord(ev.ws, id, &data)
+		if err != nil {
+			return false, err
+		}
+		return ok, nil
 	}
 
 	for _, rec := range ev.cud.creates {
@@ -435,7 +439,11 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 			if err != nil {
 				return err
 			}
-			if existsRecord(id) {
+			isExists, err := existsRecord(id)
+			if err != nil {
+				return err
+			}
+			if isExists {
 				return fmt.Errorf("can not create singleton, CDOC «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
 			}
 		}
@@ -457,10 +465,13 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 		panic(fmt.Errorf("can not apply not valid event: %s: %w", ev.Error().ErrStr(), ErrorEventNotValid))
 	}
 
-	existsRecord := func(id istructs.RecordID) bool {
+	existsRecord := func(id istructs.RecordID) (bool, error) {
 		data := make([]byte, 0)
-		ok, _ := recs.getRecord(ev.ws, id, &data)
-		return ok
+		ok, err := recs.getRecord(ev.ws, id, &data)
+		if err != nil {
+			return false, err
+		}
+		return ok, nil
 	}
 
 	loadRecord := func(rec *recordType) error {
@@ -517,7 +528,7 @@ func (recs *appRecordsType) GetBatch(workspace istructs.WSID, highConsistency bo
 }
 
 // istructs.IRecords.GetSingleton
-func (recs *appRecordsType) GetSingleton(workspace istructs.WSID, qName istructs.QName) (record istructs.IRecord, err error) {
+func (recs *appRecordsType) GetSingleton(workspace istructs.WSID, qName schemas.QName) (record istructs.IRecord, err error) {
 	var id istructs.RecordID
 	if id, err = recs.app.config.singletons.qNameToID(qName); err != nil {
 		return NewNullRecord(istructs.NullRecordID), err

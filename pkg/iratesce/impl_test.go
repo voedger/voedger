@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	irates "github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // пример ограничения общего количества регистраций (не более 1000) и регистраций с одного адреса (10) в день
@@ -22,7 +23,7 @@ func TestBasicUsage(t *testing.T) {
 	// описание приложения и рабочей области
 	// description of the application and workspace
 	app := istructs.AppQName_test1_app1
-	qName := istructs.NewQName("testPkg", "test")
+	qName := schemas.NewQName("testPkg", "test")
 	wsid := istructs.WSID(1)
 
 	// имена ограничений
@@ -119,7 +120,7 @@ func TestBucketsNew(t *testing.T) {
 	// описание приложения и рабочей области
 	// description of the application and workspace
 	app := istructs.AppQName_test1_app1
-	qName := istructs.NewQName("testPkg", "test")
+	qName := schemas.NewQName("testPkg", "test")
 	wsid := istructs.WSID(1)
 
 	// имена ограничений
@@ -170,21 +171,21 @@ func TestBucketsNew(t *testing.T) {
 
 	require.True(buckets.TakeTokens(keys, 100))
 	bs, err := buckets.GetBucketState(totalRegKey)
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(100))
 	require.False(buckets.TakeTokens(keys, 100))
-	require.Nil(err)
+	require.NoError(err)
 
 	testTime = testTime.Add(time.Hour)
 
 	bs, err = buckets.GetBucketState(totalRegKey)
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(0))
 
 	testTime = testTime.Add(-time.Hour)
 
 	bs, err = buckets.GetBucketState(totalRegKey)
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(100))
 
 	testTime = testTime.Add(time.Hour)
@@ -192,53 +193,53 @@ func TestBucketsNew(t *testing.T) {
 	keys = []irates.BucketKey{totalRegKey, addrRegKey}
 	require.True(buckets.TakeTokens(keys, 5))
 	bs, err = buckets.GetBucketState(totalRegKey)
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(5))
 	bs, err = buckets.GetBucketState(addrRegKey)
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(5))
 
 	require.False(buckets.TakeTokens(keys, 10))
 	bs, err = buckets.GetBucketState(totalRegKey)
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(5))
 	bs, err = buckets.GetBucketState(addrRegKey)
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(5))
 
 	testTime = testTime.Add(5 * time.Hour)
 
 	bs, err = buckets.GetBucketState(totalRegKey)
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(0))
 	bs, err = buckets.GetBucketState(addrRegKey)
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(0))
 
 	require.True(buckets.TakeTokens(keys, 10))
 	bs, err = buckets.GetBucketState(addrRegKey)
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(10))
 
 	addrRegistrationQuota.MaxTokensPerPeriod = 20
 	err = buckets.SetBucketState(addrRegKey, addrRegistrationQuota)
-	require.Nil(err)
+	require.NoError(err)
 
 	bs, err = buckets.GetBucketState(totalRegKey)
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(10))
 	bs, err = buckets.GetBucketState(addrRegKey)
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(0))
 
 	buckets.SetDefaultBucketState(sTotalRegLimitName, totalRegistrationQuota)
 	bs, err = buckets.GetBucketState(totalRegKey)
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(10))
 
 	buckets.ResetRateBuckets(sTotalRegLimitName, totalRegistrationQuota)
 	bs, err = buckets.GetBucketState(totalRegKey)
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(0))
 
 	totalRegKey.RateLimitName = "new limit name"

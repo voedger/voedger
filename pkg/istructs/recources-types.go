@@ -9,6 +9,8 @@ package istructs
 import (
 	"context"
 	"time"
+
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 //go:generate stringer -type=ResourceKindType
@@ -24,26 +26,26 @@ const (
 type IResource interface {
 	// Ref. ResourceKind_* constants
 	Kind() ResourceKindType
-	QName() QName
+	QName() schemas.QName
 }
 
 // ******************* Functions **************************
 
 type IFunction interface {
 	IResource
-	ParamsSchema() QName
+	ParamsSchema() schemas.QName
 }
 
 type ICommandFunction interface {
 	IFunction
-	ResultSchema() QName
-	UnloggedParamsSchema() QName
+	ResultSchema() schemas.QName
+	UnloggedParamsSchema() schemas.QName
 	Exec(args ExecCommandArgs) error
 }
 
 type IQueryFunction interface {
 	IFunction
-	ResultSchema(args PrepareArgs) QName
+	ResultSchema(args PrepareArgs) schemas.QName
 	Exec(ctx context.Context, args ExecQueryArgs, callback ExecQueryCallback) error
 }
 
@@ -73,7 +75,7 @@ type ExecQueryArgs struct {
 
 type IState interface {
 	// NewKey returns a Key builder for specified storage and entity name
-	KeyBuilder(storage, entity QName) (builder IStateKeyBuilder, err error)
+	KeyBuilder(storage, entity schemas.QName) (builder IStateKeyBuilder, err error)
 
 	CanExist(key IStateKeyBuilder) (value IStateValue, ok bool, err error)
 
@@ -109,7 +111,7 @@ type IStateValue interface {
 	GetAsInt64(index int) int64
 	GetAsFloat32(index int) float32
 	GetAsFloat64(index int) float64
-	GetAsQName(index int) QName
+	GetAsQName(index int) schemas.QName
 	GetAsBool(index int) bool
 	GetAsValue(index int) IStateValue
 }
@@ -119,7 +121,7 @@ type IStateValueBuilder interface {
 }
 type IStateKeyBuilder interface {
 	IKeyBuilder
-	Entity() QName
+	Entity() schemas.QName
 }
 type StateValueCallback func(key IKeyBuilder, value IStateValue, ok bool) (err error)
 type ValueCallback func(key IKey, value IStateValue) (err error)

@@ -183,7 +183,7 @@ func (ta *testApp) get(resource string, expectedCodes ...int) []byte {
 	require.Equal(expectedCode, res.StatusCode)
 
 	body, err := io.ReadAll(res.Body)
-	require.Nil(err)
+	require.NoError(err)
 
 	return body
 }

@@ -8,10 +8,13 @@
 
 package state
 
-import "github.com/voedger/voedger/pkg/istructs"
+import (
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
+)
 
 type IStateStorage interface {
-	NewKeyBuilder(entity istructs.QName, existingKeyBuilder istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder)
+	NewKeyBuilder(entity schemas.QName, existingKeyBuilder istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder)
 }
 type IWithGetBatch interface {
 	//GetBatch reads items from storage

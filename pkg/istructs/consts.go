@@ -7,55 +7,33 @@
 
 package istructs
 
+import "github.com/voedger/voedger/pkg/schemas"
+
 // *********************************************************************************************************
 //
 //				QName- & Names- related constants
 //
 
-// QualifierChar: char to separate package name from entity name in a QName
-const QualifierChar = "."
+// AppQNameQualifierChar: char to separate application owner (provider) from application name
 const AppQNameQualifierChar = "/"
 
-const SysPackage = "sys"
-const NullName = ""
+// NullAppQName is undefined (or empty) application name
+var NullAppQName = NewAppQName(schemas.NullName, schemas.NullName)
 
-var QNameForNull = NewQName(NullName, NullName)
-var NullQName = QNameForNull
-var NullAppQName = NewAppQName(NullName, NullName)
+var (
+	// QNameForError is a marker of error in log
+	QNameForError = schemas.NewQName(schemas.SysPackage, "Error")
 
-// QNameForError is a marker of error in log
-var QNameForError = NewQName(SysPackage, "Error")
+	// QNameCommand is used in core-irates
+	QNameCommand = schemas.NewQName(schemas.SysPackage, "Command")
 
-// QNameCommand is used in core-irates
-var QNameCommand = NewQName(SysPackage, "Command")
+	// QNameQuery is used in core-irates
+	QNameQuery = schemas.NewQName(schemas.SysPackage, "Query")
 
-// QNameQuery is used in core-irates
-var QNameQuery = NewQName(SysPackage, "Query")
+	QNameCommandCUD = schemas.NewQName(schemas.SysPackage, "CUD")
 
-var QNameCommandCUD = NewQName(SysPackage, "CUD")
-
-// QNameJSON denotes that Function argument comes as a JSON object
-var QNameJSON = NewQName(SysPackage, "JSON")
-
-// System fields
-
-// The underscore prefix is reserved for functions and types used by the compiler and standard library
-// The standard library can use these names freely because they will never conflict with correct user programs.
-const SystemFieldPrefix = "sys."
-const SystemField_ID = SystemFieldPrefix + "ID"
-const SystemField_ParentID = SystemFieldPrefix + "ParentID"
-const SystemField_IsActive = SystemFieldPrefix + "IsActive"
-const SystemField_Container = SystemFieldPrefix + "Container"
-const SystemField_QName = SystemFieldPrefix + "QName"
-
-const SystemContainer_ViewPartitionKey = SystemFieldPrefix + "pkey"
-const SystemContainer_ViewClusteringCols = SystemFieldPrefix + "ccols"
-const SystemContainer_ViewValue = SystemFieldPrefix + "val"
-
-// ContainerOccursType special values
-const (
-	ContainerOccurs_Unbounded    = ContainerOccursType(0xffff)
-	ContainerOccurs_UnboundedStr = "unbounded"
+	// QNameJSON denotes that Function argument comes as a JSON object
+	QNameJSON = schemas.NewQName(schemas.SysPackage, "JSON")
 )
 
 // *********************************************************************************************************

@@ -8,30 +8,31 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type hostState struct {
 	name           string
-	storages       map[istructs.QName]IStateStorage
-	withGetBatch   map[istructs.QName]IWithGetBatch
-	withRead       map[istructs.QName]IWithRead
-	withApplyBatch map[istructs.QName]IWithApplyBatch
-	withInsert     map[istructs.QName]IWithInsert
-	withUpdate     map[istructs.QName]IWithUpdate
-	intents        map[istructs.QName][]ApplyBatchItem
+	storages       map[schemas.QName]IStateStorage
+	withGetBatch   map[schemas.QName]IWithGetBatch
+	withRead       map[schemas.QName]IWithRead
+	withApplyBatch map[schemas.QName]IWithApplyBatch
+	withInsert     map[schemas.QName]IWithInsert
+	withUpdate     map[schemas.QName]IWithUpdate
+	intents        map[schemas.QName][]ApplyBatchItem
 	intentsLimit   int
 }
 
 func newHostState(name string, intentsLimit int) *hostState {
 	return &hostState{
 		name:           name,
-		storages:       make(map[istructs.QName]IStateStorage),
-		withGetBatch:   make(map[istructs.QName]IWithGetBatch),
-		withRead:       make(map[istructs.QName]IWithRead),
-		withApplyBatch: make(map[istructs.QName]IWithApplyBatch),
-		withInsert:     make(map[istructs.QName]IWithInsert),
-		withUpdate:     make(map[istructs.QName]IWithUpdate),
-		intents:        make(map[istructs.QName][]ApplyBatchItem),
+		storages:       make(map[schemas.QName]IStateStorage),
+		withGetBatch:   make(map[schemas.QName]IWithGetBatch),
+		withRead:       make(map[schemas.QName]IWithRead),
+		withApplyBatch: make(map[schemas.QName]IWithApplyBatch),
+		withInsert:     make(map[schemas.QName]IWithInsert),
+		withUpdate:     make(map[schemas.QName]IWithUpdate),
+		intents:        make(map[schemas.QName][]ApplyBatchItem),
 		intentsLimit:   intentsLimit,
 	}
 }
@@ -40,7 +41,7 @@ func supports(ops int, op int) bool {
 	return ops&op == op
 }
 
-func (s *hostState) addStorage(storageName istructs.QName, storage IStateStorage, ops int) {
+func (s *hostState) addStorage(storageName schemas.QName, storage IStateStorage, ops int) {
 	s.storages[storageName] = storage
 	if supports(ops, S_GET_BATCH) {
 		s.withGetBatch[storageName] = storage.(IWithGetBatch)
@@ -58,7 +59,7 @@ func (s *hostState) addStorage(storageName istructs.QName, storage IStateStorage
 	}
 }
 
-func (s *hostState) KeyBuilder(storage, entity istructs.QName) (builder istructs.IStateKeyBuilder, err error) {
+func (s *hostState) KeyBuilder(storage, entity schemas.QName) (builder istructs.IStateKeyBuilder, err error) {
 	// TODO later: re-using key builders
 	strg, ok := s.storages[storage]
 	if !ok {
@@ -81,7 +82,7 @@ func (s *hostState) CanExist(key istructs.IStateKeyBuilder) (value istructs.ISta
 	return items[0].value, items[0].value != nil, err
 }
 func (s *hostState) CanExistAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback) (err error) {
-	batches := make(map[istructs.QName][]GetBatchItem)
+	batches := make(map[schemas.QName][]GetBatchItem)
 	for _, k := range keys {
 		batches[getStorageID(k)] = append(batches[getStorageID(k)], GetBatchItem{key: k})
 	}
@@ -113,7 +114,7 @@ func (s *hostState) MustExist(key istructs.IStateKeyBuilder) (value istructs.ISt
 	return
 }
 func (s *hostState) MustExistAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback) (err error) {
-	batches := make(map[istructs.QName][]GetBatchItem)
+	batches := make(map[schemas.QName][]GetBatchItem)
 	for _, k := range keys {
 		batches[getStorageID(k)] = append(batches[getStorageID(k)], GetBatchItem{key: k})
 	}
@@ -152,7 +153,7 @@ func (s *hostState) MustNotExist(key istructs.IStateKeyBuilder) (err error) {
 	return
 }
 func (s *hostState) MustNotExistAll(keys []istructs.IStateKeyBuilder) (err error) {
-	batches := make(map[istructs.QName][]GetBatchItem)
+	batches := make(map[schemas.QName][]GetBatchItem)
 	for _, k := range keys {
 		batches[getStorageID(k)] = append(batches[getStorageID(k)], GetBatchItem{key: k})
 	}
@@ -246,7 +247,7 @@ func (s *hostState) ClearIntents() {
 		s.intents[sid] = s.intents[sid][0:0]
 	}
 }
-func (s *hostState) putToIntents(storage istructs.QName, kb istructs.IStateKeyBuilder, vb istructs.IStateValueBuilder) {
+func (s *hostState) putToIntents(storage schemas.QName, kb istructs.IStateKeyBuilder, vb istructs.IStateValueBuilder) {
 	s.intents[storage] = append(s.intents[storage], ApplyBatchItem{key: kb, value: vb})
 }
 func (s *hostState) isIntentsFull() bool {
@@ -262,7 +263,7 @@ func (s *hostState) isIntentsSize() int {
 	}
 	return intentsSize
 }
-func (s *hostState) errOperationNotSupported(sid istructs.QName, err error) error {
+func (s *hostState) errOperationNotSupported(sid schemas.QName, err error) error {
 	return fmt.Errorf("state %s, storage %s: %w", s.name, sid, err)
 }
 func (s *hostState) err(key istructs.IStateKeyBuilder, err error) error {

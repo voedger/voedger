@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/irates"
 	istorage "github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
@@ -39,8 +40,10 @@ func (cfgs *AppConfigsType) GetConfig(appName istructs.AppQName) *AppConfigType 
 
 // AppConfigType: configuration for application workflow (resources, schemas, etc.)
 type AppConfigType struct {
-	Name      istructs.AppQName
-	QNameID   istructs.ClusterAppID
+	Name    istructs.AppQName
+	QNameID istructs.ClusterAppID
+
+	scb       schemas.SchemaCacheBuilder
 	Schemas   schemas.SchemaCache
 	Resources ResourcesType
 	Uniques   *implIUniques
@@ -51,7 +54,7 @@ type AppConfigType struct {
 	storage                 istorage.IAppStorage // will be initialized on prepare()
 	versions                *vers.Versions
 	qNames                  *qnames.QNames
-	cNames                  containerNameCacheType
+	cNames                  *containers.Containers
 	singletons              singletonsCacheType
 	prepared                bool
 	app                     *appStructsType
@@ -62,7 +65,7 @@ type AppConfigType struct {
 	eventValidators         []istructs.EventValidator
 }
 
-func newAppConfig(appName istructs.AppQName, schemas schemas.SchemaCacheBuilder) *AppConfigType {
+func newAppConfig(appName istructs.AppQName, scb schemas.SchemaCacheBuilder) *AppConfigType {
 	cfg := AppConfigType{Name: appName}
 
 	qNameID, ok := istructs.ClusterApps[appName]
@@ -71,7 +74,8 @@ func newAppConfig(appName istructs.AppQName, schemas schemas.SchemaCacheBuilder)
 	}
 	cfg.QNameID = qNameID
 
-	sch, err := schemas.Build()
+	cfg.scb = scb
+	sch, err := scb.Build()
 	if err != nil {
 		panic(fmt.Errorf("unable build application «%v» schemas: %w", appName, err))
 	}
@@ -79,15 +83,15 @@ func newAppConfig(appName istructs.AppQName, schemas schemas.SchemaCacheBuilder)
 	cfg.Resources = newResources(&cfg)
 	cfg.Uniques = newUniques()
 
-	cfg.dbSchemas = dynobuf.NewSchemasCache(schemas)
-	cfg.validators = newValidators(schemas)
+	cfg.dbSchemas = dynobuf.NewSchemasCache()
+	cfg.validators = newValidators()
 
 	cfg.versions = vers.NewVersions()
 	cfg.qNames = qnames.NewQNames()
-	cfg.cNames = newContainerNameCache(&cfg)
+	cfg.cNames = containers.NewContainers()
 	cfg.singletons = newSingletonsCache(&cfg)
 	cfg.FunctionRateLimits = functionRateLimits{
-		limits: map[istructs.QName]map[istructs.RateLimitKind]istructs.RateLimit{},
+		limits: map[schemas.QName]map[istructs.RateLimitKind]istructs.RateLimit{},
 	}
 	return &cfg
 }
@@ -99,6 +103,16 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	if cfg.prepared {
 		return nil
 	}
+
+	if cfg.scb.HasChanges() {
+		sch, err := cfg.scb.Build()
+		if err != nil {
+			panic(fmt.Errorf("unable rebuild application «%v» changed schemas: %w", cfg.Name, err))
+		}
+		cfg.Schemas = sch
+	}
+	cfg.dbSchemas.Prepare(cfg.Schemas)
+	cfg.validators.prepare(cfg.Schemas)
 
 	// prepare IAppStorage
 	cfg.storage = appStorage
@@ -114,7 +128,7 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	}
 
 	// prepare container names
-	if err := cfg.cNames.prepare(); err != nil {
+	if err := cfg.cNames.Prepare(cfg.storage, cfg.versions, cfg.Schemas); err != nil {
 		return err
 	}
 
@@ -130,6 +144,10 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	if err := cfg.Uniques.validate(cfg); err != nil {
 		return err
 	}
+
+	// TODO: remove it after https://github.com/voedger/voedger/issues/56
+	cfg.dbSchemas.Prepare(cfg.Schemas)
+	cfg.validators.prepare(cfg.Schemas)
 
 	cfg.prepared = true
 	return nil

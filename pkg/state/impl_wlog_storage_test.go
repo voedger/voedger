@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestWLogStorage_Read(t *testing.T) {
@@ -21,7 +22,7 @@ func TestWLogStorage_Read(t *testing.T) {
 		events.On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				_ = args.Get(4).(istructs.WLogEventsReaderCallback)(istructs.FirstOffset, nil)
+				require.NoError(args.Get(4).(istructs.WLogEventsReaderCallback)(istructs.FirstOffset, nil))
 			})
 		appStructs := &mockAppStructs{}
 		appStructs.On("Events").Return(events)
@@ -29,16 +30,16 @@ func TestWLogStorage_Read(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		kb, err := s.KeyBuilder(WLogStorage, istructs.NullQName)
-		require.Nil(err)
+		kb, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
 
-		_ = s.Read(kb, func(key istructs.IKey, _ istructs.IStateValue) (err error) {
+		require.NoError(s.Read(kb, func(key istructs.IKey, _ istructs.IStateValue) (err error) {
 			touched = true
 			require.Equal(int64(1), key.AsInt64(Field_Offset))
 			return err
-		})
+		}))
 
 		require.True(touched)
 	})
@@ -52,11 +53,12 @@ func TestWLogStorage_Read(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, _ := s.KeyBuilder(WLogStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		require.NoError(err)
 		k.PutInt64(Field_Offset, 1)
 		k.PutInt64(Field_Count, 1)
 
-		err := s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
+		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
 
 		require.ErrorIs(err, errTest)
 	})
@@ -67,16 +69,16 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		event := new(mockWLogEvent)
 		event.On("CUDs", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 			cb := args.Get(0).(func(rec istructs.ICUDRow) error)
-			_ = cb(new(mockCUDRow))
+			require.NoError(cb(new(mockCUDRow)))
 		})
 		events := &mockEvents{}
 		events.On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				cb := args.Get(4).(istructs.WLogEventsReaderCallback)
-				_ = cb(istructs.FirstOffset, event)
-				_ = cb(istructs.Offset(2), event)
-				_ = cb(istructs.Offset(3), event)
+				require.NoError(cb(istructs.FirstOffset, event))
+				require.NoError(cb(istructs.Offset(2), event))
+				require.NoError(cb(istructs.Offset(3), event))
 			})
 		appStructs := &mockAppStructs{}
 		appStructs.On("Events").Return(events)
@@ -84,11 +86,13 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0)
-		kb, _ := s.KeyBuilder(WLogStorage, istructs.NullQName)
+		kb, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
 
-		sv, ok, _ := s.CanExist(kb)
+		sv, ok, err := s.CanExist(kb)
+		require.NoError(err)
 
 		require.True(ok)
 		require.Equal(int64(1), sv.AsInt64(Field_Offset))
@@ -110,7 +114,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 			On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				_ = args.Get(4).(istructs.WLogEventsReaderCallback)(istructs.FirstOffset, nil)
+				require.NoError(args.Get(4).(istructs.WLogEventsReaderCallback)(istructs.FirstOffset, nil))
 			}).
 			On("ReadWLog", context.Background(), istructs.WSID(1), istructs.Offset(2), 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
 			Return(errTest)
@@ -120,20 +124,22 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0)
-		kb1, _ := s.KeyBuilder(WLogStorage, istructs.NullQName)
+		kb1, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		require.NoError(err)
 		kb1.PutInt64(Field_Offset, 1)
 		kb1.PutInt64(Field_Count, 1)
-		kb2, _ := s.KeyBuilder(WLogStorage, istructs.NullQName)
+		kb2, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		require.NoError(err)
 		kb2.PutInt64(Field_Offset, 2)
 		kb2.PutInt64(Field_Count, 1)
 
-		err := s.CanExistAll([]istructs.IStateKeyBuilder{kb1, kb2}, nil)
+		err = s.CanExistAll([]istructs.IStateKeyBuilder{kb1, kb2}, nil)
 
 		require.ErrorIs(err, errTest)
 	})
 }
 func TestWLogStorage_ToJSON(t *testing.T) {
-	s := &wLogStorage{schemasFunc: func() istructs.ISchemas { return nil }}
+	s := &wLogStorage{schemaCacheFunc: func() schemas.SchemaCache { return nil }}
 	require := require.New(t)
 	eventError := &mockEventError{}
 	eventError.
@@ -158,7 +164,8 @@ func TestWLogStorage_ToJSON(t *testing.T) {
 		toJSONFunc: s.toJSON,
 	}
 
-	json, _ := sv.ToJSON()
+	json, err := sv.ToJSON()
+	require.NoError(err)
 
 	require.JSONEq(`{
 								  "ArgumentObject": {},

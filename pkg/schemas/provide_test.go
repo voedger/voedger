@@ -9,47 +9,46 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestBasicUsage(t *testing.T) {
 	schemas := NewSchemaCache()
 
-	saleParamsSchema := schemas.Add(istructs.NewQName("test", "Sale"), istructs.SchemaKind_ODoc)
+	saleParamsSchema := schemas.Add(NewQName("test", "Sale"), SchemaKind_ODoc)
 	saleParamsSchema.
-		AddField("Buyer", istructs.DataKind_string, true).
-		AddField("Age", istructs.DataKind_int32, false).
-		AddField("Height", istructs.DataKind_float32, false).
-		AddField("isHuman", istructs.DataKind_bool, false).
-		AddField("Photo", istructs.DataKind_bytes, false).
-		AddContainer("Basket", istructs.NewQName("test", "Basket"), 1, 1)
+		AddField("Buyer", DataKind_string, true).
+		AddField("Age", DataKind_int32, false).
+		AddField("Height", DataKind_float32, false).
+		AddField("isHuman", DataKind_bool, false).
+		AddField("Photo", DataKind_bytes, false).
+		AddContainer("Basket", NewQName("test", "Basket"), 1, 1)
 
-	basketSchema := schemas.Add(istructs.NewQName("test", "Basket"), istructs.SchemaKind_ORecord)
-	basketSchema.AddContainer("Good", istructs.NewQName("test", "Good"), 0, istructs.ContainerOccurs_Unbounded)
+	basketSchema := schemas.Add(NewQName("test", "Basket"), SchemaKind_ORecord)
+	basketSchema.AddContainer("Good", NewQName("test", "Good"), 0, Occurs_Unbounded)
 
-	goodSchema := schemas.Add(istructs.NewQName("test", "Good"), istructs.SchemaKind_ORecord)
+	goodSchema := schemas.Add(NewQName("test", "Good"), SchemaKind_ORecord)
 	goodSchema.
-		AddField("Name", istructs.DataKind_string, true).
-		AddField("Code", istructs.DataKind_int64, true).
-		AddField("Weight", istructs.DataKind_float64, false)
+		AddField("Name", DataKind_string, true).
+		AddField("Code", DataKind_int64, true).
+		AddField("Weight", DataKind_float64, false)
 
-	saleSecurParamsSchema := schemas.Add(istructs.NewQName("test", "saleSecureArgs"), istructs.SchemaKind_Object)
+	saleSecurParamsSchema := schemas.Add(NewQName("test", "saleSecureArgs"), SchemaKind_Object)
 	saleSecurParamsSchema.
-		AddField("password", istructs.DataKind_string, true)
+		AddField("password", DataKind_string, true)
 
-	docSchema := schemas.Add(istructs.NewQName("test", "photos"), istructs.SchemaKind_CDoc)
+	docSchema := schemas.Add(NewQName("test", "photos"), SchemaKind_CDoc)
 	docSchema.
-		AddField("Buyer", istructs.DataKind_string, true).
-		AddField("Age", istructs.DataKind_int32, false).
-		AddField("Height", istructs.DataKind_float32, false).
-		AddField("isHuman", istructs.DataKind_bool, false).
-		AddField("Photo", istructs.DataKind_bytes, false)
+		AddField("Buyer", DataKind_string, true).
+		AddField("Age", DataKind_int32, false).
+		AddField("Height", DataKind_float32, false).
+		AddField("isHuman", DataKind_bool, false).
+		AddField("Photo", DataKind_bytes, false)
 
-	viewSchema := schemas.AddView(istructs.NewQName("test", "viewBuyerByHeight"))
+	viewSchema := schemas.AddView(NewQName("test", "viewBuyerByHeight"))
 	viewSchema.
-		AddPartField("Height", istructs.DataKind_float32).
-		AddClustColumn("Buyer", istructs.DataKind_string).
-		AddValueField("BuyerID", istructs.DataKind_RecordID, true)
+		AddPartField("Height", DataKind_float32).
+		AddClustColumn("Buyer", DataKind_string).
+		AddValueField("BuyerID", DataKind_RecordID, true)
 
 	result, err := schemas.Build()
 

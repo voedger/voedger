@@ -21,7 +21,7 @@ import (
 
 func test_SchemasSingletons(t *testing.T, cfg *AppConfigType) {
 	require := require.New(t)
-	cfg.Schemas.EnumSchemas(
+	cfg.Schemas.Schemas(
 		func(s schemas.Schema) {
 			if s.Singleton() {
 				_, err := cfg.singletons.qNameToID(s.QName())
@@ -33,32 +33,31 @@ func test_SchemasSingletons(t *testing.T, cfg *AppConfigType) {
 func Test_singletonsCacheType_qNamesToID(t *testing.T) {
 
 	require := require.New(t)
-	cDocName := istructs.NewQName("test", "SignletonCDoc")
+	cDocName := schemas.NewQName("test", "SignletonCDoc")
 
 	var cfg *AppConfigType
 
 	t.Run("must be ok to construct app config", func(t *testing.T) {
 
-		schemas := schemas.NewSchemaCache()
+		bld := schemas.NewSchemaCache()
 		t.Run("must be ok to build schemas", func(t *testing.T) {
-			schema := schemas.Add(cDocName, istructs.SchemaKind_CDoc)
-			schema.AddField("f1", istructs.DataKind_QName, true)
+			schema := bld.Add(cDocName, schemas.SchemaKind_CDoc)
+			schema.AddField("f1", schemas.DataKind_QName, true)
 			schema.SetSingleton()
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
-		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
 		test_SchemasSingletons(t, cfg)
 	})
 
-	testID := func(id istructs.RecordID, known bool, qname istructs.QName) {
+	testID := func(id istructs.RecordID, known bool, qname schemas.QName) {
 		t.Run(fmt.Sprintf("test idToQName(%v)", id), func(t *testing.T) {
 			qName, err := cfg.singletons.idToQName(id)
 			if known {
@@ -66,12 +65,12 @@ func Test_singletonsCacheType_qNamesToID(t *testing.T) {
 				require.Equal(qname, qName)
 			} else {
 				require.ErrorIs(err, ErrIDNotFound)
-				require.Equal(qName, istructs.NullQName)
+				require.Equal(qName, schemas.NullQName)
 			}
 		})
 	}
 
-	testQName := func(qname istructs.QName, known bool) {
+	testQName := func(qname schemas.QName, known bool) {
 		t.Run(fmt.Sprintf("test qNameToID(%v)", qname), func(t *testing.T) {
 			var id istructs.RecordID
 			var err error
@@ -89,7 +88,7 @@ func Test_singletonsCacheType_qNamesToID(t *testing.T) {
 	}
 
 	t.Run("check NullQName", func(t *testing.T) {
-		testQName(istructs.NullQName, false)
+		testQName(schemas.NullQName, false)
 	})
 
 	t.Run("check known QName", func(t *testing.T) {
@@ -97,11 +96,11 @@ func Test_singletonsCacheType_qNamesToID(t *testing.T) {
 	})
 
 	t.Run("check unknown QName", func(t *testing.T) {
-		testQName(istructs.NewQName("unknown", "CDoc"), false)
+		testQName(schemas.NewQName("unknown", "CDoc"), false)
 	})
 
 	t.Run("check unknown id", func(t *testing.T) {
-		testID(cfg.singletons.lastID+1, false, istructs.NullQName)
+		testID(cfg.singletons.lastID+1, false, schemas.NullQName)
 	})
 }
 
@@ -121,8 +120,7 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 		err := cfg.versions.PutVersion(vers.SysSingletonsVersion, 0xFF)
 		require.NoError(err)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, ErrorInvalidVersion)
@@ -138,17 +136,16 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysSingletonsVersion))
 		storageProvider := teststore.NewTestStorageProvider(storage)
 
-		schemas := schemas.NewSchemaCache()
+		bld := schemas.NewSchemaCache()
 
 		t.Run("must be ok to build schemas", func(t *testing.T) {
-			schema := schemas.Add(istructs.NewQName("test", "CDoc"), istructs.SchemaKind_CDoc)
+			schema := bld.Add(schemas.NewQName("test", "CDoc"), schemas.SchemaKind_CDoc)
 			schema.SetSingleton()
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, testError)
@@ -156,66 +153,63 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 
 	t.Run("must error if maximum singletons is exceeded by CDocs", func(t *testing.T) {
 
-		schemas := schemas.NewSchemaCache()
+		bld := schemas.NewSchemaCache()
 
 		t.Run("must be ok to build schemas", func(t *testing.T) {
 			for i := 0; i <= 0x200; i++ {
-				schemas.Add(istructs.NewQName("test", fmt.Sprintf("CDoc%d", i)), istructs.SchemaKind_CDoc).SetSingleton()
+				bld.Add(schemas.NewQName("test", fmt.Sprintf("CDoc%d", i)), schemas.SchemaKind_CDoc).SetSingleton()
 			}
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, ErrSingletonIDsExceeds)
 	})
 
 	t.Run("must error if store ID for some singledoc to storage is failed", func(t *testing.T) {
-		schemaName := istructs.NewQName("test", "ErrorSchema")
+		schemaName := schemas.NewQName("test", "ErrorSchema")
 
 		storage := teststore.NewTestStorage()
 		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_SingletonIDs, verSysSingletonsLastest), []byte(schemaName.String()))
 		storageProvider := teststore.NewTestStorageProvider(storage)
 
-		schemas := schemas.NewSchemaCache()
+		bld := schemas.NewSchemaCache()
 
 		t.Run("must be ok to build schemas", func(t *testing.T) {
-			schemas.Add(schemaName, istructs.SchemaKind_CDoc).SetSingleton()
+			bld.Add(schemaName, schemas.SchemaKind_CDoc).SetSingleton()
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, testError)
 	})
 
 	t.Run("must error if retrieve ID for some singledoc from storage is failed", func(t *testing.T) {
-		schemaName := istructs.NewQName("test", "ErrorSchema")
+		schemaName := schemas.NewQName("test", "ErrorSchema")
 
 		storage := teststore.NewTestStorage()
 		storage.ScheduleGetError(testError, nil, []byte(schemaName.String()))
 		storage.SchedulePutError(testError, nil, []byte(schemaName.String()))
 		storageProvider := teststore.NewTestStorageProvider(storage)
 
-		schemas := schemas.NewSchemaCache()
+		bld := schemas.NewSchemaCache()
 
 		t.Run("must be ok to build schemas", func(t *testing.T) {
-			schemas.Add(schemaName, istructs.SchemaKind_CDoc).SetSingleton()
+			bld.Add(schemaName, schemas.SchemaKind_CDoc).SetSingleton()
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, testError)
@@ -244,8 +238,7 @@ func Test_singletonsCacheType_Errors(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.Error(err)
@@ -257,23 +250,23 @@ func Test_singletonsCacheType_ReuseStorage(t *testing.T) {
 
 	require := require.New(t)
 
-	testQNameA := istructs.NewQName("test", "CDocA")
-	testQNameB := istructs.NewQName("test", "CDocB")
-	testQNameC := istructs.NewQName("test", "CDocC")
+	testQNameA := schemas.NewQName("test", "CDocA")
+	testQNameB := schemas.NewQName("test", "CDocB")
+	testQNameC := schemas.NewQName("test", "CDocC")
 
 	storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
 	appCfg1 := func() *AppConfigType {
-		schemas := schemas.NewSchemaCache()
+		bld := schemas.NewSchemaCache()
 
 		t.Run("must be ok to build schemas", func(t *testing.T) {
-			schemas.Add(testQNameA, istructs.SchemaKind_CDoc).SetSingleton()
-			schemas.Add(testQNameC, istructs.SchemaKind_CDoc).SetSingleton()
+			bld.Add(testQNameA, schemas.SchemaKind_CDoc).SetSingleton()
+			bld.Add(testQNameC, schemas.SchemaKind_CDoc).SetSingleton()
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
 
 		err := cfg.prepare(nil, storage)
 		require.NoError(err)
@@ -281,16 +274,16 @@ func Test_singletonsCacheType_ReuseStorage(t *testing.T) {
 	}
 
 	appCfg2 := func() *AppConfigType {
-		schemas := schemas.NewSchemaCache()
+		bld := schemas.NewSchemaCache()
 
 		t.Run("must be ok to build schemas", func(t *testing.T) {
-			schemas.Add(testQNameA, istructs.SchemaKind_CDoc).SetSingleton()
-			schemas.Add(testQNameB, istructs.SchemaKind_CDoc).SetSingleton()
-			schemas.Add(testQNameC, istructs.SchemaKind_CDoc).SetSingleton()
+			bld.Add(testQNameA, schemas.SchemaKind_CDoc).SetSingleton()
+			bld.Add(testQNameB, schemas.SchemaKind_CDoc).SetSingleton()
+			bld.Add(testQNameC, schemas.SchemaKind_CDoc).SetSingleton()
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
 		err := cfg.prepare(nil, storage)
 		require.NoError(err)
 		return cfg

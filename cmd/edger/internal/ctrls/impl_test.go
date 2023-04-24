@@ -21,7 +21,7 @@ import (
 func Test_BasicUsageSuperController(t *testing.T) {
 	require := require.New(t)
 
-	super := New(
+	super, err := New(
 		map[states.AttributeKind]MicroControllerFactory{
 			states.DockerStackAttribute: MockMicroControllerFactory,
 			states.CommandAttribute:     MockMicroControllerFactory,
@@ -29,6 +29,7 @@ func Test_BasicUsageSuperController(t *testing.T) {
 		},
 		SuperControllerParams{},
 	)
+	require.NoError(err)
 
 	desired := states.MakeDesiredState()
 	desired["id"] = states.DesiredAttribute{
@@ -133,10 +134,10 @@ func Test_superController_loadStoreState(t *testing.T) {
 		defer func() { os.Remove(fn) }()
 
 		err := super.storeState()
-		require.NoError(err, err)
+		require.NoError(err)
 
 		err = super.loadState()
-		require.NoError(err, err)
+		require.NoError(err)
 
 		require.Equal(testState(), super.currentState)
 	})

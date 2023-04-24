@@ -9,6 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type implIAuthorizer struct {
@@ -30,9 +31,9 @@ type ACL []ACElem
 type PatternType struct {
 	opKindsPattern    []iauthnz.OperationKindType
 	principalsPattern [][]iauthnz.Principal // first OR, second AND
-	qNamesPattern     []istructs.QName
+	qNamesPattern     []schemas.QName
 }
 
 type ACPolicyType int
 
-type SubjectGetterFunc = func(requestContext context.Context, name string, as istructs.IAppStructs, wsid istructs.WSID) ([]istructs.QName, error)
+type SubjectGetterFunc = func(requestContext context.Context, name string, as istructs.IAppStructs, wsid istructs.WSID) ([]schemas.QName, error)

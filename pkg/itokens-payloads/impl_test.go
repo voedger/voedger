@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/itokensjwt"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 var (
@@ -40,13 +41,13 @@ func TestBasicUsage_PrincipalPayload(t *testing.T) {
 	t.Run("Prepare token", func(t *testing.T) {
 		token, err = signer.IssueToken(testApp, testDuration, &srcPayload)
 		log.Printf("%+v", srcPayload)
-		require.Nil(err)
+		require.NoError(err)
 	})
 
 	t.Run("Verify token", func(t *testing.T) {
 		payload := PrincipalPayload{}
 		gp, err := signer.ValidateToken(token, &payload)
-		require.Nil(err)
+		require.NoError(err)
 		require.Equal(srcPayload, payload)
 		require.Greater(gp.IssuedAt.Unix(), int64(0))
 		require.Equal(testApp, gp.AppQName)
@@ -72,13 +73,13 @@ func TestBasicUsage_BLOBUploadingPayload(t *testing.T) {
 	t.Run("Prepare token", func(t *testing.T) {
 		token, err = signer.IssueToken(testApp, testDuration, &srcPayload)
 		log.Printf("%+v", srcPayload)
-		require.Nil(err)
+		require.NoError(err)
 	})
 
 	t.Run("Verify token", func(t *testing.T) {
 		payload := BLOBUploadingPayload{}
 		gp, err := signer.ValidateToken(token, &payload)
-		require.Nil(err)
+		require.NoError(err)
 		require.Equal(srcPayload, payload)
 		require.Greater(gp.IssuedAt.Unix(), int64(0))
 		require.Equal(testApp, gp.AppQName)
@@ -90,28 +91,28 @@ func TestBasicUsage_VerifiedValue(t *testing.T) {
 
 	require := require.New(t)
 	signer := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testTimeFunc)
-	testQName := istructs.NewQName("test", "entity")
+	testQName := schemas.NewQName("test", "entity")
 
 	token := ""
 	var err error
 
 	t.Run("Issue token", func(t *testing.T) {
 		payload := VerifiedValuePayload{
-			VerificationKind: VerificationKind_EMail,
+			VerificationKind: schemas.VerificationKind_EMail,
 			WSID:             43,
 			Entity:           testQName,
 			Field:            "testName",
 			Value:            42,
 		}
 		token, err = signer.IssueToken(testApp, testDuration, &payload)
-		require.Nil(err)
+		require.NoError(err)
 	})
 
 	t.Run("Verify token", func(t *testing.T) {
 		payload := VerifiedValuePayload{}
 		gp, err := signer.ValidateToken(token, &payload)
-		require.Nil(err)
-		require.Equal(VerificationKind_EMail, payload.VerificationKind)
+		require.NoError(err)
+		require.Equal(schemas.VerificationKind_EMail, payload.VerificationKind)
 		require.Equal(testQName, payload.Entity)
 		require.Equal("testName", payload.Field)
 		require.Equal(float64(42), payload.Value)
@@ -138,13 +139,13 @@ func TestBasicUsage_IAppTokens(t *testing.T) {
 			ProfileWSID: istructs.WSID(10),
 		}
 		token, err = at.IssueToken(testDuration, &srcPayload)
-		require.Nil(err)
+		require.NoError(err)
 	})
 
 	t.Run("Validate token", func(t *testing.T) {
 		payload := PrincipalPayload{}
 		gp, err := at.ValidateToken(token, &payload)
-		require.Nil(err)
+		require.NoError(err)
 		require.Greater(gp.IssuedAt.Unix(), int64(0))
 		require.Equal(testApp, gp.AppQName)
 		require.Equal(testDuration, gp.Duration)

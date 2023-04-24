@@ -4,7 +4,7 @@
 
 package queryprocessor
 
-import "github.com/voedger/voedger/pkg/istructs"
+import "github.com/voedger/voedger/pkg/schemas"
 
 const (
 	filterKind_Eq    = "eq"
@@ -22,6 +22,6 @@ const (
 )
 
 var (
-	qNamePosDepartment = istructs.NewQName("pos", "Department")
-	qNameXLowerCase    = istructs.NewQName("x", "lower-case")
+	qNamePosDepartment = schemas.NewQName("pos", "Department")
+	qNameXLowerCase    = schemas.NewQName("x", "lower-case")
 )

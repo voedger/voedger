@@ -9,10 +9,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestBundle(t *testing.T) {
-	newKey := func(qname istructs.QName, id istructs.RecordID) (k istructs.IStateKeyBuilder) {
+	newKey := func(qname schemas.QName, id istructs.RecordID) (k istructs.IStateKeyBuilder) {
 		k = &viewRecordsKeyBuilder{
 			IKeyBuilder: &keyBuilder{data: make(map[string]interface{})},
 			view:        qname,
@@ -80,7 +81,7 @@ func TestBundle(t *testing.T) {
 func TestKeyBuilder(t *testing.T) {
 	require := require.New(t)
 
-	k := newKeyBuilder(testStorage, istructs.NullQName)
+	k := newKeyBuilder(testStorage, schemas.NullQName)
 
 	require.Equal(testStorage, k.storage)
 	require.PanicsWithValue(ErrNotSupported, func() { k.PartitionKey() })

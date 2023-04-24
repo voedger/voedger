@@ -8,13 +8,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestLessFilter_IsMatch(t *testing.T) {
 	match := func(match bool, err error) bool {
-		require.Nil(t, err)
+		require.NoError(t, err)
 		return match
 	}
 	t.Run("Compare int32", func(t *testing.T) {
@@ -23,7 +23,7 @@ func TestLessFilter_IsMatch(t *testing.T) {
 			r.Set("age", age)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"age": istructs.DataKind_int32}
+		schemaFields := coreutils.SchemaFields{"age": schemas.DataKind_int32}
 		ageFilter := func(age int) IFilter {
 			return &LessFilter{
 				field: "age",
@@ -43,7 +43,7 @@ func TestLessFilter_IsMatch(t *testing.T) {
 			r.Set("age", age)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"age": istructs.DataKind_int64}
+		schemaFields := coreutils.SchemaFields{"age": schemas.DataKind_int64}
 		ageFilter := func(age int) IFilter {
 			return &LessFilter{
 				field: "age",
@@ -63,7 +63,7 @@ func TestLessFilter_IsMatch(t *testing.T) {
 			r.Set("height", height)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"height": istructs.DataKind_float32}
+		schemaFields := coreutils.SchemaFields{"height": schemas.DataKind_float32}
 		heightFilter := func(height float32) IFilter {
 			return &LessFilter{
 				field: "height",
@@ -83,7 +83,7 @@ func TestLessFilter_IsMatch(t *testing.T) {
 			r.Set("height", height)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"height": istructs.DataKind_float64}
+		schemaFields := coreutils.SchemaFields{"height": schemas.DataKind_float64}
 		heightFilter := func(height float64) IFilter {
 			return &LessFilter{
 				field: "height",
@@ -103,7 +103,7 @@ func TestLessFilter_IsMatch(t *testing.T) {
 			r.Set("name", name)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"name": istructs.DataKind_string}
+		schemaFields := coreutils.SchemaFields{"name": schemas.DataKind_string}
 		nameFilter := func(name string) IFilter {
 			return &LessFilter{
 				field: "name",
@@ -128,7 +128,7 @@ func TestLessFilter_IsMatch(t *testing.T) {
 	t.Run("Should return error on wrong data type", func(t *testing.T) {
 		filter := &LessFilter{field: "image"}
 
-		match, err := filter.IsMatch(map[string]istructs.DataKindType{"image": istructs.DataKind_bytes}, nil)
+		match, err := filter.IsMatch(map[string]schemas.DataKind{"image": schemas.DataKind_bytes}, nil)
 
 		require.ErrorIs(t, err, ErrWrongType)
 		require.False(t, match)

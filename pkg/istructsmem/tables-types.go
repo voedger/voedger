@@ -23,7 +23,7 @@ type recordType struct {
 	isNew bool
 }
 
-// newRecord create new null (istructs.NullQName) record
+// newRecord create new null (schemas.NullQName) record
 func newRecord(appCfg *AppConfigType) recordType {
 	rec := recordType{
 		rowType: newRow(appCfg),

@@ -81,15 +81,15 @@ func TestBasicUsage_ITokens(t *testing.T) {
 	t.Run("Prepare tokens. NB: payload MUST be passed by reference", func(t *testing.T) {
 		var err error
 		principalToken, err = signer.IssueToken(testAppQName, testDuration, &principalPayload)
-		require.Nil(err)
+		require.NoError(err)
 		blobToken, err = signer.IssueToken(testAppQName, testDuration, &blobberPayload)
-		require.Nil(err)
+		require.NoError(err)
 	})
 
 	t.Run("Verify principalToken", func(t *testing.T) {
 		payload := TestPayload_Principal{}
 		gp, err := signer.ValidateToken(principalToken, &payload)
-		require.Nil(err)
+		require.NoError(err)
 		require.Equal(testAppQName, gp.AppQName)
 		require.Equal(testDuration, gp.Duration)
 		require.Equal(principalPayload, payload)
@@ -99,7 +99,7 @@ func TestBasicUsage_ITokens(t *testing.T) {
 	t.Run("Verify blobTokenToken", func(t *testing.T) {
 		payload := TestPayload_BLOBUploading{}
 		gp, err := signer.ValidateToken(blobToken, &payload)
-		require.Nil(err)
+		require.NoError(err)
 		require.Equal(testAppQName, gp.AppQName)
 		require.Equal(testDuration, gp.Duration)
 		require.Greater(gp.IssuedAt.Unix(), new(time.Time).Unix())
@@ -125,7 +125,7 @@ func TestBasicUsage_ITokens(t *testing.T) {
 		testTime = time.Date(2021, time.October, 16, 0, 46, 0, 0, time.Local)
 		// acquire signer with synthetic time and issue token
 		expiredToken, err := signer.IssueToken(istructs.AppQName_test1_app1, 1*time.Minute, &principalPayload)
-		require.Nil(err)
+		require.NoError(err)
 
 		// acquire signer with correct time and verify token
 		// must get error, because token already expired
@@ -139,7 +139,7 @@ func TestBasicUsage_ITokens(t *testing.T) {
 	t.Run("Check expired token in future", func(t *testing.T) {
 		var gp istructs.GenericPayload
 		expiredToken, err := signer.IssueToken(istructs.AppQName_test1_app1, testDuration, &principalPayload)
-		require.Nil(err)
+		require.NoError(err)
 
 		// делаем текущее время позже момента expiration
 		testTime = testTime.Add(testDuration * 2)
@@ -250,7 +250,7 @@ func TestErrorProcessing(t *testing.T) {
 			err     error
 		)
 		principalToken, err = signer.IssueToken(istructs.AppQName_test1_app1, 1*time.Minute, &principalPayload)
-		require.Nil(err)
+		require.NoError(err)
 		onByteArrayMutate = func(array *[]byte) {
 			*array = []byte{0x0A, 0x0D}
 		}
@@ -265,7 +265,7 @@ func TestErrorProcessing(t *testing.T) {
 			err     error
 		)
 		principalToken, err = signer.IssueToken(istructs.AppQName_test1_app1, 1*time.Minute, &principalPayload)
-		require.Nil(err)
+		require.NoError(err)
 		onTokenPartsMutate = func(str []string) string {
 			return "!!!!!"
 		}
@@ -280,7 +280,7 @@ func TestErrorProcessing(t *testing.T) {
 			err     error
 		)
 		principalToken, err = signer.IssueToken(istructs.AppQName_test1_app1, 1*time.Minute, &principalPayload)
-		require.Nil(err)
+		require.NoError(err)
 		onTokenArrayPartsMutate = func() []string {
 			return []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
 				"eyJBcHBRTmFtZSI6InRlc3QxL2FwcDEiLCJDbHVzdGVyIjozMiwiRGlzcGxheU5hbWUiOiJkaXNwbGF5TmFtZSIsIkR1cmF0aW9uIjo2MDAwMDAwMDAwMCwiTG9naW4iOiJsb2dpbiIsIlByb2ZpbGVXU0lEIjoxMjMsIlB3ZEhhc2giOiJBUUlEIiwiU3ViamVjdEtpbmQiOjEsImF1ZCI6Iml0b2tlbnNqd3QuVGVzdFBheWxvYWRfUHJpbmNpcGFsIiwiZXhwIjoxNjQ2OTg3OTExLCJpYXQiOjE2NDY5ODc4NTF9",

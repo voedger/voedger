@@ -11,47 +11,36 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
+	smock "github.com/voedger/voedger/pkg/schemas/mock"
 )
 
 func TestViewRecordsStorage_GetBatch(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		require := require.New(t)
-		pkSchema := &mockSchema{}
-		pkSchema.
-			On("Fields", mock.Anything).
-			Run(func(args mock.Arguments) {
-				cb := args.Get(0).(func(fieldName string, kind istructs.DataKindType))
-				cb("pkk", istructs.DataKind_string)
-			})
-		ccSchema := &mockSchema{}
-		ccSchema.
-			On("Fields", mock.Anything).
-			Run(func(args mock.Arguments) {
-				cb := args.Get(0).(func(fieldName string, kind istructs.DataKindType))
-				cb("cck", istructs.DataKind_string)
-			})
-		vSchema := &mockSchema{}
-		vSchema.
-			On("Fields", mock.Anything).
-			Run(func(args mock.Arguments) {
-				cb := args.Get(0).(func(fieldName string, kind istructs.DataKindType))
-				cb("vk", istructs.DataKind_string)
-			})
-		schema := &mockSchema{}
-		schema.
-			On("Containers", mock.AnythingOfType("func(string, istructs.QName)")).
-			Run(func(args mock.Arguments) {
-				cb := args.Get(0).(func(string, istructs.QName))
-				cb(istructs.SystemContainer_ViewPartitionKey, testViewRecordPkQName)
-				cb(istructs.SystemContainer_ViewClusteringCols, testViewRecordCcQName)
-				cb(istructs.SystemContainer_ViewValue, testViewRecordVQName)
-			})
-		schemas := &mockSchemas{}
-		schemas.
-			On("Schema", testViewRecordQName1).Return(schema).
-			On("Schema", testViewRecordPkQName).Return(pkSchema).
-			On("Schema", testViewRecordCcQName).Return(ccSchema).
-			On("Schema", testViewRecordVQName).Return(vSchema)
+
+		pkSchema := smock.MockedSchema(testViewRecordPkQName, schemas.SchemaKind_ViewRecord_PartitionKey,
+			smock.MockedField("pkk", schemas.DataKind_string, true), // ??? variable len PK !!!
+		)
+		ccSchema := smock.MockedSchema(testViewRecordCcQName, schemas.SchemaKind_ViewRecord_ClusteringColumns,
+			smock.MockedField("cck", schemas.DataKind_string, false),
+		)
+		valSchema := smock.MockedSchema(testViewRecordCcQName, schemas.SchemaKind_ViewRecord_Value,
+			smock.MockedField("vk", schemas.DataKind_string, false),
+		)
+		viewSchema := smock.MockedSchema(testViewRecordCcQName, schemas.SchemaKind_ViewRecord)
+		viewSchema.MockContainers(
+			smock.MockedContainer(schemas.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
+			smock.MockedContainer(schemas.SystemContainer_ViewClusteringCols, testViewRecordCcQName, 1, 1),
+			smock.MockedContainer(schemas.SystemContainer_ViewValue, testViewRecordVQName, 1, 1),
+		)
+		cache := smock.MockedSchemaCache(
+			viewSchema,
+			pkSchema,
+			ccSchema,
+			valSchema,
+		)
+
 		value := &mockValue{}
 		value.On("AsString", "vk").Return("value")
 		viewRecords := &mockViewRecords{}
@@ -65,7 +54,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 			})
 		appStructs := &mockAppStructs{}
 		appStructs.
-			On("Schemas").Return(schemas).
+			On("Schemas").Return(cache).
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
@@ -75,29 +64,32 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		k.PutString("pkk", "pkv")
 		k.PutString("cck", "ccv")
 
-		sv, ok, _ := s.CanExist(k)
+		sv, ok, err := s.CanExist(k)
+		require.NoError(err)
 
 		require.True(ok)
 		require.Equal("value", sv.AsString("vk"))
 	})
 	t.Run("Should return error on get batch", func(t *testing.T) {
 		require := require.New(t)
-		schema := &mockSchema{}
+
+		schema := smock.MockedSchema(testViewRecordQName1, schemas.SchemaKind_ViewRecord)
 		schema.On("Containers", mock.Anything)
-		schemas := &mockSchemas{}
-		schemas.On("Schema", testViewRecordQName1).Return(schema)
+		cache := smock.MockedSchemaCache(schema)
+
 		viewRecords := &mockViewRecords{}
 		viewRecords.
 			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(ViewRecordsStorage, testViewRecordQName1)).
 			On("GetBatch", istructs.WSID(1), mock.Anything).Return(errTest)
 		appStructs := &mockAppStructs{}
 		appStructs.
-			On("Schemas").Return(schemas).
+			On("Schemas").Return(cache).
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		k, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		require.NoError(err)
 		k.PutString("pkk", "pkv")
 
 		_, ok, err := s.CanExist(k)
@@ -117,7 +109,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				require.NotNil(args.Get(2))
-				_ = args.Get(3).(istructs.ValuesCallback)(nil, nil)
+				require.NoError(args.Get(3).(istructs.ValuesCallback)(nil, nil))
 			})
 		appStructs := &mockAppStructs{}
 		appStructs.
@@ -126,12 +118,14 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		k, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		_ = s.Read(k, func(istructs.IKey, istructs.IStateValue) error {
+		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error {
 			touched = true
 			return nil
 		})
+		require.NoError(err)
 
 		require.True(touched)
 	})
@@ -149,17 +143,20 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		k, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		require.NoError(err)
 
-		err := s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
+		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
 
 		require.ErrorIs(err, errTest)
 	})
 }
 func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testing.T) {
 	require := require.New(t)
-	schemas := &mockSchemas{}
-	schemas.On("Schema", testViewRecordQName1).Return(&nilSchema{})
+
+	cache := smock.MockedSchemaCache()
+	cache.On("Schema", testViewRecordQName1).Return(schemas.NullSchema)
+
 	viewRecords := &mockViewRecords{}
 	viewRecords.
 		On("KeyBuilder", testViewRecordQName1).Return(&nilKeyBuilder{}).
@@ -168,15 +165,17 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 	appStructs := &mockAppStructs{}
 	appStructs.
 		On("ViewRecords").Return(viewRecords).
-		On("Schemas").Return(schemas).
+		On("Schemas").Return(cache).
 		On("Records").Return(&nilRecords{}).
 		On("Events").Return(&nilEvents{})
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
-	kb, _ := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
-	_, _ = s.NewValue(kb)
+	kb, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+	require.NoError(err)
+	_, err = s.NewValue(kb)
+	require.NoError(err)
 	readyToFlush, err := s.ApplyIntents()
 	require.False(readyToFlush)
-	require.Nil(err)
+	require.NoError(err)
 
 	err = s.FlushBundles()
 
@@ -184,36 +183,26 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 }
 
 func TestViewRecordsStorage_toJSON(t *testing.T) {
-	vSchema := &mockSchema{}
-	vSchema.
-		On("Fields", mock.Anything).
-		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(fieldName string, kind istructs.DataKindType))
-			cb("ID", istructs.DataKind_RecordID)
-			cb("Name", istructs.DataKind_string)
-			cb("Count", istructs.DataKind_int64)
-		})
-	schema := &mockSchema{}
-	schema.
-		On("Containers", mock.AnythingOfType("func(string, istructs.QName)")).
-		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(string, istructs.QName))
-			cb(istructs.SystemContainer_ViewPartitionKey, testViewRecordPkQName)
-			cb(istructs.SystemContainer_ViewClusteringCols, testViewRecordCcQName)
-			cb(istructs.SystemContainer_ViewValue, testViewRecordVQName)
-		}).
-		On("Fields", mock.Anything).
-		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(fieldName string, kind istructs.DataKindType))
-			cb("ID", istructs.DataKind_RecordID)
-			cb("Name", istructs.DataKind_string)
-			cb("Count", istructs.DataKind_int64)
-		})
+	valSchema := smock.MockedSchema(testViewRecordVQName, schemas.SchemaKind_ViewRecord_Value,
+		smock.MockedField("ID", schemas.DataKind_RecordID, false),
+		smock.MockedField("Name", schemas.DataKind_string, false),
+		smock.MockedField("Count", schemas.DataKind_int64, false),
+	)
 
-	schemas := &mockSchemas{}
-	schemas.
-		On("Schema", testViewRecordQName1).Return(schema).
-		On("Schema", testViewRecordVQName).Return(vSchema)
+	viewSchema := smock.MockedSchema(testViewRecordQName1, schemas.SchemaKind_ViewRecord,
+		smock.MockedField("ID", schemas.DataKind_RecordID, false), // ??? Fields in root view schema, copy/paste error ???
+		smock.MockedField("Name", schemas.DataKind_string, false),
+		smock.MockedField("Count", schemas.DataKind_int64, false),
+	)
+	viewSchema.MockContainers(
+		smock.MockedContainer(schemas.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
+		smock.MockedContainer(schemas.SystemContainer_ViewClusteringCols, testViewRecordCcQName, 1, 1),
+		smock.MockedContainer(schemas.SystemContainer_ViewValue, testViewRecordVQName, 1, 1),
+	)
+	cache := smock.MockedSchemaCache(
+		viewSchema,
+		valSchema,
+	)
 
 	value := &mockValue{}
 	value.
@@ -223,7 +212,7 @@ func TestViewRecordsStorage_toJSON(t *testing.T) {
 		On("AsQName", mock.Anything).Return(testViewRecordQName1)
 
 	s := viewRecordsStorage{
-		schemasFunc: func() istructs.ISchemas { return schemas },
+		schemaCacheFunc: func() schemas.SchemaCache { return cache },
 	}
 	t.Run("Should marshal entire element", func(t *testing.T) {
 		require := require.New(t)
@@ -232,7 +221,8 @@ func TestViewRecordsStorage_toJSON(t *testing.T) {
 			toJSONFunc: s.toJSON,
 		}
 
-		json, _ := sv.ToJSON()
+		json, err := sv.ToJSON()
+		require.NoError(err)
 
 		require.JSONEq(`{
 								  "Count": 1001,
@@ -247,7 +237,8 @@ func TestViewRecordsStorage_toJSON(t *testing.T) {
 			toJSONFunc: s.toJSON,
 		}
 
-		json, _ := sv.ToJSON(WithExcludeFields("ID", "Count"))
+		json, err := sv.ToJSON(WithExcludeFields("ID", "Count"))
+		require.NoError(err)
 
 		require.JSONEq(`{"Name": "John"}`, json)
 	})
