@@ -17,101 +17,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/schemas"
 )
-
-func TestBasicUsage_QName(t *testing.T) {
-
-	require := require.New(t)
-
-	// Create from pkg + entity
-
-	qname := NewQName("sale", "orders")
-	require.Equal(NewQName("sale", "orders"), qname)
-	require.Equal("sale", qname.Pkg())
-	require.Equal("orders", qname.Entity())
-
-	require.Equal("sale.orders", fmt.Sprint(qname))
-
-	// Parse string
-
-	qname2, err := ParseQName("sale.orders")
-	require.NoError(err)
-	require.Equal(qname, qname2)
-
-	// Errors. Only one dot allowed
-
-	require.NotNil(ParseQName("saleorders"))
-	log.Println(ParseQName("saleorders"))
-	require.NotNil(ParseQName("sale.orders."))
-
-}
-
-func TestBasicUsage_QName_JSon(t *testing.T) {
-
-	require := require.New(t)
-
-	t.Run("Marshall/unmarshall QName", func(t *testing.T) {
-
-		qname := NewQName("airs-bp", `Карлосон 哇"呀呀`)
-
-		// Marshal
-
-		j, err := json.Marshal(&qname)
-		require.NoError(err)
-
-		// Unmarshal
-
-		var qname2 = QName{}
-		err = json.Unmarshal(j, &qname2)
-		require.NoError(err)
-
-		// Compare
-		require.Equal(qname, qname2)
-	})
-
-	t.Run("Marshall/unmarshall QName as a part of the structure", func(t *testing.T) {
-
-		type myStruct struct {
-			QName       QName
-			StringValue string
-			IntValue    int
-		}
-
-		ms := myStruct{
-			QName:       NewQName("p", `Карлосон 哇"呀呀`),
-			StringValue: "sv",
-			IntValue:    56,
-		}
-
-		// Marshal
-
-		j, err := json.Marshal(&ms)
-		require.NoError(err)
-
-		// Unmarshal
-
-		var ms2 = myStruct{}
-		err = json.Unmarshal(j, &ms2)
-		require.NoError(err)
-
-		// Compare
-		require.Equal(ms, ms2)
-	})
-
-	t.Run("key of a map", func(t *testing.T) {
-		expected := map[QName]bool{
-			NewQName("sys", "my"):            true,
-			NewQName("sys", `Карлосон 哇"呀呀`): true,
-		}
-
-		b, err := json.Marshal(&expected)
-		require.NoError(err)
-
-		actual := map[QName]bool{}
-		require.NoError(json.Unmarshal(b, &actual))
-		require.Equal(expected, actual)
-	})
-}
 
 func TestBasicUsage_AppQName(t *testing.T) {
 
@@ -306,40 +213,6 @@ func regenerateID(id RecordID) RecordID {
 	return id
 }
 
-func TestQName_Json_NullQName(t *testing.T) {
-
-	require := require.New(t)
-	t.Run("Marshall/unmarshall NullQName", func(t *testing.T) {
-
-		qname := NullQName
-
-		// Marshal
-
-		j, err := json.Marshal(&qname)
-		require.NoError(err)
-
-		// Unmarshal
-
-		var qname2 = QName{}
-		err = json.Unmarshal(j, &qname2)
-		require.NoError(err)
-
-		// Compare
-		require.Equal(qname, qname2)
-	})
-}
-
-func TestQName_Compare(t *testing.T) {
-	require := require.New(t)
-
-	q1 := NewQName(SysPackage, "Error")
-	require.Equal(QNameForError, q1)
-	require.True(QNameForError == q1)
-
-	q2 := NewQName(SysPackage, "error2")
-	require.NotEqual(q1, q2)
-}
-
 func TestAppQName_Compare(t *testing.T) {
 	require := require.New(t)
 
@@ -348,7 +221,7 @@ func TestAppQName_Compare(t *testing.T) {
 	require.Equal(q1_1, q1_2)
 	require.True(q1_1 == q1_2)
 
-	q2 := NewQName("sys", "registry2")
+	q2 := schemas.NewQName("sys", "registry2")
 	require.NotEqual(q1_1, q2)
 }
 
@@ -425,56 +298,6 @@ func TestAppQName_UnmarshalInvalidString(t *testing.T) {
 
 }
 
-func TestQName_UnmarshalInvalidString(t *testing.T) {
-	require := require.New(t)
-
-	var err error
-	t.Run("Nill slice", func(t *testing.T) {
-		q := NewQName("a", "b")
-
-		err = q.UnmarshalJSON(nil)
-		require.NotNil(err)
-		log.Println(err)
-		require.Equal(NullQName, q)
-	})
-
-	t.Run("Two-bytes string", func(t *testing.T) {
-		q := NewQName("a", "b")
-
-		err = q.UnmarshalJSON([]byte("\"\""))
-		require.NotNil(err)
-		require.Equal(NullQName, q)
-
-		log.Println(err)
-	})
-
-	t.Run("No dot", func(t *testing.T) {
-		q := NewQName("a", "b")
-
-		err = q.UnmarshalJSON([]byte("\"bcd\""))
-		require.NotNil(err)
-		require.Equal(NullQName, q)
-
-		log.Println(err)
-	})
-
-	t.Run("Two dots", func(t *testing.T) {
-		q := NewQName("a", "b")
-
-		err = q.UnmarshalJSON([]byte("\"c..d\""))
-		require.NotNil(err)
-
-		log.Println(err)
-	})
-
-	t.Run("json unquoted", func(t *testing.T) {
-		q := NewQName("a", "b")
-		err = q.UnmarshalJSON([]byte("c.d"))
-		require.NotNil(err)
-		log.Println(err)
-	})
-}
-
 func TestRecordID_IsTemp(t *testing.T) {
 	tests := []struct {
 		name string
@@ -500,261 +323,37 @@ func TestNullObject(t *testing.T) {
 	require := require.New(t)
 	null := NewNullObject()
 
-	require.Nil(null.AsBytes(NullName))
-	require.Equal(float32(0), null.AsFloat32(NullName))
-	require.Equal(float64(0), null.AsFloat64(NullName))
-	require.Equal(int32(0), null.AsInt32(NullName))
-	require.Equal(int64(0), null.AsInt64(NullName))
-	require.Equal("", null.AsString(NullName))
+	require.Nil(null.AsBytes(schemas.NullName))
+	require.Equal(float32(0), null.AsFloat32(schemas.NullName))
+	require.Equal(float64(0), null.AsFloat64(schemas.NullName))
+	require.Equal(int32(0), null.AsInt32(schemas.NullName))
+	require.Equal(int64(0), null.AsInt64(schemas.NullName))
+	require.Equal("", null.AsString(schemas.NullName))
 
-	require.Equal(NullQName, null.AsQName(NullName))
-	require.Equal(false, null.AsBool(NullName))
-	require.Equal(NullRecordID, null.AsRecordID(NullName))
+	require.Equal(schemas.NullQName, null.AsQName(schemas.NullName))
+	require.Equal(false, null.AsBool(schemas.NullName))
+	require.Equal(NullRecordID, null.AsRecordID(schemas.NullName))
 
-	require.Equal(NullQName, null.QName())
+	require.Equal(schemas.NullQName, null.QName())
 
 	// Should not be called
 	{
 		null.Containers(nil)
-		null.Elements(NullName, nil)
+		null.Elements(schemas.NullName, nil)
 		null.RecordIDs(true, nil)
 		null.FieldNames(nil)
 	}
 
 	t.Run("IRecord fields", func(t *testing.T) {
 		r := null.AsRecord()
-		require.Equal(NullQName, r.QName())
-		require.Equal(NullQName, r.QName())
+		require.Equal(schemas.NullQName, r.QName())
+		require.Equal(schemas.NullQName, r.QName())
 		require.Equal("", r.Container())
 		require.Equal(NullRecordID, r.ID())
 		require.Equal(NullRecordID, r.Parent())
 
 	})
 
-}
-
-func TestContainerOccursType_String(t *testing.T) {
-	tests := []struct {
-		name string
-		o    ContainerOccursType
-		want string
-	}{
-		{
-			name: "0 —> `0`",
-			o:    0,
-			want: `0`,
-		},
-		{
-			name: "1 —> `1`",
-			o:    1,
-			want: `1`,
-		},
-		{
-			name: "∞ —> `unbounded`",
-			o:    ContainerOccurs_Unbounded,
-			want: `unbounded`,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.o.String(); got != tt.want {
-				t.Errorf("ContainerOccursType.String() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestContainerOccursType_MarshalJSON(t *testing.T) {
-	tests := []struct {
-		name    string
-		o       ContainerOccursType
-		want    string
-		wantErr bool
-	}{
-		{
-			name:    "0 —> `0`",
-			o:       0,
-			want:    `0`,
-			wantErr: false,
-		},
-		{
-			name:    "1 —> `1`",
-			o:       1,
-			want:    `1`,
-			wantErr: false,
-		},
-		{
-			name:    "∞ —> `unbounded`",
-			o:       ContainerOccurs_Unbounded,
-			want:    `"unbounded"`,
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.o.MarshalJSON()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ContainerOccursType.MarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if string(got) != tt.want {
-				t.Errorf("ContainerOccursType.MarshalJSON() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestContainerOccursType_UnmarshalJSON(t *testing.T) {
-	tests := []struct {
-		name    string
-		data    string
-		want    ContainerOccursType
-		wantErr bool
-	}{
-		{
-			name:    "0 —> 0",
-			data:    `0`,
-			want:    0,
-			wantErr: false,
-		},
-		{
-			name:    "1 —> 1",
-			data:    `1`,
-			want:    1,
-			wantErr: false,
-		},
-		{
-			name:    `"unbounded" —> ∞`,
-			data:    `"unbounded"`,
-			want:    ContainerOccurs_Unbounded,
-			wantErr: false,
-		},
-		{
-			name:    `"3" —> error`,
-			data:    `"3"`,
-			want:    0,
-			wantErr: true,
-		},
-		{
-			name:    `65536 —> error`,
-			data:    `65536`,
-			want:    0,
-			wantErr: true,
-		},
-		{
-			name:    `-1 —> error`,
-			data:    `-1`,
-			want:    0,
-			wantErr: true,
-		},
-		{
-			name:    `"abc" —> error`,
-			data:    `"abc"`,
-			want:    0,
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var o ContainerOccursType
-			err := o.UnmarshalJSON([]byte(tt.data))
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ContainerOccursType.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if err == nil {
-				if o != tt.want {
-					t.Errorf("o.UnmarshalJSON() result = %v, want %v", o, tt.want)
-				}
-			}
-		})
-	}
-}
-
-func TestDataKindType_MarshalText(t *testing.T) {
-	tests := []struct {
-		name string
-		i    DataKindType
-		want string
-	}{
-		{
-			name: `0 —> "DataKind_null"`,
-			i:    DataKind_null,
-			want: `DataKind_null`,
-		},
-		{
-			name: `1 —> "DataKind_int32"`,
-			i:    DataKind_int32,
-			want: `DataKind_int32`,
-		},
-		{
-			name: `DataKind_FakeLast —> 12`,
-			i:    DataKind_FakeLast,
-			want: strconv.FormatUint(uint64(DataKind_FakeLast), 10),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.i.MarshalText()
-			if err != nil {
-				t.Errorf("DataKindType.MarshalText() unexpected error %v", err)
-				return
-			}
-			if string(got) != tt.want {
-				t.Errorf("DataKindType.MarshalText() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-
-	t.Run("100% cover DataKindType.String()", func(t *testing.T) {
-		const tested = DataKind_FakeLast + 1
-		want := "DataKindType(" + strconv.FormatInt(int64(tested), 10) + ")"
-		got := tested.String()
-		if got != want {
-			t.Errorf("(DataKind_FakeLast + 1).String() = %v, want %v", got, want)
-		}
-	})
-}
-
-func TestSchemaKindType_MarshalText(t *testing.T) {
-	tests := []struct {
-		name string
-		k    SchemaKindType
-		want string
-	}{
-		{name: `0 —> "SchemaKind_null"`,
-			k:    SchemaKind_null,
-			want: `SchemaKind_null`,
-		},
-		{name: `1 —> "SchemaKind_GDoc"`,
-			k:    SchemaKind_GDoc,
-			want: `SchemaKind_GDoc`,
-		},
-		{name: `SchemaKind_FakeLast —> 17`,
-			k:    SchemaKind_FakeLast,
-			want: strconv.FormatUint(uint64(SchemaKind_FakeLast), 10),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.k.MarshalText()
-			if err != nil {
-				t.Errorf("SchemaKindType.MarshalText() unexpected error %v", err)
-				return
-			}
-			if string(got) != tt.want {
-				t.Errorf("SchemaKindType.MarshalText() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-
-	t.Run("100% cover SchemaKindType.String()", func(t *testing.T) {
-		const tested = SchemaKind_FakeLast + 1
-		want := "SchemaKindType(" + strconv.FormatInt(int64(tested), 10) + ")"
-		got := tested.String()
-		if got != want {
-			t.Errorf("(SchemaKind_FakeLast + 1).String() = %v, want %v", got, want)
-		}
-	})
 }
 
 func TestRateLimitKind_String(t *testing.T) {
@@ -847,13 +446,13 @@ func TestRateLimitKind_MarshalText(t *testing.T) {
 
 func TestValidatorMatchByQName(t *testing.T) {
 	require := require.New(t)
-	qn1 := NewQName("test", "n1")
-	qn2 := NewQName("test", "n2")
-	qn3 := NewQName("test", "n3")
+	qn1 := schemas.NewQName("test", "n1")
+	qn2 := schemas.NewQName("test", "n2")
+	qn3 := schemas.NewQName("test", "n3")
 
 	t.Run("QName only", func(t *testing.T) {
 		v := CUDValidator{
-			MatchQNames: []QName{qn1, qn2},
+			MatchQNames: []schemas.QName{qn1, qn2},
 		}
 		require.True(ValidatorMatchByQName(v, qn1))
 		require.True(ValidatorMatchByQName(v, qn2))
@@ -862,7 +461,7 @@ func TestValidatorMatchByQName(t *testing.T) {
 
 	t.Run("func(QName) only", func(t *testing.T) {
 		v := CUDValidator{
-			MatchFunc: func(qName QName) bool {
+			MatchFunc: func(qName schemas.QName) bool {
 				return qName == qn1 || qName == qn2
 			},
 		}
@@ -873,10 +472,10 @@ func TestValidatorMatchByQName(t *testing.T) {
 
 	t.Run("both func(QName) and QName", func(t *testing.T) {
 		v := CUDValidator{
-			MatchFunc: func(qName QName) bool {
+			MatchFunc: func(qName schemas.QName) bool {
 				return qName == qn1
 			},
-			MatchQNames: []QName{qn2},
+			MatchQNames: []schemas.QName{qn2},
 		}
 		require.True(ValidatorMatchByQName(v, qn1))
 		require.True(ValidatorMatchByQName(v, qn2))

@@ -15,13 +15,14 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // RowsProcessorFactory is the function for building pipeline from query params and row meta
 // The pipeline is used to process data fetched by QueryHandler
 // TODO In my opinion we have to remove it from export
-type RowsProcessorFactory func(ctx context.Context, schemas istructs.ISchemas, state istructs.IState,
-	params IQueryParams, resultMeta istructs.ISchema, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline
+type RowsProcessorFactory func(ctx context.Context, cache schemas.SchemaCache, state istructs.IState,
+	params IQueryParams, resultMeta schemas.Schema, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline
 
 type ServiceFactory func(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
 	appStructsProvider istructs.IAppStructsProvider, maxPrepareQueries int, metrics imetrics.IMetrics, hvm string,

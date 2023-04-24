@@ -9,6 +9,7 @@ package payloads
 import (
 	"github.com/voedger/voedger/pkg/istructs"
 	itokens "github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // Principal can be referenced by WSID
@@ -25,7 +26,7 @@ type PrincipalPayload struct {
 type RoleType struct {
 	WSID istructs.WSID
 	// E.g. air.LinkedDevice
-	QName istructs.QName
+	QName schemas.QName
 }
 
 type BLOBUploadingPayload struct {
@@ -34,19 +35,11 @@ type BLOBUploadingPayload struct {
 	MaxSize   int64
 }
 
-type VerificationKindType uint8
-
-const (
-	VerificationKind_EMail VerificationKindType = iota
-	VerificationKind_Phone
-	VerificationKind_FakeLast
-)
-
 type VerifiedValuePayload struct {
-	VerificationKind VerificationKindType
+	VerificationKind schemas.VerificationKind
 	WSID             istructs.WSID
 	ID               istructs.RecordID
-	Entity           istructs.QName
+	Entity           schemas.QName
 	Field            string
 	Value            interface{}
 }

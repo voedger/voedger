@@ -7,9 +7,10 @@ package descr
 
 import (
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
-func Provide(app istructs.IAppStructs, rateLimits map[istructs.QName]map[istructs.RateLimitKind]istructs.RateLimit, uniques map[istructs.QName][][]string) *Application {
+func Provide(app istructs.IAppStructs, rateLimits map[schemas.QName]map[istructs.RateLimitKind]istructs.RateLimit, uniques map[schemas.QName][][]string) *Application {
 	a := newApplication()
 	a.read(app, rateLimits, uniques)
 	return a

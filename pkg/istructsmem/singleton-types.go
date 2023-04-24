@@ -22,8 +22,8 @@ import (
 // singletonsCacheType is cache for CDoc singleton IDs
 type singletonsCacheType struct {
 	cfg     *AppConfigType
-	qNames  map[istructs.QName]istructs.RecordID
-	ids     map[istructs.RecordID]istructs.QName
+	qNames  map[schemas.QName]istructs.RecordID
+	ids     map[istructs.RecordID]schemas.QName
 	lastID  istructs.RecordID
 	changes uint32
 }
@@ -31,23 +31,23 @@ type singletonsCacheType struct {
 func newSingletonsCache(cfg *AppConfigType) singletonsCacheType {
 	return singletonsCacheType{
 		cfg:    cfg,
-		qNames: make(map[istructs.QName]istructs.RecordID),
-		ids:    make(map[istructs.RecordID]istructs.QName),
+		qNames: make(map[schemas.QName]istructs.RecordID),
+		ids:    make(map[istructs.RecordID]schemas.QName),
 		lastID: istructs.FirstSingletonID - 1,
 	}
 }
 
 // clear clears singletons cache
 func (stons *singletonsCacheType) clear() {
-	stons.qNames = make(map[istructs.QName]istructs.RecordID)
-	stons.ids = make(map[istructs.RecordID]istructs.QName)
+	stons.qNames = make(map[schemas.QName]istructs.RecordID)
+	stons.ids = make(map[istructs.RecordID]schemas.QName)
 	stons.lastID = istructs.FirstSingletonID - 1
 	stons.changes = 0
 }
 
 // collectAllSingletons collect all application singlton IDs
 func (stons *singletonsCacheType) collectAllSingletons() (err error) {
-	stons.cfg.Schemas.EnumSchemas(
+	stons.cfg.Schemas.Schemas(
 		func(schema schemas.Schema) {
 			if schema.Singleton() {
 				err = errors.Join(err,
@@ -81,13 +81,13 @@ func (stons *singletonsCacheType) collectSingleton(schema schemas.Schema) (err e
 }
 
 // idToQName returns QName for specified singleton ID
-func (stons *singletonsCacheType) idToQName(id istructs.RecordID) (istructs.QName, error) {
+func (stons *singletonsCacheType) idToQName(id istructs.RecordID) (schemas.QName, error) {
 	name, ok := stons.ids[id]
 	if ok {
 		return name, nil
 	}
 
-	return istructs.NullQName, fmt.Errorf("unknown singleton ID «%v»: %w", id, ErrIDNotFound)
+	return schemas.NullQName, fmt.Errorf("unknown singleton ID «%v»: %w", id, ErrIDNotFound)
 }
 
 // load loads all stored singleton IDs from storage
@@ -109,7 +109,7 @@ func (stons *singletonsCacheType) load() (err error) {
 func (stons *singletonsCacheType) load01() error {
 
 	readSingleton := func(cCols, value []byte) error {
-		qName, err := istructs.ParseQName(string(cCols))
+		qName, err := schemas.ParseQName(string(cCols))
 		if err != nil {
 			return err
 		}
@@ -149,7 +149,7 @@ func (stons *singletonsCacheType) prepare() (err error) {
 }
 
 // qNameToID returns ID for specified CDOC document
-func (stons *singletonsCacheType) qNameToID(qName istructs.QName) (istructs.RecordID, error) {
+func (stons *singletonsCacheType) qNameToID(qName schemas.QName) (istructs.RecordID, error) {
 	if id, ok := stons.qNames[qName]; ok {
 		return id, nil
 	}

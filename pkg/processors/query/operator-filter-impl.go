@@ -8,8 +8,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -26,7 +26,7 @@ func (o FilterOperator) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (
 		o.metrics.Increase(execFilterSeconds, time.Since(begin).Seconds())
 	}()
 	outputRow := work.(IWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0]
-	mergedSchema := make(map[string]istructs.DataKindType)
+	mergedSchema := make(map[string]schemas.DataKind)
 	for k, v := range o.rootSchema {
 		mergedSchema[k] = v
 	}

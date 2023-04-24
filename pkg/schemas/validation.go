@@ -8,11 +8,10 @@ package schemas
 import (
 	"errors"
 	"fmt"
-
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func (sch *schema) validate() (err error) {
+// Validate a schema entities
+func (sch *schema) Validate() (err error) {
 	return errors.Join(
 		sch.validateFields(),
 		sch.validateContainers(),
@@ -21,9 +20,9 @@ func (sch *schema) validate() (err error) {
 
 // Validates schema fields
 func (sch *schema) validateFields() (err error) {
-	sch.EnumFields(func(f Field) {
+	sch.Fields(func(f Field) {
 		if !f.IsSys() {
-			if !sch.Props().DataKindAvailable(f.DataKind()) {
+			if !sch.Kind().DataKindAvailable(f.DataKind()) {
 				err = errors.Join(err,
 					fmt.Errorf("schema «%v»: field «%s» has unexpected type «%v»: %w", sch.QName(), f.Name(), f.DataKind(), ErrInvalidDataKind))
 			}
@@ -31,11 +30,11 @@ func (sch *schema) validateFields() (err error) {
 	})
 
 	switch sch.Kind() {
-	case istructs.SchemaKind_ViewRecord:
+	case SchemaKind_ViewRecord:
 		err = errors.Join(err, sch.validateViewFields())
-	case istructs.SchemaKind_ViewRecord_PartitionKey:
+	case SchemaKind_ViewRecord_PartitionKey:
 		err = errors.Join(err, sch.validateViewPartKeyFields())
-	case istructs.SchemaKind_ViewRecord_ClusteringColumns:
+	case SchemaKind_ViewRecord_ClusteringColumns:
 		err = errors.Join(err, sch.validateViewClustKeyFields())
 	}
 
@@ -56,26 +55,26 @@ func (sch *schema) validateViewFields() (err error) {
 	}
 
 	partSchema, clustSchema, valueSchema :=
-		findSchema(istructs.SystemContainer_ViewPartitionKey, istructs.SchemaKind_ViewRecord_PartitionKey),
-		findSchema(istructs.SystemContainer_ViewClusteringCols, istructs.SchemaKind_ViewRecord_ClusteringColumns),
-		findSchema(istructs.SystemContainer_ViewValue, istructs.SchemaKind_ViewRecord_Value)
+		findSchema(SystemContainer_ViewPartitionKey, SchemaKind_ViewRecord_PartitionKey),
+		findSchema(SystemContainer_ViewClusteringCols, SchemaKind_ViewRecord_ClusteringColumns),
+		findSchema(SystemContainer_ViewValue, SchemaKind_ViewRecord_Value)
 	if (partSchema == nil) || (clustSchema == nil) || (valueSchema == nil) {
 		return nil // extended error will return later; see validateViewContainers() method
 	}
 
 	const errWrapFmt = "schema «%v»: view field «%s» unique violated in «%s» and in «%s»: %w"
 
-	partSchema.EnumFields(func(f Field) {
+	partSchema.Fields(func(f Field) {
 		if clustSchema.Field(f.Name()) != nil {
-			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), istructs.SystemContainer_ViewPartitionKey, istructs.SystemContainer_ViewClusteringCols, ErrNameUniqueViolation))
+			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), SystemContainer_ViewPartitionKey, SystemContainer_ViewClusteringCols, ErrNameUniqueViolation))
 		}
 		if valueSchema.Field(f.Name()) != nil {
-			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), istructs.SystemContainer_ViewPartitionKey, istructs.SystemContainer_ViewValue, ErrNameUniqueViolation))
+			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), SystemContainer_ViewPartitionKey, SystemContainer_ViewValue, ErrNameUniqueViolation))
 		}
 	})
-	clustSchema.EnumFields(func(f Field) {
+	clustSchema.Fields(func(f Field) {
 		if valueSchema.Field(f.Name()) != nil {
-			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), istructs.SystemContainer_ViewClusteringCols, istructs.SystemContainer_ViewValue, ErrNameUniqueViolation))
+			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), SystemContainer_ViewClusteringCols, SystemContainer_ViewValue, ErrNameUniqueViolation))
 		}
 	})
 
@@ -100,7 +99,7 @@ func (sch *schema) validateViewClustKeyFields() (err error) {
 	}
 
 	idx, cnt := 0, sch.FieldCount()
-	sch.EnumFields(func(fld Field) {
+	sch.Fields(func(fld Field) {
 		idx++
 		if idx == cnt {
 			return // last field may be any kind
@@ -117,13 +116,13 @@ func (sch *schema) validateViewClustKeyFields() (err error) {
 // Validates schema containers
 func (sch *schema) validateContainers() (err error) {
 	switch sch.Kind() {
-	case istructs.SchemaKind_ViewRecord:
+	case SchemaKind_ViewRecord:
 		err = sch.validateViewContainers()
 	default:
-		sch.EnumContainers(func(c Container) {
+		sch.Containers(func(c Container) {
 			schema := sch.cache.SchemaByName(c.Schema())
 			if schema != nil {
-				if !sch.Props().ContainerKindAvailable(schema.Kind()) {
+				if !sch.Kind().ContainerKindAvailable(schema.Kind()) {
 					err = errors.Join(err, fmt.Errorf("schema «%v» kind «%v»: container «%s» kind «%v» is not available: %w", sch.QName(), sch.Kind(), c.Name(), schema.Kind(), ErrInvalidSchemaKind))
 				}
 			}
@@ -168,9 +167,9 @@ func (sch *schema) validateViewContainers() (err error) {
 		}
 	}
 
-	checkCont(istructs.SystemContainer_ViewPartitionKey, istructs.SchemaKind_ViewRecord_PartitionKey)
-	checkCont(istructs.SystemContainer_ViewClusteringCols, istructs.SchemaKind_ViewRecord_ClusteringColumns)
-	checkCont(istructs.SystemContainer_ViewValue, istructs.SchemaKind_ViewRecord_Value)
+	checkCont(SystemContainer_ViewPartitionKey, SchemaKind_ViewRecord_PartitionKey)
+	checkCont(SystemContainer_ViewClusteringCols, SchemaKind_ViewRecord_ClusteringColumns)
+	checkCont(SystemContainer_ViewValue, SchemaKind_ViewRecord_Value)
 
 	return err
 }
@@ -192,11 +191,11 @@ func (v *validator) validate(schema Schema) error {
 		return err
 	}
 
-	err := schema.validate()
+	err := schema.Validate()
 	v.results[schema.QName()] = err
 
 	// resolve externals
-	schema.EnumContainers(func(cont Container) {
+	schema.Containers(func(cont Container) {
 		if cont.Schema() == schema.QName() {
 			return
 		}

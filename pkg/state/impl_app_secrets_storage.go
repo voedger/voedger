@@ -11,14 +11,15 @@ import (
 
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type appSecretsStorage struct {
 	secretReader isecrets.ISecretReader
 }
 
-func (s *appSecretsStorage) NewKeyBuilder(istructs.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newKeyBuilder(AppSecretsStorage, istructs.NullQName)
+func (s *appSecretsStorage) NewKeyBuilder(schemas.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
+	return newKeyBuilder(AppSecretsStorage, schemas.NullQName)
 }
 func (s *appSecretsStorage) GetBatch(items []GetBatchItem) (err error) {
 	for i, item := range items {

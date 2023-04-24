@@ -9,18 +9,19 @@ import (
 	"encoding/json"
 
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type viewRecordsStorage struct {
 	ctx             context.Context
 	viewRecordsFunc viewRecordsFunc
-	schemasFunc     schemasFunc
+	schemaCacheFunc schemaCacheFunc
 	wsidFunc        WSIDFunc
 	n10nFunc        N10nFunc
 }
 
-func (s *viewRecordsStorage) NewKeyBuilder(entity istructs.QName, _ istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder) {
+func (s *viewRecordsStorage) NewKeyBuilder(entity schemas.QName, _ istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder) {
 	return &viewRecordsKeyBuilder{
 		IKeyBuilder: s.viewRecordsFunc().KeyBuilder(entity),
 		view:        entity,
@@ -109,10 +110,11 @@ func (s *viewRecordsStorage) toJSON(sv istructs.IStateValue, opts ...interface{}
 	}
 
 	obj := make(map[string]interface{})
-	s.schemasFunc().Schema(sv.AsQName(istructs.SystemField_QName)).
-		Containers(func(containerName string, schema istructs.QName) {
-			if containerName == istructs.SystemContainer_ViewValue {
-				obj = coreutils.FieldsToMap(sv, s.schemasFunc(), coreutils.Filter(func(name string, kidn istructs.DataKindType) bool {
+	s.schemaCacheFunc().Schema(sv.AsQName(schemas.SystemField_QName)).
+		Containers(func(cont schemas.Container) {
+			containerName := cont.Name()
+			if containerName == schemas.SystemContainer_ViewValue {
+				obj = coreutils.FieldsToMap(sv, s.schemaCacheFunc(), coreutils.Filter(func(name string, kidn schemas.DataKind) bool {
 					return !options.excludedFields[name]
 				}))
 			}
