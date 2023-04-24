@@ -50,6 +50,10 @@ func Test_Duplicates(t *testing.T) {
 	)
 	`)
 
+
+	// TODO: use golang messages like
+	// ./types2.go:17:7: EmbedParser redeclared
+    //     ./types.go:17:6: other declaration of EmbedParser
 	require.ErrorContains(err, "3:2: schema 'test' contains duplicated name MyTableValidator")
 	require.ErrorContains(err, "6:3: schema 'test' contains duplicated name MyFunc2")
 	require.ErrorContains(err, "10:4: schema 'test' contains duplicated name MyFunc4")

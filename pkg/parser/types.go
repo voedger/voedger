@@ -6,17 +6,10 @@
 package sqlschema
 
 import (
-	"embed"
 	"fmt"
 
 	"github.com/alecthomas/participle/v2/lexer"
 )
-
-// TODO: why embed.FS, how to process a normal folder?
-// NewFSParser()
-type EmbedParser func(fs embed.FS, dir string) (*SchemaAST, error)
-
-type StringParser func(string) (*SchemaAST, error)
 
 type IStatement interface {
 	GetPos() *lexer.Position

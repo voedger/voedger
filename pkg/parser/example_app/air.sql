@@ -2,6 +2,8 @@
 -- schema consists of few schema files
 SCHEMA Air;
 
+
+// TODO: How we handle this?
 IMPORT SCHEMA "github.com/untillpro/untill";
 IMPORT SCHEMA "github.com/untillpro/airsbp" AS Air;
 
@@ -13,6 +15,8 @@ FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
 
 -- Function with string as a return type
 FUNCTION MyTableValidator2(sys.TableRow) RETURNS string ENGINE WASM;
+
+// TODO: better comments
 
 
 FUNCTION MyTableValidator3(param1 sys.TableRow, bbb.string) RETURNS ccc.TableRow ENGINE WASM;
