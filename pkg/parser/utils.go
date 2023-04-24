@@ -7,6 +7,8 @@ package sqlschema
 
 import (
 	"reflect"
+
+	"github.com/alecthomas/participle/v2/lexer"
 )
 
 func extractStatement(s any) interface{} {
@@ -20,7 +22,30 @@ func extractStatement(s any) interface{} {
 	panic("undefined statement")
 }
 
-func CompareParams(params []FunctionParam, f *FunctionStmt, errs []error) []error {
-	// TODO: compare params
+func CompareParam(pos *lexer.Position, left, right FunctionParam) bool {
+	var lt, rt OptQName
+	if left.NamedParam != nil {
+		lt = left.NamedParam.Type
+	} else {
+		lt = *left.UnnamedParamType
+	}
+	if right.NamedParam != nil {
+		rt = right.NamedParam.Type
+	} else {
+		rt = *right.UnnamedParamType
+	}
+	return lt == rt
+}
+
+func CompareParams(pos *lexer.Position, params []FunctionParam, f *FunctionStmt, errs []error) []error {
+	if len(params) != len(f.Params) {
+		errs = append(errs, errorAt(ErrFunctionParamsIncorrect, pos))
+		return errs
+	}
+	for i := 0; i < len(params); i++ {
+		if !CompareParam(pos, params[i], f.Params[i]) {
+			errs = append(errs, errorAt(ErrFunctionParamsIncorrect, pos))
+		}
+	}
 	return errs
 }

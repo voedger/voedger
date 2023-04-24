@@ -1,4 +1,4 @@
-SCHEMA air;
+SCHEMA Air;
 
 IMPORT SCHEMA "github.com/untillpro/untill";
 IMPORT SCHEMA "github.com/untillpro/airsbp" AS Air;
@@ -10,6 +10,10 @@ TAG BackofficeTag;
 FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
 FUNCTION MyTableValidator2(TableRow) RETURNS string ENGINE WASM;
 FUNCTION MyTableValidator3(param1 aaa.TableRow, bbb.string) RETURNS ccc.TableRow ENGINE WASM;
+
+FUNCTION SomeProjectorFunc() RETURNS void ENGINE BUILTIN;
+FUNCTION FillUPProfile(sys.Event) RETURNS void ENGINE BUILTIN;
+FUNCTION SomeCmdFunc() RETURNS void ENGINE BUILTIN;
 
 ROLE UntillPaymentsUser;
 
@@ -37,23 +41,27 @@ WORKSPACE MyWorkspace (
 
     ROLE LocationManager;
 
-    PROJECTOR ON COMMAND Air.CreateUPProfile AS SomeFunc;
-    PROJECTOR ON COMMAND ARGUMENT Untill.QNameOrders AS SomeSchema.SomeFunc2;
-    PROJECTOR ON INSERT Untill.Bill AS SomeFunc;
-    PROJECTOR ON INSERT OR UPDATE Untill.Bill AS SomeFunc;
-    PROJECTOR ON UPDATE Untill.Bill AS SomeFunc;
-    PROJECTOR ON UPDATE OR INSERT Untill.Bill AS SomeFunc;
+    FUNCTION OrderFunc(Untill.Orders) RETURNS void ENGINE BUILTIN;
+    FUNCTION Order2Func(Untill.Orders, Untill.PBill) RETURNS void ENGINE BUILTIN;
+    FUNCTION QueryFunc() RETURNS text ENGINE BUILTIN;
+    FUNCTION Qiery2Func(Untill.Orders, Untill.PBill) RETURNS text ENGINE BUILTIN;
+
+    PROJECTOR ON COMMAND Air.CreateUPProfile AS SomeProjectorFunc;
+    PROJECTOR ON COMMAND ARGUMENT Untill.QNameOrders AS Air.SomeProjectorFunc;
+    PROJECTOR ON INSERT Untill.Bill AS SomeProjectorFunc;
+    PROJECTOR ON INSERT OR UPDATE Untill.Bill AS SomeProjectorFunc;
+    PROJECTOR ON UPDATE Untill.Bill AS SomeProjectorFunc;
+    PROJECTOR ON UPDATE OR INSERT Untill.Bill AS SomeProjectorFunc;
     PROJECTOR ApplyUPProfile ON COMMAND IN (Air.CreateUPProfile, Air.UpdateUPProfile) AS Air.FillUPProfile;
 
-    COMMAND Orders AS PbillFunc;
-    COMMAND _Orders() AS PbillFunc WITH Comment=air.PosComment, Tags=[Tag1, air.Tag2];
-    COMMAND Orders2(Untill.Orders) AS PbillFunc;
-    COMMAND Orders3(Order Untill.Orders, Untill.PBill) AS PbillFunc;
+    COMMAND Orders AS SomeCmdFunc;
+    COMMAND _Orders() AS SomeCmdFunc WITH Comment=air.PosComment, Tags=[Tag1, air.Tag2];
+    COMMAND Orders2(Untill.Orders) AS OrderFunc;
+    COMMAND Orders3(Order Untill.Orders, Untill.PBill) AS Order2Func;
 
-    QUERY Query1 RETURNS QueryResellerInfoResult AS PbillFunc;
-    QUERY _Query1() RETURNS Air.QueryResellerInfoResult AS PbillFunc WITH Comment=Air.PosComment, Tags=[Tag1, Air.Tag2];
-    QUERY Query2(Untill.Orders) RETURNS QueryResellerInfoResult AS PbillFunc;
-    QUERY Query3(Order Untill.Orders, Untill.PBill) RETURNS QueryResellerInfoResult AS PbillFunc;
+    QUERY Query1 RETURNS text AS QueryFunc;
+    QUERY _Query1() RETURNS text AS QueryFunc WITH Comment=Air.PosComment, Tags=[Tag1, Air.Tag2];
+    QUERY Query2(Order Untill.Orders, Untill.PBill) RETURNS text AS Qiery2Func;
 
 
     GRANT ALL ON ALL TABLES WITH TAG untill.Backoffice TO LocationManager;

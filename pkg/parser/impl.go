@@ -106,23 +106,26 @@ func analyseReferences(schema *SchemaAST, errs []error) []error {
 		case *CommandStmt:
 			f := resolveFunc(v.Func, schema)
 			if f == nil {
-				errs = append(errs, ErrFunctionNotFound(v.Func, v.GetPos()))
+				errs = append(errs, errorAt(ErrFunctionNotFound, v.GetPos()))
 			} else {
-				errs = CompareParams(v.Params, f, errs)
+				errs = CompareParams(&v.Pos, v.Params, f, errs)
 			}
 		case *QueryStmt:
 			f := resolveFunc(v.Func, schema)
 			if f == nil {
-				errs = append(errs, ErrFunctionNotFound(v.Func, v.GetPos()))
+				errs = append(errs, errorAt(ErrFunctionNotFound, v.GetPos()))
 			} else {
-				errs = CompareParams(v.Params, f, errs)
+				errs = CompareParams(&v.Pos, v.Params, f, errs)
+				if v.Returns != f.Returns {
+					errs = append(errs, errorAt(ErrFunctionResultIncorrect, v.GetPos()))
+				}
 			}
 		case *ProjectorStmt:
 			f := resolveFunc(v.Func, schema)
 			if f == nil {
-				errs = append(errs, ErrFunctionNotFound(v.Func, v.GetPos()))
+				errs = append(errs, errorAt(ErrFunctionNotFound, v.GetPos()))
 			} else {
-				// TODO: Check funtion params
+				// TODO: Check function params
 			}
 		}
 	})
@@ -134,7 +137,9 @@ func resolveFunc(name OptQName, schema *SchemaAST) (function *FunctionStmt) {
 	if pkg == "" || pkg == schema.Package {
 		iterate(schema, func(stmt interface{}) {
 			if f, ok := stmt.(*FunctionStmt); ok {
-				function = f
+				if f.Name == name.Name {
+					function = f
+				}
 			}
 		})
 	} else {
@@ -157,7 +162,7 @@ func analyseDuplicateNames(schema *SchemaAST, errs []error) []error {
 			}
 			if _, ok := namedIndex[name]; ok {
 				s := stmt.(IStatement)
-				errs = append(errs, ErrSchemaContainsDuplicateName(schema.Package, name, s.GetPos()))
+				errs = append(errs, errorAt(ErrSchemaContainsDuplicateName(schema.Package, name), s.GetPos()))
 			} else {
 				namedIndex[name] = stmt
 			}

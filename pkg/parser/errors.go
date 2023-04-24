@@ -13,14 +13,14 @@ import (
 
 var ErrDirContainsNoSchemaFiles = errors.New("directory contains no schema files")
 var ErrDirContainsDifferentSchemas = errors.New("directory contains files for different schemas")
+var ErrFunctionParamsIncorrect = errors.New("function parameters do not match")
+var ErrFunctionResultIncorrect = errors.New("function result do not match")
+var ErrFunctionNotFound = errors.New("function not found")
 
-func ErrFunctionNotFound(name OptQName, pos *lexer.Position) error {
-	if name.Package == "" {
-		return fmt.Errorf("function %s not found at pos: %s", name.Name, pos.String())
-	}
-	return fmt.Errorf("function %s.%s not found at pos: %s", name.Package, name.Name, pos.String())
+func ErrSchemaContainsDuplicateName(schema, name string) error {
+	return fmt.Errorf("schema '%s' contains duplicated name %s", schema, name)
 }
 
-func ErrSchemaContainsDuplicateName(schema, name string, pos *lexer.Position) error {
-	return fmt.Errorf("schema %s contains duplicated name %s at pos %s", schema, name, pos.String())
+func errorAt(err error, pos *lexer.Position) error {
+	return fmt.Errorf("%s: %w", pos.String(), err)
 }

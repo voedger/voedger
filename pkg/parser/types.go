@@ -7,6 +7,7 @@ package sqlschema
 
 import (
 	"embed"
+	"fmt"
 
 	"github.com/alecthomas/participle/v2/lexer"
 )
@@ -107,6 +108,14 @@ func (s *WorkspaceStmt) Iterate(callback func(stmt interface{})) {
 type OptQName struct {
 	Package string `parser:"(@Ident '.')?"`
 	Name    string `parser:"@Ident"`
+}
+
+func (q OptQName) String() string {
+	if q.Package == "" {
+		return q.Name
+	}
+	return fmt.Sprintf("%s.%s", q.Package, q.Name)
+
 }
 
 type Statement struct {

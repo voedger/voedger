@@ -13,8 +13,6 @@ github.com/VictoriaMetrics/fastcache v1.12.1/go.mod h1:tX04vaqcNoQeGLD+ra5pU5sWk
 github.com/alecthomas/assert/v2 v2.2.2 h1:Z/iVC0xZfWTaFNE6bA3z07T86hd45Xe2eLt6WVy2bbk=
 github.com/alecthomas/participle/v2 v2.0.0 h1:Fgrq+MbuSsJwIkw3fEj9h75vDP0Er5JzepJ0/HNHv0g=
 github.com/alecthomas/participle/v2 v2.0.0/go.mod h1:rAKZdJldHu8084ojcWevWAL8KmEU+AT+Olodb+WoN2Y=
-github.com/alecthomas/repr v0.2.0 h1:HAzS41CIzNW5syS8Mf9UwXhNH1J9aix/BvDRf1Ml2Yk=
-github.com/alecthomas/repr v0.2.0/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
 github.com/alecthomas/repr v0.2.1-0.20230322203820-fba37eeb3a59 h1:M0LE9aE9sIo6NUs54Mg5nKjuIS1TTuT6pKvQZfwsBmA=
 github.com/alecthomas/repr v0.2.1-0.20230322203820-fba37eeb3a59/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
 github.com/allegro/bigcache v1.2.1-0.20190218064605-e24eb225f156 h1:eMwmnE/GDgah4HI848JfFxHt+iPb26b4zyfspmqY0/8=
