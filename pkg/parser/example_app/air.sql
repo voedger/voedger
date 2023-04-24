@@ -8,10 +8,14 @@ IMPORT SCHEMA "github.com/untillpro/airsbp" AS Air;
 COMMENT BackofficeComment "Backoffice Comment";
 TAG BackofficeTag;
 
--- Comment for function
+-- Void function, no parameters
 FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
-FUNCTION MyTableValidator2(TableRow) RETURNS string ENGINE WASM;
-FUNCTION MyTableValidator3(param1 aaa.TableRow, bbb.string) RETURNS ccc.TableRow ENGINE WASM;
+
+-- Function with string as a return type
+FUNCTION MyTableValidator2(sys.TableRow) RETURNS string ENGINE WASM;
+
+
+FUNCTION MyTableValidator3(param1 sys.TableRow, bbb.string) RETURNS ccc.TableRow ENGINE WASM;
 
 FUNCTION SomeProjectorFunc() RETURNS void ENGINE BUILTIN;
 FUNCTION FillUPProfile(sys.Event) RETURNS void ENGINE BUILTIN;
