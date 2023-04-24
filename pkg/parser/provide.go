@@ -4,10 +4,12 @@
  */
 package sqlschema
 
+// TODO: NewFSParser()
 func ProvideEmbedParser() EmbedParser {
 	return embedParserImpl
 }
 
+// TODO: NewStringParser()
 func ProvideStringParser() StringParser {
 	return stringParserImpl
 }
