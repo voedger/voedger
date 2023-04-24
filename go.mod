@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/VictoriaMetrics/fastcache v1.12.1
 	github.com/alecthomas/participle/v2 v2.0.0
-	github.com/alecthomas/repr v0.2.0
+	github.com/alecthomas/repr v0.2.1-0.20230322203820-fba37eeb3a59
 	github.com/aptible/supercronic v0.2.2
 	github.com/emersion/go-smtp v0.15.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible

@@ -6,6 +6,7 @@ package sqlschema
 
 import (
 	"embed"
+	"errors"
 	"path/filepath"
 	"strings"
 
@@ -15,19 +16,12 @@ import (
 
 func parse(s string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
-		{Name: "C_SEMICOLON", Pattern: `;`},
-		{Name: "C_COMMA", Pattern: `,`},
-		{Name: "C_PKGSEPARATOR", Pattern: `\.`},
-		{Name: "C_ALL", Pattern: `\*`},
-		{Name: "C_EQUAL", Pattern: `=`},
-		{Name: "C_LEFTBRACKET", Pattern: `\(`},
-		{Name: "C_RIGHTBRACKET", Pattern: `\)`},
-		{Name: "C_LEFTSQBRACKET", Pattern: `\[`},
-		{Name: "C_RIGHTSQBRACKET", Pattern: `\]`},
-		{Name: "ON", Pattern: `ON`},
+
+		{Name: "Punct", Pattern: `(;|,|\.|\*|=|\(|\)|\[|\])`},
+		{Name: "Keywords", Pattern: `ON`},
 		{Name: "DEFAULTNEXTVAL", Pattern: `DEFAULT[ \r\n\t]+NEXTVAL`},
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
-		{Name: "String", Pattern: `"(\\"|[^"])*"`},
+		{Name: "String", Pattern: `("(\\"|[^"])*")|('(\\'|[^'])*')`},
 		{Name: "Int", Pattern: `\d+`},
 		{Name: "Number", Pattern: `[-+]?(\d*\.)?\d+`},
 		{Name: "Ident", Pattern: `[a-zA-Z_]\w*`},
@@ -49,7 +43,6 @@ func stringParserImpl(s string) (*SchemaAST, error) {
 
 func mergeSchemas(mergeFrom, mergeTo *SchemaAST) {
 	// imports
-	// TODO: check for import duplicates
 	mergeTo.Imports = append(mergeTo.Imports, mergeFrom.Imports...)
 
 	// statements
@@ -90,25 +83,102 @@ func embedParserImpl(fs embed.FS, dir string) (*SchemaAST, error) {
 	return analyse(head)
 }
 
+func iterate(c IStatementCollection, callback func(stmt interface{})) {
+	c.Iterate(func(stmt interface{}) {
+		callback(stmt)
+		if collection, ok := stmt.(IStatementCollection); ok {
+			iterate(collection, callback)
+		}
+	})
+}
+
 func analyse(schema *SchemaAST) (*SchemaAST, error) {
+	errs := make([]error, 0)
+	errs = analyseDuplicateNames(schema, errs)
+	errs = analyseReferences(schema, errs)
+	cleanupComments(schema)
+	return schema, errors.Join(errs...)
+}
 
-	// TODO: include pos
-	namedIndex := make(map[string]int)
-
-	for i := 0; i < len(schema.Statements); i++ {
-		var ii interface{} = &schema.Statements[i]
-
-		if statement, ok := ii.(IStatement); ok {
-			stmt := statement.Stmt()
-			// TODO: recurse into workspaces
-			if named, ok := stmt.(INamedStatement); ok {
-				if _, ok := namedIndex[named.GetName()]; ok {
-					return schema, ErrSchemaContainsDuplicateName(schema.Package, named.GetName())
+func analyseReferences(schema *SchemaAST, errs []error) []error {
+	iterate(schema, func(stmt interface{}) {
+		switch v := stmt.(type) {
+		case *CommandStmt:
+			f := resolveFunc(v.Func, schema)
+			if f == nil {
+				errs = append(errs, errorAt(ErrFunctionNotFound, v.GetPos()))
+			} else {
+				errs = CompareParams(&v.Pos, v.Params, f, errs)
+			}
+		case *QueryStmt:
+			f := resolveFunc(v.Func, schema)
+			if f == nil {
+				errs = append(errs, errorAt(ErrFunctionNotFound, v.GetPos()))
+			} else {
+				errs = CompareParams(&v.Pos, v.Params, f, errs)
+				if v.Returns != f.Returns {
+					errs = append(errs, errorAt(ErrFunctionResultIncorrect, v.GetPos()))
 				}
-				namedIndex[named.GetName()] = i
+			}
+		case *ProjectorStmt:
+			f := resolveFunc(v.Func, schema)
+			if f == nil {
+				errs = append(errs, errorAt(ErrFunctionNotFound, v.GetPos()))
+			} else {
+				// TODO: Check function params
 			}
 		}
+	})
+	return errs
+}
 
+func resolveFunc(name OptQName, schema *SchemaAST) (function *FunctionStmt) {
+	pkg := strings.TrimSpace(name.Package)
+	if pkg == "" || pkg == schema.Package {
+		iterate(schema, func(stmt interface{}) {
+			if f, ok := stmt.(*FunctionStmt); ok {
+				if f.Name == name.Name {
+					function = f
+				}
+			}
+		})
+	} else {
+		// TODO: resolve in other packages
 	}
-	return schema, nil
+	return
+}
+
+func analyseDuplicateNames(schema *SchemaAST, errs []error) []error {
+	namedIndex := make(map[string]interface{})
+
+	iterate(schema, func(stmt interface{}) {
+		if named, ok := stmt.(INamedStatement); ok {
+			name := named.GetName()
+			if name == "" {
+				_, isProjector := stmt.(*ProjectorStmt)
+				if isProjector {
+					return // skip anonymous projectors
+				}
+			}
+			if _, ok := namedIndex[name]; ok {
+				s := stmt.(IStatement)
+				errs = append(errs, errorAt(ErrSchemaContainsDuplicateName(schema.Package, name), s.GetPos()))
+			} else {
+				namedIndex[name] = stmt
+			}
+		}
+	})
+	return errs
+}
+
+func cleanupComments(schema *SchemaAST) {
+	iterate(schema, func(stmt interface{}) {
+		if s, ok := stmt.(IStatement); ok {
+			comments := *s.GetComments()
+			for i := 0; i < len(comments); i++ {
+				comments[i], _ = strings.CutPrefix(comments[i], "--")
+				comments[i] = strings.TrimSpace(comments[i])
+			}
+		}
+	})
 }

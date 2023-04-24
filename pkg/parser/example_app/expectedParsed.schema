@@ -2,57 +2,65 @@
  Package: "air",
  Imports: []sqlschema.ImportStmt{
   {
+   Pos: Position{Filename: "", Offset: 13, Line: 3, Column: 1},
    Name: "\"github.com/untillpro/untill\"",
   },
   {
+   Pos: Position{Filename: "", Offset: 58, Line: 4, Column: 1},
    Name: "\"github.com/untillpro/airsbp\"",
-   Alias: &"air",
-  },
+   Alias: &"Air"  },
  },
  Statements: []sqlschema.RootStatement{
   {
    Comment: &sqlschema.CommentStmt{
+    Statement: sqlschema.Statement{
+     Pos: Position{Filename: "", Offset: 111, Line: 6, Column: 1},
+    },
     Name: "BackofficeComment",
-    Value: "\"Backoffice Comment\"",
-   },
+    Value: "\"Backoffice Comment\""   },
   },
   {
    Tag: &sqlschema.TagStmt{
-    Name: "BackofficeTag",
-   },
+    Statement: sqlschema.Statement{
+     Pos: Position{Filename: "", Offset: 159, Line: 7, Column: 1},
+    },
+    Name: "BackofficeTag"   },
   },
   {
    Function: &sqlschema.FunctionStmt{
-    Comment: &"-- Comment for function",
+    Statement: sqlschema.Statement{
+     Pos: Position{Filename: "", Offset: 203, Line: 10, Column: 1},
+     Comments: []string{
+      "Comment for function",
+     }    },
     Name: "MyTableValidator",
     Returns: sqlschema.OptQName{
-     Name: "void",
-    },
+     Name: "void"    },
     Engine: sqlschema.EngineType{
-     Builtin: true,
-    },
-   },
+     Builtin: true    }   },
   },
   {
    Function: &sqlschema.FunctionStmt{
+    Statement: sqlschema.Statement{
+     Pos: Position{Filename: "", Offset: 260, Line: 11, Column: 1},
+    },
     Name: "MyTableValidator2",
     Params: []sqlschema.FunctionParam{
      {
       UnnamedParamType: &sqlschema.OptQName{
-       Name: "TableRow",
-      },
-     },
+       Name: "TableRow"      }     },
     },
     Returns: sqlschema.OptQName{
-     Name: "string",
-    },
+     Name: "string"    },
     Engine: sqlschema.EngineType{
      WASM: true,
-    },
-   },
+    }   },
   },
   {
    Function: &sqlschema.FunctionStmt{
+    Statement: sqlschema.Statement{
+     Pos: Position{Filename: "", Offset: 325, Line: 12, Column: 1},
+    },
     Name: "MyTableValidator3",
     Params: []sqlschema.FunctionParam{
      {
@@ -60,453 +68,439 @@
        Name: "param1",
        Type: sqlschema.OptQName{
         Package: "aaa",
-        Name: "TableRow",
-       },
-      },
+        Name: "TableRow"       }      },
      },
      {
       UnnamedParamType: &sqlschema.OptQName{
        Package: "bbb",
-       Name: "string",
-      },
-     },
+       Name: "string"      }     },
     },
     Returns: sqlschema.OptQName{
      Package: "ccc",
-     Name: "TableRow",
-    },
+     Name: "TableRow"    },
     Engine: sqlschema.EngineType{
      WASM: true,
-    },
-   },
+    }   },
   },
   {
    Role: &sqlschema.RoleStmt{
-    Name: "UntillPaymentsUser",
-   },
+    Statement: sqlschema.Statement{
+     Pos: Position{Filename: "", Offset: 420, Line: 14, Column: 1},
+    },
+    Name: "UntillPaymentsUser"   },
   },
   {
    Table: &sqlschema.TableStmt{
-    Comment: &"-- Comment for table",
-    Name: "air_table_plan",
+    Statement: sqlschema.Statement{
+     Pos: Position{Filename: "", Offset: 467, Line: 17, Column: 1},
+     Comments: []string{
+      "Comment for table",
+     }    },
+    Name: "AirTablePlan",
     Of: []sqlschema.OptQName{
      {
-      Name: "CDOC",
-     },
+      Name: "CDOC"     },
     },
     Items: []sqlschema.TableItemExpr{
      {
       Field: &sqlschema.FieldExpr{
-       Name: "fstate",
+       Name: "FState",
        Type: sqlschema.OptQName{
-        Name: "int",
-       },
-      },
-     },
+        Name: "int"       },
+      }     },
      {
       Field: &sqlschema.FieldExpr{
-       Name: "name",
+       Name: "Name",
        Type: sqlschema.OptQName{
-        Name: "text",
-       },
+        Name: "text"       },
        NotNull: true,
-      },
-     },
+      }     },
      {
       Field: &sqlschema.FieldExpr{
-       Name: "vf",
+       Name: "VerifiableField",
        Type: sqlschema.OptQName{
-        Name: "text",
-       },
+        Name: "text"       },
        NotNull: true,
        Verifiable: true,
-      },
-     },
+      }     },
      {
       Field: &sqlschema.FieldExpr{
-       Name: "i1",
+       Name: "Int1",
        Type: sqlschema.OptQName{
-        Name: "int",
-       },
+        Name: "int"       },
        DefaultIntValue: &1,
-      },
-     },
+      }     },
      {
       Field: &sqlschema.FieldExpr{
-       Name: "s1",
+       Name: "Text1",
        Type: sqlschema.OptQName{
-        Name: "text",
-       },
+        Name: "text"       },
        DefaultStringValue: &"\"a\"",
-      },
-     },
+      }     },
      {
       Field: &sqlschema.FieldExpr{
-       Name: "ii",
+       Name: "Int2",
        Type: sqlschema.OptQName{
-        Name: "int",
-       },
-       DefaultNextVal: &"sequence",
-      },
-     },
+        Name: "int"       },
+       DefaultNextVal: &"'sequence'",
+      }     },
      {
       Field: &sqlschema.FieldExpr{
-       Name: "id_bill",
+       Name: "BillID",
        Type: sqlschema.OptQName{
-        Name: "int64",
-       },
+        Name: "int64"       },
        References: &sqlschema.OptQName{
         Package: "air",
-        Name: "bill",
-       },
-      },
-     },
+        Name: "bill"       },
+      }     },
      {
       Field: &sqlschema.FieldExpr{
-       Name: "ckf",
+       Name: "CheckedField",
        Type: sqlschema.OptQName{
-        Name: "text",
-       },
-       CheckRegexp: &"\"^[0-9]{8}$\"",
-      },
-     },
+        Name: "text"       },
+       CheckRegexp: &"\"^[0-9]{8}$\""      }     },
      {
       Unique: &sqlschema.UniqueExpr{
        Fields: []string{
         "fstate",
         "name",
-       },
-      },
+       }      },
      },
     },
     With: []sqlschema.TcqWithItem{
      {
       Comment: &sqlschema.OptQName{
-       Name: "BackofficeComment",
-      },
+       Name: "BackofficeComment"      },
      },
      {
       Tags: []sqlschema.OptQName{
        {
-        Name: "BackofficeTag",
-       },
-      },
-     },
-    },
-   },
-  },
+        Name: "BackofficeTag"       },
+      }     },
+    }   }  },
   {
    Workspace: &sqlschema.WorkspaceStmt{
-    Name: "ws",
-    Statements: []*sqlschema.WorkspaceStatement{
+    Statement: sqlschema.Statement{
+     Pos: Position{Filename: "", Offset: 848, Line: 29, Column: 1},
+    },
+    Name: "MyWorkspace",
+    Statements: []sqlschema.WorkspaceStatement{
      {
       Comment: &sqlschema.CommentStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 877, Line: 31, Column: 5},
+       },
        Name: "PosComment",
-       Value: "\"Pos Comment\"",
-      },
+       Value: "\"Pos Comment\""      },
      },
      {
       Tag: &sqlschema.TagStmt{
-       Name: "PosTag",
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 915, Line: 32, Column: 5},
+       },
+       Name: "PosTag"      },
+     },
+     {
+      UseTable: &sqlschema.UseTableStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 929, Line: 34, Column: 2},
+       },
+       Package: "SomeSchema",
+       Name: "SomeTable",
       },
      },
      {
       UseTable: &sqlschema.UseTableStmt{
-       Table: sqlschema.UseTableItem{
-        Package: "somepackage",
-        Name: "sometable",
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 962, Line: 35, Column: 2},
        },
+       Name: "AirTablePlan",
       },
      },
      {
       UseTable: &sqlschema.UseTableStmt{
-       Table: sqlschema.UseTableItem{
-        Name: "mytable",
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 987, Line: 36, Column: 2},
        },
-      },
-     },
-     {
-      UseTable: &sqlschema.UseTableStmt{
-       Table: sqlschema.UseTableItem{
-        Package: "untill",
-        AllTables: true,
-       },
-      },
+       Package: "Untill",
+       AllTables: true      },
      },
      {
       Role: &sqlschema.RoleStmt{
-       Name: "LocationManager",
-      },
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1013, Line: 38, Column: 5},
+       },
+       Name: "LocationManager"      },
      },
      {
       Projector: &sqlschema.ProjectorStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1040, Line: 40, Column: 5},
+       },
        On: "COMMAND",
        Targets: []sqlschema.OptQName{
         {
-         Package: "air",
-         Name: "CreateUPProfile",
-        },
+         Package: "Air",
+         Name: "CreateUPProfile"        },
        },
        Func: sqlschema.OptQName{
-        Name: "SomeFunc",
-       },
-      },
+        Name: "SomeFunc"       }      },
      },
      {
       Projector: &sqlschema.ProjectorStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1098, Line: 41, Column: 5},
+       },
        On: "COMMANDARGUMENT",
        Targets: []sqlschema.OptQName{
         {
-         Package: "untill",
-         Name: "QNameOrders",
-        },
+         Package: "Untill",
+         Name: "QNameOrders"        },
        },
        Func: sqlschema.OptQName{
-        Package: "xyz",
-        Name: "SomeFunc2",
-       },
-      },
+        Package: "SomeSchema",
+        Name: "SomeFunc2"       }      },
      },
      {
       Projector: &sqlschema.ProjectorStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1176, Line: 42, Column: 5},
+       },
        On: "INSERT",
        Targets: []sqlschema.OptQName{
         {
-         Package: "untill",
-         Name: "bill",
-        },
+         Package: "Untill",
+         Name: "Bill"        },
        },
        Func: sqlschema.OptQName{
-        Name: "SomeFunc",
-       },
-      },
+        Name: "SomeFunc"       }      },
      },
      {
       Projector: &sqlschema.ProjectorStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1225, Line: 43, Column: 5},
+       },
        On: "INSERTORUPDATE",
        Targets: []sqlschema.OptQName{
         {
-         Package: "untill",
-         Name: "bill",
-        },
+         Package: "Untill",
+         Name: "Bill"        },
        },
        Func: sqlschema.OptQName{
-        Name: "SomeFunc",
-       },
-      },
+        Name: "SomeFunc"       }      },
      },
      {
       Projector: &sqlschema.ProjectorStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1284, Line: 44, Column: 5},
+       },
        On: "UPDATE",
        Targets: []sqlschema.OptQName{
         {
-         Package: "untill",
-         Name: "bill",
-        },
+         Package: "Untill",
+         Name: "Bill"        },
        },
        Func: sqlschema.OptQName{
-        Name: "SomeFunc",
-       },
-      },
+        Name: "SomeFunc"       }      },
      },
      {
       Projector: &sqlschema.ProjectorStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1333, Line: 45, Column: 5},
+       },
        On: "UPDATEORINSERT",
        Targets: []sqlschema.OptQName{
         {
-         Package: "untill",
-         Name: "bill",
-        },
+         Package: "Untill",
+         Name: "Bill"        },
        },
        Func: sqlschema.OptQName{
-        Name: "SomeFunc",
-       },
-      },
+        Name: "SomeFunc"       }      },
      },
      {
       Projector: &sqlschema.ProjectorStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1392, Line: 46, Column: 5},
+       },
        Name: "ApplyUPProfile",
        On: "COMMAND",
        Targets: []sqlschema.OptQName{
         {
-         Package: "air",
-         Name: "CreateUPProfile",
-        },
+         Package: "Air",
+         Name: "CreateUPProfile"        },
         {
-         Package: "air",
-         Name: "UpdateUPProfile",
-        },
+         Package: "Air",
+         Name: "UpdateUPProfile"        },
        },
        Func: sqlschema.OptQName{
-        Package: "air",
-        Name: "FillUPProfile",
-       },
-      },
+        Package: "Air",
+        Name: "FillUPProfile"       }      },
      },
      {
       Command: &sqlschema.CommandStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1501, Line: 48, Column: 5},
+       },
        Name: "Orders",
        Func: "PbillFunc",
       },
      },
      {
       Command: &sqlschema.CommandStmt{
-       Name: "Orders",
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1534, Line: 49, Column: 5},
+       },
+       Name: "_Orders",
        Func: "PbillFunc",
        With: []sqlschema.TcqWithItem{
         {
          Comment: &sqlschema.OptQName{
           Package: "air",
-          Name: "PosComment",
-         },
+          Name: "PosComment"         },
         },
         {
          Tags: []sqlschema.OptQName{
           {
-           Name: "Tag1",
-          },
+           Name: "Tag1"          },
           {
            Package: "air",
-           Name: "Tag2",
-          },
-         },
-        },
-       },
-      },
+           Name: "Tag2"          },
+         }        },
+       }      },
      },
      {
       Command: &sqlschema.CommandStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1621, Line: 50, Column: 5},
+       },
        Name: "Orders2",
        Params: []sqlschema.FunctionParam{
         {
          UnnamedParamType: &sqlschema.OptQName{
-          Package: "untill",
-          Name: "orders",
-         },
-        },
+          Package: "Untill",
+          Name: "Orders"         }        },
        },
        Func: "PbillFunc",
       },
      },
      {
       Command: &sqlschema.CommandStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1670, Line: 51, Column: 5},
+       },
        Name: "Orders3",
        Params: []sqlschema.FunctionParam{
         {
          NamedParam: &sqlschema.NamedParam{
-          Name: "order",
+          Name: "Order",
           Type: sqlschema.OptQName{
-           Package: "untill",
-           Name: "orders",
-          },
-         },
+           Package: "Untill",
+           Name: "Orders"          }         },
         },
         {
          UnnamedParamType: &sqlschema.OptQName{
-          Package: "untill",
-          Name: "pbill",
-         },
-        },
+          Package: "Untill",
+          Name: "PBill"         }        },
        },
        Func: "PbillFunc",
       },
      },
      {
       Query: &sqlschema.QueryStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1740, Line: 53, Column: 5},
+       },
        Name: "Query1",
        Returns: sqlschema.OptQName{
-        Name: "QueryResellerInfoResult",
-       },
+        Name: "QueryResellerInfoResult"       },
        Func: "PbillFunc",
       },
      },
      {
       Query: &sqlschema.QueryStmt{
-       Name: "Query1",
-       Returns: sqlschema.OptQName{
-        Package: "air",
-        Name: "QueryResellerInfoResult",
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1803, Line: 54, Column: 5},
        },
+       Name: "_Query1",
+       Returns: sqlschema.OptQName{
+        Package: "Air",
+        Name: "QueryResellerInfoResult"       },
        Func: "PbillFunc",
        With: []sqlschema.TcqWithItem{
         {
          Comment: &sqlschema.OptQName{
-          Package: "air",
-          Name: "PosComment",
-         },
+          Package: "Air",
+          Name: "PosComment"         },
         },
         {
          Tags: []sqlschema.OptQName{
           {
-           Name: "Tag1",
-          },
+           Name: "Tag1"          },
           {
-           Package: "air",
-           Name: "Tag2",
-          },
-         },
-        },
-       },
-      },
+           Package: "Air",
+           Name: "Tag2"          },
+         }        },
+       }      },
      },
      {
       Query: &sqlschema.QueryStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 1924, Line: 55, Column: 5},
+       },
        Name: "Query2",
        Params: []sqlschema.FunctionParam{
         {
          UnnamedParamType: &sqlschema.OptQName{
-          Package: "untill",
-          Name: "orders",
-         },
-        },
+          Package: "Untill",
+          Name: "Orders"         }        },
        },
        Returns: sqlschema.OptQName{
-        Name: "QueryResellerInfoResult",
-       },
+        Name: "QueryResellerInfoResult"       },
        Func: "PbillFunc",
       },
      },
      {
       Query: &sqlschema.QueryStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 2002, Line: 56, Column: 5},
+       },
        Name: "Query3",
        Params: []sqlschema.FunctionParam{
         {
          NamedParam: &sqlschema.NamedParam{
-          Name: "order",
+          Name: "Order",
           Type: sqlschema.OptQName{
-           Package: "untill",
-           Name: "orders",
-          },
-         },
+           Package: "Untill",
+           Name: "Orders"          }         },
         },
         {
          UnnamedParamType: &sqlschema.OptQName{
-          Package: "untill",
-          Name: "pbill",
-         },
-        },
+          Package: "Untill",
+          Name: "PBill"         }        },
        },
        Returns: sqlschema.OptQName{
-        Name: "QueryResellerInfoResult",
-       },
+        Name: "QueryResellerInfoResult"       },
        Func: "PbillFunc",
       },
      },
      {
       Grant: &sqlschema.GrantStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 2102, Line: 59, Column: 5},
+       },
        Grants: []string{
         "ALL",
        },
        On: "ALLTABLESWITHTAG",
        Target: sqlschema.OptQName{
         Package: "untill",
-        Name: "Backoffice",
-       },
-       To: "LocationManager",
-      },
-     },
+        Name: "Backoffice"       },
+       To: "LocationManager"      }     },
      {
       Grant: &sqlschema.GrantStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 2177, Line: 60, Column: 5},
+       },
        Grants: []string{
         "INSERT",
         "UPDATE",
@@ -514,93 +508,90 @@
        On: "ALLTABLESWITHTAG",
        Target: sqlschema.OptQName{
         Package: "sys",
-        Name: "ODoc",
-       },
-       To: "LocationUser",
-      },
-     },
+        Name: "ODoc"       },
+       To: "LocationUser"      }     },
      {
       Grant: &sqlschema.GrantStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 2250, Line: 61, Column: 5},
+       },
        Grants: []string{
         "SELECT",
        },
        On: "TABLE",
        Target: sqlschema.OptQName{
-        Package: "untill",
-        Name: "orders",
-       },
-       To: "LocationUser",
-      },
-     },
+        Package: "Untill",
+        Name: "Orders"       },
+       To: "LocationUser"      }     },
      {
       Grant: &sqlschema.GrantStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 2307, Line: 62, Column: 5},
+       },
        Grants: []string{
         "EXECUTE",
        },
        On: "COMMAND",
        Target: sqlschema.OptQName{
-        Name: "Orders",
-       },
-       To: "LocationUser",
-      },
-     },
+        Name: "Orders"       },
+       To: "LocationUser"      }     },
      {
       Grant: &sqlschema.GrantStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 2360, Line: 63, Column: 5},
+       },
        Grants: []string{
         "EXECUTE",
        },
        On: "QUERY",
        Target: sqlschema.OptQName{
-        Name: "TransactionHistory",
-       },
-       To: "LocationUser",
-      },
-     },
+        Name: "TransactionHistory"       },
+       To: "LocationUser"      }     },
      {
       Grant: &sqlschema.GrantStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 2423, Line: 64, Column: 5},
+       },
        Grants: []string{
         "EXECUTE",
        },
        On: "ALLQUERIESWITHTAG",
        Target: sqlschema.OptQName{
-        Name: "PosTag",
-       },
-       To: "LocationUser",
-      },
-     },
+        Name: "PosTag"       },
+       To: "LocationUser"      }     },
      {
       Table: &sqlschema.TableStmt{
-       Name: "ws_table",
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 2490, Line: 66, Column: 5},
+       },
+       Name: "WsTable",
        Of: []sqlschema.OptQName{
         {
-         Name: "CDOC",
-        },
+         Name: "CDOC"        },
         {
-         Package: "air",
-         Name: "SomeType",
-        },
+         Package: "Air",
+         Name: "SomeType"        },
        },
        Items: []sqlschema.TableItemExpr{
         {
          Field: &sqlschema.FieldExpr{
-          Name: "psname",
+          Name: "PsName",
           Type: sqlschema.OptQName{
-           Name: "text",
-          },
-         },
-        },
+           Name: "text"          },
+         }        },
         {
          Table: &sqlschema.TableStmt{
-          Name: "child",
+          Statement: sqlschema.Statement{
+           Pos: Position{Filename: "", Offset: 2557, Line: 68, Column: 9},
+          },
+          Name: "Child",
           Items: []sqlschema.TableItemExpr{
            {
             Field: &sqlschema.FieldExpr{
-             Name: "number",
+             Name: "Number",
              Type: sqlschema.OptQName{
-              Name: "int",
-             },
-            },
-           },
+              Name: "int"             },
+            }           },
           },
          },
         },
@@ -609,51 +600,47 @@
      },
      {
       View: &sqlschema.ViewStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 2621, Line: 73, Column: 5},
+       },
        Name: "XZReports",
        Fields: []sqlschema.ViewField{
         {
          Name: "Year",
-         Type: "int32",
-        },
+         Type: "int32"        },
         {
          Name: "Month",
-         Type: "int32",
-        },
+         Type: "int32"        },
         {
          Name: "Day",
-         Type: "int32",
-        },
+         Type: "int32"        },
         {
          Name: "Kind",
-         Type: "int32",
-        },
+         Type: "int32"        },
         {
          Name: "Number",
-         Type: "int32",
-        },
+         Type: "int32"        },
         {
          Name: "XZReportWDocID",
-         Type: "id",
-        },
+         Type: "id"        },
        },
        ResultOf: sqlschema.OptQName{
-        Package: "air",
-        Name: "UpdateXZReportsView",
-       },
+        Package: "Air",
+        Name: "UpdateXZReportsView"       },
        With: []sqlschema.ViewWithItem{
         {
          PrimaryKey: &"\"(Year), Month, Day, Kind, Number\"",
         },
         {
          Comment: &sqlschema.OptQName{
-          Name: "PosComment",
-         },
-        },
-       },
-      },
+          Name: "PosComment"         }        },
+       }      },
      },
      {
       Rate: &sqlschema.RateStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 2911, Line: 86, Column: 5},
+       },
        Name: "BackofficeFuncRate1",
        Amount: 1000,
        Per: "HOUR",
@@ -661,14 +648,14 @@
      },
      {
       Rate: &sqlschema.RateStmt{
+       Statement: sqlschema.Statement{
+        Pos: Position{Filename: "", Offset: 2955, Line: 87, Column: 5},
+       },
        Name: "BackofficeFuncRate2",
        Amount: 100,
        Per: "MINUTE",
-       PerIP: true,
-      },
+       PerIP: true      },
      },
-    },
-   },
+    }   },
   },
- },
-}
+ }}
