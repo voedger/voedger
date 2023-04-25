@@ -3,7 +3,7 @@
 * @author Michael Saigachenko
  */
 
-package sqlschema
+package parser
 
 import (
 	"reflect"

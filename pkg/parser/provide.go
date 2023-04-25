@@ -2,7 +2,7 @@
 * Copyright (c) 2023-present unTill Pro, Ltd.
 * @author Michael Saigachenko
  */
-package sqlschema
+package parser
 
 import "github.com/voedger/voedger/pkg/istructs"
 

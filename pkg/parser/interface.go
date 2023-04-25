@@ -3,7 +3,7 @@
 * @author Maxim Geraskin
  */
 
-package sqlschema
+package parser
 
 /*
 
