@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/goutils/logger"
@@ -17,10 +16,9 @@ func Test_CommandController(t *testing.T) {
 	logger.Verbose("current working dir: ", wd)
 
 	tests := []struct {
-		name              string
-		sp                CommandSP
-		expectedPV        *CommandPV
-		expectedStartTime *time.Time
+		name       string
+		sp         CommandSP
+		expectedPV *CommandPV
 	}{
 		{
 			name: `echo hello world`,
@@ -35,7 +33,6 @@ func Test_CommandController(t *testing.T) {
 				Stderr:   "",
 				ExitCode: 0,
 			},
-			expectedStartTime: nil,
 		},
 		{
 			name: `pwd`,
@@ -50,16 +47,14 @@ func Test_CommandController(t *testing.T) {
 				Stderr:   "",
 				ExitCode: 0,
 			},
-			expectedStartTime: nil,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, pv, nextStartTime := CommandController(``, test.sp, struct{}{})
+			_, pv, _ := CommandController(``, test.sp, struct{}{})
 
 			require.Equal(t, *test.expectedPV, *pv)
-			require.Equal(t, test.expectedStartTime, nextStartTime)
 		})
 	}
 }
