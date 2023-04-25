@@ -17,8 +17,8 @@ var ErrFunctionParamsIncorrect = errors.New("function parameters do not match")
 var ErrFunctionResultIncorrect = errors.New("function result do not match")
 var ErrFunctionNotFound = errors.New("function not found")
 
-func ErrSchemaContainsDuplicateName(schema, name string) error {
-	return fmt.Errorf("schema '%s' contains duplicated name %s", schema, name)
+func ErrSchemaContainsDuplicateName(name string) error {
+	return fmt.Errorf("%s redeclared", name)
 }
 
 func errorAt(err error, pos *lexer.Position) error {

@@ -36,7 +36,7 @@ func Test_Duplicates(t *testing.T) {
 
 	parser := NewStringParser()
 
-	_, err := parser(`SCHEMA test; 
+	_, err := parser("example.sql", `SCHEMA test; 
 	FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
 	FUNCTION MyTableValidator(TableRow) RETURNS string ENGINE WASM;	
 	FUNCTION MyFunc2() RETURNS void ENGINE BUILTIN;
@@ -53,9 +53,9 @@ func Test_Duplicates(t *testing.T) {
 	// TODO: use golang messages like
 	// ./types2.go:17:7: EmbedParser redeclared
 	//     ./types.go:17:6: other declaration of EmbedParser
-	require.ErrorContains(err, "3:2: schema 'test' contains duplicated name MyTableValidator")
-	require.ErrorContains(err, "6:3: schema 'test' contains duplicated name MyFunc2")
-	require.ErrorContains(err, "10:4: schema 'test' contains duplicated name MyFunc4")
+	require.ErrorContains(err, "example.sql:3:2: MyTableValidator redeclared")
+	require.ErrorContains(err, "example.sql:6:3: MyFunc2 redeclared")
+	require.ErrorContains(err, "example.sql:10:4: MyFunc4 redeclared")
 }
 
 func Test_Comments(t *testing.T) {
@@ -63,7 +63,7 @@ func Test_Comments(t *testing.T) {
 
 	parser := NewStringParser()
 
-	s, err := parser(`SCHEMA test; 
+	s, err := parser("example.sql", `SCHEMA test; 
 	-- My function
 	-- line 2
 	FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;

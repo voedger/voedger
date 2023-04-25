@@ -16,5 +16,11 @@ type IReadFS interface {
 
 type FSParser func(fs IReadFS, subDir string) (*SchemaAST, error)
 
-// TODO: func(fileName string, content string) (*SchemaAST, error)
-type StringParser func(string) (*SchemaAST, error)
+// input:
+//   modulesCache: key: module
+// output:
+//   schema - parsed package AST
+//   deps - dependencies. Key is a fully-qualified package name
+// type FSParser func(fs IReadFS, subDir string, modulesCache map[string]IReadFS) (schema *SchemaAST, deps map[string]*SchemaAST, err error)
+
+type StringParser func(fileName string, content string) (*SchemaAST, error)

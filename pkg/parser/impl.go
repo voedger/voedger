@@ -13,7 +13,7 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 )
 
-func parse(s string) (*SchemaAST, error) {
+func parse(fileName string, content string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
 
 		{Name: "Punct", Pattern: `(;|,|\.|\*|=|\(|\)|\[|\])`},
@@ -29,11 +29,11 @@ func parse(s string) (*SchemaAST, error) {
 	})
 
 	parser := participle.MustBuild[SchemaAST](participle.Lexer(basicLexer), participle.Elide("Whitespace", "Comment"))
-	return parser.ParseString("", s)
+	return parser.ParseString(fileName, content)
 }
 
-func stringParserImpl(s string) (*SchemaAST, error) {
-	parsed, err := parse(s)
+func stringParserImpl(fileName string, content string) (*SchemaAST, error) {
+	parsed, err := parse(fileName, content)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func embedParserImpl(fs IReadFS, dir string) (*SchemaAST, error) {
 			if err != nil {
 				return nil, err
 			}
-			schema, err := parse(string(bytes))
+			schema, err := parse(entry.Name(), string(bytes))
 			if err != nil {
 				return nil, err
 			}
@@ -161,7 +161,7 @@ func analyseDuplicateNames(schema *SchemaAST, errs []error) []error {
 			}
 			if _, ok := namedIndex[name]; ok {
 				s := stmt.(IStatement)
-				errs = append(errs, errorAt(ErrSchemaContainsDuplicateName(schema.Package, name), s.GetPos()))
+				errs = append(errs, errorAt(ErrSchemaContainsDuplicateName(name), s.GetPos()))
 			} else {
 				namedIndex[name] = stmt
 			}
