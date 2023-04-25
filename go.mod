@@ -17,6 +17,7 @@ require (
 	github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195
 	github.com/untillpro/goutils v0.0.0-20230413153406-ba6af4dbd062
 	github.com/untillpro/ibusmem v0.0.0-20221105120342-e51c7ee7020c
+	github.com/voedger/voedger v0.0.0-20230419092753-7ebfeae3d15b
 	github.com/wneessen/go-mail v0.3.9
 	go.etcd.io/bbolt v1.3.7
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
