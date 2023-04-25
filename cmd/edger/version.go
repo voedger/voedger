@@ -3,7 +3,7 @@
  * @author: Nikolay Nikitin
  */
 
-package cmd
+package main
 
 import (
 	"fmt"
