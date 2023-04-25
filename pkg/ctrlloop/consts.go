@@ -8,6 +8,7 @@ package ctrlloop
 import "time"
 
 const (
+	DedupInRetryInterval     = 100 * time.Millisecond
 	ReportInterval           = 10 * time.Millisecond
 	DedupScheduleInterval    = 10 * time.Second
 	MaxReportAttemptNumber   = 3
