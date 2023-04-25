@@ -39,10 +39,6 @@ const (
 	// sys.QName
 	verSysQNames01      vers.VersionValue = 1
 	verSysQNamesLastest vers.VersionValue = verSysQNames01
-
-	// sys.Singletons
-	verSysSingletons01      vers.VersionValue = 1
-	verSysSingletonsLastest vers.VersionValue = verSysSingletons01
 )
 
 // system fields mask values
