@@ -78,7 +78,7 @@ func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST)
 	for i := 1; i < len(asts); i++ {
 		f := asts[i]
 		if f.Ast.Package != headAst.Package {
-			return nil, ErrDirContainsDifferentSchemas
+			return nil, ErrUnexpectedSchema(f.FileName, f.Ast.Package, headAst.Package)
 		}
 		mergeSchemas(f.Ast, headAst)
 	}

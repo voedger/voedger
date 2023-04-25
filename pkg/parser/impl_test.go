@@ -80,3 +80,16 @@ func Test_Comments(t *testing.T) {
 	require.Equal("My function", ps.Ast.Statements[0].Function.Comments[0])
 	require.Equal("line 2", ps.Ast.Statements[0].Function.Comments[1])
 }
+
+func Test_UnexpectedSchema(t *testing.T) {
+	require := require.New(t)
+
+	ast1, err := ParseFile("file1.sql", `SCHEMA schema1; ROLE abc;`)
+	require.NoError(err)
+
+	ast2, err := ParseFile("file2.sql", `SCHEMA schema2; ROLE xyz;`)
+	require.NoError(err)
+
+	_, err = mergeFileSchemaASTsImpl("", []*FileSchemaAST{ast1, ast2})
+	require.ErrorContains(err, "file2.sql: package schema2; expected schema1")
+}

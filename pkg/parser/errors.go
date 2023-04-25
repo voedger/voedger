@@ -11,8 +11,12 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 )
 
-var ErrDirContainsNoSchemaFiles = errors.New("directory contains no schema files")
-var ErrDirContainsDifferentSchemas = errors.New("directory contains files for different schemas")
+var ErrDirContainsNoSchemaFiles = errors.New("no schema files in directory")
+
+func ErrUnexpectedSchema(fileName, actual, expected string) error {
+	return fmt.Errorf("%s: package %s; expected %s", fileName, actual, expected)
+}
+
 var ErrFunctionParamsIncorrect = errors.New("function parameters do not match")
 var ErrFunctionResultIncorrect = errors.New("function result do not match")
 var ErrFunctionNotFound = errors.New("function not found")
