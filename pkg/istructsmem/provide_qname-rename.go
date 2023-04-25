@@ -10,14 +10,14 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
-func RenameQName(storage istorage.IAppStorage, old, new istructs.QName) error {
+func RenameQName(storage istorage.IAppStorage, old, new schemas.QName) error {
 
 	const errFmt = "can not rename QName from «%v» to «%v»: "
 

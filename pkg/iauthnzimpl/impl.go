@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/schemas"
 	"golang.org/x/exp/slices"
 )
 
@@ -112,7 +113,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			if err != nil {
 				return nil, principalPayload, err
 			}
-			if wsDesc.QName() != istructs.NullQName {
+			if wsDesc.QName() != schemas.NullQName {
 				ownerWSID := wsDesc.AsInt64(field_OwnerWSID)
 				prnWSOwner := iauthnz.Principal{
 					Kind:  iauthnz.PrincipalKind_Role,
@@ -154,10 +155,10 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			if err != nil {
 				return nil, principalPayload, err
 			}
-			if compRec.QName() == istructs.NullQName {
+			if compRec.QName() == schemas.NullQName {
 				break
 			}
-			if compRec.AsBool(istructs.SystemField_IsActive) {
+			if compRec.AsBool(schemas.SystemField_IsActive) {
 				principals = append(principals, iauthnz.Principal{
 					Kind:  iauthnz.PrincipalKind_Role,
 					WSID:  deviceProfileWSID,

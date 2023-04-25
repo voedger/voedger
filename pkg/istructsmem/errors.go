@@ -31,6 +31,8 @@ var ErrMaxOccursViolation = errors.New("maximum occurs violated")
 
 var ErrFieldIsEmpty = errors.New("field is empty")
 
+var ErrInvalidVerificationKind = errors.New("invalid verification kind")
+
 var ErrCUDsMissed = errors.New("CUDs are missed")
 
 var ErrRawRecordIDExpected = errors.New("raw record ID expected")
@@ -46,8 +48,6 @@ var ErrWrongSchema = errors.New("wrong schema")
 var ErrUnexpectedShemaKind = errors.New("unexpected schema kind")
 
 var ErrUnknownCodec = errors.New("unknown codec")
-
-var ErrContainerNameIDsExceeds = errors.New("the maximum number of container identifiers has been exceeded")
 
 var ErrSingletonIDsExceeds = errors.New("the maximum number of singleton document identifiers has been exceeded")
 

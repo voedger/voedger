@@ -15,6 +15,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -81,7 +82,7 @@ type parsedCUD struct {
 	opKind         iauthnz.OperationKindType
 	existingRecord istructs.IRecord // create -> nil
 	id             int64
-	qName          istructs.QName
+	qName          schemas.QName
 	fields         coreutils.MapObject
 	xPath          xPath
 }

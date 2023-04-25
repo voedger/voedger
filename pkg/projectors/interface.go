@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state"
 )
 
@@ -48,8 +49,8 @@ type AsyncActualizerConf struct {
 type AppStructsFunc func() istructs.IAppStructs
 
 type AsyncActualizerMetrics interface {
-	Increase(metricName string, partition istructs.PartitionID, projection istructs.QName, valueDelta float64)
-	Set(metricName string, partition istructs.PartitionID, projection istructs.QName, value float64)
+	Increase(metricName string, partition istructs.PartitionID, projection schemas.QName, valueDelta float64)
+	Set(metricName string, partition istructs.PartitionID, projection schemas.QName, value float64)
 }
 
 type SyncActualizerConf struct {
@@ -65,9 +66,9 @@ type SyncActualizerConf struct {
 }
 
 type IViewSchemaBuilder interface {
-	ValueField(name string, kind istructs.DataKindType, required bool)
-	PartitionKeyField(name string, kind istructs.DataKindType, required bool)
-	ClusteringColumnField(name string, kind istructs.DataKindType, required bool)
+	ValueField(name string, kind schemas.DataKind, required bool)
+	PartitionKeyField(name string, kind schemas.DataKind, required bool)
+	ClusteringColumnField(name string, kind schemas.DataKind, required bool)
 }
 
 type BuildViewSchemaFunc func(builder IViewSchemaBuilder)

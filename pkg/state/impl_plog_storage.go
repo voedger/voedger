@@ -9,17 +9,18 @@ import (
 	"encoding/json"
 
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type pLogStorage struct {
 	ctx             context.Context
 	eventsFunc      eventsFunc
-	schemasFunc     schemasFunc
+	schemaCacheFunc schemaCacheFunc
 	partitionIDFunc PartitionIDFunc
 }
 
-func (s *pLogStorage) NewKeyBuilder(istructs.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
+func (s *pLogStorage) NewKeyBuilder(schemas.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &pLogKeyBuilder{
 		logKeyBuilder: logKeyBuilder{
 			offset: istructs.FirstOffset,
@@ -63,10 +64,10 @@ func (s *pLogStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string,
 	value := sv.(*pLogStorageValue)
 	obj := make(map[string]interface{})
 	obj["QName"] = value.event.QName().String()
-	obj["ArgumentObject"] = coreutils.ObjectToMap(value.event.ArgumentObject(), s.schemasFunc())
+	obj["ArgumentObject"] = coreutils.ObjectToMap(value.event.ArgumentObject(), s.schemaCacheFunc())
 	cc := make([]map[string]interface{}, 0)
 	_ = value.event.CUDs(func(rec istructs.ICUDRow) (err error) { //no error returns
-		cudRowMap := cudRowToMap(rec, s.schemasFunc)
+		cudRowMap := cudRowToMap(rec, s.schemaCacheFunc)
 		cc = append(cc, cudRowMap)
 		return
 	})

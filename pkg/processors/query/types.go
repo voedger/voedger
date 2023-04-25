@@ -10,6 +10,7 @@ import (
 	"context"
 
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -76,7 +77,7 @@ type IPath interface {
 type IWorkpiece interface {
 	Object() istructs.IObject
 	OutputRow() IOutputRow
-	PutEnrichedRootSchemaField(name string, kind istructs.DataKindType)
+	PutEnrichedRootSchemaField(name string, kind schemas.DataKind)
 	EnrichedRootSchema() coreutils.SchemaFields
 }
 

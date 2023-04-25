@@ -33,13 +33,13 @@ func TestQNames(t *testing.T) {
 		panic(err)
 	}
 
-	schemaName := istructs.NewQName("test", "schema")
+	schemaName := schemas.NewQName("test", "schema")
 
-	resourceName := istructs.NewQName("test", "resource")
+	resourceName := schemas.NewQName("test", "resource")
 	r := mockResources{}
-	r.On("Resources", mock.AnythingOfType("func(istructs.QName)")).
+	r.On("Resources", mock.AnythingOfType("func(schemas.QName)")).
 		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(istructs.QName))
+			cb := args.Get(0).(func(schemas.QName))
 			cb(resourceName)
 		})
 
@@ -47,7 +47,7 @@ func TestQNames(t *testing.T) {
 	if err := names.Prepare(storage, versions,
 		func() schemas.SchemaCache {
 			bld := schemas.NewSchemaCache()
-			bld.Add(schemaName, istructs.SchemaKind_CDoc)
+			bld.Add(schemaName, schemas.SchemaKind_CDoc)
 			schemas, err := bld.Build()
 			require.NoError(err)
 			return schemas
@@ -58,7 +58,7 @@ func TestQNames(t *testing.T) {
 
 	t.Run("basic QNames methods", func(t *testing.T) {
 
-		check := func(names *QNames, name istructs.QName) QNameID {
+		check := func(names *QNames, name schemas.QName) QNameID {
 			id, err := names.GetID(name)
 			require.NoError(err)
 			require.NotEqual(NullQNameID, id)
@@ -98,7 +98,7 @@ func TestQNames(t *testing.T) {
 			if err := names2.Prepare(storage, versions,
 				func() schemas.SchemaCache {
 					bld := schemas.NewSchemaCache()
-					bld.Add(schemaName, istructs.SchemaKind_CDoc)
+					bld.Add(schemaName, schemas.SchemaKind_CDoc)
 					schemas, err := bld.Build()
 					require.NoError(err)
 					return schemas
@@ -113,14 +113,14 @@ func TestQNames(t *testing.T) {
 	})
 
 	t.Run("must be error if unknown name", func(t *testing.T) {
-		id, err := names.GetID(istructs.NewQName("test", "unknown"))
+		id, err := names.GetID(schemas.NewQName("test", "unknown"))
 		require.Equal(NullQNameID, id)
 		require.ErrorIs(err, ErrNameNotFound)
 	})
 
 	t.Run("must be error if unknown id", func(t *testing.T) {
 		n, err := names.GetQName(QNameID(MaxAvailableQNameID))
-		require.Equal(istructs.NullQName, n)
+		require.Equal(schemas.NullQName, n)
 		require.ErrorIs(err, ErrIDNotFound)
 	})
 }
@@ -159,7 +159,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 
 		names := NewQNames()
 		err := names.Prepare(storage, versions, nil, nil)
-		require.ErrorIs(err, istructs.ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(err, schemas.ErrInvalidQNameStringRepresentation)
 		require.ErrorContains(err, badName)
 	})
 
@@ -212,7 +212,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			func() schemas.SchemaCache {
 				bld := schemas.NewSchemaCache()
 				for i := 0; i <= MaxAvailableQNameID; i++ {
-					bld.Add(istructs.NewQName("test", fmt.Sprintf("name_%d", i)), istructs.SchemaKind_Object)
+					bld.Add(schemas.NewQName("test", fmt.Sprintf("name_%d", i)), schemas.SchemaKind_Object)
 				}
 				schemas, err := bld.Build()
 				require.NoError(err)
@@ -223,7 +223,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 	})
 
 	t.Run("must be error if write to storage failed", func(t *testing.T) {
-		qName := istructs.NewQName("test", "test")
+		qName := schemas.NewQName("test", "test")
 		writeError := errors.New("storage write error")
 
 		t.Run("must be error if write some name failed", func(t *testing.T) {
@@ -240,7 +240,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			err := names.Prepare(storage, versions,
 				func() schemas.SchemaCache {
 					bld := schemas.NewSchemaCache()
-					bld.Add(qName, istructs.SchemaKind_Object)
+					bld.Add(qName, schemas.SchemaKind_Object)
 					schemas, err := bld.Build()
 					require.NoError(err)
 					return schemas
@@ -263,7 +263,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			err := names.Prepare(storage, versions,
 				func() schemas.SchemaCache {
 					bld := schemas.NewSchemaCache()
-					bld.Add(qName, istructs.SchemaKind_Object)
+					bld.Add(qName, schemas.SchemaKind_Object)
 					schemas, err := bld.Build()
 					require.NoError(err)
 					return schemas
@@ -278,7 +278,7 @@ type mockResources struct {
 	mock.Mock
 }
 
-func (r *mockResources) QueryResource(resource istructs.QName) istructs.IResource {
+func (r *mockResources) QueryResource(resource schemas.QName) istructs.IResource {
 	return r.Called(resource).Get(0).(istructs.IResource)
 }
 
@@ -286,6 +286,6 @@ func (r *mockResources) QueryFunctionArgsBuilder(query istructs.IQueryFunction) 
 	return r.Called(query).Get(0).(istructs.IObjectBuilder)
 }
 
-func (r *mockResources) Resources(cb func(istructs.QName)) {
+func (r *mockResources) Resources(cb func(schemas.QName)) {
 	r.Called(cb)
 }
