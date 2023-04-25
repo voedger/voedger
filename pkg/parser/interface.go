@@ -5,11 +5,16 @@
 
 package sqlschema
 
-import "embed"
+import fs "io/fs"
 
-// TODO: why embed.FS, how to process a normal folder?
-// TODO: FSParser()
-type EmbedParser func(fs embed.FS, subDir string) (*SchemaAST, error)
+type IReadFS interface {
+	fs.ReadDirFS
+	fs.ReadFileFS
+}
+
+// TODO: in: FS, moduleCache [string]FS, out: (Schema, DependencySchemas [string]Schema, error)
+
+type FSParser func(fs IReadFS, subDir string) (*SchemaAST, error)
 
 // TODO: func(fileName string, content string) (*SchemaAST, error)
 type StringParser func(string) (*SchemaAST, error)

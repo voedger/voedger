@@ -5,7 +5,6 @@
 package sqlschema
 
 import (
-	"embed"
 	"errors"
 	"path/filepath"
 	"strings"
@@ -49,7 +48,7 @@ func mergeSchemas(mergeFrom, mergeTo *SchemaAST) {
 	mergeTo.Statements = append(mergeTo.Statements, mergeFrom.Statements...)
 }
 
-func embedParserImpl(fs embed.FS, dir string) (*SchemaAST, error) {
+func embedParserImpl(fs IReadFS, dir string) (*SchemaAST, error) {
 	entries, err := fs.ReadDir(dir)
 	if err != nil {
 		return nil, err

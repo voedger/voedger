@@ -6,7 +6,7 @@ package sqlschema
 
 // TODO: NewFSParser()
 // Can be one per app
-func ProvideEmbedParser() EmbedParser {
+func ProvideFSParser() FSParser {
 	return embedParserImpl
 }
 
