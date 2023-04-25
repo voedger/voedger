@@ -7,23 +7,22 @@ package dynobuf
 
 import (
 	"github.com/untillpro/dynobuffers"
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/schemas"
 )
 
 var dataKindToDynoFieldType = map[schemas.DataKind]dynobuffers.FieldType{
-	istructs.DataKind_null:     dynobuffers.FieldTypeUnspecified,
-	istructs.DataKind_int32:    dynobuffers.FieldTypeInt32,
-	istructs.DataKind_int64:    dynobuffers.FieldTypeInt64,
-	istructs.DataKind_float32:  dynobuffers.FieldTypeFloat32,
-	istructs.DataKind_float64:  dynobuffers.FieldTypeFloat64,
-	istructs.DataKind_bytes:    dynobuffers.FieldTypeByte,
-	istructs.DataKind_string:   dynobuffers.FieldTypeString,
-	istructs.DataKind_QName:    dynobuffers.FieldTypeByte, // two fixed bytes LittleEndian
-	istructs.DataKind_bool:     dynobuffers.FieldTypeBool,
-	istructs.DataKind_RecordID: dynobuffers.FieldTypeInt64,
-	istructs.DataKind_Record:   dynobuffers.FieldTypeByte,
-	istructs.DataKind_Event:    dynobuffers.FieldTypeByte,
+	schemas.DataKind_null:     dynobuffers.FieldTypeUnspecified,
+	schemas.DataKind_int32:    dynobuffers.FieldTypeInt32,
+	schemas.DataKind_int64:    dynobuffers.FieldTypeInt64,
+	schemas.DataKind_float32:  dynobuffers.FieldTypeFloat32,
+	schemas.DataKind_float64:  dynobuffers.FieldTypeFloat64,
+	schemas.DataKind_bytes:    dynobuffers.FieldTypeByte,
+	schemas.DataKind_string:   dynobuffers.FieldTypeString,
+	schemas.DataKind_QName:    dynobuffers.FieldTypeByte, // two fixed bytes LittleEndian
+	schemas.DataKind_bool:     dynobuffers.FieldTypeBool,
+	schemas.DataKind_RecordID: dynobuffers.FieldTypeInt64,
+	schemas.DataKind_Record:   dynobuffers.FieldTypeByte,
+	schemas.DataKind_Event:    dynobuffers.FieldTypeByte,
 }
 
 var dynobufferFieldTypeToStr = map[dynobuffers.FieldType]string{

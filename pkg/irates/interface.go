@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // Interface should be obtained once
@@ -45,7 +46,7 @@ type BucketKey struct {
 	RemoteAddr    string
 	App           istructs.AppQName
 	Workspace     istructs.WSID
-	QName         istructs.QName
+	QName         schemas.QName
 	ID            istructs.RecordID
 }
 

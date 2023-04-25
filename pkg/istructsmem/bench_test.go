@@ -56,8 +56,8 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	// Names
 
 	appName := istructs.AppQName_test1_app1
-	odocQName := istructs.NewQName("test", "odoc")
-	cmdQName := istructs.NewQName("test", "cmd")
+	odocQName := schemas.NewQName("test", "odoc")
+	cmdQName := schemas.NewQName("test", "cmd")
 
 	// odoc field names and values
 
@@ -67,19 +67,19 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	stringFieldValues := make(map[string]string)
 
 	// Schemas
-	schemas := func() schemas.SchemaCacheBuilder {
+	bld := func() schemas.SchemaCacheBuilder {
 		cache := schemas.NewSchemaCache()
 
-		s := cache.Add(odocQName, istructs.SchemaKind_ODoc)
+		s := cache.Add(odocQName, schemas.SchemaKind_ODoc)
 		for i := 0; i < numOfIntFields; i++ {
 
 			intFieldName := fmt.Sprintf("i%v", i)
-			s.AddField(intFieldName, istructs.DataKind_int64, true)
+			s.AddField(intFieldName, schemas.DataKind_int64, true)
 			intFieldNames[i] = intFieldName
 			intFieldNamesFloat64Values[intFieldName] = float64(i)
 
 			stringFieldName := fmt.Sprintf("s%v", i)
-			s.AddField(stringFieldName, istructs.DataKind_string, true)
+			s.AddField(stringFieldName, schemas.DataKind_string, true)
 			stringFieldNames[i] = stringFieldName
 			stringFieldValues[stringFieldName] = stringFieldName
 
@@ -90,11 +90,11 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	// Con
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, schemas())
+	cfg := cfgs.AddConfig(appName, bld())
 
 	// Register command
 	{
-		cfg.Resources.Add(NewCommandFunction(cmdQName, odocQName, istructs.NullQName, istructs.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdQName, odocQName, schemas.NullQName, schemas.NullQName, NullCommandExec))
 	}
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
@@ -122,7 +122,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 			})
 
 		cmd := bld.ArgumentObjectBuilder()
-		cmd.PutRecordID(istructs.SystemField_ID, 1)
+		cmd.PutRecordID(schemas.SystemField_ID, 1)
 		for i := 0; i < numOfIntFields; i++ {
 			cmd.PutNumber(intFieldNames[i], intFieldNamesFloat64Values[intFieldNames[i]])
 			cmd.PutString(stringFieldNames[i], stringFieldValues[stringFieldNames[i]])

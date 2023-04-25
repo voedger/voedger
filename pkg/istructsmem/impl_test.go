@@ -44,44 +44,44 @@ func TestBasicUsage(t *testing.T) {
 
 	// create app configuration
 	appConfigs := func() AppConfigsType {
-		schemas := schemas.NewSchemaCache()
+		bld := schemas.NewSchemaCache()
 
-		saleParamsSchema := schemas.Add(istructs.NewQName("test", "Sale"), istructs.SchemaKind_ODoc)
+		saleParamsSchema := bld.Add(schemas.NewQName("test", "Sale"), schemas.SchemaKind_ODoc)
 		saleParamsSchema.
-			AddField("Buyer", istructs.DataKind_string, true).
-			AddField("Age", istructs.DataKind_int32, false).
-			AddField("Height", istructs.DataKind_float32, false).
-			AddField("isHuman", istructs.DataKind_bool, false).
-			AddField("Photo", istructs.DataKind_bytes, false).
-			AddContainer("Basket", istructs.NewQName("test", "Basket"), 1, 1)
+			AddField("Buyer", schemas.DataKind_string, true).
+			AddField("Age", schemas.DataKind_int32, false).
+			AddField("Height", schemas.DataKind_float32, false).
+			AddField("isHuman", schemas.DataKind_bool, false).
+			AddField("Photo", schemas.DataKind_bytes, false).
+			AddContainer("Basket", schemas.NewQName("test", "Basket"), 1, 1)
 
-		basketSchema := schemas.Add(istructs.NewQName("test", "Basket"), istructs.SchemaKind_ORecord)
-		basketSchema.AddContainer("Good", istructs.NewQName("test", "Good"), 0, istructs.ContainerOccurs_Unbounded)
+		basketSchema := bld.Add(schemas.NewQName("test", "Basket"), schemas.SchemaKind_ORecord)
+		basketSchema.AddContainer("Good", schemas.NewQName("test", "Good"), 0, schemas.Occurs_Unbounded)
 
-		goodSchema := schemas.Add(istructs.NewQName("test", "Good"), istructs.SchemaKind_ORecord)
+		goodSchema := bld.Add(schemas.NewQName("test", "Good"), schemas.SchemaKind_ORecord)
 		goodSchema.
-			AddField("Name", istructs.DataKind_string, true).
-			AddField("Code", istructs.DataKind_int64, true).
-			AddField("Weight", istructs.DataKind_float64, false)
+			AddField("Name", schemas.DataKind_string, true).
+			AddField("Code", schemas.DataKind_int64, true).
+			AddField("Weight", schemas.DataKind_float64, false)
 
-		saleSecurParamsSchema := schemas.Add(istructs.NewQName("test", "saleSecureArgs"), istructs.SchemaKind_Object)
+		saleSecurParamsSchema := bld.Add(schemas.NewQName("test", "saleSecureArgs"), schemas.SchemaKind_Object)
 		saleSecurParamsSchema.
-			AddField("password", istructs.DataKind_string, true)
+			AddField("password", schemas.DataKind_string, true)
 
-		docSchema := schemas.Add(istructs.NewQName("test", "photos"), istructs.SchemaKind_CDoc)
+		docSchema := bld.Add(schemas.NewQName("test", "photos"), schemas.SchemaKind_CDoc)
 		docSchema.
-			AddField("Buyer", istructs.DataKind_string, true).
-			AddField("Age", istructs.DataKind_int32, false).
-			AddField("Height", istructs.DataKind_float32, false).
-			AddField("isHuman", istructs.DataKind_bool, false).
-			AddField("Photo", istructs.DataKind_bytes, false)
+			AddField("Buyer", schemas.DataKind_string, true).
+			AddField("Age", schemas.DataKind_int32, false).
+			AddField("Height", schemas.DataKind_float32, false).
+			AddField("isHuman", schemas.DataKind_bool, false).
+			AddField("Photo", schemas.DataKind_bytes, false)
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
 
 		cfg.Resources.Add(
-			NewCommandFunction(istructs.NewQName("test", "Sale"),
-				istructs.NewQName("test", "Sale"), istructs.NewQName("test", "saleSecureArgs"), istructs.NullQName,
+			NewCommandFunction(schemas.NewQName("test", "Sale"),
+				schemas.NewQName("test", "Sale"), schemas.NewQName("test", "saleSecureArgs"), schemas.NullQName,
 				NullCommandExec))
 
 		return cfgs
@@ -102,7 +102,7 @@ func TestBasicUsage(t *testing.T) {
 				PLogOffset:        10000,
 				Workspace:         1234,
 				WLogOffset:        1000,
-				QName:             istructs.NewQName("test", "Sale"),
+				QName:             schemas.NewQName("test", "Sale"),
 				RegisteredAt:      100500,
 			},
 			Device:   762,
@@ -112,23 +112,23 @@ func TestBasicUsage(t *testing.T) {
 	// 2. make command params object
 	cmd := bld.ArgumentObjectBuilder()
 
-	cmd.PutRecordID(istructs.SystemField_ID, 1)
+	cmd.PutRecordID(schemas.SystemField_ID, 1)
 	cmd.PutString("Buyer", "Карлосон 哇\"呀呀") // to test unicode issues
 	cmd.PutInt32("Age", 33)
 	cmd.PutFloat32("Height", 1.75)
 	cmd.PutBytes("Photo", []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 4, 4, 3, 2, 1, 0})
 
 	basket := cmd.ElementBuilder("Basket")
-	basket.PutRecordID(istructs.SystemField_ID, 2)
+	basket.PutRecordID(schemas.SystemField_ID, 2)
 
 	good := basket.ElementBuilder("Good")
-	good.PutRecordID(istructs.SystemField_ID, 3)
+	good.PutRecordID(schemas.SystemField_ID, 3)
 	good.PutString("Name", "Biscuits")
 	good.PutInt64("Code", 7070)
 	good.PutFloat64("Weight", 1.1)
 
 	good = basket.ElementBuilder("Good")
-	good.PutRecordID(istructs.SystemField_ID, 4)
+	good.PutRecordID(schemas.SystemField_ID, 4)
 	good.PutString("Name", "Jam")
 	good.PutInt64("Code", 8080)
 	good.PutFloat64("Weight", 2.02)
@@ -138,8 +138,8 @@ func TestBasicUsage(t *testing.T) {
 
 	// 3. make result cuids
 	cuids := bld.CUDBuilder()
-	rec := cuids.Create(istructs.NewQName("test", "photos"))
-	rec.PutRecordID(istructs.SystemField_ID, 1)
+	rec := cuids.Create(schemas.NewQName("test", "photos"))
+	rec.PutRecordID(schemas.SystemField_ID, 1)
 	rec.PutString("Buyer", "Карлосон 哇\"呀呀")
 	rec.PutInt32("Age", 33)
 	rec.PutFloat32("Height", 1.75)
@@ -153,7 +153,7 @@ func TestBasicUsage(t *testing.T) {
 	// 5. save to PLog
 	var nextID = istructs.FirstBaseRecordID
 	pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr,
-		func(tempId istructs.RecordID, _ istructs.ISchema) (storageID istructs.RecordID, err error) {
+		func(tempId istructs.RecordID, _ schemas.Schema) (storageID istructs.RecordID, err error) {
 			storageID = nextID
 			nextID++
 			return storageID, nil
@@ -199,19 +199,19 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	require := require.New(t)
 
 	appConfigs := func() AppConfigsType {
-		schemas := schemas.NewSchemaCache()
-		viewSchema := schemas.AddView(istructs.NewQName("test", "viewDrinks"))
+		bld := schemas.NewSchemaCache()
+		viewSchema := bld.AddView(schemas.NewQName("test", "viewDrinks"))
 		viewSchema.
-			AddPartField("partitionKey1", istructs.DataKind_int64).
-			AddClustColumn("clusteringColumn1", istructs.DataKind_int64).
-			AddClustColumn("clusteringColumn2", istructs.DataKind_bool).
-			AddClustColumn("clusteringColumn3", istructs.DataKind_string).
-			AddValueField("id", istructs.DataKind_int64, true).
-			AddValueField("name", istructs.DataKind_string, true).
-			AddValueField("active", istructs.DataKind_bool, true)
+			AddPartField("partitionKey1", schemas.DataKind_int64).
+			AddClustColumn("clusteringColumn1", schemas.DataKind_int64).
+			AddClustColumn("clusteringColumn2", schemas.DataKind_bool).
+			AddClustColumn("clusteringColumn3", schemas.DataKind_string).
+			AddValueField("id", schemas.DataKind_int64, true).
+			AddValueField("name", schemas.DataKind_string, true).
+			AddValueField("active", schemas.DataKind_bool, true)
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
 
 		return cfgs
 	}
@@ -234,7 +234,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 		require.NoError(err)
 	}
 	t.Run("Should read all records by WSID", func(t *testing.T) {
-		kb := viewRecords.KeyBuilder(istructs.NewQName("test", "viewDrinks"))
+		kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", int64(1))
 		counter := 0
 
@@ -246,7 +246,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 		require.Equal(4, counter)
 	})
 	t.Run("Should read records by WSID and department", func(t *testing.T) {
-		kb := viewRecords.KeyBuilder(istructs.NewQName("test", "viewDrinks"))
+		kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 1)
 		kb.PutInt64("clusteringColumn1", 200)
 		counter := 0
@@ -259,7 +259,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 		require.Equal(2, counter)
 	})
 	t.Run("Should read one record by WSID and department and active", func(t *testing.T) {
-		kb := viewRecords.KeyBuilder(istructs.NewQName("test", "viewDrinks"))
+		kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 2)
 		kb.PutInt64("clusteringColumn1", 200)
 		kb.PutBool("clusteringColumn2", true)
@@ -273,7 +273,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 		require.Equal(1, counter)
 	})
 	t.Run("Should read one record by WSID and department, active and code ignore wrong clustering columns order reason", func(t *testing.T) {
-		kb := viewRecords.KeyBuilder(istructs.NewQName("test", "viewDrinks"))
+		kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 2)
 		kb.PutString("clusteringColumn3", "wine")
 		kb.PutBool("clusteringColumn2", true)
@@ -301,15 +301,15 @@ func TestBasicUsage_Resources(t *testing.T) {
 	require.NoError(err)
 
 	t.Run("Basic usage NewCommandFunction", func(t *testing.T) {
-		funcQName := istructs.NewQName("testpkg", "cfunc")
-		paramsSchema := istructs.NewQName("testpkg", "cfuncParams")
-		resultSchema := istructs.NullQName
+		funcQName := schemas.NewQName("testpkg", "cfunc")
+		paramsSchema := schemas.NewQName("testpkg", "cfuncParams")
+		resultSchema := schemas.NullQName
 
-		f := NewCommandFunction(funcQName, paramsSchema, istructs.NullQName, resultSchema, NullCommandExec)
+		f := NewCommandFunction(funcQName, paramsSchema, schemas.NullQName, resultSchema, NullCommandExec)
 		require.Equal(funcQName, f.QName())
 		require.Equal(istructs.ResourceKind_CommandFunction, f.Kind())
 		require.Equal(paramsSchema, f.ParamsSchema())
-		require.Equal(istructs.NullQName, f.UnloggedParamsSchema())
+		require.Equal(schemas.NullQName, f.UnloggedParamsSchema())
 		require.Equal(resultSchema, f.ResultSchema())
 
 		// Calls have no effect since we use Null* closures
@@ -329,9 +329,9 @@ func TestBasicUsage_Resources(t *testing.T) {
 			return nil
 		}
 
-		funcQName := istructs.NewQName("testpkg", "qfunc")
-		paramsSchema := istructs.NewQName("testpkg", "qfuncParams")
-		resultSchema := istructs.NullQName
+		funcQName := schemas.NewQName("testpkg", "qfunc")
+		paramsSchema := schemas.NewQName("testpkg", "qfuncParams")
+		resultSchema := schemas.NullQName
 
 		f := NewQueryFunction(funcQName, paramsSchema, resultSchema, myExecQuery)
 		require.Equal(funcQName, f.QName())
@@ -374,50 +374,52 @@ func TestBasicUsage_Schemas(t *testing.T) {
 		schema := app.Schemas().Schema(test.saleCmdDocName)
 
 		require.NotNil(schema)
-		require.Equal(istructs.SchemaKind_ODoc, schema.Kind())
+		require.Equal(schemas.SchemaKind_ODoc, schema.Kind())
 
 		// check fields
-		fields := make(map[string]istructs.DataKindType)
-		schema.Fields(func(fn string, kind istructs.DataKindType) {
-			fields[fn] = kind
+		fields := make(map[string]schemas.DataKind)
+		schema.Fields(func(f schemas.Field) {
+			fields[f.Name()] = f.DataKind()
 		})
 		require.Equal(7, len(fields)) // 2 system {sys.QName, sys.ID} + 5 user
-		require.Equal(istructs.DataKind_string, fields[test.buyerIdent])
-		require.Equal(istructs.DataKind_int32, fields[test.ageIdent])
-		require.Equal(istructs.DataKind_float32, fields[test.heightIdent])
-		require.Equal(istructs.DataKind_bool, fields[test.humanIdent])
-		require.Equal(istructs.DataKind_bytes, fields[test.photoIdent])
+		require.Equal(schemas.DataKind_string, fields[test.buyerIdent])
+		require.Equal(schemas.DataKind_int32, fields[test.ageIdent])
+		require.Equal(schemas.DataKind_float32, fields[test.heightIdent])
+		require.Equal(schemas.DataKind_bool, fields[test.humanIdent])
+		require.Equal(schemas.DataKind_bytes, fields[test.photoIdent])
 
-		schema.Containers(func(name string, sch istructs.QName) {
-			require.Equal(test.basketIdent, name)
-			require.Equal(istructs.NewQName(test.pkgName, test.basketIdent), sch)
-			t.Run("II. test first level nested schema (basket)", func(t *testing.T) {
-				schema := app.Schemas().Schema(istructs.NewQName(test.pkgName, test.basketIdent))
-				require.NotNil(schema)
-				require.Equal(istructs.SchemaKind_ORecord, schema.Kind())
+		schema.Containers(
+			func(c schemas.Container) {
+				require.Equal(test.basketIdent, c.Name())
+				require.Equal(schemas.NewQName(test.pkgName, test.basketIdent), c.Schema())
+				t.Run("II. test first level nested schema (basket)", func(t *testing.T) {
+					schema := app.Schemas().Schema(schemas.NewQName(test.pkgName, test.basketIdent))
+					require.NotNil(schema)
+					require.Equal(schemas.SchemaKind_ORecord, schema.Kind())
 
-				schema.Containers(func(name string, sch istructs.QName) {
-					require.Equal(test.goodIdent, name)
-					require.Equal(istructs.NewQName(test.pkgName, test.goodIdent), sch)
+					schema.Containers(
+						func(c schemas.Container) {
+							require.Equal(test.goodIdent, c.Name())
+							require.Equal(schemas.NewQName(test.pkgName, test.goodIdent), c.Schema())
 
-					t.Run("III. test second level nested schema (good)", func(t *testing.T) {
-						schema := app.Schemas().Schema(istructs.NewQName(test.pkgName, test.goodIdent))
-						require.NotNil(schema)
-						require.Equal(istructs.SchemaKind_ORecord, schema.Kind())
+							t.Run("III. test second level nested schema (good)", func(t *testing.T) {
+								schema := app.Schemas().Schema(schemas.NewQName(test.pkgName, test.goodIdent))
+								require.NotNil(schema)
+								require.Equal(schemas.SchemaKind_ORecord, schema.Kind())
 
-						fields := make(map[string]istructs.DataKindType)
-						schema.Fields(func(fn string, kind istructs.DataKindType) {
-							fields[fn] = kind
+								fields := make(map[string]schemas.DataKind)
+								schema.Fields(func(f schemas.Field) {
+									fields[f.Name()] = f.DataKind()
+								})
+								require.Equal(8, len(fields)) // 4 system {sys.QName, sys.ID, sys.ParentID, sys.Container} + 4 user
+								require.Equal(schemas.DataKind_RecordID, fields[test.saleIdent])
+								require.Equal(schemas.DataKind_string, fields[test.nameIdent])
+								require.Equal(schemas.DataKind_int64, fields[test.codeIdent])
+								require.Equal(schemas.DataKind_float64, fields[test.weightIdent])
+							})
 						})
-						require.Equal(8, len(fields)) // 4 system {sys.QName, sys.ID, sys.ParentID, sys.Container} + 4 user
-						require.Equal(istructs.DataKind_RecordID, fields[test.saleIdent])
-						require.Equal(istructs.DataKind_string, fields[test.nameIdent])
-						require.Equal(istructs.DataKind_int64, fields[test.codeIdent])
-						require.Equal(istructs.DataKind_float64, fields[test.weightIdent])
-					})
 				})
 			})
-		})
 	})
 }
 
@@ -426,38 +428,38 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 	require := require.New(t)
 
 	app := func() istructs.IAppStructs {
-		schemas := schemas.NewSchemaCache()
+		bld := schemas.NewSchemaCache()
 
-		recSchema := schemas.Add(istructs.NewQName("types", "CRec"), istructs.SchemaKind_CRecord)
-		recSchema.AddField("int", istructs.DataKind_int64, false)
+		recSchema := bld.Add(schemas.NewQName("types", "CRec"), schemas.SchemaKind_CRecord)
+		recSchema.AddField("int", schemas.DataKind_int64, false)
 
-		docQName := istructs.NewQName("types", "CDoc")
-		docSchema := schemas.Add(docQName, istructs.SchemaKind_CDoc)
-		docSchema.AddField("str", istructs.DataKind_string, true)
-		docSchema.AddField("fld", istructs.DataKind_int32, true)
+		docQName := schemas.NewQName("types", "CDoc")
+		docSchema := bld.Add(docQName, schemas.SchemaKind_CDoc)
+		docSchema.AddField("str", schemas.DataKind_string, true)
+		docSchema.AddField("fld", schemas.DataKind_int32, true)
 
-		docSchema.AddContainer("rec", recSchema.QName(), 0, istructs.ContainerOccurs_Unbounded)
+		docSchema.AddContainer("rec", recSchema.QName(), 0, schemas.Occurs_Unbounded)
 
-		viewSchema := schemas.AddView(istructs.NewQName("types", "View"))
-		viewSchema.AddPartField("int", istructs.DataKind_int64)
-		viewSchema.AddClustColumn("str", istructs.DataKind_string)
-		viewSchema.AddValueField("bool", istructs.DataKind_bool, false)
+		viewSchema := bld.AddView(schemas.NewQName("types", "View"))
+		viewSchema.AddPartField("int", schemas.DataKind_int64)
+		viewSchema.AddClustColumn("str", schemas.DataKind_string)
+		viewSchema.AddValueField("bool", schemas.DataKind_bool, false)
 
-		argSchema := schemas.Add(istructs.NewQName("types", "Arg"), istructs.SchemaKind_Object)
-		argSchema.AddField("bool", istructs.DataKind_bool, false)
+		argSchema := bld.Add(schemas.NewQName("types", "Arg"), schemas.SchemaKind_Object)
+		argSchema.AddField("bool", schemas.DataKind_bool, false)
 
 		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
 
 		cfg.Resources.Add(
 			NewCommandFunction(
-				istructs.NewQName("commands", "cmd"),
+				schemas.NewQName("commands", "cmd"),
 				argSchema.QName(),
-				istructs.NullQName,
+				schemas.NullQName,
 				docSchema.QName(),
 				NullCommandExec))
 
-		qNameQry := istructs.NewQName("commands", "query")
+		qNameQry := schemas.NewQName("commands", "query")
 		cfg.Resources.Add(
 			NewQueryFunction(
 				qNameQry,

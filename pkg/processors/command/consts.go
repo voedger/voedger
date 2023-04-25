@@ -7,7 +7,7 @@ package commandprocessor
 import (
 	"net/http"
 
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -17,8 +17,8 @@ const (
 )
 
 var (
-	ViewQNamePLogKnownOffsets = istructs.NewQName(istructs.SysPackage, "PLogKnownOffsets")
-	ViewQNameWLogKnownOffsets = istructs.NewQName(istructs.SysPackage, "WLogKnownOffsets")
+	ViewQNamePLogKnownOffsets = schemas.NewQName(schemas.SysPackage, "PLogKnownOffsets")
+	ViewQNameWLogKnownOffsets = schemas.NewQName(schemas.SysPackage, "WLogKnownOffsets")
 	errWSNotInited            = coreutils.NewHTTPErrorf(http.StatusForbidden, "workspace is not initialized")
 )
 
@@ -30,11 +30,11 @@ const (
 
 // TODO: should be in a separate package
 var (
-	QNameCDocWorkspaceDescriptor  = istructs.NewQName(istructs.SysPackage, "WorkspaceDescriptor")
-	QNameCommandCreateWorkspaceID = istructs.NewQName(istructs.SysPackage, "CreateWorkspaceID")
-	QNameCommandCreateWorkspace   = istructs.NewQName(istructs.SysPackage, "CreateWorkspace")
-	QNameCommandUploadBLOBHelper  = istructs.NewQName(istructs.SysPackage, "UploadBLOBHelper")
-	QNameWDocBLOB                 = istructs.NewQName(istructs.SysPackage, "BLOB")
-	QNameCommandInit              = istructs.NewQName(istructs.SysPackage, "Init")
-	QNameCommandImport            = istructs.NewQName(istructs.SysPackage, "Import")
+	QNameCDocWorkspaceDescriptor  = schemas.NewQName(schemas.SysPackage, "WorkspaceDescriptor")
+	QNameCommandCreateWorkspaceID = schemas.NewQName(schemas.SysPackage, "CreateWorkspaceID")
+	QNameCommandCreateWorkspace   = schemas.NewQName(schemas.SysPackage, "CreateWorkspace")
+	QNameCommandUploadBLOBHelper  = schemas.NewQName(schemas.SysPackage, "UploadBLOBHelper")
+	QNameWDocBLOB                 = schemas.NewQName(schemas.SysPackage, "BLOB")
+	QNameCommandInit              = schemas.NewQName(schemas.SysPackage, "Init")
+	QNameCommandImport            = schemas.NewQName(schemas.SysPackage, "Import")
 )

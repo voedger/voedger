@@ -11,22 +11,23 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestResultFieldsOperator_DoSync(t *testing.T) {
 	t.Run("Should set result fields", func(t *testing.T) {
 		require := require.New(t)
-		commonSchema := coreutils.TestSchema{Fields_: map[string]istructs.DataKindType{"name": istructs.DataKind_string}, QName_: istructs.NullQName}
+		commonSchema := coreutils.TestSchema{Fields_: map[string]schemas.DataKind{"name": schemas.DataKind_string}, QName_: schemas.NullQName}
 		commonFields := []IResultField{resultField{field: "name"}}
-		schemas := coreutils.TestSchemas{Schemas_: map[istructs.QName]istructs.ISchema{
-			istructs.NewQName("", "root"):                  commonSchema,
-			istructs.NewQName("f", "first-children-1"):     commonSchema,
-			istructs.NewQName("f", "deep-children-1"):      commonSchema,
-			istructs.NewQName("f", "very-deep-children-1"): commonSchema,
-			istructs.NewQName("s", "first-children-2"):     commonSchema,
-			istructs.NewQName("s", "deep-children-1"):      commonSchema,
-			istructs.NewQName("s", "very-deep-children-1"): commonSchema,
+		cache := coreutils.TestSchemas{Schemas_: map[schemas.QName]schemas.Schema{
+			schemas.NewQName("", "root"):                  commonSchema,
+			schemas.NewQName("f", "first-children-1"):     commonSchema,
+			schemas.NewQName("f", "deep-children-1"):      commonSchema,
+			schemas.NewQName("f", "very-deep-children-1"): commonSchema,
+			schemas.NewQName("s", "first-children-2"):     commonSchema,
+			schemas.NewQName("s", "deep-children-1"):      commonSchema,
+			schemas.NewQName("s", "very-deep-children-1"): commonSchema,
 		}}
 		elements := []IElement{
 			element{
@@ -61,7 +62,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 
 		work := func() pipeline.IWorkpiece {
 			o := &coreutils.TestObject{
-				Name:    istructs.NewQName("", "root"),
+				Name:    schemas.NewQName("", "root"),
 				Id:      istructs.RecordID(1),
 				Parent_: istructs.NullRecordID,
 				Data: map[string]interface{}{
@@ -70,7 +71,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 				Containers_: map[string][]*coreutils.TestObject{
 					"first-children-1": {
 						{
-							Name:    istructs.NewQName("f", "first-children-1"),
+							Name:    schemas.NewQName("f", "first-children-1"),
 							Id:      istructs.RecordID(101),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
@@ -79,7 +80,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 							Containers_: map[string][]*coreutils.TestObject{
 								"deep-children-1": {
 									{
-										Name:    istructs.NewQName("f", "deep-children-1"),
+										Name:    schemas.NewQName("f", "deep-children-1"),
 										Id:      istructs.RecordID(201),
 										Parent_: istructs.RecordID(101),
 										Data: map[string]interface{}{
@@ -88,7 +89,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 										Containers_: map[string][]*coreutils.TestObject{
 											"very-deep-children-1": {
 												{
-													Name:    istructs.NewQName("f", "very-deep-children-1"),
+													Name:    schemas.NewQName("f", "very-deep-children-1"),
 													Id:      istructs.RecordID(301),
 													Parent_: istructs.RecordID(201),
 													Data: map[string]interface{}{
@@ -102,7 +103,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 							},
 						},
 						{
-							Name:    istructs.NewQName("f", "first-children-1"),
+							Name:    schemas.NewQName("f", "first-children-1"),
 							Id:      istructs.RecordID(102),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
@@ -112,7 +113,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 					},
 					"first-children-2": {
 						{
-							Name:    istructs.NewQName("s", "first-children-2"),
+							Name:    schemas.NewQName("s", "first-children-2"),
 							Id:      istructs.RecordID(401),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
@@ -121,7 +122,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 							Containers_: map[string][]*coreutils.TestObject{
 								"deep-children-1": {
 									{
-										Name:    istructs.NewQName("s", "deep-children-1"),
+										Name:    schemas.NewQName("s", "deep-children-1"),
 										Id:      istructs.RecordID(501),
 										Parent_: istructs.RecordID(401),
 										Data: map[string]interface{}{
@@ -130,7 +131,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 										Containers_: map[string][]*coreutils.TestObject{
 											"very-deep-children-1": {
 												{
-													Name:    istructs.NewQName("s", "very-deep-children-1"),
+													Name:    schemas.NewQName("s", "very-deep-children-1"),
 													Id:      istructs.RecordID(601),
 													Parent_: istructs.RecordID(501),
 													Data: map[string]interface{}{
@@ -138,7 +139,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 													},
 												},
 												{
-													Name:    istructs.NewQName("s", "very-deep-children-1"),
+													Name:    schemas.NewQName("s", "very-deep-children-1"),
 													Id:      istructs.RecordID(602),
 													Parent_: istructs.RecordID(501),
 													Data: map[string]interface{}{
@@ -174,7 +175,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 		operator := &ResultFieldsOperator{
 			elements:     elements,
 			rootSchema:   coreutils.NewSchemaFields(commonSchema),
-			schemasCache: newSchemasCache(schemas),
+			schemasCache: newSchemasCache(cache),
 			metrics:      &testMetrics{},
 		}
 
@@ -227,7 +228,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 			},
 		}
 		operator := ResultFieldsOperator{
-			rootSchema: map[string]istructs.DataKindType{"": istructs.DataKind_FakeLast},
+			rootSchema: map[string]schemas.DataKind{"": schemas.DataKind_FakeLast},
 			elements:   []IElement{element{path: path{""}, fields: []IResultField{resultField{""}}}},
 			metrics:    &testMetrics{},
 		}
@@ -268,7 +269,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 			},
 		}
 		operator := ResultFieldsOperator{
-			schemasCache: &schemasCache{cache: map[istructs.QName]coreutils.SchemaFields{istructs.NullQName: nil}},
+			schemasCache: &schemasCache{fields: map[schemas.QName]coreutils.SchemaFields{schemas.NullQName: nil}},
 			elements:     []IElement{element{path: path{"container"}, fields: []IResultField{resultField{""}}}},
 			metrics:      &testMetrics{},
 		}

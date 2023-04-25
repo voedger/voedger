@@ -80,12 +80,12 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 }
 
 var (
-	incrementorName = istructs.NewQName("test", "incremenor_projector")
-	decrementorName = istructs.NewQName("test", "decrementor_projector")
+	incrementorName = schemas.NewQName("test", "incremenor_projector")
+	decrementorName = schemas.NewQName("test", "decrementor_projector")
 )
 
-var incProjectionView = istructs.NewQName("pkg", "Incremented")
-var decProjectionView = istructs.NewQName("pkg", "Decremented")
+var incProjectionView = schemas.NewQName("pkg", "Incremented")
+var decProjectionView = schemas.NewQName("pkg", "Decremented")
 
 var (
 	incrementorFactory = func(partition istructs.PartitionID) istructs.Projector {
@@ -148,9 +148,9 @@ var (
 )
 
 var buildProjectionSchema = func(builder IViewSchemaBuilder) {
-	builder.PartitionKeyField("pk", istructs.DataKind_int32, false)
-	builder.ClusteringColumnField("cc", istructs.DataKind_int32, false)
-	builder.ValueField(colValue, istructs.DataKind_int32, true)
+	builder.PartitionKeyField("pk", schemas.DataKind_int32, false)
+	builder.ClusteringColumnField("cc", schemas.DataKind_int32, false)
+	builder.ValueField(colValue, schemas.DataKind_int32, true)
 }
 
 type (
@@ -159,15 +159,15 @@ type (
 )
 
 func appStructs(schemasCfg schemasCfgCallback, appCfg appCfgCallback) istructs.IAppStructs {
-	schemas := schemas.NewSchemaCache()
-	schemas.Add(incrementorName, istructs.SchemaKind_Object)
-	schemas.Add(decrementorName, istructs.SchemaKind_Object)
+	cache := schemas.NewSchemaCache()
+	cache.Add(incrementorName, schemas.SchemaKind_Object)
+	cache.Add(decrementorName, schemas.SchemaKind_Object)
 	if schemasCfg != nil {
-		schemasCfg(schemas)
+		schemasCfg(cache)
 	}
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas)
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, cache)
 	if appCfg != nil {
 		appCfg(cfg)
 	}

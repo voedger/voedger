@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestIsSystemRole(t *testing.T) {
@@ -19,5 +19,5 @@ func TestIsSystemRole(t *testing.T) {
 	require.True(IsSystemRole(QNameRoleWorkspaceAdmin))
 	require.True(IsSystemRole(QNameRoleWorkspaceDevice))
 	require.True(IsSystemRole(QNameRoleWorkspaceSubject))
-	require.False(IsSystemRole(istructs.NewQName(istructs.SysPackage, "test")))
+	require.False(IsSystemRole(schemas.NewQName(schemas.SysPackage, "test")))
 }

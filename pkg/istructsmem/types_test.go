@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func Test_dynoBufValue(t *testing.T) {
@@ -21,71 +22,71 @@ func Test_dynoBufValue(t *testing.T) {
 	row := newTestRow()
 
 	t.Run("test int32", func(t *testing.T) {
-		v, err := row.dynoBufValue(int32(7), istructs.DataKind_int32)
+		v, err := row.dynoBufValue(int32(7), schemas.DataKind_int32)
 		require.NoError(err)
 		require.EqualValues(7, v)
 
-		v, err = row.dynoBufValue(float64(7), istructs.DataKind_int32)
+		v, err = row.dynoBufValue(float64(7), schemas.DataKind_int32)
 		require.NoError(err)
 		require.EqualValues(7, v)
 
-		v, err = row.dynoBufValue("7", istructs.DataKind_int32)
+		v, err = row.dynoBufValue("7", schemas.DataKind_int32)
 		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
 	t.Run("test int64", func(t *testing.T) {
-		v, err := row.dynoBufValue(int64(7), istructs.DataKind_int64)
+		v, err := row.dynoBufValue(int64(7), schemas.DataKind_int64)
 		require.NoError(err)
 		require.EqualValues(7, v)
 
-		v, err = row.dynoBufValue(float64(7), istructs.DataKind_int64)
+		v, err = row.dynoBufValue(float64(7), schemas.DataKind_int64)
 		require.NoError(err)
 		require.EqualValues(7, v)
 
-		v, err = row.dynoBufValue("7", istructs.DataKind_int64)
+		v, err = row.dynoBufValue("7", schemas.DataKind_int64)
 		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
 	t.Run("test float32", func(t *testing.T) {
-		v, err := row.dynoBufValue(float32(7.7), istructs.DataKind_float32)
+		v, err := row.dynoBufValue(float32(7.7), schemas.DataKind_float32)
 		require.NoError(err)
 		require.EqualValues(7.7, v)
 
-		v, err = row.dynoBufValue(float64(7.7), istructs.DataKind_float32)
+		v, err = row.dynoBufValue(float64(7.7), schemas.DataKind_float32)
 		require.NoError(err)
 		require.EqualValues(7.7, v)
 
-		v, err = row.dynoBufValue("7.7", istructs.DataKind_float32)
+		v, err = row.dynoBufValue("7.7", schemas.DataKind_float32)
 		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
 	t.Run("test float64", func(t *testing.T) {
-		v, err := row.dynoBufValue(float64(7.7), istructs.DataKind_float64)
+		v, err := row.dynoBufValue(float64(7.7), schemas.DataKind_float64)
 		require.NoError(err)
 		require.EqualValues(7.7, v)
 
-		v, err = row.dynoBufValue(7, istructs.DataKind_float64)
+		v, err = row.dynoBufValue(7, schemas.DataKind_float64)
 		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
 	t.Run("test []byte", func(t *testing.T) {
-		v, err := row.dynoBufValue([]byte{1, 2, 3}, istructs.DataKind_bytes)
+		v, err := row.dynoBufValue([]byte{1, 2, 3}, schemas.DataKind_bytes)
 		require.NoError(err)
 		require.Equal([]byte{1, 2, 3}, v)
 
-		v, err = row.dynoBufValue("AQIDBA==", istructs.DataKind_bytes)
+		v, err = row.dynoBufValue("AQIDBA==", schemas.DataKind_bytes)
 		require.NoError(err)
 		require.Equal([]byte{1, 2, 3, 4}, v)
 
-		v, err = row.dynoBufValue("ups", istructs.DataKind_bytes)
+		v, err = row.dynoBufValue("ups", schemas.DataKind_bytes)
 		require.Error(err) // base64 convert error
 		require.Nil(v)
 
-		v, err = row.dynoBufValue(7, istructs.DataKind_bytes)
+		v, err = row.dynoBufValue(7, schemas.DataKind_bytes)
 		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
@@ -95,59 +96,59 @@ func Test_dynoBufValue(t *testing.T) {
 		b := make([]byte, 2)
 		binary.BigEndian.PutUint16(b, uint16(id))
 
-		v, err := row.dynoBufValue(test.saleCmdName, istructs.DataKind_QName)
+		v, err := row.dynoBufValue(test.saleCmdName, schemas.DataKind_QName)
 		require.NoError(err)
 		require.EqualValues(b, v)
 
-		v, err = row.dynoBufValue(test.saleCmdName.String(), istructs.DataKind_QName)
+		v, err = row.dynoBufValue(test.saleCmdName.String(), schemas.DataKind_QName)
 		require.NoError(err)
 		require.EqualValues(b, v)
 
-		v, err = row.dynoBufValue(istructs.NewQName("test", "unknown"), istructs.DataKind_QName)
+		v, err = row.dynoBufValue(schemas.NewQName("test", "unknown"), schemas.DataKind_QName)
 		require.ErrorIs(err, qnames.ErrNameNotFound)
 		require.Nil(v)
 
-		v, err = row.dynoBufValue("test.unknown", istructs.DataKind_QName)
+		v, err = row.dynoBufValue("test.unknown", schemas.DataKind_QName)
 		require.ErrorIs(err, qnames.ErrNameNotFound)
 		require.Nil(v)
 
-		v, err = row.dynoBufValue("ups!", istructs.DataKind_QName)
+		v, err = row.dynoBufValue("ups!", schemas.DataKind_QName)
 		require.Error(err) // invalid QName
 		require.Nil(v)
 
-		v, err = row.dynoBufValue(7, istructs.DataKind_bytes)
+		v, err = row.dynoBufValue(7, schemas.DataKind_bytes)
 		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
 	t.Run("test bool", func(t *testing.T) {
-		v, err := row.dynoBufValue(false, istructs.DataKind_bool)
+		v, err := row.dynoBufValue(false, schemas.DataKind_bool)
 		require.NoError(err)
 		require.Equal(false, v)
 
-		v, err = row.dynoBufValue(true, istructs.DataKind_bool)
+		v, err = row.dynoBufValue(true, schemas.DataKind_bool)
 		require.NoError(err)
 		require.Equal(true, v)
 
-		v, err = row.dynoBufValue(7, istructs.DataKind_bool)
+		v, err = row.dynoBufValue(7, schemas.DataKind_bool)
 		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
 
 	t.Run("test int64", func(t *testing.T) {
-		v, err := row.dynoBufValue(istructs.NullRecordID, istructs.DataKind_RecordID)
+		v, err := row.dynoBufValue(istructs.NullRecordID, schemas.DataKind_RecordID)
 		require.NoError(err)
 		require.EqualValues(istructs.NullRecordID, v)
 
-		v, err = row.dynoBufValue(istructs.RecordID(100500700), istructs.DataKind_RecordID)
+		v, err = row.dynoBufValue(istructs.RecordID(100500700), schemas.DataKind_RecordID)
 		require.NoError(err)
 		require.EqualValues(100500700, v)
 
-		v, err = row.dynoBufValue(float64(100500700), istructs.DataKind_RecordID)
+		v, err = row.dynoBufValue(float64(100500700), schemas.DataKind_RecordID)
 		require.NoError(err)
 		require.EqualValues(100500700, v)
 
-		v, err = row.dynoBufValue("100500700", istructs.DataKind_RecordID)
+		v, err = row.dynoBufValue("100500700", schemas.DataKind_RecordID)
 		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
@@ -165,11 +166,11 @@ func Test_dynoBufValue(t *testing.T) {
 			testRecsIsEqual(t, testRec, r)
 		}
 
-		v, err := row.dynoBufValue(testRec, istructs.DataKind_Record)
+		v, err := row.dynoBufValue(testRec, schemas.DataKind_Record)
 		require.NoError(err)
 		checkRecord(v)
 
-		v, err = row.dynoBufValue("ups", istructs.DataKind_Record)
+		v, err = row.dynoBufValue("ups", schemas.DataKind_Record)
 		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
@@ -187,11 +188,11 @@ func Test_dynoBufValue(t *testing.T) {
 			testTestEvent(t, testEvent, 100501, 100500700, false)
 		}
 
-		v, err := row.dynoBufValue(testEvent, istructs.DataKind_Event)
+		v, err := row.dynoBufValue(testEvent, schemas.DataKind_Event)
 		require.NoError(err)
 		checkEvent(v)
 
-		v, err = row.dynoBufValue("ups", istructs.DataKind_Event)
+		v, err = row.dynoBufValue("ups", schemas.DataKind_Event)
 		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
@@ -223,14 +224,14 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		require.Equal(float64(0), row.AsFloat64("float64"))
 		require.Equal([]byte(nil), row.AsBytes("bytes"))
 		require.Equal("", row.AsString("string"))
-		require.Equal(istructs.NullQName, row.AsQName("QName"))
+		require.Equal(schemas.NullQName, row.AsQName("QName"))
 		require.Equal(false, row.AsBool("bool"))
 		require.Equal(istructs.NullRecordID, row.AsRecordID("RecordID"))
 
 		val := newEmptyViewValue()
 		require.Equal(istructs.IDbEvent(nil), val.AsEvent(test.testViewRecord.valueFields.event))
 		rec := val.AsRecord(test.testViewRecord.valueFields.record)
-		require.Equal(istructs.NullQName, rec.QName())
+		require.Equal(schemas.NullQName, rec.QName())
 	})
 
 	t.Run("PutNumber to numeric-type fields must be available (json)", func(t *testing.T) {
@@ -294,8 +295,8 @@ func Test_rowType_PutAs_ComplexTypes(t *testing.T) {
 
 		rec := row.AsRecord(test.testViewRecord.valueFields.record)
 		require.NotNil(rec)
-		require.Equal(istructs.NullQName, rec.QName())
-		require.Equal(istructs.NullRecordID, rec.AsRecordID(istructs.SystemField_ID))
+		require.Equal(schemas.NullQName, rec.QName())
+		require.Equal(istructs.NullRecordID, rec.AsRecordID(schemas.SystemField_ID))
 	})
 }
 
@@ -363,7 +364,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 		row := newRow(test.AppCfg)
 		row.setQName(test.testRow)
 
-		row.PutQName("QName", istructs.NewQName("unknown", "unknown"))
+		row.PutQName("QName", schemas.NewQName("unknown", "unknown"))
 
 		_, err := row.build()
 		require.ErrorIs(err, qnames.ErrNameNotFound)
@@ -387,7 +388,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 			row.PutChars("QName", "wellcome.2.error")
 
 			_, err := row.build()
-			require.ErrorIs(err, istructs.ErrInvalidQNameStringRepresentation)
+			require.ErrorIs(err, schemas.ErrInvalidQNameStringRepresentation)
 		})
 
 		t.Run("PutChars to bytes-type fields non-covertable base64 value must be error", func(t *testing.T) {
@@ -505,7 +506,7 @@ func Test_rowType_maskValues(t *testing.T) {
 		require.Equal(float64(0), row.AsFloat64("float64"))
 		require.Nil(row.AsBytes("bytes"))
 		require.Equal("*", row.AsString("string"))
-		require.Equal(istructs.NullQName, row.AsQName("QName"))
+		require.Equal(schemas.NullQName, row.AsQName("QName"))
 		require.Equal(false, row.AsBool("bool"))
 		require.Equal(istructs.NullRecordID, row.AsRecordID("RecordID"))
 	})
@@ -531,7 +532,7 @@ func Test_rowType_FieldNames(t *testing.T) {
 
 		cnt := 0
 		row.FieldNames(func(fieldName string) {
-			require.Equal(istructs.SystemField_QName, fieldName)
+			require.Equal(schemas.SystemField_QName, fieldName)
 			cnt++
 		})
 		require.Equal(1, cnt)

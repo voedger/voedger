@@ -11,21 +11,24 @@ import (
 )
 
 func newSchemasCache() DynoBufSchemasCache {
-	return DynoBufSchemasCache{}
+	cache := DynoBufSchemasCache{}
+	return cache
 }
 
-func (cache DynoBufSchemasCache) Prepare(s schemas.SchemaCache) {
-	s.EnumSchemas(
+// Prepares schemas
+func (cache DynoBufSchemasCache) Prepare(sch schemas.SchemaCache) {
+	sch.Schemas(
 		func(schema schemas.Schema) {
 			cache.add(schema)
 		})
 }
 
+// Adds schema
 func (cache DynoBufSchemasCache) add(schema schemas.Schema) {
 	db := dynobuffers.NewScheme()
 
 	db.Name = schema.QName().String()
-	schema.EnumFields(
+	schema.Fields(
 		func(f schemas.Field) {
 			if !f.IsSys() { // #18142: extract system fields from dynobuffer
 				fieldType := DataKindToFieldType(f.DataKind())

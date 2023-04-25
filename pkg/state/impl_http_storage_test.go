@@ -15,6 +15,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestHttpStorage_BasicUsage(t *testing.T) {
@@ -31,7 +32,7 @@ func TestHttpStorage_BasicUsage(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	k, err := s.KeyBuilder(HTTPStorage, istructs.NullQName)
+	k, err := s.KeyBuilder(HTTPStorage, schemas.NullQName)
 	require.NoError(err)
 
 	k.PutString(Field_Url, ts.URL)
@@ -59,7 +60,7 @@ func TestHttpStorage_Timeout(t *testing.T) {
 	t.Run("Should panic when url not found", func(t *testing.T) {
 		require := require.New(t)
 		s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 0, 0)
-		k, err := s.KeyBuilder(HTTPStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(HTTPStorage, schemas.NullQName)
 		require.NoError(err)
 
 		require.ErrorIs(errorFromPanic(func() { _ = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil }) }), ErrNotFound)
@@ -72,7 +73,7 @@ func TestHttpStorage_Timeout(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		k, err := s.KeyBuilder(HTTPStorage, istructs.NullQName)
+		k, err := s.KeyBuilder(HTTPStorage, schemas.NullQName)
 		require.NoError(err)
 		k.PutString(Field_Url, ts.URL)
 		k.PutInt64(Field_HTTPClientTimeoutMilliseconds, 100)
@@ -85,13 +86,13 @@ func TestHttpStorage_Timeout(t *testing.T) {
 func TestHttpStorage_NewKeyBuilder_should_refresh_key_builder(t *testing.T) {
 	require := require.New(t)
 	s := &httpStorage{}
-	k := s.NewKeyBuilder(istructs.NullQName, nil)
+	k := s.NewKeyBuilder(schemas.NullQName, nil)
 	k.PutString(Field_Url, "url")
 	k.PutString(Field_Method, http.MethodPost)
 	k.PutString(Field_Header, "my-header: my-value")
 	k.PutBytes(Field_Body, []byte(`{"hello":"api"}`))
 
-	hskb := s.NewKeyBuilder(istructs.NullQName, k).(*httpStorageKeyBuilder)
+	hskb := s.NewKeyBuilder(schemas.NullQName, k).(*httpStorageKeyBuilder)
 
 	require.Equal(HTTPStorage, hskb.storage)
 	require.Empty(hskb.data)

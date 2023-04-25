@@ -11,9 +11,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func storeEvent(ev *dbEventType, buf *bytes.Buffer) (err error) {
@@ -67,7 +67,7 @@ func storeEventBuildError(ev *dbEventType, buf *bytes.Buffer) {
 	bytes := ev.buildErr.OriginalEventBytes()
 	bytesLen := uint32(len(bytes))
 
-	if ev.argUnlObj.QName() != istructs.NullQName {
+	if ev.argUnlObj.QName() != schemas.NullQName {
 		bytesLen = 0 // to protect logging security data
 	}
 
@@ -117,7 +117,7 @@ func storeElement(el *elementType, buf *bytes.Buffer) (err error) {
 		return err
 	}
 
-	if el.QName() == istructs.NullQName {
+	if el.QName() == schemas.NullQName {
 		return nil
 	}
 
@@ -141,7 +141,7 @@ func loadEvent(ev *dbEventType, codecVer byte, buf *bytes.Buffer) (err error) {
 		return fmt.Errorf("error read event name: %w", err)
 	}
 
-	if ev.name == istructs.NullQName {
+	if ev.name == schemas.NullQName {
 		return nil
 	}
 
@@ -215,7 +215,7 @@ func loadEventBuildError(ev *dbEventType, buf *bytes.Buffer) (err error) {
 	if qName, err = utils.ReadShortString(buf); err != nil {
 		return fmt.Errorf("error read original event name: %w", err)
 	}
-	if ev.buildErr.qName, err = istructs.ParseQName(qName); err != nil {
+	if ev.buildErr.qName, err = schemas.ParseQName(qName); err != nil {
 		return fmt.Errorf("error read original event name: %w", err)
 	}
 
@@ -291,7 +291,7 @@ func loadElement(el *elementType, codecVer byte, buf *bytes.Buffer) (err error) 
 		return err
 	}
 
-	if el.QName() == istructs.NullQName {
+	if el.QName() == schemas.NullQName {
 		return nil
 	}
 

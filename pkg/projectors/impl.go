@@ -114,69 +114,69 @@ func (s *eventService) getWSID() istructs.WSID { return s.event.Workspace() }
 
 // implements ISchemaBuilder
 type SchemaBuilder struct {
-	schemas              schemas.SchemaCacheBuilder
-	qname                istructs.QName
+	cache                schemas.SchemaCacheBuilder
+	qname                schemas.QName
 	valueSchema          schemas.SchemaBuilder
 	partitionKeySchema   schemas.SchemaBuilder
 	clusteringColsSchema schemas.SchemaBuilder
 }
 
-func qnameValue(qname istructs.QName) istructs.QName {
-	return istructs.NewQName(qname.Pkg(), qname.Entity()+"_viewValue")
+func qnameValue(qname schemas.QName) schemas.QName {
+	return schemas.NewQName(qname.Pkg(), qname.Entity()+"_viewValue")
 }
 
-func qnamePartitionKey(qname istructs.QName) istructs.QName {
-	return istructs.NewQName(qname.Pkg(), qname.Entity()+"_viewPartitionKey")
+func qnamePartitionKey(qname schemas.QName) schemas.QName {
+	return schemas.NewQName(qname.Pkg(), qname.Entity()+"_viewPartitionKey")
 }
 
-func qnameClusteringCols(qname istructs.QName) istructs.QName {
-	return istructs.NewQName(qname.Pkg(), qname.Entity()+"_viewClusteringCols")
+func qnameClusteringCols(qname schemas.QName) schemas.QName {
+	return schemas.NewQName(qname.Pkg(), qname.Entity()+"_viewClusteringCols")
 }
 
-func (me *SchemaBuilder) ValueField(name string, kind istructs.DataKindType, required bool) {
+func (me *SchemaBuilder) ValueField(name string, kind schemas.DataKind, required bool) {
 	me.valueSchema.AddField(name, kind, required)
 }
 
-func (me *SchemaBuilder) PartitionKeyField(name string, kind istructs.DataKindType, required bool) {
+func (me *SchemaBuilder) PartitionKeyField(name string, kind schemas.DataKind, required bool) {
 	me.partitionKeySchema.AddField(name, kind, required)
 }
 
-func (me *SchemaBuilder) ClusteringColumnField(name string, kind istructs.DataKindType, required bool) {
+func (me *SchemaBuilder) ClusteringColumnField(name string, kind schemas.DataKind, required bool) {
 	me.clusteringColsSchema.AddField(name, kind, required)
 }
 
-func newSchemaBuilder(schemas schemas.SchemaCacheBuilder, qname istructs.QName) SchemaBuilder {
+func newSchemaBuilder(cache schemas.SchemaCacheBuilder, qname schemas.QName) SchemaBuilder {
 	return SchemaBuilder{
-		schemas:              schemas,
+		cache:                cache,
 		qname:                qname,
-		valueSchema:          schemas.Add(qnameValue(qname), istructs.SchemaKind_ViewRecord_Value),
-		partitionKeySchema:   schemas.Add(qnamePartitionKey(qname), istructs.SchemaKind_ViewRecord_PartitionKey),
-		clusteringColsSchema: schemas.Add(qnameClusteringCols(qname), istructs.SchemaKind_ViewRecord_ClusteringColumns),
+		valueSchema:          cache.Add(qnameValue(qname), schemas.SchemaKind_ViewRecord_Value),
+		partitionKeySchema:   cache.Add(qnamePartitionKey(qname), schemas.SchemaKind_ViewRecord_PartitionKey),
+		clusteringColsSchema: cache.Add(qnameClusteringCols(qname), schemas.SchemaKind_ViewRecord_ClusteringColumns),
 	}
 }
 
-func provideViewSchemaImpl(schemas schemas.SchemaCacheBuilder, qname istructs.QName, buildFunc BuildViewSchemaFunc) {
-	builder := newSchemaBuilder(schemas, qname)
+func provideViewSchemaImpl(cache schemas.SchemaCacheBuilder, qname schemas.QName, buildFunc BuildViewSchemaFunc) {
+	builder := newSchemaBuilder(cache, qname)
 	buildFunc(&builder)
 
-	schema := schemas.Add(qname, istructs.SchemaKind_ViewRecord)
-	schema.AddContainer(istructs.SystemContainer_ViewPartitionKey, qnamePartitionKey(qname), 1, 1)
-	schema.AddContainer(istructs.SystemContainer_ViewClusteringCols, qnameClusteringCols(qname), 1, 1)
-	schema.AddContainer(istructs.SystemContainer_ViewValue, qnameValue(qname), 1, 1)
+	schema := cache.Add(qname, schemas.SchemaKind_ViewRecord)
+	schema.AddContainer(schemas.SystemContainer_ViewPartitionKey, qnamePartitionKey(qname), 1, 1)
+	schema.AddContainer(schemas.SystemContainer_ViewClusteringCols, qnameClusteringCols(qname), 1, 1)
+	schema.AddContainer(schemas.SystemContainer_ViewValue, qnameValue(qname), 1, 1)
 }
 
-func provideOffsetsSchemaImpl(schemas schemas.SchemaCacheBuilder) {
-	offsetsSchema := schemas.Add(qnameProjectionOffsets, istructs.SchemaKind_ViewRecord)
-	offsetsSchema.AddContainer(istructs.SystemContainer_ViewPartitionKey, qnameProjectionOffsetsPartitionKey, 1, 1)
-	offsetsSchema.AddContainer(istructs.SystemContainer_ViewClusteringCols, qnameProjectionOffsetsClusteringCols, 1, 1)
-	offsetsSchema.AddContainer(istructs.SystemContainer_ViewValue, qnameProjectionOffsetsValue, 1, 1)
+func provideOffsetsSchemaImpl(cache schemas.SchemaCacheBuilder) {
+	offsetsSchema := cache.Add(qnameProjectionOffsets, schemas.SchemaKind_ViewRecord)
+	offsetsSchema.AddContainer(schemas.SystemContainer_ViewPartitionKey, qnameProjectionOffsetsPartitionKey, 1, 1)
+	offsetsSchema.AddContainer(schemas.SystemContainer_ViewClusteringCols, qnameProjectionOffsetsClusteringCols, 1, 1)
+	offsetsSchema.AddContainer(schemas.SystemContainer_ViewValue, qnameProjectionOffsetsValue, 1, 1)
 
-	partitionKeySchema := schemas.Add(qnameProjectionOffsetsPartitionKey, istructs.SchemaKind_ViewRecord_PartitionKey)
-	partitionKeySchema.AddField(partitionFld, istructs.DataKind_int32, true) // partitionID is uint16
+	partitionKeySchema := cache.Add(qnameProjectionOffsetsPartitionKey, schemas.SchemaKind_ViewRecord_PartitionKey)
+	partitionKeySchema.AddField(partitionFld, schemas.DataKind_int32, true) // partitionID is uint16
 
-	offsetsKeySchema := schemas.Add(qnameProjectionOffsetsClusteringCols, istructs.SchemaKind_ViewRecord_ClusteringColumns)
-	offsetsKeySchema.AddField(projectorNameFld, istructs.DataKind_QName, true)
+	offsetsKeySchema := cache.Add(qnameProjectionOffsetsClusteringCols, schemas.SchemaKind_ViewRecord_ClusteringColumns)
+	offsetsKeySchema.AddField(projectorNameFld, schemas.DataKind_QName, true)
 
-	offsetsValueSchema := schemas.Add(qnameProjectionOffsetsValue, istructs.SchemaKind_ViewRecord_Value)
-	offsetsValueSchema.AddField(offsetFld, istructs.DataKind_int64, true)
+	offsetsValueSchema := cache.Add(qnameProjectionOffsetsValue, schemas.SchemaKind_ViewRecord_Value)
+	offsetsValueSchema.AddField(offsetFld, schemas.DataKind_int64, true)
 }

@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/dynobuffers"
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/schemas"
 )
 
@@ -20,52 +19,53 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 	var schemaCache schemas.SchemaCache
 
 	t.Run("must ok to build schemas", func(t *testing.T) {
-		schemas := schemas.NewSchemaCache()
-		rootSchema := schemas.Add(istructs.NewQName("test", "rootSchema"), istructs.SchemaKind_Object)
+		bld := schemas.NewSchemaCache()
+		rootSchema := bld.Add(schemas.NewQName("test", "rootSchema"), schemas.SchemaKind_Object)
 		rootSchema.
-			AddField("int32Field", istructs.DataKind_int32, true).
-			AddField("int64Field", istructs.DataKind_int64, false).
-			AddField("float32Field", istructs.DataKind_float32, false).
-			AddField("float64Field", istructs.DataKind_float64, false).
-			AddField("bytesField", istructs.DataKind_bytes, false).
-			AddField("strField", istructs.DataKind_string, false).
-			AddField("qnameField", istructs.DataKind_QName, false).
-			AddField("recIDField", istructs.DataKind_RecordID, false).
-			AddContainer("child", istructs.NewQName("test", "childSchema"), 1, istructs.ContainerOccurs_Unbounded)
+			AddField("int32Field", schemas.DataKind_int32, true).
+			AddField("int64Field", schemas.DataKind_int64, false).
+			AddField("float32Field", schemas.DataKind_float32, false).
+			AddField("float64Field", schemas.DataKind_float64, false).
+			AddField("bytesField", schemas.DataKind_bytes, false).
+			AddField("strField", schemas.DataKind_string, false).
+			AddField("qnameField", schemas.DataKind_QName, false).
+			AddField("recIDField", schemas.DataKind_RecordID, false).
+			AddContainer("child", schemas.NewQName("test", "childSchema"), 1, schemas.Occurs_Unbounded)
 
-		childSchema := schemas.Add(istructs.NewQName("test", "childSchema"), istructs.SchemaKind_Element)
+		childSchema := bld.Add(schemas.NewQName("test", "childSchema"), schemas.SchemaKind_Element)
 		childSchema.
-			AddField("int32Field", istructs.DataKind_int32, true).
-			AddField("int64Field", istructs.DataKind_int64, false).
-			AddField("float32Field", istructs.DataKind_float32, false).
-			AddField("float64Field", istructs.DataKind_float64, false).
-			AddField("bytesField", istructs.DataKind_bytes, false).
-			AddField("strField", istructs.DataKind_string, false).
-			AddField("qnameField", istructs.DataKind_QName, false).
-			AddField("boolField", istructs.DataKind_bool, false).
-			AddField("recIDField", istructs.DataKind_RecordID, false).
-			AddContainer("grandChild", istructs.NewQName("test", "grandChild"), 0, 1)
+			AddField("int32Field", schemas.DataKind_int32, true).
+			AddField("int64Field", schemas.DataKind_int64, false).
+			AddField("float32Field", schemas.DataKind_float32, false).
+			AddField("float64Field", schemas.DataKind_float64, false).
+			AddField("bytesField", schemas.DataKind_bytes, false).
+			AddField("strField", schemas.DataKind_string, false).
+			AddField("qnameField", schemas.DataKind_QName, false).
+			AddField("boolField", schemas.DataKind_bool, false).
+			AddField("recIDField", schemas.DataKind_RecordID, false).
+			AddContainer("grandChild", schemas.NewQName("test", "grandChild"), 0, 1)
 
-		grandSchema := schemas.Add(istructs.NewQName("test", "grandChild"), istructs.SchemaKind_Element)
+		grandSchema := bld.Add(schemas.NewQName("test", "grandChild"), schemas.SchemaKind_Element)
 		grandSchema.
-			AddField("recIDField", istructs.DataKind_RecordID, false)
+			AddField("recIDField", schemas.DataKind_RecordID, false)
 
-		s, err := schemas.Build()
+		sch, err := bld.Build()
 		require.NoError(err)
 
-		schemaCache = s
+		schemaCache = sch
 	})
 
 	dynoSchemas := newSchemasCache()
-	dynoSchemas.Prepare(schemaCache)
 	require.NotNil(dynoSchemas)
+
+	dynoSchemas.Prepare(schemaCache)
 
 	var checkDynoScheme func(dynoScheme *dynobuffers.Scheme)
 
 	checkDynoScheme = func(dynoScheme *dynobuffers.Scheme) {
 		require.NotNil(dynoScheme)
 
-		schemaName, err := istructs.ParseQName(dynoScheme.Name)
+		schemaName, err := schemas.ParseQName(dynoScheme.Name)
 		require.NoError(err)
 
 		schema := schemaCache.SchemaByName(schemaName)
@@ -93,7 +93,7 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 		}
 	}
 
-	schemaCache.EnumSchemas(
+	schemaCache.Schemas(
 		func(s schemas.Schema) {
 			checkDynoScheme(dynoSchemas[s.QName()])
 		})

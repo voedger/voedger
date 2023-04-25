@@ -7,7 +7,6 @@
 package projectors
 
 import (
-	istructs "github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/schemas"
 )
 
@@ -23,6 +22,6 @@ func ProvideOffsetsSchema(schemas schemas.SchemaCacheBuilder) {
 	provideOffsetsSchemaImpl(schemas)
 }
 
-func ProvideViewSchema(schemas schemas.SchemaCacheBuilder, qname istructs.QName, buildFunc BuildViewSchemaFunc) {
+func ProvideViewSchema(schemas schemas.SchemaCacheBuilder, qname schemas.QName, buildFunc BuildViewSchemaFunc) {
 	provideViewSchemaImpl(schemas, qname, buildFunc)
 }

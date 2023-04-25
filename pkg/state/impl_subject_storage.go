@@ -9,6 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type subjectStorage struct {
@@ -16,8 +17,8 @@ type subjectStorage struct {
 	tokenFunc      TokenFunc
 }
 
-func (s *subjectStorage) NewKeyBuilder(_ istructs.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newKeyBuilder(SubjectStorage, istructs.NullQName)
+func (s *subjectStorage) NewKeyBuilder(_ schemas.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
+	return newKeyBuilder(SubjectStorage, schemas.NullQName)
 }
 func (s *subjectStorage) GetBatch(items []GetBatchItem) (err error) {
 	ssv := &subjectStorageValue{
