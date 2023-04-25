@@ -60,6 +60,11 @@ var (
 	qNameCmdCreateUntillPayment                     = schemas.NewQName(airPackage, "CreateUntillPayment")
 	qNameCmdRegenerateUPProfileApiToken             = schemas.NewQName(airPackage, "RegenerateUPProfileApiToken")
 	qNameCmdEnsureUPPredefinedPaymentModesExist     = schemas.NewQName(airPackage, "EnsureUPPredefinedPaymentModesExist")
+	qNameQryGetUPTerminals                          = schemas.NewQName(airPackage, "GetUPTerminals")
+	qNameQryActivateUPTerminal                      = schemas.NewQName(airPackage, "ActivateUPTerminal")
+	qNameQryGetUPPaymentMethods                     = schemas.NewQName(airPackage, "GetUPPaymentMethods")
+	qNameQryToggleUPPaymentMethod                   = schemas.NewQName(airPackage, "ToggleUPPaymentMethod")
+	qNameQryRequestUPPaymentMethod                  = schemas.NewQName(airPackage, "RequestUPPaymentMethod")
 
 	// Air roles
 	qNameRoleResellersAdmin         = schemas.NewQName(airPackage, "ResellersAdmin")

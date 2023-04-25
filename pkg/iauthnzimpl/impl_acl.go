@@ -236,12 +236,21 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
-		desc: "grant exec on c.air.CreateUntillPayment, q.air.GetUPStatus, q.air.EnsureUPPredefinedPaymentModesExist to role air.UntillPaymentsUser",
+		desc: "grant exec on few funcs to role air.UntillPaymentsUser",
 		pattern: PatternType{
 			qNamesPattern: []schemas.QName{
 				qNameQryGetUPStatus,
 				qNameCmdCreateUntillPayment,
-				qNameCmdEnsureUPPredefinedPaymentModesExist, // https://github.com/voedger/voedger/issues/57
+
+				// https://github.com/voedger/voedger/issues/57
+				qNameCmdEnsureUPPredefinedPaymentModesExist,
+
+				// https://dev.untill.com/projects/#!641315
+				qNameQryGetUPTerminals,
+				qNameQryActivateUPTerminal,
+				qNameQryGetUPPaymentMethods,
+				qNameQryToggleUPPaymentMethod,
+				qNameQryRequestUPPaymentMethod,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
