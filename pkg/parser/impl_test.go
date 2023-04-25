@@ -21,7 +21,7 @@ var efs embed.FS
 
 func Test_BasicUsage(t *testing.T) {
 
-	parser := ProvideFSParser()
+	parser := NewFSParser()
 	parsedSchema, err := parser(efs, "example_app")
 	require.NoError(t, err)
 
@@ -34,7 +34,7 @@ func Test_BasicUsage(t *testing.T) {
 func Test_Duplicates(t *testing.T) {
 	require := require.New(t)
 
-	parser := ProvideStringParser()
+	parser := NewStringParser()
 
 	_, err := parser(`SCHEMA test; 
 	FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
@@ -61,7 +61,7 @@ func Test_Duplicates(t *testing.T) {
 func Test_Comments(t *testing.T) {
 	require := require.New(t)
 
-	parser := ProvideStringParser()
+	parser := NewStringParser()
 
 	s, err := parser(`SCHEMA test; 
 	-- My function

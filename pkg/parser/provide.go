@@ -4,14 +4,12 @@
  */
 package sqlschema
 
-// TODO: NewFSParser()
 // Can be one per app
-func ProvideFSParser() FSParser {
+func NewFSParser() FSParser {
 	return embedParserImpl
 }
 
-// TODO: NewStringParser
 // Can be one per app
-func ProvideStringParser() StringParser {
+func NewStringParser() StringParser {
 	return stringParserImpl
 }
