@@ -49,3 +49,12 @@ func CompareParams(pos *lexer.Position, params []FunctionParam, f *FunctionStmt,
 	}
 	return errs
 }
+
+func iterate(c IStatementCollection, callback func(stmt interface{})) {
+	c.Iterate(func(stmt interface{}) {
+		callback(stmt)
+		if collection, ok := stmt.(IStatementCollection); ok {
+			iterate(collection, callback)
+		}
+	})
+}

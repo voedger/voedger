@@ -7,9 +7,25 @@ package sqlschema
 
 import (
 	"fmt"
+	fs "io/fs"
 
 	"github.com/alecthomas/participle/v2/lexer"
 )
+
+type FileSchemaAST struct {
+	FileName string
+	Ast      *SchemaAST
+}
+
+type PackageSchemaAST struct {
+	QualifiedPackageName string
+	Ast                  *SchemaAST
+}
+
+type IReadFS interface {
+	fs.ReadDirFS
+	fs.ReadFileFS
+}
 
 type IStatement interface {
 	GetPos() *lexer.Position

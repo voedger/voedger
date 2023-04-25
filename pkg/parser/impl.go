@@ -13,7 +13,7 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 )
 
-func parse(fileName string, content string) (*SchemaAST, error) {
+func parseImpl(fileName string, content string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
 
 		{Name: "Punct", Pattern: `(;|,|\.|\*|=|\(|\)|\[|\])`},
@@ -32,14 +32,6 @@ func parse(fileName string, content string) (*SchemaAST, error) {
 	return parser.ParseString(fileName, content)
 }
 
-func stringParserImpl(fileName string, content string) (*SchemaAST, error) {
-	parsed, err := parse(fileName, content)
-	if err != nil {
-		return nil, err
-	}
-	return analyse(parsed)
-}
-
 func mergeSchemas(mergeFrom, mergeTo *SchemaAST) {
 	// imports
 	mergeTo.Imports = append(mergeTo.Imports, mergeFrom.Imports...)
@@ -48,12 +40,12 @@ func mergeSchemas(mergeFrom, mergeTo *SchemaAST) {
 	mergeTo.Statements = append(mergeTo.Statements, mergeFrom.Statements...)
 }
 
-func embedParserImpl(fs IReadFS, dir string) (*SchemaAST, error) {
+func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
 	entries, err := fs.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	schemas := make([]*SchemaAST, 0)
+	schemas := make([]*FileSchemaAST, 0)
 	for _, entry := range entries {
 		if strings.ToLower(filepath.Ext(entry.Name())) == ".sql" {
 			fp := filepath.Join(dir, entry.Name())
@@ -61,42 +53,45 @@ func embedParserImpl(fs IReadFS, dir string) (*SchemaAST, error) {
 			if err != nil {
 				return nil, err
 			}
-			schema, err := parse(entry.Name(), string(bytes))
+			schema, err := parseImpl(entry.Name(), string(bytes))
 			if err != nil {
 				return nil, err
 			}
-			schemas = append(schemas, schema)
+			schemas = append(schemas, &FileSchemaAST{
+				FileName: entry.Name(),
+				Ast:      schema,
+			})
 		}
 	}
 	if len(schemas) == 0 {
 		return nil, ErrDirContainsNoSchemaFiles
 	}
-	head := schemas[0]
-	for i := 1; i < len(schemas); i++ {
-		schema := schemas[i]
-		if schema.Package != head.Package {
+	return schemas, nil
+}
+
+func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
+	if len(asts) == 0 {
+		return nil, nil
+	}
+	headAst := asts[0].Ast
+
+	for i := 1; i < len(asts); i++ {
+		f := asts[i]
+		if f.Ast.Package != headAst.Package {
 			return nil, ErrDirContainsDifferentSchemas
 		}
-		mergeSchemas(schema, head)
+		mergeSchemas(f.Ast, headAst)
 	}
-	return analyse(head)
-}
 
-func iterate(c IStatementCollection, callback func(stmt interface{})) {
-	c.Iterate(func(stmt interface{}) {
-		callback(stmt)
-		if collection, ok := stmt.(IStatementCollection); ok {
-			iterate(collection, callback)
-		}
-	})
-}
-
-func analyse(schema *SchemaAST) (*SchemaAST, error) {
 	errs := make([]error, 0)
-	errs = analyseDuplicateNames(schema, errs)
-	errs = analyseReferences(schema, errs)
-	cleanupComments(schema)
-	return schema, errors.Join(errs...)
+	errs = analyseDuplicateNames(headAst, errs)
+	errs = analyseReferences(headAst, errs)
+	cleanupComments(headAst)
+
+	return &PackageSchemaAST{
+		QualifiedPackageName: qualifiedPackageName,
+		Ast:                  headAst,
+	}, errors.Join(errs...)
 }
 
 func analyseReferences(schema *SchemaAST, errs []error) []error {

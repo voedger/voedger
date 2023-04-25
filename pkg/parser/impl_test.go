@@ -21,8 +21,7 @@ var efs embed.FS
 
 func Test_BasicUsage(t *testing.T) {
 
-	parser := NewFSParser()
-	parsedSchema, err := parser(efs, "example_app")
+	parsedSchema, err := ParsePackageDir("github.com/untillpro/exampleschema", efs, "example_app")
 	require.NoError(t, err)
 
 	parsedSchemaStr := repr.String(parsedSchema, repr.Indent(" "), repr.IgnorePrivate())
@@ -34,12 +33,14 @@ func Test_BasicUsage(t *testing.T) {
 func Test_Duplicates(t *testing.T) {
 	require := require.New(t)
 
-	parser := NewStringParser()
-
-	_, err := parser("example.sql", `SCHEMA test; 
+	ast1, err := ParseFile("file1.sql", `SCHEMA test; 
 	FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
 	FUNCTION MyTableValidator(TableRow) RETURNS string ENGINE WASM;	
 	FUNCTION MyFunc2() RETURNS void ENGINE BUILTIN;
+	`)
+	require.NoError(err)
+
+	ast2, err := ParseFile("file2.sql", `SCHEMA test; 
 	WORKSPACE ChildWorkspace (
 		TAG MyFunc2; -- duplicate
 		FUNCTION MyFunc3() RETURNS void ENGINE BUILTIN;
@@ -49,29 +50,33 @@ func Test_Duplicates(t *testing.T) {
 		)
 	)
 	`)
+	require.NoError(err)
+
+	_, err = mergeFileSchemaASTsImpl("", []*FileSchemaAST{ast1, ast2})
 
 	// TODO: use golang messages like
 	// ./types2.go:17:7: EmbedParser redeclared
 	//     ./types.go:17:6: other declaration of EmbedParser
-	require.ErrorContains(err, "example.sql:3:2: MyTableValidator redeclared")
-	require.ErrorContains(err, "example.sql:6:3: MyFunc2 redeclared")
-	require.ErrorContains(err, "example.sql:10:4: MyFunc4 redeclared")
+	require.ErrorContains(err, "file1.sql:3:2: MyTableValidator redeclared")
+	require.ErrorContains(err, "file2.sql:3:3: MyFunc2 redeclared")
+	require.ErrorContains(err, "file2.sql:7:4: MyFunc4 redeclared")
 }
 
 func Test_Comments(t *testing.T) {
 	require := require.New(t)
 
-	parser := NewStringParser()
-
-	s, err := parser("example.sql", `SCHEMA test; 
+	fs, err := ParseFile("example.sql", `SCHEMA test; 
 	-- My function
 	-- line 2
 	FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
 	`)
 
 	require.Nil(err)
-	require.NotNil(s.Statements[0].Function.Comments)
-	require.Equal(2, len(s.Statements[0].Function.Comments))
-	require.Equal("My function", s.Statements[0].Function.Comments[0])
-	require.Equal("line 2", s.Statements[0].Function.Comments[1])
+
+	ps, err := mergeFileSchemaASTsImpl("", []*FileSchemaAST{fs})
+
+	require.NotNil(ps.Ast.Statements[0].Function.Comments)
+	require.Equal(2, len(ps.Ast.Statements[0].Function.Comments))
+	require.Equal("My function", ps.Ast.Statements[0].Function.Comments[0])
+	require.Equal("line 2", ps.Ast.Statements[0].Function.Comments[1])
 }
