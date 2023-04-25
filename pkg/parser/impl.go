@@ -136,8 +136,6 @@ func resolveFunc(name OptQName, schema *SchemaAST) (function *FunctionStmt) {
 				}
 			}
 		})
-	} else {
-		// TODO: resolve in other packages
 	}
 	return
 }
