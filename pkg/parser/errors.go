@@ -24,8 +24,12 @@ func ErrUndefined(name string) error {
 	return fmt.Errorf("%s undefined", name)
 }
 
-func ErrSchemaContainsDuplicateName(name string) error {
+func ErrRedeclared(name string) error {
 	return fmt.Errorf("%s redeclared", name)
+}
+
+func ErrPackageRedeclared(name string) error {
+	return fmt.Errorf("package %s redeclared", name)
 }
 
 func errorAt(err error, pos *lexer.Position) error {

@@ -4,8 +4,6 @@
  */
 package parser
 
-import "github.com/voedger/voedger/pkg/istructs"
-
 // ParseFile parses content of the single file, creates FileSchemaAST and returns pointer to it.
 // Performs syntax analysis
 func ParseFile(fileName, content string) (*FileSchemaAST, error) {
@@ -35,7 +33,7 @@ func ParsePackageDir(qualifiedPackageName string, fs IReadFS, subDir string) (*P
 }
 
 // Application-level semantic analysis (e.g. cross-package references)
-func MergePackageSchemas([]*PackageSchemaAST) (istructs.ISchema, error) {
+func MergePackageSchemas([]*PackageSchemaAST) /*TODO: return .?.ISchema */ error {
 	// TODO: implement
-	return nil, nil
+	return nil
 }

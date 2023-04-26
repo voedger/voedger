@@ -7,6 +7,7 @@ package parser
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/alecthomas/participle/v2/lexer"
 )
@@ -57,4 +58,20 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 			iterate(collection, callback)
 		}
 	})
+}
+
+func resolveFunc(name string, schema *SchemaAST) (function *FunctionStmt) {
+	iterate(schema, func(stmt interface{}) {
+		if f, ok := stmt.(*FunctionStmt); ok {
+			if f.Name == name {
+				function = f
+			}
+		}
+	})
+	return
+}
+
+func isInternalFunc(name OptQName, schema *SchemaAST) bool {
+	pkg := strings.TrimSpace(name.Package)
+	return pkg == "" || pkg == schema.Package
 }

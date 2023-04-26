@@ -21,13 +21,15 @@ var efs embed.FS
 
 func Test_BasicUsage(t *testing.T) {
 
-	parsedSchema, err := ParsePackageDir("github.com/untillpro/exampleschema", efs, "example_app")
+	pkgExample, err := ParsePackageDir("github.com/untillpro/exampleschema", efs, "example_app")
 	require.NoError(t, err)
 
-	parsedSchemaStr := repr.String(parsedSchema, repr.Indent(" "), repr.IgnorePrivate())
+	parsedSchemaStr := repr.String(pkgExample, repr.Indent(" "), repr.IgnorePrivate())
 	fmt.Println(parsedSchemaStr)
 
-	//require.Equal(t, expectedParsedExampledSchemaStr, parsedSchemaStr)
+	// TODO: MergePackageSchemas should return ?.ISchema
+	require.Nil(t, MergePackageSchemas([]*PackageSchemaAST{pkgExample}))
+
 }
 
 func Test_Duplicates(t *testing.T) {
@@ -52,7 +54,7 @@ func Test_Duplicates(t *testing.T) {
 	`)
 	require.NoError(err)
 
-	_, err = mergeFileSchemaASTsImpl("", []*FileSchemaAST{ast1, ast2})
+	_, err = MergeFileSchemaASTs("", []*FileSchemaAST{ast1, ast2})
 
 	// TODO: use golang messages like
 	// ./types2.go:17:7: EmbedParser redeclared
@@ -72,7 +74,7 @@ func Test_Comments(t *testing.T) {
 	`)
 	require.Nil(err)
 
-	ps, err := mergeFileSchemaASTsImpl("", []*FileSchemaAST{fs})
+	ps, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
 	require.Nil(err)
 
 	require.NotNil(ps.Ast.Statements[0].Function.Comments)
@@ -90,7 +92,7 @@ func Test_UnexpectedSchema(t *testing.T) {
 	ast2, err := ParseFile("file2.sql", `SCHEMA schema2; ROLE xyz;`)
 	require.NoError(err)
 
-	_, err = mergeFileSchemaASTsImpl("", []*FileSchemaAST{ast1, ast2})
+	_, err = MergeFileSchemaASTs("", []*FileSchemaAST{ast1, ast2})
 	require.ErrorContains(err, "file2.sql: package schema2; expected schema1")
 }
 
@@ -106,11 +108,38 @@ func Test_FunctionUndefined(t *testing.T) {
 	`)
 	require.Nil(err)
 
-	_, err = mergeFileSchemaASTsImpl("", []*FileSchemaAST{fs})
+	_, err = MergeFileSchemaASTs("", []*FileSchemaAST{fs})
 	require.NotNil(err)
 
 	require.ErrorContains(err, "example.sql:3:6: SomeCmdFunc undefined")
 	require.ErrorContains(err, "example.sql:4:6: QueryFunc undefined")
-	require.ErrorContains(err, "example.sql:5:6: Air.SomeProjectorFunc undefined")
+	// TODO: how to check that no more errors in err?)
+}
+
+func Test_MergePackageSchemas1(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("example.sql", `SCHEMA pkg1;
+	WORKSPACE test (
+    	COMMAND Orders AS pkg2.SomeCmdFunc;
+    	QUERY Query1 RETURNS text AS pkg2.QueryFunc;
+    	PROJECTOR ON COMMAND Air.CreateUPProfile AS pkg2.SomeProjectorFunc2;
+	)
+	`)
+	require.Nil(err)
+	pkg1, err := MergeFileSchemaASTs("github.com/untillpro/pkg1", []*FileSchemaAST{fs})
+	require.Nil(err)
+
+	fs, err = ParseFile("example.sql", `SCHEMA pkg2;
+	FUNCTION SomeCmdFunc() RETURNS void ENGINE BUILTIN;
+	FUNCTION QueryFunc() RETURNS void ENGINE BUILTIN;
+	FUNCTION SomeProjectorFunc() RETURNS void ENGINE BUILTIN;
+	`)
+	require.Nil(err)
+	pkg2, err := MergeFileSchemaASTs("github.com/untillpro/pkg2", []*FileSchemaAST{fs})
+	require.Nil(err)
+
+	err = MergePackageSchemas([]*PackageSchemaAST{pkg1, pkg2})
+	require.ErrorContains(err, "example.sql:5:6: pkg2.SomeProjectorFunc2 undefined")
 
 }
