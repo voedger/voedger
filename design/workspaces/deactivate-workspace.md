@@ -24,7 +24,7 @@
 
 ```mermaid
     sequenceDiagram
-    
+
     actor owner as WorkspaceOwner
     participant ws as Workspace
     participant appws as ApplicationWS
@@ -53,7 +53,7 @@
 
 ```mermaid
     sequenceDiagram
-    
+
     actor owner as WorkspaceOwner
     participant ws as Workspace
     participant parent as OwnerApp/ParentWS
@@ -66,15 +66,15 @@
     end
 
     note over ws: ap.sys.DeactivateWorkspaceReferences()
-    ws ->> ws: Read cdoc.sys.WorkspaceDescriptor{OwnerApp, OwnerDoc, ParentWSID???}
+    ws ->> ws: Read cdoc.sys.WorkspaceDescriptor{OwnerApp, OwnerDocID, ParentWSID???}
 
-    ws ->> parent: c.sys.OnChildWorkspaceDeactivated(OwnerDoc)
+    ws ->> parent: c.sys.OnChildWorkspaceDeactivated(OwnerDocID)
 
-    opt Docs[OwnerDoc].IsActive
-      parent ->> parent: Docs[OwnerDoc].IsActive = false
+    opt Docs[OwnerDocID].IsActive
+      parent ->> parent: Docs[OwnerDocID].IsActive = false
     end
 
-    opt Foreach cdos.sys.Subject    
+    opt Foreach cdos.sys.Subject
         registry -->> ws : ProfileWSIDByLogin
         ws ->> profile: c.sys.OnJoinedWorkspaceDeactivated()
         opt JoinedWorkspace.IsActive
