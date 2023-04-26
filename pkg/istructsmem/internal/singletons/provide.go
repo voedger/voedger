@@ -3,8 +3,8 @@
  * @author: Nikolay Nikitin
  */
 
-package containers
+package singletons
 
-func New() *Containers {
-	return newContainers()
+func New() *Singletons {
+	return newSingletons()
 }

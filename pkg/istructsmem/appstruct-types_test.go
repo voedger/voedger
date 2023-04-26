@@ -80,8 +80,8 @@ func TestAppConfigsType(t *testing.T) {
 func TestErrorsAppConfigsType(t *testing.T) {
 	require := require.New(t)
 
-	storage := teststore.NewTestStorage()
-	storageProvider := teststore.NewTestStorageProvider(storage)
+	storage := teststore.NewStorage()
+	storageProvider := teststore.NewStorageProvider(storage)
 
 	t.Run("must error if error while read versions", func(t *testing.T) {
 		bld := schemas.NewSchemaCache()

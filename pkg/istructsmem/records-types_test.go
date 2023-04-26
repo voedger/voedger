@@ -22,8 +22,8 @@ func Test_RecordsRead(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	storage := teststore.NewTestStorage()
-	storageProvider := teststore.NewTestStorageProvider(storage)
+	storage := teststore.NewStorage()
+	storageProvider := teststore.NewStorageProvider(storage)
 
 	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 

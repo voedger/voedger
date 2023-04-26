@@ -10,9 +10,6 @@ import "github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 // constants for system container names
 const (
 	NullContainerID ContainerID = 0 + iota
-	ViewPKeyContainerID
-	ViewCColsContainerID
-	ViewValueContainerID
 
 	ContainerNameIDSysLast ContainerID = 63
 )

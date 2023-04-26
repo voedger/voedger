@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/singletons"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 	"github.com/voedger/voedger/pkg/schemas"
 )
@@ -55,7 +56,7 @@ type AppConfigType struct {
 	versions                *vers.Versions
 	qNames                  *qnames.QNames
 	cNames                  *containers.Containers
-	singletons              singletonsCacheType
+	singletons              *singletons.Singletons
 	prepared                bool
 	app                     *appStructsType
 	FunctionRateLimits      functionRateLimits
@@ -83,13 +84,14 @@ func newAppConfig(appName istructs.AppQName, scb schemas.SchemaCacheBuilder) *Ap
 	cfg.Resources = newResources(&cfg)
 	cfg.Uniques = newUniques()
 
-	cfg.dbSchemas = dynobuf.NewSchemasCache()
+	cfg.dbSchemas = dynobuf.New()
 	cfg.validators = newValidators()
 
-	cfg.versions = vers.NewVersions()
-	cfg.qNames = qnames.NewQNames()
-	cfg.cNames = containers.NewContainers()
-	cfg.singletons = newSingletonsCache(&cfg)
+	cfg.versions = vers.New()
+	cfg.qNames = qnames.New()
+	cfg.cNames = containers.New()
+	cfg.singletons = singletons.New()
+
 	cfg.FunctionRateLimits = functionRateLimits{
 		limits: map[schemas.QName]map[istructs.RateLimitKind]istructs.RateLimit{},
 	}
@@ -133,7 +135,7 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	}
 
 	// prepare singleton CDOCs
-	if err := cfg.singletons.prepare(); err != nil {
+	if err := cfg.singletons.Prepare(cfg.storage, cfg.versions, cfg.Schemas); err != nil {
 		return err
 	}
 
@@ -144,10 +146,6 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	if err := cfg.Uniques.validate(cfg); err != nil {
 		return err
 	}
-
-	// TODO: remove it after https://github.com/voedger/voedger/issues/56
-	cfg.dbSchemas.Prepare(cfg.Schemas)
-	cfg.validators.prepare(cfg.Schemas)
 
 	cfg.prepared = true
 	return nil

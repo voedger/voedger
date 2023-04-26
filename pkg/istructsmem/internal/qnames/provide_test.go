@@ -20,7 +20,7 @@ func Test_BasicUsage(t *testing.T) {
 	sp := istorageimpl.Provide(istorage.ProvideMem())
 	storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
-	versions := vers.NewVersions()
+	versions := vers.New()
 	if err := versions.Prepare(storage); err != nil {
 		panic(err)
 	}
@@ -35,7 +35,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	resources := istructs.IResources(nil) //TODO: add test resources
 
-	names := NewQNames()
+	names := New()
 	if err := names.Prepare(storage, versions, schemas, resources); err != nil {
 		panic(err)
 	}
@@ -51,12 +51,12 @@ func Test_BasicUsage(t *testing.T) {
 		require.Equal(testName, n)
 
 		t.Run("must be able to load early stored names", func(t *testing.T) {
-			otherVersions := vers.NewVersions()
+			otherVersions := vers.New()
 			if err := otherVersions.Prepare(storage); err != nil {
 				panic(err)
 			}
 
-			otherNames := NewQNames()
+			otherNames := New()
 			if err := otherNames.Prepare(storage, versions, nil, nil); err != nil {
 				panic(err)
 			}

@@ -392,7 +392,7 @@ func (cud *cudType) applyRecs(exists existsRecordType, load loadRecordFuncType, 
 
 	for _, rec := range cud.creates {
 		if rec.schema.Singleton() {
-			id, err := cud.appCfg.singletons.qNameToID(rec.QName())
+			id, err := cud.appCfg.singletons.GetID(rec.QName())
 			if err != nil {
 				return err
 			}
@@ -496,7 +496,7 @@ func (cud *cudType) regenerateIDsPlan(generator istructs.IDGenerator) (newIDs ne
 		var storeID istructs.RecordID
 
 		if rec.schema.Singleton() {
-			if storeID, err = cud.appCfg.singletons.qNameToID(rec.QName()); err != nil {
+			if storeID, err = cud.appCfg.singletons.GetID(rec.QName()); err != nil {
 				return nil, err
 			}
 		} else {
