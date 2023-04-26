@@ -68,9 +68,6 @@ func (cnt *Containers) collectAllContainers(sch schemas.SchemaCache) (err error)
 
 	// system containers
 	cnt.collectSysContainer("", NullContainerID)
-	cnt.collectSysContainer(schemas.SystemContainer_ViewPartitionKey, ViewPKeyContainerID)
-	cnt.collectSysContainer(schemas.SystemContainer_ViewClusteringCols, ViewCColsContainerID)
-	cnt.collectSysContainer(schemas.SystemContainer_ViewValue, ViewValueContainerID)
 
 	// application containers
 	if sch != nil {
@@ -116,7 +113,7 @@ func (cnt *Containers) collectSysContainer(name string, id ContainerID) {
 // Loads all stored container from storage
 func (cnt *Containers) load(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
 
-	ver := versions.GetVersion(vers.SysContainersVersion)
+	ver := versions.Get(vers.SysContainersVersion)
 	switch ver {
 	case vers.UnknownVersion: // no sys.Container storage exists
 		return nil
@@ -167,23 +164,22 @@ func (cnt *Containers) store(storage istorage.IAppStorage, versions *vers.Versio
 		if name == "" {
 			continue // skip NullContainerID
 		}
-		if schemas.IsSysContainer(name) {
-			continue // skip system containers, e.g. «sys.pk» or «sys.сcols»
+		if !schemas.IsSysContainer(name) {
+			item := istorage.BatchItem{
+				PKey:  pKey,
+				CCols: []byte(name),
+				Value: utils.ToBytes(id),
+			}
+			batch = append(batch, item)
 		}
-		item := istorage.BatchItem{
-			PKey:  pKey,
-			CCols: []byte(name),
-			Value: utils.ToBytes(id),
-		}
-		batch = append(batch, item)
 	}
 
 	if err = storage.PutBatch(batch); err != nil {
 		return fmt.Errorf("error store application container IDs to storage: %w", err)
 	}
 
-	if ver := versions.GetVersion(vers.SysContainersVersion); ver != lastestVersion {
-		if err = versions.PutVersion(vers.SysContainersVersion, lastestVersion); err != nil {
+	if ver := versions.Get(vers.SysContainersVersion); ver != lastestVersion {
+		if err = versions.Put(vers.SysContainersVersion, lastestVersion); err != nil {
 			return fmt.Errorf("error store system Containers view version: %w", err)
 		}
 	}

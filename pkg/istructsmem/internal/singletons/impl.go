@@ -69,7 +69,7 @@ func (stons *Singletons) Prepare(storage istorage.IAppStorage, versions *vers.Ve
 
 // loads all stored singleton IDs from storage
 func (stons *Singletons) load(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
-	ver := versions.GetVersion(vers.SysSingletonsVersion)
+	ver := versions.Get(vers.SysSingletonsVersion)
 	switch ver {
 	case vers.UnknownVersion: // no sys.QName storage exists
 		return nil
@@ -157,8 +157,8 @@ func (stons *Singletons) store(storage istorage.IAppStorage, versions *vers.Vers
 		return fmt.Errorf("error store application singleton IDs to storage: %w", err)
 	}
 
-	if ver := versions.GetVersion(vers.SysSingletonsVersion); ver != lastestVersion {
-		if err = versions.PutVersion(vers.SysSingletonsVersion, lastestVersion); err != nil {
+	if ver := versions.Get(vers.SysSingletonsVersion); ver != lastestVersion {
+		if err = versions.Put(vers.SysSingletonsVersion, lastestVersion); err != nil {
 			return fmt.Errorf("error store «sys.Singletons» system view version: %w", err)
 		}
 	}

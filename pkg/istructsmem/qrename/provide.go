@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/schemas"
 )
 
-func RenameQName(storage istorage.IAppStorage, old, new schemas.QName) error {
+// Renames QName from old to new. QNameID previously used by old will be used by new.
+func Rename(storage istorage.IAppStorage, old, new schemas.QName) error {
 	return qnames.Rename(storage, old, new)
 }

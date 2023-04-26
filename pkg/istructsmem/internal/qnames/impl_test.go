@@ -137,7 +137,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.PutVersion(vers.SysQNamesVersion, lastestVersion+1)
+		versions.Put(vers.SysQNamesVersion, lastestVersion+1)
 
 		names := New()
 		err := names.Prepare(storage, versions, nil, nil)
@@ -153,7 +153,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.PutVersion(vers.SysQNamesVersion, lastestVersion)
+		versions.Put(vers.SysQNamesVersion, lastestVersion)
 		const badName = "-test.error.qname-"
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(badName), utils.ToBytes(QNameID(512)))
 
@@ -172,7 +172,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.PutVersion(vers.SysQNamesVersion, lastestVersion)
+		versions.Put(vers.SysQNamesVersion, lastestVersion)
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte("test.deleted"), utils.ToBytes(NullQNameID))
 
 		names := New()
@@ -189,7 +189,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.PutVersion(vers.SysQNamesVersion, lastestVersion)
+		versions.Put(vers.SysQNamesVersion, lastestVersion)
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(istructs.QNameForError.String()), utils.ToBytes(QNameIDForError))
 
 		names := New()

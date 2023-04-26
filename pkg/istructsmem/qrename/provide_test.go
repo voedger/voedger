@@ -36,10 +36,11 @@ func TestRenameQName(t *testing.T) {
 
 		names := qnames.New()
 		err = names.Prepare(storage, versions, schemas, nil)
+		require.NoError(err)
 	})
 
 	t.Run("basic usage", func(t *testing.T) {
-		err := RenameQName(storage, old, new)
+		err := Rename(storage, old, new)
 		require.NoError(err)
 	})
 
@@ -50,6 +51,7 @@ func TestRenameQName(t *testing.T) {
 
 		names := qnames.New()
 		err = names.Prepare(storage, versions, nil, nil)
+		require.NoError(err)
 
 		t.Run("check old is deleted", func(t *testing.T) {
 			id, err := names.GetID(old)

@@ -121,7 +121,7 @@ func (names *QNames) collectSysQName(qName schemas.QName, id QNameID) *QNames {
 // loads all stored QNames from storage
 func (names *QNames) load(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
 
-	ver := versions.GetVersion(vers.SysQNamesVersion)
+	ver := versions.Get(vers.SysQNamesVersion)
 	switch ver {
 	case vers.UnknownVersion: // no sys.QName storage exists
 		return nil
@@ -183,8 +183,8 @@ func (names *QNames) store(storage istorage.IAppStorage, versions *vers.Versions
 		return fmt.Errorf("error store application QName IDs to storage: %w", err)
 	}
 
-	if ver := versions.GetVersion(vers.SysQNamesVersion); ver != lastestVersion {
-		if err = versions.PutVersion(vers.SysQNamesVersion, lastestVersion); err != nil {
+	if ver := versions.Get(vers.SysQNamesVersion); ver != lastestVersion {
+		if err = versions.Put(vers.SysQNamesVersion, lastestVersion); err != nil {
 			return fmt.Errorf("error store system QNames view version: %w", err)
 		}
 	}

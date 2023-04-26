@@ -16,6 +16,4 @@ var ErrSingletonIDsExceeds = fmt.Errorf("the maximum number of singleton documen
 
 var ErrIDNotFound = errors.New("ID not found")
 
-var ErrWrongQNameID = errors.New("wrong QName ID")
-
 var ErrNameNotFound = errors.New("name not found")

@@ -127,7 +127,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.PutVersion(vers.SysContainersVersion, lastestVersion+1)
+		versions.Put(vers.SysContainersVersion, lastestVersion+1)
 
 		names := New()
 		err := names.Prepare(storage, versions, nil)
@@ -143,7 +143,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.PutVersion(vers.SysContainersVersion, lastestVersion)
+		versions.Put(vers.SysContainersVersion, lastestVersion)
 		const badName = "-test-error-name-"
 		storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte(badName), utils.ToBytes(ContainerID(512)))
 
@@ -161,7 +161,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.PutVersion(vers.SysContainersVersion, lastestVersion)
+		versions.Put(vers.SysContainersVersion, lastestVersion)
 		storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte("deleted"), utils.ToBytes(NullContainerID))
 
 		names := New()
@@ -178,13 +178,12 @@ func TestContainersPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.PutVersion(vers.SysContainersVersion, lastestVersion)
-		storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte("test"), utils.ToBytes(ViewPKeyContainerID))
+		versions.Put(vers.SysContainersVersion, lastestVersion)
+		storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte("test"), utils.ToBytes(ContainerID(1)))
 
 		names := New()
 		err := names.Prepare(storage, versions, nil)
 		require.ErrorIs(err, ErrWrongContainerID)
-		require.ErrorContains(err, fmt.Sprintf("unexpected ID (%v)", ViewPKeyContainerID))
 	})
 
 	t.Run("must be error if too many Containers", func(t *testing.T) {
