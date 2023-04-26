@@ -52,6 +52,7 @@ func TestRenameQName(t *testing.T) {
 
 		names := NewQNames()
 		err = names.Prepare(storage, versions, nil, nil)
+		require.NoError(err)
 
 		t.Run("check old is deleted", func(t *testing.T) {
 			id, err := names.GetID(old)
@@ -90,6 +91,7 @@ func TestRenameQName_Errors(t *testing.T) {
 
 		names := NewQNames()
 		err = names.Prepare(storage, versions, schemas, nil)
+		require.NoError(err)
 	})
 
 	t.Run("must error if old and new are equals", func(t *testing.T) {
