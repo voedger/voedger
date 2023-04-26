@@ -100,14 +100,14 @@ func analyseReferences(schema *SchemaAST, errs []error) []error {
 		case *CommandStmt:
 			f := resolveFunc(v.Func, schema)
 			if f == nil {
-				errs = append(errs, errorAt(ErrFunctionNotFound, v.GetPos()))
+				errs = append(errs, errorAt(ErrUndefined(v.Func.String()), v.GetPos()))
 			} else {
 				errs = CompareParams(&v.Pos, v.Params, f, errs)
 			}
 		case *QueryStmt:
 			f := resolveFunc(v.Func, schema)
 			if f == nil {
-				errs = append(errs, errorAt(ErrFunctionNotFound, v.GetPos()))
+				errs = append(errs, errorAt(ErrUndefined(v.Func.String()), v.GetPos()))
 			} else {
 				errs = CompareParams(&v.Pos, v.Params, f, errs)
 				if v.Returns != f.Returns {
@@ -117,9 +117,10 @@ func analyseReferences(schema *SchemaAST, errs []error) []error {
 		case *ProjectorStmt:
 			f := resolveFunc(v.Func, schema)
 			if f == nil {
-				errs = append(errs, errorAt(ErrFunctionNotFound, v.GetPos()))
+				errs = append(errs, errorAt(ErrUndefined(v.Func.String()), v.GetPos()))
 			} else {
 				// TODO: Check function params
+				// TODO: Check ON (Command, Argument type, CUD)
 			}
 		}
 	})

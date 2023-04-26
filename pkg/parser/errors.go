@@ -19,7 +19,10 @@ func ErrUnexpectedSchema(fileName, actual, expected string) error {
 
 var ErrFunctionParamsIncorrect = errors.New("function parameters do not match")
 var ErrFunctionResultIncorrect = errors.New("function result do not match")
-var ErrFunctionNotFound = errors.New("function not found")
+
+func ErrUndefined(name string) error {
+	return fmt.Errorf("%s undefined", name)
+}
 
 func ErrSchemaContainsDuplicateName(name string) error {
 	return fmt.Errorf("%s redeclared", name)

@@ -70,10 +70,10 @@ func Test_Comments(t *testing.T) {
 	-- line 2
 	FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
 	`)
-
 	require.Nil(err)
 
 	ps, err := mergeFileSchemaASTsImpl("", []*FileSchemaAST{fs})
+	require.Nil(err)
 
 	require.NotNil(ps.Ast.Statements[0].Function.Comments)
 	require.Equal(2, len(ps.Ast.Statements[0].Function.Comments))
@@ -92,4 +92,25 @@ func Test_UnexpectedSchema(t *testing.T) {
 
 	_, err = mergeFileSchemaASTsImpl("", []*FileSchemaAST{ast1, ast2})
 	require.ErrorContains(err, "file2.sql: package schema2; expected schema1")
+}
+
+func Test_FunctionUndefined(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	WORKSPACE test (
+    	COMMAND Orders AS SomeCmdFunc;
+    	QUERY Query1 RETURNS text AS QueryFunc;
+    	PROJECTOR ON COMMAND Air.CreateUPProfile AS Air.SomeProjectorFunc;
+	)
+	`)
+	require.Nil(err)
+
+	_, err = mergeFileSchemaASTsImpl("", []*FileSchemaAST{fs})
+	require.NotNil(err)
+
+	require.ErrorContains(err, "example.sql:3:6: SomeCmdFunc undefined")
+	require.ErrorContains(err, "example.sql:4:6: QueryFunc undefined")
+	require.ErrorContains(err, "example.sql:5:6: Air.SomeProjectorFunc undefined")
+
 }
