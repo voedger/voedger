@@ -12,7 +12,7 @@
   - Workspace/WorkspaceDescriptor.IsActive == false
   - There is no active JoinedWorkspace which refers to the Workspace
     - Subject's are still active
-  - AppWorkspace/WorkspaceID[Workspace].IsActive == false
+  - AppWorkspace/WorkspaceID[Workspace].IsActive == true
 
 ## c.sys.DeactivateWorkspace()
 
