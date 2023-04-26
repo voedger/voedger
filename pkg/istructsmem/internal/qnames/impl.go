@@ -168,7 +168,8 @@ func (names *QNames) store(storage istorage.IAppStorage, versions *vers.Versions
 
 	batch := make([]istorage.BatchItem, 0)
 	for qName, id := range names.qNames {
-		if id > QNameIDSysLast {
+		if (id > QNameIDSysLast) ||
+			(qName != schemas.NullQName) && (id == NullQNameID) { // deleted QName
 			item := istorage.BatchItem{
 				PKey:  pKey,
 				CCols: []byte(qName.String()),

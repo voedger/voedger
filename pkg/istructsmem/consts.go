@@ -6,7 +6,6 @@ package istructsmem
 
 import (
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 )
 
 // nullResource is result then resource not found
@@ -33,13 +32,6 @@ const (
 
 // maxGetBatchRecordCount is maximum records that can be retrieved by ReadBatch GetBatch
 const maxGetBatchRecordCount = 256
-
-// versions of system views
-const (
-	// sys.QName
-	verSysQNames01      vers.VersionValue = 1
-	verSysQNamesLastest vers.VersionValue = verSysQNames01
-)
 
 // system fields mask values
 const (
