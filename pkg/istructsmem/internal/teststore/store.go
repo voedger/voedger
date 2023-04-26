@@ -42,11 +42,11 @@ func (tsp *testStorageProvider) AppStorage(appName istructs.AppQName) (structs i
 	return tsp.testStorage, nil
 }
 
-func NewTestStorageProvider(ts *TestMemStorage) istorage.IAppStorageProvider {
+func NewStorageProvider(ts *TestMemStorage) istorage.IAppStorageProvider {
 	return &testStorageProvider{testStorage: ts}
 }
 
-func NewTestStorage() *TestMemStorage {
+func NewStorage() *TestMemStorage {
 	s := TestMemStorage{get: scheduleStorageError{}, put: scheduleStorageError{}}
 	asf := istorage.ProvideMem()
 	sp := istorageimpl.Provide(asf)

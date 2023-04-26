@@ -24,10 +24,10 @@ func TestRenameQName(t *testing.T) {
 	old := schemas.NewQName("test", "old")
 	new := schemas.NewQName("test", "new")
 
-	storage := teststore.NewTestStorage()
+	storage := teststore.NewStorage()
 
 	t.Run("prepare storage with old QName", func(t *testing.T) {
-		versions := vers.NewVersions()
+		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
@@ -36,21 +36,21 @@ func TestRenameQName(t *testing.T) {
 		schemas, err := bld.Build()
 		require.NoError(err)
 
-		names := NewQNames()
+		names := New()
 		err = names.Prepare(storage, versions, schemas, nil)
 	})
 
 	t.Run("basic usage", func(t *testing.T) {
-		err := RenameQName(storage, old, new)
+		err := Rename(storage, old, new)
 		require.NoError(err)
 	})
 
 	t.Run("check result", func(t *testing.T) {
-		versions := vers.NewVersions()
+		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		names := NewQNames()
+		names := New()
 		err = names.Prepare(storage, versions, nil, nil)
 		require.NoError(err)
 
@@ -76,10 +76,10 @@ func TestRenameQName_Errors(t *testing.T) {
 	new := schemas.NewQName("test", "new")
 	other := schemas.NewQName("test", "other")
 
-	storage := teststore.NewTestStorage()
+	storage := teststore.NewStorage()
 
 	t.Run("prepare storage with old QName", func(t *testing.T) {
-		versions := vers.NewVersions()
+		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
@@ -89,36 +89,36 @@ func TestRenameQName_Errors(t *testing.T) {
 		schemas, err := bld.Build()
 		require.NoError(err)
 
-		names := NewQNames()
+		names := New()
 		err = names.Prepare(storage, versions, schemas, nil)
 		require.NoError(err)
 	})
 
 	t.Run("must error if old and new are equals", func(t *testing.T) {
-		err := RenameQName(storage, old, old)
+		err := Rename(storage, old, old)
 		require.ErrorContains(err, "equals")
 	})
 
 	t.Run("must error if twice rename", func(t *testing.T) {
-		err := RenameQName(storage, old, new)
+		err := Rename(storage, old, new)
 		require.NoError(err)
 
-		err = RenameQName(storage, old, new)
+		err = Rename(storage, old, new)
 		require.ErrorIs(err, ErrNameNotFound)
 
 		t.Run("but must ok reverse rename", func(t *testing.T) {
-			err = RenameQName(storage, new, old)
+			err = Rename(storage, new, old)
 			require.NoError(err)
 		})
 	})
 
 	t.Run("must error if old name not found", func(t *testing.T) {
-		err := RenameQName(storage, schemas.NewQName("test", "unknown"), new)
+		err := Rename(storage, schemas.NewQName("test", "unknown"), new)
 		require.ErrorIs(err, ErrNameNotFound)
 	})
 
 	t.Run("must error if new name is already exists", func(t *testing.T) {
-		err := RenameQName(storage, old, other)
+		err := Rename(storage, old, other)
 		require.ErrorContains(err, "exists")
 	})
 }
@@ -132,35 +132,35 @@ func TestRenameQName_Fails(t *testing.T) {
 
 	t.Run("must error if unsupported version of Versions system view", func(t *testing.T) {
 		testError := errors.New("error read versions")
-		storage := teststore.NewTestStorage()
+		storage := teststore.NewStorage()
 
-		versions := vers.NewVersions()
+		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 		versions.PutVersion(vers.SysQNamesVersion, lastestVersion+1) // future version
 
 		storage.ScheduleGetError(testError, utils.ToBytes(consts.SysView_Versions), nil)
 
-		err = RenameQName(storage, old, new)
+		err = Rename(storage, old, new)
 		require.ErrorIs(err, testError)
 	})
 
 	t.Run("must error if unsupported version of QNames system view", func(t *testing.T) {
-		storage := teststore.NewTestStorage()
+		storage := teststore.NewStorage()
 
-		versions := vers.NewVersions()
+		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 		versions.PutVersion(vers.SysQNamesVersion, lastestVersion+1) // future version
 
-		err = RenameQName(storage, old, new)
+		err = Rename(storage, old, new)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
 
-	storage := teststore.NewTestStorage()
+	storage := teststore.NewStorage()
 
 	t.Run("prepare storage with old QName", func(t *testing.T) {
-		versions := vers.NewVersions()
+		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
@@ -169,7 +169,7 @@ func TestRenameQName_Fails(t *testing.T) {
 		schemas, err := bld.Build()
 		require.NoError(err)
 
-		names := NewQNames()
+		names := New()
 		err = names.Prepare(storage, versions, schemas, nil)
 		require.NoError(err)
 	})
@@ -179,7 +179,7 @@ func TestRenameQName_Fails(t *testing.T) {
 
 		storage.ScheduleGetError(testError, nil, []byte(old.String()))
 
-		err := RenameQName(storage, old, new)
+		err := Rename(storage, old, new)
 		require.ErrorIs(err, testError)
 	})
 
@@ -188,7 +188,7 @@ func TestRenameQName_Fails(t *testing.T) {
 
 		storage.SchedulePutError(testError, nil, []byte(new.String()))
 
-		err := RenameQName(storage, old, new)
+		err := Rename(storage, old, new)
 		require.ErrorIs(err, testError)
 	})
 }

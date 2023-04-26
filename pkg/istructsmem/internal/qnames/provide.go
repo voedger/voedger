@@ -11,11 +11,11 @@ import (
 )
 
 // Create and return new QNames
-func NewQNames() *QNames {
+func New() *QNames {
 	return newQNames()
 }
 
 // Renames QName from old to new. QNameID previously used by old will be used by new.
-func RenameQName(storage istorage.IAppStorage, old, new schemas.QName) error {
+func Rename(storage istorage.IAppStorage, old, new schemas.QName) error {
 	return renameQName(storage, old, new)
 }

@@ -22,10 +22,10 @@ func TestRenameQName(t *testing.T) {
 	old := schemas.NewQName("test", "old")
 	new := schemas.NewQName("test", "new")
 
-	storage := teststore.NewTestStorage()
+	storage := teststore.NewStorage()
 
 	t.Run("prepare storage with old QName", func(t *testing.T) {
-		versions := vers.NewVersions()
+		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
@@ -34,7 +34,7 @@ func TestRenameQName(t *testing.T) {
 		schemas, err := bld.Build()
 		require.NoError(err)
 
-		names := qnames.NewQNames()
+		names := qnames.New()
 		err = names.Prepare(storage, versions, schemas, nil)
 	})
 
@@ -44,11 +44,11 @@ func TestRenameQName(t *testing.T) {
 	})
 
 	t.Run("check result", func(t *testing.T) {
-		versions := vers.NewVersions()
+		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		names := qnames.NewQNames()
+		names := qnames.New()
 		err = names.Prepare(storage, versions, nil, nil)
 
 		t.Run("check old is deleted", func(t *testing.T) {

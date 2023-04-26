@@ -23,12 +23,12 @@ func renameQName(storage istorage.IAppStorage, old, new schemas.QName) error {
 		return fmt.Errorf(errFmt, old, new, "names are equals")
 	}
 
-	vers := vers.NewVersions()
+	vers := vers.New()
 	if err := vers.Prepare(storage); err != nil {
 		return fmt.Errorf(errWrapFmt, old, new, "unable to read versions", err)
 	}
 
-	qnames := NewQNames()
+	qnames := New()
 	if err := qnames.Prepare(storage, vers, nil, nil); err != nil {
 		return fmt.Errorf(errWrapFmt, old, new, "unable to read qnames", err)
 	}

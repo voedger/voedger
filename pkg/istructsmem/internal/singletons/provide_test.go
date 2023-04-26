@@ -24,7 +24,7 @@ func Test_BasicUsage(t *testing.T) {
 	sp := istorageimpl.Provide(istorage.ProvideMem())
 	storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
-	versions := vers.NewVersions()
+	versions := vers.New()
 	if err := versions.Prepare(storage); err != nil {
 		panic(err)
 	}
@@ -37,7 +37,7 @@ func Test_BasicUsage(t *testing.T) {
 		panic(err)
 	}
 
-	stones := NewSingletons()
+	stones := New()
 	if err := stones.Prepare(storage, versions, schemas); err != nil {
 		panic(err)
 	}
@@ -53,12 +53,12 @@ func Test_BasicUsage(t *testing.T) {
 		require.Equal(testName, n)
 
 		t.Run("must be able to load early stored names", func(t *testing.T) {
-			otherVersions := vers.NewVersions()
+			otherVersions := vers.New()
 			if err := otherVersions.Prepare(storage); err != nil {
 				panic(err)
 			}
 
-			stones1 := NewSingletons()
+			stones1 := New()
 			if err := stones1.Prepare(storage, versions, nil); err != nil {
 				panic(err)
 			}
@@ -94,14 +94,14 @@ func Test_SingletonsGetID(t *testing.T) {
 	require := require.New(t)
 	cDocName := schemas.NewQName("test", "SignletonCDoc")
 
-	stons := NewSingletons()
+	stons := New()
 
 	t.Run("must be ok to construct Singletons", func(t *testing.T) {
 		storage, versions, schemas := func() (istorage.IAppStorage, *vers.Versions, schemas.SchemaCache) {
 			storage, err := istorageimpl.Provide(istorage.ProvideMem()).AppStorage(istructs.AppQName_test1_app1)
 			require.NoError(err)
 
-			versions := vers.NewVersions()
+			versions := vers.New()
 			err = versions.Prepare(storage)
 			require.NoError(err)
 
@@ -178,23 +178,23 @@ func Test_Singletons_Errors(t *testing.T) {
 		storage, err := istorageimpl.Provide(istorage.ProvideMem()).AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
-		versions := vers.NewVersions()
+		versions := vers.New()
 		err = versions.Prepare(storage)
 		require.NoError(err)
 
 		err = versions.PutVersion(vers.SysSingletonsVersion, 0xFF)
 		require.NoError(err)
 
-		stone := NewSingletons()
+		stone := New()
 		err = stone.Prepare(storage, versions, nil)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
 
 	t.Run("must error if unable store version of Singletons system  view", func(t *testing.T) {
-		storage := teststore.NewTestStorage()
+		storage := teststore.NewStorage()
 		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysSingletonsVersion))
 
-		versions := vers.NewVersions()
+		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
@@ -205,16 +205,16 @@ func Test_Singletons_Errors(t *testing.T) {
 		schemas, err := bld.Build()
 		require.NoError(err)
 
-		stone := NewSingletons()
+		stone := New()
 		err = stone.Prepare(storage, versions, schemas)
 
 		require.ErrorIs(err, testError)
 	})
 
 	t.Run("must error if maximum singletons is exceeded by CDocs", func(t *testing.T) {
-		storage := teststore.NewTestStorage()
+		storage := teststore.NewStorage()
 
-		versions := vers.NewVersions()
+		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
@@ -225,7 +225,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		schemas, err := bld.Build()
 		require.NoError(err)
 
-		stons := NewSingletons()
+		stons := New()
 		err = stons.Prepare(storage, versions, schemas)
 
 		require.ErrorIs(err, ErrSingletonIDsExceeds)
@@ -234,10 +234,10 @@ func Test_Singletons_Errors(t *testing.T) {
 	t.Run("must error if store ID for some singledoc to storage is failed", func(t *testing.T) {
 		schemaName := schemas.NewQName("test", "ErrorSchema")
 
-		storage := teststore.NewTestStorage()
+		storage := teststore.NewStorage()
 		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_SingletonIDs, lastestVersion), []byte(schemaName.String()))
 
-		versions := vers.NewVersions()
+		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
@@ -246,7 +246,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		schemas, err := bld.Build()
 		require.NoError(err)
 
-		stons := NewSingletons()
+		stons := New()
 		err = stons.Prepare(storage, versions, schemas)
 		require.ErrorIs(err, testError)
 	})
@@ -254,9 +254,9 @@ func Test_Singletons_Errors(t *testing.T) {
 	t.Run("must error if retrieve ID for some singledoc from storage is failed", func(t *testing.T) {
 		schemaName := schemas.NewQName("test", "ErrorSchema")
 
-		storage := teststore.NewTestStorage()
+		storage := teststore.NewStorage()
 
-		versions := vers.NewVersions()
+		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
@@ -265,20 +265,20 @@ func Test_Singletons_Errors(t *testing.T) {
 		schemas, err := bld.Build()
 		require.NoError(err)
 
-		stons := NewSingletons()
+		stons := New()
 		err = stons.Prepare(storage, versions, schemas)
 		require.NoError(err)
 
 		storage.ScheduleGetError(testError, nil, []byte(schemaName.String()))
-		stons1 := NewSingletons()
+		stons1 := New()
 		err = stons1.Prepare(storage, versions, schemas)
 		require.ErrorIs(err, testError)
 	})
 
 	t.Run("must error if some some CDoc singleton QName from storage is not well formed", func(t *testing.T) {
-		storage := teststore.NewTestStorage()
+		storage := teststore.NewStorage()
 
-		versions := vers.NewVersions()
+		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 		versions.PutVersion(vers.SysSingletonsVersion, lastestVersion)
@@ -292,7 +292,7 @@ func Test_Singletons_Errors(t *testing.T) {
 			require.NoError(err)
 		})
 
-		stons := NewSingletons()
+		stons := New()
 		err = stons.Prepare(storage, versions, nil)
 
 		require.ErrorIs(err, schemas.ErrInvalidQNameStringRepresentation)

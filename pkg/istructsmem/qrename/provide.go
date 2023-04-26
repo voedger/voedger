@@ -12,5 +12,5 @@ import (
 )
 
 func RenameQName(storage istorage.IAppStorage, old, new schemas.QName) error {
-	return qnames.RenameQName(storage, old, new)
+	return qnames.Rename(storage, old, new)
 }

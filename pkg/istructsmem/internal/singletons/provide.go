@@ -5,6 +5,6 @@
 
 package singletons
 
-func NewSingletons() *Singletons {
+func New() *Singletons {
 	return newSingletons()
 }

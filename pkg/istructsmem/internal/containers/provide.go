@@ -5,6 +5,6 @@
 
 package containers
 
-func NewContainers() *Containers {
+func New() *Containers {
 	return newContainers()
 }

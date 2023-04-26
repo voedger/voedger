@@ -16,7 +16,7 @@ import (
 func Test_BasicUsage(t *testing.T) {
 	name := schemas.NewQName("test", "test")
 
-	dynoSchemas := NewSchemasCache()
+	dynoSchemas := New()
 
 	dynoSchemas.Prepare(
 		func() schemas.SchemaCache {

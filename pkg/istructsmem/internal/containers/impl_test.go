@@ -27,14 +27,14 @@ func TestContainers(t *testing.T) {
 	sp := istorageimpl.Provide(istorage.ProvideMem())
 	storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
-	versions := vers.NewVersions()
+	versions := vers.New()
 	if err := versions.Prepare(storage); err != nil {
 		panic(err)
 	}
 
 	containerName := "test"
 
-	containers := NewContainers()
+	containers := New()
 	if err := containers.Prepare(storage, versions,
 		func() schemas.SchemaCache {
 			schemaName := schemas.NewQName("test", "schema")
@@ -65,12 +65,12 @@ func TestContainers(t *testing.T) {
 		id := check(containers, containerName)
 
 		t.Run("must be ok to load early stored names", func(t *testing.T) {
-			versions1 := vers.NewVersions()
+			versions1 := vers.New()
 			if err := versions1.Prepare(storage); err != nil {
 				panic(err)
 			}
 
-			containers1 := NewContainers()
+			containers1 := New()
 			if err := containers1.Prepare(storage, versions, nil); err != nil {
 				panic(err)
 			}
@@ -79,12 +79,12 @@ func TestContainers(t *testing.T) {
 		})
 
 		t.Run("must be ok to redeclare containers", func(t *testing.T) {
-			versions2 := vers.NewVersions()
+			versions2 := vers.New()
 			if err := versions2.Prepare(storage); err != nil {
 				panic(err)
 			}
 
-			containers2 := NewContainers()
+			containers2 := New()
 			if err := containers2.Prepare(storage, versions,
 				func() schemas.SchemaCache {
 					schemaName := schemas.NewQName("test", "schema")
@@ -122,14 +122,14 @@ func TestContainersPrepareErrors(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
-		versions := vers.NewVersions()
+		versions := vers.New()
 		if err := versions.Prepare(storage); err != nil {
 			panic(err)
 		}
 
 		versions.PutVersion(vers.SysContainersVersion, lastestVersion+1)
 
-		names := NewContainers()
+		names := New()
 		err := names.Prepare(storage, versions, nil)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
@@ -138,7 +138,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
-		versions := vers.NewVersions()
+		versions := vers.New()
 		if err := versions.Prepare(storage); err != nil {
 			panic(err)
 		}
@@ -147,7 +147,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 		const badName = "-test-error-name-"
 		storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte(badName), utils.ToBytes(ContainerID(512)))
 
-		names := NewContainers()
+		names := New()
 		err := names.Prepare(storage, versions, nil)
 		require.ErrorIs(err, schemas.ErrInvalidName)
 	})
@@ -156,7 +156,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
-		versions := vers.NewVersions()
+		versions := vers.New()
 		if err := versions.Prepare(storage); err != nil {
 			panic(err)
 		}
@@ -164,7 +164,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 		versions.PutVersion(vers.SysContainersVersion, lastestVersion)
 		storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte("deleted"), utils.ToBytes(NullContainerID))
 
-		names := NewContainers()
+		names := New()
 		err := names.Prepare(storage, versions, nil)
 		require.NoError(err)
 	})
@@ -173,7 +173,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
-		versions := vers.NewVersions()
+		versions := vers.New()
 		if err := versions.Prepare(storage); err != nil {
 			panic(err)
 		}
@@ -181,7 +181,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 		versions.PutVersion(vers.SysContainersVersion, lastestVersion)
 		storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte("test"), utils.ToBytes(ViewPKeyContainerID))
 
-		names := NewContainers()
+		names := New()
 		err := names.Prepare(storage, versions, nil)
 		require.ErrorIs(err, ErrWrongContainerID)
 		require.ErrorContains(err, fmt.Sprintf("unexpected ID (%v)", ViewPKeyContainerID))
@@ -191,12 +191,12 @@ func TestContainersPrepareErrors(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
-		versions := vers.NewVersions()
+		versions := vers.New()
 		if err := versions.Prepare(storage); err != nil {
 			panic(err)
 		}
 
-		names := NewContainers()
+		names := New()
 		err := names.Prepare(storage, versions,
 			func() schemas.SchemaCache {
 				bld := schemas.NewSchemaCache()
@@ -217,16 +217,16 @@ func TestContainersPrepareErrors(t *testing.T) {
 		writeError := errors.New("storage write error")
 
 		t.Run("must be error if write some name failed", func(t *testing.T) {
-			storage := teststore.NewTestStorage()
+			storage := teststore.NewStorage()
 
-			versions := vers.NewVersions()
+			versions := vers.New()
 			if err := versions.Prepare(storage); err != nil {
 				panic(err)
 			}
 
 			storage.SchedulePutError(writeError, utils.ToBytes(consts.SysView_Containers, ver01), []byte(containerName))
 
-			names := NewContainers()
+			names := New()
 			err := names.Prepare(storage, versions,
 				func() schemas.SchemaCache {
 					schemaName := schemas.NewQName("test", "schema")
@@ -241,16 +241,16 @@ func TestContainersPrepareErrors(t *testing.T) {
 		})
 
 		t.Run("must be error if write system view version failed", func(t *testing.T) {
-			storage := teststore.NewTestStorage()
+			storage := teststore.NewStorage()
 
-			versions := vers.NewVersions()
+			versions := vers.New()
 			if err := versions.Prepare(storage); err != nil {
 				panic(err)
 			}
 
 			storage.SchedulePutError(writeError, utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysContainersVersion))
 
-			names := NewContainers()
+			names := New()
 			err := names.Prepare(storage, versions,
 				func() schemas.SchemaCache {
 					schemaName := schemas.NewQName("test", "schema")

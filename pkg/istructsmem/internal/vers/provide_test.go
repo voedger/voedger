@@ -18,7 +18,7 @@ func Test_BasicUsage(t *testing.T) {
 	sp := istorageimpl.Provide(istorage.ProvideMem())
 	storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
-	versions := NewVersions()
+	versions := New()
 	if err := versions.Prepare(storage); err != nil {
 		panic(err)
 	}
@@ -37,7 +37,7 @@ func Test_BasicUsage(t *testing.T) {
 		require.Equal(ver, versions.GetVersion(key))
 
 		t.Run("must be able to load early stored versions", func(t *testing.T) {
-			otherVersions := NewVersions()
+			otherVersions := New()
 			if err := otherVersions.Prepare(storage); err != nil {
 				panic(err)
 			}

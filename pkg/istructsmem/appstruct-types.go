@@ -84,13 +84,13 @@ func newAppConfig(appName istructs.AppQName, scb schemas.SchemaCacheBuilder) *Ap
 	cfg.Resources = newResources(&cfg)
 	cfg.Uniques = newUniques()
 
-	cfg.dbSchemas = dynobuf.NewSchemasCache()
+	cfg.dbSchemas = dynobuf.New()
 	cfg.validators = newValidators()
 
-	cfg.versions = vers.NewVersions()
-	cfg.qNames = qnames.NewQNames()
-	cfg.cNames = containers.NewContainers()
-	cfg.singletons = singletons.NewSingletons()
+	cfg.versions = vers.New()
+	cfg.qNames = qnames.New()
+	cfg.cNames = containers.New()
+	cfg.singletons = singletons.New()
 
 	cfg.FunctionRateLimits = functionRateLimits{
 		limits: map[schemas.QName]map[istructs.RateLimitKind]istructs.RateLimit{},
