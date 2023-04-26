@@ -45,6 +45,8 @@ Projectors:
 
 ## Create Login
 
+// FIXME: cdoc.sys.WorkspaceID is a large collection, must be wdoc.sys.WorkspaceID
+
 |entity|app|ws|cluster
 |---|---|---|---|
 |c.sys.CreateLogin()|sys/registry|pseudoWS|main
