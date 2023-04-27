@@ -6,10 +6,8 @@ package parser
 
 import (
 	"embed"
-	"fmt"
 	"testing"
 
-	"github.com/alecthomas/repr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,8 +22,8 @@ func Test_BasicUsage(t *testing.T) {
 	pkgExample, err := ParsePackageDir("github.com/untillpro/exampleschema", efs, "example_app")
 	require.NoError(t, err)
 
-	parsedSchemaStr := repr.String(pkgExample, repr.Indent(" "), repr.IgnorePrivate())
-	fmt.Println(parsedSchemaStr)
+	// := repr.String(pkgExample, repr.Indent(" "), repr.IgnorePrivate())
+	//fmt.Println(parsedSchemaStr)
 
 	// TODO: MergePackageSchemas should return ?.ISchema
 	require.Nil(t, MergePackageSchemas([]*PackageSchemaAST{pkgExample}))
@@ -108,8 +106,10 @@ func Test_FunctionUndefined(t *testing.T) {
 	`)
 	require.Nil(err)
 
-	_, err = MergeFileSchemaASTs("", []*FileSchemaAST{fs})
-	require.NotNil(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.Nil(err)
+
+	err = MergePackageSchemas([]*PackageSchemaAST{pkg})
 
 	require.ErrorContains(err, "example.sql:3:6: SomeCmdFunc undefined")
 	require.ErrorContains(err, "example.sql:4:6: QueryFunc undefined")
