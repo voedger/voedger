@@ -100,12 +100,12 @@ func resolveFunc(fn OptQName, srcPkgSchema *PackageSchemaAST, pkgmap map[string]
 		pkgQN, err := getQualifiedPackageName(fn.Package, srcPkgSchema.Ast)
 		if err != nil {
 			return err
-		} else {
-			targetPkgSch = pkgmap[pkgQN]
-			if targetPkgSch == nil {
-				return ErrCouldNotImport(pkgQN)
-			}
 		}
+		targetPkgSch = pkgmap[pkgQN]
+		if targetPkgSch == nil {
+			return ErrCouldNotImport(pkgQN)
+		}
+
 	}
 
 	f := resolveFuncInSchema(fn.Name, targetPkgSch.Ast)
