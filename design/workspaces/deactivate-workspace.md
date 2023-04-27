@@ -9,18 +9,17 @@
 
 - Workspace with WorkspaceDescriptor.Status != Active accepts only System token
 - Workspace is (consistently) inactive if:
-  - Workspace/WorkspaceDescriptor.IsActive == false
-  - There is no active JoinedWorkspace which refers to the Workspace
-    - Subject's are still active
-  - AppWorkspace/WorkspaceID[Workspace].IsActive == true
+  - Workspace/WorkspaceDescriptor.Status == Inactive
+  - There is no any active JoinedWorkspace record which refers to the Workspace
+  - Note that Workspace.Subject records are still active
+  - AppWorkspace/WorkspaceID[Workspace].IsActive == false
 
-## c.sys.DeactivateWorkspace()
+## c.sys.InitiateDeactivateWorkspace()
 
 ???: Add ProfileWSD to Subject?
 
 - AuthZ: role.sys.WorkspaceOwner ???
-- Params: 
-  - Recursive: bool
+- Params: none
 
 ```mermaid
     sequenceDiagram
@@ -31,56 +30,29 @@
     participant profile as ProfileWS
     participant registry as regisrty
 
-    owner ->> ws: c.sys.DeactivateWorkspace()
+    owner ->> ws: c.sys.InitiateDeactivateWorkspace()
     opt WorkspaceDescriptor.Status != Active
-        note over ws: error "Workspace Status is not Active"
+      note over ws: error "Workspace Status is not Active"
     end
 
-    ws ->> ws: cdoc.sys.WorkspaceDescriptor.Status = Deactivation
+    ws ->> ws: cdoc.sys.WorkspaceDescriptor.Status = ToBeDeactivated
 
-    opt foreach cdos.sys.Subject where WSID != NULL  
-      registry -->> ws : ProfileWSIDByLogin()???
+    note over ws: ap.sys.ApplyDeactivateWorkspace()
+    opt foreach cdos.sys.Subject
+      registry -->> ws : ProfileWSIDByLogin()
       ws ->> profile: c.sys.OnJoinedWorkspaceDeactivated()
       opt JoinedWorkspace.IsActive
         profile ->> profile: JoinedWorkspace.IsActive = false
       end
     end
 
-  note over ws: ap.sys.OnDeactivateWorkspace()
-
-```
-
-
-```mermaid
-    sequenceDiagram
-
-    actor owner as WorkspaceOwner
-    participant ws as Workspace
-    participant parent as OwnerApp/ParentWS
-    participant profile as ProfileWS
-    participant registry as regisrty
-
-    owner ->> ws: c.sys.DeactivateWorkspace()
-    opt Workspace is active
-        ws ->> ws: cdoc.sys.WorkspaceDescriptor.IsActive = false
+    ws ->> appws: sys.OnWorkspaceDeactivated()
+    opt ! WorkspaceID.IsActive
+      appws ->> appws: WorkspaceID[ID(WSID)].IsActive = false
     end
 
-    note over ws: ap.sys.DeactivateWorkspaceReferences()
-    ws ->> ws: Read cdoc.sys.WorkspaceDescriptor{OwnerApp, OwnerDocID, ParentWSID???}
+    ws ->> ws: cdoc.sys.WorkspaceDescriptor.Status = Inactive
 
-    ws ->> parent: c.sys.OnChildWorkspaceDeactivated(OwnerDocID)
-
-    opt Docs[OwnerDocID].IsActive
-      parent ->> parent: Docs[OwnerDocID].IsActive = false
-    end
-
-    opt Foreach cdos.sys.Subject
-        registry -->> ws : ProfileWSIDByLogin
-        ws ->> profile: c.sys.OnJoinedWorkspaceDeactivated()
-        opt JoinedWorkspace.IsActive
-          profile ->> profile: JoinedWorkspace.IsActive = false
-        end
-    end
 ```
 
 ## c.sys.DeactivateWorkspace()
