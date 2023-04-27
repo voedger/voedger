@@ -2,8 +2,6 @@
 -- schema consists of few schema files
 SCHEMA Air;
 
-
--- TODO: How we handle this?
 IMPORT SCHEMA "github.com/untillpro/untill";
 IMPORT SCHEMA "github.com/untillpro/airsbp" AS Air;
 
@@ -103,5 +101,12 @@ WORKSPACE MyWorkspace (
 
     RATE BackofficeFuncRate1 1000 PER HOUR;
     RATE BackofficeFuncRate2 100 PER MINUTE PER IP;
+);
 
+ABSTRACT WORKSPACE AWorkspace (
+    -- Abstract workspaces cannot be created
+);
+
+WORKSPACE MyWorkspace1 OF AWorkspace (
+    -- Inherits everything declared in AWorkspace
 );

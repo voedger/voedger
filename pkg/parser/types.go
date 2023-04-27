@@ -103,8 +103,9 @@ type WorkspaceStatement struct {
 type WorkspaceStmt struct {
 	Statement
 	Abstract   bool                 `parser:"@'ABSTRACT'?"`
-	Name       string               `parser:"'WORKSPACE' @Ident '('"`
-	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
+	Name       string               `parser:"'WORKSPACE' @Ident"`
+	Of         []OptQName           `parser:"('OF' @@ (',' @@)*)?"`
+	Statements []WorkspaceStatement `parser:"'(' @@? (';' @@)* ';'? ')'"`
 }
 
 func (s WorkspaceStmt) GetName() string { return s.Name }
