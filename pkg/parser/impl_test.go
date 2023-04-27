@@ -98,7 +98,7 @@ func Test_UnexpectedSchema(t *testing.T) {
 	require.EqualError(err, "file2.sql: package schema2; expected schema1")
 }
 
-func Test_FunctionUndefined(t *testing.T) {
+func Test_Undefined(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("example.sql", `SCHEMA test; 
@@ -122,7 +122,7 @@ func Test_FunctionUndefined(t *testing.T) {
 	}, "\n"))
 }
 
-func Test_MergePackageSchemas1(t *testing.T) {
+func Test_Imports(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("example.sql", `SCHEMA pkg1;
