@@ -21,8 +21,8 @@ import (
 func TestCore_ViewRecords(t *testing.T) {
 	require := require.New(t)
 
-	storage := teststore.NewTestStorage()
-	storageProvider := teststore.NewTestStorageProvider(storage)
+	storage := teststore.NewStorage()
+	storageProvider := teststore.NewStorageProvider(storage)
 
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
@@ -847,8 +847,8 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 			AddValueField("Winner", schemas.DataKind_string, true)
 	})
 
-	storage := teststore.NewTestStorage()
-	storageProvider := teststore.NewTestStorageProvider(storage)
+	storage := teststore.NewStorage()
+	storageProvider := teststore.NewStorageProvider(storage)
 
 	cfgs := make(AppConfigsType, 1)
 	_ = cfgs.AddConfig(istructs.AppQName_test1_app1, cache)

@@ -18,6 +18,22 @@ func newVersions() *Versions {
 	return &Versions{vers: make(map[VersionKey]VersionValue)}
 }
 
+// Returns version value for version key
+func (vers *Versions) Get(key VersionKey) VersionValue {
+	return vers.vers[key]
+}
+
+// Stores version value for version key into application storage
+func (vers *Versions) Put(key VersionKey, value VersionValue) (err error) {
+	vers.vers[key] = value
+
+	return vers.storage.Put(
+		utils.ToBytes(uint16(consts.SysView_Versions)),
+		utils.ToBytes(uint16(key)),
+		utils.ToBytes(uint16(value)),
+	)
+}
+
 // Prepares cache for all versions of system views
 func (vers *Versions) Prepare(storage istorage.IAppStorage) (err error) {
 	vers.storage = storage
@@ -29,20 +45,4 @@ func (vers *Versions) Prepare(storage istorage.IAppStorage) (err error) {
 			vers.vers[key] = val
 			return nil
 		})
-}
-
-// Returns version value for version key
-func (vers *Versions) GetVersion(key VersionKey) VersionValue {
-	return vers.vers[key]
-}
-
-// Stores version value for version key into application storage
-func (vers *Versions) PutVersion(key VersionKey, value VersionValue) (err error) {
-	vers.vers[key] = value
-
-	return vers.storage.Put(
-		utils.ToBytes(uint16(consts.SysView_Versions)),
-		utils.ToBytes(uint16(key)),
-		utils.ToBytes(uint16(value)),
-	)
 }

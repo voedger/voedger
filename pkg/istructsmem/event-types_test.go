@@ -16,6 +16,7 @@ import (
 	log "github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/singletons"
 	"github.com/voedger/voedger/pkg/schemas"
 )
 
@@ -850,7 +851,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
-	docID, err = cfgs.GetConfig(istructs.AppQName_test1_app1).singletons.qNameToID(docName)
+	docID, err = cfgs.GetConfig(istructs.AppQName_test1_app1).singletons.GetID(docName)
 	require.NoError(err)
 
 	t.Run("must ok to read not created singleton CDOC by QName", func(t *testing.T) {
@@ -931,7 +932,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 	t.Run("must fail to read singleton CDOC by unknown QName", func(t *testing.T) {
 		rec, err := app.Records().GetSingleton(1, schemas.NewQName("test", "unknownCDoc"))
-		require.ErrorIs(err, ErrNameNotFound)
+		require.ErrorIs(err, singletons.ErrNameNotFound)
 		require.Equal(schemas.NullQName, rec.QName())
 		require.Equal(istructs.NullRecordID, rec.ID())
 	})

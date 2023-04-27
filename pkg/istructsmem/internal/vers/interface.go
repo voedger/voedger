@@ -16,6 +16,10 @@ type (
 )
 
 // Versions of system views
+//
+//	Use Get() to read a version of system view.
+//	Use Put() to write a version of system view.
+//	Use Prepare() to load Versions from storage.
 type Versions struct {
 	storage istorage.IAppStorage
 	vers    map[VersionKey]VersionValue

@@ -6,6 +6,6 @@
 package vers
 
 // Creates new versions storage for application structures.
-func NewVersions() *Versions {
+func New() *Versions {
 	return newVersions()
 }
