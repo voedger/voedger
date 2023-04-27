@@ -16,7 +16,7 @@ import (
 var (
 	testQName       = appdef.NewQName("test", "QName")
 	testQNameSimple = appdef.NewQName("test", "QNameSimple")
-	testFields      = map[string]appdef.DataKind{
+	testFieldDefs   = map[string]appdef.DataKind{
 		appdef.SystemField_QName: appdef.DataKind_QName,
 		"int32":                  appdef.DataKind_int32,
 		"int64":                  appdef.DataKind_int64,
@@ -27,7 +27,7 @@ var (
 		"bytes":                  appdef.DataKind_bytes,
 		"recordID":               appdef.DataKind_RecordID,
 	}
-	schema = amock.NewSchema(testQName, appdef.SchemaKind_Object, mockFields(testFields)...)
+	schema = amock.NewSchema(testQName, appdef.SchemaKind_Object, mockFields(testFieldDefs)...)
 
 	schemaSimple = amock.NewSchema(testQNameSimple, appdef.SchemaKind_Object,
 		amock.NewField(appdef.SystemField_QName, appdef.DataKind_QName, true),
@@ -69,26 +69,26 @@ var (
 	}
 )
 
-func mockFields(plan map[string]appdef.DataKind) []*amock.Field {
+func mockFields(fd map[string]appdef.DataKind) []*amock.Field {
 	f := make([]*amock.Field, 0)
-	for n, k := range plan {
+	for n, k := range fd {
 		f = append(f, amock.NewField(n, k, false))
 	}
 	return f
 }
 
-func TestNewSchemaFields(t *testing.T) {
+func TestNewFieldsDef(t *testing.T) {
 	qName := appdef.NewQName("test", "qname")
-	testFields := map[string]appdef.DataKind{
+	testFieldDefs := map[string]appdef.DataKind{
 		"fld1": appdef.DataKind_int32,
 		"str":  appdef.DataKind_string,
 	}
 	s := amock.NewSchema(qName, appdef.SchemaKind_Object)
-	for n, k := range testFields {
+	for n, k := range testFieldDefs {
 		s.AddField(amock.NewField(n, k, false))
 	}
-	sf := NewSchemaFields(s)
-	require.Equal(t, SchemaFields(testFields), sf)
+	fd := NewFieldsDef(s)
+	require.Equal(t, FieldsDef(testFieldDefs), fd)
 }
 
 func TestToMap_Basic(t *testing.T) {
@@ -123,7 +123,7 @@ func TestToMap_Basic(t *testing.T) {
 	})
 
 	t.Run("Read", func(t *testing.T) {
-		sf := NewSchemaFields(schema)
+		sf := NewFieldsDef(schema)
 		m := map[string]interface{}{}
 		for fieldName := range sf {
 			m[fieldName] = Read(fieldName, sf, obj)
@@ -234,7 +234,7 @@ func TestMToMap_NonNilsOnly_Filter(t *testing.T) {
 func TestReadValue(t *testing.T) {
 	require := require.New(t)
 	iValueFields := map[string]appdef.DataKind{}
-	for n, k := range testFields {
+	for n, k := range testFieldDefs {
 		iValueFields[n] = k
 	}
 	iValueFields["record"] = appdef.DataKind_Record
@@ -258,7 +258,7 @@ func TestReadValue(t *testing.T) {
 		},
 	}
 	t.Run("ReadValue", func(t *testing.T) {
-		sf := NewSchemaFields(iValueSchema)
+		sf := NewFieldsDef(iValueSchema)
 		actual := map[string]interface{}{}
 		for fieldName := range iValueValues {
 			actual[fieldName] = ReadValue(fieldName, sf, appDefsWithIValue, iValue)

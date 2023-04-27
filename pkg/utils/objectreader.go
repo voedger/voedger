@@ -11,17 +11,17 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type SchemaFields map[string]appdef.DataKind
+type FieldsDef map[string]appdef.DataKind
 
-func Read(fieldName string, sf SchemaFields, rr istructs.IRowReader) (val interface{}) {
-	return ReadByKind(fieldName, sf[fieldName], rr)
+func Read(fieldName string, fd FieldsDef, rr istructs.IRowReader) (val interface{}) {
+	return ReadByKind(fieldName, fd[fieldName], rr)
 }
 
-func ReadValue(fieldName string, sf SchemaFields, appDef appdef.IAppDef, val istructs.IValue) (res interface{}) {
-	if sf[fieldName] == appdef.DataKind_Record {
+func ReadValue(fieldName string, fd FieldsDef, appDef appdef.IAppDef, val istructs.IValue) (res interface{}) {
+	if fd[fieldName] == appdef.DataKind_Record {
 		return FieldsToMap(val.AsRecord(fieldName), appDef)
 	}
-	return ReadByKind(fieldName, sf[fieldName], val)
+	return ReadByKind(fieldName, fd[fieldName], val)
 }
 
 // panics on an unsupported kind guessing that pair <name, kind> could be taken from ISchema.Fields() callback only
@@ -50,9 +50,9 @@ func ReadByKind(name string, kind appdef.DataKind, rr istructs.IRowReader) inter
 	}
 }
 
-func NewSchemaFields(schema appdef.Schema) SchemaFields {
+func NewFieldsDef(def appdef.Schema) FieldsDef {
 	fields := make(map[string]appdef.DataKind)
-	schema.Fields(
+	def.Fields(
 		func(f appdef.Field) {
 			fields[f.Name()] = f.DataKind()
 		})
@@ -90,9 +90,9 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 
 	if opts.nonNilsOnly {
 		s := appDef.Schema(obj.AsQName(appdef.SystemField_QName))
-		sf := NewSchemaFields(s)
+		fd := NewFieldsDef(s)
 		obj.FieldNames(func(fieldName string) {
-			kind := sf[fieldName]
+			kind := fd[fieldName]
 			if opts.filter != nil {
 				if !opts.filter(fieldName, kind) {
 					return

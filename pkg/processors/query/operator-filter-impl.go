@@ -16,7 +16,7 @@ import (
 type FilterOperator struct {
 	pipeline.AsyncNOOP
 	filters    []IFilter
-	rootSchema coreutils.SchemaFields
+	rootFields coreutils.FieldsDef
 	metrics    IMetrics
 }
 
@@ -27,7 +27,7 @@ func (o FilterOperator) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (
 	}()
 	outputRow := work.(IWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0]
 	mergedSchema := make(map[string]appdef.DataKind)
-	for k, v := range o.rootSchema {
+	for k, v := range o.rootFields {
 		mergedSchema[k] = v
 	}
 	for k, v := range work.(IWorkpiece).EnrichedRootSchema() {

@@ -219,7 +219,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 						[]IOutputRow{row(200601), row(200602)},
 					},
 				},
-				enrichedRootSchema: make(map[string]appdef.DataKind),
+				enrichedRootFields: make(map[string]appdef.DataKind),
 			}
 		}
 		skb := &mockStateKeyBuilder{}

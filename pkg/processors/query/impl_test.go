@@ -106,7 +106,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 				keyToIdx: map[string]int{rootDocument: 0},
 				values:   make([]interface{}, 1),
 			},
-			enrichedRootSchema: make(map[string]appdef.DataKind),
+			enrichedRootFields: make(map[string]appdef.DataKind),
 		}
 	}
 
@@ -1129,7 +1129,7 @@ type testFilter struct {
 	err   error
 }
 
-func (f testFilter) IsMatch(coreutils.SchemaFields, IOutputRow) (bool, error) {
+func (f testFilter) IsMatch(coreutils.FieldsDef, IOutputRow) (bool, error) {
 	return f.match, f.err
 }
 
@@ -1141,7 +1141,7 @@ type testWorkpiece struct {
 
 func (w testWorkpiece) Object() istructs.IObject { return w.object }
 func (w testWorkpiece) OutputRow() IOutputRow    { return w.outputRow }
-func (w testWorkpiece) EnrichedRootSchema() coreutils.SchemaFields {
+func (w testWorkpiece) EnrichedRootSchema() coreutils.FieldsDef {
 	return map[string]appdef.DataKind{}
 }
 func (w testWorkpiece) PutEnrichedRootSchemaField(string, appdef.DataKind) {

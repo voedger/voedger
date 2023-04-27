@@ -16,8 +16,8 @@ type GreaterFilter struct {
 	value interface{}
 }
 
-func (f GreaterFilter) IsMatch(schemaFields coreutils.SchemaFields, outputRow IOutputRow) (bool, error) {
-	switch schemaFields[f.field] {
+func (f GreaterFilter) IsMatch(fd coreutils.FieldsDef, outputRow IOutputRow) (bool, error) {
+	switch fd[f.field] {
 	case appdef.DataKind_int32:
 		return outputRow.Value(f.field).(int32) > int32(f.value.(float64)), nil
 	case appdef.DataKind_int64:

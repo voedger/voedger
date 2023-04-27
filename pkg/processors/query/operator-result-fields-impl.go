@@ -16,7 +16,7 @@ import (
 type ResultFieldsOperator struct {
 	pipeline.AsyncNOOP
 	elements   []IElement
-	rootFields coreutils.SchemaFields
+	rootFields coreutils.FieldsDef
 	fieldsDefs *fieldsDefs
 	metrics    IMetrics
 }
@@ -55,13 +55,13 @@ func (o ResultFieldsOperator) DoAsync(ctx context.Context, work pipeline.IWorkpi
 	return work, err
 }
 
-func (o ResultFieldsOperator) fillRow(ctx context.Context, outputRow IOutputRow, element IElement, object istructs.IObject, schemaFields coreutils.SchemaFields) (err error) {
+func (o ResultFieldsOperator) fillRow(ctx context.Context, outputRow IOutputRow, element IElement, object istructs.IObject, fd coreutils.FieldsDef) (err error) {
 	row := element.NewOutputRow()
 	for _, field := range element.ResultFields() {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		value := coreutils.ReadByKind(field.Field(), schemaFields[field.Field()], object)
+		value := coreutils.ReadByKind(field.Field(), fd[field.Field()], object)
 		row.Set(field.Field(), value)
 	}
 	for _, field := range element.RefFields() {

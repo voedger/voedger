@@ -41,9 +41,9 @@ func implRowsProcessorFactory(ctx context.Context, cache appdef.IAppDef, state i
 	} else {
 		fieldsDefs := &fieldsDefs{
 			appDef: cache,
-			fields: make(map[appdef.QName]coreutils.SchemaFields),
+			fields: make(map[appdef.QName]coreutils.FieldsDef),
 		}
-		rootSchema := coreutils.NewSchemaFields(resultMeta)
+		rootSchema := coreutils.NewFieldsDef(resultMeta)
 		operators = append(operators, pipeline.WireAsyncOperator("Result fields", &ResultFieldsOperator{
 			elements:   params.Elements(),
 			rootFields: rootSchema,
@@ -59,7 +59,7 @@ func implRowsProcessorFactory(ctx context.Context, cache appdef.IAppDef, state i
 		if len(params.Filters()) != 0 {
 			operators = append(operators, pipeline.WireAsyncOperator("Filter", &FilterOperator{
 				filters:    params.Filters(),
-				rootSchema: rootSchema,
+				rootFields: rootSchema,
 				metrics:    metrics,
 			}))
 		}
@@ -197,7 +197,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("validate: get query params", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, coreutils.NewSchemaFields(qw.resultSchema))
+			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, coreutils.NewFieldsDef(qw.resultSchema))
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("authorize result", func(ctx context.Context, qw *queryWork) (err error) {
@@ -256,7 +256,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 						keyToIdx: pathToIdx,
 						values:   make([]interface{}, len(pathToIdx)),
 					},
-					enrichedRootSchema: make(map[string]appdef.DataKind),
+					enrichedRootFields: make(map[string]appdef.DataKind),
 				})
 			})
 			return coreutils.WrapSysError(err, http.StatusInternalServerError)
@@ -370,14 +370,14 @@ type workpiece struct {
 	pipeline.IWorkpiece
 	object             istructs.IObject
 	outputRow          IOutputRow
-	enrichedRootSchema coreutils.SchemaFields
+	enrichedRootFields coreutils.FieldsDef
 }
 
-func (w workpiece) Object() istructs.IObject                   { return w.object }
-func (w workpiece) OutputRow() IOutputRow                      { return w.outputRow }
-func (w workpiece) EnrichedRootSchema() coreutils.SchemaFields { return w.enrichedRootSchema }
+func (w workpiece) Object() istructs.IObject                { return w.object }
+func (w workpiece) OutputRow() IOutputRow                   { return w.outputRow }
+func (w workpiece) EnrichedRootSchema() coreutils.FieldsDef { return w.enrichedRootFields }
 func (w workpiece) PutEnrichedRootSchemaField(name string, kind appdef.DataKind) {
-	w.enrichedRootSchema[name] = kind
+	w.enrichedRootFields[name] = kind
 }
 func (w workpiece) Release() {
 	//TODO implement it someday
@@ -461,26 +461,26 @@ func (e element) RefFields() []IRefField       { return e.refs }
 
 type fieldsDefs struct {
 	appDef appdef.IAppDef
-	fields map[appdef.QName]coreutils.SchemaFields
+	fields map[appdef.QName]coreutils.FieldsDef
 	lock   sync.Mutex
 }
 
 func newFieldsDefs(appDef appdef.IAppDef) *fieldsDefs {
 	return &fieldsDefs{
 		appDef: appDef,
-		fields: make(map[appdef.QName]coreutils.SchemaFields),
+		fields: make(map[appdef.QName]coreutils.FieldsDef),
 	}
 }
 
-func (c *fieldsDefs) get(name appdef.QName) coreutils.SchemaFields {
+func (c *fieldsDefs) get(name appdef.QName) coreutils.FieldsDef {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	value, ok := c.fields[name]
+	fd, ok := c.fields[name]
 	if !ok {
-		value = coreutils.NewSchemaFields(c.appDef.Schema(name))
-		c.fields[name] = value
+		fd = coreutils.NewFieldsDef(c.appDef.Schema(name))
+		c.fields[name] = fd
 	}
-	return value
+	return fd
 }
 
 type resultSenderClosableOnlyOnce struct {
