@@ -6,6 +6,7 @@ package parser
 
 import (
 	"embed"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -57,9 +58,12 @@ func Test_Duplicates(t *testing.T) {
 	// TODO: use golang messages like
 	// ./types2.go:17:7: EmbedParser redeclared
 	//     ./types.go:17:6: other declaration of EmbedParser
-	require.ErrorContains(err, "file1.sql:3:2: MyTableValidator redeclared")
-	require.ErrorContains(err, "file2.sql:3:3: MyFunc2 redeclared")
-	require.ErrorContains(err, "file2.sql:7:4: MyFunc4 redeclared")
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:3:2: MyTableValidator redeclared",
+		"file2.sql:3:3: MyFunc2 redeclared",
+		"file2.sql:7:4: MyFunc4 redeclared",
+	}, "\n"))
+
 }
 
 func Test_Comments(t *testing.T) {
@@ -91,7 +95,7 @@ func Test_UnexpectedSchema(t *testing.T) {
 	require.NoError(err)
 
 	_, err = MergeFileSchemaASTs("", []*FileSchemaAST{ast1, ast2})
-	require.ErrorContains(err, "file2.sql: package schema2; expected schema1")
+	require.EqualError(err, "file2.sql: package schema2; expected schema1")
 }
 
 func Test_FunctionUndefined(t *testing.T) {
@@ -111,9 +115,11 @@ func Test_FunctionUndefined(t *testing.T) {
 
 	err = MergePackageSchemas([]*PackageSchemaAST{pkg})
 
-	require.ErrorContains(err, "example.sql:3:6: SomeCmdFunc undefined")
-	require.ErrorContains(err, "example.sql:4:6: QueryFunc undefined")
-	// TODO: how to check that no more errors in err?)
+	require.EqualError(err, strings.Join([]string{
+		"example.sql:3:6: SomeCmdFunc undefined",
+		"example.sql:4:6: QueryFunc undefined",
+		"example.sql:5:6: Air undefined",
+	}, "\n"))
 }
 
 func Test_MergePackageSchemas1(t *testing.T) {
@@ -150,8 +156,10 @@ func Test_MergePackageSchemas1(t *testing.T) {
 	require.Nil(err)
 
 	err = MergePackageSchemas([]*PackageSchemaAST{pkg1, pkg2, pkg3})
-	require.ErrorContains(err, "example.sql:8:6: pkg2.SomeProjectorFunc2 undefined")
-	require.ErrorContains(err, "example.sql:6:6: function result do not match")
+	require.EqualError(err, strings.Join([]string{
+		"example.sql:6:6: function result do not match",
+		"example.sql:8:6: pkg2.SomeProjectorFunc2 undefined",
+	}, "\n"))
 
 }
 
