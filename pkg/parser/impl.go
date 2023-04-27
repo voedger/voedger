@@ -85,52 +85,13 @@ func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST)
 
 	errs := make([]error, 0)
 	errs = analyseDuplicateNames(headAst, errs)
-	errs = analyseInernalReferences(headAst, errs)
 	cleanupComments(headAst)
+	cleanupImports(headAst)
 
 	return &PackageSchemaAST{
 		QualifiedPackageName: qualifiedPackageName,
 		Ast:                  headAst,
 	}, errors.Join(errs...)
-}
-
-func analyseInernalReferences(schema *SchemaAST, errs []error) []error {
-	iterate(schema, func(stmt interface{}) {
-		switch v := stmt.(type) {
-		case *CommandStmt:
-			if isInternalFunc(v.Func, schema) {
-				f := resolveFunc(v.Func.Name, schema)
-				if f == nil {
-					errs = append(errs, errorAt(ErrUndefined(v.Func.String()), v.GetPos()))
-				} else {
-					errs = CompareParams(&v.Pos, v.Params, f, errs)
-				}
-			}
-		case *QueryStmt:
-			if isInternalFunc(v.Func, schema) {
-				f := resolveFunc(v.Func.Name, schema)
-				if f == nil {
-					errs = append(errs, errorAt(ErrUndefined(v.Func.String()), v.GetPos()))
-				} else {
-					errs = CompareParams(&v.Pos, v.Params, f, errs)
-					if v.Returns != f.Returns {
-						errs = append(errs, errorAt(ErrFunctionResultIncorrect, v.GetPos()))
-					}
-				}
-			}
-		case *ProjectorStmt:
-			if isInternalFunc(v.Func, schema) {
-				f := resolveFunc(v.Func.Name, schema)
-				if f == nil {
-					errs = append(errs, errorAt(ErrUndefined(v.Func.String()), v.GetPos()))
-				} else {
-					// TODO: Check function params
-					// TODO: Check ON (Command, Argument type, CUD)
-				}
-			}
-		}
-	})
-	return errs
 }
 
 func analyseDuplicateNames(schema *SchemaAST, errs []error) []error {
@@ -168,6 +129,13 @@ func cleanupComments(schema *SchemaAST) {
 	})
 }
 
+func cleanupImports(schema *SchemaAST) {
+	for i := 0; i < len(schema.Imports); i++ {
+		imp := &schema.Imports[i]
+		imp.Name = strings.Trim(imp.Name, "\"")
+	}
+}
+
 func mergePackageSchemasImpl(packages []*PackageSchemaAST) error {
 	errs := make([]error, 0)
 	pkgmap := make(map[string]*PackageSchemaAST)
@@ -179,27 +147,44 @@ func mergePackageSchemasImpl(packages []*PackageSchemaAST) error {
 	}
 
 	for _, p := range packages {
-		errs = analyseExternalReferences(p, pkgmap, errs)
+		errs = analyseReferences(p, pkgmap, errs)
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
-func analyseExternalReferences(pkg *PackageSchemaAST, pkgmap map[string]*PackageSchemaAST, errs []error) []error {
+func analyseReferences(pkg *PackageSchemaAST, pkgmap map[string]*PackageSchemaAST, errs []error) []error {
 	iterate(pkg.Ast, func(stmt interface{}) {
+		var err error
+		var pos *lexer.Position
 		switch v := stmt.(type) {
 		case *CommandStmt:
-			if !isInternalFunc(v.Func, pkg.Ast) {
-				// f := resolveFunc(v.Func.Name, schema)
-				// if f == nil {
-				// 	errs = append(errs, errorAt(ErrUndefined(v.Func.String()), v.GetPos()))
-				// } else {
-				// 	errs = CompareParams(&v.Pos, v.Params, f, errs)
-				// }
-			}
+			pos = &v.Pos
+			err = resolveFunc(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
+				return CompareParams(v.Params, f)
+			})
 		case *QueryStmt:
-			//
+			pos = &v.Pos
+			err = resolveFunc(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
+				err = CompareParams(v.Params, f)
+				if err != nil {
+					return err
+				}
+				if v.Returns != f.Returns {
+					return ErrFunctionResultIncorrect
+				}
+				return nil
+			})
 		case *ProjectorStmt:
-			//
+			pos = &v.Pos
+			err = resolveFunc(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
+				// TODO: Check function params
+				// TODO: Check ON (Command, Argument type, CUD)
+
+				return nil
+			})
+		}
+		if err != nil {
+			errs = append(errs, errorAt(err, pos))
 		}
 	})
 	return errs

@@ -33,7 +33,6 @@ func ParsePackageDir(qualifiedPackageName string, fs IReadFS, subDir string) (*P
 }
 
 // Application-level semantic analysis (e.g. cross-package references)
-func MergePackageSchemas([]*PackageSchemaAST) /*TODO: return .?.ISchema */ error {
-	// TODO: implement
-	return nil
+func MergePackageSchemas(packages []*PackageSchemaAST) /*TODO: return .?.ISchema */ error {
+	return mergePackageSchemasImpl(packages)
 }

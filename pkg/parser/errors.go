@@ -20,6 +20,11 @@ func ErrUnexpectedSchema(fileName, actual, expected string) error {
 var ErrFunctionParamsIncorrect = errors.New("function parameters do not match")
 var ErrFunctionResultIncorrect = errors.New("function result do not match")
 
+// Golang: could not import github.com/alecthomas/participle/v2/asd (no required module provides package "github.com/alecthomas/participle/v2/asd")
+func ErrCouldNotImport(pkgName string) error {
+	return fmt.Errorf("could not import %s", pkgName)
+}
+
 func ErrUndefined(name string) error {
 	return fmt.Errorf("%s undefined", name)
 }

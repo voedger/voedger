@@ -6,10 +6,9 @@
 package parser
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
-
-	"github.com/alecthomas/participle/v2/lexer"
 )
 
 func extractStatement(s any) interface{} {
@@ -23,7 +22,7 @@ func extractStatement(s any) interface{} {
 	panic("undefined statement")
 }
 
-func CompareParam(pos *lexer.Position, left, right FunctionParam) bool {
+func CompareParam(left, right FunctionParam) bool {
 	var lt, rt OptQName
 	if left.NamedParam != nil {
 		lt = left.NamedParam.Type
@@ -38,17 +37,16 @@ func CompareParam(pos *lexer.Position, left, right FunctionParam) bool {
 	return lt == rt
 }
 
-func CompareParams(pos *lexer.Position, params []FunctionParam, f *FunctionStmt, errs []error) []error {
+func CompareParams(params []FunctionParam, f *FunctionStmt) error {
 	if len(params) != len(f.Params) {
-		errs = append(errs, errorAt(ErrFunctionParamsIncorrect, pos))
-		return errs
+		return ErrFunctionParamsIncorrect
 	}
 	for i := 0; i < len(params); i++ {
-		if !CompareParam(pos, params[i], f.Params[i]) {
-			errs = append(errs, errorAt(ErrFunctionParamsIncorrect, pos))
+		if !CompareParam(params[i], f.Params[i]) {
+			return ErrFunctionParamsIncorrect
 		}
 	}
-	return errs
+	return nil
 }
 
 func iterate(c IStatementCollection, callback func(stmt interface{})) {
@@ -60,7 +58,7 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 	})
 }
 
-func resolveFunc(name string, schema *SchemaAST) (function *FunctionStmt) {
+func resolveFuncInSchema(name string, schema *SchemaAST) (function *FunctionStmt) {
 	iterate(schema, func(stmt interface{}) {
 		if f, ok := stmt.(*FunctionStmt); ok {
 			if f.Name == name {
@@ -74,4 +72,46 @@ func resolveFunc(name string, schema *SchemaAST) (function *FunctionStmt) {
 func isInternalFunc(name OptQName, schema *SchemaAST) bool {
 	pkg := strings.TrimSpace(name.Package)
 	return pkg == "" || pkg == schema.Package
+}
+
+func getQualifiedPackageName(pkgName string, schema *SchemaAST) (string, error) {
+	for i := 0; i < len(schema.Imports); i++ {
+		imp := schema.Imports[i]
+		if imp.Alias != nil && *imp.Alias == pkgName {
+			return imp.Name, nil
+		}
+	}
+	suffix := fmt.Sprintf("/%s", pkgName)
+	for i := 0; i < len(schema.Imports); i++ {
+		imp := schema.Imports[i]
+		if strings.HasSuffix(imp.Name, suffix) {
+			return imp.Name, nil
+		}
+	}
+	return "", ErrUndefined(pkgName)
+}
+
+func resolveFunc(fn OptQName, srcPkgSchema *PackageSchemaAST, pkgmap map[string]*PackageSchemaAST, cb func(f *FunctionStmt) error) error {
+	var targetPkgSch *PackageSchemaAST
+
+	if isInternalFunc(fn, srcPkgSchema.Ast) {
+		targetPkgSch = srcPkgSchema
+	} else {
+		pkgQN, err := getQualifiedPackageName(fn.Package, srcPkgSchema.Ast)
+		if err != nil {
+			return err
+		} else {
+			targetPkgSch = pkgmap[pkgQN]
+			if targetPkgSch == nil {
+				return ErrCouldNotImport(pkgQN)
+			}
+		}
+	}
+
+	f := resolveFuncInSchema(fn.Name, targetPkgSch.Ast)
+	if f == nil {
+		return ErrUndefined(fn.String())
+	}
+	return cb(f)
+
 }

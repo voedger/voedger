@@ -120,14 +120,17 @@ func Test_MergePackageSchemas1(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("example.sql", `SCHEMA pkg1;
+	IMPORT SCHEMA "github.com/untillpro/airsbp3/pkg2";
+	IMPORT SCHEMA "github.com/untillpro/airsbp3/pkg3" AS air;
 	WORKSPACE test (
     	COMMAND Orders AS pkg2.SomeCmdFunc;
     	QUERY Query1 RETURNS text AS pkg2.QueryFunc;
+    	QUERY Query2 RETURNS text AS air.QueryFunc2;
     	PROJECTOR ON COMMAND Air.CreateUPProfile AS pkg2.SomeProjectorFunc2;
 	)
 	`)
 	require.Nil(err)
-	pkg1, err := MergeFileSchemaASTs("github.com/untillpro/pkg1", []*FileSchemaAST{fs})
+	pkg1, err := MergeFileSchemaASTs("github.com/untillpro/airsbp3/pkg1", []*FileSchemaAST{fs})
 	require.Nil(err)
 
 	fs, err = ParseFile("example.sql", `SCHEMA pkg2;
@@ -136,10 +139,18 @@ func Test_MergePackageSchemas1(t *testing.T) {
 	FUNCTION SomeProjectorFunc() RETURNS void ENGINE BUILTIN;
 	`)
 	require.Nil(err)
-	pkg2, err := MergeFileSchemaASTs("github.com/untillpro/pkg2", []*FileSchemaAST{fs})
+	pkg2, err := MergeFileSchemaASTs("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
 	require.Nil(err)
 
-	err = MergePackageSchemas([]*PackageSchemaAST{pkg1, pkg2})
-	require.ErrorContains(err, "example.sql:5:6: pkg2.SomeProjectorFunc2 undefined")
+	fs, err = ParseFile("example.sql", `SCHEMA pkg3;
+	FUNCTION QueryFunc2() RETURNS text ENGINE BUILTIN;
+	`)
+	require.Nil(err)
+	pkg3, err := MergeFileSchemaASTs("github.com/untillpro/airsbp3/pkg3", []*FileSchemaAST{fs})
+	require.Nil(err)
+
+	err = MergePackageSchemas([]*PackageSchemaAST{pkg1, pkg2, pkg3})
+	require.ErrorContains(err, "example.sql:8:6: pkg2.SomeProjectorFunc2 undefined")
+	require.ErrorContains(err, "example.sql:6:6: function result do not match")
 
 }
