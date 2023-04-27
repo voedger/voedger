@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -24,7 +24,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			r.Set("age", age)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"age": schemas.DataKind_int32}
+		schemaFields := coreutils.SchemaFields{"age": appdef.DataKind_int32}
 		ageFilter := func(age int) IFilter {
 			return &EqualsFilter{
 				field: "age",
@@ -44,7 +44,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			r.Set("age", age)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"age": schemas.DataKind_int64}
+		schemaFields := coreutils.SchemaFields{"age": appdef.DataKind_int64}
 		ageFilter := func(age int) IFilter {
 			return &EqualsFilter{
 				field: "age",
@@ -64,7 +64,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			r.Set("height", height)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"height": schemas.DataKind_float32}
+		schemaFields := coreutils.SchemaFields{"height": appdef.DataKind_float32}
 		heightFilter := func(height float32) IFilter {
 			return &EqualsFilter{
 				field:   "height",
@@ -85,7 +85,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			r.Set("height", height)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"height": schemas.DataKind_float64}
+		schemaFields := coreutils.SchemaFields{"height": appdef.DataKind_float64}
 		heightFilter := func(height float64) IFilter {
 			return &EqualsFilter{
 				field:   "height",
@@ -106,7 +106,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			r.Set("name", name)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"name": schemas.DataKind_string}
+		schemaFields := coreutils.SchemaFields{"name": appdef.DataKind_string}
 		nameFilter := func(name string) IFilter {
 			return &EqualsFilter{
 				field: "name",
@@ -126,7 +126,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			r.Set("active", active)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"active": schemas.DataKind_bool}
+		schemaFields := coreutils.SchemaFields{"active": appdef.DataKind_bool}
 		activeFilter := func(active bool) IFilter {
 			return &EqualsFilter{
 				field: "active",
@@ -151,7 +151,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 	t.Run("Should return error on wrong data type", func(t *testing.T) {
 		filter := &EqualsFilter{field: "image"}
 
-		match, err := filter.IsMatch(map[string]schemas.DataKind{"image": schemas.DataKind_bytes}, nil)
+		match, err := filter.IsMatch(map[string]appdef.DataKind{"image": appdef.DataKind_bytes}, nil)
 
 		require.ErrorIs(t, err, ErrWrongType)
 		require.False(t, match)
@@ -162,7 +162,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			r.Set("id", id)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"id": schemas.DataKind_RecordID}
+		schemaFields := coreutils.SchemaFields{"id": appdef.DataKind_RecordID}
 		ageFilter := func(id istructs.RecordID) IFilter {
 			return &EqualsFilter{
 				field: "id",

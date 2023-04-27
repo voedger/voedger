@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func Test_ValidEvent(t *testing.T) {
@@ -24,44 +24,44 @@ func Test_ValidEvent(t *testing.T) {
 	var (
 		app istructs.IAppStructs
 
-		cmdCreateDoc schemas.QName = schemas.NewQName("test", "CreateDoc")
-		cDocName     schemas.QName = schemas.NewQName("test", "CDoc")
-		oDocName     schemas.QName = schemas.NewQName("test", "ODoc")
+		cmdCreateDoc appdef.QName = appdef.NewQName("test", "CreateDoc")
+		cDocName     appdef.QName = appdef.NewQName("test", "CDoc")
+		oDocName     appdef.QName = appdef.NewQName("test", "ODoc")
 
-		cmdCreateObj         schemas.QName = schemas.NewQName("test", "CreateObj")
-		cmdCreateObjUnlogged schemas.QName = schemas.NewQName("test", "CreateObjUnlogged")
-		oObjName             schemas.QName = schemas.NewQName("test", "Object")
+		cmdCreateObj         appdef.QName = appdef.NewQName("test", "CreateObj")
+		cmdCreateObjUnlogged appdef.QName = appdef.NewQName("test", "CreateObjUnlogged")
+		oObjName             appdef.QName = appdef.NewQName("test", "Object")
 
-		cmdCUD schemas.QName = schemas.NewQName("test", "cudEvent")
+		cmdCUD appdef.QName = appdef.NewQName("test", "cudEvent")
 	)
 
 	t.Run("builds app", func(t *testing.T) {
-		bld := schemas.NewSchemaCache()
+		bld := appdef.NewSchemaCache()
 
 		t.Run("must be ok to build schemas", func(t *testing.T) {
-			CDocSchema := bld.Add(cDocName, schemas.SchemaKind_CDoc)
+			CDocSchema := bld.Add(cDocName, appdef.SchemaKind_CDoc)
 			CDocSchema.
-				AddField("Int32", schemas.DataKind_int32, true).
-				AddField("String", schemas.DataKind_string, false)
+				AddField("Int32", appdef.DataKind_int32, true).
+				AddField("String", appdef.DataKind_string, false)
 
-			ODocSchema := bld.Add(oDocName, schemas.SchemaKind_ODoc)
+			ODocSchema := bld.Add(oDocName, appdef.SchemaKind_ODoc)
 			ODocSchema.
-				AddField("Int32", schemas.DataKind_int32, true).
-				AddField("String", schemas.DataKind_string, false).
+				AddField("Int32", appdef.DataKind_int32, true).
+				AddField("String", appdef.DataKind_string, false).
 				AddContainer("child", oDocName, 0, 2) // ODocs should be able to contain ODocs, see #!19332
 
-			ObjSchema := bld.Add(oObjName, schemas.SchemaKind_Object)
+			ObjSchema := bld.Add(oObjName, appdef.SchemaKind_Object)
 			ObjSchema.
-				AddField("Int32", schemas.DataKind_int32, true).
-				AddField("String", schemas.DataKind_string, false)
+				AddField("Int32", appdef.DataKind_int32, true).
+				AddField("String", appdef.DataKind_string, false)
 		})
 
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
-		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, schemas.NullQName, schemas.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewCommandFunction(cmdCreateObj, oObjName, schemas.NullQName, schemas.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, schemas.NullQName, oObjName, schemas.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewCommandFunction(cmdCUD, schemas.NullQName, schemas.NullQName, schemas.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, appdef.NullQName, appdef.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateObj, oObjName, appdef.NullQName, appdef.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, appdef.NullQName, oObjName, appdef.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
 
 		storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
@@ -82,7 +82,7 @@ func Test_ValidEvent(t *testing.T) {
 					PLogOffset:        100500,
 					Workspace:         1,
 					WLogOffset:        1050,
-					QName:             schemas.NullQName,
+					QName:             appdef.NullQName,
 					RegisteredAt:      123456789,
 				},
 			})
@@ -113,7 +113,7 @@ func Test_ValidEvent(t *testing.T) {
 		cmd.PutInt32("Int32", 29)
 
 		cmd = bld.ArgumentUnloggedObjectBuilder()
-		cmd.PutQName(schemas.SystemField_QName, oObjName)
+		cmd.PutQName(appdef.SystemField_QName, oObjName)
 
 		_, err := bld.BuildRawEvent()
 		require.ErrorIs(err, ErrWrongSchema)
@@ -200,7 +200,7 @@ func Test_ValidEvent(t *testing.T) {
 			require.NotNil(rawEvent)
 		})
 
-		cmd.PutRecordID(schemas.SystemField_ID, 1)
+		cmd.PutRecordID(appdef.SystemField_ID, 1)
 
 		t.Run("test ok build raw event", func(t *testing.T) {
 			rawEvent, err := bld.BuildRawEvent()
@@ -233,7 +233,7 @@ func Test_ValidEvent(t *testing.T) {
 		})
 
 		t.Run("must failed build raw event (unexpected argument schema)", func(t *testing.T) {
-			cmd.PutQName(schemas.SystemField_QName, oDocName)
+			cmd.PutQName(appdef.SystemField_QName, oDocName)
 			rawEvent, err := bld.BuildRawEvent()
 			require.ErrorIs(err, ErrSchemaChanged) // expected «test.Object», but not «test.ODoc»
 			require.NotNil(rawEvent)
@@ -278,7 +278,7 @@ func Test_ValidEvent(t *testing.T) {
 		require.NotNil(bld)
 
 		cmd := bld.ArgumentObjectBuilder()
-		cmd.PutRecordID(schemas.SystemField_ID, 1)
+		cmd.PutRecordID(appdef.SystemField_ID, 1)
 		cmd.PutInt32("Int32", 29)
 		cmd.PutString("String", "string data")
 
@@ -304,12 +304,12 @@ func Test_ValidEvent(t *testing.T) {
 		require.NotNil(bld)
 
 		cmd := bld.ArgumentObjectBuilder()
-		cmd.PutRecordID(schemas.SystemField_ID, 1)
+		cmd.PutRecordID(appdef.SystemField_ID, 1)
 		cmd.PutInt32("Int32", 29)
 		cmd.PutString("String", "string data")
 
 		child := cmd.ElementBuilder("child")
-		child.PutRecordID(schemas.SystemField_ID, 2)
+		child.PutRecordID(appdef.SystemField_ID, 2)
 		child.PutInt32("Int32", 29)
 		child.PutString("String", "string data")
 
@@ -319,15 +319,15 @@ func Test_ValidEvent(t *testing.T) {
 			require.NotNil(rawEvent)
 
 			cmd := rawEvent.ArgumentObject()
-			require.Equal(istructs.RecordID(1), cmd.AsRecordID(schemas.SystemField_ID))
+			require.Equal(istructs.RecordID(1), cmd.AsRecordID(appdef.SystemField_ID))
 			require.Equal(int32(29), cmd.AsInt32("Int32"))
 			require.Equal("string data", cmd.AsString("String"))
 
 			cnt := 0
 			cmd.Elements("child", func(child istructs.IElement) {
-				require.Equal(istructs.RecordID(2), child.AsRecordID(schemas.SystemField_ID))
-				require.Equal(istructs.RecordID(1), child.AsRecordID(schemas.SystemField_ParentID))
-				require.Equal("child", child.AsString(schemas.SystemField_Container))
+				require.Equal(istructs.RecordID(2), child.AsRecordID(appdef.SystemField_ID))
+				require.Equal(istructs.RecordID(1), child.AsRecordID(appdef.SystemField_ParentID))
+				require.Equal("child", child.AsString(appdef.SystemField_Container))
 				require.Equal(int32(29), child.AsInt32("Int32"))
 				require.Equal("string data", child.AsString("String"))
 				cnt++
@@ -343,65 +343,65 @@ func Test_ValidElement(t *testing.T) {
 
 	test := test()
 
-	bld := schemas.NewSchemaCache()
+	bld := appdef.NewSchemaCache()
 
 	t.Run("must be ok to build test schemas", func(t *testing.T) {
 
 		t.Run("build object schemas", func(t *testing.T) {
-			objSchema := bld.Add(schemas.NewQName("test", "object"), schemas.SchemaKind_Object)
+			objSchema := bld.Add(appdef.NewQName("test", "object"), appdef.SchemaKind_Object)
 			objSchema.
-				AddField("int32Field", schemas.DataKind_int32, true).
-				AddField("int64Field", schemas.DataKind_int64, false).
-				AddField("float32Field", schemas.DataKind_float32, false).
-				AddField("float64Field", schemas.DataKind_float64, false).
-				AddField("bytesField", schemas.DataKind_bytes, false).
-				AddField("strField", schemas.DataKind_string, false).
-				AddField("qnameField", schemas.DataKind_QName, false).
-				AddField("recIDField", schemas.DataKind_RecordID, false).
-				AddContainer("child", schemas.NewQName("test", "element"), 1, schemas.Occurs_Unbounded)
+				AddField("int32Field", appdef.DataKind_int32, true).
+				AddField("int64Field", appdef.DataKind_int64, false).
+				AddField("float32Field", appdef.DataKind_float32, false).
+				AddField("float64Field", appdef.DataKind_float64, false).
+				AddField("bytesField", appdef.DataKind_bytes, false).
+				AddField("strField", appdef.DataKind_string, false).
+				AddField("qnameField", appdef.DataKind_QName, false).
+				AddField("recIDField", appdef.DataKind_RecordID, false).
+				AddContainer("child", appdef.NewQName("test", "element"), 1, appdef.Occurs_Unbounded)
 
-			elementSchema := bld.Add(schemas.NewQName("test", "element"), schemas.SchemaKind_Element)
+			elementSchema := bld.Add(appdef.NewQName("test", "element"), appdef.SchemaKind_Element)
 			elementSchema.
-				AddField("int32Field", schemas.DataKind_int32, true).
-				AddField("int64Field", schemas.DataKind_int64, false).
-				AddField("float32Field", schemas.DataKind_float32, false).
-				AddField("float64Field", schemas.DataKind_float64, false).
-				AddField("bytesField", schemas.DataKind_bytes, false).
-				AddField("strField", schemas.DataKind_string, false).
-				AddField("qnameField", schemas.DataKind_QName, false).
-				AddField("boolField", schemas.DataKind_bool, false).
-				AddField("recIDField", schemas.DataKind_RecordID, false).
-				AddContainer("grandChild", schemas.NewQName("test", "grandChild"), 0, 1)
+				AddField("int32Field", appdef.DataKind_int32, true).
+				AddField("int64Field", appdef.DataKind_int64, false).
+				AddField("float32Field", appdef.DataKind_float32, false).
+				AddField("float64Field", appdef.DataKind_float64, false).
+				AddField("bytesField", appdef.DataKind_bytes, false).
+				AddField("strField", appdef.DataKind_string, false).
+				AddField("qnameField", appdef.DataKind_QName, false).
+				AddField("boolField", appdef.DataKind_bool, false).
+				AddField("recIDField", appdef.DataKind_RecordID, false).
+				AddContainer("grandChild", appdef.NewQName("test", "grandChild"), 0, 1)
 
-			subElementSchema := bld.Add(schemas.NewQName("test", "grandChild"), schemas.SchemaKind_Element)
+			subElementSchema := bld.Add(appdef.NewQName("test", "grandChild"), appdef.SchemaKind_Element)
 			subElementSchema.
-				AddField("recIDField", schemas.DataKind_RecordID, false)
+				AddField("recIDField", appdef.DataKind_RecordID, false)
 		})
 
 		t.Run("build ODoc schemas", func(t *testing.T) {
-			docSchema := bld.Add(schemas.NewQName("test", "document"), schemas.SchemaKind_ODoc)
+			docSchema := bld.Add(appdef.NewQName("test", "document"), appdef.SchemaKind_ODoc)
 			docSchema.
-				AddField("int32Field", schemas.DataKind_int32, true).
-				AddField("int64Field", schemas.DataKind_int64, false).
-				AddField("float32Field", schemas.DataKind_float32, false).
-				AddField("float64Field", schemas.DataKind_float64, false).
-				AddField("bytesField", schemas.DataKind_bytes, false).
-				AddField("strField", schemas.DataKind_string, false).
-				AddField("qnameField", schemas.DataKind_QName, false).
-				AddField("recIDField", schemas.DataKind_RecordID, false).
-				AddContainer("child", schemas.NewQName("test", "record"), 1, schemas.Occurs_Unbounded)
+				AddField("int32Field", appdef.DataKind_int32, true).
+				AddField("int64Field", appdef.DataKind_int64, false).
+				AddField("float32Field", appdef.DataKind_float32, false).
+				AddField("float64Field", appdef.DataKind_float64, false).
+				AddField("bytesField", appdef.DataKind_bytes, false).
+				AddField("strField", appdef.DataKind_string, false).
+				AddField("qnameField", appdef.DataKind_QName, false).
+				AddField("recIDField", appdef.DataKind_RecordID, false).
+				AddContainer("child", appdef.NewQName("test", "record"), 1, appdef.Occurs_Unbounded)
 
-			recordSchema := bld.Add(schemas.NewQName("test", "record"), schemas.SchemaKind_ORecord)
+			recordSchema := bld.Add(appdef.NewQName("test", "record"), appdef.SchemaKind_ORecord)
 			recordSchema.
-				AddField("int32Field", schemas.DataKind_int32, true).
-				AddField("int64Field", schemas.DataKind_int64, false).
-				AddField("float32Field", schemas.DataKind_float32, false).
-				AddField("float64Field", schemas.DataKind_float64, false).
-				AddField("bytesField", schemas.DataKind_bytes, false).
-				AddField("strField", schemas.DataKind_string, false).
-				AddField("qnameField", schemas.DataKind_QName, false).
-				AddField("boolField", schemas.DataKind_bool, false).
-				AddField("recIDField", schemas.DataKind_RecordID, false)
+				AddField("int32Field", appdef.DataKind_int32, true).
+				AddField("int64Field", appdef.DataKind_int64, false).
+				AddField("float32Field", appdef.DataKind_float32, false).
+				AddField("float64Field", appdef.DataKind_float64, false).
+				AddField("bytesField", appdef.DataKind_bytes, false).
+				AddField("strField", appdef.DataKind_string, false).
+				AddField("qnameField", appdef.DataKind_QName, false).
+				AddField("boolField", appdef.DataKind_bool, false).
+				AddField("recIDField", appdef.DataKind_RecordID, false)
 		})
 	})
 
@@ -416,7 +416,7 @@ func Test_ValidElement(t *testing.T) {
 	t.Run("test build object", func(t *testing.T) {
 		t.Run("must error if null-name object", func(t *testing.T) {
 			obj := func() istructs.IObjectBuilder {
-				o := newObject(cfg, schemas.NullQName)
+				o := newObject(cfg, appdef.NullQName)
 				return &o
 			}()
 			_, err := obj.Build()
@@ -425,7 +425,7 @@ func Test_ValidElement(t *testing.T) {
 
 		t.Run("must error if unknown-name object", func(t *testing.T) {
 			obj := func() istructs.IObjectBuilder {
-				o := newObject(cfg, schemas.NewQName("test", "unknownSchema"))
+				o := newObject(cfg, appdef.NewQName("test", "unknownSchema"))
 				return &o
 			}()
 			_, err := obj.Build()
@@ -434,7 +434,7 @@ func Test_ValidElement(t *testing.T) {
 
 		t.Run("must error if invalid schema kind object", func(t *testing.T) {
 			obj := func() istructs.IObjectBuilder {
-				o := newObject(cfg, schemas.NewQName("test", "element"))
+				o := newObject(cfg, appdef.NewQName("test", "element"))
 				return &o
 			}()
 			_, err := obj.Build()
@@ -442,7 +442,7 @@ func Test_ValidElement(t *testing.T) {
 		})
 
 		obj := func() istructs.IObjectBuilder {
-			o := newObject(cfg, schemas.NewQName("test", "object"))
+			o := newObject(cfg, appdef.NewQName("test", "object"))
 			return &o
 		}()
 
@@ -477,7 +477,7 @@ func Test_ValidElement(t *testing.T) {
 		})
 
 		t.Run("must error if unknown child name", func(t *testing.T) {
-			gChild.PutString(schemas.SystemField_Container, "unknownName")
+			gChild.PutString(appdef.SystemField_Container, "unknownName")
 			_, err := obj.Build()
 			require.ErrorIs(err, containers.ErrContainerNotFound)
 		})
@@ -485,7 +485,7 @@ func Test_ValidElement(t *testing.T) {
 
 	t.Run("test build operation document", func(t *testing.T) {
 		doc := func() istructs.IObjectBuilder {
-			d := newObject(cfg, schemas.NewQName("test", "document"))
+			d := newObject(cfg, appdef.NewQName("test", "document"))
 			return &d
 		}()
 		require.NotNil(doc)
@@ -495,7 +495,7 @@ func Test_ValidElement(t *testing.T) {
 			require.ErrorIs(err, ErrNameNotFound)
 		})
 
-		doc.PutRecordID(schemas.SystemField_ID, 1)
+		doc.PutRecordID(appdef.SystemField_ID, 1)
 		doc.PutInt32("int32Field", 555)
 		t.Run("must error if no nested document record", func(t *testing.T) {
 			_, err := doc.Build()
@@ -510,17 +510,17 @@ func Test_ValidElement(t *testing.T) {
 			require.ErrorIs(err, ErrNameNotFound)
 		})
 
-		rec.PutRecordID(schemas.SystemField_ID, 2)
+		rec.PutRecordID(appdef.SystemField_ID, 2)
 		rec.PutInt32("int32Field", 555)
 
 		t.Run("must error if wrong record parent", func(t *testing.T) {
-			rec.PutRecordID(schemas.SystemField_ParentID, 77)
+			rec.PutRecordID(appdef.SystemField_ParentID, 77)
 			_, err := doc.Build()
 			require.ErrorIs(err, ErrWrongRecordID)
 		})
 
 		t.Run("must restore parent if empty record parent", func(t *testing.T) {
-			rec.PutRecordID(schemas.SystemField_ParentID, istructs.NullRecordID)
+			rec.PutRecordID(appdef.SystemField_ParentID, istructs.NullRecordID)
 			_, err := doc.Build()
 			require.NoError(err)
 		})
@@ -530,44 +530,44 @@ func Test_ValidElement(t *testing.T) {
 func Test_ValidCUD(t *testing.T) {
 	require := require.New(t)
 
-	bld := schemas.NewSchemaCache()
+	bld := appdef.NewSchemaCache()
 
 	t.Run("must be ok to build test schemas", func(t *testing.T) {
 		t.Run("build CDoc schemas", func(t *testing.T) {
-			docSchema := bld.Add(schemas.NewQName("test", "document"), schemas.SchemaKind_CDoc)
+			docSchema := bld.Add(appdef.NewQName("test", "document"), appdef.SchemaKind_CDoc)
 			docSchema.
-				AddField("int32Field", schemas.DataKind_int32, true).
-				AddField("int64Field", schemas.DataKind_int64, false).
-				AddField("float32Field", schemas.DataKind_float32, false).
-				AddField("float64Field", schemas.DataKind_float64, false).
-				AddField("bytesField", schemas.DataKind_bytes, false).
-				AddField("strField", schemas.DataKind_string, false).
-				AddField("qnameField", schemas.DataKind_QName, false).
-				AddField("recIDField", schemas.DataKind_RecordID, false).
-				AddContainer("child", schemas.NewQName("test", "record"), 1, schemas.Occurs_Unbounded)
+				AddField("int32Field", appdef.DataKind_int32, true).
+				AddField("int64Field", appdef.DataKind_int64, false).
+				AddField("float32Field", appdef.DataKind_float32, false).
+				AddField("float64Field", appdef.DataKind_float64, false).
+				AddField("bytesField", appdef.DataKind_bytes, false).
+				AddField("strField", appdef.DataKind_string, false).
+				AddField("qnameField", appdef.DataKind_QName, false).
+				AddField("recIDField", appdef.DataKind_RecordID, false).
+				AddContainer("child", appdef.NewQName("test", "record"), 1, appdef.Occurs_Unbounded)
 
-			recordSchema := bld.Add(schemas.NewQName("test", "record"), schemas.SchemaKind_CRecord)
+			recordSchema := bld.Add(appdef.NewQName("test", "record"), appdef.SchemaKind_CRecord)
 			recordSchema.
-				AddField("int32Field", schemas.DataKind_int32, true).
-				AddField("int64Field", schemas.DataKind_int64, false).
-				AddField("float32Field", schemas.DataKind_float32, false).
-				AddField("float64Field", schemas.DataKind_float64, false).
-				AddField("bytesField", schemas.DataKind_bytes, false).
-				AddField("strField", schemas.DataKind_string, false).
-				AddField("qnameField", schemas.DataKind_QName, false).
-				AddField("boolField", schemas.DataKind_bool, false).
-				AddField("recIDField", schemas.DataKind_RecordID, false)
+				AddField("int32Field", appdef.DataKind_int32, true).
+				AddField("int64Field", appdef.DataKind_int64, false).
+				AddField("float32Field", appdef.DataKind_float32, false).
+				AddField("float64Field", appdef.DataKind_float64, false).
+				AddField("bytesField", appdef.DataKind_bytes, false).
+				AddField("strField", appdef.DataKind_string, false).
+				AddField("qnameField", appdef.DataKind_QName, false).
+				AddField("boolField", appdef.DataKind_bool, false).
+				AddField("recIDField", appdef.DataKind_RecordID, false)
 
-			objSchema := bld.Add(schemas.NewQName("test", "object"), schemas.SchemaKind_Object)
+			objSchema := bld.Add(appdef.NewQName("test", "object"), appdef.SchemaKind_Object)
 			objSchema.
-				AddField("int32Field", schemas.DataKind_int32, true).
-				AddField("int64Field", schemas.DataKind_int64, false).
-				AddField("float32Field", schemas.DataKind_float32, false).
-				AddField("float64Field", schemas.DataKind_float64, false).
-				AddField("bytesField", schemas.DataKind_bytes, false).
-				AddField("strField", schemas.DataKind_string, false).
-				AddField("qnameField", schemas.DataKind_QName, false).
-				AddField("recIDField", schemas.DataKind_RecordID, false)
+				AddField("int32Field", appdef.DataKind_int32, true).
+				AddField("int64Field", appdef.DataKind_int64, false).
+				AddField("float32Field", appdef.DataKind_float32, false).
+				AddField("float64Field", appdef.DataKind_float64, false).
+				AddField("bytesField", appdef.DataKind_bytes, false).
+				AddField("strField", appdef.DataKind_string, false).
+				AddField("qnameField", appdef.DataKind_QName, false).
+				AddField("recIDField", appdef.DataKind_RecordID, false)
 		})
 	})
 
@@ -589,7 +589,7 @@ func Test_ValidCUD(t *testing.T) {
 
 	t.Run("must error if empty CUD QName", func(t *testing.T) {
 		cud := newCUD(cfg)
-		_ = cud.Create(schemas.NullQName)
+		_ = cud.Create(appdef.NullQName)
 		err := cud.build()
 		require.NoError(err)
 		err = cfg.validators.validCUD(&cud, false)
@@ -598,7 +598,7 @@ func Test_ValidCUD(t *testing.T) {
 
 	t.Run("must error if wrong CUD schema kind", func(t *testing.T) {
 		cud := newCUD(cfg)
-		c := cud.Create(schemas.NewQName("test", "object"))
+		c := cud.Create(appdef.NewQName("test", "object"))
 		c.PutInt32("int32Field", 7)
 		err := cud.build()
 		require.NoError(err)
@@ -608,8 +608,8 @@ func Test_ValidCUD(t *testing.T) {
 
 	t.Run("test storage ID allow / disable in CUD.Create", func(t *testing.T) {
 		cud := newCUD(cfg)
-		c := cud.Create(schemas.NewQName("test", "document"))
-		c.PutRecordID(schemas.SystemField_ID, 100500)
+		c := cud.Create(appdef.NewQName("test", "document"))
+		c.PutRecordID(appdef.SystemField_ID, 100500)
 		c.PutInt32("int32Field", 7)
 		err := cud.build()
 		require.NoError(err)
@@ -626,12 +626,12 @@ func Test_ValidCUD(t *testing.T) {
 	t.Run("must error if raw ID duplication", func(t *testing.T) {
 		cud := newCUD(cfg)
 
-		c1 := cud.Create(schemas.NewQName("test", "document"))
-		c1.PutRecordID(schemas.SystemField_ID, 1)
+		c1 := cud.Create(appdef.NewQName("test", "document"))
+		c1.PutRecordID(appdef.SystemField_ID, 1)
 		c1.PutInt32("int32Field", 7)
 
-		c2 := cud.Create(schemas.NewQName("test", "document"))
-		c2.PutRecordID(schemas.SystemField_ID, 1)
+		c2 := cud.Create(appdef.NewQName("test", "document"))
+		c2.PutRecordID(appdef.SystemField_ID, 1)
 		c2.PutInt32("int32Field", 8)
 
 		err := cud.build()
@@ -644,14 +644,14 @@ func Test_ValidCUD(t *testing.T) {
 	t.Run("must error if invalid ID refs", func(t *testing.T) {
 		cud := newCUD(cfg)
 
-		c1 := cud.Create(schemas.NewQName("test", "document"))
-		c1.PutRecordID(schemas.SystemField_ID, 1)
+		c1 := cud.Create(appdef.NewQName("test", "document"))
+		c1.PutRecordID(appdef.SystemField_ID, 1)
 		c1.PutInt32("int32Field", 7)
 
-		c2 := cud.Create(schemas.NewQName("test", "record"))
-		c2.PutString(schemas.SystemField_Container, "child")
-		c2.PutRecordID(schemas.SystemField_ID, 2)
-		c2.PutRecordID(schemas.SystemField_ParentID, 7)
+		c2 := cud.Create(appdef.NewQName("test", "record"))
+		c2.PutString(appdef.SystemField_Container, "child")
+		c2.PutRecordID(appdef.SystemField_ID, 2)
+		c2.PutRecordID(appdef.SystemField_ParentID, 7)
 		c2.PutInt32("int32Field", 8)
 		c2.PutRecordID("recIDField", 7)
 
@@ -667,15 +667,15 @@ func Test_VerifiedFields(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	objName := schemas.NewQName("test", "Schema")
+	objName := appdef.NewQName("test", "Schema")
 
-	bld := schemas.NewSchemaCache()
+	bld := appdef.NewSchemaCache()
 	t.Run("must be ok to build schemas", func(t *testing.T) {
-		schema := bld.Add(objName, schemas.SchemaKind_Object)
+		schema := bld.Add(objName, appdef.SchemaKind_Object)
 		schema.
-			AddField("int32", schemas.DataKind_int32, true).
-			AddVerifiedField("email", schemas.DataKind_string, false, schemas.VerificationKind_EMail).
-			AddVerifiedField("age", schemas.DataKind_int32, false, schemas.VerificationKind_Any...)
+			AddField("int32", appdef.DataKind_int32, true).
+			AddVerifiedField("email", appdef.DataKind_string, false, appdef.VerificationKind_EMail).
+			AddVerifiedField("age", appdef.DataKind_int32, false, appdef.VerificationKind_Any...)
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -697,7 +697,7 @@ func Test_VerifiedFields(t *testing.T) {
 		t.Run("ok verified value type in token", func(t *testing.T) {
 			okEmailToken := func() string {
 				p := payloads.VerifiedValuePayload{
-					VerificationKind: schemas.VerificationKind_EMail,
+					VerificationKind: appdef.VerificationKind_EMail,
 					Entity:           objName,
 					Field:            "email",
 					Value:            email,
@@ -709,7 +709,7 @@ func Test_VerifiedFields(t *testing.T) {
 
 			okAgeToken := func() string {
 				p := payloads.VerifiedValuePayload{
-					VerificationKind: schemas.VerificationKind_Phone,
+					VerificationKind: appdef.VerificationKind_Phone,
 					Entity:           objName,
 					Field:            "age",
 					Value:            7,
@@ -751,7 +751,7 @@ func Test_VerifiedFields(t *testing.T) {
 		t.Run("error if unexpected token kind", func(t *testing.T) {
 			ukToken := func() string {
 				p := payloads.VerifiedValuePayload{
-					VerificationKind: schemas.VerificationKind_Phone,
+					VerificationKind: appdef.VerificationKind_Phone,
 					Entity:           objName,
 					Field:            "email",
 					Value:            email,
@@ -772,8 +772,8 @@ func Test_VerifiedFields(t *testing.T) {
 		t.Run("error if wrong verified entity in token", func(t *testing.T) {
 			weToken := func() string {
 				p := payloads.VerifiedValuePayload{
-					VerificationKind: schemas.VerificationKind_EMail,
-					Entity:           schemas.NewQName("test", "other"),
+					VerificationKind: appdef.VerificationKind_EMail,
+					Entity:           appdef.NewQName("test", "other"),
 					Field:            "email",
 					Value:            email,
 				}
@@ -793,7 +793,7 @@ func Test_VerifiedFields(t *testing.T) {
 		t.Run("error if wrong verified field in token", func(t *testing.T) {
 			wfToken := func() string {
 				p := payloads.VerifiedValuePayload{
-					VerificationKind: schemas.VerificationKind_EMail,
+					VerificationKind: appdef.VerificationKind_EMail,
 					Entity:           objName,
 					Field:            "otherField",
 					Value:            email,
@@ -814,7 +814,7 @@ func Test_VerifiedFields(t *testing.T) {
 		t.Run("error if wrong verified value type in token", func(t *testing.T) {
 			wtToken := func() string {
 				p := payloads.VerifiedValuePayload{
-					VerificationKind: schemas.VerificationKind_EMail,
+					VerificationKind: appdef.VerificationKind_EMail,
 					Entity:           objName,
 					Field:            "email",
 					Value:            3.141592653589793238,
@@ -852,7 +852,7 @@ func Test_ValidateErrors(t *testing.T) {
 					PLogOffset:        test.plogOfs,
 					Workspace:         test.workspace,
 					WLogOffset:        test.wlogOfs,
-					QName:             schemas.NullQName,
+					QName:             appdef.NullQName,
 					RegisteredAt:      test.registeredTime,
 				},
 				Device:   test.device,
@@ -889,20 +889,20 @@ func Test_ValidateErrors(t *testing.T) {
 	t.Run("ECode_InvalidSchemaKind", func(t *testing.T) {
 		var app istructs.IAppStructs
 
-		cDocName := schemas.NewQName("test", "CDoc")
-		cmdCreateDoc := schemas.NewQName("test", "CreateDoc")
+		cDocName := appdef.NewQName("test", "CDoc")
+		cmdCreateDoc := appdef.NewQName("test", "CreateDoc")
 
 		t.Run("builds app", func(t *testing.T) {
-			bld := schemas.NewSchemaCache()
+			bld := appdef.NewSchemaCache()
 
 			t.Run("must be ok to build schemas", func(t *testing.T) {
-				CDocSchema := bld.Add(cDocName, schemas.SchemaKind_CDoc)
-				CDocSchema.AddField("Int32", schemas.DataKind_int32, false)
+				CDocSchema := bld.Add(cDocName, appdef.SchemaKind_CDoc)
+				CDocSchema.AddField("Int32", appdef.DataKind_int32, false)
 			})
 
 			cfgs := make(AppConfigsType, 1)
 			cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
-			cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, schemas.NullQName, schemas.NullQName, NullCommandExec))
+			cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, appdef.NullQName, appdef.NullQName, NullCommandExec))
 
 			storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
 			require.NoError(err)
@@ -971,7 +971,7 @@ func Test_ValidateErrors(t *testing.T) {
 				SyncedAt: test.syncTime,
 			})
 		cmd := bld.ArgumentObjectBuilder()
-		cmd.PutRecordID(schemas.SystemField_ID, 100500100500)
+		cmd.PutRecordID(appdef.SystemField_ID, 100500100500)
 		cmd.PutString(test.buyerIdent, test.buyerValue)
 
 		_, buildErr := bld.BuildRawEvent()
@@ -998,7 +998,7 @@ func Test_ValidateErrors(t *testing.T) {
 
 		cud := bld.CUDBuilder()
 		newRec := cud.Create(test.testCDoc)
-		newRec.PutRecordID(schemas.SystemField_ID, 1)
+		newRec.PutRecordID(appdef.SystemField_ID, 1)
 		r := newTestCDoc(1)
 		_ = cud.Update(r)
 
@@ -1071,10 +1071,10 @@ func Test_ValidateErrors(t *testing.T) {
 				SyncedAt: test.syncTime,
 			})
 		cmd := bld.ArgumentObjectBuilder()
-		cmd.PutRecordID(schemas.SystemField_ID, 1)
+		cmd.PutRecordID(appdef.SystemField_ID, 1)
 		cmd.PutString(test.buyerIdent, test.buyerValue)
 		bsk := cmd.ElementBuilder(test.basketIdent)
-		bsk.PutRecordID(schemas.SystemField_ID, 2)
+		bsk.PutRecordID(appdef.SystemField_ID, 2)
 		_ = bsk.ElementBuilder("")
 
 		_, buildErr := bld.BuildRawEvent()
@@ -1099,12 +1099,12 @@ func Test_ValidateErrors(t *testing.T) {
 				SyncedAt: test.syncTime,
 			})
 		cmd := bld.ArgumentObjectBuilder()
-		cmd.PutRecordID(schemas.SystemField_ID, 1)
+		cmd.PutRecordID(appdef.SystemField_ID, 1)
 		cmd.PutString(test.buyerIdent, test.buyerValue)
 		bsk := cmd.ElementBuilder(test.basketIdent)
-		bsk.PutRecordID(schemas.SystemField_ID, 2)
+		bsk.PutRecordID(appdef.SystemField_ID, 2)
 		good := bsk.ElementBuilder(test.goodIdent)
-		good.PutString(schemas.SystemField_Container, test.basketIdent) // error here
+		good.PutString(appdef.SystemField_Container, test.basketIdent) // error here
 
 		_, buildErr := bld.BuildRawEvent()
 		require.ErrorIs(buildErr, ErrNameNotFound)
@@ -1128,7 +1128,7 @@ func Test_ValidateErrors(t *testing.T) {
 				SyncedAt: test.syncTime,
 			})
 		cmd := bld.ArgumentObjectBuilder()
-		cmd.PutRecordID(schemas.SystemField_ID, 1)
+		cmd.PutRecordID(appdef.SystemField_ID, 1)
 		cmd.PutString(test.buyerIdent, test.buyerValue)
 
 		_, buildErr := bld.BuildRawEvent()
@@ -1153,11 +1153,11 @@ func Test_ValidateErrors(t *testing.T) {
 				SyncedAt: test.syncTime,
 			})
 		cmd := bld.ArgumentObjectBuilder()
-		cmd.PutRecordID(schemas.SystemField_ID, 1)
+		cmd.PutRecordID(appdef.SystemField_ID, 1)
 		cmd.PutString(test.buyerIdent, test.buyerValue)
 
 		bsk := cmd.ElementBuilder(test.basketIdent)
-		bsk.PutRecordID(schemas.SystemField_ID, 2)
+		bsk.PutRecordID(appdef.SystemField_ID, 2)
 
 		_ = cmd.ElementBuilder(test.basketIdent)
 

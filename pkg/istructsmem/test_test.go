@@ -11,11 +11,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type (
@@ -32,9 +32,9 @@ type (
 		plogOfs           istructs.Offset
 		workspace         istructs.WSID
 		wlogOfs           istructs.Offset
-		saleCmdName       schemas.QName
-		saleCmdDocName    schemas.QName
-		saleSecurParsName schemas.QName
+		saleCmdName       appdef.QName
+		saleCmdDocName    appdef.QName
+		saleSecurParsName appdef.QName
 		registeredTime    istructs.UnixMilli
 		deviceIdent       string
 		device            istructs.ConnectedDeviceID
@@ -73,30 +73,30 @@ type (
 		tempGoodsID  []istructs.RecordID
 
 		// event cuids entities
-		tablePhotos    schemas.QName
+		tablePhotos    appdef.QName
 		tempPhotoID    istructs.RecordID
-		tablePhotoRems schemas.QName
+		tablePhotoRems appdef.QName
 		tempRemarkID   istructs.RecordID
 
 		// tested resources
-		changeCmdName schemas.QName
+		changeCmdName appdef.QName
 
-		queryPhotoFunctionName         schemas.QName
-		queryPhotoFunctionParamsSchema schemas.QName
+		queryPhotoFunctionName         appdef.QName
+		queryPhotoFunctionParamsSchema appdef.QName
 
 		// tested rows
-		testRow schemas.QName
+		testRow appdef.QName
 
 		// tested records
-		testCDoc schemas.QName
-		testCRec schemas.QName
+		testCDoc appdef.QName
+		testCRec appdef.QName
 
 		// tested viewRecords
 		testViewRecord testViewRecordType
 	}
 
 	testViewRecordType struct {
-		name, valueName schemas.QName
+		name, valueName appdef.QName
 		partFields      testViewRecordPartKeyFieldsType
 		clustFields     testViewRecordClustKeyFieldsType
 		valueFields     testViewRecordValueFieldsType
@@ -132,9 +132,9 @@ var data = testDataType{
 	plogOfs:           10000,
 	workspace:         1234,
 	wlogOfs:           1000,
-	saleCmdName:       schemas.NewQName("test", "sales"),
-	saleCmdDocName:    schemas.NewQName("test", "saleArgs"),
-	saleSecurParsName: schemas.NewQName("test", "saleSecureArgs"),
+	saleCmdName:       appdef.NewQName("test", "sales"),
+	saleCmdDocName:    appdef.NewQName("test", "saleArgs"),
+	saleSecurParsName: appdef.NewQName("test", "saleSecureArgs"),
 	registeredTime:    100500,
 	deviceIdent:       "Device",
 	device:            762,
@@ -172,22 +172,22 @@ var data = testDataType{
 	tempBasketID: 556,
 	tempGoodsID:  []istructs.RecordID{557, 558},
 
-	tablePhotos:    schemas.NewQName("test", "photos"),
+	tablePhotos:    appdef.NewQName("test", "photos"),
 	tempPhotoID:    1,
-	tablePhotoRems: schemas.NewQName("test", "photoRems"),
+	tablePhotoRems: appdef.NewQName("test", "photoRems"),
 	tempRemarkID:   2,
 
-	changeCmdName: schemas.NewQName("test", "change"),
+	changeCmdName: appdef.NewQName("test", "change"),
 
-	queryPhotoFunctionName:         schemas.NewQName("test", "QueryPhoto"),
-	queryPhotoFunctionParamsSchema: schemas.NewQName("test", "QueryPhotoParams"),
+	queryPhotoFunctionName:         appdef.NewQName("test", "QueryPhoto"),
+	queryPhotoFunctionParamsSchema: appdef.NewQName("test", "QueryPhotoParams"),
 
-	testRow:  schemas.NewQName("test", "Row"),
-	testCDoc: schemas.NewQName("test", "CDoc"),
-	testCRec: schemas.NewQName("test", "Record"),
+	testRow:  appdef.NewQName("test", "Row"),
+	testCDoc: appdef.NewQName("test", "CDoc"),
+	testCRec: appdef.NewQName("test", "Record"),
 
 	testViewRecord: testViewRecordType{
-		name: schemas.NewQName("test", "ViewPhotos"),
+		name: appdef.NewQName("test", "ViewPhotos"),
 		partFields: testViewRecordPartKeyFieldsType{
 			partition: "partition",
 			workspace: "workspace",
@@ -210,112 +210,112 @@ var data = testDataType{
 
 var test func() *testDataType = func() *testDataType {
 
-	prepareSchemas := func() schemas.SchemaCacheBuilder {
-		bld := schemas.NewSchemaCache()
+	prepareSchemas := func() appdef.SchemaCacheBuilder {
+		bld := appdef.NewSchemaCache()
 
 		{
-			saleParamsSchema := bld.Add(data.saleCmdDocName, schemas.SchemaKind_ODoc)
+			saleParamsSchema := bld.Add(data.saleCmdDocName, appdef.SchemaKind_ODoc)
 			saleParamsSchema.
-				AddField(data.buyerIdent, schemas.DataKind_string, true).
-				AddField(data.ageIdent, schemas.DataKind_int32, false).
-				AddField(data.heightIdent, schemas.DataKind_float32, false).
-				AddField(data.humanIdent, schemas.DataKind_bool, false).
-				AddField(data.photoIdent, schemas.DataKind_bytes, false).
-				AddContainer(data.basketIdent, schemas.NewQName(data.pkgName, data.basketIdent), 1, 1)
+				AddField(data.buyerIdent, appdef.DataKind_string, true).
+				AddField(data.ageIdent, appdef.DataKind_int32, false).
+				AddField(data.heightIdent, appdef.DataKind_float32, false).
+				AddField(data.humanIdent, appdef.DataKind_bool, false).
+				AddField(data.photoIdent, appdef.DataKind_bytes, false).
+				AddContainer(data.basketIdent, appdef.NewQName(data.pkgName, data.basketIdent), 1, 1)
 
-			basketSchema := bld.Add(schemas.NewQName(data.pkgName, data.basketIdent), schemas.SchemaKind_ORecord)
+			basketSchema := bld.Add(appdef.NewQName(data.pkgName, data.basketIdent), appdef.SchemaKind_ORecord)
 			basketSchema.
-				AddContainer(data.goodIdent, schemas.NewQName(data.pkgName, data.goodIdent), 0, schemas.Occurs_Unbounded)
+				AddContainer(data.goodIdent, appdef.NewQName(data.pkgName, data.goodIdent), 0, appdef.Occurs_Unbounded)
 
-			goodSchema := bld.Add(schemas.NewQName(data.pkgName, data.goodIdent), schemas.SchemaKind_ORecord)
+			goodSchema := bld.Add(appdef.NewQName(data.pkgName, data.goodIdent), appdef.SchemaKind_ORecord)
 			goodSchema.
-				AddField(data.saleIdent, schemas.DataKind_RecordID, true).
-				AddField(data.nameIdent, schemas.DataKind_string, true).
-				AddField(data.codeIdent, schemas.DataKind_int64, true).
-				AddField(data.weightIdent, schemas.DataKind_float64, false)
+				AddField(data.saleIdent, appdef.DataKind_RecordID, true).
+				AddField(data.nameIdent, appdef.DataKind_string, true).
+				AddField(data.codeIdent, appdef.DataKind_int64, true).
+				AddField(data.weightIdent, appdef.DataKind_float64, false)
 
-			saleSecurParamsSchema := bld.Add(data.saleSecurParsName, schemas.SchemaKind_Object)
+			saleSecurParamsSchema := bld.Add(data.saleSecurParsName, appdef.SchemaKind_Object)
 			saleSecurParamsSchema.
-				AddField(data.passwordIdent, schemas.DataKind_string, true)
+				AddField(data.passwordIdent, appdef.DataKind_string, true)
 
-			photoParamsSchema := bld.Add(data.queryPhotoFunctionParamsSchema, schemas.SchemaKind_Object)
+			photoParamsSchema := bld.Add(data.queryPhotoFunctionParamsSchema, appdef.SchemaKind_Object)
 			photoParamsSchema.
-				AddField(data.buyerIdent, schemas.DataKind_string, true)
+				AddField(data.buyerIdent, appdef.DataKind_string, true)
 		}
 
 		{
-			recSchema := bld.Add(data.tablePhotos, schemas.SchemaKind_CDoc)
+			recSchema := bld.Add(data.tablePhotos, appdef.SchemaKind_CDoc)
 			recSchema.
-				AddField(data.buyerIdent, schemas.DataKind_string, true).
-				AddField(data.ageIdent, schemas.DataKind_int32, false).
-				AddField(data.heightIdent, schemas.DataKind_float32, false).
-				AddField(data.humanIdent, schemas.DataKind_bool, false).
-				AddField(data.photoIdent, schemas.DataKind_bytes, false).
-				AddContainer(data.remarkIdent, data.tablePhotoRems, 0, schemas.Occurs_Unbounded)
+				AddField(data.buyerIdent, appdef.DataKind_string, true).
+				AddField(data.ageIdent, appdef.DataKind_int32, false).
+				AddField(data.heightIdent, appdef.DataKind_float32, false).
+				AddField(data.humanIdent, appdef.DataKind_bool, false).
+				AddField(data.photoIdent, appdef.DataKind_bytes, false).
+				AddContainer(data.remarkIdent, data.tablePhotoRems, 0, appdef.Occurs_Unbounded)
 
-			recSchemaChild := bld.Add(data.tablePhotoRems, schemas.SchemaKind_CRecord)
+			recSchemaChild := bld.Add(data.tablePhotoRems, appdef.SchemaKind_CRecord)
 			recSchemaChild.
-				AddField(data.photoIdent, schemas.DataKind_RecordID, true).
-				AddField(data.remarkIdent, schemas.DataKind_string, true).
-				AddField(data.emptiableIdent, schemas.DataKind_string, false)
+				AddField(data.photoIdent, appdef.DataKind_RecordID, true).
+				AddField(data.remarkIdent, appdef.DataKind_string, true).
+				AddField(data.emptiableIdent, appdef.DataKind_string, false)
 		}
 
 		{
-			rowSchema := bld.Add(data.testRow, schemas.SchemaKind_Element)
+			rowSchema := bld.Add(data.testRow, appdef.SchemaKind_Element)
 			rowSchema.
-				AddField("int32", schemas.DataKind_int32, false).
-				AddField("int64", schemas.DataKind_int64, false).
-				AddField("float32", schemas.DataKind_float32, false).
-				AddField("float64", schemas.DataKind_float64, false).
-				AddField("bytes", schemas.DataKind_bytes, false).
-				AddField("string", schemas.DataKind_string, false).
-				AddField("QName", schemas.DataKind_QName, false).
-				AddField("bool", schemas.DataKind_bool, false).
-				AddField("RecordID", schemas.DataKind_RecordID, false).
-				AddField("RecordID_2", schemas.DataKind_RecordID, false)
+				AddField("int32", appdef.DataKind_int32, false).
+				AddField("int64", appdef.DataKind_int64, false).
+				AddField("float32", appdef.DataKind_float32, false).
+				AddField("float64", appdef.DataKind_float64, false).
+				AddField("bytes", appdef.DataKind_bytes, false).
+				AddField("string", appdef.DataKind_string, false).
+				AddField("QName", appdef.DataKind_QName, false).
+				AddField("bool", appdef.DataKind_bool, false).
+				AddField("RecordID", appdef.DataKind_RecordID, false).
+				AddField("RecordID_2", appdef.DataKind_RecordID, false)
 		}
 
 		{
-			cDocSchema := bld.Add(data.testCDoc, schemas.SchemaKind_CDoc)
+			cDocSchema := bld.Add(data.testCDoc, appdef.SchemaKind_CDoc)
 			cDocSchema.
-				AddField("int32", schemas.DataKind_int32, false).
-				AddField("int64", schemas.DataKind_int64, false).
-				AddField("float32", schemas.DataKind_float32, false).
-				AddField("float64", schemas.DataKind_float64, false).
-				AddField("bytes", schemas.DataKind_bytes, false).
-				AddField("string", schemas.DataKind_string, false).
-				AddField("QName", schemas.DataKind_QName, false).
-				AddField("bool", schemas.DataKind_bool, false).
-				AddField("RecordID", schemas.DataKind_RecordID, false).
-				AddContainer("record", data.testCRec, 0, schemas.Occurs_Unbounded)
+				AddField("int32", appdef.DataKind_int32, false).
+				AddField("int64", appdef.DataKind_int64, false).
+				AddField("float32", appdef.DataKind_float32, false).
+				AddField("float64", appdef.DataKind_float64, false).
+				AddField("bytes", appdef.DataKind_bytes, false).
+				AddField("string", appdef.DataKind_string, false).
+				AddField("QName", appdef.DataKind_QName, false).
+				AddField("bool", appdef.DataKind_bool, false).
+				AddField("RecordID", appdef.DataKind_RecordID, false).
+				AddContainer("record", data.testCRec, 0, appdef.Occurs_Unbounded)
 
-			cRecSchema := bld.Add(data.testCRec, schemas.SchemaKind_CRecord)
+			cRecSchema := bld.Add(data.testCRec, appdef.SchemaKind_CRecord)
 			cRecSchema.
-				AddField("int32", schemas.DataKind_int32, false).
-				AddField("int64", schemas.DataKind_int64, false).
-				AddField("float32", schemas.DataKind_float32, false).
-				AddField("float64", schemas.DataKind_float64, false).
-				AddField("bytes", schemas.DataKind_bytes, false).
-				AddField("string", schemas.DataKind_string, false).
-				AddField("QName", schemas.DataKind_QName, false).
-				AddField("bool", schemas.DataKind_bool, false).
-				AddField("RecordID", schemas.DataKind_RecordID, false)
+				AddField("int32", appdef.DataKind_int32, false).
+				AddField("int64", appdef.DataKind_int64, false).
+				AddField("float32", appdef.DataKind_float32, false).
+				AddField("float64", appdef.DataKind_float64, false).
+				AddField("bytes", appdef.DataKind_bytes, false).
+				AddField("string", appdef.DataKind_string, false).
+				AddField("QName", appdef.DataKind_QName, false).
+				AddField("bool", appdef.DataKind_bool, false).
+				AddField("RecordID", appdef.DataKind_RecordID, false)
 		}
 
 		{
 			viewSchema := bld.AddView(data.testViewRecord.name)
 			viewSchema.
-				AddPartField(data.testViewRecord.partFields.partition, schemas.DataKind_int32).
-				AddPartField(data.testViewRecord.partFields.workspace, schemas.DataKind_int64).
-				AddClustColumn(data.testViewRecord.clustFields.device, schemas.DataKind_int32).
-				AddClustColumn(data.testViewRecord.clustFields.sorter, schemas.DataKind_string).
-				AddValueField(data.testViewRecord.valueFields.buyer, schemas.DataKind_string, true).
-				AddValueField(data.testViewRecord.valueFields.age, schemas.DataKind_int32, false).
-				AddValueField(data.testViewRecord.valueFields.heights, schemas.DataKind_float32, false).
-				AddValueField(data.testViewRecord.valueFields.human, schemas.DataKind_bool, false).
-				AddValueField(data.testViewRecord.valueFields.photo, schemas.DataKind_bytes, false).
-				AddValueField(data.testViewRecord.valueFields.record, schemas.DataKind_Record, false).
-				AddValueField(data.testViewRecord.valueFields.event, schemas.DataKind_Event, false)
+				AddPartField(data.testViewRecord.partFields.partition, appdef.DataKind_int32).
+				AddPartField(data.testViewRecord.partFields.workspace, appdef.DataKind_int64).
+				AddClustColumn(data.testViewRecord.clustFields.device, appdef.DataKind_int32).
+				AddClustColumn(data.testViewRecord.clustFields.sorter, appdef.DataKind_string).
+				AddValueField(data.testViewRecord.valueFields.buyer, appdef.DataKind_string, true).
+				AddValueField(data.testViewRecord.valueFields.age, appdef.DataKind_int32, false).
+				AddValueField(data.testViewRecord.valueFields.heights, appdef.DataKind_float32, false).
+				AddValueField(data.testViewRecord.valueFields.human, appdef.DataKind_bool, false).
+				AddValueField(data.testViewRecord.valueFields.photo, appdef.DataKind_bytes, false).
+				AddValueField(data.testViewRecord.valueFields.record, appdef.DataKind_Record, false).
+				AddValueField(data.testViewRecord.valueFields.event, appdef.DataKind_Event, false)
 			data.testViewRecord.valueName = viewSchema.ValueSchema().QName()
 		}
 
@@ -330,9 +330,9 @@ var test func() *testDataType = func() *testDataType {
 			panic(err)
 		}
 
-		cfg.Resources.Add(NewCommandFunction(data.saleCmdName, data.saleCmdDocName, data.saleSecurParsName, schemas.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewCommandFunction(data.changeCmdName, schemas.NullQName, schemas.NullQName, schemas.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewQueryFunction(data.queryPhotoFunctionName, data.queryPhotoFunctionParamsSchema, schemas.NullQName, NullQueryExec))
+		cfg.Resources.Add(NewCommandFunction(data.saleCmdName, data.saleCmdDocName, data.saleSecurParsName, appdef.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(data.changeCmdName, appdef.NullQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewQueryFunction(data.queryPhotoFunctionName, data.queryPhotoFunctionParamsSchema, appdef.NullQName, NullQueryExec))
 
 		if err := cfg.prepare(iratesce.TestBucketsFactory(), storage); err != nil {
 			panic(err)
@@ -542,7 +542,7 @@ func recsIsEqual(record1, record2 istructs.IRecord) (ok bool, err error) {
 
 func fillTestObject(obj *elementType) {
 	test := test()
-	obj.PutRecordID(schemas.SystemField_ID, test.tempSaleID)
+	obj.PutRecordID(appdef.SystemField_ID, test.tempSaleID)
 	obj.PutString(test.buyerIdent, test.buyerValue)
 	obj.PutInt32(test.ageIdent, test.ageValue)
 	obj.PutFloat32(test.heightIdent, test.heightValue)
@@ -550,11 +550,11 @@ func fillTestObject(obj *elementType) {
 	obj.PutBytes(test.photoIdent, test.photoValue)
 
 	basket := obj.ElementBuilder(test.basketIdent)
-	basket.PutRecordID(schemas.SystemField_ID, test.tempBasketID)
+	basket.PutRecordID(appdef.SystemField_ID, test.tempBasketID)
 
 	for i := 0; i < test.goodCount; i++ {
 		good := basket.ElementBuilder(test.goodIdent)
-		good.PutRecordID(schemas.SystemField_ID, test.tempGoodsID[i])
+		good.PutRecordID(appdef.SystemField_ID, test.tempGoodsID[i])
 		good.PutRecordID(test.saleIdent, test.tempSaleID)
 		good.PutString(test.nameIdent, test.goodNames[i])
 		good.PutInt64(test.codeIdent, test.goodCodes[i])
@@ -614,7 +614,7 @@ func fillTestCUD(cud *cudType) {
 	test := test()
 
 	rec := cud.Create(test.tablePhotos)
-	rec.PutRecordID(schemas.SystemField_ID, test.tempPhotoID)
+	rec.PutRecordID(appdef.SystemField_ID, test.tempPhotoID)
 	rec.PutString(test.buyerIdent, test.buyerValue)
 	rec.PutInt32(test.ageIdent, test.ageValue)
 	rec.PutFloat32(test.heightIdent, test.heightValue)
@@ -622,9 +622,9 @@ func fillTestCUD(cud *cudType) {
 	rec.PutBytes(test.photoIdent, test.photoValue)
 
 	recRem := cud.Create(test.tablePhotoRems)
-	recRem.PutRecordID(schemas.SystemField_ID, test.tempRemarkID)
-	recRem.PutRecordID(schemas.SystemField_ParentID, test.tempPhotoID)
-	recRem.PutString(schemas.SystemField_Container, test.remarkIdent)
+	recRem.PutRecordID(appdef.SystemField_ID, test.tempRemarkID)
+	recRem.PutRecordID(appdef.SystemField_ParentID, test.tempPhotoID)
+	recRem.PutString(appdef.SystemField_Container, test.remarkIdent)
 	recRem.PutRecordID(test.photoIdent, test.tempPhotoID)
 	recRem.PutString(test.remarkIdent, test.remarkValue)
 }
@@ -685,7 +685,7 @@ func testTestEvent(t *testing.T, value istructs.IDbEvent, pLogOffs, wLogOffs ist
 			testPhotoRow(t, rec)
 		}
 		if rec.QName() == test.tablePhotoRems {
-			require.Equal(rec.AsRecordID(schemas.SystemField_ParentID), rec.AsRecordID(test.photoIdent))
+			require.Equal(rec.AsRecordID(appdef.SystemField_ParentID), rec.AsRecordID(test.photoIdent))
 			require.Equal(test.remarkValue, rec.AsString(test.remarkIdent))
 		}
 		cnt++
@@ -697,7 +697,7 @@ func testTestEvent(t *testing.T, value istructs.IDbEvent, pLogOffs, wLogOffs ist
 func newEmptyTestEvent() *dbEventType {
 	test := test()
 	ev := newDbEvent(test.AppCfg)
-	ev.name = schemas.NullQName
+	ev.name = appdef.NullQName
 	return &ev
 }
 

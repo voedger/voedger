@@ -8,9 +8,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -37,7 +37,7 @@ func (o *EnrichmentOperator) DoAsync(ctx context.Context, work pipeline.IWorkpie
 					return work, ctx.Err()
 				}
 
-				kb, err := o.state.KeyBuilder(state.RecordsStorage, schemas.NullQName)
+				kb, err := o.state.KeyBuilder(state.RecordsStorage, appdef.NullQName)
 				if err != nil {
 					return work, err
 				}

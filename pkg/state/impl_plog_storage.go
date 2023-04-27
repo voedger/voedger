@@ -8,8 +8,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -20,7 +20,7 @@ type pLogStorage struct {
 	partitionIDFunc PartitionIDFunc
 }
 
-func (s *pLogStorage) NewKeyBuilder(schemas.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
+func (s *pLogStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &pLogKeyBuilder{
 		logKeyBuilder: logKeyBuilder{
 			offset: istructs.FirstOffset,

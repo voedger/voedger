@@ -6,26 +6,26 @@
 package descr
 
 import (
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 type Schema struct {
-	Name       schemas.QName
-	Kind       schemas.SchemaKind
+	Name       appdef.QName
+	Kind       appdef.SchemaKind
 	Fields     []*Field     `json:",omitempty"`
 	Containers []*Container `json:",omitempty"`
 }
 
 type Field struct {
 	Name       string
-	Kind       schemas.DataKind
+	Kind       appdef.DataKind
 	Required   bool `json:",omitempty"`
 	Verifiable bool `json:",omitempty"`
 }
 
 type Container struct {
 	Name      string
-	Type      schemas.QName
-	MinOccurs schemas.Occurs
-	MaxOccurs schemas.Occurs
+	Type      appdef.QName
+	MinOccurs appdef.Occurs
+	MaxOccurs appdef.Occurs
 }

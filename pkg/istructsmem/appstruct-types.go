@@ -8,6 +8,7 @@ package istructsmem
 import (
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	istorage "github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -16,14 +17,13 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/singletons"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // AppConfigsType: map of applications configurators
 type AppConfigsType map[istructs.AppQName]*AppConfigType
 
 // AddConfig: adds new config for specified application
-func (cfgs *AppConfigsType) AddConfig(appName istructs.AppQName, schemas schemas.SchemaCacheBuilder) *AppConfigType {
+func (cfgs *AppConfigsType) AddConfig(appName istructs.AppQName, schemas appdef.SchemaCacheBuilder) *AppConfigType {
 	c := newAppConfig(appName, schemas)
 
 	(*cfgs)[appName] = c
@@ -44,8 +44,8 @@ type AppConfigType struct {
 	Name    istructs.AppQName
 	QNameID istructs.ClusterAppID
 
-	scb       schemas.SchemaCacheBuilder
-	Schemas   schemas.SchemaCache
+	scb       appdef.SchemaCacheBuilder
+	Schemas   appdef.SchemaCache
 	Resources ResourcesType
 	Uniques   *implIUniques
 
@@ -66,7 +66,7 @@ type AppConfigType struct {
 	eventValidators         []istructs.EventValidator
 }
 
-func newAppConfig(appName istructs.AppQName, scb schemas.SchemaCacheBuilder) *AppConfigType {
+func newAppConfig(appName istructs.AppQName, scb appdef.SchemaCacheBuilder) *AppConfigType {
 	cfg := AppConfigType{Name: appName}
 
 	qNameID, ok := istructs.ClusterApps[appName]
@@ -93,7 +93,7 @@ func newAppConfig(appName istructs.AppQName, scb schemas.SchemaCacheBuilder) *Ap
 	cfg.singletons = singletons.New()
 
 	cfg.FunctionRateLimits = functionRateLimits{
-		limits: map[schemas.QName]map[istructs.RateLimitKind]istructs.RateLimit{},
+		limits: map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit{},
 	}
 	return &cfg
 }

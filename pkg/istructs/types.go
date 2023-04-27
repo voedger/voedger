@@ -4,7 +4,9 @@
 
 package istructs
 
-import "github.com/voedger/voedger/pkg/schemas"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+)
 
 // AppQName is unique in cluster federation
 // <owner>/<name>
@@ -52,7 +54,7 @@ const (
 // IFieldDescr describes one field
 type IFieldDescr interface {
 	Name() string
-	DataKind() schemas.DataKind
+	DataKind() appdef.DataKind
 	Required() bool
 	Verifiable() bool
 }
@@ -66,7 +68,7 @@ type IRowReader interface {
 	AsFloat64(name string) float64
 	AsBytes(name string) []byte
 	AsString(name string) string
-	AsQName(name string) schemas.QName
+	AsQName(name string) appdef.QName
 	AsBool(name string) bool
 	AsRecordID(name string) RecordID
 
@@ -85,7 +87,7 @@ type IRowWriter interface {
 	PutFloat64(name string, value float64)
 	PutBytes(name string, value []byte)
 	PutString(name, value string)
-	PutQName(name string, value schemas.QName)
+	PutQName(name string, value appdef.QName)
 	PutBool(name string, value bool)
 	PutRecordID(name string, value RecordID)
 
@@ -98,9 +100,9 @@ type IRowWriter interface {
 // IContainerDescr describes one container
 type IContainerDescr interface {
 	Name() string
-	Schema() schemas.QName
-	MinOccurs() schemas.Occurs
-	MaxOccurs() schemas.Occurs
+	Schema() appdef.QName
+	MinOccurs() appdef.Occurs
+	MaxOccurs() appdef.Occurs
 }
 
 // App Workspace amount type. Need to wire

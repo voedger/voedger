@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestWLogStorage_Read(t *testing.T) {
@@ -30,7 +30,7 @@ func TestWLogStorage_Read(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		kb, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		kb, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
@@ -53,7 +53,7 @@ func TestWLogStorage_Read(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		k, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
 		require.NoError(err)
 		k.PutInt64(Field_Offset, 1)
 		k.PutInt64(Field_Count, 1)
@@ -86,7 +86,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0)
-		kb, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		kb, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
@@ -124,11 +124,11 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0)
-		kb1, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		kb1, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb1.PutInt64(Field_Offset, 1)
 		kb1.PutInt64(Field_Count, 1)
-		kb2, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		kb2, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb2.PutInt64(Field_Offset, 2)
 		kb2.PutInt64(Field_Count, 1)
@@ -139,7 +139,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 	})
 }
 func TestWLogStorage_ToJSON(t *testing.T) {
-	s := &wLogStorage{schemaCacheFunc: func() schemas.SchemaCache { return nil }}
+	s := &wLogStorage{schemaCacheFunc: func() appdef.SchemaCache { return nil }}
 	require := require.New(t)
 	eventError := &mockEventError{}
 	eventError.

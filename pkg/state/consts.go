@@ -7,18 +7,18 @@ package state
 import (
 	"time"
 
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 var (
-	ViewRecordsStorage = schemas.NewQName(schemas.SysPackage, "ViewRecordsStorage")
-	RecordsStorage     = schemas.NewQName(schemas.SysPackage, "RecordsStorage")
-	WLogStorage        = schemas.NewQName(schemas.SysPackage, "WLogStorage")
-	PLogStorage        = schemas.NewQName(schemas.SysPackage, "PLogStorage")
-	HTTPStorage        = schemas.NewQName(schemas.SysPackage, "HTTPStorage")
-	SendMailStorage    = schemas.NewQName(schemas.SysPackage, "SendMailStorage")
-	AppSecretsStorage  = schemas.NewQName(schemas.SysPackage, "AppSecretsStorage")
-	SubjectStorage     = schemas.NewQName(schemas.SysPackage, "SubjectStorage")
+	ViewRecordsStorage = appdef.NewQName(appdef.SysPackage, "ViewRecordsStorage")
+	RecordsStorage     = appdef.NewQName(appdef.SysPackage, "RecordsStorage")
+	WLogStorage        = appdef.NewQName(appdef.SysPackage, "WLogStorage")
+	PLogStorage        = appdef.NewQName(appdef.SysPackage, "PLogStorage")
+	HTTPStorage        = appdef.NewQName(appdef.SysPackage, "HTTPStorage")
+	SendMailStorage    = appdef.NewQName(appdef.SysPackage, "SendMailStorage")
+	AppSecretsStorage  = appdef.NewQName(appdef.SysPackage, "AppSecretsStorage")
+	SubjectStorage     = appdef.NewQName(appdef.SysPackage, "SubjectStorage")
 )
 
 const (

@@ -10,11 +10,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // TestCore_ViewRecords: test https://dev.heeus.io/launchpad/#!14470
@@ -27,25 +27,25 @@ func TestCore_ViewRecords(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		cache := schemas.NewSchemaCache()
+		cache := appdef.NewSchemaCache()
 		t.Run("must be ok to build schemas", func(t *testing.T) {
-			viewSchema := cache.AddView(schemas.NewQName("test", "viewDrinks"))
+			viewSchema := cache.AddView(appdef.NewQName("test", "viewDrinks"))
 			viewSchema.
-				AddPartField("partitionKey1", schemas.DataKind_int64).
-				AddClustColumn("clusteringColumn1", schemas.DataKind_int64).
-				AddClustColumn("clusteringColumn2", schemas.DataKind_bool).
-				AddClustColumn("clusteringColumn3", schemas.DataKind_string).
-				AddValueField("id", schemas.DataKind_int64, true).
-				AddValueField("name", schemas.DataKind_string, true).
-				AddValueField("active", schemas.DataKind_bool, true)
+				AddPartField("partitionKey1", appdef.DataKind_int64).
+				AddClustColumn("clusteringColumn1", appdef.DataKind_int64).
+				AddClustColumn("clusteringColumn2", appdef.DataKind_bool).
+				AddClustColumn("clusteringColumn3", appdef.DataKind_string).
+				AddValueField("id", appdef.DataKind_int64, true).
+				AddValueField("name", appdef.DataKind_string, true).
+				AddValueField("active", appdef.DataKind_bool, true)
 
-			otherViewSchema := cache.AddView(schemas.NewQName("test", "otherView"))
+			otherViewSchema := cache.AddView(appdef.NewQName("test", "otherView"))
 			otherViewSchema.
-				AddPartField("partitionKey1", schemas.DataKind_QName).
-				AddClustColumn("clusteringColumn1", schemas.DataKind_float32).
-				AddClustColumn("clusteringColumn2", schemas.DataKind_float64).
-				AddClustColumn("clusteringColumn3", schemas.DataKind_bytes).
-				AddValueField("valueField1", schemas.DataKind_int64, false)
+				AddPartField("partitionKey1", appdef.DataKind_QName).
+				AddClustColumn("clusteringColumn1", appdef.DataKind_float32).
+				AddClustColumn("clusteringColumn2", appdef.DataKind_float64).
+				AddClustColumn("clusteringColumn3", appdef.DataKind_bytes).
+				AddValueField("valueField1", appdef.DataKind_int64, false)
 		})
 
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, cache)
@@ -74,7 +74,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	})
 
 	t.Run("Should read one (!) record by WSID = 1", func(t *testing.T) {
-		kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 1)
 
 		var (
@@ -124,7 +124,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	})
 
 	t.Run("Should read three record from WSID = 3 with correct order", func(t *testing.T) {
-		kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 3)
 
 		counter, names := 0, ""
@@ -140,7 +140,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	})
 
 	t.Run("Should read two records by short clustering key and one by full", func(t *testing.T) {
-		kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 2)
 		kb.PutInt64("clusteringColumn1", 100)
 		kb.PutBool("clusteringColumn2", true)
@@ -198,7 +198,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		})
 
 		t.Run("Should read two records by short masked clustering key. ***Old style key filling", func(t *testing.T) {
-			kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PartitionKey().PutInt64("partitionKey1", 2)
 			kb.ClusteringColumns().PutInt64("clusteringColumn1", 100)
 			kb.ClusteringColumns().PutBool("clusteringColumn2", true)
@@ -217,7 +217,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	})
 
 	t.Run("get exists record must be ok", func(t *testing.T) {
-		kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 2)
 		kb.PutInt64("clusteringColumn1", 100)
 		kb.PutBool("clusteringColumn2", true)
@@ -231,7 +231,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	})
 
 	t.Run("get not exists record must be available", func(t *testing.T) {
-		kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 2)
 		kb.PutInt64("clusteringColumn1", 100)
 		kb.PutBool("clusteringColumn2", true)
@@ -243,7 +243,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	})
 
 	t.Run("Test UpdateValueBuilder", func(t *testing.T) {
-		kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 1)
 		kb.PutInt64("clusteringColumn1", 100)
 		kb.PutBool("clusteringColumn2", true)
@@ -262,7 +262,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		require.NotNil(oldValue)
 		require.Equal("Cola light", entryName)
 
-		vb := viewRecords.UpdateValueBuilder(schemas.NewQName("test", "viewDrinks"), oldValue)
+		vb := viewRecords.UpdateValueBuilder(appdef.NewQName("test", "viewDrinks"), oldValue)
 		vb.PutString("name", "Cola lemon")
 
 		err = viewRecords.Put(1, kb, vb)
@@ -280,22 +280,22 @@ func TestCore_ViewRecords(t *testing.T) {
 	t.Run("Invalid key building test", func(t *testing.T) {
 
 		t.Run("Must have panic if key schema missed", func(t *testing.T) {
-			require.Panics(func() { _ = viewRecords.KeyBuilder(schemas.NullQName) })
+			require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NullQName) })
 		})
 
 		t.Run("Must have panic if invalid key schema name", func(t *testing.T) {
 			require.Panics(func() { _ = viewRecords.KeyBuilder(istructs.QNameForError) })
-			require.Panics(func() { _ = viewRecords.KeyBuilder(schemas.NewQName("test", "mismDrinks")) })
+			require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NewQName("test", "mismDrinks")) })
 		})
 
 		t.Run("Must have panic if invalid key schema kind", func(t *testing.T) {
-			require.Panics(func() { _ = viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks_Value")) })
+			require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks_Value")) })
 		})
 
 		t.Run("Must have error if wrong partition key schema", func(t *testing.T) {
-			kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			pk := kb.PartitionKey()
-			pk.PutQName(schemas.SystemField_QName, schemas.NewQName("test", "viewDrinks_Value"))
+			pk.PutQName(appdef.SystemField_QName, appdef.NewQName("test", "viewDrinks_Value"))
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
@@ -303,11 +303,11 @@ func TestCore_ViewRecords(t *testing.T) {
 		})
 
 		t.Run("Must have error if wrong clustering columns schema", func(t *testing.T) {
-			kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			pk := kb.PartitionKey()
 			pk.PutInt64("partitionKey1", 1)
 			cc := kb.ClusteringColumns()
-			cc.PutQName(schemas.SystemField_QName, schemas.NewQName("test", "viewDrinks_Value"))
+			cc.PutQName(appdef.SystemField_QName, appdef.NewQName("test", "viewDrinks_Value"))
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
@@ -315,21 +315,21 @@ func TestCore_ViewRecords(t *testing.T) {
 		})
 
 		t.Run("Must have error if wrong value schema", func(t *testing.T) {
-			kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PutInt64("partitionKey1", 1)
 			kb.PutInt64("clusteringColumn1", 100)
 			kb.PutBool("clusteringColumn2", true)
 			kb.PutString("clusteringColumn3", "soda")
 
-			vb := viewRecords.NewValueBuilder(schemas.NewQName("test", "viewDrinks"))
-			vb.PutQName(schemas.SystemField_QName, schemas.NewQName("test", "viewDrinks_ClusteringColumns"))
+			vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
+			vb.PutQName(appdef.SystemField_QName, appdef.NewQName("test", "viewDrinks_ClusteringColumns"))
 
 			err := viewRecords.Put(1, kb, vb)
 			require.ErrorIs(err, ErrSchemaChanged)
 		})
 
 		t.Run("Must have error if empty partition key", func(t *testing.T) {
-			kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
@@ -344,10 +344,10 @@ func TestCore_ViewRecords(t *testing.T) {
 		})
 
 		t.Run("Must have error for put if empty clustering columns key", func(t *testing.T) {
-			kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PutInt64("partitionKey1", 1)
 
-			vb := viewRecords.NewValueBuilder(schemas.NewQName("test", "viewDrinks"))
+			vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
 			vb.PutInt64("id", 1)
 			vb.PutString("name", "tea")
 			vb.PutBool("active", true)
@@ -363,14 +363,14 @@ func TestCore_ViewRecords(t *testing.T) {
 		t.Run("Must have error if wrong fields in key", func(t *testing.T) {
 
 			t.Run("Must put error", func(t *testing.T) {
-				kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+				kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 				kb.PutBool("errorField", true)
 				err := viewRecords.Put(1, kb, nil)
 				require.ErrorIs(err, ErrNameNotFound)
 			})
 
 			t.Run("Must read and error", func(t *testing.T) {
-				kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+				kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 				kb.PutBool("errorField", true)
 				err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 					return nil
@@ -384,7 +384,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		})
 
 		t.Run("Must have error if wrong fields in partition key", func(t *testing.T) {
-			kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PartitionKey().PutBool("errorField", true)
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
@@ -396,7 +396,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		})
 
 		t.Run("Must have error if wrong fields in clustering columns", func(t *testing.T) {
-			kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PutInt64("partitionKey1", 1)
 			kb.ClusteringColumns().PutBytes("errorField", []byte{1, 2, 3})
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
@@ -412,32 +412,32 @@ func TestCore_ViewRecords(t *testing.T) {
 	t.Run("Invalid value building test", func(t *testing.T) {
 
 		t.Run("Must have panic if value schema missed", func(t *testing.T) {
-			require.Panics(func() { _ = viewRecords.NewValueBuilder(schemas.NullQName) })
+			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NullQName) })
 		})
 
 		t.Run("Must have panic if unknown value schema specified", func(t *testing.T) {
-			require.Panics(func() { _ = viewRecords.NewValueBuilder(schemas.NewQName("test", "mismDrinks")) })
+			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "mismDrinks")) })
 		})
 
 		t.Run("Must have panic if wrong value schema specified", func(t *testing.T) {
-			require.Panics(func() { _ = viewRecords.NewValueBuilder(schemas.NewQName("test", "viewDrinks_PartitionKey")) })
+			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks_PartitionKey")) })
 		})
 
 		t.Run("Must have panic if wrong existing value schema specified", func(t *testing.T) {
-			exists := newValue(appCfg, schemas.NewQName("test", "otherView"))
+			exists := newValue(appCfg, appdef.NewQName("test", "otherView"))
 			require.Panics(func() {
-				_ = viewRecords.UpdateValueBuilder(schemas.NewQName("test", "viewDrinks"), exists)
+				_ = viewRecords.UpdateValueBuilder(appdef.NewQName("test", "viewDrinks"), exists)
 			})
 		})
 
 		t.Run("Must have error for put if empty value", func(t *testing.T) {
-			kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PutInt64("partitionKey1", 1)
 			kb.PutInt64("clusteringColumn1", 100)
 			kb.PutBool("clusteringColumn2", true)
 			kb.PutString("clusteringColumn3", "null")
 
-			vb := viewRecords.NewValueBuilder(schemas.NewQName("test", "viewDrinks"))
+			vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
 
 			err := viewRecords.Put(1, kb, vb)
 			require.ErrorIs(err, ErrNameNotFound)
@@ -448,27 +448,27 @@ func TestCore_ViewRecords(t *testing.T) {
 		})
 
 		t.Run("Must have error if errors in value", func(t *testing.T) {
-			kb := viewRecords.KeyBuilder(schemas.NewQName("test", "otherView"))
-			kb.PutQName("partitionKey1", schemas.NullQName)
+			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "otherView"))
+			kb.PutQName("partitionKey1", appdef.NullQName)
 			kb.PutFloat32("clusteringColumn1", 44.4)
 			kb.PutFloat64("clusteringColumn2", 64.4)
 			kb.PutBytes("clusteringColumn3", []byte("TEST"))
 
-			vb := viewRecords.NewValueBuilder(schemas.NewQName("test", "otherView"))
-			vb.PutQName("unknownField", schemas.NullQName)
+			vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "otherView"))
+			vb.PutQName("unknownField", appdef.NullQName)
 
 			err := viewRecords.Put(1, kb, vb)
 			require.ErrorIs(err, ErrNameNotFound)
 		})
 
 		t.Run("Must have error if key and value are from different views", func(t *testing.T) {
-			kb := viewRecords.KeyBuilder(schemas.NewQName("test", "otherView"))
-			kb.PutQName("partitionKey1", schemas.NullQName)
+			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "otherView"))
+			kb.PutQName("partitionKey1", appdef.NullQName)
 			kb.PutFloat32("clusteringColumn1", 44.4)
 			kb.PutFloat64("clusteringColumn2", 64.4)
 			kb.PutBytes("clusteringColumn3", []byte("TEST"))
 
-			vb := viewRecords.NewValueBuilder(schemas.NewQName("test", "viewDrinks"))
+			vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
 			vb.PutInt64("id", 1)
 			vb.PutString("name", "baykal")
 			vb.PutBool("active", true)
@@ -495,7 +495,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			require.ErrorIs(err, ErrNameNotFound)
 
 			t.Run("put batch failed; no record from WSID = 7 must be readed", func(t *testing.T) {
-				kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+				kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 				kb.PutInt64("partitionKey1", 7)
 
 				require.NoError(viewRecords.Read(context.Background(), 7, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
@@ -508,13 +508,13 @@ func TestCore_ViewRecords(t *testing.T) {
 		t.Run("Must have not error if all is ok", func(t *testing.T) {
 
 			t.Run("vulgaris case", func(t *testing.T) {
-				kb := viewRecords.KeyBuilder(schemas.NewQName("test", "otherView"))
+				kb := viewRecords.KeyBuilder(appdef.NewQName("test", "otherView"))
 				kb.PutQName("partitionKey1", istructs.QNameForError)
 				kb.PutFloat32("clusteringColumn1", 44.4)
 				kb.PutFloat64("clusteringColumn2", 64.4)
 				kb.PutBytes("clusteringColumn3", []byte("TEST"))
 
-				vb := viewRecords.NewValueBuilder(schemas.NewQName("test", "otherView"))
+				vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "otherView"))
 				vb.PutInt64("valueField1", 1)
 
 				err := viewRecords.Put(1, kb, vb)
@@ -535,19 +535,19 @@ func TestCore_ViewRecords(t *testing.T) {
 			})
 
 			t.Run("full bytes clustering columns case", func(t *testing.T) {
-				kb := viewRecords.KeyBuilder(schemas.NewQName("test", "otherView"))
+				kb := viewRecords.KeyBuilder(appdef.NewQName("test", "otherView"))
 				kb.PutQName("partitionKey1", istructs.QNameForError)
 				kb.PutFloat32("clusteringColumn1", 44.4)
 				kb.PutFloat64("clusteringColumn2", 64.4)
 				kb.PutBytes("clusteringColumn3", []byte{0xFF, 0x1, 0x2})
 
-				vb := viewRecords.NewValueBuilder(schemas.NewQName("test", "otherView"))
+				vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "otherView"))
 				vb.PutInt64("valueField1", 7)
 
 				err := viewRecords.Put(1, kb, vb)
 				require.NoError(err)
 
-				readKey := viewRecords.KeyBuilder(schemas.NewQName("test", "otherView"))
+				readKey := viewRecords.KeyBuilder(appdef.NewQName("test", "otherView"))
 				readKey.PutQName("partitionKey1", istructs.QNameForError)
 				readKey.PutFloat32("clusteringColumn1", 44.4)
 				readKey.PutFloat64("clusteringColumn2", 64.4)
@@ -570,7 +570,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	})
 
 	t.Run("must Get() and Read() fails if storage returns damaged data", func(t *testing.T) {
-		kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 2)
 		kb.PutInt64("clusteringColumn1", 100)
 		kb.PutBool("clusteringColumn2", true)
@@ -587,7 +587,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		require.ErrorIs(err, ErrUnknownCodec)
 	})
 	t.Run("Value builder must build value", func(t *testing.T) {
-		vb := viewRecords.NewValueBuilder(schemas.NewQName("test", "viewDrinks"))
+		vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
 		vb.PutInt64("id", 42)
 		vb.PutString("name", "Coca Cola")
 		vb.PutBool("active", true)
@@ -599,7 +599,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		require.Equal(true, v.AsBool("active"))
 	})
 	t.Run("Value builder must panic on build value", func(t *testing.T) {
-		vb := viewRecords.NewValueBuilder(schemas.NewQName("test", "viewDrinks"))
+		vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
 		vb.PutInt32("id", 42)
 
 		require.Panics(func() { _ = vb.Build() })
@@ -613,12 +613,12 @@ type entryType struct {
 }
 
 func newEntry(viewRecords istructs.IViewRecords, wsid istructs.WSID, idDepartment int64, active bool, code string, id int64, name string) entryType {
-	kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+	kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 	kb.PutInt64("partitionKey1", int64(wsid))
 	kb.PutInt64("clusteringColumn1", idDepartment)
 	kb.PutBool("clusteringColumn2", active)
 	kb.PutString("clusteringColumn3", code)
-	vb := viewRecords.NewValueBuilder(schemas.NewQName("test", "viewDrinks"))
+	vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
 	vb.PutInt64("id", id)
 	vb.PutString("name", name)
 	vb.PutBool("active", active)
@@ -632,37 +632,37 @@ func newEntry(viewRecords istructs.IViewRecords, wsid istructs.WSID, idDepartmen
 func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	require := require.New(t)
 
-	viewName := schemas.NewQName("test", "view")
+	viewName := appdef.NewQName("test", "view")
 
-	cache := schemas.NewSchemaCache()
+	cache := appdef.NewSchemaCache()
 	t.Run("must be ok to build schemas", func(t *testing.T) {
 		cache.AddView(viewName).
-			AddPartField("pf_int32", schemas.DataKind_int32).
-			AddPartField("pf_int64", schemas.DataKind_int64).
-			AddPartField("pf_float32", schemas.DataKind_float32).
-			AddPartField("pf_float64", schemas.DataKind_float64).
-			AddPartField("pf_qname", schemas.DataKind_QName).
-			AddPartField("pf_bool", schemas.DataKind_bool).
-			AddPartField("pf_recID", schemas.DataKind_RecordID).
-			AddClustColumn("cc_int32", schemas.DataKind_int32).
-			AddClustColumn("cc_int64", schemas.DataKind_int64).
-			AddClustColumn("cc_float32", schemas.DataKind_float32).
-			AddClustColumn("cc_float64", schemas.DataKind_float64).
-			AddClustColumn("cc_qname", schemas.DataKind_QName).
-			AddClustColumn("cc_bool", schemas.DataKind_bool).
-			AddClustColumn("cc_recID", schemas.DataKind_RecordID).
-			AddClustColumn("cc_bytes", schemas.DataKind_bytes).
-			AddValueField("vf_int32", schemas.DataKind_int32, true).
-			AddValueField("vf_int64", schemas.DataKind_int64, false).
-			AddValueField("vf_float32", schemas.DataKind_float32, false).
-			AddValueField("vf_float64", schemas.DataKind_float64, false).
-			AddValueField("vf_bytes", schemas.DataKind_bytes, false).
-			AddValueField("vf_string", schemas.DataKind_string, false).
-			AddValueField("vf_qname", schemas.DataKind_QName, false).
-			AddValueField("vf_bool", schemas.DataKind_bool, false).
-			AddValueField("vf_recID", schemas.DataKind_RecordID, false).
-			AddValueField("vf_record", schemas.DataKind_Record, false).
-			AddValueField("vf_event", schemas.DataKind_Event, false)
+			AddPartField("pf_int32", appdef.DataKind_int32).
+			AddPartField("pf_int64", appdef.DataKind_int64).
+			AddPartField("pf_float32", appdef.DataKind_float32).
+			AddPartField("pf_float64", appdef.DataKind_float64).
+			AddPartField("pf_qname", appdef.DataKind_QName).
+			AddPartField("pf_bool", appdef.DataKind_bool).
+			AddPartField("pf_recID", appdef.DataKind_RecordID).
+			AddClustColumn("cc_int32", appdef.DataKind_int32).
+			AddClustColumn("cc_int64", appdef.DataKind_int64).
+			AddClustColumn("cc_float32", appdef.DataKind_float32).
+			AddClustColumn("cc_float64", appdef.DataKind_float64).
+			AddClustColumn("cc_qname", appdef.DataKind_QName).
+			AddClustColumn("cc_bool", appdef.DataKind_bool).
+			AddClustColumn("cc_recID", appdef.DataKind_RecordID).
+			AddClustColumn("cc_bytes", appdef.DataKind_bytes).
+			AddValueField("vf_int32", appdef.DataKind_int32, true).
+			AddValueField("vf_int64", appdef.DataKind_int64, false).
+			AddValueField("vf_float32", appdef.DataKind_float32, false).
+			AddValueField("vf_float64", appdef.DataKind_float64, false).
+			AddValueField("vf_bytes", appdef.DataKind_bytes, false).
+			AddValueField("vf_string", appdef.DataKind_string, false).
+			AddValueField("vf_qname", appdef.DataKind_QName, false).
+			AddValueField("vf_bool", appdef.DataKind_bool, false).
+			AddValueField("vf_recID", appdef.DataKind_RecordID, false).
+			AddValueField("vf_record", appdef.DataKind_Record, false).
+			AddValueField("vf_event", appdef.DataKind_Event, false)
 	})
 
 	cfg := func() *AppConfigType {
@@ -762,17 +762,17 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	//
 	appConfigs := func() AppConfigsType {
 
-		cache := schemas.NewSchemaCache()
+		cache := appdef.NewSchemaCache()
 		t.Run("must be ok to build schemas", func(t *testing.T) {
-			cache.AddView(schemas.NewQName("test", "viewDrinks")).
-				AddPartField("partitionKey1", schemas.DataKind_int64).
-				AddClustColumn("clusteringColumn1", schemas.DataKind_QName).
-				AddClustColumn("clusteringColumn2", schemas.DataKind_RecordID).
-				AddValueField("id", schemas.DataKind_int64, true).
-				AddValueField("name", schemas.DataKind_string, true).
-				AddValueField("active", schemas.DataKind_bool, true)
+			cache.AddView(appdef.NewQName("test", "viewDrinks")).
+				AddPartField("partitionKey1", appdef.DataKind_int64).
+				AddClustColumn("clusteringColumn1", appdef.DataKind_QName).
+				AddClustColumn("clusteringColumn2", appdef.DataKind_RecordID).
+				AddValueField("id", appdef.DataKind_int64, true).
+				AddValueField("name", appdef.DataKind_string, true).
+				AddValueField("active", appdef.DataKind_bool, true)
 
-			_ = cache.Add(schemas.NewQName("test", "obj1"), schemas.SchemaKind_Object)
+			_ = cache.Add(appdef.NewQName("test", "obj1"), appdef.SchemaKind_Object)
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -789,11 +789,11 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	//
 	// Add single record
 	//
-	kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+	kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 	kb.PutInt64("partitionKey1", int64(1))
-	kb.PutQName("clusteringColumn1", schemas.NewQName("test", "obj1"))
+	kb.PutQName("clusteringColumn1", appdef.NewQName("test", "obj1"))
 	kb.PutRecordID("clusteringColumn2", 131072)
-	vb := viewRecords.NewValueBuilder(schemas.NewQName("test", "viewDrinks"))
+	vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
 	vb.PutInt64("id", 123)
 	vb.PutString("name", "Coca-cola")
 	vb.PutBool("active", true)
@@ -804,13 +804,13 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	// Fetch single record
 	//
 	t.Run("Test read single item", func(t *testing.T) {
-		kb := viewRecords.KeyBuilder(schemas.NewQName("test", "viewDrinks"))
+		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", int64(1))
-		kb.PutQName("clusteringColumn1", schemas.NewQName("test", "obj1"))
+		kb.PutQName("clusteringColumn1", appdef.NewQName("test", "obj1"))
 		kb.PutRecordID("clusteringColumn2", 131072)
 
 		oldValue := istructs.IValue(nil)
-		oldCcKey1 := schemas.NullQName
+		oldCcKey1 := appdef.NullQName
 		oldCcKey2 := istructs.NullRecordID
 
 		err := viewRecords.Read(context.Background(), ws, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
@@ -822,7 +822,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 		require.NoError(err)
 		require.NotNil(oldValue)
 		require.Equal("Coca-cola", oldValue.AsString("name"))
-		require.Equal(schemas.NewQName("test", "obj1"), oldCcKey1)
+		require.Equal(appdef.NewQName("test", "obj1"), oldCcKey1)
 		require.Equal(istructs.RecordID(131072), oldCcKey2)
 	})
 }
@@ -830,21 +830,21 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 func Test_ViewRecord_GetBatch(t *testing.T) {
 	require := require.New(t)
 
-	championatsView := schemas.NewQName("test", "championats")
-	championsView := schemas.NewQName("test", "champions")
+	championatsView := appdef.NewQName("test", "championats")
+	championsView := appdef.NewQName("test", "champions")
 
-	cache := schemas.NewSchemaCache()
+	cache := appdef.NewSchemaCache()
 	t.Run("must be ok to build schemas", func(t *testing.T) {
 		cache.AddView(championatsView).
-			AddPartField("Year", schemas.DataKind_int32).
-			AddClustColumn("Sport", schemas.DataKind_string).
-			AddValueField("Country", schemas.DataKind_string, true).
-			AddValueField("City", schemas.DataKind_string, false)
+			AddPartField("Year", appdef.DataKind_int32).
+			AddClustColumn("Sport", appdef.DataKind_string).
+			AddValueField("Country", appdef.DataKind_string, true).
+			AddValueField("City", appdef.DataKind_string, false)
 
 		cache.AddView(championsView).
-			AddPartField("Year", schemas.DataKind_int32).
-			AddClustColumn("Sport", schemas.DataKind_string).
-			AddValueField("Winner", schemas.DataKind_string, true)
+			AddPartField("Year", appdef.DataKind_int32).
+			AddClustColumn("Sport", appdef.DataKind_string).
+			AddValueField("Winner", appdef.DataKind_string, true)
 	})
 
 	storage := teststore.NewStorage()
@@ -1000,7 +1000,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		require.Equal("Россия", batch[1].Value.AsString("Winner"))
 
 		require.False(batch[2].Ok)
-		require.Equal(schemas.NullQName, batch[2].Value.AsQName(schemas.SystemField_QName))
+		require.Equal(appdef.NullQName, batch[2].Value.AsQName(appdef.SystemField_QName))
 	})
 
 	t.Run("must fail to read if maximum batch size exceeds", func(t *testing.T) {

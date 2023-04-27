@@ -9,8 +9,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // ResourcesType is type for application resources
@@ -18,11 +18,11 @@ import (
 //     — istructs.IResources
 type ResourcesType struct {
 	cfg       *AppConfigType
-	resources map[schemas.QName]istructs.IResource
+	resources map[appdef.QName]istructs.IResource
 }
 
 func newResources(cfg *AppConfigType) ResourcesType {
-	return ResourcesType{cfg, make(map[schemas.QName]istructs.IResource)}
+	return ResourcesType{cfg, make(map[appdef.QName]istructs.IResource)}
 }
 
 // Add adds new resource to application resources
@@ -32,7 +32,7 @@ func (res *ResourcesType) Add(r istructs.IResource) *ResourcesType {
 }
 
 // QueryResource finds application resources by QName
-func (res *ResourcesType) QueryResource(resource schemas.QName) (r istructs.IResource) {
+func (res *ResourcesType) QueryResource(resource appdef.QName) (r istructs.IResource) {
 	r, ok := res.resources[resource]
 	if !ok {
 		return nullResource
@@ -47,7 +47,7 @@ func (res *ResourcesType) QueryFunctionArgsBuilder(query istructs.IQueryFunction
 }
 
 // CommandFunction returns command function from application resource by QName or nil if not founded
-func (res *ResourcesType) CommandFunction(name schemas.QName) (cmd istructs.ICommandFunction) {
+func (res *ResourcesType) CommandFunction(name appdef.QName) (cmd istructs.ICommandFunction) {
 	r := res.QueryResource(name)
 	if r.Kind() == istructs.ResourceKind_CommandFunction {
 		cmd := r.(istructs.ICommandFunction)
@@ -57,7 +57,7 @@ func (res *ResourcesType) CommandFunction(name schemas.QName) (cmd istructs.ICom
 }
 
 // Resources enumerates all application resources
-func (res *ResourcesType) Resources(enum func(schemas.QName)) {
+func (res *ResourcesType) Resources(enum func(appdef.QName)) {
 	for n := range res.resources {
 		enum(n)
 	}
@@ -65,18 +65,18 @@ func (res *ResourcesType) Resources(enum func(schemas.QName)) {
 
 // abstractFunctionType is ancestor for CommandFunctionType and QueryFunctionType
 type abstractFunctionType struct {
-	name, paramsSchema schemas.QName
-	resultSchemaFunc   func(istructs.PrepareArgs) schemas.QName
+	name, paramsSchema appdef.QName
+	resultSchemaFunc   func(istructs.PrepareArgs) appdef.QName
 }
 
 // istructs.IResource
-func (af *abstractFunctionType) QName() schemas.QName { return af.name }
+func (af *abstractFunctionType) QName() appdef.QName { return af.name }
 
 // istructs.IFunction
-func (af *abstractFunctionType) ParamsSchema() schemas.QName { return af.paramsSchema }
+func (af *abstractFunctionType) ParamsSchema() appdef.QName { return af.paramsSchema }
 
 // istructs.IFunction
-func (af *abstractFunctionType) ResultSchema(args istructs.PrepareArgs) schemas.QName {
+func (af *abstractFunctionType) ResultSchema(args istructs.PrepareArgs) appdef.QName {
 	return af.resultSchemaFunc(args)
 }
 
@@ -97,11 +97,11 @@ type (
 )
 
 // NewQueryFunction creates and returns new query function
-func NewQueryFunction(name, paramsSchema, resultSchema schemas.QName, exec ExecQueryClosureType) istructs.IQueryFunction {
-	return NewQueryFunctionCustomResult(name, paramsSchema, func(pa istructs.PrepareArgs) schemas.QName { return resultSchema }, exec)
+func NewQueryFunction(name, paramsSchema, resultSchema appdef.QName, exec ExecQueryClosureType) istructs.IQueryFunction {
+	return NewQueryFunctionCustomResult(name, paramsSchema, func(pa istructs.PrepareArgs) appdef.QName { return resultSchema }, exec)
 }
 
-func NewQueryFunctionCustomResult(name, paramsSchema schemas.QName, resultSchemaFunc func(istructs.PrepareArgs) schemas.QName, exec ExecQueryClosureType) istructs.IQueryFunction {
+func NewQueryFunctionCustomResult(name, paramsSchema appdef.QName, resultSchemaFunc func(istructs.PrepareArgs) appdef.QName, exec ExecQueryClosureType) istructs.IQueryFunction {
 	return &queryFunctionType{
 		abstractFunctionType: abstractFunctionType{
 			name:             name,
@@ -128,7 +128,7 @@ func (qf *queryFunctionType) Kind() istructs.ResourceKindType {
 }
 
 // istructs.IQueryFunction
-func (qf *queryFunctionType) ResultSchema(args istructs.PrepareArgs) schemas.QName {
+func (qf *queryFunctionType) ResultSchema(args istructs.PrepareArgs) appdef.QName {
 	return qf.abstractFunctionType.ResultSchema(args)
 }
 
@@ -144,18 +144,18 @@ type (
 	// commandFunctionType implements istructs.ICommandFunction
 	commandFunctionType struct {
 		abstractFunctionType
-		unloggedParamsSchema schemas.QName
+		unloggedParamsSchema appdef.QName
 		exec                 ExecCommandClosureType
 	}
 )
 
 // NewCommandFunction creates and returns new command function
-func NewCommandFunction(name, paramsSchema, unloggedParamsSchema, resultSchema schemas.QName, exec ExecCommandClosureType) istructs.ICommandFunction {
+func NewCommandFunction(name, paramsSchema, unloggedParamsSchema, resultSchema appdef.QName, exec ExecCommandClosureType) istructs.ICommandFunction {
 	return &commandFunctionType{
 		abstractFunctionType: abstractFunctionType{
 			name:             name,
 			paramsSchema:     paramsSchema,
-			resultSchemaFunc: func(pa istructs.PrepareArgs) schemas.QName { return resultSchema },
+			resultSchemaFunc: func(pa istructs.PrepareArgs) appdef.QName { return resultSchema },
 		},
 		unloggedParamsSchema: unloggedParamsSchema,
 		exec:                 exec,
@@ -178,7 +178,7 @@ func (cf *commandFunctionType) Kind() istructs.ResourceKindType {
 }
 
 // istructs.ICommandFunction
-func (cf *commandFunctionType) ResultSchema() schemas.QName {
+func (cf *commandFunctionType) ResultSchema() appdef.QName {
 	return cf.abstractFunctionType.ResultSchema(nullPrepareArgs)
 }
 
@@ -187,7 +187,7 @@ func (cf *commandFunctionType) String() string {
 	return fmt.Sprintf("c:%v", cf.abstractFunctionType.String())
 }
 
-func (cf *commandFunctionType) UnloggedParamsSchema() schemas.QName {
+func (cf *commandFunctionType) UnloggedParamsSchema() appdef.QName {
 	return cf.unloggedParamsSchema
 }
 
@@ -203,4 +203,4 @@ func newNullResource() *nullResourceType {
 
 // IResource members
 func (r *nullResourceType) Kind() istructs.ResourceKindType { return istructs.ResourceKind_null }
-func (r *nullResourceType) QName() schemas.QName            { return schemas.NullQName }
+func (r *nullResourceType) QName() appdef.QName             { return appdef.NullQName }

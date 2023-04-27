@@ -10,20 +10,20 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/dynobuffers"
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 func Test_BasicUsage(t *testing.T) {
-	name := schemas.NewQName("test", "test")
+	name := appdef.NewQName("test", "test")
 
 	dynoSchemas := New()
 
 	dynoSchemas.Prepare(
-		func() schemas.SchemaCache {
-			bld := schemas.NewSchemaCache()
-			schema := bld.Add(name, schemas.SchemaKind_CDoc)
-			schema.AddField("f1", schemas.DataKind_int32, true)
-			schema.AddField("f2", schemas.DataKind_QName, false)
+		func() appdef.SchemaCache {
+			bld := appdef.NewSchemaCache()
+			schema := bld.Add(name, appdef.SchemaKind_CDoc)
+			schema.AddField("f1", appdef.DataKind_int32, true)
+			schema.AddField("f2", appdef.DataKind_QName, false)
 			return bld
 		}())
 

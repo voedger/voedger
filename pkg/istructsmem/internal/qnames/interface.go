@@ -5,9 +5,7 @@
 
 package qnames
 
-import (
-	"github.com/voedger/voedger/pkg/schemas"
-)
+import "github.com/voedger/voedger/pkg/appdef"
 
 // Identificator for QNames
 type QNameID uint16
@@ -18,8 +16,8 @@ type QNameID uint16
 //	Use GetQName() to obtain QName name by its ID.
 //	Use Prepare() to load QNames IDs from storage.
 type QNames struct {
-	qNames  map[schemas.QName]QNameID
-	ids     map[QNameID]schemas.QName
+	qNames  map[appdef.QName]QNameID
+	ids     map[QNameID]appdef.QName
 	lastID  QNameID
 	changes uint
 }

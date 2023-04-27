@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // Ref. bench.md for results
@@ -56,8 +56,8 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	// Names
 
 	appName := istructs.AppQName_test1_app1
-	odocQName := schemas.NewQName("test", "odoc")
-	cmdQName := schemas.NewQName("test", "cmd")
+	odocQName := appdef.NewQName("test", "odoc")
+	cmdQName := appdef.NewQName("test", "cmd")
 
 	// odoc field names and values
 
@@ -67,19 +67,19 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	stringFieldValues := make(map[string]string)
 
 	// Schemas
-	bld := func() schemas.SchemaCacheBuilder {
-		cache := schemas.NewSchemaCache()
+	bld := func() appdef.SchemaCacheBuilder {
+		cache := appdef.NewSchemaCache()
 
-		s := cache.Add(odocQName, schemas.SchemaKind_ODoc)
+		s := cache.Add(odocQName, appdef.SchemaKind_ODoc)
 		for i := 0; i < numOfIntFields; i++ {
 
 			intFieldName := fmt.Sprintf("i%v", i)
-			s.AddField(intFieldName, schemas.DataKind_int64, true)
+			s.AddField(intFieldName, appdef.DataKind_int64, true)
 			intFieldNames[i] = intFieldName
 			intFieldNamesFloat64Values[intFieldName] = float64(i)
 
 			stringFieldName := fmt.Sprintf("s%v", i)
-			s.AddField(stringFieldName, schemas.DataKind_string, true)
+			s.AddField(stringFieldName, appdef.DataKind_string, true)
 			stringFieldNames[i] = stringFieldName
 			stringFieldValues[stringFieldName] = stringFieldName
 
@@ -94,7 +94,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 	// Register command
 	{
-		cfg.Resources.Add(NewCommandFunction(cmdQName, odocQName, schemas.NullQName, schemas.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdQName, odocQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
 	}
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
@@ -122,7 +122,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 			})
 
 		cmd := bld.ArgumentObjectBuilder()
-		cmd.PutRecordID(schemas.SystemField_ID, 1)
+		cmd.PutRecordID(appdef.SystemField_ID, 1)
 		for i := 0; i < numOfIntFields; i++ {
 			cmd.PutNumber(intFieldNames[i], intFieldNamesFloat64Values[intFieldNames[i]])
 			cmd.PutString(stringFieldNames[i], stringFieldValues[stringFieldNames[i]])

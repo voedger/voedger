@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestPLogStorage_Read(t *testing.T) {
@@ -30,7 +30,7 @@ func TestPLogStorage_Read(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil)
-		kb, err := s.KeyBuilder(PLogStorage, schemas.NullQName)
+		kb, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
@@ -54,7 +54,7 @@ func TestPLogStorage_Read(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil)
-		k, err := s.KeyBuilder(PLogStorage, schemas.NullQName)
+		k, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
 		require.NoError(err)
 		k.PutInt64(Field_Offset, 1)
 		k.PutInt64(Field_Count, 1)
@@ -82,7 +82,7 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, nil, 0)
-		kb, err := s.KeyBuilder(PLogStorage, schemas.NullQName)
+		kb, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
@@ -110,11 +110,11 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, nil, 0)
-		kb1, err := s.KeyBuilder(PLogStorage, schemas.NullQName)
+		kb1, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb1.PutInt64(Field_Offset, 1)
 		kb1.PutInt64(Field_Count, 1)
-		kb2, err := s.KeyBuilder(PLogStorage, schemas.NullQName)
+		kb2, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb2.PutInt64(Field_Offset, 2)
 		kb2.PutInt64(Field_Count, 1)
@@ -125,7 +125,7 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 	})
 }
 func TestPLogStorage_ToJSON(t *testing.T) {
-	s := &pLogStorage{schemaCacheFunc: func() schemas.SchemaCache { return nil }}
+	s := &pLogStorage{schemaCacheFunc: func() appdef.SchemaCache { return nil }}
 	require := require.New(t)
 	eventError := &mockEventError{}
 	eventError.

@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // TODO: move to internal/validate package
@@ -18,10 +18,10 @@ import (
 // validator provides validation application structures by single schema
 type validator struct {
 	validators *validators
-	schema     schemas.Schema
+	schema     appdef.Schema
 }
 
-func newValidator(validators *validators, schema schemas.Schema) *validator {
+func newValidator(validators *validators, schema appdef.Schema) *validator {
 	return &validator{validators, schema}
 }
 
@@ -33,10 +33,10 @@ func (v *validator) entName(e interface{}) string {
 	typeName := v.schema.QName()
 
 	if row, ok := e.(istructs.IRowReader); ok {
-		if qName := row.AsQName(schemas.SystemField_QName); qName != schemas.NullQName {
+		if qName := row.AsQName(appdef.SystemField_QName); qName != appdef.NullQName {
 			typeName = qName
-			if (qName == v.schema.QName()) && v.schema.Kind().HasSystemField(schemas.SystemField_Container) {
-				if cont := row.AsString(schemas.SystemField_Container); cont != "" {
+			if (qName == v.schema.QName()) && v.schema.Kind().HasSystemField(appdef.SystemField_Container) {
+				if cont := row.AsString(appdef.SystemField_Container); cont != "" {
 					name = cont
 				}
 			}
@@ -132,8 +132,8 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 // Validates element containers occurses
 func (v *validator) validElementContOccurses(el *elementType) (err error) {
 	v.schema.Containers(
-		func(cont schemas.Container) {
-			occurs := schemas.Occurs(0)
+		func(cont appdef.Container) {
+			occurs := appdef.Occurs(0)
 			el.EnumElements(
 				func(child *elementType) {
 					if child.Container() == cont.Name() {
@@ -156,7 +156,7 @@ func (v *validator) validElementContOccurses(el *elementType) (err error) {
 func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error) {
 	err = v.validRow(&rec.rowType)
 
-	if v.schema.Kind().HasSystemField(schemas.SystemField_ID) {
+	if v.schema.Kind().HasSystemField(appdef.SystemField_ID) {
 		if rawIDexpected && !rec.ID().IsRaw() {
 			err = errors.Join(err,
 				validateErrorf(ECode_InvalidRawRecordID, "new %s ID «%d» is not raw: %w", v.entName(rec), rec.ID(), ErrRawRecordIDExpected))
@@ -169,7 +169,7 @@ func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error)
 // Validates specified row
 func (v *validator) validRow(row *rowType) (err error) {
 	v.schema.Fields(
-		func(f schemas.Field) {
+		func(f appdef.Field) {
 			if f.Required() {
 				if !row.hasValue(f.Name()) {
 					err = errors.Join(err,
@@ -187,27 +187,27 @@ func (v *validator) validObject(obj *elementType) error {
 }
 
 type validators struct {
-	schemas    schemas.SchemaCache
-	validators map[schemas.QName]*validator
+	schemas    appdef.SchemaCache
+	validators map[appdef.QName]*validator
 }
 
 func newValidators() *validators {
 	return &validators{
-		validators: make(map[schemas.QName]*validator),
+		validators: make(map[appdef.QName]*validator),
 	}
 }
 
 // Prepares validator for specified schema cache
-func (v *validators) prepare(schemaCache schemas.SchemaCache) {
+func (v *validators) prepare(schemaCache appdef.SchemaCache) {
 	v.schemas = schemaCache
 	schemaCache.Schemas(
-		func(s schemas.Schema) {
+		func(s appdef.Schema) {
 			v.validators[s.QName()] = newValidator(v, s)
 		})
 }
 
 // Returns validator for specified schema
-func (v *validators) validator(n schemas.QName) *validator {
+func (v *validators) validator(n appdef.QName) *validator {
 	return v.validators[n]
 }
 
@@ -232,12 +232,12 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 	if ev.argObject.QName() != arg {
 		err = errors.Join(err,
 			validateErrorf(ECode_InvalidSchemaName, "event command argument «%v» uses wrong schema «%v», expected «%v»: %w", ev.name, ev.argObject.QName(), arg, ErrWrongSchema))
-	} else if arg != schemas.NullQName {
+	} else if arg != appdef.NullQName {
 		// #!17185: must be ODoc or Object only
 		schema := v.schemas.Schema(arg)
-		if (schema.Kind() != schemas.SchemaKind_ODoc) && (schema.Kind() != schemas.SchemaKind_Object) {
+		if (schema.Kind() != appdef.SchemaKind_ODoc) && (schema.Kind() != appdef.SchemaKind_Object) {
 			err = errors.Join(err,
-				validateErrorf(ECode_InvalidSchemaKind, "event command argument «%v» schema can not to be «%v», expected («%v» or «%v»): %w", arg, schema.Kind(), schemas.SchemaKind_ODoc, schemas.SchemaKind_Object, ErrWrongSchema))
+				validateErrorf(ECode_InvalidSchemaKind, "event command argument «%v» schema can not to be «%v», expected («%v» or «%v»): %w", arg, schema.Kind(), appdef.SchemaKind_ODoc, appdef.SchemaKind_Object, ErrWrongSchema))
 		}
 		err = errors.Join(err,
 			v.validObject(&ev.argObject))
@@ -246,7 +246,7 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 	if ev.argUnlObj.QName() != argUnl {
 		err = errors.Join(err,
 			validateErrorf(ECode_InvalidSchemaName, "event command unlogged argument «%v» uses wrong schema «%v», expected «%v»: %w", ev.name, ev.argUnlObj.QName(), argUnl, ErrWrongSchema))
-	} else if ev.argUnlObj.QName() != schemas.NullQName {
+	} else if ev.argUnlObj.QName() != appdef.NullQName {
 		err = errors.Join(err,
 			v.validObject(&ev.argUnlObj))
 	}
@@ -268,7 +268,7 @@ func (v *validators) validEventCUDs(ev *eventType) (err error) {
 
 // Validates specified document or object
 func (v *validators) validObject(obj *elementType) (err error) {
-	if obj.QName() == schemas.NullQName {
+	if obj.QName() == appdef.NullQName {
 		return validateErrorf(ECode_EmptySchemaName, "element «%s» has empty schema name: %w", obj.Container(), ErrNameMissed)
 	}
 
@@ -279,9 +279,9 @@ func (v *validators) validObject(obj *elementType) (err error) {
 	}
 
 	switch validator.schema.Kind() {
-	case schemas.SchemaKind_GDoc, schemas.SchemaKind_CDoc, schemas.SchemaKind_ODoc, schemas.SchemaKind_WDoc:
+	case appdef.SchemaKind_GDoc, appdef.SchemaKind_CDoc, appdef.SchemaKind_ODoc, appdef.SchemaKind_WDoc:
 		return validator.validDocument(obj)
-	case schemas.SchemaKind_Object:
+	case appdef.SchemaKind_Object:
 		return validator.validObject(obj)
 	}
 
@@ -384,7 +384,7 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 	}
 
 	key.partRow.schema.Fields(
-		func(f schemas.Field) {
+		func(f appdef.Field) {
 			if !key.partRow.hasValue(f.Name()) {
 				err = errors.Join(err,
 					validateErrorf(ECode_EmptyData, "view «%v» partition key «%v» field «%s» is empty: %w", key.viewName, partSchema, f.Name(), ErrFieldIsEmpty))
@@ -393,7 +393,7 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 
 	if !partialClust {
 		key.clustRow.schema.Fields(
-			func(f schemas.Field) {
+			func(f appdef.Field) {
 				if !key.clustRow.hasValue(f.Name()) {
 					err = errors.Join(err,
 						validateErrorf(ECode_EmptyData, "view «%v» clustering columns «%v» field «%s» is empty: %w", key.viewName, clustSchema, f.Name(), ErrFieldIsEmpty))
@@ -421,7 +421,7 @@ func (v *validators) validViewValue(value *valueType) (err error) {
 
 // Validates specified record. If rawIDexpected then raw IDs is required
 func (v *validators) validRecord(rec *recordType, rawIDexpected bool) (err error) {
-	if rec.QName() == schemas.NullQName {
+	if rec.QName() == appdef.NullQName {
 		return validateErrorf(ECode_EmptySchemaName, "record «%s» has empty schema name: %w", rec.Container(), ErrNameMissed)
 	}
 
@@ -431,7 +431,7 @@ func (v *validators) validRecord(rec *recordType, rawIDexpected bool) (err error
 	}
 
 	switch validator.schema.Kind() {
-	case schemas.SchemaKind_GDoc, schemas.SchemaKind_CDoc, schemas.SchemaKind_ODoc, schemas.SchemaKind_WDoc, schemas.SchemaKind_GRecord, schemas.SchemaKind_CRecord, schemas.SchemaKind_ORecord, schemas.SchemaKind_WRecord:
+	case appdef.SchemaKind_GDoc, appdef.SchemaKind_CDoc, appdef.SchemaKind_ODoc, appdef.SchemaKind_WDoc, appdef.SchemaKind_GRecord, appdef.SchemaKind_CRecord, appdef.SchemaKind_ORecord, appdef.SchemaKind_WRecord:
 		return validator.validRecord(rec, rawIDexpected)
 	}
 

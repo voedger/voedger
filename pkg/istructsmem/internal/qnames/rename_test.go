@@ -10,19 +10,19 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestRenameQName(t *testing.T) {
 
 	require := require.New(t)
 
-	old := schemas.NewQName("test", "old")
-	new := schemas.NewQName("test", "new")
+	old := appdef.NewQName("test", "old")
+	new := appdef.NewQName("test", "new")
 
 	storage := teststore.NewStorage()
 
@@ -31,8 +31,8 @@ func TestRenameQName(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		bld := schemas.NewSchemaCache()
-		_ = bld.Add(old, schemas.SchemaKind_Object)
+		bld := appdef.NewSchemaCache()
+		_ = bld.Add(old, appdef.SchemaKind_Object)
 		schemas, err := bld.Build()
 		require.NoError(err)
 
@@ -73,9 +73,9 @@ func TestRenameQName_Errors(t *testing.T) {
 
 	require := require.New(t)
 
-	old := schemas.NewQName("test", "old")
-	new := schemas.NewQName("test", "new")
-	other := schemas.NewQName("test", "other")
+	old := appdef.NewQName("test", "old")
+	new := appdef.NewQName("test", "new")
+	other := appdef.NewQName("test", "other")
 
 	storage := teststore.NewStorage()
 
@@ -84,9 +84,9 @@ func TestRenameQName_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		bld := schemas.NewSchemaCache()
-		_ = bld.Add(old, schemas.SchemaKind_Object)
-		_ = bld.Add(other, schemas.SchemaKind_Object)
+		bld := appdef.NewSchemaCache()
+		_ = bld.Add(old, appdef.SchemaKind_Object)
+		_ = bld.Add(other, appdef.SchemaKind_Object)
 		schemas, err := bld.Build()
 		require.NoError(err)
 
@@ -114,7 +114,7 @@ func TestRenameQName_Errors(t *testing.T) {
 	})
 
 	t.Run("must error if old name not found", func(t *testing.T) {
-		err := Rename(storage, schemas.NewQName("test", "unknown"), new)
+		err := Rename(storage, appdef.NewQName("test", "unknown"), new)
 		require.ErrorIs(err, ErrNameNotFound)
 	})
 
@@ -128,8 +128,8 @@ func TestRenameQName_Fails(t *testing.T) {
 
 	require := require.New(t)
 
-	old := schemas.NewQName("test", "old")
-	new := schemas.NewQName("test", "new")
+	old := appdef.NewQName("test", "old")
+	new := appdef.NewQName("test", "new")
 
 	t.Run("must error if unsupported version of Versions system view", func(t *testing.T) {
 		testError := errors.New("error read versions")
@@ -165,8 +165,8 @@ func TestRenameQName_Fails(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		bld := schemas.NewSchemaCache()
-		_ = bld.Add(old, schemas.SchemaKind_Object)
+		bld := appdef.NewSchemaCache()
+		_ = bld.Add(old, appdef.SchemaKind_Object)
 		schemas, err := bld.Build()
 		require.NoError(err)
 

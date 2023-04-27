@@ -9,11 +9,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func Test_BasicUsage(t *testing.T) {
@@ -26,9 +26,9 @@ func Test_BasicUsage(t *testing.T) {
 	}
 
 	testName := "test"
-	bld := schemas.NewSchemaCache()
-	bld.Add(schemas.NewQName("test", "schema"), schemas.SchemaKind_Element).
-		AddContainer(testName, schemas.NewQName("test", "schema"), 0, schemas.Occurs_Unbounded)
+	bld := appdef.NewSchemaCache()
+	bld.Add(appdef.NewQName("test", "schema"), appdef.SchemaKind_Element).
+		AddContainer(testName, appdef.NewQName("test", "schema"), 0, appdef.Occurs_Unbounded)
 	schemas, err := bld.Build()
 	if err != nil {
 		panic(err)

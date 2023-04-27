@@ -8,8 +8,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -20,7 +20,7 @@ type wLogStorage struct {
 	wsidFunc        WSIDFunc
 }
 
-func (s *wLogStorage) NewKeyBuilder(schemas.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
+func (s *wLogStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &wLogKeyBuilder{
 		logKeyBuilder: logKeyBuilder{
 			offset: istructs.FirstOffset,

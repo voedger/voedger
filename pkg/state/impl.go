@@ -7,8 +7,8 @@ package state
 import (
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -25,32 +25,32 @@ func WithExcludeFields(fieldNames ...string) ToJSONOption {
 		}
 	}
 }
-func put(fieldName string, kind schemas.DataKind, rr istructs.IRowReader, rw istructs.IRowWriter) {
+func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istructs.IRowWriter) {
 	switch kind {
-	case schemas.DataKind_int32:
+	case appdef.DataKind_int32:
 		rw.PutInt32(fieldName, rr.AsInt32(fieldName))
-	case schemas.DataKind_int64:
+	case appdef.DataKind_int64:
 		rw.PutInt64(fieldName, rr.AsInt64(fieldName))
-	case schemas.DataKind_float32:
+	case appdef.DataKind_float32:
 		rw.PutFloat32(fieldName, rr.AsFloat32(fieldName))
-	case schemas.DataKind_float64:
+	case appdef.DataKind_float64:
 		rw.PutFloat64(fieldName, rr.AsFloat64(fieldName))
-	case schemas.DataKind_bytes:
+	case appdef.DataKind_bytes:
 		rw.PutBytes(fieldName, rr.AsBytes(fieldName))
-	case schemas.DataKind_string:
+	case appdef.DataKind_string:
 		rw.PutString(fieldName, rr.AsString(fieldName))
-	case schemas.DataKind_QName:
+	case appdef.DataKind_QName:
 		rw.PutQName(fieldName, rr.AsQName(fieldName))
-	case schemas.DataKind_bool:
+	case appdef.DataKind_bool:
 		rw.PutBool(fieldName, rr.AsBool(fieldName))
-	case schemas.DataKind_RecordID:
+	case appdef.DataKind_RecordID:
 		rw.PutRecordID(fieldName, rr.AsRecordID(fieldName))
 	default:
 		panic(fmt.Errorf("illegal state: field - '%s', kind - '%d': %w", fieldName, kind, ErrNotSupported))
 	}
 }
 
-func getStorageID(key istructs.IKeyBuilder) schemas.QName {
+func getStorageID(key istructs.IKeyBuilder) appdef.QName {
 	switch k := key.(type) {
 	case *pLogKeyBuilder:
 		return PLogStorage

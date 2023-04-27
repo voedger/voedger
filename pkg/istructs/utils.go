@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 // *********************************************************************************************************
@@ -28,7 +28,7 @@ func (aqn *AppQName) Name() string  { return aqn.name }
 func (aqn AppQName) String() string { return aqn.owner + AppQNameQualifierChar + aqn.name }
 
 func ParseAppQName(val string) (res AppQName, err error) {
-	s1, s2, err := schemas.ParseQualifiedName(val, AppQNameQualifierChar)
+	s1, s2, err := appdef.ParseQualifiedName(val, AppQNameQualifierChar)
 	return NewAppQName(s1, s2), err
 }
 
@@ -57,7 +57,7 @@ func (aqn *AppQName) UnmarshalJSON(text []byte) (err error) {
 	if err != nil {
 		return err
 	}
-	aqn.owner, aqn.name, err = schemas.ParseQualifiedName(str, AppQNameQualifierChar)
+	aqn.owner, aqn.name, err = appdef.ParseQualifiedName(str, AppQNameQualifierChar)
 	return err
 }
 
@@ -115,7 +115,7 @@ func (*NullRowReader) AsFloat64(name string) float64                            
 func (*NullRowReader) AsBytes(name string) []byte                                        { return nil }
 func (*NullRowReader) AsString(name string) string                                       { return "" }
 func (*NullRowReader) AsRecordID(name string) RecordID                                   { return NullRecordID }
-func (*NullRowReader) AsQName(name string) schemas.QName                                 { return schemas.NullQName }
+func (*NullRowReader) AsQName(name string) appdef.QName                                  { return appdef.NullQName }
 func (*NullRowReader) AsBool(name string) bool                                           { return false }
 func (*NullRowReader) RecordIDs(includeNulls bool, cb func(name string, value RecordID)) {}
 
@@ -124,7 +124,7 @@ type NullObject struct{ NullRowReader }
 
 func NewNullObject() IObject { return &NullObject{} }
 
-func (*NullObject) QName() schemas.QName                            { return schemas.NullQName }
+func (*NullObject) QName() appdef.QName                             { return appdef.NullQName }
 func (*NullObject) Elements(container string, cb func(el IElement)) {}
 func (*NullObject) Containers(cb func(container string))            {}
 func (no *NullObject) AsRecord() IRecord                            { return no }
@@ -165,7 +165,7 @@ func (k RateLimitKind) MarshalText() ([]byte, error) {
 	return []byte(s), nil
 }
 
-func ValidatorMatchByQName(cudValidator CUDValidator, cudQName schemas.QName) bool {
+func ValidatorMatchByQName(cudValidator CUDValidator, cudQName appdef.QName) bool {
 	if cudValidator.MatchFunc != nil {
 		if cudValidator.MatchFunc(cudQName) {
 			return true

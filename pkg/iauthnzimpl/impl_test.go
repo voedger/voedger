@@ -11,12 +11,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
-	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -47,7 +47,7 @@ func TestBasicUsage(t *testing.T) {
 	token, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
 
-	appStructs := AppStructsWithTestStorage(map[istructs.WSID]map[schemas.QName]map[istructs.RecordID]map[string]interface{}{
+	appStructs := AppStructsWithTestStorage(map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}{
 		// WSID 1 is the user profile, not necessary to store docs there
 
 		// workspace owned by the user
@@ -158,7 +158,7 @@ func TestBasicUsage(t *testing.T) {
 		require.NoError(err)
 		authzReq := iauthnz.AuthzRequest{
 			OperationKind: iauthnz.OperationKind_EXECUTE,
-			Resource:      schemas.NewQName(schemas.SysPackage, "SomeCmd"),
+			Resource:      appdef.NewQName(appdef.SysPackage, "SomeCmd"),
 		}
 		ok, err := authz.Authorize(appStructs, principals, authzReq)
 		require.NoError(err)
@@ -180,8 +180,8 @@ func TestAuthenticate(t *testing.T) {
 	userToken, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
 
-	testRole := schemas.NewQName(schemas.SysPackage, "test")
-	apiKeyToken, err := IssueAPIToken(appTokens, time.Hour, []schemas.QName{
+	testRole := appdef.NewQName(appdef.SysPackage, "test")
+	apiKeyToken, err := IssueAPIToken(appTokens, time.Hour, []appdef.QName{
 		testRole,
 	}, 2, pp)
 	require.NoError(err)
@@ -199,40 +199,40 @@ func TestAuthenticate(t *testing.T) {
 	unlinkedDeviceToken, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
 
-	qNameCDocComputers := schemas.NewQName("untill", "computers")
+	qNameCDocComputers := appdef.NewQName("untill", "computers")
 
-	appStructs := AppStructsWithTestStorage(map[istructs.WSID]map[schemas.QName]map[istructs.RecordID]map[string]interface{}{
+	appStructs := AppStructsWithTestStorage(map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}{
 		// WSID 1 is the user profile
 		istructs.WSID(1): {
 			qNameViewDeviceProfileWSIDIdx: {
 				1: {
-					field_dummy:                  int32(1),
-					field_DeviceProfileWSID:      int64(1),
-					schemas.SystemField_IsActive: true,
-					field_ComputersID:            istructs.RecordID(2),
-					field_RestaurantComputersID:  istructs.RecordID(3),
+					field_dummy:                 int32(1),
+					field_DeviceProfileWSID:     int64(1),
+					appdef.SystemField_IsActive: true,
+					field_ComputersID:           istructs.RecordID(2),
+					field_RestaurantComputersID: istructs.RecordID(3),
 				},
 				4: {
-					field_dummy:                  int32(1),
-					field_DeviceProfileWSID:      int64(unlinkedDeviceProfileWSID),
-					schemas.SystemField_IsActive: true,
-					field_ComputersID:            istructs.RecordID(5),
-					field_RestaurantComputersID:  istructs.RecordID(6),
+					field_dummy:                 int32(1),
+					field_DeviceProfileWSID:     int64(unlinkedDeviceProfileWSID),
+					appdef.SystemField_IsActive: true,
+					field_ComputersID:           istructs.RecordID(5),
+					field_RestaurantComputersID: istructs.RecordID(6),
 				},
 			},
 			// wrong to store in the user profile wsid, but ok for test
 			qNameCDocComputers: {
 				2: {
-					schemas.SystemField_QName:    qNameCDocComputers,
-					schemas.SystemField_IsActive: true,
+					appdef.SystemField_QName:    qNameCDocComputers,
+					appdef.SystemField_IsActive: true,
 				},
 				5: {
-					schemas.SystemField_QName:    qNameCDocComputers,
-					schemas.SystemField_IsActive: false,
+					appdef.SystemField_QName:    qNameCDocComputers,
+					appdef.SystemField_IsActive: false,
 				},
 			},
 			// not used for authorization, but keep for an example
-			schemas.NewQName("untill", "restaurant_computers"): {
+			appdef.NewQName("untill", "restaurant_computers"): {
 				3: {},
 				6: {},
 			},
@@ -263,7 +263,7 @@ func TestAuthenticate(t *testing.T) {
 		desc               string
 		req                iauthnz.AuthnRequest
 		expectedPrincipals []iauthnz.Principal
-		subjects           []schemas.QName
+		subjects           []appdef.QName
 	}{
 		{
 			desc: "no auth -> host only",
@@ -380,7 +380,7 @@ func TestAuthenticate(t *testing.T) {
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceAdmin},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
-			subjects: []schemas.QName{qNameRoleResellersAdmin},
+			subjects: []appdef.QName{qNameRoleResellersAdmin},
 		},
 		{
 			desc: "UntillPaymentsReseller -> WorkspaceAdmin",
@@ -397,7 +397,7 @@ func TestAuthenticate(t *testing.T) {
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceAdmin},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
-			subjects: []schemas.QName{qNameRoleUntillPaymentsReseller},
+			subjects: []appdef.QName{qNameRoleUntillPaymentsReseller},
 		},
 		{
 			desc: "IsPersonalAccessToken -> principals are built by provided roles only",
@@ -411,8 +411,8 @@ func TestAuthenticate(t *testing.T) {
 			},
 		},
 	}
-	var subjects *[]schemas.QName
-	subjectsGetter := func(context.Context, string, istructs.IAppStructs, istructs.WSID) ([]schemas.QName, error) {
+	var subjects *[]appdef.QName
+	subjectsGetter := func(context.Context, string, istructs.IAppStructs, istructs.WSID) ([]appdef.QName, error) {
 		return *subjects, nil
 	}
 	authn := NewDefaultAuthenticator(subjectsGetter)
@@ -459,9 +459,9 @@ func TestAuthorize(t *testing.T) {
 	unlinkedDeviceToken, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
 
-	qNameCDocComputers := schemas.NewQName("untill", "computers")
+	qNameCDocComputers := appdef.NewQName("untill", "computers")
 
-	appStructs := AppStructsWithTestStorage(map[istructs.WSID]map[schemas.QName]map[istructs.RecordID]map[string]interface{}{
+	appStructs := AppStructsWithTestStorage(map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}{
 		// workspace owned by the user
 		istructs.WSID(2): {
 			qNameCDocWorkspaceDescriptor: {
@@ -472,29 +472,29 @@ func TestAuthorize(t *testing.T) {
 			},
 			qNameViewDeviceProfileWSIDIdx: {
 				2: {
-					field_dummy:                  int32(1),
-					field_DeviceProfileWSID:      int64(1),
-					schemas.SystemField_IsActive: true,
-					field_ComputersID:            istructs.RecordID(3),
-					field_RestaurantComputersID:  istructs.RecordID(4),
+					field_dummy:                 int32(1),
+					field_DeviceProfileWSID:     int64(1),
+					appdef.SystemField_IsActive: true,
+					field_ComputersID:           istructs.RecordID(3),
+					field_RestaurantComputersID: istructs.RecordID(4),
 				},
 				5: {
-					field_dummy:                  int32(1),
-					field_DeviceProfileWSID:      int64(unlinkedDeviceProfileWSID),
-					schemas.SystemField_IsActive: true,
-					field_ComputersID:            istructs.RecordID(6),
-					field_RestaurantComputersID:  istructs.RecordID(7),
+					field_dummy:                 int32(1),
+					field_DeviceProfileWSID:     int64(unlinkedDeviceProfileWSID),
+					appdef.SystemField_IsActive: true,
+					field_ComputersID:           istructs.RecordID(6),
+					field_RestaurantComputersID: istructs.RecordID(7),
 				},
 			},
 			// wrong to store in the user profile wsid, but ok for test
 			qNameCDocComputers: {
 				3: {
-					schemas.SystemField_QName:    qNameCDocComputers,
-					schemas.SystemField_IsActive: true,
+					appdef.SystemField_QName:    qNameCDocComputers,
+					appdef.SystemField_IsActive: true,
 				},
 				6: {
-					schemas.SystemField_QName:    qNameCDocComputers,
-					schemas.SystemField_IsActive: false,
+					appdef.SystemField_QName:    qNameCDocComputers,
+					appdef.SystemField_IsActive: false,
 				},
 			},
 		},
@@ -512,7 +512,7 @@ func TestAuthorize(t *testing.T) {
 	authn := NewDefaultAuthenticator(TestSubjectRolesGetter)
 	authz := NewDefaultAuthorizer()
 
-	testCmd := schemas.NewQName(schemas.SysPackage, "testcmd")
+	testCmd := appdef.NewQName(appdef.SysPackage, "testcmd")
 	testCases := []struct {
 		desc     string
 		reqz     iauthnz.AuthzRequest
@@ -630,7 +630,7 @@ func TestAuthorize(t *testing.T) {
 func TestACLAllow(t *testing.T) {
 	defer logger.SetLogLevel(logger.LogLevelInfo)
 	require := require.New(t)
-	testQName1 := schemas.NewQName(schemas.SysPackage, "testQName")
+	testQName1 := appdef.NewQName(appdef.SysPackage, "testQName")
 
 	type req struct {
 		req  iauthnz.AuthzRequest
@@ -646,7 +646,7 @@ func TestACLAllow(t *testing.T) {
 				{
 					desc: "allow rule",
 					pattern: PatternType{
-						qNamesPattern:  []schemas.QName{testQName1},
+						qNamesPattern:  []appdef.QName{testQName1},
 						opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_INSERT},
 						principalsPattern: [][]iauthnz.Principal{
 							// OR
@@ -690,7 +690,7 @@ func TestACLAllow(t *testing.T) {
 							},
 							{
 								Kind:  iauthnz.PrincipalKind_Group,
-								QName: schemas.NewQName(schemas.SysPackage, "testGroup"),
+								QName: appdef.NewQName(appdef.SysPackage, "testGroup"),
 							},
 							{
 								Kind: iauthnz.PrincipalKind_Device,
@@ -706,7 +706,7 @@ func TestACLAllow(t *testing.T) {
 				{
 					desc: "non-first principal in the pattern matches",
 					pattern: PatternType{
-						qNamesPattern: []schemas.QName{qNameCmdCreateUPProfile},
+						qNamesPattern: []appdef.QName{qNameCmdCreateUPProfile},
 						principalsPattern: [][]iauthnz.Principal{
 							// OR
 							{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
@@ -752,7 +752,7 @@ func TestACLDeny(t *testing.T) {
 	logger.SetLogLevel(logger.LogLevelVerbose)
 	defer logger.SetLogLevel(logger.LogLevelInfo)
 	require := require.New(t)
-	testQName1 := schemas.NewQName(schemas.SysPackage, "testQName")
+	testQName1 := appdef.NewQName(appdef.SysPackage, "testQName")
 
 	type req struct {
 		req  iauthnz.AuthzRequest
@@ -763,7 +763,7 @@ func TestACLDeny(t *testing.T) {
 		{
 			desc: "deny rule",
 			pattern: PatternType{
-				qNamesPattern:  []schemas.QName{testQName1},
+				qNamesPattern:  []appdef.QName{testQName1},
 				opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_INSERT},
 				principalsPattern: [][]iauthnz.Principal{
 					// OR
@@ -915,14 +915,14 @@ func TestErrors(t *testing.T) {
 
 	t.Run("personal access token for a system role", func(t *testing.T) {
 		for _, sysRole := range iauthnz.SysRoles {
-			token, err := IssueAPIToken(appTokens, time.Hour, []schemas.QName{sysRole}, 1, payloads.PrincipalPayload{})
+			token, err := IssueAPIToken(appTokens, time.Hour, []appdef.QName{sysRole}, 1, payloads.PrincipalPayload{})
 			require.ErrorIs(err, ErrPersonalAccessTokenOnSystemRole)
 			require.Empty(token)
 		}
 	})
 
 	t.Run("personal access token for NullWSID", func(t *testing.T) {
-		token, err := IssueAPIToken(appTokens, time.Hour, []schemas.QName{schemas.NewQName(schemas.SysPackage, "test")}, istructs.NullWSID, payloads.PrincipalPayload{})
+		token, err := IssueAPIToken(appTokens, time.Hour, []appdef.QName{appdef.NewQName(appdef.SysPackage, "test")}, istructs.NullWSID, payloads.PrincipalPayload{})
 		require.ErrorIs(err, ErrPersonalAccessTokenOnNullWSID)
 		require.Empty(token)
 	})
@@ -951,7 +951,7 @@ func BenchmarkBasic(b *testing.B) {
 	}
 	reqz := iauthnz.AuthzRequest{
 		OperationKind: iauthnz.OperationKind_EXECUTE,
-		Resource:      schemas.NewQName(schemas.SysPackage, "SomeCmd"),
+		Resource:      appdef.NewQName(appdef.SysPackage, "SomeCmd"),
 	}
 
 	b.ResetTimer()
@@ -967,7 +967,7 @@ func BenchmarkBasic(b *testing.B) {
 	}
 }
 
-func AppStructsWithTestStorage(data map[istructs.WSID]map[schemas.QName]map[istructs.RecordID]map[string]interface{}) istructs.IAppStructs {
+func AppStructsWithTestStorage(data map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}) istructs.IAppStructs {
 	recs := &implIRecords{data: data}
 	return &implIAppStructs{records: recs, views: &implIViewRecords{records: recs}}
 }
@@ -981,10 +981,10 @@ func (as *implIAppStructs) Events() istructs.IEvents            { panic("") }
 func (as *implIAppStructs) Records() istructs.IRecords          { return as.records }
 func (as *implIAppStructs) ViewRecords() istructs.IViewRecords  { return as.views }
 func (as *implIAppStructs) Resources() istructs.IResources      { panic("") }
-func (as *implIAppStructs) Schemas() schemas.SchemaCache        { panic("") }
+func (as *implIAppStructs) Schemas() appdef.SchemaCache         { panic("") }
 func (as *implIAppStructs) ClusterAppID() istructs.ClusterAppID { panic("") }
 func (as *implIAppStructs) AppQName() istructs.AppQName         { panic("") }
-func (as *implIAppStructs) IsFunctionRateLimitsExceeded(schemas.QName, istructs.WSID) bool {
+func (as *implIAppStructs) IsFunctionRateLimitsExceeded(appdef.QName, istructs.WSID) bool {
 	panic("")
 }
 func (as *implIAppStructs) DescribePackageNames() []string               { panic("") }
@@ -998,7 +998,7 @@ func (as *implIAppStructs) WSAmount() istructs.AppWSAmount               { panic
 func (as *implIAppStructs) AppTokens() istructs.IAppTokens               { panic("") }
 
 type implIRecords struct {
-	data map[istructs.WSID]map[schemas.QName]map[istructs.RecordID]map[string]interface{}
+	data map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}
 }
 
 func (r *implIRecords) Apply(event istructs.IPLogEvent) (err error) { panic("") }
@@ -1020,7 +1020,7 @@ func (r *implIRecords) Get(wsid istructs.WSID, _ bool, id istructs.RecordID) (re
 func (r *implIRecords) GetBatch(workspace istructs.WSID, highConsistency bool, ids []istructs.RecordGetBatchItem) (err error) {
 	panic("")
 }
-func (r *implIRecords) GetSingleton(wsid istructs.WSID, qName schemas.QName) (record istructs.IRecord, err error) {
+func (r *implIRecords) GetSingleton(wsid istructs.WSID, qName appdef.QName) (record istructs.IRecord, err error) {
 	if wsData, ok := r.data[wsid]; ok {
 		if qNameRecs, ok := wsData[qName]; ok {
 			if len(qNameRecs) > 1 {
@@ -1039,11 +1039,11 @@ func (r *implIRecords) Read(workspace istructs.WSID, highConsistency bool, id is
 
 type implIRecord struct {
 	coreutils.TestObject
-	qName schemas.QName
+	qName appdef.QName
 }
 
-func (r *implIRecord) QName() schemas.QName      { return r.qName }
-func (r *implIRecord) ID() istructs.RecordID     { return r.AsRecordID(schemas.SystemField_ID) }
+func (r *implIRecord) QName() appdef.QName       { return r.qName }
+func (r *implIRecord) ID() istructs.RecordID     { return r.AsRecordID(appdef.SystemField_ID) }
 func (r *implIRecord) Parent() istructs.RecordID { panic("") }
 func (r *implIRecord) Container() string         { panic("") }
 func (r *implIRecord) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {
@@ -1055,11 +1055,11 @@ type implIViewRecords struct {
 	records *implIRecords
 }
 
-func (vr *implIViewRecords) KeyBuilder(view schemas.QName) istructs.IKeyBuilder {
+func (vr *implIViewRecords) KeyBuilder(view appdef.QName) istructs.IKeyBuilder {
 	return &implIKeyBuilder{qName: view, TestObject: coreutils.TestObject{Data: map[string]interface{}{}}}
 }
-func (vr *implIViewRecords) NewValueBuilder(view schemas.QName) istructs.IValueBuilder { panic("") }
-func (vr *implIViewRecords) UpdateValueBuilder(view schemas.QName, existing istructs.IValue) istructs.IValueBuilder {
+func (vr *implIViewRecords) NewValueBuilder(view appdef.QName) istructs.IValueBuilder { panic("") }
+func (vr *implIViewRecords) UpdateValueBuilder(view appdef.QName, existing istructs.IValue) istructs.IValueBuilder {
 	panic("")
 }
 func (vr *implIViewRecords) Put(workspace istructs.WSID, key istructs.IKeyBuilder, value istructs.IValueBuilder) (err error) {
@@ -1102,7 +1102,7 @@ func (vr *implIViewRecords) Read(ctx context.Context, workspace istructs.WSID, k
 
 type implIKeyBuilder struct {
 	coreutils.TestObject
-	qName schemas.QName
+	qName appdef.QName
 }
 
 func (kb *implIKeyBuilder) PartitionKey() istructs.IRowWriter      { return &kb.TestObject }

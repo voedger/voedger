@@ -6,8 +6,8 @@
 package descr
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func newResource() *Resource {
@@ -34,14 +34,14 @@ func (r *Resource) read(resource istructs.IResource) {
 func (r *Resource) readCmd(command istructs.ICommandFunction) {
 	r.Command = new(Command)
 
-	if n := command.ParamsSchema(); n != schemas.NullQName {
+	if n := command.ParamsSchema(); n != appdef.NullQName {
 		r.Command.ParamsSchema = &n
 	}
 
-	if n := command.UnloggedParamsSchema(); n != schemas.NullQName {
+	if n := command.UnloggedParamsSchema(); n != appdef.NullQName {
 		r.Command.UnloggedParamsSchema = &n
 	}
-	if n := command.ResultSchema(); n != schemas.NullQName {
+	if n := command.ResultSchema(); n != appdef.NullQName {
 		r.Command.ResultSchema = &n
 	}
 }
@@ -49,10 +49,10 @@ func (r *Resource) readCmd(command istructs.ICommandFunction) {
 func (r *Resource) readQuery(query istructs.IQueryFunction) {
 	r.Query = new(Query)
 
-	if n := query.ParamsSchema(); n != schemas.NullQName {
+	if n := query.ParamsSchema(); n != appdef.NullQName {
 		r.Query.ParamsSchema = &n
 	}
-	if n := query.ResultSchema(istructs.PrepareArgs{}); n != schemas.NullQName {
+	if n := query.ResultSchema(istructs.PrepareArgs{}); n != appdef.NullQName {
 		r.Query.ResultSchema = &n
 	}
 }

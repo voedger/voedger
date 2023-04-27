@@ -4,17 +4,17 @@
 
 package istructs
 
-import "github.com/voedger/voedger/pkg/schemas"
+import "github.com/voedger/voedger/pkg/appdef"
 
 type IUniques interface {
-	GetAll(name schemas.QName) (uniques []IUnique)
+	GetAll(name appdef.QName) (uniques []IUnique)
 
 	// fields order has no sense
 	// only one unique could match. None matched -> nil
-	GetForKeySet(qName schemas.QName, keyFieldsSet []string) IUnique
+	GetForKeySet(qName appdef.QName, keyFieldsSet []string) IUnique
 }
 
 type IUnique interface {
 	Fields() []string
-	QName() schemas.QName
+	QName() appdef.QName
 }

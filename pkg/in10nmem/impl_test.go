@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type callbackMock struct {
@@ -29,7 +29,7 @@ func TestBasicUsage(t *testing.T) {
 
 	projectionKeyExample := in10n.ProjectionKey{
 		App:        istructs.AppQName_test1_app1,
-		Projection: schemas.NewQName("test", "restaurant"),
+		Projection: appdef.NewQName("test", "restaurant"),
 		WS:         istructs.WSID(0),
 	}
 
@@ -186,7 +186,7 @@ func TestQuotas(t *testing.T) {
 	t.Run("Test subscription quotas for the whole service. We create more subscription than allowed for service.", func(t *testing.T) {
 		projectionKeyExample := in10n.ProjectionKey{
 			App:        istructs.AppQName_test1_app1,
-			Projection: schemas.NewQName("test", "restaurant"),
+			Projection: appdef.NewQName("test", "restaurant"),
 			WS:         istructs.WSID(1),
 		}
 		broker := Provide(quotasExample)

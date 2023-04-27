@@ -9,18 +9,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestRenameQName(t *testing.T) {
 
 	require := require.New(t)
 
-	old := schemas.NewQName("test", "old")
-	new := schemas.NewQName("test", "new")
+	old := appdef.NewQName("test", "old")
+	new := appdef.NewQName("test", "new")
 
 	storage := teststore.NewStorage()
 
@@ -29,8 +29,8 @@ func TestRenameQName(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		bld := schemas.NewSchemaCache()
-		_ = bld.Add(old, schemas.SchemaKind_Object)
+		bld := appdef.NewSchemaCache()
+		_ = bld.Add(old, appdef.SchemaKind_Object)
 		schemas, err := bld.Build()
 		require.NoError(err)
 

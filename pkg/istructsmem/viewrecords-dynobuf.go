@@ -9,10 +9,10 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // istructs.IViewRecords.Put
@@ -53,7 +53,7 @@ func (key *keyType) storeViewPartKey() []byte {
 	buf := new(bytes.Buffer)
 
 	key.partRow.schema.Fields(
-		func(f schemas.Field) {
+		func(f appdef.Field) {
 			utils.SafeWriteBuf(buf, key.partRow.dyB.Get(f.Name()))
 		})
 
@@ -65,7 +65,7 @@ func (key *keyType) storeViewClustKey() []byte {
 	buf := new(bytes.Buffer)
 
 	key.clustRow.schema.Fields(
-		func(f schemas.Field) {
+		func(f appdef.Field) {
 			utils.SafeWriteBuf(buf, key.clustRow.dyB.Get(f.Name()))
 		})
 
@@ -81,7 +81,7 @@ func loadViewPartKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 	schema := key.partRow.schema
 
 	schema.Fields(
-		func(f schemas.Field) {
+		func(f appdef.Field) {
 			if err != nil {
 				return // first error is enough
 			}
@@ -105,7 +105,7 @@ func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 	schema := key.clustRow.schema
 
 	schema.Fields(
-		func(f schemas.Field) {
+		func(f appdef.Field) {
 			if err != nil {
 				return // first error is enough
 			}
@@ -123,49 +123,49 @@ func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 }
 
 // Loads from buffer row fixed-width field
-func loadFixedLenCellFromBuffer_00(row *rowType, field schemas.Field, appCfg *AppConfigType, buf *bytes.Buffer) (err error) {
+func loadFixedLenCellFromBuffer_00(row *rowType, field appdef.Field, appCfg *AppConfigType, buf *bytes.Buffer) (err error) {
 	switch field.DataKind() {
-	case schemas.DataKind_int32:
+	case appdef.DataKind_int32:
 		v := int32(0)
 		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
 			return err
 		}
 		row.PutInt32(field.Name(), v)
-	case schemas.DataKind_int64:
+	case appdef.DataKind_int64:
 		v := int64(0)
 		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
 			return err
 		}
 		row.PutInt64(field.Name(), v)
-	case schemas.DataKind_float32:
+	case appdef.DataKind_float32:
 		v := float32(0)
 		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
 			return err
 		}
 		row.PutFloat32(field.Name(), v)
-	case schemas.DataKind_float64:
+	case appdef.DataKind_float64:
 		v := float64(0)
 		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
 			return err
 		}
 		row.PutFloat64(field.Name(), v)
-	case schemas.DataKind_QName:
+	case appdef.DataKind_QName:
 		v := uint16(0)
 		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
 			return err
 		}
-		var name schemas.QName
+		var name appdef.QName
 		if name, err = appCfg.qNames.GetQName(qnames.QNameID(v)); err != nil {
 			return err
 		}
 		row.PutQName(field.Name(), name)
-	case schemas.DataKind_bool:
+	case appdef.DataKind_bool:
 		v := false
 		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
 			return err
 		}
 		row.PutBool(field.Name(), v)
-	case schemas.DataKind_RecordID:
+	case appdef.DataKind_RecordID:
 		v := int64(istructs.NullRecordID)
 		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
 			return err
@@ -178,14 +178,14 @@ func loadFixedLenCellFromBuffer_00(row *rowType, field schemas.Field, appCfg *Ap
 }
 
 // Loads from buffer row cell
-func loadCellFromBuffer_00(row *rowType, field schemas.Field, appCfg *AppConfigType, buf *bytes.Buffer) (err error) {
+func loadCellFromBuffer_00(row *rowType, field appdef.Field, appCfg *AppConfigType, buf *bytes.Buffer) (err error) {
 	if field.IsFixedWidth() {
 		return loadFixedLenCellFromBuffer_00(row, field, appCfg, buf)
 	}
 	switch field.DataKind() {
-	case schemas.DataKind_bytes:
+	case appdef.DataKind_bytes:
 		row.PutBytes(field.Name(), buf.Bytes())
-	case schemas.DataKind_string:
+	case appdef.DataKind_string:
 		row.PutString(field.Name(), buf.String())
 	default:
 		return fmt.Errorf("unable load data type «%s»: %w", field.DataKind().ToString(), ErrWrongFieldType)

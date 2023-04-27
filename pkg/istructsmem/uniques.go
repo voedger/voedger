@@ -7,43 +7,43 @@ package istructsmem
 import (
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type implIUnique struct {
 	fields []string
-	qName  schemas.QName
+	qName  appdef.QName
 }
 
 func newUniques() *implIUniques {
-	return &implIUniques{uniques: map[schemas.QName][]istructs.IUnique{}}
+	return &implIUniques{uniques: map[appdef.QName][]istructs.IUnique{}}
 }
 
 type implIUniques struct {
-	uniques map[schemas.QName][]istructs.IUnique
+	uniques map[appdef.QName][]istructs.IUnique
 }
 
 func (u *implIUnique) Fields() []string {
 	return u.fields
 }
 
-func (u *implIUnique) QName() schemas.QName {
+func (u *implIUnique) QName() appdef.QName {
 	return u.qName
 }
 
-func (u *implIUniques) Add(name schemas.QName, fieldNames []string) {
+func (u *implIUniques) Add(name appdef.QName, fieldNames []string) {
 	u.uniques[name] = append(u.uniques[name], &implIUnique{fields: fieldNames, qName: name})
 }
 
-func (u *implIUniques) GetAll(name schemas.QName) (uniques []istructs.IUnique) {
+func (u *implIUniques) GetAll(name appdef.QName) (uniques []istructs.IUnique) {
 	return u.uniques[name]
 }
 
 // returns an Unique that euqals to provided keyFieldsSet ignoring order
 // nil means not found
 // panics if a duplicate key field name is met in keyFieldsSet
-func (u implIUniques) GetForKeySet(qName schemas.QName, keyFieldsSet []string) istructs.IUnique {
+func (u implIUniques) GetForKeySet(qName appdef.QName, keyFieldsSet []string) istructs.IUnique {
 	for _, unique := range u.uniques[qName] {
 		if len(unique.Fields()) != len(keyFieldsSet) {
 			continue
@@ -75,7 +75,7 @@ func (u implIUniques) GetForKeySet(qName schemas.QName, keyFieldsSet []string) i
 }
 
 type fieldDesc struct {
-	kind       schemas.DataKind
+	kind       appdef.DataKind
 	isRequired bool
 }
 
@@ -86,13 +86,13 @@ func (u implIUniques) validate(cfg *AppConfigType) error {
 			return uniqueError(qName, ErrUnknownSchemaQName, "")
 		}
 		switch s.Kind() {
-		case schemas.SchemaKind_ViewRecord, schemas.SchemaKind_ViewRecord_PartitionKey, schemas.SchemaKind_ViewRecord_ClusteringColumns,
-			schemas.SchemaKind_ViewRecord_Value, schemas.SchemaKind_Object, schemas.SchemaKind_Element,
-			schemas.SchemaKind_QueryFunction, schemas.SchemaKind_CommandFunction:
+		case appdef.SchemaKind_ViewRecord, appdef.SchemaKind_ViewRecord_PartitionKey, appdef.SchemaKind_ViewRecord_ClusteringColumns,
+			appdef.SchemaKind_ViewRecord_Value, appdef.SchemaKind_Object, appdef.SchemaKind_Element,
+			appdef.SchemaKind_QueryFunction, appdef.SchemaKind_CommandFunction:
 			return uniqueError(qName, ErrSchemaKindMayNotHaveUniques, "")
 		}
 		sf := map[string]fieldDesc{}
-		s.Fields(func(fld schemas.Field) {
+		s.Fields(func(fld appdef.Field) {
 			sf[fld.Name()] = fieldDesc{
 				kind:       fld.DataKind(),
 				isRequired: fld.Required(),
@@ -113,7 +113,7 @@ func (u implIUniques) validate(cfg *AppConfigType) error {
 				if !ok {
 					return uniqueError(qName, ErrUnknownKeyField, f)
 				}
-				if fieldDesc.kind == schemas.DataKind_string || fieldDesc.kind == schemas.DataKind_bytes {
+				if fieldDesc.kind == appdef.DataKind_string || fieldDesc.kind == appdef.DataKind_bytes {
 					varSizeFieldsAmount++
 				}
 				if varSizeFieldsAmount > 1 {
@@ -147,7 +147,7 @@ func (u implIUniques) validate(cfg *AppConfigType) error {
 	return nil
 }
 
-func uniqueError(qName schemas.QName, err error, name string) error {
+func uniqueError(qName appdef.QName, err error, name string) error {
 	mes := "unique on %s: %w"
 	if len(name) > 0 {
 		mes += ": %s"

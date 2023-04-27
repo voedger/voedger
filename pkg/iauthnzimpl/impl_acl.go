@@ -8,9 +8,9 @@ import (
 	"fmt"
 
 	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func (acl ACL) IsAllowed(principals []iauthnz.Principal, req iauthnz.AuthzRequest) bool {
@@ -35,7 +35,7 @@ var defaultACL = ACL{
 	{
 		desc: "null auth policy",
 		pattern: PatternType{
-			qNamesPattern: []schemas.QName{
+			qNamesPattern: []appdef.QName{
 				qNameCmdLinkDeviceToRestaurant,
 				qNameQryIssuePrincipalToken,
 				qNameCmdCreateLogin,
@@ -59,7 +59,7 @@ var defaultACL = ACL{
 	{
 		desc: "deny all on few QNames from all",
 		pattern: PatternType{
-			qNamesPattern: []schemas.QName{
+			qNamesPattern: []appdef.QName{
 				qNameCmdStoreSubscriptionProfile, qNameCmdUpdateSubscription,
 
 				qNameCDocSubscriptionProfile, qNameCDocUnTillOrders, qNameCDocUnTillPBill,
@@ -80,7 +80,7 @@ var defaultACL = ACL{
 	{
 		desc: "update only is allowed for CDoc<$wsKind> for WorkspaceSubject",
 		pattern: PatternType{
-			qNamesPattern: []schemas.QName{
+			qNamesPattern: []appdef.QName{
 				qNameCDocWorkspaceKindUser,
 				qNameCDocWorkspaceKindDevice,
 				qNameCDocWorkspaceKindRestaurant,
@@ -103,7 +103,7 @@ var defaultACL = ACL{
 		// GRANT EXEC ON c.air.UpdateSubscription TO ROLE ProfileUser AND LOGIN 'untillchargebeeagent'
 		desc: "c.air.UpdateSubscription is allowed for 'untillchargebeeagent' login only and in its profile only",
 		pattern: PatternType{
-			qNamesPattern: []schemas.QName{qNameCmdUpdateSubscription},
+			qNamesPattern: []appdef.QName{qNameCmdUpdateSubscription},
 			principalsPattern: [][]iauthnz.Principal{
 				{
 					// AND
@@ -118,7 +118,7 @@ var defaultACL = ACL{
 		// GRANT SELECT q.sys.DescribePackage* TO ROLE ProfileUser
 		desc: "q.sys.DescribePackage* is allowed to be called in profile only",
 		pattern: PatternType{
-			qNamesPattern: []schemas.QName{
+			qNamesPattern: []appdef.QName{
 				qNameQryDescribePackage,
 				qNameQryDescribePackageNames,
 			},
@@ -129,7 +129,7 @@ var defaultACL = ACL{
 	{
 		desc: "c.sys.InitiateJoinWorkspace is allowed for authenticated users",
 		pattern: PatternType{
-			qNamesPattern: []schemas.QName{
+			qNamesPattern: []appdef.QName{
 				qNameCmdInitiateJoinWorkspace,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User}}},
@@ -139,7 +139,7 @@ var defaultACL = ACL{
 	{
 		desc: "c.sys.InitiateLeaveWorkspace is allowed for authenticated users",
 		pattern: PatternType{
-			qNamesPattern: []schemas.QName{
+			qNamesPattern: []appdef.QName{
 				qNameCmdInitiateLeaveWorkspace,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User}}},
@@ -150,7 +150,7 @@ var defaultACL = ACL{
 		// WorkspaceAdmin role asssigned automatically if has e.g. RoleResellersAdmin or RoleUntillPaymentsReseller
 		desc: "allow few reseller-related commands to WorkspaceAdmin",
 		pattern: PatternType{
-			qNamesPattern: []schemas.QName{
+			qNamesPattern: []appdef.QName{
 				qNameCmdInitiateInvitationByEmail,
 				qNameQryCollection,
 				qNameCmdInitiateUpdateInviteRoles,
@@ -170,7 +170,7 @@ var defaultACL = ACL{
 		desc: "allow SELECT cdoc.air.ResellerSubscriptionsProfile to air.AirReseller",
 		pattern: PatternType{
 			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
-			qNamesPattern:     []schemas.QName{qNameCDocResellerSubscriptionsProfile},
+			qNamesPattern:     []appdef.QName{qNameCDocResellerSubscriptionsProfile},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleAirReseller}}},
 		},
 		policy: ACPolicy_Allow,
@@ -179,7 +179,7 @@ var defaultACL = ACL{
 		// ACL for portals https://dev.untill.com/projects/#!637208
 		desc: "allow exec few portals-related funcs to air.AirReseller",
 		pattern: PatternType{
-			qNamesPattern: []schemas.QName{
+			qNamesPattern: []appdef.QName{
 				qNameCmdStoreResellerSubscriptionsProfile,
 				qNameQryGetHostedAirSubscriptions,
 				qNameQryCollection,
@@ -196,7 +196,7 @@ var defaultACL = ACL{
 		desc: "allow SELECT cdoc.air.UPProfile to air.UntillPaymentsReseller and air.AirReseller",
 		pattern: PatternType{
 			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
-			qNamesPattern:  []schemas.QName{qNameCDocUPProfile},
+			qNamesPattern:  []appdef.QName{qNameCDocUPProfile},
 			principalsPattern: [][]iauthnz.Principal{
 				// OR
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
@@ -209,7 +209,7 @@ var defaultACL = ACL{
 		// ACL for portals https://dev.untill.com/projects/#!637208
 		desc: "allow few portal-related funcs to air.UntillPaymentsReseller and air.UntillPaymentsUser",
 		pattern: PatternType{
-			qNamesPattern: []schemas.QName{
+			qNamesPattern: []appdef.QName{
 				qNameCmdCreateUPProfile,
 				qNameQryGetUPOnboardingPage,
 				qNameQryGetUPVerificationStatus,
@@ -228,7 +228,7 @@ var defaultACL = ACL{
 	{
 		desc: "q.air.QueryResellerInfo is allowed for authenticated users",
 		pattern: PatternType{
-			qNamesPattern: []schemas.QName{
+			qNamesPattern: []appdef.QName{
 				qNameQryQueryResellerInfo,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User}}},
@@ -238,7 +238,7 @@ var defaultACL = ACL{
 	{
 		desc: "grant exec on few funcs to role air.UntillPaymentsUser",
 		pattern: PatternType{
-			qNamesPattern: []schemas.QName{
+			qNamesPattern: []appdef.QName{
 				qNameQryGetUPStatus,
 				qNameCmdCreateUntillPayment,
 
@@ -263,7 +263,7 @@ var defaultACL = ACL{
 		desc: "grant exec on c.air.RegenerateUPProfileApiToken to role air.UntillPaymentsReseller and air.UntillPaymentsUser",
 		pattern: PatternType{
 			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_EXECUTE},
-			qNamesPattern:  []schemas.QName{qNameCmdRegenerateUPProfileApiToken},
+			qNamesPattern:  []appdef.QName{qNameCmdRegenerateUPProfileApiToken},
 			principalsPattern: [][]iauthnz.Principal{
 				// OR
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},

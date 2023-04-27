@@ -6,12 +6,12 @@
 package qrename
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // Renames QName from old to new. QNameID previously used by old will be used by new.
-func Rename(storage istorage.IAppStorage, old, new schemas.QName) error {
+func Rename(storage istorage.IAppStorage, old, new appdef.QName) error {
 	return qnames.Rename(storage, old, new)
 }

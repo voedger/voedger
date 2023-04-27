@@ -7,16 +7,16 @@ package istructs
 import (
 	"context"
 
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 type CUDValidator struct {
 	// MatchFunc and MatchQNames are both considered
 	// MatchFunc could be nil
-	MatchFunc func(qName schemas.QName) bool
+	MatchFunc func(qName appdef.QName) bool
 	// MatchQNames could be empty
-	MatchQNames []schemas.QName
-	Validate    func(ctx context.Context, appStructs IAppStructs, cudRow ICUDRow, wsid WSID, cmdQName schemas.QName) error
+	MatchQNames []appdef.QName
+	Validate    func(ctx context.Context, appStructs IAppStructs, cudRow ICUDRow, wsid WSID, cmdQName appdef.QName) error
 }
 
 type EventValidator func(ctx context.Context, rawEvent IRawEvent, appStructs IAppStructs, wsid WSID) error

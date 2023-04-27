@@ -6,7 +6,7 @@
 package descr
 
 import (
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 func newSchema() *Schema {
@@ -16,11 +16,11 @@ func newSchema() *Schema {
 	}
 }
 
-func (s *Schema) readAppSchema(schema schemas.Schema) {
+func (s *Schema) readAppSchema(schema appdef.Schema) {
 	s.Name = schema.QName()
 	s.Kind = schema.Kind()
 
-	schema.Fields(func(field schemas.Field) {
+	schema.Fields(func(field appdef.Field) {
 		f := newField()
 		f.Name = field.Name()
 		f.Kind = field.DataKind()
@@ -29,7 +29,7 @@ func (s *Schema) readAppSchema(schema schemas.Schema) {
 		s.Fields = append(s.Fields, f)
 	})
 
-	schema.Containers(func(cont schemas.Container) {
+	schema.Containers(func(cont appdef.Container) {
 		c := newContainer()
 		c.Name = cont.Name()
 		c.Type = cont.Schema()

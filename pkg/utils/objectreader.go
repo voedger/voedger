@@ -7,66 +7,66 @@ package coreutils
 import (
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
-type SchemaFields map[string]schemas.DataKind
+type SchemaFields map[string]appdef.DataKind
 
 func Read(fieldName string, sf SchemaFields, rr istructs.IRowReader) (val interface{}) {
 	return ReadByKind(fieldName, sf[fieldName], rr)
 }
 
-func ReadValue(fieldName string, sf SchemaFields, schemaCache schemas.SchemaCache, val istructs.IValue) (res interface{}) {
-	if sf[fieldName] == schemas.DataKind_Record {
+func ReadValue(fieldName string, sf SchemaFields, schemaCache appdef.SchemaCache, val istructs.IValue) (res interface{}) {
+	if sf[fieldName] == appdef.DataKind_Record {
 		return FieldsToMap(val.AsRecord(fieldName), schemaCache)
 	}
 	return ReadByKind(fieldName, sf[fieldName], val)
 }
 
 // panics on an unsupported kind guessing that pair <name, kind> could be taken from ISchema.Fields() callback only
-func ReadByKind(name string, kind schemas.DataKind, rr istructs.IRowReader) interface{} {
+func ReadByKind(name string, kind appdef.DataKind, rr istructs.IRowReader) interface{} {
 	switch kind {
-	case schemas.DataKind_int32:
+	case appdef.DataKind_int32:
 		return rr.AsInt32(name)
-	case schemas.DataKind_int64:
+	case appdef.DataKind_int64:
 		return rr.AsInt64(name)
-	case schemas.DataKind_float32:
+	case appdef.DataKind_float32:
 		return rr.AsFloat32(name)
-	case schemas.DataKind_float64:
+	case appdef.DataKind_float64:
 		return rr.AsFloat64(name)
-	case schemas.DataKind_bytes:
+	case appdef.DataKind_bytes:
 		return rr.AsBytes(name)
-	case schemas.DataKind_string:
+	case appdef.DataKind_string:
 		return rr.AsString(name)
-	case schemas.DataKind_RecordID:
+	case appdef.DataKind_RecordID:
 		return rr.AsRecordID(name)
-	case schemas.DataKind_QName:
+	case appdef.DataKind_QName:
 		return rr.AsQName(name).String()
-	case schemas.DataKind_bool:
+	case appdef.DataKind_bool:
 		return rr.AsBool(name)
 	default:
 		panic("unsupported kind " + fmt.Sprint(kind) + " for field " + name)
 	}
 }
 
-func NewSchemaFields(schema schemas.Schema) SchemaFields {
-	fields := make(map[string]schemas.DataKind)
+func NewSchemaFields(schema appdef.Schema) SchemaFields {
+	fields := make(map[string]appdef.DataKind)
 	schema.Fields(
-		func(f schemas.Field) {
+		func(f appdef.Field) {
 			fields[f.Name()] = f.DataKind()
 		})
 	return fields
 }
 
 type mapperOpts struct {
-	filter      func(name string, kind schemas.DataKind) bool
+	filter      func(name string, kind appdef.DataKind) bool
 	nonNilsOnly bool
 }
 
 type MapperOpt func(opt *mapperOpts)
 
-func Filter(filterFunc func(name string, kind schemas.DataKind) bool) MapperOpt {
+func Filter(filterFunc func(name string, kind appdef.DataKind) bool) MapperOpt {
 	return func(opts *mapperOpts) {
 		opts.filter = filterFunc
 	}
@@ -78,9 +78,9 @@ func WithNonNilsOnly() MapperOpt {
 	}
 }
 
-func FieldsToMap(obj istructs.IRowReader, schemaCache schemas.SchemaCache, optFuncs ...MapperOpt) (res map[string]interface{}) {
+func FieldsToMap(obj istructs.IRowReader, schemaCache appdef.SchemaCache, optFuncs ...MapperOpt) (res map[string]interface{}) {
 	res = map[string]interface{}{}
-	if obj.AsQName(schemas.SystemField_QName) == schemas.NullQName {
+	if obj.AsQName(appdef.SystemField_QName) == appdef.NullQName {
 		return
 	}
 	opts := &mapperOpts{}
@@ -89,7 +89,7 @@ func FieldsToMap(obj istructs.IRowReader, schemaCache schemas.SchemaCache, optFu
 	}
 
 	if opts.nonNilsOnly {
-		s := schemaCache.Schema(obj.AsQName(schemas.SystemField_QName))
+		s := schemaCache.Schema(obj.AsQName(appdef.SystemField_QName))
 		sf := NewSchemaFields(s)
 		obj.FieldNames(func(fieldName string) {
 			kind := sf[fieldName]
@@ -98,7 +98,7 @@ func FieldsToMap(obj istructs.IRowReader, schemaCache schemas.SchemaCache, optFu
 					return
 				}
 			}
-			if kind == schemas.DataKind_Record {
+			if kind == appdef.DataKind_Record {
 				if ival, ok := obj.(istructs.IValue); ok {
 					res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), schemaCache, optFuncs...)
 				} else {
@@ -109,15 +109,15 @@ func FieldsToMap(obj istructs.IRowReader, schemaCache schemas.SchemaCache, optFu
 			}
 		})
 	} else {
-		schemaCache.Schema(obj.AsQName(schemas.SystemField_QName)).Fields(
-			func(f schemas.Field) {
+		schemaCache.Schema(obj.AsQName(appdef.SystemField_QName)).Fields(
+			func(f appdef.Field) {
 				fieldName, kind := f.Name(), f.DataKind()
 				if opts.filter != nil {
 					if !opts.filter(fieldName, kind) {
 						return
 					}
 				}
-				if kind == schemas.DataKind_Record {
+				if kind == appdef.DataKind_Record {
 					if ival, ok := obj.(istructs.IValue); ok {
 						res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), schemaCache, optFuncs...)
 					} else {
@@ -131,8 +131,8 @@ func FieldsToMap(obj istructs.IRowReader, schemaCache schemas.SchemaCache, optFu
 	return res
 }
 
-func ObjectToMap(obj istructs.IObject, schemaCache schemas.SchemaCache, opts ...MapperOpt) (res map[string]interface{}) {
-	if obj.AsQName(schemas.SystemField_QName) == schemas.NullQName {
+func ObjectToMap(obj istructs.IObject, schemaCache appdef.SchemaCache, opts ...MapperOpt) (res map[string]interface{}) {
+	if obj.AsQName(appdef.SystemField_QName) == appdef.NullQName {
 		return map[string]interface{}{}
 	}
 	res = FieldsToMap(obj, schemaCache, opts...)

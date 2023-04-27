@@ -7,9 +7,9 @@ package state
 import (
 	"context"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func implProvideQueryProcessorState(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc,
@@ -19,27 +19,27 @@ func implProvideQueryProcessorState(ctx context.Context, appStructs istructs.IAp
 	bs.addStorage(ViewRecordsStorage, &viewRecordsStorage{
 		ctx:             ctx,
 		viewRecordsFunc: func() istructs.IViewRecords { return appStructs.ViewRecords() },
-		schemaCacheFunc: func() schemas.SchemaCache { return appStructs.Schemas() },
+		schemaCacheFunc: func() appdef.SchemaCache { return appStructs.Schemas() },
 		wsidFunc:        wsidFunc,
 	}, S_GET_BATCH|S_READ)
 
 	bs.addStorage(RecordsStorage, &recordsStorage{
 		recordsFunc:     func() istructs.IRecords { return appStructs.Records() },
-		schemaCacheFunc: func() schemas.SchemaCache { return appStructs.Schemas() },
+		schemaCacheFunc: func() appdef.SchemaCache { return appStructs.Schemas() },
 		wsidFunc:        wsidFunc,
 	}, S_GET_BATCH)
 
 	bs.addStorage(WLogStorage, &wLogStorage{
 		ctx:             ctx,
 		eventsFunc:      func() istructs.IEvents { return appStructs.Events() },
-		schemaCacheFunc: func() schemas.SchemaCache { return appStructs.Schemas() },
+		schemaCacheFunc: func() appdef.SchemaCache { return appStructs.Schemas() },
 		wsidFunc:        wsidFunc,
 	}, S_GET_BATCH|S_READ)
 
 	bs.addStorage(PLogStorage, &pLogStorage{
 		ctx:             ctx,
 		eventsFunc:      func() istructs.IEvents { return appStructs.Events() },
-		schemaCacheFunc: func() schemas.SchemaCache { return appStructs.Schemas() },
+		schemaCacheFunc: func() appdef.SchemaCache { return appStructs.Schemas() },
 		partitionIDFunc: partitionIDFunc,
 	}, S_GET_BATCH|S_READ)
 

@@ -7,14 +7,14 @@ package projectors
 import (
 	"time"
 
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 var (
-	qnameProjectionOffsets               = schemas.NewQName(schemas.SysPackage, "projectionOffsets")
-	qnameProjectionOffsetsPartitionKey   = schemas.NewQName(schemas.SysPackage, "projectionOffsetsKey")
-	qnameProjectionOffsetsClusteringCols = schemas.NewQName(schemas.SysPackage, "projectionOffsetsSort")
-	qnameProjectionOffsetsValue          = schemas.NewQName(schemas.SysPackage, "projectionOffsetsValue")
+	qnameProjectionOffsets               = appdef.NewQName(appdef.SysPackage, "projectionOffsets")
+	qnameProjectionOffsetsPartitionKey   = appdef.NewQName(appdef.SysPackage, "projectionOffsetsKey")
+	qnameProjectionOffsetsClusteringCols = appdef.NewQName(appdef.SysPackage, "projectionOffsetsSort")
+	qnameProjectionOffsetsValue          = appdef.NewQName(appdef.SysPackage, "projectionOffsetsValue")
 )
 
 const (
@@ -31,4 +31,4 @@ const (
 	n10nChannelDuration  = 100 * 365 * 24 * time.Hour
 )
 
-var PlogQName = schemas.NewQName(schemas.SysPackage, "PLog")
+var PlogQName = appdef.NewQName(appdef.SysPackage, "PLog")

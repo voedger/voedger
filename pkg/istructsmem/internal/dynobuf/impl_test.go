@@ -10,44 +10,44 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/dynobuffers"
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 func Test_DynoBufSchemasCache(t *testing.T) {
 	require := require.New(t)
 
-	var schemaCache schemas.SchemaCache
+	var schemaCache appdef.SchemaCache
 
 	t.Run("must ok to build schemas", func(t *testing.T) {
-		bld := schemas.NewSchemaCache()
-		rootSchema := bld.Add(schemas.NewQName("test", "rootSchema"), schemas.SchemaKind_Object)
+		bld := appdef.NewSchemaCache()
+		rootSchema := bld.Add(appdef.NewQName("test", "rootSchema"), appdef.SchemaKind_Object)
 		rootSchema.
-			AddField("int32Field", schemas.DataKind_int32, true).
-			AddField("int64Field", schemas.DataKind_int64, false).
-			AddField("float32Field", schemas.DataKind_float32, false).
-			AddField("float64Field", schemas.DataKind_float64, false).
-			AddField("bytesField", schemas.DataKind_bytes, false).
-			AddField("strField", schemas.DataKind_string, false).
-			AddField("qnameField", schemas.DataKind_QName, false).
-			AddField("recIDField", schemas.DataKind_RecordID, false).
-			AddContainer("child", schemas.NewQName("test", "childSchema"), 1, schemas.Occurs_Unbounded)
+			AddField("int32Field", appdef.DataKind_int32, true).
+			AddField("int64Field", appdef.DataKind_int64, false).
+			AddField("float32Field", appdef.DataKind_float32, false).
+			AddField("float64Field", appdef.DataKind_float64, false).
+			AddField("bytesField", appdef.DataKind_bytes, false).
+			AddField("strField", appdef.DataKind_string, false).
+			AddField("qnameField", appdef.DataKind_QName, false).
+			AddField("recIDField", appdef.DataKind_RecordID, false).
+			AddContainer("child", appdef.NewQName("test", "childSchema"), 1, appdef.Occurs_Unbounded)
 
-		childSchema := bld.Add(schemas.NewQName("test", "childSchema"), schemas.SchemaKind_Element)
+		childSchema := bld.Add(appdef.NewQName("test", "childSchema"), appdef.SchemaKind_Element)
 		childSchema.
-			AddField("int32Field", schemas.DataKind_int32, true).
-			AddField("int64Field", schemas.DataKind_int64, false).
-			AddField("float32Field", schemas.DataKind_float32, false).
-			AddField("float64Field", schemas.DataKind_float64, false).
-			AddField("bytesField", schemas.DataKind_bytes, false).
-			AddField("strField", schemas.DataKind_string, false).
-			AddField("qnameField", schemas.DataKind_QName, false).
-			AddField("boolField", schemas.DataKind_bool, false).
-			AddField("recIDField", schemas.DataKind_RecordID, false).
-			AddContainer("grandChild", schemas.NewQName("test", "grandChild"), 0, 1)
+			AddField("int32Field", appdef.DataKind_int32, true).
+			AddField("int64Field", appdef.DataKind_int64, false).
+			AddField("float32Field", appdef.DataKind_float32, false).
+			AddField("float64Field", appdef.DataKind_float64, false).
+			AddField("bytesField", appdef.DataKind_bytes, false).
+			AddField("strField", appdef.DataKind_string, false).
+			AddField("qnameField", appdef.DataKind_QName, false).
+			AddField("boolField", appdef.DataKind_bool, false).
+			AddField("recIDField", appdef.DataKind_RecordID, false).
+			AddContainer("grandChild", appdef.NewQName("test", "grandChild"), 0, 1)
 
-		grandSchema := bld.Add(schemas.NewQName("test", "grandChild"), schemas.SchemaKind_Element)
+		grandSchema := bld.Add(appdef.NewQName("test", "grandChild"), appdef.SchemaKind_Element)
 		grandSchema.
-			AddField("recIDField", schemas.DataKind_RecordID, false)
+			AddField("recIDField", appdef.DataKind_RecordID, false)
 
 		sch, err := bld.Build()
 		require.NoError(err)
@@ -65,7 +65,7 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 	checkDynoScheme = func(dynoScheme *dynobuffers.Scheme) {
 		require.NotNil(dynoScheme)
 
-		schemaName, err := schemas.ParseQName(dynoScheme.Name)
+		schemaName, err := appdef.ParseQName(dynoScheme.Name)
 		require.NoError(err)
 
 		schema := schemaCache.SchemaByName(schemaName)
@@ -94,7 +94,7 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 	}
 
 	schemaCache.Schemas(
-		func(s schemas.Schema) {
+		func(s appdef.Schema) {
 			checkDynoScheme(dynoSchemas[s.QName()])
 		})
 }

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
@@ -20,7 +21,6 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state"
 )
 
@@ -44,7 +44,7 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
 	app := appStructs(
-		func(schemas schemas.SchemaCacheBuilder) {
+		func(schemas appdef.SchemaCacheBuilder) {
 			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
 			ProvideViewSchema(schemas, decProjectionView, buildProjectionSchema)
 		},
@@ -80,12 +80,12 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 }
 
 var (
-	incrementorName = schemas.NewQName("test", "incremenor_projector")
-	decrementorName = schemas.NewQName("test", "decrementor_projector")
+	incrementorName = appdef.NewQName("test", "incremenor_projector")
+	decrementorName = appdef.NewQName("test", "decrementor_projector")
 )
 
-var incProjectionView = schemas.NewQName("pkg", "Incremented")
-var decProjectionView = schemas.NewQName("pkg", "Decremented")
+var incProjectionView = appdef.NewQName("pkg", "Incremented")
+var decProjectionView = appdef.NewQName("pkg", "Decremented")
 
 var (
 	incrementorFactory = func(partition istructs.PartitionID) istructs.Projector {
@@ -148,20 +148,20 @@ var (
 )
 
 var buildProjectionSchema = func(builder IViewSchemaBuilder) {
-	builder.PartitionKeyField("pk", schemas.DataKind_int32, false)
-	builder.ClusteringColumnField("cc", schemas.DataKind_int32, false)
-	builder.ValueField(colValue, schemas.DataKind_int32, true)
+	builder.PartitionKeyField("pk", appdef.DataKind_int32, false)
+	builder.ClusteringColumnField("cc", appdef.DataKind_int32, false)
+	builder.ValueField(colValue, appdef.DataKind_int32, true)
 }
 
 type (
-	schemasCfgCallback func(schemas schemas.SchemaCacheBuilder)
+	schemasCfgCallback func(schemas appdef.SchemaCacheBuilder)
 	appCfgCallback     func(cfg *istructsmem.AppConfigType)
 )
 
 func appStructs(schemasCfg schemasCfgCallback, appCfg appCfgCallback) istructs.IAppStructs {
-	cache := schemas.NewSchemaCache()
-	cache.Add(incrementorName, schemas.SchemaKind_Object)
-	cache.Add(decrementorName, schemas.SchemaKind_Object)
+	cache := appdef.NewSchemaCache()
+	cache.Add(incrementorName, appdef.SchemaKind_Object)
+	cache.Add(decrementorName, appdef.SchemaKind_Object)
 	if schemasCfg != nil {
 		schemasCfg(cache)
 	}
@@ -190,7 +190,7 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	require := require.New(t)
 
 	app := appStructs(
-		func(schemas schemas.SchemaCacheBuilder) {
+		func(schemas appdef.SchemaCacheBuilder) {
 			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
 			ProvideViewSchema(schemas, decProjectionView, buildProjectionSchema)
 		},

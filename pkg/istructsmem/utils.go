@@ -10,16 +10,16 @@ import (
 	"fmt"
 
 	"github.com/untillpro/dynobuffers"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
-var NullAppConfig = newAppConfig(istructs.AppQName_null, schemas.NewSchemaCache())
+var NullAppConfig = newAppConfig(istructs.AppQName_null, appdef.NewSchemaCache())
 
 var (
 	nullDynoBuffer = dynobuffers.NewBuffer(dynobuffers.NewScheme())
@@ -86,7 +86,7 @@ func IBucketsFromIAppStructs(as istructs.IAppStructs) irates.IBuckets {
 	return as.(interface{ Buckets() irates.IBuckets }).Buckets()
 }
 
-func FillElementFromJSON(data map[string]interface{}, s schemas.Schema, b istructs.IElementBuilder) error {
+func FillElementFromJSON(data map[string]interface{}, s appdef.Schema, b istructs.IElementBuilder) error {
 	for fieldName, fieldValue := range data {
 		switch fv := fieldValue.(type) {
 		case float64:
@@ -117,17 +117,17 @@ func FillElementFromJSON(data map[string]interface{}, s schemas.Schema, b istruc
 	return nil
 }
 
-func NewIObjectBuilder(cfg *AppConfigType, qName schemas.QName) istructs.IObjectBuilder {
+func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectBuilder {
 	obj := newObject(cfg, qName)
 	return &obj
 }
 
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
 	schems := appStructs.Schemas()
-	schema := schems.Schema(obj.AsQName(schemas.SystemField_QName))
+	schema := schems.Schema(obj.AsQName(appdef.SystemField_QName))
 	schema.Fields(
-		func(f schemas.Field) {
-			if err != nil || f.DataKind() != schemas.DataKind_RecordID {
+		func(f appdef.Field) {
+			if err != nil || f.DataKind() != appdef.DataKind_RecordID {
 				return
 			}
 			recID := obj.AsRecordID(f.Name())
@@ -139,9 +139,9 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 			if err != nil {
 				return
 			}
-			if rec.QName() == schemas.NullQName {
+			if rec.QName() == appdef.NullQName {
 				err = fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, recID,
-					obj.AsQName(schemas.SystemField_QName), f.Name())
+					obj.AsQName(appdef.SystemField_QName), f.Name())
 			}
 		})
 	return err
