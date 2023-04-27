@@ -154,3 +154,20 @@ func Test_MergePackageSchemas1(t *testing.T) {
 	require.ErrorContains(err, "example.sql:6:6: function result do not match")
 
 }
+
+func Test_AbstractWorkspace(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	WORKSPACE ws1 ();
+	ABSTRACT WORKSPACE ws2();
+	`)
+	require.Nil(err)
+
+	ps, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.Nil(err)
+
+	require.False(ps.Ast.Statements[0].Workspace.Abstract)
+	require.True(ps.Ast.Statements[1].Workspace.Abstract)
+
+}

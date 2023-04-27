@@ -102,6 +102,7 @@ type WorkspaceStatement struct {
 
 type WorkspaceStmt struct {
 	Statement
+	Abstract   bool                 `parser:"@'ABSTRACT'?"`
 	Name       string               `parser:"'WORKSPACE' @Ident '('"`
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 }
