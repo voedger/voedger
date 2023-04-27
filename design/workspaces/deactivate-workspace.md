@@ -43,8 +43,7 @@
     actor owner as WorkspaceOwner
     participant ws as Workspace
     participant parent as OwnerApp/ParentWS
-    participant profile as ProfileWS
-    participant registry as regisrty
+    participant profile as ProfileWS (cdoc.sys.Subject.ProfileWSID)
 
     owner ->> ws: c.sys.DeactivateWorkspace()
     opt Workspace is active
@@ -60,8 +59,7 @@
       parent ->> parent: Docs[OwnerDocID].IsActive = false
     end
 
-    opt Foreach cdos.sys.Subject
-        registry -->> ws : ProfileWSIDByLogin
+    opt Foreach cdoc.sys.Subject
         ws ->> profile: c.sys.OnJoinedWorkspaceDeactivated()
         opt JoinedWorkspace.IsActive
           profile ->> profile: JoinedWorkspace.IsActive = false
