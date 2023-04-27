@@ -36,7 +36,7 @@ type AsyncActualizerStateFactory func(ctx context.Context, appStructs istructs.I
 type eventsFunc func() istructs.IEvents
 type viewRecordsFunc func() istructs.IViewRecords
 type recordsFunc func() istructs.IRecords
-type schemaCacheFunc func() appdef.SchemaCache
+type appDefFunc func() appdef.IAppDef
 
 type ToJSONOptions struct{ excludedFields map[string]bool }
 type ToJSONOption func(opts *ToJSONOptions)

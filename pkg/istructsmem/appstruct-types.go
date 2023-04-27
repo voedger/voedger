@@ -23,8 +23,8 @@ import (
 type AppConfigsType map[istructs.AppQName]*AppConfigType
 
 // AddConfig: adds new config for specified application
-func (cfgs *AppConfigsType) AddConfig(appName istructs.AppQName, schemas appdef.SchemaCacheBuilder) *AppConfigType {
-	c := newAppConfig(appName, schemas)
+func (cfgs *AppConfigsType) AddConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
+	c := newAppConfig(appName, appDef)
 
 	(*cfgs)[appName] = c
 	return c
@@ -39,18 +39,18 @@ func (cfgs *AppConfigsType) GetConfig(appName istructs.AppQName) *AppConfigType 
 	return c
 }
 
-// AppConfigType: configuration for application workflow (resources, schemas, etc.)
+// AppConfigType: configuration for application workflow
 type AppConfigType struct {
 	Name    istructs.AppQName
 	QNameID istructs.ClusterAppID
 
-	scb       appdef.SchemaCacheBuilder
-	Schemas   appdef.SchemaCache
-	Resources ResourcesType
-	Uniques   *implIUniques
+	appDefBuilder appdef.IAppDefBuilder
+	AppDef        appdef.IAppDef
+	Resources     ResourcesType
+	Uniques       *implIUniques
 
-	dbSchemas  dynobuf.DynoBufSchemasCache
-	validators *validators
+	dynoSchemes dynobuf.DynoBufSchemes
+	validators  *validators
 
 	storage                 istorage.IAppStorage // will be initialized on prepare()
 	versions                *vers.Versions
@@ -66,7 +66,7 @@ type AppConfigType struct {
 	eventValidators         []istructs.EventValidator
 }
 
-func newAppConfig(appName istructs.AppQName, scb appdef.SchemaCacheBuilder) *AppConfigType {
+func newAppConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
 	cfg := AppConfigType{Name: appName}
 
 	qNameID, ok := istructs.ClusterApps[appName]
@@ -75,16 +75,16 @@ func newAppConfig(appName istructs.AppQName, scb appdef.SchemaCacheBuilder) *App
 	}
 	cfg.QNameID = qNameID
 
-	cfg.scb = scb
-	sch, err := scb.Build()
+	cfg.appDefBuilder = appDef
+	app, err := appDef.Build()
 	if err != nil {
-		panic(fmt.Errorf("unable build application «%v» schemas: %w", appName, err))
+		panic(fmt.Errorf("%v: unable build application definition: %w", appName, err))
 	}
-	cfg.Schemas = sch
+	cfg.AppDef = app
 	cfg.Resources = newResources(&cfg)
 	cfg.Uniques = newUniques()
 
-	cfg.dbSchemas = dynobuf.New()
+	cfg.dynoSchemes = dynobuf.New()
 	cfg.validators = newValidators()
 
 	cfg.versions = vers.New()
@@ -106,15 +106,15 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		return nil
 	}
 
-	if cfg.scb.HasChanges() {
-		sch, err := cfg.scb.Build()
+	if cfg.appDefBuilder.HasChanges() {
+		sch, err := cfg.appDefBuilder.Build()
 		if err != nil {
-			panic(fmt.Errorf("unable rebuild application «%v» changed schemas: %w", cfg.Name, err))
+			panic(fmt.Errorf("%v: unable rebuild changed application definition: %w", cfg.Name, err))
 		}
-		cfg.Schemas = sch
+		cfg.AppDef = sch
 	}
-	cfg.dbSchemas.Prepare(cfg.Schemas)
-	cfg.validators.prepare(cfg.Schemas)
+	cfg.dynoSchemes.Prepare(cfg.AppDef)
+	cfg.validators.prepare(cfg.AppDef)
 
 	// prepare IAppStorage
 	cfg.storage = appStorage
@@ -125,17 +125,17 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	}
 
 	// prepare QNames
-	if err := cfg.qNames.Prepare(cfg.storage, cfg.versions, cfg.Schemas, &cfg.Resources); err != nil {
+	if err := cfg.qNames.Prepare(cfg.storage, cfg.versions, cfg.AppDef, &cfg.Resources); err != nil {
 		return err
 	}
 
 	// prepare container names
-	if err := cfg.cNames.Prepare(cfg.storage, cfg.versions, cfg.Schemas); err != nil {
+	if err := cfg.cNames.Prepare(cfg.storage, cfg.versions, cfg.AppDef); err != nil {
 		return err
 	}
 
 	// prepare singleton CDOCs
-	if err := cfg.singletons.Prepare(cfg.storage, cfg.versions, cfg.Schemas); err != nil {
+	if err := cfg.singletons.Prepare(cfg.storage, cfg.versions, cfg.AppDef); err != nil {
 		return err
 	}
 

@@ -5,7 +5,7 @@
 
 package dynobuf
 
-// Returns new dynobuffer schemas cache
-func New() DynoBufSchemasCache {
-	return newSchemasCache()
+// Returns new dynobuffer schemes
+func New() DynoBufSchemes {
+	return newSchemes()
 }

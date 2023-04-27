@@ -10,14 +10,14 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-type MockField struct {
+type Field struct {
 	appdef.Field
 	mock.Mock
 	verify map[appdef.VerificationKind]bool
 }
 
-func MockedField(name string, kind appdef.DataKind, req bool) *MockField {
-	fld := MockField{}
+func NewField(name string, kind appdef.DataKind, req bool) *Field {
+	fld := Field{}
 	fld.
 		On("Name").Return(name).
 		On("DataKind").Return(kind).
@@ -26,8 +26,8 @@ func MockedField(name string, kind appdef.DataKind, req bool) *MockField {
 	return &fld
 }
 
-func MockedVerifiedField(name string, kind appdef.DataKind, req bool, vk ...appdef.VerificationKind) *MockField {
-	fld := MockField{verify: make(map[appdef.VerificationKind]bool)}
+func NewVerifiedField(name string, kind appdef.DataKind, req bool, vk ...appdef.VerificationKind) *Field {
+	fld := Field{verify: make(map[appdef.VerificationKind]bool)}
 	for _, k := range vk {
 		fld.verify[k] = true
 	}
@@ -39,15 +39,15 @@ func MockedVerifiedField(name string, kind appdef.DataKind, req bool, vk ...appd
 	return &fld
 }
 
-func (fld *MockField) Name() string              { return fld.Called().Get(0).(string) }
-func (fld *MockField) DataKind() appdef.DataKind { return fld.Called().Get(0).(appdef.DataKind) }
-func (fld *MockField) Required() bool            { return fld.Called().Get(0).(bool) }
-func (fld *MockField) Verifiable() bool          { return fld.Called().Get(0).(bool) }
-func (fld *MockField) VerificationKind(vk appdef.VerificationKind) bool {
+func (fld *Field) Name() string              { return fld.Called().Get(0).(string) }
+func (fld *Field) DataKind() appdef.DataKind { return fld.Called().Get(0).(appdef.DataKind) }
+func (fld *Field) Required() bool            { return fld.Called().Get(0).(bool) }
+func (fld *Field) Verifiable() bool          { return fld.Called().Get(0).(bool) }
+func (fld *Field) VerificationKind(vk appdef.VerificationKind) bool {
 	if len(fld.verify) > 0 {
 		return fld.verify[vk]
 	}
 	return fld.Called(vk).Get(0).(bool)
 }
-func (fld *MockField) IsFixedWidth() bool { return fld.DataKind().IsFixed() }
-func (fld *MockField) IsSys() bool        { return appdef.IsSysField(fld.Name()) }
+func (fld *Field) IsFixedWidth() bool { return fld.DataKind().IsFixed() }
+func (fld *Field) IsSys() bool        { return appdef.IsSysField(fld.Name()) }

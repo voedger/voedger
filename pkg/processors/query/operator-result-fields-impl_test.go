@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -18,17 +19,25 @@ import (
 func TestResultFieldsOperator_DoSync(t *testing.T) {
 	t.Run("Should set result fields", func(t *testing.T) {
 		require := require.New(t)
-		commonSchema := coreutils.TestSchema{Fields_: map[string]appdef.DataKind{"name": appdef.DataKind_string}, QName_: appdef.NullQName}
+
+		commonSchema := func(n appdef.QName) *amock.Schema {
+			return amock.NewSchema(n, appdef.SchemaKind_Object,
+				amock.NewField("name", appdef.DataKind_string, false),
+			)
+		}
+
 		commonFields := []IResultField{resultField{field: "name"}}
-		cache := coreutils.TestSchemas{Schemas_: map[appdef.QName]appdef.Schema{
-			appdef.NewQName("", "root"):                  commonSchema,
-			appdef.NewQName("f", "first-children-1"):     commonSchema,
-			appdef.NewQName("f", "deep-children-1"):      commonSchema,
-			appdef.NewQName("f", "very-deep-children-1"): commonSchema,
-			appdef.NewQName("s", "first-children-2"):     commonSchema,
-			appdef.NewQName("s", "deep-children-1"):      commonSchema,
-			appdef.NewQName("s", "very-deep-children-1"): commonSchema,
-		}}
+
+		appDef := amock.NewAppDef(
+			commonSchema(appdef.NewQName("", "root")),
+			commonSchema(appdef.NewQName("f", "first-children-1")),
+			commonSchema(appdef.NewQName("f", "deep-children-1")),
+			commonSchema(appdef.NewQName("f", "very-deep-children-1")),
+			commonSchema(appdef.NewQName("s", "first-children-2")),
+			commonSchema(appdef.NewQName("s", "deep-children-1")),
+			commonSchema(appdef.NewQName("s", "very-deep-children-1")),
+		)
+
 		elements := []IElement{
 			element{
 				path:   path{rootDocument},
@@ -173,10 +182,10 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 		}
 
 		operator := &ResultFieldsOperator{
-			elements:     elements,
-			rootSchema:   coreutils.NewSchemaFields(commonSchema),
-			schemasCache: newSchemasCache(cache),
-			metrics:      &testMetrics{},
+			elements:   elements,
+			rootFields: coreutils.NewSchemaFields(commonSchema(appdef.NullQName)),
+			fieldsDefs: newFieldsDefs(appDef),
+			metrics:    &testMetrics{},
 		}
 
 		outWork, err := operator.DoAsync(context.Background(), work())
@@ -228,7 +237,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 			},
 		}
 		operator := ResultFieldsOperator{
-			rootSchema: map[string]appdef.DataKind{"": appdef.DataKind_FakeLast},
+			rootFields: map[string]appdef.DataKind{"": appdef.DataKind_FakeLast},
 			elements:   []IElement{element{path: path{""}, fields: []IResultField{resultField{""}}}},
 			metrics:    &testMetrics{},
 		}
@@ -269,9 +278,9 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 			},
 		}
 		operator := ResultFieldsOperator{
-			schemasCache: &schemasCache{fields: map[appdef.QName]coreutils.SchemaFields{appdef.NullQName: nil}},
-			elements:     []IElement{element{path: path{"container"}, fields: []IResultField{resultField{""}}}},
-			metrics:      &testMetrics{},
+			fieldsDefs: &fieldsDefs{fields: map[appdef.QName]coreutils.SchemaFields{appdef.NullQName: nil}},
+			elements:   []IElement{element{path: path{"container"}, fields: []IResultField{resultField{""}}}},
+			metrics:    &testMetrics{},
 		}
 
 		outWork, err := operator.DoAsync(ctx, work)

@@ -1,35 +1,42 @@
-[![codecov](https://codecov.io/gh/heeus/schemas/branch/main/graph/badge.svg?token=u6VrbqKtnn)](https://codecov.io/gh/heeus/schemas/mock)
+[![codecov](https://codecov.io/gh/voedger/voedger/appdef/mock/branch/main/graph/badge.svg?token=u6VrbqKtnn)](https://codecov.io/gh/voedger/voedger/appdef/mock)
 
-# schemas/mock
+# appdef/mock
 
-Useful for test schemas.
+Useful for test application definition.
 
 ``` golang
   import (
     …
-    smock "github.com/voedger/voedger/pkg/schemas/mock"
+    "github.com/voedger/voedger/pkg/appdef"
+    amock "github.com/voedger/voedger/pkg/appdef/mock"
     …
   )
 
   …
-  pkSchema := smock.MockedSchema(testViewRecordPkQName, appdef.SchemaKind_ViewRecord_PartitionKey,
-		smock.MockedField("pkFld", appdef.DataKind_int64, true),
+	testViewRecordQName, testViewRecordPkQName, testViewRecordCcQName, testViewRecordVQName :=
+		appdef.NewQName("test", "view"), 
+		appdef.NewQName("test", "viewPk"), 
+		appdef.NewQName("test", "viewCc"), 
+		appdef.NewQName("test", "viewValue")
+
+  pkSchema := amock.NewSchema(testViewRecordPkQName, appdef.SchemaKind_ViewRecord_PartitionKey,
+		amock.NewField("pkFld", appdef.DataKind_int64, true),
 	)
-  ccSchema := smock.MockedSchema(testViewRecordCcQName, appdef.SchemaKind_ViewRecord_ClusteringCols,
-		smock.MockedField("ccFld", appdef.DataKind_string, true),
+  ccSchema := amock.NewSchema(testViewRecordCcQName, appdef.SchemaKind_ViewRecord_ClusteringCols,
+		amock.NewField("ccFld", appdef.DataKind_string, true),
 	)
-	valueSchema := smock.MockedSchema(testViewRecordVQName, appdef.SchemaKind_ViewRecord_Value,
-		smock.MockedField("vFld1", appdef.DataKind_int64, true),
-		smock.MockedField("vFld2", appdef.DataKind_string, false),
+	valueSchema := amock.NewSchema(testViewRecordVQName, appdef.SchemaKind_ViewRecord_Value,
+		amock.NewField("vFld1", appdef.DataKind_int64, true),
+		amock.NewField("vFld2", appdef.DataKind_string, false),
 	)
-	viewSchema := smock.MockedSchema(testViewRecordQName1, appdef.SchemaKind_ViewRecord)
+	viewSchema := smock.NewSchema(testViewRecordQName, appdef.SchemaKind_ViewRecord)
 	viewSchema.MockContainers(
-		smock.MockedContainer(appdef.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
-    smock.MockedContainer(appdef.SystemContainer_ViewClusteringColumns, testViewRecordCcQName, 1, 1),
-		smock.MockedContainer(appdef.SystemContainer_ViewValue, testViewRecordVQName, 1, 1),
+		amock.NewContainer(appdef.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
+    amock.NewContainer(appdef.SystemContainer_ViewClusteringColumns, testViewRecordCcQName, 1, 1),
+		amock.NewContainer(appdef.SystemContainer_ViewValue, testViewRecordVQName, 1, 1),
 	)
 
-	cache := smock.MockedSchemaCache(
+	appDef := amock.NewAppDef(
 		viewSchema,
 		pkSchema,
     ccSchema,

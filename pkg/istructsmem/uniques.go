@@ -81,7 +81,7 @@ type fieldDesc struct {
 
 func (u implIUniques) validate(cfg *AppConfigType) error {
 	for qName, uniques := range u.uniques {
-		s := cfg.Schemas.SchemaByName(qName)
+		s := cfg.AppDef.SchemaByName(qName)
 		if s == nil {
 			return uniqueError(qName, ErrUnknownSchemaQName, "")
 		}

@@ -44,9 +44,9 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
 	app := appStructs(
-		func(schemas appdef.SchemaCacheBuilder) {
-			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
-			ProvideViewSchema(schemas, decProjectionView, buildProjectionSchema)
+		func(appDef appdef.IAppDefBuilder) {
+			ProvideViewSchema(appDef, incProjectionView, buildProjectionSchema)
+			ProvideViewSchema(appDef, decProjectionView, buildProjectionSchema)
 		},
 		nil)
 	actualizerFactory := ProvideSyncActualizerFactory()
@@ -154,22 +154,22 @@ var buildProjectionSchema = func(builder IViewSchemaBuilder) {
 }
 
 type (
-	schemasCfgCallback func(schemas appdef.SchemaCacheBuilder)
-	appCfgCallback     func(cfg *istructsmem.AppConfigType)
+	appDefCallback func(appDef appdef.IAppDefBuilder)
+	appCfgCallback func(cfg *istructsmem.AppConfigType)
 )
 
-func appStructs(schemasCfg schemasCfgCallback, appCfg appCfgCallback) istructs.IAppStructs {
-	cache := appdef.NewSchemaCache()
-	cache.Add(incrementorName, appdef.SchemaKind_Object)
-	cache.Add(decrementorName, appdef.SchemaKind_Object)
-	if schemasCfg != nil {
-		schemasCfg(cache)
+func appStructs(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+	appDef := appdef.New()
+	appDef.Add(incrementorName, appdef.SchemaKind_Object)
+	appDef.Add(decrementorName, appdef.SchemaKind_Object)
+	if prepareAppDef != nil {
+		prepareAppDef(appDef)
 	}
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, cache)
-	if appCfg != nil {
-		appCfg(cfg)
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+	if prepareAppCfg != nil {
+		prepareAppCfg(cfg)
 	}
 
 	asf := istorage.ProvideMem()
@@ -190,9 +190,9 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	require := require.New(t)
 
 	app := appStructs(
-		func(schemas appdef.SchemaCacheBuilder) {
-			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
-			ProvideViewSchema(schemas, decProjectionView, buildProjectionSchema)
+		func(appDef appdef.IAppDefBuilder) {
+			ProvideViewSchema(appDef, incProjectionView, buildProjectionSchema)
+			ProvideViewSchema(appDef, decProjectionView, buildProjectionSchema)
 		},
 		nil)
 	actualizerFactory := ProvideSyncActualizerFactory()

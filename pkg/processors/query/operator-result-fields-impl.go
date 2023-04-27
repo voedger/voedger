@@ -15,10 +15,10 @@ import (
 
 type ResultFieldsOperator struct {
 	pipeline.AsyncNOOP
-	elements     []IElement
-	rootSchema   coreutils.SchemaFields
-	schemasCache *schemasCache
-	metrics      IMetrics
+	elements   []IElement
+	rootFields coreutils.SchemaFields
+	fieldsDefs *fieldsDefs
+	metrics    IMetrics
 }
 
 func (o ResultFieldsOperator) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
@@ -31,7 +31,7 @@ func (o ResultFieldsOperator) DoAsync(ctx context.Context, work pipeline.IWorkpi
 	for _, element := range o.elements {
 		outputRow.Set(element.Path().Name(), make([]IOutputRow, 0))
 		if element.Path().IsRoot() {
-			err = o.fillRow(ctx, outputRow, element, object, o.rootSchema)
+			err = o.fillRow(ctx, outputRow, element, object, o.rootFields)
 			if err != nil {
 				return work, err
 			}
@@ -41,7 +41,7 @@ func (o ResultFieldsOperator) DoAsync(ctx context.Context, work pipeline.IWorkpi
 		findElements = func(parent istructs.IElement, pathEntries []string, pathEntryIndex int) {
 			parent.Elements(pathEntries[pathEntryIndex], func(el istructs.IElement) {
 				if pathEntryIndex == len(pathEntries)-1 {
-					err = o.fillRow(ctx, outputRow, element, el, o.schemasCache.get(el.QName()))
+					err = o.fillRow(ctx, outputRow, element, el, o.fieldsDefs.get(el.QName()))
 					if err != nil {
 						return
 					}

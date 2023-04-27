@@ -186,7 +186,7 @@ func TestElementFillAndGet(t *testing.T) {
 			},
 		}
 		cfg := cfgs[test.appName]
-		require.NoError(FillElementFromJSON(data, cfg.Schemas.Schema(test.testCDoc), builder))
+		require.NoError(FillElementFromJSON(data, cfg.AppDef.Schema(test.testCDoc), builder))
 		o, err := builder.Build()
 		require.NoError(err)
 
@@ -230,7 +230,7 @@ func TestElementFillAndGet(t *testing.T) {
 				"sys.ID": float64(1),
 				name:     val,
 			}
-			require.NoError(FillElementFromJSON(data, cfg.Schemas.Schema(test.testCDoc), builder))
+			require.NoError(FillElementFromJSON(data, cfg.AppDef.Schema(test.testCDoc), builder))
 			o, err := builder.Build()
 			require.ErrorIs(err, ErrWrongFieldType)
 			require.Nil(o)
@@ -252,7 +252,7 @@ func TestElementFillAndGet(t *testing.T) {
 			data := map[string]interface{}{
 				c.f: c.v,
 			}
-			err := FillElementFromJSON(data, cfg.Schemas.Schema(test.testCDoc), builder)
+			err := FillElementFromJSON(data, cfg.AppDef.Schema(test.testCDoc), builder)
 			require.Error(err)
 		}
 	})
@@ -262,7 +262,7 @@ func TestIBucketsFromIAppStructs(t *testing.T) {
 	require := require.New(t)
 
 	cfgs := AppConfigsType{}
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.NewSchemaCache())
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
 	funcQName := appdef.NewQName("my", "func")
 	rlExpected := istructs.RateLimit{
 		Period:                1,

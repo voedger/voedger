@@ -18,17 +18,17 @@ func TestBasicUsage_Uniques(t *testing.T) {
 
 	qName := appdef.NewQName("my", "name")
 	qName2 := appdef.NewQName("my", "name2")
-	bld := appdef.NewSchemaCache()
+	appDef := appdef.New()
 
-	t.Run("must be ok to build schemas", func(t *testing.T) {
-		bld.Add(qName, appdef.SchemaKind_CDoc).
+	t.Run("must be ok to build application definition", func(t *testing.T) {
+		appDef.Add(qName, appdef.SchemaKind_CDoc).
 			AddField("a", appdef.DataKind_int32, true).
 			AddField("b", appdef.DataKind_int32, true).
 			AddField("c", appdef.DataKind_int32, true)
 	})
 
 	cfgs := AppConfigsType{}
-	cfg := cfgs.AddConfig(test.appName, bld)
+	cfg := cfgs.AddConfig(test.appName, appDef)
 
 	// add Uniques in AppConfigType
 	cfg.Uniques.Add(qName, []string{"a"})

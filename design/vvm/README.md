@@ -97,7 +97,7 @@ flowchart TD
       ParseAppSchemaFiles --> BuildAppPartition     
     end
     AppSchemaFiles[(folder.AppSchemaFiles)]:::H
-    AppSchemas[(AppSchemas)]:::S
+    AppDef[(AppDef)]:::S
     AppPartitions[(AppPartitions)]:::S
     AppPartition:::S
       Cache([Cache]):::S
@@ -123,8 +123,8 @@ flowchart TD
   ws.Cluster -.-> |BLOBs| DownloadImage
   DownloadImage -.-> |*.sql etc.| AppSchemaFiles
   AppSchemaFiles -.-> ParseAppSchemaFiles
-  ParseAppSchemaFiles -.-> AppSchemas
-  AppSchemas -.-> BuildAppPartition
+  ParseAppSchemaFiles -.-> AppDef
+  AppDef -.-> BuildAppPartition
   ExtensionEngineFactories -.-> BuildAppPartition
   BuildAppPartition -.-> AppPartitions
 

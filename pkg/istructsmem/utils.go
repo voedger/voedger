@@ -19,7 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokensjwt"
 )
 
-var NullAppConfig = newAppConfig(istructs.AppQName_null, appdef.NewSchemaCache())
+var NullAppConfig = newAppConfig(istructs.AppQName_null, appdef.New())
 
 var (
 	nullDynoBuffer = dynobuffers.NewBuffer(dynobuffers.NewScheme())
@@ -123,7 +123,7 @@ func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectB
 }
 
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
-	schems := appStructs.Schemas()
+	schems := appStructs.AppDef()
 	schema := schems.Schema(obj.AsQName(appdef.SystemField_QName))
 	schema.Fields(
 		func(f appdef.Field) {

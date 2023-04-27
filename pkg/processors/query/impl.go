@@ -31,7 +31,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func implRowsProcessorFactory(ctx context.Context, cache appdef.SchemaCache, state istructs.IState, params IQueryParams,
+func implRowsProcessorFactory(ctx context.Context, cache appdef.IAppDef, state istructs.IState, params IQueryParams,
 	resultMeta appdef.Schema, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline {
 	operators := make([]*pipeline.WiredOperator, 0)
 	if resultMeta.QName() == istructs.QNameJSON {
@@ -39,22 +39,22 @@ func implRowsProcessorFactory(ctx context.Context, cache appdef.SchemaCache, sta
 			metrics: metrics,
 		}))
 	} else {
-		schemasCache := &schemasCache{
-			schemas: cache,
-			fields:  make(map[appdef.QName]coreutils.SchemaFields),
+		fieldsDefs := &fieldsDefs{
+			appDef: cache,
+			fields: make(map[appdef.QName]coreutils.SchemaFields),
 		}
 		rootSchema := coreutils.NewSchemaFields(resultMeta)
 		operators = append(operators, pipeline.WireAsyncOperator("Result fields", &ResultFieldsOperator{
-			elements:     params.Elements(),
-			rootSchema:   rootSchema,
-			schemasCache: schemasCache,
-			metrics:      metrics,
+			elements:   params.Elements(),
+			rootFields: rootSchema,
+			fieldsDefs: fieldsDefs,
+			metrics:    metrics,
 		}))
 		operators = append(operators, pipeline.WireAsyncOperator("Enrichment", &EnrichmentOperator{
-			state:        state,
-			elements:     params.Elements(),
-			schemasCache: schemasCache,
-			metrics:      metrics,
+			state:      state,
+			elements:   params.Elements(),
+			fieldsDefs: fieldsDefs,
+			metrics:    metrics,
 		}))
 		if len(params.Filters()) != 0 {
 			operators = append(operators, pipeline.WireAsyncOperator("Filter", &FilterOperator{
@@ -172,7 +172,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.queryFunction = qw.msg.Resource().(istructs.IQueryFunction)
-			paramsSchema := qw.appStructs.Schemas().Schema(qw.queryFunction.ParamsSchema())
+			paramsSchema := qw.appStructs.AppDef().Schema(qw.queryFunction.ParamsSchema())
 			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), paramsSchema, qw.appCfg, qw)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
@@ -190,7 +190,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("validate: get result schema", func(ctx context.Context, qw *queryWork) (err error) {
 			schema := qw.queryFunction.ResultSchema(qw.execQueryArgs.PrepareArgs)
-			qw.resultSchema = qw.appStructs.Schemas().Schema(schema)
+			qw.resultSchema = qw.appStructs.AppDef().Schema(schema)
 			err = errIfFalse(qw.resultSchema.Kind() != appdef.SchemaKind_null, func() error {
 				return fmt.Errorf("result schema %s: %w", schema, ErrNotFound)
 			})
@@ -227,7 +227,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			defer func() {
 				qw.metrics.Increase(buildSeconds, time.Since(now).Seconds())
 			}()
-			qw.rowsProcessor = ProvideRowsProcessorFactory()(qw.msg.RequestCtx(), qw.appStructs.Schemas(),
+			qw.rowsProcessor = ProvideRowsProcessorFactory()(qw.msg.RequestCtx(), qw.appStructs.AppDef(),
 				qw.state, qw.queryParams, qw.resultSchema, qw.rs, qw.metrics)
 			return nil
 		}),
@@ -459,25 +459,25 @@ func (e element) Path() IPath                  { return e.path }
 func (e element) ResultFields() []IResultField { return e.fields }
 func (e element) RefFields() []IRefField       { return e.refs }
 
-type schemasCache struct {
-	schemas appdef.SchemaCache
-	fields  map[appdef.QName]coreutils.SchemaFields
-	lock    sync.Mutex
+type fieldsDefs struct {
+	appDef appdef.IAppDef
+	fields map[appdef.QName]coreutils.SchemaFields
+	lock   sync.Mutex
 }
 
-func newSchemasCache(cache appdef.SchemaCache) *schemasCache {
-	return &schemasCache{
-		schemas: cache,
-		fields:  make(map[appdef.QName]coreutils.SchemaFields),
+func newFieldsDefs(appDef appdef.IAppDef) *fieldsDefs {
+	return &fieldsDefs{
+		appDef: appDef,
+		fields: make(map[appdef.QName]coreutils.SchemaFields),
 	}
 }
 
-func (c *schemasCache) get(name appdef.QName) coreutils.SchemaFields {
+func (c *fieldsDefs) get(name appdef.QName) coreutils.SchemaFields {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	value, ok := c.fields[name]
 	if !ok {
-		value = coreutils.NewSchemaFields(c.schemas.Schema(name))
+		value = coreutils.NewSchemaFields(c.appDef.Schema(name))
 		c.fields[name] = value
 	}
 	return value

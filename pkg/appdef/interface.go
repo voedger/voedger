@@ -35,10 +35,10 @@ type VerificationKind uint8
 // Ref. occurs.go for constants and methods
 type Occurs uint16
 
-// Application schemas
+// Application definition.
 //
-// Ref to cache.go for implementation
-type SchemaCache interface {
+// Ref to apdef.go for implementation
+type IAppDef interface {
 	// Returns schema by name.
 	//
 	// If not found empty Schema with SchemeKind_null is returned
@@ -56,11 +56,11 @@ type SchemaCache interface {
 	Schemas(func(Schema))
 }
 
-// Application schemas builder
+// Application definition builder
 //
-// Ref to cache.go for implementation
-type SchemaCacheBuilder interface {
-	SchemaCache
+// Ref to appdef.go for implementation
+type IAppDefBuilder interface {
+	IAppDef
 
 	// Adds new schema specified name and kind.
 	//
@@ -73,8 +73,8 @@ type SchemaCacheBuilder interface {
 	// Adds new schemas for view.
 	AddView(QName) ViewBuilder
 
-	// Must be called after all schemas added. Validates schemas and returns builded schemas or error
-	Build() (SchemaCache, error)
+	// Must be called after all schemas added. Validates and returns builded application definition or error
+	Build() (IAppDef, error)
 
 	// Has changes since last success build
 	HasChanges() bool
@@ -85,7 +85,7 @@ type SchemaCacheBuilder interface {
 // Ref to schema.go for implementation
 type Schema interface {
 	// Parent cache
-	Cache() SchemaCache
+	App() IAppDef
 
 	// Schema qualified name.
 	QName() QName
@@ -165,7 +165,7 @@ type SchemaBuilder interface {
 	//   - if container schema kind is not compatable with schema kind.
 	AddContainer(name string, schema QName, min, max Occurs) SchemaBuilder
 
-	// Sets the singleton document flag for CDoc schemas.
+	// Sets the singleton document flag for CDoc.
 	//
 	// # Panics:
 	//   - if not CDoc schema.

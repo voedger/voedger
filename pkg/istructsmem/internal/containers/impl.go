@@ -45,12 +45,12 @@ func (cnt *Containers) GetID(name string) (ContainerID, error) {
 }
 
 // Loads all container from storage, add all known system and application containers and store if some changes. Must be called at application starts
-func (cnt *Containers) Prepare(storage istorage.IAppStorage, versions *vers.Versions, schemas appdef.SchemaCache) (err error) {
+func (cnt *Containers) Prepare(storage istorage.IAppStorage, versions *vers.Versions, appDef appdef.IAppDef) (err error) {
 	if err = cnt.load(storage, versions); err != nil {
 		return err
 	}
 
-	if err = cnt.collectAllContainers(schemas); err != nil {
+	if err = cnt.collectAllContainers(appDef); err != nil {
 		return err
 	}
 
@@ -63,15 +63,15 @@ func (cnt *Containers) Prepare(storage istorage.IAppStorage, versions *vers.Vers
 	return nil
 }
 
-// Retrieves and stores IDs for all known containers in application schemas. Must be called then application starts
-func (cnt *Containers) collectAllContainers(sch appdef.SchemaCache) (err error) {
+// Retrieves and stores IDs for all known containers in application definition. Must be called then application starts
+func (cnt *Containers) collectAllContainers(appDef appdef.IAppDef) (err error) {
 
 	// system containers
 	cnt.collectSysContainer("", NullContainerID)
 
 	// application containers
-	if sch != nil {
-		sch.Schemas(
+	if appDef != nil {
+		appDef.Schemas(
 			func(schema appdef.Schema) {
 				schema.Containers(
 					func(c appdef.Container) {

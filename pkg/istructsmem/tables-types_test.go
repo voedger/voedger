@@ -367,9 +367,9 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		b, err := rec1.storeToBytes()
 		require.NoError(err)
 
-		sch := appdef.NewSchemaCache()
-		t.Run("must be ok to build schemas", func(t *testing.T) {
-			sch.Add(test.testCDoc, appdef.SchemaKind_CDoc).
+		appDef := appdef.New()
+		t.Run("must be ok to build application definition", func(t *testing.T) {
+			appDef.Add(test.testCDoc, appdef.SchemaKind_CDoc).
 				AddField("int32_1", appdef.DataKind_int32, false).
 				AddField("int64_1", appdef.DataKind_int64, false).
 				AddField("float32_1", appdef.DataKind_float32, false).
@@ -379,10 +379,10 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 				AddField("QName_1", appdef.DataKind_QName, false).
 				AddField("bool_1", appdef.DataKind_bool, false).
 				AddField("RecordID_1", appdef.DataKind_RecordID, false)
-			sch.Add(test.tablePhotos, appdef.SchemaKind_Object) // for reading QName_1 field value
+			appDef.Add(test.tablePhotos, appdef.SchemaKind_Object) // for reading QName_1 field value
 		})
 
-		newConfig := newAppConfig(test.AppCfg.Name, sch)
+		newConfig := newAppConfig(test.AppCfg.Name, appDef)
 
 		err = newConfig.prepare(nil, test.AppCfg.storage)
 		require.NoError(err)

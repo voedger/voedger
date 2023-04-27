@@ -23,13 +23,13 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 
 	a.Name = app.AppQName()
 
-	app.Schemas().Schemas(func(s appdef.Schema) {
+	app.AppDef().Schemas(func(s appdef.Schema) {
 		schemaName := s.QName()
 		pkg := getPkg(schemaName, a)
 		schema := newSchema()
 		schema.Name = schemaName
 		pkg.Schemas[schemaName.String()] = schema
-		schema.readAppSchema(app.Schemas().Schema(schemaName))
+		schema.readAppSchema(app.AppDef().Schema(schemaName))
 	})
 
 	app.Resources().Resources(func(resName appdef.QName) {

@@ -16,7 +16,7 @@ import (
 type viewRecordsStorage struct {
 	ctx             context.Context
 	viewRecordsFunc viewRecordsFunc
-	schemaCacheFunc schemaCacheFunc
+	appDefFunc      appDefFunc
 	wsidFunc        WSIDFunc
 	n10nFunc        N10nFunc
 }
@@ -110,11 +110,11 @@ func (s *viewRecordsStorage) toJSON(sv istructs.IStateValue, opts ...interface{}
 	}
 
 	obj := make(map[string]interface{})
-	s.schemaCacheFunc().Schema(sv.AsQName(appdef.SystemField_QName)).
+	s.appDefFunc().Schema(sv.AsQName(appdef.SystemField_QName)).
 		Containers(func(cont appdef.Container) {
 			containerName := cont.Name()
 			if containerName == appdef.SystemContainer_ViewValue {
-				obj = coreutils.FieldsToMap(sv, s.schemaCacheFunc(), coreutils.Filter(func(name string, kidn appdef.DataKind) bool {
+				obj = coreutils.FieldsToMap(sv, s.appDefFunc(), coreutils.Filter(func(name string, kidn appdef.DataKind) bool {
 					return !options.excludedFields[name]
 				}))
 			}

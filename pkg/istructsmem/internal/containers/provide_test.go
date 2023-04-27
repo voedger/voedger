@@ -26,16 +26,16 @@ func Test_BasicUsage(t *testing.T) {
 	}
 
 	testName := "test"
-	bld := appdef.NewSchemaCache()
-	bld.Add(appdef.NewQName("test", "schema"), appdef.SchemaKind_Element).
+	appDefBuilder := appdef.New()
+	appDefBuilder.Add(appdef.NewQName("test", "schema"), appdef.SchemaKind_Element).
 		AddContainer(testName, appdef.NewQName("test", "schema"), 0, appdef.Occurs_Unbounded)
-	schemas, err := bld.Build()
+	appDef, err := appDefBuilder.Build()
 	if err != nil {
 		panic(err)
 	}
 
 	containers := New()
-	if err := containers.Prepare(storage, versions, schemas); err != nil {
+	if err := containers.Prepare(storage, versions, appDef); err != nil {
 		panic(err)
 	}
 

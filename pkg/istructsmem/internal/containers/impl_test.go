@@ -36,14 +36,14 @@ func TestContainers(t *testing.T) {
 
 	containers := New()
 	if err := containers.Prepare(storage, versions,
-		func() appdef.SchemaCache {
+		func() appdef.IAppDef {
 			schemaName := appdef.NewQName("test", "schema")
-			bld := appdef.NewSchemaCache()
-			bld.Add(schemaName, appdef.SchemaKind_Element).
+			appDef := appdef.New()
+			appDef.Add(schemaName, appdef.SchemaKind_Element).
 				AddContainer(containerName, schemaName, 0, 1)
-			schemas, err := bld.Build()
+			result, err := appDef.Build()
 			require.NoError(err)
-			return schemas
+			return result
 		}()); err != nil {
 		panic(err)
 	}
@@ -86,14 +86,14 @@ func TestContainers(t *testing.T) {
 
 			containers2 := New()
 			if err := containers2.Prepare(storage, versions,
-				func() appdef.SchemaCache {
+				func() appdef.IAppDef {
 					schemaName := appdef.NewQName("test", "schema")
-					bld := appdef.NewSchemaCache()
-					bld.Add(schemaName, appdef.SchemaKind_Element).
+					appDef := appdef.New()
+					appDef.Add(schemaName, appdef.SchemaKind_Element).
 						AddContainer(containerName, schemaName, 0, 1)
-					schemas, err := bld.Build()
+					result, err := appDef.Build()
 					require.NoError(err)
-					return schemas
+					return result
 				}()); err != nil {
 				panic(err)
 			}
@@ -197,16 +197,16 @@ func TestContainersPrepareErrors(t *testing.T) {
 
 		names := New()
 		err := names.Prepare(storage, versions,
-			func() appdef.SchemaCache {
-				bld := appdef.NewSchemaCache()
+			func() appdef.IAppDef {
+				appDef := appdef.New()
 				qName := appdef.NewQName("test", "test")
-				schema := bld.Add(qName, appdef.SchemaKind_Element)
+				schema := appDef.Add(qName, appdef.SchemaKind_Element)
 				for i := 0; i <= MaxAvailableContainerID; i++ {
 					schema.AddContainer(fmt.Sprintf("cont_%d", i), qName, 0, 1)
 				}
-				schemas, err := bld.Build()
+				result, err := appDef.Build()
 				require.NoError(err)
-				return schemas
+				return result
 			}())
 		require.ErrorIs(err, ErrContainerIDsExceeds)
 	})
@@ -227,14 +227,14 @@ func TestContainersPrepareErrors(t *testing.T) {
 
 			names := New()
 			err := names.Prepare(storage, versions,
-				func() appdef.SchemaCache {
+				func() appdef.IAppDef {
 					schemaName := appdef.NewQName("test", "schema")
-					bld := appdef.NewSchemaCache()
-					bld.Add(schemaName, appdef.SchemaKind_Element).
+					appDef := appdef.New()
+					appDef.Add(schemaName, appdef.SchemaKind_Element).
 						AddContainer(containerName, schemaName, 0, 1)
-					schemas, err := bld.Build()
+					result, err := appDef.Build()
 					require.NoError(err)
-					return schemas
+					return result
 				}())
 			require.ErrorIs(err, writeError)
 		})
@@ -251,14 +251,14 @@ func TestContainersPrepareErrors(t *testing.T) {
 
 			names := New()
 			err := names.Prepare(storage, versions,
-				func() appdef.SchemaCache {
+				func() appdef.IAppDef {
 					schemaName := appdef.NewQName("test", "schema")
-					bld := appdef.NewSchemaCache()
-					bld.Add(schemaName, appdef.SchemaKind_Element).
+					appDef := appdef.New()
+					appDef.Add(schemaName, appdef.SchemaKind_Element).
 						AddContainer(containerName, schemaName, 0, 1)
-					schemas, err := bld.Build()
+					result, err := appDef.Build()
 					require.NoError(err)
-					return schemas
+					return result
 				}())
 			require.ErrorIs(err, writeError)
 		})

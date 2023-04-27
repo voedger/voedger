@@ -45,7 +45,7 @@ func (sch *schema) validateFields() (err error) {
 func (sch *schema) validateViewFields() (err error) {
 	findSchema := func(contName string, kind SchemaKind) Schema {
 		if cont := sch.Container(contName); cont != nil {
-			if schema := sch.cache.SchemaByName(cont.Schema()); schema != nil {
+			if schema := sch.app.SchemaByName(cont.Schema()); schema != nil {
 				if schema.Kind() == kind {
 					return schema
 				}
@@ -120,7 +120,7 @@ func (sch *schema) validateContainers() (err error) {
 		err = sch.validateViewContainers()
 	default:
 		sch.Containers(func(c Container) {
-			schema := sch.cache.SchemaByName(c.Schema())
+			schema := sch.app.SchemaByName(c.Schema())
 			if schema != nil {
 				if !sch.Kind().ContainerKindAvailable(schema.Kind()) {
 					err = errors.Join(err, fmt.Errorf("schema «%v» kind «%v»: container «%s» kind «%v» is not available: %w", sch.QName(), sch.Kind(), c.Name(), schema.Kind(), ErrInvalidSchemaKind))
@@ -199,7 +199,7 @@ func (v *validator) validate(schema Schema) error {
 		if cont.Schema() == schema.QName() {
 			return
 		}
-		contSchema := schema.Cache().SchemaByName(cont.Schema())
+		contSchema := schema.App().SchemaByName(cont.Schema())
 		if contSchema == nil {
 			err = errors.Join(err, fmt.Errorf("schema «%v» container «%s» uses unknown schema «%v»: %w", schema.QName(), cont.Name(), cont.Schema(), ErrNameNotFound))
 			v.results[schema.QName()] = err

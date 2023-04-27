@@ -39,10 +39,10 @@ type IAppStructs interface {
 	Resources() IResources
 
 	// ************************************************************
-	// Data schemas, kind of RTTI, reflection
+	// Application definition, kind of RTTI, reflection
 
-	// Schemas
-	Schemas() appdef.SchemaCache
+	// AppDef
+	AppDef() appdef.IAppDef
 
 	ClusterAppID() ClusterAppID
 	AppQName() AppQName

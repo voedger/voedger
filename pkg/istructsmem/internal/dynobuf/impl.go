@@ -10,21 +10,21 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func newSchemasCache() DynoBufSchemasCache {
-	cache := DynoBufSchemasCache{}
+func newSchemes() DynoBufSchemes {
+	cache := DynoBufSchemes{}
 	return cache
 }
 
-// Prepares schemas
-func (cache DynoBufSchemasCache) Prepare(sch appdef.SchemaCache) {
-	sch.Schemas(
+// Prepares schemes
+func (sch DynoBufSchemes) Prepare(appDef appdef.IAppDef) {
+	appDef.Schemas(
 		func(schema appdef.Schema) {
-			cache.add(schema)
+			sch.add(schema)
 		})
 }
 
 // Adds schema
-func (cache DynoBufSchemasCache) add(schema appdef.Schema) {
+func (sch DynoBufSchemes) add(schema appdef.Schema) {
 	db := dynobuffers.NewScheme()
 
 	db.Name = schema.QName().String()
@@ -40,5 +40,5 @@ func (cache DynoBufSchemasCache) add(schema appdef.Schema) {
 			}
 		})
 
-	cache[schema.QName()] = db
+	sch[schema.QName()] = db
 }

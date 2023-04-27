@@ -119,10 +119,10 @@ type nilAppStructs struct {
 	istructs.IAppStructs
 }
 
+func (s *nilAppStructs) AppDef() appdef.IAppDef             { return nil }
 func (s *nilAppStructs) Events() istructs.IEvents           { return nil }
 func (s *nilAppStructs) Records() istructs.IRecords         { return nil }
 func (s *nilAppStructs) ViewRecords() istructs.IViewRecords { return nil }
-func (s *nilAppStructs) Schemas() appdef.SchemaCache        { return nil }
 
 type nilEvents struct {
 	istructs.IEvents
@@ -132,8 +132,8 @@ type nilRecords struct {
 	istructs.IRecords
 }
 
-type nilSchemas struct {
-	appdef.SchemaCache
+type nilAppDef struct {
+	appdef.IAppDef
 }
 
 type nilViewRecords struct {
@@ -145,13 +145,13 @@ type mockAppStructs struct {
 	mock.Mock
 }
 
+func (s *mockAppStructs) AppDef() appdef.IAppDef {
+	return s.Called().Get(0).(appdef.IAppDef)
+}
 func (s *mockAppStructs) Events() istructs.IEvents   { return s.Called().Get(0).(istructs.IEvents) }
 func (s *mockAppStructs) Records() istructs.IRecords { return s.Called().Get(0).(istructs.IRecords) }
 func (s *mockAppStructs) ViewRecords() istructs.IViewRecords {
 	return s.Called().Get(0).(istructs.IViewRecords)
-}
-func (s *mockAppStructs) Schemas() appdef.SchemaCache {
-	return s.Called().Get(0).(appdef.SchemaCache)
 }
 
 type mockEvents struct {

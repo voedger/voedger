@@ -14,10 +14,10 @@ import (
 )
 
 type wLogStorage struct {
-	ctx             context.Context
-	eventsFunc      eventsFunc
-	schemaCacheFunc schemaCacheFunc
-	wsidFunc        WSIDFunc
+	ctx        context.Context
+	eventsFunc eventsFunc
+	appDefFunc appDefFunc
+	wsidFunc   WSIDFunc
 }
 
 func (s *wLogStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
@@ -64,10 +64,10 @@ func (s *wLogStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string,
 	value := sv.(*wLogStorageValue)
 	obj := make(map[string]interface{})
 	obj["QName"] = value.event.QName().String()
-	obj["ArgumentObject"] = coreutils.ObjectToMap(value.event.ArgumentObject(), s.schemaCacheFunc())
+	obj["ArgumentObject"] = coreutils.ObjectToMap(value.event.ArgumentObject(), s.appDefFunc())
 	cc := make([]map[string]interface{}, 0)
 	err := value.event.CUDs(func(rec istructs.ICUDRow) (err error) {
-		cudRowMap := cudRowToMap(rec, s.schemaCacheFunc)
+		cudRowMap := cudRowToMap(rec, s.appDefFunc)
 		cc = append(cc, cudRowMap)
 		return
 	})

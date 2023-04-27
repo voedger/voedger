@@ -19,22 +19,22 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		require := require.New(t)
 
-		pkSchema := amock.MockedSchema(testViewRecordPkQName, appdef.SchemaKind_ViewRecord_PartitionKey,
-			amock.MockedField("pkk", appdef.DataKind_string, true), // ??? variable len PK !!!
+		pkSchema := amock.NewSchema(testViewRecordPkQName, appdef.SchemaKind_ViewRecord_PartitionKey,
+			amock.NewField("pkk", appdef.DataKind_string, true), // ??? variable len PK !!!
 		)
-		ccSchema := amock.MockedSchema(testViewRecordCcQName, appdef.SchemaKind_ViewRecord_ClusteringColumns,
-			amock.MockedField("cck", appdef.DataKind_string, false),
+		ccSchema := amock.NewSchema(testViewRecordCcQName, appdef.SchemaKind_ViewRecord_ClusteringColumns,
+			amock.NewField("cck", appdef.DataKind_string, false),
 		)
-		valSchema := amock.MockedSchema(testViewRecordCcQName, appdef.SchemaKind_ViewRecord_Value,
-			amock.MockedField("vk", appdef.DataKind_string, false),
+		valSchema := amock.NewSchema(testViewRecordCcQName, appdef.SchemaKind_ViewRecord_Value,
+			amock.NewField("vk", appdef.DataKind_string, false),
 		)
-		viewSchema := amock.MockedSchema(testViewRecordCcQName, appdef.SchemaKind_ViewRecord)
-		viewSchema.MockContainers(
-			amock.MockedContainer(appdef.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
-			amock.MockedContainer(appdef.SystemContainer_ViewClusteringCols, testViewRecordCcQName, 1, 1),
-			amock.MockedContainer(appdef.SystemContainer_ViewValue, testViewRecordVQName, 1, 1),
+		viewSchema := amock.NewSchema(testViewRecordCcQName, appdef.SchemaKind_ViewRecord)
+		viewSchema.AddContainer(
+			amock.NewContainer(appdef.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
+			amock.NewContainer(appdef.SystemContainer_ViewClusteringCols, testViewRecordCcQName, 1, 1),
+			amock.NewContainer(appdef.SystemContainer_ViewValue, testViewRecordVQName, 1, 1),
 		)
-		cache := amock.MockedSchemaCache(
+		appDef := amock.NewAppDef(
 			viewSchema,
 			pkSchema,
 			ccSchema,
@@ -54,7 +54,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 			})
 		appStructs := &mockAppStructs{}
 		appStructs.
-			On("Schemas").Return(cache).
+			On("AppDef").Return(appDef).
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
@@ -73,9 +73,9 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 	t.Run("Should return error on get batch", func(t *testing.T) {
 		require := require.New(t)
 
-		schema := amock.MockedSchema(testViewRecordQName1, appdef.SchemaKind_ViewRecord)
+		schema := amock.NewSchema(testViewRecordQName1, appdef.SchemaKind_ViewRecord)
 		schema.On("Containers", mock.Anything)
-		cache := amock.MockedSchemaCache(schema)
+		appDef := amock.NewAppDef(schema)
 
 		viewRecords := &mockViewRecords{}
 		viewRecords.
@@ -83,7 +83,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 			On("GetBatch", istructs.WSID(1), mock.Anything).Return(errTest)
 		appStructs := &mockAppStructs{}
 		appStructs.
-			On("Schemas").Return(cache).
+			On("AppDef").Return(appDef).
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
@@ -113,7 +113,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			})
 		appStructs := &mockAppStructs{}
 		appStructs.
-			On("Schemas").Return(&nilSchemas{}).
+			On("AppDef").Return(&nilAppDef{}).
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
@@ -138,7 +138,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			Return(errTest)
 		appStructs := &mockAppStructs{}
 		appStructs.
-			On("Schemas").Return(&nilSchemas{}).
+			On("AppDef").Return(&nilAppDef{}).
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
@@ -154,8 +154,8 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testing.T) {
 	require := require.New(t)
 
-	cache := amock.MockedSchemaCache()
-	cache.On("Schema", testViewRecordQName1).Return(appdef.NullSchema)
+	appDef := amock.NewAppDef()
+	appDef.On("Schema", testViewRecordQName1).Return(appdef.NullSchema)
 
 	viewRecords := &mockViewRecords{}
 	viewRecords.
@@ -164,8 +164,8 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 		On("PutBatch", istructs.WSID(1), mock.Anything).Return(errTest)
 	appStructs := &mockAppStructs{}
 	appStructs.
+		On("AppDef").Return(appDef).
 		On("ViewRecords").Return(viewRecords).
-		On("Schemas").Return(cache).
 		On("Records").Return(&nilRecords{}).
 		On("Events").Return(&nilEvents{})
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
@@ -183,23 +183,23 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 }
 
 func TestViewRecordsStorage_toJSON(t *testing.T) {
-	valSchema := amock.MockedSchema(testViewRecordVQName, appdef.SchemaKind_ViewRecord_Value,
-		amock.MockedField("ID", appdef.DataKind_RecordID, false),
-		amock.MockedField("Name", appdef.DataKind_string, false),
-		amock.MockedField("Count", appdef.DataKind_int64, false),
+	valSchema := amock.NewSchema(testViewRecordVQName, appdef.SchemaKind_ViewRecord_Value,
+		amock.NewField("ID", appdef.DataKind_RecordID, false),
+		amock.NewField("Name", appdef.DataKind_string, false),
+		amock.NewField("Count", appdef.DataKind_int64, false),
 	)
 
-	viewSchema := amock.MockedSchema(testViewRecordQName1, appdef.SchemaKind_ViewRecord,
-		amock.MockedField("ID", appdef.DataKind_RecordID, false), // ??? Fields in root view schema, copy/paste error ???
-		amock.MockedField("Name", appdef.DataKind_string, false),
-		amock.MockedField("Count", appdef.DataKind_int64, false),
+	viewSchema := amock.NewSchema(testViewRecordQName1, appdef.SchemaKind_ViewRecord,
+		amock.NewField("ID", appdef.DataKind_RecordID, false), // ??? Fields in root view schema, copy/paste error ???
+		amock.NewField("Name", appdef.DataKind_string, false),
+		amock.NewField("Count", appdef.DataKind_int64, false),
 	)
-	viewSchema.MockContainers(
-		amock.MockedContainer(appdef.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
-		amock.MockedContainer(appdef.SystemContainer_ViewClusteringCols, testViewRecordCcQName, 1, 1),
-		amock.MockedContainer(appdef.SystemContainer_ViewValue, testViewRecordVQName, 1, 1),
+	viewSchema.AddContainer(
+		amock.NewContainer(appdef.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
+		amock.NewContainer(appdef.SystemContainer_ViewClusteringCols, testViewRecordCcQName, 1, 1),
+		amock.NewContainer(appdef.SystemContainer_ViewValue, testViewRecordVQName, 1, 1),
 	)
-	cache := amock.MockedSchemaCache(
+	cache := amock.NewAppDef(
 		viewSchema,
 		valSchema,
 	)
@@ -212,7 +212,7 @@ func TestViewRecordsStorage_toJSON(t *testing.T) {
 		On("AsQName", mock.Anything).Return(testViewRecordQName1)
 
 	s := viewRecordsStorage{
-		schemaCacheFunc: func() appdef.SchemaCache { return cache },
+		appDefFunc: func() appdef.IAppDef { return cache },
 	}
 	t.Run("Should marshal entire element", func(t *testing.T) {
 		require := require.New(t)

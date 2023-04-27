@@ -210,11 +210,11 @@ var data = testDataType{
 
 var test func() *testDataType = func() *testDataType {
 
-	prepareSchemas := func() appdef.SchemaCacheBuilder {
-		bld := appdef.NewSchemaCache()
+	prepareAppDef := func() appdef.IAppDefBuilder {
+		appDef := appdef.New()
 
 		{
-			saleParamsSchema := bld.Add(data.saleCmdDocName, appdef.SchemaKind_ODoc)
+			saleParamsSchema := appDef.Add(data.saleCmdDocName, appdef.SchemaKind_ODoc)
 			saleParamsSchema.
 				AddField(data.buyerIdent, appdef.DataKind_string, true).
 				AddField(data.ageIdent, appdef.DataKind_int32, false).
@@ -223,28 +223,28 @@ var test func() *testDataType = func() *testDataType {
 				AddField(data.photoIdent, appdef.DataKind_bytes, false).
 				AddContainer(data.basketIdent, appdef.NewQName(data.pkgName, data.basketIdent), 1, 1)
 
-			basketSchema := bld.Add(appdef.NewQName(data.pkgName, data.basketIdent), appdef.SchemaKind_ORecord)
+			basketSchema := appDef.Add(appdef.NewQName(data.pkgName, data.basketIdent), appdef.SchemaKind_ORecord)
 			basketSchema.
 				AddContainer(data.goodIdent, appdef.NewQName(data.pkgName, data.goodIdent), 0, appdef.Occurs_Unbounded)
 
-			goodSchema := bld.Add(appdef.NewQName(data.pkgName, data.goodIdent), appdef.SchemaKind_ORecord)
+			goodSchema := appDef.Add(appdef.NewQName(data.pkgName, data.goodIdent), appdef.SchemaKind_ORecord)
 			goodSchema.
 				AddField(data.saleIdent, appdef.DataKind_RecordID, true).
 				AddField(data.nameIdent, appdef.DataKind_string, true).
 				AddField(data.codeIdent, appdef.DataKind_int64, true).
 				AddField(data.weightIdent, appdef.DataKind_float64, false)
 
-			saleSecurParamsSchema := bld.Add(data.saleSecurParsName, appdef.SchemaKind_Object)
+			saleSecurParamsSchema := appDef.Add(data.saleSecurParsName, appdef.SchemaKind_Object)
 			saleSecurParamsSchema.
 				AddField(data.passwordIdent, appdef.DataKind_string, true)
 
-			photoParamsSchema := bld.Add(data.queryPhotoFunctionParamsSchema, appdef.SchemaKind_Object)
+			photoParamsSchema := appDef.Add(data.queryPhotoFunctionParamsSchema, appdef.SchemaKind_Object)
 			photoParamsSchema.
 				AddField(data.buyerIdent, appdef.DataKind_string, true)
 		}
 
 		{
-			recSchema := bld.Add(data.tablePhotos, appdef.SchemaKind_CDoc)
+			recSchema := appDef.Add(data.tablePhotos, appdef.SchemaKind_CDoc)
 			recSchema.
 				AddField(data.buyerIdent, appdef.DataKind_string, true).
 				AddField(data.ageIdent, appdef.DataKind_int32, false).
@@ -253,7 +253,7 @@ var test func() *testDataType = func() *testDataType {
 				AddField(data.photoIdent, appdef.DataKind_bytes, false).
 				AddContainer(data.remarkIdent, data.tablePhotoRems, 0, appdef.Occurs_Unbounded)
 
-			recSchemaChild := bld.Add(data.tablePhotoRems, appdef.SchemaKind_CRecord)
+			recSchemaChild := appDef.Add(data.tablePhotoRems, appdef.SchemaKind_CRecord)
 			recSchemaChild.
 				AddField(data.photoIdent, appdef.DataKind_RecordID, true).
 				AddField(data.remarkIdent, appdef.DataKind_string, true).
@@ -261,7 +261,7 @@ var test func() *testDataType = func() *testDataType {
 		}
 
 		{
-			rowSchema := bld.Add(data.testRow, appdef.SchemaKind_Element)
+			rowSchema := appDef.Add(data.testRow, appdef.SchemaKind_Element)
 			rowSchema.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
@@ -276,7 +276,7 @@ var test func() *testDataType = func() *testDataType {
 		}
 
 		{
-			cDocSchema := bld.Add(data.testCDoc, appdef.SchemaKind_CDoc)
+			cDocSchema := appDef.Add(data.testCDoc, appdef.SchemaKind_CDoc)
 			cDocSchema.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
@@ -289,7 +289,7 @@ var test func() *testDataType = func() *testDataType {
 				AddField("RecordID", appdef.DataKind_RecordID, false).
 				AddContainer("record", data.testCRec, 0, appdef.Occurs_Unbounded)
 
-			cRecSchema := bld.Add(data.testCRec, appdef.SchemaKind_CRecord)
+			cRecSchema := appDef.Add(data.testCRec, appdef.SchemaKind_CRecord)
 			cRecSchema.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
@@ -303,7 +303,7 @@ var test func() *testDataType = func() *testDataType {
 		}
 
 		{
-			viewSchema := bld.AddView(data.testViewRecord.name)
+			viewSchema := appDef.AddView(data.testViewRecord.name)
 			viewSchema.
 				AddPartField(data.testViewRecord.partFields.partition, appdef.DataKind_int32).
 				AddPartField(data.testViewRecord.partFields.workspace, appdef.DataKind_int64).
@@ -319,7 +319,7 @@ var test func() *testDataType = func() *testDataType {
 			data.testViewRecord.valueName = viewSchema.ValueSchema().QName()
 		}
 
-		return bld
+		return appDef
 	}
 
 	prepareConfig := func(cfg *AppConfigType) {
@@ -341,7 +341,7 @@ var test func() *testDataType = func() *testDataType {
 
 	if data.AppConfigs == nil {
 		data.AppConfigs = make(AppConfigsType, 1)
-		data.AppCfg = data.AppConfigs.AddConfig(data.appName, prepareSchemas())
+		data.AppCfg = data.AppConfigs.AddConfig(data.appName, prepareAppDef())
 		prepareConfig(data.AppCfg)
 	}
 

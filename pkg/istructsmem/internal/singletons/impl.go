@@ -47,13 +47,13 @@ func (stons *Singletons) GetID(qName appdef.QName) (istructs.RecordID, error) {
 
 // Loads all singletons IDs from storage, add all known application singletons and store cache if some changes.
 // Must be called at application starts
-func (stons *Singletons) Prepare(storage istorage.IAppStorage, versions *vers.Versions, schemas appdef.SchemaCache) (err error) {
+func (stons *Singletons) Prepare(storage istorage.IAppStorage, versions *vers.Versions, appDef appdef.IAppDef) (err error) {
 	if err = stons.load(storage, versions); err != nil {
 		return err
 	}
 
-	if schemas != nil {
-		if err = stons.collectAllSingletons(schemas); err != nil {
+	if appDef != nil {
+		if err = stons.collectAllSingletons(appDef); err != nil {
 			return err
 		}
 	}
@@ -105,8 +105,8 @@ func (stons *Singletons) load01(storage istorage.IAppStorage) error {
 }
 
 // Collect all application singlton IDs
-func (stons *Singletons) collectAllSingletons(cache appdef.SchemaCache) (err error) {
-	cache.Schemas(
+func (stons *Singletons) collectAllSingletons(appDef appdef.IAppDef) (err error) {
+	appDef.Schemas(
 		func(schema appdef.Schema) {
 			if schema.Singleton() {
 				err = errors.Join(err,

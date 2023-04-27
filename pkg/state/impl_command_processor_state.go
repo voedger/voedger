@@ -20,28 +20,28 @@ func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStr
 	bs.addStorage(ViewRecordsStorage, &viewRecordsStorage{
 		ctx:             ctx,
 		viewRecordsFunc: func() istructs.IViewRecords { return appStructsFunc().ViewRecords() },
-		schemaCacheFunc: func() appdef.SchemaCache { return appStructsFunc().Schemas() },
+		appDefFunc:      func() appdef.IAppDef { return appStructsFunc().AppDef() },
 		wsidFunc:        wsidFunc,
 	}, S_GET_BATCH)
 
 	bs.addStorage(RecordsStorage, &recordsStorage{
-		recordsFunc:     func() istructs.IRecords { return appStructsFunc().Records() },
-		cudFunc:         cudFunc,
-		schemaCacheFunc: func() appdef.SchemaCache { return appStructsFunc().Schemas() },
-		wsidFunc:        wsidFunc,
+		recordsFunc: func() istructs.IRecords { return appStructsFunc().Records() },
+		cudFunc:     cudFunc,
+		appDefFunc:  func() appdef.IAppDef { return appStructsFunc().AppDef() },
+		wsidFunc:    wsidFunc,
 	}, S_GET_BATCH|S_INSERT|S_UPDATE)
 
 	bs.addStorage(WLogStorage, &wLogStorage{
-		ctx:             ctx,
-		eventsFunc:      func() istructs.IEvents { return appStructsFunc().Events() },
-		schemaCacheFunc: func() appdef.SchemaCache { return appStructsFunc().Schemas() },
-		wsidFunc:        wsidFunc,
+		ctx:        ctx,
+		eventsFunc: func() istructs.IEvents { return appStructsFunc().Events() },
+		appDefFunc: func() appdef.IAppDef { return appStructsFunc().AppDef() },
+		wsidFunc:   wsidFunc,
 	}, S_GET_BATCH)
 
 	bs.addStorage(PLogStorage, &pLogStorage{
 		ctx:             ctx,
 		eventsFunc:      func() istructs.IEvents { return appStructsFunc().Events() },
-		schemaCacheFunc: func() appdef.SchemaCache { return appStructsFunc().Schemas() },
+		appDefFunc:      func() appdef.IAppDef { return appStructsFunc().AppDef() },
 		partitionIDFunc: partitionIDFunc,
 	}, S_GET_BATCH)
 

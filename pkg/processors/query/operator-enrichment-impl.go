@@ -17,10 +17,10 @@ import (
 
 type EnrichmentOperator struct {
 	pipeline.AsyncNOOP
-	state        istructs.IState
-	elements     []IElement
-	schemasCache *schemasCache
-	metrics      IMetrics
+	state      istructs.IState
+	elements   []IElement
+	fieldsDefs *fieldsDefs
+	metrics    IMetrics
 }
 
 func (o *EnrichmentOperator) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
@@ -49,7 +49,7 @@ func (o *EnrichmentOperator) DoAsync(ctx context.Context, work pipeline.IWorkpie
 				}
 				record := sv.AsRecord("")
 
-				schemaFields := o.schemasCache.get(record.QName())
+				schemaFields := o.fieldsDefs.get(record.QName())
 				value := coreutils.ReadByKind(field.RefField(), schemaFields[field.RefField()], record)
 				if element.Path().IsRoot() {
 					work.(IWorkpiece).PutEnrichedRootSchemaField(field.Key(), schemaFields[field.RefField()])

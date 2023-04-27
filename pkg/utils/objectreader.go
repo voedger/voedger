@@ -17,9 +17,9 @@ func Read(fieldName string, sf SchemaFields, rr istructs.IRowReader) (val interf
 	return ReadByKind(fieldName, sf[fieldName], rr)
 }
 
-func ReadValue(fieldName string, sf SchemaFields, schemaCache appdef.SchemaCache, val istructs.IValue) (res interface{}) {
+func ReadValue(fieldName string, sf SchemaFields, appDef appdef.IAppDef, val istructs.IValue) (res interface{}) {
 	if sf[fieldName] == appdef.DataKind_Record {
-		return FieldsToMap(val.AsRecord(fieldName), schemaCache)
+		return FieldsToMap(val.AsRecord(fieldName), appDef)
 	}
 	return ReadByKind(fieldName, sf[fieldName], val)
 }
@@ -78,7 +78,7 @@ func WithNonNilsOnly() MapperOpt {
 	}
 }
 
-func FieldsToMap(obj istructs.IRowReader, schemaCache appdef.SchemaCache, optFuncs ...MapperOpt) (res map[string]interface{}) {
+func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...MapperOpt) (res map[string]interface{}) {
 	res = map[string]interface{}{}
 	if obj.AsQName(appdef.SystemField_QName) == appdef.NullQName {
 		return
@@ -89,7 +89,7 @@ func FieldsToMap(obj istructs.IRowReader, schemaCache appdef.SchemaCache, optFun
 	}
 
 	if opts.nonNilsOnly {
-		s := schemaCache.Schema(obj.AsQName(appdef.SystemField_QName))
+		s := appDef.Schema(obj.AsQName(appdef.SystemField_QName))
 		sf := NewSchemaFields(s)
 		obj.FieldNames(func(fieldName string) {
 			kind := sf[fieldName]
@@ -100,7 +100,7 @@ func FieldsToMap(obj istructs.IRowReader, schemaCache appdef.SchemaCache, optFun
 			}
 			if kind == appdef.DataKind_Record {
 				if ival, ok := obj.(istructs.IValue); ok {
-					res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), schemaCache, optFuncs...)
+					res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), appDef, optFuncs...)
 				} else {
 					panic("DataKind_Record field met -> IValue must be provided")
 				}
@@ -109,7 +109,7 @@ func FieldsToMap(obj istructs.IRowReader, schemaCache appdef.SchemaCache, optFun
 			}
 		})
 	} else {
-		schemaCache.Schema(obj.AsQName(appdef.SystemField_QName)).Fields(
+		appDef.Schema(obj.AsQName(appdef.SystemField_QName)).Fields(
 			func(f appdef.Field) {
 				fieldName, kind := f.Name(), f.DataKind()
 				if opts.filter != nil {
@@ -119,7 +119,7 @@ func FieldsToMap(obj istructs.IRowReader, schemaCache appdef.SchemaCache, optFun
 				}
 				if kind == appdef.DataKind_Record {
 					if ival, ok := obj.(istructs.IValue); ok {
-						res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), schemaCache, optFuncs...)
+						res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), appDef, optFuncs...)
 					} else {
 						panic("DataKind_Record field met -> IValue must be provided")
 					}
@@ -131,16 +131,16 @@ func FieldsToMap(obj istructs.IRowReader, schemaCache appdef.SchemaCache, optFun
 	return res
 }
 
-func ObjectToMap(obj istructs.IObject, schemaCache appdef.SchemaCache, opts ...MapperOpt) (res map[string]interface{}) {
+func ObjectToMap(obj istructs.IObject, appDef appdef.IAppDef, opts ...MapperOpt) (res map[string]interface{}) {
 	if obj.AsQName(appdef.SystemField_QName) == appdef.NullQName {
 		return map[string]interface{}{}
 	}
-	res = FieldsToMap(obj, schemaCache, opts...)
+	res = FieldsToMap(obj, appDef, opts...)
 	obj.Containers(func(container string) {
 		var elemMap map[string]interface{}
 		cont := []map[string]interface{}{}
 		obj.Elements(container, func(el istructs.IElement) {
-			elemMap = ObjectToMap(el, schemaCache, opts...)
+			elemMap = ObjectToMap(el, appDef, opts...)
 			cont = append(cont, elemMap)
 		})
 		res[container] = cont

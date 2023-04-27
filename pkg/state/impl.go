@@ -71,7 +71,7 @@ func getStorageID(key istructs.IKeyBuilder) appdef.QName {
 	}
 }
 
-func cudRowToMap(rec istructs.ICUDRow, cache schemaCacheFunc) (res map[string]interface{}) {
+func cudRowToMap(rec istructs.ICUDRow, cache appDefFunc) (res map[string]interface{}) {
 	res = coreutils.FieldsToMap(rec, cache())
 	res["IsNew"] = rec.IsNew()
 	return res

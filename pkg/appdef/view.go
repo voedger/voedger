@@ -11,7 +11,7 @@ import (
 
 // Implements IViewBuilder interface
 type viewBuilder struct {
-	cache *schemasCache
+	cache *appDef
 	name  QName
 	viewSchema,
 	partSchema,
@@ -20,7 +20,7 @@ type viewBuilder struct {
 	valueSchema SchemaBuilder
 }
 
-func newViewBuilder(cache *schemasCache, name QName) viewBuilder {
+func newViewBuilder(cache *appDef, name QName) viewBuilder {
 	view := viewBuilder{
 		cache:       cache,
 		name:        name,
@@ -87,7 +87,7 @@ func (view *viewBuilder) ValueSchema() SchemaBuilder {
 	return view.valueSchema
 }
 
-func (cache *schemasCache) prepareViewFullKeySchema(sch Schema) {
+func (app *appDef) prepareViewFullKeySchema(sch Schema) {
 	if sch.Kind() != SchemaKind_ViewRecord {
 		panic(fmt.Errorf("not view schema «%v» kind «%v» passed: %w", sch.QName(), sch.Kind(), ErrInvalidSchemaKind))
 	}
@@ -114,7 +114,7 @@ func (cache *schemasCache) prepareViewFullKeySchema(sch Schema) {
 
 	fkName := ViewFullKeyColumsSchemaName(sch.QName())
 	var fkSchema SchemaBuilder
-	fkSchema, ok := cache.schemas[fkName]
+	fkSchema, ok := app.schemas[fkName]
 
 	if ok {
 		if fkSchema.Kind() != SchemaKind_ViewRecord_ClusteringColumns {
@@ -125,7 +125,7 @@ func (cache *schemasCache) prepareViewFullKeySchema(sch Schema) {
 		}
 		fkSchema.clear()
 	} else {
-		fkSchema = cache.Add(fkName, SchemaKind_ViewRecord_ClusteringColumns)
+		fkSchema = app.Add(fkName, SchemaKind_ViewRecord_ClusteringColumns)
 	}
 
 	// recreate full key schema fields
@@ -136,7 +136,7 @@ func (cache *schemasCache) prepareViewFullKeySchema(sch Schema) {
 		fkSchema.AddField(f.Name(), f.DataKind(), false)
 	})
 
-	cache.changed()
+	app.changed()
 }
 
 // Returns partition key schema name for specified view

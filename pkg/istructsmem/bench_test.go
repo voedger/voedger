@@ -66,9 +66,9 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	stringFieldNames := make([]string, numOfIntFields)
 	stringFieldValues := make(map[string]string)
 
-	// Schemas
-	bld := func() appdef.SchemaCacheBuilder {
-		cache := appdef.NewSchemaCache()
+	// application definition
+	appDef := func() appdef.IAppDefBuilder {
+		cache := appdef.New()
 
 		s := cache.Add(odocQName, appdef.SchemaKind_ODoc)
 		for i := 0; i < numOfIntFields; i++ {
@@ -90,7 +90,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	// Con
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, bld())
+	cfg := cfgs.AddConfig(appName, appDef())
 
 	// Register command
 	{

@@ -26,9 +26,9 @@ func Test_BasicUsage(t *testing.T) {
 	}
 
 	testName := appdef.NewQName("test", "schema")
-	bld := appdef.NewSchemaCache()
-	bld.Add(testName, appdef.SchemaKind_CDoc)
-	schemas, err := bld.Build()
+	appDefBuilder := appdef.New()
+	appDefBuilder.Add(testName, appdef.SchemaKind_CDoc)
+	appDef, err := appDefBuilder.Build()
 	if err != nil {
 		panic(err)
 	}
@@ -36,7 +36,7 @@ func Test_BasicUsage(t *testing.T) {
 	resources := istructs.IResources(nil) //TODO: add test resources
 
 	names := New()
-	if err := names.Prepare(storage, versions, schemas, resources); err != nil {
+	if err := names.Prepare(storage, versions, appDef, resources); err != nil {
 		panic(err)
 	}
 

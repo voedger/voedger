@@ -44,7 +44,7 @@ func TestBasicUsage(t *testing.T) {
 
 	// create app configuration
 	appConfigs := func() AppConfigsType {
-		bld := appdef.NewSchemaCache()
+		bld := appdef.New()
 
 		saleParamsSchema := bld.Add(appdef.NewQName("test", "Sale"), appdef.SchemaKind_ODoc)
 		saleParamsSchema.
@@ -199,7 +199,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	require := require.New(t)
 
 	appConfigs := func() AppConfigsType {
-		bld := appdef.NewSchemaCache()
+		bld := appdef.New()
 		viewSchema := bld.AddView(appdef.NewQName("test", "viewDrinks"))
 		viewSchema.
 			AddPartField("partitionKey1", appdef.DataKind_int64).
@@ -359,8 +359,8 @@ func TestBasicUsage_Resources(t *testing.T) {
 	})
 }
 
-// TestBasicUsage_Schemas: Demonstrates basic usage schemas
-func TestBasicUsage_Schemas(t *testing.T) {
+// Demonstrates basic usage application definition
+func TestBasicUsage_AppDef(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
@@ -371,7 +371,7 @@ func TestBasicUsage_Schemas(t *testing.T) {
 	require.NoError(err)
 
 	t.Run("I. test top level schema (command object)", func(t *testing.T) {
-		schema := app.Schemas().Schema(test.saleCmdDocName)
+		schema := app.AppDef().Schema(test.saleCmdDocName)
 
 		require.NotNil(schema)
 		require.Equal(appdef.SchemaKind_ODoc, schema.Kind())
@@ -393,7 +393,7 @@ func TestBasicUsage_Schemas(t *testing.T) {
 				require.Equal(test.basketIdent, c.Name())
 				require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.Schema())
 				t.Run("II. test first level nested schema (basket)", func(t *testing.T) {
-					schema := app.Schemas().Schema(appdef.NewQName(test.pkgName, test.basketIdent))
+					schema := app.AppDef().Schema(appdef.NewQName(test.pkgName, test.basketIdent))
 					require.NotNil(schema)
 					require.Equal(appdef.SchemaKind_ORecord, schema.Kind())
 
@@ -403,7 +403,7 @@ func TestBasicUsage_Schemas(t *testing.T) {
 							require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.Schema())
 
 							t.Run("III. test second level nested schema (good)", func(t *testing.T) {
-								schema := app.Schemas().Schema(appdef.NewQName(test.pkgName, test.goodIdent))
+								schema := app.AppDef().Schema(appdef.NewQName(test.pkgName, test.goodIdent))
 								require.NotNil(schema)
 								require.Equal(appdef.SchemaKind_ORecord, schema.Kind())
 
@@ -428,28 +428,28 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 	require := require.New(t)
 
 	app := func() istructs.IAppStructs {
-		bld := appdef.NewSchemaCache()
+		appDef := appdef.New()
 
-		recSchema := bld.Add(appdef.NewQName("types", "CRec"), appdef.SchemaKind_CRecord)
+		recSchema := appDef.Add(appdef.NewQName("types", "CRec"), appdef.SchemaKind_CRecord)
 		recSchema.AddField("int", appdef.DataKind_int64, false)
 
 		docQName := appdef.NewQName("types", "CDoc")
-		docSchema := bld.Add(docQName, appdef.SchemaKind_CDoc)
+		docSchema := appDef.Add(docQName, appdef.SchemaKind_CDoc)
 		docSchema.AddField("str", appdef.DataKind_string, true)
 		docSchema.AddField("fld", appdef.DataKind_int32, true)
 
 		docSchema.AddContainer("rec", recSchema.QName(), 0, appdef.Occurs_Unbounded)
 
-		viewSchema := bld.AddView(appdef.NewQName("types", "View"))
+		viewSchema := appDef.AddView(appdef.NewQName("types", "View"))
 		viewSchema.AddPartField("int", appdef.DataKind_int64)
 		viewSchema.AddClustColumn("str", appdef.DataKind_string)
 		viewSchema.AddValueField("bool", appdef.DataKind_bool, false)
 
-		argSchema := bld.Add(appdef.NewQName("types", "Arg"), appdef.SchemaKind_Object)
+		argSchema := appDef.Add(appdef.NewQName("types", "Arg"), appdef.SchemaKind_Object)
 		argSchema.AddField("bool", appdef.DataKind_bool, false)
 
 		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 
 		cfg.Resources.Add(
 			NewCommandFunction(
@@ -508,7 +508,7 @@ func Test_Provide(t *testing.T) {
 
 	t.Run("AppStructs() must error if unknown app name", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.NewSchemaCache())
+		cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
 		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil)
 		require.NotNil(p)
 

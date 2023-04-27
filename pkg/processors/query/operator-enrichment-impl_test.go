@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
@@ -20,28 +21,29 @@ import (
 func TestEnrichmentOperator_DoSync(t *testing.T) {
 	t.Run("Should set reference fields", func(t *testing.T) {
 		require := require.New(t)
-		commonSchema := coreutils.TestSchema{
-			Fields_: map[string]appdef.DataKind{
-				"id_lower_case_name": appdef.DataKind_RecordID,
-			},
-			QName_: appdef.NullQName,
+
+		commonSchema := func(n appdef.QName) *amock.Schema {
+			return amock.NewSchema(n, appdef.SchemaKind_Object,
+				amock.NewField("id_lower_case_name", appdef.DataKind_RecordID, false),
+			)
 		}
+
 		commonFields := []IRefField{refField{field: "id_lower_case_name", ref: "name", key: "id_lower_case_name/name"}}
-		cache := coreutils.TestSchemas{Schemas_: map[appdef.QName]appdef.Schema{
-			appdef.NewQName("", "root"):                  commonSchema,
-			appdef.NewQName("f", "first-children-1"):     commonSchema,
-			appdef.NewQName("f", "deep-children-1"):      commonSchema,
-			appdef.NewQName("f", "very-deep-children-1"): commonSchema,
-			appdef.NewQName("s", "first-children-2"):     commonSchema,
-			appdef.NewQName("s", "deep-children-1"):      commonSchema,
-			appdef.NewQName("s", "very-deep-children-1"): commonSchema,
-			qNameXLowerCase: coreutils.TestSchema{
-				Fields_: map[string]appdef.DataKind{
-					"name": appdef.DataKind_string,
-				},
-				QName_: qNameXLowerCase,
-			},
-		}}
+
+		appDef := amock.NewAppDef(
+			commonSchema(appdef.NewQName("", "root")),
+			commonSchema(appdef.NewQName("f", "first-children-1")),
+			commonSchema(appdef.NewQName("f", "deep-children-1")),
+			commonSchema(appdef.NewQName("f", "very-deep-children-1")),
+			commonSchema(appdef.NewQName("s", "first-children-2")),
+			commonSchema(appdef.NewQName("s", "deep-children-1")),
+			commonSchema(appdef.NewQName("s", "very-deep-children-1")),
+
+			amock.NewSchema(qNameXLowerCase, appdef.SchemaKind_Object,
+				amock.NewField("name", appdef.DataKind_string, false),
+			),
+		)
+
 		elements := []IElement{
 			element{
 				path: path{rootDocument},
@@ -235,10 +237,10 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 			On("MustExist", mock.Anything).Return(record("very-deep-children-1-601")).Once().
 			On("MustExist", mock.Anything).Return(record("very-deep-children-1-602")).Once()
 		op := &EnrichmentOperator{
-			state:        s,
-			elements:     elements,
-			schemasCache: newSchemasCache(cache),
-			metrics:      &testMetrics{},
+			state:      s,
+			elements:   elements,
+			fieldsDefs: newFieldsDefs(appDef),
+			metrics:    &testMetrics{},
 		}
 
 		outWork, err := op.DoAsync(context.Background(), work())

@@ -29,13 +29,13 @@ func TestRenameQName(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		bld := appdef.NewSchemaCache()
-		_ = bld.Add(old, appdef.SchemaKind_Object)
-		schemas, err := bld.Build()
+		appDefBuilder := appdef.New()
+		_ = appDefBuilder.Add(old, appdef.SchemaKind_Object)
+		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
 
 		names := qnames.New()
-		err = names.Prepare(storage, versions, schemas, nil)
+		err = names.Prepare(storage, versions, appDef, nil)
 		require.NoError(err)
 	})
 

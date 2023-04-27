@@ -16,11 +16,11 @@ import (
 func Test_BasicUsage(t *testing.T) {
 	name := appdef.NewQName("test", "test")
 
-	dynoSchemas := New()
+	schemes := New()
 
-	dynoSchemas.Prepare(
-		func() appdef.SchemaCache {
-			bld := appdef.NewSchemaCache()
+	schemes.Prepare(
+		func() appdef.IAppDef {
+			bld := appdef.New()
 			schema := bld.Add(name, appdef.SchemaKind_CDoc)
 			schema.AddField("f1", appdef.DataKind_int32, true)
 			schema.AddField("f2", appdef.DataKind_QName, false)
@@ -30,7 +30,7 @@ func Test_BasicUsage(t *testing.T) {
 	t.Run("let test basic methods", func(t *testing.T) {
 		require := require.New(t)
 
-		schema := dynoSchemas[name]
+		schema := schemes[name]
 		require.NotNil(schema, "DynoBufferSchema returns nil")
 
 		require.Len(schema.Fields, 2)

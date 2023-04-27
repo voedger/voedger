@@ -296,7 +296,7 @@ func (row *rowType) setQName(value appdef.QName) {
 		return
 	}
 
-	schema := row.appCfg.Schemas.SchemaByName(value)
+	schema := row.appCfg.AppDef.SchemaByName(value)
 	if schema == nil {
 		row.collectErrorf(errSchemaNotFoundWrap, value, ErrNameNotFound)
 		return
@@ -320,7 +320,7 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 	}
 
 	if qName != appdef.NullQName {
-		schema := row.appCfg.Schemas.SchemaByName(qName)
+		schema := row.appCfg.AppDef.SchemaByName(qName)
 		if schema == nil {
 			err = fmt.Errorf(errSchemaNotFoundWrap, qName, ErrNameNotFound)
 			row.collectError(err)
@@ -343,7 +343,7 @@ func (row *rowType) setSchema(value appdef.Schema) {
 	if row.schema.QName() == appdef.NullQName {
 		row.dyB = nullDynoBuffer
 	} else {
-		row.dyB = dynobuffers.NewBuffer(row.appCfg.dbSchemas[row.schema.QName()])
+		row.dyB = dynobuffers.NewBuffer(row.appCfg.dynoSchemes[row.schema.QName()])
 	}
 }
 

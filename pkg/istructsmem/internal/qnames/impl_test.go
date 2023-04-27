@@ -45,12 +45,12 @@ func TestQNames(t *testing.T) {
 
 	names := New()
 	if err := names.Prepare(storage, versions,
-		func() appdef.SchemaCache {
-			bld := appdef.NewSchemaCache()
-			bld.Add(schemaName, appdef.SchemaKind_CDoc)
-			schemas, err := bld.Build()
+		func() appdef.IAppDef {
+			appDefBuilder := appdef.New()
+			appDefBuilder.Add(schemaName, appdef.SchemaKind_CDoc)
+			appDef, err := appDefBuilder.Build()
 			require.NoError(err)
-			return schemas
+			return appDef
 		}(),
 		&r); err != nil {
 		panic(err)
@@ -96,12 +96,12 @@ func TestQNames(t *testing.T) {
 
 			names2 := New()
 			if err := names2.Prepare(storage, versions,
-				func() appdef.SchemaCache {
-					bld := appdef.NewSchemaCache()
-					bld.Add(schemaName, appdef.SchemaKind_CDoc)
-					schemas, err := bld.Build()
+				func() appdef.IAppDef {
+					appdefBuilder := appdef.New()
+					appdefBuilder.Add(schemaName, appdef.SchemaKind_CDoc)
+					appDef, err := appdefBuilder.Build()
 					require.NoError(err)
-					return schemas
+					return appDef
 				}(),
 				nil); err != nil {
 				panic(err)
@@ -209,14 +209,14 @@ func TestQNamesPrepareErrors(t *testing.T) {
 
 		names := New()
 		err := names.Prepare(storage, versions,
-			func() appdef.SchemaCache {
-				bld := appdef.NewSchemaCache()
+			func() appdef.IAppDef {
+				appDefBuilder := appdef.New()
 				for i := 0; i <= MaxAvailableQNameID; i++ {
-					bld.Add(appdef.NewQName("test", fmt.Sprintf("name_%d", i)), appdef.SchemaKind_Object)
+					appDefBuilder.Add(appdef.NewQName("test", fmt.Sprintf("name_%d", i)), appdef.SchemaKind_Object)
 				}
-				schemas, err := bld.Build()
+				appDef, err := appDefBuilder.Build()
 				require.NoError(err)
-				return schemas
+				return appDef
 			}(),
 			nil)
 		require.ErrorIs(err, ErrQNameIDsExceeds)
@@ -238,12 +238,12 @@ func TestQNamesPrepareErrors(t *testing.T) {
 
 			names := New()
 			err := names.Prepare(storage, versions,
-				func() appdef.SchemaCache {
-					bld := appdef.NewSchemaCache()
-					bld.Add(qName, appdef.SchemaKind_Object)
-					schemas, err := bld.Build()
+				func() appdef.IAppDef {
+					appDefBuilder := appdef.New()
+					appDefBuilder.Add(qName, appdef.SchemaKind_Object)
+					appDef, err := appDefBuilder.Build()
 					require.NoError(err)
-					return schemas
+					return appDef
 				}(),
 				nil)
 			require.ErrorIs(err, writeError)
@@ -261,12 +261,12 @@ func TestQNamesPrepareErrors(t *testing.T) {
 
 			names := New()
 			err := names.Prepare(storage, versions,
-				func() appdef.SchemaCache {
-					bld := appdef.NewSchemaCache()
-					bld.Add(qName, appdef.SchemaKind_Object)
-					schemas, err := bld.Build()
+				func() appdef.IAppDef {
+					appDefBuilder := appdef.New()
+					appDefBuilder.Add(qName, appdef.SchemaKind_Object)
+					appDef, err := appDefBuilder.Build()
 					require.NoError(err)
-					return schemas
+					return appDef
 				}(),
 				nil)
 			require.ErrorIs(err, writeError)

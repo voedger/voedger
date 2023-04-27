@@ -41,8 +41,8 @@ type appPartition struct {
 	nextPLogOffset istructs.Offset
 }
 
-func ProvideJSONFuncParamsSchema(cache appdef.SchemaCacheBuilder) {
-	cache.Add(istructs.QNameJSON, appdef.SchemaKind_Object).
+func ProvideJSONFuncParamsSchema(appDef appdef.IAppDefBuilder) {
+	appDef.Add(istructs.QNameJSON, appdef.SchemaKind_Object).
 		AddField(Field_JSONSchemaBody, appdef.DataKind_string, true)
 }
 

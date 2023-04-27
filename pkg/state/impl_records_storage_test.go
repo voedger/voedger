@@ -50,21 +50,21 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 				items[1].Record = record2
 			})
 
-		schema1 := amock.MockedSchema(testRecordQName1, appdef.SchemaKind_Object,
-			amock.MockedField("number", appdef.DataKind_int64, false),
+		schema1 := amock.NewSchema(testRecordQName1, appdef.SchemaKind_Object,
+			amock.NewField("number", appdef.DataKind_int64, false),
 		)
-		schema2 := amock.MockedSchema(testRecordQName1, appdef.SchemaKind_Object,
-			amock.MockedField("age", appdef.DataKind_int64, false),
+		schema2 := amock.NewSchema(testRecordQName1, appdef.SchemaKind_Object,
+			amock.NewField("age", appdef.DataKind_int64, false),
 		)
-		cache := amock.MockedSchemaCache(
+		appDef := amock.NewAppDef(
 			schema1,
 			schema2,
 		)
 
 		appStructs := &mockAppStructs{}
 		appStructs.
+			On("AppDef").Return(appDef).
 			On("Records").Return(records).
-			On("Schemas").Return(cache).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
@@ -138,24 +138,24 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 			On("GetSingleton", istructs.WSID(2), testRecordQName2).Return(nullRecord, nil).
 			On("GetSingleton", istructs.WSID(3), testRecordQName2).Return(singleton2, nil)
 
-		schema1 := amock.MockedSchema(testRecordQName1, appdef.SchemaKind_Object,
-			amock.MockedField("number", appdef.DataKind_int64, false),
+		schema1 := amock.NewSchema(testRecordQName1, appdef.SchemaKind_Object,
+			amock.NewField("number", appdef.DataKind_int64, false),
 		)
-		schema2 := amock.MockedSchema(testRecordQName2, appdef.SchemaKind_Object,
-			amock.MockedField("age", appdef.DataKind_int64, false),
+		schema2 := amock.NewSchema(testRecordQName2, appdef.SchemaKind_Object,
+			amock.NewField("age", appdef.DataKind_int64, false),
 		)
-		cache := amock.MockedSchemaCache(
+		appDef := amock.NewAppDef(
 			schema1,
 			schema2,
 		)
 
-		appsTructs := &mockAppStructs{}
-		appsTructs.
+		appStructs := &mockAppStructs{}
+		appStructs.
+			On("AppDef").Return(appDef).
 			On("Records").Return(records).
-			On("Schemas").Return(cache).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appsTructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 		k1, err := s.KeyBuilder(RecordsStorage, appdef.NullQName)
 		require.NoError(err)
 		k1.PutQName(Field_Singleton, testRecordQName1)
@@ -208,8 +208,8 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		records.On("GetBatch", istructs.WSID(1), true, mock.AnythingOfType("[]istructs.RecordGetBatchItem")).Return(errTest)
 		appsTructs := &mockAppStructs{}
 		appsTructs.
+			On("AppDef").Return(&nilAppDef{}).
 			On("Records").Return(records).
-			On("Schemas").Return(&nilSchemas{}).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appsTructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
@@ -228,8 +228,8 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		records.On("GetSingleton", istructs.WSID(1), testRecordQName1).Return(&mockRecord{}, errTest)
 		appStructs := &mockAppStructs{}
 		appStructs.
+			On("AppDef").Return(&nilAppDef{}).
 			On("Records").Return(records).
-			On("Schemas").Return(&nilSchemas{}).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
@@ -246,7 +246,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 func TestRecordsStorage_Insert(t *testing.T) {
 	require := require.New(t)
 	fieldName := "name"
-	value := "Heuus"
+	value := "Heuus" //???
 	rw := &mockRowWriter{}
 	rw.
 		On("PutString", fieldName, value)

@@ -10,44 +10,44 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-type MockSchema struct {
+type Schema struct {
 	appdef.Schema
 	mock.Mock
-	cache      *MockSchemaCache
-	fields     []*MockField
-	containers []*MockContainer
+	app        *AppDef
+	fields     []*Field
+	containers []*Container
 }
 
-func MockedSchema(name appdef.QName, kind appdef.SchemaKind, fields ...*MockField) *MockSchema {
-	s := MockSchema{}
+func NewSchema(name appdef.QName, kind appdef.SchemaKind, fields ...*Field) *Schema {
+	s := Schema{}
 	s.
 		On("QName").Return(name).
 		On("Kind").Return(kind)
 	if len(fields) > 0 {
-		s.MockFields(fields...)
+		s.AddField(fields...)
 	}
 	return &s
 }
 
-func (s *MockSchema) MockFields(f ...*MockField) {
+func (s *Schema) AddField(f ...*Field) {
 	s.fields = append(s.fields, f...)
 }
 
-func (s *MockSchema) MockContainers(c ...*MockContainer) {
+func (s *Schema) AddContainer(c ...*Container) {
 	s.containers = append(s.containers, c...)
 }
 
-func (s *MockSchema) Cache() appdef.SchemaCache {
-	if s.cache != nil {
-		return s.cache
+func (s *Schema) App() appdef.IAppDef {
+	if s.app != nil {
+		return s.app
 	}
-	return s.Called().Get(0).(appdef.SchemaCache)
+	return s.Called().Get(0).(appdef.IAppDef)
 }
 
-func (s *MockSchema) QName() appdef.QName     { return s.Called().Get(0).(appdef.QName) }
-func (s *MockSchema) Kind() appdef.SchemaKind { return s.Called().Get(0).(appdef.SchemaKind) }
+func (s *Schema) QName() appdef.QName     { return s.Called().Get(0).(appdef.QName) }
+func (s *Schema) Kind() appdef.SchemaKind { return s.Called().Get(0).(appdef.SchemaKind) }
 
-func (s *MockSchema) Field(name string) appdef.Field {
+func (s *Schema) Field(name string) appdef.Field {
 	if len(s.fields) > 0 {
 		for _, f := range s.fields {
 			if f.Name() == name {
@@ -59,14 +59,14 @@ func (s *MockSchema) Field(name string) appdef.Field {
 	return s.Called(name).Get(0).(appdef.Field)
 }
 
-func (s *MockSchema) FieldCount() int {
+func (s *Schema) FieldCount() int {
 	if l := len(s.fields); l > 0 {
 		return l
 	}
 	return s.Called().Get(0).(int)
 }
 
-func (s *MockSchema) Fields(cb func(appdef.Field)) {
+func (s *Schema) Fields(cb func(appdef.Field)) {
 	if len(s.fields) > 0 {
 		for _, f := range s.fields {
 			cb(f)
@@ -76,7 +76,7 @@ func (s *MockSchema) Fields(cb func(appdef.Field)) {
 	s.Called(cb)
 }
 
-func (s *MockSchema) Container(name string) appdef.Container {
+func (s *Schema) Container(name string) appdef.Container {
 	if len(s.containers) > 0 {
 		for _, c := range s.containers {
 			if c.Name() == name {
@@ -88,14 +88,14 @@ func (s *MockSchema) Container(name string) appdef.Container {
 	return s.Called(name).Get(0).(appdef.Container)
 }
 
-func (s *MockSchema) ContainerCount() int {
+func (s *Schema) ContainerCount() int {
 	if l := len(s.containers); l > 0 {
 		return l
 	}
 	return s.Called().Get(0).(int)
 }
 
-func (s *MockSchema) Containers(cb func(appdef.Container)) {
+func (s *Schema) Containers(cb func(appdef.Container)) {
 	if len(s.containers) > 0 {
 		for _, c := range s.containers {
 			cb(c)
@@ -105,15 +105,15 @@ func (s *MockSchema) Containers(cb func(appdef.Container)) {
 	s.Called(cb)
 }
 
-func (s *MockSchema) ContainerSchema(name string) appdef.Schema {
-	if (s.cache != nil) && (len(s.containers) > 0) {
+func (s *Schema) ContainerSchema(name string) appdef.Schema {
+	if (s.app != nil) && (len(s.containers) > 0) {
 		if c := s.Container(name); c != nil {
-			return s.cache.Schema(c.Schema())
+			return s.app.Schema(c.Schema())
 		}
 		return appdef.NullSchema
 	}
 	return s.Called(name).Get(0).(appdef.Schema)
 }
 
-func (s *MockSchema) Singleton() bool { return s.Called().Get(0).(bool) }
-func (s *MockSchema) Validate() error { return s.Called().Get(0).(error) }
+func (s *Schema) Singleton() bool { return s.Called().Get(0).(bool) }
+func (s *Schema) Validate() error { return s.Called().Get(0).(error) }

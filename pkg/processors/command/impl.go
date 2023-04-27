@@ -54,13 +54,8 @@ func NewCommandMessage(requestCtx context.Context, body []byte, appQName istruct
 }
 
 // need for collection.ProvideSyncActualizer()
-func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
-	return c.pLogEvent
-}
-
-// need for collection.ProvideSyncActualizer()
-func (c *cmdWorkpiece) Schemas() appdef.SchemaCache {
-	return c.appStructs.Schemas()
+func (c *cmdWorkpiece) AppDef() appdef.IAppDef {
+	return c.appStructs.AppDef()
 }
 
 // need for collection.ProvideSyncActualizer(), q.sys.EnrichPrincipalToken, c.sys.ChangePassword
@@ -71,6 +66,11 @@ func (c *cmdWorkpiece) AppQName() istructs.AppQName {
 // need for sync projectors which are using wsid.GetNextWSID()
 func (c *cmdWorkpiece) Context() context.Context {
 	return c.cmdMes.RequestCtx()
+}
+
+// need for collection.ProvideSyncActualizer()
+func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
+	return c.pLogEvent
 }
 
 // used by ProvideSyncActualizerFactory
@@ -149,7 +149,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		ws := ap.getWorkspace(event.Workspace())
 		_ = event.CUDs(func(rec istructs.ICUDRow) error { // no errors to return
 			if rec.IsNew() {
-				schema := cmd.Schemas().Schema(rec.QName())
+				schema := cmd.AppDef().Schema(rec.QName())
 				if schema.Kind() == appdef.SchemaKind_CDoc || schema.Kind() == appdef.SchemaKind_CRecord {
 					ws.NextCDocCRecordBaseID = rec.ID().BaseRecordID() + 1
 				} else {
@@ -333,7 +333,7 @@ func getArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"args" field must be an object`)
 		}
-		paramsSchema := cmd.appStructs.Schemas().Schema(cmd.cmdFunc.ParamsSchema())
+		paramsSchema := cmd.appStructs.AppDef().Schema(cmd.cmdFunc.ParamsSchema())
 		if err = istructsmem.FillElementFromJSON(args, paramsSchema, aob); err != nil {
 			return err
 		}
@@ -355,7 +355,7 @@ func getUnloggedArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"unloggedArgs" field must be an object`)
 		}
-		unloggedParamsSchema := cmd.appStructs.Schemas().Schema(cmd.cmdFunc.UnloggedParamsSchema())
+		unloggedParamsSchema := cmd.appStructs.AppDef().Schema(cmd.cmdFunc.UnloggedParamsSchema())
 		if err = istructsmem.FillElementFromJSON(unloggedArgs, unloggedParamsSchema, auob); err != nil {
 			return err
 		}

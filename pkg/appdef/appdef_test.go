@@ -11,28 +11,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_SchemasCache_Add(t *testing.T) {
+func Test_AppDef_Add(t *testing.T) {
 	require := require.New(t)
 
-	cache := newSchemaCache()
+	app := newAppDef()
 
 	t.Run("panic if name is empty", func(t *testing.T) {
 		require.Panics(func() {
-			cache.Add(NullQName, SchemaKind_CDoc)
+			app.Add(NullQName, SchemaKind_CDoc)
 		})
 	})
 
 	t.Run("panic if name is invalid", func(t *testing.T) {
 		require.Panics(func() {
-			cache.Add(NewQName("naked", "🔫"), SchemaKind_CDoc)
+			app.Add(NewQName("naked", "🔫"), SchemaKind_CDoc)
 		})
 	})
 
 	t.Run("if schema with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "test")
-		cache.Add(testName, SchemaKind_CDoc)
+		app.Add(testName, SchemaKind_CDoc)
 		require.Panics(func() {
-			cache.Add(testName, SchemaKind_CDoc)
+			app.Add(testName, SchemaKind_CDoc)
 		})
 	})
 }

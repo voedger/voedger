@@ -27,9 +27,9 @@ func TestCore_ViewRecords(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		cache := appdef.NewSchemaCache()
-		t.Run("must be ok to build schemas", func(t *testing.T) {
-			viewSchema := cache.AddView(appdef.NewQName("test", "viewDrinks"))
+		appDef := appdef.New()
+		t.Run("must be ok to build application definition", func(t *testing.T) {
+			viewSchema := appDef.AddView(appdef.NewQName("test", "viewDrinks"))
 			viewSchema.
 				AddPartField("partitionKey1", appdef.DataKind_int64).
 				AddClustColumn("clusteringColumn1", appdef.DataKind_int64).
@@ -39,7 +39,7 @@ func TestCore_ViewRecords(t *testing.T) {
 				AddValueField("name", appdef.DataKind_string, true).
 				AddValueField("active", appdef.DataKind_bool, true)
 
-			otherViewSchema := cache.AddView(appdef.NewQName("test", "otherView"))
+			otherViewSchema := appDef.AddView(appdef.NewQName("test", "otherView"))
 			otherViewSchema.
 				AddPartField("partitionKey1", appdef.DataKind_QName).
 				AddClustColumn("clusteringColumn1", appdef.DataKind_float32).
@@ -48,7 +48,7 @@ func TestCore_ViewRecords(t *testing.T) {
 				AddValueField("valueField1", appdef.DataKind_int64, false)
 		})
 
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, cache)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 
 		return cfgs
 	}
@@ -634,9 +634,9 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 
 	viewName := appdef.NewQName("test", "view")
 
-	cache := appdef.NewSchemaCache()
-	t.Run("must be ok to build schemas", func(t *testing.T) {
-		cache.AddView(viewName).
+	appDef := appdef.New()
+	t.Run("must be ok to build application definition", func(t *testing.T) {
+		appDef.AddView(viewName).
 			AddPartField("pf_int32", appdef.DataKind_int32).
 			AddPartField("pf_int64", appdef.DataKind_int64).
 			AddPartField("pf_float32", appdef.DataKind_float32).
@@ -667,7 +667,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 
 	cfg := func() *AppConfigType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, cache)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, appDef)
 
 		storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
@@ -762,9 +762,9 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	//
 	appConfigs := func() AppConfigsType {
 
-		cache := appdef.NewSchemaCache()
-		t.Run("must be ok to build schemas", func(t *testing.T) {
-			cache.AddView(appdef.NewQName("test", "viewDrinks")).
+		appDef := appdef.New()
+		t.Run("must be ok to build application definition", func(t *testing.T) {
+			appDef.AddView(appdef.NewQName("test", "viewDrinks")).
 				AddPartField("partitionKey1", appdef.DataKind_int64).
 				AddClustColumn("clusteringColumn1", appdef.DataKind_QName).
 				AddClustColumn("clusteringColumn2", appdef.DataKind_RecordID).
@@ -772,11 +772,11 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 				AddValueField("name", appdef.DataKind_string, true).
 				AddValueField("active", appdef.DataKind_bool, true)
 
-			_ = cache.Add(appdef.NewQName("test", "obj1"), appdef.SchemaKind_Object)
+			_ = appDef.Add(appdef.NewQName("test", "obj1"), appdef.SchemaKind_Object)
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, cache)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 
 		return cfgs
 	}
@@ -833,15 +833,15 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	championatsView := appdef.NewQName("test", "championats")
 	championsView := appdef.NewQName("test", "champions")
 
-	cache := appdef.NewSchemaCache()
-	t.Run("must be ok to build schemas", func(t *testing.T) {
-		cache.AddView(championatsView).
+	appDef := appdef.New()
+	t.Run("must be ok to build application definition", func(t *testing.T) {
+		appDef.AddView(championatsView).
 			AddPartField("Year", appdef.DataKind_int32).
 			AddClustColumn("Sport", appdef.DataKind_string).
 			AddValueField("Country", appdef.DataKind_string, true).
 			AddValueField("City", appdef.DataKind_string, false)
 
-		cache.AddView(championsView).
+		appDef.AddView(championsView).
 			AddPartField("Year", appdef.DataKind_int32).
 			AddClustColumn("Sport", appdef.DataKind_string).
 			AddValueField("Winner", appdef.DataKind_string, true)
@@ -851,7 +851,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	storageProvider := teststore.NewStorageProvider(storage)
 
 	cfgs := make(AppConfigsType, 1)
-	_ = cfgs.AddConfig(istructs.AppQName_test1_app1, cache)
+	_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)

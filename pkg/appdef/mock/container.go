@@ -10,13 +10,13 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-type MockContainer struct {
+type Container struct {
 	appdef.Container
 	mock.Mock
 }
 
-func MockedContainer(name string, schema appdef.QName, min, max appdef.Occurs) *MockContainer {
-	cnt := MockContainer{}
+func NewContainer(name string, schema appdef.QName, min, max appdef.Occurs) *Container {
+	cnt := Container{}
 	cnt.
 		On("Name").Return(name).
 		On("Schema").Return(schema).
@@ -25,8 +25,8 @@ func MockedContainer(name string, schema appdef.QName, min, max appdef.Occurs) *
 	return &cnt
 }
 
-func (c *MockContainer) Name() string             { return c.Called().Get(0).(string) }
-func (c *MockContainer) Schema() appdef.QName     { return c.Called().Get(0).(appdef.QName) }
-func (c *MockContainer) MinOccurs() appdef.Occurs { return c.Called().Get(0).(appdef.Occurs) }
-func (c *MockContainer) MaxOccurs() appdef.Occurs { return c.Called().Get(0).(appdef.Occurs) }
-func (c *MockContainer) IsSys() bool              { return appdef.IsSysContainer(c.Name()) }
+func (c *Container) Name() string             { return c.Called().Get(0).(string) }
+func (c *Container) Schema() appdef.QName     { return c.Called().Get(0).(appdef.QName) }
+func (c *Container) MinOccurs() appdef.Occurs { return c.Called().Get(0).(appdef.Occurs) }
+func (c *Container) MaxOccurs() appdef.Occurs { return c.Called().Get(0).(appdef.Occurs) }
+func (c *Container) IsSys() bool              { return appdef.IsSysContainer(c.Name()) }

@@ -142,7 +142,7 @@ func Test_RecordsRead(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.NewSchemaCache())
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
@@ -165,7 +165,7 @@ func Test_RecordsRead(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.NewSchemaCache())
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)

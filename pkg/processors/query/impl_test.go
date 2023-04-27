@@ -57,14 +57,14 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Sweet")).Once()
-	departmentSchema := amock.MockedSchema(qNamePosDepartment, appdef.SchemaKind_Object,
-		amock.MockedField("name", appdef.DataKind_string, false),
+	departmentSchema := amock.NewSchema(qNamePosDepartment, appdef.SchemaKind_Object,
+		amock.NewField("name", appdef.DataKind_string, false),
 	)
-	resultMeta := amock.MockedSchema(appdef.NewQName("pos", "DepartmentResult"), appdef.SchemaKind_Object,
-		amock.MockedField("id", appdef.DataKind_int64, true),
-		amock.MockedField("name", appdef.DataKind_string, false),
+	resultMeta := amock.NewSchema(appdef.NewQName("pos", "DepartmentResult"), appdef.SchemaKind_Object,
+		amock.NewField("id", appdef.DataKind_int64, true),
+		amock.NewField("name", appdef.DataKind_string, false),
 	)
-	schemaCache := amock.MockedSchemaCache(
+	appDef := amock.NewAppDef(
 		departmentSchema,
 		resultMeta,
 	)
@@ -120,7 +120,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		},
 		close: func(err error) {},
 	}
-	processor := ProvideRowsProcessorFactory()(context.Background(), schemaCache, s, params, resultMeta, rs, &testMetrics{})
+	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, s, params, resultMeta, rs, &testMetrics{})
 
 	require.NoError(processor.SendAsync(work(1, "Cola", 10)))
 	require.NoError(processor.SendAsync(work(3, "White wine", 20)))
@@ -136,7 +136,7 @@ var (
 	qNameQryDenied = appdef.NewQName(appdef.SysPackage, "TestDeniedQry") // same as in ACL
 )
 
-func getTestCfg(require *require.Assertions, cfgSchemas func(schemas appdef.SchemaCacheBuilder), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (cfgs istructsmem.AppConfigsType, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
+func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (cfgs istructsmem.AppConfigsType, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
 	cfgs = make(istructsmem.AppConfigsType)
 	asf := istorage.ProvideMem()
 	storageProvider := istorageimpl.Provide(asf)
@@ -146,22 +146,22 @@ func getTestCfg(require *require.Assertions, cfgSchemas func(schemas appdef.Sche
 	qNameDepartment := appdef.NewQName("bo", "Department")
 	qNameArticle := appdef.NewQName("bo", "Article")
 
-	cache := appdef.NewSchemaCache()
-	cache.Add(qNameFindArticlesByModificationTimeStampRangeParams, appdef.SchemaKind_Object).
+	appDef := appdef.New()
+	appDef.Add(qNameFindArticlesByModificationTimeStampRangeParams, appdef.SchemaKind_Object).
 		AddField("from", appdef.DataKind_int64, false).
 		AddField("till", appdef.DataKind_int64, false)
-	cache.Add(qNameDepartment, appdef.SchemaKind_CDoc).
+	appDef.Add(qNameDepartment, appdef.SchemaKind_CDoc).
 		AddField("name", appdef.DataKind_string, true)
-	cache.Add(qNameArticle, appdef.SchemaKind_Object).
+	appDef.Add(qNameArticle, appdef.SchemaKind_Object).
 		AddField("sys.ID", appdef.DataKind_RecordID, true).
 		AddField("name", appdef.DataKind_string, true).
 		AddField("id_department", appdef.DataKind_int64, true)
 
-	if cfgSchemas != nil {
-		cfgSchemas(cache)
+	if prepareAppDef != nil {
+		prepareAppDef(appDef)
 	}
 
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, cache)
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 
 	asp = istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, payloads.TestAppTokensFactory(tokens), storageProvider)
 
@@ -315,7 +315,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 func TestRawMode(t *testing.T) {
 	require := require.New(t)
 
-	resultMeta := &amock.MockSchema{}
+	resultMeta := &amock.Schema{}
 	resultMeta.On("QName").Return(istructs.QNameJSON)
 
 	result := ""
@@ -328,7 +328,7 @@ func TestRawMode(t *testing.T) {
 		},
 		close: func(err error) {},
 	}
-	processor := ProvideRowsProcessorFactory()(context.Background(), &amock.MockSchemaCache{}, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{})
+	processor := ProvideRowsProcessorFactory()(context.Background(), &amock.AppDef{}, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{})
 
 	require.NoError(processor.SendAsync(workpiece{
 		object: &coreutils.TestObject{
@@ -996,9 +996,9 @@ func TestRateLimiter(t *testing.T) {
 	qNameMyFuncResults := appdef.NewQName(appdef.SysPackage, "results")
 	var myFunc istructs.IResource
 	cfgs, appStructsProvider, appTokens := getTestCfg(require,
-		func(cache appdef.SchemaCacheBuilder) {
-			cache.Add(qNameMyFuncParams, appdef.SchemaKind_Object)
-			cache.Add(qNameMyFuncResults, appdef.SchemaKind_Object).
+		func(appDef appdef.IAppDefBuilder) {
+			appDef.Add(qNameMyFuncParams, appdef.SchemaKind_Object)
+			appDef.Add(qNameMyFuncResults, appdef.SchemaKind_Object).
 				AddField("fld", appdef.DataKind_string, false)
 		},
 		func(cfg *istructsmem.AppConfigType) {

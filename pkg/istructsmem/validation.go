@@ -187,7 +187,7 @@ func (v *validator) validObject(obj *elementType) error {
 }
 
 type validators struct {
-	schemas    appdef.SchemaCache
+	appDef     appdef.IAppDef
 	validators map[appdef.QName]*validator
 }
 
@@ -198,9 +198,9 @@ func newValidators() *validators {
 }
 
 // Prepares validator for specified schema cache
-func (v *validators) prepare(schemaCache appdef.SchemaCache) {
-	v.schemas = schemaCache
-	schemaCache.Schemas(
+func (v *validators) prepare(appDef appdef.IAppDef) {
+	v.appDef = appDef
+	v.appDef.Schemas(
 		func(s appdef.Schema) {
 			v.validators[s.QName()] = newValidator(v, s)
 		})
@@ -234,7 +234,7 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 			validateErrorf(ECode_InvalidSchemaName, "event command argument «%v» uses wrong schema «%v», expected «%v»: %w", ev.name, ev.argObject.QName(), arg, ErrWrongSchema))
 	} else if arg != appdef.NullQName {
 		// #!17185: must be ODoc or Object only
-		schema := v.schemas.Schema(arg)
+		schema := v.appDef.Schema(arg)
 		if (schema.Kind() != appdef.SchemaKind_ODoc) && (schema.Kind() != appdef.SchemaKind_Object) {
 			err = errors.Join(err,
 				validateErrorf(ECode_InvalidSchemaKind, "event command argument «%v» schema can not to be «%v», expected («%v» or «%v»): %w", arg, schema.Kind(), appdef.SchemaKind_ODoc, appdef.SchemaKind_Object, ErrWrongSchema))

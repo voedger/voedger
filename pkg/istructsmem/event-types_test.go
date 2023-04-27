@@ -654,22 +654,22 @@ func Test_EventUpdateRawCud(t *testing.T) {
 	docName := appdef.NewQName("test", "cdoc")
 	recName := appdef.NewQName("test", "crec")
 
-	bld := appdef.NewSchemaCache()
+	appDef := appdef.New()
 
-	t.Run("must ok to construct schemas", func(t *testing.T) {
-		doc := bld.Add(docName, appdef.SchemaKind_CDoc)
+	t.Run("must ok to construct application definition", func(t *testing.T) {
+		doc := appDef.Add(docName, appdef.SchemaKind_CDoc)
 		doc.AddField("new", appdef.DataKind_bool, true)
 		doc.AddField("rec", appdef.DataKind_RecordID, false)
 		doc.AddField("emptiable", appdef.DataKind_string, false)
 		doc.AddContainer("rec", recName, 0, 1)
 
-		rec := bld.Add(recName, appdef.SchemaKind_CRecord)
+		rec := appDef.Add(recName, appdef.SchemaKind_CRecord)
 		rec.AddField("data", appdef.DataKind_string, false)
 	})
 
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
+		cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 		return cfgs
 	}()
 
@@ -832,7 +832,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 	docName := appdef.NewQName("test", "cdoc")
 	docID := istructs.NullRecordID
 
-	bld := appdef.NewSchemaCache()
+	bld := appdef.New()
 
 	t.Run("must ok to construct singleton CDOC schema", func(t *testing.T) {
 		schema := bld.Add(docName, appdef.SchemaKind_CDoc)

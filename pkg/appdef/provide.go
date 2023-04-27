@@ -5,7 +5,7 @@
 
 package appdef
 
-// Creates and return new application schemas cache
-func NewSchemaCache() SchemaCacheBuilder {
-	return newSchemaCache()
+// Creates and return new application definition builder
+func New() IAppDefBuilder {
+	return newAppDef()
 }

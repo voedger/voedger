@@ -96,6 +96,11 @@ func newAppStructs(appCfg *AppConfigType, buckets irates.IBuckets, appTokens ist
 	return &app
 }
 
+// istructs.IAppStructs.AppDef
+func (app *appStructsType) AppDef() appdef.IAppDef {
+	return app.config.AppDef
+}
+
 // istructs.IAppStructs.Events
 func (app *appStructsType) Events() istructs.IEvents {
 	return &app.events
@@ -114,11 +119,6 @@ func (app *appStructsType) ViewRecords() istructs.IViewRecords {
 // istructs.IAppStructs.Resources
 func (app *appStructsType) Resources() istructs.IResources {
 	return &app.config.Resources
-}
-
-// istructs.IAppStructs.Schemas
-func (app *appStructsType) Schemas() appdef.SchemaCache {
-	return app.config.Schemas
 }
 
 // istructs.IAppStructs.ClusterAppID

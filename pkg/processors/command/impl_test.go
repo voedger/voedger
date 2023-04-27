@@ -53,18 +53,18 @@ func TestBasicUsage(t *testing.T) {
 	testCmdQNameParams := appdef.NewQName(appdef.SysPackage, "TestParams")
 	// схема unloged-параметров тестовой команды
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
-	buildSchemas := func(cache appdef.SchemaCacheBuilder) {
-		testCmdParamsScheme := cache.Add(testCmdQNameParams, appdef.SchemaKind_Object)
+	prepareAppDef := func(appDef appdef.IAppDefBuilder) {
+		testCmdParamsScheme := appDef.Add(testCmdQNameParams, appdef.SchemaKind_Object)
 		testCmdParamsScheme.AddField("Text", appdef.DataKind_string, true)
 
-		testCmdParamsUnloggedScheme := cache.Add(testCmdQNameParamsUnlogged, appdef.SchemaKind_Object)
+		testCmdParamsUnloggedScheme := appDef.Add(testCmdQNameParamsUnlogged, appdef.SchemaKind_Object)
 		testCmdParamsUnloggedScheme.AddField("Password", appdef.DataKind_string, true)
 
-		cache.Add(testCDoc, appdef.SchemaKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
-		cache.Add(testCRecord, appdef.SchemaKind_CRecord)
+		appDef.Add(testCDoc, appdef.SchemaKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+		appDef.Add(testCRecord, appdef.SchemaKind_CRecord)
 	}
 
-	app := setUp(t, buildSchemas)
+	app := setUp(t, prepareAppDef)
 	defer tearDown(app)
 
 	channelID, err := app.n10nBroker.NewChannel("test", 24*time.Hour)
@@ -180,10 +180,10 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp) map[string]interface
 func TestRecovery(t *testing.T) {
 	require := require.New(t)
 
-	app := setUp(t, func(cache appdef.SchemaCacheBuilder) {
-		_ = cache.Add(testCRecord, appdef.SchemaKind_CRecord)
-		_ = cache.Add(testCDoc, appdef.SchemaKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
-		_ = cache.Add(testWDoc, appdef.SchemaKind_WDoc)
+	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
+		_ = appDef.Add(testCRecord, appdef.SchemaKind_CRecord)
+		_ = appDef.Add(testCDoc, appdef.SchemaKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+		_ = appDef.Add(testWDoc, appdef.SchemaKind_WDoc)
 	})
 	defer tearDown(app)
 
@@ -238,8 +238,8 @@ func TestCUDUpdate(t *testing.T) {
 
 	testQName := appdef.NewQName("test", "test")
 
-	app := setUp(t, func(cache appdef.SchemaCacheBuilder) {
-		_ = cache.Add(testQName, appdef.SchemaKind_CDoc).AddField("IntFld", appdef.DataKind_int32, false)
+	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
+		_ = appDef.Add(testQName, appdef.SchemaKind_CDoc).AddField("IntFld", appdef.DataKind_int32, false)
 	})
 	defer tearDown(app)
 
@@ -291,8 +291,8 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 
 	testQName := appdef.NewQName("test", "test")
 
-	app := setUp(t, func(cache appdef.SchemaCacheBuilder) {
-		_ = cache.Add(testQName, appdef.SchemaKind_CDoc)
+	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
+		_ = appDef.Add(testQName, appdef.SchemaKind_CDoc)
 	})
 	defer tearDown(app)
 
@@ -342,11 +342,11 @@ func Test400BadRequests(t *testing.T) {
 	testCmdQNameParams := appdef.NewQName(appdef.SysPackage, "TestParams")
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
 
-	app := setUp(t, func(cache appdef.SchemaCacheBuilder) {
-		cache.Add(testCmdQNameParams, appdef.SchemaKind_Object).
+	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
+		appDef.Add(testCmdQNameParams, appdef.SchemaKind_Object).
 			AddField("Text", appdef.DataKind_string, true)
 
-		cache.Add(testCmdQNameParamsUnlogged, appdef.SchemaKind_Object).
+		appDef.Add(testCmdQNameParamsUnlogged, appdef.SchemaKind_Object).
 			AddField("Password", appdef.DataKind_string, true)
 	})
 	defer tearDown(app)
@@ -416,8 +416,8 @@ func TestAuthnz(t *testing.T) {
 
 	qNameTestDeniedCDoc := appdef.NewQName(appdef.SysPackage, "TestDeniedCDoc") // the same in core/iauthnzimpl
 
-	app := setUp(t, func(cache appdef.SchemaCacheBuilder) {
-		cache.Add(qNameTestDeniedCDoc, appdef.SchemaKind_CDoc)
+	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
+		appDef.Add(qNameTestDeniedCDoc, appdef.SchemaKind_CDoc)
 	})
 	defer tearDown(app)
 
@@ -493,7 +493,7 @@ func getAuthHeader(token string) map[string][]string {
 
 func TestBasicUsage_QNameJSONFunc(t *testing.T) {
 	require := require.New(t)
-	app := setUp(t, func(schemas appdef.SchemaCacheBuilder) {})
+	app := setUp(t, func(appDef appdef.IAppDefBuilder) {})
 	defer tearDown(app)
 
 	ch := make(chan interface{})
@@ -530,8 +530,8 @@ func TestRateLimit(t *testing.T) {
 	parsQName := appdef.NewQName(appdef.SysPackage, "Params")
 
 	app := setUp(t,
-		func(cache appdef.SchemaCacheBuilder) {
-			cache.Add(parsQName, appdef.SchemaKind_Object)
+		func(appDef appdef.IAppDefBuilder) {
+			appDef.Add(parsQName, appdef.SchemaKind_Object)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(
@@ -603,7 +603,7 @@ func replyBadRequest(bus ibus.IBus, sender interface{}, message string) {
 	})
 }
 
-func setUp(t *testing.T, cfgSchemas func(schemas appdef.SchemaCacheBuilder), cfgFuncs ...func(*istructsmem.AppConfigType)) testApp {
+func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFuncs ...func(*istructsmem.AppConfigType)) testApp {
 	if coreutils.IsDebug() {
 		testTimeout = time.Hour
 	}
@@ -617,15 +617,15 @@ func setUp(t *testing.T, cfgSchemas func(schemas appdef.SchemaCacheBuilder), cfg
 	asf := istorage.ProvideMem()
 	appStorageProvider := istorageimpl.Provide(asf)
 
-	// schema constructions
-	cache := appdef.NewSchemaCache()
-	ProvideJSONFuncParamsSchema(cache)
-	if cfgSchemas != nil {
-		cfgSchemas(cache)
+	// build application definition
+	appDef := appdef.New()
+	ProvideJSONFuncParamsSchema(appDef)
+	if prepareAppDef != nil {
+		prepareAppDef(appDef)
 	}
 
 	// конфиг приложения airs-bp
-	cfg := cfgs.AddConfig(istructs.AppQName_untill_airs_bp, cache)
+	cfg := cfgs.AddConfig(istructs.AppQName_untill_airs_bp, appDef)
 	for _, cfgFunc := range cfgFuncs {
 		cfgFunc(cfg)
 	}

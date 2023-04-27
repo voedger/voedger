@@ -25,17 +25,6 @@ type TestObject struct {
 	Containers_ map[string][]*TestObject
 }
 
-type TestSchema struct {
-	Fields_     map[string]appdef.DataKind
-	Containers_ map[string]appdef.QName
-	QName_      appdef.QName
-	Signleton_  bool
-}
-
-type TestSchemas struct {
-	Schemas_ map[appdef.QName]appdef.Schema
-}
-
 type TestValue struct {
 	*TestObject
 }
@@ -45,20 +34,6 @@ func (v *TestValue) AsRecord(name string) (record istructs.IRecord) {
 }
 func (v *TestValue) AsEvent(name string) (event istructs.IDbEvent) {
 	return v.Data[name].(istructs.IDbEvent)
-}
-
-func (s TestSchemas) Schemas(cb func(appdef.Schema)) {
-	for _, s := range s.Schemas_ {
-		cb(s)
-	}
-}
-func (s TestSchemas) SchemaCount() int                             { return len(s.Schemas_) }
-func (s TestSchemas) SchemaByName(name appdef.QName) appdef.Schema { return s.Schemas_[name] }
-func (s TestSchemas) Schema(name appdef.QName) appdef.Schema {
-	if schema := s.SchemaByName(name); schema != nil {
-		return schema
-	}
-	return nil
 }
 
 func (o *TestObject) PutInt32(name string, value int32)                { o.Data[name] = value }
@@ -149,62 +124,3 @@ func (o *TestObject) Containers(cb func(container string)) {
 		cb(containerName)
 	}
 }
-
-func (s TestSchema) Cache() appdef.SchemaCache { panic("implement me") }
-func (s TestSchema) QName() appdef.QName       { return s.QName_ }
-func (s TestSchema) Kind() appdef.SchemaKind   { return appdef.SchemaKind_FakeLast }
-func (s TestSchema) Field(name string) appdef.Field {
-	if k, ok := s.Fields_[name]; ok {
-		fld := feildDescr{name: name, kind: k}
-		return &fld
-	}
-	return nil
-}
-func (s TestSchema) FieldCount() int { return len(s.Fields_) }
-func (s TestSchema) Fields(cb func(appdef.Field)) {
-	for n, k := range s.Fields_ {
-		fld := feildDescr{name: n, kind: k}
-		cb(&fld)
-	}
-}
-func (s TestSchema) Container(name string) appdef.Container {
-	if s, ok := s.Containers_[name]; ok {
-		cont := contDescr{name: name, schema: s}
-		return &cont
-	}
-	return nil
-}
-func (s TestSchema) ContainerCount() int { return len(s.Containers_) }
-func (s TestSchema) Containers(cb func(appdef.Container)) {
-	for n, s := range s.Containers_ {
-		cont := contDescr{name: n, schema: s}
-		cb(&cont)
-	}
-}
-func (s TestSchema) ContainerSchema(name string) appdef.Schema { panic("implement me") }
-func (s TestSchema) Singleton() bool                           { return s.Signleton_ }
-func (s TestSchema) Validate() error                           { return nil }
-
-type feildDescr struct {
-	name string
-	kind appdef.DataKind
-}
-
-func (f feildDescr) Name() string                                  { return f.name }
-func (f feildDescr) DataKind() appdef.DataKind                     { return f.kind }
-func (f feildDescr) Required() bool                                { return false }
-func (f feildDescr) Verifiable() bool                              { return false }
-func (f feildDescr) VerificationKind(appdef.VerificationKind) bool { return false }
-func (f feildDescr) IsFixedWidth() bool                            { return f.kind.IsFixed() }
-func (f feildDescr) IsSys() bool                                   { return appdef.IsSysField(f.name) }
-
-type contDescr struct {
-	name   string
-	schema appdef.QName
-}
-
-func (c contDescr) Name() string             { return c.name }
-func (c contDescr) Schema() appdef.QName     { return c.schema }
-func (c contDescr) MinOccurs() appdef.Occurs { return 0 }
-func (c contDescr) MaxOccurs() appdef.Occurs { return appdef.Occurs_Unbounded }
-func (c contDescr) IsSys() bool              { return appdef.IsSysContainer(c.name) }

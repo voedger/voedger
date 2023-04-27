@@ -41,21 +41,21 @@ func TestResourceEnumerator(t *testing.T) {
 
 	t.Run("builds app", func(t *testing.T) {
 
-		bld := appdef.NewSchemaCache()
-		t.Run("must be ok to build schemas and resources", func(t *testing.T) {
-			CDocSchema := bld.Add(cDocName, appdef.SchemaKind_CDoc)
+		appDef := appdef.New()
+		t.Run("must be ok to build application definition", func(t *testing.T) {
+			CDocSchema := appDef.Add(cDocName, appdef.SchemaKind_CDoc)
 			CDocSchema.
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)
 
-			ObjSchema := bld.Add(oObjName, appdef.SchemaKind_Object)
+			ObjSchema := appDef.Add(oObjName, appdef.SchemaKind_Object)
 			ObjSchema.
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
+		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 
 		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, appdef.NullQName, appdef.NullQName, NullCommandExec))
 		cfg.Resources.Add(NewCommandFunction(cmdCreateObj, oObjName, appdef.NullQName, appdef.NullQName, NullCommandExec))

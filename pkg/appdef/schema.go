@@ -14,7 +14,7 @@ var NullSchema = newSchema(nil, NullQName, SchemaKind_null)
 
 // Implements ISchema and ISchemaBuilder interfaces
 type schema struct {
-	cache             *schemasCache
+	app               *appDef
 	name              QName
 	kind              SchemaKind
 	fields            map[string]*field
@@ -24,9 +24,9 @@ type schema struct {
 	singleton         bool
 }
 
-func newSchema(cache *schemasCache, name QName, kind SchemaKind) *schema {
+func newSchema(app *appDef, name QName, kind SchemaKind) *schema {
 	schema := schema{
-		cache:             cache,
+		app:               app,
 		name:              name,
 		kind:              kind,
 		fields:            make(map[string]*field),
@@ -61,7 +61,7 @@ func (sch *schema) AddContainer(name string, schema QName, minOccurs, maxOccurs 
 	if !sch.Kind().ContainersAllowed() {
 		panic(fmt.Errorf("schema «%s» kind «%v» does not allow containers: %w", sch.QName(), sch.Kind(), ErrInvalidSchemaKind))
 	}
-	if contSchema := sch.cache.SchemaByName(schema); contSchema != nil {
+	if contSchema := sch.app.SchemaByName(schema); contSchema != nil {
 		if !sch.Kind().ContainerKindAvailable(contSchema.Kind()) {
 			panic(fmt.Errorf("schema «%s» kind «%v» does not support child container kind «%v»: %w", sch.QName(), sch.Kind(), contSchema.Kind(), ErrInvalidSchemaKind))
 		}
@@ -81,13 +81,13 @@ func (sch *schema) AddField(name string, kind DataKind, required bool) SchemaBui
 	return sch
 }
 
+func (sch *schema) App() IAppDef {
+	return sch.app
+}
+
 func (sch *schema) AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) SchemaBuilder {
 	sch.addField(name, kind, required, true, vk...)
 	return sch
-}
-
-func (sch *schema) Cache() SchemaCache {
-	return sch.cache
 }
 
 func (sch *schema) Container(name string) Container {
@@ -109,7 +109,7 @@ func (sch *schema) Containers(cb func(Container)) {
 
 func (sch *schema) ContainerSchema(contName string) Schema {
 	if cont := sch.Container(contName); cont != nil {
-		return sch.cache.SchemaByName(cont.Schema())
+		return sch.app.SchemaByName(cont.Schema())
 	}
 	return nil
 }
@@ -185,8 +185,8 @@ func (sch *schema) addField(name string, kind DataKind, required, verified bool,
 }
 
 func (sch *schema) changed() {
-	if sch.cache != nil {
-		sch.cache.changed()
+	if sch.app != nil {
+		sch.app.changed()
 	}
 }
 
