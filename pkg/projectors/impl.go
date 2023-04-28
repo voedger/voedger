@@ -112,56 +112,11 @@ type eventService struct {
 
 func (s *eventService) getWSID() istructs.WSID { return s.event.Workspace() }
 
-type ViewBuilder struct {
-	appDef               appdef.IAppDefBuilder
-	qname                appdef.QName
-	valueSchema          appdef.IDefBuilder
-	partitionKeySchema   appdef.IDefBuilder
-	clusteringColsSchema appdef.IDefBuilder
-}
-
-func qnameValue(qname appdef.QName) appdef.QName {
-	return appdef.NewQName(qname.Pkg(), qname.Entity()+"_viewValue")
-}
-
-func qnamePartitionKey(qname appdef.QName) appdef.QName {
-	return appdef.NewQName(qname.Pkg(), qname.Entity()+"_viewPartitionKey")
-}
-
-func qnameClusteringCols(qname appdef.QName) appdef.QName {
-	return appdef.NewQName(qname.Pkg(), qname.Entity()+"_viewClusteringCols")
-}
-
-func (view *ViewBuilder) ValueField(name string, kind appdef.DataKind, required bool) {
-	view.valueSchema.AddField(name, kind, required)
-}
-
-func (view *ViewBuilder) PartitionKeyField(name string, kind appdef.DataKind, required bool) {
-	view.partitionKeySchema.AddField(name, kind, required)
-}
-
-func (view *ViewBuilder) ClusteringColumnField(name string, kind appdef.DataKind, required bool) {
-	view.clusteringColsSchema.AddField(name, kind, required)
-}
-
-func newViewBuilder(appDef appdef.IAppDefBuilder, qname appdef.QName) ViewBuilder {
-	return ViewBuilder{
-		appDef:               appDef,
-		qname:                qname,
-		valueSchema:          appDef.Add(qnameValue(qname), appdef.DefKind_ViewRecord_Value),
-		partitionKeySchema:   appDef.Add(qnamePartitionKey(qname), appdef.DefKind_ViewRecord_PartitionKey),
-		clusteringColsSchema: appDef.Add(qnameClusteringCols(qname), appdef.DefKind_ViewRecord_ClusteringColumns),
-	}
-}
-
 func provideViewSchemaImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc BuildViewSchemaFunc) {
-	builder := newViewBuilder(appDef, qname)
-	buildFunc(&builder)
-
-	schema := appDef.Add(qname, appdef.DefKind_ViewRecord)
-	schema.AddContainer(appdef.SystemContainer_ViewPartitionKey, qnamePartitionKey(qname), 1, 1)
-	schema.AddContainer(appdef.SystemContainer_ViewClusteringCols, qnameClusteringCols(qname), 1, 1)
-	schema.AddContainer(appdef.SystemContainer_ViewValue, qnameValue(qname), 1, 1)
+	builder := appDef.AddView(qname)
+	if buildFunc != nil {
+		buildFunc(builder)
+	}
 }
 
 func provideOffsetsDefImpl(appDef appdef.IAppDefBuilder) {

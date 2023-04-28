@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -71,7 +71,7 @@ type IViewSchemaBuilder interface {
 	ClusteringColumnField(name string, kind appdef.DataKind, required bool)
 }
 
-type BuildViewSchemaFunc func(builder IViewSchemaBuilder)
+type BuildViewSchemaFunc func(builder appdef.ViewBuilder)
 
 type WorkToEventFunc func(work interface{}) istructs.IPLogEvent
 

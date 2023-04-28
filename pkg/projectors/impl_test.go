@@ -45,8 +45,8 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 
 	app := appStructs(
 		func(appDef appdef.IAppDefBuilder) {
-			ProvideViewSchema(appDef, incProjectionView, buildProjectionSchema)
-			ProvideViewSchema(appDef, decProjectionView, buildProjectionSchema)
+			ProvideViewSchema(appDef, incProjectionView, buildProjectionView)
+			ProvideViewSchema(appDef, decProjectionView, buildProjectionView)
 		},
 		nil)
 	actualizerFactory := ProvideSyncActualizerFactory()
@@ -147,10 +147,10 @@ var (
 	}
 )
 
-var buildProjectionSchema = func(builder IViewSchemaBuilder) {
-	builder.PartitionKeyField("pk", appdef.DataKind_int32, false)
-	builder.ClusteringColumnField("cc", appdef.DataKind_int32, false)
-	builder.ValueField(colValue, appdef.DataKind_int32, true)
+var buildProjectionView = func(view appdef.ViewBuilder) {
+	view.AddPartField("pk", appdef.DataKind_int32)
+	view.AddClustColumn("cc", appdef.DataKind_int32)
+	view.AddValueField(colValue, appdef.DataKind_int32, true)
 }
 
 type (
@@ -191,8 +191,8 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 
 	app := appStructs(
 		func(appDef appdef.IAppDefBuilder) {
-			ProvideViewSchema(appDef, incProjectionView, buildProjectionSchema)
-			ProvideViewSchema(appDef, decProjectionView, buildProjectionSchema)
+			ProvideViewSchema(appDef, incProjectionView, buildProjectionView)
+			ProvideViewSchema(appDef, decProjectionView, buildProjectionView)
 		},
 		nil)
 	actualizerFactory := ProvideSyncActualizerFactory()
