@@ -84,7 +84,7 @@ func (c *cmdWorkpiece) GetPrincipalPayload() payloads.PrincipalPayload {
 }
 
 func (ws *workspace) nextRecordID(schema appdef.Schema) (res istructs.RecordID) {
-	if schema.Kind() == appdef.SchemaKind_CDoc || schema.Kind() == appdef.SchemaKind_CRecord {
+	if schema.Kind() == appdef.DefKind_CDoc || schema.Kind() == appdef.DefKind_CRecord {
 		res = istructs.NewCDocCRecordID(ws.NextCDocCRecordBaseID)
 		ws.NextCDocCRecordBaseID++
 	} else {
@@ -150,7 +150,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		_ = event.CUDs(func(rec istructs.ICUDRow) error { // no errors to return
 			if rec.IsNew() {
 				schema := cmd.AppDef().Schema(rec.QName())
-				if schema.Kind() == appdef.SchemaKind_CDoc || schema.Kind() == appdef.SchemaKind_CRecord {
+				if schema.Kind() == appdef.DefKind_CDoc || schema.Kind() == appdef.DefKind_CRecord {
 					ws.NextCDocCRecordBaseID = rec.ID().BaseRecordID() + 1
 				} else {
 					ws.NextBaseID = rec.ID().BaseRecordID() + 1

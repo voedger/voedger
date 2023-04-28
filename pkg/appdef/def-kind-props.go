@@ -6,21 +6,21 @@
 package appdef
 
 // Schema kind properties
-var schemaKindProps = map[SchemaKind]struct {
+var defKindProps = map[DefKind]struct {
 	fieldsAllowed           bool
 	availableFieldKinds     map[DataKind]bool
 	systemFields            map[string]bool
 	containersAllowed       bool
-	availableContainerKinds map[SchemaKind]bool
+	availableContainerKinds map[DefKind]bool
 }{
-	SchemaKind_null: {
+	DefKind_null: {
 		fieldsAllowed:           false,
 		availableFieldKinds:     map[DataKind]bool{},
 		systemFields:            map[string]bool{},
 		containersAllowed:       false,
-		availableContainerKinds: map[SchemaKind]bool{},
+		availableContainerKinds: map[DefKind]bool{},
 	},
-	SchemaKind_GDoc: {
+	DefKind_GDoc: {
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -39,11 +39,11 @@ var schemaKindProps = map[SchemaKind]struct {
 			SystemField_IsActive: true,
 		},
 		containersAllowed: true,
-		availableContainerKinds: map[SchemaKind]bool{
-			SchemaKind_GRecord: true,
+		availableContainerKinds: map[DefKind]bool{
+			DefKind_GRecord: true,
 		},
 	},
-	SchemaKind_CDoc: {
+	DefKind_CDoc: {
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -62,11 +62,11 @@ var schemaKindProps = map[SchemaKind]struct {
 			SystemField_IsActive: true,
 		},
 		containersAllowed: true,
-		availableContainerKinds: map[SchemaKind]bool{
-			SchemaKind_CRecord: true,
+		availableContainerKinds: map[DefKind]bool{
+			DefKind_CRecord: true,
 		},
 	},
-	SchemaKind_ODoc: {
+	DefKind_ODoc: {
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -84,12 +84,12 @@ var schemaKindProps = map[SchemaKind]struct {
 			SystemField_QName: true,
 		},
 		containersAllowed: true,
-		availableContainerKinds: map[SchemaKind]bool{
-			SchemaKind_ODoc:    true, // #19322!: ODocs should be able to contain ODocs
-			SchemaKind_ORecord: true,
+		availableContainerKinds: map[DefKind]bool{
+			DefKind_ODoc:    true, // #19322!: ODocs should be able to contain ODocs
+			DefKind_ORecord: true,
 		},
 	},
-	SchemaKind_WDoc: {
+	DefKind_WDoc: {
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -108,11 +108,11 @@ var schemaKindProps = map[SchemaKind]struct {
 			SystemField_IsActive: true,
 		},
 		containersAllowed: true,
-		availableContainerKinds: map[SchemaKind]bool{
-			SchemaKind_WRecord: true,
+		availableContainerKinds: map[DefKind]bool{
+			DefKind_WRecord: true,
 		},
 	},
-	SchemaKind_GRecord: {
+	DefKind_GRecord: {
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -133,11 +133,11 @@ var schemaKindProps = map[SchemaKind]struct {
 			SystemField_IsActive:  true,
 		},
 		containersAllowed: true,
-		availableContainerKinds: map[SchemaKind]bool{
-			SchemaKind_GRecord: true,
+		availableContainerKinds: map[DefKind]bool{
+			DefKind_GRecord: true,
 		},
 	},
-	SchemaKind_CRecord: {
+	DefKind_CRecord: {
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -158,11 +158,11 @@ var schemaKindProps = map[SchemaKind]struct {
 			SystemField_IsActive:  true,
 		},
 		containersAllowed: true,
-		availableContainerKinds: map[SchemaKind]bool{
-			SchemaKind_CRecord: true,
+		availableContainerKinds: map[DefKind]bool{
+			DefKind_CRecord: true,
 		},
 	},
-	SchemaKind_ORecord: {
+	DefKind_ORecord: {
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -182,11 +182,11 @@ var schemaKindProps = map[SchemaKind]struct {
 			SystemField_Container: true,
 		},
 		containersAllowed: true,
-		availableContainerKinds: map[SchemaKind]bool{
-			SchemaKind_ORecord: true,
+		availableContainerKinds: map[DefKind]bool{
+			DefKind_ORecord: true,
 		},
 	},
-	SchemaKind_WRecord: {
+	DefKind_WRecord: {
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -207,22 +207,22 @@ var schemaKindProps = map[SchemaKind]struct {
 			SystemField_IsActive:  true,
 		},
 		containersAllowed: true,
-		availableContainerKinds: map[SchemaKind]bool{
-			SchemaKind_WRecord: true,
+		availableContainerKinds: map[DefKind]bool{
+			DefKind_WRecord: true,
 		},
 	},
-	SchemaKind_ViewRecord: {
+	DefKind_ViewRecord: {
 		fieldsAllowed:       false,
 		availableFieldKinds: map[DataKind]bool{},
 		containersAllowed:   true,
-		availableContainerKinds: map[SchemaKind]bool{
-			SchemaKind_ViewRecord_PartitionKey:      true,
-			SchemaKind_ViewRecord_ClusteringColumns: true,
-			SchemaKind_ViewRecord_Value:             true,
+		availableContainerKinds: map[DefKind]bool{
+			DefKind_ViewRecord_PartitionKey:      true,
+			DefKind_ViewRecord_ClusteringColumns: true,
+			DefKind_ViewRecord_Value:             true,
 		},
 		systemFields: map[string]bool{},
 	},
-	SchemaKind_ViewRecord_PartitionKey: {
+	DefKind_ViewRecord_PartitionKey: {
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -235,9 +235,9 @@ var schemaKindProps = map[SchemaKind]struct {
 		},
 		systemFields:            map[string]bool{},
 		containersAllowed:       false,
-		availableContainerKinds: map[SchemaKind]bool{},
+		availableContainerKinds: map[DefKind]bool{},
 	},
-	SchemaKind_ViewRecord_ClusteringColumns: {
+	DefKind_ViewRecord_ClusteringColumns: {
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -252,9 +252,9 @@ var schemaKindProps = map[SchemaKind]struct {
 		},
 		systemFields:            map[string]bool{},
 		containersAllowed:       false,
-		availableContainerKinds: map[SchemaKind]bool{},
+		availableContainerKinds: map[DefKind]bool{},
 	},
-	SchemaKind_ViewRecord_Value: {
+	DefKind_ViewRecord_Value: {
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -273,9 +273,9 @@ var schemaKindProps = map[SchemaKind]struct {
 			SystemField_QName: true,
 		},
 		containersAllowed:       false,
-		availableContainerKinds: map[SchemaKind]bool{},
+		availableContainerKinds: map[DefKind]bool{},
 	},
-	SchemaKind_Object: {
+	DefKind_Object: {
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -292,11 +292,11 @@ var schemaKindProps = map[SchemaKind]struct {
 			SystemField_QName: true,
 		},
 		containersAllowed: true,
-		availableContainerKinds: map[SchemaKind]bool{
-			SchemaKind_Element: true,
+		availableContainerKinds: map[DefKind]bool{
+			DefKind_Element: true,
 		},
 	},
-	SchemaKind_Element: {
+	DefKind_Element: {
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -314,34 +314,34 @@ var schemaKindProps = map[SchemaKind]struct {
 			SystemField_Container: true,
 		},
 		containersAllowed: true,
-		availableContainerKinds: map[SchemaKind]bool{
-			SchemaKind_Element: true,
+		availableContainerKinds: map[DefKind]bool{
+			DefKind_Element: true,
 		},
 	},
-	SchemaKind_QueryFunction: {
+	DefKind_QueryFunction: {
 		fieldsAllowed:       false,
 		availableFieldKinds: map[DataKind]bool{},
 		systemFields:        map[string]bool{},
 		containersAllowed:   true,
-		availableContainerKinds: map[SchemaKind]bool{
-			SchemaKind_GDoc:   true,
-			SchemaKind_CDoc:   true,
-			SchemaKind_ODoc:   true,
-			SchemaKind_WDoc:   true,
-			SchemaKind_Object: true,
+		availableContainerKinds: map[DefKind]bool{
+			DefKind_GDoc:   true,
+			DefKind_CDoc:   true,
+			DefKind_ODoc:   true,
+			DefKind_WDoc:   true,
+			DefKind_Object: true,
 		},
 	},
-	SchemaKind_CommandFunction: {
+	DefKind_CommandFunction: {
 		fieldsAllowed:       false,
 		availableFieldKinds: map[DataKind]bool{},
 		systemFields:        map[string]bool{},
 		containersAllowed:   true,
-		availableContainerKinds: map[SchemaKind]bool{
-			SchemaKind_GDoc:   true,
-			SchemaKind_CDoc:   true,
-			SchemaKind_ODoc:   true,
-			SchemaKind_WDoc:   true,
-			SchemaKind_Object: true,
+		availableContainerKinds: map[DefKind]bool{
+			DefKind_GDoc:   true,
+			DefKind_CDoc:   true,
+			DefKind_ODoc:   true,
+			DefKind_WDoc:   true,
+			DefKind_Object: true,
 		},
 	},
 }

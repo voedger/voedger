@@ -27,9 +27,9 @@ var (
 		"bytes":                  appdef.DataKind_bytes,
 		"recordID":               appdef.DataKind_RecordID,
 	}
-	schema = amock.NewSchema(testQName, appdef.SchemaKind_Object, mockFields(testFieldDefs)...)
+	schema = amock.NewSchema(testQName, appdef.DefKind_Object, mockFields(testFieldDefs)...)
 
-	schemaSimple = amock.NewSchema(testQNameSimple, appdef.SchemaKind_Object,
+	schemaSimple = amock.NewSchema(testQNameSimple, appdef.DefKind_Object,
 		amock.NewField(appdef.SystemField_QName, appdef.DataKind_QName, true),
 		amock.NewField("int32", appdef.DataKind_int32, false),
 	)
@@ -83,7 +83,7 @@ func TestNewFieldsDef(t *testing.T) {
 		"fld1": appdef.DataKind_int32,
 		"str":  appdef.DataKind_string,
 	}
-	s := amock.NewSchema(qName, appdef.SchemaKind_Object)
+	s := amock.NewSchema(qName, appdef.DefKind_Object)
 	for n, k := range testFieldDefs {
 		s.AddField(amock.NewField(n, k, false))
 	}
@@ -238,7 +238,7 @@ func TestReadValue(t *testing.T) {
 		iValueFields[n] = k
 	}
 	iValueFields["record"] = appdef.DataKind_Record
-	iValueSchema := amock.NewSchema(testQName, appdef.SchemaKind_ViewRecord_Value, mockFields(iValueFields)...)
+	iValueSchema := amock.NewSchema(testQName, appdef.DefKind_ViewRecord_Value, mockFields(iValueFields)...)
 	iValueValues := map[string]interface{}{}
 	for k, v := range testData {
 		iValueValues[k] = v

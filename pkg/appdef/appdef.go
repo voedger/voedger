@@ -23,7 +23,7 @@ func newAppDef() *appDef {
 	return &app
 }
 
-func (app *appDef) Add(name QName, kind SchemaKind) SchemaBuilder {
+func (app *appDef) Add(name QName, kind DefKind) SchemaBuilder {
 	if name == NullQName {
 		panic(fmt.Errorf("schema name cannot be empty: %w", ErrNameMissed))
 	}
@@ -94,7 +94,7 @@ func (app *appDef) changed() {
 
 func (app *appDef) prepare() {
 	app.Schemas(func(s Schema) {
-		if s.Kind() == SchemaKind_ViewRecord {
+		if s.Kind() == DefKind_ViewRecord {
 			app.prepareViewFullKeySchema(s)
 		}
 	})

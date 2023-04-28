@@ -18,21 +18,21 @@ func Test_AppDef_Add(t *testing.T) {
 
 	t.Run("panic if name is empty", func(t *testing.T) {
 		require.Panics(func() {
-			app.Add(NullQName, SchemaKind_CDoc)
+			app.Add(NullQName, DefKind_CDoc)
 		})
 	})
 
 	t.Run("panic if name is invalid", func(t *testing.T) {
 		require.Panics(func() {
-			app.Add(NewQName("naked", "🔫"), SchemaKind_CDoc)
+			app.Add(NewQName("naked", "🔫"), DefKind_CDoc)
 		})
 	})
 
 	t.Run("if schema with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "test")
-		app.Add(testName, SchemaKind_CDoc)
+		app.Add(testName, DefKind_CDoc)
 		require.Panics(func() {
-			app.Add(testName, SchemaKind_CDoc)
+			app.Add(testName, DefKind_CDoc)
 		})
 	})
 }

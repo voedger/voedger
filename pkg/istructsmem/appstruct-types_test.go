@@ -86,7 +86,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 	t.Run("must error if error while read versions", func(t *testing.T) {
 		bld := appdef.New()
 		t.Run("must be ok to build application definition", func(t *testing.T) {
-			bld.Add(appdef.NewQName("test", "CDoc"), appdef.SchemaKind_CDoc)
+			bld.Add(appdef.NewQName("test", "CDoc"), appdef.DefKind_CDoc)
 		})
 
 		cfgs1 := make(AppConfigsType, 1)

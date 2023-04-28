@@ -369,7 +369,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 		appDef := appdef.New()
 		t.Run("must be ok to build application definition", func(t *testing.T) {
-			appDef.Add(test.testCDoc, appdef.SchemaKind_CDoc).
+			appDef.Add(test.testCDoc, appdef.DefKind_CDoc).
 				AddField("int32_1", appdef.DataKind_int32, false).
 				AddField("int64_1", appdef.DataKind_int64, false).
 				AddField("float32_1", appdef.DataKind_float32, false).
@@ -379,7 +379,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 				AddField("QName_1", appdef.DataKind_QName, false).
 				AddField("bool_1", appdef.DataKind_bool, false).
 				AddField("RecordID_1", appdef.DataKind_RecordID, false)
-			appDef.Add(test.tablePhotos, appdef.SchemaKind_Object) // for reading QName_1 field value
+			appDef.Add(test.tablePhotos, appdef.DefKind_Object) // for reading QName_1 field value
 		})
 
 		newConfig := newAppConfig(test.AppCfg.Name, appDef)

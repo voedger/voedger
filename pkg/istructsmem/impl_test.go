@@ -46,7 +46,7 @@ func TestBasicUsage(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		bld := appdef.New()
 
-		saleParamsSchema := bld.Add(appdef.NewQName("test", "Sale"), appdef.SchemaKind_ODoc)
+		saleParamsSchema := bld.Add(appdef.NewQName("test", "Sale"), appdef.DefKind_ODoc)
 		saleParamsSchema.
 			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
@@ -55,20 +55,20 @@ func TestBasicUsage(t *testing.T) {
 			AddField("Photo", appdef.DataKind_bytes, false).
 			AddContainer("Basket", appdef.NewQName("test", "Basket"), 1, 1)
 
-		basketSchema := bld.Add(appdef.NewQName("test", "Basket"), appdef.SchemaKind_ORecord)
+		basketSchema := bld.Add(appdef.NewQName("test", "Basket"), appdef.DefKind_ORecord)
 		basketSchema.AddContainer("Good", appdef.NewQName("test", "Good"), 0, appdef.Occurs_Unbounded)
 
-		goodSchema := bld.Add(appdef.NewQName("test", "Good"), appdef.SchemaKind_ORecord)
+		goodSchema := bld.Add(appdef.NewQName("test", "Good"), appdef.DefKind_ORecord)
 		goodSchema.
 			AddField("Name", appdef.DataKind_string, true).
 			AddField("Code", appdef.DataKind_int64, true).
 			AddField("Weight", appdef.DataKind_float64, false)
 
-		saleSecurParamsSchema := bld.Add(appdef.NewQName("test", "saleSecureArgs"), appdef.SchemaKind_Object)
+		saleSecurParamsSchema := bld.Add(appdef.NewQName("test", "saleSecureArgs"), appdef.DefKind_Object)
 		saleSecurParamsSchema.
 			AddField("password", appdef.DataKind_string, true)
 
-		docSchema := bld.Add(appdef.NewQName("test", "photos"), appdef.SchemaKind_CDoc)
+		docSchema := bld.Add(appdef.NewQName("test", "photos"), appdef.DefKind_CDoc)
 		docSchema.
 			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
@@ -374,7 +374,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 		schema := app.AppDef().Schema(test.saleCmdDocName)
 
 		require.NotNil(schema)
-		require.Equal(appdef.SchemaKind_ODoc, schema.Kind())
+		require.Equal(appdef.DefKind_ODoc, schema.Kind())
 
 		// check fields
 		fields := make(map[string]appdef.DataKind)
@@ -395,7 +395,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 				t.Run("II. test first level nested schema (basket)", func(t *testing.T) {
 					schema := app.AppDef().Schema(appdef.NewQName(test.pkgName, test.basketIdent))
 					require.NotNil(schema)
-					require.Equal(appdef.SchemaKind_ORecord, schema.Kind())
+					require.Equal(appdef.DefKind_ORecord, schema.Kind())
 
 					schema.Containers(
 						func(c appdef.Container) {
@@ -405,7 +405,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 							t.Run("III. test second level nested schema (good)", func(t *testing.T) {
 								schema := app.AppDef().Schema(appdef.NewQName(test.pkgName, test.goodIdent))
 								require.NotNil(schema)
-								require.Equal(appdef.SchemaKind_ORecord, schema.Kind())
+								require.Equal(appdef.DefKind_ORecord, schema.Kind())
 
 								fields := make(map[string]appdef.DataKind)
 								schema.Fields(func(f appdef.Field) {
@@ -430,11 +430,11 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 	app := func() istructs.IAppStructs {
 		appDef := appdef.New()
 
-		recSchema := appDef.Add(appdef.NewQName("types", "CRec"), appdef.SchemaKind_CRecord)
+		recSchema := appDef.Add(appdef.NewQName("types", "CRec"), appdef.DefKind_CRecord)
 		recSchema.AddField("int", appdef.DataKind_int64, false)
 
 		docQName := appdef.NewQName("types", "CDoc")
-		docSchema := appDef.Add(docQName, appdef.SchemaKind_CDoc)
+		docSchema := appDef.Add(docQName, appdef.DefKind_CDoc)
 		docSchema.AddField("str", appdef.DataKind_string, true)
 		docSchema.AddField("fld", appdef.DataKind_int32, true)
 
@@ -445,7 +445,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		viewSchema.AddClustColumn("str", appdef.DataKind_string)
 		viewSchema.AddValueField("bool", appdef.DataKind_bool, false)
 
-		argSchema := appDef.Add(appdef.NewQName("types", "Arg"), appdef.SchemaKind_Object)
+		argSchema := appDef.Add(appdef.NewQName("types", "Arg"), appdef.DefKind_Object)
 		argSchema.AddField("bool", appdef.DataKind_bool, false)
 
 		cfgs := make(AppConfigsType)

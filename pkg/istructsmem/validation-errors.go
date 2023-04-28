@@ -13,7 +13,7 @@ const (
 
 	ECode_EmptySchemaName
 	ECode_InvalidSchemaName
-	ECode_InvalidSchemaKind
+	ECode_InvalidDefKind
 
 	ECode_EmptyData
 

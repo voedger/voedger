@@ -10,13 +10,13 @@ import (
 )
 
 // NullSchema is used for return then schema	is not founded
-var NullSchema = newSchema(nil, NullQName, SchemaKind_null)
+var NullSchema = newSchema(nil, NullQName, DefKind_null)
 
 // Implements ISchema and ISchemaBuilder interfaces
 type schema struct {
 	app               *appDef
 	name              QName
-	kind              SchemaKind
+	kind              DefKind
 	fields            map[string]*field
 	fieldsOrdered     []string
 	containers        map[string]*container
@@ -24,7 +24,7 @@ type schema struct {
 	singleton         bool
 }
 
-func newSchema(app *appDef, name QName, kind SchemaKind) *schema {
+func newSchema(app *appDef, name QName, kind DefKind) *schema {
 	schema := schema{
 		app:               app,
 		name:              name,
@@ -59,11 +59,11 @@ func (sch *schema) AddContainer(name string, schema QName, minOccurs, maxOccurs 
 	}
 
 	if !sch.Kind().ContainersAllowed() {
-		panic(fmt.Errorf("schema «%s» kind «%v» does not allow containers: %w", sch.QName(), sch.Kind(), ErrInvalidSchemaKind))
+		panic(fmt.Errorf("schema «%s» kind «%v» does not allow containers: %w", sch.QName(), sch.Kind(), ErrInvalidDefKind))
 	}
 	if contSchema := sch.app.SchemaByName(schema); contSchema != nil {
 		if !sch.Kind().ContainerKindAvailable(contSchema.Kind()) {
-			panic(fmt.Errorf("schema «%s» kind «%v» does not support child container kind «%v»: %w", sch.QName(), sch.Kind(), contSchema.Kind(), ErrInvalidSchemaKind))
+			panic(fmt.Errorf("schema «%s» kind «%v» does not support child container kind «%v»: %w", sch.QName(), sch.Kind(), contSchema.Kind(), ErrInvalidDefKind))
 		}
 	}
 
@@ -131,7 +131,7 @@ func (sch *schema) Fields(cb func(Field)) {
 	}
 }
 
-func (sch *schema) Kind() SchemaKind {
+func (sch *schema) Kind() DefKind {
 	return sch.kind
 }
 
@@ -140,15 +140,15 @@ func (sch *schema) QName() QName {
 }
 
 func (sch *schema) SetSingleton() {
-	if sch.Kind() != SchemaKind_CDoc {
-		panic(fmt.Errorf("only CDocs can be singletons: %w", ErrInvalidSchemaKind))
+	if sch.Kind() != DefKind_CDoc {
+		panic(fmt.Errorf("only CDocs can be singletons: %w", ErrInvalidDefKind))
 	}
 	sch.singleton = true
 	sch.changed()
 }
 
 func (sch *schema) Singleton() bool {
-	return sch.singleton && (sch.Kind() == SchemaKind_CDoc)
+	return sch.singleton && (sch.Kind() == DefKind_CDoc)
 }
 
 func (sch *schema) addField(name string, kind DataKind, required, verified bool, vk ...VerificationKind) {
@@ -167,7 +167,7 @@ func (sch *schema) addField(name string, kind DataKind, required, verified bool,
 		panic(fmt.Errorf("field «%v» is already exists: %w", name, ErrNameUniqueViolation))
 	}
 	if !sch.Kind().FieldsAllowed() {
-		panic(fmt.Errorf("schema «%s» kind «%v» does not allow fields: %w", sch.QName(), sch.Kind(), ErrInvalidSchemaKind))
+		panic(fmt.Errorf("schema «%s» kind «%v» does not allow fields: %w", sch.QName(), sch.Kind(), ErrInvalidDefKind))
 	}
 	if !sch.Kind().DataKindAvailable(kind) {
 		panic(fmt.Errorf("schema «%s» kind «%v» does not support fields kind «%v»: %w", sch.QName(), sch.Kind(), kind, ErrInvalidDataKind))

@@ -24,11 +24,11 @@ func newViewBuilder(cache *appDef, name QName) viewBuilder {
 	view := viewBuilder{
 		cache:       cache,
 		name:        name,
-		viewSchema:  cache.Add(name, SchemaKind_ViewRecord),
-		partSchema:  cache.Add(ViewPartitionKeySchemaName(name), SchemaKind_ViewRecord_PartitionKey),
-		clustSchema: cache.Add(ViewClusteringColumsSchemaName(name), SchemaKind_ViewRecord_ClusteringColumns),
-		keySchema:   cache.Add(ViewFullKeyColumsSchemaName(name), SchemaKind_ViewRecord_ClusteringColumns),
-		valueSchema: cache.Add(ViewValueSchemaName(name), SchemaKind_ViewRecord_Value),
+		viewSchema:  cache.Add(name, DefKind_ViewRecord),
+		partSchema:  cache.Add(ViewPartitionKeySchemaName(name), DefKind_ViewRecord_PartitionKey),
+		clustSchema: cache.Add(ViewClusteringColumsSchemaName(name), DefKind_ViewRecord_ClusteringColumns),
+		keySchema:   cache.Add(ViewFullKeyColumsSchemaName(name), DefKind_ViewRecord_ClusteringColumns),
+		valueSchema: cache.Add(ViewValueSchemaName(name), DefKind_ViewRecord_Value),
 	}
 	view.viewSchema.
 		AddContainer(SystemContainer_ViewPartitionKey, view.partSchema.QName(), 1, 1).
@@ -88,11 +88,11 @@ func (view *viewBuilder) ValueSchema() SchemaBuilder {
 }
 
 func (app *appDef) prepareViewFullKeySchema(sch Schema) {
-	if sch.Kind() != SchemaKind_ViewRecord {
-		panic(fmt.Errorf("not view schema «%v» kind «%v» passed: %w", sch.QName(), sch.Kind(), ErrInvalidSchemaKind))
+	if sch.Kind() != DefKind_ViewRecord {
+		panic(fmt.Errorf("not view schema «%v» kind «%v» passed: %w", sch.QName(), sch.Kind(), ErrInvalidDefKind))
 	}
 
-	contSchema := func(name string, expectedKind SchemaKind) Schema {
+	contSchema := func(name string, expectedKind DefKind) Schema {
 		contSchema := sch.ContainerSchema(name)
 		if contSchema == nil {
 			return nil
@@ -103,11 +103,11 @@ func (app *appDef) prepareViewFullKeySchema(sch Schema) {
 		return contSchema
 	}
 
-	pkSchema := contSchema(SystemContainer_ViewPartitionKey, SchemaKind_ViewRecord_PartitionKey)
+	pkSchema := contSchema(SystemContainer_ViewPartitionKey, DefKind_ViewRecord_PartitionKey)
 	if pkSchema == nil {
 		return
 	}
-	ccSchema := contSchema(SystemContainer_ViewClusteringCols, SchemaKind_ViewRecord_ClusteringColumns)
+	ccSchema := contSchema(SystemContainer_ViewClusteringCols, DefKind_ViewRecord_ClusteringColumns)
 	if ccSchema == nil {
 		return
 	}
@@ -117,15 +117,15 @@ func (app *appDef) prepareViewFullKeySchema(sch Schema) {
 	fkSchema, ok := app.schemas[fkName]
 
 	if ok {
-		if fkSchema.Kind() != SchemaKind_ViewRecord_ClusteringColumns {
-			panic(fmt.Errorf("schema «%v» has unvalid kind «%v», expected kind «%v»: %w", fkName, fkSchema.Kind(), SchemaKind_ViewRecord_ClusteringColumns, ErrInvalidSchemaKind))
+		if fkSchema.Kind() != DefKind_ViewRecord_ClusteringColumns {
+			panic(fmt.Errorf("schema «%v» has unvalid kind «%v», expected kind «%v»: %w", fkName, fkSchema.Kind(), DefKind_ViewRecord_ClusteringColumns, ErrInvalidDefKind))
 		}
 		if fkSchema.FieldCount() == pkSchema.FieldCount()+ccSchema.FieldCount() {
 			return // already exists schema is ok
 		}
 		fkSchema.clear()
 	} else {
-		fkSchema = app.Add(fkName, SchemaKind_ViewRecord_ClusteringColumns)
+		fkSchema = app.Add(fkName, DefKind_ViewRecord_ClusteringColumns)
 	}
 
 	// recreate full key schema fields

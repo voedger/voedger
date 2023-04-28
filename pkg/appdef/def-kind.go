@@ -11,86 +11,86 @@ import (
 	"strings"
 )
 
-//go:generate stringer -type=SchemaKind -output=schema-kind_string.go
+//go:generate stringer -type=DefKind -output=def-kind_string.go
 
 const (
-	SchemaKind_null SchemaKind = iota
+	DefKind_null DefKind = iota
 
 	// Глобальный Global configuration, WSID==0 (глобальная номенклатура): UserProfileLocation, SystemConfig
-	SchemaKind_GDoc
+	DefKind_GDoc
 
 	// Кoнфигурационный документ (per workspace articles, prices, clients)
-	SchemaKind_CDoc
+	DefKind_CDoc
 
 	// Operational documents: pbill, orders
 	// https://vocable.ru/termin/operacionnyi-dokument.html
 	// ОПЕРАЦИОННЫЙ ДОКУМЕНТ счет-фактура, чек, заказ, свидетельствующий о совершении сделки.
 	// Might not be edited
-	SchemaKind_ODoc
+	DefKind_ODoc
 
 	// bill
 	// Workflow document, extends ODoc
 	// Might be edited
-	SchemaKind_WDoc
+	DefKind_WDoc
 
 	// Parts of documents, article_price, pbill_item
-	SchemaKind_GRecord
-	SchemaKind_CRecord
-	SchemaKind_ORecord
-	SchemaKind_WRecord
+	DefKind_GRecord
+	DefKind_CRecord
+	DefKind_ORecord
+	DefKind_WRecord
 
 	// collection (BO)  ((wsid, qname), id), record
 	// logins ((wsid0), login) id
-	SchemaKind_ViewRecord
+	DefKind_ViewRecord
 	// No fields with variable length allowed
-	SchemaKind_ViewRecord_PartitionKey
+	DefKind_ViewRecord_PartitionKey
 	// Only one variable length field is allowed (must be last field)
-	SchemaKind_ViewRecord_ClusteringColumns
-	SchemaKind_ViewRecord_Value
+	DefKind_ViewRecord_ClusteringColumns
+	DefKind_ViewRecord_Value
 
 	// Function params, results, Event.command (this is command function params)
-	SchemaKind_Object
+	DefKind_Object
 	// Elements of objects
-	SchemaKind_Element
+	DefKind_Element
 
-	// Params and Result are SchemaKind_Object
-	SchemaKind_QueryFunction
+	// Params and Result are DefKind_Object
+	DefKind_QueryFunction
 
 	// Params are always ODoc + WDoc
 	// Commands have no explicit result
-	SchemaKind_CommandFunction
+	DefKind_CommandFunction
 
-	SchemaKind_FakeLast
+	DefKind_FakeLast
 )
 
 // Is fields allowed.
-func (k SchemaKind) FieldsAllowed() bool {
-	return schemaKindProps[k].fieldsAllowed
+func (k DefKind) FieldsAllowed() bool {
+	return defKindProps[k].fieldsAllowed
 }
 
 // Is data kind allowed.
-func (k SchemaKind) DataKindAvailable(d DataKind) bool {
-	return schemaKindProps[k].fieldsAllowed && schemaKindProps[k].availableFieldKinds[d]
+func (k DefKind) DataKindAvailable(d DataKind) bool {
+	return defKindProps[k].fieldsAllowed && defKindProps[k].availableFieldKinds[d]
 }
 
 // Is specified system field used.
-func (k SchemaKind) HasSystemField(f string) bool {
-	return schemaKindProps[k].fieldsAllowed && schemaKindProps[k].systemFields[f]
+func (k DefKind) HasSystemField(f string) bool {
+	return defKindProps[k].fieldsAllowed && defKindProps[k].systemFields[f]
 }
 
 // Is containers allowed.
-func (k SchemaKind) ContainersAllowed() bool {
-	return schemaKindProps[k].containersAllowed
+func (k DefKind) ContainersAllowed() bool {
+	return defKindProps[k].containersAllowed
 }
 
 // Is specified schema kind may be used in child containers.
-func (k SchemaKind) ContainerKindAvailable(s SchemaKind) bool {
-	return schemaKindProps[k].containersAllowed && schemaKindProps[k].availableContainerKinds[s]
+func (k DefKind) ContainerKindAvailable(s DefKind) bool {
+	return defKindProps[k].containersAllowed && defKindProps[k].availableContainerKinds[s]
 }
 
-func (k SchemaKind) MarshalText() ([]byte, error) {
+func (k DefKind) MarshalText() ([]byte, error) {
 	var s string
-	if k < SchemaKind_FakeLast {
+	if k < DefKind_FakeLast {
 		s = k.String()
 	} else {
 		const base = 10
@@ -99,9 +99,9 @@ func (k SchemaKind) MarshalText() ([]byte, error) {
 	return []byte(s), nil
 }
 
-// Renders an SchemaKind in human-readable form, without "SchemaKind_" prefix,
+// Renders an DefKind in human-readable form, without "DefKind_" prefix,
 // suitable for debugging or error messages
-func (k SchemaKind) ToString() string {
-	const pref = "SchemaKind_"
+func (k DefKind) ToString() string {
+	const pref = "DefKind_"
 	return strings.TrimPrefix(k.String(), pref)
 }

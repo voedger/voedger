@@ -657,13 +657,13 @@ func Test_EventUpdateRawCud(t *testing.T) {
 	appDef := appdef.New()
 
 	t.Run("must ok to construct application definition", func(t *testing.T) {
-		doc := appDef.Add(docName, appdef.SchemaKind_CDoc)
+		doc := appDef.Add(docName, appdef.DefKind_CDoc)
 		doc.AddField("new", appdef.DataKind_bool, true)
 		doc.AddField("rec", appdef.DataKind_RecordID, false)
 		doc.AddField("emptiable", appdef.DataKind_string, false)
 		doc.AddContainer("rec", recName, 0, 1)
 
-		rec := appDef.Add(recName, appdef.SchemaKind_CRecord)
+		rec := appDef.Add(recName, appdef.DefKind_CRecord)
 		rec.AddField("data", appdef.DataKind_string, false)
 	})
 
@@ -835,7 +835,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 	bld := appdef.New()
 
 	t.Run("must ok to construct singleton CDOC schema", func(t *testing.T) {
-		schema := bld.Add(docName, appdef.SchemaKind_CDoc)
+		schema := bld.Add(docName, appdef.DefKind_CDoc)
 		schema.SetSingleton()
 		schema.AddField("option", appdef.DataKind_int64, true)
 	})

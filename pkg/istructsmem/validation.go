@@ -235,9 +235,9 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 	} else if arg != appdef.NullQName {
 		// #!17185: must be ODoc or Object only
 		schema := v.appDef.Schema(arg)
-		if (schema.Kind() != appdef.SchemaKind_ODoc) && (schema.Kind() != appdef.SchemaKind_Object) {
+		if (schema.Kind() != appdef.DefKind_ODoc) && (schema.Kind() != appdef.DefKind_Object) {
 			err = errors.Join(err,
-				validateErrorf(ECode_InvalidSchemaKind, "event command argument «%v» schema can not to be «%v», expected («%v» or «%v»): %w", arg, schema.Kind(), appdef.SchemaKind_ODoc, appdef.SchemaKind_Object, ErrWrongSchema))
+				validateErrorf(ECode_InvalidDefKind, "event command argument «%v» schema can not to be «%v», expected («%v» or «%v»): %w", arg, schema.Kind(), appdef.DefKind_ODoc, appdef.DefKind_Object, ErrWrongSchema))
 		}
 		err = errors.Join(err,
 			v.validObject(&ev.argObject))
@@ -279,13 +279,13 @@ func (v *validators) validObject(obj *elementType) (err error) {
 	}
 
 	switch validator.schema.Kind() {
-	case appdef.SchemaKind_GDoc, appdef.SchemaKind_CDoc, appdef.SchemaKind_ODoc, appdef.SchemaKind_WDoc:
+	case appdef.DefKind_GDoc, appdef.DefKind_CDoc, appdef.DefKind_ODoc, appdef.DefKind_WDoc:
 		return validator.validDocument(obj)
-	case appdef.SchemaKind_Object:
+	case appdef.DefKind_Object:
 		return validator.validObject(obj)
 	}
 
-	return validateErrorf(ECode_InvalidSchemaKind, "object refers to invalid schema «%v» kind «%v»: %w", obj.QName(), validator.schema.Kind(), ErrUnexpectedShemaKind)
+	return validateErrorf(ECode_InvalidDefKind, "object refers to invalid schema «%v» kind «%v»: %w", obj.QName(), validator.schema.Kind(), ErrUnexpectedShemaKind)
 }
 
 // validates specified CUD
@@ -431,9 +431,9 @@ func (v *validators) validRecord(rec *recordType, rawIDexpected bool) (err error
 	}
 
 	switch validator.schema.Kind() {
-	case appdef.SchemaKind_GDoc, appdef.SchemaKind_CDoc, appdef.SchemaKind_ODoc, appdef.SchemaKind_WDoc, appdef.SchemaKind_GRecord, appdef.SchemaKind_CRecord, appdef.SchemaKind_ORecord, appdef.SchemaKind_WRecord:
+	case appdef.DefKind_GDoc, appdef.DefKind_CDoc, appdef.DefKind_ODoc, appdef.DefKind_WDoc, appdef.DefKind_GRecord, appdef.DefKind_CRecord, appdef.DefKind_ORecord, appdef.DefKind_WRecord:
 		return validator.validRecord(rec, rawIDexpected)
 	}
 
-	return validateErrorf(ECode_InvalidSchemaKind, "record «%s» refers to invalid schema «%v» kind «%v»: %w", rec.Container(), rec.QName(), validator.schema.Kind(), ErrUnexpectedShemaKind)
+	return validateErrorf(ECode_InvalidDefKind, "record «%s» refers to invalid schema «%v» kind «%v»: %w", rec.Container(), rec.QName(), validator.schema.Kind(), ErrUnexpectedShemaKind)
 }

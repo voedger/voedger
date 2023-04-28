@@ -160,8 +160,8 @@ type (
 
 func appStructs(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	appDef := appdef.New()
-	appDef.Add(incrementorName, appdef.SchemaKind_Object)
-	appDef.Add(decrementorName, appdef.SchemaKind_Object)
+	appDef.Add(incrementorName, appdef.DefKind_Object)
+	appDef.Add(decrementorName, appdef.DefKind_Object)
 	if prepareAppDef != nil {
 		prepareAppDef(appDef)
 	}

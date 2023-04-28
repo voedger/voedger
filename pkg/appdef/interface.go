@@ -15,10 +15,10 @@ type QName struct {
 	entity string
 }
 
-// Schema kind enumeration
+// Definition kind enumeration.
 //
-// Ref. schema-kind.go for constants and methods
-type SchemaKind uint8
+// Ref. def-kind.go for constants and methods
+type DefKind uint8
 
 // Data kind enumeration
 //
@@ -27,7 +27,7 @@ type DataKind uint8
 
 // Field Verification kind
 //
-// Ref. verify,go for constants and methods
+// Ref. verification-king.go for constants and methods
 type VerificationKind uint8
 
 // Numeric with OccursUnbounded value
@@ -68,7 +68,7 @@ type IAppDefBuilder interface {
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
 	//   - if schema with name already exists.
-	Add(name QName, kind SchemaKind) SchemaBuilder
+	Add(name QName, kind DefKind) SchemaBuilder
 
 	// Adds new schemas for view.
 	AddView(QName) ViewBuilder
@@ -91,7 +91,7 @@ type Schema interface {
 	QName() QName
 
 	// Schema kind.
-	Kind() SchemaKind
+	Kind() DefKind
 
 	// Finds field by name.
 	//

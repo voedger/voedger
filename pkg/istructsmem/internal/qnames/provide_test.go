@@ -27,7 +27,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	testName := appdef.NewQName("test", "schema")
 	appDefBuilder := appdef.New()
-	appDefBuilder.Add(testName, appdef.SchemaKind_CDoc)
+	appDefBuilder.Add(testName, appdef.DefKind_CDoc)
 	appDef, err := appDefBuilder.Build()
 	if err != nil {
 		panic(err)

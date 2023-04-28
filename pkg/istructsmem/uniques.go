@@ -86,10 +86,10 @@ func (u implIUniques) validate(cfg *AppConfigType) error {
 			return uniqueError(qName, ErrUnknownSchemaQName, "")
 		}
 		switch s.Kind() {
-		case appdef.SchemaKind_ViewRecord, appdef.SchemaKind_ViewRecord_PartitionKey, appdef.SchemaKind_ViewRecord_ClusteringColumns,
-			appdef.SchemaKind_ViewRecord_Value, appdef.SchemaKind_Object, appdef.SchemaKind_Element,
-			appdef.SchemaKind_QueryFunction, appdef.SchemaKind_CommandFunction:
-			return uniqueError(qName, ErrSchemaKindMayNotHaveUniques, "")
+		case appdef.DefKind_ViewRecord, appdef.DefKind_ViewRecord_PartitionKey, appdef.DefKind_ViewRecord_ClusteringColumns,
+			appdef.DefKind_ViewRecord_Value, appdef.DefKind_Object, appdef.DefKind_Element,
+			appdef.DefKind_QueryFunction, appdef.DefKind_CommandFunction:
+			return uniqueError(qName, ErrDefKindMayNotHaveUniques, "")
 		}
 		sf := map[string]fieldDesc{}
 		s.Fields(func(fld appdef.Field) {

@@ -21,7 +21,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 		require := require.New(t)
 
 		commonSchema := func(n appdef.QName) *amock.Schema {
-			return amock.NewSchema(n, appdef.SchemaKind_Object,
+			return amock.NewSchema(n, appdef.DefKind_Object,
 				amock.NewField("name", appdef.DataKind_string, false),
 			)
 		}

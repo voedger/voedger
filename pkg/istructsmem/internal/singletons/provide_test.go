@@ -31,7 +31,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	testName := appdef.NewQName("test", "schema")
 	appDefBuilder := appdef.New()
-	appDefBuilder.Add(testName, appdef.SchemaKind_CDoc).SetSingleton()
+	appDefBuilder.Add(testName, appdef.DefKind_CDoc).SetSingleton()
 	appDef, err := appDefBuilder.Build()
 	if err != nil {
 		panic(err)
@@ -106,7 +106,7 @@ func Test_SingletonsGetID(t *testing.T) {
 			require.NoError(err)
 
 			appDefBuilder := appdef.New()
-			schema := appDefBuilder.Add(cDocName, appdef.SchemaKind_CDoc)
+			schema := appDefBuilder.Add(cDocName, appdef.DefKind_CDoc)
 			schema.AddField("f1", appdef.DataKind_QName, true)
 			schema.SetSingleton()
 			appDef, err := appDefBuilder.Build()
@@ -199,7 +199,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		require.NoError(err)
 
 		appDefBuilder := appdef.New()
-		schema := appDefBuilder.Add(cDocName, appdef.SchemaKind_CDoc)
+		schema := appDefBuilder.Add(cDocName, appdef.DefKind_CDoc)
 		schema.AddField("f1", appdef.DataKind_QName, true)
 		schema.SetSingleton()
 		appDef, err := appDefBuilder.Build()
@@ -220,7 +220,7 @@ func Test_Singletons_Errors(t *testing.T) {
 
 		appDefBuilder := appdef.New()
 		for id := istructs.FirstSingletonID; id <= istructs.MaxSingletonID; id++ {
-			appDefBuilder.Add(appdef.NewQName("test", fmt.Sprintf("CDoc_%v", id)), appdef.SchemaKind_CDoc).SetSingleton()
+			appDefBuilder.Add(appdef.NewQName("test", fmt.Sprintf("CDoc_%v", id)), appdef.DefKind_CDoc).SetSingleton()
 		}
 		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
@@ -242,7 +242,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		require.NoError(err)
 
 		appDefBuilder := appdef.New()
-		appDefBuilder.Add(schemaName, appdef.SchemaKind_CDoc).SetSingleton()
+		appDefBuilder.Add(schemaName, appdef.DefKind_CDoc).SetSingleton()
 		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
 
@@ -261,7 +261,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		require.NoError(err)
 
 		appDefBuilder := appdef.New()
-		appDefBuilder.Add(schemaName, appdef.SchemaKind_CDoc).SetSingleton()
+		appDefBuilder.Add(schemaName, appdef.DefKind_CDoc).SetSingleton()
 		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
 

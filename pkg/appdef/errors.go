@@ -18,7 +18,7 @@ var ErrNameNotFound = errors.New("name not found")
 
 var ErrInvalidQNameStringRepresentation = errors.New("invalid string representation of qualified name")
 
-var ErrInvalidSchemaKind = errors.New("invalid schema kind")
+var ErrInvalidDefKind = errors.New("invalid definition kind")
 
 var ErrWrongSchemaStruct = errors.New("wrong schema structure")
 

@@ -73,16 +73,16 @@ func mockedHostStateStructs() istructs.IAppStructs {
 		}).
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
 
-	pkSchema := amock.NewSchema(testViewRecordPkQName, appdef.SchemaKind_ViewRecord_PartitionKey,
+	pkSchema := amock.NewSchema(testViewRecordPkQName, appdef.DefKind_ViewRecord_PartitionKey,
 		amock.NewField("pkFld", appdef.DataKind_string, true),
 	)
 
-	valSchema := amock.NewSchema(testViewRecordVQName, appdef.SchemaKind_ViewRecord_Value,
+	valSchema := amock.NewSchema(testViewRecordVQName, appdef.DefKind_ViewRecord_Value,
 		amock.NewField("vFld", appdef.DataKind_int64, false),
 		amock.NewField(ColOffset, appdef.DataKind_int64, false),
 	)
 
-	viewSchema := amock.NewSchema(testViewRecordQName1, appdef.SchemaKind_ViewRecord)
+	viewSchema := amock.NewSchema(testViewRecordQName1, appdef.DefKind_ViewRecord)
 	viewSchema.AddContainer(
 		amock.NewContainer(appdef.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
 		amock.NewContainer(appdef.SystemContainer_ViewValue, testViewRecordVQName, 1, 1),

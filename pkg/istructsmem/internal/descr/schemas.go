@@ -11,7 +11,7 @@ import (
 
 type Schema struct {
 	Name       appdef.QName
-	Kind       appdef.SchemaKind
+	Kind       appdef.DefKind
 	Fields     []*Field     `json:",omitempty"`
 	Containers []*Container `json:",omitempty"`
 }

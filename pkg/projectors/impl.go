@@ -148,9 +148,9 @@ func newViewBuilder(appDef appdef.IAppDefBuilder, qname appdef.QName) ViewBuilde
 	return ViewBuilder{
 		appDef:               appDef,
 		qname:                qname,
-		valueSchema:          appDef.Add(qnameValue(qname), appdef.SchemaKind_ViewRecord_Value),
-		partitionKeySchema:   appDef.Add(qnamePartitionKey(qname), appdef.SchemaKind_ViewRecord_PartitionKey),
-		clusteringColsSchema: appDef.Add(qnameClusteringCols(qname), appdef.SchemaKind_ViewRecord_ClusteringColumns),
+		valueSchema:          appDef.Add(qnameValue(qname), appdef.DefKind_ViewRecord_Value),
+		partitionKeySchema:   appDef.Add(qnamePartitionKey(qname), appdef.DefKind_ViewRecord_PartitionKey),
+		clusteringColsSchema: appDef.Add(qnameClusteringCols(qname), appdef.DefKind_ViewRecord_ClusteringColumns),
 	}
 }
 
@@ -158,24 +158,24 @@ func provideViewSchemaImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, bui
 	builder := newViewBuilder(appDef, qname)
 	buildFunc(&builder)
 
-	schema := appDef.Add(qname, appdef.SchemaKind_ViewRecord)
+	schema := appDef.Add(qname, appdef.DefKind_ViewRecord)
 	schema.AddContainer(appdef.SystemContainer_ViewPartitionKey, qnamePartitionKey(qname), 1, 1)
 	schema.AddContainer(appdef.SystemContainer_ViewClusteringCols, qnameClusteringCols(qname), 1, 1)
 	schema.AddContainer(appdef.SystemContainer_ViewValue, qnameValue(qname), 1, 1)
 }
 
 func provideOffsetsSchemaImpl(appDef appdef.IAppDefBuilder) {
-	offsetsSchema := appDef.Add(qnameProjectionOffsets, appdef.SchemaKind_ViewRecord)
+	offsetsSchema := appDef.Add(qnameProjectionOffsets, appdef.DefKind_ViewRecord)
 	offsetsSchema.AddContainer(appdef.SystemContainer_ViewPartitionKey, qnameProjectionOffsetsPartitionKey, 1, 1)
 	offsetsSchema.AddContainer(appdef.SystemContainer_ViewClusteringCols, qnameProjectionOffsetsClusteringCols, 1, 1)
 	offsetsSchema.AddContainer(appdef.SystemContainer_ViewValue, qnameProjectionOffsetsValue, 1, 1)
 
-	partitionKeySchema := appDef.Add(qnameProjectionOffsetsPartitionKey, appdef.SchemaKind_ViewRecord_PartitionKey)
+	partitionKeySchema := appDef.Add(qnameProjectionOffsetsPartitionKey, appdef.DefKind_ViewRecord_PartitionKey)
 	partitionKeySchema.AddField(partitionFld, appdef.DataKind_int32, true) // partitionID is uint16
 
-	offsetsKeySchema := appDef.Add(qnameProjectionOffsetsClusteringCols, appdef.SchemaKind_ViewRecord_ClusteringColumns)
+	offsetsKeySchema := appDef.Add(qnameProjectionOffsetsClusteringCols, appdef.DefKind_ViewRecord_ClusteringColumns)
 	offsetsKeySchema.AddField(projectorNameFld, appdef.DataKind_QName, true)
 
-	offsetsValueSchema := appDef.Add(qnameProjectionOffsetsValue, appdef.SchemaKind_ViewRecord_Value)
+	offsetsValueSchema := appDef.Add(qnameProjectionOffsetsValue, appdef.DefKind_ViewRecord_Value)
 	offsetsValueSchema.AddField(offsetFld, appdef.DataKind_int64, true)
 }

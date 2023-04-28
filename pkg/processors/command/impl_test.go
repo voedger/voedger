@@ -54,14 +54,14 @@ func TestBasicUsage(t *testing.T) {
 	// схема unloged-параметров тестовой команды
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
 	prepareAppDef := func(appDef appdef.IAppDefBuilder) {
-		testCmdParamsScheme := appDef.Add(testCmdQNameParams, appdef.SchemaKind_Object)
+		testCmdParamsScheme := appDef.Add(testCmdQNameParams, appdef.DefKind_Object)
 		testCmdParamsScheme.AddField("Text", appdef.DataKind_string, true)
 
-		testCmdParamsUnloggedScheme := appDef.Add(testCmdQNameParamsUnlogged, appdef.SchemaKind_Object)
+		testCmdParamsUnloggedScheme := appDef.Add(testCmdQNameParamsUnlogged, appdef.DefKind_Object)
 		testCmdParamsUnloggedScheme.AddField("Password", appdef.DataKind_string, true)
 
-		appDef.Add(testCDoc, appdef.SchemaKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
-		appDef.Add(testCRecord, appdef.SchemaKind_CRecord)
+		appDef.Add(testCDoc, appdef.DefKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+		appDef.Add(testCRecord, appdef.DefKind_CRecord)
 	}
 
 	app := setUp(t, prepareAppDef)
@@ -181,9 +181,9 @@ func TestRecovery(t *testing.T) {
 	require := require.New(t)
 
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
-		_ = appDef.Add(testCRecord, appdef.SchemaKind_CRecord)
-		_ = appDef.Add(testCDoc, appdef.SchemaKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
-		_ = appDef.Add(testWDoc, appdef.SchemaKind_WDoc)
+		_ = appDef.Add(testCRecord, appdef.DefKind_CRecord)
+		_ = appDef.Add(testCDoc, appdef.DefKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+		_ = appDef.Add(testWDoc, appdef.DefKind_WDoc)
 	})
 	defer tearDown(app)
 
@@ -239,7 +239,7 @@ func TestCUDUpdate(t *testing.T) {
 	testQName := appdef.NewQName("test", "test")
 
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
-		_ = appDef.Add(testQName, appdef.SchemaKind_CDoc).AddField("IntFld", appdef.DataKind_int32, false)
+		_ = appDef.Add(testQName, appdef.DefKind_CDoc).AddField("IntFld", appdef.DataKind_int32, false)
 	})
 	defer tearDown(app)
 
@@ -292,7 +292,7 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 	testQName := appdef.NewQName("test", "test")
 
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
-		_ = appDef.Add(testQName, appdef.SchemaKind_CDoc)
+		_ = appDef.Add(testQName, appdef.DefKind_CDoc)
 	})
 	defer tearDown(app)
 
@@ -343,10 +343,10 @@ func Test400BadRequests(t *testing.T) {
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
 
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
-		appDef.Add(testCmdQNameParams, appdef.SchemaKind_Object).
+		appDef.Add(testCmdQNameParams, appdef.DefKind_Object).
 			AddField("Text", appdef.DataKind_string, true)
 
-		appDef.Add(testCmdQNameParamsUnlogged, appdef.SchemaKind_Object).
+		appDef.Add(testCmdQNameParamsUnlogged, appdef.DefKind_Object).
 			AddField("Password", appdef.DataKind_string, true)
 	})
 	defer tearDown(app)
@@ -417,7 +417,7 @@ func TestAuthnz(t *testing.T) {
 	qNameTestDeniedCDoc := appdef.NewQName(appdef.SysPackage, "TestDeniedCDoc") // the same in core/iauthnzimpl
 
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
-		appDef.Add(qNameTestDeniedCDoc, appdef.SchemaKind_CDoc)
+		appDef.Add(qNameTestDeniedCDoc, appdef.DefKind_CDoc)
 	})
 	defer tearDown(app)
 
@@ -531,7 +531,7 @@ func TestRateLimit(t *testing.T) {
 
 	app := setUp(t,
 		func(appDef appdef.IAppDefBuilder) {
-			appDef.Add(parsQName, appdef.SchemaKind_Object)
+			appDef.Add(parsQName, appdef.DefKind_Object)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(

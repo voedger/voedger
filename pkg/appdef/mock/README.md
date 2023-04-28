@@ -19,17 +19,17 @@ Useful for test application definition.
 		appdef.NewQName("test", "viewCc"), 
 		appdef.NewQName("test", "viewValue")
 
-  pkSchema := amock.NewSchema(testViewRecordPkQName, appdef.SchemaKind_ViewRecord_PartitionKey,
+  pkSchema := amock.NewSchema(testViewRecordPkQName, appdef.DefKind_ViewRecord_PartitionKey,
 		amock.NewField("pkFld", appdef.DataKind_int64, true),
 	)
-  ccSchema := amock.NewSchema(testViewRecordCcQName, appdef.SchemaKind_ViewRecord_ClusteringCols,
+  ccSchema := amock.NewSchema(testViewRecordCcQName, appdef.DefKind_ViewRecord_ClusteringCols,
 		amock.NewField("ccFld", appdef.DataKind_string, true),
 	)
-	valueSchema := amock.NewSchema(testViewRecordVQName, appdef.SchemaKind_ViewRecord_Value,
+	valueSchema := amock.NewSchema(testViewRecordVQName, appdef.DefKind_ViewRecord_Value,
 		amock.NewField("vFld1", appdef.DataKind_int64, true),
 		amock.NewField("vFld2", appdef.DataKind_string, false),
 	)
-	viewSchema := smock.NewSchema(testViewRecordQName, appdef.SchemaKind_ViewRecord)
+	viewSchema := smock.NewSchema(testViewRecordQName, appdef.DefKind_ViewRecord)
 	viewSchema.MockContainers(
 		amock.NewContainer(appdef.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
     amock.NewContainer(appdef.SystemContainer_ViewClusteringColumns, testViewRecordCcQName, 1, 1),

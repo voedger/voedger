@@ -63,7 +63,7 @@ var ErrKeyFieldMustBeRequired = errors.New("key field must be required")
 
 var ErrUnknownSchemaQName = errors.New("unknown schema QName")
 
-var ErrSchemaKindMayNotHaveUniques = errors.New("schema kind may not have uniques")
+var ErrDefKindMayNotHaveUniques = errors.New("definition kind may not have uniques")
 
 var ErrUnknownKeyField = errors.New("unknown key field")
 

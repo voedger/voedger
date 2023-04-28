@@ -74,14 +74,14 @@ func mockedAppStructs() istructs.IAppStructs {
 		On("NewValueBuilder", testViewRecordQName1).Return(mvb1).Once().
 		On("NewValueBuilder", testViewRecordQName1).Return(mvb2).Once().
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
-	pkSchema := amock.NewSchema(testViewRecordPkQName, appdef.SchemaKind_ViewRecord_PartitionKey,
+	pkSchema := amock.NewSchema(testViewRecordPkQName, appdef.DefKind_ViewRecord_PartitionKey,
 		amock.NewField("pkFld", appdef.DataKind_string, true),
 	)
-	valueSchema := amock.NewSchema(testViewRecordVQName, appdef.SchemaKind_ViewRecord_Value,
+	valueSchema := amock.NewSchema(testViewRecordVQName, appdef.DefKind_ViewRecord_Value,
 		amock.NewField("vFld", appdef.DataKind_int64, true),
 		amock.NewField(ColOffset, appdef.DataKind_int64, true),
 	)
-	viewSchema := amock.NewSchema(testViewRecordQName1, appdef.SchemaKind_ViewRecord)
+	viewSchema := amock.NewSchema(testViewRecordQName1, appdef.DefKind_ViewRecord)
 	viewSchema.AddContainer(
 		amock.NewContainer(appdef.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
 		amock.NewContainer(appdef.SystemContainer_ViewValue, testViewRecordVQName, 1, 1),
@@ -446,7 +446,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 		require := require.New(t)
 		touched := false
 		appDef := amock.NewAppDef(
-			amock.NewSchema(testViewRecordQName1, appdef.SchemaKind_null), // to return NullSchema
+			amock.NewSchema(testViewRecordQName1, appdef.DefKind_null), // to return NullSchema
 		)
 		viewRecords := &mockViewRecords{}
 		viewRecords.
@@ -494,7 +494,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 		require := require.New(t)
 		touched := false
 		appDef := amock.NewAppDef(
-			amock.NewSchema(testViewRecordQName1, appdef.SchemaKind_null), // to return NullSchema
+			amock.NewSchema(testViewRecordQName1, appdef.DefKind_null), // to return NullSchema
 		)
 		viewRecords := &mockViewRecords{}
 		viewRecords.

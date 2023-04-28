@@ -47,7 +47,7 @@ func TestQNames(t *testing.T) {
 	if err := names.Prepare(storage, versions,
 		func() appdef.IAppDef {
 			appDefBuilder := appdef.New()
-			appDefBuilder.Add(schemaName, appdef.SchemaKind_CDoc)
+			appDefBuilder.Add(schemaName, appdef.DefKind_CDoc)
 			appDef, err := appDefBuilder.Build()
 			require.NoError(err)
 			return appDef
@@ -98,7 +98,7 @@ func TestQNames(t *testing.T) {
 			if err := names2.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					appdefBuilder := appdef.New()
-					appdefBuilder.Add(schemaName, appdef.SchemaKind_CDoc)
+					appdefBuilder.Add(schemaName, appdef.DefKind_CDoc)
 					appDef, err := appdefBuilder.Build()
 					require.NoError(err)
 					return appDef
@@ -212,7 +212,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			func() appdef.IAppDef {
 				appDefBuilder := appdef.New()
 				for i := 0; i <= MaxAvailableQNameID; i++ {
-					appDefBuilder.Add(appdef.NewQName("test", fmt.Sprintf("name_%d", i)), appdef.SchemaKind_Object)
+					appDefBuilder.Add(appdef.NewQName("test", fmt.Sprintf("name_%d", i)), appdef.DefKind_Object)
 				}
 				appDef, err := appDefBuilder.Build()
 				require.NoError(err)
@@ -240,7 +240,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					appDefBuilder := appdef.New()
-					appDefBuilder.Add(qName, appdef.SchemaKind_Object)
+					appDefBuilder.Add(qName, appdef.DefKind_Object)
 					appDef, err := appDefBuilder.Build()
 					require.NoError(err)
 					return appDef
@@ -263,7 +263,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					appDefBuilder := appdef.New()
-					appDefBuilder.Add(qName, appdef.SchemaKind_Object)
+					appDefBuilder.Add(qName, appdef.DefKind_Object)
 					appDef, err := appDefBuilder.Build()
 					require.NoError(err)
 					return appDef

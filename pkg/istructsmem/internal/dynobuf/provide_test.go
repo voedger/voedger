@@ -21,7 +21,7 @@ func Test_BasicUsage(t *testing.T) {
 	schemes.Prepare(
 		func() appdef.IAppDef {
 			bld := appdef.New()
-			schema := bld.Add(name, appdef.SchemaKind_CDoc)
+			schema := bld.Add(name, appdef.DefKind_CDoc)
 			schema.AddField("f1", appdef.DataKind_int32, true)
 			schema.AddField("f2", appdef.DataKind_QName, false)
 			return bld

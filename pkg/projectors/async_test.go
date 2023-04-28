@@ -278,7 +278,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 			ProvideViewSchema(appDef, incProjectionView, buildProjectionSchema)
 			ProvideViewSchema(appDef, decProjectionView, buildProjectionSchema)
 			ProvideOffsetsSchema(appDef)
-			appDef.Add(name, appdef.SchemaKind_Object)
+			appDef.Add(name, appdef.DefKind_Object)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))

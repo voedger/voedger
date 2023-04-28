@@ -20,7 +20,7 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 
 	t.Run("must ok to build application definition", func(t *testing.T) {
 		appDefBuilder := appdef.New()
-		rootSchema := appDefBuilder.Add(appdef.NewQName("test", "rootSchema"), appdef.SchemaKind_Object)
+		rootSchema := appDefBuilder.Add(appdef.NewQName("test", "rootSchema"), appdef.DefKind_Object)
 		rootSchema.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
@@ -32,7 +32,7 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 			AddField("recIDField", appdef.DataKind_RecordID, false).
 			AddContainer("child", appdef.NewQName("test", "childSchema"), 1, appdef.Occurs_Unbounded)
 
-		childSchema := appDefBuilder.Add(appdef.NewQName("test", "childSchema"), appdef.SchemaKind_Element)
+		childSchema := appDefBuilder.Add(appdef.NewQName("test", "childSchema"), appdef.DefKind_Element)
 		childSchema.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
@@ -45,7 +45,7 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 			AddField("recIDField", appdef.DataKind_RecordID, false).
 			AddContainer("grandChild", appdef.NewQName("test", "grandChild"), 0, 1)
 
-		grandSchema := appDefBuilder.Add(appdef.NewQName("test", "grandChild"), appdef.SchemaKind_Element)
+		grandSchema := appDefBuilder.Add(appdef.NewQName("test", "grandChild"), appdef.DefKind_Element)
 		grandSchema.
 			AddField("recIDField", appdef.DataKind_RecordID, false)
 

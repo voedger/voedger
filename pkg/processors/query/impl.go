@@ -191,7 +191,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		operator("validate: get result schema", func(ctx context.Context, qw *queryWork) (err error) {
 			schema := qw.queryFunction.ResultSchema(qw.execQueryArgs.PrepareArgs)
 			qw.resultSchema = qw.appStructs.AppDef().Schema(schema)
-			err = errIfFalse(qw.resultSchema.Kind() != appdef.SchemaKind_null, func() error {
+			err = errIfFalse(qw.resultSchema.Kind() != appdef.DefKind_null, func() error {
 				return fmt.Errorf("result schema %s: %w", schema, ErrNotFound)
 			})
 			return coreutils.WrapSysError(err, http.StatusBadRequest)

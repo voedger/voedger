@@ -97,8 +97,8 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 		arg = cmd.ParamsSchema()
 		argUnl = cmd.UnloggedParamsSchema()
 	} else {
-		// #!16208: Must be possible to use SchemaKind_ODoc as Event.QName
-		if schema := ev.appCfg.AppDef.SchemaByName(ev.name); (schema == nil) || (schema.Kind() != appdef.SchemaKind_ODoc) {
+		// #!16208: Must be possible to use DefKind_ODoc as Event.QName
+		if schema := ev.appCfg.AppDef.SchemaByName(ev.name); (schema == nil) || (schema.Kind() != appdef.DefKind_ODoc) {
 			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
 		}
 		arg = ev.name
@@ -753,10 +753,10 @@ func (el *elementType) forEach(cb func(e *elementType) error) (err error) {
 // isDocument returns is document schema assigned to element record
 func (el *elementType) isDocument() bool {
 	kind := el.schema.Kind()
-	return (kind == appdef.SchemaKind_GDoc) ||
-		(kind == appdef.SchemaKind_CDoc) ||
-		(kind == appdef.SchemaKind_ODoc) ||
-		(kind == appdef.SchemaKind_WDoc)
+	return (kind == appdef.DefKind_GDoc) ||
+		(kind == appdef.DefKind_CDoc) ||
+		(kind == appdef.DefKind_ODoc) ||
+		(kind == appdef.DefKind_WDoc)
 }
 
 // maskValues masks element record row values and all elements chils recursive

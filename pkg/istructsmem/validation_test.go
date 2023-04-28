@@ -39,16 +39,16 @@ func Test_ValidEvent(t *testing.T) {
 		appDef := appdef.New()
 
 		t.Run("must be ok to build application definition", func(t *testing.T) {
-			appDef.Add(cDocName, appdef.SchemaKind_CDoc).
+			appDef.Add(cDocName, appdef.DefKind_CDoc).
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)
 
-			appDef.Add(oDocName, appdef.SchemaKind_ODoc).
+			appDef.Add(oDocName, appdef.DefKind_ODoc).
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false).
 				AddContainer("child", oDocName, 0, 2) // ODocs should be able to contain ODocs, see #!19332
 
-			appDef.Add(oObjName, appdef.SchemaKind_Object).
+			appDef.Add(oObjName, appdef.DefKind_Object).
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)
 		})
@@ -345,7 +345,7 @@ func Test_ValidElement(t *testing.T) {
 	t.Run("must be ok to build test application definition", func(t *testing.T) {
 
 		t.Run("build object schema", func(t *testing.T) {
-			objSchema := appDef.Add(appdef.NewQName("test", "object"), appdef.SchemaKind_Object)
+			objSchema := appDef.Add(appdef.NewQName("test", "object"), appdef.DefKind_Object)
 			objSchema.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
@@ -357,7 +357,7 @@ func Test_ValidElement(t *testing.T) {
 				AddField("recIDField", appdef.DataKind_RecordID, false).
 				AddContainer("child", appdef.NewQName("test", "element"), 1, appdef.Occurs_Unbounded)
 
-			elementSchema := appDef.Add(appdef.NewQName("test", "element"), appdef.SchemaKind_Element)
+			elementSchema := appDef.Add(appdef.NewQName("test", "element"), appdef.DefKind_Element)
 			elementSchema.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
@@ -370,13 +370,13 @@ func Test_ValidElement(t *testing.T) {
 				AddField("recIDField", appdef.DataKind_RecordID, false).
 				AddContainer("grandChild", appdef.NewQName("test", "grandChild"), 0, 1)
 
-			subElementSchema := appDef.Add(appdef.NewQName("test", "grandChild"), appdef.SchemaKind_Element)
+			subElementSchema := appDef.Add(appdef.NewQName("test", "grandChild"), appdef.DefKind_Element)
 			subElementSchema.
 				AddField("recIDField", appdef.DataKind_RecordID, false)
 		})
 
 		t.Run("build ODoc schema", func(t *testing.T) {
-			docSchema := appDef.Add(appdef.NewQName("test", "document"), appdef.SchemaKind_ODoc)
+			docSchema := appDef.Add(appdef.NewQName("test", "document"), appdef.DefKind_ODoc)
 			docSchema.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
@@ -388,7 +388,7 @@ func Test_ValidElement(t *testing.T) {
 				AddField("recIDField", appdef.DataKind_RecordID, false).
 				AddContainer("child", appdef.NewQName("test", "record"), 1, appdef.Occurs_Unbounded)
 
-			recordSchema := appDef.Add(appdef.NewQName("test", "record"), appdef.SchemaKind_ORecord)
+			recordSchema := appDef.Add(appdef.NewQName("test", "record"), appdef.DefKind_ORecord)
 			recordSchema.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
@@ -530,7 +530,7 @@ func Test_ValidCUD(t *testing.T) {
 	appDef := appdef.New()
 
 	t.Run("must be ok to build test application definition", func(t *testing.T) {
-		docSchema := appDef.Add(appdef.NewQName("test", "document"), appdef.SchemaKind_CDoc)
+		docSchema := appDef.Add(appdef.NewQName("test", "document"), appdef.DefKind_CDoc)
 		docSchema.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
@@ -542,7 +542,7 @@ func Test_ValidCUD(t *testing.T) {
 			AddField("recIDField", appdef.DataKind_RecordID, false).
 			AddContainer("child", appdef.NewQName("test", "record"), 1, appdef.Occurs_Unbounded)
 
-		recordSchema := appDef.Add(appdef.NewQName("test", "record"), appdef.SchemaKind_CRecord)
+		recordSchema := appDef.Add(appdef.NewQName("test", "record"), appdef.DefKind_CRecord)
 		recordSchema.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
@@ -554,7 +554,7 @@ func Test_ValidCUD(t *testing.T) {
 			AddField("boolField", appdef.DataKind_bool, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false)
 
-		objSchema := appDef.Add(appdef.NewQName("test", "object"), appdef.SchemaKind_Object)
+		objSchema := appDef.Add(appdef.NewQName("test", "object"), appdef.DefKind_Object)
 		objSchema.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
@@ -666,7 +666,7 @@ func Test_VerifiedFields(t *testing.T) {
 
 	appDef := appdef.New()
 	t.Run("must be ok to build application definition", func(t *testing.T) {
-		schema := appDef.Add(objName, appdef.SchemaKind_Object)
+		schema := appDef.Add(objName, appdef.DefKind_Object)
 		schema.
 			AddField("int32", appdef.DataKind_int32, true).
 			AddVerifiedField("email", appdef.DataKind_string, false, appdef.VerificationKind_EMail).
@@ -881,7 +881,7 @@ func Test_ValidateErrors(t *testing.T) {
 		require.Equal(ECode_InvalidSchemaName, validateErr.Code())
 	})
 
-	t.Run("ECode_InvalidSchemaKind", func(t *testing.T) {
+	t.Run("ECode_InvalidDefKind", func(t *testing.T) {
 		var app istructs.IAppStructs
 
 		cDocName := appdef.NewQName("test", "CDoc")
@@ -891,7 +891,7 @@ func Test_ValidateErrors(t *testing.T) {
 			appDef := appdef.New()
 
 			t.Run("must be ok to build application definition", func(t *testing.T) {
-				CDocSchema := appDef.Add(cDocName, appdef.SchemaKind_CDoc)
+				CDocSchema := appDef.Add(cDocName, appdef.DefKind_CDoc)
 				CDocSchema.AddField("Int32", appdef.DataKind_int32, false)
 			})
 
@@ -927,7 +927,7 @@ func Test_ValidateErrors(t *testing.T) {
 		require.ErrorIs(buildErr, ErrWrongSchema)
 		validateErr := validateErrorf(0, "")
 		require.ErrorAs(buildErr, &validateErr)
-		require.Equal(ECode_InvalidSchemaKind, validateErr.Code())
+		require.Equal(ECode_InvalidDefKind, validateErr.Code())
 	})
 
 	t.Run("ECode_EmptyFieldData", func(t *testing.T) {

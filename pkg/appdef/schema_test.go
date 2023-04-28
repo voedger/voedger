@@ -14,7 +14,7 @@ import (
 func Test_schema_AddField(t *testing.T) {
 	require := require.New(t)
 
-	bld := New().Add(NewQName("test", "object"), SchemaKind_Object)
+	bld := New().Add(NewQName("test", "object"), DefKind_Object)
 	require.NotNil(bld)
 
 	t.Run("must be ok to add field", func(t *testing.T) {
@@ -55,12 +55,12 @@ func Test_schema_AddField(t *testing.T) {
 	})
 
 	t.Run("must be panic if fields are not allowed by schema kind", func(t *testing.T) {
-		bld := New().Add(NewQName("test", "test"), SchemaKind_ViewRecord)
+		bld := New().Add(NewQName("test", "test"), DefKind_ViewRecord)
 		require.Panics(func() { bld.AddField("f1", DataKind_int64, true) })
 	})
 
 	t.Run("must be panic if field data kind is not allowed by schema kind", func(t *testing.T) {
-		bld := New().Add(NewQName("test", "test"), SchemaKind_ViewRecord_PartitionKey)
+		bld := New().Add(NewQName("test", "test"), DefKind_ViewRecord_PartitionKey)
 		require.Panics(func() { bld.AddField("f1", DataKind_string, true) })
 	})
 }
@@ -68,7 +68,7 @@ func Test_schema_AddField(t *testing.T) {
 func Test_schema_AddVerifiedField(t *testing.T) {
 	require := require.New(t)
 
-	bld := New().Add(NewQName("test", "object"), SchemaKind_Object)
+	bld := New().Add(NewQName("test", "object"), DefKind_Object)
 	require.NotNil(bld)
 
 	t.Run("must be ok to add verified field", func(t *testing.T) {
@@ -102,11 +102,11 @@ func Test_schema_AddContainer(t *testing.T) {
 	require := require.New(t)
 
 	cache := New()
-	bld := cache.Add(NewQName("test", "object"), SchemaKind_Object)
+	bld := cache.Add(NewQName("test", "object"), DefKind_Object)
 	require.NotNil(bld)
 
 	elQName := NewQName("test", "element")
-	_ = cache.Add(elQName, SchemaKind_Element)
+	_ = cache.Add(elQName, DefKind_Element)
 
 	t.Run("must be ok to add container", func(t *testing.T) {
 		bld.AddContainer("c1", elQName, 1, Occurs_Unbounded)
@@ -151,7 +151,7 @@ func Test_schema_AddContainer(t *testing.T) {
 	pkQName := NewQName("test", "pk")
 
 	t.Run("must be panic if containers are not allowed by schema kind", func(t *testing.T) {
-		bld := cache.Add(pkQName, SchemaKind_ViewRecord_PartitionKey)
+		bld := cache.Add(pkQName, DefKind_ViewRecord_PartitionKey)
 		require.Panics(func() { bld.AddContainer("c1", elQName, 1, Occurs_Unbounded) })
 	})
 
@@ -168,7 +168,7 @@ func Test_schema_Singleton(t *testing.T) {
 	cache := New()
 
 	t.Run("must be ok to create singleton schema", func(t *testing.T) {
-		bld := cache.Add(NewQName("test", "singleton"), SchemaKind_CDoc)
+		bld := cache.Add(NewQName("test", "singleton"), DefKind_CDoc)
 		require.NotNil(bld)
 
 		bld.SetSingleton()
@@ -176,7 +176,7 @@ func Test_schema_Singleton(t *testing.T) {
 	})
 
 	t.Run("must be panic if not CDoc schema", func(t *testing.T) {
-		bld := cache.Add(NewQName("test", "wdoc"), SchemaKind_WDoc)
+		bld := cache.Add(NewQName("test", "wdoc"), DefKind_WDoc)
 		require.NotNil(bld)
 
 		require.Panics(func() { bld.SetSingleton() })

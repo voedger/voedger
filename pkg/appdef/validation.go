@@ -30,11 +30,11 @@ func (sch *schema) validateFields() (err error) {
 	})
 
 	switch sch.Kind() {
-	case SchemaKind_ViewRecord:
+	case DefKind_ViewRecord:
 		err = errors.Join(err, sch.validateViewFields())
-	case SchemaKind_ViewRecord_PartitionKey:
+	case DefKind_ViewRecord_PartitionKey:
 		err = errors.Join(err, sch.validateViewPartKeyFields())
-	case SchemaKind_ViewRecord_ClusteringColumns:
+	case DefKind_ViewRecord_ClusteringColumns:
 		err = errors.Join(err, sch.validateViewClustKeyFields())
 	}
 
@@ -43,7 +43,7 @@ func (sch *schema) validateFields() (err error) {
 
 // Validate view fields unique. See https://dev.heeus.io/launchpad/?r=1#!17003 for particulars
 func (sch *schema) validateViewFields() (err error) {
-	findSchema := func(contName string, kind SchemaKind) Schema {
+	findSchema := func(contName string, kind DefKind) Schema {
 		if cont := sch.Container(contName); cont != nil {
 			if schema := sch.app.SchemaByName(cont.Schema()); schema != nil {
 				if schema.Kind() == kind {
@@ -55,9 +55,9 @@ func (sch *schema) validateViewFields() (err error) {
 	}
 
 	partSchema, clustSchema, valueSchema :=
-		findSchema(SystemContainer_ViewPartitionKey, SchemaKind_ViewRecord_PartitionKey),
-		findSchema(SystemContainer_ViewClusteringCols, SchemaKind_ViewRecord_ClusteringColumns),
-		findSchema(SystemContainer_ViewValue, SchemaKind_ViewRecord_Value)
+		findSchema(SystemContainer_ViewPartitionKey, DefKind_ViewRecord_PartitionKey),
+		findSchema(SystemContainer_ViewClusteringCols, DefKind_ViewRecord_ClusteringColumns),
+		findSchema(SystemContainer_ViewValue, DefKind_ViewRecord_Value)
 	if (partSchema == nil) || (clustSchema == nil) || (valueSchema == nil) {
 		return nil // extended error will return later; see validateViewContainers() method
 	}
@@ -116,14 +116,14 @@ func (sch *schema) validateViewClustKeyFields() (err error) {
 // Validates schema containers
 func (sch *schema) validateContainers() (err error) {
 	switch sch.Kind() {
-	case SchemaKind_ViewRecord:
+	case DefKind_ViewRecord:
 		err = sch.validateViewContainers()
 	default:
 		sch.Containers(func(c Container) {
 			schema := sch.app.SchemaByName(c.Schema())
 			if schema != nil {
 				if !sch.Kind().ContainerKindAvailable(schema.Kind()) {
-					err = errors.Join(err, fmt.Errorf("schema «%v» kind «%v»: container «%s» kind «%v» is not available: %w", sch.QName(), sch.Kind(), c.Name(), schema.Kind(), ErrInvalidSchemaKind))
+					err = errors.Join(err, fmt.Errorf("schema «%v» kind «%v»: container «%s» kind «%v» is not available: %w", sch.QName(), sch.Kind(), c.Name(), schema.Kind(), ErrInvalidDefKind))
 				}
 			}
 		})
@@ -140,7 +140,7 @@ func (sch *schema) validateViewContainers() (err error) {
 			fmt.Errorf("schema «%v»: view records schema must contain 3 containers: %w", sch.QName(), ErrWrongSchemaStruct))
 	}
 
-	checkCont := func(name string, expectedKind SchemaKind) {
+	checkCont := func(name string, expectedKind DefKind) {
 		cont := sch.Container(name)
 		if cont == nil {
 			err = errors.Join(err,
@@ -163,13 +163,13 @@ func (sch *schema) validateViewContainers() (err error) {
 		}
 		if contSchema.Kind() != expectedKind {
 			err = errors.Join(err,
-				fmt.Errorf("view schema «%v» container «%s» schema has invalid kind «%v», expected «%v»: %w", sch.QName(), name, contSchema.Kind(), expectedKind, ErrInvalidSchemaKind))
+				fmt.Errorf("view schema «%v» container «%s» schema has invalid kind «%v», expected «%v»: %w", sch.QName(), name, contSchema.Kind(), expectedKind, ErrInvalidDefKind))
 		}
 	}
 
-	checkCont(SystemContainer_ViewPartitionKey, SchemaKind_ViewRecord_PartitionKey)
-	checkCont(SystemContainer_ViewClusteringCols, SchemaKind_ViewRecord_ClusteringColumns)
-	checkCont(SystemContainer_ViewValue, SchemaKind_ViewRecord_Value)
+	checkCont(SystemContainer_ViewPartitionKey, DefKind_ViewRecord_PartitionKey)
+	checkCont(SystemContainer_ViewClusteringCols, DefKind_ViewRecord_ClusteringColumns)
+	checkCont(SystemContainer_ViewValue, DefKind_ViewRecord_Value)
 
 	return err
 }

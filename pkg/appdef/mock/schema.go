@@ -18,7 +18,7 @@ type Schema struct {
 	containers []*Container
 }
 
-func NewSchema(name appdef.QName, kind appdef.SchemaKind, fields ...*Field) *Schema {
+func NewSchema(name appdef.QName, kind appdef.DefKind, fields ...*Field) *Schema {
 	s := Schema{}
 	s.
 		On("QName").Return(name).
@@ -44,8 +44,8 @@ func (s *Schema) App() appdef.IAppDef {
 	return s.Called().Get(0).(appdef.IAppDef)
 }
 
-func (s *Schema) QName() appdef.QName     { return s.Called().Get(0).(appdef.QName) }
-func (s *Schema) Kind() appdef.SchemaKind { return s.Called().Get(0).(appdef.SchemaKind) }
+func (s *Schema) QName() appdef.QName  { return s.Called().Get(0).(appdef.QName) }
+func (s *Schema) Kind() appdef.DefKind { return s.Called().Get(0).(appdef.DefKind) }
 
 func (s *Schema) Field(name string) appdef.Field {
 	if len(s.fields) > 0 {
