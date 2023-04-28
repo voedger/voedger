@@ -45,8 +45,8 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 
 	app := appStructs(
 		func(appDef appdef.IAppDefBuilder) {
-			ProvideViewSchema(appDef, incProjectionView, buildProjectionView)
-			ProvideViewSchema(appDef, decProjectionView, buildProjectionView)
+			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
+			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 		},
 		nil)
 	actualizerFactory := ProvideSyncActualizerFactory()
@@ -191,8 +191,8 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 
 	app := appStructs(
 		func(appDef appdef.IAppDefBuilder) {
-			ProvideViewSchema(appDef, incProjectionView, buildProjectionView)
-			ProvideViewSchema(appDef, decProjectionView, buildProjectionView)
+			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
+			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 		},
 		nil)
 	actualizerFactory := ProvideSyncActualizerFactory()

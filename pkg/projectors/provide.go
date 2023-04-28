@@ -20,6 +20,6 @@ func ProvideOffsetsDef(appDef appdef.IAppDefBuilder) {
 	provideOffsetsDefImpl(appDef)
 }
 
-func ProvideViewSchema(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc BuildViewSchemaFunc) {
-	provideViewSchemaImpl(appDef, qname, buildFunc)
+func ProvideViewDef(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc ViewDefBuilder) {
+	provideViewDefImpl(appDef, qname, buildFunc)
 }

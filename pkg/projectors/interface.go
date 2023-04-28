@@ -65,13 +65,7 @@ type SyncActualizerConf struct {
 	N10nFunc     state.N10nFunc
 }
 
-type IViewSchemaBuilder interface {
-	ValueField(name string, kind appdef.DataKind, required bool)
-	PartitionKeyField(name string, kind appdef.DataKind, required bool)
-	ClusteringColumnField(name string, kind appdef.DataKind, required bool)
-}
-
-type BuildViewSchemaFunc func(builder appdef.ViewBuilder)
+type ViewDefBuilder func(builder appdef.ViewBuilder)
 
 type WorkToEventFunc func(work interface{}) istructs.IPLogEvent
 

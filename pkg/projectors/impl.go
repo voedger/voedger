@@ -112,7 +112,7 @@ type eventService struct {
 
 func (s *eventService) getWSID() istructs.WSID { return s.event.Workspace() }
 
-func provideViewSchemaImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc BuildViewSchemaFunc) {
+func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc ViewDefBuilder) {
 	builder := appDef.AddView(qname)
 	if buildFunc != nil {
 		buildFunc(builder)
