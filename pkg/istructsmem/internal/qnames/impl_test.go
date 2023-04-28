@@ -33,7 +33,7 @@ func TestQNames(t *testing.T) {
 		panic(err)
 	}
 
-	schemaName := appdef.NewQName("test", "schema")
+	defName := appdef.NewQName("test", "doc")
 
 	resourceName := appdef.NewQName("test", "resource")
 	r := mockResources{}
@@ -47,7 +47,7 @@ func TestQNames(t *testing.T) {
 	if err := names.Prepare(storage, versions,
 		func() appdef.IAppDef {
 			appDefBuilder := appdef.New()
-			appDefBuilder.Add(schemaName, appdef.DefKind_CDoc)
+			appDefBuilder.Add(defName, appdef.DefKind_CDoc)
 			appDef, err := appDefBuilder.Build()
 			require.NoError(err)
 			return appDef
@@ -70,7 +70,7 @@ func TestQNames(t *testing.T) {
 			return id
 		}
 
-		sID := check(names, schemaName)
+		sID := check(names, defName)
 		rID := check(names, resourceName)
 
 		t.Run("must be ok to load early stored names", func(t *testing.T) {
@@ -84,7 +84,7 @@ func TestQNames(t *testing.T) {
 				panic(err)
 			}
 
-			require.Equal(sID, check(names1, schemaName))
+			require.Equal(sID, check(names1, defName))
 			require.Equal(rID, check(names1, resourceName))
 		})
 
@@ -98,7 +98,7 @@ func TestQNames(t *testing.T) {
 			if err := names2.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					appdefBuilder := appdef.New()
-					appdefBuilder.Add(schemaName, appdef.DefKind_CDoc)
+					appdefBuilder.Add(defName, appdef.DefKind_CDoc)
 					appDef, err := appdefBuilder.Build()
 					require.NoError(err)
 					return appDef
@@ -107,7 +107,7 @@ func TestQNames(t *testing.T) {
 				panic(err)
 			}
 
-			require.Equal(sID, check(names2, schemaName))
+			require.Equal(sID, check(names2, defName))
 			require.Equal(rID, check(names2, resourceName))
 		})
 	})

@@ -81,8 +81,8 @@ type (
 		// tested resources
 		changeCmdName appdef.QName
 
-		queryPhotoFunctionName         appdef.QName
-		queryPhotoFunctionParamsSchema appdef.QName
+		queryPhotoFunctionName       appdef.QName
+		queryPhotoFunctionParamsName appdef.QName
 
 		// tested rows
 		testRow appdef.QName
@@ -179,8 +179,8 @@ var data = testDataType{
 
 	changeCmdName: appdef.NewQName("test", "change"),
 
-	queryPhotoFunctionName:         appdef.NewQName("test", "QueryPhoto"),
-	queryPhotoFunctionParamsSchema: appdef.NewQName("test", "QueryPhotoParams"),
+	queryPhotoFunctionName:       appdef.NewQName("test", "QueryPhoto"),
+	queryPhotoFunctionParamsName: appdef.NewQName("test", "QueryPhotoParams"),
 
 	testRow:  appdef.NewQName("test", "Row"),
 	testCDoc: appdef.NewQName("test", "CDoc"),
@@ -238,7 +238,7 @@ var test func() *testDataType = func() *testDataType {
 			saleSecurParamsDef.
 				AddField(data.passwordIdent, appdef.DataKind_string, true)
 
-			photoParamsDef := appDef.Add(data.queryPhotoFunctionParamsSchema, appdef.DefKind_Object)
+			photoParamsDef := appDef.Add(data.queryPhotoFunctionParamsName, appdef.DefKind_Object)
 			photoParamsDef.
 				AddField(data.buyerIdent, appdef.DataKind_string, true)
 		}
@@ -332,7 +332,7 @@ var test func() *testDataType = func() *testDataType {
 
 		cfg.Resources.Add(NewCommandFunction(data.saleCmdName, data.saleCmdDocName, data.saleSecurParsName, appdef.NullQName, NullCommandExec))
 		cfg.Resources.Add(NewCommandFunction(data.changeCmdName, appdef.NullQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewQueryFunction(data.queryPhotoFunctionName, data.queryPhotoFunctionParamsSchema, appdef.NullQName, NullQueryExec))
+		cfg.Resources.Add(NewQueryFunction(data.queryPhotoFunctionName, data.queryPhotoFunctionParamsName, appdef.NullQName, NullQueryExec))
 
 		if err := cfg.prepare(iratesce.TestBucketsFactory(), storage); err != nil {
 			panic(err)

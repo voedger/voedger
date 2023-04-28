@@ -81,18 +81,18 @@ type fieldDesc struct {
 
 func (u implIUniques) validate(cfg *AppConfigType) error {
 	for qName, uniques := range u.uniques {
-		s := cfg.AppDef.DefByName(qName)
-		if s == nil {
-			return uniqueError(qName, ErrUnknownSchemaQName, "")
+		d := cfg.AppDef.DefByName(qName)
+		if d == nil {
+			return uniqueError(qName, ErrUnknownDefinitionQName, "")
 		}
-		switch s.Kind() {
+		switch d.Kind() {
 		case appdef.DefKind_ViewRecord, appdef.DefKind_ViewRecord_PartitionKey, appdef.DefKind_ViewRecord_ClusteringColumns,
 			appdef.DefKind_ViewRecord_Value, appdef.DefKind_Object, appdef.DefKind_Element,
 			appdef.DefKind_QueryFunction, appdef.DefKind_CommandFunction:
 			return uniqueError(qName, ErrDefKindMayNotHaveUniques, "")
 		}
 		sf := map[string]fieldDesc{}
-		s.Fields(func(fld appdef.Field) {
+		d.Fields(func(fld appdef.Field) {
 			sf[fld.Name()] = fieldDesc{
 				kind:       fld.DataKind(),
 				isRequired: fld.Required(),

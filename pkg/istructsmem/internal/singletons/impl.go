@@ -42,7 +42,7 @@ func (stons *Singletons) GetID(qName appdef.QName) (istructs.RecordID, error) {
 	if id, ok := stons.qNames[qName]; ok {
 		return id, nil
 	}
-	return istructs.NullRecordID, fmt.Errorf("unable to find singleton ID for schema «%v»: %w", qName, ErrNameNotFound)
+	return istructs.NullRecordID, fmt.Errorf("unable to find singleton ID for definition «%v»: %w", qName, ErrNameNotFound)
 }
 
 // Loads all singletons IDs from storage, add all known application singletons and store cache if some changes.
@@ -107,17 +107,17 @@ func (stons *Singletons) load01(storage istorage.IAppStorage) error {
 // Collect all application singlton IDs
 func (stons *Singletons) collectAllSingletons(appDef appdef.IAppDef) (err error) {
 	appDef.Defs(
-		func(schema appdef.IDef) {
-			if schema.Singleton() {
+		func(d appdef.IDef) {
+			if d.Singleton() {
 				err = errors.Join(err,
-					stons.collectSingleton(schema.QName()))
+					stons.collectSingleton(d.QName()))
 			}
 		})
 
 	return err
 }
 
-// collectSingleton checks is application schema singleton in cache. If not then adds it with new ID
+// collectSingleton checks is application definition singleton in cache. If not then adds it with new ID
 func (stons *Singletons) collectSingleton(qname appdef.QName) error {
 
 	if _, ok := stons.qNames[qname]; ok {

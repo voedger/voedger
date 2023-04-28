@@ -18,17 +18,17 @@ func newSchemes() DynoBufSchemes {
 // Prepares schemes
 func (sch DynoBufSchemes) Prepare(appDef appdef.IAppDef) {
 	appDef.Defs(
-		func(schema appdef.IDef) {
-			sch.add(schema)
+		func(d appdef.IDef) {
+			sch.add(d)
 		})
 }
 
-// Adds schema
-func (sch DynoBufSchemes) add(schema appdef.IDef) {
+// Adds scheme
+func (sch DynoBufSchemes) add(def appdef.IDef) {
 	db := dynobuffers.NewScheme()
 
-	db.Name = schema.QName().String()
-	schema.Fields(
+	db.Name = def.QName().String()
+	def.Fields(
 		func(f appdef.Field) {
 			if !f.IsSys() { // #18142: extract system fields from dynobuffer
 				fieldType := DataKindToFieldType(f.DataKind())
@@ -40,5 +40,5 @@ func (sch DynoBufSchemes) add(schema appdef.IDef) {
 			}
 		})
 
-	sch[schema.QName()] = db
+	sch[def.QName()] = db
 }

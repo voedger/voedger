@@ -13,15 +13,15 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func Test_DynoBufSchemasCache(t *testing.T) {
+func TestDynoBufSchemes(t *testing.T) {
 	require := require.New(t)
 
 	var appDef appdef.IAppDef
 
 	t.Run("must ok to build application definition", func(t *testing.T) {
 		appDefBuilder := appdef.New()
-		rootSchema := appDefBuilder.Add(appdef.NewQName("test", "rootSchema"), appdef.DefKind_Object)
-		rootSchema.
+		rootDef := appDefBuilder.Add(appdef.NewQName("test", "obj"), appdef.DefKind_Object)
+		rootDef.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
@@ -30,10 +30,10 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 			AddField("strField", appdef.DataKind_string, false).
 			AddField("qnameField", appdef.DataKind_QName, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false).
-			AddContainer("child", appdef.NewQName("test", "childSchema"), 1, appdef.Occurs_Unbounded)
+			AddContainer("child", appdef.NewQName("test", "el"), 1, appdef.Occurs_Unbounded)
 
-		childSchema := appDefBuilder.Add(appdef.NewQName("test", "childSchema"), appdef.DefKind_Element)
-		childSchema.
+		childDef := appDefBuilder.Add(appdef.NewQName("test", "el"), appdef.DefKind_Element)
+		childDef.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
@@ -43,10 +43,10 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 			AddField("qnameField", appdef.DataKind_QName, false).
 			AddField("boolField", appdef.DataKind_bool, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false).
-			AddContainer("grandChild", appdef.NewQName("test", "grandChild"), 0, 1)
+			AddContainer("grandChild", appdef.NewQName("test", "el1"), 0, 1)
 
-		grandSchema := appDefBuilder.Add(appdef.NewQName("test", "grandChild"), appdef.DefKind_Element)
-		grandSchema.
+		grandDef := appDefBuilder.Add(appdef.NewQName("test", "el1"), appdef.DefKind_Element)
+		grandDef.
 			AddField("recIDField", appdef.DataKind_RecordID, false)
 
 		sch, err := appDefBuilder.Build()
@@ -65,15 +65,15 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 	checkScheme = func(dynoScheme *dynobuffers.Scheme) {
 		require.NotNil(dynoScheme)
 
-		schemaName, err := appdef.ParseQName(dynoScheme.Name)
+		defName, err := appdef.ParseQName(dynoScheme.Name)
 		require.NoError(err)
 
-		schema := appDef.DefByName(schemaName)
-		require.NotNil(schema)
+		def := appDef.DefByName(defName)
+		require.NotNil(def)
 
 		for _, fld := range dynoScheme.Fields {
 			if fld.Ft == dynobuffers.FieldTypeObject {
-				cont := schema.Container(fld.Name)
+				cont := def.Container(fld.Name)
 				require.NotNil(cont)
 
 				require.Equal(fld.IsMandatory, cont.MinOccurs() > 0)
@@ -86,7 +86,7 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 				continue
 			}
 
-			field := schema.Field(fld.Name)
+			field := def.Field(fld.Name)
 			require.NotNil(field)
 
 			require.Equal(DataKindToFieldType(field.DataKind()), fld.Ft)

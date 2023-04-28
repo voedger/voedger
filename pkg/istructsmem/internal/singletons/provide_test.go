@@ -29,10 +29,10 @@ func Test_BasicUsage(t *testing.T) {
 		panic(err)
 	}
 
-	testName := appdef.NewQName("test", "schema")
-	appDefBuilder := appdef.New()
-	appDefBuilder.Add(testName, appdef.DefKind_CDoc).SetSingleton()
-	appDef, err := appDefBuilder.Build()
+	testName := appdef.NewQName("test", "doc")
+	app := appdef.New()
+	app.Add(testName, appdef.DefKind_CDoc).SetSingleton()
+	appDef, err := app.Build()
 	if err != nil {
 		panic(err)
 	}
@@ -77,14 +77,14 @@ func Test_BasicUsage(t *testing.T) {
 func test_AppDefSingletons(t *testing.T, appDef appdef.IAppDef, stons *Singletons) {
 	require := require.New(t)
 	appDef.Defs(
-		func(schema appdef.IDef) {
-			if schema.Singleton() {
-				id, err := stons.GetID(schema.QName())
+		func(d appdef.IDef) {
+			if d.Singleton() {
+				id, err := stons.GetID(d.QName())
 				require.NoError(err)
 				require.NotEqual(istructs.NullRecordID, id)
 				name, err := stons.GetQName(id)
 				require.NoError(err)
-				require.Equal(schema.QName(), name)
+				require.Equal(d.QName(), name)
 			}
 		})
 }
@@ -105,11 +105,11 @@ func Test_SingletonsGetID(t *testing.T) {
 			err = versions.Prepare(storage)
 			require.NoError(err)
 
-			appDefBuilder := appdef.New()
-			schema := appDefBuilder.Add(cDocName, appdef.DefKind_CDoc)
-			schema.AddField("f1", appdef.DataKind_QName, true)
-			schema.SetSingleton()
-			appDef, err := appDefBuilder.Build()
+			app := appdef.New()
+			def := app.Add(cDocName, appdef.DefKind_CDoc)
+			def.AddField("f1", appdef.DataKind_QName, true)
+			def.SetSingleton()
+			appDef, err := app.Build()
 			require.NoError(err)
 
 			return storage, versions, appDef
@@ -198,11 +198,11 @@ func Test_Singletons_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		appDefBuilder := appdef.New()
-		schema := appDefBuilder.Add(cDocName, appdef.DefKind_CDoc)
-		schema.AddField("f1", appdef.DataKind_QName, true)
-		schema.SetSingleton()
-		appDef, err := appDefBuilder.Build()
+		app := appdef.New()
+		def := app.Add(cDocName, appdef.DefKind_CDoc)
+		def.AddField("f1", appdef.DataKind_QName, true)
+		def.SetSingleton()
+		appDef, err := app.Build()
 		require.NoError(err)
 
 		stone := New()
@@ -232,18 +232,18 @@ func Test_Singletons_Errors(t *testing.T) {
 	})
 
 	t.Run("must error if store ID for some singledoc to storage is failed", func(t *testing.T) {
-		schemaName := appdef.NewQName("test", "ErrorSchema")
+		defName := appdef.NewQName("test", "ErrorDef")
 
 		storage := teststore.NewStorage()
-		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_SingletonIDs, lastestVersion), []byte(schemaName.String()))
+		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_SingletonIDs, lastestVersion), []byte(defName.String()))
 
 		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		appDefBuilder := appdef.New()
-		appDefBuilder.Add(schemaName, appdef.DefKind_CDoc).SetSingleton()
-		appDef, err := appDefBuilder.Build()
+		app := appdef.New()
+		app.Add(defName, appdef.DefKind_CDoc).SetSingleton()
+		appDef, err := app.Build()
 		require.NoError(err)
 
 		stons := New()
@@ -252,7 +252,7 @@ func Test_Singletons_Errors(t *testing.T) {
 	})
 
 	t.Run("must error if retrieve ID for some singledoc from storage is failed", func(t *testing.T) {
-		schemaName := appdef.NewQName("test", "ErrorSchema")
+		defName := appdef.NewQName("test", "ErrorDef")
 
 		storage := teststore.NewStorage()
 
@@ -260,16 +260,16 @@ func Test_Singletons_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		appDefBuilder := appdef.New()
-		appDefBuilder.Add(schemaName, appdef.DefKind_CDoc).SetSingleton()
-		appDef, err := appDefBuilder.Build()
+		app := appdef.New()
+		app.Add(defName, appdef.DefKind_CDoc).SetSingleton()
+		appDef, err := app.Build()
 		require.NoError(err)
 
 		stons := New()
 		err = stons.Prepare(storage, versions, appDef)
 		require.NoError(err)
 
-		storage.ScheduleGetError(testError, nil, []byte(schemaName.String()))
+		storage.ScheduleGetError(testError, nil, []byte(defName.String()))
 		stons1 := New()
 		err = stons1.Prepare(storage, versions, appDef)
 		require.ErrorIs(err, testError)

@@ -73,7 +73,7 @@ type appStructsType struct {
 	config      *AppConfigType
 	events      appEventsType
 	records     appRecordsType
-	veiwRecords appViewRecordsType
+	veiwRecords appViewRecords
 	buckets     irates.IBuckets
 	descr       *descr.Application
 	uniques     *implIUniques
@@ -434,7 +434,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 	}
 
 	for _, rec := range ev.cud.creates {
-		if rec.schema.Singleton() {
+		if rec.def.Singleton() {
 			id, err := recs.app.config.singletons.GetID(rec.QName())
 			if err != nil {
 				return err

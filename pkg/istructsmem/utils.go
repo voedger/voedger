@@ -98,8 +98,8 @@ func FillElementFromJSON(data map[string]interface{}, s appdef.IDef, b istructs.
 		case []interface{}:
 			// e.g. TestBasicUsage_Dashboard(), "order_item": [<2 elements>]
 			containerName := fieldName
-			containerSchema := s.ContainerDef(containerName)
-			if containerSchema == nil {
+			containerDef := s.ContainerDef(containerName)
+			if containerDef == nil {
 				return fmt.Errorf("container with name %s is not found", containerName)
 			}
 			for i, intf := range fv {
@@ -108,7 +108,7 @@ func FillElementFromJSON(data map[string]interface{}, s appdef.IDef, b istructs.
 					return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
 				}
 				containerElemBuilder := b.ElementBuilder(fieldName)
-				if err := FillElementFromJSON(objContainerElem, containerSchema, containerElemBuilder); err != nil {
+				if err := FillElementFromJSON(objContainerElem, containerDef, containerElemBuilder); err != nil {
 					return err
 				}
 			}
@@ -123,9 +123,9 @@ func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectB
 }
 
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
-	schems := appStructs.AppDef()
-	schema := schems.Def(obj.AsQName(appdef.SystemField_QName))
-	schema.Fields(
+	appDef := appStructs.AppDef()
+	def := appDef.Def(obj.AsQName(appdef.SystemField_QName))
+	def.Fields(
 		func(f appdef.Field) {
 			if err != nil || f.DataKind() != appdef.DataKind_RecordID {
 				return

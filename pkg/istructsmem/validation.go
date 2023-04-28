@@ -15,27 +15,28 @@ import (
 
 // TODO: move to internal/validate package
 
-// validator provides validation application structures by single schema
+// Provides validation application structures by single definition
 type validator struct {
 	validators *validators
-	schema     appdef.IDef
+	def        appdef.IDef
 }
 
-func newValidator(validators *validators, schema appdef.IDef) *validator {
-	return &validator{validators, schema}
+func newValidator(validators *validators, def appdef.IDef) *validator {
+	return &validator{validators, def}
 }
 
 // Return readable name of entity to validate.
+//
 // If entity has only type QName, then the result will be short like `CDoc (sales.BillDocument)`, otherwise it will be complete like `CRecord «Price» (sales.PriceRecord)`
 func (v *validator) entName(e interface{}) string {
-	ent := v.schema.Kind().ToString()
+	ent := v.def.Kind().ToString()
 	name := ""
-	typeName := v.schema.QName()
+	typeName := v.def.QName()
 
 	if row, ok := e.(istructs.IRowReader); ok {
 		if qName := row.AsQName(appdef.SystemField_QName); qName != appdef.NullQName {
 			typeName = qName
-			if (qName == v.schema.QName()) && v.schema.Kind().HasSystemField(appdef.SystemField_Container) {
+			if (qName == v.def.QName()) && v.def.Kind().HasSystemField(appdef.SystemField_Container) {
 				if cont := row.AsString(appdef.SystemField_Container); cont != "" {
 					name = cont
 				}
@@ -50,13 +51,13 @@ func (v *validator) entName(e interface{}) string {
 	return fmt.Sprintf("%s «%s» (%v)", ent, name, typeName) // complete form
 }
 
-// validate specified document
+// Validate specified document
 func (v *validator) validDocument(doc *elementType) error {
 	// TODO: check RecordID refs available for document kind
 	return v.validElement(doc, true)
 }
 
-// validate specified element
+// Validate specified element
 func (v *validator) validElement(el *elementType, storable bool) (err error) {
 	if storable {
 		err = v.validRecord(&el.recordType, true)
@@ -72,7 +73,7 @@ func (v *validator) validElement(el *elementType, storable bool) (err error) {
 	return err
 }
 
-// validates element containers
+// Validates element containers
 func (v *validator) validElementContainers(el *elementType, storable bool) (err error) {
 
 	err = v.validElementContOccurses(el)
@@ -89,7 +90,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 					validateErrorf(ECode_EmptyElementName, "%s child[%d] has empty container name: %w", v.entName(el), idx, ErrNameMissed))
 				return
 			}
-			cont := v.schema.Container(childName)
+			cont := v.def.Container(childName)
 			if cont == nil {
 				err = errors.Join(err,
 					validateErrorf(ECode_InvalidElementName, "%s child[%d] has unknown container name «%s»: %w", v.entName(el), idx, childName, ErrNameNotFound))
@@ -99,7 +100,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 			childQName := child.QName()
 			if childQName != cont.Def() {
 				err = errors.Join(err,
-					validateErrorf(ECode_InvalidSchemaName, "%s child[%d] «%s» has wrong schema name «%v», expected «%v»: %w", v.entName(el), idx, childName, childQName, cont.Def(), ErrNameNotFound))
+					validateErrorf(ECode_InvalidDefName, "%s child[%d] «%s» has wrong definition name «%v», expected «%v»: %w", v.entName(el), idx, childName, childQName, cont.Def(), ErrNameNotFound))
 				return
 			}
 
@@ -118,7 +119,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 			childValidator := v.validators.validator(childQName)
 			if childValidator == nil {
 				err = errors.Join(err,
-					validateErrorf(ECode_InvalidSchemaName, "object refers to unknown schema «%v»: %w", childQName, ErrNameNotFound))
+					validateErrorf(ECode_InvalidDefName, "object refers to unknown definition «%v»: %w", childQName, ErrNameNotFound))
 				return
 			}
 
@@ -131,7 +132,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 
 // Validates element containers occurses
 func (v *validator) validElementContOccurses(el *elementType) (err error) {
-	v.schema.Containers(
+	v.def.Containers(
 		func(cont appdef.Container) {
 			occurs := appdef.Occurs(0)
 			el.EnumElements(
@@ -156,7 +157,7 @@ func (v *validator) validElementContOccurses(el *elementType) (err error) {
 func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error) {
 	err = v.validRow(&rec.rowType)
 
-	if v.schema.Kind().HasSystemField(appdef.SystemField_ID) {
+	if v.def.Kind().HasSystemField(appdef.SystemField_ID) {
 		if rawIDexpected && !rec.ID().IsRaw() {
 			err = errors.Join(err,
 				validateErrorf(ECode_InvalidRawRecordID, "new %s ID «%d» is not raw: %w", v.entName(rec), rec.ID(), ErrRawRecordIDExpected))
@@ -168,12 +169,12 @@ func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error)
 
 // Validates specified row
 func (v *validator) validRow(row *rowType) (err error) {
-	v.schema.Fields(
+	v.def.Fields(
 		func(f appdef.Field) {
 			if f.Required() {
 				if !row.hasValue(f.Name()) {
 					err = errors.Join(err,
-						validateErrorf(ECode_EmptyData, "%s misses field «%s» required by schema «%v»: %w", v.entName(row), f.Name(), v.schema.QName(), ErrNameNotFound))
+						validateErrorf(ECode_EmptyData, "%s misses field «%s» required by definition «%v»: %w", v.entName(row), f.Name(), v.def.QName(), ErrNameNotFound))
 				}
 			}
 		})
@@ -186,6 +187,7 @@ func (v *validator) validObject(obj *elementType) error {
 	return v.validElement(obj, false)
 }
 
+// Application definitions validators
 type validators struct {
 	appDef     appdef.IAppDef
 	validators map[appdef.QName]*validator
@@ -197,21 +199,23 @@ func newValidators() *validators {
 	}
 }
 
-// Prepares validator for specified schema cache
+// Prepares validators for specified application definition
 func (v *validators) prepare(appDef appdef.IAppDef) {
 	v.appDef = appDef
 	v.appDef.Defs(
-		func(s appdef.IDef) {
-			v.validators[s.QName()] = newValidator(v, s)
+		func(d appdef.IDef) {
+			v.validators[d.QName()] = newValidator(v, d)
 		})
 }
 
-// Returns validator for specified schema
+// Returns validator for specified definition
 func (v *validators) validator(n appdef.QName) *validator {
 	return v.validators[n]
 }
 
-// validate specified event. Must be called _after_ build() method
+// Validate specified event.
+//
+// Must be called _after_ build() method
 func (v *validators) validEvent(ev *eventType) (err error) {
 
 	err = errors.Join(
@@ -222,22 +226,22 @@ func (v *validators) validEvent(ev *eventType) (err error) {
 	return err
 }
 
-// validEventObjects validate event parts: object and unlogged object
+// Validate event parts: object and unlogged object
 func (v *validators) validEventObjects(ev *eventType) (err error) {
 	arg, argUnl, err := ev.argumentNames()
 	if err != nil {
-		return validateError(ECode_InvalidSchemaName, err)
+		return validateError(ECode_InvalidDefName, err)
 	}
 
 	if ev.argObject.QName() != arg {
 		err = errors.Join(err,
-			validateErrorf(ECode_InvalidSchemaName, "event command argument «%v» uses wrong schema «%v», expected «%v»: %w", ev.name, ev.argObject.QName(), arg, ErrWrongSchema))
+			validateErrorf(ECode_InvalidDefName, "event command argument «%v» uses wrong definition «%v», expected «%v»: %w", ev.name, ev.argObject.QName(), arg, ErrWrongDefinition))
 	} else if arg != appdef.NullQName {
 		// #!17185: must be ODoc or Object only
-		schema := v.appDef.Def(arg)
-		if (schema.Kind() != appdef.DefKind_ODoc) && (schema.Kind() != appdef.DefKind_Object) {
+		def := v.appDef.Def(arg)
+		if (def.Kind() != appdef.DefKind_ODoc) && (def.Kind() != appdef.DefKind_Object) {
 			err = errors.Join(err,
-				validateErrorf(ECode_InvalidDefKind, "event command argument «%v» schema can not to be «%v», expected («%v» or «%v»): %w", arg, schema.Kind(), appdef.DefKind_ODoc, appdef.DefKind_Object, ErrWrongSchema))
+				validateErrorf(ECode_InvalidDefKind, "event command argument «%v» definition can not to be «%v», expected («%v» or «%v»): %w", arg, def.Kind(), appdef.DefKind_ODoc, appdef.DefKind_Object, ErrWrongDefinition))
 		}
 		err = errors.Join(err,
 			v.validObject(&ev.argObject))
@@ -245,7 +249,7 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 
 	if ev.argUnlObj.QName() != argUnl {
 		err = errors.Join(err,
-			validateErrorf(ECode_InvalidSchemaName, "event command unlogged argument «%v» uses wrong schema «%v», expected «%v»: %w", ev.name, ev.argUnlObj.QName(), argUnl, ErrWrongSchema))
+			validateErrorf(ECode_InvalidDefName, "event command unlogged argument «%v» uses wrong definition «%v», expected «%v»: %w", ev.name, ev.argUnlObj.QName(), argUnl, ErrWrongDefinition))
 	} else if ev.argUnlObj.QName() != appdef.NullQName {
 		err = errors.Join(err,
 			v.validObject(&ev.argUnlObj))
@@ -254,7 +258,7 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 	return err
 }
 
-// validEventCUDs validate event CUD parts: argument CUDs and result CUDs
+// Validate event CUD parts: argument CUDs and result CUDs
 func (v *validators) validEventCUDs(ev *eventType) (err error) {
 	if ev.cud.empty() {
 		if ev.name == istructs.QNameCommandCUD {
@@ -269,26 +273,26 @@ func (v *validators) validEventCUDs(ev *eventType) (err error) {
 // Validates specified document or object
 func (v *validators) validObject(obj *elementType) (err error) {
 	if obj.QName() == appdef.NullQName {
-		return validateErrorf(ECode_EmptySchemaName, "element «%s» has empty schema name: %w", obj.Container(), ErrNameMissed)
+		return validateErrorf(ECode_EmptyDefName, "element «%s» has empty definition name: %w", obj.Container(), ErrNameMissed)
 	}
 
 	validator := v.validator(obj.QName())
 
 	if validator == nil {
-		return validateErrorf(ECode_InvalidSchemaName, "object refers to unknown schema «%v»: %w", obj.QName(), ErrNameNotFound)
+		return validateErrorf(ECode_InvalidDefName, "object refers to unknown definition «%v»: %w", obj.QName(), ErrNameNotFound)
 	}
 
-	switch validator.schema.Kind() {
+	switch validator.def.Kind() {
 	case appdef.DefKind_GDoc, appdef.DefKind_CDoc, appdef.DefKind_ODoc, appdef.DefKind_WDoc:
 		return validator.validDocument(obj)
 	case appdef.DefKind_Object:
 		return validator.validObject(obj)
 	}
 
-	return validateErrorf(ECode_InvalidDefKind, "object refers to invalid schema «%v» kind «%v»: %w", obj.QName(), validator.schema.Kind(), ErrUnexpectedShemaKind)
+	return validateErrorf(ECode_InvalidDefKind, "object refers to invalid definition «%v» kind «%v»: %w", obj.QName(), validator.def.Kind(), ErrUnexpectedDefKind)
 }
 
-// validates specified CUD
+// Validates specified CUD
 func (v *validators) validCUD(cud *cudType, allowStorageIDsInCreate bool) (err error) {
 	for _, newRec := range cud.creates {
 		err = errors.Join(err,
@@ -371,32 +375,34 @@ func (v *validators) validCUDRefRawIDs(cud *cudType) (err error) {
 	return err
 }
 
-// Validates specified view key. If partialClust specified then clustering columns row may be partially filled
+// Validates specified view key.
+//
+// If partialClust specified then clustering columns row may be partially filled
 func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
-	partSchema := key.partKeySchema()
-	if key.partRow.QName() != partSchema {
-		return validateErrorf(ECode_InvalidSchemaName, "wrong view partition key schema «%v», for view «%v» expected «%v»: %w", key.partRow.QName(), key.viewName, partSchema, ErrWrongSchema)
+	pkDef := key.pkDef()
+	if key.partRow.QName() != pkDef {
+		return validateErrorf(ECode_InvalidDefName, "wrong view partition key definition «%v», for view «%v» expected «%v»: %w", key.partRow.QName(), key.viewName, pkDef, ErrWrongDefinition)
 	}
 
-	clustSchema := key.clustColsSchema()
-	if key.clustRow.QName() != clustSchema {
-		return validateErrorf(ECode_InvalidSchemaName, "wrong view clustering columns schema «%v», for view «%v» expected «%v»: %w", key.clustRow.QName(), key.viewName, clustSchema, ErrWrongSchema)
+	ccDef := key.ccDef()
+	if key.clustRow.QName() != ccDef {
+		return validateErrorf(ECode_InvalidDefName, "wrong view clustering columns definition «%v», for view «%v» expected «%v»: %w", key.clustRow.QName(), key.viewName, ccDef, ErrWrongDefinition)
 	}
 
-	key.partRow.schema.Fields(
+	key.partRow.def.Fields(
 		func(f appdef.Field) {
 			if !key.partRow.hasValue(f.Name()) {
 				err = errors.Join(err,
-					validateErrorf(ECode_EmptyData, "view «%v» partition key «%v» field «%s» is empty: %w", key.viewName, partSchema, f.Name(), ErrFieldIsEmpty))
+					validateErrorf(ECode_EmptyData, "view «%v» partition key «%v» field «%s» is empty: %w", key.viewName, pkDef, f.Name(), ErrFieldIsEmpty))
 			}
 		})
 
 	if !partialClust {
-		key.clustRow.schema.Fields(
+		key.clustRow.def.Fields(
 			func(f appdef.Field) {
 				if !key.clustRow.hasValue(f.Name()) {
 					err = errors.Join(err,
-						validateErrorf(ECode_EmptyData, "view «%v» clustering columns «%v» field «%s» is empty: %w", key.viewName, clustSchema, f.Name(), ErrFieldIsEmpty))
+						validateErrorf(ECode_EmptyData, "view «%v» clustering columns «%v» field «%s» is empty: %w", key.viewName, ccDef, f.Name(), ErrFieldIsEmpty))
 				}
 			})
 	}
@@ -406,34 +412,36 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 
 // Validates specified view value
 func (v *validators) validViewValue(value *valueType) (err error) {
-	valSchema := value.valueSchema()
-	if value.QName() != valSchema {
-		return validateErrorf(ECode_InvalidSchemaName, "wrong view value schema «%v», for view «%v» expected «%v»: %w", value.QName(), value.viewName, valSchema, ErrWrongSchema)
+	valDef := value.valueDef()
+	if value.QName() != valDef {
+		return validateErrorf(ECode_InvalidDefName, "wrong view value definition «%v», for view «%v» expected «%v»: %w", value.QName(), value.viewName, valDef, ErrWrongDefinition)
 	}
 
-	validator := v.validator(valSchema)
+	validator := v.validator(valDef)
 	if validator == nil {
-		return validateErrorf(ECode_InvalidSchemaName, "view value «%v» schema not found: %w", valSchema, ErrNameNotFound)
+		return validateErrorf(ECode_InvalidDefName, "view value «%v» definition not found: %w", valDef, ErrNameNotFound)
 	}
 
 	return validator.validRow(&value.rowType)
 }
 
-// Validates specified record. If rawIDexpected then raw IDs is required
+// Validates specified record.
+//
+// If rawIDexpected then raw IDs is required
 func (v *validators) validRecord(rec *recordType, rawIDexpected bool) (err error) {
 	if rec.QName() == appdef.NullQName {
-		return validateErrorf(ECode_EmptySchemaName, "record «%s» has empty schema name: %w", rec.Container(), ErrNameMissed)
+		return validateErrorf(ECode_EmptyDefName, "record «%s» has empty defniition name: %w", rec.Container(), ErrNameMissed)
 	}
 
 	validator := v.validator(rec.QName())
 	if validator == nil {
-		return validateErrorf(ECode_InvalidSchemaName, "object refers to unknown schema «%v»: %w", rec.QName(), ErrNameNotFound)
+		return validateErrorf(ECode_InvalidDefName, "object refers to unknown definition «%v»: %w", rec.QName(), ErrNameNotFound)
 	}
 
-	switch validator.schema.Kind() {
+	switch validator.def.Kind() {
 	case appdef.DefKind_GDoc, appdef.DefKind_CDoc, appdef.DefKind_ODoc, appdef.DefKind_WDoc, appdef.DefKind_GRecord, appdef.DefKind_CRecord, appdef.DefKind_ORecord, appdef.DefKind_WRecord:
 		return validator.validRecord(rec, rawIDexpected)
 	}
 
-	return validateErrorf(ECode_InvalidDefKind, "record «%s» refers to invalid schema «%v» kind «%v»: %w", rec.Container(), rec.QName(), validator.schema.Kind(), ErrUnexpectedShemaKind)
+	return validateErrorf(ECode_InvalidDefKind, "record «%s» refers to invalid definition «%v» kind «%v»: %w", rec.Container(), rec.QName(), validator.def.Kind(), ErrUnexpectedDefKind)
 }

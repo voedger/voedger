@@ -13,34 +13,34 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func Test_BasicUsage(t *testing.T) {
+func TestDynoBufSchemesBasicUsage(t *testing.T) {
 	name := appdef.NewQName("test", "test")
 
 	schemes := New()
 
 	schemes.Prepare(
 		func() appdef.IAppDef {
-			bld := appdef.New()
-			schema := bld.Add(name, appdef.DefKind_CDoc)
-			schema.AddField("f1", appdef.DataKind_int32, true)
-			schema.AddField("f2", appdef.DataKind_QName, false)
-			return bld
+			app := appdef.New()
+			def := app.Add(name, appdef.DefKind_CDoc)
+			def.AddField("f1", appdef.DataKind_int32, true)
+			def.AddField("f2", appdef.DataKind_QName, false)
+			return app
 		}())
 
 	t.Run("let test basic methods", func(t *testing.T) {
 		require := require.New(t)
 
-		schema := schemes[name]
-		require.NotNil(schema, "DynoBufferSchema returns nil")
+		scheme := schemes[name]
+		require.NotNil(scheme, "DynoBufferSchema returns nil")
 
-		require.Len(schema.Fields, 2)
+		require.Len(scheme.Fields, 2)
 
-		require.Equal("f1", schema.Fields[0].Name)
-		require.Equal(dynobuffers.FieldTypeInt32, schema.Fields[0].Ft)
-		require.Equal("int32", FieldTypeToString(schema.Fields[0].Ft))
+		require.Equal("f1", scheme.Fields[0].Name)
+		require.Equal(dynobuffers.FieldTypeInt32, scheme.Fields[0].Ft)
+		require.Equal("int32", FieldTypeToString(scheme.Fields[0].Ft))
 
-		require.Equal("f2", schema.Fields[1].Name)
-		require.Equal(dynobuffers.FieldTypeByte, schema.Fields[1].Ft)
-		require.True(schema.Fields[1].IsArray)
+		require.Equal("f2", scheme.Fields[1].Name)
+		require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[1].Ft)
+		require.True(scheme.Fields[1].IsArray)
 	})
 }

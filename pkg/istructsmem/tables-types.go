@@ -9,15 +9,15 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// recordType implements record that stored in database
-//   - interfaces:
-//     — istructs.IRecord
-//     — istructs.IORecord
-//     — istructs.IEditableRecord
-//     — istructs.ICRecord
-//     — istructs.IGRecord
-//     — istructs.IWDocHeadRecord
-//     — istructs.ICUDRow
+// Implements interfaces:
+//
+//	— istructs.IRecord
+//	— istructs.IORecord
+//	— istructs.IEditableRecord
+//	— istructs.ICRecord
+//	— istructs.IGRecord
+//	— istructs.IWDocHeadRecord
+//	— istructs.ICUDRow
 type recordType struct {
 	rowType
 	isNew bool

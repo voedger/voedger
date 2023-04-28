@@ -1,4 +1,4 @@
-[![codecov](https://codecov.io/gh/voedger/voedger/core-istructsmem/internal/descr/branch/main/graph/badge.svg?token=1O1pA6zdYs)](https://codecov.io/gh/voedger/voedger/core-istructsmem/internal/descr)
+[![codecov](https://codecov.io/gh/voedger/voedger/branch/main/graph/badge.svg?token=1O1pA6zdYs)](https://codecov.io/gh/voedger/voedger/istructsmem/internal/descr)
 
 # Packages and Definitions Description
 

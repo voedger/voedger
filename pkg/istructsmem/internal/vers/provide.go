@@ -5,7 +5,7 @@
 
 package vers
 
-// Creates new versions storage for application structures.
+// Creates and returns new versions storage
 func New() *Versions {
 	return newVersions()
 }

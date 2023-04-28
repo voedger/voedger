@@ -51,15 +51,7 @@ const (
 	SubjectKind_FakeLast
 )
 
-// IFieldDescr describes one field
-type IFieldDescr interface {
-	Name() string
-	DataKind() appdef.DataKind
-	Required() bool
-	Verifiable() bool
-}
-
-// panics if name does not exist in schema
+// panics if name does not exist in definition
 // If field is nil zero value is returned
 type IRowReader interface {
 	AsInt32(name string) int32
@@ -95,14 +87,6 @@ type IRowWriter interface {
 	PutNumber(name string, value float64)
 	// Tries to make conversion from value to a name type
 	PutChars(name string, value string)
-}
-
-// IContainerDescr describes one container
-type IContainerDescr interface {
-	Name() string
-	Schema() appdef.QName
-	MinOccurs() appdef.Occurs
-	MaxOccurs() appdef.Occurs
 }
 
 // App Workspace amount type. Need to wire

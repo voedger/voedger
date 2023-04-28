@@ -16,7 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 )
 
-func Test_BasicUsage(t *testing.T) {
+func TestQNamesBasicUsage(t *testing.T) {
 	sp := istorageimpl.Provide(istorage.ProvideMem())
 	storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
@@ -25,10 +25,10 @@ func Test_BasicUsage(t *testing.T) {
 		panic(err)
 	}
 
-	testName := appdef.NewQName("test", "schema")
-	appDefBuilder := appdef.New()
-	appDefBuilder.Add(testName, appdef.DefKind_CDoc)
-	appDef, err := appDefBuilder.Build()
+	testName := appdef.NewQName("test", "doc")
+	app := appdef.New()
+	app.Add(testName, appdef.DefKind_CDoc)
+	appDef, err := app.Build()
 	if err != nil {
 		panic(err)
 	}

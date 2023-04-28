@@ -16,7 +16,7 @@ import (
 )
 
 // istructs.IViewRecords.Put
-func (vr *appViewRecordsType) storeViewRecord(workspace istructs.WSID, key istructs.IKeyBuilder, value istructs.IValueBuilder) (partKey, clustCols, data []byte, err error) {
+func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.IKeyBuilder, value istructs.IValueBuilder) (partKey, clustCols, data []byte, err error) {
 
 	k := key.(*keyType)
 	if err = k.build(); err != nil {
@@ -35,7 +35,7 @@ func (vr *appViewRecordsType) storeViewRecord(workspace istructs.WSID, key istru
 	}
 
 	if k.viewName != v.viewName {
-		return nil, nil, nil, fmt.Errorf("key and value are from different views (key view is «%v», value view is «%v»): %w", k.viewName, v.viewName, ErrWrongSchema)
+		return nil, nil, nil, fmt.Errorf("key and value are from different views (key view is «%v», value view is «%v»): %w", k.viewName, v.viewName, ErrWrongDefinition)
 	}
 
 	partKey, clustCols = k.storeToBytes()
@@ -52,7 +52,7 @@ func (vr *appViewRecordsType) storeViewRecord(workspace istructs.WSID, key istru
 func (key *keyType) storeViewPartKey() []byte {
 	buf := new(bytes.Buffer)
 
-	key.partRow.schema.Fields(
+	key.partRow.def.Fields(
 		func(f appdef.Field) {
 			utils.SafeWriteBuf(buf, key.partRow.dyB.Get(f.Name()))
 		})
@@ -64,7 +64,7 @@ func (key *keyType) storeViewPartKey() []byte {
 func (key *keyType) storeViewClustKey() []byte {
 	buf := new(bytes.Buffer)
 
-	key.clustRow.schema.Fields(
+	key.clustRow.def.Fields(
 		func(f appdef.Field) {
 			utils.SafeWriteBuf(buf, key.clustRow.dyB.Get(f.Name()))
 		})
@@ -73,14 +73,14 @@ func (key *keyType) storeViewClustKey() []byte {
 }
 
 // load functions are grouped by codec version. Codec version number included as part (suffix) in function name
-
+//
 // Loads partition key from buffer
 func loadViewPartKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 	const errWrapPrefix = "unable to load partitition key"
 
-	schema := key.partRow.schema
+	def := key.partRow.def
 
-	schema.Fields(
+	def.Fields(
 		func(f appdef.Field) {
 			if err != nil {
 				return // first error is enough
@@ -102,9 +102,9 @@ func loadViewPartKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 	const errWrapPrefix = "unable to load clustering key"
 
-	schema := key.clustRow.schema
+	def := key.clustRow.def
 
-	schema.Fields(
+	def.Fields(
 		func(f appdef.Field) {
 			if err != nil {
 				return // first error is enough

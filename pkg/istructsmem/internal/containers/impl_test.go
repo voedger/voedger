@@ -37,10 +37,10 @@ func TestContainers(t *testing.T) {
 	containers := New()
 	if err := containers.Prepare(storage, versions,
 		func() appdef.IAppDef {
-			schemaName := appdef.NewQName("test", "schema")
+			defName := appdef.NewQName("test", "el")
 			appDef := appdef.New()
-			appDef.Add(schemaName, appdef.DefKind_Element).
-				AddContainer(containerName, schemaName, 0, 1)
+			appDef.Add(defName, appdef.DefKind_Element).
+				AddContainer(containerName, defName, 0, 1)
 			result, err := appDef.Build()
 			require.NoError(err)
 			return result
@@ -87,10 +87,10 @@ func TestContainers(t *testing.T) {
 			containers2 := New()
 			if err := containers2.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					schemaName := appdef.NewQName("test", "schema")
+					defName := appdef.NewQName("test", "el")
 					appDef := appdef.New()
-					appDef.Add(schemaName, appdef.DefKind_Element).
-						AddContainer(containerName, schemaName, 0, 1)
+					appDef.Add(defName, appdef.DefKind_Element).
+						AddContainer(containerName, defName, 0, 1)
 					result, err := appDef.Build()
 					require.NoError(err)
 					return result
@@ -200,9 +200,9 @@ func TestContainersPrepareErrors(t *testing.T) {
 			func() appdef.IAppDef {
 				appDef := appdef.New()
 				qName := appdef.NewQName("test", "test")
-				schema := appDef.Add(qName, appdef.DefKind_Element)
+				def := appDef.Add(qName, appdef.DefKind_Element)
 				for i := 0; i <= MaxAvailableContainerID; i++ {
-					schema.AddContainer(fmt.Sprintf("cont_%d", i), qName, 0, 1)
+					def.AddContainer(fmt.Sprintf("cont_%d", i), qName, 0, 1)
 				}
 				result, err := appDef.Build()
 				require.NoError(err)
@@ -228,10 +228,10 @@ func TestContainersPrepareErrors(t *testing.T) {
 			names := New()
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					schemaName := appdef.NewQName("test", "schema")
+					defName := appdef.NewQName("test", "el")
 					appDef := appdef.New()
-					appDef.Add(schemaName, appdef.DefKind_Element).
-						AddContainer(containerName, schemaName, 0, 1)
+					appDef.Add(defName, appdef.DefKind_Element).
+						AddContainer(containerName, defName, 0, 1)
 					result, err := appDef.Build()
 					require.NoError(err)
 					return result
@@ -252,10 +252,10 @@ func TestContainersPrepareErrors(t *testing.T) {
 			names := New()
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					schemaName := appdef.NewQName("test", "schema")
+					defName := appdef.NewQName("test", "el")
 					appDef := appdef.New()
-					appDef.Add(schemaName, appdef.DefKind_Element).
-						AddContainer(containerName, schemaName, 0, 1)
+					appDef.Add(defName, appdef.DefKind_Element).
+						AddContainer(containerName, defName, 0, 1)
 					result, err := appDef.Build()
 					require.NoError(err)
 					return result

@@ -98,7 +98,7 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 		argUnl = cmd.UnloggedParamsDef()
 	} else {
 		// #!16208: Must be possible to use DefKind_ODoc as Event.QName
-		if schema := ev.appCfg.AppDef.DefByName(ev.name); (schema == nil) || (schema.Kind() != appdef.DefKind_ODoc) {
+		if d := ev.appCfg.AppDef.DefByName(ev.name); (d == nil) || (d.Kind() != appdef.DefKind_ODoc) {
 			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
 		}
 		arg = ev.name
@@ -110,11 +110,11 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 // build build all event arguments and CUDs
 func (ev *eventType) build() (err error) {
 	if ev.name == appdef.NullQName {
-		return validateErrorf(ECode_EmptySchemaName, "empty event command name: %w", ErrNameMissed)
+		return validateErrorf(ECode_EmptyDefName, "empty event command name: %w", ErrNameMissed)
 	}
 
 	if _, err = ev.appCfg.qNames.GetID(ev.name); err != nil {
-		return validateErrorf(ECode_InvalidSchemaName, "unknown event command name «%v»: %w", ev.name, err)
+		return validateErrorf(ECode_InvalidDefName, "unknown event command name «%v»: %w", ev.name, err)
 	}
 
 	err = errors.Join(
@@ -391,7 +391,7 @@ func newCUD(appCfg *AppConfigType) cudType {
 func (cud *cudType) applyRecs(exists existsRecordType, load loadRecordFuncType, store storeRecordFuncType) (err error) {
 
 	for _, rec := range cud.creates {
-		if rec.schema.Singleton() {
+		if rec.def.Singleton() {
 			id, err := cud.appCfg.singletons.GetID(rec.QName())
 			if err != nil {
 				return err
@@ -495,12 +495,12 @@ func (cud *cudType) regenerateIDsPlan(generator istructs.IDGenerator) (newIDs ne
 
 		var storeID istructs.RecordID
 
-		if rec.schema.Singleton() {
+		if rec.def.Singleton() {
 			if storeID, err = cud.appCfg.singletons.GetID(rec.QName()); err != nil {
 				return nil, err
 			}
 		} else {
-			if storeID, err = generator(id, rec.schema); err != nil {
+			if storeID, err = generator(id, rec.def); err != nil {
 				return nil, err
 			}
 		}
@@ -750,9 +750,9 @@ func (el *elementType) forEach(cb func(e *elementType) error) (err error) {
 	return err
 }
 
-// isDocument returns is document schema assigned to element record
+// Returns is document definition assigned to element record
 func (el *elementType) isDocument() bool {
-	kind := el.schema.Kind()
+	kind := el.def.Kind()
 	return (kind == appdef.DefKind_GDoc) ||
 		(kind == appdef.DefKind_CDoc) ||
 		(kind == appdef.DefKind_ODoc) ||
@@ -776,7 +776,7 @@ func (el *elementType) regenerateIDs(generator istructs.IDGenerator) (err error)
 	err = el.forEach(
 		func(e *elementType) error {
 			if id := e.ID(); id.IsRaw() {
-				storeID, err := generator(id, e.schema)
+				storeID, err := generator(id, e.def)
 				if err != nil {
 					return err
 				}
@@ -817,7 +817,7 @@ func (el *elementType) ElementBuilder(containerName string) istructs.IElementBui
 	c := newElement(el)
 	el.childs = append(el.childs, &c)
 	if el.QName() != appdef.NullQName {
-		if cont := el.schema.Container(containerName); cont != nil {
+		if cont := el.def.Container(containerName); cont != nil {
 			c.setQName(cont.Def())
 			if c.QName() != appdef.NullQName {
 				if el.ID() != istructs.NullRecordID {

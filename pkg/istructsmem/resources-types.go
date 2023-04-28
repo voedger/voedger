@@ -95,8 +95,8 @@ type (
 )
 
 // Creates and returns new query function
-func NewQueryFunction(name, paramsSchema, resultSchema appdef.QName, exec ExecQueryClosure) istructs.IQueryFunction {
-	return NewQueryFunctionCustomResult(name, paramsSchema, func(pa istructs.PrepareArgs) appdef.QName { return resultSchema }, exec)
+func NewQueryFunction(name, pars, result appdef.QName, exec ExecQueryClosure) istructs.IQueryFunction {
+	return NewQueryFunctionCustomResult(name, pars, func(istructs.PrepareArgs) appdef.QName { return result }, exec)
 }
 
 func NewQueryFunctionCustomResult(name, pars appdef.QName, resultDef func(istructs.PrepareArgs) appdef.QName, exec ExecQueryClosure) istructs.IQueryFunction {

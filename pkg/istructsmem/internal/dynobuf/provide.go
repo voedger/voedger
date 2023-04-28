@@ -5,7 +5,7 @@
 
 package dynobuf
 
-// Returns new dynobuffer schemes
+// Creates and returns new dynobuffer schemes
 func New() DynoBufSchemes {
 	return newSchemes()
 }

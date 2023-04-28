@@ -117,27 +117,27 @@ func TestEventBuilder_Core(t *testing.T) {
 		// 1. save to PLog
 		var nextID = istructs.FirstBaseRecordID
 		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr,
-			func(rawID istructs.RecordID, schema appdef.IDef) (storageID istructs.RecordID, err error) {
+			func(rawID istructs.RecordID, def appdef.IDef) (storageID istructs.RecordID, err error) {
 				require.True(rawID.IsRaw())
 				storageID = nextID
 				switch rawID {
 				case test.tempPhotoID:
-					require.Equal(test.tablePhotos, schema.QName())
+					require.Equal(test.tablePhotos, def.QName())
 					photoID = storageID
 				case test.tempRemarkID:
-					require.Equal(test.tablePhotoRems, schema.QName())
+					require.Equal(test.tablePhotoRems, def.QName())
 					remarkID = storageID
 				case test.tempSaleID:
-					require.Equal(test.saleCmdDocName, schema.QName())
+					require.Equal(test.saleCmdDocName, def.QName())
 					saleID = storageID
 				case test.tempBasketID:
-					require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), schema.QName())
+					require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), def.QName())
 					basketID = storageID
 				case test.tempGoodsID[0]:
-					require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), schema.QName())
+					require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), def.QName())
 					goodsID[0] = storageID
 				case test.tempGoodsID[1]:
-					require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), schema.QName())
+					require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), def.QName())
 					goodsID[1] = storageID
 				}
 				nextID++
@@ -714,9 +714,9 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			require.NotNil(rawEvent)
 
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err,
-				func(rawID istructs.RecordID, schema appdef.IDef) (storageID istructs.RecordID, err error) {
+				func(rawID istructs.RecordID, def appdef.IDef) (storageID istructs.RecordID, err error) {
 					require.EqualValues(1, rawID)
-					require.EqualValues(docName, schema.QName())
+					require.EqualValues(docName, def.QName())
 					return docID, nil
 				})
 			require.NotNil(pLogEvent)
@@ -771,9 +771,9 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			require.NotNil(rawEvent)
 
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err,
-				func(rawID istructs.RecordID, schema appdef.IDef) (storageID istructs.RecordID, err error) {
+				func(rawID istructs.RecordID, def appdef.IDef) (storageID istructs.RecordID, err error) {
 					require.EqualValues(1, rawID)
-					require.EqualValues(recName, schema.QName())
+					require.EqualValues(recName, def.QName())
 					return recID, nil
 				})
 			require.NotNil(pLogEvent)
@@ -832,17 +832,17 @@ func Test_SingletonCDocEvent(t *testing.T) {
 	docName := appdef.NewQName("test", "cdoc")
 	docID := istructs.NullRecordID
 
-	bld := appdef.New()
+	appDef := appdef.New()
 
-	t.Run("must ok to construct singleton CDOC schema", func(t *testing.T) {
-		schema := bld.Add(docName, appdef.DefKind_CDoc)
-		schema.SetSingleton()
-		schema.AddField("option", appdef.DataKind_int64, true)
+	t.Run("must ok to construct singleton CDOC", func(t *testing.T) {
+		def := appDef.Add(docName, appdef.DefKind_CDoc)
+		def.SetSingleton()
+		def.AddField("option", appdef.DataKind_int64, true)
 	})
 
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
+		cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 		return cfgs
 	}()
 
@@ -1182,7 +1182,7 @@ func TestEventBuild_Error(t *testing.T) {
 			cud.PutString(test.remarkIdent, test.remarkValue)
 
 			_, buildErr = bld.BuildRawEvent()
-			require.ErrorIs(buildErr, ErrSchemaChanged)
+			require.ErrorIs(buildErr, ErrDefChanged)
 		})
 
 		t.Run("update unknown field", func(t *testing.T) {
@@ -1280,9 +1280,9 @@ func TestEventBuild_Error(t *testing.T) {
 			require.NotNil(rawEvent)
 
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr,
-				func(tempId istructs.RecordID, schema appdef.IDef) (storageID istructs.RecordID, err error) {
+				func(tempId istructs.RecordID, def appdef.IDef) (storageID istructs.RecordID, err error) {
 					if tempId == test.tempBasketID {
-						require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), schema.QName())
+						require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), def.QName())
 						return istructs.NullRecordID, fmt.Errorf("test error: %w", ErrWrongRecordID)
 					}
 					return 100500, nil
@@ -1312,9 +1312,9 @@ func TestEventBuild_Error(t *testing.T) {
 			require.NotNil(rawEvent)
 
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr,
-				func(tempId istructs.RecordID, schema appdef.IDef) (storageID istructs.RecordID, err error) {
+				func(tempId istructs.RecordID, def appdef.IDef) (storageID istructs.RecordID, err error) {
 					if tempId == 7 {
-						require.Equal(test.tablePhotoRems, schema.QName())
+						require.Equal(test.tablePhotoRems, def.QName())
 						return istructs.NullRecordID, fmt.Errorf("test error: %w", ErrWrongRecordID)
 					}
 					return 100500, nil

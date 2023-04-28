@@ -75,9 +75,9 @@ func (names *QNames) collectAllQNames(appDef appdef.IAppDef, r istructs.IResourc
 
 	if appDef != nil {
 		appDef.Defs(
-			func(schema appdef.IDef) {
+			func(d appdef.IDef) {
 				err = errors.Join(err,
-					names.collectAppQName(schema.QName()))
+					names.collectAppQName(d.QName()))
 			})
 	}
 
