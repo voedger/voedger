@@ -49,10 +49,10 @@ func (o *EnrichmentOperator) DoAsync(ctx context.Context, work pipeline.IWorkpie
 				}
 				record := sv.AsRecord("")
 
-				schemaFields := o.fieldsDefs.get(record.QName())
-				value := coreutils.ReadByKind(field.RefField(), schemaFields[field.RefField()], record)
+				recFields := o.fieldsDefs.get(record.QName())
+				value := coreutils.ReadByKind(field.RefField(), recFields[field.RefField()], record)
 				if element.Path().IsRoot() {
-					work.(IWorkpiece).PutEnrichedRootSchemaField(field.Key(), schemaFields[field.RefField()])
+					work.(IWorkpiece).PutEnrichedRootField(field.Key(), recFields[field.RefField()])
 				}
 				rows[i].Set(field.Key(), value)
 			}

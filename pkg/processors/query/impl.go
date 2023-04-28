@@ -31,7 +31,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func implRowsProcessorFactory(ctx context.Context, cache appdef.IAppDef, state istructs.IState, params IQueryParams,
+func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state istructs.IState, params IQueryParams,
 	resultMeta appdef.IDef, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline {
 	operators := make([]*pipeline.WiredOperator, 0)
 	if resultMeta.QName() == istructs.QNameJSON {
@@ -40,13 +40,13 @@ func implRowsProcessorFactory(ctx context.Context, cache appdef.IAppDef, state i
 		}))
 	} else {
 		fieldsDefs := &fieldsDefs{
-			appDef: cache,
+			appDef: appDef,
 			fields: make(map[appdef.QName]coreutils.FieldsDef),
 		}
-		rootSchema := coreutils.NewFieldsDef(resultMeta)
+		rootFields := coreutils.NewFieldsDef(resultMeta)
 		operators = append(operators, pipeline.WireAsyncOperator("Result fields", &ResultFieldsOperator{
 			elements:   params.Elements(),
-			rootFields: rootSchema,
+			rootFields: rootFields,
 			fieldsDefs: fieldsDefs,
 			metrics:    metrics,
 		}))
@@ -59,7 +59,7 @@ func implRowsProcessorFactory(ctx context.Context, cache appdef.IAppDef, state i
 		if len(params.Filters()) != 0 {
 			operators = append(operators, pipeline.WireAsyncOperator("Filter", &FilterOperator{
 				filters:    params.Filters(),
-				rootFields: rootSchema,
+				rootFields: rootFields,
 				metrics:    metrics,
 			}))
 		}
@@ -188,11 +188,11 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			qw.execQueryArgs.State = qw.state
 			return
 		}),
-		operator("validate: get result schema", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("validate: get result definition", func(ctx context.Context, qw *queryWork) (err error) {
 			def := qw.queryFunction.ResultDef(qw.execQueryArgs.PrepareArgs)
 			qw.resultDef = qw.appStructs.AppDef().Def(def)
 			err = errIfFalse(qw.resultDef.Kind() != appdef.DefKind_null, func() error {
-				return fmt.Errorf("result schema %s: %w", def, ErrNotFound)
+				return fmt.Errorf("result definition %s: %w", def, ErrNotFound)
 			})
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
@@ -244,7 +244,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			err = qw.queryFunction.Exec(ctx, qw.execQueryArgs, func(object istructs.IObject) error {
 				pathToIdx := make(map[string]int)
 				if qw.resultDef.QName() == istructs.QNameJSON {
-					pathToIdx[Field_JSONSchemaBody] = 0
+					pathToIdx[Field_JSONDef_Body] = 0
 				} else {
 					for i, element := range qw.queryParams.Elements() {
 						pathToIdx[element.Path().Name()] = i
@@ -375,8 +375,8 @@ type workpiece struct {
 
 func (w workpiece) Object() istructs.IObject                { return w.object }
 func (w workpiece) OutputRow() IOutputRow                   { return w.outputRow }
-func (w workpiece) EnrichedRootSchema() coreutils.FieldsDef { return w.enrichedRootFields }
-func (w workpiece) PutEnrichedRootSchemaField(name string, kind appdef.DataKind) {
+func (w workpiece) EnrichedRootFields() coreutils.FieldsDef { return w.enrichedRootFields }
+func (w workpiece) PutEnrichedRootField(name string, kind appdef.DataKind) {
 	w.enrichedRootFields[name] = kind
 }
 func (w workpiece) Release() {
@@ -394,21 +394,21 @@ func (r *outputRow) Values() []interface{}               { return r.values }
 func (r *outputRow) Value(alias string) interface{}      { return r.values[r.keyToIdx[alias]] }
 func (r *outputRow) MarshalJSON() ([]byte, error)        { return json.Marshal(r.values) }
 
-func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, argsSchema appdef.IDef, appCfg *istructsmem.AppConfigType,
+func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, argsDef appdef.IDef, appCfg *istructsmem.AppConfigType,
 	qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
 	args, _, err := data.AsObject("args")
 	if err != nil {
 		return execQueryArgs, err
 	}
 	requestArgs := istructs.NewNullObject()
-	switch argsSchema.QName() {
+	switch argsDef.QName() {
 	case appdef.NullQName:
 		//Do nothing
 	case istructs.QNameJSON:
 		requestArgs, err = newJsonObject(data)
 	default:
-		requestArgsBuilder := istructsmem.NewIObjectBuilder(appCfg, argsSchema.QName())
-		if err := istructsmem.FillElementFromJSON(args, argsSchema, requestArgsBuilder); err != nil {
+		requestArgsBuilder := istructsmem.NewIObjectBuilder(appCfg, argsDef.QName())
+		if err := istructsmem.FillElementFromJSON(args, argsDef, requestArgsBuilder); err != nil {
 			return execQueryArgs, err
 		}
 		requestArgs, err = requestArgsBuilder.Build()
@@ -521,7 +521,7 @@ func newJsonObject(data coreutils.MapObject) (object istructs.IObject, err error
 }
 
 func (o *jsonObject) AsString(name string) string {
-	if name == Field_JSONSchemaBody {
+	if name == Field_JSONDef_Body {
 		return string(o.body)
 	}
 	return o.NullObject.AsString(name)

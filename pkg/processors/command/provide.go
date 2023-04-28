@@ -41,9 +41,9 @@ type appPartition struct {
 	nextPLogOffset istructs.Offset
 }
 
-func ProvideJSONFuncParamsSchema(appDef appdef.IAppDefBuilder) {
+func ProvideJSONFuncParamsDef(appDef appdef.IAppDefBuilder) {
 	appDef.Add(istructs.QNameJSON, appdef.DefKind_Object).
-		AddField(Field_JSONSchemaBody, appdef.DataKind_string, true)
+		AddField(Field_JSONDef_Body, appdef.DataKind_string, true)
 }
 
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение

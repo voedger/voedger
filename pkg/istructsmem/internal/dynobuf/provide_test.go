@@ -31,7 +31,7 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 		require := require.New(t)
 
 		scheme := schemes[name]
-		require.NotNil(scheme, "DynoBufferSchema returns nil")
+		require.NotNil(scheme, "DynoBufferScheme returns nil")
 
 		require.Len(scheme.Fields, 2)
 

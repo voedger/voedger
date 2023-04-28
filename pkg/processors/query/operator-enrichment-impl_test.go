@@ -22,7 +22,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 	t.Run("Should set reference fields", func(t *testing.T) {
 		require := require.New(t)
 
-		commonSchema := func(n appdef.QName) *amock.Def {
+		commonDef := func(n appdef.QName) *amock.Def {
 			return amock.NewDef(n, appdef.DefKind_Object,
 				amock.NewField("id_lower_case_name", appdef.DataKind_RecordID, false),
 			)
@@ -31,13 +31,13 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 		commonFields := []IRefField{refField{field: "id_lower_case_name", ref: "name", key: "id_lower_case_name/name"}}
 
 		appDef := amock.NewAppDef(
-			commonSchema(appdef.NewQName("", "root")),
-			commonSchema(appdef.NewQName("f", "first-children-1")),
-			commonSchema(appdef.NewQName("f", "deep-children-1")),
-			commonSchema(appdef.NewQName("f", "very-deep-children-1")),
-			commonSchema(appdef.NewQName("s", "first-children-2")),
-			commonSchema(appdef.NewQName("s", "deep-children-1")),
-			commonSchema(appdef.NewQName("s", "very-deep-children-1")),
+			commonDef(appdef.NewQName("", "root")),
+			commonDef(appdef.NewQName("f", "first-children-1")),
+			commonDef(appdef.NewQName("f", "deep-children-1")),
+			commonDef(appdef.NewQName("f", "very-deep-children-1")),
+			commonDef(appdef.NewQName("s", "first-children-2")),
+			commonDef(appdef.NewQName("s", "deep-children-1")),
+			commonDef(appdef.NewQName("s", "very-deep-children-1")),
 
 			amock.NewDef(qNameXLowerCase, appdef.DefKind_Object,
 				amock.NewField("name", appdef.DataKind_string, false),

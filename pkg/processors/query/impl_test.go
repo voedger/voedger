@@ -57,7 +57,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Sweet")).Once()
-	departmentSchema := amock.NewDef(qNamePosDepartment, appdef.DefKind_Object,
+	departmentDef := amock.NewDef(qNamePosDepartment, appdef.DefKind_Object,
 		amock.NewField("name", appdef.DataKind_string, false),
 	)
 	resultMeta := amock.NewDef(appdef.NewQName("pos", "DepartmentResult"), appdef.DefKind_Object,
@@ -65,7 +65,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		amock.NewField("name", appdef.DataKind_string, false),
 	)
 	appDef := amock.NewAppDef(
-		departmentSchema,
+		departmentDef,
 		resultMeta,
 	)
 	params := queryParams{
@@ -142,7 +142,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 	storageProvider := istorageimpl.Provide(asf)
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeFunc)
 
-	qNameFindArticlesByModificationTimeStampRangeParams := appdef.NewQName("bo", "FindArticlesByModificationTimeStampRangeParamsSchema")
+	qNameFindArticlesByModificationTimeStampRangeParams := appdef.NewQName("bo", "FindArticlesByModificationTimeStampRangeParamsDef")
 	qNameDepartment := appdef.NewQName("bo", "Department")
 	qNameArticle := appdef.NewQName("bo", "Article")
 
@@ -231,7 +231,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 	rawEvent, err := reb.BuildRawEvent()
 	require.NoError(err)
 	nextRecordID := istructs.FirstBaseRecordID
-	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, func(custom istructs.RecordID, schema appdef.IDef) (storage istructs.RecordID, err error) {
+	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, func(istructs.RecordID, appdef.IDef) (storage istructs.RecordID, err error) {
 		storage = nextRecordID
 		nextRecordID++
 		return
@@ -332,7 +332,7 @@ func TestRawMode(t *testing.T) {
 
 	require.NoError(processor.SendAsync(workpiece{
 		object: &coreutils.TestObject{
-			Data: map[string]interface{}{Field_JSONSchemaBody: `[accepted]`},
+			Data: map[string]interface{}{Field_JSONDef_Body: `[accepted]`},
 		},
 		outputRow: &outputRow{
 			keyToIdx: map[string]int{rootDocument: 0},
@@ -1141,10 +1141,10 @@ type testWorkpiece struct {
 
 func (w testWorkpiece) Object() istructs.IObject { return w.object }
 func (w testWorkpiece) OutputRow() IOutputRow    { return w.outputRow }
-func (w testWorkpiece) EnrichedRootSchema() coreutils.FieldsDef {
+func (w testWorkpiece) EnrichedRootFields() coreutils.FieldsDef {
 	return map[string]appdef.DataKind{}
 }
-func (w testWorkpiece) PutEnrichedRootSchemaField(string, appdef.DataKind) {
+func (w testWorkpiece) PutEnrichedRootField(string, appdef.DataKind) {
 	panic("implement me")
 }
 func (w testWorkpiece) Release() {

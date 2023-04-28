@@ -26,18 +26,18 @@ func (o FilterOperator) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (
 		o.metrics.Increase(execFilterSeconds, time.Since(begin).Seconds())
 	}()
 	outputRow := work.(IWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0]
-	mergedSchema := make(map[string]appdef.DataKind)
-	for k, v := range o.rootFields {
-		mergedSchema[k] = v
+	mergedFields := make(map[string]appdef.DataKind)
+	for n, k := range o.rootFields {
+		mergedFields[n] = k
 	}
-	for k, v := range work.(IWorkpiece).EnrichedRootSchema() {
-		mergedSchema[k] = v
+	for n, k := range work.(IWorkpiece).EnrichedRootFields() {
+		mergedFields[n] = k
 	}
 	for _, filter := range o.filters {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		match, err := filter.IsMatch(mergedSchema, outputRow)
+		match, err := filter.IsMatch(mergedFields, outputRow)
 		if err != nil {
 			return nil, err
 		}

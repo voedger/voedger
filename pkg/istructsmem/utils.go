@@ -86,7 +86,7 @@ func IBucketsFromIAppStructs(as istructs.IAppStructs) irates.IBuckets {
 	return as.(interface{ Buckets() irates.IBuckets }).Buckets()
 }
 
-func FillElementFromJSON(data map[string]interface{}, s appdef.IDef, b istructs.IElementBuilder) error {
+func FillElementFromJSON(data map[string]interface{}, def appdef.IDef, b istructs.IElementBuilder) error {
 	for fieldName, fieldValue := range data {
 		switch fv := fieldValue.(type) {
 		case float64:
@@ -98,7 +98,7 @@ func FillElementFromJSON(data map[string]interface{}, s appdef.IDef, b istructs.
 		case []interface{}:
 			// e.g. TestBasicUsage_Dashboard(), "order_item": [<2 elements>]
 			containerName := fieldName
-			containerDef := s.ContainerDef(containerName)
+			containerDef := def.ContainerDef(containerName)
 			if containerDef == nil {
 				return fmt.Errorf("container with name %s is not found", containerName)
 			}

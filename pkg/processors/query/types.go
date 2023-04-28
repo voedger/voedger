@@ -77,8 +77,8 @@ type IPath interface {
 type IWorkpiece interface {
 	Object() istructs.IObject
 	OutputRow() IOutputRow
-	PutEnrichedRootSchemaField(name string, kind appdef.DataKind)
-	EnrichedRootSchema() coreutils.FieldsDef
+	EnrichedRootFields() coreutils.FieldsDef
+	PutEnrichedRootField(name string, kind appdef.DataKind)
 }
 
 // IOutputRow is filled by the row processor operators

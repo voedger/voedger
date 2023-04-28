@@ -49,7 +49,7 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewSchema(appDef, incProjectionView, buildProjectionSchema)
 			ProvideViewSchema(appDef, decProjectionView, buildProjectionSchema)
-			ProvideOffsetsSchema(appDef)
+			ProvideOffsetsDef(appDef)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
@@ -136,7 +136,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewSchema(appDef, incProjectionView, buildProjectionSchema)
 			ProvideViewSchema(appDef, decProjectionView, buildProjectionSchema)
-			ProvideOffsetsSchema(appDef)
+			ProvideOffsetsDef(appDef)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
@@ -210,7 +210,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewSchema(appDef, incProjectionView, buildProjectionSchema)
 			ProvideViewSchema(appDef, decProjectionView, buildProjectionSchema)
-			ProvideOffsetsSchema(appDef)
+			ProvideOffsetsDef(appDef)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
@@ -277,7 +277,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewSchema(appDef, incProjectionView, buildProjectionSchema)
 			ProvideViewSchema(appDef, decProjectionView, buildProjectionSchema)
-			ProvideOffsetsSchema(appDef)
+			ProvideOffsetsDef(appDef)
 			appDef.Add(name, appdef.DefKind_Object)
 		},
 		func(cfg *istructsmem.AppConfigType) {
@@ -377,7 +377,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewSchema(appDef, incProjectionView, buildProjectionSchema)
 			ProvideViewSchema(appDef, decProjectionView, buildProjectionSchema)
-			ProvideOffsetsSchema(appDef)
+			ProvideOffsetsDef(appDef)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
@@ -532,7 +532,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewSchema(appDef, incProjectionView, buildProjectionSchema)
 			ProvideViewSchema(appDef, decProjectionView, buildProjectionSchema)
-			ProvideOffsetsSchema(appDef)
+			ProvideOffsetsDef(appDef)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
@@ -634,7 +634,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewSchema(appDef, incProjectionView, buildProjectionSchema)
 			ProvideViewSchema(appDef, decProjectionView, buildProjectionSchema)
-			ProvideOffsetsSchema(appDef)
+			ProvideOffsetsDef(appDef)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))

@@ -20,7 +20,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 	t.Run("Should set result fields", func(t *testing.T) {
 		require := require.New(t)
 
-		commonSchema := func(n appdef.QName) *amock.Def {
+		commonDef := func(n appdef.QName) *amock.Def {
 			return amock.NewDef(n, appdef.DefKind_Object,
 				amock.NewField("name", appdef.DataKind_string, false),
 			)
@@ -29,13 +29,13 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 		commonFields := []IResultField{resultField{field: "name"}}
 
 		appDef := amock.NewAppDef(
-			commonSchema(appdef.NewQName("", "root")),
-			commonSchema(appdef.NewQName("f", "first-children-1")),
-			commonSchema(appdef.NewQName("f", "deep-children-1")),
-			commonSchema(appdef.NewQName("f", "very-deep-children-1")),
-			commonSchema(appdef.NewQName("s", "first-children-2")),
-			commonSchema(appdef.NewQName("s", "deep-children-1")),
-			commonSchema(appdef.NewQName("s", "very-deep-children-1")),
+			commonDef(appdef.NewQName("", "root")),
+			commonDef(appdef.NewQName("f", "first-children-1")),
+			commonDef(appdef.NewQName("f", "deep-children-1")),
+			commonDef(appdef.NewQName("f", "very-deep-children-1")),
+			commonDef(appdef.NewQName("s", "first-children-2")),
+			commonDef(appdef.NewQName("s", "deep-children-1")),
+			commonDef(appdef.NewQName("s", "very-deep-children-1")),
 		)
 
 		elements := []IElement{
@@ -183,7 +183,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 
 		operator := &ResultFieldsOperator{
 			elements:   elements,
-			rootFields: coreutils.NewFieldsDef(commonSchema(appdef.NullQName)),
+			rootFields: coreutils.NewFieldsDef(commonDef(appdef.NullQName)),
 			fieldsDefs: newFieldsDefs(appDef),
 			metrics:    &testMetrics{},
 		}

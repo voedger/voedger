@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	Field_JSONSchemaBody = "Body"
-	intentsLimit         = 128
+	Field_JSONDef_Body = "Body"
+	intentsLimit       = 128
 )
 
 var (

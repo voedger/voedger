@@ -91,7 +91,7 @@ func (p queryParams) validate(rootFields coreutils.FieldsDef) (err error) {
 		}
 		for _, field := range e.ResultFields() {
 			if _, ok := rootFields[field.Field()]; !ok {
-				return fmt.Errorf("elements: root element fields has field '%s' that is unexpected in root schema, please remove it: %w", field.Field(), ErrUnexpected)
+				return fmt.Errorf("elements: root element fields has field '%s' that is unexpected in root fields, please remove it: %w", field.Field(), ErrUnexpected)
 			}
 			fields[field.Field()] = true
 		}

@@ -11,10 +11,7 @@ import (
 )
 
 var (
-	qnameProjectionOffsets               = appdef.NewQName(appdef.SysPackage, "projectionOffsets")
-	qnameProjectionOffsetsPartitionKey   = appdef.NewQName(appdef.SysPackage, "projectionOffsetsKey")
-	qnameProjectionOffsetsClusteringCols = appdef.NewQName(appdef.SysPackage, "projectionOffsetsSort")
-	qnameProjectionOffsetsValue          = appdef.NewQName(appdef.SysPackage, "projectionOffsetsValue")
+	qnameProjectionOffsets = appdef.NewQName(appdef.SysPackage, "projectionOffsets")
 )
 
 const (

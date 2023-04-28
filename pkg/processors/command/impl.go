@@ -83,8 +83,8 @@ func (c *cmdWorkpiece) GetPrincipalPayload() payloads.PrincipalPayload {
 	return c.principalPayload
 }
 
-func (ws *workspace) nextRecordID(schema appdef.IDef) (res istructs.RecordID) {
-	if schema.Kind() == appdef.DefKind_CDoc || schema.Kind() == appdef.DefKind_CRecord {
+func (ws *workspace) nextRecordID(def appdef.IDef) (res istructs.RecordID) {
+	if def.Kind() == appdef.DefKind_CDoc || def.Kind() == appdef.DefKind_CRecord {
 		res = istructs.NewCDocCRecordID(ws.NextCDocCRecordBaseID)
 		ws.NextCDocCRecordBaseID++
 	} else {
@@ -149,8 +149,8 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		ws := ap.getWorkspace(event.Workspace())
 		_ = event.CUDs(func(rec istructs.ICUDRow) error { // no errors to return
 			if rec.IsNew() {
-				schema := cmd.AppDef().Def(rec.QName())
-				if schema.Kind() == appdef.DefKind_CDoc || schema.Kind() == appdef.DefKind_CRecord {
+				def := cmd.AppDef().Def(rec.QName())
+				if def.Kind() == appdef.DefKind_CDoc || def.Kind() == appdef.DefKind_CRecord {
 					ws.NextCDocCRecordBaseID = rec.ID().BaseRecordID() + 1
 				} else {
 					ws.NextBaseID = rec.ID().BaseRecordID() + 1
@@ -180,8 +180,8 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, work interface{}) (err error)
 	cmd := work.(*cmdWorkpiece)
 	cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil,
 		// FIXME: implement the right id generator
-		func(tempId istructs.RecordID, schema appdef.IDef) (storageID istructs.RecordID, err error) {
-			storageID = cmd.workspace.nextRecordID(schema)
+		func(tempId istructs.RecordID, def appdef.IDef) (storageID istructs.RecordID, err error) {
+			storageID = cmd.workspace.nextRecordID(def)
 			cmd.generatedIDs[tempId] = storageID
 			return
 		},
@@ -278,7 +278,7 @@ func unmarshalRequestBody(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if cmd.cmdFunc.ParamsDef() == istructs.QNameJSON {
 		cmd.requestData["args"] = map[string]interface{}{
-			Field_JSONSchemaBody: string(cmd.cmdMes.Body()),
+			Field_JSONDef_Body: string(cmd.cmdMes.Body()),
 		}
 	} else if err = json.Unmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
 		err = fmt.Errorf("failed to unmarshal request body: %w", err)
@@ -333,8 +333,8 @@ func getArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"args" field must be an object`)
 		}
-		paramsSchema := cmd.appStructs.AppDef().Def(cmd.cmdFunc.ParamsDef())
-		if err = istructsmem.FillElementFromJSON(args, paramsSchema, aob); err != nil {
+		parsDef := cmd.appStructs.AppDef().Def(cmd.cmdFunc.ParamsDef())
+		if err = istructsmem.FillElementFromJSON(args, parsDef, aob); err != nil {
 			return err
 		}
 	}
@@ -355,8 +355,8 @@ func getUnloggedArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"unloggedArgs" field must be an object`)
 		}
-		unloggedParamsSchema := cmd.appStructs.AppDef().Def(cmd.cmdFunc.UnloggedParamsDef())
-		if err = istructsmem.FillElementFromJSON(unloggedArgs, unloggedParamsSchema, auob); err != nil {
+		unloggedParsDef := cmd.appStructs.AppDef().Def(cmd.cmdFunc.UnloggedParamsDef())
+		if err = istructsmem.FillElementFromJSON(unloggedArgs, unloggedParsDef, auob); err != nil {
 			return err
 		}
 	}
