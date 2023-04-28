@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * Copyright (c) 2023-present unTill Pro, Ltd.
  * @author: Nikolay Nikitin
+ * @author: Alisher Nurmanov
  */
 
 package main
