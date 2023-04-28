@@ -18,12 +18,12 @@ type Resource struct {
 }
 
 type Command struct {
-	ParamsSchema         *appdef.QName `json:",omitempty"`
-	UnloggedParamsSchema *appdef.QName `json:",omitempty"`
-	ResultSchema         *appdef.QName `json:",omitempty"`
+	Params   *appdef.QName `json:",omitempty"`
+	Unlogged *appdef.QName `json:",omitempty"`
+	Result   *appdef.QName `json:",omitempty"`
 }
 
 type Query struct {
-	ParamsSchema *appdef.QName `json:",omitempty"`
-	ResultSchema *appdef.QName `json:",omitempty"`
+	Params *appdef.QName `json:",omitempty"`
+	Result *appdef.QName `json:",omitempty"`
 }

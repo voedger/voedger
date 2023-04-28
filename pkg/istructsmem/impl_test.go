@@ -302,15 +302,15 @@ func TestBasicUsage_Resources(t *testing.T) {
 
 	t.Run("Basic usage NewCommandFunction", func(t *testing.T) {
 		funcQName := appdef.NewQName("testpkg", "cfunc")
-		paramsSchema := appdef.NewQName("testpkg", "cfuncParams")
+		paramsDef := appdef.NewQName("testpkg", "cfuncParams")
 		resultSchema := appdef.NullQName
 
-		f := NewCommandFunction(funcQName, paramsSchema, appdef.NullQName, resultSchema, NullCommandExec)
+		f := NewCommandFunction(funcQName, paramsDef, appdef.NullQName, resultSchema, NullCommandExec)
 		require.Equal(funcQName, f.QName())
 		require.Equal(istructs.ResourceKind_CommandFunction, f.Kind())
-		require.Equal(paramsSchema, f.ParamsSchema())
-		require.Equal(appdef.NullQName, f.UnloggedParamsSchema())
-		require.Equal(resultSchema, f.ResultSchema())
+		require.Equal(paramsDef, f.ParamsDef())
+		require.Equal(appdef.NullQName, f.UnloggedParamsDef())
+		require.Equal(resultSchema, f.ResultDef())
 
 		// Calls have no effect since we use Null* closures
 
@@ -330,14 +330,14 @@ func TestBasicUsage_Resources(t *testing.T) {
 		}
 
 		funcQName := appdef.NewQName("testpkg", "qfunc")
-		paramsSchema := appdef.NewQName("testpkg", "qfuncParams")
-		resultSchema := appdef.NullQName
+		parDefs := appdef.NewQName("testpkg", "qfuncParams")
+		resDefs := appdef.NullQName
 
-		f := NewQueryFunction(funcQName, paramsSchema, resultSchema, myExecQuery)
+		f := NewQueryFunction(funcQName, parDefs, resDefs, myExecQuery)
 		require.Equal(funcQName, f.QName())
 		require.Equal(istructs.ResourceKind_QueryFunction, f.Kind())
-		require.Equal(paramsSchema, f.ParamsSchema())
-		require.Equal(resultSchema, f.ResultSchema(istructs.PrepareArgs{})) // ???
+		require.Equal(parDefs, f.ParamsDef())
+		require.Equal(resDefs, f.ResultDef(istructs.PrepareArgs{})) // ???
 
 		// Depends on myExecQuery
 		f.Exec(context.Background(), istructs.ExecQueryArgs{}, func(istructs.IObject) error { return nil })

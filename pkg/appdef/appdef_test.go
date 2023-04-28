@@ -28,7 +28,7 @@ func Test_AppDef_Add(t *testing.T) {
 		})
 	})
 
-	t.Run("if schema with name already exists", func(t *testing.T) {
+	t.Run("if definition with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "test")
 		app.Add(testName, DefKind_CDoc)
 		require.Panics(func() {

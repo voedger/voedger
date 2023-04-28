@@ -13,26 +13,24 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// ResourcesType is type for application resources
-//   - interfaces:
-//     — istructs.IResources
-type ResourcesType struct {
+// Implements istructs.IResources
+type Resources struct {
 	cfg       *AppConfigType
 	resources map[appdef.QName]istructs.IResource
 }
 
-func newResources(cfg *AppConfigType) ResourcesType {
-	return ResourcesType{cfg, make(map[appdef.QName]istructs.IResource)}
+func newResources(cfg *AppConfigType) Resources {
+	return Resources{cfg, make(map[appdef.QName]istructs.IResource)}
 }
 
-// Add adds new resource to application resources
-func (res *ResourcesType) Add(r istructs.IResource) *ResourcesType {
+// Adds new resource to application resources
+func (res *Resources) Add(r istructs.IResource) *Resources {
 	res.resources[r.QName()] = r
 	return res
 }
 
-// QueryResource finds application resources by QName
-func (res *ResourcesType) QueryResource(resource appdef.QName) (r istructs.IResource) {
+// Finds application resource by QName
+func (res *Resources) QueryResource(resource appdef.QName) (r istructs.IResource) {
 	r, ok := res.resources[resource]
 	if !ok {
 		return nullResource
@@ -40,14 +38,14 @@ func (res *ResourcesType) QueryResource(resource appdef.QName) (r istructs.IReso
 	return r
 }
 
-// QueryFunctionArgsBuilder returns argument object builder for query function
-func (res *ResourcesType) QueryFunctionArgsBuilder(query istructs.IQueryFunction) istructs.IObjectBuilder {
-	r := newObject(res.cfg, query.ParamsSchema())
+// Returns argument object builder for query function
+func (res *Resources) QueryFunctionArgsBuilder(query istructs.IQueryFunction) istructs.IObjectBuilder {
+	r := newObject(res.cfg, query.ParamsDef())
 	return &r
 }
 
-// CommandFunction returns command function from application resource by QName or nil if not founded
-func (res *ResourcesType) CommandFunction(name appdef.QName) (cmd istructs.ICommandFunction) {
+// Returns command function from application resource by QName or nil if not founded
+func (res *Resources) CommandFunction(name appdef.QName) (cmd istructs.ICommandFunction) {
 	r := res.QueryResource(name)
 	if r.Kind() == istructs.ResourceKind_CommandFunction {
 		cmd := r.(istructs.ICommandFunction)
@@ -56,109 +54,109 @@ func (res *ResourcesType) CommandFunction(name appdef.QName) (cmd istructs.IComm
 	return nil
 }
 
-// Resources enumerates all application resources
-func (res *ResourcesType) Resources(enum func(appdef.QName)) {
+// Enumerates all application resources
+func (res *Resources) Resources(enum func(appdef.QName)) {
 	for n := range res.resources {
 		enum(n)
 	}
 }
 
-// abstractFunctionType is ancestor for CommandFunctionType and QueryFunctionType
-type abstractFunctionType struct {
-	name, paramsSchema appdef.QName
-	resultSchemaFunc   func(istructs.PrepareArgs) appdef.QName
+// Ancestor for command & query functions
+type abstractFunction struct {
+	name, parsDef appdef.QName
+	resDef        func(istructs.PrepareArgs) appdef.QName
 }
 
 // istructs.IResource
-func (af *abstractFunctionType) QName() appdef.QName { return af.name }
+func (af *abstractFunction) QName() appdef.QName { return af.name }
 
 // istructs.IFunction
-func (af *abstractFunctionType) ParamsSchema() appdef.QName { return af.paramsSchema }
+func (af *abstractFunction) ParamsDef() appdef.QName { return af.parsDef }
 
 // istructs.IFunction
-func (af *abstractFunctionType) ResultSchema(args istructs.PrepareArgs) appdef.QName {
-	return af.resultSchemaFunc(args)
+func (af *abstractFunction) ResultDef(args istructs.PrepareArgs) appdef.QName {
+	return af.resDef(args)
 }
 
-// for debug and logging purposes
-func (af *abstractFunctionType) String() string {
+// For debug and logging purposes
+func (af *abstractFunction) String() string {
 	return fmt.Sprintf("%v", af.QName())
 }
 
 type (
-	// ExecQueryClosureType is function type to call for query execute action
-	ExecQueryClosureType func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error)
+	// Function type to call for query execute action
+	ExecQueryClosure func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error)
 
-	// queryFunctionType implements istructs.IQueryFunction
-	queryFunctionType struct {
-		abstractFunctionType
-		exec ExecQueryClosureType
+	// Implements istructs.IQueryFunction
+	queryFunction struct {
+		abstractFunction
+		exec ExecQueryClosure
 	}
 )
 
-// NewQueryFunction creates and returns new query function
-func NewQueryFunction(name, paramsSchema, resultSchema appdef.QName, exec ExecQueryClosureType) istructs.IQueryFunction {
+// Creates and returns new query function
+func NewQueryFunction(name, paramsSchema, resultSchema appdef.QName, exec ExecQueryClosure) istructs.IQueryFunction {
 	return NewQueryFunctionCustomResult(name, paramsSchema, func(pa istructs.PrepareArgs) appdef.QName { return resultSchema }, exec)
 }
 
-func NewQueryFunctionCustomResult(name, paramsSchema appdef.QName, resultSchemaFunc func(istructs.PrepareArgs) appdef.QName, exec ExecQueryClosureType) istructs.IQueryFunction {
-	return &queryFunctionType{
-		abstractFunctionType: abstractFunctionType{
-			name:             name,
-			paramsSchema:     paramsSchema,
-			resultSchemaFunc: resultSchemaFunc,
+func NewQueryFunctionCustomResult(name, pars appdef.QName, resultDef func(istructs.PrepareArgs) appdef.QName, exec ExecQueryClosure) istructs.IQueryFunction {
+	return &queryFunction{
+		abstractFunction: abstractFunction{
+			name:    name,
+			parsDef: pars,
+			resDef:  resultDef,
 		},
 		exec: exec,
 	}
 }
 
-// NullQueryExec is null execute action closure for query functions
+// Null execute action closure for query functions
 func NullQueryExec(_ context.Context, _ istructs.IQueryFunction, _ istructs.ExecQueryArgs, _ istructs.ExecQueryCallback) error {
 	return nil
 }
 
 // istructs.IQueryFunction
-func (qf *queryFunctionType) Exec(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func (qf *queryFunction) Exec(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return qf.exec(ctx, qf, args, callback)
 }
 
 // istructs.IResource
-func (qf *queryFunctionType) Kind() istructs.ResourceKindType {
+func (qf *queryFunction) Kind() istructs.ResourceKindType {
 	return istructs.ResourceKind_QueryFunction
 }
 
 // istructs.IQueryFunction
-func (qf *queryFunctionType) ResultSchema(args istructs.PrepareArgs) appdef.QName {
-	return qf.abstractFunctionType.ResultSchema(args)
+func (qf *queryFunction) ResultDef(args istructs.PrepareArgs) appdef.QName {
+	return qf.abstractFunction.ResultDef(args)
 }
 
 // for debug and logging purposes
-func (qf *queryFunctionType) String() string {
-	return fmt.Sprintf("q:%v", qf.abstractFunctionType.String())
+func (qf *queryFunction) String() string {
+	return fmt.Sprintf("q:%v", qf.abstractFunction.String())
 }
 
 type (
-	// ExecCommandClosureType is function type to call for command execute action
-	ExecCommandClosureType func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error)
+	// Function type to call for command execute action
+	ExecCommandClosure func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error)
 
-	// commandFunctionType implements istructs.ICommandFunction
-	commandFunctionType struct {
-		abstractFunctionType
-		unloggedParamsSchema appdef.QName
-		exec                 ExecCommandClosureType
+	// Implements istructs.ICommandFunction
+	commandFunction struct {
+		abstractFunction
+		unlParsDef appdef.QName
+		exec       ExecCommandClosure
 	}
 )
 
 // NewCommandFunction creates and returns new command function
-func NewCommandFunction(name, paramsSchema, unloggedParamsSchema, resultSchema appdef.QName, exec ExecCommandClosureType) istructs.ICommandFunction {
-	return &commandFunctionType{
-		abstractFunctionType: abstractFunctionType{
-			name:             name,
-			paramsSchema:     paramsSchema,
-			resultSchemaFunc: func(pa istructs.PrepareArgs) appdef.QName { return resultSchema },
+func NewCommandFunction(name, params, unlogged, result appdef.QName, exec ExecCommandClosure) istructs.ICommandFunction {
+	return &commandFunction{
+		abstractFunction: abstractFunction{
+			name:    name,
+			parsDef: params,
+			resDef:  func(pa istructs.PrepareArgs) appdef.QName { return result },
 		},
-		unloggedParamsSchema: unloggedParamsSchema,
-		exec:                 exec,
+		unlParsDef: unlogged,
+		exec:       exec,
 	}
 }
 
@@ -168,27 +166,27 @@ func NullCommandExec(_ istructs.ICommandFunction, _ istructs.ExecCommandArgs) er
 }
 
 // istructs.ICommandFunction
-func (cf *commandFunctionType) Exec(args istructs.ExecCommandArgs) error {
+func (cf *commandFunction) Exec(args istructs.ExecCommandArgs) error {
 	return cf.exec(cf, args)
 }
 
 // istructs.IResource
-func (cf *commandFunctionType) Kind() istructs.ResourceKindType {
+func (cf *commandFunction) Kind() istructs.ResourceKindType {
 	return istructs.ResourceKind_CommandFunction
 }
 
 // istructs.ICommandFunction
-func (cf *commandFunctionType) ResultSchema() appdef.QName {
-	return cf.abstractFunctionType.ResultSchema(nullPrepareArgs)
+func (cf *commandFunction) ResultDef() appdef.QName {
+	return cf.abstractFunction.ResultDef(nullPrepareArgs)
 }
 
 // for debug and logging purposes
-func (cf *commandFunctionType) String() string {
-	return fmt.Sprintf("c:%v", cf.abstractFunctionType.String())
+func (cf *commandFunction) String() string {
+	return fmt.Sprintf("c:%v", cf.abstractFunction.String())
 }
 
-func (cf *commandFunctionType) UnloggedParamsSchema() appdef.QName {
-	return cf.unloggedParamsSchema
+func (cf *commandFunction) UnloggedParamsDef() appdef.QName {
+	return cf.unlParsDef
 }
 
 // nullResourceType type to return then resource is not founded

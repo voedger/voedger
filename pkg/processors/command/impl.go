@@ -276,7 +276,7 @@ func getFunction(_ context.Context, work interface{}) (err error) {
 
 func unmarshalRequestBody(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdFunc.ParamsSchema() == istructs.QNameJSON {
+	if cmd.cmdFunc.ParamsDef() == istructs.QNameJSON {
 		cmd.requestData["args"] = map[string]interface{}{
 			Field_JSONSchemaBody: string(cmd.cmdMes.Body()),
 		}
@@ -324,7 +324,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work interface{}) 
 
 func getArgsObject(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdFunc.ParamsSchema() == appdef.NullQName {
+	if cmd.cmdFunc.ParamsDef() == appdef.NullQName {
 		return nil
 	}
 	aob := cmd.reb.ArgumentObjectBuilder()
@@ -333,7 +333,7 @@ func getArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"args" field must be an object`)
 		}
-		paramsSchema := cmd.appStructs.AppDef().Def(cmd.cmdFunc.ParamsSchema())
+		paramsSchema := cmd.appStructs.AppDef().Def(cmd.cmdFunc.ParamsDef())
 		if err = istructsmem.FillElementFromJSON(args, paramsSchema, aob); err != nil {
 			return err
 		}
@@ -346,7 +346,7 @@ func getArgsObject(_ context.Context, work interface{}) (err error) {
 
 func getUnloggedArgsObject(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdFunc.UnloggedParamsSchema() == appdef.NullQName {
+	if cmd.cmdFunc.UnloggedParamsDef() == appdef.NullQName {
 		return nil
 	}
 	auob := cmd.reb.ArgumentUnloggedObjectBuilder()
@@ -355,7 +355,7 @@ func getUnloggedArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"unloggedArgs" field must be an object`)
 		}
-		unloggedParamsSchema := cmd.appStructs.AppDef().Def(cmd.cmdFunc.UnloggedParamsSchema())
+		unloggedParamsSchema := cmd.appStructs.AppDef().Def(cmd.cmdFunc.UnloggedParamsDef())
 		if err = istructsmem.FillElementFromJSON(unloggedArgs, unloggedParamsSchema, auob); err != nil {
 			return err
 		}

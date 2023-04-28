@@ -172,8 +172,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.queryFunction = qw.msg.Resource().(istructs.IQueryFunction)
-			paramsSchema := qw.appStructs.AppDef().Def(qw.queryFunction.ParamsSchema())
-			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), paramsSchema, qw.appCfg, qw)
+			parDef := qw.appStructs.AppDef().Def(qw.queryFunction.ParamsDef())
+			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), parDef, qw.appCfg, qw)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("create state", func(ctx context.Context, qw *queryWork) (err error) {
@@ -189,15 +189,15 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return
 		}),
 		operator("validate: get result schema", func(ctx context.Context, qw *queryWork) (err error) {
-			schema := qw.queryFunction.ResultSchema(qw.execQueryArgs.PrepareArgs)
-			qw.resultSchema = qw.appStructs.AppDef().Def(schema)
-			err = errIfFalse(qw.resultSchema.Kind() != appdef.DefKind_null, func() error {
-				return fmt.Errorf("result schema %s: %w", schema, ErrNotFound)
+			def := qw.queryFunction.ResultDef(qw.execQueryArgs.PrepareArgs)
+			qw.resultDef = qw.appStructs.AppDef().Def(def)
+			err = errIfFalse(qw.resultDef.Kind() != appdef.DefKind_null, func() error {
+				return fmt.Errorf("result schema %s: %w", def, ErrNotFound)
 			})
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("validate: get query params", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, coreutils.NewFieldsDef(qw.resultSchema))
+			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, coreutils.NewFieldsDef(qw.resultDef))
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("authorize result", func(ctx context.Context, qw *queryWork) (err error) {
@@ -228,7 +228,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				qw.metrics.Increase(buildSeconds, time.Since(now).Seconds())
 			}()
 			qw.rowsProcessor = ProvideRowsProcessorFactory()(qw.msg.RequestCtx(), qw.appStructs.AppDef(),
-				qw.state, qw.queryParams, qw.resultSchema, qw.rs, qw.metrics)
+				qw.state, qw.queryParams, qw.resultDef, qw.rs, qw.metrics)
 			return nil
 		}),
 		operator("exec function", func(ctx context.Context, qw *queryWork) (err error) {
@@ -243,7 +243,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}()
 			err = qw.queryFunction.Exec(ctx, qw.execQueryArgs, func(object istructs.IObject) error {
 				pathToIdx := make(map[string]int)
-				if qw.resultSchema.QName() == istructs.QNameJSON {
+				if qw.resultDef.QName() == istructs.QNameJSON {
 					pathToIdx[Field_JSONSchemaBody] = 0
 				} else {
 					for i, element := range qw.queryParams.Elements() {
@@ -276,7 +276,7 @@ type queryWork struct {
 	queryParams       IQueryParams
 	appStructs        istructs.IAppStructs
 	queryFunction     istructs.IQueryFunction
-	resultSchema      appdef.IDef
+	resultDef         appdef.IDef
 	execQueryArgs     istructs.ExecQueryArgs
 	maxPrepareQueries int
 	rowsProcessor     pipeline.IAsyncPipeline

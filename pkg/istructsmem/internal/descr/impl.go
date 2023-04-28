@@ -23,13 +23,13 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 
 	a.Name = app.AppQName()
 
-	app.AppDef().Defs(func(s appdef.IDef) {
-		schemaName := s.QName()
-		pkg := getPkg(schemaName, a)
-		schema := newSchema()
-		schema.Name = schemaName
-		pkg.Schemas[schemaName.String()] = schema
-		schema.readAppSchema(app.AppDef().Def(schemaName))
+	app.AppDef().Defs(func(def appdef.IDef) {
+		defName := def.QName()
+		pkg := getPkg(defName, a)
+		d := newDef()
+		d.Name = defName
+		pkg.Defs[defName.String()] = d
+		d.readAppDef(app.AppDef().Def(defName))
 	})
 
 	app.Resources().Resources(func(resName appdef.QName) {
@@ -62,8 +62,8 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 	}
 }
 
-func getPkg(schemaName appdef.QName, a *Application) *Package {
-	pkgName := schemaName.Pkg()
+func getPkg(name appdef.QName, a *Application) *Package {
+	pkgName := name.Pkg()
 	pkg := a.Packages[pkgName]
 	if pkg == nil {
 		pkg = newPackage()
@@ -75,7 +75,7 @@ func getPkg(schemaName appdef.QName, a *Application) *Package {
 
 func newPackage() *Package {
 	return &Package{
-		Schemas:    make(map[string]*Schema),
+		Defs:       make(map[string]*Def),
 		Resources:  make(map[string]*Resource),
 		RateLimits: make(map[string][]*RateLimit),
 		Uniques:    make(map[string][]*Unique),

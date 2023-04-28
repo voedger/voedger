@@ -94,8 +94,8 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 
 	cmd := ev.appCfg.Resources.CommandFunction(ev.name)
 	if cmd != nil {
-		arg = cmd.ParamsSchema()
-		argUnl = cmd.UnloggedParamsSchema()
+		arg = cmd.ParamsDef()
+		argUnl = cmd.UnloggedParamsDef()
 	} else {
 		// #!16208: Must be possible to use DefKind_ODoc as Event.QName
 		if schema := ev.appCfg.AppDef.DefByName(ev.name); (schema == nil) || (schema.Kind() != appdef.DefKind_ODoc) {

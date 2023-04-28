@@ -46,7 +46,7 @@ type AppConfigType struct {
 
 	appDefBuilder appdef.IAppDefBuilder
 	AppDef        appdef.IAppDef
-	Resources     ResourcesType
+	Resources     Resources
 	Uniques       *implIUniques
 
 	dynoSchemes dynobuf.DynoBufSchemes

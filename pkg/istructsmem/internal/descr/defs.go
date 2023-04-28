@@ -9,7 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-type Schema struct {
+type Def struct {
 	Name       appdef.QName
 	Kind       appdef.DefKind
 	Fields     []*Field     `json:",omitempty"`

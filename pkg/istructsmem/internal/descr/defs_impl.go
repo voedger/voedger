@@ -9,33 +9,33 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func newSchema() *Schema {
-	return &Schema{
+func newDef() *Def {
+	return &Def{
 		Fields:     make([]*Field, 0),
 		Containers: make([]*Container, 0),
 	}
 }
 
-func (s *Schema) readAppSchema(schema appdef.IDef) {
-	s.Name = schema.QName()
-	s.Kind = schema.Kind()
+func (d *Def) readAppDef(def appdef.IDef) {
+	d.Name = def.QName()
+	d.Kind = def.Kind()
 
-	schema.Fields(func(field appdef.Field) {
+	def.Fields(func(field appdef.Field) {
 		f := newField()
 		f.Name = field.Name()
 		f.Kind = field.DataKind()
 		f.Required = field.Required()
 		f.Verifiable = field.Verifiable()
-		s.Fields = append(s.Fields, f)
+		d.Fields = append(d.Fields, f)
 	})
 
-	schema.Containers(func(cont appdef.Container) {
+	def.Containers(func(cont appdef.Container) {
 		c := newContainer()
 		c.Name = cont.Name()
 		c.Type = cont.Def()
 		c.MinOccurs = cont.MinOccurs()
 		c.MaxOccurs = cont.MaxOccurs()
-		s.Containers = append(s.Containers, c)
+		d.Containers = append(d.Containers, c)
 	})
 }
 
