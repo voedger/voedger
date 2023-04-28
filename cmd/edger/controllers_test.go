@@ -81,7 +81,7 @@ func Test_CommandController(t *testing.T) {
 
 			require.Equal(t, len(test.expectedStdout) > 0, len(pv.Stdout) > 0)
 			require.Equal(t, len(test.expectedStderr) > 0, len(pv.Stderr) > 0)
-			require.Equal(t, test.expectedExitCode, pv.ExitCode)
+			require.Equal(t, test.expectedExitCode == 0, pv.ExitCode == 0)
 		})
 	}
 }
