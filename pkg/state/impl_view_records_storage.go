@@ -110,7 +110,7 @@ func (s *viewRecordsStorage) toJSON(sv istructs.IStateValue, opts ...interface{}
 	}
 
 	obj := make(map[string]interface{})
-	s.appDefFunc().Schema(sv.AsQName(appdef.SystemField_QName)).
+	s.appDefFunc().Def(sv.AsQName(appdef.SystemField_QName)).
 		Containers(func(cont appdef.Container) {
 			containerName := cont.Name()
 			if containerName == appdef.SystemContainer_ViewValue {

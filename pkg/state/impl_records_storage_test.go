@@ -50,10 +50,10 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 				items[1].Record = record2
 			})
 
-		schema1 := amock.NewSchema(testRecordQName1, appdef.DefKind_Object,
+		schema1 := amock.NewDef(testRecordQName1, appdef.DefKind_Object,
 			amock.NewField("number", appdef.DataKind_int64, false),
 		)
-		schema2 := amock.NewSchema(testRecordQName1, appdef.DefKind_Object,
+		schema2 := amock.NewDef(testRecordQName1, appdef.DefKind_Object,
 			amock.NewField("age", appdef.DataKind_int64, false),
 		)
 		appDef := amock.NewAppDef(
@@ -138,10 +138,10 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 			On("GetSingleton", istructs.WSID(2), testRecordQName2).Return(nullRecord, nil).
 			On("GetSingleton", istructs.WSID(3), testRecordQName2).Return(singleton2, nil)
 
-		schema1 := amock.NewSchema(testRecordQName1, appdef.DefKind_Object,
+		schema1 := amock.NewDef(testRecordQName1, appdef.DefKind_Object,
 			amock.NewField("number", appdef.DataKind_int64, false),
 		)
-		schema2 := amock.NewSchema(testRecordQName2, appdef.DefKind_Object,
+		schema2 := amock.NewDef(testRecordQName2, appdef.DefKind_Object,
 			amock.NewField("age", appdef.DataKind_int64, false),
 		)
 		appDef := amock.NewAppDef(

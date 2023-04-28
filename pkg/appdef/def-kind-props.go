@@ -5,7 +5,7 @@
 
 package appdef
 
-// Schema kind properties
+// Definition kind properties
 var defKindProps = map[DefKind]struct {
 	fieldsAllowed           bool
 	availableFieldKinds     map[DataKind]bool

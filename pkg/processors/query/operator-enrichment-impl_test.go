@@ -22,8 +22,8 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 	t.Run("Should set reference fields", func(t *testing.T) {
 		require := require.New(t)
 
-		commonSchema := func(n appdef.QName) *amock.Schema {
-			return amock.NewSchema(n, appdef.DefKind_Object,
+		commonSchema := func(n appdef.QName) *amock.Def {
+			return amock.NewDef(n, appdef.DefKind_Object,
 				amock.NewField("id_lower_case_name", appdef.DataKind_RecordID, false),
 			)
 		}
@@ -39,7 +39,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 			commonSchema(appdef.NewQName("s", "deep-children-1")),
 			commonSchema(appdef.NewQName("s", "very-deep-children-1")),
 
-			amock.NewSchema(qNameXLowerCase, appdef.DefKind_Object,
+			amock.NewDef(qNameXLowerCase, appdef.DefKind_Object,
 				amock.NewField("name", appdef.DataKind_string, false),
 			),
 		)

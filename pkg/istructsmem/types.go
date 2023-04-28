@@ -33,7 +33,7 @@ import (
 //     — istructs.IEditableRecord
 type rowType struct {
 	appCfg    *AppConfigType
-	schema    appdef.Schema
+	schema    appdef.IDef
 	id        istructs.RecordID
 	parentID  istructs.RecordID
 	container string
@@ -46,7 +46,7 @@ type rowType struct {
 func newRow(appCfg *AppConfigType) rowType {
 	return rowType{
 		appCfg:    appCfg,
-		schema:    appdef.NullSchema,
+		schema:    appdef.NullDef,
 		id:        istructs.NullRecordID,
 		parentID:  istructs.NullRecordID,
 		container: "",
@@ -82,7 +82,7 @@ func (row *rowType) build() (nilledFields []string, err error) {
 
 // clear clears row by set QName to NullQName value
 func (row *rowType) clear() {
-	row.schema = appdef.NullSchema
+	row.schema = appdef.NullDef
 	row.id = istructs.NullRecordID
 	row.parentID = istructs.NullRecordID
 	row.container = ""
@@ -296,7 +296,7 @@ func (row *rowType) setQName(value appdef.QName) {
 		return
 	}
 
-	schema := row.appCfg.AppDef.SchemaByName(value)
+	schema := row.appCfg.AppDef.DefByName(value)
 	if schema == nil {
 		row.collectErrorf(errSchemaNotFoundWrap, value, ErrNameNotFound)
 		return
@@ -320,7 +320,7 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 	}
 
 	if qName != appdef.NullQName {
-		schema := row.appCfg.AppDef.SchemaByName(qName)
+		schema := row.appCfg.AppDef.DefByName(qName)
 		if schema == nil {
 			err = fmt.Errorf(errSchemaNotFoundWrap, qName, ErrNameNotFound)
 			row.collectError(err)
@@ -333,9 +333,9 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 }
 
 // setSchema assign specified schema to row and rebuild row. Schema can not to be nil and must be valid
-func (row *rowType) setSchema(value appdef.Schema) {
+func (row *rowType) setSchema(value appdef.IDef) {
 	if value == nil {
-		row.schema = appdef.NullSchema
+		row.schema = appdef.NullDef
 	} else {
 		row.schema = value
 	}

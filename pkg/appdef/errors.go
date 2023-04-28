@@ -20,7 +20,7 @@ var ErrInvalidQNameStringRepresentation = errors.New("invalid string representat
 
 var ErrInvalidDefKind = errors.New("invalid definition kind")
 
-var ErrWrongSchemaStruct = errors.New("wrong schema structure")
+var ErrWrongDefStruct = errors.New("wrong definition structure")
 
 var ErrVerificationKindMissed = errors.New("verification kind is missed")
 

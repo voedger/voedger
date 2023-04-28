@@ -106,8 +106,8 @@ func (stons *Singletons) load01(storage istorage.IAppStorage) error {
 
 // Collect all application singlton IDs
 func (stons *Singletons) collectAllSingletons(appDef appdef.IAppDef) (err error) {
-	appDef.Schemas(
-		func(schema appdef.Schema) {
+	appDef.Defs(
+		func(schema appdef.IDef) {
 			if schema.Singleton() {
 				err = errors.Join(err,
 					stons.collectSingleton(schema.QName()))

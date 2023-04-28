@@ -13,152 +13,151 @@ import (
 type viewBuilder struct {
 	cache *appDef
 	name  QName
-	viewSchema,
-	partSchema,
-	clustSchema,
-	keySchema, // partition key + clustering columns
-	valueSchema SchemaBuilder
+	def,
+	pkDef,
+	ccDef,
+	fkDef, // partition key + clustering columns
+	valDef IDefBuilder
 }
 
 func newViewBuilder(cache *appDef, name QName) viewBuilder {
 	view := viewBuilder{
-		cache:       cache,
-		name:        name,
-		viewSchema:  cache.Add(name, DefKind_ViewRecord),
-		partSchema:  cache.Add(ViewPartitionKeySchemaName(name), DefKind_ViewRecord_PartitionKey),
-		clustSchema: cache.Add(ViewClusteringColumsSchemaName(name), DefKind_ViewRecord_ClusteringColumns),
-		keySchema:   cache.Add(ViewFullKeyColumsSchemaName(name), DefKind_ViewRecord_ClusteringColumns),
-		valueSchema: cache.Add(ViewValueSchemaName(name), DefKind_ViewRecord_Value),
+		cache:  cache,
+		name:   name,
+		def:    cache.Add(name, DefKind_ViewRecord),
+		pkDef:  cache.Add(ViewPartitionKeyDefName(name), DefKind_ViewRecord_PartitionKey),
+		ccDef:  cache.Add(ViewClusteringColumsDefName(name), DefKind_ViewRecord_ClusteringColumns),
+		fkDef:  cache.Add(ViewFullKeyColumsDefName(name), DefKind_ViewRecord_ClusteringColumns),
+		valDef: cache.Add(ViewValueDefName(name), DefKind_ViewRecord_Value),
 	}
-	view.viewSchema.
-		AddContainer(SystemContainer_ViewPartitionKey, view.partSchema.QName(), 1, 1).
-		AddContainer(SystemContainer_ViewClusteringCols, view.clustSchema.QName(), 1, 1).
-		AddContainer(SystemContainer_ViewValue, view.valueSchema.QName(), 1, 1)
+	view.def.
+		AddContainer(SystemContainer_ViewPartitionKey, view.pkDef.QName(), 1, 1).
+		AddContainer(SystemContainer_ViewClusteringCols, view.ccDef.QName(), 1, 1).
+		AddContainer(SystemContainer_ViewValue, view.valDef.QName(), 1, 1)
 
 	return view
 }
 
 func (view *viewBuilder) AddPartField(name string, kind DataKind) ViewBuilder {
-	view.partSchema.AddField(name, kind, true)
+	view.pkDef.AddField(name, kind, true)
 	return view
 }
 
 func (view *viewBuilder) AddClustColumn(name string, kind DataKind) ViewBuilder {
-	view.clustSchema.AddField(name, kind, false)
+	view.ccDef.AddField(name, kind, false)
 	return view
 }
 
 func (view *viewBuilder) AddValueField(name string, kind DataKind, required bool) ViewBuilder {
-	view.ValueSchema().AddField(name, kind, required)
+	view.ValueDef().AddField(name, kind, required)
 	return view
+}
+
+func (view *viewBuilder) Def() IDefBuilder {
+	return view.def
 }
 
 func (view *viewBuilder) Name() QName {
 	return view.name
 }
 
-func (view *viewBuilder) Schema() SchemaBuilder {
-	return view.viewSchema
+func (view *viewBuilder) PartKeyDef() IDefBuilder {
+	return view.pkDef
 }
 
-func (view *viewBuilder) PartKeySchema() SchemaBuilder {
-	return view.partSchema
+func (view *viewBuilder) ClustColsDef() IDefBuilder {
+	return view.ccDef
 }
 
-func (view *viewBuilder) ClustColsSchema() SchemaBuilder {
-	return view.clustSchema
-}
-
-// FullKeySchema returns view full key (partition key + clustering columns) schema
-func (view *viewBuilder) FullKeySchema() SchemaBuilder {
-	if view.keySchema.FieldCount() != view.PartKeySchema().FieldCount()+view.ClustColsSchema().FieldCount() {
-		view.keySchema.clear()
-		view.PartKeySchema().Fields(func(fld Field) {
-			view.keySchema.AddField(fld.Name(), fld.DataKind(), true)
+func (view *viewBuilder) FullKeyDef() IDefBuilder {
+	if view.fkDef.FieldCount() != view.PartKeyDef().FieldCount()+view.ClustColsDef().FieldCount() {
+		view.fkDef.clear()
+		view.PartKeyDef().Fields(func(f Field) {
+			view.fkDef.AddField(f.Name(), f.DataKind(), true)
 		})
-		view.ClustColsSchema().Fields(func(fld Field) {
-			view.keySchema.AddField(fld.Name(), fld.DataKind(), false)
+		view.ClustColsDef().Fields(func(f Field) {
+			view.fkDef.AddField(f.Name(), f.DataKind(), false)
 		})
 	}
-	return view.keySchema
+	return view.fkDef
 }
 
-func (view *viewBuilder) ValueSchema() SchemaBuilder {
-	return view.valueSchema
+func (view *viewBuilder) ValueDef() IDefBuilder {
+	return view.valDef
 }
 
-func (app *appDef) prepareViewFullKeySchema(sch Schema) {
+func (app *appDef) prepareViewFullKeyDef(sch IDef) {
 	if sch.Kind() != DefKind_ViewRecord {
-		panic(fmt.Errorf("not view schema «%v» kind «%v» passed: %w", sch.QName(), sch.Kind(), ErrInvalidDefKind))
+		panic(fmt.Errorf("definition «%v» kind «%v» is not view: %w", sch.QName(), sch.Kind(), ErrInvalidDefKind))
 	}
 
-	contSchema := func(name string, expectedKind DefKind) Schema {
-		contSchema := sch.ContainerSchema(name)
-		if contSchema == nil {
+	contDef := func(name string, expectedKind DefKind) IDef {
+		cd := sch.ContainerDef(name)
+		if cd == nil {
 			return nil
 		}
-		if contSchema.Kind() != expectedKind {
+		if cd.Kind() != expectedKind {
 			return nil
 		}
-		return contSchema
+		return cd
 	}
 
-	pkSchema := contSchema(SystemContainer_ViewPartitionKey, DefKind_ViewRecord_PartitionKey)
-	if pkSchema == nil {
+	pkDef := contDef(SystemContainer_ViewPartitionKey, DefKind_ViewRecord_PartitionKey)
+	if pkDef == nil {
 		return
 	}
-	ccSchema := contSchema(SystemContainer_ViewClusteringCols, DefKind_ViewRecord_ClusteringColumns)
-	if ccSchema == nil {
+	ccDef := contDef(SystemContainer_ViewClusteringCols, DefKind_ViewRecord_ClusteringColumns)
+	if ccDef == nil {
 		return
 	}
 
-	fkName := ViewFullKeyColumsSchemaName(sch.QName())
-	var fkSchema SchemaBuilder
-	fkSchema, ok := app.schemas[fkName]
+	fkName := ViewFullKeyColumsDefName(sch.QName())
+	var fkDef IDefBuilder
+	fkDef, ok := app.defs[fkName]
 
 	if ok {
-		if fkSchema.Kind() != DefKind_ViewRecord_ClusteringColumns {
-			panic(fmt.Errorf("schema «%v» has unvalid kind «%v», expected kind «%v»: %w", fkName, fkSchema.Kind(), DefKind_ViewRecord_ClusteringColumns, ErrInvalidDefKind))
+		if fkDef.Kind() != DefKind_ViewRecord_ClusteringColumns {
+			panic(fmt.Errorf("definition «%v» has unvalid kind «%v», expected kind «%v»: %w", fkName, fkDef.Kind(), DefKind_ViewRecord_ClusteringColumns, ErrInvalidDefKind))
 		}
-		if fkSchema.FieldCount() == pkSchema.FieldCount()+ccSchema.FieldCount() {
-			return // already exists schema is ok
+		if fkDef.FieldCount() == pkDef.FieldCount()+ccDef.FieldCount() {
+			return // already exists definition is ok
 		}
-		fkSchema.clear()
+		fkDef.clear()
 	} else {
-		fkSchema = app.Add(fkName, DefKind_ViewRecord_ClusteringColumns)
+		fkDef = app.Add(fkName, DefKind_ViewRecord_ClusteringColumns)
 	}
 
-	// recreate full key schema fields
-	pkSchema.Fields(func(f Field) {
-		fkSchema.AddField(f.Name(), f.DataKind(), true)
+	// recreate full key definition fields
+	pkDef.Fields(func(f Field) {
+		fkDef.AddField(f.Name(), f.DataKind(), true)
 	})
-	ccSchema.Fields(func(f Field) {
-		fkSchema.AddField(f.Name(), f.DataKind(), false)
+	ccDef.Fields(func(f Field) {
+		fkDef.AddField(f.Name(), f.DataKind(), false)
 	})
 
 	app.changed()
 }
 
-// Returns partition key schema name for specified view
-func ViewPartitionKeySchemaName(view QName) QName {
+// Returns partition key definition name for specified view
+func ViewPartitionKeyDefName(view QName) QName {
 	const suff = "_PartitionKey"
 	return suffixedQName(view, suff)
 }
 
-// Returns clustering columns schema name for specified view
-func ViewClusteringColumsSchemaName(view QName) QName {
+// Returns clustering columns definition name for specified view
+func ViewClusteringColumsDefName(view QName) QName {
 	const suff = "_ClusteringColumns"
 	return suffixedQName(view, suff)
 }
 
-// Returns full key schema name for specified view
-func ViewFullKeyColumsSchemaName(view QName) QName {
+// Returns full key definition name for specified view
+func ViewFullKeyColumsDefName(view QName) QName {
 	const suff = "_FullKey"
 	return suffixedQName(view, suff)
 }
 
-// Returns value schema name for specified view
-func ViewValueSchemaName(view QName) QName {
+// Returns value definition name for specified view
+func ViewValueDefName(view QName) QName {
 	const suff = "_Value"
 	return suffixedQName(view, suff)
 }

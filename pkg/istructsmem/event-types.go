@@ -98,7 +98,7 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 		argUnl = cmd.UnloggedParamsSchema()
 	} else {
 		// #!16208: Must be possible to use DefKind_ODoc as Event.QName
-		if schema := ev.appCfg.AppDef.SchemaByName(ev.name); (schema == nil) || (schema.Kind() != appdef.DefKind_ODoc) {
+		if schema := ev.appCfg.AppDef.DefByName(ev.name); (schema == nil) || (schema.Kind() != appdef.DefKind_ODoc) {
 			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
 		}
 		arg = ev.name
@@ -818,7 +818,7 @@ func (el *elementType) ElementBuilder(containerName string) istructs.IElementBui
 	el.childs = append(el.childs, &c)
 	if el.QName() != appdef.NullQName {
 		if cont := el.schema.Container(containerName); cont != nil {
-			c.setQName(cont.Schema())
+			c.setQName(cont.Def())
 			if c.QName() != appdef.NullQName {
 				if el.ID() != istructs.NullRecordID {
 					c.setParent(el.ID())

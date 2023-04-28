@@ -243,10 +243,10 @@ func (key *keyType) build() (err error) {
 
 // clustColsSchema returns name of clustering columns key schema
 func (key *keyType) clustColsSchema() appdef.QName {
-	if schema := key.appCfg.AppDef.SchemaByName(key.viewName); schema != nil {
+	if schema := key.appCfg.AppDef.DefByName(key.viewName); schema != nil {
 		if schema.Kind() == appdef.DefKind_ViewRecord {
 			// There are no invalid schemas in the cache. Therefore, if schema is found and good kind, then no more checks necessary
-			return schema.Container(appdef.SystemContainer_ViewClusteringCols).Schema()
+			return schema.Container(appdef.SystemContainer_ViewClusteringCols).Def()
 		}
 	}
 	return appdef.NullQName
@@ -254,10 +254,10 @@ func (key *keyType) clustColsSchema() appdef.QName {
 
 // fullKeySchema returns name of full key schema
 func (key *keyType) fullKeySchema() appdef.QName {
-	if schema := key.appCfg.AppDef.SchemaByName(key.viewName); schema != nil {
+	if schema := key.appCfg.AppDef.DefByName(key.viewName); schema != nil {
 		if schema.Kind() == appdef.DefKind_ViewRecord {
 			// There are no invalid schemas in the cache. Therefore, if schema is found and good kind, then no more checks necessary
-			return appdef.ViewFullKeyColumsSchemaName(key.viewName)
+			return appdef.ViewFullKeyColumsDefName(key.viewName)
 		}
 	}
 	return appdef.NullQName
@@ -301,10 +301,10 @@ func (key *keyType) loadFromBytes(pKey, cKey []byte) (err error) {
 
 // partKeySchema returns name of partitional key schema
 func (key *keyType) partKeySchema() appdef.QName {
-	if schema := key.appCfg.AppDef.SchemaByName(key.viewName); schema != nil {
+	if schema := key.appCfg.AppDef.DefByName(key.viewName); schema != nil {
 		if schema.Kind() == appdef.DefKind_ViewRecord {
 			// There are no invalid schemas in the cache. Therefore, if schema is found and good kind, then no more checks necessary
-			return schema.Container(appdef.SystemContainer_ViewPartitionKey).Schema()
+			return schema.Container(appdef.SystemContainer_ViewPartitionKey).Def()
 		}
 	}
 	return appdef.NullQName
@@ -312,8 +312,8 @@ func (key *keyType) partKeySchema() appdef.QName {
 
 // splitRow splits solid key row to partition key row and clustering columns row using view schemas
 func (key *keyType) splitRow() {
-	partSchema := key.appCfg.AppDef.SchemaByName(key.partKeySchema())
-	clustSchema := key.appCfg.AppDef.SchemaByName(key.clustColsSchema())
+	partSchema := key.appCfg.AppDef.DefByName(key.partKeySchema())
+	clustSchema := key.appCfg.AppDef.DefByName(key.clustColsSchema())
 
 	key.rowType.dyB.IterateFields(nil,
 		func(name string, data interface{}) bool {
@@ -342,7 +342,7 @@ func (key *keyType) validSchemas() (ok bool, err error) {
 		return false, err
 	}
 
-	schema := key.appCfg.AppDef.SchemaByName(key.viewName)
+	schema := key.appCfg.AppDef.DefByName(key.viewName)
 	if schema == nil {
 		return false, fmt.Errorf("unknown view key schema «%v»: %w", key.viewName, ErrNameNotFound)
 	}
@@ -435,10 +435,10 @@ func newNullValue() istructs.IValue {
 
 // valueSchema returns name of view value schema
 func (val *valueType) valueSchema() appdef.QName {
-	if schema := val.appCfg.AppDef.SchemaByName(val.viewName); schema != nil {
+	if schema := val.appCfg.AppDef.DefByName(val.viewName); schema != nil {
 		if schema.Kind() == appdef.DefKind_ViewRecord {
 			// There are no invalid schemas in the cache. Therefore, if schema is found and good kind, then no more checks necessary
-			return schema.Container(appdef.SystemContainer_ViewValue).Schema()
+			return schema.Container(appdef.SystemContainer_ViewValue).Def()
 		}
 	}
 	return appdef.NullQName
@@ -450,7 +450,7 @@ func (val *valueType) validSchemas() (ok bool, err error) {
 		return false, fmt.Errorf("missed view schema: %w", ErrNameMissed)
 	}
 
-	schema := val.appCfg.AppDef.SchemaByName(val.viewName)
+	schema := val.appCfg.AppDef.DefByName(val.viewName)
 	if schema == nil {
 		return false, fmt.Errorf("unknown view schema «%v»: %w", val.viewName, ErrNameNotFound)
 	}

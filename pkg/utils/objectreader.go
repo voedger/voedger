@@ -50,7 +50,7 @@ func ReadByKind(name string, kind appdef.DataKind, rr istructs.IRowReader) inter
 	}
 }
 
-func NewFieldsDef(def appdef.Schema) FieldsDef {
+func NewFieldsDef(def appdef.IDef) FieldsDef {
 	fields := make(map[string]appdef.DataKind)
 	def.Fields(
 		func(f appdef.Field) {
@@ -89,7 +89,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 	}
 
 	if opts.nonNilsOnly {
-		s := appDef.Schema(obj.AsQName(appdef.SystemField_QName))
+		s := appDef.Def(obj.AsQName(appdef.SystemField_QName))
 		fd := NewFieldsDef(s)
 		obj.FieldNames(func(fieldName string) {
 			kind := fd[fieldName]
@@ -109,7 +109,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 			}
 		})
 	} else {
-		appDef.Schema(obj.AsQName(appdef.SystemField_QName)).Fields(
+		appDef.Def(obj.AsQName(appdef.SystemField_QName)).Fields(
 			func(f appdef.Field) {
 				fieldName, kind := f.Name(), f.DataKind()
 				if opts.filter != nil {

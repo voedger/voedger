@@ -153,7 +153,7 @@ func TestBasicUsage(t *testing.T) {
 	// 5. save to PLog
 	var nextID = istructs.FirstBaseRecordID
 	pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr,
-		func(tempId istructs.RecordID, _ appdef.Schema) (storageID istructs.RecordID, err error) {
+		func(tempId istructs.RecordID, _ appdef.IDef) (storageID istructs.RecordID, err error) {
 			storageID = nextID
 			nextID++
 			return storageID, nil
@@ -371,7 +371,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 	require.NoError(err)
 
 	t.Run("I. test top level schema (command object)", func(t *testing.T) {
-		schema := app.AppDef().Schema(test.saleCmdDocName)
+		schema := app.AppDef().Def(test.saleCmdDocName)
 
 		require.NotNil(schema)
 		require.Equal(appdef.DefKind_ODoc, schema.Kind())
@@ -391,19 +391,19 @@ func TestBasicUsage_AppDef(t *testing.T) {
 		schema.Containers(
 			func(c appdef.Container) {
 				require.Equal(test.basketIdent, c.Name())
-				require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.Schema())
+				require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.Def())
 				t.Run("II. test first level nested schema (basket)", func(t *testing.T) {
-					schema := app.AppDef().Schema(appdef.NewQName(test.pkgName, test.basketIdent))
+					schema := app.AppDef().Def(appdef.NewQName(test.pkgName, test.basketIdent))
 					require.NotNil(schema)
 					require.Equal(appdef.DefKind_ORecord, schema.Kind())
 
 					schema.Containers(
 						func(c appdef.Container) {
 							require.Equal(test.goodIdent, c.Name())
-							require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.Schema())
+							require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.Def())
 
 							t.Run("III. test second level nested schema (good)", func(t *testing.T) {
-								schema := app.AppDef().Schema(appdef.NewQName(test.pkgName, test.goodIdent))
+								schema := app.AppDef().Def(appdef.NewQName(test.pkgName, test.goodIdent))
 								require.NotNil(schema)
 								require.Equal(appdef.DefKind_ORecord, schema.Kind())
 

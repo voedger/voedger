@@ -10,81 +10,81 @@ import (
 	"fmt"
 )
 
-// Validate a schema entities
-func (sch *schema) Validate() (err error) {
+// Validate a definition entities
+func (d *def) Validate() (err error) {
 	return errors.Join(
-		sch.validateFields(),
-		sch.validateContainers(),
+		d.validateFields(),
+		d.validateContainers(),
 	)
 }
 
-// Validates schema fields
-func (sch *schema) validateFields() (err error) {
-	sch.Fields(func(f Field) {
+// Validates definition fields
+func (d *def) validateFields() (err error) {
+	d.Fields(func(f Field) {
 		if !f.IsSys() {
-			if !sch.Kind().DataKindAvailable(f.DataKind()) {
+			if !d.Kind().DataKindAvailable(f.DataKind()) {
 				err = errors.Join(err,
-					fmt.Errorf("schema «%v»: field «%s» has unexpected type «%v»: %w", sch.QName(), f.Name(), f.DataKind(), ErrInvalidDataKind))
+					fmt.Errorf("%v: field «%s» has unexpected type «%v»: %w", d.QName(), f.Name(), f.DataKind(), ErrInvalidDataKind))
 			}
 		}
 	})
 
-	switch sch.Kind() {
+	switch d.Kind() {
 	case DefKind_ViewRecord:
-		err = errors.Join(err, sch.validateViewFields())
+		err = errors.Join(err, d.validateViewFields())
 	case DefKind_ViewRecord_PartitionKey:
-		err = errors.Join(err, sch.validateViewPartKeyFields())
+		err = errors.Join(err, d.validateViewPartKeyFields())
 	case DefKind_ViewRecord_ClusteringColumns:
-		err = errors.Join(err, sch.validateViewClustKeyFields())
+		err = errors.Join(err, d.validateViewClustKeyFields())
 	}
 
 	return err
 }
 
 // Validate view fields unique. See https://dev.heeus.io/launchpad/?r=1#!17003 for particulars
-func (sch *schema) validateViewFields() (err error) {
-	findSchema := func(contName string, kind DefKind) Schema {
-		if cont := sch.Container(contName); cont != nil {
-			if schema := sch.app.SchemaByName(cont.Schema()); schema != nil {
-				if schema.Kind() == kind {
-					return schema
+func (d *def) validateViewFields() (err error) {
+	findDef := func(contName string, kind DefKind) IDef {
+		if cont := d.Container(contName); cont != nil {
+			if def := d.app.DefByName(cont.Def()); def != nil {
+				if def.Kind() == kind {
+					return def
 				}
 			}
 		}
 		return nil
 	}
 
-	partSchema, clustSchema, valueSchema :=
-		findSchema(SystemContainer_ViewPartitionKey, DefKind_ViewRecord_PartitionKey),
-		findSchema(SystemContainer_ViewClusteringCols, DefKind_ViewRecord_ClusteringColumns),
-		findSchema(SystemContainer_ViewValue, DefKind_ViewRecord_Value)
-	if (partSchema == nil) || (clustSchema == nil) || (valueSchema == nil) {
+	pkDef, ccDef, valDef :=
+		findDef(SystemContainer_ViewPartitionKey, DefKind_ViewRecord_PartitionKey),
+		findDef(SystemContainer_ViewClusteringCols, DefKind_ViewRecord_ClusteringColumns),
+		findDef(SystemContainer_ViewValue, DefKind_ViewRecord_Value)
+	if (pkDef == nil) || (ccDef == nil) || (valDef == nil) {
 		return nil // extended error will return later; see validateViewContainers() method
 	}
 
-	const errWrapFmt = "schema «%v»: view field «%s» unique violated in «%s» and in «%s»: %w"
+	const errWrapFmt = "definition «%v»: view field «%s» unique violated in «%s» and in «%s»: %w"
 
-	partSchema.Fields(func(f Field) {
-		if clustSchema.Field(f.Name()) != nil {
-			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), SystemContainer_ViewPartitionKey, SystemContainer_ViewClusteringCols, ErrNameUniqueViolation))
+	pkDef.Fields(func(f Field) {
+		if ccDef.Field(f.Name()) != nil {
+			err = errors.Join(err, fmt.Errorf(errWrapFmt, d.QName(), f.Name(), SystemContainer_ViewPartitionKey, SystemContainer_ViewClusteringCols, ErrNameUniqueViolation))
 		}
-		if valueSchema.Field(f.Name()) != nil {
-			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), SystemContainer_ViewPartitionKey, SystemContainer_ViewValue, ErrNameUniqueViolation))
+		if valDef.Field(f.Name()) != nil {
+			err = errors.Join(err, fmt.Errorf(errWrapFmt, d.QName(), f.Name(), SystemContainer_ViewPartitionKey, SystemContainer_ViewValue, ErrNameUniqueViolation))
 		}
 	})
-	clustSchema.Fields(func(f Field) {
-		if valueSchema.Field(f.Name()) != nil {
-			err = errors.Join(err, fmt.Errorf(errWrapFmt, sch.QName(), f.Name(), SystemContainer_ViewClusteringCols, SystemContainer_ViewValue, ErrNameUniqueViolation))
+	ccDef.Fields(func(f Field) {
+		if valDef.Field(f.Name()) != nil {
+			err = errors.Join(err, fmt.Errorf(errWrapFmt, d.QName(), f.Name(), SystemContainer_ViewClusteringCols, SystemContainer_ViewValue, ErrNameUniqueViolation))
 		}
 	})
 
 	return err
 }
 
-// Validates view partition key schema fields
-func (sch *schema) validateViewPartKeyFields() error {
-	if sch.FieldCount() == 0 {
-		return fmt.Errorf("schema «%v»: partition key can not to be empty: %w", sch.QName(), ErrFieldsMissed)
+// Validates view partition key definition fields
+func (d *def) validateViewPartKeyFields() error {
+	if d.FieldCount() == 0 {
+		return fmt.Errorf("%v: partition key can not to be empty: %w", d.QName(), ErrFieldsMissed)
 	}
 
 	// the validity of the field types (fixed width) was checked above in the method validateFields
@@ -92,38 +92,38 @@ func (sch *schema) validateViewPartKeyFields() error {
 	return nil
 }
 
-// Validates view clustering columns schema fields
-func (sch *schema) validateViewClustKeyFields() (err error) {
-	if sch.FieldCount() == 0 {
-		return fmt.Errorf("schema «%v»: clustering columns can not to be empty: %w", sch.QName(), ErrFieldsMissed)
+// Validates view clustering columns definition fields
+func (d *def) validateViewClustKeyFields() (err error) {
+	if d.FieldCount() == 0 {
+		return fmt.Errorf("%v: clustering columns can not to be empty: %w", d.QName(), ErrFieldsMissed)
 	}
 
-	idx, cnt := 0, sch.FieldCount()
-	sch.Fields(func(fld Field) {
+	idx, cnt := 0, d.FieldCount()
+	d.Fields(func(fld Field) {
 		idx++
 		if idx == cnt {
 			return // last field may be any kind
 		}
 		if !fld.IsFixedWidth() {
 			err = errors.Join(err,
-				fmt.Errorf("schema «%v»: only last clustering column field can be variable length; not last field «%s» has variable length type «%v»: %w", sch.QName(), fld.Name(), fld.DataKind(), ErrInvalidDataKind))
+				fmt.Errorf("%v: only last clustering column field can be variable length; not last field «%s» has variable length type «%v»: %w", d.QName(), fld.Name(), fld.DataKind(), ErrInvalidDataKind))
 		}
 	})
 
 	return err
 }
 
-// Validates schema containers
-func (sch *schema) validateContainers() (err error) {
-	switch sch.Kind() {
+// Validates definition containers
+func (d *def) validateContainers() (err error) {
+	switch d.Kind() {
 	case DefKind_ViewRecord:
-		err = sch.validateViewContainers()
+		err = d.validateViewContainers()
 	default:
-		sch.Containers(func(c Container) {
-			schema := sch.app.SchemaByName(c.Schema())
-			if schema != nil {
-				if !sch.Kind().ContainerKindAvailable(schema.Kind()) {
-					err = errors.Join(err, fmt.Errorf("schema «%v» kind «%v»: container «%s» kind «%v» is not available: %w", sch.QName(), sch.Kind(), c.Name(), schema.Kind(), ErrInvalidDefKind))
+		d.Containers(func(c Container) {
+			def := d.app.DefByName(c.Def())
+			if def != nil {
+				if !d.Kind().ContainerKindAvailable(def.Kind()) {
+					err = errors.Join(err, fmt.Errorf("%v: kind «%v»: container «%s» kind «%v» is not available: %w", d.QName(), d.Kind(), c.Name(), def.Kind(), ErrInvalidDefKind))
 				}
 			}
 		})
@@ -132,38 +132,38 @@ func (sch *schema) validateContainers() (err error) {
 	return err
 }
 
-// Validates view schema containers
-func (sch *schema) validateViewContainers() (err error) {
+// Validates view definition containers
+func (d *def) validateViewContainers() (err error) {
 	const viewContCount = 3
-	if sch.ContainerCount() != viewContCount {
+	if d.ContainerCount() != viewContCount {
 		err = errors.Join(err,
-			fmt.Errorf("schema «%v»: view records schema must contain 3 containers: %w", sch.QName(), ErrWrongSchemaStruct))
+			fmt.Errorf("%v: view records definition must have 3 containers: %w", d.QName(), ErrWrongDefStruct))
 	}
 
 	checkCont := func(name string, expectedKind DefKind) {
-		cont := sch.Container(name)
+		cont := d.Container(name)
 		if cont == nil {
 			err = errors.Join(err,
-				fmt.Errorf("view schema «%v» misses container «%s»: %w", sch.QName(), name, ErrWrongSchemaStruct))
+				fmt.Errorf("%v: view definition misses container «%s»: %w", d.QName(), name, ErrWrongDefStruct))
 			return
 		}
 		if o := cont.MinOccurs(); o != 1 {
 			err = errors.Join(err,
-				fmt.Errorf("view schema «%v» container «%s» has invalid min occurs value %d, expected 1: %w", sch.QName(), name, o, ErrWrongSchemaStruct))
+				fmt.Errorf("%v: view container «%s» has invalid min occurs value %d, expected 1: %w", d.QName(), name, o, ErrWrongDefStruct))
 		}
 		if o := cont.MaxOccurs(); o != 1 {
 			err = errors.Join(err,
-				fmt.Errorf("view schema «%v» container «%s» has invalid max occurs value %d, expected 1: %w", sch.QName(), name, o, ErrWrongSchemaStruct))
+				fmt.Errorf("%v: view container «%s» has invalid max occurs value %d, expected 1: %w", d.QName(), name, o, ErrWrongDefStruct))
 		}
-		contSchema := sch.ContainerSchema(name)
-		if contSchema == nil {
+		contDef := d.ContainerDef(name)
+		if contDef == nil {
 			err = errors.Join(err,
-				fmt.Errorf("view schema «%v» container «%s» schema not found: %w", sch.QName(), name, ErrNameNotFound))
+				fmt.Errorf("%v: view container «%s» definition not found: %w", d.QName(), name, ErrNameNotFound))
 			return
 		}
-		if contSchema.Kind() != expectedKind {
+		if contDef.Kind() != expectedKind {
 			err = errors.Join(err,
-				fmt.Errorf("view schema «%v» container «%s» schema has invalid kind «%v», expected «%v»: %w", sch.QName(), name, contSchema.Kind(), expectedKind, ErrInvalidDefKind))
+				fmt.Errorf("%v: view container «%s» definition has invalid kind «%v», expected «%v»: %w", d.QName(), name, contDef.Kind(), expectedKind, ErrInvalidDefKind))
 		}
 	}
 
@@ -175,7 +175,7 @@ func (sch *schema) validateViewContainers() (err error) {
 }
 
 type (
-	// schema validator
+	// Definitions validator
 	validator struct {
 		results map[QName]error
 	}
@@ -185,24 +185,24 @@ func newValidator() *validator {
 	return &validator{make(map[QName]error)}
 }
 
-// validate specified schema
-func (v *validator) validate(schema Schema) error {
-	if err, ok := v.results[schema.QName()]; ok {
+// validate specified definition
+func (v *validator) validate(def IDef) error {
+	if err, ok := v.results[def.QName()]; ok {
 		return err
 	}
 
-	err := schema.Validate()
-	v.results[schema.QName()] = err
+	err := def.Validate()
+	v.results[def.QName()] = err
 
 	// resolve externals
-	schema.Containers(func(cont Container) {
-		if cont.Schema() == schema.QName() {
+	def.Containers(func(cont Container) {
+		if cont.Def() == def.QName() {
 			return
 		}
-		contSchema := schema.App().SchemaByName(cont.Schema())
-		if contSchema == nil {
-			err = errors.Join(err, fmt.Errorf("schema «%v» container «%s» uses unknown schema «%v»: %w", schema.QName(), cont.Name(), cont.Schema(), ErrNameNotFound))
-			v.results[schema.QName()] = err
+		contDef := def.App().DefByName(cont.Def())
+		if contDef == nil {
+			err = errors.Join(err, fmt.Errorf("%v: container «%s» uses unknown definition «%v»: %w", def.QName(), cont.Name(), cont.Def(), ErrNameNotFound))
+			v.results[def.QName()] = err
 		}
 	})
 

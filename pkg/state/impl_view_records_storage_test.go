@@ -19,16 +19,16 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		require := require.New(t)
 
-		pkSchema := amock.NewSchema(testViewRecordPkQName, appdef.DefKind_ViewRecord_PartitionKey,
+		pkSchema := amock.NewDef(testViewRecordPkQName, appdef.DefKind_ViewRecord_PartitionKey,
 			amock.NewField("pkk", appdef.DataKind_string, true), // ??? variable len PK !!!
 		)
-		ccSchema := amock.NewSchema(testViewRecordCcQName, appdef.DefKind_ViewRecord_ClusteringColumns,
+		ccSchema := amock.NewDef(testViewRecordCcQName, appdef.DefKind_ViewRecord_ClusteringColumns,
 			amock.NewField("cck", appdef.DataKind_string, false),
 		)
-		valSchema := amock.NewSchema(testViewRecordCcQName, appdef.DefKind_ViewRecord_Value,
+		valSchema := amock.NewDef(testViewRecordCcQName, appdef.DefKind_ViewRecord_Value,
 			amock.NewField("vk", appdef.DataKind_string, false),
 		)
-		viewSchema := amock.NewSchema(testViewRecordCcQName, appdef.DefKind_ViewRecord)
+		viewSchema := amock.NewDef(testViewRecordCcQName, appdef.DefKind_ViewRecord)
 		viewSchema.AddContainer(
 			amock.NewContainer(appdef.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
 			amock.NewContainer(appdef.SystemContainer_ViewClusteringCols, testViewRecordCcQName, 1, 1),
@@ -73,7 +73,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 	t.Run("Should return error on get batch", func(t *testing.T) {
 		require := require.New(t)
 
-		schema := amock.NewSchema(testViewRecordQName1, appdef.DefKind_ViewRecord)
+		schema := amock.NewDef(testViewRecordQName1, appdef.DefKind_ViewRecord)
 		schema.On("Containers", mock.Anything)
 		appDef := amock.NewAppDef(schema)
 
@@ -155,7 +155,7 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 	require := require.New(t)
 
 	appDef := amock.NewAppDef()
-	appDef.On("Schema", testViewRecordQName1).Return(appdef.NullSchema)
+	appDef.On("Schema", testViewRecordQName1).Return(appdef.NullDef)
 
 	viewRecords := &mockViewRecords{}
 	viewRecords.
@@ -183,13 +183,13 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 }
 
 func TestViewRecordsStorage_toJSON(t *testing.T) {
-	valSchema := amock.NewSchema(testViewRecordVQName, appdef.DefKind_ViewRecord_Value,
+	valSchema := amock.NewDef(testViewRecordVQName, appdef.DefKind_ViewRecord_Value,
 		amock.NewField("ID", appdef.DataKind_RecordID, false),
 		amock.NewField("Name", appdef.DataKind_string, false),
 		amock.NewField("Count", appdef.DataKind_int64, false),
 	)
 
-	viewSchema := amock.NewSchema(testViewRecordQName1, appdef.DefKind_ViewRecord,
+	viewSchema := amock.NewDef(testViewRecordQName1, appdef.DefKind_ViewRecord,
 		amock.NewField("ID", appdef.DataKind_RecordID, false), // ??? Fields in root view schema, copy/paste error ???
 		amock.NewField("Name", appdef.DataKind_string, false),
 		amock.NewField("Count", appdef.DataKind_int64, false),

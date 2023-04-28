@@ -16,7 +16,7 @@ func newSchema() *Schema {
 	}
 }
 
-func (s *Schema) readAppSchema(schema appdef.Schema) {
+func (s *Schema) readAppSchema(schema appdef.IDef) {
 	s.Name = schema.QName()
 	s.Kind = schema.Kind()
 
@@ -32,7 +32,7 @@ func (s *Schema) readAppSchema(schema appdef.Schema) {
 	schema.Containers(func(cont appdef.Container) {
 		c := newContainer()
 		c.Name = cont.Name()
-		c.Type = cont.Schema()
+		c.Type = cont.Def()
 		c.MinOccurs = cont.MinOccurs()
 		c.MaxOccurs = cont.MaxOccurs()
 		s.Containers = append(s.Containers, c)

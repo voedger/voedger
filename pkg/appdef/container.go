@@ -16,19 +16,21 @@ const SystemContainer_ViewValue = SystemPackagePrefix + "val"
 // Implements Container interface
 type container struct {
 	name      string
-	schema    QName
+	def       QName
 	minOccurs Occurs
 	maxOccurs Occurs
 }
 
-func newContainer(name string, schema QName, minOccurs, maxOccurs Occurs) container {
+func newContainer(name string, def QName, minOccurs, maxOccurs Occurs) container {
 	return container{
 		name:      name,
-		schema:    schema,
+		def:       def,
 		minOccurs: minOccurs,
 		maxOccurs: maxOccurs,
 	}
 }
+
+func (cont *container) Def() QName { return cont.def }
 
 func (cont *container) IsSys() bool { return IsSysContainer(cont.name) }
 
@@ -37,8 +39,6 @@ func (cont *container) MaxOccurs() Occurs { return cont.maxOccurs }
 func (cont *container) MinOccurs() Occurs { return cont.minOccurs }
 
 func (cont *container) Name() string { return cont.name }
-
-func (cont *container) Schema() QName { return cont.schema }
 
 // Returns is container system
 func IsSysContainer(n string) bool {

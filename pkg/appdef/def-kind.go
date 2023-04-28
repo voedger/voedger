@@ -83,7 +83,7 @@ func (k DefKind) ContainersAllowed() bool {
 	return defKindProps[k].containersAllowed
 }
 
-// Is specified schema kind may be used in child containers.
+// Is specified definition kind may be used in child containers.
 func (k DefKind) ContainerKindAvailable(s DefKind) bool {
 	return defKindProps[k].containersAllowed && defKindProps[k].availableContainerKinds[s]
 }

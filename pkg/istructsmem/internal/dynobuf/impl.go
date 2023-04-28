@@ -17,14 +17,14 @@ func newSchemes() DynoBufSchemes {
 
 // Prepares schemes
 func (sch DynoBufSchemes) Prepare(appDef appdef.IAppDef) {
-	appDef.Schemas(
-		func(schema appdef.Schema) {
+	appDef.Defs(
+		func(schema appdef.IDef) {
 			sch.add(schema)
 		})
 }
 
 // Adds schema
-func (sch DynoBufSchemes) add(schema appdef.Schema) {
+func (sch DynoBufSchemes) add(schema appdef.IDef) {
 	db := dynobuffers.NewScheme()
 
 	db.Name = schema.QName().String()

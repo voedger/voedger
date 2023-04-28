@@ -71,8 +71,8 @@ func (cnt *Containers) collectAllContainers(appDef appdef.IAppDef) (err error) {
 
 	// application containers
 	if appDef != nil {
-		appDef.Schemas(
-			func(schema appdef.Schema) {
+		appDef.Defs(
+			func(schema appdef.IDef) {
 				schema.Containers(
 					func(c appdef.Container) {
 						if !c.IsSys() {

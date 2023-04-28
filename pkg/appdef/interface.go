@@ -39,21 +39,21 @@ type Occurs uint16
 //
 // Ref to apdef.go for implementation
 type IAppDef interface {
-	// Returns schema by name.
+	// Returns definition by name.
 	//
-	// If not found empty Schema with SchemeKind_null is returned
-	Schema(name QName) Schema
+	// If not found empty definition with DefKind_null is returned
+	Def(name QName) IDef
 
-	// Returns schema by name.
+	// Returns definition by name.
 	//
 	// Returns nil if not found.
-	SchemaByName(name QName) Schema
+	DefByName(name QName) IDef
 
-	// Return count of schemas.
-	SchemaCount() int
+	// Return count of definitions.
+	DefCount() int
 
-	// Enumerates all schemas from cache.
-	Schemas(func(Schema))
+	// Enumerates all application definitions.
+	Defs(func(IDef))
 }
 
 // Application definition builder
@@ -62,35 +62,35 @@ type IAppDef interface {
 type IAppDefBuilder interface {
 	IAppDef
 
-	// Adds new schema specified name and kind.
+	// Adds new definition specified name and kind.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if schema with name already exists.
-	Add(name QName, kind DefKind) SchemaBuilder
+	//   - if definition with name already exists.
+	Add(name QName, kind DefKind) IDefBuilder
 
-	// Adds new schemas for view.
+	// Adds new definitions for view.
 	AddView(QName) ViewBuilder
 
-	// Must be called after all schemas added. Validates and returns builded application definition or error
+	// Must be called after all definitions added. Validates and returns builded application definition or error
 	Build() (IAppDef, error)
 
 	// Has changes since last success build
 	HasChanges() bool
 }
 
-// Schema describes the entity, such as document, record or view. Schema has fields and containers.
+// Definition describes the entity, such as document, record or view. Definitions may have fields and containers.
 //
-// Ref to schema.go for implementation
-type Schema interface {
+// Ref to def.go for implementation
+type IDef interface {
 	// Parent cache
 	App() IAppDef
 
-	// Schema qualified name.
+	// Definition qualified name.
 	QName() QName
 
-	// Schema kind.
+	// Definition kind.
 	Kind() DefKind
 
 	// Finds field by name.
@@ -115,23 +115,23 @@ type Schema interface {
 	// Enumerates all containers in add order.
 	Containers(func(Container))
 
-	// Finds container schema by constinaer name.
+	// Finds container definition by constainer name.
 	//
 	// Returns nil if not found.
-	ContainerSchema(name string) Schema
+	ContainerDef(name string) IDef
 
-	// Returns is schema CDoc singleton
+	// Returns is definition CDoc singleton
 	Singleton() bool
 
-	// Validates schema entities
+	// Validates definition
 	Validate() error
 }
 
-// Schema builder
+// Definition builder
 //
-// Ref to schema.go for implementation
-type SchemaBuilder interface {
-	Schema
+// Ref to def.go for implementation
+type IDefBuilder interface {
+	IDef
 
 	// Adds field specified name and kind.
 	//
@@ -139,9 +139,9 @@ type SchemaBuilder interface {
 	//   - if name is empty,
 	//   - if name is invalid,
 	//   - if field with name is already exists,
-	//   - if schema kind not supports fields,
-	//   - if data kind is not allowed by schema kind.
-	AddField(name string, kind DataKind, required bool) SchemaBuilder
+	//   - if definition kind not supports fields,
+	//   - if data kind is not allowed by definition kind.
+	AddField(name string, kind DataKind, required bool) IDefBuilder
 
 	// Adds verified field specified name and kind.
 	//
@@ -149,10 +149,10 @@ type SchemaBuilder interface {
 	//   - if field name is empty,
 	//   - if field name is invalid,
 	//   - if field with name is already exists,
-	//   - if schema kind not supports fields,
-	//   - if data kind is not allowed by schema kind,
+	//   - if definition kind not supports fields,
+	//   - if data kind is not allowed by definition kind,
 	//   - if no verification kinds are specified
-	AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) SchemaBuilder
+	AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IDefBuilder
 
 	// Adds container specified name and occurs.
 	//
@@ -161,14 +161,14 @@ type SchemaBuilder interface {
 	//   - if name is invalid,
 	//   - if container with name already exists,
 	//   - if invalid occurrences,
-	//   - if schema kind does not allow containers,
-	//   - if container schema kind is not compatable with schema kind.
-	AddContainer(name string, schema QName, min, max Occurs) SchemaBuilder
+	//   - if definition kind does not allow containers,
+	//   - if container definition kind is not compatable with definition kind.
+	AddContainer(name string, def QName, min, max Occurs) IDefBuilder
 
 	// Sets the singleton document flag for CDoc.
 	//
 	// # Panics:
-	//   - if not CDoc schema.
+	//   - if not CDoc definition.
 	SetSingleton()
 
 	clear()
@@ -181,28 +181,28 @@ type ViewBuilder interface {
 	// Returns view name
 	Name() QName
 
-	// Schema returns view schema
-	Schema() SchemaBuilder
+	// Returns view definition
+	Def() IDefBuilder
 
-	// PartKeySchema: returns view partition key schema
-	PartKeySchema() SchemaBuilder
+	// Returns view partition key definition
+	PartKeyDef() IDefBuilder
 
-	// ClustColsSchema returns view clustering columns schema
-	ClustColsSchema() SchemaBuilder
+	// Returns view clustering columns definition
+	ClustColsDef() IDefBuilder
 
-	// FullKeySchema returns view full key (partition key + clustering columns) schema
-	FullKeySchema() SchemaBuilder
+	// Returns view full key (partition key + clustering columns) definition
+	FullKeyDef() IDefBuilder
 
-	// ValueSchema returns view value schema
-	ValueSchema() SchemaBuilder
+	// Returns view value definition
+	ValueDef() IDefBuilder
 
-	// AddPartField adds specisified field to view partition key schema. Fields is always required
+	// AddPartField adds specisified field to view partition key definition. Fields is always required
 	AddPartField(name string, kind DataKind) ViewBuilder
 
-	// AddClustColumn adds specisified field to view clustering columns schema. Fields is optional
+	// AddClustColumn adds specisified field to view clustering columns definition. Fields is optional
 	AddClustColumn(name string, kind DataKind) ViewBuilder
 
-	// AddValueField adds specisified field to view value schema
+	// AddValueField adds specisified field to view value definition
 	AddValueField(name string, kind DataKind, required bool) ViewBuilder
 }
 
@@ -232,15 +232,15 @@ type Field interface {
 	IsSys() bool
 }
 
-// Describes single inclusion of child schema in parent schema.
+// Describes single inclusion of child definition in parent definition.
 //
 // Ref to container.go for constants and implementation
 type Container interface {
 	// Returns name of container
 	Name() string
 
-	// Returns schema name of container
-	Schema() QName
+	// Returns definition name of container
+	Def() QName
 
 	// Returns minimum occurs
 	MinOccurs() Occurs

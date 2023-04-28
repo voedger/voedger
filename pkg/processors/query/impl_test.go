@@ -57,10 +57,10 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Sweet")).Once()
-	departmentSchema := amock.NewSchema(qNamePosDepartment, appdef.DefKind_Object,
+	departmentSchema := amock.NewDef(qNamePosDepartment, appdef.DefKind_Object,
 		amock.NewField("name", appdef.DataKind_string, false),
 	)
-	resultMeta := amock.NewSchema(appdef.NewQName("pos", "DepartmentResult"), appdef.DefKind_Object,
+	resultMeta := amock.NewDef(appdef.NewQName("pos", "DepartmentResult"), appdef.DefKind_Object,
 		amock.NewField("id", appdef.DataKind_int64, true),
 		amock.NewField("name", appdef.DataKind_string, false),
 	)
@@ -231,7 +231,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 	rawEvent, err := reb.BuildRawEvent()
 	require.NoError(err)
 	nextRecordID := istructs.FirstBaseRecordID
-	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, func(custom istructs.RecordID, schema appdef.Schema) (storage istructs.RecordID, err error) {
+	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, func(custom istructs.RecordID, schema appdef.IDef) (storage istructs.RecordID, err error) {
 		storage = nextRecordID
 		nextRecordID++
 		return
@@ -315,7 +315,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 func TestRawMode(t *testing.T) {
 	require := require.New(t)
 
-	resultMeta := &amock.Schema{}
+	resultMeta := &amock.Def{}
 	resultMeta.On("QName").Return(istructs.QNameJSON)
 
 	result := ""

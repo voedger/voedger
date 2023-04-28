@@ -32,7 +32,7 @@ import (
 )
 
 func implRowsProcessorFactory(ctx context.Context, cache appdef.IAppDef, state istructs.IState, params IQueryParams,
-	resultMeta appdef.Schema, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline {
+	resultMeta appdef.IDef, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline {
 	operators := make([]*pipeline.WiredOperator, 0)
 	if resultMeta.QName() == istructs.QNameJSON {
 		operators = append(operators, pipeline.WireAsyncOperator("Raw result", &RawResultOperator{
@@ -172,7 +172,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.queryFunction = qw.msg.Resource().(istructs.IQueryFunction)
-			paramsSchema := qw.appStructs.AppDef().Schema(qw.queryFunction.ParamsSchema())
+			paramsSchema := qw.appStructs.AppDef().Def(qw.queryFunction.ParamsSchema())
 			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), paramsSchema, qw.appCfg, qw)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
@@ -190,7 +190,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("validate: get result schema", func(ctx context.Context, qw *queryWork) (err error) {
 			schema := qw.queryFunction.ResultSchema(qw.execQueryArgs.PrepareArgs)
-			qw.resultSchema = qw.appStructs.AppDef().Schema(schema)
+			qw.resultSchema = qw.appStructs.AppDef().Def(schema)
 			err = errIfFalse(qw.resultSchema.Kind() != appdef.DefKind_null, func() error {
 				return fmt.Errorf("result schema %s: %w", schema, ErrNotFound)
 			})
@@ -276,7 +276,7 @@ type queryWork struct {
 	queryParams       IQueryParams
 	appStructs        istructs.IAppStructs
 	queryFunction     istructs.IQueryFunction
-	resultSchema      appdef.Schema
+	resultSchema      appdef.IDef
 	execQueryArgs     istructs.ExecQueryArgs
 	maxPrepareQueries int
 	rowsProcessor     pipeline.IAsyncPipeline
@@ -394,7 +394,7 @@ func (r *outputRow) Values() []interface{}               { return r.values }
 func (r *outputRow) Value(alias string) interface{}      { return r.values[r.keyToIdx[alias]] }
 func (r *outputRow) MarshalJSON() ([]byte, error)        { return json.Marshal(r.values) }
 
-func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, argsSchema appdef.Schema, appCfg *istructsmem.AppConfigType,
+func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, argsSchema appdef.IDef, appCfg *istructsmem.AppConfigType,
 	qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
 	args, _, err := data.AsObject("args")
 	if err != nil {
@@ -477,7 +477,7 @@ func (c *fieldsDefs) get(name appdef.QName) coreutils.FieldsDef {
 	defer c.lock.Unlock()
 	fd, ok := c.fields[name]
 	if !ok {
-		fd = coreutils.NewFieldsDef(c.appDef.Schema(name))
+		fd = coreutils.NewFieldsDef(c.appDef.Def(name))
 		c.fields[name] = fd
 	}
 	return fd

@@ -13,61 +13,61 @@ import (
 type AppDef struct {
 	appdef.IAppDef
 	mock.Mock
-	sch []*Schema
+	defs []*Def
 }
 
-func NewAppDef(sch ...*Schema) *AppDef {
+func NewAppDef(def ...*Def) *AppDef {
 	app := AppDef{}
-	if len(sch) > 0 {
-		app.Add(sch...)
+	if len(def) > 0 {
+		app.Add(def...)
 	}
 	return &app
 }
 
-func (app *AppDef) Add(sch ...*Schema) {
-	if len(sch) > 0 {
-		for _, s := range sch {
-			s.app = app
+func (app *AppDef) Add(def ...*Def) {
+	if len(def) > 0 {
+		for _, d := range def {
+			d.app = app
 		}
-		app.sch = append(app.sch, sch...)
+		app.defs = append(app.defs, def...)
 	}
 }
 
-func (app *AppDef) Schema(name appdef.QName) appdef.Schema {
-	if len(app.sch) > 0 {
-		for _, s := range app.sch {
-			if s.QName() == name {
-				return s
+func (app *AppDef) Def(name appdef.QName) appdef.IDef {
+	if len(app.defs) > 0 {
+		for _, d := range app.defs {
+			if d.QName() == name {
+				return d
 			}
 		}
-		return appdef.NullSchema
+		return appdef.NullDef
 	}
-	return app.Called(name).Get(0).(appdef.Schema)
+	return app.Called(name).Get(0).(appdef.IDef)
 }
 
-func (app *AppDef) SchemaByName(name appdef.QName) appdef.Schema {
-	if len(app.sch) > 0 {
-		for _, s := range app.sch {
-			if s.QName() == name {
-				return s
+func (app *AppDef) DefByName(name appdef.QName) appdef.IDef {
+	if len(app.defs) > 0 {
+		for _, d := range app.defs {
+			if d.QName() == name {
+				return d
 			}
 		}
 		return nil
 	}
-	return app.Called(name).Get(0).(appdef.Schema)
+	return app.Called(name).Get(0).(appdef.IDef)
 }
 
-func (app *AppDef) SchemaCount() int {
-	if l := len(app.sch); l > 0 {
+func (app *AppDef) DefCount() int {
+	if l := len(app.defs); l > 0 {
 		return l
 	}
 	return app.Called().Get(0).(int)
 }
 
-func (app *AppDef) Schemas(cb func(appdef.Schema)) {
-	if len(app.sch) > 0 {
-		for _, s := range app.sch {
-			cb(s)
+func (app *AppDef) Defs(cb func(appdef.IDef)) {
+	if len(app.defs) > 0 {
+		for _, d := range app.defs {
+			cb(d)
 		}
 		return
 	}

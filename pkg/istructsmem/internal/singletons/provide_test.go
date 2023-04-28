@@ -76,8 +76,8 @@ func Test_BasicUsage(t *testing.T) {
 
 func test_AppDefSingletons(t *testing.T, appDef appdef.IAppDef, stons *Singletons) {
 	require := require.New(t)
-	appDef.Schemas(
-		func(schema appdef.Schema) {
+	appDef.Defs(
+		func(schema appdef.IDef) {
 			if schema.Singleton() {
 				id, err := stons.GetID(schema.QName())
 				require.NoError(err)

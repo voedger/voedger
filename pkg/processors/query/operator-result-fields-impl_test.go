@@ -20,8 +20,8 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 	t.Run("Should set result fields", func(t *testing.T) {
 		require := require.New(t)
 
-		commonSchema := func(n appdef.QName) *amock.Schema {
-			return amock.NewSchema(n, appdef.DefKind_Object,
+		commonSchema := func(n appdef.QName) *amock.Def {
+			return amock.NewDef(n, appdef.DefKind_Object,
 				amock.NewField("name", appdef.DataKind_string, false),
 			)
 		}

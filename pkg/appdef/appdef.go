@@ -13,30 +13,30 @@ import (
 // Implements IAppDef and IAppDefBuilder interfaces
 type appDef struct {
 	changes int
-	schemas map[QName]*schema
+	defs    map[QName]*def
 }
 
 func newAppDef() *appDef {
 	app := appDef{
-		schemas: make(map[QName]*schema),
+		defs: make(map[QName]*def),
 	}
 	return &app
 }
 
-func (app *appDef) Add(name QName, kind DefKind) SchemaBuilder {
+func (app *appDef) Add(name QName, kind DefKind) IDefBuilder {
 	if name == NullQName {
-		panic(fmt.Errorf("schema name cannot be empty: %w", ErrNameMissed))
+		panic(fmt.Errorf("definition name cannot be empty: %w", ErrNameMissed))
 	}
 	if ok, err := ValidQName(name); !ok {
-		panic(fmt.Errorf("invalid schema name «%v»: %w", name, err))
+		panic(fmt.Errorf("invalid definition name «%v»: %w", name, err))
 	}
-	if app.SchemaByName(name) != nil {
-		panic(fmt.Errorf("schema name «%s» already used: %w", name, ErrNameUniqueViolation))
+	if app.DefByName(name) != nil {
+		panic(fmt.Errorf("definition name «%s» already used: %w", name, ErrNameUniqueViolation))
 	}
-	schema := newSchema(app, name, kind)
-	app.schemas[name] = schema
+	d := newDef(app, name, kind)
+	app.defs[name] = d
 	app.changed()
-	return schema
+	return d
 }
 
 func (app *appDef) AddView(name QName) ViewBuilder {
@@ -49,8 +49,8 @@ func (app *appDef) Build() (result IAppDef, err error) {
 	app.prepare()
 
 	validator := newValidator()
-	app.Schemas(func(schema Schema) {
-		err = errors.Join(err, validator.validate(schema))
+	app.Defs(func(d IDef) {
+		err = errors.Join(err, validator.validate(d))
 	})
 	if err != nil {
 		return nil, err
@@ -64,27 +64,27 @@ func (app *appDef) HasChanges() bool {
 	return app.changes > 0
 }
 
-func (app *appDef) Schema(name QName) Schema {
-	if schema := app.SchemaByName(name); schema != nil {
-		return schema
+func (app *appDef) Def(name QName) IDef {
+	if d := app.DefByName(name); d != nil {
+		return d
 	}
-	return NullSchema
+	return NullDef
 }
 
-func (app *appDef) SchemaByName(name QName) Schema {
-	if schema, ok := app.schemas[name]; ok {
-		return schema
+func (app *appDef) DefByName(name QName) IDef {
+	if d, ok := app.defs[name]; ok {
+		return d
 	}
 	return nil
 }
 
-func (app *appDef) SchemaCount() int {
-	return len(app.schemas)
+func (app *appDef) DefCount() int {
+	return len(app.defs)
 }
 
-func (app *appDef) Schemas(enum func(Schema)) {
-	for _, schema := range app.schemas {
-		enum(schema)
+func (app *appDef) Defs(cb func(IDef)) {
+	for _, d := range app.defs {
+		cb(d)
 	}
 }
 
@@ -93,9 +93,9 @@ func (app *appDef) changed() {
 }
 
 func (app *appDef) prepare() {
-	app.Schemas(func(s Schema) {
-		if s.Kind() == DefKind_ViewRecord {
-			app.prepareViewFullKeySchema(s)
+	app.Defs(func(d IDef) {
+		if d.Kind() == DefKind_ViewRecord {
+			app.prepareViewFullKeyDef(d)
 		}
 	})
 }

@@ -115,9 +115,9 @@ func (s *eventService) getWSID() istructs.WSID { return s.event.Workspace() }
 type ViewBuilder struct {
 	appDef               appdef.IAppDefBuilder
 	qname                appdef.QName
-	valueSchema          appdef.SchemaBuilder
-	partitionKeySchema   appdef.SchemaBuilder
-	clusteringColsSchema appdef.SchemaBuilder
+	valueSchema          appdef.IDefBuilder
+	partitionKeySchema   appdef.IDefBuilder
+	clusteringColsSchema appdef.IDefBuilder
 }
 
 func qnameValue(qname appdef.QName) appdef.QName {

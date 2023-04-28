@@ -86,7 +86,7 @@ func IBucketsFromIAppStructs(as istructs.IAppStructs) irates.IBuckets {
 	return as.(interface{ Buckets() irates.IBuckets }).Buckets()
 }
 
-func FillElementFromJSON(data map[string]interface{}, s appdef.Schema, b istructs.IElementBuilder) error {
+func FillElementFromJSON(data map[string]interface{}, s appdef.IDef, b istructs.IElementBuilder) error {
 	for fieldName, fieldValue := range data {
 		switch fv := fieldValue.(type) {
 		case float64:
@@ -98,7 +98,7 @@ func FillElementFromJSON(data map[string]interface{}, s appdef.Schema, b istruct
 		case []interface{}:
 			// e.g. TestBasicUsage_Dashboard(), "order_item": [<2 elements>]
 			containerName := fieldName
-			containerSchema := s.ContainerSchema(containerName)
+			containerSchema := s.ContainerDef(containerName)
 			if containerSchema == nil {
 				return fmt.Errorf("container with name %s is not found", containerName)
 			}
@@ -124,7 +124,7 @@ func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectB
 
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
 	schems := appStructs.AppDef()
-	schema := schems.Schema(obj.AsQName(appdef.SystemField_QName))
+	schema := schems.Def(obj.AsQName(appdef.SystemField_QName))
 	schema.Fields(
 		func(f appdef.Field) {
 			if err != nil || f.DataKind() != appdef.DataKind_RecordID {

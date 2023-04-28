@@ -83,7 +83,7 @@ func (c *cmdWorkpiece) GetPrincipalPayload() payloads.PrincipalPayload {
 	return c.principalPayload
 }
 
-func (ws *workspace) nextRecordID(schema appdef.Schema) (res istructs.RecordID) {
+func (ws *workspace) nextRecordID(schema appdef.IDef) (res istructs.RecordID) {
 	if schema.Kind() == appdef.DefKind_CDoc || schema.Kind() == appdef.DefKind_CRecord {
 		res = istructs.NewCDocCRecordID(ws.NextCDocCRecordBaseID)
 		ws.NextCDocCRecordBaseID++
@@ -149,7 +149,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		ws := ap.getWorkspace(event.Workspace())
 		_ = event.CUDs(func(rec istructs.ICUDRow) error { // no errors to return
 			if rec.IsNew() {
-				schema := cmd.AppDef().Schema(rec.QName())
+				schema := cmd.AppDef().Def(rec.QName())
 				if schema.Kind() == appdef.DefKind_CDoc || schema.Kind() == appdef.DefKind_CRecord {
 					ws.NextCDocCRecordBaseID = rec.ID().BaseRecordID() + 1
 				} else {
@@ -180,7 +180,7 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, work interface{}) (err error)
 	cmd := work.(*cmdWorkpiece)
 	cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil,
 		// FIXME: implement the right id generator
-		func(tempId istructs.RecordID, schema appdef.Schema) (storageID istructs.RecordID, err error) {
+		func(tempId istructs.RecordID, schema appdef.IDef) (storageID istructs.RecordID, err error) {
 			storageID = cmd.workspace.nextRecordID(schema)
 			cmd.generatedIDs[tempId] = storageID
 			return
@@ -333,7 +333,7 @@ func getArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"args" field must be an object`)
 		}
-		paramsSchema := cmd.appStructs.AppDef().Schema(cmd.cmdFunc.ParamsSchema())
+		paramsSchema := cmd.appStructs.AppDef().Def(cmd.cmdFunc.ParamsSchema())
 		if err = istructsmem.FillElementFromJSON(args, paramsSchema, aob); err != nil {
 			return err
 		}
@@ -355,7 +355,7 @@ func getUnloggedArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"unloggedArgs" field must be an object`)
 		}
-		unloggedParamsSchema := cmd.appStructs.AppDef().Schema(cmd.cmdFunc.UnloggedParamsSchema())
+		unloggedParamsSchema := cmd.appStructs.AppDef().Def(cmd.cmdFunc.UnloggedParamsSchema())
 		if err = istructsmem.FillElementFromJSON(unloggedArgs, unloggedParamsSchema, auob); err != nil {
 			return err
 		}

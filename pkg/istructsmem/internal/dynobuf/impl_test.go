@@ -68,7 +68,7 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 		schemaName, err := appdef.ParseQName(dynoScheme.Name)
 		require.NoError(err)
 
-		schema := appDef.SchemaByName(schemaName)
+		schema := appDef.DefByName(schemaName)
 		require.NotNil(schema)
 
 		for _, fld := range dynoScheme.Fields {
@@ -93,8 +93,8 @@ func Test_DynoBufSchemasCache(t *testing.T) {
 		}
 	}
 
-	appDef.Schemas(
-		func(s appdef.Schema) {
+	appDef.Defs(
+		func(s appdef.IDef) {
 			checkScheme(schemes[s.QName()])
 		})
 }

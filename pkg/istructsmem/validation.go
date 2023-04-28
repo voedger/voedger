@@ -18,10 +18,10 @@ import (
 // validator provides validation application structures by single schema
 type validator struct {
 	validators *validators
-	schema     appdef.Schema
+	schema     appdef.IDef
 }
 
-func newValidator(validators *validators, schema appdef.Schema) *validator {
+func newValidator(validators *validators, schema appdef.IDef) *validator {
 	return &validator{validators, schema}
 }
 
@@ -97,9 +97,9 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 			}
 
 			childQName := child.QName()
-			if childQName != cont.Schema() {
+			if childQName != cont.Def() {
 				err = errors.Join(err,
-					validateErrorf(ECode_InvalidSchemaName, "%s child[%d] «%s» has wrong schema name «%v», expected «%v»: %w", v.entName(el), idx, childName, childQName, cont.Schema(), ErrNameNotFound))
+					validateErrorf(ECode_InvalidSchemaName, "%s child[%d] «%s» has wrong schema name «%v», expected «%v»: %w", v.entName(el), idx, childName, childQName, cont.Def(), ErrNameNotFound))
 				return
 			}
 
@@ -200,8 +200,8 @@ func newValidators() *validators {
 // Prepares validator for specified schema cache
 func (v *validators) prepare(appDef appdef.IAppDef) {
 	v.appDef = appDef
-	v.appDef.Schemas(
-		func(s appdef.Schema) {
+	v.appDef.Defs(
+		func(s appdef.IDef) {
 			v.validators[s.QName()] = newValidator(v, s)
 		})
 }
@@ -234,7 +234,7 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 			validateErrorf(ECode_InvalidSchemaName, "event command argument «%v» uses wrong schema «%v», expected «%v»: %w", ev.name, ev.argObject.QName(), arg, ErrWrongSchema))
 	} else if arg != appdef.NullQName {
 		// #!17185: must be ODoc or Object only
-		schema := v.appDef.Schema(arg)
+		schema := v.appDef.Def(arg)
 		if (schema.Kind() != appdef.DefKind_ODoc) && (schema.Kind() != appdef.DefKind_Object) {
 			err = errors.Join(err,
 				validateErrorf(ECode_InvalidDefKind, "event command argument «%v» schema can not to be «%v», expected («%v» or «%v»): %w", arg, schema.Kind(), appdef.DefKind_ODoc, appdef.DefKind_Object, ErrWrongSchema))
