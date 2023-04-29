@@ -14,6 +14,19 @@ Useful for test application definition.
 
   …
 
+  el := amock.NewDef(appdef.NewQName("test", "el"), appdef.DefKind_Element,
+		amock.NewField("f1", appdef.DataKind_string, true),
+	)
+  obj := amock.NewDef(appdef.NewQName("test", "obj"), appdef.DefKind_Object,
+		amock.NewField("f2", appdef.DataKind_int64, true),
+	)
+	obj.AddContainer(amock.NewContainer("c1", el.QName(), 0, appdef.Occurs_Unbounded))
+
+	appDef := amock.NewAppDef(
+		el,
+		obj,
+	)
+
 	view := amock.NewView(appdef.NewQName("test", "view"))
 	view.
 		AddPartField("pkFld", appdef.DataKind_int64).
@@ -21,13 +34,7 @@ Useful for test application definition.
 		AddValueField("vFld1", appdef.DataKind_int64, true).
 		AddValueField("vFld2", appdef.DataKind_string, false)
 
-  obj := amock.NewDef(appdef.NewQName("test", "obj"), appdef.DefKind_Object,
-		amock.NewField("f1", appdef.DataKind_int64, true),
-	)
-
-	appDef := amock.NewAppDef()
 	appDef.AddView(view)
-	appDef.Add(obj)
 
   …
 
