@@ -23,7 +23,7 @@ TABLE AirTablePlan OF CDOC (
     Int2 int DEFAULT NEXTVAL('sequence'),
     BillID int64 REFERENCES air.bill,
     CheckedField text CHECK "^[0-9]{8}$",
-    UNIQUE fstate, name
+    UNIQUE (fstate, name)
 ) WITH Comment=BackofficeComment, Tags=[BackofficeTag];
 
 WORKSPACE MyWorkspace (

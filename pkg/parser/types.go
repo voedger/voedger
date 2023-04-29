@@ -273,7 +273,7 @@ type TableItemExpr struct {
 }
 
 type UniqueExpr struct {
-	Fields []string `parser:"'UNIQUE' @Ident (',' @Ident)*"`
+	Fields []string `parser:"'UNIQUE' '(' @Ident (',' @Ident)* ')'"`
 }
 
 // TODO: TABLE: FIELD CHECK(expression)
