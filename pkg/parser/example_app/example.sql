@@ -1,4 +1,6 @@
-SCHEMA air;
+-- package consists of schema and resources
+-- schema consists of few schema files
+SCHEMA Air;
 
 IMPORT SCHEMA "github.com/untillpro/untill";
 IMPORT SCHEMA "github.com/untillpro/airsbp" AS Air;
@@ -58,26 +60,29 @@ WORKSPACE MyWorkspace (
 	USE TABLE Untill.*; 
 
 
+    FUNCTION SomeProjectorFunc() RETURNS text ENGINE BUILTIN;
+    FUNCTION OrderFunc(Untill.Orders) RETURNS void ENGINE BUILTIN;
+    FUNCTION Order2Func(Untill.Orders, Untill.PBill) RETURNS void ENGINE BUILTIN;
+    FUNCTION QueryFunc() RETURNS text ENGINE BUILTIN;
+    FUNCTION Qiery2Func(Untill.Orders, Untill.PBill) RETURNS text ENGINE BUILTIN;
+
     -- Projectors can only be declared in workspaces
-    PROJECTOR ON COMMAND Air.CreateUPProfile AS SomeFunc;
-    PROJECTOR ON COMMAND ARGUMENT Untill.QNameOrders AS SomeSchema.SomeFunc2;
-    PROJECTOR ON INSERT Untill.Bill AS SomeFunc;
-    PROJECTOR ON INSERT OR UPDATE Untill.Bill AS SomeFunc;
-    PROJECTOR ON UPDATE Untill.Bill AS SomeFunc;
-    PROJECTOR ON UPDATE OR INSERT Untill.Bill AS SomeFunc;
-    PROJECTOR ApplyUPProfile ON COMMAND IN (Air.CreateUPProfile, Air.UpdateUPProfile) AS Air.FillUPProfile;
+    PROJECTOR ON COMMAND Air.CreateUPProfile AS SomeProjectorFunc;
+    PROJECTOR ON COMMAND ARGUMENT Untill.QNameOrders AS Air.SomeProjectorFunc;
+    PROJECTOR ON INSERT Untill.Bill AS SomeProjectorFunc;
+    PROJECTOR ON INSERT OR UPDATE Untill.Bill AS SomeProjectorFunc;
+    PROJECTOR ON UPDATE Untill.Bill AS SomeProjectorFunc;
+    PROJECTOR ON UPDATE OR INSERT Untill.Bill AS SomeProjectorFunc;
+    PROJECTOR ApplyUPProfile ON COMMAND IN (Air.CreateUPProfile, Air.UpdateUPProfile) AS Air.SomeProjectorFunc;
 
     -- Commands can only be declared in workspaces
-    COMMAND Orders AS PbillFunc;
-    COMMAND _Orders() AS PbillFunc WITH Comment=air.PosComment, Tags=[Tag1, air.Tag2];
-    COMMAND Orders2(Untill.Orders) AS PbillFunc;
-    COMMAND Orders3(Order Untill.Orders, Untill.PBill) AS PbillFunc;
+    COMMAND Orders2(Untill.Orders) AS OrderFunc;
+    COMMAND Orders3(Order Untill.Orders, Untill.PBill) AS Order2Func WITH Comment=air.PosComment, Tags=[Tag1, air.Tag2];
 
     -- Qieries can only be declared in workspaces
-    QUERY Query1 RETURNS QueryResellerInfoResult AS PbillFunc;
-    QUERY _Query1() RETURNS Air.QueryResellerInfoResult AS PbillFunc WITH Comment=Air.PosComment, Tags=[Tag1, Air.Tag2];
-    QUERY Query2(Untill.Orders) RETURNS QueryResellerInfoResult AS PbillFunc;
-    QUERY Query3(Order Untill.Orders, Untill.PBill) RETURNS QueryResellerInfoResult AS PbillFunc;
+    QUERY Query1 RETURNS text AS QueryFunc;
+    QUERY _Query1() RETURNS text AS QueryFunc WITH Comment=Air.PosComment, Tags=[Tag1, Air.Tag2];
+    QUERY Query2(Order Untill.Orders, Untill.PBill) RETURNS text AS Qiery2Func;
 
 
     -- ACLs
@@ -109,5 +114,12 @@ WORKSPACE MyWorkspace (
 
     RATE BackofficeFuncRate1 1000 PER HOUR;
     RATE BackofficeFuncRate2 100 PER MINUTE PER IP;
+);
 
+ABSTRACT WORKSPACE AWorkspace (
+    -- Abstract workspaces cannot be created
+);
+
+WORKSPACE MyWorkspace1 OF AWorkspace (
+    -- Inherits everything declared in AWorkspace
 );

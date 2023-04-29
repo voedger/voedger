@@ -2,10 +2,9 @@
 * Copyright (c) 2023-present unTill Pro, Ltd.
 * @author Michael Saigachenko
  */
-package sqlschema
+package parser
 
 import (
-	"embed"
 	"errors"
 	"path/filepath"
 	"strings"
@@ -14,7 +13,7 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 )
 
-func parse(s string) (*SchemaAST, error) {
+func parseImpl(fileName string, content string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
 
 		{Name: "Punct", Pattern: `(;|,|\.|\*|=|\(|\)|\[|\])`},
@@ -31,15 +30,7 @@ func parse(s string) (*SchemaAST, error) {
 	})
 
 	parser := participle.MustBuild[SchemaAST](participle.Lexer(basicLexer), participle.Elide("Whitespace", "Comment"))
-	return parser.ParseString("", s)
-}
-
-func stringParserImpl(s string) (*SchemaAST, error) {
-	parsed, err := parse(s)
-	if err != nil {
-		return nil, err
-	}
-	return analyse(parsed)
+	return parser.ParseString(fileName, content)
 }
 
 func mergeSchemas(mergeFrom, mergeTo *SchemaAST) {
@@ -50,12 +41,12 @@ func mergeSchemas(mergeFrom, mergeTo *SchemaAST) {
 	mergeTo.Statements = append(mergeTo.Statements, mergeFrom.Statements...)
 }
 
-func embedParserImpl(fs embed.FS, dir string) (*SchemaAST, error) {
+func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
 	entries, err := fs.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	schemas := make([]*SchemaAST, 0)
+	schemas := make([]*FileSchemaAST, 0)
 	for _, entry := range entries {
 		if strings.ToLower(filepath.Ext(entry.Name())) == ".sql" {
 			fp := filepath.Join(dir, entry.Name())
@@ -63,41 +54,45 @@ func embedParserImpl(fs embed.FS, dir string) (*SchemaAST, error) {
 			if err != nil {
 				return nil, err
 			}
-			schema, err := parse(string(bytes))
+			schema, err := parseImpl(entry.Name(), string(bytes))
 			if err != nil {
 				return nil, err
 			}
-			schemas = append(schemas, schema)
+			schemas = append(schemas, &FileSchemaAST{
+				FileName: entry.Name(),
+				Ast:      schema,
+			})
 		}
 	}
 	if len(schemas) == 0 {
 		return nil, ErrDirContainsNoSchemaFiles
 	}
-	head := schemas[0]
-	for i := 1; i < len(schemas); i++ {
-		schema := schemas[i]
-		if schema.Package != head.Package {
-			return nil, ErrDirContainsDifferentSchemas
-		}
-		mergeSchemas(schema, head)
+	return schemas, nil
+}
+
+func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
+	if len(asts) == 0 {
+		return nil, nil
 	}
-	return analyse(head)
-}
+	headAst := asts[0].Ast
 
-func iterate(c IStatementCollection, callback func(stmt interface{})) {
-	c.Iterate(func(stmt interface{}) {
-		callback(stmt)
-		if collection, ok := stmt.(IStatementCollection); ok {
-			iterate(collection, callback)
+	for i := 1; i < len(asts); i++ {
+		f := asts[i]
+		if f.Ast.Package != headAst.Package {
+			return nil, ErrUnexpectedSchema(f.FileName, f.Ast.Package, headAst.Package)
 		}
-	})
-}
+		mergeSchemas(f.Ast, headAst)
+	}
 
-func analyse(schema *SchemaAST) (*SchemaAST, error) {
 	errs := make([]error, 0)
-	errs = analyseDuplicateNames(schema, errs)
-	cleanupComments(schema)
-	return schema, errors.Join(errs...)
+	errs = analyseDuplicateNames(headAst, errs)
+	cleanupComments(headAst)
+	cleanupImports(headAst)
+
+	return &PackageSchemaAST{
+		QualifiedPackageName: qualifiedPackageName,
+		Ast:                  headAst,
+	}, errors.Join(errs...)
 }
 
 func analyseDuplicateNames(schema *SchemaAST, errs []error) []error {
@@ -114,7 +109,7 @@ func analyseDuplicateNames(schema *SchemaAST, errs []error) []error {
 			}
 			if _, ok := namedIndex[name]; ok {
 				s := stmt.(IStatement)
-				errs = append(errs, ErrSchemaContainsDuplicateName(schema.Package, name, s.GetPos()))
+				errs = append(errs, errorAt(ErrRedeclared(name), s.GetPos()))
 			} else {
 				namedIndex[name] = stmt
 			}
@@ -133,4 +128,65 @@ func cleanupComments(schema *SchemaAST) {
 			}
 		}
 	})
+}
+
+func cleanupImports(schema *SchemaAST) {
+	for i := 0; i < len(schema.Imports); i++ {
+		imp := &schema.Imports[i]
+		imp.Name = strings.Trim(imp.Name, "\"")
+	}
+}
+
+func mergePackageSchemasImpl(packages []*PackageSchemaAST) error {
+	errs := make([]error, 0)
+	pkgmap := make(map[string]*PackageSchemaAST)
+	for _, p := range packages {
+		if _, ok := pkgmap[p.QualifiedPackageName]; ok {
+			return ErrPackageRedeclared(p.QualifiedPackageName)
+		}
+		pkgmap[p.QualifiedPackageName] = p
+	}
+
+	for _, p := range packages {
+		errs = analyseReferences(p, pkgmap, errs)
+	}
+	return errors.Join(errs...)
+}
+
+func analyseReferences(pkg *PackageSchemaAST, pkgmap map[string]*PackageSchemaAST, errs []error) []error {
+	iterate(pkg.Ast, func(stmt interface{}) {
+		var err error
+		var pos *lexer.Position
+		switch v := stmt.(type) {
+		case *CommandStmt:
+			pos = &v.Pos
+			err = resolveFunc(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
+				return CompareParams(v.Params, f)
+			})
+		case *QueryStmt:
+			pos = &v.Pos
+			err = resolveFunc(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
+				err = CompareParams(v.Params, f)
+				if err != nil {
+					return err
+				}
+				if v.Returns != f.Returns {
+					return ErrFunctionResultIncorrect
+				}
+				return nil
+			})
+		case *ProjectorStmt:
+			pos = &v.Pos
+			err = resolveFunc(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
+				// TODO: Check function params
+				// TODO: Check ON (Command, Argument type, CUD)
+
+				return nil
+			})
+		}
+		if err != nil {
+			errs = append(errs, errorAt(err, pos))
+		}
+	})
+	return errs
 }

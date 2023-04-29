@@ -3,16 +3,29 @@
 * @author Michael Saigachenko
  */
 
-package sqlschema
+package parser
 
 import (
-	"embed"
+	"fmt"
+	fs "io/fs"
 
 	"github.com/alecthomas/participle/v2/lexer"
 )
 
-type EmbedParser func(fs embed.FS, dir string) (*SchemaAST, error)
-type StringParser func(string) (*SchemaAST, error)
+type FileSchemaAST struct {
+	FileName string
+	Ast      *SchemaAST
+}
+
+type PackageSchemaAST struct {
+	QualifiedPackageName string
+	Ast                  *SchemaAST
+}
+
+type IReadFS interface {
+	fs.ReadDirFS
+	fs.ReadFileFS
+}
 
 type IStatement interface {
 	GetPos() *lexer.Position
@@ -89,7 +102,10 @@ type WorkspaceStatement struct {
 
 type WorkspaceStmt struct {
 	Statement
-	Name       string               `parser:"'WORKSPACE' @Ident '('"`
+	Abstract   bool                 `parser:"@'ABSTRACT'?"`
+	Name       string               `parser:"'WORKSPACE' @Ident "`
+	Of         []OptQName           `parser:"('OF' @@ (',' @@)*)?"`
+	A          int                  `parser:"'('"`
 	Descriptor *WsDescriptorStmt    `parser:"('DESCRIPTOR' @@)?"`
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 }
@@ -115,6 +131,14 @@ type WsDescriptorStmt struct {
 type OptQName struct {
 	Package string `parser:"(@Ident '.')?"`
 	Name    string `parser:"@Ident"`
+}
+
+func (q OptQName) String() string {
+	if q.Package == "" {
+		return q.Name
+	}
+	return fmt.Sprintf("%s.%s", q.Package, q.Name)
+
 }
 
 type Statement struct {
@@ -227,7 +251,7 @@ type CommandStmt struct {
 	Statement
 	Name   string          `parser:"'COMMAND' @Ident"`
 	Params []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
-	Func   string          `parser:"'AS' @Ident"`
+	Func   OptQName        `parser:"'AS' @@"`
 	With   []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
@@ -243,7 +267,7 @@ type QueryStmt struct {
 	Name    string          `parser:"'QUERY' @Ident"`
 	Params  []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
 	Returns OptQName        `parser:"'RETURNS' @@"`
-	Func    string          `parser:"'AS' @Ident"`
+	Func    OptQName        `parser:"'AS' @@"`
 	With    []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
