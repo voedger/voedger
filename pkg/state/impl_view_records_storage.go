@@ -110,15 +110,22 @@ func (s *viewRecordsStorage) toJSON(sv istructs.IStateValue, opts ...interface{}
 	}
 
 	obj := make(map[string]interface{})
-	s.appDefFunc().Def(sv.AsQName(appdef.SystemField_QName)).
-		Containers(func(cont appdef.Container) {
-			containerName := cont.Name()
-			if containerName == appdef.SystemContainer_ViewValue {
-				obj = coreutils.FieldsToMap(sv, s.appDefFunc(), coreutils.Filter(func(name string, kidn appdef.DataKind) bool {
-					return !options.excludedFields[name]
-				}))
-			}
-		})
+	// —— nnv, commented. Я не понимаю, зачем здесь поиск контейнера со значением, если его результат никак не используется.
+	//		Если бы QName (или определение) найденного контейнера передавалась бы дальше в FieldsToMap или бы изменила бы QName	sv, то это бы объяснило зачем.
+
+	// s.appDefFunc().Def(sv.AsQName(appdef.SystemField_QName)).
+	// 	Containers(func(cont appdef.Container) {
+	// 		containerName := cont.Name()
+	// 		if containerName == appdef.SystemContainer_ViewValue {
+	// 			obj = coreutils.FieldsToMap(sv, s.appDefFunc(), coreutils.Filter(func(name string, kind appdef.DataKind) bool {
+	// 				return !options.excludedFields[name]
+	// 			}))
+	// 		}
+	// 	})
+
+	obj = coreutils.FieldsToMap(sv, s.appDefFunc(), coreutils.Filter(func(n string, _ appdef.DataKind) bool {
+		return !options.excludedFields[n]
+	}))
 
 	bb, err := json.Marshal(obj)
 	return string(bb), err

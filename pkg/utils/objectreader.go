@@ -80,17 +80,20 @@ func WithNonNilsOnly() MapperOpt {
 
 func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...MapperOpt) (res map[string]interface{}) {
 	res = map[string]interface{}{}
-	if obj.AsQName(appdef.SystemField_QName) == appdef.NullQName {
+
+	qn := obj.AsQName(appdef.SystemField_QName)
+	if qn == appdef.NullQName {
 		return
 	}
+	def := appDef.Def(qn)
+
 	opts := &mapperOpts{}
 	for _, optFunc := range optFuncs {
 		optFunc(opts)
 	}
 
 	if opts.nonNilsOnly {
-		s := appDef.Def(obj.AsQName(appdef.SystemField_QName))
-		fd := NewFieldsDef(s)
+		fd := NewFieldsDef(def)
 		obj.FieldNames(func(fieldName string) {
 			kind := fd[fieldName]
 			if opts.filter != nil {
@@ -109,7 +112,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 			}
 		})
 	} else {
-		appDef.Def(obj.AsQName(appdef.SystemField_QName)).Fields(
+		def.Fields(
 			func(f appdef.Field) {
 				fieldName, kind := f.Name(), f.DataKind()
 				if opts.filter != nil {

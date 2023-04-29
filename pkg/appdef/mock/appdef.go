@@ -33,6 +33,16 @@ func (app *AppDef) Add(def ...*Def) {
 	}
 }
 
+func (app *AppDef) AddView(view *View) {
+	view.app = app
+	app.Add(
+		view.view,
+		view.pk,
+		view.cc,
+		view.val,
+	)
+}
+
 func (app *AppDef) Def(name appdef.QName) appdef.IDef {
 	if len(app.defs) > 0 {
 		for _, d := range app.defs {

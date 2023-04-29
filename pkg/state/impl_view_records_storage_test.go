@@ -19,27 +19,14 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		require := require.New(t)
 
-		pkSchema := amock.NewDef(testViewRecordPkQName, appdef.DefKind_ViewRecord_PartitionKey,
-			amock.NewField("pkk", appdef.DataKind_string, true), // ??? variable len PK !!!
-		)
-		ccSchema := amock.NewDef(testViewRecordCcQName, appdef.DefKind_ViewRecord_ClusteringColumns,
-			amock.NewField("cck", appdef.DataKind_string, false),
-		)
-		valSchema := amock.NewDef(testViewRecordCcQName, appdef.DefKind_ViewRecord_Value,
-			amock.NewField("vk", appdef.DataKind_string, false),
-		)
-		viewSchema := amock.NewDef(testViewRecordCcQName, appdef.DefKind_ViewRecord)
-		viewSchema.AddContainer(
-			amock.NewContainer(appdef.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
-			amock.NewContainer(appdef.SystemContainer_ViewClusteringCols, testViewRecordCcQName, 1, 1),
-			amock.NewContainer(appdef.SystemContainer_ViewValue, testViewRecordVQName, 1, 1),
-		)
-		appDef := amock.NewAppDef(
-			viewSchema,
-			pkSchema,
-			ccSchema,
-			valSchema,
-		)
+		view := amock.NewView(testViewRecordQName1)
+		view.
+			AddPartField("pkk", appdef.DataKind_string). // ??? variable len PK !!!
+			AddClustColumn("cck", appdef.DataKind_string).
+			AddValueField("vk", appdef.DataKind_string, false)
+
+		appDef := amock.NewAppDef()
+		appDef.AddView(view)
 
 		value := &mockValue{}
 		value.On("AsString", "vk").Return("value")
@@ -183,36 +170,27 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 }
 
 func TestViewRecordsStorage_toJSON(t *testing.T) {
-	valSchema := amock.NewDef(testViewRecordVQName, appdef.DefKind_ViewRecord_Value,
-		amock.NewField("ID", appdef.DataKind_RecordID, false),
-		amock.NewField("Name", appdef.DataKind_string, false),
-		amock.NewField("Count", appdef.DataKind_int64, false),
-	)
 
-	viewSchema := amock.NewDef(testViewRecordQName1, appdef.DefKind_ViewRecord,
-		amock.NewField("ID", appdef.DataKind_RecordID, false), // ??? Fields in root view schema, copy/paste error ???
-		amock.NewField("Name", appdef.DataKind_string, false),
-		amock.NewField("Count", appdef.DataKind_int64, false),
-	)
-	viewSchema.AddContainer(
-		amock.NewContainer(appdef.SystemContainer_ViewPartitionKey, testViewRecordPkQName, 1, 1),
-		amock.NewContainer(appdef.SystemContainer_ViewClusteringCols, testViewRecordCcQName, 1, 1),
-		amock.NewContainer(appdef.SystemContainer_ViewValue, testViewRecordVQName, 1, 1),
-	)
-	cache := amock.NewAppDef(
-		viewSchema,
-		valSchema,
-	)
+	view := amock.NewView(testViewRecordQName1)
+	view.
+		AddPartField("pkFld", appdef.DataKind_int64).
+		AddClustColumn("ccFld", appdef.DataKind_string).
+		AddValueField("ID", appdef.DataKind_RecordID, false).
+		AddValueField("Name", appdef.DataKind_string, false).
+		AddValueField("Count", appdef.DataKind_int64, false)
+
+	appDef := amock.NewAppDef()
+	appDef.AddView(view)
 
 	value := &mockValue{}
 	value.
 		On("AsRecordID", "ID").Return(istructs.RecordID(42)).
 		On("AsString", "Name").Return("John").
 		On("AsInt64", "Count").Return(int64(1001)).
-		On("AsQName", mock.Anything).Return(testViewRecordQName1)
+		On("AsQName", mock.Anything).Return(appdef.ViewValueDefName(testViewRecordQName1))
 
 	s := viewRecordsStorage{
-		appDefFunc: func() appdef.IAppDef { return cache },
+		appDefFunc: func() appdef.IAppDef { return appDef },
 	}
 	t.Run("Should marshal entire element", func(t *testing.T) {
 		require := require.New(t)
