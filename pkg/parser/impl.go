@@ -21,6 +21,7 @@ func parse(s string) (*SchemaAST, error) {
 		{Name: "Keywords", Pattern: `ON`},
 		{Name: "DEFAULTNEXTVAL", Pattern: `DEFAULT[ \r\n\t]+NEXTVAL`},
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
+		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
 		{Name: "String", Pattern: `("(\\"|[^"])*")|('(\\'|[^'])*')`},
 		{Name: "Int", Pattern: `\d+`},
 		{Name: "Number", Pattern: `[-+]?(\d*\.)?\d+`},

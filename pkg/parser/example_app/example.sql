@@ -79,11 +79,10 @@ WORKSPACE MyWorkspace (
         Day int32, 
         Kind int32, 
         Number int32, 
-        XZReportWDocID id
+        XZReportWDocID id,
+        PRIMARY KEY ((Year), Month, Day, Kind, Number)
     ) AS RESULT OF Air.UpdateXZReportsView
-    WITH 
-        PrimaryKey="(Year), Month, Day, Kind, Number",
-        Comment=PosComment;
+    WITH Comment=PosComment;
 
 
     RATE BackofficeFuncRate1 1000 PER HOUR;

@@ -228,12 +228,12 @@ type CommandStmt struct {
 	Name   string          `parser:"'COMMAND' @Ident"`
 	Params []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
 	Func   string          `parser:"'AS' @Ident"`
-	With   []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
+	With   []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
 func (s CommandStmt) GetName() string { return s.Name }
 
-type TcqWithItem struct {
+type WithItem struct {
 	Comment *OptQName  `parser:"('Comment' '=' @@)"`
 	Tags    []OptQName `parser:"| ('Tags' '=' '[' @@ (',' @@)* ']')"`
 }
@@ -244,7 +244,7 @@ type QueryStmt struct {
 	Params  []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
 	Returns OptQName        `parser:"'RETURNS' @@"`
 	Func    string          `parser:"'AS' @Ident"`
-	With    []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
+	With    []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
 func (s QueryStmt) GetName() string { return s.Name }
@@ -264,12 +264,13 @@ type NamedParam struct {
 	Type OptQName `parser:"@@"`
 }
 
+// TODO: validate that table has no duplicated fields
 type TableStmt struct {
 	Statement
 	Name  string          `parser:"'TABLE' @Ident"`
 	Of    []OptQName      `parser:"('OF' @@ (',' @@)*)?"`
 	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
-	With  []TcqWithItem   `parser:"('WITH' @@ (',' @@)* )?"`
+	With  []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
 func (s TableStmt) GetName() string { return s.Name }
@@ -301,9 +302,21 @@ type FieldExpr struct {
 type ViewStmt struct {
 	Statement
 	Name     string         `parser:"'VIEW' @Ident"`
-	Fields   []ViewField    `parser:"'(' @@? (',' @@)* ')'"`
+	Fields   []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	ResultOf OptQName       `parser:"'AS' 'RESULT' 'OF' @@"`
-	With     []ViewWithItem `parser:"'WITH' @@ (',' @@)* "`
+	With     []WithItem     `parser:"'WITH' @@ (',' @@)* "`
+}
+
+// TODO: validate that view has not more than 1 PrimaryKeyExpr
+// TODO: validate that view has no duplicated fields
+type ViewItemExpr struct {
+	PrimaryKey *PrimaryKeyExpr `parser:"(PRIMARYKEY '(' @@ ')')"`
+	Field      *ViewField      `parser:"| @@"`
+}
+
+type PrimaryKeyExpr struct {
+	PartitionKeyFields      []string `parser:"('(' @Ident (',' @Ident)* ')')?"`
+	ClusteringColumnsFields []string `parser:"','? @Ident (',' @Ident)*"`
 }
 
 func (s ViewStmt) GetName() string { return s.Name }
@@ -311,11 +324,6 @@ func (s ViewStmt) GetName() string { return s.Name }
 type ViewField struct {
 	Name string `parser:"@Ident"`
 	Type string `parser:"@Ident"` // TODO: viewField: predefined types?
-}
-
-type ViewWithItem struct {
-	PrimaryKey *string   `parser:"('PrimaryKey' '=' @String)"`
-	Comment    *OptQName `parser:"| ('Comment' '=' @@)"`
 }
 
 // TODO TYPE + "TABLE|WORKSPACE OF" validation
