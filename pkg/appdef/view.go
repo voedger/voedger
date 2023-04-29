@@ -86,32 +86,24 @@ func (view *viewBuilder) ValueDef() IDefBuilder {
 	return view.valDef
 }
 
-func (app *appDef) prepareViewFullKeyDef(sch IDef) {
-	if sch.Kind() != DefKind_ViewRecord {
-		panic(fmt.Errorf("definition «%v» kind «%v» is not view: %w", sch.QName(), sch.Kind(), ErrInvalidDefKind))
-	}
+func (app *appDef) prepareViewFullKeyDef(def IDef) {
 
 	contDef := func(name string, expectedKind DefKind) IDef {
-		cd := sch.ContainerDef(name)
+		cd := def.ContainerDef(name)
 		if cd == nil {
-			return nil
+			return NullDef
 		}
 		if cd.Kind() != expectedKind {
-			return nil
+			return NullDef
 		}
 		return cd
 	}
 
-	pkDef := contDef(SystemContainer_ViewPartitionKey, DefKind_ViewRecord_PartitionKey)
-	if pkDef == nil {
-		return
-	}
-	ccDef := contDef(SystemContainer_ViewClusteringCols, DefKind_ViewRecord_ClusteringColumns)
-	if ccDef == nil {
-		return
-	}
+	pkDef, ccDef :=
+		contDef(SystemContainer_ViewPartitionKey, DefKind_ViewRecord_PartitionKey),
+		contDef(SystemContainer_ViewClusteringCols, DefKind_ViewRecord_ClusteringColumns)
 
-	fkName := ViewFullKeyColumsDefName(sch.QName())
+	fkName := ViewFullKeyColumsDefName(def.QName())
 	var fkDef IDefBuilder
 	fkDef, ok := app.defs[fkName]
 

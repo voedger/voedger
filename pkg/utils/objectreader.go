@@ -24,7 +24,7 @@ func ReadValue(fieldName string, fd FieldsDef, appDef appdef.IAppDef, val istruc
 	return ReadByKind(fieldName, fd[fieldName], val)
 }
 
-// panics on an unsupported kind guessing that pair <name, kind> could be taken from ISchema.Fields() callback only
+// panics on an unsupported kind guessing that pair <name, kind> could be taken from IDef.Fields() callback only
 func ReadByKind(name string, kind appdef.DataKind, rr istructs.IRowReader) interface{} {
 	switch kind {
 	case appdef.DataKind_int32:

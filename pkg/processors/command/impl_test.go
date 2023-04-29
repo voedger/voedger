@@ -54,11 +54,11 @@ func TestBasicUsage(t *testing.T) {
 	// схема unloged-параметров тестовой команды
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
 	prepareAppDef := func(appDef appdef.IAppDefBuilder) {
-		testCmdParamsScheme := appDef.Add(testCmdQNameParams, appdef.DefKind_Object)
-		testCmdParamsScheme.AddField("Text", appdef.DataKind_string, true)
+		parsDef := appDef.Add(testCmdQNameParams, appdef.DefKind_Object)
+		parsDef.AddField("Text", appdef.DataKind_string, true)
 
-		testCmdParamsUnloggedScheme := appDef.Add(testCmdQNameParamsUnlogged, appdef.DefKind_Object)
-		testCmdParamsUnloggedScheme.AddField("Password", appdef.DataKind_string, true)
+		unloggedParsDef := appDef.Add(testCmdQNameParamsUnlogged, appdef.DefKind_Object)
+		unloggedParsDef.AddField("Password", appdef.DataKind_string, true)
 
 		appDef.Add(testCDoc, appdef.DefKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
 		appDef.Add(testCRecord, appdef.DefKind_CRecord)

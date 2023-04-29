@@ -60,9 +60,8 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 	t.Run("Should return error on get batch", func(t *testing.T) {
 		require := require.New(t)
 
-		schema := amock.NewDef(testViewRecordQName1, appdef.DefKind_ViewRecord)
-		schema.On("Containers", mock.Anything)
-		appDef := amock.NewAppDef(schema)
+		appDef := amock.NewAppDef()
+		appDef.AddView(amock.NewView(testViewRecordQName1))
 
 		viewRecords := &mockViewRecords{}
 		viewRecords.
@@ -142,7 +141,7 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 	require := require.New(t)
 
 	appDef := amock.NewAppDef()
-	appDef.On("Schema", testViewRecordQName1).Return(appdef.NullDef)
+	appDef.AddView(amock.NewView(testViewRecordQName1))
 
 	viewRecords := &mockViewRecords{}
 	viewRecords.

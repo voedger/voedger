@@ -438,7 +438,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 		require := require.New(t)
 		touched := false
 		appDef := amock.NewAppDef(
-			amock.NewDef(testViewRecordQName1, appdef.DefKind_null), // to return NullSchema
+			amock.NewDef(testViewRecordQName1, appdef.DefKind_null), // to return NullDef
 		)
 		viewRecords := &mockViewRecords{}
 		viewRecords.
@@ -486,7 +486,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 		require := require.New(t)
 		touched := false
 		appDef := amock.NewAppDef(
-			amock.NewDef(testViewRecordQName1, appdef.DefKind_null), // to return NullSchema
+			amock.NewDef(testViewRecordQName1, appdef.DefKind_null), // to return NullDef
 		)
 		viewRecords := &mockViewRecords{}
 		viewRecords.

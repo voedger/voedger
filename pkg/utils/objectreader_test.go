@@ -27,16 +27,16 @@ var (
 		"bytes":                  appdef.DataKind_bytes,
 		"recordID":               appdef.DataKind_RecordID,
 	}
-	schema = amock.NewDef(testQName, appdef.DefKind_Object, mockFields(testFieldDefs)...)
+	def = amock.NewDef(testQName, appdef.DefKind_Object, mockFields(testFieldDefs)...)
 
-	schemaSimple = amock.NewDef(testQNameSimple, appdef.DefKind_Object,
+	simpleDef = amock.NewDef(testQNameSimple, appdef.DefKind_Object,
 		amock.NewField(appdef.SystemField_QName, appdef.DataKind_QName, true),
 		amock.NewField("int32", appdef.DataKind_int32, false),
 	)
 
 	appDef = amock.NewAppDef(
-		schema,
-		schemaSimple,
+		def,
+		simpleDef,
 	)
 
 	testData = map[string]interface{}{
@@ -83,11 +83,11 @@ func TestNewFieldsDef(t *testing.T) {
 		"fld1": appdef.DataKind_int32,
 		"str":  appdef.DataKind_string,
 	}
-	s := amock.NewDef(qName, appdef.DefKind_Object)
+	def := amock.NewDef(qName, appdef.DefKind_Object)
 	for n, k := range testFieldDefs {
-		s.AddField(amock.NewField(n, k, false))
+		def.AddField(amock.NewField(n, k, false))
 	}
-	fd := NewFieldsDef(s)
+	fd := NewFieldsDef(def)
 	require.Equal(t, FieldsDef(testFieldDefs), fd)
 }
 
@@ -123,10 +123,10 @@ func TestToMap_Basic(t *testing.T) {
 	})
 
 	t.Run("Read", func(t *testing.T) {
-		sf := NewFieldsDef(schema)
+		fd := NewFieldsDef(def)
 		m := map[string]interface{}{}
-		for fieldName := range sf {
-			m[fieldName] = Read(fieldName, sf, obj)
+		for fieldName := range fd {
+			m[fieldName] = Read(fieldName, fd, obj)
 		}
 		testBasic(m, require)
 	})
@@ -238,7 +238,7 @@ func TestReadValue(t *testing.T) {
 		iValueFields[n] = k
 	}
 	iValueFields["record"] = appdef.DataKind_Record
-	iValueSchema := amock.NewDef(testQName, appdef.DefKind_ViewRecord_Value, mockFields(iValueFields)...)
+	iValueDef := amock.NewDef(testQName, appdef.DefKind_ViewRecord_Value, mockFields(iValueFields)...)
 	iValueValues := map[string]interface{}{}
 	for k, v := range testData {
 		iValueValues[k] = v
@@ -247,8 +247,8 @@ func TestReadValue(t *testing.T) {
 		Data: testDataSimple,
 	}
 	appDefsWithIValue := amock.NewAppDef(
-		iValueSchema,
-		schemaSimple,
+		iValueDef,
+		simpleDef,
 	)
 	iValue := &TestValue{
 		TestObject: &TestObject{
@@ -258,10 +258,10 @@ func TestReadValue(t *testing.T) {
 		},
 	}
 	t.Run("ReadValue", func(t *testing.T) {
-		sf := NewFieldsDef(iValueSchema)
+		fd := NewFieldsDef(iValueDef)
 		actual := map[string]interface{}{}
 		for fieldName := range iValueValues {
-			actual[fieldName] = ReadValue(fieldName, sf, appDefsWithIValue, iValue)
+			actual[fieldName] = ReadValue(fieldName, fd, appDefsWithIValue, iValue)
 		}
 		testBasic(actual, require)
 		require.Equal(map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"}, actual["record"])
