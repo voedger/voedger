@@ -27,6 +27,9 @@ TABLE AirTablePlan OF CDOC (
 ) WITH Comment=BackofficeComment, Tags=[BackofficeTag];
 
 WORKSPACE MyWorkspace (
+    DESCRIPTOR OF NamedType ( -- Workspace descriptor is always CDOC and SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
+        Description text
+    );
 
     COMMENT PosComment "Pos Comment";
     TAG PosTag;

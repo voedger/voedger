@@ -90,6 +90,7 @@ type WorkspaceStatement struct {
 type WorkspaceStmt struct {
 	Statement
 	Name       string               `parser:"'WORKSPACE' @Ident '('"`
+	Descriptor *WsDescriptorStmt    `parser:"('DESCRIPTOR' @@)?"`
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 }
 
@@ -102,6 +103,13 @@ func (s *WorkspaceStmt) Iterate(callback func(stmt interface{})) {
 		}
 		callback(raw.stmt)
 	}
+}
+
+type WsDescriptorStmt struct {
+	Statement
+	Of    []OptQName      `parser:"('OF' @@ (',' @@)*)?"`
+	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
+	_     int             `parser:"';'"`
 }
 
 type OptQName struct {
@@ -309,3 +317,5 @@ type ViewWithItem struct {
 	PrimaryKey *string   `parser:"('PrimaryKey' '=' @String)"`
 	Comment    *OptQName `parser:"| ('Comment' '=' @@)"`
 }
+
+// TODO TYPE + "TABLE|WORKSPACE OF" validation
