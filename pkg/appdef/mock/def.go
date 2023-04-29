@@ -116,4 +116,3 @@ func (d *Def) ContainerDef(name string) appdef.IDef {
 }
 
 func (d *Def) Singleton() bool { return d.Called().Get(0).(bool) }
-func (d *Def) Validate() error { return d.Called().Get(0).(error) }

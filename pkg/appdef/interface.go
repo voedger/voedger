@@ -122,9 +122,6 @@ type IDef interface {
 
 	// Returns is definition CDoc singleton
 	Singleton() bool
-
-	// Validates definition
-	Validate() error
 }
 
 // Definition builder
@@ -170,8 +167,6 @@ type IDefBuilder interface {
 	// # Panics:
 	//   - if not CDoc definition.
 	SetSingleton()
-
-	clear()
 }
 
 // View builder
@@ -189,9 +184,6 @@ type ViewBuilder interface {
 
 	// Returns view clustering columns definition
 	ClustColsDef() IDefBuilder
-
-	// Returns view full key (partition key + clustering columns) definition
-	FullKeyDef() IDefBuilder
 
 	// Returns view value definition
 	ValueDef() IDefBuilder

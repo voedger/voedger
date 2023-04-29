@@ -6,7 +6,6 @@
 package mock
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -115,8 +114,6 @@ func TestInheritsMockingDef(t *testing.T) {
 
 	app := AppDef{}
 
-	validated := false
-
 	def := Def{}
 	def.
 		On("App").Return(&app).
@@ -135,11 +132,7 @@ func TestInheritsMockingDef(t *testing.T) {
 			cb(&cont)
 		}).
 		On("ContainerDef", mock.AnythingOfType("string")).Return(&def).
-		On("Singleton").Return(true).
-		On("Validate").
-		Run(func(_ mock.Arguments) {
-			validated = true
-		}).Return(errors.New("test error"))
+		On("Singleton").Return(true)
 
 	require := require.New(t)
 
@@ -168,7 +161,4 @@ func TestInheritsMockingDef(t *testing.T) {
 	require.NotNil(def.ContainerDef("mockContainer"))
 
 	require.True(def.Singleton())
-
-	require.ErrorContains(def.Validate(), "test error")
-	require.True(validated)
 }

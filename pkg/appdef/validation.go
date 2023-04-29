@@ -10,6 +10,10 @@ import (
 	"fmt"
 )
 
+type validated interface {
+	Validate() error
+}
+
 // Validate a definition entities
 func (d *def) Validate() (err error) {
 	return errors.Join(
@@ -186,13 +190,15 @@ func newValidator() *validator {
 }
 
 // validate specified definition
-func (v *validator) validate(def IDef) error {
+func (v *validator) validate(def IDef) (err error) {
 	if err, ok := v.results[def.QName()]; ok {
 		return err
 	}
 
-	err := def.Validate()
-	v.results[def.QName()] = err
+	if d, ok := def.(validated); ok {
+		err = d.Validate()
+		v.results[def.QName()] = err
+	}
 
 	// resolve externals
 	def.Containers(func(cont Container) {

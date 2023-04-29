@@ -5,10 +5,6 @@
 
 package appdef
 
-import (
-	"fmt"
-)
-
 // Implements IViewBuilder interface
 type viewBuilder struct {
 	cache *appDef
@@ -27,7 +23,6 @@ func newViewBuilder(cache *appDef, name QName) viewBuilder {
 		def:    cache.Add(name, DefKind_ViewRecord),
 		pkDef:  cache.Add(ViewPartitionKeyDefName(name), DefKind_ViewRecord_PartitionKey),
 		ccDef:  cache.Add(ViewClusteringColumsDefName(name), DefKind_ViewRecord_ClusteringColumns),
-		fkDef:  cache.Add(ViewFullKeyColumsDefName(name), DefKind_ViewRecord_ClusteringColumns),
 		valDef: cache.Add(ViewValueDefName(name), DefKind_ViewRecord_Value),
 	}
 	view.def.
@@ -69,19 +64,6 @@ func (view *viewBuilder) ClustColsDef() IDefBuilder {
 	return view.ccDef
 }
 
-func (view *viewBuilder) FullKeyDef() IDefBuilder {
-	if view.fkDef.FieldCount() != view.PartKeyDef().FieldCount()+view.ClustColsDef().FieldCount() {
-		view.fkDef.clear()
-		view.PartKeyDef().Fields(func(f Field) {
-			view.fkDef.AddField(f.Name(), f.DataKind(), true)
-		})
-		view.ClustColsDef().Fields(func(f Field) {
-			view.fkDef.AddField(f.Name(), f.DataKind(), false)
-		})
-	}
-	return view.fkDef
-}
-
 func (view *viewBuilder) ValueDef() IDefBuilder {
 	return view.valDef
 }
@@ -108,18 +90,16 @@ func (app *appDef) prepareViewFullKeyDef(def IDef) {
 	fkDef, ok := app.defs[fkName]
 
 	if ok {
-		if fkDef.Kind() != DefKind_ViewRecord_ClusteringColumns {
-			panic(fmt.Errorf("definition «%v» has unvalid kind «%v», expected kind «%v»: %w", fkName, fkDef.Kind(), DefKind_ViewRecord_ClusteringColumns, ErrInvalidDefKind))
-		}
-		if fkDef.FieldCount() == pkDef.FieldCount()+ccDef.FieldCount() {
+		if (fkDef.Kind() == DefKind_ViewRecord_ClusteringColumns) &&
+			(fkDef.FieldCount() == pkDef.FieldCount()+ccDef.FieldCount()) {
 			return // already exists definition is ok
 		}
-		fkDef.clear()
-	} else {
-		fkDef = app.Add(fkName, DefKind_ViewRecord_ClusteringColumns)
+		app.remove(fkName)
 	}
 
 	// recreate full key definition fields
+	fkDef = app.Add(fkName, DefKind_ViewRecord_ClusteringColumns)
+
 	pkDef.Fields(func(f Field) {
 		fkDef.AddField(f.Name(), f.DataKind(), true)
 	})
