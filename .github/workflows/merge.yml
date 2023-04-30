@@ -13,7 +13,7 @@ jobs:
     steps:
     - name: Merge PR
       env: 
-        GH_TOKEN: ${{ github.token }}
+        GH_TOKEN: ${{ secrets.personaltoken }}
         token: ${{ secrets.personaltoken }}
         repo: ${{ GITHUB.REPOSITORY }}
         pr_number: ${{ github.event.number }}
