@@ -16,6 +16,7 @@ import (
 func parseImpl(fileName string, content string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
 
+		{Name: "Array", Pattern: `\[\]`},
 		{Name: "Punct", Pattern: `(;|,|\.|\*|=|\(|\)|\[|\])`},
 		{Name: "Keywords", Pattern: `ON`},
 		{Name: "DEFAULTNEXTVAL", Pattern: `DEFAULT[ \r\n\t]+NEXTVAL`},

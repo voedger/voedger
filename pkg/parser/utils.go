@@ -23,7 +23,7 @@ func extractStatement(s any) interface{} {
 }
 
 func CompareParam(left, right FunctionParam) bool {
-	var lt, rt OptQName
+	var lt, rt TypeQName
 	if left.NamedParam != nil {
 		lt = left.NamedParam.Type
 	} else {
@@ -69,7 +69,7 @@ func resolveFuncInSchema(name string, schema *SchemaAST) (function *FunctionStmt
 	return
 }
 
-func isInternalFunc(name OptQName, schema *SchemaAST) bool {
+func isInternalFunc(name DefQName, schema *SchemaAST) bool {
 	pkg := strings.TrimSpace(name.Package)
 	return pkg == "" || pkg == schema.Package
 }
@@ -91,7 +91,7 @@ func getQualifiedPackageName(pkgName string, schema *SchemaAST) (string, error) 
 	return "", ErrUndefined(pkgName)
 }
 
-func resolveFunc(fn OptQName, srcPkgSchema *PackageSchemaAST, pkgmap map[string]*PackageSchemaAST, cb func(f *FunctionStmt) error) error {
+func resolveFunc(fn DefQName, srcPkgSchema *PackageSchemaAST, pkgmap map[string]*PackageSchemaAST, cb func(f *FunctionStmt) error) error {
 	var targetPkgSch *PackageSchemaAST
 
 	if isInternalFunc(fn, srcPkgSchema.Ast) {

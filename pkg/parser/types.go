@@ -73,6 +73,7 @@ type RootStatement struct {
 	Function  *FunctionStmt  `parser:"| @@"`
 	Workspace *WorkspaceStmt `parser:"| @@"`
 	Table     *TableStmt     `parser:"| @@"`
+	Type      *TypeStmt      `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
 
 	stmt interface{}
@@ -94,6 +95,7 @@ type WorkspaceStatement struct {
 	Function  *FunctionStmt  `parser:"| @@"`
 	Workspace *WorkspaceStmt `parser:"| @@"`
 	Table     *TableStmt     `parser:"| @@"`
+	Type      *TypeStmt      `parser:"| @@"`
 	//Sequence  *sequenceStmt  `parser:"| @@"`
 	Grant *GrantStmt `parser:"| @@"`
 
@@ -104,7 +106,7 @@ type WorkspaceStmt struct {
 	Statement
 	Abstract   bool                 `parser:"@'ABSTRACT'?"`
 	Name       string               `parser:"'WORKSPACE' @Ident "`
-	Of         []OptQName           `parser:"('OF' @@ (',' @@)*)?"`
+	Of         []DefQName           `parser:"('OF' @@ (',' @@)*)?"`
 	A          int                  `parser:"'('"`
 	Descriptor *WsDescriptorStmt    `parser:"('DESCRIPTOR' @@)?"`
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
@@ -121,19 +123,32 @@ func (s *WorkspaceStmt) Iterate(callback func(stmt interface{})) {
 	}
 }
 
+type TypeStmt struct {
+	Statement
+	Name  string          `parser:"'TYPE' @Ident "`
+	Of    []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
+	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
+}
+
 type WsDescriptorStmt struct {
 	Statement
-	Of    []OptQName      `parser:"('OF' @@ (',' @@)*)?"`
+	Of    []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
 	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
 	_     int             `parser:"';'"`
 }
 
-type OptQName struct {
+type DefQName struct {
 	Package string `parser:"(@Ident '.')?"`
 	Name    string `parser:"@Ident"`
 }
 
-func (q OptQName) String() string {
+type TypeQName struct {
+	Package string `parser:"(@Ident '.')?"`
+	Name    string `parser:"@Ident"`
+	IsArray bool   `parser:"@Array?"`
+}
+
+func (q DefQName) String() string {
 	if q.Package == "" {
 		return q.Name
 	}
@@ -160,8 +175,8 @@ type ProjectorStmt struct {
 	// TODO
 	// On string     `parser:"@(('COMMAND' 'ARGUMENT'?) |  'COMMAND' | 'INSERT'| 'UPDATE' | 'ACTIVATE'| 'DEACTIVATE' ))"`
 	On      string     `parser:"@(('COMMAND' 'ARGUMENT'?) |  'COMMAND' | ('INSERT' ('OR' 'UPDATE')?)  | ('UPDATE' ('OR' 'INSERT')?))"`
-	Targets []OptQName `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
-	Func    OptQName   `parser:"'AS' @@"`
+	Targets []DefQName `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
+	Func    DefQName   `parser:"'AS' @@"`
 }
 
 func (s ProjectorStmt) GetName() string { return s.Name }
@@ -169,7 +184,7 @@ func (s ProjectorStmt) GetName() string { return s.Name }
 type TemplateStmt struct {
 	Statement
 	Name      string   `parser:"'TEMPLATE' @Ident 'OF' 'WORKSPACE'" `
-	Workspace OptQName `parser:"@@"`
+	Workspace DefQName `parser:"@@"`
 	Source    string   `parser:"'SOURCE' @Ident"`
 }
 
@@ -233,7 +248,7 @@ type GrantStmt struct {
 	Statement
 	Grants []string `parser:"'GRANT' @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE') (','  @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE'))*"`
 	On     string   `parser:"'ON' @('TABLE' | ('ALL' 'TABLES' 'WITH' 'TAG') | 'COMMAND' | ('ALL' 'COMMANDS' 'WITH' 'TAG') | 'QUERY' | ('ALL' 'QUERIES' 'WITH' 'TAG'))"`
-	Target OptQName `parser:"@@"`
+	Target DefQName `parser:"@@"`
 	To     string   `parser:"'TO' @Ident"`
 }
 
@@ -241,7 +256,7 @@ type FunctionStmt struct {
 	Statement
 	Name    string          `parser:"'FUNCTION' @Ident"`
 	Params  []FunctionParam `parser:"'(' @@? (',' @@)* ')'"`
-	Returns OptQName        `parser:"'RETURNS' @@"`
+	Returns TypeQName       `parser:"'RETURNS' @@"`
 	Engine  EngineType      `parser:"'ENGINE' @@"`
 }
 
@@ -251,23 +266,23 @@ type CommandStmt struct {
 	Statement
 	Name   string          `parser:"'COMMAND' @Ident"`
 	Params []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
-	Func   OptQName        `parser:"'AS' @@"`
+	Func   DefQName        `parser:"'AS' @@"`
 	With   []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
 func (s CommandStmt) GetName() string { return s.Name }
 
 type WithItem struct {
-	Comment *OptQName  `parser:"('Comment' '=' @@)"`
-	Tags    []OptQName `parser:"| ('Tags' '=' '[' @@ (',' @@)* ']')"`
+	Comment *DefQName  `parser:"('Comment' '=' @@)"`
+	Tags    []DefQName `parser:"| ('Tags' '=' '[' @@ (',' @@)* ']')"`
 }
 
 type QueryStmt struct {
 	Statement
 	Name    string          `parser:"'QUERY' @Ident"`
 	Params  []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
-	Returns OptQName        `parser:"'RETURNS' @@"`
-	Func    OptQName        `parser:"'AS' @@"`
+	Returns TypeQName       `parser:"'RETURNS' @@"`
+	Func    DefQName        `parser:"'AS' @@"`
 	With    []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
@@ -280,19 +295,19 @@ type EngineType struct {
 
 type FunctionParam struct {
 	NamedParam       *NamedParam `parser:"@@"`
-	UnnamedParamType *OptQName   `parser:"| @@"`
+	UnnamedParamType *TypeQName  `parser:"| @@"`
 }
 
 type NamedParam struct {
-	Name string   `parser:"@Ident"`
-	Type OptQName `parser:"@@"`
+	Name string    `parser:"@Ident"`
+	Type TypeQName `parser:"@@"`
 }
 
 // TODO: validate that table has no duplicated fields
 type TableStmt struct {
 	Statement
 	Name  string          `parser:"'TABLE' @Ident"`
-	Of    []OptQName      `parser:"('OF' @@ (',' @@)*)?"`
+	Of    []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
 	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
 	With  []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 }
@@ -313,13 +328,13 @@ type UniqueExpr struct {
 // TODO: TABLE: TABLE CHECK
 type FieldExpr struct {
 	Name               string    `parser:"@Ident"`
-	Type               OptQName  `parser:"@@"`
+	Type               TypeQName `parser:"@@"`
 	NotNull            bool      `parser:"@(NOTNULL)?"`
 	Verifiable         bool      `parser:"@('VERIFIABLE')?"`
 	DefaultIntValue    *int      `parser:"('DEFAULT' @Int)?"`
 	DefaultStringValue *string   `parser:"('DEFAULT' @String)?"`
 	DefaultNextVal     *string   `parser:"(DEFAULTNEXTVAL  '(' @String ')')?"`
-	References         *OptQName `parser:"('REFERENCES' @@)?"`
+	References         *DefQName `parser:"('REFERENCES' @@)?"`
 	CheckRegexp        *string   `parser:"('CHECK' @String)?"`
 }
 
@@ -327,8 +342,8 @@ type ViewStmt struct {
 	Statement
 	Name     string         `parser:"'VIEW' @Ident"`
 	Fields   []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	ResultOf OptQName       `parser:"'AS' 'RESULT' 'OF' @@"`
-	With     []WithItem     `parser:"'WITH' @@ (',' @@)* "`
+	ResultOf DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
+	With     []WithItem     `parser:"('WITH' @@ (',' @@)*)?"`
 }
 
 // TODO: validate that view has not more than 1 PrimaryKeyExpr
