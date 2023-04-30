@@ -275,6 +275,7 @@ func (s CommandStmt) GetName() string { return s.Name }
 type WithItem struct {
 	Comment *DefQName  `parser:"('Comment' '=' @@)"`
 	Tags    []DefQName `parser:"| ('Tags' '=' '[' @@ (',' @@)* ']')"`
+	Rate    *DefQName  `parser:"| ('Rate' '=' @@)"`
 }
 
 type QueryStmt struct {
@@ -315,9 +316,15 @@ type TableStmt struct {
 func (s TableStmt) GetName() string { return s.Name }
 
 type TableItemExpr struct {
-	Table  *TableStmt  `parser:"@@"`
-	Unique *UniqueExpr `parser:"| @@"`
-	Field  *FieldExpr  `parser:"| @@"`
+	Table  *TableStmt      `parser:"@@"`
+	Unique *UniqueExpr     `parser:"| @@"`
+	Check  *TableCheckExpr `parser:"| @@"`
+	Field  *FieldExpr      `parser:"| @@"`
+}
+
+type TableCheckExpr struct {
+	ConstraintName string `parser:"('CONSTRAINT' @Ident)?"`
+	Expression     string `parser:"'CHECK' '(' @String ')'"` // TODO: Parse expression
 }
 
 type UniqueExpr struct {
@@ -343,7 +350,6 @@ type ViewStmt struct {
 	Name     string         `parser:"'VIEW' @Ident"`
 	Fields   []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	ResultOf DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
-	With     []WithItem     `parser:"('WITH' @@ (',' @@)*)?"`
 }
 
 // TODO: validate that view has not more than 1 PrimaryKeyExpr
