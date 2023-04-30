@@ -27,13 +27,13 @@ TABLE AirTablePlan OF CDOC (
     FState int,
     Name text NOT NULL,
     VerifiableField text NOT NULL VERIFIABLE, -- Verifiable field
-    Int1 int DEFAULT 1, 
+    Int1 int DEFAULT 1 CHECK("Int1 > Int2 && Int1 < 100000"), -- (TODO unquote) Expressions evaluating to TRUE or UNKNOWN succeed.
     Text1 text DEFAULT "a",
     Int2 int DEFAULT NEXTVAL('sequence'),
     BillID int64 REFERENCES air.bill,
     CheckedField text CHECK "^[0-9]{8}$", -- Field validated by regexp
-    CHECK ("ValidateRow(this)"), -- (TODO) Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
-    CONSTRAINT StateChecker CHECK ("ValidateFState(FState)"), -- (TODO) Named CHECK table constraint
+    CHECK ("ValidateRow(this)"), -- (TODO unquote) Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
+    CONSTRAINT StateChecker CHECK ("ValidateFState(FState)"), -- (TODO unquote) Named CHECK table constraint
     UNIQUE (FState, Name) -- unnamed UNIQUE table constraint
 ) WITH Comment=BackofficeComment, Tags=[BackofficeTag]; -- Optional comment and tags
 
@@ -73,15 +73,16 @@ WORKSPACE MyWorkspace (
     );	
 
     -- Functions which are only used by statements within this workspace
-    FUNCTION SomeProjectorFunc() RETURNS text ENGINE BUILTIN;
+    FUNCTION SomeProjectorFunc(Event) RETURNS void ENGINE BUILTIN;
+    FUNCTION SomeProjectorFunc2(event sys.Event) RETURNS void ENGINE BUILTIN;
     FUNCTION OrderFunc(Untill.Orders) RETURNS void ENGINE BUILTIN;
     FUNCTION Order2Func(Untill.Orders, Untill.PBill) RETURNS void ENGINE BUILTIN;
     FUNCTION QueryFunc() RETURNS text ENGINE BUILTIN;
     FUNCTION Qiery2Func(Untill.Orders, Untill.PBill) RETURNS text ENGINE BUILTIN;
 
-    -- Projectors can only be declared in workspaces
+    -- Projectors can only be declared in workspaces. Function can only take sys.Event as argument and return void.
     PROJECTOR ON COMMAND Air.CreateUPProfile AS SomeProjectorFunc;
-    PROJECTOR ON COMMAND ARGUMENT Untill.QNameOrders AS Air.SomeProjectorFunc;
+    PROJECTOR ON COMMAND ARGUMENT Untill.QNameOrders AS Air.SomeProjectorFunc2;
     PROJECTOR ON INSERT Untill.Bill AS SomeProjectorFunc;
     PROJECTOR ON INSERT OR UPDATE Untill.Bill AS SomeProjectorFunc;
     PROJECTOR ON UPDATE Untill.Bill AS SomeProjectorFunc;

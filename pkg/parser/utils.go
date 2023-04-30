@@ -115,3 +115,7 @@ func resolveFunc(fn DefQName, srcPkgSchema *PackageSchemaAST, pkgmap map[string]
 	return cb(f)
 
 }
+
+func isSysType(name string, t TypeQName) bool {
+	return t == TypeQName{Package: sysPkgName, Name: name, IsArray: false} || t == TypeQName{Package: "", Name: name, IsArray: false}
+}

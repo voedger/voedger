@@ -331,8 +331,6 @@ type UniqueExpr struct {
 	Fields []string `parser:"'UNIQUE' '(' @Ident (',' @Ident)* ')'"`
 }
 
-// TODO: TABLE: FIELD CHECK(expression)
-// TODO: TABLE: TABLE CHECK
 type FieldExpr struct {
 	Name               string    `parser:"@Ident"`
 	Type               TypeQName `parser:"@@"`
@@ -343,6 +341,7 @@ type FieldExpr struct {
 	DefaultNextVal     *string   `parser:"(DEFAULTNEXTVAL  '(' @String ')')?"`
 	References         *DefQName `parser:"('REFERENCES' @@)?"`
 	CheckRegexp        *string   `parser:"('CHECK' @String)?"`
+	CheckExpression    *string   `parser:"('CHECK' '(' @String ')')?"` // TODO: Parse expression
 }
 
 type ViewStmt struct {

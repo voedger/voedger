@@ -27,7 +27,8 @@ func Test_BasicUsage(t *testing.T) {
 	//fmt.Println(parsedSchemaStr)
 
 	// TODO: MergePackageSchemas should return ?.ISchema
-	require.Nil(t, MergePackageSchemas([]*PackageSchemaAST{pkgExample}))
+	err = MergePackageSchemas([]*PackageSchemaAST{pkgExample})
+	require.Nil(t, err)
 
 }
 

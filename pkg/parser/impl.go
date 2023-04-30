@@ -179,7 +179,21 @@ func analyseReferences(pkg *PackageSchemaAST, pkgmap map[string]*PackageSchemaAS
 		case *ProjectorStmt:
 			pos = &v.Pos
 			err = resolveFunc(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
-				// TODO: Check function params
+				if len(f.Params) != 1 {
+					return ErrFunctionParamsIncorrect
+				}
+				if f.Params[0].NamedParam != nil {
+					if !isSysType(eventTypeName, f.Params[0].NamedParam.Type) {
+						return ErrFunctionParamsIncorrect
+					}
+				} else { // unnamed
+					if !isSysType(eventTypeName, *f.Params[0].UnnamedParamType) {
+						return ErrFunctionParamsIncorrect
+					}
+				}
+				if !isSysType(voidTypeName, f.Returns) {
+					return ErrFunctionResultIncorrect
+				}
 				// TODO: Check ON (Command, Argument type, CUD)
 
 				return nil
