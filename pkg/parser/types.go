@@ -130,6 +130,8 @@ type TypeStmt struct {
 	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
 }
 
+func (s TypeStmt) GetName() string { return s.Name }
+
 type WsDescriptorStmt struct {
 	Statement
 	Of    []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
@@ -171,15 +173,22 @@ func (s *Statement) GetComments() *[]string {
 
 type ProjectorStmt struct {
 	Statement
-	Name string `parser:"'PROJECTOR' @Ident? 'ON'"`
-	// TODO
-	// On string     `parser:"@(('COMMAND' 'ARGUMENT'?) |  'COMMAND' | 'INSERT'| 'UPDATE' | 'ACTIVATE'| 'DEACTIVATE' ))"`
-	On      string     `parser:"@(('COMMAND' 'ARGUMENT'?) |  'COMMAND' | ('INSERT' ('OR' 'UPDATE')?)  | ('UPDATE' ('OR' 'INSERT')?))"`
-	Targets []DefQName `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
-	Func    DefQName   `parser:"'AS' @@"`
+	Name    string      `parser:"'PROJECTOR' @Ident?"`
+	On      ProjectorOn `parser:"'ON' @@"`
+	Targets []DefQName  `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
+	Func    DefQName    `parser:"'AS' @@"`
 }
 
 func (s ProjectorStmt) GetName() string { return s.Name }
+
+type ProjectorOn struct {
+	CommandArgument bool `parser:"@('COMMAND' 'ARGUMENT')"`
+	Command         bool `parser:"| @('COMMAND')"`
+	Insert          bool `parser:"| @(('INSERT' ('OR' 'UPDATE')?) | ('UPDATE' 'OR' 'INSERT'))"`
+	Update          bool `parser:"| @(('UPDATE' ('OR' 'INSERT')?) | ('INSERT' 'OR' 'UPDATE'))"`
+	Activate        bool `parser:"| @(('ACTIVATE' ('OR' 'DEACTIVATE')?) | ('DEACTIVATE' 'OR' 'ACTIVATE'))"`
+	Deactivate      bool `parser:"| @(('DEACTIVATE' ('OR' 'ACTIVATE')?) | ('ACTIVATE' 'OR' 'DEACTIVATE'))"`
+}
 
 type TemplateStmt struct {
 	Statement

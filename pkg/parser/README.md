@@ -1,8 +1,4 @@
 # TODO: Semantic analysis
-- DO not mix named and unnamed params in functions, commands and queries
-- param of functions specified in projectors
-- projector ON in (COMMAND, COMMANDARGUMENT, ...)
-- command and query arguments are the same with function
 - table OF: 
     - type is correct
     - type is not specified twice

@@ -65,7 +65,11 @@ WORKSPACE MyWorkspace (
 	USE TABLE SomeSchema.SomeTable;
 	USE TABLE Untill.*; 
 
-    TABLE WsTable OF CDOC, Air.SomeType ( -- Multiple inheritance
+    TYPE NamedType (
+        Name text
+    );
+
+    TABLE WsTable OF CDOC, Air.NamedType ( -- Multiple inheritance
         PsName text,
         TABLE Child (
             Number int				
@@ -81,13 +85,15 @@ WORKSPACE MyWorkspace (
     FUNCTION Qiery2Func(Untill.Orders, Untill.PBill) RETURNS text ENGINE BUILTIN;
 
     -- Projectors can only be declared in workspaces. Function can only take sys.Event as argument and return void.
-    PROJECTOR ON COMMAND Air.CreateUPProfile AS SomeProjectorFunc;
-    PROJECTOR ON COMMAND ARGUMENT Untill.QNameOrders AS Air.SomeProjectorFunc2;
-    PROJECTOR ON INSERT Untill.Bill AS SomeProjectorFunc;
-    PROJECTOR ON INSERT OR UPDATE Untill.Bill AS SomeProjectorFunc;
-    PROJECTOR ON UPDATE Untill.Bill AS SomeProjectorFunc;
-    PROJECTOR ON UPDATE OR INSERT Untill.Bill AS SomeProjectorFunc;
-    PROJECTOR ApplyUPProfile ON COMMAND IN (Air.CreateUPProfile, Air.UpdateUPProfile) AS Air.SomeProjectorFunc;
+    PROJECTOR ON COMMAND Air.Orders2 AS SomeProjectorFunc;
+    PROJECTOR ON COMMAND ARGUMENT NamedType AS Air.SomeProjectorFunc2;
+    PROJECTOR ON INSERT Air.AirTablePlan AS SomeProjectorFunc;
+    PROJECTOR ON INSERT OR UPDATE IN (Air.AirTablePlan, WsTable) AS SomeProjectorFunc;
+    PROJECTOR ON UPDATE Air.AirTablePlan AS SomeProjectorFunc;
+    PROJECTOR ON UPDATE OR INSERT Air.AirTablePlan AS SomeProjectorFunc;
+    PROJECTOR ON ACTIVATE Air.AirTablePlan AS SomeProjectorFunc; -- Triggered when Article is activated
+    PROJECTOR ON ACTIVATE OR DEACTIVATE Air.AirTablePlan AS SomeProjectorFunc; -- Triggered when Article is activated or deactivated
+    PROJECTOR ApplyUPProfile ON COMMAND IN (Air.Orders2, Air.Orders3) AS Air.SomeProjectorFunc;
 
     -- Commands can only be declared in workspaces
     COMMAND Orders2(Untill.Orders) AS OrderFunc;

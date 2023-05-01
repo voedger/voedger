@@ -138,6 +138,7 @@ func Test_Undefined(t *testing.T) {
 		"example.sql:3:6: SomeCmdFunc undefined",
 		"example.sql:4:6: QueryFunc undefined",
 		"example.sql:5:6: Air undefined",
+		"example.sql:5:6: Air undefined",
 	}, "\n"))
 }
 
@@ -178,6 +179,7 @@ func Test_Imports(t *testing.T) {
 	require.EqualError(err, strings.Join([]string{
 		"example.sql:6:6: function result do not match",
 		"example.sql:8:6: pkg2.SomeProjectorFunc2 undefined",
+		"example.sql:8:6: Air undefined",
 	}, "\n"))
 
 }

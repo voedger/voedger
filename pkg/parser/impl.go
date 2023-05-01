@@ -166,12 +166,15 @@ func analyseReferences(pkg *PackageSchemaAST, pkgmap map[string]*PackageSchemaAS
 		switch v := stmt.(type) {
 		case *CommandStmt:
 			pos = &v.Pos
-			err = resolveFunc(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
+			err = resolve(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
 				return CompareParams(v.Params, f)
 			})
+			if err != nil {
+				errs = append(errs, errorAt(err, pos))
+			}
 		case *QueryStmt:
 			pos = &v.Pos
-			err = resolveFunc(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
+			err = resolve(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
 				err = CompareParams(v.Params, f)
 				if err != nil {
 					return err
@@ -181,9 +184,13 @@ func analyseReferences(pkg *PackageSchemaAST, pkgmap map[string]*PackageSchemaAS
 				}
 				return nil
 			})
+			if err != nil {
+				errs = append(errs, errorAt(err, pos))
+			}
 		case *ProjectorStmt:
 			pos = &v.Pos
-			err = resolveFunc(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
+			// Check function parameters and result
+			err = resolve(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
 				if len(f.Params) != 1 {
 					return ErrFunctionParamsIncorrect
 				}
@@ -199,13 +206,25 @@ func analyseReferences(pkg *PackageSchemaAST, pkgmap map[string]*PackageSchemaAS
 				if !isSysType(voidTypeName, f.Returns) {
 					return ErrFunctionResultIncorrect
 				}
-				// TODO: Check ON (Command, Argument type, CUD)
-
 				return nil
 			})
-		}
-		if err != nil {
-			errs = append(errs, errorAt(err, pos))
+			if err != nil {
+				errs = append(errs, errorAt(err, pos))
+			}
+			// Check targets
+			for _, target := range v.Targets {
+				if v.On.Activate || v.On.Deactivate || v.On.Insert || v.On.Update {
+					err = resolve(target, pkg, pkgmap, func(f *TableStmt) error { return nil })
+				} else if v.On.Command {
+					err = resolve(target, pkg, pkgmap, func(f *CommandStmt) error { return nil })
+				} else if v.On.CommandArgument {
+					err = resolve(target, pkg, pkgmap, func(f *TypeStmt) error { return nil })
+				}
+				if err != nil {
+					errs = append(errs, errorAt(err, pos))
+				}
+			}
+
 		}
 	})
 	return errs

@@ -58,18 +58,7 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 	})
 }
 
-func resolveFuncInSchema(name string, schema *SchemaAST) (function *FunctionStmt) {
-	iterate(schema, func(stmt interface{}) {
-		if f, ok := stmt.(*FunctionStmt); ok {
-			if f.Name == name {
-				function = f
-			}
-		}
-	})
-	return
-}
-
-func isInternalFunc(name DefQName, schema *SchemaAST) bool {
+func isInternalName(name DefQName, schema *SchemaAST) bool {
 	pkg := strings.TrimSpace(name.Package)
 	return pkg == "" || pkg == schema.Package
 }
@@ -91,29 +80,42 @@ func getQualifiedPackageName(pkgName string, schema *SchemaAST) (string, error) 
 	return "", ErrUndefined(pkgName)
 }
 
-func resolveFunc(fn DefQName, srcPkgSchema *PackageSchemaAST, pkgmap map[string]*PackageSchemaAST, cb func(f *FunctionStmt) error) error {
+func getTargetSchema(n DefQName, srcPkgSchema *PackageSchemaAST, pkgmap map[string]*PackageSchemaAST) (*PackageSchemaAST, error) {
 	var targetPkgSch *PackageSchemaAST
 
-	if isInternalFunc(fn, srcPkgSchema.Ast) {
-		targetPkgSch = srcPkgSchema
-	} else {
-		pkgQN, err := getQualifiedPackageName(fn.Package, srcPkgSchema.Ast)
-		if err != nil {
-			return err
-		}
-		targetPkgSch = pkgmap[pkgQN]
-		if targetPkgSch == nil {
-			return ErrCouldNotImport(pkgQN)
-		}
-
+	if isInternalName(n, srcPkgSchema.Ast) {
+		return srcPkgSchema, nil
 	}
 
-	f := resolveFuncInSchema(fn.Name, targetPkgSch.Ast)
-	if f == nil {
+	pkgQN, err := getQualifiedPackageName(n.Package, srcPkgSchema.Ast)
+	if err != nil {
+		return nil, err
+	}
+	targetPkgSch = pkgmap[pkgQN]
+	if targetPkgSch == nil {
+		return nil, ErrCouldNotImport(pkgQN)
+	}
+	return targetPkgSch, nil
+}
+
+func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt](fn DefQName, srcPkgSchema *PackageSchemaAST, pkgmap map[string]*PackageSchemaAST, cb func(f stmtType) error) error {
+	schema, err := getTargetSchema(fn, srcPkgSchema, pkgmap)
+	if err != nil {
+		return err
+	}
+	var item stmtType
+	iterate(schema.Ast, func(stmt interface{}) {
+		if f, ok := stmt.(stmtType); ok {
+			named := any(f).(INamedStatement)
+			if named.GetName() == fn.Name {
+				item = f
+			}
+		}
+	})
+	if item == nil {
 		return ErrUndefined(fn.String())
 	}
-	return cb(f)
-
+	return cb(item)
 }
 
 func isSysType(name string, t TypeQName) bool {
