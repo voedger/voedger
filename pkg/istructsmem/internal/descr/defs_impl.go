@@ -20,7 +20,7 @@ func (d *Def) readAppDef(def appdef.IDef) {
 	d.Name = def.QName()
 	d.Kind = def.Kind()
 
-	def.Fields(func(field appdef.Field) {
+	def.Fields(func(field appdef.IField) {
 		f := newField()
 		f.Name = field.Name()
 		f.Kind = field.DataKind()
@@ -29,7 +29,7 @@ func (d *Def) readAppDef(def appdef.IDef) {
 		d.Fields = append(d.Fields, f)
 	})
 
-	def.Containers(func(cont appdef.Container) {
+	def.Containers(func(cont appdef.IContainer) {
 		c := newContainer()
 		c.Name = cont.Name()
 		c.Type = cont.Def()

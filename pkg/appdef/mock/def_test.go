@@ -90,7 +90,7 @@ func TestDef(t *testing.T) {
 
 			require.Equal(obj.ContainerCount(), func() int {
 				cnt := 0
-				obj.Containers(func(appdef.Container) { cnt++ })
+				obj.Containers(func(appdef.IContainer) { cnt++ })
 				return cnt
 			}())
 
@@ -122,16 +122,16 @@ func TestInheritsMockingDef(t *testing.T) {
 		On("App").Return(&app).
 		On("FieldCount").Return(1).
 		On("Field", mock.AnythingOfType("string")).Return(&fld).
-		On("Fields", mock.AnythingOfType("func(appdef.Field)")).
+		On("Fields", mock.AnythingOfType("func(appdef.IField)")).
 		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(appdef.Field))
+			cb := args.Get(0).(func(appdef.IField))
 			cb(&fld)
 		}).
 		On("ContainerCount").Return(1).
 		On("Container", mock.AnythingOfType("string")).Return(&cont).
-		On("Containers", mock.AnythingOfType("func(appdef.Container)")).
+		On("Containers", mock.AnythingOfType("func(appdef.IContainer)")).
 		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(appdef.Container))
+			cb := args.Get(0).(func(appdef.IContainer))
 			cb(&cont)
 		}).
 		On("ContainerDef", mock.AnythingOfType("string")).Return(&def).
@@ -149,7 +149,7 @@ func TestInheritsMockingDef(t *testing.T) {
 	require.True(f.VerificationKind(appdef.VerificationKind_EMail))
 	require.Equal(def.FieldCount(), func() int {
 		cnt := 0
-		def.Fields(func(appdef.Field) { cnt++ })
+		def.Fields(func(appdef.IField) { cnt++ })
 		return cnt
 	}())
 
@@ -159,7 +159,7 @@ func TestInheritsMockingDef(t *testing.T) {
 	require.Equal("mockContainer", c.Name())
 	require.Equal(def.ContainerCount(), func() int {
 		cnt := 0
-		def.Containers(func(appdef.Container) { cnt++ })
+		def.Containers(func(appdef.IContainer) { cnt++ })
 		return cnt
 	}())
 	require.Equal(&def, def.ContainerDef("mockContainer"))

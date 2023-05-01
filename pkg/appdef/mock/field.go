@@ -11,7 +11,7 @@ import (
 )
 
 type Field struct {
-	appdef.Field
+	appdef.IField
 	mock.Mock
 	verify map[appdef.VerificationKind]bool
 }

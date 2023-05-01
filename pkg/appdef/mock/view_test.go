@@ -57,7 +57,7 @@ func TestView(t *testing.T) {
 				require.Equal(1, pk.FieldCount())
 				require.Equal(pk.FieldCount(), func() int {
 					cnt := 0
-					pk.Fields(func(f appdef.Field) {
+					pk.Fields(func(f appdef.IField) {
 						cnt++
 						switch f.Name() {
 						case "pkFld":
@@ -85,7 +85,7 @@ func TestView(t *testing.T) {
 				require.Equal(1, cc.FieldCount())
 				require.Equal(cc.FieldCount(), func() int {
 					cnt := 0
-					cc.Fields(func(f appdef.Field) {
+					cc.Fields(func(f appdef.IField) {
 						cnt++
 						switch f.Name() {
 						case "ccFld":
@@ -113,7 +113,7 @@ func TestView(t *testing.T) {
 				require.Equal(2, v.FieldCount())
 				require.Equal(v.FieldCount(), func() int {
 					cnt := 0
-					v.Fields(func(f appdef.Field) {
+					v.Fields(func(f appdef.IField) {
 						cnt++
 						switch f.Name() {
 						case "vFld1":

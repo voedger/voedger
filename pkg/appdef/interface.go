@@ -71,7 +71,7 @@ type IAppDefBuilder interface {
 	Add(name QName, kind DefKind) IDefBuilder
 
 	// Adds new definitions for view.
-	AddView(QName) ViewBuilder
+	AddView(QName) IViewBuilder
 
 	// Must be called after all definitions added. Validates and returns builded application definition or error
 	Build() (IAppDef, error)
@@ -96,24 +96,24 @@ type IDef interface {
 	// Finds field by name.
 	//
 	// Returns nil if not found.
-	Field(name string) Field
+	Field(name string) IField
 
 	// Returns fields count
 	FieldCount() int
 
 	// Enumerates all fields in add order.
-	Fields(func(Field))
+	Fields(func(IField))
 
 	// Finds container by name.
 	//
 	// Returns nil if not found.
-	Container(name string) Container
+	Container(name string) IContainer
 
 	// Returns containers count
 	ContainerCount() int
 
 	// Enumerates all containers in add order.
-	Containers(func(Container))
+	Containers(func(IContainer))
 
 	// Finds container definition by constainer name.
 	//
@@ -172,7 +172,7 @@ type IDefBuilder interface {
 // View builder
 //
 // Ref to view.go for implementation
-type ViewBuilder interface {
+type IViewBuilder interface {
 	// Returns view name
 	Name() QName
 
@@ -189,19 +189,19 @@ type ViewBuilder interface {
 	ValueDef() IDefBuilder
 
 	// AddPartField adds specisified field to view partition key definition. Fields is always required
-	AddPartField(name string, kind DataKind) ViewBuilder
+	AddPartField(name string, kind DataKind) IViewBuilder
 
 	// AddClustColumn adds specisified field to view clustering columns definition. Fields is optional
-	AddClustColumn(name string, kind DataKind) ViewBuilder
+	AddClustColumn(name string, kind DataKind) IViewBuilder
 
 	// AddValueField adds specisified field to view value definition
-	AddValueField(name string, kind DataKind, required bool) ViewBuilder
+	AddValueField(name string, kind DataKind, required bool) IViewBuilder
 }
 
 // Describe single field.
 //
 // Ref to field.go for constants and implementation
-type Field interface {
+type IField interface {
 	// Returns field name
 	Name() string
 
@@ -227,7 +227,7 @@ type Field interface {
 // Describes single inclusion of child definition in parent definition.
 //
 // Ref to container.go for constants and implementation
-type Container interface {
+type IContainer interface {
 	// Returns name of container
 	Name() string
 

@@ -147,7 +147,7 @@ var (
 	}
 )
 
-var buildProjectionView = func(view appdef.ViewBuilder) {
+var buildProjectionView = func(view appdef.IViewBuilder) {
 	view.AddPartField("pk", appdef.DataKind_int32)
 	view.AddClustColumn("cc", appdef.DataKind_int32)
 	view.AddValueField(colValue, appdef.DataKind_int32, true)

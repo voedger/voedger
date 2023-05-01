@@ -39,7 +39,7 @@ func (app *appDef) Add(name QName, kind DefKind) IDefBuilder {
 	return d
 }
 
-func (app *appDef) AddView(name QName) ViewBuilder {
+func (app *appDef) AddView(name QName) IViewBuilder {
 	v := newViewBuilder(app, name)
 	app.changed()
 	return &v

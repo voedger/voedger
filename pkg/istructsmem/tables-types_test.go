@@ -90,7 +90,7 @@ func Test_newRecord(t *testing.T) {
 		t.Run("system field counters for test CDoc", func(t *testing.T) {
 			sysCnt := 0
 			doc.def.Fields(
-				func(f appdef.Field) {
+				func(f appdef.IField) {
 					require.True(doc.hasValue(f.Name()))
 					if f.IsSys() {
 						sysCnt++
@@ -111,7 +111,7 @@ func Test_newRecord(t *testing.T) {
 			sysCnt := 0
 
 			doc.def.Fields(
-				func(f appdef.Field) {
+				func(f appdef.IField) {
 					require.True(doc.hasValue(f.Name()))
 					if f.IsSys() {
 						sysCnt++
@@ -148,7 +148,7 @@ func Test_newRecord(t *testing.T) {
 				sysCnt := 0
 
 				rec.def.Fields(
-					func(f appdef.Field) {
+					func(f appdef.IField) {
 						require.True(rec.hasValue(f.Name()))
 						if f.IsSys() {
 							sysCnt++
@@ -170,7 +170,7 @@ func Test_newRecord(t *testing.T) {
 				sysCnt := 0
 
 				rec.def.Fields(
-					func(f appdef.Field) {
+					func(f appdef.IField) {
 						require.True(rec.hasValue(f.Name()))
 						if f.IsSys() {
 							sysCnt++

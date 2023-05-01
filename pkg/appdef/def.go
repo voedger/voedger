@@ -90,7 +90,7 @@ func (d *def) AddVerifiedField(name string, kind DataKind, required bool, vk ...
 	return d
 }
 
-func (d *def) Container(name string) Container {
+func (d *def) Container(name string) IContainer {
 	if c, ok := d.containers[name]; ok {
 		return c
 	}
@@ -101,7 +101,7 @@ func (d *def) ContainerCount() int {
 	return len(d.containersOrdered)
 }
 
-func (d *def) Containers(cb func(Container)) {
+func (d *def) Containers(cb func(IContainer)) {
 	for _, n := range d.containersOrdered {
 		cb(d.Container(n))
 	}
@@ -114,7 +114,7 @@ func (d *def) ContainerDef(contName string) IDef {
 	return NullDef
 }
 
-func (d *def) Field(name string) Field {
+func (d *def) Field(name string) IField {
 	if f, ok := d.fields[name]; ok {
 		return f
 	}
@@ -125,7 +125,7 @@ func (d *def) FieldCount() int {
 	return len(d.fieldsOrdered)
 }
 
-func (d *def) Fields(cb func(Field)) {
+func (d *def) Fields(cb func(IField)) {
 	for _, n := range d.fieldsOrdered {
 		cb(d.Field(n))
 	}

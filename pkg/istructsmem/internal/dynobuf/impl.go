@@ -29,7 +29,7 @@ func (sch DynoBufSchemes) add(def appdef.IDef) {
 
 	db.Name = def.QName().String()
 	def.Fields(
-		func(f appdef.Field) {
+		func(f appdef.IField) {
 			if !f.IsSys() { // #18142: extract system fields from dynobuffer
 				fieldType := DataKindToFieldType(f.DataKind())
 				if fieldType == dynobuffers.FieldTypeByte {

@@ -24,7 +24,7 @@ func (d *def) Validate() (err error) {
 
 // Validates definition fields
 func (d *def) validateFields() (err error) {
-	d.Fields(func(f Field) {
+	d.Fields(func(f IField) {
 		if !f.IsSys() {
 			if !d.Kind().DataKindAvailable(f.DataKind()) {
 				err = errors.Join(err,
@@ -68,7 +68,7 @@ func (d *def) validateViewFields() (err error) {
 
 	const errWrapFmt = "definition «%v»: view field «%s» unique violated in «%s» and in «%s»: %w"
 
-	pkDef.Fields(func(f Field) {
+	pkDef.Fields(func(f IField) {
 		if ccDef.Field(f.Name()) != nil {
 			err = errors.Join(err, fmt.Errorf(errWrapFmt, d.QName(), f.Name(), SystemContainer_ViewPartitionKey, SystemContainer_ViewClusteringCols, ErrNameUniqueViolation))
 		}
@@ -76,7 +76,7 @@ func (d *def) validateViewFields() (err error) {
 			err = errors.Join(err, fmt.Errorf(errWrapFmt, d.QName(), f.Name(), SystemContainer_ViewPartitionKey, SystemContainer_ViewValue, ErrNameUniqueViolation))
 		}
 	})
-	ccDef.Fields(func(f Field) {
+	ccDef.Fields(func(f IField) {
 		if valDef.Field(f.Name()) != nil {
 			err = errors.Join(err, fmt.Errorf(errWrapFmt, d.QName(), f.Name(), SystemContainer_ViewClusteringCols, SystemContainer_ViewValue, ErrNameUniqueViolation))
 		}
@@ -103,7 +103,7 @@ func (d *def) validateViewClustKeyFields() (err error) {
 	}
 
 	idx, cnt := 0, d.FieldCount()
-	d.Fields(func(fld Field) {
+	d.Fields(func(fld IField) {
 		idx++
 		if idx == cnt {
 			return // last field may be any kind
@@ -123,7 +123,7 @@ func (d *def) validateContainers() (err error) {
 	case DefKind_ViewRecord:
 		err = d.validateViewContainers()
 	default:
-		d.Containers(func(c Container) {
+		d.Containers(func(c IContainer) {
 			def := d.app.DefByName(c.Def())
 			if def != nil {
 				if !d.Kind().ContainerKindAvailable(def.Kind()) {
@@ -201,7 +201,7 @@ func (v *validator) validate(def IDef) (err error) {
 	}
 
 	// resolve externals
-	def.Containers(func(cont Container) {
+	def.Containers(func(cont IContainer) {
 		if cont.Def() == def.QName() {
 			return
 		}

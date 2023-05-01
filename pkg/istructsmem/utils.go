@@ -126,7 +126,7 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 	appDef := appStructs.AppDef()
 	def := appDef.Def(obj.AsQName(appdef.SystemField_QName))
 	def.Fields(
-		func(f appdef.Field) {
+		func(f appdef.IField) {
 			if err != nil || f.DataKind() != appdef.DataKind_RecordID {
 				return
 			}

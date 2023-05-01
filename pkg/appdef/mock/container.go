@@ -11,7 +11,7 @@ import (
 )
 
 type Container struct {
-	appdef.Container
+	appdef.IContainer
 	mock.Mock
 }
 

@@ -378,7 +378,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 
 		// check fields
 		fields := make(map[string]appdef.DataKind)
-		cmdDef.Fields(func(f appdef.Field) {
+		cmdDef.Fields(func(f appdef.IField) {
 			fields[f.Name()] = f.DataKind()
 		})
 		require.Equal(7, len(fields)) // 2 system {sys.QName, sys.ID} + 5 user
@@ -389,7 +389,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 		require.Equal(appdef.DataKind_bytes, fields[test.photoIdent])
 
 		cmdDef.Containers(
-			func(c appdef.Container) {
+			func(c appdef.IContainer) {
 				require.Equal(test.basketIdent, c.Name())
 				require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.Def())
 				t.Run("II. test first level nested definition (basket)", func(t *testing.T) {
@@ -398,7 +398,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 					require.Equal(appdef.DefKind_ORecord, def.Kind())
 
 					def.Containers(
-						func(c appdef.Container) {
+						func(c appdef.IContainer) {
 							require.Equal(test.goodIdent, c.Name())
 							require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.Def())
 
@@ -408,7 +408,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 								require.Equal(appdef.DefKind_ORecord, def.Kind())
 
 								fields := make(map[string]appdef.DataKind)
-								def.Fields(func(f appdef.Field) {
+								def.Fields(func(f appdef.IField) {
 									fields[f.Name()] = f.DataKind()
 								})
 								require.Equal(8, len(fields)) // 4 system {sys.QName, sys.ID, sys.ParentID, sys.Container} + 4 user

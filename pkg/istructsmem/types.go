@@ -763,7 +763,7 @@ func (row *rowType) QName() appdef.QName {
 // istructs.IRowReader.RecordIDs
 func (row *rowType) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {
 	row.def.Fields(
-		func(fld appdef.Field) {
+		func(fld appdef.IField) {
 			if fld.DataKind() == appdef.DataKind_RecordID {
 				id := row.AsRecordID(fld.Name())
 				if (id != istructs.NullRecordID) || includeNulls {

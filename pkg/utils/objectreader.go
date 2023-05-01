@@ -53,7 +53,7 @@ func ReadByKind(name string, kind appdef.DataKind, rr istructs.IRowReader) inter
 func NewFieldsDef(def appdef.IDef) FieldsDef {
 	fields := make(map[string]appdef.DataKind)
 	def.Fields(
-		func(f appdef.Field) {
+		func(f appdef.IField) {
 			fields[f.Name()] = f.DataKind()
 		})
 	return fields
@@ -113,7 +113,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 		})
 	} else {
 		def.Fields(
-			func(f appdef.Field) {
+			func(f appdef.IField) {
 				fieldName, kind := f.Name(), f.DataKind()
 				if opts.filter != nil {
 					if !opts.filter(fieldName, kind) {

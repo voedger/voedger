@@ -53,7 +53,7 @@ func (key *keyType) storeViewPartKey() []byte {
 	buf := new(bytes.Buffer)
 
 	key.partRow.def.Fields(
-		func(f appdef.Field) {
+		func(f appdef.IField) {
 			utils.SafeWriteBuf(buf, key.partRow.dyB.Get(f.Name()))
 		})
 
@@ -65,7 +65,7 @@ func (key *keyType) storeViewClustKey() []byte {
 	buf := new(bytes.Buffer)
 
 	key.clustRow.def.Fields(
-		func(f appdef.Field) {
+		func(f appdef.IField) {
 			utils.SafeWriteBuf(buf, key.clustRow.dyB.Get(f.Name()))
 		})
 
@@ -81,7 +81,7 @@ func loadViewPartKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 	def := key.partRow.def
 
 	def.Fields(
-		func(f appdef.Field) {
+		func(f appdef.IField) {
 			if err != nil {
 				return // first error is enough
 			}
@@ -105,7 +105,7 @@ func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 	def := key.clustRow.def
 
 	def.Fields(
-		func(f appdef.Field) {
+		func(f appdef.IField) {
 			if err != nil {
 				return // first error is enough
 			}
@@ -123,7 +123,7 @@ func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 }
 
 // Loads from buffer row fixed-width field
-func loadFixedLenCellFromBuffer_00(row *rowType, field appdef.Field, appCfg *AppConfigType, buf *bytes.Buffer) (err error) {
+func loadFixedLenCellFromBuffer_00(row *rowType, field appdef.IField, appCfg *AppConfigType, buf *bytes.Buffer) (err error) {
 	switch field.DataKind() {
 	case appdef.DataKind_int32:
 		v := int32(0)
@@ -178,7 +178,7 @@ func loadFixedLenCellFromBuffer_00(row *rowType, field appdef.Field, appCfg *App
 }
 
 // Loads from buffer row cell
-func loadCellFromBuffer_00(row *rowType, field appdef.Field, appCfg *AppConfigType, buf *bytes.Buffer) (err error) {
+func loadCellFromBuffer_00(row *rowType, field appdef.IField, appCfg *AppConfigType, buf *bytes.Buffer) (err error) {
 	if field.IsFixedWidth() {
 		return loadFixedLenCellFromBuffer_00(row, field, appCfg, buf)
 	}

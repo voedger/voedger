@@ -133,7 +133,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 // Validates element containers occurses
 func (v *validator) validElementContOccurses(el *elementType) (err error) {
 	v.def.Containers(
-		func(cont appdef.Container) {
+		func(cont appdef.IContainer) {
 			occurs := appdef.Occurs(0)
 			el.EnumElements(
 				func(child *elementType) {
@@ -170,7 +170,7 @@ func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error)
 // Validates specified row
 func (v *validator) validRow(row *rowType) (err error) {
 	v.def.Fields(
-		func(f appdef.Field) {
+		func(f appdef.IField) {
 			if f.Required() {
 				if !row.hasValue(f.Name()) {
 					err = errors.Join(err,
@@ -390,7 +390,7 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 	}
 
 	key.partRow.def.Fields(
-		func(f appdef.Field) {
+		func(f appdef.IField) {
 			if !key.partRow.hasValue(f.Name()) {
 				err = errors.Join(err,
 					validateErrorf(ECode_EmptyData, "view «%v» partition key «%v» field «%s» is empty: %w", key.viewName, pkDef, f.Name(), ErrFieldIsEmpty))
@@ -399,7 +399,7 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 
 	if !partialClust {
 		key.clustRow.def.Fields(
-			func(f appdef.Field) {
+			func(f appdef.IField) {
 				if !key.clustRow.hasValue(f.Name()) {
 					err = errors.Join(err,
 						validateErrorf(ECode_EmptyData, "view «%v» clustering columns «%v» field «%s» is empty: %w", key.viewName, ccDef, f.Name(), ErrFieldIsEmpty))

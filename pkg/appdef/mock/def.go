@@ -47,7 +47,7 @@ func (d *Def) App() appdef.IAppDef {
 func (d *Def) QName() appdef.QName  { return d.Called().Get(0).(appdef.QName) }
 func (d *Def) Kind() appdef.DefKind { return d.Called().Get(0).(appdef.DefKind) }
 
-func (d *Def) Field(name string) appdef.Field {
+func (d *Def) Field(name string) appdef.IField {
 	if len(d.fields) > 0 {
 		for _, f := range d.fields {
 			if f.Name() == name {
@@ -56,7 +56,7 @@ func (d *Def) Field(name string) appdef.Field {
 		}
 		return nil
 	}
-	return d.Called(name).Get(0).(appdef.Field)
+	return d.Called(name).Get(0).(appdef.IField)
 }
 
 func (d *Def) FieldCount() int {
@@ -66,7 +66,7 @@ func (d *Def) FieldCount() int {
 	return d.Called().Get(0).(int)
 }
 
-func (d *Def) Fields(cb func(appdef.Field)) {
+func (d *Def) Fields(cb func(appdef.IField)) {
 	if len(d.fields) > 0 {
 		for _, f := range d.fields {
 			cb(f)
@@ -76,7 +76,7 @@ func (d *Def) Fields(cb func(appdef.Field)) {
 	d.Called(cb)
 }
 
-func (d *Def) Container(name string) appdef.Container {
+func (d *Def) Container(name string) appdef.IContainer {
 	if len(d.containers) > 0 {
 		for _, c := range d.containers {
 			if c.Name() == name {
@@ -85,7 +85,7 @@ func (d *Def) Container(name string) appdef.Container {
 		}
 		return nil
 	}
-	return d.Called(name).Get(0).(appdef.Container)
+	return d.Called(name).Get(0).(appdef.IContainer)
 }
 
 func (d *Def) ContainerCount() int {
@@ -95,7 +95,7 @@ func (d *Def) ContainerCount() int {
 	return d.Called().Get(0).(int)
 }
 
-func (d *Def) Containers(cb func(appdef.Container)) {
+func (d *Def) Containers(cb func(appdef.IContainer)) {
 	if len(d.containers) > 0 {
 		for _, c := range d.containers {
 			cb(c)

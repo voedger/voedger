@@ -32,17 +32,17 @@ func newViewBuilder(cache *appDef, name QName) viewBuilder {
 	return view
 }
 
-func (view *viewBuilder) AddPartField(name string, kind DataKind) ViewBuilder {
+func (view *viewBuilder) AddPartField(name string, kind DataKind) IViewBuilder {
 	view.pkDef.AddField(name, kind, true)
 	return view
 }
 
-func (view *viewBuilder) AddClustColumn(name string, kind DataKind) ViewBuilder {
+func (view *viewBuilder) AddClustColumn(name string, kind DataKind) IViewBuilder {
 	view.ccDef.AddField(name, kind, false)
 	return view
 }
 
-func (view *viewBuilder) AddValueField(name string, kind DataKind, required bool) ViewBuilder {
+func (view *viewBuilder) AddValueField(name string, kind DataKind, required bool) IViewBuilder {
 	view.ValueDef().AddField(name, kind, required)
 	return view
 }
@@ -96,10 +96,10 @@ func (app *appDef) prepareViewFullKeyDef(def IDef) {
 	// recreate full key definition fields
 	fkDef = app.Add(fkName, DefKind_ViewRecord_ClusteringColumns)
 
-	pkDef.Fields(func(f Field) {
+	pkDef.Fields(func(f IField) {
 		fkDef.AddField(f.Name(), f.DataKind(), true)
 	})
-	ccDef.Fields(func(f Field) {
+	ccDef.Fields(func(f IField) {
 		fkDef.AddField(f.Name(), f.DataKind(), false)
 	})
 

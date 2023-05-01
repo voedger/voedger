@@ -265,11 +265,11 @@ func (key *keyType) keyRow() (istructs.IRowReader, error) {
 	row.setQName(key.fkDef())
 
 	key.partRow.def.Fields(
-		func(f appdef.Field) {
+		func(f appdef.IField) {
 			row.dyB.Set(f.Name(), key.partRow.dyB.Get(f.Name()))
 		})
 	key.clustRow.def.Fields(
-		func(f appdef.Field) {
+		func(f appdef.IField) {
 			row.dyB.Set(f.Name(), key.clustRow.dyB.Get(f.Name()))
 		})
 
@@ -373,7 +373,7 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 
 					result := true
 					r1.def.Fields(
-						func(f appdef.Field) {
+						func(f appdef.IField) {
 							result = result && equalVal(r1.dyB.Get(f.Name()), r2.dyB.Get(f.Name()))
 						})
 					return result
