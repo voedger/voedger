@@ -100,13 +100,13 @@ WORKSPACE MyWorkspace (
     
     -- Command with declared Comment, Tags and Rate
     COMMAND Orders3(Order Untill.Orders, Untill.PBill) AS Order2Func WITH 
-        Comment=air.PosComment, 
-        Tags=[Tag1, air.Tag2],
+        Comment=Air.PosComment, 
+        Tags=[BackofficeTag, Air.PosTag],
         Rate=BackofficeFuncRate1; 
 
     -- Qieries can only be declared in workspaces
     QUERY Query1 RETURNS text AS QueryFunc;
-    QUERY _Query1() RETURNS text AS QueryFunc WITH Comment=Air.PosComment, Tags=[Tag1, Air.Tag2];
+    QUERY _Query1() RETURNS text AS QueryFunc WITH Comment=Air.PosComment, Tags=[BackofficeTag, Air.PosTag];
     QUERY Query2(Order Untill.Orders, Untill.PBill) RETURNS text AS Qiery2Func;
 
 

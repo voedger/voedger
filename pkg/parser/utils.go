@@ -98,7 +98,7 @@ func getTargetSchema(n DefQName, c *aContext) (*PackageSchemaAST, error) {
 	return targetPkgSch, nil
 }
 
-func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt](fn DefQName, c *aContext, cb func(f stmtType) error) {
+func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt](fn DefQName, c *aContext, cb func(f stmtType) error) {
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
 		c.errs = append(c.errs, errorAt(err, c.pos))

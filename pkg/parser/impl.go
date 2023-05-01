@@ -172,6 +172,21 @@ type aContext struct {
 	errs   []error
 }
 
+func analyzeWithRefs(c *aContext, with []WithItem) {
+	for i := range with {
+		wi := &with[i]
+		if wi.Comment != nil {
+			resolve(*wi.Comment, c, func(f *CommentStmt) error { return nil })
+		} else if wi.Rate != nil {
+			resolve(*wi.Rate, c, func(f *RateStmt) error { return nil })
+		}
+		for j := range wi.Tags {
+			tag := wi.Tags[j]
+			resolve(tag, c, func(f *TagStmt) error { return nil })
+		}
+	}
+}
+
 func analyseReferences(c *aContext) {
 	iterate(c.pkg.Ast, func(stmt interface{}) {
 		var err error
@@ -181,6 +196,7 @@ func analyseReferences(c *aContext) {
 			resolve(v.Func, c, func(f *FunctionStmt) error {
 				return CompareParams(v.Params, f)
 			})
+			analyzeWithRefs(c, v.With)
 		case *QueryStmt:
 			c.pos = &v.Pos
 			resolve(v.Func, c, func(f *FunctionStmt) error {
@@ -193,6 +209,7 @@ func analyseReferences(c *aContext) {
 				}
 				return nil
 			})
+			analyzeWithRefs(c, v.With)
 		case *ProjectorStmt:
 			c.pos = &v.Pos
 			// Check function parameters and result
@@ -224,7 +241,9 @@ func analyseReferences(c *aContext) {
 					resolve(target, c, func(f *TypeStmt) error { return nil })
 				}
 			}
-
+		case *TableStmt:
+			c.pos = &v.Pos
+			analyzeWithRefs(c, v.With)
 		}
 	})
 }
