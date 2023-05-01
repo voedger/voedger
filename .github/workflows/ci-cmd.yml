@@ -1,18 +1,28 @@
-name: CI golang
+name: CI cmd
 
-on: [push, pull_request, pull_request_target]
+on:
+  push:
+    paths:
+      - 'cmd/**'
+  pull_request:
+    paths:
+      - 'cmd/**'
+  pull_request_target:
+    paths:
+      - 'cmd/**'
 
 jobs:
-  call-workflow-ci:
+  call-workflow-ci-cmd:
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
     with: 
+      test_folder: 'cmd'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   auto-merge-pr:
-    needs: call-workflow-ci
+    needs: call-workflow-ci-cmd
     if: github.event_name == 'pull_request_target'
     uses: voedger/voedger/.github/workflows/merge.yml@main
     secrets:
