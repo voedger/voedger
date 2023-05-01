@@ -80,28 +80,29 @@ func getQualifiedPackageName(pkgName string, schema *SchemaAST) (string, error) 
 	return "", ErrUndefined(pkgName)
 }
 
-func getTargetSchema(n DefQName, srcPkgSchema *PackageSchemaAST, pkgmap map[string]*PackageSchemaAST) (*PackageSchemaAST, error) {
+func getTargetSchema(n DefQName, c *aContext) (*PackageSchemaAST, error) {
 	var targetPkgSch *PackageSchemaAST
 
-	if isInternalName(n, srcPkgSchema.Ast) {
-		return srcPkgSchema, nil
+	if isInternalName(n, c.pkg.Ast) {
+		return c.pkg, nil
 	}
 
-	pkgQN, err := getQualifiedPackageName(n.Package, srcPkgSchema.Ast)
+	pkgQN, err := getQualifiedPackageName(n.Package, c.pkg.Ast)
 	if err != nil {
 		return nil, err
 	}
-	targetPkgSch = pkgmap[pkgQN]
+	targetPkgSch = c.pkgmap[pkgQN]
 	if targetPkgSch == nil {
 		return nil, ErrCouldNotImport(pkgQN)
 	}
 	return targetPkgSch, nil
 }
 
-func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt](fn DefQName, srcPkgSchema *PackageSchemaAST, pkgmap map[string]*PackageSchemaAST, cb func(f stmtType) error) error {
-	schema, err := getTargetSchema(fn, srcPkgSchema, pkgmap)
+func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt](fn DefQName, c *aContext, cb func(f stmtType) error) {
+	schema, err := getTargetSchema(fn, c)
 	if err != nil {
-		return err
+		c.errs = append(c.errs, errorAt(err, c.pos))
+		return
 	}
 	var item stmtType
 	iterate(schema.Ast, func(stmt interface{}) {
@@ -113,9 +114,14 @@ func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt](fn 
 		}
 	})
 	if item == nil {
-		return ErrUndefined(fn.String())
+		c.errs = append(c.errs, errorAt(ErrUndefined(fn.String()), c.pos))
+		return
 	}
-	return cb(item)
+	err = cb(item)
+	if err != nil {
+		c.errs = append(c.errs, errorAt(err, c.pos))
+		return
+	}
 }
 
 func isSysType(name string, t TypeQName) bool {

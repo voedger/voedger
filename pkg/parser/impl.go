@@ -144,7 +144,6 @@ func cleanupImports(schema *SchemaAST) {
 }
 
 func mergePackageSchemasImpl(packages []*PackageSchemaAST) error {
-	errs := make([]error, 0)
 	pkgmap := make(map[string]*PackageSchemaAST)
 	for _, p := range packages {
 		if _, ok := pkgmap[p.QualifiedPackageName]; ok {
@@ -153,28 +152,38 @@ func mergePackageSchemasImpl(packages []*PackageSchemaAST) error {
 		pkgmap[p.QualifiedPackageName] = p
 	}
 
-	for _, p := range packages {
-		errs = analyseReferences(p, pkgmap, errs)
+	c := aContext{
+		pkg:    nil,
+		pkgmap: pkgmap,
+		errs:   make([]error, 0),
 	}
-	return errors.Join(errs...)
+
+	for _, p := range packages {
+		c.pkg = p
+		analyseReferences(&c)
+	}
+	return errors.Join(c.errs...)
 }
 
-func analyseReferences(pkg *PackageSchemaAST, pkgmap map[string]*PackageSchemaAST, errs []error) []error {
-	iterate(pkg.Ast, func(stmt interface{}) {
+type aContext struct {
+	pkg    *PackageSchemaAST
+	pkgmap map[string]*PackageSchemaAST
+	pos    *lexer.Position
+	errs   []error
+}
+
+func analyseReferences(c *aContext) {
+	iterate(c.pkg.Ast, func(stmt interface{}) {
 		var err error
-		var pos *lexer.Position
 		switch v := stmt.(type) {
 		case *CommandStmt:
-			pos = &v.Pos
-			err = resolve(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
+			c.pos = &v.Pos
+			resolve(v.Func, c, func(f *FunctionStmt) error {
 				return CompareParams(v.Params, f)
 			})
-			if err != nil {
-				errs = append(errs, errorAt(err, pos))
-			}
 		case *QueryStmt:
-			pos = &v.Pos
-			err = resolve(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
+			c.pos = &v.Pos
+			resolve(v.Func, c, func(f *FunctionStmt) error {
 				err = CompareParams(v.Params, f)
 				if err != nil {
 					return err
@@ -184,13 +193,10 @@ func analyseReferences(pkg *PackageSchemaAST, pkgmap map[string]*PackageSchemaAS
 				}
 				return nil
 			})
-			if err != nil {
-				errs = append(errs, errorAt(err, pos))
-			}
 		case *ProjectorStmt:
-			pos = &v.Pos
+			c.pos = &v.Pos
 			// Check function parameters and result
-			err = resolve(v.Func, pkg, pkgmap, func(f *FunctionStmt) error {
+			resolve(v.Func, c, func(f *FunctionStmt) error {
 				if len(f.Params) != 1 {
 					return ErrFunctionParamsIncorrect
 				}
@@ -208,24 +214,17 @@ func analyseReferences(pkg *PackageSchemaAST, pkgmap map[string]*PackageSchemaAS
 				}
 				return nil
 			})
-			if err != nil {
-				errs = append(errs, errorAt(err, pos))
-			}
 			// Check targets
 			for _, target := range v.Targets {
 				if v.On.Activate || v.On.Deactivate || v.On.Insert || v.On.Update {
-					err = resolve(target, pkg, pkgmap, func(f *TableStmt) error { return nil })
+					resolve(target, c, func(f *TableStmt) error { return nil })
 				} else if v.On.Command {
-					err = resolve(target, pkg, pkgmap, func(f *CommandStmt) error { return nil })
+					resolve(target, c, func(f *CommandStmt) error { return nil })
 				} else if v.On.CommandArgument {
-					err = resolve(target, pkg, pkgmap, func(f *TypeStmt) error { return nil })
-				}
-				if err != nil {
-					errs = append(errs, errorAt(err, pos))
+					resolve(target, c, func(f *TypeStmt) error { return nil })
 				}
 			}
 
 		}
 	})
-	return errs
 }
