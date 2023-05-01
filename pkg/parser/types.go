@@ -323,8 +323,8 @@ type TableItemExpr struct {
 }
 
 type TableCheckExpr struct {
-	ConstraintName string `parser:"('CONSTRAINT' @Ident)?"`
-	Expression     string `parser:"'CHECK' '(' @String ')'"` // TODO: Parse expression
+	ConstraintName string     `parser:"('CONSTRAINT' @Ident)?"`
+	Expression     Expression `parser:"'CHECK' '(' @@ ')'"`
 }
 
 type UniqueExpr struct {
@@ -332,16 +332,16 @@ type UniqueExpr struct {
 }
 
 type FieldExpr struct {
-	Name               string    `parser:"@Ident"`
-	Type               TypeQName `parser:"@@"`
-	NotNull            bool      `parser:"@(NOTNULL)?"`
-	Verifiable         bool      `parser:"@('VERIFIABLE')?"`
-	DefaultIntValue    *int      `parser:"('DEFAULT' @Int)?"`
-	DefaultStringValue *string   `parser:"('DEFAULT' @String)?"`
-	DefaultNextVal     *string   `parser:"(DEFAULTNEXTVAL  '(' @String ')')?"`
-	References         *DefQName `parser:"('REFERENCES' @@)?"`
-	CheckRegexp        *string   `parser:"('CHECK' @String)?"`
-	CheckExpression    *string   `parser:"('CHECK' '(' @String ')')?"` // TODO: Parse expression
+	Name               string      `parser:"@Ident"`
+	Type               TypeQName   `parser:"@@"`
+	NotNull            bool        `parser:"@(NOTNULL)?"`
+	Verifiable         bool        `parser:"@('VERIFIABLE')?"`
+	DefaultIntValue    *int        `parser:"('DEFAULT' @Int)?"`
+	DefaultStringValue *string     `parser:"('DEFAULT' @String)?"`
+	DefaultNextVal     *string     `parser:"(DEFAULTNEXTVAL  '(' @String ')')?"`
+	References         *DefQName   `parser:"('REFERENCES' @@)?"`
+	CheckRegexp        *string     `parser:"('CHECK' @String)?"`
+	CheckExpression    *Expression `parser:"('CHECK' '(' @@ ')')?"`
 }
 
 type ViewStmt struct {

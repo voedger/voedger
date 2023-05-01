@@ -32,6 +32,24 @@ func Test_BasicUsage(t *testing.T) {
 
 }
 
+func Test_Expressions(t *testing.T) {
+	require := require.New(t)
+
+	_, err := ParseFile("file1.sql", `SCHEMA test; 
+	TABLE MyTable(
+		Int1 text DEFAULT 1 CHECK(Int1 > Int2),
+		Int1 int DEFAULT 1 CHECK(Text != "asd"),
+		Int1 int DEFAULT 1 CHECK(Int2 > -5),
+		Int1 int DEFAULT 1 CHECK(TextField > "asd" AND (SomeFloat/3.2)*4 != 5.003),
+		Int1 int DEFAULT 1 CHECK(SomeFunc("a", TextField) AND BoolField=FALSE),
+		
+		CHECK(MyRowValidator(this))
+	)
+	`)
+	require.NoError(err)
+
+}
+
 func Test_Duplicates(t *testing.T) {
 	require := require.New(t)
 

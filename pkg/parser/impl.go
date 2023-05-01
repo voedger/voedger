@@ -16,21 +16,26 @@ import (
 func parseImpl(fileName string, content string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
 
+		{Name: "Comment", Pattern: `--.*`},
 		{Name: "Array", Pattern: `\[\]`},
-		{Name: "Punct", Pattern: `(;|,|\.|\*|=|\(|\)|\[|\])`},
-		{Name: "Keywords", Pattern: `ON`},
+		{Name: "Float", Pattern: `[-+]?\d+\.\d+`},
+		{Name: "Int", Pattern: `[-+]?\d+`},
+		{Name: "Operators", Pattern: `<>|!=|<=|>=|[-+*/%,()=<>]`}, //( '<>' | '<=' | '>=' | '=' | '<' | '>' | '!=' )"
+		{Name: "Punct", Pattern: `[;\[\].]`},
+		{Name: "Keywords", Pattern: `ON|AND|OR`},
 		{Name: "DEFAULTNEXTVAL", Pattern: `DEFAULT[ \r\n\t]+NEXTVAL`},
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
 		{Name: "String", Pattern: `("(\\"|[^"])*")|('(\\'|[^'])*')`},
-		{Name: "Int", Pattern: `\d+`},
-		{Name: "Number", Pattern: `[-+]?(\d*\.)?\d+`},
 		{Name: "Ident", Pattern: `[a-zA-Z_]\w*`},
 		{Name: "Whitespace", Pattern: `[ \r\n\t]+`},
-		{Name: "Comment", Pattern: `--.*`},
 	})
 
-	parser := participle.MustBuild[SchemaAST](participle.Lexer(basicLexer), participle.Elide("Whitespace", "Comment"))
+	parser := participle.MustBuild[SchemaAST](
+		participle.Lexer(basicLexer),
+		participle.Elide("Whitespace", "Comment"),
+		participle.Unquote("String"),
+	)
 	return parser.ParseString(fileName, content)
 }
 

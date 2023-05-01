@@ -27,13 +27,13 @@ TABLE AirTablePlan OF CDOC (
     FState int,
     Name text NOT NULL,
     VerifiableField text NOT NULL VERIFIABLE, -- Verifiable field
-    Int1 int DEFAULT 1 CHECK("Int1 > Int2 && Int1 < 100000"), -- (TODO unquote) Expressions evaluating to TRUE or UNKNOWN succeed.
+    Int1 int DEFAULT 1 CHECK(Int1 >= 1 AND Int2 < 10000),  -- Expressions evaluating to TRUE or UNKNOWN succeed.
     Text1 text DEFAULT "a",
     Int2 int DEFAULT NEXTVAL('sequence'),
     BillID int64 REFERENCES air.bill,
     CheckedField text CHECK "^[0-9]{8}$", -- Field validated by regexp
-    CHECK ("ValidateRow(this)"), -- (TODO unquote) Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
-    CONSTRAINT StateChecker CHECK ("ValidateFState(FState)"), -- (TODO unquote) Named CHECK table constraint
+    CHECK (ValidateRow(this)), -- Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
+    CONSTRAINT StateChecker CHECK (ValidateFState(FState)), -- Named CHECK table constraint
     UNIQUE (FState, Name) -- unnamed UNIQUE table constraint
 ) WITH Comment=BackofficeComment, Tags=[BackofficeTag]; -- Optional comment and tags
 
