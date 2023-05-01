@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/heeus/wazero/api"
+	"github.com/voedger/wazero/api"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/state"
