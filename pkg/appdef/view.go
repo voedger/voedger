@@ -12,7 +12,6 @@ type viewBuilder struct {
 	def,
 	pkDef,
 	ccDef,
-	fkDef, // partition key + clustering columns
 	valDef IDefBuilder
 }
 
@@ -71,14 +70,11 @@ func (view *viewBuilder) ValueDef() IDefBuilder {
 func (app *appDef) prepareViewFullKeyDef(def IDef) {
 
 	contDef := func(name string, expectedKind DefKind) IDef {
-		cd := def.ContainerDef(name)
-		if cd == nil {
+		d := def.ContainerDef(name)
+		if d.Kind() != expectedKind {
 			return NullDef
 		}
-		if cd.Kind() != expectedKind {
-			return NullDef
-		}
-		return cd
+		return d
 	}
 
 	pkDef, ccDef :=

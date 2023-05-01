@@ -109,9 +109,9 @@ func (d *def) Containers(cb func(Container)) {
 
 func (d *def) ContainerDef(contName string) IDef {
 	if cont := d.Container(contName); cont != nil {
-		return d.app.DefByName(cont.Def())
+		return d.app.Def(cont.Def())
 	}
-	return nil
+	return NullDef
 }
 
 func (d *def) Field(name string) Field {
@@ -188,14 +188,6 @@ func (d *def) changed() {
 	if d.app != nil {
 		d.app.changed()
 	}
-}
-
-// clears fields and containers
-func (d *def) clear() {
-	d.fields = make(map[string]*field)
-	d.fieldsOrdered = make([]string, 0)
-	d.containers = make(map[string]*container)
-	d.containersOrdered = make([]string, 0)
 }
 
 func (d *def) makeSysFields() {

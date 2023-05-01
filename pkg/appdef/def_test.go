@@ -119,9 +119,10 @@ func Test_def_AddContainer(t *testing.T) {
 		require.False(c.IsSys())
 
 		require.Equal(elQName, c.Def())
-		s := def.ContainerDef("c1")
-		require.NotNil(s)
-		require.Equal(elQName, s.QName())
+		d := def.ContainerDef("c1")
+		require.NotNil(d)
+		require.Equal(elQName, d.QName())
+		require.Equal(DefKind_Element, d.Kind())
 
 		require.EqualValues(1, c.MinOccurs())
 		require.Equal(Occurs_Unbounded, c.MaxOccurs())
@@ -158,7 +159,9 @@ func Test_def_AddContainer(t *testing.T) {
 	t.Run("must be panic if container definition is not compatable", func(t *testing.T) {
 		require.Panics(func() { def.AddContainer("c2", pkQName, 1, 1) })
 
-		require.Nil(def.ContainerDef("c2"))
+		d := def.ContainerDef("c2")
+		require.NotNil(d)
+		require.Equal(DefKind_null, d.Kind())
 	})
 }
 

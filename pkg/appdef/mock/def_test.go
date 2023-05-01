@@ -86,6 +86,7 @@ func TestDef(t *testing.T) {
 			el := obj.ContainerDef("c1")
 			require.NotNil(el)
 			require.Equal(qNames.element, el.QName())
+			require.Equal(appdef.DefKind_Element, el.Kind())
 
 			require.Equal(obj.ContainerCount(), func() int {
 				cnt := 0
@@ -94,7 +95,9 @@ func TestDef(t *testing.T) {
 			}())
 
 			require.Nil(obj.Container("unknownContainer"))
-			require.Equal(appdef.NullDef, obj.ContainerDef("unknownContainer"))
+			d := obj.ContainerDef("unknownContainer")
+			require.NotNil(d)
+			require.Equal(appdef.DefKind_null, d.Kind())
 		})
 
 		require.Equal(appdef.DefKind_null, appDef.Def(appdef.NewQName("test", "unknown")).Kind())
@@ -132,6 +135,7 @@ func TestInheritsMockingDef(t *testing.T) {
 			cb(&cont)
 		}).
 		On("ContainerDef", mock.AnythingOfType("string")).Return(&def).
+		On("Kind").Return(appdef.DefKind_CRecord).
 		On("Singleton").Return(true)
 
 	require := require.New(t)
@@ -158,7 +162,7 @@ func TestInheritsMockingDef(t *testing.T) {
 		def.Containers(func(appdef.Container) { cnt++ })
 		return cnt
 	}())
-	require.NotNil(def.ContainerDef("mockContainer"))
+	require.Equal(&def, def.ContainerDef("mockContainer"))
 
 	require.True(def.Singleton())
 }

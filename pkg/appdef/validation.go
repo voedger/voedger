@@ -160,7 +160,7 @@ func (d *def) validateViewContainers() (err error) {
 				fmt.Errorf("%v: view container «%s» has invalid max occurs value %d, expected 1: %w", d.QName(), name, o, ErrWrongDefStruct))
 		}
 		contDef := d.ContainerDef(name)
-		if contDef == nil {
+		if contDef.Kind() == DefKind_null {
 			err = errors.Join(err,
 				fmt.Errorf("%v: view container «%s» definition not found: %w", d.QName(), name, ErrNameNotFound))
 			return

@@ -117,7 +117,7 @@ type IDef interface {
 
 	// Finds container definition by constainer name.
 	//
-	// Returns nil if not found.
+	// If not found empty definition with DefKind_null is returned
 	ContainerDef(name string) IDef
 
 	// Returns is definition CDoc singleton

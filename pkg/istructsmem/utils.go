@@ -99,7 +99,7 @@ func FillElementFromJSON(data map[string]interface{}, def appdef.IDef, b istruct
 			// e.g. TestBasicUsage_Dashboard(), "order_item": [<2 elements>]
 			containerName := fieldName
 			containerDef := def.ContainerDef(containerName)
-			if containerDef == nil {
+			if containerDef.Kind() == appdef.DefKind_null {
 				return fmt.Errorf("container with name %s is not found", containerName)
 			}
 			for i, intf := range fv {
