@@ -79,8 +79,7 @@ type Term struct {
 }
 
 type SymbolRef struct {
-	//Name       DefQName      `parser:"@@"` TODO: Use DefQName not string
-	Symbol     string        `parser:"@Ident @( '.' Ident )*"`
+	Name       DefQName      `parser:"@@"`
 	Parameters []*Expression `parser:"( '(' @@ ( ',' @@ )* ')' )?"`
 }
 
