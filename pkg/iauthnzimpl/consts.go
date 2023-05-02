@@ -65,12 +65,14 @@ var (
 	qNameQryGetUPPaymentMethods                     = schemas.NewQName(airPackage, "GetUPPaymentMethods")
 	qNameQryToggleUPPaymentMethod                   = schemas.NewQName(airPackage, "ToggleUPPaymentMethod")
 	qNameQryRequestUPPaymentMethod                  = schemas.NewQName(airPackage, "RequestUPPaymentMethod")
+	qNameQryUPTerminalWebhook                       = schemas.NewQName(airPackage, "UPTerminalWebhook")
 
 	// Air roles
 	qNameRoleResellersAdmin         = schemas.NewQName(airPackage, "ResellersAdmin")
 	qNameRoleUntillPaymentsReseller = schemas.NewQName(airPackage, "UntillPaymentsReseller")
 	qNameRoleUntillPaymentsUser     = schemas.NewQName(airPackage, "UntillPaymentsUser")
 	qNameRoleAirReseller            = schemas.NewQName(airPackage, "AirReseller")
+	qNameRoleUntillPaymentsTerminal = schemas.NewQName(airPackage, "UntillPaymentsTerminal")
 )
 
 const (
