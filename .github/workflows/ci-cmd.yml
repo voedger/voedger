@@ -14,6 +14,7 @@ jobs:
     with: 
       test_folder: 'cmd'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
+      ignore_bp3: 'true'
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}

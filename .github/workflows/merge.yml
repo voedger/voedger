@@ -16,5 +16,4 @@ jobs:
         GH_TOKEN: ${{ secrets.personaltoken }}
         token: ${{ secrets.personaltoken }}
         repo: ${{ GITHUB.REPOSITORY }}
-        pr_number: ${{ github.event.number }}
       run: curl -s https://raw.githubusercontent.com/untillpro/ci-action/master/scripts/domergepr.sh | bash 
