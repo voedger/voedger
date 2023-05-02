@@ -2,8 +2,8 @@
 name: DevOps
 about: Something nice to improve workflow
 title: ''
-labels: document, kind/devops
-assignees: ''
+labels: backlog, document, kind/devops
+assignees: ivvist
 
 ---
 
