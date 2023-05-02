@@ -14,7 +14,7 @@ import (
 func Test_def_AddField(t *testing.T) {
 	require := require.New(t)
 
-	def := New().Add(NewQName("test", "object"), DefKind_Object)
+	def := New().AddStruct(NewQName("test", "object"), DefKind_Object)
 	require.NotNil(def)
 
 	t.Run("must be ok to add field", func(t *testing.T) {
@@ -55,20 +55,21 @@ func Test_def_AddField(t *testing.T) {
 	})
 
 	t.Run("must be panic if fields are not allowed by definition kind", func(t *testing.T) {
-		def := New().Add(NewQName("test", "test"), DefKind_ViewRecord)
-		require.Panics(func() { def.AddField("f1", DataKind_int64, true) })
+		view := New().AddView(NewQName("test", "view"))
+		def := view.Def()
+		require.Panics(func() { def.AddField("f1", DataKind_string, true) })
 	})
 
 	t.Run("must be panic if field data kind is not allowed by definition kind", func(t *testing.T) {
-		def := New().Add(NewQName("test", "test"), DefKind_ViewRecord_PartitionKey)
-		require.Panics(func() { def.AddField("f1", DataKind_string, true) })
+		view := New().AddView(NewQName("test", "view"))
+		require.Panics(func() { view.AddPartField("f1", DataKind_string) })
 	})
 }
 
 func Test_def_AddVerifiedField(t *testing.T) {
 	require := require.New(t)
 
-	def := New().Add(NewQName("test", "object"), DefKind_Object)
+	def := New().AddStruct(NewQName("test", "object"), DefKind_Object)
 	require.NotNil(def)
 
 	t.Run("must be ok to add verified field", func(t *testing.T) {
@@ -102,11 +103,11 @@ func Test_def_AddContainer(t *testing.T) {
 	require := require.New(t)
 
 	appDef := New()
-	def := appDef.Add(NewQName("test", "object"), DefKind_Object)
+	def := appDef.AddStruct(NewQName("test", "object"), DefKind_Object)
 	require.NotNil(def)
 
 	elQName := NewQName("test", "element")
-	_ = appDef.Add(elQName, DefKind_Element)
+	_ = appDef.AddStruct(elQName, DefKind_Element)
 
 	t.Run("must be ok to add container", func(t *testing.T) {
 		def.AddContainer("c1", elQName, 1, Occurs_Unbounded)
@@ -149,15 +150,14 @@ func Test_def_AddContainer(t *testing.T) {
 		require.Panics(func() { def.AddContainer("c3", elQName, 2, 1) })
 	})
 
-	pkQName := NewQName("test", "pk")
-
 	t.Run("must be panic if containers are not allowed by definition kind", func(t *testing.T) {
-		def := appDef.Add(pkQName, DefKind_ViewRecord_PartitionKey)
-		require.Panics(func() { def.AddContainer("c1", elQName, 1, Occurs_Unbounded) })
+		view := appDef.AddView(NewQName("test", "view"))
+		pk := view.PartKeyDef()
+		require.Panics(func() { pk.AddContainer("c1", elQName, 1, Occurs_Unbounded) })
 	})
 
 	t.Run("must be panic if container definition is not compatable", func(t *testing.T) {
-		require.Panics(func() { def.AddContainer("c2", pkQName, 1, 1) })
+		require.Panics(func() { def.AddContainer("c2", def.QName(), 1, 1) })
 
 		d := def.ContainerDef("c2")
 		require.NotNil(d)
@@ -171,7 +171,7 @@ func Test_def_Singleton(t *testing.T) {
 	appDef := New()
 
 	t.Run("must be ok to create singleton definition", func(t *testing.T) {
-		def := appDef.Add(NewQName("test", "singleton"), DefKind_CDoc)
+		def := appDef.AddStruct(NewQName("test", "singleton"), DefKind_CDoc)
 		require.NotNil(def)
 
 		def.SetSingleton()
@@ -179,7 +179,7 @@ func Test_def_Singleton(t *testing.T) {
 	})
 
 	t.Run("must be panic if not CDoc definition", func(t *testing.T) {
-		def := appDef.Add(NewQName("test", "wdoc"), DefKind_WDoc)
+		def := appDef.AddStruct(NewQName("test", "wdoc"), DefKind_WDoc)
 		require.NotNil(def)
 
 		require.Panics(func() { def.SetSingleton() })

@@ -7,6 +7,7 @@ package appdef
 
 // Definition kind properties
 var defKindProps = map[DefKind]struct {
+	structure               bool
 	fieldsAllowed           bool
 	availableFieldKinds     map[DataKind]bool
 	systemFields            map[string]bool
@@ -14,6 +15,7 @@ var defKindProps = map[DefKind]struct {
 	availableContainerKinds map[DefKind]bool
 }{
 	DefKind_null: {
+		structure:               false,
 		fieldsAllowed:           false,
 		availableFieldKinds:     map[DataKind]bool{},
 		systemFields:            map[string]bool{},
@@ -21,6 +23,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{},
 	},
 	DefKind_GDoc: {
+		structure:     true,
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -44,6 +47,7 @@ var defKindProps = map[DefKind]struct {
 		},
 	},
 	DefKind_CDoc: {
+		structure:     true,
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -67,6 +71,7 @@ var defKindProps = map[DefKind]struct {
 		},
 	},
 	DefKind_ODoc: {
+		structure:     true,
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -90,6 +95,7 @@ var defKindProps = map[DefKind]struct {
 		},
 	},
 	DefKind_WDoc: {
+		structure:     true,
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -113,6 +119,7 @@ var defKindProps = map[DefKind]struct {
 		},
 	},
 	DefKind_GRecord: {
+		structure:     true,
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -138,6 +145,7 @@ var defKindProps = map[DefKind]struct {
 		},
 	},
 	DefKind_CRecord: {
+		structure:     true,
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -163,6 +171,7 @@ var defKindProps = map[DefKind]struct {
 		},
 	},
 	DefKind_ORecord: {
+		structure:     true,
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -187,6 +196,7 @@ var defKindProps = map[DefKind]struct {
 		},
 	},
 	DefKind_WRecord: {
+		structure:     true,
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -212,6 +222,7 @@ var defKindProps = map[DefKind]struct {
 		},
 	},
 	DefKind_ViewRecord: {
+		structure:           false,
 		fieldsAllowed:       false,
 		availableFieldKinds: map[DataKind]bool{},
 		containersAllowed:   true,
@@ -223,6 +234,7 @@ var defKindProps = map[DefKind]struct {
 		systemFields: map[string]bool{},
 	},
 	DefKind_ViewRecord_PartitionKey: {
+		structure:     false,
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -238,6 +250,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{},
 	},
 	DefKind_ViewRecord_ClusteringColumns: {
+		structure:     false,
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -255,6 +268,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{},
 	},
 	DefKind_ViewRecord_Value: {
+		structure:     false,
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -276,6 +290,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{},
 	},
 	DefKind_Object: {
+		structure:     true,
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -297,6 +312,7 @@ var defKindProps = map[DefKind]struct {
 		},
 	},
 	DefKind_Element: {
+		structure:     true,
 		fieldsAllowed: true,
 		availableFieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
@@ -319,6 +335,7 @@ var defKindProps = map[DefKind]struct {
 		},
 	},
 	DefKind_QueryFunction: {
+		structure:           false,
 		fieldsAllowed:       false,
 		availableFieldKinds: map[DataKind]bool{},
 		systemFields:        map[string]bool{},
@@ -332,6 +349,7 @@ var defKindProps = map[DefKind]struct {
 		},
 	},
 	DefKind_CommandFunction: {
+		structure:           false,
 		fieldsAllowed:       false,
 		availableFieldKinds: map[DataKind]bool{},
 		systemFields:        map[string]bool{},

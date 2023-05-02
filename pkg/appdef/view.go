@@ -5,6 +5,8 @@
 
 package appdef
 
+import "fmt"
+
 // Implements IViewBuilder interface
 type viewBuilder struct {
 	cache *appDef
@@ -19,10 +21,10 @@ func newViewBuilder(cache *appDef, name QName) viewBuilder {
 	view := viewBuilder{
 		cache:  cache,
 		name:   name,
-		def:    cache.Add(name, DefKind_ViewRecord),
-		pkDef:  cache.Add(ViewPartitionKeyDefName(name), DefKind_ViewRecord_PartitionKey),
-		ccDef:  cache.Add(ViewClusteringColumsDefName(name), DefKind_ViewRecord_ClusteringColumns),
-		valDef: cache.Add(ViewValueDefName(name), DefKind_ViewRecord_Value),
+		def:    cache.addDef(name, DefKind_ViewRecord),
+		pkDef:  cache.addDef(ViewPartitionKeyDefName(name), DefKind_ViewRecord_PartitionKey),
+		ccDef:  cache.addDef(ViewClusteringColumsDefName(name), DefKind_ViewRecord_ClusteringColumns),
+		valDef: cache.addDef(ViewValueDefName(name), DefKind_ViewRecord_Value),
 	}
 	view.def.
 		AddContainer(SystemContainer_ViewPartitionKey, view.pkDef.QName(), 1, 1).
@@ -33,16 +35,19 @@ func newViewBuilder(cache *appDef, name QName) viewBuilder {
 }
 
 func (view *viewBuilder) AddPartField(name string, kind DataKind) IViewBuilder {
+	view.panicIfFieldDuplication(name)
 	view.pkDef.AddField(name, kind, true)
 	return view
 }
 
 func (view *viewBuilder) AddClustColumn(name string, kind DataKind) IViewBuilder {
+	view.panicIfFieldDuplication(name)
 	view.ccDef.AddField(name, kind, false)
 	return view
 }
 
 func (view *viewBuilder) AddValueField(name string, kind DataKind, required bool) IViewBuilder {
+	view.panicIfFieldDuplication(name)
 	view.ValueDef().AddField(name, kind, required)
 	return view
 }
@@ -67,19 +72,21 @@ func (view *viewBuilder) ValueDef() IDefBuilder {
 	return view.valDef
 }
 
-func (app *appDef) prepareViewFullKeyDef(def IDef) {
-
-	contDef := func(name string, expectedKind DefKind) IDef {
-		d := def.ContainerDef(name)
-		if d.Kind() != expectedKind {
-			return NullDef
+func (view *viewBuilder) panicIfFieldDuplication(name string) {
+	check := func(def IDef) {
+		if def.Field(name) != nil {
+			panic(fmt.Errorf("field «%s» already exists in view «%v» %v: %w", name, view.Name(), def.Kind(), ErrNameUniqueViolation))
 		}
-		return d
 	}
 
-	pkDef, ccDef :=
-		contDef(SystemContainer_ViewPartitionKey, DefKind_ViewRecord_PartitionKey),
-		contDef(SystemContainer_ViewClusteringCols, DefKind_ViewRecord_ClusteringColumns)
+	check(view.PartKeyDef())
+	check(view.ClustColsDef())
+	check(view.ValueDef())
+}
+
+func (app *appDef) prepareViewFullKeyDef(def IDef) {
+	pkDef := def.ContainerDef(SystemContainer_ViewPartitionKey)
+	ccDef := def.ContainerDef(SystemContainer_ViewClusteringCols)
 
 	fkName := ViewFullKeyColumsDefName(def.QName())
 	var fkDef IDefBuilder
@@ -94,7 +101,7 @@ func (app *appDef) prepareViewFullKeyDef(def IDef) {
 	}
 
 	// recreate full key definition fields
-	fkDef = app.Add(fkName, DefKind_ViewRecord_ClusteringColumns)
+	fkDef = app.addDef(fkName, DefKind_ViewRecord_ClusteringColumns)
 
 	pkDef.Fields(func(f IField) {
 		fkDef.AddField(f.Name(), f.DataKind(), true)

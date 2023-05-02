@@ -772,7 +772,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 				AddValueField("name", appdef.DataKind_string, true).
 				AddValueField("active", appdef.DataKind_bool, true)
 
-			_ = appDef.Add(appdef.NewQName("test", "obj1"), appdef.DefKind_Object)
+			_ = appDef.AddStruct(appdef.NewQName("test", "obj1"), appdef.DefKind_Object)
 		})
 
 		cfgs := make(AppConfigsType, 1)

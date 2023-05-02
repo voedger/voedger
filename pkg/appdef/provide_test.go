@@ -14,7 +14,7 @@ import (
 func TestBasicUsage(t *testing.T) {
 	appDef := New()
 
-	saleParamsDef := appDef.Add(NewQName("test", "Sale"), DefKind_ODoc)
+	saleParamsDef := appDef.AddStruct(NewQName("test", "Sale"), DefKind_ODoc)
 	saleParamsDef.
 		AddField("Buyer", DataKind_string, true).
 		AddField("Age", DataKind_int32, false).
@@ -23,20 +23,20 @@ func TestBasicUsage(t *testing.T) {
 		AddField("Photo", DataKind_bytes, false).
 		AddContainer("Basket", NewQName("test", "Basket"), 1, 1)
 
-	basketDef := appDef.Add(NewQName("test", "Basket"), DefKind_ORecord)
+	basketDef := appDef.AddStruct(NewQName("test", "Basket"), DefKind_ORecord)
 	basketDef.AddContainer("Good", NewQName("test", "Good"), 0, Occurs_Unbounded)
 
-	goodDef := appDef.Add(NewQName("test", "Good"), DefKind_ORecord)
+	goodDef := appDef.AddStruct(NewQName("test", "Good"), DefKind_ORecord)
 	goodDef.
 		AddField("Name", DataKind_string, true).
 		AddField("Code", DataKind_int64, true).
 		AddField("Weight", DataKind_float64, false)
 
-	saleSecurParamsDef := appDef.Add(NewQName("test", "saleSecureArgs"), DefKind_Object)
+	saleSecurParamsDef := appDef.AddStruct(NewQName("test", "saleSecureArgs"), DefKind_Object)
 	saleSecurParamsDef.
 		AddField("password", DataKind_string, true)
 
-	docDef := appDef.Add(NewQName("test", "photos"), DefKind_CDoc)
+	docDef := appDef.AddStruct(NewQName("test", "photos"), DefKind_CDoc)
 	docDef.
 		AddField("Buyer", DataKind_string, true).
 		AddField("Age", DataKind_int32, false).

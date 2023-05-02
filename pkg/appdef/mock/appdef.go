@@ -19,12 +19,12 @@ type AppDef struct {
 func NewAppDef(def ...*Def) *AppDef {
 	app := AppDef{}
 	if len(def) > 0 {
-		app.Add(def...)
+		app.AddStruct(def...)
 	}
 	return &app
 }
 
-func (app *AppDef) Add(def ...*Def) {
+func (app *AppDef) AddStruct(def ...*Def) {
 	if len(def) > 0 {
 		for _, d := range def {
 			d.app = app
@@ -35,7 +35,7 @@ func (app *AppDef) Add(def ...*Def) {
 
 func (app *AppDef) AddView(view *View) {
 	view.app = app
-	app.Add(
+	app.AddStruct(
 		view.view,
 		view.pk,
 		view.cc,

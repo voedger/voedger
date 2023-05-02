@@ -1,6 +1,6 @@
 [![codecov](https://codecov.io/gh/voedger/voedger/appdef/mock/branch/main/graph/badge.svg?token=u6VrbqKtnn)](https://codecov.io/gh/voedger/voedger/appdef/mock)
 
-# appdef/mock
+# package `appdef/mock`
 
 Useful for test application definition.
 

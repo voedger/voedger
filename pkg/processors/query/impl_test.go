@@ -147,12 +147,12 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 	qNameArticle := appdef.NewQName("bo", "Article")
 
 	appDef := appdef.New()
-	appDef.Add(qNameFindArticlesByModificationTimeStampRangeParams, appdef.DefKind_Object).
+	appDef.AddStruct(qNameFindArticlesByModificationTimeStampRangeParams, appdef.DefKind_Object).
 		AddField("from", appdef.DataKind_int64, false).
 		AddField("till", appdef.DataKind_int64, false)
-	appDef.Add(qNameDepartment, appdef.DefKind_CDoc).
+	appDef.AddStruct(qNameDepartment, appdef.DefKind_CDoc).
 		AddField("name", appdef.DataKind_string, true)
-	appDef.Add(qNameArticle, appdef.DefKind_Object).
+	appDef.AddStruct(qNameArticle, appdef.DefKind_Object).
 		AddField("sys.ID", appdef.DataKind_RecordID, true).
 		AddField("name", appdef.DataKind_string, true).
 		AddField("id_department", appdef.DataKind_int64, true)
@@ -997,8 +997,8 @@ func TestRateLimiter(t *testing.T) {
 	var myFunc istructs.IResource
 	cfgs, appStructsProvider, appTokens := getTestCfg(require,
 		func(appDef appdef.IAppDefBuilder) {
-			appDef.Add(qNameMyFuncParams, appdef.DefKind_Object)
-			appDef.Add(qNameMyFuncResults, appdef.DefKind_Object).
+			appDef.AddStruct(qNameMyFuncParams, appdef.DefKind_Object)
+			appDef.AddStruct(qNameMyFuncResults, appdef.DefKind_Object).
 				AddField("fld", appdef.DataKind_string, false)
 		},
 		func(cfg *istructsmem.AppConfigType) {

@@ -67,8 +67,13 @@ type IAppDefBuilder interface {
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
-	Add(name QName, kind DefKind) IDefBuilder
+	//   - if definition with name already exists,
+	//   - if kind is not structure.
+	// # Structures are:
+	//	- DefKind_GDoc, DefKind_CDoc, DefKind_ODoc, DefKind_WDoc,
+	//	-	DefKind_GRecord, DefKind_CRecord, DefKind_ORecord, DefKind_WRecord
+	//	- DefKind_Object and DefKind_Element.
+	AddStruct(name QName, kind DefKind) IDefBuilder
 
 	// Adds new definitions for view.
 	AddView(QName) IViewBuilder
@@ -189,12 +194,22 @@ type IViewBuilder interface {
 	ValueDef() IDefBuilder
 
 	// AddPartField adds specisified field to view partition key definition. Fields is always required
+	//
+	// # Panics:
+	//	- if field already exists in clustering columns or value fields,
+	//	- if not fixed size data kind.
 	AddPartField(name string, kind DataKind) IViewBuilder
 
 	// AddClustColumn adds specisified field to view clustering columns definition. Fields is optional
+	//
+	// # Panics:
+	//	- if field already exists in partition key or value fields.
 	AddClustColumn(name string, kind DataKind) IViewBuilder
 
 	// AddValueField adds specisified field to view value definition
+	//
+	// # Panics:
+	//	- if field already exists in partition key or clustering columns fields.
 	AddValueField(name string, kind DataKind, required bool) IViewBuilder
 }
 

@@ -20,7 +20,7 @@ func TestDynoBufSchemes(t *testing.T) {
 
 	t.Run("must ok to build application definition", func(t *testing.T) {
 		appDefBuilder := appdef.New()
-		rootDef := appDefBuilder.Add(appdef.NewQName("test", "obj"), appdef.DefKind_Object)
+		rootDef := appDefBuilder.AddStruct(appdef.NewQName("test", "obj"), appdef.DefKind_Object)
 		rootDef.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
@@ -32,7 +32,7 @@ func TestDynoBufSchemes(t *testing.T) {
 			AddField("recIDField", appdef.DataKind_RecordID, false).
 			AddContainer("child", appdef.NewQName("test", "el"), 1, appdef.Occurs_Unbounded)
 
-		childDef := appDefBuilder.Add(appdef.NewQName("test", "el"), appdef.DefKind_Element)
+		childDef := appDefBuilder.AddStruct(appdef.NewQName("test", "el"), appdef.DefKind_Element)
 		childDef.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
@@ -45,7 +45,7 @@ func TestDynoBufSchemes(t *testing.T) {
 			AddField("recIDField", appdef.DataKind_RecordID, false).
 			AddContainer("grandChild", appdef.NewQName("test", "el1"), 0, 1)
 
-		grandDef := appDefBuilder.Add(appdef.NewQName("test", "el1"), appdef.DefKind_Element)
+		grandDef := appDefBuilder.AddStruct(appdef.NewQName("test", "el1"), appdef.DefKind_Element)
 		grandDef.
 			AddField("recIDField", appdef.DataKind_RecordID, false)
 

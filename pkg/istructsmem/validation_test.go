@@ -39,16 +39,16 @@ func Test_ValidEvent(t *testing.T) {
 		appDef := appdef.New()
 
 		t.Run("must be ok to build application definition", func(t *testing.T) {
-			appDef.Add(cDocName, appdef.DefKind_CDoc).
+			appDef.AddStruct(cDocName, appdef.DefKind_CDoc).
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)
 
-			appDef.Add(oDocName, appdef.DefKind_ODoc).
+			appDef.AddStruct(oDocName, appdef.DefKind_ODoc).
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false).
 				AddContainer("child", oDocName, 0, 2) // ODocs should be able to contain ODocs, see #!19332
 
-			appDef.Add(oObjName, appdef.DefKind_Object).
+			appDef.AddStruct(oObjName, appdef.DefKind_Object).
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)
 		})
@@ -345,7 +345,7 @@ func Test_ValidElement(t *testing.T) {
 	t.Run("must be ok to build test application definition", func(t *testing.T) {
 
 		t.Run("build object definition", func(t *testing.T) {
-			objDef := appDef.Add(appdef.NewQName("test", "object"), appdef.DefKind_Object)
+			objDef := appDef.AddStruct(appdef.NewQName("test", "object"), appdef.DefKind_Object)
 			objDef.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
@@ -357,7 +357,7 @@ func Test_ValidElement(t *testing.T) {
 				AddField("recIDField", appdef.DataKind_RecordID, false).
 				AddContainer("child", appdef.NewQName("test", "element"), 1, appdef.Occurs_Unbounded)
 
-			elDef := appDef.Add(appdef.NewQName("test", "element"), appdef.DefKind_Element)
+			elDef := appDef.AddStruct(appdef.NewQName("test", "element"), appdef.DefKind_Element)
 			elDef.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
@@ -370,13 +370,13 @@ func Test_ValidElement(t *testing.T) {
 				AddField("recIDField", appdef.DataKind_RecordID, false).
 				AddContainer("grandChild", appdef.NewQName("test", "grandChild"), 0, 1)
 
-			subElDef := appDef.Add(appdef.NewQName("test", "grandChild"), appdef.DefKind_Element)
+			subElDef := appDef.AddStruct(appdef.NewQName("test", "grandChild"), appdef.DefKind_Element)
 			subElDef.
 				AddField("recIDField", appdef.DataKind_RecordID, false)
 		})
 
 		t.Run("build ODoc definition", func(t *testing.T) {
-			docDef := appDef.Add(appdef.NewQName("test", "document"), appdef.DefKind_ODoc)
+			docDef := appDef.AddStruct(appdef.NewQName("test", "document"), appdef.DefKind_ODoc)
 			docDef.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
@@ -388,7 +388,7 @@ func Test_ValidElement(t *testing.T) {
 				AddField("recIDField", appdef.DataKind_RecordID, false).
 				AddContainer("child", appdef.NewQName("test", "record"), 1, appdef.Occurs_Unbounded)
 
-			recDef := appDef.Add(appdef.NewQName("test", "record"), appdef.DefKind_ORecord)
+			recDef := appDef.AddStruct(appdef.NewQName("test", "record"), appdef.DefKind_ORecord)
 			recDef.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
@@ -530,7 +530,7 @@ func Test_ValidCUD(t *testing.T) {
 	appDef := appdef.New()
 
 	t.Run("must be ok to build test application definition", func(t *testing.T) {
-		docDef := appDef.Add(appdef.NewQName("test", "document"), appdef.DefKind_CDoc)
+		docDef := appDef.AddStruct(appdef.NewQName("test", "document"), appdef.DefKind_CDoc)
 		docDef.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
@@ -542,7 +542,7 @@ func Test_ValidCUD(t *testing.T) {
 			AddField("recIDField", appdef.DataKind_RecordID, false).
 			AddContainer("child", appdef.NewQName("test", "record"), 1, appdef.Occurs_Unbounded)
 
-		recDef := appDef.Add(appdef.NewQName("test", "record"), appdef.DefKind_CRecord)
+		recDef := appDef.AddStruct(appdef.NewQName("test", "record"), appdef.DefKind_CRecord)
 		recDef.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
@@ -554,7 +554,7 @@ func Test_ValidCUD(t *testing.T) {
 			AddField("boolField", appdef.DataKind_bool, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false)
 
-		objDef := appDef.Add(appdef.NewQName("test", "object"), appdef.DefKind_Object)
+		objDef := appDef.AddStruct(appdef.NewQName("test", "object"), appdef.DefKind_Object)
 		objDef.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
@@ -666,7 +666,7 @@ func Test_VerifiedFields(t *testing.T) {
 
 	appDef := appdef.New()
 	t.Run("must be ok to build application definition", func(t *testing.T) {
-		def := appDef.Add(objName, appdef.DefKind_Object)
+		def := appDef.AddStruct(objName, appdef.DefKind_Object)
 		def.
 			AddField("int32", appdef.DataKind_int32, true).
 			AddVerifiedField("email", appdef.DataKind_string, false, appdef.VerificationKind_EMail).
@@ -891,7 +891,7 @@ func Test_ValidateErrors(t *testing.T) {
 			appDef := appdef.New()
 
 			t.Run("must be ok to build application definition", func(t *testing.T) {
-				cDocDef := appDef.Add(cDocName, appdef.DefKind_CDoc)
+				cDocDef := appDef.AddStruct(cDocName, appdef.DefKind_CDoc)
 				cDocDef.AddField("Int32", appdef.DataKind_int32, false)
 			})
 

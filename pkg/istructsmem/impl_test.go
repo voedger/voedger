@@ -46,7 +46,7 @@ func TestBasicUsage(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		bld := appdef.New()
 
-		saleParamsDef := bld.Add(appdef.NewQName("test", "Sale"), appdef.DefKind_ODoc)
+		saleParamsDef := bld.AddStruct(appdef.NewQName("test", "Sale"), appdef.DefKind_ODoc)
 		saleParamsDef.
 			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
@@ -55,20 +55,20 @@ func TestBasicUsage(t *testing.T) {
 			AddField("Photo", appdef.DataKind_bytes, false).
 			AddContainer("Basket", appdef.NewQName("test", "Basket"), 1, 1)
 
-		basketDef := bld.Add(appdef.NewQName("test", "Basket"), appdef.DefKind_ORecord)
+		basketDef := bld.AddStruct(appdef.NewQName("test", "Basket"), appdef.DefKind_ORecord)
 		basketDef.AddContainer("Good", appdef.NewQName("test", "Good"), 0, appdef.Occurs_Unbounded)
 
-		goodDef := bld.Add(appdef.NewQName("test", "Good"), appdef.DefKind_ORecord)
+		goodDef := bld.AddStruct(appdef.NewQName("test", "Good"), appdef.DefKind_ORecord)
 		goodDef.
 			AddField("Name", appdef.DataKind_string, true).
 			AddField("Code", appdef.DataKind_int64, true).
 			AddField("Weight", appdef.DataKind_float64, false)
 
-		saleSecurParamsDef := bld.Add(appdef.NewQName("test", "saleSecureArgs"), appdef.DefKind_Object)
+		saleSecurParamsDef := bld.AddStruct(appdef.NewQName("test", "saleSecureArgs"), appdef.DefKind_Object)
 		saleSecurParamsDef.
 			AddField("password", appdef.DataKind_string, true)
 
-		docDef := bld.Add(appdef.NewQName("test", "photos"), appdef.DefKind_CDoc)
+		docDef := bld.AddStruct(appdef.NewQName("test", "photos"), appdef.DefKind_CDoc)
 		docDef.
 			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
@@ -430,11 +430,11 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 	app := func() istructs.IAppStructs {
 		appDef := appdef.New()
 
-		recDef := appDef.Add(appdef.NewQName("types", "CRec"), appdef.DefKind_CRecord)
+		recDef := appDef.AddStruct(appdef.NewQName("types", "CRec"), appdef.DefKind_CRecord)
 		recDef.AddField("int", appdef.DataKind_int64, false)
 
 		docQName := appdef.NewQName("types", "CDoc")
-		docDef := appDef.Add(docQName, appdef.DefKind_CDoc)
+		docDef := appDef.AddStruct(docQName, appdef.DefKind_CDoc)
 		docDef.AddField("str", appdef.DataKind_string, true)
 		docDef.AddField("fld", appdef.DataKind_int32, true)
 
@@ -445,7 +445,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		viewDef.AddClustColumn("str", appdef.DataKind_string)
 		viewDef.AddValueField("bool", appdef.DataKind_bool, false)
 
-		argDef := appDef.Add(appdef.NewQName("types", "Arg"), appdef.DefKind_Object)
+		argDef := appDef.AddStruct(appdef.NewQName("types", "Arg"), appdef.DefKind_Object)
 		argDef.AddField("bool", appdef.DataKind_bool, false)
 
 		cfgs := make(AppConfigsType)

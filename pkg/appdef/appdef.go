@@ -23,7 +23,7 @@ func newAppDef() *appDef {
 	return &app
 }
 
-func (app *appDef) Add(name QName, kind DefKind) IDefBuilder {
+func (app *appDef) AddStruct(name QName, kind DefKind) IDefBuilder {
 	if name == NullQName {
 		panic(fmt.Errorf("definition name cannot be empty: %w", ErrNameMissed))
 	}
@@ -33,10 +33,10 @@ func (app *appDef) Add(name QName, kind DefKind) IDefBuilder {
 	if app.DefByName(name) != nil {
 		panic(fmt.Errorf("definition name «%s» already used: %w", name, ErrNameUniqueViolation))
 	}
-	d := newDef(app, name, kind)
-	app.defs[name] = d
-	app.changed()
-	return d
+	if !kind.IsStructure() {
+		panic(fmt.Errorf("definition kind «%v» is not structure: %w", kind, ErrInvalidDefKind))
+	}
+	return app.addDef(name, kind)
 }
 
 func (app *appDef) AddView(name QName) IViewBuilder {
@@ -86,6 +86,13 @@ func (app *appDef) Defs(cb func(IDef)) {
 	for _, d := range app.defs {
 		cb(d)
 	}
+}
+
+func (app *appDef) addDef(name QName, kind DefKind) IDefBuilder {
+	d := newDef(app, name, kind)
+	app.defs[name] = d
+	app.changed()
+	return d
 }
 
 func (app *appDef) changed() {

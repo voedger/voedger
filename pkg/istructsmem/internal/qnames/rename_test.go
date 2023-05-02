@@ -32,7 +32,7 @@ func TestRenameQName(t *testing.T) {
 		require.NoError(err)
 
 		appDefBuilder := appdef.New()
-		_ = appDefBuilder.Add(old, appdef.DefKind_Object)
+		_ = appDefBuilder.AddStruct(old, appdef.DefKind_Object)
 		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
 
@@ -85,8 +85,8 @@ func TestRenameQName_Errors(t *testing.T) {
 		require.NoError(err)
 
 		appDefBuilder := appdef.New()
-		_ = appDefBuilder.Add(old, appdef.DefKind_Object)
-		_ = appDefBuilder.Add(other, appdef.DefKind_Object)
+		_ = appDefBuilder.AddStruct(old, appdef.DefKind_Object)
+		_ = appDefBuilder.AddStruct(other, appdef.DefKind_Object)
 		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
 
@@ -166,7 +166,7 @@ func TestRenameQName_Fails(t *testing.T) {
 		require.NoError(err)
 
 		appDefBuilder := appdef.New()
-		_ = appDefBuilder.Add(old, appdef.DefKind_Object)
+		_ = appDefBuilder.AddStruct(old, appdef.DefKind_Object)
 		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
 

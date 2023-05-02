@@ -21,7 +21,7 @@ func TestBasicUsage_Uniques(t *testing.T) {
 	appDef := appdef.New()
 
 	t.Run("must be ok to build application definition", func(t *testing.T) {
-		appDef.Add(qName, appdef.DefKind_CDoc).
+		appDef.AddStruct(qName, appdef.DefKind_CDoc).
 			AddField("a", appdef.DataKind_int32, true).
 			AddField("b", appdef.DataKind_int32, true).
 			AddField("c", appdef.DataKind_int32, true)

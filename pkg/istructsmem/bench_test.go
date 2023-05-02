@@ -70,7 +70,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	appDef := func() appdef.IAppDefBuilder {
 		cache := appdef.New()
 
-		s := cache.Add(odocQName, appdef.DefKind_ODoc)
+		s := cache.AddStruct(odocQName, appdef.DefKind_ODoc)
 		for i := 0; i < numOfIntFields; i++ {
 
 			intFieldName := fmt.Sprintf("i%v", i)

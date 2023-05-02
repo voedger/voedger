@@ -68,6 +68,11 @@ func (k DefKind) FieldsAllowed() bool {
 	return defKindProps[k].fieldsAllowed
 }
 
+// Is structure.
+func (k DefKind) IsStructure() bool {
+	return defKindProps[k].structure
+}
+
 // Is data kind allowed.
 func (k DefKind) DataKindAvailable(d DataKind) bool {
 	return defKindProps[k].fieldsAllowed && defKindProps[k].availableFieldKinds[d]

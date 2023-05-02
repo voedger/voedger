@@ -42,7 +42,7 @@ type appPartition struct {
 }
 
 func ProvideJSONFuncParamsDef(appDef appdef.IAppDefBuilder) {
-	appDef.Add(istructs.QNameJSON, appdef.DefKind_Object).
+	appDef.AddStruct(istructs.QNameJSON, appdef.DefKind_Object).
 		AddField(Field_JSONDef_Body, appdef.DataKind_string, true)
 }
 
