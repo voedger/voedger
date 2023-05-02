@@ -16,6 +16,7 @@ import (
 //go:embed version
 var version string
 
+// TODO: add reading SP from stdin to pass to ctrlloops
 func main() {
 	if err := execRootCmd(os.Args, version); err != nil {
 		os.Exit(1)
