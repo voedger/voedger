@@ -33,5 +33,5 @@ jobs:
     if: github.event_name == 'pull_request_target'
     uses: voedger/voedger/.github/workflows/merge.yml@main
     secrets:
-      personaltoken: ${{ secrets.PERSONAL_TOKEN }}
+      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
 
