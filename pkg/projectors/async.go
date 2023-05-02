@@ -128,24 +128,20 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	a.pipeline = pipeline.NewAsyncPipeline(ctx, a.name, projectorOp, errorHandlerOp)
 
-	a.conf.channel, err = a.conf.Broker.NewChannel(istructs.SubjectLogin(a.name), n10nChannelDuration)
-	if err != nil {
+	if a.conf.channel, err = a.conf.Broker.NewChannel(istructs.SubjectLogin(a.name), n10nChannelDuration); err != nil {
 		return err
 	}
-	err = a.conf.Broker.Subscribe(a.conf.channel, in10n.ProjectionKey{
+	return a.conf.Broker.Subscribe(a.conf.channel, in10n.ProjectionKey{
 		App:        a.conf.AppQName,
 		Projection: PlogQName,
 		WS:         istructs.WSID(a.conf.Partition),
 	})
-	if err != nil {
-		return err
-	}
-
-	return err
 }
 
 func (a *asyncActualizer) finit() {
-	a.pipeline.Close()
+	if a.pipeline != nil {
+		a.pipeline.Close()
+	}
 	if logger.IsTrace() {
 		logger.Trace(fmt.Sprintf("%s finalized", a.name))
 	}
