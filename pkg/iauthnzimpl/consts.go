@@ -56,12 +56,14 @@ var (
 	qNameQryGetUPStatus                             = istructs.NewQName(airPackage, "GetUPStatus")
 	qNameQryQueryResellerInfo                       = istructs.NewQName(airPackage, "QueryResellerInfo")
 	qNameCmdCreateUntillPayment                     = istructs.NewQName(airPackage, "CreateUntillPayment")
+	qNameQryUPTerminalWebhook                       = istructs.NewQName(airPackage, "UPTerminalWebhook")
 
 	// Air roles
 	qNameRoleResellersAdmin         = istructs.NewQName(airPackage, "ResellersAdmin")
 	qNameRoleUntillPaymentsReseller = istructs.NewQName(airPackage, "UntillPaymentsReseller")
 	qNameRoleUntillPaymentsUser     = istructs.NewQName(airPackage, "UntillPaymentsUser")
 	qNameRoleAirReseller            = istructs.NewQName(airPackage, "AirReseller")
+	qNameRoleUntillPaymentsTerminal = istructs.NewQName(airPackage, "UntillPaymentsTerminal")
 )
 
 const (
