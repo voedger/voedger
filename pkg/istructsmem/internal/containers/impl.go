@@ -11,11 +11,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func newContainers() *Containers {
@@ -45,12 +45,12 @@ func (cnt *Containers) GetID(name string) (ContainerID, error) {
 }
 
 // Loads all container from storage, add all known system and application containers and store if some changes. Must be called at application starts
-func (cnt *Containers) Prepare(storage istorage.IAppStorage, versions *vers.Versions, schemas schemas.SchemaCache) (err error) {
+func (cnt *Containers) Prepare(storage istorage.IAppStorage, versions *vers.Versions, appDef appdef.IAppDef) (err error) {
 	if err = cnt.load(storage, versions); err != nil {
 		return err
 	}
 
-	if err = cnt.collectAllContainers(schemas); err != nil {
+	if err = cnt.collectAllContainers(appDef); err != nil {
 		return err
 	}
 
@@ -63,18 +63,18 @@ func (cnt *Containers) Prepare(storage istorage.IAppStorage, versions *vers.Vers
 	return nil
 }
 
-// Retrieves and stores IDs for all known containers in application schemas. Must be called then application starts
-func (cnt *Containers) collectAllContainers(sch schemas.SchemaCache) (err error) {
+// Retrieves and stores IDs for all known containers in application definition. Must be called then application starts
+func (cnt *Containers) collectAllContainers(appDef appdef.IAppDef) (err error) {
 
 	// system containers
 	cnt.collectSysContainer("", NullContainerID)
 
 	// application containers
-	if sch != nil {
-		sch.Schemas(
-			func(schema schemas.Schema) {
-				schema.Containers(
-					func(c schemas.Container) {
+	if appDef != nil {
+		appDef.Defs(
+			func(d appdef.IDef) {
+				d.Containers(
+					func(c appdef.IContainer) {
 						if !c.IsSys() {
 							err = errors.Join(err, cnt.collectAppContainer(c.Name()))
 						}
@@ -129,7 +129,7 @@ func (cnt *Containers) load01(storage istorage.IAppStorage) error {
 
 	readName := func(cCols, value []byte) error {
 		name := string(cCols)
-		if ok, err := schemas.ValidIdent(name); !ok {
+		if ok, err := appdef.ValidIdent(name); !ok {
 			return err
 		}
 		id := ContainerID(binary.BigEndian.Uint16(value))
@@ -164,7 +164,7 @@ func (cnt *Containers) store(storage istorage.IAppStorage, versions *vers.Versio
 		if name == "" {
 			continue // skip NullContainerID
 		}
-		if !schemas.IsSysContainer(name) {
+		if !appdef.IsSysContainer(name) {
 			item := istorage.BatchItem{
 				PKey:  pKey,
 				CCols: []byte(name),

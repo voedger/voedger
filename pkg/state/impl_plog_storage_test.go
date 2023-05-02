@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestPLogStorage_Read(t *testing.T) {
@@ -25,12 +25,12 @@ func TestPLogStorage_Read(t *testing.T) {
 				require.NoError(args.Get(4).(istructs.PLogEventsReaderCallback)(istructs.FirstOffset, nil))
 			})
 		appStructs := &mockAppStructs{}
+		appStructs.On("AppDef").Return(&nilAppDef{})
 		appStructs.On("Events").Return(events)
-		appStructs.On("Schemas").Return(&nilSchemas{})
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil)
-		kb, err := s.KeyBuilder(PLogStorage, schemas.NullQName)
+		kb, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
@@ -49,12 +49,12 @@ func TestPLogStorage_Read(t *testing.T) {
 		events := &mockEvents{}
 		events.On("ReadPLog", context.Background(), istructs.PartitionID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.PLogEventsReaderCallback")).Return(errTest)
 		appStructs := &mockAppStructs{}
+		appStructs.On("AppDef").Return(&nilAppDef{})
 		appStructs.On("Events").Return(events)
-		appStructs.On("Schemas").Return(&nilSchemas{})
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil)
-		k, err := s.KeyBuilder(PLogStorage, schemas.NullQName)
+		k, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
 		require.NoError(err)
 		k.PutInt64(Field_Offset, 1)
 		k.PutInt64(Field_Count, 1)
@@ -77,12 +77,12 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 				require.NoError(cb(istructs.Offset(3), nil))
 			})
 		appStructs := &mockAppStructs{}
+		appStructs.On("AppDef").Return(&nilAppDef{})
 		appStructs.On("Events").Return(events)
-		appStructs.On("Schemas").Return(&nilSchemas{})
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, nil, 0)
-		kb, err := s.KeyBuilder(PLogStorage, schemas.NullQName)
+		kb, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
@@ -105,16 +105,16 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 			On("ReadPLog", context.Background(), istructs.PartitionID(1), istructs.Offset(2), 1, mock.AnythingOfType("istructs.PLogEventsReaderCallback")).
 			Return(errTest)
 		appStructs := &mockAppStructs{}
+		appStructs.On("AppDef").Return(&nilAppDef{})
 		appStructs.On("Events").Return(events)
-		appStructs.On("Schemas").Return(&nilSchemas{})
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, nil, 0)
-		kb1, err := s.KeyBuilder(PLogStorage, schemas.NullQName)
+		kb1, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb1.PutInt64(Field_Offset, 1)
 		kb1.PutInt64(Field_Count, 1)
-		kb2, err := s.KeyBuilder(PLogStorage, schemas.NullQName)
+		kb2, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb2.PutInt64(Field_Offset, 2)
 		kb2.PutInt64(Field_Count, 1)
@@ -125,7 +125,7 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 	})
 }
 func TestPLogStorage_ToJSON(t *testing.T) {
-	s := &pLogStorage{schemaCacheFunc: func() schemas.SchemaCache { return nil }}
+	s := &pLogStorage{appDefFunc: func() appdef.IAppDef { return nil }}
 	require := require.New(t)
 	eventError := &mockEventError{}
 	eventError.

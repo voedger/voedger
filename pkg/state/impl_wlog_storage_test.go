@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestWLogStorage_Read(t *testing.T) {
@@ -25,12 +25,12 @@ func TestWLogStorage_Read(t *testing.T) {
 				require.NoError(args.Get(4).(istructs.WLogEventsReaderCallback)(istructs.FirstOffset, nil))
 			})
 		appStructs := &mockAppStructs{}
+		appStructs.On("AppDef").Return(&nilAppDef{})
 		appStructs.On("Events").Return(events)
-		appStructs.On("Schemas").Return(&nilSchemas{})
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		kb, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		kb, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
@@ -48,12 +48,12 @@ func TestWLogStorage_Read(t *testing.T) {
 		events := &mockEvents{}
 		events.On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).Return(errTest)
 		appStructs := &mockAppStructs{}
+		appStructs.On("AppDef").Return(&nilAppDef{})
 		appStructs.On("Events").Return(events)
-		appStructs.On("Schemas").Return(&nilSchemas{})
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		k, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
 		require.NoError(err)
 		k.PutInt64(Field_Offset, 1)
 		k.PutInt64(Field_Count, 1)
@@ -81,12 +81,12 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 				require.NoError(cb(istructs.Offset(3), event))
 			})
 		appStructs := &mockAppStructs{}
+		appStructs.On("AppDef").Return(&nilAppDef{})
 		appStructs.On("Events").Return(events)
-		appStructs.On("Schemas").Return(&nilSchemas{})
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0)
-		kb, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		kb, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
@@ -119,16 +119,16 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 			On("ReadWLog", context.Background(), istructs.WSID(1), istructs.Offset(2), 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
 			Return(errTest)
 		appStructs := &mockAppStructs{}
+		appStructs.On("AppDef").Return(&nilAppDef{})
 		appStructs.On("Events").Return(events)
-		appStructs.On("Schemas").Return(&nilSchemas{})
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0)
-		kb1, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		kb1, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb1.PutInt64(Field_Offset, 1)
 		kb1.PutInt64(Field_Count, 1)
-		kb2, err := s.KeyBuilder(WLogStorage, schemas.NullQName)
+		kb2, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb2.PutInt64(Field_Offset, 2)
 		kb2.PutInt64(Field_Count, 1)
@@ -139,7 +139,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 	})
 }
 func TestWLogStorage_ToJSON(t *testing.T) {
-	s := &wLogStorage{schemaCacheFunc: func() schemas.SchemaCache { return nil }}
+	s := &wLogStorage{appDefFunc: func() appdef.IAppDef { return nil }}
 	require := require.New(t)
 	eventError := &mockEventError{}
 	eventError.

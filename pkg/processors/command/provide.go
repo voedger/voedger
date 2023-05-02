@@ -10,13 +10,13 @@ import (
 
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -41,9 +41,9 @@ type appPartition struct {
 	nextPLogOffset istructs.Offset
 }
 
-func ProvideJSONFuncParamsSchema(cache schemas.SchemaCacheBuilder) {
-	cache.Add(istructs.QNameJSON, schemas.SchemaKind_Object).
-		AddField(Field_JSONSchemaBody, schemas.DataKind_string, true)
+func ProvideJSONFuncParamsDef(appDef appdef.IAppDefBuilder) {
+	appDef.AddStruct(istructs.QNameJSON, appdef.DefKind_Object).
+		AddField(Field_JSONDef_Body, appdef.DataKind_string, true)
 }
 
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение

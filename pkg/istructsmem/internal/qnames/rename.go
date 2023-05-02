@@ -8,12 +8,12 @@ package qnames
 import (
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
-func renameQName(storage istorage.IAppStorage, old, new schemas.QName) error {
+func renameQName(storage istorage.IAppStorage, old, new appdef.QName) error {
 	const (
 		errFmt     = "can not rename QName from «%v» to «%v»: %s"
 		errWrapFmt = errFmt + ": %w"
@@ -42,7 +42,7 @@ func renameQName(storage istorage.IAppStorage, old, new schemas.QName) error {
 		return fmt.Errorf(errWrapFmt, old, new, fmt.Sprintf("new already exists (id=%v)", exists), err)
 	}
 
-	set := func(n schemas.QName, id QNameID) {
+	set := func(n appdef.QName, id QNameID) {
 		qnames.qNames[n] = id
 		qnames.ids[id] = n
 		qnames.changes++

@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/schemas"
 
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
@@ -73,7 +73,7 @@ type appStructsType struct {
 	config      *AppConfigType
 	events      appEventsType
 	records     appRecordsType
-	veiwRecords appViewRecordsType
+	veiwRecords appViewRecords
 	buckets     irates.IBuckets
 	descr       *descr.Application
 	uniques     *implIUniques
@@ -96,6 +96,11 @@ func newAppStructs(appCfg *AppConfigType, buckets irates.IBuckets, appTokens ist
 	return &app
 }
 
+// istructs.IAppStructs.AppDef
+func (app *appStructsType) AppDef() appdef.IAppDef {
+	return app.config.AppDef
+}
+
 // istructs.IAppStructs.Events
 func (app *appStructsType) Events() istructs.IEvents {
 	return &app.events
@@ -114,11 +119,6 @@ func (app *appStructsType) ViewRecords() istructs.IViewRecords {
 // istructs.IAppStructs.Resources
 func (app *appStructsType) Resources() istructs.IResources {
 	return &app.config.Resources
-}
-
-// istructs.IAppStructs.Schemas
-func (app *appStructsType) Schemas() schemas.SchemaCache {
-	return app.config.Schemas
 }
 
 // istructs.IAppStructs.ClusterAppID
@@ -160,7 +160,7 @@ func (app *appStructsType) AppTokens() istructs.IAppTokens {
 	return app.appTokens
 }
 
-func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName schemas.QName, wsid istructs.WSID) bool {
+func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid istructs.WSID) bool {
 	ratelimits, ok := app.config.FunctionRateLimits.limits[funcQName]
 	if !ok {
 		return false
@@ -188,7 +188,7 @@ func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName schemas.QName,
 
 func (app *appStructsType) describe() *descr.Application {
 	if app.descr == nil {
-		stringedUniques := map[schemas.QName][][]string{}
+		stringedUniques := map[appdef.QName][][]string{}
 		for qName, uniques := range app.config.Uniques.uniques {
 			stringedUnque := stringedUniques[qName]
 			for _, u := range uniques {
@@ -256,7 +256,7 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 		}
 	}
 
-	if dbEvent.argUnlObj.QName() != schemas.NullQName {
+	if dbEvent.argUnlObj.QName() != appdef.NullQName {
 		dbEvent.argUnlObj.maskValues()
 	}
 
@@ -434,7 +434,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 	}
 
 	for _, rec := range ev.cud.creates {
-		if rec.schema.Singleton() {
+		if rec.def.Singleton() {
 			id, err := recs.app.config.singletons.GetID(rec.QName())
 			if err != nil {
 				return err
@@ -528,7 +528,7 @@ func (recs *appRecordsType) GetBatch(workspace istructs.WSID, highConsistency bo
 }
 
 // istructs.IRecords.GetSingleton
-func (recs *appRecordsType) GetSingleton(workspace istructs.WSID, qName schemas.QName) (record istructs.IRecord, err error) {
+func (recs *appRecordsType) GetSingleton(workspace istructs.WSID, qName appdef.QName) (record istructs.IRecord, err error) {
 	var id istructs.RecordID
 	if id, err = recs.app.config.singletons.GetID(qName); err != nil {
 		return NewNullRecord(istructs.NullRecordID), err

@@ -9,17 +9,17 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestRateLimits_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	cfgs := make(AppConfigsType)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())
-	qName1 := schemas.NewQName(schemas.SysPackage, "myFunc")
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+	qName1 := appdef.NewQName(appdef.SysPackage, "myFunc")
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
@@ -66,15 +66,15 @@ func TestRateLimits_BasicUsage(t *testing.T) {
 	require.False(as.IsFunctionRateLimitsExceeded(qName1, 42))
 
 	t.Run("must be False if unknown (or unlimited) function", func(t *testing.T) {
-		require.False(as.IsFunctionRateLimitsExceeded(schemas.NewQName("test", "unknown"), 42))
+		require.False(as.IsFunctionRateLimitsExceeded(appdef.NewQName("test", "unknown"), 42))
 	})
 }
 
 func TestRateLimitsErrors(t *testing.T) {
 	unsupportedRateLimitKind := istructs.RateLimitKind(istructs.RateLimitKind_FakeLast)
 	rls := functionRateLimits{
-		limits: map[schemas.QName]map[istructs.RateLimitKind]istructs.RateLimit{
-			schemas.NewQName(schemas.SysPackage, "test"): {
+		limits: map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit{
+			appdef.NewQName(appdef.SysPackage, "test"): {
 				unsupportedRateLimitKind: {},
 			},
 		},
@@ -85,7 +85,7 @@ func TestRateLimitsErrors(t *testing.T) {
 
 func TestGetFunctionRateLimitName(t *testing.T) {
 
-	testFn := schemas.NewQName(schemas.SysPackage, "test")
+	testFn := appdef.NewQName(appdef.SysPackage, "test")
 
 	tests := []struct {
 		name string

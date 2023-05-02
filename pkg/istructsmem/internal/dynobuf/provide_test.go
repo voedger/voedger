@@ -10,37 +10,37 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/dynobuffers"
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func Test_BasicUsage(t *testing.T) {
-	name := schemas.NewQName("test", "test")
+func TestDynoBufSchemesBasicUsage(t *testing.T) {
+	name := appdef.NewQName("test", "test")
 
-	dynoSchemas := New()
+	schemes := New()
 
-	dynoSchemas.Prepare(
-		func() schemas.SchemaCache {
-			bld := schemas.NewSchemaCache()
-			schema := bld.Add(name, schemas.SchemaKind_CDoc)
-			schema.AddField("f1", schemas.DataKind_int32, true)
-			schema.AddField("f2", schemas.DataKind_QName, false)
-			return bld
+	schemes.Prepare(
+		func() appdef.IAppDef {
+			app := appdef.New()
+			def := app.AddStruct(name, appdef.DefKind_CDoc)
+			def.AddField("f1", appdef.DataKind_int32, true)
+			def.AddField("f2", appdef.DataKind_QName, false)
+			return app
 		}())
 
 	t.Run("let test basic methods", func(t *testing.T) {
 		require := require.New(t)
 
-		schema := dynoSchemas[name]
-		require.NotNil(schema, "DynoBufferSchema returns nil")
+		scheme := schemes[name]
+		require.NotNil(scheme, "DynoBufferScheme returns nil")
 
-		require.Len(schema.Fields, 2)
+		require.Len(scheme.Fields, 2)
 
-		require.Equal("f1", schema.Fields[0].Name)
-		require.Equal(dynobuffers.FieldTypeInt32, schema.Fields[0].Ft)
-		require.Equal("int32", FieldTypeToString(schema.Fields[0].Ft))
+		require.Equal("f1", scheme.Fields[0].Name)
+		require.Equal(dynobuffers.FieldTypeInt32, scheme.Fields[0].Ft)
+		require.Equal("int32", FieldTypeToString(scheme.Fields[0].Ft))
 
-		require.Equal("f2", schema.Fields[1].Name)
-		require.Equal(dynobuffers.FieldTypeByte, schema.Fields[1].Ft)
-		require.True(schema.Fields[1].IsArray)
+		require.Equal("f2", scheme.Fields[1].Name)
+		require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[1].Ft)
+		require.True(scheme.Fields[1].IsArray)
 	})
 }

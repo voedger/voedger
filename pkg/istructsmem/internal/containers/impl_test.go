@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -18,7 +19,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestContainers(t *testing.T) {
@@ -36,14 +36,14 @@ func TestContainers(t *testing.T) {
 
 	containers := New()
 	if err := containers.Prepare(storage, versions,
-		func() schemas.SchemaCache {
-			schemaName := schemas.NewQName("test", "schema")
-			bld := schemas.NewSchemaCache()
-			bld.Add(schemaName, schemas.SchemaKind_Element).
-				AddContainer(containerName, schemaName, 0, 1)
-			schemas, err := bld.Build()
+		func() appdef.IAppDef {
+			defName := appdef.NewQName("test", "el")
+			appDef := appdef.New()
+			appDef.AddStruct(defName, appdef.DefKind_Element).
+				AddContainer(containerName, defName, 0, 1)
+			result, err := appDef.Build()
 			require.NoError(err)
-			return schemas
+			return result
 		}()); err != nil {
 		panic(err)
 	}
@@ -86,14 +86,14 @@ func TestContainers(t *testing.T) {
 
 			containers2 := New()
 			if err := containers2.Prepare(storage, versions,
-				func() schemas.SchemaCache {
-					schemaName := schemas.NewQName("test", "schema")
-					bld := schemas.NewSchemaCache()
-					bld.Add(schemaName, schemas.SchemaKind_Element).
-						AddContainer(containerName, schemaName, 0, 1)
-					schemas, err := bld.Build()
+				func() appdef.IAppDef {
+					defName := appdef.NewQName("test", "el")
+					appDef := appdef.New()
+					appDef.AddStruct(defName, appdef.DefKind_Element).
+						AddContainer(containerName, defName, 0, 1)
+					result, err := appDef.Build()
 					require.NoError(err)
-					return schemas
+					return result
 				}()); err != nil {
 				panic(err)
 			}
@@ -149,7 +149,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 
 		names := New()
 		err := names.Prepare(storage, versions, nil)
-		require.ErrorIs(err, schemas.ErrInvalidName)
+		require.ErrorIs(err, appdef.ErrInvalidName)
 	})
 
 	t.Run("must be ok if deleted Container readed from system view ", func(t *testing.T) {
@@ -197,16 +197,16 @@ func TestContainersPrepareErrors(t *testing.T) {
 
 		names := New()
 		err := names.Prepare(storage, versions,
-			func() schemas.SchemaCache {
-				bld := schemas.NewSchemaCache()
-				qName := schemas.NewQName("test", "test")
-				schema := bld.Add(qName, schemas.SchemaKind_Element)
+			func() appdef.IAppDef {
+				appDef := appdef.New()
+				qName := appdef.NewQName("test", "test")
+				def := appDef.AddStruct(qName, appdef.DefKind_Element)
 				for i := 0; i <= MaxAvailableContainerID; i++ {
-					schema.AddContainer(fmt.Sprintf("cont_%d", i), qName, 0, 1)
+					def.AddContainer(fmt.Sprintf("cont_%d", i), qName, 0, 1)
 				}
-				schemas, err := bld.Build()
+				result, err := appDef.Build()
 				require.NoError(err)
-				return schemas
+				return result
 			}())
 		require.ErrorIs(err, ErrContainerIDsExceeds)
 	})
@@ -227,14 +227,14 @@ func TestContainersPrepareErrors(t *testing.T) {
 
 			names := New()
 			err := names.Prepare(storage, versions,
-				func() schemas.SchemaCache {
-					schemaName := schemas.NewQName("test", "schema")
-					bld := schemas.NewSchemaCache()
-					bld.Add(schemaName, schemas.SchemaKind_Element).
-						AddContainer(containerName, schemaName, 0, 1)
-					schemas, err := bld.Build()
+				func() appdef.IAppDef {
+					defName := appdef.NewQName("test", "el")
+					appDef := appdef.New()
+					appDef.AddStruct(defName, appdef.DefKind_Element).
+						AddContainer(containerName, defName, 0, 1)
+					result, err := appDef.Build()
 					require.NoError(err)
-					return schemas
+					return result
 				}())
 			require.ErrorIs(err, writeError)
 		})
@@ -251,14 +251,14 @@ func TestContainersPrepareErrors(t *testing.T) {
 
 			names := New()
 			err := names.Prepare(storage, versions,
-				func() schemas.SchemaCache {
-					schemaName := schemas.NewQName("test", "schema")
-					bld := schemas.NewSchemaCache()
-					bld.Add(schemaName, schemas.SchemaKind_Element).
-						AddContainer(containerName, schemaName, 0, 1)
-					schemas, err := bld.Build()
+				func() appdef.IAppDef {
+					defName := appdef.NewQName("test", "el")
+					appDef := appdef.New()
+					appDef.AddStruct(defName, appdef.DefKind_Element).
+						AddContainer(containerName, defName, 0, 1)
+					result, err := appDef.Build()
 					require.NoError(err)
-					return schemas
+					return result
 				}())
 			require.ErrorIs(err, writeError)
 		})

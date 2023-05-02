@@ -43,9 +43,9 @@ var ErrWrongRecordID = errors.New("wrong record ID")
 
 var ErrUnableToUpdateSystemField = errors.New("unable to update system field")
 
-var ErrWrongSchema = errors.New("wrong schema")
+var ErrWrongDefinition = errors.New("wrong definition")
 
-var ErrUnexpectedShemaKind = errors.New("unexpected schema kind")
+var ErrUnexpectedDefKind = errors.New("unexpected definition kind")
 
 var ErrUnknownCodec = errors.New("unknown codec")
 
@@ -61,9 +61,9 @@ var ErrKeyMustHaveNotMoreThanOneVarSizeField = errors.New("key must have not mor
 
 var ErrKeyFieldMustBeRequired = errors.New("key field must be required")
 
-var ErrUnknownSchemaQName = errors.New("unknown schema QName")
+var ErrUnknownDefinitionQName = errors.New("unknown definition QName")
 
-var ErrSchemaKindMayNotHaveUniques = errors.New("schema kind may not have uniques")
+var ErrDefKindMayNotHaveUniques = errors.New("definition kind may not have uniques")
 
 var ErrUnknownKeyField = errors.New("unknown key field")
 
@@ -71,11 +71,11 @@ var ErrUniquesHaveSameFields = errors.New("uniques have same fields")
 
 var ErrKeyFieldIsUsedMoreThanOnce = errors.New("key field is used more than once")
 
-var ErrSchemaChanged = errors.New("schema has been changed")
+var ErrDefChanged = errors.New("definition has been changed")
 
 var ErrReferentialIntegrityViolation = errors.New("referencial integrity violation")
 
-const errFieldNotFoundWrap = "%s-type field «%s» is not found in schema «%v»: %w" // int32-type field «myField» is not found …
+const errFieldNotFoundWrap = "%s-type field «%s» is not found in definition «%v»: %w" // int32-type field «myField» is not found …
 
 const errFieldValueTypeMismatchWrap = "value type «%s» is not applicable for %s-type field «%s»: %w" // value type «float64» is not applicable for int32-type field «myField»: …
 
@@ -85,7 +85,7 @@ const errFieldConvertErrorWrap = "field «%s» value type «%T» can not to be c
 
 const errCantGetFieldQNameIDWrap = "QName field «%s» can not get ID for value «%v»: %w"
 
-const errSchemaNotFoundWrap = "schema «%v» not found: %w"
+const errDefNotFoundWrap = "definition «%v» not found: %w"
 
 // ValidateError: an interface for describing errors that occurred during validation
 //   - methods:

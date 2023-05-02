@@ -11,49 +11,49 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func newSingletons() *Singletons {
 	return &Singletons{
-		qNames: make(map[schemas.QName]istructs.RecordID),
-		ids:    make(map[istructs.RecordID]schemas.QName),
+		qNames: make(map[appdef.QName]istructs.RecordID),
+		ids:    make(map[istructs.RecordID]appdef.QName),
 		lastID: istructs.FirstSingletonID - 1,
 	}
 }
 
 // Returns QName for CDoc singleton with specified ID
-func (stons *Singletons) GetQName(id istructs.RecordID) (schemas.QName, error) {
+func (stons *Singletons) GetQName(id istructs.RecordID) (appdef.QName, error) {
 	name, ok := stons.ids[id]
 	if ok {
 		return name, nil
 	}
 
-	return schemas.NullQName, fmt.Errorf("unknown singleton ID «%v»: %w", id, ErrIDNotFound)
+	return appdef.NullQName, fmt.Errorf("unknown singleton ID «%v»: %w", id, ErrIDNotFound)
 }
 
 // Returns ID for CDoc singleton with specified QName
-func (stons *Singletons) GetID(qName schemas.QName) (istructs.RecordID, error) {
+func (stons *Singletons) GetID(qName appdef.QName) (istructs.RecordID, error) {
 	if id, ok := stons.qNames[qName]; ok {
 		return id, nil
 	}
-	return istructs.NullRecordID, fmt.Errorf("unable to find singleton ID for schema «%v»: %w", qName, ErrNameNotFound)
+	return istructs.NullRecordID, fmt.Errorf("unable to find singleton ID for definition «%v»: %w", qName, ErrNameNotFound)
 }
 
 // Loads all singletons IDs from storage, add all known application singletons and store cache if some changes.
 // Must be called at application starts
-func (stons *Singletons) Prepare(storage istorage.IAppStorage, versions *vers.Versions, schemas schemas.SchemaCache) (err error) {
+func (stons *Singletons) Prepare(storage istorage.IAppStorage, versions *vers.Versions, appDef appdef.IAppDef) (err error) {
 	if err = stons.load(storage, versions); err != nil {
 		return err
 	}
 
-	if schemas != nil {
-		if err = stons.collectAllSingletons(schemas); err != nil {
+	if appDef != nil {
+		if err = stons.collectAllSingletons(appDef); err != nil {
 			return err
 		}
 	}
@@ -84,7 +84,7 @@ func (stons *Singletons) load(storage istorage.IAppStorage, versions *vers.Versi
 func (stons *Singletons) load01(storage istorage.IAppStorage) error {
 
 	readSingleton := func(cCols, value []byte) error {
-		qName, err := schemas.ParseQName(string(cCols))
+		qName, err := appdef.ParseQName(string(cCols))
 		if err != nil {
 			return err
 		}
@@ -105,20 +105,20 @@ func (stons *Singletons) load01(storage istorage.IAppStorage) error {
 }
 
 // Collect all application singlton IDs
-func (stons *Singletons) collectAllSingletons(cache schemas.SchemaCache) (err error) {
-	cache.Schemas(
-		func(schema schemas.Schema) {
-			if schema.Singleton() {
+func (stons *Singletons) collectAllSingletons(appDef appdef.IAppDef) (err error) {
+	appDef.Defs(
+		func(d appdef.IDef) {
+			if d.Singleton() {
 				err = errors.Join(err,
-					stons.collectSingleton(schema.QName()))
+					stons.collectSingleton(d.QName()))
 			}
 		})
 
 	return err
 }
 
-// collectSingleton checks is application schema singleton in cache. If not then adds it with new ID
-func (stons *Singletons) collectSingleton(qname schemas.QName) error {
+// collectSingleton checks is application definition singleton in cache. If not then adds it with new ID
+func (stons *Singletons) collectSingleton(qname appdef.QName) error {
 
 	if _, ok := stons.qNames[qname]; ok {
 		return nil // already known singleton

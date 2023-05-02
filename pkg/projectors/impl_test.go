@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
@@ -20,7 +21,6 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state"
 )
 
@@ -44,9 +44,9 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
 	app := appStructs(
-		func(schemas schemas.SchemaCacheBuilder) {
-			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
-			ProvideViewSchema(schemas, decProjectionView, buildProjectionSchema)
+		func(appDef appdef.IAppDefBuilder) {
+			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
+			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 		},
 		nil)
 	actualizerFactory := ProvideSyncActualizerFactory()
@@ -80,12 +80,12 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 }
 
 var (
-	incrementorName = schemas.NewQName("test", "incremenor_projector")
-	decrementorName = schemas.NewQName("test", "decrementor_projector")
+	incrementorName = appdef.NewQName("test", "incremenor_projector")
+	decrementorName = appdef.NewQName("test", "decrementor_projector")
 )
 
-var incProjectionView = schemas.NewQName("pkg", "Incremented")
-var decProjectionView = schemas.NewQName("pkg", "Decremented")
+var incProjectionView = appdef.NewQName("pkg", "Incremented")
+var decProjectionView = appdef.NewQName("pkg", "Decremented")
 
 var (
 	incrementorFactory = func(partition istructs.PartitionID) istructs.Projector {
@@ -147,29 +147,29 @@ var (
 	}
 )
 
-var buildProjectionSchema = func(builder IViewSchemaBuilder) {
-	builder.PartitionKeyField("pk", schemas.DataKind_int32, false)
-	builder.ClusteringColumnField("cc", schemas.DataKind_int32, false)
-	builder.ValueField(colValue, schemas.DataKind_int32, true)
+var buildProjectionView = func(view appdef.IViewBuilder) {
+	view.AddPartField("pk", appdef.DataKind_int32)
+	view.AddClustColumn("cc", appdef.DataKind_int32)
+	view.AddValueField(colValue, appdef.DataKind_int32, true)
 }
 
 type (
-	schemasCfgCallback func(schemas schemas.SchemaCacheBuilder)
-	appCfgCallback     func(cfg *istructsmem.AppConfigType)
+	appDefCallback func(appDef appdef.IAppDefBuilder)
+	appCfgCallback func(cfg *istructsmem.AppConfigType)
 )
 
-func appStructs(schemasCfg schemasCfgCallback, appCfg appCfgCallback) istructs.IAppStructs {
-	cache := schemas.NewSchemaCache()
-	cache.Add(incrementorName, schemas.SchemaKind_Object)
-	cache.Add(decrementorName, schemas.SchemaKind_Object)
-	if schemasCfg != nil {
-		schemasCfg(cache)
+func appStructs(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+	appDef := appdef.New()
+	appDef.AddStruct(incrementorName, appdef.DefKind_Object)
+	appDef.AddStruct(decrementorName, appdef.DefKind_Object)
+	if prepareAppDef != nil {
+		prepareAppDef(appDef)
 	}
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, cache)
-	if appCfg != nil {
-		appCfg(cfg)
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+	if prepareAppCfg != nil {
+		prepareAppCfg(cfg)
 	}
 
 	asf := istorage.ProvideMem()
@@ -190,9 +190,9 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	require := require.New(t)
 
 	app := appStructs(
-		func(schemas schemas.SchemaCacheBuilder) {
-			ProvideViewSchema(schemas, incProjectionView, buildProjectionSchema)
-			ProvideViewSchema(schemas, decProjectionView, buildProjectionSchema)
+		func(appDef appdef.IAppDefBuilder) {
+			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
+			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 		},
 		nil)
 	actualizerFactory := ProvideSyncActualizerFactory()

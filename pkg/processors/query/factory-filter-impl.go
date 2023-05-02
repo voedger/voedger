@@ -189,15 +189,15 @@ func nearlyEqual(a, b, epsilon float64) bool {
 //type baseFilter struct {
 //	field       string
 //	value       interface{}
-//	schemaField schemas.DataKind
+//	kind        appdef.DataKind
 //}
 //
-//func (f *baseFilter) Prepare(schemaFields utils.SchemaFields) error {
-//	schemaField, ok := schemaFields[f.field]
+//func (f *baseFilter) Prepare(fd utils.FieldsDef) error {
+//	kind, ok := fd[f.field]
 //	if !ok {
-//		return fmt.Errorf(errLayout, f.field, ErrSchemaFieldNotFound)
+//		return fmt.Errorf(errLayout, f.field, ErrNameNotFound)
 //	}
-//	f.schemaField = schemaField
+//	f.kind = kind
 //	return f.validateValue()
 //}
 //
@@ -207,7 +207,7 @@ func nearlyEqual(a, b, epsilon float64) bool {
 //
 //func (f *baseFilter) validateValue() error {
 //	_, ok := f.value.(float64)
-//	if (f.schemaField == schemas.DataKind_int32 || f.schemaField == schemas.DataKind_int64 || f.schemaField == schemas.DataKind_float32) && !ok {
+//	if (f.kind == appdef.DataKind_int32 || f.kind == appdef.DataKind_int64 || f.kind == appdef.DataKind_float32) && !ok {
 //		return fmt.Errorf(errLayout, f.field, ErrWrongDataType)
 //	}
 //	return nil

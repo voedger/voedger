@@ -8,27 +8,27 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestBasicUsage_Uniques(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	qName := schemas.NewQName("my", "name")
-	qName2 := schemas.NewQName("my", "name2")
-	bld := schemas.NewSchemaCache()
+	qName := appdef.NewQName("my", "name")
+	qName2 := appdef.NewQName("my", "name2")
+	appDef := appdef.New()
 
-	t.Run("must be ok to build schemas", func(t *testing.T) {
-		bld.Add(qName, schemas.SchemaKind_CDoc).
-			AddField("a", schemas.DataKind_int32, true).
-			AddField("b", schemas.DataKind_int32, true).
-			AddField("c", schemas.DataKind_int32, true)
+	t.Run("must be ok to build application definition", func(t *testing.T) {
+		appDef.AddStruct(qName, appdef.DefKind_CDoc).
+			AddField("a", appdef.DataKind_int32, true).
+			AddField("b", appdef.DataKind_int32, true).
+			AddField("c", appdef.DataKind_int32, true)
 	})
 
 	cfgs := AppConfigsType{}
-	cfg := cfgs.AddConfig(test.appName, bld)
+	cfg := cfgs.AddConfig(test.appName, appDef)
 
 	// add Uniques in AppConfigType
 	cfg.Uniques.Add(qName, []string{"a"})

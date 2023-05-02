@@ -13,8 +13,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	log "github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func Test_newRecord(t *testing.T) {
@@ -24,7 +24,7 @@ func Test_newRecord(t *testing.T) {
 
 	t.Run("newNullRecord must return empty, nullQName record with specified sys.ID", func(t *testing.T) {
 		rec := NewNullRecord(100500)
-		require.Equal(rec.QName(), schemas.NullQName)
+		require.Equal(rec.QName(), appdef.NullQName)
 		require.Equal(rec.ID(), istructs.RecordID(100500))
 		require.Equal(rec.Parent(), istructs.NullRecordID)
 		require.Equal(rec.Container(), "")
@@ -36,7 +36,7 @@ func Test_newRecord(t *testing.T) {
 
 		t.Run("test as IRecord", func(t *testing.T) {
 			var r istructs.IRecord = &rec
-			require.Equal(schemas.NullQName, r.QName())
+			require.Equal(appdef.NullQName, r.QName())
 			require.Equal(istructs.NullRecordID, r.ID())
 			require.Equal(istructs.NullRecordID, r.Parent())
 			require.Equal("", r.Container())
@@ -49,11 +49,11 @@ func Test_newRecord(t *testing.T) {
 
 		t.Run("test as IRowReader", func(t *testing.T) {
 			var r istructs.IRowReader = &rec
-			require.Equal(schemas.NullQName, r.AsQName(schemas.SystemField_QName))
-			require.Equal(istructs.NullRecordID, r.AsRecordID(schemas.SystemField_ID))
-			require.Equal(istructs.NullRecordID, r.AsRecordID(schemas.SystemField_ParentID))
-			require.Equal("", r.AsString(schemas.SystemField_Container))
-			require.True(r.AsBool(schemas.SystemField_IsActive))
+			require.Equal(appdef.NullQName, r.AsQName(appdef.SystemField_QName))
+			require.Equal(istructs.NullRecordID, r.AsRecordID(appdef.SystemField_ID))
+			require.Equal(istructs.NullRecordID, r.AsRecordID(appdef.SystemField_ParentID))
+			require.Equal("", r.AsString(appdef.SystemField_Container))
+			require.True(r.AsBool(appdef.SystemField_IsActive))
 		})
 	})
 
@@ -80,7 +80,7 @@ func Test_newRecord(t *testing.T) {
 		require.False(doc.empty())
 		require.Equal(test.testCDoc, doc.QName())
 		require.Equal(istructs.RecordID(100500), doc.ID())
-		require.Equal(istructs.RecordID(100500), doc.AsRecordID(schemas.SystemField_ID))
+		require.Equal(istructs.RecordID(100500), doc.AsRecordID(appdef.SystemField_ID))
 		require.Equal(istructs.NullRecordID, doc.Parent())
 		require.Equal("", doc.Container())
 		require.True(doc.IsActive())
@@ -89,8 +89,8 @@ func Test_newRecord(t *testing.T) {
 
 		t.Run("system field counters for test CDoc", func(t *testing.T) {
 			sysCnt := 0
-			doc.schema.Fields(
-				func(f schemas.Field) {
+			doc.def.Fields(
+				func(f appdef.IField) {
 					require.True(doc.hasValue(f.Name()))
 					if f.IsSys() {
 						sysCnt++
@@ -100,18 +100,18 @@ func Test_newRecord(t *testing.T) {
 		})
 
 		t.Run("inactivating test CDoc", func(t *testing.T) {
-			doc.PutBool(schemas.SystemField_IsActive, false)
+			doc.PutBool(appdef.SystemField_IsActive, false)
 
 			require.False(doc.IsActive())
-			require.False(doc.AsBool(schemas.SystemField_IsActive))
+			require.False(doc.AsBool(appdef.SystemField_IsActive))
 		})
 
 		t.Run("field counters for test CDoc", func(t *testing.T) {
 			cnt := 0
 			sysCnt := 0
 
-			doc.schema.Fields(
-				func(f schemas.Field) {
+			doc.def.Fields(
+				func(f appdef.IField) {
 					require.True(doc.hasValue(f.Name()))
 					if f.IsSys() {
 						sysCnt++
@@ -121,7 +121,7 @@ func Test_newRecord(t *testing.T) {
 
 			require.Equal(3, sysCnt) // sys.QName, sys.ID and sys.IsActive
 			require.Equal(sysCnt+9, cnt)
-			require.Equal(doc.schema.FieldCount(), cnt)
+			require.Equal(doc.def.FieldCount(), cnt)
 		})
 
 		t.Run("newTestCRec must return non empty, full filled and valid «test.Record»", func(t *testing.T) {
@@ -129,26 +129,26 @@ func Test_newRecord(t *testing.T) {
 			require.False(rec.empty())
 			require.Equal(test.testCRec, rec.QName())
 			require.Equal(istructs.RecordID(100501), rec.ID())
-			require.Equal(istructs.RecordID(100501), rec.AsRecordID(schemas.SystemField_ID))
+			require.Equal(istructs.RecordID(100501), rec.AsRecordID(appdef.SystemField_ID))
 			require.Equal(istructs.NullRecordID, rec.Parent())
 			require.Equal("", rec.Container())
 			require.True(rec.IsActive())
 
 			testTestCRec(t, rec, 100501)
 
-			rec.PutRecordID(schemas.SystemField_ParentID, doc.ID())
+			rec.PutRecordID(appdef.SystemField_ParentID, doc.ID())
 			require.Equal(doc.ID(), rec.Parent())
-			require.Equal(doc.ID(), rec.AsRecordID(schemas.SystemField_ParentID))
+			require.Equal(doc.ID(), rec.AsRecordID(appdef.SystemField_ParentID))
 
-			rec.PutString(schemas.SystemField_Container, "record")
+			rec.PutString(appdef.SystemField_Container, "record")
 			require.Equal("record", rec.Container())
-			require.Equal("record", rec.AsString(schemas.SystemField_Container))
+			require.Equal("record", rec.AsString(appdef.SystemField_Container))
 
 			t.Run("system field counters for test CRecord", func(t *testing.T) {
 				sysCnt := 0
 
-				rec.schema.Fields(
-					func(f schemas.Field) {
+				rec.def.Fields(
+					func(f appdef.IField) {
 						require.True(rec.hasValue(f.Name()))
 						if f.IsSys() {
 							sysCnt++
@@ -159,18 +159,18 @@ func Test_newRecord(t *testing.T) {
 			})
 
 			t.Run("inactivating test CRecord", func(t *testing.T) {
-				rec.PutBool(schemas.SystemField_IsActive, false)
+				rec.PutBool(appdef.SystemField_IsActive, false)
 
 				require.False(rec.IsActive())
-				require.False(rec.AsBool(schemas.SystemField_IsActive))
+				require.False(rec.AsBool(appdef.SystemField_IsActive))
 			})
 
 			t.Run("field counters for test CRecord", func(t *testing.T) {
 				cnt := 0
 				sysCnt := 0
 
-				rec.schema.Fields(
-					func(f schemas.Field) {
+				rec.def.Fields(
+					func(f appdef.IField) {
 						require.True(rec.hasValue(f.Name()))
 						if f.IsSys() {
 							sysCnt++
@@ -180,7 +180,7 @@ func Test_newRecord(t *testing.T) {
 
 				require.Equal(5, sysCnt) // sys.QName, sys.ID sys.ParentID, sys.Container and sys.IsActive
 				require.Equal(sysCnt+9, cnt)
-				require.Equal(rec.schema.FieldCount(), cnt)
+				require.Equal(rec.def.FieldCount(), cnt)
 			})
 		})
 	})
@@ -206,7 +206,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 	t.Run("same as previous test, but for deactivated CDoc", func(t *testing.T) {
 		rec1 := newTestCDoc(100501)
-		rec1.PutBool(schemas.SystemField_IsActive, false)
+		rec1.PutBool(appdef.SystemField_IsActive, false)
 
 		b, err := rec1.storeToBytes()
 		require.NoError(err)
@@ -215,7 +215,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		err = rec2.loadFromBytes(b)
 		require.NoError(err)
 		testTestCDoc(t, &rec2, 100501)
-		require.False(rec2.AsBool(schemas.SystemField_IsActive))
+		require.False(rec2.AsBool(appdef.SystemField_IsActive))
 
 		testRecsIsEqual(t, rec1, &rec2)
 	})
@@ -227,20 +227,20 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			id, err := row.qNameID()
 			require.NoError(err)
 			_ = binary.Write(buf, binary.BigEndian, int16(id))
-			if row.QName() == schemas.NullQName {
+			if row.QName() == appdef.NullQName {
 				return buf.Bytes()
 			}
-			if row.schema.Kind().HasSystemField(schemas.SystemField_ID) {
+			if row.def.Kind().HasSystemField(appdef.SystemField_ID) {
 				require.NoError(binary.Write(buf, binary.BigEndian, uint64(row.ID())))
 			}
-			if row.schema.Kind().HasSystemField(schemas.SystemField_ParentID) {
+			if row.def.Kind().HasSystemField(appdef.SystemField_ParentID) {
 				require.NoError(binary.Write(buf, binary.BigEndian, uint64(row.parentID)))
 			}
-			if row.schema.Kind().HasSystemField(schemas.SystemField_Container) {
+			if row.def.Kind().HasSystemField(appdef.SystemField_Container) {
 				id, _ := row.containerID()
 				require.NoError(binary.Write(buf, binary.BigEndian, int16(id)))
 			}
-			if row.schema.Kind().HasSystemField(schemas.SystemField_IsActive) {
+			if row.def.Kind().HasSystemField(appdef.SystemField_IsActive) {
 				require.NoError(binary.Write(buf, binary.BigEndian, row.isActive))
 			}
 			b, err := row.dyB.ToBytes()
@@ -267,8 +267,8 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 		t.Run("test CRecords", func(t *testing.T) {
 			rec1 := newTestCRecord(100503)
-			rec1.PutRecordID(schemas.SystemField_ParentID, 100502)
-			rec1.PutString(schemas.SystemField_Container, test.goodIdent)
+			rec1.PutRecordID(appdef.SystemField_ParentID, 100502)
+			rec1.PutString(appdef.SystemField_Container, test.goodIdent)
 
 			bytes := store_codec_RawDynoBuffer(rec1)
 
@@ -289,7 +289,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		err = rec2.loadFromBytes(b)
 		require.NoError(err)
 
-		require.Equal(schemas.NullQName, rec2.QName())
+		require.Equal(appdef.NullQName, rec2.QName())
 		require.Equal(istructs.NullRecordID, rec2.ID())
 	})
 
@@ -367,22 +367,22 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		b, err := rec1.storeToBytes()
 		require.NoError(err)
 
-		sch := schemas.NewSchemaCache()
-		t.Run("must be ok to build schemas", func(t *testing.T) {
-			sch.Add(test.testCDoc, schemas.SchemaKind_CDoc).
-				AddField("int32_1", schemas.DataKind_int32, false).
-				AddField("int64_1", schemas.DataKind_int64, false).
-				AddField("float32_1", schemas.DataKind_float32, false).
-				AddField("float64_1", schemas.DataKind_float64, false).
-				AddField("bytes_1", schemas.DataKind_bytes, false).
-				AddField("string_1", schemas.DataKind_string, false).
-				AddField("QName_1", schemas.DataKind_QName, false).
-				AddField("bool_1", schemas.DataKind_bool, false).
-				AddField("RecordID_1", schemas.DataKind_RecordID, false)
-			sch.Add(test.tablePhotos, schemas.SchemaKind_Object) // for reading QName_1 field value
+		appDef := appdef.New()
+		t.Run("must be ok to build application definition", func(t *testing.T) {
+			appDef.AddStruct(test.testCDoc, appdef.DefKind_CDoc).
+				AddField("int32_1", appdef.DataKind_int32, false).
+				AddField("int64_1", appdef.DataKind_int64, false).
+				AddField("float32_1", appdef.DataKind_float32, false).
+				AddField("float64_1", appdef.DataKind_float64, false).
+				AddField("bytes_1", appdef.DataKind_bytes, false).
+				AddField("string_1", appdef.DataKind_string, false).
+				AddField("QName_1", appdef.DataKind_QName, false).
+				AddField("bool_1", appdef.DataKind_bool, false).
+				AddField("RecordID_1", appdef.DataKind_RecordID, false)
+			appDef.AddStruct(test.tablePhotos, appdef.DefKind_Object) // for reading QName_1 field value
 		})
 
-		newConfig := newAppConfig(test.AppCfg.Name, sch)
+		newConfig := newAppConfig(test.AppCfg.Name, appDef)
 
 		err = newConfig.prepare(nil, test.AppCfg.storage)
 		require.NoError(err)

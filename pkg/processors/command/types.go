@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -15,7 +16,6 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -82,7 +82,7 @@ type parsedCUD struct {
 	opKind         iauthnz.OperationKindType
 	existingRecord istructs.IRecord // create -> nil
 	id             int64
-	qName          schemas.QName
+	qName          appdef.QName
 	fields         coreutils.MapObject
 	xPath          xPath
 }

@@ -10,21 +10,18 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 var (
-	testRecordQName1      = schemas.NewQName("test", "record1")
-	testRecordQName2      = schemas.NewQName("test", "record2")
-	testRecordQName3      = schemas.NewQName("test", "record3")
-	testEvent             = schemas.NewQName("test", "event")
-	testViewRecordQName1  = schemas.NewQName("test", "viewRecord1")
-	testViewRecordQName2  = schemas.NewQName("test", "viewRecord2")
-	testViewRecordPkQName = schemas.NewQName("test", "viewRecordPk")
-	testViewRecordCcQName = schemas.NewQName("test", "viewRecordCc")
-	testViewRecordVQName  = schemas.NewQName("test", "viewRecordV")
-	testStorage           = schemas.NewQName("test", "testStorage")
+	testRecordQName1     = appdef.NewQName("test", "record1")
+	testRecordQName2     = appdef.NewQName("test", "record2")
+	testRecordQName3     = appdef.NewQName("test", "record3")
+	testEvent            = appdef.NewQName("test", "event")
+	testViewRecordQName1 = appdef.NewQName("test", "viewRecord1")
+	testViewRecordQName2 = appdef.NewQName("test", "viewRecord2")
+	testStorage          = appdef.NewQName("test", "testStorage")
 )
 
 func TestSimpleWSIDFunc(t *testing.T) {
@@ -58,22 +55,22 @@ func Test_put(t *testing.T) {
 			On("AsBool", "boolFld").Return(true).
 			On("AsRecordID", "recordIDFld").Return(istructs.RecordID(6))
 
-		put("int32Fld", schemas.DataKind_int32, mrr, mrw)
-		put("int64Fld", schemas.DataKind_int64, mrr, mrw)
-		put("float32Fld", schemas.DataKind_float32, mrr, mrw)
-		put("float64Fld", schemas.DataKind_float64, mrr, mrw)
-		put("byteFld", schemas.DataKind_bytes, mrr, mrw)
-		put("stringFld", schemas.DataKind_string, mrr, mrw)
-		put("qNameFld", schemas.DataKind_QName, mrr, mrw)
-		put("boolFld", schemas.DataKind_bool, mrr, mrw)
-		put("recordIDFld", schemas.DataKind_RecordID, mrr, mrw)
+		put("int32Fld", appdef.DataKind_int32, mrr, mrw)
+		put("int64Fld", appdef.DataKind_int64, mrr, mrw)
+		put("float32Fld", appdef.DataKind_float32, mrr, mrw)
+		put("float64Fld", appdef.DataKind_float64, mrr, mrw)
+		put("byteFld", appdef.DataKind_bytes, mrr, mrw)
+		put("stringFld", appdef.DataKind_string, mrr, mrw)
+		put("qNameFld", appdef.DataKind_QName, mrr, mrw)
+		put("boolFld", appdef.DataKind_bool, mrr, mrw)
+		put("recordIDFld", appdef.DataKind_RecordID, mrr, mrw)
 
 		mrw.AssertExpectations(t)
 		mrr.AssertExpectations(t)
 	})
 	t.Run("Should panic when data kind not supported", func(t *testing.T) {
 		require.PanicsWithError(t, "illegal state: field - 'notSupported', kind - '12': not supported", func() {
-			put("notSupported", schemas.DataKind_FakeLast, nil, nil)
+			put("notSupported", appdef.DataKind_FakeLast, nil, nil)
 		})
 	})
 }
@@ -83,21 +80,21 @@ func Test_getStorageID(t *testing.T) {
 		tests := []struct {
 			name            string
 			kb              istructs.IStateKeyBuilder
-			expectedStorage schemas.QName
+			expectedStorage appdef.QName
 		}{
 			{
 				name:            "General storage key",
-				kb:              newKeyBuilder(RecordsStorage, schemas.NullQName),
+				kb:              newKeyBuilder(RecordsStorage, appdef.NullQName),
 				expectedStorage: RecordsStorage,
 			},
 			{
 				name:            "Email storage key",
-				kb:              &sendMailStorageKeyBuilder{keyBuilder: newKeyBuilder(SendMailStorage, schemas.NullQName)},
+				kb:              &sendMailStorageKeyBuilder{keyBuilder: newKeyBuilder(SendMailStorage, appdef.NullQName)},
 				expectedStorage: SendMailStorage,
 			},
 			{
 				name:            "HTTP storage key",
-				kb:              &httpStorageKeyBuilder{keyBuilder: newKeyBuilder(HTTPStorage, schemas.NullQName)},
+				kb:              &httpStorageKeyBuilder{keyBuilder: newKeyBuilder(HTTPStorage, appdef.NullQName)},
 				expectedStorage: HTTPStorage,
 			},
 			{
@@ -119,10 +116,10 @@ type nilAppStructs struct {
 	istructs.IAppStructs
 }
 
+func (s *nilAppStructs) AppDef() appdef.IAppDef             { return nil }
 func (s *nilAppStructs) Events() istructs.IEvents           { return nil }
 func (s *nilAppStructs) Records() istructs.IRecords         { return nil }
 func (s *nilAppStructs) ViewRecords() istructs.IViewRecords { return nil }
-func (s *nilAppStructs) Schemas() schemas.SchemaCache       { return nil }
 
 type nilEvents struct {
 	istructs.IEvents
@@ -132,8 +129,8 @@ type nilRecords struct {
 	istructs.IRecords
 }
 
-type nilSchemas struct {
-	schemas.SchemaCache
+type nilAppDef struct {
+	appdef.IAppDef
 }
 
 type nilViewRecords struct {
@@ -145,13 +142,13 @@ type mockAppStructs struct {
 	mock.Mock
 }
 
+func (s *mockAppStructs) AppDef() appdef.IAppDef {
+	return s.Called().Get(0).(appdef.IAppDef)
+}
 func (s *mockAppStructs) Events() istructs.IEvents   { return s.Called().Get(0).(istructs.IEvents) }
 func (s *mockAppStructs) Records() istructs.IRecords { return s.Called().Get(0).(istructs.IRecords) }
 func (s *mockAppStructs) ViewRecords() istructs.IViewRecords {
 	return s.Called().Get(0).(istructs.IViewRecords)
-}
-func (s *mockAppStructs) Schemas() schemas.SchemaCache {
-	return s.Called().Get(0).(schemas.SchemaCache)
 }
 
 type mockEvents struct {
@@ -174,7 +171,7 @@ type mockRecords struct {
 func (r *mockRecords) GetBatch(workspace istructs.WSID, highConsistency bool, ids []istructs.RecordGetBatchItem) (err error) {
 	return r.Called(workspace, highConsistency, ids).Error(0)
 }
-func (r *mockRecords) GetSingleton(workspace istructs.WSID, qName schemas.QName) (record istructs.IRecord, err error) {
+func (r *mockRecords) GetSingleton(workspace istructs.WSID, qName appdef.QName) (record istructs.IRecord, err error) {
 	aa := r.Called(workspace, qName)
 	return aa.Get(0).(istructs.IRecord), aa.Error(1)
 }
@@ -184,13 +181,13 @@ type mockViewRecords struct {
 	mock.Mock
 }
 
-func (r *mockViewRecords) KeyBuilder(view schemas.QName) istructs.IKeyBuilder {
+func (r *mockViewRecords) KeyBuilder(view appdef.QName) istructs.IKeyBuilder {
 	return r.Called(view).Get(0).(istructs.IKeyBuilder)
 }
-func (r *mockViewRecords) NewValueBuilder(view schemas.QName) istructs.IValueBuilder {
+func (r *mockViewRecords) NewValueBuilder(view appdef.QName) istructs.IValueBuilder {
 	return r.Called(view).Get(0).(istructs.IValueBuilder)
 }
-func (r *mockViewRecords) UpdateValueBuilder(view schemas.QName, existing istructs.IValue) istructs.IValueBuilder {
+func (r *mockViewRecords) UpdateValueBuilder(view appdef.QName, existing istructs.IValue) istructs.IValueBuilder {
 	return r.Called(view, existing).Get(0).(istructs.IValueBuilder)
 }
 func (r *mockViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRecordGetBatchItem) (err error) {
@@ -208,10 +205,10 @@ type mockRecord struct {
 	mock.Mock
 }
 
-func (r *mockRecord) QName() schemas.QName      { return r.Called().Get(0).(schemas.QName) }
+func (r *mockRecord) QName() appdef.QName       { return r.Called().Get(0).(appdef.QName) }
 func (r *mockRecord) AsInt64(name string) int64 { return r.Called(name).Get(0).(int64) }
-func (r *mockRecord) AsQName(name string) schemas.QName {
-	return r.Called(name).Get(0).(schemas.QName)
+func (r *mockRecord) AsQName(name string) appdef.QName {
+	return r.Called(name).Get(0).(appdef.QName)
 }
 func (r *mockRecord) FieldNames(cb func(fieldName string)) {
 	r.Called(cb)
@@ -228,8 +225,8 @@ func (v *mockValue) AsFloat32(name string) float32 { return v.Called(name).Get(0
 func (v *mockValue) AsFloat64(name string) float64 { return v.Called(name).Get(0).(float64) }
 func (v *mockValue) AsBytes(name string) []byte    { return v.Called(name).Get(0).([]byte) }
 func (v *mockValue) AsString(name string) string   { return v.Called(name).String(0) }
-func (v *mockValue) AsQName(name string) schemas.QName {
-	return v.Called(name).Get(0).(schemas.QName)
+func (v *mockValue) AsQName(name string) appdef.QName {
+	return v.Called(name).Get(0).(appdef.QName)
 }
 func (v *mockValue) AsBool(name string) bool { return v.Called(name).Bool(0) }
 func (v *mockValue) AsRecordID(name string) istructs.RecordID {
@@ -255,7 +252,7 @@ type mockStorage struct {
 	mock.Mock
 }
 
-func (s *mockStorage) NewKeyBuilder(entity schemas.QName, existingBuilder istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
+func (s *mockStorage) NewKeyBuilder(entity appdef.QName, existingBuilder istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return s.Called(entity, existingBuilder).Get(0).(istructs.IStateKeyBuilder)
 }
 func (s *mockStorage) GetBatch(items []GetBatchItem) (err error) {
@@ -284,7 +281,7 @@ type mockKeyBuilder struct {
 
 func (b *mockKeyBuilder) PutString(name, value string)                     { b.Called(name, value) }
 func (b *mockKeyBuilder) PutRecordID(name string, value istructs.RecordID) { b.Called(name, value) }
-func (b *mockKeyBuilder) PutQName(name string, value schemas.QName)        { b.Called(name, value) }
+func (b *mockKeyBuilder) PutQName(name string, value appdef.QName)         { b.Called(name, value) }
 func (b *mockKeyBuilder) Equals(src istructs.IKeyBuilder) bool             { return b.Called(src).Bool(0) }
 
 type nilKeyBuilder struct {
@@ -304,7 +301,7 @@ func (b *mockValueBuilder) PutFloat32(name string, value float32)            { b
 func (b *mockValueBuilder) PutFloat64(name string, value float64)            { b.Called(name, value) }
 func (b *mockValueBuilder) PutBytes(name string, value []byte)               { b.Called(name, value) }
 func (b *mockValueBuilder) PutString(name string, value string)              { b.Called(name, value) }
-func (b *mockValueBuilder) PutQName(name string, value schemas.QName)        { b.Called(name, value) }
+func (b *mockValueBuilder) PutQName(name string, value appdef.QName)         { b.Called(name, value) }
 func (b *mockValueBuilder) PutBool(name string, value bool)                  { b.Called(name, value) }
 func (b *mockValueBuilder) PutRecordID(name string, value istructs.RecordID) { b.Called(name, value) }
 func (b *mockValueBuilder) Build() istructs.IValue                           { return b.Called().Get(0).(istructs.IValue) }
@@ -324,8 +321,8 @@ func (r *mockRowReader) AsFloat32(name string) float32 { return r.Called(name).G
 func (r *mockRowReader) AsFloat64(name string) float64 { return r.Called(name).Get(0).(float64) }
 func (r *mockRowReader) AsBytes(name string) []byte    { return r.Called(name).Get(0).([]byte) }
 func (r *mockRowReader) AsString(name string) string   { return r.Called(name).String(0) }
-func (r *mockRowReader) AsQName(name string) schemas.QName {
-	return r.Called(name).Get(0).(schemas.QName)
+func (r *mockRowReader) AsQName(name string) appdef.QName {
+	return r.Called(name).Get(0).(appdef.QName)
 }
 func (r *mockRowReader) AsBool(name string) bool { return r.Called(name).Bool(0) }
 func (r *mockRowReader) AsRecordID(name string) istructs.RecordID {
@@ -343,7 +340,7 @@ func (w *mockRowWriter) PutFloat32(name string, value float32)            { w.Ca
 func (w *mockRowWriter) PutFloat64(name string, value float64)            { w.Called(name, value) }
 func (w *mockRowWriter) PutBytes(name string, value []byte)               { w.Called(name, value) }
 func (w *mockRowWriter) PutString(name, value string)                     { w.Called(name, value) }
-func (w *mockRowWriter) PutQName(name string, value schemas.QName)        { w.Called(name, value) }
+func (w *mockRowWriter) PutQName(name string, value appdef.QName)         { w.Called(name, value) }
 func (w *mockRowWriter) PutBool(name string, value bool)                  { w.Called(name, value) }
 func (w *mockRowWriter) PutRecordID(name string, value istructs.RecordID) { w.Called(name, value) }
 
@@ -376,7 +373,7 @@ func (e *mockWLogEvent) DeviceID() istructs.ConnectedDeviceID {
 	return e.Called().Get(0).(istructs.ConnectedDeviceID)
 }
 func (e *mockWLogEvent) Synced() bool                 { return e.Called().Bool(0) }
-func (e *mockWLogEvent) QName() schemas.QName         { return e.Called().Get(0).(schemas.QName) }
+func (e *mockWLogEvent) QName() appdef.QName          { return e.Called().Get(0).(appdef.QName) }
 func (e *mockWLogEvent) SyncedAt() istructs.UnixMilli { return e.Called().Get(0).(istructs.UnixMilli) }
 func (e *mockWLogEvent) Error() istructs.IEventError  { return e.Called().Get(0).(istructs.IEventError) }
 func (e *mockWLogEvent) Release()                     {}
@@ -385,10 +382,10 @@ type mockEventError struct {
 	mock.Mock
 }
 
-func (e *mockEventError) ErrStr() string                 { return e.Called().String(0) }
-func (e *mockEventError) QNameFromParams() schemas.QName { return e.Called().Get(0).(schemas.QName) }
-func (e *mockEventError) ValidEvent() bool               { return e.Called().Bool(0) }
-func (e *mockEventError) OriginalEventBytes() []byte     { return e.Called().Get(0).([]byte) }
+func (e *mockEventError) ErrStr() string                { return e.Called().String(0) }
+func (e *mockEventError) QNameFromParams() appdef.QName { return e.Called().Get(0).(appdef.QName) }
+func (e *mockEventError) ValidEvent() bool              { return e.Called().Bool(0) }
+func (e *mockEventError) OriginalEventBytes() []byte    { return e.Called().Get(0).([]byte) }
 
 type mockPLogEvent struct {
 	mock.Mock
@@ -411,7 +408,7 @@ func (e *mockPLogEvent) DeviceID() istructs.ConnectedDeviceID {
 	return e.Called().Get(0).(istructs.ConnectedDeviceID)
 }
 func (e *mockPLogEvent) Synced() bool                 { return e.Called().Bool(0) }
-func (e *mockPLogEvent) QName() schemas.QName         { return e.Called().Get(0).(schemas.QName) }
+func (e *mockPLogEvent) QName() appdef.QName          { return e.Called().Get(0).(appdef.QName) }
 func (e *mockPLogEvent) SyncedAt() istructs.UnixMilli { return e.Called().Get(0).(istructs.UnixMilli) }
 func (e *mockPLogEvent) Error() istructs.IEventError  { return e.Called().Get(0).(istructs.IEventError) }
 func (e *mockPLogEvent) Workspace() istructs.WSID     { return e.Called().Get(0).(istructs.WSID) }
@@ -422,7 +419,7 @@ type mockCUD struct {
 	mock.Mock
 }
 
-func (c *mockCUD) Create(qName schemas.QName) istructs.IRowWriter {
+func (c *mockCUD) Create(qName appdef.QName) istructs.IRowWriter {
 	return c.Called().Get(0).(istructs.IRowWriter)
 }
 func (c *mockCUD) Update(record istructs.IRecord) istructs.IRowWriter {

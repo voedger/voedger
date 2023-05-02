@@ -9,8 +9,8 @@ package queryprocessor
 import (
 	"context"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -18,7 +18,7 @@ import (
 type FilterFactory func(data coreutils.MapObject) (IFilter, error)
 
 type IFilter interface {
-	IsMatch(schemaFields coreutils.SchemaFields, outputRow IOutputRow) (bool, error)
+	IsMatch(fd coreutils.FieldsDef, outputRow IOutputRow) (bool, error)
 }
 
 // FieldFactory creates IField from data
@@ -77,8 +77,8 @@ type IPath interface {
 type IWorkpiece interface {
 	Object() istructs.IObject
 	OutputRow() IOutputRow
-	PutEnrichedRootSchemaField(name string, kind schemas.DataKind)
-	EnrichedRootSchema() coreutils.SchemaFields
+	EnrichedRootFields() coreutils.FieldsDef
+	PutEnrichedRootField(name string, kind appdef.DataKind)
 }
 
 // IOutputRow is filled by the row processor operators

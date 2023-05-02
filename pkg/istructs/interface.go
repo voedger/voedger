@@ -10,7 +10,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 // Structs can be changed on-the-fly, so AppStructs() are taken for each message (request) to be handled
@@ -39,15 +39,15 @@ type IAppStructs interface {
 	Resources() IResources
 
 	// ************************************************************
-	// Data schemas, kind of RTTI, reflection
+	// Application definition, kind of RTTI, reflection
 
-	// Schemas
-	Schemas() schemas.SchemaCache
+	// AppDef
+	AppDef() appdef.IAppDef
 
 	ClusterAppID() ClusterAppID
 	AppQName() AppQName
 
-	IsFunctionRateLimitsExceeded(funcQName schemas.QName, wsid WSID) bool
+	IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid WSID) bool
 
 	// Describe package names
 	DescribePackageNames() []string
@@ -104,7 +104,7 @@ type IRecords interface {
 	// @ConcurrentAccess R
 	// qName must be a singletone
 	// If record not found NullRecord with QName() == NullQName is returned
-	GetSingleton(workspace WSID, qName schemas.QName) (record IRecord, err error)
+	GetSingleton(workspace WSID, qName appdef.QName) (record IRecord, err error)
 }
 
 type RecordGetBatchItem struct {
@@ -116,9 +116,9 @@ type IViewRecords interface {
 
 	// Builders panic if QName not found
 
-	KeyBuilder(view schemas.QName) IKeyBuilder
-	NewValueBuilder(view schemas.QName) IValueBuilder
-	UpdateValueBuilder(view schemas.QName, existing IValue) IValueBuilder
+	KeyBuilder(view appdef.QName) IKeyBuilder
+	NewValueBuilder(view appdef.QName) IValueBuilder
+	UpdateValueBuilder(view appdef.QName, existing IValue) IValueBuilder
 
 	// All key fields must be specified (panic)
 	// Key & value must be from the same QName (panic)
@@ -154,12 +154,12 @@ type IResources interface {
 
 	// If resource not found then {ResourceKind_null, QNameForNullResource) is returned
 	// Currently resources are ICommandFunction and IQueryFunction
-	QueryResource(resource schemas.QName) (r IResource)
+	QueryResource(resource appdef.QName) (r IResource)
 
 	QueryFunctionArgsBuilder(query IQueryFunction) IObjectBuilder
 
 	// Enumerates all application resources
-	Resources(func(resName schemas.QName))
+	Resources(func(resName appdef.QName))
 }
 
 // Same as itokens.ITokens but works for App specified in IAppTokensFactory

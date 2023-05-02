@@ -6,8 +6,8 @@
 package iauthnz
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type AuthnRequest struct {
@@ -34,7 +34,7 @@ type Principal struct {
 	Name string
 
 	// PrincipalKind_Role	- Role name
-	QName schemas.QName
+	QName appdef.QName
 
 	// PrincipalKind_Group	- GroupID
 	ID istructs.IDType
@@ -53,21 +53,21 @@ const (
 )
 
 var (
-	QNameRoleSystem          = schemas.NewQName(schemas.SysPackage, "RoleSystem")
-	QNameRoleWorkspaceOwner  = schemas.NewQName(schemas.SysPackage, "RoleWorkspaceOwner")
-	QNameRoleWorkspaceDevice = schemas.NewQName(schemas.SysPackage, "RoleWorkspaceDevice")
+	QNameRoleSystem          = appdef.NewQName(appdef.SysPackage, "RoleSystem")
+	QNameRoleWorkspaceOwner  = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceOwner")
+	QNameRoleWorkspaceDevice = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceDevice")
 
 	// assigned if additionally if WorkspaceOwner or WorkspaceDevice or ProfileOwner
-	QNameRoleWorkspaceSubject = schemas.NewQName(schemas.SysPackage, "RoleWorkspaceSubject")
+	QNameRoleWorkspaceSubject = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceSubject")
 
 	// assigned if request is came to subject's profile
-	QNameRoleProfileOwner = schemas.NewQName(schemas.SysPackage, "RoleProfileOwner")
+	QNameRoleProfileOwner = appdef.NewQName(appdef.SysPackage, "RoleProfileOwner")
 
 	// asssigned automatically if has e.g. RoleResellersAdmin or RoleUntillPaymentsReseller
-	QNameRoleWorkspaceAdmin = schemas.NewQName(schemas.SysPackage, "RoleWorkspaceAdmin")
+	QNameRoleWorkspaceAdmin = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceAdmin")
 )
 
-var SysRoles = []schemas.QName{
+var SysRoles = []appdef.QName{
 	QNameRoleSystem,
 	QNameRoleWorkspaceOwner,
 	QNameRoleWorkspaceDevice,

@@ -7,9 +7,9 @@
 package payloads
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	itokens "github.com/voedger/voedger/pkg/itokens"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // Principal can be referenced by WSID
@@ -26,7 +26,7 @@ type PrincipalPayload struct {
 type RoleType struct {
 	WSID istructs.WSID
 	// E.g. air.LinkedDevice
-	QName schemas.QName
+	QName appdef.QName
 }
 
 type BLOBUploadingPayload struct {
@@ -36,10 +36,10 @@ type BLOBUploadingPayload struct {
 }
 
 type VerifiedValuePayload struct {
-	VerificationKind schemas.VerificationKind
+	VerificationKind appdef.VerificationKind
 	WSID             istructs.WSID
 	ID               istructs.RecordID
-	Entity           schemas.QName
+	Entity           appdef.QName
 	Field            string
 	Value            interface{}
 }

@@ -10,9 +10,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state"
 )
 
@@ -112,71 +112,16 @@ type eventService struct {
 
 func (s *eventService) getWSID() istructs.WSID { return s.event.Workspace() }
 
-// implements ISchemaBuilder
-type SchemaBuilder struct {
-	cache                schemas.SchemaCacheBuilder
-	qname                schemas.QName
-	valueSchema          schemas.SchemaBuilder
-	partitionKeySchema   schemas.SchemaBuilder
-	clusteringColsSchema schemas.SchemaBuilder
-}
-
-func qnameValue(qname schemas.QName) schemas.QName {
-	return schemas.NewQName(qname.Pkg(), qname.Entity()+"_viewValue")
-}
-
-func qnamePartitionKey(qname schemas.QName) schemas.QName {
-	return schemas.NewQName(qname.Pkg(), qname.Entity()+"_viewPartitionKey")
-}
-
-func qnameClusteringCols(qname schemas.QName) schemas.QName {
-	return schemas.NewQName(qname.Pkg(), qname.Entity()+"_viewClusteringCols")
-}
-
-func (me *SchemaBuilder) ValueField(name string, kind schemas.DataKind, required bool) {
-	me.valueSchema.AddField(name, kind, required)
-}
-
-func (me *SchemaBuilder) PartitionKeyField(name string, kind schemas.DataKind, required bool) {
-	me.partitionKeySchema.AddField(name, kind, required)
-}
-
-func (me *SchemaBuilder) ClusteringColumnField(name string, kind schemas.DataKind, required bool) {
-	me.clusteringColsSchema.AddField(name, kind, required)
-}
-
-func newSchemaBuilder(cache schemas.SchemaCacheBuilder, qname schemas.QName) SchemaBuilder {
-	return SchemaBuilder{
-		cache:                cache,
-		qname:                qname,
-		valueSchema:          cache.Add(qnameValue(qname), schemas.SchemaKind_ViewRecord_Value),
-		partitionKeySchema:   cache.Add(qnamePartitionKey(qname), schemas.SchemaKind_ViewRecord_PartitionKey),
-		clusteringColsSchema: cache.Add(qnameClusteringCols(qname), schemas.SchemaKind_ViewRecord_ClusteringColumns),
+func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc ViewDefBuilder) {
+	builder := appDef.AddView(qname)
+	if buildFunc != nil {
+		buildFunc(builder)
 	}
 }
 
-func provideViewSchemaImpl(cache schemas.SchemaCacheBuilder, qname schemas.QName, buildFunc BuildViewSchemaFunc) {
-	builder := newSchemaBuilder(cache, qname)
-	buildFunc(&builder)
-
-	schema := cache.Add(qname, schemas.SchemaKind_ViewRecord)
-	schema.AddContainer(schemas.SystemContainer_ViewPartitionKey, qnamePartitionKey(qname), 1, 1)
-	schema.AddContainer(schemas.SystemContainer_ViewClusteringCols, qnameClusteringCols(qname), 1, 1)
-	schema.AddContainer(schemas.SystemContainer_ViewValue, qnameValue(qname), 1, 1)
-}
-
-func provideOffsetsSchemaImpl(cache schemas.SchemaCacheBuilder) {
-	offsetsSchema := cache.Add(qnameProjectionOffsets, schemas.SchemaKind_ViewRecord)
-	offsetsSchema.AddContainer(schemas.SystemContainer_ViewPartitionKey, qnameProjectionOffsetsPartitionKey, 1, 1)
-	offsetsSchema.AddContainer(schemas.SystemContainer_ViewClusteringCols, qnameProjectionOffsetsClusteringCols, 1, 1)
-	offsetsSchema.AddContainer(schemas.SystemContainer_ViewValue, qnameProjectionOffsetsValue, 1, 1)
-
-	partitionKeySchema := cache.Add(qnameProjectionOffsetsPartitionKey, schemas.SchemaKind_ViewRecord_PartitionKey)
-	partitionKeySchema.AddField(partitionFld, schemas.DataKind_int32, true) // partitionID is uint16
-
-	offsetsKeySchema := cache.Add(qnameProjectionOffsetsClusteringCols, schemas.SchemaKind_ViewRecord_ClusteringColumns)
-	offsetsKeySchema.AddField(projectorNameFld, schemas.DataKind_QName, true)
-
-	offsetsValueSchema := cache.Add(qnameProjectionOffsetsValue, schemas.SchemaKind_ViewRecord_Value)
-	offsetsValueSchema.AddField(offsetFld, schemas.DataKind_int64, true)
+func provideOffsetsDefImpl(appDef appdef.IAppDefBuilder) {
+	def := appDef.AddView(qnameProjectionOffsets)
+	def.AddPartField(partitionFld, appdef.DataKind_int32)
+	def.AddClustColumn(projectorNameFld, appdef.DataKind_QName)
+	def.AddValueField(offsetFld, appdef.DataKind_int64, true)
 }
