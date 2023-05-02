@@ -4,9 +4,6 @@ on:
   push:
     paths:
       - 'pkg/**'
-  pull_request:
-    paths:
-      - 'pkg/**'
   pull_request_target:
     paths:
       - 'pkg/**'

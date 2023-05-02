@@ -4,9 +4,6 @@ on:
   push:
     paths:
       - 'cmd/**'
-  pull_request:
-    paths:
-      - 'cmd/**'
   pull_request_target:
     paths:
       - 'cmd/**'
