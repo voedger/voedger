@@ -72,8 +72,6 @@ github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7/go.mod h1:Fecb
 github.com/grpc-ecosystem/grpc-gateway v1.5.0/go.mod h1:RSKVYQBd5MCa4OVpNdGskqpgL2+G+NZTnrVHpWWfpdw=
 github.com/heeus/core-logger v0.0.0-20211015110533-1499b5b04842 h1:X2LRJXKOT3cBYOIoVPDFd/Rockq14waiag6T5QGZdNY=
 github.com/heeus/core-logger v0.0.0-20211015110533-1499b5b04842/go.mod h1:yTNAkvEhCxUhuMB0g8OJKjve8tHAUIQ9MmRDn0z20b0=
-github.com/heeus/wazero v0.0.0-20230312183541-2ba001e0d7c0 h1:LQKMWlrOoFY/GvxQoa8mY5T0jmDSdr31baiJ+QDXT5M=
-github.com/heeus/wazero v0.0.0-20230312183541-2ba001e0d7c0/go.mod h1:9tcNvrMdK1cKkShu7GZNMCGE36UxKjkeVdj6Um8TTrE=
 github.com/inconshreveable/mousetrap v1.0.1 h1:U3uMjPSQEBMNp1lFxmllqCPM6P5u/Xq7Pgzkat/bFNc=
 github.com/inconshreveable/mousetrap v1.0.1/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/jellevandenhooff/dkim v0.0.0-20150330215556-f50fe3d243e1/go.mod h1:E0B/fFc00Y+Rasa88328GlI/XbtyysCtTHZS8h7IrBU=
@@ -163,8 +161,8 @@ github.com/viant/assertly v0.4.8/go.mod h1:aGifi++jvCrUaklKEKT0BU95igDNaqkvz+49u
 github.com/viant/assertly v0.5.4/go.mod h1:aGifi++jvCrUaklKEKT0BU95igDNaqkvz+49uaYMPRU=
 github.com/viant/toolbox v0.24.0/go.mod h1:OxMCG57V0PXuIP2HNQrtJf2CjqdmbrOx5EkMILuUhzM=
 github.com/viant/toolbox v0.33.0/go.mod h1:OxMCG57V0PXuIP2HNQrtJf2CjqdmbrOx5EkMILuUhzM=
-github.com/voedger/voedger v0.0.0-20230419092753-7ebfeae3d15b h1:fKIuSFDnoiTDQKOpgXIhMdpShXqVVDmBXKPOnRBmI5A=
-github.com/voedger/voedger v0.0.0-20230419092753-7ebfeae3d15b/go.mod h1:kGjAj9anZMk0VLzKACkpJNN+ALr0n/hz0J5I1MyuMF8=
+github.com/voedger/wazero v0.0.0-20230501104804-47700bcd4177 h1:Vz9+z9rLctBblZHADYDQD0HZQe9KcSeNR/t02rtSYC4=
+github.com/voedger/wazero v0.0.0-20230501104804-47700bcd4177/go.mod h1:ZmqlxJcWK4CrUtrm5qUMOf/OeNqHsQJtm+S+6CBJwCg=
 github.com/wneessen/go-mail v0.3.9 h1:Q4DbCk3htT5DtDWKeMgNXCiHc4bBY/vv/XQPT6XDXzc=
 github.com/wneessen/go-mail v0.3.9/go.mod h1:zxOlafWCP/r6FEhAaRgH4IC1vg2YXxO0Nar9u0IScZ8=
 go.etcd.io/bbolt v1.3.7 h1:j+zJOnnEjF/kyHlDDgGnVL/AIqIJPq8UoB2GSNfkUfQ=

@@ -272,4 +272,12 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
+	{
+		desc: "grant exec on q.air.UPTerminalWebhook to role air.UntillPaymentsTerminal",
+		pattern: PatternType{
+			qNamesPattern:     []schemas.QName{qNameQryUPTerminalWebhook},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsTerminal}}},
+		},
+		policy: ACPolicy_Allow,
+	},
 }
