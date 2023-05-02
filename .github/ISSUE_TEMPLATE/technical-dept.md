@@ -2,7 +2,7 @@
 name: Technical dept
 about: Free your mind from the dept
 title: ''
-labels: direct, kind/dept, status/pending
+labels: kind/dept
 assignees: ''
 
 ---
