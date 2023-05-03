@@ -17,3 +17,4 @@ type WiredServer struct {
 	ihttp.IHTTPProcessorAPI
 	ihttpctl.IHTTPProcessorController
 }
+
