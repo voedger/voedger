@@ -130,7 +130,7 @@ func (d *Def) Singleton() bool { return d.Called().Get(0).(bool) }
 func (d *Def) Unique(name string) []appdef.IField {
 	if d.uniques != nil {
 		if f, ok := d.uniques[name]; ok {
-			fields := make([]appdef.IField, len(f))
+			fields := make([]appdef.IField, 0)
 			for _, n := range f {
 				fields = append(fields, d.Field(n))
 			}
@@ -151,12 +151,13 @@ func (d *Def) UniqueCount() int {
 func (d *Def) Uniques(cb func(string, []appdef.IField)) {
 	if d.uniques != nil {
 		for name, f := range d.uniques {
-			fields := make([]appdef.IField, len(f))
+			fields := make([]appdef.IField, 0)
 			for _, n := range f {
 				fields = append(fields, d.Field(n))
 			}
 			cb(name, fields)
 		}
+		return
 	}
 	d.Called(cb)
 }

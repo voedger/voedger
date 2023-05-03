@@ -60,7 +60,7 @@ func (qn QName) Entity() string { return qn.entity }
 func (qn QName) String() string { return qn.pkg + QNameQualifierChar + qn.entity }
 
 // JSON marshaling support
-func (qn *QName) MarshalJSON() ([]byte, error) {
+func (qn QName) MarshalJSON() ([]byte, error) {
 	return json.Marshal(qn.pkg + QNameQualifierChar + qn.entity)
 }
 

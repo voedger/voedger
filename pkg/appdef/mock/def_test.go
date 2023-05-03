@@ -105,6 +105,48 @@ func TestDef(t *testing.T) {
 	})
 }
 
+func TestUniques(t *testing.T) {
+	qName := appdef.NewQName("test", "el")
+
+	def := NewDef(qName, appdef.DefKind_Element,
+		NewField("f1", appdef.DataKind_string, true),
+		NewField("f2", appdef.DataKind_string, true),
+	)
+	def.AddUnique("elUnique01", []string{"f1", "f2"})
+
+	appDef := NewAppDef(def)
+
+	t.Run("test result", func(t *testing.T) {
+		require := require.New(t)
+
+		d := appDef.Def(qName)
+		require.Equal(1, d.UniqueCount())
+
+		f := d.Unique("elUnique01")
+		require.Len(f, 2)
+		require.Equal("f1", f[0].Name())
+		require.Equal("f2", f[1].Name())
+
+		require.Equal(d.UniqueCount(), func() int {
+			cnt := 0
+			d.Uniques(func(name string, fields []appdef.IField) {
+				cnt++
+				switch name {
+				case "elUnique01":
+					require.Len(fields, 2)
+					require.Equal("f1", fields[0].Name())
+					require.Equal("f2", fields[1].Name())
+				default:
+					require.Failf("unexpected unique %v", name)
+				}
+			})
+			return cnt
+		}())
+
+		require.Len(d.Unique("unknownUnique"), 0)
+	})
+}
+
 func TestInheritsMockingDef(t *testing.T) {
 	fld := Field{}
 	fld.
@@ -136,7 +178,15 @@ func TestInheritsMockingDef(t *testing.T) {
 		}).
 		On("ContainerDef", mock.AnythingOfType("string")).Return(&def).
 		On("Kind").Return(appdef.DefKind_CRecord).
-		On("Singleton").Return(true)
+		On("QName").Return(appdef.NewQName("test", "crec")).
+		On("Singleton").Return(true).
+		On("Unique", mock.AnythingOfType("string")).Return([]appdef.IField{&fld}).
+		On("UniqueCount").Return(1).
+		On("Uniques", mock.AnythingOfType("func(string, []appdef.IField)")).
+		Run(func(args mock.Arguments) {
+			cb := args.Get(0).(func(string, []appdef.IField))
+			cb("crecUniqueMockField", []appdef.IField{&fld})
+		})
 
 	require := require.New(t)
 
@@ -165,4 +215,14 @@ func TestInheritsMockingDef(t *testing.T) {
 	require.Equal(&def, def.ContainerDef("mockContainer"))
 
 	require.True(def.Singleton())
+
+	require.Equal(1, def.UniqueCount())
+	uf := def.Unique("crecUniqueMockField")
+	require.Len(uf, 1)
+	require.Equal("mockField", uf[0].Name())
+	require.Equal(def.UniqueCount(), func() int {
+		cnt := 0
+		def.Uniques(func(string, []appdef.IField) { cnt++ })
+		return cnt
+	}())
 }
