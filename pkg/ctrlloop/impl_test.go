@@ -506,6 +506,7 @@ func Test_Dedupin(t *testing.T) {
 			var messagesToCall []statefulMessage[string, int, struct{}]
 			var messagesToRepeat []scheduledMessage[string, int, struct{}]
 			var inProcessKeyCounter int
+			// done := make(chan interface{})
 			go func() {
 				testMessagesWriter(dedupInCh, test.messages)
 
@@ -521,10 +522,13 @@ func Test_Dedupin(t *testing.T) {
 					inProcessKeyCounter++
 					return true
 				})
+
+				// close(done)
 			}()
 
 			dedupIn(dedupInCh, callerCh, repeatCh, &InProcess, time.Now)
 
+			// <-done
 			require.Equal(t, len(messagesToCall), inProcessKeyCounter)
 			require.Equal(t, len(messagesToRepeat), 1)
 		})
