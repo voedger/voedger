@@ -13,7 +13,6 @@ on:
 
 jobs:
   call-workflow-ci-pkg:
-    if: github.event_name != 'push'
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
     with: 
       test_folder: 'pkg'
@@ -25,7 +24,6 @@ jobs:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-ci-cmd:
-    if: github.event_name != 'push'
     needs: call-workflow-ci-pkg
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
     with: 
