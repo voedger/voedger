@@ -16,6 +16,7 @@ type Def struct {
 	app        *AppDef
 	fields     []*Field
 	containers []*Container
+	uniques    map[string][]string
 }
 
 func NewDef(name appdef.QName, kind appdef.DefKind, fields ...*Field) *Def {
@@ -35,6 +36,15 @@ func (d *Def) AddField(f ...*Field) {
 
 func (d *Def) AddContainer(c ...*Container) {
 	d.containers = append(d.containers, c...)
+}
+
+func (d *Def) AddUnique(name string, fields []string) {
+	if d.uniques == nil {
+		d.uniques = make(map[string][]string)
+	}
+	f := make([]string, len(fields))
+	copy(f, fields)
+	d.uniques[name] = f
 }
 
 func (d *Def) App() appdef.IAppDef {
@@ -116,3 +126,37 @@ func (d *Def) ContainerDef(name string) appdef.IDef {
 }
 
 func (d *Def) Singleton() bool { return d.Called().Get(0).(bool) }
+
+func (d *Def) Unique(name string) []appdef.IField {
+	if d.uniques != nil {
+		if f, ok := d.uniques[name]; ok {
+			fields := make([]appdef.IField, len(f))
+			for _, n := range f {
+				fields = append(fields, d.Field(n))
+			}
+			return fields
+		}
+		return nil
+	}
+	return d.Called(name).Get(0).([]appdef.IField)
+}
+
+func (d *Def) UniqueCount() int {
+	if d.uniques != nil {
+		return len(d.uniques)
+	}
+	return d.Called().Get(0).(int)
+}
+
+func (d *Def) Uniques(cb func(string, []appdef.IField)) {
+	if d.uniques != nil {
+		for name, f := range d.uniques {
+			fields := make([]appdef.IField, len(f))
+			for _, n := range f {
+				fields = append(fields, d.Field(n))
+			}
+			cb(name, fields)
+		}
+	}
+	d.Called(cb)
+}

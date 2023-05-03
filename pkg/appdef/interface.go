@@ -127,6 +127,17 @@ type IDef interface {
 
 	// Returns is definition CDoc singleton
 	Singleton() bool
+
+	// Return unique by name.
+	//
+	// Returns nil if not unique found
+	Unique(name string) []IField
+
+	// Return uniques count
+	UniqueCount() int
+
+	// Enumerates all uniques
+	Uniques(func(name string, fields []IField))
 }
 
 // Definition builder
@@ -166,6 +177,19 @@ type IDefBuilder interface {
 	//   - if definition kind does not allow containers,
 	//   - if container definition kind is not compatable with definition kind.
 	AddContainer(name string, def QName, min, max Occurs) IDefBuilder
+
+	// Adds new unique with specified name and fields set.
+	// If name is omitted, then default name is used, e.g. `unique01`.
+	//
+	// # Panics:
+	//   - if unique name is invalid,
+	//   - if unique with name is already exists,
+	//   - if definition kind is not supports uniques,
+	//   - if fields set is empty,
+	//   - if fields has duplicates,
+	//   - if fields set is already exists or overlaps with an existing more general unique,
+	//   - if some field not found.
+	AddUnique(name string, fields []string) IDefBuilder
 
 	// Sets the singleton document flag for CDoc.
 	//

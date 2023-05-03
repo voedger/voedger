@@ -93,6 +93,11 @@ func (k DefKind) ContainerKindAvailable(s DefKind) bool {
 	return defKindProps[k].containersAllowed && defKindProps[k].availableContainerKinds[s]
 }
 
+// Is uniques available.
+func (k DefKind) UniquesAvailable() bool {
+	return defKindProps[k].availableUniques
+}
+
 func (k DefKind) MarshalText() ([]byte, error) {
 	var s string
 	if k < DefKind_FakeLast {

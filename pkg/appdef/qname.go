@@ -51,10 +51,10 @@ func ParseQualifiedName(val, delimiter string) (part1, part2 string, err error) 
 }
 
 // Returns package name
-func (qn *QName) Pkg() string { return qn.pkg }
+func (qn QName) Pkg() string { return qn.pkg }
 
 // Returns entity name
-func (qn *QName) Entity() string { return qn.entity }
+func (qn QName) Entity() string { return qn.entity }
 
 // Returns QName as string
 func (qn QName) String() string { return qn.pkg + QNameQualifierChar + qn.entity }
