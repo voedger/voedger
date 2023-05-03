@@ -5,7 +5,9 @@
 
 package appdef
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type unique struct {
 	def    *def

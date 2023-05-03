@@ -87,12 +87,7 @@ func (d *def) AddField(name string, kind DataKind, required bool) IDefBuilder {
 
 func (d *def) AddUnique(name string, fields []string) IDefBuilder {
 	if name == NullName {
-		for i := 0; i < 100; i++ {
-			name = fmt.Sprintf("%s%02d", d.QName().Entity(), i)
-			if d.Unique(name) == nil {
-				break
-			}
-		}
+		name = generateUniqueName(d, fields)
 	}
 	return d.addUnique(name, fields)
 }

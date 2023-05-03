@@ -82,3 +82,25 @@ func Test_overlaps(t *testing.T) {
 		require.False(overlaps([]int{1, 2, 3}, []int{7, 0, 3, 2, 0, -1}))
 	})
 }
+
+func Test_generateUniqueName(t *testing.T) {
+	def := newDef(nil, NewQName("test", "rec"), DefKind_CRecord)
+
+	type args struct {
+		fields []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := generateUniqueName(tt.args.def, tt.args.fields); got != tt.want {
+				t.Errorf("generateUniqueName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
