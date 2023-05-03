@@ -1,0 +1,31 @@
+[
+  {
+    "sys.ID": 1,
+    "sys.IsActive": true,
+    "sys.QName": "untill.currency",
+    "code": "GBP",
+    "name": "Pound sterling",
+    "round": 2,
+    "eurozone": 0,
+    "rate": 1.0,
+    "symbol": "£",
+    "digcode": 826
+  },
+  {
+    "sys.ID": 2,
+    "sys.IsActive": true,
+    "sys.QName": "untill.payments",
+    "driver_id": "",
+    "driver_kind": 0,
+    "guid": "AC2FB2A6-03A2-40AB-9848-20054E0CDC58",
+    "id_bookkp": 0,
+    "id_currency": 1,
+    "kind": 0,
+    "ml_name": null,
+    "name": "Cash",
+    "number": 1,
+    "params": "",
+    "paym_external_id": "",
+    "psp_model": -1
+  }
+]

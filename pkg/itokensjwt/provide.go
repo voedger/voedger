@@ -15,7 +15,7 @@ import (
 )
 
 // jwt.TimeFunc will be set to timeFunc but jwt.TimeFunc can not be protected from simulaneous access -> must be set only once
-// e.g. to avoid data race in airs-bp3: write jwt.TimeFunc in next test, read in async istructs.Projector of a previous test
+// e.g. to avoid data race: write jwt.TimeFunc in next test, read in async istructs.Projector of a previous test
 var onceJWTTimeFuncSetter = sync.Once{}
 
 // ProvideITokens implementation by provided interface

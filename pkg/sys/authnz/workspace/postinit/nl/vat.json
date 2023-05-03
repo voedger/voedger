@@ -1,0 +1,26 @@
+[
+  {
+    "sys.ID": 1,
+    "sys.IsActive": true,
+    "sys.QName": "untill.vat",
+    "name": "Standard",
+    "vat": 210000,
+    "vat_sign": "A"
+  },
+  {
+    "sys.ID": 2,
+    "sys.IsActive": true,
+    "sys.QName": "untill.vat",
+    "name": "Reduced",
+    "vat": 90000,
+    "vat_sign": "B"
+  },
+  {
+    "sys.ID": 3,
+    "sys.IsActive": true,
+    "sys.QName": "untill.vat",
+    "name": "Zero",
+    "vat": 0,
+    "vat_sign": "C"
+  }
+]

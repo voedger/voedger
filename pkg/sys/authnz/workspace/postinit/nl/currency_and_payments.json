@@ -1,0 +1,31 @@
+[
+  {
+    "sys.ID": 1,
+    "sys.IsActive": true,
+    "sys.QName": "untill.currency",
+    "code": "EUR",
+    "name": "Euro",
+    "round": 2,
+    "eurozone": 1,
+    "rate": 1.0,
+    "symbol": "€",
+    "digcode": 978
+  },
+  {
+    "sys.ID": 2,
+    "sys.IsActive": true,
+    "sys.QName": "untill.payments",
+    "driver_id": "",
+    "driver_kind": 0,
+    "guid": "49D0D05D-F0F7-43EF-BBC3-5FDD32B69901",
+    "id_bookkp": 0,
+    "id_currency": 1,
+    "kind": 0,
+    "ml_name": null,
+    "name": "Contant geld",
+    "number": 1,
+    "params": "",
+    "paym_external_id": "",
+    "psp_model": -1
+  }
+]

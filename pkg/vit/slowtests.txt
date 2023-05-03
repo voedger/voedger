@@ -1,0 +1,11 @@
+github.com/untillpro/airs-bp3/hit.TestBasicUsage_SharedTestConfig
+github.com/untillpro/airs-bp3/packages/air/it.Test_Race_BillCreate
+github.com/untillpro/airs-bp3/packages/air/it.Test_Race_BillCreateAndRead
+github.com/untillpro/airs-bp3/packages/air/it.Test_Race_BillCreateAndPayMany
+github.com/untillpro/airs-bp3/packages/air/it.Test_Race_RestaurantIntenseUsage
+github.com/untillpro/airs-bp3/packages/air/it.TestSubscription_BasicUsage
+github.com/untillpro/airs-bp3/packages/air/it.TestWorkspaceTemplates_DemoAndDemoMin
+github.com/untillpro/airs-bp3/packages/sys/it.Test_Race_CUDManyUpdateManyReadCheckResult
+github.com/untillpro/airs-bp3/packages/sys/it.Test_Race_CUDManyWriteReadCheckResult
+github.com/untillpro/airs-bp3/packages/sys/it.Test_Race_SUsignUpIn
+github.com/untillpro/airs-bp3/packages/sys/it.TestJournal
