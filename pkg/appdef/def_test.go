@@ -95,7 +95,7 @@ func Test_def_AddVerifiedField(t *testing.T) {
 	})
 
 	t.Run("must be panic if no verification kinds", func(t *testing.T) {
-		require.Panics(func() { def.AddVerifiedField("f2", DataKind_int64, true) })
+		require.Panics(func() { def.AddVerifiedField("f3", DataKind_int64, true) })
 	})
 }
 
@@ -185,5 +185,100 @@ func Test_def_Singleton(t *testing.T) {
 		require.Panics(func() { def.SetSingleton() })
 
 		require.False(def.Singleton())
+	})
+}
+
+func Test_def_AddUnique(t *testing.T) {
+	require := require.New(t)
+
+	qName := NewQName("test", "user")
+	appDef := New()
+
+	def := appDef.AddStruct(qName, DefKind_CDoc)
+	require.NotNil(def)
+
+	def.
+		AddField("name", DataKind_string, true).
+		AddField("surname", DataKind_string, false).
+		AddField("lastname", DataKind_string, false).
+		AddField("birthday", DataKind_int64, false).
+		AddField("sex", DataKind_bool, false).
+		AddField("eMail", DataKind_string, false).
+		AddUnique("", []string{"eMail"}).
+		AddUnique("userUniqueFullName", []string{"name", "surname", "lastname"})
+
+	t.Run("test is ok", func(t *testing.T) {
+		app, err := appDef.Build()
+		require.NoError(err)
+
+		d := app.Def(qName)
+		require.NotEqual(DefKind_null, d.Kind())
+
+		require.Equal(2, d.UniqueCount())
+
+		f := d.Unique("userUniqueFullName")
+		require.Len(f, 3)
+		require.Equal("name", f[0].Name())
+		require.Equal("surname", f[1].Name())
+		require.Equal("lastname", f[2].Name())
+
+		require.Equal(d.UniqueCount(), func() int {
+			cnt := 0
+			d.Uniques(func(name string, fields []IField) {
+				cnt++
+				switch name {
+				case "userUniqueEMail":
+					require.Len(fields, 1)
+					require.Equal("eMail", fields[0].Name())
+					require.Equal(DataKind_string, fields[0].DataKind())
+				case "userUniqueFullName":
+					require.Len(f, 3)
+					require.Equal("name", f[0].Name())
+					require.Equal("surname", f[1].Name())
+					require.Equal("lastname", f[2].Name())
+				}
+			})
+			return cnt
+		}())
+	})
+
+	t.Run("test panics", func(t *testing.T) {
+
+		require.Panics(func() {
+			def.AddUnique("naked-🔫", []string{"sex"})
+		}, "panics if invalid unique name")
+
+		require.Panics(func() {
+			def.AddUnique("userUniqueFullName", []string{"name", "surname", "lastname"})
+		}, "panics unique with name is already exists")
+
+		require.Panics(func() {
+			vv := appDef.AddView(NewQName("test", "view")).ValueDef()
+			vv.AddUnique("", []string{"f1", "f2"})
+		}, "panics if definition kind is not supports uniques")
+
+		require.Panics(func() {
+			def.AddUnique("emptyUnique", []string{})
+		}, "panics if fields set is empty")
+
+		require.Panics(func() {
+			def.AddUnique("", []string{"birthday", "birthday"})
+		}, "if fields has duplicates")
+
+		require.Panics(func() {
+			def.AddUnique("", []string{"name", "surname", "lastname"})
+		}, "if fields set is already exists")
+
+		require.Panics(func() {
+			def.AddUnique("", []string{"surname"})
+		}, "if fields set overlaps exists")
+
+		require.Panics(func() {
+			def.AddUnique("", []string{"eMail", "birthday"})
+		}, "if fields set overlaped by exists")
+
+		require.Panics(func() {
+			def.AddUnique("", []string{"unknown"})
+		}, "if fields not exists")
 	})
 }

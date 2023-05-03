@@ -7,7 +7,7 @@ package appdef
 
 import (
 	"fmt"
-	"strconv"
+	"strings"
 )
 
 // If the slices have duplicates, then the indices of the first pair are returned, otherwise (-1, -1)
@@ -47,17 +47,18 @@ func overlaps[T comparable](set1, set2 []T) bool {
 // Generates name for unique.
 //
 // For single field unique, the concationation of the definition name, the `Unique` word and the field name is used.
+// E.g., for definition «test.user» and field «eMail» name "userUniqueEMail" will returned
 func generateUniqueName(def *def, fields []string) string {
 	pref := fmt.Sprintf("%sUnique", def.QName().Entity())
 	if len(fields) == 1 {
-		s := pref + fields[0]
+		s := pref + strings.Title(fields[0])
 		if def.Unique(s) == nil {
 			return s
 		}
 	}
 	const tryCnt = 100
-	for i := 0; i < tryCnt; i++ {
-		s := pref + strconv.Itoa(i)
+	for i := 1; i < tryCnt; i++ {
+		s := pref + fmt.Sprintf("%02d", i)
 		if def.Unique(s) == nil {
 			return s
 		}

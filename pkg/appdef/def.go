@@ -92,13 +92,13 @@ func (d *def) AddUnique(name string, fields []string) IDefBuilder {
 	return d.addUnique(name, fields)
 }
 
-func (d *def) App() IAppDef {
-	return d.app
-}
-
 func (d *def) AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IDefBuilder {
 	d.addField(name, kind, required, true, vk...)
 	return d
+}
+
+func (d *def) App() IAppDef {
+	return d.app
 }
 
 func (d *def) Container(name string) IContainer {
@@ -232,7 +232,7 @@ func (d *def) addUnique(name string, fields []string) IDefBuilder {
 	}
 
 	d.Uniques(func(name string, fld []IField) {
-		ff := make([]string, len(fld))
+		ff := make([]string, 0)
 		for _, f := range fld {
 			ff = append(ff, f.Name())
 		}

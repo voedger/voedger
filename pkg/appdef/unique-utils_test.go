@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -28,7 +29,7 @@ func Test_hasDups(t *testing.T) {
 	require.True(0 == i && 1 == j)
 
 	i, j = duplicates([]string{"a", "b", "c", "c"})
-	require.True(0 == 2 && 1 == 3)
+	require.True(2 == i && 3 == j)
 }
 
 func Test_subSet(t *testing.T) {
@@ -84,23 +85,38 @@ func Test_overlaps(t *testing.T) {
 }
 
 func Test_generateUniqueName(t *testing.T) {
-	def := newDef(nil, NewQName("test", "rec"), DefKind_CRecord)
+	def := newDef(nil, NewQName("test", "user"), DefKind_CRecord)
 
-	type args struct {
-		fields []string
-	}
 	tests := []struct {
-		name string
-		args args
-		want string
+		name   string
+		fields []string
+		want   string
 	}{
-		// TODO: Add test cases.
+		{"single field test", []string{"eMail"}, "userUniqueEMail"},
+		{"multiply fields test", []string{"field1", "field2"}, "userUnique01"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := generateUniqueName(tt.args.def, tt.args.fields); got != tt.want {
-				t.Errorf("generateUniqueName() = %v, want %v", got, tt.want)
+			if got := generateUniqueName(def, tt.fields); got != tt.want {
+				t.Errorf("generateUniqueName(%v, %#v) = %v, want %v", def.QName(), tt.fields, got, tt.want)
 			}
 		})
 	}
+
+	t.Run("too many uniques (> 100) test", func(t *testing.T) {
+		require := require.New(t)
+
+		def := newDef(nil, NewQName("test", "rec"), DefKind_CRecord)
+		for i := 1; i < 100; i++ {
+			def.AddField("i"+strconv.Itoa(i), DataKind_int32, false)
+			def.AddField("b"+strconv.Itoa(i), DataKind_bool, false)
+		}
+		for i := 1; i < 100; i++ {
+			def.AddUnique("", []string{"i" + strconv.Itoa(i), "b" + strconv.Itoa(i)})
+		}
+
+		require.Panics(func() {
+			def.AddUnique("", []string{"i01", "b99"})
+		})
+	})
 }
