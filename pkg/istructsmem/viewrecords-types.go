@@ -7,6 +7,7 @@ package istructsmem
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -424,6 +425,26 @@ func newValue(appCfg *AppConfigType, name appdef.QName) *valueType {
 // newNullValue return new empty (null) value. Useful as result if no view record found
 func newNullValue() istructs.IValue {
 	return newValue(NullAppConfig, appdef.NullQName)
+}
+
+// Loads view value from bytes
+func (val *valueType) loadFromBytes(in []byte) (err error) {
+	buf := bytes.NewBuffer(in)
+
+	var codec byte
+	if err = binary.Read(buf, binary.BigEndian, &codec); err != nil {
+		return fmt.Errorf("error read codec version: %w", err)
+	}
+	switch codec {
+	case codec_RawDynoBuffer, codec_RDB_1:
+		if err := loadViewValue(val, codec, buf); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unknown codec version «%d»: %w", codec, ErrUnknownCodec)
+	}
+
+	return nil
 }
 
 // valueDef returns name of view value definition
