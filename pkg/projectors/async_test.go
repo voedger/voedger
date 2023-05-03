@@ -296,7 +296,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	topOffset := f.fill(1001)
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
-	errors := make(chan string)
+	errors := make(chan string, 10)
 	chanAfterError := make(chan time.Time)
 
 	broker := in10nmem.Provide(in10n.Quotas{

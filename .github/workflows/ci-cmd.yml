@@ -13,6 +13,7 @@ on:
 
 jobs:
   call-workflow-ci-cmd:
+    if: github.event_name != 'pull_request_target'
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
     with: 
       test_folder: 'cmd'
