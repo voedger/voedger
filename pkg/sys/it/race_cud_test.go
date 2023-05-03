@@ -4,7 +4,7 @@
 
 // The goal of package is  to ensure there are no Race Condition/Race Data errors in Heeus read/write operations
 // All tests should be run with -race
-package heeus_it
+package sys_it
 
 import (
 	"fmt"
@@ -14,8 +14,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	airsbp_it "github.com/untillpro/airs-bp3/packages/air/it"
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -33,17 +33,17 @@ func Test_Race_CUDSimpleRead(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	hit := it.NewHIT(t, &airsbp_it.SharedConfig_Air)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	defer vit.TearDown()
 
 	cnt := readCnt
 	wg := sync.WaitGroup{}
 	wg.Add(cnt)
-	ws := hit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
 	for i := 0; i < cnt; i++ {
 		go func() {
 			defer wg.Done()
-			readArt(hit, ws)
+			readArt(vit, ws)
 		}()
 	}
 	wg.Wait()
@@ -54,17 +54,17 @@ func Test_Race_CUDSimpleWrite(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	hit := it.NewHIT(t, &airsbp_it.SharedConfig_Air)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	defer vit.TearDown()
 
 	cnt := writeCnt
 	wg := sync.WaitGroup{}
 	wg.Add(cnt)
-	ws := hit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
 	for i := 0; i < cnt; i++ {
 		go func() {
 			defer wg.Done()
-			writeArt(ws, hit)
+			writeArt(ws, vit)
 		}()
 	}
 	wg.Wait()
@@ -73,22 +73,22 @@ func Test_Race_CUDOneWriteManyRead(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	hit := it.NewHIT(t, &airsbp_it.SharedConfig_Air)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	defer vit.TearDown()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	ws := hit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
 	go func() {
 		defer wg.Done()
-		writeArt(ws, hit)
+		writeArt(ws, vit)
 	}()
 
 	for i := 0; i < readCnt; i++ {
 		wg.Add(1)
 		go func(_ *testing.T, _ int) {
 			defer wg.Done()
-			readArt(hit, ws)
+			readArt(vit, ws)
 		}(t, i)
 	}
 	wg.Wait()
@@ -100,17 +100,17 @@ func Test_Race_CUDManyWriteOneRead(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	hit := it.NewHIT(t, &airsbp_it.SharedConfig_Air)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	defer vit.TearDown()
 
 	cnt := writeCnt
 	wg := sync.WaitGroup{}
-	ws := hit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
 	for i := 0; i < cnt; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			writeArt(ws, hit)
+			writeArt(ws, vit)
 		}()
 	}
 	wg.Wait()
@@ -119,7 +119,7 @@ func Test_Race_CUDManyWriteOneRead(t *testing.T) {
 	wgr.Add(1)
 	go func(_ *testing.T) {
 		defer wgr.Done()
-		readArt(hit, ws)
+		readArt(vit, ws)
 	}(t)
 	wgr.Wait()
 }
@@ -130,21 +130,21 @@ func Test_Race_CUDManyWriteManyReadNoResult(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	hit := it.NewHIT(t, &airsbp_it.SharedConfig_Air)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	defer vit.TearDown()
 
 	cnt := writeCnt
 	wg := sync.WaitGroup{}
 	wg.Add(2 * cnt)
-	ws := hit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
 	for i := 0; i < cnt; i++ {
 		go func() {
 			defer wg.Done()
-			writeArt(ws, hit)
+			writeArt(ws, vit)
 		}()
 		go func() {
 			defer wg.Done()
-			readArt(hit, ws)
+			readArt(vit, ws)
 		}()
 	}
 	wg.Wait()
@@ -156,18 +156,18 @@ func Test_Race_CUDManyWriteManyReadCheckResult(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	hit := it.NewHIT(t, &airsbp_it.SharedConfig_Air)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	defer vit.TearDown()
 
 	cnt := writeCnt
 	wgW := sync.WaitGroup{}
 	wgW.Add(cnt)
-	ws := hit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
 	artNumbers := make(chan int, cnt)
 	for i := 0; i < cnt; i++ {
 		go func() {
 			defer wgW.Done()
-			artNumbers <- writeArt(ws, hit)
+			artNumbers <- writeArt(ws, vit)
 		}()
 	}
 	wgW.Wait()
@@ -178,7 +178,7 @@ func Test_Race_CUDManyWriteManyReadCheckResult(t *testing.T) {
 	for i := 0; i < cnt; i++ {
 		go func(at *testing.T) {
 			defer wgR.Done()
-			readAndCheckArt(at, <-artNumbers, hit, ws)
+			readAndCheckArt(at, <-artNumbers, vit, ws)
 		}(t)
 	}
 	wgR.Wait()
@@ -191,18 +191,18 @@ func Test_Race_CUDManyUpdateManyReadCheckResult(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	hit := it.NewHIT(t, &airsbp_it.SharedConfig_Air)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	defer vit.TearDown()
 
 	cntw := writeCnt
 	wgW := sync.WaitGroup{}
 	wgW.Add(cntw)
-	ws := hit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
 	artNumbers := make(chan int, cntw)
 	for i := 0; i < cntw; i++ {
 		go func() {
 			defer wgW.Done()
-			artNumbers <- writeArt(ws, hit)
+			artNumbers <- writeArt(ws, vit)
 		}()
 	}
 	wgW.Wait()
@@ -214,7 +214,7 @@ func Test_Race_CUDManyUpdateManyReadCheckResult(t *testing.T) {
 			wgUR.Add(1)
 			go func(acnt int) {
 				defer wgUR.Done()
-				updateArtByName(<-artNumbers, acnt, hit, ws)
+				updateArtByName(<-artNumbers, acnt, vit, ws)
 			}(cntw)
 		}
 
@@ -223,7 +223,7 @@ func Test_Race_CUDManyUpdateManyReadCheckResult(t *testing.T) {
 			wgUR.Add(1)
 			go func() {
 				defer wgUR.Done()
-				readArt(hit, ws)
+				readArt(vit, ws)
 			}()
 		}
 
@@ -239,8 +239,8 @@ func Test_Race_CUDManyReadCheckResult(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	hit := it.NewHIT(t, &airsbp_it.SharedConfig_Air)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	defer vit.TearDown()
 
 	var cntWS int = readCnt
 
@@ -249,8 +249,8 @@ func Test_Race_CUDManyReadCheckResult(t *testing.T) {
 		wg.Add(1)
 		go func(wsid istructs.WSID) {
 			defer wg.Done()
-			ws := hit.DummyWS(istructs.AppQName_untill_airs_bp, wsid)
-			readArt(hit, ws)
+			ws := vit.DummyWS(istructs.AppQName_untill_airs_bp, wsid)
+			readArt(vit, ws)
 		}(prtIdx)
 	}
 	wg.Wait()
@@ -261,8 +261,8 @@ func Test_Race_CUDManyWriteCheckResult(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	hit := it.NewHIT(t, &airsbp_it.SharedConfig_Air)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	defer vit.TearDown()
 
 	var cntWS int = writeCnt
 	var prtIdx istructs.WSID
@@ -272,8 +272,8 @@ func Test_Race_CUDManyWriteCheckResult(t *testing.T) {
 		wg.Add(1)
 		go func(wsid istructs.WSID) {
 			defer wg.Done()
-			ws := hit.DummyWS(istructs.AppQName_untill_airs_bp, wsid+istructs.MaxPseudoBaseWSID)
-			writeArt(ws, hit)
+			ws := vit.DummyWS(istructs.AppQName_untill_airs_bp, wsid+istructs.MaxPseudoBaseWSID)
+			writeArt(ws, vit)
 		}(prtIdx)
 	}
 	wg.Wait()
@@ -284,8 +284,8 @@ func Test_Race_CUDManyWriteReadCheckResult(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	hit := it.NewHIT(t, &airsbp_it.SharedConfig_Air)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	defer vit.TearDown()
 
 	var cntWS int = writeCnt
 	var prtIdx istructs.WSID
@@ -296,24 +296,24 @@ func Test_Race_CUDManyWriteReadCheckResult(t *testing.T) {
 			wg.Add(1)
 			go func(wsid istructs.WSID) {
 				defer wg.Done()
-				ws := hit.DummyWS(istructs.AppQName_untill_airs_bp, wsid+istructs.MaxPseudoBaseWSID)
-				writeArt(ws, hit)
+				ws := vit.DummyWS(istructs.AppQName_untill_airs_bp, wsid+istructs.MaxPseudoBaseWSID)
+				writeArt(ws, vit)
 			}(prtIdx)
 		}
 		for prtIdx = 1; int(prtIdx) < cntWS; prtIdx++ {
 			wg.Add(1)
 			go func(wsid istructs.WSID) {
 				defer wg.Done()
-				ws := hit.DummyWS(istructs.AppQName_untill_airs_bp, wsid+istructs.MaxPseudoBaseWSID)
-				readArt(hit, ws)
+				ws := vit.DummyWS(istructs.AppQName_untill_airs_bp, wsid+istructs.MaxPseudoBaseWSID)
+				readArt(vit, ws)
 			}(prtIdx)
 		}
 		wg.Wait()
 	}
 }
 
-func writeArt(ws *it.AppWorkspace, hit *it.HIT) (artNumber int) {
-	artNumber = hit.NextNumber()
+func writeArt(ws *it.AppWorkspace, vit *it.VIT) (artNumber int) {
+	artNumber = vit.NextNumber()
 	idstr := strconv.Itoa(artNumber)
 	artname := "cola" + idstr
 	body := `
@@ -333,11 +333,11 @@ func writeArt(ws *it.AppWorkspace, hit *it.HIT) (artNumber int) {
 				}
 			]
 		}`
-	hit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body)
 	return
 }
 
-func readArt(hit *it.HIT, ws *it.AppWorkspace) *utils.FuncResponse {
+func readArt(vit *it.VIT, ws *it.AppWorkspace) *coreutils.FuncResponse {
 	body := `
 	{
 		"args":{
@@ -350,25 +350,25 @@ func readArt(hit *it.HIT, ws *it.AppWorkspace) *utils.FuncResponse {
 		],
 		"orderBy":[{"field":"name"}]
 	}`
-	return hit.PostWS(ws, "q.sys.Collection", body)
+	return vit.PostWS(ws, "q.sys.Collection", body)
 }
 
-func updateArtByName(idx, num int, hit *it.HIT, ws *it.AppWorkspace) {
+func updateArtByName(idx, num int, vit *it.VIT, ws *it.AppWorkspace) {
 	artname := "cola" + strconv.Itoa(idx)
-	resp := readArt(hit, ws)
+	resp := readArt(vit, ws)
 
 	var actualName string
 	for i := 0; i < num; i++ {
 		actualName = resp.SectionRow(i)[0].(string)
 		if artname == actualName {
 			id := resp.SectionRow()[2].(float64)
-			updateArt(id, hit, ws)
+			updateArt(id, vit, ws)
 			break
 		}
 	}
 }
 
-func updateArt(id float64, hit *it.HIT, ws *it.AppWorkspace) {
+func updateArt(id float64, vit *it.VIT, ws *it.AppWorkspace) {
 	body := fmt.Sprintf(`
 	{
 		"cuds": [
@@ -384,16 +384,16 @@ func updateArt(id float64, hit *it.HIT, ws *it.AppWorkspace) {
 			}
 		]
 	}`, int64(id))
-	hit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body)
 }
 
-func readAndCheckArt(t *testing.T, idx int, hit *it.HIT, ws *it.AppWorkspace) {
+func readAndCheckArt(t *testing.T, idx int, vit *it.VIT, ws *it.AppWorkspace) {
 	idstr := strconv.Itoa(idx)
 	artname := "cola" + idstr
 	require := require.New(t)
 	var id float64
 
-	resp := readArt(hit, ws)
+	resp := readArt(vit, ws)
 
 	var actualName string
 	var actualControlActive float64

@@ -2,7 +2,7 @@
  * Copyright (c) 2021-present unTill Pro, Ltd.
  */
 
-package heeus_it
+package sys_it
 
 import (
 	"context"
@@ -19,8 +19,8 @@ import (
 
 func TestBasicUsage_ReverseProxy(t *testing.T) {
 	require := require.New(t)
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
 	targetListener, err := net.Listen("tcp", fmt.Sprintf(":%d", it.TestServicePort))
 	require.NoError(err)
@@ -48,14 +48,14 @@ func TestBasicUsage_ReverseProxy(t *testing.T) {
 	for srcURL, expectedURLPath := range cases {
 		targetHandler.setExpectedURLPath(expectedURLPath)
 
-		resp := hit.PostFree(fmt.Sprintf("http://127.0.0.1:%s/%s", hit.FederationURL().Port(), srcURL), body)
+		resp := vit.PostFree(fmt.Sprintf("http://127.0.0.1:%s/%s", vit.FederationURL.Port(), srcURL), body)
 		require.Equal(`hello world`, resp.Body) // guarantees that expectedURLPath is checked by the handler
 	}
 
 	t.Run("route domain", func(t *testing.T) {
 		targetHandler.setExpectedURLPath("/grafana/foo")
 		targetHandler.setExpectedHost("127.0.0.1")
-		resp := hit.PostFree(fmt.Sprintf("http://localhost:%s/grafana/foo", hit.FederationURL().Port()), body)
+		resp := vit.PostFree(fmt.Sprintf("http://localhost:%s/grafana/foo", vit.FederationURL.Port()), body)
 		require.Equal(`hello world`, resp.Body)
 	})
 

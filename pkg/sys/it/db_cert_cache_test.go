@@ -3,7 +3,7 @@
  * Aleksei Ponomarev
  */
 
-package heeus_it
+package sys_it
 
 import (
 	"context"
@@ -21,10 +21,10 @@ func TestBasicUsage_db_cache(t *testing.T) {
 	ctx := context.TODO()
 	require := require.New(t)
 
-	hit := vit.NewHIT(t, &vit.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := vit.NewVIT(t, &vit.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	storage, err := hit.IAppStorageProvider.AppStorage(istructs.AppQName_sys_router)
+	storage, err := vit.IAppStorageProvider.AppStorage(istructs.AppQName_sys_router)
 	require.NoError(err)
 	require.NotNil(storage)
 	cache := dbcertcache.ProvideDbCache(storage)

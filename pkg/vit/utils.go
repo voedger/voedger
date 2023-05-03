@@ -28,7 +28,7 @@ import (
 
 func (hit *VIT) GetBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID int64, token string) *BLOB {
 	hit.T.Helper()
-	resp, err := utils.FederationReq(hit.FederationURL(), fmt.Sprintf(`blob/%s/%d/%d`, appQName.String(), wsid, blobID), "", coreutils.WithAuthorizeBy(token))
+	resp, err := coreutils.FederationReq(hit.FederationURL, fmt.Sprintf(`blob/%s/%d/%d`, appQName.String(), wsid, blobID), "", coreutils.WithAuthorizeBy(token))
 	require.NoError(hit.T, err)
 	contentDisposition := resp.HTTPResp.Header.Get("Content-Disposition")
 	_, params, err := mime.ParseMediaType(contentDisposition)
@@ -40,7 +40,7 @@ func (hit *VIT) GetBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID i
 	}
 }
 
-func (hit *VIT) signUp(login Login, wsKindInitData string, opts ...utils.ReqOptFunc) {
+func (hit *VIT) signUp(login Login, wsKindInitData string, opts ...coreutils.ReqOptFunc) {
 	hit.T.Helper()
 	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":%q,"ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
 		login.Name, login.AppQName.String(), login.subjectKind, wsKindInitData, login.clusterID, login.Pwd)
@@ -53,7 +53,7 @@ func WithClusterID(clusterID istructs.ClusterID) signUpOptFunc {
 	}
 }
 
-func WithReqOpt(reqOpt utils.ReqOptFunc) signUpOptFunc {
+func WithReqOpt(reqOpt coreutils.ReqOptFunc) signUpOptFunc {
 	return func(opts *signUpOpts) {
 		opts.reqOpts = append(opts.reqOpts, reqOpt)
 	}
@@ -138,7 +138,7 @@ func (hit *VIT) GetCDocChildWorkspace(ws *AppWorkspace) (cdoc map[string]interfa
 	return hit.getCDoc(ws.Owner.AppQName, authnz.QNameCDocChildWorkspace, ws.Owner.ProfileWSID)
 }
 
-func (hit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter func(owner *Principal, body string) *utils.FuncResponse) (ws *AppWorkspace) {
+func (hit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter func(owner *Principal, body string) *coreutils.FuncResponse) (ws *AppWorkspace) {
 	const (
 		// respect linter
 		tmplNameIdx   = 3
@@ -194,13 +194,13 @@ func (hit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 }
 
 func (hit *VIT) WaitForWorkspace(wsName string, owner *Principal) (ws *AppWorkspace) {
-	return hit.waitForWorkspace(wsName, owner, func(owner *Principal, body string) *utils.FuncResponse {
+	return hit.waitForWorkspace(wsName, owner, func(owner *Principal, body string) *coreutils.FuncResponse {
 		return hit.PostProfile(owner, "q.sys.QueryChildWorkspaceByName", body)
 	})
 }
 
 func (hit *VIT) WaitForChildWorkspace(parentWS *AppWorkspace, wsName string, owner *Principal) (ws *AppWorkspace) {
-	return hit.waitForWorkspace(wsName, owner, func(owner *Principal, body string) *utils.FuncResponse {
+	return hit.waitForWorkspace(wsName, owner, func(owner *Principal, body string) *coreutils.FuncResponse {
 		return hit.PostWS(parentWS, "q.sys.QueryChildWorkspaceByName", body)
 	})
 }
@@ -286,7 +286,7 @@ func (hit *VIT) SubscribeForN10n(ws *AppWorkspace, viewQName appdef.QName) chan 
 	query := fmt.Sprintf(`{"SubjectLogin":"test_%d","ProjectionKey":[{"App":"%s","Projection":"%s","WS":%d}]}`,
 		ws.WSID, ws.Owner.AppQName, viewQName, ws.WSID)
 	params.Add("payload", query)
-	httpResp, err := utils.FederationReq(hit.FederationURL(), fmt.Sprintf("n10n/channel?%s", params.Encode()), "",
+	httpResp, err := coreutils.FederationReq(hit.FederationURL, fmt.Sprintf("n10n/channel?%s", params.Encode()), "",
 		coreutils.WithLongPolling())
 	require.NoError(hit.T, err)
 
@@ -351,10 +351,10 @@ func IsCassandraStorage() bool {
 	return ok
 }
 
-func (hit *VIT) MetricsRequest(opts ...utils.ReqOptFunc) (resp string) {
+func (hit *VIT) MetricsRequest(opts ...coreutils.ReqOptFunc) (resp string) {
 	hit.T.Helper()
 	url := fmt.Sprintf("http://127.0.0.1:%d/metrics", hit.HeeusVM.MetricsServicePort())
-	res, err := utils.Req(url, "", opts...)
+	res, err := coreutils.Req(url, "", opts...)
 	require.NoError(hit.T, err)
 	return res.Body
 }

@@ -2,7 +2,7 @@
  * Copyright (c) 2021-present unTill Pro, Ltd.
  */
 
-package heeus_it
+package sys_it
 
 import (
 	"bufio"
@@ -14,13 +14,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 	airsbp_it "github.com/untillpro/airs-bp3/packages/air/it"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
 func TestBasicUsage_n10n(t *testing.T) {
 	require := require.New(t)
-	hit := it.NewHIT(t, &airsbp_it.SharedConfig_Air)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	defer vit.TearDown()
 
 	// создадим канал и подпишемся на изменения проекции
 	query := `
@@ -41,7 +42,7 @@ func TestBasicUsage_n10n(t *testing.T) {
 		}`
 	params := url.Values{}
 	params.Add("payload", query)
-	resp := hit.Get(fmt.Sprintf("n10n/channel?%s", params.Encode()), coreutils.WithLongPolling())
+	resp := vit.Get(fmt.Sprintf("n10n/channel?%s", params.Encode()), coreutils.WithLongPolling())
 
 	done := make(chan interface{})
 	channelID := ""
@@ -84,7 +85,7 @@ func TestBasicUsage_n10n(t *testing.T) {
  			"Projection": "paa.price",
  			"WS": 1
  		}`
-	hit.Post("n10n/update/13", body)
+	vit.Post("n10n/update/13", body)
 
 	<-done // подождем чтения
 
@@ -103,7 +104,7 @@ func TestBasicUsage_n10n(t *testing.T) {
 	`, channelID)
 	params = url.Values{}
 	params.Add("payload", string(query))
-	hit.Get(fmt.Sprintf("n10n/unsubscribe?%s", params.Encode()))
+	vit.Get(fmt.Sprintf("n10n/unsubscribe?%s", params.Encode()))
 
 	// закроем запрос, т.к. при unsubscribe завершения связи со стороны сервера не происходит
 	resp.HTTPResp.Body.Close()

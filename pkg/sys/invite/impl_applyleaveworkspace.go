@@ -9,12 +9,12 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func ProvideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
@@ -61,7 +61,7 @@ func applyLeaveWorkspace(timeFunc func() time.Time, federationURL func() *url.UR
 			}
 
 			//Update subject
-			_, err = utils.FederationFunc(
+			_, err = coreutils.FederationFunc(
 				federationURL(),
 				fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID)),
@@ -71,7 +71,7 @@ func applyLeaveWorkspace(timeFunc func() time.Time, federationURL func() *url.UR
 			}
 
 			//Deactivate joined workspace
-			_, err = utils.FederationFunc(
+			_, err = coreutils.FederationFunc(
 				federationURL(),
 				fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 				fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
@@ -81,7 +81,7 @@ func applyLeaveWorkspace(timeFunc func() time.Time, federationURL func() *url.UR
 			}
 
 			//Update invite
-			_, err = utils.FederationFunc(
+			_, err = coreutils.FederationFunc(
 				federationURL(),
 				fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, rec.ID(), State_Left, timeFunc().UnixMilli()),

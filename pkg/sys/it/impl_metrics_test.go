@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package heeus_it
+package sys_it
 
 import (
 	"fmt"
@@ -13,18 +13,18 @@ import (
 
 	"github.com/stretchr/testify/require"
 	airsbp_it "github.com/untillpro/airs-bp3/packages/air/it"
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/istructs"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
 func TestBasicUsage_Metrics(t *testing.T) {
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 	require := require.New(t)
 
-	url := fmt.Sprintf("http://127.0.0.1:%d/metrics", hit.MetricsServicePort())
+	url := fmt.Sprintf("http://127.0.0.1:%d/metrics", vit.MetricsServicePort())
 	resp, err := http.Get(url)
 	require.Nil(err, err)
 
@@ -36,32 +36,32 @@ func TestBasicUsage_Metrics(t *testing.T) {
 }
 
 func TestMetricsService(t *testing.T) {
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
 	t.Run("service check", func(t *testing.T) {
-		log.Println(hit.MetricsRequest(coreutils.WithRelativeURL("/metrics/check")))
+		log.Println(vit.MetricsRequest(coreutils.WithRelativeURL("/metrics/check")))
 	})
 
 	t.Run("404 on wrong url", func(t *testing.T) {
-		log.Println(hit.MetricsRequest(coreutils.WithRelativeURL("/unknown"), utils.Expect404()))
+		log.Println(vit.MetricsRequest(coreutils.WithRelativeURL("/unknown"), coreutils.Expect404()))
 	})
 
 	t.Run("404 on wrong method", func(t *testing.T) {
-		log.Println(hit.MetricsRequest(coreutils.WithMethod(http.MethodPost), utils.Expect404()))
+		log.Println(vit.MetricsRequest(coreutils.WithMethod(http.MethodPost), coreutils.Expect404()))
 	})
 }
 
 func TestCommandProcessorMetrics(t *testing.T) {
-	hit := it.NewHIT(t, &airsbp_it.SharedConfig_Air)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	defer vit.TearDown()
 	require := require.New(t)
 
-	ws := hit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
 	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"untill.payments","name":"EFT","guid":"0a53b7c6-2c47-491c-ac00-307b8d5ba6f0"}}]}`
-	hit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body)
 
-	metrics := hit.MetricsRequest()
+	metrics := vit.MetricsRequest()
 
 	require.Contains(metrics, commandprocessor.CommandsTotal)
 	require.Contains(metrics, commandprocessor.CommandsSeconds)

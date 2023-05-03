@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -18,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/collection"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func ProvideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
@@ -56,7 +56,7 @@ func applyJoinWorkspace(timeFunc func() time.Time, federationURL func() *url.URL
 		if err != nil {
 			return
 		}
-		_, err = utils.FederationFunc(
+		_, err = coreutils.FederationFunc(
 			federationURL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CreateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d,"WSName":"%s"}}`,
@@ -95,7 +95,7 @@ func applyJoinWorkspace(timeFunc func() time.Time, federationURL func() *url.URL
 		} else {
 			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID), svCDocInvite.AsString(Field_Roles))
 		}
-		resp, err := utils.FederationFunc(
+		resp, err := coreutils.FederationFunc(
 			federationURL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			body,
@@ -111,7 +111,7 @@ func applyJoinWorkspace(timeFunc func() time.Time, federationURL func() *url.URL
 		} else {
 			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, svCDocInvite.AsRecordID(appdef.SystemField_ID), State_Joined, timeFunc().UnixMilli())
 		}
-		_, err = utils.FederationFunc(
+		_, err = coreutils.FederationFunc(
 			federationURL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			body,

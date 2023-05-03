@@ -3,72 +3,72 @@
  * @author Denis Gribanov
  */
 
-package heeus_it
+package sys_it
 
 import (
 	"fmt"
 	"testing"
 	"time"
 
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
 func TestBasicUsage_ChangePassword(t *testing.T) {
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	loginName := hit.NextName()
-	login := hit.SignUp(loginName, "1", istructs.AppQName_test1_app1)
+	loginName := vit.NextName()
+	login := vit.SignUp(loginName, "1", istructs.AppQName_test1_app1)
 
 	// change the password
 	// null auth
 	newPwd := "2"
 	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"1","NewPassword":"%s"}}`, loginName, istructs.AppQName_test1_app1, newPwd)
-	hit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.sys.ChangePassword", body)
+	vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.sys.ChangePassword", body)
 
 	// note: previous tokens are still valid after password change
 
 	// expect no errors on login with new password
 	login.Pwd = newPwd
-	hit.SignIn(login)
+	vit.SignIn(login)
 }
 
 func TestChangePasswordErrors(t *testing.T) {
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	prn := hit.GetPrincipal(istructs.AppQName_test1_app1, "login") // from HIT config
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login") // from VIT config
 
 	t.Run("login not found", func(t *testing.T) {
-		unexistingLogin := hit.NextName()
+		unexistingLogin := vit.NextName()
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"1","NewPassword":"2"}}`,
 			unexistingLogin, istructs.AppQName_test1_app1)
-		hit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.sys.ChangePassword", body, utils.Expect401())
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.sys.ChangePassword", body, coreutils.Expect401())
 	})
 
 	t.Run("wrong password", func(t *testing.T) {
-		hit.TimeAdd(time.Minute) // proceed to the next minute to avoid 429 too many requests
+		vit.TimeAdd(time.Minute) // proceed to the next minute to avoid 429 too many requests
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"2","NewPassword":"3"}}`,
 			prn.Login.Name, istructs.AppQName_test1_app1)
-		hit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.sys.ChangePassword", body, utils.Expect401())
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.sys.ChangePassword", body, coreutils.Expect401())
 	})
 
 	t.Run("rate limit exceed", func(t *testing.T) {
-		hit.TimeAdd(time.Minute) // proceed to the next minute to avoid 429 too many requests
+		vit.TimeAdd(time.Minute) // proceed to the next minute to avoid 429 too many requests
 
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"2","NewPassword":"3"}}`,
 			prn.Login.Name, istructs.AppQName_test1_app1)
-		hit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.sys.ChangePassword", body, utils.Expect401()) // not 429, wrong password
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.sys.ChangePassword", body, coreutils.Expect401()) // not 429, wrong password
 
 		// >1 calls per minute -> 429
-		hit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.sys.ChangePassword", body, utils.Expect429())
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.sys.ChangePassword", body, coreutils.Expect429())
 
 		// proceed to the next minute -> able to change the password again
-		hit.TimeAdd(time.Minute)
+		vit.TimeAdd(time.Minute)
 		body = fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"2","NewPassword":"3"}}`,
 			prn.Login.Name, istructs.AppQName_test1_app1)
-		hit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.sys.ChangePassword", body, utils.Expect401()) // again not 429, wrong password
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.sys.ChangePassword", body, coreutils.Expect401()) // again not 429, wrong password
 	})
 }

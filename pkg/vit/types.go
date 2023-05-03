@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
@@ -114,7 +114,7 @@ type signInOpts struct {
 
 type signUpOpts struct {
 	profileClusterID istructs.ClusterID
-	reqOpts          []utils.ReqOptFunc
+	reqOpts          []coreutils.ReqOptFunc
 }
 
 type EmailCaptor struct {

@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package heeus_it
+package sys_it
 
 import (
 	"fmt"
@@ -13,24 +13,24 @@ import (
 
 	"github.com/stretchr/testify/require"
 	wsuntill "github.com/untillpro/airs-bp3/packages/air/workspace"
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/authnz/workspace"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
 func TestBasicUsage_Workspace(t *testing.T) {
 	require := require.New(t)
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	loginName := hit.NextName()
-	wsName := hit.NextName()
-	login := hit.SignUp(loginName, "1", istructs.AppQName_test1_app1)
-	prn := hit.SignIn(login)
+	loginName := vit.NextName()
+	wsName := vit.NextName()
+	login := vit.SignUp(loginName, "1", istructs.AppQName_test1_app1)
+	prn := vit.SignIn(login)
 
 	t.Run("404 not found on q.sys.QueryChildWorkspaceByName on a non-inited workspace", func(t *testing.T) {
 		body := fmt.Sprintf(`
@@ -44,7 +44,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 					}
 				]
 			}`, wsName)
-		resp := hit.PostProfile(prn, "q.sys.QueryChildWorkspaceByName", body, utils.Expect404())
+		resp := vit.PostProfile(prn, "q.sys.QueryChildWorkspaceByName", body, coreutils.Expect404())
 		resp.Println()
 	})
 
@@ -59,8 +59,8 @@ func TestBasicUsage_Workspace(t *testing.T) {
 				"WSClusterID": 42
 			}
 		}`, wsName)
-		hit.PostProfile(prn, "c.sys.InitChildWorkspace", body)
-		ws := hit.WaitForWorkspace(wsName, prn)
+		vit.PostProfile(prn, "c.sys.InitChildWorkspace", body)
+		ws := vit.WaitForWorkspace(wsName, prn)
 
 		require.Empty(ws.WSError)
 		require.Equal(wsName, ws.Name)
@@ -71,7 +71,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 
 		t.Run("check the initialized workspace using collection", func(t *testing.T) {
 			body = `{"args":{"Schema":"untill.air_table_plan"},"elements":[{"fields":["sys.ID","image","preview"]}]}`
-			resp := hit.PostWS(ws, "q.sys.Collection", body)
+			resp := vit.PostWS(ws, "q.sys.Collection", body)
 			require.Equal(int64(5000000000400), int64(resp.SectionRow()[0].(float64)))  // from testTemplate
 			require.Equal(int64(5000000000416), int64(resp.SectionRow(1)[0].(float64))) // from testTemplate
 		})
@@ -79,7 +79,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		var idOfCDocWSKind int64
 
 		t.Run("check current cdoc.sys.$wsKind", func(t *testing.T) {
-			cdoc, id := hit.GetCDocWSKind(ws)
+			cdoc, id := vit.GetCDocWSKind(ws)
 			idOfCDocWSKind = id
 			require.Equal(float64(10), cdoc["IntFld"])
 			require.Equal("", cdoc["StrFld"])
@@ -101,10 +101,10 @@ func TestBasicUsage_Workspace(t *testing.T) {
 						}
 					]
 				}`, idOfCDocWSKind)
-			hit.PostWS(ws, "c.sys.CUD", body)
+			vit.PostWS(ws, "c.sys.CUD", body)
 
 			// check updated workspace config
-			cdoc, _ := hit.GetCDocWSKind(ws)
+			cdoc, _ := vit.GetCDocWSKind(ws)
 			require.Equal(2, len(cdoc))
 			require.Equal(float64(42), cdoc["IntFld"])
 			require.Equal("str", cdoc["StrFld"])
@@ -113,13 +113,13 @@ func TestBasicUsage_Workspace(t *testing.T) {
 
 	t.Run("create a new workspace with an existing name -> 409 conflict", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "my.WSKind","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
-		resp := hit.PostProfile(prn, "c.sys.InitChildWorkspace", body, utils.Expect409())
+		resp := vit.PostProfile(prn, "c.sys.InitChildWorkspace", body, coreutils.Expect409())
 		resp.Println()
 	})
 
 	t.Run("read user workspaces list", func(t *testing.T) {
 		body := `{"args":{"Schema":"sys.ChildWorkspace"},"elements":[{"fields":["WSName","WSKind","WSID","WSError"]}]}`
-		resp := hit.PostProfile(prn, "q.sys.Collection", body)
+		resp := vit.PostProfile(prn, "q.sys.Collection", body)
 		// note: wsKind is rendered as {} because q.sys.Collection appends QName to the object to marshal to JSON by value
 		// whereas appdef.QName.MarshalJSON() func has pointer receiver
 		resp.Println()
@@ -127,10 +127,10 @@ func TestBasicUsage_Workspace(t *testing.T) {
 }
 
 func TestWorkspaceAuthorization(t *testing.T) {
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	ws := hit.WS(istructs.AppQName_test1_app1, "test_ws")
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	prn := ws.Owner
 
 	body := `{"cuds": [{"sys.ID": 1,"fields": {"sys.QName": "my.WSKind"}}]}`
@@ -138,24 +138,24 @@ func TestWorkspaceAuthorization(t *testing.T) {
 	t.Run("403 forbidden", func(t *testing.T) {
 		t.Run("workspace is not initialized", func(t *testing.T) {
 			// try to exec c.sys.CUD in non-inited ws id 1
-			hit.PostApp(istructs.AppQName_test1_app1, 1, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn.Token), utils.Expect403()).Println()
+			vit.PostApp(istructs.AppQName_test1_app1, 1, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn.Token), coreutils.Expect403()).Println()
 		})
 
 		t.Run("access denied (wrong wsid)", func(t *testing.T) {
 			// create a new login
-			login := hit.SignUp(hit.NextName(), "1", istructs.AppQName_test1_app1)
-			newPrn := hit.SignIn(login)
+			login := vit.SignUp(vit.NextName(), "1", istructs.AppQName_test1_app1)
+			newPrn := vit.SignIn(login)
 
 			// try to modify the workspace by the non-owner
-			hit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", body, coreutils.WithAuthorizeBy(newPrn.Token), utils.Expect403()).Println()
+			vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", body, coreutils.WithAuthorizeBy(newPrn.Token), coreutils.Expect403()).Println()
 		})
 	})
 
 	t.Run("401 unauthorized", func(t *testing.T) {
 		t.Run("token from an another app", func(t *testing.T) {
-			login := hit.SignUp(hit.NextName(), "1", istructs.AppQName_test1_app2)
-			newPrn := hit.SignIn(login)
-			hit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", body, coreutils.WithAuthorizeBy(newPrn.Token), utils.Expect401()).Println()
+			login := vit.SignUp(vit.NextName(), "1", istructs.AppQName_test1_app2)
+			newPrn := vit.SignIn(login)
+			vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", body, coreutils.WithAuthorizeBy(newPrn.Token), coreutils.Expect401()).Println()
 		})
 	})
 }
@@ -169,30 +169,30 @@ func TestDenyCreateCDocWSKind(t *testing.T) {
 		authnz.QNameCDoc_WorkspaceKind_AppWorkspace,
 	}
 
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	ws := hit.WS(istructs.AppQName_test1_app1, "test_ws")
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	for _, cdocWSkind := range cdocWSKinds {
 		t.Run("deny to create manually cdoc.sys."+cdocWSkind.String(), func(t *testing.T) {
 			body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s"}}]}`, cdocWSkind.String())
-			hit.PostWS(ws, "c.sys.CUD", body, utils.Expect403()).Println()
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403()).Println()
 		})
 	}
 }
 
 func TestDenyCUDCDocOwnerModification(t *testing.T) {
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	ws := hit.WS(istructs.AppQName_test1_app1, "test_ws")
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("CDoc<ChildWorkspace>", func(t *testing.T) {
 		// try to modify CDoc<ChildWorkspace>
-		_, idOfCDocWSKind := hit.GetCDocChildWorkspace(ws)
-		body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"WSName":"new name"}}]}`, idOfCDocWSKind) // intFld is declared in hit.SharedConfig_Simple
-		hit.PostProfile(ws.Owner, "c.sys.CUD", body, utils.Expect403()).Println()
+		_, idOfCDocWSKind := vit.GetCDocChildWorkspace(ws)
+		body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"WSName":"new name"}}]}`, idOfCDocWSKind) // intFld is declared in vit.SharedConfig_Simple
+		vit.PostProfile(ws.Owner, "c.sys.CUD", body, coreutils.Expect403()).Println()
 	})
 
 	// note: unable to work with CDoc<Login>

@@ -10,10 +10,10 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
@@ -69,7 +69,7 @@ func buildWorkspace(templateName string, epWSTemplates vvm.IEPWSTemplates, wsKin
 			return err
 		}
 
-		if _, err := utils.FederationFunc(federationURL, initCmdURL, string(bb), coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
+		if _, err := coreutils.FederationFunc(federationURL, initCmdURL, string(bb), coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
 			return fmt.Errorf("c.sys.Init failed: %w", err)
 		}
 	}
@@ -96,7 +96,7 @@ func uploadBLOBs(blobs []BLOB, federationURL *url.URL, appQName istructs.AppQNam
 		uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s", appQName.String(), wsid, blob.Name, blob.MimeType)
 		logger.Info("workspace build: uploading blob", blob.Name, "url:", uploadBLOBURL)
 
-		resp, err := utils.FederationPOST(federationURL, uploadBLOBURL, string(blob.Content), coreutils.WithAuthorizeBy(principalToken))
+		resp, err := coreutils.FederationPOST(federationURL, uploadBLOBURL, string(blob.Content), coreutils.WithAuthorizeBy(principalToken))
 		if err != nil {
 			return nil, fmt.Errorf("blob %s: %w", blob.Name, err)
 		}

@@ -2,7 +2,7 @@
  * Copyright (c) 2020-present unTill Pro, Ltd.
  */
 
-package heeus_it
+package sys_it
 
 import (
 	"bytes"
@@ -12,122 +12,121 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/uniques"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func getUniqueNumber(hit *it.HIT) (int, string) {
-	uniqueNumber := hit.NextNumber()
+func getUniqueNumber(vit *it.VIT) (int, string) {
+	uniqueNumber := vit.NextNumber()
 	buf := bytes.NewBuffer(nil)
-	require.NoError(hit.T, binary.Write(buf, binary.BigEndian, uint32(uniqueNumber)))
+	require.NoError(vit.T, binary.Write(buf, binary.BigEndian, uint32(uniqueNumber)))
 	uniqueBytes := base64.StdEncoding.EncodeToString(buf.Bytes())
 	return uniqueNumber, uniqueBytes
 }
 
 func TestBasicUsage_Uniques(t *testing.T) {
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	ws := hit.WS(istructs.AppQName_test1_app1, "test_ws")
-	num, bts := getUniqueNumber(hit)
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	num, bts := getUniqueNumber(vit)
 
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	hit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body)
 
 	t.Run("409 on duplicate basic", func(t *testing.T) {
 		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-		hit.PostWS(ws, "c.sys.CUD", body, utils.Expect409()).Println()
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409()).Println()
 	})
 
 	t.Run("409 on duplicate different fields order", func(t *testing.T) {
 		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Str":"str","Bytes":"%s","Int":%d,"Bool":true}}]}`, bts, num)
-		hit.PostWS(ws, "c.sys.CUD", body, utils.Expect409()).Println()
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409()).Println()
 	})
 }
 
 func TestActivateDeactivateRecordWithUniques(t *testing.T) {
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	ws := hit.WS(istructs.AppQName_test1_app1, "test_ws")
-	num, bts := getUniqueNumber(hit)
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	num, bts := getUniqueNumber(vit)
 
 	// insert a unique
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	newID := hit.PostWS(ws, "c.sys.CUD", body).NewID()
+	newID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	// allowed to deactivate
 	body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, newID)
-	hit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body)
 
 	// ok to deactivate again an already inactive record
-	hit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body)
 
 	// still not able to update unique fields even if the record is deactivated
 	body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Int":42}}]}`, newID)
-	hit.PostWS(ws, "c.sys.CUD", body, utils.Expect403())
+	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403())
 
 	// allowed to activate
 	body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":true}}]}`, newID)
-	hit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body)
 
 	// ok to activate again the already active record
-	hit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body)
 
 	// check uniques works after deactivate/activate
 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	hit.PostWS(ws, "c.sys.CUD", body, utils.Expect409())
+	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 }
 
 func TestUniquesUpdate(t *testing.T) {
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	ws := hit.WS(istructs.AppQName_test1_app1, "test_ws")
-	num, bts := getUniqueNumber(hit)
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	num, bts := getUniqueNumber(vit)
 
 	// insert a unique
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	prevID := hit.PostWS(ws, "c.sys.CUD", body).NewID()
+	prevID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	// to update unique fields let's deactivate existing record and create new record with new values
 	body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, prevID)
-	hit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body)
 
 	// insert a record with new values, i.e. do actually update
-	num, bts = getUniqueNumber(hit)
+	num, bts = getUniqueNumber(vit)
 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	prevID = hit.PostWS(ws, "c.sys.CUD", body).NewID()
+	prevID = vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	// let's deactivate the new record
 	body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, prevID)
-	hit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body)
 
 	// we're able to insert a new record that conflicts with the deactivated one
 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	hit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body)
 
 	// insert the same again -> unique constraint violation with the new record
-	hit.PostWS(ws, "c.sys.CUD", body, utils.Expect409())
+	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 
 	// try to activate previously deactivated record -> conflict with the just inserted new record
 	body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":true}}]}`, prevID)
-	hit.PostWS(ws, "c.sys.CUD", body, utils.Expect409())
+	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 }
 
 func TestUniquesDenyUpdate(t *testing.T) {
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	ws := hit.WS(istructs.AppQName_test1_app1, "test_ws")
-	num, bts := getUniqueNumber(hit)
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	num, bts := getUniqueNumber(vit)
 
 	// insert one unique
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	newID := hit.PostWS(ws, "c.sys.CUD", body).NewID()
+	newID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	// deny to modify any unique field
 	fields := []string{
@@ -138,43 +137,43 @@ func TestUniquesDenyUpdate(t *testing.T) {
 	}
 	for _, f := range fields {
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.DocConstraints",%s}}]}`, newID, f)
-		hit.PostWS(ws, "c.sys.CUD", body, utils.Expect403())
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403())
 	}
 }
 
 func TestInsertDeactivatedRecord(t *testing.T) {
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	ws := hit.WS(istructs.AppQName_test1_app1, "test_ws")
-	num, bts := getUniqueNumber(hit)
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	num, bts := getUniqueNumber(vit)
 
 	// insert a deactivated unique
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":false,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	newID := hit.PostWS(ws, "c.sys.CUD", body).NewID()
+	newID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	// still not able to update unique fields even if the record is deactivated
 	body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Int":42}}]}`, newID)
-	hit.PostWS(ws, "c.sys.CUD", body, utils.Expect403())
+	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403())
 
 	// allowed to activate
 	body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":true}}]}`, newID)
-	hit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body)
 
 	// check uniques works after deactivate/activate
 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	hit.PostWS(ws, "c.sys.CUD", body, utils.Expect409())
+	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 
 	// allowed to insert a new deactivated record event it is conflicting with existsing
 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":false,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	hit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body)
 }
 
 func TestUniquesTrickyValues(t *testing.T) {
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	ws := hit.WS(istructs.AppQName_test1_app1, "test_ws")
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("order of fields should not cause violation", func(t *testing.T) {
 		// row with int32 12345678,[]byte{0} are inserted
@@ -185,27 +184,27 @@ func TestUniquesTrickyValues(t *testing.T) {
 		num := 123456789 // []byte{7, 91, 205, 21}
 		bts := base64.StdEncoding.EncodeToString([]byte{0})
 		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":false,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-		hit.PostWS(ws, "c.sys.CUD", body)
+		vit.PostWS(ws, "c.sys.CUD", body)
 
 		// have unique for key {7,91,205,21,0}
 
 		num = int(binary.BigEndian.Uint32([]byte{91, 205, 21, 0}))
 		bts = base64.StdEncoding.EncodeToString([]byte{7})
 		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":false,"Bytes":"%s","Int":%d,"Str":"str","Bool":true}}]}`, bts, num)
-		hit.PostWS(ws, "c.sys.CUD", body)
+		vit.PostWS(ws, "c.sys.CUD", body)
 		// expect no errors
 	})
 }
 
 func TestMultipleCUDs(t *testing.T) {
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	ws := hit.WS(istructs.AppQName_test1_app1, "test_ws")
-	num, bts := getUniqueNumber(hit)
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	num, bts := getUniqueNumber(vit)
 
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	hit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body)
 
 	t.Run("duplicate in cuds simple", func(t *testing.T) {
 		t.Run("duplicate with existing", func(t *testing.T) {
@@ -213,16 +212,16 @@ func TestMultipleCUDs(t *testing.T) {
 				{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}},
 				{"fields":{"sys.ID":2,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}
 			]}`, num, bts, num, bts)
-			hit.PostWS(ws, "c.sys.CUD", body, utils.Expect409())
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 		})
 
 		t.Run("duplicate in CUDs", func(t *testing.T) {
-			newNum, newBts := getUniqueNumber(hit)
+			newNum, newBts := getUniqueNumber(vit)
 			body := fmt.Sprintf(`{"cuds":[
 				{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}},
 				{"fields":{"sys.ID":2,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}
 			]}`, newNum, newBts, newNum, newBts)
-			hit.PostWS(ws, "c.sys.CUD", body, utils.Expect409())
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 		})
 	})
 
@@ -232,7 +231,7 @@ func TestMultipleCUDs(t *testing.T) {
 				{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}},
 				{"fields":{"sys.ID":2,"sys.QName":"test.DocConstraints","sys.IsActive":false,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}
 			]}`, num, bts, num, bts)
-			hit.PostWS(ws, "c.sys.CUD", body, utils.Expect409())
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 		})
 		t.Run("three", func(t *testing.T) {
 			body := fmt.Sprintf(`{"cuds":[
@@ -240,29 +239,29 @@ func TestMultipleCUDs(t *testing.T) {
 				{"fields":{"sys.ID":2,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}},
 				{"fields":{"sys.ID":3,"sys.QName":"test.DocConstraints","sys.IsActive":false,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}
 			]}`, num, bts, num, bts, num, bts)
-			hit.PostWS(ws, "c.sys.CUD", body, utils.Expect409())
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 
 			body = fmt.Sprintf(`{"cuds":[
 				{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":false,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}},
 				{"fields":{"sys.ID":2,"sys.QName":"test.DocConstraints","sys.IsActive":false,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}},
 				{"fields":{"sys.ID":3,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}
 			]}`, num, bts, num, bts, num, bts)
-			hit.PostWS(ws, "c.sys.CUD", body, utils.Expect409())
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 		})
 	})
 
 	t.Run("multiple update", func(t *testing.T) {
 		t.Run("update the inactive record", func(t *testing.T) {
-			num, bts := getUniqueNumber(hit)
+			num, bts := getUniqueNumber(vit)
 			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-			id := hit.PostWS(ws, "c.sys.CUD", body).NewID()
+			id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 			t.Run("effectively no changes", func(t *testing.T) {
 				body = fmt.Sprintf(`{"cuds":[
 					{"sys.ID":%d,"fields":{"sys.QName":"test.DocConstraints","sys.IsActive":false}},
 					{"sys.ID":%d,"fields":{"sys.QName":"test.DocConstraints","sys.IsActive":true}}
 				]}`, id, id)
-				hit.PostWS(ws, "c.sys.CUD", body)
+				vit.PostWS(ws, "c.sys.CUD", body)
 			})
 
 			t.Run("effectively no changes but insert a conflicting record", func(t *testing.T) {
@@ -271,17 +270,17 @@ func TestMultipleCUDs(t *testing.T) {
 					{"sys.ID":%d,"fields":{"sys.QName":"test.DocConstraints","sys.IsActive":true}},
 					{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}
 				]}`, id, id, num, bts)
-				hit.PostWS(ws, "c.sys.CUD", body, utils.Expect409())
+				vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 			})
 		})
 		t.Run("update the inactive record", func(t *testing.T) {
-			num, bts := getUniqueNumber(hit)
+			num, bts := getUniqueNumber(vit)
 
 			body := fmt.Sprintf(`{"cuds":[
 				{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":false,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}},
 				{"fields":{"sys.ID":2,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}
 			]}`, num, bts, num, bts)
-			resp := hit.PostWS(ws, "c.sys.CUD", body)
+			resp := vit.PostWS(ws, "c.sys.CUD", body)
 			id1 := resp.NewIDs["1"]
 
 			t.Run("ok to make first conflict by update then fix it immediately because engine stores updates in a map by ID, result is false in our case", func(t *testing.T) {
@@ -292,7 +291,7 @@ func TestMultipleCUDs(t *testing.T) {
 					{"sys.ID":%d,"fields":{"sys.QName":"test.DocConstraints","sys.IsActive":true}},
 					{"sys.ID":%d,"fields":{"sys.QName":"test.DocConstraints","sys.IsActive":false}}
 				]}`, id1, id1)
-				hit.PostWS(ws, "c.sys.CUD", body)
+				vit.PostWS(ws, "c.sys.CUD", body)
 			})
 
 			t.Run("conflict if effectively activating the conflicting record", func(t *testing.T) {
@@ -300,40 +299,40 @@ func TestMultipleCUDs(t *testing.T) {
 					{"sys.ID":%d,"fields":{"sys.QName":"test.DocConstraints","sys.IsActive":false}},
 					{"sys.ID":%d,"fields":{"sys.QName":"test.DocConstraints","sys.IsActive":true}}
 				]}`, id1, id1)
-				hit.PostWS(ws, "c.sys.CUD", body, utils.Expect409())
+				vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 			})
 		})
 
 		t.Run("update and insert in one request", func(t *testing.T) {
-			num, bts := getUniqueNumber(hit)
+			num, bts := getUniqueNumber(vit)
 
 			// insert one inactive
 			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":false,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-			id := hit.PostWS(ws, "c.sys.CUD", body).NewID()
+			id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 			// insert new same (ok) and update the incative one (should be denied)
 			body = fmt.Sprintf(`{"cuds":[
 				{"fields":{"sys.ID":2,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}},
 				{"sys.ID":%d,"fields":{"sys.QName":"test.DocConstraints","sys.IsActive":true}}
 			]}`, num, bts, id)
-			hit.PostWS(ws, "c.sys.CUD", body, utils.Expect409())
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 		})
 	})
 }
 
 func TestBasicUsage_GetUniqueID(t *testing.T) {
 	require := require.New(t)
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	ws := hit.WS(istructs.AppQName_test1_app1, "test_ws")
-	num, bts := getUniqueNumber(hit)
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	num, bts := getUniqueNumber(vit)
 
 	// insert a doc record that has an unique
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	newID := hit.PostWS(ws, "c.sys.CUD", body).NewID()
+	newID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
-	as, err := hit.IAppStructsProvider.AppStructs(istructs.AppQName_test1_app1)
+	as, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
 	// get the IUnique determined by key fields set
@@ -362,7 +361,7 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 	t.Run("id of inactive record", func(t *testing.T) {
 		// let's deactive the record
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.DocConstraints","sys.IsActive":false}}]}`, newID)
-		hit.PostWS(ws, "c.sys.CUD", body)
+		vit.PostWS(ws, "c.sys.CUD", body)
 
 		// NullRecordID for the inactive record
 		obj := &coreutils.TestObject{

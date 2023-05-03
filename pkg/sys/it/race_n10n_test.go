@@ -2,7 +2,7 @@
  * Copyright (c) 2021-present unTill Pro, Ltd.
  */
 
-package heeus_it
+package sys_it
 
 import (
 	"bufio"
@@ -12,7 +12,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/untillpro/airs-bp3/utils"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -21,17 +21,17 @@ func Test_Race_n10n_perSubject(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
 	wg := &sync.WaitGroup{}
 	cnt := 100
-	resps := make(chan *utils.HTTPResponse, cnt)
+	resps := make(chan *coreutils.HTTPResponse, cnt)
 	for i := 0; i < cnt; i++ {
 		wg.Add(1)
 		go func(ai int) {
 			defer wg.Done()
-			resps <- createChannel(hit, ai)
+			resps <- createChannel(vit, ai)
 		}(i)
 	}
 	wg.Wait()
@@ -47,19 +47,19 @@ func Test_Race_n10nCHS(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
 	wg := sync.WaitGroup{}
 	wgSubscribe := &sync.WaitGroup{}
 	cnt := 100
-	resps := make(chan *utils.HTTPResponse, cnt)
+	resps := make(chan *coreutils.HTTPResponse, cnt)
 	for i := 0; i < cnt; i++ {
 		wg.Add(1)
 		wgSubscribe.Add(1)
 		go func(ai int) {
 			defer wg.Done()
-			resp := createChannel(hit, ai)
+			resp := createChannel(vit, ai)
 			subscribe(wgSubscribe, resp)
 			resps <- resp
 		}(i)
@@ -78,21 +78,21 @@ func Test_Race_n10nCHSU(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
 	wg := sync.WaitGroup{}
 	wgSubscribe := &sync.WaitGroup{}
 	cnt := 10
-	resps := make(chan *utils.HTTPResponse, cnt)
+	resps := make(chan *coreutils.HTTPResponse, cnt)
 	for i := 0; i < cnt; i++ {
 		wg.Add(1)
 		wgSubscribe.Add(1)
 		go func(ai int) {
 			defer wg.Done()
-			resp := createChannel(hit, ai)
+			resp := createChannel(vit, ai)
 			subscribe(wgSubscribe, resp)
-			update(hit, ai)
+			update(vit, ai)
 			resps <- resp
 		}(i)
 	}
@@ -105,7 +105,7 @@ func Test_Race_n10nCHSU(t *testing.T) {
 	wgSubscribe.Wait()
 }
 
-func createChannel(hit *it.HIT, ai int) *utils.HTTPResponse {
+func createChannel(vit *it.VIT, ai int) *coreutils.HTTPResponse {
 	query := fmt.Sprintf(`
 		{
 			"SubjectLogin": "paa%d",
@@ -123,11 +123,11 @@ func createChannel(hit *it.HIT, ai int) *utils.HTTPResponse {
 		}`, ai)
 	params := url.Values{}
 	params.Add("payload", string(query))
-	resp := hit.Get(fmt.Sprintf("n10n/channel?%s", params.Encode()), coreutils.WithLongPolling())
+	resp := vit.Get(fmt.Sprintf("n10n/channel?%s", params.Encode()), coreutils.WithLongPolling())
 	return resp
 }
 
-func subscribe(wg *sync.WaitGroup, resp *utils.HTTPResponse) {
+func subscribe(wg *sync.WaitGroup, resp *coreutils.HTTPResponse) {
 	go func() {
 		defer wg.Done()
 		scanner := bufio.NewScanner(resp.HTTPResp.Body)
@@ -140,12 +140,12 @@ func subscribe(wg *sync.WaitGroup, resp *utils.HTTPResponse) {
 	}()
 }
 
-func update(hit *it.HIT, aws int) {
+func update(vit *it.VIT, aws int) {
 	body := fmt.Sprintf(`
 		{
 			"App": "untill/Application",
 			"Projection": "paa.price",
 			"WS": %s
 		}`, strconv.Itoa(aws))
-	hit.Post("n10n/update/13", body)
+	vit.Post("n10n/update/13", body)
 }

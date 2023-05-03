@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package heeus_it
+package sys_it
 
 import (
 	"context"
@@ -11,13 +11,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/smtp"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
 )
@@ -46,13 +46,13 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 		defer func() { goOn <- nil }() // отсигналим, что поймали ошибку context.Cancelled
 		return err
 	}
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
 	// отправим POST-запрос
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
-	ws := hit.DummyWS(istructs.AppQName_test1_app1)
-	hit.PostWSSys(ws, "q.sys.MockQry", body, coreutils.WithResponseHandler(func(httpResp *http.Response) {
+	ws := vit.DummyWS(istructs.AppQName_test1_app1)
+	vit.PostWSSys(ws, "q.sys.MockQry", body, coreutils.WithResponseHandler(func(httpResp *http.Response) {
 		// прочтем первую часть ответа (сервер не отдаст вторую, пока в goOn не запишем чего-нибудь)
 		entireResp := []byte{}
 		var err error
@@ -77,10 +77,10 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 }
 
 func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
-	hitCfg := it.NewOwnHITConfig(
-		it.WithApp(istructs.AppQName_test1_app1, func(hvmCfg *vvm.HVMConfig, hvmAPI vvm.HVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
+	vitCfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app1, func(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
 
-			sys.Provide(hvmCfg.TimeFunc, cfg, adf, hvmAPI, smtp.Cfg{}, sep)
+			sys.Provide(vvmCfg.TimeFunc, cfg, adf, vvmAPI, smtp.Cfg{}, sep)
 
 			cdocQName := appdef.NewQName("test", "cdoc")
 			adf.AddStruct(cdocQName, appdef.DefKind_CDoc)
@@ -114,10 +114,10 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 			cfg.Resources.Add(cmd2CUDs)
 		}, it.WithUserLogin("login", "1")),
 	)
-	hit := it.NewHIT(t, &hitCfg)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &vitCfg)
+	defer vit.TearDown()
 
-	prn := hit.GetPrincipal(istructs.AppQName_test1_app1, "login")
-	resp := hit.PostProfile(prn, "c.sys.testCmd", "{}", utils.Expect409())
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
+	resp := vit.PostProfile(prn, "c.sys.testCmd", "{}", coreutils.Expect409())
 	resp.Println()
 }

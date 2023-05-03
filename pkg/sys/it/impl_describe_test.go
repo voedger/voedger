@@ -2,7 +2,7 @@
  * Copyright (c) 2020-present unTill Pro, Ltd.
  */
 
-package heeus_it
+package sys_it
 
 import (
 	"encoding/json"
@@ -16,14 +16,14 @@ import (
 
 func TestBasicUsage_DescribeSchema(t *testing.T) {
 	require := require.New(t)
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
-	prn := hit.GetPrincipal(istructs.AppQName_test1_app1, "login")
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
 
 	t.Run("describe package names", func(t *testing.T) {
 		body := `{"args":{},"elements":[{"fields":["Names"]}]}`
-		namesStr := hit.PostProfile(prn, "q.sys.DescribePackageNames", body).SectionRow()[0].(string)
+		namesStr := vit.PostProfile(prn, "q.sys.DescribePackageNames", body).SectionRow()[0].(string)
 		names := strings.Split(namesStr, ",")
 		require.Len(names, 5)
 		require.Contains(names, "sys")
@@ -35,7 +35,7 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 
 	t.Run("describe package", func(t *testing.T) {
 		body := `{"args":{"PackageName":"my"},"elements":[{"fields":["PackageDesc"]}]}`
-		desc := hit.PostProfile(prn, "q.sys.DescribePackage", body).SectionRow()[0].(string)
+		desc := vit.PostProfile(prn, "q.sys.DescribePackage", body).SectionRow()[0].(string)
 
 		actual := map[string]interface{}{}
 		require.NoError(json.Unmarshal([]byte(desc), &actual))

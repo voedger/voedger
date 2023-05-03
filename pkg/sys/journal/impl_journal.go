@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
@@ -62,7 +63,7 @@ func qryJournalExec(jdi vvm.IEPJournalIndices, jp vvm.IEPJournalPredicates, appD
 			if fo == int64(0) {
 				return
 			}
-			eo, err := NewEventObject(value.AsEvent("").(istructs.IWLogEvent), appDef, f, corecoreutils.WithNonNilsOnly())
+			eo, err := NewEventObject(value.AsEvent("").(istructs.IWLogEvent), appDef, f, coreutils.WithNonNilsOnly())
 			if err != nil {
 				return err
 			}

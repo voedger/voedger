@@ -2,7 +2,7 @@
  * Copyright (c) 2023-present unTill Pro, Ltd.
  */
 
-package heeus_it
+package sys_it
 
 import (
 	"fmt"
@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/invite"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -21,10 +22,10 @@ func TestInvite_BasicUsage(t *testing.T) {
 	//TODO Daniil fix it
 	t.Skip("Daniil fix it https://dev.untill.com/projects/#!639145")
 	require := require.New(t)
-	hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	defer hit.TearDown()
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 	wsName := "test_ws"
-	ws := hit.WS(istructs.AppQName_test1_app1, wsName)
+	ws := vit.WS(istructs.AppQName_test1_app1, wsName)
 	inviteEmailTemplate := "text:" + strings.Join([]string{
 		invite.EmailTemplatePlaceholder_VerificationCode,
 		invite.EmailTemplatePlaceholder_InviteID,
@@ -35,7 +36,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	inviteEmailSubject := "you are invited"
 	updateRolesEmailTemplate := "text:" + invite.EmailTemplatePlaceholder_Roles
 	updateRolesEmailSubject := "your roles are updated"
-	expireDatetime := hit.Now().UnixMilli()
+	expireDatetime := vit.Now().UnixMilli()
 	expireDatetimeStr := strconv.FormatInt(expireDatetime, 10)
 	verificationCode := expireDatetimeStr[len(expireDatetimeStr)-6:]
 	initialRoles := "initial.Roles"
@@ -43,23 +44,23 @@ func TestInvite_BasicUsage(t *testing.T) {
 
 	initiateInvitationByEMail := func(email string) (inviteID int64) {
 		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`, email, initialRoles, expireDatetime, inviteEmailTemplate, inviteEmailSubject)
-		return hit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
+		return vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
 	}
 
 	initiateJoinWorkspace := func(inviteID int64, login string) {
-		profile := hit.GetPrincipal(istructs.AppQName_test1_app1, login)
-		hit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), coreutils.WithAuthorizeBy(profile.Token))
+		profile := vit.GetPrincipal(istructs.AppQName_test1_app1, login)
+		vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), coreutils.WithAuthorizeBy(profile.Token))
 	}
 
 	initiateUpdateInviteRoles := func(inviteID int64) {
-		hit.PostWS(ws, "c.sys.InitiateUpdateInviteRoles", fmt.Sprintf(`{"args":{"InviteID":%d,"Roles":"%s","EmailTemplate":"%s","EmailSubject":"%s"}}`, inviteID, updatedRoles, updateRolesEmailTemplate, updateRolesEmailSubject))
+		vit.PostWS(ws, "c.sys.InitiateUpdateInviteRoles", fmt.Sprintf(`{"args":{"InviteID":%d,"Roles":"%s","EmailTemplate":"%s","EmailSubject":"%s"}}`, inviteID, updatedRoles, updateRolesEmailTemplate, updateRolesEmailSubject))
 	}
 
 	waitForInviteState := func(inviteState int32, inviteID int64) {
 		deadline := time.Now().Add(time.Second * 5)
 		var entity []interface{}
 		for time.Now().Before(deadline) {
-			entity = hit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
+			entity = vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
 			{"args":{"Schema":"sys.Invite"},
 			"elements":[{"fields":["State","sys.ID"]}],
 			"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, inviteID)).SectionRow(0)
@@ -71,7 +72,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	}
 
 	findCDocInviteByID := func(inviteID int64) []interface{} {
-		return hit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
+		return vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
 			{"args":{"Schema":"sys.Invite"},
 			"elements":[{"fields":[
 				"SubjectKind",
@@ -91,7 +92,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	}
 
 	findCDocSubjectByLogin := func(login string) []interface{} {
-		return hit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
+		return vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
 			{"args":{"Schema":"sys.Subject"},
 			"elements":[{"fields":[
 				"Login",
@@ -104,7 +105,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	}
 
 	findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin := func(invitingWorkspaceWSID istructs.WSID, login string) []interface{} {
-		return hit.PostProfile(hit.GetPrincipal(istructs.AppQName_test1_app1, login), "q.sys.Collection", fmt.Sprintf(`
+		return vit.PostProfile(vit.GetPrincipal(istructs.AppQName_test1_app1, login), "q.sys.Collection", fmt.Sprintf(`
 			{"args":{"Schema":"sys.JoinedWorkspace"},
 			"elements":[{"fields":[
 				"sys.ID",
@@ -131,14 +132,14 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(it.TestEmail, cDocInvite[2])
 	require.Equal(initialRoles, cDocInvite[3])
 	require.Equal(float64(expireDatetime), cDocInvite[4])
-	require.Equal(float64(hit.Now().UnixMilli()), cDocInvite[7])
-	require.Equal(float64(hit.Now().UnixMilli()), cDocInvite[8])
+	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[7])
+	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	//Check that emails were send
-	require.Equal(verificationCode, strings.Split(hit.ExpectEmail().Capture().Body, ";")[0])
-	require.Equal(verificationCode, strings.Split(hit.ExpectEmail().Capture().Body, ";")[0])
+	require.Equal(verificationCode, strings.Split(vit.ExpectEmail().Capture().Body, ";")[0])
+	require.Equal(verificationCode, strings.Split(vit.ExpectEmail().Capture().Body, ";")[0])
 
-	message := hit.ExpectEmail().Capture()
+	message := vit.ExpectEmail().Capture()
 	ss := strings.Split(message.Body, ";")
 	require.Equal(inviteEmailSubject, message.Subject)
 	require.Equal(invite.EmailFrom, message.From)
@@ -156,14 +157,14 @@ func TestInvite_BasicUsage(t *testing.T) {
 	cDocInvite = findCDocInviteByID(inviteID2)
 
 	require.Equal(verificationCode, cDocInvite[5])
-	require.Equal(float64(hit.Now().UnixMilli()), cDocInvite[8])
+	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	//Cancel then invite it again (inviteID3)
-	hit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID3))
+	vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID3))
 	waitForInviteState(invite.State_Cancelled, inviteID3)
 	initiateInvitationByEMail(it.TestEmail3)
 	waitForInviteState(invite.State_ToBeInvited, inviteID3)
-	_ = hit.ExpectEmail().Capture()
+	_ = vit.ExpectEmail().Capture()
 	waitForInviteState(invite.State_Invited, inviteID3)
 
 	//Join workspaces
@@ -175,9 +176,9 @@ func TestInvite_BasicUsage(t *testing.T) {
 
 	cDocInvite = findCDocInviteByID(inviteID2)
 
-	require.Equal(float64(hit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail2).ProfileWSID), cDocInvite[10])
+	require.Equal(float64(vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail2).ProfileWSID), cDocInvite[10])
 	require.Equal(float64(istructs.SubjectKind_User), cDocInvite[0])
-	require.Equal(float64(hit.Now().UnixMilli()), cDocInvite[8])
+	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	waitForInviteState(invite.State_Joined, inviteID)
 	waitForInviteState(invite.State_Joined, inviteID2)
@@ -202,11 +203,11 @@ func TestInvite_BasicUsage(t *testing.T) {
 
 	cDocInvite = findCDocInviteByID(inviteID)
 
-	require.Equal(float64(hit.Now().UnixMilli()), cDocInvite[8])
+	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	//Check that emails were send
-	require.Equal(updatedRoles, hit.ExpectEmail().Capture().Body)
-	message = hit.ExpectEmail().Capture()
+	require.Equal(updatedRoles, vit.ExpectEmail().Capture().Body)
+	message = vit.ExpectEmail().Capture()
 	require.Equal(updateRolesEmailSubject, message.Subject)
 	require.Equal(invite.EmailFrom, message.From)
 	require.Equal([]string{it.TestEmail2}, message.To)
@@ -222,13 +223,13 @@ func TestInvite_BasicUsage(t *testing.T) {
 	waitForInviteState(invite.State_Joined, inviteID2)
 
 	//Cancel accepted invite
-	hit.PostWS(ws, "c.sys.InitiateCancelAcceptedInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
+	vit.PostWS(ws, "c.sys.InitiateCancelAcceptedInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
 
 	waitForInviteState(invite.State_ToBeCancelled, inviteID)
 
 	cDocInvite = findCDocInviteByID(inviteID)
 
-	require.Equal(float64(hit.Now().UnixMilli()), cDocInvite[8])
+	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	waitForInviteState(invite.State_Cancelled, inviteID)
 
@@ -238,16 +239,16 @@ func TestInvite_BasicUsage(t *testing.T) {
 
 	cDocInvite = findCDocInviteByID(inviteID)
 
-	require.Equal(float64(hit.Now().UnixMilli()), cDocInvite[8])
+	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	//Leave workspace
-	hit.PostWS(ws, "c.sys.InitiateLeaveWorkspace", "{}", coreutils.WithAuthorizeBy(hit.GetPrincipal(ws.Owner.AppQName, it.TestEmail2).Token))
+	vit.PostWS(ws, "c.sys.InitiateLeaveWorkspace", "{}", coreutils.WithAuthorizeBy(vit.GetPrincipal(ws.Owner.AppQName, it.TestEmail2).Token))
 
 	waitForInviteState(invite.State_ToBeLeft, inviteID2)
 
 	cDocInvite = findCDocInviteByID(inviteID2)
 
-	require.Equal(float64(hit.Now().UnixMilli()), cDocInvite[8])
+	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	waitForInviteState(invite.State_Left, inviteID2)
 
@@ -262,20 +263,20 @@ func TestCancelSentInvite(t *testing.T) {
 	//TODO Fix it Daniil
 	t.Skip("Fix it Daniil")
 	//require := require.New(t)
-	//hit := it.NewHIT(t, &it.SharedConfig_Simple)
-	//defer hit.TearDown()
-	//ws := hit.WS(istructs.AppQName_test1_app1, "test_ws")
+	//vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	//defer vit.TearDown()
+	//ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	//
 	//t.Run("Should be ok", func(t *testing.T) {
 	//	body := `{"args":{"Email":"user@acme.com","Roles":"trolles","ExpireDatetime":1674751138000,"NewLoginEmailTemplate":"text:","ExistingLoginEmailTemplate":"text:"}}`
-	//	inviteID := hit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
-	//	//Read it for successful HIT tear down
-	//	_ = hit.ExpectEmail().Capture()
+	//	inviteID := vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
+	//	//Read it for successful vit tear down
+	//	_ = vit.ExpectEmail().Capture()
 	//
-	//	hit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
+	//	vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
 	//})
 	//t.Run("Should be not ok", func(t *testing.T) {
-	//	resp := hit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, -100), utils.Expect400())
+	//	resp := vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, -100), coreutils.Expect400())
 	//
 	//	require.Equal(coreutils.NewHTTPError(http.StatusBadRequest, invite.errInviteNotExists), resp.SysError)
 	//})
