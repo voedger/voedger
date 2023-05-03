@@ -83,7 +83,7 @@ func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp ist
 		// c.sys.SendEmailVerificationCode
 		body := fmt.Sprintf(`{"args":{"VerificationCode":"%s","Email":"%s","Reason":"%s"}}`, verificationCode, email, verifyEmailReason)
 		if _, err = utils.FederationFunc(federationURL(), fmt.Sprintf("api/%s/%d/c.sys.SendEmailVerificationCode", appQName, args.Workspace), body,
-			utils.WithDiscardResponse(), utils.WithAuthorizeBy(systemPrincipalToken)); err != nil {
+			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(systemPrincipalToken)); err != nil {
 			return fmt.Errorf("c.sys.SendEmailVerificationCode failed: %w", err)
 		}
 

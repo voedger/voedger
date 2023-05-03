@@ -61,7 +61,7 @@ func applyJoinWorkspace(timeFunc func() time.Time, federationURL func() *url.URL
 			fmt.Sprintf("api/%s/%d/c.sys.CreateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d,"WSName":"%s"}}`,
 				svCDocInvite.AsString(Field_Roles), event.Workspace(), svCDocWorkspaceDescriptor.AsString(authnz.Field_WSName)),
-			utils.WithAuthorizeBy(token))
+			coreutils.WithAuthorizeBy(token))
 		if err != nil {
 			return
 		}
@@ -99,7 +99,7 @@ func applyJoinWorkspace(timeFunc func() time.Time, federationURL func() *url.URL
 			federationURL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			body,
-			utils.WithAuthorizeBy(token))
+			coreutils.WithAuthorizeBy(token))
 		if err != nil {
 			return
 		}
@@ -115,7 +115,7 @@ func applyJoinWorkspace(timeFunc func() time.Time, federationURL func() *url.URL
 			federationURL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			body,
-			utils.WithAuthorizeBy(token))
+			coreutils.WithAuthorizeBy(token))
 
 		return err
 	}

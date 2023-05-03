@@ -52,7 +52,7 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 	// отправим POST-запрос
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 	ws := hit.DummyWS(istructs.AppQName_test1_app1)
-	hit.PostWSSys(ws, "q.sys.MockQry", body, utils.WithResponseHandler(func(httpResp *http.Response) {
+	hit.PostWSSys(ws, "q.sys.MockQry", body, coreutils.WithResponseHandler(func(httpResp *http.Response) {
 		// прочтем первую часть ответа (сервер не отдаст вторую, пока в goOn не запишем чего-нибудь)
 		entireResp := []byte{}
 		var err error

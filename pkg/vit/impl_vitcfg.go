@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/appdef"
 	blobberapp "github.com/voedger/voedger/pkg/apps/sys/blobber"
 	registryapp "github.com/voedger/voedger/pkg/apps/sys/registry"
@@ -54,7 +53,7 @@ func WithUserLogin(name, pwd string, opts ...PostConstructFunc) AppOptFunc {
 	}
 }
 
-func WithWorkspaceTemplate(wsKind appdef.QName, templateName string, templateFS utils.EmbedFS) AppOptFunc {
+func WithWorkspaceTemplate(wsKind appdef.QName, templateName string, templateFS coreutils.EmbedFS) AppOptFunc {
 	return func(app *app, cfg *vvm.VVMConfig) {
 		app.wsTemplateFuncs = append(app.wsTemplateFuncs, func(sep vvm.IStandardExtensionPoints) {
 			epWSKindTemplates := sep.EPWSTemplates().ExtensionPoint(wsKind)

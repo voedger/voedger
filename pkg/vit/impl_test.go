@@ -15,7 +15,6 @@ import (
 	"unsafe"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
@@ -164,26 +163,26 @@ func TestBasicUsage_POST(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("low-level POST with authorization by token", func(t *testing.T) {
-		vit.Post(fmt.Sprintf("api/test1/app1/%d/c.sys.CUD", ws.WSID), bodyCUD, utils.Expect403())
-		httpResp = vit.Post(fmt.Sprintf("api/test1/app1/%d/c.sys.CUD", ws.WSID), bodyCUD, utils.WithAuthorizeBy(ws.Owner.Token))
+		vit.Post(fmt.Sprintf("api/test1/app1/%d/c.sys.CUD", ws.WSID), bodyCUD, coreutils.Expect403())
+		httpResp = vit.Post(fmt.Sprintf("api/test1/app1/%d/c.sys.CUD", ws.WSID), bodyCUD, corecoreutils.WithAuthorizeBy(ws.Owner.Token))
 		httpResp.Println()
 	})
 
 	t.Run("low-level POST with authorization by header", func(t *testing.T) {
-		httpResp = vit.Post(fmt.Sprintf("api/test1/app1/%d/c.sys.CUD", ws.WSID), bodyCUD, utils.WithHeaders(coreutils.Authorization, "Bearer "+ws.Owner.Token))
+		httpResp = vit.Post(fmt.Sprintf("api/test1/app1/%d/c.sys.CUD", ws.WSID), bodyCUD, corecoreutils.WithHeaders(coreutils.Authorization, "Bearer "+ws.Owner.Token))
 		httpResp.Println()
 	})
 
 	t.Run("headers and cookies", func(t *testing.T) {
 		vit.PostWS(ws, "q.sys.Echo", bodyEcho,
-			utils.WithHeaders("Test-header", "Test header value"),
-			utils.WithCookies("Test-cookie", "test cookie value"),
+			corecoreutils.WithHeaders("Test-header", "Test header value"),
+			corecoreutils.WithCookies("Test-cookie", "test cookie value"),
 		)
 	})
 
 	t.Run("app-level POST with authorization", func(t *testing.T) {
-		vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", bodyCUD, utils.Expect403())
-		resp := vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", bodyCUD, utils.WithAuthorizeBy(ws.Owner.Token)) // FuncResponse is returned
+		vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", bodyCUD, coreutils.Expect403())
+		resp := vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", bodyCUD, corecoreutils.WithAuthorizeBy(ws.Owner.Token)) // FuncResponse is returned
 		require.True(resp.NewID() > 0)
 		require.True(resp.CurrentWLogOffset > 0)
 		require.Empty(resp.Sections)                 // not used for commands
@@ -191,7 +190,7 @@ func TestBasicUsage_POST(t *testing.T) {
 	})
 
 	t.Run("custom response handler", func(t *testing.T) {
-		resp := vit.PostWS(ws, "q.sys.Echo", bodyEcho, utils.WithResponseHandler(func(httpResp *http.Response) {
+		resp := vit.PostWS(ws, "q.sys.Echo", bodyEcho, corecoreutils.WithResponseHandler(func(httpResp *http.Response) {
 			bytes, err := io.ReadAll(httpResp.Body)
 			require.Nil(err, err)
 			log.Println(string(bytes))

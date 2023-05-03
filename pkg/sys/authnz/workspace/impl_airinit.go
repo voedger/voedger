@@ -30,7 +30,7 @@ func airWSPostInit(targetAppQName istructs.AppQName, newWSID istructs.WSID, fede
 	//Get sys.WorkspaceDescriptor
 	collectionURL := fmt.Sprintf("api/%s/%d/q.sys.Collection", targetAppQName.String(), newWSID)
 	body := `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["OwnerWSID"]}]}`
-	resp, err := utils.FederationFunc(federationURL, collectionURL, body, utils.WithAuthorizeBy(authToken))
+	resp, err := utils.FederationFunc(federationURL, collectionURL, body, coreutils.WithAuthorizeBy(authToken))
 	if err != nil {
 		return
 	}
@@ -39,7 +39,7 @@ func airWSPostInit(targetAppQName istructs.AppQName, newWSID istructs.WSID, fede
 	//Get air.UserProfile
 	collectionURL = fmt.Sprintf("api/%s/%d/q.sys.Collection", targetAppQName.String(), int64(workspaceDescriptor[0].(float64)))
 	body = `{"args":{"Schema":"air.UserProfile"},"elements":[{"fields":["sys.ID","Country"]}]}`
-	resp, err = utils.FederationFunc(federationURL, collectionURL, body, utils.WithAuthorizeBy(authToken))
+	resp, err = utils.FederationFunc(federationURL, collectionURL, body, coreutils.WithAuthorizeBy(authToken))
 	if err != nil {
 		return
 	}
@@ -79,7 +79,7 @@ func airWSPostInit(targetAppQName istructs.AppQName, newWSID istructs.WSID, fede
 		}
 
 		initURL := fmt.Sprintf("api/%s/%d/c.sys.Init", targetAppQName.String(), newWSID)
-		resp, err = utils.FederationFunc(federationURL, initURL, string(bb), utils.WithAuthorizeBy(authToken))
+		resp, err = utils.FederationFunc(federationURL, initURL, string(bb), coreutils.WithAuthorizeBy(authToken))
 		if err != nil {
 			return
 		}
@@ -91,7 +91,7 @@ func airWSPostInit(targetAppQName istructs.AppQName, newWSID istructs.WSID, fede
 	newTicketBLOBIDs := make(map[interface{}]interface{})
 	for code, blob := range airc_ticket_layouts.ProvideTicketLayouts() {
 		blobURL := fmt.Sprintf("blob/%s/%d?name=ticketData&mimeType=application/x-binary", targetAppQName, newWSID)
-		resp, err := utils.FederationPOST(federationURL, blobURL, blob, utils.WithAuthorizeBy(authToken), utils.WithHeaders(coreutils.ContentType, "application/x-www-form-urlencoded"))
+		resp, err := utils.FederationPOST(federationURL, blobURL, blob, coreutils.WithAuthorizeBy(authToken), coreutils.WithHeaders(coreutils.ContentType, "application/x-www-form-urlencoded"))
 		if err != nil {
 			return err
 		}
@@ -139,7 +139,7 @@ func airWSPostInit(targetAppQName istructs.AppQName, newWSID istructs.WSID, fede
 	}
 
 	initURL := fmt.Sprintf("api/%s/%d/c.sys.Init", targetAppQName.String(), newWSID)
-	resp, err = utils.FederationFunc(federationURL, initURL, string(bb), utils.WithAuthorizeBy(authToken))
+	resp, err = utils.FederationFunc(federationURL, initURL, string(bb), coreutils.WithAuthorizeBy(authToken))
 	if err != nil {
 		return
 	}
@@ -148,7 +148,7 @@ func airWSPostInit(targetAppQName istructs.AppQName, newWSID istructs.WSID, fede
 	//Get air.Restaurant
 	collectionURL = fmt.Sprintf("api/%s/%d/q.sys.Collection", targetAppQName.String(), newWSID)
 	body = `{"args":{"Schema":"air.Restaurant"},"elements":[{"fields":["sys.ID"]}]}`
-	resp, err = utils.FederationFunc(federationURL, collectionURL, body, utils.WithAuthorizeBy(authToken))
+	resp, err = utils.FederationFunc(federationURL, collectionURL, body, coreutils.WithAuthorizeBy(authToken))
 	if err != nil {
 		return
 	}
@@ -173,7 +173,7 @@ func airWSPostInit(targetAppQName istructs.AppQName, newWSID istructs.WSID, fede
 
 	cudURL := fmt.Sprintf("api/%s/%d/c.sys.CUD", targetAppQName.String(), newWSID)
 	body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":%s}]}`, int64(restaurant[0].(float64)), string(bb))
-	_, err = utils.FederationFunc(federationURL, cudURL, body, utils.WithAuthorizeBy(authToken), utils.WithDiscardResponse())
+	_, err = utils.FederationFunc(federationURL, cudURL, body, coreutils.WithAuthorizeBy(authToken), coreutils.WithDiscardResponse())
 
 	return err
 }

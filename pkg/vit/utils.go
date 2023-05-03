@@ -28,7 +28,7 @@ import (
 
 func (hit *VIT) GetBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID int64, token string) *BLOB {
 	hit.T.Helper()
-	resp, err := utils.FederationReq(hit.FederationURL(), fmt.Sprintf(`blob/%s/%d/%d`, appQName.String(), wsid, blobID), "", utils.WithAuthorizeBy(token))
+	resp, err := utils.FederationReq(hit.FederationURL(), fmt.Sprintf(`blob/%s/%d/%d`, appQName.String(), wsid, blobID), "", coreutils.WithAuthorizeBy(token))
 	require.NoError(hit.T, err)
 	contentDisposition := resp.HTTPResp.Header.Get("Content-Disposition")
 	_, params, err := mime.ParseMediaType(contentDisposition)
@@ -93,7 +93,7 @@ func (hit *VIT) GetCDocLoginID(login Login) int64 {
 	body := fmt.Sprintf(`{"args":{"query":"select CDocLoginID from sys.LoginIdx where AppWSID = %d and AppIDLoginHash = '%s/%s'"}, "elements":[{"fields":["Result"]}]}`,
 		appWSID, login.AppQName, signupin.GetLoginHash(login.Name))
 	sys := hit.GetSystemPrincipal(istructs.AppQName_sys_registry)
-	resp := hit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.sys.SqlQuery", body, utils.WithAuthorizeBy(sys.Token))
+	resp := hit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sys.Token))
 	m := map[string]interface{}{}
 	require.NoError(hit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
 	return int64(m["CDocLoginID"].(float64))
@@ -121,7 +121,7 @@ func (hit *VIT) getCDoc(appQName istructs.AppQName, qName appdef.QName, wsid ist
 	})
 	body.WriteString("]}]}")
 	sys := hit.GetSystemPrincipal(appQName)
-	resp := hit.PostApp(appQName, wsid, "q.sys.Collection", body.String(), utils.WithAuthorizeBy(sys.Token))
+	resp := hit.PostApp(appQName, wsid, "q.sys.Collection", body.String(), coreutils.WithAuthorizeBy(sys.Token))
 	if len(resp.Sections) == 0 {
 		hit.T.Fatalf("no CDoc<%s> at workspace id %d", qName.String(), wsid)
 	}
@@ -287,7 +287,7 @@ func (hit *VIT) SubscribeForN10n(ws *AppWorkspace, viewQName appdef.QName) chan 
 		ws.WSID, ws.Owner.AppQName, viewQName, ws.WSID)
 	params.Add("payload", query)
 	httpResp, err := utils.FederationReq(hit.FederationURL(), fmt.Sprintf("n10n/channel?%s", params.Encode()), "",
-		utils.WithLongPolling())
+		coreutils.WithLongPolling())
 	require.NoError(hit.T, err)
 
 	scanner := bufio.NewScanner(httpResp.HTTPResp.Body)

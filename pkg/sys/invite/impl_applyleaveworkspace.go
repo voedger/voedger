@@ -65,7 +65,7 @@ func applyLeaveWorkspace(timeFunc func() time.Time, federationURL func() *url.UR
 				federationURL(),
 				fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID)),
-				utils.WithAuthorizeBy(token))
+				coreutils.WithAuthorizeBy(token))
 			if err != nil {
 				return
 			}
@@ -75,7 +75,7 @@ func applyLeaveWorkspace(timeFunc func() time.Time, federationURL func() *url.UR
 				federationURL(),
 				fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 				fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
-				utils.WithAuthorizeBy(token))
+				coreutils.WithAuthorizeBy(token))
 			if err != nil {
 				return
 			}
@@ -85,7 +85,7 @@ func applyLeaveWorkspace(timeFunc func() time.Time, federationURL func() *url.UR
 				federationURL(),
 				fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, rec.ID(), State_Left, timeFunc().UnixMilli()),
-				utils.WithAuthorizeBy(token))
+				coreutils.WithAuthorizeBy(token))
 
 			return
 		})

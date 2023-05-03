@@ -40,15 +40,15 @@ func TestMetricsService(t *testing.T) {
 	defer hit.TearDown()
 
 	t.Run("service check", func(t *testing.T) {
-		log.Println(hit.MetricsRequest(utils.WithRelativeURL("/metrics/check")))
+		log.Println(hit.MetricsRequest(coreutils.WithRelativeURL("/metrics/check")))
 	})
 
 	t.Run("404 on wrong url", func(t *testing.T) {
-		log.Println(hit.MetricsRequest(utils.WithRelativeURL("/unknown"), utils.Expect404()))
+		log.Println(hit.MetricsRequest(coreutils.WithRelativeURL("/unknown"), utils.Expect404()))
 	})
 
 	t.Run("404 on wrong method", func(t *testing.T) {
-		log.Println(hit.MetricsRequest(utils.WithMethod(http.MethodPost), utils.Expect404()))
+		log.Println(hit.MetricsRequest(coreutils.WithMethod(http.MethodPost), utils.Expect404()))
 	})
 }
 

@@ -14,7 +14,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	airsbp_it "github.com/untillpro/airs-bp3/packages/air/it"
-	"github.com/untillpro/airs-bp3/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -42,7 +41,7 @@ func TestBasicUsage_n10n(t *testing.T) {
 		}`
 	params := url.Values{}
 	params.Add("payload", query)
-	resp := hit.Get(fmt.Sprintf("n10n/channel?%s", params.Encode()), utils.WithLongPolling())
+	resp := hit.Get(fmt.Sprintf("n10n/channel?%s", params.Encode()), coreutils.WithLongPolling())
 
 	done := make(chan interface{})
 	channelID := ""

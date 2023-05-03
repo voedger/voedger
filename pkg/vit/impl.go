@@ -292,57 +292,57 @@ func (vit *VIT) GetPrincipal(appQName istructs.AppQName, login string) *Principa
 	return prn
 }
 
-func (vit *VIT) PostProfile(prn *Principal, funcName string, body string, opts ...utils.ReqOptFunc) *utils.FuncResponse {
+func (vit *VIT) PostProfile(prn *Principal, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
-	opts = append(opts, utils.WithAuthorizeByIfNot(prn.Token))
+	opts = append(opts, coreutils.WithAuthorizeByIfNot(prn.Token))
 	return vit.PostApp(prn.AppQName, prn.ProfileWSID, funcName, body, opts...)
 }
 
-func (vit *VIT) PostWS(ws *AppWorkspace, funcName string, body string, opts ...utils.ReqOptFunc) *utils.FuncResponse {
+func (vit *VIT) PostWS(ws *AppWorkspace, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
-	opts = append(opts, utils.WithAuthorizeByIfNot(ws.Owner.Token))
+	opts = append(opts, coreutils.WithAuthorizeByIfNot(ws.Owner.Token))
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
 // PostWSSys is PostWS authorized by the System Token
-func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts ...utils.ReqOptFunc) *utils.FuncResponse {
+func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
 	sysPrn := vit.GetSystemPrincipal(ws.Owner.AppQName)
-	opts = append(opts, utils.WithAuthorizeByIfNot(sysPrn.Token))
+	opts = append(opts, coreutils.WithAuthorizeByIfNot(sysPrn.Token))
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
-func (vit *VIT) PostFree(url string, body string, opts ...utils.ReqOptFunc) *utils.HTTPResponse {
+func (vit *VIT) PostFree(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	opts = append(opts, utils.WithMethod(http.MethodPost))
-	res, err := utils.Req(url, body, opts...)
+	opts = append(opts, coreutils.WithMethod(http.MethodPost))
+	res, err := coreutils.Req(url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
 }
 
-func (vit *VIT) Post(url string, body string, opts ...utils.ReqOptFunc) *utils.HTTPResponse {
+func (vit *VIT) Post(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	res, err := utils.FederationPOST(vit.FederationURL(), url, body, opts...)
+	res, err := coreutils.FederationPOST(vit.FederationURL(), url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
 }
 
-func (vit *VIT) PostApp(appQName istructs.AppQName, wsid istructs.WSID, funcName string, body string, opts ...utils.ReqOptFunc) *utils.FuncResponse {
+func (vit *VIT) PostApp(appQName istructs.AppQName, wsid istructs.WSID, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
 	url := fmt.Sprintf("api/%s/%d/%s", appQName, wsid, funcName)
-	res, err := utils.FederationFunc(vit.FederationURL(), url, body, opts...)
+	res, err := coreutils.FederationFunc(vit.FederationURL(), url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
 }
 
-func (vit *VIT) Get(url string, opts ...utils.ReqOptFunc) *utils.HTTPResponse {
+func (vit *VIT) Get(url string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	res, err := utils.FederationReq(vit.FederationURL(), url, "", opts...)
+	res, err := coreutils.FederationReq(vit.FederationURL(), url, "", opts...)
 	require.NoError(vit.T, err)
 	return res
 }
 
-func (vit *VIT) WaitFor(consumer func() *utils.FuncResponse) *utils.FuncResponse {
+func (vit *VIT) WaitFor(consumer func() *coreutils.FuncResponse) *coreutils.FuncResponse {
 	vit.T.Helper()
 	start := time.Now()
 	for time.Since(start) < testTimeout {

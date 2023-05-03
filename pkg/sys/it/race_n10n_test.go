@@ -123,7 +123,7 @@ func createChannel(hit *it.HIT, ai int) *utils.HTTPResponse {
 		}`, ai)
 	params := url.Values{}
 	params.Add("payload", string(query))
-	resp := hit.Get(fmt.Sprintf("n10n/channel?%s", params.Encode()), utils.WithLongPolling())
+	resp := hit.Get(fmt.Sprintf("n10n/channel?%s", params.Encode()), coreutils.WithLongPolling())
 	return resp
 }
 

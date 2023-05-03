@@ -38,8 +38,8 @@ func TestBasicUsage_BLOBProcessors(t *testing.T) {
 
 	// write
 	resp := hit.Post(fmt.Sprintf(`blob/test1/app1/%d?name=test&mimeType=application/x-binary`, ws.WSID), string(expBLOB),
-		utils.WithAuthorizeBy(systemPrincipal),
-		utils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
+		coreutils.WithAuthorizeBy(systemPrincipal),
+		coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
 	)
 	blobID, err := strconv.Atoi(resp.Body)
 	require.NoError(err)
@@ -47,7 +47,7 @@ func TestBasicUsage_BLOBProcessors(t *testing.T) {
 
 	// read, authorize over headers
 	resp = hit.Get(fmt.Sprintf(`blob/test1/app1/%d/%d`, ws.WSID, blobID),
-		utils.WithAuthorizeBy(systemPrincipal),
+		coreutils.WithAuthorizeBy(systemPrincipal),
 	)
 	actBLOB := []byte(resp.Body)
 	require.Equal("application/x-binary", resp.HTTPResp.Header["Content-Type"][0])
@@ -56,7 +56,7 @@ func TestBasicUsage_BLOBProcessors(t *testing.T) {
 
 	// read, authorize over unescaped cookies
 	resp = hit.Get(fmt.Sprintf(`blob/test1/app1/%d/%d`, ws.WSID, blobID),
-		utils.WithCookies(coreutils.Authorization, "Bearer "+systemPrincipal),
+		coreutils.WithCookies(coreutils.Authorization, "Bearer "+systemPrincipal),
 	)
 	actBLOB = []byte(resp.Body)
 	require.Equal("application/x-binary", resp.HTTPResp.Header["Content-Type"][0])
@@ -65,7 +65,7 @@ func TestBasicUsage_BLOBProcessors(t *testing.T) {
 
 	// read, authorize over escaped cookies
 	resp = hit.Get(fmt.Sprintf(`blob/test1/app1/%d/%d`, ws.WSID, blobID),
-		utils.WithCookies(coreutils.Authorization, "Bearer%20"+systemPrincipal),
+		coreutils.WithCookies(coreutils.Authorization, "Bearer%20"+systemPrincipal),
 	)
 	actBLOB = []byte(resp.Body)
 	require.Equal("application/x-binary", resp.HTTPResp.Header["Content-Type"][0])
@@ -74,7 +74,7 @@ func TestBasicUsage_BLOBProcessors(t *testing.T) {
 
 	// read, POST
 	resp = hit.Post(fmt.Sprintf(`blob/test1/app1/%d/%d`, ws.WSID, blobID), "",
-		utils.WithAuthorizeBy(systemPrincipal),
+		coreutils.WithAuthorizeBy(systemPrincipal),
 	)
 	actBLOB = []byte(resp.Body)
 	require.Equal("application/x-binary", resp.HTTPResp.Header["Content-Type"][0])
@@ -104,14 +104,14 @@ func TestBlobberErrors(t *testing.T) {
 	t.Run("403 forbidden on blob size quota exceeded", func(t *testing.T) {
 		bigBLOB := make([]byte, 150)
 		hit.Post(fmt.Sprintf(`blob/test1/app1/%d?name=test&mimeType=application/x-binary`, ws.WSID), string(bigBLOB),
-			utils.WithAuthorizeBy(systemPrincipal),
+			coreutils.WithAuthorizeBy(systemPrincipal),
 			utils.Expect403(),
 		).Println()
 	})
 
 	t.Run("404 not found on querying an unexsting blob", func(t *testing.T) {
 		hit.Get(fmt.Sprintf(`blob/test1/app1/%d/%d`, ws.WSID, 1),
-			utils.WithAuthorizeBy(systemPrincipal),
+			coreutils.WithAuthorizeBy(systemPrincipal),
 			utils.Expect404(),
 		).Println()
 	})
@@ -119,28 +119,28 @@ func TestBlobberErrors(t *testing.T) {
 	t.Run("400 on wrong Content-Type and name+mimeType query params", func(t *testing.T) {
 		t.Run("neither Content-Type nor name+mimeType query params are not provided", func(t *testing.T) {
 			hit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
-				utils.WithAuthorizeBy(systemPrincipal),
+				coreutils.WithAuthorizeBy(systemPrincipal),
 				utils.Expect400(),
 			).Println()
 		})
 		t.Run("no name+mimeType query params and non-(mutipart/form-data) Content-Type", func(t *testing.T) {
 			hit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
-				utils.WithAuthorizeBy(systemPrincipal),
-				utils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"),
+				coreutils.WithAuthorizeBy(systemPrincipal),
+				coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"),
 				utils.Expect400(),
 			).Println()
 		})
 		t.Run("both name+mimeType query params and Conten-Type are specified", func(t *testing.T) {
 			hit.Post(fmt.Sprintf(`blob/test1/app1/%d?name=test&mimeType=application/x-binary`, ws.WSID), "blobContent",
-				utils.WithAuthorizeBy(systemPrincipal),
-				utils.WithHeaders("Content-Type", "multipart/form-data"),
+				coreutils.WithAuthorizeBy(systemPrincipal),
+				coreutils.WithHeaders("Content-Type", "multipart/form-data"),
 				utils.Expect400(),
 			).Println()
 		})
 		t.Run("boundary of multipart/form-data is not specified", func(t *testing.T) {
 			hit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
-				utils.WithAuthorizeBy(systemPrincipal),
-				utils.WithHeaders("Content-Type", "multipart/form-data"),
+				coreutils.WithAuthorizeBy(systemPrincipal),
+				coreutils.WithHeaders("Content-Type", "multipart/form-data"),
 				utils.Expect400(),
 			).Println()
 		})
@@ -181,8 +181,8 @@ func TestBlobMultipartUpload(t *testing.T) {
 
 	// write blobs
 	blobIDsStr := hit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), body.String(),
-		utils.WithAuthorizeBy(systemPrincipalToken),
-		utils.WithHeaders("Content-Type", fmt.Sprintf("multipart/form-data; boundary=%s", boundary)),
+		coreutils.WithAuthorizeBy(systemPrincipalToken),
+		coreutils.WithHeaders("Content-Type", fmt.Sprintf("multipart/form-data; boundary=%s", boundary)),
 	).Body
 	log.Println(blobIDsStr)
 

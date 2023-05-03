@@ -105,7 +105,7 @@ func TestForeignAuthorization(t *testing.T) {
 	t.Run("subjects", func(t *testing.T) {
 		// try to execute an operation by the foreign login, expect 403
 		cudBody := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "untill.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
-		hit.PostWS(parentWS, "c.sys.CUD", cudBody, utils.Expect403(), utils.WithAuthorizeBy(newPrn.Token))
+		hit.PostWS(parentWS, "c.sys.CUD", cudBody, utils.Expect403(), coreutils.WithAuthorizeBy(newPrn.Token))
 
 		// make this new foreign login a subject in the existing workspace
 		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.Subject","Login": "%s","SubjectKind":%d,"Roles": "%s"}}]}`,
@@ -113,7 +113,7 @@ func TestForeignAuthorization(t *testing.T) {
 		hit.PostWS(parentWS, "c.sys.CUD", body)
 
 		// now the foreign login could work in the workspace
-		hit.PostWS(parentWS, "c.sys.CUD", cudBody, utils.WithAuthorizeBy(newPrn.Token))
+		hit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.WithAuthorizeBy(newPrn.Token))
 	})
 
 	t.Run("enrich principal token", func(t *testing.T) {
@@ -135,7 +135,7 @@ func TestForeignAuthorization(t *testing.T) {
 		// ok to execute a stricted operation in the child workspace using the enriched token
 		// expect no errors
 		body = `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "untill.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
-		hit.PostWS(childWS, "c.sys.CUD", body, utils.WithAuthorizeBy(enrichedToken))
+		hit.PostWS(childWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(enrichedToken))
 	})
 
 	t.Run("API token", func(t *testing.T) {
@@ -154,6 +154,6 @@ func TestForeignAuthorization(t *testing.T) {
 		require.NoError(err)
 
 		// API token has role.air.AirReseller, q.sys.Collection is allowed for that role according to the current ACL -> the request should be successful
-		hit.PostWS(childWS, "q.sys.Collection", body, utils.WithAuthorizeBy(apiToken))
+		hit.PostWS(childWS, "q.sys.Collection", body, coreutils.WithAuthorizeBy(apiToken))
 	})
 }

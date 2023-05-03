@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -49,7 +48,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 
 	initiateJoinWorkspace := func(inviteID int64, login string) {
 		profile := hit.GetPrincipal(istructs.AppQName_test1_app1, login)
-		hit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), utils.WithAuthorizeBy(profile.Token))
+		hit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), coreutils.WithAuthorizeBy(profile.Token))
 	}
 
 	initiateUpdateInviteRoles := func(inviteID int64) {
@@ -242,7 +241,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(float64(hit.Now().UnixMilli()), cDocInvite[8])
 
 	//Leave workspace
-	hit.PostWS(ws, "c.sys.InitiateLeaveWorkspace", "{}", utils.WithAuthorizeBy(hit.GetPrincipal(ws.Owner.AppQName, it.TestEmail2).Token))
+	hit.PostWS(ws, "c.sys.InitiateLeaveWorkspace", "{}", coreutils.WithAuthorizeBy(hit.GetPrincipal(ws.Owner.AppQName, it.TestEmail2).Token))
 
 	waitForInviteState(invite.State_ToBeLeft, inviteID2)
 

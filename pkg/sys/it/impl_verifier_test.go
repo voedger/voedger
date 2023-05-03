@@ -135,7 +135,7 @@ func TestVerifierErrors(t *testing.T) {
 	ws := hit.DummyWS(istructs.AppQName_test1_app1, userPrincipal.ProfileWSID)
 
 	verificationToken, verificationCode := InitiateEmailVerification(hit, userPrincipal, it.QNameTestEmailVerificationDoc,
-		"EmailField", it.TestEmail, ws.WSID, utils.WithAuthorizeBy(userPrincipal.Token))
+		"EmailField", it.TestEmail, ws.WSID, coreutils.WithAuthorizeBy(userPrincipal.Token))
 
 	t.Run("error 500 on set the raw value instead of verified value token for the verified field", func(t *testing.T) {
 		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameTestEmailVerificationDoc, it.TestEmail)
@@ -193,7 +193,7 @@ func TestVerificationLimits(t *testing.T) {
 	t.Run("q.sys.InitiateEmailVerification limits", func(t *testing.T) {
 
 		// first q.sys.InitiateEmailVerifications are ok
-		InitiateEmailVerification(hit, userPrincipal, it.QNameTestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, utils.WithAuthorizeBy(userPrincipal.Token))
+		InitiateEmailVerification(hit, userPrincipal, it.QNameTestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, coreutils.WithAuthorizeBy(userPrincipal.Token))
 
 		// 2nd exceeds the limit -> 429 Too many requests
 		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken"]}]}`, it.QNameTestEmailVerificationDoc, "EmailField", it.TestEmail)
@@ -201,13 +201,13 @@ func TestVerificationLimits(t *testing.T) {
 
 		// still able to send to call in antoher profile because the limit is per-profile
 		otherPrn := hit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail2)
-		InitiateEmailVerification(hit, otherPrn, it.QNameTestEmailVerificationDoc, "EmailField", it.TestEmail2, testWSID, utils.WithAuthorizeBy(otherPrn.Token))
+		InitiateEmailVerification(hit, otherPrn, it.QNameTestEmailVerificationDoc, "EmailField", it.TestEmail2, testWSID, coreutils.WithAuthorizeBy(otherPrn.Token))
 
 		// proceed to the next minute -> limits will be reset
 		hit.TimeAdd(time.Minute)
 
 		// expect no errors
-		token, code = InitiateEmailVerification(hit, userPrincipal, it.QNameTestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, utils.WithAuthorizeBy(userPrincipal.Token))
+		token, code = InitiateEmailVerification(hit, userPrincipal, it.QNameTestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, coreutils.WithAuthorizeBy(userPrincipal.Token))
 	})
 
 	t.Run("q.sys.IssueVerifiedValueToken limits", func(t *testing.T) {
@@ -226,7 +226,7 @@ func TestVerificationLimits(t *testing.T) {
 		hit.TimeAdd(verifier.IssueVerifiedValueToken_Period)
 
 		// regenerate token and code because previous ones are expired already
-		token, code = InitiateEmailVerification(hit, userPrincipal, it.QNameTestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, utils.WithAuthorizeBy(userPrincipal.Token))
+		token, code = InitiateEmailVerification(hit, userPrincipal, it.QNameTestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, coreutils.WithAuthorizeBy(userPrincipal.Token))
 		bodyGoodCode = fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
 
 		// now check that limits are restored and that limits are reset on successful code verification

@@ -138,7 +138,7 @@ func TestWorkspaceAuthorization(t *testing.T) {
 	t.Run("403 forbidden", func(t *testing.T) {
 		t.Run("workspace is not initialized", func(t *testing.T) {
 			// try to exec c.sys.CUD in non-inited ws id 1
-			hit.PostApp(istructs.AppQName_test1_app1, 1, "c.sys.CUD", body, utils.WithAuthorizeBy(prn.Token), utils.Expect403()).Println()
+			hit.PostApp(istructs.AppQName_test1_app1, 1, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn.Token), utils.Expect403()).Println()
 		})
 
 		t.Run("access denied (wrong wsid)", func(t *testing.T) {
@@ -147,7 +147,7 @@ func TestWorkspaceAuthorization(t *testing.T) {
 			newPrn := hit.SignIn(login)
 
 			// try to modify the workspace by the non-owner
-			hit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", body, utils.WithAuthorizeBy(newPrn.Token), utils.Expect403()).Println()
+			hit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", body, coreutils.WithAuthorizeBy(newPrn.Token), utils.Expect403()).Println()
 		})
 	})
 
@@ -155,7 +155,7 @@ func TestWorkspaceAuthorization(t *testing.T) {
 		t.Run("token from an another app", func(t *testing.T) {
 			login := hit.SignUp(hit.NextName(), "1", istructs.AppQName_test1_app2)
 			newPrn := hit.SignIn(login)
-			hit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", body, utils.WithAuthorizeBy(newPrn.Token), utils.Expect401()).Println()
+			hit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", body, coreutils.WithAuthorizeBy(newPrn.Token), utils.Expect401()).Println()
 		})
 	})
 }

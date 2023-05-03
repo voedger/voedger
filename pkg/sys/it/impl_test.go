@@ -115,44 +115,44 @@ func TestAuthorization(t *testing.T) {
 	t.Run("basic usage", func(t *testing.T) {
 		t.Run("Bearer scheme", func(t *testing.T) {
 			sys := hit.GetSystemPrincipal(istructs.AppQName_test1_app1)
-			hit.PostApp(istructs.AppQName_test1_app1, prn.ProfileWSID, "c.sys.CUD", body, utils.WithHeaders(coreutils.Authorization, "Bearer "+sys.Token))
+			hit.PostApp(istructs.AppQName_test1_app1, prn.ProfileWSID, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Bearer "+sys.Token))
 		})
 
 		t.Run("Basic scheme", func(t *testing.T) {
 			t.Run("token in username only", func(t *testing.T) {
 				basicAuthHeader := base64.StdEncoding.EncodeToString([]byte(prn.Token + ":"))
-				hit.PostApp(istructs.AppQName_test1_app1, prn.ProfileWSID, "c.sys.CUD", body, utils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
+				hit.PostApp(istructs.AppQName_test1_app1, prn.ProfileWSID, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
 			})
 			t.Run("token in password only", func(t *testing.T) {
 				basicAuthHeader := base64.StdEncoding.EncodeToString([]byte(":" + prn.Token))
-				hit.PostApp(istructs.AppQName_test1_app1, prn.ProfileWSID, "c.sys.CUD", body, utils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
+				hit.PostApp(istructs.AppQName_test1_app1, prn.ProfileWSID, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
 			})
 			t.Run("token is splitted over username and password", func(t *testing.T) {
 				basicAuthHeader := base64.StdEncoding.EncodeToString([]byte(prn.Token[:len(prn.Token)/2] + ":" + prn.Token[len(prn.Token)/2:]))
-				hit.PostApp(istructs.AppQName_test1_app1, prn.ProfileWSID, "c.sys.CUD", body, utils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
+				hit.PostApp(istructs.AppQName_test1_app1, prn.ProfileWSID, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
 			})
 		})
 	})
 
 	t.Run("401 unauthorized", func(t *testing.T) {
 		t.Run("wrong Authorization token", func(t *testing.T) {
-			hit.PostProfile(prn, "c.sys.CUD", body, utils.WithAuthorizeBy("wrong"), utils.Expect401()).Println()
+			hit.PostProfile(prn, "c.sys.CUD", body, coreutils.WithAuthorizeBy("wrong"), utils.Expect401()).Println()
 		})
 
 		t.Run("unsupported Authorization header", func(t *testing.T) {
 			hit.PostProfile(prn, "c.sys.CUD", body,
-				utils.WithHeaders(coreutils.Authorization, `whatever w\o Bearer or Basic`), utils.Expect401()).Println()
+				coreutils.WithHeaders(coreutils.Authorization, `whatever w\o Bearer or Basic`), utils.Expect401()).Println()
 		})
 
 		t.Run("Basic authorization", func(t *testing.T) {
 			t.Run("non-base64 header value", func(t *testing.T) {
 				hit.PostProfile(prn, "c.sys.CUD", body,
-					utils.WithHeaders(coreutils.Authorization, `Basic non-base64-value`), utils.Expect401()).Println()
+					coreutils.WithHeaders(coreutils.Authorization, `Basic non-base64-value`), utils.Expect401()).Println()
 			})
 			t.Run("no colon between username and password", func(t *testing.T) {
 				headerValue := base64.RawStdEncoding.EncodeToString([]byte("some password"))
 				hit.PostProfile(prn, "c.sys.CUD", body,
-					utils.WithHeaders(coreutils.Authorization, "Basic "+headerValue), utils.Expect401()).Println()
+					coreutils.WithHeaders(coreutils.Authorization, "Basic "+headerValue), utils.Expect401()).Println()
 			})
 		})
 	})
@@ -230,13 +230,13 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		postDone.Add(1)
 		go func() {
 			defer postDone.Done()
-			hit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.MockQry", body, utils.WithAuthorizeBy(sys.Token))
+			hit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.MockQry", body, coreutils.WithAuthorizeBy(sys.Token))
 		}()
 
 		<-funcStarted
 	}
 
-	hit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Echo", body, utils.Expect503(), utils.WithAuthorizeBy(sys.Token))
+	hit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Echo", body, utils.Expect503(), coreutils.WithAuthorizeBy(sys.Token))
 
 	for i := 0; i < int(hit.HVMConfig.NumQueryProcessors); i++ {
 		okToFinish <- nil
