@@ -751,6 +751,15 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	require.NoError(err)
 
 	testRowsIsEqual(t, &v1.rowType, &v2.rowType)
+
+	t.Run("should be load error if truncated value bytes", func(t *testing.T) {
+		for i := 0; i < len(p); i++ {
+			v2 := newValue(cfg, viewName)
+			err := v2.loadFromBytes(p[:i])
+			require.Error(err, i)
+		}
+	})
+
 }
 
 // Test_ViewRecords_ClustColumnsQName: see https://dev.heeus.io/launchpad/#!16377 problem
