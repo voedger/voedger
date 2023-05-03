@@ -1,13 +1,13 @@
 name: CI pkg-cmd
 
 on:
-  push:
+  pull_request_target:
     paths:
       - 'pkg/**'
 
 jobs:
   call-workflow-ci-pkg:
-    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@master
     with: 
       test_folder: 'pkg'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
@@ -18,7 +18,7 @@ jobs:
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-ci-cmd:
     needs: call-workflow-ci-pkg
-    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@master
     with: 
       test_folder: 'cmd'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
@@ -26,4 +26,9 @@ jobs:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
+  auto-merge-pr:
+    needs: call-workflow-ci-cmd
+    uses: voedger/voedger/.github/workflows/merge.yml@main
+    secrets:
+      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
 
