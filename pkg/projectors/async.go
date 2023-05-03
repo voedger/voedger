@@ -66,7 +66,7 @@ func (a *asyncActualizer) Run(ctx context.Context) {
 		if err = a.init(ctx); err == nil {
 			logger.Trace(a.name, "started")
 			err = a.keepReading()
-			a.conf.LogError(err)
+			a.conf.LogError(a.name, err)
 		}
 		a.finit() // even execute if a.init has failed
 		if ctx.Err() == nil && err != nil {
@@ -95,7 +95,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	err = a.readOffset(p.projector.Name)
 	if err != nil {
-		a.conf.LogError(err)
+		a.conf.LogError(a.name, err)
 		return err
 	}
 
@@ -162,7 +162,7 @@ func (a *asyncActualizer) keepReading() (err error) {
 		if a.offset < offset {
 			err = a.readPlogToTheEnd()
 			if err != nil {
-				a.conf.LogError(err)
+				a.conf.LogError(a.name, err)
 				a.readCtx.cancelWithError(err)
 			}
 		}
@@ -179,7 +179,7 @@ func (a *asyncActualizer) readPlogToTheEnd() (err error) {
 
 		err = a.pipeline.SendAsync(work)
 		if err != nil {
-			a.conf.LogError(err)
+			a.conf.LogError(a.name, err)
 			return
 		}
 
