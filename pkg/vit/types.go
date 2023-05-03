@@ -17,12 +17,12 @@ import (
 )
 
 // Heeus Integration Test
-type HIT struct {
+type VIT struct {
 	lock sync.Mutex
 	T    *testing.T
 	*vvm.HeeusVM
-	HVMConfig            *vvm.HVMConfig
-	cleanups             []func(hit *HIT)
+	*vvm.VVMConfig
+	cleanups             []func(vit *VIT)
 	isFinalized          bool
 	nextNumber           int
 	appWorkspaces        map[istructs.AppQName]map[string]*AppWorkspace
@@ -38,22 +38,22 @@ type timeService struct {
 	currentInstant time.Time
 }
 
-type HITConfig struct {
-	opts     []hitConfigOptFunc
+type VITConfig struct {
+	opts     []vitConfigOptFunc
 	isShared bool
 }
 
-type hitApps map[istructs.AppQName]*app // указатель потому, что к app потом будут опции применяться ([]logins, например)
+type vitApps map[istructs.AppQName]*app // указатель потому, что к app потом будут опции применяться ([]logins, например)
 
-type hitPreConfig struct {
-	hvmCfg   *vvm.HVMConfig
-	hitApps  hitApps
-	cleanups []func(hit *HIT)
+type vitPreConfig struct {
+	vvmCfg   *vvm.VVMConfig
+	vitApps  vitApps
+	cleanups []func(vit *VIT)
 }
 
-type hitConfigOptFunc func(*hitPreConfig)
-type AppOptFunc func(app *app, cfg *vvm.HVMConfig)
-type hitOptFunc func(hit *HIT)
+type vitConfigOptFunc func(*vitPreConfig)
+type AppOptFunc func(app *app, cfg *vvm.VVMConfig)
+type vitOptFunc func(vit *VIT)
 type signInOptFunc func(opts *signInOpts)
 type signUpOptFunc func(opts *signUpOpts)
 type PostConstructFunc func(intf interface{})
@@ -118,6 +118,6 @@ type signUpOpts struct {
 }
 
 type EmailCaptor struct {
-	hit *HIT
+	vit *VIT
 	ch  chan smtptest.Message
 }

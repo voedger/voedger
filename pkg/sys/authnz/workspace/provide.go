@@ -157,6 +157,8 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	appDefBuilder.AddStruct(qNameAPInitializeWorkspace, appdef.DefKind_Object)
 	appDefBuilder.AddStruct(qNameAPInvokeCreateWorkspaceID, appdef.DefKind_Object)
 	appDefBuilder.AddStruct(qNameAPInvokeCreateWorkspace, appdef.DefKind_Object)
+
+	ProvideViewNextWSID(appDefBuilder)
 }
 
 // proj.sys.ChildWorkspaceIdx

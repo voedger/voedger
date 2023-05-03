@@ -41,7 +41,7 @@ var (
 	QNameQryRated                 = appdef.NewQName(appdef.SysPackage, "RatedQry")
 
 	// BLOBMaxSize 5
-	SharedConfig_Simple = NewSharedHITConfig(
+	SharedConfig_Simple = NewSharedVITConfig(
 		WithApp(istructs.AppQName_test1_app1, ProvideSimpleApp,
 			WithWorkspaceTemplate(QNameTestWSKind, "test_template", test_template.TestTemplateFS),
 			WithUserLogin("login", "pwd"),
@@ -51,14 +51,14 @@ var (
 			WithChildWorkspace(QNameTestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
 		),
 		WithApp(istructs.AppQName_test1_app2, ProvideSimpleApp, WithUserLogin("login", "1")),
-		WithHVMConfig(func(cfg *vvm.HVMConfig) {
+		WithVVMConfig(func(cfg *vvm.VVMConfig) {
 			// for impl_reverseproxy_test
 			cfg.Routes["/grafana"] = fmt.Sprintf("http://127.0.0.1:%d", TestServicePort)
 			cfg.RoutesRewrite["/grafana-rewrite"] = fmt.Sprintf("http://127.0.0.1:%d/rewritten", TestServicePort)
 			cfg.RouteDefault = fmt.Sprintf("http://127.0.0.1:%d/not-found", TestServicePort)
 			cfg.RouteDomains["localhost"] = "http://127.0.0.1"
 		}),
-		WithCleanup(func(hit *HIT) {
+		WithCleanup(func(hit *VIT) {
 			MockCmdExec = func(input string) error { panic("") }
 			MockQryExec = func(input string, callback istructs.ExecQueryCallback) error { panic("") }
 		}),
@@ -67,7 +67,7 @@ var (
 	MockCmdExec func(input string) error
 )
 
-func EmptyApp(hvmCfg *vvm.HVMConfig, hvmAPI vvm.HVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
+func EmptyApp(hvmCfg *vvm.VVMConfig, hvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
 	registryapp.Provide(smtp.Cfg{})(hvmCfg, hvmAPI, cfg, adf, sep)
 	adf.AddStruct(QNameTestWSKind, appdef.DefKind_CDoc).
 		AddField("IntFld", appdef.DataKind_int32, true).
@@ -76,7 +76,7 @@ func EmptyApp(hvmCfg *vvm.HVMConfig, hvmAPI vvm.HVMAPI, cfg *istructsmem.AppConf
 	sep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
 }
 
-func ProvideSimpleApp(hvmCfg *vvm.HVMConfig, hvmAPI vvm.HVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
+func ProvideSimpleApp(hvmCfg *vvm.VVMConfig, hvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
 
 	// sys package
 	sys.Provide(hvmCfg.TimeFunc, cfg, adf, hvmAPI, smtp.Cfg{}, sep)

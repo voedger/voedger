@@ -24,7 +24,7 @@ const (
 
 var (
 	ts                        = &timeService{currentInstant: DefaultTestTime}
-	hits                      = map[*HITConfig]*HIT{}
+	vits                      = map[*VITConfig]*VIT{}
 	DefaultTestTime           = time.UnixMilli(1649667286774) // 2022-04-11 11:54:46 +0300 MSK
 	workspaceInitAwaitTimeout = defaultWorkspaceAwaitTimeout
 )

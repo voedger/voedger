@@ -25,7 +25,7 @@ import (
 
 func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 	cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
-	cpAmount CommandProcessorsAmountType, hvmApps HVMApps) ibus.IBus {
+	cpAmount CommandProcessorsAmountType, vvmApps VVMApps) ibus.IBus {
 	var bus ibus.IBus
 	bus = ibusmem.Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
 		// Handling Command/Query messages
@@ -56,7 +56,7 @@ func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 			coreutils.ReplyBadRequest(bus, sender, fmt.Sprintf("failed to parse app qualified name %s: %s", request.AppQName, err.Error()))
 			return
 		}
-		if !hvmApps.Exists(appQName) {
+		if !vvmApps.Exists(appQName) {
 			coreutils.ReplyBadRequest(bus, sender, fmt.Sprintf("unknown app %s", request.AppQName))
 			return
 		}

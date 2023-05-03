@@ -133,7 +133,7 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istruct
 		if err != nil {
 			return err
 		}
-		newWSID, err := utils.GetNextWSID(args.Workpiece.(interface{ Context() context.Context }).Context(), as, args.Workspace.ClusterID())
+		newWSID, err := GetNextWSID(args.Workpiece.(interface{ Context() context.Context }).Context(), as, args.Workspace.ClusterID())
 		if err != nil {
 			return err
 		}

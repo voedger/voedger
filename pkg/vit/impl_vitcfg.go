@@ -19,33 +19,33 @@ import (
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func NewOwnHITConfig(opts ...hitConfigOptFunc) HITConfig {
+func NewOwnVITConfig(opts ...vitConfigOptFunc) VITConfig {
 	// helper: implicitly append sys apps
 	opts = append(opts,
 		WithApp(istructs.AppQName_sys_registry, registryapp.Provide(smtp.Cfg{})),
 		WithApp(istructs.AppQName_sys_blobber, blobberapp.Provide(smtp.Cfg{})),
 		WithApp(istructs.AppQName_sys_router, routerapp.Provide(smtp.Cfg{})),
 	)
-	return HITConfig{
+	return VITConfig{
 		opts: opts,
 	}
 }
 
-func NewSharedHITConfig(opts ...hitConfigOptFunc) HITConfig {
-	cfg := NewOwnHITConfig(opts...)
+func NewSharedVITConfig(opts ...vitConfigOptFunc) VITConfig {
+	cfg := NewOwnVITConfig(opts...)
 	cfg.isShared = true
 	return cfg
 }
 
-func WithBuilder(builder vvm.HVMAppBuilder) AppOptFunc {
-	return func(app *app, cfg *vvm.HVMConfig) {
-		cfg.HVMAppsBuilder.Add(app.name, builder)
+func WithBuilder(builder vvm.VVMAppBuilder) AppOptFunc {
+	return func(app *app, cfg *vvm.VVMConfig) {
+		cfg.VVMAppsBuilder.Add(app.name, builder)
 	}
 }
 
 // at MainCluster
 func WithUserLogin(name, pwd string, opts ...PostConstructFunc) AppOptFunc {
-	return func(app *app, _ *vvm.HVMConfig) {
+	return func(app *app, _ *vvm.VVMConfig) {
 		login := NewLogin(name, pwd, app.name, istructs.SubjectKind_User, istructs.MainClusterID)
 		for _, opt := range opts {
 			opt(&login)
@@ -55,7 +55,7 @@ func WithUserLogin(name, pwd string, opts ...PostConstructFunc) AppOptFunc {
 }
 
 func WithWorkspaceTemplate(wsKind appdef.QName, templateName string, templateFS utils.EmbedFS) AppOptFunc {
-	return func(app *app, cfg *vvm.HVMConfig) {
+	return func(app *app, cfg *vvm.VVMConfig) {
 		app.wsTemplateFuncs = append(app.wsTemplateFuncs, func(sep vvm.IStandardExtensionPoints) {
 			epWSKindTemplates := sep.EPWSTemplates().ExtensionPoint(wsKind)
 			epWSKindTemplates.AddNamed(templateName, templateFS)
@@ -64,7 +64,7 @@ func WithWorkspaceTemplate(wsKind appdef.QName, templateName string, templateFS 
 }
 
 func WithChildWorkspace(wsKind appdef.QName, name, templateName string, templateParams string, ownerLoginName string, wsInitData map[string]interface{}, opts ...PostConstructFunc) AppOptFunc {
-	return func(app *app, cfg *vvm.HVMConfig) {
+	return func(app *app, cfg *vvm.VVMConfig) {
 		initData, err := json.Marshal(&wsInitData)
 		if err != nil {
 			panic(err)
@@ -99,21 +99,21 @@ func WithSingleton(name appdef.QName, data map[string]interface{}) PostConstruct
 	}
 }
 
-func WithHVMConfig(configurer func(cfg *vvm.HVMConfig)) hitConfigOptFunc {
-	return func(hpc *hitPreConfig) {
-		configurer(hpc.hvmCfg)
+func WithVVMConfig(configurer func(cfg *vvm.VVMConfig)) vitConfigOptFunc {
+	return func(hpc *vitPreConfig) {
+		configurer(hpc.vvmCfg)
 	}
 }
 
-func WithCleanup(cleanup func(hit *HIT)) hitConfigOptFunc {
-	return func(hpc *hitPreConfig) {
+func WithCleanup(cleanup func(*VIT)) vitConfigOptFunc {
+	return func(hpc *vitPreConfig) {
 		hpc.cleanups = append(hpc.cleanups, cleanup)
 	}
 }
 
-func WithApp(appQName istructs.AppQName, updater vvm.HVMAppBuilder, appOpts ...AppOptFunc) hitConfigOptFunc {
-	return func(hpc *hitPreConfig) {
-		_, ok := hpc.hitApps[appQName]
+func WithApp(appQName istructs.AppQName, updater vvm.VVMAppBuilder, appOpts ...AppOptFunc) vitConfigOptFunc {
+	return func(vpc *vitPreConfig) {
+		_, ok := vpc.vitApps[appQName]
 		if ok {
 			panic("app already added")
 		}
@@ -121,14 +121,14 @@ func WithApp(appQName istructs.AppQName, updater vvm.HVMAppBuilder, appOpts ...A
 			name: appQName,
 			ws:   map[string]WSParams{},
 		}
-		hpc.hitApps[appQName] = app
-		hpc.hvmCfg.HVMAppsBuilder.Add(appQName, updater)
+		vpc.vitApps[appQName] = app
+		vpc.vvmCfg.VVMAppsBuilder.Add(appQName, updater)
 		for _, appOpt := range appOpts {
-			appOpt(app, hpc.hvmCfg)
+			appOpt(app, vpc.vvmCfg)
 		}
 		// to append tests templates to already declared templates
 		for _, wsTempalateFunc := range app.wsTemplateFuncs {
-			hpc.hvmCfg.HVMAppsBuilder.Add(appQName, func(_ *vvm.HVMConfig, hvmAPI vvm.HVMAPI, _ *istructsmem.AppConfigType, _ appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
+			vpc.vvmCfg.VVMAppsBuilder.Add(appQName, func(_ *vvm.VVMConfig, _ vvm.VVMAPI, _ *istructsmem.AppConfigType, _ appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
 				wsTempalateFunc(sep)
 			})
 		}

@@ -24,7 +24,7 @@ type ServiceFactory func(commandsChannel CommandChannel, partitionID istructs.Pa
 type CommandChannel iprocbus.ServiceChannel
 type OperatorSyncActualizer pipeline.ISyncOperator
 type SyncActualizerFactory func(hvmCtx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator
-type HVMName string
+type VVMName string
 
 type ValidateFunc func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID) (err error)
 

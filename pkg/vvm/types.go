@@ -54,13 +54,13 @@ type MaxPrepareQueriesType int
 type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx int) iprocbus.ServiceChannel
 type AppStorageFactory func(appQName istructs.AppQName, appStorage istorage.IAppStorage) istorage.IAppStorage
 type StorageCacheSizeType int
-type HVMApps []istructs.AppQName
+type VVMApps []istructs.AppQName
 type QueryProcessorsCount int
 type CommandProcessorsCount int
 type BusTimeout time.Duration
 type FederationURLType func() *url.URL
-type HVMIdxType int
-type HVMPortType int
+type VVMIdxType int
+type VVMPortType int
 type ProcessorChannelType int
 type ProcesorChannel struct {
 	iprocbusmem.ChannelGroup
@@ -69,8 +69,8 @@ type ProcesorChannel struct {
 type RouterServices []interface{}
 type MetricsServiceOperator pipeline.ISyncOperator
 type MetricsServicePortInitial int
-type HVMPortSource struct {
-	getter func() HVMPortType
+type VVMPortSource struct {
+	getter func() VVMPortType
 }
 type IAppStorageUncachingProviderFactory func() (provider istorage.IAppStorageProvider)
 type EPKey string
@@ -87,18 +87,18 @@ type PostDocDesc struct {
 	IsSingleton bool
 }
 
-type HVMAppBuilder func(hvmCfg *HVMConfig, hvmAPI HVMAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep IStandardExtensionPoints)
-type HVMAppsBuilder map[istructs.AppQName][]HVMAppBuilder
+type VVMAppBuilder func(vvmCfg *VVMConfig, vvmAPI VVMAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep IStandardExtensionPoints)
+type VVMAppsBuilder map[istructs.AppQName][]VVMAppBuilder
 
-type HVM struct {
+type VVM struct {
 	ServicePipeline
-	HVMAPI
-	HVMApps
+	VVMAPI
+	VVMApps
 	AppsExtensionPoints map[istructs.AppQName]IStandardExtensionPoints
 	MetricsServicePort  func() metrics.MetricsServicePort
 }
 
-type HVMAPI struct {
+type VVMAPI struct {
 	itokens.ITokens
 	istructs.IAppStructsProvider
 	istructsmem.AppConfigsType
@@ -146,8 +146,8 @@ type standardExtensionPointsImpl struct {
 	rootExtensionPoint *implIExtensionPoint
 }
 
-type HVMConfig struct {
-	HVMAppsBuilder             HVMAppsBuilder // is a map
+type VVMConfig struct {
+	VVMAppsBuilder             VVMAppsBuilder // is a map
 	TimeFunc                   func() time.Time
 	RouterWriteTimeout         int
 	RouterReadTimeout          int
@@ -163,17 +163,17 @@ type HVMConfig struct {
 	StorageFactory             func() (provider istorage.IAppStorageFactory, err error)
 	BlobberServiceChannels     router.BlobberServiceChannels
 	BLOBMaxSize                router.BLOBMaxSizeType
-	Name                       commandprocessor.HVMName
+	Name                       commandprocessor.VVMName
 	NumCommandProcessors       CommandProcessorsCount
 	NumQueryProcessors         QueryProcessorsCount
 	MaxPrepareQueries          MaxPrepareQueriesType
 	StorageCacheSize           StorageCacheSizeType
 	processorsChannels         []ProcesorChannel
-	// 0 -> dynamic port will be used, new on each hvmIdx
-	// >0 -> HVMPort+hvmIdx will be actually used
-	HVMPort            HVMPortType
+	// 0 -> dynamic port will be used, new on each vvmIdx
+	// >0 -> vVMPort+vvmIdx will be actually used
+	VVMPort            VVMPortType
 	MetricsServicePort MetricsServicePortInitial
-	// test and FederationURL contains port -> the port will be relaced with the actual HVMPort
+	// test and FederationURL contains port -> the port will be relaced with the actual VVMPort
 	FederationURL       *url.URL
 	ActualizerStateOpts []state.ActualizerStateOptFunc
 }
@@ -186,9 +186,9 @@ type resultSenderErrorFirst struct {
 }
 
 type HeeusVM struct {
-	*HVM
-	hvmCtxCancel func()
-	hvmCleanup   func()
+	*VVM
+	vvmCtxCancel func()
+	vvmCleanup   func()
 }
 
 type testISecretReader struct {

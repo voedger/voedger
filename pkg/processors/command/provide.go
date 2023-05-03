@@ -48,7 +48,7 @@ func ProvideJSONFuncParamsDef(appDef appdef.IAppDefBuilder) {
 
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
 func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now func() time.Time, syncActualizerFactory SyncActualizerFactory,
-	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, hvm HVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
+	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, hvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
 	secretReader isecrets.ISecretReader) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
 		cmdProc := &cmdProc{

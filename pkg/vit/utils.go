@@ -26,7 +26,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func (hit *HIT) GetBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID int64, token string) *BLOB {
+func (hit *VIT) GetBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID int64, token string) *BLOB {
 	hit.T.Helper()
 	resp, err := utils.FederationReq(hit.FederationURL(), fmt.Sprintf(`blob/%s/%d/%d`, appQName.String(), wsid, blobID), "", utils.WithAuthorizeBy(token))
 	require.NoError(hit.T, err)
@@ -40,7 +40,7 @@ func (hit *HIT) GetBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID i
 	}
 }
 
-func (hit *HIT) signUp(login Login, wsKindInitData string, opts ...utils.ReqOptFunc) {
+func (hit *VIT) signUp(login Login, wsKindInitData string, opts ...utils.ReqOptFunc) {
 	hit.T.Helper()
 	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":%q,"ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
 		login.Name, login.AppQName.String(), login.subjectKind, wsKindInitData, login.clusterID, login.Pwd)
@@ -59,7 +59,7 @@ func WithReqOpt(reqOpt utils.ReqOptFunc) signUpOptFunc {
 	}
 }
 
-func (hit *HIT) SignUp(loginName, pwd string, appQName istructs.AppQName, opts ...signUpOptFunc) Login {
+func (hit *VIT) SignUp(loginName, pwd string, appQName istructs.AppQName, opts ...signUpOptFunc) Login {
 	hit.T.Helper()
 	signUpOpts := getSignUpOpts(opts)
 	login := NewLogin(loginName, pwd, appQName, istructs.SubjectKind_User, signUpOpts.profileClusterID)
@@ -77,7 +77,7 @@ func getSignUpOpts(opts []signUpOptFunc) *signUpOpts {
 	return res
 }
 
-func (hit *HIT) SignUpDevice(loginName, pwd string, appQName istructs.AppQName, opts ...signUpOptFunc) Login {
+func (hit *VIT) SignUpDevice(loginName, pwd string, appQName istructs.AppQName, opts ...signUpOptFunc) Login {
 	hit.T.Helper()
 	signUpOpts := getSignUpOpts(opts)
 	login := NewLogin(loginName, pwd, appQName, istructs.SubjectKind_Device, signUpOpts.profileClusterID)
@@ -85,7 +85,7 @@ func (hit *HIT) SignUpDevice(loginName, pwd string, appQName istructs.AppQName, 
 	return login
 }
 
-func (hit *HIT) GetCDocLoginID(login Login) int64 {
+func (hit *VIT) GetCDocLoginID(login Login) int64 {
 	hit.T.Helper()
 	as, err := hit.IAppStructsProvider.AppStructs(istructs.AppQName_sys_registry)
 	require.NoError(hit.T, err) // notest
@@ -99,12 +99,12 @@ func (hit *HIT) GetCDocLoginID(login Login) int64 {
 	return int64(m["CDocLoginID"].(float64))
 }
 
-func (hit *HIT) GetCDocWSKind(ws *AppWorkspace) (cdoc map[string]interface{}, id int64) {
+func (hit *VIT) GetCDocWSKind(ws *AppWorkspace) (cdoc map[string]interface{}, id int64) {
 	hit.T.Helper()
 	return hit.getCDoc(ws.Owner.AppQName, ws.Kind, ws.WSID)
 }
 
-func (hit *HIT) getCDoc(appQName istructs.AppQName, qName appdef.QName, wsid istructs.WSID) (cdoc map[string]interface{}, id int64) {
+func (hit *VIT) getCDoc(appQName istructs.AppQName, qName appdef.QName, wsid istructs.WSID) (cdoc map[string]interface{}, id int64) {
 	hit.T.Helper()
 	body := bytes.NewBufferString(fmt.Sprintf(`{"args":{"Schema":"%s"},"elements":[{"fields":["sys.ID"`, qName))
 	fields := []string{}
@@ -133,12 +133,12 @@ func (hit *HIT) getCDoc(appQName istructs.AppQName, qName appdef.QName, wsid ist
 	return
 }
 
-func (hit *HIT) GetCDocChildWorkspace(ws *AppWorkspace) (cdoc map[string]interface{}, id int64) {
+func (hit *VIT) GetCDocChildWorkspace(ws *AppWorkspace) (cdoc map[string]interface{}, id int64) {
 	hit.T.Helper()
 	return hit.getCDoc(ws.Owner.AppQName, authnz.QNameCDocChildWorkspace, ws.Owner.ProfileWSID)
 }
 
-func (hit *HIT) waitForWorkspace(wsName string, owner *Principal, respGetter func(owner *Principal, body string) *utils.FuncResponse) (ws *AppWorkspace) {
+func (hit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter func(owner *Principal, body string) *utils.FuncResponse) (ws *AppWorkspace) {
 	const (
 		// respect linter
 		tmplNameIdx   = 3
@@ -193,13 +193,13 @@ func (hit *HIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 	return ws
 }
 
-func (hit *HIT) WaitForWorkspace(wsName string, owner *Principal) (ws *AppWorkspace) {
+func (hit *VIT) WaitForWorkspace(wsName string, owner *Principal) (ws *AppWorkspace) {
 	return hit.waitForWorkspace(wsName, owner, func(owner *Principal, body string) *utils.FuncResponse {
 		return hit.PostProfile(owner, "q.sys.QueryChildWorkspaceByName", body)
 	})
 }
 
-func (hit *HIT) WaitForChildWorkspace(parentWS *AppWorkspace, wsName string, owner *Principal) (ws *AppWorkspace) {
+func (hit *VIT) WaitForChildWorkspace(parentWS *AppWorkspace, wsName string, owner *Principal) (ws *AppWorkspace) {
 	return hit.waitForWorkspace(wsName, owner, func(owner *Principal, body string) *utils.FuncResponse {
 		return hit.PostWS(parentWS, "q.sys.QueryChildWorkspaceByName", body)
 	})
@@ -211,7 +211,7 @@ func DoNotFailOnTimeout() signInOptFunc {
 	}
 }
 
-func (hit *HIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) {
+func (hit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) {
 	hit.T.Helper()
 	opts := &signInOpts{
 		failOnTimeout: true,
@@ -256,7 +256,7 @@ func (hit *HIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 	return nil
 }
 
-func (hit *HIT) InitChildWorkspace(wsd WSParams, owner *Principal) {
+func (hit *VIT) InitChildWorkspace(wsd WSParams, owner *Principal) {
 	hit.T.Helper()
 	body := fmt.Sprintf(`{
 		"args": {
@@ -272,7 +272,7 @@ func (hit *HIT) InitChildWorkspace(wsd WSParams, owner *Principal) {
 	hit.PostProfile(owner, "c.sys.InitChildWorkspace", body)
 }
 
-func (hit *HIT) CreateWorkspace(wsp WSParams, owner *Principal) *AppWorkspace {
+func (hit *VIT) CreateWorkspace(wsp WSParams, owner *Principal) *AppWorkspace {
 	hit.InitChildWorkspace(wsp, owner)
 	ws := hit.WaitForWorkspace(wsp.Name, owner)
 	require.Empty(hit.T, ws.WSError)
@@ -280,7 +280,7 @@ func (hit *HIT) CreateWorkspace(wsp WSParams, owner *Principal) *AppWorkspace {
 }
 
 // will be finalized automatically on hit.TearDown()
-func (hit *HIT) SubscribeForN10n(ws *AppWorkspace, viewQName appdef.QName) chan int64 {
+func (hit *VIT) SubscribeForN10n(ws *AppWorkspace, viewQName appdef.QName) chan int64 {
 	n10n := make(chan int64)
 	params := url.Values{}
 	query := fmt.Sprintf(`{"SubjectLogin":"test_%d","ProjectionKey":[{"App":"%s","Projection":"%s","WS":%d}]}`,
@@ -322,7 +322,7 @@ func (hit *HIT) SubscribeForN10n(ws *AppWorkspace, viewQName appdef.QName) chan 
 		}
 	}()
 	hit.lock.Lock() // need to lock because the hit instance is used in different goroutines in e.g. Test_Race_RestaurantIntenseUsage()
-	hit.cleanups = append(hit.cleanups, func(hit *HIT) {
+	hit.cleanups = append(hit.cleanups, func(hit *VIT) {
 		body := fmt.Sprintf(`
 			{
 				"Channel": "%s",
@@ -351,7 +351,7 @@ func IsCassandraStorage() bool {
 	return ok
 }
 
-func (hit *HIT) MetricsRequest(opts ...utils.ReqOptFunc) (resp string) {
+func (hit *VIT) MetricsRequest(opts ...utils.ReqOptFunc) (resp string) {
 	hit.T.Helper()
 	url := fmt.Sprintf("http://127.0.0.1:%d/metrics", hit.HeeusVM.MetricsServicePort())
 	res, err := utils.Req(url, "", opts...)

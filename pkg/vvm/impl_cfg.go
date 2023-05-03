@@ -19,12 +19,12 @@ import (
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 )
 
-func NewHVMDefaultConfig() HVMConfig {
+func NewVVMDefaultConfig() VVMConfig {
 	hostname, err := os.Hostname()
 	if err != nil {
 		panic(err)
 	}
-	hvmCfg := HVMConfig{
+	vvmCfg := VVMConfig{
 		Routes:                 map[string]string{},
 		RoutesRewrite:          map[string]string{},
 		RouteDomains:           map[string]string{},
@@ -33,8 +33,8 @@ func NewHVMDefaultConfig() HVMConfig {
 		RouterConnectionsLimit: router.DefaultRouterConnectionsLimit,
 		BLOBMaxSize:            DefaultBLOBMaxSize,
 		TimeFunc:               DefaultTimeFunc,
-		Name:                   commandprocessor.HVMName(hostname),
-		HVMAppsBuilder:         HVMAppsBuilder{},
+		Name:                   commandprocessor.VVMName(hostname),
+		VVMAppsBuilder:         VVMAppsBuilder{},
 		BusTimeout:             BusTimeout(ibus.DefaultTimeout),
 		BlobberServiceChannels: router.BlobberServiceChannels{
 			{
@@ -53,7 +53,7 @@ func NewHVMDefaultConfig() HVMConfig {
 		NumQueryProcessors:   NumQueryProcessors,
 		StorageCacheSize:     DefaultCacheSize,
 		MaxPrepareQueries:    DefaultMaxPrepareQueries,
-		HVMPort:              DefaultHVMPort,
+		VVMPort:              DefaultVVMPort,
 		MetricsServicePort:   DefaultMetricsServicePort,
 		StorageFactory: func() (provider istorage.IAppStorageFactory, err error) {
 			logger.Info("using istoragemem")
@@ -61,7 +61,7 @@ func NewHVMDefaultConfig() HVMConfig {
 		},
 	}
 
-	hvmCfg.AddProcessorChannel(
+	vvmCfg.AddProcessorChannel(
 		// command processors
 		// конкретный ресторан должен пойти в один и тотже cmd proc
 		iprocbusmem.ChannelGroup{
@@ -71,7 +71,7 @@ func NewHVMDefaultConfig() HVMConfig {
 		ProcessorChannel_Command,
 	)
 
-	hvmCfg.AddProcessorChannel(
+	vvmCfg.AddProcessorChannel(
 		// query processors
 		// все QueryProcessors сидят на одном канале, т.к. любой ресторан может обслуживаться любым query proc
 		iprocbusmem.ChannelGroup{
@@ -81,7 +81,7 @@ func NewHVMDefaultConfig() HVMConfig {
 		ProcessorChannel_Query,
 	)
 
-	return hvmCfg
+	return vvmCfg
 }
 
 func (tsr *testISecretReader) ReadSecret(name string) ([]byte, error) {
@@ -91,14 +91,14 @@ func (tsr *testISecretReader) ReadSecret(name string) ([]byte, error) {
 	return tsr.realSecretReader.ReadSecret(name)
 }
 
-func (cfg *HVMConfig) AddProcessorChannel(cg iprocbusmem.ChannelGroup, t ProcessorChannelType) {
+func (cfg *VVMConfig) AddProcessorChannel(cg iprocbusmem.ChannelGroup, t ProcessorChannelType) {
 	cfg.processorsChannels = append(cfg.processorsChannels, ProcesorChannel{
 		ChannelGroup: cg,
 		ChannelType:  t,
 	})
 }
 
-func (vvm *HVMConfig) ProvideServiceChannelFactory(procbus iprocbus.IProcBus) ServiceChannelFactory {
+func (vvm *VVMConfig) ProvideServiceChannelFactory(procbus iprocbus.IProcBus) ServiceChannelFactory {
 	return func(pct ProcessorChannelType, channelIdx int) iprocbus.ServiceChannel {
 		for groupIdx, pcg := range vvm.processorsChannels {
 			if pcg.ChannelType == pct {
@@ -109,7 +109,7 @@ func (vvm *HVMConfig) ProvideServiceChannelFactory(procbus iprocbus.IProcBus) Se
 	}
 }
 
-func (ha *HVMApps) Exists(name istructs.AppQName) bool {
+func (ha *VVMApps) Exists(name istructs.AppQName) bool {
 	for _, appQName := range *ha {
 		if appQName == name {
 			return true

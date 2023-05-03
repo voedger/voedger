@@ -39,7 +39,7 @@ import (
 //go:embed slowtests.txt
 var slowTestsPaths string
 
-func NewHIT(t *testing.T, hitCfg *HITConfig, opts ...hitOptFunc) (hit *HIT) {
+func NewVIT(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	if coreutils.SkipSlowTests() {
 		pc, _, _, _ := runtime.Caller(1)
 		callerFunc := runtime.FuncForPC(pc)
@@ -51,40 +51,40 @@ func NewHIT(t *testing.T, hitCfg *HITConfig, opts ...hitOptFunc) (hit *HIT) {
 		}
 	}
 	useCas := IsCassandraStorage()
-	if !hitCfg.isShared {
-		hit = newHit(t, hitCfg, useCas)
+	if !vitCfg.isShared {
+		vit = newVit(t, vitCfg, useCas)
 	} else {
 		ok := false
-		if hit, ok = hits[hitCfg]; ok {
-			if !hit.isFinalized {
-				panic("Teardown() was not called on a previous HIT which used the provided shared config")
+		if vit, ok = vits[vitCfg]; ok {
+			if !vit.isFinalized {
+				panic("Teardown() was not called on a previous VIT which used the provided shared config")
 			}
-			hit.isFinalized = false
+			vit.isFinalized = false
 		} else {
-			hit = newHit(t, hitCfg, useCas)
-			hits[hitCfg] = hit
+			vit = newVit(t, vitCfg, useCas)
+			vits[vitCfg] = vit
 		}
 	}
 
 	for _, opt := range opts {
-		opt(hit)
+		opt(vit)
 	}
 
-	hit.T = t
+	vit.T = t
 
 	// run each test in the next day to mostly prevent previous tests impact and\or workspace initialization
-	hit.TimeAdd(day)
+	vit.TimeAdd(day)
 
-	hit.initialGoroutinesNum = runtime.NumGoroutine()
+	vit.initialGoroutinesNum = runtime.NumGoroutine()
 
-	return hit
+	return vit
 }
 
-func newHit(t *testing.T, hitCfg *HITConfig, useCas bool) *HIT {
-	cfg := vvm.NewHVMDefaultConfig()
+func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
+	cfg := vvm.NewVVMDefaultConfig()
 
 	// only dynamic ports are used in tests
-	cfg.HVMPort = 0
+	cfg.VVMPort = 0
 	cfg.MetricsServicePort = 0
 
 	cfg.TimeFunc = func() time.Time { return ts.now() }
@@ -92,12 +92,12 @@ func newHit(t *testing.T, hitCfg *HITConfig, useCas bool) *HIT {
 	emailMessagesChan := make(chan smtptest.Message, 1) // must be buffered
 	cfg.ActualizerStateOpts = append(cfg.ActualizerStateOpts, state.WithEmailMessagesChan(emailMessagesChan))
 
-	hitPreConfig := &hitPreConfig{
-		hvmCfg:  &cfg,
-		hitApps: hitApps{},
+	vitPreConfig := &vitPreConfig{
+		vvmCfg:  &cfg,
+		vitApps: vitApps{},
 	}
-	for _, opt := range hitCfg.opts {
-		opt(hitPreConfig)
+	for _, opt := range vitCfg.opts {
+		opt(vitPreConfig)
 	}
 
 	// eliminate timeouts impact for debugging
@@ -112,40 +112,40 @@ func newHit(t *testing.T, hitCfg *HITConfig, useCas bool) *HIT {
 		}
 	}
 
-	hvm, err := vvm.ProvideHVM(&cfg, 0)
+	hvm, err := vvm.ProvideVVM(&cfg, 0)
 	require.NoError(t, err)
 
-	hit := &HIT{
+	vit := &VIT{
 		HeeusVM:              hvm,
-		HVMConfig:            &cfg,
+		VVMConfig:            &cfg,
 		T:                    t,
 		appWorkspaces:        map[istructs.AppQName]map[string]*AppWorkspace{},
 		principals:           map[istructs.AppQName]map[string]*Principal{},
 		lock:                 sync.Mutex{},
-		isOnSharedConfig:     hitCfg.isShared,
+		isOnSharedConfig:     vitCfg.isShared,
 		emailMessagesChan:    emailMessagesChan,
-		configCleanupsAmount: len(hitPreConfig.cleanups),
+		configCleanupsAmount: len(vitPreConfig.cleanups),
 	}
 
-	hit.cleanups = append(hit.cleanups, hitPreConfig.cleanups...)
+	vit.cleanups = append(vit.cleanups, vitPreConfig.cleanups...)
 
 	// запустим сервер
-	require.Nil(t, hit.Launch())
+	require.Nil(t, vit.Launch())
 
-	for _, app := range hitPreConfig.hitApps {
+	for _, app := range vitPreConfig.vitApps {
 		// создадим логины и рабочие области
 		for _, login := range app.logins {
-			hit.SignUp(login.Name, login.Pwd, login.AppQName)
-			prn := hit.SignIn(login)
-			appPrincipals, ok := hit.principals[app.name]
+			vit.SignUp(login.Name, login.Pwd, login.AppQName)
+			prn := vit.SignIn(login)
+			appPrincipals, ok := vit.principals[app.name]
 			if !ok {
 				appPrincipals = map[string]*Principal{}
-				hit.principals[app.name] = appPrincipals
+				vit.principals[app.name] = appPrincipals
 			}
 			appPrincipals[login.Name] = prn
 
 			for singleton, data := range login.singletons {
-				if !hit.PostProfile(prn, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, singleton)).IsEmpty() {
+				if !vit.PostProfile(prn, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, singleton)).IsEmpty() {
 					continue
 				}
 				data[appdef.SystemField_ID] = 1
@@ -154,20 +154,20 @@ func newHit(t *testing.T, hitCfg *HITConfig, useCas bool) *HIT {
 				bb, err := json.Marshal(data)
 				require.NoError(t, err)
 
-				hit.PostProfile(prn, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb))
+				vit.PostProfile(prn, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb))
 			}
 		}
 		for _, wsd := range app.ws {
-			owner := hit.principals[app.name][wsd.ownerLoginName]
-			appWorkspaces, ok := hit.appWorkspaces[app.name]
+			owner := vit.principals[app.name][wsd.ownerLoginName]
+			appWorkspaces, ok := vit.appWorkspaces[app.name]
 			if !ok {
 				appWorkspaces = map[string]*AppWorkspace{}
-				hit.appWorkspaces[app.name] = appWorkspaces
+				vit.appWorkspaces[app.name] = appWorkspaces
 			}
-			appWorkspaces[wsd.Name] = hit.CreateWorkspace(wsd, owner)
+			appWorkspaces[wsd.Name] = vit.CreateWorkspace(wsd, owner)
 
 			for singleton, data := range wsd.singletons {
-				if !hit.PostWS(appWorkspaces[wsd.Name], "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, singleton)).IsEmpty() {
+				if !vit.PostWS(appWorkspaces[wsd.Name], "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, singleton)).IsEmpty() {
 					continue
 				}
 				data[appdef.SystemField_ID] = 1
@@ -176,31 +176,31 @@ func newHit(t *testing.T, hitCfg *HITConfig, useCas bool) *HIT {
 				bb, err := json.Marshal(data)
 				require.NoError(t, err)
 
-				hit.PostWS(appWorkspaces[wsd.Name], "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb))
+				vit.PostWS(appWorkspaces[wsd.Name], "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb))
 			}
 		}
 	}
-	return hit
+	return vit
 }
 
-func NewHITLocalCassandra(t *testing.T, hitCfg *HITConfig, opts ...hitOptFunc) (hit *HIT) {
-	hit = newHit(t, hitCfg, true)
+func NewVITLocalCassandra(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
+	vit = newVit(t, vitCfg, true)
 	for _, opt := range opts {
-		opt(hit)
+		opt(vit)
 	}
 
-	return hit
+	return vit
 }
 
 // WSID as wsid[0] or 1, system owner
 // command processor will skip initialization check for that workspace
-func (hit *HIT) DummyWS(appQName istructs.AppQName, awsid ...istructs.WSID) *AppWorkspace {
+func (vit *VIT) DummyWS(appQName istructs.AppQName, awsid ...istructs.WSID) *AppWorkspace {
 	wsid := istructs.WSID(1)
 	if len(awsid) > 0 {
 		wsid = awsid[0]
 	}
 	commandprocessor.AddDummyWS(wsid)
-	sysPrn := hit.GetSystemPrincipal(appQName)
+	sysPrn := vit.GetSystemPrincipal(appQName)
 	return &AppWorkspace{
 		WorkspaceDescriptor: WorkspaceDescriptor{
 			WSParams: WSParams{
@@ -213,8 +213,8 @@ func (hit *HIT) DummyWS(appQName istructs.AppQName, awsid ...istructs.WSID) *App
 	}
 }
 
-func (hit *HIT) WS(appQName istructs.AppQName, wsName string) *AppWorkspace {
-	appWorkspaces, ok := hit.appWorkspaces[appQName]
+func (vit *VIT) WS(appQName istructs.AppQName, wsName string) *AppWorkspace {
+	appWorkspaces, ok := vit.appWorkspaces[appQName]
 	if !ok {
 		panic("unknown app " + appQName.String())
 	}
@@ -224,48 +224,48 @@ func (hit *HIT) WS(appQName istructs.AppQName, wsName string) *AppWorkspace {
 	panic("unknown workspace " + wsName)
 }
 
-func (hit *HIT) TearDown() {
-	hit.T.Helper()
-	hit.isFinalized = true
-	for _, cleanup := range hit.cleanups {
-		cleanup(hit)
+func (vit *VIT) TearDown() {
+	vit.T.Helper()
+	vit.isFinalized = true
+	for _, cleanup := range vit.cleanups {
+		cleanup(vit)
 	}
-	hit.cleanups = hit.cleanups[:hit.configCleanupsAmount]
+	vit.cleanups = vit.cleanups[:vit.configCleanupsAmount]
 	grNum := runtime.NumGoroutine()
-	if grNum-hit.initialGoroutinesNum > allowedGoroutinesNumDiff {
-		hit.T.Logf("!!! goroutines leak: was %d on HIT setup, now %d after teardown", hit.initialGoroutinesNum, grNum)
+	if grNum-vit.initialGoroutinesNum > allowedGoroutinesNumDiff {
+		vit.T.Logf("!!! goroutines leak: was %d on VIT setup, now %d after teardown", vit.initialGoroutinesNum, grNum)
 	}
 	select {
-	case <-hit.emailMessagesChan:
-		hit.T.Log("unexpected email message received")
-		hit.T.Fail()
+	case <-vit.emailMessagesChan:
+		vit.T.Log("unexpected email message received")
+		vit.T.Fail()
 	default:
 	}
-	if hit.isOnSharedConfig {
+	if vit.isOnSharedConfig {
 		return
 	}
-	hit.Shutdown()
+	vit.Shutdown()
 }
 
-func (hit *HIT) MetricsServicePort() int {
-	return int(hit.HeeusVM.MetricsServicePort())
+func (vit *VIT) MetricsServicePort() int {
+	return int(vit.HeeusVM.MetricsServicePort())
 }
 
-func (hit *HIT) GetSystemPrincipal(appQName istructs.AppQName) *Principal {
-	hit.T.Helper()
-	hit.lock.Lock()
-	defer hit.lock.Unlock()
-	appPrincipals, ok := hit.principals[appQName]
+func (vit *VIT) GetSystemPrincipal(appQName istructs.AppQName) *Principal {
+	vit.T.Helper()
+	vit.lock.Lock()
+	defer vit.lock.Unlock()
+	appPrincipals, ok := vit.principals[appQName]
 	if !ok {
 		appPrincipals = map[string]*Principal{}
-		hit.principals[appQName] = appPrincipals
+		vit.principals[appQName] = appPrincipals
 	}
 	prn, ok := appPrincipals["___sys"]
 	if !ok {
-		as, err := hit.IAppStructsProvider.AppStructs(appQName)
-		require.NoError(hit.T, err)
+		as, err := vit.IAppStructsProvider.AppStructs(appQName)
+		require.NoError(vit.T, err)
 		sysToken, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
-		require.NoError(hit.T, err)
+		require.NoError(vit.T, err)
 		prn = &Principal{
 			Token:       sysToken,
 			ProfileWSID: istructs.NullWSID,
@@ -280,70 +280,70 @@ func (hit *HIT) GetSystemPrincipal(appQName istructs.AppQName) *Principal {
 	return prn
 }
 
-func (hit *HIT) GetPrincipal(appQName istructs.AppQName, login string) *Principal {
-	appPrincipals, ok := hit.principals[appQName]
+func (vit *VIT) GetPrincipal(appQName istructs.AppQName, login string) *Principal {
+	appPrincipals, ok := vit.principals[appQName]
 	if !ok {
-		hit.T.Fatalf("unknown app %s", appQName)
+		vit.T.Fatalf("unknown app %s", appQName)
 	}
 	prn, ok := appPrincipals[login]
 	if !ok {
-		hit.T.Fatalf("unknown login %s", login)
+		vit.T.Fatalf("unknown login %s", login)
 	}
 	return prn
 }
 
-func (hit *HIT) PostProfile(prn *Principal, funcName string, body string, opts ...utils.ReqOptFunc) *utils.FuncResponse {
-	hit.T.Helper()
+func (vit *VIT) PostProfile(prn *Principal, funcName string, body string, opts ...utils.ReqOptFunc) *utils.FuncResponse {
+	vit.T.Helper()
 	opts = append(opts, utils.WithAuthorizeByIfNot(prn.Token))
-	return hit.PostApp(prn.AppQName, prn.ProfileWSID, funcName, body, opts...)
+	return vit.PostApp(prn.AppQName, prn.ProfileWSID, funcName, body, opts...)
 }
 
-func (hit *HIT) PostWS(ws *AppWorkspace, funcName string, body string, opts ...utils.ReqOptFunc) *utils.FuncResponse {
-	hit.T.Helper()
+func (vit *VIT) PostWS(ws *AppWorkspace, funcName string, body string, opts ...utils.ReqOptFunc) *utils.FuncResponse {
+	vit.T.Helper()
 	opts = append(opts, utils.WithAuthorizeByIfNot(ws.Owner.Token))
-	return hit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
+	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
 // PostWSSys is PostWS authorized by the System Token
-func (hit *HIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts ...utils.ReqOptFunc) *utils.FuncResponse {
-	hit.T.Helper()
-	sysPrn := hit.GetSystemPrincipal(ws.Owner.AppQName)
+func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts ...utils.ReqOptFunc) *utils.FuncResponse {
+	vit.T.Helper()
+	sysPrn := vit.GetSystemPrincipal(ws.Owner.AppQName)
 	opts = append(opts, utils.WithAuthorizeByIfNot(sysPrn.Token))
-	return hit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
+	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
-func (hit *HIT) PostFree(url string, body string, opts ...utils.ReqOptFunc) *utils.HTTPResponse {
-	hit.T.Helper()
+func (vit *VIT) PostFree(url string, body string, opts ...utils.ReqOptFunc) *utils.HTTPResponse {
+	vit.T.Helper()
 	opts = append(opts, utils.WithMethod(http.MethodPost))
 	res, err := utils.Req(url, body, opts...)
-	require.NoError(hit.T, err)
+	require.NoError(vit.T, err)
 	return res
 }
 
-func (hit *HIT) Post(url string, body string, opts ...utils.ReqOptFunc) *utils.HTTPResponse {
-	hit.T.Helper()
-	res, err := utils.FederationPOST(hit.FederationURL(), url, body, opts...)
-	require.NoError(hit.T, err)
+func (vit *VIT) Post(url string, body string, opts ...utils.ReqOptFunc) *utils.HTTPResponse {
+	vit.T.Helper()
+	res, err := utils.FederationPOST(vit.FederationURL(), url, body, opts...)
+	require.NoError(vit.T, err)
 	return res
 }
 
-func (hit *HIT) PostApp(appQName istructs.AppQName, wsid istructs.WSID, funcName string, body string, opts ...utils.ReqOptFunc) *utils.FuncResponse {
-	hit.T.Helper()
+func (vit *VIT) PostApp(appQName istructs.AppQName, wsid istructs.WSID, funcName string, body string, opts ...utils.ReqOptFunc) *utils.FuncResponse {
+	vit.T.Helper()
 	url := fmt.Sprintf("api/%s/%d/%s", appQName, wsid, funcName)
-	res, err := utils.FederationFunc(hit.FederationURL(), url, body, opts...)
-	require.NoError(hit.T, err)
+	res, err := utils.FederationFunc(vit.FederationURL(), url, body, opts...)
+	require.NoError(vit.T, err)
 	return res
 }
 
-func (hit *HIT) Get(url string, opts ...utils.ReqOptFunc) *utils.HTTPResponse {
-	hit.T.Helper()
-	res, err := utils.FederationReq(hit.FederationURL(), url, "", opts...)
-	require.NoError(hit.T, err)
+func (vit *VIT) Get(url string, opts ...utils.ReqOptFunc) *utils.HTTPResponse {
+	vit.T.Helper()
+	res, err := utils.FederationReq(vit.FederationURL(), url, "", opts...)
+	require.NoError(vit.T, err)
 	return res
 }
 
-func (hit *HIT) WaitFor(consumer func() *utils.FuncResponse) *utils.FuncResponse {
-	hit.T.Helper()
+func (vit *VIT) WaitFor(consumer func() *utils.FuncResponse) *utils.FuncResponse {
+	vit.T.Helper()
 	start := time.Now()
 	for time.Since(start) < testTimeout {
 		resp := consumer()
@@ -353,13 +353,13 @@ func (hit *HIT) WaitFor(consumer func() *utils.FuncResponse) *utils.FuncResponse
 		logger.Info("waiting for projection")
 		time.Sleep(100 * time.Millisecond)
 	}
-	hit.T.Fail()
+	vit.T.Fail()
 	return nil
 }
 
-func (hit *HIT) refreshTokens() {
-	hit.T.Helper()
-	for _, appPrns := range hit.principals {
+func (vit *VIT) refreshTokens() {
+	vit.T.Helper()
+	for _, appPrns := range vit.principals {
 		for _, prn := range appPrns {
 			// issue principal token
 			principalPayload := payloads.PrincipalPayload{
@@ -367,62 +367,62 @@ func (hit *HIT) refreshTokens() {
 				SubjectKind: istructs.SubjectKind_User,
 				ProfileWSID: istructs.WSID(prn.ProfileWSID),
 			}
-			as, err := hit.IAppStructsProvider.AppStructs(prn.AppQName)
-			require.NoError(hit.T, err) // notest
+			as, err := vit.IAppStructsProvider.AppStructs(prn.AppQName)
+			require.NoError(vit.T, err) // notest
 			newToken, err := as.AppTokens().IssueToken(signupin.DefaultPrincipalTokenExpiration, &principalPayload)
-			require.NoError(hit.T, err)
+			require.NoError(vit.T, err)
 			prn.Token = newToken
 		}
 	}
 }
 
-func (hit *HIT) NextNumber() int {
-	hit.lock.Lock()
-	hit.nextNumber++
-	res := hit.nextNumber
-	hit.lock.Unlock()
+func (vit *VIT) NextNumber() int {
+	vit.lock.Lock()
+	vit.nextNumber++
+	res := vit.nextNumber
+	vit.lock.Unlock()
 	return res
 }
 
-func (hit *HIT) Now() time.Time {
+func (vit *VIT) Now() time.Time {
 	return ts.now()
 }
 
-func (hit *HIT) SetNow(now time.Time) {
+func (vit *VIT) SetNow(now time.Time) {
 	ts.setCurrentInstant(now)
-	hit.refreshTokens()
+	vit.refreshTokens()
 }
 
-func (hit *HIT) TimeAdd(dur time.Duration) {
+func (vit *VIT) TimeAdd(dur time.Duration) {
 	ts.add(dur)
-	hit.refreshTokens()
+	vit.refreshTokens()
 }
 
-func (hit *HIT) NextName() string {
-	return "name_" + strconv.Itoa(hit.NextNumber())
+func (vit *VIT) NextName() string {
+	return "name_" + strconv.Itoa(vit.NextNumber())
 }
 
-func (hit *HIT) ExpectEmail() *EmailCaptor {
-	ec := &EmailCaptor{ch: make(chan smtptest.Message, 1), hit: hit}
+func (vit *VIT) ExpectEmail() *EmailCaptor {
+	ec := &EmailCaptor{ch: make(chan smtptest.Message, 1), vit: vit}
 	go func() {
-		m := <-hit.emailMessagesChan
+		m := <-vit.emailMessagesChan
 		ec.ch <- m
 	}()
 	return ec
 }
 
 // sets `bs` as state of Buckets for `rateLimitName` in `appQName`
-// will be automatically restored on hit.TearDown() to the state the Bucket was before MockBuckets() call
-func (hit *HIT) MockBuckets(appQName istructs.AppQName, rateLimitName string, bs irates.BucketState) {
-	hit.T.Helper()
-	as, err := hit.IAppStructsProvider.AppStructs(appQName)
-	require.NoError(hit.T, err)
+// will be automatically restored on vit.TearDown() to the state the Bucket was before MockBuckets() call
+func (vit *VIT) MockBuckets(appQName istructs.AppQName, rateLimitName string, bs irates.BucketState) {
+	vit.T.Helper()
+	as, err := vit.IAppStructsProvider.AppStructs(appQName)
+	require.NoError(vit.T, err)
 	appBuckets := istructsmem.IBucketsFromIAppStructs(as)
 	initialState, err := appBuckets.GetDefaultBucketsState(rateLimitName)
-	require.NoError(hit.T, err)
+	require.NoError(vit.T, err)
 	appBuckets.SetDefaultBucketState(rateLimitName, bs)
 	appBuckets.ResetRateBuckets(rateLimitName, bs)
-	hit.cleanups = append(hit.cleanups, func(hit *HIT) {
+	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
 		appBuckets.SetDefaultBucketState(rateLimitName, initialState)
 		appBuckets.ResetRateBuckets(rateLimitName, initialState)
 	})
@@ -467,6 +467,6 @@ func (ec *EmailCaptor) Capture() (m smtptest.Message) {
 		return m
 	case <-tmr.C:
 	}
-	ec.hit.T.Fatal("no email messages")
+	ec.vit.T.Fatal("no email messages")
 	return
 }

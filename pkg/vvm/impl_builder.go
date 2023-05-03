@@ -10,13 +10,13 @@ import (
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func (hap HVMAppsBuilder) Add(appQName istructs.AppQName, builder HVMAppBuilder) {
+func (hap VVMAppsBuilder) Add(appQName istructs.AppQName, builder VVMAppBuilder) {
 	builders := hap[appQName]
 	builders = append(builders, builder)
 	hap[appQName] = builders
 }
 
-func (hap HVMAppsBuilder) PrepareStandardExtensionPoints() map[istructs.AppQName]IStandardExtensionPoints {
+func (hap VVMAppsBuilder) PrepareStandardExtensionPoints() map[istructs.AppQName]IStandardExtensionPoints {
 	seps := map[istructs.AppQName]IStandardExtensionPoints{}
 	for appQName := range hap {
 		seps[appQName] = &standardExtensionPointsImpl{rootExtensionPoint: &implIExtensionPoint{}}
@@ -24,13 +24,13 @@ func (hap HVMAppsBuilder) PrepareStandardExtensionPoints() map[istructs.AppQName
 	return seps
 }
 
-func (hap HVMAppsBuilder) Build(hvmCfg *HVMConfig, cfgs istructsmem.AppConfigsType, hvmAPI HVMAPI, seps map[istructs.AppQName]IStandardExtensionPoints) (hvmApps HVMApps) {
+func (hap VVMAppsBuilder) Build(vvmCfg *VVMConfig, cfgs istructsmem.AppConfigsType, vvmAPI VVMAPI, seps map[istructs.AppQName]IStandardExtensionPoints) (vvmApps VVMApps) {
 	for appQName, builders := range hap {
 		adf := appdef.New()
 		sep := seps[appQName]
 		cfg := cfgs.AddConfig(appQName, adf)
 		for _, builder := range builders {
-			builder(hvmCfg, hvmAPI, cfg, adf, sep)
+			builder(vvmCfg, vvmAPI, cfg, adf, sep)
 		}
 		epPostDocs := sep.ExtensionPoint(EPPostDocs)
 		epPostDocs.Iterate(func(eKey EKey, value interface{}) {
@@ -50,13 +50,13 @@ func (hap HVMAppsBuilder) Build(hvmCfg *HVMConfig, cfgs istructsmem.AppConfigsTy
 				doc.SetSingleton()
 			}
 		})
-		hvmApps = append(hvmApps, appQName)
+		vvmApps = append(vvmApps, appQName)
 		// TODO: remove it after https://github.com/voedger/voedger/issues/56
 		if _, err := adf.Build(); err != nil {
 			panic(err)
 		}
 	}
-	return hvmApps
+	return vvmApps
 }
 
 func (ar *standardExtensionPointsImpl) ExtensionPoint(epKey EPKey) IExtensionPoint {

@@ -28,9 +28,8 @@ import (
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, hvmAPI vvm.HVMAPI, smtpCfg smtp.Cfg, sep vvm.IStandardExtensionPoints) {
+func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, hvmAPI vvm.VVMAPI, smtpCfg smtp.Cfg, sep vvm.IStandardExtensionPoints) {
 	blobber.ProvideBlobberCmds(cfg, appDefBuilder)
-	utils.ProvideViewNextWSID(appDefBuilder)
 	collection.ProvideCollectionFunc(cfg, appDefBuilder)
 	collection.ProvideCDocFunc(cfg, appDefBuilder)
 	collection.ProvideStateFunc(cfg, appDefBuilder)

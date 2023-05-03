@@ -13,8 +13,8 @@ import (
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func Provide(smtpCfg smtp.Cfg) vvm.HVMAppBuilder {
-	return func(hvmCfg *vvm.HVMConfig, hvmAPI vvm.HVMAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
+func Provide(smtpCfg smtp.Cfg) vvm.VVMAppBuilder {
+	return func(hvmCfg *vvm.VVMConfig, hvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
 
 		// sys package
 		sys.Provide(hvmCfg.TimeFunc, cfg, appDefBuilder, hvmAPI, smtpCfg, sep)

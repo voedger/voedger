@@ -6,6 +6,7 @@ package workspace
 
 import (
 	"embed"
+	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -22,6 +23,9 @@ const (
 	Field_InitStartedAtMs  = "InitStartedAtMs"
 	Field_ChildWorkspaceID = "ChildWorkspaceID"
 	workspace              = "Workspace"
+	fldDummy1              = "dummy1"
+	fldDummy2              = "dummy2"
+	fldNextBaseWSID        = "NextBaseWSID"
 )
 
 var (
@@ -32,6 +36,8 @@ var (
 	qNameAPInitializeWorkspace     = appdef.NewQName(appdef.SysPackage, "InitializeWorkspace")
 	qNameAPInvokeCreateWorkspaceID = appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspaceID")
 	qNameAPInvokeCreateWorkspace   = appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspace")
+	ViewQNameNextBaseWSID          = appdef.NewQName(appdef.SysPackage, "NextBaseWSID")
+	nextWSIDGlobalLock             = sync.Mutex{}
 )
 
 //go:embed postinit/*
