@@ -4,17 +4,22 @@ on:
   push:
     paths:
       - 'cmd/**'
+  pull_request:
+    paths:
+      - 'cmd/**'
   pull_request_target:
     paths:
       - 'cmd/**'
 
 jobs:
   call-workflow-ci-cmd:
+    if: github.event_name == 'pull_request'
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
     with: 
       test_folder: 'cmd'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
       ignore_bp3: 'true'
+      short_test: 'true'
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
