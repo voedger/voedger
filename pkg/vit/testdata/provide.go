@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package test_template
+package sys_test_template
 
 import "embed"
 

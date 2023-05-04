@@ -7,7 +7,6 @@ package sys
 import (
 	"time"
 
-	// "github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
@@ -28,7 +27,8 @@ import (
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, hvmAPI vvm.VVMAPI, smtpCfg smtp.Cfg, sep vvm.IStandardExtensionPoints) {
+func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, hvmAPI vvm.VVMAPI, smtpCfg smtp.Cfg,
+	sep vvm.IStandardExtensionPoints, wsPostInitFunc workspace.WSPostInitFunc) {
 	blobber.ProvideBlobberCmds(cfg, appDefBuilder)
 	collection.ProvideCollectionFunc(cfg, appDefBuilder)
 	collection.ProvideCDocFunc(cfg, appDefBuilder)
@@ -52,7 +52,7 @@ func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBu
 		journal.ProvideWLogDatesAsyncProjectorFactory(),
 		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspace(hvmAPI.FederationURL, cfg.Name, hvmAPI.ITokens),
 		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(hvmAPI.FederationURL, cfg.Name, hvmAPI.ITokens),
-		workspace.ProvideAsyncProjectorInitializeWorkspace(hvmAPI.FederationURL, timeFunc, cfg.Name, sep.EPWSTemplates(), hvmAPI.ITokens),
+		workspace.ProvideAsyncProjectorInitializeWorkspace(hvmAPI.FederationURL, timeFunc, cfg.Name, sep.EPWSTemplates(), hvmAPI.ITokens, wsPostInitFunc),
 		verifier.ProvideAsyncProjectorFactory_SendEmailVerificationCode(hvmAPI.FederationURL, smtpCfg),
 		invite.ProvideAsyncProjectorApplyInvitationFactory(timeFunc, hvmAPI.FederationURL, cfg.Name, hvmAPI.ITokens, smtpCfg),
 		invite.ProvideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc, hvmAPI.FederationURL, cfg.Name, hvmAPI.ITokens),

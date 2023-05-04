@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	airsbp_it "github.com/untillpro/airs-bp3/packages/air/it"
 	"github.com/voedger/voedger/pkg/istructs"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -53,12 +52,12 @@ func TestMetricsService(t *testing.T) {
 }
 
 func TestCommandProcessorMetrics(t *testing.T) {
-	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 	require := require.New(t)
 
-	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
-	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"untill.payments","name":"EFT","guid":"0a53b7c6-2c47-491c-ac00-307b8d5ba6f0"}}]}`
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
 	vit.PostWS(ws, "c.sys.CUD", body)
 
 	metrics := vit.MetricsRequest()

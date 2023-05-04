@@ -593,7 +593,7 @@ func tearDown(app testApp) {
 	<-app.done
 }
 
-// simulate airs-bp3 behaviour
+// simulate real app behaviour
 func replyBadRequest(bus ibus.IBus, sender interface{}, message string) {
 	res := coreutils.NewHTTPErrorf(http.StatusBadRequest, message)
 	bus.SendResponse(sender, ibus.Response{
@@ -636,7 +636,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus
 	var bus ibus.IBus
 	bus = ibusmem.Provide(func(ctx context.Context, sender interface{}, request ibus.Request) {
-		// сымитируем работу airs-bp3 при приеме запроса-команды
+		// сымитируем работу реального приложения при приеме запроса-команды
 		cmdQName, err := appdef.ParseQName(request.Resource[2:])
 		require.NoError(t, err)
 		appQName, err := istructs.ParseAppQName(request.AppQName)

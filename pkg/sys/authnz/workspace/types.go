@@ -4,11 +4,17 @@
 
 package workspace
 
-import "github.com/voedger/voedger/pkg/istructs"
+import (
+	"net/url"
+
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
+)
 
 type cud struct {
 	Fields map[string]interface{} `json:"fields"`
 }
+
 type cuds struct {
 	Cuds []cud `json:"cuds"`
 }
@@ -23,3 +29,5 @@ type BLOB struct {
 	Name      string
 	MimeType  string
 }
+
+type WSPostInitFunc func(targetAppQName istructs.AppQName, wsKind appdef.QName, newWSID istructs.WSID, federationURL *url.URL, authToken string) (err error)

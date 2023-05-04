@@ -7,7 +7,7 @@
     "preview": 536,
     "sys.ID": 5000000000400,
     "sys.IsActive": true,
-    "sys.QName": "untill.air_table_plan",
+    "sys.QName": "sys.air_table_plan",
     "width": 879
   },
   {
@@ -18,7 +18,7 @@
     "preview": 541,
     "sys.ID": 5000000000416,
     "sys.IsActive": true,
-    "sys.QName": "untill.air_table_plan",
+    "sys.QName": "sys.air_table_plan",
     "width": 882
   },
   {
@@ -48,7 +48,7 @@
     "speed": 9600,
     "sys.ID": 5000001540,
     "sys.IsActive": true,
-    "sys.QName": "untill.printers",
+    "sys.QName": "sys.printers",
     "top_lines": 0,
     "width": 42
   },
@@ -65,7 +65,7 @@
     "sccovers": 0,
     "sys.ID": 5000000249,
     "sys.IsActive": true,
-    "sys.QName": "untill.sales_area"
+    "sys.QName": "sys.sales_area"
   },
   {
     "driver_id": "",
@@ -79,7 +79,7 @@
     "psp_model": -1,
     "sys.ID": 5000000060,
     "sys.IsActive": true,
-    "sys.QName": "untill.payments"
+    "sys.QName": "sys.payments"
   },
   {
     "block_time_break": 0,
@@ -101,7 +101,7 @@
     "start_week_time": 28800000,
     "sys.ID": 100000000000,
     "sys.IsActive": true,
-    "sys.QName": "untill.untill_users",
+    "sys.QName": "sys.untill_users",
     "user_clock_in": 0,
     "user_poscode": "6",
     "user_poscode_remoteterm": "",
@@ -111,11 +111,11 @@
     "void_number": 0
   },
   {
-    "sys.QName": "untill.computers",
+    "sys.QName": "sys.computers",
     "sys.ID": 1000000201
   },
   {
-    "sys.QName": "untill.restaurant_computers",
+    "sys.QName": "sys.restaurant_computers",
     "sys.ID": 1000000202,
     "id_computers": 1000000201,
     "sys.ParentID": 1000000201,

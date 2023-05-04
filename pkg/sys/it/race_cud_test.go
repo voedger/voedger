@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	airsbp_it "github.com/untillpro/airs-bp3/packages/air/it"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -33,16 +32,17 @@ func Test_Race_CUDSimpleRead(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 
 	cnt := readCnt
 	wg := sync.WaitGroup{}
 	wg.Add(cnt)
-	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	for i := 0; i < cnt; i++ {
 		go func() {
 			defer wg.Done()
+			writeArt(ws, vit)
 			readArt(vit, ws)
 		}()
 	}
@@ -54,13 +54,13 @@ func Test_Race_CUDSimpleWrite(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 
 	cnt := writeCnt
 	wg := sync.WaitGroup{}
 	wg.Add(cnt)
-	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	for i := 0; i < cnt; i++ {
 		go func() {
 			defer wg.Done()
@@ -73,12 +73,12 @@ func Test_Race_CUDOneWriteManyRead(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	go func() {
 		defer wg.Done()
 		writeArt(ws, vit)
@@ -100,12 +100,12 @@ func Test_Race_CUDManyWriteOneRead(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 
 	cnt := writeCnt
 	wg := sync.WaitGroup{}
-	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	for i := 0; i < cnt; i++ {
 		wg.Add(1)
 		go func() {
@@ -130,13 +130,13 @@ func Test_Race_CUDManyWriteManyReadNoResult(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 
 	cnt := writeCnt
 	wg := sync.WaitGroup{}
 	wg.Add(2 * cnt)
-	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	for i := 0; i < cnt; i++ {
 		go func() {
 			defer wg.Done()
@@ -156,13 +156,13 @@ func Test_Race_CUDManyWriteManyReadCheckResult(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 
 	cnt := writeCnt
 	wgW := sync.WaitGroup{}
 	wgW.Add(cnt)
-	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	artNumbers := make(chan int, cnt)
 	for i := 0; i < cnt; i++ {
 		go func() {
@@ -191,13 +191,13 @@ func Test_Race_CUDManyUpdateManyReadCheckResult(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 
 	cntw := writeCnt
 	wgW := sync.WaitGroup{}
 	wgW.Add(cntw)
-	ws := vit.WS(istructs.AppQName_untill_airs_bp, "test_restaurant")
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	artNumbers := make(chan int, cntw)
 	for i := 0; i < cntw; i++ {
 		go func() {
@@ -239,7 +239,7 @@ func Test_Race_CUDManyReadCheckResult(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 
 	var cntWS int = readCnt
@@ -249,7 +249,7 @@ func Test_Race_CUDManyReadCheckResult(t *testing.T) {
 		wg.Add(1)
 		go func(wsid istructs.WSID) {
 			defer wg.Done()
-			ws := vit.DummyWS(istructs.AppQName_untill_airs_bp, wsid)
+			ws := vit.DummyWS(istructs.AppQName_test1_app1, wsid)
 			readArt(vit, ws)
 		}(prtIdx)
 	}
@@ -261,7 +261,7 @@ func Test_Race_CUDManyWriteCheckResult(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 
 	var cntWS int = writeCnt
@@ -272,7 +272,7 @@ func Test_Race_CUDManyWriteCheckResult(t *testing.T) {
 		wg.Add(1)
 		go func(wsid istructs.WSID) {
 			defer wg.Done()
-			ws := vit.DummyWS(istructs.AppQName_untill_airs_bp, wsid+istructs.MaxPseudoBaseWSID)
+			ws := vit.DummyWS(istructs.AppQName_test1_app1, wsid+istructs.MaxPseudoBaseWSID)
 			writeArt(ws, vit)
 		}(prtIdx)
 	}
@@ -284,7 +284,7 @@ func Test_Race_CUDManyWriteReadCheckResult(t *testing.T) {
 	if it.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 
 	var cntWS int = writeCnt
@@ -296,7 +296,7 @@ func Test_Race_CUDManyWriteReadCheckResult(t *testing.T) {
 			wg.Add(1)
 			go func(wsid istructs.WSID) {
 				defer wg.Done()
-				ws := vit.DummyWS(istructs.AppQName_untill_airs_bp, wsid+istructs.MaxPseudoBaseWSID)
+				ws := vit.DummyWS(istructs.AppQName_test1_app1, wsid+istructs.MaxPseudoBaseWSID)
 				writeArt(ws, vit)
 			}(prtIdx)
 		}
@@ -304,7 +304,7 @@ func Test_Race_CUDManyWriteReadCheckResult(t *testing.T) {
 			wg.Add(1)
 			go func(wsid istructs.WSID) {
 				defer wg.Done()
-				ws := vit.DummyWS(istructs.AppQName_untill_airs_bp, wsid+istructs.MaxPseudoBaseWSID)
+				ws := vit.DummyWS(istructs.AppQName_test1_app1, wsid+istructs.MaxPseudoBaseWSID)
 				readArt(vit, ws)
 			}(prtIdx)
 		}
@@ -322,7 +322,7 @@ func writeArt(ws *it.AppWorkspace, vit *it.VIT) (artNumber int) {
 				{
 					"fields": {
 						"sys.ID": ` + idstr + `,
-						"sys.QName": "untill.articles",
+						"sys.QName": "sys.articles",
 						"name": "` + artname + `",
 						"article_manual": 1,
 						"article_hash": 2,
@@ -341,7 +341,7 @@ func readArt(vit *it.VIT, ws *it.AppWorkspace) *coreutils.FuncResponse {
 	body := `
 	{
 		"args":{
-			"Schema":"untill.articles"
+			"Schema":"sys.articles"
 		},
 		"elements":[
 			{

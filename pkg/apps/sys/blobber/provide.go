@@ -14,6 +14,6 @@ import (
 
 func Provide(smtpCfg smtp.Cfg) vvm.VVMAppBuilder {
 	return func(hvmCfg *vvm.VVMConfig, hvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
-		sys.Provide(hvmCfg.TimeFunc, cfg, appDefBuilder, hvmAPI, smtpCfg, sep) // need to generate AppWorkspaces only
+		sys.Provide(hvmCfg.TimeFunc, cfg, appDefBuilder, hvmAPI, smtpCfg, sep, nil) // need to generate AppWorkspaces only
 	}
 }

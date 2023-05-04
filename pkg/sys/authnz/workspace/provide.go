@@ -173,11 +173,11 @@ func ProvideSyncProjectorChildWorkspaceIdxFactory() istructs.ProjectorFactory {
 
 // Projector<A, InitializeWorkspace>
 func ProvideAsyncProjectorInitializeWorkspace(federationURL func() *url.URL, nowFunc func() time.Time, appQName istructs.AppQName, epWSTemplates vvm.IEPWSTemplates,
-	tokensAPI itokens.ITokens) istructs.ProjectorFactory {
+	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPInitializeWorkspace,
-			Func: initializeWorkspaceProjector(nowFunc, appQName, federationURL, epWSTemplates, tokensAPI),
+			Func: initializeWorkspaceProjector(nowFunc, appQName, federationURL, epWSTemplates, tokensAPI, wsPostInitFunc),
 		}
 	}
 }

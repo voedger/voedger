@@ -5,7 +5,6 @@
 package workspace
 
 import (
-	"embed"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -38,13 +37,4 @@ var (
 	qNameAPInvokeCreateWorkspace   = appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspace")
 	ViewQNameNextBaseWSID          = appdef.NewQName(appdef.SysPackage, "NextBaseWSID")
 	nextWSIDGlobalLock             = sync.Mutex{}
-)
-
-//go:embed postinit/*
-var Postinit embed.FS
-
-const (
-	pathCap    = 3
-	ticketsCap = 3
-	base       = 10
 )

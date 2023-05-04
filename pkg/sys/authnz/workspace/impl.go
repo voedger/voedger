@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	workspacemgmt "github.com/untillpro/airs-bp3/packages/air/workspace"
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -273,7 +272,8 @@ func execCmdCreateWorkspace(now func() time.Time, asp istructs.IAppStructsProvid
 
 // Projector<A, InitializeWorkspace>
 // triggered by CDoc<WorkspaceDescriptor>
-func initializeWorkspaceProjector(nowFunc func() time.Time, targetAppQName istructs.AppQName, federationURL func() *url.URL, epWSTemplates vvm.IEPWSTemplates, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func initializeWorkspaceProjector(nowFunc func() time.Time, targetAppQName istructs.AppQName, federationURL func() *url.URL, epWSTemplates vvm.IEPWSTemplates,
+	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) error {
 			if rec.QName() != commandprocessor.QNameCDocWorkspaceDescriptor {
@@ -387,9 +387,8 @@ func initializeWorkspaceProjector(nowFunc func() time.Time, targetAppQName istru
 				}
 			}
 
-			// TODO: implement this hack as workspace post-init action\event
-			if wsError == nil && targetAppQName == istructs.AppQName_untill_airs_bp && wsDescr.AsQName(authnz.Field_WSKind) == workspacemgmt.QNameCDocWorkspaceKindRestaurant {
-				wsError = airWSPostInit(targetAppQName, istructs.WSID(newWSID), federationURL, systemPrincipalToken_TargetApp)
+			if wsError == nil && wsPostInitFunc != nil {
+				wsError = wsPostInitFunc(targetAppQName, wsDescr.AsQName(authnz.Field_WSKind), istructs.WSID(newWSID), federationURL, systemPrincipalToken_TargetApp)
 			}
 
 			ownerUpdated = updateOwner(rec, ownerApp, newWSID, wsError, systemPrincipalToken_OwnerApp, federationURL, info, er)

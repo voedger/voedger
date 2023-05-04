@@ -13,14 +13,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	airsbp_it "github.com/untillpro/airs-bp3/packages/air/it"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
 func TestBasicUsage_n10n(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &airsbp_it.SharedConfig_Air)
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 
 	// создадим канал и подпишемся на изменения проекции

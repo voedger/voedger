@@ -12,7 +12,6 @@ import (
 	"testing/fstest"
 
 	"github.com/stretchr/testify/require"
-	wsuntill "github.com/untillpro/airs-bp3/packages/air/workspace"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -70,7 +69,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		require.Equal(istructs.ClusterID(42), ws.WSID.ClusterID())
 
 		t.Run("check the initialized workspace using collection", func(t *testing.T) {
-			body = `{"args":{"Schema":"untill.air_table_plan"},"elements":[{"fields":["sys.ID","image","preview"]}]}`
+			body = `{"args":{"Schema":"sys.air_table_plan"},"elements":[{"fields":["sys.ID","image","preview"]}]}`
 			resp := vit.PostWS(ws, "q.sys.Collection", body)
 			require.Equal(int64(5000000000400), int64(resp.SectionRow()[0].(float64)))  // from testTemplate
 			require.Equal(int64(5000000000416), int64(resp.SectionRow(1)[0].(float64))) // from testTemplate
@@ -160,12 +159,10 @@ func TestWorkspaceAuthorization(t *testing.T) {
 	})
 }
 
-// TODO: shoot off air.Restaurant check to airs-bp3 integration tests
 func TestDenyCreateCDocWSKind(t *testing.T) {
 	cdocWSKinds := []appdef.QName{
 		authnz.QNameCDoc_WorkspaceKind_UserProfile,
 		authnz.QNameCDoc_WorkspaceKind_DeviceProfile,
-		wsuntill.QNameCDocWorkspaceKindRestaurant,
 		authnz.QNameCDoc_WorkspaceKind_AppWorkspace,
 	}
 
