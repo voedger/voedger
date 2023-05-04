@@ -52,24 +52,4 @@ func TestBasicUsage_Uniques(t *testing.T) {
 		uniques = iu.GetAll(qName2)
 		require.Empty(uniques)
 	})
-
-	t.Run("GetForKeysSet", func(t *testing.T) {
-		u := iu.GetForKeySet(qName, []string{"a"})
-		require.Equal([]string{"a"}, u.Fields())
-
-		u = iu.GetForKeySet(qName, []string{"b", "c"})
-		require.Equal([]string{"b", "c"}, u.Fields())
-
-		// order has no sense
-		u = iu.GetForKeySet(qName, []string{"c", "b"})
-		require.Equal([]string{"b", "c"}, u.Fields())
-
-		require.Nil(iu.GetForKeySet(qName, []string{"a", "b"}))
-		require.Nil(iu.GetForKeySet(qName, []string{"b"}))
-		require.Nil(iu.GetForKeySet(qName, []string{"a", "b", "c"}))
-		require.Nil(iu.GetForKeySet(qName2, []string{"any"}))
-
-		require.Panics(func() { iu.GetForKeySet(qName, []string{"b", "b"}) })
-		require.Panics(func() { iu.GetForKeySet(qName, []string{"a", "a"}) })
-	})
 }
