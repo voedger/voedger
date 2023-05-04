@@ -468,7 +468,6 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 				NullQueryExec))
 
 		cfg.Uniques.Add(docQName, []string{"str"})
-		cfg.Uniques.Add(docQName, []string{"str", "fld"})
 
 		cfg.FunctionRateLimits.AddAppLimit(qNameQry, istructs.RateLimit{
 			Period:                1,

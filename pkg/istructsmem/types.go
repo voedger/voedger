@@ -56,7 +56,7 @@ func newRow(appCfg *AppConfigType) rowType {
 }
 
 // build builds the row. Must be called after all Put××× calls to build row. If there were errors during data puts, then their connection will be returned.
-// If there were no errors, then tries to form the dynobuffer and returns the result
+// If there were no errors, then tries to form the dynoBuffer and returns the result
 func (row *rowType) build() (nilledFields []string, err error) {
 	if row.err != nil {
 		return nil, row.error()
@@ -141,7 +141,7 @@ func (row *rowType) error() error {
 	return row.err
 }
 
-// Returns has dynobuffer data in specified field
+// Returns has dynoBuffer data in specified field
 func (row *rowType) hasValue(name string) (value bool) {
 	if name == appdef.SystemField_QName {
 		// special case: sys.QName is always presents
@@ -204,9 +204,9 @@ func (row *rowType) maskValues() {
 
 // Checks is field specified name and kind exists in dynobuffers scheme.
 //
-// If exists then puts specified field value into dynobuffer else collects error.
+// If exists then puts specified field value into dynoBuffer else collects error.
 //
-// Remark: if field must be verificated before put then collects error «field must be verified»
+// Remark: if field must be verified before put then collects error «field must be verified»
 func (row *rowType) putValue(name string, kind dynobuffers.FieldType, value interface{}) {
 	fld, ok := row.dyB.Scheme.FieldsMap[name]
 	if !ok {
@@ -218,7 +218,7 @@ func (row *rowType) putValue(name string, kind dynobuffers.FieldType, value inte
 		if fld.Verifiable() {
 			token, ok := value.(string)
 			if !ok {
-				row.collectErrorf(errFieldMustBeVerificated, name, value, ErrWrongFieldType)
+				row.collectErrorf(errFieldMustBeVerified, name, value, ErrWrongFieldType)
 				return
 			}
 			data, err := row.verifyToken(name, token)
@@ -370,8 +370,8 @@ func (row *rowType) verifyToken(name string, token string) (value interface{}, e
 		return nil, err
 	}
 
-	// if gpayload.AppQName != row.appCfg.Name { … } // redundant check, must be check by IAppToken.ValidateToken()
-	// if expTime := gpayload.IssuedAt.Add(gpayload.Duration); time.Now().After(expTime) { … } // redundant check, must be check by IAppToken.ValidateToken()
+	// if payload.AppQName != row.appCfg.Name { … } // redundant check, must be check by IAppToken.ValidateToken()
+	// if expTime := payload.IssuedAt.Add(payload.Duration); time.Now().After(expTime) { … } // redundant check, must be check by IAppToken.ValidateToken()
 
 	fld := row.def.Field(name)
 

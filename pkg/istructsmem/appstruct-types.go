@@ -134,7 +134,7 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		return err
 	}
 
-	// prepare singleton CDOCs
+	// prepare singleton CDocs
 	if err := cfg.singletons.Prepare(cfg.storage, cfg.versions, cfg.AppDef); err != nil {
 		return err
 	}

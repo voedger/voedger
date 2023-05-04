@@ -206,6 +206,7 @@ func (app *appStructsType) DescribePackage(name string) interface{} {
 	return app.describe().Packages[name]
 }
 
+// Deprecated: use IDef.Unique instead
 func (app *appStructsType) Uniques() istructs.IUniques {
 	return app.uniques
 }
