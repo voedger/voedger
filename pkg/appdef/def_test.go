@@ -156,7 +156,7 @@ func Test_def_AddContainer(t *testing.T) {
 		require.Panics(func() { pk.AddContainer("c1", elQName, 1, Occurs_Unbounded) })
 	})
 
-	t.Run("must be panic if container definition is not compatable", func(t *testing.T) {
+	t.Run("must be panic if container definition is not compatible", func(t *testing.T) {
 		require.Panics(func() { def.AddContainer("c2", def.QName(), 1, 1) })
 
 		d := def.ContainerDef("c2")
@@ -200,12 +200,12 @@ func Test_def_AddUnique(t *testing.T) {
 	def.
 		AddField("name", DataKind_string, true).
 		AddField("surname", DataKind_string, false).
-		AddField("lastname", DataKind_string, false).
+		AddField("lastName", DataKind_string, false).
 		AddField("birthday", DataKind_int64, false).
 		AddField("sex", DataKind_bool, false).
 		AddField("eMail", DataKind_string, false).
 		AddUnique("", []string{"eMail"}).
-		AddUnique("userUniqueFullName", []string{"name", "surname", "lastname"})
+		AddUnique("userUniqueFullName", []string{"name", "surname", "lastName"})
 
 	t.Run("test is ok", func(t *testing.T) {
 		app, err := appDef.Build()
@@ -220,7 +220,7 @@ func Test_def_AddUnique(t *testing.T) {
 		require.Len(f, 3)
 		require.Equal("name", f[0].Name())
 		require.Equal("surname", f[1].Name())
-		require.Equal("lastname", f[2].Name())
+		require.Equal("lastName", f[2].Name())
 
 		require.Equal(d.UniqueCount(), func() int {
 			cnt := 0
@@ -235,7 +235,7 @@ func Test_def_AddUnique(t *testing.T) {
 					require.Len(f, 3)
 					require.Equal("name", f[0].Name())
 					require.Equal("surname", f[1].Name())
-					require.Equal("lastname", f[2].Name())
+					require.Equal("lastName", f[2].Name())
 				}
 			})
 			return cnt
@@ -249,13 +249,16 @@ func Test_def_AddUnique(t *testing.T) {
 		}, "panics if invalid unique name")
 
 		require.Panics(func() {
-			def.AddUnique("userUniqueFullName", []string{"name", "surname", "lastname"})
+			def.AddUnique("userUniqueFullName", []string{"name", "surname", "lastName"})
 		}, "panics unique with name is already exists")
 
-		require.Panics(func() {
-			vv := appDef.AddView(NewQName("test", "view")).ValueDef()
-			vv.AddUnique("", []string{"f1", "f2"})
-		}, "panics if definition kind is not supports uniques")
+		t.Run("panics if definition kind is not supports uniques", func(t *testing.T) {
+			d := appDef.AddStruct(NewQName("test", "obj"), DefKind_Object)
+			d.AddField("f1", DataKind_bool, false).AddField("f2", DataKind_bool, false)
+			require.Panics(func() {
+				d.AddUnique("", []string{"f1", "f2"})
+			})
+		})
 
 		require.Panics(func() {
 			def.AddUnique("emptyUnique", []string{})
@@ -266,7 +269,7 @@ func Test_def_AddUnique(t *testing.T) {
 		}, "if fields has duplicates")
 
 		require.Panics(func() {
-			def.AddUnique("", []string{"name", "surname", "lastname"})
+			def.AddUnique("", []string{"name", "surname", "lastName"})
 		}, "if fields set is already exists")
 
 		require.Panics(func() {
@@ -275,7 +278,7 @@ func Test_def_AddUnique(t *testing.T) {
 
 		require.Panics(func() {
 			def.AddUnique("", []string{"eMail", "birthday"})
-		}, "if fields set overlaped by exists")
+		}, "if fields set overlapped by exists")
 
 		require.Panics(func() {
 			def.AddUnique("", []string{"unknown"})

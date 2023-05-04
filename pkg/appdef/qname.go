@@ -30,7 +30,7 @@ var (
 	NullQName    = QNameForNull
 )
 
-// Builds a qualfied name from two parts (from pakage name and from entity name)
+// Builds a qualified name from two parts (from package name and from entity name)
 func NewQName(pkgName, entityName string) QName {
 	return QName{pkg: pkgName, entity: entityName}
 }

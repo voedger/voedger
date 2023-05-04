@@ -40,7 +40,7 @@ func (u *implIUniques) GetAll(name appdef.QName) (uniques []istructs.IUnique) {
 	return u.uniques[name]
 }
 
-// returns an Unique that euqals to provided keyFieldsSet ignoring order
+// returns an Unique that equals to provided keyFieldsSet ignoring order
 // nil means not found
 // panics if a duplicate key field name is met in keyFieldsSet
 func (u implIUniques) GetForKeySet(qName appdef.QName, keyFieldsSet []string) istructs.IUnique {

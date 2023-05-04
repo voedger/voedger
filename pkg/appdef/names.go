@@ -12,7 +12,7 @@ import (
 // Empty name
 const NullName = ""
 
-// MaxIdentLen is maximum identificator length
+// MaxIdentLen is maximum identifier length
 const MaxIdentLen = 255
 
 // Returns is string is valid identifier and error if not

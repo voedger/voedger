@@ -178,14 +178,14 @@ func TestInheritsMockingDef(t *testing.T) {
 		}).
 		On("ContainerDef", mock.AnythingOfType("string")).Return(&def).
 		On("Kind").Return(appdef.DefKind_CRecord).
-		On("QName").Return(appdef.NewQName("test", "crec")).
+		On("QName").Return(appdef.NewQName("test", "cRec")).
 		On("Singleton").Return(true).
 		On("Unique", mock.AnythingOfType("string")).Return([]appdef.IField{&fld}).
 		On("UniqueCount").Return(1).
 		On("Uniques", mock.AnythingOfType("func(string, []appdef.IField)")).
 		Run(func(args mock.Arguments) {
 			cb := args.Get(0).(func(string, []appdef.IField))
-			cb("crecUniqueMockField", []appdef.IField{&fld})
+			cb("cRecUniqueMockField", []appdef.IField{&fld})
 		})
 
 	require := require.New(t)
@@ -217,7 +217,7 @@ func TestInheritsMockingDef(t *testing.T) {
 	require.True(def.Singleton())
 
 	require.Equal(1, def.UniqueCount())
-	uf := def.Unique("crecUniqueMockField")
+	uf := def.Unique("cRecUniqueMockField")
 	require.Len(uf, 1)
 	require.Equal("mockField", uf[0].Name())
 	require.Equal(def.UniqueCount(), func() int {

@@ -58,7 +58,7 @@ func TestDefKindToString(t *testing.T) {
 		k    DefKind
 		want string
 	}{
-		{name: "vulgaris", k: DefKind_CDoc, want: "CDoc"},
+		{name: "basic", k: DefKind_CDoc, want: "CDoc"},
 		{name: "out of range", k: DefKind_FakeLast + 1, want: (DefKind_FakeLast + 1).String()},
 	}
 	for _, tt := range tests {
@@ -100,7 +100,7 @@ func TestDefKind_UniquesAvailable(t *testing.T) {
 	}{
 		{"document", DefKind_CDoc, true},
 		{"record", DefKind_CRecord, true},
-		{"element", DefKind_Element, true},
+		{"element", DefKind_Object, false},
 		{"view", DefKind_ViewRecord_Value, false},
 		{"resource", DefKind_CommandFunction, false},
 	}

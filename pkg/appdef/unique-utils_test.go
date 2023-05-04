@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_hasDups(t *testing.T) {
+func Test_duplicates(t *testing.T) {
 	require := require.New(t)
 
 	require.Negative(duplicates([]string{"a"}))

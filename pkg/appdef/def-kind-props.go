@@ -324,7 +324,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{
 			DefKind_Element: true,
 		},
-		availableUniques: true,
+		availableUniques: false,
 	},
 	DefKind_Element: {
 		structure:     true,
@@ -348,7 +348,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{
 			DefKind_Element: true,
 		},
-		availableUniques: true,
+		availableUniques: false,
 	},
 	DefKind_QueryFunction: {
 		structure:           false,

@@ -120,7 +120,7 @@ type IDef interface {
 	// Enumerates all containers in add order.
 	Containers(func(IContainer))
 
-	// Finds container definition by constainer name.
+	// Finds container definition by name.
 	//
 	// If not found empty definition with DefKind_null is returned
 	ContainerDef(name string) IDef
@@ -175,7 +175,7 @@ type IDefBuilder interface {
 	//   - if container with name already exists,
 	//   - if invalid occurrences,
 	//   - if definition kind does not allow containers,
-	//   - if container definition kind is not compatable with definition kind.
+	//   - if container definition kind is not compatible with definition kind.
 	AddContainer(name string, def QName, min, max Occurs) IDefBuilder
 
 	// Adds new unique with specified name and fields set.
@@ -217,20 +217,20 @@ type IViewBuilder interface {
 	// Returns view value definition
 	ValueDef() IDefBuilder
 
-	// AddPartField adds specisified field to view partition key definition. Fields is always required
+	// AddPartField adds specified field to view partition key definition. Fields is always required
 	//
 	// # Panics:
 	//	- if field already exists in clustering columns or value fields,
 	//	- if not fixed size data kind.
 	AddPartField(name string, kind DataKind) IViewBuilder
 
-	// AddClustColumn adds specisified field to view clustering columns definition. Fields is optional
+	// AddClustColumn adds specified field to view clustering columns definition. Fields is optional
 	//
 	// # Panics:
 	//	- if field already exists in partition key or value fields.
 	AddClustColumn(name string, kind DataKind) IViewBuilder
 
-	// AddValueField adds specisified field to view value definition
+	// AddValueField adds specified field to view value definition
 	//
 	// # Panics:
 	//	- if field already exists in partition key or clustering columns fields.
@@ -250,10 +250,10 @@ type IField interface {
 	// Returns is field required
 	Required() bool
 
-	// Returns is field verifable
+	// Returns is field verifiable
 	Verifiable() bool
 
-	// Returns is field verifable by specified verification kind
+	// Returns is field verifiable by specified verification kind
 	VerificationKind(VerificationKind) bool
 
 	// Returns is field has fixed width data kind
