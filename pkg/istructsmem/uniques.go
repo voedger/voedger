@@ -40,11 +40,6 @@ func (u *implIUniques) GetAll(name appdef.QName) (uniques []istructs.IUnique) {
 	return u.uniques[name]
 }
 
-type fieldDesc struct {
-	kind       appdef.DataKind
-	isRequired bool
-}
-
 func (u implIUniques) validate(cfg *AppConfigType) error {
 
 	uniqueError := func(qName appdef.QName, wrap error, msg string, args ...any) error {
