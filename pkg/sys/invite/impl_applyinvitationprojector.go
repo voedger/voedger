@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -48,7 +47,7 @@ func applyInvitationProjector(timeFunc func() time.Time, federationURL func() *u
 		}
 
 		verificationCode := fmt.Sprintf("%06d", timeFunc().UnixMilli()%time.Second.Microseconds())
-		emailTemplate := utils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
+		emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 
 		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.RecordsStorage, commandprocessor.QNameCDocWorkspaceDescriptor)
 		if err != nil {

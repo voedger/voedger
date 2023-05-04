@@ -7,7 +7,6 @@
 package collection
 
 import (
-	airconsts "github.com/untillpro/airs-bp3/packages/air/consts"
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -24,9 +23,9 @@ const (
 )
 
 var (
-	// TODO: air.CollectionView must be air.CollectionView. But if so many records in the view will not be found by air.CollectionView
+	// TODO: air.CollectionView must be sys.CollectionView. But if so many records in the view will not be found by air.CollectionView
 	// so keep air.CollectionView for backward compatibility
-	QNameViewCollection = appdef.NewQName(airconsts.AirPackage, "CollectionView")
+	QNameViewCollection = appdef.NewQName("air", "CollectionView")
 )
 
 // ///////////////////////////////////

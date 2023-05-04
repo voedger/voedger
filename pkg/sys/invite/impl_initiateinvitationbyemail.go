@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -34,7 +33,7 @@ func provideCmdInitiateInvitationByEMail(cfg *istructsmem.AppConfigType, appDefB
 
 func execCmdInitiateInvitationByEMail(timeFunc func() time.Time) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-		if !utils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
+		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
 		}
 

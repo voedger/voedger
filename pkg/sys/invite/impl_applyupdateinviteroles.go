@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -78,7 +77,7 @@ func applyUpdateInviteRolesProjector(timeFunc func() time.Time, federationURL fu
 			return
 		}
 
-		emailTemplate := utils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
+		emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 
 		replacer := strings.NewReplacer(EmailTemplatePlaceholder_Roles, event.ArgumentObject().AsString(Field_Roles))
 
