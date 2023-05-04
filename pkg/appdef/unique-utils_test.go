@@ -20,16 +20,16 @@ func Test_duplicates(t *testing.T) {
 	require.Negative(duplicates([]int{0, 1, 2}))
 
 	i, j := duplicates([]int{0, 1, 0})
-	require.True(0 == i && 2 == j)
+	require.True(i == 0 && j == 2)
 
 	i, j = duplicates([]int{0, 1, 2, 1})
-	require.True(1 == i && 3 == j)
+	require.True(i == 1 && j == 3)
 
 	i, j = duplicates([]bool{true, true})
-	require.True(0 == i && 1 == j)
+	require.True(i == 0 && j == 1)
 
 	i, j = duplicates([]string{"a", "b", "c", "c"})
-	require.True(2 == i && 3 == j)
+	require.True(i == 2 && j == 3)
 }
 
 func Test_subSet(t *testing.T) {
