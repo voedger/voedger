@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -63,6 +64,14 @@ func Test_def_AddField(t *testing.T) {
 	t.Run("must be panic if field data kind is not allowed by definition kind", func(t *testing.T) {
 		view := New().AddView(NewQName("test", "view"))
 		require.Panics(func() { view.AddPartField("f1", DataKind_string) })
+	})
+
+	t.Run("must be panic if too many fields", func(t *testing.T) {
+		d := New().AddStruct(NewQName("test", "obj"), DefKind_Object)
+		for i := 0; i < MaxDefFieldCount-1; i++ { // -1 for sys.QName field
+			d.AddField(fmt.Sprintf("f_%#x", i), DataKind_bool, false)
+		}
+		require.Panics(func() { d.AddField("errorField", DataKind_bool, false) })
 	})
 }
 
@@ -163,6 +172,15 @@ func Test_def_AddContainer(t *testing.T) {
 		require.NotNil(d)
 		require.Equal(DefKind_null, d.Kind())
 	})
+
+	t.Run("must be panic if too many containers", func(t *testing.T) {
+		qn := NewQName("test", "el")
+		d := New().AddStruct(qn, DefKind_Element)
+		for i := 0; i < MaxDefContainerCount; i++ {
+			d.AddContainer(fmt.Sprintf("c_%#x", i), qn, 0, Occurs_Unbounded)
+		}
+		require.Panics(func() { d.AddContainer("errorContainer", qn, 0, Occurs_Unbounded) })
+	})
 }
 
 func Test_def_Singleton(t *testing.T) {
@@ -253,7 +271,7 @@ func Test_def_AddUnique(t *testing.T) {
 		}, "panics unique with name is already exists")
 
 		t.Run("panics if definition kind is not supports uniques", func(t *testing.T) {
-			d := appDef.AddStruct(NewQName("test", "obj"), DefKind_Object)
+			d := New().AddStruct(NewQName("test", "obj"), DefKind_Object)
 			d.AddField("f1", DataKind_bool, false).AddField("f2", DataKind_bool, false)
 			require.Panics(func() {
 				d.AddUnique("", []string{"f1", "f2"})
@@ -267,6 +285,17 @@ func Test_def_AddUnique(t *testing.T) {
 		require.Panics(func() {
 			def.AddUnique("", []string{"birthday", "birthday"})
 		}, "if fields has duplicates")
+
+		t.Run("panics if too many fields", func(t *testing.T) {
+			d := New().AddStruct(NewQName("test", "rec"), DefKind_CRecord)
+			fldNames := []string{}
+			for i := 0; i <= MaxDefUniqueFieldsCount; i++ {
+				n := fmt.Sprintf("f_%#x", i)
+				d.AddField(n, DataKind_bool, false)
+				fldNames = append(fldNames, n)
+			}
+			require.Panics(func() { d.AddUnique("", fldNames) })
+		})
 
 		require.Panics(func() {
 			def.AddUnique("", []string{"name", "surname", "lastName"})
@@ -283,5 +312,16 @@ func Test_def_AddUnique(t *testing.T) {
 		require.Panics(func() {
 			def.AddUnique("", []string{"unknown"})
 		}, "if fields not exists")
+
+		t.Run("panics if too many uniques", func(t *testing.T) {
+			d := New().AddStruct(NewQName("test", "rec"), DefKind_CRecord)
+			for i := 0; i < MaxDefUniqueCount; i++ {
+				n := fmt.Sprintf("f_%#x", i)
+				d.AddField(n, DataKind_int32, false)
+				d.AddUnique("", []string{n})
+			}
+			d.AddField("lastStraw", DataKind_int32, false)
+			require.Panics(func() { d.AddUnique("", []string{"lastStraw"}) })
+		})
 	})
 }

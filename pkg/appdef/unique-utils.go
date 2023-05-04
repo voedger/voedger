@@ -47,7 +47,9 @@ func overlaps[T comparable](set1, set2 []T) bool {
 // Generates name for unique.
 //
 // For single field unique, the concatenation of the definition name, the `Unique` word and the field name is used.
-// E.g., for definition «test.user» and field «eMail» name "userUniqueEMail" will returned
+// E.g., for definition «test.user» and field «eMail» name "userUniqueEMail" will returned.
+//
+// For multiply fields unique, the concatenation of the definition name, the `Unique` word and two digits is used, e.g. `userUnique01`.
 func generateUniqueName(def *def, fields []string) string {
 	pref := fmt.Sprintf("%sUnique", def.QName().Entity())
 	if len(fields) == 1 {
