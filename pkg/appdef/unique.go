@@ -7,6 +7,7 @@ package appdef
 
 import (
 	"fmt"
+	"sort"
 )
 
 type unique struct {
@@ -17,6 +18,7 @@ type unique struct {
 
 func newUnique(def *def, name string, fields []string) *unique {
 	u := unique{def, name, make([]IField, 0)}
+	sort.Strings(fields)
 	for _, f := range fields {
 		fld := def.Field(f)
 		if fld == nil {

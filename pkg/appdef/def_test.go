@@ -236,9 +236,9 @@ func Test_def_AddUnique(t *testing.T) {
 
 		f := d.Unique("userUniqueFullName")
 		require.Len(f, 3)
-		require.Equal("name", f[0].Name())
-		require.Equal("surname", f[1].Name())
-		require.Equal("lastName", f[2].Name())
+		require.Equal("lastName", f[0].Name())
+		require.Equal("name", f[1].Name())
+		require.Equal("surname", f[2].Name())
 
 		require.Equal(d.UniqueCount(), func() int {
 			cnt := 0
@@ -251,9 +251,9 @@ func Test_def_AddUnique(t *testing.T) {
 					require.Equal(DataKind_string, fields[0].DataKind())
 				case "userUniqueFullName":
 					require.Len(f, 3)
-					require.Equal("name", f[0].Name())
-					require.Equal("surname", f[1].Name())
-					require.Equal("lastName", f[2].Name())
+					require.Equal("lastName", f[0].Name())
+					require.Equal("name", f[1].Name())
+					require.Equal("surname", f[2].Name())
 				}
 			})
 			return cnt
