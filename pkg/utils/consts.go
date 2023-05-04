@@ -5,7 +5,10 @@
 
 package coreutils
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
 const (
 	Authorization      = "Authorization"
@@ -15,4 +18,5 @@ const (
 	shortRetryDelay    = 100 * time.Millisecond
 	longRetryDelay     = time.Second
 	shortRetriesAmount = 10
+	CRC16Mask          = uint32(math.MaxUint32 >> 16)
 )

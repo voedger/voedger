@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -67,7 +66,7 @@ func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp ist
 				return err
 			}
 			appTokens = asRegistry.AppTokens()
-			targetWSID = utils.GetPseudoWSID(email, istructs.MainClusterID)
+			targetWSID = coreutils.GetPseudoWSID(email, istructs.MainClusterID)
 		}
 
 		verificationToken, verificationCode, err := NewVerificationToken(entity, field, email, appdef.VerificationKind_EMail, targetWSID, itokens, appTokens)

@@ -48,14 +48,14 @@ func TestBasicUsage_ReverseProxy(t *testing.T) {
 	for srcURL, expectedURLPath := range cases {
 		targetHandler.setExpectedURLPath(expectedURLPath)
 
-		resp := vit.PostFree(fmt.Sprintf("http://127.0.0.1:%s/%s", vit.FederationURL.Port(), srcURL), body)
+		resp := vit.PostFree(fmt.Sprintf("http://127.0.0.1:%s/%s", vit.VVMAPI.FederationURL().Port(), srcURL), body)
 		require.Equal(`hello world`, resp.Body) // guarantees that expectedURLPath is checked by the handler
 	}
 
 	t.Run("route domain", func(t *testing.T) {
 		targetHandler.setExpectedURLPath("/grafana/foo")
 		targetHandler.setExpectedHost("127.0.0.1")
-		resp := vit.PostFree(fmt.Sprintf("http://localhost:%s/grafana/foo", vit.FederationURL.Port()), body)
+		resp := vit.PostFree(fmt.Sprintf("http://localhost:%s/grafana/foo", vit.VVMAPI.FederationURL().Port()), body)
 		require.Equal(`hello world`, resp.Body)
 	})
 

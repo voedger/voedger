@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
@@ -19,7 +18,7 @@ import (
 )
 
 func CheckAppWSID(login string, urlWSID istructs.WSID, appWSAmount istructs.AppWSAmount) error {
-	crc16 := utils.CRC16([]byte(login))
+	crc16 := coreutils.CRC16([]byte(login))
 	appWSID := istructs.WSID(crc16%uint16(appWSAmount)) + istructs.FirstBaseAppWSID
 	expectedAppWSID := istructs.NewWSID(urlWSID.ClusterID(), appWSID)
 	if expectedAppWSID != urlWSID {

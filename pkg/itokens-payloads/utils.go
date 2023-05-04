@@ -7,9 +7,11 @@ package payloads
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/voedger/voedger/pkg/istructs"
 	itokens "github.com/voedger/voedger/pkg/itokens"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func GetSystemPrincipalToken(itokens itokens.ITokens, appQName istructs.AppQName) (string, error) {
@@ -30,4 +32,24 @@ func GetSystemPrincipalTokenApp(appTokens istructs.IAppTokens) (string, error) {
 
 func IsSystemPrincipal(principalPayload *PrincipalPayload) bool {
 	return principalPayload != nil && principalPayload.ProfileWSID == istructs.NullWSID
+}
+
+func GetPayloadRegistry(itokens itokens.ITokens, token string, payload interface{}) (gp istructs.GenericPayload, err error) {
+	if gp, err = itokens.ValidateToken(token, payload); err != nil {
+		err = coreutils.NewHTTPError(http.StatusUnauthorized, err)
+	}
+	return
+}
+
+func GetPrincipalPayload(appTokens istructs.IAppTokens, principalToken string) (principalPayload PrincipalPayload, err error) {
+	_, err = GetPayload(appTokens, principalToken, &principalPayload)
+	return
+}
+
+// nolint (gp is never used)
+func GetPayload(appTokens istructs.IAppTokens, token string, payload interface{}) (gp istructs.GenericPayload, err error) {
+	if gp, err = appTokens.ValidateToken(token, payload); err != nil {
+		err = coreutils.NewHTTPError(http.StatusUnauthorized, err)
+	}
+	return
 }

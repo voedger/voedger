@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/untillpro/airs-bp3/utils"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -68,7 +67,7 @@ func TestIntiateResetPasswordErrors(t *testing.T) {
 
 	t.Run("400 bad request on an unknown login", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"unknown"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1)
-		vit.PostApp(istructs.AppQName_sys_registry, utils.GetPseudoWSID("unknown", istructs.MainClusterID), "q.sys.InitiateResetPasswordByEmail", body, coreutils.Expect400()).Println()
+		vit.PostApp(istructs.AppQName_sys_registry, coreutils.GetPseudoWSID("unknown", istructs.MainClusterID), "q.sys.InitiateResetPasswordByEmail", body, coreutils.Expect400()).Println()
 	})
 }
 
@@ -79,7 +78,7 @@ func TestIssueResetPasswordTokenErrors(t *testing.T) {
 
 	t.Run("400 bad request on an unknown login", func(t *testing.T) {
 		unknownLogin := "unknown"
-		pseudoWSID := utils.GetPseudoWSID(unknownLogin, istructs.MainClusterID)
+		pseudoWSID := coreutils.GetPseudoWSID(unknownLogin, istructs.MainClusterID)
 		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, unknownLogin)
 		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.InitiateResetPasswordByEmail", body, coreutils.Expect400()).Println()
 	})
