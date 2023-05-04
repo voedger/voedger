@@ -58,7 +58,7 @@ func generateUniqueName(def *def, fields []string) string {
 			return s
 		}
 	}
-	const tryCnt = 100
+	const tryCnt = MaxDefUniqueCount
 	for i := 1; i < tryCnt; i++ {
 		s := pref + fmt.Sprintf("%02d", i)
 		if def.Unique(s) == nil {

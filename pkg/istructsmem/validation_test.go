@@ -60,12 +60,12 @@ func Test_ValidEvent(t *testing.T) {
 		cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, appdef.NullQName, oObjName, appdef.NullQName, NullCommandExec))
 		cfg.Resources.Add(NewCommandFunction(cmdCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
 
-		storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
+		storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
 		require.NoError(err)
 
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
@@ -405,7 +405,7 @@ func Test_ValidElement(t *testing.T) {
 	cfgs := make(AppConfigsType, 1)
 	cfg := cfgs.AddConfig(test.appName, appDef)
 
-	storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
+	storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
 	require.NoError(err)
@@ -569,7 +569,7 @@ func Test_ValidCUD(t *testing.T) {
 	cfgs := make(AppConfigsType, 1)
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 
-	storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
+	storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
 	require.NoError(err)
@@ -679,9 +679,9 @@ func Test_VerifiedFields(t *testing.T) {
 	email := "test@test.io"
 
 	tokens := testTokensFactory().New(test.appName)
-	storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
+	storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
-	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 	err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
 	require.NoError(err)
 	_, err = asp.AppStructs(test.appName) // need to set cfg.app because IAppTokens are taken from cfg.app
@@ -834,7 +834,7 @@ func Test_ValidateErrors(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -899,12 +899,12 @@ func Test_ValidateErrors(t *testing.T) {
 			cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 			cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, appdef.NullQName, appdef.NullQName, NullCommandExec))
 
-			storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
+			storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
 			require.NoError(err)
 			err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
 			require.NoError(err)
 
-			provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+			provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 			app, err = provider.AppStructs(istructs.AppQName_test1_app1)
 			require.NoError(err)

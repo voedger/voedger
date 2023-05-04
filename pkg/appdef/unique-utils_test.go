@@ -107,11 +107,11 @@ func Test_generateUniqueName(t *testing.T) {
 		require := require.New(t)
 
 		def := newDef(nil, NewQName("test", "rec"), DefKind_CRecord)
-		for i := 1; i < 100; i++ {
+		for i := 1; i < MaxDefUniqueCount; i++ {
 			def.AddField("i"+strconv.Itoa(i), DataKind_int32, false)
 			def.AddField("b"+strconv.Itoa(i), DataKind_bool, false)
 		}
-		for i := 1; i < 100; i++ {
+		for i := 1; i < MaxDefUniqueCount; i++ {
 			def.AddUnique("", []string{"i" + strconv.Itoa(i), "b" + strconv.Itoa(i)})
 		}
 

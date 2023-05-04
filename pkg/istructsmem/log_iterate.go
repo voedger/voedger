@@ -29,7 +29,7 @@ func readLogParts(startOffset istructs.Offset, toReadCount int, readPart logRead
 	maxPart, _ := crackLogOffset(finishOffset - 1)
 
 	for part := minPart; part <= maxPart; part++ {
-		pk, _ := splitLogOffset(uncrackLogOffset(part, 0))
+		pk, _ := splitLogOffset(glueLogOffset(part, 0))
 		clustFrom := []byte(nil)
 		if part == minPart {
 			_, clustFrom = splitLogOffset(startOffset)

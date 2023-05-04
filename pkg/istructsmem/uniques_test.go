@@ -27,15 +27,15 @@ func TestBasicUsage_Uniques(t *testing.T) {
 			AddField("c", appdef.DataKind_int32, true)
 	})
 
-	cfgs := AppConfigsType{}
-	cfg := cfgs.AddConfig(test.appName, appDef)
+	configs := AppConfigsType{}
+	cfg := configs.AddConfig(test.appName, appDef)
 
 	// add Uniques in AppConfigType
 	cfg.Uniques.Add(qName, []string{"a"})
 	cfg.Uniques.Add(qName, []string{"b", "c"})
 
 	// use Uniques using IAppStructs
-	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	asp := Provide(configs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 	as, err := asp.AppStructs(test.appName)
 	require.NoError(err)
 	iu := as.Uniques()

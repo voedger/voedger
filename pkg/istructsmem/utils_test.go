@@ -161,7 +161,7 @@ func TestElementFillAndGet(t *testing.T) {
 	test := test()
 
 	cfgs := test.AppConfigs
-	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 	_, err := asp.AppStructs(test.appName)
 	require.NoError(err)
 	builder := NewIObjectBuilder(cfgs[istructs.AppQName_test1_app1], test.testCDoc)
@@ -269,7 +269,7 @@ func TestIBucketsFromIAppStructs(t *testing.T) {
 		MaxAllowedPerDuration: 2,
 	}
 	cfg.FunctionRateLimits.AddAppLimit(funcQName, rlExpected)
-	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 	as, err := asp.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	buckets := IBucketsFromIAppStructs(as)

@@ -18,8 +18,8 @@ import (
 
 // Ref. bench.md for results
 
-// Register a command "cmd" with ODoc "odoc" as an argument
-// odoc has numOfIntFields int64 fields and same number of string fields
+// Register a command "cmd" with ODoc "oDoc" as an argument
+// oDoc has numOfIntFields int64 fields and same number of string fields
 // Test BuildRawEvent performance
 func Benchmark_BuildRawEvent(b *testing.B) {
 
@@ -56,10 +56,10 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	// Names
 
 	appName := istructs.AppQName_test1_app1
-	odocQName := appdef.NewQName("test", "odoc")
+	oDocQName := appdef.NewQName("test", "oDoc")
 	cmdQName := appdef.NewQName("test", "cmd")
 
-	// odoc field names and values
+	// oDoc field names and values
 
 	intFieldNames := make([]string, numOfIntFields)
 	intFieldNamesFloat64Values := make(map[string]float64)
@@ -70,7 +70,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	appDef := func() appdef.IAppDefBuilder {
 		cache := appdef.New()
 
-		s := cache.AddStruct(odocQName, appdef.DefKind_ODoc)
+		s := cache.AddStruct(oDocQName, appdef.DefKind_ODoc)
 		for i := 0; i < numOfIntFields; i++ {
 
 			intFieldName := fmt.Sprintf("i%v", i)
@@ -89,15 +89,15 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 	// Con
 
-	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, appDef())
+	configs := make(AppConfigsType, 1)
+	cfg := configs.AddConfig(appName, appDef())
 
 	// Register command
 	{
-		cfg.Resources.Add(NewCommandFunction(cmdQName, odocQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdQName, oDocQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
 	}
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider := Provide(configs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 	appStructs, err := provider.AppStructs(appName)
 	require.NoError(err)
@@ -139,34 +139,34 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 }
 
-func Benchmark_UnmarshallJSONForBuildRawEvent(b *testing.B) {
+func Benchmark_UnmarshalJSONForBuildRawEvent(b *testing.B) {
 	numOfIntFields := 2
 	b.Run(fmt.Sprint("numOfFields=", numOfIntFields*2), func(b *testing.B) {
-		bench_UnmarshallJSONForBuildRawEvent(b, numOfIntFields)
+		bench_UnmarshalJSONForBuildRawEvent(b, numOfIntFields)
 	})
 
 	numOfIntFields = 4
 	b.Run(fmt.Sprint("numOfFields=", numOfIntFields*2), func(b *testing.B) {
-		bench_UnmarshallJSONForBuildRawEvent(b, numOfIntFields)
+		bench_UnmarshalJSONForBuildRawEvent(b, numOfIntFields)
 	})
 
 	numOfIntFields = 8
 	b.Run(fmt.Sprint("numOfFields=", numOfIntFields*2), func(b *testing.B) {
-		bench_UnmarshallJSONForBuildRawEvent(b, numOfIntFields)
+		bench_UnmarshalJSONForBuildRawEvent(b, numOfIntFields)
 	})
 
 	numOfIntFields = 16
 	b.Run(fmt.Sprint("numOfFields=", numOfIntFields*2), func(b *testing.B) {
-		bench_UnmarshallJSONForBuildRawEvent(b, numOfIntFields)
+		bench_UnmarshalJSONForBuildRawEvent(b, numOfIntFields)
 	})
 
 	numOfIntFields = 32
 	b.Run(fmt.Sprint("numOfFields=", numOfIntFields*2), func(b *testing.B) {
-		bench_UnmarshallJSONForBuildRawEvent(b, numOfIntFields)
+		bench_UnmarshalJSONForBuildRawEvent(b, numOfIntFields)
 	})
 }
 
-func bench_UnmarshallJSONForBuildRawEvent(b *testing.B, numOfIntFields int) {
+func bench_UnmarshalJSONForBuildRawEvent(b *testing.B, numOfIntFields int) {
 
 	require := require.New(b)
 
