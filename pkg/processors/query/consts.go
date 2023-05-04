@@ -4,7 +4,7 @@
 
 package queryprocessor
 
-import "github.com/voedger/voedger/pkg/istructs"
+import "github.com/voedger/voedger/pkg/appdef"
 
 const (
 	filterKind_Eq    = "eq"
@@ -16,12 +16,12 @@ const (
 )
 
 const (
-	minNormalFloat64     = 0x1.0p-1022
-	rootDocument         = ""
-	Field_JSONSchemaBody = "Body"
+	minNormalFloat64   = 0x1.0p-1022
+	rootDocument       = ""
+	Field_JSONDef_Body = "Body"
 )
 
 var (
-	qNamePosDepartment = istructs.NewQName("pos", "Department")
-	qNameXLowerCase    = istructs.NewQName("x", "lower-case")
+	qNamePosDepartment = appdef.NewQName("pos", "Department")
+	qNameXLowerCase    = appdef.NewQName("x", "lower-case")
 )

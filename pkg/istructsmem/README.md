@@ -1,4 +1,4 @@
-[![codecov](https://codecov.io/gh/heeus/core-istructsmem/branch/main/graph/badge.svg?token=1O1pA6zdYs)](https://codecov.io/gh/heeus/core-istructsmem)
+[![codecov](https://codecov.io/gh/voedger/voedger/branch/main/graph/badge.svg?token=1O1pA6zdYs)](https://codecov.io/gh/voedger/voedger/istructsmem)
 
 # Events
 
@@ -59,6 +59,4 @@
   * `appViewRecordsType.Read`
     + Reads view records (key and value) for specified key from the storage by calling callback function.
     + Key may be build partially. In this case all view records, witch keys starts with specified key, will be reads
-
-# Schemas
 

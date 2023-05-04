@@ -11,7 +11,9 @@ import (
 	"testing"
 	"time"
 
-	irates "github.com/voedger/voedger/pkg/irates"
+	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -24,7 +26,7 @@ func TestRace_Buckets(t *testing.T) {
 	totalRegKey := irates.BucketKey{
 		RateLimitName: sTotalRegLimitName,
 		App:           istructs.AppQName_test1_app1,
-		QName:         istructs.NewQName("test", "test"),
+		QName:         appdef.NewQName("test", "test"),
 		RemoteAddr:    "",
 		Workspace:     1,
 	}
@@ -38,7 +40,7 @@ func TestRace_Buckets(t *testing.T) {
 	addrRegKey := irates.BucketKey{
 		RateLimitName: sAddrRegLimitName,
 		App:           istructs.AppQName_test1_app1,
-		QName:         istructs.NewQName("test", "test"),
+		QName:         appdef.NewQName("test", "test"),
 		RemoteAddr:    "addr",
 		Workspace:     1,
 	}
@@ -69,7 +71,8 @@ func TestRace_Buckets(t *testing.T) {
 		defer finish.Done()
 		start.Done()
 		for ctx.Err() == nil {
-			_, _ = buckets.GetBucketState(totalRegKey)
+			_, err := buckets.GetBucketState(totalRegKey)
+			require.NoError(t, err)
 		}
 	}
 

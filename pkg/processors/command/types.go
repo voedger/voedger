@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -81,7 +82,7 @@ type parsedCUD struct {
 	opKind         iauthnz.OperationKindType
 	existingRecord istructs.IRecord // create -> nil
 	id             int64
-	qName          istructs.QName
+	qName          appdef.QName
 	fields         coreutils.MapObject
 	xPath          xPath
 }

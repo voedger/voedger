@@ -1,0 +1,24 @@
+name: CI cmd
+
+on:
+  pull_request_target:
+    paths:
+      - 'cmd/**'
+
+jobs:
+  call-workflow-ci-cmd:
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@master
+    with: 
+      test_folder: 'cmd'
+      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
+      ignore_bp3: 'true'
+    secrets:
+      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
+      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+      personal_token: ${{ secrets.PERSONAL_TOKEN }}
+  auto-merge-pr:
+    needs: call-workflow-ci-cmd
+    uses: voedger/voedger/.github/workflows/merge.yml@main
+    secrets:
+      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
+

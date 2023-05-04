@@ -256,3 +256,4 @@ func expandPath(path string) (string, error) {
 
 	return absPath, nil
 }
+

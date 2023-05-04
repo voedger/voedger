@@ -89,28 +89,34 @@ func (r *route) HandlerFunc(f func(http.ResponseWriter, *http.Request)) *route {
 	return r
 }
 
-func (r *router) PathPrefix(resource string) *route {
+func (r *router) PathPrefix(resource string) (*route, error) {
 	return r.NewRoute().PathPrefix(resource)
 }
 
-func (r *route) PathPrefix(resource string) *route {
+func (r *route) PathPrefix(resource string) (*route, error) {
 	pattern := bytes.NewBufferString("")
 	pattern.WriteString("^(" + resource + ")")
-	matcher, _ := newRRegExp(pattern.String())
+	matcher, err := newRRegExp(pattern.String())
+	if err != nil {
+		return nil, err
+	}
 	r.matchers = append(r.matchers, matcher)
-	return r
+	return r, nil
 }
 
-func (r *router) Path(resource string) *route {
+func (r *router) Path(resource string) (*route, error) {
 	return r.NewRoute().Path(resource)
 }
 
-func (r *route) Path(resource string) *route {
+func (r *route) Path(resource string) (*route, error) {
 	pattern := bytes.NewBufferString("")
 	pattern.WriteString("(.+/)?" + resource + "$")
-	matcher, _ := newRRegExp(pattern.String())
+	matcher, err := newRRegExp(pattern.String())
+	if err != nil {
+		return nil, err
+	}
 	r.matchers = append(r.matchers, matcher)
-	return r
+	return r, nil
 }
 
 func (hs *httpProcessor) Prepare() (err error) {
@@ -132,7 +138,11 @@ func (hs *httpProcessor) Run(ctx context.Context) {
 	}()
 
 	<-ctx.Done()
-	_ = hs.server.Shutdown(context.Background())
+	if err := hs.server.Shutdown(context.Background()); err != nil {
+		logger.Error("server shutdown failed", err)
+		hs.listener.Close()
+		hs.server.Close()
+	}
 
 	logger.Info("waiting for the httpProcessor...")
 	wg.Wait()
@@ -208,8 +218,12 @@ func (r *router) NewRoute() *route {
 	return route
 }
 
-func (r *router) HandleFunc(path string, f func(http.ResponseWriter, *http.Request)) *route {
-	return r.NewRoute().Path(path).HandlerFunc(f)
+func (r *router) HandleFunc(path string, f func(http.ResponseWriter, *http.Request)) (*route, error) {
+	route, err := r.NewRoute().Path(path)
+	if err != nil {
+		return nil, err
+	}
+	return route.HandlerFunc(f), nil
 }
 
 func (r *router) match(req *http.Request, match *RouteMatch) bool {
@@ -262,9 +276,13 @@ func (hs *httpProcessor) Receiver(_ context.Context, request interface{}, _ ibus
 	switch v := request.(type) {
 	case msgDeployAppPartition:
 		// <cluster-domain>/api/<AppQName.owner>/<AppQName.name>/<wsid>/<{q,c}.funcQName>
-		hs.router.Path(
+		route, err := hs.router.Path(
 			fmt.Sprintf("/api/%s/%s/%d/q|c\\.[a-zA-Z_.]+", v.app.Owner(), v.app.Name(), v.partNo),
-		).HandlerFunc(handleAppPart(v.commandHandler, v.queryHandler))
+		)
+		if err != nil {
+			return ibus.NewResult(nil, err, "", "")
+		}
+		route.HandlerFunc(handleAppPart(v.commandHandler, v.queryHandler))
 		return ibus.NewResult(nil, nil, "", "")
 
 	case msgDeployStaticContent:
@@ -294,9 +312,19 @@ func (hs *httpProcessor) Receiver(_ context.Context, request interface{}, _ ibus
 			setContentType_ApplicationText(wr)
 			_, _ = wr.Write([]byte("Not found needed query sender."))
 		}
-		sub := hs.router.PathPrefix(resource).subRouter()
-		sub.Path("echo").HandlerFunc(f1)
-		sub.Path("").HandlerFunc(f)
+		route, err := hs.router.PathPrefix(resource)
+		if err != nil {
+			return ibus.NewResult(nil, err, "", "")
+		}
+		sub := route.subRouter()
+		if route, err = sub.Path("echo"); err != nil {
+			return ibus.NewResult(nil, err, "", "")
+		}
+		route.HandlerFunc(f1)
+		if route, err = sub.Path(""); err != nil {
+			return ibus.NewResult(nil, err, "", "")
+		}
+		route.HandlerFunc(f)
 		logger.Info("new handler added for router: url -", resource)
 		return ibus.NewResult(nil, nil, "", "")
 	case msgListeningPort:

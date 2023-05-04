@@ -50,12 +50,12 @@ func Benchmark_pipelineIService_Sequential(b *testing.B) {
 	}
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	cfgs, appStructsProvider, appTokens := getTestCfg(require)
+	cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
 	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs }, appStructsProvider, 3,
 		imetrics.Provide(), "hvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
 	as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
-	require.Nil(err)
+	require.NoError(err)
 	funcResource := as.Resources().QueryResource(qNameFunction)
 	start := time.Now()
 	sysToken := getSystemToken(appTokens)
@@ -112,12 +112,12 @@ func Benchmark_pipelineIService_Parallel(b *testing.B) {
 		}
 		authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 		authz := iauthnzimpl.NewDefaultAuthorizer()
-		cfgs, appStructsProvider, appTokens := getTestCfg(require)
+		cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
 		queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
 			appStructsProvider, 3, imetrics.Provide(), "hvm", authn, authz, cfgs)
 		go queryProcessor.Run(context.Background())
 		as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
-		require.Nil(err)
+		require.NoError(err)
 		funcResource := as.Resources().QueryResource(qNameFunction)
 		sysToken := getSystemToken(appTokens)
 

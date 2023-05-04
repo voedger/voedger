@@ -9,6 +9,8 @@ package istructs
 import (
 	"context"
 	"time"
+
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 // Structs can be changed on-the-fly, so AppStructs() are taken for each message (request) to be handled
@@ -37,15 +39,15 @@ type IAppStructs interface {
 	Resources() IResources
 
 	// ************************************************************
-	// Data schemas, kind of RTTI, reflection
+	// Application definition, kind of RTTI, reflection
 
-	// Schemas
-	Schemas() ISchemas
+	// AppDef
+	AppDef() appdef.IAppDef
 
 	ClusterAppID() ClusterAppID
 	AppQName() AppQName
 
-	IsFunctionRateLimitsExceeded(funcQName QName, wsid WSID) bool
+	IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid WSID) bool
 
 	// Describe package names
 	DescribePackageNames() []string
@@ -102,7 +104,7 @@ type IRecords interface {
 	// @ConcurrentAccess R
 	// qName must be a singletone
 	// If record not found NullRecord with QName() == NullQName is returned
-	GetSingleton(workspace WSID, qName QName) (record IRecord, err error)
+	GetSingleton(workspace WSID, qName appdef.QName) (record IRecord, err error)
 }
 
 type RecordGetBatchItem struct {
@@ -114,9 +116,9 @@ type IViewRecords interface {
 
 	// Builders panic if QName not found
 
-	KeyBuilder(view QName) IKeyBuilder
-	NewValueBuilder(view QName) IValueBuilder
-	UpdateValueBuilder(view QName, existing IValue) IValueBuilder
+	KeyBuilder(view appdef.QName) IKeyBuilder
+	NewValueBuilder(view appdef.QName) IValueBuilder
+	UpdateValueBuilder(view appdef.QName, existing IValue) IValueBuilder
 
 	// All key fields must be specified (panic)
 	// Key & value must be from the same QName (panic)
@@ -152,32 +154,12 @@ type IResources interface {
 
 	// If resource not found then {ResourceKind_null, QNameForNullResource) is returned
 	// Currently resources are ICommandFunction and IQueryFunction
-	QueryResource(resource QName) (r IResource)
+	QueryResource(resource appdef.QName) (r IResource)
 
 	QueryFunctionArgsBuilder(query IQueryFunction) IObjectBuilder
 
 	// Enumerates all application resources
-	Resources(func(resName QName))
-}
-
-type ISchemas interface {
-	// If not found empty Schema with SchemeKind_null is returned
-	Schema(schema QName) ISchema
-
-	// Enumerates all application schemas
-	Schemas(func(schemaName QName))
-}
-
-type ISchema interface {
-	Kind() SchemaKindType
-	QName() QName
-
-	Fields(cb func(fieldName string, kind DataKindType))
-	ForEachField(cb func(field IFieldDescr))
-
-	// If not found empty ContainerDescr with NullQName schema is returned
-	Containers(cb func(containerName string, schema QName))
-	ForEachContainer(cb func(cont IContainerDescr))
+	Resources(func(resName appdef.QName))
 }
 
 // Same as itokens.ITokens but works for App specified in IAppTokensFactory

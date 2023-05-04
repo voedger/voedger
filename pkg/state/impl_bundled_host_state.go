@@ -7,12 +7,13 @@ package state
 import (
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type bundledHostState struct {
 	*hostState
-	bundles      map[istructs.QName]bundle
+	bundles      map[appdef.QName]bundle
 	bundlesLimit int
 }
 
@@ -138,7 +139,7 @@ func (s *bundledHostState) FlushBundles() (err error) {
 	}
 	return
 }
-func (s *bundledHostState) addStorage(storageName istructs.QName, storage IStateStorage, ops int) {
+func (s *bundledHostState) addStorage(storageName appdef.QName, storage IStateStorage, ops int) {
 	s.hostState.addStorage(storageName, storage, ops)
 	if supports(ops, S_UPDATE) || supports(ops, S_INSERT) {
 		s.bundles[storageName] = newBundle()

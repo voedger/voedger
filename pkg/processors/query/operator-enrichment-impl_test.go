@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
+	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
@@ -19,28 +21,29 @@ import (
 func TestEnrichmentOperator_DoSync(t *testing.T) {
 	t.Run("Should set reference fields", func(t *testing.T) {
 		require := require.New(t)
-		commonSchema := coreutils.TestSchema{
-			Fields_: map[string]istructs.DataKindType{
-				"id_lower_case_name": istructs.DataKind_RecordID,
-			},
-			QName_: istructs.NullQName,
+
+		commonDef := func(n appdef.QName) *amock.Def {
+			return amock.NewDef(n, appdef.DefKind_Object,
+				amock.NewField("id_lower_case_name", appdef.DataKind_RecordID, false),
+			)
 		}
+
 		commonFields := []IRefField{refField{field: "id_lower_case_name", ref: "name", key: "id_lower_case_name/name"}}
-		schemas := coreutils.TestSchemas{Schemas_: map[istructs.QName]istructs.ISchema{
-			istructs.NewQName("", "root"):                  commonSchema,
-			istructs.NewQName("f", "first-children-1"):     commonSchema,
-			istructs.NewQName("f", "deep-children-1"):      commonSchema,
-			istructs.NewQName("f", "very-deep-children-1"): commonSchema,
-			istructs.NewQName("s", "first-children-2"):     commonSchema,
-			istructs.NewQName("s", "deep-children-1"):      commonSchema,
-			istructs.NewQName("s", "very-deep-children-1"): commonSchema,
-			qNameXLowerCase: coreutils.TestSchema{
-				Fields_: map[string]istructs.DataKindType{
-					"name": istructs.DataKind_string,
-				},
-				QName_: qNameXLowerCase,
-			},
-		}}
+
+		appDef := amock.NewAppDef(
+			commonDef(appdef.NewQName("", "root")),
+			commonDef(appdef.NewQName("f", "first-children-1")),
+			commonDef(appdef.NewQName("f", "deep-children-1")),
+			commonDef(appdef.NewQName("f", "very-deep-children-1")),
+			commonDef(appdef.NewQName("s", "first-children-2")),
+			commonDef(appdef.NewQName("s", "deep-children-1")),
+			commonDef(appdef.NewQName("s", "very-deep-children-1")),
+
+			amock.NewDef(qNameXLowerCase, appdef.DefKind_Object,
+				amock.NewField("name", appdef.DataKind_string, false),
+			),
+		)
+
 		elements := []IElement{
 			element{
 				path: path{rootDocument},
@@ -92,7 +95,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 		}
 		work := func() pipeline.IWorkpiece {
 			o := &coreutils.TestObject{
-				Name:    istructs.NewQName("", "root"),
+				Name:    appdef.NewQName("", "root"),
 				Id:      istructs.RecordID(1),
 				Parent_: istructs.NullRecordID,
 				Data: map[string]interface{}{
@@ -102,7 +105,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 				Containers_: map[string][]*coreutils.TestObject{
 					"first-children-1": {
 						{
-							Name:    istructs.NewQName("f", "first-children-1"),
+							Name:    appdef.NewQName("f", "first-children-1"),
 							Id:      istructs.RecordID(101),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
@@ -112,7 +115,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 							Containers_: map[string][]*coreutils.TestObject{
 								"deep-children-1": {
 									{
-										Name:    istructs.NewQName("f", "deep-children-1"),
+										Name:    appdef.NewQName("f", "deep-children-1"),
 										Id:      istructs.RecordID(201),
 										Parent_: istructs.RecordID(101),
 										Data: map[string]interface{}{
@@ -122,7 +125,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 										Containers_: map[string][]*coreutils.TestObject{
 											"very-deep-children-1": {
 												{
-													Name:    istructs.NewQName("f", "very-deep-children-1"),
+													Name:    appdef.NewQName("f", "very-deep-children-1"),
 													Id:      istructs.RecordID(301),
 													Parent_: istructs.RecordID(201),
 													Data: map[string]interface{}{
@@ -137,7 +140,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 							},
 						},
 						{
-							Name:    istructs.NewQName("f", "first-children-1"),
+							Name:    appdef.NewQName("f", "first-children-1"),
 							Id:      istructs.RecordID(102),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
@@ -148,7 +151,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 					},
 					"first-children-2": {
 						{
-							Name:    istructs.NewQName("s", "first-children-2"),
+							Name:    appdef.NewQName("s", "first-children-2"),
 							Id:      istructs.RecordID(401),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
@@ -158,7 +161,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 							Containers_: map[string][]*coreutils.TestObject{
 								"deep-children-1": {
 									{
-										Name:    istructs.NewQName("s", "deep-children-1"),
+										Name:    appdef.NewQName("s", "deep-children-1"),
 										Id:      istructs.RecordID(501),
 										Parent_: istructs.RecordID(401),
 										Data: map[string]interface{}{
@@ -168,7 +171,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 										Containers_: map[string][]*coreutils.TestObject{
 											"very-deep-children-1": {
 												{
-													Name:    istructs.NewQName("s", "very-deep-children-1"),
+													Name:    appdef.NewQName("s", "very-deep-children-1"),
 													Id:      istructs.RecordID(601),
 													Parent_: istructs.RecordID(501),
 													Data: map[string]interface{}{
@@ -177,7 +180,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 													},
 												},
 												{
-													Name:    istructs.NewQName("s", "very-deep-children-1"),
+													Name:    appdef.NewQName("s", "very-deep-children-1"),
 													Id:      istructs.RecordID(602),
 													Parent_: istructs.RecordID(501),
 													Data: map[string]interface{}{
@@ -216,14 +219,14 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 						[]IOutputRow{row(200601), row(200602)},
 					},
 				},
-				enrichedRootSchema: make(map[string]istructs.DataKindType),
+				enrichedRootFields: make(map[string]appdef.DataKind),
 			}
 		}
 		skb := &mockStateKeyBuilder{}
 		skb.On("PutRecordID", mock.Anything, mock.Anything)
 		s := &mockState{}
 		s.
-			On("KeyBuilder", state.RecordsStorage, istructs.NullQName).Return(skb).
+			On("KeyBuilder", state.RecordsStorage, appdef.NullQName).Return(skb).
 			On("MustExist", mock.Anything).Return(record("root")).Once().
 			On("MustExist", mock.Anything).Return(record("first-children-1-101")).Once().
 			On("MustExist", mock.Anything).Return(record("first-children-1-102")).Once().
@@ -234,10 +237,10 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 			On("MustExist", mock.Anything).Return(record("very-deep-children-1-601")).Once().
 			On("MustExist", mock.Anything).Return(record("very-deep-children-1-602")).Once()
 		op := &EnrichmentOperator{
-			state:        s,
-			elements:     elements,
-			schemasCache: newSchemasCache(schemas),
-			metrics:      &testMetrics{},
+			state:      s,
+			elements:   elements,
+			fieldsDefs: newFieldsDefs(appDef),
+			metrics:    &testMetrics{},
 		}
 
 		outWork, err := op.DoAsync(context.Background(), work())

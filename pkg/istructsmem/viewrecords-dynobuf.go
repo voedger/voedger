@@ -8,36 +8,39 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
 // istructs.IViewRecords.Put
-func (vr *appViewRecordsType) storeViewRecord(workspace istructs.WSID, key istructs.IKeyBuilder, value istructs.IValueBuilder) (partKey, clustCols, data []byte, err error) {
+func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.IKeyBuilder, value istructs.IValueBuilder) (partKey, clustCols, data []byte, err error) {
 
 	k := key.(*keyType)
 	if err = k.build(); err != nil {
 		return nil, nil, nil, err
 	}
-	if err = vr.app.config.Schemas.validKey(k, false); err != nil {
+	if err = vr.app.config.validators.validKey(k, false); err != nil {
 		return nil, nil, nil, err
 	}
 
 	v := value.(*valueType)
-	if err = v.build(); err != nil {
+	if _, err = v.build(); err != nil {
 		return nil, nil, nil, err
 	}
-	if err = vr.app.config.Schemas.validViewValue(v); err != nil {
+	if err = vr.app.config.validators.validViewValue(v); err != nil {
 		return nil, nil, nil, err
 	}
 
 	if k.viewName != v.viewName {
-		return nil, nil, nil, fmt.Errorf("key and value are from different views (key view is «%v», value view is «%v»): %w", k.viewName, v.viewName, ErrWrongSchema)
+		return nil, nil, nil, fmt.Errorf("key and value are from different views (key view is «%v», value view is «%v»): %w", k.viewName, v.viewName, ErrWrongDefinition)
 	}
 
 	partKey, clustCols = k.storeToBytes()
-	partKey = prefixBytes(partKey, uint16(k.viewID), uint64(workspace))
+	partKey = utils.PrefixBytes(partKey, k.viewID, workspace)
 
 	if data, err = v.storeToBytes(); err != nil {
 		return nil, nil, nil, err
@@ -46,176 +49,171 @@ func (vr *appViewRecordsType) storeViewRecord(workspace istructs.WSID, key istru
 	return partKey, clustCols, data, nil
 }
 
-// storeViewPartKey stores partition key to bytes.
-// Be careful! This method must be called only after key validation!
+// Stores partition key to bytes. Must be called only if valid key
 func (key *keyType) storeViewPartKey() []byte {
 	buf := new(bytes.Buffer)
-	for _, name := range key.partRow.schema.fieldsOrder {
-		// if !fixedFldKind(key.partRow.schema.fields[name].kind) {…ErrFieldTypeMismatch} — unnecessary check. All view schemas must be valid
 
-		data := key.partRow.dyB.Get(name)
-		switch v := data.(type) {
-		case int32, int64, float32, float64, bool:
-			_ = binary.Write(buf, binary.BigEndian, v)
-		case []byte: // two bytes (fld.kind == istructs.DataKind_QName)
-			_, _ = buf.Write(v)
-		}
-		// case nil: return fmt.Errorf(… ErrNameNotFound) — unnecessary check. Key must be validated before storing
-		// default: return fmt.Errorf(…, ErrFieldTypeMismatch) — unnecessary check. Key must be validated before storing
-	}
+	key.partRow.def.Fields(
+		func(f appdef.IField) {
+			utils.SafeWriteBuf(buf, key.partRow.dyB.Get(f.Name()))
+		})
+
 	return buf.Bytes()
 }
 
-// storeViewClustKey stores clustering columns to bytes.
-// Be careful! This method must be called only after key validation!
+// Stores clustering columns to bytes. Must be called only if valid key
 func (key *keyType) storeViewClustKey() []byte {
 	buf := new(bytes.Buffer)
-	for _, name := range key.clustRow.schema.fieldsOrder {
-		// if (i < len(key.clustRow.schema.fieldsOrder)-1) && !fixedFldKind(key.clustRow.schema.fields[name].kind) {…ErrFieldTypeMismatch} — unnecessary check. All view schemas must be valid
 
-		data := key.clustRow.dyB.Get(name)
-		switch v := data.(type) {
-		case nil:
-			break // not error, just partially builded clustering key
-		case int32, int64, float32, float64, bool:
-			_ = binary.Write(buf, binary.BigEndian, v)
-		case []byte:
-			_, _ = buf.Write(v)
-		case string:
-			_, _ = buf.WriteString(v)
-		}
-		// default: return fmt.Errorf(…ErrFieldTypeMismatch) — unnecessary check. Key must be validated before storing
-	}
+	key.clustRow.def.Fields(
+		func(f appdef.IField) {
+			utils.SafeWriteBuf(buf, key.clustRow.dyB.Get(f.Name()))
+		})
+
 	return buf.Bytes()
 }
 
 // load functions are grouped by codec version. Codec version number included as part (suffix) in function name
-
-// loadViewPartKey_00 loads partition key from buffer
+//
+// Loads partition key from buffer
 func loadViewPartKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 	const errWrapPrefix = "unable to load partitition key"
 
-	schema := key.partRow.schema
+	def := key.partRow.def
 
-	for _, fieldName := range schema.fieldsOrder {
-		fld := schema.fields[fieldName]
-		// if !fixedFldKind(fld.kind) {…ErrFieldTypeMismatch} — unnecessary check. All view schemas must be valid
-		if err := loadFixedLenCellFromBuffer_00(&key.partRow, fieldName, fld, key.appCfg, buf); err != nil {
-			return fmt.Errorf("%s: partition column «%s» cannot be loaded: %w", errWrapPrefix, fieldName, err)
-		}
-	}
+	def.Fields(
+		func(f appdef.IField) {
+			if err != nil {
+				return // first error is enough
+			}
+			if e := loadFixedLenCellFromBuffer_00(&key.partRow, f, key.appCfg, buf); e != nil {
+				err = fmt.Errorf("%s: partition column «%s» cannot be loaded: %w", errWrapPrefix, f.Name(), e)
+			}
+		})
 
-	if err = key.partRow.build(); err != nil {
+	if err != nil {
 		return err
 	}
 
-	return nil
+	_, err = key.partRow.build()
+	return err
 }
 
-// loadViewClustKey_00 loads clustering columns from buffer
+// Loads clustering columns from buffer
 func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 	const errWrapPrefix = "unable to load clustering key"
 
-	schema := key.clustRow.schema
+	def := key.clustRow.def
 
-	for _, fieldName := range schema.fieldsOrder {
-		fld := schema.fields[fieldName]
-		// if (i < len(schema.fieldsOrder)-1) and !fixedFldKind(fld.kind) {…ErrFieldTypeMismatch)} — unnecessary check. All view schemas must be valid
-		if err := loadCellFromBuffer_00(&key.clustRow, fieldName, fld, key.appCfg, buf); err != nil {
-			return fmt.Errorf("%s: clustering column «%s» cannot be loaded: %w", errWrapPrefix, fieldName, err)
-		}
-	}
+	def.Fields(
+		func(f appdef.IField) {
+			if err != nil {
+				return // first error is enough
+			}
+			if e := loadCellFromBuffer_00(&key.clustRow, f, key.appCfg, buf); e != nil {
+				err = fmt.Errorf("%s: partition column «%s» cannot be loaded: %w", errWrapPrefix, f.Name(), e)
+			}
+		})
 
-	if err = key.clustRow.build(); err != nil {
+	if err != nil {
 		return err
 	}
+
+	_, err = key.clustRow.build()
+	return err
+}
+
+// Loads view value from specified buf using specified codec.
+//
+// This method uses the name of the definition set by the caller (val.QName), ignoring that is read from the buffer.
+func loadViewValue(val *valueType, codecVer byte, buf *bytes.Buffer) (err error) {
+	var qnameId uint16
+	if err = binary.Read(buf, binary.BigEndian, &qnameId); err != nil {
+		return fmt.Errorf("error read value QNameID: %w", err)
+	}
+	if err = loadRowSysFields(&val.rowType, codecVer, buf); err != nil {
+		return err
+	}
+
+	len := uint32(0)
+	if err := binary.Read(buf, binary.BigEndian, &len); err != nil {
+		return fmt.Errorf("error read value dynobuffer length: %w", err)
+	}
+	if buf.Len() < int(len) {
+		return fmt.Errorf("error read value dynobuffer, expected %d bytes, but only %d bytes is available: %w", len, buf.Len(), io.ErrUnexpectedEOF)
+	}
+	val.dyB.Reset(buf.Next(int(len)))
 
 	return nil
 }
 
-// loadFixedLenCellFromBuffer_00 loads from buffer row fixed-width field
-func loadFixedLenCellFromBuffer_00(row *rowType, fieldName string, field *FieldPropsType, appCfg *AppConfigType, buf *bytes.Buffer) (err error) {
-	switch field.kind {
-	case istructs.DataKind_int32:
+// Loads from buffer row fixed-width field
+func loadFixedLenCellFromBuffer_00(row *rowType, field appdef.IField, appCfg *AppConfigType, buf *bytes.Buffer) (err error) {
+	switch field.DataKind() {
+	case appdef.DataKind_int32:
 		v := int32(0)
 		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
 			return err
 		}
-		row.PutInt32(fieldName, v)
-	case istructs.DataKind_int64:
+		row.PutInt32(field.Name(), v)
+	case appdef.DataKind_int64:
 		v := int64(0)
 		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
 			return err
 		}
-		row.PutInt64(fieldName, v)
-	case istructs.DataKind_float32:
+		row.PutInt64(field.Name(), v)
+	case appdef.DataKind_float32:
 		v := float32(0)
 		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
 			return err
 		}
-		row.PutFloat32(fieldName, v)
-	case istructs.DataKind_float64:
+		row.PutFloat32(field.Name(), v)
+	case appdef.DataKind_float64:
 		v := float64(0)
 		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
 			return err
 		}
-		row.PutFloat64(fieldName, v)
-	case istructs.DataKind_QName:
+		row.PutFloat64(field.Name(), v)
+	case appdef.DataKind_QName:
 		v := uint16(0)
 		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
 			return err
 		}
-		var name istructs.QName
-		if name, err = appCfg.qNames.idToQName(QNameID(v)); err != nil {
+		var name appdef.QName
+		if name, err = appCfg.qNames.GetQName(qnames.QNameID(v)); err != nil {
 			return err
 		}
-		row.PutQName(fieldName, name)
-	case istructs.DataKind_bool:
+		row.PutQName(field.Name(), name)
+	case appdef.DataKind_bool:
 		v := false
 		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
 			return err
 		}
-		row.PutBool(fieldName, v)
-	case istructs.DataKind_RecordID:
+		row.PutBool(field.Name(), v)
+	case appdef.DataKind_RecordID:
 		v := int64(istructs.NullRecordID)
 		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
 			return err
 		}
-		row.PutRecordID(fieldName, istructs.RecordID(v))
+		row.PutRecordID(field.Name(), istructs.RecordID(v))
 	default:
-		return fmt.Errorf("field «%s» in row «%v» has variable length or unsupported field type «%s»: %w", fieldName, row.QName(), dataKindToStr[field.kind], coreutils.ErrFieldTypeMismatch)
+		return fmt.Errorf("field «%s» in row «%v» has variable length or unsupported field type «%v»: %w", field.Name(), row.QName(), field.DataKind(), ErrWrongFieldType)
 	}
 	return nil
 }
 
-// loadCellFromBuffer_00 loads from buffer row cell
-func loadCellFromBuffer_00(row *rowType, fieldName string, field *FieldPropsType, appCfg *AppConfigType, buf *bytes.Buffer) (err error) {
-	if fixedFldKind(field.kind) {
-		return loadFixedLenCellFromBuffer_00(row, fieldName, field, appCfg, buf)
+// Loads from buffer row cell
+func loadCellFromBuffer_00(row *rowType, field appdef.IField, appCfg *AppConfigType, buf *bytes.Buffer) (err error) {
+	if field.IsFixedWidth() {
+		return loadFixedLenCellFromBuffer_00(row, field, appCfg, buf)
 	}
-	switch field.kind {
-	case istructs.DataKind_bytes:
-		row.PutBytes(fieldName, buf.Bytes())
-	case istructs.DataKind_string:
-		row.PutString(fieldName, buf.String())
+	switch field.DataKind() {
+	case appdef.DataKind_bytes:
+		row.PutBytes(field.Name(), buf.Bytes())
+	case appdef.DataKind_string:
+		row.PutString(field.Name(), buf.String())
 	default:
-		return fmt.Errorf("unable load data type «%s»: %w", dataKindToStr[field.kind], coreutils.ErrFieldTypeMismatch)
+		return fmt.Errorf("unable load data type «%s»: %w", field.DataKind().ToString(), ErrWrongFieldType)
 	}
 	return nil
-}
-
-// fixedFldKind returns if fixed width field data kind
-func fixedFldKind(kind istructs.DataKindType) bool {
-	switch kind {
-	case
-		istructs.DataKind_int32,
-		istructs.DataKind_int64,
-		istructs.DataKind_float32,
-		istructs.DataKind_float64,
-		istructs.DataKind_QName,
-		istructs.DataKind_bool,
-		istructs.DataKind_RecordID:
-		return true
-	}
-	return false
 }

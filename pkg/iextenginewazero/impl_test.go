@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/heeus/wazero/api"
+	"github.com/voedger/wazero/api"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/state"
@@ -44,7 +44,7 @@ func Test_BasicUsage(t *testing.T) {
 	//
 	// Invoke command
 	//
-	_ = extensions["exampleCommand"].Invoke(extIO)
+	require.NoError(extensions["exampleCommand"].Invoke(extIO))
 	require.Equal(1, len(extIO.intents))
 	v := extIO.intents[0].value.(*mockValueBuilder)
 
@@ -57,7 +57,7 @@ func Test_BasicUsage(t *testing.T) {
 	//
 	extIO = &mockIo{}    // reset intents
 	projectorMode = true // state will return different Event
-	_ = extensions["updateSubscriptionProjector"].Invoke(extIO)
+	require.NoError(extensions["updateSubscriptionProjector"].Invoke(extIO))
 
 	require.Equal(1, len(extIO.intents))
 	v = extIO.intents[0].value.(*mockValueBuilder)

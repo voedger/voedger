@@ -6,10 +6,12 @@
 
 package istructs
 
+import "github.com/voedger/voedger/pkg/appdef"
+
 // Base abstract record
 type IRecord interface {
 	IRowReader
-	QName() QName
+	QName() appdef.QName
 	ID() RecordID
 
 	// NullRecordID for documents

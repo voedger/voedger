@@ -6,16 +6,15 @@
 package istructsmem
 
 import (
-	"errors"
 	"reflect"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func Test_splitID(t *testing.T) {
@@ -157,476 +156,13 @@ func Test_splitLogOffsetMonotonicIncrease(t *testing.T) {
 	wg.Wait()
 }
 
-func Test_prefixBytes(t *testing.T) {
-	type args struct {
-		bytes  []byte
-		prefix []interface{}
-	}
-	tests := []struct {
-		name string
-		args args
-		want []byte
-	}{
-		{
-			name: "add system QNameID to PK",
-			args: args{
-				bytes:  []byte{0x01, 0x02},
-				prefix: []interface{}{QNameIDForError},
-			},
-			want: []byte{0x00, 0x01, 0x01, 0x02},
-		},
-		{
-			name: "add system view QNameID to PK",
-			args: args{
-				bytes:  []byte{0x01, 0x02},
-				prefix: []interface{}{QNameIDSysSingletonIDs}, //0x0016 (22 decimals)
-			},
-			want: []byte{0x00, byte(QNameIDSysSingletonIDs), 0x01, 0x02},
-		},
-		{
-			name: "add QNameID and WSID to PK",
-			args: args{
-				bytes:  []byte{0x01, 0x02},
-				prefix: []interface{}{QNameID(0x0107), istructs.WSID(0xA7010203)},
-			},
-			want: []byte{0x01, 0x07, 0x00, 0x00, 0x00, 0x00, 0xA7, 0x01, 0x02, 0x03, 0x01, 0x02},
-		},
-		{
-			name: "add QNameID and WSID to nil PK",
-			args: args{
-				bytes:  nil,
-				prefix: []interface{}{QNameID(0x0107), istructs.WSID(0xA7010203)},
-			},
-			want: []byte{0x01, 0x07, 0x00, 0x00, 0x00, 0x00, 0xA7, 0x01, 0x02, 0x03},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := prefixBytes(tt.args.bytes, tt.args.prefix...); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("prefixBytes() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-
-	require.New(t).Panics(func() {
-		bytes := []byte{0x01, 0x02}
-		const value = 55 // unknown type size!
-		_ = prefixBytes(bytes, value)
-	}, "must panic if expand bytes slice by unknown/variable size values")
-}
-
-func Test_fullBytes(t *testing.T) {
-	type args struct {
-		b []byte
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "nil case",
-			args: args{b: nil},
-			want: true,
-		},
-		{
-			name: "null len case",
-			args: args{b: []byte{}},
-			want: true,
-		},
-		{
-			name: "full byte test",
-			args: args{b: []byte{0xFF}},
-			want: true,
-		},
-		{
-			name: "full word test",
-			args: args{b: []byte{0xFF, 0xFF}},
-			want: true,
-		},
-		{
-			name: "full long bytes test",
-			args: args{b: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
-			want: true,
-		},
-		{
-			name: "negative test",
-			args: args{b: []byte("bytes")},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := fullBytes(tt.args.b); got != tt.want {
-				t.Errorf("fullBytes() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_rightMarginCCols(t *testing.T) {
-	type args struct {
-		cc []byte
-	}
-	tests := []struct {
-		name string
-		args args
-		want []byte
-	}{
-		{
-			name: "nil test",
-			args: args{cc: nil},
-			want: nil,
-		},
-		{
-			name: "null len test",
-			args: args{cc: []byte{}},
-			want: nil,
-		},
-		{
-			name: "full byte test",
-			args: args{cc: []byte{0xFF}},
-			want: nil,
-		},
-		{
-			name: "full word test",
-			args: args{cc: []byte{0xFF, 0xFF}},
-			want: nil,
-		},
-		{
-			name: "vulgaris test",
-			args: args{cc: []byte{0x01, 0x02}},
-			want: []byte{0x01, 0x03},
-		},
-		{
-			name: "full-end test",
-			args: args{cc: []byte{0x01, 0xFF}},
-			want: []byte{0x02, 0x00},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if gotFinishCCols := rightMarginCCols(tt.args.cc); !reflect.DeepEqual(gotFinishCCols, tt.want) {
-				t.Errorf("rangeCCols() = %v, want %v", gotFinishCCols, tt.want)
-			}
-		})
-	}
-}
-
-func Test_validIdent(t *testing.T) {
-	type args struct {
-		ident string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantOk  bool
-		wantErr error
-	}{
-		// negative tests
-		{
-			name:    "error if empty ident",
-			args:    args{ident: ""},
-			wantOk:  false,
-			wantErr: ErrNameMissed,
-		},
-		{
-			name:    "error if wrong first char",
-			args:    args{ident: "🐧26"},
-			wantOk:  false,
-			wantErr: ErrInvalidName,
-		},
-		{
-			name:    "error if wrong digit starts",
-			args:    args{ident: "2abc"},
-			wantOk:  false,
-			wantErr: ErrInvalidName,
-		},
-		{
-			name:    "error if wrong last char",
-			args:    args{ident: "lookAt🐧"},
-			wantOk:  false,
-			wantErr: ErrInvalidName,
-		},
-		{
-			name:    "error if wrong char anywhere",
-			args:    args{ident: "This🐧isMy"},
-			wantOk:  false,
-			wantErr: ErrInvalidName,
-		},
-		{
-			name:    "error if starts from digit",
-			args:    args{ident: "7zip"},
-			wantOk:  false,
-			wantErr: ErrInvalidName,
-		},
-		{
-			name:    "error if spaces at begin",
-			args:    args{ident: " zip"},
-			wantOk:  false,
-			wantErr: ErrInvalidName,
-		},
-		{
-			name:    "error if spaces at end",
-			args:    args{ident: "zip "},
-			wantOk:  false,
-			wantErr: ErrInvalidName,
-		},
-		{
-			name:    "error if spaces anywhere",
-			args:    args{ident: "zip zip"},
-			wantOk:  false,
-			wantErr: ErrInvalidName,
-		},
-		{
-			name: "error if too long",
-			args: args{ident: func() string {
-				sworm := "_"
-				for i := 0; i < MaxIdentLen; i++ {
-					sworm += "_"
-				}
-				return sworm
-			}()},
-			wantOk:  false,
-			wantErr: ErrInvalidName,
-		},
-		// positive tests
-		{
-			name:   "one letter must pass",
-			args:   args{ident: "i"},
-			wantOk: true,
-		},
-		{
-			name:   "single underscore must pass",
-			args:   args{ident: "_"},
-			wantOk: true,
-		},
-		{
-			name:   "starts from underscore must pass",
-			args:   args{ident: "_test"},
-			wantOk: true,
-		},
-		{
-			name:   "vulgaris camel notation must pass",
-			args:   args{ident: "thisIsIdent1"},
-			wantOk: true,
-		},
-		{
-			name:   "vulgaris snake notation must pass",
-			args:   args{ident: "this_is_ident_2"},
-			wantOk: true,
-		},
-		{
-			name:   "mixed notation must pass",
-			args:   args{ident: "useMix_4_fun"},
-			wantOk: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotOk, err := validIdent(tt.args.ident)
-			if gotOk != tt.wantOk {
-				t.Errorf("validIdent() = %v, want %v", gotOk, tt.wantOk)
-				return
-			}
-			if err != nil {
-				if tt.wantErr == nil {
-					t.Errorf("validIdent() error = %v, wantErr is nil", err)
-					return
-				}
-				if !errors.Is(err, tt.wantErr) {
-					t.Errorf("validIdent() error = %v not is %v", err, tt.wantErr)
-					return
-				}
-			} else if tt.wantErr != nil {
-				t.Errorf("validIdent() error = nil, wantErr - %v", tt.wantErr)
-				return
-			}
-		})
-	}
-}
-
-func Test_validQName(t *testing.T) {
-	type args struct {
-		qName istructs.QName
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantOk  bool
-		wantErr bool
-	}{
-		{
-			name:    "NullQName must pass",
-			args:    args{qName: istructs.NullQName},
-			wantOk:  true,
-			wantErr: false,
-		},
-		{
-			name:    "error if missed package",
-			args:    args{qName: istructs.NewQName("", "test")},
-			wantOk:  false,
-			wantErr: true,
-		},
-		{
-			name:    "error if invalid package",
-			args:    args{qName: istructs.NewQName("5", "test")},
-			wantOk:  false,
-			wantErr: true,
-		},
-		{
-			name:    "error if missed entity",
-			args:    args{qName: istructs.NewQName("test", "")},
-			wantOk:  false,
-			wantErr: true,
-		},
-		{
-			name:    "error if invalid entity",
-			args:    args{qName: istructs.NewQName("naked", "🔫")},
-			wantOk:  false,
-			wantErr: true,
-		},
-		{
-			name:    "error if system QNames",
-			args:    args{qName: istructs.QNameForError},
-			wantOk:  true,
-			wantErr: false,
-		},
-		{
-			name:    "error if vulgaris QName",
-			args:    args{qName: istructs.NewQName("test", "test")},
-			wantOk:  true,
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotOk, err := validQName(tt.args.qName)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validQName() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotOk != tt.wantOk {
-				t.Errorf("validQName() = %v, want %v", gotOk, tt.wantOk)
-			}
-		})
-	}
-}
-
-func Test_sysField(t *testing.T) {
-	type args struct {
-		name string
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "true if sys.QName",
-			args: args{istructs.SystemField_QName},
-			want: true,
-		},
-		{
-			name: "true if sys.ID",
-			args: args{istructs.SystemField_ID},
-			want: true,
-		},
-		{
-			name: "true if sys.ParentID",
-			args: args{istructs.SystemField_ParentID},
-			want: true,
-		},
-		{
-			name: "true if sys.Container",
-			args: args{istructs.SystemField_Container},
-			want: true,
-		},
-		{
-			name: "true if sys.IsActive",
-			args: args{istructs.SystemField_IsActive},
-			want: true,
-		},
-		{
-			name: "false if empty",
-			args: args{""},
-			want: false,
-		},
-		{
-			name: "false if vulgaris user",
-			args: args{"userField"},
-			want: false,
-		},
-		{
-			name: "false if curious user",
-			args: args{"sys.user"},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := sysField(tt.args.name); got != tt.want {
-				t.Errorf("sysField() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_sysContainer(t *testing.T) {
-	type args struct {
-		name string
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "true if sys.pkey",
-			args: args{istructs.SystemContainer_ViewPartitionKey},
-			want: true,
-		},
-		{
-			name: "true if sys.ccols",
-			args: args{istructs.SystemContainer_ViewClusteringCols},
-			want: true,
-		},
-		{
-			name: "true if sys.val",
-			args: args{istructs.SystemContainer_ViewValue},
-			want: true,
-		},
-		{
-			name: "false if empty",
-			args: args{""},
-			want: false,
-		},
-		{
-			name: "false if vulgaris user",
-			args: args{"userContainer"},
-			want: false,
-		},
-		{
-			name: "false if curious user",
-			args: args{"sys.user"},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := sysContainer(tt.args.name); got != tt.want {
-				t.Errorf("sysContainer() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestElementFillAndGet(t *testing.T) {
 	require := require.New(t)
-	cfgs := testAppConfigs()
-	asp, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
-	_, err = asp.AppStructs(test.appName)
+	test := test()
+
+	cfgs := test.AppConfigs
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	_, err := asp.AppStructs(test.appName)
 	require.NoError(err)
 	builder := NewIObjectBuilder(cfgs[istructs.AppQName_test1_app1], test.testCDoc)
 
@@ -650,7 +186,7 @@ func TestElementFillAndGet(t *testing.T) {
 			},
 		}
 		cfg := cfgs[test.appName]
-		require.NoError(FillElementFromJSON(data, cfg.Schemas.Schema(test.testCDoc), builder, cfg.app.Schemas()))
+		require.NoError(FillElementFromJSON(data, cfg.AppDef.Def(test.testCDoc), builder))
 		o, err := builder.Build()
 		require.NoError(err)
 
@@ -694,9 +230,9 @@ func TestElementFillAndGet(t *testing.T) {
 				"sys.ID": float64(1),
 				name:     val,
 			}
-			require.NoError(FillElementFromJSON(data, cfg.Schemas.Schema(test.testCDoc), builder, cfg.app.Schemas()))
+			require.NoError(FillElementFromJSON(data, cfg.AppDef.Def(test.testCDoc), builder))
 			o, err := builder.Build()
-			require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
+			require.ErrorIs(err, ErrWrongFieldType)
 			require.Nil(o)
 		}
 	})
@@ -716,7 +252,7 @@ func TestElementFillAndGet(t *testing.T) {
 			data := map[string]interface{}{
 				c.f: c.v,
 			}
-			err := FillElementFromJSON(data, cfg.Schemas.Schema(test.testCDoc), builder, cfg.app.Schemas())
+			err := FillElementFromJSON(data, cfg.AppDef.Def(test.testCDoc), builder)
 			require.Error(err)
 		}
 	})
@@ -724,17 +260,17 @@ func TestElementFillAndGet(t *testing.T) {
 
 func TestIBucketsFromIAppStructs(t *testing.T) {
 	require := require.New(t)
+
 	cfgs := AppConfigsType{}
-	cfg := cfgs.AddConfig(test.appName)
-	funcQName := istructs.NewQName("my", "func")
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+	funcQName := appdef.NewQName("my", "func")
 	rlExpected := istructs.RateLimit{
 		Period:                1,
 		MaxAllowedPerDuration: 2,
 	}
 	cfg.FunctionRateLimits.AddAppLimit(funcQName, rlExpected)
-	asp, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
-	as, err := asp.AppStructs(test.appName)
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	as, err := asp.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	buckets := IBucketsFromIAppStructs(as)
 	bsActual, err := buckets.GetDefaultBucketsState(GetFunctionRateLimitName(funcQName, istructs.RateLimitKind_byApp))

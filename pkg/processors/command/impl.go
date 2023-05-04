@@ -16,6 +16,7 @@ import (
 
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -53,13 +54,8 @@ func NewCommandMessage(requestCtx context.Context, body []byte, appQName istruct
 }
 
 // need for collection.ProvideSyncActualizer()
-func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
-	return c.pLogEvent
-}
-
-// need for collection.ProvideSyncActualizer()
-func (c *cmdWorkpiece) Schemas() istructs.ISchemas {
-	return c.appStructs.Schemas()
+func (c *cmdWorkpiece) AppDef() appdef.IAppDef {
+	return c.appStructs.AppDef()
 }
 
 // need for collection.ProvideSyncActualizer(), q.sys.EnrichPrincipalToken, c.sys.ChangePassword
@@ -72,6 +68,11 @@ func (c *cmdWorkpiece) Context() context.Context {
 	return c.cmdMes.RequestCtx()
 }
 
+// need for collection.ProvideSyncActualizer()
+func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
+	return c.pLogEvent
+}
+
 // used by ProvideSyncActualizerFactory
 func (c *cmdWorkpiece) WSID() istructs.WSID {
 	return c.cmdMes.WSID()
@@ -82,8 +83,8 @@ func (c *cmdWorkpiece) GetPrincipalPayload() payloads.PrincipalPayload {
 	return c.principalPayload
 }
 
-func (ws *workspace) nextRecordID(schema istructs.ISchema) (res istructs.RecordID) {
-	if schema.Kind() == istructs.SchemaKind_CDoc || schema.Kind() == istructs.SchemaKind_CRecord {
+func (ws *workspace) nextRecordID(def appdef.IDef) (res istructs.RecordID) {
+	if def.Kind() == appdef.DefKind_CDoc || def.Kind() == appdef.DefKind_CRecord {
 		res = istructs.NewCDocCRecordID(ws.NextCDocCRecordBaseID)
 		ws.NextCDocCRecordBaseID++
 	} else {
@@ -148,8 +149,8 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		ws := ap.getWorkspace(event.Workspace())
 		_ = event.CUDs(func(rec istructs.ICUDRow) error { // no errors to return
 			if rec.IsNew() {
-				schema := cmd.Schemas().Schema(rec.QName())
-				if schema.Kind() == istructs.SchemaKind_CDoc || schema.Kind() == istructs.SchemaKind_CRecord {
+				def := cmd.AppDef().Def(rec.QName())
+				if def.Kind() == appdef.DefKind_CDoc || def.Kind() == appdef.DefKind_CRecord {
 					ws.NextCDocCRecordBaseID = rec.ID().BaseRecordID() + 1
 				} else {
 					ws.NextBaseID = rec.ID().BaseRecordID() + 1
@@ -165,7 +166,12 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 	if err := cmd.appStructs.Events().ReadPLog(ctx, cmdProc.pNumber, istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
 		return nil, err
 	}
-	worskapcesJSON, _ := json.Marshal(ap.workspaces) // error impossible
+	worskapcesJSON, err := json.Marshal(ap.workspaces)
+	if err != nil {
+		// error impossible
+		// notest
+		return nil, err
+	}
 	logger.Info(fmt.Sprintf(`app "%s" partition %d recovered: nextPLogOffset %d, workspaces: %s`, cmd.cmdMes.AppQName(), cmdProc.pNumber, ap.nextPLogOffset, string(worskapcesJSON)))
 	return ap, nil
 }
@@ -174,8 +180,8 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, work interface{}) (err error)
 	cmd := work.(*cmdWorkpiece)
 	cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil,
 		// FIXME: implement the right id generator
-		func(tempId istructs.RecordID, schema istructs.ISchema) (storageID istructs.RecordID, err error) {
-			storageID = cmd.workspace.nextRecordID(schema)
+		func(tempId istructs.RecordID, def appdef.IDef) (storageID istructs.RecordID, err error) {
+			storageID = cmd.workspace.nextRecordID(def)
 			cmd.generatedIDs[tempId] = storageID
 			return
 		},
@@ -202,7 +208,7 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 	if funcQName == QNameCommandCreateWorkspace || funcQName == QNameCommandCreateWorkspaceID || funcQName == QNameCommandInit {
 		return nil
 	}
-	if wsDesc.QName() != istructs.NullQName {
+	if wsDesc.QName() != appdef.NullQName {
 		if funcQName == QNameCommandUploadBLOBHelper {
 			return nil
 		}
@@ -270,9 +276,9 @@ func getFunction(_ context.Context, work interface{}) (err error) {
 
 func unmarshalRequestBody(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdFunc.ParamsSchema() == istructs.QNameJSON {
+	if cmd.cmdFunc.ParamsDef() == istructs.QNameJSON {
 		cmd.requestData["args"] = map[string]interface{}{
-			Field_JSONSchemaBody: string(cmd.cmdMes.Body()),
+			Field_JSONDef_Body: string(cmd.cmdMes.Body()),
 		}
 	} else if err = json.Unmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
 		err = fmt.Errorf("failed to unmarshal request body: %w", err)
@@ -318,7 +324,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work interface{}) 
 
 func getArgsObject(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdFunc.ParamsSchema() == istructs.NullQName {
+	if cmd.cmdFunc.ParamsDef() == appdef.NullQName {
 		return nil
 	}
 	aob := cmd.reb.ArgumentObjectBuilder()
@@ -327,8 +333,8 @@ func getArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"args" field must be an object`)
 		}
-		paramsSchema := cmd.appStructs.Schemas().Schema(cmd.cmdFunc.ParamsSchema())
-		if err = istructsmem.FillElementFromJSON(args, paramsSchema, aob, cmd.appStructs.Schemas()); err != nil {
+		parsDef := cmd.appStructs.AppDef().Def(cmd.cmdFunc.ParamsDef())
+		if err = istructsmem.FillElementFromJSON(args, parsDef, aob); err != nil {
 			return err
 		}
 	}
@@ -340,7 +346,7 @@ func getArgsObject(_ context.Context, work interface{}) (err error) {
 
 func getUnloggedArgsObject(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdFunc.UnloggedParamsSchema() == istructs.NullQName {
+	if cmd.cmdFunc.UnloggedParamsDef() == appdef.NullQName {
 		return nil
 	}
 	auob := cmd.reb.ArgumentUnloggedObjectBuilder()
@@ -349,8 +355,8 @@ func getUnloggedArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"unloggedArgs" field must be an object`)
 		}
-		unloggedParamsSchema := cmd.appStructs.Schemas().Schema(cmd.cmdFunc.UnloggedParamsSchema())
-		if err = istructsmem.FillElementFromJSON(unloggedArgs, unloggedParamsSchema, auob, cmd.appStructs.Schemas()); err != nil {
+		unloggedParsDef := cmd.appStructs.AppDef().Def(cmd.cmdFunc.UnloggedParamsDef())
+		if err = istructsmem.FillElementFromJSON(unloggedArgs, unloggedParsDef, auob); err != nil {
 			return err
 		}
 	}
@@ -393,7 +399,7 @@ func (cmdProc *cmdProc) validate(ctx context.Context, work interface{}) (err err
 	}
 	for _, appCUDValidator := range cmd.appStructs.CUDValidators() {
 		err = cmd.rawEvent.CUDs(func(rec istructs.ICUDRow) error {
-			recQName := rec.AsQName(istructs.SystemField_QName)
+			recQName := rec.AsQName(appdef.SystemField_QName)
 			if istructs.ValidatorMatchByQName(appCUDValidator, recQName) {
 				if err := appCUDValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.cmdFunc.QName()); err != nil {
 					return err
@@ -435,21 +441,21 @@ func parseCUDs(_ context.Context, work interface{}) (err error) {
 		}
 		// sys.ID внутри -> create, снаружи -> update
 		isCreate := false
-		if parsedCUD.id, isCreate, err = parsedCUD.fields.AsInt64(istructs.SystemField_ID); err != nil {
+		if parsedCUD.id, isCreate, err = parsedCUD.fields.AsInt64(appdef.SystemField_ID); err != nil {
 			return xPath.Error(err)
 		}
 		if isCreate {
 			parsedCUD.opKind = iauthnz.OperationKind_INSERT
-			qNameStr, _, err := parsedCUD.fields.AsString(istructs.SystemField_QName)
+			qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
 			if err != nil {
 				return xPath.Error(err)
 			}
-			if parsedCUD.qName, err = istructs.ParseQName(qNameStr); err != nil {
+			if parsedCUD.qName, err = appdef.ParseQName(qNameStr); err != nil {
 				return xPath.Error(err)
 			}
 		} else {
 			parsedCUD.opKind = iauthnz.OperationKind_UPDATE
-			if parsedCUD.id, ok, err = cudData.AsInt64(istructs.SystemField_ID); err != nil {
+			if parsedCUD.id, ok, err = cudData.AsInt64(appdef.SystemField_ID); err != nil {
 				return xPath.Error(err)
 			}
 			if !ok {
@@ -458,7 +464,7 @@ func parseCUDs(_ context.Context, work interface{}) (err error) {
 			if parsedCUD.existingRecord, err = cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, istructs.RecordID(parsedCUD.id)); err != nil {
 				return
 			}
-			if parsedCUD.qName = parsedCUD.existingRecord.QName(); parsedCUD.qName == istructs.NullQName {
+			if parsedCUD.qName = parsedCUD.existingRecord.QName(); parsedCUD.qName == appdef.NullQName {
 				return coreutils.NewHTTPError(http.StatusNotFound, xPath.Errorf("record with queried id %d does not exist", parsedCUD.id))
 			}
 		}
@@ -522,7 +528,7 @@ func (cmdProc *cmdProc) writeCUDs(_ context.Context, work interface{}) (err erro
 		var rowWriter istructs.IRowWriter
 		if parsedCUD.opKind == iauthnz.OperationKind_INSERT {
 			rowWriter = cmd.reb.CUDBuilder().Create(parsedCUD.qName)
-			rowWriter.PutRecordID(istructs.SystemField_ID, istructs.RecordID(parsedCUD.id))
+			rowWriter.PutRecordID(appdef.SystemField_ID, istructs.RecordID(parsedCUD.id))
 		} else {
 			rowWriter = cmd.reb.CUDBuilder().Update(parsedCUD.existingRecord)
 		}
