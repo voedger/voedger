@@ -5,7 +5,7 @@
 
 package containers
 
-// Identificator for Container name
+// Identifier for Container name
 type ContainerID uint16
 
 // Container IDs system view

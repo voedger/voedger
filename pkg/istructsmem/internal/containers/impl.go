@@ -138,7 +138,7 @@ func (cnt *Containers) load01(storage istorage.IAppStorage) error {
 		}
 
 		if id <= ContainerNameIDSysLast {
-			return fmt.Errorf("unexpected ID (%v) is readed from system Containers view: %w", id, ErrWrongContainerID)
+			return fmt.Errorf("unexpected ID (%v) is loaded from system Containers view: %w", id, ErrWrongContainerID)
 		}
 
 		cnt.containers[name] = id
@@ -157,7 +157,7 @@ func (cnt *Containers) load01(storage istorage.IAppStorage) error {
 
 // Stores all known container to storage
 func (cnt *Containers) store(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
-	pKey := utils.ToBytes(consts.SysView_Containers, lastestVersion)
+	pKey := utils.ToBytes(consts.SysView_Containers, latestVersion)
 
 	batch := make([]istorage.BatchItem, 0)
 	for name, id := range cnt.containers {
@@ -178,8 +178,8 @@ func (cnt *Containers) store(storage istorage.IAppStorage, versions *vers.Versio
 		return fmt.Errorf("error store application container IDs to storage: %w", err)
 	}
 
-	if ver := versions.Get(vers.SysContainersVersion); ver != lastestVersion {
-		if err = versions.Put(vers.SysContainersVersion, lastestVersion); err != nil {
+	if ver := versions.Get(vers.SysContainersVersion); ver != latestVersion {
+		if err = versions.Put(vers.SysContainersVersion, latestVersion); err != nil {
 			return fmt.Errorf("error store system Containers view version: %w", err)
 		}
 	}
