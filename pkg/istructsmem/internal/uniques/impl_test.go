@@ -26,15 +26,22 @@ func TestUniques(t *testing.T) {
 
 	testName := appdef.NewQName("test", "doc")
 
-	testAppDef := func() appdef.IAppDef {
+	testAppDef := func(ver uint) appdef.IAppDef {
 		app := appdef.New()
+
 		def := app.AddStruct(testName, appdef.DefKind_CDoc)
 		def.
 			AddField("name", appdef.DataKind_string, true).
 			AddField("surname", appdef.DataKind_string, false).
 			AddField("lastName", appdef.DataKind_string, false).
 			AddField("passportNumber", appdef.DataKind_string, false).
-			AddField("passportSerial", appdef.DataKind_string, false).
+			AddField("passportSerial", appdef.DataKind_string, false)
+
+		if ver > 1 {
+			def.AddUnique("absurdUnique", []string{"lastName", "passportSerial"})
+		}
+
+		def.
 			AddUnique("fullNameUnique", []string{"name", "surname", "lastName"}).
 			AddUnique("passportUnique", []string{"passportSerial", "passportNumber"})
 
@@ -54,22 +61,22 @@ func TestUniques(t *testing.T) {
 		panic(err)
 	}
 
-	appDef := testAppDef()
+	appDef1 := testAppDef(1)
 
-	qNames := qnames.New()
-	if err := qNames.Prepare(storage, versions, appDef, nil); err != nil {
+	qNames1 := qnames.New()
+	if err := qNames1.Prepare(storage, versions, appDef1, nil); err != nil {
 		panic(err)
 	}
 
-	uniques := New()
-	if err := uniques.Prepare(storage, versions, qNames, appDef); err != nil {
+	uniques1 := New()
+	if err := uniques1.Prepare(storage, versions, qNames1, appDef1); err != nil {
 		panic(err)
 	}
 
 	require := require.New(t)
 
 	t.Run("basic Uniques methods", func(t *testing.T) {
-		def := appDef.Def(testName)
+		def := appDef1.Def(testName)
 
 		require.Equal(2, def.UniqueCount())
 		require.Equal(def.UniqueCount(), func() int {
@@ -77,7 +84,7 @@ func TestUniques(t *testing.T) {
 			def.Uniques(func(u appdef.IUnique) {
 				cnt++
 
-				id, err := uniques.ID(u)
+				id, err := uniques1.ID(u)
 				require.NoError(err)
 				require.Greater(id, appdef.FirstUniqueID)
 
@@ -85,43 +92,46 @@ func TestUniques(t *testing.T) {
 			})
 			return cnt
 		}())
+	})
 
-		t.Run("must be able to load early stored uniques", func(t *testing.T) {
-			versions1 := vers.New()
-			if err := versions1.Prepare(storage); err != nil {
-				panic(err)
-			}
+	t.Run("must be able to load early stored uniques", func(t *testing.T) {
+		versions2 := vers.New()
+		if err := versions2.Prepare(storage); err != nil {
+			panic(err)
+		}
 
-			appDef1 := testAppDef()
+		appDef2 := testAppDef(2)
 
-			qNames1 := qnames.New()
-			if err := qNames1.Prepare(storage, versions, appDef1, nil); err != nil {
-				panic(err)
-			}
+		qNames2 := qnames.New()
+		if err := qNames2.Prepare(storage, versions, appDef2, nil); err != nil {
+			panic(err)
+		}
 
-			uniques1 := New()
-			if err := uniques1.Prepare(storage, versions1, qNames1, appDef1); err != nil {
-				panic(err)
-			}
+		uniques2 := New()
+		if err := uniques2.Prepare(storage, versions2, qNames2, appDef2); err != nil {
+			panic(err)
+		}
 
-			def1 := appDef1.Def(testName)
+		def1 := appDef1.Def(testName)
+		require.Equal(2, def1.UniqueCount())
 
-			require.Equal(2, def1.UniqueCount())
-			def.Uniques(func(u appdef.IUnique) {
-				u1 := def1.UniqueByName(u.Name())
-				require.Equal(u.ID(), u1.ID())
+		def2 := appDef2.Def(testName)
+		require.Equal(3, def2.UniqueCount())
 
-				u1 = def1.UniqueByID(u.ID())
-				require.Equal(u.Name(), u1.Name())
-			})
+		def1.Uniques(func(u1 appdef.IUnique) {
+			u2 := def2.UniqueByName(u1.Name())
+			require.Equal(u1.ID(), u2.ID())
+
+			u2 = def2.UniqueByID(u1.ID())
+			require.Equal(u1.Name(), u2.Name())
 		})
 	})
 
 	t.Run("must be null id for unknown unique", func(t *testing.T) {
 		unique := amock.NewUnique("unknownUnique", []string{"surname", "passportNumber"})
-		unique.On("Def").Return(appDef.Def(testName))
+		unique.On("Def").Return(appDef1.Def(testName))
 
-		id, err := uniques.ID(unique)
+		id, err := uniques1.ID(unique)
 		require.Empty(id)
 		require.ErrorIs(err, ErrUniqueNotFound)
 	})
@@ -133,7 +143,7 @@ func TestUniques(t *testing.T) {
 
 		unique := def.UniqueByName("u1")
 
-		id, err := uniques.ID(unique)
+		id, err := uniques1.ID(unique)
 		require.Empty(id)
 		require.ErrorIs(err, qnames.ErrNameNotFound)
 	})
