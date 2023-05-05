@@ -17,5 +17,5 @@ const MaxDefContainerCount = 65536
 // Maximum fields per one unique
 const MaxDefUniqueFieldsCount = 256
 
-// Maximum uniques per definition
+// Maximum uniques
 const MaxDefUniqueCount = 100

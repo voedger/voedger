@@ -209,6 +209,8 @@ func TestPrefixBytes(t *testing.T) {
 	}, "must panic if expand bytes slice by unknown/variable size values")
 }
 
+type testInt uint16
+
 func TestToBytes(t *testing.T) {
 	type args struct {
 		value []interface{}
@@ -222,6 +224,11 @@ func TestToBytes(t *testing.T) {
 			name: "fixed width",
 			args: args{value: []interface{}{uint16(20)}},
 			want: []byte{0, 20},
+		},
+		{
+			name: "fixed width custom type",
+			args: args{value: []interface{}{testInt(1973)}},
+			want: []byte{0x07, 0xb5},
 		},
 		{
 			name: "[]byte",

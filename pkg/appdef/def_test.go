@@ -235,6 +235,7 @@ func Test_def_AddUnique(t *testing.T) {
 		require.Equal(2, d.UniqueCount())
 
 		u := d.UniqueByName("userUniqueFullName")
+		require.Equal(d, u.Def())
 		require.Len(u.Fields(), 3)
 		require.Equal("lastName", u.Fields()[0].Name())
 		require.Equal("name", u.Fields()[1].Name())
@@ -261,13 +262,13 @@ func Test_def_AddUnique(t *testing.T) {
 	})
 
 	t.Run("test unique IDs", func(t *testing.T) {
-		id := NullUniqueID
+		id := FirstUniqueID
 		def.Uniques(func(u IUnique) { id++; u.SetID(id) })
 
-		require.Nil(def.UniqueByID(NullUniqueID))
-		require.NotNil(def.UniqueByID(UniqueID(1)))
-		require.NotNil(def.UniqueByID(UniqueID(2)))
-		require.Nil(def.UniqueByID(UniqueID(3)))
+		require.Nil(def.UniqueByID(FirstUniqueID))
+		require.NotNil(def.UniqueByID(FirstUniqueID + 1))
+		require.NotNil(def.UniqueByID(FirstUniqueID + 2))
+		require.Nil(def.UniqueByID(FirstUniqueID + 3))
 	})
 
 	t.Run("test panics", func(t *testing.T) {

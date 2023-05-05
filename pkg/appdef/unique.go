@@ -10,7 +10,10 @@ import (
 	"sort"
 )
 
-const NullUniqueID UniqueID = 0
+const (
+	NullUniqueID  UniqueID = 0
+	FirstUniqueID          = NullUniqueID + 65536
+)
 
 // Implements IUnique interface
 type unique struct {
@@ -32,6 +35,8 @@ func newUnique(def *def, name string, fields []string) *unique {
 	}
 	return &u
 }
+
+func (u unique) Def() IDef { return u.def }
 
 func (u unique) Name() string { return u.name }
 

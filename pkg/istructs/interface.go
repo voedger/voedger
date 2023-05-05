@@ -57,7 +57,7 @@ type IAppStructs interface {
 
 	// Deprecated: use IDef.Uniques() instead
 	//
-	// Uniques exists for historical compatibility and should not be used.
+	// This Uniques exists for historical compatibility and should not be used.
 	// Provides only simplest (from one field) uniques, only one unique for each definition
 	Uniques() IUniques
 

@@ -45,7 +45,7 @@ func (st *Singletons) QName(id istructs.RecordID) (appdef.QName, error) {
 	return appdef.NullQName, fmt.Errorf("unknown singleton ID «%v»: %w", id, ErrIDNotFound)
 }
 
-// Loads all singletons IDs from storage, add all known application singletons and store cache if some changes.
+// Loads all singletons IDs from storage, add all known application singletons and store if some changes.
 // Must be called at application starts
 func (st *Singletons) Prepare(storage istorage.IAppStorage, versions *vers.Versions, appDef appdef.IAppDef) (err error) {
 	if err = st.load(storage, versions); err != nil {
@@ -71,13 +71,13 @@ func (st *Singletons) Prepare(storage istorage.IAppStorage, versions *vers.Versi
 func (st *Singletons) load(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
 	ver := versions.Get(vers.SysSingletonsVersion)
 	switch ver {
-	case vers.UnknownVersion: // no sys.QName storage exists
+	case vers.UnknownVersion: // no system singletons view exists in storage
 		return nil
 	case ver01:
 		return st.load01(storage)
 	}
 
-	return fmt.Errorf("unable load singleton IDs from «sys.Singletons» system view version %v: %w", ver, vers.ErrorInvalidVersion)
+	return fmt.Errorf("unable load singleton IDs from system view version %v: %w", ver, vers.ErrorInvalidVersion)
 }
 
 // Loads singletons IDs from storage using ver01 codec
@@ -159,7 +159,7 @@ func (st *Singletons) store(storage istorage.IAppStorage, versions *vers.Version
 
 	if ver := versions.Get(vers.SysSingletonsVersion); ver != latestVersion {
 		if err = versions.Put(vers.SysSingletonsVersion, latestVersion); err != nil {
-			return fmt.Errorf("error store «sys.Singletons» system view version: %w", err)
+			return fmt.Errorf("error store singletons system view version: %w", err)
 		}
 	}
 

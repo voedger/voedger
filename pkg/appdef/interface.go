@@ -289,12 +289,15 @@ type IContainer interface {
 }
 
 // Unique identifier type
-type UniqueID uint64
+type UniqueID uint32
 
 // Describe single unique for definition.
 //
 // Ref to unique.go for implementation
 type IUnique interface {
+	// returns parent definition
+	Def() IDef
+
 	// Returns name of unique.
 	//
 	// Name suitable for debugging or error messages. Unique identification provided by ID

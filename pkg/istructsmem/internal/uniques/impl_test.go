@@ -1,0 +1,252 @@
+/*
+ * Copyright (c) 2023-present Sigma-Soft, Ltd.
+ * @author: Nikolay Nikitin
+ */
+
+package uniques
+
+import (
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
+	amock "github.com/voedger/voedger/pkg/appdef/mock"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
+)
+
+func TestUniques(t *testing.T) {
+
+	testName := appdef.NewQName("test", "doc")
+
+	testAppDef := func() appdef.IAppDef {
+		app := appdef.New()
+		def := app.AddStruct(testName, appdef.DefKind_CDoc)
+		def.
+			AddField("name", appdef.DataKind_string, true).
+			AddField("surname", appdef.DataKind_string, false).
+			AddField("lastName", appdef.DataKind_string, false).
+			AddField("passportNumber", appdef.DataKind_string, false).
+			AddField("passportSerial", appdef.DataKind_string, false).
+			AddUnique("fullNameUnique", []string{"name", "surname", "lastName"}).
+			AddUnique("passportUnique", []string{"passportSerial", "passportNumber"})
+
+		appDef, err := app.Build()
+		if err != nil {
+			panic(err)
+		}
+
+		return appDef
+	}
+
+	sp := istorageimpl.Provide(istorage.ProvideMem())
+	storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
+
+	versions := vers.New()
+	if err := versions.Prepare(storage); err != nil {
+		panic(err)
+	}
+
+	appDef := testAppDef()
+
+	qNames := qnames.New()
+	if err := qNames.Prepare(storage, versions, appDef, nil); err != nil {
+		panic(err)
+	}
+
+	uniques := New()
+	if err := uniques.Prepare(storage, versions, qNames, appDef); err != nil {
+		panic(err)
+	}
+
+	require := require.New(t)
+
+	t.Run("basic Uniques methods", func(t *testing.T) {
+		def := appDef.Def(testName)
+
+		require.Equal(2, def.UniqueCount())
+		require.Equal(def.UniqueCount(), func() int {
+			cnt := 0
+			def.Uniques(func(u appdef.IUnique) {
+				cnt++
+
+				id, err := uniques.ID(u)
+				require.NoError(err)
+				require.Greater(id, appdef.FirstUniqueID)
+
+				require.Equal(id, u.ID())
+			})
+			return cnt
+		}())
+
+		t.Run("must be able to load early stored uniques", func(t *testing.T) {
+			versions1 := vers.New()
+			if err := versions1.Prepare(storage); err != nil {
+				panic(err)
+			}
+
+			appDef1 := testAppDef()
+
+			qNames1 := qnames.New()
+			if err := qNames1.Prepare(storage, versions, appDef1, nil); err != nil {
+				panic(err)
+			}
+
+			uniques1 := New()
+			if err := uniques1.Prepare(storage, versions1, qNames1, appDef1); err != nil {
+				panic(err)
+			}
+
+			def1 := appDef1.Def(testName)
+
+			require.Equal(2, def1.UniqueCount())
+			def.Uniques(func(u appdef.IUnique) {
+				u1 := def1.UniqueByName(u.Name())
+				require.Equal(u.ID(), u1.ID())
+
+				u1 = def1.UniqueByID(u.ID())
+				require.Equal(u.Name(), u1.Name())
+			})
+		})
+	})
+
+	t.Run("must be null id for unknown unique", func(t *testing.T) {
+		unique := amock.NewUnique("unknownUnique", []string{"surname", "passportNumber"})
+		unique.On("Def").Return(appDef.Def(testName))
+
+		id, err := uniques.ID(unique)
+		require.Empty(id)
+		require.ErrorIs(err, ErrUniqueNotFound)
+	})
+
+	t.Run("must be null id for uniques for unknown definitions", func(t *testing.T) {
+		def := amock.NewDef(appdef.NewQName("test", "unknownDoc"), appdef.DefKind_CDoc,
+			amock.NewField("f1", appdef.DataKind_string, true))
+		def.AddUnique(amock.NewUnique("u1", []string{"f1"}))
+
+		unique := def.UniqueByName("u1")
+
+		id, err := uniques.ID(unique)
+		require.Empty(id)
+		require.ErrorIs(err, qnames.ErrNameNotFound)
+	})
+}
+
+func TestUniquesErrors(t *testing.T) {
+	testName := appdef.NewQName("test", "doc")
+
+	testAppDef := func() appdef.IAppDef {
+		app := appdef.New()
+		def := app.AddStruct(testName, appdef.DefKind_CDoc)
+		def.
+			AddField("name", appdef.DataKind_string, true).
+			AddField("surname", appdef.DataKind_string, false).
+			AddField("lastName", appdef.DataKind_string, false).
+			AddField("passportNumber", appdef.DataKind_string, false).
+			AddField("passportSerial", appdef.DataKind_string, false).
+			AddUnique("fullNameUnique", []string{"name", "surname", "lastName"}).
+			AddUnique("passportUnique", []string{"passportSerial", "passportNumber"})
+
+		appDef, err := app.Build()
+		if err != nil {
+			panic(err)
+		}
+
+		return appDef
+	}
+
+	require := require.New(t)
+
+	t.Run("must error if unknown uniques system view version", func(t *testing.T) {
+		storage := teststore.NewStorage()
+
+		versions := vers.New()
+		if err := versions.Prepare(storage); err != nil {
+			panic(err)
+		}
+
+		versions.Put(vers.SysUniquesVersion, latestVersion+1) // future version
+
+		appDef := testAppDef()
+
+		qNames := qnames.New()
+		if err := qNames.Prepare(storage, versions, appDef, nil); err != nil {
+			panic(err)
+		}
+
+		uniques := New()
+
+		err := uniques.Prepare(storage, versions, qNames, appDef)
+		require.ErrorIs(err, vers.ErrorInvalidVersion)
+
+	})
+
+	t.Run("must error if unknown definition uniques passed to Prepare()", func(t *testing.T) {
+		storage := teststore.NewStorage()
+
+		versions := vers.New()
+		if err := versions.Prepare(storage); err != nil {
+			panic(err)
+		}
+
+		appDef := testAppDef()
+
+		qNames := qnames.New()
+		if err := qNames.Prepare(storage, versions, appDef, nil); err != nil {
+			panic(err)
+		}
+
+		uniques := New()
+
+		t.Run("inject unknown definition to AppDef", func(t *testing.T) {
+			def := appDef.(appdef.IAppDefBuilder).AddStruct(appdef.NewQName("test", "unknown"), appdef.DefKind_CDoc)
+			def.
+				AddField("fld", appdef.DataKind_string, false).
+				AddUnique("", []string{"fld"})
+		})
+
+		err := uniques.Prepare(storage, versions, qNames, appDef)
+		require.ErrorIs(err, qnames.ErrNameNotFound)
+	})
+
+	t.Run("must error if storage failed to write", func(t *testing.T) {
+		storage := teststore.NewStorage()
+
+		versions := vers.New()
+		if err := versions.Prepare(storage); err != nil {
+			panic(err)
+		}
+
+		appDef := testAppDef()
+
+		qNames := qnames.New()
+		if err := qNames.Prepare(storage, versions, appDef, nil); err != nil {
+			panic(err)
+		}
+
+		t.Run("fail to write some unique id", func(t *testing.T) {
+			writeError := errors.New("can not store unique")
+			storage.SchedulePutError(writeError, utils.ToBytes(consts.SysView_UniquesIDs, latestVersion), nil)
+
+			uniques := New()
+			err := uniques.Prepare(storage, versions, qNames, appDef)
+			require.ErrorIs(err, writeError)
+		})
+
+		t.Run("fail to write uniques system view version", func(t *testing.T) {
+			writeError := errors.New("can not store version")
+			storage.SchedulePutError(writeError, utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysUniquesVersion))
+
+			uniques := New()
+			err := uniques.Prepare(storage, versions, qNames, appDef)
+			require.ErrorIs(err, writeError)
+		})
+	})
+}
