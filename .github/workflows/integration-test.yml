@@ -44,11 +44,6 @@ jobs:
           exit 1
         fi
 
-        if [ "${{ github.event.issue.user.login }}" != "AlekseiPonomarev" ]; then
-            echo "Issue opened by wrong user, skipping deployment"
-            exit 1
-        fi
-
     - name: Checkout
       uses: actions/checkout@v2
 
