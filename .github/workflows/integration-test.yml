@@ -13,7 +13,7 @@
 #    -  and any other sensitive information.
 # To use the secrets in your GitHub Actions workflow, you can reference them using the syntax ${{ secrets.SECRET_NAME }}.
 
-name: Terraform Deployment
+name: ctool integration test
 
 on:
   issues:
@@ -27,7 +27,7 @@ jobs:
     - name: Check Issue
       run: |
 
-        teams=$(curl -s -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" https://api.github.com/user/teams | jq -r '.[].name')
+        teams=$(curl -s -H "Authorization: Bearer ${{ secrets.REPOREADING_TOKEN }}" https://api.github.com/user/teams | jq -r '.[].name')
 
         is_member=false
 
@@ -59,15 +59,11 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-2
 
-#    - name: Create S3 bucket for Terraform state
-#      run: |
-#        aws s3api create-bucket --bucket voyager-terraform-state --region us-east-2 --create-bucket-configuration LocationConstraint=us-east-2
-
     - name: Set up Terraform
       uses: hashicorp/setup-terraform@v2
       with:
         terraform_wrapper: false
-# -backend-config="bucket=voyager-terraform-state"
+
     - name: Terraform Init
       run: terraform -chdir=cmd/ctool/scripts/terraform/ init
       env:
@@ -77,7 +73,7 @@ jobs:
       run: terraform -chdir=cmd/ctool/scripts/terraform/ plan -out=terraform.tfplan
       env:
         TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
-        TF_VAR_gh_token: ${{ secrets.GH_TOKEN }}
+        TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
  
     - name: Terraform apply
       run: terraform -chdir=cmd/ctool/scripts/terraform/ apply -auto-approve
@@ -85,7 +81,7 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
-        TF_VAR_gh_token: ${{ secrets.GH_TOKEN }}
+        TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
 
     - name: Setup SSH
       uses: webfactory/ssh-agent@v0.5.0
@@ -95,9 +91,7 @@ jobs:
     - name: Load environment file
       run: |
            echo PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_01) >> $GITHUB_ENV
-#         if [ -f .env.${{ github.job }} ]; then
-#            export $(cat .env.${{ github.job }} | xargs)
-#         fi
+
     - name: Smoke test - wait for scylla initialization
       run: |
         echo "Work with ${{ env.PUBLIC_IP }}"
@@ -124,14 +118,14 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
-        TF_VAR_gh_token: ${{ secrets.GH_TOKEN }}
+        TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
 
     - name: Add comment to issue
       if: ${{ always() }}
       run: |
         curl --request POST \
           --url https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments \
-          --header 'Authorization: Bearer ${{ secrets.GH_TOKEN }}' \
+          --header 'Authorization: Bearer ${{ secrets.REPOREADING_TOKEN }}' \
           --header 'Content-Type: application/json' \
           --data '{
             "body": "This is a comment that will be automatic added to issue #${{ github.event.issue.number }} by the GitHub Action.\nThe result of the GitHub Action is ${{ job.status }}."

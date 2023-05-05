@@ -29,6 +29,6 @@ cat docker-compose-template.yml | \
 
 cat ./docker-compose.yml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/docker-compose.yml'
 
-ssh $SSH_OPTIONS $SSH_USER@$1 "docker stack deploy --compose-file ~/docker-compose.yml scylla"
+ssh $SSH_OPTIONS $SSH_USER@$1 "docker stack deploy --compose-file ~/docker-compose.yml DBMSDockerStack"
 
 set +x

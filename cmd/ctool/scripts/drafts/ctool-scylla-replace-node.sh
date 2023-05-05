@@ -41,7 +41,7 @@ service_label=$(./db-stack-update.sh $1 $2 | tail -n 1)
 
 cat ./docker-compose.yml | ssh $SSH_OPTIONS $SSH_USER@$2 'cat > ~/docker-compose.yml'
 
-ssh $SSH_OPTIONS $SSH_USER@$2 "docker stack deploy --compose-file ~/docker-compose.yml scylla"
+ssh $SSH_OPTIONS $SSH_USER@$2 "docker stack deploy --compose-file ~/docker-compose.yml DBMSDockerStack"
 
 ./swarm-set-label.sh $MANAGER $2 $service_label
 set +x

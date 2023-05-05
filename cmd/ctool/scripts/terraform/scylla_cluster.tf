@@ -96,19 +96,18 @@ resource "aws_instance" "node_00" {
     inline = [
     "echo '${var.ssh_private_key}' > /tmp/amazonKey.pem",
     "chmod 400 /tmp/amazonKey.pem",
-    "eval $(ssh-agent -s)",
-    "ssh-add /tmp/amazonKey.pem",
-    "mkdir -p ~/.ssh", 
-    "touch ~/.ssh/ssh_auth_sock",
-    "chmod 600 ~/.ssh/ssh_auth_sock",
-    "echo $SSH_AUTH_SOCK > ~/.ssh/ssh_auth_sock",
-    "rm -f /tmp/amazonKey.pem",
-    "git clone https://AlekseiPonomarev:'${var.gh_token}'@github.com/AlekseiPonomarev/testsdata",
-    "cd ~/testsdata/cmd/ctool/scripts/drafts",
-    "chmod +x *.sh",
-    "~/testsdata/cmd/ctool/scripts/drafts/ctool-scylla-deploy.sh 10.0.0.12 10.0.0.13 10.0.0.14"
+    "curl -L https://git.io/vQhTU | bash -s -- --version 1.20",
+    "git clone https://github.com/voedger/voedger",
+    "export GOROOT=$HOME/.go",
+    "export PATH=$GOROOT/bin:$PATH",
+    "echo $GOROOT",
+    "echo $PATH", 
+    "cd $HOME/voedger/cmd/ctool && go build -o ctool",
+    "$HOME/voedger/cmd/ctool/ctool init SE 10.0.0.11 10.0.0.15 10.0.0.12 10.0.0.13 10.0.0.14",
+    "$HOME/voedger/cmd/ctool/ctool apply /tmp/amazonKey.pem"
     ]
   }
+
 
   tags = {
     Name = "node_00"
