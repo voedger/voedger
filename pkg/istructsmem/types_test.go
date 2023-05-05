@@ -92,7 +92,7 @@ func Test_dynoBufValue(t *testing.T) {
 	})
 
 	t.Run("test QName", func(t *testing.T) {
-		id, _ := test.AppCfg.qNames.GetID(test.saleCmdName)
+		id, _ := test.AppCfg.qNames.ID(test.saleCmdName)
 		b := make([]byte, 2)
 		binary.BigEndian.PutUint16(b, uint16(id))
 

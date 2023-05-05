@@ -44,11 +44,11 @@ func Test_BasicUsage(t *testing.T) {
 
 	require := require.New(t)
 	t.Run("basic Singletons methods", func(t *testing.T) {
-		id, err := stones.GetID(testName)
+		id, err := stones.ID(testName)
 		require.NoError(err)
 		require.NotEqual(istructs.NullRecordID, id)
 
-		n, err := stones.GetQName(id)
+		n, err := stones.QName(id)
 		require.NoError(err)
 		require.Equal(testName, n)
 
@@ -63,11 +63,11 @@ func Test_BasicUsage(t *testing.T) {
 				panic(err)
 			}
 
-			id1, err := stones.GetID(testName)
+			id1, err := stones.ID(testName)
 			require.NoError(err)
 			require.Equal(id, id1)
 
-			n1, err := stones.GetQName(id)
+			n1, err := stones.QName(id)
 			require.NoError(err)
 			require.Equal(testName, n1)
 		})
@@ -79,10 +79,10 @@ func test_AppDefSingletons(t *testing.T, appDef appdef.IAppDef, stons *Singleton
 	appDef.Defs(
 		func(d appdef.IDef) {
 			if d.Singleton() {
-				id, err := stons.GetID(d.QName())
+				id, err := stons.ID(d.QName())
 				require.NoError(err)
 				require.NotEqual(istructs.NullRecordID, id)
-				name, err := stons.GetQName(id)
+				name, err := stons.QName(id)
 				require.NoError(err)
 				require.Equal(d.QName(), name)
 			}
@@ -123,7 +123,7 @@ func Test_SingletonsGetID(t *testing.T) {
 
 	testID := func(id istructs.RecordID, known bool, qname appdef.QName) {
 		t.Run(fmt.Sprintf("test Singletons.GetQName(%v)", id), func(t *testing.T) {
-			qName, err := stons.GetQName(id)
+			qName, err := stons.QName(id)
 			if known {
 				require.NoError(err)
 				require.Equal(qname, qName)
@@ -139,7 +139,7 @@ func Test_SingletonsGetID(t *testing.T) {
 			var id istructs.RecordID
 			var err error
 
-			id, err = stons.GetID(qname)
+			id, err = stons.ID(qname)
 			if known {
 				require.NoError(err)
 				require.NotNil(id)
@@ -235,7 +235,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		defName := appdef.NewQName("test", "ErrorDef")
 
 		storage := teststore.NewStorage()
-		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_SingletonIDs, lastestVersion), []byte(defName.String()))
+		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_SingletonIDs, latestVersion), []byte(defName.String()))
 
 		versions := vers.New()
 		err := versions.Prepare(storage)
@@ -281,11 +281,11 @@ func Test_Singletons_Errors(t *testing.T) {
 		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
-		versions.Put(vers.SysSingletonsVersion, lastestVersion)
+		versions.Put(vers.SysSingletonsVersion, latestVersion)
 
 		t.Run("crack storage by put invalid QName string into Singletons system view", func(t *testing.T) {
 			err = storage.Put(
-				utils.ToBytes(consts.SysView_SingletonIDs, lastestVersion),
+				utils.ToBytes(consts.SysView_SingletonIDs, latestVersion),
 				[]byte("error.CDoc.be-e-e"),
 				utils.ToBytes(istructs.MaxSingletonID),
 			)

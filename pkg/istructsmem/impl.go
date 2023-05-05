@@ -428,7 +428,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
 	for _, rec := range ev.cud.creates {
 		if rec.def.Singleton() {
-			id, err := recs.app.config.singletons.GetID(rec.QName())
+			id, err := recs.app.config.singletons.ID(rec.QName())
 			if err != nil {
 				return err
 			}
@@ -523,7 +523,7 @@ func (recs *appRecordsType) GetBatch(workspace istructs.WSID, highConsistency bo
 // istructs.IRecords.GetSingleton
 func (recs *appRecordsType) GetSingleton(workspace istructs.WSID, qName appdef.QName) (record istructs.IRecord, err error) {
 	var id istructs.RecordID
-	if id, err = recs.app.config.singletons.GetID(qName); err != nil {
+	if id, err = recs.app.config.singletons.ID(qName); err != nil {
 		return NewNullRecord(istructs.NullRecordID), err
 	}
 	return recs.Get(workspace, true, id)

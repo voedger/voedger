@@ -101,7 +101,7 @@ func (row *rowType) collectErrorf(format string, a ...interface{}) {
 
 // containerID returns row container id
 func (row *rowType) containerID() (id containers.ContainerID, err error) {
-	return row.appCfg.cNames.GetID(row.Container())
+	return row.appCfg.cNames.ID(row.Container())
 }
 
 // copyFrom assigns from specified row
@@ -245,7 +245,7 @@ func (row *rowType) qNameID() (qnames.QNameID, error) {
 	if name == appdef.NullQName {
 		return qnames.NullQNameID, nil
 	}
-	return row.appCfg.qNames.GetID(name)
+	return row.appCfg.qNames.ID(name)
 }
 
 // setActive sets record IsActive activity flag
@@ -265,7 +265,7 @@ func (row *rowType) setContainer(value string) {
 
 // setContainerID sets record container by ID. Useful from loadFromBytes()
 func (row *rowType) setContainerID(value containers.ContainerID) (err error) {
-	cont, err := row.appCfg.cNames.GetContainer(value)
+	cont, err := row.appCfg.cNames.Container(value)
 	if err != nil {
 		row.collectError(err)
 		return err
@@ -314,7 +314,7 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 
 	row.clear()
 
-	qName, err := row.appCfg.qNames.GetQName(value)
+	qName, err := row.appCfg.qNames.QName(value)
 	if err != nil {
 		row.collectError(err)
 		return err
@@ -472,7 +472,7 @@ func (row *rowType) AsQName(name string) appdef.QName {
 	}
 
 	if id, ok := dynoBufGetWord(row.dyB, name); ok {
-		qName, err := row.appCfg.qNames.GetQName(qnames.QNameID(id))
+		qName, err := row.appCfg.qNames.QName(qnames.QNameID(id))
 		if err != nil {
 			panic(err)
 		}
@@ -669,7 +669,7 @@ func (row *rowType) PutQName(name string, value appdef.QName) {
 		return
 	}
 
-	id, err := row.appCfg.qNames.GetID(value)
+	id, err := row.appCfg.qNames.ID(value)
 	if err != nil {
 		row.collectErrorf(errCantGetFieldQNameIDWrap, name, value, err)
 		return

@@ -56,13 +56,13 @@ func TestRenameQName(t *testing.T) {
 		require.NoError(err)
 
 		t.Run("check old is deleted", func(t *testing.T) {
-			id, err := names.GetID(old)
+			id, err := names.ID(old)
 			require.ErrorIs(err, ErrNameNotFound)
 			require.Equal(id, NullQNameID)
 		})
 
 		t.Run("check new is not null", func(t *testing.T) {
-			id, err := names.GetID(new)
+			id, err := names.ID(new)
 			require.NoError(err)
 			require.Greater(id, QNameIDSysLast)
 		})

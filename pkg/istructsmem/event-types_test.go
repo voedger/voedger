@@ -851,7 +851,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
-	docID, err = cfgs.GetConfig(istructs.AppQName_test1_app1).singletons.GetID(docName)
+	docID, err = cfgs.GetConfig(istructs.AppQName_test1_app1).singletons.ID(docName)
 	require.NoError(err)
 
 	t.Run("must ok to read not created singleton CDOC by QName", func(t *testing.T) {

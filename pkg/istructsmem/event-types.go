@@ -113,7 +113,7 @@ func (ev *eventType) build() (err error) {
 		return validateErrorf(ECode_EmptyDefName, "empty event command name: %w", ErrNameMissed)
 	}
 
-	if _, err = ev.appCfg.qNames.GetID(ev.name); err != nil {
+	if _, err = ev.appCfg.qNames.ID(ev.name); err != nil {
 		return validateErrorf(ECode_InvalidDefName, "unknown event command name «%v»: %w", ev.name, err)
 	}
 
@@ -322,7 +322,7 @@ func (ev *dbEventType) loadFromBytes(in []byte) (err error) {
 // qNameID retrieves ID for event command name
 func (ev *dbEventType) qNameID() qnames.QNameID {
 	if ev.valid() {
-		if id, err := ev.appCfg.qNames.GetID(ev.QName()); err == nil {
+		if id, err := ev.appCfg.qNames.ID(ev.QName()); err == nil {
 			return id
 		}
 	}
@@ -392,7 +392,7 @@ func (cud *cudType) applyRecs(exists existsRecordType, load loadRecordFuncType, 
 
 	for _, rec := range cud.creates {
 		if rec.def.Singleton() {
-			id, err := cud.appCfg.singletons.GetID(rec.QName())
+			id, err := cud.appCfg.singletons.ID(rec.QName())
 			if err != nil {
 				return err
 			}
@@ -496,7 +496,7 @@ func (cud *cudType) regenerateIDsPlan(generator istructs.IDGenerator) (newIDs ne
 		var storeID istructs.RecordID
 
 		if rec.def.Singleton() {
-			if storeID, err = cud.appCfg.singletons.GetID(rec.QName()); err != nil {
+			if storeID, err = cud.appCfg.singletons.ID(rec.QName()); err != nil {
 				return nil, err
 			}
 		} else {

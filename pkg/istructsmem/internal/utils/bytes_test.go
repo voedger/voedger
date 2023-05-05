@@ -88,7 +88,7 @@ func TestReadWriteShortString(t *testing.T) {
 			args: args{str: ""},
 		},
 		{
-			name: "vulgaris",
+			name: "basic",
 			args: args{str: "AAA"},
 		},
 	}
@@ -122,7 +122,7 @@ func TestReadWriteShortString(t *testing.T) {
 		require.ErrorContains(err, "length")
 	})
 
-	t.Run("must be error if not enouth chars to read", func(t *testing.T) {
+	t.Run("must be error if not enough chars to read", func(t *testing.T) {
 		b := bytes.NewBuffer([]byte{0, 3, 65, 65})
 		_, err := ReadShortString(b)
 
@@ -140,7 +140,7 @@ func TestCopyBytes(t *testing.T) {
 		want []byte
 	}{
 		{
-			name: "vulgaris test",
+			name: "basic test",
 			args: args{src: []byte{1, 2, 3}},
 			want: []byte{1, 2, 3},
 		},
@@ -292,7 +292,7 @@ func TestFullBytes(t *testing.T) {
 	}
 }
 
-func TestSuccBytes(t *testing.T) {
+func TestIncBytes(t *testing.T) {
 	type args struct {
 		cc []byte
 	}
@@ -322,7 +322,7 @@ func TestSuccBytes(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "vulgaris test",
+			name: "basic test",
 			args: args{cc: []byte{0x01, 0x02}},
 			want: []byte{0x01, 0x03},
 		},
@@ -334,7 +334,7 @@ func TestSuccBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if gotFinishCCols := SuccBytes(tt.args.cc); !reflect.DeepEqual(gotFinishCCols, tt.want) {
+			if gotFinishCCols := IncBytes(tt.args.cc); !reflect.DeepEqual(gotFinishCCols, tt.want) {
 				t.Errorf("rangeCCols() = %v, want %v", gotFinishCCols, tt.want)
 			}
 		})

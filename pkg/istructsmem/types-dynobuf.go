@@ -77,7 +77,7 @@ func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (inter
 			if err != nil {
 				return nil, err
 			}
-			id, err := row.appCfg.qNames.GetID(qName)
+			id, err := row.appCfg.qNames.ID(qName)
 			if err != nil {
 				return nil, err
 			}
@@ -85,7 +85,7 @@ func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (inter
 			binary.BigEndian.PutUint16(b, uint16(id))
 			return b, nil
 		case appdef.QName:
-			id, err := row.appCfg.qNames.GetID(v)
+			id, err := row.appCfg.qNames.ID(v)
 			if err != nil {
 				return nil, err
 			}

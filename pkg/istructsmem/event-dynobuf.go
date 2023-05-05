@@ -137,7 +137,7 @@ func loadEvent(ev *dbEventType, codecVer byte, buf *bytes.Buffer) (err error) {
 	if err := binary.Read(buf, binary.BigEndian, &id); err != nil {
 		return fmt.Errorf("error read event name ID: %w", err)
 	}
-	if ev.name, err = ev.appCfg.qNames.GetQName(qnames.QNameID(id)); err != nil {
+	if ev.name, err = ev.appCfg.qNames.QName(qnames.QNameID(id)); err != nil {
 		return fmt.Errorf("error read event name: %w", err)
 	}
 

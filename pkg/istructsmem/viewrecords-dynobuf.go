@@ -180,7 +180,7 @@ func loadFixedLenCellFromBuffer_00(row *rowType, field appdef.IField, appCfg *Ap
 			return err
 		}
 		var name appdef.QName
-		if name, err = appCfg.qNames.GetQName(qnames.QNameID(v)); err != nil {
+		if name, err = appCfg.qNames.QName(qnames.QNameID(v)); err != nil {
 			return err
 		}
 		row.PutQName(field.Name(), name)

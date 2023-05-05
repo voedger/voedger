@@ -51,11 +51,11 @@ func TestContainers(t *testing.T) {
 	t.Run("basic Containers methods", func(t *testing.T) {
 
 		check := func(containers *Containers, name string) ContainerID {
-			id, err := containers.GetID(name)
+			id, err := containers.ID(name)
 			require.NoError(err)
 			require.NotEqual(NullContainerID, id)
 
-			n, err := containers.GetContainer(id)
+			n, err := containers.Container(id)
 			require.NoError(err)
 			require.Equal(name, n)
 
@@ -103,13 +103,13 @@ func TestContainers(t *testing.T) {
 	})
 
 	t.Run("must be error if unknown container", func(t *testing.T) {
-		id, err := containers.GetID("unknown")
+		id, err := containers.ID("unknown")
 		require.Equal(NullContainerID, id)
 		require.ErrorIs(err, ErrContainerNotFound)
 	})
 
 	t.Run("must be error if unknown id", func(t *testing.T) {
-		n, err := containers.GetContainer(ContainerID(MaxAvailableContainerID))
+		n, err := containers.Container(ContainerID(MaxAvailableContainerID))
 		require.Equal("", n)
 		require.ErrorIs(err, ErrContainerIDNotFound)
 	})

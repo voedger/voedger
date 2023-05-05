@@ -192,7 +192,7 @@ func (vr *appViewRecords) Read(ctx context.Context, workspace istructs.WSID, key
 	}
 
 	pk := utils.PrefixBytes(pKey, k.viewID, workspace)
-	return vr.app.config.storage.Read(ctx, pk, cKey, utils.SuccBytes(cKey), readRecord)
+	return vr.app.config.storage.Read(ctx, pk, cKey, utils.IncBytes(cKey), readRecord)
 }
 
 // keyType is complex key from two parts (partition key and clustering key)
@@ -334,7 +334,7 @@ func (key *keyType) validDefs() (ok bool, err error) {
 		return false, fmt.Errorf("missed view definition: %w", ErrNameMissed)
 	}
 
-	if key.viewID, err = key.appCfg.qNames.GetID(key.viewName); err != nil {
+	if key.viewID, err = key.appCfg.qNames.ID(key.viewName); err != nil {
 		return false, err
 	}
 

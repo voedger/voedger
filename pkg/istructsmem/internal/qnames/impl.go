@@ -28,7 +28,7 @@ func newQNames() *QNames {
 }
 
 // Returns ID for specified QName
-func (names *QNames) GetID(qName appdef.QName) (QNameID, error) {
+func (names *QNames) ID(qName appdef.QName) (QNameID, error) {
 	if id, ok := names.qNames[qName]; ok {
 		return id, nil
 	}
@@ -36,7 +36,7 @@ func (names *QNames) GetID(qName appdef.QName) (QNameID, error) {
 }
 
 // Retrieve QName for specified ID
-func (names *QNames) GetQName(id QNameID) (qName appdef.QName, err error) {
+func (names *QNames) QName(id QNameID) (qName appdef.QName, err error) {
 	qName, ok := names.ids[id]
 	if ok {
 		return qName, nil
@@ -146,7 +146,7 @@ func (names *QNames) load01(storage istorage.IAppStorage) error {
 		}
 
 		if id <= QNameIDSysLast {
-			return fmt.Errorf("unexpected ID (%v) is readed from system QNames view: %w", id, ErrWrongQNameID)
+			return fmt.Errorf("unexpected ID (%v) is loaded from system QNames view: %w", id, ErrWrongQNameID)
 		}
 
 		names.qNames[qName] = id

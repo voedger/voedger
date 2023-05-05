@@ -59,11 +59,11 @@ func TestQNames(t *testing.T) {
 	t.Run("basic QNames methods", func(t *testing.T) {
 
 		check := func(names *QNames, name appdef.QName) QNameID {
-			id, err := names.GetID(name)
+			id, err := names.ID(name)
 			require.NoError(err)
 			require.NotEqual(NullQNameID, id)
 
-			n, err := names.GetQName(id)
+			n, err := names.QName(id)
 			require.NoError(err)
 			require.Equal(name, n)
 
@@ -113,13 +113,13 @@ func TestQNames(t *testing.T) {
 	})
 
 	t.Run("must be error if unknown name", func(t *testing.T) {
-		id, err := names.GetID(appdef.NewQName("test", "unknown"))
+		id, err := names.ID(appdef.NewQName("test", "unknown"))
 		require.Equal(NullQNameID, id)
 		require.ErrorIs(err, ErrNameNotFound)
 	})
 
 	t.Run("must be error if unknown id", func(t *testing.T) {
-		n, err := names.GetQName(QNameID(MaxAvailableQNameID))
+		n, err := names.QName(QNameID(MaxAvailableQNameID))
 		require.Equal(appdef.NullQName, n)
 		require.ErrorIs(err, ErrIDNotFound)
 	})

@@ -27,7 +27,7 @@ func newContainers() *Containers {
 }
 
 // Retrieve container for specified ID
-func (cnt *Containers) GetContainer(id ContainerID) (name string, err error) {
+func (cnt *Containers) Container(id ContainerID) (name string, err error) {
 	name, ok := cnt.ids[id]
 	if ok {
 		return name, nil
@@ -37,7 +37,7 @@ func (cnt *Containers) GetContainer(id ContainerID) (name string, err error) {
 }
 
 // Retrieve ID for specified container
-func (cnt *Containers) GetID(name string) (ContainerID, error) {
+func (cnt *Containers) ID(name string) (ContainerID, error) {
 	if id, ok := cnt.containers[name]; ok {
 		return id, nil
 	}
