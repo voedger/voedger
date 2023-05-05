@@ -10,14 +10,18 @@ import (
 	"sort"
 )
 
+const NullUniqueID UniqueID = 0
+
+// Implements IUnique interface
 type unique struct {
 	def    *def
 	name   string
 	fields []IField
+	id     UniqueID
 }
 
 func newUnique(def *def, name string, fields []string) *unique {
-	u := unique{def, name, make([]IField, 0)}
+	u := unique{def, name, make([]IField, 0), NullUniqueID}
 	sort.Strings(fields)
 	for _, f := range fields {
 		fld := def.Field(f)
@@ -28,3 +32,11 @@ func newUnique(def *def, name string, fields []string) *unique {
 	}
 	return &u
 }
+
+func (u unique) Name() string { return u.name }
+
+func (u unique) Fields() []IField { return u.fields }
+
+func (u unique) ID() UniqueID { return u.id }
+
+func (u *unique) SetID(value UniqueID) { u.id = value }

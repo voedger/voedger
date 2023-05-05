@@ -16,7 +16,7 @@ type Def struct {
 	app        *AppDef
 	fields     []*Field
 	containers []*Container
-	uniques    map[string][]string
+	uniques    []*Unique
 }
 
 func NewDef(name appdef.QName, kind appdef.DefKind, fields ...*Field) *Def {
@@ -38,13 +38,11 @@ func (d *Def) AddContainer(c ...*Container) {
 	d.containers = append(d.containers, c...)
 }
 
-func (d *Def) AddUnique(name string, fields []string) {
-	if d.uniques == nil {
-		d.uniques = make(map[string][]string)
+func (d *Def) AddUnique(u ...*Unique) {
+	for _, uu := range u {
+		uu.def = d
 	}
-	f := make([]string, len(fields))
-	copy(f, fields)
-	d.uniques[name] = f
+	d.uniques = append(d.uniques, u...)
 }
 
 func (d *Def) App() appdef.IAppDef {
@@ -127,18 +125,28 @@ func (d *Def) ContainerDef(name string) appdef.IDef {
 
 func (d *Def) Singleton() bool { return d.Called().Get(0).(bool) }
 
-func (d *Def) Unique(name string) []appdef.IField {
-	if d.uniques != nil {
-		if f, ok := d.uniques[name]; ok {
-			fields := make([]appdef.IField, 0)
-			for _, n := range f {
-				fields = append(fields, d.Field(n))
+func (d *Def) UniqueByName(name string) appdef.IUnique {
+	if len(d.uniques) > 0 {
+		for _, u := range d.uniques {
+			if u.Name() == name {
+				return u
 			}
-			return fields
 		}
 		return nil
 	}
-	return d.Called(name).Get(0).([]appdef.IField)
+	return d.Called(name).Get(0).(appdef.IUnique)
+}
+
+func (d *Def) UniqueByID(id appdef.UniqueID) appdef.IUnique {
+	if len(d.uniques) > 0 {
+		for _, u := range d.uniques {
+			if u.ID() == id {
+				return u
+			}
+		}
+		return nil
+	}
+	return d.Called(id).Get(0).(appdef.IUnique)
 }
 
 func (d *Def) UniqueCount() int {
@@ -148,14 +156,10 @@ func (d *Def) UniqueCount() int {
 	return d.Called().Get(0).(int)
 }
 
-func (d *Def) Uniques(cb func(string, []appdef.IField)) {
+func (d *Def) Uniques(cb func(appdef.IUnique)) {
 	if d.uniques != nil {
-		for name, f := range d.uniques {
-			fields := make([]appdef.IField, 0)
-			for _, n := range f {
-				fields = append(fields, d.Field(n))
-			}
-			cb(name, fields)
+		for _, u := range d.uniques {
+			cb(u)
 		}
 		return
 	}

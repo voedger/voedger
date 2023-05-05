@@ -162,20 +162,29 @@ func (d *def) SetSingleton() {
 	d.changed()
 }
 
-func (d *def) Unique(name string) []IField {
+func (d *def) UniqueByName(name string) IUnique {
 	if u, ok := d.uniques[name]; ok {
-		return u.fields
+		return u
 	}
 	return nil
+}
+
+func (d *def) UniqueByID(id UniqueID) (unique IUnique) {
+	d.Uniques(func(u IUnique) {
+		if u.ID() == id {
+			unique = u
+		}
+	})
+	return unique
 }
 
 func (d *def) UniqueCount() int {
 	return len(d.uniques)
 }
 
-func (d *def) Uniques(enum func(string, []IField)) {
+func (d *def) Uniques(enum func(IUnique)) {
 	for _, n := range d.uniquesOrdered {
-		enum(n, d.Unique(n))
+		enum(d.UniqueByName(n))
 	}
 }
 
@@ -222,10 +231,10 @@ func (d *def) addField(name string, kind DataKind, required, verified bool, vk .
 
 func (d *def) addUnique(name string, fields []string) IDefBuilder {
 	if ok, err := ValidIdent(name); !ok {
-		panic(fmt.Errorf("%v: definition unique name «%v» is invalid: %w", d.QName(), name, err))
+		panic(fmt.Errorf("%v: unique name «%v» is invalid: %w", d.QName(), name, err))
 	}
-	if d.Unique(name) != nil {
-		panic(fmt.Errorf("%v: definition unique «%v» is already exists: %w", d.QName(), name, ErrNameUniqueViolation))
+	if d.UniqueByName(name) != nil {
+		panic(fmt.Errorf("%v: unique «%v» is already exists: %w", d.QName(), name, ErrNameUniqueViolation))
 	}
 
 	if !d.Kind().UniquesAvailable() {
@@ -240,21 +249,21 @@ func (d *def) addUnique(name string, fields []string) IDefBuilder {
 	}
 
 	if len(fields) > MaxDefUniqueFieldsCount {
-		panic(fmt.Errorf("%v: unique «%s» maximum fields (%d) exceed: %w", d.QName(), name, MaxDefUniqueFieldsCount, ErrTooManyFields))
+		panic(fmt.Errorf("%v: unique «%s» exceeds maximum fields (%d): %w", d.QName(), name, MaxDefUniqueFieldsCount, ErrTooManyFields))
 	}
 
-	d.Uniques(func(name string, fld []IField) {
+	d.Uniques(func(u IUnique) {
 		ff := make([]string, 0)
-		for _, f := range fld {
+		for _, f := range u.Fields() {
 			ff = append(ff, f.Name())
 		}
 		if overlaps(fields, ff) {
-			panic(fmt.Errorf("%v: definition already has unique «%v» which overlaps with new unique: %w", d.QName(), name, ErrInvalidDefKind))
+			panic(fmt.Errorf("%v: definition already has unique «%s» which overlaps with new unique: %w", d.QName(), name, ErrInvalidDefKind))
 		}
 	})
 
 	if len(d.uniques) >= MaxDefUniqueCount {
-		panic(fmt.Errorf("%v: definition maximum uniques (%d) exceed: %w", d.QName(), MaxDefUniqueCount, ErrTooManyUniques))
+		panic(fmt.Errorf("%v: maximum uniques (%d) is exceeded: %w", d.QName(), MaxDefUniqueCount, ErrTooManyUniques))
 	}
 
 	u := newUnique(d, name, fields)

@@ -128,16 +128,21 @@ type IDef interface {
 	// Returns is definition CDoc singleton
 	Singleton() bool
 
-	// Return unique by name. Fields are sorted alphabetically.
+	// Return unique by ID.
 	//
 	// Returns nil if not unique found
-	Unique(name string) []IField
+	UniqueByID(id UniqueID) IUnique
+
+	// Return unique by name.
+	//
+	// Returns nil if not unique found
+	UniqueByName(name string) IUnique
 
 	// Return uniques count
 	UniqueCount() int
 
-	// Enumerates all uniques. Unique fields are sorted alphabetically.
-	Uniques(func(name string, fields []IField))
+	// Enumerates all uniques.
+	Uniques(func(IUnique))
 }
 
 // Definition builder
@@ -265,7 +270,7 @@ type IField interface {
 
 // Describes single inclusion of child definition in parent definition.
 //
-// Ref to container.go for constants and implementation
+// Ref to container.go for implementation
 type IContainer interface {
 	// Returns name of container
 	Name() string
@@ -281,4 +286,26 @@ type IContainer interface {
 
 	// Returns is container system
 	IsSys() bool
+}
+
+// Unique identifier type
+type UniqueID uint64
+
+// Describe single unique for definition.
+//
+// Ref to unique.go for implementation
+type IUnique interface {
+	// Returns name of unique.
+	//
+	// Name suitable for debugging or error messages. Unique identification provided by ID
+	Name() string
+
+	// Returns unique fields list. Fields are sorted alphabetically
+	Fields() []IField
+
+	// Unique identifier. Based on definition QName and field list
+	ID() UniqueID
+
+	// Assigns ID. Must be called during application structures preparation
+	SetID(UniqueID)
 }

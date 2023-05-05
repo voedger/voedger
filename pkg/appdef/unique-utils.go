@@ -54,14 +54,14 @@ func generateUniqueName(def *def, fields []string) string {
 	pref := fmt.Sprintf("%sUnique", def.QName().Entity())
 	if len(fields) == 1 {
 		s := pref + strings.Title(fields[0])
-		if def.Unique(s) == nil {
+		if def.UniqueByName(s) == nil {
 			return s
 		}
 	}
 	const tryCnt = MaxDefUniqueCount
 	for i := 1; i < tryCnt; i++ {
 		s := pref + fmt.Sprintf("%02d", i)
-		if def.Unique(s) == nil {
+		if def.UniqueByName(s) == nil {
 			return s
 		}
 	}

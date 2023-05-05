@@ -234,30 +234,40 @@ func Test_def_AddUnique(t *testing.T) {
 
 		require.Equal(2, d.UniqueCount())
 
-		f := d.Unique("userUniqueFullName")
-		require.Len(f, 3)
-		require.Equal("lastName", f[0].Name())
-		require.Equal("name", f[1].Name())
-		require.Equal("surname", f[2].Name())
+		u := d.UniqueByName("userUniqueFullName")
+		require.Len(u.Fields(), 3)
+		require.Equal("lastName", u.Fields()[0].Name())
+		require.Equal("name", u.Fields()[1].Name())
+		require.Equal("surname", u.Fields()[2].Name())
 
 		require.Equal(d.UniqueCount(), func() int {
 			cnt := 0
-			d.Uniques(func(name string, fields []IField) {
+			d.Uniques(func(u IUnique) {
 				cnt++
-				switch name {
+				switch u.Name() {
 				case "userUniqueEMail":
-					require.Len(fields, 1)
-					require.Equal("eMail", fields[0].Name())
-					require.Equal(DataKind_string, fields[0].DataKind())
+					require.Len(u.Fields(), 1)
+					require.Equal("eMail", u.Fields()[0].Name())
+					require.Equal(DataKind_string, u.Fields()[0].DataKind())
 				case "userUniqueFullName":
-					require.Len(f, 3)
-					require.Equal("lastName", f[0].Name())
-					require.Equal("name", f[1].Name())
-					require.Equal("surname", f[2].Name())
+					require.Len(u.Fields(), 3)
+					require.Equal("lastName", u.Fields()[0].Name())
+					require.Equal("name", u.Fields()[1].Name())
+					require.Equal("surname", u.Fields()[2].Name())
 				}
 			})
 			return cnt
 		}())
+	})
+
+	t.Run("test unique IDs", func(t *testing.T) {
+		id := NullUniqueID
+		def.Uniques(func(u IUnique) { id++; u.SetID(id) })
+
+		require.Nil(def.UniqueByID(NullUniqueID))
+		require.NotNil(def.UniqueByID(UniqueID(1)))
+		require.NotNil(def.UniqueByID(UniqueID(2)))
+		require.Nil(def.UniqueByID(UniqueID(3)))
 	})
 
 	t.Run("test panics", func(t *testing.T) {

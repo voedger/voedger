@@ -112,7 +112,7 @@ func TestUniques(t *testing.T) {
 		NewField("f1", appdef.DataKind_string, true),
 		NewField("f2", appdef.DataKind_string, true),
 	)
-	def.AddUnique("elUnique01", []string{"f1", "f2"})
+	def.AddUnique(NewUnique("elUnique01", []string{"f1", "f2"}))
 
 	appDef := NewAppDef(def)
 
@@ -122,28 +122,36 @@ func TestUniques(t *testing.T) {
 		d := appDef.Def(qName)
 		require.Equal(1, d.UniqueCount())
 
-		f := d.Unique("elUnique01")
-		require.Len(f, 2)
-		require.Equal("f1", f[0].Name())
-		require.Equal("f2", f[1].Name())
+		u := d.UniqueByName("elUnique01")
+		require.Len(u.Fields(), 2)
+		require.Equal("f1", u.Fields()[0].Name())
+		require.Equal("f2", u.Fields()[1].Name())
 
 		require.Equal(d.UniqueCount(), func() int {
 			cnt := 0
-			d.Uniques(func(name string, fields []appdef.IField) {
+			d.Uniques(func(u appdef.IUnique) {
 				cnt++
-				switch name {
+				switch u.Name() {
 				case "elUnique01":
-					require.Len(fields, 2)
-					require.Equal("f1", fields[0].Name())
-					require.Equal("f2", fields[1].Name())
+					require.Len(u.Fields(), 2)
+					require.Equal("f1", u.Fields()[0].Name())
+					require.Equal("f2", u.Fields()[1].Name())
 				default:
-					require.Failf("unexpected unique %v", name)
+					require.Failf("unexpected unique %v", u.Name())
 				}
 			})
 			return cnt
 		}())
 
-		require.Len(d.Unique("unknownUnique"), 0)
+		require.Nil(d.UniqueByName("unknownUnique"))
+
+		t.Run("test id", func(t *testing.T) {
+			testID := appdef.UniqueID(100500)
+			u := d.UniqueByName("elUnique01")
+			u.SetID(testID)
+
+			require.Equal(testID, u.ID())
+		})
 	})
 }
 
@@ -156,6 +164,11 @@ func TestInheritsMockingDef(t *testing.T) {
 	cont := Container{}
 	cont.
 		On("Name").Return("mockContainer")
+
+	unique := Unique{}
+	unique.
+		On("Name").Return("mockUnique").
+		On("Fields").Return([]appdef.IField{&fld})
 
 	app := AppDef{}
 
@@ -180,12 +193,12 @@ func TestInheritsMockingDef(t *testing.T) {
 		On("Kind").Return(appdef.DefKind_CRecord).
 		On("QName").Return(appdef.NewQName("test", "cRec")).
 		On("Singleton").Return(true).
-		On("Unique", mock.AnythingOfType("string")).Return([]appdef.IField{&fld}).
+		On("UniqueByName", mock.AnythingOfType("string")).Return(&unique).
 		On("UniqueCount").Return(1).
-		On("Uniques", mock.AnythingOfType("func(string, []appdef.IField)")).
+		On("Uniques", mock.AnythingOfType("func(appdef.IUnique)")).
 		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(string, []appdef.IField))
-			cb("cRecUniqueMockField", []appdef.IField{&fld})
+			cb := args.Get(0).(func(appdef.IUnique))
+			cb(&unique)
 		})
 
 	require := require.New(t)
@@ -217,12 +230,12 @@ func TestInheritsMockingDef(t *testing.T) {
 	require.True(def.Singleton())
 
 	require.Equal(1, def.UniqueCount())
-	uf := def.Unique("cRecUniqueMockField")
-	require.Len(uf, 1)
-	require.Equal("mockField", uf[0].Name())
+	u := def.UniqueByName("cRecUniqueMockField")
+	require.Len(u.Fields(), 1)
+	require.Equal("mockField", u.Fields()[0].Name())
 	require.Equal(def.UniqueCount(), func() int {
 		cnt := 0
-		def.Uniques(func(string, []appdef.IField) { cnt++ })
+		def.Uniques(func(appdef.IUnique) { cnt++ })
 		return cnt
 	}())
 }

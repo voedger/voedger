@@ -137,14 +137,14 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, lastestVersion+1)
+		versions.Put(vers.SysQNamesVersion, latestVersion+1)
 
 		names := New()
 		err := names.Prepare(storage, versions, nil, nil)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
 
-	t.Run("must be error if invalid QName readed from system view ", func(t *testing.T) {
+	t.Run("must be error if invalid QName loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
@@ -153,7 +153,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, lastestVersion)
+		versions.Put(vers.SysQNamesVersion, latestVersion)
 		const badName = "-test.error.qname-"
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(badName), utils.ToBytes(QNameID(512)))
 
@@ -163,7 +163,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		require.ErrorContains(err, badName)
 	})
 
-	t.Run("must be ok if deleted QName readed from system view ", func(t *testing.T) {
+	t.Run("must be ok if deleted QName loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
@@ -172,7 +172,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, lastestVersion)
+		versions.Put(vers.SysQNamesVersion, latestVersion)
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte("test.deleted"), utils.ToBytes(NullQNameID))
 
 		names := New()
@@ -180,7 +180,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("must be error if invalid (small) QNameID readed from system view ", func(t *testing.T) {
+	t.Run("must be error if invalid (small) QNameID loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
@@ -189,7 +189,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, lastestVersion)
+		versions.Put(vers.SysQNamesVersion, latestVersion)
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(istructs.QNameForError.String()), utils.ToBytes(QNameIDForError))
 
 		names := New()

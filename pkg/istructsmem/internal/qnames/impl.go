@@ -183,8 +183,8 @@ func (names *QNames) store(storage istorage.IAppStorage, versions *vers.Versions
 		return fmt.Errorf("error store application QName IDs to storage: %w", err)
 	}
 
-	if ver := versions.Get(vers.SysQNamesVersion); ver != lastestVersion {
-		if err = versions.Put(vers.SysQNamesVersion, lastestVersion); err != nil {
+	if ver := versions.Get(vers.SysQNamesVersion); ver != latestVersion {
+		if err = versions.Put(vers.SysQNamesVersion, latestVersion); err != nil {
 			return fmt.Errorf("error store system QNames view version: %w", err)
 		}
 	}

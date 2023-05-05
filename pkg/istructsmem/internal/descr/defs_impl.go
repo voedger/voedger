@@ -33,9 +33,9 @@ func (d *Def) read(def appdef.IDef) {
 		d.Containers = append(d.Containers, c)
 	})
 
-	def.Uniques(func(name string, fields []appdef.IField) {
+	def.Uniques(func(unique appdef.IUnique) {
 		u := newUnique()
-		u.read(name, fields)
+		u.read(unique)
 		d.Uniques = append(d.Uniques, u)
 	})
 }
@@ -60,9 +60,9 @@ func (c *Container) read(cont appdef.IContainer) {
 
 func newUnique() *Unique { return &Unique{} }
 
-func (u *Unique) read(name string, fields []appdef.IField) {
-	u.Name = name
-	for _, f := range fields {
+func (u *Unique) read(unique appdef.IUnique) {
+	u.Name = unique.Name()
+	for _, f := range unique.Fields() {
 		u.Fields = append(u.Fields, f.Name())
 	}
 }
