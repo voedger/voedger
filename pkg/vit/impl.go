@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -35,20 +34,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
-//go:embed slowtests.txt
-var slowTestsPaths string
-
 func NewVIT(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
-	if coreutils.SkipSlowTests() {
-		pc, _, _, _ := runtime.Caller(1)
-		callerFunc := runtime.FuncForPC(pc)
-		for _, p := range strings.Split(slowTestsPaths, "\n") {
-			fn := callerFunc.Name()
-			if fn == p {
-				t.Skip("slow test skipped")
-			}
-		}
-	}
 	useCas := IsCassandraStorage()
 	if !vitCfg.isShared {
 		vit = newVit(t, vitCfg, useCas)
@@ -111,11 +97,11 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 		}
 	}
 
-	hvm, err := vvm.ProvideVVM(&cfg, 0)
+	vvm, err := vvm.ProvideVVM(&cfg, 0)
 	require.NoError(t, err)
 
 	vit := &VIT{
-		HeeusVM:              hvm,
+		VoedgerVM:            vvm,
 		VVMConfig:            &cfg,
 		T:                    t,
 		appWorkspaces:        map[istructs.AppQName]map[string]*AppWorkspace{},
@@ -247,7 +233,7 @@ func (vit *VIT) TearDown() {
 }
 
 func (vit *VIT) MetricsServicePort() int {
-	return int(vit.HeeusVM.MetricsServicePort())
+	return int(vit.VoedgerVM.MetricsServicePort())
 }
 
 func (vit *VIT) GetSystemPrincipal(appQName istructs.AppQName) *Principal {

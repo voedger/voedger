@@ -66,8 +66,8 @@ var (
 	MockCmdExec func(input string) error
 )
 
-func EmptyApp(hvmCfg *vvm.VVMConfig, hvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
-	registryapp.Provide(smtp.Cfg{})(hvmCfg, hvmAPI, cfg, adf, sep)
+func EmptyApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
+	registryapp.Provide(smtp.Cfg{})(vvmCfg, vvmAPI, cfg, adf, sep)
 	adf.AddStruct(QNameTestWSKind, appdef.DefKind_CDoc).
 		AddField("IntFld", appdef.DataKind_int32, true).
 		AddField("StrFld", appdef.DataKind_string, false).
@@ -75,13 +75,13 @@ func EmptyApp(hvmCfg *vvm.VVMConfig, hvmAPI vvm.VVMAPI, cfg *istructsmem.AppConf
 	sep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
 }
 
-func ProvideSimpleApp(hvmCfg *vvm.VVMConfig, hvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
+func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
 
 	// sys package
-	sys.Provide(hvmCfg.TimeFunc, cfg, adf, hvmAPI, smtp.Cfg{}, sep, nil)
+	sys.Provide(vvmCfg.TimeFunc, cfg, adf, vvmAPI, smtp.Cfg{}, sep, nil)
 
 	const simpleAppBLOBMaxSize = 5
-	hvmCfg.BLOBMaxSize = simpleAppBLOBMaxSize
+	vvmCfg.BLOBMaxSize = simpleAppBLOBMaxSize
 
 	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "articles"), appdef.DefKind_CDoc).
 		AddField("name", appdef.DataKind_string, false).

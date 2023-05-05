@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	Field_JSONDef_Body = "Body"
-	intentsLimit       = 128
+	intentsLimit = 128
 )
 
 var (

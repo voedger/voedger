@@ -30,10 +30,6 @@ func GetSystemPrincipalTokenApp(appTokens istructs.IAppTokens) (string, error) {
 	return systemPrincipalToken, nil
 }
 
-func IsSystemPrincipal(principalPayload *PrincipalPayload) bool {
-	return principalPayload != nil && principalPayload.ProfileWSID == istructs.NullWSID
-}
-
 func GetPayloadRegistry(itokens itokens.ITokens, token string, payload interface{}) (gp istructs.GenericPayload, err error) {
 	if gp, err = itokens.ValidateToken(token, payload); err != nil {
 		err = coreutils.NewHTTPError(http.StatusUnauthorized, err)

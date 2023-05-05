@@ -307,7 +307,7 @@ func Req(url string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 			} else {
 				time.Sleep(shortRetryDelay)
 			}
-			logger.Verbose("503. retying...")
+			logger.Verbose("503. retrying...")
 			tryNum++
 			continue
 		}

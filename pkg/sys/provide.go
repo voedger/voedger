@@ -27,7 +27,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, hvmAPI vvm.VVMAPI, smtpCfg smtp.Cfg,
+func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, vvmAPI vvm.VVMAPI, smtpCfg smtp.Cfg,
 	sep vvm.IStandardExtensionPoints, wsPostInitFunc workspace.WSPostInitFunc) {
 	blobber.ProvideBlobberCmds(cfg, appDefBuilder)
 	collection.ProvideCollectionFunc(cfg, appDefBuilder)
@@ -40,25 +40,25 @@ func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBu
 	builtin.ProivdeCmdImport(cfg) // for sync
 	builtin.ProvideQryEcho(cfg, appDefBuilder)
 	builtin.ProvideQryGRCount(cfg, appDefBuilder)
-	workspace.Provide(cfg, appDefBuilder, hvmAPI.IAppStructsProvider, timeFunc)
-	sqlquery.Provide(cfg, appDefBuilder, hvmAPI.IAppStructsProvider, vvm.NumCommandProcessors)
+	workspace.Provide(cfg, appDefBuilder, vvmAPI.IAppStructsProvider, timeFunc)
+	sqlquery.Provide(cfg, appDefBuilder, vvmAPI.IAppStructsProvider, vvm.NumCommandProcessors)
 	projectors.ProvideOffsetsDef(appDefBuilder)
 	commandprocessor.ProvideJSONFuncParamsDef(appDefBuilder)
-	verifier.Provide(cfg, appDefBuilder, hvmAPI.ITokens, hvmAPI.FederationURL, hvmAPI.IAppStructsProvider)
-	signupin.ProvideQryRefreshPrincipalToken(cfg, appDefBuilder, hvmAPI.ITokens)
+	verifier.Provide(cfg, appDefBuilder, vvmAPI.ITokens, vvmAPI.FederationURL, vvmAPI.IAppStructsProvider)
+	signupin.ProvideQryRefreshPrincipalToken(cfg, appDefBuilder, vvmAPI.ITokens)
 	signupin.ProvideCDocLogin(appDefBuilder)
 	invite.Provide(cfg, appDefBuilder, timeFunc)
 	cfg.AddAsyncProjectors(
 		journal.ProvideWLogDatesAsyncProjectorFactory(),
-		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspace(hvmAPI.FederationURL, cfg.Name, hvmAPI.ITokens),
-		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(hvmAPI.FederationURL, cfg.Name, hvmAPI.ITokens),
-		workspace.ProvideAsyncProjectorInitializeWorkspace(hvmAPI.FederationURL, timeFunc, cfg.Name, sep.EPWSTemplates(), hvmAPI.ITokens, wsPostInitFunc),
-		verifier.ProvideAsyncProjectorFactory_SendEmailVerificationCode(hvmAPI.FederationURL, smtpCfg),
-		invite.ProvideAsyncProjectorApplyInvitationFactory(timeFunc, hvmAPI.FederationURL, cfg.Name, hvmAPI.ITokens, smtpCfg),
-		invite.ProvideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc, hvmAPI.FederationURL, cfg.Name, hvmAPI.ITokens),
-		invite.ProvideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc, hvmAPI.FederationURL, cfg.Name, hvmAPI.ITokens, smtpCfg),
-		invite.ProvideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc, hvmAPI.FederationURL, cfg.Name, hvmAPI.ITokens),
-		invite.ProvideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc, hvmAPI.FederationURL, cfg.Name, hvmAPI.ITokens),
+		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspace(vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens),
+		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens),
+		workspace.ProvideAsyncProjectorInitializeWorkspace(vvmAPI.FederationURL, timeFunc, cfg.Name, sep.EPWSTemplates(), vvmAPI.ITokens, wsPostInitFunc),
+		verifier.ProvideAsyncProjectorFactory_SendEmailVerificationCode(vvmAPI.FederationURL, smtpCfg),
+		invite.ProvideAsyncProjectorApplyInvitationFactory(timeFunc, vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens, smtpCfg),
+		invite.ProvideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc, vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens),
+		invite.ProvideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc, vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens, smtpCfg),
+		invite.ProvideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc, vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens),
+		invite.ProvideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc, vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens),
 	)
 	cfg.AddSyncProjectors(
 		workspace.ProvideSyncProjectorChildWorkspaceIdxFactory(),
@@ -67,7 +67,7 @@ func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBu
 	)
 	cfg.AddSyncProjectors(collection.ProvideSyncProjectorFactories(appDefBuilder)...)
 	uniques.Provide(cfg, appDefBuilder)
-	describe.Provide(cfg, hvmAPI.IAppStructsProvider, appDefBuilder)
-	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, hvmAPI.IAppTokensFactory)
+	describe.Provide(cfg, vvmAPI.IAppStructsProvider, appDefBuilder)
+	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, vvmAPI.IAppTokensFactory)
 	cfg.AddCUDValidators(builtin.ProvideRefIntegrityValidator())
 }

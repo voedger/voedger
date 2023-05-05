@@ -34,7 +34,7 @@ func TestWrongTypes(t *testing.T) {
 
 	cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
 	queryProcessor := ProvideServiceFactory()(serviceChannel, resultSenderClosableFactory, appStructsProvider, 3, imetrics.Provide(),
-		"hvm", authn, authz, cfgs)
+		"vvm", authn, authz, cfgs)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		queryProcessor.Run(ctx)

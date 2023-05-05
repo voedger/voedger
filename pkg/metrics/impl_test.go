@@ -30,9 +30,9 @@ func TestBasicUsage(t *testing.T) {
 	})
 
 	require.Len(collection, 3)
-	require.True(collection["somecounter_total{app=\"test1/app1\",hvm=\"host1\"} 0.00035\n"])
-	require.True(collection["somecounter_total{app=\"test1/app2\",hvm=\"host1\"} 1\n"])
-	require.True(collection["somecounter_total{hvm=\"host1\"} 7\n"])
+	require.True(collection["somecounter_total{app=\"test1/app1\",vvm=\"host1\"} 0.00035\n"])
+	require.True(collection["somecounter_total{app=\"test1/app2\",vvm=\"host1\"} 1\n"])
+	require.True(collection["somecounter_total{vvm=\"host1\"} 7\n"])
 }
 
 func TestMetrics_List(t *testing.T) {
@@ -61,44 +61,44 @@ func TestToPrometheus(t *testing.T) {
 	tests := []struct {
 		name  string
 		app   istructs.AppQName
-		hvm   string
+		vvm   string
 		value float64
 		want  string
 	}{
 		{
 			name:  "Full",
 			app:   istructs.AppQName_test1_app1,
-			hvm:   "host",
+			vvm:   "host",
 			value: 164759,
-			want:  "something_total{app=\"test1/app1\",hvm=\"host\"} 164759\n",
+			want:  "something_total{app=\"test1/app1\",vvm=\"host\"} 164759\n",
 		},
 		{
 			name:  "Without app",
 			app:   istructs.NullAppQName,
-			hvm:   "host",
+			vvm:   "host",
 			value: 164759,
-			want:  "something_total{hvm=\"host\"} 164759\n",
+			want:  "something_total{vvm=\"host\"} 164759\n",
 		},
 		{
-			name:  "Without hvm",
+			name:  "Without vvm",
 			app:   istructs.AppQName_test1_app1,
-			hvm:   "",
+			vvm:   "",
 			value: 164759,
 			want:  "something_total{app=\"test1/app1\"} 164759\n",
 		},
 		{
 			name:  "Big value",
 			app:   istructs.AppQName_test2_app1,
-			hvm:   "host",
+			vvm:   "host",
 			value: 123456789000.01,
-			want:  "something_total{app=\"test2/app1\",hvm=\"host\"} 123456789000.01\n",
+			want:  "something_total{app=\"test2/app1\",vvm=\"host\"} 123456789000.01\n",
 		},
 		{
 			name:  "Small value",
 			app:   istructs.AppQName_test2_app1,
-			hvm:   "host",
+			vvm:   "host",
 			value: 0.00000123456,
-			want:  "something_total{app=\"test2/app1\",hvm=\"host\"} 0.00000123456\n",
+			want:  "something_total{app=\"test2/app1\",vvm=\"host\"} 0.00000123456\n",
 		},
 	}
 	for _, test := range tests {
@@ -106,7 +106,7 @@ func TestToPrometheus(t *testing.T) {
 			m := &metric{
 				name: "something_total",
 				app:  test.app,
-				hvm:  test.hvm,
+				vvm:  test.vvm,
 			}
 
 			require.Equal(t, test.want, string(ToPrometheus(m, test.value)))

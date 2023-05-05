@@ -14,14 +14,14 @@ import (
 )
 
 func Provide(smtpCfg smtp.Cfg) vvm.VVMAppBuilder {
-	return func(hvmCfg *vvm.VVMConfig, hvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
+	return func(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
 
 		// sys package
-		sys.Provide(hvmCfg.TimeFunc, cfg, appDefBuilder, hvmAPI, smtpCfg, sep, nil)
+		sys.Provide(vvmCfg.TimeFunc, cfg, appDefBuilder, vvmAPI, smtpCfg, sep, nil)
 
 		// sys/registry resources
 		// note: q.sys.RefreshPrincipalToken is moved to sys package because it is strange to call it in sys/registry: provided token is issued for different app (e.g. airs-bp)
-		signupin.Provide(cfg, appDefBuilder, hvmAPI.ITokens, hvmAPI.FederationURL, hvmAPI.IAppStructsProvider)
+		signupin.Provide(cfg, appDefBuilder, vvmAPI.ITokens, vvmAPI.FederationURL, vvmAPI.IAppStructsProvider)
 		cfg.AddSyncProjectors(
 			signupin.ProvideSyncProjectorLoginIdxFactory(),
 		)

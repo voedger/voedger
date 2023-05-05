@@ -2,7 +2,7 @@
  * Copyright (c) 2021-present unTill Pro, Ltd.
  */
 
-// The goal of package is  to ensure there are no Race Condition/Race Data errors in Heeus read/write operations
+// The goal of package is  to ensure there are no Race Condition/Race Data errors in Voedger read/write operations
 // All tests should be run with -race
 package sys_it
 
@@ -188,6 +188,9 @@ func Test_Race_CUDManyWriteManyReadCheckResult(t *testing.T) {
 // Read & Update from many goroutines with different pauses after all data has been written
 // Read result: only status = OK checked
 func Test_Race_CUDManyUpdateManyReadCheckResult(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	if it.IsCassandraStorage() {
 		return
 	}
@@ -281,6 +284,9 @@ func Test_Race_CUDManyWriteCheckResult(t *testing.T) {
 
 // Read & Write from many goroutines with different WSID
 func Test_Race_CUDManyWriteReadCheckResult(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	if it.IsCassandraStorage() {
 		return
 	}

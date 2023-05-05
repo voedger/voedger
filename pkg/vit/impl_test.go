@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-// Heeus integration test
+// Voedger integration test
 package vit
 
 import (

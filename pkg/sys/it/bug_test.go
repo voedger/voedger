@@ -32,6 +32,9 @@ func (r *rr) AsString(string) string {
 }
 
 func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	require := require.New(t)
 	goOn := make(chan interface{})
 	it.MockQryExec = func(input string, callback istructs.ExecQueryCallback) (err error) {

@@ -52,7 +52,7 @@ func provideHandler(metrics imetrics.IMetrics) http.HandlerFunc {
 
 		err := metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
 			if _, err = rw.Write(imetrics.ToPrometheus(metric, metricValue)); err != nil {
-				return fmt.Errorf("metrics service: failed to write metric %s for app %s on HVM %s: %w", metric.Name(), metric.App(), metric.Hvm(), err)
+				return fmt.Errorf("metrics service: failed to write metric %s for app %s on VVM %s: %w", metric.Name(), metric.App(), metric.Vvm(), err)
 			}
 			return
 		})

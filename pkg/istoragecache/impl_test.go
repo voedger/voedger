@@ -37,7 +37,7 @@ func TestBasicUsage(t *testing.T) {
 			},
 		}
 		tsp := &testStorageProvider{storage: ts}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "hvm")
+		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
@@ -64,7 +64,7 @@ func TestBasicUsage(t *testing.T) {
 			},
 		}
 		tsp := &testStorageProvider{storage: ts}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "hvm")
+		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
@@ -91,7 +91,7 @@ func TestBasicUsage(t *testing.T) {
 		}}
 		data := make([]byte, 0, 100)
 		tsp := &testStorageProvider{storage: ts}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "hvm")
+		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
@@ -121,7 +121,7 @@ func TestBasicUsage(t *testing.T) {
 		}
 		data := make([]byte, 0, 100)
 		tsp := &testStorageProvider{storage: ts}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "hvm")
+		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		require.NoError(storage.Put([]byte("NL"), []byte("Beverage"), []byte("Cola")))
@@ -157,7 +157,7 @@ func TestBasicUsage(t *testing.T) {
 	t.Run("error on app storage get error", func(t *testing.T) {
 		testErr := errors.New("test error")
 		tsp := &testStorageProvider{appStorageGetError: testErr}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "hvm")
+		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.ErrorIs(t, err, testErr)
 		require.Nil(t, storage)
@@ -176,7 +176,7 @@ func TestAppStorage_Put(t *testing.T) {
 		},
 	}
 	tsp := &testStorageProvider{storage: ts}
-	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "hvm")
+	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
@@ -202,7 +202,7 @@ func TestAppStorage_PutBatch(t *testing.T) {
 		},
 	}
 	tsp := &testStorageProvider{storage: ts}
-	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "hvm")
+	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
@@ -227,7 +227,7 @@ func TestAppStorage_Get(t *testing.T) {
 		return false, testErr
 	}}
 	tsp := &testStorageProvider{storage: ts}
-	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "hvm")
+	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
@@ -245,7 +245,7 @@ func TestAppStorage_GetBatch(t *testing.T) {
 			return testErr
 		}}
 		tsp := &testStorageProvider{storage: ts}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "hvm")
+		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
@@ -274,7 +274,7 @@ func TestAppStorage_GetBatch(t *testing.T) {
 				return err
 			}}
 		tsp := &testStorageProvider{storage: ts}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "hvm")
+		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
@@ -313,7 +313,7 @@ func TestAppStorage_GetBatch(t *testing.T) {
 func TestTechnologyCompatibilityKit(t *testing.T) {
 	asf := istorage.ProvideMem()
 	asp := istorageimpl.Provide(asf)
-	cachingStorageProvider := Provide(testCacheSize, asp, imetrics.Provide(), "hvm")
+	cachingStorageProvider := Provide(testCacheSize, asp, imetrics.Provide(), "vvm")
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(t, err)
 	istorage.TechnologyCompatibilityKit_Storage(t, storage)

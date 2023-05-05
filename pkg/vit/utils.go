@@ -352,7 +352,7 @@ func IsCassandraStorage() bool {
 
 func (vit *VIT) MetricsRequest(opts ...coreutils.ReqOptFunc) (resp string) {
 	vit.T.Helper()
-	url := fmt.Sprintf("http://127.0.0.1:%d/metrics", vit.HeeusVM.MetricsServicePort())
+	url := fmt.Sprintf("http://127.0.0.1:%d/metrics", vit.VoedgerVM.MetricsServicePort())
 	res, err := coreutils.Req(url, "", opts...)
 	require.NoError(vit.T, err)
 	return res.Body

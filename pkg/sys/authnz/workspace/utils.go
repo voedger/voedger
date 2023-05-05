@@ -39,7 +39,7 @@ func ProvideViewNextWSID(appDefBuilder appdef.IAppDefBuilder) {
 	})
 }
 
-// TODO: works correct in Community Edition only. Have >1 HVM -> need to lock in a different way
+// TODO: works correct in Community Edition only. Have >1 VVM -> need to lock in a different way
 func GetNextWSID(ctx context.Context, appStructs istructs.IAppStructs, clusterID istructs.ClusterID) (istructs.WSID, error) {
 	vr := appStructs.ViewRecords()
 	kb := vr.KeyBuilder(ViewQNameNextBaseWSID)

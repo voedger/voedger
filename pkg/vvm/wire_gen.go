@@ -158,9 +158,9 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 
 // provide.go:
 
-func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *HeeusVM, err error) {
+func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	voedgerVM = &HeeusVM{vvmCtxCancel: cancel}
+	voedgerVM = &VoedgerVM{vvmCtxCancel: cancel}
 	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(ctx, vvmCfg, vvmIdx)
 	if err != nil {
 		return nil, err
@@ -168,13 +168,13 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *HeeusVM, err e
 	return voedgerVM, BuildAppWorkspaces(voedgerVM.VVM, vvmCfg)
 }
 
-func (vvm *HeeusVM) Shutdown() {
+func (vvm *VoedgerVM) Shutdown() {
 	vvm.vvmCtxCancel()
 	vvm.ServicePipeline.Close()
 	vvm.vvmCleanup()
 }
 
-func (vvm *HeeusVM) Launch() error {
+func (vvm *VoedgerVM) Launch() error {
 	ignition := struct{}{}
 	return vvm.ServicePipeline.SendSync(ignition)
 }

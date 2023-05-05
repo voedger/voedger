@@ -16,11 +16,11 @@ import (
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
-// Heeus Integration Test
+// Voedger Integration Test
 type VIT struct {
 	lock sync.Mutex
 	T    *testing.T
-	*vvm.HeeusVM
+	*vvm.VoedgerVM
 	*vvm.VVMConfig
 	cleanups             []func(vit *VIT)
 	isFinalized          bool

@@ -185,7 +185,7 @@ type resultSenderErrorFirst struct {
 	bus    ibus.IBus
 }
 
-type HeeusVM struct {
+type VoedgerVM struct {
 	*VVM
 	vvmCtxCancel func()
 	vvmCleanup   func()

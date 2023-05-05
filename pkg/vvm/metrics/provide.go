@@ -15,7 +15,7 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
 
-func ProvideMetricsService(hvmCtx context.Context, metricsServicePort MetricsServicePort, imetrics imetrics.IMetrics) MetricsService {
+func ProvideMetricsService(vvmCtx context.Context, metricsServicePort MetricsServicePort, imetrics imetrics.IMetrics) MetricsService {
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(int(metricsServicePort)))
 	if err != nil {
 		panic(err)
@@ -25,7 +25,7 @@ func ProvideMetricsService(hvmCtx context.Context, metricsServicePort MetricsSer
 		Server: &http.Server{
 			Handler: provideHandler(imetrics),
 			BaseContext: func(l net.Listener) context.Context {
-				return hvmCtx
+				return vvmCtx
 			},
 			ReadHeaderTimeout: router2.DefaultRouterReadTimeout * time.Second, // avoiding potential Slowloris attack (G112 linter rule)
 		},

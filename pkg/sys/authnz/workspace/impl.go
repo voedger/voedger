@@ -239,12 +239,12 @@ func execCmdCreateWorkspace(now func() time.Time, asp istructs.IAppStructsProvid
 			return err
 		}
 		cdocWSDesc.PutRecordID(appdef.SystemField_ID, 1)
-		cdocWSDesc.PutInt64(Field_OwnerWSID, args.ArgumentObject.AsInt64(Field_OwnerWSID))   // CDoc<Login> -> pseudo WSID, CDoc<ChildWorkspace> -> owner profile WSID
-		cdocWSDesc.PutQName(Field_OwnerQName, args.ArgumentObject.AsQName(Field_OwnerQName)) // sys.Login or sys.UserProfile
-		cdocWSDesc.PutInt64(Field_OwnerID, args.ArgumentObject.AsInt64(Field_OwnerID))       // CDoc<Login>.ID or CDoc<ChildWorkspace>.ID
-		cdocWSDesc.PutString(Field_OwnerApp, args.ArgumentObject.AsString(Field_OwnerApp))
+		cdocWSDesc.PutInt64(Field_OwnerWSID, args.ArgumentObject.AsInt64(Field_OwnerWSID))           // CDoc<Login> -> pseudo WSID, CDoc<ChildWorkspace> -> owner profile WSID
+		cdocWSDesc.PutQName(Field_OwnerQName, args.ArgumentObject.AsQName(Field_OwnerQName))         // sys.Login or sys.UserProfile
+		cdocWSDesc.PutInt64(Field_OwnerID, args.ArgumentObject.AsInt64(Field_OwnerID))               // CDoc<Login>.ID or CDoc<ChildWorkspace>.ID
 		cdocWSDesc.PutString(authnz.Field_WSName, args.ArgumentObject.AsString(authnz.Field_WSName)) // CDoc<Login> -> "hardcoded", CDoc<ChildWorkspace> -> wsName
 		cdocWSDesc.PutQName(authnz.Field_WSKind, wsKind)                                             // CDoc<Login> -> sys.DeviceProfile or sys.UserProfile, CDoc<ChildWorkspace> -> provided wsKind (e.g. air.Restaurant)
+		cdocWSDesc.PutString(Field_OwnerApp, args.ArgumentObject.AsString(Field_OwnerApp))
 		cdocWSDesc.PutString(authnz.Field_WSKindInitializationData, wsKindInitializationDataStr)
 		cdocWSDesc.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
 		cdocWSDesc.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))

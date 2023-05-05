@@ -382,7 +382,7 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
-	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable { return out }, provider, maxPrepareQueries, imetrics.Provide(), "hvm",
+	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable { return out }, provider, maxPrepareQueries, imetrics.Provide(), "vvm",
 		authn, authz, testCfgs)
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
@@ -494,7 +494,7 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable {
 		return out
-	}, provider, maxPrepareQueries, imetrics.Provide(), "hvm", authn, authz, testCfgs)
+	}, provider, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, testCfgs)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
@@ -609,7 +609,7 @@ func TestBasicUsage_State(t *testing.T) {
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable {
 		return out
-	}, provider, maxPrepareQueries, imetrics.Provide(), "hvm", authn, authz, testCfgs)
+	}, provider, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, testCfgs)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
@@ -773,7 +773,7 @@ func TestState_withAfterArgument(t *testing.T) {
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable {
 		return out
-	}, provider, maxPrepareQueries, imetrics.Provide(), "hvm", authn, authz, testCfgs)
+	}, provider, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, testCfgs)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)

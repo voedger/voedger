@@ -16,15 +16,15 @@ import (
 type metric struct {
 	name string
 	app  istructs.AppQName
-	hvm  string
+	vvm  string
 }
 
 func (m *metric) Name() string {
 	return m.name
 }
 
-func (m *metric) Hvm() string {
-	return m.hvm
+func (m *metric) Vvm() string {
+	return m.vvm
 }
 
 func (m *metric) App() istructs.AppQName {
@@ -42,20 +42,20 @@ func newMetrics() IMetrics {
 	}
 }
 
-func (m *mapMetrics) Increase(metricName string, hvm string, valueDelta float64) {
+func (m *mapMetrics) Increase(metricName string, vvm string, valueDelta float64) {
 	key := metric{
 		name: metricName,
 		app:  istructs.AppQName_null,
-		hvm:  hvm,
+		vvm:  vvm,
 	}
 	m.increase(key, valueDelta)
 }
 
-func (m *mapMetrics) IncreaseApp(metricName string, hvm string, app istructs.AppQName, valueDelta float64) {
+func (m *mapMetrics) IncreaseApp(metricName string, vvm string, app istructs.AppQName, valueDelta float64) {
 	key := metric{
 		name: metricName,
 		app:  app,
-		hvm:  hvm,
+		vvm:  vvm,
 	}
 	m.increase(key, valueDelta)
 }
@@ -81,19 +81,19 @@ func (m *mapMetrics) List(cb func(metric IMetric, metricValue float64) (err erro
 func ToPrometheus(metric IMetric, metricValue float64) []byte {
 	bb := bytes.Buffer{}
 	bb.WriteString(metric.Name())
-	if metric.App() != istructs.NullAppQName || metric.Hvm() != "" {
+	if metric.App() != istructs.NullAppQName || metric.Vvm() != "" {
 		bb.WriteRune('{')
 		if metric.App() != istructs.NullAppQName {
 			bb.WriteString(`app="`)
 			bb.WriteString(metric.App().String())
 			bb.WriteRune('"')
 		}
-		if metric.Hvm() != "" {
+		if metric.Vvm() != "" {
 			if metric.App() != istructs.NullAppQName {
 				bb.WriteRune(',')
 			}
-			bb.WriteString(`hvm="`)
-			bb.WriteString(metric.Hvm())
+			bb.WriteString(`vvm="`)
+			bb.WriteString(metric.Vvm())
 			bb.WriteRune('"')
 		}
 		bb.WriteRune('}')

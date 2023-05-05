@@ -38,6 +38,9 @@ func Test_Race_SUCreateLogin(t *testing.T) {
 
 // Test_Race_SUsignUpIn: sign up,sign in with existing logins & sign in with un-existing logins
 func Test_Race_SUsignUpIn(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 

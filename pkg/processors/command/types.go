@@ -23,7 +23,7 @@ import (
 type ServiceFactory func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService
 type CommandChannel iprocbus.ServiceChannel
 type OperatorSyncActualizer pipeline.ISyncOperator
-type SyncActualizerFactory func(hvmCtx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator
+type SyncActualizerFactory func(vvmCtx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator
 type VVMName string
 
 type ValidateFunc func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID) (err error)
@@ -43,13 +43,13 @@ type ICommandMessage interface {
 type xPath string
 
 type commandProcessorMetrics struct {
-	hvm     string
+	vvm     string
 	app     istructs.AppQName
 	metrics imetrics.IMetrics
 }
 
 func (m *commandProcessorMetrics) increase(metricName string, valueDelta float64) {
-	m.metrics.IncreaseApp(metricName, m.hvm, m.app, valueDelta)
+	m.metrics.IncreaseApp(metricName, m.vvm, m.app, valueDelta)
 }
 
 type cmdWorkpiece struct {

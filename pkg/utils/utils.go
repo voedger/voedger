@@ -5,8 +5,30 @@
 
 package coreutils
 
-import "strings"
+import (
+	"os"
+	"strings"
+	"time"
+)
 
 func IsBlank(str string) bool {
 	return len(strings.TrimSpace(str)) == 0
+}
+
+// https://github.com/golang/go/issues/27169
+func ResetTimer(t *time.Timer, timeout time.Duration) {
+	if !t.Stop() {
+		select {
+		case <-t.C:
+		default:
+		}
+	}
+	t.Reset(timeout)
+}
+func IsTest() bool {
+	return strings.Contains(os.Args[0], ".test") || IsDebug()
+}
+
+func IsDebug() bool {
+	return strings.Contains(os.Args[0], "__debug_bin")
 }
