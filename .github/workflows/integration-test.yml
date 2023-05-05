@@ -1,0 +1,132 @@
+# Copyright (c) 2023 Sigma-Soft, Ltd.
+# @author Aleksei Ponomarev
+#
+# To set up a secret in your GitHub repository, follow these steps:
+#    - Go to your repository in GitHub and click on the "Settings" tab.
+#    - In the left sidebar, click on "Secrets".
+#    - Click on the "New secret" button.
+#    - Enter a name for your secret (e.g., "AWS_ACCESS_KEY_ID"), and paste in the value of your AWS access key ID.
+#    - Click on the "Add secret" button to save the secret.
+# You can repeat these steps for each secret you need to store:
+#    -  such as your AWS secret access key
+#    -  SSH private key
+#    -  and any other sensitive information.
+# To use the secrets in your GitHub Actions workflow, you can reference them using the syntax ${{ secrets.SECRET_NAME }}.
+
+name: ctool integration test
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  deploy:
+    if: ${{ contains(github.event.issue.title, 'ctoolintegrationtest') }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check Issue
+      run: |
+
+        teams=$(curl -s -H "Authorization: Bearer ${{ secrets.REPOREADING_TOKEN }}" https://api.github.com/user/teams | jq -r '.[].name')
+
+        is_member=false
+
+        for team in $teams; do
+          if [[ $team == "DevOps_ctool" ]]; then
+            is_member=true
+            break
+          fi
+        done
+        if [ "$is_member" = true ]; then
+          echo "User is a member of DevOps_ctool team." 
+        else
+          echo "User is not a member of DevOps_ctool team."
+          exit 1
+        fi
+
+        if [ "${{ github.event.issue.user.login }}" != "AlekseiPonomarev" ]; then
+            echo "Issue opened by wrong user, skipping deployment"
+            exit 1
+        fi
+
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-2
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_wrapper: false
+
+    - name: Terraform Init
+      run: terraform -chdir=cmd/ctool/scripts/terraform/ init
+      env:
+        TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
+
+    - name: Terraform plan
+      run: terraform -chdir=cmd/ctool/scripts/terraform/ plan -out=terraform.tfplan
+      env:
+        TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
+        TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
+ 
+    - name: Terraform apply
+      run: terraform -chdir=cmd/ctool/scripts/terraform/ apply -auto-approve
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
+        TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.5.0
+      with:
+        ssh-private-key: ${{ secrets.AWS_SSH_KEY }}
+        
+    - name: Load environment file
+      run: |
+           echo PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_01) >> $GITHUB_ENV
+
+    - name: Smoke test - wait for scylla initialization
+      run: |
+        echo "Work with ${{ env.PUBLIC_IP }}"
+        count=0
+        while [ $count -lt 60 ]; do
+           if [ $(ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.PUBLIC_IP }} docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c "^UN\s") -eq 3 ]; then
+           echo "Scylla initialization success"
+             break
+           fi
+           echo "Still wait for scylla initialization.."
+           sleep 5
+           count=$((count+1))
+        done
+        if [ $count -eq 60 ]; then
+           echo "Scylla initialization timed out."
+           exit 1
+        fi
+
+      
+    - name: Terraform destroy
+      if: always()
+      run: terraform -chdir=cmd/ctool/scripts/terraform/ destroy -auto-approve
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
+        TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
+
+    - name: Add comment to issue
+      if: ${{ always() }}
+      run: |
+        curl --request POST \
+          --url https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments \
+          --header 'Authorization: Bearer ${{ secrets.REPOREADING_TOKEN }}' \
+          --header 'Content-Type: application/json' \
+          --data '{
+            "body": "This is a comment that will be automatic added to issue #${{ github.event.issue.number }} by the GitHub Action.\nThe result of the GitHub Action is ${{ job.status }}."
+          }'
