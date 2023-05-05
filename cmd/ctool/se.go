@@ -29,11 +29,11 @@ func newSeConfigType(cluster *clusterType) *seConfigType {
 		StackName: "voedger",
 	}
 	if cluster.Edition == clusterEditionSE {
-		config.SENode1 = cluster.Nodes[idxSENode1].State.Address
-		config.SENode2 = cluster.Nodes[idxSENode2].State.Address
-		config.DBNode1 = cluster.Nodes[idxDBNode1].State.Address
-		config.DBNode2 = cluster.Nodes[idxDBNode2].State.Address
-		config.DBNode3 = cluster.Nodes[idxDBNode3].State.Address
+		config.SENode1 = cluster.Nodes[idxSENode1].ActualState.Address
+		config.SENode2 = cluster.Nodes[idxSENode2].ActualState.Address
+		config.DBNode1 = cluster.Nodes[idxDBNode1].ActualState.Address
+		config.DBNode2 = cluster.Nodes[idxDBNode2].ActualState.Address
+		config.DBNode3 = cluster.Nodes[idxDBNode3].ActualState.Address
 	}
 	return &config
 }
@@ -58,6 +58,60 @@ func deploySeCluster(cluster *clusterType) error {
 		logger.Info("The cluster has already been successfully deployed.")
 		return nil
 	}
+
+	var err error
+
+	if needPrepareSeNodes(cluster) {
+		if err = prepareSeNodes(cluster); err != nil {
+			logger.Error(err.Error())
+			return err
+		}
+	}
+
+	// Start db cluster
+
+	prepareScripts("db-cluster-start.sh")
+
+	conf := newSeConfigType(cluster)
+
+	logger.Info("db cluster start on", conf.DBNode1, conf.DBNode2, conf.DBNode3)
+	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s %s", conf.DBNode1, conf.DBNode2, conf.DBNode3)).
+		run("db-cluster-start.sh", conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
+	// end of Start db cluster
+	logger.Info(">>>>>  deploy Se App Stack", conf.SENode1, conf.SENode2)
+	if err = deploySeDockerStack(cluster); err != nil {
+		return err
+	}
+
+	if nodes, err := cluster.nodesForProcess(); len(nodes) == 0 {
+		return err
+	}
+
+	// succses!
+	for _, node := range cluster.Nodes {
+		node.ActualState.NodeVersion = node.desiredNodeVersion(cluster)
+	}
+	cluster.ActualVersion = cluster.DesiredVersion
+
+	logger.Info("cluster successfully deployed!")
+	return nil
+
+}
+
+func needPrepareSeNodes(cluster *clusterType) bool {
+	for _, n := range cluster.Nodes {
+		if err := n.check(cluster); err != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func prepareSeNodes(cluster *clusterType) error {
 
 	nodes, err := cluster.nodesForProcess()
 	if err != nil {
@@ -84,11 +138,11 @@ func deploySeCluster(cluster *clusterType) error {
 
 		go func(n *nodeType) {
 			defer wg.Done()
-			logger.Info(fmt.Sprintf("Installing docker on a %s host...", n.State.Address))
-			if e := newScriptExecuter(cluster.sshKey, n.State.Address).
-				run("docker-install.sh", n.State.Address); e != nil {
+			logger.Info(fmt.Sprintf("Installing docker on a %s host...", n.ActualState.Address))
+			if e := newScriptExecuter(cluster.sshKey, n.ActualState.Address).
+				run("docker-install.sh", n.ActualState.Address); e != nil {
 				logger.Error(e.Error())
-				n.State.Error = e.Error()
+				n.Error = e.Error()
 			}
 		}(nodes[i])
 	}
@@ -105,7 +159,7 @@ func deploySeCluster(cluster *clusterType) error {
 
 	// Init swarm mode
 	node := cluster.Nodes[idxSENode1]
-	manager := node.State.Address
+	manager := node.ActualState.Address
 	if err = prepareScripts("swarm-init.sh", "swarm-set-label.sh", "db-node-prepare.sh"); err != nil {
 		return err
 	}
@@ -115,21 +169,21 @@ func deploySeCluster(cluster *clusterType) error {
 		logger.Info("swarm init on", manager)
 		if err = newScriptExecuter(cluster.sshKey, manager).
 			run("swarm-init.sh", manager); err != nil {
-			node.State.Error = err.Error()
+			node.Error = err.Error()
 			return err
 		}
 
 		logger.Info("swarm set label on", manager, "scylla1")
 		if err = newScriptExecuter(cluster.sshKey, manager).
 			run("swarm-set-label.sh", manager, manager, node.label()); err != nil {
-			node.State.Error = err.Error()
+			node.Error = err.Error()
 			return err
 		}
 
 		logger.Info("db node prepare", manager)
 		if err = newScriptExecuter(cluster.sshKey, manager).
 			run("db-node-prepare.sh", manager); err != nil {
-			node.State.Error = err.Error()
+			node.Error = err.Error()
 			return err
 		}
 		return nil
@@ -147,66 +201,71 @@ func deploySeCluster(cluster *clusterType) error {
 
 	for i := 0; i < len(cluster.Nodes); i++ {
 
-		if cluster.Nodes[i].State.Address == manager {
+		if cluster.Nodes[i].ActualState.Address == manager {
 			continue
 		}
 
 		func(n *nodeType) {
-			logger.Info("swarm add node on ", n.State.Address)
-			if e := newScriptExecuter(cluster.sshKey, node.State.Address).
-				run("swarm-add-node.sh", manager, n.State.Address); e != nil {
+			logger.Info("swarm add node on ", n.ActualState.Address)
+			if e := newScriptExecuter(cluster.sshKey, node.ActualState.Address).
+				run("swarm-add-node.sh", manager, n.ActualState.Address); e != nil {
 				logger.Error(e.Error())
-				n.State.Error = e.Error()
+				n.Error = e.Error()
 				return
 			}
 
-			logger.Info("swarm set label on", n.State.Address, n.label())
-			if e := newScriptExecuter(cluster.sshKey, n.State.Address).
-				run("swarm-set-label.sh", manager, n.State.Address, n.label()); e != nil {
+			logger.Info("swarm set label on", n.ActualState.Address, n.label())
+			if e := newScriptExecuter(cluster.sshKey, n.ActualState.Address).
+				run("swarm-set-label.sh", manager, n.ActualState.Address, n.label()); e != nil {
 				logger.Error(e.Error())
-				n.State.Error = e.Error()
+				n.Error = e.Error()
 				return
 			}
 
-			logger.Info("db node prepare ", n.State.Address)
-			if e := newScriptExecuter(cluster.sshKey, n.State.Address).
-				run("db-node-prepare.sh", n.State.Address); e != nil {
+			logger.Info("db node prepare ", n.ActualState.Address)
+			if e := newScriptExecuter(cluster.sshKey, n.ActualState.Address).
+				run("db-node-prepare.sh", n.ActualState.Address); e != nil {
 				logger.Error(e.Error())
-				n.State.Error = e.Error()
+				n.Error = e.Error()
 				return
 			}
 		}(&cluster.Nodes[i])
 	}
 
 	// end of Add remaining nodes to swarm cluster
+	return nil
+}
 
-	if nodes, err = cluster.nodesForProcess(); len(nodes) == 0 {
+func needDeploySeCluster(cluster *clusterType) bool {
+	return cluster.DesiredVersion != cluster.ActualVersion
+}
+
+func deploySeDockerStack(cluster *clusterType) error {
+
+	logger.Info("Starting a app stack deployment.")
+	prepareScripts("swarm-set-label.sh", "docker-compose-se.yml", "se-cluster-start.sh")
+
+	conf := newSeConfigType(cluster)
+	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.SENode1, conf.SENode2)).
+		run("se-cluster-start.sh", conf.SENode1, conf.SENode2); err != nil {
+		logger.Error(err.Error())
 		return err
 	}
 
-	// Start db cluster
+	return nil
+}
+
+func deployDbmsDockerStack(cluster *clusterType) error {
 
 	prepareScripts("db-cluster-start.sh")
 
 	conf := newSeConfigType(cluster)
 	logger.Info("db cluster start on", conf.DBNode1, conf.DBNode2, conf.DBNode3)
-	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s %s", conf.DBNode1, conf.DBNode2, conf.DBNode3)).
+	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s %s", conf.DBNode1, conf.DBNode2, conf.DBNode3)).
 		run("db-cluster-start.sh", conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
 
-	// end of Start db cluster
-
-	if nodes, err = cluster.nodesForProcess(); len(nodes) == 0 {
-		return err
-	}
-
-	// succses!
-	for _, node := range nodes {
-		node.State.NodeVersion = cluster.CToolVersion
-	}
-	logger.Info("cluster successfully deployed!")
 	return nil
-
 }

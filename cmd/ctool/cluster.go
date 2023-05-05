@@ -22,9 +22,10 @@ import (
 
 func newCluster() *clusterType {
 	var cluster = clusterType{
-		CToolVersion: version,
-		exists:       false,
-		Draft:        true,
+		DesiredVersion: version,
+		ActualVersion:  version,
+		exists:         false,
+		Draft:          true,
 	}
 	dir, _ := os.Getwd()
 	cluster.configFileName = filepath.Join(dir, clusterConfFileName)
@@ -33,30 +34,51 @@ func newCluster() *clusterType {
 }
 
 type nodeStateType struct {
-	Address     string
-	NodeVersion string
-	AttemptNo   int
-	Info        string `json:"Info,omitempty"`
-	Error       string `json:"Error,omitempty"`
+	Address     string `json:"Address,omitempty"`
+	NodeVersion string `json:"NodeVersion,omitempty"`
+}
+
+func (n *nodeStateType) clear() {
+	n.Address = ""
+	n.NodeVersion = ""
+}
+
+func (n *nodeStateType) isEmpty() bool {
+	return n.Address == "" && n.NodeVersion == ""
+}
+
+type nodeType struct {
+	NodeRole     string
+	idx          int // the sequence number of the node, starts with 1
+	AttemptNo    int
+	Info         string `json:"Info,omitempty"`
+	Error        string `json:"Error,omitempty"`
+	ActualState  nodeStateType
+	DesiredState nodeStateType `json:"DesiredState,omitempty"`
 }
 
 // initializing a new action attempt on a node
 // the error is being reset
 // the attempt counter is incremented
-func (ns *nodeStateType) newAttempt() {
-	ns.AttemptNo += 1
-	ns.Error = ""
+func (n *nodeType) newAttempt() {
+	n.AttemptNo += 1
+	n.Error = ""
 }
 
-func (ns *nodeStateType) reset() {
-	ns.AttemptNo = 0
-	ns.Error = ""
+func (n *nodeType) reset() {
+	n.AttemptNo = 0
+	n.Error = ""
 }
 
-type nodeType struct {
-	NodeRole string
-	idx      int // the sequence number of the node, starts with 1
-	State    nodeStateType
+func (n *nodeType) desiredNodeVersion(c *clusterType) string {
+	if &n.DesiredState != nil && !n.DesiredState.isEmpty() {
+		return n.DesiredState.NodeVersion
+	}
+	return c.DesiredVersion
+}
+
+func (n *nodeType) actualNodeVersion() string {
+	return n.ActualState.NodeVersion
 }
 
 // label for swarm node
@@ -74,7 +96,7 @@ func (n *nodeType) label() string {
 }
 
 func (ns *nodeType) check(c *clusterType) error {
-	if ns.State.NodeVersion != c.CToolVersion {
+	if ns.actualNodeVersion() != ns.desiredNodeVersion(c) {
 		return ErrorDifferentNodeVersions
 	}
 	return nil
@@ -89,7 +111,7 @@ func (n *nodesType) hosts(nodeRole string) []string {
 	var h []string
 	for _, N := range *n {
 		if nodeRole == "" || N.NodeRole == nodeRole {
-			h = append(h, N.State.Address)
+			h = append(h, N.ActualState.Address)
 		}
 	}
 	return h
@@ -100,7 +122,8 @@ type clusterType struct {
 	sshKey           string
 	exists           bool //the cluster is loaded from "cluster.json" at the start of ctool
 	Edition          string
-	CToolVersion     string
+	ActualVersion    string
+	DesiredVersion   string
 	DataCenters      []string `json:"DataCenters,omitempty"`
 	LastAttemptError string   `json:"LastAttemptError,omitempty"`
 	LastAttemptInfo  string   `json:"LastAttemptInfo,omitempty"`
@@ -142,12 +165,12 @@ func (c *clusterType) nodesForProcess() (nodesType, error) {
 			continue
 		}
 
-		if c.Nodes[i].State.Error == "" {
+		if c.Nodes[i].Error == "" {
 			nodes = append(nodes, &c.Nodes[i])
 			continue
 		}
 
-		err = errors.Join(err, errors.New(c.Nodes[i].State.Error))
+		err = errors.Join(err, errors.New(c.Nodes[i].Error))
 	}
 
 	return nodes, err
@@ -159,7 +182,7 @@ func (c *clusterType) needStartProcess() bool {
 		e := c.Nodes[i].check(c)
 		if e != nil {
 			exists = true
-			c.Nodes[i].State.newAttempt()
+			c.Nodes[i].newAttempt()
 		}
 	}
 	return exists
@@ -193,9 +216,9 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 		c.Nodes = make([]nodeType, 1)
 		c.Nodes[0].NodeRole = nrCENode
 		if len(args) > 0 {
-			c.Nodes[0].State.Address = args[0]
+			c.Nodes[0].ActualState.Address = args[0]
 		} else {
-			c.Nodes[0].State.Address = "0.0.0.0"
+			c.Nodes[0].ActualState.Address = "0.0.0.0"
 		}
 	} else { // SE args
 		c.Edition = clusterEditionSE
@@ -208,7 +231,7 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 			} else {
 				c.Nodes[i].NodeRole = nrDBNode
 			}
-			c.Nodes[i].State.Address = args[i]
+			c.Nodes[i].ActualState.Address = args[i]
 		}
 
 		if len(args) == initSeWithDCArgCount {
@@ -223,8 +246,8 @@ func (c *clusterType) validate() error {
 	var err error
 
 	for _, n := range c.Nodes {
-		if net.ParseIP(n.State.Address) == nil {
-			err = errors.Join(err, errors.New(n.State.Address+" "+ErrorInvalidIpAddress.Error()))
+		if net.ParseIP(n.ActualState.Address) == nil {
+			err = errors.Join(err, errors.New(n.ActualState.Address+" "+ErrorInvalidIpAddress.Error()))
 		}
 	}
 
@@ -256,4 +279,3 @@ func expandPath(path string) (string, error) {
 
 	return absPath, nil
 }
-

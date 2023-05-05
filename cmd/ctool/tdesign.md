@@ -88,7 +88,7 @@ In the full version of `cluster.json` array `Nodes` contains 5 elements.
       "Address": "5.255.255.55",  
 
       // Cluster status
-      "State": {
+      "ActualState": {
         // Version from the last successful attempt
         // Skipped if empty
         "NodeVersion": "0.0.1",
@@ -135,10 +135,10 @@ In the full version of `cluster.json` array `Nodes` contains 5 elements.
       // Node role
       "NodeRole": "SENode",
 
-      "State": {    
+      "DesiredState": {    
         "Address": "5.255.255.55",
       }
-      "PreviousState": {
+      "ActualState": {
       
         "Address": "5.255.255.54",  
       
