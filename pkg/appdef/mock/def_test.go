@@ -147,7 +147,7 @@ func TestUniques(t *testing.T) {
 		t.Run("test id", func(t *testing.T) {
 			testID := appdef.FirstUniqueID + 1
 			u := d.UniqueByName("elUnique01")
-			u.SetID(testID)
+			u.(interface{ SetID(appdef.UniqueID) }).SetID(testID)
 
 			require.Equal(testID, u.ID())
 
@@ -247,7 +247,7 @@ func TestInheritsMockingDef(t *testing.T) {
 		return cnt
 	}())
 
-	u.SetID(appdef.FirstUniqueID)
+	u.(interface{ SetID(appdef.UniqueID) }).SetID(appdef.FirstUniqueID)
 	require.Equal(appdef.FirstUniqueID, u.ID())
 
 	require.Equal(u, def.UniqueByID(u.ID()))

@@ -306,9 +306,8 @@ type IUnique interface {
 	// Returns unique fields list. Fields are sorted alphabetically
 	Fields() []IField
 
-	// Unique identifier. Based on definition QName and field list
+	// Unique identifier.
+	//
+	// Must be assigned during AppStruct construction by calling SetID(UniqueID)
 	ID() UniqueID
-
-	// Assigns ID. Must be called during application structures preparation
-	SetID(UniqueID)
 }

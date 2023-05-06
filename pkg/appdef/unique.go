@@ -44,4 +44,5 @@ func (u unique) Fields() []IField { return u.fields }
 
 func (u unique) ID() UniqueID { return u.id }
 
+// Assigns ID. Must be called during application structures preparation
 func (u *unique) SetID(value UniqueID) { u.id = value }

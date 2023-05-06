@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -68,8 +67,7 @@ func TestUniques(t *testing.T) {
 		panic(err)
 	}
 
-	uniques1 := New()
-	if err := uniques1.Prepare(storage, versions, qNames1, appDef1); err != nil {
+	if err := PrepareApDefUniqueIDs(storage, versions, qNames1, appDef1); err != nil {
 		panic(err)
 	}
 
@@ -83,12 +81,7 @@ func TestUniques(t *testing.T) {
 			cnt := 0
 			def.Uniques(func(u appdef.IUnique) {
 				cnt++
-
-				id, err := uniques1.ID(u)
-				require.NoError(err)
-				require.Greater(id, appdef.FirstUniqueID)
-
-				require.Equal(id, u.ID())
+				require.Greater(u.ID(), appdef.FirstUniqueID)
 			})
 			return cnt
 		}())
@@ -107,8 +100,7 @@ func TestUniques(t *testing.T) {
 			panic(err)
 		}
 
-		uniques2 := New()
-		if err := uniques2.Prepare(storage, versions2, qNames2, appDef2); err != nil {
+		if err := PrepareApDefUniqueIDs(storage, versions2, qNames2, appDef2); err != nil {
 			panic(err)
 		}
 
@@ -125,27 +117,6 @@ func TestUniques(t *testing.T) {
 			u2 = def2.UniqueByID(u1.ID())
 			require.Equal(u1.Name(), u2.Name())
 		})
-	})
-
-	t.Run("must be null id for unknown unique", func(t *testing.T) {
-		unique := amock.NewUnique("unknownUnique", []string{"surname", "passportNumber"})
-		unique.On("Def").Return(appDef1.Def(testName))
-
-		id, err := uniques1.ID(unique)
-		require.Empty(id)
-		require.ErrorIs(err, ErrUniqueNotFound)
-	})
-
-	t.Run("must be null id for uniques for unknown definitions", func(t *testing.T) {
-		def := amock.NewDef(appdef.NewQName("test", "unknownDoc"), appdef.DefKind_CDoc,
-			amock.NewField("f1", appdef.DataKind_string, true))
-		def.AddUnique(amock.NewUnique("u1", []string{"f1"}))
-
-		unique := def.UniqueByName("u1")
-
-		id, err := uniques1.ID(unique)
-		require.Empty(id)
-		require.ErrorIs(err, qnames.ErrNameNotFound)
 	})
 }
 
@@ -191,11 +162,8 @@ func TestUniquesErrors(t *testing.T) {
 			panic(err)
 		}
 
-		uniques := New()
-
-		err := uniques.Prepare(storage, versions, qNames, appDef)
+		err := PrepareApDefUniqueIDs(storage, versions, qNames, appDef)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
-
 	})
 
 	t.Run("must error if unknown definition uniques passed to Prepare()", func(t *testing.T) {
@@ -213,8 +181,6 @@ func TestUniquesErrors(t *testing.T) {
 			panic(err)
 		}
 
-		uniques := New()
-
 		t.Run("inject unknown definition to AppDef", func(t *testing.T) {
 			def := appDef.(appdef.IAppDefBuilder).AddStruct(appdef.NewQName("test", "unknown"), appdef.DefKind_CDoc)
 			def.
@@ -222,7 +188,7 @@ func TestUniquesErrors(t *testing.T) {
 				AddUnique("", []string{"fld"})
 		})
 
-		err := uniques.Prepare(storage, versions, qNames, appDef)
+		err := PrepareApDefUniqueIDs(storage, versions, qNames, appDef)
 		require.ErrorIs(err, qnames.ErrNameNotFound)
 	})
 
@@ -245,8 +211,7 @@ func TestUniquesErrors(t *testing.T) {
 			writeError := errors.New("can not store unique")
 			storage.SchedulePutError(writeError, utils.ToBytes(consts.SysView_UniquesIDs, latestVersion), nil)
 
-			uniques := New()
-			err := uniques.Prepare(storage, versions, qNames, appDef)
+			err := PrepareApDefUniqueIDs(storage, versions, qNames, appDef)
 			require.ErrorIs(err, writeError)
 		})
 
@@ -254,8 +219,7 @@ func TestUniquesErrors(t *testing.T) {
 			writeError := errors.New("can not store version")
 			storage.SchedulePutError(writeError, utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysUniquesVersion))
 
-			uniques := New()
-			err := uniques.Prepare(storage, versions, qNames, appDef)
+			err := PrepareApDefUniqueIDs(storage, versions, qNames, appDef)
 			require.ErrorIs(err, writeError)
 		})
 	})

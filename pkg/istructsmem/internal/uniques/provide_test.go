@@ -56,8 +56,7 @@ func Test_BasicUsage(t *testing.T) {
 		panic(err)
 	}
 
-	uniques := New()
-	if err := uniques.Prepare(storage, versions, qNames, appDef); err != nil {
+	if err := PrepareApDefUniqueIDs(storage, versions, qNames, appDef); err != nil {
 		panic(err)
 	}
 
@@ -71,12 +70,7 @@ func Test_BasicUsage(t *testing.T) {
 			cnt := 0
 			def.Uniques(func(u appdef.IUnique) {
 				cnt++
-
-				id, err := uniques.ID(u)
-				require.NoError(err)
-				require.Greater(id, appdef.FirstUniqueID)
-
-				require.Equal(id, u.ID())
+				require.Greater(u.ID(), appdef.FirstUniqueID)
 			})
 			return cnt
 		}())

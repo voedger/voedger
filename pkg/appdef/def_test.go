@@ -263,7 +263,7 @@ func Test_def_AddUnique(t *testing.T) {
 
 	t.Run("test unique IDs", func(t *testing.T) {
 		id := FirstUniqueID
-		def.Uniques(func(u IUnique) { id++; u.SetID(id) })
+		def.Uniques(func(u IUnique) { id++; u.(interface{ SetID(UniqueID) }).SetID(id) })
 
 		require.Nil(def.UniqueByID(FirstUniqueID))
 		require.NotNil(def.UniqueByID(FirstUniqueID + 1))

@@ -19,28 +19,24 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 )
 
-func newUniques() *Uniques {
-	return &Uniques{
+// uniques IDs system view.
+type uniques struct {
+	ids     map[string]appdef.UniqueID
+	lastID  appdef.UniqueID
+	changes uint
+	qnames  *qnames.QNames
+}
+
+func newUniques() *uniques {
+	return &uniques{
 		ids:    make(map[string]appdef.UniqueID),
 		lastID: appdef.FirstUniqueID,
 	}
 }
 
-// Returns ID for unique
-func (un *Uniques) ID(u appdef.IUnique) (appdef.UniqueID, error) {
-	k, err := un.key(u)
-	if err != nil {
-		return appdef.NullUniqueID, err
-	}
-	if id, ok := un.ids[k]; ok {
-		return id, nil
-	}
-	return appdef.NullUniqueID, ErrUniqueNotFound
-}
-
 // Loads all uniques IDs from storage, add all uniques from application definitions and store if some changes.
 // Must be called at application starts
-func (un *Uniques) Prepare(storage istorage.IAppStorage, versions *vers.Versions, qnames *qnames.QNames, appDef appdef.IAppDef) (err error) {
+func (un *uniques) prepare(storage istorage.IAppStorage, versions *vers.Versions, qnames *qnames.QNames, appDef appdef.IAppDef) (err error) {
 	if err = un.load(storage, versions); err != nil {
 		return err
 	}
@@ -69,7 +65,7 @@ func (un *Uniques) Prepare(storage istorage.IAppStorage, versions *vers.Versions
 //   - field names pipe-separated concatenation, e.g. "|name|surname|"
 //
 // e.g. "0x07b5|name|surname|"
-func (un *Uniques) key(u appdef.IUnique) (string, error) {
+func (un *uniques) key(u appdef.IUnique) (string, error) {
 	id, err := un.qnames.ID(u.Def().QName())
 	if err != nil {
 		return "", err
@@ -89,7 +85,7 @@ func (un *Uniques) key(u appdef.IUnique) (string, error) {
 }
 
 // loads all stored unique IDs from storage
-func (un *Uniques) load(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
+func (un *uniques) load(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
 	ver := versions.Get(vers.SysUniquesVersion)
 	switch ver {
 	case vers.UnknownVersion: // no system uniques view exists in storage
@@ -102,7 +98,7 @@ func (un *Uniques) load(storage istorage.IAppStorage, versions *vers.Versions) (
 }
 
 // Loads uniques IDs from storage using ver01 codec
-func (un *Uniques) load01(storage istorage.IAppStorage) error {
+func (un *uniques) load01(storage istorage.IAppStorage) error {
 
 	readUnique := func(cCols, value []byte) error {
 		k := string(cCols)
@@ -121,7 +117,7 @@ func (un *Uniques) load01(storage istorage.IAppStorage) error {
 }
 
 // Collect unique
-func (un *Uniques) collect(u appdef.IUnique) (err error) {
+func (un *uniques) collect(u appdef.IUnique) (err error) {
 	k, err := un.key(u)
 	if err != nil {
 		return err
@@ -135,13 +131,13 @@ func (un *Uniques) collect(u appdef.IUnique) (err error) {
 		un.changes++
 	}
 
-	u.SetID(id)
+	u.(interface{ SetID(appdef.UniqueID) }).SetID(id)
 
 	return nil
 }
 
 // Collect all application uniques
-func (un *Uniques) collectAll(appDef appdef.IAppDef) (err error) {
+func (un *uniques) collectAll(appDef appdef.IAppDef) (err error) {
 	appDef.Defs(
 		func(d appdef.IDef) {
 			d.Uniques(func(u appdef.IUnique) {
@@ -153,7 +149,7 @@ func (un *Uniques) collectAll(appDef appdef.IAppDef) (err error) {
 }
 
 // stores uniques IDs using latestVersion codec
-func (un *Uniques) store(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
+func (un *uniques) store(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
 	pKey := utils.ToBytes(consts.SysView_UniquesIDs, latestVersion)
 
 	batch := make([]istorage.BatchItem, 0)
