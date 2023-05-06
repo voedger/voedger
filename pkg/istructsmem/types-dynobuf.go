@@ -19,7 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 )
 
-// dynoBufValue converts specified value to dynobuffer compatable type using specified data kind.
+// Converts specified value to dyno-buffer compatible type using specified data kind.
 // If value type is not corresponding to kind then next conversions are available:
 //
 //	— float64 value can be converted to all numeric kinds (int32, int64, float32, float64, RecordID)

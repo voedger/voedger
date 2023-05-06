@@ -708,7 +708,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 		require.NoError(err)
 
 		testRowsIsEqual(t, &k1.partRow, &k2.partRow)
-		testRowsIsEqual(t, &k1.clustRow, &k2.clustRow)
+		testRowsIsEqual(t, &k1.ccolsRow, &k2.ccolsRow)
 
 		require.True(k1.Equals(k2))
 		require.True(k2.Equals(k1))

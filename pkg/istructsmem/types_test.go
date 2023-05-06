@@ -78,7 +78,9 @@ func Test_dynoBufValue(t *testing.T) {
 		require.NoError(err)
 		require.Equal([]byte{1, 2, 3}, v)
 
+		// cspell:disable
 		v, err = row.dynoBufValue("AQIDBA==", appdef.DataKind_bytes)
+		// cspell:enable
 		require.NoError(err)
 		require.Equal([]byte{1, 2, 3, 4}, v)
 
@@ -260,7 +262,9 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 
 		row.PutChars("string", "test 🏐 тест")
 		row.PutChars("QName", test.saleCmdName.String())
+		// cspell:disable
 		row.PutChars("bytes", "AQIDBA==")
+		// cspell:enable
 
 		_, err := row.build()
 		require.NoError(err)
@@ -381,21 +385,21 @@ func Test_rowType_PutErrors(t *testing.T) {
 			require.ErrorIs(err, ErrWrongFieldType)
 		})
 
-		t.Run("PutChars to QName-type fields non-covertable value must be error", func(t *testing.T) {
+		t.Run("PutChars to QName-type fields non convertible value must be error", func(t *testing.T) {
 			row := newRow(test.AppCfg)
 			row.setQName(test.testRow)
 
-			row.PutChars("QName", "wellcome.2.error")
+			row.PutChars("QName", "welcome.2.error")
 
 			_, err := row.build()
 			require.ErrorIs(err, appdef.ErrInvalidQNameStringRepresentation)
 		})
 
-		t.Run("PutChars to bytes-type fields non-covertable base64 value must be error", func(t *testing.T) {
+		t.Run("PutChars to bytes-type fields non convertible base64 value must be error", func(t *testing.T) {
 			row := newRow(test.AppCfg)
 			row.setQName(test.testRow)
 
-			row.PutChars("bytes", "wellcome.2.error")
+			row.PutChars("bytes", "welcome.2.error")
 
 			_, err := row.build()
 			require.Error(err)

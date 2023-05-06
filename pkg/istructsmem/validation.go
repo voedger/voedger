@@ -76,7 +76,7 @@ func (v *validator) validElement(el *elementType, storable bool) (err error) {
 // Validates element containers
 func (v *validator) validElementContainers(el *elementType, storable bool) (err error) {
 
-	err = v.validElementContOccurses(el)
+	err = v.validElementContOccurs(el)
 
 	elID := el.ID()
 
@@ -130,8 +130,8 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 	return err
 }
 
-// Validates element containers occurses
-func (v *validator) validElementContOccurses(el *elementType) (err error) {
+// Validates element containers occurs
+func (v *validator) validElementContOccurs(el *elementType) (err error) {
 	v.def.Containers(
 		func(cont appdef.IContainer) {
 			occurs := appdef.Occurs(0)
@@ -226,7 +226,7 @@ func (v *validators) validEvent(ev *eventType) (err error) {
 	return err
 }
 
-// Validate event parts: object and unlogged object
+// Validate event parts: object and secure object
 func (v *validators) validEventObjects(ev *eventType) (err error) {
 	arg, argUnl, err := ev.argumentNames()
 	if err != nil {
@@ -249,7 +249,7 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 
 	if ev.argUnlObj.QName() != argUnl {
 		err = errors.Join(err,
-			validateErrorf(ECode_InvalidDefName, "event command unlogged argument «%v» uses wrong definition «%v», expected «%v»: %w", ev.name, ev.argUnlObj.QName(), argUnl, ErrWrongDefinition))
+			validateErrorf(ECode_InvalidDefName, "event command un-logged argument «%v» uses wrong definition «%v», expected «%v»: %w", ev.name, ev.argUnlObj.QName(), argUnl, ErrWrongDefinition))
 	} else if ev.argUnlObj.QName() != appdef.NullQName {
 		err = errors.Join(err,
 			v.validObject(&ev.argUnlObj))
@@ -300,7 +300,7 @@ func (v *validators) validCUD(cud *cudType, allowStorageIDsInCreate bool) (err e
 	}
 
 	err = errors.Join(err,
-		v.validCUDIDsUnique(cud),
+		v.validCUDsUnique(cud),
 		v.validCUDRefRawIDs(cud),
 	)
 
@@ -313,7 +313,7 @@ func (v *validators) validCUD(cud *cudType, allowStorageIDsInCreate bool) (err e
 }
 
 // Validates IDs in CUD for unique
-func (v *validators) validCUDIDsUnique(cud *cudType) (err error) {
+func (v *validators) validCUDsUnique(cud *cudType) (err error) {
 	const errRecIDViolatedWrap = "cud.%s record ID «%d» is used repeatedly: %w"
 
 	ids := make(map[istructs.RecordID]bool)
@@ -385,8 +385,8 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 	}
 
 	ccDef := key.ccDef()
-	if key.clustRow.QName() != ccDef {
-		return validateErrorf(ECode_InvalidDefName, "wrong view clustering columns definition «%v», for view «%v» expected «%v»: %w", key.clustRow.QName(), key.viewName, ccDef, ErrWrongDefinition)
+	if key.ccolsRow.QName() != ccDef {
+		return validateErrorf(ECode_InvalidDefName, "wrong view clustering columns definition «%v», for view «%v» expected «%v»: %w", key.ccolsRow.QName(), key.viewName, ccDef, ErrWrongDefinition)
 	}
 
 	key.partRow.def.Fields(
@@ -398,9 +398,9 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 		})
 
 	if !partialClust {
-		key.clustRow.def.Fields(
+		key.ccolsRow.def.Fields(
 			func(f appdef.IField) {
-				if !key.clustRow.hasValue(f.Name()) {
+				if !key.ccolsRow.hasValue(f.Name()) {
 					err = errors.Join(err,
 						validateErrorf(ECode_EmptyData, "view «%v» clustering columns «%v» field «%s» is empty: %w", key.viewName, ccDef, f.Name(), ErrFieldIsEmpty))
 				}
@@ -430,7 +430,7 @@ func (v *validators) validViewValue(value *valueType) (err error) {
 // If rawIDexpected then raw IDs is required
 func (v *validators) validRecord(rec *recordType, rawIDexpected bool) (err error) {
 	if rec.QName() == appdef.NullQName {
-		return validateErrorf(ECode_EmptyDefName, "record «%s» has empty defniition name: %w", rec.Container(), ErrNameMissed)
+		return validateErrorf(ECode_EmptyDefName, "record «%s» has empty definition name: %w", rec.Container(), ErrNameMissed)
 	}
 
 	validator := v.validator(rec.QName())

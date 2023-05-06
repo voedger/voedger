@@ -65,9 +65,9 @@ func (key *keyType) storeViewPartKey() []byte {
 func (key *keyType) storeViewClustKey() []byte {
 	buf := new(bytes.Buffer)
 
-	key.clustRow.def.Fields(
+	key.ccolsRow.def.Fields(
 		func(f appdef.IField) {
-			utils.SafeWriteBuf(buf, key.clustRow.dyB.Get(f.Name()))
+			utils.SafeWriteBuf(buf, key.ccolsRow.dyB.Get(f.Name()))
 		})
 
 	return buf.Bytes()
@@ -103,14 +103,14 @@ func loadViewPartKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 	const errWrapPrefix = "unable to load clustering key"
 
-	def := key.clustRow.def
+	def := key.ccolsRow.def
 
 	def.Fields(
 		func(f appdef.IField) {
 			if err != nil {
 				return // first error is enough
 			}
-			if e := loadCellFromBuffer_00(&key.clustRow, f, key.appCfg, buf); e != nil {
+			if e := loadCellFromBuffer_00(&key.ccolsRow, f, key.appCfg, buf); e != nil {
 				err = fmt.Errorf("%s: partition column «%s» cannot be loaded: %w", errWrapPrefix, f.Name(), e)
 			}
 		})
@@ -119,7 +119,7 @@ func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 		return err
 	}
 
-	_, err = key.clustRow.build()
+	_, err = key.ccolsRow.build()
 	return err
 }
 
