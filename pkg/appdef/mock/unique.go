@@ -37,9 +37,9 @@ func (u *Unique) Def() appdef.IDef {
 func (u *Unique) Name() string { return u.Called().Get(0).(string) }
 
 func (u *Unique) Fields() (fields []appdef.IField) {
-	if (u.Def() != nil) && (len(u.fields) > 0) {
+	if (u.def != nil) && (len(u.fields) > 0) {
 		for _, n := range u.fields {
-			f := u.Def().Field(n)
+			f := u.def.Field(n)
 			fields = append(fields, f)
 		}
 		return fields
