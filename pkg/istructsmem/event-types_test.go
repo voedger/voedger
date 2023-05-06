@@ -103,7 +103,7 @@ func TestEventBuilder_Core(t *testing.T) {
 			recRem.PutString(appdef.SystemField_Container, test.remarkIdent)
 			recRem.PutRecordID(test.photoIdent, test.tempPhotoID)
 			recRem.PutString(test.remarkIdent, test.remarkValue)
-			recRem.PutString(test.emptiableIdent, test.emptiableValue)
+			recRem.PutString(test.emptinessIdent, test.emptinessValue)
 		})
 
 		t.Run("test build raw event", func(t *testing.T) {
@@ -178,7 +178,7 @@ func TestEventBuilder_Core(t *testing.T) {
 				require.Equal(idR, remarkID)
 				require.Equal(photoID, r.AsRecordID(test.photoIdent))
 				require.Equal(test.remarkValue, r.AsString(test.remarkIdent))
-				require.Equal(test.emptiableValue, r.AsString(test.emptiableIdent))
+				require.Equal(test.emptinessValue, r.AsString(test.emptinessIdent))
 			}
 		})
 		require.NoError(err)
@@ -313,7 +313,7 @@ func TestEventBuilder_Core(t *testing.T) {
 
 			remRec := cuds.Update(oldRemRec)
 			remRec.PutString(test.remarkIdent, changedRems)
-			remRec.PutString(test.emptiableIdent, "")
+			remRec.PutString(test.emptinessIdent, "")
 		})
 
 		t.Run("test build raw event", func(t *testing.T) {
@@ -432,7 +432,7 @@ func TestEventBuilder_Core(t *testing.T) {
 
 			require.Equal(test.tablePhotoRems, recRem.QName())
 			require.Equal(changedRems, recRem.AsString(test.remarkIdent))
-			require.Empty(recRem.AsString(test.emptiableIdent))
+			require.Empty(recRem.AsString(test.emptinessIdent))
 		})
 	})
 
