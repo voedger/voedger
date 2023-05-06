@@ -23,10 +23,11 @@ import (
 )
 
 const (
-	TestEmail       = "123@123.com"
-	TestEmail2      = "124@124.com"
-	TestEmail3      = "125@125.com"
-	TestServicePort = 10000
+	TestEmail        = "123@123.com"
+	TestEmail2       = "124@124.com"
+	TestEmail3       = "125@125.com"
+	TestServicePort  = 10000
+	defaultMaxOccurs = 100
 )
 
 var (
@@ -97,7 +98,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("pc_fix_button", appdef.DataKind_int32, true).
 		AddField("rm_fix_button", appdef.DataKind_int32, true).
 		AddField("id_food_group", appdef.DataKind_RecordID, false).
-		AddContainer("department_options", appdef.NewQName(appdef.SysPackage, "department_options"), appdef.Occurs(0), appdef.Occurs(100))
+		AddContainer("department_options", appdef.NewQName(appdef.SysPackage, "department_options"), appdef.Occurs(0), appdef.Occurs(defaultMaxOccurs))
 
 	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "department_options"), appdef.DefKind_CRecord).
 		AddField("id_department", appdef.DataKind_RecordID, true).
@@ -117,7 +118,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("sys.IsActive", appdef.DataKind_bool, false).
 		AddField("preview", appdef.DataKind_int64, false).
 		AddField("bg_color", appdef.DataKind_int32, false).
-		AddContainer("air_table_plan_item", appdef.NewQName(appdef.SysPackage, "air_table_plan_item"), appdef.Occurs(0), appdef.Occurs(100))
+		AddContainer("air_table_plan_item", appdef.NewQName(appdef.SysPackage, "air_table_plan_item"), appdef.Occurs(0), appdef.Occurs(defaultMaxOccurs))
 
 	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "air_table_plan_item"), appdef.DefKind_CRecord).
 		AddField("id_air_table_plan", appdef.DataKind_RecordID, true).
@@ -184,7 +185,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("bmanual", appdef.DataKind_int32, true).
 		AddField("id_prices", appdef.DataKind_RecordID, false).
 		AddField("number", appdef.DataKind_int32, false).
-		AddField("close_manualy", appdef.DataKind_int32, false).
+		AddField("close_manualy", appdef.DataKind_int32, false). // nolint
 		AddField("auto_accept_reservations", appdef.DataKind_int32, false).
 		AddField("only_reserved", appdef.DataKind_int32, false).
 		AddField("id_prices_original", appdef.DataKind_RecordID, false).
@@ -281,7 +282,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("login_screen", appdef.DataKind_int32, false).
 		AddField("id_themes", appdef.DataKind_RecordID, false).
 		AddField("device_profile_wsid", appdef.DataKind_int64, false).
-		AddContainer("restaurant_computers", appdef.NewQName(appdef.SysPackage, "restaurant_computers"), appdef.Occurs(0), appdef.Occurs(100))
+		AddContainer("restaurant_computers", appdef.NewQName(appdef.SysPackage, "restaurant_computers"), appdef.Occurs(0), appdef.Occurs(defaultMaxOccurs))
 
 	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "restaurant_computers"), appdef.DefKind_CRecord).
 		AddField("id_computers", appdef.DataKind_RecordID, true).

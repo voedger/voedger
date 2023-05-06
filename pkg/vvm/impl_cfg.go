@@ -98,9 +98,9 @@ func (cfg *VVMConfig) AddProcessorChannel(cg iprocbusmem.ChannelGroup, t Process
 	})
 }
 
-func (vvm *VVMConfig) ProvideServiceChannelFactory(procbus iprocbus.IProcBus) ServiceChannelFactory {
+func (cfg *VVMConfig) ProvideServiceChannelFactory(procbus iprocbus.IProcBus) ServiceChannelFactory {
 	return func(pct ProcessorChannelType, channelIdx int) iprocbus.ServiceChannel {
-		for groupIdx, pcg := range vvm.processorsChannels {
+		for groupIdx, pcg := range cfg.processorsChannels {
 			if pcg.ChannelType == pct {
 				return procbus.ServiceChannel(groupIdx, channelIdx)
 			}
