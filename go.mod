@@ -32,6 +32,7 @@ require (
 	github.com/gocql/gocql v1.3.1 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/flatbuffers v1.12.0 // indirect
+	github.com/google/gofuzz v1.2.0
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/heeus/core-logger v0.0.0-20211015110533-1499b5b04842 // indirect
