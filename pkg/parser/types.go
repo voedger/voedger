@@ -105,6 +105,7 @@ type WorkspaceStatement struct {
 type WorkspaceStmt struct {
 	Statement
 	Abstract   bool                 `parser:"@'ABSTRACT'?"`
+	Pool       bool                 `parser:"@('POOL' 'OF')?"`
 	Name       string               `parser:"'WORKSPACE' @Ident "`
 	Of         []DefQName           `parser:"('OF' @@ (',' @@)*)?"`
 	A          int                  `parser:"'('"`

@@ -143,4 +143,5 @@ ABSTRACT WORKSPACE AWorkspace (
 
 WORKSPACE MyWorkspace1 OF AWorkspace (
     -- Inherits everything declared in AWorkspace
+    POOL OF WORKSPACE MyPool ()
 );
