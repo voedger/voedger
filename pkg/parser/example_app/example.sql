@@ -23,7 +23,7 @@ FUNCTION ValidateFState(State int) RETURNS boolean ENGINE WASM;
 
 
 -- TABLE ... OF - declares the inheritance from type or table. PROJECTORS from the base table are not inherted.
-TABLE AirTablePlan OF CDOC (
+TABLE AirTablePlan INHERITS CDOC (
     FState int,
     Name text NOT NULL,
     VerifiableField text NOT NULL VERIFIABLE, -- Verifiable field
@@ -39,14 +39,14 @@ TABLE AirTablePlan OF CDOC (
 
 
 -- Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC
-TABLE SubscriptionProfile OF SINGLETONE (
+TABLE SubscriptionProfile INHERITS SINGLETONE (
     CustomerID text,
     CustomerKind int,
     CompanyName text
 );
 
 WORKSPACE MyWorkspace (
-    DESCRIPTOR OF NamedType ( -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
+    DESCRIPTOR OF TypeWithName ( -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
         Country text CHECK "^[A-Za-z]{2}$",
         Description text
     );
@@ -65,11 +65,14 @@ WORKSPACE MyWorkspace (
 	USE TABLE SomeSchema.SomeTable;
 	USE TABLE Untill.*; 
 
-    TYPE NamedType (
+    TYPE TypeWithName (
         Name text
     );
+    TYPE TypeWithKind (
+        Kind int
+    );
 
-    TABLE WsTable OF CDOC, Air.NamedType ( -- Multiple inheritance
+    TABLE WsTable INHERITS CDOC OF Air.TypeWithName, TypeWithKind ( -- Multiple types
         PsName text,
         TABLE Child (
             Number int				
@@ -86,7 +89,7 @@ WORKSPACE MyWorkspace (
 
     -- Projectors can only be declared in workspaces. Function can only take sys.Event as argument and return void.
     PROJECTOR ON COMMAND Air.Orders2 AS SomeProjectorFunc;
-    PROJECTOR ON COMMAND ARGUMENT NamedType AS Air.SomeProjectorFunc2;
+    PROJECTOR ON COMMAND ARGUMENT TypeWithName AS Air.SomeProjectorFunc2;
     PROJECTOR ON INSERT Air.AirTablePlan AS SomeProjectorFunc;
     PROJECTOR ON INSERT OR UPDATE IN (Air.AirTablePlan, WsTable) AS SomeProjectorFunc;
     PROJECTOR ON UPDATE Air.AirTablePlan AS SomeProjectorFunc;

@@ -316,10 +316,11 @@ type NamedParam struct {
 // TODO: validate that table has no duplicated fields
 type TableStmt struct {
 	Statement
-	Name  string          `parser:"'TABLE' @Ident"`
-	Of    []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
-	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
-	With  []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Name     string          `parser:"'TABLE' @Ident"`
+	Inherits DefQName        `parser:"('INHERITS' @@)?"`
+	Of       []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
+	Items    []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
+	With     []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
 func (s TableStmt) GetName() string { return s.Name }
