@@ -1,4 +1,3 @@
-SYNTAX VERSION 1;
 -- package consists of schema and resources
 -- schema consists of few schema files
 SCHEMA Air;
