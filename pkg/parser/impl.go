@@ -25,6 +25,7 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "Keywords", Pattern: `ON|AND|OR`},
 		{Name: "DEFAULTNEXTVAL", Pattern: `DEFAULT[ \r\n\t]+NEXTVAL`},
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
+		{Name: "EXTENSIONENGINE", Pattern: `EXTENSION[ \r\n\t]+ENGINE`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
 		{Name: "String", Pattern: `("(\\"|[^"])*")|('(\\'|[^'])*')`},
 		{Name: "Ident", Pattern: `[a-zA-Z_]\w*`},
@@ -189,48 +190,15 @@ func analyzeWithRefs(c *aContext, with []WithItem) {
 
 func analyseReferences(c *aContext) {
 	iterate(c.pkg.Ast, func(stmt interface{}) {
-		var err error
 		switch v := stmt.(type) {
 		case *CommandStmt:
 			c.pos = &v.Pos
-			resolve(v.Func, c, func(f *FunctionStmt) error {
-				return CompareParams(v.Params, f)
-			})
 			analyzeWithRefs(c, v.With)
 		case *QueryStmt:
 			c.pos = &v.Pos
-			resolve(v.Func, c, func(f *FunctionStmt) error {
-				err = CompareParams(v.Params, f)
-				if err != nil {
-					return err
-				}
-				if v.Returns != f.Returns {
-					return ErrFunctionResultIncorrect
-				}
-				return nil
-			})
 			analyzeWithRefs(c, v.With)
 		case *ProjectorStmt:
 			c.pos = &v.Pos
-			// Check function parameters and result
-			resolve(v.Func, c, func(f *FunctionStmt) error {
-				if len(f.Params) != 1 {
-					return ErrFunctionParamsIncorrect
-				}
-				if f.Params[0].NamedParam != nil {
-					if !isSysType(eventTypeName, f.Params[0].NamedParam.Type) {
-						return ErrFunctionParamsIncorrect
-					}
-				} else { // unnamed
-					if !isSysType(eventTypeName, *f.Params[0].UnnamedParamType) {
-						return ErrFunctionParamsIncorrect
-					}
-				}
-				if !isSysType(voidTypeName, f.Returns) {
-					return ErrFunctionResultIncorrect
-				}
-				return nil
-			})
 			// Check targets
 			for _, target := range v.Targets {
 				if v.On.Activate || v.On.Deactivate || v.On.Insert || v.On.Update {

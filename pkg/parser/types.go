@@ -67,13 +67,13 @@ type RootStatement struct {
 	Template *TemplateStmt `parser:"@@"`
 
 	// Also allowed in root
-	Role      *RoleStmt      `parser:"| @@"`
-	Comment   *CommentStmt   `parser:"| @@"`
-	Tag       *TagStmt       `parser:"| @@"`
-	Function  *FunctionStmt  `parser:"| @@"`
-	Workspace *WorkspaceStmt `parser:"| @@"`
-	Table     *TableStmt     `parser:"| @@"`
-	Type      *TypeStmt      `parser:"| @@"`
+	Role      *RoleStmt          `parser:"| @@"`
+	Comment   *CommentStmt       `parser:"| @@"`
+	Tag       *TagStmt           `parser:"| @@"`
+	ExtEngine *RootExtEngineStmt `parser:"| @@"`
+	Workspace *WorkspaceStmt     `parser:"| @@"`
+	Table     *TableStmt         `parser:"| @@"`
+	Type      *TypeStmt          `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
 
 	stmt interface{}
@@ -81,25 +81,65 @@ type RootStatement struct {
 
 type WorkspaceStatement struct {
 	// Only allowed in workspace
-	Projector *ProjectorStmt `parser:"@@"`
-	Command   *CommandStmt   `parser:"| @@"`
-	Query     *QueryStmt     `parser:"| @@"`
-	Rate      *RateStmt      `parser:"| @@"`
-	View      *ViewStmt      `parser:"| @@"`
-	UseTable  *UseTableStmt  `parser:"| @@"`
+	Rate     *RateStmt     `parser:"@@"`
+	View     *ViewStmt     `parser:"| @@"`
+	UseTable *UseTableStmt `parser:"| @@"`
 
 	// Also allowed in workspace
-	Role      *RoleStmt      `parser:"| @@"`
-	Comment   *CommentStmt   `parser:"| @@"`
-	Tag       *TagStmt       `parser:"| @@"`
-	Function  *FunctionStmt  `parser:"| @@"`
-	Workspace *WorkspaceStmt `parser:"| @@"`
-	Table     *TableStmt     `parser:"| @@"`
-	Type      *TypeStmt      `parser:"| @@"`
+	Role      *RoleStmt               `parser:"| @@"`
+	Comment   *CommentStmt            `parser:"| @@"`
+	Tag       *TagStmt                `parser:"| @@"`
+	ExtEngine *WorkspaceExtEngineStmt `parser:"| @@"`
+	Workspace *WorkspaceStmt          `parser:"| @@"`
+	Table     *TableStmt              `parser:"| @@"`
+	Type      *TypeStmt               `parser:"| @@"`
 	//Sequence  *sequenceStmt  `parser:"| @@"`
 	Grant *GrantStmt `parser:"| @@"`
 
 	stmt interface{}
+}
+
+type RootExtEngineStatement struct {
+	Function *FunctionStmt `parser:"@@"`
+	stmt     interface{}
+}
+
+type WorkspaceExtEngineStatement struct {
+	Function  *FunctionStmt  `parser:"@@"`
+	Projector *ProjectorStmt `parser:"| @@"`
+	Command   *CommandStmt   `parser:"| @@"`
+	Query     *QueryStmt     `parser:"| @@"`
+	stmt      interface{}
+}
+
+type WorkspaceExtEngineStmt struct {
+	Engine     EngineType                    `parser:"EXTENSIONENGINE @@"`
+	Statements []WorkspaceExtEngineStatement `parser:"'(' @@? (';' @@)* ';'? ')'"`
+}
+
+func (s *WorkspaceExtEngineStmt) Iterate(callback func(stmt interface{})) {
+	for i := 0; i < len(s.Statements); i++ {
+		raw := &s.Statements[i]
+		if raw.stmt == nil {
+			raw.stmt = extractStatement(*raw)
+		}
+		callback(raw.stmt)
+	}
+}
+
+type RootExtEngineStmt struct {
+	Engine     EngineType               `parser:"EXTENSIONENGINE @@"`
+	Statements []RootExtEngineStatement `parser:"'(' @@? (';' @@)* ';'? ')'"`
+}
+
+func (s *RootExtEngineStmt) Iterate(callback func(stmt interface{})) {
+	for i := 0; i < len(s.Statements); i++ {
+		raw := &s.Statements[i]
+		if raw.stmt == nil {
+			raw.stmt = extractStatement(*raw)
+		}
+		callback(raw.stmt)
+	}
 }
 
 type WorkspaceStmt struct {
@@ -177,7 +217,6 @@ type ProjectorStmt struct {
 	Name    string      `parser:"'PROJECTOR' @Ident?"`
 	On      ProjectorOn `parser:"'ON' @@"`
 	Targets []DefQName  `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
-	Func    DefQName    `parser:"'AS' @@"`
 }
 
 func (s ProjectorStmt) GetName() string { return s.Name }
@@ -267,7 +306,6 @@ type FunctionStmt struct {
 	Name    string          `parser:"'FUNCTION' @Ident"`
 	Params  []FunctionParam `parser:"'(' @@? (',' @@)* ')'"`
 	Returns TypeQName       `parser:"'RETURNS' @@"`
-	Engine  EngineType      `parser:"'ENGINE' @@"`
 }
 
 func (s FunctionStmt) GetName() string { return s.Name }
@@ -276,7 +314,6 @@ type CommandStmt struct {
 	Statement
 	Name   string          `parser:"'COMMAND' @Ident"`
 	Params []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
-	Func   DefQName        `parser:"'AS' @@"`
 	With   []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
@@ -293,7 +330,6 @@ type QueryStmt struct {
 	Name    string          `parser:"'QUERY' @Ident"`
 	Params  []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
 	Returns TypeQName       `parser:"'RETURNS' @@"`
-	Func    DefQName        `parser:"'AS' @@"`
 	With    []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 }
 

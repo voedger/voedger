@@ -54,17 +54,21 @@ func Test_Duplicates(t *testing.T) {
 	require := require.New(t)
 
 	ast1, err := ParseFile("file1.sql", `SCHEMA test; 
-	FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
-	FUNCTION MyTableValidator(TableRow) RETURNS string ENGINE WASM;	
-	FUNCTION MyFunc2() RETURNS void ENGINE BUILTIN;
+	EXTENSION ENGINE BUILTIN (
+		FUNCTION MyTableValidator() RETURNS void;
+		FUNCTION MyTableValidator(TableRow) RETURNS string;	
+		FUNCTION MyFunc2() RETURNS void;
+	)
 	`)
 	require.NoError(err)
 
 	ast2, err := ParseFile("file2.sql", `SCHEMA test; 
 	WORKSPACE ChildWorkspace (
 		TAG MyFunc2; -- duplicate
-		FUNCTION MyFunc3() RETURNS void ENGINE BUILTIN;
-		FUNCTION MyFunc4() RETURNS void ENGINE BUILTIN;
+		EXTENSION ENGINE BUILTIN (
+			FUNCTION MyFunc3() RETURNS void;
+			FUNCTION MyFunc4() RETURNS void;
+		);
 		WORKSPACE InnerWorkspace (
 			ROLE MyFunc4; -- duplicate
 		)
@@ -78,9 +82,9 @@ func Test_Duplicates(t *testing.T) {
 	// ./types2.go:17:7: EmbedParser redeclared
 	//     ./types.go:17:6: other declaration of EmbedParser
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:3:2: MyTableValidator redeclared",
+		"file1.sql:4:3: MyTableValidator redeclared",
 		"file2.sql:3:3: MyFunc2 redeclared",
-		"file2.sql:7:4: MyFunc4 redeclared",
+		"file2.sql:9:4: MyFunc4 redeclared",
 	}, "\n"))
 
 }
@@ -89,19 +93,21 @@ func Test_Comments(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("example.sql", `SCHEMA test; 
-	-- My function
-	-- line 2
-	FUNCTION MyTableValidator() RETURNS void ENGINE BUILTIN;
+	EXTENSION ENGINE BUILTIN (
+		-- My function
+		-- line 2
+		FUNCTION MyFunc() RETURNS void;
+	);
 	`)
 	require.Nil(err)
 
 	ps, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
 	require.Nil(err)
 
-	require.NotNil(ps.Ast.Statements[0].Function.Comments)
-	require.Equal(2, len(ps.Ast.Statements[0].Function.Comments))
-	require.Equal("My function", ps.Ast.Statements[0].Function.Comments[0])
-	require.Equal("line 2", ps.Ast.Statements[0].Function.Comments[1])
+	require.NotNil(ps.Ast.Statements[0].ExtEngine.Statements[0].Function.Comments)
+	require.Equal(2, len(ps.Ast.Statements[0].ExtEngine.Statements[0].Function.Comments))
+	require.Equal("My function", ps.Ast.Statements[0].ExtEngine.Statements[0].Function.Comments[0])
+	require.Equal("line 2", ps.Ast.Statements[0].ExtEngine.Statements[0].Function.Comments[1])
 }
 
 func Test_UnexpectedSchema(t *testing.T) {
@@ -122,9 +128,11 @@ func Test_Undefined(t *testing.T) {
 
 	fs, err := ParseFile("example.sql", `SCHEMA test; 
 	WORKSPACE test (
-    	COMMAND Orders AS SomeCmdFunc;
-    	QUERY Query1 RETURNS text AS QueryFunc;
-    	PROJECTOR ON COMMAND Air.CreateUPProfile AS Air.SomeProjectorFunc;
+		EXTENSION ENGINE WASM (
+			COMMAND Orders() WITH Tags=[UndefinedTag];
+			QUERY Query1 RETURNS text WITH Rate=UndefinedRate, Comment=Air.UndefinedComment;
+			PROJECTOR ON COMMAND Air.CreateUPProfile;
+		)
 	)
 	`)
 	require.Nil(err)
@@ -135,10 +143,10 @@ func Test_Undefined(t *testing.T) {
 	err = MergePackageSchemas([]*PackageSchemaAST{pkg})
 
 	require.EqualError(err, strings.Join([]string{
-		"example.sql:3:6: SomeCmdFunc undefined",
-		"example.sql:4:6: QueryFunc undefined",
-		"example.sql:5:6: Air undefined",
-		"example.sql:5:6: Air undefined",
+		"example.sql:4:4: UndefinedTag undefined",
+		"example.sql:5:4: UndefinedRate undefined",
+		"example.sql:5:4: Air undefined",
+		"example.sql:6:4: Air undefined",
 	}, "\n"))
 }
 
@@ -149,37 +157,38 @@ func Test_Imports(t *testing.T) {
 	IMPORT SCHEMA "github.com/untillpro/airsbp3/pkg2";
 	IMPORT SCHEMA "github.com/untillpro/airsbp3/pkg3" AS air;
 	WORKSPACE test (
-    	COMMAND Orders AS pkg2.SomeCmdFunc;
-    	QUERY Query1 RETURNS text AS pkg2.QueryFunc;
-    	QUERY Query2 RETURNS text AS air.QueryFunc2;
-    	PROJECTOR ON COMMAND Air.CreateUPProfile AS pkg2.SomeProjectorFunc2;
+		EXTENSION ENGINE WASM (
+    		COMMAND Orders WITH Tags=[pkg2.SomeTag];
+    		QUERY Query1 RETURNS text WITH Comment=pkg2.SomeComment;
+    		QUERY Query2 RETURNS text WITH Comment=air.SomeComment;
+    		QUERY Query3 RETURNS text WITH Comment=air.SomeComment2; -- air.SomeComment2 undefined
+    		PROJECTOR ON COMMAND Air.CreateUPProfile; -- Air undefined
+		)
 	)
 	`)
-	require.Nil(err)
+	require.NoError(err)
 	pkg1, err := MergeFileSchemaASTs("github.com/untillpro/airsbp3/pkg1", []*FileSchemaAST{fs})
-	require.Nil(err)
+	require.NoError(err)
 
 	fs, err = ParseFile("example.sql", `SCHEMA pkg2;
-	FUNCTION SomeCmdFunc() RETURNS void ENGINE BUILTIN;
-	FUNCTION QueryFunc() RETURNS void ENGINE BUILTIN;
-	FUNCTION SomeProjectorFunc() RETURNS void ENGINE BUILTIN;
+	TAG SomeTag;
+	COMMENT SomeComment "Hello world!";
 	`)
-	require.Nil(err)
+	require.NoError(err)
 	pkg2, err := MergeFileSchemaASTs("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
-	require.Nil(err)
+	require.NoError(err)
 
 	fs, err = ParseFile("example.sql", `SCHEMA pkg3;
-	FUNCTION QueryFunc2() RETURNS text ENGINE BUILTIN;
+	COMMENT SomeComment "Hello world!";
 	`)
-	require.Nil(err)
+	require.NoError(err)
 	pkg3, err := MergeFileSchemaASTs("github.com/untillpro/airsbp3/pkg3", []*FileSchemaAST{fs})
-	require.Nil(err)
+	require.NoError(err)
 
 	err = MergePackageSchemas([]*PackageSchemaAST{pkg1, pkg2, pkg3})
 	require.EqualError(err, strings.Join([]string{
-		"example.sql:6:6: function result do not match",
-		"example.sql:8:6: pkg2.SomeProjectorFunc2 undefined",
-		"example.sql:8:6: Air undefined",
+		"example.sql:9:7: air.SomeComment2 undefined",
+		"example.sql:10:7: Air undefined",
 	}, "\n"))
 
 }

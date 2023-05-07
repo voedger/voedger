@@ -14,14 +14,6 @@ TAG BackofficeTag;
 -- Declares ROLE
 ROLE UntillPaymentsUser;
 
-
--- Function which takes sys.TableRow (unnamed param), returns boolean and implemented in WASM module in this package
-FUNCTION ValidateRow(TableRow) RETURNS boolean ENGINE WASM;
-
--- Function which takes named parameter, returns boolean, and implemented in WASM module in this package
-FUNCTION ValidateFState(State int) RETURNS boolean ENGINE WASM;
-
-
 -- TABLE ... OF - declares the inheritance from type or table. PROJECTORS from the base table are not inherted.
 TABLE AirTablePlan INHERITS CDOC (
     FState int,
@@ -43,6 +35,17 @@ TABLE SubscriptionProfile INHERITS SINGLETONE (
     CustomerID text,
     CustomerKind int,
     CompanyName text
+);
+
+-- Package-level extensions
+EXTENSION ENGINE WASM (
+
+    -- Function which takes sys.TableRow (unnamed param), returns boolean and implemented in WASM module in this package
+    FUNCTION ValidateRow(TableRow) RETURNS boolean;
+
+    -- Function which takes named parameter, returns boolean, and implemented in WASM module in this package
+    FUNCTION ValidateFState(State int) RETURNS boolean;
+
 );
 
 WORKSPACE MyWorkspace (
@@ -79,39 +82,34 @@ WORKSPACE MyWorkspace (
         )
     );	
 
-    -- Functions which are only used by statements within this workspace
-    FUNCTION SomeProjectorFunc(Event) RETURNS void ENGINE BUILTIN;
-    FUNCTION SomeProjectorFunc2(event sys.Event) RETURNS void ENGINE BUILTIN;
-    FUNCTION OrderFunc(Untill.Orders) RETURNS void ENGINE BUILTIN;
-    FUNCTION Order2Func(Untill.Orders, Untill.PBill) RETURNS void ENGINE BUILTIN;
-    FUNCTION QueryFunc() RETURNS text ENGINE BUILTIN;
-    FUNCTION Qiery2Func(Untill.Orders, Untill.PBill) RETURNS text ENGINE BUILTIN;
+    -- Workspace-level extensions 
+    EXTENSION ENGINE BUILTIN (
 
-    -- Projectors can only be declared in workspaces. Function can only take sys.Event as argument and return void.
-    PROJECTOR ON COMMAND Air.Orders2 AS SomeProjectorFunc;
-    PROJECTOR ON COMMAND ARGUMENT TypeWithName AS Air.SomeProjectorFunc2;
-    PROJECTOR ON INSERT Air.AirTablePlan AS SomeProjectorFunc;
-    PROJECTOR ON INSERT OR UPDATE IN (Air.AirTablePlan, WsTable) AS SomeProjectorFunc;
-    PROJECTOR ON UPDATE Air.AirTablePlan AS SomeProjectorFunc;
-    PROJECTOR ON UPDATE OR INSERT Air.AirTablePlan AS SomeProjectorFunc;
-    PROJECTOR ON ACTIVATE Air.AirTablePlan AS SomeProjectorFunc; -- Triggered when Article is activated
-    PROJECTOR ON ACTIVATE OR DEACTIVATE Air.AirTablePlan AS SomeProjectorFunc; -- Triggered when Article is activated or deactivated
-    PROJECTOR ApplyUPProfile ON COMMAND IN (Air.Orders2, Air.Orders3) AS Air.SomeProjectorFunc;
+        -- Projectors can only be declared in workspaces. Function can only take sys.Event as argument and return void.
+        PROJECTOR SomeProjector1 ON COMMAND Air.Orders2;
+        PROJECTOR SomeProjector2 ON COMMAND ARGUMENT TypeWithName;
+        PROJECTOR SomeProjector3 ON INSERT Air.AirTablePlan;
+        PROJECTOR SomeProjector4 ON INSERT OR UPDATE IN (Air.AirTablePlan, WsTable);
+        PROJECTOR SomeProjector5 ON UPDATE Air.AirTablePlan;
+        PROJECTOR SomeProjector6 ON UPDATE OR INSERT Air.AirTablePlan;
+        PROJECTOR SomeProjector7 ON ACTIVATE Air.AirTablePlan; -- Triggered when Article is activated
+        PROJECTOR SomeProjector8 ON ACTIVATE OR DEACTIVATE Air.AirTablePlan; -- Triggered when Article is activated or deactivated
+        PROJECTOR ApplyUPProfile ON COMMAND IN (Air.Orders2, Air.Orders3);
 
-    -- Commands can only be declared in workspaces
-    COMMAND Orders2(Untill.Orders) AS OrderFunc;
-    
-    -- Command with declared Comment, Tags and Rate
-    COMMAND Orders3(Order Untill.Orders, Untill.PBill) AS Order2Func WITH 
-        Comment=Air.PosComment, 
-        Tags=[BackofficeTag, Air.PosTag],
-        Rate=BackofficeFuncRate1; 
+        -- Commands can only be declared in workspaces
+        COMMAND Orders2(Untill.Orders);
+        
+        -- Command with declared Comment, Tags and Rate
+        COMMAND Orders3(Order Untill.Orders, Untill.PBill) WITH 
+            Comment=Air.PosComment, 
+            Tags=[BackofficeTag, Air.PosTag],
+            Rate=BackofficeFuncRate1; 
 
-    -- Qieries can only be declared in workspaces
-    QUERY Query1 RETURNS text AS QueryFunc;
-    QUERY _Query1() RETURNS text AS QueryFunc WITH Comment=Air.PosComment, Tags=[BackofficeTag, Air.PosTag];
-    QUERY Query2(Order Untill.Orders, Untill.PBill) RETURNS text AS Qiery2Func;
-
+        -- Qieries can only be declared in workspaces
+        QUERY Query1 RETURNS text;
+        QUERY _Query1() RETURNS text WITH Comment=Air.PosComment, Tags=[BackofficeTag, Air.PosTag];
+        QUERY Query2(Order Untill.Orders, Untill.PBill) RETURNS text;
+    );
 
     -- ACLs
     GRANT ALL ON ALL TABLES WITH TAG untill.Backoffice TO LocationManager;
@@ -133,8 +131,6 @@ WORKSPACE MyWorkspace (
         XZReportWDocID id,
         PRIMARY KEY ((Year), Month, Day, Kind, Number)
     ) AS RESULT OF Air.UpdateXZReportsView;
-
-
 );
 
 ABSTRACT WORKSPACE AWorkspace (
