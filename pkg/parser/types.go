@@ -5,8 +5,6 @@
 
 package parser
 
-// TODO: schema name starts with lowercase
-
 import (
 	"fmt"
 	fs "io/fs"
@@ -416,8 +414,20 @@ type PrimaryKeyExpr struct {
 func (s ViewStmt) GetName() string { return s.Name }
 
 type ViewField struct {
-	Name string `parser:"@Ident"`
-	Type string `parser:"@Ident"` // TODO: viewField: predefined types?
+	Name string        `parser:"@Ident"`
+	Type ViewFieldType `parser:"@@"`
+}
+
+type ViewFieldType struct {
+	Int32   bool `parser:"@(('sys' '.')? ('int'|'int32'))"`
+	Int64   bool `parser:"| @(('sys' '.')? 'int64')"`
+	Float32 bool `parser:"@(('sys' '.')? ('float'|'float32'))"`
+	Float64 bool `parser:"| @(('sys' '.')? 'float64')"`
+	Bytes   bool `parser:"| @('sys.'? 'blob')"` // TODO: blob or byte[] ?
+	Text    bool `parser:"| @('sys.'? 'text')"` // TODO: string or text ?
+	QName   bool `parser:"| @('sys.'? 'qname')"`
+	Bool    bool `parser:"| @('sys.'? 'bool')"`
+	Id      bool `parser:"| @(('sys' '.')? 'id')"`
 }
 
 // TODO TYPE + "TABLE|WORKSPACE OF" validation

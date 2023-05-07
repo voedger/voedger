@@ -144,10 +144,11 @@ WORKSPACE MyWorkspace (
     ) AS RESULT OF air.UpdateDashboard;
 
     VIEW OrdersCountView(
-        Year int32,
+        Year int, -- same as int32
         Month int32, 
-        Day int32, 
+        Day sys.int32, -- same as int32
         Qnantity int32,
+        SomeField int32,
         PRIMARY KEY ((Year), Month, Day)
     ) AS RESULT OF CountOrders;
 
