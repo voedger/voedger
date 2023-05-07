@@ -130,8 +130,8 @@ func Test_Undefined(t *testing.T) {
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
 			COMMAND Orders() WITH Tags=[UndefinedTag];
-			QUERY Query1 RETURNS text WITH Rate=UndefinedRate, Comment=Air.UndefinedComment;
-			PROJECTOR ON COMMAND Air.CreateUPProfile AFFECTS sys.HTTPStorage;
+			QUERY Query1 RETURNS text WITH Rate=UndefinedRate, Comment=xyz.UndefinedComment;
+			PROJECTOR ON COMMAND xyz.CreateUPProfile AFFECTS sys.HTTPStorage;
 		)
 	)
 	`)
@@ -145,8 +145,8 @@ func Test_Undefined(t *testing.T) {
 	require.EqualError(err, strings.Join([]string{
 		"example.sql:4:4: UndefinedTag undefined",
 		"example.sql:5:4: UndefinedRate undefined",
-		"example.sql:5:4: Air undefined",
-		"example.sql:6:4: Air undefined",
+		"example.sql:5:4: xyz undefined",
+		"example.sql:6:4: xyz undefined",
 	}, "\n"))
 }
 
