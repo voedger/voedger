@@ -5,6 +5,8 @@
 
 package parser
 
+// TODO: schema name starts with lowercase
+
 import (
 	"fmt"
 	fs "io/fs"
@@ -217,6 +219,7 @@ type ProjectorStmt struct {
 	Name    string      `parser:"'PROJECTOR' @Ident?"`
 	On      ProjectorOn `parser:"'ON' @@"`
 	Targets []DefQName  `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
+	Affects []DefQName  `parser:"'AFFECTS' @@ ('AND' @@)*"` // TODO: AFFECTS: 1) HTTP is not an Intent. 2) Only allow one type of AFFECT per projector??? Sequences???
 }
 
 func (s ProjectorStmt) GetName() string { return s.Name }

@@ -74,6 +74,11 @@ WORKSPACE MyWorkspace (
     TYPE TypeWithKind (
         Kind int
     );
+    TYPE SubscriptionEvent (
+        Origin text,
+        Data text
+    );
+
 
     TABLE WsTable INHERITS CDOC OF Air.TypeWithName, TypeWithKind ( -- Multiple types
         PsName text,
@@ -85,22 +90,28 @@ WORKSPACE MyWorkspace (
     -- Workspace-level extensions 
     EXTENSION ENGINE BUILTIN (
 
-        -- Projectors can only be declared in workspaces. Function can only take sys.Event as argument and return void.
-        PROJECTOR SomeProjector1 ON COMMAND Air.Orders2;
-        PROJECTOR SomeProjector2 ON COMMAND ARGUMENT TypeWithName;
-        PROJECTOR SomeProjector3 ON INSERT Air.AirTablePlan;
-        PROJECTOR SomeProjector4 ON INSERT OR UPDATE IN (Air.AirTablePlan, WsTable);
-        PROJECTOR SomeProjector5 ON UPDATE Air.AirTablePlan;
-        PROJECTOR SomeProjector6 ON UPDATE OR INSERT Air.AirTablePlan;
-        PROJECTOR SomeProjector7 ON ACTIVATE Air.AirTablePlan; -- Triggered when Article is activated
-        PROJECTOR SomeProjector8 ON ACTIVATE OR DEACTIVATE Air.AirTablePlan; -- Triggered when Article is activated or deactivated
-        PROJECTOR ApplyUPProfile ON COMMAND IN (Air.Orders2, Air.Orders3);
+        -- Projector can only be declared in workspace.
+        -- A builtin function OrdersCountProjector must exist in package resources.
+        -- Projector triggered by command and it affects Air.OrdersCountView which is a VIEW.
+        -- Projector can affect either VIEWs or Storage QNames (except ViewRecordStorage)
+        PROJECTOR CountOrders ON COMMAND Air.Orders AFFECTS Air.OrdersCountView;
+        
+        -- Projector triggered by command argument and it affects SubscriptionProfile which is a Storage
+        PROJECTOR UpdateSubscriptionProfile ON COMMAND ARGUMENT SubscriptionEvent AFFECTS sys.HTTPStorage;
+
+        -- Projectors triggered by CUD operations
+        PROJECTOR AirPlanThumbnailGen ON INSERT Air.AirTablePlan AFFECTS AirPlanThumbnails;
+        PROJECTOR UpdateDashboard ON COMMAND IN (Air.Orders, Air.Orders2) AFFECTS DashboardView;
+        PROJECTOR UpdateActivePlans ON ACTIVATE OR DEACTIVATE Air.AirTablePlan AFFECTS ActiveTablePlansView;
+        
+        -- Some projector which sends E-mails and performs HTTP queries
+        PROJECTOR NotifyOnChanges ON INSERT OR UPDATE IN (Air.AirTablePlan, WsTable) AFFECTS sys.SendMailStorage AND sys.HTTPStorage;
 
         -- Commands can only be declared in workspaces
-        COMMAND Orders2(Untill.Orders);
+        COMMAND Orders(Untill.Orders);
         
         -- Command with declared Comment, Tags and Rate
-        COMMAND Orders3(Order Untill.Orders, Untill.PBill) WITH 
+        COMMAND Orders2(Order Untill.Orders, Untill.PBill) WITH 
             Comment=Air.PosComment, 
             Tags=[BackofficeTag, Air.PosTag],
             Rate=BackofficeFuncRate1; 
@@ -130,7 +141,16 @@ WORKSPACE MyWorkspace (
         Number int32, 
         XZReportWDocID id,
         PRIMARY KEY ((Year), Month, Day, Kind, Number)
-    ) AS RESULT OF Air.UpdateXZReportsView;
+    ) AS RESULT OF Air.UpdateDashboard;
+
+    VIEW OrdersCountView(
+        Year int32,
+        Month int32, 
+        Day int32, 
+        Qnantity int32,
+        PRIMARY KEY ((Year), Month, Day)
+    ) AS RESULT OF CountOrders;
+
 );
 
 ABSTRACT WORKSPACE AWorkspace (
