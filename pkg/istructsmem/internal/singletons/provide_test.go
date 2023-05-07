@@ -54,10 +54,6 @@ func Test_BasicUsage(t *testing.T) {
 		require.NoError(err)
 		require.NotEqual(istructs.NullRecordID, id)
 
-		n, err := stones.QName(id)
-		require.NoError(err)
-		require.Equal(testName, n)
-
 		t.Run("must be able to load early stored singletons", func(t *testing.T) {
 			versions1 := vers.New()
 			if err := versions1.Prepare(storage); err != nil {
@@ -74,10 +70,6 @@ func Test_BasicUsage(t *testing.T) {
 			id1, err := stones1.ID(testName)
 			require.NoError(err)
 			require.Equal(id, id1)
-
-			n1, err := stones1.QName(id)
-			require.NoError(err)
-			require.Equal(n, n1)
 		})
 	})
 }
@@ -90,9 +82,6 @@ func test_AppDefSingletons(t *testing.T, appDef appdef.IAppDef, st *Singletons) 
 				id, err := st.ID(d.QName())
 				require.NoError(err)
 				require.NotEqual(istructs.NullRecordID, id)
-				name, err := st.QName(id)
-				require.NoError(err)
-				require.Equal(d.QName(), name)
 			}
 		})
 }
@@ -130,14 +119,13 @@ func Test_SingletonsGetID(t *testing.T) {
 	})
 
 	testID := func(id istructs.RecordID, known bool, qname appdef.QName) {
-		t.Run(fmt.Sprintf("test Singletons.GetQName(%v)", id), func(t *testing.T) {
-			qName, err := st.QName(id)
+		t.Run(fmt.Sprintf("test Singletons QName(%v) founded", id), func(t *testing.T) {
+			n, ok := st.ids[id]
 			if known {
-				require.NoError(err)
-				require.Equal(qname, qName)
+				require.True(ok)
+				require.Equal(qname, n)
 			} else {
-				require.ErrorIs(err, ErrIDNotFound)
-				require.Equal(qName, appdef.NullQName)
+				require.False(ok)
 			}
 		})
 	}

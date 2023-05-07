@@ -50,7 +50,7 @@ func (cnt *Containers) Prepare(storage istorage.IAppStorage, versions *vers.Vers
 		return err
 	}
 
-	if err = cnt.collectAllContainers(appDef); err != nil {
+	if err = cnt.collectAll(appDef); err != nil {
 		return err
 	}
 
@@ -64,10 +64,10 @@ func (cnt *Containers) Prepare(storage istorage.IAppStorage, versions *vers.Vers
 }
 
 // Retrieves and stores IDs for all known containers in application definition. Must be called then application starts
-func (cnt *Containers) collectAllContainers(appDef appdef.IAppDef) (err error) {
+func (cnt *Containers) collectAll(appDef appdef.IAppDef) (err error) {
 
 	// system containers
-	cnt.collectSysContainer("", NullContainerID)
+	cnt.collectSys("", NullContainerID)
 
 	// application containers
 	if appDef != nil {
@@ -76,7 +76,7 @@ func (cnt *Containers) collectAllContainers(appDef appdef.IAppDef) (err error) {
 				d.Containers(
 					func(c appdef.IContainer) {
 						if !c.IsSys() {
-							err = errors.Join(err, cnt.collectAppContainer(c.Name()))
+							err = errors.Join(err, cnt.collect(c.Name()))
 						}
 					})
 			})
@@ -86,7 +86,7 @@ func (cnt *Containers) collectAllContainers(appDef appdef.IAppDef) (err error) {
 }
 
 // Retrieves and stores ID for specified application container
-func (cnt *Containers) collectAppContainer(name string) (err error) {
+func (cnt *Containers) collect(name string) (err error) {
 	if _, ok := cnt.containers[name]; ok {
 		return nil // already known container
 	}
@@ -105,7 +105,7 @@ func (cnt *Containers) collectAppContainer(name string) (err error) {
 }
 
 // Remember ID for specified system container
-func (cnt *Containers) collectSysContainer(name string, id ContainerID) {
+func (cnt *Containers) collectSys(name string, id ContainerID) {
 	cnt.containers[name] = id
 	cnt.ids[id] = name
 }

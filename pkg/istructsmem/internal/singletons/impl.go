@@ -35,16 +35,6 @@ func (st *Singletons) ID(qName appdef.QName) (istructs.RecordID, error) {
 	return istructs.NullRecordID, fmt.Errorf("unable to find singleton ID for definition «%v»: %w", qName, ErrNameNotFound)
 }
 
-// Returns QName for CDoc singleton with specified ID
-func (st *Singletons) QName(id istructs.RecordID) (appdef.QName, error) {
-	name, ok := st.ids[id]
-	if ok {
-		return name, nil
-	}
-
-	return appdef.NullQName, fmt.Errorf("unknown singleton ID «%v»: %w", id, ErrIDNotFound)
-}
-
 // Loads all singletons IDs from storage, add all known application singletons and store if some changes.
 // Must be called at application starts
 func (st *Singletons) Prepare(storage istorage.IAppStorage, versions *vers.Versions, appDef appdef.IAppDef) (err error) {
