@@ -93,6 +93,7 @@ func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST)
 
 	errs := make([]error, 0)
 	errs = analyseDuplicateNames(headAst, errs)
+	errs = analyseDuplicateNamesInSchemas(headAst, errs)
 	cleanupComments(headAst)
 	cleanupImports(headAst)
 
@@ -100,6 +101,33 @@ func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST)
 		QualifiedPackageName: qualifiedPackageName,
 		Ast:                  headAst,
 	}, errors.Join(errs...)
+}
+
+func analyseDuplicateNamesInSchemas(schema *SchemaAST, errs []error) []error {
+	iterate(schema, func(stmt interface{}) {
+		if view, ok := stmt.(*ViewStmt); ok {
+			numPK := 0
+			fields := make(map[string]int)
+			for i := range view.Fields {
+				fe := view.Fields[i]
+				if fe.PrimaryKey != nil {
+					if numPK == 1 {
+						errs = append(errs, errorAt(ErrPrimaryKeyRedeclared, &fe.Pos))
+					} else {
+						numPK++
+					}
+				}
+				if fe.Field != nil {
+					if _, ok := fields[fe.Field.Name]; ok {
+						errs = append(errs, errorAt(ErrRedeclared(fe.Field.Name), &fe.Pos))
+					} else {
+						fields[fe.Field.Name] = i
+					}
+				}
+			}
+		}
+	})
+	return errs
 }
 
 func analyseDuplicateNames(schema *SchemaAST, errs []error) []error {

@@ -89,6 +89,33 @@ func Test_Duplicates(t *testing.T) {
 
 }
 
+func Test_DuplicatesInViews(t *testing.T) {
+	require := require.New(t)
+
+	ast, err := ParseFile("file2.sql", `SCHEMA test; 
+	WORKSPACE Workspace (
+		VIEW test(
+			field1 int,
+			field2 int,
+			field1 text,
+			PRIMARY KEY(field1),
+			PRIMARY KEY(field2)			
+		) AS RESULT OF Proj1;
+	)
+	`)
+	require.NoError(err)
+
+	_, err = MergeFileSchemaASTs("", []*FileSchemaAST{ast})
+
+	// TODO: use golang messages like
+	// ./types2.go:17:7: EmbedParser redeclared
+	//     ./types.go:17:6: other declaration of EmbedParser
+	require.EqualError(err, strings.Join([]string{
+		"file2.sql:6:4: field1 redeclared",
+		"file2.sql:8:4: primary key redeclared",
+	}, "\n"))
+
+}
 func Test_Comments(t *testing.T) {
 	require := require.New(t)
 

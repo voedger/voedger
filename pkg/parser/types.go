@@ -399,9 +399,8 @@ type ViewStmt struct {
 	ResultOf DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
 }
 
-// TODO: validate that view has not more than 1 PrimaryKeyExpr
-// TODO: validate that view has no duplicated fields
 type ViewItemExpr struct {
+	Pos        lexer.Position
 	PrimaryKey *PrimaryKeyExpr `parser:"(PRIMARYKEY '(' @@ ')')"`
 	Field      *ViewField      `parser:"| @@"`
 }
