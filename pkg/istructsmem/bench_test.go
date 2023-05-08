@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -55,8 +56,8 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	// Names
 
 	appName := istructs.AppQName_test1_app1
-	odocQName := istructs.NewQName("test", "odoc")
-	cmdQName := istructs.NewQName("test", "cmd")
+	odocQName := appdef.NewQName("test", "odoc")
+	cmdQName := appdef.NewQName("test", "cmd")
 
 	// odoc field names and values
 
@@ -65,39 +66,41 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	stringFieldNames := make([]string, numOfIntFields)
 	stringFieldValues := make(map[string]string)
 
-	// Con
+	// application definition
+	appDef := func() appdef.IAppDefBuilder {
+		cache := appdef.New()
 
-	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName)
-
-	// Register odoc schema
-	{
-		s := cfg.Schemas.Add(odocQName, istructs.SchemaKind_ODoc)
+		s := cache.AddStruct(odocQName, appdef.DefKind_ODoc)
 		for i := 0; i < numOfIntFields; i++ {
 
 			intFieldName := fmt.Sprintf("i%v", i)
-			s.AddField(intFieldName, istructs.DataKind_int64, true)
+			s.AddField(intFieldName, appdef.DataKind_int64, true)
 			intFieldNames[i] = intFieldName
 			intFieldNamesFloat64Values[intFieldName] = float64(i)
 
 			stringFieldName := fmt.Sprintf("s%v", i)
-			s.AddField(stringFieldName, istructs.DataKind_string, true)
+			s.AddField(stringFieldName, appdef.DataKind_string, true)
 			stringFieldNames[i] = stringFieldName
 			stringFieldValues[stringFieldName] = stringFieldName
 
 		}
+		return cache
 	}
+
+	// Con
+
+	cfgs := make(AppConfigsType, 1)
+	cfg := cfgs.AddConfig(appName, appDef())
 
 	// Register command
 	{
-		cfg.Resources.Add(NewCommandFunction(cmdQName, odocQName, istructs.NullQName, istructs.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdQName, odocQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
 	}
 
-	provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.Nil(err)
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 
 	appStructs, err := provider.AppStructs(appName)
-	require.Nil(err)
+	require.NoError(err)
 
 	start := time.Now()
 	b.ResetTimer()
@@ -119,7 +122,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 			})
 
 		cmd := bld.ArgumentObjectBuilder()
-		cmd.PutRecordID(istructs.SystemField_ID, 1)
+		cmd.PutRecordID(appdef.SystemField_ID, 1)
 		for i := 0; i < numOfIntFields; i++ {
 			cmd.PutNumber(intFieldNames[i], intFieldNamesFloat64Values[intFieldNames[i]])
 			cmd.PutString(stringFieldNames[i], stringFieldValues[stringFieldNames[i]])
@@ -132,7 +135,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 	}
 	b.ReportMetric(float64(b.N)/time.Since(start).Seconds(), "op/s")
-	require.Nil(err)
+	require.NoError(err)
 
 }
 
@@ -182,7 +185,7 @@ func bench_UnmarshallJSONForBuildRawEvent(b *testing.B, numOfIntFields int) {
 		}
 	}
 	bytes, err := json.Marshal(srcMap)
-	require.Nil(err)
+	require.NoError(err)
 
 	start := time.Now()
 	b.ResetTimer()

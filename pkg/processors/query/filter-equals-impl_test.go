@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestEqualsFilter_IsMatch(t *testing.T) {
 	match := func(match bool, err error) bool {
-		require.Nil(t, err)
+		require.NoError(t, err)
 		return match
 	}
 	t.Run("Compare int32", func(t *testing.T) {
@@ -23,7 +24,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			r.Set("age", age)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"age": istructs.DataKind_int32}
+		fd := coreutils.FieldsDef{"age": appdef.DataKind_int32}
 		ageFilter := func(age int) IFilter {
 			return &EqualsFilter{
 				field: "age",
@@ -31,10 +32,10 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {
-			require.True(t, match(ageFilter(42).IsMatch(schemaFields, row(42))))
+			require.True(t, match(ageFilter(42).IsMatch(fd, row(42))))
 		})
 		t.Run("Should not match", func(t *testing.T) {
-			require.False(t, match(ageFilter(45).IsMatch(schemaFields, row(42))))
+			require.False(t, match(ageFilter(45).IsMatch(fd, row(42))))
 		})
 	})
 	t.Run("Compare int64", func(t *testing.T) {
@@ -43,7 +44,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			r.Set("age", age)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"age": istructs.DataKind_int64}
+		fd := coreutils.FieldsDef{"age": appdef.DataKind_int64}
 		ageFilter := func(age int) IFilter {
 			return &EqualsFilter{
 				field: "age",
@@ -51,10 +52,10 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {
-			require.True(t, match(ageFilter(42).IsMatch(schemaFields, row(42))))
+			require.True(t, match(ageFilter(42).IsMatch(fd, row(42))))
 		})
 		t.Run("Should not match", func(t *testing.T) {
-			require.False(t, match(ageFilter(45).IsMatch(schemaFields, row(42))))
+			require.False(t, match(ageFilter(45).IsMatch(fd, row(42))))
 		})
 	})
 	t.Run("Compare float32", func(t *testing.T) {
@@ -63,7 +64,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			r.Set("height", height)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"height": istructs.DataKind_float32}
+		fd := coreutils.FieldsDef{"height": appdef.DataKind_float32}
 		heightFilter := func(height float32) IFilter {
 			return &EqualsFilter{
 				field:   "height",
@@ -72,10 +73,10 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {
-			require.True(t, match(heightFilter(42.7).IsMatch(schemaFields, row(42.7))))
+			require.True(t, match(heightFilter(42.7).IsMatch(fd, row(42.7))))
 		})
 		t.Run("Should not match", func(t *testing.T) {
-			require.False(t, match(heightFilter(42.71).IsMatch(schemaFields, row(42.7))))
+			require.False(t, match(heightFilter(42.71).IsMatch(fd, row(42.7))))
 		})
 	})
 	t.Run("Compare float64", func(t *testing.T) {
@@ -84,7 +85,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			r.Set("height", height)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"height": istructs.DataKind_float64}
+		fd := coreutils.FieldsDef{"height": appdef.DataKind_float64}
 		heightFilter := func(height float64) IFilter {
 			return &EqualsFilter{
 				field:   "height",
@@ -93,10 +94,10 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {
-			require.True(t, match(heightFilter(42.7).IsMatch(schemaFields, row(42.7))))
+			require.True(t, match(heightFilter(42.7).IsMatch(fd, row(42.7))))
 		})
 		t.Run("Should not match", func(t *testing.T) {
-			require.False(t, match(heightFilter(42.71).IsMatch(schemaFields, row(42.7))))
+			require.False(t, match(heightFilter(42.71).IsMatch(fd, row(42.7))))
 		})
 	})
 	t.Run("Compare string", func(t *testing.T) {
@@ -105,7 +106,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			r.Set("name", name)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"name": istructs.DataKind_string}
+		fd := coreutils.FieldsDef{"name": appdef.DataKind_string}
 		nameFilter := func(name string) IFilter {
 			return &EqualsFilter{
 				field: "name",
@@ -113,10 +114,10 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {
-			require.True(t, match(nameFilter("Cola").IsMatch(schemaFields, row("Cola"))))
+			require.True(t, match(nameFilter("Cola").IsMatch(fd, row("Cola"))))
 		})
 		t.Run("Should not match", func(t *testing.T) {
-			require.False(t, match(nameFilter("Beer").IsMatch(schemaFields, row("Cola"))))
+			require.False(t, match(nameFilter("Beer").IsMatch(fd, row("Cola"))))
 		})
 	})
 	t.Run("Compare bool", func(t *testing.T) {
@@ -125,7 +126,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			r.Set("active", active)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"active": istructs.DataKind_bool}
+		fd := coreutils.FieldsDef{"active": appdef.DataKind_bool}
 		activeFilter := func(active bool) IFilter {
 			return &EqualsFilter{
 				field: "active",
@@ -133,10 +134,10 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {
-			require.True(t, match(activeFilter(true).IsMatch(schemaFields, row(true))))
+			require.True(t, match(activeFilter(true).IsMatch(fd, row(true))))
 		})
 		t.Run("Should not match", func(t *testing.T) {
-			require.False(t, match(activeFilter(true).IsMatch(schemaFields, row(false))))
+			require.False(t, match(activeFilter(true).IsMatch(fd, row(false))))
 		})
 	})
 	t.Run("Should return false on null data type", func(t *testing.T) {
@@ -150,7 +151,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 	t.Run("Should return error on wrong data type", func(t *testing.T) {
 		filter := &EqualsFilter{field: "image"}
 
-		match, err := filter.IsMatch(map[string]istructs.DataKindType{"image": istructs.DataKind_bytes}, nil)
+		match, err := filter.IsMatch(map[string]appdef.DataKind{"image": appdef.DataKind_bytes}, nil)
 
 		require.ErrorIs(t, err, ErrWrongType)
 		require.False(t, match)
@@ -161,7 +162,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			r.Set("id", id)
 			return r
 		}
-		schemaFields := coreutils.SchemaFields{"id": istructs.DataKind_RecordID}
+		fd := coreutils.FieldsDef{"id": appdef.DataKind_RecordID}
 		ageFilter := func(id istructs.RecordID) IFilter {
 			return &EqualsFilter{
 				field: "id",
@@ -169,10 +170,10 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {
-			require.True(t, match(ageFilter(42).IsMatch(schemaFields, row(42))))
+			require.True(t, match(ageFilter(42).IsMatch(fd, row(42))))
 		})
 		t.Run("Should not match", func(t *testing.T) {
-			require.False(t, match(ageFilter(45).IsMatch(schemaFields, row(42))))
+			require.False(t, match(ageFilter(45).IsMatch(fd, row(42))))
 		})
 	})
 }

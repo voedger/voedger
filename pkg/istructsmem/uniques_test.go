@@ -8,28 +8,34 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestBasicUsage_Uniques(t *testing.T) {
 	require := require.New(t)
+	test := test()
+
+	qName := appdef.NewQName("my", "name")
+	qName2 := appdef.NewQName("my", "name2")
+	appDef := appdef.New()
+
+	t.Run("must be ok to build application definition", func(t *testing.T) {
+		appDef.AddStruct(qName, appdef.DefKind_CDoc).
+			AddField("a", appdef.DataKind_int32, true).
+			AddField("b", appdef.DataKind_int32, true).
+			AddField("c", appdef.DataKind_int32, true)
+	})
+
 	cfgs := AppConfigsType{}
-	cfg := cfgs.AddConfig(test.appName)
-	qName := istructs.NewQName("my", "name")
-	qName2 := istructs.NewQName("my", "name2")
-	cfg.Schemas.Add(qName, istructs.SchemaKind_CDoc).
-		AddField("a", istructs.DataKind_int32, true).
-		AddField("b", istructs.DataKind_int32, true).
-		AddField("c", istructs.DataKind_int32, true)
+	cfg := cfgs.AddConfig(test.appName, appDef)
 
 	// add Uniques in AppConfigType
 	cfg.Uniques.Add(qName, []string{"a"})
 	cfg.Uniques.Add(qName, []string{"b", "c"})
 
 	// use Uniques using IAppStructs
-	asp, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
 	as, err := asp.AppStructs(test.appName)
 	require.NoError(err)
 	iu := as.Uniques()

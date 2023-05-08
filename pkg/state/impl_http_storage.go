@@ -10,12 +10,13 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type httpStorage struct{}
 
-func (s *httpStorage) NewKeyBuilder(istructs.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
+func (s *httpStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return newHTTPStorageKeyBuilder()
 }
 func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {

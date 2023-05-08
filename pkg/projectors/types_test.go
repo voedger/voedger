@@ -9,11 +9,13 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestProjector_isAcceptable(t *testing.T) {
-	newEvent := func(event, eventArgs istructs.QName) istructs.IPLogEvent {
+	newEvent := func(event, eventArgs appdef.QName) istructs.IPLogEvent {
 		o := &mockObject{}
 		o.On("QName").Return(eventArgs)
 		e := &mockPLogEvent{}
@@ -24,8 +26,8 @@ func TestProjector_isAcceptable(t *testing.T) {
 	}
 	tests := []struct {
 		name             string
-		eventsFilter     []istructs.QName
-		eventsArgsFilter []istructs.QName
+		eventsFilter     []appdef.QName
+		eventsArgsFilter []appdef.QName
 		handleErrors     bool
 		event            istructs.IPLogEvent
 		want             bool
@@ -33,43 +35,43 @@ func TestProjector_isAcceptable(t *testing.T) {
 		{
 			name:         "Should accept any",
 			handleErrors: false,
-			event:        newEvent(istructs.NullQName, istructs.NullQName),
+			event:        newEvent(appdef.NullQName, appdef.NullQName),
 			want:         true,
 		},
 		{
 			name:         "Should accept error",
 			handleErrors: true,
-			event:        newEvent(istructs.QNameForError, istructs.NullQName),
+			event:        newEvent(istructs.QNameForError, appdef.NullQName),
 			want:         true,
 		},
 		{
 			name:         "Should not accept error",
 			handleErrors: false,
-			event:        newEvent(istructs.QNameForError, istructs.NullQName),
+			event:        newEvent(istructs.QNameForError, appdef.NullQName),
 			want:         false,
 		},
 		{
 			name:         "Should accept event",
-			eventsFilter: []istructs.QName{istructs.QNameCommand},
-			event:        newEvent(istructs.QNameCommand, istructs.NullQName),
+			eventsFilter: []appdef.QName{istructs.QNameCommand},
+			event:        newEvent(istructs.QNameCommand, appdef.NullQName),
 			want:         true,
 		},
 		{
 			name:         "Should not accept event",
-			eventsFilter: []istructs.QName{istructs.QNameQuery},
-			event:        newEvent(istructs.QNameCommand, istructs.NullQName),
+			eventsFilter: []appdef.QName{istructs.QNameQuery},
+			event:        newEvent(istructs.QNameCommand, appdef.NullQName),
 			want:         false,
 		},
 		{
 			name:             "Should accept event args",
-			eventsArgsFilter: []istructs.QName{istructs.QNameCommand},
-			event:            newEvent(istructs.NullQName, istructs.QNameCommand),
+			eventsArgsFilter: []appdef.QName{istructs.QNameCommand},
+			event:            newEvent(appdef.NullQName, istructs.QNameCommand),
 			want:             true,
 		},
 		{
 			name:             "Should not accept event args",
-			eventsArgsFilter: []istructs.QName{istructs.QNameQuery},
-			event:            newEvent(istructs.NullQName, istructs.QNameCommand),
+			eventsArgsFilter: []appdef.QName{istructs.QNameQuery},
+			event:            newEvent(appdef.NullQName, istructs.QNameCommand),
 			want:             false,
 		},
 	}
@@ -91,7 +93,7 @@ type mockPLogEvent struct {
 	mock.Mock
 }
 
-func (e *mockPLogEvent) QName() istructs.QName { return e.Called().Get(0).(istructs.QName) }
+func (e *mockPLogEvent) QName() appdef.QName { return e.Called().Get(0).(appdef.QName) }
 func (e *mockPLogEvent) ArgumentObject() istructs.IObject {
 	return e.Called().Get(0).(istructs.IObject)
 }
@@ -101,4 +103,4 @@ type mockObject struct {
 	mock.Mock
 }
 
-func (o *mockObject) QName() istructs.QName { return o.Called().Get(0).(istructs.QName) }
+func (o *mockObject) QName() appdef.QName { return o.Called().Get(0).(appdef.QName) }

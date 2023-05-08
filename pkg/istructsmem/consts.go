@@ -5,133 +5,11 @@
 package istructsmem
 
 import (
-	dynobuffers "github.com/untillpro/dynobuffers"
 	"github.com/voedger/voedger/pkg/istructs"
-	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-)
-
-// validate error codes, see ValidateError.Code()
-const (
-	ECode_UnknownError = iota
-
-	ECode_EmptySchemaName
-	ECode_InvalidSchemaName
-	ECode_InvalidSchemaKind
-
-	ECode_EmptyData
-
-	ECode_InvalidRawRecordID
-	ECode_InvalidRecordID
-	ECode_InvalidRefRecordID
-
-	ECode_EEmptyCUDs
-
-	ECode_EmptyElementName
-	ECode_InvalidElementName
-	ECode_InvalidOccursMin
-	ECode_InvalidOccursMax
 )
 
 // nullResource is result then resource not found
 var nullResource istructs.IResource = newNullResource()
-
-const (
-	// data kind mnemonics
-	dk_null     = "null"
-	dk_int32    = "int32"
-	dk_int64    = "int64"
-	dk_float32  = "float32"
-	dk_float64  = "float64"
-	dk_bytes    = "[]byte"
-	dk_string   = "string"
-	dk_QName    = "QName"
-	dk_bool     = "bool"
-	dk_RecordID = "RecordID"
-	dk_Record   = "record"
-	dk_Event    = "event"
-	// abstracts if unknown type
-	dk_Number = "numeric"
-	dk_Chars  = "character"
-)
-
-// dataKindToStr is map to return data kind mnemonics. Useful to format error messages
-var dataKindToStr = map[istructs.DataKindType]string{
-	istructs.DataKind_null:     dk_null,
-	istructs.DataKind_int32:    dk_int32,
-	istructs.DataKind_int64:    dk_int64,
-	istructs.DataKind_float32:  dk_float32,
-	istructs.DataKind_float64:  dk_float64,
-	istructs.DataKind_bytes:    dk_bytes,
-	istructs.DataKind_string:   dk_string,
-	istructs.DataKind_QName:    dk_QName,
-	istructs.DataKind_bool:     dk_bool,
-	istructs.DataKind_RecordID: dk_RecordID,
-	istructs.DataKind_Record:   dk_Record,
-	istructs.DataKind_Event:    dk_Event,
-}
-
-var dynobufferFieldTypeToStr = map[dynobuffers.FieldType]string{
-	dynobuffers.FieldTypeUnspecified: dk_null,
-	dynobuffers.FieldTypeInt32:       dk_int32,
-	dynobuffers.FieldTypeInt64:       dk_int64,
-	dynobuffers.FieldTypeFloat32:     dk_float32,
-	dynobuffers.FieldTypeFloat64:     dk_float64,
-	dynobuffers.FieldTypeString:      dk_string,
-	dynobuffers.FieldTypeBool:        dk_bool,
-	dynobuffers.FieldTypeByte:        dk_bytes,
-}
-
-const ( // verification kind mnemonics
-	verify_byEmail = "EMail"
-	verify_ByPhone = "Phone"
-)
-
-var verificationKindToStr = map[payloads.VerificationKindType]string{
-	payloads.VerificationKind_EMail: verify_byEmail,
-	payloads.VerificationKind_Phone: verify_ByPhone,
-}
-
-const (
-	// schema kind mnemonics
-	sk_null                         = "null"
-	sk_GDoc                         = "GDoc"
-	sk_CDoc                         = "CDoc"
-	sk_ODoc                         = "ODoc"
-	sk_WDoc                         = "WDoc"
-	sk_GRecord                      = "GRecord"
-	sk_CRecord                      = "CRecord"
-	sk_ORecord                      = "ORecord"
-	sk_WRecord                      = "WRecord"
-	sk_ViewRecord                   = "ViewRecord"
-	sk_ViewRecord_PartitionKey      = "ViewRecord_PartitionKey"
-	sk_ViewRecord_ClusteringColumns = "ViewRecord_ClusteringColumns"
-	sk_ViewRecord_Value             = "ViewRecord_Value"
-	sk_Object                       = "Object"
-	sk_Element                      = "Element"
-	sk_QueryFunction                = "QueryFunction"
-	sk_CommandFunction              = "CommandFunction"
-)
-
-// shemaKindToStr is map to return schema kind mnemonics. Useful to format error messages
-var shemaKindToStr = map[istructs.SchemaKindType]string{
-	istructs.SchemaKind_null:                         sk_null,
-	istructs.SchemaKind_GDoc:                         sk_GDoc,
-	istructs.SchemaKind_CDoc:                         sk_CDoc,
-	istructs.SchemaKind_ODoc:                         sk_ODoc,
-	istructs.SchemaKind_WDoc:                         sk_WDoc,
-	istructs.SchemaKind_GRecord:                      sk_GRecord,
-	istructs.SchemaKind_CRecord:                      sk_CRecord,
-	istructs.SchemaKind_ORecord:                      sk_ORecord,
-	istructs.SchemaKind_WRecord:                      sk_WRecord,
-	istructs.SchemaKind_ViewRecord:                   sk_ViewRecord,
-	istructs.SchemaKind_ViewRecord_PartitionKey:      sk_ViewRecord_PartitionKey,
-	istructs.SchemaKind_ViewRecord_ClusteringColumns: sk_ViewRecord_ClusteringColumns,
-	istructs.SchemaKind_ViewRecord_Value:             sk_ViewRecord_Value,
-	istructs.SchemaKind_Object:                       sk_Object,
-	istructs.SchemaKind_Element:                      sk_Element,
-	istructs.SchemaKind_QueryFunction:                sk_QueryFunction,
-	istructs.SchemaKind_CommandFunction:              sk_CommandFunction,
-}
 
 const (
 	// byte codec versions
@@ -152,58 +30,8 @@ const (
 	partitionRecordCount = 1 << partitionBits
 )
 
-// constants for system QNames
-const (
-	NullQNameID QNameID = 0 + iota
-	QNameIDForError
-	QNameIDCommandCUD
-)
-
-// constants for system container names
-const (
-	nullContainerNameID containerNameIDType = 0 + iota
-
-	containerNameIDSysLast containerNameIDType = 63
-)
-
-// QNames for system views
-const (
-	QNameIDSysVesions      QNameID = 16 + iota // system view versions
-	QNameIDSysQNames                           // application QNames system view
-	QNameIDSysContainers                       // application container names view
-	QNameIDSysRecords                          // application Records view
-	QNameIDSysPLog                             // application PLog view
-	QNameIDSysWLog                             // application WLog view
-	QNameIDSysSingletonIDs                     // application singletons IDs view
-
-	QNameIDSysLast QNameID = 255
-)
-
-// MaxIdentLen is maximum identificator length
-const MaxIdentLen = 255
-
 // maxGetBatchRecordCount is maximum records that can be retrieved by ReadBatch GetBatch
 const maxGetBatchRecordCount = 256
-
-// versions of system views
-const (
-	verUnknown versionValueType = 0
-
-	// sys.QName
-	verSysQNames        versionKeyType   = 1
-	verSysQNames01      versionValueType = 1
-	verSysQNamesLastest versionValueType = verSysQNames01
-
-	// sys.Containers
-	verSysContainers        versionKeyType   = 2
-	verSysContainers01      versionValueType = 1
-	verSysContainersLastest versionValueType = verSysContainers01
-
-	// sys.Singletons
-	verSysSingletons        versionKeyType   = 3
-	verSysSingletons01      versionValueType = 1
-	verSysSingletonsLastest versionValueType = verSysSingletons01
-)
 
 // system fields mask values
 const (

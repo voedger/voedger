@@ -6,10 +6,10 @@
 package iauthnz
 
 import (
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/appdef"
 	"golang.org/x/exp/slices"
 )
 
-func IsSystemRole(role istructs.QName) bool {
+func IsSystemRole(role appdef.QName) bool {
 	return slices.Contains(SysRoles, role)
 }

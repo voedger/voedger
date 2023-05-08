@@ -10,12 +10,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 type SysError struct {
 	HTTPStatus int
-	QName      istructs.QName
+	QName      appdef.QName
 	Message    string
 	Data       string
 }
@@ -44,7 +44,7 @@ func (he SysError) Error() string {
 func (he SysError) ToJSON() string {
 	b := bytes.NewBuffer(nil)
 	b.WriteString(fmt.Sprintf(`{"sys.Error":{"HTTPStatus":%d,"Message":%q`, he.HTTPStatus, he.Message))
-	if he.QName != istructs.NullQName {
+	if he.QName != appdef.NullQName {
 		b.WriteString(fmt.Sprintf(`,"QName":"%s"`, he.QName.String()))
 	}
 	if len(he.Data) > 0 {

@@ -6,10 +6,7 @@
 
 package projectors
 
-import (
-	istructs "github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
-)
+import "github.com/voedger/voedger/pkg/appdef"
 
 func ProvideAsyncActualizerFactory() AsyncActualizerFactory {
 	return asyncActualizerFactory
@@ -19,10 +16,10 @@ func ProvideSyncActualizerFactory() SyncActualizerFactory {
 	return syncActualizerFactory
 }
 
-func ProvideOffsetsSchema(cfg *istructsmem.AppConfigType) {
-	provideOffsetsSchemaImpl(cfg)
+func ProvideOffsetsDef(appDef appdef.IAppDefBuilder) {
+	provideOffsetsDefImpl(appDef)
 }
 
-func ProvideViewSchema(app *istructsmem.AppConfigType, qname istructs.QName, buildFunc BuildViewSchemaFunc) {
-	provideViewSchemaImpl(app, qname, buildFunc)
+func ProvideViewDef(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc ViewDefBuilder) {
+	provideViewDefImpl(appDef, qname, buildFunc)
 }

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	istructs "github.com/voedger/voedger/pkg/istructs"
@@ -43,13 +44,16 @@ import (
 func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
-	cmdQName := istructs.NewQName("test", "test")
-	app := appStructs(func(cfg *istructsmem.AppConfigType) {
-		ProvideViewSchema(cfg, incProjectionView, buildProjectionSchema)
-		ProvideViewSchema(cfg, decProjectionView, buildProjectionSchema)
-		ProvideOffsetsSchema(cfg)
-		cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
-	})
+	cmdQName := appdef.NewQName("test", "test")
+	app := appStructs(
+		func(appDef appdef.IAppDefBuilder) {
+			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
+			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
+			ProvideOffsetsDef(appDef)
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
 	f := pLogFiller{
@@ -80,7 +84,7 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	// 5th (index 4 in pLog array)):
 	_ = storeProjectorOffset(app, partitionNr, decrementorName, istructs.Offset(4))
 
-	broker, _ := in10nmem.Provide(in10n.Quotas{
+	broker := in10nmem.Provide(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
@@ -97,8 +101,9 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 			AppStructs: func() istructs.IAppStructs { return app },
 			Broker:     broker,
 		}
-		actualizer, _ := actualizerFactory(conf, factory)
-		_ = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
+		actualizer, err := actualizerFactory(conf, factory)
+		require.NoError(err)
+		require.NoError(actualizer.DoSync(conf.Ctx, struct{}{})) // Start service
 		actualizers[i] = actualizer
 	}
 
@@ -126,13 +131,16 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	require := require.New(t)
 
-	cmdQName := istructs.NewQName("test", "test")
-	app := appStructs(func(cfg *istructsmem.AppConfigType) {
-		ProvideViewSchema(cfg, incProjectionView, buildProjectionSchema)
-		ProvideViewSchema(cfg, decProjectionView, buildProjectionSchema)
-		ProvideOffsetsSchema(cfg)
-		cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
-	})
+	cmdQName := appdef.NewQName("test", "test")
+	app := appStructs(
+		func(appDef appdef.IAppDefBuilder) {
+			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
+			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
+			ProvideOffsetsDef(appDef)
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+		})
 	partitionNr := istructs.PartitionID(2) // test within partition 2
 
 	f := pLogFiller{
@@ -154,7 +162,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker, _ := in10nmem.Provide(in10n.Quotas{
+	broker := in10nmem.Provide(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
@@ -173,11 +181,11 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	actualizer, err := actualizerFactory(conf, incrementorFactory)
-	require.Nil(err)
+	require.NoError(err)
 
 	t0 := time.Now()
 	err = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
-	require.Nil(err)
+	require.NoError(err)
 
 	// Wait for the projectors
 	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
@@ -197,13 +205,16 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	require := require.New(t)
 
-	cmdQName := istructs.NewQName("test", "test")
-	app := appStructs(func(cfg *istructsmem.AppConfigType) {
-		ProvideViewSchema(cfg, incProjectionView, buildProjectionSchema)
-		ProvideViewSchema(cfg, decProjectionView, buildProjectionSchema)
-		ProvideOffsetsSchema(cfg)
-		cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
-	})
+	cmdQName := appdef.NewQName("test", "test")
+	app := appStructs(
+		func(appDef appdef.IAppDefBuilder) {
+			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
+			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
+			ProvideOffsetsDef(appDef)
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
 	f := pLogFiller{
@@ -218,7 +229,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker, _ := in10nmem.Provide(in10n.Quotas{
+	broker := in10nmem.Provide(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
@@ -235,11 +246,11 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	actualizer, err := actualizerFactory(conf, incrementorFactory)
-	require.Nil(err)
+	require.NoError(err)
 
 	t0 := time.Now()
 	err = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
-	require.Nil(err)
+	require.NoError(err)
 
 	// Wait for the projectors
 	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
@@ -260,15 +271,18 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	require := require.New(t)
 
-	name := istructs.NewQName("test", "failing_projector")
-	cmdQName := istructs.NewQName("test", "test")
-	app := appStructs(func(cfg *istructsmem.AppConfigType) {
-		ProvideViewSchema(cfg, incProjectionView, buildProjectionSchema)
-		ProvideViewSchema(cfg, decProjectionView, buildProjectionSchema)
-		ProvideOffsetsSchema(cfg)
-		cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
-		cfg.Schemas.Add(name, istructs.SchemaKind_Object)
-	})
+	name := appdef.NewQName("test", "failing_projector")
+	cmdQName := appdef.NewQName("test", "test")
+	app := appStructs(
+		func(appDef appdef.IAppDefBuilder) {
+			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
+			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
+			ProvideOffsetsDef(appDef)
+			appDef.AddStruct(name, appdef.DefKind_Object)
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
 	f := pLogFiller{
@@ -282,10 +296,10 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	topOffset := f.fill(1001)
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
-	errors := make(chan string)
+	errors := make(chan string, 10)
 	chanAfterError := make(chan time.Time)
 
-	broker, _ := in10nmem.Provide(in10n.Quotas{
+	broker := in10nmem.Provide(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
@@ -326,12 +340,13 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	}
 
 	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, _ := actualizerFactory(conf, factory)
-	_ = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
+	actualizer, err := actualizerFactory(conf, factory)
+	require.NoError(err)
+	require.NoError(actualizer.DoSync(conf.Ctx, struct{}{})) // Start service
 
 	// Wait for the logged error
-	err := <-errors
-	require.Equal("error: [test.failing_projector [1] [Projector/doAsync, outWork==nil] test error]", err)
+	errStr := <-errors
+	require.Equal("error: [test.failing_projector [1] [Projector/doAsync, outWork==nil] test error]", errStr)
 
 	// wait until the istructs.Projector version is updated with the 1st record
 	for getActualizerOffset(require, app, partitionNr, name) < istructs.Offset(1) {
@@ -357,13 +372,16 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	require := require.New(t)
 
-	cmdQName := istructs.NewQName("test", "test")
-	app := appStructs(func(cfg *istructsmem.AppConfigType) {
-		ProvideViewSchema(cfg, incProjectionView, buildProjectionSchema)
-		ProvideViewSchema(cfg, decProjectionView, buildProjectionSchema)
-		ProvideOffsetsSchema(cfg)
-		cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
-	})
+	cmdQName := appdef.NewQName("test", "test")
+	app := appStructs(
+		func(appDef appdef.IAppDefBuilder) {
+			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
+			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
+			ProvideOffsetsDef(appDef)
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
 	f := pLogFiller{
@@ -378,7 +396,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker, _ := in10nmem.Provide(in10n.Quotas{
+	broker := in10nmem.Provide(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
@@ -398,7 +416,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	actualizer, err := actualizerFactory(conf, incrementorFactory)
-	require.Nil(err)
+	require.NoError(err)
 
 	_ = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
 
@@ -466,7 +484,7 @@ type pLogFiller struct {
 	app       istructs.IAppStructs
 	partition istructs.PartitionID
 	offset    istructs.Offset
-	cmdQName  istructs.QName
+	cmdQName  appdef.QName
 }
 
 func (f *pLogFiller) fill(WSID istructs.WSID) (offset istructs.Offset) {
@@ -484,7 +502,7 @@ func (f *pLogFiller) fill(WSID istructs.WSID) (offset istructs.Offset) {
 	}
 	offset = f.offset
 	f.offset++
-	generator := func(custom istructs.RecordID, schema istructs.ISchema) (storage istructs.RecordID, err error) {
+	generator := func(istructs.RecordID, appdef.IDef) (storage istructs.RecordID, err error) {
 		return istructs.NullRecordID, nil
 	}
 	_, err = f.app.Events().PutPlog(rawEvent, nil, generator)
@@ -509,13 +527,16 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 
 	require := require.New(t)
 
-	cmdQName := istructs.NewQName("test", "test")
-	app := appStructs(func(cfg *istructsmem.AppConfigType) {
-		ProvideViewSchema(cfg, incProjectionView, buildProjectionSchema)
-		ProvideViewSchema(cfg, decProjectionView, buildProjectionSchema)
-		ProvideOffsetsSchema(cfg)
-		cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
-	})
+	cmdQName := appdef.NewQName("test", "test")
+	app := appStructs(
+		func(appDef appdef.IAppDefBuilder) {
+			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
+			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
+			ProvideOffsetsDef(appDef)
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
 	f := pLogFiller{
@@ -534,7 +555,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker, _ := in10nmem.Provide(in10n.Quotas{
+	broker := in10nmem.Provide(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
@@ -552,8 +573,9 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 		Broker:     broker,
 		Metrics:    &metrics,
 	}
-	actualizer, _ := actualizerFactory(conf, incrementorFactory)
-	_ = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
+	actualizer, err := actualizerFactory(conf, incrementorFactory)
+	require.NoError(err)
+	require.NoError(actualizer.DoSync(conf.Ctx, struct{}{})) // Start service
 
 	t0 := time.Now()
 	// Wait for the projectors
@@ -584,7 +606,7 @@ type simpleMetrics struct {
 	storedOffset  int64
 }
 
-func (m *simpleMetrics) Increase(metricName string, partition istructs.PartitionID, projection istructs.QName, valueDelta float64) {
+func (m *simpleMetrics) Increase(metricName string, partition istructs.PartitionID, projection appdef.QName, valueDelta float64) {
 	if metricName == aaCurrentOffset {
 		atomic.AddInt64(&m.currentOffset, int64(valueDelta))
 	} else if metricName == aaFlushesTotal {
@@ -594,7 +616,7 @@ func (m *simpleMetrics) Increase(metricName string, partition istructs.Partition
 	}
 }
 
-func (m *simpleMetrics) Set(metricName string, partition istructs.PartitionID, projection istructs.QName, value float64) {
+func (m *simpleMetrics) Set(metricName string, partition istructs.PartitionID, projection appdef.QName, value float64) {
 	if metricName == aaCurrentOffset {
 		atomic.StoreInt64(&m.currentOffset, int64(value))
 	} else if metricName == aaFlushesTotal {
@@ -607,13 +629,16 @@ func (m *simpleMetrics) Set(metricName string, partition istructs.PartitionID, p
 func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 	require := require.New(t)
 
-	cmdQName := istructs.NewQName("test", "test")
-	app := appStructs(func(cfg *istructsmem.AppConfigType) {
-		ProvideViewSchema(cfg, incProjectionView, buildProjectionSchema)
-		ProvideViewSchema(cfg, decProjectionView, buildProjectionSchema)
-		ProvideOffsetsSchema(cfg)
-		cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructs.NullQName, istructs.NullQName, istructs.NullQName, istructsmem.NullCommandExec))
-	})
+	cmdQName := appdef.NewQName("test", "test")
+	app := appStructs(
+		func(appDef appdef.IAppDefBuilder) {
+			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
+			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
+			ProvideOffsetsDef(appDef)
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+		})
 	partitionNr := istructs.PartitionID(2) // test within partition 2
 
 	f := pLogFiller{
@@ -627,7 +652,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker, _ := in10nmem.Provide(in10n.Quotas{
+	broker := in10nmem.Provide(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
@@ -652,11 +677,11 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 		return istructs.Projector{Name: incrementorName, NonBuffered: true, Func: incrementor}
 	}
 	actualizer, err := actualizerFactory(conf, projectorFactory)
-	require.Nil(err)
+	require.NoError(err)
 
 	t0 := time.Now()
 	err = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
-	require.Nil(err)
+	require.NoError(err)
 
 	// Wait for the projectors
 	for atomic.LoadInt64(&metrics.storedOffset) < int64(topOffset) {

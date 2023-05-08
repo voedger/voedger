@@ -7,6 +7,7 @@ package state
 import (
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -24,32 +25,32 @@ func WithExcludeFields(fieldNames ...string) ToJSONOption {
 		}
 	}
 }
-func put(fieldName string, kind istructs.DataKindType, rr istructs.IRowReader, rw istructs.IRowWriter) {
+func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istructs.IRowWriter) {
 	switch kind {
-	case istructs.DataKind_int32:
+	case appdef.DataKind_int32:
 		rw.PutInt32(fieldName, rr.AsInt32(fieldName))
-	case istructs.DataKind_int64:
+	case appdef.DataKind_int64:
 		rw.PutInt64(fieldName, rr.AsInt64(fieldName))
-	case istructs.DataKind_float32:
+	case appdef.DataKind_float32:
 		rw.PutFloat32(fieldName, rr.AsFloat32(fieldName))
-	case istructs.DataKind_float64:
+	case appdef.DataKind_float64:
 		rw.PutFloat64(fieldName, rr.AsFloat64(fieldName))
-	case istructs.DataKind_bytes:
+	case appdef.DataKind_bytes:
 		rw.PutBytes(fieldName, rr.AsBytes(fieldName))
-	case istructs.DataKind_string:
+	case appdef.DataKind_string:
 		rw.PutString(fieldName, rr.AsString(fieldName))
-	case istructs.DataKind_QName:
+	case appdef.DataKind_QName:
 		rw.PutQName(fieldName, rr.AsQName(fieldName))
-	case istructs.DataKind_bool:
+	case appdef.DataKind_bool:
 		rw.PutBool(fieldName, rr.AsBool(fieldName))
-	case istructs.DataKind_RecordID:
+	case appdef.DataKind_RecordID:
 		rw.PutRecordID(fieldName, rr.AsRecordID(fieldName))
 	default:
 		panic(fmt.Errorf("illegal state: field - '%s', kind - '%d': %w", fieldName, kind, ErrNotSupported))
 	}
 }
 
-func getStorageID(key istructs.IKeyBuilder) istructs.QName {
+func getStorageID(key istructs.IKeyBuilder) appdef.QName {
 	switch k := key.(type) {
 	case *pLogKeyBuilder:
 		return PLogStorage
@@ -70,8 +71,8 @@ func getStorageID(key istructs.IKeyBuilder) istructs.QName {
 	}
 }
 
-func cudRowToMap(rec istructs.ICUDRow, schemasFunc schemasFunc) (res map[string]interface{}) {
-	res = coreutils.FieldsToMap(rec, schemasFunc())
+func cudRowToMap(rec istructs.ICUDRow, cache appDefFunc) (res map[string]interface{}) {
+	res = coreutils.FieldsToMap(rec, cache())
 	res["IsNew"] = rec.IsNew()
 	return res
 }

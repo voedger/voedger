@@ -12,18 +12,20 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 )
 
 func Test_RecordsRead(t *testing.T) {
 	require := require.New(t)
+	test := test()
 
-	storage := newTestStorage()
-	storageProvider := newTestStorageProvider(storage)
+	storage := teststore.NewStorage()
+	storageProvider := teststore.NewStorageProvider(storage)
 
-	provider, err := Provide(testAppConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-	require.NoError(err)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -63,7 +65,7 @@ func Test_RecordsRead(t *testing.T) {
 			t.Run(fmt.Sprintf("must ok read not exists record %v", id), func(t *testing.T) {
 				rec, err := app.Records().Get(test.workspace, true, id)
 				require.NoError(err)
-				require.Equal(istructs.NullQName, rec.QName())
+				require.Equal(appdef.NullQName, rec.QName())
 				require.Equal(id, rec.ID())
 			})
 		}
@@ -90,7 +92,7 @@ func Test_RecordsRead(t *testing.T) {
 					if (rec.ID >= minTestRecordID) && (rec.ID <= maxTestRecordID) {
 						testTestCRec(t, rec.Record, rec.ID)
 					} else {
-						require.Equal(istructs.NullQName, rec.Record.QName())
+						require.Equal(appdef.NullQName, rec.Record.QName())
 					}
 				}
 			}
@@ -136,12 +138,12 @@ func Test_RecordsRead(t *testing.T) {
 		testID := istructs.RecordID(100500)
 		_, cc := splitRecordID(testID)
 
-		storage.sheduleGetError(testError, nil, cc)
-		defer storage.reset()
+		storage.ScheduleGetError(testError, nil, cc)
+		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1)
-		provider, _ := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
@@ -151,7 +153,7 @@ func Test_RecordsRead(t *testing.T) {
 		recs[1].ID = testID
 		recs[2].ID = testID + 1
 
-		err := app.Records().GetBatch(test.workspace, true, recs)
+		err = app.Records().GetBatch(test.workspace, true, recs)
 		require.ErrorIs(err, testError)
 	})
 
@@ -159,12 +161,12 @@ func Test_RecordsRead(t *testing.T) {
 		testID := istructs.RecordID(100500)
 		_, cc := splitRecordID(testID)
 
-		storage.sheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, cc)
-		defer storage.reset()
+		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, cc)
+		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1)
-		provider, _ := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)

@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -63,7 +64,7 @@ type SubscriptionID string
 
 type ProjectionKey struct {
 	App        istructs.AppQName
-	Projection istructs.QName
+	Projection appdef.QName
 	WS         istructs.WSID
 }
 

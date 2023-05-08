@@ -10,8 +10,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	istructs "github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -112,81 +112,16 @@ type eventService struct {
 
 func (s *eventService) getWSID() istructs.WSID { return s.event.Workspace() }
 
-// implements ISchemaBuilder
-type SchemaBuilder struct {
-	qname                istructs.QName
-	app                  *istructsmem.AppConfigType
-	valueSchema          *istructsmem.SchemaType
-	partitionKeySchema   *istructsmem.SchemaType
-	clusteringColsSchema *istructsmem.SchemaType
-}
-
-func qnameValue(qname istructs.QName) istructs.QName {
-	return istructs.NewQName(qname.Pkg(), qname.Entity()+"_viewValue")
-}
-
-func qnamePartitionKey(qname istructs.QName) istructs.QName {
-	return istructs.NewQName(qname.Pkg(), qname.Entity()+"_viewPartitionKey")
-}
-
-func qnameClusteringCols(qname istructs.QName) istructs.QName {
-	return istructs.NewQName(qname.Pkg(), qname.Entity()+"_viewClusteringCols")
-}
-
-func (me *SchemaBuilder) ValueField(name string, kind istructs.DataKindType, required bool) {
-	me.valueSchema.AddField(name, kind, required)
-}
-
-func (me *SchemaBuilder) PartitionKeyField(name string, kind istructs.DataKindType, required bool) {
-	me.partitionKeySchema.AddField(name, kind, required)
-}
-
-func (me *SchemaBuilder) ClusteringColumnField(name string, kind istructs.DataKindType, required bool) {
-	me.clusteringColsSchema.AddField(name, kind, required)
-}
-
-func newSchemaBuilder(qname istructs.QName, app *istructsmem.AppConfigType) SchemaBuilder {
-	return SchemaBuilder{
-		qname:                qname,
-		app:                  app,
-		valueSchema:          app.Schemas.Add(qnameValue(qname), istructs.SchemaKind_ViewRecord_Value),
-		partitionKeySchema:   app.Schemas.Add(qnamePartitionKey(qname), istructs.SchemaKind_ViewRecord_PartitionKey),
-		clusteringColsSchema: app.Schemas.Add(qnameClusteringCols(qname), istructs.SchemaKind_ViewRecord_ClusteringColumns),
+func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc ViewDefBuilder) {
+	builder := appDef.AddView(qname)
+	if buildFunc != nil {
+		buildFunc(builder)
 	}
 }
 
-func provideViewSchemaImpl(app *istructsmem.AppConfigType, qname istructs.QName, buildFunc BuildViewSchemaFunc) {
-	builder := newSchemaBuilder(qname, app)
-	buildFunc(&builder)
-
-	schema := app.Schemas.Add(qname, istructs.SchemaKind_ViewRecord)
-	schema.AddContainer(istructs.SystemContainer_ViewPartitionKey, qnamePartitionKey(qname), 1, 1)
-	schema.AddContainer(istructs.SystemContainer_ViewClusteringCols, qnameClusteringCols(qname), 1, 1)
-	schema.AddContainer(istructs.SystemContainer_ViewValue, qnameValue(qname), 1, 1)
-	err := schema.Validate(true)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func provideOffsetsSchemaImpl(cfg *istructsmem.AppConfigType) {
-
-	offsetsSchema := cfg.Schemas.Add(qnameProjectionOffsets, istructs.SchemaKind_ViewRecord)
-	offsetsSchema.AddContainer(istructs.SystemContainer_ViewPartitionKey, qnameProjectionOffsetsPartitionKey, 1, 1)
-	offsetsSchema.AddContainer(istructs.SystemContainer_ViewClusteringCols, qnameProjectionOffsetsClusteringCols, 1, 1)
-	offsetsSchema.AddContainer(istructs.SystemContainer_ViewValue, qnameProjectionOffsetsValue, 1, 1)
-
-	partitionKeySchema := cfg.Schemas.Add(qnameProjectionOffsetsPartitionKey, istructs.SchemaKind_ViewRecord_PartitionKey)
-	partitionKeySchema.AddField(partitionFld, istructs.DataKind_int32, true) // partitionID is uint16
-
-	offsetsKeySchema := cfg.Schemas.Add(qnameProjectionOffsetsClusteringCols, istructs.SchemaKind_ViewRecord_ClusteringColumns)
-	offsetsKeySchema.AddField(projectorNameFld, istructs.DataKind_QName, true)
-
-	offsetsValueSchema := cfg.Schemas.Add(qnameProjectionOffsetsValue, istructs.SchemaKind_ViewRecord_Value)
-	offsetsValueSchema.AddField(offsetFld, istructs.DataKind_int64, true)
-
-	err := offsetsSchema.Validate(true)
-	if err != nil {
-		panic(err)
-	}
+func provideOffsetsDefImpl(appDef appdef.IAppDefBuilder) {
+	def := appDef.AddView(qnameProjectionOffsets)
+	def.AddPartField(partitionFld, appdef.DataKind_int32)
+	def.AddClustColumn(projectorNameFld, appdef.DataKind_QName)
+	def.AddValueField(offsetFld, appdef.DataKind_int64, true)
 }

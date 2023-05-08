@@ -8,6 +8,7 @@ package projectors
 
 import (
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
@@ -29,14 +30,14 @@ func (e *plogEvent) SaveWLog() (err error)                             { return 
 func (e *plogEvent) SaveCUDs() (err error)                             { return nil }
 func (e *plogEvent) Release()                                          {}
 func (e *plogEvent) Error() istructs.IEventError                       { return nil }
-func (e *plogEvent) QName() istructs.QName                             { return istructs.NewQName(istructs.SysPackage, "abc") }
+func (e *plogEvent) QName() appdef.QName                               { return appdef.NewQName(appdef.SysPackage, "abc") }
 func (e *plogEvent) CUDs(func(rec istructs.ICUDRow) error) (err error) { return err }
 func (e *plogEvent) RegisteredAt() istructs.UnixMilli                  { return 0 }
 func (e *plogEvent) Synced() bool                                      { return false }
 func (e *plogEvent) DeviceID() istructs.ConnectedDeviceID              { return 0 }
 func (e *plogEvent) SyncedAt() istructs.UnixMilli                      { return 0 }
 
-func storeProjectorOffset(appStructs istructs.IAppStructs, partition istructs.PartitionID, projectorName istructs.QName, offset istructs.Offset) error {
+func storeProjectorOffset(appStructs istructs.IAppStructs, partition istructs.PartitionID, projectorName appdef.QName, offset istructs.Offset) error {
 	kb := appStructs.ViewRecords().KeyBuilder(qnameProjectionOffsets)
 	kb.PutInt32(partitionFld, int32(partition))
 	kb.PutQName(projectorNameFld, projectorName)
@@ -45,13 +46,13 @@ func storeProjectorOffset(appStructs istructs.IAppStructs, partition istructs.Pa
 	return appStructs.ViewRecords().Put(istructs.NullWSID, kb, vb)
 }
 
-func getActualizerOffset(require *require.Assertions, appStructs istructs.IAppStructs, partition istructs.PartitionID, projectorName istructs.QName) istructs.Offset {
+func getActualizerOffset(require *require.Assertions, appStructs istructs.IAppStructs, partition istructs.PartitionID, projectorName appdef.QName) istructs.Offset {
 	offs, err := ActualizerOffset(appStructs, partition, projectorName)
-	require.Nil(err)
+	require.NoError(err)
 	return offs
 }
 
-func getProjectionValue(require *require.Assertions, appStructs istructs.IAppStructs, qname istructs.QName, wsid istructs.WSID) int32 {
+func getProjectionValue(require *require.Assertions, appStructs istructs.IAppStructs, qname appdef.QName, wsid istructs.WSID) int32 {
 	key := appStructs.ViewRecords().KeyBuilder(qname)
 	key.PutInt32("pk", 0)
 	key.PutInt32("cc", 0)

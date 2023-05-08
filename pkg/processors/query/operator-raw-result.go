@@ -24,10 +24,10 @@ func (o RawResultOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece) 
 	topOutputRow := work.(IWorkpiece).OutputRow()
 	object := work.(IWorkpiece).Object()
 	row := &outputRow{
-		keyToIdx: map[string]int{Field_JSONSchemaBody: 0},
+		keyToIdx: map[string]int{Field_JSONDef_Body: 0},
 		values:   make([]interface{}, 1),
 	}
-	row.Set(Field_JSONSchemaBody, object.AsString(Field_JSONSchemaBody))
+	row.Set(Field_JSONDef_Body, object.AsString(Field_JSONDef_Body))
 	topOutputRow.Set(rootDocument, []IOutputRow{row})
 	return work, err
 }

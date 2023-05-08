@@ -15,11 +15,12 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/heeus/wazero"
-	"github.com/heeus/wazero/api"
-	"github.com/heeus/wazero/wasi"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/wazero"
+	"github.com/voedger/wazero/api"
+	"github.com/voedger/wazero/wasi"
 )
 
 type wazeroExtEngine struct {
@@ -335,16 +336,16 @@ func (f *wazeroExtEngine) hostGetKey(args []uint64) (res []uint64) {
 	var entityPtr uint32 = uint32(args[2])
 	var entitySize uint32 = uint32(args[thirdArgument])
 
-	var storage istructs.QName
-	var entity istructs.QName
+	var storage appdef.QName
+	var entity appdef.QName
 	var err error
-	storage, err = istructs.ParseQName(f.decodeStr(storagePtr, storageSize))
+	storage, err = appdef.ParseQName(f.decodeStr(storagePtr, storageSize))
 	if err != nil {
 		panic(err)
 	}
 	entitystr := f.decodeStr(entityPtr, entitySize)
 	if entitystr != "" {
-		entity, err = istructs.ParseQName(entitystr)
+		entity, err = appdef.ParseQName(entitystr)
 		if err != nil {
 			panic(err)
 		}
@@ -785,7 +786,7 @@ func (f *wazeroExtEngine) hostRowWriterPutQName(args []uint64) []uint64 {
 	writer, name := f.getWriterArgs(args[0], uint32(args[1]), uint32(args[2]), uint32(args[thirdArgument]))
 	pkg := f.decodeStr(uint32(args[fourthArgument]), uint32(args[fifthArgument]))
 	entity := f.decodeStr(uint32(args[sixthArgument]), uint32(args[seventhArgument]))
-	writer.PutQName(name, istructs.NewQName(pkg, entity))
+	writer.PutQName(name, appdef.NewQName(pkg, entity))
 	return []uint64{}
 }
 

@@ -10,9 +10,9 @@ type OrFilter struct {
 	filters []IFilter
 }
 
-func (f OrFilter) IsMatch(schemaFields coreutils.SchemaFields, outputRow IOutputRow) (bool, error) {
+func (f OrFilter) IsMatch(fd coreutils.FieldsDef, outputRow IOutputRow) (bool, error) {
 	for _, filter := range f.filters {
-		match, err := filter.IsMatch(schemaFields, outputRow)
+		match, err := filter.IsMatch(fd, outputRow)
 		if err != nil {
 			return false, err
 		}

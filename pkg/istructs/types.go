@@ -4,6 +4,10 @@
 
 package istructs
 
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+)
+
 // AppQName is unique in cluster federation
 // <owner>/<name>
 // sys/registry
@@ -32,51 +36,11 @@ type RecordID IDType
 type Offset IDType
 type WSID IDType
 
-// DataKindType
-// Ref. utils.go for marshaling method
-//
-//go:generate stringer -type=DataKindType
-type DataKindType uint8
-
 type ClusterID = uint16
 
 // Unique per cluster (Different clusters might have different ID for the same App)
 // 2^32 apps per clusters
 type ClusterAppID = uint32
-
-// <pkg>.<entity>
-// Ref. utils.go for methods
-type QName struct {
-	pkg    string
-	entity string
-}
-
-type IQName interface {
-	QName() QName
-	SchemaKind() SchemaKindType
-}
-
-const (
-	// null - no-value type. Returned when the requisted type does not exist
-	DataKind_null DataKindType = iota
-	DataKind_int32
-	DataKind_int64
-	DataKind_float32
-	DataKind_float64
-	DataKind_bytes
-	DataKind_string
-	DataKind_QName
-	DataKind_bool
-
-	DataKind_RecordID
-
-	// Complex types
-
-	DataKind_Record
-	DataKind_Event
-
-	DataKind_FakeLast
-)
 
 type SubjectKindType uint8
 
@@ -87,15 +51,7 @@ const (
 	SubjectKind_FakeLast
 )
 
-// IFieldDescr describes one field
-type IFieldDescr interface {
-	Name() string
-	DataKind() DataKindType
-	Required() bool
-	Verifiable() bool
-}
-
-// panics if name does not exist in schema
+// panics if name does not exist in definition
 // If field is nil zero value is returned
 type IRowReader interface {
 	AsInt32(name string) int32
@@ -104,7 +60,7 @@ type IRowReader interface {
 	AsFloat64(name string) float64
 	AsBytes(name string) []byte
 	AsString(name string) string
-	AsQName(name string) QName
+	AsQName(name string) appdef.QName
 	AsBool(name string) bool
 	AsRecordID(name string) RecordID
 
@@ -123,7 +79,7 @@ type IRowWriter interface {
 	PutFloat64(name string, value float64)
 	PutBytes(name string, value []byte)
 	PutString(name, value string)
-	PutQName(name string, value QName)
+	PutQName(name string, value appdef.QName)
 	PutBool(name string, value bool)
 	PutRecordID(name string, value RecordID)
 
@@ -133,18 +89,5 @@ type IRowWriter interface {
 	PutChars(name string, value string)
 }
 
-// IContainerDescr describes one container
-type IContainerDescr interface {
-	Name() string
-	Schema() QName
-	MinOccurs() ContainerOccursType
-	MaxOccurs() ContainerOccursType
-}
-
-// ContainerOccursType is numeric type with OccursUnbounded value
-// Ref. utils.go for format and marshaling methods
-type ContainerOccursType uint16
-
 // App Workspace amount type. Need to wire
 type AppWSAmount int
-

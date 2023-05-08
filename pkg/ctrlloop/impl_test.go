@@ -6,6 +6,7 @@
 package ctrlloop
 
 import (
+	"container/list"
 	"sync"
 	"testing"
 	"time"
@@ -16,7 +17,6 @@ import (
 )
 
 func Test_BasicUsage(t *testing.T) {
-	// TODO: add serial number related tests
 	logger.SetLogLevel(logger.LogLevelVerbose)
 
 	mockGetNextTimeFunc := func(cronSchedule string, startTimeTolerance time.Duration, nowTime time.Time) time.Time {
@@ -87,14 +87,14 @@ func Test_BasicUsage(t *testing.T) {
 				return nil
 			}
 
-			ch := make(chan OriginalMessage[string, int])
+			inCh := make(chan OriginalMessage[string, int])
 
-			New(test.controller, reporterFunc, 5, ch, time.Now)
+			waitFunc := New(test.controller, reporterFunc, 5, inCh, time.Now)
 
 			wg.Add(test.numReportedMessages)
 
 			for _, m := range test.messages {
-				ch <- OriginalMessage[string, int]{
+				inCh <- OriginalMessage[string, int]{
 					Key:                m.Key,
 					SP:                 m.SP,
 					CronSchedule:       m.CronSchedule,
@@ -104,101 +104,356 @@ func Test_BasicUsage(t *testing.T) {
 
 			wg.Wait()
 
-			close(ch)
+			close(inCh)
+
+			waitFunc()
 
 			assert.GreaterOrEqual(t, test.numReportedMessages, len(reportDB))
 		})
 	}
 }
 
-func Test_Scheduler(t *testing.T) {
-	mockGetNextTimeFunc := func(cronSchedule string, startTimeTolerance time.Duration, nowTime time.Time) time.Time {
+// nolint
+func Test_SchedulerOnIn(t *testing.T) {
+	alwaysNowFunc := func(cronSchedule string, startTimeTolerance time.Duration, nowTime time.Time) time.Time {
 		return nowTime
 	}
 
-	nextStartTimeFunc = mockGetNextTimeFunc
+	var testNowTime = time.Date(2023, 4, 20, 00, 00, 00, 0, time.Now().Location())
 
 	tests := []struct {
-		name                 string
-		originalMessages     []OriginalMessage[string, int]
-		messagesFromRepeater []scheduledMessage[string, int, struct{}]
+		name                    string
+		originalMessages        []OriginalMessage[string, int]
+		scheduledItems          []scheduledMessage[string, int, struct{}]
+		nextStartTimeFunc       nextStartTimeFunction
+		nowTime                 time.Time
+		expectedResultKeys      []string
+		expectedMaxSerialNumber uint64
+		expectedTopStartTime    time.Time
 	}{
 		{
-			name: `in<-A,B,C;repeat<-D,E`,
+			name: `2 keys`,
+			originalMessages: []OriginalMessage[string, int]{
+				{
+					Key: `A`,
+					SP:  0,
+				},
+				{
+					Key: `B`,
+					SP:  4,
+				},
+			},
+			scheduledItems:          []scheduledMessage[string, int, struct{}]{},
+			nextStartTimeFunc:       alwaysNowFunc,
+			nowTime:                 testNowTime,
+			expectedResultKeys:      []string{`A`, `B`},
+			expectedMaxSerialNumber: 1,
+			expectedTopStartTime:    testNowTime,
+		},
+		{
+			name: `2 keys, 1 key in ScheduledItems`,
+			originalMessages: []OriginalMessage[string, int]{
+				{
+					Key: `A`,
+					SP:  0,
+				},
+				{
+					Key: `B`,
+					SP:  4,
+				},
+			},
+			scheduledItems: []scheduledMessage[string, int, struct{}]{
+				{
+					Key:          `A`,
+					SP:           0,
+					serialNumber: 10,
+					StartTime:    testNowTime,
+				},
+			},
+			nextStartTimeFunc:       alwaysNowFunc,
+			nowTime:                 testNowTime,
+			expectedResultKeys:      []string{`A`, `B`},
+			expectedMaxSerialNumber: 10,
+			expectedTopStartTime:    testNowTime,
+		},
+		{
+			name: `invalid CronSchedule`,
+			originalMessages: []OriginalMessage[string, int]{
+				{
+					Key:          `A`,
+					SP:           0,
+					CronSchedule: `QWERTY`,
+				},
+			},
+			nowTime:                 testNowTime,
+			scheduledItems:          []scheduledMessage[string, int, struct{}]{},
+			nextStartTimeFunc:       getNextStartTime,
+			expectedResultKeys:      []string{`A`},
+			expectedMaxSerialNumber: 0,
+			expectedTopStartTime:    testNowTime,
+		},
+		{
+			name: `CronSchedule * 1 * * *, tolerance zero`,
+			originalMessages: []OriginalMessage[string, int]{
+				{
+					Key:          `A`,
+					SP:           0,
+					CronSchedule: `* 1 * * *`,
+				},
+			},
+			scheduledItems:          []scheduledMessage[string, int, struct{}]{},
+			nextStartTimeFunc:       getNextStartTime,
+			nowTime:                 testNowTime,
+			expectedResultKeys:      []string{`A`},
+			expectedMaxSerialNumber: 0,
+			expectedTopStartTime:    testNowTime.Add(1 * time.Hour),
+		},
+		{
+			name: `CronSchedule 0 0 * * *, tolerance 5 min`,
 			originalMessages: []OriginalMessage[string, int]{
 				{
 					Key:                `A`,
 					SP:                 0,
-					CronSchedule:       `*/1 * * * *`,
-					StartTimeTolerance: 5 * time.Second,
-				},
-				{
-					Key:                `B`,
-					SP:                 1,
-					CronSchedule:       `now`,
-					StartTimeTolerance: 5 * time.Second,
-				},
-				{
-					Key:                `C`,
-					SP:                 2,
-					CronSchedule:       `*/1 * * * *`,
-					StartTimeTolerance: 5 * time.Second,
+					CronSchedule:       `0 0 * * *`,
+					StartTimeTolerance: 5 * time.Minute,
 				},
 			},
-			messagesFromRepeater: []scheduledMessage[string, int, struct{}]{
+			scheduledItems:          []scheduledMessage[string, int, struct{}]{},
+			nextStartTimeFunc:       getNextStartTime,
+			nowTime:                 testNowTime.Add(299 * time.Second),
+			expectedResultKeys:      []string{`A`},
+			expectedMaxSerialNumber: 0,
+			expectedTopStartTime:    testNowTime,
+		},
+		{
+			name: `CronSchedule 0 0 * * *, tolerance 5 min, 1 second delay`,
+			originalMessages: []OriginalMessage[string, int]{
 				{
-					Key:          `D`,
-					SP:           1,
-					serialNumber: 1,
-					StartTime:    time.Now(),
-				},
-				{
-					Key:          `E`,
-					SP:           1,
-					serialNumber: 1,
-					StartTime:    time.Now(),
+					Key:                `A`,
+					SP:                 0,
+					CronSchedule:       `0 0 * * *`,
+					StartTimeTolerance: 5 * time.Minute,
 				},
 			},
+			scheduledItems:          []scheduledMessage[string, int, struct{}]{},
+			nextStartTimeFunc:       getNextStartTime,
+			nowTime:                 testNowTime.Add(301 * time.Second),
+			expectedResultKeys:      []string{`A`},
+			expectedMaxSerialNumber: 0,
+			expectedTopStartTime:    testNowTime.Add(24 * time.Hour),
+		},
+		{
+			name: `the second message scheduled before the first one`,
+			originalMessages: []OriginalMessage[string, int]{
+				{
+					Key:          `A`,
+					SP:           0,
+					CronSchedule: `0 11 * * *`,
+				},
+				{
+					Key:          `B`,
+					SP:           4,
+					CronSchedule: `0 10 * * *`,
+				},
+			},
+			scheduledItems:          []scheduledMessage[string, int, struct{}]{},
+			nextStartTimeFunc:       getNextStartTime,
+			nowTime:                 testNowTime,
+			expectedResultKeys:      []string{`B`, `A`},
+			expectedMaxSerialNumber: 1,
+			expectedTopStartTime:    testNowTime.Add(10 * time.Hour),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			inCh := make(chan OriginalMessage[string, int])
-			dedupInCh := make(chan statefulMessage[string, int, struct{}])
-			repeatCh := make(chan scheduledMessage[string, int, struct{}], 3)
+			nextStartTimeFunc = test.nextStartTimeFunc
 
-			schedulerWG := sync.WaitGroup{}
-			schedulerWG.Add(1)
-			go func() {
-				defer schedulerWG.Done()
+			initList := list.New()
+			for _, i := range test.scheduledItems {
+				initList.PushBack(i)
+			}
 
-				scheduler(inCh, dedupInCh, repeatCh, time.Now)
-			}()
+			schedulerObj := newScheduler[string, int, struct{}](initList)
 
-			messageReaderWG := sync.WaitGroup{}
-			messageReaderWG.Add(len(test.messagesFromRepeater) + len(test.originalMessages))
+			for i, m := range test.originalMessages {
+				schedulerObj.OnIn(uint64(i), m, test.nowTime)
+			}
 
-			// mock dedupIn
-			dedupInMessagesCounter := 0
-			go testMessagesReader(dedupInCh, &messageReaderWG, &dedupInMessagesCounter)
+			maxSerialNumber := uint64(0)
+			resultKeys := make([]string, 0)
+			for element := schedulerObj.scheduledItems.Front(); element != nil; element = element.Next() {
+				m := element.Value.(scheduledMessage[string, int, struct{}])
+				if m.serialNumber > maxSerialNumber {
+					maxSerialNumber = m.serialNumber
+				}
+				resultKeys = append(resultKeys, m.Key)
+			}
 
-			// mock repeater
-			go testMessagesWriter(repeatCh, test.messagesFromRepeater)
-
-			testMessagesWriter(inCh, test.originalMessages)
-
-			messageReaderWG.Wait()
-
-			// closing channels
-			close(inCh)
-			close(repeatCh)
-
-			schedulerWG.Wait()
-			// asserts
-			require.Equal(t, len(test.messagesFromRepeater)+len(test.originalMessages), dedupInMessagesCounter)
+			top := schedulerObj.scheduledItems.Front().Value.(scheduledMessage[string, int, struct{}])
+			require.Equal(t, test.expectedTopStartTime, top.StartTime)
+			require.Equal(t, test.expectedResultKeys, resultKeys)
+			require.Equal(t, test.expectedMaxSerialNumber, maxSerialNumber)
 		})
 	}
+}
+
+func Test_SchedulerOnRepeat(t *testing.T) {
+	var testNowTime = time.Date(2023, 4, 20, 00, 00, 00, 0, time.Now().Location())
+
+	tests := []struct {
+		name                    string
+		messagesToRepeat        []scheduledMessage[string, int, struct{}]
+		scheduledItems          []scheduledMessage[string, int, struct{}]
+		expectedScheduledKeys   []string
+		expectedMaxSerialNumber uint64
+	}{
+		{
+			name: `fresh serial number`,
+			messagesToRepeat: []scheduledMessage[string, int, struct{}]{
+				{
+					Key:          `A`,
+					SP:           0,
+					serialNumber: 1,
+					StartTime:    testNowTime,
+				},
+				{
+					Key:          `A`,
+					SP:           1,
+					serialNumber: 2,
+					StartTime:    testNowTime.Add(5 * time.Second),
+				},
+			},
+			expectedScheduledKeys:   []string{`A`},
+			expectedMaxSerialNumber: 2,
+		},
+		{
+			name: `obsoleted serial number`,
+			messagesToRepeat: []scheduledMessage[string, int, struct{}]{
+				{
+					Key:          `A`,
+					SP:           0,
+					serialNumber: 2,
+					StartTime:    testNowTime,
+				},
+				{
+					Key:          `A`,
+					SP:           1,
+					serialNumber: 1,
+					StartTime:    testNowTime.Add(5 * time.Second),
+				},
+			},
+			expectedScheduledKeys:   []string{`A`},
+			expectedMaxSerialNumber: 2,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			initList := list.New()
+			schedulerObj := newScheduler[string, int, struct{}](initList)
+
+			for _, m := range test.messagesToRepeat {
+				schedulerObj.OnRepeat(m, time.Now())
+			}
+
+			maxSerialNumber := uint64(0)
+			resultKeys := make([]string, 0)
+			for element := schedulerObj.scheduledItems.Front(); element != nil; element = element.Next() {
+				m := element.Value.(scheduledMessage[string, int, struct{}])
+				if m.serialNumber > maxSerialNumber {
+					maxSerialNumber = m.serialNumber
+				}
+				resultKeys = append(resultKeys, m.Key)
+			}
+
+			require.Equal(t, test.expectedScheduledKeys, resultKeys)
+			require.Equal(t, test.expectedMaxSerialNumber, maxSerialNumber)
+		})
+	}
+}
+
+func Test_SchedulerOnTimer(t *testing.T) {
+	var testNowTime = time.Date(2023, 4, 20, 00, 00, 00, 0, time.Now().Location())
+
+	t.Run(`empty scheduledItems`, func(t *testing.T) {
+		dedupInCh := make(chan statefulMessage[string, int, struct{}], 10)
+
+		schedulerObj := newScheduler[string, int, struct{}](nil)
+		schedulerObj.OnTimer(dedupInCh, time.Now())
+		schedulerObj.OnTimer(dedupInCh, time.Now())
+
+		messagesToDedupIn := testMessagesReader(dedupInCh)
+
+		// closing channels
+		close(dedupInCh)
+
+		require.Equal(t, 0, len(messagesToDedupIn))
+	})
+
+	t.Run(`2 scheduled items`, func(t *testing.T) {
+		dedupInCh := make(chan statefulMessage[string, int, struct{}], 10)
+
+		scheduledItems := []scheduledMessage[string, int, struct{}]{
+			{
+				Key:          `A`,
+				SP:           0,
+				serialNumber: 1,
+				StartTime:    testNowTime.Add(5 * time.Second),
+			},
+			{
+				Key:          `B`,
+				SP:           1,
+				serialNumber: 2,
+				StartTime:    testNowTime.Add(3 * time.Second),
+			},
+		}
+
+		schedulerObj := newScheduler[string, int, struct{}](nil)
+		// fulfilling ScheduledItems storage
+		for _, m := range scheduledItems {
+			schedulerObj.OnRepeat(m, testNowTime)
+		}
+		require.Equal(t, 3*time.Second, schedulerObj.lastDuration)
+
+		schedulerObj.OnTimer(dedupInCh, testNowTime)
+		require.Equal(t, 5*time.Second, schedulerObj.lastDuration)
+
+		// closing channels
+		close(dedupInCh)
+	})
+
+	t.Run(`dedupIn channel is busy`, func(t *testing.T) {
+		dedupInCh := make(chan statefulMessage[string, int, struct{}], 1)
+
+		scheduledItems := []scheduledMessage[string, int, struct{}]{
+			{
+				Key:          `A`,
+				SP:           0,
+				serialNumber: 1,
+				StartTime:    testNowTime.Add(5 * time.Second),
+			},
+		}
+
+		schedulerObj := newScheduler[string, int, struct{}](nil)
+		// fulfilling ScheduledItems storage
+		for _, m := range scheduledItems {
+			schedulerObj.OnRepeat(m, testNowTime)
+		}
+		require.Equal(t, 5*time.Second, schedulerObj.lastDuration)
+
+		// make dedupInCh busy
+		dedupInCh <- statefulMessage[string, int, struct{}]{
+			Key:          `B`,
+			SP:           1,
+			serialNumber: 2,
+		}
+		schedulerObj.OnTimer(dedupInCh, testNowTime)
+		require.Equal(t, DedupInRetryInterval, schedulerObj.lastDuration)
+
+		// closing channels
+		close(dedupInCh)
+	})
 }
 
 func Test_Dedupin(t *testing.T) {
@@ -214,7 +469,7 @@ func Test_Dedupin(t *testing.T) {
 		messages      []statefulMessage[string, int, struct{}]
 	}{
 		{
-			name:          `dedupIn<-A,B,B,C`,
+			name:          `2 keys are duplicated in 4 messages`,
 			inProcessKeys: []string{``},
 			messages: []statefulMessage[string, int, struct{}]{
 				{
@@ -245,39 +500,37 @@ func Test_Dedupin(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			InProcess := sync.Map{}
 			dedupInCh := make(chan statefulMessage[string, int, struct{}])
-			callerCh := make(chan statefulMessage[string, int, struct{}])
-			repeatCh := make(chan scheduledMessage[string, int, struct{}], 3)
+			callerCh := make(chan statefulMessage[string, int, struct{}], 10)
+			repeatCh := make(chan scheduledMessage[string, int, struct{}], 10)
 
-			dedupInWG := sync.WaitGroup{}
-			dedupInWG.Add(1)
+			var messagesToCall []statefulMessage[string, int, struct{}]
+			var messagesToRepeat []scheduledMessage[string, int, struct{}]
+			var inProcessKeyCounter int
+			done := make(chan interface{})
 			go func() {
-				defer dedupInWG.Done()
+				testMessagesWriter(dedupInCh, test.messages)
 
-				dedupIn(dedupInCh, callerCh, repeatCh, &InProcess, time.Now)
+				messagesToCall = testMessagesReader(callerCh)
+				messagesToRepeat = testMessagesReader(repeatCh)
+
+				// closing channels
+				close(dedupInCh)
+				close(repeatCh)
+
+				inProcessKeyCounter = 0
+				InProcess.Range(func(_, _ any) bool {
+					inProcessKeyCounter++
+					return true
+				})
+
+				close(done)
 			}()
 
-			messageReaderWG := sync.WaitGroup{}
-			messageReaderWG.Add(len(test.messages))
+			dedupIn(dedupInCh, callerCh, repeatCh, &InProcess, time.Now)
 
-			// mock caller
-			callerMessagesCounter := 0
-			go testMessagesReader(callerCh, &messageReaderWG, &callerMessagesCounter)
-
-			// mock repeater
-			repeaterMessagesCounter := 0
-			go testMessagesReader(repeatCh, &messageReaderWG, &repeaterMessagesCounter)
-
-			testMessagesWriter(dedupInCh, test.messages)
-
-			messageReaderWG.Wait()
-
-			// closing channels
-			close(dedupInCh)
-			close(repeatCh)
-
-			dedupInWG.Wait()
-			// asserts
-			require.Equal(t, len(test.messages), callerMessagesCounter+repeaterMessagesCounter)
+			<-done
+			require.Equal(t, len(messagesToCall), inProcessKeyCounter)
+			require.Equal(t, len(messagesToRepeat), 1)
 		})
 	}
 }
@@ -298,7 +551,7 @@ func Test_Repeater(t *testing.T) {
 		messages      []answer[string, int, int, struct{}]
 	}{
 		{
-			name:          `repeater<-A,B,B,C`,
+			name:          `2 messages to report, 2 messages to repeat`,
 			inProcessKeys: []string{``},
 			messages: []answer[string, int, int, struct{}]{
 				{
@@ -316,14 +569,14 @@ func Test_Repeater(t *testing.T) {
 					PV:           nil,
 				},
 				{
-					Key:          `B`,
+					Key:          `C`,
 					SP:           2,
 					serialNumber: 1,
 					StartTime:    nil,
 					PV:           &pv,
 				},
 				{
-					Key:          `C`,
+					Key:          `D`,
 					SP:           2,
 					serialNumber: 1,
 					StartTime:    nil,
@@ -336,46 +589,25 @@ func Test_Repeater(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			repeaterCh := make(chan answer[string, int, int, struct{}])
-			repeatCh := make(chan scheduledMessage[string, int, struct{}], 3)
-			reporterCh := make(chan reportInfo[string, int])
+			repeatCh := make(chan scheduledMessage[string, int, struct{}], 10)
+			reporterCh := make(chan reportInfo[string, int], 10)
 
-			repeaterWG := sync.WaitGroup{}
-			repeaterWG.Add(1)
+			var messagesToReport []reportInfo[string, int]
+			var messagesToRepeat []scheduledMessage[string, int, struct{}]
 			go func() {
-				defer repeaterWG.Done()
+				testMessagesWriter(repeaterCh, test.messages)
 
-				repeater(repeaterCh, repeatCh, reporterCh)
+				messagesToReport = testMessagesReader(reporterCh)
+				messagesToRepeat = testMessagesReader(repeatCh)
+
+				close(repeaterCh)
 			}()
 
-			messageReaderWG := sync.WaitGroup{}
-			messageReaderWG.Add(len(test.messages))
+			repeater(repeaterCh, repeatCh, reporterCh)
 
-			// mock reporter
-			reporterMessagesCounter := 0
-			go testMessagesReader(reporterCh, &messageReaderWG, &reporterMessagesCounter)
-
-			// mock scheduler's repeatCh
-			repeatMessagesCounter := 0
-			go testMessagesReader(repeatCh, &messageReaderWG, &repeatMessagesCounter)
-
-			testMessagesWriter(repeaterCh, test.messages)
-
-			messageReaderWG.Wait()
-
-			// closing channels
-			close(repeaterCh)
-
-			repeaterWG.Wait()
-			// asserts
-			require.Equal(t, len(test.messages), repeatMessagesCounter+reporterMessagesCounter)
+			require.Equal(t, len(messagesToReport), 2)
+			require.Equal(t, len(messagesToRepeat), 2)
 		})
-	}
-}
-
-func testMessagesReader[T any](ch <-chan T, wg *sync.WaitGroup, counter *int) {
-	for range ch {
-		*counter = *counter + 1
-		wg.Done()
 	}
 }
 
@@ -383,4 +615,24 @@ func testMessagesWriter[T any](ch chan<- T, arr []T) {
 	for _, m := range arr {
 		ch <- m
 	}
+}
+
+func testMessagesReader[T any](ch <-chan T) []T {
+	results := make([]T, 0)
+
+	var val T
+	ok := true
+	for ok {
+		select {
+		case val, ok = <-ch:
+			if ok {
+				results = append(results, val)
+			} else {
+				return results
+			}
+		default:
+			return results
+		}
+	}
+	return results
 }
