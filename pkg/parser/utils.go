@@ -123,7 +123,3 @@ func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *C
 		return
 	}
 }
-
-func isSysType(name string, t TypeQName) bool {
-	return t == TypeQName{Package: sysPkgName, Name: name, IsArray: false} || t == TypeQName{Package: "", Name: name, IsArray: false}
-}

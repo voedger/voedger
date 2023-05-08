@@ -4,8 +4,3 @@
  */
 
 package parser
-
-const sysPkgName = "sys"
-
-const eventTypeName = "Event"
-const voidTypeName = "void"
