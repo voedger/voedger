@@ -214,7 +214,7 @@ func (s *Statement) GetComments() *[]string {
 
 type ProjectorStmt struct {
 	Statement
-	Name    string      `parser:"'PROJECTOR' @Ident?"`
+	Name    string      `parser:"'PROJECTOR' @Ident"`
 	On      ProjectorOn `parser:"'ON' @@"`
 	Targets []DefQName  `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
 	Affects []DefQName  `parser:"'AFFECTS' @@ ('AND' @@)*"` // TODO: AFFECTS: 1) HTTP is not an Intent. 2) Only allow one type of AFFECT per projector??? Sequences???

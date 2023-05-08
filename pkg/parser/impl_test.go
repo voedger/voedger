@@ -158,7 +158,7 @@ func Test_Undefined(t *testing.T) {
 		EXTENSION ENGINE WASM (
 			COMMAND Orders() WITH Tags=[UndefinedTag];
 			QUERY Query1 RETURNS text WITH Rate=UndefinedRate, Comment=xyz.UndefinedComment;
-			PROJECTOR ON COMMAND xyz.CreateUPProfile AFFECTS sys.HTTPStorage;
+			PROJECTOR ImProjector ON COMMAND xyz.CreateUPProfile AFFECTS sys.HTTPStorage;
 		)
 	)
 	`)
@@ -189,7 +189,7 @@ func Test_Imports(t *testing.T) {
     		QUERY Query1 RETURNS text WITH Comment=pkg2.SomeComment;
     		QUERY Query2 RETURNS text WITH Comment=air.SomeComment;
     		QUERY Query3 RETURNS text WITH Comment=air.SomeComment2; -- air.SomeComment2 undefined
-    		PROJECTOR ON COMMAND Air.CreateUPProfil AFFECTS sys.HTTPStorage; -- Air undefined
+    		PROJECTOR ImProjector ON COMMAND Air.CreateUPProfil AFFECTS sys.HTTPStorage; -- Air undefined
 		)
 	)
 	`)
