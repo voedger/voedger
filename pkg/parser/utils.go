@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 func extractStatement(s any) interface{} {
@@ -54,6 +56,17 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 		callback(stmt)
 		if collection, ok := stmt.(IStatementCollection); ok {
 			iterate(collection, callback)
+		}
+	})
+}
+
+func iterateStmt[stmtType *TableStmt | *TypeStmt](c IStatementCollection, callback func(stmt stmtType)) {
+	c.Iterate(func(stmt interface{}) {
+		if s, ok := stmt.(stmtType); ok {
+			callback(s)
+		}
+		if collection, ok := stmt.(IStatementCollection); ok {
+			iterateStmt(collection, callback)
 		}
 	})
 }
@@ -122,4 +135,16 @@ func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *C
 		c.errs = append(c.errs, errorAt(err, c.pos))
 		return
 	}
+}
+
+// func isSysDef(qn DefQName, ident string) bool {
+// 	return (qn.Package == "" || qn.Package == appdef.SysPackage) && qn.Name == ident
+// }
+
+func getTableDefKind(table *TableStmt, packages map[string]*PackageSchemaAST) (appdef.DefKind, error) {
+	// var kind appdef.DefKind
+	// for _, of := range table.Of {
+	// 	if isSysDef()
+	// }
+	return appdef.DefKind_null, nil
 }

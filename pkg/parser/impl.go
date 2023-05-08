@@ -11,6 +11,7 @@ import (
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 func parseImpl(fileName string, content string) (*SchemaAST, error) {
@@ -82,7 +83,7 @@ func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST)
 		return nil, nil
 	}
 	headAst := asts[0].Ast
-
+	// TODO: do we need to check that last element in qualifiedPackageName path corresponds to f.Ast.Package?
 	for i := 1; i < len(asts); i++ {
 		f := asts[i]
 		if f.Ast.Package != headAst.Package {
@@ -96,6 +97,7 @@ func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST)
 	errs = analyseDuplicateNamesInSchemas(headAst, errs)
 	cleanupComments(headAst)
 	cleanupImports(headAst)
+	// TODO: unable to specify different base tables (CDOC, WDOC, ...) in the table inheritace chain
 
 	return &PackageSchemaAST{
 		QualifiedPackageName: qualifiedPackageName,
@@ -172,11 +174,11 @@ func cleanupImports(schema *SchemaAST) {
 	}
 }
 
-func mergePackageSchemasImpl(packages []*PackageSchemaAST) error {
+func mergePackageSchemasImpl(packages []*PackageSchemaAST) (map[string]*PackageSchemaAST, error) {
 	pkgmap := make(map[string]*PackageSchemaAST)
 	for _, p := range packages {
 		if _, ok := pkgmap[p.QualifiedPackageName]; ok {
-			return ErrPackageRedeclared(p.QualifiedPackageName)
+			return nil, ErrPackageRedeclared(p.QualifiedPackageName)
 		}
 		pkgmap[p.QualifiedPackageName] = p
 	}
@@ -191,7 +193,7 @@ func mergePackageSchemasImpl(packages []*PackageSchemaAST) error {
 		c.pkg = p
 		analyseReferences(&c)
 	}
-	return errors.Join(c.errs...)
+	return pkgmap, errors.Join(c.errs...)
 }
 
 type aContext struct {
@@ -242,4 +244,26 @@ func analyseReferences(c *aContext) {
 			analyzeWithRefs(c, v.With)
 		}
 	})
+}
+
+func buildAppDefs(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) error {
+	if err := buildTables(packages, builder); err != nil {
+		return err
+	}
+	return nil
+}
+
+func buildTables(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) error {
+	var errs []error
+	for _, schema := range packages {
+		iterateStmt(schema.Ast, func(table *TableStmt) {
+			tableType, err := getTableDefKind(table, packages)
+			if err != nil {
+				errs = append(errs, errorAt(err, &table.Pos))
+			} else {
+				builder.AddStruct(appdef.NewQName(schema.Ast.Package, table.Name), tableType)
+			}
+		})
+	}
+	return errors.Join(errs...)
 }
