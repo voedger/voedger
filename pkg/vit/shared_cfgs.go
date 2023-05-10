@@ -58,7 +58,7 @@ var (
 			cfg.RouteDefault = fmt.Sprintf("http://127.0.0.1:%d/not-found", TestServicePort)
 			cfg.RouteDomains["localhost"] = "http://127.0.0.1"
 		}),
-		WithCleanup(func(vit *VIT) {
+		WithCleanup(func(_ *VIT) {
 			MockCmdExec = func(input string) error { panic("") }
 			MockQryExec = func(input string, callback istructs.ExecQueryCallback) error { panic("") }
 		}),
