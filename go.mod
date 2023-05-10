@@ -9,6 +9,7 @@ require (
 	github.com/blastrain/vitess-sqlparser v0.0.0-20201030050434-a139afbb1aba
 	github.com/emersion/go-smtp v0.15.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/google/gofuzz v1.0.0
 	github.com/google/uuid v1.3.0
 	github.com/google/wire v0.5.0
 	github.com/heeus/core-istoragecas v0.0.0-20230417172104-aff277174d72
@@ -26,8 +27,6 @@ require (
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 )
 
-require github.com/alecthomas/repr v0.2.1-0.20230322203820-fba37eeb3a59 // indirect
-
 require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -35,7 +34,6 @@ require (
 	github.com/gocql/gocql v1.3.1 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/flatbuffers v1.12.0 // indirect
-	github.com/google/gofuzz v1.2.0
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/heeus/core-logger v0.0.0-20211015110533-1499b5b04842 // indirect
