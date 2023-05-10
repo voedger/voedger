@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -120,6 +121,30 @@ func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 
 	_, err = key.clustRow.build()
 	return err
+}
+
+// Loads view value from specified buf using specified codec.
+//
+// This method uses the name of the definition set by the caller (val.QName), ignoring that is read from the buffer.
+func loadViewValue(val *valueType, codecVer byte, buf *bytes.Buffer) (err error) {
+	var qnameId uint16
+	if err = binary.Read(buf, binary.BigEndian, &qnameId); err != nil {
+		return fmt.Errorf("error read value QNameID: %w", err)
+	}
+	if err = loadRowSysFields(&val.rowType, codecVer, buf); err != nil {
+		return err
+	}
+
+	len := uint32(0)
+	if err := binary.Read(buf, binary.BigEndian, &len); err != nil {
+		return fmt.Errorf("error read value dynobuffer length: %w", err)
+	}
+	if buf.Len() < int(len) {
+		return fmt.Errorf("error read value dynobuffer, expected %d bytes, but only %d bytes is available: %w", len, buf.Len(), io.ErrUnexpectedEOF)
+	}
+	val.dyB.Reset(buf.Next(int(len)))
+
+	return nil
 }
 
 // Loads from buffer row fixed-width field

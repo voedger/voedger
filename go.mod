@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/VictoriaMetrics/fastcache v1.12.1
+	github.com/alecthomas/participle/v2 v2.0.0
 	github.com/aptible/supercronic v0.2.2
 	github.com/blastrain/vitess-sqlparser v0.0.0-20201030050434-a139afbb1aba
 	github.com/emersion/go-smtp v0.15.0
@@ -24,6 +25,8 @@ require (
 	golang.org/x/crypto v0.8.0
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 )
+
+require github.com/alecthomas/repr v0.2.1-0.20230322203820-fba37eeb3a59 // indirect
 
 require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
