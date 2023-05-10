@@ -20,6 +20,8 @@ func ErrUnexpectedSchema(fileName, actual, expected string) error {
 var ErrFunctionParamsIncorrect = errors.New("function parameters do not match")
 var ErrFunctionResultIncorrect = errors.New("function result do not match")
 var ErrPrimaryKeyRedeclared = errors.New("primary key redeclared")
+var ErrUndefinedTableKind = errors.New("undefined table kind")
+var ErrArrayFieldsNotSupportedInTables = errors.New("array fields of system types not supported in tables")
 
 // Golang: could not import github.com/alecthomas/participle/v2/asd (no required module provides package "github.com/alecthomas/participle/v2/asd")
 func ErrCouldNotImport(pkgName string) error {

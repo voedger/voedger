@@ -118,14 +118,26 @@ func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *C
 		return
 	}
 	var item stmtType
-	iterate(schema.Ast, func(stmt interface{}) {
-		if f, ok := stmt.(stmtType); ok {
-			named := any(f).(INamedStatement)
-			if named.GetName() == fn.Name {
-				item = f
+	iter := func(s *SchemaAST) {
+		iterate(s, func(stmt interface{}) {
+			if f, ok := stmt.(stmtType); ok {
+				named := any(f).(INamedStatement)
+				if named.GetName() == fn.Name {
+					item = f
+				}
 			}
+		})
+	}
+	iter(schema.Ast)
+
+	if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
+		sysSchema := c.pkgmap[appdef.SysPackage]
+		if sysSchema == nil {
+			c.errs = append(c.errs, errorAt(ErrCouldNotImport(appdef.SysPackage), c.pos))
+		} else {
+			iter(sysSchema.Ast)
 		}
-	})
+	}
 	if item == nil {
 		c.errs = append(c.errs, errorAt(ErrUndefined(fn.String()), c.pos))
 		return
@@ -137,14 +149,73 @@ func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *C
 	}
 }
 
-// func isSysDef(qn DefQName, ident string) bool {
-// 	return (qn.Package == "" || qn.Package == appdef.SysPackage) && qn.Name == ident
-// }
+func maybeSysPkg(pkg string) bool {
+	return (pkg == "" || pkg == appdef.SysPackage)
+}
 
-func getTableDefKind(table *TableStmt, packages map[string]*PackageSchemaAST) (appdef.DefKind, error) {
-	// var kind appdef.DefKind
-	// for _, of := range table.Of {
-	// 	if isSysDef()
-	// }
-	return appdef.DefKind_null, nil
+func isSysDef(qn DefQName, ident string) bool {
+	return maybeSysPkg(qn.Package) && qn.Name == ident
+}
+
+func getTableInheritanceChain(table *TableStmt, c *aContext) (chain []DefQName) {
+	chain = make([]DefQName, 0)
+	var vf func(t *TableStmt)
+	vf = func(t *TableStmt) {
+		if t.Inherits != nil {
+			resolve(*t.Inherits, c, func(t *TableStmt) error {
+				chain = append(chain, *t.Inherits)
+				vf(t)
+				return nil
+			})
+		}
+	}
+	vf(table)
+	return chain
+}
+
+func getTableDefKind(table *TableStmt, c *aContext) appdef.DefKind {
+	chain := getTableInheritanceChain(table, c)
+	for _, t := range chain {
+		if isSysDef(t, nameCDOC) {
+			return appdef.DefKind_CDoc
+		} else if isSysDef(t, nameODOC) {
+			return appdef.DefKind_ODoc
+		} else if isSysDef(t, nameWDOC) {
+			return appdef.DefKind_WDoc
+		}
+	}
+	return appdef.DefKind_null
+}
+
+func getTypeDataKind(t TypeQName) appdef.DataKind {
+	if maybeSysPkg(t.Package) {
+		if t.Name == sysInt32 || t.Name == sysInt {
+			return appdef.DataKind_int32
+		}
+		if t.Name == sysInt64 {
+			return appdef.DataKind_int64
+		}
+		if t.Name == sysFloat32 || t.Name == sysFloat {
+			return appdef.DataKind_float32
+		}
+		if t.Name == sysFloat64 {
+			return appdef.DataKind_float64
+		}
+		if t.Name == sysQName {
+			return appdef.DataKind_QName
+		}
+		if t.Name == sysId {
+			return appdef.DataKind_RecordID
+		}
+		if t.Name == sysBool {
+			return appdef.DataKind_bool
+		}
+		if t.Name == sysString {
+			return appdef.DataKind_string
+		}
+		if t.Name == sysBytes {
+			return appdef.DataKind_bytes
+		}
+	}
+	return appdef.DataKind_null
 }

@@ -10,13 +10,25 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 //go:embed example_app/*.sql
 var efs embed.FS
 
+//go:embed system_pkg/*.sql
+var sfs embed.FS
+
 //_go:embed example_app/expectedParsed.schema
 //var expectedParsedExampledSchemaStr string
+
+func getSysPackage() *PackageSchemaAST {
+	pkgSys, err := ParsePackageDir(appdef.SysPackage, sfs, "system_pkg")
+	if err != nil {
+		panic(err)
+	}
+	return pkgSys
+}
 
 func Test_BasicUsage(t *testing.T) {
 
@@ -27,9 +39,8 @@ func Test_BasicUsage(t *testing.T) {
 	//fmt.Println(parsedSchemaStr)
 
 	// TODO: MergePackageSchemas should return ?.ISchema
-	_, err = MergePackageSchemas([]*PackageSchemaAST{pkgExample})
+	_, err = MergePackageSchemas([]*PackageSchemaAST{getSysPackage(), pkgExample})
 	require.NoError(t, err)
-
 }
 
 func Test_Expressions(t *testing.T) {
@@ -167,7 +178,7 @@ func Test_Undefined(t *testing.T) {
 	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
 	require.Nil(err)
 
-	_, err = MergePackageSchemas([]*PackageSchemaAST{pkg})
+	_, err = MergePackageSchemas([]*PackageSchemaAST{pkg, getSysPackage()})
 
 	require.EqualError(err, strings.Join([]string{
 		"example.sql:4:4: UndefinedTag undefined",
@@ -212,7 +223,7 @@ func Test_Imports(t *testing.T) {
 	pkg3, err := MergeFileSchemaASTs("github.com/untillpro/airsbp3/pkg3", []*FileSchemaAST{fs})
 	require.NoError(err)
 
-	_, err = MergePackageSchemas([]*PackageSchemaAST{pkg1, pkg2, pkg3})
+	_, err = MergePackageSchemas([]*PackageSchemaAST{getSysPackage(), pkg1, pkg2, pkg3})
 	require.EqualError(err, strings.Join([]string{
 		"example.sql:9:7: air.SomeComment2 undefined",
 		"example.sql:10:7: Air undefined",

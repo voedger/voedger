@@ -242,6 +242,12 @@ func analyseReferences(c *aContext) {
 		case *TableStmt:
 			c.pos = &v.Pos
 			analyzeWithRefs(c, v.With)
+			if v.Inherits != nil {
+				resolve(*v.Inherits, c, func(f *TableStmt) error { return nil })
+			}
+			for _, of := range v.Of {
+				resolve(of, c, func(f *TypeStmt) error { return nil })
+			}
 		}
 	})
 }
@@ -254,16 +260,52 @@ func buildAppDefs(packages map[string]*PackageSchemaAST, builder appdef.IAppDefB
 }
 
 func buildTables(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) error {
-	var errs []error
+	c := aContext{
+		pkg:    nil,
+		pkgmap: packages,
+		errs:   make([]error, 0),
+	}
 	for _, schema := range packages {
 		iterateStmt(schema.Ast, func(table *TableStmt) {
-			tableType, err := getTableDefKind(table, packages)
-			if err != nil {
-				errs = append(errs, errorAt(err, &table.Pos))
+			tableType := getTableDefKind(table, &c)
+			if tableType == appdef.DefKind_null {
+				c.errs = append(c.errs, errorAt(ErrUndefinedTableKind, &table.Pos))
 			} else {
-				builder.AddStruct(appdef.NewQName(schema.Ast.Package, table.Name), tableType)
+				builder := builder.AddStruct(appdef.NewQName(schema.Ast.Package, table.Name), tableType)
+				addFieldsOf(table.Of, builder, &c)
+				addTableItems(table.Items, builder, &c)
 			}
 		})
 	}
-	return errors.Join(errs...)
+	return errors.Join(c.errs...)
+}
+
+func addTableItems(items []TableItemExpr, builder appdef.IDefBuilder, ctx *aContext) {
+	for _, item := range items {
+		if item.Field != nil {
+			sysDataKind := getTypeDataKind(item.Field.Type)
+			if sysDataKind != appdef.DataKind_null {
+				if item.Field.Type.IsArray {
+					ctx.errs = append(ctx.errs, errorAt(ErrArrayFieldsNotSupportedInTables, &item.Field.Pos))
+				} else {
+					if item.Field.Verifiable {
+						// TODO: Support different verification kindsbuilder, &c
+						builder.AddVerifiedField(item.Field.Name, sysDataKind, item.Field.NotNull, appdef.VerificationKind_EMail)
+					} else {
+						builder.AddField(item.Field.Name, sysDataKind, item.Field.NotNull)
+					}
+				}
+			}
+		}
+	}
+}
+
+func addFieldsOf(types []DefQName, builder appdef.IDefBuilder, ctx *aContext) {
+	for _, of := range types {
+		resolve(of, ctx, func(t *TypeStmt) error {
+			addTableItems(t.Items, builder, ctx)
+			addFieldsOf(t.Of, builder, ctx)
+			return nil
+		})
+	}
 }

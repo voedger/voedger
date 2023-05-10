@@ -355,9 +355,9 @@ type NamedParam struct {
 type TableStmt struct {
 	Statement
 	Name     string          `parser:"'TABLE' @Ident"`
-	Inherits DefQName        `parser:"('INHERITS' @@)?"`
+	Inherits *DefQName       `parser:"('INHERITS' @@)?"`
 	Of       []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
-	Items    []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
+	Items    []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	With     []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
@@ -380,6 +380,7 @@ type UniqueExpr struct {
 }
 
 type FieldExpr struct {
+	Pos                lexer.Position
 	Name               string      `parser:"@Ident"`
 	Type               TypeQName   `parser:"@@"`
 	NotNull            bool        `parser:"@(NOTNULL)?"`
