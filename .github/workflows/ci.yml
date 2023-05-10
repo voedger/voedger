@@ -1,0 +1,10 @@
+name: Check PR and Merge PR
+
+on: [push]
+
+jobs:
+  call-workflow-check:
+    uses: voedger/voedger/.github/workflows/check.yml@main
+    with: 
+      ignore_bp3: 'true'
+
