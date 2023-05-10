@@ -1,6 +1,6 @@
 name: CI cmd
 
-on: [pull_request_target]
+on: [push]
 
 jobs:
   call-workflow-ci-cmd:
