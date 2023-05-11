@@ -141,7 +141,7 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	}
 
 	// prepare unique IDs
-	if err := uniques.PrepareApDefUniqueIDs(cfg.storage, cfg.versions, cfg.qNames, cfg.AppDef); err != nil {
+	if err := uniques.PrepareAppDefUniqueIDs(cfg.storage, cfg.versions, cfg.qNames, cfg.AppDef); err != nil {
 		return err
 	}
 

@@ -56,7 +56,7 @@ func Test_BasicUsage(t *testing.T) {
 		panic(err)
 	}
 
-	if err := PrepareApDefUniqueIDs(storage, versions, qNames, appDef); err != nil {
+	if err := PrepareAppDefUniqueIDs(storage, versions, qNames, appDef); err != nil {
 		panic(err)
 	}
 

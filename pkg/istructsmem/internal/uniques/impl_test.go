@@ -67,7 +67,7 @@ func TestUniques(t *testing.T) {
 		panic(err)
 	}
 
-	if err := PrepareApDefUniqueIDs(storage, versions, qNames1, appDef1); err != nil {
+	if err := PrepareAppDefUniqueIDs(storage, versions, qNames1, appDef1); err != nil {
 		panic(err)
 	}
 
@@ -100,7 +100,7 @@ func TestUniques(t *testing.T) {
 			panic(err)
 		}
 
-		if err := PrepareApDefUniqueIDs(storage, versions2, qNames2, appDef2); err != nil {
+		if err := PrepareAppDefUniqueIDs(storage, versions2, qNames2, appDef2); err != nil {
 			panic(err)
 		}
 
@@ -162,7 +162,7 @@ func TestUniquesErrors(t *testing.T) {
 			panic(err)
 		}
 
-		err := PrepareApDefUniqueIDs(storage, versions, qNames, appDef)
+		err := PrepareAppDefUniqueIDs(storage, versions, qNames, appDef)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
 
@@ -188,7 +188,7 @@ func TestUniquesErrors(t *testing.T) {
 				AddUnique("", []string{"fld"})
 		})
 
-		err := PrepareApDefUniqueIDs(storage, versions, qNames, appDef)
+		err := PrepareAppDefUniqueIDs(storage, versions, qNames, appDef)
 		require.ErrorIs(err, qnames.ErrNameNotFound)
 	})
 
@@ -211,7 +211,7 @@ func TestUniquesErrors(t *testing.T) {
 			writeError := errors.New("can not store unique")
 			storage.SchedulePutError(writeError, utils.ToBytes(consts.SysView_UniquesIDs, latestVersion), nil)
 
-			err := PrepareApDefUniqueIDs(storage, versions, qNames, appDef)
+			err := PrepareAppDefUniqueIDs(storage, versions, qNames, appDef)
 			require.ErrorIs(err, writeError)
 		})
 
@@ -219,7 +219,7 @@ func TestUniquesErrors(t *testing.T) {
 			writeError := errors.New("can not store version")
 			storage.SchedulePutError(writeError, utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysUniquesVersion))
 
-			err := PrepareApDefUniqueIDs(storage, versions, qNames, appDef)
+			err := PrepareAppDefUniqueIDs(storage, versions, qNames, appDef)
 			require.ErrorIs(err, writeError)
 		})
 	})
