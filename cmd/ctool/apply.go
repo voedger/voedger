@@ -6,6 +6,8 @@
 package main
 
 import (
+	"sync"
+
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/logger"
 )
@@ -31,6 +33,63 @@ func newApplyCmd() *cobra.Command {
 }
 
 func apply(cmd *cobra.Command, arg []string) error {
+	cluster := newCluster()
+	for _, n := range cluster.Nodes {
+		n.cluster = cluster
+	}
+	defer cluster.saveToJSON()
+
+	var err error
+
+	if err = cluster.validate(); err != nil {
+		logger.Error(err.Error)
+		return err
+	}
+
+	if len(arg) > 0 {
+		cluster.sshKey, err = expandPath(arg[0])
+		if err != nil {
+			return err
+		}
+
+	}
+
+	if cluster.Cmd.isEmpty() {
+		logger.Info("no active command found to apply")
+		return nil
+	}
+
+	cluster.Draft = false
+
+	if err := installYq(); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(cluster.Nodes))
+
+	for i := 0; i < len(cluster.Nodes); i++ {
+		cluster.Nodes[i].cluster = cluster
+		go func(node *nodeType) {
+			defer wg.Done()
+			if err := node.nodeControllerFunction(); err != nil {
+				logger.Error(err.Error)
+			}
+		}(&cluster.Nodes[i])
+	}
+
+	wg.Wait()
+
+	if cluster.existsNodeError() {
+		return ErrorPreparingClusterNodes
+	}
+
+	return cluster.clusterControllerFunction()
+}
+
+/*
+func apply(cmd *cobra.Command, arg []string) error {
 
 	cluster := newCluster()
 
@@ -40,7 +99,7 @@ func apply(cmd *cobra.Command, arg []string) error {
 	}
 
 	cluster.Draft = false
-	cluster.saveToJSON()
+	defer cluster.saveToJSON()
 
 	if len(arg) > 0 {
 		cluster.sshKey, err = expandPath(arg[0])
@@ -70,4 +129,11 @@ func apply(cmd *cobra.Command, arg []string) error {
 	}
 
 	return nil
+}
+*/
+
+// Install yq (yaml parser)
+func installYq() error {
+	prepareScripts("yq-install.sh")
+	return newScriptExecuter("", "localhost").run("yq-install.sh")
 }
