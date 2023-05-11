@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   call-workflow-check:
-    uses: voedeger/voedeger/.github/workflows/check.yml@main
+    uses: voedger/voedger/.github/workflows/check.yml@main
     with: 
       ignore_bp3: 'true'
 
