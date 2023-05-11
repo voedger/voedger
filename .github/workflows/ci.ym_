@@ -1,0 +1,14 @@
+name: Check PR and Merge PR
+
+on: [push]
+
+jobs: 
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check PR true
+      run: |
+        echo "ignore_bp3 = true"
+
+

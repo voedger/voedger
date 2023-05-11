@@ -1,0 +1,18 @@
+name: CI golang
+
+on:
+  workflow_call:
+    inputs:
+      ignore_bp3:
+        required: false
+        type: string
+
+jobs: 
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check PR true
+      run: |
+        echo "ignore_bp3 = true"
+
