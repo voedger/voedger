@@ -178,6 +178,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			principals = append(principals, prnWSSubject)
 		}
 	}
+	
 
 	// ResellersAdmin || UntillPaymentsReseller -> WorkspaceAdmin
 	for _, prn := range principals {
