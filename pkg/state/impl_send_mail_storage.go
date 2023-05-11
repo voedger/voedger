@@ -121,7 +121,7 @@ func (s *sendMailStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 			select {
 			case s.messages <- m:
 			default:
-				// asumming HIT will be failed on TearDown
+				// asumming VIT will be failed on TearDown
 			}
 		} else {
 			c, e := mail.NewClient(k.data[Field_Host].(string), opts...)
