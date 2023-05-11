@@ -32,6 +32,10 @@ func ErrUndefined(name string) error {
 	return fmt.Errorf("%s undefined", name)
 }
 
+func ErrTypeNotSupported(name string) error {
+	return fmt.Errorf("%s type not supported", name)
+}
+
 func ErrRedeclared(name string) error {
 	return fmt.Errorf("%s redeclared", name)
 }

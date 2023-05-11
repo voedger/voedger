@@ -173,18 +173,18 @@ func getTableInheritanceChain(table *TableStmt, c *aContext) (chain []DefQName) 
 	return chain
 }
 
-func getTableDefKind(table *TableStmt, c *aContext) appdef.DefKind {
+func getTableDefKind(table *TableStmt, c *aContext) (kind appdef.DefKind, singletone bool) {
 	chain := getTableInheritanceChain(table, c)
 	for _, t := range chain {
-		if isSysDef(t, nameCDOC) {
-			return appdef.DefKind_CDoc
+		if isSysDef(t, nameCDOC) || isSysDef(t, nameSingleton) {
+			return appdef.DefKind_CDoc, isSysDef(t, nameSingleton)
 		} else if isSysDef(t, nameODOC) {
-			return appdef.DefKind_ODoc
+			return appdef.DefKind_ODoc, false
 		} else if isSysDef(t, nameWDOC) {
-			return appdef.DefKind_WDoc
+			return appdef.DefKind_WDoc, false
 		}
 	}
-	return appdef.DefKind_null
+	return appdef.DefKind_null, false
 }
 
 func getTypeDataKind(t TypeQName) appdef.DataKind {

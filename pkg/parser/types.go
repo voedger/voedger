@@ -185,18 +185,31 @@ type DefQName struct {
 	Name    string `parser:"@Ident"`
 }
 
-type TypeQName struct {
-	Package string `parser:"(@Ident '.')?"`
-	Name    string `parser:"@Ident"`
-	IsArray bool   `parser:"@Array?"`
-}
-
 func (q DefQName) String() string {
 	if q.Package == "" {
 		return q.Name
 	}
 	return fmt.Sprintf("%s.%s", q.Package, q.Name)
 
+}
+
+type TypeQName struct {
+	Package string `parser:"(@Ident '.')?"`
+	Name    string `parser:"@Ident"`
+	IsArray bool   `parser:"@Array?"`
+}
+
+func (q TypeQName) String() (s string) {
+	if q.Package == "" {
+		s = q.Name
+	} else {
+		s = fmt.Sprintf("%s.%s", q.Package, q.Name)
+	}
+
+	if q.IsArray {
+		return fmt.Sprintf("[]%s", s)
+	}
+	return s
 }
 
 type Statement struct {

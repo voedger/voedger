@@ -6,9 +6,10 @@
 package parser
 
 const (
-	nameCDOC = "CDOC"
-	nameODOC = "ODOC"
-	nameWDOC = "WDOC"
+	nameCDOC      = "CDOC"
+	nameODOC      = "ODOC"
+	nameWDOC      = "WDOC"
+	nameSingleton = "SINGLETON"
 )
 
 const (

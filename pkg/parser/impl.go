@@ -267,20 +267,23 @@ func buildTables(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBu
 	}
 	for _, schema := range packages {
 		iterateStmt(schema.Ast, func(table *TableStmt) {
-			tableType := getTableDefKind(table, &c)
+			tableType, singletone := getTableDefKind(table, &c)
 			if tableType == appdef.DefKind_null {
 				c.errs = append(c.errs, errorAt(ErrUndefinedTableKind, &table.Pos))
 			} else {
-				builder := builder.AddStruct(appdef.NewQName(schema.Ast.Package, table.Name), tableType)
-				addFieldsOf(table.Of, builder, &c)
-				addTableItems(table.Items, builder, &c)
+				defBuilder := builder.AddStruct(appdef.NewQName(schema.Ast.Package, table.Name), tableType)
+				addFieldsOf(table.Of, defBuilder, builder, &c)
+				addTableItems(table.Items, defBuilder, builder, &c)
+				if singletone {
+					defBuilder.SetSingleton()
+				}
 			}
 		})
 	}
 	return errors.Join(c.errs...)
 }
 
-func addTableItems(items []TableItemExpr, builder appdef.IDefBuilder, ctx *aContext) {
+func addTableItems(items []TableItemExpr, defBuilder appdef.IDefBuilder, builder appdef.IAppDefBuilder, ctx *aContext) {
 	for _, item := range items {
 		if item.Field != nil {
 			sysDataKind := getTypeDataKind(item.Field.Type)
@@ -290,21 +293,32 @@ func addTableItems(items []TableItemExpr, builder appdef.IDefBuilder, ctx *aCont
 				} else {
 					if item.Field.Verifiable {
 						// TODO: Support different verification kindsbuilder, &c
-						builder.AddVerifiedField(item.Field.Name, sysDataKind, item.Field.NotNull, appdef.VerificationKind_EMail)
+						defBuilder.AddVerifiedField(item.Field.Name, sysDataKind, item.Field.NotNull, appdef.VerificationKind_EMail)
 					} else {
-						builder.AddField(item.Field.Name, sysDataKind, item.Field.NotNull)
+						defBuilder.AddField(item.Field.Name, sysDataKind, item.Field.NotNull)
 					}
 				}
+			} else {
+				ctx.errs = append(ctx.errs, errorAt(ErrTypeNotSupported(item.Field.Type.String()), &item.Field.Pos))
 			}
+		} else if item.Unique != nil {
+
+			// TODO: add unique
+		} else if item.Table != nil {
+			//typeBuilder := builder.AddStruct()
+			//builder.AddContainer()
+			// - how to add unique
+			// - collections: records and types
+			// - how to test
 		}
 	}
 }
 
-func addFieldsOf(types []DefQName, builder appdef.IDefBuilder, ctx *aContext) {
+func addFieldsOf(types []DefQName, defBuilder appdef.IDefBuilder, builder appdef.IAppDefBuilder, ctx *aContext) {
 	for _, of := range types {
 		resolve(of, ctx, func(t *TypeStmt) error {
-			addTableItems(t.Items, builder, ctx)
-			addFieldsOf(t.Of, builder, ctx)
+			addTableItems(t.Items, defBuilder, builder, ctx)
+			addFieldsOf(t.Of, defBuilder, builder, ctx)
 			return nil
 		})
 	}
