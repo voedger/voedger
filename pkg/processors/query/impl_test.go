@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"math"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -289,11 +290,19 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
 		appStructsProvider, 3, metrics, "vvm", authn, authz, cfgs)
-	go queryProcessor.Run(context.Background())
+	processorCtx, processorCtxCancel := context.WithCancel(context.Background())
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		queryProcessor.Run(processorCtx)
+		wg.Done()
+	}()
 	funcResource := as.Resources().QueryResource(qNameFunction)
 	systemToken := getSystemToken(appTokens)
 	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, funcResource, "127.0.0.1", systemToken)
 	<-done
+	processorCtxCancel()
+	wg.Wait()
 
 	_ = metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
 		metricNames = append(metricNames, metric.Name())
