@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/sys/uniques"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
+	"golang.org/x/exp/slices"
 )
 
 func getUniqueNumber(vit *it.VIT) (int, string) {
@@ -129,16 +130,8 @@ func TestUniquesDenyUpdate(t *testing.T) {
 	newID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	// deny to modify any unique field
-	fields := []string{
-		`"Int":1`,
-		`"Str":"str"`,
-		`"Bool":true`,
-		`"Int":1,"Bool":true`,
-	}
-	for _, f := range fields {
-		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.DocConstraints",%s}}]}`, newID, f)
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403())
-	}
+	body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.DocConstraints","Int": 1}}]}`, newID)
+	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403())
 }
 
 func TestInsertDeactivatedRecord(t *testing.T) {
@@ -323,7 +316,12 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 	require.NoError(err)
 
 	// get the IUnique determined by key fields set
-	unique := as.Uniques().GetForKeySet(it.QNameCDocTestConstraints, []string{"Str", "Int", "Bool"}) // order has no sense
+	var unique istructs.IUnique                                              // nolint
+	for _, probe := range as.Uniques().GetAll(it.QNameCDocTestConstraints) { // nolint
+		if slices.Equal(probe.Fields(), []string{"Int"}) {
+			unique = probe
+		}
+	}
 	require.NotNil(unique)
 
 	// simulate data source and try to get an ID for that combination of key fields

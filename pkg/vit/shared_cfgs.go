@@ -487,8 +487,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("Bool", appdef.DataKind_bool, true).
 		AddField("Float32", appdef.DataKind_float32, false).
 		AddField("Bytes", appdef.DataKind_bytes, true)
-	cfg.Uniques.Add(QNameCDocTestConstraints, []string{"Int", "Bool", "Str"})
-	cfg.Uniques.Add(QNameCDocTestConstraints, []string{"Bytes"})
+	cfg.Uniques.Add(QNameCDocTestConstraints, []string{"Int"})
 
 	// for singletons test
 	signletonDefBuilder := adf.AddStruct(QNameTestSingleton, appdef.DefKind_CDoc)
