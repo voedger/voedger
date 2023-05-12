@@ -34,15 +34,16 @@ func newApplyCmd() *cobra.Command {
 
 func apply(cmd *cobra.Command, arg []string) error {
 	cluster := newCluster()
-	for _, n := range cluster.Nodes {
-		n.cluster = cluster
-	}
 	defer cluster.saveToJSON()
 
 	var err error
 
 	if err = cluster.validate(); err != nil {
 		logger.Error(err.Error)
+		return err
+	}
+
+	if err = mkCommandDirAndLogFile(cmd); err != nil {
 		return err
 	}
 
@@ -70,7 +71,6 @@ func apply(cmd *cobra.Command, arg []string) error {
 	wg.Add(len(cluster.Nodes))
 
 	for i := 0; i < len(cluster.Nodes); i++ {
-		cluster.Nodes[i].cluster = cluster
 		go func(node *nodeType) {
 			defer wg.Done()
 			if err := node.nodeControllerFunction(); err != nil {
@@ -87,50 +87,6 @@ func apply(cmd *cobra.Command, arg []string) error {
 
 	return cluster.clusterControllerFunction()
 }
-
-/*
-func apply(cmd *cobra.Command, arg []string) error {
-
-	cluster := newCluster()
-
-	err := cluster.validate()
-	if err != nil {
-		return err
-	}
-
-	cluster.Draft = false
-	defer cluster.saveToJSON()
-
-	if len(arg) > 0 {
-		cluster.sshKey, err = expandPath(arg[0])
-		if err != nil {
-			return err
-		}
-
-	}
-
-	err = mkCommandDirAndLogFile(cmd)
-	if err != nil {
-		return err
-	}
-
-	switch cluster.Edition {
-	case clusterEditionCE:
-		err = deployCeCluster(cluster)
-	case clusterEditionSE:
-		err = deploySeCluster(cluster)
-	default:
-		err = ErrorInvalidClusterEdition
-	}
-
-	if err != nil {
-		logger.Error(err.Error())
-		return err
-	}
-
-	return nil
-}
-*/
 
 // Install yq (yaml parser)
 func installYq() error {

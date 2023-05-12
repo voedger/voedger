@@ -23,7 +23,7 @@ import (
 func newCluster() *clusterType {
 	var cluster = clusterType{
 		DesiredClusterVersion: version,
-		ActualClusterVersion:  version,
+		ActualClusterVersion:  "",
 		exists:                false,
 		Draft:                 true,
 	}
@@ -84,17 +84,18 @@ func (n *nodeType) success(info string) {
 	n.Info = info
 }
 
+func (n *nodeType) fail(err string) {
+	n.Error = err
+	n.Info = ""
+}
+
 // initializing a new action attempt on a node
 // the error is being reset
 // the attempt counter is incremented
 func (n *nodeType) newAttempt() {
 	n.AttemptNo += 1
 	n.Error = ""
-}
-
-func (n *nodeType) reset() {
-	n.AttemptNo = 0
-	n.Error = ""
+	n.Info = ""
 }
 
 func (n *nodeType) desiredNodeVersion(c *clusterType) string {
@@ -378,8 +379,8 @@ func (c *clusterType) loadFromJSON() error {
 		}
 	}
 
-	for _, n := range c.Nodes {
-		n.cluster = c
+	for i := 0; i < len(c.Nodes); i++ {
+		c.Nodes[i].cluster = c
 	}
 
 	return err
@@ -394,10 +395,11 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 		c.Nodes = make([]nodeType, 1)
 		c.Nodes[0].NodeRole = nrCENode
 		c.Nodes[0].cluster = c
+		c.Nodes[0].DesiredNodeState.NodeVersion = c.DesiredClusterVersion
 		if len(args) > 0 {
-			c.Nodes[0].ActualNodeState.Address = args[0]
+			c.Nodes[0].DesiredNodeState.Address = args[0]
 		} else {
-			c.Nodes[0].ActualNodeState.Address = "0.0.0.0"
+			c.Nodes[0].DesiredNodeState.Address = "0.0.0.0"
 		}
 	} else { // SE args
 		c.Edition = clusterEditionSE
@@ -410,7 +412,8 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 			} else {
 				c.Nodes[i].NodeRole = nrDBNode
 			}
-			c.Nodes[i].ActualNodeState.Address = args[i]
+			c.Nodes[i].DesiredNodeState.Address = args[i]
+			c.Nodes[i].DesiredNodeState.NodeVersion = c.DesiredClusterVersion
 			c.Nodes[i].cluster = c
 		}
 
@@ -426,7 +429,10 @@ func (c *clusterType) validate() error {
 	var err error
 
 	for _, n := range c.Nodes {
-		if net.ParseIP(n.ActualNodeState.Address) == nil {
+		if len(n.DesiredNodeState.Address) > 0 && net.ParseIP(n.DesiredNodeState.Address) == nil {
+			err = errors.Join(err, errors.New(n.DesiredNodeState.Address+" "+ErrorInvalidIpAddress.Error()))
+		}
+		if len(n.ActualNodeState.Address) > 0 && net.ParseIP(n.ActualNodeState.Address) == nil {
 			err = errors.Join(err, errors.New(n.ActualNodeState.Address+" "+ErrorInvalidIpAddress.Error()))
 		}
 	}
@@ -442,9 +448,17 @@ func (c *clusterType) validate() error {
 	return err
 }
 
-func (c *clusterType) success() {
+func (c *clusterType) success(info string) {
 	c.ActualClusterVersion = c.DesiredClusterVersion
 	c.DesiredClusterVersion = ""
+	c.Cmd.clear()
+	c.LastAttemptError = ""
+	c.LastAttemptInfo = info
+}
+
+func (c *clusterType) fail(error string) {
+	c.LastAttemptError = error
+	c.LastAttemptInfo = ""
 }
 
 func expandPath(path string) (string, error) {
