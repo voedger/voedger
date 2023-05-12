@@ -172,7 +172,7 @@ func (v *validator) validRow(row *rowType) (err error) {
 	v.def.Fields(
 		func(f appdef.IField) {
 			if f.Required() {
-				if !row.hasValue(f.Name()) {
+				if !row.HasValue(f.Name()) {
 					err = errors.Join(err,
 						validateErrorf(ECode_EmptyData, "%s misses field «%s» required by definition «%v»: %w", v.entName(row), f.Name(), v.def.QName(), ErrNameNotFound))
 				}
@@ -391,7 +391,7 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 
 	key.partRow.def.Fields(
 		func(f appdef.IField) {
-			if !key.partRow.hasValue(f.Name()) {
+			if !key.partRow.HasValue(f.Name()) {
 				err = errors.Join(err,
 					validateErrorf(ECode_EmptyData, "view «%v» partition key «%v» field «%s» is empty: %w", key.viewName, pkDef, f.Name(), ErrFieldIsEmpty))
 			}
@@ -400,7 +400,7 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 	if !partialClust {
 		key.ccolsRow.def.Fields(
 			func(f appdef.IField) {
-				if !key.ccolsRow.hasValue(f.Name()) {
+				if !key.ccolsRow.HasValue(f.Name()) {
 					err = errors.Join(err,
 						validateErrorf(ECode_EmptyData, "view «%v» clustering columns «%v» field «%s» is empty: %w", key.viewName, ccDef, f.Name(), ErrFieldIsEmpty))
 				}

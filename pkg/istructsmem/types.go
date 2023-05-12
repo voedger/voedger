@@ -141,28 +141,6 @@ func (row *rowType) error() error {
 	return row.err
 }
 
-// Returns has dynoBuffer data in specified field
-func (row *rowType) hasValue(name string) (value bool) {
-	if name == appdef.SystemField_QName {
-		// special case: sys.QName is always presents
-		return true
-	}
-	if name == appdef.SystemField_ID {
-		return row.id != istructs.NullRecordID
-	}
-	if name == appdef.SystemField_ParentID {
-		return row.parentID != istructs.NullRecordID
-	}
-	if name == appdef.SystemField_Container {
-		return row.container != ""
-	}
-	if name == appdef.SystemField_IsActive {
-		// special case: sys.IsActive is presents if required by definition kind
-		return row.def.Kind().HasSystemField(appdef.SystemField_IsActive)
-	}
-	return row.dyB.HasValue(name)
-}
-
 // Loads row from bytes
 func (row *rowType) loadFromBytes(in []byte) (err error) {
 
@@ -582,6 +560,30 @@ func (row *rowType) FieldNames(cb func(fieldName string)) {
 			cb(name)
 			return true
 		})
+}
+
+// FIXME: remove when no longer in use
+//
+// Returns has dynoBuffer data in specified field
+func (row *rowType) HasValue(name string) (value bool) {
+	if name == appdef.SystemField_QName {
+		// special case: sys.QName is always presents
+		return true
+	}
+	if name == appdef.SystemField_ID {
+		return row.id != istructs.NullRecordID
+	}
+	if name == appdef.SystemField_ParentID {
+		return row.parentID != istructs.NullRecordID
+	}
+	if name == appdef.SystemField_Container {
+		return row.container != ""
+	}
+	if name == appdef.SystemField_IsActive {
+		// special case: sys.IsActive is presents if required by definition kind
+		return row.def.Kind().HasSystemField(appdef.SystemField_IsActive)
+	}
+	return row.dyB.HasValue(name)
 }
 
 // istructs.IRecord.ID
