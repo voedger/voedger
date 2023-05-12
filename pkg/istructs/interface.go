@@ -34,7 +34,7 @@ type IAppStructs interface {
 	// ************************************************************
 	// Static data, kind of constants
 
-	// Working with recources like functions, images (in the future)
+	// Working with resources like functions, images (in the future)
 	// Function can be inside WASM, container, executable, jar, zip etc.
 	Resources() IResources
 
@@ -55,6 +55,10 @@ type IAppStructs interface {
 	// Describe package content
 	DescribePackage(pkgName string) interface{}
 
+	// Deprecated: use IDef.Uniques() instead
+	//
+	// This Uniques exists for historical compatibility and should not be used.
+	// Provides only simplest (from one field) uniques, only one unique for each definition
 	Uniques() IUniques
 
 	SyncProjectors() []ProjectorFactory
@@ -102,7 +106,7 @@ type IRecords interface {
 	GetBatch(workspace WSID, highConsistency bool, ids []RecordGetBatchItem) (err error)
 
 	// @ConcurrentAccess R
-	// qName must be a singletone
+	// qName must be a singleton
 	// If record not found NullRecord with QName() == NullQName is returned
 	GetSingleton(workspace WSID, qName appdef.QName) (record IRecord, err error)
 }
@@ -166,7 +170,7 @@ type IResources interface {
 // App is configured per interface instance
 // placed here because otherwise IAppStructs.AppTokens() would depend on itokens-payloads
 type IAppTokens interface {
-	// Calls istruct.IssueToken for given App
+	// Calls istructs.IssueToken for given App
 	IssueToken(duration time.Duration, pointerToPayload interface{}) (token string, err error)
 	// ErrTokenIssuedForAnotherApp is returned (check using errors.Is(...)) when token is issued for another application
 	ValidateToken(token string, pointerToPayload interface{}) (gp GenericPayload, err error)

@@ -23,7 +23,7 @@ func newViewBuilder(cache *appDef, name QName) viewBuilder {
 		name:   name,
 		def:    cache.addDef(name, DefKind_ViewRecord),
 		pkDef:  cache.addDef(ViewPartitionKeyDefName(name), DefKind_ViewRecord_PartitionKey),
-		ccDef:  cache.addDef(ViewClusteringColumsDefName(name), DefKind_ViewRecord_ClusteringColumns),
+		ccDef:  cache.addDef(ViewClusteringColumnsDefName(name), DefKind_ViewRecord_ClusteringColumns),
 		valDef: cache.addDef(ViewValueDefName(name), DefKind_ViewRecord_Value),
 	}
 	view.def.
@@ -88,7 +88,7 @@ func (app *appDef) prepareViewFullKeyDef(def IDef) {
 	pkDef := def.ContainerDef(SystemContainer_ViewPartitionKey)
 	ccDef := def.ContainerDef(SystemContainer_ViewClusteringCols)
 
-	fkName := ViewFullKeyColumsDefName(def.QName())
+	fkName := ViewFullKeyColumnsDefName(def.QName())
 	var fkDef IDefBuilder
 	fkDef, ok := app.defs[fkName]
 
@@ -115,29 +115,29 @@ func (app *appDef) prepareViewFullKeyDef(def IDef) {
 
 // Returns partition key definition name for specified view
 func ViewPartitionKeyDefName(view QName) QName {
-	const suff = "_PartitionKey"
-	return suffixedQName(view, suff)
+	const suffix = "_PartitionKey"
+	return suffixedQName(view, suffix)
 }
 
 // Returns clustering columns definition name for specified view
-func ViewClusteringColumsDefName(view QName) QName {
-	const suff = "_ClusteringColumns"
-	return suffixedQName(view, suff)
+func ViewClusteringColumnsDefName(view QName) QName {
+	const suffix = "_ClusteringColumns"
+	return suffixedQName(view, suffix)
 }
 
 // Returns full key definition name for specified view
-func ViewFullKeyColumsDefName(view QName) QName {
-	const suff = "_FullKey"
-	return suffixedQName(view, suff)
+func ViewFullKeyColumnsDefName(view QName) QName {
+	const suffix = "_FullKey"
+	return suffixedQName(view, suffix)
 }
 
 // Returns value definition name for specified view
 func ViewValueDefName(view QName) QName {
-	const suff = "_Value"
-	return suffixedQName(view, suff)
+	const suffix = "_Value"
+	return suffixedQName(view, suffix)
 }
 
 // Appends suffix to QName entity name and returns new QName
-func suffixedQName(q QName, suff string) QName {
-	return NewQName(q.Pkg(), q.Entity()+suff)
+func suffixedQName(q QName, suffix string) QName {
+	return NewQName(q.Pkg(), q.Entity()+suffix)
 }

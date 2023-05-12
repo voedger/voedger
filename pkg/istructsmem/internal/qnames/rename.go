@@ -33,12 +33,12 @@ func renameQName(storage istorage.IAppStorage, old, new appdef.QName) error {
 		return fmt.Errorf(errWrapFmt, old, new, "unable to read qnames", err)
 	}
 
-	id, err := qnames.GetID(old)
+	id, err := qnames.ID(old)
 	if err != nil {
 		return fmt.Errorf(errWrapFmt, old, new, "old not found", err)
 	}
 
-	if exists, err := qnames.GetID(new); err == nil {
+	if exists, err := qnames.ID(new); err == nil {
 		return fmt.Errorf(errWrapFmt, old, new, fmt.Sprintf("new already exists (id=%v)", exists), err)
 	}
 

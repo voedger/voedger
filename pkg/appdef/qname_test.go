@@ -36,8 +36,8 @@ func TestBasicUsage_QName(t *testing.T) {
 
 	// Errors. Only one dot allowed
 
-	require.NotNil(ParseQName("saleorders"))
-	log.Println(ParseQName("saleorders"))
+	require.NotNil(ParseQName("saleOrders"))
+	log.Println(ParseQName("saleOrders"))
 	require.NotNil(ParseQName("sale.orders."))
 
 }
@@ -46,9 +46,9 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 
 	require := require.New(t)
 
-	t.Run("Marshall/unmarshall QName", func(t *testing.T) {
+	t.Run("Marshall/Unmarshal QName", func(t *testing.T) {
 
-		qname := NewQName("airs-bp", `Карлосон 哇"呀呀`)
+		qname := NewQName("airs-bp", `Карлсон 哇"呀呀`)
 
 		// Marshal
 
@@ -65,7 +65,7 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 		require.Equal(qname, qname2)
 	})
 
-	t.Run("Marshall/unmarshall QName as a part of the structure", func(t *testing.T) {
+	t.Run("Marshall/Unmarshal QName as a part of the structure", func(t *testing.T) {
 
 		type myStruct struct {
 			QName       QName
@@ -74,7 +74,7 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 		}
 
 		ms := myStruct{
-			QName:       NewQName("p", `Карлосон 哇"呀呀`),
+			QName:       NewQName("p", `Карлсон 哇"呀呀`),
 			StringValue: "sv",
 			IntValue:    56,
 		}
@@ -96,8 +96,8 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 
 	t.Run("key of a map", func(t *testing.T) {
 		expected := map[QName]bool{
-			NewQName("sys", "my"):            true,
-			NewQName("sys", `Карлосон 哇"呀呀`): true,
+			NewQName("sys", "my"):           true,
+			NewQName("sys", `Карлсон 哇"呀呀`): true,
 		}
 
 		b, err := json.Marshal(&expected)
@@ -112,7 +112,7 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 func TestQName_Json_NullQName(t *testing.T) {
 
 	require := require.New(t)
-	t.Run("Marshall/unmarshall NullQName", func(t *testing.T) {
+	t.Run("Marshall/Unmarshal NullQName", func(t *testing.T) {
 
 		qname := NullQName
 
@@ -240,7 +240,7 @@ func Test_ValidQName(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "ok if vulgaris QName",
+			name:    "ok if basic QName",
 			args:    args{qName: NewQName("test", "test")},
 			wantOk:  true,
 			wantErr: false,

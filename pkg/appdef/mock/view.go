@@ -23,7 +23,7 @@ func NewView(name appdef.QName) *View {
 	v := View{
 		view: NewDef(name, appdef.DefKind_ViewRecord),
 		pk:   NewDef(appdef.ViewPartitionKeyDefName(name), appdef.DefKind_ViewRecord_PartitionKey),
-		cc:   NewDef(appdef.ViewClusteringColumsDefName(name), appdef.DefKind_ViewRecord_ClusteringColumns),
+		cc:   NewDef(appdef.ViewClusteringColumnsDefName(name), appdef.DefKind_ViewRecord_ClusteringColumns),
 		val:  NewDef(appdef.ViewValueDefName(name), appdef.DefKind_ViewRecord_Value),
 	}
 
