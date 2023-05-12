@@ -54,6 +54,61 @@ type IAppDef interface {
 
 	// Enumerates all application definitions.
 	Defs(func(IDef))
+
+	// Return GDoc by name.
+	//
+	// Returns nil if not found.
+	GDoc(name QName) IGDoc
+
+	// Return GRecord by name.
+	//
+	// Returns nil if not found.
+	GRecord(name QName) IGRecord
+
+	// Return CDoc by name.
+	//
+	// Returns nil if not found.
+	CDoc(name QName) ICDoc
+
+	// Return CRecord by name.
+	//
+	// Returns nil if not found.
+	CRecord(name QName) ICRecord
+
+	// Return WDoc by name.
+	//
+	// Returns nil if not found.
+	WDoc(name QName) IWDoc
+
+	// Return WRecord by name.
+	//
+	// Returns nil if not found.
+	WRecord(name QName) IWRecord
+
+	// Return ODoc by name.
+	//
+	// Returns nil if not found.
+	ODoc(name QName) IODoc
+
+	// Return ORecord by name.
+	//
+	// Returns nil if not found.
+	ORecord(name QName) IORecord
+
+	// Return Object by name.
+	//
+	// Returns nil if not found.
+	Object(name QName) IObject
+
+	// Return Element by name.
+	//
+	// Returns nil if not found.
+	Element(name QName) IElement
+
+	// Return View by name.
+	//
+	// Returns nil if not found.
+	View(name QName) IView
 }
 
 // Application definition builder
@@ -62,18 +117,85 @@ type IAppDef interface {
 type IAppDefBuilder interface {
 	IAppDef
 
-	// Adds new definition specified name and kind.
+	// Adds new GDoc definition with specified name.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists,
-	//   - if kind is not structure.
-	// # Structures are:
-	//	- DefKind_GDoc, DefKind_CDoc, DefKind_ODoc, DefKind_WDoc,
-	//	-	DefKind_GRecord, DefKind_CRecord, DefKind_ORecord, DefKind_WRecord
-	//	- DefKind_Object and DefKind_Element.
-	AddStruct(name QName, kind DefKind) IDefBuilder
+	//   - if definition with name already exists.
+	AddGDoc(name QName) IGDocBuilder
+
+	// Adds new GRecord definition with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if definition with name already exists.
+	AddGRecord(name QName) IGRecordBuilder
+
+	// Adds new CDoc definition with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if definition with name already exists.
+	AddCDoc(name QName) ICDocBuilder
+
+	// Adds new CRecord definition with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if definition with name already exists.
+	AddCRecord(name QName) ICRecordBuilder
+
+	// Adds new WDoc definition with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if definition with name already exists.
+	AddWDoc(name QName) IWDocBuilder
+
+	// Adds new WRecord definition with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if definition with name already exists.
+	AddWRecord(name QName) IWRecordBuilder
+
+	// Adds new ODoc definition with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if definition with name already exists.
+	AddODoc(name QName) IODocBuilder
+
+	// Adds new ORecord definition with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if definition with name already exists.
+	AddORecord(name QName) IORecordBuilder
+
+	// Adds new Object definition with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if definition with name already exists.
+	AddObject(name QName) IObjectBuilder
+
+	// Adds new Element definition with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if definition with name already exists.
+	AddElement(name QName) IElementBuilder
 
 	// Adds new definitions for view.
 	AddView(QName) IViewBuilder
@@ -97,7 +219,16 @@ type IDef interface {
 
 	// Definition kind.
 	Kind() DefKind
+}
 
+// Definitions with fields:
+//	- DefKind_GDoc and DefKind_GRecord,
+//	- DefKind_CDoc and DefKind_CRecord,
+//	- DefKind_ODoc and DefKind_CRecord,
+//	- DefKind_WDoc and DefKind_WRecord,
+//	- DefKind_Object and DefKind_Element,
+//	- DefKind_ViewRecord_PartitionKey, DefKind_ViewRecord_ClusteringColumns and DefKind_ViewRecord_Value
+type IWithFields interface {
 	// Finds field by name.
 	//
 	// Returns nil if not found.
@@ -108,7 +239,39 @@ type IDef interface {
 
 	// Enumerates all fields in add order.
 	Fields(func(IField))
+}
 
+type IWithFieldsBuilder interface {
+	// Adds field specified name and kind.
+	//
+	// # Panics:
+	//   - if name is empty,
+	//   - if name is invalid,
+	//   - if field with name is already exists,
+	//   - if definition kind not supports fields,
+	//   - if data kind is not allowed by definition kind.
+	AddField(name string, kind DataKind, required bool) IWithFieldsBuilder
+
+	// Adds verified field specified name and kind.
+	//
+	// # Panics:
+	//   - if field name is empty,
+	//   - if field name is invalid,
+	//   - if field with name is already exists,
+	//   - if definition kind not supports fields,
+	//   - if data kind is not allowed by definition kind,
+	//   - if no verification kinds are specified
+	AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IWithFieldsBuilder
+}
+
+// Definitions with containers:
+//	- DefKind_GDoc and DefKind_GRecord,
+//	- DefKind_CDoc and DefKind_CRecord,
+//	- DefKind_ODoc and DefKind_CRecord,
+//	- DefKind_WDoc and DefKind_WRecord,
+//	- DefKind_Object and DefKind_Element,
+//	- DefKind_ViewRecord
+type IWithContainers interface {
 	// Finds container by name.
 	//
 	// Returns nil if not found.
@@ -124,10 +287,26 @@ type IDef interface {
 	//
 	// If not found empty definition with DefKind_null is returned
 	ContainerDef(name string) IDef
+}
 
-	// Returns is definition CDoc singleton
-	Singleton() bool
+type IWithContainersBuilder interface {
+	// Adds container specified name and occurs.
+	//
+	// # Panics:
+	//   - if name is empty,
+	//   - if name is invalid,
+	//   - if container with name already exists,
+	//   - if invalid occurrences,
+	//   - if definition kind does not allow containers,
+	//   - if container definition kind is not compatible with definition kind.
+	AddContainer(name string, def QName, min, max Occurs) IWithContainersBuilder
+}
 
+// Definitions with uniques:
+//	- DefKind_GDoc and DefKind_GRecord,
+//	- DefKind_CDoc and DefKind_CRecord,
+//	- DefKind_WDoc and DefKind_WRecord
+type IWithUniques interface {
 	// Return unique by ID.
 	//
 	// Returns nil if not unique found
@@ -145,44 +324,7 @@ type IDef interface {
 	Uniques(func(IUnique))
 }
 
-// Definition builder
-//
-// Ref to def.go for implementation
-type IDefBuilder interface {
-	IDef
-
-	// Adds field specified name and kind.
-	//
-	// # Panics:
-	//   - if name is empty,
-	//   - if name is invalid,
-	//   - if field with name is already exists,
-	//   - if definition kind not supports fields,
-	//   - if data kind is not allowed by definition kind.
-	AddField(name string, kind DataKind, required bool) IDefBuilder
-
-	// Adds verified field specified name and kind.
-	//
-	// # Panics:
-	//   - if field name is empty,
-	//   - if field name is invalid,
-	//   - if field with name is already exists,
-	//   - if definition kind not supports fields,
-	//   - if data kind is not allowed by definition kind,
-	//   - if no verification kinds are specified
-	AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IDefBuilder
-
-	// Adds container specified name and occurs.
-	//
-	// # Panics:
-	//   - if name is empty,
-	//   - if name is invalid,
-	//   - if container with name already exists,
-	//   - if invalid occurrences,
-	//   - if definition kind does not allow containers,
-	//   - if container definition kind is not compatible with definition kind.
-	AddContainer(name string, def QName, min, max Occurs) IDefBuilder
-
+type IWithUniquesBuilder interface {
 	// Adds new unique with specified name and fields.
 	// If name is omitted, then default name is used, e.g. `unique01`.
 	//
@@ -194,34 +336,178 @@ type IDefBuilder interface {
 	//   - if fields has duplicates,
 	//   - if fields is already exists or overlaps with an existing unique,
 	//   - if some field not found.
-	AddUnique(name string, fields []string) IDefBuilder
+	AddUnique(name string, fields []string) IWithUniquesBuilder
+}
 
-	// Sets the singleton document flag for CDoc.
-	//
-	// # Panics:
-	//   - if not CDoc definition.
+// Global document. DefKind() is DefKind_GDoc.
+type IGDoc interface {
+	IDef
+	IWithFields
+	IWithContainers
+	IWithUniques
+}
+
+type IGDocBuilder interface {
+	IGDoc
+	IWithFieldsBuilder
+	IWithContainersBuilder
+	IWithUniquesBuilder
+}
+
+// Global document record. DefKind() is DefKind_GRecord.
+type IGRecord interface {
+	IDef
+	IWithFields
+	IWithContainers
+	IWithUniques
+}
+
+type IGRecordBuilder interface {
+	IGRecord
+	IWithFieldsBuilder
+	IWithContainersBuilder
+	IWithUniquesBuilder
+}
+
+// Configuration document. DefKind() is DefKind_CDoc.
+type ICDoc interface {
+	IDef
+	IWithFields
+	IWithContainers
+	IWithUniques
+
+	// Returns is singleton
+	Singleton() bool
+}
+
+type ICDocBuilder interface {
+	ICDoc
+	IWithFieldsBuilder
+	IWithContainersBuilder
+	IWithUniquesBuilder
+
+	// Sets CDoc singleton
 	SetSingleton()
 }
 
-// View builder
+// Configuration document record. DefKind() is DefKind_CRecord.
+type ICRecord interface {
+	IDef
+	IWithFields
+	IWithContainers
+	IWithUniques
+}
+
+type ICRecordBuilder interface {
+	ICRecord
+	IWithFieldsBuilder
+	IWithContainersBuilder
+	IWithUniquesBuilder
+}
+
+// Workflow document. DefKind() is DefKind_WDoc.
+type IWDoc interface {
+	IDef
+	IWithFields
+	IWithContainers
+	IWithUniques
+}
+
+type IWDocBuilder interface {
+	IWDoc
+	IWithFieldsBuilder
+	IWithContainersBuilder
+	IWithUniquesBuilder
+}
+
+// Workflow document record. DefKind() is DefKind_WRecord.
+type IWRecord interface {
+	IDef
+	IWithFields
+	IWithContainers
+	IWithUniques
+}
+
+type IWRecordBuilder interface {
+	IWRecord
+	IWithFieldsBuilder
+	IWithContainersBuilder
+	IWithUniquesBuilder
+}
+
+// Operation document. DefKind() is DefKind_ODoc.
+type IODoc interface {
+	IDef
+	IWithFields
+	IWithContainers
+}
+
+type IODocBuilder interface {
+	IODoc
+	IWithFieldsBuilder
+	IWithContainersBuilder
+}
+
+// Operation document record. DefKind() is DefKind_ORecord.
+type IORecord interface {
+	IDef
+	IWithFields
+	IWithContainers
+}
+
+type IORecordBuilder interface {
+	IORecord
+	IWithFieldsBuilder
+	IWithContainersBuilder
+}
+
+// Object definition. DefKind() is DefKind_Object.
+type IObject interface {
+	IDef
+	IWithFields
+	IWithContainers
+}
+
+type IObjectBuilder interface {
+	IObject
+	IWithFieldsBuilder
+	IWithContainersBuilder
+}
+
+// Element definition. DefKind() is DefKind_Element.
+type IElement interface {
+	IDef
+	IWithFields
+	IWithContainers
+}
+
+type IElementBuilder interface {
+	IElement
+	IWithFieldsBuilder
+	IWithContainersBuilder
+}
+
+// View definition. DefKind() is DefKind_ViewRecord
 //
 // Ref to view.go for implementation
-type IViewBuilder interface {
-	// Returns view name
-	Name() QName
+type IView interface {
+	IDef
+	IWithContainers
 
-	// Returns view definition
-	Def() IDefBuilder
+	// Returns partition key definition
+	PartKey() IPartKey
 
-	// Returns view partition key definition
-	PartKeyDef() IDefBuilder
+	// Returns clustering columns definition
+	ClustCols() IClustCols
 
-	// Returns view clustering columns definition
-	ClustColsDef() IDefBuilder
+	// Returns full (pk + ccols) view key definition
+	Key() IViewKey
 
 	// Returns view value definition
-	ValueDef() IDefBuilder
+	Value() IViewValue
+}
 
+type IViewBuilder interface {
 	// AddPartField adds specified field to view partition key definition. Fields is always required
 	//
 	// # Panics:
@@ -240,6 +526,32 @@ type IViewBuilder interface {
 	// # Panics:
 	//	- if field already exists in partition key or clustering columns fields.
 	AddValueField(name string, kind DataKind, required bool) IViewBuilder
+}
+
+// View partition key definition. DefKind() is DefKind_ViewRecordPartitionKey
+type IPartKey interface {
+	IDef
+	IWithFields
+}
+
+// View clustering columns definition. DefKind() is DefKind_ViewRecordClusteringColumns
+type IClustCols interface {
+	IDef
+	IWithFields
+}
+
+// View full (pk + cc) key definition. DefKind() is DefKind_ViewRecordFullKey
+//
+// Partition key fields is required, clustering columns is not.
+type IViewKey interface {
+	IDef
+	IWithFields
+}
+
+// View value definition. DefKind() is DefKind_ViewRecord_Value
+type IViewValue interface {
+	IDef
+	IWithFields
 }
 
 // Describe single field.

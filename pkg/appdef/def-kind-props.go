@@ -97,7 +97,7 @@ var defKindProps = map[DefKind]struct {
 			DefKind_ODoc:    true, // #19322!: ODocs should be able to contain ODocs
 			DefKind_ORecord: true,
 		},
-		availableUniques: true,
+		availableUniques: false,
 	},
 	DefKind_WDoc: {
 		structure:     true,
@@ -202,7 +202,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{
 			DefKind_ORecord: true,
 		},
-		availableUniques: true,
+		availableUniques: false,
 	},
 	DefKind_WRecord: {
 		structure:     true,

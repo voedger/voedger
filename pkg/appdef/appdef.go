@@ -23,7 +23,7 @@ func newAppDef() *appDef {
 	return &app
 }
 
-func (app *appDef) AddStruct(name QName, kind DefKind) IDefBuilder {
+func (app *appDef) AddStruct(name QName, kind DefKind) IStructBuilder {
 	if name == NullQName {
 		panic(fmt.Errorf("definition name cannot be empty: %w", ErrNameMissed))
 	}
@@ -88,7 +88,7 @@ func (app *appDef) Defs(cb func(IDef)) {
 	}
 }
 
-func (app *appDef) addDef(name QName, kind DefKind) IDefBuilder {
+func (app *appDef) addDef(name QName, kind DefKind) IStructBuilder {
 	d := newDef(app, name, kind)
 	app.defs[name] = d
 	app.changed()

@@ -42,7 +42,7 @@ func newDef(app *appDef, name QName, kind DefKind) *def {
 	return &def
 }
 
-func (d *def) AddContainer(name string, contDef QName, minOccurs, maxOccurs Occurs) IDefBuilder {
+func (d *def) AddContainer(name string, contDef QName, minOccurs, maxOccurs Occurs) IStructBuilder {
 	if name == NullName {
 		panic(fmt.Errorf("empty container name: %w", ErrNameMissed))
 	}
@@ -84,19 +84,19 @@ func (d *def) AddContainer(name string, contDef QName, minOccurs, maxOccurs Occu
 	return d
 }
 
-func (d *def) AddField(name string, kind DataKind, required bool) IDefBuilder {
+func (d *def) AddField(name string, kind DataKind, required bool) IStructBuilder {
 	d.addField(name, kind, required, false)
 	return d
 }
 
-func (d *def) AddUnique(name string, fields []string) IDefBuilder {
+func (d *def) AddUnique(name string, fields []string) IStructBuilder {
 	if name == NullName {
 		name = generateUniqueName(d, fields)
 	}
 	return d.addUnique(name, fields)
 }
 
-func (d *def) AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IDefBuilder {
+func (d *def) AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IStructBuilder {
 	d.addField(name, kind, required, true, vk...)
 	return d
 }
@@ -229,7 +229,7 @@ func (d *def) addField(name string, kind DataKind, required, verified bool, vk .
 	d.changed()
 }
 
-func (d *def) addUnique(name string, fields []string) IDefBuilder {
+func (d *def) addUnique(name string, fields []string) IStructBuilder {
 	if ok, err := ValidIdent(name); !ok {
 		panic(fmt.Errorf("%v: unique name «%v» is invalid: %w", d.QName(), name, err))
 	}

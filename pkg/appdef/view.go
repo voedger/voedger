@@ -14,7 +14,7 @@ type viewBuilder struct {
 	def,
 	pkDef,
 	ccDef,
-	valDef IDefBuilder
+	valDef IStructBuilder
 }
 
 func newViewBuilder(cache *appDef, name QName) viewBuilder {
@@ -52,7 +52,7 @@ func (view *viewBuilder) AddValueField(name string, kind DataKind, required bool
 	return view
 }
 
-func (view *viewBuilder) Def() IDefBuilder {
+func (view *viewBuilder) Def() IStructBuilder {
 	return view.def
 }
 
@@ -60,15 +60,15 @@ func (view *viewBuilder) Name() QName {
 	return view.name
 }
 
-func (view *viewBuilder) PartKeyDef() IDefBuilder {
+func (view *viewBuilder) PartKeyDef() IStructBuilder {
 	return view.pkDef
 }
 
-func (view *viewBuilder) ClustColsDef() IDefBuilder {
+func (view *viewBuilder) ClustColsDef() IStructBuilder {
 	return view.ccDef
 }
 
-func (view *viewBuilder) ValueDef() IDefBuilder {
+func (view *viewBuilder) ValueDef() IStructBuilder {
 	return view.valDef
 }
 
@@ -89,7 +89,7 @@ func (app *appDef) prepareViewFullKeyDef(def IDef) {
 	ccDef := def.ContainerDef(SystemContainer_ViewClusteringCols)
 
 	fkName := ViewFullKeyColumnsDefName(def.QName())
-	var fkDef IDefBuilder
+	var fkDef IStructBuilder
 	fkDef, ok := app.defs[fkName]
 
 	if ok {
