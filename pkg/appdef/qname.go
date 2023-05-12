@@ -30,7 +30,7 @@ var (
 	NullQName    = QNameForNull
 )
 
-// Builds a qualfied name from two parts (from pakage name and from entity name)
+// Builds a qualified name from two parts (from package name and from entity name)
 func NewQName(pkgName, entityName string) QName {
 	return QName{pkg: pkgName, entity: entityName}
 }
@@ -51,16 +51,16 @@ func ParseQualifiedName(val, delimiter string) (part1, part2 string, err error) 
 }
 
 // Returns package name
-func (qn *QName) Pkg() string { return qn.pkg }
+func (qn QName) Pkg() string { return qn.pkg }
 
 // Returns entity name
-func (qn *QName) Entity() string { return qn.entity }
+func (qn QName) Entity() string { return qn.entity }
 
 // Returns QName as string
 func (qn QName) String() string { return qn.pkg + QNameQualifierChar + qn.entity }
 
 // JSON marshaling support
-func (qn *QName) MarshalJSON() ([]byte, error) {
+func (qn QName) MarshalJSON() ([]byte, error) {
 	return json.Marshal(qn.pkg + QNameQualifierChar + qn.entity)
 }
 

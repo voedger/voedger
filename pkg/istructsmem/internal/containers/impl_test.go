@@ -51,11 +51,11 @@ func TestContainers(t *testing.T) {
 	t.Run("basic Containers methods", func(t *testing.T) {
 
 		check := func(containers *Containers, name string) ContainerID {
-			id, err := containers.GetID(name)
+			id, err := containers.ID(name)
 			require.NoError(err)
 			require.NotEqual(NullContainerID, id)
 
-			n, err := containers.GetContainer(id)
+			n, err := containers.Container(id)
 			require.NoError(err)
 			require.Equal(name, n)
 
@@ -103,13 +103,13 @@ func TestContainers(t *testing.T) {
 	})
 
 	t.Run("must be error if unknown container", func(t *testing.T) {
-		id, err := containers.GetID("unknown")
+		id, err := containers.ID("unknown")
 		require.Equal(NullContainerID, id)
 		require.ErrorIs(err, ErrContainerNotFound)
 	})
 
 	t.Run("must be error if unknown id", func(t *testing.T) {
-		n, err := containers.GetContainer(ContainerID(MaxAvailableContainerID))
+		n, err := containers.Container(ContainerID(MaxAvailableContainerID))
 		require.Equal("", n)
 		require.ErrorIs(err, ErrContainerIDNotFound)
 	})
@@ -127,14 +127,14 @@ func TestContainersPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysContainersVersion, lastestVersion+1)
+		versions.Put(vers.SysContainersVersion, latestVersion+1)
 
 		names := New()
 		err := names.Prepare(storage, versions, nil)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
 
-	t.Run("must be error if invalid Container readed from system view ", func(t *testing.T) {
+	t.Run("must be error if invalid Container loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
@@ -143,7 +143,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysContainersVersion, lastestVersion)
+		versions.Put(vers.SysContainersVersion, latestVersion)
 		const badName = "-test-error-name-"
 		storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte(badName), utils.ToBytes(ContainerID(512)))
 
@@ -152,7 +152,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 		require.ErrorIs(err, appdef.ErrInvalidName)
 	})
 
-	t.Run("must be ok if deleted Container readed from system view ", func(t *testing.T) {
+	t.Run("must be ok if deleted Container loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
@@ -161,7 +161,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysContainersVersion, lastestVersion)
+		versions.Put(vers.SysContainersVersion, latestVersion)
 		storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte("deleted"), utils.ToBytes(NullContainerID))
 
 		names := New()
@@ -169,7 +169,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("must be error if invalid (small) ContainerID readed from system view ", func(t *testing.T) {
+	t.Run("must be error if invalid (small) ContainerID loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
@@ -178,7 +178,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysContainersVersion, lastestVersion)
+		versions.Put(vers.SysContainersVersion, latestVersion)
 		storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte("test"), utils.ToBytes(ContainerID(1)))
 
 		names := New()

@@ -14,6 +14,4 @@ import (
 
 var ErrSingletonIDsExceeds = fmt.Errorf("the maximum number of singleton document identifiers (%v) has been exceeded", istructs.MaxSingletonID)
 
-var ErrIDNotFound = errors.New("ID not found")
-
 var ErrNameNotFound = errors.New("name not found")

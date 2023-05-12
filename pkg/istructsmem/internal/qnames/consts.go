@@ -23,5 +23,5 @@ const MaxAvailableQNameID = 0xFFFF
 const (
 	ver01 vers.VersionValue = vers.UnknownVersion + 1
 
-	lastestVersion = ver01
+	latestVersion = ver01
 )

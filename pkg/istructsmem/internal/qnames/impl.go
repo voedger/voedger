@@ -28,7 +28,7 @@ func newQNames() *QNames {
 }
 
 // Returns ID for specified QName
-func (names *QNames) GetID(qName appdef.QName) (QNameID, error) {
+func (names *QNames) ID(qName appdef.QName) (QNameID, error) {
 	if id, ok := names.qNames[qName]; ok {
 		return id, nil
 	}
@@ -36,7 +36,7 @@ func (names *QNames) GetID(qName appdef.QName) (QNameID, error) {
 }
 
 // Retrieve QName for specified ID
-func (names *QNames) GetQName(id QNameID) (qName appdef.QName, err error) {
+func (names *QNames) QName(id QNameID) (qName appdef.QName, err error) {
 	qName, ok := names.ids[id]
 	if ok {
 		return qName, nil
@@ -51,7 +51,7 @@ func (names *QNames) Prepare(storage istorage.IAppStorage, versions *vers.Versio
 		return err
 	}
 
-	if err := names.collectAllQNames(appDef, resources); err != nil {
+	if err := names.collectAll(appDef, resources); err != nil {
 		return err
 	}
 
@@ -65,19 +65,19 @@ func (names *QNames) Prepare(storage istorage.IAppStorage, versions *vers.Versio
 }
 
 // Collect all system and application QName IDs
-func (names *QNames) collectAllQNames(appDef appdef.IAppDef, r istructs.IResources) (err error) {
+func (names *QNames) collectAll(appDef appdef.IAppDef, r istructs.IResources) (err error) {
 
 	// system QNames
 	names.
-		collectSysQName(appdef.NullQName, NullQNameID).
-		collectSysQName(istructs.QNameForError, QNameIDForError).
-		collectSysQName(istructs.QNameCommandCUD, QNameIDCommandCUD)
+		collectSys(appdef.NullQName, NullQNameID).
+		collectSys(istructs.QNameForError, QNameIDForError).
+		collectSys(istructs.QNameCommandCUD, QNameIDCommandCUD)
 
 	if appDef != nil {
 		appDef.Defs(
 			func(d appdef.IDef) {
 				err = errors.Join(err,
-					names.collectAppQName(d.QName()))
+					names.collect(d.QName()))
 			})
 	}
 
@@ -85,7 +85,7 @@ func (names *QNames) collectAllQNames(appDef appdef.IAppDef, r istructs.IResourc
 		r.Resources(
 			func(q appdef.QName) {
 				err = errors.Join(err,
-					names.collectAppQName(q))
+					names.collect(q))
 			})
 	}
 
@@ -93,7 +93,7 @@ func (names *QNames) collectAllQNames(appDef appdef.IAppDef, r istructs.IResourc
 }
 
 // Checks is exists ID for application QName in cache. If not then adds it with new ID
-func (names *QNames) collectAppQName(qName appdef.QName) error {
+func (names *QNames) collect(qName appdef.QName) error {
 	if _, ok := names.qNames[qName]; ok {
 		return nil // already known QName
 	}
@@ -112,7 +112,7 @@ func (names *QNames) collectAppQName(qName appdef.QName) error {
 }
 
 // Adds system QName to cache
-func (names *QNames) collectSysQName(qName appdef.QName, id QNameID) *QNames {
+func (names *QNames) collectSys(qName appdef.QName, id QNameID) *QNames {
 	names.qNames[qName] = id
 	names.ids[id] = qName
 	return names
@@ -129,7 +129,7 @@ func (names *QNames) load(storage istorage.IAppStorage, versions *vers.Versions)
 		return names.load01(storage)
 	}
 
-	return fmt.Errorf("unknown version of system QNames view (%v): %w", ver, vers.ErrorInvalidVersion)
+	return fmt.Errorf("unknown version of QNames system view (%v): %w", ver, vers.ErrorInvalidVersion)
 }
 
 // loads all stored QNames from storage version ver01
@@ -146,7 +146,7 @@ func (names *QNames) load01(storage istorage.IAppStorage) error {
 		}
 
 		if id <= QNameIDSysLast {
-			return fmt.Errorf("unexpected ID (%v) is readed from system QNames view: %w", id, ErrWrongQNameID)
+			return fmt.Errorf("unexpected ID (%v) is loaded from QNames system view: %w", id, ErrWrongQNameID)
 		}
 
 		names.qNames[qName] = id
@@ -183,9 +183,9 @@ func (names *QNames) store(storage istorage.IAppStorage, versions *vers.Versions
 		return fmt.Errorf("error store application QName IDs to storage: %w", err)
 	}
 
-	if ver := versions.Get(vers.SysQNamesVersion); ver != lastestVersion {
-		if err = versions.Put(vers.SysQNamesVersion, lastestVersion); err != nil {
-			return fmt.Errorf("error store system QNames view version: %w", err)
+	if ver := versions.Get(vers.SysQNamesVersion); ver != latestVersion {
+		if err = versions.Put(vers.SysQNamesVersion, latestVersion); err != nil {
+			return fmt.Errorf("error store QNames system view version: %w", err)
 		}
 	}
 
