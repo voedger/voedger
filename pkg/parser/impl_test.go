@@ -32,18 +32,27 @@ func getSysPackageAST() *PackageSchemaAST {
 
 func Test_BasicUsage(t *testing.T) {
 
+	require := require.New(t)
 	examplePkgAST, err := ParsePackageDir("github.com/untillpro/exampleschema", efs, "example_app")
-	require.NoError(t, err)
+	require.NoError(err)
 
 	// := repr.String(pkgExample, repr.Indent(" "), repr.IgnorePrivate())
 	//fmt.Println(parsedSchemaStr)
 
-	packages, err := MergePackageSchemas([]*PackageSchemaAST{getSysPackageAST(), examplePkgAST})
-	require.NoError(t, err)
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		examplePkgAST,
+	})
+	require.NoError(err)
 
 	builder := appdef.New()
 	err = BuildAppDefs(packages, builder)
-	require.NoError(t, err)
+	require.NoError(err)
+
+	def := builder.Def(appdef.NewQName("air", "AirTablePlan"))
+	require.NotNil(def)
+	require.Equal(appdef.DataKind_int32, def.Field("FState").DataKind())
+	require.Equal(2, len(def.UniqueByName("AIRTABLEPLAN_UNIQUE1").Fields()))
 }
 
 func Test_Expressions(t *testing.T) {
