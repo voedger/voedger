@@ -157,13 +157,18 @@ func isSysDef(qn DefQName, ident string) bool {
 	return maybeSysPkg(qn.Package) && qn.Name == ident
 }
 
+func isPredefinedSysTable(table *TableStmt, c *aContext) bool {
+	return c.pkg.QualifiedPackageName == appdef.SysPackage && (table.Name == nameCDOC || table.Name == nameWDOC || table.Name == nameODOC)
+}
+
 func getTableInheritanceChain(table *TableStmt, c *aContext) (chain []DefQName) {
 	chain = make([]DefQName, 0)
 	var vf func(t *TableStmt)
 	vf = func(t *TableStmt) {
 		if t.Inherits != nil {
-			resolve(*t.Inherits, c, func(t *TableStmt) error {
-				chain = append(chain, *t.Inherits)
+			inherited := *t.Inherits
+			resolve(inherited, c, func(t *TableStmt) error {
+				chain = append(chain, inherited)
 				vf(t)
 				return nil
 			})
@@ -171,6 +176,30 @@ func getTableInheritanceChain(table *TableStmt, c *aContext) (chain []DefQName) 
 	}
 	vf(table)
 	return chain
+}
+
+func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
+	switch rootTableKind {
+	case appdef.DefKind_CDoc:
+		return appdef.DefKind_CRecord
+	case appdef.DefKind_ODoc:
+		return appdef.DefKind_ORecord
+	case appdef.DefKind_WDoc:
+		return appdef.DefKind_WRecord
+	default:
+		panic(fmt.Sprintf("unexpected root table kind %d", rootTableKind))
+	}
+}
+
+func genUniqueName(tablename string, bc appdef.IDefBuilder) string {
+	tn := strings.ToUpper(tablename)
+	for i := 1; i < appdef.MaxDefUniqueCount+1; i++ {
+		un := fmt.Sprintf("%s_UNIQUE%d", tn, i)
+		if bc.UniqueByName(un) == nil {
+			return un
+		}
+	}
+	return ""
 }
 
 func getTableDefKind(table *TableStmt, c *aContext) (kind appdef.DefKind, singletone bool) {

@@ -377,15 +377,19 @@ type TableStmt struct {
 func (s TableStmt) GetName() string { return s.Name }
 
 type TableItemExpr struct {
-	Table  *TableStmt      `parser:"@@"`
-	Unique *UniqueExpr     `parser:"| @@"`
-	Check  *TableCheckExpr `parser:"| @@"`
-	Field  *FieldExpr      `parser:"| @@"`
+	Table      *TableStmt       `parser:"@@"`
+	Constraint *TableConstraint `parser:"| @@"`
+	Field      *FieldExpr       `parser:"| @@"`
+}
+
+type TableConstraint struct {
+	ConstraintName string          `parser:"('CONSTRAINT' @Ident)?"`
+	Unique         *UniqueExpr     `parser:"(@@"`
+	Check          *TableCheckExpr `parser:"| @@)"`
 }
 
 type TableCheckExpr struct {
-	ConstraintName string     `parser:"('CONSTRAINT' @Ident)?"`
-	Expression     Expression `parser:"'CHECK' '(' @@ ')'"`
+	Expression Expression `parser:"'CHECK' '(' @@ ')'"`
 }
 
 type UniqueExpr struct {

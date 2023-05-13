@@ -259,6 +259,14 @@ func buildAppDefs(packages map[string]*PackageSchemaAST, builder appdef.IAppDefB
 	return nil
 }
 
+type defBuilderContext struct {
+	builder    appdef.IAppDefBuilder
+	defBuilder appdef.IDefBuilder
+	defKind    appdef.DefKind
+	tableName  string
+	schema     *PackageSchemaAST
+}
+
 func buildTables(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) error {
 	c := aContext{
 		pkg:    nil,
@@ -267,15 +275,25 @@ func buildTables(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBu
 	}
 	for _, schema := range packages {
 		iterateStmt(schema.Ast, func(table *TableStmt) {
+			c.pkg = schema
+			if isPredefinedSysTable(table, &c) {
+				return
+			}
 			tableType, singletone := getTableDefKind(table, &c)
 			if tableType == appdef.DefKind_null {
 				c.errs = append(c.errs, errorAt(ErrUndefinedTableKind, &table.Pos))
 			} else {
-				defBuilder := builder.AddStruct(appdef.NewQName(schema.Ast.Package, table.Name), tableType)
-				addFieldsOf(table.Of, defBuilder, builder, &c)
-				addTableItems(table.Items, defBuilder, builder, &c)
+				bc := defBuilderContext{
+					builder:    builder,
+					defKind:    tableType,
+					tableName:  table.Name,
+					defBuilder: builder.AddStruct(appdef.NewQName(schema.Ast.Package, table.Name), tableType),
+					schema:     schema,
+				}
+				addFieldsOf(table.Of, &bc, &c)
+				addTableItems(table.Items, &bc, &c)
 				if singletone {
-					defBuilder.SetSingleton()
+					bc.defBuilder.SetSingleton()
 				}
 			}
 		})
@@ -283,7 +301,7 @@ func buildTables(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBu
 	return errors.Join(c.errs...)
 }
 
-func addTableItems(items []TableItemExpr, defBuilder appdef.IDefBuilder, builder appdef.IAppDefBuilder, ctx *aContext) {
+func addTableItems(items []TableItemExpr, bc *defBuilderContext, ctx *aContext) {
 	for _, item := range items {
 		if item.Field != nil {
 			sysDataKind := getTypeDataKind(item.Field.Type)
@@ -293,32 +311,52 @@ func addTableItems(items []TableItemExpr, defBuilder appdef.IDefBuilder, builder
 				} else {
 					if item.Field.Verifiable {
 						// TODO: Support different verification kindsbuilder, &c
-						defBuilder.AddVerifiedField(item.Field.Name, sysDataKind, item.Field.NotNull, appdef.VerificationKind_EMail)
+						bc.defBuilder.AddVerifiedField(item.Field.Name, sysDataKind, item.Field.NotNull, appdef.VerificationKind_EMail)
 					} else {
-						defBuilder.AddField(item.Field.Name, sysDataKind, item.Field.NotNull)
+						bc.defBuilder.AddField(item.Field.Name, sysDataKind, item.Field.NotNull)
 					}
 				}
 			} else {
 				ctx.errs = append(ctx.errs, errorAt(ErrTypeNotSupported(item.Field.Type.String()), &item.Field.Pos))
 			}
-		} else if item.Unique != nil {
-
-			// TODO: add unique
+		} else if item.Constraint != nil {
+			if item.Constraint.Unique != nil {
+				name := item.Constraint.ConstraintName
+				if name == "" {
+					name = genUniqueName(bc.tableName, bc.defBuilder)
+				}
+				bc.defBuilder.AddUnique(name, item.Constraint.Unique.Fields)
+			} else if item.Constraint.Check != nil {
+				// TODO: implement Table Check COnstraint
+			}
 		} else if item.Table != nil {
-			//typeBuilder := builder.AddStruct()
-			//builder.AddContainer()
-			// - how to add unique
-			// - collections: records and types
-			// - how to test
+			// Add nested table
+			kind, singletone := getTableDefKind(item.Table, ctx)
+			if kind != appdef.DefKind_null || singletone {
+				ctx.errs = append(ctx.errs, ErrNestedTableCannotBeDocument)
+			} else {
+				tk := getNestedTableKind(bc.defKind)
+				qname := appdef.NewQName(bc.schema.Ast.Package, item.Table.Name)
+				nestedBc := defBuilderContext{
+					builder:    bc.builder,
+					defKind:    tk,
+					defBuilder: bc.builder.AddStruct(qname, tk),
+					tableName:  item.Table.Name,
+					schema:     bc.schema,
+				}
+				addFieldsOf(item.Table.Of, &nestedBc, ctx)
+				addTableItems(item.Table.Items, &nestedBc, ctx)
+				bc.defBuilder.AddContainer(item.Table.Name, qname, 0, 100) // TODO: max occurances?
+			}
 		}
 	}
 }
 
-func addFieldsOf(types []DefQName, defBuilder appdef.IDefBuilder, builder appdef.IAppDefBuilder, ctx *aContext) {
+func addFieldsOf(types []DefQName, bc *defBuilderContext, ctx *aContext) {
 	for _, of := range types {
 		resolve(of, ctx, func(t *TypeStmt) error {
-			addTableItems(t.Items, defBuilder, builder, ctx)
-			addFieldsOf(t.Of, defBuilder, builder, ctx)
+			addTableItems(t.Items, bc, ctx)
+			addFieldsOf(t.Of, bc, ctx)
 			return nil
 		})
 	}
