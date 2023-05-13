@@ -64,6 +64,7 @@ var (
 	qNameQryToggleUPPaymentMethod                   = appdef.NewQName(airPackage, "ToggleUPPaymentMethod")
 	qNameQryRequestUPPaymentMethod                  = appdef.NewQName(airPackage, "RequestUPPaymentMethod")
 	qNameQryUPTerminalWebhook                       = appdef.NewQName(airPackage, "UPTerminalWebhook")
+	qNameCDocUntillPayments                         = appdef.NewQName(airPackage, "UntillPayments")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")

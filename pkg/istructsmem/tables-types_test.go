@@ -91,7 +91,7 @@ func Test_newRecord(t *testing.T) {
 			sysCnt := 0
 			doc.def.Fields(
 				func(f appdef.IField) {
-					require.True(doc.hasValue(f.Name()))
+					require.True(doc.HasValue(f.Name()))
 					if f.IsSys() {
 						sysCnt++
 					}
@@ -112,7 +112,7 @@ func Test_newRecord(t *testing.T) {
 
 			doc.def.Fields(
 				func(f appdef.IField) {
-					require.True(doc.hasValue(f.Name()))
+					require.True(doc.HasValue(f.Name()))
 					if f.IsSys() {
 						sysCnt++
 					}
@@ -149,7 +149,7 @@ func Test_newRecord(t *testing.T) {
 
 				rec.def.Fields(
 					func(f appdef.IField) {
-						require.True(rec.hasValue(f.Name()))
+						require.True(rec.HasValue(f.Name()))
 						if f.IsSys() {
 							sysCnt++
 						}
@@ -171,7 +171,7 @@ func Test_newRecord(t *testing.T) {
 
 				rec.def.Fields(
 					func(f appdef.IField) {
-						require.True(rec.hasValue(f.Name()))
+						require.True(rec.HasValue(f.Name()))
 						if f.IsSys() {
 							sysCnt++
 						}
@@ -394,14 +394,14 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		require.Equal(rec1.QName(), rec2.QName())
 		rec1.dyB.IterateFields(nil, func(name string, val1 interface{}) bool {
 			newName := name + "_1"
-			require.True(rec2.hasValue(newName), newName)
+			require.True(rec2.HasValue(newName), newName)
 			val2 := rec2.dyB.Get(newName)
 			require.Equal(val1, val2)
 			return true
 		})
 		rec2.dyB.IterateFields(nil, func(name string, val2 interface{}) bool {
 			oldName := name[:len(name)-2]
-			require.True(rec1.hasValue(oldName), oldName)
+			require.True(rec1.HasValue(oldName), oldName)
 			return true
 		})
 	})

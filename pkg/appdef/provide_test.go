@@ -32,8 +32,8 @@ func TestBasicUsage(t *testing.T) {
 		AddField("Code", DataKind_int64, true).
 		AddField("Weight", DataKind_float64, false)
 
-	saleSecurParamsDef := appDef.AddStruct(NewQName("test", "saleSecureArgs"), DefKind_Object)
-	saleSecurParamsDef.
+	saleSecureParamsDef := appDef.AddStruct(NewQName("test", "saleSecureArgs"), DefKind_Object)
+	saleSecureParamsDef.
 		AddField("password", DataKind_string, true)
 
 	docDef := appDef.AddStruct(NewQName("test", "photos"), DefKind_CDoc)

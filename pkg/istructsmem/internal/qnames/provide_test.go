@@ -42,11 +42,11 @@ func TestQNamesBasicUsage(t *testing.T) {
 
 	require := require.New(t)
 	t.Run("basic QNames methods", func(t *testing.T) {
-		id, err := names.GetID(testName)
+		id, err := names.ID(testName)
 		require.NoError(err)
 		require.NotEqual(NullQNameID, id)
 
-		n, err := names.GetQName(id)
+		n, err := names.QName(id)
 		require.NoError(err)
 		require.Equal(testName, n)
 
@@ -61,11 +61,11 @@ func TestQNamesBasicUsage(t *testing.T) {
 				panic(err)
 			}
 
-			id1, err := names.GetID(testName)
+			id1, err := names.ID(testName)
 			require.NoError(err)
 			require.Equal(id, id1)
 
-			n1, err := names.GetQName(id)
+			n1, err := names.QName(id)
 			require.NoError(err)
 			require.Equal(testName, n1)
 		})

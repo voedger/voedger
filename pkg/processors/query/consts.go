@@ -18,7 +18,6 @@ const (
 const (
 	minNormalFloat64   = 0x1.0p-1022
 	rootDocument       = ""
-	Field_JSONDef_Body = "Body"
 )
 
 var (

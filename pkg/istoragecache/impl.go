@@ -18,7 +18,7 @@ type cachedAppStorage struct {
 	cache    *fastcache.Cache
 	storage  istorage.IAppStorage
 	metrics  imetrics.IMetrics
-	hvm      string
+	vvm      string
 	appQName istructs.AppQName
 }
 
@@ -26,7 +26,7 @@ type implCachingAppStorageProvider struct {
 	storageProvider istorage.IAppStorageProvider
 	maxBytes        int
 	metrics         imetrics.IMetrics
-	hvmName         string
+	vvmName         string
 }
 
 func (asp *implCachingAppStorageProvider) AppStorage(appQName istructs.AppQName) (istorage.IAppStorage, error) {
@@ -34,15 +34,15 @@ func (asp *implCachingAppStorageProvider) AppStorage(appQName istructs.AppQName)
 	if err != nil {
 		return nil, err
 	}
-	return newCachingAppStorage(asp.maxBytes, nonCachingAppStorage, asp.metrics, asp.hvmName, appQName), nil
+	return newCachingAppStorage(asp.maxBytes, nonCachingAppStorage, asp.metrics, asp.vvmName, appQName), nil
 }
 
-func newCachingAppStorage(maxBytes int, nonCachingAppStorage istorage.IAppStorage, metrics imetrics.IMetrics, hvm string, appQName istructs.AppQName) istorage.IAppStorage {
+func newCachingAppStorage(maxBytes int, nonCachingAppStorage istorage.IAppStorage, metrics imetrics.IMetrics, vvm string, appQName istructs.AppQName) istorage.IAppStorage {
 	return &cachedAppStorage{
 		cache:    fastcache.New(maxBytes),
 		storage:  nonCachingAppStorage,
 		metrics:  metrics,
-		hvm:      hvm,
+		vvm:      vvm,
 		appQName: appQName,
 	}
 }
@@ -50,9 +50,9 @@ func newCachingAppStorage(maxBytes int, nonCachingAppStorage istorage.IAppStorag
 func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 	start := time.Now()
 	defer func() {
-		s.metrics.IncreaseApp(putSeconds, s.hvm, s.appQName, time.Since(start).Seconds())
+		s.metrics.IncreaseApp(putSeconds, s.vvm, s.appQName, time.Since(start).Seconds())
 	}()
-	s.metrics.IncreaseApp(putTotal, s.hvm, s.appQName, 1.0)
+	s.metrics.IncreaseApp(putTotal, s.vvm, s.appQName, 1.0)
 
 	err = s.storage.Put(pKey, cCols, value)
 	if err == nil {
@@ -64,10 +64,10 @@ func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err err
 func (s *cachedAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	start := time.Now()
 	defer func() {
-		s.metrics.IncreaseApp(putBatchSeconds, s.hvm, s.appQName, time.Since(start).Seconds())
+		s.metrics.IncreaseApp(putBatchSeconds, s.vvm, s.appQName, time.Since(start).Seconds())
 	}()
-	s.metrics.IncreaseApp(putBatchTotal, s.hvm, s.appQName, 1.0)
-	s.metrics.IncreaseApp(putBatchItemsTotal, s.hvm, s.appQName, float64(len(items)))
+	s.metrics.IncreaseApp(putBatchTotal, s.vvm, s.appQName, 1.0)
+	s.metrics.IncreaseApp(putBatchItemsTotal, s.vvm, s.appQName, float64(len(items)))
 
 	err = s.storage.PutBatch(items)
 	if err == nil {
@@ -81,14 +81,14 @@ func (s *cachedAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
 	start := time.Now()
 	defer func() {
-		s.metrics.IncreaseApp(getSeconds, s.hvm, s.appQName, time.Since(start).Seconds())
+		s.metrics.IncreaseApp(getSeconds, s.vvm, s.appQName, time.Since(start).Seconds())
 	}()
-	s.metrics.IncreaseApp(getTotal, s.hvm, s.appQName, 1.0)
+	s.metrics.IncreaseApp(getTotal, s.vvm, s.appQName, 1.0)
 
 	*data = (*data)[0:0]
 	*data = s.cache.Get(*data, key(pKey, cCols))
 	if len(*data) != 0 {
-		s.metrics.IncreaseApp(getCachedTotal, s.hvm, s.appQName, 1.0)
+		s.metrics.IncreaseApp(getCachedTotal, s.vvm, s.appQName, 1.0)
 		return true, err
 	}
 	ok, err = s.storage.Get(pKey, cCols, data)
@@ -104,9 +104,9 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 func (s *cachedAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) (err error) {
 	start := time.Now()
 	defer func() {
-		s.metrics.IncreaseApp(getBatchSeconds, s.hvm, s.appQName, time.Since(start).Seconds())
+		s.metrics.IncreaseApp(getBatchSeconds, s.vvm, s.appQName, time.Since(start).Seconds())
 	}()
-	s.metrics.IncreaseApp(getBatchTotal, s.hvm, s.appQName, 1.0)
+	s.metrics.IncreaseApp(getBatchTotal, s.vvm, s.appQName, 1.0)
 	if !s.getBatchFromCache(pKey, items) {
 		return s.getBatchFromStorage(pKey, items)
 	}
@@ -121,7 +121,7 @@ func (s *cachedAppStorage) getBatchFromCache(pKey []byte, items []istorage.GetBa
 		}
 		items[i].Ok = true
 	}
-	s.metrics.IncreaseApp(getBatchCachedTotal, s.hvm, s.appQName, 1.0)
+	s.metrics.IncreaseApp(getBatchCachedTotal, s.vvm, s.appQName, 1.0)
 	return true
 }
 
@@ -143,9 +143,9 @@ func (s *cachedAppStorage) getBatchFromStorage(pKey []byte, items []istorage.Get
 func (s *cachedAppStorage) Read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
 	start := time.Now()
 	defer func() {
-		s.metrics.IncreaseApp(readSeconds, s.hvm, s.appQName, time.Since(start).Seconds())
+		s.metrics.IncreaseApp(readSeconds, s.vvm, s.appQName, time.Since(start).Seconds())
 	}()
-	s.metrics.IncreaseApp(readTotal, s.hvm, s.appQName, 1.0)
+	s.metrics.IncreaseApp(readTotal, s.vvm, s.appQName, 1.0)
 
 	return s.storage.Read(ctx, pKey, startCCols, finishCCols, cb)
 }

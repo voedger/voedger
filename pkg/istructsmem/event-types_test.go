@@ -25,7 +25,7 @@ func TestEventBuilder_Core(t *testing.T) {
 	test := test()
 
 	// gets AppStructProvider and AppStructs
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -103,7 +103,7 @@ func TestEventBuilder_Core(t *testing.T) {
 			recRem.PutString(appdef.SystemField_Container, test.remarkIdent)
 			recRem.PutRecordID(test.photoIdent, test.tempPhotoID)
 			recRem.PutString(test.remarkIdent, test.remarkValue)
-			recRem.PutString(test.emptiableIdent, test.emptiableValue)
+			recRem.PutString(test.emptinessIdent, test.emptinessValue)
 		})
 
 		t.Run("test build raw event", func(t *testing.T) {
@@ -178,7 +178,7 @@ func TestEventBuilder_Core(t *testing.T) {
 				require.Equal(idR, remarkID)
 				require.Equal(photoID, r.AsRecordID(test.photoIdent))
 				require.Equal(test.remarkValue, r.AsString(test.remarkIdent))
-				require.Equal(test.emptiableValue, r.AsString(test.emptiableIdent))
+				require.Equal(test.emptinessValue, r.AsString(test.emptinessIdent))
 			}
 		})
 		require.NoError(err)
@@ -313,7 +313,7 @@ func TestEventBuilder_Core(t *testing.T) {
 
 			remRec := cuds.Update(oldRemRec)
 			remRec.PutString(test.remarkIdent, changedRems)
-			remRec.PutString(test.emptiableIdent, "")
+			remRec.PutString(test.emptinessIdent, "")
 		})
 
 		t.Run("test build raw event", func(t *testing.T) {
@@ -432,7 +432,7 @@ func TestEventBuilder_Core(t *testing.T) {
 
 			require.Equal(test.tablePhotoRems, recRem.QName())
 			require.Equal(changedRems, recRem.AsString(test.remarkIdent))
-			require.Empty(recRem.AsString(test.emptiableIdent))
+			require.Empty(recRem.AsString(test.emptinessIdent))
 		})
 	})
 
@@ -680,7 +680,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 		testScenarioCount
 	)
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 	ws := istructs.WSID(1)
 
@@ -846,12 +846,12 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		return cfgs
 	}()
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
-	docID, err = cfgs.GetConfig(istructs.AppQName_test1_app1).singletons.GetID(docName)
+	docID, err = cfgs.GetConfig(istructs.AppQName_test1_app1).singletons.ID(docName)
 	require.NoError(err)
 
 	t.Run("must ok to read not created singleton CDOC by QName", func(t *testing.T) {
@@ -1044,7 +1044,7 @@ func TestEventBuild_Error(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -1411,7 +1411,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)

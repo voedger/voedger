@@ -3,11 +3,3 @@
  */
 
 package descr
-
-type Unique struct {
-	Fields []string
-}
-
-func newUnique() *Unique {
-	return &Unique{}
-}

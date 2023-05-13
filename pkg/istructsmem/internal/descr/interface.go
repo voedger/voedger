@@ -17,5 +17,4 @@ type Package struct {
 	Defs       map[string]*Def         `json:",omitempty"`
 	Resources  map[string]*Resource    `json:",omitempty"`
 	RateLimits map[string][]*RateLimit `json:",omitempty"`
-	Uniques    map[string][]*Unique    `json:",omitempty"`
 }

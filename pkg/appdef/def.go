@@ -21,6 +21,8 @@ type def struct {
 	fieldsOrdered     []string
 	containers        map[string]*container
 	containersOrdered []string
+	uniques           map[string]*unique
+	uniquesOrdered    []string
 	singleton         bool
 }
 
@@ -33,6 +35,8 @@ func newDef(app *appDef, name QName, kind DefKind) *def {
 		fieldsOrdered:     make([]string, 0),
 		containers:        make(map[string]*container),
 		containersOrdered: make([]string, 0),
+		uniques:           make(map[string]*unique),
+		uniquesOrdered:    make([]string, 0),
 	}
 	def.makeSysFields()
 	return &def
@@ -67,6 +71,10 @@ func (d *def) AddContainer(name string, contDef QName, minOccurs, maxOccurs Occu
 		}
 	}
 
+	if len(d.containers) >= MaxDefContainerCount {
+		panic(fmt.Errorf("%v: maximum container count (%d) exceeds: %w", d.QName(), MaxDefContainerCount, ErrTooManyContainers))
+	}
+
 	cont := newContainer(name, contDef, minOccurs, maxOccurs)
 	d.containers[name] = &cont
 	d.containersOrdered = append(d.containersOrdered, name)
@@ -81,13 +89,20 @@ func (d *def) AddField(name string, kind DataKind, required bool) IDefBuilder {
 	return d
 }
 
-func (d *def) App() IAppDef {
-	return d.app
+func (d *def) AddUnique(name string, fields []string) IDefBuilder {
+	if name == NullName {
+		name = generateUniqueName(d, fields)
+	}
+	return d.addUnique(name, fields)
 }
 
 func (d *def) AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IDefBuilder {
 	d.addField(name, kind, required, true, vk...)
 	return d
+}
+
+func (d *def) App() IAppDef {
+	return d.app
 }
 
 func (d *def) Container(name string) IContainer {
@@ -147,34 +162,64 @@ func (d *def) SetSingleton() {
 	d.changed()
 }
 
+func (d *def) UniqueByName(name string) IUnique {
+	if u, ok := d.uniques[name]; ok {
+		return u
+	}
+	return nil
+}
+
+func (d *def) UniqueByID(id UniqueID) (unique IUnique) {
+	d.Uniques(func(u IUnique) {
+		if u.ID() == id {
+			unique = u
+		}
+	})
+	return unique
+}
+
+func (d *def) UniqueCount() int {
+	return len(d.uniques)
+}
+
+func (d *def) Uniques(enum func(IUnique)) {
+	for _, n := range d.uniquesOrdered {
+		enum(d.UniqueByName(n))
+	}
+}
+
 func (d *def) Singleton() bool {
 	return d.singleton && (d.Kind() == DefKind_CDoc)
 }
 
 func (d *def) addField(name string, kind DataKind, required, verified bool, vk ...VerificationKind) {
 	if name == NullName {
-		panic(fmt.Errorf("empty field name: %w", ErrNameMissed))
+		panic(fmt.Errorf("%v: empty field name: %w", d.QName(), ErrNameMissed))
 	}
 	if !IsSysField(name) {
 		if ok, err := ValidIdent(name); !ok {
-			panic(fmt.Errorf("field name «%v» is invalid: %w", name, err))
+			panic(fmt.Errorf("%v: field name «%v» is invalid: %w", d.QName(), name, err))
 		}
 	}
 	if d.Field(name) != nil {
 		if IsSysField(name) {
 			return
 		}
-		panic(fmt.Errorf("field «%v» is already exists: %w", name, ErrNameUniqueViolation))
+		panic(fmt.Errorf("%v: definition field «%v» is already exists: %w", d.QName(), name, ErrNameUniqueViolation))
 	}
 	if !d.Kind().FieldsAllowed() {
-		panic(fmt.Errorf("definition «%s» kind «%v» does not allow fields: %w", d.QName(), d.Kind(), ErrInvalidDefKind))
+		panic(fmt.Errorf("%v: definition kind «%v» does not allow fields: %w", d.QName(), d.Kind(), ErrInvalidDefKind))
 	}
 	if !d.Kind().DataKindAvailable(kind) {
-		panic(fmt.Errorf("definition «%s» kind «%v» does not support fields kind «%v»: %w", d.QName(), d.Kind(), kind, ErrInvalidDataKind))
+		panic(fmt.Errorf("%v: definition kind «%v» does not support fields kind «%v»: %w", d.QName(), d.Kind(), kind, ErrInvalidDataKind))
 	}
 
 	if verified && (len(vk) == 0) {
-		panic(fmt.Errorf("missed verification kind for field «%v»: %w", name, ErrVerificationKindMissed))
+		panic(fmt.Errorf("%v: missed verification kind for field «%v»: %w", d.QName(), name, ErrVerificationKindMissed))
+	}
+
+	if len(d.fields) >= MaxDefFieldCount {
+		panic(fmt.Errorf("%v: maximum field count (%d) exceeds: %w", d.QName(), MaxDefFieldCount, ErrTooManyFields))
 	}
 
 	fld := newField(name, kind, required, verified, vk...)
@@ -182,6 +227,52 @@ func (d *def) addField(name string, kind DataKind, required, verified bool, vk .
 	d.fieldsOrdered = append(d.fieldsOrdered, name)
 
 	d.changed()
+}
+
+func (d *def) addUnique(name string, fields []string) IDefBuilder {
+	if ok, err := ValidIdent(name); !ok {
+		panic(fmt.Errorf("%v: unique name «%v» is invalid: %w", d.QName(), name, err))
+	}
+	if d.UniqueByName(name) != nil {
+		panic(fmt.Errorf("%v: unique «%v» is already exists: %w", d.QName(), name, ErrNameUniqueViolation))
+	}
+
+	if !d.Kind().UniquesAvailable() {
+		panic(fmt.Errorf("%v: definition kind «%v» does not support uniques: %w", d.QName(), d.Kind(), ErrInvalidDefKind))
+	}
+
+	if len(fields) == 0 {
+		panic(fmt.Errorf("%v: no fields specified for unique «%s»: %w", d.QName(), name, ErrNameMissed))
+	}
+	if i, j := duplicates(fields); i >= 0 {
+		panic(fmt.Errorf("%v: unique «%s» has duplicates (fields[%d] == fields[%d] == %q): %w", d.QName(), name, i, j, fields[i], ErrNameUniqueViolation))
+	}
+
+	if len(fields) > MaxDefUniqueFieldsCount {
+		panic(fmt.Errorf("%v: unique «%s» exceeds maximum fields (%d): %w", d.QName(), name, MaxDefUniqueFieldsCount, ErrTooManyFields))
+	}
+
+	d.Uniques(func(u IUnique) {
+		ff := make([]string, 0)
+		for _, f := range u.Fields() {
+			ff = append(ff, f.Name())
+		}
+		if overlaps(fields, ff) {
+			panic(fmt.Errorf("%v: definition already has unique «%s» which overlaps with new unique: %w", d.QName(), name, ErrInvalidDefKind))
+		}
+	})
+
+	if len(d.uniques) >= MaxDefUniqueCount {
+		panic(fmt.Errorf("%v: maximum uniques (%d) is exceeded: %w", d.QName(), MaxDefUniqueCount, ErrTooManyUniques))
+	}
+
+	u := newUnique(d, name, fields)
+	d.uniques[name] = u
+	d.uniquesOrdered = append(d.uniquesOrdered, name)
+
+	d.changed()
+
+	return d
 }
 
 func (d *def) changed() {

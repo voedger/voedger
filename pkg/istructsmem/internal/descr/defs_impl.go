@@ -13,32 +13,56 @@ func newDef() *Def {
 	return &Def{
 		Fields:     make([]*Field, 0),
 		Containers: make([]*Container, 0),
+		Uniques:    make([]*Unique, 0),
 	}
 }
 
-func (d *Def) readAppDef(def appdef.IDef) {
+func (d *Def) read(def appdef.IDef) {
 	d.Name = def.QName()
 	d.Kind = def.Kind()
 
 	def.Fields(func(field appdef.IField) {
 		f := newField()
-		f.Name = field.Name()
-		f.Kind = field.DataKind()
-		f.Required = field.Required()
-		f.Verifiable = field.Verifiable()
+		f.read(field)
 		d.Fields = append(d.Fields, f)
 	})
 
 	def.Containers(func(cont appdef.IContainer) {
 		c := newContainer()
-		c.Name = cont.Name()
-		c.Type = cont.Def()
-		c.MinOccurs = cont.MinOccurs()
-		c.MaxOccurs = cont.MaxOccurs()
+		c.read(cont)
 		d.Containers = append(d.Containers, c)
+	})
+
+	def.Uniques(func(unique appdef.IUnique) {
+		u := newUnique()
+		u.read(unique)
+		d.Uniques = append(d.Uniques, u)
 	})
 }
 
 func newField() *Field { return &Field{} }
 
+func (f *Field) read(field appdef.IField) {
+	f.Name = field.Name()
+	f.Kind = field.DataKind()
+	f.Required = field.Required()
+	f.Verifiable = field.Verifiable()
+}
+
 func newContainer() *Container { return &Container{} }
+
+func (c *Container) read(cont appdef.IContainer) {
+	c.Name = cont.Name()
+	c.Type = cont.Def()
+	c.MinOccurs = cont.MinOccurs()
+	c.MaxOccurs = cont.MaxOccurs()
+}
+
+func newUnique() *Unique { return &Unique{} }
+
+func (u *Unique) read(unique appdef.IUnique) {
+	u.Name = unique.Name()
+	for _, f := range unique.Fields() {
+		u.Fields = append(u.Fields, f.Name())
+	}
+}

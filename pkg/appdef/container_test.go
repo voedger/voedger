@@ -39,7 +39,7 @@ func Test_IsSysContainer(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "false if vulgaris user",
+			name: "false if basic user",
 			args: args{"userContainer"},
 			want: false,
 		},

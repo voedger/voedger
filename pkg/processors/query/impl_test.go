@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"math"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -287,12 +289,20 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
-		appStructsProvider, 3, metrics, "hvm", authn, authz, cfgs)
-	go queryProcessor.Run(context.Background())
+		appStructsProvider, 3, metrics, "vvm", authn, authz, cfgs)
+	processorCtx, processorCtxCancel := context.WithCancel(context.Background())
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		queryProcessor.Run(processorCtx)
+		wg.Done()
+	}()
 	funcResource := as.Resources().QueryResource(qNameFunction)
 	systemToken := getSystemToken(appTokens)
 	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, funcResource, "127.0.0.1", systemToken)
 	<-done
+	processorCtxCancel()
+	wg.Wait()
 
 	_ = metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
 		metricNames = append(metricNames, metric.Name())
@@ -332,7 +342,7 @@ func TestRawMode(t *testing.T) {
 
 	require.NoError(processor.SendAsync(workpiece{
 		object: &coreutils.TestObject{
-			Data: map[string]interface{}{Field_JSONDef_Body: `[accepted]`},
+			Data: map[string]interface{}{processors.Field_JSONDef_Body: `[accepted]`},
 		},
 		outputRow: &outputRow{
 			keyToIdx: map[string]int{rootDocument: 0},
@@ -1025,7 +1035,7 @@ func TestRateLimiter(t *testing.T) {
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
-		appStructsProvider, 3, metrics, "hvm", authn, authz, cfgs)
+		appStructsProvider, 3, metrics, "vvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
 
 	systemToken := getSystemToken(appTokens)
@@ -1072,7 +1082,7 @@ func TestAuthnz(t *testing.T) {
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
-		appStructsProvider, 3, metrics, "hvm", authn, authz, cfgs)
+		appStructsProvider, 3, metrics, "vvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
 	funcResource := as.Resources().QueryResource(qNameFunction)
 

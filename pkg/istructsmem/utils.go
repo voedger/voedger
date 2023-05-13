@@ -23,9 +23,9 @@ var NullAppConfig = newAppConfig(istructs.AppQName_null, appdef.New())
 
 var (
 	nullDynoBuffer = dynobuffers.NewBuffer(dynobuffers.NewScheme())
-	// not a func -> golang tokensjwt.TimeFunc will be initialized on process init forever
-	testTokensFactory    = func() payloads.IAppTokensFactory { return payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()) }
-	simpleStorageProvder = func() istorage.IAppStorageProvider {
+	// not a func -> golang itokensjwt.TimeFunc will be initialized on process init forever
+	testTokensFactory     = func() payloads.IAppTokensFactory { return payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()) }
+	simpleStorageProvider = func() istorage.IAppStorageProvider {
 		asf := istorage.ProvideMem()
 		return istorageimpl.Provide(asf)
 	}
@@ -46,8 +46,8 @@ func crackLogOffset(ofs istructs.Offset) (hi uint64, low uint16) {
 	return crackID(uint64(ofs))
 }
 
-// uncrackLogOffset calculate log offset from two-parts key — partition key (hi) and clustering columns (lo)
-func uncrackLogOffset(hi uint64, low uint16) istructs.Offset {
+// glueLogOffset calculate log offset from two-parts key — partition key (hi) and clustering columns (lo)
+func glueLogOffset(hi uint64, low uint16) istructs.Offset {
 	return istructs.Offset(hi<<partitionBits | uint64(low))
 }
 
@@ -77,7 +77,7 @@ func splitLogOffset(offset istructs.Offset) (pk, cc []byte) {
 func calcLogOffset(pk, cc []byte) istructs.Offset {
 	hi := binary.BigEndian.Uint64(pk)
 	low := binary.BigEndian.Uint16(cc)
-	return uncrackLogOffset(hi, low)
+	return glueLogOffset(hi, low)
 }
 
 // used in tests only
@@ -102,8 +102,8 @@ func FillElementFromJSON(data map[string]interface{}, def appdef.IDef, b istruct
 			if containerDef.Kind() == appdef.DefKind_null {
 				return fmt.Errorf("container with name %s is not found", containerName)
 			}
-			for i, intf := range fv {
-				objContainerElem, ok := intf.(map[string]interface{})
+			for i, val := range fv {
+				objContainerElem, ok := val.(map[string]interface{})
 				if !ok {
 					return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
 				}
