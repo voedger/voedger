@@ -60,7 +60,7 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 	})
 }
 
-func iterateStmt[stmtType *TableStmt | *TypeStmt](c IStatementCollection, callback func(stmt stmtType)) {
+func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt](c IStatementCollection, callback func(stmt stmtType)) {
 	c.Iterate(func(stmt interface{}) {
 		if s, ok := stmt.(stmtType); ok {
 			callback(s)
@@ -93,7 +93,7 @@ func getQualifiedPackageName(pkgName string, schema *SchemaAST) (string, error) 
 	return "", ErrUndefined(pkgName)
 }
 
-func getTargetSchema(n DefQName, c *aContext) (*PackageSchemaAST, error) {
+func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 	var targetPkgSch *PackageSchemaAST
 
 	if isInternalName(n, c.pkg.Ast) {
@@ -111,7 +111,7 @@ func getTargetSchema(n DefQName, c *aContext) (*PackageSchemaAST, error) {
 	return targetPkgSch, nil
 }
 
-func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt](fn DefQName, c *aContext, cb func(f stmtType) error) {
+func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) {
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
 		c.errs = append(c.errs, errorAt(err, c.pos))
@@ -157,17 +157,17 @@ func isSysDef(qn DefQName, ident string) bool {
 	return maybeSysPkg(qn.Package) && qn.Name == ident
 }
 
-func isPredefinedSysTable(table *TableStmt, c *aContext) bool {
+func isPredefinedSysTable(table *TableStmt, c *buildContext) bool {
 	return c.pkg.QualifiedPackageName == appdef.SysPackage && (table.Name == nameCDOC || table.Name == nameWDOC || table.Name == nameODOC)
 }
 
-func getTableInheritanceChain(table *TableStmt, c *aContext) (chain []DefQName) {
+func getTableInheritanceChain(table *TableStmt, ctx *buildContext) (chain []DefQName) {
 	chain = make([]DefQName, 0)
 	var vf func(t *TableStmt)
 	vf = func(t *TableStmt) {
 		if t.Inherits != nil {
 			inherited := *t.Inherits
-			resolve(inherited, c, func(t *TableStmt) error {
+			resolve(inherited, &ctx.basicContext, func(t *TableStmt) error {
 				chain = append(chain, inherited)
 				vf(t)
 				return nil
@@ -202,8 +202,8 @@ func genUniqueName(tablename string, bc appdef.IDefBuilder) string {
 	return ""
 }
 
-func getTableDefKind(table *TableStmt, c *aContext) (kind appdef.DefKind, singletone bool) {
-	chain := getTableInheritanceChain(table, c)
+func getTableDefKind(table *TableStmt, ctx *buildContext) (kind appdef.DefKind, singletone bool) {
+	chain := getTableInheritanceChain(table, ctx)
 	for _, t := range chain {
 		if isSysDef(t, nameCDOC) || isSysDef(t, nameSingleton) {
 			return appdef.DefKind_CDoc, isSysDef(t, nameSingleton)

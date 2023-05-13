@@ -51,8 +51,14 @@ func Test_BasicUsage(t *testing.T) {
 
 	def := builder.Def(appdef.NewQName("air", "AirTablePlan"))
 	require.NotNil(def)
+	require.Equal(appdef.DefKind_CDoc, def.Kind())
 	require.Equal(appdef.DataKind_int32, def.Field("FState").DataKind())
 	require.Equal(2, len(def.UniqueByName("AIRTABLEPLAN_UNIQUE1").Fields()))
+
+	def = builder.Def(appdef.NewQName("air", "SubscriptionEvent"))
+	require.NotNil(def)
+	require.Equal(appdef.DefKind_Object, def.Kind())
+	require.Equal(appdef.DataKind_string, def.Field("Origin").DataKind())
 }
 
 func Test_Expressions(t *testing.T) {
