@@ -31,7 +31,7 @@ TABLE AirTablePlan INHERITS CDOC (
 
 
 -- Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC
-TABLE SubscriptionProfile INHERITS SINGLETONE (
+TABLE SubscriptionProfile INHERITS SINGLETON (
     CustomerID text,
     CustomerKind int,
     CompanyName text
