@@ -139,7 +139,7 @@ WORKSPACE MyWorkspace (
         Day int32, 
         Kind int32, 
         Number int32, 
-        XZReportWDocID id,
+        XZReportWDocID id NOT NULL,
         PRIMARY KEY ((Year), Month, Day, Kind, Number)
     ) AS RESULT OF air.UpdateDashboard;
 

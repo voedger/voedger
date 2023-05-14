@@ -415,6 +415,7 @@ type ViewStmt struct {
 	Name     string         `parser:"'VIEW' @Ident"`
 	Fields   []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	ResultOf DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
+	pkRef    *PrimaryKeyExpr
 }
 
 type ViewItemExpr struct {
@@ -431,8 +432,9 @@ type PrimaryKeyExpr struct {
 func (s ViewStmt) GetName() string { return s.Name }
 
 type ViewField struct {
-	Name string        `parser:"@Ident"`
-	Type ViewFieldType `parser:"@@"`
+	Name    string        `parser:"@Ident"`
+	Type    ViewFieldType `parser:"@@"`
+	NotNull bool          `parser:"@(NOTNULL)?"`
 }
 
 type ViewFieldType struct {

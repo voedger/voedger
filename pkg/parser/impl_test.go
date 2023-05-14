@@ -49,16 +49,27 @@ func Test_BasicUsage(t *testing.T) {
 	err = BuildAppDefs(packages, builder)
 	require.NoError(err)
 
+	// table
 	def := builder.Def(appdef.NewQName("air", "AirTablePlan"))
 	require.NotNil(def)
 	require.Equal(appdef.DefKind_CDoc, def.Kind())
 	require.Equal(appdef.DataKind_int32, def.Field("FState").DataKind())
 	require.Equal(2, len(def.UniqueByName("AIRTABLEPLAN_UNIQUE1").Fields()))
 
+	// type
 	def = builder.Def(appdef.NewQName("air", "SubscriptionEvent"))
 	require.NotNil(def)
 	require.Equal(appdef.DefKind_Object, def.Kind())
 	require.Equal(appdef.DataKind_string, def.Field("Origin").DataKind())
+
+	// view
+	def = builder.Def(appdef.NewQName("air", "XZReports"))
+	require.NotNil(def)
+	require.Equal(appdef.DefKind_ViewRecord, def.Kind())
+	require.Equal(2, builder.Def(def.Container(appdef.SystemContainer_ViewValue).Def()).FieldCount()) // sys.Qname, XZReportWDocID
+	require.Equal(1, builder.Def(def.Container(appdef.SystemContainer_ViewPartitionKey).Def()).FieldCount())
+	require.Equal(4, builder.Def(def.Container(appdef.SystemContainer_ViewClusteringCols).Def()).FieldCount())
+
 }
 
 func Test_Expressions(t *testing.T) {

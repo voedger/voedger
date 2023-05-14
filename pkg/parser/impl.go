@@ -94,7 +94,7 @@ func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST)
 
 	errs := make([]error, 0)
 	errs = analyseDuplicateNames(headAst, errs)
-	errs = analyseDuplicateNamesInSchemas(headAst, errs)
+	errs = analyseViews(headAst, errs)
 	cleanupComments(headAst)
 	cleanupImports(headAst)
 	// TODO: unable to specify different base tables (CDOC, WDOC, ...) in the table inheritace chain
@@ -106,18 +106,18 @@ func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST)
 	}, errors.Join(errs...)
 }
 
-func analyseDuplicateNamesInSchemas(schema *SchemaAST, errs []error) []error {
+func analyseViews(schema *SchemaAST, errs []error) []error {
 	iterate(schema, func(stmt interface{}) {
 		if view, ok := stmt.(*ViewStmt); ok {
-			numPK := 0
+			view.pkRef = nil
 			fields := make(map[string]int)
 			for i := range view.Fields {
 				fe := view.Fields[i]
 				if fe.PrimaryKey != nil {
-					if numPK == 1 {
+					if view.pkRef != nil {
 						errs = append(errs, errorAt(ErrPrimaryKeyRedeclared, &fe.Pos))
 					} else {
-						numPK++
+						view.pkRef = fe.PrimaryKey
 					}
 				}
 				if fe.Field != nil {
@@ -127,6 +127,9 @@ func analyseDuplicateNamesInSchemas(schema *SchemaAST, errs []error) []error {
 						fields[fe.Field.Name] = i
 					}
 				}
+			}
+			if view.pkRef == nil {
+				errs = append(errs, errorAt(ErrPrimaryKeyNotDeclared, &view.Pos))
 			}
 		}
 	})
@@ -301,10 +304,13 @@ func newBuildContext(packages map[string]*PackageSchemaAST, builder appdef.IAppD
 func buildAppDefs(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) error {
 	ctx := newBuildContext(packages, builder)
 
+	if err := buildTypes(&ctx); err != nil {
+		return err
+	}
 	if err := buildTables(&ctx); err != nil {
 		return err
 	}
-	if err := buildTypes(&ctx); err != nil {
+	if err := buildViews(&ctx); err != nil {
 		return err
 	}
 	return nil
@@ -318,6 +324,40 @@ func buildTypes(ctx *buildContext) error {
 			addFieldsOf(typ.Of, ctx)
 			addTableItems(typ.Items, ctx)
 			ctx.popDef()
+		})
+	}
+	return nil
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
+func buildViews(ctx *buildContext) error {
+	for _, schema := range ctx.pkgmap {
+		iterateStmt(schema.Ast, func(view *ViewStmt) {
+			ctx.newSchema(schema)
+
+			qname := appdef.NewQName(ctx.pkg.Ast.Package, view.Name)
+			vb := ctx.builder.AddView(qname)
+			for i := range view.Fields {
+				f := &view.Fields[i]
+				if f.Field != nil {
+					datakind := viewFieldDataKind(f.Field)
+					if contains(view.pkRef.ClusteringColumnsFields, f.Field.Name) {
+						vb.AddClustColumn(f.Field.Name, datakind)
+					} else if contains(view.pkRef.PartitionKeyFields, f.Field.Name) {
+						vb.AddPartField(f.Field.Name, datakind)
+					} else {
+						vb.AddValueField(f.Field.Name, datakind, f.Field.NotNull)
+					}
+				}
+			}
 		})
 	}
 	return nil

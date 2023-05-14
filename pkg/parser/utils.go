@@ -248,3 +248,31 @@ func getTypeDataKind(t TypeQName) appdef.DataKind {
 	}
 	return appdef.DataKind_null
 }
+
+func viewFieldDataKind(f *ViewField) appdef.DataKind {
+	if f.Type.Bool {
+		return appdef.DataKind_bool
+	}
+	if f.Type.Bytes {
+		return appdef.DataKind_bytes
+	}
+	if f.Type.Float32 {
+		return appdef.DataKind_float32
+	}
+	if f.Type.Float64 {
+		return appdef.DataKind_float64
+	}
+	if f.Type.Id {
+		return appdef.DataKind_RecordID
+	}
+	if f.Type.Int32 {
+		return appdef.DataKind_int32
+	}
+	if f.Type.Int64 {
+		return appdef.DataKind_int64
+	}
+	if f.Type.QName {
+		return appdef.DataKind_QName
+	}
+	return appdef.DataKind_string
+}
