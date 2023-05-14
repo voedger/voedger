@@ -56,6 +56,12 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DataKind_int32, def.Field("FState").DataKind())
 	require.Equal(2, len(def.UniqueByName("AIRTABLEPLAN_UNIQUE1").Fields()))
 
+	// child table
+	def = builder.Def(appdef.NewQName("air", "AirTablePlanItem"))
+	require.NotNil(def)
+	require.Equal(appdef.DefKind_CRecord, def.Kind())
+	require.Equal(appdef.DataKind_int32, def.Field("TableNo").DataKind())
+
 	// type
 	def = builder.Def(appdef.NewQName("air", "SubscriptionEvent"))
 	require.NotNil(def)

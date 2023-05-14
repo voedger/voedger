@@ -26,7 +26,11 @@ TABLE AirTablePlan INHERITS CDOC (
     CheckedField text CHECK "^[0-9]{8}$", -- Field validated by regexp
     CHECK (ValidateRow(this)), -- Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
     CONSTRAINT StateChecker CHECK (ValidateFState(FState)), -- Named CHECK table constraint
-    UNIQUE (FState, Name) -- unnamed UNIQUE table constraint
+    UNIQUE (FState, Name), -- unnamed UNIQUE table constraint
+    TABLE AirTablePlanItem (
+        TableNo int,
+        Chairs int
+    )
 ) WITH Comment=BackofficeComment, Tags=[BackofficeTag]; -- Optional comment and tags
 
 
