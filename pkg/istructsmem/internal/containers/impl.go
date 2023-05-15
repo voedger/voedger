@@ -73,12 +73,14 @@ func (cnt *Containers) collectAll(appDef appdef.IAppDef) (err error) {
 	if appDef != nil {
 		appDef.Defs(
 			func(d appdef.IDef) {
-				d.Containers(
-					func(c appdef.IContainer) {
-						if !c.IsSys() {
-							err = errors.Join(err, cnt.collect(c.Name()))
-						}
-					})
+				if cont, ok := d.(appdef.IWithContainers); ok {
+					cont.Containers(
+						func(c appdef.IContainer) {
+							if !c.IsSys() {
+								err = errors.Join(err, cnt.collect(c.Name()))
+							}
+						})
+				}
 			})
 	}
 

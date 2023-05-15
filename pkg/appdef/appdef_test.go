@@ -18,25 +18,21 @@ func Test_AppDef_AddStruct(t *testing.T) {
 
 	t.Run("panic if name is empty", func(t *testing.T) {
 		require.Panics(func() {
-			app.AddStruct(NullQName, DefKind_CDoc)
+			app.AddCDoc(NullQName)
 		})
 	})
 
 	t.Run("panic if name is invalid", func(t *testing.T) {
 		require.Panics(func() {
-			app.AddStruct(NewQName("naked", "🔫"), DefKind_CDoc)
+			app.AddCDoc(NewQName("naked", "🔫"))
 		})
 	})
 
 	t.Run("panic if definition with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "test")
-		app.AddStruct(testName, DefKind_CDoc)
+		app.AddCDoc(testName)
 		require.Panics(func() {
-			app.AddStruct(testName, DefKind_CDoc)
+			app.AddWDoc(testName)
 		})
-	})
-
-	t.Run("panic if kind is not structure", func(t *testing.T) {
-		require.Panics(func() { app.AddStruct(NewQName("test", "view"), DefKind_ViewRecord_Value) })
 	})
 }

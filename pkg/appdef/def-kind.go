@@ -46,6 +46,8 @@ const (
 	DefKind_ViewRecord_PartitionKey
 	// Only one variable length field is allowed (must be last field)
 	DefKind_ViewRecord_ClusteringColumns
+	// FullKey definition = PartitionKey + ClusteringColumns
+	DefKind_ViewRecord_Key
 	DefKind_ViewRecord_Value
 
 	// Function params, results, Event.command (this is command function params)
@@ -66,11 +68,6 @@ const (
 // Is fields allowed.
 func (k DefKind) FieldsAllowed() bool {
 	return defKindProps[k].fieldsAllowed
-}
-
-// Is structure.
-func (k DefKind) IsStructure() bool {
-	return defKindProps[k].structure
 }
 
 // Is data kind allowed.

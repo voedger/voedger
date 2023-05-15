@@ -241,7 +241,7 @@ type IWithFields interface {
 	Fields(func(IField))
 }
 
-type IWithFieldsBuilder interface {
+type IFieldsBuilder interface {
 	// Adds field specified name and kind.
 	//
 	// # Panics:
@@ -250,7 +250,7 @@ type IWithFieldsBuilder interface {
 	//   - if field with name is already exists,
 	//   - if definition kind not supports fields,
 	//   - if data kind is not allowed by definition kind.
-	AddField(name string, kind DataKind, required bool) IWithFieldsBuilder
+	AddField(name string, kind DataKind, required bool) IFieldsBuilder
 
 	// Adds verified field specified name and kind.
 	//
@@ -261,7 +261,7 @@ type IWithFieldsBuilder interface {
 	//   - if definition kind not supports fields,
 	//   - if data kind is not allowed by definition kind,
 	//   - if no verification kinds are specified
-	AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IWithFieldsBuilder
+	AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder
 }
 
 // Definitions with containers:
@@ -289,7 +289,7 @@ type IWithContainers interface {
 	ContainerDef(name string) IDef
 }
 
-type IWithContainersBuilder interface {
+type IContainersBuilder interface {
 	// Adds container specified name and occurs.
 	//
 	// # Panics:
@@ -299,7 +299,7 @@ type IWithContainersBuilder interface {
 	//   - if invalid occurrences,
 	//   - if definition kind does not allow containers,
 	//   - if container definition kind is not compatible with definition kind.
-	AddContainer(name string, def QName, min, max Occurs) IWithContainersBuilder
+	AddContainer(name string, def QName, min, max Occurs) IContainersBuilder
 }
 
 // Definitions with uniques:
@@ -324,7 +324,7 @@ type IWithUniques interface {
 	Uniques(func(IUnique))
 }
 
-type IWithUniquesBuilder interface {
+type IUniquesBuilder interface {
 	// Adds new unique with specified name and fields.
 	// If name is omitted, then default name is used, e.g. `unique01`.
 	//
@@ -336,7 +336,7 @@ type IWithUniquesBuilder interface {
 	//   - if fields has duplicates,
 	//   - if fields is already exists or overlaps with an existing unique,
 	//   - if some field not found.
-	AddUnique(name string, fields []string) IWithUniquesBuilder
+	AddUnique(name string, fields []string) IUniquesBuilder
 }
 
 // Global document. DefKind() is DefKind_GDoc.
@@ -349,9 +349,9 @@ type IGDoc interface {
 
 type IGDocBuilder interface {
 	IGDoc
-	IWithFieldsBuilder
-	IWithContainersBuilder
-	IWithUniquesBuilder
+	IFieldsBuilder
+	IContainersBuilder
+	IUniquesBuilder
 }
 
 // Global document record. DefKind() is DefKind_GRecord.
@@ -364,9 +364,9 @@ type IGRecord interface {
 
 type IGRecordBuilder interface {
 	IGRecord
-	IWithFieldsBuilder
-	IWithContainersBuilder
-	IWithUniquesBuilder
+	IFieldsBuilder
+	IContainersBuilder
+	IUniquesBuilder
 }
 
 // Configuration document. DefKind() is DefKind_CDoc.
@@ -382,9 +382,9 @@ type ICDoc interface {
 
 type ICDocBuilder interface {
 	ICDoc
-	IWithFieldsBuilder
-	IWithContainersBuilder
-	IWithUniquesBuilder
+	IFieldsBuilder
+	IContainersBuilder
+	IUniquesBuilder
 
 	// Sets CDoc singleton
 	SetSingleton()
@@ -400,9 +400,9 @@ type ICRecord interface {
 
 type ICRecordBuilder interface {
 	ICRecord
-	IWithFieldsBuilder
-	IWithContainersBuilder
-	IWithUniquesBuilder
+	IFieldsBuilder
+	IContainersBuilder
+	IUniquesBuilder
 }
 
 // Workflow document. DefKind() is DefKind_WDoc.
@@ -415,9 +415,9 @@ type IWDoc interface {
 
 type IWDocBuilder interface {
 	IWDoc
-	IWithFieldsBuilder
-	IWithContainersBuilder
-	IWithUniquesBuilder
+	IFieldsBuilder
+	IContainersBuilder
+	IUniquesBuilder
 }
 
 // Workflow document record. DefKind() is DefKind_WRecord.
@@ -430,9 +430,9 @@ type IWRecord interface {
 
 type IWRecordBuilder interface {
 	IWRecord
-	IWithFieldsBuilder
-	IWithContainersBuilder
-	IWithUniquesBuilder
+	IFieldsBuilder
+	IContainersBuilder
+	IUniquesBuilder
 }
 
 // Operation document. DefKind() is DefKind_ODoc.
@@ -444,8 +444,8 @@ type IODoc interface {
 
 type IODocBuilder interface {
 	IODoc
-	IWithFieldsBuilder
-	IWithContainersBuilder
+	IFieldsBuilder
+	IContainersBuilder
 }
 
 // Operation document record. DefKind() is DefKind_ORecord.
@@ -457,8 +457,8 @@ type IORecord interface {
 
 type IORecordBuilder interface {
 	IORecord
-	IWithFieldsBuilder
-	IWithContainersBuilder
+	IFieldsBuilder
+	IContainersBuilder
 }
 
 // Object definition. DefKind() is DefKind_Object.
@@ -470,8 +470,8 @@ type IObject interface {
 
 type IObjectBuilder interface {
 	IObject
-	IWithFieldsBuilder
-	IWithContainersBuilder
+	IFieldsBuilder
+	IContainersBuilder
 }
 
 // Element definition. DefKind() is DefKind_Element.
@@ -483,8 +483,8 @@ type IElement interface {
 
 type IElementBuilder interface {
 	IElement
-	IWithFieldsBuilder
-	IWithContainersBuilder
+	IFieldsBuilder
+	IContainersBuilder
 }
 
 // View definition. DefKind() is DefKind_ViewRecord
@@ -508,6 +508,8 @@ type IView interface {
 }
 
 type IViewBuilder interface {
+	IView
+
 	// AddPartField adds specified field to view partition key definition. Fields is always required
 	//
 	// # Panics:

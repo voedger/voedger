@@ -254,7 +254,7 @@ func (key *keyType) ccDef() appdef.QName {
 func (key *keyType) fkDef() appdef.QName {
 	if d := key.appCfg.AppDef.DefByName(key.viewName); d != nil {
 		if d.Kind() == appdef.DefKind_ViewRecord {
-			return appdef.ViewFullKeyColumnsDefName(key.viewName)
+			return appdef.ViewKeyDefName(key.viewName)
 		}
 	}
 	return appdef.NullQName
