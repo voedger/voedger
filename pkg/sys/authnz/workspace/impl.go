@@ -250,6 +250,7 @@ func execCmdCreateWorkspace(now func() time.Time, asp istructs.IAppStructsProvid
 		cdocWSDesc.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
 		cdocWSDesc.PutInt64(authnz.Field_WSID, int64(newWSID))
 		cdocWSDesc.PutInt64(authnz.Field_СreatedAtMs, now().UnixMilli())
+		cdocWSDesc.PutInt32(Field_Status, int32(WorkspaceStatus_Active))
 		if e != nil {
 			cdocWSDesc.PutString(Field_CreateError, e.Error())
 			logger.Info("c.sys.CreateWorkspace: ", e.Error())

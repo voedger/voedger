@@ -26,17 +26,25 @@ const (
 	fldDummy2              = "dummy2"
 	fldNextBaseWSID        = "NextBaseWSID"
 	field_WSName           = "WSName"
+	Field_Status           = "Status"
 )
 
 var (
-	QNameViewChildWorkspaceIdx     = appdef.NewQName(appdef.SysPackage, "ChildWorkspaceIdx")
-	QNameViewWorkspaceIDIdx        = appdef.NewQName(appdef.SysPackage, "WorkspaceIDIdx")
-	QNameQueryChildWorkspaceByName = appdef.NewQName(appdef.SysPackage, "QueryChildWorkspaceByName")
-	QNameCDocWorkspaceID           = appdef.NewQName(appdef.SysPackage, "WorkspaceID")
-	qNameAPInitializeWorkspace     = appdef.NewQName(appdef.SysPackage, "InitializeWorkspace")
-	qNameAPInvokeCreateWorkspaceID = appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspaceID")
-	qNameAPInvokeCreateWorkspace   = appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspace")
-	ViewQNameNextBaseWSID          = appdef.NewQName(appdef.SysPackage, "NextBaseWSID")
-	nextWSIDGlobalLock             = sync.Mutex{}
-	qNameCmdDeactivateWorkspace    = appdef.NewQName(appdef.SysPackage, "DeactivateWorkspace")
+	QNameViewChildWorkspaceIdx             = appdef.NewQName(appdef.SysPackage, "ChildWorkspaceIdx")
+	QNameViewWorkspaceIDIdx                = appdef.NewQName(appdef.SysPackage, "WorkspaceIDIdx")
+	QNameQueryChildWorkspaceByName         = appdef.NewQName(appdef.SysPackage, "QueryChildWorkspaceByName")
+	QNameCDocWorkspaceID                   = appdef.NewQName(appdef.SysPackage, "WorkspaceID")
+	qNameAPInitializeWorkspace             = appdef.NewQName(appdef.SysPackage, "InitializeWorkspace")
+	qNameAPInvokeCreateWorkspaceID         = appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspaceID")
+	qNameAPInvokeCreateWorkspace           = appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspace")
+	ViewQNameNextBaseWSID                  = appdef.NewQName(appdef.SysPackage, "NextBaseWSID")
+	qNameCmdDeactivateWorkspace            = appdef.NewQName(appdef.SysPackage, "DeactivateWorkspace")
+	qNameProjectorApplyDeactivateWorkspace = appdef.NewQName(appdef.SysPackage, "ApplyDeactivateWorkspace")
+	nextWSIDGlobalLock                     = sync.Mutex{}
+)
+
+const (
+	WorkspaceStatus_Active WorkspaceStatus = iota
+	WorkspaceStatus_ToBeDeactivated
+	WorkspaceStatus_Inactive
 )

@@ -27,6 +27,7 @@ import (
 	"github.com/voedger/voedger/pkg/projectors"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"golang.org/x/exp/maps"
+	workspacemgmt "github.com/voedger/voedger/pkg/sys/authnz/workspace"
 )
 
 func (cm *implICommandMessage) Body() []byte                      { return cm.body }
@@ -206,7 +207,7 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 	if IsDummyWS(cmd.cmdMes.WSID()) {
 		return nil
 	}
-	if funcQName == QNameCommandCreateWorkspace || /*funcQName == QNameCommandCreateWorkspaceID ||*/ funcQName == QNameCommandInit {
+	if funcQName == QNameCommandCreateWorkspace || funcQName == QNameCommandInit {
 		return nil
 	}
 	if wsDesc.QName() != appdef.NullQName {
@@ -223,6 +224,12 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 		}
 	}
 	return errWSNotInited
+}
+
+func checkWSActive(_ context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	wsDesc := work.(*cmdWorkpiece).wsDesc
+	wsDesc.AsInt32(workspacemgmt.Field_Status)
 }
 
 func getAppStructs(_ context.Context, work interface{}) (err error) {

@@ -134,6 +134,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		AddField(Field_InitStartedAtMs, appdef.DataKind_int64, false).
 		AddField(commandprocessor.Field_InitError, appdef.DataKind_string, false).
 		AddField(commandprocessor.Field_InitCompletedAtMs, appdef.DataKind_int64, false).
+		AddField(Field_Status, appdef.DataKind_int32, false).
 		SetSingleton()
 
 	// q.sys.QueryChildWorkspaceByName
@@ -150,6 +151,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			AddField(Field_TemplateParams, appdef.DataKind_string, false).
 			AddField(authnz.Field_WSID, appdef.DataKind_int64, false).
 			AddField(authnz.Field_WSError, appdef.DataKind_string, false).
+			AddField(appdef.SystemField_IsActive, appdef.DataKind_bool, true).
 			QName(),
 		qcwbnQryExec,
 	))

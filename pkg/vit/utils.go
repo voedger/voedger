@@ -144,6 +144,7 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 		tmplParamsIdx = 4
 		wsidIdx       = 5
 		wsErrIdx      = 6
+		isActiveIdx   = 7
 	)
 	deadline := time.Now().Add(workspaceInitAwaitTimeout)
 	logger.Verbose("workspace", wsName, "awaiting started")
@@ -155,7 +156,7 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 				},
 				"elements":[
 					{
-						"fields":["WSName", "WSKind", "WSKindInitializationData", "TemplateName", "TemplateParams", "WSID", "WSError"]
+						"fields":["WSName", "WSKind", "WSKindInitializationData", "TemplateName", "TemplateParams", "WSID", "WSError", "sys.IsActive"]
 					}
 				]
 			}`, wsName)
@@ -182,10 +183,11 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 					TemplateParams: resp.SectionRow()[tmplParamsIdx].(string),
 					ClusterID:      istructs.MainClusterID,
 				},
-				WSID:    wsid,
-				WSError: wsError,
+				WSID:     wsid,
+				WSError:  wsError,
 			},
 			Owner: owner,
+			IsActive: resp.SectionRow()[isActiveIdx].(bool),
 		}
 	}
 	vit.T.Fatalf("workspace %s is not initialized in an acceptable time", wsName)

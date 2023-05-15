@@ -86,7 +86,8 @@ type WorkspaceDescriptor struct {
 
 type AppWorkspace struct {
 	WorkspaceDescriptor
-	Owner *Principal // потому что токены принципала обновляются, когда меняется время
+	Owner    *Principal // потому что токены принципала обновляются, когда меняется время
+	IsActive bool
 }
 
 type Principal struct {
