@@ -27,7 +27,7 @@ SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogL
 
 count=0
 
-while [ $# -gt0 ] && [ $count -lt 2 ]; do
+while [ $# -gt 0 ] && [ $count -lt 2 ]; do
   echo "Processing: $1"
   ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /prometheus && mkdir -p ~/prometheus"
   ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /alertmanager && mkdir -p ~/alertmanager"
