@@ -47,25 +47,19 @@ func apply(cmd *cobra.Command, arg []string) error {
 		return err
 	}
 
+	if !cluster.existsNodeError() && cluster.Cmd.isEmpty() {
+		logger.Info("no active command found to apply")
+		return nil
+	}
+
 	if len(arg) > 0 {
 		cluster.sshKey, err = expandPath(arg[0])
 		if err != nil {
 			return err
 		}
-
-	}
-
-	if cluster.Cmd.isEmpty() {
-		logger.Info("no active command found to apply")
-		return nil
 	}
 
 	cluster.Draft = false
-
-	if err := installYq(); err != nil {
-		logger.Error(err.Error())
-		return err
-	}
 
 	var wg sync.WaitGroup
 	wg.Add(len(cluster.Nodes))
@@ -86,10 +80,4 @@ func apply(cmd *cobra.Command, arg []string) error {
 	}
 
 	return cluster.clusterControllerFunction()
-}
-
-// Install yq (yaml parser)
-func installYq() error {
-	prepareScripts("yq-install.sh")
-	return newScriptExecuter("", "localhost").run("yq-install.sh")
 }

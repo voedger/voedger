@@ -331,37 +331,6 @@ func (c *clusterType) saveToJSON() error {
 	return err
 }
 
-func (c *clusterType) nodesForProcess() (nodesType, error) {
-	nodes := nodesType{}
-	var err error
-	for i := 0; i < len(c.Nodes); i++ {
-		if c.Nodes[i].check(c) == nil {
-			continue
-		}
-
-		if c.Nodes[i].Error == "" {
-			nodes = append(nodes, &c.Nodes[i])
-			continue
-		}
-
-		err = errors.Join(err, errors.New(c.Nodes[i].Error))
-	}
-
-	return nodes, err
-}
-
-func (c *clusterType) needStartProcess() bool {
-	exists := false
-	for i := range c.Nodes {
-		e := c.Nodes[i].check(c)
-		if e != nil {
-			exists = true
-			c.Nodes[i].newAttempt()
-		}
-	}
-	return exists
-}
-
 func (c *clusterType) loadFromJSON() error {
 
 	defer c.updateNodeIndexes()
