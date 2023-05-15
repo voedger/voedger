@@ -15,7 +15,7 @@ func provideCmdDeactivateJoinedWorkspace(cfg *istructsmem.AppConfigType, appDefB
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdDeactivateJoinedWorkspace,
 		appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "DeactivateJoinedWorkspaceParams"), appdef.DefKind_Object).
-			AddField(field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).
+			AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).
 			QName(),
 		appdef.NullQName,
 		appdef.NullQName,
@@ -29,13 +29,13 @@ func execCmdDeactivateJoinedWorkspace(_ istructs.ICommandFunction, args istructs
 		return
 	}
 	skbViewJoinedWorkspaceIndex.PutInt32(field_Dummy, value_Dummy_Two)
-	skbViewJoinedWorkspaceIndex.PutInt64(field_InvitingWorkspaceWSID, args.ArgumentObject.AsInt64(field_InvitingWorkspaceWSID))
+	skbViewJoinedWorkspaceIndex.PutInt64(Field_InvitingWorkspaceWSID, args.ArgumentObject.AsInt64(Field_InvitingWorkspaceWSID))
 	svViewJoinedWorkspaceIndex, err := args.State.MustExist(skbViewJoinedWorkspaceIndex)
 	if err != nil {
 		return
 	}
 
-	skbCDocJoinedWorkspace, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocJoinedWorkspace)
+	skbCDocJoinedWorkspace, err := args.State.KeyBuilder(state.RecordsStorage, QNameCDocJoinedWorkspace)
 	if err != nil {
 		return err
 	}

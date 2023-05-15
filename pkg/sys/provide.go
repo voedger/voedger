@@ -40,13 +40,14 @@ func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBu
 	builtin.ProivdeCmdImport(cfg) // for sync
 	builtin.ProvideQryEcho(cfg, appDefBuilder)
 	builtin.ProvideQryGRCount(cfg, appDefBuilder)
-	workspace.Provide(cfg, appDefBuilder, vvmAPI.IAppStructsProvider, timeFunc)
+	workspace.Provide(cfg, appDefBuilder, vvmAPI.IAppStructsProvider, timeFunc, vvmAPI.ITokens, vvmAPI.FederationURL)
 	sqlquery.Provide(cfg, appDefBuilder, vvmAPI.IAppStructsProvider, vvm.NumCommandProcessors)
 	projectors.ProvideOffsetsDef(appDefBuilder)
 	commandprocessor.ProvideJSONFuncParamsDef(appDefBuilder)
 	verifier.Provide(cfg, appDefBuilder, vvmAPI.ITokens, vvmAPI.FederationURL, vvmAPI.IAppStructsProvider)
 	signupin.ProvideQryRefreshPrincipalToken(cfg, appDefBuilder, vvmAPI.ITokens)
 	signupin.ProvideCDocLogin(appDefBuilder)
+	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, vvmAPI.IAppTokensFactory)
 	invite.Provide(cfg, appDefBuilder, timeFunc)
 	cfg.AddAsyncProjectors(
 		journal.ProvideWLogDatesAsyncProjectorFactory(),
@@ -68,6 +69,5 @@ func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBu
 	cfg.AddSyncProjectors(collection.ProvideSyncProjectorFactories(appDefBuilder)...)
 	uniques.Provide(cfg, appDefBuilder)
 	describe.Provide(cfg, vvmAPI.IAppStructsProvider, appDefBuilder)
-	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, vvmAPI.IAppTokensFactory)
 	cfg.AddCUDValidators(builtin.ProvideRefIntegrityValidator())
 }

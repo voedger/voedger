@@ -25,6 +25,7 @@ const (
 	fldDummy1              = "dummy1"
 	fldDummy2              = "dummy2"
 	fldNextBaseWSID        = "NextBaseWSID"
+	field_WSName           = "WSName"
 )
 
 var (
@@ -37,4 +38,5 @@ var (
 	qNameAPInvokeCreateWorkspace   = appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspace")
 	ViewQNameNextBaseWSID          = appdef.NewQName(appdef.SysPackage, "NextBaseWSID")
 	nextWSIDGlobalLock             = sync.Mutex{}
+	qNameCmdDeactivateWorkspace    = appdef.NewQName(appdef.SysPackage, "DeactivateWorkspace")
 )

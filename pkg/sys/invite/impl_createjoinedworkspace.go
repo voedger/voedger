@@ -16,8 +16,8 @@ func provideCmdCreateJoinedWorkspace(cfg *istructsmem.AppConfigType, appDefBuild
 		qNameCmdCreateJoinedWorkspace,
 		appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "CreateJoinedWorkspaceParams"), appdef.DefKind_Object).
 			AddField(Field_Roles, appdef.DataKind_string, true).
-			AddField(field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).
-			AddField(field_WSName, appdef.DataKind_string, true).
+			AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).
+			AddField(Field_WSName, appdef.DataKind_string, true).
 			QName(),
 		appdef.NullQName,
 		appdef.NullQName,
@@ -31,13 +31,13 @@ func execCmdCreateJoinedWorkspace(_ istructs.ICommandFunction, args istructs.Exe
 		return
 	}
 	skbViewJoinedWorkspaceIndex.PutInt32(field_Dummy, value_Dummy_Two)
-	skbViewJoinedWorkspaceIndex.PutInt64(field_InvitingWorkspaceWSID, args.ArgumentObject.AsInt64(field_InvitingWorkspaceWSID))
+	skbViewJoinedWorkspaceIndex.PutInt64(Field_InvitingWorkspaceWSID, args.ArgumentObject.AsInt64(Field_InvitingWorkspaceWSID))
 	svViewJoinedWorkspaceIndex, ok, err := args.State.CanExist(skbViewJoinedWorkspaceIndex)
 	if err != nil {
 		return
 	}
 	if ok {
-		skbCDocJoinedWorkspace, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocJoinedWorkspace)
+		skbCDocJoinedWorkspace, err := args.State.KeyBuilder(state.RecordsStorage, QNameCDocJoinedWorkspace)
 		if err != nil {
 			return err
 		}
@@ -55,7 +55,7 @@ func execCmdCreateJoinedWorkspace(_ istructs.ICommandFunction, args istructs.Exe
 
 		return nil
 	}
-	skbCDocJoinedWorkspace, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocJoinedWorkspace)
+	skbCDocJoinedWorkspace, err := args.State.KeyBuilder(state.RecordsStorage, QNameCDocJoinedWorkspace)
 	if err != nil {
 		return
 	}
@@ -65,8 +65,8 @@ func execCmdCreateJoinedWorkspace(_ istructs.ICommandFunction, args istructs.Exe
 	}
 	svbCDocJoinedWorkspace.PutRecordID(appdef.SystemField_ID, istructs.RecordID(1))
 	svbCDocJoinedWorkspace.PutString(Field_Roles, args.ArgumentObject.AsString(Field_Roles))
-	svbCDocJoinedWorkspace.PutString(field_WSName, args.ArgumentObject.AsString(field_WSName))
-	svbCDocJoinedWorkspace.PutInt64(field_InvitingWorkspaceWSID, args.ArgumentObject.AsInt64(field_InvitingWorkspaceWSID))
+	svbCDocJoinedWorkspace.PutString(Field_WSName, args.ArgumentObject.AsString(Field_WSName))
+	svbCDocJoinedWorkspace.PutInt64(Field_InvitingWorkspaceWSID, args.ArgumentObject.AsInt64(Field_InvitingWorkspaceWSID))
 
 	return err
 }

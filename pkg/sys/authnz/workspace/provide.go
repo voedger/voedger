@@ -18,7 +18,8 @@ import (
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, now func() time.Time) {
+func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, now func() time.Time, tokensAPI itokens.ITokens,
+	federationURL func() *url.URL) {
 	// c.sys.InitChildWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		authnz.QNameCommandInitChildWorkspace,
@@ -159,6 +160,9 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	appDefBuilder.AddStruct(qNameAPInvokeCreateWorkspace, appdef.DefKind_Object)
 
 	ProvideViewNextWSID(appDefBuilder)
+
+	// deactivate workspace
+	provideDeactivateWorkspace(cfg, appDefBuilder, tokensAPI, federationURL)
 }
 
 // proj.sys.ChildWorkspaceIdx

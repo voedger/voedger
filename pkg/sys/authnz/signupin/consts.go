@@ -36,7 +36,8 @@ const (
 
 var (
 	// see https://dev.untill.com/projects/#!537026
-	validLoginRegexp       *regexp.Regexp = regexp.MustCompile(`^[^\.\- ][a-z0-9!#$%&'*+-\/=?^_{|}~@]+[^\.\- ]$`)
-	QNameViewLoginIdx                     = appdef.NewQName(appdef.SysPackage, "LoginIdx")
-	qNameCmdChangePassword                = appdef.NewQName(appdef.SysPackage, "ChangePassword")
+	validLoginRegexp *regexp.Regexp = regexp.MustCompile(`^[a-z0-9!#$%&'*+\-/=?^_` + "`" + `{|}~@]+(\.[a-z0-9!#$%&'*+\-/=?^_` + "`" + `{|}~@ ]+)*$`)
+	//`^[^\.\- ][a-z0-9!#$%&'*+-\/=?^_{|}~@]+[^\.\- ]$`)
+	QNameViewLoginIdx      = appdef.NewQName(appdef.SysPackage, "LoginIdx")
+	qNameCmdChangePassword = appdef.NewQName(appdef.SysPackage, "ChangePassword")
 )

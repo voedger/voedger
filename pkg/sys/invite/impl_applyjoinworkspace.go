@@ -91,7 +91,9 @@ func applyJoinWorkspace(timeFunc func() time.Time, federationURL func() *url.URL
 		var body string
 		//Store cdoc.sys.Subject
 		if svCDocSubject == nil {
-			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d}}]}`, svCDocInvite.AsString(Field_Login), svCDocInvite.AsString(Field_Roles), svCDocInvite.AsInt32(Field_SubjectKind))
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
+				svCDocInvite.AsString(Field_Login), svCDocInvite.AsString(Field_Roles), svCDocInvite.AsInt32(Field_SubjectKind),
+				svCDocInvite.AsInt64(field_InviteeProfileWSID))
 		} else {
 			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID), svCDocInvite.AsString(Field_Roles))
 		}

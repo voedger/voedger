@@ -13,6 +13,7 @@ func provideCDocSubject(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAp
 	appDefBuilder.AddStruct(QNameCDocSubject, appdef.DefKind_CDoc).
 		AddField(Field_Login, appdef.DataKind_string, true).
 		AddField(Field_SubjectKind, appdef.DataKind_int32, true).
-		AddField(Field_Roles, appdef.DataKind_string, true)
+		AddField(Field_Roles, appdef.DataKind_string, true).
+		AddField(Field_ProfileWSID, appdef.DataKind_int64, false)
 	cfg.Uniques.Add(QNameCDocSubject, []string{Field_Login})
 }

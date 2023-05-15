@@ -66,3 +66,29 @@ func WaitForIndexOffset(vit *vit.VIT, ws *vit.AppWorkspace, index appdef.QName, 
 		}
 	}
 }
+
+func InitiateInvitationByEMail(vit *vit.VIT, ws *vit.AppWorkspace, expireDatetime int64, email, initialRoles, inviteEmailTemplate, inviteEmailSubject string) (inviteID int64) {
+	body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
+		email, initialRoles, expireDatetime, inviteEmailTemplate, inviteEmailSubject)
+	return vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
+}
+
+func InitiateJoinWorkspace(vit *vit.VIT, ws *vit.AppWorkspace, inviteID int64, login string, verificationCode string) {
+	profile := vit.GetPrincipal(istructs.AppQName_test1_app1, login)
+	vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), coreutils.WithAuthorizeBy(profile.Token))
+}
+
+func WaitForInviteState(vit *vit.VIT, ws *vit.AppWorkspace, inviteState int32, inviteID int64) {
+	deadline := time.Now().Add(time.Second * 5)
+	var entity []interface{}
+	for time.Now().Before(deadline) {
+		entity = vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
+		{"args":{"Schema":"sys.Invite"},
+		"elements":[{"fields":["State","sys.ID"]}],
+		"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, inviteID)).SectionRow(0)
+		if inviteState == int32(entity[0].(float64)) {
+			return
+		}
+	}
+	panic(fmt.Sprintf("invite [%d] is not in required state [%d] it has state [%d]", inviteID, inviteState, int32(entity[0].(float64))))
+}

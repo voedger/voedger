@@ -9,8 +9,8 @@ import (
 )
 
 func provideCDocJoinedWorkspace(appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddStruct(qNameCDocJoinedWorkspace, appdef.DefKind_CDoc).
+	appDefBuilder.AddStruct(QNameCDocJoinedWorkspace, appdef.DefKind_CDoc).
 		AddField(Field_Roles, appdef.DataKind_string, true).
-		AddField(field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).
-		AddField(field_WSName, appdef.DataKind_string, true)
+		AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).
+		AddField(Field_WSName, appdef.DataKind_string, true)
 }
