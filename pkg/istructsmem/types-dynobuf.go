@@ -13,48 +13,48 @@ import (
 	"io"
 
 	dynobuffers "github.com/untillpro/dynobuffers"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
-// dynoBufValue converts specified value to dynobuffer compatable type using specified data kind.
+// Converts specified value to dyno-buffer compatible type using specified data kind.
 // If value type is not corresponding to kind then next conversions are available:
 //
 //	— float64 value can be converted to all numeric kinds (int32, int64, float32, float64, RecordID)
 //	— string value can be converted to QName and []byte kinds
 //
 // QName values, record- and event- values returned as []byte
-func (row *rowType) dynoBufValue(value interface{}, kind schemas.DataKind) (interface{}, error) {
+func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (interface{}, error) {
 	switch kind {
-	case schemas.DataKind_int32:
+	case appdef.DataKind_int32:
 		switch v := value.(type) {
 		case int32:
 			return v, nil
 		case float64:
 			return int32(v), nil
 		}
-	case schemas.DataKind_int64:
+	case appdef.DataKind_int64:
 		switch v := value.(type) {
 		case int64:
 			return v, nil
 		case float64:
 			return int64(v), nil
 		}
-	case schemas.DataKind_float32:
+	case appdef.DataKind_float32:
 		switch v := value.(type) {
 		case float32:
 			return v, nil
 		case float64:
 			return float32(v), nil
 		}
-	case schemas.DataKind_float64:
+	case appdef.DataKind_float64:
 		switch v := value.(type) {
 		case float64:
 			return v, nil
 		}
-	case schemas.DataKind_bytes:
+	case appdef.DataKind_bytes:
 		switch v := value.(type) {
 		case string:
 			bytes, err := base64.StdEncoding.DecodeString(v)
@@ -65,27 +65,27 @@ func (row *rowType) dynoBufValue(value interface{}, kind schemas.DataKind) (inte
 		case []byte:
 			return v, nil
 		}
-	case schemas.DataKind_string:
+	case appdef.DataKind_string:
 		switch v := value.(type) {
 		case string:
 			return v, nil
 		}
-	case schemas.DataKind_QName:
+	case appdef.DataKind_QName:
 		switch v := value.(type) {
 		case string:
-			qName, err := schemas.ParseQName(v)
+			qName, err := appdef.ParseQName(v)
 			if err != nil {
 				return nil, err
 			}
-			id, err := row.appCfg.qNames.GetID(qName)
+			id, err := row.appCfg.qNames.ID(qName)
 			if err != nil {
 				return nil, err
 			}
 			b := make([]byte, 2)
 			binary.BigEndian.PutUint16(b, uint16(id))
 			return b, nil
-		case schemas.QName:
-			id, err := row.appCfg.qNames.GetID(v)
+		case appdef.QName:
+			id, err := row.appCfg.qNames.ID(v)
 			if err != nil {
 				return nil, err
 			}
@@ -93,19 +93,19 @@ func (row *rowType) dynoBufValue(value interface{}, kind schemas.DataKind) (inte
 			binary.BigEndian.PutUint16(b, uint16(id))
 			return b, nil
 		}
-	case schemas.DataKind_bool:
+	case appdef.DataKind_bool:
 		switch v := value.(type) {
 		case bool:
 			return v, nil
 		}
-	case schemas.DataKind_RecordID:
+	case appdef.DataKind_RecordID:
 		switch v := value.(type) {
 		case float64:
 			return int64(v), nil
 		case istructs.RecordID:
 			return int64(v), nil
 		}
-	case schemas.DataKind_Record:
+	case appdef.DataKind_Record:
 		switch v := value.(type) {
 		case *recordType:
 			bytes, err := v.storeToBytes()
@@ -114,7 +114,7 @@ func (row *rowType) dynoBufValue(value interface{}, kind schemas.DataKind) (inte
 			}
 			return bytes, nil
 		}
-	case schemas.DataKind_Event:
+	case appdef.DataKind_Event:
 		switch v := value.(type) {
 		case *dbEventType:
 			bytes, err := v.storeToBytes()
@@ -143,7 +143,7 @@ func storeRow(row *rowType, buf *bytes.Buffer) (err error) {
 		return err
 	}
 	_ = binary.Write(buf, binary.BigEndian, int16(id))
-	if row.QName() == schemas.NullQName {
+	if row.QName() == appdef.NullQName {
 		return nil
 	}
 
@@ -209,7 +209,7 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 	if err = row.setQNameID(qnames.QNameID(qnameId)); err != nil {
 		return err
 	}
-	if row.QName() == schemas.NullQName {
+	if row.QName() == appdef.NullQName {
 		return nil
 	}
 
@@ -229,19 +229,19 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 	return nil
 }
 
-// Returns system fields mask combination for schema kind, see sfm_××× consts
-func schemaSysFieldsMask(schema schemas.Schema) uint16 {
-	kind, sfm := schema.Kind(), uint16(0)
-	if kind.HasSystemField(schemas.SystemField_ID) {
+// Returns system fields mask combination for definition kind, see sfm_××× consts
+func defKindSysFieldsMask(kind appdef.DefKind) uint16 {
+	sfm := uint16(0)
+	if kind.HasSystemField(appdef.SystemField_ID) {
 		sfm |= sfm_ID
 	}
-	if kind.HasSystemField(schemas.SystemField_ParentID) {
+	if kind.HasSystemField(appdef.SystemField_ParentID) {
 		sfm |= sfm_ParentID
 	}
-	if kind.HasSystemField(schemas.SystemField_Container) {
+	if kind.HasSystemField(appdef.SystemField_Container) {
 		sfm |= sfm_Container
 	}
-	if kind.HasSystemField(schemas.SystemField_IsActive) {
+	if kind.HasSystemField(appdef.SystemField_IsActive) {
 		sfm |= sfm_IsActive
 	}
 	return sfm
@@ -251,7 +251,7 @@ func loadRowSysFields(row *rowType, codecVer byte, buf *bytes.Buffer) (err error
 	var sysFieldMask uint16
 
 	if codecVer == codec_RawDynoBuffer {
-		sysFieldMask = schemaSysFieldsMask(row.schema)
+		sysFieldMask = defKindSysFieldsMask(row.def.Kind())
 	} else {
 		if err = binary.Read(buf, binary.BigEndian, &sysFieldMask); err != nil {
 			return fmt.Errorf("error read system fields mask: %w", err)

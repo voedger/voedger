@@ -5,6 +5,7 @@
 
 package singletons
 
+// Creates and returns new singletons system view
 func New() *Singletons {
 	return newSingletons()
 }

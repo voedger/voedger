@@ -6,8 +6,8 @@
 package qnames
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // Create and return new QNames
@@ -16,6 +16,6 @@ func New() *QNames {
 }
 
 // Renames QName from old to new. QNameID previously used by old will be used by new.
-func Rename(storage istorage.IAppStorage, old, new schemas.QName) error {
+func Rename(storage istorage.IAppStorage, old, new appdef.QName) error {
 	return renameQName(storage, old, new)
 }

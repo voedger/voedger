@@ -7,8 +7,8 @@ package dynobuf
 
 import (
 	"github.com/untillpro/dynobuffers"
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
-// Map of dynobuffer schemas by schema name
-type DynoBufSchemasCache map[schemas.QName]*dynobuffers.Scheme
+// Dynobuffer schemes map
+type DynoBufSchemes map[appdef.QName]*dynobuffers.Scheme

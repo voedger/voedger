@@ -4,7 +4,9 @@
 
 package istructs
 
-import "github.com/voedger/voedger/pkg/schemas"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+)
 
 // AppQName is unique in cluster federation
 // <owner>/<name>
@@ -49,15 +51,7 @@ const (
 	SubjectKind_FakeLast
 )
 
-// IFieldDescr describes one field
-type IFieldDescr interface {
-	Name() string
-	DataKind() schemas.DataKind
-	Required() bool
-	Verifiable() bool
-}
-
-// panics if name does not exist in schema
+// panics if name does not exist in definition
 // If field is nil zero value is returned
 type IRowReader interface {
 	AsInt32(name string) int32
@@ -66,7 +60,7 @@ type IRowReader interface {
 	AsFloat64(name string) float64
 	AsBytes(name string) []byte
 	AsString(name string) string
-	AsQName(name string) schemas.QName
+	AsQName(name string) appdef.QName
 	AsBool(name string) bool
 	AsRecordID(name string) RecordID
 
@@ -85,7 +79,7 @@ type IRowWriter interface {
 	PutFloat64(name string, value float64)
 	PutBytes(name string, value []byte)
 	PutString(name, value string)
-	PutQName(name string, value schemas.QName)
+	PutQName(name string, value appdef.QName)
 	PutBool(name string, value bool)
 	PutRecordID(name string, value RecordID)
 
@@ -93,14 +87,6 @@ type IRowWriter interface {
 	PutNumber(name string, value float64)
 	// Tries to make conversion from value to a name type
 	PutChars(name string, value string)
-}
-
-// IContainerDescr describes one container
-type IContainerDescr interface {
-	Name() string
-	Schema() schemas.QName
-	MinOccurs() schemas.Occurs
-	MaxOccurs() schemas.Occurs
 }
 
 // App Workspace amount type. Need to wire

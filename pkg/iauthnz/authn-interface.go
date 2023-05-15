@@ -13,7 +13,7 @@ import (
 )
 
 // Proposed NewDefaultAuthenticator() signature
-// One per HVM
+// One per VVM
 type NewDefaultAuthenticatorType func() IAuthenticator
 
 type IAuthenticator interface {

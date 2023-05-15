@@ -7,9 +7,9 @@ package state
 import (
 	"encoding/json"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type subjectStorage struct {
@@ -17,8 +17,8 @@ type subjectStorage struct {
 	tokenFunc      TokenFunc
 }
 
-func (s *subjectStorage) NewKeyBuilder(_ schemas.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newKeyBuilder(SubjectStorage, schemas.NullQName)
+func (s *subjectStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
+	return newKeyBuilder(SubjectStorage, appdef.NullQName)
 }
 func (s *subjectStorage) GetBatch(items []GetBatchItem) (err error) {
 	ssv := &subjectStorageValue{

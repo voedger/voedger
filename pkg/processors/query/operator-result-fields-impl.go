@@ -15,10 +15,10 @@ import (
 
 type ResultFieldsOperator struct {
 	pipeline.AsyncNOOP
-	elements     []IElement
-	rootSchema   coreutils.SchemaFields
-	schemasCache *schemasCache
-	metrics      IMetrics
+	elements   []IElement
+	rootFields coreutils.FieldsDef
+	fieldsDefs *fieldsDefs
+	metrics    IMetrics
 }
 
 func (o ResultFieldsOperator) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
@@ -31,7 +31,7 @@ func (o ResultFieldsOperator) DoAsync(ctx context.Context, work pipeline.IWorkpi
 	for _, element := range o.elements {
 		outputRow.Set(element.Path().Name(), make([]IOutputRow, 0))
 		if element.Path().IsRoot() {
-			err = o.fillRow(ctx, outputRow, element, object, o.rootSchema)
+			err = o.fillRow(ctx, outputRow, element, object, o.rootFields)
 			if err != nil {
 				return work, err
 			}
@@ -41,7 +41,7 @@ func (o ResultFieldsOperator) DoAsync(ctx context.Context, work pipeline.IWorkpi
 		findElements = func(parent istructs.IElement, pathEntries []string, pathEntryIndex int) {
 			parent.Elements(pathEntries[pathEntryIndex], func(el istructs.IElement) {
 				if pathEntryIndex == len(pathEntries)-1 {
-					err = o.fillRow(ctx, outputRow, element, el, o.schemasCache.get(el.QName()))
+					err = o.fillRow(ctx, outputRow, element, el, o.fieldsDefs.get(el.QName()))
 					if err != nil {
 						return
 					}
@@ -55,13 +55,13 @@ func (o ResultFieldsOperator) DoAsync(ctx context.Context, work pipeline.IWorkpi
 	return work, err
 }
 
-func (o ResultFieldsOperator) fillRow(ctx context.Context, outputRow IOutputRow, element IElement, object istructs.IObject, schemaFields coreutils.SchemaFields) (err error) {
+func (o ResultFieldsOperator) fillRow(ctx context.Context, outputRow IOutputRow, element IElement, object istructs.IObject, fd coreutils.FieldsDef) (err error) {
 	row := element.NewOutputRow()
 	for _, field := range element.ResultFields() {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		value := coreutils.ReadByKind(field.Field(), schemaFields[field.Field()], object)
+		value := coreutils.ReadByKind(field.Field(), fd[field.Field()], object)
 		row.Set(field.Field(), value)
 	}
 	for _, field := range element.RefFields() {

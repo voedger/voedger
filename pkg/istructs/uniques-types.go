@@ -4,17 +4,15 @@
 
 package istructs
 
-import "github.com/voedger/voedger/pkg/schemas"
+import "github.com/voedger/voedger/pkg/appdef"
 
+// Deprecated: use IDef().Uniques
 type IUniques interface {
-	GetAll(name schemas.QName) (uniques []IUnique)
-
-	// fields order has no sense
-	// only one unique could match. None matched -> nil
-	GetForKeySet(qName schemas.QName, keyFieldsSet []string) IUnique
+	GetAll(name appdef.QName) (uniques []IUnique)
 }
 
+// Deprecated: use IDef().Uniques
 type IUnique interface {
 	Fields() []string
-	QName() schemas.QName
+	QName() appdef.QName
 }

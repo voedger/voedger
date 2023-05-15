@@ -12,21 +12,21 @@ import (
 	"net/url"
 	"path/filepath"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var errTestIOError = errors.New("test i/o error")
 
-var storageEvent = schemas.NewQName("sys", "EventStorage")
-var storageSendmail = schemas.NewQName("sys", "SendMailStorage")
-var storageRecords = schemas.NewQName("sys", "RecordsStorage")
-var storageTest = schemas.NewQName("sys", "Test")
-var storageTest2 = schemas.NewQName("sys", "Test2")
-var storageTest3 = schemas.NewQName("sys", "Test3")
-var storageIoError = schemas.NewQName("sys", "IoErrorStorage")
+var storageEvent = appdef.NewQName("sys", "EventStorage")
+var storageSendmail = appdef.NewQName("sys", "SendMailStorage")
+var storageRecords = appdef.NewQName("sys", "RecordsStorage")
+var storageTest = appdef.NewQName("sys", "Test")
+var storageTest2 = appdef.NewQName("sys", "Test2")
+var storageTest3 = appdef.NewQName("sys", "Test3")
+var storageIoError = appdef.NewQName("sys", "IoErrorStorage")
 
 var projectorMode bool
 
@@ -52,7 +52,7 @@ func testModuleURL(path string) (u *url.URL) {
 
 }
 
-func (s *mockIo) KeyBuilder(storage, entity schemas.QName) (builder istructs.IStateKeyBuilder, err error) {
+func (s *mockIo) KeyBuilder(storage, entity appdef.QName) (builder istructs.IStateKeyBuilder, err error) {
 	return &mockKeyBuilder{
 		entity:  entity,
 		storage: storage,
@@ -201,7 +201,7 @@ func (s *mockIo) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCall
 			mk.Data["f64"] = float64(i) + 0.01
 			mk.Data["str"] = fmt.Sprintf("key%d", i)
 			mk.Data["bytes"] = []byte{byte(i), 2, 3}
-			mk.Data["qname"] = schemas.NewQName("keypkg", fmt.Sprintf("e%d", i))
+			mk.Data["qname"] = appdef.NewQName("keypkg", fmt.Sprintf("e%d", i))
 			mk.Data["bool"] = true
 
 			mv := mockValue{
@@ -213,7 +213,7 @@ func (s *mockIo) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCall
 			mv.Data["f64"] = float64(i) + 0.0001
 			mv.Data["str"] = fmt.Sprintf("value%d", i)
 			mv.Data["bytes"] = []byte{3, 2, 1}
-			mv.Data["qname"] = schemas.NewQName("valuepkg", fmt.Sprintf("ee%d", i))
+			mv.Data["qname"] = appdef.NewQName("valuepkg", fmt.Sprintf("ee%d", i))
 			mv.Data["bool"] = false
 			if err := callback(&mk, &mv); err != nil {
 				return err
@@ -225,11 +225,11 @@ func (s *mockIo) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCall
 }
 
 type mockKeyBuilder struct {
-	entity  schemas.QName
-	storage schemas.QName
+	entity  appdef.QName
+	storage appdef.QName
 }
 
-func (kb *mockKeyBuilder) Entity() schemas.QName                            { return kb.entity }
+func (kb *mockKeyBuilder) Entity() appdef.QName                             { return kb.entity }
 func (kb *mockKeyBuilder) PartitionKey() istructs.IRowWriter                { return nil }
 func (kb *mockKeyBuilder) ClusteringColumns() istructs.IRowWriter           { return nil }
 func (kb *mockKeyBuilder) Equals(src istructs.IKeyBuilder) bool             { return false }
@@ -239,7 +239,7 @@ func (kb *mockKeyBuilder) PutFloat32(name string, value float32)            {}
 func (kb *mockKeyBuilder) PutFloat64(name string, value float64)            {}
 func (kb *mockKeyBuilder) PutBytes(name string, value []byte)               {}
 func (kb *mockKeyBuilder) PutString(name, value string)                     {}
-func (kb *mockKeyBuilder) PutQName(name string, value schemas.QName)        {}
+func (kb *mockKeyBuilder) PutQName(name string, value appdef.QName)         {}
 func (kb *mockKeyBuilder) PutBool(name string, value bool)                  {}
 func (kb *mockKeyBuilder) PutRecordID(name string, value istructs.RecordID) {}
 
@@ -267,14 +267,14 @@ func (v *mockValue) ToJSON(opts ...interface{}) (string, error)     { return "",
 func (v *mockValue) AsRecord(name string) (record istructs.IRecord) { return nil }
 func (v *mockValue) AsEvent(name string) (event istructs.IDbEvent)  { return nil }
 
-func (v *mockValue) GetAsInt32(index int) int32         { return v.index[index].(int32) }
-func (v *mockValue) GetAsInt64(index int) int64         { return 0 }
-func (v *mockValue) GetAsFloat32(index int) float32     { return 0 }
-func (v *mockValue) GetAsFloat64(index int) float64     { return 0 }
-func (v *mockValue) GetAsBytes(index int) []byte        { return v.index[index].([]byte) }
-func (v *mockValue) GetAsString(index int) string       { return v.index[index].(string) }
-func (v *mockValue) GetAsQName(index int) schemas.QName { return schemas.NullQName }
-func (v *mockValue) GetAsBool(index int) bool           { return false }
+func (v *mockValue) GetAsInt32(index int) int32        { return v.index[index].(int32) }
+func (v *mockValue) GetAsInt64(index int) int64        { return 0 }
+func (v *mockValue) GetAsFloat32(index int) float32    { return 0 }
+func (v *mockValue) GetAsFloat64(index int) float64    { return 0 }
+func (v *mockValue) GetAsBytes(index int) []byte       { return v.index[index].([]byte) }
+func (v *mockValue) GetAsString(index int) string      { return v.index[index].(string) }
+func (v *mockValue) GetAsQName(index int) appdef.QName { return appdef.NullQName }
+func (v *mockValue) GetAsBool(index int) bool          { return false }
 
 func (v *mockValue) Length() int                              { return 0 }
 func (v *mockValue) AsRecordID(name string) istructs.RecordID { return 0 }
@@ -362,7 +362,7 @@ func (kb *mockValueBuilder) PutFloat32(name string, value float32)            {}
 func (kb *mockValueBuilder) PutFloat64(name string, value float64)            {}
 func (kb *mockValueBuilder) PutBytes(name string, value []byte)               { kb.items[name] = value }
 func (kb *mockValueBuilder) PutString(name, value string)                     { kb.items[name] = value }
-func (kb *mockValueBuilder) PutQName(name string, value schemas.QName)        {}
+func (kb *mockValueBuilder) PutQName(name string, value appdef.QName)         {}
 func (kb *mockValueBuilder) PutBool(name string, value bool)                  {}
 func (kb *mockValueBuilder) PutRecordID(name string, value istructs.RecordID) {}
 

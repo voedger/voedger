@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -19,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestQNames(t *testing.T) {
@@ -33,24 +33,24 @@ func TestQNames(t *testing.T) {
 		panic(err)
 	}
 
-	schemaName := schemas.NewQName("test", "schema")
+	defName := appdef.NewQName("test", "doc")
 
-	resourceName := schemas.NewQName("test", "resource")
+	resourceName := appdef.NewQName("test", "resource")
 	r := mockResources{}
-	r.On("Resources", mock.AnythingOfType("func(schemas.QName)")).
+	r.On("Resources", mock.AnythingOfType("func(appdef.QName)")).
 		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(schemas.QName))
+			cb := args.Get(0).(func(appdef.QName))
 			cb(resourceName)
 		})
 
 	names := New()
 	if err := names.Prepare(storage, versions,
-		func() schemas.SchemaCache {
-			bld := schemas.NewSchemaCache()
-			bld.Add(schemaName, schemas.SchemaKind_CDoc)
-			schemas, err := bld.Build()
+		func() appdef.IAppDef {
+			appDefBuilder := appdef.New()
+			appDefBuilder.AddStruct(defName, appdef.DefKind_CDoc)
+			appDef, err := appDefBuilder.Build()
 			require.NoError(err)
-			return schemas
+			return appDef
 		}(),
 		&r); err != nil {
 		panic(err)
@@ -58,19 +58,19 @@ func TestQNames(t *testing.T) {
 
 	t.Run("basic QNames methods", func(t *testing.T) {
 
-		check := func(names *QNames, name schemas.QName) QNameID {
-			id, err := names.GetID(name)
+		check := func(names *QNames, name appdef.QName) QNameID {
+			id, err := names.ID(name)
 			require.NoError(err)
 			require.NotEqual(NullQNameID, id)
 
-			n, err := names.GetQName(id)
+			n, err := names.QName(id)
 			require.NoError(err)
 			require.Equal(name, n)
 
 			return id
 		}
 
-		sID := check(names, schemaName)
+		sID := check(names, defName)
 		rID := check(names, resourceName)
 
 		t.Run("must be ok to load early stored names", func(t *testing.T) {
@@ -84,7 +84,7 @@ func TestQNames(t *testing.T) {
 				panic(err)
 			}
 
-			require.Equal(sID, check(names1, schemaName))
+			require.Equal(sID, check(names1, defName))
 			require.Equal(rID, check(names1, resourceName))
 		})
 
@@ -96,31 +96,31 @@ func TestQNames(t *testing.T) {
 
 			names2 := New()
 			if err := names2.Prepare(storage, versions,
-				func() schemas.SchemaCache {
-					bld := schemas.NewSchemaCache()
-					bld.Add(schemaName, schemas.SchemaKind_CDoc)
-					schemas, err := bld.Build()
+				func() appdef.IAppDef {
+					appdefBuilder := appdef.New()
+					appdefBuilder.AddStruct(defName, appdef.DefKind_CDoc)
+					appDef, err := appdefBuilder.Build()
 					require.NoError(err)
-					return schemas
+					return appDef
 				}(),
 				nil); err != nil {
 				panic(err)
 			}
 
-			require.Equal(sID, check(names2, schemaName))
+			require.Equal(sID, check(names2, defName))
 			require.Equal(rID, check(names2, resourceName))
 		})
 	})
 
 	t.Run("must be error if unknown name", func(t *testing.T) {
-		id, err := names.GetID(schemas.NewQName("test", "unknown"))
+		id, err := names.ID(appdef.NewQName("test", "unknown"))
 		require.Equal(NullQNameID, id)
 		require.ErrorIs(err, ErrNameNotFound)
 	})
 
 	t.Run("must be error if unknown id", func(t *testing.T) {
-		n, err := names.GetQName(QNameID(MaxAvailableQNameID))
-		require.Equal(schemas.NullQName, n)
+		n, err := names.QName(QNameID(MaxAvailableQNameID))
+		require.Equal(appdef.NullQName, n)
 		require.ErrorIs(err, ErrIDNotFound)
 	})
 }
@@ -137,14 +137,14 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, lastestVersion+1)
+		versions.Put(vers.SysQNamesVersion, latestVersion+1)
 
 		names := New()
 		err := names.Prepare(storage, versions, nil, nil)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
 
-	t.Run("must be error if invalid QName readed from system view ", func(t *testing.T) {
+	t.Run("must be error if invalid QName loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
@@ -153,17 +153,17 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, lastestVersion)
+		versions.Put(vers.SysQNamesVersion, latestVersion)
 		const badName = "-test.error.qname-"
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(badName), utils.ToBytes(QNameID(512)))
 
 		names := New()
 		err := names.Prepare(storage, versions, nil, nil)
-		require.ErrorIs(err, schemas.ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(err, appdef.ErrInvalidQNameStringRepresentation)
 		require.ErrorContains(err, badName)
 	})
 
-	t.Run("must be ok if deleted QName readed from system view ", func(t *testing.T) {
+	t.Run("must be ok if deleted QName loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
@@ -172,7 +172,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, lastestVersion)
+		versions.Put(vers.SysQNamesVersion, latestVersion)
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte("test.deleted"), utils.ToBytes(NullQNameID))
 
 		names := New()
@@ -180,7 +180,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("must be error if invalid (small) QNameID readed from system view ", func(t *testing.T) {
+	t.Run("must be error if invalid (small) QNameID loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
@@ -189,7 +189,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, lastestVersion)
+		versions.Put(vers.SysQNamesVersion, latestVersion)
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(istructs.QNameForError.String()), utils.ToBytes(QNameIDForError))
 
 		names := New()
@@ -209,21 +209,21 @@ func TestQNamesPrepareErrors(t *testing.T) {
 
 		names := New()
 		err := names.Prepare(storage, versions,
-			func() schemas.SchemaCache {
-				bld := schemas.NewSchemaCache()
+			func() appdef.IAppDef {
+				appDefBuilder := appdef.New()
 				for i := 0; i <= MaxAvailableQNameID; i++ {
-					bld.Add(schemas.NewQName("test", fmt.Sprintf("name_%d", i)), schemas.SchemaKind_Object)
+					appDefBuilder.AddStruct(appdef.NewQName("test", fmt.Sprintf("name_%d", i)), appdef.DefKind_Object)
 				}
-				schemas, err := bld.Build()
+				appDef, err := appDefBuilder.Build()
 				require.NoError(err)
-				return schemas
+				return appDef
 			}(),
 			nil)
 		require.ErrorIs(err, ErrQNameIDsExceeds)
 	})
 
 	t.Run("must be error if write to storage failed", func(t *testing.T) {
-		qName := schemas.NewQName("test", "test")
+		qName := appdef.NewQName("test", "test")
 		writeError := errors.New("storage write error")
 
 		t.Run("must be error if write some name failed", func(t *testing.T) {
@@ -238,12 +238,12 @@ func TestQNamesPrepareErrors(t *testing.T) {
 
 			names := New()
 			err := names.Prepare(storage, versions,
-				func() schemas.SchemaCache {
-					bld := schemas.NewSchemaCache()
-					bld.Add(qName, schemas.SchemaKind_Object)
-					schemas, err := bld.Build()
+				func() appdef.IAppDef {
+					appDefBuilder := appdef.New()
+					appDefBuilder.AddStruct(qName, appdef.DefKind_Object)
+					appDef, err := appDefBuilder.Build()
 					require.NoError(err)
-					return schemas
+					return appDef
 				}(),
 				nil)
 			require.ErrorIs(err, writeError)
@@ -261,12 +261,12 @@ func TestQNamesPrepareErrors(t *testing.T) {
 
 			names := New()
 			err := names.Prepare(storage, versions,
-				func() schemas.SchemaCache {
-					bld := schemas.NewSchemaCache()
-					bld.Add(qName, schemas.SchemaKind_Object)
-					schemas, err := bld.Build()
+				func() appdef.IAppDef {
+					appDefBuilder := appdef.New()
+					appDefBuilder.AddStruct(qName, appdef.DefKind_Object)
+					appDef, err := appDefBuilder.Build()
 					require.NoError(err)
-					return schemas
+					return appDef
 				}(),
 				nil)
 			require.ErrorIs(err, writeError)
@@ -278,7 +278,7 @@ type mockResources struct {
 	mock.Mock
 }
 
-func (r *mockResources) QueryResource(resource schemas.QName) istructs.IResource {
+func (r *mockResources) QueryResource(resource appdef.QName) istructs.IResource {
 	return r.Called(resource).Get(0).(istructs.IResource)
 }
 
@@ -286,6 +286,6 @@ func (r *mockResources) QueryFunctionArgsBuilder(query istructs.IQueryFunction) 
 	return r.Called(query).Get(0).(istructs.IObjectBuilder)
 }
 
-func (r *mockResources) Resources(cb func(schemas.QName)) {
+func (r *mockResources) Resources(cb func(appdef.QName)) {
 	r.Called(cb)
 }

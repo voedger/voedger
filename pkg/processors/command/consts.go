@@ -7,18 +7,17 @@ package commandprocessor
 import (
 	"net/http"
 
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 const (
-	Field_JSONSchemaBody = "Body"
-	intentsLimit         = 128
+	intentsLimit = 128
 )
 
 var (
-	ViewQNamePLogKnownOffsets = schemas.NewQName(schemas.SysPackage, "PLogKnownOffsets")
-	ViewQNameWLogKnownOffsets = schemas.NewQName(schemas.SysPackage, "WLogKnownOffsets")
+	ViewQNamePLogKnownOffsets = appdef.NewQName(appdef.SysPackage, "PLogKnownOffsets")
+	ViewQNameWLogKnownOffsets = appdef.NewQName(appdef.SysPackage, "WLogKnownOffsets")
 	errWSNotInited            = coreutils.NewHTTPErrorf(http.StatusForbidden, "workspace is not initialized")
 )
 
@@ -30,11 +29,11 @@ const (
 
 // TODO: should be in a separate package
 var (
-	QNameCDocWorkspaceDescriptor  = schemas.NewQName(schemas.SysPackage, "WorkspaceDescriptor")
-	QNameCommandCreateWorkspaceID = schemas.NewQName(schemas.SysPackage, "CreateWorkspaceID")
-	QNameCommandCreateWorkspace   = schemas.NewQName(schemas.SysPackage, "CreateWorkspace")
-	QNameCommandUploadBLOBHelper  = schemas.NewQName(schemas.SysPackage, "UploadBLOBHelper")
-	QNameWDocBLOB                 = schemas.NewQName(schemas.SysPackage, "BLOB")
-	QNameCommandInit              = schemas.NewQName(schemas.SysPackage, "Init")
-	QNameCommandImport            = schemas.NewQName(schemas.SysPackage, "Import")
+	QNameCDocWorkspaceDescriptor  = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
+	QNameCommandCreateWorkspaceID = appdef.NewQName(appdef.SysPackage, "CreateWorkspaceID")
+	QNameCommandCreateWorkspace   = appdef.NewQName(appdef.SysPackage, "CreateWorkspace")
+	QNameCommandUploadBLOBHelper  = appdef.NewQName(appdef.SysPackage, "UploadBLOBHelper")
+	QNameWDocBLOB                 = appdef.NewQName(appdef.SysPackage, "BLOB")
+	QNameCommandInit              = appdef.NewQName(appdef.SysPackage, "Init")
+	QNameCommandImport            = appdef.NewQName(appdef.SysPackage, "Import")
 )

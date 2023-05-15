@@ -65,13 +65,13 @@
 ## Functional design
 Declare a schema with a verified field:
 ```go
-AppConfigType.Schemas.Add(QName, e.g. istructs. SchemaKind_CDoc).
-	AddVerifiedField(name, kind, false, e.g. payloads.VerificationKind_EMail)
+AppConfigType.AppDef.Add(QName, e.g. appdef.DefKind_CDoc).
+	AddVerifiedField(name, kind, false, e.g. appdef.VerificationKind_EMail)
 ```
 
 Issue verification token and code:
 ```go
-token, code, err := verifier.NewVerificationToken(entity, field, email, e.g. payloads.VerificationKind_EMail, targetWSID, ITokens, IAppTokens)
+token, code, err := verifier.NewVerificationToken(entity, field, email, e.g. appdef.VerificationKind_EMail, targetWSID, ITokens, IAppTokens)
 ```
 
 Issue verified value token:
@@ -123,12 +123,12 @@ sequenceDiagram
 		tp->>tp: set the value from the token to the target field
 	deactivate tp
 ```
-### Verifiable fields in schemas
+### Verifiable fields in application schema
 ```mermaid
 erDiagram
 
-istructs_Schema ||..|| ResetPasswordByEmailUnloggedParams: "describes e.g."
-istructs_Schema ||..|| CDocAirUserProfile: "describes e.g."
+appdef_Schema ||..|| ResetPasswordByEmailUnloggedParams: "describes e.g."
+appdef_Schema ||..|| CDocAirUserProfile: "describes e.g."
 
 ResetPasswordByEmailUnloggedParams ||--|| authnz_Email: "has field"
 air_Email ||..|| VerifiableField: is
@@ -168,11 +168,11 @@ value ||--|| VerifiedField: "is part of"
 name ||--|| VerifiedField: "is part of"
 kind ||--|| VerifiedField: "is part of"
 
-VerifiedField }|--|| istructs_Schema: "belongs to"
-QName ||..|| istructs_Schema: "refs"
+VerifiedField }|--|| appdef_Schema: "belongs to"
+QName ||..|| appdef_Schema: "refs"
 
-istructs_Schema ||..|| ResetPasswordByEmailUnloggedParams: "e.g."
-istructs_Schema ||..|| CDocAirUserProfile: "e.g."
+appdef_Schema ||..|| ResetPasswordByEmailUnloggedParams: "e.g."
+appdef_Schema ||..|| CDocAirUserProfile: "e.g."
 
 ResetPasswordByEmailUnloggedParams ||--|| authnz_Email: "has field"
 VerifiedField ||..|| air_Email: "can be"

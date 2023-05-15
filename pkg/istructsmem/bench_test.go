@@ -11,15 +11,15 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // Ref. bench.md for results
 
-// Register a command "cmd" with ODoc "odoc" as an argument
-// odoc has numOfIntFields int64 fields and same number of string fields
+// Register a command "cmd" with ODoc "oDoc" as an argument
+// oDoc has numOfIntFields int64 fields and same number of string fields
 // Test BuildRawEvent performance
 func Benchmark_BuildRawEvent(b *testing.B) {
 
@@ -56,30 +56,30 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	// Names
 
 	appName := istructs.AppQName_test1_app1
-	odocQName := schemas.NewQName("test", "odoc")
-	cmdQName := schemas.NewQName("test", "cmd")
+	oDocQName := appdef.NewQName("test", "oDoc")
+	cmdQName := appdef.NewQName("test", "cmd")
 
-	// odoc field names and values
+	// oDoc field names and values
 
 	intFieldNames := make([]string, numOfIntFields)
 	intFieldNamesFloat64Values := make(map[string]float64)
 	stringFieldNames := make([]string, numOfIntFields)
 	stringFieldValues := make(map[string]string)
 
-	// Schemas
-	bld := func() schemas.SchemaCacheBuilder {
-		cache := schemas.NewSchemaCache()
+	// application definition
+	appDef := func() appdef.IAppDefBuilder {
+		cache := appdef.New()
 
-		s := cache.Add(odocQName, schemas.SchemaKind_ODoc)
+		s := cache.AddStruct(oDocQName, appdef.DefKind_ODoc)
 		for i := 0; i < numOfIntFields; i++ {
 
 			intFieldName := fmt.Sprintf("i%v", i)
-			s.AddField(intFieldName, schemas.DataKind_int64, true)
+			s.AddField(intFieldName, appdef.DataKind_int64, true)
 			intFieldNames[i] = intFieldName
 			intFieldNamesFloat64Values[intFieldName] = float64(i)
 
 			stringFieldName := fmt.Sprintf("s%v", i)
-			s.AddField(stringFieldName, schemas.DataKind_string, true)
+			s.AddField(stringFieldName, appdef.DataKind_string, true)
 			stringFieldNames[i] = stringFieldName
 			stringFieldValues[stringFieldName] = stringFieldName
 
@@ -89,15 +89,15 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 	// Con
 
-	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, bld())
+	configs := make(AppConfigsType, 1)
+	cfg := configs.AddConfig(appName, appDef())
 
 	// Register command
 	{
-		cfg.Resources.Add(NewCommandFunction(cmdQName, odocQName, schemas.NullQName, schemas.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdQName, oDocQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
 	}
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider := Provide(configs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 	appStructs, err := provider.AppStructs(appName)
 	require.NoError(err)
@@ -122,7 +122,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 			})
 
 		cmd := bld.ArgumentObjectBuilder()
-		cmd.PutRecordID(schemas.SystemField_ID, 1)
+		cmd.PutRecordID(appdef.SystemField_ID, 1)
 		for i := 0; i < numOfIntFields; i++ {
 			cmd.PutNumber(intFieldNames[i], intFieldNamesFloat64Values[intFieldNames[i]])
 			cmd.PutString(stringFieldNames[i], stringFieldValues[stringFieldNames[i]])
@@ -139,34 +139,34 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 }
 
-func Benchmark_UnmarshallJSONForBuildRawEvent(b *testing.B) {
+func Benchmark_UnmarshalJSONForBuildRawEvent(b *testing.B) {
 	numOfIntFields := 2
 	b.Run(fmt.Sprint("numOfFields=", numOfIntFields*2), func(b *testing.B) {
-		bench_UnmarshallJSONForBuildRawEvent(b, numOfIntFields)
+		bench_UnmarshalJSONForBuildRawEvent(b, numOfIntFields)
 	})
 
 	numOfIntFields = 4
 	b.Run(fmt.Sprint("numOfFields=", numOfIntFields*2), func(b *testing.B) {
-		bench_UnmarshallJSONForBuildRawEvent(b, numOfIntFields)
+		bench_UnmarshalJSONForBuildRawEvent(b, numOfIntFields)
 	})
 
 	numOfIntFields = 8
 	b.Run(fmt.Sprint("numOfFields=", numOfIntFields*2), func(b *testing.B) {
-		bench_UnmarshallJSONForBuildRawEvent(b, numOfIntFields)
+		bench_UnmarshalJSONForBuildRawEvent(b, numOfIntFields)
 	})
 
 	numOfIntFields = 16
 	b.Run(fmt.Sprint("numOfFields=", numOfIntFields*2), func(b *testing.B) {
-		bench_UnmarshallJSONForBuildRawEvent(b, numOfIntFields)
+		bench_UnmarshalJSONForBuildRawEvent(b, numOfIntFields)
 	})
 
 	numOfIntFields = 32
 	b.Run(fmt.Sprint("numOfFields=", numOfIntFields*2), func(b *testing.B) {
-		bench_UnmarshallJSONForBuildRawEvent(b, numOfIntFields)
+		bench_UnmarshalJSONForBuildRawEvent(b, numOfIntFields)
 	})
 }
 
-func bench_UnmarshallJSONForBuildRawEvent(b *testing.B, numOfIntFields int) {
+func bench_UnmarshalJSONForBuildRawEvent(b *testing.B, numOfIntFields int) {
 
 	require := require.New(b)
 

@@ -9,12 +9,12 @@
 package state
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 type IStateStorage interface {
-	NewKeyBuilder(entity schemas.QName, existingKeyBuilder istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder)
+	NewKeyBuilder(entity appdef.QName, existingKeyBuilder istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder)
 }
 type IWithGetBatch interface {
 	//GetBatch reads items from storage

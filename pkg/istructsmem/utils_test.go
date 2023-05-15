@@ -11,10 +11,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func Test_splitID(t *testing.T) {
@@ -107,8 +107,8 @@ func Test_splitCalcLogOffset(t *testing.T) {
 	wg := sync.WaitGroup{}
 
 	const basketCount int = 4
-	testBaskets := func(startbasket int) {
-		startOffs := istructs.Offset(startbasket * 4096)
+	testBaskets := func(startBasket int) {
+		startOffs := istructs.Offset(startBasket * 4096)
 		for ofs := startOffs; ofs < startOffs+istructs.Offset(4096*basketCount); ofs++ {
 			pk, cc := splitLogOffset(ofs)
 			ofs1 := calcLogOffset(pk, cc)
@@ -130,8 +130,8 @@ func Test_splitLogOffsetMonotonicIncrease(t *testing.T) {
 	wg := sync.WaitGroup{}
 
 	const basketCount int = 4
-	testBaskets := func(startbasket int) {
-		startOffs := istructs.Offset(startbasket * 4096)
+	testBaskets := func(startBasket int) {
+		startOffs := istructs.Offset(startBasket * 4096)
 		p, c := splitLogOffset(startOffs)
 		for ofs := startOffs + 1; ofs < startOffs+istructs.Offset(4096*basketCount); ofs++ {
 			pp, cc := splitLogOffset(ofs)
@@ -161,7 +161,7 @@ func TestElementFillAndGet(t *testing.T) {
 	test := test()
 
 	cfgs := test.AppConfigs
-	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 	_, err := asp.AppStructs(test.appName)
 	require.NoError(err)
 	builder := NewIObjectBuilder(cfgs[istructs.AppQName_test1_app1], test.testCDoc)
@@ -186,7 +186,7 @@ func TestElementFillAndGet(t *testing.T) {
 			},
 		}
 		cfg := cfgs[test.appName]
-		require.NoError(FillElementFromJSON(data, cfg.Schemas.Schema(test.testCDoc), builder))
+		require.NoError(FillElementFromJSON(data, cfg.AppDef.Def(test.testCDoc), builder))
 		o, err := builder.Build()
 		require.NoError(err)
 
@@ -230,7 +230,7 @@ func TestElementFillAndGet(t *testing.T) {
 				"sys.ID": float64(1),
 				name:     val,
 			}
-			require.NoError(FillElementFromJSON(data, cfg.Schemas.Schema(test.testCDoc), builder))
+			require.NoError(FillElementFromJSON(data, cfg.AppDef.Def(test.testCDoc), builder))
 			o, err := builder.Build()
 			require.ErrorIs(err, ErrWrongFieldType)
 			require.Nil(o)
@@ -245,14 +245,14 @@ func TestElementFillAndGet(t *testing.T) {
 		}{
 			{"unknownContainer", []interface{}{}},
 			{"record", []interface{}{"str"}},
-			{"record", []interface{}{map[string]interface{}{"unknwonContainer": []interface{}{}}}},
+			{"record", []interface{}{map[string]interface{}{"unknownContainer": []interface{}{}}}},
 		}
 		cfg := cfgs[test.appName]
 		for _, c := range cases {
 			data := map[string]interface{}{
 				c.f: c.v,
 			}
-			err := FillElementFromJSON(data, cfg.Schemas.Schema(test.testCDoc), builder)
+			err := FillElementFromJSON(data, cfg.AppDef.Def(test.testCDoc), builder)
 			require.Error(err)
 		}
 	})
@@ -262,14 +262,14 @@ func TestIBucketsFromIAppStructs(t *testing.T) {
 	require := require.New(t)
 
 	cfgs := AppConfigsType{}
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())
-	funcQName := schemas.NewQName("my", "func")
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+	funcQName := appdef.NewQName("my", "func")
 	rlExpected := istructs.RateLimit{
 		Period:                1,
 		MaxAllowedPerDuration: 2,
 	}
 	cfg.FunctionRateLimits.AddAppLimit(funcQName, rlExpected)
-	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 	as, err := asp.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	buckets := IBucketsFromIAppStructs(as)

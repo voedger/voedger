@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 )
 
 type RawResultOperator struct {
@@ -24,10 +25,10 @@ func (o RawResultOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece) 
 	topOutputRow := work.(IWorkpiece).OutputRow()
 	object := work.(IWorkpiece).Object()
 	row := &outputRow{
-		keyToIdx: map[string]int{Field_JSONSchemaBody: 0},
+		keyToIdx: map[string]int{processors.Field_JSONDef_Body: 0},
 		values:   make([]interface{}, 1),
 	}
-	row.Set(Field_JSONSchemaBody, object.AsString(Field_JSONSchemaBody))
+	row.Set(processors.Field_JSONDef_Body, object.AsString(processors.Field_JSONDef_Body))
 	topOutputRow.Set(rootDocument, []IOutputRow{row})
 	return work, err
 }

@@ -8,8 +8,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	istructs "github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // Design: N10n https://dev.heeus.io/launchpad/#!13813
@@ -64,7 +64,7 @@ type SubscriptionID string
 
 type ProjectionKey struct {
 	App        istructs.AppQName
-	Projection schemas.QName
+	Projection appdef.QName
 	WS         istructs.WSID
 }
 

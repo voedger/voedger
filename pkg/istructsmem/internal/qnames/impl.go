@@ -11,24 +11,24 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func newQNames() *QNames {
 	return &QNames{
-		qNames: make(map[schemas.QName]QNameID),
-		ids:    make(map[QNameID]schemas.QName),
+		qNames: make(map[appdef.QName]QNameID),
+		ids:    make(map[QNameID]appdef.QName),
 		lastID: QNameIDSysLast,
 	}
 }
 
 // Returns ID for specified QName
-func (names *QNames) GetID(qName schemas.QName) (QNameID, error) {
+func (names *QNames) ID(qName appdef.QName) (QNameID, error) {
 	if id, ok := names.qNames[qName]; ok {
 		return id, nil
 	}
@@ -36,22 +36,22 @@ func (names *QNames) GetID(qName schemas.QName) (QNameID, error) {
 }
 
 // Retrieve QName for specified ID
-func (names *QNames) GetQName(id QNameID) (qName schemas.QName, err error) {
+func (names *QNames) QName(id QNameID) (qName appdef.QName, err error) {
 	qName, ok := names.ids[id]
 	if ok {
 		return qName, nil
 	}
 
-	return schemas.NullQName, fmt.Errorf("unknown QName ID «%v»: %w", id, ErrIDNotFound)
+	return appdef.NullQName, fmt.Errorf("unknown QName ID «%v»: %w", id, ErrIDNotFound)
 }
 
 // Reads all application QNames from storage, add all system and application QNames and write result to storage if some changes. Must be called at application starts
-func (names *QNames) Prepare(storage istorage.IAppStorage, versions *vers.Versions, schemas schemas.SchemaCache, resources istructs.IResources) error {
+func (names *QNames) Prepare(storage istorage.IAppStorage, versions *vers.Versions, appDef appdef.IAppDef, resources istructs.IResources) error {
 	if err := names.load(storage, versions); err != nil {
 		return err
 	}
 
-	if err := names.collectAllQNames(schemas, resources); err != nil {
+	if err := names.collectAll(appDef, resources); err != nil {
 		return err
 	}
 
@@ -65,27 +65,27 @@ func (names *QNames) Prepare(storage istorage.IAppStorage, versions *vers.Versio
 }
 
 // Collect all system and application QName IDs
-func (names *QNames) collectAllQNames(s schemas.SchemaCache, r istructs.IResources) (err error) {
+func (names *QNames) collectAll(appDef appdef.IAppDef, r istructs.IResources) (err error) {
 
 	// system QNames
 	names.
-		collectSysQName(schemas.NullQName, NullQNameID).
-		collectSysQName(istructs.QNameForError, QNameIDForError).
-		collectSysQName(istructs.QNameCommandCUD, QNameIDCommandCUD)
+		collectSys(appdef.NullQName, NullQNameID).
+		collectSys(istructs.QNameForError, QNameIDForError).
+		collectSys(istructs.QNameCommandCUD, QNameIDCommandCUD)
 
-	if s != nil {
-		s.Schemas(
-			func(schema schemas.Schema) {
+	if appDef != nil {
+		appDef.Defs(
+			func(d appdef.IDef) {
 				err = errors.Join(err,
-					names.collectAppQName(schema.QName()))
+					names.collect(d.QName()))
 			})
 	}
 
 	if r != nil {
 		r.Resources(
-			func(q schemas.QName) {
+			func(q appdef.QName) {
 				err = errors.Join(err,
-					names.collectAppQName(q))
+					names.collect(q))
 			})
 	}
 
@@ -93,7 +93,7 @@ func (names *QNames) collectAllQNames(s schemas.SchemaCache, r istructs.IResourc
 }
 
 // Checks is exists ID for application QName in cache. If not then adds it with new ID
-func (names *QNames) collectAppQName(qName schemas.QName) error {
+func (names *QNames) collect(qName appdef.QName) error {
 	if _, ok := names.qNames[qName]; ok {
 		return nil // already known QName
 	}
@@ -112,7 +112,7 @@ func (names *QNames) collectAppQName(qName schemas.QName) error {
 }
 
 // Adds system QName to cache
-func (names *QNames) collectSysQName(qName schemas.QName, id QNameID) *QNames {
+func (names *QNames) collectSys(qName appdef.QName, id QNameID) *QNames {
 	names.qNames[qName] = id
 	names.ids[id] = qName
 	return names
@@ -129,14 +129,14 @@ func (names *QNames) load(storage istorage.IAppStorage, versions *vers.Versions)
 		return names.load01(storage)
 	}
 
-	return fmt.Errorf("unknown version of system QNames view (%v): %w", ver, vers.ErrorInvalidVersion)
+	return fmt.Errorf("unknown version of QNames system view (%v): %w", ver, vers.ErrorInvalidVersion)
 }
 
 // loads all stored QNames from storage version ver01
 func (names *QNames) load01(storage istorage.IAppStorage) error {
 
 	readQName := func(cCols, value []byte) error {
-		qName, err := schemas.ParseQName(string(cCols))
+		qName, err := appdef.ParseQName(string(cCols))
 		if err != nil {
 			return err
 		}
@@ -146,7 +146,7 @@ func (names *QNames) load01(storage istorage.IAppStorage) error {
 		}
 
 		if id <= QNameIDSysLast {
-			return fmt.Errorf("unexpected ID (%v) is readed from system QNames view: %w", id, ErrWrongQNameID)
+			return fmt.Errorf("unexpected ID (%v) is loaded from QNames system view: %w", id, ErrWrongQNameID)
 		}
 
 		names.qNames[qName] = id
@@ -169,7 +169,7 @@ func (names *QNames) store(storage istorage.IAppStorage, versions *vers.Versions
 	batch := make([]istorage.BatchItem, 0)
 	for qName, id := range names.qNames {
 		if (id > QNameIDSysLast) ||
-			(qName != schemas.NullQName) && (id == NullQNameID) { // deleted QName
+			(qName != appdef.NullQName) && (id == NullQNameID) { // deleted QName
 			item := istorage.BatchItem{
 				PKey:  pKey,
 				CCols: []byte(qName.String()),
@@ -183,9 +183,9 @@ func (names *QNames) store(storage istorage.IAppStorage, versions *vers.Versions
 		return fmt.Errorf("error store application QName IDs to storage: %w", err)
 	}
 
-	if ver := versions.Get(vers.SysQNamesVersion); ver != lastestVersion {
-		if err = versions.Put(vers.SysQNamesVersion, lastestVersion); err != nil {
-			return fmt.Errorf("error store system QNames view version: %w", err)
+	if ver := versions.Get(vers.SysQNamesVersion); ver != latestVersion {
+		if err = versions.Put(vers.SysQNamesVersion, latestVersion); err != nil {
+			return fmt.Errorf("error store QNames system view version: %w", err)
 		}
 	}
 

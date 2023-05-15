@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
@@ -18,7 +19,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func TestAppConfigsType(t *testing.T) {
@@ -30,7 +30,7 @@ func TestAppConfigsType(t *testing.T) {
 
 	cfgs := make(AppConfigsType)
 	for app, id := range istructs.ClusterApps {
-		cfg := cfgs.AddConfig(app, schemas.NewSchemaCache())
+		cfg := cfgs.AddConfig(app, appdef.New())
 		require.NotNil(cfg)
 		require.Equal(cfg.Name, app)
 		require.Equal(cfg.QNameID, id)
@@ -84,9 +84,9 @@ func TestErrorsAppConfigsType(t *testing.T) {
 	storageProvider := teststore.NewStorageProvider(storage)
 
 	t.Run("must error if error while read versions", func(t *testing.T) {
-		bld := schemas.NewSchemaCache()
-		t.Run("must be ok to build schemas", func(t *testing.T) {
-			bld.Add(schemas.NewQName("test", "CDoc"), schemas.SchemaKind_CDoc)
+		bld := appdef.New()
+		t.Run("must be ok to build application definition", func(t *testing.T) {
+			bld.AddStruct(appdef.NewQName("test", "CDoc"), appdef.DefKind_CDoc)
 		})
 
 		cfgs1 := make(AppConfigsType, 1)
@@ -110,7 +110,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 
 	t.Run("must error if damaged data while read versions", func(t *testing.T) {
 		cfgs1 := make(AppConfigsType, 1)
-		_ = cfgs1.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())
+		_ = cfgs1.AddConfig(istructs.AppQName_test1_app1, appdef.New())
 		provider1 := Provide(cfgs1, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		_, err := provider1.AppStructs(istructs.AppQName_test1_app1)
@@ -120,7 +120,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, pKey, nil)
 
 		cfgs2 := make(AppConfigsType, 1)
-		_ = cfgs2.AddConfig(istructs.AppQName_test1_app1, schemas.NewSchemaCache())
+		_ = cfgs2.AddConfig(istructs.AppQName_test1_app1, appdef.New())
 		provider2 := Provide(cfgs2, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		_, err = provider2.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)

@@ -12,28 +12,27 @@ import (
 	"errors"
 	"fmt"
 
-	dynobuffers "github.com/untillpro/dynobuffers"
+	"github.com/untillpro/dynobuffers"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
-// rowType is type to implement istructs row interfaces.
-
-//   - interfaces:
-//     — istructs.IRowReader
-//     — istructs.IRowWriter
-//     — istructs.IValue
-//     — istructs.IValueBuilder
-//     — istructs.IRecord (partially)
-//     — istructs.IEditableRecord
+// Implements interfaces:
+//
+//	— istructs.IRowReader
+//	— istructs.IRowWriter
+//	— istructs.IValue
+//	— istructs.IValueBuilder
+//	— istructs.IRecord (partially)
+//	— istructs.IEditableRecord
 type rowType struct {
 	appCfg    *AppConfigType
-	schema    schemas.Schema
+	def       appdef.IDef
 	id        istructs.RecordID
 	parentID  istructs.RecordID
 	container string
@@ -42,11 +41,11 @@ type rowType struct {
 	err       error
 }
 
-// newRow constructs new row (QName is schemas.NullQName)
+// newRow constructs new row (QName is appdef.NullQName)
 func newRow(appCfg *AppConfigType) rowType {
 	return rowType{
 		appCfg:    appCfg,
-		schema:    schemas.NullSchema,
+		def:       appdef.NullDef,
 		id:        istructs.NullRecordID,
 		parentID:  istructs.NullRecordID,
 		container: "",
@@ -57,13 +56,13 @@ func newRow(appCfg *AppConfigType) rowType {
 }
 
 // build builds the row. Must be called after all Put××× calls to build row. If there were errors during data puts, then their connection will be returned.
-// If there were no errors, then tries to form the dynobuffer and returns the result
+// If there were no errors, then tries to form the dynoBuffer and returns the result
 func (row *rowType) build() (nilledFields []string, err error) {
 	if row.err != nil {
 		return nil, row.error()
 	}
 
-	if row.QName() == schemas.NullQName {
+	if row.QName() == appdef.NullQName {
 		return nil, nil
 	}
 
@@ -82,7 +81,7 @@ func (row *rowType) build() (nilledFields []string, err error) {
 
 // clear clears row by set QName to NullQName value
 func (row *rowType) clear() {
-	row.schema = schemas.NullSchema
+	row.def = appdef.NullDef
 	row.id = istructs.NullRecordID
 	row.parentID = istructs.NullRecordID
 	row.container = ""
@@ -102,7 +101,7 @@ func (row *rowType) collectErrorf(format string, a ...interface{}) {
 
 // containerID returns row container id
 func (row *rowType) containerID() (id containers.ContainerID, err error) {
-	return row.appCfg.cNames.GetID(row.Container())
+	return row.appCfg.cNames.ID(row.Container())
 }
 
 // copyFrom assigns from specified row
@@ -142,29 +141,7 @@ func (row *rowType) error() error {
 	return row.err
 }
 
-// hasValue returns has dynobuffer data in specified field
-func (row *rowType) hasValue(name string) (value bool) {
-	if name == schemas.SystemField_QName {
-		// special case: sys.QName is always presents
-		return true
-	}
-	if name == schemas.SystemField_ID {
-		return row.id != istructs.NullRecordID
-	}
-	if name == schemas.SystemField_ParentID {
-		return row.parentID != istructs.NullRecordID
-	}
-	if name == schemas.SystemField_Container {
-		return row.container != ""
-	}
-	if name == schemas.SystemField_IsActive {
-		// special case: sys.IsActive is presents if schema required
-		return row.schema.Kind().HasSystemField(schemas.SystemField_IsActive)
-	}
-	return row.dyB.HasValue(name)
-}
-
-// loadFromBytes loads row from bytes
+// Loads row from bytes
 func (row *rowType) loadFromBytes(in []byte) (err error) {
 
 	buf := bytes.NewBuffer(in)
@@ -203,9 +180,11 @@ func (row *rowType) maskValues() {
 	}
 }
 
-// putValue checks is field specified name and kind exists in dynobuffers schema.
-// If exists then puts specified field value into dynobuffer else collects error.
-// Remark: if field must be verificated before put then collects error «field must be verified»
+// Checks is field specified name and kind exists in dynobuffers scheme.
+//
+// If exists then puts specified field value into dynoBuffer else collects error.
+//
+// Remark: if field must be verified before put then collects error «field must be verified»
 func (row *rowType) putValue(name string, kind dynobuffers.FieldType, value interface{}) {
 	fld, ok := row.dyB.Scheme.FieldsMap[name]
 	if !ok {
@@ -213,11 +192,11 @@ func (row *rowType) putValue(name string, kind dynobuffers.FieldType, value inte
 		return
 	}
 
-	if fld := row.schema.Field(name); fld != nil {
+	if fld := row.def.Field(name); fld != nil {
 		if fld.Verifiable() {
 			token, ok := value.(string)
 			if !ok {
-				row.collectErrorf(errFieldMustBeVerificated, name, value, ErrWrongFieldType)
+				row.collectErrorf(errFieldMustBeVerified, name, value, ErrWrongFieldType)
 				return
 			}
 			data, err := row.verifyToken(name, token)
@@ -241,10 +220,10 @@ func (row *rowType) putValue(name string, kind dynobuffers.FieldType, value inte
 // qNameID returns storage ID of row QName
 func (row *rowType) qNameID() (qnames.QNameID, error) {
 	name := row.QName()
-	if name == schemas.NullQName {
+	if name == appdef.NullQName {
 		return qnames.NullQNameID, nil
 	}
-	return row.appCfg.qNames.GetID(name)
+	return row.appCfg.qNames.ID(name)
 }
 
 // setActive sets record IsActive activity flag
@@ -264,7 +243,7 @@ func (row *rowType) setContainer(value string) {
 
 // setContainerID sets record container by ID. Useful from loadFromBytes()
 func (row *rowType) setContainerID(value containers.ContainerID) (err error) {
-	cont, err := row.appCfg.cNames.GetContainer(value)
+	cont, err := row.appCfg.cNames.Container(value)
 	if err != nil {
 		row.collectError(err)
 		return err
@@ -285,27 +264,27 @@ func (row *rowType) setParent(value istructs.RecordID) {
 }
 
 // setQName sets new specified QName for row. It resets all data from row
-func (row *rowType) setQName(value schemas.QName) {
+func (row *rowType) setQName(value appdef.QName) {
 	if row.QName() == value {
 		return
 	}
 
 	row.clear()
 
-	if value == schemas.NullQName {
+	if value == appdef.NullQName {
 		return
 	}
 
-	schema := row.appCfg.Schemas.SchemaByName(value)
-	if schema == nil {
-		row.collectErrorf(errSchemaNotFoundWrap, value, ErrNameNotFound)
+	def := row.appCfg.AppDef.DefByName(value)
+	if def == nil {
+		row.collectErrorf(errDefNotFoundWrap, value, ErrNameNotFound)
 		return
 	}
 
-	row.setSchema(schema)
+	row.setDef(def)
 }
 
-// setQNameID same as setQName, useful from loadFromBytes()
+// Same as setQName, useful from loadFromBytes()
 func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 	if id, err := row.qNameID(); (err == nil) && (id == value) {
 		return nil
@@ -313,41 +292,43 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 
 	row.clear()
 
-	qName, err := row.appCfg.qNames.GetQName(value)
+	qName, err := row.appCfg.qNames.QName(value)
 	if err != nil {
 		row.collectError(err)
 		return err
 	}
 
-	if qName != schemas.NullQName {
-		schema := row.appCfg.Schemas.SchemaByName(qName)
-		if schema == nil {
-			err = fmt.Errorf(errSchemaNotFoundWrap, qName, ErrNameNotFound)
+	if qName != appdef.NullQName {
+		def := row.appCfg.AppDef.DefByName(qName)
+		if def == nil {
+			err = fmt.Errorf(errDefNotFoundWrap, qName, ErrNameNotFound)
 			row.collectError(err)
 			return err
 		}
-		row.setSchema(schema)
+		row.setDef(def)
 	}
 
 	return nil
 }
 
-// setSchema assign specified schema to row and rebuild row. Schema can not to be nil and must be valid
-func (row *rowType) setSchema(value schemas.Schema) {
+// Assign specified definition to row and rebuild row.
+//
+// Definition can not to be nil and must be valid
+func (row *rowType) setDef(value appdef.IDef) {
 	if value == nil {
-		row.schema = schemas.NullSchema
+		row.def = appdef.NullDef
 	} else {
-		row.schema = value
+		row.def = value
 	}
 
-	if row.schema.QName() == schemas.NullQName {
+	if row.def.QName() == appdef.NullQName {
 		row.dyB = nullDynoBuffer
 	} else {
-		row.dyB = dynobuffers.NewBuffer(row.appCfg.dbSchemas[row.schema.QName()])
+		row.dyB = dynobuffers.NewBuffer(row.appCfg.dynoSchemes[row.def.QName()])
 	}
 }
 
-// storeToBytes stores row to bytes and returns error if occurs
+// Stores row to bytes and returns error if occurs
 func (row *rowType) storeToBytes() (out []byte, err error) {
 	buf := new(bytes.Buffer)
 	_ = binary.Write(buf, binary.BigEndian, codec_LastVersion)
@@ -367,10 +348,10 @@ func (row *rowType) verifyToken(name string, token string) (value interface{}, e
 		return nil, err
 	}
 
-	// if gpayload.AppQName != row.appCfg.Name { … } // redundant check, must be check by IAppToken.ValidateToken()
-	// if expTime := gpayload.IssuedAt.Add(gpayload.Duration); time.Now().After(expTime) { … } // redundant check, must be check by IAppToken.ValidateToken()
+	// if payload.AppQName != row.appCfg.Name { … } // redundant check, must be check by IAppToken.ValidateToken()
+	// if expTime := payload.IssuedAt.Add(payload.Duration); time.Now().After(expTime) { … } // redundant check, must be check by IAppToken.ValidateToken()
 
-	fld := row.schema.Field(name)
+	fld := row.def.Field(name)
 
 	if !fld.VerificationKind(payload.VerificationKind) {
 		return nil, fmt.Errorf("unavailable verification method %v: %w", payload.VerificationKind, ErrInvalidVerificationKind)
@@ -395,8 +376,8 @@ func (row *rowType) AsInt32(name string) (value int32) {
 	if value, ok := row.dyB.GetInt32(name); ok {
 		return value
 	}
-	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_int32.ToString(), name, row.QName(), ErrNameNotFound))
+	if row.def.Field(name) == nil {
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_int32.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return 0
 }
@@ -406,8 +387,8 @@ func (row *rowType) AsInt64(name string) (value int64) {
 	if value, ok := row.dyB.GetInt64(name); ok {
 		return value
 	}
-	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_int64.ToString(), name, row.QName(), ErrNameNotFound))
+	if row.def.Field(name) == nil {
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_int64.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return 0
 }
@@ -417,8 +398,8 @@ func (row *rowType) AsFloat32(name string) (value float32) {
 	if value, ok := row.dyB.GetFloat32(name); ok {
 		return value
 	}
-	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_float32.ToString(), name, row.QName(), ErrNameNotFound))
+	if row.def.Field(name) == nil {
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_float32.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return 0
 }
@@ -428,8 +409,8 @@ func (row *rowType) AsFloat64(name string) (value float64) {
 	if value, ok := row.dyB.GetFloat64(name); ok {
 		return value
 	}
-	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_float64.ToString(), name, row.QName(), ErrNameNotFound))
+	if row.def.Field(name) == nil {
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_float64.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return 0
 }
@@ -439,15 +420,15 @@ func (row *rowType) AsBytes(name string) (value []byte) {
 	if bytes := row.dyB.GetByteArray(name); bytes != nil {
 		return bytes.Bytes()
 	}
-	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_bytes.ToString(), name, row.QName(), ErrNameNotFound))
+	if row.def.Field(name) == nil {
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_bytes.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return nil
 }
 
 // istructs.IRowReader.AsString
 func (row *rowType) AsString(name string) (value string) {
-	if name == schemas.SystemField_Container {
+	if name == appdef.SystemField_Container {
 		return row.container
 	}
 
@@ -455,36 +436,36 @@ func (row *rowType) AsString(name string) (value string) {
 		return value
 	}
 
-	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_string.ToString(), name, row.QName(), ErrNameNotFound))
+	if row.def.Field(name) == nil {
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_string.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return ""
 }
 
 // istructs.IRowReader.AsQName
-func (row *rowType) AsQName(name string) schemas.QName {
-	if name == schemas.SystemField_QName {
-		// special case: «sys.QName» field must returned from assigned schema
-		return row.schema.QName()
+func (row *rowType) AsQName(name string) appdef.QName {
+	if name == appdef.SystemField_QName {
+		// special case: «sys.QName» field must returned from row definition
+		return row.def.QName()
 	}
 
 	if id, ok := dynoBufGetWord(row.dyB, name); ok {
-		qName, err := row.appCfg.qNames.GetQName(qnames.QNameID(id))
+		qName, err := row.appCfg.qNames.QName(qnames.QNameID(id))
 		if err != nil {
 			panic(err)
 		}
 		return qName
 	}
 
-	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_QName.ToString(), name, row.QName(), ErrNameNotFound))
+	if row.def.Field(name) == nil {
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_QName.ToString(), name, row.QName(), ErrNameNotFound))
 	}
-	return schemas.NullQName
+	return appdef.NullQName
 }
 
 // istructs.IRowReader.AsBool
 func (row *rowType) AsBool(name string) bool {
-	if name == schemas.SystemField_IsActive {
+	if name == appdef.SystemField_IsActive {
 		return row.isActive
 	}
 
@@ -492,8 +473,8 @@ func (row *rowType) AsBool(name string) bool {
 		return value
 	}
 
-	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_bool.ToString(), name, row.QName(), ErrNameNotFound))
+	if row.def.Field(name) == nil {
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_bool.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 
 	return false
@@ -501,11 +482,11 @@ func (row *rowType) AsBool(name string) bool {
 
 // istructs.IRowReader.AsRecordID
 func (row *rowType) AsRecordID(name string) istructs.RecordID {
-	if name == schemas.SystemField_ID {
+	if name == appdef.SystemField_ID {
 		return row.id
 	}
 
-	if name == schemas.SystemField_ParentID {
+	if name == appdef.SystemField_ParentID {
 		return row.parentID
 	}
 
@@ -513,8 +494,8 @@ func (row *rowType) AsRecordID(name string) istructs.RecordID {
 		return istructs.RecordID(value)
 	}
 
-	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_RecordID.ToString(), name, row.QName(), ErrNameNotFound))
+	if row.def.Field(name) == nil {
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_RecordID.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return istructs.NullRecordID
 }
@@ -528,8 +509,8 @@ func (row *rowType) AsRecord(name string) istructs.IRecord {
 		}
 		return &record
 	}
-	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_Record.ToString(), name, row.QName(), ErrNameNotFound))
+	if row.def.Field(name) == nil {
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_Record.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return NewNullRecord(istructs.NullRecordID)
 }
@@ -543,8 +524,8 @@ func (row *rowType) AsEvent(name string) istructs.IDbEvent {
 		}
 		return &event
 	}
-	if row.schema.Field(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, schemas.DataKind_Event.ToString(), name, row.QName(), ErrNameNotFound))
+	if row.def.Field(name) == nil {
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_Event.ToString(), name, row.QName(), ErrNameNotFound))
 	}
 	return nil
 }
@@ -557,20 +538,20 @@ func (row *rowType) Container() string {
 // istructs.IRowReader.FieldNames
 func (row *rowType) FieldNames(cb func(fieldName string)) {
 	// system fields
-	if row.schema.Kind().HasSystemField(schemas.SystemField_QName) {
-		cb(schemas.SystemField_QName)
+	if row.def.Kind().HasSystemField(appdef.SystemField_QName) {
+		cb(appdef.SystemField_QName)
 	}
 	if row.id != istructs.NullRecordID {
-		cb(schemas.SystemField_ID)
+		cb(appdef.SystemField_ID)
 	}
 	if row.parentID != istructs.NullRecordID {
-		cb(schemas.SystemField_ParentID)
+		cb(appdef.SystemField_ParentID)
 	}
 	if row.container != "" {
-		cb(schemas.SystemField_Container)
+		cb(appdef.SystemField_Container)
 	}
-	if row.schema.Kind().HasSystemField(schemas.SystemField_IsActive) {
-		cb(schemas.SystemField_IsActive)
+	if row.def.Kind().HasSystemField(appdef.SystemField_IsActive) {
+		cb(appdef.SystemField_IsActive)
 	}
 
 	// user fields
@@ -579,6 +560,30 @@ func (row *rowType) FieldNames(cb func(fieldName string)) {
 			cb(name)
 			return true
 		})
+}
+
+// FIXME: remove when no longer in use
+//
+// Returns has dynoBuffer data in specified field
+func (row *rowType) HasValue(name string) (value bool) {
+	if name == appdef.SystemField_QName {
+		// special case: sys.QName is always presents
+		return true
+	}
+	if name == appdef.SystemField_ID {
+		return row.id != istructs.NullRecordID
+	}
+	if name == appdef.SystemField_ParentID {
+		return row.parentID != istructs.NullRecordID
+	}
+	if name == appdef.SystemField_Container {
+		return row.container != ""
+	}
+	if name == appdef.SystemField_IsActive {
+		// special case: sys.IsActive is presents if required by definition kind
+		return row.def.Kind().HasSystemField(appdef.SystemField_IsActive)
+	}
+	return row.dyB.HasValue(name)
 }
 
 // istructs.IRecord.ID
@@ -618,25 +623,25 @@ func (row *rowType) PutFloat64(name string, value float64) {
 
 // istructs.IRowWriter.PutNumber
 func (row *rowType) PutNumber(name string, value float64) {
-	fld := row.schema.Field(name)
+	fld := row.def.Field(name)
 	if fld == nil {
 		row.collectErrorf(errFieldNotFoundWrap, "number", name, row.QName(), ErrNameNotFound)
 		return
 	}
 
 	switch k := fld.DataKind(); k {
-	case schemas.DataKind_int32:
+	case appdef.DataKind_int32:
 		row.dyB.Set(name, int32(value))
-	case schemas.DataKind_int64:
+	case appdef.DataKind_int64:
 		row.dyB.Set(name, int64(value))
-	case schemas.DataKind_float32:
+	case appdef.DataKind_float32:
 		row.dyB.Set(name, float32(value))
-	case schemas.DataKind_float64:
+	case appdef.DataKind_float64:
 		row.dyB.Set(name, value)
-	case schemas.DataKind_RecordID:
+	case appdef.DataKind_RecordID:
 		row.PutRecordID(name, istructs.RecordID(value))
 	default:
-		row.collectErrorf(errFieldValueTypeMismatchWrap, schemas.DataKind_float64.ToString(), k, name, ErrWrongFieldType)
+		row.collectErrorf(errFieldValueTypeMismatchWrap, appdef.DataKind_float64.ToString(), k, name, ErrWrongFieldType)
 	}
 }
 
@@ -647,7 +652,7 @@ func (row *rowType) PutBytes(name string, value []byte) {
 
 // istructs.IRowWriter.PutString
 func (row *rowType) PutString(name string, value string) {
-	if name == schemas.SystemField_Container {
+	if name == appdef.SystemField_Container {
 		row.setContainer(value)
 		return
 	}
@@ -655,18 +660,18 @@ func (row *rowType) PutString(name string, value string) {
 }
 
 // istructs.IRowWriter.PutQName
-func (row *rowType) PutQName(name string, value schemas.QName) {
-	if name == schemas.SystemField_QName {
+func (row *rowType) PutQName(name string, value appdef.QName) {
+	if name == appdef.SystemField_QName {
 		// special case: user try to assign empty record early constructed from CUD.Create()
-		if row.QName() == schemas.NullQName {
+		if row.QName() == appdef.NullQName {
 			row.setQName(value)
 		} else if row.QName() != value {
-			row.collectErrorf("%w", ErrSchemaChanged)
+			row.collectErrorf("%w", ErrDefChanged)
 		}
 		return
 	}
 
-	id, err := row.appCfg.qNames.GetID(value)
+	id, err := row.appCfg.qNames.ID(value)
 	if err != nil {
 		row.collectErrorf(errCantGetFieldQNameIDWrap, name, value, err)
 		return
@@ -679,37 +684,37 @@ func (row *rowType) PutQName(name string, value schemas.QName) {
 
 // istructs.IRowWriter.PutChars
 func (row *rowType) PutChars(name string, value string) {
-	fld := row.schema.Field(name)
+	fld := row.def.Field(name)
 	if fld == nil {
 		row.collectErrorf(errFieldNotFoundWrap, "chars", name, row.QName(), ErrNameNotFound)
 		return
 	}
 
 	switch k := fld.DataKind(); k {
-	case schemas.DataKind_bytes:
+	case appdef.DataKind_bytes:
 		bytes, err := base64.StdEncoding.DecodeString(value)
 		if err != nil {
-			row.collectErrorf(errFieldConvertErrorWrap, name, value, schemas.DataKind_bytes.ToString(), err)
+			row.collectErrorf(errFieldConvertErrorWrap, name, value, appdef.DataKind_bytes.ToString(), err)
 			return
 		}
 		row.PutBytes(name, bytes)
-	case schemas.DataKind_string:
+	case appdef.DataKind_string:
 		row.PutString(name, value)
-	case schemas.DataKind_QName:
-		qName, err := schemas.ParseQName(value)
+	case appdef.DataKind_QName:
+		qName, err := appdef.ParseQName(value)
 		if err != nil {
-			row.collectErrorf(errFieldConvertErrorWrap, name, value, schemas.DataKind_QName.ToString(), err)
+			row.collectErrorf(errFieldConvertErrorWrap, name, value, appdef.DataKind_QName.ToString(), err)
 			return
 		}
 		row.PutQName(name, qName)
 	default:
-		row.collectErrorf(errFieldValueTypeMismatchWrap, schemas.DataKind_string.ToString(), k, name, ErrWrongFieldType)
+		row.collectErrorf(errFieldValueTypeMismatchWrap, appdef.DataKind_string.ToString(), k, name, ErrWrongFieldType)
 	}
 }
 
 // istructs.IRowWriter.PutBool
 func (row *rowType) PutBool(name string, value bool) {
-	if name == schemas.SystemField_IsActive {
+	if name == appdef.SystemField_IsActive {
 		row.setActive(value)
 		return
 	}
@@ -719,11 +724,11 @@ func (row *rowType) PutBool(name string, value bool) {
 
 // istructs.IRowWriter.PutRecordID
 func (row *rowType) PutRecordID(name string, value istructs.RecordID) {
-	if name == schemas.SystemField_ID {
+	if name == appdef.SystemField_ID {
 		row.setID(value)
 		return
 	}
-	if name == schemas.SystemField_ParentID {
+	if name == appdef.SystemField_ParentID {
 		row.setParent(value)
 		return
 	}
@@ -750,18 +755,18 @@ func (row *rowType) PutEvent(name string, event istructs.IDbEvent) {
 }
 
 // istructs.IRecord.QName: returns row qualified name
-func (row *rowType) QName() schemas.QName {
-	if row.schema != nil {
-		return row.schema.QName()
+func (row *rowType) QName() appdef.QName {
+	if row.def != nil {
+		return row.def.QName()
 	}
-	return schemas.NullQName
+	return appdef.NullQName
 }
 
 // istructs.IRowReader.RecordIDs
 func (row *rowType) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {
-	row.schema.Fields(
-		func(fld schemas.Field) {
-			if fld.DataKind() == schemas.DataKind_RecordID {
+	row.def.Fields(
+		func(fld appdef.IField) {
+			if fld.DataKind() == appdef.DataKind_RecordID {
 				id := row.AsRecordID(fld.Name())
 				if (id != istructs.NullRecordID) || includeNulls {
 					cb(fld.Name(), id)

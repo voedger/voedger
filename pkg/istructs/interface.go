@@ -10,7 +10,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 // Structs can be changed on-the-fly, so AppStructs() are taken for each message (request) to be handled
@@ -34,20 +34,20 @@ type IAppStructs interface {
 	// ************************************************************
 	// Static data, kind of constants
 
-	// Working with recources like functions, images (in the future)
+	// Working with resources like functions, images (in the future)
 	// Function can be inside WASM, container, executable, jar, zip etc.
 	Resources() IResources
 
 	// ************************************************************
-	// Data schemas, kind of RTTI, reflection
+	// Application definition, kind of RTTI, reflection
 
-	// Schemas
-	Schemas() schemas.SchemaCache
+	// AppDef
+	AppDef() appdef.IAppDef
 
 	ClusterAppID() ClusterAppID
 	AppQName() AppQName
 
-	IsFunctionRateLimitsExceeded(funcQName schemas.QName, wsid WSID) bool
+	IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid WSID) bool
 
 	// Describe package names
 	DescribePackageNames() []string
@@ -55,6 +55,10 @@ type IAppStructs interface {
 	// Describe package content
 	DescribePackage(pkgName string) interface{}
 
+	// Deprecated: use IDef.Uniques() instead
+	//
+	// This Uniques exists for historical compatibility and should not be used.
+	// Provides only simplest (from one field) uniques, only one unique for each definition
 	Uniques() IUniques
 
 	SyncProjectors() []ProjectorFactory
@@ -102,9 +106,9 @@ type IRecords interface {
 	GetBatch(workspace WSID, highConsistency bool, ids []RecordGetBatchItem) (err error)
 
 	// @ConcurrentAccess R
-	// qName must be a singletone
+	// qName must be a singleton
 	// If record not found NullRecord with QName() == NullQName is returned
-	GetSingleton(workspace WSID, qName schemas.QName) (record IRecord, err error)
+	GetSingleton(workspace WSID, qName appdef.QName) (record IRecord, err error)
 }
 
 type RecordGetBatchItem struct {
@@ -116,9 +120,9 @@ type IViewRecords interface {
 
 	// Builders panic if QName not found
 
-	KeyBuilder(view schemas.QName) IKeyBuilder
-	NewValueBuilder(view schemas.QName) IValueBuilder
-	UpdateValueBuilder(view schemas.QName, existing IValue) IValueBuilder
+	KeyBuilder(view appdef.QName) IKeyBuilder
+	NewValueBuilder(view appdef.QName) IValueBuilder
+	UpdateValueBuilder(view appdef.QName, existing IValue) IValueBuilder
 
 	// All key fields must be specified (panic)
 	// Key & value must be from the same QName (panic)
@@ -154,19 +158,19 @@ type IResources interface {
 
 	// If resource not found then {ResourceKind_null, QNameForNullResource) is returned
 	// Currently resources are ICommandFunction and IQueryFunction
-	QueryResource(resource schemas.QName) (r IResource)
+	QueryResource(resource appdef.QName) (r IResource)
 
 	QueryFunctionArgsBuilder(query IQueryFunction) IObjectBuilder
 
 	// Enumerates all application resources
-	Resources(func(resName schemas.QName))
+	Resources(func(resName appdef.QName))
 }
 
 // Same as itokens.ITokens but works for App specified in IAppTokensFactory
 // App is configured per interface instance
 // placed here because otherwise IAppStructs.AppTokens() would depend on itokens-payloads
 type IAppTokens interface {
-	// Calls istruct.IssueToken for given App
+	// Calls istructs.IssueToken for given App
 	IssueToken(duration time.Duration, pointerToPayload interface{}) (token string, err error)
 	// ErrTokenIssuedForAnotherApp is returned (check using errors.Is(...)) when token is issued for another application
 	ValidateToken(token string, pointerToPayload interface{}) (gp GenericPayload, err error)
