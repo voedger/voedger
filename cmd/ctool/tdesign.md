@@ -87,10 +87,6 @@ In the full version of `cluster.json` array `Nodes` contains 5 elements.
       // Node role
       "NodeRole": "SENode",
 
-      // Version from the last successful attempt
-      // Skipped if empty
-      "NodeVersion": "0.0.1",
-        
       // Attempt number
       "AttemptNo": 2,
         
