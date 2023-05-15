@@ -29,6 +29,9 @@ const (
 	dbNodeCount             = 3
 	seDcCount               = 3
 
+	// Deploy SE args
+	initCeArgCount = 1
+
 	// node Roles
 	nrCENode = "CENode"
 	nrSENode = "SENode"
@@ -47,6 +50,13 @@ const (
 	idxDBNode1
 	idxDBNode2
 	idxDBNode3
+)
+
+const (
+	// command kind
+	ckInit    = "init"
+	ckUpgrade = "upgrade"
+	ckReplace = "replace"
 )
 
 const (
