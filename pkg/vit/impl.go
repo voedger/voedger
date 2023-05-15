@@ -161,7 +161,7 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 				bb, err := json.Marshal(data)
 				require.NoError(t, err)
 
-				vit.PostWS(appWorkspaces[wsd.Name], "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb))
+				vit.PostWS(appWorkspaces[wsd.Name], "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), coreutils.WithAuthorizeBy(vit.GetSystemPrincipal(app.name).Token))
 			}
 		}
 	}
