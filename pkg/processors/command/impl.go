@@ -23,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"golang.org/x/exp/maps"
@@ -278,7 +279,7 @@ func unmarshalRequestBody(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if cmd.cmdFunc.ParamsDef() == istructs.QNameJSON {
 		cmd.requestData["args"] = map[string]interface{}{
-			Field_JSONDef_Body: string(cmd.cmdMes.Body()),
+			processors.Field_JSONDef_Body: string(cmd.cmdMes.Body()),
 		}
 	} else if err = json.Unmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
 		err = fmt.Errorf("failed to unmarshal request body: %w", err)

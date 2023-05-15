@@ -120,13 +120,29 @@ type IDef interface {
 	// Enumerates all containers in add order.
 	Containers(func(IContainer))
 
-	// Finds container definition by constainer name.
+	// Finds container definition by name.
 	//
 	// If not found empty definition with DefKind_null is returned
 	ContainerDef(name string) IDef
 
 	// Returns is definition CDoc singleton
 	Singleton() bool
+
+	// Return unique by ID.
+	//
+	// Returns nil if not unique found
+	UniqueByID(id UniqueID) IUnique
+
+	// Return unique by name.
+	//
+	// Returns nil if not unique found
+	UniqueByName(name string) IUnique
+
+	// Return uniques count
+	UniqueCount() int
+
+	// Enumerates all uniques.
+	Uniques(func(IUnique))
 }
 
 // Definition builder
@@ -164,8 +180,21 @@ type IDefBuilder interface {
 	//   - if container with name already exists,
 	//   - if invalid occurrences,
 	//   - if definition kind does not allow containers,
-	//   - if container definition kind is not compatable with definition kind.
+	//   - if container definition kind is not compatible with definition kind.
 	AddContainer(name string, def QName, min, max Occurs) IDefBuilder
+
+	// Adds new unique with specified name and fields.
+	// If name is omitted, then default name is used, e.g. `unique01`.
+	//
+	// # Panics:
+	//   - if unique name is invalid,
+	//   - if unique with name is already exists,
+	//   - if definition kind is not supports uniques,
+	//   - if fields list is empty,
+	//   - if fields has duplicates,
+	//   - if fields is already exists or overlaps with an existing unique,
+	//   - if some field not found.
+	AddUnique(name string, fields []string) IDefBuilder
 
 	// Sets the singleton document flag for CDoc.
 	//
@@ -193,20 +222,20 @@ type IViewBuilder interface {
 	// Returns view value definition
 	ValueDef() IDefBuilder
 
-	// AddPartField adds specisified field to view partition key definition. Fields is always required
+	// AddPartField adds specified field to view partition key definition. Fields is always required
 	//
 	// # Panics:
 	//	- if field already exists in clustering columns or value fields,
 	//	- if not fixed size data kind.
 	AddPartField(name string, kind DataKind) IViewBuilder
 
-	// AddClustColumn adds specisified field to view clustering columns definition. Fields is optional
+	// AddClustColumn adds specified field to view clustering columns definition. Fields is optional
 	//
 	// # Panics:
 	//	- if field already exists in partition key or value fields.
 	AddClustColumn(name string, kind DataKind) IViewBuilder
 
-	// AddValueField adds specisified field to view value definition
+	// AddValueField adds specified field to view value definition
 	//
 	// # Panics:
 	//	- if field already exists in partition key or clustering columns fields.
@@ -226,10 +255,10 @@ type IField interface {
 	// Returns is field required
 	Required() bool
 
-	// Returns is field verifable
+	// Returns is field verifiable
 	Verifiable() bool
 
-	// Returns is field verifable by specified verification kind
+	// Returns is field verifiable by specified verification kind
 	VerificationKind(VerificationKind) bool
 
 	// Returns is field has fixed width data kind
@@ -241,7 +270,7 @@ type IField interface {
 
 // Describes single inclusion of child definition in parent definition.
 //
-// Ref to container.go for constants and implementation
+// Ref to container.go for implementation
 type IContainer interface {
 	// Returns name of container
 	Name() string
@@ -257,4 +286,28 @@ type IContainer interface {
 
 	// Returns is container system
 	IsSys() bool
+}
+
+// Unique identifier type
+type UniqueID uint32
+
+// Describe single unique for definition.
+//
+// Ref to unique.go for implementation
+type IUnique interface {
+	// returns parent definition
+	Def() IDef
+
+	// Returns name of unique.
+	//
+	// Name suitable for debugging or error messages. Unique identification provided by ID
+	Name() string
+
+	// Returns unique fields list. Fields are sorted alphabetically
+	Fields() []IField
+
+	// Unique identifier.
+	//
+	// Must be assigned during AppStruct construction by calling SetID(UniqueID)
+	ID() UniqueID
 }

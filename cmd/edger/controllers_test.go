@@ -89,7 +89,7 @@ func Test_CommandController(t *testing.T) {
 
 func TestDockerController_AllContainersRunning(t *testing.T) {
 	if testing.Short() {
-		t.Skip(`skipping test in short mod`)
+		t.Skip(`skipping test in short mode`)
 	}
 
 	projectName := `my`
@@ -173,7 +173,7 @@ services:
 	//require.Equal(t, expectedNewState.states, newState.states)
 
 	// updating image to version 7.0.11-alpine
-	sp.ComposeText = ` 
+	sp.ComposeText = `
 version: "3.7"
 services:
     redis:
@@ -194,7 +194,7 @@ services:
 	err = cleanUp(projectName)
 	require.NoError(t, err)
 
-	sp.ComposeText = ` 
+	sp.ComposeText = `
 version: "3.7"
 services:
     redis:

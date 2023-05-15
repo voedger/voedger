@@ -34,7 +34,7 @@ func TestAddView(t *testing.T) {
 
 	cc := view.ClustColsDef()
 	require.NotNil(cc)
-	require.Equal(ViewClusteringColumsDefName(viewName), cc.QName())
+	require.Equal(ViewClusteringColumnsDefName(viewName), cc.QName())
 	require.Equal(DefKind_ViewRecord_ClusteringColumns, cc.Kind())
 	require.Zero(cc.ContainerCount())
 

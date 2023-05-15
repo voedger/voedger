@@ -14,7 +14,7 @@ import (
 //go:generate stringer -type=DataKind -output=data-kind_string.go
 
 const (
-	// null - no-value type. Returned when the requisted type does not exist
+	// null - no-value type. Returned when the requested type does not exist
 	DataKind_null DataKind = iota
 
 	DataKind_int32

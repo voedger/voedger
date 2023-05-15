@@ -5,13 +5,13 @@
 
 package containers
 
-// Identificator for Container name
+// Identifier for Container name
 type ContainerID uint16
 
 // Container IDs system view
 //
-//	Use GetID() to obtain container ID by its name.
-//	Use GetContainer() to obtain container name by its ID.
+//	Use ID() to obtain container ID by its name.
+//	Use Container() to obtain container name by its ID.
 //	Use Prepare() to load container IDs from storage.
 type Containers struct {
 	containers map[string]ContainerID

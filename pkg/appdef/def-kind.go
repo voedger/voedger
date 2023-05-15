@@ -19,10 +19,10 @@ const (
 	// Глобальный Global configuration, WSID==0 (глобальная номенклатура): UserProfileLocation, SystemConfig
 	DefKind_GDoc
 
-	// Кoнфигурационный документ (per workspace articles, prices, clients)
+	// Конфигурационный документ (per workspace articles, prices, clients)
 	DefKind_CDoc
 
-	// Operational documents: pbill, orders
+	// Operational documents: bills, orders
 	// https://vocable.ru/termin/operacionnyi-dokument.html
 	// ОПЕРАЦИОННЫЙ ДОКУМЕНТ счет-фактура, чек, заказ, свидетельствующий о совершении сделки.
 	// Might not be edited
@@ -33,7 +33,7 @@ const (
 	// Might be edited
 	DefKind_WDoc
 
-	// Parts of documents, article_price, pbill_item
+	// Parts of documents, article_price, bill_item
 	DefKind_GRecord
 	DefKind_CRecord
 	DefKind_ORecord
@@ -91,6 +91,11 @@ func (k DefKind) ContainersAllowed() bool {
 // Is specified definition kind may be used in child containers.
 func (k DefKind) ContainerKindAvailable(s DefKind) bool {
 	return defKindProps[k].containersAllowed && defKindProps[k].availableContainerKinds[s]
+}
+
+// Is uniques available.
+func (k DefKind) UniquesAvailable() bool {
+	return defKindProps[k].availableUniques
 }
 
 func (k DefKind) MarshalText() ([]byte, error) {

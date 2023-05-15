@@ -7,5 +7,4 @@ package istoragebbolt
 const (
 	rwxrwxrwx = 0777
 	rw_rw_rw_ = 0666
-	validChar = "_"
 )

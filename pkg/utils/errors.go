@@ -7,6 +7,7 @@ package coreutils
 import "errors"
 
 var (
-	ErrFieldsMissed      = errors.New("fields are missed")
-	ErrFieldTypeMismatch = errors.New("field type mismatch")
+	ErrFieldsMissed         = errors.New("fields are missed")
+	ErrFieldTypeMismatch    = errors.New("field type mismatch")
+	ErrUnexpectedStatusCode = errors.New("unexpected status code")
 )

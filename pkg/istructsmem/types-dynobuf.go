@@ -19,7 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 )
 
-// dynoBufValue converts specified value to dynobuffer compatable type using specified data kind.
+// Converts specified value to dyno-buffer compatible type using specified data kind.
 // If value type is not corresponding to kind then next conversions are available:
 //
 //	— float64 value can be converted to all numeric kinds (int32, int64, float32, float64, RecordID)
@@ -77,7 +77,7 @@ func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (inter
 			if err != nil {
 				return nil, err
 			}
-			id, err := row.appCfg.qNames.GetID(qName)
+			id, err := row.appCfg.qNames.ID(qName)
 			if err != nil {
 				return nil, err
 			}
@@ -85,7 +85,7 @@ func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (inter
 			binary.BigEndian.PutUint16(b, uint16(id))
 			return b, nil
 		case appdef.QName:
-			id, err := row.appCfg.qNames.GetID(v)
+			id, err := row.appCfg.qNames.ID(v)
 			if err != nil {
 				return nil, err
 			}

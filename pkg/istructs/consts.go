@@ -84,7 +84,7 @@ const WSIDClusterLShift = 64 - 16 - 1
 const MinReservedBaseRecordID = MaxRawRecordID + 1
 const MaxReservedBaseRecordID = MinReservedBaseRecordID + 0xffff
 
-// Singletone - CDoc which has at most one record
+// Singleton - CDoc which has at most one record
 const FirstSingletonID = MinReservedBaseRecordID
 const MaxSingletonID = FirstSingletonID + 0x1ff
 

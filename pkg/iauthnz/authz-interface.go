@@ -8,7 +8,7 @@ package iauthnz
 import "github.com/voedger/voedger/pkg/istructs"
 
 // Proposed NewDefaultAuthorizer() signature
-// One per HVM
+// One per VVM
 type NewDefaultAuthorizerType func() IAuthorizer
 
 type IAuthorizer interface {

@@ -13,6 +13,7 @@ var defKindProps = map[DefKind]struct {
 	systemFields            map[string]bool
 	containersAllowed       bool
 	availableContainerKinds map[DefKind]bool
+	availableUniques        bool
 }{
 	DefKind_null: {
 		structure:               false,
@@ -21,6 +22,7 @@ var defKindProps = map[DefKind]struct {
 		systemFields:            map[string]bool{},
 		containersAllowed:       false,
 		availableContainerKinds: map[DefKind]bool{},
+		availableUniques:        false,
 	},
 	DefKind_GDoc: {
 		structure:     true,
@@ -45,6 +47,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{
 			DefKind_GRecord: true,
 		},
+		availableUniques: true,
 	},
 	DefKind_CDoc: {
 		structure:     true,
@@ -69,6 +72,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{
 			DefKind_CRecord: true,
 		},
+		availableUniques: true,
 	},
 	DefKind_ODoc: {
 		structure:     true,
@@ -93,6 +97,7 @@ var defKindProps = map[DefKind]struct {
 			DefKind_ODoc:    true, // #19322!: ODocs should be able to contain ODocs
 			DefKind_ORecord: true,
 		},
+		availableUniques: true,
 	},
 	DefKind_WDoc: {
 		structure:     true,
@@ -117,6 +122,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{
 			DefKind_WRecord: true,
 		},
+		availableUniques: true,
 	},
 	DefKind_GRecord: {
 		structure:     true,
@@ -143,6 +149,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{
 			DefKind_GRecord: true,
 		},
+		availableUniques: true,
 	},
 	DefKind_CRecord: {
 		structure:     true,
@@ -169,6 +176,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{
 			DefKind_CRecord: true,
 		},
+		availableUniques: true,
 	},
 	DefKind_ORecord: {
 		structure:     true,
@@ -194,6 +202,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{
 			DefKind_ORecord: true,
 		},
+		availableUniques: true,
 	},
 	DefKind_WRecord: {
 		structure:     true,
@@ -220,18 +229,20 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{
 			DefKind_WRecord: true,
 		},
+		availableUniques: true,
 	},
 	DefKind_ViewRecord: {
 		structure:           false,
 		fieldsAllowed:       false,
 		availableFieldKinds: map[DataKind]bool{},
+		systemFields:        map[string]bool{},
 		containersAllowed:   true,
 		availableContainerKinds: map[DefKind]bool{
 			DefKind_ViewRecord_PartitionKey:      true,
 			DefKind_ViewRecord_ClusteringColumns: true,
 			DefKind_ViewRecord_Value:             true,
 		},
-		systemFields: map[string]bool{},
+		availableUniques: false,
 	},
 	DefKind_ViewRecord_PartitionKey: {
 		structure:     false,
@@ -248,6 +259,7 @@ var defKindProps = map[DefKind]struct {
 		systemFields:            map[string]bool{},
 		containersAllowed:       false,
 		availableContainerKinds: map[DefKind]bool{},
+		availableUniques:        false,
 	},
 	DefKind_ViewRecord_ClusteringColumns: {
 		structure:     false,
@@ -266,6 +278,7 @@ var defKindProps = map[DefKind]struct {
 		systemFields:            map[string]bool{},
 		containersAllowed:       false,
 		availableContainerKinds: map[DefKind]bool{},
+		availableUniques:        false,
 	},
 	DefKind_ViewRecord_Value: {
 		structure:     false,
@@ -288,6 +301,7 @@ var defKindProps = map[DefKind]struct {
 		},
 		containersAllowed:       false,
 		availableContainerKinds: map[DefKind]bool{},
+		availableUniques:        false,
 	},
 	DefKind_Object: {
 		structure:     true,
@@ -310,6 +324,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{
 			DefKind_Element: true,
 		},
+		availableUniques: false,
 	},
 	DefKind_Element: {
 		structure:     true,
@@ -333,6 +348,7 @@ var defKindProps = map[DefKind]struct {
 		availableContainerKinds: map[DefKind]bool{
 			DefKind_Element: true,
 		},
+		availableUniques: false,
 	},
 	DefKind_QueryFunction: {
 		structure:           false,
@@ -347,6 +363,7 @@ var defKindProps = map[DefKind]struct {
 			DefKind_WDoc:   true,
 			DefKind_Object: true,
 		},
+		availableUniques: false,
 	},
 	DefKind_CommandFunction: {
 		structure:           false,
@@ -361,5 +378,6 @@ var defKindProps = map[DefKind]struct {
 			DefKind_WDoc:   true,
 			DefKind_Object: true,
 		},
+		availableUniques: false,
 	},
 }

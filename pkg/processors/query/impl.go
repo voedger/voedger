@@ -27,6 +27,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -81,7 +82,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 }
 
 func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
-	appStructsProvider istructs.IAppStructsProvider, maxPrepareQueries int, metrics imetrics.IMetrics, hvm string,
+	appStructsProvider istructs.IAppStructsProvider, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
 	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, appCfgs istructsmem.AppConfigsType) pipeline.IService {
 	secretReader := isecretsimpl.ProvideSecretReader()
 	return pipeline.NewService(func(ctx context.Context) {
@@ -92,7 +93,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				now := time.Now()
 				msg := intf.(IQueryMessage)
 				qpm := &queryProcessorMetrics{
-					hvm:     hvm,
+					vvm:     vvm,
 					app:     msg.AppQName(),
 					metrics: metrics,
 				}
@@ -244,7 +245,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			err = qw.queryFunction.Exec(ctx, qw.execQueryArgs, func(object istructs.IObject) error {
 				pathToIdx := make(map[string]int)
 				if qw.resultDef.QName() == istructs.QNameJSON {
-					pathToIdx[Field_JSONDef_Body] = 0
+					pathToIdx[processors.Field_JSONDef_Body] = 0
 				} else {
 					for i, element := range qw.queryParams.Elements() {
 						pathToIdx[element.Path().Name()] = i
@@ -495,13 +496,13 @@ func (s *resultSenderClosableOnlyOnce) Close(err error) {
 }
 
 type queryProcessorMetrics struct {
-	hvm     string
+	vvm     string
 	app     istructs.AppQName
 	metrics imetrics.IMetrics
 }
 
 func (m *queryProcessorMetrics) Increase(metricName string, valueDelta float64) {
-	m.metrics.IncreaseApp(metricName, m.hvm, m.app, valueDelta)
+	m.metrics.IncreaseApp(metricName, m.vvm, m.app, valueDelta)
 }
 
 // need or q.sys.EnrichPrincipalToken
@@ -521,7 +522,7 @@ func newJsonObject(data coreutils.MapObject) (object istructs.IObject, err error
 }
 
 func (o *jsonObject) AsString(name string) string {
-	if name == Field_JSONDef_Body {
+	if name == processors.Field_JSONDef_Body {
 		return string(o.body)
 	}
 	return o.NullObject.AsString(name)

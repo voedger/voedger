@@ -52,7 +52,7 @@ func Benchmark_pipelineIService_Sequential(b *testing.B) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
 	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs }, appStructsProvider, 3,
-		imetrics.Provide(), "hvm", authn, authz, cfgs)
+		imetrics.Provide(), "vvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
 	as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -114,7 +114,7 @@ func Benchmark_pipelineIService_Parallel(b *testing.B) {
 		authz := iauthnzimpl.NewDefaultAuthorizer()
 		cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
 		queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
-			appStructsProvider, 3, imetrics.Provide(), "hvm", authn, authz, cfgs)
+			appStructsProvider, 3, imetrics.Provide(), "vvm", authn, authz, cfgs)
 		go queryProcessor.Run(context.Background())
 		as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)

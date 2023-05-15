@@ -669,7 +669,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, appDef)
 
-		storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
+		storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		err = cfg.prepare(nil, storage)
 		if err != nil {
@@ -708,7 +708,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 		require.NoError(err)
 
 		testRowsIsEqual(t, &k1.partRow, &k2.partRow)
-		testRowsIsEqual(t, &k1.clustRow, &k2.clustRow)
+		testRowsIsEqual(t, &k1.ccolsRow, &k2.ccolsRow)
 
 		require.True(k1.Equals(k2))
 		require.True(k2.Equals(k1))
@@ -790,7 +790,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 		return cfgs
 	}
 
-	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 	as, err := p.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
