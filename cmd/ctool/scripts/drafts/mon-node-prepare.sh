@@ -39,6 +39,8 @@ while [ $# -gt 0 ] && [ $count -lt 2 ]; do
   cat ./prometheus/alert.rules | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/prometheus/alert.rules'
   cat ./alertmanager/config.yml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/alertmanager/config.yml'
 
+  chown -R 65534:65534 /prometheus
+
   count=$((count+1))
 
   shift
