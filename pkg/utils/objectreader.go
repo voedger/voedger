@@ -52,10 +52,12 @@ func ReadByKind(name string, kind appdef.DataKind, rr istructs.IRowReader) inter
 
 func NewFieldsDef(def appdef.IDef) FieldsDef {
 	fields := make(map[string]appdef.DataKind)
-	def.Fields(
-		func(f appdef.IField) {
-			fields[f.Name()] = f.DataKind()
-		})
+	if fDef, ok := def.(appdef.IWithFields); ok {
+		fDef.Fields(
+			func(f appdef.IField) {
+				fields[f.Name()] = f.DataKind()
+			})
+	}
 	return fields
 }
 
@@ -102,8 +104,8 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 				}
 			}
 			if kind == appdef.DataKind_Record {
-				if ival, ok := obj.(istructs.IValue); ok {
-					res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), appDef, optFuncs...)
+				if v, ok := obj.(istructs.IValue); ok {
+					res[fieldName] = FieldsToMap(v.AsRecord(fieldName), appDef, optFuncs...)
 				} else {
 					panic("DataKind_Record field met -> IValue must be provided")
 				}
@@ -112,7 +114,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 			}
 		})
 	} else {
-		def.Fields(
+		def.(appdef.IWithFields).Fields(
 			func(f appdef.IField) {
 				fieldName, kind := f.Name(), f.DataKind()
 				if opts.filter != nil {
@@ -121,8 +123,8 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 					}
 				}
 				if kind == appdef.DataKind_Record {
-					if ival, ok := obj.(istructs.IValue); ok {
-						res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), appDef, optFuncs...)
+					if v, ok := obj.(istructs.IValue); ok {
+						res[fieldName] = FieldsToMap(v.AsRecord(fieldName), appDef, optFuncs...)
 					} else {
 						panic("DataKind_Record field met -> IValue must be provided")
 					}

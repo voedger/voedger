@@ -22,7 +22,7 @@ func TestBasicUsage_Uniques(t *testing.T) {
 	appDef := appdef.New()
 
 	t.Run("must be ok to build application definition", func(t *testing.T) {
-		appDef.AddStruct(qName, appdef.DefKind_CDoc).
+		appDef.AddCDoc(qName).
 			AddField("a", appdef.DataKind_int32, true).
 			AddField("b", appdef.DataKind_int32, true).
 			AddField("c", appdef.DataKind_int32, true)
@@ -58,11 +58,11 @@ func TestUniquesRestrictions(t *testing.T) {
 
 	config := func() *AppConfigType {
 		app := appdef.New()
-		_ = app.AddStruct(cDoc, appdef.DefKind_CDoc).
+		_ = app.AddCDoc(cDoc).
 			AddField("a", appdef.DataKind_int32, true).
 			AddField("b", appdef.DataKind_int32, true).
 			AddField("c", appdef.DataKind_int32, false)
-		_ = app.AddStruct(obj, appdef.DefKind_Object).
+		_ = app.AddObject(obj).
 			AddField("a", appdef.DataKind_int32, true).
 			AddField("b", appdef.DataKind_int32, true).
 			AddField("c", appdef.DataKind_int32, false)

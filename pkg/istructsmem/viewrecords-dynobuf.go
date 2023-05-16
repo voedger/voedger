@@ -53,7 +53,7 @@ func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.
 func (key *keyType) storeViewPartKey() []byte {
 	buf := new(bytes.Buffer)
 
-	key.partRow.def.Fields(
+	key.partRow.fieldsDef().Fields(
 		func(f appdef.IField) {
 			utils.SafeWriteBuf(buf, key.partRow.dyB.Get(f.Name()))
 		})
@@ -65,7 +65,7 @@ func (key *keyType) storeViewPartKey() []byte {
 func (key *keyType) storeViewClustKey() []byte {
 	buf := new(bytes.Buffer)
 
-	key.ccolsRow.def.Fields(
+	key.ccolsRow.fieldsDef().Fields(
 		func(f appdef.IField) {
 			utils.SafeWriteBuf(buf, key.ccolsRow.dyB.Get(f.Name()))
 		})
@@ -77,17 +77,13 @@ func (key *keyType) storeViewClustKey() []byte {
 //
 // Loads partition key from buffer
 func loadViewPartKey_00(key *keyType, buf *bytes.Buffer) (err error) {
-	const errWrapPrefix = "unable to load partitition key"
-
-	def := key.partRow.def
-
-	def.Fields(
+	key.partRow.fieldsDef().Fields(
 		func(f appdef.IField) {
 			if err != nil {
 				return // first error is enough
 			}
 			if e := loadFixedLenCellFromBuffer_00(&key.partRow, f, key.appCfg, buf); e != nil {
-				err = fmt.Errorf("%s: partition column «%s» cannot be loaded: %w", errWrapPrefix, f.Name(), e)
+				err = fmt.Errorf("unable to load partition key field «%s»: %w", f.Name(), e)
 			}
 		})
 
@@ -101,17 +97,13 @@ func loadViewPartKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 
 // Loads clustering columns from buffer
 func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
-	const errWrapPrefix = "unable to load clustering key"
-
-	def := key.ccolsRow.def
-
-	def.Fields(
+	key.ccolsRow.fieldsDef().Fields(
 		func(f appdef.IField) {
 			if err != nil {
 				return // first error is enough
 			}
 			if e := loadCellFromBuffer_00(&key.ccolsRow, f, key.appCfg, buf); e != nil {
-				err = fmt.Errorf("%s: partition column «%s» cannot be loaded: %w", errWrapPrefix, f.Name(), e)
+				err = fmt.Errorf("unable to load clustering columns field «%s»: %w", f.Name(), e)
 			}
 		})
 

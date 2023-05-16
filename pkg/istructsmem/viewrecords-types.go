@@ -242,20 +242,16 @@ func (key *keyType) build() (err error) {
 
 // Returns name of clustering columns key definition
 func (key *keyType) ccDef() appdef.QName {
-	if d := key.appCfg.AppDef.DefByName(key.viewName); d != nil {
-		if d.Kind() == appdef.DefKind_ViewRecord {
-			return d.Container(appdef.SystemContainer_ViewClusteringCols).Def()
-		}
+	if v := key.appCfg.AppDef.View(key.viewName); v != nil {
+		return v.ClustCols().QName()
 	}
 	return appdef.NullQName
 }
 
 // Returns name of full key definition
 func (key *keyType) fkDef() appdef.QName {
-	if d := key.appCfg.AppDef.DefByName(key.viewName); d != nil {
-		if d.Kind() == appdef.DefKind_ViewRecord {
-			return appdef.ViewKeyDefName(key.viewName)
-		}
+	if v := key.appCfg.AppDef.View(key.viewName); v != nil {
+		return v.Key().QName()
 	}
 	return appdef.NullQName
 }
@@ -265,11 +261,11 @@ func (key *keyType) keyRow() (istructs.IRowReader, error) {
 	row := newRow(key.appCfg)
 	row.setQName(key.fkDef())
 
-	key.partRow.def.Fields(
+	key.partRow.fieldsDef().Fields(
 		func(f appdef.IField) {
 			row.dyB.Set(f.Name(), key.partRow.dyB.Get(f.Name()))
 		})
-	key.ccolsRow.def.Fields(
+	key.ccolsRow.fieldsDef().Fields(
 		func(f appdef.IField) {
 			row.dyB.Set(f.Name(), key.ccolsRow.dyB.Get(f.Name()))
 		})
@@ -298,18 +294,18 @@ func (key *keyType) loadFromBytes(pKey, cKey []byte) (err error) {
 
 // Returns name of partition key definition
 func (key *keyType) pkDef() appdef.QName {
-	if d := key.appCfg.AppDef.DefByName(key.viewName); d != nil {
-		if d.Kind() == appdef.DefKind_ViewRecord {
-			return d.Container(appdef.SystemContainer_ViewPartitionKey).Def()
-		}
+	if v := key.appCfg.AppDef.View(key.viewName); v != nil {
+		return v.PartKey().QName()
 	}
+
 	return appdef.NullQName
 }
 
 // Splits solid key row to partition key row and clustering columns row using view definitions
 func (key *keyType) splitRow() {
-	pkDef := key.appCfg.AppDef.DefByName(key.pkDef())
-	ccDef := key.appCfg.AppDef.DefByName(key.ccDef())
+	v := key.appCfg.AppDef.View(key.viewName)
+	pkDef := v.PartKey()
+	ccDef := v.ClustCols()
 
 	key.rowType.dyB.IterateFields(nil,
 		func(name string, data interface{}) bool {
@@ -373,7 +369,7 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 					}
 
 					result := true
-					r1.def.Fields(
+					r1.fieldsDef().Fields(
 						func(f appdef.IField) {
 							result = result && equalVal(r1.dyB.Get(f.Name()), r2.dyB.Get(f.Name()))
 						})
@@ -449,10 +445,8 @@ func (val *valueType) loadFromBytes(in []byte) (err error) {
 
 // valueDef returns name of view value definition
 func (val *valueType) valueDef() appdef.QName {
-	if d := val.appCfg.AppDef.DefByName(val.viewName); d != nil {
-		if d.Kind() == appdef.DefKind_ViewRecord {
-			return d.Container(appdef.SystemContainer_ViewValue).Def()
-		}
+	if v := val.appCfg.AppDef.View(val.viewName); v != nil {
+		return v.Value().QName()
 	}
 	return appdef.NullQName
 }

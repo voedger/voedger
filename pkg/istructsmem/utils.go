@@ -7,6 +7,7 @@ package istructsmem
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/untillpro/dynobuffers"
@@ -97,20 +98,24 @@ func FillElementFromJSON(data map[string]interface{}, def appdef.IDef, b istruct
 			b.PutBool(fieldName, fv)
 		case []interface{}:
 			// e.g. TestBasicUsage_Dashboard(), "order_item": [<2 elements>]
-			containerName := fieldName
-			containerDef := def.ContainerDef(containerName)
-			if containerDef.Kind() == appdef.DefKind_null {
-				return fmt.Errorf("container with name %s is not found", containerName)
-			}
-			for i, val := range fv {
-				objContainerElem, ok := val.(map[string]interface{})
-				if !ok {
-					return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
+			if cont, ok := def.(appdef.IWithContainers); ok {
+				containerName := fieldName
+				containerDef := cont.ContainerDef(containerName)
+				if containerDef.Kind() == appdef.DefKind_null {
+					return fmt.Errorf("container with name %s is not found", containerName)
 				}
-				containerElemBuilder := b.ElementBuilder(fieldName)
-				if err := FillElementFromJSON(objContainerElem, containerDef, containerElemBuilder); err != nil {
-					return err
+				for i, val := range fv {
+					objContainerElem, ok := val.(map[string]interface{})
+					if !ok {
+						return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
+					}
+					containerElemBuilder := b.ElementBuilder(fieldName)
+					if err := FillElementFromJSON(objContainerElem, containerDef, containerElemBuilder); err != nil {
+						return err
+					}
 				}
+			} else {
+				return fmt.Errorf("definition %v has not containers", def.QName())
 			}
 		}
 	}
@@ -125,24 +130,26 @@ func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectB
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
 	appDef := appStructs.AppDef()
 	def := appDef.Def(obj.AsQName(appdef.SystemField_QName))
-	def.Fields(
-		func(f appdef.IField) {
-			if err != nil || f.DataKind() != appdef.DataKind_RecordID {
-				return
-			}
-			recID := obj.AsRecordID(f.Name())
-			if recID.IsRaw() || recID == istructs.NullRecordID {
-				return
-			}
-			var rec istructs.IRecord
-			rec, err = appStructs.Records().Get(wsid, true, recID)
-			if err != nil {
-				return
-			}
-			if rec.QName() == appdef.NullQName {
-				err = fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, recID,
-					obj.AsQName(appdef.SystemField_QName), f.Name())
-			}
-		})
+	if fields, ok := def.(appdef.IWithFields); ok {
+		fields.Fields(
+			func(f appdef.IField) {
+				if f.DataKind() != appdef.DataKind_RecordID {
+					return
+				}
+				recID := obj.AsRecordID(f.Name())
+				if recID.IsRaw() || recID == istructs.NullRecordID {
+					return
+				}
+				if rec, readErr := appStructs.Records().Get(wsid, true, recID); readErr == nil {
+					if rec.QName() == appdef.NullQName {
+						err = errors.Join(err,
+							fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, recID,
+								obj.AsQName(appdef.SystemField_QName), f.Name()))
+					}
+				} else {
+					err = errors.Join(err, readErr)
+				}
+			})
+	}
 	return err
 }
