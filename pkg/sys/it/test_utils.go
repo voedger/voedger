@@ -92,3 +92,16 @@ func WaitForInviteState(vit *vit.VIT, ws *vit.AppWorkspace, inviteState int32, i
 	}
 	panic(fmt.Sprintf("invite [%d] is not in required state [%d] it has state [%d]", inviteID, inviteState, int32(entity[0].(float64))))
 }
+
+func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *vit.VIT, invitingWorkspaceWSID istructs.WSID, login string) []interface{} {
+	return vit.PostProfile(vit.GetPrincipal(istructs.AppQName_test1_app1, login), "q.sys.Collection", fmt.Sprintf(`
+		{"args":{"Schema":"sys.JoinedWorkspace"},
+		"elements":[{"fields":[
+			"sys.ID",
+			"sys.IsActive",
+			"Roles",
+			"InvitingWorkspaceWSID",
+			"WSName"
+		]}],
+		"filters":[{"expr":"eq","args":{"field":"InvitingWorkspaceWSID","value":%d}}]}`, invitingWorkspaceWSID)).SectionRow(0)
+}

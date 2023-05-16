@@ -49,15 +49,15 @@ func TestBasicUsage_DeactivateWorkspace(t *testing.T) {
 
 	// try to exec something in a deactivated workspace
 	body := `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
-	vit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403())
 }
 
-func Test_DeactivateWorkspace(t *testing.T) {
+func TestDeactivateJoinedWorkspace(t *testing.T) {
+	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 
 	wsName1 := vit.NextName()
-	wsName2 := vit.NextName()
 	prn1 := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 	prn2 := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail2)
 	wsp := it.WSParams{
@@ -67,39 +67,44 @@ func Test_DeactivateWorkspace(t *testing.T) {
 		ClusterID:    istructs.MainClusterID,
 	}
 
-	ws1 := vit.CreateWorkspace(wsp, prn1)
+	newWS := vit.CreateWorkspace(wsp, prn1)
 
-	wsp.Name = wsName2
+	// check prn2 could not work in ws1
+	body := `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
+	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn2.Token), coreutils.Expect403())
 
-	// join ws2 to ws1
+	// join login TestEmail2 to ws1
 	expireDatetime := vit.Now().UnixMilli()
 	roleOwner := iauthnz.QNameRoleWorkspaceOwner.String()
 	updateRolesEmailTemplate := "text:" + invite.EmailTemplatePlaceholder_Roles
 	updateRolesEmailSubject := "your roles are updated"
-	inviteID := InitiateInvitationByEMail(vit, ws1, expireDatetime, it.TestEmail2, roleOwner, updateRolesEmailTemplate, updateRolesEmailSubject)
+	inviteID := InitiateInvitationByEMail(vit, newWS, expireDatetime, it.TestEmail2, roleOwner, updateRolesEmailTemplate, updateRolesEmailSubject)
 
 	vit.ExpectEmail().Capture()
-	// vit.ExpectEmail().Capture()
 
-	WaitForInviteState(vit, ws1, invite.State_Invited, inviteID)
+	WaitForInviteState(vit, newWS, invite.State_Invited, inviteID)
 
 	expireDatetimeStr := strconv.FormatInt(expireDatetime, 10)
 	verificationCode := expireDatetimeStr[len(expireDatetimeStr)-6:]
-	InitiateJoinWorkspace(vit, ws1, inviteID, it.TestEmail2, verificationCode)
+	InitiateJoinWorkspace(vit, newWS, inviteID, it.TestEmail2, verificationCode)
 
-	WaitForInviteState(vit, ws1, invite.State_Joined, inviteID)
+	WaitForInviteState(vit, newWS, invite.State_Joined, inviteID)
 
 	// check prn2 could work in ws1
-	body := `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
-	vit.PostWS(ws1, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn2.Token))
+	body = `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
+	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn2.Token))
 
-	vit.PostWS(ws1, "c.sys.DeactivateWorkspace", "{}")
-
+	vit.PostWS(newWS, "c.sys.DeactivateWorkspace", "{}")
+	
 	for {
-		ws := vit.WaitForWorkspace(ws1.Name, prn1)
+		ws := vit.WaitForWorkspace(newWS.Name, prn1)
 		if !ws.IsActive {
 			break
 		}
 	}
 	time.Sleep(100 * time.Hour)
+
+	// now check that cdoc.sys.JoinedWorkspace.IsActive == false
+	cDocsJoinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, newWS.WSID, it.TestEmail2)
+	require.Len(cDocsJoinedWorkspace, 1)
 }

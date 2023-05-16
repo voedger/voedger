@@ -78,19 +78,6 @@ func TestInvite_BasicUsage(t *testing.T) {
 			"filters":[{"expr":"eq","args":{"field":"Login","value":"%s"}}]}`, login)).SectionRow(0)
 	}
 
-	findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin := func(invitingWorkspaceWSID istructs.WSID, login string) []interface{} {
-		return vit.PostProfile(vit.GetPrincipal(istructs.AppQName_test1_app1, login), "q.sys.Collection", fmt.Sprintf(`
-			{"args":{"Schema":"sys.JoinedWorkspace"},
-			"elements":[{"fields":[
-				"sys.ID",
-				"sys.IsActive",
-				"Roles",
-				"InvitingWorkspaceWSID",
-				"WSName"
-			]}],
-			"filters":[{"expr":"eq","args":{"field":"InvitingWorkspaceWSID","value":%d}}]}`, invitingWorkspaceWSID)).SectionRow(0)
-	}
-
 	//Invite existing users
 	inviteID := InitiateInvitationByEMail(vit, ws, expireDatetime, it.TestEmail, initialRoles, inviteEmailTemplate, inviteEmailSubject)
 	inviteID2 := InitiateInvitationByEMail(vit, ws, expireDatetime, it.TestEmail2, initialRoles, inviteEmailTemplate, inviteEmailSubject)
@@ -157,7 +144,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	WaitForInviteState(vit, ws, invite.State_Joined, inviteID)
 	WaitForInviteState(vit, ws, invite.State_Joined, inviteID2)
 
-	cDocJoinedWorkspace := findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(ws.WSID, it.TestEmail2)
+	cDocJoinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, ws.WSID, it.TestEmail2)
 
 	require.Equal(initialRoles, cDocJoinedWorkspace[2])
 	require.Equal(wsName, cDocJoinedWorkspace[4])

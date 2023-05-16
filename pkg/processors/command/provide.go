@@ -10,14 +10,12 @@ import (
 
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/processors"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -42,11 +40,6 @@ type appPartition struct {
 	nextPLogOffset istructs.Offset
 }
 
-func ProvideJSONFuncParamsDef(appDef appdef.IAppDefBuilder) {
-	appDef.AddStruct(istructs.QNameJSON, appdef.DefKind_Object).
-		AddField(processors.Field_JSONDef_Body, appdef.DataKind_string, true)
-}
-
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
 func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now func() time.Time, syncActualizerFactory SyncActualizerFactory,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
@@ -67,6 +60,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("limitCallRate", limitCallRate),
 				pipeline.WireFunc("getWSDesc", getWSDesc),
 				pipeline.WireFunc("checkWSInitialized", checkWSInitialized),
+				pipeline.WireFunc("checkWSActive", checkWSActive),
 				pipeline.WireFunc("getAppPartition", cmdProc.getAppPartition),
 				pipeline.WireFunc("getFunction", getFunction),
 				pipeline.WireFunc("authenticate", cmdProc.authenticate),

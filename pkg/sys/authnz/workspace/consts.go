@@ -26,7 +26,6 @@ const (
 	fldDummy2              = "dummy2"
 	fldNextBaseWSID        = "NextBaseWSID"
 	field_WSName           = "WSName"
-	Field_Status           = "Status"
 )
 
 var (
@@ -43,8 +42,4 @@ var (
 	nextWSIDGlobalLock                     = sync.Mutex{}
 )
 
-const (
-	WorkspaceStatus_Active WorkspaceStatus = iota
-	WorkspaceStatus_ToBeDeactivated
-	WorkspaceStatus_Inactive
-)
+

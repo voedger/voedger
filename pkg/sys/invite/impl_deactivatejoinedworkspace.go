@@ -9,6 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 )
 
 func provideCmdDeactivateJoinedWorkspace(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
@@ -35,7 +36,7 @@ func execCmdDeactivateJoinedWorkspace(_ istructs.ICommandFunction, args istructs
 		return
 	}
 
-	skbCDocJoinedWorkspace, err := args.State.KeyBuilder(state.RecordsStorage, QNameCDocJoinedWorkspace)
+	skbCDocJoinedWorkspace, err := args.State.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocJoinedWorkspace)
 	if err != nil {
 		return err
 	}

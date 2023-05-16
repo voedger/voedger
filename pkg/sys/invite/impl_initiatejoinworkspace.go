@@ -12,6 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -67,7 +68,7 @@ func execCmdInitiateJoinWorkspace(timeFunc func() time.Time) func(cf istructs.IC
 			return
 		}
 		svbCDocInvite.PutInt64(field_InviteeProfileWSID, svPrincipal.AsInt64(state.Field_ProfileWSID))
-		svbCDocInvite.PutInt32(Field_SubjectKind, svPrincipal.AsInt32(state.Field_Kind))
+		svbCDocInvite.PutInt32(sysshared.Field_SubjectKind, svPrincipal.AsInt32(state.Field_Kind))
 		svbCDocInvite.PutInt64(field_Updated, timeFunc().UnixMilli())
 		svbCDocInvite.PutInt32(field_State, State_ToBeJoined)
 

@@ -620,7 +620,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 
 	// build application definition
 	appDef := appdef.New()
-	ProvideJSONFuncParamsDef(appDef)
+	processors.ProvideJSONFuncParamsDef(appDef)
 	if prepareAppDef != nil {
 		prepareAppDef(appDef)
 	}

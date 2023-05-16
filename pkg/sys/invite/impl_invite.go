@@ -7,11 +7,12 @@ package invite
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 )
 
 func provideCDocInvite(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	appDefBuilder.AddStruct(qNameCDocInvite, appdef.DefKind_CDoc).
-		AddField(Field_SubjectKind, appdef.DataKind_int32, false).
+		AddField(sysshared.Field_SubjectKind, appdef.DataKind_int32, false).
 		AddField(Field_Login, appdef.DataKind_string, true).
 		AddField(field_Email, appdef.DataKind_string, true).
 		AddField(Field_Roles, appdef.DataKind_string, false).

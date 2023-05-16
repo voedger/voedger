@@ -9,8 +9,8 @@ import (
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
-	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/state"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 )
 
 func ProvideBlobberCmds(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
@@ -20,7 +20,7 @@ func ProvideBlobberCmds(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAp
 }
 
 func provideBLOBWDoc(appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddStruct(commandprocessor.QNameWDocBLOB, appdef.DefKind_WDoc).AddField(fldStatus, appdef.DataKind_int32, true)
+	appDefBuilder.AddStruct(sysshared.QNameWDocBLOB, appdef.DefKind_WDoc).AddField(fldStatus, appdef.DataKind_int32, true)
 }
 
 func provideDownloadBLOBHelperCmd(cfg *istructsmem.AppConfigType) {
@@ -32,13 +32,13 @@ func provideDownloadBLOBHelperCmd(cfg *istructsmem.AppConfigType) {
 }
 
 func provideUploadBLOBHelperCmd(cfg *istructsmem.AppConfigType) {
-	uploadBLOBHelperCmd := istructsmem.NewCommandFunction(commandprocessor.QNameCommandUploadBLOBHelper, appdef.NullQName, appdef.NullQName, appdef.NullQName, ubhExec)
+	uploadBLOBHelperCmd := istructsmem.NewCommandFunction(sysshared.QNameCommandUploadBLOBHelper, appdef.NullQName, appdef.NullQName, appdef.NullQName, ubhExec)
 	cfg.Resources.Add(uploadBLOBHelperCmd)
 }
 
 func ubhExec(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 	// write a dummy WDoc<BLOB> to book an ID and then use it as a new BLOB ID
-	kb, err := args.State.KeyBuilder(state.RecordsStorage, commandprocessor.QNameWDocBLOB)
+	kb, err := args.State.KeyBuilder(state.RecordsStorage, sysshared.QNameWDocBLOB)
 	if err != nil {
 		return
 	}

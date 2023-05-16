@@ -9,7 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
 	"github.com/voedger/voedger/pkg/sys/authnz/workspace"
@@ -43,7 +43,7 @@ func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBu
 	workspace.Provide(cfg, appDefBuilder, vvmAPI.IAppStructsProvider, timeFunc, vvmAPI.ITokens, vvmAPI.FederationURL)
 	sqlquery.Provide(cfg, appDefBuilder, vvmAPI.IAppStructsProvider, vvm.NumCommandProcessors)
 	projectors.ProvideOffsetsDef(appDefBuilder)
-	commandprocessor.ProvideJSONFuncParamsDef(appDefBuilder)
+	processors.ProvideJSONFuncParamsDef(appDefBuilder)
 	verifier.Provide(cfg, appDefBuilder, vvmAPI.ITokens, vvmAPI.FederationURL, vvmAPI.IAppStructsProvider)
 	signupin.ProvideQryRefreshPrincipalToken(cfg, appDefBuilder, vvmAPI.ITokens)
 	signupin.ProvideCDocLogin(appDefBuilder)
