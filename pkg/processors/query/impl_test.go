@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -58,17 +57,15 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Sweet")).Once()
-	departmentDef := amock.NewDef(qNamePosDepartment, appdef.DefKind_Object,
-		amock.NewField("name", appdef.DataKind_string, false),
-	)
-	resultMeta := amock.NewDef(appdef.NewQName("pos", "DepartmentResult"), appdef.DefKind_Object,
-		amock.NewField("id", appdef.DataKind_int64, true),
-		amock.NewField("name", appdef.DataKind_string, false),
-	)
-	appDef := amock.NewAppDef(
-		departmentDef,
-		resultMeta,
-	)
+
+	appDef := appdef.New()
+	departmentDef := appDef.AddObject(qNamePosDepartment)
+	departmentDef.AddField("name", appdef.DataKind_string, false)
+	resultMeta := appDef.AddObject(appdef.NewQName("pos", "DepartmentResult"))
+	resultMeta.
+		AddField("id", appdef.DataKind_int64, true).
+		AddField("name", appdef.DataKind_string, false)
+
 	params := queryParams{
 		elements: []IElement{
 			element{
@@ -316,8 +313,8 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 func TestRawMode(t *testing.T) {
 	require := require.New(t)
 
-	resultMeta := &amock.Def{}
-	resultMeta.On("QName").Return(istructs.QNameJSON)
+	appDef := appdef.New()
+	resultMeta := appDef.AddObject(istructs.QNameJSON)
 
 	result := ""
 	rs := testResultSenderClosable{
@@ -329,7 +326,7 @@ func TestRawMode(t *testing.T) {
 		},
 		close: func(err error) {},
 	}
-	processor := ProvideRowsProcessorFactory()(context.Background(), &amock.AppDef{}, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{})
+	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{})
 
 	require.NoError(processor.SendAsync(workpiece{
 		object: &coreutils.TestObject{

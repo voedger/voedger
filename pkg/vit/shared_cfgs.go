@@ -288,7 +288,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 	comps.
 		AddContainer("restaurant_computers", appdef.NewQName(appdef.SysPackage, "restaurant_computers"), appdef.Occurs(0), appdef.Occurs(defaultMaxOccurs))
 
-	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "restaurant_computers")).
+	adf.AddCRecord(appdef.NewQName(appdef.SysPackage, "restaurant_computers")).
 		AddField("id_computers", appdef.DataKind_RecordID, true).
 		AddField("id_sales_area", appdef.DataKind_RecordID, false).
 		AddField("sales_kind", appdef.DataKind_int32, false).

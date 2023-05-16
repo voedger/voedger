@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
@@ -22,27 +21,25 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 	t.Run("Should set reference fields", func(t *testing.T) {
 		require := require.New(t)
 
-		commonDef := func(n appdef.QName) *amock.Def {
-			return amock.NewDef(n, appdef.DefKind_Object,
-				amock.NewField("id_lower_case_name", appdef.DataKind_RecordID, false),
-			)
+		appDef := appdef.New()
+
+		commonDef := func(n appdef.QName) appdef.IDef {
+			d := appDef.AddObject(n)
+			d.AddField("id_lower_case_name", appdef.DataKind_RecordID, false)
+			return d
 		}
+		commonDef(appdef.NewQName("_", "root"))
+		commonDef(appdef.NewQName("f", "first_children_1"))
+		commonDef(appdef.NewQName("f", "deep_children_1"))
+		commonDef(appdef.NewQName("f", "very_deep_children_1"))
+		commonDef(appdef.NewQName("s", "first_children_2"))
+		commonDef(appdef.NewQName("s", "deep_children_1"))
+		commonDef(appdef.NewQName("s", "very_deep_children_1"))
 
 		commonFields := []IRefField{refField{field: "id_lower_case_name", ref: "name", key: "id_lower_case_name/name"}}
 
-		appDef := amock.NewAppDef(
-			commonDef(appdef.NewQName("", "root")),
-			commonDef(appdef.NewQName("f", "first-children-1")),
-			commonDef(appdef.NewQName("f", "deep-children-1")),
-			commonDef(appdef.NewQName("f", "very-deep-children-1")),
-			commonDef(appdef.NewQName("s", "first-children-2")),
-			commonDef(appdef.NewQName("s", "deep-children-1")),
-			commonDef(appdef.NewQName("s", "very-deep-children-1")),
-
-			amock.NewDef(qNameXLowerCase, appdef.DefKind_Object,
-				amock.NewField("name", appdef.DataKind_string, false),
-			),
-		)
+		appDef.AddObject(qNameXLowerCase).
+			AddField("name", appdef.DataKind_string, false)
 
 		elements := []IElement{
 			element{
@@ -50,27 +47,27 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 				refs: commonFields,
 			},
 			element{
-				path: path{"first-children-1"},
+				path: path{"first_children_1"},
 				refs: commonFields,
 			},
 			element{
-				path: path{"first-children-1", "deep-children-1"},
+				path: path{"first_children_1", "deep_children_1"},
 				refs: commonFields,
 			},
 			element{
-				path: path{"first-children-1", "deep-children-1", "very-deep-children-1"},
+				path: path{"first_children_1", "deep_children_1", "very_deep_children_1"},
 				refs: commonFields,
 			},
 			element{
-				path: path{"first-children-2"},
+				path: path{"first_children_2"},
 				refs: commonFields,
 			},
 			element{
-				path: path{"first-children-2", "deep-children-1"},
+				path: path{"first_children_2", "deep_children_1"},
 				refs: commonFields,
 			},
 			element{
-				path: path{"first-children-2", "deep-children-1", "very-deep-children-1"},
+				path: path{"first_children_2", "deep_children_1", "very_deep_children_1"},
 				refs: commonFields,
 			},
 		}
@@ -103,34 +100,34 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 					"name":               "ROOT",
 				},
 				Containers_: map[string][]*coreutils.TestObject{
-					"first-children-1": {
+					"first_children_1": {
 						{
-							Name:    appdef.NewQName("f", "first-children-1"),
+							Name:    appdef.NewQName("f", "first_children_1"),
 							Id:      istructs.RecordID(101),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
 								"id_lower_case_name": istructs.RecordID(200101),
-								"name":               "FIRST-CHILDREN-1-101",
+								"name":               "FIRST_CHILDREN_1_101",
 							},
 							Containers_: map[string][]*coreutils.TestObject{
-								"deep-children-1": {
+								"deep_children_1": {
 									{
-										Name:    appdef.NewQName("f", "deep-children-1"),
+										Name:    appdef.NewQName("f", "deep_children_1"),
 										Id:      istructs.RecordID(201),
 										Parent_: istructs.RecordID(101),
 										Data: map[string]interface{}{
 											"id_lower_case_name": istructs.RecordID(200201),
-											"name":               "DEEP-CHILDREN-1-201",
+											"name":               "DEEP_CHILDREN_1_201",
 										},
 										Containers_: map[string][]*coreutils.TestObject{
-											"very-deep-children-1": {
+											"very_deep_children_1": {
 												{
-													Name:    appdef.NewQName("f", "very-deep-children-1"),
+													Name:    appdef.NewQName("f", "very_deep_children_1"),
 													Id:      istructs.RecordID(301),
 													Parent_: istructs.RecordID(201),
 													Data: map[string]interface{}{
 														"id_lower_case_name": istructs.RecordID(200301),
-														"name":               "VERY-DEEP-CHILDREN-1-301",
+														"name":               "VERY_DEEP_CHILDREN_1_301",
 													},
 												},
 											},
@@ -140,52 +137,52 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 							},
 						},
 						{
-							Name:    appdef.NewQName("f", "first-children-1"),
+							Name:    appdef.NewQName("f", "first_children_1"),
 							Id:      istructs.RecordID(102),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
 								"id_lower_case_name": istructs.RecordID(200102),
-								"name":               "FIRST-CHILDREN-1-102",
+								"name":               "FIRST_CHILDREN_1_102",
 							},
 						},
 					},
-					"first-children-2": {
+					"first_children_2": {
 						{
-							Name:    appdef.NewQName("s", "first-children-2"),
+							Name:    appdef.NewQName("s", "first_children_2"),
 							Id:      istructs.RecordID(401),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
 								"id_lower_case_name": istructs.RecordID(200401),
-								"name":               "FIRST-CHILDREN-2-401",
+								"name":               "FIRST_CHILDREN_2_401",
 							},
 							Containers_: map[string][]*coreutils.TestObject{
-								"deep-children-1": {
+								"deep_children_1": {
 									{
-										Name:    appdef.NewQName("s", "deep-children-1"),
+										Name:    appdef.NewQName("s", "deep_children_1"),
 										Id:      istructs.RecordID(501),
 										Parent_: istructs.RecordID(401),
 										Data: map[string]interface{}{
 											"id_lower_case_name": istructs.RecordID(200501),
-											"name":               "DEEP-CHILDREN-1-501",
+											"name":               "DEEP_CHILDREN_1_501",
 										},
 										Containers_: map[string][]*coreutils.TestObject{
-											"very-deep-children-1": {
+											"very_deep_children_1": {
 												{
-													Name:    appdef.NewQName("s", "very-deep-children-1"),
+													Name:    appdef.NewQName("s", "very_deep_children_1"),
 													Id:      istructs.RecordID(601),
 													Parent_: istructs.RecordID(501),
 													Data: map[string]interface{}{
 														"id_lower_case_name": istructs.RecordID(200601),
-														"name":               "VERY-DEEP-CHILDREN-1-601",
+														"name":               "VERY_DEEP_CHILDREN_1_601",
 													},
 												},
 												{
-													Name:    appdef.NewQName("s", "very-deep-children-1"),
+													Name:    appdef.NewQName("s", "very_deep_children_1"),
 													Id:      istructs.RecordID(602),
 													Parent_: istructs.RecordID(501),
 													Data: map[string]interface{}{
 														"id_lower_case_name": istructs.RecordID(200602),
-														"name":               "VERY-DEEP-CHILDREN-1-602",
+														"name":               "VERY_DEEP_CHILDREN_1_602",
 													},
 												},
 											},
@@ -202,12 +199,12 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 				outputRow: &outputRow{
 					keyToIdx: map[string]int{
 						rootDocument:                       0,
-						"first-children-1":                 1,
-						"first-children-1/deep-children-1": 2,
-						"first-children-1/deep-children-1/very-deep-children-1": 3,
-						"first-children-2":                                      4,
-						"first-children-2/deep-children-1":                      5,
-						"first-children-2/deep-children-1/very-deep-children-1": 6,
+						"first_children_1":                 1,
+						"first_children_1/deep_children_1": 2,
+						"first_children_1/deep_children_1/very_deep_children_1": 3,
+						"first_children_2":                                      4,
+						"first_children_2/deep_children_1":                      5,
+						"first_children_2/deep_children_1/very_deep_children_1": 6,
 					},
 					values: []interface{}{
 						[]IOutputRow{row(2001)},
@@ -228,14 +225,14 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 		s.
 			On("KeyBuilder", state.RecordsStorage, appdef.NullQName).Return(skb).
 			On("MustExist", mock.Anything).Return(record("root")).Once().
-			On("MustExist", mock.Anything).Return(record("first-children-1-101")).Once().
-			On("MustExist", mock.Anything).Return(record("first-children-1-102")).Once().
-			On("MustExist", mock.Anything).Return(record("deep-children-1-201")).Once().
-			On("MustExist", mock.Anything).Return(record("very-deep-children-1-301")).Once().
-			On("MustExist", mock.Anything).Return(record("first-children-2-401")).Once().
-			On("MustExist", mock.Anything).Return(record("deep-children-1-501")).Once().
-			On("MustExist", mock.Anything).Return(record("very-deep-children-1-601")).Once().
-			On("MustExist", mock.Anything).Return(record("very-deep-children-1-602")).Once()
+			On("MustExist", mock.Anything).Return(record("first_children_1_101")).Once().
+			On("MustExist", mock.Anything).Return(record("first_children_1_102")).Once().
+			On("MustExist", mock.Anything).Return(record("deep_children_1_201")).Once().
+			On("MustExist", mock.Anything).Return(record("very_deep_children_1_301")).Once().
+			On("MustExist", mock.Anything).Return(record("first_children_2_401")).Once().
+			On("MustExist", mock.Anything).Return(record("deep_children_1_501")).Once().
+			On("MustExist", mock.Anything).Return(record("very_deep_children_1_601")).Once().
+			On("MustExist", mock.Anything).Return(record("very_deep_children_1_602")).Once()
 		op := &EnrichmentOperator{
 			state:      s,
 			elements:   elements,
@@ -248,20 +245,20 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 		require.NoError(err)
 		require.Len(outWork.(IWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow), 1)
 		require.Equal("root", outWork.(IWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Value("id_lower_case_name/name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first-children-1").([]IOutputRow), 2)
-		require.Equal("first-children-1-101", outWork.(IWorkpiece).OutputRow().Value("first-children-1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
-		require.Equal("first-children-1-102", outWork.(IWorkpiece).OutputRow().Value("first-children-1").([]IOutputRow)[1].Value("id_lower_case_name/name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first-children-1/deep-children-1").([]IOutputRow), 1)
-		require.Equal("deep-children-1-201", outWork.(IWorkpiece).OutputRow().Value("first-children-1/deep-children-1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first-children-1/deep-children-1/very-deep-children-1").([]IOutputRow), 1)
-		require.Equal("very-deep-children-1-301", outWork.(IWorkpiece).OutputRow().Value("first-children-1/deep-children-1/very-deep-children-1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first-children-2").([]IOutputRow), 1)
-		require.Equal("first-children-2-401", outWork.(IWorkpiece).OutputRow().Value("first-children-2").([]IOutputRow)[0].Value("id_lower_case_name/name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first-children-2/deep-children-1").([]IOutputRow), 1)
-		require.Equal("deep-children-1-501", outWork.(IWorkpiece).OutputRow().Value("first-children-2/deep-children-1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first-children-2/deep-children-1/very-deep-children-1").([]IOutputRow), 2)
-		require.Equal("very-deep-children-1-601", outWork.(IWorkpiece).OutputRow().Value("first-children-2/deep-children-1/very-deep-children-1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
-		require.Equal("very-deep-children-1-602", outWork.(IWorkpiece).OutputRow().Value("first-children-2/deep-children-1/very-deep-children-1").([]IOutputRow)[1].Value("id_lower_case_name/name"))
+		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_1").([]IOutputRow), 2)
+		require.Equal("first_children_1_101", outWork.(IWorkpiece).OutputRow().Value("first_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
+		require.Equal("first_children_1_102", outWork.(IWorkpiece).OutputRow().Value("first_children_1").([]IOutputRow)[1].Value("id_lower_case_name/name"))
+		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1").([]IOutputRow), 1)
+		require.Equal("deep_children_1_201", outWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
+		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1/very_deep_children_1").([]IOutputRow), 1)
+		require.Equal("very_deep_children_1_301", outWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1/very_deep_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
+		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_2").([]IOutputRow), 1)
+		require.Equal("first_children_2_401", outWork.(IWorkpiece).OutputRow().Value("first_children_2").([]IOutputRow)[0].Value("id_lower_case_name/name"))
+		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1").([]IOutputRow), 1)
+		require.Equal("deep_children_1_501", outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
+		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1/very_deep_children_1").([]IOutputRow), 2)
+		require.Equal("very_deep_children_1_601", outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1/very_deep_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
+		require.Equal("very_deep_children_1_602", outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1/very_deep_children_1").([]IOutputRow)[1].Value("id_lower_case_name/name"))
 	})
 	t.Run("Should handle ctx error during row fill with ref fields", func(t *testing.T) {
 		require := require.New(t)

@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -50,16 +49,11 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 				items[1].Record = record2
 			})
 
-		def1 := amock.NewDef(testRecordQName1, appdef.DefKind_Object,
-			amock.NewField("number", appdef.DataKind_int64, false),
-		)
-		def2 := amock.NewDef(testRecordQName1, appdef.DefKind_Object,
-			amock.NewField("age", appdef.DataKind_int64, false),
-		)
-		appDef := amock.NewAppDef(
-			def1,
-			def2,
-		)
+		appDef := appdef.New()
+		appDef.AddObject(testRecordQName1).
+			AddField("number", appdef.DataKind_int64, false)
+		appDef.AddObject(testRecordQName2).
+			AddField("age", appdef.DataKind_int64, false)
 
 		appStructs := &mockAppStructs{}
 		appStructs.
@@ -138,16 +132,11 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 			On("GetSingleton", istructs.WSID(2), testRecordQName2).Return(nullRecord, nil).
 			On("GetSingleton", istructs.WSID(3), testRecordQName2).Return(singleton2, nil)
 
-		def1 := amock.NewDef(testRecordQName1, appdef.DefKind_Object,
-			amock.NewField("number", appdef.DataKind_int64, false),
-		)
-		def2 := amock.NewDef(testRecordQName2, appdef.DefKind_Object,
-			amock.NewField("age", appdef.DataKind_int64, false),
-		)
-		appDef := amock.NewAppDef(
-			def1,
-			def2,
-		)
+		appDef := appdef.New()
+		appDef.AddObject(testRecordQName1).
+			AddField("number", appdef.DataKind_int64, false)
+		appDef.AddObject(testRecordQName2).
+			AddField("age", appdef.DataKind_int64, false)
 
 		appStructs := &mockAppStructs{}
 		appStructs.
@@ -182,14 +171,20 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		require.Len(rr, 3)
 		require.Equal(int64(10), rr[0].value.AsInt64("number"))
 		require.True(rr[0].exists)
-		require.JSONEq(`{"number":10}`, toJSON(rr[0].value))
+		require.JSONEq(`{
+											"sys.QName":"test.record1",
+											"number":10
+										}`, toJSON(rr[0].value))
 		require.Equal(istructs.WSID(2), rr[1].key.(*recordsKeyBuilder).wsid)
 		require.Nil(rr[1].value)
 		require.False(rr[1].exists)
 		require.Equal(istructs.WSID(3), rr[2].key.(*recordsKeyBuilder).wsid)
 		require.True(rr[2].exists)
 		require.Equal(int64(18), rr[2].value.AsInt64("age"))
-		require.JSONEq(`{"age":18}`, toJSON(rr[2].value))
+		require.JSONEq(`{
+											"sys.QName":"test.record2",
+											"age":18
+										}`, toJSON(rr[2].value))
 	})
 	t.Run("Should return error when 'id' not found", func(t *testing.T) {
 		require := require.New(t)
