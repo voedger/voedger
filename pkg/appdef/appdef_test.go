@@ -11,10 +11,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_AppDef_AddStruct(t *testing.T) {
+func Test_AppDef_AddCDoc(t *testing.T) {
 	require := require.New(t)
 
 	app := newAppDef()
+
+	t.Run("must be ok to add singleton", func(t *testing.T) {
+		require.Panics(func() {
+			cDoc := app.AddSingleton(NullQName)
+			require.NotNil(cDoc)
+			require.Equal(DefKind_CDoc, cDoc.Kind())
+			require.True(cDoc.Singleton())
+		})
+	})
 
 	t.Run("panic if name is empty", func(t *testing.T) {
 		require.Panics(func() {

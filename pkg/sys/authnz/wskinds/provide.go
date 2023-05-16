@@ -10,13 +10,12 @@ import (
 )
 
 func ProvideCDocsWorkspaceKinds(appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddCDoc(authnz.QNameCDoc_WorkspaceKind_DeviceProfile).SetSingleton()
+	appDefBuilder.AddSingleton(authnz.QNameCDoc_WorkspaceKind_DeviceProfile)
 
-	cDoc := appDefBuilder.AddCDoc(authnz.QNameCDoc_WorkspaceKind_UserProfile)
-	cDoc.AddField(authnz.Field_DisplayName, appdef.DataKind_string, false) // made not required according to https://dev.untill.com/projects/#!613071
-	cDoc.SetSingleton()
+	appDefBuilder.AddSingleton(authnz.QNameCDoc_WorkspaceKind_UserProfile).
+		AddField(authnz.Field_DisplayName, appdef.DataKind_string, false) // made not required according to https://dev.untill.com/projects/#!613071
 
 	// See UserProfile.Email at packages/air/userprofile/provide.go
 
-	appDefBuilder.AddCDoc(authnz.QNameCDoc_WorkspaceKind_AppWorkspace).SetSingleton()
+	appDefBuilder.AddSingleton(authnz.QNameCDoc_WorkspaceKind_AppWorkspace)
 }

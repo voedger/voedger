@@ -835,8 +835,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 	appDef := appdef.New()
 
 	t.Run("must ok to construct singleton CDoc", func(t *testing.T) {
-		def := appDef.AddCDoc(docName)
-		def.SetSingleton()
+		def := appDef.AddSingleton(docName)
 		def.AddField("option", appdef.DataKind_int64, true)
 	})
 

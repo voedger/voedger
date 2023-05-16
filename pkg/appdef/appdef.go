@@ -31,6 +31,12 @@ func (app *appDef) AddCDoc(name QName) ICDocBuilder {
 	return app.addDef(name, DefKind_CDoc)
 }
 
+func (app *appDef) AddSingleton(name QName) ICDocBuilder {
+	d := app.addDef(name, DefKind_CDoc)
+	d.SetSingleton()
+	return d
+}
+
 func (app *appDef) AddCRecord(name QName) ICRecordBuilder {
 	return app.addDef(name, DefKind_CRecord)
 }

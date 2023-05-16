@@ -119,8 +119,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 
 	// singleton CDoc<sys.WorkspaceDescriptor>
 	// target app, new WSID
-	cDoc := appDefBuilder.AddCDoc(commandprocessor.QNameCDocWorkspaceDescriptor)
-	cDoc.
+	appDefBuilder.AddSingleton(commandprocessor.QNameCDocWorkspaceDescriptor).
 		AddField(Field_OwnerWSID, appdef.DataKind_int64, false). // owner* fields made non-required for app workspaces
 		AddField(Field_OwnerQName, appdef.DataKind_QName, false).
 		AddField(Field_OwnerID, appdef.DataKind_int64, false).
@@ -136,8 +135,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		AddField(Field_InitStartedAtMs, appdef.DataKind_int64, false).
 		AddField(commandprocessor.Field_InitError, appdef.DataKind_string, false).
 		AddField(commandprocessor.Field_InitCompletedAtMs, appdef.DataKind_int64, false)
-	cDoc.
-		SetSingleton()
 
 	// q.sys.QueryChildWorkspaceByName
 	cfg.Resources.Add(istructsmem.NewQueryFunction(

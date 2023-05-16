@@ -141,6 +141,14 @@ type IAppDefBuilder interface {
 	//   - if definition with name already exists.
 	AddCDoc(name QName) ICDocBuilder
 
+	// Adds new singleton CDoc definition with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if definition with name already exists.
+	AddSingleton(name QName) ICDocBuilder
+
 	// Adds new CRecord definition with specified name.
 	//
 	// # Panics:

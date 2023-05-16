@@ -33,7 +33,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	testAppDef := func() appdef.IAppDef {
 		app := appdef.New()
-		app.AddCDoc(testName).SetSingleton()
+		app.AddSingleton(testName)
 		appDef, err := app.Build()
 		if err != nil {
 			panic(err)
@@ -105,9 +105,8 @@ func Test_SingletonsGetID(t *testing.T) {
 			require.NoError(err)
 
 			app := appdef.New()
-			def := app.AddCDoc(cDocName)
+			def := app.AddSingleton(cDocName)
 			def.AddField("f1", appdef.DataKind_QName, true)
-			def.SetSingleton()
 			appDef, err := app.Build()
 			require.NoError(err)
 
@@ -197,9 +196,8 @@ func Test_Singletons_Errors(t *testing.T) {
 		require.NoError(err)
 
 		app := appdef.New()
-		def := app.AddCDoc(cDocName)
+		def := app.AddSingleton(cDocName)
 		def.AddField("f1", appdef.DataKind_QName, true)
-		def.SetSingleton()
 		appDef, err := app.Build()
 		require.NoError(err)
 
@@ -218,7 +216,7 @@ func Test_Singletons_Errors(t *testing.T) {
 
 		appDefBuilder := appdef.New()
 		for id := istructs.FirstSingletonID; id <= istructs.MaxSingletonID; id++ {
-			appDefBuilder.AddCDoc(appdef.NewQName("test", fmt.Sprintf("CDoc_%v", id))).SetSingleton()
+			appDefBuilder.AddSingleton(appdef.NewQName("test", fmt.Sprintf("CDoc_%v", id)))
 		}
 		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
@@ -240,7 +238,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		require.NoError(err)
 
 		app := appdef.New()
-		app.AddCDoc(defName).SetSingleton()
+		app.AddSingleton(defName)
 		appDef, err := app.Build()
 		require.NoError(err)
 
@@ -259,7 +257,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		require.NoError(err)
 
 		app := appdef.New()
-		app.AddCDoc(defName).SetSingleton()
+		app.AddSingleton(defName)
 		appDef, err := app.Build()
 		require.NoError(err)
 
