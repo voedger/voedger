@@ -249,7 +249,7 @@ type clusterType struct {
 	exists                bool //the cluster is loaded from "cluster.json" at the start of ctool
 	Edition               string
 	ActualClusterVersion  string
-	DesiredClusterVersion string
+	DesiredClusterVersion string `json:"DesiredClusterVersion,omitempty"`
 	Cmd                   cmdType
 	DataCenters           []string `json:"DataCenters,omitempty"`
 	LastAttemptError      string   `json:"LastAttemptError,omitempty"`
@@ -265,7 +265,7 @@ func (c *clusterType) clusterControllerFunction() error {
 	case clusterEditionSE:
 		return seClusterControllerFunction(c)
 	default:
-		return ErrorClusterControllerFunctionNotAssigned
+		return ErrClusterControllerFunctionNotAssigned
 	}
 }
 
