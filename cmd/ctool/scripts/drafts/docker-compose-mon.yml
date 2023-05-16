@@ -1,0 +1,155 @@
+version: '3.5'
+services:
+  prometheus1:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - /prometheus:/prometheus
+      - ~/prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    restart: unless-stopped
+    ports:
+      - target: 9090
+        published: 9090
+        protocol: tcp
+        mode: host
+    deploy:
+      placement:
+        constraints:
+          - node.labels.type == mon1
+      replicas: 1
+    logging:
+      driver: "local"
+      options: 
+        max-size: 10m
+        max-file: "3"
+
+  prometheus2:
+    image: prom/prometheus:latest
+    container_name: prometheus_1
+    volumes:
+      - /prometheus:/prometheus
+      - ~/prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    restart: unless-stopped
+    ports:
+      - target: 9090
+        published: 9090
+        protocol: tcp
+        mode: host
+    deploy:
+      placement:
+        constraints:
+          - node.labels.type == mon2
+      replicas: 1
+    logging:
+      driver: "local"
+      options: 
+        max-size: 10m
+        max-file: "3"
+
+  alertmanager1:
+    image: prom/alertmanager:latest
+    container_name: alertmanager_1
+    volumes:
+      - /alertmanager:/alertmanager
+      - ~/alertmanager:/etc/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+      - '--cluster.peer=alertmanager_2:9094' 
+    restart: unless-stopped
+    ports:
+      - target: 9093
+        published: 9093
+        protocol: tcp
+        mode: host
+      - target: 9094
+        published: 9094
+        protocol: tcp
+        mode: host
+    deploy:
+      placement:
+        constraints:
+          - node.labels.type == mon1
+      replicas: 1
+
+  alertmanager2:
+    image: prom/alertmanager:latest
+    container_name: alertmanager_2
+    volumes:
+      - /alertmanager:/alertmanager
+      - ~/alertmanager:/etc/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+      - '--cluster.peer=alertmanager_1:9094' 
+    restart: unless-stopped
+    ports:
+      - target: 9093
+        published: 9093
+        protocol: tcp
+        mode: host
+      - target: 9094
+        published: 9094
+        protocol: tcp
+        mode: host
+    deploy:
+      placement:
+        constraints:
+          - node.labels.type == mon2
+      replicas: 1
+
+  node-exporter1:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    deploy:
+      placement:
+        constraints:
+          - node.labels.type == mon1
+      replicas: 1
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command: 
+      - '--path.procfs=/host/proc' 
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - target: 9100
+        published: 9100
+        protocol: tcp
+        mode: host
+    restart: unless-stopped
+
+  node-exporter2:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    deploy:
+      placement:
+        constraints:
+          - node.labels.type == mon2
+      replicas: 1
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command: 
+      - '--path.procfs=/host/proc' 
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - target: 9100
+        published: 9100
+        protocol: tcp
+        mode: host
+    restart: unless-stopped

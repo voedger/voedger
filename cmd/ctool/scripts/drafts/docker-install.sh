@@ -17,10 +17,6 @@ NODE=$1
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
 
-sudo add-apt-repository ppa:rmescandon/yq -y
-sudo apt update 
-sudo apt install yq -y
-
 script="\
         sudo add-apt-repository ppa:rmescandon/yq -y;
         sudo apt-get update;
