@@ -75,7 +75,7 @@ func TestView(t *testing.T) {
 				c := view.Container(appdef.SystemContainer_ViewClusteringCols)
 				require.NotNil(c)
 				require.True(c.IsSys())
-				require.Equal(appdef.ViewClusteringColumsDefName(view.QName()), c.Def())
+				require.Equal(appdef.ViewClusteringColumnsDefName(view.QName()), c.Def())
 
 				cc := appDef.Def(c.Def())
 				require.NotNil(cc)

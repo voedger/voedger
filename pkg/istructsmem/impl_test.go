@@ -88,7 +88,7 @@ func TestBasicUsage(t *testing.T) {
 	}()
 
 	// gets AppStructProvider and AppStructs
-	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -216,7 +216,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 		return cfgs
 	}
 
-	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 	as, err := p.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
@@ -295,7 +295,7 @@ func TestBasicUsage_Resources(t *testing.T) {
 	test := test()
 
 	// gets AppStructProvider and AppStructs
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -365,7 +365,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 	test := test()
 
 	// gets AppStructProvider and AppStructs
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -468,7 +468,6 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 				NullQueryExec))
 
 		cfg.Uniques.Add(docQName, []string{"str"})
-		cfg.Uniques.Add(docQName, []string{"str", "fld"})
 
 		cfg.FunctionRateLimits.AddAppLimit(qNameQry, istructs.RateLimit{
 			Period:                1,
@@ -479,7 +478,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 			MaxAllowedPerDuration: 4,
 		})
 
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
@@ -517,7 +516,7 @@ func Test_Provide(t *testing.T) {
 	})
 
 	t.Run("check application ClusterAppID() and AppQName()", func(t *testing.T) {
-		provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+		provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 		app, err := provider.AppStructs(test.appName)
 		require.NoError(err)

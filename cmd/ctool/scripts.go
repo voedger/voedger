@@ -18,7 +18,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-//go:embed scripts/*
+//go:embed scripts/drafts/*
 var scriptsFS embed.FS
 
 var scriptsTempDir string
@@ -97,7 +97,7 @@ func prepareScripts(scriptFileNames ...string) error {
 			continue
 		}
 
-		file, err := scriptsFS.Open("scripts/" + fileName)
+		file, err := scriptsFS.Open("scripts/drafts/" + fileName)
 		if err != nil {
 			return err
 		}

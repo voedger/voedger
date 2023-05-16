@@ -56,13 +56,13 @@ func TestRenameQName(t *testing.T) {
 		require.NoError(err)
 
 		t.Run("check old is deleted", func(t *testing.T) {
-			id, err := names.GetID(old)
+			id, err := names.ID(old)
 			require.ErrorIs(err, ErrNameNotFound)
 			require.Equal(id, NullQNameID)
 		})
 
 		t.Run("check new is not null", func(t *testing.T) {
-			id, err := names.GetID(new)
+			id, err := names.ID(new)
 			require.NoError(err)
 			require.Greater(id, QNameIDSysLast)
 		})
@@ -138,7 +138,7 @@ func TestRenameQName_Fails(t *testing.T) {
 		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
-		versions.Put(vers.SysQNamesVersion, lastestVersion+1) // future version
+		versions.Put(vers.SysQNamesVersion, latestVersion+1) // future version
 
 		storage.ScheduleGetError(testError, utils.ToBytes(consts.SysView_Versions), nil)
 
@@ -152,7 +152,7 @@ func TestRenameQName_Fails(t *testing.T) {
 		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
-		versions.Put(vers.SysQNamesVersion, lastestVersion+1) // future version
+		versions.Put(vers.SysQNamesVersion, latestVersion+1) // future version
 
 		err = Rename(storage, old, new)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)

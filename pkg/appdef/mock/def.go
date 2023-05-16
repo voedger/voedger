@@ -16,6 +16,7 @@ type Def struct {
 	app        *AppDef
 	fields     []*Field
 	containers []*Container
+	uniques    []*Unique
 }
 
 func NewDef(name appdef.QName, kind appdef.DefKind, fields ...*Field) *Def {
@@ -35,6 +36,13 @@ func (d *Def) AddField(f ...*Field) {
 
 func (d *Def) AddContainer(c ...*Container) {
 	d.containers = append(d.containers, c...)
+}
+
+func (d *Def) AddUnique(u ...*Unique) {
+	for _, uu := range u {
+		uu.def = d
+	}
+	d.uniques = append(d.uniques, u...)
 }
 
 func (d *Def) App() appdef.IAppDef {
@@ -116,3 +124,44 @@ func (d *Def) ContainerDef(name string) appdef.IDef {
 }
 
 func (d *Def) Singleton() bool { return d.Called().Get(0).(bool) }
+
+func (d *Def) UniqueByName(name string) appdef.IUnique {
+	if len(d.uniques) > 0 {
+		for _, u := range d.uniques {
+			if u.Name() == name {
+				return u
+			}
+		}
+		return nil
+	}
+	return d.Called(name).Get(0).(appdef.IUnique)
+}
+
+func (d *Def) UniqueByID(id appdef.UniqueID) appdef.IUnique {
+	if len(d.uniques) > 0 {
+		for _, u := range d.uniques {
+			if u.ID() == id {
+				return u
+			}
+		}
+		return nil
+	}
+	return d.Called(id).Get(0).(appdef.IUnique)
+}
+
+func (d *Def) UniqueCount() int {
+	if d.uniques != nil {
+		return len(d.uniques)
+	}
+	return d.Called().Get(0).(int)
+}
+
+func (d *Def) Uniques(cb func(appdef.IUnique)) {
+	if d.uniques != nil {
+		for _, u := range d.uniques {
+			cb(u)
+		}
+		return
+	}
+	d.Called(cb)
+}

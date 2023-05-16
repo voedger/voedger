@@ -17,8 +17,7 @@ func newApplication() *Application {
 	return &a
 }
 
-func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit,
-	uniquesByQNames map[appdef.QName][][]string) {
+func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit) {
 	a.Packages = make(map[string]*Package)
 
 	a.Name = app.AppQName()
@@ -29,7 +28,7 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 		d := newDef()
 		d.Name = defName
 		pkg.Defs[defName.String()] = d
-		d.readAppDef(app.AppDef().Def(defName))
+		d.read(app.AppDef().Def(defName))
 	})
 
 	app.Resources().Resources(func(resName appdef.QName) {
@@ -51,15 +50,6 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 			pkg.RateLimits[qName.String()] = append(pkg.RateLimits[qName.String()], rateLimit)
 		}
 	}
-
-	for qName, uniques := range uniquesByQNames {
-		for _, fields := range uniques {
-			pkg := getPkg(qName, a)
-			unique := newUnique()
-			unique.Fields = fields
-			pkg.Uniques[qName.String()] = append(pkg.Uniques[qName.String()], unique)
-		}
-	}
 }
 
 func getPkg(name appdef.QName, a *Application) *Package {
@@ -78,6 +68,5 @@ func newPackage() *Package {
 		Defs:       make(map[string]*Def),
 		Resources:  make(map[string]*Resource),
 		RateLimits: make(map[string][]*RateLimit),
-		Uniques:    make(map[string][]*Unique),
 	}
 }

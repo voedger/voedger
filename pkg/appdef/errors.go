@@ -24,9 +24,14 @@ var ErrWrongDefStruct = errors.New("wrong definition structure")
 
 var ErrVerificationKindMissed = errors.New("verification kind is missed")
 
+var ErrTooManyFields = errors.New("too many fields")
+
+var ErrTooManyContainers = errors.New("too many containers")
+
+var ErrTooManyUniques = errors.New("too many uniques")
+
 var ErrInvalidDataKind = errors.New("invalid data kind")
 
 var ErrInvalidOccurs = errors.New("invalid occurs value")
 
 var ErrFieldsMissed = errors.New("fields missed")
-

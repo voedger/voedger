@@ -78,11 +78,11 @@ func Test_ValidIdent(t *testing.T) {
 		{
 			name: "error if too long",
 			args: args{ident: func() string {
-				sworm := "_"
+				worm := "_"
 				for i := 0; i < MaxIdentLen; i++ {
-					sworm += "_"
+					worm += "_"
 				}
-				return sworm
+				return worm
 			}()},
 			wantOk:  false,
 			wantErr: ErrInvalidName,
@@ -104,12 +104,12 @@ func Test_ValidIdent(t *testing.T) {
 			wantOk: true,
 		},
 		{
-			name:   "vulgaris camel notation must pass",
+			name:   "basic camel notation must pass",
 			args:   args{ident: "thisIsIdent1"},
 			wantOk: true,
 		},
 		{
-			name:   "vulgaris snake notation must pass",
+			name:   "basic snake notation must pass",
 			args:   args{ident: "this_is_ident_2"},
 			wantOk: true,
 		},
@@ -183,7 +183,7 @@ func Test_IsSysField(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "false if vulgaris user",
+			name: "false if basic user",
 			args: args{"userField"},
 			want: false,
 		},
