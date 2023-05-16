@@ -132,3 +132,7 @@ func (c *containers) Containers(cb func(IContainer)) {
 		cb(c.Container(n))
 	}
 }
+
+func (c *containers) QName() QName {
+	return c.def.QName()
+}

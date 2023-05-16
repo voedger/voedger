@@ -17,9 +17,10 @@ import (
 func ProvideCollectionFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunctionCustomResult(
 		qNameQueryCollection,
-		appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "CollectionParams"), appdef.DefKind_Object).
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CollectionParams")).
 			AddField(field_Schema, appdef.DataKind_string, true).
-			AddField(field_ID, appdef.DataKind_RecordID, false).QName(),
+			AddField(field_ID, appdef.DataKind_RecordID, false).
+			QName(),
 		collectionResultQName,
 		collectionFuncExec,
 	))

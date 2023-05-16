@@ -18,10 +18,10 @@ import (
 func provideStateFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameQueryState,
-		appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "StateParams"), appdef.DefKind_Object).
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateParams")).
 			AddField(field_After, appdef.DataKind_int64, true).
 			QName(),
-		appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "StateResult"), appdef.DefKind_Object).
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult")).
 			AddField(field_State, appdef.DataKind_string, true).
 			QName(),
 		stateFuncExec(appDefBuilder)))

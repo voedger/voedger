@@ -42,6 +42,11 @@ func Test_def_AddContainer(t *testing.T) {
 		require.Equal(Occurs_Unbounded, c.MaxOccurs())
 	})
 
+	t.Run("test AddContainer(…).QName() helper", func(t *testing.T) {
+		d := appDef.AddObject(NewQName("test", "object1"))
+		require.Equal(d.QName(), d.AddContainer("c1", elQName, 1, Occurs_Unbounded).QName())
+	})
+
 	t.Run("must be panic if empty container name", func(t *testing.T) {
 		require.Panics(func() { def.AddContainer("", elQName, 1, Occurs_Unbounded) })
 	})

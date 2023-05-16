@@ -20,18 +20,12 @@ func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName ap
 	keyFieldsDef := coreutils.FieldsDef{}
 	valueFieldsDef := coreutils.FieldsDef{}
 
-	viewDef := appStructs.AppDef().Def(viewRecordQName)
-	viewDef.Containers(func(cont appdef.IContainer) {
-		switch cont.Name() {
-		case appdef.SystemContainer_ViewPartitionKey, appdef.SystemContainer_ViewClusteringCols:
-			appStructs.AppDef().Def(cont.Def()).Fields(func(field appdef.IField) {
-				keyFieldsDef[field.Name()] = field.DataKind()
-			})
-		case appdef.SystemContainer_ViewValue:
-			appStructs.AppDef().Def(cont.Def()).Fields(func(field appdef.IField) {
-				valueFieldsDef[field.Name()] = field.DataKind()
-			})
-		}
+	viewDef := appStructs.AppDef().View(viewRecordQName)
+	viewDef.Key().Fields(func(field appdef.IField) {
+		keyFieldsDef[field.Name()] = field.DataKind()
+	})
+	viewDef.Value().Fields(func(field appdef.IField) {
+		valueFieldsDef[field.Name()] = field.DataKind()
 	})
 
 	if !f.acceptAll {

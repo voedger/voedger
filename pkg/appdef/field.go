@@ -114,6 +114,10 @@ func (f *fields) Fields(cb func(IField)) {
 	}
 }
 
+func (f *fields) QName() QName {
+	return f.def.QName()
+}
+
 func (f *fields) addField(name string, kind DataKind, required, verified bool, vk ...VerificationKind) {
 	if name == NullName {
 		panic(fmt.Errorf("%v: empty field name: %w", f.def.QName(), ErrNameMissed))

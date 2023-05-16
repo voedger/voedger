@@ -63,6 +63,10 @@ func (v *view) AddValueField(name string, kind DataKind, required bool) IViewBui
 	return v
 }
 
+func (v *view) Def() IDef {
+	return &v.def
+}
+
 func (v *view) Key() IViewKey {
 	return v.key
 }

@@ -214,7 +214,7 @@ type IDef interface {
 	// Parent cache
 	App() IAppDef
 
-	// Definition qualified name.
+	// Definition qualified name
 	QName() QName
 
 	// Definition kind.
@@ -229,6 +229,9 @@ type IDef interface {
 //	- DefKind_Object and DefKind_Element,
 //	- DefKind_ViewRecord_PartitionKey, DefKind_ViewRecord_ClusteringColumns and DefKind_ViewRecord_Value
 type IWithFields interface {
+	// Owner definition qualified name
+	QName() QName
+
 	// Finds field by name.
 	//
 	// Returns nil if not found.
@@ -242,6 +245,8 @@ type IWithFields interface {
 }
 
 type IFieldsBuilder interface {
+	IWithFields
+
 	// Adds field specified name and kind.
 	//
 	// # Panics:
@@ -272,6 +277,9 @@ type IFieldsBuilder interface {
 //	- DefKind_Object and DefKind_Element,
 //	- DefKind_ViewRecord
 type IWithContainers interface {
+	// Owner definition qualified name
+	QName() QName
+
 	// Finds container by name.
 	//
 	// Returns nil if not found.
@@ -290,6 +298,8 @@ type IWithContainers interface {
 }
 
 type IContainersBuilder interface {
+	IWithContainers
+
 	// Adds container specified name and occurs.
 	//
 	// # Panics:
@@ -325,6 +335,8 @@ type IWithUniques interface {
 }
 
 type IUniquesBuilder interface {
+	IWithUniques
+
 	// Adds new unique with specified name and fields.
 	// If name is omitted, then default name is used, e.g. `unique01`.
 	//

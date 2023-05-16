@@ -14,7 +14,7 @@ import (
 func provideCmdDeactivateJoinedWorkspace(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdDeactivateJoinedWorkspace,
-		appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "DeactivateJoinedWorkspaceParams"), appdef.DefKind_Object).
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "DeactivateJoinedWorkspaceParams")).
 			AddField(field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).
 			QName(),
 		appdef.NullQName,

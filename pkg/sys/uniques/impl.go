@@ -159,21 +159,25 @@ func getUniqueKeyValues(unique istructs.IUnique, appDef appdef.IAppDef, rec istr
 	valuesBytes := bytes.NewBuffer(nil)
 	varSizeFieldName := ""
 	varSizeFieldKind := appdef.DataKind_null
-	appDef.Def(unique.QName()).Fields(func(field appdef.IField) {
-		if err != nil {
-			// notest
-			return
-		}
-		if !slices.Contains(unique.Fields(), field.Name()) {
-			return
-		}
-		if field.DataKind() == appdef.DataKind_string || field.DataKind() == appdef.DataKind_bytes {
-			varSizeFieldName = field.Name()
-			varSizeFieldKind = field.DataKind()
-		} else {
-			err = appendValue(field.Name(), valuesBytes, rec, field.DataKind())
-		}
-	})
+
+	if def, ok := appDef.Def(unique.QName()).(appdef.IWithFields); ok {
+		def.Fields(func(field appdef.IField) {
+			if err != nil {
+				// notest
+				return
+			}
+			if !slices.Contains(unique.Fields(), field.Name()) {
+				return
+			}
+			if field.DataKind().IsFixed() {
+				err = appendValue(field.Name(), valuesBytes, rec, field.DataKind())
+			} else {
+				varSizeFieldName = field.Name()
+				varSizeFieldKind = field.DataKind()
+			}
+		})
+	}
+
 	if err == nil && len(varSizeFieldName) > 0 {
 		err = appendValue(varSizeFieldName, valuesBytes, rec, varSizeFieldKind)
 	}

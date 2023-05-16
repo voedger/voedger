@@ -18,7 +18,7 @@ import (
 func provideCmdInitiateCancelAcceptedInvite(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc func() time.Time) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdInitiateCancelAcceptedInvite,
-		appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "InitiateCancelAcceptedInviteParams"), appdef.DefKind_Object).
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateCancelAcceptedInviteParams")).
 			AddField(field_InviteID, appdef.DataKind_RecordID, true).
 			QName(),
 		appdef.NullQName,

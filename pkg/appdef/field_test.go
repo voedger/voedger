@@ -35,6 +35,11 @@ func Test_def_AddField(t *testing.T) {
 		require.False(f.Verifiable())
 	})
 
+	t.Run("test AddField(…).QName() helper", func(t *testing.T) {
+		d := New().AddObject(NewQName("test", "object"))
+		require.Equal(d.QName(), d.AddField("f1", DataKind_int64, true).QName())
+	})
+
 	t.Run("must be panic if empty field name", func(t *testing.T) {
 		require.Panics(func() { def.AddField("", DataKind_int64, true) })
 	})

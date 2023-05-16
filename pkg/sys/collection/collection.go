@@ -123,12 +123,11 @@ func (s *idService) findRootByID(id istructs.RecordID) (record istructs.IRecord,
 
 var CollectionViewBuilderFunc = func(builder appdef.IViewBuilder) {
 
-	builder.PartKeyDef().AddField(Field_PartKey, appdef.DataKind_int32, true)
-
-	builder.ClustColsDef().AddField(Field_DocQName, appdef.DataKind_QName, false)
-	builder.ClustColsDef().AddField(field_DocID, appdef.DataKind_RecordID, false)
-	builder.ClustColsDef().AddField(field_ElementID, appdef.DataKind_RecordID, false)
-
-	builder.ValueDef().AddField(Field_Record, appdef.DataKind_Record, true)
-	builder.ValueDef().AddField(state.ColOffset, appdef.DataKind_int64, true)
+	builder.
+		AddPartField(Field_PartKey, appdef.DataKind_int32).
+		AddClustColumn(Field_DocQName, appdef.DataKind_QName).
+		AddClustColumn(field_DocID, appdef.DataKind_RecordID).
+		AddClustColumn(field_ElementID, appdef.DataKind_RecordID).
+		AddValueField(Field_Record, appdef.DataKind_Record, true).
+		AddValueField(state.ColOffset, appdef.DataKind_int64, true)
 }
