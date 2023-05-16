@@ -18,7 +18,7 @@ func New[Key comparable, SP any, PV any, State any](
 	controllerFunc ControllerFunction[Key, SP, State, PV],
 	reporterFunc ReporterFunction[Key, PV],
 	numControllerRoutines int,
-	ch chan OriginalMessage[Key, SP],
+	ch chan ControlMessage[Key, SP],
 	nowTimeFunc nowTimeFunction,
 ) (wait func()) {
 	InProcess := sync.Map{}
