@@ -12,7 +12,7 @@ require (
 	github.com/google/gofuzz v1.0.0
 	github.com/google/uuid v1.3.0
 	github.com/google/wire v0.5.0
-	github.com/heeus/core-istoragecas v0.0.0-20230417172104-aff277174d72
+	github.com/heeus/core-istoragecas v0.0.0-20230515150319-7a48d896aac2
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.2
 	github.com/untillpro/airs-ibus v0.0.0-20221105121917-d13e0967180d
