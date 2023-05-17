@@ -20,7 +20,6 @@ import (
 )
 
 func TestBasicUsage_DeactivateWorkspace(t *testing.T) {
-	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 
@@ -35,7 +34,6 @@ func TestBasicUsage_DeactivateWorkspace(t *testing.T) {
 	}
 
 	ws := vit.CreateWorkspace(wsp, prn1)
-	require.True(ws.IsActive)
 
 	// deactivate workspace
 	vit.PostWS(ws, "c.sys.DeactivateWorkspace", "{}")

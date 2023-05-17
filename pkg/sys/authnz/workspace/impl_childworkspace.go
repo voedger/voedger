@@ -115,7 +115,6 @@ func qcwbnQryExec(_ context.Context, _ istructs.IQueryFunction, args istructs.Ex
 		templateParams:           rec.AsString(Field_TemplateParams),
 		wsid:                     rec.AsInt64(authnz.Field_WSID),
 		wsError:                  rec.AsString(authnz.Field_WSError),
-		isActive:                 rec.AsBool(appdef.SystemField_IsActive),
 	})
 }
 
@@ -129,7 +128,6 @@ type qcwbnRR struct {
 	templateParams           string
 	wsid                     int64
 	wsError                  string
-	isActive                 bool
 }
 
 func (q *qcwbnRR) AsInt64(string) int64 { return q.wsid }
@@ -151,4 +149,3 @@ func (q *qcwbnRR) AsString(name string) string {
 		panic("unexpected field to return: " + name)
 	}
 }
-func (q *qcwbnRR) AsBool(string) bool { return q.isActive }

@@ -156,7 +156,7 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 				},
 				"elements":[
 					{
-						"fields":["WSName", "WSKind", "WSKindInitializationData", "TemplateName", "TemplateParams", "WSID", "WSError", "sys.IsActive"]
+						"fields":["WSName", "WSKind", "WSKindInitializationData", "TemplateName", "TemplateParams", "WSID", "WSError"]
 					}
 				]
 			}`, wsName)
@@ -183,11 +183,10 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 					TemplateParams: resp.SectionRow()[tmplParamsIdx].(string),
 					ClusterID:      istructs.MainClusterID,
 				},
-				WSID:     wsid,
-				WSError:  wsError,
+				WSID:    wsid,
+				WSError: wsError,
 			},
 			Owner: owner,
-			IsActive: resp.SectionRow()[isActiveIdx].(bool),
 		}
 	}
 	vit.T.Fatalf("workspace %s is not initialized in an acceptable time", wsName)

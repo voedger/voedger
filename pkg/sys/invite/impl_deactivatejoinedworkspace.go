@@ -28,30 +28,4 @@ func execCmdDeactivateJoinedWorkspace(_ istructs.ICommandFunction, args istructs
 		svbCDocJoinedWorkspace.PutBool(appdef.SystemField_IsActive, false)
 	}
 	return err
-	// skbViewJoinedWorkspaceIndex, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewJoinedWorkspaceIndex)
-	// if err != nil {
-	// 	return
-	// }
-	// skbViewJoinedWorkspaceIndex.PutInt32(field_Dummy, value_Dummy_Two)
-	// skbViewJoinedWorkspaceIndex.PutInt64(Field_InvitingWorkspaceWSID, args.ArgumentObject.AsInt64(Field_InvitingWorkspaceWSID))
-	// svViewJoinedWorkspaceIndex, err := args.State.MustExist(skbViewJoinedWorkspaceIndex)
-	// if err != nil {
-	// 	return
-	// }
-
-	// skbCDocJoinedWorkspace, err := args.State.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocJoinedWorkspace)
-	// if err != nil {
-	// 	return err
-	// }
-	// skbCDocJoinedWorkspace.PutRecordID(state.Field_ID, svViewJoinedWorkspaceIndex.AsRecordID(field_JoinedWorkspaceID))
-	// svCDocJoinedWorkspace, err := args.State.MustExist(skbCDocJoinedWorkspace)
-	// if err != nil {
-	// 	return err
-	// }
-	// svbCDocJoinedWorkspace, err := args.Intents.UpdateValue(skbCDocJoinedWorkspace, svCDocJoinedWorkspace)
-	// if err != nil {
-	// 	return err
-	// }
-	// svbCDocJoinedWorkspace.PutBool(appdef.SystemField_IsActive, false)
-	// return err
 }
