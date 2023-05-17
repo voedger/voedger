@@ -246,7 +246,7 @@ func checkWSActive(_ context.Context, work interface{}) (err error) {
 		cmd.checkWSDescUpdating = true
 		return nil
 	}
-	return errWSInactive
+	return processors.ErrWSInactive
 }
 
 func getAppStructs(_ context.Context, work interface{}) (err error) {
@@ -514,7 +514,7 @@ func checkWorkspaceDescriptorUpdating(_ context.Context, work interface{}) (err 
 					continue
 				}
 			}
-			return errWSInactive
+			return processors.ErrWSInactive
 		} else {
 			if (cud.qName == sysshared.QNameCDocWorkspaceDescriptor || cud.qName == sysshared.QNameWDocBLOB) && cud.opKind == iauthnz.OperationKind_UPDATE {
 				continue

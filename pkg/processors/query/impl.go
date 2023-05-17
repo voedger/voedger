@@ -137,6 +137,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("check workspace active", func(ctx context.Context, qw *queryWork) (err error) {
 			if qw.appStructs.AppDef().DefByName(sysshared.QNameCDocWorkspaceDescriptor) == nil {
+				// workaround to avoid create cdoc.sys.WorkspaceDescriptor in query processor tests
+				// work in an inactive workspace is tested in impl_deactivateworkspace_test.go
 				return nil
 			}
 			wsDesc, err := qw.appStructs.Records().GetSingleton(qw.msg.WSID(), sysshared.QNameCDocWorkspaceDescriptor)
