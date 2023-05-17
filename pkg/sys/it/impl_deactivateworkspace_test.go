@@ -42,6 +42,8 @@ func TestBasicUsage_DeactivateWorkspace(t *testing.T) {
 	// try to exec something in a deactivated workspace
 	body := `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403())
+
+	
 }
 
 func waitForDeactivate(vit *it.VIT, ws *it.AppWorkspace) {

@@ -29,6 +29,7 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -131,6 +132,24 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		operator("check function call rate", func(ctx context.Context, qw *queryWork) (err error) {
 			if qw.appStructs.IsFunctionRateLimitsExceeded(qw.msg.Resource().QName(), qw.msg.WSID()) {
 				return coreutils.NewSysError(http.StatusTooManyRequests)
+			}
+			return nil
+		}),
+		operator("check workspace active", func(ctx context.Context, qw *queryWork) (err error) {
+			if qw.appStructs.AppDef().DefByName(sysshared.QNameCDocWorkspaceDescriptor) == nil {
+				return nil
+			}
+			wsDesc, err := qw.appStructs.Records().GetSingleton(qw.msg.WSID(), sysshared.QNameCDocWorkspaceDescriptor)
+			if err != nil {
+				// notest
+				return err
+			}
+			if wsDesc.QName() == appdef.NullQName {
+				// TODO: query prcessor currently does not check workspace initialization
+				return nil
+			}
+			if wsDesc.AsInt32(sysshared.Field_Status) != int32(sysshared.WorkspaceStatus_Inactive) {
+				return processors.ErrWSInactive
 			}
 			return nil
 		}),
