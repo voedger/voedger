@@ -27,20 +27,27 @@ jobs:
     - name: Check Issue
       run: |
 
-        teams=$(curl -s -H "Authorization: Bearer ${{ secrets.REPOREADING_TOKEN }}" https://api.github.com/user/teams | jq -r '.[].name')
+        ORG_NAME="voedger"
+        TEAM_NAME="DevOps_ctool"
+        USER_NAME="${{ github.event.issue.user.login }}"
 
-        is_member=false
+        # Check organization membership
+        ORG_MEMBERSHIP=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${{ secrets.REPOREADING_TOKEN }}" "https://api.github.com/orgs/$ORG_NAME/members/$USER_NAME")
 
-        for team in $teams; do
-          if [[ $team == "DevOps_ctool" ]]; then
-            is_member=true
-            break
-          fi
-        done
-        if [ "$is_member" = true ]; then
-          echo "User is a member of DevOps_ctool team." 
+        if [[ $ORG_MEMBERSHIP -eq 204 ]]; then
+          echo "The user $USER_NAME is a member of the organization $ORG_NAME."
         else
-          echo "User is not a member of DevOps_ctool team."
+          echo "The user $USER_NAME is not a member of the organization $ORG_NAME."
+          exit 1
+        fi
+
+        # Check team membership
+        TEAM_MEMBERSHIP=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${{ secrets.REPOREADING_TOKEN }}" "https://api.github.com/orgs/$ORG_NAME/teams/$TEAM_NAME/memberships/$USER_NAME")
+
+        if [[ $TEAM_MEMBERSHIP -eq 200 ]]; then
+          echo "The user $USER_NAME is a member of the team $TEAM_NAME within the organization $ORG_NAME."
+        else
+          echo "The user $USER_NAME is not a member of the team $TEAM_NAME within the organization $ORG_NAME."
           exit 1
         fi
 

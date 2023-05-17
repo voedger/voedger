@@ -6,6 +6,8 @@
 package main
 
 import (
+	"sync"
+
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/logger"
 )
@@ -31,43 +33,51 @@ func newApplyCmd() *cobra.Command {
 }
 
 func apply(cmd *cobra.Command, arg []string) error {
-
 	cluster := newCluster()
+	defer cluster.saveToJSON()
 
-	err := cluster.validate()
-	if err != nil {
+	var err error
+
+	if err = cluster.validate(); err != nil {
+		logger.Error(err.Error)
 		return err
 	}
 
-	cluster.Draft = false
-	cluster.saveToJSON()
+	if err = mkCommandDirAndLogFile(cmd); err != nil {
+		return err
+	}
+
+	if !cluster.existsNodeError() && cluster.Cmd.isEmpty() {
+		logger.Info("no active command found to apply")
+		return nil
+	}
 
 	if len(arg) > 0 {
 		cluster.sshKey, err = expandPath(arg[0])
 		if err != nil {
 			return err
 		}
-
 	}
 
-	err = mkCommandDirAndLogFile(cmd)
-	if err != nil {
-		return err
+	cluster.Draft = false
+
+	var wg sync.WaitGroup
+	wg.Add(len(cluster.Nodes))
+
+	for i := 0; i < len(cluster.Nodes); i++ {
+		go func(node *nodeType) {
+			defer wg.Done()
+			if err := node.nodeControllerFunction(); err != nil {
+				logger.Error(err.Error)
+			}
+		}(&cluster.Nodes[i])
 	}
 
-	switch cluster.Edition {
-	case clusterEditionCE:
-		err = deployCeCluster(cluster)
-	case clusterEditionSE:
-		err = deploySeCluster(cluster)
-	default:
-		err = ErrorInvalidClusterEdition
+	wg.Wait()
+
+	if cluster.existsNodeError() {
+		return ErrorPreparingClusterNodes
 	}
 
-	if err != nil {
-		logger.Error(err.Error())
-		return err
-	}
-
-	return nil
+	return cluster.clusterControllerFunction()
 }
