@@ -2,7 +2,6 @@ version: '3.5'
 services:
   prometheus1:
     image: prom/prometheus:latest
-    container_name: prometheus
     volumes:
       - /prometheus:/prometheus
       - ~/prometheus:/etc/prometheus
@@ -19,7 +18,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == mon1
+          - node.labels.mon == mon1
       replicas: 1
     logging:
       driver: "local"
@@ -29,7 +28,6 @@ services:
 
   prometheus2:
     image: prom/prometheus:latest
-    container_name: prometheus_1
     volumes:
       - /prometheus:/prometheus
       - ~/prometheus:/etc/prometheus
@@ -46,7 +44,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == mon2
+          - node.labels.mon == mon2
       replicas: 1
     logging:
       driver: "local"
@@ -56,14 +54,15 @@ services:
 
   alertmanager1:
     image: prom/alertmanager:latest
-    container_name: alertmanager_1
     volumes:
       - /alertmanager:/alertmanager
       - ~/alertmanager:/etc/alertmanager
     command:
       - '--config.file=/etc/alertmanager/config.yml'
       - '--storage.path=/alertmanager'
-      - '--cluster.peer=alertmanager_2:9094' 
+      - '--cluster.peer={se2}:9094' 
+      - '--cluster.listen-address=:9094'
+      - '--cluster.advertise-address={se1}:9094'
     restart: unless-stopped
     ports:
       - target: 9093
@@ -77,19 +76,20 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == mon1
+          - node.labels.mon == mon1
       replicas: 1
 
   alertmanager2:
     image: prom/alertmanager:latest
-    container_name: alertmanager_2
     volumes:
       - /alertmanager:/alertmanager
       - ~/alertmanager:/etc/alertmanager
     command:
       - '--config.file=/etc/alertmanager/config.yml'
       - '--storage.path=/alertmanager'
-      - '--cluster.peer=alertmanager_1:9094' 
+      - '--cluster.peer={se1}:9094' 
+      - '--cluster.listen-address=:9094'
+      - '--cluster.advertise-address={se2}:9094'
     restart: unless-stopped
     ports:
       - target: 9093
@@ -103,16 +103,15 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == mon2
+          - node.labels.mon == mon2
       replicas: 1
 
   node-exporter1:
     image: prom/node-exporter:latest
-    container_name: node-exporter
     deploy:
       placement:
         constraints:
-          - node.labels.type == mon1
+          - node.labels.mon == mon1
       replicas: 1
     volumes:
       - /proc:/host/proc:ro
@@ -132,11 +131,10 @@ services:
 
   node-exporter2:
     image: prom/node-exporter:latest
-    container_name: node-exporter
     deploy:
       placement:
         constraints:
-          - node.labels.type == mon2
+          - node.labels.mon == mon2
       replicas: 1
     volumes:
       - /proc:/host/proc:ro
