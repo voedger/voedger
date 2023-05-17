@@ -15,7 +15,7 @@ if [[ $# -ne 3 ]]; then
 fi
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 REMOTE_HOSTNAME=$(ssh $SSH_OPTIONS $SSH_USER@$2 'hostname')
 

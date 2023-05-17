@@ -16,7 +16,7 @@ if [ "$#" -lt 2 ]; then
 fi
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 MANAGER=$1
 
 JOIN_TOKEN=$(cat ./manager.token)

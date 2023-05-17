@@ -46,4 +46,8 @@ while [ $# -gt 0 ] && [ $count -lt 2 ]; do
   shift
 done
 
+cat ./docker-compose-mon.yml | \
+    sed "s/{se1}/$se1/g; s/{se2}/$se2/g" \
+    | ssh $SSH_OPTIONS $SSH_USER@$se1 'cat > ~/docker-compose-mon.yml'
+
 set +x

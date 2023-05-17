@@ -17,8 +17,6 @@ fi
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
-cat ./docker-compose-mon.yml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/docker-compose-mon.yml'
-
 ssh $SSH_OPTIONS $SSH_USER@$1 "docker stack deploy --compose-file ~/docker-compose-mon.yml MonDockerStack"
 
 set +x
