@@ -12,7 +12,7 @@ services:
       replicas: 2
       placement:
         constraints:
-          - node.labels.type == se
+          - node.labels.se == se
 
     volumes:
       - /:/rootfs:ro

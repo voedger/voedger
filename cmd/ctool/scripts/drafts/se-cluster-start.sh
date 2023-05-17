@@ -24,7 +24,7 @@ MANAGER=$1
 
 # Add remaining nodes to swarm cluster
 while [ $# -gt 0 ]; do
-  ./swarm-set-label.sh $MANAGER $1 "se"
+  ./swarm-set-label.sh $MANAGER $1 "se" "se"
   shift
 done
 

@@ -18,7 +18,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == mon1
+          - node.labels.mon == mon1
       replicas: 1
     logging:
       driver: "local"
@@ -44,7 +44,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == mon2
+          - node.labels.mon == mon2
       replicas: 1
     logging:
       driver: "local"
@@ -74,7 +74,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == mon1
+          - node.labels.mon == mon1
       replicas: 1
 
   alertmanager2:
@@ -99,7 +99,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == mon2
+          - node.labels.mon == mon2
       replicas: 1
 
   node-exporter1:
@@ -107,7 +107,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == mon1
+          - node.labels.mon == mon1
       replicas: 1
     volumes:
       - /proc:/host/proc:ro
@@ -130,7 +130,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == mon2
+          - node.labels.mon == mon2
       replicas: 1
     volumes:
       - /proc:/host/proc:ro
