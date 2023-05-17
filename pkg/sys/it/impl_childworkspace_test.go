@@ -45,6 +45,9 @@ func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 
 	t.Run("create child workspace", func(t *testing.T) {
 		// init
+		// note: creating workspace at non-main cluster is unsupported for now
+		// because there are no AppWorkspaces in any cluster but Main (created automatically on VVM launch)
+		// also GetAppWSID() uses MainCluser, not the target one
 		body := fmt.Sprintf(`
 			{
 				"args": {
