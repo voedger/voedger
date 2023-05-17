@@ -250,6 +250,9 @@ type IFields interface {
 
 	// Enumerates all fields in add order.
 	Fields(func(IField))
+
+	// Returns user fields count. System fields (sys.QName, sys.ID, …) do not count
+	UserFieldCount() int
 }
 
 type IFieldsBuilder interface {

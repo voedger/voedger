@@ -21,7 +21,9 @@ func Test_def_AddField(t *testing.T) {
 	t.Run("must be ok to add field", func(t *testing.T) {
 		def.AddField("f1", DataKind_int64, true)
 
-		require.Equal(2, def.FieldCount()) // + sys.QName
+		require.Equal(1, def.UserFieldCount())
+		require.Equal(def.UserFieldCount()+1, def.FieldCount()) // + sys.QName
+
 		f := def.Field("f1")
 		require.NotNil(f)
 		require.Equal("f1", f.Name())

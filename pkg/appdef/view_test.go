@@ -42,6 +42,9 @@ func TestAddView(t *testing.T) {
 	require.Equal(ViewValueDefName(viewName), val.QName())
 	require.Equal(DefKind_ViewRecord_Value, val.Kind())
 
+	require.Equal(v, app.View(v.QName()))
+	require.Nil(app.View(NewQName("test", "unknown")))
+
 	t.Run("must be ok to add partition key fields", func(t *testing.T) {
 		v.AddPartField("pkF1", DataKind_int64)
 		v.AddPartField("pkF2", DataKind_bool)
@@ -99,13 +102,18 @@ func TestAddView(t *testing.T) {
 
 	_, err := app.Build()
 	require.NoError(err)
+	require.False(app.HasChanges())
 
 	t.Run("must be ok to add value fields to view after app build", func(t *testing.T) {
 		v.AddValueField("valF3", DataKind_Event, false)
 		require.Equal(3+1, val.FieldCount())
 
+		require.True(app.HasChanges())
+
 		_, err := app.Build()
 		require.NoError(err)
+
+		require.False(app.HasChanges())
 	})
 
 	t.Run("must be ok to add pk or cc fields to view after app build", func(t *testing.T) {
@@ -116,8 +124,12 @@ func TestAddView(t *testing.T) {
 		require.Equal(3, cc.FieldCount())
 		require.Equal(6, key.FieldCount())
 
+		require.True(app.HasChanges())
+
 		_, err := app.Build()
 		require.NoError(err)
+
+		require.False(app.HasChanges())
 	})
 }
 

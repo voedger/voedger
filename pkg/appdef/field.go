@@ -118,6 +118,16 @@ func (f *fields) QName() QName {
 	return f.def.QName()
 }
 
+func (f *fields) UserFieldCount() int {
+	cnt := 0
+	f.Fields(func(f IField) {
+		if !f.IsSys() {
+			cnt++
+		}
+	})
+	return cnt
+}
+
 func (f *fields) addField(name string, kind DataKind, required, verified bool, vk ...VerificationKind) {
 	if name == NullName {
 		panic(fmt.Errorf("%v: empty field name: %w", f.def.QName(), ErrNameMissed))
