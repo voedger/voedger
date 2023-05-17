@@ -110,7 +110,7 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	if cfg.appDefBuilder.HasChanges() {
 		sch, err := cfg.appDefBuilder.Build()
 		if err != nil {
-			panic(fmt.Errorf("%v: unable rebuild changed application definition: %w", cfg.Name, err))
+			return fmt.Errorf("%v: unable rebuild changed application definition: %w", cfg.Name, err)
 		}
 		cfg.AppDef = sch
 	}

@@ -206,6 +206,11 @@ type IAppDefBuilder interface {
 	AddElement(name QName) IElementBuilder
 
 	// Adds new definitions for view.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if definition with name already exists.
 	AddView(QName) IViewBuilder
 
 	// Must be called after all definitions added. Validates and returns builded application definition or error
