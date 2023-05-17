@@ -30,6 +30,7 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -158,6 +159,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 		AddField("sys.ID", appdef.DataKind_RecordID, true).
 		AddField("name", appdef.DataKind_string, true).
 		AddField("id_department", appdef.DataKind_int64, true)
+	appDef.AddStruct(sysshared.QNameCDocWorkspaceDescriptor, appdef.DefKind_CDoc).SetSingleton() // need to avoid error cdoc.sys.wsdesc missing
 
 	if prepareAppDef != nil {
 		prepareAppDef(appDef)

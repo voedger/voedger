@@ -234,6 +234,12 @@ func checkWSActive(_ context.Context, work interface{}) (err error) {
 	if IsDummyWS(cmd.cmdMes.WSID()) {
 		return nil
 	}
+	for _, prn := range cmd.principals {
+		if prn.Kind == iauthnz.PrincipalKind_Role && prn.QName == iauthnz.QNameRoleSystem && prn.WSID == cmd.cmdMes.WSID() {
+			// system -> allow to work in any case
+			return nil
+		}
+	}
 	wsDesc := work.(*cmdWorkpiece).wsDesc
 	if wsDesc.QName() == appdef.NullQName {
 		return nil

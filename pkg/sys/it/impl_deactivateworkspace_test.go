@@ -40,17 +40,21 @@ func TestBasicUsage_DeactivateWorkspace(t *testing.T) {
 	waitForDeactivate(vit, ws)
 
 	// 403 forbidden on work in an inactive workspace
-	body := `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
-	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403())
+	bodyCmd := `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
+	vit.PostWS(ws, "c.sys.CUD", bodyCmd, coreutils.Expect403())
 
-	body = `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`
-	vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect403())
+	bodyQry := `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`
+	vit.PostWS(ws, "q.sys.Collection", bodyQry, coreutils.Expect403())
+
+	// still able to work in an inactive workspace with the system token
+	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
+	vit.PostWS(ws, "q.sys.Collection", bodyQry, coreutils.WithAuthorizeBy(sysToken.Token))
 }
 
 func waitForDeactivate(vit *it.VIT, ws *it.AppWorkspace) {
 	deadline := time.Now().Add(time.Second)
 	for time.Now().Before(deadline) {
-		resp := vit.PostWS(ws, "q.sys.Collection", `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`)
+		resp := vit.PostWSSys(ws, "q.sys.Collection", `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`)
 		if int32(resp.SectionRow()[0].(float64)) == int32(sysshared.WorkspaceStatus_Inactive) {
 			break
 		}
