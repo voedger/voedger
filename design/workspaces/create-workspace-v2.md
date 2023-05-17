@@ -20,7 +20,7 @@ Create User/Login/App Workspaces
 
 Commands:
 
-- [c.sys.InitUserWorkspace()](#csysinituserworkspace)
+- [c.sys.InitChildWorkspace()](#csysinitchildworkspace)
 - [c.sys.CreateWorkspaceID()](#csyscreateworkspaceid)
 - [c.sys.CreateWorkspace()](#csyscreateworkspace)
 - [UpdateOwner()](#updateownerwsparams-newwsid-wsdescriniterror)
@@ -56,11 +56,11 @@ Projectors:
 
 |entity|app|ws|cluster|
 |---|---|---|---|
-|c.sys.InitUserWorkspace()<br/>cdoc.sys.ChildWorkspace (owner)<br/>aproj.sys.InvokeCreateWorkspaceID()|Tagret App|Profile|Profile Cluster
-|c.sys.CreateWorkspaceID()<br/>cdoc.sys.WorkspaceID<br/>aproj.sys.InvokeCreateWorkspace()|Target App|(Target Cluster, Base Profile WSID)|Target Cluster
+|c.sys.InitChildWorkspace()<br/>cdoc.sys.ChildWorkspace (owner)<br/>aproj.sys.InvokeCreateWorkspaceID()|Tagret App|Profile|Profile Cluster
+|c.sys.CreateWorkspaceID()<br/>cdoc.sys.WorkspaceID<br/>aproj.sys.InvokeCreateWorkspace()|Target App|(Target Cluster, CRC16(wsName))|Target Cluster
 |c.sys.CreateWorkspace()<br/>cdoc.sys.WorkspaceDescriptor<br/>cdoc.$wsKind (air.Restaurant)<br/>aproj.sys.InitializeWorkspace()|Target App|new WSID|Target Cluster
 
-## c.sys.InitUserWorkspace()
+## c.sys.InitChildWorkspace()
 
 
 - AuthZ: Owner
@@ -70,11 +70,11 @@ Projectors:
 - Check that wsName does not exist yet: View<UserWorkspaceIdx>{pk: dummy, cc: wsName, value: idOfUserWorkspace}
   - 409 conflict
 - Create CDoc<UserWorkspace> {wsName, wsKind, wsKindInitializationData, templateName, templateParams, wsClusterID, /* Updated aftewards by UpdateOwner*/ WSID, wsError}
-  - Trigger Projector<A, InvokeCreateWorkspaceID> 
+  - Trigger Projector<A, InvokeCreateWorkspaceID>
   - Trigger Projector<UserWorkspaceIdx>
 
 Subject:
-- Call WS[Subject.ProfileWSID].InitUserWorkspace()
+- Call WS[Subject.ProfileWSID].InitChildWorkspace()
   - wsName
   - wsKind
   - wsKindInitializationData // JSON
@@ -142,7 +142,7 @@ Subject:
 
 - if wsDecr.initStartedAtMs == 0
   - WS[currentWS].c.sys.CUD(wsDescr.ID, initStartedAtMs)
-  - err = bp3.BuildWorkspace() // to init data 
+  - err = bp3.BuildWorkspace() // to init data
   - if err != nil: error = ("Workspace data initialization failed: %v", err)
   - WS[currentWS].c.sys.CUD(wsDescr.ID, initError: error, initCompletedAtMs)
   - UpdateOwner(wsParams, new.WSID, error)
@@ -192,7 +192,7 @@ Subject:
       - put PLog
       - apply PLog event to records
       - put WLog
-      - incr PLog and WLog offsets 
+      - incr PLog and WLog offsets
   - //TODO AppWorkspaces must be created when application is deployed
 - App Workspaces amount is defined per app, default 10
 

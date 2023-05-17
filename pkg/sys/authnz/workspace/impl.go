@@ -47,6 +47,7 @@ func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName is
 			var templateName string
 			var templateParams string
 			var targetClusterID istructs.ClusterID
+			var wsidToCallCreateWSIDAt istructs.WSID
 			ownerWSID := event.Workspace()
 			ownerBaseWSID := ownerWSID.BaseWSID()
 			targetApp := ""
@@ -62,6 +63,7 @@ func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName is
 				templateParams = rec.AsString(Field_TemplateParams)
 				targetClusterID = istructs.ClusterID(rec.AsInt32(authnz.Field_WSClusterID))
 				targetApp = ownerApp
+				wsidToCallCreateWSIDAt = istructs.NewWSID(targetClusterID, istructs.WSID(coreutils.CRC16([]byte(wsName))))
 			case authnz.QNameCDocLogin:
 				wsName = "hashedLogin"
 				switch istructs.SubjectKindType(rec.AsInt32(authnz.Field_SubjectKind)) {
@@ -74,11 +76,11 @@ func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName is
 				}
 				targetClusterID = istructs.ClusterID(rec.AsInt32(authnz.Field_ProfileClusterID))
 				targetApp = rec.AsString(signupin.Field_AppName)
+				wsidToCallCreateWSIDAt = istructs.NewWSID(targetClusterID, ownerBaseWSID)
 			default:
 				// notest
 				panic("")
 			}
-			wsidToCallCreateWSIDAt := istructs.NewWSID(targetClusterID, ownerBaseWSID)
 
 			// Call WS[$PseudoWSID].c.CreateWorkspaceID()
 			createWSIDCmdURL := fmt.Sprintf("api/%s/%d/c.sys.CreateWorkspaceID", targetApp, wsidToCallCreateWSIDAt)
