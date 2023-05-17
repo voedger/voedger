@@ -166,6 +166,16 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
+		// https://github.com/voedger/voedger/issues/125
+		desc: "grant UPDATE on air.UntillPayments to role sys.WorkspaceAdmin",
+		pattern: PatternType{
+			qNamesPattern:     []appdef.QName{qNameCDocUntillPayments},
+			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_UPDATE},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceAdmin}}},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
 		// ACL for portals https://dev.untill.com/projects/#!637208
 		desc: "allow SELECT cdoc.air.ResellerSubscriptionsProfile to air.AirReseller",
 		pattern: PatternType{

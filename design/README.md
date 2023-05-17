@@ -433,12 +433,14 @@ Principles
     SENodeIP ||..|| SENodeLeader: "used by"
 
     SEDockerStack ||..|| se_exe: "contains"
-    SEDockerStack ||--|| Prometheus : "contains"
-    SEDockerStack ||--|| Graphana : "contains"
+    MonDockerStack ||--|| Prometheus : "contains"
+    MonDockerStack ||--|| Graphana : "contains"
+    MonDockerStack ||--|| Alertmanager : "contains"
 
     SENode ||..|| Node : "is"
     SENode ||..|| SENodeLeader : "can be"
     SENode ||..|| SEDockerStack : "runs"    
+    SENode ||..|| MonDockerStack : "runs"
 
     DBMSNode ||..|| Node : "is"
     DBMSNode ||..|| DBMSDockerStack : "runs"

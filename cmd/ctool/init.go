@@ -8,6 +8,7 @@ package main
 import (
 	"errors"
 	"net"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/logger"
@@ -88,6 +89,12 @@ func initCE(cmd *cobra.Command, args []string) error {
 		return ErrorClusterConfAlreadyExists
 	}
 
+	c := newCmd(ckInit, "CE "+strings.Join(args, " "))
+	if err := cluster.applyCmd(c); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
 	err := mkCommandDirAndLogFile(cmd)
 	if err != nil {
 		return err
@@ -117,6 +124,12 @@ func initSE(cmd *cobra.Command, args []string) error {
 
 	if !cluster.Draft {
 		return ErrorClusterConfAlreadyExists
+	}
+
+	c := newCmd(ckInit, "SE "+strings.Join(args, " "))
+	if err := cluster.applyCmd(c); err != nil {
+		logger.Error(err.Error())
+		return err
 	}
 
 	err := mkCommandDirAndLogFile(cmd)
