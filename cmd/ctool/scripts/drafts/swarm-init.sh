@@ -19,7 +19,7 @@ if [ "$#" -lt 1 ]; then
 fi
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 if [[ $(ssh $SSH_OPTIONS $SSH_USER@$1 docker info --format '{{.Swarm.LocalNodeState}}') == "inactive" ]]; then
   # Initialize Swarm with all nodes as managers and workers
