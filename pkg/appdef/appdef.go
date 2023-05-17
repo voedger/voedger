@@ -246,8 +246,3 @@ func (app *appDef) changed() {
 
 func (app *appDef) prepare() {
 }
-
-func (app *appDef) remove(name QName) {
-	delete(app.defs, name)
-	app.changed()
-}

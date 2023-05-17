@@ -23,10 +23,9 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 
 		appDef := appdef.New()
 
-		commonDef := func(n appdef.QName) appdef.IDef {
-			d := appDef.AddObject(n)
-			d.AddField("id_lower_case_name", appdef.DataKind_RecordID, false)
-			return d
+		commonDef := func(n appdef.QName) {
+			appDef.AddObject(n).
+				AddField("id_lower_case_name", appdef.DataKind_RecordID, false)
 		}
 		commonDef(appdef.NewQName("_", "root"))
 		commonDef(appdef.NewQName("f", "first_children_1"))
