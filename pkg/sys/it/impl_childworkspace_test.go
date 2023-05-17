@@ -52,7 +52,7 @@ func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 					"WSKind": "my.WSKind",
 					"WSKindInitializationData": "{\"IntFld\": 10}",
 					"TemplateName": "test_template",
-					"WSClusterID": 42
+					"WSClusterID": 1
 				}
 			}`, wsName)
 		vit.PostWS(parentWS, "c.sys.InitChildWorkspace", body)
@@ -64,7 +64,7 @@ func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 		require.Equal(it.QNameTestWSKind, childWS.Kind)
 		require.Equal(`{"IntFld": 10}`, childWS.InitDataJSON)
 		require.Equal("test_template", childWS.TemplateName)
-		require.Equal(istructs.ClusterID(42), childWS.WSID.ClusterID())
+		require.Equal(istructs.ClusterID(1), childWS.WSID.ClusterID())
 
 		t.Run("create a new workspace with an existing name -> 409 conflict", func(t *testing.T) {
 			body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "my.WSKind","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)

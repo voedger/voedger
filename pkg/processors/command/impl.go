@@ -206,7 +206,7 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 	if IsDummyWS(cmd.cmdMes.WSID()) {
 		return nil
 	}
-	if funcQName == QNameCommandCreateWorkspace || /*funcQName == QNameCommandCreateWorkspaceID ||*/ funcQName == QNameCommandInit {
+	if funcQName == QNameCommandCreateWorkspace || funcQName == QNameCommandCreateWorkspaceID || funcQName == QNameCommandInit {
 		return nil
 	}
 	if wsDesc.QName() != appdef.NullQName {
