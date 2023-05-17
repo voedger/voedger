@@ -23,10 +23,10 @@ fi
 MANAGER=$1
 
 # Add remaining nodes to swarm cluster
-while [ $# -gt 0 ]; do
-  ./swarm-set-label.sh $MANAGER $1 "se"
-  shift
-done
+# while [ $# -gt 0 ]; do
+#   ./swarm-set-label.sh $MANAGER $1 "se" "se"
+#   shift
+# done
 
 # Start db cluster
 cat ./docker-compose-se.yml | ssh $SSH_OPTIONS $SSH_USER@$MANAGER 'cat > ~/docker-compose-se.yml'
