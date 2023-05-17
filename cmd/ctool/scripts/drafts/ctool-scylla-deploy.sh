@@ -35,7 +35,7 @@ set -- "${args[@]}"
 
 # Init swarm mode
 ./swarm-init.sh $1
-./swarm-set-label.sh $1 $1 scylla1
+./swarm-set-label.sh $1 $1 "type" scylla1
 ./db-node-prepare.sh $1
 MANAGER=$1
 
@@ -45,7 +45,7 @@ shift
 i=2
 while [ $# -gt 0 ]; do
   ./swarm-add-node.sh $MANAGER $1
-  ./swarm-set-label.sh $MANAGER $1 "scylla$i"
+  ./swarm-set-label.sh $MANAGER $1 "type" "scylla$i"
   ./db-node-prepare.sh $1
   shift
   ((i++))
