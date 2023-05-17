@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/invite"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -38,14 +39,19 @@ func TestBasicUsage_DeactivateWorkspace(t *testing.T) {
 
 	// deactivate workspace
 	vit.PostWS(ws, "c.sys.DeactivateWorkspace", "{}")
-	startTime := time.Now()
-	for time.Since(startTime) < 10*time.Second {
-		ws = vit.WaitForWorkspace(ws.Name, prn1)
-		if !ws.IsActive {
+	for {
+		resp := vit.PostWS(ws, "q.sys.Collection", `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`)
+		if int32(resp.SectionRow()[0].(float64)) == int32(sysshared.WorkspaceStatus_Inactive) {
 			break
 		}
 	}
-	require.False(ws.IsActive)
+	// startTime := time.Now()
+	// for time.Since(startTime) < 10*time.Second {
+	// 	ws = vit.WaitForWorkspace(ws.Name, prn1)
+	// 	if !ws.IsActive {
+	// 		break
+	// 	}
+	// }
 
 	// try to exec something in a deactivated workspace
 	body := `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
@@ -95,7 +101,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn2.Token))
 
 	vit.PostWS(newWS, "c.sys.DeactivateWorkspace", "{}")
-	
+
 	for {
 		ws := vit.WaitForWorkspace(newWS.Name, prn1)
 		if !ws.IsActive {

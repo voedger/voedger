@@ -19,4 +19,5 @@ var (
 	ViewQNamePLogKnownOffsets = appdef.NewQName(appdef.SysPackage, "PLogKnownOffsets")
 	ViewQNameWLogKnownOffsets = appdef.NewQName(appdef.SysPackage, "WLogKnownOffsets")
 	errWSNotInited            = coreutils.NewHTTPErrorf(http.StatusForbidden, "workspace is not initialized")
+	errWSInactive             = coreutils.NewHTTPErrorf(http.StatusForbidden, "workspace status is not active")
 )

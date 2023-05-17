@@ -14,7 +14,7 @@ import (
 func ProvideSyncProjectorJoinedWorkspaceIndexFactory() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         qNameViewJoinedWorkspaceIndex,
+			Name:         QNameViewJoinedWorkspaceIndex,
 			EventsFilter: []appdef.QName{qNameCmdCreateJoinedWorkspace},
 			Func:         joinedWorkspaceIndexProjector,
 		}
@@ -27,7 +27,7 @@ var joinedWorkspaceIndexProjector = func(event istructs.IPLogEvent, s istructs.I
 			return
 		}
 
-		skbViewJoinedWorkspaceIndex, err := s.KeyBuilder(state.ViewRecordsStorage, qNameViewJoinedWorkspaceIndex)
+		skbViewJoinedWorkspaceIndex, err := s.KeyBuilder(state.ViewRecordsStorage, QNameViewJoinedWorkspaceIndex)
 		if err != nil {
 			return err
 		}

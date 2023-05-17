@@ -52,7 +52,7 @@
       appws ->> appws: WorkspaceID[ID(WSID)].IsActive = false
     end
 
-    ws ->> ws: cdoc.sys.WorkspaceDescriptor.Status = Inactive
+    ws ->> ws: c.sys.CUD: cdoc.sys.WorkspaceDescriptor.Status = Inactive
 
 ```
 

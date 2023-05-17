@@ -24,7 +24,7 @@ var (
 	qNameCmdCancelSentInvite             = appdef.NewQName(appdef.SysPackage, "CancelSentInvite")
 	qNameCDocInvite                      = appdef.NewQName(appdef.SysPackage, "Invite")
 	qNameViewInviteIndex                 = appdef.NewQName(appdef.SysPackage, "InviteIndexView")
-	qNameViewJoinedWorkspaceIndex        = appdef.NewQName(appdef.SysPackage, "JoinedWorkspaceIndexView")
+	QNameViewJoinedWorkspaceIndex        = appdef.NewQName(appdef.SysPackage, "JoinedWorkspaceIndexView")
 	qNameAPApplyCancelAcceptedInvite     = appdef.NewQName(appdef.SysPackage, "ApplyCancelAcceptedInvite")
 	qNameAPApplyInvitation               = appdef.NewQName(appdef.SysPackage, "ApplyInvitation")
 	qNameAPApplyJoinWorkspace            = appdef.NewQName(appdef.SysPackage, "ApplyJoinWorkspace")

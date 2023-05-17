@@ -25,7 +25,7 @@ const (
 	fldDummy1              = "dummy1"
 	fldDummy2              = "dummy2"
 	fldNextBaseWSID        = "NextBaseWSID"
-	field_WSName           = "WSName"
+	field_InvitedToWSID    = "InvitedToWSID"
 )
 
 var (
@@ -41,5 +41,3 @@ var (
 	qNameProjectorApplyDeactivateWorkspace = appdef.NewQName(appdef.SysPackage, "ApplyDeactivateWorkspace")
 	nextWSIDGlobalLock                     = sync.Mutex{}
 )
-
-

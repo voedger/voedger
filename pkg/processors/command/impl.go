@@ -196,6 +196,9 @@ func getWSDesc(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if !IsDummyWS(cmd.cmdMes.WSID()) {
 		cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), sysshared.QNameCDocWorkspaceDescriptor)
+		if cmd.wsDesc.QName() != appdef.NullQName {
+			cmd.wsDescStatus = sysshared.WorkspaceStatus(cmd.wsDesc.AsInt32(sysshared.Field_Status))
+		}
 	}
 	return
 }
@@ -215,6 +218,7 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 			return nil
 		}
 		if wsDesc.AsInt64(sysshared.Field_InitCompletedAtMs) > 0 && len(wsDesc.AsString(sysshared.Field_InitError)) == 0 {
+			cmd.wsInitialized = true
 			return nil
 		}
 		if funcQName == istructs.QNameCommandCUD {
@@ -228,10 +232,19 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 
 func checkWSActive(_ context.Context, work interface{}) (err error) {
 	wsDesc := work.(*cmdWorkpiece).wsDesc
-	if wsDesc.QName() != appdef.NullQName && wsDesc.AsInt32(sysshared.Field_Status) != int32(sysshared.WorkspaceStatus_Active) {
-		return coreutils.NewHTTPErrorf(http.StatusForbidden, "Workspace Status is not Active")
+	if wsDesc.QName() == appdef.NullQName {
+		return nil
 	}
-	return nil
+	cmd := work.(*cmdWorkpiece)
+	if wsDesc.AsInt32(sysshared.Field_Status) == int32(sysshared.WorkspaceStatus_Active) {
+		return nil
+	}
+	funcQName := cmd.cmdMes.Resource().(istructs.ICommandFunction).QName()
+	if funcQName == istructs.QNameCommandCUD {
+		cmd.checkWSDescUpdating = true
+		return nil
+	}
+	return errWSInactive
 }
 
 func getAppStructs(_ context.Context, work interface{}) (err error) {
@@ -488,14 +501,24 @@ func checkWorkspaceDescriptorUpdating(_ context.Context, work interface{}) (err 
 	// c.sys.CUD in a workspace with CDoc<WorkspaceDescriptor>.initCompletedAt == 0 -> check if we are updating the WorkspaceDescriptor now
 	// initializing indeed -> ok
 	// "workspace is not initialized" otherwise
+	// 2nd case: we're updateing wsDesc.Status = Inactive when deactivating workspace. The request consists of only this operation -> allow, "workspace is inactive" error otherwise
 	if !cmd.checkWSDescUpdating {
 		return nil
 	}
 	for _, cud := range cmd.parsedCUDs {
-		if (cud.qName == sysshared.QNameCDocWorkspaceDescriptor || cud.qName == sysshared.QNameWDocBLOB) && cud.opKind == iauthnz.OperationKind_UPDATE {
-			continue
+		if cmd.wsInitialized {
+			if cud.qName == sysshared.QNameCDocWorkspaceDescriptor && cud.opKind == iauthnz.OperationKind_UPDATE && len(cud.fields) == 1 {
+				if _, ok := cud.fields[sysshared.Field_Status]; ok {
+					continue
+				}
+			}
+			return errWSInactive
+		} else {
+			if (cud.qName == sysshared.QNameCDocWorkspaceDescriptor || cud.qName == sysshared.QNameWDocBLOB) && cud.opKind == iauthnz.OperationKind_UPDATE {
+				continue
+			}
+			return errWSNotInited
 		}
-		return errWSNotInited
 	}
 	return nil
 }

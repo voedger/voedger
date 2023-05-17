@@ -27,30 +27,12 @@ func provideCmdCreateJoinedWorkspace(cfg *istructsmem.AppConfigType, appDefBuild
 }
 
 func execCmdCreateJoinedWorkspace(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-	skbViewJoinedWorkspaceIndex, err := args.State.KeyBuilder(state.ViewRecordsStorage, qNameViewJoinedWorkspaceIndex)
+	svbCDocJoinedWorkspace, ok, err := GetCDocJoinedWorkspaceForUpdate(args.State, args.Intents, args.ArgumentObject.AsInt64(Field_InvitingWorkspaceWSID))
 	if err != nil {
-		return
-	}
-	skbViewJoinedWorkspaceIndex.PutInt32(field_Dummy, value_Dummy_Two)
-	skbViewJoinedWorkspaceIndex.PutInt64(Field_InvitingWorkspaceWSID, args.ArgumentObject.AsInt64(Field_InvitingWorkspaceWSID))
-	svViewJoinedWorkspaceIndex, ok, err := args.State.CanExist(skbViewJoinedWorkspaceIndex)
-	if err != nil {
-		return
+		// notest
+		return err
 	}
 	if ok {
-		skbCDocJoinedWorkspace, err := args.State.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocJoinedWorkspace)
-		if err != nil {
-			return err
-		}
-		skbCDocJoinedWorkspace.PutRecordID(state.Field_ID, svViewJoinedWorkspaceIndex.AsRecordID(field_JoinedWorkspaceID))
-		svCDocJoinedWorkspace, err := args.State.MustExist(skbCDocJoinedWorkspace)
-		if err != nil {
-			return err
-		}
-		svbCDocJoinedWorkspace, err := args.Intents.UpdateValue(skbCDocJoinedWorkspace, svCDocJoinedWorkspace)
-		if err != nil {
-			return err
-		}
 		svbCDocJoinedWorkspace.PutString(Field_Roles, args.ArgumentObject.AsString(Field_Roles))
 		svbCDocJoinedWorkspace.PutBool(appdef.SystemField_IsActive, true)
 
@@ -60,7 +42,7 @@ func execCmdCreateJoinedWorkspace(_ istructs.ICommandFunction, args istructs.Exe
 	if err != nil {
 		return
 	}
-	svbCDocJoinedWorkspace, err := args.Intents.NewValue(skbCDocJoinedWorkspace)
+	svbCDocJoinedWorkspace, err = args.Intents.NewValue(skbCDocJoinedWorkspace)
 	if err != nil {
 		return err
 	}

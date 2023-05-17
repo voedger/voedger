@@ -164,7 +164,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	ProvideViewNextWSID(appDefBuilder)
 
 	// deactivate workspace
-	provideDeactivateWorkspace(cfg, appDefBuilder, tokensAPI, federationURL)
+	provideDeactivateWorkspace(cfg, appDefBuilder, tokensAPI, federationURL, asp)
 }
 
 // proj.sys.ChildWorkspaceIdx
