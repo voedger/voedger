@@ -61,7 +61,7 @@ services:
       - '--config.file=/etc/alertmanager/config.yml'
       - '--storage.path=/alertmanager'
       - '--cluster.peer={se2}:9094' 
-      - '--cluster.listen-address={se1}:9094'
+      - '--cluster.listen-address=:9094'
       - '--cluster.advertise-address={se1}:9094'
     restart: unless-stopped
     ports:
@@ -88,7 +88,7 @@ services:
       - '--config.file=/etc/alertmanager/config.yml'
       - '--storage.path=/alertmanager'
       - '--cluster.peer={se1}:9094' 
-      - '--cluster.listen-address={se2}:9094'
+      - '--cluster.listen-address=:9094'
       - '--cluster.advertise-address={se2}:9094'
     restart: unless-stopped
     ports:
