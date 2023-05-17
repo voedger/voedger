@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -47,6 +48,7 @@ func GetComputersRecByDeviceProfileWSID(as istructs.IAppStructs, requestWSID ist
 		return nil, nil, err
 	}
 	if !batchItems[0].Ok {
+		logger.Verbose("device profileWSID", deviceProfileWSID, "is not found in view.sys.DeviceProfileWSIDIdx")
 		return &istructs.NullObject{}, &istructs.NullObject{}, nil
 	}
 	view := batchItems[0].Value
@@ -57,6 +59,16 @@ func GetComputersRecByDeviceProfileWSID(as istructs.IAppStructs, requestWSID ist
 		return nil, nil, err
 	}
 	restaurantComputersRec, err = as.Records().Get(requestWSID, true, rcID)
+	if computersRec.QName() == appdef.NullQName {
+		logger.Verbose("device profileWSID", deviceProfileWSID, ": computers[", cID, "] does not exist")
+	} else if !computersRec.AsBool(appdef.SystemField_IsActive) {
+		logger.Verbose("device profileWSID", deviceProfileWSID, ": computers[", cID, "] inactive")
+	}
+	if restaurantComputersRec.QName() == appdef.NullQName {
+		logger.Verbose("device profileWSID", deviceProfileWSID, ": restaurant_computers[", rcID, "] does not exist")
+	} else if restaurantComputersRec.AsBool(appdef.SystemField_IsActive) {
+		logger.Verbose("device profileWSID", deviceProfileWSID, ": restaurant_computers[", rcID, "] inactive")
+	}
 	return
 }
 
