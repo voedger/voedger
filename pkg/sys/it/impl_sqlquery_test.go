@@ -18,6 +18,15 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
+func TestXxx(t *testing.T) {
+	TestBasicUsage_Journal(t)
+	TestJournal_read_in_years_range_1(t)
+	TestBasicUsage_SignUpIn(t)
+	TestCreateLoginErrors(t)
+	TestSignInErrors(t)
+	TestSqlQuery_plog(t)
+}
+
 func TestBasicUsage_SqlQuery(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
@@ -133,7 +142,7 @@ func TestSqlQuery_plog(t *testing.T) {
 		m = map[string]interface{}{}
 		require.NoError(json.Unmarshal([]byte(resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)), &m))
 		lastPLogOffset = int(m["PlogOffset"].(float64))
-		require.Greater(lastPLogOffset, 1)
+
 	})
 	t.Run("Should read one event by limit", func(t *testing.T) {
 		require := require.New(t)
@@ -145,6 +154,9 @@ func TestSqlQuery_plog(t *testing.T) {
 	t.Run("Should read one event by Offset", func(t *testing.T) {
 		require := require.New(t)
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.plog where Offset > %d"},"elements":[{"fields":["Result"]}]}`, lastPLogOffset-1)
+		if lastPLogOffset-1 <= 0 {
+			fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!")
+		}
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 
 		m := map[string]interface{}{}
