@@ -196,9 +196,6 @@ func getWSDesc(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if !IsDummyWS(cmd.cmdMes.WSID()) {
 		cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), sysshared.QNameCDocWorkspaceDescriptor)
-		if cmd.wsDesc.QName() != appdef.NullQName {
-			cmd.wsDescStatus = sysshared.WorkspaceStatus(cmd.wsDesc.AsInt32(sysshared.Field_Status))
-		}
 	}
 	return
 }
@@ -210,7 +207,9 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 	if IsDummyWS(cmd.cmdMes.WSID()) {
 		return nil
 	}
-	if funcQName == sysshared.QNameCommandCreateWorkspace || funcQName == sysshared.QNameCommandInit {
+	if funcQName == sysshared.QNameCommandCreateWorkspace ||
+		funcQName == sysshared.QNameCommandCreateWorkspaceID || // happens on creating a child of an another workspace
+		funcQName == sysshared.QNameCommandInit {
 		return nil
 	}
 	if wsDesc.QName() != appdef.NullQName {
@@ -231,11 +230,14 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 }
 
 func checkWSActive(_ context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	if IsDummyWS(cmd.cmdMes.WSID()) {
+		return nil
+	}
 	wsDesc := work.(*cmdWorkpiece).wsDesc
 	if wsDesc.QName() == appdef.NullQName {
 		return nil
 	}
-	cmd := work.(*cmdWorkpiece)
 	if wsDesc.AsInt32(sysshared.Field_Status) == int32(sysshared.WorkspaceStatus_Active) {
 		return nil
 	}

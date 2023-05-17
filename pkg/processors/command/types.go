@@ -17,7 +17,6 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -77,7 +76,6 @@ type cmdWorkpiece struct {
 	wsDesc              istructs.IRecord
 	checkWSDescUpdating bool
 	hostStateProvider   *hostStateProvider
-	wsDescStatus        sysshared.WorkspaceStatus
 	wsInitialized       bool
 }
 
