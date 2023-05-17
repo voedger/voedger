@@ -13,7 +13,7 @@
   - There is no any active JoinedWorkspace record which refers to the Workspace
   - Note that Workspace.Subject records are still active
   - AppWorkspace/WorkspaceID[Workspace].IsActive == false
-- The following case is possible: `cdoc.sys.WorkspaceID.IsActive` == true but it is impossible to work there because `cdoc.sys.WorkspaceDescriptor.Status` != Active already. Consistency is gauranteed within a single partition only, here there are 2 different partitions
+- The following case is possible: `cdoc.sys.WorkspaceID.IsActive == true` but it is impossible to work there because `cdoc.sys.WorkspaceDescriptor.Status` != Active already. Consistency is gauranteed within a single partition only, here there are 2 different partitions
 
 ## c.sys.InitiateDeactivateWorkspace()
 
