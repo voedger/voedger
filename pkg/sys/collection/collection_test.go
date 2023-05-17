@@ -86,7 +86,7 @@ func appConfigs() (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
 	}
 
 	{ // CDoc: article prices
-		articlesPricesDef := adf.AddCDoc(test.tableArticlePrices)
+		articlesPricesDef := adf.AddCRecord(test.tableArticlePrices)
 		articlesPricesDef.
 			AddField(test.articlePricesPriceIdIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePricesPriceIdent, appdef.DataKind_float32, true)
@@ -95,7 +95,7 @@ func appConfigs() (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
 	}
 
 	{ // CDoc: article price exceptions
-		articlesPricesExceptionsDef := adf.AddCDoc(test.tableArticlePriceExceptions)
+		articlesPricesExceptionsDef := adf.AddCRecord(test.tableArticlePriceExceptions)
 		articlesPricesExceptionsDef.
 			AddField(test.articlePriceExceptionsPeriodIdIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePriceExceptionsPriceIdent, appdef.DataKind_float32, true)
