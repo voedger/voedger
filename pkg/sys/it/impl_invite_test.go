@@ -146,8 +146,8 @@ func TestInvite_BasicUsage(t *testing.T) {
 
 	cDocJoinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, ws.WSID, it.TestEmail2)
 
-	require.Equal(initialRoles, cDocJoinedWorkspace[2])
-	require.Equal(wsName, cDocJoinedWorkspace[4])
+	require.Equal(initialRoles, cDocJoinedWorkspace.roles)
+	require.Equal(wsName, cDocJoinedWorkspace.wsName)
 
 	cDocSubject := findCDocSubjectByLogin(it.TestEmail)
 

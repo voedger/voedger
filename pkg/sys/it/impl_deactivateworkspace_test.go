@@ -39,23 +39,22 @@ func TestBasicUsage_DeactivateWorkspace(t *testing.T) {
 
 	// deactivate workspace
 	vit.PostWS(ws, "c.sys.DeactivateWorkspace", "{}")
-	for {
-		resp := vit.PostWS(ws, "q.sys.Collection", `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`)
-		if int32(resp.SectionRow()[0].(float64)) == int32(sysshared.WorkspaceStatus_Inactive) {
-			break
-		}
-	}
-	// startTime := time.Now()
-	// for time.Since(startTime) < 10*time.Second {
-	// 	ws = vit.WaitForWorkspace(ws.Name, prn1)
-	// 	if !ws.IsActive {
-	// 		break
-	// 	}
-	// }
+	waitForDeactivate(vit, ws)
 
 	// try to exec something in a deactivated workspace
 	body := `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403())
+}
+
+func waitForDeactivate(vit *it.VIT, ws *it.AppWorkspace) {
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		resp := vit.PostWS(ws, "q.sys.Collection", `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`)
+		if int32(resp.SectionRow()[0].(float64)) == int32(sysshared.WorkspaceStatus_Inactive) {
+			break
+		}
+		time.Sleep(awaitTime)
+	}
 }
 
 func TestDeactivateJoinedWorkspace(t *testing.T) {
@@ -100,17 +99,11 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	body = `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
 	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn2.Token))
 
+	// deactivate
 	vit.PostWS(newWS, "c.sys.DeactivateWorkspace", "{}")
-
-	for {
-		ws := vit.WaitForWorkspace(newWS.Name, prn1)
-		if !ws.IsActive {
-			break
-		}
-	}
-	time.Sleep(100 * time.Hour)
+	waitForDeactivate(vit, newWS)
 
 	// now check that cdoc.sys.JoinedWorkspace.IsActive == false
-	cDocsJoinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, newWS.WSID, it.TestEmail2)
-	require.Len(cDocsJoinedWorkspace, 1)
+	joinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, newWS.WSID, it.TestEmail2)
+	require.False(joinedWorkspace.isActive)
 }

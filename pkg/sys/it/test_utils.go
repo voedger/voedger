@@ -93,8 +93,16 @@ func WaitForInviteState(vit *vit.VIT, ws *vit.AppWorkspace, inviteState int32, i
 	panic(fmt.Sprintf("invite [%d] is not in required state [%d] it has state [%d]", inviteID, inviteState, int32(entity[0].(float64))))
 }
 
-func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *vit.VIT, invitingWorkspaceWSID istructs.WSID, login string) []interface{} {
-	return vit.PostProfile(vit.GetPrincipal(istructs.AppQName_test1_app1, login), "q.sys.Collection", fmt.Sprintf(`
+type joinedWorkspaceDesc struct {
+	id int64
+	isActive bool
+	roles string
+	invitingWorkspaceWSID istructs.WSID
+	wsName string
+}
+
+func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *vit.VIT, invitingWorkspaceWSID istructs.WSID, login string) joinedWorkspaceDesc {
+	resp :=  vit.PostProfile(vit.GetPrincipal(istructs.AppQName_test1_app1, login), "q.sys.Collection", fmt.Sprintf(`
 		{"args":{"Schema":"sys.JoinedWorkspace"},
 		"elements":[{"fields":[
 			"sys.ID",
@@ -103,5 +111,12 @@ func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *vit.VIT, inviti
 			"InvitingWorkspaceWSID",
 			"WSName"
 		]}],
-		"filters":[{"expr":"eq","args":{"field":"InvitingWorkspaceWSID","value":%d}}]}`, invitingWorkspaceWSID)).SectionRow(0)
+		"filters":[{"expr":"eq","args":{"field":"InvitingWorkspaceWSID","value":%d}}]}`, invitingWorkspaceWSID))
+	return joinedWorkspaceDesc{
+		id: int64(resp.SectionRow()[0].(float64)),
+		isActive: resp.SectionRow()[1].(bool),
+		roles: resp.SectionRow()[2].(string),
+		invitingWorkspaceWSID: istructs.WSID(resp.SectionRow()[3].(float64)),
+		wsName: resp.SectionRow()[4].(string),
+	}
 }
