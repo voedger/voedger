@@ -94,15 +94,15 @@ func WaitForInviteState(vit *vit.VIT, ws *vit.AppWorkspace, inviteState int32, i
 }
 
 type joinedWorkspaceDesc struct {
-	id int64
-	isActive bool
-	roles string
+	id                    int64
+	isActive              bool
+	roles                 string
 	invitingWorkspaceWSID istructs.WSID
-	wsName string
+	wsName                string
 }
 
 func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *vit.VIT, invitingWorkspaceWSID istructs.WSID, login string) joinedWorkspaceDesc {
-	resp :=  vit.PostProfile(vit.GetPrincipal(istructs.AppQName_test1_app1, login), "q.sys.Collection", fmt.Sprintf(`
+	resp := vit.PostProfile(vit.GetPrincipal(istructs.AppQName_test1_app1, login), "q.sys.Collection", fmt.Sprintf(`
 		{"args":{"Schema":"sys.JoinedWorkspace"},
 		"elements":[{"fields":[
 			"sys.ID",
@@ -113,10 +113,10 @@ func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *vit.VIT, inviti
 		]}],
 		"filters":[{"expr":"eq","args":{"field":"InvitingWorkspaceWSID","value":%d}}]}`, invitingWorkspaceWSID))
 	return joinedWorkspaceDesc{
-		id: int64(resp.SectionRow()[0].(float64)),
-		isActive: resp.SectionRow()[1].(bool),
-		roles: resp.SectionRow()[2].(string),
+		id:                    int64(resp.SectionRow()[0].(float64)),
+		isActive:              resp.SectionRow()[1].(bool),
+		roles:                 resp.SectionRow()[2].(string),
 		invitingWorkspaceWSID: istructs.WSID(resp.SectionRow()[3].(float64)),
-		wsName: resp.SectionRow()[4].(string),
+		wsName:                resp.SectionRow()[4].(string),
 	}
 }

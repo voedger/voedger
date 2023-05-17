@@ -144,7 +144,6 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 		tmplParamsIdx = 4
 		wsidIdx       = 5
 		wsErrIdx      = 6
-		isActiveIdx   = 7
 	)
 	deadline := time.Now().Add(workspaceInitAwaitTimeout)
 	logger.Verbose("workspace", wsName, "awaiting started")
