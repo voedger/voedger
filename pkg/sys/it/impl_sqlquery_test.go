@@ -13,7 +13,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
-	sys_it "github.com/voedger/voedger/pkg/sys/it"
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -106,7 +105,7 @@ func TestSqlQuery_plog(t *testing.T) {
 		pLogSize++
 	}
 
-	time.Sleep(sys_it.ProjectionAwaitTime)
+	time.Sleep(ProjectionAwaitTime)
 
 	t.Run("Should read events with default Offset and limit", func(t *testing.T) {
 		require := require.New(t)
@@ -134,6 +133,7 @@ func TestSqlQuery_plog(t *testing.T) {
 		m = map[string]interface{}{}
 		require.NoError(json.Unmarshal([]byte(resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)), &m))
 		lastPLogOffset = int(m["PlogOffset"].(float64))
+		require.Greater(lastPLogOffset, 1)
 	})
 	t.Run("Should read one event by limit", func(t *testing.T) {
 		require := require.New(t)
