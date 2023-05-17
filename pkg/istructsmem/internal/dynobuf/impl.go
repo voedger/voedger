@@ -19,14 +19,14 @@ func newSchemes() DynoBufSchemes {
 func (sch DynoBufSchemes) Prepare(appDef appdef.IAppDef) {
 	appDef.Defs(
 		func(d appdef.IDef) {
-			if fld, ok := d.(appdef.IWithFields); ok {
+			if fld, ok := d.(appdef.IFields); ok {
 				sch.add(d.QName(), fld)
 			}
 		})
 }
 
 // Adds scheme
-func (sch DynoBufSchemes) add(name appdef.QName, fields appdef.IWithFields) {
+func (sch DynoBufSchemes) add(name appdef.QName, fields appdef.IFields) {
 	db := dynobuffers.NewScheme()
 
 	db.Name = name.String()

@@ -66,7 +66,7 @@ func (u implIUniques) validate(cfg *AppConfigType) error {
 		}
 
 		name := unique.Fields()[0]
-		fld := d.(appdef.IWithFields).Field(name)
+		fld := d.(appdef.IFields).Field(name)
 
 		if fld == nil {
 			return uniqueError(qName, appdef.ErrNameNotFound, "field «%s» not found", name)

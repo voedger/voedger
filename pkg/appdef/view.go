@@ -84,7 +84,7 @@ func (v *view) Value() IViewValue {
 }
 
 func (v *view) panicIfFieldDuplication(name string) {
-	check := func(f IWithFields) {
+	check := func(f IFields) {
 		if fld := f.Field(name); fld != nil {
 			panic(fmt.Errorf("field «%s» already exists in view «%v»: %w", name, v.QName(), ErrNameUniqueViolation))
 		}

@@ -146,8 +146,8 @@ func (row *rowType) fieldDef(name string) appdef.IField {
 }
 
 // Returns fields definition
-func (row *rowType) fieldsDef() appdef.IWithFields {
-	return row.def.(appdef.IWithFields)
+func (row *rowType) fieldsDef() appdef.IFields {
+	return row.def.(appdef.IFields)
 }
 
 // Loads row from bytes

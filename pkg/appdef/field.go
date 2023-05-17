@@ -71,7 +71,7 @@ func IsSysField(n string) bool {
 }
 
 // # Implements:
-//   - IWithFields
+//   - IFields
 //   - IFieldsBuilder
 type fields struct {
 	def           *def

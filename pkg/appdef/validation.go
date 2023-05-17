@@ -35,7 +35,7 @@ func (v *validator) validate(def IDef) (err error) {
 		v.results[def.QName()] = err
 	}
 
-	if d, ok := def.(IWithContainers); ok {
+	if d, ok := def.(IContainers); ok {
 		// resolve externals
 		d.Containers(func(cont IContainer) {
 			if cont.Def() == def.QName() {

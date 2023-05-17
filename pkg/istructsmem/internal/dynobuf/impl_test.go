@@ -80,7 +80,7 @@ func TestDynoBufSchemes(t *testing.T) {
 
 		for _, fld := range dynoScheme.Fields {
 			if fld.Ft == dynobuffers.FieldTypeObject {
-				cont, ok := def.(appdef.IWithContainers)
+				cont, ok := def.(appdef.IContainers)
 				require.True(ok)
 
 				c := cont.Container(fld.Name)
@@ -96,7 +96,7 @@ func TestDynoBufSchemes(t *testing.T) {
 				continue
 			}
 
-			field := def.(appdef.IWithFields).Field(fld.Name)
+			field := def.(appdef.IFields).Field(fld.Name)
 			require.NotNil(field)
 
 			require.Equal(DataKindToFieldType(field.DataKind()), fld.Ft)
@@ -105,7 +105,7 @@ func TestDynoBufSchemes(t *testing.T) {
 
 	appDef.Defs(
 		func(s appdef.IDef) {
-			if _, ok := s.(appdef.IWithFields); ok {
+			if _, ok := s.(appdef.IFields); ok {
 				checkScheme(schemes[s.QName()])
 			}
 		})

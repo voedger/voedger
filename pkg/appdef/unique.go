@@ -49,8 +49,8 @@ func (u unique) ID() UniqueID { return u.id }
 func (u *unique) SetID(value UniqueID) { u.id = value }
 
 // # Implements:
-//   - IWithUniques
-//   - IWithUniquesBuilder
+//   - IUniques
+//   - IUniquesBuilder
 type uniques struct {
 	def            *def
 	uniques        map[string]*unique

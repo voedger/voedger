@@ -98,7 +98,7 @@ func FillElementFromJSON(data map[string]interface{}, def appdef.IDef, b istruct
 			b.PutBool(fieldName, fv)
 		case []interface{}:
 			// e.g. TestBasicUsage_Dashboard(), "order_item": [<2 elements>]
-			if cont, ok := def.(appdef.IWithContainers); ok {
+			if cont, ok := def.(appdef.IContainers); ok {
 				containerName := fieldName
 				containerDef := cont.ContainerDef(containerName)
 				if containerDef.Kind() == appdef.DefKind_null {
@@ -130,7 +130,7 @@ func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectB
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
 	appDef := appStructs.AppDef()
 	def := appDef.Def(obj.AsQName(appdef.SystemField_QName))
-	if fields, ok := def.(appdef.IWithFields); ok {
+	if fields, ok := def.(appdef.IFields); ok {
 		fields.Fields(
 			func(f appdef.IField) {
 				if f.DataKind() != appdef.DataKind_RecordID {

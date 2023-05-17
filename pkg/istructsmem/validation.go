@@ -75,7 +75,7 @@ func (v *validator) validElement(el *elementType, storable bool) (err error) {
 
 // Validates element containers
 func (v *validator) validElementContainers(el *elementType, storable bool) (err error) {
-	def, ok := v.def.(appdef.IWithContainers)
+	def, ok := v.def.(appdef.IContainers)
 	if !ok {
 		err = errors.Join(err,
 			validateErrorf(ECode_InvalidDefName, "%s has definition kind «%v» without containers: %w", v.entName(el), v.def.Kind(), ErrUnexpectedDefKind))
@@ -170,7 +170,7 @@ func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error)
 
 // Validates specified row
 func (v *validator) validRow(row *rowType) (err error) {
-	v.def.(appdef.IWithFields).Fields(
+	v.def.(appdef.IFields).Fields(
 		func(f appdef.IField) {
 			if f.Required() {
 				if !row.HasValue(f.Name()) {

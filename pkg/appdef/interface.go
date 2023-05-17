@@ -236,7 +236,7 @@ type IDef interface {
 //	- DefKind_WDoc and DefKind_WRecord,
 //	- DefKind_Object and DefKind_Element,
 //	- DefKind_ViewRecord_PartitionKey, DefKind_ViewRecord_ClusteringColumns and DefKind_ViewRecord_Value
-type IWithFields interface {
+type IFields interface {
 	// Owner definition qualified name
 	QName() QName
 
@@ -253,7 +253,7 @@ type IWithFields interface {
 }
 
 type IFieldsBuilder interface {
-	IWithFields
+	IFields
 
 	// Adds field specified name and kind.
 	//
@@ -284,7 +284,7 @@ type IFieldsBuilder interface {
 //	- DefKind_WDoc and DefKind_WRecord,
 //	- DefKind_Object and DefKind_Element,
 //	- DefKind_ViewRecord
-type IWithContainers interface {
+type IContainers interface {
 	// Owner definition qualified name
 	QName() QName
 
@@ -306,7 +306,7 @@ type IWithContainers interface {
 }
 
 type IContainersBuilder interface {
-	IWithContainers
+	IContainers
 
 	// Adds container specified name and occurs.
 	//
@@ -324,7 +324,7 @@ type IContainersBuilder interface {
 //	- DefKind_GDoc and DefKind_GRecord,
 //	- DefKind_CDoc and DefKind_CRecord,
 //	- DefKind_WDoc and DefKind_WRecord
-type IWithUniques interface {
+type IUniques interface {
 	// Return unique by ID.
 	//
 	// Returns nil if not unique found
@@ -343,7 +343,7 @@ type IWithUniques interface {
 }
 
 type IUniquesBuilder interface {
-	IWithUniques
+	IUniques
 
 	// Adds new unique with specified name and fields.
 	// If name is omitted, then default name is used, e.g. `unique01`.
@@ -362,9 +362,9 @@ type IUniquesBuilder interface {
 // Global document. DefKind() is DefKind_GDoc.
 type IGDoc interface {
 	IDef
-	IWithFields
-	IWithContainers
-	IWithUniques
+	IFields
+	IContainers
+	IUniques
 }
 
 type IGDocBuilder interface {
@@ -377,9 +377,9 @@ type IGDocBuilder interface {
 // Global document record. DefKind() is DefKind_GRecord.
 type IGRecord interface {
 	IDef
-	IWithFields
-	IWithContainers
-	IWithUniques
+	IFields
+	IContainers
+	IUniques
 }
 
 type IGRecordBuilder interface {
@@ -392,9 +392,9 @@ type IGRecordBuilder interface {
 // Configuration document. DefKind() is DefKind_CDoc.
 type ICDoc interface {
 	IDef
-	IWithFields
-	IWithContainers
-	IWithUniques
+	IFields
+	IContainers
+	IUniques
 
 	// Returns is singleton
 	Singleton() bool
@@ -413,9 +413,9 @@ type ICDocBuilder interface {
 // Configuration document record. DefKind() is DefKind_CRecord.
 type ICRecord interface {
 	IDef
-	IWithFields
-	IWithContainers
-	IWithUniques
+	IFields
+	IContainers
+	IUniques
 }
 
 type ICRecordBuilder interface {
@@ -428,9 +428,9 @@ type ICRecordBuilder interface {
 // Workflow document. DefKind() is DefKind_WDoc.
 type IWDoc interface {
 	IDef
-	IWithFields
-	IWithContainers
-	IWithUniques
+	IFields
+	IContainers
+	IUniques
 }
 
 type IWDocBuilder interface {
@@ -443,9 +443,9 @@ type IWDocBuilder interface {
 // Workflow document record. DefKind() is DefKind_WRecord.
 type IWRecord interface {
 	IDef
-	IWithFields
-	IWithContainers
-	IWithUniques
+	IFields
+	IContainers
+	IUniques
 }
 
 type IWRecordBuilder interface {
@@ -458,8 +458,8 @@ type IWRecordBuilder interface {
 // Operation document. DefKind() is DefKind_ODoc.
 type IODoc interface {
 	IDef
-	IWithFields
-	IWithContainers
+	IFields
+	IContainers
 }
 
 type IODocBuilder interface {
@@ -471,8 +471,8 @@ type IODocBuilder interface {
 // Operation document record. DefKind() is DefKind_ORecord.
 type IORecord interface {
 	IDef
-	IWithFields
-	IWithContainers
+	IFields
+	IContainers
 }
 
 type IORecordBuilder interface {
@@ -484,8 +484,8 @@ type IORecordBuilder interface {
 // Object definition. DefKind() is DefKind_Object.
 type IObject interface {
 	IDef
-	IWithFields
-	IWithContainers
+	IFields
+	IContainers
 }
 
 type IObjectBuilder interface {
@@ -497,8 +497,8 @@ type IObjectBuilder interface {
 // Element definition. DefKind() is DefKind_Element.
 type IElement interface {
 	IDef
-	IWithFields
-	IWithContainers
+	IFields
+	IContainers
 }
 
 type IElementBuilder interface {
@@ -512,7 +512,7 @@ type IElementBuilder interface {
 // Ref to view.go for implementation
 type IView interface {
 	IDef
-	IWithContainers
+	IContainers
 
 	// Returns partition key definition
 	PartKey() IPartKey
@@ -553,13 +553,13 @@ type IViewBuilder interface {
 // View partition key definition. DefKind() is DefKind_ViewRecordPartitionKey
 type IPartKey interface {
 	IDef
-	IWithFields
+	IFields
 }
 
 // View clustering columns definition. DefKind() is DefKind_ViewRecordClusteringColumns
 type IClustCols interface {
 	IDef
-	IWithFields
+	IFields
 }
 
 // View full (pk + cc) key definition. DefKind() is DefKind_ViewRecordFullKey
@@ -567,13 +567,13 @@ type IClustCols interface {
 // Partition key fields is required, clustering columns is not.
 type IViewKey interface {
 	IDef
-	IWithFields
+	IFields
 }
 
 // View value definition. DefKind() is DefKind_ViewRecord_Value
 type IViewValue interface {
 	IDef
-	IWithFields
+	IFields
 }
 
 // Describe single field.

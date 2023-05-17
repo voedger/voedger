@@ -21,7 +21,7 @@ func (d *Def) read(def appdef.IDef) {
 	d.Name = def.QName()
 	d.Kind = def.Kind()
 
-	if fld, ok := def.(appdef.IWithFields); ok {
+	if fld, ok := def.(appdef.IFields); ok {
 		fld.Fields(func(field appdef.IField) {
 			f := newField()
 			f.read(field)
@@ -29,7 +29,7 @@ func (d *Def) read(def appdef.IDef) {
 		})
 	}
 
-	if cnt, ok := def.(appdef.IWithContainers); ok {
+	if cnt, ok := def.(appdef.IContainers); ok {
 		cnt.Containers(func(cont appdef.IContainer) {
 			c := newContainer()
 			c.read(cont)
@@ -37,7 +37,7 @@ func (d *Def) read(def appdef.IDef) {
 		})
 	}
 
-	if uni, ok := def.(appdef.IWithUniques); ok {
+	if uni, ok := def.(appdef.IUniques); ok {
 		uni.Uniques(func(unique appdef.IUnique) {
 			u := newUnique()
 			u.read(unique)

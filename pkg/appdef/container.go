@@ -54,7 +54,7 @@ func IsSysContainer(n string) bool {
 }
 
 // # Implements:
-//   - IWithContainers
+//   - IContainers
 //   - IContainersBuilder
 type containers struct {
 	def               *def

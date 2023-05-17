@@ -160,7 +160,7 @@ func getUniqueKeyValues(unique istructs.IUnique, appDef appdef.IAppDef, rec istr
 	varSizeFieldName := ""
 	varSizeFieldKind := appdef.DataKind_null
 
-	if def, ok := appDef.Def(unique.QName()).(appdef.IWithFields); ok {
+	if def, ok := appDef.Def(unique.QName()).(appdef.IFields); ok {
 		def.Fields(func(field appdef.IField) {
 			if err != nil {
 				// notest

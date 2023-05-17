@@ -201,13 +201,13 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		require := require.New(t)
 		records := &mockRecords{}
 		records.On("GetBatch", istructs.WSID(1), true, mock.AnythingOfType("[]istructs.RecordGetBatchItem")).Return(errTest)
-		appsTructs := &mockAppStructs{}
-		appsTructs.
+		appStructs := &mockAppStructs{}
+		appStructs.
 			On("AppDef").Return(&nilAppDef{}).
 			On("Records").Return(records).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appsTructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 		k, err := s.KeyBuilder(RecordsStorage, appdef.NullQName)
 		require.NoError(err)
 		k.PutRecordID(Field_ID, istructs.RecordID(1))
@@ -241,7 +241,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 func TestRecordsStorage_Insert(t *testing.T) {
 	require := require.New(t)
 	fieldName := "name"
-	value := "Heuus" //???
+	value := "Voedger" //???
 	rw := &mockRowWriter{}
 	rw.
 		On("PutString", fieldName, value)
@@ -262,7 +262,7 @@ func TestRecordsStorage_Insert(t *testing.T) {
 func TestRecordsStorage_Update(t *testing.T) {
 	require := require.New(t)
 	fieldName := "name"
-	value := "Heuus"
+	value := "Voedger"
 	rw := &mockRowWriter{}
 	rw.On("PutString", fieldName, value)
 	r := &mockRecord{}

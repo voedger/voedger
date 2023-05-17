@@ -819,7 +819,7 @@ func (el *elementType) ElementBuilder(containerName string) istructs.IElementBui
 	c := newElement(el)
 	el.child = append(el.child, &c)
 	if el.QName() != appdef.NullQName {
-		if cont := el.def.(appdef.IWithContainers).Container(containerName); cont != nil {
+		if cont := el.def.(appdef.IContainers).Container(containerName); cont != nil {
 			c.setQName(cont.Def())
 			if c.QName() != appdef.NullQName {
 				if el.ID() != istructs.NullRecordID {

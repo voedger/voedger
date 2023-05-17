@@ -73,7 +73,7 @@ func (cnt *Containers) collectAll(appDef appdef.IAppDef) (err error) {
 	if appDef != nil {
 		appDef.Defs(
 			func(d appdef.IDef) {
-				if cont, ok := d.(appdef.IWithContainers); ok {
+				if cont, ok := d.(appdef.IContainers); ok {
 					cont.Containers(
 						func(c appdef.IContainer) {
 							if !c.IsSys() {
