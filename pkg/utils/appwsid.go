@@ -15,7 +15,7 @@ func GetAppWSID(wsid istructs.WSID, appWSAmount istructs.AppWSAmount) istructs.W
 	baseWSID := wsid.BaseWSID()
 	appWSNumber := baseWSID % istructs.WSID(appWSAmount)
 	baseAppWSID := istructs.FirstBaseAppWSID + appWSNumber
-	return istructs.NewWSID(istructs.MainClusterID, baseAppWSID)
+	return istructs.NewWSID(istructs.MainClusterID, baseAppWSID) // user profiles must be stored in the Main Cluster (Maxim said)
 }
 
 func CRC16(entity []byte) uint16 {
