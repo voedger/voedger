@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"log"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
+	sys_it "github.com/voedger/voedger/pkg/sys/it"
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -103,6 +105,8 @@ func TestSqlQuery_plog(t *testing.T) {
 		vit.PostWS(ws, "c.sys.CUD", body)
 		pLogSize++
 	}
+
+	time.Sleep(sys_it.ProjectionAwaitTime)
 
 	t.Run("Should read events with default Offset and limit", func(t *testing.T) {
 		require := require.New(t)
