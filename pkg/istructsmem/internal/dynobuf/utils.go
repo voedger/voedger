@@ -7,11 +7,11 @@ package dynobuf
 
 import (
 	"github.com/untillpro/dynobuffers"
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
-// Converts schemas DataKind to dynobuffers FieldType
-func DataKindToFieldType(kind schemas.DataKind) dynobuffers.FieldType {
+// Converts appdef.DataKind to dynobuffers.FieldType
+func DataKindToFieldType(kind appdef.DataKind) dynobuffers.FieldType {
 	return dataKindToDynoFieldType[kind]
 }
 

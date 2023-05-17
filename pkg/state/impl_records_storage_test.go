@@ -10,9 +10,9 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
+	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
-	smock "github.com/voedger/voedger/pkg/schemas/mock"
 )
 
 func TestRecordsStorage_GetBatch(t *testing.T) {
@@ -50,32 +50,32 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 				items[1].Record = record2
 			})
 
-		schema1 := smock.MockedSchema(testRecordQName1, schemas.SchemaKind_Object,
-			smock.MockedField("number", schemas.DataKind_int64, false),
+		def1 := amock.NewDef(testRecordQName1, appdef.DefKind_Object,
+			amock.NewField("number", appdef.DataKind_int64, false),
 		)
-		schema2 := smock.MockedSchema(testRecordQName1, schemas.SchemaKind_Object,
-			smock.MockedField("age", schemas.DataKind_int64, false),
+		def2 := amock.NewDef(testRecordQName1, appdef.DefKind_Object,
+			amock.NewField("age", appdef.DataKind_int64, false),
 		)
-		cache := smock.MockedSchemaCache(
-			schema1,
-			schema2,
+		appDef := amock.NewAppDef(
+			def1,
+			def2,
 		)
 
 		appStructs := &mockAppStructs{}
 		appStructs.
+			On("AppDef").Return(appDef).
 			On("Records").Return(records).
-			On("Schemas").Return(cache).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k1, err := s.KeyBuilder(RecordsStorage, schemas.NullQName)
+		k1, err := s.KeyBuilder(RecordsStorage, appdef.NullQName)
 		require.NoError(err)
 		k1.PutRecordID(Field_ID, 1)
-		k2, err := s.KeyBuilder(RecordsStorage, schemas.NullQName)
+		k2, err := s.KeyBuilder(RecordsStorage, appdef.NullQName)
 		require.NoError(err)
 		k2.PutRecordID(Field_ID, 2)
 		k2.PutInt64(Field_WSID, 2)
-		k3, err := s.KeyBuilder(RecordsStorage, schemas.NullQName)
+		k3, err := s.KeyBuilder(RecordsStorage, appdef.NullQName)
 		require.NoError(err)
 		k3.PutRecordID(Field_ID, 3)
 		k3.PutInt64(Field_WSID, 2)
@@ -131,39 +131,39 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 			x("age")
 		})
 		nullRecord := &mockRecord{}
-		nullRecord.On("QName").Return(schemas.NullQName)
+		nullRecord.On("QName").Return(appdef.NullQName)
 		records := &mockRecords{}
 		records.
 			On("GetSingleton", istructs.WSID(1), testRecordQName1).Return(singleton1, nil).
 			On("GetSingleton", istructs.WSID(2), testRecordQName2).Return(nullRecord, nil).
 			On("GetSingleton", istructs.WSID(3), testRecordQName2).Return(singleton2, nil)
 
-		schema1 := smock.MockedSchema(testRecordQName1, schemas.SchemaKind_Object,
-			smock.MockedField("number", schemas.DataKind_int64, false),
+		def1 := amock.NewDef(testRecordQName1, appdef.DefKind_Object,
+			amock.NewField("number", appdef.DataKind_int64, false),
 		)
-		schema2 := smock.MockedSchema(testRecordQName2, schemas.SchemaKind_Object,
-			smock.MockedField("age", schemas.DataKind_int64, false),
+		def2 := amock.NewDef(testRecordQName2, appdef.DefKind_Object,
+			amock.NewField("age", appdef.DataKind_int64, false),
 		)
-		cache := smock.MockedSchemaCache(
-			schema1,
-			schema2,
+		appDef := amock.NewAppDef(
+			def1,
+			def2,
 		)
 
-		appsTructs := &mockAppStructs{}
-		appsTructs.
+		appStructs := &mockAppStructs{}
+		appStructs.
+			On("AppDef").Return(appDef).
 			On("Records").Return(records).
-			On("Schemas").Return(cache).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appsTructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k1, err := s.KeyBuilder(RecordsStorage, schemas.NullQName)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
+		k1, err := s.KeyBuilder(RecordsStorage, appdef.NullQName)
 		require.NoError(err)
 		k1.PutQName(Field_Singleton, testRecordQName1)
-		k2, err := s.KeyBuilder(RecordsStorage, schemas.NullQName)
+		k2, err := s.KeyBuilder(RecordsStorage, appdef.NullQName)
 		require.NoError(err)
 		k2.PutQName(Field_Singleton, testRecordQName2)
 		k2.PutInt64(Field_WSID, 2)
-		k3, err := s.KeyBuilder(RecordsStorage, schemas.NullQName)
+		k3, err := s.KeyBuilder(RecordsStorage, appdef.NullQName)
 		require.NoError(err)
 		k3.PutQName(Field_Singleton, testRecordQName2)
 		k3.PutInt64(Field_WSID, 3)
@@ -194,7 +194,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 	t.Run("Should return error when 'id' not found", func(t *testing.T) {
 		require := require.New(t)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), &nilAppStructs{}, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, err := s.KeyBuilder(RecordsStorage, schemas.NullQName)
+		k, err := s.KeyBuilder(RecordsStorage, appdef.NullQName)
 		require.NoError(err)
 
 		_, ok, err := s.CanExist(k)
@@ -208,12 +208,12 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		records.On("GetBatch", istructs.WSID(1), true, mock.AnythingOfType("[]istructs.RecordGetBatchItem")).Return(errTest)
 		appsTructs := &mockAppStructs{}
 		appsTructs.
+			On("AppDef").Return(&nilAppDef{}).
 			On("Records").Return(records).
-			On("Schemas").Return(&nilSchemas{}).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appsTructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, err := s.KeyBuilder(RecordsStorage, schemas.NullQName)
+		k, err := s.KeyBuilder(RecordsStorage, appdef.NullQName)
 		require.NoError(err)
 		k.PutRecordID(Field_ID, istructs.RecordID(1))
 
@@ -228,12 +228,12 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		records.On("GetSingleton", istructs.WSID(1), testRecordQName1).Return(&mockRecord{}, errTest)
 		appStructs := &mockAppStructs{}
 		appStructs.
+			On("AppDef").Return(&nilAppDef{}).
 			On("Records").Return(records).
-			On("Schemas").Return(&nilSchemas{}).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, err := s.KeyBuilder(RecordsStorage, schemas.NullQName)
+		k, err := s.KeyBuilder(RecordsStorage, appdef.NullQName)
 		require.NoError(err)
 		k.PutQName(Field_Singleton, testRecordQName1)
 
@@ -246,7 +246,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 func TestRecordsStorage_Insert(t *testing.T) {
 	require := require.New(t)
 	fieldName := "name"
-	value := "Heuus"
+	value := "Heuus" //???
 	rw := &mockRowWriter{}
 	rw.
 		On("PutString", fieldName, value)

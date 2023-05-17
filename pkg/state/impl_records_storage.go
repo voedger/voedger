@@ -8,22 +8,22 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type recordsStorage struct {
-	recordsFunc     recordsFunc
-	cudFunc         CUDFunc
-	schemaCacheFunc schemaCacheFunc
-	wsidFunc        WSIDFunc
+	recordsFunc recordsFunc
+	cudFunc     CUDFunc
+	appDefFunc  appDefFunc
+	wsidFunc    WSIDFunc
 }
 
-func (s *recordsStorage) NewKeyBuilder(entity schemas.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
+func (s *recordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &recordsKeyBuilder{
 		id:        istructs.NullRecordID,
-		singleton: schemas.NullQName,
+		singleton: appdef.NullQName,
 		wsid:      s.wsidFunc(),
 		entity:    entity,
 	}
@@ -31,7 +31,7 @@ func (s *recordsStorage) NewKeyBuilder(entity schemas.QName, _ istructs.IStateKe
 func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 	type getSingletonParams struct {
 		wsid    istructs.WSID
-		qname   schemas.QName
+		qname   appdef.QName
 		itemIdx int
 	}
 	wsidToItemIdx := make(map[istructs.WSID][]int)
@@ -39,7 +39,7 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 	gg := make([]getSingletonParams, 0)
 	for itemIdx, item := range items {
 		k := item.key.(*recordsKeyBuilder)
-		if k.singleton != schemas.NullQName {
+		if k.singleton != appdef.NullQName {
 			gg = append(gg, getSingletonParams{
 				wsid:    k.wsid,
 				qname:   k.singleton,
@@ -60,7 +60,7 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 			return
 		}
 		for i, batchItem := range batch {
-			if batchItem.Record.QName() == schemas.NullQName {
+			if batchItem.Record.QName() == appdef.NullQName {
 				continue
 			}
 			items[wsidToItemIdx[wsid][i]].value = &recordsStorageValue{
@@ -74,7 +74,7 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 		if e != nil {
 			return e
 		}
-		if singleton.QName() == schemas.NullQName {
+		if singleton.QName() == appdef.NullQName {
 			continue
 		}
 		items[g.itemIdx].value = &recordsStorageValue{
@@ -94,7 +94,7 @@ func (s *recordsStorage) ProvideValueBuilderForUpdate(_ istructs.IStateKeyBuilde
 	return &recordsValueBuilder{rw: s.cudFunc().Update(existingValue.AsRecord(""))}
 }
 func (s *recordsStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
-	obj := coreutils.FieldsToMap(sv, s.schemaCacheFunc())
+	obj := coreutils.FieldsToMap(sv, s.appDefFunc())
 	bb, err := json.Marshal(&obj)
 	return string(bb), err
 }

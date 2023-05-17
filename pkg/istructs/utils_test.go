@@ -17,7 +17,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 func TestBasicUsage_AppQName(t *testing.T) {
@@ -221,7 +221,7 @@ func TestAppQName_Compare(t *testing.T) {
 	require.Equal(q1_1, q1_2)
 	require.True(q1_1 == q1_2)
 
-	q2 := schemas.NewQName("sys", "registry2")
+	q2 := appdef.NewQName("sys", "registry2")
 	require.NotEqual(q1_1, q2)
 }
 
@@ -323,31 +323,31 @@ func TestNullObject(t *testing.T) {
 	require := require.New(t)
 	null := NewNullObject()
 
-	require.Nil(null.AsBytes(schemas.NullName))
-	require.Equal(float32(0), null.AsFloat32(schemas.NullName))
-	require.Equal(float64(0), null.AsFloat64(schemas.NullName))
-	require.Equal(int32(0), null.AsInt32(schemas.NullName))
-	require.Equal(int64(0), null.AsInt64(schemas.NullName))
-	require.Equal("", null.AsString(schemas.NullName))
+	require.Nil(null.AsBytes(appdef.NullName))
+	require.Equal(float32(0), null.AsFloat32(appdef.NullName))
+	require.Equal(float64(0), null.AsFloat64(appdef.NullName))
+	require.Equal(int32(0), null.AsInt32(appdef.NullName))
+	require.Equal(int64(0), null.AsInt64(appdef.NullName))
+	require.Equal("", null.AsString(appdef.NullName))
 
-	require.Equal(schemas.NullQName, null.AsQName(schemas.NullName))
-	require.Equal(false, null.AsBool(schemas.NullName))
-	require.Equal(NullRecordID, null.AsRecordID(schemas.NullName))
+	require.Equal(appdef.NullQName, null.AsQName(appdef.NullName))
+	require.Equal(false, null.AsBool(appdef.NullName))
+	require.Equal(NullRecordID, null.AsRecordID(appdef.NullName))
 
-	require.Equal(schemas.NullQName, null.QName())
+	require.Equal(appdef.NullQName, null.QName())
 
 	// Should not be called
 	{
 		null.Containers(nil)
-		null.Elements(schemas.NullName, nil)
+		null.Elements(appdef.NullName, nil)
 		null.RecordIDs(true, nil)
 		null.FieldNames(nil)
 	}
 
 	t.Run("IRecord fields", func(t *testing.T) {
 		r := null.AsRecord()
-		require.Equal(schemas.NullQName, r.QName())
-		require.Equal(schemas.NullQName, r.QName())
+		require.Equal(appdef.NullQName, r.QName())
+		require.Equal(appdef.NullQName, r.QName())
 		require.Equal("", r.Container())
 		require.Equal(NullRecordID, r.ID())
 		require.Equal(NullRecordID, r.Parent())
@@ -446,13 +446,13 @@ func TestRateLimitKind_MarshalText(t *testing.T) {
 
 func TestValidatorMatchByQName(t *testing.T) {
 	require := require.New(t)
-	qn1 := schemas.NewQName("test", "n1")
-	qn2 := schemas.NewQName("test", "n2")
-	qn3 := schemas.NewQName("test", "n3")
+	qn1 := appdef.NewQName("test", "n1")
+	qn2 := appdef.NewQName("test", "n2")
+	qn3 := appdef.NewQName("test", "n3")
 
 	t.Run("QName only", func(t *testing.T) {
 		v := CUDValidator{
-			MatchQNames: []schemas.QName{qn1, qn2},
+			MatchQNames: []appdef.QName{qn1, qn2},
 		}
 		require.True(ValidatorMatchByQName(v, qn1))
 		require.True(ValidatorMatchByQName(v, qn2))
@@ -461,7 +461,7 @@ func TestValidatorMatchByQName(t *testing.T) {
 
 	t.Run("func(QName) only", func(t *testing.T) {
 		v := CUDValidator{
-			MatchFunc: func(qName schemas.QName) bool {
+			MatchFunc: func(qName appdef.QName) bool {
 				return qName == qn1 || qName == qn2
 			},
 		}
@@ -472,10 +472,10 @@ func TestValidatorMatchByQName(t *testing.T) {
 
 	t.Run("both func(QName) and QName", func(t *testing.T) {
 		v := CUDValidator{
-			MatchFunc: func(qName schemas.QName) bool {
+			MatchFunc: func(qName appdef.QName) bool {
 				return qName == qn1
 			},
-			MatchQNames: []schemas.QName{qn2},
+			MatchQNames: []appdef.QName{qn2},
 		}
 		require.True(ValidatorMatchByQName(v, qn1))
 		require.True(ValidatorMatchByQName(v, qn2))

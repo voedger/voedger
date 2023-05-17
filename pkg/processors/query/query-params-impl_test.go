@@ -34,7 +34,7 @@ func TestWrongTypes(t *testing.T) {
 
 	cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
 	queryProcessor := ProvideServiceFactory()(serviceChannel, resultSenderClosableFactory, appStructsProvider, 3, imetrics.Provide(),
-		"hvm", authn, authz, cfgs)
+		"vvm", authn, authz, cfgs)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		queryProcessor.Run(ctx)
@@ -227,9 +227,9 @@ func TestWrongTypes(t *testing.T) {
 			err:  "field 'startFrom' must be an int64: field type mismatch",
 		},
 		{
-			name: "Root element fields must be present in result schema",
+			name: "Root element fields must be present in result fields",
 			body: `{"elements":[{"path":"not/root"},{"fields":["wrong"]}]}`,
-			err:  "elements: root element fields has field 'wrong' that is unexpected in root schema, please remove it: unexpected",
+			err:  "elements: root element fields has field 'wrong' that is unexpected in root fields, please remove it: unexpected",
 		},
 		{
 			name: "Equals filter field must be present in root element fields/refs",

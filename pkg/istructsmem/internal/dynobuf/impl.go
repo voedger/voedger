@@ -7,29 +7,29 @@ package dynobuf
 
 import (
 	"github.com/untillpro/dynobuffers"
-	"github.com/voedger/voedger/pkg/schemas"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func newSchemasCache() DynoBufSchemasCache {
-	cache := DynoBufSchemasCache{}
+func newSchemes() DynoBufSchemes {
+	cache := DynoBufSchemes{}
 	return cache
 }
 
-// Prepares schemas
-func (cache DynoBufSchemasCache) Prepare(sch schemas.SchemaCache) {
-	sch.Schemas(
-		func(schema schemas.Schema) {
-			cache.add(schema)
+// Prepares schemes
+func (sch DynoBufSchemes) Prepare(appDef appdef.IAppDef) {
+	appDef.Defs(
+		func(d appdef.IDef) {
+			sch.add(d)
 		})
 }
 
-// Adds schema
-func (cache DynoBufSchemasCache) add(schema schemas.Schema) {
+// Adds scheme
+func (sch DynoBufSchemes) add(def appdef.IDef) {
 	db := dynobuffers.NewScheme()
 
-	db.Name = schema.QName().String()
-	schema.Fields(
-		func(f schemas.Field) {
+	db.Name = def.QName().String()
+	def.Fields(
+		func(f appdef.IField) {
 			if !f.IsSys() { // #18142: extract system fields from dynobuffer
 				fieldType := DataKindToFieldType(f.DataKind())
 				if fieldType == dynobuffers.FieldTypeByte {
@@ -40,5 +40,5 @@ func (cache DynoBufSchemasCache) add(schema schemas.Schema) {
 			}
 		})
 
-	cache[schema.QName()] = db
+	sch[def.QName()] = db
 }

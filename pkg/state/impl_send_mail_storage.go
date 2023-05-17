@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/wneessen/go-mail"
@@ -19,9 +19,9 @@ type sendMailStorage struct {
 	messages chan smtptest.Message // not nil in tests only
 }
 
-func (s *sendMailStorage) NewKeyBuilder(schemas.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
+func (s *sendMailStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &sendMailStorageKeyBuilder{
-		keyBuilder: newKeyBuilder(SendMailStorage, schemas.NullQName),
+		keyBuilder: newKeyBuilder(SendMailStorage, appdef.NullQName),
 		to:         make([]string, 0),
 		cc:         make([]string, 0),
 		bcc:        make([]string, 0),
@@ -121,7 +121,7 @@ func (s *sendMailStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 			select {
 			case s.messages <- m:
 			default:
-				// asumming HIT will be failed on TearDown
+				// asumming VIT will be failed on TearDown
 			}
 		} else {
 			c, e := mail.NewClient(k.data[Field_Host].(string), opts...)

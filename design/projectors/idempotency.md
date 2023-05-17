@@ -11,7 +11,7 @@
 - No need to check it for *Insert* operations: there's always CanExist / MustNotExist check before Insert operation in the extensions
 
 ### Implementation
-- An additional field is added by core to store last applied offset to all view schemas
+- An additional field is added by core to store last applied offset to all views
 - Existing views:
   - views which does not have this field so once added it will store zero for existing values. Engine should take this into account.
   - view having "offs" field already: check that WLog offset is stored

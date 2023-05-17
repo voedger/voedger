@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	irates "github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // пример ограничения общего количества регистраций (не более 1000) и регистраций с одного адреса (10) в день
@@ -23,7 +23,7 @@ func TestBasicUsage(t *testing.T) {
 	// описание приложения и рабочей области
 	// description of the application and workspace
 	app := istructs.AppQName_test1_app1
-	qName := schemas.NewQName("testPkg", "test")
+	qName := appdef.NewQName("testPkg", "test")
 	wsid := istructs.WSID(1)
 
 	// имена ограничений
@@ -120,7 +120,7 @@ func TestBucketsNew(t *testing.T) {
 	// описание приложения и рабочей области
 	// description of the application and workspace
 	app := istructs.AppQName_test1_app1
-	qName := schemas.NewQName("testPkg", "test")
+	qName := appdef.NewQName("testPkg", "test")
 	wsid := istructs.WSID(1)
 
 	// имена ограничений

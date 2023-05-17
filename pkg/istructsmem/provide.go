@@ -20,7 +20,7 @@ func Provide(appConfigs AppConfigsType, bucketsFactory irates.BucketsFactoryType
 		locker:           sync.RWMutex{},
 		configs:          appConfigs,
 		structures:       make(map[istructs.AppQName]*appStructsType),
-		bucketsFacotry:   bucketsFactory,
+		bucketsFactory:   bucketsFactory,
 		appTokensFactory: appTokensFactory,
 		storageProvider:  storageProvider,
 	}

@@ -9,11 +9,14 @@ import (
 	"encoding/json"
 	"math"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
+	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -25,8 +28,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/schemas"
-	smock "github.com/voedger/voedger/pkg/schemas/mock"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -52,20 +54,20 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	skb.On("PutRecordID", mock.Anything, mock.Anything)
 	s := &mockState{}
 	s.
-		On("KeyBuilder", state.RecordsStorage, schemas.NullQName).Return(skb).
+		On("KeyBuilder", state.RecordsStorage, appdef.NullQName).Return(skb).
 		On("MustExist", mock.Anything).Return(department("Soft drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Sweet")).Once()
-	departmentSchema := smock.MockedSchema(qNamePosDepartment, schemas.SchemaKind_Object,
-		smock.MockedField("name", schemas.DataKind_string, false),
+	departmentDef := amock.NewDef(qNamePosDepartment, appdef.DefKind_Object,
+		amock.NewField("name", appdef.DataKind_string, false),
 	)
-	resultMeta := smock.MockedSchema(schemas.NewQName("pos", "DepartmentResult"), schemas.SchemaKind_Object,
-		smock.MockedField("id", schemas.DataKind_int64, true),
-		smock.MockedField("name", schemas.DataKind_string, false),
+	resultMeta := amock.NewDef(appdef.NewQName("pos", "DepartmentResult"), appdef.DefKind_Object,
+		amock.NewField("id", appdef.DataKind_int64, true),
+		amock.NewField("name", appdef.DataKind_string, false),
 	)
-	schemaCache := smock.MockedSchemaCache(
-		departmentSchema,
+	appDef := amock.NewAppDef(
+		departmentDef,
 		resultMeta,
 	)
 	params := queryParams{
@@ -99,14 +101,14 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	work := func(id int64, name string, idDepartment int64) pipeline.IWorkpiece {
 		return workpiece{
 			object: &coreutils.TestObject{
-				Name: schemas.NewQName("pos", "Article"),
+				Name: appdef.NewQName("pos", "Article"),
 				Data: map[string]interface{}{"id": id, "name": name, "id_department": istructs.RecordID(idDepartment)},
 			},
 			outputRow: &outputRow{
 				keyToIdx: map[string]int{rootDocument: 0},
 				values:   make([]interface{}, 1),
 			},
-			enrichedRootSchema: make(map[string]schemas.DataKind),
+			enrichedRootFields: make(map[string]appdef.DataKind),
 		}
 	}
 
@@ -120,7 +122,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		},
 		close: func(err error) {},
 	}
-	processor := ProvideRowsProcessorFactory()(context.Background(), schemaCache, s, params, resultMeta, rs, &testMetrics{})
+	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, s, params, resultMeta, rs, &testMetrics{})
 
 	require.NoError(processor.SendAsync(work(1, "Cola", 10)))
 	require.NoError(processor.SendAsync(work(3, "White wine", 20)))
@@ -132,49 +134,49 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 }
 
 var (
-	qNameFunction  = schemas.NewQName("bo", "FindArticlesByModificationTimeStampRange")
-	qNameQryDenied = schemas.NewQName(schemas.SysPackage, "TestDeniedQry") // same as in ACL
+	qNameFunction  = appdef.NewQName("bo", "FindArticlesByModificationTimeStampRange")
+	qNameQryDenied = appdef.NewQName(appdef.SysPackage, "TestDeniedQry") // same as in ACL
 )
 
-func getTestCfg(require *require.Assertions, cfgSchemas func(schemas schemas.SchemaCacheBuilder), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (cfgs istructsmem.AppConfigsType, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
+func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (cfgs istructsmem.AppConfigsType, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
 	cfgs = make(istructsmem.AppConfigsType)
 	asf := istorage.ProvideMem()
 	storageProvider := istorageimpl.Provide(asf)
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeFunc)
 
-	qNameFindArticlesByModificationTimeStampRangeParams := schemas.NewQName("bo", "FindArticlesByModificationTimeStampRangeParamsSchema")
-	qNameDepartment := schemas.NewQName("bo", "Department")
-	qNameArticle := schemas.NewQName("bo", "Article")
+	qNameFindArticlesByModificationTimeStampRangeParams := appdef.NewQName("bo", "FindArticlesByModificationTimeStampRangeParamsDef")
+	qNameDepartment := appdef.NewQName("bo", "Department")
+	qNameArticle := appdef.NewQName("bo", "Article")
 
-	cache := schemas.NewSchemaCache()
-	cache.Add(qNameFindArticlesByModificationTimeStampRangeParams, schemas.SchemaKind_Object).
-		AddField("from", schemas.DataKind_int64, false).
-		AddField("till", schemas.DataKind_int64, false)
-	cache.Add(qNameDepartment, schemas.SchemaKind_CDoc).
-		AddField("name", schemas.DataKind_string, true)
-	cache.Add(qNameArticle, schemas.SchemaKind_Object).
-		AddField("sys.ID", schemas.DataKind_RecordID, true).
-		AddField("name", schemas.DataKind_string, true).
-		AddField("id_department", schemas.DataKind_int64, true)
+	appDef := appdef.New()
+	appDef.AddStruct(qNameFindArticlesByModificationTimeStampRangeParams, appdef.DefKind_Object).
+		AddField("from", appdef.DataKind_int64, false).
+		AddField("till", appdef.DataKind_int64, false)
+	appDef.AddStruct(qNameDepartment, appdef.DefKind_CDoc).
+		AddField("name", appdef.DataKind_string, true)
+	appDef.AddStruct(qNameArticle, appdef.DefKind_Object).
+		AddField("sys.ID", appdef.DataKind_RecordID, true).
+		AddField("name", appdef.DataKind_string, true).
+		AddField("id_department", appdef.DataKind_int64, true)
 
-	if cfgSchemas != nil {
-		cfgSchemas(cache)
+	if prepareAppDef != nil {
+		prepareAppDef(appDef)
 	}
 
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, cache)
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 
 	asp = istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, payloads.TestAppTokensFactory(tokens), storageProvider)
 
 	article := func(id, idDepartment istructs.RecordID, name string) istructs.IObject {
 		return &coreutils.TestObject{
-			Name: schemas.NewQName("bo", "Article"),
+			Name: appdef.NewQName("bo", "Article"),
 			Data: map[string]interface{}{"sys.ID": id, "name": name, "id_department": idDepartment},
 		}
 	}
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameFunction,
 		qNameFindArticlesByModificationTimeStampRangeParams,
-		schemas.NewQName("bo", "Article"),
+		appdef.NewQName("bo", "Article"),
 		func(_ context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			require.Equal(int64(1257894000), args.ArgumentObject.AsInt64("from"))
 			require.Equal(int64(2257894000), args.ArgumentObject.AsInt64("till"))
@@ -193,8 +195,8 @@ func getTestCfg(require *require.Assertions, cfgSchemas func(schemas schemas.Sch
 			return err
 		},
 	))
-	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, schemas.NullQName, schemas.NullQName, schemas.NullQName, istructsmem.NullCommandExec))
-	cfg.Resources.Add(istructsmem.NewQueryFunction(qNameQryDenied, schemas.NullQName, schemas.NullQName, istructsmem.NullQueryExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewQueryFunction(qNameQryDenied, appdef.NullQName, appdef.NullQName, istructsmem.NullQueryExec))
 
 	for _, f := range cfgFunc {
 		f(cfg)
@@ -219,9 +221,9 @@ func getTestCfg(require *require.Assertions, cfgSchemas func(schemas schemas.Sch
 		},
 	)
 
-	namedDoc := func(qName schemas.QName, id istructs.RecordID, name string) {
+	namedDoc := func(qName appdef.QName, id istructs.RecordID, name string) {
 		doc := reb.CUDBuilder().Create(qName)
-		doc.PutRecordID(schemas.SystemField_ID, id)
+		doc.PutRecordID(appdef.SystemField_ID, id)
 		doc.PutString("name", name)
 	}
 	namedDoc(qNameDepartment, istructs.MaxRawRecordID+10, "Soft drinks")
@@ -231,7 +233,7 @@ func getTestCfg(require *require.Assertions, cfgSchemas func(schemas schemas.Sch
 	rawEvent, err := reb.BuildRawEvent()
 	require.NoError(err)
 	nextRecordID := istructs.FirstBaseRecordID
-	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, func(custom istructs.RecordID, schema schemas.Schema) (storage istructs.RecordID, err error) {
+	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, func(istructs.RecordID, appdef.IDef) (storage istructs.RecordID, err error) {
 		storage = nextRecordID
 		nextRecordID++
 		return
@@ -287,12 +289,20 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
-		appStructsProvider, 3, metrics, "hvm", authn, authz, cfgs)
-	go queryProcessor.Run(context.Background())
+		appStructsProvider, 3, metrics, "vvm", authn, authz, cfgs)
+	processorCtx, processorCtxCancel := context.WithCancel(context.Background())
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		queryProcessor.Run(processorCtx)
+		wg.Done()
+	}()
 	funcResource := as.Resources().QueryResource(qNameFunction)
 	systemToken := getSystemToken(appTokens)
 	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, funcResource, "127.0.0.1", systemToken)
 	<-done
+	processorCtxCancel()
+	wg.Wait()
 
 	_ = metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
 		metricNames = append(metricNames, metric.Name())
@@ -315,7 +325,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 func TestRawMode(t *testing.T) {
 	require := require.New(t)
 
-	resultMeta := &smock.MockSchema{}
+	resultMeta := &amock.Def{}
 	resultMeta.On("QName").Return(istructs.QNameJSON)
 
 	result := ""
@@ -328,11 +338,11 @@ func TestRawMode(t *testing.T) {
 		},
 		close: func(err error) {},
 	}
-	processor := ProvideRowsProcessorFactory()(context.Background(), &smock.MockSchemaCache{}, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{})
+	processor := ProvideRowsProcessorFactory()(context.Background(), &amock.AppDef{}, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{})
 
 	require.NoError(processor.SendAsync(workpiece{
 		object: &coreutils.TestObject{
-			Data: map[string]interface{}{Field_JSONSchemaBody: `[accepted]`},
+			Data: map[string]interface{}{processors.Field_JSONDef_Body: `[accepted]`},
 		},
 		outputRow: &outputRow{
 			keyToIdx: map[string]int{rootDocument: 0},
@@ -992,17 +1002,17 @@ func TestRateLimiter(t *testing.T) {
 		},
 	}
 
-	qNameMyFuncParams := schemas.NewQName(schemas.SysPackage, "myFuncParams")
-	qNameMyFuncResults := schemas.NewQName(schemas.SysPackage, "results")
+	qNameMyFuncParams := appdef.NewQName(appdef.SysPackage, "myFuncParams")
+	qNameMyFuncResults := appdef.NewQName(appdef.SysPackage, "results")
 	var myFunc istructs.IResource
 	cfgs, appStructsProvider, appTokens := getTestCfg(require,
-		func(cache schemas.SchemaCacheBuilder) {
-			cache.Add(qNameMyFuncParams, schemas.SchemaKind_Object)
-			cache.Add(qNameMyFuncResults, schemas.SchemaKind_Object).
-				AddField("fld", schemas.DataKind_string, false)
+		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddStruct(qNameMyFuncParams, appdef.DefKind_Object)
+			appDef.AddStruct(qNameMyFuncResults, appdef.DefKind_Object).
+				AddField("fld", appdef.DataKind_string, false)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			qName := schemas.NewQName(schemas.SysPackage, "myFunc")
+			qName := appdef.NewQName(appdef.SysPackage, "myFunc")
 			myFunc = istructsmem.NewQueryFunction(
 				qName,
 				qNameMyFuncParams,
@@ -1025,7 +1035,7 @@ func TestRateLimiter(t *testing.T) {
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
-		appStructsProvider, 3, metrics, "hvm", authn, authz, cfgs)
+		appStructsProvider, 3, metrics, "vvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
 
 	systemToken := getSystemToken(appTokens)
@@ -1072,7 +1082,7 @@ func TestAuthnz(t *testing.T) {
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
-		appStructsProvider, 3, metrics, "hvm", authn, authz, cfgs)
+		appStructsProvider, 3, metrics, "vvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
 	funcResource := as.Resources().QueryResource(qNameFunction)
 
@@ -1129,7 +1139,7 @@ type testFilter struct {
 	err   error
 }
 
-func (f testFilter) IsMatch(coreutils.SchemaFields, IOutputRow) (bool, error) {
+func (f testFilter) IsMatch(coreutils.FieldsDef, IOutputRow) (bool, error) {
 	return f.match, f.err
 }
 
@@ -1141,10 +1151,10 @@ type testWorkpiece struct {
 
 func (w testWorkpiece) Object() istructs.IObject { return w.object }
 func (w testWorkpiece) OutputRow() IOutputRow    { return w.outputRow }
-func (w testWorkpiece) EnrichedRootSchema() coreutils.SchemaFields {
-	return map[string]schemas.DataKind{}
+func (w testWorkpiece) EnrichedRootFields() coreutils.FieldsDef {
+	return map[string]appdef.DataKind{}
 }
-func (w testWorkpiece) PutEnrichedRootSchemaField(string, schemas.DataKind) {
+func (w testWorkpiece) PutEnrichedRootField(string, appdef.DataKind) {
 	panic("implement me")
 }
 func (w testWorkpiece) Release() {
@@ -1207,7 +1217,7 @@ type mockState struct {
 	mock.Mock
 }
 
-func (s *mockState) KeyBuilder(storage, entity schemas.QName) (builder istructs.IStateKeyBuilder, err error) {
+func (s *mockState) KeyBuilder(storage, entity appdef.QName) (builder istructs.IStateKeyBuilder, err error) {
 	return s.Called(storage, entity).Get(0).(istructs.IStateKeyBuilder), err
 }
 
@@ -1239,4 +1249,4 @@ type mockRecord struct {
 }
 
 func (r *mockRecord) AsString(name string) string { return r.Called(name).String(0) }
-func (r *mockRecord) QName() schemas.QName        { return r.Called().Get(0).(schemas.QName) }
+func (r *mockRecord) QName() appdef.QName         { return r.Called().Get(0).(appdef.QName) }

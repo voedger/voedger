@@ -11,55 +11,45 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func newSingletons() *Singletons {
 	return &Singletons{
-		qNames: make(map[schemas.QName]istructs.RecordID),
-		ids:    make(map[istructs.RecordID]schemas.QName),
+		qNames: make(map[appdef.QName]istructs.RecordID),
+		ids:    make(map[istructs.RecordID]appdef.QName),
 		lastID: istructs.FirstSingletonID - 1,
 	}
 }
 
-// Returns QName for CDoc singleton with specified ID
-func (stons *Singletons) GetQName(id istructs.RecordID) (schemas.QName, error) {
-	name, ok := stons.ids[id]
-	if ok {
-		return name, nil
-	}
-
-	return schemas.NullQName, fmt.Errorf("unknown singleton ID «%v»: %w", id, ErrIDNotFound)
-}
-
 // Returns ID for CDoc singleton with specified QName
-func (stons *Singletons) GetID(qName schemas.QName) (istructs.RecordID, error) {
-	if id, ok := stons.qNames[qName]; ok {
+func (st *Singletons) ID(qName appdef.QName) (istructs.RecordID, error) {
+	if id, ok := st.qNames[qName]; ok {
 		return id, nil
 	}
-	return istructs.NullRecordID, fmt.Errorf("unable to find singleton ID for schema «%v»: %w", qName, ErrNameNotFound)
+	return istructs.NullRecordID, fmt.Errorf("unable to find singleton ID for definition «%v»: %w", qName, ErrNameNotFound)
 }
 
-// Loads all singletons IDs from storage, add all known application singletons and store cache if some changes.
+// Loads all singletons IDs from storage, add all known application singletons and store if some changes.
 // Must be called at application starts
-func (stons *Singletons) Prepare(storage istorage.IAppStorage, versions *vers.Versions, schemas schemas.SchemaCache) (err error) {
-	if err = stons.load(storage, versions); err != nil {
+func (st *Singletons) Prepare(storage istorage.IAppStorage, versions *vers.Versions, appDef appdef.IAppDef) (err error) {
+	if err = st.load(storage, versions); err != nil {
 		return err
 	}
 
-	if schemas != nil {
-		if err = stons.collectAllSingletons(schemas); err != nil {
+	if appDef != nil {
+		if err = st.collectAllSingletons(appDef); err != nil {
 			return err
 		}
 	}
 
-	if stons.changes > 0 {
-		if err := stons.store(storage, versions); err != nil {
+	if st.changes > 0 {
+		if err := st.store(storage, versions); err != nil {
 			return err
 		}
 	}
@@ -68,33 +58,33 @@ func (stons *Singletons) Prepare(storage istorage.IAppStorage, versions *vers.Ve
 }
 
 // loads all stored singleton IDs from storage
-func (stons *Singletons) load(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
+func (st *Singletons) load(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
 	ver := versions.Get(vers.SysSingletonsVersion)
 	switch ver {
-	case vers.UnknownVersion: // no sys.QName storage exists
+	case vers.UnknownVersion: // no system singletons view exists in storage
 		return nil
 	case ver01:
-		return stons.load01(storage)
+		return st.load01(storage)
 	}
 
-	return fmt.Errorf("unable load singleton IDs from «sys.Singletons» system view version %v: %w", ver, vers.ErrorInvalidVersion)
+	return fmt.Errorf("unable load singleton IDs from system view version %v: %w", ver, vers.ErrorInvalidVersion)
 }
 
 // Loads singletons IDs from storage using ver01 codec
-func (stons *Singletons) load01(storage istorage.IAppStorage) error {
+func (st *Singletons) load01(storage istorage.IAppStorage) error {
 
 	readSingleton := func(cCols, value []byte) error {
-		qName, err := schemas.ParseQName(string(cCols))
+		qName, err := appdef.ParseQName(string(cCols))
 		if err != nil {
 			return err
 		}
 		id := istructs.RecordID(binary.BigEndian.Uint64(value))
 
-		stons.qNames[qName] = id
-		stons.ids[id] = qName
+		st.qNames[qName] = id
+		st.ids[id] = qName
 
-		if stons.lastID < id {
-			stons.lastID = id
+		if st.lastID < id {
+			st.lastID = id
 		}
 
 		return nil
@@ -104,32 +94,32 @@ func (stons *Singletons) load01(storage istorage.IAppStorage) error {
 	return storage.Read(context.Background(), pKey, nil, nil, readSingleton)
 }
 
-// Collect all application singlton IDs
-func (stons *Singletons) collectAllSingletons(cache schemas.SchemaCache) (err error) {
-	cache.Schemas(
-		func(schema schemas.Schema) {
-			if schema.Singleton() {
+// Collect all application singleton IDs
+func (st *Singletons) collectAllSingletons(appDef appdef.IAppDef) (err error) {
+	appDef.Defs(
+		func(d appdef.IDef) {
+			if d.Singleton() {
 				err = errors.Join(err,
-					stons.collectSingleton(schema.QName()))
+					st.collectSingleton(d.QName()))
 			}
 		})
 
 	return err
 }
 
-// collectSingleton checks is application schema singleton in cache. If not then adds it with new ID
-func (stons *Singletons) collectSingleton(qname schemas.QName) error {
+// collectSingleton checks is application definition singleton in cache. If not then adds it with new ID
+func (st *Singletons) collectSingleton(qname appdef.QName) error {
 
-	if _, ok := stons.qNames[qname]; ok {
+	if _, ok := st.qNames[qname]; ok {
 		return nil // already known singleton
 	}
 
-	for id := stons.lastID + 1; id < istructs.MaxSingletonID; id++ {
-		if _, ok := stons.ids[id]; !ok {
-			stons.qNames[qname] = id
-			stons.ids[id] = qname
-			stons.lastID = id
-			stons.changes++
+	for id := st.lastID + 1; id < istructs.MaxSingletonID; id++ {
+		if _, ok := st.ids[id]; !ok {
+			st.qNames[qname] = id
+			st.ids[id] = qname
+			st.lastID = id
+			st.changes++
 			return nil
 		}
 	}
@@ -137,12 +127,12 @@ func (stons *Singletons) collectSingleton(qname schemas.QName) error {
 	return ErrSingletonIDsExceeds
 }
 
-// stores singletons IDs using lastestVersion codec
-func (stons *Singletons) store(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
-	pKey := utils.ToBytes(consts.SysView_SingletonIDs, lastestVersion)
+// stores singletons IDs using latestVersion codec
+func (st *Singletons) store(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
+	pKey := utils.ToBytes(consts.SysView_SingletonIDs, latestVersion)
 
 	batch := make([]istorage.BatchItem, 0)
-	for qName, id := range stons.qNames {
+	for qName, id := range st.qNames {
 		if id >= istructs.FirstSingletonID {
 			item := istorage.BatchItem{
 				PKey:  pKey,
@@ -157,12 +147,12 @@ func (stons *Singletons) store(storage istorage.IAppStorage, versions *vers.Vers
 		return fmt.Errorf("error store application singleton IDs to storage: %w", err)
 	}
 
-	if ver := versions.Get(vers.SysSingletonsVersion); ver != lastestVersion {
-		if err = versions.Put(vers.SysSingletonsVersion, lastestVersion); err != nil {
-			return fmt.Errorf("error store «sys.Singletons» system view version: %w", err)
+	if ver := versions.Get(vers.SysSingletonsVersion); ver != latestVersion {
+		if err = versions.Put(vers.SysSingletonsVersion, latestVersion); err != nil {
+			return fmt.Errorf("error store singletons system view version: %w", err)
 		}
 	}
 
-	stons.changes = 0
+	st.changes = 0
 	return nil
 }

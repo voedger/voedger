@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -15,7 +16,6 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -23,8 +23,8 @@ import (
 type ServiceFactory func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService
 type CommandChannel iprocbus.ServiceChannel
 type OperatorSyncActualizer pipeline.ISyncOperator
-type SyncActualizerFactory func(hvmCtx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator
-type HVMName string
+type SyncActualizerFactory func(vvmCtx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator
+type VVMName string
 
 type ValidateFunc func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID) (err error)
 
@@ -43,13 +43,13 @@ type ICommandMessage interface {
 type xPath string
 
 type commandProcessorMetrics struct {
-	hvm     string
+	vvm     string
 	app     istructs.AppQName
 	metrics imetrics.IMetrics
 }
 
 func (m *commandProcessorMetrics) increase(metricName string, valueDelta float64) {
-	m.metrics.IncreaseApp(metricName, m.hvm, m.app, valueDelta)
+	m.metrics.IncreaseApp(metricName, m.vvm, m.app, valueDelta)
 }
 
 type cmdWorkpiece struct {
@@ -82,7 +82,7 @@ type parsedCUD struct {
 	opKind         iauthnz.OperationKindType
 	existingRecord istructs.IRecord // create -> nil
 	id             int64
-	qName          schemas.QName
+	qName          appdef.QName
 	fields         coreutils.MapObject
 	xPath          xPath
 }

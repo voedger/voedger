@@ -8,52 +8,51 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
+	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 var (
-	testQName       = schemas.NewQName("test", "QName")
-	testQNameSimple = schemas.NewQName("test", "QNameSimple")
-	testFields      = map[string]schemas.DataKind{
-		"int32":                   schemas.DataKind_int32,
-		"int64":                   schemas.DataKind_int64,
-		"float32":                 schemas.DataKind_float32,
-		"float64":                 schemas.DataKind_float64,
-		"string":                  schemas.DataKind_string,
-		"bool":                    schemas.DataKind_bool,
-		"bytes":                   schemas.DataKind_bytes,
-		"recordID":                schemas.DataKind_RecordID,
-		schemas.SystemField_QName: schemas.DataKind_QName,
+	testQName       = appdef.NewQName("test", "QName")
+	testQNameSimple = appdef.NewQName("test", "QNameSimple")
+	testFieldDefs   = map[string]appdef.DataKind{
+		appdef.SystemField_QName: appdef.DataKind_QName,
+		"int32":                  appdef.DataKind_int32,
+		"int64":                  appdef.DataKind_int64,
+		"float32":                appdef.DataKind_float32,
+		"float64":                appdef.DataKind_float64,
+		"string":                 appdef.DataKind_string,
+		"bool":                   appdef.DataKind_bool,
+		"bytes":                  appdef.DataKind_bytes,
+		"recordID":               appdef.DataKind_RecordID,
 	}
-	schema = TestSchema{
-		Fields_: testFields,
-		QName_:  testQName,
-	}
-	schemaSimple = TestSchema{
-		Fields_: map[string]schemas.DataKind{
-			schemas.SystemField_QName: schemas.DataKind_QName,
-			"int32":                   schemas.DataKind_int32,
-		},
-	}
-	schemaCache = TestSchemas{Schemas_: map[schemas.QName]schemas.Schema{
-		testQName:       schema,
-		testQNameSimple: schemaSimple,
-	}}
+	def = amock.NewDef(testQName, appdef.DefKind_Object, mockFields(testFieldDefs)...)
+
+	simpleDef = amock.NewDef(testQNameSimple, appdef.DefKind_Object,
+		amock.NewField(appdef.SystemField_QName, appdef.DataKind_QName, true),
+		amock.NewField("int32", appdef.DataKind_int32, false),
+	)
+
+	appDef = amock.NewAppDef(
+		def,
+		simpleDef,
+	)
+
 	testData = map[string]interface{}{
-		"int32":                   int32(1),
-		"int64":                   int64(2),
-		"float32":                 float32(3),
-		"float64":                 float64(4),
-		"string":                  "str",
-		"bool":                    true,
-		"bytes":                   []byte{5, 6},
-		"recordID":                istructs.RecordID(7),
-		schemas.SystemField_QName: testQName,
+		"int32":                  int32(1),
+		"int64":                  int64(2),
+		"float32":                float32(3),
+		"float64":                float64(4),
+		"string":                 "str",
+		"bool":                   true,
+		"bytes":                  []byte{5, 6},
+		"recordID":               istructs.RecordID(7),
+		appdef.SystemField_QName: testQName,
 	}
 	testDataSimple = map[string]interface{}{
-		schemas.SystemField_QName: testQNameSimple,
-		"int32":                   int32(42),
+		appdef.SystemField_QName: testQNameSimple,
+		"int32":                  int32(42),
 	}
 	testBasic = func(m map[string]interface{}, require *require.Assertions) {
 		require.Equal(int32(1), m["int32"])
@@ -64,24 +63,32 @@ var (
 		require.Equal(true, m["bool"])
 		require.Equal([]byte{5, 6}, m["bytes"])
 		require.Equal(istructs.RecordID(7), m["recordID"])
-		actualQName, err := schemas.ParseQName(m[schemas.SystemField_QName].(string))
+		actualQName, err := appdef.ParseQName(m[appdef.SystemField_QName].(string))
 		require.NoError(err)
 		require.Equal(testQName, actualQName)
 	}
 )
 
-func TestNewSchemaFields(t *testing.T) {
-	qName := schemas.NewQName("test", "qname")
-	testFields := map[string]schemas.DataKind{
-		"fld1": schemas.DataKind_int32,
-		"str":  schemas.DataKind_string,
+func mockFields(fd map[string]appdef.DataKind) []*amock.Field {
+	f := make([]*amock.Field, 0)
+	for n, k := range fd {
+		f = append(f, amock.NewField(n, k, false))
 	}
-	s := TestSchema{
-		Fields_: testFields,
-		QName_:  qName,
+	return f
+}
+
+func TestNewFieldsDef(t *testing.T) {
+	qName := appdef.NewQName("test", "qname")
+	testFieldDefs := map[string]appdef.DataKind{
+		"fld1": appdef.DataKind_int32,
+		"str":  appdef.DataKind_string,
 	}
-	sf := NewSchemaFields(s)
-	require.Equal(t, SchemaFields(testFields), sf)
+	def := amock.NewDef(qName, appdef.DefKind_Object)
+	for n, k := range testFieldDefs {
+		def.AddField(amock.NewField(n, k, false))
+	}
+	fd := NewFieldsDef(def)
+	require.Equal(t, FieldsDef(testFieldDefs), fd)
 }
 
 func TestToMap_Basic(t *testing.T) {
@@ -101,25 +108,25 @@ func TestToMap_Basic(t *testing.T) {
 	}
 
 	t.Run("ObjectToMap", func(t *testing.T) {
-		m := ObjectToMap(obj, schemaCache)
+		m := ObjectToMap(obj, appDef)
 		testBasic(m, require)
-		containerObjs := m["container"].([]map[string]interface{})
-		require.Len(containerObjs, 1)
-		containerObj := containerObjs[0]
+		containerObjects := m["container"].([]map[string]interface{})
+		require.Len(containerObjects, 1)
+		containerObj := containerObjects[0]
 		require.Equal(int32(42), containerObj["int32"])
-		require.Equal(testQNameSimple.String(), containerObj[schemas.SystemField_QName])
+		require.Equal(testQNameSimple.String(), containerObj[appdef.SystemField_QName])
 	})
 
 	t.Run("FieldsToMap", func(t *testing.T) {
-		m := FieldsToMap(obj, schemaCache)
+		m := FieldsToMap(obj, appDef)
 		testBasic(m, require)
 	})
 
 	t.Run("Read", func(t *testing.T) {
-		sf := NewSchemaFields(schema)
+		fd := NewFieldsDef(def)
 		m := map[string]interface{}{}
-		for fieldName := range sf {
-			m[fieldName] = Read(fieldName, sf, obj)
+		for fieldName := range fd {
+			m[fieldName] = Read(fieldName, fd, obj)
 		}
 		testBasic(m, require)
 	})
@@ -129,12 +136,12 @@ func TestToMap_Basic(t *testing.T) {
 			Name: testQName,
 			Id:   42,
 			Data: map[string]interface{}{
-				schemas.SystemField_QName: schemas.NullQName,
+				appdef.SystemField_QName: appdef.NullQName,
 			},
 		}
-		m := ObjectToMap(obj, schemaCache)
+		m := ObjectToMap(obj, appDef)
 		require.Empty(m)
-		m = FieldsToMap(obj, schemaCache)
+		m = FieldsToMap(obj, appDef)
 		require.Empty(m)
 	})
 }
@@ -148,14 +155,14 @@ func TestToMap_Filter(t *testing.T) {
 	}
 
 	count := 0
-	filter := Filter(func(name string, kind schemas.DataKind) bool {
+	filter := Filter(func(name string, kind appdef.DataKind) bool {
 		if name == "bool" {
-			require.Equal(schemas.DataKind_bool, kind)
+			require.Equal(appdef.DataKind_bool, kind)
 			count++
 			return true
 		}
 		if name == "string" {
-			require.Equal(schemas.DataKind_string, kind)
+			require.Equal(appdef.DataKind_string, kind)
 			count++
 			return true
 		}
@@ -163,7 +170,7 @@ func TestToMap_Filter(t *testing.T) {
 	})
 
 	t.Run("ObjectToMap", func(t *testing.T) {
-		m := ObjectToMap(obj, schemaCache, filter)
+		m := ObjectToMap(obj, appDef, filter)
 		require.Equal(2, count)
 		require.Len(m, 2)
 		require.Equal(true, m["bool"])
@@ -171,7 +178,7 @@ func TestToMap_Filter(t *testing.T) {
 	})
 
 	t.Run("FieldsToMap", func(t *testing.T) {
-		m := FieldsToMap(obj, schemaCache, filter)
+		m := FieldsToMap(obj, appDef, filter)
 		require.Equal(4, count)
 		require.Len(m, 2)
 		require.Equal(true, m["bool"])
@@ -182,10 +189,10 @@ func TestToMap_Filter(t *testing.T) {
 func TestMToMap_NonNilsOnly_Filter(t *testing.T) {
 	require := require.New(t)
 	testDataPartial := map[string]interface{}{
-		"int32":                   int32(1),
-		"string":                  "str",
-		"float32":                 float32(2),
-		schemas.SystemField_QName: testQName,
+		"int32":                  int32(1),
+		"string":                 "str",
+		"float32":                float32(2),
+		appdef.SystemField_QName: testQName,
 	}
 	obj := &TestObject{
 		Name: testQName,
@@ -193,48 +200,45 @@ func TestMToMap_NonNilsOnly_Filter(t *testing.T) {
 		Data: testDataPartial,
 	}
 	expected := map[string]interface{}{
-		"int32":                   int32(1),
-		"string":                  "str",
-		schemas.SystemField_QName: testQName.String(),
+		"int32":                  int32(1),
+		"string":                 "str",
+		appdef.SystemField_QName: testQName.String(),
 	}
 
-	t.Run("OjectToMap", func(t *testing.T) {
-		m := ObjectToMap(obj, schemaCache, WithNonNilsOnly(), Filter(func(name string, kind schemas.DataKind) bool {
+	t.Run("ObjectToMap", func(t *testing.T) {
+		m := ObjectToMap(obj, appDef, WithNonNilsOnly(), Filter(func(name string, kind appdef.DataKind) bool {
 			return name != "float32"
 		}))
 		require.Equal(expected, m)
 	})
 
 	t.Run("FieldsToMap", func(t *testing.T) {
-		m := FieldsToMap(obj, schemaCache, WithNonNilsOnly(), Filter(func(name string, kind schemas.DataKind) bool {
+		m := FieldsToMap(obj, appDef, WithNonNilsOnly(), Filter(func(name string, kind appdef.DataKind) bool {
 			return name != "float32"
 		}))
 		require.Equal(expected, m)
 	})
 
-	t.Run("OjectToMap + filter", func(t *testing.T) {
-		filter := Filter(func(name string, kind schemas.DataKind) bool {
+	t.Run("ObjectToMap + filter", func(t *testing.T) {
+		filter := Filter(func(name string, kind appdef.DataKind) bool {
 			return name == "string"
 		})
 		expected := map[string]interface{}{
 			"string": "str",
 		}
-		m := ObjectToMap(obj, schemaCache, WithNonNilsOnly(), filter)
+		m := ObjectToMap(obj, appDef, WithNonNilsOnly(), filter)
 		require.Equal(expected, m)
 	})
 }
 
 func TestReadValue(t *testing.T) {
 	require := require.New(t)
-	iValueFields := map[string]schemas.DataKind{}
-	for k, v := range testFields {
-		iValueFields[k] = v
+	iValueFields := map[string]appdef.DataKind{}
+	for n, k := range testFieldDefs {
+		iValueFields[n] = k
 	}
-	iValueFields["record"] = schemas.DataKind_Record
-	iValueSchema := TestSchema{
-		QName_:  testQName,
-		Fields_: iValueFields,
-	}
+	iValueFields["record"] = appdef.DataKind_Record
+	iValueDef := amock.NewDef(testQName, appdef.DefKind_ViewRecord_Value, mockFields(iValueFields)...)
 	iValueValues := map[string]interface{}{}
 	for k, v := range testData {
 		iValueValues[k] = v
@@ -242,12 +246,10 @@ func TestReadValue(t *testing.T) {
 	iValueValues["record"] = &TestObject{
 		Data: testDataSimple,
 	}
-	schemasWithIValue := TestSchemas{
-		Schemas_: map[schemas.QName]schemas.Schema{
-			testQName:       iValueSchema,
-			testQNameSimple: schemaSimple,
-		},
-	}
+	appDefsWithIValue := amock.NewAppDef(
+		iValueDef,
+		simpleDef,
+	)
 	iValue := &TestValue{
 		TestObject: &TestObject{
 			Name: testQName,
@@ -256,25 +258,25 @@ func TestReadValue(t *testing.T) {
 		},
 	}
 	t.Run("ReadValue", func(t *testing.T) {
-		sf := NewSchemaFields(iValueSchema)
+		fd := NewFieldsDef(iValueDef)
 		actual := map[string]interface{}{}
 		for fieldName := range iValueValues {
-			actual[fieldName] = ReadValue(fieldName, sf, schemasWithIValue, iValue)
+			actual[fieldName] = ReadValue(fieldName, fd, appDefsWithIValue, iValue)
 		}
 		testBasic(actual, require)
-		require.Equal(map[string]interface{}{"int32": int32(42), schemas.SystemField_QName: "test.QNameSimple"}, actual["record"])
+		require.Equal(map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"}, actual["record"])
 	})
 
 	t.Run("FieldsToMap", func(t *testing.T) {
-		m := FieldsToMap(iValue, schemasWithIValue)
+		m := FieldsToMap(iValue, appDefsWithIValue)
 		testBasic(m, require)
-		require.Equal(map[string]interface{}{"int32": int32(42), schemas.SystemField_QName: "test.QNameSimple"}, m["record"])
+		require.Equal(map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"}, m["record"])
 	})
 
 	t.Run("FieldsToMap non-nils only", func(t *testing.T) {
-		m := FieldsToMap(iValue, schemasWithIValue, WithNonNilsOnly())
+		m := FieldsToMap(iValue, appDefsWithIValue, WithNonNilsOnly())
 		testBasic(m, require)
-		require.Equal(map[string]interface{}{"int32": int32(42), schemas.SystemField_QName: "test.QNameSimple"}, m["record"])
+		require.Equal(map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"}, m["record"])
 	})
 
 	t.Run("panic if an object contains DataKind_Record field but is not IValue", func(t *testing.T) {
@@ -282,12 +284,12 @@ func TestReadValue(t *testing.T) {
 			Name: testQName,
 			Data: iValueValues,
 		}
-		require.Panics(func() { FieldsToMap(obj, schemasWithIValue) })
-		require.Panics(func() { FieldsToMap(obj, schemasWithIValue, WithNonNilsOnly()) })
+		require.Panics(func() { FieldsToMap(obj, appDefsWithIValue) })
+		require.Panics(func() { FieldsToMap(obj, appDefsWithIValue, WithNonNilsOnly()) })
 	})
 }
 
 func TestObjectReaderErrors(t *testing.T) {
 	require := require.New(t)
-	require.Panics(func() { ReadByKind("", schemas.DataKind_FakeLast, nil) })
+	require.Panics(func() { ReadByKind("", appdef.DataKind_FakeLast, nil) })
 }

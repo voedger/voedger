@@ -11,9 +11,9 @@ import "fmt"
 const (
 	ECode_UnknownError = iota
 
-	ECode_EmptySchemaName
-	ECode_InvalidSchemaName
-	ECode_InvalidSchemaKind
+	ECode_EmptyDefName
+	ECode_InvalidDefName
+	ECode_InvalidDefKind
 
 	ECode_EmptyData
 

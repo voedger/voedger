@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/schemas"
 	"github.com/voedger/voedger/pkg/state"
 )
 
@@ -66,6 +66,7 @@ func (a *asyncActualizer) Run(ctx context.Context) {
 		if err = a.init(ctx); err == nil {
 			logger.Trace(a.name, "started")
 			err = a.keepReading()
+			a.conf.LogError(a.name, err)
 		}
 		a.finit() // even execute if a.init has failed
 		if ctx.Err() == nil && err != nil {
@@ -94,6 +95,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	err = a.readOffset(p.projector.Name)
 	if err != nil {
+		a.conf.LogError(a.name, err)
 		return err
 	}
 
@@ -102,7 +104,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		a.structs,
 		state.SimplePartitionIDFunc(a.conf.Partition),
 		p.WSIDProvider,
-		func(view schemas.QName, wsid istructs.WSID, offset istructs.Offset) {
+		func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {
 			a.conf.Broker.Update(in10n.ProjectionKey{
 				App:        a.conf.AppQName,
 				Projection: view,
@@ -128,24 +130,20 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	a.pipeline = pipeline.NewAsyncPipeline(ctx, a.name, projectorOp, errorHandlerOp)
 
-	a.conf.channel, err = a.conf.Broker.NewChannel(istructs.SubjectLogin(a.name), n10nChannelDuration)
-	if err != nil {
+	if a.conf.channel, err = a.conf.Broker.NewChannel(istructs.SubjectLogin(a.name), n10nChannelDuration); err != nil {
 		return err
 	}
-	err = a.conf.Broker.Subscribe(a.conf.channel, in10n.ProjectionKey{
+	return a.conf.Broker.Subscribe(a.conf.channel, in10n.ProjectionKey{
 		App:        a.conf.AppQName,
 		Projection: PlogQName,
 		WS:         istructs.WSID(a.conf.Partition),
 	})
-	if err != nil {
-		return err
-	}
-
-	return err
 }
 
 func (a *asyncActualizer) finit() {
-	a.pipeline.Close()
+	if a.pipeline != nil {
+		a.pipeline.Close()
+	}
 	if logger.IsTrace() {
 		logger.Trace(fmt.Sprintf("%s finalized", a.name))
 	}
@@ -164,6 +162,7 @@ func (a *asyncActualizer) keepReading() (err error) {
 		if a.offset < offset {
 			err = a.readPlogToTheEnd()
 			if err != nil {
+				a.conf.LogError(a.name, err)
 				a.readCtx.cancelWithError(err)
 			}
 		}
@@ -180,6 +179,7 @@ func (a *asyncActualizer) readPlogToTheEnd() (err error) {
 
 		err = a.pipeline.SendAsync(work)
 		if err != nil {
+			a.conf.LogError(a.name, err)
 			return
 		}
 
@@ -193,7 +193,7 @@ func (a *asyncActualizer) readPlogToTheEnd() (err error) {
 	})
 }
 
-func (a *asyncActualizer) readOffset(projectorName schemas.QName) (err error) {
+func (a *asyncActualizer) readOffset(projectorName appdef.QName) (err error) {
 	a.offset, err = ActualizerOffset(a.structs, a.conf.Partition, projectorName)
 	return
 }
@@ -275,7 +275,7 @@ type asyncErrorHandler struct {
 
 func (h *asyncErrorHandler) OnError(_ context.Context, err error) { h.readCtx.cancelWithError(err) }
 
-func ActualizerOffset(appStructs istructs.IAppStructs, partition istructs.PartitionID, projectorName schemas.QName) (offset istructs.Offset, err error) {
+func ActualizerOffset(appStructs istructs.IAppStructs, partition istructs.PartitionID, projectorName appdef.QName) (offset istructs.Offset, err error) {
 	key := appStructs.ViewRecords().KeyBuilder(qnameProjectionOffsets)
 	key.PutInt32(partitionFld, int32(partition))
 	key.PutQName(projectorNameFld, projectorName)

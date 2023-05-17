@@ -2,7 +2,7 @@
 name: Feature request
 about: Suggest an idea for this project
 title: ''
-labels: direct, kind/feature, status/pending
+labels: kind/feature
 assignees: ''
 
 ---

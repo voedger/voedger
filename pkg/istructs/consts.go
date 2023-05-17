@@ -7,7 +7,7 @@
 
 package istructs
 
-import "github.com/voedger/voedger/pkg/schemas"
+import "github.com/voedger/voedger/pkg/appdef"
 
 // *********************************************************************************************************
 //
@@ -18,22 +18,22 @@ import "github.com/voedger/voedger/pkg/schemas"
 const AppQNameQualifierChar = "/"
 
 // NullAppQName is undefined (or empty) application name
-var NullAppQName = NewAppQName(schemas.NullName, schemas.NullName)
+var NullAppQName = NewAppQName(appdef.NullName, appdef.NullName)
 
 var (
 	// QNameForError is a marker of error in log
-	QNameForError = schemas.NewQName(schemas.SysPackage, "Error")
+	QNameForError = appdef.NewQName(appdef.SysPackage, "Error")
 
 	// QNameCommand is used in core-irates
-	QNameCommand = schemas.NewQName(schemas.SysPackage, "Command")
+	QNameCommand = appdef.NewQName(appdef.SysPackage, "Command")
 
 	// QNameQuery is used in core-irates
-	QNameQuery = schemas.NewQName(schemas.SysPackage, "Query")
+	QNameQuery = appdef.NewQName(appdef.SysPackage, "Query")
 
-	QNameCommandCUD = schemas.NewQName(schemas.SysPackage, "CUD")
+	QNameCommandCUD = appdef.NewQName(appdef.SysPackage, "CUD")
 
 	// QNameJSON denotes that Function argument comes as a JSON object
-	QNameJSON = schemas.NewQName(schemas.SysPackage, "JSON")
+	QNameJSON = appdef.NewQName(appdef.SysPackage, "JSON")
 )
 
 // *********************************************************************************************************
@@ -84,7 +84,7 @@ const WSIDClusterLShift = 64 - 16 - 1
 const MinReservedBaseRecordID = MaxRawRecordID + 1
 const MaxReservedBaseRecordID = MinReservedBaseRecordID + 0xffff
 
-// Singletone - CDoc which has at most one record
+// Singleton - CDoc which has at most one record
 const FirstSingletonID = MinReservedBaseRecordID
 const MaxSingletonID = FirstSingletonID + 0x1ff
 

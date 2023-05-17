@@ -11,9 +11,9 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 func storeEvent(ev *dbEventType, buf *bytes.Buffer) (err error) {
@@ -67,7 +67,7 @@ func storeEventBuildError(ev *dbEventType, buf *bytes.Buffer) {
 	bytes := ev.buildErr.OriginalEventBytes()
 	bytesLen := uint32(len(bytes))
 
-	if ev.argUnlObj.QName() != schemas.NullQName {
+	if ev.argUnlObj.QName() != appdef.NullQName {
 		bytesLen = 0 // to protect logging security data
 	}
 
@@ -85,7 +85,7 @@ func storeEventArguments(ev *dbEventType, buf *bytes.Buffer) (err error) {
 	}
 
 	if err := storeElement(&ev.argUnlObj, buf); err != nil {
-		return fmt.Errorf("can not store event command «%v» unlogged argument «%v»: %w", ev.name, ev.argUnlObj.QName(), err)
+		return fmt.Errorf("can not store event command «%v» un-logged argument «%v»: %w", ev.name, ev.argUnlObj.QName(), err)
 	}
 
 	return nil
@@ -117,13 +117,13 @@ func storeElement(el *elementType, buf *bytes.Buffer) (err error) {
 		return err
 	}
 
-	if el.QName() == schemas.NullQName {
+	if el.QName() == appdef.NullQName {
 		return nil
 	}
 
-	childCount := uint16(len(el.childs))
+	childCount := uint16(len(el.child))
 	_ = binary.Write(buf, binary.BigEndian, &childCount)
-	for _, c := range el.childs {
+	for _, c := range el.child {
 		if err := storeElement(c, buf); err != nil {
 			return err
 		}
@@ -137,11 +137,11 @@ func loadEvent(ev *dbEventType, codecVer byte, buf *bytes.Buffer) (err error) {
 	if err := binary.Read(buf, binary.BigEndian, &id); err != nil {
 		return fmt.Errorf("error read event name ID: %w", err)
 	}
-	if ev.name, err = ev.appCfg.qNames.GetQName(qnames.QNameID(id)); err != nil {
+	if ev.name, err = ev.appCfg.qNames.QName(qnames.QNameID(id)); err != nil {
 		return fmt.Errorf("error read event name: %w", err)
 	}
 
-	if ev.name == schemas.NullQName {
+	if ev.name == appdef.NullQName {
 		return nil
 	}
 
@@ -215,7 +215,7 @@ func loadEventBuildError(ev *dbEventType, buf *bytes.Buffer) (err error) {
 	if qName, err = utils.ReadShortString(buf); err != nil {
 		return fmt.Errorf("error read original event name: %w", err)
 	}
-	if ev.buildErr.qName, err = schemas.ParseQName(qName); err != nil {
+	if ev.buildErr.qName, err = appdef.ParseQName(qName); err != nil {
 		return fmt.Errorf("error read original event name: %w", err)
 	}
 
@@ -241,7 +241,7 @@ func loadEventArguments(ev *dbEventType, codecVer byte, buf *bytes.Buffer) (err 
 	}
 
 	if err := loadElement(&ev.argUnlObj, codecVer, buf); err != nil {
-		return fmt.Errorf("can not load event command «%v» unlogged argument: %w", ev.name, err)
+		return fmt.Errorf("can not load event command «%v» un-logged argument: %w", ev.name, err)
 	}
 
 	return nil
@@ -276,7 +276,7 @@ func loadEventCUDs(ev *dbEventType, codecVer byte, buf *bytes.Buffer) (err error
 		upd.originRec.setQName(upd.changes.QName())
 		upd.originRec.setID(id)
 		// warnings:
-		// — upd.originRec is partially constructed, not full readed!
+		// — upd.originRec is partially constructed, not full filled!
 		// — upd.result is null record, not applicable to store!
 		// it is very important for calling code to reread upd.originRec and recall upd.build() to obtain correct upd.result
 		ev.cud.updates[id] = &upd
@@ -291,7 +291,7 @@ func loadElement(el *elementType, codecVer byte, buf *bytes.Buffer) (err error) 
 		return err
 	}
 
-	if el.QName() == schemas.NullQName {
+	if el.QName() == appdef.NullQName {
 		return nil
 	}
 
@@ -304,7 +304,7 @@ func loadElement(el *elementType, codecVer byte, buf *bytes.Buffer) (err error) 
 		if err := loadElement(&child, codecVer, buf); err != nil {
 			return err
 		}
-		el.childs = append(el.childs, &child)
+		el.child = append(el.child, &child)
 	}
 
 	return nil

@@ -10,22 +10,22 @@ import (
 	"fmt"
 
 	"github.com/untillpro/dynobuffers"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
-var NullAppConfig = newAppConfig(istructs.AppQName_null, schemas.NewSchemaCache())
+var NullAppConfig = newAppConfig(istructs.AppQName_null, appdef.New())
 
 var (
 	nullDynoBuffer = dynobuffers.NewBuffer(dynobuffers.NewScheme())
-	// not a func -> golang tokensjwt.TimeFunc will be initialized on process init forever
-	testTokensFactory    = func() payloads.IAppTokensFactory { return payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()) }
-	simpleStorageProvder = func() istorage.IAppStorageProvider {
+	// not a func -> golang itokensjwt.TimeFunc will be initialized on process init forever
+	testTokensFactory     = func() payloads.IAppTokensFactory { return payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()) }
+	simpleStorageProvider = func() istorage.IAppStorageProvider {
 		asf := istorage.ProvideMem()
 		return istorageimpl.Provide(asf)
 	}
@@ -46,8 +46,8 @@ func crackLogOffset(ofs istructs.Offset) (hi uint64, low uint16) {
 	return crackID(uint64(ofs))
 }
 
-// uncrackLogOffset calculate log offset from two-parts key — partition key (hi) and clustering columns (lo)
-func uncrackLogOffset(hi uint64, low uint16) istructs.Offset {
+// glueLogOffset calculate log offset from two-parts key — partition key (hi) and clustering columns (lo)
+func glueLogOffset(hi uint64, low uint16) istructs.Offset {
 	return istructs.Offset(hi<<partitionBits | uint64(low))
 }
 
@@ -77,7 +77,7 @@ func splitLogOffset(offset istructs.Offset) (pk, cc []byte) {
 func calcLogOffset(pk, cc []byte) istructs.Offset {
 	hi := binary.BigEndian.Uint64(pk)
 	low := binary.BigEndian.Uint16(cc)
-	return uncrackLogOffset(hi, low)
+	return glueLogOffset(hi, low)
 }
 
 // used in tests only
@@ -86,7 +86,7 @@ func IBucketsFromIAppStructs(as istructs.IAppStructs) irates.IBuckets {
 	return as.(interface{ Buckets() irates.IBuckets }).Buckets()
 }
 
-func FillElementFromJSON(data map[string]interface{}, s schemas.Schema, b istructs.IElementBuilder) error {
+func FillElementFromJSON(data map[string]interface{}, def appdef.IDef, b istructs.IElementBuilder) error {
 	for fieldName, fieldValue := range data {
 		switch fv := fieldValue.(type) {
 		case float64:
@@ -98,17 +98,17 @@ func FillElementFromJSON(data map[string]interface{}, s schemas.Schema, b istruc
 		case []interface{}:
 			// e.g. TestBasicUsage_Dashboard(), "order_item": [<2 elements>]
 			containerName := fieldName
-			containerSchema := s.ContainerSchema(containerName)
-			if containerSchema == nil {
+			containerDef := def.ContainerDef(containerName)
+			if containerDef.Kind() == appdef.DefKind_null {
 				return fmt.Errorf("container with name %s is not found", containerName)
 			}
-			for i, intf := range fv {
-				objContainerElem, ok := intf.(map[string]interface{})
+			for i, val := range fv {
+				objContainerElem, ok := val.(map[string]interface{})
 				if !ok {
 					return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
 				}
 				containerElemBuilder := b.ElementBuilder(fieldName)
-				if err := FillElementFromJSON(objContainerElem, containerSchema, containerElemBuilder); err != nil {
+				if err := FillElementFromJSON(objContainerElem, containerDef, containerElemBuilder); err != nil {
 					return err
 				}
 			}
@@ -117,17 +117,17 @@ func FillElementFromJSON(data map[string]interface{}, s schemas.Schema, b istruc
 	return nil
 }
 
-func NewIObjectBuilder(cfg *AppConfigType, qName schemas.QName) istructs.IObjectBuilder {
+func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectBuilder {
 	obj := newObject(cfg, qName)
 	return &obj
 }
 
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
-	schems := appStructs.Schemas()
-	schema := schems.Schema(obj.AsQName(schemas.SystemField_QName))
-	schema.Fields(
-		func(f schemas.Field) {
-			if err != nil || f.DataKind() != schemas.DataKind_RecordID {
+	appDef := appStructs.AppDef()
+	def := appDef.Def(obj.AsQName(appdef.SystemField_QName))
+	def.Fields(
+		func(f appdef.IField) {
+			if err != nil || f.DataKind() != appdef.DataKind_RecordID {
 				return
 			}
 			recID := obj.AsRecordID(f.Name())
@@ -139,9 +139,9 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 			if err != nil {
 				return
 			}
-			if rec.QName() == schemas.NullQName {
+			if rec.QName() == appdef.NullQName {
 				err = fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, recID,
-					obj.AsQName(schemas.SystemField_QName), f.Name())
+					obj.AsQName(appdef.SystemField_QName), f.Name())
 			}
 		})
 	return err

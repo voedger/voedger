@@ -11,5 +11,5 @@ import "github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 const (
 	ver01 vers.VersionValue = vers.UnknownVersion + 1
 
-	lastestVersion = ver01
+	latestVersion = ver01
 )

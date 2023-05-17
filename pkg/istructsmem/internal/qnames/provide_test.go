@@ -9,14 +9,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
-func Test_BasicUsage(t *testing.T) {
+func TestQNamesBasicUsage(t *testing.T) {
 	sp := istorageimpl.Provide(istorage.ProvideMem())
 	storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
@@ -25,10 +25,10 @@ func Test_BasicUsage(t *testing.T) {
 		panic(err)
 	}
 
-	testName := schemas.NewQName("test", "schema")
-	bld := schemas.NewSchemaCache()
-	bld.Add(testName, schemas.SchemaKind_CDoc)
-	schemas, err := bld.Build()
+	testName := appdef.NewQName("test", "doc")
+	app := appdef.New()
+	app.AddStruct(testName, appdef.DefKind_CDoc)
+	appDef, err := app.Build()
 	if err != nil {
 		panic(err)
 	}
@@ -36,17 +36,17 @@ func Test_BasicUsage(t *testing.T) {
 	resources := istructs.IResources(nil) //TODO: add test resources
 
 	names := New()
-	if err := names.Prepare(storage, versions, schemas, resources); err != nil {
+	if err := names.Prepare(storage, versions, appDef, resources); err != nil {
 		panic(err)
 	}
 
 	require := require.New(t)
 	t.Run("basic QNames methods", func(t *testing.T) {
-		id, err := names.GetID(testName)
+		id, err := names.ID(testName)
 		require.NoError(err)
 		require.NotEqual(NullQNameID, id)
 
-		n, err := names.GetQName(id)
+		n, err := names.QName(id)
 		require.NoError(err)
 		require.Equal(testName, n)
 
@@ -61,11 +61,11 @@ func Test_BasicUsage(t *testing.T) {
 				panic(err)
 			}
 
-			id1, err := names.GetID(testName)
+			id1, err := names.ID(testName)
 			require.NoError(err)
 			require.Equal(id, id1)
 
-			n1, err := names.GetQName(id)
+			n1, err := names.QName(id)
 			require.NoError(err)
 			require.Equal(testName, n1)
 		})

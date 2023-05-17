@@ -6,18 +6,17 @@
 package singletons
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/schemas"
 )
 
 // Singletons IDs system view.
 //
-//	Use GetID() to obtain singleton CDoc record ID by its QName.
-//	Use GetQName() to obtain CDoc document QName by its record ID.
+//	Use ID() to obtain singleton CDoc record ID by its QName.
 //	Use Prepare() to load Singletons from storage.
 type Singletons struct {
-	qNames  map[schemas.QName]istructs.RecordID
-	ids     map[istructs.RecordID]schemas.QName
+	qNames  map[appdef.QName]istructs.RecordID
+	ids     map[istructs.RecordID]appdef.QName
 	lastID  istructs.RecordID
 	changes uint
 }
