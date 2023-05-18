@@ -114,6 +114,7 @@ func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName is
 }
 
 // c.sys.CreateWorkspaceID
+// targetApp/appWS
 func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istructs.AppQName) istructsmem.ExecCommandClosure {
 	return func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 		// TODO: AuthZ: System,SystemToken in header
@@ -171,6 +172,7 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istruct
 
 // Projector<A, InvokeCreateWorkspace>
 // triggered by CDoc<WorkspaceID>
+// targetApp/appWS
 func invokeCreateWorkspaceProjector(federationURL func() *url.URL, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) error {
