@@ -92,7 +92,7 @@ jobs:
         
     - name: Load environment file
       run: |
-           echo PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_01) >> $GITHUB_ENV
+           echo PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_03) >> $GITHUB_ENV
 
     - name: Smoke test - wait for scylla initialization
       run: |
@@ -112,6 +112,27 @@ jobs:
            exit 1
         fi
 
+    - name: Check Prometheus and Alertmanager
+      run: |
+        NODES=("10.0.0.11" "10.0.0.12")
+
+        for node in "${NODES[@]}"; do
+          PROMETHEUS_RESPONSE=$(ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${node}:9090")
+          if [[ "${PROMETHEUS_RESPONSE}" == "200" ]]; then
+            echo "Prometheus is up and running on node ${node}."
+          else
+            echo "Failed to reach Prometheus on node ${node}. HTTP response code: ${PROMETHEUS_RESPONSE}"
+            exit 1
+          fi
+
+          ALERTMANAGER_RESPONSE=$(ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${node}:9093")
+          if [[ "${ALERTMANAGER_RESPONSE}" == "200" ]]; then
+            echo "Alertmanager is up and running on node ${node}."
+          else
+            echo "Failed to reach Alertmanager on node ${node}. HTTP response code: ${ALERTMANAGER_RESPONSE}"
+            exit 1
+          fi
+        done
       
     - name: Terraform destroy
       if: always()
