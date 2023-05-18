@@ -29,7 +29,6 @@
     participant ws as Workspace
     participant appws as currentApp/ApplicationWS
     participant profile as ProfileWS
-    participant registry as regisrty
 
     owner ->> ws: c.sys.InitiateDeactivateWorkspace()
     opt WorkspaceDescriptor.Status != Active
@@ -40,8 +39,7 @@
 
     note over ws: ap.sys.ApplyDeactivateWorkspace()
     opt foreach cdos.sys.Subject
-      registry -->> ws : ProfileWSIDByLogin()
-      ws ->> profile: c.sys.OnJoinedWorkspaceDeactivated()
+      ws ->> profile: c.sys.OnJoinedWorkspaceDeactivated(currentWSID)
       opt JoinedWorkspace.IsActive
         profile ->> profile: JoinedWorkspace.IsActive = false
       end
