@@ -18,51 +18,40 @@ func successSECluster() clusterType {
 		Edition:               clusterEditionSE,
 		DesiredClusterVersion: version,
 		ActualClusterVersion:  version,
-		LastAttemptInfo:       "some info about cluster",
 		DataCenters: []string{
 			"dc1", "dc2", "dc3",
 		},
 		Nodes: []nodeType{
 			{
-				NodeRole:  "SENode",
-				AttemptNo: 1,
-				Info:      "some info about node",
+				NodeRole: "SENode",
 				ActualNodeState: nodeStateType{
 					Address:     "5.255.255.55",
 					NodeVersion: version,
 				},
 			},
 			{
-				NodeRole:  "SENode",
-				AttemptNo: 1,
-				Info:      "some info about node",
+				NodeRole: "SENode",
 				ActualNodeState: nodeStateType{
 					Address:     "5.255.255.56",
 					NodeVersion: version,
 				},
 			},
 			{
-				NodeRole:  "DBNode",
-				AttemptNo: 1,
-				Info:      "some info about node",
+				NodeRole: "DBNode",
 				ActualNodeState: nodeStateType{
 					Address:     "5.255.255.57",
 					NodeVersion: version,
 				},
 			},
 			{
-				NodeRole:  "DBNode",
-				AttemptNo: 1,
-				Info:      "some info about node",
+				NodeRole: "DBNode",
 				ActualNodeState: nodeStateType{
 					Address:     "5.255.255.58",
 					NodeVersion: version,
 				},
 			},
 			{
-				NodeRole:  "DBNode",
-				AttemptNo: 1,
-				Info:      "some info about node",
+				NodeRole: "DBNode",
 				ActualNodeState: nodeStateType{
 					Address:     "5.255.255.59",
 					NodeVersion: version,
@@ -83,9 +72,7 @@ func failSECluster() clusterType {
 		},
 		Nodes: []nodeType{
 			{
-				NodeRole:  "SENode",
-				AttemptNo: 1,
-				Info:      "some info about node",
+				NodeRole: "SENode",
 				DesiredNodeState: nodeStateType{
 					Address:     "5.255.255.55",
 					NodeVersion: version,
@@ -96,9 +83,7 @@ func failSECluster() clusterType {
 				},
 			},
 			{
-				NodeRole:  "SENode",
-				AttemptNo: 2,
-				Info:      "error information on the node",
+				NodeRole: "SENode",
 				DesiredNodeState: nodeStateType{
 					Address:     "5.255.255.56",
 					NodeVersion: version,
@@ -109,18 +94,15 @@ func failSECluster() clusterType {
 				},
 			},
 			{
-				NodeRole:  "DBNode",
-				AttemptNo: 1,
-				Info:      "some info about node",
+				NodeRole: "DBNode",
 				ActualNodeState: nodeStateType{
 					Address:     "5.255.255.57",
 					NodeVersion: version,
 				},
 			},
 			{
-				NodeRole:  "DBNode",
-				AttemptNo: 1,
-				Error:     "error information on the node",
+				NodeRole: "DBNode",
+				Error:    "error information on the node",
 				DesiredNodeState: nodeStateType{
 					Address:     "5.255.255.58",
 					NodeVersion: version,
@@ -131,9 +113,7 @@ func failSECluster() clusterType {
 				},
 			},
 			{
-				NodeRole:  "DBNode",
-				AttemptNo: 1,
-				Info:      "some info about node",
+				NodeRole: "DBNode",
 				ActualNodeState: nodeStateType{
 					Address:     "5.255.255.59",
 					NodeVersion: version,
@@ -148,12 +128,9 @@ func successCECluster() clusterType {
 		Edition:               clusterEditionCE,
 		DesiredClusterVersion: version,
 		ActualClusterVersion:  version,
-		LastAttemptInfo:       "some info about cluster",
 		Nodes: []nodeType{
 			{
-				NodeRole:  "CENode",
-				AttemptNo: 1,
-				Info:      "some info about node",
+				NodeRole: "CENode",
 				ActualNodeState: nodeStateType{
 					Address:     "5.255.255.59",
 					NodeVersion: version,
@@ -171,9 +148,8 @@ func failCECluster() clusterType {
 		LastAttemptError:      "some error",
 		Nodes: []nodeType{
 			{
-				NodeRole:  "CENode",
-				AttemptNo: 1,
-				Error:     "error information on the node",
+				NodeRole: "CENode",
+				Error:    "error information on the node",
 				DesiredNodeState: nodeStateType{
 					Address:     "5.255.255.59",
 					NodeVersion: version,
