@@ -57,11 +57,9 @@ func (n *nodeStateType) isEmpty() bool {
 type nodeType struct {
 	cluster          *clusterType
 	NodeRole         string
-	idx              int // the sequence number of the node, starts with 1
-	AttemptNo        int
-	Info             string `json:"Info,omitempty"`
-	Error            string `json:"Error,omitempty"`
-	ActualNodeState  nodeStateType
+	idx              int           // the sequence number of the node, starts with 1
+	Error            string        `json:"Error,omitempty"`
+	ActualNodeState  nodeStateType `json:"ActualNodeState,omitempty"`
 	DesiredNodeState nodeStateType `json:"DesiredNodeState,omitempty"`
 }
 
@@ -76,26 +74,21 @@ func (n *nodeType) nodeControllerFunction() error {
 	}
 }
 
-func (n *nodeType) success(info string) {
+func (n *nodeType) success() {
 	n.ActualNodeState = n.DesiredNodeState
 	n.DesiredNodeState.clear()
-	n.AttemptNo = 0
 	n.Error = ""
-	n.Info = info
 }
 
 func (n *nodeType) fail(err string) {
 	n.Error = err
-	n.Info = ""
 }
 
 // initializing a new action attempt on a node
 // the error is being reset
 // the attempt counter is incremented
 func (n *nodeType) newAttempt() {
-	n.AttemptNo += 1
 	n.Error = ""
-	n.Info = ""
 }
 
 func (n *nodeType) desiredNodeVersion(c *clusterType) string {
@@ -109,18 +102,21 @@ func (n *nodeType) actualNodeVersion() string {
 	return n.ActualNodeState.NodeVersion
 }
 
-// label for swarm node
-func (n *nodeType) label() string {
+func (n *nodeType) label(key string) string {
 	switch n.NodeRole {
 	case nrCENode:
-		return "ceapp"
+		return "ce"
 	case nrSENode:
-		return fmt.Sprintf("app%d", n.idx)
+		if key == swarmSeLabelKey {
+			return "se"
+		} else if key == swarmMonLabelKey {
+			return fmt.Sprintf("mon%d", n.idx)
+		}
 	case nrDBNode:
 		return fmt.Sprintf("scylla%d", n.idx-seNodeCount)
-	default:
-		return fmt.Sprintf("node%d", n.idx)
 	}
+
+	return fmt.Sprintf("node%d", n.idx)
 }
 
 func (ns *nodeType) check(c *clusterType) error {
@@ -249,11 +245,10 @@ type clusterType struct {
 	exists                bool //the cluster is loaded from "cluster.json" at the start of ctool
 	Edition               string
 	ActualClusterVersion  string
-	DesiredClusterVersion string
-	Cmd                   cmdType
+	DesiredClusterVersion string   `json:"DesiredClusterVersion,omitempty"`
+	Cmd                   cmdType  `json:"Cmd,omitempty"`
 	DataCenters           []string `json:"DataCenters,omitempty"`
 	LastAttemptError      string   `json:"LastAttemptError,omitempty"`
-	LastAttemptInfo       string   `json:"LastAttemptInfo,omitempty"`
 	Nodes                 []nodeType
 	Draft                 bool `json:"Draft,omitempty"`
 }
@@ -265,7 +260,7 @@ func (c *clusterType) clusterControllerFunction() error {
 	case clusterEditionSE:
 		return seClusterControllerFunction(c)
 	default:
-		return ErrorClusterControllerFunctionNotAssigned
+		return ErrClusterControllerFunctionNotAssigned
 	}
 }
 
@@ -417,17 +412,15 @@ func (c *clusterType) validate() error {
 	return err
 }
 
-func (c *clusterType) success(info string) {
+func (c *clusterType) success() {
 	c.ActualClusterVersion = c.DesiredClusterVersion
 	c.DesiredClusterVersion = ""
 	c.Cmd.clear()
 	c.LastAttemptError = ""
-	c.LastAttemptInfo = info
 }
 
 func (c *clusterType) fail(error string) {
 	c.LastAttemptError = error
-	c.LastAttemptInfo = ""
 }
 
 func expandPath(path string) (string, error) {

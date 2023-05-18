@@ -105,10 +105,18 @@ func prepareScripts(scriptFileNames ...string) error {
 
 		destFileName := filepath.Join(scriptsTempDir, fileName)
 
+		dir := filepath.Dir(destFileName)
+
+		err = os.MkdirAll(dir, 0700) // os.ModePerm)
+		if err != nil {
+			return err
+		}
+
 		newFile, err := os.Create(destFileName)
 		if err != nil {
 			return err
 		}
+
 		defer newFile.Close()
 		if err = os.Chmod(destFileName, rwxrwxrwx); err != nil {
 			return err
@@ -121,7 +129,6 @@ func prepareScripts(scriptFileNames ...string) error {
 	}
 
 	return nil
-
 }
 
 func inputPassword(pass *string) error {

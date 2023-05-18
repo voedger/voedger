@@ -13,7 +13,6 @@ import (
 )
 
 var (
-	force      bool
 	appCompose string = "gcr.io/cadvisor/cadvisor:latest"
 	dbCompose  string = "scylladb/scylla"
 )
@@ -25,7 +24,6 @@ func newApplyCmd() *cobra.Command {
 		RunE:  apply,
 	}
 
-	cmd.Flags().BoolVarP(&force, "force", "", false, "forced reinstallation of the required environment")
 	cmd.Flags().StringVarP(&appCompose, "app-compose", "", appCompose, "name of the application image other than default")
 	cmd.Flags().StringVarP(&dbCompose, "db-compose", "", dbCompose, "name of the db server image other than default")
 
@@ -34,7 +32,6 @@ func newApplyCmd() *cobra.Command {
 
 func apply(cmd *cobra.Command, arg []string) error {
 	cluster := newCluster()
-	defer cluster.saveToJSON()
 
 	var err error
 
@@ -43,6 +40,7 @@ func apply(cmd *cobra.Command, arg []string) error {
 		return err
 	}
 
+	defer cluster.saveToJSON()
 	if err = mkCommandDirAndLogFile(cmd); err != nil {
 		return err
 	}

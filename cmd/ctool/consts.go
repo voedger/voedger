@@ -63,3 +63,9 @@ const (
 	ceSettingsFileName = "ce-settings.json"
 	seSettingsFileName = "se-settings.json"
 )
+
+const (
+	swarmDbmsLabelKey = "type"
+	swarmSeLabelKey   = "se"
+	swarmMonLabelKey  = "mon"
+)
