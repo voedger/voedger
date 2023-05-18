@@ -14,13 +14,13 @@
 
 ### Principles
 
-- Workspace can be App Workspace, ProfileWorkspace or UserWorkspace
-- ProfileWorkspace keeps Subject data, including list of UserWorkspace-s
-  - "sys.UserProfile", "sys.DeviceProfile"
-- UserWorkspace: "air.Restaurant" etc.
-- Workspace has OwningDocument
-- OwningDocument: a document whose fields {WSID, wsError} will be updated when workspace is ready
-- Currently, OwningDocument kinds: CDoc[Login], CDoc[UserWorkspace]
+- Workspace can be AppWorkspace, ProfileWorkspace or ChildWorkspace
+- ProfileWorkspace keeps Subject data, including list of ChildWorkspace-s
+  - `sys.UserProfile`, `sys.DeviceProfile`
+- ChildWorkspace: `air.Restaurant` etc.
+- Workspace has the OwningDocument
+- OwningDocument: a document whose fields {WSID, wsError} will be updated when workspace will be ready
+- Currently, OwningDocument kinds: `cdoc.sys.Login`, `cdoc.sys.ChildWorkspace`
 - // TODO: Clearing the owner.error causes the workspace to be regenerated
 - OwningDocument.error must NOT be published to CUD function (only System can update)
 
@@ -31,13 +31,13 @@
 | Workspace| Рабочая область       |
 | AppWorkspace   |Рабочая область приложения|
 | ProfileWorkspace   | Профиль        |
-| UserWorkspace   |Пользовательская рабочая область|
+| ChildWorkspace   |Дочерняя рабочая область|
 
 ```mermaid
 erDiagram
   Workspace||--|| AppWorkspace: "can be"
   Workspace||--|| ProfileWorkspace: "can be"
-  Workspace||--|| UserWorkspace: "can be"
+  Workspace||--|| ChildWorkspace: "can be"
 
   AppWorkspace ||--|{ cdoc_sys_Login: "e.g. can keep"
   AppWorkspace ||--|{ cdoc_sys_WorkspaceID: "e.g. can keep"
@@ -45,13 +45,14 @@ erDiagram
   ProfileWorkspace ||--|{ UserProfile: "can be"
   ProfileWorkspace ||--|{ DeviceProfile: "can be"
 
-  UserWorkspace ||--|{ air_Restaurant: "e.g. can be"
-  UserWorkspace ||--|{ slack_Organization: "e.g. can be"
+  ChildWorkspace ||--|{ air_Restaurant: "e.g. can be"
+  ChildWorkspace ||--|{ slack_Organization: "e.g. can be"
 ```
 
 ### Owning Document
 
-> "Doc from App owns Workspace" means that Workspace.Docs[sys.WorkspaceDescriptor].Owner = Doc.ID AND Workspace.Docs[sys.WorkspaceDescriptor].App = Record.App
+> "Doc from App owns Workspace" means that
+Workspace.Docs[sys.WorkspaceDescriptor].OwnerID = Doc.ID AND Workspace.Docs[sys.WorkspaceDescriptor].App = Doc.App
 
 ```mermaid
 erDiagram
@@ -67,20 +68,29 @@ erDiagram
   UserApp ||--|{ ProfileWorkspace: "has"
 
   ProfileWorkspace ||--|{ cdoc_ChildWorkspace: "has"
-  cdoc_ChildWorkspace ||--|| UserWorkspace: "owns"
+  cdoc_ChildWorkspace ||--|| ChildWorkspace: "owns"
   AppWorkspace||--|| Workspace: "is"
   ProfileWorkspace||--|| Workspace: "is"
-  UserWorkspace||--|| Workspace: "is"
+  ChildWorkspace||--|| Workspace: "is"
 
   Workspace||--|| cdoc_sys_WorkspaceDescriptor: "has"
 
   cdoc_sys_WorkspaceDescriptor{
     OwnerApp AppQName
-    OwnerDoc ID "Owner fields {WSID, WorkspaceError} will be updated by workspace creation proc"
-    InitStartedAtMs  int64
-    InitCompletedAtMs int64
-    wsKind  QName
-    ParentWSID WSID
+    OwnerID RecordID "Owner fields {WSID, WorkspaceError} will be updated by workspace creation proc"
+    OwnerWSID WSID
+    OwnerQName QName
+    CreatedAtMs  int64
+    InitStartedAtMs int64
+    InitCompletedAtMs int64 "will be updated by workspace creation proc"
+    CreateError string "e.g. wrong workspace init data"
+    InitError string "will be updated by workspace creation proc"
+    WSName string
+    WSKind  QName
+    WSKindInitializationData string "json"
+    TemplateName string
+    TemplateParams string
+    WSID WSID "current WSID"
   }
 ```
 
@@ -97,8 +107,7 @@ erDiagram
 
   AppWorkspace || -- || Workspace: is
   %% ??? one-to-one
-  AppWorkspace ||--|| cdoc_sys_WorkspaceID: "has"
-  AppWorkspace ||--|{ cdoc_sys_Workspace: "has"
+  AppWorkspace ||--|{ cdoc_sys_WorkspaceID: "has"
 
 
   Workspace || -- || AppWorkspaceDescriptorCDoc: has
