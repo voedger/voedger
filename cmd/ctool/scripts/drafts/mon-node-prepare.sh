@@ -40,6 +40,7 @@ while [ $# -gt 0 ] && [ $count -lt 2 ]; do
   cat ./alertmanager/config.yml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/alertmanager/config.yml'
 
   ssh $SSH_OPTIONS $SSH_USER@$1 "sudo chown -R 65534:65534 /prometheus"
+  ssh $SSH_OPTIONS $SSH_USER@$1 "sudo chown -R 65534:65534 /alertmanager"
 
   count=$((count+1))
 
