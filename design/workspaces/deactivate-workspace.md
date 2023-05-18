@@ -17,8 +17,6 @@
 
 ## c.sys.InitiateDeactivateWorkspace()
 
-???: Add ProfileWSD to Subject?
-
 - AuthZ: role.sys.WorkspaceOwner ???
 - Params: none
 
