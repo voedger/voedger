@@ -38,7 +38,7 @@ erDiagram
   Workspace||--|| AppWorkspace: "can be"
   Workspace||--|| ProfileWorkspace: "can be"
   Workspace||--|| UserWorkspace: "can be"
-  
+
   AppWorkspace ||--|{ cdoc_sys_Login: "e.g. can keep"
   AppWorkspace ||--|{ cdoc_sys_WorkspaceID: "e.g. can keep"
 
@@ -47,9 +47,9 @@ erDiagram
 
   UserWorkspace ||--|{ air_Restaurant: "e.g. can be"
   UserWorkspace ||--|{ slack_Organization: "e.g. can be"
-```  
+```
 
-### Owninig Document
+### Owning Document
 
 > "Doc from App owns Workspace" means that Workspace.Docs[sys.WorkspaceDescriptor].Owner = Doc.ID AND Workspace.Docs[sys.WorkspaceDescriptor].App = Record.App
 
@@ -88,7 +88,7 @@ erDiagram
 
 ```mermaid
 erDiagram
- 
+
 
   ProfileWorkspace ||--o{ cdoc_sys_JoinedWorkspace: "has"
   ProfileWorkspace || -- || Workspace: is
@@ -99,19 +99,19 @@ erDiagram
   %% ??? one-to-one
   AppWorkspace ||--|| cdoc_sys_WorkspaceID: "has"
   AppWorkspace ||--|{ cdoc_sys_Workspace: "has"
-  
-  
+
+
   Workspace || -- || AppWorkspaceDescriptorCDoc: has
   Workspace || -- || cdoc_sys_WorkspaceDescriptor: has
   Workspace || -- |{ cdoc_sys_Subject: has
-  Workspace || -- |{ cdoc_sys_ChildWorkspace: has  
+  Workspace || -- |{ cdoc_sys_ChildWorkspace: has
 
 
 
   AppWorkspaceDescriptorCDoc ||--|| cdoc_sys_UserProfile: "can be"
   AppWorkspaceDescriptorCDoc ||--|| cdoc_sys_DeviceProfile: "can be"
   AppWorkspaceDescriptorCDoc ||--|| AnyCustomCDoc: "can be"
-  
+
   cdoc_sys_WorkspaceDescriptor ||--|| cdoc_sys_ChildWorkspace: "refers to parent WS"
 
   Workspace || -- || WSID: "addressed by"
