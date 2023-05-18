@@ -183,11 +183,12 @@ func ProvideAsyncProjectorInitializeWorkspace(federationURL func() *url.URL, now
 }
 
 // Projector<A, InvokeCreateWorkspaceID>
-func ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(federationURL func() *url.URL, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
+func ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(federationURL func() *url.URL, appQName istructs.AppQName, tokensAPI itokens.ITokens,
+	asp istructs.IAppStructsProvider) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPInvokeCreateWorkspaceID,
-			Func: invokeCreateWorkspaceIDProjector(federationURL, appQName, tokensAPI),
+			Func: invokeCreateWorkspaceIDProjector(federationURL, appQName, tokensAPI, asp),
 		}
 	}
 }

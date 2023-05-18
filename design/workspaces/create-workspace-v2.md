@@ -13,7 +13,7 @@ Create User/Login/App Workspaces
 
 - [Principles](#solution-principles)
 - [Create Login](#create-login)
-- [Create UserWorkspace](#create-userworkspace)
+- [Create ChildWorkspace](#create-childworkspace)
 - [Related commits](#related-commits)
 - [Notes](#notes)
 - [See also](#see-also)
@@ -52,7 +52,7 @@ Projectors:
 |c.sys.CreateWorkspaceID()<br/>cdoc.sys.WorkspaceID<br/>aproj.sys.InvokeCreateWorkspace()|Target App|(Target Cluster, base App WSID)|Target Cluster
 |c.sys.CreateWorkspace()<br/>cdoc.sys.WorkspaceDescriptor<br/>cdoc.sys.UserProfile/DeviceProfile<br/>aproj.sys.InitializeWorkspace()|Target App|new WSID|Target Cluster
 
-## Create UserWorkspace
+## Create ChildWorkspace
 
 |entity|app|ws|cluster|
 |---|---|---|---|
@@ -67,11 +67,11 @@ Projectors:
   - PrincipalToken in header
   - PrincipalToken.ProfileWSID == Request.WSID
 - Params: wsName, wsKind, wsKindInitializationData, templateName, templateParams (JSON), wsClusterID
-- Check that wsName does not exist yet: View<UserWorkspaceIdx>{pk: dummy, cc: wsName, value: idOfUserWorkspace}
+- Check that wsName does not exist yet: View<ChildWorkspaceIdx>{pk: dummy, cc: wsName, value: idOfChildWorkspace}
   - 409 conflict
-- Create CDoc<UserWorkspace> {wsName, wsKind, wsKindInitializationData, templateName, templateParams, wsClusterID, /* Updated aftewards by UpdateOwner*/ WSID, wsError}
+- Create CDoc<ChildWorkspace> {wsName, wsKind, wsKindInitializationData, templateName, templateParams, wsClusterID, /* Updated aftewards by UpdateOwner*/ WSID, wsError}
   - Trigger Projector<A, InvokeCreateWorkspaceID>
-  - Trigger Projector<UserWorkspaceIdx>
+  - Trigger Projector<ChildWorkspaceIdx>
 
 Subject:
 - Call WS[Subject.ProfileWSID].InitChildWorkspace()
@@ -79,12 +79,12 @@ Subject:
   - wsKind
   - wsKindInitializationData // JSON
   - wsClusterID // Ideally user should be asked which cluster to use
-- Call WS[Subject.ProfileWSID].q.QueryUserWorkspaceByName() until (WSID || wsError)
-  - Returns all fields of CDoc<UserWorkspace>
+- Call WS[Subject.ProfileWSID].q.QueryChildWorkspaceByName() until (WSID || wsError)
+  - Returns all fields of CDoc<ChildWorkspace>
 
 ## aproj.sys.InvokeCreateWorkspaceID()
 
-- Triggered by CDoc<UserWorkspace>
+- Triggered by CDoc<ChildWorkspace>
 - PseudoWSID = NewWSID(wsClusterID, CRC32(wsName))
 - // PseudoWSID  is needed to avoid WSID generation bottlenecks
 - Call WS[$PseudoWSID].c.CreateWorkspaceID()

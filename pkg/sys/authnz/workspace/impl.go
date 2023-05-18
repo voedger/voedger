@@ -33,7 +33,7 @@ import (
 // Projector<A, InvokeCreateWorkspaceID>
 // triggered by CDoc<ChildWorkspace> or CDoc<Login> (both not singletons)
 // wsid - pseudoProfile: crc32(wsName) or crc32(login)
-func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName istructs.AppQName, tokensAPI itokens.ITokens, asp istructs.IAppStructsProvider) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) error {
 			if rec.QName() != authnz.QNameCDocLogin && rec.QName() != authnz.QNameCDocChildWorkspace {
@@ -61,9 +61,16 @@ func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName is
 				wsKind = rec.AsQName(authnz.Field_WSKind)
 				templateName = rec.AsString(field_TemplateName)
 				templateParams = rec.AsString(Field_TemplateParams)
-				targetClusterID = istructs.ClusterID(rec.AsInt32(authnz.Field_WSClusterID))
 				targetApp = ownerApp
-				wsidToCallCreateWSIDAt = istructs.NewWSID(targetClusterID, istructs.WSID(coreutils.CRC16([]byte(wsName))))
+				as, err := asp.AppStructs(appQName)
+				if err != nil {
+					// notest
+					return err
+				}
+				// AppWSID?
+				// для login ownerWSID будет 0
+				wsidToCallCreateWSIDAt = coreutils.GetPseudoWSID(wsName, ownerWSID, targetClusterID)
+				// wsidToCallCreateWSIDAt = istructs.WSID(coreutils.CRC16([]byte(fmt.Sprint(ownerWSID)+"/"+wsName)))
 			case authnz.QNameCDocLogin:
 				wsName = "hashedLogin"
 				switch istructs.SubjectKindType(rec.AsInt32(authnz.Field_SubjectKind)) {
