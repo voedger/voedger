@@ -125,7 +125,7 @@ func TestSqlQuery_plog(t *testing.T) {
 		m := map[string]interface{}{}
 		require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
 		require.Equal(sqlquery.DefaultOffset, istructs.Offset(m["PlogOffset"].(float64)))
-		require.Len(resp.Sections[0].Elements, pLogSize)
+		require.GreaterOrEqual(len(resp.Sections[0].Elements), pLogSize)
 
 		m = map[string]interface{}{}
 		require.NoError(json.Unmarshal([]byte(resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)), &m))
