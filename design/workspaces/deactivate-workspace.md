@@ -27,7 +27,7 @@
 
     actor owner as WorkspaceOwner
     participant ws as Workspace
-    participant appws as ApplicationWS
+    participant appws as currentApp/ApplicationWS
     participant profile as ProfileWS
     participant registry as regisrty
 
@@ -47,9 +47,10 @@
       end
     end
 
-    ws ->> appws: sys.OnWorkspaceDeactivated()
-    opt ! WorkspaceID.IsActive
-      appws ->> appws: WorkspaceID[ID(WSID)].IsActive = false
+    ws ->> appws: sys.OnWorkspaceDeactivated(ownerWSID, wsName)
+    appws ->> appws: read IDOfCDocWorkspaceID from view.sys.WorkspaceIDIdx
+    opt exists && !WorkspaceID.IsActive
+      appws ->> appws: WorkspaceID.IsActive = false
     end
 
     ws ->> ws: c.sys.CUD: cdoc.sys.WorkspaceDescriptor.Status = Inactive

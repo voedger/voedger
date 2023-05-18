@@ -102,10 +102,9 @@ func cmdOnJoinedWorkspaceDeactivateExec(cf istructs.ICommandFunction, args istru
 	if err != nil {
 		return err
 	}
-	if !ok {
-		return nil
+	if ok {
+		svbCDocJoinedWorkspace.PutBool(appdef.SystemField_IsActive, false)
 	}
-	svbCDocJoinedWorkspace.PutBool(appdef.SystemField_IsActive, false)
 	return nil
 }
 
