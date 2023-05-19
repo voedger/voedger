@@ -6,12 +6,14 @@
 package sys_it
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/invite"
@@ -50,6 +52,10 @@ func TestBasicUsage_DeactivateWorkspace(t *testing.T) {
 	// still able to work in an inactive workspace with the system token
 	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 	vit.PostWS(ws, "q.sys.Collection", bodyQry, coreutils.WithAuthorizeBy(sysToken.Token))
+	vit.PostWS(ws, "c.sys.CUD", bodyCmd, coreutils.WithAuthorizeBy(sysToken.Token))
+
+	// 409 conflict on deactivate an already deactivated worksace
+	vit.PostWS(ws, "c.sys.DeactivateWorkspace", "{}", coreutils.WithAuthorizeBy(sysToken.Token), coreutils.Expect409())
 }
 
 func waitForDeactivate(vit *it.VIT, ws *it.AppWorkspace) {
@@ -93,15 +99,11 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	updateRolesEmailTemplate := "text:" + invite.EmailTemplatePlaceholder_Roles
 	updateRolesEmailSubject := "your roles are updated"
 	inviteID := InitiateInvitationByEMail(vit, newWS, expireDatetime, it.TestEmail2, roleOwner, updateRolesEmailTemplate, updateRolesEmailSubject)
-
 	vit.ExpectEmail().Capture()
-
 	WaitForInviteState(vit, newWS, invite.State_Invited, inviteID)
-
 	expireDatetimeStr := strconv.FormatInt(expireDatetime, 10)
 	verificationCode := expireDatetimeStr[len(expireDatetimeStr)-6:]
 	InitiateJoinWorkspace(vit, newWS, inviteID, it.TestEmail2, verificationCode)
-
 	WaitForInviteState(vit, newWS, invite.State_Joined, inviteID)
 
 	// check prn2 could work in ws1
@@ -118,9 +120,18 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 
 	// check appWS/cdoc.sys.WorkspaceID.IsActive == false
 	wsidOfCDocWorkspaceID := coreutils.GetPseudoWSID(prn1.ProfileWSID, newWS.Name, istructs.MainClusterID)
-	vit.PostApp(istructs.AppQName_test1_app1, wsidOfCDocWorkspaceID, "q.sys.Collection", fmt.Sprintf(`
-			{"args":{"Schema":"sys.WorkspaceIDIdx"},
-			"elements":[{"fields":["IDOfCDocWorkspaceID]}],
-			"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, inviteID)).SectionRow(0)
+	body = fmt.Sprintf(`{"args":{"Query":"select IDOfCDocWorkspaceID from sys.WorkspaceIDIdx where OwnerWSID = %d and WSName = '%s'"}, "elements":[{"fields":["Result"]}]}`,
+		prn1.ProfileWSID, newWS.Name)
+	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
+	resp := vit.PostApp(istructs.AppQName_test1_app1, wsidOfCDocWorkspaceID, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sysToken.Token))
+	viewWorkspaceIDIdx := map[string]interface{}{}
+	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &viewWorkspaceIDIdx))
+	idOfCDocWorkspaceID := int64(viewWorkspaceIDIdx["IDOfCDocWorkspaceID"].(float64))
+	body = fmt.Sprintf(`{"args":{"ID": %d},"elements":[{"fields": ["Result"]}]}`, int64(idOfCDocWorkspaceID))
+	resp = vit.PostApp(istructs.AppQName_test1_app1, wsidOfCDocWorkspaceID, "q.sys.CDoc", body, coreutils.WithAuthorizeBy(sysToken.Token))
+	jsonBytes := []byte(resp.SectionRow()[0].(string))
+	cdocWorkspaceID := map[string]interface{}{}
+	require.Nil(json.Unmarshal(jsonBytes, &cdocWorkspaceID))
+	require.False(cdocWorkspaceID[appdef.SystemField_IsActive].(bool))
 
 }

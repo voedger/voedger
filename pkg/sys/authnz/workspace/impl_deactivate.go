@@ -92,6 +92,7 @@ func cmdDeactivateWorkspaceExec(cf istructs.ICommandFunction, args istructs.Exec
 
 	wsDescUpdater, err := args.Intents.UpdateValue(kb, wsDesc)
 	if err != nil {
+		// notest
 		return err
 	}
 	wsDescUpdater.PutInt32(sysshared.Field_Status, int32(sysshared.WorkspaceStatus_ToBeDeactivated))
@@ -196,9 +197,8 @@ func projectorApplyDeactivateWorkspace(federationURL func() *url.URL, appQName i
 				return nil
 			}
 			profileWSID := istructs.WSID(subject.AsInt64(sysshared.Field_ProfileWSID))
-			// вызовем c.sys.OnJoinedWorkspaceDeactivated
-			// по словам Максима: приложение всегда текщее
-			// по словам Миши: в сабджектах не может быть логинов из разных приложений
+			// app is always current
+			// impossible to have logins from different apps among subjects (Michael said)
 			url := fmt.Sprintf(`api/%s/%d/c.sys.OnJoinedWorkspaceDeactivated`, appQName, profileWSID)
 
 			body := fmt.Sprintf(`{"args":{"InvitedToWSID":%d}}`, event.Workspace())
@@ -210,7 +210,7 @@ func projectorApplyDeactivateWorkspace(federationURL func() *url.URL, appQName i
 			return err
 		}
 
-		// c.sys.OnWorkspaceDeactivated(OnwerWSID, WSName) (appWS)
+		// appWS/c.sys.OnWorkspaceDeactivated(OnwerWSID, WSName)
 		wsName := wsDesc.AsString(sysshared.Field_WSName)
 		body := fmt.Sprintf(`{"args":{"OwnerWSID":%d, "WSName":"%s"}}`, ownerWSID, wsName)
 		cdocWorkspaceIDWSID := coreutils.GetPseudoWSID(istructs.WSID(ownerWSID), wsName, event.Workspace().ClusterID())
