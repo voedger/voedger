@@ -160,8 +160,39 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istruct
 		cdocWorkspaceID.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
 		cdocWorkspaceID.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
 		cdocWorkspaceID.PutInt64(authnz.Field_WSID, int64(newWSID))
+
 		return
 	}
+}
+
+// sp.sys.WorkspaceIDIdx
+// triggered by cdoc.sys.WorkspaceID
+// targetApp/appWS
+func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+	return event.CUDs(func(rec istructs.ICUDRow) error {
+		if rec.QName() != QNameCDocWorkspaceID {
+			return nil
+		}
+		kb, err := s.KeyBuilder(state.ViewRecordsStorage, QNameViewWorkspaceIDIdx)
+		if err != nil {
+			// notest
+			return nil
+		}
+		ownerWSID := rec.AsInt64(Field_OwnerWSID)
+		wsName := rec.AsString(authnz.Field_WSName)
+		wsid := rec.AsInt64(authnz.Field_WSID)
+		kb.PutInt64(Field_OwnerWSID, ownerWSID)
+		kb.PutString(authnz.Field_WSName, wsName)
+		wsIdxVB, err := intents.NewValue(kb)
+		if err != nil {
+			// notest
+			return nil
+		}
+
+		wsIdxVB.PutInt64(authnz.Field_WSID, wsid)
+		wsIdxVB.PutInt64(field_IDOfCDocWorkspaceID, int64(rec.ID()))
+		return nil
+	})
 }
 
 // Projector<A, InvokeCreateWorkspace>

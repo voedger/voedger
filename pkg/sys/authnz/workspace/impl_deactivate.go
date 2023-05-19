@@ -42,7 +42,9 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivated"),
 		adf.AddStruct(appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivatedParams"), appdef.DefKind_Object).
-			AddField(Field_OwnerID, appdef.DataKind_int64, true).QName(),
+			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
+			AddField(sysshared.Field_WSName, appdef.DataKind_string, true).
+			QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		cmdOnWorkspaceDeactivatedExec,
@@ -110,27 +112,47 @@ func cmdOnJoinedWorkspaceDeactivateExec(cf istructs.ICommandFunction, args istru
 
 // app/pseudoProfileWSID, ownerApp
 func cmdOnWorkspaceDeactivatedExec(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-	ownerID := args.ArgumentObject.AsInt64(Field_OwnerID)
-	kb, err := args.State.KeyBuilder(state.RecordsStorage, appdef.NullQName)
+	ownerWSID := args.ArgumentObject.AsInt64(Field_OwnerWSID)
+	wsName := args.ArgumentObject.AsString(sysshared.Field_WSName)
+	kb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewWorkspaceIDIdx)
 	if err != nil {
 		// notest
 		return err
 	}
-	kb.PutRecordID(state.Field_ID, istructs.RecordID(ownerID))
-	ownerDoc, err := args.State.MustExist(kb)
+	kb.PutInt64(Field_OwnerWSID, ownerWSID)
+	kb.PutString(sysshared.Field_WSName, wsName)
+	viewRec, ok, err := args.State.CanExist(kb)
 	if err != nil {
 		// notest
 		return err
 	}
-	if !ownerDoc.AsBool(appdef.SystemField_IsActive) {
-		return nil
+	if !ok {
+		logger.Verbose("workspace", wsName, ":", ownerWSID, "is not mentioned in view.sys.WorkspaceIDId")
+		return
 	}
-	ownerDocUpdater, err := args.Intents.UpdateValue(kb, ownerDoc)
+	idOfCDocWorkspaceID := viewRec.AsRecordID(field_IDOfCDocWorkspaceID)
+	kb, err = args.State.KeyBuilder(state.RecordsStorage, QNameCDocWorkspaceID)
 	if err != nil {
 		// notest
 		return err
 	}
-	ownerDocUpdater.PutBool(appdef.SystemField_IsActive, false)
+	kb.PutRecordID(state.Field_ID, idOfCDocWorkspaceID)
+	cdocWorkspaceID, err := args.State.MustExist(kb)
+	if err != nil {
+		// notest
+		return err
+	}
+
+	if !cdocWorkspaceID.AsBool(appdef.SystemField_IsActive) {
+		logger.Verbose("cdoc.sys.WorkspaceID is inactive already")
+	}
+
+	cdocWorkspaceIDUpdater, err := args.Intents.UpdateValue(kb, cdocWorkspaceID)
+	if err != nil {
+		// notest
+		return err
+	}
+	cdocWorkspaceIDUpdater.PutBool(appdef.SystemField_IsActive, false)
 	return nil
 }
 
@@ -191,16 +213,16 @@ func projectorApplyDeactivateWorkspace(federationURL func() *url.URL, appQName i
 		// c.sys.OnWorkspaceDeactivated(OnwerWSID, WSName) (appWS)
 		wsName := wsDesc.AsString(sysshared.Field_WSName)
 		body := fmt.Sprintf(`{"args":{"OwnerWSID":%d, "WSName":"%s"}}`, ownerID, wsName)
-		cdocWorkspaceIDWSID := coreutils.GetAppWSID()
-		if _, err := coreutils.FederationFunc(federationURL(), fmt.Sprintf("api/%s/%d/c.sys.OnWorkspaceDeactivated", ownerApp, ownerWSID), body,
+		cdocWorkspaceIDWSID := coreutils.GetPseudoWSID(istructs.WSID(ownerWSID), wsName, event.Workspace().ClusterID())
+		if _, err := coreutils.FederationFunc(federationURL(), fmt.Sprintf("api/%s/%d/c.sys.OnWorkspaceDeactivated", ownerApp, cdocWorkspaceIDWSID), body,
 			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(sysToken)); err != nil {
 			return fmt.Errorf("c.sys.OnWorkspaceDeactivated failed: %w", err)
 		}
-		// c.sys.OnWorkspaceDeactivated(OwnerID) (profile)
-		body := fmt.Sprintf(`{"args":{"OwnerID":%d}}`, ownerID)
-		if _, err := coreutils.FederationFunc(federationURL(), fmt.Sprintf("api/%s/%d/c.sys.OnWorkspaceDeactivated", ownerApp, ownerWSID), body,
+		// c.sys.CUD: cdocs[ownerID].IsActive = false
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":falsed}}]}`, ownerID)
+		if _, err := coreutils.FederationFunc(federationURL(), fmt.Sprintf("api/%s/%d/c.sys.CUD", ownerApp, ownerWSID), body,
 			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(sysToken)); err != nil {
-			return fmt.Errorf("c.sys.OnWorkspaceDeactivated failed: %w", err)
+			return fmt.Errorf("c.sys.CUD: cdocs[ownerID].IsActive = false failed: %w", err)
 		}
 
 		// cdoc.sys.WorkspaceDescriptor.Status = Inactive
@@ -209,6 +231,7 @@ func projectorApplyDeactivateWorkspace(federationURL func() *url.URL, appQName i
 			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(sysToken)); err != nil {
 			return fmt.Errorf("c.sys.WorkspaceDescriptor.Status=Inactive by c.sys.CUD failed: %w", err)
 		}
+
 		logger.Info("workspace", wsDesc.AsString(sysshared.Field_WSName), "deactivated")
 		return nil
 	}

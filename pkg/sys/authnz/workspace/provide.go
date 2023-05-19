@@ -80,7 +80,9 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	projectors.ProvideViewDef(appDefBuilder, QNameViewWorkspaceIDIdx, func(b appdef.IViewBuilder) {
 		b.PartKeyDef().AddField(Field_OwnerWSID, appdef.DataKind_int64, true)
 		b.ClustColsDef().AddField(authnz.Field_WSName, appdef.DataKind_string, true)
-		b.ValueDef().AddField(authnz.Field_WSID, appdef.DataKind_int64, true)
+		b.ValueDef().
+			AddField(authnz.Field_WSID, appdef.DataKind_int64, true).
+			AddField(field_IDOfCDocWorkspaceID, appdef.DataKind_RecordID, false) // TODO: not required for backward compatibility. Actually is required
 	})
 
 	// CDoc<WorkspaceID>
@@ -204,6 +206,16 @@ func ProvideAsyncProjectorFactoryInvokeCreateWorkspace(federationURL func() *url
 		return istructs.Projector{
 			Name: qNameAPInvokeCreateWorkspace,
 			Func: invokeCreateWorkspaceProjector(federationURL, appQName, tokensAPI),
+		}
+	}
+}
+
+// sp.sys.WorkspaceIDIdx
+func ProvideSyncProjectorWorkspaceIDIdx(federationURL func() *url.URL, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
+	return func(partition istructs.PartitionID) istructs.Projector {
+		return istructs.Projector{
+			Name: QNameViewWorkspaceIDIdx,
+			Func: workspaceIDIdxProjector,
 		}
 	}
 }
