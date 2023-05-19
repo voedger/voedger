@@ -6,6 +6,7 @@
 package sys_it
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -53,6 +54,9 @@ func TestBasicUsage_DeactivateWorkspace(t *testing.T) {
 
 func waitForDeactivate(vit *it.VIT, ws *it.AppWorkspace) {
 	deadline := time.Now().Add(time.Second)
+	if coreutils.IsDebug() {
+		deadline = deadline.Add(time.Hour)
+	}
 	for time.Now().Before(deadline) {
 		resp := vit.PostWSSys(ws, "q.sys.Collection", `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`)
 		if int32(resp.SectionRow()[0].(float64)) == int32(sysshared.WorkspaceStatus_Inactive) {
@@ -108,7 +112,15 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	vit.PostWS(newWS, "c.sys.DeactivateWorkspace", "{}")
 	waitForDeactivate(vit, newWS)
 
-	// now check that cdoc.sys.JoinedWorkspace.IsActive == false
+	// check cdoc.sys.JoinedWorkspace.IsActive == false
 	joinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, newWS.WSID, it.TestEmail2)
 	require.False(joinedWorkspace.isActive)
+
+	// check appWS/cdoc.sys.WorkspaceID.IsActive == false
+	wsidOfCDocWorkspaceID := coreutils.GetPseudoWSID(prn1.ProfileWSID, newWS.Name, istructs.MainClusterID)
+	vit.PostApp(istructs.AppQName_test1_app1, wsidOfCDocWorkspaceID, "q.sys.Collection", fmt.Sprintf(`
+			{"args":{"Schema":"sys.WorkspaceIDIdx"},
+			"elements":[{"fields":["IDOfCDocWorkspaceID]}],
+			"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, inviteID)).SectionRow(0)
+
 }

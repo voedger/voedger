@@ -170,7 +170,7 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istruct
 // targetApp/appWS
 func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return event.CUDs(func(rec istructs.ICUDRow) error {
-		if rec.QName() != QNameCDocWorkspaceID {
+		if rec.QName() != QNameCDocWorkspaceID || !rec.IsNew() { // must not apply on cdoc.sys.WorkspaceID update. That happens on deactivate a workspace
 			return nil
 		}
 		kb, err := s.KeyBuilder(state.ViewRecordsStorage, QNameViewWorkspaceIDIdx)
@@ -189,6 +189,7 @@ func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, inten
 			return nil
 		}
 		wsIdxVB.PutInt64(authnz.Field_WSID, wsid)
+		wsIdxVB.PutRecordID(field_IDOfCDocWorkspaceID, rec.ID())
 		return nil
 	})
 }
