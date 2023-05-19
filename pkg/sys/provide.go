@@ -51,7 +51,7 @@ func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBu
 	cfg.AddAsyncProjectors(
 		journal.ProvideWLogDatesAsyncProjectorFactory(),
 		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspace(vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens),
-		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens, appW),
+		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens),
 		workspace.ProvideAsyncProjectorInitializeWorkspace(vvmAPI.FederationURL, timeFunc, cfg.Name, sep.EPWSTemplates(), vvmAPI.ITokens, wsPostInitFunc),
 		verifier.ProvideAsyncProjectorFactory_SendEmailVerificationCode(vvmAPI.FederationURL, smtpCfg),
 		invite.ProvideAsyncProjectorApplyInvitationFactory(timeFunc, vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens, smtpCfg),

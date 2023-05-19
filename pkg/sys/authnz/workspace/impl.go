@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"io/fs"
 	"net/url"
 	"path/filepath"
@@ -33,7 +34,7 @@ import (
 // Projector<A, InvokeCreateWorkspaceID>
 // triggered by CDoc<ChildWorkspace> or CDoc<Login> (both not singletons)
 // wsid - pseudoProfile: crc32(wsName) or crc32(login)
-func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName istructs.AppQName, tokensAPI itokens.ITokens, asp istructs.IAppStructsProvider) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) error {
 			if rec.QName() != authnz.QNameCDocLogin && rec.QName() != authnz.QNameCDocChildWorkspace {
@@ -62,17 +63,10 @@ func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName is
 				templateName = rec.AsString(field_TemplateName)
 				templateParams = rec.AsString(Field_TemplateParams)
 				targetApp = ownerApp
-				as, err := asp.AppStructs(appQName)
-				if err != nil {
-					// notest
-					return err
-				}
-				// AppWSID?
-				// для login ownerWSID будет 0
-				wsidToCallCreateWSIDAt = coreutils.GetPseudoWSID(wsName, ownerWSID, targetClusterID)
-				// wsidToCallCreateWSIDAt = istructs.WSID(coreutils.CRC16([]byte(fmt.Sprint(ownerWSID)+"/"+wsName)))
+				wsidToCallCreateWSIDAt = coreutils.GetPseudoWSID(ownerWSID, wsName, targetClusterID)
 			case authnz.QNameCDocLogin:
-				wsName = "hashedLogin"
+				loginHash := rec.AsString(authnz.Field_LoginHash)
+				wsName = fmt.Sprint(crc32.ChecksumIEEE([]byte(loginHash)))
 				switch istructs.SubjectKindType(rec.AsInt32(authnz.Field_SubjectKind)) {
 				case istructs.SubjectKind_Device:
 					wsKind = authnz.QNameCDoc_WorkspaceKind_DeviceProfile
