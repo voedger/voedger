@@ -7,7 +7,7 @@
 
 ## Principles
 
-- Workspace with WorkspaceDescriptor.Status != Active accepts only System token
+- Workspace with WorkspaceDescriptor.Status != Active accepts only System token. 403 forbidden otherwise
 - Workspace is (consistently) inactive if:
   - Workspace/WorkspaceDescriptor.Status == Inactive
   - There is no any active JoinedWorkspace record which refers to the Workspace
