@@ -9,22 +9,22 @@
 ```mermaid
 mindmap
   root((Def))
-    Structures["Structures"]
-      GDoc("GDoc")
-        (GRec)
-      CDoc("CDoc")
-        (CRec)
+    )Structures(
+      (GDoc)
+        (GRecord)
+      (CDoc)
+        (CRecord)
       (WDoc)
-        (WRec)
+        (WRecord)
       (ODoc)
-        (ORec)
+        (ORecord)
       (Object)
         (Element)
-    [Views]
+    (Views)
       (PartKey)
       (ClustCols)
       (Value)
-    [Resources]
+    )Resources(
       (Commands)
       (Queries)
 ```
