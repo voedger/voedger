@@ -188,9 +188,7 @@ func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, inten
 			// notest
 			return nil
 		}
-
 		wsIdxVB.PutInt64(authnz.Field_WSID, wsid)
-		wsIdxVB.PutInt64(field_IDOfCDocWorkspaceID, int64(rec.ID()))
 		return nil
 	})
 }

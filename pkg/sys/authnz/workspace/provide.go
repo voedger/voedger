@@ -211,7 +211,7 @@ func ProvideAsyncProjectorFactoryInvokeCreateWorkspace(federationURL func() *url
 }
 
 // sp.sys.WorkspaceIDIdx
-func ProvideSyncProjectorWorkspaceIDIdx(federationURL func() *url.URL, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
+func ProvideAsyncProjectorWorkspaceIDIdx() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: QNameViewWorkspaceIDIdx,

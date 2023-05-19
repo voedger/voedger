@@ -65,6 +65,7 @@ func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBu
 		workspace.ProvideSyncProjectorChildWorkspaceIdxFactory(),
 		invite.ProvideSyncProjectorInviteIndexFactory(),
 		invite.ProvideSyncProjectorJoinedWorkspaceIndexFactory(),
+		workspace.ProvideAsyncProjectorWorkspaceIDIdx(),
 	)
 	cfg.AddSyncProjectors(collection.ProvideSyncProjectorFactories(appDefBuilder)...)
 	uniques.Provide(cfg, appDefBuilder)
