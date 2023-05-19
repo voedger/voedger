@@ -23,7 +23,7 @@ if [[ $# -ne 3 ]]; then
 fi
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 MANAGER=$3
 
@@ -43,5 +43,5 @@ cat ./docker-compose.yml | ssh $SSH_OPTIONS $SSH_USER@$2 'cat > ~/docker-compose
 
 ssh $SSH_OPTIONS $SSH_USER@$2 "docker stack deploy --compose-file ~/docker-compose.yml DBMSDockerStack"
 
-./swarm-set-label.sh $MANAGER $2 $service_label
+./swarm-set-label.sh $MANAGER $2 "type" $service_label
 set +x

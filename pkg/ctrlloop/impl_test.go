@@ -506,29 +506,25 @@ func Test_Dedupin(t *testing.T) {
 			var messagesToCall []statefulMessage[string, int, struct{}]
 			var messagesToRepeat []scheduledMessage[string, int, struct{}]
 			var inProcessKeyCounter int
-			done := make(chan interface{})
 			go func() {
 				testMessagesWriter(dedupInCh, test.messages)
-
-				messagesToCall = testMessagesReader(callerCh)
-				messagesToRepeat = testMessagesReader(repeatCh)
 
 				// closing channels
 				close(dedupInCh)
 				close(repeatCh)
-
-				inProcessKeyCounter = 0
-				InProcess.Range(func(_, _ any) bool {
-					inProcessKeyCounter++
-					return true
-				})
-
-				close(done)
 			}()
 
 			dedupIn(dedupInCh, callerCh, repeatCh, &InProcess, time.Now)
 
-			<-done
+			messagesToCall = testMessagesReader(callerCh)
+			messagesToRepeat = testMessagesReader(repeatCh)
+
+			inProcessKeyCounter = 0
+			InProcess.Range(func(_, _ any) bool {
+				inProcessKeyCounter++
+				return true
+			})
+
 			require.Equal(t, len(messagesToCall), inProcessKeyCounter)
 			require.Equal(t, len(messagesToRepeat), 1)
 		})
@@ -597,13 +593,13 @@ func Test_Repeater(t *testing.T) {
 			go func() {
 				testMessagesWriter(repeaterCh, test.messages)
 
-				messagesToReport = testMessagesReader(reporterCh)
-				messagesToRepeat = testMessagesReader(repeatCh)
-
 				close(repeaterCh)
 			}()
 
 			repeater(repeaterCh, repeatCh, reporterCh)
+
+			messagesToReport = testMessagesReader(reporterCh)
+			messagesToRepeat = testMessagesReader(repeatCh)
 
 			require.Equal(t, len(messagesToReport), 2)
 			require.Equal(t, len(messagesToRepeat), 2)

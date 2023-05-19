@@ -15,7 +15,7 @@ if [[ $# -ne 3 ]]; then
 fi
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 scylla1=$1
 scylla2=$2

@@ -1,2 +1,2 @@
 #!/bin/bash
-go build -o .ctool/ctool main
+go build -o .ctool/ctool

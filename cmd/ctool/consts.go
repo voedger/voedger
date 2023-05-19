@@ -29,6 +29,9 @@ const (
 	dbNodeCount             = 3
 	seDcCount               = 3
 
+	// Deploy SE args
+	initCeArgCount = 1
+
 	// node Roles
 	nrCENode = "CENode"
 	nrSENode = "SENode"
@@ -50,6 +53,19 @@ const (
 )
 
 const (
+	// command kind
+	ckInit    = "init"
+	ckUpgrade = "upgrade"
+	ckReplace = "replace"
+)
+
+const (
 	ceSettingsFileName = "ce-settings.json"
 	seSettingsFileName = "se-settings.json"
+)
+
+const (
+	swarmDbmsLabelKey = "type"
+	swarmSeLabelKey   = "se"
+	swarmMonLabelKey  = "mon"
 )

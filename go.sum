@@ -90,8 +90,8 @@ github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7/go.mod h1:Fecb
 github.com/grpc-ecosystem/grpc-gateway v1.5.0/go.mod h1:RSKVYQBd5MCa4OVpNdGskqpgL2+G+NZTnrVHpWWfpdw=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc1Q53c0bnx2ufif5kANL7bfZWcc6VJWJd8=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
-github.com/heeus/core-istoragecas v0.0.0-20230417172104-aff277174d72 h1:PT9C1FgTpbybFCylTimPzPmCaypq1TxuA8j4LZRsg9o=
-github.com/heeus/core-istoragecas v0.0.0-20230417172104-aff277174d72/go.mod h1:io2NfNwnUeSmAdNdNBr5pGuw9fZU4TnyWQU3407wVk4=
+github.com/heeus/core-istoragecas v0.0.0-20230515150319-7a48d896aac2 h1:Rc+tg0w061lRdzvfbUxdINTGKLwSBHY4KeYfLpC0D3c=
+github.com/heeus/core-istoragecas v0.0.0-20230515150319-7a48d896aac2/go.mod h1:io2NfNwnUeSmAdNdNBr5pGuw9fZU4TnyWQU3407wVk4=
 github.com/heeus/core-logger v0.0.0-20211015110533-1499b5b04842 h1:X2LRJXKOT3cBYOIoVPDFd/Rockq14waiag6T5QGZdNY=
 github.com/heeus/core-logger v0.0.0-20211015110533-1499b5b04842/go.mod h1:yTNAkvEhCxUhuMB0g8OJKjve8tHAUIQ9MmRDn0z20b0=
 github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUqJM=
