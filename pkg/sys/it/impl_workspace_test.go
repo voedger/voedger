@@ -55,7 +55,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 				"WSKind": "my.WSKind",
 				"WSKindInitializationData": "{\"IntFld\": 10}",
 				"TemplateName": "test_template",
-				"WSClusterID": 42
+				"WSClusterID": 1
 			}
 		}`, wsName)
 		vit.PostProfile(prn, "c.sys.InitChildWorkspace", body)
@@ -66,7 +66,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		require.Equal(it.QNameTestWSKind, ws.Kind)
 		require.Equal(`{"IntFld": 10}`, ws.InitDataJSON)
 		require.Equal("test_template", ws.TemplateName)
-		require.Equal(istructs.ClusterID(42), ws.WSID.ClusterID())
+		require.Equal(istructs.ClusterID(1), ws.WSID.ClusterID())
 
 		t.Run("check the initialized workspace using collection", func(t *testing.T) {
 			body = `{"args":{"Schema":"sys.air_table_plan"},"elements":[{"fields":["sys.ID","image","preview"]}]}`
