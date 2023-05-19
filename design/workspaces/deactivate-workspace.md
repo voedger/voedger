@@ -46,7 +46,6 @@
       appws ->> appws: cdoc.sys.WorkspaceID[IDOfCDocWorkspaceID].IsActive = false
     end
 
-
     opt Foreach cdos.sys.Subject
         registry -->> ws : ProfileWSID by Subject.Login
         ws ->> profile: c.sys.JoinedWorkspaceDeactivated()
@@ -54,12 +53,4 @@
           profile ->> profile: JoinedWorkspace.IsActive = false
         end
     end
-
-
-
-
-
-
-
-
 ```
