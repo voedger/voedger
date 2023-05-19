@@ -7,6 +7,7 @@ package irates
 import (
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -45,7 +46,7 @@ type BucketKey struct {
 	RemoteAddr    string
 	App           istructs.AppQName
 	Workspace     istructs.WSID
-	QName         istructs.QName
+	QName         appdef.QName
 	ID            istructs.RecordID
 }
 

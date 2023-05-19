@@ -7,64 +7,66 @@ package coreutils
 import (
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type SchemaFields map[string]istructs.DataKindType
+type FieldsDef map[string]appdef.DataKind
 
-func Read(fieldName string, sf SchemaFields, rr istructs.IRowReader) (val interface{}) {
-	return ReadByKind(fieldName, sf[fieldName], rr)
+func Read(fieldName string, fd FieldsDef, rr istructs.IRowReader) (val interface{}) {
+	return ReadByKind(fieldName, fd[fieldName], rr)
 }
 
-func ReadValue(fieldName string, sf SchemaFields, schemas istructs.ISchemas, val istructs.IValue) (res interface{}) {
-	if sf[fieldName] == istructs.DataKind_Record {
-		return FieldsToMap(val.AsRecord(fieldName), schemas)
+func ReadValue(fieldName string, fd FieldsDef, appDef appdef.IAppDef, val istructs.IValue) (res interface{}) {
+	if fd[fieldName] == appdef.DataKind_Record {
+		return FieldsToMap(val.AsRecord(fieldName), appDef)
 	}
-	return ReadByKind(fieldName, sf[fieldName], val)
+	return ReadByKind(fieldName, fd[fieldName], val)
 }
 
-// panics on an unsupported kind guessing that pair <name, kind> could be taken from ISchema.Fields() callback only
-func ReadByKind(name string, kind istructs.DataKindType, rr istructs.IRowReader) interface{} {
+// panics on an unsupported kind guessing that pair <name, kind> could be taken from IDef.Fields() callback only
+func ReadByKind(name string, kind appdef.DataKind, rr istructs.IRowReader) interface{} {
 	switch kind {
-	case istructs.DataKind_int32:
+	case appdef.DataKind_int32:
 		return rr.AsInt32(name)
-	case istructs.DataKind_int64:
+	case appdef.DataKind_int64:
 		return rr.AsInt64(name)
-	case istructs.DataKind_float32:
+	case appdef.DataKind_float32:
 		return rr.AsFloat32(name)
-	case istructs.DataKind_float64:
+	case appdef.DataKind_float64:
 		return rr.AsFloat64(name)
-	case istructs.DataKind_bytes:
+	case appdef.DataKind_bytes:
 		return rr.AsBytes(name)
-	case istructs.DataKind_string:
+	case appdef.DataKind_string:
 		return rr.AsString(name)
-	case istructs.DataKind_RecordID:
+	case appdef.DataKind_RecordID:
 		return rr.AsRecordID(name)
-	case istructs.DataKind_QName:
+	case appdef.DataKind_QName:
 		return rr.AsQName(name).String()
-	case istructs.DataKind_bool:
+	case appdef.DataKind_bool:
 		return rr.AsBool(name)
 	default:
 		panic("unsupported kind " + fmt.Sprint(kind) + " for field " + name)
 	}
 }
 
-func NewSchemaFields(schema istructs.ISchema) SchemaFields {
-	fields := make(map[string]istructs.DataKindType)
-	schema.Fields(func(fieldName string, kind istructs.DataKindType) {
-		fields[fieldName] = kind
-	})
+func NewFieldsDef(def appdef.IDef) FieldsDef {
+	fields := make(map[string]appdef.DataKind)
+	def.Fields(
+		func(f appdef.IField) {
+			fields[f.Name()] = f.DataKind()
+		})
 	return fields
 }
 
 type mapperOpts struct {
-	filter      func(name string, kind istructs.DataKindType) bool
+	filter      func(name string, kind appdef.DataKind) bool
 	nonNilsOnly bool
 }
 
 type MapperOpt func(opt *mapperOpts)
 
-func Filter(filterFunc func(name string, kind istructs.DataKindType) bool) MapperOpt {
+func Filter(filterFunc func(name string, kind appdef.DataKind) bool) MapperOpt {
 	return func(opts *mapperOpts) {
 		opts.filter = filterFunc
 	}
@@ -76,29 +78,32 @@ func WithNonNilsOnly() MapperOpt {
 	}
 }
 
-func FieldsToMap(obj istructs.IRowReader, schemas istructs.ISchemas, optFuncs ...MapperOpt) (res map[string]interface{}) {
+func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...MapperOpt) (res map[string]interface{}) {
 	res = map[string]interface{}{}
-	if obj.AsQName(istructs.SystemField_QName) == istructs.NullQName {
+
+	qn := obj.AsQName(appdef.SystemField_QName)
+	if qn == appdef.NullQName {
 		return
 	}
+	def := appDef.Def(qn)
+
 	opts := &mapperOpts{}
 	for _, optFunc := range optFuncs {
 		optFunc(opts)
 	}
 
 	if opts.nonNilsOnly {
-		s := schemas.Schema(obj.AsQName(istructs.SystemField_QName))
-		sf := NewSchemaFields(s)
+		fd := NewFieldsDef(def)
 		obj.FieldNames(func(fieldName string) {
-			kind := sf[fieldName]
+			kind := fd[fieldName]
 			if opts.filter != nil {
 				if !opts.filter(fieldName, kind) {
 					return
 				}
 			}
-			if kind == istructs.DataKind_Record {
+			if kind == appdef.DataKind_Record {
 				if ival, ok := obj.(istructs.IValue); ok {
-					res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), schemas, optFuncs...)
+					res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), appDef, optFuncs...)
 				} else {
 					panic("DataKind_Record field met -> IValue must be provided")
 				}
@@ -107,36 +112,38 @@ func FieldsToMap(obj istructs.IRowReader, schemas istructs.ISchemas, optFuncs ..
 			}
 		})
 	} else {
-		schemas.Schema(obj.AsQName(istructs.SystemField_QName)).Fields(func(fieldName string, kind istructs.DataKindType) {
-			if opts.filter != nil {
-				if !opts.filter(fieldName, kind) {
-					return
+		def.Fields(
+			func(f appdef.IField) {
+				fieldName, kind := f.Name(), f.DataKind()
+				if opts.filter != nil {
+					if !opts.filter(fieldName, kind) {
+						return
+					}
 				}
-			}
-			if kind == istructs.DataKind_Record {
-				if ival, ok := obj.(istructs.IValue); ok {
-					res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), schemas, optFuncs...)
+				if kind == appdef.DataKind_Record {
+					if ival, ok := obj.(istructs.IValue); ok {
+						res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), appDef, optFuncs...)
+					} else {
+						panic("DataKind_Record field met -> IValue must be provided")
+					}
 				} else {
-					panic("DataKind_Record field met -> IValue must be provided")
+					res[fieldName] = ReadByKind(fieldName, kind, obj)
 				}
-			} else {
-				res[fieldName] = ReadByKind(fieldName, kind, obj)
-			}
-		})
+			})
 	}
 	return res
 }
 
-func ObjectToMap(obj istructs.IObject, schemas istructs.ISchemas, opts ...MapperOpt) (res map[string]interface{}) {
-	if obj.AsQName(istructs.SystemField_QName) == istructs.NullQName {
+func ObjectToMap(obj istructs.IObject, appDef appdef.IAppDef, opts ...MapperOpt) (res map[string]interface{}) {
+	if obj.AsQName(appdef.SystemField_QName) == appdef.NullQName {
 		return map[string]interface{}{}
 	}
-	res = FieldsToMap(obj, schemas, opts...)
+	res = FieldsToMap(obj, appDef, opts...)
 	obj.Containers(func(container string) {
 		var elemMap map[string]interface{}
 		cont := []map[string]interface{}{}
 		obj.Elements(container, func(el istructs.IElement) {
-			elemMap = ObjectToMap(el, schemas, opts...)
+			elemMap = ObjectToMap(el, appDef, opts...)
 			cont = append(cont, elemMap)
 		})
 		res[container] = cont

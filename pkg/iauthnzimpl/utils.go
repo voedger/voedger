@@ -10,17 +10,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"golang.org/x/exp/slices"
 )
 
-var TestSubjectRolesGetter = func(context.Context, string, istructs.IAppStructs, istructs.WSID) ([]istructs.QName, error) {
+var TestSubjectRolesGetter = func(context.Context, string, istructs.IAppStructs, istructs.WSID) ([]appdef.QName, error) {
 	return nil, nil
 }
 
-func IssueAPIToken(appTokens istructs.IAppTokens, duration time.Duration, roles []istructs.QName, wsid istructs.WSID, currentPrincipalPayload payloads.PrincipalPayload) (token string, err error) {
+func IssueAPIToken(appTokens istructs.IAppTokens, duration time.Duration, roles []appdef.QName, wsid istructs.WSID, currentPrincipalPayload payloads.PrincipalPayload) (token string, err error) {
 	if wsid == istructs.NullWSID {
 		return "", ErrPersonalAccessTokenOnNullWSID
 	}
@@ -45,7 +47,10 @@ func GetComputersRecByDeviceProfileWSID(as istructs.IAppStructs, requestWSID ist
 	if err := as.ViewRecords().GetBatch(requestWSID, batchItems); err != nil {
 		return nil, nil, err
 	}
+	const prefix = "device profileWSID"
 	if !batchItems[0].Ok {
+
+		logger.Verbose(prefix, deviceProfileWSID, "is not found in view.sys.DeviceProfileWSIDIdx")
 		return &istructs.NullObject{}, &istructs.NullObject{}, nil
 	}
 	view := batchItems[0].Value
@@ -55,8 +60,20 @@ func GetComputersRecByDeviceProfileWSID(as istructs.IAppStructs, requestWSID ist
 	if computersRec, err = as.Records().Get(requestWSID, true, cID); err != nil {
 		return nil, nil, err
 	}
-	restaurantComputersRec, err = as.Records().Get(requestWSID, true, rcID)
-	return
+	if restaurantComputersRec, err = as.Records().Get(requestWSID, true, rcID); err != nil {
+		return nil, nil, err
+	}
+	if computersRec.QName() == appdef.NullQName {
+		logger.Verbose(prefix, deviceProfileWSID, ": computers[", cID, "] does not exist")
+	} else if !computersRec.AsBool(appdef.SystemField_IsActive) {
+		logger.Verbose(prefix, deviceProfileWSID, ": computers[", cID, "] inactive")
+	}
+	if restaurantComputersRec.QName() == appdef.NullQName {
+		logger.Verbose(prefix, deviceProfileWSID, ": restaurant_computers[", rcID, "] does not exist")
+	} else if restaurantComputersRec.AsBool(appdef.SystemField_IsActive) {
+		logger.Verbose(prefix, deviceProfileWSID, ": restaurant_computers[", rcID, "] inactive")
+	}
+	return computersRec, restaurantComputersRec, nil
 }
 
 func matchOrNotSpecified_Principals(pattern [][]iauthnz.Principal, actualPrns []iauthnz.Principal) (ok bool) {
@@ -80,7 +97,7 @@ func matchOrNotSpecified_Principals(pattern [][]iauthnz.Principal, actualPrns []
 					if len(prnAND.Name) > 0 && prnAND.Name != actualPrn.Name {
 						return false
 					}
-					if prnAND.QName != istructs.NullQName && prnAND.QName != actualPrn.QName {
+					if prnAND.QName != appdef.NullQName && prnAND.QName != actualPrn.QName {
 						return false
 					}
 					if prnAND.WSID > 0 && prnAND.WSID != actualPrn.WSID {
@@ -107,7 +124,7 @@ func matchOrNotSpecified_OpKinds(arr []iauthnz.OperationKindType, toFind iauthnz
 	return len(arr) == 0 || slices.Contains(arr, toFind)
 }
 
-func matchOrNotSpecified_QNames(arr []istructs.QName, toFind istructs.QName) bool {
+func matchOrNotSpecified_QNames(arr []appdef.QName, toFind appdef.QName) bool {
 	return len(arr) == 0 || slices.Contains(arr, toFind)
 }
 
@@ -159,7 +176,7 @@ func prnsToString(prns []iauthnz.Principal) string {
 		default:
 			res.WriteString("<unknown>")
 		}
-		if prn.QName != istructs.NullQName {
+		if prn.QName != appdef.NullQName {
 			res.WriteString(" " + prn.QName.String())
 		} else {
 			res.WriteString(" " + prn.Name)

@@ -1,7 +1,7 @@
 
 # 14.11.2021 Results
 
-https://github.com/heeus/core/istructsmem/tree/36162aff8055b14481b5daedcb029d6e7b829c87
+https://github.com/untillpro/voedger/pkg/istructsmem/tree/36162aff8055b14481b5daedcb029d6e7b829c87
 
 ```go
 cpu: Intel(R) Core(TM) i5-3570 CPU @ 3.40GHz
@@ -32,7 +32,7 @@ Benchmark_UnmarshallJSONForBuildRawEvent/numOfIntFields=32
 
 # 15.12.2021 Results
 
-https://github.com/heeus/core/istructsmem/tree/0bfaaed1070f549dcdc1828076c6830311dcc572
+https://github.com/untillpro/voedger/pkg/istructsmem/tree/0bfaaed1070f549dcdc1828076c6830311dcc572
 
 ```go
 cpu: Intel(R) Core(TM) i7-3770 CPU @ 3.40GHz

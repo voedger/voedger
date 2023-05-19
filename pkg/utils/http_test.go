@@ -18,7 +18,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	ibus "github.com/untillpro/airs-ibus"
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 func TestNewHTTPError(t *testing.T) {
@@ -28,7 +28,7 @@ func TestNewHTTPError(t *testing.T) {
 		require.Empty(sysErr.Data)
 		require.Equal(http.StatusInternalServerError, sysErr.HTTPStatus)
 		require.Equal("test error", sysErr.Message)
-		require.Equal(istructs.NullQName, sysErr.QName)
+		require.Equal(appdef.NullQName, sysErr.QName)
 		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"test error"}}`, sysErr.ToJSON())
 	})
 
@@ -37,7 +37,7 @@ func TestNewHTTPError(t *testing.T) {
 		require.Empty(sysErr.Data)
 		require.Equal(http.StatusInternalServerError, sysErr.HTTPStatus)
 		require.Equal("test error", sysErr.Message)
-		require.Equal(istructs.NullQName, sysErr.QName)
+		require.Equal(appdef.NullQName, sysErr.QName)
 		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"test error"}}`, sysErr.ToJSON())
 	})
 }
@@ -111,7 +111,7 @@ func TestReply(t *testing.T) {
 				HTTPStatus: http.StatusAlreadyReported,
 				Message:    "test error",
 				Data:       "dddfd",
-				QName:      istructs.NewQName("my", "qname"),
+				QName:      appdef.NewQName("my", "qname"),
 			}
 			ReplyErrDef(bus, sender, err, http.StatusAccepted)
 			expectedResp := ibus.Response{

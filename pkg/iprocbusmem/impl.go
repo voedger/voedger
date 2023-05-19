@@ -9,7 +9,7 @@ import (
 )
 
 type implIProcBus struct {
-	// protected by airs-bp3 lifecycle: write only on wiring stage, read only after start
+	// protected by VVM lifecycle: write only on wiring stage, read only after start
 	chans [][]iprocbus.ServiceChannel
 }
 

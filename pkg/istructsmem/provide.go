@@ -15,13 +15,13 @@ import (
 
 // Provide: constructs new application structures provider
 func Provide(appConfigs AppConfigsType, bucketsFactory irates.BucketsFactoryType, appTokensFactory payloads.IAppTokensFactory,
-	storageProvider istorage.IAppStorageProvider) (provider istructs.IAppStructsProvider, err error) {
+	storageProvider istorage.IAppStorageProvider) (provider istructs.IAppStructsProvider) {
 	return &appStructsProviderType{
 		locker:           sync.RWMutex{},
 		configs:          appConfigs,
 		structures:       make(map[istructs.AppQName]*appStructsType),
-		bucketsFacotry:   bucketsFactory,
+		bucketsFactory:   bucketsFactory,
 		appTokensFactory: appTokensFactory,
 		storageProvider:  storageProvider,
-	}, nil
+	}
 }

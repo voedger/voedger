@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -17,11 +18,10 @@ import (
 func TestRateLimits_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	cfgs := make(AppConfigsType)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1)
-	qName1 := istructs.NewQName(istructs.SysPackage, "myFunc")
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+	qName1 := appdef.NewQName(appdef.SysPackage, "myFunc")
 
-	provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-	require.NoError(err)
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 	// limit c.sys.myFunc func call:
 	// - per app:
@@ -66,15 +66,15 @@ func TestRateLimits_BasicUsage(t *testing.T) {
 	require.False(as.IsFunctionRateLimitsExceeded(qName1, 42))
 
 	t.Run("must be False if unknown (or unlimited) function", func(t *testing.T) {
-		require.False(as.IsFunctionRateLimitsExceeded(istructs.NewQName("test", "unknown"), 42))
+		require.False(as.IsFunctionRateLimitsExceeded(appdef.NewQName("test", "unknown"), 42))
 	})
 }
 
 func TestRateLimitsErrors(t *testing.T) {
 	unsupportedRateLimitKind := istructs.RateLimitKind(istructs.RateLimitKind_FakeLast)
 	rls := functionRateLimits{
-		limits: map[istructs.QName]map[istructs.RateLimitKind]istructs.RateLimit{
-			istructs.NewQName(istructs.SysPackage, "test"): {
+		limits: map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit{
+			appdef.NewQName(appdef.SysPackage, "test"): {
 				unsupportedRateLimitKind: {},
 			},
 		},
@@ -85,7 +85,7 @@ func TestRateLimitsErrors(t *testing.T) {
 
 func TestGetFunctionRateLimitName(t *testing.T) {
 
-	testFn := istructs.NewQName(istructs.SysPackage, "test")
+	testFn := appdef.NewQName(appdef.SysPackage, "test")
 
 	tests := []struct {
 		name string

@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 func TestBasicUsage_SysError(t *testing.T) {
@@ -36,7 +36,7 @@ func TestBasicUsage_SysError(t *testing.T) {
 	t.Run("wrap error that is SysError already", func(t *testing.T) {
 		err := SysError{
 			HTTPStatus: http.StatusOK,
-			QName:      istructs.NewQName("my", "test"),
+			QName:      appdef.NewQName("my", "test"),
 			Message:    "test",
 			Data:       "data",
 		}
@@ -47,7 +47,7 @@ func TestBasicUsage_SysError(t *testing.T) {
 	t.Run("ToJSON", func(t *testing.T) {
 		err := SysError{
 			HTTPStatus: http.StatusOK,
-			QName:      istructs.NewQName("my", "test"),
+			QName:      appdef.NewQName("my", "test"),
 			Message:    "test",
 			Data:       "data",
 		}
@@ -59,6 +59,6 @@ func TestBasicUsage_SysError(t *testing.T) {
 		require.Empty(sysErr.Data)
 		require.Equal(http.StatusContinue, sysErr.HTTPStatus)
 		require.Empty(sysErr.Message)
-		require.Equal(istructs.NullQName, sysErr.QName)
+		require.Equal(appdef.NullQName, sysErr.QName)
 	})
 }

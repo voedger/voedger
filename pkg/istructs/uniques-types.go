@@ -4,15 +4,15 @@
 
 package istructs
 
-type IUniques interface {
-	GetAll(name QName) (uniques []IUnique)
+import "github.com/voedger/voedger/pkg/appdef"
 
-	// fields order has no sense
-	// only one unique could match. None matched -> nil
-	GetForKeySet(qName QName, keyFieldsSet []string) IUnique
+// Deprecated: use IDef().Uniques
+type IUniques interface {
+	GetAll(name appdef.QName) (uniques []IUnique)
 }
 
+// Deprecated: use IDef().Uniques
 type IUnique interface {
 	Fields() []string
-	QName() QName
+	QName() appdef.QName
 }

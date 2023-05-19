@@ -13,7 +13,7 @@ import (
 type IMetric interface {
 	Name() string
 
-	Hvm() string
+	Vvm() string
 
 	// App returns istructs.NullAppQName when not specified
 	App() istructs.AppQName
@@ -25,14 +25,14 @@ type IMetrics interface {
 	// Naming best practices: https://prometheus.io/docs/practices/naming/
 	//
 	// @ConcurrentAccess
-	Increase(metricName string, hvm string, valueDelta float64)
+	Increase(metricName string, vvmName string, valueDelta float64)
 
 	// Increase app metric value with "delta".
 	// The default metric value is always 0.
 	// Naming best practices: https://prometheus.io/docs/practices/naming/
 	//
 	// @ConcurrentAccess
-	IncreaseApp(metricName string, hvm string, app istructs.AppQName, valueDelta float64)
+	IncreaseApp(metricName string, vvmName string, app istructs.AppQName, valueDelta float64)
 
 	// GetAll lists current values of all metrics
 	//

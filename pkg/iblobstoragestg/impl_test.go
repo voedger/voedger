@@ -44,7 +44,7 @@ func TestBasicUsage(t *testing.T) {
 	asf := istorage.ProvideMem()
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
-	require.Nil(err)
+	require.NoError(err)
 	blobber := Provide(storage, func() time.Time { return time.Now() })
 	ctx := context.TODO()
 	reader := provideTestData()
@@ -65,12 +65,12 @@ func TestBasicUsage(t *testing.T) {
 
 	t.Run("Write blob to storage, return must be without errors", func(t *testing.T) {
 		err := blobber.WriteBLOB(ctx, key, desc, reader, maxSize)
-		require.Nil(err)
+		require.NoError(err)
 	})
 
 	t.Run("Read blob status, return must be without errors", func(t *testing.T) {
 		bs, err := blobber.QueryBLOBState(ctx, key)
-		require.Nil(err)
+		require.NoError(err)
 		require.Equal(bs.Status, iblobstorage.BLOBStatus_Completed)
 	})
 
@@ -84,7 +84,7 @@ func TestBasicUsage(t *testing.T) {
 		// Reset reader and read anew
 		reader.Reset(blob)
 		v, err := readData(ctx, reader)
-		require.Nil(err)
+		require.NoError(err)
 
 		// Read
 		err = blobber.ReadBLOB(ctx, key, func(blobState iblobstorage.BLOBState) (err error) {
@@ -93,9 +93,9 @@ func TestBasicUsage(t *testing.T) {
 			return nil
 		}, writer)
 
-		require.Nil(err)
+		require.NoError(err)
 		err = writer.Flush()
-		require.Nil(err)
+		require.NoError(err)
 
 		// Compare
 		require.Equal(v, buf.Bytes())
@@ -118,7 +118,7 @@ func TestQuotaExceed(t *testing.T) {
 	asf := istorage.ProvideMem()
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
-	require.Nil(err)
+	require.NoError(err)
 	blobber := Provide(storage, func() time.Time { return time.Now() })
 	reader := provideTestData()
 	ctx := context.Background()

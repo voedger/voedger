@@ -57,7 +57,7 @@ func TestWiredOperator_doAsync(t *testing.T) {
 		work, err := operator.doAsync(testWorkpiece{})
 
 		require.IsType(t, testwork{}, work)
-		require.Nil(t, err)
+		require.NoError(t, err)
 	})
 	t.Run("Should return error on nil work", func(t *testing.T) {
 		operator := WiredOperator{

@@ -7,18 +7,17 @@ package commandprocessor
 import (
 	"net/http"
 
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/appdef"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 const (
-	Field_JSONSchemaBody = "Body"
-	intentsLimit         = 128
+	intentsLimit = 128
 )
 
 var (
-	ViewQNamePLogKnownOffsets = istructs.NewQName(istructs.SysPackage, "PLogKnownOffsets")
-	ViewQNameWLogKnownOffsets = istructs.NewQName(istructs.SysPackage, "WLogKnownOffsets")
+	ViewQNamePLogKnownOffsets = appdef.NewQName(appdef.SysPackage, "PLogKnownOffsets")
+	ViewQNameWLogKnownOffsets = appdef.NewQName(appdef.SysPackage, "WLogKnownOffsets")
 	errWSNotInited            = coreutils.NewHTTPErrorf(http.StatusForbidden, "workspace is not initialized")
 )
 
@@ -30,11 +29,11 @@ const (
 
 // TODO: should be in a separate package
 var (
-	QNameCDocWorkspaceDescriptor  = istructs.NewQName(istructs.SysPackage, "WorkspaceDescriptor")
-	QNameCommandCreateWorkspaceID = istructs.NewQName(istructs.SysPackage, "CreateWorkspaceID")
-	QNameCommandCreateWorkspace   = istructs.NewQName(istructs.SysPackage, "CreateWorkspace")
-	QNameCommandUploadBLOBHelper  = istructs.NewQName(istructs.SysPackage, "UploadBLOBHelper")
-	QNameWDocBLOB                 = istructs.NewQName(istructs.SysPackage, "BLOB")
-	QNameCommandInit              = istructs.NewQName(istructs.SysPackage, "Init")
-	QNameCommandImport            = istructs.NewQName(istructs.SysPackage, "Import")
+	QNameCDocWorkspaceDescriptor  = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
+	QNameCommandCreateWorkspaceID = appdef.NewQName(appdef.SysPackage, "CreateWorkspaceID")
+	QNameCommandCreateWorkspace   = appdef.NewQName(appdef.SysPackage, "CreateWorkspace")
+	QNameCommandUploadBLOBHelper  = appdef.NewQName(appdef.SysPackage, "UploadBLOBHelper")
+	QNameWDocBLOB                 = appdef.NewQName(appdef.SysPackage, "BLOB")
+	QNameCommandInit              = appdef.NewQName(appdef.SysPackage, "Init")
+	QNameCommandImport            = appdef.NewQName(appdef.SysPackage, "Import")
 )

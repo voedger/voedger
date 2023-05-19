@@ -10,13 +10,14 @@ import (
 
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -41,14 +42,14 @@ type appPartition struct {
 	nextPLogOffset istructs.Offset
 }
 
-func ProvideJSONFuncParamsSchema(cfg *istructsmem.AppConfigType) {
-	cfg.Schemas.Add(istructs.QNameJSON, istructs.SchemaKind_Object).
-		AddField(Field_JSONSchemaBody, istructs.DataKind_string, true)
+func ProvideJSONFuncParamsDef(appDef appdef.IAppDefBuilder) {
+	appDef.AddStruct(istructs.QNameJSON, appdef.DefKind_Object).
+		AddField(processors.Field_JSONDef_Body, appdef.DataKind_string, true)
 }
 
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
 func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now func() time.Time, syncActualizerFactory SyncActualizerFactory,
-	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, hvm HVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
+	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
 	secretReader isecrets.ISecretReader) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
 		cmdProc := &cmdProc{
@@ -59,9 +60,9 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 			authenticator: authenticator,
 			authorizer:    authorizer,
 		}
-		return pipeline.NewService(func(hvmCtx context.Context) {
-			hsp := newHostStateProvider(hvmCtx, partitionID, secretReader)
-			cmdPipeline := pipeline.NewSyncPipeline(hvmCtx, "Command Processor",
+		return pipeline.NewService(func(vvmCtx context.Context) {
+			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader)
+			cmdPipeline := pipeline.NewSyncPipeline(vvmCtx, "Command Processor",
 				pipeline.WireFunc("getAppStructs", getAppStructs),
 				pipeline.WireFunc("limitCallRate", limitCallRate),
 				pipeline.WireFunc("getWSDesc", getWSDesc),
@@ -88,7 +89,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("putPLog", cmdProc.putPLog),
 				pipeline.WireFunc("applyPLogEvent", applyPLogEvent),
 				pipeline.WireFunc("syncProjectorsStart", syncProjectorsBegin),
-				pipeline.WireSyncOperator("syncProjectors", syncActualizerFactory(hvmCtx, partitionID)),
+				pipeline.WireSyncOperator("syncProjectors", syncActualizerFactory(vvmCtx, partitionID)),
 				pipeline.WireFunc("syncProjectorsEnd", syncProjectorsEnd),
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),
@@ -96,7 +97,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 			)
 			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid
 			defer cmdPipeline.Close()
-			for hvmCtx.Err() == nil {
+			for vvmCtx.Err() == nil {
 				select {
 				case intf := <-commandsChannel:
 					start := time.Now()
@@ -108,7 +109,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 						hostStateProvider: hsp,
 					}
 					cmd.metrics = commandProcessorMetrics{
-						hvm:     string(hvm),
+						vvm:     string(vvm),
 						app:     cmd.cmdMes.AppQName(),
 						metrics: metrics,
 					}
@@ -123,7 +124,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 						cmd.wLogEvent.Release()
 					}
 					cmd.metrics.increase(CommandsSeconds, time.Since(start).Seconds())
-				case <-hvmCtx.Done():
+				case <-vvmCtx.Done():
 					cmdProc.appPartitions = map[istructs.AppQName]*appPartition{} // clear appPartitions to test recovery
 					return
 				}

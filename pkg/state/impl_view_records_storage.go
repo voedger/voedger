@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -15,12 +16,12 @@ import (
 type viewRecordsStorage struct {
 	ctx             context.Context
 	viewRecordsFunc viewRecordsFunc
-	schemasFunc     schemasFunc
+	appDefFunc      appDefFunc
 	wsidFunc        WSIDFunc
 	n10nFunc        N10nFunc
 }
 
-func (s *viewRecordsStorage) NewKeyBuilder(entity istructs.QName, _ istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder) {
+func (s *viewRecordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder) {
 	return &viewRecordsKeyBuilder{
 		IKeyBuilder: s.viewRecordsFunc().KeyBuilder(entity),
 		view:        entity,
@@ -108,15 +109,23 @@ func (s *viewRecordsStorage) toJSON(sv istructs.IStateValue, opts ...interface{}
 		opt.(ToJSONOption)(options)
 	}
 
-	obj := make(map[string]interface{})
-	s.schemasFunc().Schema(sv.AsQName(istructs.SystemField_QName)).
-		Containers(func(containerName string, schema istructs.QName) {
-			if containerName == istructs.SystemContainer_ViewValue {
-				obj = coreutils.FieldsToMap(sv, s.schemasFunc(), coreutils.Filter(func(name string, kidn istructs.DataKindType) bool {
-					return !options.excludedFields[name]
-				}))
-			}
-		})
+	// obj := make(map[string]interface{})
+	// —— nnv, commented. Я не понимаю, зачем здесь поиск контейнера со значением, если его результат никак не используется.
+	//		Если бы QName (или определение) найденного контейнера передавалась бы дальше в FieldsToMap или бы изменила бы QName	sv, то это бы объяснило зачем.
+
+	// s.appDefFunc().Def(sv.AsQName(appdef.SystemField_QName)).
+	// 	Containers(func(cont appdef.Container) {
+	// 		containerName := cont.Name()
+	// 		if containerName == appdef.SystemContainer_ViewValue {
+	// 			obj = coreutils.FieldsToMap(sv, s.appDefFunc(), coreutils.Filter(func(name string, kind appdef.DataKind) bool {
+	// 				return !options.excludedFields[name]
+	// 			}))
+	// 		}
+	// 	})
+
+	obj := coreutils.FieldsToMap(sv, s.appDefFunc(), coreutils.Filter(func(n string, _ appdef.DataKind) bool {
+		return !options.excludedFields[n]
+	}))
 
 	bb, err := json.Marshal(obj)
 	return string(bb), err

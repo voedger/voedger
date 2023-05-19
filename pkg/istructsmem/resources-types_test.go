@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -18,7 +19,7 @@ func Test_nullResource(t *testing.T) {
 
 	n := newNullResource()
 	require.Equal(istructs.ResourceKind_null, n.Kind())
-	require.Equal(istructs.NullQName, n.QName())
+	require.Equal(appdef.NullQName, n.QName())
 }
 
 func TestResourceEnumerator(t *testing.T) {
@@ -28,47 +29,45 @@ func TestResourceEnumerator(t *testing.T) {
 		cfg *AppConfigType
 		app istructs.IAppStructs
 
-		cmdCreateDoc istructs.QName = istructs.NewQName("test", "CreateDoc")
-		cDocName     istructs.QName = istructs.NewQName("test", "CDoc")
+		cmdCreateDoc appdef.QName = appdef.NewQName("test", "CreateDoc")
+		cDocName     appdef.QName = appdef.NewQName("test", "CDoc")
 
-		cmdCreateObj         istructs.QName = istructs.NewQName("test", "CreateObj")
-		cmdCreateObjUnlogged istructs.QName = istructs.NewQName("test", "CreateObjUnlogged")
-		oObjName             istructs.QName = istructs.NewQName("test", "Object")
+		cmdCreateObj         appdef.QName = appdef.NewQName("test", "CreateObj")
+		cmdCreateObjUnlogged appdef.QName = appdef.NewQName("test", "CreateObjUnlogged")
+		oObjName             appdef.QName = appdef.NewQName("test", "Object")
 
-		cmdCUD istructs.QName = istructs.NewQName("test", "cudEvent")
+		cmdCUD appdef.QName = appdef.NewQName("test", "cudEvent")
 	)
 
 	t.Run("builds app", func(t *testing.T) {
-		cfgs := make(AppConfigsType, 1)
-		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1)
 
-		t.Run("builds schemas and resources", func(t *testing.T) {
-			CDocSchema := cfg.Schemas.Add(cDocName, istructs.SchemaKind_CDoc)
-			CDocSchema.
-				AddField("Int32", istructs.DataKind_int32, true).
-				AddField("String", istructs.DataKind_string, false)
+		appDef := appdef.New()
+		t.Run("must be ok to build application definition", func(t *testing.T) {
+			cDocDef := appDef.AddStruct(cDocName, appdef.DefKind_CDoc)
+			cDocDef.
+				AddField("Int32", appdef.DataKind_int32, true).
+				AddField("String", appdef.DataKind_string, false)
 
-			ObjSchema := cfg.Schemas.Add(oObjName, istructs.SchemaKind_Object)
-			ObjSchema.
-				AddField("Int32", istructs.DataKind_int32, true).
-				AddField("String", istructs.DataKind_string, false)
-
-			err := cfg.Schemas.ValidateSchemas()
-			require.NoError(err)
-
-			cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, istructs.NullQName, istructs.NullQName, NullCommandExec))
-			cfg.Resources.Add(NewCommandFunction(cmdCreateObj, oObjName, istructs.NullQName, istructs.NullQName, NullCommandExec))
-			cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, istructs.NullQName, oObjName, istructs.NullQName, NullCommandExec))
-			cfg.Resources.Add(NewCommandFunction(cmdCUD, istructs.NullQName, istructs.NullQName, istructs.NullQName, NullCommandExec))
+			objDef := appDef.AddStruct(oObjName, appdef.DefKind_Object)
+			objDef.
+				AddField("Int32", appdef.DataKind_int32, true).
+				AddField("String", appdef.DataKind_string, false)
 		})
 
-		storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
+		cfgs := make(AppConfigsType, 1)
+		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+
+		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, appdef.NullQName, appdef.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateObj, oObjName, appdef.NullQName, appdef.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, appdef.NullQName, oObjName, appdef.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
+
+		storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
 		require.NoError(err)
 
-		provider, err := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
@@ -77,7 +76,7 @@ func TestResourceEnumerator(t *testing.T) {
 	t.Run("enumerate all resources", func(t *testing.T) {
 		cnt := 0
 		app.Resources().Resources(
-			func(resName istructs.QName) {
+			func(resName appdef.QName) {
 				cnt++
 				require.NotNil(app.Resources().QueryResource(resName))
 			})

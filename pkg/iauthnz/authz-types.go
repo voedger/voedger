@@ -5,7 +5,7 @@
 
 package iauthnz
 
-import "github.com/voedger/voedger/pkg/istructs"
+import "github.com/voedger/voedger/pkg/appdef"
 
 type OperationKindType byte
 
@@ -20,7 +20,7 @@ const (
 type AuthzRequest struct {
 	OperationKind OperationKindType
 
-	Resource istructs.QName
+	Resource appdef.QName
 
 	Fields []string
 }
