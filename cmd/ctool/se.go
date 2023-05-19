@@ -14,7 +14,7 @@ import (
 
 func seNodeControllerFunction(n *nodeType) error {
 
-	if !force && n.DesiredNodeState.isEmpty() {
+	if n.DesiredNodeState.isEmpty() {
 		return nil
 	}
 
@@ -25,7 +25,7 @@ func seNodeControllerFunction(n *nodeType) error {
 	if err = deployDocker(n); err != nil {
 		logger.Error(err.Error())
 	} else {
-		n.success("ok")
+		n.success()
 	}
 
 	return err
@@ -56,7 +56,7 @@ func seClusterControllerFunction(c *clusterType) error {
 	}
 
 	if err == nil {
-		c.success("ok")
+		c.success()
 	}
 
 	return err
@@ -85,7 +85,7 @@ func deploySeSwarm(cluster *clusterType) error {
 
 		logger.Info("swarm set label on", manager, "scylla1")
 		if err = newScriptExecuter(cluster.sshKey, manager).
-			run("swarm-set-label.sh", manager, manager, node.label()); err != nil {
+			run("swarm-set-label.sh", manager, manager, swarmDbmsLabelKey, node.label(swarmDbmsLabelKey)); err != nil {
 			node.Error = err.Error()
 			return err
 		}
@@ -127,9 +127,9 @@ func deploySeSwarm(cluster *clusterType) error {
 				return
 			}
 
-			logger.Info("swarm set label on", n.ActualNodeState.Address, n.label())
+			logger.Info("swarm set label on", n.ActualNodeState.Address, n.label(swarmDbmsLabelKey))
 			if e := newScriptExecuter(cluster.sshKey, n.ActualNodeState.Address).
-				run("swarm-set-label.sh", manager, n.ActualNodeState.Address, n.label()); e != nil {
+				run("swarm-set-label.sh", manager, n.ActualNodeState.Address, swarmDbmsLabelKey, n.label(swarmDbmsLabelKey)); e != nil {
 				logger.Error(e.Error())
 				n.Error = e.Error()
 				return
@@ -157,7 +157,20 @@ func deploySeDockerStack(cluster *clusterType) error {
 		return err
 	}
 
+	//	swarm-set-label вызвать для SENode1 и SENode2
+
 	conf := newSeConfigType(cluster)
+
+	if err := newScriptExecuter(cluster.sshKey, conf.SENode1).
+		run("swarm-set-label.sh", conf.SENode1, conf.SENode1, swarmSeLabelKey, cluster.nodeByHost(conf.SENode1).label(swarmSeLabelKey)); err != nil {
+		return err
+	}
+
+	if err := newScriptExecuter(cluster.sshKey, conf.SENode2).
+		run("swarm-set-label.sh", conf.SENode1, conf.SENode2, swarmSeLabelKey, cluster.nodeByHost(conf.SENode2).label(swarmSeLabelKey)); err != nil {
+		return err
+	}
+
 	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.SENode1, conf.SENode2)).
 		run("se-cluster-start.sh", conf.SENode1, conf.SENode2); err != nil {
 		return err
@@ -190,7 +203,30 @@ func deployMonDockerStack(cluster *clusterType) error {
 
 	logger.Info("Starting a mon docker stack deployment.")
 
-	// here will need to implement the installation of man stack
+	prepareScripts("alertmanager/config.yml", "prometheus/prometheus.yml", "prometheus/alert.rules",
+		"docker-compose-mon.yml", "mon-node-prepare.sh", "mon-stack-start.sh", "swarm-set-label.sh")
+
+	conf := newSeConfigType(cluster)
+
+	if err := newScriptExecuter(cluster.sshKey, conf.SENode1).
+		run("swarm-set-label.sh", conf.SENode1, conf.SENode1, swarmMonLabelKey, cluster.nodeByHost(conf.SENode1).label(swarmMonLabelKey)); err != nil {
+		return err
+	}
+
+	if err := newScriptExecuter(cluster.sshKey, conf.SENode2).
+		run("swarm-set-label.sh", conf.SENode1, conf.SENode2, swarmMonLabelKey, cluster.nodeByHost(conf.SENode2).label(swarmMonLabelKey)); err != nil {
+		return err
+	}
+
+	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.SENode1, conf.SENode2)).
+		run("mon-node-prepare.sh", conf.SENode1, conf.SENode2, conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
+		return err
+	}
+
+	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.SENode1, conf.SENode2)).
+		run("mon-stack-start.sh", conf.SENode1, conf.SENode2); err != nil {
+		return err
+	}
 
 	logger.Info("SE docker mon docker stack deployed successfully")
 	return nil

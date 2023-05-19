@@ -19,9 +19,6 @@ In the full version of `cluster.json` array `Nodes` contains 5 elements.
   // ctool version
   "ActualClusterVersion": "0.0.2",
 
-  // Skipped if empty
-  "LastAttemptInfo": "some info",
-
   // List of data centers
   // Exists only for multi-dc deployment
   "DataCenters": [ 
@@ -87,13 +84,7 @@ In the full version of `cluster.json` array `Nodes` contains 5 elements.
       // Node role
       "NodeRole": "SENode",
 
-      // Version from the last successful attempt
-      // Skipped if empty
-      "NodeVersion": "0.0.1",
-        
-      // Attempt number
-      "AttemptNo": 2,
-        
+       
       // Error on the last attempt
       // Skipped if empty
       "Error": "some error"
