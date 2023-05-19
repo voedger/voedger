@@ -14,6 +14,10 @@ import (
 
 func seNodeControllerFunction(n *nodeType) error {
 
+	if len(n.Error) > 0 && n.DesiredNodeState.isEmpty() {
+		n.DesiredNodeState = n.ActualNodeState
+	}
+
 	if n.DesiredNodeState.isEmpty() {
 		return nil
 	}

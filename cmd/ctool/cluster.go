@@ -16,8 +16,10 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
+	"github.com/untillpro/goutils/logger"
 )
 
 func newCluster() *clusterType {
@@ -26,6 +28,7 @@ func newCluster() *clusterType {
 		ActualClusterVersion:  "",
 		exists:                false,
 		Draft:                 true,
+		sshKey:                sshKey,
 	}
 	dir, _ := os.Getwd()
 	cluster.configFileName = filepath.Join(dir, clusterConfFileName)
@@ -70,7 +73,7 @@ func (n *nodeType) nodeControllerFunction() error {
 	case nrCENode:
 		return ceNodeControllerFunction(n)
 	default:
-		return ErrorNodeControllerFunctionNotAssigned
+		return ErrNodeControllerFunctionNotAssigned
 	}
 }
 
@@ -121,7 +124,7 @@ func (n *nodeType) label(key string) string {
 
 func (ns *nodeType) check(c *clusterType) error {
 	if ns.actualNodeVersion() != ns.desiredNodeVersion(c) {
-		return ErrorDifferentNodeVersions
+		return ErrDifferentNodeVersions
 	}
 	return nil
 }
@@ -144,6 +147,45 @@ func (n *nodesType) hosts(nodeRole string) []string {
 type cmdType struct {
 	Kind string
 	Args string
+}
+
+func (c *cmdType) apply(cluster *clusterType) error {
+
+	var err error
+
+	if !cluster.existsNodeError() && cluster.Cmd.isEmpty() {
+		logger.Info("no active command found to apply")
+		return nil
+	}
+
+	defer cluster.saveToJSON()
+
+	if err = cluster.validate(); err != nil {
+		logger.Error(err.Error)
+		return err
+	}
+
+	cluster.Draft = false
+
+	var wg sync.WaitGroup
+	wg.Add(len(cluster.Nodes))
+
+	for i := 0; i < len(cluster.Nodes); i++ {
+		go func(node *nodeType) {
+			defer wg.Done()
+			if err := node.nodeControllerFunction(); err != nil {
+				logger.Error(err.Error)
+			}
+		}(&cluster.Nodes[i])
+	}
+
+	wg.Wait()
+
+	if cluster.existsNodeError() {
+		return ErrPreparingClusterNodes
+	}
+
+	return cluster.clusterControllerFunction()
 }
 
 func (c *cmdType) args() []string {
@@ -169,7 +211,7 @@ func (c *cmdType) validate(cluster *clusterType) error {
 	case ckReplace:
 		return validateReplaceCmd(c, cluster)
 	default:
-		return ErrorUnknownCommand
+		return ErrUnknownCommand
 	}
 }
 
@@ -180,16 +222,16 @@ func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
 	args := cmd.args()
 
 	if len(args) == 0 {
-		return ErrorMissingCommandArguments
+		return ErrMissingCommandArguments
 	}
 
 	if args[0] != clusterEditionCE && args[0] != clusterEditionSE {
-		return ErrorInvalidClusterEdition
+		return ErrInvalidClusterEdition
 	}
 
 	if args[0] == clusterEditionCE && len(args) != 1+initCeArgCount ||
 		args[0] == clusterEditionSE && len(args) != 1+initSeArgCount && len(args) != initSeWithDCArgCount {
-		return ErrorInvalidNumberOfArguments
+		return ErrInvalidNumberOfArguments
 	}
 
 	return nil
@@ -200,15 +242,15 @@ func validateUpgradeCmd(cmd *cmdType, cluster *clusterType) error {
 	args := cmd.args()
 
 	if len(args) == 0 {
-		return ErrorMissingCommandArguments
+		return ErrMissingCommandArguments
 	}
 
 	if len(args) != 1 {
-		return ErrorInvalidNumberOfArguments
+		return ErrInvalidNumberOfArguments
 	}
 
 	if args[0] == cluster.ActualClusterVersion {
-		return ErrorNoUpdgradeRequired
+		return ErrNoUpdgradeRequired
 	}
 
 	return nil
@@ -219,21 +261,21 @@ func validateReplaceCmd(cmd *cmdType, cluster *clusterType) error {
 	args := cmd.args()
 
 	if len(args) == 0 {
-		return ErrorMissingCommandArguments
+		return ErrMissingCommandArguments
 	}
 
 	if len(args) != 2 {
-		return ErrorInvalidNumberOfArguments
+		return ErrInvalidNumberOfArguments
 	}
 
 	var err error
 
 	if n := cluster.nodeByHost(args[0]); n == nil {
-		err = errors.Join(err, fmt.Errorf(ErrorHostNotFoundInCluster.Error(), args[0]))
+		err = errors.Join(err, fmt.Errorf(ErrHostNotFoundInCluster.Error(), args[0]))
 	}
 
 	if n := cluster.nodeByHost(args[1]); n != nil {
-		err = errors.Join(err, fmt.Errorf(ErrorHostAlreadyExistsInCluster.Error(), args[1]))
+		err = errors.Join(err, fmt.Errorf(ErrHostAlreadyExistsInCluster.Error(), args[1]))
 	}
 
 	return err
@@ -297,7 +339,7 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 	}
 
 	if !c.Draft && !c.Cmd.isEmpty() {
-		return ErrorUncompletedCommandFound
+		return ErrUncompletedCommandFound
 	}
 
 	c.Cmd = *cmd
@@ -394,19 +436,19 @@ func (c *clusterType) validate() error {
 
 	for _, n := range c.Nodes {
 		if len(n.DesiredNodeState.Address) > 0 && net.ParseIP(n.DesiredNodeState.Address) == nil {
-			err = errors.Join(err, errors.New(n.DesiredNodeState.Address+" "+ErrorInvalidIpAddress.Error()))
+			err = errors.Join(err, errors.New(n.DesiredNodeState.Address+" "+ErrInvalidIpAddress.Error()))
 		}
 		if len(n.ActualNodeState.Address) > 0 && net.ParseIP(n.ActualNodeState.Address) == nil {
-			err = errors.Join(err, errors.New(n.ActualNodeState.Address+" "+ErrorInvalidIpAddress.Error()))
+			err = errors.Join(err, errors.New(n.ActualNodeState.Address+" "+ErrInvalidIpAddress.Error()))
 		}
 	}
 
 	if c.Edition != clusterEditionCE && c.Edition != clusterEditionSE {
-		err = errors.Join(err, ErrorInvalidClusterEdition)
+		err = errors.Join(err, ErrInvalidClusterEdition)
 	}
 
 	if len(c.DataCenters) > 0 && len(c.DataCenters) != 3 {
-		err = errors.Join(err, ErrorInvalidNumberOfDataCenters)
+		err = errors.Join(err, ErrInvalidNumberOfDataCenters)
 	}
 
 	return err

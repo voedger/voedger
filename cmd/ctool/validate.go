@@ -24,8 +24,8 @@ func validate(cmd *cobra.Command, arg []string) error {
 	cluster := newCluster()
 
 	if !cluster.exists {
-		logger.Error(ErrorClusterConfNotFound.Error)
-		return ErrorClusterConfNotFound
+		logger.Error(ErrClusterConfNotFound.Error)
+		return ErrClusterConfNotFound
 	}
 
 	err := cluster.validate()
