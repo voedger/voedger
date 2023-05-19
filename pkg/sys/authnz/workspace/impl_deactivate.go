@@ -151,7 +151,7 @@ func projectorApplyDeactivateWorkspace(federationURL func() *url.URL, appQName i
 		}
 		ownerApp := wsDesc.AsString(Field_OwnerApp)
 		ownerWSID := wsDesc.AsInt64(Field_OwnerWSID)
-		ownerDocID := wsDesc.AsInt64(Field_OwnerID)
+		ownerID := wsDesc.AsInt64(Field_OwnerID)
 
 		sysToken, err := payloads.GetSystemPrincipalToken(tokensAPI, appQName)
 		if err != nil {
@@ -188,8 +188,16 @@ func projectorApplyDeactivateWorkspace(federationURL func() *url.URL, appQName i
 			return err
 		}
 
-		// c.sys.OnWorkspaceDeactivated(OwnerDocID)
-		body := fmt.Sprintf(`{"args":{"OwnerID":%d}}`, ownerDocID)
+		// c.sys.OnWorkspaceDeactivated(OnwerWSID, WSName) (appWS)
+		wsName := wsDesc.AsString(sysshared.Field_WSName)
+		body := fmt.Sprintf(`{"args":{"OwnerWSID":%d, "WSName":"%s"}}`, ownerID, wsName)
+		cdocWorkspaceIDWSID := coreutils.GetAppWSID()
+		if _, err := coreutils.FederationFunc(federationURL(), fmt.Sprintf("api/%s/%d/c.sys.OnWorkspaceDeactivated", ownerApp, ownerWSID), body,
+			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(sysToken)); err != nil {
+			return fmt.Errorf("c.sys.OnWorkspaceDeactivated failed: %w", err)
+		}
+		// c.sys.OnWorkspaceDeactivated(OwnerID) (profile)
+		body := fmt.Sprintf(`{"args":{"OwnerID":%d}}`, ownerID)
 		if _, err := coreutils.FederationFunc(federationURL(), fmt.Sprintf("api/%s/%d/c.sys.OnWorkspaceDeactivated", ownerApp, ownerWSID), body,
 			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(sysToken)); err != nil {
 			return fmt.Errorf("c.sys.OnWorkspaceDeactivated failed: %w", err)

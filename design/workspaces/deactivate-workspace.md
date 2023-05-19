@@ -44,9 +44,13 @@
     end
 
     ws ->> appws: sys.OnWorkspaceDeactivated(ownerWSID, wsName)
-    appws ->> appws: read IDOfCDocWorkspaceID from view.sys.WorkspaceIDIdx
     opt exists && !WorkspaceID.IsActive
       appws ->> appws: WorkspaceID.IsActive = false
+    end
+
+    ws ->> profile: sys.OnWorkspaceDeactivated(ownerID) ???
+    opt ownerDoc.IsActive
+      profile ->> profile: ownerDoc.IsActive = false
     end
 
     ws ->> ws: c.sys.CUD: cdoc.sys.WorkspaceDescriptor.Status = Inactive

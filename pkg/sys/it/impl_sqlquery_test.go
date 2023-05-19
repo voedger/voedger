@@ -18,15 +18,6 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func TestXxx(t *testing.T) {
-	TestBasicUsage_Journal(t)
-	TestJournal_read_in_years_range_1(t)
-	TestBasicUsage_SignUpIn(t)
-	TestCreateLoginErrors(t)
-	TestSignInErrors(t)
-	TestSqlQuery_plog(t)
-}
-
 func TestBasicUsage_SqlQuery(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)

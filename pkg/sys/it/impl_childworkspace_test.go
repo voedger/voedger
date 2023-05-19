@@ -111,8 +111,8 @@ func TestForeignAuthorization(t *testing.T) {
 		vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.Expect403(), coreutils.WithAuthorizeBy(newPrn.Token))
 
 		// make this new foreign login a subject in the existing workspace
-		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.Subject","Login": "%s","SubjectKind":%d,"Roles": "%s"}}]}`,
-			newLoginName, istructs.SubjectKind_User, iauthnz.QNameRoleWorkspaceSubject)
+		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.Subject","Login": "%s","SubjectKind":%d,"Roles": "%s","ProfileWSID":%d}}]}`,
+			newLoginName, istructs.SubjectKind_User, iauthnz.QNameRoleWorkspaceSubject, newPrn.ProfileWSID)
 		vit.PostWS(parentWS, "c.sys.CUD", body)
 
 		// now the foreign login could work in the workspace
@@ -125,8 +125,8 @@ func TestForeignAuthorization(t *testing.T) {
 		vit.PostWS(childWS, "c.sys.CUD", body, coreutils.Expect403())
 
 		// create cdoc.sys.Subject with a role the custom func execution could be authorized with
-		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.Subject","Login": "login","SubjectKind":%d,"Roles": "%s"}}]}`,
-			istructs.SubjectKind_User, iauthnz.QNameRoleWorkspaceSubject)
+		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.Subject","Login": "login","SubjectKind":%d,"Roles": "%s","ProfileWSID":%d}}]}`,
+			istructs.SubjectKind_User, iauthnz.QNameRoleWorkspaceSubject, newPrn.ProfileWSID)
 		vit.PostWS(parentWS, "c.sys.CUD", body)
 
 		// enrich the principal token in the parentWS
