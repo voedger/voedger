@@ -34,7 +34,14 @@ mindmap
 ```mermaid
 classDiagram
 
-direction TB
+  class IField {
+    <<Interface>>
+    +Name() string
+    +DataKind() DataKind
+    +Required() bool
+    +Verified() bool
+    +VerificationKind(VerificationKind) bool
+  }
 
   class IFields{
     <<Interface>>
@@ -44,20 +51,19 @@ direction TB
   }
   IFields "1" --* "0..*" IField : compose
 
-  IFieldsBuilder <|-- IFields : inherits
+  IFieldsBuilder --|> IFields : inherits
   class IFieldsBuilder {
     <<Interface>>
     AddField(…) IField
     AddVerifiedField(…) IField
   }
 
-  class IField {
+  class IContainer {
     <<Interface>>
     +Name() string
-    +DataKind() DataKind
-    +Required() bool
-    +Verified() bool
-    +VerificationKind(VerificationKind) bool
+    +Def() IDef
+    +MinOccurs() int
+    +MaxOccurs() int
   }
 
   class IContainers{
@@ -69,18 +75,17 @@ direction TB
   }
   IContainers "1" --* "0..*" IContainer : compose
 
-  IContainersBuilder <|-- IContainers : inherits
+  IContainersBuilder --|> IContainers : inherits
   class IContainersBuilder {
     <<Interface>>
     AddContainer(…) IContainer
   }
 
-  class IContainer {
+  class IUnique {
     <<Interface>>
     +Name() string
-    +Def() IDef
-    +MinOccurs() int
-    +MaxOccurs() int
+    +ID() UniqueID
+    +Fields() []IFeld
   }
 
   class IUniques{
@@ -92,17 +97,10 @@ direction TB
   }
   IUniques "1" --* "0..*" IUnique : compose
 
-  IUniquesBuilder <|-- IUniques : inherits
+  IUniquesBuilder --|> IUniques : inherits
   class IUniquesBuilder {
     <<Interface>>
     AddUnique(…) IUnique
-  }
-
-  class IUnique {
-    <<Interface>>
-    +Name() string
-    +ID() UniqueID
-    +Fields() []IFeld
   }
 ```
 
@@ -110,15 +108,15 @@ direction TB
 
 ```mermaid
 classDiagram
+  direction BT
 
-direction TB
   class IDef{
     <<Interface>>
     +Kind() DefKind
     +QName() QName
   }
 
-  IGDoc <|-- IDef : inherits
+  IGDoc --|> IDef : inherits
   class IGDoc {
     <<Interface>>
     IFields
@@ -127,7 +125,7 @@ direction TB
   }
   IGDoc "1" --o "0..*" IGRecord : aggregate child
 
-  IGDocBuilder <|-- IGDoc : inherits
+  IGDocBuilder --|> IGDoc : inherits
   class IGDocBuilder {
     <<Interface>>
     IFieldsBuilder
@@ -135,7 +133,7 @@ direction TB
     IUniquesBuilder
   }
 
-  IGRecord <|-- IDef : inherits
+  IGRecord --|> IDef : inherits
   class IGRecord {
     <<Interface>>
     IFields
@@ -144,7 +142,7 @@ direction TB
   }
   IGRecord "1" --o "0..*" IGRecord : aggregate child
 
-  IGRecordBuilder <|-- IGRecord : inherits
+  IGRecordBuilder --|> IGRecord : inherits
   class IGRecordBuilder {
     <<Interface>>
     IFieldsBuilder
@@ -152,7 +150,7 @@ direction TB
     IUniquesBuilder
   }
 
-  ICDoc <|-- IDef : inherits
+  ICDoc --|> IDef : inherits
   class ICDoc {
     <<Interface>>
     IFields
@@ -162,7 +160,7 @@ direction TB
   }
   ICDoc "1" --o "0..*" ICRecord : aggregate child
 
-  ICDocBuilder <|-- ICDoc : inherits
+  ICDocBuilder --|> ICDoc : inherits
   class ICDocBuilder {
     <<Interface>>
     IFieldsBuilder
@@ -171,7 +169,7 @@ direction TB
     +SetSingleton()
   }
 
-  ICRecord <|-- IDef : inherits
+  ICRecord --|> IDef : inherits
   class ICRecord {
     <<Interface>>
     IFields
@@ -180,7 +178,7 @@ direction TB
   }
   ICRecord "1" --o "0..*" ICRecord : aggregate child
 
-  ICRecordBuilder <|-- ICRecord : inherits
+  ICRecordBuilder --|> ICRecord : inherits
   class ICRecordBuilder {
     <<Interface>>
     IFieldsBuilder
@@ -188,7 +186,7 @@ direction TB
     IUniquesBuilder
   }
 
-  IWDoc <|-- IDef : inherits
+  IWDoc --|> IDef : inherits
   class IWDoc {
     <<Interface>>
     IFields
@@ -197,7 +195,7 @@ direction TB
   }
   IWDoc "1" --o "0..*" IWRecord : aggregate child
 
-  IWDocBuilder <|-- IWDoc : inherits
+  IWDocBuilder --|> IWDoc : inherits
   class IWDocBuilder {
     <<Interface>>
     IFieldsBuilder
@@ -205,7 +203,7 @@ direction TB
     IUniquesBuilder
   }
 
-  IWRecord <|-- IDef : inherits
+  IWRecord --|> IDef : inherits
   class IWRecord {
     <<Interface>>
     IFields
@@ -214,7 +212,7 @@ direction TB
   }
   IWRecord "1" --o "0..*" IWRecord : aggregate child
 
-  IWRecordBuilder <|-- IWRecord : inherits
+  IWRecordBuilder --|> IWRecord : inherits
   class IWRecordBuilder {
     <<Interface>>
     IFieldsBuilder
@@ -222,7 +220,7 @@ direction TB
     IUniquesBuilder
   }
 
-  IODoc <|-- IDef : inherits
+  IODoc --|> IDef : inherits
   class IODoc {
     <<Interface>>
     IFields
@@ -231,14 +229,14 @@ direction TB
   IODoc "1" --o "0..*" IODoc : aggregate child docs
   IODoc "1" --o "0..*" IORecord : aggregate child recs
 
-  IODocBuilder <|-- IODoc : inherits
+  IODocBuilder --|> IODoc : inherits
   class IODocBuilder {
     <<Interface>>
     IFieldsBuilder
     IContainersBuilder
   }
 
-  IORecord <|-- IDef : inherits
+  IORecord --|> IDef : inherits
   class IORecord {
     <<Interface>>
     IFields
@@ -246,14 +244,14 @@ direction TB
   }
   IORecord "1" --o "0..*" IORecord : aggregate child
 
-  IORecordBuilder <|-- IORecord : inherits
+  IORecordBuilder --|> IORecord : inherits
   class IORecordBuilder {
     <<Interface>>
     IFieldsBuilder
     IContainersBuilder
   }
 
-  IObject <|-- IDef : inherits
+  IObject --|> IDef : inherits
 
   class IObject {
     <<Interface>>
@@ -262,14 +260,14 @@ direction TB
   }
   IObject "1" --o "0..*" IElement : aggregate child
 
-  IObjectBuilder <|-- IObject : inherits
+  IObjectBuilder --|> IObject : inherits
   class IObjectBuilder {
     <<Interface>>
     IFieldsBuilder
     IContainersBuilder
   }
   
-  IElement <|-- IDef : inherits
+  IElement --|> IDef : inherits
   class IElement {
     <<Interface>>
     IFields
@@ -277,7 +275,7 @@ direction TB
   }
   IElement "1" --o "0..*" IElement : aggregate child
 
-  IElementBuilder <|-- IElement : inherits
+  IElementBuilder --|> IElement : inherits
   class IElementBuilder {
     <<Interface>>
     IFieldsBuilder
@@ -289,7 +287,8 @@ direction TB
 
 ```mermaid
 classDiagram
-direction TB
+  direction BT
+
   class IDef{
     <<Interface>>
     +Kind() DefKind
@@ -304,7 +303,7 @@ direction TB
   }
   note for IField "Required is always true \n for partition key fields, \n false for clustering columns \n and optional for value fields"
 
-  IView <|-- IDef : inherits
+  IView --|> IDef : inherits
   class IView {
     <<Interface>>
     IContainers
@@ -318,28 +317,28 @@ direction TB
   IView --o IViewKey : aggregate
   IView --o IViewValue : aggregate
 
-  IPartKey <|-- IDef : inherits
+  IPartKey --|> IDef : inherits
   class IPartKey {
     <<Interface>>
     IFields
   }
   IPartKey "1" -- "1..*" IField : compose
 
-  IClustCols <|-- IDef : inherits
+  IClustCols --|> IDef : inherits
   class IClustCols {
     <<Interface>>
     IFields
   }
   IClustCols "1" -- "1..*" IField : compose
 
-  IViewKey <|-- IDef : inherits
+  IViewKey --|> IDef : inherits
   class IViewKey {
     <<Interface>>
     IFields
   }
   IViewKey "1" -- "1..*" IField : compose
 
-  IViewValue <|-- IDef : inherits
+  IViewValue --|> IDef : inherits
   class IViewValue {
     <<Interface>>
     IFields
@@ -385,4 +384,3 @@ Invalid names examples:
 
 - Maximum fields per unique is 256
 - Maximum uniques per definition is 100.
-
