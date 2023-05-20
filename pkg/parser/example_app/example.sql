@@ -15,7 +15,7 @@ TAG BackofficeTag;
 ROLE UntillPaymentsUser;
 
 -- TABLE ... OF - declares the inheritance from type or table. PROJECTORS from the base table are not inherted.
-TABLE AirTablePlan INHERITS CDOC (
+TABLE AirTablePlan INHERITS CDoc (
     FState int,
     Name text NOT NULL,
     VerifiableField text NOT NULL VERIFIABLE, -- Verifiable field
@@ -35,7 +35,7 @@ TABLE AirTablePlan INHERITS CDOC (
 
 
 -- Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC
-TABLE SubscriptionProfile INHERITS SINGLETON (
+TABLE SubscriptionProfile INHERITS Singleton (
     CustomerID text,
     CustomerKind int,
     CompanyName text
@@ -84,7 +84,7 @@ WORKSPACE MyWorkspace (
     );
 
 
-    TABLE WsTable INHERITS CDOC OF air.TypeWithName, TypeWithKind ( -- Multiple types
+    TABLE WsTable INHERITS CDoc OF air.TypeWithName, TypeWithKind ( -- Multiple types
         PsName text,
         TABLE Child (
             Number int				

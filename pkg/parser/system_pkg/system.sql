@@ -1,16 +1,16 @@
 SCHEMA sys;
 
-TABLE CDOC(
+TABLE CDoc(
     id id
 );
 
-TABLE ODOC(
+TABLE ODoc(
     id id
 );
 
-TABLE WDOC(
+TABLE WDoc(
     id id
 );
 
-TABLE SINGLETON INHERITS CDOC (
+TABLE Singleton INHERITS CDoc (
 );
