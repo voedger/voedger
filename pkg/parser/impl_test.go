@@ -78,6 +78,102 @@ func Test_BasicUsage(t *testing.T) {
 
 }
 
+func Test_DupFieldsInTypes(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("file1.sql", `SCHEMA test;
+	TYPE RootType (
+		Id int32
+	);
+	TYPE BaseType OF RootType(
+		baseField int
+	);
+	TYPE BaseType2 (
+		someField int
+	);
+	TYPE MyType OF BaseType, BaseType2 (
+		field text,
+		field text,
+		baseField text,
+		someField int,
+		Id text
+	)
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	err = BuildAppDefs(packages, appdef.New())
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:13:3: field redeclared",
+		"file1.sql:14:3: baseField redeclared",
+		"file1.sql:15:3: someField redeclared",
+		"file1.sql:16:3: Id redeclared",
+	}, "\n"))
+
+}
+
+func Test_DupFieldsInTables(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("file1.sql", `SCHEMA test;
+	TYPE RootType (
+		Kind int32
+	);
+	TYPE BaseType OF RootType(
+		baseField int
+	);
+	TYPE BaseType2 (
+		someField int
+	);
+	TABLE ByBaseTable INHERITS CDoc (
+		Name text,
+		Code text,
+		UNIQUE (Code),
+		CONSTRAINT constraint1 UNIQUE (Name)
+	);
+	TABLE MyTable INHERITS ByBaseTable OF BaseType, BaseType2 (
+		newField text,
+		field text,
+		field text, 		-- duplicated in the this table
+		baseField text,		-- duplicated in the first OF
+		someField int,		-- duplicated in the second OF
+		Kind int,			-- duplicated in the first OF (2nd level)
+		Name int,			-- duplicated in the inherited table
+		ID text,			-- duplicated in the inherited table (2nd level)
+		UNIQUE (Kind),
+		CONSTRAINT constraint1 UNIQUE (newField) -- duplicated in the inherited table
+	)
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	err = BuildAppDefs(packages, appdef.New())
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:20:3: field redeclared",
+		"file1.sql:21:3: baseField redeclared",
+		"file1.sql:22:3: someField redeclared",
+		"file1.sql:23:3: Kind redeclared",
+		"file1.sql:24:3: Name redeclared",
+		"file1.sql:25:3: ID redeclared",
+		"file1.sql:27:3: constraint1 redeclared",
+	}, "\n"))
+
+}
+
 func Test_Expressions(t *testing.T) {
 	require := require.New(t)
 
@@ -124,9 +220,6 @@ func Test_Duplicates(t *testing.T) {
 
 	_, err = MergeFileSchemaASTs("", []*FileSchemaAST{ast1, ast2})
 
-	// TODO: use golang messages like
-	// ./types2.go:17:7: EmbedParser redeclared
-	//     ./types.go:17:6: other declaration of EmbedParser
 	require.EqualError(err, strings.Join([]string{
 		"file1.sql:4:3: MyTableValidator redeclared",
 		"file2.sql:3:3: MyFunc2 redeclared",
@@ -153,9 +246,6 @@ func Test_DuplicatesInViews(t *testing.T) {
 
 	_, err = MergeFileSchemaASTs("", []*FileSchemaAST{ast})
 
-	// TODO: use golang messages like
-	// ./types2.go:17:7: EmbedParser redeclared
-	//     ./types.go:17:6: other declaration of EmbedParser
 	require.EqualError(err, strings.Join([]string{
 		"file2.sql:6:4: field1 redeclared",
 		"file2.sql:8:4: primary key redeclared",

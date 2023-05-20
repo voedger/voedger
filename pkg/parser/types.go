@@ -383,6 +383,7 @@ type TableItemExpr struct {
 }
 
 type TableConstraint struct {
+	Pos            lexer.Position
 	ConstraintName string          `parser:"('CONSTRAINT' @Ident)?"`
 	Unique         *UniqueExpr     `parser:"(@@"`
 	Check          *TableCheckExpr `parser:"| @@)"`

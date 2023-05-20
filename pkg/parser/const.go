@@ -25,3 +25,5 @@ const (
 	sysString  = "text"
 	sysBytes   = "blob"
 )
+
+const maxNestedTableContainerOccurances = 100 // FIXME: 100 container occurances
