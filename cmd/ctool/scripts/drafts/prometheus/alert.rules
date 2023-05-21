@@ -1,0 +1,10 @@
+groups:
+- name: Hardware alerts
+  rules:
+  - alert: NodeCPUUsage
+    expr: avg(irate(node_cpu_seconds_total{mode="idle"}[1m]) * 100) < 30
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: High CPU usage detected CPU usage is above 70%

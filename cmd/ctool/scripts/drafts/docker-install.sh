@@ -15,11 +15,7 @@ fi
 VERSION_STRING="5:20.10.23~3-0~ubuntu-focal"
 NODE=$1
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
-
-sudo add-apt-repository ppa:rmescandon/yq -y
-sudo apt update 
-sudo apt install yq -y
+SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 script="\
         sudo add-apt-repository ppa:rmescandon/yq -y;

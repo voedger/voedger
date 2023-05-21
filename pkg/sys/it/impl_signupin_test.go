@@ -75,7 +75,7 @@ func TestCreateLoginErrors(t *testing.T) {
 	})
 
 	login := vit.NextName()
-	loginPseudoWSID := coreutils.GetPseudoWSID(login, istructs.MainClusterID)
+	loginPseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.MainClusterID)
 
 	t.Run("unknown application", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"my/unknown","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"password"}}`,
@@ -115,7 +115,7 @@ func TestCreateLoginErrors(t *testing.T) {
 			"-test@test.com-",
 		}
 		for _, wrongLogin := range wrongLogins {
-			pseudoWSID := coreutils.GetPseudoWSID(wrongLogin, istructs.MainClusterID)
+			pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, wrongLogin, istructs.MainClusterID)
 			body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
 				wrongLogin, istructs.AppQName_test1_app1.String(), istructs.SubjectKind_User, istructs.MainClusterID, "1")
 			resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "c.sys.CreateLogin", body, coreutils.Expect400())
@@ -129,7 +129,7 @@ func TestSignInErrors(t *testing.T) {
 	defer vit.TearDown()
 
 	login := vit.NextName()
-	pseudoWSID := coreutils.GetPseudoWSID(login, istructs.MainClusterID)
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.MainClusterID)
 
 	t.Run("unknown login", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "1","AppName": "%s"},"elements":[{"fields":["PrincipalToken", "WSID", "WSError"]}]}`,

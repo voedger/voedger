@@ -13,14 +13,14 @@ Create User/Login/App Workspaces
 
 - [Principles](#solution-principles)
 - [Create Login](#create-login)
-- [Create UserWorkspace](#create-userworkspace)
+- [Create ChildWorkspace](#create-childworkspace)
 - [Related commits](#related-commits)
 - [Notes](#notes)
 - [See also](#see-also)
 
 Commands:
 
-- [c.sys.InitUserWorkspace()](#csysinituserworkspace)
+- [c.sys.InitChildWorkspace()](#csysinitchildworkspace)
 - [c.sys.CreateWorkspaceID()](#csyscreateworkspaceid)
 - [c.sys.CreateWorkspace()](#csyscreateworkspace)
 - [UpdateOwner()](#updateownerwsparams-newwsid-wsdescriniterror)
@@ -52,39 +52,39 @@ Projectors:
 |c.sys.CreateWorkspaceID()<br/>cdoc.sys.WorkspaceID<br/>aproj.sys.InvokeCreateWorkspace()|Target App|(Target Cluster, base App WSID)|Target Cluster
 |c.sys.CreateWorkspace()<br/>cdoc.sys.WorkspaceDescriptor<br/>cdoc.sys.UserProfile/DeviceProfile<br/>aproj.sys.InitializeWorkspace()|Target App|new WSID|Target Cluster
 
-## Create UserWorkspace
+## Create ChildWorkspace
 
 |entity|app|ws|cluster|
 |---|---|---|---|
-|c.sys.InitUserWorkspace()<br/>cdoc.sys.ChildWorkspace (owner)<br/>aproj.sys.InvokeCreateWorkspaceID()|Tagret App|Profile|Profile Cluster
-|c.sys.CreateWorkspaceID()<br/>cdoc.sys.WorkspaceID<br/>aproj.sys.InvokeCreateWorkspace()|Target App|(Target Cluster, Base Profile WSID)|Target Cluster
+|c.sys.InitChildWorkspace()<br/>cdoc.sys.ChildWorkspace (owner)<br/>aproj.sys.InvokeCreateWorkspaceID()|Tagret App|Profile|Profile Cluster
+|c.sys.CreateWorkspaceID()<br/>cdoc.sys.WorkspaceID<br/>aproj.sys.InvokeCreateWorkspace()|Target App|(Target Cluster, CRC16(ownerWSID+"/"+wsName))|Target Cluster
 |c.sys.CreateWorkspace()<br/>cdoc.sys.WorkspaceDescriptor<br/>cdoc.$wsKind (air.Restaurant)<br/>aproj.sys.InitializeWorkspace()|Target App|new WSID|Target Cluster
 
-## c.sys.InitUserWorkspace()
+## c.sys.InitChildWorkspace()
 
 
 - AuthZ: Owner
   - PrincipalToken in header
   - PrincipalToken.ProfileWSID == Request.WSID
 - Params: wsName, wsKind, wsKindInitializationData, templateName, templateParams (JSON), wsClusterID
-- Check that wsName does not exist yet: View<UserWorkspaceIdx>{pk: dummy, cc: wsName, value: idOfUserWorkspace}
+- Check that wsName does not exist yet: View<ChildWorkspaceIdx>{pk: dummy, cc: wsName, value: idOfChildWorkspace}
   - 409 conflict
-- Create CDoc<UserWorkspace> {wsName, wsKind, wsKindInitializationData, templateName, templateParams, wsClusterID, /* Updated aftewards by UpdateOwner*/ WSID, wsError}
-  - Trigger Projector<A, InvokeCreateWorkspaceID> 
-  - Trigger Projector<UserWorkspaceIdx>
+- Create CDoc<ChildWorkspace> {wsName, wsKind, wsKindInitializationData, templateName, templateParams, wsClusterID, /* Updated aftewards by UpdateOwner*/ WSID, wsError}
+  - Trigger Projector<A, InvokeCreateWorkspaceID>
+  - Trigger Projector<ChildWorkspaceIdx>
 
 Subject:
-- Call WS[Subject.ProfileWSID].InitUserWorkspace()
+- Call WS[Subject.ProfileWSID].InitChildWorkspace()
   - wsName
   - wsKind
   - wsKindInitializationData // JSON
   - wsClusterID // Ideally user should be asked which cluster to use
-- Call WS[Subject.ProfileWSID].q.QueryUserWorkspaceByName() until (WSID || wsError)
-  - Returns all fields of CDoc<UserWorkspace>
+- Call WS[Subject.ProfileWSID].q.QueryChildWorkspaceByName() until (WSID || wsError)
+  - Returns all fields of CDoc<ChildWorkspace>
 
 ## aproj.sys.InvokeCreateWorkspaceID()
 
-- Triggered by CDoc<UserWorkspace>
+- Triggered by CDoc<ChildWorkspace>
 - PseudoWSID = NewWSID(wsClusterID, CRC32(wsName))
 - // PseudoWSID  is needed to avoid WSID generation bottlenecks
 - Call WS[$PseudoWSID].c.CreateWorkspaceID()
@@ -142,7 +142,7 @@ Subject:
 
 - if wsDecr.initStartedAtMs == 0
   - WS[currentWS].c.sys.CUD(wsDescr.ID, initStartedAtMs)
-  - err = bp3.BuildWorkspace() // to init data 
+  - err = bp3.BuildWorkspace() // to init data
   - if err != nil: error = ("Workspace data initialization failed: %v", err)
   - WS[currentWS].c.sys.CUD(wsDescr.ID, initError: error, initCompletedAtMs)
   - UpdateOwner(wsParams, new.WSID, error)
@@ -192,7 +192,7 @@ Subject:
       - put PLog
       - apply PLog event to records
       - put WLog
-      - incr PLog and WLog offsets 
+      - incr PLog and WLog offsets
   - //TODO AppWorkspaces must be created when application is deployed
 - App Workspaces amount is defined per app, default 10
 

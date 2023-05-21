@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"io/fs"
 	"net/url"
 	"path/filepath"
@@ -47,6 +48,7 @@ func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName is
 			var templateName string
 			var templateParams string
 			var targetClusterID istructs.ClusterID
+			var wsidToCallCreateWSIDAt istructs.WSID
 			ownerWSID := event.Workspace()
 			ownerBaseWSID := ownerWSID.BaseWSID()
 			targetApp := ""
@@ -60,10 +62,11 @@ func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName is
 				wsKind = rec.AsQName(authnz.Field_WSKind)
 				templateName = rec.AsString(field_TemplateName)
 				templateParams = rec.AsString(Field_TemplateParams)
-				targetClusterID = istructs.ClusterID(rec.AsInt32(authnz.Field_WSClusterID))
 				targetApp = ownerApp
+				wsidToCallCreateWSIDAt = coreutils.GetPseudoWSID(ownerWSID, wsName, targetClusterID)
 			case authnz.QNameCDocLogin:
-				wsName = "hashedLogin"
+				loginHash := rec.AsString(authnz.Field_LoginHash)
+				wsName = fmt.Sprint(crc32.ChecksumIEEE([]byte(loginHash)))
 				switch istructs.SubjectKindType(rec.AsInt32(authnz.Field_SubjectKind)) {
 				case istructs.SubjectKind_Device:
 					wsKind = authnz.QNameCDoc_WorkspaceKind_DeviceProfile
@@ -74,11 +77,11 @@ func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName is
 				}
 				targetClusterID = istructs.ClusterID(rec.AsInt32(authnz.Field_ProfileClusterID))
 				targetApp = rec.AsString(signupin.Field_AppName)
+				wsidToCallCreateWSIDAt = istructs.NewWSID(targetClusterID, ownerBaseWSID)
 			default:
 				// notest
 				panic("")
 			}
-			wsidToCallCreateWSIDAt := istructs.NewWSID(targetClusterID, ownerBaseWSID)
 
 			// Call WS[$PseudoWSID].c.CreateWorkspaceID()
 			createWSIDCmdURL := fmt.Sprintf("api/%s/%d/c.sys.CreateWorkspaceID", targetApp, wsidToCallCreateWSIDAt)
@@ -105,6 +108,7 @@ func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName is
 }
 
 // c.sys.CreateWorkspaceID
+// targetApp/appWS
 func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istructs.AppQName) istructsmem.ExecCommandClosure {
 	return func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 		// TODO: AuthZ: System,SystemToken in header
@@ -160,8 +164,37 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istruct
 	}
 }
 
+// sp.sys.WorkspaceIDIdx
+// triggered by cdoc.sys.WorkspaceID
+// targetApp/appWS
+func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+	return event.CUDs(func(rec istructs.ICUDRow) error {
+		if rec.QName() != QNameCDocWorkspaceID {
+			return nil
+		}
+		kb, err := s.KeyBuilder(state.ViewRecordsStorage, QNameViewWorkspaceIDIdx)
+		if err != nil {
+			// notest
+			return nil
+		}
+		ownerWSID := rec.AsInt64(Field_OwnerWSID)
+		wsName := rec.AsString(authnz.Field_WSName)
+		wsid := rec.AsInt64(authnz.Field_WSID)
+		kb.PutInt64(Field_OwnerWSID, ownerWSID)
+		kb.PutString(authnz.Field_WSName, wsName)
+		wsIdxVB, err := intents.NewValue(kb)
+		if err != nil {
+			// notest
+			return nil
+		}
+		wsIdxVB.PutInt64(authnz.Field_WSID, wsid)
+		return nil
+	})
+}
+
 // Projector<A, InvokeCreateWorkspace>
 // triggered by CDoc<WorkspaceID>
+// targetApp/appWS
 func invokeCreateWorkspaceProjector(federationURL func() *url.URL, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) error {

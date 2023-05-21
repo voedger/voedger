@@ -359,6 +359,6 @@ func (vit *VIT) MetricsRequest(opts ...coreutils.ReqOptFunc) (resp string) {
 }
 
 func NewLogin(name, pwd string, appQName istructs.AppQName, subjectKind istructs.SubjectKindType, clusterID istructs.ClusterID) Login {
-	pseudoWSID := coreutils.GetPseudoWSID(name, istructs.MainClusterID)
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, name, istructs.MainClusterID)
 	return Login{name, pwd, pseudoWSID, appQName, subjectKind, clusterID, map[appdef.QName]map[string]interface{}{}}
 }

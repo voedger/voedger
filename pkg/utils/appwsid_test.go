@@ -19,13 +19,13 @@ func TestBasicUsage_GetAppWSID(t *testing.T) {
 		appWSAmount     istructs.AppWSAmount
 		expectedAppWSID istructs.WSID
 	}{
-		{1, 1, istructs.MaxPseudoBaseWSID + 1},
-		{2, 1, istructs.MaxPseudoBaseWSID + 1},
-		{3, 1, istructs.MaxPseudoBaseWSID + 1},
-		{1, 10, istructs.MaxPseudoBaseWSID + 2},
-		{8, 10, istructs.MaxPseudoBaseWSID + 9},
-		{10, 10, istructs.MaxPseudoBaseWSID + 1},
-		{11, 10, istructs.MaxPseudoBaseWSID + 2},
+		{1, 1, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+1)},
+		{2, 1, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+1)},
+		{3, 1, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+1)},
+		{1, 10, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+2)},
+		{8, 10, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+9)},
+		{10, 10, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+1)},
+		{11, 10, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+2)},
 	}
 
 	for _, c := range cases {
@@ -37,12 +37,12 @@ func TestGetPseudoWSID(t *testing.T) {
 	fuzz := fuzz.New()
 	type src struct {
 		entity    string
-		clusetrID istructs.ClusterID
+		clusterID istructs.ClusterID
 	}
-	const mask = uint64(0xFFFFFFFFFFFC0000) // ensures that bits 16th-46th are zero
+	const mask = uint64(0xFFFFFFFFFFFC0000)
 	var srcInstance src
 	for i := 0; i < 10000; i++ {
 		fuzz.Fuzz(&srcInstance)
-		require.Zero(t, uint64(GetPseudoWSID(srcInstance.entity, srcInstance.clusetrID))&mask)
+		require.Zero(t, uint64(GetPseudoWSID(istructs.NullWSID, srcInstance.entity, srcInstance.clusterID))&mask)
 	}
 }

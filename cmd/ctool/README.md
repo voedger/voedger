@@ -25,38 +25,35 @@ Deploy [Heeus Community Edition (CE)](https://github.com/heeus/heeus-design#comm
 **Deploy a CE cluster on a localhost**
 
     $ ctool init CE
-    $ ctool apply [--force]
+    $ ctool apply 
 
- `--force` - forced reinstallation of the required environment
 
 ### Deploy SE
 
 **Prerequisites**
 - Configure 5 clean  Ubunty??? servers
   - The following addresses will be used as example: 5.255.255.56 5.255.255.57 5.255.255.58 5.255.255.59 5.255.255.60 
-- Admin user name: adm
 - Admin user SSH key: adm.key
 
 **Deploy a SE cluster**
 
     $ ctool init SE 5.255.255.56 5.255.255.57 5.255.255.58 5.255.255.59 5.255.255.60 
-    $ ctool apply [--force] adm ./adm.key
+    $ ctool apply ./adm.key
 
-`--force` - forced reinstallation of the required environment
 
 **Deploy a stritched SE cluster**
 
     $ ctool init SE 5.255.255.56 5.255.255.57 5.255.255.58 5.255.255.59 5.255.255.60 dc1 dc2 dc3 
-    $ ctool apply adm ./adm.key
+    $ ctool apply ./adm.key
 
 **Re-apply after error**
 
-    $ ctool apply adm ./adm.key
+    $ ctool apply ./adm.key
 
 **Update the cluster version to the ctool version**
 
     $ ctool upgrade
-    $ ctool apply adm ./adm.key
+    $ ctool apply ./adm.key
 
 **Validate cluster.json structure**
 
@@ -65,11 +62,8 @@ Deploy [Heeus Community Edition (CE)](https://github.com/heeus/heeus-design#comm
 **Replace a cluster node**
 
     $ ctool replace 5.255.255.56 5.255.255.60
-    $ ctool apply adm ./adm.key
+    $ ctool apply ./adm.key
 
-**Get low-level information on cluster objects**
-
-    $ ctool inspect
 
 **The result of the execution of the ctool commands**
 

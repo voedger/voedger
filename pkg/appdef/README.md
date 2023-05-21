@@ -34,3 +34,4 @@ Invalid names examples:
 ### Uniques
 - Maximum fields per unique is 256
 - Maximum uniques per definition is 100.
+
