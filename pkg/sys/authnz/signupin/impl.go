@@ -52,9 +52,6 @@ func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecComman
 			strings.Contains(loginStr, "..") || !validLoginRegexp.MatchString(loginStr) {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "incorrect login format: ", loginStr)
 		}
-		// if strings.Contains(loginStr, "..") || !validLoginRegexp.MatchString(loginStr) {
-		// 	return coreutils.NewHTTPErrorf(http.StatusBadRequest, "incorrect login format: ", loginStr)
-		// }
 
 		cdocLoginID, err := GetCDocLoginID(args.State, args.Workspace, appName, loginStr)
 		if err != nil {
