@@ -210,7 +210,7 @@ func projectorApplyDeactivateWorkspace(federationURL func() *url.URL, appQName i
 			return err
 		}
 
-		// appWS/c.sys.OnWorkspaceDeactivated(OnwerWSID, WSName)
+		// currentApp/ApplicationWS/c.sys.OnWorkspaceDeactivated(OnwerWSID, WSName)
 		wsName := wsDesc.AsString(sysshared.Field_WSName)
 		body := fmt.Sprintf(`{"args":{"OwnerWSID":%d, "WSName":"%s"}}`, ownerWSID, wsName)
 		cdocWorkspaceIDWSID := coreutils.GetPseudoWSID(istructs.WSID(ownerWSID), wsName, event.Workspace().ClusterID())

@@ -14,6 +14,10 @@
   - Note that Workspace.Subject records are still active
   - AppWorkspace/WorkspaceID[Workspace].IsActive == false
 - The following case is possible: `cdoc.sys.WorkspaceID.IsActive == true` but it is impossible to work there because `cdoc.sys.WorkspaceDescriptor.Status` != Active already. Consistency is gauranteed within a single partition only, here there are 2 different partitions
+- Deactivating a previously created workspaces is possible but nothing will be made on `c.sys.OnJoinedWorkspaceDeactivated` beacuse:
+  - there was no `sp.sys.WorkspaceIDIdx`
+  - there was no field `view.sys.WorkspaceIDIdx.InvitingWorkspaceWSID`
+
 
 ## c.sys.InitiateDeactivateWorkspace()
 
