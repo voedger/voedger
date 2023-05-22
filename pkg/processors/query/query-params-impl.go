@@ -24,7 +24,7 @@ func (p queryParams) OrderBy() []IOrderBy  { return p.orderBy }
 func (p queryParams) StartFrom() int64     { return p.startFrom }
 func (p queryParams) Count() int64         { return p.count }
 
-func newQueryParams(data coreutils.MapObject, elementFactory ElementFactory, filterFactory FilterFactory, orderByFactory OrderByFactory, rootFields coreutils.FieldsDef) (res IQueryParams, err error) {
+func newQueryParams(data coreutils.MapObject, elementFactory ElementFactory, filterFactory FilterFactory, orderByFactory OrderByFactory, rootFieldsKinds FieldsKinds) (res IQueryParams, err error) {
 	qp := queryParams{}
 	if err = qp.fillArray(data, "elements", func(elem coreutils.MapObject) error {
 		element, err := elementFactory(elem)
@@ -59,7 +59,7 @@ func newQueryParams(data coreutils.MapObject, elementFactory ElementFactory, fil
 	if qp.startFrom, _, err = data.AsInt64("startFrom"); err != nil {
 		return nil, err
 	}
-	return qp, qp.validate(rootFields)
+	return qp, qp.validate(rootFieldsKinds)
 }
 
 func (p *queryParams) fillArray(data coreutils.MapObject, fieldName string, cb func(elem coreutils.MapObject) error) error {
@@ -76,7 +76,7 @@ func (p *queryParams) fillArray(data coreutils.MapObject, fieldName string, cb f
 	return err
 }
 
-func (p queryParams) validate(rootFields coreutils.FieldsDef) (err error) {
+func (p queryParams) validate(rootFieldsKinds FieldsKinds) (err error) {
 	pathPresent := make(map[string]bool)
 	for _, e := range p.elements {
 		if pathPresent[e.Path().Name()] {
@@ -90,7 +90,7 @@ func (p queryParams) validate(rootFields coreutils.FieldsDef) (err error) {
 			continue
 		}
 		for _, field := range e.ResultFields() {
-			if _, ok := rootFields[field.Field()]; !ok {
+			if _, ok := rootFieldsKinds[field.Field()]; !ok {
 				return fmt.Errorf("elements: root element fields has field '%s' that is unexpected in root fields, please remove it: %w", field.Field(), ErrUnexpected)
 			}
 			fields[field.Field()] = true

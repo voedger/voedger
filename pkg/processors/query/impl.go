@@ -43,9 +43,9 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 	} else {
 		fieldsDefs := &fieldsDefs{
 			appDef: appDef,
-			fields: make(map[appdef.QName]coreutils.FieldsDef),
+			fields: make(map[appdef.QName]FieldsKinds),
 		}
-		rootFields := coreutils.NewFieldsDef(resultMeta)
+		rootFields := newFieldsKinds(resultMeta)
 		operators = append(operators, pipeline.WireAsyncOperator("Result fields", &ResultFieldsOperator{
 			elements:   params.Elements(),
 			rootFields: rootFields,
@@ -221,7 +221,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("validate: get query params", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, coreutils.NewFieldsDef(qw.resultDef))
+			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, newFieldsKinds(qw.resultDef))
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("authorize result", func(ctx context.Context, qw *queryWork) (err error) {
@@ -280,7 +280,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 						keyToIdx: pathToIdx,
 						values:   make([]interface{}, len(pathToIdx)),
 					},
-					enrichedRootFields: make(map[string]appdef.DataKind),
+					enrichedRootFieldsKinds: make(map[string]appdef.DataKind),
 				})
 			})
 			return coreutils.WrapSysError(err, http.StatusInternalServerError)
@@ -392,16 +392,16 @@ func NewQueryMessage(requestCtx context.Context, appQName istructs.AppQName, wsi
 
 type workpiece struct {
 	pipeline.IWorkpiece
-	object             istructs.IObject
-	outputRow          IOutputRow
-	enrichedRootFields coreutils.FieldsDef
+	object                  istructs.IObject
+	outputRow               IOutputRow
+	enrichedRootFieldsKinds FieldsKinds
 }
 
-func (w workpiece) Object() istructs.IObject                { return w.object }
-func (w workpiece) OutputRow() IOutputRow                   { return w.outputRow }
-func (w workpiece) EnrichedRootFields() coreutils.FieldsDef { return w.enrichedRootFields }
-func (w workpiece) PutEnrichedRootField(name string, kind appdef.DataKind) {
-	w.enrichedRootFields[name] = kind
+func (w workpiece) Object() istructs.IObject             { return w.object }
+func (w workpiece) OutputRow() IOutputRow                { return w.outputRow }
+func (w workpiece) EnrichedRootFieldsKinds() FieldsKinds { return w.enrichedRootFieldsKinds }
+func (w workpiece) PutEnrichedRootFieldKind(name string, kind appdef.DataKind) {
+	w.enrichedRootFieldsKinds[name] = kind
 }
 func (w workpiece) Release() {
 	//TODO implement it someday
@@ -485,23 +485,23 @@ func (e element) RefFields() []IRefField       { return e.refs }
 
 type fieldsDefs struct {
 	appDef appdef.IAppDef
-	fields map[appdef.QName]coreutils.FieldsDef
+	fields map[appdef.QName]FieldsKinds
 	lock   sync.Mutex
 }
 
 func newFieldsDefs(appDef appdef.IAppDef) *fieldsDefs {
 	return &fieldsDefs{
 		appDef: appDef,
-		fields: make(map[appdef.QName]coreutils.FieldsDef),
+		fields: make(map[appdef.QName]FieldsKinds),
 	}
 }
 
-func (c *fieldsDefs) get(name appdef.QName) coreutils.FieldsDef {
+func (c *fieldsDefs) get(name appdef.QName) FieldsKinds {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	fd, ok := c.fields[name]
 	if !ok {
-		fd = coreutils.NewFieldsDef(c.appDef.Def(name))
+		fd = newFieldsKinds(c.appDef.Def(name))
 		c.fields[name] = fd
 	}
 	return fd
@@ -549,4 +549,12 @@ func (o *jsonObject) AsString(name string) string {
 		return string(o.body)
 	}
 	return o.NullObject.AsString(name)
+}
+
+func newFieldsKinds(def appdef.IDef) FieldsKinds {
+	res := FieldsKinds{}
+	def.Fields(func(f appdef.IField) {
+		res[f.Name()] = f.DataKind()
+	})
+	return res
 }

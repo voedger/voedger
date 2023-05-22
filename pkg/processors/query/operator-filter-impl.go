@@ -10,13 +10,12 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/pipeline"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type FilterOperator struct {
 	pipeline.AsyncNOOP
 	filters    []IFilter
-	rootFields coreutils.FieldsDef
+	rootFields FieldsKinds
 	metrics    IMetrics
 }
 
@@ -30,7 +29,7 @@ func (o FilterOperator) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (
 	for n, k := range o.rootFields {
 		mergedFields[n] = k
 	}
-	for n, k := range work.(IWorkpiece).EnrichedRootFields() {
+	for n, k := range work.(IWorkpiece).EnrichedRootFieldsKinds() {
 		mergedFields[n] = k
 	}
 	for _, filter := range o.filters {
