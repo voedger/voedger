@@ -19,13 +19,14 @@ func newValidateCmd() *cobra.Command {
 }
 
 func validate(cmd *cobra.Command, arg []string) error {
-	mkCommandDirAndLogFile(cmd)
 
 	cluster := newCluster()
 
+	mkCommandDirAndLogFile(cmd, cluster)
+
 	if !cluster.exists {
-		logger.Error(ErrorClusterConfNotFound.Error)
-		return ErrorClusterConfNotFound
+		logger.Error(ErrClusterConfNotFound.Error)
+		return ErrClusterConfNotFound
 	}
 
 	err := cluster.validate()

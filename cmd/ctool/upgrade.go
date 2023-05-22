@@ -28,7 +28,7 @@ func upgrade(cmd *cobra.Command, arg []string) error {
 		return nil
 	}
 
-	err := mkCommandDirAndLogFile(cmd)
+	err := mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}
