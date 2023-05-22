@@ -77,20 +77,6 @@ func mockFields(fd map[string]appdef.DataKind) []*amock.Field {
 	return f
 }
 
-func TestNewFieldsDef(t *testing.T) {
-	qName := appdef.NewQName("test", "qname")
-	testFieldDefs := map[string]appdef.DataKind{
-		"fld1": appdef.DataKind_int32,
-		"str":  appdef.DataKind_string,
-	}
-	def := amock.NewDef(qName, appdef.DefKind_Object)
-	for n, k := range testFieldDefs {
-		def.AddField(amock.NewField(n, k, false))
-	}
-	fd := NewFieldsDef(def)
-	require.Equal(t, FieldsDef(testFieldDefs), fd)
-}
-
 func TestToMap_Basic(t *testing.T) {
 	require := require.New(t)
 	obj := &TestObject{
@@ -119,15 +105,6 @@ func TestToMap_Basic(t *testing.T) {
 
 	t.Run("FieldsToMap", func(t *testing.T) {
 		m := FieldsToMap(obj, appDef)
-		testBasic(m, require)
-	})
-
-	t.Run("Read", func(t *testing.T) {
-		fd := NewFieldsDef(def)
-		m := map[string]interface{}{}
-		for fieldName := range fd {
-			m[fieldName] = Read(fieldName, fd, obj)
-		}
 		testBasic(m, require)
 	})
 
@@ -246,7 +223,7 @@ func TestReadValue(t *testing.T) {
 	iValueValues["record"] = &TestObject{
 		Data: testDataSimple,
 	}
-	appDefsWithIValue := amock.NewAppDef(
+	appDefWithIValue := amock.NewAppDef(
 		iValueDef,
 		simpleDef,
 	)
@@ -257,24 +234,15 @@ func TestReadValue(t *testing.T) {
 			Data: iValueValues,
 		},
 	}
-	t.Run("ReadValue", func(t *testing.T) {
-		fd := NewFieldsDef(iValueDef)
-		actual := map[string]interface{}{}
-		for fieldName := range iValueValues {
-			actual[fieldName] = ReadValue(fieldName, fd, appDefsWithIValue, iValue)
-		}
-		testBasic(actual, require)
-		require.Equal(map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"}, actual["record"])
-	})
 
 	t.Run("FieldsToMap", func(t *testing.T) {
-		m := FieldsToMap(iValue, appDefsWithIValue)
+		m := FieldsToMap(iValue, appDefWithIValue)
 		testBasic(m, require)
 		require.Equal(map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"}, m["record"])
 	})
 
 	t.Run("FieldsToMap non-nils only", func(t *testing.T) {
-		m := FieldsToMap(iValue, appDefsWithIValue, WithNonNilsOnly())
+		m := FieldsToMap(iValue, appDefWithIValue, WithNonNilsOnly())
 		testBasic(m, require)
 		require.Equal(map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"}, m["record"])
 	})
@@ -284,8 +252,8 @@ func TestReadValue(t *testing.T) {
 			Name: testQName,
 			Data: iValueValues,
 		}
-		require.Panics(func() { FieldsToMap(obj, appDefsWithIValue) })
-		require.Panics(func() { FieldsToMap(obj, appDefsWithIValue, WithNonNilsOnly()) })
+		require.Panics(func() { FieldsToMap(obj, appDefWithIValue) })
+		require.Panics(func() { FieldsToMap(obj, appDefWithIValue, WithNonNilsOnly()) })
 	})
 }
 
