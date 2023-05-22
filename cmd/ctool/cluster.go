@@ -153,11 +153,6 @@ func (c *cmdType) apply(cluster *clusterType) error {
 
 	var err error
 
-	if !cluster.existsNodeError() && cluster.Cmd.isEmpty() {
-		logger.Info("no active command found to apply")
-		return nil
-	}
-
 	defer cluster.saveToJSON()
 
 	if err = cluster.validate(); err != nil {

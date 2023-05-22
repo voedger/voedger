@@ -95,7 +95,7 @@ func initCE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err := mkCommandDirAndLogFile(cmd)
+	err := mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func initSE(cmd *cobra.Command, args []string) error {
 	}
 
 	defer cluster.saveToJSON()
-	err := mkCommandDirAndLogFile(cmd)
+	err := mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}
