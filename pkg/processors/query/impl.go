@@ -478,7 +478,8 @@ func (c *fieldsDefs) get(name appdef.QName) FieldsKinds {
 	defer c.lock.Unlock()
 	fd, ok := c.fields[name]
 	if !ok {
-		c.fields[name] = newFieldsKinds(c.appDef.Def(name))
+		fd = newFieldsKinds(c.appDef.Def(name))
+		c.fields[name] = fd
 	}
 	return fd
 }

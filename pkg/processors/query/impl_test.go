@@ -1154,7 +1154,7 @@ func (w testWorkpiece) OutputRow() IOutputRow    { return w.outputRow }
 func (w testWorkpiece) EnrichedRootFieldsKinds() FieldsKinds {
 	return FieldsKinds{}
 }
-func (w testWorkpiece) PutEnrichedRootField(string, appdef.DataKind) {
+func (w testWorkpiece) PutEnrichedRootFieldKind(string, appdef.DataKind) {
 	panic("implement me")
 }
 func (w testWorkpiece) Release() {
