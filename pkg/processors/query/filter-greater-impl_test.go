@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestGreaterFilter_IsMatch(t *testing.T) {
@@ -23,7 +22,7 @@ func TestGreaterFilter_IsMatch(t *testing.T) {
 			r.Set("age", age)
 			return r
 		}
-		fd := coreutils.FieldsDef{"age": appdef.DataKind_int32}
+		fk := FieldsKinds{"age": appdef.DataKind_int32}
 		ageFilter := func(age int) IFilter {
 			return &GreaterFilter{
 				field: "age",
@@ -31,10 +30,10 @@ func TestGreaterFilter_IsMatch(t *testing.T) {
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {
-			require.True(t, match(ageFilter(41).IsMatch(fd, row(42))))
+			require.True(t, match(ageFilter(41).IsMatch(fk, row(42))))
 		})
 		t.Run("Should not match", func(t *testing.T) {
-			require.False(t, match(ageFilter(43).IsMatch(fd, row(42))))
+			require.False(t, match(ageFilter(43).IsMatch(fk, row(42))))
 		})
 	})
 	t.Run("Compare int64", func(t *testing.T) {
@@ -43,7 +42,7 @@ func TestGreaterFilter_IsMatch(t *testing.T) {
 			r.Set("age", age)
 			return r
 		}
-		fd := coreutils.FieldsDef{"age": appdef.DataKind_int64}
+		fk := FieldsKinds{"age": appdef.DataKind_int64}
 		ageFilter := func(age int) IFilter {
 			return &GreaterFilter{
 				field: "age",
@@ -51,10 +50,10 @@ func TestGreaterFilter_IsMatch(t *testing.T) {
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {
-			require.True(t, match(ageFilter(41).IsMatch(fd, row(42))))
+			require.True(t, match(ageFilter(41).IsMatch(fk, row(42))))
 		})
 		t.Run("Should not match", func(t *testing.T) {
-			require.False(t, match(ageFilter(43).IsMatch(fd, row(42))))
+			require.False(t, match(ageFilter(43).IsMatch(fk, row(42))))
 		})
 	})
 	t.Run("Compare float32", func(t *testing.T) {
@@ -63,7 +62,7 @@ func TestGreaterFilter_IsMatch(t *testing.T) {
 			r.Set("height", height)
 			return r
 		}
-		fd := coreutils.FieldsDef{"height": appdef.DataKind_float32}
+		fk := FieldsKinds{"height": appdef.DataKind_float32}
 		heightFilter := func(height float32) IFilter {
 			return &GreaterFilter{
 				field: "height",
@@ -71,10 +70,10 @@ func TestGreaterFilter_IsMatch(t *testing.T) {
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {
-			require.True(t, match(heightFilter(42.69).IsMatch(fd, row(42.7))))
+			require.True(t, match(heightFilter(42.69).IsMatch(fk, row(42.7))))
 		})
 		t.Run("Should not match", func(t *testing.T) {
-			require.False(t, match(heightFilter(42.71).IsMatch(fd, row(42.7))))
+			require.False(t, match(heightFilter(42.71).IsMatch(fk, row(42.7))))
 		})
 	})
 	t.Run("Compare float64", func(t *testing.T) {
@@ -83,7 +82,7 @@ func TestGreaterFilter_IsMatch(t *testing.T) {
 			r.Set("height", height)
 			return r
 		}
-		fd := coreutils.FieldsDef{"height": appdef.DataKind_float64}
+		fk := FieldsKinds{"height": appdef.DataKind_float64}
 		heightFilter := func(height float64) IFilter {
 			return &GreaterFilter{
 				field: "height",
@@ -91,10 +90,10 @@ func TestGreaterFilter_IsMatch(t *testing.T) {
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {
-			require.True(t, match(heightFilter(42.69).IsMatch(fd, row(42.7))))
+			require.True(t, match(heightFilter(42.69).IsMatch(fk, row(42.7))))
 		})
 		t.Run("Should not match", func(t *testing.T) {
-			require.False(t, match(heightFilter(42.71).IsMatch(fd, row(42.7))))
+			require.False(t, match(heightFilter(42.71).IsMatch(fk, row(42.7))))
 		})
 	})
 	t.Run("Compare string", func(t *testing.T) {
@@ -103,7 +102,7 @@ func TestGreaterFilter_IsMatch(t *testing.T) {
 			r.Set("name", name)
 			return r
 		}
-		fd := coreutils.FieldsDef{"name": appdef.DataKind_string}
+		fk := FieldsKinds{"name": appdef.DataKind_string}
 		nameFilter := func(name string) IFilter {
 			return &GreaterFilter{
 				field: "name",
@@ -111,10 +110,10 @@ func TestGreaterFilter_IsMatch(t *testing.T) {
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {
-			require.True(t, match(nameFilter("Amaretto").IsMatch(fd, row("Cola"))))
+			require.True(t, match(nameFilter("Amaretto").IsMatch(fk, row("Cola"))))
 		})
 		t.Run("Should not match", func(t *testing.T) {
-			require.False(t, match(nameFilter("Xenta").IsMatch(fd, row("Cola"))))
+			require.False(t, match(nameFilter("Xenta").IsMatch(fk, row("Cola"))))
 		})
 	})
 	t.Run("Should return false on null data type", func(t *testing.T) {

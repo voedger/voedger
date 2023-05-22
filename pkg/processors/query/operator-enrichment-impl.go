@@ -52,7 +52,7 @@ func (o *EnrichmentOperator) DoAsync(ctx context.Context, work pipeline.IWorkpie
 				recFields := o.fieldsDefs.get(record.QName())
 				value := coreutils.ReadByKind(field.RefField(), recFields[field.RefField()], record)
 				if element.Path().IsRoot() {
-					work.(IWorkpiece).PutEnrichedRootField(field.Key(), recFields[field.RefField()])
+					work.(IWorkpiece).PutEnrichedRootFieldKind(field.Key(), recFields[field.RefField()])
 				}
 				rows[i].Set(field.Key(), value)
 			}

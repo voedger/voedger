@@ -9,7 +9,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type EqualsFilter struct {
@@ -18,8 +17,8 @@ type EqualsFilter struct {
 	epsilon float64
 }
 
-func (f EqualsFilter) IsMatch(fd coreutils.FieldsDef, outputRow IOutputRow) (bool, error) {
-	switch fd[f.field] {
+func (f EqualsFilter) IsMatch(fk FieldsKinds, outputRow IOutputRow) (bool, error) {
+	switch fk[f.field] {
 	case appdef.DataKind_int32:
 		return outputRow.Value(f.field).(int32) == int32(f.value.(float64)), nil
 	case appdef.DataKind_int64:
