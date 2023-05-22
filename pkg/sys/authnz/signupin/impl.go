@@ -46,9 +46,15 @@ func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecComman
 			return
 		}
 
-		if strings.Contains(loginStr, "..") || !validLoginRegexp.MatchString(loginStr) {
+		// see https://dev.untill.com/projects/#!537026
+		if strings.HasPrefix(loginStr, "-") || strings.HasPrefix(loginStr, ".") || strings.HasPrefix(loginStr, " ") ||
+			strings.HasSuffix(loginStr, "-") || strings.HasSuffix(loginStr, ".") || strings.HasSuffix(loginStr, " ") ||
+			strings.Contains(loginStr, "..") || !validLoginRegexp.MatchString(loginStr) {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "incorrect login format: ", loginStr)
 		}
+		// if strings.Contains(loginStr, "..") || !validLoginRegexp.MatchString(loginStr) {
+		// 	return coreutils.NewHTTPErrorf(http.StatusBadRequest, "incorrect login format: ", loginStr)
+		// }
 
 		cdocLoginID, err := GetCDocLoginID(args.State, args.Workspace, appName, loginStr)
 		if err != nil {
