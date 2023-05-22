@@ -17,31 +17,28 @@ import (
 )
 
 func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
-	keyFieldsDef := coreutils.FieldsDef{}
-	valueFieldsDef := coreutils.FieldsDef{}
-
+	var valueContinerDef appdef.IDef
+	keyFieldsKinds := map[string]appdef.DataKind{}
 	viewDef := appStructs.AppDef().Def(viewRecordQName)
 	viewDef.Containers(func(cont appdef.IContainer) {
 		switch cont.Name() {
 		case appdef.SystemContainer_ViewPartitionKey, appdef.SystemContainer_ViewClusteringCols:
-			appStructs.AppDef().Def(cont.Def()).Fields(func(field appdef.IField) {
-				keyFieldsDef[field.Name()] = field.DataKind()
+			appStructs.AppDef().Def(cont.Def()).Fields(func(f appdef.IField) {
+				keyFieldsKinds[f.Name()] = f.DataKind()
 			})
 		case appdef.SystemContainer_ViewValue:
-			appStructs.AppDef().Def(cont.Def()).Fields(func(field appdef.IField) {
-				valueFieldsDef[field.Name()] = field.DataKind()
-			})
+			valueContinerDef = appStructs.AppDef().Def(cont.Def())
 		}
 	})
 
 	if !f.acceptAll {
-		allowedFields := make(map[string]bool, len(keyFieldsDef)+len(valueFieldsDef))
-		for field := range keyFieldsDef {
-			allowedFields[field] = true
+		allowedFields := make(map[string]bool, len(keyFieldsKinds)+valueContinerDef.FieldCount())
+		for name := range keyFieldsKinds {
+			allowedFields[name] = true
 		}
-		for field := range valueFieldsDef {
-			allowedFields[field] = true
-		}
+		valueContinerDef.Fields(func(f appdef.IField) {
+			allowedFields[f.Name()] = true
+		})
 		for field := range f.fields {
 			if !allowedFields[field] {
 				return fmt.Errorf("field '%s' does not exist in '%s' value def", field, viewRecordQName)
@@ -94,7 +91,7 @@ func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName ap
 	kb := appStructs.ViewRecords().KeyBuilder(viewRecordQName)
 
 	for _, k := range kk {
-		switch keyFieldsDef[k.name] {
+		switch keyFieldsKinds[k.name] {
 		case appdef.DataKind_int32:
 			fallthrough
 		case appdef.DataKind_int64:
