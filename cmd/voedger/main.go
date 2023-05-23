@@ -28,7 +28,7 @@ func execRootCmd(args []string, ver string) error {
 		"Voedger server Community Edition",
 		args,
 		ver,
-		NewServerCmd(),
+		newServerCmd(),
 	)
 
 	return cobrau.ExecCommandAndCatchInterrupt(rootCmd)
