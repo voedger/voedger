@@ -76,19 +76,6 @@ func addFieldDefs(def appdef.IFieldsBuilder, fd map[string]appdef.DataKind) {
 	}
 }
 
-func TestNewFieldsDef(t *testing.T) {
-	qName := appdef.NewQName("test", "qname")
-	testFieldDefs := map[string]appdef.DataKind{
-		appdef.SystemField_QName: appdef.DataKind_QName,
-		"fld1":                   appdef.DataKind_int32,
-		"str":                    appdef.DataKind_string,
-	}
-	def := appdef.New().AddObject(qName)
-	addFieldDefs(def, testFieldDefs)
-	fd := NewFieldsDef(def)
-	require.Equal(t, FieldsDef(testFieldDefs), fd)
-}
-
 func TestToMap_Basic(t *testing.T) {
 	require := require.New(t)
 	obj := &TestObject{
@@ -119,17 +106,6 @@ func TestToMap_Basic(t *testing.T) {
 
 	t.Run("FieldsToMap", func(t *testing.T) {
 		m := FieldsToMap(obj, appDef)
-		testBasic(testQName, m, require)
-	})
-
-	def := appDef.Def(testQName)
-
-	t.Run("Read", func(t *testing.T) {
-		fd := NewFieldsDef(def)
-		m := map[string]interface{}{}
-		for fieldName := range fd {
-			m[fieldName] = Read(fieldName, fd, obj)
-		}
 		testBasic(testQName, m, require)
 	})
 
@@ -253,7 +229,6 @@ func TestReadValue(t *testing.T) {
 	for n, k := range iValueFields {
 		view.AddValueField(n, k, false)
 	}
-	iValueDef := view.Value()
 
 	iValueValues := map[string]interface{}{}
 	for k, v := range testData {
@@ -271,15 +246,6 @@ func TestReadValue(t *testing.T) {
 			Data: iValueValues,
 		},
 	}
-	t.Run("ReadValue", func(t *testing.T) {
-		fd := NewFieldsDef(iValueDef)
-		actual := map[string]interface{}{}
-		for fieldName := range iValueValues {
-			actual[fieldName] = ReadValue(fieldName, fd, appDefs, iValue)
-		}
-		testBasic(vvQName, actual, require)
-		require.Equal(map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"}, actual["record"])
-	})
 
 	t.Run("FieldsToMap", func(t *testing.T) {
 		m := FieldsToMap(iValue, appDefs)

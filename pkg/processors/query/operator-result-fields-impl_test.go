@@ -181,7 +181,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 
 		operator := &ResultFieldsOperator{
 			elements:   elements,
-			rootFields: coreutils.NewFieldsDef(commonDef(appdef.NewQName("test", "root"))),
+			rootFields: newFieldsKinds(commonDef(appdef.NewQName("test", "root"))),
 			fieldsDefs: newFieldsDefs(appDef),
 			metrics:    &testMetrics{},
 		}
@@ -276,7 +276,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 			},
 		}
 		operator := ResultFieldsOperator{
-			fieldsDefs: &fieldsDefs{fields: map[appdef.QName]coreutils.FieldsDef{appdef.NullQName: nil}},
+			fieldsDefs: &fieldsDefs{fields: map[appdef.QName]FieldsKinds{appdef.NullQName: nil}},
 			elements:   []IElement{element{path: path{"container"}, fields: []IResultField{resultField{""}}}},
 			metrics:    &testMetrics{},
 		}

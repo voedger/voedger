@@ -21,7 +21,7 @@ func replace(cmd *cobra.Command, arg []string) error {
 	cluster := newCluster()
 	defer cluster.saveToJSON()
 
-	err := mkCommandDirAndLogFile(cmd)
+	err := mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}

@@ -43,15 +43,25 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 
 	os.Chdir(scriptsTempDir)
 
+	var stdoutWriter io.Writer
+	var stderrWriter io.Writer
+	if logFile != nil {
+		stdoutWriter = io.MultiWriter(os.Stdout, logFile)
+		stderrWriter = io.MultiWriter(os.Stderr, logFile)
+	} else {
+		stdoutWriter = os.Stdout
+		stderrWriter = os.Stderr
+	}
+
 	var err error
 	if len(se.outputPrefix) > 0 {
 		sedArg := fmt.Sprintf("s/^/[%s]: /", se.outputPrefix)
 		err = pExec.
 			Command("sed", sedArg).
-			Run(os.Stdout, os.Stderr)
+			Run(stdoutWriter, stderrWriter)
 	} else {
 		err = pExec.
-			Run(os.Stdout, os.Stderr)
+			Run(stdoutWriter, stderrWriter)
 	}
 
 	return err

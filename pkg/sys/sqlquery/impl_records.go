@@ -75,11 +75,10 @@ func readRecords(WSID istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 	}
 
 	def := appStructs.AppDef().Def(qName)
-	sf := coreutils.NewFieldsDef(def)
 
 	if !f.acceptAll {
 		for field := range f.fields {
-			if sf[field] == appdef.DataKind_null {
+			if def.(appdef.IFields).Field(field) == nil {
 				return fmt.Errorf("field '%s' not found in def", field)
 			}
 		}

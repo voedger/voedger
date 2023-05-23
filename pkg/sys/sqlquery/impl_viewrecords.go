@@ -17,25 +17,16 @@ import (
 )
 
 func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
-	keyFieldsDef := coreutils.FieldsDef{}
-	valueFieldsDef := coreutils.FieldsDef{}
-
 	viewDef := appStructs.AppDef().View(viewRecordQName)
-	viewDef.Key().Fields(func(field appdef.IField) {
-		keyFieldsDef[field.Name()] = field.DataKind()
-	})
-	viewDef.Value().Fields(func(field appdef.IField) {
-		valueFieldsDef[field.Name()] = field.DataKind()
-	})
 
 	if !f.acceptAll {
-		allowedFields := make(map[string]bool, len(keyFieldsDef)+len(valueFieldsDef))
-		for field := range keyFieldsDef {
-			allowedFields[field] = true
-		}
-		for field := range valueFieldsDef {
-			allowedFields[field] = true
-		}
+		allowedFields := make(map[string]bool, viewDef.Key().FieldCount()+viewDef.Value().FieldCount())
+		viewDef.Key().Fields(func(f appdef.IField) {
+			allowedFields[f.Name()] = true
+		})
+		viewDef.Value().Fields(func(f appdef.IField) {
+			allowedFields[f.Name()] = true
+		})
 		for field := range f.fields {
 			if !allowedFields[field] {
 				return fmt.Errorf("field '%s' does not exist in '%s' value def", field, viewRecordQName)
@@ -88,7 +79,11 @@ func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName ap
 	kb := appStructs.ViewRecords().KeyBuilder(viewRecordQName)
 
 	for _, k := range kk {
-		switch keyFieldsDef[k.name] {
+		f := viewDef.Key().Field(k.name)
+		if f == nil {
+			return fmt.Errorf("field '%s' does not exist in '%s' key def", k.name, viewRecordQName)
+		}
+		switch f.DataKind() {
 		case appdef.DataKind_int32:
 			fallthrough
 		case appdef.DataKind_int64:
@@ -109,8 +104,6 @@ func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName ap
 			fallthrough
 		case appdef.DataKind_QName:
 			kb.PutChars(k.name, string(k.value))
-		case appdef.DataKind_null:
-			return fmt.Errorf("field '%s' does not exist in '%s' key def", k.name, viewRecordQName)
 		default:
 			return errUnsupportedDataKind
 		}
