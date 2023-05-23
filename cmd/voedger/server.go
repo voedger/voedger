@@ -26,7 +26,7 @@ func newServerCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			busCLIParams.ReadWriteTimeout = time.Nanosecond * Default_ibus_ReadWriteTimeoutNS
 			if logger.IsVerbose() {
-				busCLIParams.ReadWriteTimeout = time.Hour
+				busCLIParams.ReadWriteTimeout = time.Hour //FIXME: remove this
 			}
 			wired, cleanup, err := wireServer(busCLIParams, httpCLIParams)
 			if err != nil {

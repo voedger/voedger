@@ -17,7 +17,7 @@ var sysMonitorSiteHelloFS embed.FS
 //go:embed site.main/*
 var sysMonitorSiteMainFS embed.FS
 
-func Provide() ihttpctl.StaticResourcesType {
+func New() ihttpctl.StaticResourcesType {
 	var fsHello, fsMain fs.FS
 	var err error
 	fsHello, err = fs.Sub(sysMonitorSiteHelloFS, "site.hello")
