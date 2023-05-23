@@ -9,8 +9,8 @@ import (
 	"github.com/voedger/voedger/pkg/ihttpctl"
 )
 
-func ProvideStaticEmbeddedResources() []ihttpctl.StaticResourcesType {
+func NewStaticEmbeddedResources() []ihttpctl.StaticResourcesType {
 	return []ihttpctl.StaticResourcesType{
-		sysmonitor.Provide(),
+		sysmonitor.New(),
 	}
 }

@@ -34,7 +34,7 @@ func wireServer(cliParams ibus.CLIParams, ihttpCLIParams ihttp.CLIParams) (Wired
 		cleanup()
 		return WiredServer{}, nil, err
 	}
-	v := apps.ProvideStaticEmbeddedResources()
+	v := apps.NewStaticEmbeddedResources()
 	ihttpProcessorController, err := ihttpctl.NewHTTPProcessorController(ihttpProcessorAPI, v)
 	if err != nil {
 		cleanup2()
