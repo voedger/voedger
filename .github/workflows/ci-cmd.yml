@@ -18,7 +18,7 @@ jobs:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-cd-voeger:
-    needs: call-workflow-ci-cd
+    needs: call-workflow-ci-cmd
     uses: ivvist/voedger/.github/workflows/cd-voedger.yml@main
     secrets:
       dockerusername: ${{ secrets.DOCKER_USERNAME }}
