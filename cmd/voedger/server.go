@@ -17,7 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/iservicesctl"
 )
 
-func newServerCmd() *cobra.Command {
+func NewServerCmd() *cobra.Command {
 	var httpCLIParams ihttp.CLIParams
 	var busCLIParams ibus.CLIParams
 	serverCmd := &cobra.Command{
