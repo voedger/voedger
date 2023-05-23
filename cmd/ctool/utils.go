@@ -45,11 +45,12 @@ func getLoggerLevel() logger.TLogLevel {
 	return logger.LogLevelInfo
 }
 
-func mkCommandDirAndLogFile(cmd *cobra.Command) error {
+func mkCommandDirAndLogFile(cmd *cobra.Command, cluster *clusterType) error {
 	var (
 		s     string
 		parts []string
 	)
+
 	for cmd.Parent() != nil {
 		parts = strings.Split(cmd.Use, " ")
 		if s == "" {
@@ -58,6 +59,10 @@ func mkCommandDirAndLogFile(cmd *cobra.Command) error {
 			s = fmt.Sprintf("%s-%s", parts[0], s)
 		}
 		cmd = cmd.Parent()
+	}
+
+	if !cluster.Cmd.isEmpty() && !strings.Contains(s, cluster.Cmd.Kind) {
+		s = fmt.Sprintf("%s-%s", s, cluster.Cmd.Kind)
 	}
 
 	commandDirName = fmt.Sprintf("%s-%s", time.Now().Format("20060102-150405"), s)

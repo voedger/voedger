@@ -5,7 +5,9 @@
 package parser
 
 import (
+	"embed"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -57,8 +59,13 @@ func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
 	schemas := make([]*FileSchemaAST, 0)
 	for _, entry := range entries {
 		if strings.ToLower(filepath.Ext(entry.Name())) == ".sql" {
-			fp := filepath.Join(dir, entry.Name())
-			bytes, err := fs.ReadFile(fp)
+			var fpath string
+			if _, ok := fs.(embed.FS); ok {
+				fpath = fmt.Sprintf("%s/%s", dir, entry.Name()) // The path separator is a forward slash, even on Windows systems
+			} else {
+				fpath = filepath.Join(dir, entry.Name())
+			}
+			bytes, err := fs.ReadFile(fpath)
 			if err != nil {
 				return nil, err
 			}
