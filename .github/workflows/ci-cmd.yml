@@ -19,7 +19,7 @@ jobs:
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-cd_voeger:
     needs: call-workflow-ci-cmd
-    uses: ./.github/workflows/cd-voedger.yml@main
+    uses: ./cd-voedger.yml
     secrets:
       dockerusername: ${{ secrets.DOCKER_USERNAME }}
       dockerpassword: ${{ secrets.DOCKER_PASSWORD }}
