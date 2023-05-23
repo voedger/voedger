@@ -10,3 +10,4 @@ Provide CLI logic for CE
   - try static resources - open http://localhost:8888/static/sys/monitor/site/hello/
   - monitor - open http://localhost:8888/static/sys/monitor/site/main/
 
+
