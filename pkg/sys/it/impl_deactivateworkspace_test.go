@@ -44,9 +44,9 @@ func TestBasicUsage_DeactivateWorkspace(t *testing.T) {
 
 	// 403 forbidden on work in an inactive workspace
 	bodyCmd := `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
-	vit.PostWS(ws, "c.sys.CUD", bodyCmd, coreutils.Expect403())
+	vit.PostWS(ws, "c.sys.CUD", bodyCmd, coreutils.Expect403()).Println()
 	bodyQry := `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`
-	vit.PostWS(ws, "q.sys.Collection", bodyQry, coreutils.Expect403())
+	vit.PostWS(ws, "q.sys.Collection", bodyQry, coreutils.Expect403()).Println()
 
 	// still able to work in an inactive workspace with the system token
 	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)

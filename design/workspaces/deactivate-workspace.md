@@ -19,10 +19,12 @@
   - there was no field `view.sys.WorkspaceIDIdx.InvitingWorkspaceWSID`
 
 
+
 ## c.sys.InitiateDeactivateWorkspace()
 
 - AuthZ: role.sys.WorkspaceOwner ???
 - Params: none
+- открментировать почему exists (backward compatibility) (возможно в принципах есть) что такое previously?
 
 ```mermaid
     sequenceDiagram
