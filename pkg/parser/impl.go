@@ -241,7 +241,7 @@ func analyseRefs(c *basicContext) {
 		case *ProjectorStmt:
 			c.pos = &v.Pos
 			// Check targets
-			for _, target := range v.Targets {
+			for _, target := range v.Triggers {
 				if v.On.Activate || v.On.Deactivate || v.On.Insert || v.On.Update {
 					resolve(target, c, func(f *TableStmt) error { return nil })
 				} else if v.On.Command {

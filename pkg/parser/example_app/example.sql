@@ -96,20 +96,22 @@ WORKSPACE MyWorkspace (
 
         -- Projector can only be declared in workspace.
         -- A builtin function OrdersCountProjector must exist in package resources.
-        -- Projector triggered by command and it affects air.OrdersCountView which is a VIEW.
-        -- Projector can affect either VIEWs or Storage QNames (except ViewRecordStorage)
-        PROJECTOR CountOrders ON COMMAND air.Orders AFFECTS air.OrdersCountView;
+        -- TARGET - lists all QNames for which Intets are generated (QName of Entity or Storage)
+        -- USE - lists all QNames for which Get/Read operations are done (QName of Entity or Storage). 
+        --      (no need to specify in USES when already listed in TARGET)
+        PROJECTOR CountOrders ON COMMAND air.Orders MAKES air.OrdersCountView;
         
-        -- Projector triggered by command argument and it affects SubscriptionProfile which is a Storage
-        PROJECTOR UpdateSubscriptionProfile ON COMMAND ARGUMENT SubscriptionEvent AFFECTS sys.HTTPStorage;
+        -- Projector triggered by command argument SubscriptionProfile which is a Storage
+        -- Projector uses sys.HTTPStorage
+        PROJECTOR UpdateSubscriptionProfile ON COMMAND ARGUMENT SubscriptionEvent USES sys.HTTPStorage;
 
         -- Projectors triggered by CUD operations
-        PROJECTOR AirPlanThumbnailGen ON INSERT air.AirTablePlan AFFECTS AirPlanThumbnails;
-        PROJECTOR UpdateDashboard ON COMMAND IN (air.Orders, air.Orders2) AFFECTS DashboardView;
-        PROJECTOR UpdateActivePlans ON ACTIVATE OR DEACTIVATE air.AirTablePlan AFFECTS ActiveTablePlansView;
+        PROJECTOR AirPlanThumbnailGen ON INSERT air.AirTablePlan MAKES AirPlanThumbnails;
+        PROJECTOR UpdateDashboard ON COMMAND IN (air.Orders, air.Orders2) MAKES DashboardView;
+        PROJECTOR UpdateActivePlans ON ACTIVATE OR DEACTIVATE air.AirTablePlan MAKES ActiveTablePlansView;
         
         -- Some projector which sends E-mails and performs HTTP queries
-        PROJECTOR NotifyOnChanges ON INSERT OR UPDATE IN (air.AirTablePlan, WsTable) AFFECTS sys.SendMailStorage AND sys.HTTPStorage;
+        PROJECTOR NotifyOnChanges ON INSERT OR UPDATE IN (air.AirTablePlan, WsTable) USES sys.HTTPStorage MAKES sys.SendMailStorage;
 
         -- Commands can only be declared in workspaces
         COMMAND Orders(Untill.Orders);
