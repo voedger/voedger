@@ -31,7 +31,7 @@ func newInitCmd() *cobra.Command {
 		Short: "Creates the file cluster.json for the SE edition cluster",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != initSeArgCount && len(args) != initSeWithDCArgCount {
-				return ErrorInvalidNumberOfArguments
+				return ErrInvalidNumberOfArguments
 			}
 			return nil
 		},
@@ -86,7 +86,7 @@ func initCE(cmd *cobra.Command, args []string) error {
 	defer cluster.saveToJSON()
 
 	if !cluster.Draft {
-		return ErrorClusterConfAlreadyExists
+		return ErrClusterConfAlreadyExists
 	}
 
 	c := newCmd(ckInit, "CE "+strings.Join(args, " "))
@@ -95,7 +95,7 @@ func initCE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err := mkCommandDirAndLogFile(cmd)
+	err := mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func initSE(cmd *cobra.Command, args []string) error {
 	cluster := newCluster()
 
 	if !cluster.Draft {
-		return ErrorClusterConfAlreadyExists
+		return ErrClusterConfAlreadyExists
 	}
 
 	c := newCmd(ckInit, "SE "+strings.Join(args, " "))
@@ -132,7 +132,7 @@ func initSE(cmd *cobra.Command, args []string) error {
 	}
 
 	defer cluster.saveToJSON()
-	err := mkCommandDirAndLogFile(cmd)
+	err := mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}
@@ -145,6 +145,9 @@ func initSE(cmd *cobra.Command, args []string) error {
 	err = cluster.validate()
 	if err == nil {
 		println("cluster configuration is ok")
+		if err = cluster.Cmd.apply(cluster); err != nil {
+			logger.Error(err)
+		}
 	}
 
 	return err
