@@ -18,11 +18,9 @@
   - there was no `sp.sys.WorkspaceIDIdx`
   - there was no field `view.sys.WorkspaceIDIdx.InvitingWorkspaceWSID`
 
-
-
 ## c.sys.InitiateDeactivateWorkspace()
 
-- AuthZ: role.sys.WorkspaceOwner ???
+- AuthZ: role.sys.WorkspaceSubject
 - Params: none
 - открментировать почему exists (backward compatibility) (возможно в принципах есть) что такое previously?
 
@@ -33,6 +31,7 @@
     participant ws as Workspace
     participant appws as currentApp/ApplicationWS
     participant profile as ProfileWS
+    participant ownerWS as OwnerApp/OwnerWS
 
     owner ->> ws: c.sys.InitiateDeactivateWorkspace()
     opt WorkspaceDescriptor.Status != Active
@@ -54,14 +53,10 @@
       appws ->> appws: WorkspaceID.IsActive = false
     end
 
-    ws ->> profile: sys.CUD: cdocs[ownerID].IsActive = false
+    ws ->> ownerWS: c.sys.OnChildWorkspaceDeactivated(ownerID)
+    opt cdocs[ownerID].IsActive
+      ownerWS ->> ownerWS: cdocs[ownerID].IsActive = false
+    end
 
     ws ->> ws: c.sys.CUD: cdoc.sys.WorkspaceDescriptor.Status = Inactive
-
 ```
-
-## c.sys.DeactivateWorkspace()
-
-- AuthNZ: System
-
-

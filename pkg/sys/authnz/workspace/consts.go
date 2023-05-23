@@ -38,7 +38,7 @@ var (
 	qNameAPInvokeCreateWorkspaceID         = appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspaceID")
 	qNameAPInvokeCreateWorkspace           = appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspace")
 	ViewQNameNextBaseWSID                  = appdef.NewQName(appdef.SysPackage, "NextBaseWSID")
-	qNameCmdDeactivateWorkspace            = appdef.NewQName(appdef.SysPackage, "DeactivateWorkspace")
+	qNameCmdInitiateDeactivateWorkspace    = appdef.NewQName(appdef.SysPackage, "InitiateDeactivateWorkspace")
 	qNameProjectorApplyDeactivateWorkspace = appdef.NewQName(appdef.SysPackage, "ApplyDeactivateWorkspace")
 	nextWSIDGlobalLock                     = sync.Mutex{}
 )
