@@ -1,4 +1,4 @@
-name: CD golang
+name: CD cmd/voedger
 
 on:
   workflow_call:
