@@ -380,6 +380,7 @@ func (s TableStmt) GetName() string { return s.Name }
 type TableItemExpr struct {
 	Table      *TableStmt       `parser:"@@"`
 	Constraint *TableConstraint `parser:"| @@"`
+	RefField   *RefFieldExpr    `parser:"| @@"`
 	Field      *FieldExpr       `parser:"| @@"`
 }
 
@@ -398,19 +399,23 @@ type UniqueExpr struct {
 	Fields []string `parser:"'UNIQUE' '(' @Ident (',' @Ident)* ')'"`
 }
 
+type RefFieldExpr struct {
+	Pos        lexer.Position
+	Name       string   `parser:"@Ident"`
+	References DefQName `parser:"'reference' @@"`
+}
+
 type FieldExpr struct {
 	Pos                lexer.Position
-	Name               string    `parser:"@Ident"`
-	ReferenceTo        *DefQName `parser:"('reference' @@)"`
-	Type               TypeQName `parser:"| (@@"`
-	NotNull            bool      `parser:"@(NOTNULL)?"`
-	Verifiable         bool      `parser:"@('VERIFIABLE')?"`
-	DefaultIntValue    *int      `parser:"('DEFAULT' @Int)?"`
-	DefaultStringValue *string   `parser:"('DEFAULT' @String)?"`
-	DefaultNextVal     *string   `parser:"(DEFAULTNEXTVAL  '(' @String ')')?"`
-	//References         *DefQName   `parser:"('REFERENCES' @@)?"`
-	CheckRegexp     *string     `parser:"('CHECK' @String)?"`
-	CheckExpression *Expression `parser:"('CHECK' '(' @@ ')')? )"`
+	Name               string      `parser:"@Ident"`
+	Type               *TypeQName  `parser:"@@"`
+	NotNull            bool        `parser:"@(NOTNULL)?"`
+	Verifiable         bool        `parser:"@('VERIFIABLE')?"`
+	DefaultIntValue    *int        `parser:"('DEFAULT' @Int)?"`
+	DefaultStringValue *string     `parser:"('DEFAULT' @String)?"`
+	DefaultNextVal     *string     `parser:"(DEFAULTNEXTVAL  '(' @String ')')?"`
+	CheckRegexp        *string     `parser:"('CHECK' @String)?"`
+	CheckExpression    *Expression `parser:"('CHECK' '(' @@ ')')? "`
 }
 
 type ViewStmt struct {
