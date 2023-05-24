@@ -400,16 +400,17 @@ type UniqueExpr struct {
 
 type FieldExpr struct {
 	Pos                lexer.Position
-	Name               string      `parser:"@Ident"`
-	Type               TypeQName   `parser:"@@"`
-	NotNull            bool        `parser:"@(NOTNULL)?"`
-	Verifiable         bool        `parser:"@('VERIFIABLE')?"`
-	DefaultIntValue    *int        `parser:"('DEFAULT' @Int)?"`
-	DefaultStringValue *string     `parser:"('DEFAULT' @String)?"`
-	DefaultNextVal     *string     `parser:"(DEFAULTNEXTVAL  '(' @String ')')?"`
-	References         *DefQName   `parser:"('REFERENCES' @@)?"`
-	CheckRegexp        *string     `parser:"('CHECK' @String)?"`
-	CheckExpression    *Expression `parser:"('CHECK' '(' @@ ')')?"`
+	Name               string    `parser:"@Ident"`
+	ReferenceTo        *DefQName `parser:"('reference' @@)"`
+	Type               TypeQName `parser:"| (@@"`
+	NotNull            bool      `parser:"@(NOTNULL)?"`
+	Verifiable         bool      `parser:"@('VERIFIABLE')?"`
+	DefaultIntValue    *int      `parser:"('DEFAULT' @Int)?"`
+	DefaultStringValue *string   `parser:"('DEFAULT' @String)?"`
+	DefaultNextVal     *string   `parser:"(DEFAULTNEXTVAL  '(' @String ')')?"`
+	//References         *DefQName   `parser:"('REFERENCES' @@)?"`
+	CheckRegexp     *string     `parser:"('CHECK' @String)?"`
+	CheckExpression *Expression `parser:"('CHECK' '(' @@ ')')? )"`
 }
 
 type ViewStmt struct {
