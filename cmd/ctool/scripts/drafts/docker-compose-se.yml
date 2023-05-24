@@ -3,9 +3,8 @@ version: '3.7'
 
 services:
   
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
-    container_name: voedger-cadvisor
+  se:
+    image: voedger/voedger:0.0.1-alpha
     ports:
       - "0.0.0.0:8080:8080"
     deploy:
@@ -14,9 +13,4 @@ services:
         constraints:
           - node.labels.se == se
 
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:rw
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
     restart: unless-stopped
