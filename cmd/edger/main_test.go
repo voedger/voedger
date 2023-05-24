@@ -72,14 +72,15 @@ func TestExecRootCmd(t *testing.T) {
 
 	defer restoreStdinFunc()
 
+	delimiter := dockerContainerNameDelimiter()
 	expectedNewState := dockerContainerInfoList{
 		{
-			Name:  fmt.Sprintf("%s-redis-1", projectName),
+			Name:  fmt.Sprintf("%s%sredis%s1", projectName, delimiter, delimiter),
 			Image: "redis:7.0.11-alpine",
 			IsUp:  true,
 		},
 		{
-			Name:  fmt.Sprintf("%s-nginx-1", projectName),
+			Name:  fmt.Sprintf("%s%snginx%s1", projectName, delimiter, delimiter),
 			Image: "nginx:1.23.4",
 			IsUp:  true,
 		},
@@ -102,4 +103,11 @@ func TestExecRootCmd(t *testing.T) {
 
 	err = cleanUp(projectName)
 	require.NoError(t, err)
+
+	// Test case: Provide valid arguments and version
+	args = []string{"edger", "unknown_command"}
+	ver = "1.0.0"
+
+	err = execRootCmd(args, ver)
+	require.Error(t, err)
 }
