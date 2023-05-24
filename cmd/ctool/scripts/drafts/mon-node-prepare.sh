@@ -31,8 +31,8 @@ while [ $# -gt 0 ] && [ $count -lt 2 ]; do
   echo "Processing: $1"
   ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /prometheus && mkdir -p ~/prometheus"
   ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /alertmanager && mkdir -p ~/alertmanager"
-  ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p ~/grafana/provisioning/dashboards"
-  ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p ~/grafana/provisioning/datasources"
+  ssh $SSH_OPTIONS $SSH_USER@$1 "mkdir -p ~/grafana/provisioning/dashboards"
+  ssh $SSH_OPTIONS $SSH_USER@$1 "mkdir -p ~/grafana/provisioning/datasources"
 
    cat ./grafana/provisioning/dashboards/swarmprom-nodes-dash.json | \
       ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/provisioning/dashboards/swarmprom-nodes-dash.json'
