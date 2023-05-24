@@ -12,10 +12,10 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/vvm"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federationURL vvm.FederationURLType, asp istructs.IAppStructsProvider) {
+func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federation coreutils.IFederation, asp istructs.IAppStructsProvider) {
 
 	// c.sys.CreateLogin
 	provideCmdCreateLogin(cfgRegistry, appDefBuilder, asp)
@@ -46,7 +46,7 @@ func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDe
 		provideIssuePrincipalTokenExec(asp, itokens))
 	cfgRegistry.Resources.Add(issuePrincipalTokenQry)
 
-	provideResetPassword(cfgRegistry, appDefBuilder, itokens, federationURL, asp)
+	provideResetPassword(cfgRegistry, appDefBuilder, itokens, federation, asp)
 	provideChangePassword(cfgRegistry, appDefBuilder)
 }
 

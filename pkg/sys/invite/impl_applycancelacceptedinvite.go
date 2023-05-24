@@ -17,17 +17,17 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func ProvideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
+func ProvideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc func() time.Time, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name:         qNameAPApplyCancelAcceptedInvite,
 			EventsFilter: []appdef.QName{qNameCmdInitiateCancelAcceptedInvite},
-			Func:         applyCancelAcceptedInvite(timeFunc, federationURL, appQName, tokens),
+			Func:         applyCancelAcceptedInvite(timeFunc, federation, appQName, tokens),
 		}
 	}
 }
 
-func applyCancelAcceptedInvite(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyCancelAcceptedInvite(timeFunc func() time.Time, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbCDocInvite, err := s.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
 		if err != nil {

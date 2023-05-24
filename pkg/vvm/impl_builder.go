@@ -24,7 +24,7 @@ func (hap VVMAppsBuilder) PrepareStandardExtensionPoints() map[istructs.AppQName
 	return seps
 }
 
-func (hap VVMAppsBuilder) Build(vvmCfg *VVMConfig, cfgs istructsmem.AppConfigsType, vvmAPI VVMAPI, seps map[istructs.AppQName]IStandardExtensionPoints) (vvmApps VVMApps) {
+func (hap VVMAppsBuilder) Build(vvmCfg *VVMConfig, cfgs istructsmem.AppConfigsType, seps map[istructs.AppQName]IStandardExtensionPoints) (vvmApps VVMApps) {
 	for appQName, builders := range hap {
 		adf := appdef.New()
 		sep := seps[appQName]

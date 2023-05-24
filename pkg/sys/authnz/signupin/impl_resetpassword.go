@@ -17,10 +17,9 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federationURL vvm.FederationURLType,
+func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federation coreutils.IFederation,
 	asp istructs.IAppStructsProvider) {
 
 	// sys/registry/pseudoProfileWSID/q.sys.InitiateResetPasswordByEmail
@@ -34,7 +33,7 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder 
 			AddField(field_VerificationToken, appdef.DataKind_string, true).
 			AddField(field_ProfileWSID, appdef.DataKind_int64, true).
 			QName(),
-		provideQryInitiateResetPasswordByEmailExec(itokens, federationURL, asp),
+		provideQryInitiateResetPasswordByEmailExec(itokens, federation, asp),
 	))
 
 	// sys/registry/pseudoProfileWSID/q.sys.IssueVerifiedValueTokenForResetPassword
@@ -48,7 +47,7 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder 
 			AddField(Field_AppName, appdef.DataKind_string, true).QName(),
 		appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenForResetPasswordResult"), appdef.DefKind_Object).
 			AddField(field_VerifiedValueToken, appdef.DataKind_string, true).QName(),
-		provideIssueVerifiedValueTokenForResetPasswordExec(itokens, federationURL),
+		provideIssueVerifiedValueTokenForResetPasswordExec(itokens, federation),
 	))
 
 	cfgRegistry.Resources.Add(istructsmem.NewCommandFunction(
@@ -65,7 +64,7 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder 
 
 // sys/registry/pseudoWSID
 // null auth
-func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federationUrl vvm.FederationURLType, asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
+func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federation coreutils.IFederation, asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		loginAppStr := args.ArgumentObject.AsString(Field_AppName)
 		email := args.ArgumentObject.AsString(field_Email)
@@ -127,7 +126,7 @@ func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federat
 
 // sys/registry/pseudoWSID
 // null auth
-func provideIssueVerifiedValueTokenForResetPasswordExec(itokens itokens.ITokens, federationUrl vvm.FederationURLType) istructsmem.ExecQueryClosure {
+func provideIssueVerifiedValueTokenForResetPasswordExec(itokens itokens.ITokens, federation coreutils.IFederation) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		token := args.ArgumentObject.AsString(field_VerificationToken)
 		code := args.ArgumentObject.AsString(field_VerificationCode)

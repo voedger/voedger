@@ -19,18 +19,18 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func ProvideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.ProjectorFactory {
+func ProvideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc func() time.Time, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name:         qNameAPApplyUpdateInviteRoles,
 			EventsFilter: []appdef.QName{qNameCmdInitiateUpdateInviteRoles},
-			Func:         applyUpdateInviteRolesProjector(timeFunc, federationURL, appQName, tokens, smtpCfg),
+			Func:         applyUpdateInviteRolesProjector(timeFunc, federation, appQName, tokens, smtpCfg),
 			NonBuffered:  true,
 		}
 	}
 }
 
-func applyUpdateInviteRolesProjector(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyUpdateInviteRolesProjector(timeFunc func() time.Time, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbCDocInvite, err := s.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
 		if err != nil {

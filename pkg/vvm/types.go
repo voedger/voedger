@@ -12,6 +12,7 @@ import (
 	ibus "github.com/untillpro/airs-ibus"
 	router "github.com/untillpro/airs-router2"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -19,9 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/itokens"
-	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/pipeline"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/state"
@@ -58,7 +56,7 @@ type VVMApps []istructs.AppQName
 type QueryProcessorsCount int
 type CommandProcessorsCount int
 type BusTimeout time.Duration
-type FederationURLType func() *url.URL
+type FederationURL func() *url.URL
 type VVMIdxType int
 type VVMPortType int
 type ProcessorChannelType int
@@ -73,8 +71,8 @@ type VVMPortSource struct {
 	getter func() VVMPortType
 }
 type IAppStorageUncachingProviderFactory func() (provider istorage.IAppStorageProvider)
-type EPKey string
-type EKey interface{}
+// type EPKey string
+// type EKey interface{}
 
 type PostDocFieldType struct {
 	Kind              appdef.DataKind
@@ -87,24 +85,15 @@ type PostDocDesc struct {
 	IsSingleton bool
 }
 
-type VVMAppBuilder func(vvmCfg *VVMConfig, vvmAPI VVMAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep IStandardExtensionPoints)
-type VVMAppsBuilder map[istructs.AppQName][]VVMAppBuilder
+// type VVMAppBuilder func(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep IStandardExtensionPoints)
+type VVMAppsBuilder map[istructs.AppQName][]apps.AppBuilder
 
 type VVM struct {
 	ServicePipeline
-	VVMAPI
+
 	VVMApps
 	AppsExtensionPoints map[istructs.AppQName]IStandardExtensionPoints
 	MetricsServicePort  func() metrics.MetricsServicePort
-}
-
-type VVMAPI struct {
-	itokens.ITokens
-	istructs.IAppStructsProvider
-	istructsmem.AppConfigsType
-	istorage.IAppStorageProvider
-	payloads.IAppTokensFactory
-	FederationURL FederationURLType
 }
 
 type AppsExtensionPoints map[istructs.AppQName]IStandardExtensionPoints
@@ -121,26 +110,26 @@ type NamedExtension struct {
 	value interface{}
 }
 
-// val could be map[interface{}]interface{} or IExtensionPoint
-type implIExtensionPoint struct {
-	key   EKey
-	exts  []interface{} // element could be any or NamedExtension or IExtensionPoint
-	value interface{}
-}
+// // val could be map[interface{}]interface{} or IExtensionPoint
+// type implIExtensionPoint struct {
+// 	key   EKey
+// 	exts  []interface{} // element could be any or NamedExtension or IExtensionPoint
+// 	value interface{}
+// }
 
 type IEPWSTemplates IExtensionPoint
 type IEPJournalIndices IExtensionPoint
 type IEPJournalPredicates IExtensionPoint
 
-type IExtensionPoint interface {
-	// optional value is never set or set once. Otherwise -> panic
-	ExtensionPoint(eKey EKey, value ...interface{}) IExtensionPoint
-	AddNamed(eKey EKey, value interface{})
-	Add(value interface{})
-	Find(eKey EKey) (val interface{}, ok bool)
-	Iterate(callback func(eKey EKey, value interface{}))
-	Value() interface{}
-}
+// type IExtensionPoint interface {
+// 	// optional value is never set or set once. Otherwise -> panic
+// 	ExtensionPoint(eKey EKey, value ...interface{}) IExtensionPoint
+// 	AddNamed(eKey EKey, value interface{})
+// 	Add(value interface{})
+// 	Find(eKey EKey) (val interface{}, ok bool)
+// 	Iterate(callback func(eKey EKey, value interface{}))
+// 	Value() interface{}
+// }
 
 type standardExtensionPointsImpl struct {
 	rootExtensionPoint *implIExtensionPoint

@@ -34,7 +34,7 @@ import (
 // Projector<A, InvokeCreateWorkspaceID>
 // triggered by CDoc<ChildWorkspace> or CDoc<Login> (both not singletons)
 // wsid - pseudoProfile: crc32(wsName) or crc32(login)
-func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) error {
 			if rec.QName() != authnz.QNameCDocLogin && rec.QName() != authnz.QNameCDocChildWorkspace {
@@ -195,7 +195,7 @@ func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, inten
 // Projector<A, InvokeCreateWorkspace>
 // triggered by CDoc<WorkspaceID>
 // targetApp/appWS
-func invokeCreateWorkspaceProjector(federationURL func() *url.URL, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func invokeCreateWorkspaceProjector(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) error {
 			if rec.QName() != QNameCDocWorkspaceID {
@@ -305,7 +305,7 @@ func execCmdCreateWorkspace(now func() time.Time, asp istructs.IAppStructsProvid
 
 // Projector<A, InitializeWorkspace>
 // triggered by CDoc<WorkspaceDescriptor>
-func initializeWorkspaceProjector(nowFunc func() time.Time, targetAppQName istructs.AppQName, federationURL func() *url.URL, epWSTemplates vvm.IEPWSTemplates,
+func initializeWorkspaceProjector(nowFunc func() time.Time, targetAppQName istructs.AppQName, federation coreutils.IFederation, epWSTemplates vvm.IEPWSTemplates,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) error {
@@ -324,7 +324,6 @@ func initializeWorkspaceProjector(nowFunc func() time.Time, targetAppQName istru
 			wsDescr := rec
 			newWSID := rec.AsInt64(authnz.Field_WSID)
 			newWSName := wsDescr.AsString(authnz.Field_WSName)
-			federationURL := federationURL()
 			ownerApp := rec.AsString(Field_OwnerApp)
 			var wsError error
 			logPrefix := fmt.Sprintf("aproj.sys.InitializeWorkspace[%s:%d]>:", newWSName, newWSID)

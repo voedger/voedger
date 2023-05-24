@@ -8,6 +8,10 @@ package coreutils
 import (
 	"io/fs"
 	"net/http"
+	"net/url"
+	"time"
+
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type EmbedFS interface {
@@ -39,3 +43,10 @@ type FuncError struct {
 	SysError
 	ExpectedHTTPCodes []int
 }
+
+type IFederation interface {
+	POST(appQName istructs.AppQName, wsid istructs.WSID, fn string, body string, opts ...ReqOptFunc) (*HTTPResponse, error)
+	URL() *url.URL
+}
+
+type TimeFunc func() time.Time

@@ -5,7 +5,6 @@
 package workspace
 
 import (
-	"net/url"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -15,6 +14,7 @@ import (
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
@@ -172,32 +172,32 @@ func ProvideSyncProjectorChildWorkspaceIdxFactory() istructs.ProjectorFactory {
 }
 
 // Projector<A, InitializeWorkspace>
-func ProvideAsyncProjectorInitializeWorkspace(federationURL func() *url.URL, nowFunc func() time.Time, appQName istructs.AppQName, epWSTemplates vvm.IEPWSTemplates,
+func ProvideAsyncProjectorInitializeWorkspace(federation coreutils.IFederation, nowFunc func() time.Time, appQName istructs.AppQName, epWSTemplates vvm.IEPWSTemplates,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPInitializeWorkspace,
-			Func: initializeWorkspaceProjector(nowFunc, appQName, federationURL, epWSTemplates, tokensAPI, wsPostInitFunc),
+			Func: initializeWorkspaceProjector(nowFunc, appQName, federation, epWSTemplates, tokensAPI, wsPostInitFunc),
 		}
 	}
 }
 
 // Projector<A, InvokeCreateWorkspaceID>
-func ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(federationURL func() *url.URL, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
+func ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPInvokeCreateWorkspaceID,
-			Func: invokeCreateWorkspaceIDProjector(federationURL, appQName, tokensAPI),
+			Func: invokeCreateWorkspaceIDProjector(federation, appQName, tokensAPI),
 		}
 	}
 }
 
 // Projector<A, InvokeCreateWorkspace>
-func ProvideAsyncProjectorFactoryInvokeCreateWorkspace(federationURL func() *url.URL, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
+func ProvideAsyncProjectorFactoryInvokeCreateWorkspace(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPInvokeCreateWorkspace,
-			Func: invokeCreateWorkspaceProjector(federationURL, appQName, tokensAPI),
+			Func: invokeCreateWorkspaceProjector(federation, appQName, tokensAPI),
 		}
 	}
 }

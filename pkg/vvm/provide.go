@@ -76,7 +76,6 @@ func (vvm *VoedgerVM) Launch() error {
 func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxType) (*VVM, func(), error) {
 	panic(wire.Build(
 		wire.Struct(new(VVM), "*"),
-		wire.Struct(new(VVMAPI), "*"),
 		provideServicePipeline,
 		provideCommandProcessors,
 		provideQueryProcessors,

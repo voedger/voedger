@@ -14,6 +14,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/url"
 	netURL "net/url"
 	"testing"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/istructs"
 	"golang.org/x/exp/slices"
 )
 
@@ -463,3 +465,18 @@ func (fe FuncError) Unwrap() error {
 	return fe.SysError
 }
 
+type implIFederation struct {
+	federationURL func() *url.URL
+}
+
+func (f *implIFederation) POST(appQName istructs.AppQName, wsid istructs.WSID, fn string, body string, opts ...ReqOptFunc) (*HTTPResponse, error) {
+	return FederationPOST(f.federationURL(), fmt.Sprintf(`api/%s/%d/%s`, appQName, wsid, fn), body, opts...)
+}
+
+func (f *implIFederation) URL() *netURL.URL {
+	return f.federationURL()
+}
+
+func NewIFederation(federationURL func() *url.URL) IFederation {
+	return &implIFederation{federationURL: federationURL}
+}
