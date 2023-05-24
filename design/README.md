@@ -16,7 +16,7 @@
 
 - [Editions](#editions)
 - [Community Edition (CE)](#community-edition-ce)
-- [Standart Edition (SE)](#standart-edition-se)
+- [Standart Edition (SE)](se/README.md)
 - [Enterprise Edition (EE)](#enterprise-edition-ee)
 
 ## DevOps
@@ -403,56 +403,16 @@ Principles
     erDiagram
     CECluster ||--|| Node : "always has one"
     Node ||--|| CEDockerStack : "runs"
-    CEDockerStack ||--|| ce_exe : "contains"
-    CEDockerStack ||--|| Prometheus : "contains"
-    CEDockerStack ||--|| Graphana : "contains"
-    CEDockerStack ||--|| Scylla : "contains"
-    ce_exe ||..|| Scylla : "uses as ClusterStorage"
+    CEDockerStack ||--|| voedger : "contains"
+    CEDockerStack ||--|| prometheus : "contains"
+    CEDockerStack ||--|| graphana : "contains"
+    CEDockerStack ||--|| scylla : "contains"
+    voedger ||..|| scylla : "uses as ClusterStorage"
 ```
 
 ### Standart Edition (SE)
 
-Principles
-- Node must be clean Ubuntu node
-  - Reason: We believe it will avoid possible conflicts between installed software and reduce operation costs
-- We do NOT use Balancers like https://www.hetzner.com/cloud/load-balancer 
-  - Reason: We can implement floating IP???
-- Do not use Edger
-  - Reason: Edger requires connection to working Application which does not exist yet
-- ??? Agent, SENodeLeader
-
-
-```mermaid
-    erDiagram
-
-    SECluster ||--|{ SENode : "has 2 nodes with role SE"
-    SECluster ||--|{ DBMSNode : "has 3 nodes with role DB"
-    SECluster ||--|| ClusterStorage : "has"
-    SECluster ||--|| SENodeIP: "has"
-
-    SENodeIP ||..|| SENodeLeader: "used by"
-
-    SEDockerStack ||..|| se_exe: "contains"
-    MonDockerStack ||--|| Prometheus : "contains"
-    MonDockerStack ||--|| Graphana : "contains"
-    MonDockerStack ||--|| Alertmanager : "contains"
-
-    SENode ||..|| Node : "is"
-    SENode ||..|| SENodeLeader : "can be"
-    SENode ||..|| SEDockerStack : "runs"    
-    SENode ||..|| MonDockerStack : "runs"
-
-    DBMSNode ||..|| Node : "is"
-    DBMSNode ||..|| DBMSDockerStack : "runs"
-    DBMSNode |{..|| ClusterStorage : "used by"
-
-
-   
-    ClusterStorage ||..|{ DBMSDockerStack: "provided by"
-    DBMSDockerStack ||..|| Cassandra : "can be"
-    DBMSDockerStack ||..|| Scylla : "can be"
-    DBMSDockerStack ||..|| FoundationDB : "can be"
-```
+ref. [se/README.md](se/README.md)
 
 ### Enterprise Edition (EE)
 
