@@ -33,6 +33,7 @@ while [ $# -gt 0 ] && [ $count -lt 2 ]; do
   ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /alertmanager && mkdir -p ~/alertmanager"
   ssh $SSH_OPTIONS $SSH_USER@$1 "mkdir -p ~/grafana/provisioning/dashboards"
   ssh $SSH_OPTIONS $SSH_USER@$1 "mkdir -p ~/grafana/provisioning/datasources"
+  ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /var/lib/grafana"
 
    cat ./grafana/provisioning/dashboards/swarmprom-nodes-dash.json | \
       ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/provisioning/dashboards/swarmprom-nodes-dash.json'
