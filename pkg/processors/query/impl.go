@@ -530,8 +530,10 @@ func (o *jsonObject) AsString(name string) string {
 
 func newFieldsKinds(def appdef.IDef) FieldsKinds {
 	res := FieldsKinds{}
-	def.Fields(func(f appdef.IField) {
-		res[f.Name()] = f.DataKind()
-	})
+	if fields, ok := def.(appdef.IFields); ok {
+		fields.Fields(func(f appdef.IField) {
+			res[f.Name()] = f.DataKind()
+		})
+	}
 	return res
 }

@@ -20,7 +20,8 @@ func ProvideBlobberCmds(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAp
 }
 
 func provideBLOBWDoc(appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddStruct(commandprocessor.QNameWDocBLOB, appdef.DefKind_WDoc).AddField(fldStatus, appdef.DataKind_int32, true)
+	appDefBuilder.AddWDoc(commandprocessor.QNameWDocBLOB).
+		AddField(fldStatus, appdef.DataKind_int32, true)
 }
 
 func provideDownloadBLOBHelperCmd(cfg *istructsmem.AppConfigType) {

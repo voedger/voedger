@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -59,17 +58,15 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Sweet")).Once()
-	departmentDef := amock.NewDef(qNamePosDepartment, appdef.DefKind_Object,
-		amock.NewField("name", appdef.DataKind_string, false),
-	)
-	resultMeta := amock.NewDef(appdef.NewQName("pos", "DepartmentResult"), appdef.DefKind_Object,
-		amock.NewField("id", appdef.DataKind_int64, true),
-		amock.NewField("name", appdef.DataKind_string, false),
-	)
-	appDef := amock.NewAppDef(
-		departmentDef,
-		resultMeta,
-	)
+
+	appDef := appdef.New()
+	departmentDef := appDef.AddObject(qNamePosDepartment)
+	departmentDef.AddField("name", appdef.DataKind_string, false)
+	resultMeta := appDef.AddObject(appdef.NewQName("pos", "DepartmentResult"))
+	resultMeta.
+		AddField("id", appdef.DataKind_int64, true).
+		AddField("name", appdef.DataKind_string, false)
+
 	params := queryParams{
 		elements: []IElement{
 			element{
@@ -149,12 +146,12 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 	qNameArticle := appdef.NewQName("bo", "Article")
 
 	appDef := appdef.New()
-	appDef.AddStruct(qNameFindArticlesByModificationTimeStampRangeParams, appdef.DefKind_Object).
+	appDef.AddObject(qNameFindArticlesByModificationTimeStampRangeParams).
 		AddField("from", appdef.DataKind_int64, false).
 		AddField("till", appdef.DataKind_int64, false)
-	appDef.AddStruct(qNameDepartment, appdef.DefKind_CDoc).
+	appDef.AddCDoc(qNameDepartment).
 		AddField("name", appdef.DataKind_string, true)
-	appDef.AddStruct(qNameArticle, appdef.DefKind_Object).
+	appDef.AddObject(qNameArticle).
 		AddField("sys.ID", appdef.DataKind_RecordID, true).
 		AddField("name", appdef.DataKind_string, true).
 		AddField("id_department", appdef.DataKind_int64, true)
@@ -325,8 +322,8 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 func TestRawMode(t *testing.T) {
 	require := require.New(t)
 
-	resultMeta := &amock.Def{}
-	resultMeta.On("QName").Return(istructs.QNameJSON)
+	appDef := appdef.New()
+	resultMeta := appDef.AddObject(istructs.QNameJSON)
 
 	result := ""
 	rs := testResultSenderClosable{
@@ -338,7 +335,7 @@ func TestRawMode(t *testing.T) {
 		},
 		close: func(err error) {},
 	}
-	processor := ProvideRowsProcessorFactory()(context.Background(), &amock.AppDef{}, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{})
+	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{})
 
 	require.NoError(processor.SendAsync(workpiece{
 		object: &coreutils.TestObject{
@@ -1007,8 +1004,8 @@ func TestRateLimiter(t *testing.T) {
 	var myFunc istructs.IResource
 	cfgs, appStructsProvider, appTokens := getTestCfg(require,
 		func(appDef appdef.IAppDefBuilder) {
-			appDef.AddStruct(qNameMyFuncParams, appdef.DefKind_Object)
-			appDef.AddStruct(qNameMyFuncResults, appdef.DefKind_Object).
+			appDef.AddObject(qNameMyFuncParams)
+			appDef.AddObject(qNameMyFuncResults).
 				AddField("fld", appdef.DataKind_string, false)
 		},
 		func(cfg *istructsmem.AppConfigType) {

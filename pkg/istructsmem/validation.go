@@ -75,9 +75,34 @@ func (v *validator) validElement(el *elementType, storable bool) (err error) {
 
 // Validates element containers
 func (v *validator) validElementContainers(el *elementType, storable bool) (err error) {
+	def, ok := v.def.(appdef.IContainers)
+	if !ok {
+		err = errors.Join(err,
+			validateErrorf(ECode_InvalidDefName, "%s has definition kind «%v» without containers: %w", v.entName(el), v.def.Kind(), ErrUnexpectedDefKind))
+		return err
+	}
 
-	err = v.validElementContOccurs(el)
+	// validates element containers occurs
+	def.Containers(
+		func(cont appdef.IContainer) {
+			occurs := appdef.Occurs(0)
+			el.EnumElements(
+				func(child *elementType) {
+					if child.Container() == cont.Name() {
+						occurs++
+					}
+				})
+			if occurs < cont.MinOccurs() {
+				err = errors.Join(err,
+					validateErrorf(ECode_InvalidOccursMin, "%s container «%s» has not enough occurrences (%d, minimum %d): %w", v.entName(el), cont.Name(), occurs, cont.MinOccurs(), ErrMinOccursViolation))
+			}
+			if occurs > cont.MaxOccurs() {
+				err = errors.Join(err,
+					validateErrorf(ECode_InvalidOccursMax, "%s container «%s» has too many occurrences (%d, maximum %d): %w", v.entName(el), cont.Name(), occurs, cont.MaxOccurs(), ErrMaxOccursViolation))
+			}
+		})
 
+	// validate element children
 	elID := el.ID()
 
 	idx := -1
@@ -90,7 +115,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 					validateErrorf(ECode_EmptyElementName, "%s child[%d] has empty container name: %w", v.entName(el), idx, ErrNameMissed))
 				return
 			}
-			cont := v.def.Container(childName)
+			cont := def.Container(childName)
 			if cont == nil {
 				err = errors.Join(err,
 					validateErrorf(ECode_InvalidElementName, "%s child[%d] has unknown container name «%s»: %w", v.entName(el), idx, childName, ErrNameNotFound))
@@ -122,34 +147,10 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 					validateErrorf(ECode_InvalidDefName, "object refers to unknown definition «%v»: %w", childQName, ErrNameNotFound))
 				return
 			}
-
 			err = errors.Join(err,
 				childValidator.validElement(child, storable))
 		})
 
-	return err
-}
-
-// Validates element containers occurs
-func (v *validator) validElementContOccurs(el *elementType) (err error) {
-	v.def.Containers(
-		func(cont appdef.IContainer) {
-			occurs := appdef.Occurs(0)
-			el.EnumElements(
-				func(child *elementType) {
-					if child.Container() == cont.Name() {
-						occurs++
-					}
-				})
-			if occurs < cont.MinOccurs() {
-				err = errors.Join(err,
-					validateErrorf(ECode_InvalidOccursMin, "%s container «%s» has not enough occurrences (%d, minimum %d): %w", v.entName(el), cont.Name(), occurs, cont.MinOccurs(), ErrMinOccursViolation))
-			}
-			if occurs > cont.MaxOccurs() {
-				err = errors.Join(err,
-					validateErrorf(ECode_InvalidOccursMax, "%s container «%s» has too many occurrences (%d, maximum %d): %w", v.entName(el), cont.Name(), occurs, cont.MaxOccurs(), ErrMaxOccursViolation))
-			}
-		})
 	return err
 }
 
@@ -169,7 +170,7 @@ func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error)
 
 // Validates specified row
 func (v *validator) validRow(row *rowType) (err error) {
-	v.def.Fields(
+	v.def.(appdef.IFields).Fields(
 		func(f appdef.IField) {
 			if f.Required() {
 				if !row.HasValue(f.Name()) {
@@ -389,7 +390,7 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 		return validateErrorf(ECode_InvalidDefName, "wrong view clustering columns definition «%v», for view «%v» expected «%v»: %w", key.ccolsRow.QName(), key.viewName, ccDef, ErrWrongDefinition)
 	}
 
-	key.partRow.def.Fields(
+	key.partRow.fieldsDef().Fields(
 		func(f appdef.IField) {
 			if !key.partRow.HasValue(f.Name()) {
 				err = errors.Join(err,
@@ -398,7 +399,7 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 		})
 
 	if !partialClust {
-		key.ccolsRow.def.Fields(
+		key.ccolsRow.fieldsDef().Fields(
 			func(f appdef.IField) {
 				if !key.ccolsRow.HasValue(f.Name()) {
 					err = errors.Join(err,
