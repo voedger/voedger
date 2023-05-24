@@ -51,6 +51,31 @@ services:
     links:
       - prometheus1
 
+  grafana2:
+    image: grafana/grafana:latest
+    volumes:
+      - ~/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ~/grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ~/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - /var/lib/grafana:/var/lib/grafana
+    ports:
+      - target: 3000
+        published: 3000
+        protocol: tcp
+        mode: host
+    deploy:
+      placement:
+        constraints:
+          - node.labels.mon == mon2
+      replicas: 1
+    logging:
+      driver: "local"
+      options: 
+        max-size: 10m
+        max-file: "3"
+    links:
+      - prometheus2
+
 
   prometheus2:
     image: prom/prometheus:latest
