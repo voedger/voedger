@@ -198,7 +198,7 @@ services:
     image: prom/node-exporter:latest
 
     environment:
-      - NODE_ID={se1}    
+      - node_id={se1}    
 
     deploy:
       placement:
@@ -225,7 +225,7 @@ services:
     image: prom/node-exporter:latest
 
     environment:
-      - NODE_ID={se2}    
+      - node_id={se2}    
 
     deploy:
       placement:
