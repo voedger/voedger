@@ -31,7 +31,7 @@ jobs:
         git config --global url."https://${{ secrets.REPOREADING_TOKEN }}:x-oauth-basic@github.com/heeus".insteadOf "https://github.com/heeus"
         git config --global url."https://${{ secrets.REPOREADING_TOKEN }}:x-oauth-basic@github.com/untillpro".insteadOf "https://github.com/untillpro"
         git config --global url."https://${{ secrets.REPOREADING_TOKEN }}:x-oauth-basic@github.com/voedger".insteadOf "https://github.com/voedger"
-        go build -o voedger ./cmd/voedger
+        go build -o ./cmd/voedger ./cmd/voedger
       env:
         GOPRIVATE: "github.com/untillpro/*,github.com/heeus/*,github.com/voedger/*"
 
