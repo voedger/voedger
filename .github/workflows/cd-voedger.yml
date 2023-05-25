@@ -44,6 +44,6 @@ jobs:
     - name: Build and push Docker image alpha
       uses: docker/build-push-action@v2
       with:
-        context: ./cmd/voedger
+        context: /cmd/voedger
         push: true
         tags: voedger/voedger:0.0.1-alpha
