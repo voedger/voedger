@@ -468,7 +468,7 @@ func addTableItems(items []TableItemExpr, ctx *buildContext) {
 			ctx.pushDef(item.Table.Name, tk) // TODO: analyze for duplicates in the QNames of nested tables
 			addFieldsOf(item.Table.Of, ctx)
 			addTableItems(item.Table.Items, ctx)
-			ctx.defCtx().defBuilder.AddContainer(containerName, ctx.defCtx().qname, 0, maxNestedTableContainerOccurences)
+			ctx.defCtx().defBuilder.AddContainer(containerName, ctx.defCtx().qname, 0, maxNestedTableContainerOccurrences)
 			ctx.popDef()
 
 		}
