@@ -25,6 +25,7 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"golang.org/x/exp/maps"
 )
@@ -194,7 +195,7 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, work interface{}) (err error)
 func getWSDesc(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if !IsDummyWS(cmd.cmdMes.WSID()) {
-		cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), QNameCDocWorkspaceDescriptor)
+		cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), sysshared.QNameCDocWorkspaceDescriptor)
 	}
 	return
 }
@@ -206,14 +207,17 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 	if IsDummyWS(cmd.cmdMes.WSID()) {
 		return nil
 	}
-	if funcQName == QNameCommandCreateWorkspace || funcQName == QNameCommandCreateWorkspaceID || funcQName == QNameCommandInit {
+	if funcQName == sysshared.QNameCommandCreateWorkspace ||
+		funcQName == sysshared.QNameCommandCreateWorkspaceID || // happens on creating a child of an another workspace
+		funcQName == sysshared.QNameCommandInit {
 		return nil
 	}
 	if wsDesc.QName() != appdef.NullQName {
-		if funcQName == QNameCommandUploadBLOBHelper {
+		if funcQName == sysshared.QNameCommandUploadBLOBHelper {
 			return nil
 		}
-		if wsDesc.AsInt64(Field_InitCompletedAtMs) > 0 && len(wsDesc.AsString(Field_InitError)) == 0 {
+		if wsDesc.AsInt64(sysshared.Field_InitCompletedAtMs) > 0 && len(wsDesc.AsString(sysshared.Field_InitError)) == 0 {
+			cmd.wsInitialized = true
 			return nil
 		}
 		if funcQName == istructs.QNameCommandCUD {
@@ -223,6 +227,32 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 		}
 	}
 	return errWSNotInited
+}
+
+func checkWSActive(_ context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	if IsDummyWS(cmd.cmdMes.WSID()) {
+		return nil
+	}
+	for _, prn := range cmd.principals {
+		if prn.Kind == iauthnz.PrincipalKind_Role && prn.QName == iauthnz.QNameRoleSystem && prn.WSID == cmd.cmdMes.WSID() {
+			// system -> allow to work in any case
+			return nil
+		}
+	}
+	wsDesc := work.(*cmdWorkpiece).wsDesc
+	if wsDesc.QName() == appdef.NullQName {
+		return nil
+	}
+	if wsDesc.AsInt32(sysshared.Field_Status) == int32(sysshared.WorkspaceStatus_Active) {
+		return nil
+	}
+	funcQName := cmd.cmdMes.Resource().(istructs.ICommandFunction).QName()
+	if funcQName == istructs.QNameCommandCUD {
+		cmd.checkWSDescUpdating = true
+		return nil
+	}
+	return processors.ErrWSInactive
 }
 
 func getAppStructs(_ context.Context, work interface{}) (err error) {
@@ -306,7 +336,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work interface{}) 
 
 	// init - для импорта, Import - это sync
 	switch cmd.cmdMes.Resource().QName() {
-	case QNameCommandImport, QNameCommandInit:
+	case sysshared.QNameCommandImport, sysshared.QNameCommandInit:
 		cmd.reb = cmd.appStructs.Events().GetSyncRawEventBuilder(
 			istructs.SyncRawEventBuilderParams{
 				SyncedAt:                     istructs.UnixMilli(cmdProc.now().UnixMilli()),
@@ -479,11 +509,20 @@ func checkWorkspaceDescriptorUpdating(_ context.Context, work interface{}) (err 
 	// c.sys.CUD in a workspace with CDoc<WorkspaceDescriptor>.initCompletedAt == 0 -> check if we are updating the WorkspaceDescriptor now
 	// initializing indeed -> ok
 	// "workspace is not initialized" otherwise
+	// 2nd case: we're updateing wsDesc.Status = Inactive when deactivating workspace. The request consists of only this operation -> allow, "workspace is inactive" error otherwise
 	if !cmd.checkWSDescUpdating {
 		return nil
 	}
 	for _, cud := range cmd.parsedCUDs {
-		if (cud.qName == QNameCDocWorkspaceDescriptor || cud.qName == QNameWDocBLOB) && cud.opKind == iauthnz.OperationKind_UPDATE {
+		if cmd.wsInitialized {
+			if cud.qName == sysshared.QNameCDocWorkspaceDescriptor && cud.opKind == iauthnz.OperationKind_UPDATE && len(cud.fields) == 1 {
+				if _, ok := cud.fields[sysshared.Field_Status]; ok {
+					continue
+				}
+			}
+			return processors.ErrWSInactive
+		}
+		if (cud.qName == sysshared.QNameCDocWorkspaceDescriptor || cud.qName == sysshared.QNameWDocBLOB) && cud.opKind == iauthnz.OperationKind_UPDATE {
 			continue
 		}
 		return errWSNotInited

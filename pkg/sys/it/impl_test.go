@@ -15,8 +15,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
-	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/sys"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -97,9 +97,9 @@ func checkCDocsWSDesc(vvm *vvm.VVM, require *require.Assertions) {
 			as, err := vvm.IAppStructsProvider.AppStructs(appQName)
 			require.NoError(err)
 			appWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
-			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, commandprocessor.QNameCDocWorkspaceDescriptor)
+			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, sysshared.QNameCDocWorkspaceDescriptor)
 			require.NoError(err)
-			require.Equal(commandprocessor.QNameCDocWorkspaceDescriptor, existingCDocWSDesc.QName())
+			require.Equal(sysshared.QNameCDocWorkspaceDescriptor, existingCDocWSDesc.QName())
 		}
 	}
 }
