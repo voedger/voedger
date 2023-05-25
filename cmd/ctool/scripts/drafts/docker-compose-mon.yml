@@ -208,6 +208,7 @@ services:
       replicas: 1
     volumes:
       - /etc/hostname:/etc/nodename
+      - /etc/node-exporter:/etc/node-exporter
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
@@ -238,6 +239,7 @@ services:
       replicas: 1
     volumes:
       - /etc/hostname:/etc/nodename
+      - /etc/node-exporter:/etc/node-exporter
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
