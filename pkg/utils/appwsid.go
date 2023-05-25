@@ -16,6 +16,10 @@ func GetAppWSID(wsid istructs.WSID, appWSAmount istructs.AppWSAmount) istructs.W
 	baseWSID := wsid.BaseWSID()
 	appWSNumber := baseWSID % istructs.WSID(appWSAmount)
 	baseAppWSID := istructs.FirstBaseAppWSID + appWSNumber
+	// problem: app workspaces are automatically created in the main cluster on VVM launch
+	// request to an another cluster -> there are no App Workspaces yet
+	// it is ok for now because App Workspaces should be created on deply an app in the new cluster
+	// we're using Main Cluster only
 	return istructs.NewWSID(istructs.MainClusterID, baseAppWSID)
 }
 

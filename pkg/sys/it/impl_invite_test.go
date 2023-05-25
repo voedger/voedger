@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -42,33 +41,8 @@ func TestInvite_BasicUsage(t *testing.T) {
 	initialRoles := "initial.Roles"
 	updatedRoles := "updated.Roles"
 
-	initiateInvitationByEMail := func(email string) (inviteID int64) {
-		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`, email, initialRoles, expireDatetime, inviteEmailTemplate, inviteEmailSubject)
-		return vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
-	}
-
-	initiateJoinWorkspace := func(inviteID int64, login string) {
-		profile := vit.GetPrincipal(istructs.AppQName_test1_app1, login)
-		vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), coreutils.WithAuthorizeBy(profile.Token))
-	}
-
 	initiateUpdateInviteRoles := func(inviteID int64) {
 		vit.PostWS(ws, "c.sys.InitiateUpdateInviteRoles", fmt.Sprintf(`{"args":{"InviteID":%d,"Roles":"%s","EmailTemplate":"%s","EmailSubject":"%s"}}`, inviteID, updatedRoles, updateRolesEmailTemplate, updateRolesEmailSubject))
-	}
-
-	waitForInviteState := func(inviteState int32, inviteID int64) {
-		deadline := time.Now().Add(time.Second * 5)
-		var entity []interface{}
-		for time.Now().Before(deadline) {
-			entity = vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
-			{"args":{"Schema":"sys.Invite"},
-			"elements":[{"fields":["State","sys.ID"]}],
-			"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, inviteID)).SectionRow(0)
-			if inviteState == int32(entity[0].(float64)) {
-				return
-			}
-		}
-		panic(fmt.Sprintf("invite [%d] is not in required state [%d] it has state [%d]", inviteID, inviteState, int32(entity[0].(float64))))
 	}
 
 	findCDocInviteByID := func(inviteID int64) []interface{} {
@@ -104,27 +78,14 @@ func TestInvite_BasicUsage(t *testing.T) {
 			"filters":[{"expr":"eq","args":{"field":"Login","value":"%s"}}]}`, login)).SectionRow(0)
 	}
 
-	findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin := func(invitingWorkspaceWSID istructs.WSID, login string) []interface{} {
-		return vit.PostProfile(vit.GetPrincipal(istructs.AppQName_test1_app1, login), "q.sys.Collection", fmt.Sprintf(`
-			{"args":{"Schema":"sys.JoinedWorkspace"},
-			"elements":[{"fields":[
-				"sys.ID",
-				"sys.IsActive",
-				"Roles",
-				"InvitingWorkspaceWSID",
-				"WSName"
-			]}],
-			"filters":[{"expr":"eq","args":{"field":"InvitingWorkspaceWSID","value":%d}}]}`, invitingWorkspaceWSID)).SectionRow(0)
-	}
-
 	//Invite existing users
-	inviteID := initiateInvitationByEMail(it.TestEmail)
-	inviteID2 := initiateInvitationByEMail(it.TestEmail2)
-	inviteID3 := initiateInvitationByEMail(it.TestEmail3)
+	inviteID := InitiateInvitationByEMail(vit, ws, expireDatetime, it.TestEmail, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+	inviteID2 := InitiateInvitationByEMail(vit, ws, expireDatetime, it.TestEmail2, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+	inviteID3 := InitiateInvitationByEMail(vit, ws, expireDatetime, it.TestEmail3, initialRoles, inviteEmailTemplate, inviteEmailSubject)
 
-	waitForInviteState(invite.State_ToBeInvited, inviteID)
-	waitForInviteState(invite.State_ToBeInvited, inviteID2)
-	waitForInviteState(invite.State_ToBeInvited, inviteID3)
+	WaitForInviteState(vit, ws, invite.State_ToBeInvited, inviteID)
+	WaitForInviteState(vit, ws, invite.State_ToBeInvited, inviteID2)
+	WaitForInviteState(vit, ws, invite.State_ToBeInvited, inviteID3)
 
 	cDocInvite := findCDocInviteByID(inviteID)
 
@@ -150,9 +111,9 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(wsName, ss[3])
 	require.Equal(it.TestEmail3, ss[4])
 
-	waitForInviteState(invite.State_Invited, inviteID)
-	waitForInviteState(invite.State_Invited, inviteID2)
-	waitForInviteState(invite.State_Invited, inviteID3)
+	WaitForInviteState(vit, ws, invite.State_Invited, inviteID)
+	WaitForInviteState(vit, ws, invite.State_Invited, inviteID2)
+	WaitForInviteState(vit, ws, invite.State_Invited, inviteID3)
 
 	cDocInvite = findCDocInviteByID(inviteID2)
 
@@ -161,18 +122,18 @@ func TestInvite_BasicUsage(t *testing.T) {
 
 	//Cancel then invite it again (inviteID3)
 	vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID3))
-	waitForInviteState(invite.State_Cancelled, inviteID3)
-	initiateInvitationByEMail(it.TestEmail3)
-	waitForInviteState(invite.State_ToBeInvited, inviteID3)
+	WaitForInviteState(vit, ws, invite.State_Cancelled, inviteID3)
+	InitiateInvitationByEMail(vit, ws, expireDatetime, it.TestEmail3, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+	WaitForInviteState(vit, ws, invite.State_ToBeInvited, inviteID3)
 	_ = vit.ExpectEmail().Capture()
-	waitForInviteState(invite.State_Invited, inviteID3)
+	WaitForInviteState(vit, ws, invite.State_Invited, inviteID3)
 
 	//Join workspaces
-	initiateJoinWorkspace(inviteID, it.TestEmail)
-	initiateJoinWorkspace(inviteID2, it.TestEmail2)
+	InitiateJoinWorkspace(vit, ws, inviteID, it.TestEmail, verificationCode)
+	InitiateJoinWorkspace(vit, ws, inviteID2, it.TestEmail2, verificationCode)
 
-	waitForInviteState(invite.State_ToBeJoined, inviteID)
-	waitForInviteState(invite.State_ToBeJoined, inviteID2)
+	WaitForInviteState(vit, ws, invite.State_ToBeJoined, inviteID)
+	WaitForInviteState(vit, ws, invite.State_ToBeJoined, inviteID2)
 
 	cDocInvite = findCDocInviteByID(inviteID2)
 
@@ -180,13 +141,13 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(float64(istructs.SubjectKind_User), cDocInvite[0])
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
-	waitForInviteState(invite.State_Joined, inviteID)
-	waitForInviteState(invite.State_Joined, inviteID2)
+	WaitForInviteState(vit, ws, invite.State_Joined, inviteID)
+	WaitForInviteState(vit, ws, invite.State_Joined, inviteID2)
 
-	cDocJoinedWorkspace := findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(ws.WSID, it.TestEmail2)
+	cDocJoinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, ws.WSID, it.TestEmail2)
 
-	require.Equal(initialRoles, cDocJoinedWorkspace[2])
-	require.Equal(wsName, cDocJoinedWorkspace[4])
+	require.Equal(initialRoles, cDocJoinedWorkspace.roles)
+	require.Equal(wsName, cDocJoinedWorkspace.wsName)
 
 	cDocSubject := findCDocSubjectByLogin(it.TestEmail)
 
@@ -198,9 +159,8 @@ func TestInvite_BasicUsage(t *testing.T) {
 	initiateUpdateInviteRoles(inviteID)
 	initiateUpdateInviteRoles(inviteID2)
 
-	waitForInviteState(invite.State_ToUpdateRoles, inviteID)
-	waitForInviteState(invite.State_ToUpdateRoles, inviteID2)
-
+	WaitForInviteState(vit, ws, invite.State_ToUpdateRoles, inviteID)
+	WaitForInviteState(vit, ws, invite.State_ToUpdateRoles, inviteID2)
 	cDocInvite = findCDocInviteByID(inviteID)
 
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
@@ -219,19 +179,19 @@ func TestInvite_BasicUsage(t *testing.T) {
 
 	//TODO Denis how to get WS by login? I want to check sys.JoinedWorkspace
 
-	waitForInviteState(invite.State_Joined, inviteID)
-	waitForInviteState(invite.State_Joined, inviteID2)
+	WaitForInviteState(vit, ws, invite.State_Joined, inviteID)
+	WaitForInviteState(vit, ws, invite.State_Joined, inviteID2)
 
 	//Cancel accepted invite
 	vit.PostWS(ws, "c.sys.InitiateCancelAcceptedInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
 
-	waitForInviteState(invite.State_ToBeCancelled, inviteID)
+	WaitForInviteState(vit, ws, invite.State_ToBeCancelled, inviteID)
 
 	cDocInvite = findCDocInviteByID(inviteID)
 
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
-	waitForInviteState(invite.State_Cancelled, inviteID)
+	WaitForInviteState(vit, ws, invite.State_Cancelled, inviteID)
 
 	cDocSubject = findCDocSubjectByLogin(it.TestEmail)
 
@@ -244,13 +204,13 @@ func TestInvite_BasicUsage(t *testing.T) {
 	//Leave workspace
 	vit.PostWS(ws, "c.sys.InitiateLeaveWorkspace", "{}", coreutils.WithAuthorizeBy(vit.GetPrincipal(ws.Owner.AppQName, it.TestEmail2).Token))
 
-	waitForInviteState(invite.State_ToBeLeft, inviteID2)
+	WaitForInviteState(vit, ws, invite.State_ToBeLeft, inviteID2)
 
 	cDocInvite = findCDocInviteByID(inviteID2)
 
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
-	waitForInviteState(invite.State_Left, inviteID2)
+	WaitForInviteState(vit, ws, invite.State_Left, inviteID2)
 
 	cDocSubject = findCDocSubjectByLogin(it.TestEmail2)
 

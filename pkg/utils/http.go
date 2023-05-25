@@ -195,6 +195,10 @@ func Expect503() ReqOptFunc {
 	return WithExpectedCode(http.StatusServiceUnavailable)
 }
 
+func Expect410() ReqOptFunc {
+	return WithExpectedCode(http.StatusGone)
+}
+
 func ExpectSysError500() ReqOptFunc {
 	return func(opts *reqOpts) {
 		opts.expectedSysErrorCode = http.StatusInternalServerError
@@ -221,7 +225,7 @@ func req(url string, body string, client *http.Client, opts *reqOpts) (*http.Res
 	if err != nil {
 		return nil, fmt.Errorf("NewRequest() failed: %w", err)
 	}
-	req.Close = true
+	// req.Close = true
 	for k, v := range opts.headers {
 		req.Header.Add(k, v)
 	}
@@ -462,4 +466,3 @@ func (fe FuncError) Error() string {
 func (fe FuncError) Unwrap() error {
 	return fe.SysError
 }
-

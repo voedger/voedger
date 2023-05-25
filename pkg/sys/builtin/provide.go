@@ -12,6 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -22,12 +23,12 @@ func ProvideCmdCUD(cfg *istructsmem.AppConfigType) {
 
 // для импорта через ImportBO
 func ProvideCmdInit(cfg *istructsmem.AppConfigType) {
-	cfg.Resources.Add(istructsmem.NewCommandFunction(commandprocessor.QNameCommandInit, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(sysshared.QNameCommandInit, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 }
 
 // вместо Sync
 func ProivdeCmdImport(cfg *istructsmem.AppConfigType) {
-	cfg.Resources.Add(istructsmem.NewCommandFunction(commandprocessor.QNameCommandImport, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(sysshared.QNameCommandImport, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 }
 
 func ProvideRefIntegrityValidator() istructs.CUDValidator {
@@ -36,7 +37,7 @@ func ProvideRefIntegrityValidator() istructs.CUDValidator {
 			return true
 		},
 		Validate: func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) (err error) {
-			if commandprocessor.IsDummyWS(wsid) || cmdQName == commandprocessor.QNameCommandImport || cmdQName == commandprocessor.QNameCommandInit {
+			if commandprocessor.IsDummyWS(wsid) || cmdQName == sysshared.QNameCommandImport || cmdQName == sysshared.QNameCommandInit {
 				return nil
 			}
 			return coreutils.WrapSysError(istructsmem.CheckRefIntegrity(cudRow, appStructs, wsid), http.StatusBadRequest)

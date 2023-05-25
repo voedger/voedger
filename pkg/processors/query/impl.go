@@ -29,6 +29,7 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -134,10 +135,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
-		operator("unmarshal JSON", func(ctx context.Context, qw *queryWork) (err error) {
-			err = json.Unmarshal(qw.msg.Body(), &qw.requestData)
-			return coreutils.WrapSysError(err, http.StatusBadRequest)
-		}),
 		operator("authenticate query request", func(ctx context.Context, qw *queryWork) (err error) {
 			req := iauthnz.AuthnRequest{
 				Host:        qw.msg.Host(),
@@ -148,6 +145,28 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				return coreutils.WrapSysError(err, http.StatusUnauthorized)
 			}
 			return
+		}),
+		operator("check workspace active", func(ctx context.Context, qw *queryWork) (err error) {
+			for _, prn := range qw.principals {
+				if prn.Kind == iauthnz.PrincipalKind_Role && prn.QName == iauthnz.QNameRoleSystem && prn.WSID == qw.msg.WSID() {
+					// system -> allow to work in any case
+					return nil
+				}
+			}
+			
+			wsDesc, err := qw.appStructs.Records().GetSingleton(qw.msg.WSID(), sysshared.QNameCDocWorkspaceDescriptor)
+			if err != nil {
+				// notest
+				return err
+			}
+			if wsDesc.QName() == appdef.NullQName {
+				// TODO: query prcessor currently does not check workspace initialization
+				return nil
+			}
+			if wsDesc.AsInt32(sysshared.Field_Status) != int32(sysshared.WorkspaceStatus_Active) {
+				return processors.ErrWSInactive
+			}
+			return nil
 		}),
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
 			req := iauthnz.AuthzRequest{
@@ -162,6 +181,10 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
 			}
 			return nil
+		}),
+		operator("unmarshal JSON", func(ctx context.Context, qw *queryWork) (err error) {
+			err = json.Unmarshal(qw.msg.Body(), &qw.requestData)
+			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("get AppConfig", func(ctx context.Context, qw *queryWork) (err error) {
 			cfg, ok := appCfgs[qw.msg.AppQName()]
