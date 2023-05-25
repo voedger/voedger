@@ -198,7 +198,8 @@ services:
     image: prom/node-exporter:latest
 
     environment:
-      - NODE_ID={{"{{"}}.Node.Hostname{{"}}"}}
+      - NODE_ID={{.Node.ID}}
+      - NODE_NAME=$(cat /etc/nodename)
 
     deploy:
       placement:
@@ -206,6 +207,7 @@ services:
           - node.labels.mon == mon1
       replicas: 1
     volumes:
+      - /etc/hostname:/etc/nodename
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
@@ -214,6 +216,7 @@ services:
       - '--path.sysfs=/host/sys'
       - '--path.rootfs=/rootfs'
       - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.textfile.directory=/etc/node-exporter/'
     ports:
       - target: 9100
         published: 9100
@@ -225,7 +228,8 @@ services:
     image: prom/node-exporter:latest
 
     environment:
-      - NODE_ID={{"{{"}}.Node.Hostname{{"}}"}}
+      - NODE_ID={{.Node.ID}}
+      - NODE_NAME=$(cat /etc/nodename)
 
     deploy:
       placement:
@@ -233,6 +237,7 @@ services:
           - node.labels.mon == mon2
       replicas: 1
     volumes:
+      - /etc/hostname:/etc/nodename
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
@@ -241,6 +246,7 @@ services:
       - '--path.sysfs=/host/sys'
       - '--path.rootfs=/rootfs'
       - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.textfile.directory=/etc/node-exporter/'
     ports:
       - target: 9100
         published: 9100
