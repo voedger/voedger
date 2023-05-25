@@ -521,12 +521,11 @@ func checkWorkspaceDescriptorUpdating(_ context.Context, work interface{}) (err 
 				}
 			}
 			return processors.ErrWSInactive
-		} else {
-			if (cud.qName == sysshared.QNameCDocWorkspaceDescriptor || cud.qName == sysshared.QNameWDocBLOB) && cud.opKind == iauthnz.OperationKind_UPDATE {
-				continue
-			}
-			return errWSNotInited
 		}
+		if (cud.qName == sysshared.QNameCDocWorkspaceDescriptor || cud.qName == sysshared.QNameWDocBLOB) && cud.opKind == iauthnz.OperationKind_UPDATE {
+			continue
+		}
+		return errWSNotInited
 	}
 	return nil
 }

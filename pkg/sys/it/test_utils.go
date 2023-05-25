@@ -112,11 +112,12 @@ func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *vit.VIT, inviti
 			"WSName"
 		]}],
 		"filters":[{"expr":"eq","args":{"field":"InvitingWorkspaceWSID","value":%d}}]}`, invitingWorkspaceWSID))
+	const wsNameIdx = 4
 	return joinedWorkspaceDesc{
 		id:                    int64(resp.SectionRow()[0].(float64)),
 		isActive:              resp.SectionRow()[1].(bool),
 		roles:                 resp.SectionRow()[2].(string),
 		invitingWorkspaceWSID: istructs.WSID(resp.SectionRow()[3].(float64)),
-		wsName:                resp.SectionRow()[4].(string),
+		wsName:                resp.SectionRow()[wsNameIdx].(string),
 	}
 }
