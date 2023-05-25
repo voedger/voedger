@@ -22,7 +22,7 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func TestBasicUsage_DeactivateWorkspace(t *testing.T) {
+func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 	defer vit.TearDown()
 
@@ -38,15 +38,15 @@ func TestBasicUsage_DeactivateWorkspace(t *testing.T) {
 
 	ws := vit.CreateWorkspace(wsp, prn1)
 
-	// deactivate workspace
-	vit.PostWS(ws, "c.sys.DeactivateWorkspace", "{}")
+	// initiate deactivate workspace
+	vit.PostWS(ws, "c.sys.InitiateDeactivateWorkspace", "{}")
 	waitForDeactivate(vit, ws)
 
-	// 403 forbidden on work in an inactive workspace
+	// 410 Gone on work in an inactive workspace
 	bodyCmd := `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
-	vit.PostWS(ws, "c.sys.CUD", bodyCmd, coreutils.Expect403())
+	vit.PostWS(ws, "c.sys.CUD", bodyCmd, coreutils.Expect410()).Println()
 	bodyQry := `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`
-	vit.PostWS(ws, "q.sys.Collection", bodyQry, coreutils.Expect403())
+	vit.PostWS(ws, "q.sys.Collection", bodyQry, coreutils.Expect410()).Println()
 
 	// still able to work in an inactive workspace with the system token
 	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
@@ -54,7 +54,7 @@ func TestBasicUsage_DeactivateWorkspace(t *testing.T) {
 	vit.PostWS(ws, "c.sys.CUD", bodyCmd, coreutils.WithAuthorizeBy(sysToken.Token))
 
 	// 409 conflict on deactivate an already deactivated worksace
-	vit.PostWS(ws, "c.sys.DeactivateWorkspace", "{}", coreutils.WithAuthorizeBy(sysToken.Token), coreutils.Expect409())
+	vit.PostWS(ws, "c.sys.InitiateDeactivateWorkspace", "{}", coreutils.WithAuthorizeBy(sysToken.Token), coreutils.Expect409())
 }
 
 func waitForDeactivate(vit *it.VIT, ws *it.AppWorkspace) {
@@ -110,7 +110,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn2.Token))
 
 	// deactivate
-	vit.PostWS(newWS, "c.sys.DeactivateWorkspace", "{}")
+	vit.PostWS(newWS, "c.sys.InitiateDeactivateWorkspace", "{}")
 	waitForDeactivate(vit, newWS)
 
 	// check cdoc.sys.JoinedWorkspace.IsActive == false
@@ -132,5 +132,4 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	cdocWorkspaceID := map[string]interface{}{}
 	require.Nil(json.Unmarshal(jsonBytes, &cdocWorkspaceID))
 	require.False(cdocWorkspaceID[appdef.SystemField_IsActive].(bool))
-
 }

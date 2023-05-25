@@ -13,4 +13,4 @@ import (
 
 const Field_JSONDef_Body = "Body"
 
-var ErrWSInactive = coreutils.NewHTTPErrorf(http.StatusForbidden, "workspace status is not active")
+var ErrWSInactive = coreutils.NewHTTPErrorf(http.StatusGone, "workspace status is not active")
