@@ -25,7 +25,7 @@ func wireServer(ibus.CLIParams, ihttp.CLIParams) (WiredServer, func(), error) {
 			ihttpimpl.NewProcessor,
 			ihttpimpl.NewAPI,
 			ihttpctl.NewHTTPProcessorController,
-			apps.ProvideStaticEmbeddedResources,
+			apps.NewStaticEmbeddedResources,
 			wire.Struct(new(WiredServer), "*"),
 		),
 	)
