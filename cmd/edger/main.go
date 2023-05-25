@@ -22,7 +22,6 @@ func main() {
 	}
 }
 
-// TODO: add tests for execRootCmd into main_test.go
 func execRootCmd(args []string, ver string) error {
 	version = ver
 
