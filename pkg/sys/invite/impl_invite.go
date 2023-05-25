@@ -10,7 +10,8 @@ import (
 )
 
 func provideCDocInvite(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddCDoc(qNameCDocInvite).
+	doc := appDefBuilder.AddCDoc(qNameCDocInvite)
+	doc.
 		AddField(Field_SubjectKind, appdef.DataKind_int32, false).
 		AddField(Field_Login, appdef.DataKind_string, true).
 		AddField(field_Email, appdef.DataKind_string, true).
@@ -22,5 +23,5 @@ func provideCDocInvite(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IApp
 		AddField(field_Updated, appdef.DataKind_int64, true).
 		AddField(field_SubjectID, appdef.DataKind_RecordID, false).
 		AddField(field_InviteeProfileWSID, appdef.DataKind_int64, false)
-	cfg.Uniques.Add(qNameCDocInvite, []string{field_Email})
+	doc.SetUniqueField(field_Email)
 }

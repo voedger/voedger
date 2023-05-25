@@ -484,13 +484,13 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("NonVerifiedField", appdef.DataKind_string, false)
 
 	// for impl_uniques_test
-	adf.AddCDoc(QNameCDocTestConstraints).
-		AddField("Int", appdef.DataKind_int32, true).
+	doc := adf.AddCDoc(QNameCDocTestConstraints)
+	doc.AddField("Int", appdef.DataKind_int32, true).
 		AddField("Str", appdef.DataKind_string, true).
 		AddField("Bool", appdef.DataKind_bool, true).
 		AddField("Float32", appdef.DataKind_float32, false).
 		AddField("Bytes", appdef.DataKind_bytes, true)
-	cfg.Uniques.Add(QNameCDocTestConstraints, []string{"Int"})
+	doc.SetUniqueField("Int")
 
 	// for singletons test
 	adf.AddSingleton(QNameTestSingleton).

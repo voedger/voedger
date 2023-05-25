@@ -10,9 +10,11 @@ import (
 )
 
 func provideCDocSubject(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddCDoc(QNameCDocSubject).
+	doc := appDefBuilder.AddCDoc(QNameCDocSubject)
+	doc.
 		AddField(Field_Login, appdef.DataKind_string, true).
 		AddField(Field_SubjectKind, appdef.DataKind_int32, true).
 		AddField(Field_Roles, appdef.DataKind_string, true)
-	cfg.Uniques.Add(QNameCDocSubject, []string{Field_Login})
+	doc.
+		SetUniqueField(Field_Login)
 }
