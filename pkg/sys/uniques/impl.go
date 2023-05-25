@@ -131,48 +131,20 @@ func getUniqueViewRecord(st istructs.IState, rec istructs.IRowReader, uf appdef.
 	return sv, kb, ok, err
 }
 
-func appendValue(fieldName string, buf *bytes.Buffer, rec istructs.IRowReader, kind appdef.DataKind) error {
-	val := coreutils.ReadByKind(fieldName, kind, rec)
-	switch kind {
-	case appdef.DataKind_string:
-		if _, err := buf.WriteString(val.(string)); err != nil {
-			// notest
-			return err
-		}
-	case appdef.DataKind_bytes:
-		if _, err := buf.Write(val.([]byte)); err != nil {
-			// notest
-			return err
-		}
-	default:
-		return binary.Write(buf, binary.BigEndian, val)
-	}
-	return nil
-}
-
 func getUniqueKeyValues(rec istructs.IRowReader, uf appdef.IField) (res []byte, err error) {
 	buf := bytes.NewBuffer(nil)
 
 	val := coreutils.ReadByKind(uf.Name(), uf.DataKind(), rec)
 	switch uf.DataKind() {
 	case appdef.DataKind_string:
-		if _, err := buf.WriteString(val.(string)); err != nil {
-			// notest
-			return nil, err
-		}
+		_, err = buf.WriteString(val.(string))
 	case appdef.DataKind_bytes:
-		if _, err := buf.Write(val.([]byte)); err != nil {
-			// notest
-			return nil, err
-		}
+		_, err = buf.Write(val.([]byte))
 	default:
-		if err := binary.Write(buf, binary.BigEndian, val); err != nil {
-			// notest
-			return nil, err
-		}
+		err = binary.Write(buf, binary.BigEndian, val)
 	}
 
-	return buf.Bytes(), nil
+	return buf.Bytes(), err
 }
 
 // notest err
@@ -182,9 +154,8 @@ func buildUniqueViewKeyByValues(kb istructs.IKeyBuilder, qName appdef.QName, uni
 		// notest
 		return err
 	}
-	hash := int64(h.Sum64())
 	kb.PutQName(field_QName, qName)
-	kb.PutInt64(field_ValuesHash, hash)
+	kb.PutInt64(field_ValuesHash, int64(h.Sum64()))
 	kb.PutBytes(field_Values, uniqueKeyValues)
 	return nil
 }

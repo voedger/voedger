@@ -6,10 +6,9 @@ package invite
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func provideCDocSubject(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func provideCDocSubject(appDefBuilder appdef.IAppDefBuilder) {
 	doc := appDefBuilder.AddCDoc(QNameCDocSubject)
 	doc.
 		AddField(Field_Login, appdef.DataKind_string, true).
