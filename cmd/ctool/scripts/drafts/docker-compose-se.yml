@@ -6,7 +6,7 @@ services:
   se:
     image: voedger/voedger:0.0.1-alpha
     ports:
-      - "0.0.0.0:8080:8080"
+      - "0.0.0.0:8888:8888"
     deploy:
       replicas: 2
       placement:
