@@ -10,7 +10,7 @@ import (
 )
 
 func provideCDocJoinedWorkspace(appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddStruct(sysshared.QNameCDocJoinedWorkspace, appdef.DefKind_CDoc).
+	appDefBuilder.AddCDoc(sysshared.QNameCDocJoinedWorkspace).
 		AddField(Field_Roles, appdef.DataKind_string, true).
 		AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).
 		AddField(sysshared.Field_WSName, appdef.DataKind_string, true)

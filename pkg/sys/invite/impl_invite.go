@@ -11,7 +11,7 @@ import (
 )
 
 func provideCDocInvite(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddStruct(qNameCDocInvite, appdef.DefKind_CDoc).
+	appDefBuilder.AddCDoc(qNameCDocInvite).
 		AddField(sysshared.Field_SubjectKind, appdef.DataKind_int32, false).
 		AddField(Field_Login, appdef.DataKind_string, true).
 		AddField(field_Email, appdef.DataKind_string, true).

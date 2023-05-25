@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -27,7 +26,7 @@ func TestHostState_BasicUsage(t *testing.T) {
 		//Create key
 		key, err := state.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
 		require.NoError(err)
-		key.PutString("pkFld", "pkVal")
+		key.PutInt64("pkFld", 64)
 
 		// Call to storage
 		require.NoError(state.MustNotExist(key))
@@ -58,7 +57,7 @@ func mockedHostStateStructs() istructs.IAppStructs {
 		On("PutInt64", ColOffset, int64(46)).Once()
 	mkb := &mockKeyBuilder{}
 	mkb.
-		On("PutString", "pkFld", "pkVal")
+		On("PutInt64", "pkFld", int64(64))
 	viewRecords := &mockViewRecords{}
 	viewRecords.
 		On("KeyBuilder", testViewRecordQName1).Return(mkb).
@@ -73,15 +72,14 @@ func mockedHostStateStructs() istructs.IAppStructs {
 		}).
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
 
-	view := amock.NewView(testViewRecordQName1)
+	appDef := appdef.New()
+
+	view := appDef.AddView(testViewRecordQName1)
 	view.
-		AddPartField("pkFld", appdef.DataKind_string). //??? string in partition key
+		AddPartField("pkFld", appdef.DataKind_int64).
 		AddClustColumn("ccFld", appdef.DataKind_string).
 		AddValueField("vFld", appdef.DataKind_int64, false).
 		AddValueField(ColOffset, appdef.DataKind_int64, false)
-
-	appDef := amock.NewAppDef()
-	appDef.AddView(view)
 
 	appStructs := &mockAppStructs{}
 	appStructs.

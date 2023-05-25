@@ -42,10 +42,12 @@ func (tsp *testStorageProvider) AppStorage(appName istructs.AppQName) (structs i
 	return tsp.testStorage, nil
 }
 
+// Returns new storage provider for specified test storage
 func NewStorageProvider(ts *TestMemStorage) istorage.IAppStorageProvider {
 	return &testStorageProvider{testStorage: ts}
 }
 
+// Returns new test storage
 func NewStorage() *TestMemStorage {
 	s := TestMemStorage{get: scheduleStorageError{}, put: scheduleStorageError{}}
 	asf := istorage.ProvideMem()
@@ -56,6 +58,12 @@ func NewStorage() *TestMemStorage {
 	}
 
 	return &s
+}
+
+// Returns new test storage and new test storage provider
+func New() (storage *TestMemStorage, provider istorage.IAppStorageProvider) {
+	s := NewStorage()
+	return s, NewStorageProvider(s)
 }
 
 // Returns is partition key and clustering columns matches the scheduled error

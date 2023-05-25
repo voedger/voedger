@@ -10,14 +10,14 @@ import (
 	"time"
 )
 
-type OriginalMessage[Key comparable, SP any] struct {
+type ControlMessage[Key comparable, SP any] struct {
 	Key                Key
 	SP                 SP
 	CronSchedule       string
 	StartTimeTolerance time.Duration
 }
 
-func (m OriginalMessage[Key, SP]) String() string {
+func (m ControlMessage[Key, SP]) String() string {
 	return fmt.Sprintf(keyLogFormat, m.Key)
 }
 

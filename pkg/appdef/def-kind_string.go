@@ -20,17 +20,18 @@ func _() {
 	_ = x[DefKind_ViewRecord-9]
 	_ = x[DefKind_ViewRecord_PartitionKey-10]
 	_ = x[DefKind_ViewRecord_ClusteringColumns-11]
-	_ = x[DefKind_ViewRecord_Value-12]
-	_ = x[DefKind_Object-13]
-	_ = x[DefKind_Element-14]
-	_ = x[DefKind_QueryFunction-15]
-	_ = x[DefKind_CommandFunction-16]
-	_ = x[DefKind_FakeLast-17]
+	_ = x[DefKind_ViewRecord_Key-12]
+	_ = x[DefKind_ViewRecord_Value-13]
+	_ = x[DefKind_Object-14]
+	_ = x[DefKind_Element-15]
+	_ = x[DefKind_QueryFunction-16]
+	_ = x[DefKind_CommandFunction-17]
+	_ = x[DefKind_FakeLast-18]
 }
 
-const _DefKind_name = "DefKind_nullDefKind_GDocDefKind_CDocDefKind_ODocDefKind_WDocDefKind_GRecordDefKind_CRecordDefKind_ORecordDefKind_WRecordDefKind_ViewRecordDefKind_ViewRecord_PartitionKeyDefKind_ViewRecord_ClusteringColumnsDefKind_ViewRecord_ValueDefKind_ObjectDefKind_ElementDefKind_QueryFunctionDefKind_CommandFunctionDefKind_FakeLast"
+const _DefKind_name = "DefKind_nullDefKind_GDocDefKind_CDocDefKind_ODocDefKind_WDocDefKind_GRecordDefKind_CRecordDefKind_ORecordDefKind_WRecordDefKind_ViewRecordDefKind_ViewRecord_PartitionKeyDefKind_ViewRecord_ClusteringColumnsDefKind_ViewRecord_KeyDefKind_ViewRecord_ValueDefKind_ObjectDefKind_ElementDefKind_QueryFunctionDefKind_CommandFunctionDefKind_FakeLast"
 
-var _DefKind_index = [...]uint16{0, 12, 24, 36, 48, 60, 75, 90, 105, 120, 138, 169, 205, 229, 243, 258, 279, 302, 318}
+var _DefKind_index = [...]uint16{0, 12, 24, 36, 48, 60, 75, 90, 105, 120, 138, 169, 205, 227, 251, 265, 280, 301, 324, 340}
 
 func (i DefKind) String() string {
 	if i >= DefKind(len(_DefKind_index)-1) {

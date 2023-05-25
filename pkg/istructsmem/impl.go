@@ -427,7 +427,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 	}
 
 	for _, rec := range ev.cud.creates {
-		if rec.def.Singleton() {
+		if cDoc, ok := rec.def.(appdef.ICDoc); ok && cDoc.Singleton() {
 			id, err := recs.app.config.singletons.ID(rec.QName())
 			if err != nil {
 				return err

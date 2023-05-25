@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -19,14 +18,11 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		require := require.New(t)
 
-		view := amock.NewView(testViewRecordQName1)
-		view.
-			AddPartField("pkk", appdef.DataKind_string). // ??? variable len PK !!!
+		appDef := appdef.New()
+		appDef.AddView(testViewRecordQName1).
+			AddPartField("pkk", appdef.DataKind_int64).
 			AddClustColumn("cck", appdef.DataKind_string).
 			AddValueField("vk", appdef.DataKind_string, false)
-
-		appDef := amock.NewAppDef()
-		appDef.AddView(view)
 
 		value := &mockValue{}
 		value.On("AsString", "vk").Return("value")
@@ -48,7 +44,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 		k, e := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
 		require.Nil(e)
-		k.PutString("pkk", "pkv")
+		k.PutInt64("pkk", 64)
 		k.PutString("cck", "ccv")
 
 		sv, ok, err := s.CanExist(k)
@@ -60,8 +56,11 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 	t.Run("Should return error on get batch", func(t *testing.T) {
 		require := require.New(t)
 
-		appDef := amock.NewAppDef()
-		appDef.AddView(amock.NewView(testViewRecordQName1))
+		appDef := appdef.New()
+		appDef.AddView(testViewRecordQName1).
+			AddPartField("pkk", appdef.DataKind_int64).
+			AddClustColumn("cck", appdef.DataKind_string).
+			AddValueField("vk", appdef.DataKind_string, false)
 
 		viewRecords := &mockViewRecords{}
 		viewRecords.
@@ -76,7 +75,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 		k, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
 		require.NoError(err)
-		k.PutString("pkk", "pkv")
+		k.PutInt64("pkk", 64)
 
 		_, ok, err := s.CanExist(k)
 
@@ -140,8 +139,11 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testing.T) {
 	require := require.New(t)
 
-	appDef := amock.NewAppDef()
-	appDef.AddView(amock.NewView(testViewRecordQName1))
+	appDef := appdef.New()
+	appDef.AddView(testViewRecordQName1).
+		AddPartField("pkk", appdef.DataKind_int64).
+		AddClustColumn("cck", appdef.DataKind_string).
+		AddValueField("vk", appdef.DataKind_string, false)
 
 	viewRecords := &mockViewRecords{}
 	viewRecords.
@@ -170,16 +172,13 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 
 func TestViewRecordsStorage_toJSON(t *testing.T) {
 
-	view := amock.NewView(testViewRecordQName1)
-	view.
+	appDef := appdef.New()
+	appDef.AddView(testViewRecordQName1).
 		AddPartField("pkFld", appdef.DataKind_int64).
 		AddClustColumn("ccFld", appdef.DataKind_string).
 		AddValueField("ID", appdef.DataKind_RecordID, false).
 		AddValueField("Name", appdef.DataKind_string, false).
 		AddValueField("Count", appdef.DataKind_int64, false)
-
-	appDef := amock.NewAppDef()
-	appDef.AddView(view)
 
 	value := &mockValue{}
 	value.
@@ -202,10 +201,11 @@ func TestViewRecordsStorage_toJSON(t *testing.T) {
 		require.NoError(err)
 
 		require.JSONEq(`{
-								  "Count": 1001,
-								  "ID": 42,
-								  "Name": "John"
-								}`, json)
+											"sys.QName":"test.viewRecord1_Value",					  
+											"Count": 1001,
+								  		"ID": 42,
+								  		"Name": "John"
+										}`, json)
 	})
 	t.Run("Should filter fields", func(t *testing.T) {
 		require := require.New(t)
@@ -217,6 +217,9 @@ func TestViewRecordsStorage_toJSON(t *testing.T) {
 		json, err := sv.ToJSON(WithExcludeFields("ID", "Count"))
 		require.NoError(err)
 
-		require.JSONEq(`{"Name": "John"}`, json)
+		require.JSONEq(`{
+											"sys.QName":"test.viewRecord1_Value",					  
+											"Name": "John"
+									  }`, json)
 	})
 }

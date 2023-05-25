@@ -69,10 +69,9 @@ var (
 
 func EmptyApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
 	registryapp.Provide(smtp.Cfg{})(vvmCfg, vvmAPI, cfg, adf, sep)
-	adf.AddStruct(QNameTestWSKind, appdef.DefKind_CDoc).
+	adf.AddSingleton(QNameTestWSKind).
 		AddField("IntFld", appdef.DataKind_int32, true).
-		AddField("StrFld", appdef.DataKind_string, false).
-		SetSingleton()
+		AddField("StrFld", appdef.DataKind_string, false)
 	sep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
 }
 
@@ -84,7 +83,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 	const simpleAppBLOBMaxSize = 5
 	vvmCfg.BLOBMaxSize = simpleAppBLOBMaxSize
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "articles"), appdef.DefKind_CDoc).
+	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "articles")).
 		AddField("name", appdef.DataKind_string, false).
 		AddField("article_manual", appdef.DataKind_int32, true).
 		AddField("article_hash", appdef.DataKind_int32, true).
@@ -92,21 +91,23 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("time_active", appdef.DataKind_int32, true).
 		AddField("control_active", appdef.DataKind_int32, true)
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "options"), appdef.DefKind_CDoc)
+	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "options"))
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "department"), appdef.DefKind_CDoc).
-		AddField("pc_fix_button", appdef.DataKind_int32, true).
+	dep := adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "department"))
+	dep.AddField("pc_fix_button", appdef.DataKind_int32, true).
 		AddField("rm_fix_button", appdef.DataKind_int32, true).
-		AddField("id_food_group", appdef.DataKind_RecordID, false).
+		AddField("id_food_group", appdef.DataKind_RecordID, false)
+	dep.
 		AddContainer("department_options", appdef.NewQName(appdef.SysPackage, "department_options"), appdef.Occurs(0), appdef.Occurs(defaultMaxOccurs))
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "department_options"), appdef.DefKind_CRecord).
+	adf.AddCRecord(appdef.NewQName(appdef.SysPackage, "department_options")).
 		AddField("id_department", appdef.DataKind_RecordID, true).
 		AddField("id_options", appdef.DataKind_RecordID, false).
 		AddField("option_number", appdef.DataKind_int32, false).
 		AddField("option_type", appdef.DataKind_int32, true)
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "air_table_plan"), appdef.DefKind_CDoc).
+	tabPlan := adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "air_table_plan"))
+	tabPlan.
 		AddField("fstate", appdef.DataKind_int32, false).
 		AddField("name", appdef.DataKind_string, false).
 		AddField("ml_name", appdef.DataKind_bytes, false).
@@ -117,10 +118,11 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("is_hidden", appdef.DataKind_int32, false).
 		AddField("sys.IsActive", appdef.DataKind_bool, false).
 		AddField("preview", appdef.DataKind_int64, false).
-		AddField("bg_color", appdef.DataKind_int32, false).
+		AddField("bg_color", appdef.DataKind_int32, false)
+	tabPlan.
 		AddContainer("air_table_plan_item", appdef.NewQName(appdef.SysPackage, "air_table_plan_item"), appdef.Occurs(0), appdef.Occurs(defaultMaxOccurs))
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "air_table_plan_item"), appdef.DefKind_CRecord).
+	adf.AddCRecord(appdef.NewQName(appdef.SysPackage, "air_table_plan_item")).
 		AddField("id_air_table_plan", appdef.DataKind_RecordID, true).
 		AddField("fstate", appdef.DataKind_int32, false).
 		AddField("number", appdef.DataKind_int32, false).
@@ -140,7 +142,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("text", appdef.DataKind_string, false).
 		AddField("hide_seats", appdef.DataKind_bool, false)
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "printers"), appdef.DefKind_CDoc).
+	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "printers")).
 		AddField("guid", appdef.DataKind_string, true).
 		AddField("name", appdef.DataKind_string, false).
 		AddField("id_printer_drivers", appdef.DataKind_RecordID, false).
@@ -180,7 +182,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("purpose_receipt_enabled", appdef.DataKind_bool, false).
 		AddField("purpose_preparation_enabled", appdef.DataKind_bool, false)
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "sales_area"), appdef.DefKind_CDoc).
+	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "sales_area")).
 		AddField("name", appdef.DataKind_string, false).
 		AddField("bmanual", appdef.DataKind_int32, true).
 		AddField("id_prices", appdef.DataKind_RecordID, false).
@@ -199,7 +201,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("is_default", appdef.DataKind_bool, false).
 		AddField("id_table_plan", appdef.DataKind_RecordID, false)
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "payments"), appdef.DefKind_CDoc).
+	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "payments")).
 		AddField("name", appdef.DataKind_string, false).
 		AddField("kind", appdef.DataKind_int32, false).
 		AddField("number", appdef.DataKind_int32, false).
@@ -214,7 +216,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("ml_name", appdef.DataKind_bytes, false).
 		AddField("paym_external_id", appdef.DataKind_string, false)
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "untill_users"), appdef.DefKind_CDoc).
+	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "untill_users")).
 		AddField("name", appdef.DataKind_string, false).
 		AddField("mandates", appdef.DataKind_bytes, false).
 		AddField("user_void", appdef.DataKind_int32, true).
@@ -259,7 +261,8 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("hide_wm", appdef.DataKind_int32, false).
 		AddField("creation_date", appdef.DataKind_int64, false)
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "computers"), appdef.DefKind_CDoc).
+	comps := adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "computers"))
+	comps.
 		AddField("name", appdef.DataKind_string, false).
 		AddField("sys.IsActive", appdef.DataKind_bool, false).
 		AddField("show_cursor", appdef.DataKind_int32, false).
@@ -281,10 +284,11 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("default_a4_printer", appdef.DataKind_string, false).
 		AddField("login_screen", appdef.DataKind_int32, false).
 		AddField("id_themes", appdef.DataKind_RecordID, false).
-		AddField("device_profile_wsid", appdef.DataKind_int64, false).
+		AddField("device_profile_wsid", appdef.DataKind_int64, false)
+	comps.
 		AddContainer("restaurant_computers", appdef.NewQName(appdef.SysPackage, "restaurant_computers"), appdef.Occurs(0), appdef.Occurs(defaultMaxOccurs))
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "restaurant_computers"), appdef.DefKind_CRecord).
+	adf.AddCRecord(appdef.NewQName(appdef.SysPackage, "restaurant_computers")).
 		AddField("id_computers", appdef.DataKind_RecordID, true).
 		AddField("id_sales_area", appdef.DataKind_RecordID, false).
 		AddField("sales_kind", appdef.DataKind_int32, false).
@@ -378,7 +382,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("id_tickets_giftcardsbill", appdef.DataKind_RecordID, false).
 		AddField("id_printers_giftcardsbill", appdef.DataKind_RecordID, false)
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "bill"), appdef.DefKind_WDoc).
+	adf.AddWDoc(appdef.NewQName(appdef.SysPackage, "bill")).
 		AddField("tableno", appdef.DataKind_int32, true).
 		AddField("id_untill_users", appdef.DataKind_RecordID, true).
 		AddField("table_part", appdef.DataKind_string, true).
@@ -450,18 +454,17 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("remaining_quantity", appdef.DataKind_float64, false).
 		AddField("working_day", appdef.DataKind_string, true)
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "pos_emails"), appdef.DefKind_CDoc).
+	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "pos_emails")).
 		AddField("kind", appdef.DataKind_int32, false).
 		AddField("email", appdef.DataKind_string, false).
 		AddField("description", appdef.DataKind_string, false).
 		AddField("sys.IsActive", appdef.DataKind_bool, false)
 
-	adf.AddStruct(QNameTestWSKind, appdef.DefKind_CDoc).
+	adf.AddSingleton(QNameTestWSKind).
 		AddField("IntFld", appdef.DataKind_int32, true).
-		AddField("StrFld", appdef.DataKind_string, false).
-		SetSingleton()
+		AddField("StrFld", appdef.DataKind_string, false)
 
-	adf.AddStruct(appdef.NewQName(appdef.SysPackage, "category"), appdef.DefKind_CDoc).
+	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "category")).
 		AddField("name", appdef.DataKind_string, false).
 		AddField("sys.IsActive", appdef.DataKind_bool, false).
 		AddField("hq_id", appdef.DataKind_string, false).
@@ -469,19 +472,19 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("cat_external_id", appdef.DataKind_string, false)
 
 	projectors.ProvideViewDef(adf, QNameTestView, func(b appdef.IViewBuilder) {
-		b.PartKeyDef().AddField("ViewIntFld", appdef.DataKind_int32, true)
-		b.ClustColsDef().AddField("ViewStrFld", appdef.DataKind_string, true)
+		b.AddPartField("ViewIntFld", appdef.DataKind_int32).
+			AddClustColumn("ViewStrFld", appdef.DataKind_string)
 	})
 	sep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
 
 	// for impl_verifier_test
-	adf.AddStruct(QNameTestEmailVerificationDoc, appdef.DefKind_CDoc).
+	adf.AddCDoc(QNameTestEmailVerificationDoc).
 		AddVerifiedField("EmailField", appdef.DataKind_string, true, appdef.VerificationKind_EMail).
 		AddVerifiedField("PhoneField", appdef.DataKind_string, false, appdef.VerificationKind_Phone).
 		AddField("NonVerifiedField", appdef.DataKind_string, false)
 
 	// for impl_uniques_test
-	adf.AddStruct(QNameCDocTestConstraints, appdef.DefKind_CDoc).
+	adf.AddCDoc(QNameCDocTestConstraints).
 		AddField("Int", appdef.DataKind_int32, true).
 		AddField("Str", appdef.DataKind_string, true).
 		AddField("Bool", appdef.DataKind_bool, true).
@@ -490,22 +493,20 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 	cfg.Uniques.Add(QNameCDocTestConstraints, []string{"Int"})
 
 	// for singletons test
-	signletonDefBuilder := adf.AddStruct(QNameTestSingleton, appdef.DefKind_CDoc)
-	signletonDefBuilder.
-		AddField("Fld1", appdef.DataKind_string, true).
-		SetSingleton()
+	adf.AddSingleton(QNameTestSingleton).
+		AddField("Fld1", appdef.DataKind_string, true)
 
 	// for rates test
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQryRated,
 		appdef.NullQName,
-		adf.AddStruct(appdef.NewQName(appdef.SysPackage, "RatedQryParams"), appdef.DefKind_Object).
+		adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedQryParams")).
 			AddField("Fld", appdef.DataKind_string, false).QName(),
 		istructsmem.NullQueryExec,
 	))
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCmdRated,
-		adf.AddStruct(appdef.NewQName(appdef.SysPackage, "RatedCmdParams"), appdef.DefKind_Object).
+		adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedCmdParams")).
 			AddField("Fld", appdef.DataKind_string, false).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
@@ -534,11 +535,11 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 
 	mockQryQName := appdef.NewQName(appdef.SysPackage, "MockQry")
 	mockQryParamsQName := appdef.NewQName(appdef.SysPackage, "MockQryParams")
-	adf.AddStruct(mockQryParamsQName, appdef.DefKind_Object).
+	adf.AddObject(mockQryParamsQName).
 		AddField(field_Input, appdef.DataKind_string, true)
 
 	mockQryResQName := appdef.NewQName(appdef.SysPackage, "MockQryResult")
-	mockQryResScheme := adf.AddStruct(mockQryResQName, appdef.DefKind_Object)
+	mockQryResScheme := adf.AddObject(mockQryResQName)
 	mockQryResScheme.AddField("Res", appdef.DataKind_string, true)
 
 	mockQry := istructsmem.NewQueryFunction(mockQryQName, mockQryParamsQName, mockQryResQName,
@@ -551,7 +552,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 
 	mockCmdQName := appdef.NewQName(appdef.SysPackage, "MockCmd")
 	mockCmdParamsQName := appdef.NewQName(appdef.SysPackage, "MockCmdParams")
-	adf.AddStruct(mockCmdParamsQName, appdef.DefKind_Object).
+	adf.AddObject(mockCmdParamsQName).
 		AddField(field_Input, appdef.DataKind_string, true)
 
 	execCmdMockCmd := func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {

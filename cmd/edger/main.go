@@ -16,13 +16,13 @@ import (
 //go:embed version
 var version string
 
-// TODO: add reading SP from stdin to pass to ctrlloops
 func main() {
 	if err := execRootCmd(os.Args, version); err != nil {
 		os.Exit(1)
 	}
 }
 
+// TODO: add tests for execRootCmd into main_test.go
 func execRootCmd(args []string, ver string) error {
 	version = ver
 
@@ -32,7 +32,7 @@ func execRootCmd(args []string, ver string) error {
 		args,
 		version,
 		newServerCmd(),
-		newVersionCmd(),
+		newRunEdgerCmd(),
 	)
 	//rootCmd.PersistentFlags().BoolVar(&internal.IsDryRun, "dry-run", false, "Simulate the execution of the command without actually modifying any files or data")
 

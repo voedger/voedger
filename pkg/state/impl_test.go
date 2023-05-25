@@ -279,6 +279,7 @@ type mockKeyBuilder struct {
 	mock.Mock
 }
 
+func (b *mockKeyBuilder) PutInt64(name string, value int64)                { b.Called(name, value) }
 func (b *mockKeyBuilder) PutString(name, value string)                     { b.Called(name, value) }
 func (b *mockKeyBuilder) PutRecordID(name string, value istructs.RecordID) { b.Called(name, value) }
 func (b *mockKeyBuilder) PutQName(name string, value appdef.QName)         { b.Called(name, value) }

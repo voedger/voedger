@@ -21,14 +21,14 @@ import (
 func provideQryJournal(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, jdi vvm.IEPJournalIndices, jp vvm.IEPJournalPredicates) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Journal"),
-		appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "JournalParams"), appdef.DefKind_Object).
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "JournalParams")).
 			AddField(field_From, appdef.DataKind_int64, true).
 			AddField(field_Till, appdef.DataKind_int64, true).
 			AddField(Field_EventTypes, appdef.DataKind_string, true).
 			AddField(field_IndexForTimestamps, appdef.DataKind_string, false).
 			AddField(field_RangeUnit, appdef.DataKind_string, false).
 			QName(),
-		appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "JournalResult"), appdef.DefKind_Object).
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "JournalResult")).
 			AddField(Field_Offset, appdef.DataKind_int64, true).
 			AddField(Field_EventTime, appdef.DataKind_int64, true).
 			AddField(Field_Event, appdef.DataKind_string, true).

@@ -13,7 +13,7 @@ import (
 func provideCmdUpdateJoinedWorkspaceRoles(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdUpdateJoinedWorkspaceRoles,
-		appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "UpdateJoinedWorkspaceRolesParams"), appdef.DefKind_Object).
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "UpdateJoinedWorkspaceRolesParams")).
 			AddField(Field_Roles, appdef.DataKind_string, true).
 			AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).
 			QName(),

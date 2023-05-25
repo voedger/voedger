@@ -41,7 +41,7 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 	// owner app, owner WSID
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivated"),
-		adf.AddStruct(appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivatedParams"), appdef.DefKind_Object).
+		adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivatedParams")).
 			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
 			AddField(sysshared.Field_WSName, appdef.DataKind_string, true).
 			QName(),
@@ -54,14 +54,14 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 	// target app, profile WSID
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivated"),
-		adf.AddStruct(appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivatedParams"), appdef.DefKind_Object).
+		adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivatedParams")).
 			AddField(field_InvitedToWSID, appdef.DataKind_int64, true).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		cmdOnJoinedWorkspaceDeactivateExec,
 	))
 
-	adf.AddStruct(qNameProjectorApplyDeactivateWorkspace, appdef.DefKind_Object)
+	adf.AddObject(qNameProjectorApplyDeactivateWorkspace)
 
 	// target app, target WSID
 	cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {

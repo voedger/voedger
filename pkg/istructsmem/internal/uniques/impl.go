@@ -140,9 +140,11 @@ func (un *uniques) collect(u appdef.IUnique) (err error) {
 func (un *uniques) collectAll(appDef appdef.IAppDef) (err error) {
 	appDef.Defs(
 		func(d appdef.IDef) {
-			d.Uniques(func(u appdef.IUnique) {
-				err = errors.Join(err, un.collect(u))
-			})
+			if uni, ok := d.(appdef.IUniques); ok {
+				uni.Uniques(func(u appdef.IUnique) {
+					err = errors.Join(err, un.collect(u))
+				})
+			}
 		})
 
 	return err

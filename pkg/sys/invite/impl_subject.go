@@ -11,7 +11,7 @@ import (
 )
 
 func provideCDocSubject(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddStruct(sysshared.QNameCDocSubject, appdef.DefKind_CDoc).
+	appDefBuilder.AddCDoc(sysshared.QNameCDocSubject).
 		AddField(Field_Login, appdef.DataKind_string, true).
 		AddField(sysshared.Field_SubjectKind, appdef.DataKind_int32, true).
 		AddField(Field_Roles, appdef.DataKind_string, true).

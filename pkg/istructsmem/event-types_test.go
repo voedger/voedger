@@ -509,7 +509,7 @@ func TestEventBuilder_Core(t *testing.T) {
 			})
 		})
 
-		t.Run("test rewrited record", func(t *testing.T) {
+		t.Run("test rewritten record", func(t *testing.T) {
 			rec, err := app.Records().Get(test.workspace, true, photoID)
 			require.NoError(err)
 			require.NotNil(rec)
@@ -651,19 +651,19 @@ func Test_EventUpdateRawCud(t *testing.T) {
 	// this test for https://dev.heeus.io/launchpad/#!25853
 	require := require.New(t)
 
-	docName := appdef.NewQName("test", "cdoc")
-	recName := appdef.NewQName("test", "crec")
+	docName := appdef.NewQName("test", "cDoc")
+	recName := appdef.NewQName("test", "cRec")
 
 	appDef := appdef.New()
 
 	t.Run("must ok to construct application definition", func(t *testing.T) {
-		doc := appDef.AddStruct(docName, appdef.DefKind_CDoc)
+		doc := appDef.AddCDoc(docName)
 		doc.AddField("new", appdef.DataKind_bool, true)
 		doc.AddField("rec", appdef.DataKind_RecordID, false)
-		doc.AddField("emptiable", appdef.DataKind_string, false)
+		doc.AddField("emptied", appdef.DataKind_string, false)
 		doc.AddContainer("rec", recName, 0, 1)
 
-		rec := appDef.AddStruct(recName, appdef.DefKind_CRecord)
+		rec := appDef.AddCRecord(recName)
 		rec.AddField("data", appdef.DataKind_string, false)
 	})
 
@@ -674,31 +674,31 @@ func Test_EventUpdateRawCud(t *testing.T) {
 	}()
 
 	const (
-		testScenarioIndirectPLogApply uint = iota
-		testScenarioRereadedPLogApply
+		simpleTest uint = iota
+		retryTest
 
-		testScenarioCount
+		testCount
 	)
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 	ws := istructs.WSID(1)
 
-	for testScenario := testScenarioIndirectPLogApply; testScenario < testScenarioCount; testScenario++ {
+	for test := simpleTest; test < testCount; test++ {
 
 		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
-		docID := istructs.RecordID(322685000131087 + testScenario)
+		docID := istructs.RecordID(322685000131087 + test)
 
-		t.Run("must ok to create CDOC", func(t *testing.T) {
+		t.Run("must ok to create CDoc", func(t *testing.T) {
 			bld := app.Events().GetNewRawEventBuilder(
 				istructs.NewRawEventBuilderParams{
 					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
 						HandlingPartition: 1,
-						PLogOffset:        istructs.Offset(100500 + testScenario),
+						PLogOffset:        istructs.Offset(100500 + test),
 						Workspace:         ws,
-						WLogOffset:        istructs.Offset(100500 + testScenario),
+						WLogOffset:        istructs.Offset(100500 + test),
 						QName:             istructs.QNameCommandCUD, // sys.CUD
 						RegisteredAt:      1,
 					},
@@ -707,7 +707,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			create := bld.CUDBuilder().Create(docName)
 			create.PutRecordID(appdef.SystemField_ID, 1)
 			create.PutBool("new", true)
-			create.PutString("emptiable", "to be emptied")
+			create.PutString("emptied", "to be emptied")
 
 			rawEvent, err := bld.BuildRawEvent()
 			require.NoError(err)
@@ -723,7 +723,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			require.NoError(saveErr, saveErr)
 			require.True(pLogEvent.Error().ValidEvent())
 
-			t.Run("must ok to apply CDOC records", func(t *testing.T) {
+			t.Run("must ok to apply CDoc records", func(t *testing.T) {
 				recCnt := 0
 				err = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {
 					require.EqualValues(docName, r.QName())
@@ -735,16 +735,16 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			})
 		})
 
-		recID := istructs.RecordID(322685000131087 + testScenario + 1)
+		recID := istructs.RecordID(322685000131087 + test + 1)
 
-		t.Run("must ok to update CDOC", func(t *testing.T) {
+		t.Run("must ok to update CDoc", func(t *testing.T) {
 			bld := app.Events().GetNewRawEventBuilder(
 				istructs.NewRawEventBuilderParams{
 					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
 						HandlingPartition: 1,
-						PLogOffset:        istructs.Offset(100501 + testScenario),
+						PLogOffset:        istructs.Offset(100501 + test),
 						Workspace:         ws,
-						WLogOffset:        istructs.Offset(100501 + testScenario),
+						WLogOffset:        istructs.Offset(100501 + test),
 						QName:             istructs.QNameCommandCUD, // sys.CUD
 						RegisteredAt:      1,
 					},
@@ -764,7 +764,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 				}())
 			update.PutBool("new", false)
 			update.PutRecordID("rec", 1)
-			update.PutString("emptiable", "")
+			update.PutString("emptied", "")
 
 			rawEvent, err := bld.BuildRawEvent()
 			require.NoError(err)
@@ -780,12 +780,12 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			require.NoError(saveErr, saveErr)
 			require.True(pLogEvent.Error().ValidEvent())
 
-			switch testScenario {
-			case testScenarioRereadedPLogApply:
+			switch test {
+			case retryTest:
 				t.Run("must ok to reread PLog event", func(t *testing.T) {
 					pLogEvent = nil
-					err := app.Events().ReadPLog(context.Background(), 1, istructs.Offset(100501+testScenario), 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-						require.EqualValues(100501+testScenario, plogOffset)
+					err := app.Events().ReadPLog(context.Background(), 1, istructs.Offset(100501+test), 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+						require.EqualValues(100501+test, plogOffset)
 						pLogEvent = event
 						return nil
 					})
@@ -795,7 +795,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 				})
 			}
 
-			t.Run("must ok to apply CDOC records", func(t *testing.T) {
+			t.Run("must ok to apply CDoc records", func(t *testing.T) {
 				recCnt := 0
 				err = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {
 					switch id := r.ID(); id {
@@ -815,7 +815,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 				require.Equal(2, recCnt)
 			})
 
-			t.Run("must ok to reread CDOC record", func(t *testing.T) {
+			t.Run("must ok to reread CDoc record", func(t *testing.T) {
 				rec, err := app.Records().Get(ws, true, docID)
 				require.NoError(err)
 				require.EqualValues(docName, rec.QName())
@@ -829,14 +829,13 @@ func Test_EventUpdateRawCud(t *testing.T) {
 func Test_SingletonCDocEvent(t *testing.T) {
 	require := require.New(t)
 
-	docName := appdef.NewQName("test", "cdoc")
+	docName := appdef.NewQName("test", "cDoc")
 	docID := istructs.NullRecordID
 
 	appDef := appdef.New()
 
-	t.Run("must ok to construct singleton CDOC", func(t *testing.T) {
-		def := appDef.AddStruct(docName, appdef.DefKind_CDoc)
-		def.SetSingleton()
+	t.Run("must ok to construct singleton CDoc", func(t *testing.T) {
+		def := appDef.AddSingleton(docName)
 		def.AddField("option", appdef.DataKind_int64, true)
 	})
 
@@ -854,14 +853,14 @@ func Test_SingletonCDocEvent(t *testing.T) {
 	docID, err = cfgs.GetConfig(istructs.AppQName_test1_app1).singletons.ID(docName)
 	require.NoError(err)
 
-	t.Run("must ok to read not created singleton CDOC by QName", func(t *testing.T) {
+	t.Run("must ok to read not created singleton CDoc by QName", func(t *testing.T) {
 		rec, err := app.Records().GetSingleton(1, docName)
 		require.NoError(err)
 		require.Equal(appdef.NullQName, rec.QName())
 		require.Equal(docID, rec.ID())
 	})
 
-	t.Run("must ok to create singleton CDOC", func(t *testing.T) {
+	t.Run("must ok to create singleton CDoc", func(t *testing.T) {
 		bld := app.Events().GetNewRawEventBuilder(
 			istructs.NewRawEventBuilderParams{
 				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
@@ -884,13 +883,13 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err,
 			func(_ istructs.RecordID, _ appdef.IDef) (storageID istructs.RecordID, err error) {
-				return istructs.NullRecordID, fmt.Errorf("unexpected call ID generator from singleton CDOC creation")
+				return istructs.NullRecordID, fmt.Errorf("unexpected call ID generator from singleton CDoc creation")
 			})
 		require.NotNil(pLogEvent)
 		require.NoError(saveErr, saveErr)
 		require.True(pLogEvent.Error().ValidEvent())
 
-		t.Run("newly created singleton CDOC must be ok", func(t *testing.T) {
+		t.Run("newly created singleton CDoc must be ok", func(t *testing.T) {
 			recCnt := 0
 			pLogEvent.CUDs(func(rec istructs.ICUDRow) error {
 				require.Equal(docName, rec.QName())
@@ -903,7 +902,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			require.Equal(1, recCnt)
 		})
 
-		t.Run("must ok to apply singleton CDOC records", func(t *testing.T) {
+		t.Run("must ok to apply singleton CDoc records", func(t *testing.T) {
 			recCnt := 0
 			err = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {
 				require.Equal(docName, r.QName())
@@ -914,15 +913,15 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			require.Equal(1, recCnt)
 		})
 
-		t.Run("must fail if attempt to reapply singleton CDOC creation", func(t *testing.T) {
+		t.Run("must fail if attempt to reapply singleton CDoc creation", func(t *testing.T) {
 			err = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {
-				require.Fail("must fail if attempt to reapply singleton CDOC creation")
+				require.Fail("must fail if attempt to reapply singleton CDoc creation")
 			})
 			require.ErrorIs(err, ErrRecordIDUniqueViolation)
 		})
 	})
 
-	t.Run("must ok to read singleton CDOC by QName", func(t *testing.T) {
+	t.Run("must ok to read singleton CDoc by QName", func(t *testing.T) {
 		rec, err := app.Records().GetSingleton(1, docName)
 		require.NoError(err)
 		require.Equal(docName, rec.QName())
@@ -930,14 +929,14 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		require.Equal(int64(8), rec.AsInt64("option"))
 	})
 
-	t.Run("must fail to read singleton CDOC by unknown QName", func(t *testing.T) {
+	t.Run("must fail to read singleton CDoc by unknown QName", func(t *testing.T) {
 		rec, err := app.Records().GetSingleton(1, appdef.NewQName("test", "unknownCDoc"))
 		require.ErrorIs(err, singletons.ErrNameNotFound)
 		require.Equal(appdef.NullQName, rec.QName())
 		require.Equal(istructs.NullRecordID, rec.ID())
 	})
 
-	t.Run("must fail to attempt singleton CDOC recreation", func(t *testing.T) {
+	t.Run("must fail to attempt singleton CDoc recreation", func(t *testing.T) {
 		bld := app.Events().GetNewRawEventBuilder(
 			istructs.NewRawEventBuilderParams{
 				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
@@ -960,7 +959,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr,
 			func(_ istructs.RecordID, _ appdef.IDef) (storageID istructs.RecordID, err error) {
-				return istructs.NullRecordID, fmt.Errorf("unexpected call ID generator from singleton CDOC creation")
+				return istructs.NullRecordID, fmt.Errorf("unexpected call ID generator from singleton CDoc creation")
 			})
 		require.NotNil(pLogEvent)
 		require.NoError(saveErr, saveErr)
@@ -973,7 +972,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			"must panic if apply invalid event")
 	})
 
-	t.Run("must ok to update singleton CDOC", func(t *testing.T) {
+	t.Run("must ok to update singleton CDoc", func(t *testing.T) {
 		bld := app.Events().GetNewRawEventBuilder(
 			istructs.NewRawEventBuilderParams{
 				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
@@ -1000,13 +999,13 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err,
 			func(_ istructs.RecordID, _ appdef.IDef) (storageID istructs.RecordID, err error) {
-				return istructs.NullRecordID, fmt.Errorf("unexpected call ID generator while singleton CDOC update")
+				return istructs.NullRecordID, fmt.Errorf("unexpected call ID generator while singleton CDoc update")
 			})
 		require.NotNil(pLogEvent)
 		require.NoError(saveErr, saveErr)
 		require.True(pLogEvent.Error().ValidEvent())
 
-		t.Run("updated singleton CDOC must be ok", func(t *testing.T) {
+		t.Run("updated singleton CDoc must be ok", func(t *testing.T) {
 			recCnt := 0
 			pLogEvent.CUDs(func(rec istructs.ICUDRow) error {
 				require.Equal(docName, rec.QName())
@@ -1019,7 +1018,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			require.Equal(1, recCnt)
 		})
 
-		t.Run("must ok to apply singleton CDOC update records", func(t *testing.T) {
+		t.Run("must ok to apply singleton CDoc update records", func(t *testing.T) {
 			recCnt := 0
 			err = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {
 				require.Equal(docName, r.QName())
@@ -1030,7 +1029,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			require.Equal(1, recCnt)
 		})
 
-		t.Run("must ok to read updated singleton CDOC from records", func(t *testing.T) {
+		t.Run("must ok to read updated singleton CDoc from records", func(t *testing.T) {
 			rec, err := app.Records().Get(1, true, docID)
 			require.NoError(err)
 			require.Equal(docName, rec.QName())
@@ -1075,7 +1074,7 @@ func TestEventBuild_Error(t *testing.T) {
 		require.NotNil(rawEvent)
 	})
 
-	t.Run("Build sys.CUD must have error if emty CUDs", func(t *testing.T) {
+	t.Run("Build sys.CUD must have error if empty CUDs", func(t *testing.T) {
 		bld := eventBuilder(istructs.QNameCommandCUD)
 		rawEvent, buildErr = bld.BuildRawEvent()
 		require.ErrorIs(buildErr, ErrCUDsMissed)

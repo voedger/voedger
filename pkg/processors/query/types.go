@@ -18,7 +18,7 @@ import (
 type FilterFactory func(data coreutils.MapObject) (IFilter, error)
 
 type IFilter interface {
-	IsMatch(fd coreutils.FieldsDef, outputRow IOutputRow) (bool, error)
+	IsMatch(fd FieldsKinds, outputRow IOutputRow) (bool, error)
 }
 
 // FieldFactory creates IField from data
@@ -77,8 +77,8 @@ type IPath interface {
 type IWorkpiece interface {
 	Object() istructs.IObject
 	OutputRow() IOutputRow
-	EnrichedRootFields() coreutils.FieldsDef
-	PutEnrichedRootField(name string, kind appdef.DataKind)
+	EnrichedRootFieldsKinds() FieldsKinds
+	PutEnrichedRootFieldKind(name string, kind appdef.DataKind)
 }
 
 // IOutputRow is filled by the row processor operators
@@ -114,3 +114,5 @@ type IResultSenderClosable interface {
 type IMetrics interface {
 	Increase(metricName string, valueDelta float64)
 }
+
+type FieldsKinds map[string]appdef.DataKind

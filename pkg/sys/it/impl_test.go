@@ -38,10 +38,12 @@ func TestBasicUsage(t *testing.T) {
 		it.WithApp(istructs.AppQName_test1_app1, func(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
 			cfg.Resources.Add(istructsmem.NewQueryFunction(
 				appdef.NewQName(appdef.SysPackage, "Greeter"),
-				appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "GreeterParams"), appdef.DefKind_Object).
-					AddField("Text", appdef.DataKind_string, true).QName(),
-				appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "GreeterResult"), appdef.DefKind_Object).
-					AddField("Res", appdef.DataKind_string, true).QName(),
+				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
+					AddField("Text", appdef.DataKind_string, true).
+					QName(),
+				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterResult")).
+					AddField("Res", appdef.DataKind_string, true).
+					QName(),
 				func(_ context.Context, _ istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 					text := args.ArgumentObject.AsString("Text")
 					var rr = &greeterRR{text: text}
