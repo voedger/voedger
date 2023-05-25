@@ -47,6 +47,9 @@ func mockStdin(t *testing.T, dummyInput string) (restoreStdinFunc func(), err er
 }
 
 func TestExecRootCmd(t *testing.T) {
+	if testing.Short() {
+		t.Skip(`skipping test in short mod`)
+	}
 	// Test case: Provide valid arguments and version
 	args := []string{"edger", "run"}
 	ver := "1.0.0"
