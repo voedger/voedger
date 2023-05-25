@@ -351,7 +351,7 @@ type IUniques interface {
 
 	// Returns single field unique.
 	//
-	// This is old-style unique support. See issue [#173](https://github.com/voedger/voedger/issues/173)
+	// This is old-style unique support. See [issue #173](https://github.com/voedger/voedger/issues/173)
 	UniqueField() IField
 }
 
@@ -374,11 +374,12 @@ type IUniquesBuilder interface {
 	// Sets single field unique.
 	// Calling SetUniqueField again changes unique field. If specified name is empty, then clears unique field.
 	//
-	// This is old-style unique support. See issue [#173](https://github.com/voedger/voedger/issues/173)
+	// This is old-style unique support. See [issue #173](https://github.com/voedger/voedger/issues/173)
 	//
 	// # Panics:
 	//   - if field name is invalid,
-	//   - if field not found.
+	//   - if field not found,
+	//   - if field is not required.
 	SetUniqueField(name string) IUniquesBuilder
 }
 

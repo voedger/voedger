@@ -48,7 +48,6 @@ type AppConfigType struct {
 	appDefBuilder appdef.IAppDefBuilder
 	AppDef        appdef.IAppDef
 	Resources     Resources
-	Uniques       *implIUniques
 
 	dynoSchemes dynobuf.DynoBufSchemes
 	validators  *validators
@@ -83,7 +82,6 @@ func newAppConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppC
 	}
 	cfg.AppDef = app
 	cfg.Resources = newResources(&cfg)
-	cfg.Uniques = newUniques()
 
 	cfg.dynoSchemes = dynobuf.New()
 	cfg.validators = newValidators()
@@ -147,11 +145,6 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 
 	// prepare functions rate limiter
 	cfg.FunctionRateLimits.prepare(buckets)
-
-	// validate uniques
-	if err := cfg.Uniques.validate(cfg); err != nil {
-		return err
-	}
 
 	cfg.prepared = true
 	return nil

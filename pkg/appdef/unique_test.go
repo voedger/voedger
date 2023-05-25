@@ -145,7 +145,7 @@ func Test_def_AddUnique(t *testing.T) {
 }
 
 func Test_def_UniqueField(t *testing.T) {
-	// This tests old-style uniques. See issue [#173](https://github.com/voedger/voedger/issues/173)
+	// This tests old-style uniques. See [issue #173](https://github.com/voedger/voedger/issues/173)
 	require := require.New(t)
 
 	qName := NewQName("test", "user")
@@ -160,7 +160,7 @@ func Test_def_UniqueField(t *testing.T) {
 		AddField("lastName", DataKind_string, false).
 		AddField("birthday", DataKind_int64, false).
 		AddField("sex", DataKind_bool, false).
-		AddField("eMail", DataKind_string, false)
+		AddField("eMail", DataKind_string, true)
 	def.SetUniqueField("eMail")
 
 	t.Run("test is ok", func(t *testing.T) {
@@ -172,6 +172,7 @@ func Test_def_UniqueField(t *testing.T) {
 
 		fld := d.UniqueField()
 		require.Equal("eMail", fld.Name())
+		require.True(fld.Required())
 	})
 
 	t.Run("must be ok to clear unique field", func(t *testing.T) {
@@ -194,5 +195,9 @@ func Test_def_UniqueField(t *testing.T) {
 		require.Panics(func() {
 			def.SetUniqueField("unknownField")
 		}, "panics if unknown unique field name")
+
+		require.Panics(func() {
+			def.SetUniqueField("surname")
+		}, "panics if unique field is not required")
 	})
 }

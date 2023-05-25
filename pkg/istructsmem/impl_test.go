@@ -438,6 +438,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		docDef := appDef.AddCDoc(docQName)
 		docDef.AddField("str", appdef.DataKind_string, true)
 		docDef.AddField("fld", appdef.DataKind_int32, true)
+		docDef.SetUniqueField("str")
 
 		docDef.AddContainer("rec", recDef.QName(), 0, appdef.Occurs_Unbounded)
 
@@ -467,8 +468,6 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 				argDef.QName(),
 				viewDef.Value().QName(),
 				NullQueryExec))
-
-		cfg.Uniques.Add(docQName, []string{"str"})
 
 		cfg.FunctionRateLimits.AddAppLimit(qNameQry, istructs.RateLimit{
 			Period:                1,
