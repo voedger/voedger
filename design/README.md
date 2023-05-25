@@ -382,7 +382,7 @@ Extension Site examples:
 | ----------- | ----------- |----------- |----------- |
 | Federation  | Yes         |Yes         |Yes         |
 | Router      | 1           |1           |Many        |
-| HVM         | 1           |1           |Many        |
+| VM          | 1           |1           |Many        |
 | HA          | No          |Yes         |Yes         |
 | Scalability | No          |No          |Yes         |
 
