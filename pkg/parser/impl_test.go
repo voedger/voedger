@@ -50,31 +50,30 @@ func Test_BasicUsage(t *testing.T) {
 	require.NoError(err)
 
 	// table
-	def := builder.Def(appdef.NewQName("air", "AirTablePlan"))
-	require.NotNil(def)
-	require.Equal(appdef.DefKind_CDoc, def.Kind())
-	require.Equal(appdef.DataKind_int32, def.Field("FState").DataKind())
-	require.Equal(2, len(def.UniqueByName("AIRTABLEPLAN_UNIQUE1").Fields()))
+	cdoc := builder.Def(appdef.NewQName("air", "AirTablePlan"))
+	require.NotNil(cdoc)
+	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
+	require.Equal(appdef.DataKind_int32, cdoc.(appdef.IFields).Field("FState").DataKind())
+	require.Equal(2, len(cdoc.(appdef.IUniquesBuilder).UniqueByName("AIRTABLEPLAN_UNIQUE1").Fields()))
 
 	// child table
-	def = builder.Def(appdef.NewQName("air", "AirTablePlanItem"))
-	require.NotNil(def)
-	require.Equal(appdef.DefKind_CRecord, def.Kind())
-	require.Equal(appdef.DataKind_int32, def.Field("TableNo").DataKind())
+	crec := builder.Def(appdef.NewQName("air", "AirTablePlanItem"))
+	require.NotNil(crec)
+	require.Equal(appdef.DefKind_CRecord, crec.Kind())
+	require.Equal(appdef.DataKind_int32, crec.(appdef.IFields).Field("TableNo").DataKind())
 
 	// type
-	def = builder.Def(appdef.NewQName("air", "SubscriptionEvent"))
-	require.NotNil(def)
-	require.Equal(appdef.DefKind_Object, def.Kind())
-	require.Equal(appdef.DataKind_string, def.Field("Origin").DataKind())
+	obj := builder.Object(appdef.NewQName("air", "SubscriptionEvent"))
+	require.Equal(appdef.DefKind_Object, obj.Kind())
+	require.Equal(appdef.DataKind_string, obj.Field("Origin").DataKind())
 
 	// view
-	def = builder.Def(appdef.NewQName("air", "XZReports"))
-	require.NotNil(def)
-	require.Equal(appdef.DefKind_ViewRecord, def.Kind())
-	require.Equal(2, builder.Def(def.Container(appdef.SystemContainer_ViewValue).Def()).FieldCount()) // sys.Qname, XZReportWDocID
-	require.Equal(1, builder.Def(def.Container(appdef.SystemContainer_ViewPartitionKey).Def()).FieldCount())
-	require.Equal(4, builder.Def(def.Container(appdef.SystemContainer_ViewClusteringCols).Def()).FieldCount())
+	view := builder.View(appdef.NewQName("air", "XZReports"))
+	require.NotNil(view)
+	require.Equal(appdef.DefKind_ViewRecord, view.Kind())
+	require.Equal(2, builder.Def(view.Container(appdef.SystemContainer_ViewValue).Def()).(appdef.IFields).FieldCount()) // sys.Qname, XZReportWDocID
+	require.Equal(1, builder.Def(view.Container(appdef.SystemContainer_ViewPartitionKey).Def()).(appdef.IFields).FieldCount())
+	require.Equal(4, builder.Def(view.Container(appdef.SystemContainer_ViewClusteringCols).Def()).(appdef.IFields).FieldCount())
 
 }
 
