@@ -12,13 +12,14 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
-	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, now func() time.Time) {
+func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, now func() time.Time, tokensAPI itokens.ITokens,
+	federationURL func() *url.URL) {
 	// c.sys.InitChildWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		authnz.QNameCommandInitChildWorkspace,
@@ -59,7 +60,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	// c.sys.CreateWorkspaceID
 	// target app, (target cluster, base profile WSID)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		commandprocessor.QNameCommandCreateWorkspaceID,
+		sysshared.QNameCommandCreateWorkspaceID,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateWorkspaceIDParams")).
 			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
 			AddField(Field_OwnerQName, appdef.DataKind_QName, true).
@@ -81,7 +82,8 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		b.
 			AddPartField(Field_OwnerWSID, appdef.DataKind_int64).
 			AddClustColumn(authnz.Field_WSName, appdef.DataKind_string).
-			AddValueField(authnz.Field_WSID, appdef.DataKind_int64, true)
+			AddValueField(authnz.Field_WSID, appdef.DataKind_int64, true).
+			AddValueField(field_IDOfCDocWorkspaceID, appdef.DataKind_RecordID, false) // TODO: not required for backward compatibility. Actually is required
 	})
 
 	// CDoc<WorkspaceID>
@@ -100,7 +102,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 
 	// c.sys.CreateWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		commandprocessor.QNameCommandCreateWorkspace,
+		sysshared.QNameCommandCreateWorkspace,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateWorkspaceParams")).
 			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
 			AddField(Field_OwnerQName, appdef.DataKind_QName, true).
@@ -119,7 +121,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 
 	// singleton CDoc<sys.WorkspaceDescriptor>
 	// target app, new WSID
-	appDefBuilder.AddSingleton(commandprocessor.QNameCDocWorkspaceDescriptor).
+	appDefBuilder.AddSingleton(sysshared.QNameCDocWorkspaceDescriptor).
 		AddField(Field_OwnerWSID, appdef.DataKind_int64, false). // owner* fields made non-required for app workspaces
 		AddField(Field_OwnerQName, appdef.DataKind_QName, false).
 		AddField(Field_OwnerID, appdef.DataKind_int64, false).
@@ -133,8 +135,9 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		AddField(Field_CreateError, appdef.DataKind_string, false).
 		AddField(authnz.Field_СreatedAtMs, appdef.DataKind_int64, true).
 		AddField(Field_InitStartedAtMs, appdef.DataKind_int64, false).
-		AddField(commandprocessor.Field_InitError, appdef.DataKind_string, false).
-		AddField(commandprocessor.Field_InitCompletedAtMs, appdef.DataKind_int64, false)
+		AddField(sysshared.Field_InitError, appdef.DataKind_string, false).
+		AddField(sysshared.Field_InitCompletedAtMs, appdef.DataKind_int64, false).
+		AddField(sysshared.Field_Status, appdef.DataKind_int32, false)
 
 	// q.sys.QueryChildWorkspaceByName
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
@@ -150,6 +153,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			AddField(Field_TemplateParams, appdef.DataKind_string, false).
 			AddField(authnz.Field_WSID, appdef.DataKind_int64, false).
 			AddField(authnz.Field_WSError, appdef.DataKind_string, false).
+			AddField(appdef.SystemField_IsActive, appdef.DataKind_bool, true).
 			QName(),
 		qcwbnQryExec,
 	))
@@ -160,6 +164,9 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	appDefBuilder.AddObject(qNameAPInvokeCreateWorkspace)
 
 	ProvideViewNextWSID(appDefBuilder)
+
+	// deactivate workspace
+	provideDeactivateWorkspace(cfg, appDefBuilder, tokensAPI, federationURL, asp)
 }
 
 // proj.sys.ChildWorkspaceIdx

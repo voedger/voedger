@@ -45,6 +45,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/collection"
 	"github.com/voedger/voedger/pkg/sys/invite"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
@@ -165,7 +166,7 @@ func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 	return func(requestContext context.Context, name string, as istructs.IAppStructs, wsid istructs.WSID) ([]appdef.QName, error) {
 		kb := as.ViewRecords().KeyBuilder(collection.QNameViewCollection)
 		kb.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
-		kb.PutQName(collection.Field_DocQName, invite.QNameCDocSubject)
+		kb.PutQName(collection.Field_DocQName, sysshared.QNameCDocSubject)
 		res := []appdef.QName{}
 		err := as.ViewRecords().Read(requestContext, wsid, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 			record := value.AsRecord(collection.Field_Record)

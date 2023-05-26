@@ -19,6 +19,7 @@ jobs:
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-cd-voeger:
     needs: call-workflow-ci-cmd
+    if: github.repository == 'voedger/voedger'
     uses: voedger/voedger/.github/workflows/cd-voedger.yml@main
     secrets:
       dockerusername: ${{ secrets.DOCKER_USERNAME }}

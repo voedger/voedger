@@ -10,25 +10,166 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 //go:embed example_app/*.sql
 var efs embed.FS
 
+//go:embed system_pkg/*.sql
+var sfs embed.FS
+
 //_go:embed example_app/expectedParsed.schema
 //var expectedParsedExampledSchemaStr string
 
+func getSysPackageAST() *PackageSchemaAST {
+	pkgSys, err := ParsePackageDir(appdef.SysPackage, sfs, "system_pkg")
+	if err != nil {
+		panic(err)
+	}
+	return pkgSys
+}
+
 func Test_BasicUsage(t *testing.T) {
 
-	pkgExample, err := ParsePackageDir("github.com/untillpro/exampleschema", efs, "example_app")
-	require.NoError(t, err)
+	require := require.New(t)
+	examplePkgAST, err := ParsePackageDir("github.com/untillpro/exampleschema", efs, "example_app")
+	require.NoError(err)
 
 	// := repr.String(pkgExample, repr.Indent(" "), repr.IgnorePrivate())
 	//fmt.Println(parsedSchemaStr)
 
-	// TODO: MergePackageSchemas should return ?.ISchema
-	err = MergePackageSchemas([]*PackageSchemaAST{pkgExample})
-	require.NoError(t, err)
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		examplePkgAST,
+	})
+	require.NoError(err)
+
+	builder := appdef.New()
+	err = BuildAppDefs(packages, builder)
+	require.NoError(err)
+
+	// table
+	cdoc := builder.Def(appdef.NewQName("air", "AirTablePlan"))
+	require.NotNil(cdoc)
+	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
+	require.Equal(appdef.DataKind_int32, cdoc.(appdef.IFields).Field("FState").DataKind())
+	require.Equal(2, len(cdoc.(appdef.IUniquesBuilder).UniqueByName("AIRTABLEPLAN_UNIQUE1").Fields()))
+
+	// child table
+	crec := builder.Def(appdef.NewQName("air", "AirTablePlanItem"))
+	require.NotNil(crec)
+	require.Equal(appdef.DefKind_CRecord, crec.Kind())
+	require.Equal(appdef.DataKind_int32, crec.(appdef.IFields).Field("TableNo").DataKind())
+
+	// type
+	obj := builder.Object(appdef.NewQName("air", "SubscriptionEvent"))
+	require.Equal(appdef.DefKind_Object, obj.Kind())
+	require.Equal(appdef.DataKind_string, obj.Field("Origin").DataKind())
+
+	// view
+	view := builder.View(appdef.NewQName("air", "XZReports"))
+	require.NotNil(view)
+	require.Equal(appdef.DefKind_ViewRecord, view.Kind())
+	require.Equal(2, builder.Def(view.Container(appdef.SystemContainer_ViewValue).Def()).(appdef.IFields).FieldCount()) // sys.Qname, XZReportWDocID
+	require.Equal(1, builder.Def(view.Container(appdef.SystemContainer_ViewPartitionKey).Def()).(appdef.IFields).FieldCount())
+	require.Equal(4, builder.Def(view.Container(appdef.SystemContainer_ViewClusteringCols).Def()).(appdef.IFields).FieldCount())
+
+}
+
+func Test_DupFieldsInTypes(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("file1.sql", `SCHEMA test;
+	TYPE RootType (
+		Id int32
+	);
+	TYPE BaseType OF RootType(
+		baseField int
+	);
+	TYPE BaseType2 (
+		someField int
+	);
+	TYPE MyType OF BaseType, BaseType2 (
+		field text,
+		field text,
+		baseField text,
+		someField int,
+		Id text
+	)
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	err = BuildAppDefs(packages, appdef.New())
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:13:3: field redeclared",
+		"file1.sql:14:3: baseField redeclared",
+		"file1.sql:15:3: someField redeclared",
+		"file1.sql:16:3: Id redeclared",
+	}, "\n"))
+
+}
+
+func Test_DupFieldsInTables(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("file1.sql", `SCHEMA test;
+	TYPE RootType (
+		Kind int32
+	);
+	TYPE BaseType OF RootType(
+		baseField int
+	);
+	TYPE BaseType2 (
+		someField int
+	);
+	TABLE ByBaseTable INHERITS CDoc (
+		Name text,
+		Code text,
+		UNIQUE (Code),
+		CONSTRAINT constraint1 UNIQUE (Name)
+	);
+	TABLE MyTable INHERITS ByBaseTable OF BaseType, BaseType2 (
+		newField text,
+		field text,
+		field text, 		-- duplicated in the this table
+		baseField text,		-- duplicated in the first OF
+		someField int,		-- duplicated in the second OF
+		Kind int,			-- duplicated in the first OF (2nd level)
+		Name int,			-- duplicated in the inherited table
+		ID text,			-- duplicated in the inherited table (2nd level)
+		UNIQUE (Kind),
+		CONSTRAINT constraint1 UNIQUE (newField) -- duplicated in the inherited table
+	)
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	err = BuildAppDefs(packages, appdef.New())
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:20:3: field redeclared",
+		"file1.sql:21:3: baseField redeclared",
+		"file1.sql:22:3: someField redeclared",
+		"file1.sql:23:3: Kind redeclared",
+		"file1.sql:24:3: Name redeclared",
+		"file1.sql:25:3: ID redeclared",
+		"file1.sql:27:3: constraint1 redeclared",
+	}, "\n"))
 
 }
 
@@ -78,9 +219,6 @@ func Test_Duplicates(t *testing.T) {
 
 	_, err = MergeFileSchemaASTs("", []*FileSchemaAST{ast1, ast2})
 
-	// TODO: use golang messages like
-	// ./types2.go:17:7: EmbedParser redeclared
-	//     ./types.go:17:6: other declaration of EmbedParser
 	require.EqualError(err, strings.Join([]string{
 		"file1.sql:4:3: MyTableValidator redeclared",
 		"file2.sql:3:3: MyFunc2 redeclared",
@@ -107,9 +245,6 @@ func Test_DuplicatesInViews(t *testing.T) {
 
 	_, err = MergeFileSchemaASTs("", []*FileSchemaAST{ast})
 
-	// TODO: use golang messages like
-	// ./types2.go:17:7: EmbedParser redeclared
-	//     ./types.go:17:6: other declaration of EmbedParser
 	require.EqualError(err, strings.Join([]string{
 		"file2.sql:6:4: field1 redeclared",
 		"file2.sql:8:4: primary key redeclared",
@@ -158,7 +293,7 @@ func Test_Undefined(t *testing.T) {
 		EXTENSION ENGINE WASM (
 			COMMAND Orders() WITH Tags=[UndefinedTag];
 			QUERY Query1 RETURNS text WITH Rate=UndefinedRate, Comment=xyz.UndefinedComment;
-			PROJECTOR ImProjector ON COMMAND xyz.CreateUPProfile AFFECTS sys.HTTPStorage;
+			PROJECTOR ImProjector ON COMMAND xyz.CreateUPProfile USES sys.HTTPStorage;
 		)
 	)
 	`)
@@ -167,7 +302,7 @@ func Test_Undefined(t *testing.T) {
 	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
 	require.Nil(err)
 
-	err = MergePackageSchemas([]*PackageSchemaAST{pkg})
+	_, err = MergePackageSchemas([]*PackageSchemaAST{pkg, getSysPackageAST()})
 
 	require.EqualError(err, strings.Join([]string{
 		"example.sql:4:4: UndefinedTag undefined",
@@ -189,7 +324,7 @@ func Test_Imports(t *testing.T) {
     		QUERY Query1 RETURNS text WITH Comment=pkg2.SomeComment;
     		QUERY Query2 RETURNS text WITH Comment=air.SomeComment;
     		QUERY Query3 RETURNS text WITH Comment=air.SomeComment2; -- air.SomeComment2 undefined
-    		PROJECTOR ImProjector ON COMMAND Air.CreateUPProfil AFFECTS sys.HTTPStorage; -- Air undefined
+    		PROJECTOR ImProjector ON COMMAND Air.CreateUPProfil USES sys.HTTPStorage; -- Air undefined
 		)
 	)
 	`)
@@ -212,7 +347,7 @@ func Test_Imports(t *testing.T) {
 	pkg3, err := MergeFileSchemaASTs("github.com/untillpro/airsbp3/pkg3", []*FileSchemaAST{fs})
 	require.NoError(err)
 
-	err = MergePackageSchemas([]*PackageSchemaAST{pkg1, pkg2, pkg3})
+	_, err = MergePackageSchemas([]*PackageSchemaAST{getSysPackageAST(), pkg1, pkg2, pkg3})
 	require.EqualError(err, strings.Join([]string{
 		"example.sql:9:7: air.SomeComment2 undefined",
 		"example.sql:10:7: Air undefined",

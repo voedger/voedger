@@ -31,9 +31,10 @@ jobs:
         git config --global url."https://${{ secrets.REPOREADING_TOKEN }}:x-oauth-basic@github.com/heeus".insteadOf "https://github.com/heeus"
         git config --global url."https://${{ secrets.REPOREADING_TOKEN }}:x-oauth-basic@github.com/untillpro".insteadOf "https://github.com/untillpro"
         git config --global url."https://${{ secrets.REPOREADING_TOKEN }}:x-oauth-basic@github.com/voedger".insteadOf "https://github.com/voedger"
-        go build -o voedger ./cmd/voedger
+        go build -o ./cmd/voedger ./cmd/voedger
       env:
         GOPRIVATE: "github.com/untillpro/*,github.com/heeus/*,github.com/voedger/*"
+        CGO_ENABLED: 0
 
     - name: Log in to Docker Hub
       uses: docker/login-action@v2
@@ -42,8 +43,9 @@ jobs:
         password: ${{ secrets.dockerpassword }}
 
     - name: Build and push Docker image alpha
-      uses: docker/build-push-action@v2
+      uses: docker/build-push-action@v4
       with:
-        context: .
+        context: ./cmd/voedger
+        file: ./cmd/voedger/Dockerfile
         push: true
         tags: voedger/voedger:0.0.1-alpha

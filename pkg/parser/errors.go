@@ -20,6 +20,10 @@ func ErrUnexpectedSchema(fileName, actual, expected string) error {
 var ErrFunctionParamsIncorrect = errors.New("function parameters do not match")
 var ErrFunctionResultIncorrect = errors.New("function result do not match")
 var ErrPrimaryKeyRedeclared = errors.New("primary key redeclared")
+var ErrPrimaryKeyNotDeclared = errors.New("primary key not declared")
+var ErrUndefinedTableKind = errors.New("undefined table kind")
+var ErrNestedTableCannotBeDocument = errors.New("nested table cannot be declared as document")
+var ErrArrayFieldsNotSupportedHere = errors.New("array fields of system types not supported here")
 
 // Golang: could not import github.com/alecthomas/participle/v2/asd (no required module provides package "github.com/alecthomas/participle/v2/asd")
 func ErrCouldNotImport(pkgName string) error {
@@ -28,6 +32,10 @@ func ErrCouldNotImport(pkgName string) error {
 
 func ErrUndefined(name string) error {
 	return fmt.Errorf("%s undefined", name)
+}
+
+func ErrTypeNotSupported(name string) error {
+	return fmt.Errorf("%s type not supported", name)
 }
 
 func ErrRedeclared(name string) error {

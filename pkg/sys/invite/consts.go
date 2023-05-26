@@ -23,10 +23,8 @@ var (
 	qNameCmdInitiateLeaveWorkspace       = appdef.NewQName(appdef.SysPackage, "InitiateLeaveWorkspace")
 	qNameCmdCancelSentInvite             = appdef.NewQName(appdef.SysPackage, "CancelSentInvite")
 	qNameCDocInvite                      = appdef.NewQName(appdef.SysPackage, "Invite")
-	qNameCDocJoinedWorkspace             = appdef.NewQName(appdef.SysPackage, "JoinedWorkspace")
-	QNameCDocSubject                     = appdef.NewQName(appdef.SysPackage, "Subject")
 	qNameViewInviteIndex                 = appdef.NewQName(appdef.SysPackage, "InviteIndexView")
-	qNameViewJoinedWorkspaceIndex        = appdef.NewQName(appdef.SysPackage, "JoinedWorkspaceIndexView")
+	QNameViewJoinedWorkspaceIndex        = appdef.NewQName(appdef.SysPackage, "JoinedWorkspaceIndexView")
 	qNameAPApplyCancelAcceptedInvite     = appdef.NewQName(appdef.SysPackage, "ApplyCancelAcceptedInvite")
 	qNameAPApplyInvitation               = appdef.NewQName(appdef.SysPackage, "ApplyInvitation")
 	qNameAPApplyJoinWorkspace            = appdef.NewQName(appdef.SysPackage, "ApplyJoinWorkspace")
@@ -43,8 +41,7 @@ const (
 	field_EmailTemplate         = "EmailTemplate"
 	field_EmailSubject          = "EmailSubject"
 	Field_Login                 = "Login"
-	Field_SubjectKind           = "SubjectKind"
-	field_InvitingWorkspaceWSID = "InvitingWorkspaceWSID"
+	Field_InvitingWorkspaceWSID = "InvitingWorkspaceWSID"
 	field_InviteeProfileWSID    = "InviteeProfileWSID"
 	field_State                 = "State"
 	field_Created               = "Created"
@@ -52,7 +49,6 @@ const (
 	field_SubjectID             = "SubjectID"
 	field_Dummy                 = "Dummy"
 	field_JoinedWorkspaceID     = "JoinedWorkspaceID"
-	field_WSName                = "WSName"
 )
 
 type State int32

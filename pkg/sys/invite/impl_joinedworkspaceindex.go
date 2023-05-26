@@ -9,8 +9,8 @@ import (
 )
 
 func provideViewJoinedWorkspaceIndex(appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddView(qNameViewJoinedWorkspaceIndex).
+	appDefBuilder.AddView(QNameViewJoinedWorkspaceIndex).
 		AddPartField(field_Dummy, appdef.DataKind_int32).
-		AddClustColumn(field_InvitingWorkspaceWSID, appdef.DataKind_int64).
+		AddClustColumn(Field_InvitingWorkspaceWSID, appdef.DataKind_int64).
 		AddValueField(field_JoinedWorkspaceID, appdef.DataKind_RecordID, true)
 }
