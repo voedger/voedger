@@ -69,7 +69,6 @@ func (app *appDef) AddWDoc(name QName) IWDocBuilder {
 
 func (app *appDef) AddView(name QName) IViewBuilder {
 	v := newView(app, name)
-	app.changed()
 	return v
 }
 
