@@ -15,14 +15,12 @@ import (
 //   - IAppDefBuilder
 type appDef struct {
 	changes int
-	defs    map[QName]*def
-	views   map[QName]*view
+	defs    map[QName]interface{}
 }
 
 func newAppDef() *appDef {
 	app := appDef{
-		defs:  make(map[QName]*def),
-		views: make(map[QName]*view),
+		defs: make(map[QName]interface{}),
 	}
 	return &app
 }
@@ -71,7 +69,6 @@ func (app *appDef) AddWDoc(name QName) IWDocBuilder {
 
 func (app *appDef) AddView(name QName) IViewBuilder {
 	v := newView(app, name)
-	app.views[name] = v
 	app.changed()
 	return v
 }
@@ -95,20 +92,16 @@ func (app *appDef) Build() (result IAppDef, err error) {
 	return app, nil
 }
 
-func (app *appDef) CDoc(name QName) ICDoc {
-	if d, ok := app.defs[name]; ok {
-		if d.Kind() == DefKind_CDoc {
-			return d
-		}
+func (app *appDef) CDoc(name QName) (d ICDoc) {
+	if d := app.defByKind(name, DefKind_CDoc); d != nil {
+		return d.(ICDoc)
 	}
 	return nil
 }
 
 func (app *appDef) CRecord(name QName) ICRecord {
-	if d, ok := app.defs[name]; ok {
-		if d.Kind() == DefKind_CRecord {
-			return d
-		}
+	if d := app.defByKind(name, DefKind_CRecord); d != nil {
+		return d.(ICRecord)
 	}
 	return nil
 }
@@ -122,7 +115,7 @@ func (app *appDef) Def(name QName) IDef {
 
 func (app *appDef) DefByName(name QName) IDef {
 	if d, ok := app.defs[name]; ok {
-		return d
+		return d.(IDef)
 	}
 	return nil
 }
@@ -133,33 +126,27 @@ func (app *appDef) DefCount() int {
 
 func (app *appDef) Defs(cb func(IDef)) {
 	for _, d := range app.defs {
-		cb(d)
+		cb(d.(IDef))
 	}
 }
 
 func (app *appDef) Element(name QName) IElement {
-	if d, ok := app.defs[name]; ok {
-		if d.Kind() == DefKind_Element {
-			return d
-		}
+	if d := app.defByKind(name, DefKind_Element); d != nil {
+		return d.(IElement)
 	}
 	return nil
 }
 
 func (app *appDef) GDoc(name QName) IGDoc {
-	if d, ok := app.defs[name]; ok {
-		if d.Kind() == DefKind_GDoc {
-			return d
-		}
+	if d := app.defByKind(name, DefKind_GDoc); d != nil {
+		return d.(IGDoc)
 	}
 	return nil
 }
 
 func (app *appDef) GRecord(name QName) IGRecord {
-	if d, ok := app.defs[name]; ok {
-		if d.Kind() == DefKind_GRecord {
-			return d
-		}
+	if d := app.defByKind(name, DefKind_GRecord); d != nil {
+		return d.(IGRecord)
 	}
 	return nil
 }
@@ -169,53 +156,43 @@ func (app *appDef) HasChanges() bool {
 }
 
 func (app *appDef) Object(name QName) IObject {
-	if d, ok := app.defs[name]; ok {
-		if d.Kind() == DefKind_Object {
-			return d
-		}
+	if d := app.defByKind(name, DefKind_Object); d != nil {
+		return d.(IObject)
 	}
 	return nil
 }
 
 func (app *appDef) ODoc(name QName) IODoc {
-	if d, ok := app.defs[name]; ok {
-		if d.Kind() == DefKind_ODoc {
-			return d
-		}
+	if d := app.defByKind(name, DefKind_ODoc); d != nil {
+		return d.(IODoc)
 	}
 	return nil
 }
 
 func (app *appDef) ORecord(name QName) IORecord {
-	if d, ok := app.defs[name]; ok {
-		if d.Kind() == DefKind_ORecord {
-			return d
-		}
+	if d := app.defByKind(name, DefKind_ORecord); d != nil {
+		return d.(IORecord)
 	}
 	return nil
 }
 
 func (app *appDef) View(name QName) IView {
-	if v, ok := app.views[name]; ok {
-		return v
+	if d := app.defByKind(name, DefKind_ViewRecord); d != nil {
+		return d.(IView)
 	}
 	return nil
 }
 
 func (app *appDef) WDoc(name QName) IWDoc {
-	if d, ok := app.defs[name]; ok {
-		if d.Kind() == DefKind_WDoc {
-			return d
-		}
+	if d := app.defByKind(name, DefKind_WDoc); d != nil {
+		return d.(IWDoc)
 	}
 	return nil
 }
 
 func (app *appDef) WRecord(name QName) IWRecord {
-	if d, ok := app.defs[name]; ok {
-		if d.Kind() == DefKind_WRecord {
-			return d
-		}
+	if d := app.defByKind(name, DefKind_WRecord); d != nil {
+		return d.(IWRecord)
 	}
 	return nil
 }
@@ -235,13 +212,22 @@ func (app *appDef) addDef(name QName, kind DefKind) *def {
 	return d
 }
 
-func (app *appDef) appendDef(def *def) {
-	app.defs[def.QName()] = def
+func (app *appDef) appendDef(def interface{}) {
+	app.defs[def.(IDef).QName()] = def
 	app.changed()
 }
 
 func (app *appDef) changed() {
 	app.changes++
+}
+
+func (app *appDef) defByKind(name QName, kind DefKind) interface{} {
+	if d, ok := app.defs[name]; ok {
+		if d.(IDef).Kind() == kind {
+			return d
+		}
+	}
+	return nil
 }
 
 func (app *appDef) prepare() {
