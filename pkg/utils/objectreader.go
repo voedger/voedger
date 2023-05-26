@@ -11,19 +11,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type FieldsDef map[string]appdef.DataKind
-
-func Read(fieldName string, fd FieldsDef, rr istructs.IRowReader) (val interface{}) {
-	return ReadByKind(fieldName, fd[fieldName], rr)
-}
-
-func ReadValue(fieldName string, fd FieldsDef, appDef appdef.IAppDef, val istructs.IValue) (res interface{}) {
-	if fd[fieldName] == appdef.DataKind_Record {
-		return FieldsToMap(val.AsRecord(fieldName), appDef)
-	}
-	return ReadByKind(fieldName, fd[fieldName], val)
-}
-
 // panics on an unsupported kind guessing that pair <name, kind> could be taken from IDef.Fields() callback only
 func ReadByKind(name string, kind appdef.DataKind, rr istructs.IRowReader) interface{} {
 	switch kind {
@@ -48,15 +35,6 @@ func ReadByKind(name string, kind appdef.DataKind, rr istructs.IRowReader) inter
 	default:
 		panic("unsupported kind " + fmt.Sprint(kind) + " for field " + name)
 	}
-}
-
-func NewFieldsDef(def appdef.IDef) FieldsDef {
-	fields := make(map[string]appdef.DataKind)
-	def.Fields(
-		func(f appdef.IField) {
-			fields[f.Name()] = f.DataKind()
-		})
-	return fields
 }
 
 type mapperOpts struct {
@@ -92,37 +70,18 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 		optFunc(opts)
 	}
 
-	if opts.nonNilsOnly {
-		fd := NewFieldsDef(def)
-		obj.FieldNames(func(fieldName string) {
-			kind := fd[fieldName]
-			if opts.filter != nil {
-				if !opts.filter(fieldName, kind) {
-					return
-				}
-			}
-			if kind == appdef.DataKind_Record {
-				if ival, ok := obj.(istructs.IValue); ok {
-					res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), appDef, optFuncs...)
-				} else {
-					panic("DataKind_Record field met -> IValue must be provided")
-				}
-			} else {
-				res[fieldName] = ReadByKind(fieldName, kind, obj)
-			}
-		})
-	} else {
-		def.Fields(
-			func(f appdef.IField) {
-				fieldName, kind := f.Name(), f.DataKind()
+	if fields, ok := def.(appdef.IFields); ok {
+		if opts.nonNilsOnly {
+			obj.FieldNames(func(fieldName string) {
+				kind := fields.Field(fieldName).DataKind()
 				if opts.filter != nil {
 					if !opts.filter(fieldName, kind) {
 						return
 					}
 				}
 				if kind == appdef.DataKind_Record {
-					if ival, ok := obj.(istructs.IValue); ok {
-						res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), appDef, optFuncs...)
+					if v, ok := obj.(istructs.IValue); ok {
+						res[fieldName] = FieldsToMap(v.AsRecord(fieldName), appDef, optFuncs...)
 					} else {
 						panic("DataKind_Record field met -> IValue must be provided")
 					}
@@ -130,6 +89,26 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 					res[fieldName] = ReadByKind(fieldName, kind, obj)
 				}
 			})
+		} else {
+			fields.Fields(
+				func(f appdef.IField) {
+					fieldName, kind := f.Name(), f.DataKind()
+					if opts.filter != nil {
+						if !opts.filter(fieldName, kind) {
+							return
+						}
+					}
+					if kind == appdef.DataKind_Record {
+						if v, ok := obj.(istructs.IValue); ok {
+							res[fieldName] = FieldsToMap(v.AsRecord(fieldName), appDef, optFuncs...)
+						} else {
+							panic("DataKind_Record field met -> IValue must be provided")
+						}
+					} else {
+						res[fieldName] = ReadByKind(fieldName, kind, obj)
+					}
+				})
+		}
 	}
 	return res
 }

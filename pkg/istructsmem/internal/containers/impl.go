@@ -27,7 +27,7 @@ func newContainers() *Containers {
 }
 
 // Retrieve container for specified ID
-func (cnt *Containers) GetContainer(id ContainerID) (name string, err error) {
+func (cnt *Containers) Container(id ContainerID) (name string, err error) {
 	name, ok := cnt.ids[id]
 	if ok {
 		return name, nil
@@ -37,7 +37,7 @@ func (cnt *Containers) GetContainer(id ContainerID) (name string, err error) {
 }
 
 // Retrieve ID for specified container
-func (cnt *Containers) GetID(name string) (ContainerID, error) {
+func (cnt *Containers) ID(name string) (ContainerID, error) {
 	if id, ok := cnt.containers[name]; ok {
 		return id, nil
 	}
@@ -50,7 +50,7 @@ func (cnt *Containers) Prepare(storage istorage.IAppStorage, versions *vers.Vers
 		return err
 	}
 
-	if err = cnt.collectAllContainers(appDef); err != nil {
+	if err = cnt.collectAll(appDef); err != nil {
 		return err
 	}
 
@@ -64,21 +64,23 @@ func (cnt *Containers) Prepare(storage istorage.IAppStorage, versions *vers.Vers
 }
 
 // Retrieves and stores IDs for all known containers in application definition. Must be called then application starts
-func (cnt *Containers) collectAllContainers(appDef appdef.IAppDef) (err error) {
+func (cnt *Containers) collectAll(appDef appdef.IAppDef) (err error) {
 
 	// system containers
-	cnt.collectSysContainer("", NullContainerID)
+	cnt.collectSys("", NullContainerID)
 
 	// application containers
 	if appDef != nil {
 		appDef.Defs(
 			func(d appdef.IDef) {
-				d.Containers(
-					func(c appdef.IContainer) {
-						if !c.IsSys() {
-							err = errors.Join(err, cnt.collectAppContainer(c.Name()))
-						}
-					})
+				if cont, ok := d.(appdef.IContainers); ok {
+					cont.Containers(
+						func(c appdef.IContainer) {
+							if !c.IsSys() {
+								err = errors.Join(err, cnt.collect(c.Name()))
+							}
+						})
+				}
 			})
 	}
 
@@ -86,7 +88,7 @@ func (cnt *Containers) collectAllContainers(appDef appdef.IAppDef) (err error) {
 }
 
 // Retrieves and stores ID for specified application container
-func (cnt *Containers) collectAppContainer(name string) (err error) {
+func (cnt *Containers) collect(name string) (err error) {
 	if _, ok := cnt.containers[name]; ok {
 		return nil // already known container
 	}
@@ -105,7 +107,7 @@ func (cnt *Containers) collectAppContainer(name string) (err error) {
 }
 
 // Remember ID for specified system container
-func (cnt *Containers) collectSysContainer(name string, id ContainerID) {
+func (cnt *Containers) collectSys(name string, id ContainerID) {
 	cnt.containers[name] = id
 	cnt.ids[id] = name
 }
@@ -138,7 +140,7 @@ func (cnt *Containers) load01(storage istorage.IAppStorage) error {
 		}
 
 		if id <= ContainerNameIDSysLast {
-			return fmt.Errorf("unexpected ID (%v) is readed from system Containers view: %w", id, ErrWrongContainerID)
+			return fmt.Errorf("unexpected ID (%v) is loaded from system Containers view: %w", id, ErrWrongContainerID)
 		}
 
 		cnt.containers[name] = id
@@ -157,7 +159,7 @@ func (cnt *Containers) load01(storage istorage.IAppStorage) error {
 
 // Stores all known container to storage
 func (cnt *Containers) store(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
-	pKey := utils.ToBytes(consts.SysView_Containers, lastestVersion)
+	pKey := utils.ToBytes(consts.SysView_Containers, latestVersion)
 
 	batch := make([]istorage.BatchItem, 0)
 	for name, id := range cnt.containers {
@@ -178,8 +180,8 @@ func (cnt *Containers) store(storage istorage.IAppStorage, versions *vers.Versio
 		return fmt.Errorf("error store application container IDs to storage: %w", err)
 	}
 
-	if ver := versions.Get(vers.SysContainersVersion); ver != lastestVersion {
-		if err = versions.Put(vers.SysContainersVersion, lastestVersion); err != nil {
+	if ver := versions.Get(vers.SysContainersVersion); ver != latestVersion {
+		if err = versions.Put(vers.SysContainersVersion, latestVersion); err != nil {
 			return fmt.Errorf("error store system Containers view version: %w", err)
 		}
 	}

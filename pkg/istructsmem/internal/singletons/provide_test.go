@@ -30,12 +30,18 @@ func Test_BasicUsage(t *testing.T) {
 	}
 
 	testName := appdef.NewQName("test", "doc")
-	app := appdef.New()
-	app.AddStruct(testName, appdef.DefKind_CDoc).SetSingleton()
-	appDef, err := app.Build()
-	if err != nil {
-		panic(err)
+
+	testAppDef := func() appdef.IAppDef {
+		app := appdef.New()
+		app.AddSingleton(testName)
+		appDef, err := app.Build()
+		if err != nil {
+			panic(err)
+		}
+		return appDef
 	}
+
+	appDef := testAppDef()
 
 	stones := New()
 	if err := stones.Prepare(storage, versions, appDef); err != nil {
@@ -44,47 +50,40 @@ func Test_BasicUsage(t *testing.T) {
 
 	require := require.New(t)
 	t.Run("basic Singletons methods", func(t *testing.T) {
-		id, err := stones.GetID(testName)
+		id, err := stones.ID(testName)
 		require.NoError(err)
 		require.NotEqual(istructs.NullRecordID, id)
 
-		n, err := stones.GetQName(id)
-		require.NoError(err)
-		require.Equal(testName, n)
-
-		t.Run("must be able to load early stored names", func(t *testing.T) {
-			otherVersions := vers.New()
-			if err := otherVersions.Prepare(storage); err != nil {
+		t.Run("must be able to load early stored singletons", func(t *testing.T) {
+			versions1 := vers.New()
+			if err := versions1.Prepare(storage); err != nil {
 				panic(err)
 			}
+
+			appDef1 := testAppDef()
 
 			stones1 := New()
-			if err := stones1.Prepare(storage, versions, nil); err != nil {
+			if err := stones1.Prepare(storage, versions1, appDef1); err != nil {
 				panic(err)
 			}
 
-			id1, err := stones.GetID(testName)
+			id1, err := stones1.ID(testName)
 			require.NoError(err)
 			require.Equal(id, id1)
-
-			n1, err := stones.GetQName(id)
-			require.NoError(err)
-			require.Equal(testName, n1)
 		})
 	})
 }
 
-func test_AppDefSingletons(t *testing.T, appDef appdef.IAppDef, stons *Singletons) {
+func test_AppDefSingletons(t *testing.T, appDef appdef.IAppDef, st *Singletons) {
 	require := require.New(t)
 	appDef.Defs(
 		func(d appdef.IDef) {
-			if d.Singleton() {
-				id, err := stons.GetID(d.QName())
-				require.NoError(err)
-				require.NotEqual(istructs.NullRecordID, id)
-				name, err := stons.GetQName(id)
-				require.NoError(err)
-				require.Equal(d.QName(), name)
+			if cDoc, ok := d.(appdef.ICDoc); ok {
+				if cDoc.Singleton() {
+					id, err := st.ID(cDoc.QName())
+					require.NoError(err)
+					require.NotEqual(istructs.NullRecordID, id)
+				}
 			}
 		})
 }
@@ -92,9 +91,9 @@ func test_AppDefSingletons(t *testing.T, appDef appdef.IAppDef, stons *Singleton
 func Test_SingletonsGetID(t *testing.T) {
 
 	require := require.New(t)
-	cDocName := appdef.NewQName("test", "SignletonCDoc")
+	cDocName := appdef.NewQName("test", "SingletonCDoc")
 
-	stons := New()
+	st := New()
 
 	t.Run("must be ok to construct Singletons", func(t *testing.T) {
 		storage, versions, appDef := func() (istorage.IAppStorage, *vers.Versions, appdef.IAppDef) {
@@ -106,30 +105,28 @@ func Test_SingletonsGetID(t *testing.T) {
 			require.NoError(err)
 
 			app := appdef.New()
-			def := app.AddStruct(cDocName, appdef.DefKind_CDoc)
+			def := app.AddSingleton(cDocName)
 			def.AddField("f1", appdef.DataKind_QName, true)
-			def.SetSingleton()
 			appDef, err := app.Build()
 			require.NoError(err)
 
 			return storage, versions, appDef
 		}()
 
-		err := stons.Prepare(storage, versions, appDef)
+		err := st.Prepare(storage, versions, appDef)
 		require.NoError(err)
 
-		test_AppDefSingletons(t, appDef, stons)
+		test_AppDefSingletons(t, appDef, st)
 	})
 
 	testID := func(id istructs.RecordID, known bool, qname appdef.QName) {
-		t.Run(fmt.Sprintf("test Singletons.GetQName(%v)", id), func(t *testing.T) {
-			qName, err := stons.GetQName(id)
+		t.Run(fmt.Sprintf("test Singletons QName(%v) founded", id), func(t *testing.T) {
+			n, ok := st.ids[id]
 			if known {
-				require.NoError(err)
-				require.Equal(qname, qName)
+				require.True(ok)
+				require.Equal(qname, n)
 			} else {
-				require.ErrorIs(err, ErrIDNotFound)
-				require.Equal(qName, appdef.NullQName)
+				require.False(ok)
 			}
 		})
 	}
@@ -139,7 +136,7 @@ func Test_SingletonsGetID(t *testing.T) {
 			var id istructs.RecordID
 			var err error
 
-			id, err = stons.GetID(qname)
+			id, err = st.ID(qname)
 			if known {
 				require.NoError(err)
 				require.NotNil(id)
@@ -171,7 +168,7 @@ func Test_SingletonsGetID(t *testing.T) {
 func Test_Singletons_Errors(t *testing.T) {
 
 	require := require.New(t)
-	cDocName := appdef.NewQName("test", "SignletonCDoc")
+	cDocName := appdef.NewQName("test", "SingletonCDoc")
 	testError := fmt.Errorf("test error")
 
 	t.Run("must error if unknown version of Singletons system view", func(t *testing.T) {
@@ -199,9 +196,8 @@ func Test_Singletons_Errors(t *testing.T) {
 		require.NoError(err)
 
 		app := appdef.New()
-		def := app.AddStruct(cDocName, appdef.DefKind_CDoc)
+		def := app.AddSingleton(cDocName)
 		def.AddField("f1", appdef.DataKind_QName, true)
-		def.SetSingleton()
 		appDef, err := app.Build()
 		require.NoError(err)
 
@@ -220,38 +216,38 @@ func Test_Singletons_Errors(t *testing.T) {
 
 		appDefBuilder := appdef.New()
 		for id := istructs.FirstSingletonID; id <= istructs.MaxSingletonID; id++ {
-			appDefBuilder.AddStruct(appdef.NewQName("test", fmt.Sprintf("CDoc_%v", id)), appdef.DefKind_CDoc).SetSingleton()
+			appDefBuilder.AddSingleton(appdef.NewQName("test", fmt.Sprintf("CDoc_%v", id)))
 		}
 		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
 
-		stons := New()
-		err = stons.Prepare(storage, versions, appDef)
+		st := New()
+		err = st.Prepare(storage, versions, appDef)
 
 		require.ErrorIs(err, ErrSingletonIDsExceeds)
 	})
 
-	t.Run("must error if store ID for some singledoc to storage is failed", func(t *testing.T) {
+	t.Run("must error if store ID for some singleton doc to storage is failed", func(t *testing.T) {
 		defName := appdef.NewQName("test", "ErrorDef")
 
 		storage := teststore.NewStorage()
-		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_SingletonIDs, lastestVersion), []byte(defName.String()))
+		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_SingletonIDs, latestVersion), []byte(defName.String()))
 
 		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
 		app := appdef.New()
-		app.AddStruct(defName, appdef.DefKind_CDoc).SetSingleton()
+		app.AddSingleton(defName)
 		appDef, err := app.Build()
 		require.NoError(err)
 
-		stons := New()
-		err = stons.Prepare(storage, versions, appDef)
+		st := New()
+		err = st.Prepare(storage, versions, appDef)
 		require.ErrorIs(err, testError)
 	})
 
-	t.Run("must error if retrieve ID for some singledoc from storage is failed", func(t *testing.T) {
+	t.Run("must error if retrieve ID for some singleton doc from storage is failed", func(t *testing.T) {
 		defName := appdef.NewQName("test", "ErrorDef")
 
 		storage := teststore.NewStorage()
@@ -261,17 +257,17 @@ func Test_Singletons_Errors(t *testing.T) {
 		require.NoError(err)
 
 		app := appdef.New()
-		app.AddStruct(defName, appdef.DefKind_CDoc).SetSingleton()
+		app.AddSingleton(defName)
 		appDef, err := app.Build()
 		require.NoError(err)
 
-		stons := New()
-		err = stons.Prepare(storage, versions, appDef)
+		st := New()
+		err = st.Prepare(storage, versions, appDef)
 		require.NoError(err)
 
 		storage.ScheduleGetError(testError, nil, []byte(defName.String()))
-		stons1 := New()
-		err = stons1.Prepare(storage, versions, appDef)
+		st1 := New()
+		err = st1.Prepare(storage, versions, appDef)
 		require.ErrorIs(err, testError)
 	})
 
@@ -281,19 +277,19 @@ func Test_Singletons_Errors(t *testing.T) {
 		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
-		versions.Put(vers.SysSingletonsVersion, lastestVersion)
+		versions.Put(vers.SysSingletonsVersion, latestVersion)
 
 		t.Run("crack storage by put invalid QName string into Singletons system view", func(t *testing.T) {
 			err = storage.Put(
-				utils.ToBytes(consts.SysView_SingletonIDs, lastestVersion),
+				utils.ToBytes(consts.SysView_SingletonIDs, latestVersion),
 				[]byte("error.CDoc.be-e-e"),
 				utils.ToBytes(istructs.MaxSingletonID),
 			)
 			require.NoError(err)
 		})
 
-		stons := New()
-		err = stons.Prepare(storage, versions, nil)
+		st := New()
+		err = st.Prepare(storage, versions, nil)
 
 		require.ErrorIs(err, appdef.ErrInvalidQNameStringRepresentation)
 	})

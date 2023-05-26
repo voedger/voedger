@@ -4,15 +4,13 @@
 
 package queryprocessor
 
-import coreutils "github.com/voedger/voedger/pkg/utils"
-
 type AndFilter struct {
 	filters []IFilter
 }
 
-func (f AndFilter) IsMatch(fd coreutils.FieldsDef, outputRow IOutputRow) (bool, error) {
+func (f AndFilter) IsMatch(fk FieldsKinds, outputRow IOutputRow) (bool, error) {
 	for _, filter := range f.filters {
-		match, err := filter.IsMatch(fd, outputRow)
+		match, err := filter.IsMatch(fk, outputRow)
 		if err != nil {
 			return false, err
 		}

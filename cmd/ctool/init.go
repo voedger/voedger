@@ -8,6 +8,7 @@ package main
 import (
 	"errors"
 	"net"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/logger"
@@ -30,7 +31,7 @@ func newInitCmd() *cobra.Command {
 		Short: "Creates the file cluster.json for the SE edition cluster",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != initSeArgCount && len(args) != initSeWithDCArgCount {
-				return ErrorInvalidNumberOfArguments
+				return ErrInvalidNumberOfArguments
 			}
 			return nil
 		},
@@ -85,10 +86,16 @@ func initCE(cmd *cobra.Command, args []string) error {
 	defer cluster.saveToJSON()
 
 	if !cluster.Draft {
-		return ErrorClusterConfAlreadyExists
+		return ErrClusterConfAlreadyExists
 	}
 
-	err := mkCommandDirAndLogFile(cmd)
+	c := newCmd(ckInit, "CE "+strings.Join(args, " "))
+	if err := cluster.applyCmd(c); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
+	err := mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}
@@ -113,13 +120,19 @@ func initCE(cmd *cobra.Command, args []string) error {
 func initSE(cmd *cobra.Command, args []string) error {
 
 	cluster := newCluster()
-	defer cluster.saveToJSON()
 
 	if !cluster.Draft {
-		return ErrorClusterConfAlreadyExists
+		return ErrClusterConfAlreadyExists
 	}
 
-	err := mkCommandDirAndLogFile(cmd)
+	c := newCmd(ckInit, "SE "+strings.Join(args, " "))
+	if err := cluster.applyCmd(c); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
+	defer cluster.saveToJSON()
+	err := mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}
@@ -132,6 +145,9 @@ func initSE(cmd *cobra.Command, args []string) error {
 	err = cluster.validate()
 	if err == nil {
 		println("cluster configuration is ok")
+		if err = cluster.Cmd.apply(cluster); err != nil {
+			logger.Error(err)
+		}
 	}
 
 	return err

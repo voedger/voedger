@@ -7,6 +7,7 @@ package istructsmem
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/untillpro/dynobuffers"
@@ -23,9 +24,9 @@ var NullAppConfig = newAppConfig(istructs.AppQName_null, appdef.New())
 
 var (
 	nullDynoBuffer = dynobuffers.NewBuffer(dynobuffers.NewScheme())
-	// not a func -> golang tokensjwt.TimeFunc will be initialized on process init forever
-	testTokensFactory    = func() payloads.IAppTokensFactory { return payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()) }
-	simpleStorageProvder = func() istorage.IAppStorageProvider {
+	// not a func -> golang itokensjwt.TimeFunc will be initialized on process init forever
+	testTokensFactory     = func() payloads.IAppTokensFactory { return payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()) }
+	simpleStorageProvider = func() istorage.IAppStorageProvider {
 		asf := istorage.ProvideMem()
 		return istorageimpl.Provide(asf)
 	}
@@ -46,8 +47,8 @@ func crackLogOffset(ofs istructs.Offset) (hi uint64, low uint16) {
 	return crackID(uint64(ofs))
 }
 
-// uncrackLogOffset calculate log offset from two-parts key — partition key (hi) and clustering columns (lo)
-func uncrackLogOffset(hi uint64, low uint16) istructs.Offset {
+// glueLogOffset calculate log offset from two-parts key — partition key (hi) and clustering columns (lo)
+func glueLogOffset(hi uint64, low uint16) istructs.Offset {
 	return istructs.Offset(hi<<partitionBits | uint64(low))
 }
 
@@ -77,7 +78,7 @@ func splitLogOffset(offset istructs.Offset) (pk, cc []byte) {
 func calcLogOffset(pk, cc []byte) istructs.Offset {
 	hi := binary.BigEndian.Uint64(pk)
 	low := binary.BigEndian.Uint16(cc)
-	return uncrackLogOffset(hi, low)
+	return glueLogOffset(hi, low)
 }
 
 // used in tests only
@@ -97,20 +98,24 @@ func FillElementFromJSON(data map[string]interface{}, def appdef.IDef, b istruct
 			b.PutBool(fieldName, fv)
 		case []interface{}:
 			// e.g. TestBasicUsage_Dashboard(), "order_item": [<2 elements>]
-			containerName := fieldName
-			containerDef := def.ContainerDef(containerName)
-			if containerDef.Kind() == appdef.DefKind_null {
-				return fmt.Errorf("container with name %s is not found", containerName)
-			}
-			for i, intf := range fv {
-				objContainerElem, ok := intf.(map[string]interface{})
-				if !ok {
-					return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
+			if cont, ok := def.(appdef.IContainers); ok {
+				containerName := fieldName
+				containerDef := cont.ContainerDef(containerName)
+				if containerDef.Kind() == appdef.DefKind_null {
+					return fmt.Errorf("container with name %s is not found", containerName)
 				}
-				containerElemBuilder := b.ElementBuilder(fieldName)
-				if err := FillElementFromJSON(objContainerElem, containerDef, containerElemBuilder); err != nil {
-					return err
+				for i, val := range fv {
+					objContainerElem, ok := val.(map[string]interface{})
+					if !ok {
+						return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
+					}
+					containerElemBuilder := b.ElementBuilder(fieldName)
+					if err := FillElementFromJSON(objContainerElem, containerDef, containerElemBuilder); err != nil {
+						return err
+					}
 				}
+			} else {
+				return fmt.Errorf("definition %v has not containers", def.QName())
 			}
 		}
 	}
@@ -125,24 +130,26 @@ func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectB
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
 	appDef := appStructs.AppDef()
 	def := appDef.Def(obj.AsQName(appdef.SystemField_QName))
-	def.Fields(
-		func(f appdef.IField) {
-			if err != nil || f.DataKind() != appdef.DataKind_RecordID {
-				return
-			}
-			recID := obj.AsRecordID(f.Name())
-			if recID.IsRaw() || recID == istructs.NullRecordID {
-				return
-			}
-			var rec istructs.IRecord
-			rec, err = appStructs.Records().Get(wsid, true, recID)
-			if err != nil {
-				return
-			}
-			if rec.QName() == appdef.NullQName {
-				err = fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, recID,
-					obj.AsQName(appdef.SystemField_QName), f.Name())
-			}
-		})
+	if fields, ok := def.(appdef.IFields); ok {
+		fields.Fields(
+			func(f appdef.IField) {
+				if f.DataKind() != appdef.DataKind_RecordID {
+					return
+				}
+				recID := obj.AsRecordID(f.Name())
+				if recID.IsRaw() || recID == istructs.NullRecordID {
+					return
+				}
+				if rec, readErr := appStructs.Records().Get(wsid, true, recID); readErr == nil {
+					if rec.QName() == appdef.NullQName {
+						err = errors.Join(err,
+							fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, recID,
+								obj.AsQName(appdef.SystemField_QName), f.Name()))
+					}
+				} else {
+					err = errors.Join(err, readErr)
+				}
+			})
+	}
 	return err
 }

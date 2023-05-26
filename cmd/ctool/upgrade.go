@@ -23,12 +23,12 @@ func upgrade(cmd *cobra.Command, arg []string) error {
 
 	cluster := newCluster()
 
-	if version == cluster.CToolVersion {
+	if cluster.ActualClusterVersion == cluster.DesiredClusterVersion {
 		fmt.Println("no update required")
 		return nil
 	}
 
-	err := mkCommandDirAndLogFile(cmd)
+	err := mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}

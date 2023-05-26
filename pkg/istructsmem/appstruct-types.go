@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/singletons"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/uniques"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 )
 
@@ -109,7 +110,7 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	if cfg.appDefBuilder.HasChanges() {
 		sch, err := cfg.appDefBuilder.Build()
 		if err != nil {
-			panic(fmt.Errorf("%v: unable rebuild changed application definition: %w", cfg.Name, err))
+			return fmt.Errorf("%v: unable rebuild changed application definition: %w", cfg.Name, err)
 		}
 		cfg.AppDef = sch
 	}
@@ -134,8 +135,13 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		return err
 	}
 
-	// prepare singleton CDOCs
+	// prepare singleton CDocs
 	if err := cfg.singletons.Prepare(cfg.storage, cfg.versions, cfg.AppDef); err != nil {
+		return err
+	}
+
+	// prepare unique IDs
+	if err := uniques.PrepareAppDefUniqueIDs(cfg.storage, cfg.versions, cfg.qNames, cfg.AppDef); err != nil {
 		return err
 	}
 

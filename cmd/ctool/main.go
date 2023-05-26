@@ -19,6 +19,9 @@ import (
 //go:embed version
 var version string
 
+// path to SSH key (flag --ssh-key)
+var sshKey string
+
 func main() {
 	logger.PrintLine = printLogLine
 	defer deleteScriptsTempDir()
@@ -41,9 +44,10 @@ func execRootCmd(args []string, ver string) error {
 		newValidateCmd(),
 		newUpgradeCmd(),
 		newReplaceCmd(),
-		newApplyCmd(),
+		newRepeatCmd(),
 	)
 
+	rootCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
 	logger.SetLogLevel(getLoggerLevel())
 
 	return cobrau.ExecCommandAndCatchInterrupt(rootCmd)

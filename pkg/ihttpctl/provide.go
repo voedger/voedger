@@ -16,7 +16,7 @@ func NewHTTPProcessorController(api ihttp.IHTTPProcessorAPI, staticResources []S
 	for _, sr := range staticResources {
 		for url, fs := range sr {
 			if _, exists := srs[url]; exists {
-				return nil, fmt.Errorf("static resource with duplicate url %s", url)
+				return nil, fmt.Errorf("static resource with duplicate url %s", url) // TODO: panic
 			}
 			srs[url] = fs
 		}

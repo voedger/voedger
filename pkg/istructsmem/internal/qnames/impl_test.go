@@ -47,7 +47,7 @@ func TestQNames(t *testing.T) {
 	if err := names.Prepare(storage, versions,
 		func() appdef.IAppDef {
 			appDefBuilder := appdef.New()
-			appDefBuilder.AddStruct(defName, appdef.DefKind_CDoc)
+			appDefBuilder.AddCDoc(defName)
 			appDef, err := appDefBuilder.Build()
 			require.NoError(err)
 			return appDef
@@ -59,11 +59,11 @@ func TestQNames(t *testing.T) {
 	t.Run("basic QNames methods", func(t *testing.T) {
 
 		check := func(names *QNames, name appdef.QName) QNameID {
-			id, err := names.GetID(name)
+			id, err := names.ID(name)
 			require.NoError(err)
 			require.NotEqual(NullQNameID, id)
 
-			n, err := names.GetQName(id)
+			n, err := names.QName(id)
 			require.NoError(err)
 			require.Equal(name, n)
 
@@ -98,7 +98,7 @@ func TestQNames(t *testing.T) {
 			if err := names2.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					appdefBuilder := appdef.New()
-					appdefBuilder.AddStruct(defName, appdef.DefKind_CDoc)
+					appdefBuilder.AddCDoc(defName)
 					appDef, err := appdefBuilder.Build()
 					require.NoError(err)
 					return appDef
@@ -113,13 +113,13 @@ func TestQNames(t *testing.T) {
 	})
 
 	t.Run("must be error if unknown name", func(t *testing.T) {
-		id, err := names.GetID(appdef.NewQName("test", "unknown"))
+		id, err := names.ID(appdef.NewQName("test", "unknown"))
 		require.Equal(NullQNameID, id)
 		require.ErrorIs(err, ErrNameNotFound)
 	})
 
 	t.Run("must be error if unknown id", func(t *testing.T) {
-		n, err := names.GetQName(QNameID(MaxAvailableQNameID))
+		n, err := names.QName(QNameID(MaxAvailableQNameID))
 		require.Equal(appdef.NullQName, n)
 		require.ErrorIs(err, ErrIDNotFound)
 	})
@@ -137,14 +137,14 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, lastestVersion+1)
+		versions.Put(vers.SysQNamesVersion, latestVersion+1)
 
 		names := New()
 		err := names.Prepare(storage, versions, nil, nil)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
 
-	t.Run("must be error if invalid QName readed from system view ", func(t *testing.T) {
+	t.Run("must be error if invalid QName loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
@@ -153,7 +153,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, lastestVersion)
+		versions.Put(vers.SysQNamesVersion, latestVersion)
 		const badName = "-test.error.qname-"
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(badName), utils.ToBytes(QNameID(512)))
 
@@ -163,7 +163,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		require.ErrorContains(err, badName)
 	})
 
-	t.Run("must be ok if deleted QName readed from system view ", func(t *testing.T) {
+	t.Run("must be ok if deleted QName loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
@@ -172,7 +172,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, lastestVersion)
+		versions.Put(vers.SysQNamesVersion, latestVersion)
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte("test.deleted"), utils.ToBytes(NullQNameID))
 
 		names := New()
@@ -180,7 +180,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("must be error if invalid (small) QNameID readed from system view ", func(t *testing.T) {
+	t.Run("must be error if invalid (small) QNameID loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(istorage.ProvideMem())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
@@ -189,7 +189,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, lastestVersion)
+		versions.Put(vers.SysQNamesVersion, latestVersion)
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(istructs.QNameForError.String()), utils.ToBytes(QNameIDForError))
 
 		names := New()
@@ -212,7 +212,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			func() appdef.IAppDef {
 				appDefBuilder := appdef.New()
 				for i := 0; i <= MaxAvailableQNameID; i++ {
-					appDefBuilder.AddStruct(appdef.NewQName("test", fmt.Sprintf("name_%d", i)), appdef.DefKind_Object)
+					appDefBuilder.AddObject(appdef.NewQName("test", fmt.Sprintf("name_%d", i)))
 				}
 				appDef, err := appDefBuilder.Build()
 				require.NoError(err)
@@ -240,7 +240,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					appDefBuilder := appdef.New()
-					appDefBuilder.AddStruct(qName, appdef.DefKind_Object)
+					appDefBuilder.AddObject(qName)
 					appDef, err := appDefBuilder.Build()
 					require.NoError(err)
 					return appDef
@@ -263,7 +263,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					appDefBuilder := appdef.New()
-					appDefBuilder.AddStruct(qName, appdef.DefKind_Object)
+					appDefBuilder.AddObject(qName)
 					appDef, err := appDefBuilder.Build()
 					require.NoError(err)
 					return appDef

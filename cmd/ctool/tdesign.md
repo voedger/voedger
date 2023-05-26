@@ -13,12 +13,12 @@ In the full version of `cluster.json` array `Nodes` contains 5 elements.
 
 ```txt
 {
-  // Cluster edition type
-  "Edition": "SE", 
+  // Edition
+  "EditionType": "SE", 
   
   // ctool version
-  "CToolVersion": "0.0.1", 
-  
+  "ActualClusterVersion": "0.0.2",
+
   // List of data centers
   // Exists only for multi-dc deployment
   "DataCenters": [ 
@@ -26,30 +26,23 @@ In the full version of `cluster.json` array `Nodes` contains 5 elements.
     "dc2", // relates to Nodes[3]
     "dc3"  // relates to Nodes[4]
   ],
-  
-  // Skipped if empty
-  "LastAttemptInfo": "some info about cluster",
 
-  // Cluster nodes
   "Nodes": [
     {
-      "NodeRole": "SENode", // Node role
-
-      "Address": "5.255.255.55", // IP address
-
-      // Cluster status
-      "State": {
+      // Node role
+      "NodeRole": "SENode",
+   
+      // info on the last attempt
+      // Skipped if empty
+      "Info": "some info"
         
-        // Version from the last successful attempt
-        // Skipped if empty
-        "NodeVersion": "0.0.1",
-        
-        "AttemptNo": 1,  // Attempt number
-        
-        // Skipped if empty
-        "Info": "some info about node"
+      // actual node state     
+      "ActualNodeState": {
+        "Address": "5.255.255.55",
+        "NodeVersion": "0.0.2"
       }
-    }
+
+    },
   ]
 }
 ```
@@ -62,11 +55,21 @@ In the full version of `cluster.json` array `Nodes` contains 5 elements.
 
 ```txt
 {
-  // IP address
+  // Edition
   "EditionType": "SE", 
   
   // ctool version
-  "ClusterVersion": "0.0.2", 
+  "ActualClusterVersion": "",
+  "DesiredClusterVersion": "0.0.2",
+
+  // actual command for apply
+  "Cmd": {
+    "Kind": "command kind (name)",
+    "Args": "command arguments separated by a space"
+  },
+
+  // Skipped if empty
+  "LastAttemptError": "some error",
 
   // List of data centers
   // Exists only for multi-dc deployment
@@ -75,31 +78,26 @@ In the full version of `cluster.json` array `Nodes` contains 5 elements.
     "dc2", // relates to Nodes[3]
     "dc3"  // relates to Nodes[4]
   ],
-  
-  // Skipped if empty
-  "LastAttemptError": "some error",
-  
+
   "Nodes": [
     {
       // Node role
       "NodeRole": "SENode",
 
-      // IP address
-      "Address": "5.255.255.55",  
+       
+      // Error on the last attempt
+      // Skipped if empty
+      "Error": "some error"
 
-      // Cluster status
-      "State": {
-        // Version from the last successful attempt
-        // Skipped if empty
-        "NodeVersion": "0.0.1",
-        
-        // Attempt number
-        "AttemptNo": 2,
-        
-        // Error on the last attempt
-        // Skipped if empty
-        "Error": "some error"
+      "ActualNodeState": {
+        "Address": "",
+        "NodeVersion": ""
       }
+      "DesiredNodeState": {
+        "Address": "5.255.255.55",
+        "NodeVersion": "0.0.2"
+      }
+
     },
   ]
 }
@@ -108,16 +106,23 @@ In the full version of `cluster.json` array `Nodes` contains 5 elements.
 ## cluster.json: Replace
 
 Example of the fragment `cluster.json` with comments.
+Replace DBNode from 10.0.0.21 to 10.0.0.22
 
 In the full version of `cluster.json` array `Nodes` contains 5 elements.
 
 ```txt
 {
-  // IP address
+  // Edition
   "EditionType": "SE", 
   
   // ctool version
-  "ClusterVersion": "0.0.2", 
+  "ActualClusterVersion": "0.0.2",
+  
+  // replace command for apply
+  "Cmd": {
+    "Kind": "replace",
+    "Args": "10.0.0.21 10.0.0.22"
+  },
 
   // List of data centers
   // Exists only for multi-dc deployment
@@ -126,35 +131,40 @@ In the full version of `cluster.json` array `Nodes` contains 5 elements.
     "dc2", // relates to Nodes[3]
     "dc3"  // relates to Nodes[4]
   ],
-  
-  // Skipped if empty
-  "LastAttemptError": "some error",
-  
+
   "Nodes": [
     {
       // Node role
-      "NodeRole": "SENode",
-
-      "State": {    
-        "Address": "5.255.255.55",
+      "NodeRole": "DBNode",
+       
+      "ActualNodeState": {
+        "Address": "10.0.0.21",
+        "NodeVersion": "0.0.2"
       }
-      "PreviousState": {
-      
-        "Address": "5.255.255.54",  
-      
-        // Version from the last successful attempt
-        // Skipped if empty
-        "NodeVersion": "0.0.1",
-        
-        // Attempt number
-        "AttemptNo": 2,
-        
-        // Error on the last attempt
-        // Skipped if empty
-        "Error": "some error"
-      }      
+      "DesiredNodeState": {
+        "Address": "10.0.0.22",
+        "NodeVersion": "0.0.2"
+      }
+
     },
   ]
 }
 ```
+## NodeControllerFunction
 
+Works if: section DesiredNodeState exists
+
+  - Optionally update docker
+  - Assign ActualNodeState = DesiredNodeState
+  - Remove DesiredNodeState
+
+## ClusterCntrollerFunction
+
+Works if: Cmd exists 
+
+  - DeploySwarm()
+  - UpdateSEDockerStack()
+  - UpdateDBScyllaDockerStack()
+  - UpdateMonDockerStack()
+  - Assign ActualClusterVersion = DesiredClusterVersion
+  - Remove Cmd

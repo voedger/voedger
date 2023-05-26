@@ -16,12 +16,11 @@ const (
 )
 
 const (
-	minNormalFloat64   = 0x1.0p-1022
-	rootDocument       = ""
-	Field_JSONDef_Body = "Body"
+	minNormalFloat64 = 0x1.0p-1022
+	rootDocument     = ""
 )
 
 var (
 	qNamePosDepartment = appdef.NewQName("pos", "Department")
-	qNameXLowerCase    = appdef.NewQName("x", "lower-case")
+	qNameXLowerCase    = appdef.NewQName("x", "lower_case")
 )

@@ -103,7 +103,7 @@ resource "aws_instance" "node_00" {
     "echo $GOROOT",
     "echo $PATH", 
     "cd $HOME/voedger/cmd/ctool && go build -o ctool",
-    "$HOME/voedger/cmd/ctool/ctool init SE 10.0.0.11 10.0.0.15 10.0.0.12 10.0.0.13 10.0.0.14",
+    "$HOME/voedger/cmd/ctool/ctool init SE 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15",
     "$HOME/voedger/cmd/ctool/ctool apply /tmp/amazonKey.pem"
     ]
   }

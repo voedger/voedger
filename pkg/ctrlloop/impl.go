@@ -15,14 +15,14 @@ import (
 	"github.com/untillpro/goutils/logger"
 )
 
-func scheduler[Key comparable, SP any, State any](in chan OriginalMessage[Key, SP], dedupInCh chan statefulMessage[Key, SP, State], repeatCh chan scheduledMessage[Key, SP, State], nowTimeFunc nowTimeFunction) {
+func scheduler[Key comparable, SP any, State any](in chan ControlMessage[Key, SP], dedupInCh chan statefulMessage[Key, SP, State], repeatCh chan scheduledMessage[Key, SP, State], nowTimeFunc nowTimeFunction) {
 	defer close(dedupInCh)
 
 	schedulerObj := newScheduler[Key, SP, State](nil)
 	var serialNumber uint64
 
 	ok := true
-	var m OriginalMessage[Key, SP]
+	var m ControlMessage[Key, SP]
 	for ok {
 		now := nowTimeFunc()
 		select {

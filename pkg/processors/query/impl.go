@@ -27,7 +27,9 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -41,9 +43,9 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 	} else {
 		fieldsDefs := &fieldsDefs{
 			appDef: appDef,
-			fields: make(map[appdef.QName]coreutils.FieldsDef),
+			fields: make(map[appdef.QName]FieldsKinds),
 		}
-		rootFields := coreutils.NewFieldsDef(resultMeta)
+		rootFields := newFieldsKinds(resultMeta)
 		operators = append(operators, pipeline.WireAsyncOperator("Result fields", &ResultFieldsOperator{
 			elements:   params.Elements(),
 			rootFields: rootFields,
@@ -81,7 +83,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 }
 
 func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
-	appStructsProvider istructs.IAppStructsProvider, maxPrepareQueries int, metrics imetrics.IMetrics, hvm string,
+	appStructsProvider istructs.IAppStructsProvider, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
 	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, appCfgs istructsmem.AppConfigsType) pipeline.IService {
 	secretReader := isecretsimpl.ProvideSecretReader()
 	return pipeline.NewService(func(ctx context.Context) {
@@ -92,7 +94,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				now := time.Now()
 				msg := intf.(IQueryMessage)
 				qpm := &queryProcessorMetrics{
-					hvm:     hvm,
+					vvm:     vvm,
 					app:     msg.AppQName(),
 					metrics: metrics,
 				}
@@ -133,10 +135,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
-		operator("unmarshal JSON", func(ctx context.Context, qw *queryWork) (err error) {
-			err = json.Unmarshal(qw.msg.Body(), &qw.requestData)
-			return coreutils.WrapSysError(err, http.StatusBadRequest)
-		}),
 		operator("authenticate query request", func(ctx context.Context, qw *queryWork) (err error) {
 			req := iauthnz.AuthnRequest{
 				Host:        qw.msg.Host(),
@@ -147,6 +145,28 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				return coreutils.WrapSysError(err, http.StatusUnauthorized)
 			}
 			return
+		}),
+		operator("check workspace active", func(ctx context.Context, qw *queryWork) (err error) {
+			for _, prn := range qw.principals {
+				if prn.Kind == iauthnz.PrincipalKind_Role && prn.QName == iauthnz.QNameRoleSystem && prn.WSID == qw.msg.WSID() {
+					// system -> allow to work in any case
+					return nil
+				}
+			}
+			
+			wsDesc, err := qw.appStructs.Records().GetSingleton(qw.msg.WSID(), sysshared.QNameCDocWorkspaceDescriptor)
+			if err != nil {
+				// notest
+				return err
+			}
+			if wsDesc.QName() == appdef.NullQName {
+				// TODO: query prcessor currently does not check workspace initialization
+				return nil
+			}
+			if wsDesc.AsInt32(sysshared.Field_Status) != int32(sysshared.WorkspaceStatus_Active) {
+				return processors.ErrWSInactive
+			}
+			return nil
 		}),
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
 			req := iauthnz.AuthzRequest{
@@ -161,6 +181,10 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
 			}
 			return nil
+		}),
+		operator("unmarshal JSON", func(ctx context.Context, qw *queryWork) (err error) {
+			err = json.Unmarshal(qw.msg.Body(), &qw.requestData)
+			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("get AppConfig", func(ctx context.Context, qw *queryWork) (err error) {
 			cfg, ok := appCfgs[qw.msg.AppQName()]
@@ -197,7 +221,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("validate: get query params", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, coreutils.NewFieldsDef(qw.resultDef))
+			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, newFieldsKinds(qw.resultDef))
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("authorize result", func(ctx context.Context, qw *queryWork) (err error) {
@@ -244,7 +268,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			err = qw.queryFunction.Exec(ctx, qw.execQueryArgs, func(object istructs.IObject) error {
 				pathToIdx := make(map[string]int)
 				if qw.resultDef.QName() == istructs.QNameJSON {
-					pathToIdx[Field_JSONDef_Body] = 0
+					pathToIdx[processors.Field_JSONDef_Body] = 0
 				} else {
 					for i, element := range qw.queryParams.Elements() {
 						pathToIdx[element.Path().Name()] = i
@@ -256,7 +280,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 						keyToIdx: pathToIdx,
 						values:   make([]interface{}, len(pathToIdx)),
 					},
-					enrichedRootFields: make(map[string]appdef.DataKind),
+					enrichedRootFieldsKinds: make(map[string]appdef.DataKind),
 				})
 			})
 			return coreutils.WrapSysError(err, http.StatusInternalServerError)
@@ -368,16 +392,16 @@ func NewQueryMessage(requestCtx context.Context, appQName istructs.AppQName, wsi
 
 type workpiece struct {
 	pipeline.IWorkpiece
-	object             istructs.IObject
-	outputRow          IOutputRow
-	enrichedRootFields coreutils.FieldsDef
+	object                  istructs.IObject
+	outputRow               IOutputRow
+	enrichedRootFieldsKinds FieldsKinds
 }
 
-func (w workpiece) Object() istructs.IObject                { return w.object }
-func (w workpiece) OutputRow() IOutputRow                   { return w.outputRow }
-func (w workpiece) EnrichedRootFields() coreutils.FieldsDef { return w.enrichedRootFields }
-func (w workpiece) PutEnrichedRootField(name string, kind appdef.DataKind) {
-	w.enrichedRootFields[name] = kind
+func (w workpiece) Object() istructs.IObject             { return w.object }
+func (w workpiece) OutputRow() IOutputRow                { return w.outputRow }
+func (w workpiece) EnrichedRootFieldsKinds() FieldsKinds { return w.enrichedRootFieldsKinds }
+func (w workpiece) PutEnrichedRootFieldKind(name string, kind appdef.DataKind) {
+	w.enrichedRootFieldsKinds[name] = kind
 }
 func (w workpiece) Release() {
 	//TODO implement it someday
@@ -461,23 +485,23 @@ func (e element) RefFields() []IRefField       { return e.refs }
 
 type fieldsDefs struct {
 	appDef appdef.IAppDef
-	fields map[appdef.QName]coreutils.FieldsDef
+	fields map[appdef.QName]FieldsKinds
 	lock   sync.Mutex
 }
 
 func newFieldsDefs(appDef appdef.IAppDef) *fieldsDefs {
 	return &fieldsDefs{
 		appDef: appDef,
-		fields: make(map[appdef.QName]coreutils.FieldsDef),
+		fields: make(map[appdef.QName]FieldsKinds),
 	}
 }
 
-func (c *fieldsDefs) get(name appdef.QName) coreutils.FieldsDef {
+func (c *fieldsDefs) get(name appdef.QName) FieldsKinds {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	fd, ok := c.fields[name]
 	if !ok {
-		fd = coreutils.NewFieldsDef(c.appDef.Def(name))
+		fd = newFieldsKinds(c.appDef.Def(name))
 		c.fields[name] = fd
 	}
 	return fd
@@ -495,13 +519,13 @@ func (s *resultSenderClosableOnlyOnce) Close(err error) {
 }
 
 type queryProcessorMetrics struct {
-	hvm     string
+	vvm     string
 	app     istructs.AppQName
 	metrics imetrics.IMetrics
 }
 
 func (m *queryProcessorMetrics) Increase(metricName string, valueDelta float64) {
-	m.metrics.IncreaseApp(metricName, m.hvm, m.app, valueDelta)
+	m.metrics.IncreaseApp(metricName, m.vvm, m.app, valueDelta)
 }
 
 // need or q.sys.EnrichPrincipalToken
@@ -521,8 +545,18 @@ func newJsonObject(data coreutils.MapObject) (object istructs.IObject, err error
 }
 
 func (o *jsonObject) AsString(name string) string {
-	if name == Field_JSONDef_Body {
+	if name == processors.Field_JSONDef_Body {
 		return string(o.body)
 	}
 	return o.NullObject.AsString(name)
+}
+
+func newFieldsKinds(def appdef.IDef) FieldsKinds {
+	res := FieldsKinds{}
+	if fields, ok := def.(appdef.IFields); ok {
+		fields.Fields(func(f appdef.IField) {
+			res[f.Name()] = f.DataKind()
+		})
+	}
+	return res
 }

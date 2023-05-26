@@ -14,6 +14,8 @@ type Def struct {
 	Kind       appdef.DefKind
 	Fields     []*Field     `json:",omitempty"`
 	Containers []*Container `json:",omitempty"`
+	Uniques    []*Unique    `json:",omitempty"`
+	Singleton  bool         `json:",omitempty"`
 }
 
 type Field struct {
@@ -28,4 +30,9 @@ type Container struct {
 	Type      appdef.QName
 	MinOccurs appdef.Occurs
 	MaxOccurs appdef.Occurs
+}
+
+type Unique struct {
+	Name   string
+	Fields []string
 }

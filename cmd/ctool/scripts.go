@@ -18,7 +18,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-//go:embed scripts/*
+//go:embed scripts/drafts/*
 var scriptsFS embed.FS
 
 var scriptsTempDir string
@@ -43,15 +43,25 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 
 	os.Chdir(scriptsTempDir)
 
+	var stdoutWriter io.Writer
+	var stderrWriter io.Writer
+	if logFile != nil {
+		stdoutWriter = io.MultiWriter(os.Stdout, logFile)
+		stderrWriter = io.MultiWriter(os.Stderr, logFile)
+	} else {
+		stdoutWriter = os.Stdout
+		stderrWriter = os.Stderr
+	}
+
 	var err error
 	if len(se.outputPrefix) > 0 {
 		sedArg := fmt.Sprintf("s/^/[%s]: /", se.outputPrefix)
 		err = pExec.
 			Command("sed", sedArg).
-			Run(os.Stdout, os.Stderr)
+			Run(stdoutWriter, stderrWriter)
 	} else {
 		err = pExec.
-			Run(os.Stdout, os.Stderr)
+			Run(stdoutWriter, stderrWriter)
 	}
 
 	return err
@@ -97,7 +107,7 @@ func prepareScripts(scriptFileNames ...string) error {
 			continue
 		}
 
-		file, err := scriptsFS.Open("scripts/" + fileName)
+		file, err := scriptsFS.Open("scripts/drafts/" + fileName)
 		if err != nil {
 			return err
 		}
@@ -105,10 +115,18 @@ func prepareScripts(scriptFileNames ...string) error {
 
 		destFileName := filepath.Join(scriptsTempDir, fileName)
 
+		dir := filepath.Dir(destFileName)
+
+		err = os.MkdirAll(dir, 0700) // os.ModePerm)
+		if err != nil {
+			return err
+		}
+
 		newFile, err := os.Create(destFileName)
 		if err != nil {
 			return err
 		}
+
 		defer newFile.Close()
 		if err = os.Chmod(destFileName, rwxrwxrwx); err != nil {
 			return err
@@ -121,7 +139,6 @@ func prepareScripts(scriptFileNames ...string) error {
 	}
 
 	return nil
-
 }
 
 func inputPassword(pass *string) error {

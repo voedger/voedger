@@ -29,7 +29,7 @@ func Test_BasicUsage(t *testing.T) {
 		name                string
 		numReportedMessages int
 		controller          ControllerFunction[string, int, string, int]
-		messages            []OriginalMessage[string, int]
+		messages            []ControlMessage[string, int]
 	}{
 		{
 			name:                "3 messages:A->B->C",
@@ -40,7 +40,7 @@ func Test_BasicUsage(t *testing.T) {
 				pv = &v
 				return nil, pv, nil
 			},
-			messages: []OriginalMessage[string, int]{
+			messages: []ControlMessage[string, int]{
 				{
 					Key:                `A`,
 					SP:                 0,
@@ -87,14 +87,14 @@ func Test_BasicUsage(t *testing.T) {
 				return nil
 			}
 
-			inCh := make(chan OriginalMessage[string, int])
+			inCh := make(chan ControlMessage[string, int])
 
 			waitFunc := New(test.controller, reporterFunc, 5, inCh, time.Now)
 
 			wg.Add(test.numReportedMessages)
 
 			for _, m := range test.messages {
-				inCh <- OriginalMessage[string, int]{
+				inCh <- ControlMessage[string, int]{
 					Key:                m.Key,
 					SP:                 m.SP,
 					CronSchedule:       m.CronSchedule,
@@ -123,7 +123,7 @@ func Test_SchedulerOnIn(t *testing.T) {
 
 	tests := []struct {
 		name                    string
-		originalMessages        []OriginalMessage[string, int]
+		originalMessages        []ControlMessage[string, int]
 		scheduledItems          []scheduledMessage[string, int, struct{}]
 		nextStartTimeFunc       nextStartTimeFunction
 		nowTime                 time.Time
@@ -133,7 +133,7 @@ func Test_SchedulerOnIn(t *testing.T) {
 	}{
 		{
 			name: `2 keys`,
-			originalMessages: []OriginalMessage[string, int]{
+			originalMessages: []ControlMessage[string, int]{
 				{
 					Key: `A`,
 					SP:  0,
@@ -152,7 +152,7 @@ func Test_SchedulerOnIn(t *testing.T) {
 		},
 		{
 			name: `2 keys, 1 key in ScheduledItems`,
-			originalMessages: []OriginalMessage[string, int]{
+			originalMessages: []ControlMessage[string, int]{
 				{
 					Key: `A`,
 					SP:  0,
@@ -178,7 +178,7 @@ func Test_SchedulerOnIn(t *testing.T) {
 		},
 		{
 			name: `invalid CronSchedule`,
-			originalMessages: []OriginalMessage[string, int]{
+			originalMessages: []ControlMessage[string, int]{
 				{
 					Key:          `A`,
 					SP:           0,
@@ -194,7 +194,7 @@ func Test_SchedulerOnIn(t *testing.T) {
 		},
 		{
 			name: `CronSchedule * 1 * * *, tolerance zero`,
-			originalMessages: []OriginalMessage[string, int]{
+			originalMessages: []ControlMessage[string, int]{
 				{
 					Key:          `A`,
 					SP:           0,
@@ -210,7 +210,7 @@ func Test_SchedulerOnIn(t *testing.T) {
 		},
 		{
 			name: `CronSchedule 0 0 * * *, tolerance 5 min`,
-			originalMessages: []OriginalMessage[string, int]{
+			originalMessages: []ControlMessage[string, int]{
 				{
 					Key:                `A`,
 					SP:                 0,
@@ -227,7 +227,7 @@ func Test_SchedulerOnIn(t *testing.T) {
 		},
 		{
 			name: `CronSchedule 0 0 * * *, tolerance 5 min, 1 second delay`,
-			originalMessages: []OriginalMessage[string, int]{
+			originalMessages: []ControlMessage[string, int]{
 				{
 					Key:                `A`,
 					SP:                 0,
@@ -244,7 +244,7 @@ func Test_SchedulerOnIn(t *testing.T) {
 		},
 		{
 			name: `the second message scheduled before the first one`,
-			originalMessages: []OriginalMessage[string, int]{
+			originalMessages: []ControlMessage[string, int]{
 				{
 					Key:          `A`,
 					SP:           0,
@@ -506,29 +506,25 @@ func Test_Dedupin(t *testing.T) {
 			var messagesToCall []statefulMessage[string, int, struct{}]
 			var messagesToRepeat []scheduledMessage[string, int, struct{}]
 			var inProcessKeyCounter int
-			done := make(chan interface{})
 			go func() {
 				testMessagesWriter(dedupInCh, test.messages)
-
-				messagesToCall = testMessagesReader(callerCh)
-				messagesToRepeat = testMessagesReader(repeatCh)
 
 				// closing channels
 				close(dedupInCh)
 				close(repeatCh)
-
-				inProcessKeyCounter = 0
-				InProcess.Range(func(_, _ any) bool {
-					inProcessKeyCounter++
-					return true
-				})
-
-				close(done)
 			}()
 
 			dedupIn(dedupInCh, callerCh, repeatCh, &InProcess, time.Now)
 
-			<-done
+			messagesToCall = testMessagesReader(callerCh)
+			messagesToRepeat = testMessagesReader(repeatCh)
+
+			inProcessKeyCounter = 0
+			InProcess.Range(func(_, _ any) bool {
+				inProcessKeyCounter++
+				return true
+			})
+
 			require.Equal(t, len(messagesToCall), inProcessKeyCounter)
 			require.Equal(t, len(messagesToRepeat), 1)
 		})
@@ -597,13 +593,13 @@ func Test_Repeater(t *testing.T) {
 			go func() {
 				testMessagesWriter(repeaterCh, test.messages)
 
-				messagesToReport = testMessagesReader(reporterCh)
-				messagesToRepeat = testMessagesReader(repeatCh)
-
 				close(repeaterCh)
 			}()
 
 			repeater(repeaterCh, repeatCh, reporterCh)
+
+			messagesToReport = testMessagesReader(reporterCh)
+			messagesToRepeat = testMessagesReader(repeatCh)
 
 			require.Equal(t, len(messagesToReport), 2)
 			require.Equal(t, len(messagesToRepeat), 2)

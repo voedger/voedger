@@ -141,18 +141,18 @@ func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRe
 
 // istructs.IViewRecords.Put
 func (vr *appViewRecords) Put(workspace istructs.WSID, key istructs.IKeyBuilder, value istructs.IValueBuilder) (err error) {
-	var partKey, clustCols, data []byte
-	if partKey, clustCols, data, err = vr.storeViewRecord(workspace, key, value); err == nil {
-		return vr.app.config.storage.Put(partKey, clustCols, data)
+	var partKey, ccolsCols, data []byte
+	if partKey, ccolsCols, data, err = vr.storeViewRecord(workspace, key, value); err == nil {
+		return vr.app.config.storage.Put(partKey, ccolsCols, data)
 	}
 	return err
 }
 
 // istructs.IViewRecords.PutBatch
-func (vr *appViewRecords) PutBatch(workspace istructs.WSID, viewrecs []istructs.ViewKV) (err error) {
-	batch := make([]istorage.BatchItem, len(viewrecs))
+func (vr *appViewRecords) PutBatch(workspace istructs.WSID, recs []istructs.ViewKV) (err error) {
+	batch := make([]istorage.BatchItem, len(recs))
 
-	for i, kv := range viewrecs {
+	for i, kv := range recs {
 		if batch[i].PKey, batch[i].CCols, batch[i].Value, err = vr.storeViewRecord(workspace, kv.Key, kv.Value); err != nil {
 			return err
 		}
@@ -192,7 +192,7 @@ func (vr *appViewRecords) Read(ctx context.Context, workspace istructs.WSID, key
 	}
 
 	pk := utils.PrefixBytes(pKey, k.viewID, workspace)
-	return vr.app.config.storage.Read(ctx, pk, cKey, utils.SuccBytes(cKey), readRecord)
+	return vr.app.config.storage.Read(ctx, pk, cKey, utils.IncBytes(cKey), readRecord)
 }
 
 // keyType is complex key from two parts (partition key and clustering key)
@@ -203,7 +203,7 @@ type keyType struct {
 	viewName appdef.QName
 	viewID   qnames.QNameID
 	partRow  rowType
-	clustRow rowType
+	ccolsRow rowType
 }
 
 func newKey(appCfg *AppConfigType, name appdef.QName) *keyType {
@@ -211,11 +211,11 @@ func newKey(appCfg *AppConfigType, name appdef.QName) *keyType {
 		rowType:  newRow(appCfg),
 		viewName: name,
 		partRow:  newRow(appCfg),
-		clustRow: newRow(appCfg),
+		ccolsRow: newRow(appCfg),
 	}
 	key.rowType.setQName(key.fkDef())
 	key.partRow.setQName(key.pkDef())
-	key.clustRow.setQName(key.ccDef())
+	key.ccolsRow.setQName(key.ccDef())
 	return &key
 }
 
@@ -233,7 +233,7 @@ func (key *keyType) build() (err error) {
 		return err
 	}
 
-	if _, err = key.clustRow.build(); err != nil {
+	if _, err = key.ccolsRow.build(); err != nil {
 		return err
 	}
 
@@ -242,36 +242,32 @@ func (key *keyType) build() (err error) {
 
 // Returns name of clustering columns key definition
 func (key *keyType) ccDef() appdef.QName {
-	if d := key.appCfg.AppDef.DefByName(key.viewName); d != nil {
-		if d.Kind() == appdef.DefKind_ViewRecord {
-			return d.Container(appdef.SystemContainer_ViewClusteringCols).Def()
-		}
+	if v := key.appCfg.AppDef.View(key.viewName); v != nil {
+		return v.ClustCols().QName()
 	}
 	return appdef.NullQName
 }
 
 // Returns name of full key definition
 func (key *keyType) fkDef() appdef.QName {
-	if d := key.appCfg.AppDef.DefByName(key.viewName); d != nil {
-		if d.Kind() == appdef.DefKind_ViewRecord {
-			return appdef.ViewFullKeyColumsDefName(key.viewName)
-		}
+	if v := key.appCfg.AppDef.View(key.viewName); v != nil {
+		return v.Key().QName()
 	}
 	return appdef.NullQName
 }
 
-// Return new key row, contained all fields from partitional key and clustering columns
+// Return new key row, contained all fields from partition key and clustering columns
 func (key *keyType) keyRow() (istructs.IRowReader, error) {
 	row := newRow(key.appCfg)
 	row.setQName(key.fkDef())
 
-	key.partRow.def.Fields(
+	key.partRow.fieldsDef().Fields(
 		func(f appdef.IField) {
 			row.dyB.Set(f.Name(), key.partRow.dyB.Get(f.Name()))
 		})
-	key.clustRow.def.Fields(
+	key.ccolsRow.fieldsDef().Fields(
 		func(f appdef.IField) {
-			row.dyB.Set(f.Name(), key.clustRow.dyB.Get(f.Name()))
+			row.dyB.Set(f.Name(), key.ccolsRow.dyB.Get(f.Name()))
 		})
 
 	if _, err := row.build(); err != nil {
@@ -281,7 +277,7 @@ func (key *keyType) keyRow() (istructs.IRowReader, error) {
 	return &row, nil
 }
 
-// loadFromBytes reads key from partitional key bytes and clustering columns bytes
+// loadFromBytes reads key from partition key bytes and clustering columns bytes
 func (key *keyType) loadFromBytes(pKey, cKey []byte) (err error) {
 	buf := bytes.NewBuffer(pKey)
 	if err = loadViewPartKey_00(key, buf); err != nil {
@@ -296,20 +292,20 @@ func (key *keyType) loadFromBytes(pKey, cKey []byte) (err error) {
 	return nil
 }
 
-// Returns name of partitional key definition
+// Returns name of partition key definition
 func (key *keyType) pkDef() appdef.QName {
-	if d := key.appCfg.AppDef.DefByName(key.viewName); d != nil {
-		if d.Kind() == appdef.DefKind_ViewRecord {
-			return d.Container(appdef.SystemContainer_ViewPartitionKey).Def()
-		}
+	if v := key.appCfg.AppDef.View(key.viewName); v != nil {
+		return v.PartKey().QName()
 	}
+
 	return appdef.NullQName
 }
 
 // Splits solid key row to partition key row and clustering columns row using view definitions
 func (key *keyType) splitRow() {
-	pkDef := key.appCfg.AppDef.DefByName(key.pkDef())
-	ccDef := key.appCfg.AppDef.DefByName(key.ccDef())
+	v := key.appCfg.AppDef.View(key.viewName)
+	pkDef := v.PartKey()
+	ccDef := v.ClustCols()
 
 	key.rowType.dyB.IterateFields(nil,
 		func(name string, data interface{}) bool {
@@ -317,13 +313,13 @@ func (key *keyType) splitRow() {
 				key.partRow.dyB.Set(name, data)
 			}
 			if ccDef.Field(name) != nil {
-				key.clustRow.dyB.Set(name, data)
+				key.ccolsRow.dyB.Set(name, data)
 			}
 			return true
 		})
 }
 
-// Stores key to partitional key bytes and to clustering columns bytes
+// Stores key to partition key bytes and to clustering columns bytes
 func (key *keyType) storeToBytes() (pKey, cKey []byte) {
 	return key.storeViewPartKey(), key.storeViewClustKey()
 }
@@ -334,7 +330,7 @@ func (key *keyType) validDefs() (ok bool, err error) {
 		return false, fmt.Errorf("missed view definition: %w", ErrNameMissed)
 	}
 
-	if key.viewID, err = key.appCfg.qNames.GetID(key.viewName); err != nil {
+	if key.viewID, err = key.appCfg.qNames.ID(key.viewName); err != nil {
 		return false, err
 	}
 
@@ -365,7 +361,7 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 
 					equalVal := func(d1, d2 interface{}) bool {
 						switch v := d1.(type) {
-						case []byte: // uncomparable type
+						case []byte: // non comparable type
 							return bytes.Equal(d2.([]byte), v)
 						default: // comparable types: int32, int64, float32, float64, string, bool
 							return d2 == v
@@ -373,14 +369,14 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 					}
 
 					result := true
-					r1.def.Fields(
+					r1.fieldsDef().Fields(
 						func(f appdef.IField) {
 							result = result && equalVal(r1.dyB.Get(f.Name()), r2.dyB.Get(f.Name()))
 						})
 					return result
 				}
 
-				return equalRow(key.partRow, k.partRow) && equalRow(key.clustRow, k.clustRow)
+				return equalRow(key.partRow, k.partRow) && equalRow(key.ccolsRow, k.ccolsRow)
 			}
 		}
 	}
@@ -394,7 +390,7 @@ func (key *keyType) PartitionKey() istructs.IRowWriter {
 
 // istructs.IKeyBuilder.ClusteringColumns
 func (key *keyType) ClusteringColumns() istructs.IRowWriter {
-	return &key.clustRow
+	return &key.ccolsRow
 }
 
 // valueType implements IValue, IValueBuilder
@@ -449,10 +445,8 @@ func (val *valueType) loadFromBytes(in []byte) (err error) {
 
 // valueDef returns name of view value definition
 func (val *valueType) valueDef() appdef.QName {
-	if d := val.appCfg.AppDef.DefByName(val.viewName); d != nil {
-		if d.Kind() == appdef.DefKind_ViewRecord {
-			return d.Container(appdef.SystemContainer_ViewValue).Def()
-		}
+	if v := val.appCfg.AppDef.View(val.viewName); v != nil {
+		return v.Value().QName()
 	}
 	return appdef.NullQName
 }

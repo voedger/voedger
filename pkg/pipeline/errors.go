@@ -51,7 +51,7 @@ func (e ErrInBranches) Error() string {
 	return strings.Join(ss, ",")
 }
 
-// need for uniques projector at airs-bp3/packages/sys/uniques/impl.go
+// need for uniques projector at ackages/sys/uniques/impl.go
 // it emmits 409 Conflict HTTP status code, so need to pull it from ErrInBranches
 func (e ErrInBranches) As(target interface{}) bool {
 	for _, err := range e.Errors {

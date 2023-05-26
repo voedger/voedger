@@ -5,12 +5,15 @@
 package parser
 
 import (
+	"embed"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 func parseImpl(fileName string, content string) (*SchemaAST, error) {
@@ -56,8 +59,13 @@ func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
 	schemas := make([]*FileSchemaAST, 0)
 	for _, entry := range entries {
 		if strings.ToLower(filepath.Ext(entry.Name())) == ".sql" {
-			fp := filepath.Join(dir, entry.Name())
-			bytes, err := fs.ReadFile(fp)
+			var fpath string
+			if _, ok := fs.(embed.FS); ok {
+				fpath = fmt.Sprintf("%s/%s", dir, entry.Name()) // The path separator is a forward slash, even on Windows systems
+			} else {
+				fpath = filepath.Join(dir, entry.Name())
+			}
+			bytes, err := fs.ReadFile(fpath)
 			if err != nil {
 				return nil, err
 			}
@@ -82,7 +90,7 @@ func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST)
 		return nil, nil
 	}
 	headAst := asts[0].Ast
-
+	// TODO: do we need to check that last element in qualifiedPackageName path corresponds to f.Ast.Package?
 	for i := 1; i < len(asts); i++ {
 		f := asts[i]
 		if f.Ast.Package != headAst.Package {
@@ -93,9 +101,11 @@ func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST)
 
 	errs := make([]error, 0)
 	errs = analyseDuplicateNames(headAst, errs)
-	errs = analyseDuplicateNamesInSchemas(headAst, errs)
+	errs = analyseViews(headAst, errs)
 	cleanupComments(headAst)
 	cleanupImports(headAst)
+	// TODO: unable to specify different base tables (CDOC, WDOC, ...) in the table inheritace chain
+	// TODO: Type cannot have nested tables
 
 	return &PackageSchemaAST{
 		QualifiedPackageName: qualifiedPackageName,
@@ -103,18 +113,18 @@ func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST)
 	}, errors.Join(errs...)
 }
 
-func analyseDuplicateNamesInSchemas(schema *SchemaAST, errs []error) []error {
+func analyseViews(schema *SchemaAST, errs []error) []error {
 	iterate(schema, func(stmt interface{}) {
 		if view, ok := stmt.(*ViewStmt); ok {
-			numPK := 0
+			view.pkRef = nil
 			fields := make(map[string]int)
 			for i := range view.Fields {
 				fe := view.Fields[i]
 				if fe.PrimaryKey != nil {
-					if numPK == 1 {
+					if view.pkRef != nil {
 						errs = append(errs, errorAt(ErrPrimaryKeyRedeclared, &fe.Pos))
 					} else {
-						numPK++
+						view.pkRef = fe.PrimaryKey
 					}
 				}
 				if fe.Field != nil {
@@ -124,6 +134,9 @@ func analyseDuplicateNamesInSchemas(schema *SchemaAST, errs []error) []error {
 						fields[fe.Field.Name] = i
 					}
 				}
+			}
+			if view.pkRef == nil {
+				errs = append(errs, errorAt(ErrPrimaryKeyNotDeclared, &view.Pos))
 			}
 		}
 	})
@@ -172,16 +185,16 @@ func cleanupImports(schema *SchemaAST) {
 	}
 }
 
-func mergePackageSchemasImpl(packages []*PackageSchemaAST) error {
+func mergePackageSchemasImpl(packages []*PackageSchemaAST) (map[string]*PackageSchemaAST, error) {
 	pkgmap := make(map[string]*PackageSchemaAST)
 	for _, p := range packages {
 		if _, ok := pkgmap[p.QualifiedPackageName]; ok {
-			return ErrPackageRedeclared(p.QualifiedPackageName)
+			return nil, ErrPackageRedeclared(p.QualifiedPackageName)
 		}
 		pkgmap[p.QualifiedPackageName] = p
 	}
 
-	c := aContext{
+	c := basicContext{
 		pkg:    nil,
 		pkgmap: pkgmap,
 		errs:   make([]error, 0),
@@ -189,19 +202,19 @@ func mergePackageSchemasImpl(packages []*PackageSchemaAST) error {
 
 	for _, p := range packages {
 		c.pkg = p
-		analyseReferences(&c)
+		analyseRefs(&c)
 	}
-	return errors.Join(c.errs...)
+	return pkgmap, errors.Join(c.errs...)
 }
 
-type aContext struct {
+type basicContext struct {
 	pkg    *PackageSchemaAST
 	pkgmap map[string]*PackageSchemaAST
 	pos    *lexer.Position
 	errs   []error
 }
 
-func analyzeWithRefs(c *aContext, with []WithItem) {
+func analyzeWithRefs(c *basicContext, with []WithItem) {
 	for i := range with {
 		wi := &with[i]
 		if wi.Comment != nil {
@@ -216,7 +229,7 @@ func analyzeWithRefs(c *aContext, with []WithItem) {
 	}
 }
 
-func analyseReferences(c *aContext) {
+func analyseRefs(c *basicContext) {
 	iterate(c.pkg.Ast, func(stmt interface{}) {
 		switch v := stmt.(type) {
 		case *CommandStmt:
@@ -228,7 +241,7 @@ func analyseReferences(c *aContext) {
 		case *ProjectorStmt:
 			c.pos = &v.Pos
 			// Check targets
-			for _, target := range v.Targets {
+			for _, target := range v.Triggers {
 				if v.On.Activate || v.On.Deactivate || v.On.Insert || v.On.Update {
 					resolve(target, c, func(f *TableStmt) error { return nil })
 				} else if v.On.Command {
@@ -240,6 +253,234 @@ func analyseReferences(c *aContext) {
 		case *TableStmt:
 			c.pos = &v.Pos
 			analyzeWithRefs(c, v.With)
+			if v.Inherits != nil {
+				resolve(*v.Inherits, c, func(f *TableStmt) error { return nil })
+			}
+			for _, of := range v.Of {
+				resolve(of, c, func(f *TypeStmt) error { return nil })
+			}
 		}
 	})
+}
+
+type defBuildContext struct {
+	defBuilder appdef.IDefBuilder
+	qname      appdef.QName
+	kind       appdef.DefKind
+	names      map[string]bool
+}
+
+func (c *defBuildContext) checkName(name string, pos *lexer.Position) error {
+	if _, ok := c.names[name]; ok {
+		return errorAt(ErrRedeclared(name), pos)
+	}
+	c.names[name] = true
+	return nil
+}
+
+type buildContext struct {
+	basicContext
+	builder appdef.IAppDefBuilder
+	defs    []defBuildContext
+}
+
+func (c *buildContext) newSchema(schema *PackageSchemaAST) {
+	c.pkg = schema
+	c.defs = make([]defBuildContext, 0)
+}
+
+func (c *buildContext) pushDef(name string, kind appdef.DefKind) {
+	qname := appdef.NewQName(c.pkg.Ast.Package, name)
+	c.defs = append(c.defs, defBuildContext{
+		defBuilder: c.builder.AddStruct(qname, kind),
+		kind:       kind,
+		qname:      qname,
+		names:      make(map[string]bool),
+	})
+}
+
+func (c *buildContext) popDef() {
+	c.defs = c.defs[:len(c.defs)-1]
+}
+
+func (c *buildContext) defCtx() *defBuildContext {
+	return &c.defs[len(c.defs)-1]
+}
+
+func newBuildContext(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) buildContext {
+	return buildContext{
+		basicContext: basicContext{
+			pkg:    nil,
+			pkgmap: packages,
+			errs:   make([]error, 0),
+		},
+		builder: builder,
+	}
+}
+
+func buildAppDefs(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) error {
+	ctx := newBuildContext(packages, builder)
+
+	if err := buildTypes(&ctx); err != nil {
+		return err
+	}
+	if err := buildTables(&ctx); err != nil {
+		return err
+	}
+	if err := buildViews(&ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func buildTypes(ctx *buildContext) error {
+	for _, schema := range ctx.pkgmap {
+		iterateStmt(schema.Ast, func(typ *TypeStmt) {
+			ctx.newSchema(schema)
+			ctx.pushDef(typ.Name, appdef.DefKind_Object)
+			addFieldsOf(typ.Of, ctx)
+			addTableItems(typ.Items, ctx)
+			ctx.popDef()
+		})
+	}
+	return nil
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
+func buildViews(ctx *buildContext) error {
+	for _, schema := range ctx.pkgmap {
+		iterateStmt(schema.Ast, func(view *ViewStmt) {
+			ctx.newSchema(schema)
+
+			qname := appdef.NewQName(ctx.pkg.Ast.Package, view.Name)
+			vb := ctx.builder.AddView(qname)
+			for i := range view.Fields {
+				f := &view.Fields[i]
+				if f.Field != nil {
+					datakind := viewFieldDataKind(f.Field)
+					if contains(view.pkRef.ClusteringColumnsFields, f.Field.Name) {
+						vb.AddClustColumn(f.Field.Name, datakind)
+					} else if contains(view.pkRef.PartitionKeyFields, f.Field.Name) {
+						vb.AddPartField(f.Field.Name, datakind)
+					} else {
+						vb.AddValueField(f.Field.Name, datakind, f.Field.NotNull)
+					}
+				}
+			}
+		})
+	}
+	return nil
+}
+
+func fillTable(ctx *buildContext, table *TableStmt) {
+	if table.Inherits != nil {
+		resolve(*table.Inherits, &ctx.basicContext, func(t *TableStmt) error {
+			fillTable(ctx, t)
+			return nil
+		})
+	}
+	addFieldsOf(table.Of, ctx)
+	addTableItems(table.Items, ctx)
+}
+
+func buildTables(ctx *buildContext) error {
+	for _, schema := range ctx.pkgmap {
+		iterateStmt(schema.Ast, func(table *TableStmt) {
+			ctx.newSchema(schema)
+			if isPredefinedSysTable(table, ctx) {
+				return
+			}
+			tableType, singletone := getTableDefKind(table, ctx)
+			if tableType == appdef.DefKind_null {
+				ctx.errs = append(ctx.errs, errorAt(ErrUndefinedTableKind, &table.Pos))
+			} else {
+				ctx.pushDef(table.Name, tableType)
+				fillTable(ctx, table)
+				if singletone {
+					ctx.defCtx().defBuilder.SetSingleton()
+				}
+				ctx.popDef()
+			}
+		})
+	}
+	return errors.Join(ctx.errs...)
+}
+
+func addTableItems(items []TableItemExpr, ctx *buildContext) {
+	for _, item := range items {
+		if item.Field != nil {
+			sysDataKind := getTypeDataKind(*item.Field.Type) // TODO: handle 'reference ...'
+			if sysDataKind != appdef.DataKind_null {
+				if item.Field.Type.IsArray {
+					ctx.errs = append(ctx.errs, errorAt(ErrArrayFieldsNotSupportedHere, &item.Field.Pos))
+					continue
+				}
+				if err := ctx.defCtx().checkName(item.Field.Name, &item.Field.Pos); err != nil {
+					ctx.errs = append(ctx.errs, err)
+					continue
+				}
+				if item.Field.Verifiable {
+					// TODO: Support different verification kindsbuilder, &c
+					ctx.defCtx().defBuilder.AddVerifiedField(item.Field.Name, sysDataKind, item.Field.NotNull, appdef.VerificationKind_EMail)
+				} else {
+					ctx.defCtx().defBuilder.AddField(item.Field.Name, sysDataKind, item.Field.NotNull)
+				}
+			} else {
+				ctx.errs = append(ctx.errs, errorAt(ErrTypeNotSupported(item.Field.Type.String()), &item.Field.Pos))
+			}
+		} else if item.Constraint != nil {
+			// TODO: constraint checks, e.g. same field cannot be used twice
+			if item.Constraint.Unique != nil {
+				name := item.Constraint.ConstraintName
+				if name == "" {
+					name = genUniqueName(ctx.defCtx().qname.Entity(), ctx.defCtx().defBuilder)
+				}
+				if err := ctx.defCtx().checkName(name, &item.Constraint.Pos); err != nil {
+					ctx.errs = append(ctx.errs, err)
+					continue
+				}
+				ctx.defCtx().defBuilder.AddUnique(name, item.Constraint.Unique.Fields)
+				//} else if item.Constraint.Check != nil {
+				// TODO: implement Table Check Constraint
+			}
+		} else if item.Table != nil {
+			// Add nested table
+			kind, singletone := getTableDefKind(item.Table, ctx)
+			if kind != appdef.DefKind_null || singletone {
+				ctx.errs = append(ctx.errs, ErrNestedTableCannotBeDocument)
+				continue
+			}
+
+			containerName := item.Table.Name // TODO: implement AS container_name
+			if err := ctx.defCtx().checkName(containerName, &item.Table.Pos); err != nil {
+				ctx.errs = append(ctx.errs, err)
+				continue
+			}
+			tk := getNestedTableKind(ctx.defs[0].kind)
+			ctx.pushDef(item.Table.Name, tk) // TODO: analyze for duplicates in the QNames of nested tables
+			addFieldsOf(item.Table.Of, ctx)
+			addTableItems(item.Table.Items, ctx)
+			ctx.defCtx().defBuilder.AddContainer(containerName, ctx.defCtx().qname, 0, maxNestedTableContainerOccurrences)
+			ctx.popDef()
+
+		}
+	}
+}
+
+func addFieldsOf(types []DefQName, ctx *buildContext) {
+	for _, of := range types {
+		resolve(of, &ctx.basicContext, func(t *TypeStmt) error {
+			addFieldsOf(t.Of, ctx)
+			addTableItems(t.Items, ctx)
+			return nil
+		})
+	}
 }

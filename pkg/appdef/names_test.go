@@ -78,11 +78,11 @@ func Test_ValidIdent(t *testing.T) {
 		{
 			name: "error if too long",
 			args: args{ident: func() string {
-				sworm := "_"
+				worm := "_"
 				for i := 0; i < MaxIdentLen; i++ {
-					sworm += "_"
+					worm += "_"
 				}
-				return sworm
+				return worm
 			}()},
 			wantOk:  false,
 			wantErr: ErrInvalidName,
@@ -104,12 +104,12 @@ func Test_ValidIdent(t *testing.T) {
 			wantOk: true,
 		},
 		{
-			name:   "vulgaris camel notation must pass",
+			name:   "basic camel notation must pass",
 			args:   args{ident: "thisIsIdent1"},
 			wantOk: true,
 		},
 		{
-			name:   "vulgaris snake notation must pass",
+			name:   "basic snake notation must pass",
 			args:   args{ident: "this_is_ident_2"},
 			wantOk: true,
 		},
@@ -138,65 +138,6 @@ func Test_ValidIdent(t *testing.T) {
 			} else if tt.wantErr != nil {
 				t.Errorf("ValidIdent() error = nil, wantErr - %v", tt.wantErr)
 				return
-			}
-		})
-	}
-}
-
-func Test_IsSysField(t *testing.T) {
-	type args struct {
-		name string
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "true if sys.QName",
-			args: args{SystemField_QName},
-			want: true,
-		},
-		{
-			name: "true if sys.ID",
-			args: args{SystemField_ID},
-			want: true,
-		},
-		{
-			name: "true if sys.ParentID",
-			args: args{SystemField_ParentID},
-			want: true,
-		},
-		{
-			name: "true if sys.Container",
-			args: args{SystemField_Container},
-			want: true,
-		},
-		{
-			name: "true if sys.IsActive",
-			args: args{SystemField_IsActive},
-			want: true,
-		},
-		{
-			name: "false if empty",
-			args: args{""},
-			want: false,
-		},
-		{
-			name: "false if vulgaris user",
-			args: args{"userField"},
-			want: false,
-		},
-		{
-			name: "false if curious user",
-			args: args{"sys.user"},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := IsSysField(tt.args.name); got != tt.want {
-				t.Errorf("sysField() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -30,7 +30,7 @@ func TestRenameQName(t *testing.T) {
 		require.NoError(err)
 
 		appDefBuilder := appdef.New()
-		_ = appDefBuilder.AddStruct(old, appdef.DefKind_Object)
+		_ = appDefBuilder.AddObject(old)
 		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
 
@@ -54,13 +54,13 @@ func TestRenameQName(t *testing.T) {
 		require.NoError(err)
 
 		t.Run("check old is deleted", func(t *testing.T) {
-			id, err := names.GetID(old)
+			id, err := names.ID(old)
 			require.ErrorIs(err, qnames.ErrNameNotFound)
 			require.Equal(id, qnames.NullQNameID)
 		})
 
 		t.Run("check new is not null", func(t *testing.T) {
-			id, err := names.GetID(new)
+			id, err := names.ID(new)
 			require.NoError(err)
 			require.Greater(id, qnames.QNameIDSysLast)
 		})

@@ -86,7 +86,7 @@ func PrefixBytes(value []byte, prefix ...interface{}) []byte {
 	return buf.Bytes()
 }
 
-// ToBytes returns bytes slice constructed from specified values writed from left to right
+// Returns a slice of bytes built from the specified values, written from left to right
 func ToBytes(value ...interface{}) []byte {
 	return PrefixBytes(nil, value...)
 }
@@ -104,7 +104,7 @@ func FullBytes(b []byte) bool {
 // Increments by one bit low byte and returns the result.
 //
 // Useful to obtain right margin of half-open range of partially filled clustering columns
-func SuccBytes(cur []byte) (next []byte) {
+func IncBytes(cur []byte) (next []byte) {
 	if FullBytes(cur) {
 		return nil
 	}

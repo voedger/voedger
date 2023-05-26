@@ -23,7 +23,7 @@ import (
 
 // appStructsProviderType implements IAppStructsProvider interface
 //   - fields:
-//     — locker: to implement @СoncurentAccess-methods
+//     — locker: to implement @ConcurrentAccess-methods
 //     — configs: configurations of supported applications
 //     — structures: maps of application structures
 //   - methods:
@@ -33,7 +33,7 @@ type appStructsProviderType struct {
 	locker           sync.RWMutex
 	configs          AppConfigsType
 	structures       map[istructs.AppQName]*appStructsType
-	bucketsFacotry   irates.BucketsFactoryType
+	bucketsFactory   irates.BucketsFactoryType
 	appTokensFactory payloads.IAppTokensFactory
 	storageProvider  istorage.IAppStorageProvider
 }
@@ -51,7 +51,7 @@ func (provider *appStructsProviderType) AppStructs(appName istructs.AppQName) (s
 
 	app, exists := provider.structures[appName]
 	if !exists {
-		buckets := provider.bucketsFacotry()
+		buckets := provider.bucketsFactory()
 		appTokens := provider.appTokensFactory.New(appName)
 		appStorage, err := provider.storageProvider.AppStorage(appName)
 		if err != nil {
@@ -73,7 +73,7 @@ type appStructsType struct {
 	config      *AppConfigType
 	events      appEventsType
 	records     appRecordsType
-	veiwRecords appViewRecords
+	viewRecords appViewRecords
 	buckets     irates.IBuckets
 	descr       *descr.Application
 	uniques     *implIUniques
@@ -91,7 +91,7 @@ func newAppStructs(appCfg *AppConfigType, buckets irates.IBuckets, appTokens ist
 	}
 	app.events = newEvents(&app)
 	app.records = newRecords(&app)
-	app.veiwRecords = newAppViewRecords(&app)
+	app.viewRecords = newAppViewRecords(&app)
 	appCfg.app = &app
 	return &app
 }
@@ -113,7 +113,7 @@ func (app *appStructsType) Records() istructs.IRecords {
 
 // istructs.IAppStructs.ViewRecords
 func (app *appStructsType) ViewRecords() istructs.IViewRecords {
-	return &app.veiwRecords
+	return &app.viewRecords
 }
 
 // istructs.IAppStructs.Resources
@@ -161,12 +161,12 @@ func (app *appStructsType) AppTokens() istructs.IAppTokens {
 }
 
 func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid istructs.WSID) bool {
-	ratelimits, ok := app.config.FunctionRateLimits.limits[funcQName]
+	rateLimits, ok := app.config.FunctionRateLimits.limits[funcQName]
 	if !ok {
 		return false
 	}
 	keys := []irates.BucketKey{}
-	for rlKind := range ratelimits {
+	for rlKind := range rateLimits {
 		key := irates.BucketKey{
 			QName:         funcQName,
 			RateLimitName: GetFunctionRateLimitName(funcQName, rlKind),
@@ -188,15 +188,7 @@ func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName appdef.QName, 
 
 func (app *appStructsType) describe() *descr.Application {
 	if app.descr == nil {
-		stringedUniques := map[appdef.QName][][]string{}
-		for qName, uniques := range app.config.Uniques.uniques {
-			stringedUnque := stringedUniques[qName]
-			for _, u := range uniques {
-				stringedUnque = append(stringedUnque, u.Fields())
-			}
-			stringedUniques[qName] = stringedUnque
-		}
-		app.descr = descr.Provide(app, app.config.FunctionRateLimits.limits, stringedUniques)
+		app.descr = descr.Provide(app, app.config.FunctionRateLimits.limits)
 	}
 	return app.descr
 }
@@ -214,6 +206,7 @@ func (app *appStructsType) DescribePackage(name string) interface{} {
 	return app.describe().Packages[name]
 }
 
+// Deprecated: use IDef.Unique instead
 func (app *appStructsType) Uniques() istructs.IUniques {
 	return app.uniques
 }
@@ -293,7 +286,7 @@ func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (event istructs.IWLogEve
 // istructs.IEvents.ReadPLog
 func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.PartitionID, offset istructs.Offset, toReadCount int, cb istructs.PLogEventsReaderCallback) error {
 
-	readPart := func(pk, clustFrom, clustTo []byte) (ok bool, err error) {
+	readPart := func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
 
 		count := 0
 		readEvent := func(ccols, viewRecord []byte) (err error) {
@@ -307,7 +300,7 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 		}
 
 		pKey := utils.PrefixBytes(pk, consts.SysView_PLog, partition) // + partition! see #18047
-		err = e.app.config.storage.Read(ctx, pKey, clustFrom, clustTo, readEvent)
+		err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, readEvent)
 
 		return (err == nil) && (count > 0), err // stop iterate parts if error or no events in last partition
 	}
@@ -318,7 +311,7 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 // istructs.IEvents.ReadWLog
 func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, offset istructs.Offset, toReadCount int, cb istructs.WLogEventsReaderCallback) error {
 
-	readPart := func(pk, clustFrom, clustTo []byte) (ok bool, err error) {
+	readPart := func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
 
 		count := 0
 		readEvent := func(ccols, viewRecord []byte) (err error) {
@@ -332,7 +325,7 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 		}
 
 		pKey := utils.PrefixBytes(pk, consts.SysView_WLog, workspace)
-		err = e.app.config.storage.Read(ctx, pKey, clustFrom, clustTo, readEvent)
+		err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, readEvent)
 
 		return (err == nil) && (count > 0), err // stop iterate parts if error or no events in last partition
 	}
@@ -353,14 +346,14 @@ func newRecords(app *appStructsType) appRecordsType {
 	}
 }
 
-// getRecord reads record from application storage througth view-records methods
+// getRecord reads record from application storage through view-records methods
 func (recs *appRecordsType) getRecord(workspace istructs.WSID, id istructs.RecordID, data *[]byte) (ok bool, err error) {
 	idHi, idLow := splitRecordID(id)
 	pk := utils.PrefixBytes(idHi, consts.SysView_Records, workspace)
 	return recs.app.config.storage.Get(pk, idLow, data)
 }
 
-// getRecordBatch reads record from application storage througth view-records methods
+// getRecordBatch reads record from application storage through view-records methods
 func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istructs.RecordGetBatchItem) (err error) {
 	if len(ids) > maxGetBatchRecordCount {
 		return fmt.Errorf("batch read %d records requested, but only %d supported: %w", len(ids), maxGetBatchRecordCount, ErrMaxGetBatchRecordCountExceeds)
@@ -397,14 +390,14 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 	return nil
 }
 
-// putRecord puts record to application storage througth view-records methods
+// putRecord puts record to application storage through view-records methods
 func (recs *appRecordsType) putRecord(workspace istructs.WSID, id istructs.RecordID, data []byte) (err error) {
 	idHi, idLow := splitRecordID(id)
 	pk := utils.PrefixBytes(idHi, consts.SysView_Records, workspace)
 	return recs.app.config.storage.Put(pk, idLow, data)
 }
 
-// putRecordsBatch puts record array to application storage througth view-records batch methods
+// putRecordsBatch puts record array to application storage through view-records batch methods
 type recordBatchItemType struct {
 	id   istructs.RecordID
 	data []byte
@@ -421,7 +414,7 @@ func (recs *appRecordsType) putRecordsBatch(workspace istructs.WSID, records []r
 	return recs.app.config.storage.PutBatch(batch)
 }
 
-// validEvent returns error if event has uncommitable data, such as singleton unique violations or invalid record id references
+// validEvent returns error if event has non-committable data, such as singleton unique violations or invalid record id references
 func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
 	existsRecord := func(id istructs.RecordID) (bool, error) {
@@ -434,8 +427,8 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 	}
 
 	for _, rec := range ev.cud.creates {
-		if rec.def.Singleton() {
-			id, err := recs.app.config.singletons.GetID(rec.QName())
+		if cDoc, ok := rec.def.(appdef.ICDoc); ok && cDoc.Singleton() {
+			id, err := recs.app.config.singletons.ID(rec.QName())
 			if err != nil {
 				return err
 			}
@@ -444,7 +437,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 				return err
 			}
 			if isExists {
-				return fmt.Errorf("can not create singleton, CDOC «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
+				return fmt.Errorf("can not create singleton, CDoc «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
 			}
 		}
 	}
@@ -530,7 +523,7 @@ func (recs *appRecordsType) GetBatch(workspace istructs.WSID, highConsistency bo
 // istructs.IRecords.GetSingleton
 func (recs *appRecordsType) GetSingleton(workspace istructs.WSID, qName appdef.QName) (record istructs.IRecord, err error) {
 	var id istructs.RecordID
-	if id, err = recs.app.config.singletons.GetID(qName); err != nil {
+	if id, err = recs.app.config.singletons.ID(qName); err != nil {
 		return NewNullRecord(istructs.NullRecordID), err
 	}
 	return recs.Get(workspace, true, id)

@@ -65,7 +65,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			newEntry(viewRecords, 1, 100, true, "soda", 1, "Cola"),
 			newEntry(viewRecords, 1, 100, true, "soda", 2, "Cola light"), // dupe, must override previous name
 			newEntry(viewRecords, 2, 100, true, "soda", 2, "Pepsi"),
-			newEntry(viewRecords, 2, 100, true, "sidr", 2, "Apple sidr"),
+			newEntry(viewRecords, 2, 100, true, "cider", 2, "Apple cider"),
 		}
 		for _, e := range entries {
 			err := viewRecords.Put(e.wsid, e.key, e.value)
@@ -145,49 +145,46 @@ func TestCore_ViewRecords(t *testing.T) {
 		kb.PutInt64("clusteringColumn1", 100)
 		kb.PutBool("clusteringColumn2", true)
 
-		t.Run("Should read two records by short clustering key", func(t *testing.T) {
-			counter := 0
-			val_name := ""
+		t.Run("Should read one records by short clustering key", func(t *testing.T) {
+			counter, val_names := 0, "|"
 			err := viewRecords.Read(context.Background(), 2, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				counter++
-				val_name += value.AsString("name")
+				val_names += value.AsString("name") + "|"
 				return nil
 			})
 			require.NoError(err)
 			require.Equal(2, counter)
-			require.Equal("Apple sidrPepsi", val_name)
+			require.Equal("|Apple cider|Pepsi|", val_names)
 		})
 
-		t.Run("Should read two records by short masked clustering key", func(t *testing.T) {
-			kb.PutString("clusteringColumn3", "s")
-			counter := 0
-			val_name := ""
+		t.Run("Should read one records by short «c» clustering key", func(t *testing.T) {
+			kb.PutString("clusteringColumn3", "c")
+			counter, val_name := 0, "|"
 			err := viewRecords.Read(context.Background(), 2, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				counter++
-				val_name += value.AsString("name")
-				return nil
-			})
-			require.NoError(err)
-			require.Equal(2, counter)
-			require.Equal("Apple sidrPepsi", val_name)
-		})
-
-		t.Run("Should read one record by long masked clustering key", func(t *testing.T) {
-			kb.PutString("clusteringColumn3", "si")
-			counter := 0
-			val_name := ""
-			err := viewRecords.Read(context.Background(), 2, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
-				counter++
-				val_name += value.AsString("name")
+				val_name += value.AsString("name") + "|"
 				return nil
 			})
 			require.NoError(err)
 			require.Equal(1, counter)
-			require.Equal("Apple sidr", val_name)
+			require.Equal("|Apple cider|", val_name)
+		})
+
+		t.Run("Should read one record by long «cid» clustering key", func(t *testing.T) {
+			kb.PutString("clusteringColumn3", "cid")
+			counter, val_name := 0, "|"
+			err := viewRecords.Read(context.Background(), 2, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
+				counter++
+				val_name += value.AsString("name") + "|"
+				return nil
+			})
+			require.NoError(err)
+			require.Equal(1, counter)
+			require.Equal("|Apple cider|", val_name)
 		})
 
 		t.Run("Should no read records by not existing clustering key", func(t *testing.T) {
-			kb.PutString("clusteringColumn3", "simba")
+			kb.PutString("clusteringColumn3", "tofu")
 			counter := 0
 			err := viewRecords.Read(context.Background(), 2, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				counter++
@@ -197,22 +194,22 @@ func TestCore_ViewRecords(t *testing.T) {
 			require.Equal(0, counter)
 		})
 
-		t.Run("Should read two records by short masked clustering key. ***Old style key filling", func(t *testing.T) {
+		t.Run("Should read one records by short «s» clustering key. Old style key filling", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PartitionKey().PutInt64("partitionKey1", 2)
 			kb.ClusteringColumns().PutInt64("clusteringColumn1", 100)
 			kb.ClusteringColumns().PutBool("clusteringColumn2", true)
 			kb.ClusteringColumns().PutString("clusteringColumn3", "s")
 			counter := 0
-			val_name := ""
+			val_name := "|"
 			err := viewRecords.Read(context.Background(), 2, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				counter++
-				val_name += value.AsString("name")
+				val_name += value.AsString("name") + "|"
 				return nil
 			})
 			require.NoError(err)
-			require.Equal(2, counter)
-			require.Equal("Apple sidrPepsi", val_name)
+			require.Equal(1, counter)
+			require.Equal("|Pepsi|", val_name)
 		})
 	})
 
@@ -221,12 +218,12 @@ func TestCore_ViewRecords(t *testing.T) {
 		kb.PutInt64("partitionKey1", 2)
 		kb.PutInt64("clusteringColumn1", 100)
 		kb.PutBool("clusteringColumn2", true)
-		kb.PutString("clusteringColumn3", "sidr")
+		kb.PutString("clusteringColumn3", "cider")
 
 		value, err := viewRecords.Get(2, kb)
 		require.NoError(err)
 		require.Equal(int64(2), value.AsInt64("id"))
-		require.Equal("Apple sidr", value.AsString("name"))
+		require.Equal("Apple cider", value.AsString("name"))
 		require.True(value.AsBool("active"))
 	})
 
@@ -235,7 +232,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		kb.PutInt64("partitionKey1", 2)
 		kb.PutInt64("clusteringColumn1", 100)
 		kb.PutBool("clusteringColumn2", true)
-		kb.PutString("clusteringColumn3", "sake")
+		kb.PutString("clusteringColumn3", "tofu")
 
 		value, err := viewRecords.Get(2, kb)
 		require.ErrorIs(err, ErrRecordNotFound)
@@ -285,7 +282,7 @@ func TestCore_ViewRecords(t *testing.T) {
 
 		t.Run("Must have panic if invalid key definition name", func(t *testing.T) {
 			require.Panics(func() { _ = viewRecords.KeyBuilder(istructs.QNameForError) })
-			require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NewQName("test", "mismDrinks")) })
+			require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NewQName("test", "unknownDrinks")) })
 		})
 
 		t.Run("Must have panic if invalid key definition kind", func(t *testing.T) {
@@ -416,7 +413,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		})
 
 		t.Run("Must have panic if unknown value definition specified", func(t *testing.T) {
-			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "mismDrinks")) })
+			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "unknownDrinks")) })
 		})
 
 		t.Run("Must have panic if wrong value definition specified", func(t *testing.T) {
@@ -470,7 +467,7 @@ func TestCore_ViewRecords(t *testing.T) {
 
 			vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
 			vb.PutInt64("id", 1)
-			vb.PutString("name", "baykal")
+			vb.PutString("name", "baikal")
 			vb.PutBool("active", true)
 
 			err := viewRecords.Put(1, kb, vb)
@@ -494,12 +491,12 @@ func TestCore_ViewRecords(t *testing.T) {
 			err := viewRecords.PutBatch(7, batch)
 			require.ErrorIs(err, ErrNameNotFound)
 
-			t.Run("put batch failed; no record from WSID = 7 must be readed", func(t *testing.T) {
+			t.Run("put batch failed; no record from WSID = 7 must be read", func(t *testing.T) {
 				kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 				kb.PutInt64("partitionKey1", 7)
 
 				require.NoError(viewRecords.Read(context.Background(), 7, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
-					require.Fail("if put batch failed then no records must be readed")
+					require.Fail("if put batch failed then no records must be read")
 					return nil
 				}))
 			})
@@ -507,7 +504,7 @@ func TestCore_ViewRecords(t *testing.T) {
 
 		t.Run("Must have not error if all is ok", func(t *testing.T) {
 
-			t.Run("vulgaris case", func(t *testing.T) {
+			t.Run("basic case", func(t *testing.T) {
 				kb := viewRecords.KeyBuilder(appdef.NewQName("test", "otherView"))
 				kb.PutQName("partitionKey1", istructs.QNameForError)
 				kb.PutFloat32("clusteringColumn1", 44.4)
@@ -574,9 +571,9 @@ func TestCore_ViewRecords(t *testing.T) {
 		kb.PutInt64("partitionKey1", 2)
 		kb.PutInt64("clusteringColumn1", 100)
 		kb.PutBool("clusteringColumn2", true)
-		kb.PutString("clusteringColumn3", "sidr")
+		kb.PutString("clusteringColumn3", "cider")
 
-		c := utils.PrefixBytes([]byte("sidr"), int64(100), true)
+		c := utils.PrefixBytes([]byte("cider"), int64(100), true)
 
 		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, c)
 		_, err := viewRecords.Get(2, kb)
@@ -669,7 +666,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, appDef)
 
-		storage, err := simpleStorageProvder().AppStorage(istructs.AppQName_test1_app1)
+		storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		err = cfg.prepare(nil, storage)
 		if err != nil {
@@ -708,7 +705,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 		require.NoError(err)
 
 		testRowsIsEqual(t, &k1.partRow, &k2.partRow)
-		testRowsIsEqual(t, &k1.clustRow, &k2.clustRow)
+		testRowsIsEqual(t, &k1.ccolsRow, &k2.ccolsRow)
 
 		require.True(k1.Equals(k2))
 		require.True(k2.Equals(k1))
@@ -781,7 +778,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 				AddValueField("name", appdef.DataKind_string, true).
 				AddValueField("active", appdef.DataKind_bool, true)
 
-			_ = appDef.AddStruct(appdef.NewQName("test", "obj1"), appdef.DefKind_Object)
+			_ = appDef.AddObject(appdef.NewQName("test", "obj1"))
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -790,7 +787,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 		return cfgs
 	}
 
-	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvder())
+	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 	as, err := p.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
@@ -839,12 +836,12 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 func Test_ViewRecord_GetBatch(t *testing.T) {
 	require := require.New(t)
 
-	championatsView := appdef.NewQName("test", "championats")
+	championshipsView := appdef.NewQName("test", "championships")
 	championsView := appdef.NewQName("test", "champions")
 
 	appDef := appdef.New()
 	t.Run("must be ok to build application definition", func(t *testing.T) {
-		appDef.AddView(championatsView).
+		appDef.AddView(championshipsView).
 			AddPartField("Year", appdef.DataKind_int32).
 			AddClustColumn("Sport", appdef.DataKind_string).
 			AddValueField("Country", appdef.DataKind_string, true).
@@ -866,16 +863,16 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
-	type championat struct {
-		year              int32
-		sport, cntr, city string
-		winner            string
+	type championship struct {
+		year                 int32
+		sport, country, city string
+		winner               string
 	}
-	var championats = []championat{
+	var championships = []championship{
 		{1949, "Волейбол", "Чехословакия", "Прага", "СССР"},
 		{1952, "Волейбол", "СССР", "Москва", "СССР"},
 		{1956, "Волейбол", "Франция", "Париж", "Чехословакия"},
-		{1960, "Волейбол", "Бразиия", "Рио-де-Жанейро", "СССР"},
+		{1960, "Волейбол", "Бразилия", "Рио-де-Жанейро", "СССР"},
 		{1962, "Волейбол", "СССР", "Москва", "СССР"},
 		{1966, "Волейбол", "Чехословакия", "Прага", "Чехословакия"},
 		{1970, "Волейбол", "Болгария", "София", "ГДР"},
@@ -883,7 +880,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		{1978, "Волейбол", "Италия", "Рим", "СССР"},
 		{1982, "Волейбол", "Аргентина", "Буэнос-Айрес", "СССР"},
 		{1986, "Волейбол", "Франция", "Париж", "США"},
-		{1990, "Волейбол", "Бразиия", "Рио-де-Жанейро", "Италия"},
+		{1990, "Волейбол", "Бразилия", "Рио-де-Жанейро", "Италия"},
 		{1994, "Волейбол", "Греция", "Афины", "Италия"},
 		{1998, "Волейбол", "Япония", "Токио", "Италия"},
 		{2002, "Волейбол", "Аргентина", "Буэнос-Айрес", "Бразилия"},
@@ -906,7 +903,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		{1986, "Гандбол", "Швейцария", "Цюрих", "Югославия"},
 		{1990, "Гандбол", "Чехословакия", "Прага", "Швеция"},
 		{1993, "Гандбол", "Швеция", "Осло", "Россия"},
-		{1995, "Гандбол", "Исландия", "Рейкявик", "Франция"},
+		{1995, "Гандбол", "Исландия", "Рейкьявик", "Франция"},
 		{1997, "Гандбол", "Япония", "Токио", "Россия"},
 		{1999, "Гандбол", "Египет", "Каир", "Швеция"},
 		{2003, "Гандбол", "Португалия", "Лиссабон", "Хорватия"},
@@ -926,13 +923,13 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 
 	t.Run("Put view records to test", func(t *testing.T) {
 		batch := make([]istructs.ViewKV, 0)
-		for _, c := range championats {
+		for _, c := range championships {
 			kv := istructs.ViewKV{}
-			kv.Key = app.ViewRecords().KeyBuilder(championatsView)
+			kv.Key = app.ViewRecords().KeyBuilder(championshipsView)
 			kv.Key.PutInt32("Year", c.year)
 			kv.Key.PutString("Sport", c.sport)
-			kv.Value = app.ViewRecords().NewValueBuilder(championatsView)
-			kv.Value.PutString("Country", c.cntr)
+			kv.Value = app.ViewRecords().NewValueBuilder(championshipsView)
+			kv.Value.PutString("Country", c.country)
 			kv.Value.PutString("City", c.city)
 			batch = append(batch, kv)
 
@@ -953,9 +950,9 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 
 	t.Run("must ok to read all recs by batch", func(t *testing.T) {
 		batch := make([]istructs.ViewRecordGetBatchItem, 0)
-		for _, c := range championats {
+		for _, c := range championships {
 			kv := istructs.ViewRecordGetBatchItem{}
-			kv.Key = app.ViewRecords().KeyBuilder(championatsView)
+			kv.Key = app.ViewRecords().KeyBuilder(championshipsView)
 			kv.Key.PutInt32("Year", c.year)
 			kv.Key.PutString("Sport", c.sport)
 			batch = append(batch, kv)
@@ -972,10 +969,10 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		require.NoError(err)
 
 		i := 0
-		for _, c := range championats {
+		for _, c := range championships {
 			b := batch[i]
 			require.True(b.Ok)
-			require.Equal(c.cntr, b.Value.AsString("Country"))
+			require.Equal(c.country, b.Value.AsString("Country"))
 			require.Equal(c.city, b.Value.AsString("City"))
 			i++
 			if c.winner != "" {
@@ -1096,7 +1093,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		require.False(k1.Equals(k3), "KeyBuilder must not be equals if different partition fields")
 		require.False(k3.Equals(k1), "KeyBuilder must not be equals if different partition fields")
 
-		k4 := app.ViewRecords().KeyBuilder(championatsView)
+		k4 := app.ViewRecords().KeyBuilder(championshipsView)
 		k4.PutInt32("Year", 1962)
 		k4.PutString("Sport", "Волейбол")
 

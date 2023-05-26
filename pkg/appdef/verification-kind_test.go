@@ -184,7 +184,7 @@ func TestVerificationKind_ToString(t *testing.T) {
 		k    VerificationKind
 		want string
 	}{
-		{name: "vulgaris", k: VerificationKind_EMail, want: "EMail"},
+		{name: "basic test", k: VerificationKind_EMail, want: "EMail"},
 		{name: "out of range", k: VerificationKind_FakeLast + 1, want: (VerificationKind_FakeLast + 1).String()},
 	}
 	for _, tt := range tests {

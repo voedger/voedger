@@ -95,7 +95,6 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		principals = append(principals, prn)
 	}
 
-	workspaceSubject := false
 	switch pkt {
 	case iauthnz.PrincipalKind_User:
 		if req.RequestWSID == profileWSID {
@@ -107,7 +106,6 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			if !slices.Contains(principals, prnProfileOwner) {
 				principals = append(principals, prnProfileOwner)
 			}
-			workspaceSubject = true
 		} else {
 			wsDesc, err := as.Records().GetSingleton(req.RequestWSID, qNameCDocWorkspaceDescriptor)
 			if err != nil {
@@ -122,7 +120,6 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 				}
 				if ownerWSID == int64(profileWSID) && !slices.Contains(principals, prnWSOwner) {
 					principals = append(principals, prnWSOwner)
-					workspaceSubject = true
 				}
 				// check roles came from token
 				for _, role := range principalPayload.Roles {
@@ -136,9 +133,6 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 					}
 					if !slices.Contains(principals, prn) {
 						principals = append(principals, prn)
-						if role.QName == iauthnz.QNameRoleProfileOwner || role.QName == iauthnz.QNameRoleWorkspaceOwner {
-							workspaceSubject = true
-						}
 					}
 				}
 			}
@@ -164,18 +158,28 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 					WSID:  deviceProfileWSID,
 					QName: iauthnz.QNameRoleWorkspaceDevice,
 				})
-				workspaceSubject = true
 			}
 		}
 	}
-	if workspaceSubject {
-		prnWSSubject := iauthnz.Principal{
-			Kind:  iauthnz.PrincipalKind_Role,
-			WSID:  req.RequestWSID,
-			QName: iauthnz.QNameRoleWorkspaceSubject,
+
+workspaceSubjectLoop:
+	for _, prn := range principals {
+		if prn.Kind != iauthnz.PrincipalKind_Role {
+			continue
 		}
-		if !slices.Contains(principals, prnWSSubject) {
-			principals = append(principals, prnWSSubject)
+		switch prn.QName {
+		case iauthnz.QNameRoleWorkspaceSubject:
+			break workspaceSubjectLoop
+		case iauthnz.QNameRoleWorkspaceDevice, iauthnz.QNameRoleProfileOwner, iauthnz.QNameRoleWorkspaceOwner:
+			prnWSSubject := iauthnz.Principal{
+				Kind:  iauthnz.PrincipalKind_Role,
+				WSID:  req.RequestWSID,
+				QName: iauthnz.QNameRoleWorkspaceSubject,
+			}
+			if !slices.Contains(principals, prnWSSubject) {
+				principals = append(principals, prnWSSubject)
+			}
+			break workspaceSubjectLoop
 		}
 	}
 
