@@ -11,6 +11,3 @@ Provide CLI logic for CE
   - monitor - open http://localhost:8888/static/sys/monitor/site/main/
 
 
-
-
-

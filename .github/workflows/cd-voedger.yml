@@ -34,6 +34,7 @@ jobs:
         go build -o ./cmd/voedger ./cmd/voedger
       env:
         GOPRIVATE: "github.com/untillpro/*,github.com/heeus/*,github.com/voedger/*"
+        CGO_ENABLED: 0
 
     - name: Log in to Docker Hub
       uses: docker/login-action@v2
