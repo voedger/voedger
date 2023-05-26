@@ -191,7 +191,7 @@ func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
 	}
 }
 
-func genUniqueName(tablename string, bc appdef.IDefBuilder) string {
+func genUniqueName(tablename string, bc appdef.IUniquesBuilder) string {
 	tn := strings.ToUpper(tablename)
 	for i := 1; i < appdef.MaxDefUniqueCount+1; i++ {
 		un := fmt.Sprintf("%s_UNIQUE%d", tn, i)
