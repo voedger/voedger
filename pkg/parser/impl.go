@@ -457,7 +457,7 @@ func addTableItems(items []TableItemExpr, ctx *buildContext) {
 			}
 		} else if item.Constraint != nil {
 			// TODO: constraint checks, e.g. same field cannot be used twice
-			if item.Constraint.Unique != nil {
+			if item.Constraint.UniqueField != nil {
 				name := item.Constraint.ConstraintName
 				if name == "" {
 					name = genUniqueName(ctx.defCtx().qname.Entity(), ctx.defCtx().defBuilder.(appdef.IUniquesBuilder))
@@ -466,9 +466,8 @@ func addTableItems(items []TableItemExpr, ctx *buildContext) {
 					ctx.errs = append(ctx.errs, err)
 					continue
 				}
-				ctx.defCtx().defBuilder.(appdef.IUniquesBuilder).AddUnique(name, item.Constraint.Unique.Fields)
-				//} else if item.Constraint.Check != nil {
-				// TODO: implement Table Check Constraint
+				ctx.defCtx().defBuilder.(appdef.IUniquesBuilder).AddUnique(name, []string{item.Constraint.UniqueField.Field})
+
 			}
 		} else if item.Table != nil {
 			// Add nested table

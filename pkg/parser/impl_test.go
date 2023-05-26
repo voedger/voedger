@@ -54,7 +54,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.NotNil(cdoc)
 	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
 	require.Equal(appdef.DataKind_int32, cdoc.(appdef.IFields).Field("FState").DataKind())
-	require.Equal(2, len(cdoc.(appdef.IUniquesBuilder).UniqueByName("AIRTABLEPLAN_UNIQUE1").Fields()))
+	require.Equal(1, len(cdoc.(appdef.IUniquesBuilder).UniqueByName("AIRTABLEPLAN_UNIQUE1").Fields()))
 
 	// child table
 	crec := builder.Def(appdef.NewQName("air", "AirTablePlanItem"))
@@ -147,7 +147,7 @@ func Test_DupFieldsInTables(t *testing.T) {
 		Name int,			-- duplicated in the inherited table
 		ID text,			-- duplicated in the inherited table (2nd level)
 		UNIQUE (Kind),
-		CONSTRAINT constraint1 UNIQUE (newField) -- duplicated in the inherited table
+		CONSTRAINT constraint1 UNIQUEFIELD newField -- duplicated in the inherited table
 	)
 	`)
 	require.NoError(err)
