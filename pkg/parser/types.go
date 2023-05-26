@@ -185,18 +185,31 @@ type DefQName struct {
 	Name    string `parser:"@Ident"`
 }
 
-type TypeQName struct {
-	Package string `parser:"(@Ident '.')?"`
-	Name    string `parser:"@Ident"`
-	IsArray bool   `parser:"@Array?"`
-}
-
 func (q DefQName) String() string {
 	if q.Package == "" {
 		return q.Name
 	}
 	return fmt.Sprintf("%s.%s", q.Package, q.Name)
 
+}
+
+type TypeQName struct {
+	Package string `parser:"(@Ident '.')?"`
+	Name    string `parser:"@Ident"`
+	IsArray bool   `parser:"@Array?"`
+}
+
+func (q TypeQName) String() (s string) {
+	if q.Package == "" {
+		s = q.Name
+	} else {
+		s = fmt.Sprintf("%s.%s", q.Package, q.Name)
+	}
+
+	if q.IsArray {
+		return fmt.Sprintf("[]%s", s)
+	}
+	return s
 }
 
 type Statement struct {
@@ -214,10 +227,11 @@ func (s *Statement) GetComments() *[]string {
 
 type ProjectorStmt struct {
 	Statement
-	Name    string      `parser:"'PROJECTOR' @Ident"`
-	On      ProjectorOn `parser:"'ON' @@"`
-	Targets []DefQName  `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
-	Affects []DefQName  `parser:"'AFFECTS' @@ ('AND' @@)*"` // TODO: AFFECTS: 1) HTTP is not an Intent. 2) Only allow one type of AFFECT per projector??? Sequences???
+	Name     string      `parser:"'PROJECTOR' @Ident"`
+	On       ProjectorOn `parser:"'ON' @@"`
+	Triggers []DefQName  `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
+	Use      []DefQName  `parser:"('USES' @@ ('AND' @@)*)?"`
+	Targets  []DefQName  `parser:"('MAKES' @@ ('AND' @@)*)?"`
 }
 
 func (s ProjectorStmt) GetName() string { return s.Name }
@@ -355,41 +369,53 @@ type NamedParam struct {
 type TableStmt struct {
 	Statement
 	Name     string          `parser:"'TABLE' @Ident"`
-	Inherits DefQName        `parser:"('INHERITS' @@)?"`
+	Inherits *DefQName       `parser:"('INHERITS' @@)?"`
 	Of       []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
-	Items    []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
+	Items    []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	With     []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
 func (s TableStmt) GetName() string { return s.Name }
 
 type TableItemExpr struct {
-	Table  *TableStmt      `parser:"@@"`
-	Unique *UniqueExpr     `parser:"| @@"`
-	Check  *TableCheckExpr `parser:"| @@"`
-	Field  *FieldExpr      `parser:"| @@"`
+	Table      *TableStmt       `parser:"@@"`
+	Constraint *TableConstraint `parser:"| @@"`
+	RefField   *RefFieldExpr    `parser:"| @@"`
+	Field      *FieldExpr       `parser:"| @@"`
+}
+
+type TableConstraint struct {
+	Pos            lexer.Position
+	ConstraintName string          `parser:"('CONSTRAINT' @Ident)?"`
+	Unique         *UniqueExpr     `parser:"(@@"`
+	Check          *TableCheckExpr `parser:"| @@)"`
 }
 
 type TableCheckExpr struct {
-	ConstraintName string     `parser:"('CONSTRAINT' @Ident)?"`
-	Expression     Expression `parser:"'CHECK' '(' @@ ')'"`
+	Expression Expression `parser:"'CHECK' '(' @@ ')'"`
 }
 
 type UniqueExpr struct {
 	Fields []string `parser:"'UNIQUE' '(' @Ident (',' @Ident)* ')'"`
 }
 
+type RefFieldExpr struct {
+	Pos        lexer.Position
+	Name       string   `parser:"@Ident"`
+	References DefQName `parser:"'reference' @@"`
+}
+
 type FieldExpr struct {
+	Pos                lexer.Position
 	Name               string      `parser:"@Ident"`
-	Type               TypeQName   `parser:"@@"`
+	Type               *TypeQName  `parser:"@@"`
 	NotNull            bool        `parser:"@(NOTNULL)?"`
 	Verifiable         bool        `parser:"@('VERIFIABLE')?"`
 	DefaultIntValue    *int        `parser:"('DEFAULT' @Int)?"`
 	DefaultStringValue *string     `parser:"('DEFAULT' @String)?"`
 	DefaultNextVal     *string     `parser:"(DEFAULTNEXTVAL  '(' @String ')')?"`
-	References         *DefQName   `parser:"('REFERENCES' @@)?"`
 	CheckRegexp        *string     `parser:"('CHECK' @String)?"`
-	CheckExpression    *Expression `parser:"('CHECK' '(' @@ ')')?"`
+	CheckExpression    *Expression `parser:"('CHECK' '(' @@ ')')? "`
 }
 
 type ViewStmt struct {
@@ -397,6 +423,7 @@ type ViewStmt struct {
 	Name     string         `parser:"'VIEW' @Ident"`
 	Fields   []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	ResultOf DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
+	pkRef    *PrimaryKeyExpr
 }
 
 type ViewItemExpr struct {
@@ -413,8 +440,9 @@ type PrimaryKeyExpr struct {
 func (s ViewStmt) GetName() string { return s.Name }
 
 type ViewField struct {
-	Name string        `parser:"@Ident"`
-	Type ViewFieldType `parser:"@@"`
+	Name    string        `parser:"@Ident"`
+	Type    ViewFieldType `parser:"@@"`
+	NotNull bool          `parser:"@(NOTNULL)?"`
 }
 
 type ViewFieldType struct {

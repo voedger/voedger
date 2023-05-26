@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 func extractStatement(s any) interface{} {
@@ -58,6 +60,17 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 	})
 }
 
+func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt](c IStatementCollection, callback func(stmt stmtType)) {
+	c.Iterate(func(stmt interface{}) {
+		if s, ok := stmt.(stmtType); ok {
+			callback(s)
+		}
+		if collection, ok := stmt.(IStatementCollection); ok {
+			iterateStmt(collection, callback)
+		}
+	})
+}
+
 func isInternalName(name DefQName, schema *SchemaAST) bool {
 	pkg := strings.TrimSpace(name.Package)
 	return pkg == "" || pkg == schema.Package
@@ -80,7 +93,7 @@ func getQualifiedPackageName(pkgName string, schema *SchemaAST) (string, error) 
 	return "", ErrUndefined(pkgName)
 }
 
-func getTargetSchema(n DefQName, c *aContext) (*PackageSchemaAST, error) {
+func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 	var targetPkgSch *PackageSchemaAST
 
 	if isInternalName(n, c.pkg.Ast) {
@@ -98,21 +111,33 @@ func getTargetSchema(n DefQName, c *aContext) (*PackageSchemaAST, error) {
 	return targetPkgSch, nil
 }
 
-func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt](fn DefQName, c *aContext, cb func(f stmtType) error) {
+func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) {
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
 		c.errs = append(c.errs, errorAt(err, c.pos))
 		return
 	}
 	var item stmtType
-	iterate(schema.Ast, func(stmt interface{}) {
-		if f, ok := stmt.(stmtType); ok {
-			named := any(f).(INamedStatement)
-			if named.GetName() == fn.Name {
-				item = f
+	iter := func(s *SchemaAST) {
+		iterate(s, func(stmt interface{}) {
+			if f, ok := stmt.(stmtType); ok {
+				named := any(f).(INamedStatement)
+				if named.GetName() == fn.Name {
+					item = f
+				}
 			}
+		})
+	}
+	iter(schema.Ast)
+
+	if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
+		sysSchema := c.pkgmap[appdef.SysPackage]
+		if sysSchema == nil {
+			c.errs = append(c.errs, errorAt(ErrCouldNotImport(appdef.SysPackage), c.pos))
+		} else {
+			iter(sysSchema.Ast)
 		}
-	})
+	}
 	if item == nil {
 		c.errs = append(c.errs, errorAt(ErrUndefined(fn.String()), c.pos))
 		return
@@ -122,4 +147,132 @@ func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *C
 		c.errs = append(c.errs, errorAt(err, c.pos))
 		return
 	}
+}
+
+func maybeSysPkg(pkg string) bool {
+	return (pkg == "" || pkg == appdef.SysPackage)
+}
+
+func isSysDef(qn DefQName, ident string) bool {
+	return maybeSysPkg(qn.Package) && qn.Name == ident
+}
+
+func isPredefinedSysTable(table *TableStmt, c *buildContext) bool {
+	return c.pkg.QualifiedPackageName == appdef.SysPackage && (table.Name == nameCDOC || table.Name == nameWDOC || table.Name == nameODOC)
+}
+
+func getTableInheritanceChain(table *TableStmt, ctx *buildContext) (chain []DefQName) {
+	chain = make([]DefQName, 0)
+	var vf func(t *TableStmt)
+	vf = func(t *TableStmt) {
+		if t.Inherits != nil {
+			inherited := *t.Inherits
+			resolve(inherited, &ctx.basicContext, func(t *TableStmt) error {
+				chain = append(chain, inherited)
+				vf(t)
+				return nil
+			})
+		}
+	}
+	vf(table)
+	return chain
+}
+
+func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
+	switch rootTableKind {
+	case appdef.DefKind_CDoc:
+		return appdef.DefKind_CRecord
+	case appdef.DefKind_ODoc:
+		return appdef.DefKind_ORecord
+	case appdef.DefKind_WDoc:
+		return appdef.DefKind_WRecord
+	default:
+		panic(fmt.Sprintf("unexpected root table kind %d", rootTableKind))
+	}
+}
+
+func genUniqueName(tablename string, bc appdef.IDefBuilder) string {
+	tn := strings.ToUpper(tablename)
+	for i := 1; i < appdef.MaxDefUniqueCount+1; i++ {
+		un := fmt.Sprintf("%s_UNIQUE%d", tn, i)
+		if bc.UniqueByName(un) == nil {
+			return un
+		}
+	}
+	return ""
+}
+
+func getTableDefKind(table *TableStmt, ctx *buildContext) (kind appdef.DefKind, singletone bool) {
+	chain := getTableInheritanceChain(table, ctx)
+	for _, t := range chain {
+		if isSysDef(t, nameCDOC) || isSysDef(t, nameSingleton) {
+			return appdef.DefKind_CDoc, isSysDef(t, nameSingleton)
+		} else if isSysDef(t, nameODOC) {
+			return appdef.DefKind_ODoc, false
+		} else if isSysDef(t, nameWDOC) {
+			return appdef.DefKind_WDoc, false
+		}
+	}
+	return appdef.DefKind_null, false
+}
+
+func getTypeDataKind(t TypeQName) appdef.DataKind {
+	if maybeSysPkg(t.Package) {
+		if t.Name == sysInt32 || t.Name == sysInt {
+			return appdef.DataKind_int32
+		}
+		if t.Name == sysInt64 {
+			return appdef.DataKind_int64
+		}
+		if t.Name == sysFloat32 || t.Name == sysFloat {
+			return appdef.DataKind_float32
+		}
+		if t.Name == sysFloat64 {
+			return appdef.DataKind_float64
+		}
+		if t.Name == sysQName {
+			return appdef.DataKind_QName
+		}
+		if t.Name == sysId {
+			return appdef.DataKind_RecordID
+		}
+		if t.Name == sysBool {
+			return appdef.DataKind_bool
+		}
+		if t.Name == sysString {
+			return appdef.DataKind_string
+		}
+		if t.Name == sysBytes {
+			return appdef.DataKind_bytes
+		}
+	}
+	return appdef.DataKind_null
+}
+
+func viewFieldDataKind(f *ViewField) appdef.DataKind {
+	if f.Type.Bool {
+		return appdef.DataKind_bool
+	}
+	if f.Type.Bytes {
+		return appdef.DataKind_bytes
+	}
+	if f.Type.Float32 {
+		return appdef.DataKind_float32
+	}
+	if f.Type.Float64 {
+		return appdef.DataKind_float64
+	}
+	if f.Type.Id {
+		return appdef.DataKind_RecordID
+	}
+	if f.Type.Int32 {
+		return appdef.DataKind_int32
+	}
+	if f.Type.Int64 {
+		return appdef.DataKind_int64
+	}
+	if f.Type.QName {
+		return appdef.DataKind_QName
+	}
+	return appdef.DataKind_string
 }

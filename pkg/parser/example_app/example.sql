@@ -15,23 +15,27 @@ TAG BackofficeTag;
 ROLE UntillPaymentsUser;
 
 -- TABLE ... OF - declares the inheritance from type or table. PROJECTORS from the base table are not inherted.
-TABLE AirTablePlan INHERITS CDOC (
+TABLE AirTablePlan INHERITS CDoc (
     FState int,
     Name text NOT NULL,
     VerifiableField text NOT NULL VERIFIABLE, -- Verifiable field
     Int1 int DEFAULT 1 CHECK(Int1 >= 1 AND Int2 < 10000),  -- Expressions evaluating to TRUE or UNKNOWN succeed.
     Text1 text DEFAULT "a",
     Int2 int DEFAULT NEXTVAL('sequence'),
-    BillID int64 REFERENCES air.bill,
+    BillID reference air.bill,
     CheckedField text CHECK "^[0-9]{8}$", -- Field validated by regexp
     CHECK (ValidateRow(this)), -- Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
     CONSTRAINT StateChecker CHECK (ValidateFState(FState)), -- Named CHECK table constraint
-    UNIQUE (FState, Name) -- unnamed UNIQUE table constraint
+    UNIQUE (FState, Name), -- unnamed UNIQUE table constraint
+    TABLE AirTablePlanItem (
+        TableNo int,
+        Chairs int
+    )
 ) WITH Comment=BackofficeComment, Tags=[BackofficeTag]; -- Optional comment and tags
 
 
 -- Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC
-TABLE SubscriptionProfile INHERITS SINGLETONE (
+TABLE SubscriptionProfile INHERITS Singleton (
     CustomerID text,
     CustomerKind int,
     CompanyName text
@@ -80,7 +84,7 @@ WORKSPACE MyWorkspace (
     );
 
 
-    TABLE WsTable INHERITS CDOC OF air.TypeWithName, TypeWithKind ( -- Multiple types
+    TABLE WsTable INHERITS CDoc OF air.TypeWithName, TypeWithKind ( -- Multiple types
         PsName text,
         TABLE Child (
             Number int				
@@ -92,20 +96,22 @@ WORKSPACE MyWorkspace (
 
         -- Projector can only be declared in workspace.
         -- A builtin function OrdersCountProjector must exist in package resources.
-        -- Projector triggered by command and it affects air.OrdersCountView which is a VIEW.
-        -- Projector can affect either VIEWs or Storage QNames (except ViewRecordStorage)
-        PROJECTOR CountOrders ON COMMAND air.Orders AFFECTS air.OrdersCountView;
+        -- TARGET - lists all QNames for which Intets are generated (QName of Entity or Storage)
+        -- USE - lists all QNames for which Get/Read operations are done (QName of Entity or Storage). 
+        --      (no need to specify in USES when already listed in TARGET)
+        PROJECTOR CountOrders ON COMMAND air.Orders MAKES air.OrdersCountView;
         
-        -- Projector triggered by command argument and it affects SubscriptionProfile which is a Storage
-        PROJECTOR UpdateSubscriptionProfile ON COMMAND ARGUMENT SubscriptionEvent AFFECTS sys.HTTPStorage;
+        -- Projector triggered by command argument SubscriptionProfile which is a Storage
+        -- Projector uses sys.HTTPStorage
+        PROJECTOR UpdateSubscriptionProfile ON COMMAND ARGUMENT SubscriptionEvent USES sys.HTTPStorage;
 
         -- Projectors triggered by CUD operations
-        PROJECTOR AirPlanThumbnailGen ON INSERT air.AirTablePlan AFFECTS AirPlanThumbnails;
-        PROJECTOR UpdateDashboard ON COMMAND IN (air.Orders, air.Orders2) AFFECTS DashboardView;
-        PROJECTOR UpdateActivePlans ON ACTIVATE OR DEACTIVATE air.AirTablePlan AFFECTS ActiveTablePlansView;
+        PROJECTOR AirPlanThumbnailGen ON INSERT air.AirTablePlan MAKES AirPlanThumbnails;
+        PROJECTOR UpdateDashboard ON COMMAND IN (air.Orders, air.Orders2) MAKES DashboardView;
+        PROJECTOR UpdateActivePlans ON ACTIVATE OR DEACTIVATE air.AirTablePlan MAKES ActiveTablePlansView;
         
         -- Some projector which sends E-mails and performs HTTP queries
-        PROJECTOR NotifyOnChanges ON INSERT OR UPDATE IN (air.AirTablePlan, WsTable) AFFECTS sys.SendMailStorage AND sys.HTTPStorage;
+        PROJECTOR NotifyOnChanges ON INSERT OR UPDATE IN (air.AirTablePlan, WsTable) USES sys.HTTPStorage MAKES sys.SendMailStorage;
 
         -- Commands can only be declared in workspaces
         COMMAND Orders(Untill.Orders);
@@ -139,7 +145,7 @@ WORKSPACE MyWorkspace (
         Day int32, 
         Kind int32, 
         Number int32, 
-        XZReportWDocID id,
+        XZReportWDocID id NOT NULL,
         PRIMARY KEY ((Year), Month, Day, Kind, Number)
     ) AS RESULT OF air.UpdateDashboard;
 
