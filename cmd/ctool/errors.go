@@ -25,4 +25,5 @@ var (
 	ErrNodeControllerFunctionNotAssigned    = errors.New("node controller function not assigned")
 	ErrClusterControllerFunctionNotAssigned = errors.New("cluster controller function not assigned")
 	ErrPreparingClusterNodes                = errors.New("error preparing cluster nodes, the apply command is aborted")
+	ErrManagerTokenNotExists                = errors.New("manager token not exists")
 )

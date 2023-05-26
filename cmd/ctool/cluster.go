@@ -287,7 +287,8 @@ type clusterType struct {
 	DataCenters           []string `json:"DataCenters,omitempty"`
 	LastAttemptError      string   `json:"LastAttemptError,omitempty"`
 	Nodes                 []nodeType
-	Draft                 bool `json:"Draft,omitempty"`
+	Draft                 bool   `json:"Draft,omitempty"`
+	ManagerToken          string `json:"ManagerToken,omitempty"`
 }
 
 func (c *clusterType) clusterControllerFunction() error {
@@ -320,9 +321,9 @@ func equalIPs(ip1, ip2 string) bool {
 }
 
 func (c *clusterType) nodeByHost(address string) *nodeType {
-	for _, n := range c.Nodes {
+	for i, n := range c.Nodes {
 		if equalIPs(n.ActualNodeState.Address, address) {
-			return &n
+			return &c.Nodes[i]
 		}
 	}
 	return nil
@@ -338,8 +339,18 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 	}
 
 	c.Cmd = *cmd
-	// todo
-	// here you will need to change the cluster nodes, if required
+
+	defer c.saveToJSON()
+	switch cmd.Kind {
+	case ckReplace:
+		oldAddr := cmd.args()[0]
+		newAddr := cmd.args()[1]
+		node := c.nodeByHost(oldAddr)
+		node.DesiredNodeState = node.ActualNodeState
+		node.DesiredNodeState.Address = newAddr
+		node.ActualNodeState.clear()
+
+	}
 
 	return nil
 }

@@ -181,3 +181,47 @@ func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 
 	return nil
 }
+
+func copyFile(src, dest string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		return err
+	}
+
+	err = destFile.Sync()
+	if err != nil {
+		return err
+	}
+
+	sourceInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	err = os.Chmod(dest, sourceInfo.Mode())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func fileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
