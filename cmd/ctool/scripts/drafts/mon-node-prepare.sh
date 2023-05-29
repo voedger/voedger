@@ -58,6 +58,7 @@ while [ $# -gt 0 ] && [ $count -lt 2 ]; do
   cat ./prometheus/alert.rules | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/prometheus/alert.rules'
   cat ./alertmanager/config.yml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/alertmanager/config.yml'
 
+   ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /etc/node-exporter && sudo chown -R 65534:65534 /etc/node-exporter"
 
    NODE_ID=$(ssh $SSH_OPTIONS $SSH_USER@$1 "docker info --format '{{.Swarm.NodeID}}'")
    NODE_NAME=$(ssh $SSH_OPTIONS $SSH_USER@$1 "docker node inspect --format '{{.Description.Hostname}}' $NODE_ID")
@@ -65,7 +66,6 @@ while [ $# -gt 0 ] && [ $count -lt 2 ]; do
    echo "node_meta{node_id=$NODE_ID, container_label_com_docker_swarm_node_id=$NODE_ID, node_name=$NODE_NAME} 1" | \
      ssh $SSH_OPTIONS $SSH_USER@$1 'sudo cat > /etc/node-exporter/node-meta.prom'
 
-   ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /etc/node-exporter && sudo chown -R 65534:65534 /etc/node-exporter"
 
   ssh $SSH_OPTIONS $SSH_USER@$1 "sudo chown -R 65534:65534 /prometheus"
   ssh $SSH_OPTIONS $SSH_USER@$1 "sudo chown -R 65534:65534 /alertmanager"
