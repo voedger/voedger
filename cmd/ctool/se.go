@@ -8,20 +8,17 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 
 	"github.com/untillpro/goutils/logger"
 )
 
 func seNodeControllerFunction(n *nodeType) error {
 
-	if len(n.Error) > 0 && n.DesiredNodeState.isEmpty() {
-		n.DesiredNodeState = n.ActualNodeState
+	if len(n.Error) > 0 && (n.DesiredNodeState == nil || n.DesiredNodeState.isEmpty()) {
+		n.DesiredNodeState = newNodeState(n.ActualNodeState.Address, n.ActualNodeState.NodeVersion)
 	}
 
-	if n.DesiredNodeState.isEmpty() {
+	if n.DesiredNodeState == nil || n.DesiredNodeState.isEmpty() {
 		return nil
 	}
 
@@ -164,10 +161,6 @@ func deploySeSwarm(cluster *clusterType) error {
 				return
 			}
 		}(&cluster.Nodes[i])
-	}
-
-	if err := saveManagerToken(cluster); err != nil {
-		return err
 	}
 
 	// end of Add remaining nodes to swarm cluster
@@ -314,7 +307,6 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 
 	conf := newSeConfigType(cluster)
 
-	fmt.Println("swarm-get-manager-token.sh", conf.SENode1)
 	if err = newScriptExecuter(cluster.sshKey, "localhost").
 		run("swarm-get-manager-token.sh", conf.SENode1); err != nil {
 		logger.Error(err.Error())
@@ -331,14 +323,12 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 		conf.DBNode3 = oldAddr
 	}
 
-	fmt.Println("docker-compose-prepare.sh", conf.DBNode1, conf.DBNode2, conf.DBNode3)
 	if err = newScriptExecuter(cluster.sshKey, "localhost").
 		run("docker-compose-prepare.sh", conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
 
-	fmt.Println("ctool-scylla-replace-node.sh", oldNodeAddr, newNodeAddr, conf.SENode1)
 	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s, %s", oldNodeAddr, newNodeAddr)).
 		run("ctool-scylla-replace-node.sh", oldNodeAddr, newNodeAddr, conf.SENode1); err != nil {
 		logger.Error(err.Error())
@@ -347,26 +337,4 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 
 	logger.Info(fmt.Sprintf("sclylla node [%s -> %s] replaced successfully", oldNodeAddr, newNodeAddr))
 	return nil
-}
-
-func saveManagerToken(cluster *clusterType) error {
-	tokenFileName := filepath.Join(scriptsTempDir, "manager.token")
-	if !fileExists(tokenFileName) {
-		return ErrManagerTokenNotExists
-	}
-	token, err := ioutil.ReadFile(tokenFileName)
-	if err != nil {
-		return err
-	}
-
-	cluster.ManagerToken = string(token)
-	return nil
-}
-
-func prepareManagerToken(cluster *clusterType) error {
-
-	tokenFileName := filepath.Join(scriptsTempDir, "manager.token")
-	err := os.WriteFile(tokenFileName, []byte(cluster.ManagerToken), os.FileMode(rwxrwxrwx))
-	return err
-
 }
