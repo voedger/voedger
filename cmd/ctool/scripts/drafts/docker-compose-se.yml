@@ -5,6 +5,8 @@ services:
   
   se:
     image: voedger/voedger:0.0.1-alpha
+    environment:
+      - VOEDGER_HTTP_PORT=8888
     ports:
       - "0.0.0.0:8888:8888"
     deploy:
