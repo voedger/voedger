@@ -17,12 +17,12 @@ import (
 
 	_ "embed"
 
-	istoragecas "github.com/heeus/core-istoragecas"
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	istorage "github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorageimpl/istoragecas"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -35,7 +35,7 @@ import (
 )
 
 func NewVIT(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
-	useCas := IsCassandraStorage()
+	useCas := coreutils.IsCassandraStorage()
 	if !vitCfg.isShared {
 		vit = newVit(t, vitCfg, useCas)
 	} else {
