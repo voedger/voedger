@@ -198,8 +198,8 @@ services:
     image: prom/node-exporter:latest
 
     environment:
-      - NODE_ID={{.Node.ID}}
-      - NODE_NAME="ip-10-0-0-11"
+  #    - NODE_ID={{.Node.ID}}
+  #    - NODE_NAME="ip-10-0-0-11"
 
     deploy:
       placement:
@@ -229,8 +229,8 @@ services:
     image: prom/node-exporter:latest
 
     environment:
-      - NODE_ID={{.Node.ID}}
-      - NODE_NAME="ip-10-0-0-12"
+#      - NODE_ID={{.Node.ID}}
+#      - NODE_NAME="ip-10-0-0-12"
 
     deploy:
       placement:
