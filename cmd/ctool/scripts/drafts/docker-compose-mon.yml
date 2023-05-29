@@ -197,8 +197,8 @@ services:
   node-exporter1:
     image: prom/node-exporter:latest
 
-    environment:
-      - NODE_ID={{.Node.ID}}
+#    environment:
+#      - NODE_ID={{.Node.ID}}
 #      - NODE_NAME="ip-10-0-0-11"
 
     deploy:
@@ -228,8 +228,8 @@ services:
   node-exporter2:
     image: prom/node-exporter:latest
 
-    environment:
-      - NODE_ID={{.Node.ID}}
+#    environment:
+#      - NODE_ID={{.Node.ID}}
 #      - NODE_NAME="ip-10-0-0-12"
 
     deploy:
