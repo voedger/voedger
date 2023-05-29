@@ -1,15 +1,15 @@
 SCHEMA sys;
 
 TABLE CDoc(
-    ID id
+    ID int64
 );
 
 TABLE ODoc(
-    ID id
+    ID int64
 );
 
 TABLE WDoc(
-    ID id
+    ID int64
 );
 
 TABLE Singleton INHERITS CDoc (

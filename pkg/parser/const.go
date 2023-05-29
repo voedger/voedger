@@ -20,7 +20,6 @@ const (
 	sysFloat32 = "float32"
 	sysFloat64 = "float64"
 	sysQName   = "qname"
-	sysId      = "id"
 	sysBool    = "bool"
 	sysString  = "text"
 	sysBytes   = "blob"
