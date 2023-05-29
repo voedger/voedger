@@ -55,10 +55,11 @@ type uniques struct {
 	def            *def
 	uniques        map[string]*unique
 	uniquesOrdered []string
+	field          IField
 }
 
 func makeUniques(def *def) uniques {
-	u := uniques{def, make(map[string]*unique), make([]string, 0)}
+	u := uniques{def, make(map[string]*unique), make([]string, 0), nil}
 	return u
 }
 
@@ -67,6 +68,28 @@ func (u *uniques) AddUnique(name string, fields []string) IUniquesBuilder {
 		name = generateUniqueName(u.def, fields)
 	}
 	return u.addUnique(name, fields)
+}
+
+func (u *uniques) SetUniqueField(name string) IUniquesBuilder {
+	if name == NullName {
+		u.field = nil
+		return u
+	}
+	if ok, err := ValidIdent(name); !ok {
+		panic((fmt.Errorf("%v: unique field name «%v» is invalid: %w", u.def.QName(), name, err)))
+	}
+
+	fld := u.def.Field(name)
+	if fld == nil {
+		panic((fmt.Errorf("%v: unique field name «%v» not found: %w", u.def.QName(), name, ErrNameNotFound)))
+	}
+	if !fld.Required() {
+		panic((fmt.Errorf("%v: unique field «%v» must be required", u.def.QName(), name)))
+	}
+
+	u.field = fld
+
+	return u
 }
 
 func (u *uniques) UniqueByName(name string) IUnique {
@@ -87,6 +110,10 @@ func (u *uniques) UniqueByID(id UniqueID) (unique IUnique) {
 
 func (u *uniques) UniqueCount() int {
 	return len(u.uniques)
+}
+
+func (u *uniques) UniqueField() IField {
+	return u.field
 }
 
 func (u *uniques) Uniques(enum func(IUnique)) {

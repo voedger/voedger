@@ -12,11 +12,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/uniques"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
-	"golang.org/x/exp/slices"
 )
 
 func getUniqueNumber(vit *it.VIT) (int, string) {
@@ -315,69 +315,81 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 	as, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
-	// get the IUnique determined by key fields set
-	var unique istructs.IUnique                                              // nolint
-	for _, probe := range as.Uniques().GetAll(it.QNameCDocTestConstraints) { // nolint
-		if slices.Equal(probe.Fields(), []string{"Int"}) {
-			unique = probe
-		}
-	}
-	require.NotNil(unique)
+	t.Run("must be ok to find unique field for test CDoc", func(t *testing.T) {
+		unique, ok := as.AppDef().Def(it.QNameCDocTestConstraints).(appdef.IUniques)
+		require.True(ok)
+		require.NotNil(unique.UniqueField())
+	})
 
 	// simulate data source and try to get an ID for that combination of key fields
 	t.Run("basic", func(t *testing.T) {
 		obj := &coreutils.TestObject{
 			Data: map[string]interface{}{
-
+				// required for unique key builder
+				appdef.SystemField_QName: it.QNameCDocTestConstraints,
 				// required for unique key
-				"Str":  "str",
-				"Bool": true,
-				"Int":  int32(num),
-
+				"Int": int32(num),
 				// not in the unique key, could be omitted
+				"Str":     "str",
+				"Bool":    true,
 				"Float32": float32(42),
 			},
 		}
-		uniqueRecID, err := uniques.GetUniqueID(unique, as, obj, ws.WSID)
+		uniqueRecID, err := uniques.GetUniqueID(as, obj, ws.WSID)
 		require.NoError(err)
 		require.Equal(istructs.RecordID(newID), uniqueRecID)
 	})
 
-	t.Run("id of inactive record", func(t *testing.T) {
-		// let's deactive the record
+	t.Run("must be ok to deactivate active record", func(t *testing.T) {
+		// let's deactivate the record
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.DocConstraints","sys.IsActive":false}}]}`, newID)
 		vit.PostWS(ws, "c.sys.CUD", body)
 
-		// NullRecordID for the inactive record
+		t.Run("must be not found deactivated record", func(t *testing.T) {
+			// NullRecordID for the inactive record
+			obj := &coreutils.TestObject{
+				Data: map[string]interface{}{
+					appdef.SystemField_QName: it.QNameCDocTestConstraints,
+					"Int":                    int32(num),
+					"Str":                    "str",
+					"Bool":                   true,
+				},
+			}
+			uniqueRecID, err := uniques.GetUniqueID(as, obj, ws.WSID)
+			require.NoError(err)
+			require.Zero(uniqueRecID)
+		})
+	})
+
+	t.Run("must be not found unknown record", func(t *testing.T) {
 		obj := &coreutils.TestObject{
 			Data: map[string]interface{}{
-				"Str":  "str1",
-				"Bool": true,
-				"Int":  int32(num),
+				appdef.SystemField_QName: it.QNameCDocTestConstraints,
+				"Int":                    int32(num) + 1,
 			},
 		}
-		uniqueRecID, err := uniques.GetUniqueID(unique, as, obj, ws.WSID)
+		uniqueRecID, err := uniques.GetUniqueID(as, obj, ws.WSID)
 		require.NoError(err)
 		require.Zero(uniqueRecID)
 	})
 
-	t.Run("not found", func(t *testing.T) {
-		obj := &coreutils.TestObject{
-			Data: map[string]interface{}{
-				"Str":  "str1",
-				"Bool": true,
-				"Int":  int32(num),
-			},
-		}
-		uniqueRecID, err := uniques.GetUniqueID(unique, as, obj, ws.WSID)
-		require.NoError(err)
-		require.Zero(uniqueRecID)
+	t.Run("must be ok to reactivate inactive record", func(t *testing.T) {
+		// let's reactivate the record
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.DocConstraints","sys.IsActive":true}}]}`, newID)
+		vit.PostWS(ws, "c.sys.CUD", body)
 
-		obj = &coreutils.TestObject{
-			Data: map[string]interface{}{},
-		}
-		uniqueRecID, err = uniques.GetUniqueID(unique, as, obj, ws.WSID)
-		require.NoError(err)
-		require.Zero(uniqueRecID)
+		t.Run("must be ok reactivated record", func(t *testing.T) {
+			obj := &coreutils.TestObject{
+				Data: map[string]interface{}{
+					appdef.SystemField_QName: it.QNameCDocTestConstraints,
+					"Int":                    int32(num),
+					"Str":                    "str",
+					"Bool":                   true,
+				},
+			}
+			uniqueRecID, err := uniques.GetUniqueID(as, obj, ws.WSID)
+			require.NoError(err)
+			require.Equal(istructs.RecordID(newID), uniqueRecID)
+		})
 	})
 }

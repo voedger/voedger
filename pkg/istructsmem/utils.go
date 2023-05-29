@@ -129,7 +129,8 @@ func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectB
 
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
 	appDef := appStructs.AppDef()
-	def := appDef.Def(obj.AsQName(appdef.SystemField_QName))
+	qName := obj.AsQName(appdef.SystemField_QName)
+	def := appDef.Def(qName)
 	if fields, ok := def.(appdef.IFields); ok {
 		fields.Fields(
 			func(f appdef.IField) {
@@ -143,8 +144,7 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 				if rec, readErr := appStructs.Records().Get(wsid, true, recID); readErr == nil {
 					if rec.QName() == appdef.NullQName {
 						err = errors.Join(err,
-							fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, recID,
-								obj.AsQName(appdef.SystemField_QName), f.Name()))
+							fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, recID, qName, f.Name()))
 					}
 				} else {
 					err = errors.Join(err, readErr)

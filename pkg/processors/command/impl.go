@@ -430,8 +430,7 @@ func (cmdProc *cmdProc) validate(ctx context.Context, work interface{}) (err err
 	}
 	for _, appCUDValidator := range cmd.appStructs.CUDValidators() {
 		err = cmd.rawEvent.CUDs(func(rec istructs.ICUDRow) error {
-			recQName := rec.AsQName(appdef.SystemField_QName)
-			if istructs.ValidatorMatchByQName(appCUDValidator, recQName) {
+			if istructs.ValidatorMatchByQName(appCUDValidator, rec.QName()) {
 				if err := appCUDValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.cmdFunc.QName()); err != nil {
 					return err
 				}
