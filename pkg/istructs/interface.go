@@ -55,12 +55,6 @@ type IAppStructs interface {
 	// Describe package content
 	DescribePackage(pkgName string) interface{}
 
-	// Deprecated: use IDef.Uniques() instead
-	//
-	// This Uniques exists for historical compatibility and should not be used.
-	// Provides only simplest (from one field) uniques, only one unique for each definition
-	Uniques() IUniques
-
 	SyncProjectors() []ProjectorFactory
 	AsyncProjectors() []ProjectorFactory
 

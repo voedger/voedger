@@ -53,7 +53,7 @@ func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName is
 			ownerBaseWSID := ownerWSID.BaseWSID()
 			targetApp := ""
 			ownerApp := appQName.String()
-			ownerQName := rec.AsQName(appdef.SystemField_QName)
+			ownerQName := rec.QName()
 			ownerID := rec.ID()
 			wsKindInitializationData := rec.AsString(authnz.Field_WSKindInitializationData)
 			switch ownerQName {

@@ -43,6 +43,9 @@ func (d *Def) read(def appdef.IDef) {
 			u.read(unique)
 			d.Uniques = append(d.Uniques, u)
 		})
+		if uf := uni.UniqueField(); uf != nil {
+			d.UniqueField = uf.Name()
+		}
 	}
 
 	if cDoc, ok := def.(appdef.ICDoc); ok {

@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"mime"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -344,11 +343,6 @@ func (vit *VIT) SubscribeForN10n(ws *AppWorkspace, viewQName appdef.QName) chan 
 	})
 	vit.lock.Unlock()
 	return n10n
-}
-
-func IsCassandraStorage() bool {
-	_, ok := os.LookupEnv("CASSANDRA_TESTS_ENABLED")
-	return ok
 }
 
 func (vit *VIT) MetricsRequest(opts ...coreutils.ReqOptFunc) (resp string) {

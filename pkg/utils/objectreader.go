@@ -114,7 +114,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 }
 
 func ObjectToMap(obj istructs.IObject, appDef appdef.IAppDef, opts ...MapperOpt) (res map[string]interface{}) {
-	if obj.AsQName(appdef.SystemField_QName) == appdef.NullQName {
+	if obj.QName() == appdef.NullQName {
 		return map[string]interface{}{}
 	}
 	res = FieldsToMap(obj, appDef, opts...)

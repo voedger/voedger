@@ -76,7 +76,6 @@ type appStructsType struct {
 	viewRecords appViewRecords
 	buckets     irates.IBuckets
 	descr       *descr.Application
-	uniques     *implIUniques
 	appWSAmount istructs.AppWSAmount
 	appTokens   istructs.IAppTokens
 }
@@ -87,7 +86,6 @@ func newAppStructs(appCfg *AppConfigType, buckets irates.IBuckets, appTokens ist
 		buckets:     buckets,
 		appWSAmount: istructs.DefaultAppWSAmount,
 		appTokens:   appTokens,
-		uniques:     appCfg.Uniques,
 	}
 	app.events = newEvents(&app)
 	app.records = newRecords(&app)
@@ -204,11 +202,6 @@ func (app *appStructsType) DescribePackageNames() (names []string) {
 // istructs.IAppStructs.DescribePackage: Describe package content
 func (app *appStructsType) DescribePackage(name string) interface{} {
 	return app.describe().Packages[name]
-}
-
-// Deprecated: use IDef.Unique instead
-func (app *appStructsType) Uniques() istructs.IUniques {
-	return app.uniques
 }
 
 // appEventsType implements IEvents
