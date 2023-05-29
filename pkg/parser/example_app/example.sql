@@ -22,7 +22,9 @@ TABLE AirTablePlan INHERITS CDoc (
     Int1 int DEFAULT 1 CHECK(Int1 >= 1 AND Int2 < 10000),  -- Expressions evaluating to TRUE or UNKNOWN succeed.
     Text1 text DEFAULT "a",
     Int2 int DEFAULT NEXTVAL('sequence'),
-    BillID reference air.bill,
+    BillRef ref(untill.bill), 
+    AnyTableRef ref,
+    FewTablesRef ref(untill.table1, untill.table2) NOT NULL,
     CheckedField text CHECK "^[0-9]{8}$", -- Field validated by regexp
     CHECK (ValidateRow(this)), -- Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
     CONSTRAINT StateChecker CHECK (ValidateFState(FState)), -- Named CHECK table constraint

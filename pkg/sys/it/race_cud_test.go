@@ -29,7 +29,7 @@ const (
 // Read from many goroutines.
 // Read result does not matter.
 func Test_Race_CUDSimpleRead(t *testing.T) {
-	if it.IsCassandraStorage() {
+	if coreutils.IsCassandraStorage() {
 		return
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
@@ -51,7 +51,7 @@ func Test_Race_CUDSimpleRead(t *testing.T) {
 
 // Write from many goroutines
 func Test_Race_CUDSimpleWrite(t *testing.T) {
-	if it.IsCassandraStorage() {
+	if coreutils.IsCassandraStorage() {
 		return
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
@@ -70,7 +70,7 @@ func Test_Race_CUDSimpleWrite(t *testing.T) {
 	wg.Wait()
 }
 func Test_Race_CUDOneWriteManyRead(t *testing.T) {
-	if it.IsCassandraStorage() {
+	if coreutils.IsCassandraStorage() {
 		return
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
@@ -97,7 +97,7 @@ func Test_Race_CUDOneWriteManyRead(t *testing.T) {
 // Write from many goroutines, one read after all writes are finished
 // Read result: only status = OK checked
 func Test_Race_CUDManyWriteOneRead(t *testing.T) {
-	if it.IsCassandraStorage() {
+	if coreutils.IsCassandraStorage() {
 		return
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
@@ -127,7 +127,7 @@ func Test_Race_CUDManyWriteOneRead(t *testing.T) {
 // Write from many goroutines, and simultaneous read from many goroutines
 // Read result: only status = OK checked
 func Test_Race_CUDManyWriteManyReadNoResult(t *testing.T) {
-	if it.IsCassandraStorage() {
+	if coreutils.IsCassandraStorage() {
 		return
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
@@ -153,7 +153,7 @@ func Test_Race_CUDManyWriteManyReadNoResult(t *testing.T) {
 // Write from many goroutines & read from many goroutines after all data has been written
 // Read result: Checks all written data are correct
 func Test_Race_CUDManyWriteManyReadCheckResult(t *testing.T) {
-	if it.IsCassandraStorage() {
+	if coreutils.IsCassandraStorage() {
 		return
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
@@ -191,7 +191,7 @@ func Test_Race_CUDManyUpdateManyReadCheckResult(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	if it.IsCassandraStorage() {
+	if coreutils.IsCassandraStorage() {
 		return
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
@@ -239,7 +239,7 @@ func Test_Race_CUDManyUpdateManyReadCheckResult(t *testing.T) {
 
 // Read from many goroutines with different WSID
 func Test_Race_CUDManyReadCheckResult(t *testing.T) {
-	if it.IsCassandraStorage() {
+	if coreutils.IsCassandraStorage() {
 		return
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
@@ -261,7 +261,7 @@ func Test_Race_CUDManyReadCheckResult(t *testing.T) {
 
 // Write from many goroutines with different WSID
 func Test_Race_CUDManyWriteCheckResult(t *testing.T) {
-	if it.IsCassandraStorage() {
+	if coreutils.IsCassandraStorage() {
 		return
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
@@ -287,7 +287,7 @@ func Test_Race_CUDManyWriteReadCheckResult(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	if it.IsCassandraStorage() {
+	if coreutils.IsCassandraStorage() {
 		return
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)

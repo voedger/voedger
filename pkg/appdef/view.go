@@ -23,7 +23,7 @@ type view struct {
 
 func newView(app *appDef, name QName) *view {
 	v := view{def: makeDef(app, name, DefKind_ViewRecord)}
-	app.appendDef(&v.def)
+	app.appendDef(&v)
 
 	v.pkey = app.addDef(ViewPartitionKeyDefName(name), DefKind_ViewRecord_PartitionKey)
 	v.pkey.validate = validatePKeyFields
@@ -61,10 +61,6 @@ func (v *view) AddValueField(name string, kind DataKind, required bool) IViewBui
 	v.panicIfFieldDuplication(name)
 	v.value.AddField(name, kind, required)
 	return v
-}
-
-func (v *view) Def() IDef {
-	return &v.def
 }
 
 func (v *view) Key() IViewKey {

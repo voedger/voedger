@@ -233,9 +233,6 @@ func getTypeDataKind(t TypeQName) appdef.DataKind {
 		if t.Name == sysQName {
 			return appdef.DataKind_QName
 		}
-		if t.Name == sysId {
-			return appdef.DataKind_RecordID
-		}
 		if t.Name == sysBool {
 			return appdef.DataKind_bool
 		}

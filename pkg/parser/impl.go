@@ -435,8 +435,14 @@ func buildTables(ctx *buildContext) error {
 
 func addTableItems(items []TableItemExpr, ctx *buildContext) {
 	for _, item := range items {
-		if item.Field != nil {
-			sysDataKind := getTypeDataKind(*item.Field.Type) // TODO: handle 'reference ...'
+		if item.RefField != nil {
+			if err := ctx.defCtx().checkName(item.RefField.Name, &item.RefField.Pos); err != nil {
+				ctx.errs = append(ctx.errs, err)
+				continue
+			}
+			ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).AddField(item.RefField.Name, appdef.DataKind_RecordID, item.RefField.NotNull)
+		} else if item.Field != nil {
+			sysDataKind := getTypeDataKind(*item.Field.Type)
 			if sysDataKind != appdef.DataKind_null {
 				if item.Field.Type.IsArray {
 					ctx.errs = append(ctx.errs, errorAt(ErrArrayFieldsNotSupportedHere, &item.Field.Pos))

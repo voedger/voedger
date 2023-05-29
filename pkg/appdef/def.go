@@ -13,10 +13,7 @@ import (
 var NullDef = newDef(nil, NullQName, DefKind_null)
 
 // # Implements:
-//   - IDef and IDefBuilder
-//   - IWithFields and IFieldsBuilder
-//   - IWithContainers and IContainersBuilder
-//   - IWithUniques and IUniquesBuilder
+//   - IDef
 //   - IGDoc, IGDocBuilder and IGRecord, IGRecordBuilder
 //   - ICDoc, ICDocBuilder and ICRecord, ICRecordBuilder
 //   - IWDoc, IWDocBuilder and IWRecord, IWRecordBuilder

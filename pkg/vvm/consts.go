@@ -7,8 +7,8 @@ package vvm
 import (
 	"time"
 
-	istoragecas "github.com/heeus/core-istoragecas"
 	router "github.com/untillpro/airs-router2"
+	"github.com/voedger/voedger/pkg/istorageimpl/istoragecas"
 )
 
 const (
