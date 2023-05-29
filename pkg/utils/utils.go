@@ -32,3 +32,8 @@ func IsTest() bool {
 func IsDebug() bool {
 	return strings.Contains(os.Args[0], "__debug_bin")
 }
+
+func IsCassandraStorage() bool {
+	_, ok := os.LookupEnv("CASSANDRA_TESTS_ENABLED")
+	return ok
+}
