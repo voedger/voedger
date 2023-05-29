@@ -61,7 +61,7 @@ func mkCommandDirAndLogFile(cmd *cobra.Command, cluster *clusterType) error {
 		cmd = cmd.Parent()
 	}
 
-	if !cluster.Cmd.isEmpty() && !strings.Contains(s, cluster.Cmd.Kind) {
+	if cluster.Cmd != nil && !cluster.Cmd.isEmpty() && !strings.Contains(s, cluster.Cmd.Kind) {
 		s = fmt.Sprintf("%s-%s", s, cluster.Cmd.Kind)
 	}
 
