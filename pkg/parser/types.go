@@ -386,13 +386,18 @@ type TableItemExpr struct {
 
 type TableConstraint struct {
 	Pos            lexer.Position
-	ConstraintName string          `parser:"('CONSTRAINT' @Ident)?"`
-	Unique         *UniqueExpr     `parser:"(@@"`
-	Check          *TableCheckExpr `parser:"| @@)"`
+	ConstraintName string           `parser:"('CONSTRAINT' @Ident)?"`
+	UniqueField    *UniqueFieldExpr `parser:"(@@"`
+	//	Unique         *UniqueExpr      `parser:"(@@"` // TODO: not supported by kernel yet
+	Check *TableCheckExpr `parser:"| @@)"`
 }
 
 type TableCheckExpr struct {
 	Expression Expression `parser:"'CHECK' '(' @@ ')'"`
+}
+
+type UniqueFieldExpr struct {
+	Field string `parser:"'UNIQUEFIELD' @Ident"`
 }
 
 type UniqueExpr struct {
