@@ -106,7 +106,6 @@ func TestAddView(t *testing.T) {
 
 	_, err := app.Build()
 	require.NoError(err)
-	require.False(app.HasChanges())
 
 	t.Run("must be ok to cast Def() as IView", func(t *testing.T) {
 		a, err := app.Build()
@@ -152,12 +151,8 @@ func TestAddView(t *testing.T) {
 		v.AddValueField("valF3", DataKind_Event, false)
 		require.Equal(3+1, val.FieldCount())
 
-		require.True(app.HasChanges())
-
 		_, err := app.Build()
 		require.NoError(err)
-
-		require.False(app.HasChanges())
 	})
 
 	t.Run("must be ok to add pk or cc fields to view after app build", func(t *testing.T) {
@@ -168,12 +163,8 @@ func TestAddView(t *testing.T) {
 		require.Equal(3, cc.FieldCount())
 		require.Equal(6, key.FieldCount())
 
-		require.True(app.HasChanges())
-
 		_, err := app.Build()
 		require.NoError(err)
-
-		require.False(app.HasChanges())
 	})
 }
 

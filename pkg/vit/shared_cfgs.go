@@ -497,19 +497,16 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("Fld1", appdef.DataKind_string, true)
 
 	// for rates test
+	pars := adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedQryParams"))
+	pars.AddField("Fld", appdef.DataKind_string, false)
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
-		QNameQryRated,
-		appdef.NullQName,
-		adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedQryParams")).
-			AddField("Fld", appdef.DataKind_string, false).QName(),
+		QNameQryRated, appdef.NullQName, pars.QName(),
 		istructsmem.NullQueryExec,
 	))
+	pars = adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedCmdParams"))
+	pars.AddField("Fld", appdef.DataKind_string, false)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		QNameCmdRated,
-		adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedCmdParams")).
-			AddField("Fld", appdef.DataKind_string, false).QName(),
-		appdef.NullQName,
-		appdef.NullQName,
+		QNameCmdRated, pars.QName(), appdef.NullQName, appdef.NullQName,
 		istructsmem.NullCommandExec,
 	))
 

@@ -18,14 +18,12 @@ import (
 )
 
 func provideQrySqlQuery(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, numCommandProcessors int) {
+	pars := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SqlQueryParams"))
+	pars.AddField(field_Query, appdef.DataKind_string, true)
+	res := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SqlQueryResult"))
+	res.AddField(field_Result, appdef.DataKind_string, true)
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
-		appdef.NewQName(appdef.SysPackage, "SqlQuery"),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SqlQueryParams")).
-			AddField(field_Query, appdef.DataKind_string, true).
-			QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SqlQueryResult")).
-			AddField(field_Result, appdef.DataKind_string, true).
-			QName(),
+		appdef.NewQName(appdef.SysPackage, "SqlQuery"), pars.QName(), res.QName(),
 		execQrySqlQuery(asp, cfg.Name, numCommandProcessors),
 	))
 }

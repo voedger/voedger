@@ -17,14 +17,11 @@ import (
 )
 
 func provideCmdInitiateJoinWorkspace(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc func() time.Time) {
+	pars := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateJoinWorkspaceParams"))
+	pars.AddField(field_InviteID, appdef.DataKind_RecordID, true).
+		AddField(field_VerificationCode, appdef.DataKind_string, true)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		qNameCmdInitiateJoinWorkspace,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateJoinWorkspaceParams")).
-			AddField(field_InviteID, appdef.DataKind_RecordID, true).
-			AddField(field_VerificationCode, appdef.DataKind_string, true).
-			QName(),
-		appdef.NullQName,
-		appdef.NullQName,
+		qNameCmdInitiateJoinWorkspace, pars.QName(), appdef.NullQName, appdef.NullQName,
 		execCmdInitiateJoinWorkspace(timeFunc),
 	))
 }

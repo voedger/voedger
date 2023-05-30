@@ -25,45 +25,39 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder 
 
 	// sys/registry/pseudoProfileWSID/q.sys.InitiateResetPasswordByEmail
 	// null auth
+	pars := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateResetPasswordByEmailParams"))
+	pars.AddField(Field_AppName, appdef.DataKind_string, true).
+		AddField(field_Email, appdef.DataKind_string, true)
+	res := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateResetPasswordByEmailResult"))
+	res.AddField(field_VerificationToken, appdef.DataKind_string, true).
+		AddField(field_ProfileWSID, appdef.DataKind_int64, true)
 	cfgRegistry.Resources.Add(istructsmem.NewQueryFunction(
-		authnz.QNameQueryInitiateResetPasswordByEmail,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateResetPasswordByEmailParams")).
-			AddField(Field_AppName, appdef.DataKind_string, true).
-			AddField(field_Email, appdef.DataKind_string, true).
-			QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateResetPasswordByEmailResult")).
-			AddField(field_VerificationToken, appdef.DataKind_string, true).
-			AddField(field_ProfileWSID, appdef.DataKind_int64, true).
-			QName(),
+		authnz.QNameQueryInitiateResetPasswordByEmail, pars.QName(), res.QName(),
 		provideQryInitiateResetPasswordByEmailExec(itokens, federationURL, asp),
 	))
 
 	// sys/registry/pseudoProfileWSID/q.sys.IssueVerifiedValueTokenForResetPassword
 	// null auth
+	pars = appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenForResetPasswordParams"))
+	pars.AddField(field_VerificationToken, appdef.DataKind_string, true).
+		AddField(field_VerificationCode, appdef.DataKind_string, true).
+		AddField(field_ProfileWSID, appdef.DataKind_int64, true).
+		AddField(Field_AppName, appdef.DataKind_string, true)
+	res = appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenForResetPasswordResult"))
+	res.AddField(field_VerifiedValueToken, appdef.DataKind_string, true)
 	cfgRegistry.Resources.Add(istructsmem.NewQueryFunction(
-		authnz.QNameQueryIssueVerifiedValueTokenForResetPassword,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenForResetPasswordParams")).
-			AddField(field_VerificationToken, appdef.DataKind_string, true).
-			AddField(field_VerificationCode, appdef.DataKind_string, true).
-			AddField(field_ProfileWSID, appdef.DataKind_int64, true).
-			AddField(Field_AppName, appdef.DataKind_string, true).
-			QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenForResetPasswordResult")).
-			AddField(field_VerifiedValueToken, appdef.DataKind_string, true).
-			QName(),
+		authnz.QNameQueryIssueVerifiedValueTokenForResetPassword, pars.QName(), res.QName(),
 		provideIssueVerifiedValueTokenForResetPasswordExec(itokens, federationURL),
 	))
 
+	pars = appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "ResetPasswordByEmailParams"))
+	pars.AddField(Field_AppName, appdef.DataKind_string, true)
+	unl := appDefBuilder.AddObject(authnz.QNameCommandResetPasswordByEmailUnloggedParams)
+	unl.
+		AddVerifiedField(field_Email, appdef.DataKind_string, true, appdef.VerificationKind_EMail).
+		AddField(field_NewPwd, appdef.DataKind_string, true)
 	cfgRegistry.Resources.Add(istructsmem.NewCommandFunction(
-		authnz.QNameCommandResetPasswordByEmail,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "ResetPasswordByEmailParams")).
-			AddField(Field_AppName, appdef.DataKind_string, true).
-			QName(),
-		appDefBuilder.AddObject(authnz.QNameCommandResetPasswordByEmailUnloggedParams).
-			AddVerifiedField(field_Email, appdef.DataKind_string, true, appdef.VerificationKind_EMail).
-			AddField(field_NewPwd, appdef.DataKind_string, true).
-			QName(),
-		appdef.NullQName,
+		authnz.QNameCommandResetPasswordByEmail, pars.QName(), unl.QName(), appdef.NullQName,
 		cmdResetPasswordByEmailExec,
 	))
 }

@@ -16,14 +16,12 @@ import (
 )
 
 func ProvideQryRefreshPrincipalToken(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens) {
+	pars := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "RefreshPrincipalTokenParams"))
+	pars.AddField(field_ExistingPrincipalToken, appdef.DataKind_string, true)
+	res := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "RefreshPrincipalTokenResult"))
+	res.AddField(field_NewPrincipalToken, appdef.DataKind_string, true)
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
-		appdef.NewQName(appdef.SysPackage, "RefreshPrincipalToken"),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "RefreshPrincipalTokenParams")).
-			AddField(field_ExistingPrincipalToken, appdef.DataKind_string, true).
-			QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "RefreshPrincipalTokenResult")).
-			AddField(field_NewPrincipalToken, appdef.DataKind_string, true).
-			QName(),
+		appdef.NewQName(appdef.SysPackage, "RefreshPrincipalToken"), pars.QName(), res.QName(),
 		provideRefreshPrincipalTokenExec(itokens),
 	))
 }

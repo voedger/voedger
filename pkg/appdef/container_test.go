@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * Copyright (c) 2023-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
  */
 
@@ -42,11 +42,6 @@ func Test_def_AddContainer(t *testing.T) {
 		require.Equal(Occurs_Unbounded, c.MaxOccurs())
 	})
 
-	t.Run("test AddContainer(…).QName() helper", func(t *testing.T) {
-		d := appDef.AddObject(NewQName("test", "object1"))
-		require.Equal(d.QName(), d.AddContainer("c1", elQName, 1, Occurs_Unbounded).QName())
-	})
-
 	t.Run("must be panic if empty container name", func(t *testing.T) {
 		require.Panics(func() { def.AddContainer("", elQName, 1, Occurs_Unbounded) })
 	})
@@ -66,12 +61,6 @@ func Test_def_AddContainer(t *testing.T) {
 	t.Run("must be panic if invalid occurrences", func(t *testing.T) {
 		require.Panics(func() { def.AddContainer("c2", elQName, 1, 0) })
 		require.Panics(func() { def.AddContainer("c3", elQName, 2, 1) })
-	})
-
-	t.Run("must be panic if containers are not allowed by definition kind", func(t *testing.T) {
-		view := appDef.AddView(NewQName("test", "view"))
-		pk := view.PartKey()
-		require.Panics(func() { pk.(IContainersBuilder).AddContainer("c1", elQName, 1, Occurs_Unbounded) })
 	})
 
 	t.Run("must be panic if container definition is not compatible", func(t *testing.T) {

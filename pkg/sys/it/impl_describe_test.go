@@ -57,6 +57,10 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 						map[string]interface{}{"Kind": "DataKind_int32", "Name": "ViewIntFld", "Required": true},
 						map[string]interface{}{"Kind": "DataKind_string", "Name": "ViewStrFld"},
 					},
+					"Containers": []interface{}{
+						map[string]interface{}{"MaxOccurs": float64(1), "MinOccurs": float64(1), "Name": "sys.pkey", "Type": "my.View_PartitionKey"},
+						map[string]interface{}{"MaxOccurs": float64(1), "MinOccurs": float64(1), "Name": "sys.ccols", "Type": "my.View_ClusteringColumns"},
+					},
 					"Kind": "DefKind_ViewRecord_Key",
 					"Name": "my.View_FullKey",
 				},

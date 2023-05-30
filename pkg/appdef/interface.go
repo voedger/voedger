@@ -215,9 +215,6 @@ type IAppDefBuilder interface {
 
 	// Must be called after all definitions added. Validates and returns builded application definition or error
 	Build() (IAppDef, error)
-
-	// Has changes since last success build
-	HasChanges() bool
 }
 
 // Definition describes the entity, such as document, record or view. Definitions may have fields and containers.
@@ -242,9 +239,6 @@ type IDef interface {
 //	- DefKind_Object and DefKind_Element,
 //	- DefKind_ViewRecord_PartitionKey, DefKind_ViewRecord_ClusteringColumns and DefKind_ViewRecord_Value
 type IFields interface {
-	// Owner definition qualified name
-	QName() QName
-
 	// Finds field by name.
 	//
 	// Returns nil if not found.
@@ -293,9 +287,6 @@ type IFieldsBuilder interface {
 //	- DefKind_Object and DefKind_Element,
 //	- DefKind_ViewRecord
 type IContainers interface {
-	// Owner definition qualified name
-	QName() QName
-
 	// Finds container by name.
 	//
 	// Returns nil if not found.

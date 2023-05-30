@@ -37,11 +37,6 @@ func Test_def_AddField(t *testing.T) {
 		require.False(f.Verifiable())
 	})
 
-	t.Run("test AddField(…).QName() helper", func(t *testing.T) {
-		d := New().AddObject(NewQName("test", "object"))
-		require.Equal(d.QName(), d.AddField("f1", DataKind_int64, true).QName())
-	})
-
 	t.Run("must be panic if empty field name", func(t *testing.T) {
 		require.Panics(func() { def.AddField("", DataKind_int64, true) })
 	})
@@ -60,11 +55,6 @@ func Test_def_AddField(t *testing.T) {
 			require.NotPanics(func() { def.AddField(SystemField_QName, DataKind_QName, true) })
 			require.Equal(2, def.FieldCount())
 		})
-	})
-
-	t.Run("must be panic if fields are not allowed by definition kind", func(t *testing.T) {
-		view := New().AddView(NewQName("test", "view"))
-		require.Panics(func() { view.(IFieldsBuilder).AddField("f1", DataKind_string, true) })
 	})
 
 	t.Run("must be panic if field data kind is not allowed by definition kind", func(t *testing.T) {

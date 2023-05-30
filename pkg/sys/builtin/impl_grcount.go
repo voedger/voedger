@@ -20,12 +20,10 @@ type grcountRR struct {
 func (e *grcountRR) AsInt32(string) int32 { return int32(runtime.NumGoroutine()) }
 
 func ProvideQryGRCount(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+	res := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GRCountResult"))
+	res.AddField("NumGoroutines", appdef.DataKind_int32, true)
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
-		appdef.NewQName(appdef.SysPackage, "GRCount"),
-		appdef.NullQName,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GRCountResult")).
-			AddField("NumGoroutines", appdef.DataKind_int32, true).
-			QName(),
+		appdef.NewQName(appdef.SysPackage, "GRCount"), appdef.NullQName, res.QName(),
 		func(_ context.Context, _ istructs.IQueryFunction, _ istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			return callback(&grcountRR{})
 		},

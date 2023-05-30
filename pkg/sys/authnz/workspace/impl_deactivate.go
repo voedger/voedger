@@ -39,36 +39,29 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 
 	// c.sys.OnWorkspaceDeactivated
 	// owner app, owner WSID
+	pars := adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivatedParams"))
+	pars.AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
+		AddField(sysshared.Field_WSName, appdef.DataKind_string, true)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivated"),
-		adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivatedParams")).
-			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
-			AddField(sysshared.Field_WSName, appdef.DataKind_string, true).
-			QName(),
-		appdef.NullQName,
-		appdef.NullQName,
+		appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivated"), pars.QName(), appdef.NullQName, appdef.NullQName,
 		cmdOnWorkspaceDeactivatedExec,
 	))
 
 	// c.sys.OnJoinedWorkspaceDeactivated
 	// target app, profile WSID
+	pars = adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivatedParams"))
+	pars.AddField(field_InvitedToWSID, appdef.DataKind_int64, true)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivated"),
-		adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivatedParams")).
-			AddField(field_InvitedToWSID, appdef.DataKind_int64, true).QName(),
-		appdef.NullQName,
-		appdef.NullQName,
+		appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivated"), pars.QName(), appdef.NullQName, appdef.NullQName,
 		cmdOnJoinedWorkspaceDeactivateExec,
 	))
 
 	// c.sys.OnChildWorkspaceDeactivated
 	// ownerApp/ownerWSID
+	pars = adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnChildWorkspaceDeactivatedParams"))
+	pars.AddField(Field_OwnerID, appdef.DataKind_int64, true)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		appdef.NewQName(appdef.SysPackage, "OnChildWorkspaceDeactivated"),
-		adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnChildWorkspaceDeactivatedParams")).
-			AddField(Field_OwnerID, appdef.DataKind_int64, true).QName(),
-		appdef.NullQName,
-		appdef.NullQName,
+		appdef.NewQName(appdef.SysPackage, "OnChildWorkspaceDeactivated"), pars.QName(), appdef.NullQName, appdef.NullQName,
 		cmdOnChildWorkspaceDeactivatedExec,
 	))
 

@@ -16,17 +16,14 @@ import (
 )
 
 func provideCmdInitiateInvitationByEMail(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc func() time.Time) {
+	pars := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateInvitationByEMailParams"))
+	pars.AddField(field_Email, appdef.DataKind_string, true).
+		AddField(Field_Roles, appdef.DataKind_string, true).
+		AddField(field_ExpireDatetime, appdef.DataKind_int64, true).
+		AddField(field_EmailTemplate, appdef.DataKind_string, true).
+		AddField(field_EmailSubject, appdef.DataKind_string, true)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		qNameCmdInitiateInvitationByEMail,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateInvitationByEMailParams")).
-			AddField(field_Email, appdef.DataKind_string, true).
-			AddField(Field_Roles, appdef.DataKind_string, true).
-			AddField(field_ExpireDatetime, appdef.DataKind_int64, true).
-			AddField(field_EmailTemplate, appdef.DataKind_string, true).
-			AddField(field_EmailSubject, appdef.DataKind_string, true).
-			QName(),
-		appdef.NullQName,
-		appdef.NullQName,
+		qNameCmdInitiateInvitationByEMail, pars.QName(), appdef.NullQName, appdef.NullQName,
 		execCmdInitiateInvitationByEMail(timeFunc),
 	))
 }

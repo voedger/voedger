@@ -74,16 +74,14 @@ func IsSysField(n string) bool {
 //   - IFields
 //   - IFieldsBuilder
 type fields struct {
-	def           *def
+	owner         interface{}
 	fields        map[string]*field
 	fieldsOrdered []string
 }
 
-func makeFields(def *def) fields {
+func makeFields(def interface{}) fields {
 	f := fields{def, make(map[string]*field), make([]string, 0)}
-	if def.Kind().FieldsAllowed() {
-		f.makeSysFields()
-	}
+	f.makeSysFields()
 	return f
 }
 
@@ -114,10 +112,6 @@ func (f *fields) Fields(cb func(IField)) {
 	}
 }
 
-func (f *fields) QName() QName {
-	return f.def.QName()
-}
-
 func (f *fields) UserFieldCount() int {
 	cnt := 0
 	f.Fields(func(f IField) {
@@ -130,59 +124,61 @@ func (f *fields) UserFieldCount() int {
 
 func (f *fields) addField(name string, kind DataKind, required, verified bool, vk ...VerificationKind) {
 	if name == NullName {
-		panic(fmt.Errorf("%v: empty field name: %w", f.def.QName(), ErrNameMissed))
+		panic(fmt.Errorf("%v: empty field name: %w", f.def().QName(), ErrNameMissed))
 	}
 	if !IsSysField(name) {
 		if ok, err := ValidIdent(name); !ok {
-			panic(fmt.Errorf("%v: field name «%v» is invalid: %w", f.def.QName(), name, err))
+			panic(fmt.Errorf("%v: field name «%v» is invalid: %w", f.def().QName(), name, err))
 		}
 	}
 	if f.Field(name) != nil {
 		if IsSysField(name) {
 			return
 		}
-		panic(fmt.Errorf("%v: definition field «%v» is already exists: %w", f.def.QName(), name, ErrNameUniqueViolation))
+		panic(fmt.Errorf("%v: field «%s» is already exists: %w", f.def().QName(), name, ErrNameUniqueViolation))
 	}
-	if !f.def.Kind().FieldsAllowed() {
-		panic(fmt.Errorf("%v: definition kind «%v» does not allow fields: %w", f.def.QName(), f.def.Kind(), ErrInvalidDefKind))
-	}
-	if !f.def.Kind().DataKindAvailable(kind) {
-		panic(fmt.Errorf("%v: definition kind «%v» does not support fields kind «%v»: %w", f.def.QName(), f.def.Kind(), kind, ErrInvalidDataKind))
+
+	if k := f.def().Kind(); !k.DataKindAvailable(kind) {
+		panic(fmt.Errorf("%v: definition kind «%v» does not support fields kind «%v»: %w", f.def().QName(), k, kind, ErrInvalidDataKind))
 	}
 
 	if verified && (len(vk) == 0) {
-		panic(fmt.Errorf("%v: missed verification kind for field «%v»: %w", f.def.QName(), name, ErrVerificationKindMissed))
+		panic(fmt.Errorf("%v: missed verification kind for field «%s»: %w", f.def().QName(), name, ErrVerificationKindMissed))
 	}
 
 	if len(f.fields) >= MaxDefFieldCount {
-		panic(fmt.Errorf("%v: maximum field count (%d) exceeds: %w", f.def.QName(), MaxDefFieldCount, ErrTooManyFields))
+		panic(fmt.Errorf("%v: maximum field count (%d) exceeds: %w", f.def().QName(), MaxDefFieldCount, ErrTooManyFields))
 	}
 
 	fld := newField(name, kind, required, verified, vk...)
 	f.fields[name] = fld
 	f.fieldsOrdered = append(f.fieldsOrdered, name)
+}
 
-	f.def.changed()
+func (f *fields) def() IDef {
+	return f.owner.(IDef)
 }
 
 func (f *fields) makeSysFields() {
-	if f.def.Kind().HasSystemField(SystemField_QName) {
+	k := f.def().Kind()
+
+	if k.HasSystemField(SystemField_QName) {
 		f.AddField(SystemField_QName, DataKind_QName, true)
 	}
 
-	if f.def.Kind().HasSystemField(SystemField_ID) {
+	if k.HasSystemField(SystemField_ID) {
 		f.AddField(SystemField_ID, DataKind_RecordID, true)
 	}
 
-	if f.def.Kind().HasSystemField(SystemField_ParentID) {
+	if k.HasSystemField(SystemField_ParentID) {
 		f.AddField(SystemField_ParentID, DataKind_RecordID, true)
 	}
 
-	if f.def.Kind().HasSystemField(SystemField_Container) {
+	if k.HasSystemField(SystemField_Container) {
 		f.AddField(SystemField_Container, DataKind_string, true)
 	}
 
-	if f.def.Kind().HasSystemField(SystemField_IsActive) {
+	if k.HasSystemField(SystemField_IsActive) {
 		f.AddField(SystemField_IsActive, DataKind_bool, false)
 	}
 }

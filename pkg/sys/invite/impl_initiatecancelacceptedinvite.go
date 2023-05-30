@@ -16,13 +16,10 @@ import (
 )
 
 func provideCmdInitiateCancelAcceptedInvite(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc func() time.Time) {
+	pars := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateCancelAcceptedInviteParams"))
+	pars.AddField(field_InviteID, appdef.DataKind_RecordID, true)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		qNameCmdInitiateCancelAcceptedInvite,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateCancelAcceptedInviteParams")).
-			AddField(field_InviteID, appdef.DataKind_RecordID, true).
-			QName(),
-		appdef.NullQName,
-		appdef.NullQName,
+		qNameCmdInitiateCancelAcceptedInvite, pars.QName(), appdef.NullQName, appdef.NullQName,
 		execCmdInitiateCancelAcceptedInvite(timeFunc),
 	))
 }

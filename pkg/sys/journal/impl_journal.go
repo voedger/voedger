@@ -19,20 +19,18 @@ import (
 )
 
 func provideQryJournal(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, jdi vvm.IEPJournalIndices, jp vvm.IEPJournalPredicates) {
+	pars := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "JournalParams"))
+	pars.AddField(field_From, appdef.DataKind_int64, true).
+		AddField(field_Till, appdef.DataKind_int64, true).
+		AddField(Field_EventTypes, appdef.DataKind_string, true).
+		AddField(field_IndexForTimestamps, appdef.DataKind_string, false).
+		AddField(field_RangeUnit, appdef.DataKind_string, false)
+	res := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "JournalResult"))
+	res.AddField(Field_Offset, appdef.DataKind_int64, true).
+		AddField(Field_EventTime, appdef.DataKind_int64, true).
+		AddField(Field_Event, appdef.DataKind_string, true)
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
-		appdef.NewQName(appdef.SysPackage, "Journal"),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "JournalParams")).
-			AddField(field_From, appdef.DataKind_int64, true).
-			AddField(field_Till, appdef.DataKind_int64, true).
-			AddField(Field_EventTypes, appdef.DataKind_string, true).
-			AddField(field_IndexForTimestamps, appdef.DataKind_string, false).
-			AddField(field_RangeUnit, appdef.DataKind_string, false).
-			QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "JournalResult")).
-			AddField(Field_Offset, appdef.DataKind_int64, true).
-			AddField(Field_EventTime, appdef.DataKind_int64, true).
-			AddField(Field_Event, appdef.DataKind_string, true).
-			QName(),
+		appdef.NewQName(appdef.SysPackage, "Journal"), pars.QName(), res.QName(),
 		qryJournalExec(jdi, jp, appDefBuilder),
 	))
 }
