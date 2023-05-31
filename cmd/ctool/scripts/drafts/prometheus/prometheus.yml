@@ -49,3 +49,11 @@ scrape_configs:
         - {scylla1}:9180
         - {scylla2}:9180
         - {scylla3}:9180
+
+  - job_name: 'cadvisor'
+    scrape_interval: 10s
+    static_configs:
+      # Monitor swarm nodes and services
+      - targets: 
+        - {se1}:8080
+        - {se2}:8080
