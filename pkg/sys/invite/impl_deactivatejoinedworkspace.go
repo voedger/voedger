@@ -11,10 +11,12 @@ import (
 )
 
 func provideCmdDeactivateJoinedWorkspace(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
-	pars := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "DeactivateJoinedWorkspaceParams"))
-	pars.AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64, true)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		qNameCmdDeactivateJoinedWorkspace, pars.QName(), appdef.NullQName, appdef.NullQName,
+		qNameCmdDeactivateJoinedWorkspace,
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "DeactivateJoinedWorkspaceParams")).
+			AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).(appdef.IDef).QName(),
+		appdef.NullQName,
+		appdef.NullQName,
 		execCmdDeactivateJoinedWorkspace,
 	))
 }

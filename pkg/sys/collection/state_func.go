@@ -16,12 +16,12 @@ import (
 )
 
 func provideStateFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
-	pars := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateParams"))
-	pars.AddField(field_After, appdef.DataKind_int64, true)
-	res := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult"))
-	res.AddField(field_State, appdef.DataKind_string, true)
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
-		qNameQueryState, pars.QName(), res.QName(),
+		qNameQueryState,
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateParams")).
+			AddField(field_After, appdef.DataKind_int64, true).(appdef.IDef).QName(),
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult")).
+			AddField(field_State, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		stateFuncExec(appDefBuilder)))
 }
 
