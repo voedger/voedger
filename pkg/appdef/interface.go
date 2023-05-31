@@ -250,6 +250,20 @@ type IFields interface {
 	// Enumerates all fields in add order.
 	Fields(func(IField))
 
+	// Finds reference field by name.
+	//
+	// Returns nil if field is not found, or field found but it is not a reference field
+	RefField(name string) IRefField
+
+	// Enumerates all reference fields. System field (sys.ParentID) is also enumerated
+	RefFields(func(IRefField))
+
+	// Returns reference fields count. System field (sys.ParentID) is also counted
+	RefFieldCount() int
+
+	// Enumerates all fields except system
+	UserFields(func(IField))
+
 	// Returns user fields count. System fields (sys.QName, sys.ID, …) do not count
 	UserFieldCount() int
 }
@@ -263,9 +277,16 @@ type IFieldsBuilder interface {
 	//   - if name is empty,
 	//   - if name is invalid,
 	//   - if field with name is already exists,
-	//   - if definition kind not supports fields,
-	//   - if data kind is not allowed by definition kind.
+	//   - if specified data kind is not allowed by definition kind.
 	AddField(name string, kind DataKind, required bool) IFieldsBuilder
+
+	// Adds reference field specified name and target refs.
+	//
+	// # Panics:
+	//   - if name is empty,
+	//   - if name is invalid,
+	//   - if field with name is already exists.
+	AddRefField(name string, required bool, ref ...QName) IFieldsBuilder
 
 	// Adds verified field specified name and kind.
 	//
@@ -273,7 +294,6 @@ type IFieldsBuilder interface {
 	//   - if field name is empty,
 	//   - if field name is invalid,
 	//   - if field with name is already exists,
-	//   - if definition kind not supports fields,
 	//   - if data kind is not allowed by definition kind,
 	//   - if no verification kinds are specified
 	AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder
@@ -615,6 +635,16 @@ type IField interface {
 
 	// Returns is field system
 	IsSys() bool
+}
+
+// Reference field. Describe field with DataKind_RecordID.
+//
+// Use Refs() to obtain list of target references.
+type IRefField interface {
+	IField
+
+	// Returns list of target references
+	Refs() []QName
 }
 
 // Describes single inclusion of child definition in parent definition.

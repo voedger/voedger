@@ -29,13 +29,18 @@ type field struct {
 	verify     map[VerificationKind]bool
 }
 
-func newField(name string, kind DataKind, required, verified bool, vk ...VerificationKind) *field {
+func makeField(name string, kind DataKind, required, verified bool, vk ...VerificationKind) field {
 	f := field{name, kind, required, verified, make(map[VerificationKind]bool)}
 	if verified {
 		for _, kind := range vk {
 			f.verify[kind] = true
 		}
 	}
+	return f
+}
+
+func newField(name string, kind DataKind, required, verified bool, vk ...VerificationKind) *field {
+	f := makeField(name, kind, required, verified, vk...)
 	return &f
 }
 
@@ -93,6 +98,14 @@ func (f *fields) AddField(name string, kind DataKind, required bool) IFieldsBuil
 	return f.owner.(IFieldsBuilder)
 }
 
+func (f *fields) AddRefField(name string, required bool, ref ...QName) IFieldsBuilder {
+	if err := f.checkAddField(name, DataKind_RecordID); err != nil {
+		panic(err)
+	}
+	f.appendField(name, newRefField(name, required, ref...))
+	return f.owner.(IFieldsBuilder)
+}
+
 func (f *fields) AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder {
 	if err := f.checkAddField(name, kind); err != nil {
 		panic(err)
@@ -121,10 +134,51 @@ func (f *fields) Fields(cb func(IField)) {
 	}
 }
 
+func (f *fields) RefField(name string) (rf IRefField) {
+	if fld := f.Field(name); fld != nil {
+		if fld.DataKind() == DataKind_RecordID {
+			if fld, ok := fld.(IRefField); ok {
+				rf = fld
+			}
+		}
+	}
+	return rf
+}
+
+func (f *fields) RefFields(cb func(IRefField)) {
+	f.Fields(func(fld IField) {
+		if fld.DataKind() == DataKind_RecordID {
+			if rf, ok := fld.(IRefField); ok {
+				cb(rf)
+			}
+		}
+	})
+}
+
+func (f *fields) RefFieldCount() int {
+	cnt := 0
+	f.Fields(func(fld IField) {
+		if fld.DataKind() == DataKind_RecordID {
+			if _, ok := fld.(IRefField); ok {
+				cnt++
+			}
+		}
+	})
+	return cnt
+}
+
+func (f *fields) UserFields(cb func(IField)) {
+	f.Fields(func(fld IField) {
+		if !fld.IsSys() {
+			cb(fld)
+		}
+	})
+}
+
 func (f *fields) UserFieldCount() int {
 	cnt := 0
-	f.Fields(func(f IField) {
-		if !f.IsSys() {
+	f.Fields(func(fld IField) {
+		if !fld.IsSys() {
 			cnt++
 		}
 	})
@@ -187,3 +241,23 @@ func (f *fields) makeSysFields() {
 		f.AddField(SystemField_IsActive, DataKind_bool, false)
 	}
 }
+
+// # Implements:
+//   - IRefField
+type refField struct {
+	field
+	refs []QName
+}
+
+func newRefField(name string, required bool, ref ...QName) *refField {
+	f := &refField{
+		field: makeField(name, DataKind_RecordID, required, false),
+		refs:  make([]QName, 0),
+	}
+	for i := range ref {
+		f.refs = append(f.refs, ref[i])
+	}
+	return f
+}
+
+func (f refField) Refs() []QName { return f.refs }
