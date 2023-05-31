@@ -285,7 +285,7 @@ type IFieldsBuilder interface {
 //	- DefKind_ODoc and DefKind_CRecord,
 //	- DefKind_WDoc and DefKind_WRecord,
 //	- DefKind_Object and DefKind_Element,
-//	- DefKind_ViewRecord
+//	- DefKind_ViewRecord and DefKind_ViewKey
 type IContainers interface {
 	// Finds container by name.
 	//

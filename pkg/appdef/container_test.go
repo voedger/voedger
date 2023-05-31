@@ -42,6 +42,15 @@ func Test_def_AddContainer(t *testing.T) {
 		require.Equal(Occurs_Unbounded, c.MaxOccurs())
 	})
 
+	t.Run("chain notation is ok to add containers", func(t *testing.T) {
+		d := New().AddObject(NewQName("test", "obj"))
+		n := d.AddContainer("c1", elQName, 1, Occurs_Unbounded).
+			AddContainer("c2", elQName, 1, Occurs_Unbounded).
+			AddContainer("c3", elQName, 1, Occurs_Unbounded).(IDef).QName()
+		require.Equal(d.QName(), n)
+		require.Equal(3, d.ContainerCount())
+	})
+
 	t.Run("must be panic if empty container name", func(t *testing.T) {
 		require.Panics(func() { def.AddContainer("", elQName, 1, Occurs_Unbounded) })
 	})

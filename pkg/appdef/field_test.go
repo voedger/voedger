@@ -37,8 +37,17 @@ func Test_def_AddField(t *testing.T) {
 		require.False(f.Verifiable())
 	})
 
+	t.Run("chain notation is ok to add fields", func(t *testing.T) {
+		d := New().AddObject(NewQName("test", "obj"))
+		n := d.AddField("f1", DataKind_int64, true).
+			AddField("f2", DataKind_int32, false).
+			AddField("f3", DataKind_string, false).(IDef).QName()
+		require.Equal(d.QName(), n)
+		require.Equal(3, d.UserFieldCount())
+	})
+
 	t.Run("must be panic if empty field name", func(t *testing.T) {
-		require.Panics(func() { def.AddField("", DataKind_int64, true) })
+		require.Panics(func() { def.AddVerifiedField("", DataKind_int64, true, VerificationKind_Phone) })
 	})
 
 	t.Run("must be panic if invalid field name", func(t *testing.T) {
@@ -67,7 +76,7 @@ func Test_def_AddField(t *testing.T) {
 		for i := 0; i < MaxDefFieldCount-1; i++ { // -1 for sys.QName field
 			d.AddField(fmt.Sprintf("f_%#x", i), DataKind_bool, false)
 		}
-		require.Panics(func() { d.AddField("errorField", DataKind_bool, false) })
+		require.Panics(func() { d.AddField("errorField", DataKind_bool, true) })
 	})
 }
 

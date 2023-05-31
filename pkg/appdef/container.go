@@ -101,7 +101,7 @@ func (c *containers) AddContainer(name string, contDef QName, minOccurs, maxOccu
 	c.containers[name] = cont
 	c.containersOrdered = append(c.containersOrdered, name)
 
-	return c
+	return c.owner.(IContainersBuilder)
 }
 
 func (c *containers) Container(name string) IContainer {
