@@ -170,7 +170,7 @@ func (u *uniques) addUnique(name string, fields []string) IUniquesBuilder {
 	u.uniques[name] = un
 	u.uniquesOrdered = append(u.uniquesOrdered, name)
 
-	return u
+	return u.owner.(IUniquesBuilder)
 }
 
 func (u *uniques) def() IDef {
