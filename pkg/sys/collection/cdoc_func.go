@@ -20,12 +20,12 @@ import (
 )
 
 func provideQryCDoc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
-	pars := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CDocParams"))
-	pars.AddField(field_ID, appdef.DataKind_int64, true)
-	res := appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CDocResult"))
-	res.AddField("Result", appdef.DataKind_string, false)
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
-		qNameCDocFunc, pars.QName(), res.QName(),
+		qNameCDocFunc,
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CDocParams")).
+			AddField(field_ID, appdef.DataKind_int64, true).(appdef.IDef).QName(),
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CDocResult")).
+			AddField("Result", appdef.DataKind_string, false).(appdef.IDef).QName(),
 		execQryCDoc(appDefBuilder)))
 }
 

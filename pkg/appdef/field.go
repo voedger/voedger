@@ -86,9 +86,6 @@ func makeFields(def interface{}) fields {
 }
 
 func (f *fields) AddField(name string, kind DataKind, required bool) IFieldsBuilder {
-	if IsSysField(name) && (f.Field(name) != nil) {
-		return f.owner.(IFieldsBuilder) // special case: try to add system field
-	}
 	if err := f.checkAddField(name, kind); err != nil {
 		panic(err)
 	}

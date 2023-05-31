@@ -52,18 +52,10 @@ func Test_def_AddField(t *testing.T) {
 
 	t.Run("must be panic if invalid field name", func(t *testing.T) {
 		require.Panics(func() { def.AddField("naked_🔫", DataKind_int64, true) })
-		t.Run("but ok if system field", func(t *testing.T) {
-			require.NotPanics(func() { def.AddField(SystemField_QName, DataKind_QName, true) })
-			require.Equal(2, def.FieldCount())
-		})
 	})
 
 	t.Run("must be panic if field name dupe", func(t *testing.T) {
 		require.Panics(func() { def.AddField("f1", DataKind_int64, true) })
-		t.Run("but ok if system field", func(t *testing.T) {
-			require.NotPanics(func() { def.AddField(SystemField_QName, DataKind_QName, true) })
-			require.Equal(2, def.FieldCount())
-		})
 	})
 
 	t.Run("must be panic if field data kind is not allowed by definition kind", func(t *testing.T) {
