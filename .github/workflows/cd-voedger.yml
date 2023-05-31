@@ -1,0 +1,51 @@
+name: CD cmd/voedger
+
+on:
+  workflow_call:
+    secrets:
+      dockerusername:
+        required: true
+      dockerpassword:
+        required: true
+      personaltoken:
+        required: true
+      reporeading_token:
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 'stable'
+
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Build executable
+      run: |
+        git config --global url."https://${{ secrets.REPOREADING_TOKEN }}:x-oauth-basic@github.com/heeus".insteadOf "https://github.com/heeus"
+        git config --global url."https://${{ secrets.REPOREADING_TOKEN }}:x-oauth-basic@github.com/untillpro".insteadOf "https://github.com/untillpro"
+        git config --global url."https://${{ secrets.REPOREADING_TOKEN }}:x-oauth-basic@github.com/voedger".insteadOf "https://github.com/voedger"
+        go build -o ./cmd/voedger ./cmd/voedger
+      env:
+        GOPRIVATE: "github.com/untillpro/*,github.com/heeus/*,github.com/voedger/*"
+        CGO_ENABLED: 0
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.dockerusername }}
+        password: ${{ secrets.dockerpassword }}
+
+    - name: Build and push Docker image alpha
+      uses: docker/build-push-action@v4
+      with:
+        context: ./cmd/voedger
+        file: ./cmd/voedger/Dockerfile
+        push: true
+        tags: voedger/voedger:0.0.1-alpha

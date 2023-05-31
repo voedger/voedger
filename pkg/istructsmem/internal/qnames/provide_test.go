@@ -27,7 +27,7 @@ func TestQNamesBasicUsage(t *testing.T) {
 
 	testName := appdef.NewQName("test", "doc")
 	app := appdef.New()
-	app.AddStruct(testName, appdef.DefKind_CDoc)
+	app.AddCDoc(testName)
 	appDef, err := app.Build()
 	if err != nil {
 		panic(err)

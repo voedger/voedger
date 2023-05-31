@@ -6,7 +6,9 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"runtime"
 	"sort"
 	"testing"
 
@@ -106,14 +108,16 @@ services:
         restart: always
 `,
 	}
+
+	delimiter := dockerContainerNameDelimiter()
 	expectedNewState := dockerContainerInfoList{
 		{
-			Name:  "my-redis-1",
+			Name:  fmt.Sprintf("my%sredis%s1", delimiter, delimiter),
 			Image: "redis:7.0.11-alpine",
 			IsUp:  true,
 		},
 		{
-			Name:  "my-nginx-1",
+			Name:  fmt.Sprintf("my%snginx%s1", delimiter, delimiter),
 			Image: "nginx:1.23.4",
 			IsUp:  true,
 		},
@@ -150,9 +154,10 @@ services:
         restart: always`,
 	}
 
+	delimiter := dockerContainerNameDelimiter()
 	expectedNewState := dockerContainerInfoList{
 		{
-			Name:  "my-redis-1",
+			Name:  fmt.Sprintf("my%sredis%s1", delimiter, delimiter),
 			Image: "redis:7.0.4-alpine",
 			IsUp:  true,
 		},
@@ -211,12 +216,12 @@ services:
 
 	expectedNewState = dockerContainerInfoList{
 		{
-			Name:  "my-redis-1",
+			Name:  fmt.Sprintf("my%sredis%s1", delimiter, delimiter),
 			Image: "redis:7.0.11-alpine",
 			IsUp:  true,
 		},
 		{
-			Name:  "my-nginx-1",
+			Name:  fmt.Sprintf("my%snginx%s1", delimiter, delimiter),
 			Image: "nginx:1.23.4",
 			IsUp:  true,
 		},
@@ -251,4 +256,13 @@ func TestDockerController_InvalidComposeFile(t *testing.T) {
 
 	err = cleanUp(projectName)
 	require.NoError(t, err)
+}
+
+func dockerContainerNameDelimiter() string {
+	switch runtime.GOOS {
+	case `linux`:
+		return `_`
+	default:
+		return `-`
+	}
 }

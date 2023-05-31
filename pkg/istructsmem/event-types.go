@@ -391,17 +391,19 @@ func newCUD(appCfg *AppConfigType) cudType {
 func (cud *cudType) applyRecs(exists existsRecordType, load loadRecordFuncType, store storeRecordFuncType) (err error) {
 
 	for _, rec := range cud.creates {
-		if rec.def.Singleton() {
-			id, err := cud.appCfg.singletons.ID(rec.QName())
-			if err != nil {
-				return err
-			}
-			isExists, err := exists(id)
-			if err != nil {
-				return err
-			}
-			if isExists {
-				return fmt.Errorf("can not create singleton, CDoc «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
+		if cDoc, ok := rec.def.(appdef.ICDoc); ok {
+			if cDoc.Singleton() {
+				id, err := cud.appCfg.singletons.ID(rec.QName())
+				if err != nil {
+					return err
+				}
+				isExists, err := exists(id)
+				if err != nil {
+					return err
+				}
+				if isExists {
+					return fmt.Errorf("can not create singleton, CDoc «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
+				}
 			}
 		}
 		if err = store(rec); err != nil {
@@ -495,7 +497,7 @@ func (cud *cudType) regenerateIDsPlan(generator istructs.IDGenerator) (newIDs ne
 
 		var storeID istructs.RecordID
 
-		if rec.def.Singleton() {
+		if cDoc, ok := rec.def.(appdef.ICDoc); ok && cDoc.Singleton() {
 			if storeID, err = cud.appCfg.singletons.ID(rec.QName()); err != nil {
 				return nil, err
 			}
@@ -817,7 +819,7 @@ func (el *elementType) ElementBuilder(containerName string) istructs.IElementBui
 	c := newElement(el)
 	el.child = append(el.child, &c)
 	if el.QName() != appdef.NullQName {
-		if cont := el.def.Container(containerName); cont != nil {
+		if cont := el.def.(appdef.IContainers).Container(containerName); cont != nil {
 			c.setQName(cont.Def())
 			if c.QName() != appdef.NullQName {
 				if el.ID() != istructs.NullRecordID {
@@ -828,6 +830,11 @@ func (el *elementType) ElementBuilder(containerName string) istructs.IElementBui
 		}
 	}
 	return &c
+}
+
+// Returns child elements count
+func (el *elementType) ElementCount() int {
+	return len(el.child)
 }
 
 // istructs.IElement.Elements

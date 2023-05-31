@@ -34,8 +34,8 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/processors"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var (
@@ -52,17 +52,17 @@ func TestBasicUsage(t *testing.T) {
 
 	// схема параметров тестовой команды
 	testCmdQNameParams := appdef.NewQName(appdef.SysPackage, "TestParams")
-	// схема unloged-параметров тестовой команды
+	// схема unlogged-параметров тестовой команды
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
 	prepareAppDef := func(appDef appdef.IAppDefBuilder) {
-		parsDef := appDef.AddStruct(testCmdQNameParams, appdef.DefKind_Object)
+		parsDef := appDef.AddObject(testCmdQNameParams)
 		parsDef.AddField("Text", appdef.DataKind_string, true)
 
-		unloggedParsDef := appDef.AddStruct(testCmdQNameParamsUnlogged, appdef.DefKind_Object)
+		unloggedParsDef := appDef.AddObject(testCmdQNameParamsUnlogged)
 		unloggedParsDef.AddField("Password", appdef.DataKind_string, true)
 
-		appDef.AddStruct(testCDoc, appdef.DefKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
-		appDef.AddStruct(testCRecord, appdef.DefKind_CRecord)
+		appDef.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+		appDef.AddCRecord(testCRecord)
 	}
 
 	app := setUp(t, prepareAppDef)
@@ -111,7 +111,7 @@ func TestBasicUsage(t *testing.T) {
 	app.cfg.Resources.Add(testCmd)
 
 	t.Run("basic usage", func(t *testing.T) {
-		// commandprocessor работает через ibus.SendResponse -> нам нужен sender -> тестируем через ibus.SendRequest2()
+		// command processor работает через ibus.SendResponse -> нам нужен sender -> тестируем через ibus.SendRequest2()
 		request := ibus.Request{
 			Body:     []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"pass"},"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}}]}`),
 			AppQName: istructs.AppQName_untill_airs_bp.String(),
@@ -182,9 +182,9 @@ func TestRecovery(t *testing.T) {
 	require := require.New(t)
 
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
-		_ = appDef.AddStruct(testCRecord, appdef.DefKind_CRecord)
-		_ = appDef.AddStruct(testCDoc, appdef.DefKind_CDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
-		_ = appDef.AddStruct(testWDoc, appdef.DefKind_WDoc)
+		_ = appDef.AddCRecord(testCRecord)
+		_ = appDef.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+		_ = appDef.AddWDoc(testWDoc)
 	})
 	defer tearDown(app)
 
@@ -240,7 +240,7 @@ func TestCUDUpdate(t *testing.T) {
 	testQName := appdef.NewQName("test", "test")
 
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
-		_ = appDef.AddStruct(testQName, appdef.DefKind_CDoc).AddField("IntFld", appdef.DataKind_int32, false)
+		_ = appDef.AddCDoc(testQName).AddField("IntFld", appdef.DataKind_int32, false)
 	})
 	defer tearDown(app)
 
@@ -276,7 +276,7 @@ func TestCUDUpdate(t *testing.T) {
 		require.Equal(coreutils.ApplicationJSON, resp.ContentType)
 	})
 
-	t.Run("404 not found on update unexisting", func(t *testing.T) {
+	t.Run("404 not found on update not existing", func(t *testing.T) {
 		req.Body = []byte(`{"cuds":[{"sys.ID":2,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`)
 		resp, sections, secErr, err = app.bus.SendRequest2(app.ctx, req, testTimeout)
 		require.Nil(err, err)
@@ -293,7 +293,7 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 	testQName := appdef.NewQName("test", "test")
 
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
-		_ = appDef.AddStruct(testQName, appdef.DefKind_CDoc)
+		_ = appDef.AddCDoc(testQName)
 	})
 	defer tearDown(app)
 
@@ -344,10 +344,10 @@ func Test400BadRequests(t *testing.T) {
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
 
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
-		appDef.AddStruct(testCmdQNameParams, appdef.DefKind_Object).
+		appDef.AddObject(testCmdQNameParams).
 			AddField("Text", appdef.DataKind_string, true)
 
-		appDef.AddStruct(testCmdQNameParamsUnlogged, appdef.DefKind_Object).
+		appDef.AddObject(testCmdQNameParamsUnlogged).
 			AddField("Password", appdef.DataKind_string, true)
 	})
 	defer tearDown(app)
@@ -418,7 +418,7 @@ func TestAuthnz(t *testing.T) {
 	qNameTestDeniedCDoc := appdef.NewQName(appdef.SysPackage, "TestDeniedCDoc") // the same in core/iauthnzimpl
 
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
-		appDef.AddStruct(qNameTestDeniedCDoc, appdef.DefKind_CDoc)
+		appDef.AddCDoc(qNameTestDeniedCDoc)
 	})
 	defer tearDown(app)
 
@@ -532,7 +532,7 @@ func TestRateLimit(t *testing.T) {
 
 	app := setUp(t,
 		func(appDef appdef.IAppDefBuilder) {
-			appDef.AddStruct(parsQName, appdef.DefKind_Object)
+			appDef.AddObject(parsQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(
@@ -594,7 +594,7 @@ func tearDown(app testApp) {
 	<-app.done
 }
 
-// simulate real app behaviour
+// simulate real app behavior
 func replyBadRequest(bus ibus.IBus, sender interface{}, message string) {
 	res := coreutils.NewHTTPErrorf(http.StatusBadRequest, message)
 	bus.SendResponse(sender, ibus.Response{
@@ -620,7 +620,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 
 	// build application definition
 	appDef := appdef.New()
-	ProvideJSONFuncParamsDef(appDef)
+	processors.ProvideJSONFuncParamsDef(appDef)
 	if prepareAppDef != nil {
 		prepareAppDef(appDef)
 	}

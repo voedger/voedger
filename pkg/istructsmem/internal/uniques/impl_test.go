@@ -28,7 +28,7 @@ func TestUniques(t *testing.T) {
 	testAppDef := func(ver uint) appdef.IAppDef {
 		app := appdef.New()
 
-		def := app.AddStruct(testName, appdef.DefKind_CDoc)
+		def := app.AddCDoc(testName)
 		def.
 			AddField("name", appdef.DataKind_string, true).
 			AddField("surname", appdef.DataKind_string, false).
@@ -74,7 +74,7 @@ func TestUniques(t *testing.T) {
 	require := require.New(t)
 
 	t.Run("basic Uniques methods", func(t *testing.T) {
-		def := appDef1.Def(testName)
+		def := appDef1.CDoc(testName)
 
 		require.Equal(2, def.UniqueCount())
 		require.Equal(def.UniqueCount(), func() int {
@@ -104,10 +104,10 @@ func TestUniques(t *testing.T) {
 			panic(err)
 		}
 
-		def1 := appDef1.Def(testName)
+		def1 := appDef1.CDoc(testName)
 		require.Equal(2, def1.UniqueCount())
 
-		def2 := appDef2.Def(testName)
+		def2 := appDef2.CDoc(testName)
 		require.Equal(3, def2.UniqueCount())
 
 		def1.Uniques(func(u1 appdef.IUnique) {
@@ -125,13 +125,14 @@ func TestUniquesErrors(t *testing.T) {
 
 	testAppDef := func() appdef.IAppDef {
 		app := appdef.New()
-		def := app.AddStruct(testName, appdef.DefKind_CDoc)
+		def := app.AddCDoc(testName)
 		def.
 			AddField("name", appdef.DataKind_string, true).
 			AddField("surname", appdef.DataKind_string, false).
 			AddField("lastName", appdef.DataKind_string, false).
 			AddField("passportNumber", appdef.DataKind_string, false).
-			AddField("passportSerial", appdef.DataKind_string, false).
+			AddField("passportSerial", appdef.DataKind_string, false)
+		def.
 			AddUnique("fullNameUnique", []string{"name", "surname", "lastName"}).
 			AddUnique("passportUnique", []string{"passportSerial", "passportNumber"})
 
@@ -182,9 +183,10 @@ func TestUniquesErrors(t *testing.T) {
 		}
 
 		t.Run("inject unknown definition to AppDef", func(t *testing.T) {
-			def := appDef.(appdef.IAppDefBuilder).AddStruct(appdef.NewQName("test", "unknown"), appdef.DefKind_CDoc)
+			def := appDef.(appdef.IAppDefBuilder).AddCDoc(appdef.NewQName("test", "unknown"))
 			def.
-				AddField("fld", appdef.DataKind_string, false).
+				AddField("fld", appdef.DataKind_string, false)
+			def.
 				AddUnique("", []string{"fld"})
 		})
 

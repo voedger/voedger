@@ -44,7 +44,7 @@ func (s *schedulerImp[Key, SP, State]) Tick() <-chan time.Time {
 	return s.timer.C
 }
 
-func (s *schedulerImp[Key, SP, State]) OnIn(serialNumber uint64, m OriginalMessage[Key, SP], now time.Time) {
+func (s *schedulerImp[Key, SP, State]) OnIn(serialNumber uint64, m ControlMessage[Key, SP], now time.Time) {
 	item := scheduledMessage[Key, SP, State]{
 		Key:          m.Key,
 		SP:           m.SP,

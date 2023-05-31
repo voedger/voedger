@@ -8,8 +8,3 @@ const (
 	FldBLOBID = "blobID"
 	fldStatus = "status"
 )
-
-var (
-// QNameWDocBLOB                = appdef.NewQName(appdef.SysPackage, "BLOB")
-// QNameCommandUploadBLOBHelper = appdef.NewQName(appdef.SysPackage, "UploadBLOBHelper")
-)

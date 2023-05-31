@@ -43,7 +43,7 @@ type appPartition struct {
 }
 
 func ProvideJSONFuncParamsDef(appDef appdef.IAppDefBuilder) {
-	appDef.AddStruct(istructs.QNameJSON, appdef.DefKind_Object).
+	appDef.AddObject(istructs.QNameJSON).
 		AddField(processors.Field_JSONDef_Body, appdef.DataKind_string, true)
 }
 
@@ -67,9 +67,10 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("limitCallRate", limitCallRate),
 				pipeline.WireFunc("getWSDesc", getWSDesc),
 				pipeline.WireFunc("checkWSInitialized", checkWSInitialized),
+				pipeline.WireFunc("authenticate", cmdProc.authenticate),
+				pipeline.WireFunc("checkWSActive", checkWSActive),
 				pipeline.WireFunc("getAppPartition", cmdProc.getAppPartition),
 				pipeline.WireFunc("getFunction", getFunction),
-				pipeline.WireFunc("authenticate", cmdProc.authenticate),
 				pipeline.WireFunc("authorizeRequest", cmdProc.authorizeRequest),
 				pipeline.WireFunc("unmarshalRequestBody", unmarshalRequestBody),
 				pipeline.WireFunc("getWorkspace", cmdProc.getWorkspace),

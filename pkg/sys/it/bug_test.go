@@ -86,7 +86,7 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 			sys.Provide(vvmCfg.TimeFunc, cfg, adf, vvmAPI, smtp.Cfg{}, sep, nil)
 
 			cdocQName := appdef.NewQName("test", "cdoc")
-			adf.AddStruct(cdocQName, appdef.DefKind_CDoc)
+			adf.AddCDoc(cdocQName)
 
 			cmdQName := appdef.NewQName(appdef.SysPackage, "testCmd")
 			cmd2CUDs := istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName,

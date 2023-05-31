@@ -10,8 +10,8 @@ import (
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 )
 
 func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
@@ -25,7 +25,7 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 		}
 		for wsNum := 0; istructs.AppWSAmount(wsNum) < as.WSAmount(); wsNum++ {
 			appWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
-			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, commandprocessor.QNameCDocWorkspaceDescriptor)
+			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, sysshared.QNameCDocWorkspaceDescriptor)
 			if err != nil {
 				return err
 			}
@@ -51,12 +51,12 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 					SyncedAt:                     istructs.UnixMilli(vvmConfig.TimeFunc().UnixMilli()),
 				},
 			)
-			cdocWSDesc := reb.CUDBuilder().Create(commandprocessor.QNameCDocWorkspaceDescriptor)
+			cdocWSDesc := reb.CUDBuilder().Create(sysshared.QNameCDocWorkspaceDescriptor)
 			cdocWSDesc.PutRecordID(appdef.SystemField_ID, 1)
 			cdocWSDesc.PutString(authnz.Field_WSName, "appWS"+strconv.Itoa(wsNum))
 			cdocWSDesc.PutQName(authnz.Field_WSKind, authnz.QNameCDoc_WorkspaceKind_AppWorkspace)
 			cdocWSDesc.PutInt64(authnz.Field_СreatedAtMs, vvmConfig.TimeFunc().UnixMilli())
-			cdocWSDesc.PutInt64(commandprocessor.Field_InitCompletedAtMs, vvmConfig.TimeFunc().UnixMilli())
+			cdocWSDesc.PutInt64(sysshared.Field_InitCompletedAtMs, vvmConfig.TimeFunc().UnixMilli())
 			rawEvent, err := reb.BuildRawEvent()
 			if err != nil {
 				return err

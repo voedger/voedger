@@ -17,26 +17,14 @@ import (
 )
 
 func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
-	var valueContinerDef appdef.IDef
-	keyFieldsKinds := map[string]appdef.DataKind{}
-	viewDef := appStructs.AppDef().Def(viewRecordQName)
-	viewDef.Containers(func(cont appdef.IContainer) {
-		switch cont.Name() {
-		case appdef.SystemContainer_ViewPartitionKey, appdef.SystemContainer_ViewClusteringCols:
-			appStructs.AppDef().Def(cont.Def()).Fields(func(f appdef.IField) {
-				keyFieldsKinds[f.Name()] = f.DataKind()
-			})
-		case appdef.SystemContainer_ViewValue:
-			valueContinerDef = appStructs.AppDef().Def(cont.Def())
-		}
-	})
+	viewDef := appStructs.AppDef().View(viewRecordQName)
 
 	if !f.acceptAll {
-		allowedFields := make(map[string]bool, len(keyFieldsKinds)+valueContinerDef.FieldCount())
-		for name := range keyFieldsKinds {
-			allowedFields[name] = true
-		}
-		valueContinerDef.Fields(func(f appdef.IField) {
+		allowedFields := make(map[string]bool, viewDef.Key().FieldCount()+viewDef.Value().FieldCount())
+		viewDef.Key().Fields(func(f appdef.IField) {
+			allowedFields[f.Name()] = true
+		})
+		viewDef.Value().Fields(func(f appdef.IField) {
 			allowedFields[f.Name()] = true
 		})
 		for field := range f.fields {
@@ -91,7 +79,11 @@ func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName ap
 	kb := appStructs.ViewRecords().KeyBuilder(viewRecordQName)
 
 	for _, k := range kk {
-		switch keyFieldsKinds[k.name] {
+		f := viewDef.Key().Field(k.name)
+		if f == nil {
+			return fmt.Errorf("field '%s' does not exist in '%s' key def", k.name, viewRecordQName)
+		}
+		switch f.DataKind() {
 		case appdef.DataKind_int32:
 			fallthrough
 		case appdef.DataKind_int64:
@@ -112,8 +104,6 @@ func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName ap
 			fallthrough
 		case appdef.DataKind_QName:
 			kb.PutChars(k.name, string(k.value))
-		case appdef.DataKind_null:
-			return fmt.Errorf("field '%s' does not exist in '%s' key def", k.name, viewRecordQName)
 		default:
 			return errUnsupportedDataKind
 		}
