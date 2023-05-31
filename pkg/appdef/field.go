@@ -252,10 +252,7 @@ type refField struct {
 func newRefField(name string, required bool, ref ...QName) *refField {
 	f := &refField{
 		field: makeField(name, DataKind_RecordID, required, false),
-		refs:  make([]QName, 0),
-	}
-	for i := range ref {
-		f.refs = append(f.refs, ref[i])
+		refs:  append([]QName{}, ref...),
 	}
 	return f
 }
