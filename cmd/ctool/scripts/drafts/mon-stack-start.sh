@@ -22,7 +22,7 @@ AppNode2=$2
 
 cat ./docker-compose-mon.yml | \
     sed "s/{{.AppNode1}}/$AppNode1/g; s/{{.AppNode2}}/$AppNode2/g" \
-    | ssh $SSH_OPTIONS $SSH_USER@$se1 'cat > ~/docker-compose-mon.yml'
+    | ssh $SSH_OPTIONS $SSH_USER@$AppNode1 'cat > ~/docker-compose-mon.yml'
 
 ssh $SSH_OPTIONS $SSH_USER@$se1 "docker stack deploy --compose-file ~/docker-compose-mon.yml MonDockerStack"
 
