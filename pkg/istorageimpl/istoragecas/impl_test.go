@@ -11,7 +11,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	istorage "github.com/voedger/voedger/pkg/istorage"
+
+	"github.com/voedger/voedger/pkg/istorage"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -40,8 +41,6 @@ func TestMultipleApps(t *testing.T) {
 	}
 	const appCount = 3
 
-	require := require.New(t)
-
 	casPar := CassandraParamsType{
 		Hosts:                   hosts(),
 		Port:                    port(),
@@ -51,7 +50,7 @@ func TestMultipleApps(t *testing.T) {
 	wg := sync.WaitGroup{}
 
 	asf, err := Provide(casPar)
-	require.NoError(err)
+	require.NoError(t, err)
 
 	testApp := func() {
 		defer wg.Done()
@@ -108,4 +107,19 @@ func TestCassandraParamsType_cqlVersion(t *testing.T) {
 			require.Equal(t, test.wantCqlVersion, CassandraParamsType{CQLVersion: test.cqlVersion}.cqlVersion())
 		})
 	}
+}
+
+func TestDCAwareRoundRobinPolicy(t *testing.T) {
+	if !coreutils.IsCassandraStorage() {
+		t.Skip()
+	}
+	casPar := CassandraParamsType{
+		Hosts:                   hosts(),
+		Port:                    port(),
+		NumRetries:              retryAttempt,
+		KeyspaceWithReplication: SimpleWithReplication,
+		DC:                      "dc1",
+	}
+	provider := newStorageProvider(casPar)
+	require.NotNil(t, provider.cluster.PoolConfig.HostSelectionPolicy)
 }

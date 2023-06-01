@@ -11,16 +11,16 @@ set -euo pipefail
 set -x
 
 if [[ $# -ne 5 ]]; then
-  echo "Usage: $0 <SE node1> <SE node2> <Scylla node1> <Scylla node2> <Scylla node3>" 
+  echo "Usage: $0 <AppNode1> <AppNode2> <DBNode1> <DBNode2> <DBNode3>" 
   exit 1
 fi
 
 
-se1=$1
-se2=$2
-scylla1=$3
-scylla2=$4
-scylla3=$5
+AppNode1=$1
+AppNode2=$2
+DBNode1=$3
+DBNode2=$4
+DBNode3=$5
 
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
@@ -45,14 +45,14 @@ while [ $# -gt 0 ] && [ $count -lt 2 ]; do
       ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/provisioning/dashboards/swarmprom_dashboards.yml'
 
   cat ./grafana/provisioning/datasources/datasource.yml | \
-      sed "s/{se}/$1/g" \
+      sed "s/{{.AppNode}}/$1/g" \
       | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/provisioning/datasources/datasource.yml'
 
   cat ./grafana/grafana.ini | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/grafana.ini'
 
 
   cat ./prometheus/prometheus.yml | \
-      sed "s/{scylla1}/$scylla1/g; s/{scylla2}/$scylla2/g; s/{scylla3}/$scylla3/g; s/{se1}/$se1/g; s/{se2}/$se2/g; s/{mon_label}/mon$((count+1))/g" \
+      sed "s/{{.DBNode1}}/$DBNode1/g; s/{{.DBNode2}}/$DBNode2/g; s/{{.DBNode3}}/$DBNode3/g; s/{{.AppNode1}}/$AppNode1/g; s/{{.AppNode2}}/$AppNode2/g; s/{{.Label}}/AppNode$((count+1))/g" \
       | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/prometheus/prometheus.yml'
 
   cat ./prometheus/alert.rules | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/prometheus/alert.rules'
