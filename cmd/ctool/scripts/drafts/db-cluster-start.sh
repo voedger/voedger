@@ -24,7 +24,7 @@ DBNode3=$3
 # Replace the template values in the YAML file with the arguments (scylla nodes ip addresses)
 # and store as prod compose file for start swarm services
 cat docker-compose-template.yml | \
-    sed "s/{{.DBNode1})/$DBNode1/g; s/{{.DBNode2}}/$DBNode2/g; s/{{.DBNode3}}/$DBNode3/g" \
+    sed "s/{{\.DBNode1})/$DBNode1/g; s/{{\.DBNode2}}/$DBNode2/g; s/{{\.DBNode3}}/$DBNode3/g" \
     > ./docker-compose.yml
 
 cat ./docker-compose.yml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/docker-compose.yml'
