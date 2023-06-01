@@ -105,13 +105,12 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		return nil
 	}
 
-	if cfg.appDefBuilder.HasChanges() {
-		sch, err := cfg.appDefBuilder.Build()
-		if err != nil {
-			return fmt.Errorf("%v: unable rebuild changed application definition: %w", cfg.Name, err)
-		}
-		cfg.AppDef = sch
+	sch, err := cfg.appDefBuilder.Build()
+	if err != nil {
+		return fmt.Errorf("%v: unable rebuild changed application definition: %w", cfg.Name, err)
 	}
+	cfg.AppDef = sch
+
 	cfg.dynoSchemes.Prepare(cfg.AppDef)
 	cfg.validators.prepare(cfg.AppDef)
 

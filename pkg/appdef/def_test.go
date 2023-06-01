@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * Copyright (c) 2023-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
  */
 
@@ -11,25 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_def_Singleton(t *testing.T) {
+func Test_NullDef(t *testing.T) {
 	require := require.New(t)
 
-	appDef := New()
-
-	t.Run("must be ok to create singleton definition", func(t *testing.T) {
-		def := appDef.AddCDoc(NewQName("test", "singleton"))
-		require.NotNil(def)
-
-		def.SetSingleton()
-		require.True(def.Singleton())
-	})
-
-	t.Run("must be panic if not CDoc definition", func(t *testing.T) {
-		def := appDef.AddWDoc(NewQName("test", "wdoc"))
-		require.NotNil(def)
-
-		require.Panics(func() { def.(ICDocBuilder).SetSingleton() })
-
-		require.False(def.(ICDocBuilder).Singleton())
-	})
+	require.Nil(NullDef.App())
+	require.Equal(NullQName, NullDef.QName())
+	require.Equal(DefKind_null, NullDef.Kind())
 }

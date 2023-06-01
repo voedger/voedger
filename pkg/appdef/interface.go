@@ -215,9 +215,6 @@ type IAppDefBuilder interface {
 
 	// Must be called after all definitions added. Validates and returns builded application definition or error
 	Build() (IAppDef, error)
-
-	// Has changes since last success build
-	HasChanges() bool
 }
 
 // Definition describes the entity, such as document, record or view. Definitions may have fields and containers.
@@ -242,9 +239,6 @@ type IDef interface {
 //	- DefKind_Object and DefKind_Element,
 //	- DefKind_ViewRecord_PartitionKey, DefKind_ViewRecord_ClusteringColumns and DefKind_ViewRecord_Value
 type IFields interface {
-	// Owner definition qualified name
-	QName() QName
-
 	// Finds field by name.
 	//
 	// Returns nil if not found.
@@ -255,6 +249,20 @@ type IFields interface {
 
 	// Enumerates all fields in add order.
 	Fields(func(IField))
+
+	// Finds reference field by name.
+	//
+	// Returns nil if field is not found, or field found but it is not a reference field
+	RefField(name string) IRefField
+
+	// Enumerates all reference fields. System field (sys.ParentID) is also enumerated
+	RefFields(func(IRefField))
+
+	// Returns reference fields count. System field (sys.ParentID) is also counted
+	RefFieldCount() int
+
+	// Enumerates all fields except system
+	UserFields(func(IField))
 
 	// Returns user fields count. System fields (sys.QName, sys.ID, …) do not count
 	UserFieldCount() int
@@ -269,9 +277,16 @@ type IFieldsBuilder interface {
 	//   - if name is empty,
 	//   - if name is invalid,
 	//   - if field with name is already exists,
-	//   - if definition kind not supports fields,
-	//   - if data kind is not allowed by definition kind.
+	//   - if specified data kind is not allowed by definition kind.
 	AddField(name string, kind DataKind, required bool) IFieldsBuilder
+
+	// Adds reference field specified name and target refs.
+	//
+	// # Panics:
+	//   - if name is empty,
+	//   - if name is invalid,
+	//   - if field with name is already exists.
+	AddRefField(name string, required bool, ref ...QName) IFieldsBuilder
 
 	// Adds verified field specified name and kind.
 	//
@@ -279,7 +294,6 @@ type IFieldsBuilder interface {
 	//   - if field name is empty,
 	//   - if field name is invalid,
 	//   - if field with name is already exists,
-	//   - if definition kind not supports fields,
 	//   - if data kind is not allowed by definition kind,
 	//   - if no verification kinds are specified
 	AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder
@@ -291,11 +305,8 @@ type IFieldsBuilder interface {
 //	- DefKind_ODoc and DefKind_CRecord,
 //	- DefKind_WDoc and DefKind_WRecord,
 //	- DefKind_Object and DefKind_Element,
-//	- DefKind_ViewRecord
+//	- DefKind_ViewRecord and DefKind_ViewKey
 type IContainers interface {
-	// Owner definition qualified name
-	QName() QName
-
 	// Finds container by name.
 	//
 	// Returns nil if not found.
@@ -624,6 +635,16 @@ type IField interface {
 
 	// Returns is field system
 	IsSys() bool
+}
+
+// Reference field. Describe field with DataKind_RecordID.
+//
+// Use Refs() to obtain list of target references.
+type IRefField interface {
+	IField
+
+	// Returns list of target references
+	Refs() []QName
 }
 
 // Describes single inclusion of child definition in parent definition.

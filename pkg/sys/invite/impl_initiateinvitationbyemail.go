@@ -23,8 +23,7 @@ func provideCmdInitiateInvitationByEMail(cfg *istructsmem.AppConfigType, appDefB
 			AddField(Field_Roles, appdef.DataKind_string, true).
 			AddField(field_ExpireDatetime, appdef.DataKind_int64, true).
 			AddField(field_EmailTemplate, appdef.DataKind_string, true).
-			AddField(field_EmailSubject, appdef.DataKind_string, true).
-			QName(),
+			AddField(field_EmailSubject, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdInitiateInvitationByEMail(timeFunc),
