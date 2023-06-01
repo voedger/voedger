@@ -280,10 +280,13 @@ var defKindProps = map[DefKind]struct {
 			DataKind_bool:     true,
 			DataKind_RecordID: true,
 		},
-		systemFields:            map[string]bool{},
-		containersAllowed:       false,
-		availableContainerKinds: map[DefKind]bool{},
-		availableUniques:        false,
+		systemFields:      map[string]bool{},
+		containersAllowed: true,
+		availableContainerKinds: map[DefKind]bool{
+			DefKind_ViewRecord_PartitionKey:      true,
+			DefKind_ViewRecord_ClusteringColumns: true,
+		},
+		availableUniques: false,
 	},
 	DefKind_ViewRecord_Value: {
 		fieldsAllowed: true,

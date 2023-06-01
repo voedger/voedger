@@ -50,31 +50,29 @@ func Test_BasicUsage(t *testing.T) {
 	require.NoError(err)
 
 	// table
-	def := builder.Def(appdef.NewQName("air", "AirTablePlan"))
-	require.NotNil(def)
-	require.Equal(appdef.DefKind_CDoc, def.Kind())
-	require.Equal(appdef.DataKind_int32, def.Field("FState").DataKind())
-	require.Equal(2, len(def.UniqueByName("AIRTABLEPLAN_UNIQUE1").Fields()))
+	cdoc := builder.Def(appdef.NewQName("air", "AirTablePlan"))
+	require.NotNil(cdoc)
+	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
+	require.Equal(appdef.DataKind_int32, cdoc.(appdef.IFields).Field("FState").DataKind())
 
 	// child table
-	def = builder.Def(appdef.NewQName("air", "AirTablePlanItem"))
-	require.NotNil(def)
-	require.Equal(appdef.DefKind_CRecord, def.Kind())
-	require.Equal(appdef.DataKind_int32, def.Field("TableNo").DataKind())
+	crec := builder.Def(appdef.NewQName("air", "AirTablePlanItem"))
+	require.NotNil(crec)
+	require.Equal(appdef.DefKind_CRecord, crec.Kind())
+	require.Equal(appdef.DataKind_int32, crec.(appdef.IFields).Field("TableNo").DataKind())
 
 	// type
-	def = builder.Def(appdef.NewQName("air", "SubscriptionEvent"))
-	require.NotNil(def)
-	require.Equal(appdef.DefKind_Object, def.Kind())
-	require.Equal(appdef.DataKind_string, def.Field("Origin").DataKind())
+	obj := builder.Object(appdef.NewQName("air", "SubscriptionEvent"))
+	require.Equal(appdef.DefKind_Object, obj.Kind())
+	require.Equal(appdef.DataKind_string, obj.Field("Origin").DataKind())
 
 	// view
-	def = builder.Def(appdef.NewQName("air", "XZReports"))
-	require.NotNil(def)
-	require.Equal(appdef.DefKind_ViewRecord, def.Kind())
-	require.Equal(2, builder.Def(def.Container(appdef.SystemContainer_ViewValue).Def()).FieldCount()) // sys.Qname, XZReportWDocID
-	require.Equal(1, builder.Def(def.Container(appdef.SystemContainer_ViewPartitionKey).Def()).FieldCount())
-	require.Equal(4, builder.Def(def.Container(appdef.SystemContainer_ViewClusteringCols).Def()).FieldCount())
+	view := builder.View(appdef.NewQName("air", "XZReports"))
+	require.NotNil(view)
+	require.Equal(appdef.DefKind_ViewRecord, view.Kind())
+	require.Equal(2, builder.Def(view.Container(appdef.SystemContainer_ViewValue).Def()).(appdef.IFields).FieldCount()) // sys.Qname, XZReportWDocID
+	require.Equal(1, builder.Def(view.Container(appdef.SystemContainer_ViewPartitionKey).Def()).(appdef.IFields).FieldCount())
+	require.Equal(4, builder.Def(view.Container(appdef.SystemContainer_ViewClusteringCols).Def()).(appdef.IFields).FieldCount())
 
 }
 
@@ -134,9 +132,7 @@ func Test_DupFieldsInTables(t *testing.T) {
 	);
 	TABLE ByBaseTable INHERITS CDoc (
 		Name text,
-		Code text,
-		UNIQUE (Code),
-		CONSTRAINT constraint1 UNIQUE (Name)
+		Code text
 	);
 	TABLE MyTable INHERITS ByBaseTable OF BaseType, BaseType2 (
 		newField text,
@@ -146,9 +142,7 @@ func Test_DupFieldsInTables(t *testing.T) {
 		someField int,		-- duplicated in the second OF
 		Kind int,			-- duplicated in the first OF (2nd level)
 		Name int,			-- duplicated in the inherited table
-		ID text,			-- duplicated in the inherited table (2nd level)
-		UNIQUE (Kind),
-		CONSTRAINT constraint1 UNIQUE (newField) -- duplicated in the inherited table
+		ID text				-- duplicated in the inherited table (2nd level)
 	)
 	`)
 	require.NoError(err)
@@ -163,13 +157,12 @@ func Test_DupFieldsInTables(t *testing.T) {
 
 	err = BuildAppDefs(packages, appdef.New())
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:20:3: field redeclared",
-		"file1.sql:21:3: baseField redeclared",
-		"file1.sql:22:3: someField redeclared",
-		"file1.sql:23:3: Kind redeclared",
-		"file1.sql:24:3: Name redeclared",
-		"file1.sql:25:3: ID redeclared",
-		"file1.sql:27:3: constraint1 redeclared",
+		"file1.sql:18:3: field redeclared",
+		"file1.sql:19:3: baseField redeclared",
+		"file1.sql:20:3: someField redeclared",
+		"file1.sql:21:3: Kind redeclared",
+		"file1.sql:22:3: Name redeclared",
+		"file1.sql:23:3: ID redeclared",
 	}, "\n"))
 
 }
@@ -377,4 +370,42 @@ func Test_AbstractWorkspace(t *testing.T) {
 	require.Equal("ws2", ps.Ast.Statements[3].Workspace.Of[0].String())
 	require.Equal("test.ws3", ps.Ast.Statements[3].Workspace.Of[1].String())
 
+}
+
+func Test_UniqueFields(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	TABLE MyTable INHERITS CDoc (
+		Int1 int32,
+		Int2 int32 NOT NULL,
+		UNIQUEFIELD UnknownField,
+		UNIQUEFIELD Int1,
+		UNIQUEFIELD Int2
+	)
+	`)
+	require.Nil(err)
+
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.Nil(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	def := appdef.New()
+	err = BuildAppDefs(packages, def)
+	require.EqualError(err, strings.Join([]string{
+		"example.sql:5:3: undefined field UnknownField",
+		"example.sql:6:3: field has to be NOT NULL",
+	}, "\n"))
+
+	cdoc := def.CDoc(appdef.NewQName("test", "MyTable"))
+	require.NotNil(cdoc)
+
+	fld := cdoc.UniqueField()
+	require.NotNil(fld)
+	require.Equal("Int2", fld.Name())
 }

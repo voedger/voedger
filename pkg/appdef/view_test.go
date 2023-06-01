@@ -15,6 +15,10 @@ func TestAddView(t *testing.T) {
 	require := require.New(t)
 
 	app := New()
+
+	objName := NewQName("test", "object")
+	_ = app.AddObject(objName)
+
 	viewName := NewQName("test", "view")
 	v := app.AddView(viewName)
 	require.NotNil(v)
@@ -102,18 +106,53 @@ func TestAddView(t *testing.T) {
 
 	_, err := app.Build()
 	require.NoError(err)
-	require.False(app.HasChanges())
+
+	t.Run("must be ok to cast Def() as IView", func(t *testing.T) {
+		a, err := app.Build()
+		require.NoError(err)
+
+		d := a.Def(viewName)
+		require.NotNil(d)
+		require.Equal(DefKind_ViewRecord, d.Kind())
+
+		v, ok := d.(IView)
+		require.True(ok)
+		require.NotNil(v)
+
+		k, ok := a.Def(ViewKeyDefName(viewName)).(IViewKey)
+		require.True(ok)
+		require.Equal(k, key)
+		require.Equal(k, v.Key())
+	})
+
+	t.Run("must be nil if unknown view", func(t *testing.T) {
+		a, err := app.Build()
+		require.NoError(err)
+
+		v := a.View(NewQName("unknown", "view"))
+		require.Nil(v)
+	})
+
+	t.Run("must be nil if not view", func(t *testing.T) {
+		a, err := app.Build()
+		require.NoError(err)
+
+		v := a.View(objName)
+		require.Nil(v)
+
+		d := a.Def(objName)
+		require.NotNil(d)
+		v, ok := d.(IView)
+		require.False(ok)
+		require.Nil(v)
+	})
 
 	t.Run("must be ok to add value fields to view after app build", func(t *testing.T) {
 		v.AddValueField("valF3", DataKind_Event, false)
 		require.Equal(3+1, val.FieldCount())
 
-		require.True(app.HasChanges())
-
 		_, err := app.Build()
 		require.NoError(err)
-
-		require.False(app.HasChanges())
 	})
 
 	t.Run("must be ok to add pk or cc fields to view after app build", func(t *testing.T) {
@@ -124,12 +163,8 @@ func TestAddView(t *testing.T) {
 		require.Equal(3, cc.FieldCount())
 		require.Equal(6, key.FieldCount())
 
-		require.True(app.HasChanges())
-
 		_, err := app.Build()
 		require.NoError(err)
-
-		require.False(app.HasChanges())
 	})
 }
 

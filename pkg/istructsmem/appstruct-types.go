@@ -48,7 +48,6 @@ type AppConfigType struct {
 	appDefBuilder appdef.IAppDefBuilder
 	AppDef        appdef.IAppDef
 	Resources     Resources
-	Uniques       *implIUniques
 
 	dynoSchemes dynobuf.DynoBufSchemes
 	validators  *validators
@@ -83,7 +82,6 @@ func newAppConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppC
 	}
 	cfg.AppDef = app
 	cfg.Resources = newResources(&cfg)
-	cfg.Uniques = newUniques()
 
 	cfg.dynoSchemes = dynobuf.New()
 	cfg.validators = newValidators()
@@ -107,13 +105,12 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		return nil
 	}
 
-	if cfg.appDefBuilder.HasChanges() {
-		sch, err := cfg.appDefBuilder.Build()
-		if err != nil {
-			return fmt.Errorf("%v: unable rebuild changed application definition: %w", cfg.Name, err)
-		}
-		cfg.AppDef = sch
+	sch, err := cfg.appDefBuilder.Build()
+	if err != nil {
+		return fmt.Errorf("%v: unable rebuild changed application definition: %w", cfg.Name, err)
 	}
+	cfg.AppDef = sch
+
 	cfg.dynoSchemes.Prepare(cfg.AppDef)
 	cfg.validators.prepare(cfg.AppDef)
 
@@ -147,11 +144,6 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 
 	// prepare functions rate limiter
 	cfg.FunctionRateLimits.prepare(buckets)
-
-	// validate uniques
-	if err := cfg.Uniques.validate(cfg); err != nil {
-		return err
-	}
 
 	cfg.prepared = true
 	return nil

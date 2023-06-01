@@ -26,6 +26,94 @@ services:
         max-size: 10m
         max-file: "3"
 
+  grafana1:
+    image: grafana/grafana:latest
+    volumes:
+      - ~/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ~/grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ~/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - /var/lib/grafana:/var/lib/grafana
+    ports:
+      - target: 3000
+        published: 3000
+        protocol: tcp
+        mode: host
+    deploy:
+      placement:
+        constraints:
+          - node.labels.mon == mon1
+      replicas: 1
+    logging:
+      driver: "local"
+      options: 
+        max-size: 10m
+        max-file: "3"
+    links:
+      - prometheus1
+
+  grafana2:
+    image: grafana/grafana:latest
+    volumes:
+      - ~/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ~/grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ~/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - /var/lib/grafana:/var/lib/grafana
+    ports:
+      - target: 3000
+        published: 3000
+        protocol: tcp
+        mode: host
+    deploy:
+      placement:
+        constraints:
+          - node.labels.mon == mon2
+      replicas: 1
+    logging:
+      driver: "local"
+      options: 
+        max-size: 10m
+        max-file: "3"
+    links:
+      - prometheus2
+
+  cadvisor1:
+    image: gcr.io/cadvisor/cadvisor:latest
+    ports:
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: host
+    deploy:
+      placement:
+        constraints:
+          - node.labels.mon == mon1
+
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    restart: unless-stopped
+
+  cadvisor2:
+    image: gcr.io/cadvisor/cadvisor:latest
+    ports:
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: host
+    deploy:
+      placement:
+        constraints:
+          - node.labels.mon == mon2
+
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    restart: unless-stopped
+
   prometheus2:
     image: prom/prometheus:latest
     volumes:
@@ -108,12 +196,19 @@ services:
 
   node-exporter1:
     image: prom/node-exporter:latest
+
+#    environment:
+#      - NODE_ID={{.Node.ID}}
+#      - NODE_NAME="ip-10-0-0-11"
+
     deploy:
       placement:
         constraints:
           - node.labels.mon == mon1
       replicas: 1
     volumes:
+      - /etc/hostname:/etc/nodename
+      - /etc/node-exporter:/etc/node-exporter
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
@@ -122,6 +217,7 @@ services:
       - '--path.sysfs=/host/sys'
       - '--path.rootfs=/rootfs'
       - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.textfile.directory=/etc/node-exporter/'
     ports:
       - target: 9100
         published: 9100
@@ -131,12 +227,19 @@ services:
 
   node-exporter2:
     image: prom/node-exporter:latest
+
+#    environment:
+#      - NODE_ID={{.Node.ID}}
+#      - NODE_NAME="ip-10-0-0-12"
+
     deploy:
       placement:
         constraints:
           - node.labels.mon == mon2
       replicas: 1
     volumes:
+      - /etc/hostname:/etc/nodename
+      - /etc/node-exporter:/etc/node-exporter
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
@@ -145,6 +248,7 @@ services:
       - '--path.sysfs=/host/sys'
       - '--path.rootfs=/rootfs'
       - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.textfile.directory=/etc/node-exporter/'
     ports:
       - target: 9100
         published: 9100

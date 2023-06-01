@@ -31,10 +31,9 @@ func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, appDefB
 			AddField(Field_Email, appdef.DataKind_string, true).
 			AddField(field_TargetWSID, appdef.DataKind_int64, true).
 			AddField(field_ForRegistry, appdef.DataKind_bool, false). // to issue token for sys/registry/pseudoWSID/c.sys.ResetPassword, not for the current app
-			QName(),
+		(appdef.IDef).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitialEmailVerificationResult")).
-			AddField(field_VerificationToken, appdef.DataKind_string, true).
-			QName(),
+			AddField(field_VerificationToken, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		provideIEVExec(cfg.Name, itokens, asp, federationURL),
 	))
 	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQueryInitiateEmailVerification, istructs.RateLimit{
@@ -141,11 +140,9 @@ func provideQryIssueVerifiedValueToken(cfg *istructsmem.AppConfigType, appDefBui
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenParams")).
 			AddField(field_VerificationToken, appdef.DataKind_string, true).
 			AddField(field_VerificationCode, appdef.DataKind_string, true).
-			AddField(field_ForRegistry, appdef.DataKind_bool, false).
-			QName(),
+			AddField(field_ForRegistry, appdef.DataKind_bool, false).(appdef.IDef).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenResult")).
-			AddField(field_VerifiedValueToken, appdef.DataKind_string, true).
-			QName(),
+			AddField(field_VerifiedValueToken, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		provideIVVTExec(itokens, cfg.Name, asp),
 	))
 
@@ -201,8 +198,7 @@ func provideCmdSendEmailVerificationCode(cfg *istructsmem.AppConfigType, appDefB
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SendEmailVerificationParams")).
 			AddField(field_VerificationCode, appdef.DataKind_string, true).
 			AddField(Field_Email, appdef.DataKind_string, true).
-			AddField(field_Reason, appdef.DataKind_string, true).
-			QName(),
+			AddField(field_Reason, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		istructsmem.NullCommandExec,

@@ -6,12 +6,12 @@ package invite
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 )
 
-func provideCDocInvite(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddCDoc(qNameCDocInvite).
+func provideCDocInvite(appDefBuilder appdef.IAppDefBuilder) {
+	doc := appDefBuilder.AddCDoc(qNameCDocInvite)
+	doc.
 		AddField(sysshared.Field_SubjectKind, appdef.DataKind_int32, false).
 		AddField(Field_Login, appdef.DataKind_string, true).
 		AddField(field_Email, appdef.DataKind_string, true).
@@ -23,5 +23,5 @@ func provideCDocInvite(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IApp
 		AddField(field_Updated, appdef.DataKind_int64, true).
 		AddField(field_SubjectID, appdef.DataKind_RecordID, false).
 		AddField(field_InviteeProfileWSID, appdef.DataKind_int64, false)
-	cfg.Uniques.Add(qNameCDocInvite, []string{field_Email})
+	doc.SetUniqueField(field_Email)
 }

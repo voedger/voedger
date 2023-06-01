@@ -23,14 +23,17 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: QNameViewUniques,
-			Func: provideUniquesProjectorFunc(cfg.Uniques, appDefBuilder),
+			Func: provideUniquesProjectorFunc(appDefBuilder),
 		}
 	})
 	cfg.AddCUDValidators(istructs.CUDValidator{
 		MatchFunc: func(qName appdef.QName) bool {
-			return len(cfg.Uniques.GetAll(qName)) > 0
+			if uniques, ok := appDefBuilder.Def(qName).(appdef.IUniques); ok {
+				return uniques.UniqueField() != nil
+			}
+			return false
 		},
-		Validate: provideCUDUniqueUpdateDenyValidator(cfg.Uniques),
+		Validate: provideCUDUniqueUpdateDenyValidator(),
 	})
-	cfg.AddEventValidators(provideEventUniqueValidator(cfg.Uniques))
+	cfg.AddEventValidators(provideEventUniqueValidator())
 }

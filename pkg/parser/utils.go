@@ -191,16 +191,16 @@ func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
 	}
 }
 
-func genUniqueName(tablename string, bc appdef.IDefBuilder) string {
-	tn := strings.ToUpper(tablename)
-	for i := 1; i < appdef.MaxDefUniqueCount+1; i++ {
-		un := fmt.Sprintf("%s_UNIQUE%d", tn, i)
-		if bc.UniqueByName(un) == nil {
-			return un
-		}
-	}
-	return ""
-}
+// func genUniqueName(tablename string, bc appdef.IUniquesBuilder) string {
+// 	tn := strings.ToUpper(tablename)
+// 	for i := 1; i < appdef.MaxDefUniqueCount+1; i++ {
+// 		un := fmt.Sprintf("%s_UNIQUE%d", tn, i)
+// 		if bc.UniqueByName(un) == nil {
+// 			return un
+// 		}
+// 	}
+// 	return ""
+// }
 
 func getTableDefKind(table *TableStmt, ctx *buildContext) (kind appdef.DefKind, singletone bool) {
 	chain := getTableInheritanceChain(table, ctx)
@@ -232,9 +232,6 @@ func getTypeDataKind(t TypeQName) appdef.DataKind {
 		}
 		if t.Name == sysQName {
 			return appdef.DataKind_QName
-		}
-		if t.Name == sysId {
-			return appdef.DataKind_RecordID
 		}
 		if t.Name == sysBool {
 			return appdef.DataKind_bool

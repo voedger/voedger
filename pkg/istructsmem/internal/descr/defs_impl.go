@@ -43,6 +43,9 @@ func (d *Def) read(def appdef.IDef) {
 			u.read(unique)
 			d.Uniques = append(d.Uniques, u)
 		})
+		if uf := uni.UniqueField(); uf != nil {
+			d.UniqueField = uf.Name()
+		}
 	}
 
 	if cDoc, ok := def.(appdef.ICDoc); ok {
@@ -59,6 +62,11 @@ func (f *Field) read(field appdef.IField) {
 	f.Kind = field.DataKind()
 	f.Required = field.Required()
 	f.Verifiable = field.Verifiable()
+	if ref, ok := field.(appdef.IRefField); ok {
+		for _, r := range ref.Refs() {
+			f.Refs = append(f.Refs, r.String())
+		}
+	}
 }
 
 func newContainer() *Container { return &Container{} }

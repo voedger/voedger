@@ -30,14 +30,33 @@ func (v *validator) validate(def IDef) (err error) {
 		return err
 	}
 
-	if d, ok := def.(withValidate); ok {
-		err = d.Validate()
+	if val, ok := def.(withValidate); ok {
+		err = val.Validate()
 		v.results[def.QName()] = err
 	}
 
-	if d, ok := def.(IContainers); ok {
-		// resolve externals
-		d.Containers(func(cont IContainer) {
+	if fld, ok := def.(IFields); ok {
+		// resolve reference fields definitions
+		fld.RefFields(func(rf IRefField) {
+			for _, n := range rf.Refs() {
+				refDef := def.App().DefByName(n)
+				if refDef == nil {
+					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to unknown definition «%v»: %w", def.QName(), rf.Name(), n, ErrNameNotFound))
+					v.results[def.QName()] = err
+					continue
+				}
+				if !refDef.Kind().HasSystemField(SystemField_ID) {
+					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to non referable definition «%v» kind «%v» without «%s» field: %w", def.QName(), rf.Name(), n, refDef.Kind(), SystemField_ID, ErrInvalidDefKind))
+					v.results[def.QName()] = err
+					continue
+				}
+			}
+		})
+	}
+
+	if cnt, ok := def.(IContainers); ok {
+		// resolve containers definitions
+		cnt.Containers(func(cont IContainer) {
 			if cont.Def() == def.QName() {
 				return
 			}

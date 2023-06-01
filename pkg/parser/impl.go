@@ -202,7 +202,7 @@ func mergePackageSchemasImpl(packages []*PackageSchemaAST) (map[string]*PackageS
 
 	for _, p := range packages {
 		c.pkg = p
-		analyseRefs(&c)
+		analyse(&c)
 	}
 	return pkgmap, errors.Join(c.errs...)
 }
@@ -229,7 +229,7 @@ func analyzeWithRefs(c *basicContext, with []WithItem) {
 	}
 }
 
-func analyseRefs(c *basicContext) {
+func analyse(c *basicContext) {
 	iterate(c.pkg.Ast, func(stmt interface{}) {
 		switch v := stmt.(type) {
 		case *CommandStmt:
@@ -264,7 +264,7 @@ func analyseRefs(c *basicContext) {
 }
 
 type defBuildContext struct {
-	defBuilder appdef.IDefBuilder
+	defBuilder interface{}
 	qname      appdef.QName
 	kind       appdef.DefKind
 	names      map[string]bool
@@ -291,8 +291,27 @@ func (c *buildContext) newSchema(schema *PackageSchemaAST) {
 
 func (c *buildContext) pushDef(name string, kind appdef.DefKind) {
 	qname := appdef.NewQName(c.pkg.Ast.Package, name)
+	var builder interface{}
+	switch kind {
+	case appdef.DefKind_CDoc:
+		builder = c.builder.AddCDoc(qname)
+	case appdef.DefKind_CRecord:
+		builder = c.builder.AddCRecord(qname)
+	case appdef.DefKind_ODoc:
+		builder = c.builder.AddODoc(qname)
+	case appdef.DefKind_ORecord:
+		builder = c.builder.AddORecord(qname)
+	case appdef.DefKind_WDoc:
+		builder = c.builder.AddWDoc(qname)
+	case appdef.DefKind_WRecord:
+		builder = c.builder.AddWRecord(qname)
+	case appdef.DefKind_Object:
+		builder = c.builder.AddObject(qname)
+	default:
+		panic(fmt.Sprintf("unsupported def kind %d", kind))
+	}
 	c.defs = append(c.defs, defBuildContext{
-		defBuilder: c.builder.AddStruct(qname, kind),
+		defBuilder: builder,
 		kind:       kind,
 		qname:      qname,
 		names:      make(map[string]bool),
@@ -405,7 +424,7 @@ func buildTables(ctx *buildContext) error {
 				ctx.pushDef(table.Name, tableType)
 				fillTable(ctx, table)
 				if singletone {
-					ctx.defCtx().defBuilder.SetSingleton()
+					ctx.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
 				}
 				ctx.popDef()
 			}
@@ -416,8 +435,14 @@ func buildTables(ctx *buildContext) error {
 
 func addTableItems(items []TableItemExpr, ctx *buildContext) {
 	for _, item := range items {
-		if item.Field != nil {
-			sysDataKind := getTypeDataKind(*item.Field.Type) // TODO: handle 'reference ...'
+		if item.RefField != nil {
+			if err := ctx.defCtx().checkName(item.RefField.Name, &item.RefField.Pos); err != nil {
+				ctx.errs = append(ctx.errs, err)
+				continue
+			}
+			ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).AddField(item.RefField.Name, appdef.DataKind_RecordID, item.RefField.NotNull)
+		} else if item.Field != nil {
+			sysDataKind := getTypeDataKind(*item.Field.Type)
 			if sysDataKind != appdef.DataKind_null {
 				if item.Field.Type.IsArray {
 					ctx.errs = append(ctx.errs, errorAt(ErrArrayFieldsNotSupportedHere, &item.Field.Pos))
@@ -429,27 +454,26 @@ func addTableItems(items []TableItemExpr, ctx *buildContext) {
 				}
 				if item.Field.Verifiable {
 					// TODO: Support different verification kindsbuilder, &c
-					ctx.defCtx().defBuilder.AddVerifiedField(item.Field.Name, sysDataKind, item.Field.NotNull, appdef.VerificationKind_EMail)
+					ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).AddVerifiedField(item.Field.Name, sysDataKind, item.Field.NotNull, appdef.VerificationKind_EMail)
 				} else {
-					ctx.defCtx().defBuilder.AddField(item.Field.Name, sysDataKind, item.Field.NotNull)
+					ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).AddField(item.Field.Name, sysDataKind, item.Field.NotNull)
 				}
 			} else {
 				ctx.errs = append(ctx.errs, errorAt(ErrTypeNotSupported(item.Field.Type.String()), &item.Field.Pos))
 			}
 		} else if item.Constraint != nil {
-			// TODO: constraint checks, e.g. same field cannot be used twice
-			if item.Constraint.Unique != nil {
-				name := item.Constraint.ConstraintName
-				if name == "" {
-					name = genUniqueName(ctx.defCtx().qname.Entity(), ctx.defCtx().defBuilder)
-				}
-				if err := ctx.defCtx().checkName(name, &item.Constraint.Pos); err != nil {
-					ctx.errs = append(ctx.errs, err)
+			if item.Constraint.UniqueField != nil {
+				f := ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).Field(item.Constraint.UniqueField.Field)
+				if f == nil {
+					ctx.errs = append(ctx.errs, errorAt(ErrUndefinedField(item.Constraint.UniqueField.Field), &item.Constraint.Pos))
 					continue
 				}
-				ctx.defCtx().defBuilder.AddUnique(name, item.Constraint.Unique.Fields)
-				//} else if item.Constraint.Check != nil {
-				// TODO: implement Table Check Constraint
+				if !f.Required() {
+					ctx.errs = append(ctx.errs, errorAt(ErrMustBeNotNull, &item.Constraint.Pos))
+					continue
+				}
+				// item.Constraint.ConstraintName  constraint name not used for old uniques
+				ctx.defCtx().defBuilder.(appdef.IUniquesBuilder).SetUniqueField(item.Constraint.UniqueField.Field)
 			}
 		} else if item.Table != nil {
 			// Add nested table
@@ -468,7 +492,7 @@ func addTableItems(items []TableItemExpr, ctx *buildContext) {
 			ctx.pushDef(item.Table.Name, tk) // TODO: analyze for duplicates in the QNames of nested tables
 			addFieldsOf(item.Table.Of, ctx)
 			addTableItems(item.Table.Items, ctx)
-			ctx.defCtx().defBuilder.AddContainer(containerName, ctx.defCtx().qname, 0, maxNestedTableContainerOccurrences)
+			ctx.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(containerName, ctx.defCtx().qname, 0, maxNestedTableContainerOccurrences)
 			ctx.popDef()
 
 		}
