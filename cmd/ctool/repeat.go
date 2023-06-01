@@ -24,7 +24,7 @@ func repeat(cmd *cobra.Command, arg []string) error {
 	cluster := newCluster()
 	defer cluster.saveToJSON()
 
-	if !cluster.existsNodeError() && cluster.Cmd.isEmpty() {
+	if !cluster.existsNodeError() && (cluster.Cmd == nil || cluster.Cmd.isEmpty()) {
 		logger.Info("no active command found to repeat")
 		return nil
 	}

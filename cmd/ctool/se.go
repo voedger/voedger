@@ -14,11 +14,11 @@ import (
 
 func seNodeControllerFunction(n *nodeType) error {
 
-	if len(n.Error) > 0 && n.DesiredNodeState.isEmpty() {
-		n.DesiredNodeState = n.ActualNodeState
+	if len(n.Error) > 0 && (n.DesiredNodeState == nil || n.DesiredNodeState.isEmpty()) {
+		n.DesiredNodeState = newNodeState(n.ActualNodeState.Address, n.ActualNodeState.NodeVersion)
 	}
 
-	if n.DesiredNodeState.isEmpty() {
+	if n.DesiredNodeState == nil || n.DesiredNodeState.isEmpty() {
 		return nil
 	}
 
@@ -39,28 +39,42 @@ func seClusterControllerFunction(c *clusterType) error {
 
 	var err error
 
-	if err = deploySeSwarm(c); err != nil {
-		logger.Error(err.Error)
-		return err
-	}
-
-	if e := deployDbmsDockerStack(c); e != nil {
-		logger.Error(e.Error)
-		err = errors.Join(err, e)
-	}
-
-	if e := deploySeDockerStack(c); e != nil {
-		logger.Error(e.Error)
-		err = errors.Join(err, e)
-	}
-
-	if e := deployMonDockerStack(c); e != nil {
-		logger.Error(e.Error)
-		err = errors.Join(err, e)
+	switch c.Cmd.Kind {
+	case ckInit:
+		err = initSeCluster(c)
+	case ckReplace:
+		err = replaceSeScyllaNode(c)
+	default:
+		err = ErrUnknownCommand
 	}
 
 	if err == nil {
 		c.success()
+	}
+	return err
+}
+
+func initSeCluster(cluster *clusterType) error {
+	var err error
+
+	if err = deploySeSwarm(cluster); err != nil {
+		logger.Error(err.Error)
+		return err
+	}
+
+	if e := deployDbmsDockerStack(cluster); e != nil {
+		logger.Error(e.Error)
+		err = errors.Join(err, e)
+	}
+
+	if e := deploySeDockerStack(cluster); e != nil {
+		logger.Error(e.Error)
+		err = errors.Join(err, e)
+	}
+
+	if e := deployMonDockerStack(cluster); e != nil {
+		logger.Error(e.Error)
+		err = errors.Join(err, e)
 	}
 
 	return err
@@ -87,7 +101,7 @@ func deploySeSwarm(cluster *clusterType) error {
 			return err
 		}
 
-		logger.Info("swarm set label on", manager, "scylla1")
+		logger.Info("swarm set label on", manager, node.label(swarmDbmsLabelKey))
 		if err = newScriptExecuter(cluster.sshKey, manager).
 			run("swarm-set-label.sh", manager, manager, swarmDbmsLabelKey, node.label(swarmDbmsLabelKey)); err != nil {
 			node.Error = err.Error()
@@ -276,4 +290,51 @@ func deployDocker(node *nodeType) error {
 	}
 
 	return err
+}
+
+func replaceSeScyllaNode(cluster *clusterType) error {
+	var err error
+
+	prepareScripts("ctool-scylla-replace-node.sh", "docker-install.sh", "swarm-add-node.sh",
+		"db-node-prepare.sh", "db-bootstrap-prepare.sh", "swarm-rm-node.sh",
+		"db-stack-update.sh", "docker-compose-template.yml", "swarm-set-label.sh", "docker-compose-prepare.sh",
+		"scylla.yaml", "swarm-get-manager-token.sh")
+
+	//prepareManagerToken(cluster)
+
+	oldNodeAddr := cluster.Cmd.args()[0]
+	newNodeAddr := cluster.Cmd.args()[1]
+
+	conf := newSeConfigType(cluster)
+
+	if err = newScriptExecuter(cluster.sshKey, "localhost").
+		run("swarm-get-manager-token.sh", conf.SENode1); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
+	oldAddr := cluster.Cmd.args()[0]
+	newAddr := cluster.Cmd.args()[1]
+	if conf.DBNode1 == newAddr {
+		conf.DBNode1 = oldAddr
+	} else if conf.DBNode2 == newAddr {
+		conf.DBNode2 = oldAddr
+	} else if conf.DBNode3 == newAddr {
+		conf.DBNode3 = oldAddr
+	}
+
+	if err = newScriptExecuter(cluster.sshKey, "localhost").
+		run("docker-compose-prepare.sh", conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
+	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s, %s", oldNodeAddr, newNodeAddr)).
+		run("ctool-scylla-replace-node.sh", oldNodeAddr, newNodeAddr, conf.SENode1); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
+	logger.Info(fmt.Sprintf("sclylla node [%s -> %s] replaced successfully", oldNodeAddr, newNodeAddr))
+	return nil
 }

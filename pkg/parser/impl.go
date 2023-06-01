@@ -202,7 +202,7 @@ func mergePackageSchemasImpl(packages []*PackageSchemaAST) (map[string]*PackageS
 
 	for _, p := range packages {
 		c.pkg = p
-		analyseRefs(&c)
+		analyse(&c)
 	}
 	return pkgmap, errors.Join(c.errs...)
 }
@@ -229,7 +229,7 @@ func analyzeWithRefs(c *basicContext, with []WithItem) {
 	}
 }
 
-func analyseRefs(c *basicContext) {
+func analyse(c *basicContext) {
 	iterate(c.pkg.Ast, func(stmt interface{}) {
 		switch v := stmt.(type) {
 		case *CommandStmt:
@@ -462,19 +462,18 @@ func addTableItems(items []TableItemExpr, ctx *buildContext) {
 				ctx.errs = append(ctx.errs, errorAt(ErrTypeNotSupported(item.Field.Type.String()), &item.Field.Pos))
 			}
 		} else if item.Constraint != nil {
-			// TODO: constraint checks, e.g. same field cannot be used twice
-			if item.Constraint.Unique != nil {
-				name := item.Constraint.ConstraintName
-				if name == "" {
-					name = genUniqueName(ctx.defCtx().qname.Entity(), ctx.defCtx().defBuilder.(appdef.IUniquesBuilder))
-				}
-				if err := ctx.defCtx().checkName(name, &item.Constraint.Pos); err != nil {
-					ctx.errs = append(ctx.errs, err)
+			if item.Constraint.UniqueField != nil {
+				f := ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).Field(item.Constraint.UniqueField.Field)
+				if f == nil {
+					ctx.errs = append(ctx.errs, errorAt(ErrUndefinedField(item.Constraint.UniqueField.Field), &item.Constraint.Pos))
 					continue
 				}
-				ctx.defCtx().defBuilder.(appdef.IUniquesBuilder).AddUnique(name, item.Constraint.Unique.Fields)
-				//} else if item.Constraint.Check != nil {
-				// TODO: implement Table Check Constraint
+				if !f.Required() {
+					ctx.errs = append(ctx.errs, errorAt(ErrMustBeNotNull, &item.Constraint.Pos))
+					continue
+				}
+				// item.Constraint.ConstraintName  constraint name not used for old uniques
+				ctx.defCtx().defBuilder.(appdef.IUniquesBuilder).SetUniqueField(item.Constraint.UniqueField.Field)
 			}
 		} else if item.Table != nil {
 			// Add nested table

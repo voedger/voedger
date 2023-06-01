@@ -3,20 +3,16 @@ version: '3.7'
 
 services:
   
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
-    container_name: voedger-cadvisor
+  se:
+    image: voedger/voedger:0.0.1-alpha
+    environment:
+      - VOEDGER_HTTP_PORT=8888
     ports:
-      - "0.0.0.0:8080:8080"
+      - "0.0.0.0:8888:8888"
     deploy:
-      replicas: 2
+      replicas: 1
       placement:
         constraints:
           - node.labels.se == se
 
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:rw
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
     restart: unless-stopped
