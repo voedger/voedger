@@ -18,7 +18,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon1
+          - node.labels.AppNode1 == true
       replicas: 1
     logging:
       driver: "local"
@@ -41,7 +41,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon1
+          - node.labels.AppNode1 == true
       replicas: 1
     logging:
       driver: "local"
@@ -66,7 +66,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon2
+          - node.labels.AppNode2 == true
       replicas: 1
     logging:
       driver: "local"
@@ -86,7 +86,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon1
+          - node.labels.AppNode1 == true
 
     volumes:
       - /:/rootfs:ro
@@ -105,7 +105,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon2
+          - node.labels.AppNode2 == true
 
     volumes:
       - /:/rootfs:ro
@@ -132,7 +132,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon2
+          - node.labels.AppNode2 == true
       replicas: 1
     logging:
       driver: "local"
@@ -148,9 +148,9 @@ services:
     command:
       - '--config.file=/etc/alertmanager/config.yml'
       - '--storage.path=/alertmanager'
-      - '--cluster.peer={se2}:9094' 
+      - '--cluster.peer={{.AppNode2}}:9094' 
       - '--cluster.listen-address=:9094'
-      - '--cluster.advertise-address={se1}:9094'
+      - '--cluster.advertise-address={{.AppNode1}}:9094'
     restart: unless-stopped
     ports:
       - target: 9093
@@ -164,7 +164,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon1
+          - node.labels.AppNode1 == true
       replicas: 1
 
   alertmanager2:
@@ -175,9 +175,9 @@ services:
     command:
       - '--config.file=/etc/alertmanager/config.yml'
       - '--storage.path=/alertmanager'
-      - '--cluster.peer={se1}:9094' 
+      - '--cluster.peer={{.AppNode1}}:9094' 
       - '--cluster.listen-address=:9094'
-      - '--cluster.advertise-address={se2}:9094'
+      - '--cluster.advertise-address={{.AppNode2}}:9094'
     restart: unless-stopped
     ports:
       - target: 9093
@@ -191,20 +191,16 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon2
+          - node.labels.AppNode2 == true
       replicas: 1
 
   node-exporter1:
     image: prom/node-exporter:latest
 
-#    environment:
-#      - NODE_ID={{.Node.ID}}
-#      - NODE_NAME="ip-10-0-0-11"
-
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon1
+          - node.labels.AppNode1 == true
       replicas: 1
     volumes:
       - /etc/hostname:/etc/nodename
@@ -228,14 +224,10 @@ services:
   node-exporter2:
     image: prom/node-exporter:latest
 
-#    environment:
-#      - NODE_ID={{.Node.ID}}
-#      - NODE_NAME="ip-10-0-0-12"
-
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon2
+          - node.labels.AppNode2 == true
       replicas: 1
     volumes:
       - /etc/hostname:/etc/nodename

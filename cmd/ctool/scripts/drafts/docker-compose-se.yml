@@ -13,6 +13,6 @@ services:
       replicas: 1
       placement:
         constraints:
-          - node.labels.se == se
+          - node.labels.AppNode == true
 
     restart: unless-stopped
