@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 
 	"github.com/untillpro/goutils/exec"
 	"golang.org/x/crypto/ssh/terminal"
@@ -26,6 +27,22 @@ var scriptsTempDir string
 type scriptExecuterType struct {
 	outputPrefix string
 	sshKeyPath   string
+}
+
+func showProgress(done chan bool) {
+	indicators := []string{"|", "/", "-", "\\"}
+	i := 0
+	for {
+		select {
+		case <-done:
+			fmt.Print("\r")
+			return
+		default:
+			fmt.Printf("\r%s\r", indicators[i])
+			i = (i + 1) % len(indicators)
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
 }
 
 func (se *scriptExecuterType) run(scriptName string, args ...string) error {
@@ -46,12 +63,16 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 	var stdoutWriter io.Writer
 	var stderrWriter io.Writer
 	if logFile != nil {
-		stdoutWriter = io.MultiWriter(os.Stdout, logFile)
-		stderrWriter = io.MultiWriter(os.Stderr, logFile)
+		stdoutWriter = logFile
+		stderrWriter = logFile
 	} else {
 		stdoutWriter = os.Stdout
 		stderrWriter = os.Stderr
 	}
+
+	done := make(chan bool)
+	go showProgress(done)
+	defer func() { done <- true }()
 
 	var err error
 	if len(se.outputPrefix) > 0 {
