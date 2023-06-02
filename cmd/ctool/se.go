@@ -103,7 +103,7 @@ func deploySeSwarm(cluster *clusterType) error {
 
 		logger.Info("swarm set label on", manager, node.label(swarmDbmsLabelKey))
 		if err = newScriptExecuter(cluster.sshKey, manager).
-			run("swarm-set-label.sh", manager, manager, swarmDbmsLabelKey, node.label(swarmDbmsLabelKey)); err != nil {
+			run("swarm-set-label.sh", manager, manager, node.label(swarmDbmsLabelKey), "true"); err != nil {
 			node.Error = err.Error()
 			return err
 		}
@@ -147,7 +147,7 @@ func deploySeSwarm(cluster *clusterType) error {
 
 			logger.Info("swarm set label on", n.ActualNodeState.Address, n.label(swarmDbmsLabelKey))
 			if e := newScriptExecuter(cluster.sshKey, n.ActualNodeState.Address).
-				run("swarm-set-label.sh", manager, n.ActualNodeState.Address, swarmDbmsLabelKey, n.label(swarmDbmsLabelKey)); e != nil {
+				run("swarm-set-label.sh", manager, n.ActualNodeState.Address, n.label(swarmDbmsLabelKey), "true"); e != nil {
 				logger.Error(e.Error())
 				n.Error = e.Error()
 				return
@@ -180,12 +180,12 @@ func deploySeDockerStack(cluster *clusterType) error {
 	conf := newSeConfigType(cluster)
 
 	if err := newScriptExecuter(cluster.sshKey, conf.SENode1).
-		run("swarm-set-label.sh", conf.SENode1, conf.SENode1, swarmSeLabelKey, cluster.nodeByHost(conf.SENode1).label(swarmSeLabelKey)); err != nil {
+		run("swarm-set-label.sh", conf.SENode1, conf.SENode1, cluster.nodeByHost(conf.SENode1).label(swarmAppLabelKey), "true"); err != nil {
 		return err
 	}
 
 	if err := newScriptExecuter(cluster.sshKey, conf.SENode2).
-		run("swarm-set-label.sh", conf.SENode1, conf.SENode2, swarmSeLabelKey, cluster.nodeByHost(conf.SENode2).label(swarmSeLabelKey)); err != nil {
+		run("swarm-set-label.sh", conf.SENode1, conf.SENode2, cluster.nodeByHost(conf.SENode2).label(swarmAppLabelKey), "true"); err != nil {
 		return err
 	}
 
@@ -224,15 +224,22 @@ func deployMonDockerStack(cluster *clusterType) error {
 	prepareScripts("alertmanager/config.yml", "prometheus/prometheus.yml", "prometheus/alert.rules",
 		"docker-compose-mon.yml", "mon-node-prepare.sh", "mon-stack-start.sh", "swarm-set-label.sh")
 
+	prepareScripts("grafana/grafana.ini",
+		"grafana/provisioning/dashboards/swarmprom_dashboards.yml",
+		"grafana/provisioning/dashboards/swarmprom-nodes-dash.json",
+		"grafana/provisioning/dashboards/swarmprom-prometheus-dash.json",
+		"grafana/provisioning/dashboards/swarmprom-services-dash.json",
+		"grafana/provisioning/datasources/datasource.yml")
+
 	conf := newSeConfigType(cluster)
 
 	if err := newScriptExecuter(cluster.sshKey, conf.SENode1).
-		run("swarm-set-label.sh", conf.SENode1, conf.SENode1, swarmMonLabelKey, cluster.nodeByHost(conf.SENode1).label(swarmMonLabelKey)); err != nil {
+		run("swarm-set-label.sh", conf.SENode1, conf.SENode1, cluster.nodeByHost(conf.SENode1).label(swarmMonLabelKey), "true"); err != nil {
 		return err
 	}
 
 	if err := newScriptExecuter(cluster.sshKey, conf.SENode2).
-		run("swarm-set-label.sh", conf.SENode1, conf.SENode2, swarmMonLabelKey, cluster.nodeByHost(conf.SENode2).label(swarmMonLabelKey)); err != nil {
+		run("swarm-set-label.sh", conf.SENode1, conf.SENode2, cluster.nodeByHost(conf.SENode2).label(swarmMonLabelKey), "true"); err != nil {
 		return err
 	}
 
@@ -323,6 +330,7 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 		conf.DBNode3 = oldAddr
 	}
 
+	fmt.Println("docker-compose-prepare.sh", conf.DBNode1, conf.DBNode2, conf.DBNode3)
 	if err = newScriptExecuter(cluster.sshKey, "localhost").
 		run("docker-compose-prepare.sh", conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
 		logger.Error(err.Error())
@@ -332,6 +340,11 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s, %s", oldNodeAddr, newNodeAddr)).
 		run("ctool-scylla-replace-node.sh", oldNodeAddr, newNodeAddr, conf.SENode1); err != nil {
 		logger.Error(err.Error())
+		return err
+	}
+
+	if err := newScriptExecuter(cluster.sshKey, conf.SENode2).
+		run("swarm-set-label.sh", conf.SENode1, newAddr, cluster.nodeByHost(newAddr).label(swarmMonLabelKey), "true"); err != nil {
 		return err
 	}
 
