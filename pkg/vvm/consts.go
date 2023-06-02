@@ -12,15 +12,14 @@ import (
 )
 
 const (
-	NumCommandProcessors                 = 10
-	NumQueryProcessors                   = 10 // <=0 -> 1 query processor will exist anyway
-	DefaultQuotasChannels                = 1000
+	DefaultNumCommandProcessors          = 10
+	DefaultNumQueryProcessors            = 10  // <=0 -> 1 query processor will exist anyway
+	DefaultQuotasChannelsFactor          = 100 // Quotas.Channels will be NumCommandProcessors * DefaultQuotasFactor
 	DefaultQuotasChannelsPerSubject      = 10
-	DefaultQuotasSubscriptions           = 10000
+	DefaultQuotasSubscriptionsFactor     = 1000 // Quotas.Subscriptions will be NumCommandProcessors * DefaultQuotasSubscriptionsFactor
 	DefaultQuotasSubscriptionsPerSubject = 20
 	DefaultMetricsServicePort            = 8000
-	DefaultPartitionsCount               = NumCommandProcessors // не кофигурировать. Временно столько же, сколько и командных процессоров
-	DefaultCacheSize                     = 1024 * 1024 * 1024   // 1Gb
+	DefaultCacheSize                     = 1024 * 1024 * 1024 // 1Gb
 	ShortestPossibleFunctionNameLen      = len("q.a.a")
 	DefaultBLOBWorkersNum                = 10
 	DefaultRetryAfterSecondsOn503        = 1
