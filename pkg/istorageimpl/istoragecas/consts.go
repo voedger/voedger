@@ -10,7 +10,6 @@ import "time"
 const (
 	initialConnectionTimeout = 30 * time.Second
 	ConnectionTimeout        = 30 * time.Second
-	attempts                 = 5
 	retryAttempt             = 3
 	SimpleWithReplication    = "{'class': 'SimpleStrategy', 'replication_factor': '1'}"
 )
