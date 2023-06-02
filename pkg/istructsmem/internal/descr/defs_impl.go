@@ -62,6 +62,11 @@ func (f *Field) read(field appdef.IField) {
 	f.Kind = field.DataKind()
 	f.Required = field.Required()
 	f.Verifiable = field.Verifiable()
+	if ref, ok := field.(appdef.IRefField); ok {
+		for _, r := range ref.Refs() {
+			f.Refs = append(f.Refs, r.String())
+		}
+	}
 }
 
 func newContainer() *Container { return &Container{} }

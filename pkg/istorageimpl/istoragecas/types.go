@@ -13,6 +13,7 @@ type CassandraParamsType struct {
 	ProtoVersion int
 	CQLVersion   string
 	NumRetries   int
+	DC           string
 
 	// e.g. "{ 'class' : 'SimpleStrategy', 'replication_factor' : 1 }"
 	KeyspaceWithReplication string

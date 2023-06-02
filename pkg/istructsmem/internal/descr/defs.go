@@ -22,8 +22,9 @@ type Def struct {
 type Field struct {
 	Name       string
 	Kind       appdef.DataKind
-	Required   bool `json:",omitempty"`
-	Verifiable bool `json:",omitempty"`
+	Required   bool     `json:",omitempty"`
+	Verifiable bool     `json:",omitempty"`
+	Refs       []string `json:",omitempty"`
 }
 
 type Container struct {

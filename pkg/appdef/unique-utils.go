@@ -46,24 +46,24 @@ func overlaps[T comparable](set1, set2 []T) bool {
 
 // Generates name for unique.
 //
-// For single field unique, the concatenation of the definition name, the `Unique` word and the field name is used.
-// E.g., for definition «test.user» and field «eMail» name "userUniqueEMail" will returned.
+// For single field unique, the concatenation of `Unique` word and the field name is used.
+// E.g., for definition with single field «eMail» name "UniqueEMail" will returned.
 //
-// For multiply fields unique, the concatenation of the definition name, the `Unique` word and two digits is used, e.g. `userUnique01`.
-func generateUniqueName(def *def, fields []string) string {
-	pref := fmt.Sprintf("%sUnique", def.QName().Entity())
+// For multiply fields unique, the concatenation of the `Unique` word and two digits is used, e.g. "Unique01".
+func generateUniqueName(u IUniques, fields []string) string {
+	const pref = "Unique"
 	if len(fields) == 1 {
 		s := pref + strings.Title(fields[0])
-		if def.UniqueByName(s) == nil {
+		if u.UniqueByName(s) == nil {
 			return s
 		}
 	}
 	const tryCnt = MaxDefUniqueCount
 	for i := 1; i < tryCnt; i++ {
 		s := pref + fmt.Sprintf("%02d", i)
-		if def.UniqueByName(s) == nil {
+		if u.UniqueByName(s) == nil {
 			return s
 		}
 	}
-	panic(fmt.Errorf("%v: unable to generate unique name for definition: %w", def.QName(), ErrNameMissed))
+	panic(fmt.Errorf("unable to generate unique name for definition: %w", ErrTooManyUniques))
 }

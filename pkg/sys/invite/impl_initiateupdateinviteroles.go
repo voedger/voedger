@@ -22,8 +22,7 @@ func provideCmdInitiateUpdateInviteRoles(cfg *istructsmem.AppConfigType, appDefB
 			AddField(field_InviteID, appdef.DataKind_RecordID, true).
 			AddField(Field_Roles, appdef.DataKind_string, true).
 			AddField(field_EmailTemplate, appdef.DataKind_string, true).
-			AddField(field_EmailSubject, appdef.DataKind_string, true).
-			QName(),
+			AddField(field_EmailSubject, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdInitiateUpdateInviteRoles(timeFunc),

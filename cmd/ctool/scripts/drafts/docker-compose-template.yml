@@ -7,7 +7,7 @@ services:
 
   scylla1:
     image: scylladb/scylla:4.5.3
-    command: --seeds {scylla1},{scylla2},{scylla3} --listen-address 0.0.0.0  --broadcast-address {scylla1}  --broadcast-rpc-address {scylla1}
+    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode1}}  --broadcast-rpc-address {{.DBNode1}}
     ports:
       - target: 9042
         published: 9042
@@ -24,10 +24,10 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == scylla1
+          - node.labels.DBNode1 == true
       replicas: 1
     healthcheck:
-      test: ["CMD-SHELL", "nodetool status | awk '/^UN/ {print $$2}' | grep -w '{scylla1}'"]
+      test: ["CMD-SHELL", "nodetool status | awk '/^UN/ {print $$2}' | grep -w '{{.DBNode1}}'"]
       interval: 15s
       timeout: 5s
       retries: 30  
@@ -39,7 +39,7 @@ services:
 
   scylla2:
     image: scylladb/scylla:4.5.3
-    command: --seeds {scylla1},{scylla2},{scylla3} --listen-address 0.0.0.0  --broadcast-address {scylla2}  --broadcast-rpc-address {scylla2}
+    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode2}}  --broadcast-rpc-address {{.DBNode2}}
     ports:
       - target: 9042
         published: 9042
@@ -56,10 +56,10 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == scylla2
+          - node.labels.DBNode2 == true
       replicas: 1
     healthcheck:
-      test: ["CMD-SHELL", "nodetool status | awk '/^UN/ {print $$2}' | grep -w '{scylla2}'"]
+      test: ["CMD-SHELL", "nodetool status | awk '/^UN/ {print $$2}' | grep -w '{{.DBNode2}}'"]
       interval: 15s
       timeout: 5s
       retries: 30  
@@ -71,7 +71,7 @@ services:
 
   scylla3:
     image: scylladb/scylla:4.5.3
-    command: --seeds {scylla1},{scylla2},{scylla3} --listen-address 0.0.0.0  --broadcast-address {scylla3}  --broadcast-rpc-address {scylla3}
+    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode3}}  --broadcast-rpc-address {{.DBNode3}}
     ports:
       - target: 9042
         published: 9042
@@ -88,10 +88,10 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == scylla3
+          - node.labels.DBNode3 == true
       replicas: 1
     healthcheck:
-      test: ["CMD-SHELL", "nodetool status | awk '/^UN/ {print $$2}' | grep -w '{scylla3}'"]
+      test: ["CMD-SHELL", "nodetool status | awk '/^UN/ {print $$2}' | grep -w '{{.DBNode3}}'"]
       interval: 15s
       timeout: 5s
       retries: 30  

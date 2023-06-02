@@ -23,13 +23,12 @@ func provideQryCDoc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDef
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameCDocFunc,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CDocParams")).
-			AddField(field_ID, appdef.DataKind_int64, true).
-			QName(),
+			AddField(field_ID, appdef.DataKind_int64, true).(appdef.IDef).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CDocResult")).
-			AddField("Result", appdef.DataKind_string, false).
-			QName(),
+			AddField("Result", appdef.DataKind_string, false).(appdef.IDef).QName(),
 		execQryCDoc(appDefBuilder)))
 }
+
 func execQryCDoc(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		rkb, err := args.State.KeyBuilder(state.RecordsStorage, appdef.NullQName)
