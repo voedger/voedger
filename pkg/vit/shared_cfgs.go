@@ -57,6 +57,9 @@ var (
 			cfg.RoutesRewrite["/grafana-rewrite"] = fmt.Sprintf("http://127.0.0.1:%d/rewritten", TestServicePort)
 			cfg.RouteDefault = fmt.Sprintf("http://127.0.0.1:%d/not-found", TestServicePort)
 			cfg.RouteDomains["localhost"] = "http://127.0.0.1"
+
+			const simpleAppBLOBMaxSize = 5
+			cfg.BLOBMaxSize = simpleAppBLOBMaxSize
 		}),
 		WithCleanup(func(_ *VIT) {
 			MockCmdExec = func(input string) error { panic("") }
@@ -76,12 +79,8 @@ func EmptyApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConf
 }
 
 func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
-
 	// sys package
-	sys.Provide(vvmCfg.TimeFunc, cfg, adf, vvmAPI, smtp.Cfg{}, sep, nil)
-
-	const simpleAppBLOBMaxSize = 5
-	vvmCfg.BLOBMaxSize = simpleAppBLOBMaxSize
+	sys.Provide(vvmCfg.TimeFunc, cfg, adf, vvmAPI, smtp.Cfg{}, sep, nil, vvmCfg.NumCommandProcessors)
 
 	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "articles")).
 		AddField("name", appdef.DataKind_string, false).

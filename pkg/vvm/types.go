@@ -28,7 +28,6 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/metrics"
 )
 
-type AppPartitionsCount int
 type ServicePipeline pipeline.ISyncPipeline
 type OperatorCommandProcessors pipeline.ISyncOperator
 type OperatorCommandProcessor pipeline.ISyncOperator
@@ -157,7 +156,6 @@ type VVMConfig struct {
 	Routes                     map[string]string
 	RoutesRewrite              map[string]string
 	RouteDomains               map[string]string
-	PartitionsCount            AppPartitionsCount
 	BusTimeout                 BusTimeout
 	Quotas                     in10n.Quotas
 	StorageFactory             func() (provider istorage.IAppStorageFactory, err error)

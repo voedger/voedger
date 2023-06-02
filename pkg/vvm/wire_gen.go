@@ -114,8 +114,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	asyncActualizersFactory := provideAsyncActualizersFactory(iAppStructsProvider, in10nBroker, asyncActualizerFactory, iSecretReader)
 	v5 := vvmConfig.ActualizerStateOpts
 	appPartitionFactory := provideAppPartitionFactory(asyncActualizersFactory, v5)
-	appPartitionsCount := vvmConfig.PartitionsCount
-	appServiceFactory := provideAppServiceFactory(appPartitionFactory, appPartitionsCount)
+	appServiceFactory := provideAppServiceFactory(appPartitionFactory, commandProcessorsCount)
 	operatorAppServicesFactory := provideOperatorAppServices(appServiceFactory, vvmApps, iAppStructsProvider)
 	vvmPortType := vvmConfig.VVMPort
 	routerParams := provideRouterParams(vvmConfig, vvmPortType, vvmIdx)
@@ -162,6 +161,23 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	voedgerVM = &VoedgerVM{vvmCtxCancel: cancel}
+	vvmCfg.addProcessorChannel(iprocbusmem.ChannelGroup{
+		NumChannels:       int(vvmCfg.NumCommandProcessors),
+		ChannelBufferSize: int(vvmCfg.NumCommandProcessors),
+	}, ProcessorChannel_Command,
+	)
+
+	vvmCfg.addProcessorChannel(iprocbusmem.ChannelGroup{
+		NumChannels:       1,
+		ChannelBufferSize: 0,
+	}, ProcessorChannel_Query,
+	)
+	vvmCfg.Quotas = in10n.Quotas{
+		Channels:               int(DefaultQuotasChannelsFactor * vvmCfg.NumCommandProcessors),
+		ChannelsPerSubject:     DefaultQuotasChannelsPerSubject,
+		Subsciptions:           int(DefaultQuotasSubscriptionsFactor * vvmCfg.NumCommandProcessors),
+		SubsciptionsPerSubject: DefaultQuotasSubscriptionsPerSubject,
+	}
 	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(ctx, vvmCfg, vvmIdx)
 	if err != nil {
 		return nil, err
@@ -528,10 +544,10 @@ func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.Actual
 	}
 }
 
-func provideAppServiceFactory(apf AppPartitionFactory, pa AppPartitionsCount) AppServiceFactory {
+func provideAppServiceFactory(apf AppPartitionFactory, cpCount CommandProcessorsCount) AppServiceFactory {
 	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories) pipeline.ISyncOperator {
-		forks := make([]pipeline.ForkOperatorOptionFunc, pa)
-		for i := 0; i < int(pa); i++ {
+		forks := make([]pipeline.ForkOperatorOptionFunc, cpCount)
+		for i := 0; i < int(cpCount); i++ {
 			forks[i] = pipeline.ForkBranch(apf(vvmCtx, appQName, asyncProjectorFactories, istructs.PartitionID(i)))
 		}
 		return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)

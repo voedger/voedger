@@ -10,7 +10,6 @@ import (
 	ibus "github.com/untillpro/airs-ibus"
 	router "github.com/untillpro/airs-router2"
 	"github.com/untillpro/goutils/logger"
-	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -22,9 +21,10 @@ import (
 func NewVVMDefaultConfig() VVMConfig {
 	hostname, err := os.Hostname()
 	if err != nil {
+		// notest
 		panic(err)
 	}
-	vvmCfg := VVMConfig{
+	return VVMConfig{
 		Routes:                 map[string]string{},
 		RoutesRewrite:          map[string]string{},
 		RouteDomains:           map[string]string{},
@@ -42,15 +42,8 @@ func NewVVMDefaultConfig() VVMConfig {
 				ChannelBufferSize: 0,
 			},
 		},
-		Quotas: in10n.Quotas{
-			Channels:               DefaultQuotasChannels,
-			ChannelsPerSubject:     DefaultQuotasChannelsPerSubject,
-			Subsciptions:           DefaultQuotasSubscriptions,
-			SubsciptionsPerSubject: DefaultQuotasSubscriptionsPerSubject,
-		},
-		PartitionsCount:      DefaultPartitionsCount,
-		NumCommandProcessors: NumCommandProcessors,
-		NumQueryProcessors:   NumQueryProcessors,
+		NumCommandProcessors: DefaultNumCommandProcessors,
+		NumQueryProcessors:   DefaultNumQueryProcessors,
 		StorageCacheSize:     DefaultCacheSize,
 		MaxPrepareQueries:    DefaultMaxPrepareQueries,
 		VVMPort:              DefaultVVMPort,
@@ -60,28 +53,6 @@ func NewVVMDefaultConfig() VVMConfig {
 			return istorage.ProvideMem(), nil
 		},
 	}
-
-	vvmCfg.AddProcessorChannel(
-		// command processors
-		// конкретный ресторан должен пойти в один и тотже cmd proc
-		iprocbusmem.ChannelGroup{
-			NumChannels:       NumCommandProcessors,
-			ChannelBufferSize: NumCommandProcessors,
-		},
-		ProcessorChannel_Command,
-	)
-
-	vvmCfg.AddProcessorChannel(
-		// query processors
-		// все QueryProcessors сидят на одном канале, т.к. любой ресторан может обслуживаться любым query proc
-		iprocbusmem.ChannelGroup{
-			NumChannels:       1,
-			ChannelBufferSize: 0,
-		},
-		ProcessorChannel_Query,
-	)
-
-	return vvmCfg
 }
 
 func (tsr *testISecretReader) ReadSecret(name string) ([]byte, error) {
@@ -91,7 +62,7 @@ func (tsr *testISecretReader) ReadSecret(name string) ([]byte, error) {
 	return tsr.realSecretReader.ReadSecret(name)
 }
 
-func (cfg *VVMConfig) AddProcessorChannel(cg iprocbusmem.ChannelGroup, t ProcessorChannelType) {
+func (cfg *VVMConfig) addProcessorChannel(cg iprocbusmem.ChannelGroup, t ProcessorChannelType) {
 	cfg.processorsChannels = append(cfg.processorsChannels, ProcesorChannel{
 		ChannelGroup: cg,
 		ChannelType:  t,
