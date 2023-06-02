@@ -50,7 +50,7 @@ func TestBasicUsage(t *testing.T) {
 			))
 
 			// need to read cdoc.sys.Subject on auth
-			sys.Provide(vvmCfg.TimeFunc, cfg, appDefBuilder, vvmAPI, smtp.Cfg{}, sep, nil)
+			sys.Provide(vvmCfg.TimeFunc, cfg, appDefBuilder, vvmAPI, smtp.Cfg{}, sep, nil, vvmCfg.NumCommandProcessors)
 		}),
 	)
 	vit := it.NewVIT(t, &cfg)
