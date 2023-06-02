@@ -53,6 +53,7 @@ func overlaps[T comparable](set1, set2 []T) bool {
 func generateUniqueName(u IUniques, fields []string) string {
 	const pref = "Unique"
 	if len(fields) == 1 {
+
 		s := pref + strings.Title(fields[0])
 		if u.UniqueByName(s) == nil {
 			return s
