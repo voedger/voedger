@@ -65,11 +65,6 @@ const (
 	DefKind_FakeLast
 )
 
-// Is fields allowed.
-func (k DefKind) FieldsAllowed() bool {
-	return defKindProps[k].fieldsAllowed
-}
-
 // Is data kind allowed.
 func (k DefKind) DataKindAvailable(d DataKind) bool {
 	return defKindProps[k].fieldsAllowed && defKindProps[k].availableFieldKinds[d]
@@ -80,19 +75,9 @@ func (k DefKind) HasSystemField(f string) bool {
 	return defKindProps[k].fieldsAllowed && defKindProps[k].systemFields[f]
 }
 
-// Is containers allowed.
-func (k DefKind) ContainersAllowed() bool {
-	return defKindProps[k].containersAllowed
-}
-
 // Is specified definition kind may be used in child containers.
 func (k DefKind) ContainerKindAvailable(s DefKind) bool {
 	return defKindProps[k].containersAllowed && defKindProps[k].availableContainerKinds[s]
-}
-
-// Is uniques available.
-func (k DefKind) UniquesAvailable() bool {
-	return defKindProps[k].availableUniques
 }
 
 func (k DefKind) MarshalText() ([]byte, error) {
@@ -108,7 +93,7 @@ func (k DefKind) MarshalText() ([]byte, error) {
 
 // Renders an DefKind in human-readable form, without "DefKind_" prefix,
 // suitable for debugging or error messages
-func (k DefKind) ToString() string {
+func (k DefKind) TrimString() string {
 	const pref = "DefKind_"
 	return strings.TrimPrefix(k.String(), pref)
 }
