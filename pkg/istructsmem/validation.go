@@ -29,7 +29,7 @@ func newValidator(validators *validators, def appdef.IDef) *validator {
 //
 // If entity has only type QName, then the result will be short like `CDoc (sales.BillDocument)`, otherwise it will be complete like `CRecord «Price» (sales.PriceRecord)`
 func (v *validator) entName(e interface{}) string {
-	ent := v.def.Kind().ToString()
+	ent := v.def.Kind().TrimString()
 	name := ""
 	typeName := v.def.QName()
 

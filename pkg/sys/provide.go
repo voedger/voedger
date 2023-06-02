@@ -28,7 +28,7 @@ import (
 )
 
 func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, vvmAPI vvm.VVMAPI, smtpCfg smtp.Cfg,
-	sep vvm.IStandardExtensionPoints, wsPostInitFunc workspace.WSPostInitFunc) {
+	sep vvm.IStandardExtensionPoints, wsPostInitFunc workspace.WSPostInitFunc, cpCount vvm.CommandProcessorsCount) {
 	blobber.ProvideBlobberCmds(cfg, appDefBuilder)
 	collection.ProvideCollectionFunc(cfg, appDefBuilder)
 	collection.ProvideCDocFunc(cfg, appDefBuilder)
@@ -41,7 +41,7 @@ func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBu
 	builtin.ProvideQryEcho(cfg, appDefBuilder)
 	builtin.ProvideQryGRCount(cfg, appDefBuilder)
 	workspace.Provide(cfg, appDefBuilder, vvmAPI.IAppStructsProvider, timeFunc, vvmAPI.ITokens, vvmAPI.FederationURL)
-	sqlquery.Provide(cfg, appDefBuilder, vvmAPI.IAppStructsProvider, vvm.NumCommandProcessors)
+	sqlquery.Provide(cfg, appDefBuilder, vvmAPI.IAppStructsProvider, int(cpCount))
 	projectors.ProvideOffsetsDef(appDefBuilder)
 	processors.ProvideJSONFuncParamsDef(appDefBuilder)
 	verifier.Provide(cfg, appDefBuilder, vvmAPI.ITokens, vvmAPI.FederationURL, vvmAPI.IAppStructsProvider)

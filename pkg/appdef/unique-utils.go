@@ -7,7 +7,9 @@ package appdef
 
 import (
 	"fmt"
-	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // If the slices have duplicates, then the indices of the first pair are returned, otherwise (-1, -1)
@@ -53,7 +55,7 @@ func overlaps[T comparable](set1, set2 []T) bool {
 func generateUniqueName(u IUniques, fields []string) string {
 	const pref = "Unique"
 	if len(fields) == 1 {
-		s := pref + strings.Title(fields[0])
+		s := pref + cases.Title(language.English, cases.NoLower).String(fields[0])
 		if u.UniqueByName(s) == nil {
 			return s
 		}
