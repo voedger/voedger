@@ -65,7 +65,7 @@ const (
 )
 
 const (
-	swarmDbmsLabelKey = "type"
-	swarmSeLabelKey   = "se"
+	swarmDbmsLabelKey = "dbm"
+	swarmAppLabelKey  = "app"
 	swarmMonLabelKey  = "mon"
 )
