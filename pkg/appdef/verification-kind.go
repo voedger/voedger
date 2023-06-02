@@ -33,7 +33,7 @@ func (k VerificationKind) MarshalJSON() ([]byte, error) {
 
 // Renders an VerificationKind in human-readable form, without "VerificationKind_" prefix,
 // suitable for debugging or error messages
-func (k VerificationKind) ShortString() string {
+func (k VerificationKind) TrimString() string {
 	const pref = "VerificationKind_"
 	return strings.TrimPrefix(k.String(), pref)
 }
