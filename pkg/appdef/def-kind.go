@@ -67,17 +67,17 @@ const (
 
 // Is data kind allowed.
 func (k DefKind) DataKindAvailable(d DataKind) bool {
-	return defKindProps[k].fieldsAllowed && defKindProps[k].availableFieldKinds[d]
+	return defKindProps[k].fieldKinds[d]
 }
 
 // Is specified system field used.
 func (k DefKind) HasSystemField(f string) bool {
-	return defKindProps[k].fieldsAllowed && defKindProps[k].systemFields[f]
+	return defKindProps[k].systemFields[f]
 }
 
 // Is specified definition kind may be used in child containers.
 func (k DefKind) ContainerKindAvailable(s DefKind) bool {
-	return defKindProps[k].containersAllowed && defKindProps[k].availableContainerKinds[s]
+	return defKindProps[k].containerKinds[s]
 }
 
 func (k DefKind) MarshalText() ([]byte, error) {

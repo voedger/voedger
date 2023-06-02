@@ -189,7 +189,7 @@ func TestVerificationKind_ToString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.k.ToString(); got != tt.want {
+			if got := tt.k.ShortString(); got != tt.want {
 				t.Errorf("VerificationKind.ToString() = %v, want %v", got, tt.want)
 			}
 		})
