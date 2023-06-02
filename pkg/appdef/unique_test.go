@@ -42,6 +42,7 @@ func Test_def_AddUnique(t *testing.T) {
 		require.Equal(2, d.UniqueCount())
 
 		u := d.UniqueByName("userUniqueFullName")
+		require.Equal(d, u.Def())
 		require.Len(u.Fields(), 3)
 		require.Equal("lastName", u.Fields()[0].Name())
 		require.Equal("name", u.Fields()[1].Name())
