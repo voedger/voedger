@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -109,6 +110,39 @@ func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 		return nil, ErrCouldNotImport(pkgQN)
 	}
 	return targetPkgSch, nil
+}
+
+func resolveTable(fn DefQName, c *basicContext, pos *lexer.Position) (*TableStmt, error) {
+	var item *TableStmt
+	var checkStatement func(stmt interface{})
+	checkStatement = func(stmt interface{}) {
+		if t, ok := stmt.(*TableStmt); ok {
+			if t.Name == fn.Name {
+				item = t
+				return
+			}
+			for i := range t.Items {
+				if t.Items[i].NestedTable != nil {
+					checkStatement(&t.Items[i].NestedTable.Table)
+				}
+			}
+		}
+	}
+
+	schema, err := getTargetSchema(fn, c)
+	if err != nil {
+		return nil, errorAt(err, pos)
+	}
+
+	iterate(schema.Ast, func(stmt interface{}) {
+		checkStatement(stmt)
+	})
+
+	if item == nil {
+		return nil, errorAt(ErrUndefined(fn.String()), c.pos)
+	}
+
+	return item, nil
 }
 
 func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) {
