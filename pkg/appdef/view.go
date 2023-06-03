@@ -16,8 +16,6 @@ import (
 type view struct {
 	def
 	containers
-	pkey  *viewPKey
-	ccols *viewCCols
 	key   *viewKey
 	value *viewValue
 }
@@ -26,19 +24,9 @@ func newView(app *appDef, name QName) *view {
 	v := &view{def: makeDef(app, name, DefKind_ViewRecord)}
 	v.containers = makeContainers(v)
 
-	v.pkey = newViewPKey(app, ViewPartitionKeyDefName(name))
-	v.ccols = newViewCCols(app, ViewClusteringColumnsDefName(name))
-
-	v.key = newViewKey(app, ViewKeyDefName(name))
-	v.key.
-		AddContainer(SystemContainer_ViewPartitionKey, v.pkey.QName(), 1, 1).
-		AddContainer(SystemContainer_ViewClusteringCols, v.ccols.QName(), 1, 1)
-
-	v.value = newViewValue(app, ViewValueDefName(name))
-
+	v.key = newViewKey(app, name)
+	v.value = newViewValue(app, name)
 	v.
-		AddContainer(SystemContainer_ViewPartitionKey, v.pkey.QName(), 1, 1).
-		AddContainer(SystemContainer_ViewClusteringCols, v.ccols.QName(), 1, 1).
 		AddContainer(SystemContainer_ViewKey, v.key.QName(), 1, 1).
 		AddContainer(SystemContainer_ViewValue, v.value.QName(), 1, 1)
 
@@ -49,14 +37,14 @@ func newView(app *appDef, name QName) *view {
 
 func (v *view) AddPartField(name string, kind DataKind) IViewBuilder {
 	v.panicIfFieldDuplication(name)
-	v.pkey.AddField(name, kind, true)
+	v.key.pkey.AddField(name, kind, true)
 	v.key.AddField(name, kind, true)
 	return v
 }
 
 func (v *view) AddClustColumn(name string, kind DataKind) IViewBuilder {
 	v.panicIfFieldDuplication(name)
-	v.ccols.AddField(name, kind, false)
+	v.key.ccols.AddField(name, kind, false)
 	v.key.AddField(name, kind, false)
 	return v
 }
@@ -71,14 +59,6 @@ func (v *view) Key() IViewKey {
 	return v.key
 }
 
-func (v *view) PartKey() IPartKey {
-	return v.pkey
-}
-
-func (v *view) ClustCols() IClustCols {
-	return v.ccols
-}
-
 func (v *view) Value() IViewValue {
 	return v.value
 }
@@ -90,8 +70,7 @@ func (v *view) panicIfFieldDuplication(name string) {
 		}
 	}
 
-	check(v.PartKey())
-	check(v.ClustCols())
+	check(v.Key())
 	check(v.Value())
 }
 
@@ -158,14 +137,32 @@ type viewKey struct {
 	def
 	fields
 	containers
+	pkey  *viewPKey
+	ccols *viewCCols
 }
 
-func newViewKey(app *appDef, name QName) *viewKey {
-	key := &viewKey{def: makeDef(app, name, DefKind_ViewRecord_Key)}
+func newViewKey(app *appDef, viewName QName) *viewKey {
+	key := &viewKey{def: makeDef(app, ViewKeyDefName(viewName), DefKind_ViewRecord_Key)}
 	key.fields = makeFields(key)
 	key.containers = makeContainers(key)
+
+	key.pkey = newViewPKey(app, ViewPartitionKeyDefName(viewName))
+	key.ccols = newViewCCols(app, ViewClusteringColumnsDefName(viewName))
+
+	key.
+		AddContainer(SystemContainer_ViewPartitionKey, key.pkey.QName(), 1, 1).
+		AddContainer(SystemContainer_ViewClusteringCols, key.ccols.QName(), 1, 1)
+
 	app.appendDef(key)
 	return key
+}
+
+func (key *viewKey) PartKey() IPartKey {
+	return key.pkey
+}
+
+func (key *viewKey) ClustCols() IClustCols {
+	return key.ccols
 }
 
 // # Implements:
@@ -175,8 +172,8 @@ type viewValue struct {
 	fields
 }
 
-func newViewValue(app *appDef, name QName) *viewValue {
-	val := &viewValue{def: makeDef(app, name, DefKind_ViewRecord_Value)}
+func newViewValue(app *appDef, viewName QName) *viewValue {
+	val := &viewValue{def: makeDef(app, ViewValueDefName(viewName), DefKind_ViewRecord_Value)}
 	val.fields = makeFields(val)
 	app.appendDef(val)
 	return val

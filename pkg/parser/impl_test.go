@@ -70,10 +70,10 @@ func Test_BasicUsage(t *testing.T) {
 	view := builder.View(appdef.NewQName("air", "XZReports"))
 	require.NotNil(view)
 	require.Equal(appdef.DefKind_ViewRecord, view.Kind())
-	require.Equal(2, builder.Def(view.Container(appdef.SystemContainer_ViewValue).Def()).(appdef.IFields).FieldCount()) // sys.Qname, XZReportWDocID
-	require.Equal(1, builder.Def(view.Container(appdef.SystemContainer_ViewPartitionKey).Def()).(appdef.IFields).FieldCount())
-	require.Equal(4, builder.Def(view.Container(appdef.SystemContainer_ViewClusteringCols).Def()).(appdef.IFields).FieldCount())
 
+	require.Equal(1, view.Value().UserFieldCount())
+	require.Equal(1, view.Key().PartKey().FieldCount())
+	require.Equal(4, view.Key().ClustCols().FieldCount())
 }
 
 func Test_DupFieldsInTypes(t *testing.T) {

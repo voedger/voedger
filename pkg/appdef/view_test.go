@@ -21,25 +21,25 @@ func TestAddView(t *testing.T) {
 
 	viewName := NewQName("test", "view")
 	v := app.AddView(viewName)
-	require.NotNil(v)
 	require.Equal(viewName, v.QName())
 	require.Equal(DefKind_ViewRecord, v.Kind())
-	require.Equal(4, v.ContainerCount())
+	require.Equal(2, v.ContainerCount()) // key + value
 
-	pk := v.PartKey()
-	require.NotNil(pk)
+	key := v.Key()
+	require.Equal(v.ContainerDef(SystemContainer_ViewKey), key)
+	require.Equal(ViewKeyDefName(viewName), key.QName())
+	require.Equal(DefKind_ViewRecord_Key, key.Kind())
+	require.Equal(2, key.ContainerCount()) // pk + cc
+
+	pk := key.PartKey()
+	require.Equal(key.ContainerDef(SystemContainer_ViewPartitionKey), pk)
 	require.Equal(ViewPartitionKeyDefName(viewName), pk.QName())
 	require.Equal(DefKind_ViewRecord_PartitionKey, pk.Kind())
 
-	cc := v.ClustCols()
-	require.NotNil(cc)
+	cc := key.ClustCols()
+	require.Equal(key.ContainerDef(SystemContainer_ViewClusteringCols), cc)
 	require.Equal(ViewClusteringColumnsDefName(viewName), cc.QName())
 	require.Equal(DefKind_ViewRecord_ClusteringColumns, cc.Kind())
-
-	key := v.Key()
-	require.NotNil(key)
-	require.Equal(ViewKeyDefName(viewName), key.QName())
-	require.Equal(DefKind_ViewRecord_Key, key.Kind())
 
 	val := v.Value()
 	require.NotNil(val)
