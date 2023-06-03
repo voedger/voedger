@@ -549,12 +549,6 @@ type IView interface {
 	IDef
 	IContainers
 
-	// Returns partition key definition
-	PartKey() IPartKey
-
-	// Returns clustering columns definition
-	ClustCols() IClustCols
-
 	// Returns full (pk + ccols) view key definition
 	Key() IViewKey
 
@@ -603,6 +597,13 @@ type IClustCols interface {
 type IViewKey interface {
 	IDef
 	IFields
+	IContainers
+
+	// Returns partition key definition
+	PartKey() IPartKey
+
+	// Returns clustering columns definition
+	ClustCols() IClustCols
 }
 
 // View value definition. DefKind() is DefKind_ViewRecord_Value
