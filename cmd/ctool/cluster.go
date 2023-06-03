@@ -29,6 +29,7 @@ func newCluster() *clusterType {
 		exists:                false,
 		Draft:                 true,
 		sshKey:                sshKey,
+		Cmd:                   newCmd("", ""),
 	}
 	dir, _ := os.Getwd()
 	cluster.configFileName = filepath.Join(dir, clusterConfFileName)
@@ -41,6 +42,10 @@ func newCmd(cmdKind, cmdArgs string) *cmdType {
 		Kind: cmdKind,
 		Args: cmdArgs,
 	}
+}
+
+func newNodeState(address string, nodeVersion string) *nodeStateType {
+	return &nodeStateType{Address: address, NodeVersion: nodeVersion}
 }
 
 type nodeStateType struct {
@@ -60,10 +65,10 @@ func (n *nodeStateType) isEmpty() bool {
 type nodeType struct {
 	cluster          *clusterType
 	NodeRole         string
-	idx              int           // the sequence number of the node, starts with 1
-	Error            string        `json:"Error,omitempty"`
-	ActualNodeState  nodeStateType `json:"ActualNodeState,omitempty"`
-	DesiredNodeState nodeStateType `json:"DesiredNodeState,omitempty"`
+	idx              int            // the sequence number of the node, starts with 1
+	Error            string         `json:"Error,omitempty"`
+	ActualNodeState  *nodeStateType `json:"ActualNodeState,omitempty"`
+	DesiredNodeState *nodeStateType `json:"DesiredNodeState,omitempty"`
 }
 
 func (n *nodeType) nodeControllerFunction() error {
@@ -78,7 +83,7 @@ func (n *nodeType) nodeControllerFunction() error {
 }
 
 func (n *nodeType) success() {
-	n.ActualNodeState = n.DesiredNodeState
+	n.ActualNodeState = newNodeState(n.DesiredNodeState.Address, n.desiredNodeVersion(n.cluster))
 	n.DesiredNodeState.clear()
 	n.Error = ""
 }
@@ -95,7 +100,7 @@ func (n *nodeType) newAttempt() {
 }
 
 func (n *nodeType) desiredNodeVersion(c *clusterType) string {
-	if &n.DesiredNodeState != nil && !n.DesiredNodeState.isEmpty() {
+	if n.DesiredNodeState != nil && !n.DesiredNodeState.isEmpty() {
 		return n.DesiredNodeState.NodeVersion
 	}
 	return c.DesiredClusterVersion
@@ -110,13 +115,13 @@ func (n *nodeType) label(key string) string {
 	case nrCENode:
 		return "ce"
 	case nrSENode:
-		if key == swarmSeLabelKey {
-			return "se"
+		if key == swarmAppLabelKey {
+			return "AppNode"
 		} else if key == swarmMonLabelKey {
-			return fmt.Sprintf("mon%d", n.idx)
+			return fmt.Sprintf("AppNode%d", n.idx)
 		}
 	case nrDBNode:
-		return fmt.Sprintf("scylla%d", n.idx-seNodeCount)
+		return fmt.Sprintf("DBNode%d", n.idx-seNodeCount)
 	}
 
 	return fmt.Sprintf("node%d", n.idx)
@@ -251,7 +256,6 @@ func validateUpgradeCmd(cmd *cmdType, cluster *clusterType) error {
 	return nil
 }
 
-// replace [oldIpAddr] [newIpAddr]
 func validateReplaceCmd(cmd *cmdType, cluster *clusterType) error {
 	args := cmd.args()
 
@@ -283,7 +287,7 @@ type clusterType struct {
 	Edition               string
 	ActualClusterVersion  string
 	DesiredClusterVersion string   `json:"DesiredClusterVersion,omitempty"`
-	Cmd                   cmdType  `json:"Cmd,omitempty"`
+	Cmd                   *cmdType `json:"Cmd,omitempty"`
 	DataCenters           []string `json:"DataCenters,omitempty"`
 	LastAttemptError      string   `json:"LastAttemptError,omitempty"`
 	Nodes                 []nodeType
@@ -320,9 +324,9 @@ func equalIPs(ip1, ip2 string) bool {
 }
 
 func (c *clusterType) nodeByHost(address string) *nodeType {
-	for _, n := range c.Nodes {
+	for i, n := range c.Nodes {
 		if equalIPs(n.ActualNodeState.Address, address) {
-			return &n
+			return &c.Nodes[i]
 		}
 	}
 	return nil
@@ -333,13 +337,26 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 		return err
 	}
 
-	if !c.Draft && !c.Cmd.isEmpty() {
+	if !c.Draft && c != nil && !c.Cmd.isEmpty() {
 		return ErrUncompletedCommandFound
 	}
 
-	c.Cmd = *cmd
-	// todo
-	// here you will need to change the cluster nodes, if required
+	c.Cmd = cmd
+
+	defer c.saveToJSON()
+	switch cmd.Kind {
+	case ckReplace:
+		oldAddr := cmd.args()[0]
+		newAddr := cmd.args()[1]
+		node := c.nodeByHost(oldAddr)
+
+		node.DesiredNodeState = newNodeState(newAddr, node.desiredNodeVersion(c))
+
+		if node.ActualNodeState != nil {
+			node.ActualNodeState.clear()
+		}
+
+	}
 
 	return nil
 }
@@ -351,6 +368,18 @@ func (c *clusterType) updateNodeIndexes() {
 }
 
 func (c *clusterType) saveToJSON() error {
+
+	if c.Cmd != nil && c.Cmd.isEmpty() {
+		c.Cmd = nil
+	}
+	for i := 0; i < len(c.Nodes); i++ {
+		if c.Nodes[i].DesiredNodeState != nil && c.Nodes[i].DesiredNodeState.isEmpty() {
+			c.Nodes[i].DesiredNodeState = nil
+		}
+		if c.Nodes[i].ActualNodeState != nil && c.Nodes[i].ActualNodeState.isEmpty() {
+			c.Nodes[i].ActualNodeState = nil
+		}
+	}
 
 	b, err := json.Marshal(c)
 	if err == nil {
@@ -366,6 +395,19 @@ func (c *clusterType) saveToJSON() error {
 func (c *clusterType) loadFromJSON() error {
 
 	defer c.updateNodeIndexes()
+	defer func() {
+		if c.Cmd == nil {
+			c.Cmd = newCmd("", "")
+		}
+		for i := 0; i < len(c.Nodes); i++ {
+			if c.Nodes[i].ActualNodeState == nil {
+				c.Nodes[i].ActualNodeState = newNodeState("", "")
+			}
+			if c.Nodes[i].DesiredNodeState == nil {
+				c.Nodes[i].DesiredNodeState = newNodeState("", "")
+			}
+		}
+	}()
 	if _, err := os.Stat(c.configFileName); err != nil {
 		return err
 	}
@@ -390,13 +432,15 @@ func (c *clusterType) loadFromJSON() error {
 func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error {
 
 	defer c.updateNodeIndexes()
+	defer c.saveToJSON()
 
 	if cmd == initCECmd { // CE args
 		c.Edition = clusterEditionCE
 		c.Nodes = make([]nodeType, 1)
 		c.Nodes[0].NodeRole = nrCENode
 		c.Nodes[0].cluster = c
-		c.Nodes[0].DesiredNodeState.NodeVersion = c.DesiredClusterVersion
+		c.Nodes[0].DesiredNodeState = newNodeState("", c.DesiredClusterVersion)
+		c.Nodes[0].ActualNodeState = newNodeState("", "")
 		if len(args) > 0 {
 			c.Nodes[0].DesiredNodeState.Address = args[0]
 		} else {
@@ -413,8 +457,8 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 			} else {
 				c.Nodes[i].NodeRole = nrDBNode
 			}
-			c.Nodes[i].DesiredNodeState.Address = args[i]
-			c.Nodes[i].DesiredNodeState.NodeVersion = c.DesiredClusterVersion
+			c.Nodes[i].DesiredNodeState = newNodeState(args[i], c.DesiredClusterVersion)
+			c.Nodes[i].ActualNodeState = newNodeState("", "")
 			c.Nodes[i].cluster = c
 		}
 
@@ -430,10 +474,10 @@ func (c *clusterType) validate() error {
 	var err error
 
 	for _, n := range c.Nodes {
-		if len(n.DesiredNodeState.Address) > 0 && net.ParseIP(n.DesiredNodeState.Address) == nil {
+		if n.DesiredNodeState != nil && len(n.DesiredNodeState.Address) > 0 && net.ParseIP(n.DesiredNodeState.Address) == nil {
 			err = errors.Join(err, errors.New(n.DesiredNodeState.Address+" "+ErrInvalidIpAddress.Error()))
 		}
-		if len(n.ActualNodeState.Address) > 0 && net.ParseIP(n.ActualNodeState.Address) == nil {
+		if n.ActualNodeState != nil && len(n.ActualNodeState.Address) > 0 && net.ParseIP(n.ActualNodeState.Address) == nil {
 			err = errors.Join(err, errors.New(n.ActualNodeState.Address+" "+ErrInvalidIpAddress.Error()))
 		}
 	}
@@ -452,7 +496,9 @@ func (c *clusterType) validate() error {
 func (c *clusterType) success() {
 	c.ActualClusterVersion = c.DesiredClusterVersion
 	c.DesiredClusterVersion = ""
-	c.Cmd.clear()
+	if c.Cmd != nil {
+		c.Cmd.clear()
+	}
 	c.LastAttemptError = ""
 }
 

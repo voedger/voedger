@@ -16,7 +16,7 @@ set -euo pipefail
 set -x
 
 if [[ $# -ne 3 ]]; then
-  echo "Usage: $0 <scylla1> <scylla2> <scylla3>"
+  echo "Usage: $0 <DBNode1> <DBNode2> <DBNode3>"
   exit 1
 fi
 
@@ -35,7 +35,7 @@ set -- "${args[@]}"
 
 # Init swarm mode
 ./swarm-init.sh $1
-./swarm-set-label.sh $1 $1 "type" scylla1
+./swarm-set-label.sh $1 $1 "DBNode1" "true"
 ./db-node-prepare.sh $1
 MANAGER=$1
 
@@ -45,7 +45,7 @@ shift
 i=2
 while [ $# -gt 0 ]; do
   ./swarm-add-node.sh $MANAGER $1
-  ./swarm-set-label.sh $MANAGER $1 "type" "scylla$i"
+  ./swarm-set-label.sh $MANAGER $1 "DBNode$i" "true"
   ./db-node-prepare.sh $1
   shift
   ((i++))

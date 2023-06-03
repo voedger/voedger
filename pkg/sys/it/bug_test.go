@@ -83,7 +83,7 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 	vitCfg := it.NewOwnVITConfig(
 		it.WithApp(istructs.AppQName_test1_app1, func(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
 
-			sys.Provide(vvmCfg.TimeFunc, cfg, adf, vvmAPI, smtp.Cfg{}, sep, nil)
+			sys.Provide(vvmCfg.TimeFunc, cfg, adf, vvmAPI, smtp.Cfg{}, sep, nil, vvmCfg.NumCommandProcessors)
 
 			cdocQName := appdef.NewQName("test", "cdoc")
 			adf.AddCDoc(cdocQName)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * Copyright (c) 2023-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
  */
 
@@ -7,15 +7,13 @@ package appdef
 
 import (
 	"errors"
-	"fmt"
 )
 
 // # Implements:
 //   - IAppDef
 //   - IAppDefBuilder
 type appDef struct {
-	changes int
-	defs    map[QName]interface{}
+	defs map[QName]interface{}
 }
 
 func newAppDef() *appDef {
@@ -26,59 +24,56 @@ func newAppDef() *appDef {
 }
 
 func (app *appDef) AddCDoc(name QName) ICDocBuilder {
-	return app.addDef(name, DefKind_CDoc)
+	return newCDoc(app, name)
 }
 
 func (app *appDef) AddSingleton(name QName) ICDocBuilder {
-	d := app.addDef(name, DefKind_CDoc)
-	d.SetSingleton()
-	return d
+	doc := newCDoc(app, name)
+	doc.SetSingleton()
+	return doc
 }
 
 func (app *appDef) AddCRecord(name QName) ICRecordBuilder {
-	return app.addDef(name, DefKind_CRecord)
+	return newCRecord(app, name)
 }
 
 func (app *appDef) AddElement(name QName) IElementBuilder {
-	return app.addDef(name, DefKind_Element)
+	return newElement(app, name)
 }
 
 func (app *appDef) AddGDoc(name QName) IGDocBuilder {
-	return app.addDef(name, DefKind_GDoc)
+	return newGDoc(app, name)
 }
 
 func (app *appDef) AddGRecord(name QName) IGRecordBuilder {
-	return app.addDef(name, DefKind_GRecord)
+	return newGRecord(app, name)
 }
 
 func (app *appDef) AddObject(name QName) IObjectBuilder {
-	return app.addDef(name, DefKind_Object)
+	return newObject(app, name)
 }
 
 func (app *appDef) AddODoc(name QName) IODocBuilder {
-	return app.addDef(name, DefKind_ODoc)
+	return newODoc(app, name)
 }
 
 func (app *appDef) AddORecord(name QName) IORecordBuilder {
-	return app.addDef(name, DefKind_ORecord)
-}
-
-func (app *appDef) AddWDoc(name QName) IWDocBuilder {
-	return app.addDef(name, DefKind_WDoc)
+	return newORecord(app, name)
 }
 
 func (app *appDef) AddView(name QName) IViewBuilder {
-	v := newView(app, name)
-	return v
+	return newView(app, name)
+}
+
+func (app *appDef) AddWDoc(name QName) IWDocBuilder {
+	return newWDoc(app, name)
 }
 
 func (app *appDef) AddWRecord(name QName) IWRecordBuilder {
-	return app.addDef(name, DefKind_WRecord)
+	return newWRecord(app, name)
 }
 
 func (app *appDef) Build() (result IAppDef, err error) {
-	app.prepare()
-
 	validator := newValidator()
 	app.Defs(func(d IDef) {
 		err = errors.Join(err, validator.validate(d))
@@ -87,7 +82,6 @@ func (app *appDef) Build() (result IAppDef, err error) {
 		return nil, err
 	}
 
-	app.changes = 0
 	return app, nil
 }
 
@@ -150,10 +144,6 @@ func (app *appDef) GRecord(name QName) IGRecord {
 	return nil
 }
 
-func (app *appDef) HasChanges() bool {
-	return app.changes > 0
-}
-
 func (app *appDef) Object(name QName) IObject {
 	if d := app.defByKind(name, DefKind_Object); d != nil {
 		return d.(IObject)
@@ -196,28 +186,8 @@ func (app *appDef) WRecord(name QName) IWRecord {
 	return nil
 }
 
-func (app *appDef) addDef(name QName, kind DefKind) *def {
-	if name == NullQName {
-		panic(fmt.Errorf("definition name cannot be empty: %w", ErrNameMissed))
-	}
-	if ok, err := ValidQName(name); !ok {
-		panic(fmt.Errorf("invalid definition name «%v»: %w", name, err))
-	}
-	if app.DefByName(name) != nil {
-		panic(fmt.Errorf("definition name «%s» already used: %w", name, ErrNameUniqueViolation))
-	}
-	d := newDef(app, name, kind)
-	app.appendDef(d)
-	return d
-}
-
 func (app *appDef) appendDef(def interface{}) {
 	app.defs[def.(IDef).QName()] = def
-	app.changed()
-}
-
-func (app *appDef) changed() {
-	app.changes++
 }
 
 func (app *appDef) defByKind(name QName, kind DefKind) interface{} {
@@ -227,7 +197,4 @@ func (app *appDef) defByKind(name QName, kind DefKind) interface{} {
 		}
 	}
 	return nil
-}
-
-func (app *appDef) prepare() {
 }

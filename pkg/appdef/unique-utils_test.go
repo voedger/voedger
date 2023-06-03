@@ -85,15 +85,16 @@ func Test_overlaps(t *testing.T) {
 }
 
 func Test_generateUniqueName(t *testing.T) {
-	def := newDef(nil, NewQName("test", "user"), DefKind_CRecord)
+	app := newAppDef()
+	def := app.AddCDoc(NewQName("test", "user"))
 
 	tests := []struct {
 		name   string
 		fields []string
 		want   string
 	}{
-		{"single field test", []string{"eMail"}, "userUniqueEMail"},
-		{"multiply fields test", []string{"field1", "field2"}, "userUnique01"},
+		{"single field test", []string{"eMail"}, "UniqueEMail"},
+		{"multiply fields test", []string{"field1", "field2"}, "Unique01"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -106,7 +107,8 @@ func Test_generateUniqueName(t *testing.T) {
 	t.Run("too many uniques (> 100) test", func(t *testing.T) {
 		require := require.New(t)
 
-		def := newDef(nil, NewQName("test", "rec"), DefKind_CRecord)
+		appDef := New()
+		def := appDef.AddCRecord(NewQName("test", "rec"))
 		for i := 1; i < MaxDefUniqueCount; i++ {
 			def.AddField("i"+strconv.Itoa(i), DataKind_int32, false)
 			def.AddField("b"+strconv.Itoa(i), DataKind_bool, false)

@@ -18,8 +18,7 @@ func provideCmdCreateJoinedWorkspace(cfg *istructsmem.AppConfigType, appDefBuild
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateJoinedWorkspaceParams")).
 			AddField(Field_Roles, appdef.DataKind_string, true).
 			AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).
-			AddField(sysshared.Field_WSName, appdef.DataKind_string, true).
-			QName(),
+			AddField(sysshared.Field_WSName, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdCreateJoinedWorkspace,

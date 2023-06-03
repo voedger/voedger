@@ -33,7 +33,7 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 				logger.Verbose("app workspace", appQName, wsNum, "(", appWSID, ") inited already")
 				continue
 			}
-			partition := istructs.PartitionID(appWSID % istructs.WSID(vvmConfig.PartitionsCount))
+			partition := istructs.PartitionID(appWSID % istructs.WSID(vvmConfig.NumCommandProcessors))
 			if _, ok := pLogOffsets[partition]; !ok {
 				pLogOffsets[partition] = istructs.FirstOffset
 			}

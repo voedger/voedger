@@ -20,8 +20,6 @@ var ErrInvalidQNameStringRepresentation = errors.New("invalid string representat
 
 var ErrInvalidDefKind = errors.New("invalid definition kind")
 
-var ErrWrongDefStruct = errors.New("wrong definition structure")
-
 var ErrVerificationKindMissed = errors.New("verification kind is missed")
 
 var ErrTooManyFields = errors.New("too many fields")

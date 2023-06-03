@@ -12,108 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_def_AddField(t *testing.T) {
-	require := require.New(t)
-
-	def := New().AddObject(NewQName("test", "object"))
-	require.NotNil(def)
-
-	t.Run("must be ok to add field", func(t *testing.T) {
-		def.AddField("f1", DataKind_int64, true)
-
-		require.Equal(1, def.UserFieldCount())
-		require.Equal(def.UserFieldCount()+1, def.FieldCount()) // + sys.QName
-
-		f := def.Field("f1")
-		require.NotNil(f)
-		require.Equal("f1", f.Name())
-		require.False(f.IsSys())
-
-		require.Equal(DataKind_int64, f.DataKind())
-		require.True(f.IsFixedWidth())
-		require.True(f.DataKind().IsFixed())
-
-		require.True(f.Required())
-		require.False(f.Verifiable())
-	})
-
-	t.Run("test AddField(…).QName() helper", func(t *testing.T) {
-		d := New().AddObject(NewQName("test", "object"))
-		require.Equal(d.QName(), d.AddField("f1", DataKind_int64, true).QName())
-	})
-
-	t.Run("must be panic if empty field name", func(t *testing.T) {
-		require.Panics(func() { def.AddField("", DataKind_int64, true) })
-	})
-
-	t.Run("must be panic if invalid field name", func(t *testing.T) {
-		require.Panics(func() { def.AddField("naked_🔫", DataKind_int64, true) })
-		t.Run("but ok if system field", func(t *testing.T) {
-			require.NotPanics(func() { def.AddField(SystemField_QName, DataKind_QName, true) })
-			require.Equal(2, def.FieldCount())
-		})
-	})
-
-	t.Run("must be panic if field name dupe", func(t *testing.T) {
-		require.Panics(func() { def.AddField("f1", DataKind_int64, true) })
-		t.Run("but ok if system field", func(t *testing.T) {
-			require.NotPanics(func() { def.AddField(SystemField_QName, DataKind_QName, true) })
-			require.Equal(2, def.FieldCount())
-		})
-	})
-
-	t.Run("must be panic if fields are not allowed by definition kind", func(t *testing.T) {
-		view := New().AddView(NewQName("test", "view"))
-		require.Panics(func() { view.(IFieldsBuilder).AddField("f1", DataKind_string, true) })
-	})
-
-	t.Run("must be panic if field data kind is not allowed by definition kind", func(t *testing.T) {
-		view := New().AddView(NewQName("test", "view"))
-		require.Panics(func() { view.AddPartField("f1", DataKind_string) })
-	})
-
-	t.Run("must be panic if too many fields", func(t *testing.T) {
-		d := New().AddObject(NewQName("test", "obj"))
-		for i := 0; i < MaxDefFieldCount-1; i++ { // -1 for sys.QName field
-			d.AddField(fmt.Sprintf("f_%#x", i), DataKind_bool, false)
-		}
-		require.Panics(func() { d.AddField("errorField", DataKind_bool, false) })
-	})
-}
-
-func Test_def_AddVerifiedField(t *testing.T) {
-	require := require.New(t)
-
-	def := New().AddObject(NewQName("test", "object"))
-	require.NotNil(def)
-
-	t.Run("must be ok to add verified field", func(t *testing.T) {
-		def.AddVerifiedField("f1", DataKind_int64, true, VerificationKind_Phone)
-		def.AddVerifiedField("f2", DataKind_int64, true, VerificationKind_Any...)
-
-		require.Equal(3, def.FieldCount()) // + sys.QName
-		f1 := def.Field("f1")
-		require.NotNil(f1)
-
-		require.True(f1.Verifiable())
-		require.False(f1.VerificationKind(VerificationKind_EMail))
-		require.True(f1.VerificationKind(VerificationKind_Phone))
-		require.False(f1.VerificationKind(VerificationKind_FakeLast))
-
-		f2 := def.Field("f2")
-		require.NotNil(f2)
-
-		require.True(f2.Verifiable())
-		require.True(f2.VerificationKind(VerificationKind_EMail))
-		require.True(f2.VerificationKind(VerificationKind_Phone))
-		require.False(f2.VerificationKind(VerificationKind_FakeLast))
-	})
-
-	t.Run("must be panic if no verification kinds", func(t *testing.T) {
-		require.Panics(func() { def.AddVerifiedField("f3", DataKind_int64, true) })
-	})
-}
-
 func Test_IsSysField(t *testing.T) {
 	type args struct {
 		name string
@@ -171,4 +69,220 @@ func Test_IsSysField(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_AddField(t *testing.T) {
+	require := require.New(t)
+
+	obj := New().AddObject(NewQName("test", "object"))
+	require.NotNil(obj)
+
+	t.Run("must be ok to add field", func(t *testing.T) {
+		obj.AddField("f1", DataKind_int64, true)
+
+		require.Equal(1, obj.UserFieldCount())
+		require.Equal(obj.UserFieldCount()+1, obj.FieldCount()) // + sys.QName
+
+		f := obj.Field("f1")
+		require.NotNil(f)
+		require.Equal("f1", f.Name())
+		require.False(f.IsSys())
+
+		require.Equal(DataKind_int64, f.DataKind())
+		require.True(f.IsFixedWidth())
+		require.True(f.DataKind().IsFixed())
+
+		require.True(f.Required())
+		require.False(f.Verifiable())
+	})
+
+	t.Run("chain notation is ok to add fields", func(t *testing.T) {
+		d := New().AddObject(NewQName("test", "obj"))
+		n := d.AddField("f1", DataKind_int64, true).
+			AddField("f2", DataKind_int32, false).
+			AddField("f3", DataKind_string, false).(IDef).QName()
+		require.Equal(d.QName(), n)
+		require.Equal(3, d.UserFieldCount())
+	})
+
+	t.Run("must be panic if empty field name", func(t *testing.T) {
+		require.Panics(func() { obj.AddVerifiedField("", DataKind_int64, true, VerificationKind_Phone) })
+	})
+
+	t.Run("must be panic if invalid field name", func(t *testing.T) {
+		require.Panics(func() { obj.AddField("naked_🔫", DataKind_int64, true) })
+	})
+
+	t.Run("must be panic if field name dupe", func(t *testing.T) {
+		require.Panics(func() { obj.AddField("f1", DataKind_int64, true) })
+	})
+
+	t.Run("must be panic if field data kind is not allowed by definition kind", func(t *testing.T) {
+		view := New().AddView(NewQName("test", "view"))
+		require.Panics(func() { view.AddPartField("f1", DataKind_string) })
+	})
+
+	t.Run("must be panic if too many fields", func(t *testing.T) {
+		o := New().AddObject(NewQName("test", "obj"))
+		for i := 0; i < MaxDefFieldCount-1; i++ { // -1 for sys.QName field
+			o.AddField(fmt.Sprintf("f_%#x", i), DataKind_bool, false)
+		}
+		require.Panics(func() { o.AddField("errorField", DataKind_bool, true) })
+	})
+}
+
+func Test_AddVerifiedField(t *testing.T) {
+	require := require.New(t)
+
+	obj := New().AddObject(NewQName("test", "object"))
+	require.NotNil(obj)
+
+	t.Run("must be ok to add verified field", func(t *testing.T) {
+		obj.AddVerifiedField("f1", DataKind_int64, true, VerificationKind_Phone)
+		obj.AddVerifiedField("f2", DataKind_int64, true, VerificationKind_Any...)
+
+		require.Equal(3, obj.FieldCount()) // + sys.QName
+		f1 := obj.Field("f1")
+		require.NotNil(f1)
+
+		require.True(f1.Verifiable())
+		require.False(f1.VerificationKind(VerificationKind_EMail))
+		require.True(f1.VerificationKind(VerificationKind_Phone))
+		require.False(f1.VerificationKind(VerificationKind_FakeLast))
+
+		f2 := obj.Field("f2")
+		require.NotNil(f2)
+
+		require.True(f2.Verifiable())
+		require.True(f2.VerificationKind(VerificationKind_EMail))
+		require.True(f2.VerificationKind(VerificationKind_Phone))
+		require.False(f2.VerificationKind(VerificationKind_FakeLast))
+	})
+
+	t.Run("must be panic if no verification kinds", func(t *testing.T) {
+		require.Panics(func() { obj.AddVerifiedField("f3", DataKind_int64, true) })
+	})
+}
+
+func Test_AddRefField(t *testing.T) {
+	require := require.New(t)
+
+	docName := NewQName("test", "doc")
+	var app IAppDef
+
+	t.Run("must be ok to add reference fields", func(t *testing.T) {
+		appDef := New()
+		doc := appDef.AddWDoc(docName)
+		require.NotNil(doc)
+
+		doc.
+			AddField("f1", DataKind_int64, true).
+			AddRefField("rf1", true).
+			AddRefField("rf2", false, doc.QName())
+
+		a, err := appDef.Build()
+		require.NoError(err)
+
+		app = a
+	})
+
+	t.Run("must be ok to work with reference fields", func(t *testing.T) {
+		doc := app.WDoc(docName)
+
+		t.Run("must be ok type cast reference field", func(t *testing.T) {
+			fld := doc.Field("rf1")
+			require.NotNil(fld)
+
+			require.Equal("rf1", fld.Name())
+			require.Equal(DataKind_RecordID, fld.DataKind())
+			require.True(fld.Required())
+
+			rf, ok := fld.(IRefField)
+			require.True(ok)
+			require.Empty(rf.Refs())
+		})
+
+		t.Run("must be ok to obtain reference field", func(t *testing.T) {
+			rf2 := doc.RefField("rf2")
+			require.NotNil(rf2)
+
+			require.Equal("rf2", rf2.Name())
+			require.Equal(DataKind_RecordID, rf2.DataKind())
+			require.False(rf2.Required())
+
+			require.Len(rf2.Refs(), 1)
+			require.Equal(rf2.Refs()[0], docName)
+		})
+
+		t.Run("must be nil if unknown reference field", func(t *testing.T) {
+			require.Nil(doc.RefField("unknown"))
+			require.Nil(doc.RefField("f1"), "must be nil because `f1` is not a reference field")
+		})
+
+		t.Run("must be ok to enumerate reference fields", func(t *testing.T) {
+			require.Equal(2, doc.RefFieldCount())
+
+			require.Equal(doc.RefFieldCount(), func() int {
+				cnt := 0
+				doc.RefFields(func(rf IRefField) {
+					switch cnt {
+					case 0:
+						require.Equal(doc.RefField("rf1"), rf)
+					case 1:
+						require.Equal(docName, rf.Refs()[0])
+					default:
+						require.Failf("unexpected reference field", "field name: %s", rf.Name())
+					}
+					cnt++
+				})
+				return cnt
+			}())
+		})
+	})
+}
+
+func Test_UserFields(t *testing.T) {
+	require := require.New(t)
+
+	docName := NewQName("test", "doc")
+	var app IAppDef
+
+	t.Run("must be ok to add fields", func(t *testing.T) {
+		appDef := New()
+		doc := appDef.AddODoc(docName)
+		require.NotNil(doc)
+
+		doc.
+			AddField("f", DataKind_int64, true).
+			AddVerifiedField("vf", DataKind_string, true, VerificationKind_EMail).
+			AddRefField("rf", true, doc.QName())
+
+		a, err := appDef.Build()
+		require.NoError(err)
+
+		app = a
+	})
+
+	t.Run("must be ok to enumerate user fields", func(t *testing.T) {
+		doc := app.ODoc(docName)
+		require.Equal(3, doc.UserFieldCount())
+
+		require.Equal(doc.UserFieldCount(), func() int {
+			cnt := 0
+			doc.UserFields(func(f IField) {
+				switch cnt {
+				case 0:
+					require.Equal(doc.Field("f"), f)
+				case 1:
+					require.True(f.VerificationKind(VerificationKind_EMail))
+				case 2:
+					require.Equal(docName, f.(IRefField).Refs()[0])
+				default:
+					require.Failf("unexpected reference field", "field name: %s", f.Name())
+				}
+				cnt++
+			})
+			return cnt
+		}())
+	})
 }

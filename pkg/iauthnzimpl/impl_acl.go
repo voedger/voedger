@@ -160,6 +160,9 @@ var defaultACL = ACL{
 				qNameCmdInitChildWorkspace,
 				qNameCmdEnrichPrincipalToken,
 				istructs.QNameCommandCUD,
+
+				// https://github.com/voedger/voedger/issues/208
+				qNameCmdInitiateDeactivateWorkspace,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceAdmin}}},
 		},

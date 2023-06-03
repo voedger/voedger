@@ -13,7 +13,8 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/untillpro/goutils/logger"
-	istorage "github.com/voedger/voedger/pkg/istorage"
+
+	"github.com/voedger/voedger/pkg/istorage"
 )
 
 type appStorageProviderType struct {
@@ -26,6 +27,9 @@ func newStorageProvider(casPar CassandraParamsType) (prov *appStorageProviderTyp
 		casPar: casPar,
 	}
 	provider.cluster = gocql.NewCluster(strings.Split(casPar.Hosts, ",")...)
+	if len(casPar.DC) > 0 {
+		provider.cluster.PoolConfig.HostSelectionPolicy = gocql.DCAwareRoundRobinPolicy(casPar.DC)
+	}
 	if casPar.Port > 0 {
 		provider.cluster.Port = casPar.Port
 	}

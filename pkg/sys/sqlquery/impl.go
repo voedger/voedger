@@ -21,11 +21,9 @@ func provideQrySqlQuery(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAp
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "SqlQuery"),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SqlQueryParams")).
-			AddField(field_Query, appdef.DataKind_string, true).
-			QName(),
+			AddField(field_Query, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SqlQueryResult")).
-			AddField(field_Result, appdef.DataKind_string, true).
-			QName(),
+			AddField(field_Result, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		execQrySqlQuery(asp, cfg.Name, numCommandProcessors),
 	))
 }

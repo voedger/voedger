@@ -57,6 +57,9 @@ var (
 			cfg.RoutesRewrite["/grafana-rewrite"] = fmt.Sprintf("http://127.0.0.1:%d/rewritten", TestServicePort)
 			cfg.RouteDefault = fmt.Sprintf("http://127.0.0.1:%d/not-found", TestServicePort)
 			cfg.RouteDomains["localhost"] = "http://127.0.0.1"
+
+			const simpleAppBLOBMaxSize = 5
+			cfg.BLOBMaxSize = simpleAppBLOBMaxSize
 		}),
 		WithCleanup(func(_ *VIT) {
 			MockCmdExec = func(input string) error { panic("") }
@@ -76,12 +79,8 @@ func EmptyApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConf
 }
 
 func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
-
 	// sys package
-	sys.Provide(vvmCfg.TimeFunc, cfg, adf, vvmAPI, smtp.Cfg{}, sep, nil)
-
-	const simpleAppBLOBMaxSize = 5
-	vvmCfg.BLOBMaxSize = simpleAppBLOBMaxSize
+	sys.Provide(vvmCfg.TimeFunc, cfg, adf, vvmAPI, smtp.Cfg{}, sep, nil, vvmCfg.NumCommandProcessors)
 
 	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "articles")).
 		AddField("name", appdef.DataKind_string, false).
@@ -116,7 +115,6 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("height", appdef.DataKind_int32, false).
 		AddField("image", appdef.DataKind_int64, false).
 		AddField("is_hidden", appdef.DataKind_int32, false).
-		AddField("sys.IsActive", appdef.DataKind_bool, false).
 		AddField("preview", appdef.DataKind_int64, false).
 		AddField("bg_color", appdef.DataKind_int32, false)
 	tabPlan.
@@ -135,7 +133,6 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("places", appdef.DataKind_int32, false).
 		AddField("chair_type", appdef.DataKind_string, false).
 		AddField("table_type", appdef.DataKind_string, false).
-		AddField("sys.IsActive", appdef.DataKind_bool, false).
 		AddField("type", appdef.DataKind_int32, false).
 		AddField("color", appdef.DataKind_int32, false).
 		AddField("code", appdef.DataKind_string, false).
@@ -163,7 +160,6 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("printer_ip", appdef.DataKind_string, false).
 		AddField("printer_port", appdef.DataKind_int32, false).
 		AddField("cant_be_redirected_to", appdef.DataKind_int32, false).
-		AddField("sys.IsActive", appdef.DataKind_bool, false).
 		AddField("com_params", appdef.DataKind_bytes, false).
 		AddField("printer_type", appdef.DataKind_int32, false).
 		AddField("exclude_message", appdef.DataKind_int32, false).
@@ -192,7 +188,6 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("only_reserved", appdef.DataKind_int32, false).
 		AddField("id_prices_original", appdef.DataKind_RecordID, false).
 		AddField("group_vat_level", appdef.DataKind_int32, false).
-		AddField("sys.IsActive", appdef.DataKind_bool, false).
 		AddField("sc", appdef.DataKind_int64, false).
 		AddField("sccovers", appdef.DataKind_int32, false).
 		AddField("id_scplan", appdef.DataKind_RecordID, false).
@@ -208,7 +203,6 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("psp_model", appdef.DataKind_int32, false).
 		AddField("id_bookkp", appdef.DataKind_RecordID, false).
 		AddField("id_currency", appdef.DataKind_RecordID, false).
-		AddField("sys.IsActive", appdef.DataKind_bool, false).
 		AddField("params", appdef.DataKind_string, false).
 		AddField("driver_kind", appdef.DataKind_int32, false).
 		AddField("driver_id", appdef.DataKind_string, false).
@@ -235,7 +229,6 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		AddField("user_clock_in", appdef.DataKind_int32, false).
 		AddField("user_poscode_remoteterm", appdef.DataKind_string, false).
 		AddField("is_custom_remoteterm_poscode", appdef.DataKind_int32, false).
-		AddField("sys.IsActive", appdef.DataKind_bool, false).
 		AddField("id_group_users", appdef.DataKind_RecordID, false).
 		AddField("tp_api_pwd", appdef.DataKind_string, false).
 		AddField("firstname", appdef.DataKind_string, false).
@@ -264,7 +257,6 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 	comps := adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "computers"))
 	comps.
 		AddField("name", appdef.DataKind_string, false).
-		AddField("sys.IsActive", appdef.DataKind_bool, false).
 		AddField("show_cursor", appdef.DataKind_int32, false).
 		AddField("on_hold", appdef.DataKind_int32, false).
 		AddField("untillsrv_port", appdef.DataKind_int32, false).
@@ -457,8 +449,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "pos_emails")).
 		AddField("kind", appdef.DataKind_int32, false).
 		AddField("email", appdef.DataKind_string, false).
-		AddField("description", appdef.DataKind_string, false).
-		AddField("sys.IsActive", appdef.DataKind_bool, false)
+		AddField("description", appdef.DataKind_string, false)
 
 	adf.AddSingleton(QNameTestWSKind).
 		AddField("IntFld", appdef.DataKind_int32, true).
@@ -466,7 +457,6 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 
 	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "category")).
 		AddField("name", appdef.DataKind_string, false).
-		AddField("sys.IsActive", appdef.DataKind_bool, false).
 		AddField("hq_id", appdef.DataKind_string, false).
 		AddField("ml_name", appdef.DataKind_bytes, false).
 		AddField("cat_external_id", appdef.DataKind_string, false)
@@ -501,13 +491,13 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		QNameQryRated,
 		appdef.NullQName,
 		adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedQryParams")).
-			AddField("Fld", appdef.DataKind_string, false).QName(),
+			AddField("Fld", appdef.DataKind_string, false).(appdef.IDef).QName(),
 		istructsmem.NullQueryExec,
 	))
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCmdRated,
 		adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedCmdParams")).
-			AddField("Fld", appdef.DataKind_string, false).QName(),
+			AddField("Fld", appdef.DataKind_string, false).(appdef.IDef).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		istructsmem.NullCommandExec,
