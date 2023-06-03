@@ -411,9 +411,9 @@ type UniqueExpr struct {
 
 type RefFieldExpr struct {
 	Pos     lexer.Position
-	Name    string   `parser:"@Ident"`
-	RefDocs DefQName `parser:"'ref' ('(' @@ (',' @@)* ')')?"`
-	NotNull bool     `parser:"@(NOTNULL)?"`
+	Name    string     `parser:"@Ident"`
+	RefDocs []DefQName `parser:"'ref' ('(' @@ (',' @@)* ')')?"`
+	NotNull bool       `parser:"@(NOTNULL)?"`
 }
 
 type FieldExpr struct {
