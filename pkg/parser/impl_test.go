@@ -142,7 +142,7 @@ func Test_DupFieldsInTables(t *testing.T) {
 		someField int,		-- duplicated in the second OF
 		Kind int,			-- duplicated in the first OF (2nd level)
 		Name int,			-- duplicated in the inherited table
-		ID text				-- duplicated in the inherited table (2nd level)
+		ID text				
 	)
 	`)
 	require.NoError(err)
@@ -162,7 +162,6 @@ func Test_DupFieldsInTables(t *testing.T) {
 		"file1.sql:20:3: someField redeclared",
 		"file1.sql:21:3: Kind redeclared",
 		"file1.sql:22:3: Name redeclared",
-		"file1.sql:23:3: ID redeclared",
 	}, "\n"))
 
 }
@@ -193,19 +192,24 @@ func Test_Duplicates(t *testing.T) {
 		FUNCTION MyTableValidator() RETURNS void;
 		FUNCTION MyTableValidator(TableRow) RETURNS string;	
 		FUNCTION MyFunc2() RETURNS void;
-	)
+	);
+	TABLE Rec1 INHERITS CRecord();
 	`)
 	require.NoError(err)
 
 	ast2, err := ParseFile("file2.sql", `SCHEMA test; 
 	WORKSPACE ChildWorkspace (
-		TAG MyFunc2; -- duplicate
+		TAG MyFunc2; -- redeclared
 		EXTENSION ENGINE BUILTIN (
 			FUNCTION MyFunc3() RETURNS void;
 			FUNCTION MyFunc4() RETURNS void;
 		);
 		WORKSPACE InnerWorkspace (
-			ROLE MyFunc4; -- duplicate
+			ROLE MyFunc4; -- redeclared
+		);
+		TABLE Doc1 INHERITS ODoc(
+			nested1 Rec1,
+			nested2 TABLE Rec1() -- redeclared
 		)
 	)
 	`)
@@ -217,6 +221,7 @@ func Test_Duplicates(t *testing.T) {
 		"file1.sql:4:3: MyTableValidator redeclared",
 		"file2.sql:3:3: MyFunc2 redeclared",
 		"file2.sql:9:4: MyFunc4 redeclared",
+		"file2.sql:13:12: Rec1 redeclared",
 	}, "\n"))
 
 }

@@ -10,6 +10,9 @@ const (
 	nameODOC      = "ODoc"
 	nameWDOC      = "WDoc"
 	nameSingleton = "Singleton"
+	nameCRecord   = "CRecord"
+	nameORecord   = "ORecord"
+	nameWRecord   = "WRecord"
 )
 
 const (
