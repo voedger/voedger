@@ -14,6 +14,10 @@ TAG BackofficeTag;
 -- Declares ROLE
 ROLE UntillPaymentsUser;
 
+TABLE NestedTable INHERITS CRecord (
+    ItemName text
+);
+
 -- TABLE ... OF - declares the inheritance from type or table. PROJECTORS from the base table are not inherted.
 TABLE AirTablePlan INHERITS CDoc (
     FState int,
@@ -30,10 +34,12 @@ TABLE AirTablePlan INHERITS CDoc (
     CONSTRAINT StateChecker CHECK (ValidateFState(FState)), -- Named CHECK table constraint
     -- UNIQUE (FState, Name), -- unnamed UNIQUE table constraint
     UNIQUEFIELD Name, -- deprecated. For Air backward compatibility only
-    TABLE AirTablePlanItem (
+    TableItems TABLE AirTablePlanItem (
         TableNo int,
         Chairs int
-    )
+    ),
+    items NestedTable,
+    ExcludedTableItems AirTablePlanItem
 ) WITH Comment=BackofficeComment, Tags=[BackofficeTag]; -- Optional comment and tags
 
 
@@ -89,7 +95,7 @@ WORKSPACE MyWorkspace (
 
     TABLE WsTable INHERITS CDoc OF air.TypeWithName, TypeWithKind ( -- Multiple types
         PsName text,
-        TABLE Child (
+        items TABLE Child (
             Number int				
         )
     );	

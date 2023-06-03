@@ -158,7 +158,9 @@ func isSysDef(qn DefQName, ident string) bool {
 }
 
 func isPredefinedSysTable(table *TableStmt, c *buildContext) bool {
-	return c.pkg.QualifiedPackageName == appdef.SysPackage && (table.Name == nameCDOC || table.Name == nameWDOC || table.Name == nameODOC)
+	return c.pkg.QualifiedPackageName == appdef.SysPackage &&
+		(table.Name == nameCDOC || table.Name == nameWDOC || table.Name == nameODOC ||
+			table.Name == nameCRecord || table.Name == nameWRecord || table.Name == nameORecord)
 }
 
 func getTableInheritanceChain(table *TableStmt, ctx *buildContext) (chain []DefQName) {
@@ -211,6 +213,12 @@ func getTableDefKind(table *TableStmt, ctx *buildContext) (kind appdef.DefKind, 
 			return appdef.DefKind_ODoc, false
 		} else if isSysDef(t, nameWDOC) {
 			return appdef.DefKind_WDoc, false
+		} else if isSysDef(t, nameCRecord) {
+			return appdef.DefKind_CRecord, false
+		} else if isSysDef(t, nameORecord) {
+			return appdef.DefKind_ORecord, false
+		} else if isSysDef(t, nameWRecord) {
+			return appdef.DefKind_WRecord, false
 		}
 	}
 	return appdef.DefKind_null, false
