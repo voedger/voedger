@@ -216,11 +216,11 @@ func getTableInheritanceChain(table *TableStmt, ctx *buildContext) (chain []DefQ
 
 func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
 	switch rootTableKind {
-	case appdef.DefKind_CDoc:
+	case appdef.DefKind_CDoc, appdef.DefKind_CRecord:
 		return appdef.DefKind_CRecord
-	case appdef.DefKind_ODoc:
+	case appdef.DefKind_ODoc, appdef.DefKind_ORecord:
 		return appdef.DefKind_ORecord
-	case appdef.DefKind_WDoc:
+	case appdef.DefKind_WDoc, appdef.DefKind_WRecord:
 		return appdef.DefKind_WRecord
 	default:
 		panic(fmt.Sprintf("unexpected root table kind %d", rootTableKind))
