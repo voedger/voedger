@@ -831,11 +831,6 @@ func (el *elementType) ElementBuilder(containerName string) istructs.IElementBui
 	return &c
 }
 
-// Returns child elements count
-func (el *elementType) ElementCount() int {
-	return len(el.child)
-}
-
 // istructs.IElement.Elements
 func (el *elementType) Elements(container string, cb func(nestedPart istructs.IElement)) {
 	for _, c := range el.child {
