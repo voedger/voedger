@@ -6,7 +6,6 @@ package invite
 
 import (
 	"fmt"
-	"net/url"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -57,7 +56,7 @@ func applyJoinWorkspace(timeFunc func() time.Time, federation coreutils.IFederat
 			return
 		}
 		_, err = coreutils.FederationFunc(
-			federationURL(),
+			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CreateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d,"WSName":"%s"}}`,
 				svCDocInvite.AsString(Field_Roles), event.Workspace(), svCDocWorkspaceDescriptor.AsString(authnz.Field_WSName)),
@@ -98,7 +97,7 @@ func applyJoinWorkspace(timeFunc func() time.Time, federation coreutils.IFederat
 			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID), svCDocInvite.AsString(Field_Roles))
 		}
 		resp, err := coreutils.FederationFunc(
-			federationURL(),
+			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			body,
 			coreutils.WithAuthorizeBy(token))
@@ -114,7 +113,7 @@ func applyJoinWorkspace(timeFunc func() time.Time, federation coreutils.IFederat
 			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, svCDocInvite.AsRecordID(appdef.SystemField_ID), State_Joined, timeFunc().UnixMilli())
 		}
 		_, err = coreutils.FederationFunc(
-			federationURL(),
+			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			body,
 			coreutils.WithAuthorizeBy(token))

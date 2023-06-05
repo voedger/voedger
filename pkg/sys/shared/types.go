@@ -5,4 +5,4 @@
 
 package sysshared
 
-type WorkspaceStatus int32
+// type WorkspaceStatus int32

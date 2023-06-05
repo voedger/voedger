@@ -6,7 +6,6 @@ package invite
 
 import (
 	"fmt"
-	"net/url"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -63,7 +62,7 @@ func applyLeaveWorkspace(timeFunc func() time.Time, federation coreutils.IFedera
 
 			//Update subject
 			_, err = coreutils.FederationFunc(
-				federationURL(),
+				federation.URL(),
 				fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID)),
 				coreutils.WithAuthorizeBy(token))
@@ -73,7 +72,7 @@ func applyLeaveWorkspace(timeFunc func() time.Time, federation coreutils.IFedera
 
 			//Deactivate joined workspace
 			_, err = coreutils.FederationFunc(
-				federationURL(),
+				federation.URL(),
 				fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 				fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
 				coreutils.WithAuthorizeBy(token))
@@ -83,7 +82,7 @@ func applyLeaveWorkspace(timeFunc func() time.Time, federation coreutils.IFedera
 
 			//Update invite
 			_, err = coreutils.FederationFunc(
-				federationURL(),
+				federation.URL(),
 				fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, rec.ID(), State_Left, timeFunc().UnixMilli()),
 				coreutils.WithAuthorizeBy(token))

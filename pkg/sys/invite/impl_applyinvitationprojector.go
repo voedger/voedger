@@ -6,7 +6,6 @@ package invite
 
 import (
 	"fmt"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -33,7 +32,7 @@ func ProvideAsyncProjectorApplyInvitationFactory(timeFunc func() time.Time, fede
 	}
 }
 
-func applyInvitationProjector(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyInvitationProjector(timeFunc func() time.Time, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbViewInviteIndex, err := s.KeyBuilder(state.ViewRecordsStorage, qNameViewInviteIndex)
 		if err != nil {
@@ -106,7 +105,7 @@ func applyInvitationProjector(timeFunc func() time.Time, federationURL func() *u
 			return
 		}
 		_, err = coreutils.FederationFunc(
-			federationURL(),
+			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"VerificationCode":"%s","Updated":%d}}]}`, svViewInviteIndex.AsRecordID(field_InviteID), State_Invited, verificationCode, timeFunc().UnixMilli()),
 			coreutils.WithAuthorizeBy(authToken))

@@ -8,17 +8,17 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, now func() time.Time, tokensAPI itokens.ITokens,
-	federationURL func() *url.URL) {
+func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, timeFunc func() time.Time, tokensAPI itokens.ITokens,
+	federation coreutils.IFederation) {
 	// c.sys.InitChildWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		authnz.QNameCommandInitChildWorkspace,
@@ -112,7 +112,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			AddField(Field_TemplateParams, appdef.DataKind_string, false).(appdef.IDef).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
-		execCmdCreateWorkspace(now, asp, cfg.Name),
+		execCmdCreateWorkspace(timeFunc, asp, cfg.Name),
 	))
 
 	// singleton CDoc<sys.WorkspaceDescriptor>
@@ -160,7 +160,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	ProvideViewNextWSID(appDefBuilder)
 
 	// deactivate workspace
-	provideDeactivateWorkspace(cfg, appDefBuilder, tokensAPI, federationURL, asp)
+	provideDeactivateWorkspace(cfg, appDefBuilder, tokensAPI, federation, asp)
 }
 
 // proj.sys.ChildWorkspaceIdx
@@ -174,12 +174,12 @@ func ProvideSyncProjectorChildWorkspaceIdxFactory() istructs.ProjectorFactory {
 }
 
 // Projector<A, InitializeWorkspace>
-func ProvideAsyncProjectorInitializeWorkspace(federation coreutils.IFederation, nowFunc func() time.Time, appQName istructs.AppQName, epWSTemplates vvm.IEPWSTemplates,
+func ProvideAsyncProjectorInitializeWorkspace(federation coreutils.IFederation, nowFunc func() time.Time, appQName istructs.AppQName, ep extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPInitializeWorkspace,
-			Func: initializeWorkspaceProjector(nowFunc, appQName, federation, epWSTemplates, tokensAPI, wsPostInitFunc),
+			Func: initializeWorkspaceProjector(nowFunc, appQName, federation, ep, tokensAPI, wsPostInitFunc),
 		}
 	}
 }

@@ -16,7 +16,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-type AppAPI struct {
+type APIs struct {
 	itokens.ITokens
 	istructs.IAppStructsProvider
 	istructsmem.AppConfigsType
@@ -24,6 +24,7 @@ type AppAPI struct {
 	payloads.IAppTokensFactory
 	coreutils.IFederation
 	coreutils.TimeFunc
+	NumCommandProcessors coreutils.CommandProcessorsCount
 }
 
-type AppBuilder func(appAPI AppAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint)
+type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint)

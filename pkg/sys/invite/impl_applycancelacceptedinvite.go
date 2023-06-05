@@ -6,7 +6,6 @@ package invite
 
 import (
 	"fmt"
-	"net/url"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -14,8 +13,8 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	sysshared "github.com/voedger/voedger/pkg/sys/shared"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func ProvideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc func() time.Time, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
@@ -57,7 +56,7 @@ func applyCancelAcceptedInvite(timeFunc func() time.Time, federation coreutils.I
 
 		//Update subject
 		_, err = coreutils.FederationFunc(
-			federationURL(),
+			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID)),
 			coreutils.WithAuthorizeBy(token))
@@ -67,7 +66,7 @@ func applyCancelAcceptedInvite(timeFunc func() time.Time, federation coreutils.I
 
 		//Deactivate joined workspace
 		_, err = coreutils.FederationFunc(
-			federationURL(),
+			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
 			coreutils.WithAuthorizeBy(token))
@@ -77,7 +76,7 @@ func applyCancelAcceptedInvite(timeFunc func() time.Time, federation coreutils.I
 
 		//Update invite
 		_, err = coreutils.FederationFunc(
-			federationURL(),
+			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, event.ArgumentObject().AsRecordID(field_InviteID), State_Cancelled, timeFunc().UnixMilli()),
 			coreutils.WithAuthorizeBy(token))

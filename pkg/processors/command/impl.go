@@ -25,7 +25,9 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
+	workspacemgmt "github.com/voedger/voedger/pkg/sys/authnz/workspace"
+	"github.com/voedger/voedger/pkg/sys/blobber"
+	"github.com/voedger/voedger/pkg/sys/builtin"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"golang.org/x/exp/maps"
 )
@@ -195,7 +197,7 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, work interface{}) (err error)
 func getWSDesc(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if !IsDummyWS(cmd.cmdMes.WSID()) {
-		cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), sysshared.QNameCDocWorkspaceDescriptor)
+		cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), workspacemgmt.QNameCDocWorkspaceDescriptor)
 	}
 	return
 }
@@ -207,16 +209,16 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 	if IsDummyWS(cmd.cmdMes.WSID()) {
 		return nil
 	}
-	if funcQName == sysshared.QNameCommandCreateWorkspace ||
-		funcQName == sysshared.QNameCommandCreateWorkspaceID || // happens on creating a child of an another workspace
-		funcQName == sysshared.QNameCommandInit {
+	if funcQName == workspacemgmt.QNameCommandCreateWorkspace ||
+		funcQName == workspacemgmt.QNameCommandCreateWorkspaceID || // happens on creating a child of an another workspace
+		funcQName == builtin.QNameCommandInit {
 		return nil
 	}
 	if wsDesc.QName() != appdef.NullQName {
-		if funcQName == sysshared.QNameCommandUploadBLOBHelper {
+		if funcQName == blobber.QNameCommandUploadBLOBHelper {
 			return nil
 		}
-		if wsDesc.AsInt64(sysshared.Field_InitCompletedAtMs) > 0 && len(wsDesc.AsString(sysshared.Field_InitError)) == 0 {
+		if wsDesc.AsInt64(workspacemgmt.Field_InitCompletedAtMs) > 0 && len(wsDesc.AsString(workspacemgmt.Field_InitError)) == 0 {
 			cmd.wsInitialized = true
 			return nil
 		}
@@ -244,7 +246,7 @@ func checkWSActive(_ context.Context, work interface{}) (err error) {
 	if wsDesc.QName() == appdef.NullQName {
 		return nil
 	}
-	if wsDesc.AsInt32(sysshared.Field_Status) == int32(sysshared.WorkspaceStatus_Active) {
+	if wsDesc.AsInt32(workspacemgmt.Field_Status) == int32(workspacemgmt.WorkspaceStatus_Active) {
 		return nil
 	}
 	funcQName := cmd.cmdMes.Resource().(istructs.ICommandFunction).QName()
@@ -336,7 +338,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work interface{}) 
 
 	// init - для импорта, Import - это sync
 	switch cmd.cmdMes.Resource().QName() {
-	case sysshared.QNameCommandImport, sysshared.QNameCommandInit:
+	case builtin.QNameCommandImport, builtin.QNameCommandInit:
 		cmd.reb = cmd.appStructs.Events().GetSyncRawEventBuilder(
 			istructs.SyncRawEventBuilderParams{
 				SyncedAt:                     istructs.UnixMilli(cmdProc.now().UnixMilli()),
@@ -514,14 +516,14 @@ func checkWorkspaceDescriptorUpdating(_ context.Context, work interface{}) (err 
 	}
 	for _, cud := range cmd.parsedCUDs {
 		if cmd.wsInitialized {
-			if cud.qName == sysshared.QNameCDocWorkspaceDescriptor && cud.opKind == iauthnz.OperationKind_UPDATE && len(cud.fields) == 1 {
-				if _, ok := cud.fields[sysshared.Field_Status]; ok {
+			if cud.qName == workspacemgmt.QNameCDocWorkspaceDescriptor && cud.opKind == iauthnz.OperationKind_UPDATE && len(cud.fields) == 1 {
+				if _, ok := cud.fields[workspacemgmt.Field_Status]; ok {
 					continue
 				}
 			}
 			return processors.ErrWSInactive
 		}
-		if (cud.qName == sysshared.QNameCDocWorkspaceDescriptor || cud.qName == sysshared.QNameWDocBLOB) && cud.opKind == iauthnz.OperationKind_UPDATE {
+		if (cud.qName == workspacemgmt.QNameCDocWorkspaceDescriptor || cud.qName == blobber.QNameWDocBLOB) && cud.opKind == iauthnz.OperationKind_UPDATE {
 			continue
 		}
 		return errWSNotInited

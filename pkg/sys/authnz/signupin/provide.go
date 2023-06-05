@@ -15,7 +15,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federation coreutils.IFederation, asp istructs.IAppStructsProvider) {
+func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federation coreutils.IFederation,
+	asp istructs.IAppStructsProvider) {
 
 	// c.sys.CreateLogin
 	provideCmdCreateLogin(cfgRegistry, appDefBuilder, asp)
@@ -46,7 +47,7 @@ func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDe
 		provideIssuePrincipalTokenExec(asp, itokens))
 	cfgRegistry.Resources.Add(issuePrincipalTokenQry)
 
-	provideResetPassword(cfgRegistry, appDefBuilder, itokens, federation, asp)
+	provideResetPassword(cfgRegistry, appDefBuilder, asp, itokens, federation)
 	provideChangePassword(cfgRegistry, appDefBuilder)
 }
 

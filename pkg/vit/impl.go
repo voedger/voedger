@@ -307,7 +307,7 @@ func (vit *VIT) PostFree(url string, body string, opts ...coreutils.ReqOptFunc) 
 
 func (vit *VIT) Post(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	res, err := coreutils.FederationPOST(vit.VVMAPI.FederationURL(), url, body, opts...)
+	res, err := coreutils.FederationPOST(vit.IFederation.URL(), url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
 }
@@ -315,14 +315,14 @@ func (vit *VIT) Post(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 func (vit *VIT) PostApp(appQName istructs.AppQName, wsid istructs.WSID, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
 	url := fmt.Sprintf("api/%s/%d/%s", appQName, wsid, funcName)
-	res, err := coreutils.FederationFunc(vit.VVMAPI.FederationURL(), url, body, opts...)
+	res, err := coreutils.FederationFunc(vit.IFederation.URL(), url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
 }
 
 func (vit *VIT) Get(url string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	res, err := coreutils.FederationReq(vit.VVMAPI.FederationURL(), url, "", opts...)
+	res, err := coreutils.FederationReq(vit.IFederation.URL(), url, "", opts...)
 	require.NoError(vit.T, err)
 	return res
 }

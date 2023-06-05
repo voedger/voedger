@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -70,17 +72,17 @@ var (
 	MockCmdExec func(input string) error
 )
 
-func EmptyApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
-	registryapp.Provide(smtp.Cfg{})(vvmCfg, vvmAPI, cfg, adf, sep)
-	adf.AddSingleton(QNameTestWSKind).
+func EmptyApp(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+	registryapp.Provide(smtp.Cfg{})(apis, cfg, appDefBuilder, ep)
+	appDefBuilder.AddSingleton(QNameTestWSKind).
 		AddField("IntFld", appdef.DataKind_int32, true).
 		AddField("StrFld", appdef.DataKind_string, false)
-	sep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
+	ep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
 }
 
-func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
+func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	// sys package
-	sys.Provide(vvmCfg.TimeFunc, cfg, adf, vvmAPI, smtp.Cfg{}, sep, nil, vvmCfg.NumCommandProcessors)
+	sys.Provide(cfg, adf, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory, apis.NumCommandProcessors)
 
 	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "articles")).
 		AddField("name", appdef.DataKind_string, false).
@@ -465,7 +467,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		b.AddPartField("ViewIntFld", appdef.DataKind_int32).
 			AddClustColumn("ViewStrFld", appdef.DataKind_string)
 	})
-	sep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
+	ep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
 
 	// for impl_verifier_test
 	adf.AddCDoc(QNameTestEmailVerificationDoc).

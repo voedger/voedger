@@ -19,6 +19,8 @@ import (
 	ibus "github.com/untillpro/airs-ibus"
 	router "github.com/untillpro/airs-router2"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
@@ -127,7 +129,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideIBus,
 		provideRouterParams,
 		provideRouterAppStorage,
-		provideFederationURL,
+		provideIFederation,
 		provideCachingAppStorageProvider,  // IAppStorageProvider
 		itokensjwt.ProvideITokens,         // ITokens
 		istructsmem.Provide,               // IAppStructsProvider
@@ -262,8 +264,8 @@ func provideMetricsServiceOperator(ms metrics.MetricsService) MetricsServiceOper
 }
 
 // TODO: consider vvmIdx
-func provideFederationURL(cfg *VVMConfig, vvmPortSource *VVMPortSource) FederationURLType {
-	return func() *url.URL {
+func provideIFederation(cfg *VVMConfig, vvmPortSource *VVMPortSource) coreutils.IFederation {
+	return coreutils.NewIFederation(func() *url.URL {
 		if cfg.FederationURL != nil {
 			return cfg.FederationURL
 		}
@@ -273,7 +275,7 @@ func provideFederationURL(cfg *VVMConfig, vvmPortSource *VVMPortSource) Federati
 			panic(err)
 		}
 		return resultFU
-	}
+	})
 }
 
 // Metrics service port could be dynamic -> need a func that will return the actual port
@@ -305,12 +307,12 @@ func provideAppConfigs(vvmConfig *VVMConfig) istructsmem.AppConfigsType {
 	return istructsmem.AppConfigsType{}
 }
 
-func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[istructs.AppQName]IStandardExtensionPoints {
-	return vvmConfig.VVMAppsBuilder.PrepareStandardExtensionPoints()
+func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[istructs.AppQName]extensionpoints.IExtensionPoint {
+	return vvmConfig.VVMAppsBuilder.PrepareAppsExtensionPoints()
 }
 
-func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, vvmAPI VVMAPI, seps map[istructs.AppQName]IStandardExtensionPoints) VVMApps {
-	return vvmConfig.VVMAppsBuilder.Build(vvmConfig, cfgs, vvmAPI, seps)
+func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) VVMApps {
+	return vvmConfig.VVMAppsBuilder.Build(cfgs, apis, appsEPs)
 }
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {
@@ -478,7 +480,7 @@ func provideQueryProcessors(qpCount QueryProcessorsCount, qc QueryChannel, bus i
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
 
-func provideCommandProcessors(cpCount CommandProcessorsCount, ccf CommandChannelFactory, cpFactory commandprocessor.ServiceFactory) OperatorCommandProcessors {
+func provideCommandProcessors(cpCount coreutils.CommandProcessorsCount, ccf CommandChannelFactory, cpFactory commandprocessor.ServiceFactory) OperatorCommandProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, cpCount)
 	for i := 0; i < int(cpCount); i++ {
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(cpFactory(ccf(i), istructs.PartitionID(i))))
@@ -525,7 +527,7 @@ func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.Actual
 	}
 }
 
-func provideAppServiceFactory(apf AppPartitionFactory, cpCount CommandProcessorsCount) AppServiceFactory {
+func provideAppServiceFactory(apf AppPartitionFactory, cpCount coreutils.CommandProcessorsCount) AppServiceFactory {
 	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories) pipeline.ISyncOperator {
 		forks := make([]pipeline.ForkOperatorOptionFunc, cpCount)
 		for i := 0; i < int(cpCount); i++ {

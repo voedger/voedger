@@ -13,6 +13,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
@@ -35,7 +37,7 @@ func (e *greeterRR) AsString(name string) string {
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	cfg := it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app1, func(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
+		it.WithApp(istructs.AppQName_test1_app1, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 			cfg.Resources.Add(istructsmem.NewQueryFunction(
 				appdef.NewQName(appdef.SysPackage, "Greeter"),
 				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
@@ -50,7 +52,7 @@ func TestBasicUsage(t *testing.T) {
 			))
 
 			// need to read cdoc.sys.Subject on auth
-			sys.Provide(vvmCfg.TimeFunc, cfg, appDefBuilder, vvmAPI, smtp.Cfg{}, sep, nil, vvmCfg.NumCommandProcessors)
+			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory, apis.NumCommandProcessors)
 		}),
 	)
 	vit := it.NewVIT(t, &cfg)

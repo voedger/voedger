@@ -4,6 +4,8 @@
 
 package wskinds
 
-import "github.com/voedger/voedger/pkg/vvm"
+import (
+	"github.com/voedger/voedger/pkg/extensionpoints"
+)
 
-const EPWorkspaceKind vvm.EPKey = "WorkspaceKind"
+const EPWorkspaceKind extensionpoints.EPKey = "WorkspaceKind"

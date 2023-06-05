@@ -50,3 +50,5 @@ type IFederation interface {
 }
 
 type TimeFunc func() time.Time
+
+type CommandProcessorsCount int

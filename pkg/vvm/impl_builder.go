@@ -8,35 +8,37 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func (hap VVMAppsBuilder) Add(appQName istructs.AppQName, builder VVMAppBuilder) {
+func (hap VVMAppsBuilder) Add(appQName istructs.AppQName, builder apps.AppBuilder) {
 	builders := hap[appQName]
 	builders = append(builders, builder)
 	hap[appQName] = builders
 }
 
-func (hap VVMAppsBuilder) PrepareStandardExtensionPoints() map[istructs.AppQName]IStandardExtensionPoints {
-	seps := map[istructs.AppQName]IStandardExtensionPoints{}
+func (hap VVMAppsBuilder) PrepareAppsExtensionPoints() map[istructs.AppQName]extensionpoints.IExtensionPoint {
+	seps := map[istructs.AppQName]extensionpoints.IExtensionPoint{}
 	for appQName := range hap {
-		seps[appQName] = &standardExtensionPointsImpl{rootExtensionPoint: &implIExtensionPoint{}}
+		seps[appQName] = extensionpoints.NewRootExtensionPoint()
 	}
 	return seps
 }
 
-func (hap VVMAppsBuilder) Build(vvmCfg *VVMConfig, cfgs istructsmem.AppConfigsType, seps map[istructs.AppQName]IStandardExtensionPoints) (vvmApps VVMApps) {
+func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (vvmApps VVMApps) {
 	for appQName, builders := range hap {
 		adf := appdef.New()
-		sep := seps[appQName]
+		appEPs := appsEPs[appQName]
 		cfg := cfgs.AddConfig(appQName, adf)
 		for _, builder := range builders {
-			builder(vvmCfg, vvmAPI, cfg, adf, sep)
+			builder(apis, cfg, adf, appEPs)
 		}
-		epPostDocs := sep.ExtensionPoint(EPPostDocs)
-		epPostDocs.Iterate(func(eKey EKey, value interface{}) {
-			epPostDoc := value.(IExtensionPoint)
+		epPostDocs := appEPs.ExtensionPoint(EPPostDocs)
+		epPostDocs.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
+			epPostDoc := value.(extensionpoints.IExtensionPoint)
 			postDocQName := eKey.(appdef.QName)
 			postDocDesc := epPostDoc.Value().(PostDocDesc)
 
@@ -58,7 +60,7 @@ func (hap VVMAppsBuilder) Build(vvmCfg *VVMConfig, cfgs istructsmem.AppConfigsTy
 				panic(fmt.Errorf("document «%s» has unexpected definition kind «%v»", postDocQName, postDocDesc.Kind))
 			}
 
-			epPostDoc.Iterate(func(eKey EKey, value interface{}) {
+			epPostDoc.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
 				postDocField := value.(PostDocFieldType)
 				if len(postDocField.VerificationKinds) > 0 {
 					doc.AddVerifiedField(eKey.(string), postDocField.Kind, postDocField.Required, postDocField.VerificationKinds...)
@@ -74,17 +76,4 @@ func (hap VVMAppsBuilder) Build(vvmCfg *VVMConfig, cfgs istructsmem.AppConfigsTy
 		}
 	}
 	return vvmApps
-}
-
-func (ar *standardExtensionPointsImpl) ExtensionPoint(epKey EPKey) IExtensionPoint {
-	return ar.rootExtensionPoint.ExtensionPoint(epKey)
-}
-func (ar *standardExtensionPointsImpl) EPWSTemplates() IEPWSTemplates {
-	return ar.rootExtensionPoint.ExtensionPoint(EPWSTemplates)
-}
-func (ar *standardExtensionPointsImpl) EPJournalIndices() IEPJournalIndices {
-	return ar.rootExtensionPoint.ExtensionPoint(EPJournalIndices)
-}
-func (ar *standardExtensionPointsImpl) EPJournalPredicates() IEPJournalPredicates {
-	return ar.rootExtensionPoint.ExtensionPoint(EPJournalPredicates)
 }
