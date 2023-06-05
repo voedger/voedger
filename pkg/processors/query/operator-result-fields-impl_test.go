@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -20,23 +19,22 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 	t.Run("Should set result fields", func(t *testing.T) {
 		require := require.New(t)
 
-		commonDef := func(n appdef.QName) *amock.Def {
-			return amock.NewDef(n, appdef.DefKind_Object,
-				amock.NewField("name", appdef.DataKind_string, false),
-			)
+		appDef := appdef.New()
+
+		commonDef := func(n appdef.QName) appdef.IDef {
+			d := appDef.AddObject(n)
+			d.AddField("name", appdef.DataKind_string, false)
+			return d
 		}
+		commonDef(appdef.NewQName("_", "root"))
+		commonDef(appdef.NewQName("f", "first_children_1"))
+		commonDef(appdef.NewQName("f", "deep_children_1"))
+		commonDef(appdef.NewQName("f", "very_deep_children_1"))
+		commonDef(appdef.NewQName("s", "first_children_2"))
+		commonDef(appdef.NewQName("s", "deep_children_1"))
+		commonDef(appdef.NewQName("s", "very_deep_children_1"))
 
 		commonFields := []IResultField{resultField{field: "name"}}
-
-		appDef := amock.NewAppDef(
-			commonDef(appdef.NewQName("", "root")),
-			commonDef(appdef.NewQName("f", "first-children-1")),
-			commonDef(appdef.NewQName("f", "deep-children-1")),
-			commonDef(appdef.NewQName("f", "very-deep-children-1")),
-			commonDef(appdef.NewQName("s", "first-children-2")),
-			commonDef(appdef.NewQName("s", "deep-children-1")),
-			commonDef(appdef.NewQName("s", "very-deep-children-1")),
-		)
 
 		elements := []IElement{
 			element{
@@ -44,65 +42,65 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 				fields: commonFields,
 			},
 			element{
-				path:   path{"first-children-1"},
+				path:   path{"first_children_1"},
 				fields: commonFields,
 			},
 			element{
-				path:   path{"first-children-1", "deep-children-1"},
+				path:   path{"first_children_1", "deep_children_1"},
 				fields: commonFields,
 			},
 			element{
-				path:   path{"first-children-1", "deep-children-1", "very-deep-children-1"},
+				path:   path{"first_children_1", "deep_children_1", "very_deep_children_1"},
 				fields: commonFields,
 			},
 			element{
-				path:   path{"first-children-2"},
+				path:   path{"first_children_2"},
 				fields: commonFields,
 			},
 			element{
-				path:   path{"first-children-2", "deep-children-1"},
+				path:   path{"first_children_2", "deep_children_1"},
 				fields: commonFields,
 			},
 			element{
-				path:   path{"first-children-2", "deep-children-1", "very-deep-children-1"},
+				path:   path{"first_children_2", "deep_children_1", "very_deep_children_1"},
 				fields: commonFields,
 			},
 		}
 
 		work := func() pipeline.IWorkpiece {
 			o := &coreutils.TestObject{
-				Name:    appdef.NewQName("", "root"),
+				Name:    appdef.NewQName("_", "root"),
 				Id:      istructs.RecordID(1),
 				Parent_: istructs.NullRecordID,
 				Data: map[string]interface{}{
 					"name": "ROOT",
 				},
 				Containers_: map[string][]*coreutils.TestObject{
-					"first-children-1": {
+					"first_children_1": {
 						{
-							Name:    appdef.NewQName("f", "first-children-1"),
+							Name:    appdef.NewQName("f", "first_children_1"),
 							Id:      istructs.RecordID(101),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
-								"name": "FIRST-CHILDREN-1-101",
+								"name": "FIRST_CHILDREN_1_101",
 							},
 							Containers_: map[string][]*coreutils.TestObject{
-								"deep-children-1": {
+								"deep_children_1": {
 									{
-										Name:    appdef.NewQName("f", "deep-children-1"),
+										Name:    appdef.NewQName("f", "deep_children_1"),
 										Id:      istructs.RecordID(201),
 										Parent_: istructs.RecordID(101),
 										Data: map[string]interface{}{
-											"name": "DEEP-CHILDREN-1-201",
+											"name": "DEEP_CHILDREN_1_201",
 										},
 										Containers_: map[string][]*coreutils.TestObject{
-											"very-deep-children-1": {
+											"very_deep_children_1": {
 												{
-													Name:    appdef.NewQName("f", "very-deep-children-1"),
+													Name:    appdef.NewQName("f", "very_deep_children_1"),
 													Id:      istructs.RecordID(301),
 													Parent_: istructs.RecordID(201),
 													Data: map[string]interface{}{
-														"name": "VERY-DEEP-CHILDREN-1-301",
+														"name": "VERY_DEEP_CHILDREN_1_301",
 													},
 												},
 											},
@@ -112,47 +110,47 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 							},
 						},
 						{
-							Name:    appdef.NewQName("f", "first-children-1"),
+							Name:    appdef.NewQName("f", "first_children_1"),
 							Id:      istructs.RecordID(102),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
-								"name": "FIRST-CHILDREN-1-102",
+								"name": "FIRST_CHILDREN_1_102",
 							},
 						},
 					},
-					"first-children-2": {
+					"first_children_2": {
 						{
-							Name:    appdef.NewQName("s", "first-children-2"),
+							Name:    appdef.NewQName("s", "first_children_2"),
 							Id:      istructs.RecordID(401),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
-								"name": "FIRST-CHILDREN-2-401",
+								"name": "FIRST_CHILDREN_2_401",
 							},
 							Containers_: map[string][]*coreutils.TestObject{
-								"deep-children-1": {
+								"deep_children_1": {
 									{
-										Name:    appdef.NewQName("s", "deep-children-1"),
+										Name:    appdef.NewQName("s", "deep_children_1"),
 										Id:      istructs.RecordID(501),
 										Parent_: istructs.RecordID(401),
 										Data: map[string]interface{}{
-											"name": "DEEP-CHILDREN-1-501",
+											"name": "DEEP_CHILDREN_1_501",
 										},
 										Containers_: map[string][]*coreutils.TestObject{
-											"very-deep-children-1": {
+											"very_deep_children_1": {
 												{
-													Name:    appdef.NewQName("s", "very-deep-children-1"),
+													Name:    appdef.NewQName("s", "very_deep_children_1"),
 													Id:      istructs.RecordID(601),
 													Parent_: istructs.RecordID(501),
 													Data: map[string]interface{}{
-														"name": "VERY-DEEP-CHILDREN-1-601",
+														"name": "VERY_DEEP_CHILDREN_1_601",
 													},
 												},
 												{
-													Name:    appdef.NewQName("s", "very-deep-children-1"),
+													Name:    appdef.NewQName("s", "very_deep_children_1"),
 													Id:      istructs.RecordID(602),
 													Parent_: istructs.RecordID(501),
 													Data: map[string]interface{}{
-														"name": "VERY-DEEP-CHILDREN-1-602",
+														"name": "VERY_DEEP_CHILDREN_1_602",
 													},
 												},
 											},
@@ -169,12 +167,12 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 				outputRow: &outputRow{
 					keyToIdx: map[string]int{
 						rootDocument:                       0,
-						"first-children-1":                 1,
-						"first-children-1/deep-children-1": 2,
-						"first-children-1/deep-children-1/very-deep-children-1": 3,
-						"first-children-2":                                      4,
-						"first-children-2/deep-children-1":                      5,
-						"first-children-2/deep-children-1/very-deep-children-1": 6,
+						"first_children_1":                 1,
+						"first_children_1/deep_children_1": 2,
+						"first_children_1/deep_children_1/very_deep_children_1": 3,
+						"first_children_2":                                      4,
+						"first_children_2/deep_children_1":                      5,
+						"first_children_2/deep_children_1/very_deep_children_1": 6,
 					},
 					values: make([]interface{}, 7),
 				},
@@ -183,7 +181,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 
 		operator := &ResultFieldsOperator{
 			elements:   elements,
-			rootFields: newFieldsKinds(commonDef(appdef.NullQName)),
+			rootFields: newFieldsKinds(commonDef(appdef.NewQName("test", "root"))),
 			fieldsDefs: newFieldsDefs(appDef),
 			metrics:    &testMetrics{},
 		}
@@ -193,20 +191,20 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 		require.NoError(err)
 		require.Len(outWork.(IWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow), 1)
 		require.Equal("ROOT", outWork.(IWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Value("name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first-children-1").([]IOutputRow), 2)
-		require.Equal("FIRST-CHILDREN-1-101", outWork.(IWorkpiece).OutputRow().Value("first-children-1").([]IOutputRow)[0].Value("name"))
-		require.Equal("FIRST-CHILDREN-1-102", outWork.(IWorkpiece).OutputRow().Value("first-children-1").([]IOutputRow)[1].Value("name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first-children-1/deep-children-1").([]IOutputRow), 1)
-		require.Equal("DEEP-CHILDREN-1-201", outWork.(IWorkpiece).OutputRow().Value("first-children-1/deep-children-1").([]IOutputRow)[0].Value("name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first-children-1/deep-children-1/very-deep-children-1").([]IOutputRow), 1)
-		require.Equal("VERY-DEEP-CHILDREN-1-301", outWork.(IWorkpiece).OutputRow().Value("first-children-1/deep-children-1/very-deep-children-1").([]IOutputRow)[0].Value("name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first-children-2").([]IOutputRow), 1)
-		require.Equal("FIRST-CHILDREN-2-401", outWork.(IWorkpiece).OutputRow().Value("first-children-2").([]IOutputRow)[0].Value("name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first-children-2/deep-children-1").([]IOutputRow), 1)
-		require.Equal("DEEP-CHILDREN-1-501", outWork.(IWorkpiece).OutputRow().Value("first-children-2/deep-children-1").([]IOutputRow)[0].Value("name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first-children-2/deep-children-1/very-deep-children-1").([]IOutputRow), 2)
-		require.Equal("VERY-DEEP-CHILDREN-1-601", outWork.(IWorkpiece).OutputRow().Value("first-children-2/deep-children-1/very-deep-children-1").([]IOutputRow)[0].Value("name"))
-		require.Equal("VERY-DEEP-CHILDREN-1-602", outWork.(IWorkpiece).OutputRow().Value("first-children-2/deep-children-1/very-deep-children-1").([]IOutputRow)[1].Value("name"))
+		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_1").([]IOutputRow), 2)
+		require.Equal("FIRST_CHILDREN_1_101", outWork.(IWorkpiece).OutputRow().Value("first_children_1").([]IOutputRow)[0].Value("name"))
+		require.Equal("FIRST_CHILDREN_1_102", outWork.(IWorkpiece).OutputRow().Value("first_children_1").([]IOutputRow)[1].Value("name"))
+		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1").([]IOutputRow), 1)
+		require.Equal("DEEP_CHILDREN_1_201", outWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1").([]IOutputRow)[0].Value("name"))
+		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1/very_deep_children_1").([]IOutputRow), 1)
+		require.Equal("VERY_DEEP_CHILDREN_1_301", outWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1/very_deep_children_1").([]IOutputRow)[0].Value("name"))
+		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_2").([]IOutputRow), 1)
+		require.Equal("FIRST_CHILDREN_2_401", outWork.(IWorkpiece).OutputRow().Value("first_children_2").([]IOutputRow)[0].Value("name"))
+		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1").([]IOutputRow), 1)
+		require.Equal("DEEP_CHILDREN_1_501", outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1").([]IOutputRow)[0].Value("name"))
+		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1/very_deep_children_1").([]IOutputRow), 2)
+		require.Equal("VERY_DEEP_CHILDREN_1_601", outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1/very_deep_children_1").([]IOutputRow)[0].Value("name"))
+		require.Equal("VERY_DEEP_CHILDREN_1_602", outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1/very_deep_children_1").([]IOutputRow)[1].Value("name"))
 	})
 	t.Run("Should handle ctx error during row fill with result fields", func(t *testing.T) {
 		require := require.New(t)

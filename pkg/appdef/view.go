@@ -5,139 +5,208 @@
 
 package appdef
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
-// Implements IViewBuilder interface
-type viewBuilder struct {
-	cache *appDef
-	name  QName
-	def,
-	pkDef,
-	ccDef,
-	valDef IDefBuilder
+// # Implements:
+//   - IView
+//   - IViewBuilder
+type view struct {
+	def
+	containers
+	pkey  *viewPKey
+	ccols *viewCCols
+	key   *viewKey
+	value *viewValue
 }
 
-func newViewBuilder(cache *appDef, name QName) viewBuilder {
-	view := viewBuilder{
-		cache:  cache,
-		name:   name,
-		def:    cache.addDef(name, DefKind_ViewRecord),
-		pkDef:  cache.addDef(ViewPartitionKeyDefName(name), DefKind_ViewRecord_PartitionKey),
-		ccDef:  cache.addDef(ViewClusteringColumnsDefName(name), DefKind_ViewRecord_ClusteringColumns),
-		valDef: cache.addDef(ViewValueDefName(name), DefKind_ViewRecord_Value),
-	}
-	view.def.
-		AddContainer(SystemContainer_ViewPartitionKey, view.pkDef.QName(), 1, 1).
-		AddContainer(SystemContainer_ViewClusteringCols, view.ccDef.QName(), 1, 1).
-		AddContainer(SystemContainer_ViewValue, view.valDef.QName(), 1, 1)
+func newView(app *appDef, name QName) *view {
+	v := &view{def: makeDef(app, name, DefKind_ViewRecord)}
+	v.containers = makeContainers(v)
 
-	return view
+	v.pkey = newViewPKey(app, ViewPartitionKeyDefName(name))
+	v.ccols = newViewCCols(app, ViewClusteringColumnsDefName(name))
+
+	v.key = newViewKey(app, ViewKeyDefName(name))
+	v.key.
+		AddContainer(SystemContainer_ViewPartitionKey, v.pkey.QName(), 1, 1).
+		AddContainer(SystemContainer_ViewClusteringCols, v.ccols.QName(), 1, 1)
+
+	v.value = newViewValue(app, ViewValueDefName(name))
+
+	v.
+		AddContainer(SystemContainer_ViewPartitionKey, v.pkey.QName(), 1, 1).
+		AddContainer(SystemContainer_ViewClusteringCols, v.ccols.QName(), 1, 1).
+		AddContainer(SystemContainer_ViewKey, v.key.QName(), 1, 1).
+		AddContainer(SystemContainer_ViewValue, v.value.QName(), 1, 1)
+
+	app.appendDef(v)
+
+	return v
 }
 
-func (view *viewBuilder) AddPartField(name string, kind DataKind) IViewBuilder {
-	view.panicIfFieldDuplication(name)
-	view.pkDef.AddField(name, kind, true)
-	return view
+func (v *view) AddPartField(name string, kind DataKind) IViewBuilder {
+	v.panicIfFieldDuplication(name)
+	v.pkey.AddField(name, kind, true)
+	v.key.AddField(name, kind, true)
+	return v
 }
 
-func (view *viewBuilder) AddClustColumn(name string, kind DataKind) IViewBuilder {
-	view.panicIfFieldDuplication(name)
-	view.ccDef.AddField(name, kind, false)
-	return view
+func (v *view) AddClustColumn(name string, kind DataKind) IViewBuilder {
+	v.panicIfFieldDuplication(name)
+	v.ccols.AddField(name, kind, false)
+	v.key.AddField(name, kind, false)
+	return v
 }
 
-func (view *viewBuilder) AddValueField(name string, kind DataKind, required bool) IViewBuilder {
-	view.panicIfFieldDuplication(name)
-	view.ValueDef().AddField(name, kind, required)
-	return view
+func (v *view) AddValueField(name string, kind DataKind, required bool) IViewBuilder {
+	v.panicIfFieldDuplication(name)
+	v.value.AddField(name, kind, required)
+	return v
 }
 
-func (view *viewBuilder) Def() IDefBuilder {
-	return view.def
+func (v *view) Key() IViewKey {
+	return v.key
 }
 
-func (view *viewBuilder) Name() QName {
-	return view.name
+func (v *view) PartKey() IPartKey {
+	return v.pkey
 }
 
-func (view *viewBuilder) PartKeyDef() IDefBuilder {
-	return view.pkDef
+func (v *view) ClustCols() IClustCols {
+	return v.ccols
 }
 
-func (view *viewBuilder) ClustColsDef() IDefBuilder {
-	return view.ccDef
+func (v *view) Value() IViewValue {
+	return v.value
 }
 
-func (view *viewBuilder) ValueDef() IDefBuilder {
-	return view.valDef
-}
-
-func (view *viewBuilder) panicIfFieldDuplication(name string) {
-	check := func(def IDef) {
-		if def.Field(name) != nil {
-			panic(fmt.Errorf("field «%s» already exists in view «%v» %v: %w", name, view.Name(), def.Kind(), ErrNameUniqueViolation))
+func (v *view) panicIfFieldDuplication(name string) {
+	check := func(f IFields) {
+		if fld := f.Field(name); fld != nil {
+			panic(fmt.Errorf("field «%s» already exists in view «%v»: %w", name, v.QName(), ErrNameUniqueViolation))
 		}
 	}
 
-	check(view.PartKeyDef())
-	check(view.ClustColsDef())
-	check(view.ValueDef())
+	check(v.PartKey())
+	check(v.ClustCols())
+	check(v.Value())
 }
 
-func (app *appDef) prepareViewFullKeyDef(def IDef) {
-	pkDef := def.ContainerDef(SystemContainer_ViewPartitionKey)
-	ccDef := def.ContainerDef(SystemContainer_ViewClusteringCols)
+// # Implements:
+//   - IPartKey
+type viewPKey struct {
+	def
+	fields
+}
 
-	fkName := ViewFullKeyColumnsDefName(def.QName())
-	var fkDef IDefBuilder
-	fkDef, ok := app.defs[fkName]
+func newViewPKey(app *appDef, name QName) *viewPKey {
+	pKey := &viewPKey{def: makeDef(app, name, DefKind_ViewRecord_PartitionKey)}
+	pKey.fields = makeFields(pKey)
+	app.appendDef(pKey)
+	return pKey
+}
 
-	if ok {
-		if (fkDef.Kind() == DefKind_ViewRecord_ClusteringColumns) &&
-			(fkDef.FieldCount() == pkDef.FieldCount()+ccDef.FieldCount()) {
-			return // already exists definition is ok
-		}
-		app.remove(fkName)
+// Validates view partition key
+func (pk *viewPKey) Validate() error {
+	if pk.FieldCount() == 0 {
+		return fmt.Errorf("%v: view partition key can not to be empty: %w", pk.QName(), ErrFieldsMissed)
+	}
+	return nil
+}
+
+// # Implements:
+//   - IClustCols
+type viewCCols struct {
+	def
+	fields
+}
+
+func newViewCCols(app *appDef, name QName) *viewCCols {
+	cc := &viewCCols{def: makeDef(app, name, DefKind_ViewRecord_ClusteringColumns)}
+	cc.fields = makeFields(cc)
+	app.appendDef(cc)
+	return cc
+}
+
+// Validates view clustering columns
+func (cc *viewCCols) Validate() (err error) {
+	if cc.FieldCount() == 0 {
+		return fmt.Errorf("%v: view clustering columns can not to be empty: %w", cc.QName(), ErrFieldsMissed)
 	}
 
-	// recreate full key definition fields
-	fkDef = app.addDef(fkName, DefKind_ViewRecord_ClusteringColumns)
-
-	pkDef.Fields(func(f IField) {
-		fkDef.AddField(f.Name(), f.DataKind(), true)
+	idx, cnt := 0, cc.FieldCount()
+	cc.Fields(func(fld IField) {
+		idx++
+		if idx == cnt {
+			return // last field may be any kind
+		}
+		if !fld.IsFixedWidth() {
+			err = errors.Join(err,
+				fmt.Errorf("%v: only last view clustering column field can be variable length; not last field «%s» has variable length type «%v»: %w", cc.QName(), fld.Name(), fld.DataKind(), ErrInvalidDataKind))
+		}
 	})
-	ccDef.Fields(func(f IField) {
-		fkDef.AddField(f.Name(), f.DataKind(), false)
-	})
 
-	app.changed()
+	return err
+}
+
+// # Implements:
+//   - IViewKey
+type viewKey struct {
+	def
+	fields
+	containers
+}
+
+func newViewKey(app *appDef, name QName) *viewKey {
+	key := &viewKey{def: makeDef(app, name, DefKind_ViewRecord_Key)}
+	key.fields = makeFields(key)
+	key.containers = makeContainers(key)
+	app.appendDef(key)
+	return key
+}
+
+// # Implements:
+//   - IViewValue
+type viewValue struct {
+	def
+	fields
+}
+
+func newViewValue(app *appDef, name QName) *viewValue {
+	val := &viewValue{def: makeDef(app, name, DefKind_ViewRecord_Value)}
+	val.fields = makeFields(val)
+	app.appendDef(val)
+	return val
 }
 
 // Returns partition key definition name for specified view
-func ViewPartitionKeyDefName(view QName) QName {
+func ViewPartitionKeyDefName(viewName QName) QName {
 	const suffix = "_PartitionKey"
-	return suffixedQName(view, suffix)
+	return suffixedQName(viewName, suffix)
 }
 
 // Returns clustering columns definition name for specified view
-func ViewClusteringColumnsDefName(view QName) QName {
+func ViewClusteringColumnsDefName(viewName QName) QName {
 	const suffix = "_ClusteringColumns"
-	return suffixedQName(view, suffix)
+	return suffixedQName(viewName, suffix)
 }
 
 // Returns full key definition name for specified view
-func ViewFullKeyColumnsDefName(view QName) QName {
+func ViewKeyDefName(viewName QName) QName {
 	const suffix = "_FullKey"
-	return suffixedQName(view, suffix)
+	return suffixedQName(viewName, suffix)
 }
 
 // Returns value definition name for specified view
-func ViewValueDefName(view QName) QName {
+func ViewValueDefName(viewName QName) QName {
 	const suffix = "_Value"
-	return suffixedQName(view, suffix)
+	return suffixedQName(viewName, suffix)
 }
 
 // Appends suffix to QName entity name and returns new QName
-func suffixedQName(q QName, suffix string) QName {
-	return NewQName(q.Pkg(), q.Entity()+suffix)
+func suffixedQName(name QName, suffix string) QName {
+	return NewQName(name.Pkg(), name.Entity()+suffix)
 }

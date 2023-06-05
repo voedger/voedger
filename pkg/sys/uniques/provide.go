@@ -15,22 +15,25 @@ var QNameViewUniques = appdef.NewQName(appdef.SysPackage, "Uniques")
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	projectors.ProvideViewDef(appDefBuilder, QNameViewUniques, func(b appdef.IViewBuilder) {
-		b.PartKeyDef().AddField(field_QName, appdef.DataKind_QName, true)
-		b.PartKeyDef().AddField(field_ValuesHash, appdef.DataKind_int64, true)
-		b.ClustColsDef().AddField(field_Values, appdef.DataKind_bytes, true)
-		b.ValueDef().AddField(field_ID, appdef.DataKind_RecordID, true)
+		b.AddPartField(field_QName, appdef.DataKind_QName).
+			AddPartField(field_ValuesHash, appdef.DataKind_int64).
+			AddClustColumn(field_Values, appdef.DataKind_bytes).
+			AddValueField(field_ID, appdef.DataKind_RecordID, true)
 	})
 	cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: QNameViewUniques,
-			Func: provideUniquesProjectorFunc(cfg.Uniques, appDefBuilder),
+			Func: provideUniquesProjectorFunc(appDefBuilder),
 		}
 	})
 	cfg.AddCUDValidators(istructs.CUDValidator{
 		MatchFunc: func(qName appdef.QName) bool {
-			return len(cfg.Uniques.GetAll(qName)) > 0
+			if uniques, ok := appDefBuilder.Def(qName).(appdef.IUniques); ok {
+				return uniques.UniqueField() != nil
+			}
+			return false
 		},
-		Validate: provideCUDUniqueUpdateDenyValidator(cfg.Uniques),
+		Validate: provideCUDUniqueUpdateDenyValidator(),
 	})
-	cfg.AddEventValidators(provideEventUniqueValidator(cfg.Uniques))
+	cfg.AddEventValidators(provideEventUniqueValidator())
 }

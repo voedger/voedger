@@ -45,6 +45,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/collection"
 	"github.com/voedger/voedger/pkg/sys/invite"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
@@ -54,6 +55,31 @@ import (
 func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	voedgerVM = &VoedgerVM{vvmCtxCancel: cancel}
+	vvmCfg.addProcessorChannel(
+		// command processors
+		// each restaurant must go to the same cmd proc -> one single cmd processor behind the each command service channel
+		iprocbusmem.ChannelGroup{
+			NumChannels:       int(vvmCfg.NumCommandProcessors),
+			ChannelBufferSize: int(vvmCfg.NumCommandProcessors),
+		},
+		ProcessorChannel_Command,
+	)
+
+	vvmCfg.addProcessorChannel(
+		// query processors
+		// all query processors sits on a single channel because any restaurant could be served by any query proc
+		iprocbusmem.ChannelGroup{
+			NumChannels:       1,
+			ChannelBufferSize: 0,
+		},
+		ProcessorChannel_Query,
+	)
+	vvmCfg.Quotas = in10n.Quotas{
+		Channels:               int(DefaultQuotasChannelsFactor * vvmCfg.NumCommandProcessors),
+		ChannelsPerSubject:     DefaultQuotasChannelsPerSubject,
+		Subsciptions:           int(DefaultQuotasSubscriptionsFactor * vvmCfg.NumCommandProcessors),
+		SubsciptionsPerSubject: DefaultQuotasSubscriptionsPerSubject,
+	}
 	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(ctx, vvmCfg, vvmIdx)
 	if err != nil {
 		return nil, err
@@ -134,7 +160,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
 			"NumQueryProcessors",
-			"PartitionsCount",
 			"TimeFunc",
 			"Quotas",
 			"BlobberServiceChannels",
@@ -164,7 +189,7 @@ func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 	return func(requestContext context.Context, name string, as istructs.IAppStructs, wsid istructs.WSID) ([]appdef.QName, error) {
 		kb := as.ViewRecords().KeyBuilder(collection.QNameViewCollection)
 		kb.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
-		kb.PutQName(collection.Field_DocQName, invite.QNameCDocSubject)
+		kb.PutQName(collection.Field_DocQName, sysshared.QNameCDocSubject)
 		res := []appdef.QName{}
 		err := as.ViewRecords().Read(requestContext, wsid, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 			record := value.AsRecord(collection.Field_Record)
@@ -500,10 +525,10 @@ func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.Actual
 	}
 }
 
-func provideAppServiceFactory(apf AppPartitionFactory, pa AppPartitionsCount) AppServiceFactory {
+func provideAppServiceFactory(apf AppPartitionFactory, cpCount CommandProcessorsCount) AppServiceFactory {
 	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories) pipeline.ISyncOperator {
-		forks := make([]pipeline.ForkOperatorOptionFunc, pa)
-		for i := 0; i < int(pa); i++ {
+		forks := make([]pipeline.ForkOperatorOptionFunc, cpCount)
+		for i := 0; i < int(cpCount); i++ {
 			forks[i] = pipeline.ForkBranch(apf(vvmCtx, appQName, asyncProjectorFactories, istructs.PartitionID(i)))
 		}
 		return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)

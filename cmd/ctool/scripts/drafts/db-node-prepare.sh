@@ -11,7 +11,7 @@ set -euo pipefail
 set -x
 
 if [[ $# -ne 1 ]]; then
-  echo "Usage: $0 <node ip address>"
+  echo "Usage: $0 <DBNode>"
   exit 1
 fi
 

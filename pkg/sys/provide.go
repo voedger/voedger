@@ -9,7 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
 	"github.com/voedger/voedger/pkg/sys/authnz/workspace"
@@ -28,7 +28,7 @@ import (
 )
 
 func Provide(appAPI apps.AppAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, smtpCfg smtp.Cfg,
-	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc) {
+	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, cpCount vvm.CommandProcessorsCount) {
 	blobber.ProvideBlobberCmds(cfg, appDefBuilder)
 	collection.ProvideCollectionFunc(cfg, appDefBuilder)
 	collection.ProvideCDocFunc(cfg, appDefBuilder)
@@ -41,12 +41,13 @@ func Provide(appAPI apps.AppAPI, cfg *istructsmem.AppConfigType, appDefBuilder a
 	builtin.ProvideQryEcho(cfg, appDefBuilder)
 	builtin.ProvideQryGRCount(cfg, appDefBuilder)
 	workspace.Provide(cfg, appDefBuilder, appAPI.IAppStructsProvider, appAPI.TimeFunc)
-	sqlquery.Provide(cfg, appDefBuilder, appAPI.IAppStructsProvider, vvm.NumCommandProcessors)
+	sqlquery.Provide(cfg, appDefBuilder, appAPI.IAppStructsProvider, int(cpCount))
 	projectors.ProvideOffsetsDef(appDefBuilder)
-	commandprocessor.ProvideJSONFuncParamsDef(appDefBuilder)
+	processors.ProvideJSONFuncParamsDef(appDefBuilder)
 	verifier.Provide(cfg, appDefBuilder, itokens, federation, asp)
 	signupin.ProvideQryRefreshPrincipalToken(cfg, appDefBuilder, itokens)
 	signupin.ProvideCDocLogin(appDefBuilder)
+	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, vvmAPI.IAppTokensFactory)
 	invite.Provide(cfg, appDefBuilder, timeFunc)
 	cfg.AddAsyncProjectors(
 		journal.ProvideWLogDatesAsyncProjectorFactory(),

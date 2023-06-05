@@ -2,7 +2,7 @@ global:
   scrape_interval:     30s # By default, scrape targets every 1 minute.
   evaluation_interval: 30s # By default, evaluate rules every 1 minute.
   external_labels:
-     node: {mon_label} # mon1 for example. Use label as node.label.type in swarm
+     node: {{.Label}}  # mon1 for example. Use label as node.label.type in swarm
   #scrape_timeout:     10s # By default, a scrape request times out in 10 seconds.
   
 # Alertmanager configuration
@@ -14,8 +14,8 @@ alerting:
   alertmanagers:
     - static_configs:
       - targets:
-        - {se1}:9093 # during deploy replace with real ip address of alert manager
-        - {se2}:9093 # during deploy replace with real ip address of alert manager
+        - {{.AppNode1}}:9093 # during deploy replace with real ip address of alert manager
+        - {{.AppNode2}}:9093 # during deploy replace with real ip address of alert manager
 
 # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
 rule_files:
@@ -29,8 +29,8 @@ scrape_configs:
     static_configs:
       # Execute query expressions prometheus_abc_xyz
       - targets: 
-        - {se1}:9090
-        - {se2}:9090
+        - {{.AppNode1}}:9090
+        - {{.AppNode2}}:9090
 
   - job_name: 'node-exporter'
     scrape_interval: 10s
@@ -38,14 +38,22 @@ scrape_configs:
       # node-exporter:9100 where node-exporter is service name in docker-compose.yml 
       # Execute non-prometheus_abc_xyz query expressions, e.g., node_load1 etc.
       - targets: 
-        - {se1}:9100
-        - {se2}:9100
+        - {{.AppNode1}}:9100
+        - {{.AppNode2}}:9100
 
   - job_name: 'scylla-cluster'
     scrape_interval: 10s
     static_configs:
       # Monitor scylla nodes with embedded scylla exporter
       - targets: 
-        - {scylla1}:9180
-        - {scylla2}:9180
-        - {scylla3}:9180
+        - {{.DBNode1}}:9180
+        - {{.DBNode2}}:9180
+        - {{.DBNode3}}:9180
+
+  - job_name: 'cadvisor'
+    scrape_interval: 10s
+    static_configs:
+      # Monitor swarm nodes and services
+      - targets: 
+        - {{.AppNode1}}:8080
+        - {{.AppNode2}}:8080

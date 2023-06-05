@@ -17,7 +17,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	provideQryInitiateEmailVerification(cfg, appDefBuilder, itokens, asp, federation)
 	provideQryIssueVerifiedValueToken(cfg, appDefBuilder, itokens, asp)
 	provideCmdSendEmailVerificationCode(cfg, appDefBuilder)
-	appDefBuilder.AddStruct(qNameAPSendEmailVerificationCode, appdef.DefKind_Object)
+	appDefBuilder.AddObject(qNameAPSendEmailVerificationCode)
 }
 
 func ProvideAsyncProjectorFactory_SendEmailVerificationCode(federation coreutils.IFederation, smtpCfg smtp.Cfg) istructs.ProjectorFactory {

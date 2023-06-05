@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	amock "github.com/voedger/voedger/pkg/appdef/mock"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -29,7 +28,7 @@ func TestBundledHostState_BasicUsage(t *testing.T) {
 		//Create key
 		kb, err := state.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
 		require.NoError(err)
-		kb.PutString("pkFld", "pkVal")
+		kb.PutInt64("pkFld", int64(64))
 
 		// Create new value
 		eb, err := intents.NewValue(kb)
@@ -67,7 +66,7 @@ func mockedAppStructs() istructs.IAppStructs {
 		On("PutInt64", ColOffset, int64(46)).Once()
 	mkb := &mockKeyBuilder{}
 	mkb.
-		On("PutString", "pkFld", "pkVal")
+		On("PutInt64", "pkFld", int64(64))
 
 	viewRecords := &mockViewRecords{}
 	viewRecords.
@@ -76,14 +75,13 @@ func mockedAppStructs() istructs.IAppStructs {
 		On("NewValueBuilder", testViewRecordQName1).Return(mvb2).Once().
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
 
-	view := amock.NewView(testViewRecordQName1)
+	appDef := appdef.New()
+	view := appDef.AddView(testViewRecordQName1)
 	view.
-		AddPartField("pkFld", appdef.DataKind_string).
+		AddPartField("pkFld", appdef.DataKind_int64).
+		AddClustColumn("ccFld", appdef.DataKind_string).
 		AddValueField("vFld", appdef.DataKind_int64, true).
 		AddValueField(ColOffset, appdef.DataKind_int64, true)
-
-	appDef := amock.NewAppDef()
-	appDef.AddView(view)
 
 	appStructs := &mockAppStructs{}
 	appStructs.
@@ -118,7 +116,7 @@ func TestAsyncActualizerState_BasicUsage_Old(t *testing.T) {
 		On("PutInt64", ColOffset, int64(46))
 	mkb := &mockKeyBuilder{}
 	mkb.
-		On("PutString", "pkFld", "pkVal").
+		On("PutInt64", "pkFld", int64(64)).
 		On("Equals", mock.Anything).Return(true)
 	viewRecords := &mockViewRecords{}
 	viewRecords.
@@ -137,7 +135,7 @@ func TestAsyncActualizerState_BasicUsage_Old(t *testing.T) {
 	//Create key
 	kb, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
 	require.NoError(err)
-	kb.PutString("pkFld", "pkVal")
+	kb.PutInt64("pkFld", 64)
 
 	//Create new value and put it to bundle
 	eb, err := s.NewValue(kb)
@@ -437,9 +435,9 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 	t.Run("Should flush bundle before read", func(t *testing.T) {
 		require := require.New(t)
 		touched := false
-		appDef := amock.NewAppDef(
-			amock.NewDef(testViewRecordQName1, appdef.DefKind_null), // to return NullDef
-		)
+
+		appDef := appdef.New() // Def() must return NullDef
+
 		viewRecords := &mockViewRecords{}
 		viewRecords.
 			On("KeyBuilder", testViewRecordQName1).Return(&nilKeyBuilder{}).
@@ -485,9 +483,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 	t.Run("Should return error when error occurred on apply batch", func(t *testing.T) {
 		require := require.New(t)
 		touched := false
-		appDef := amock.NewAppDef(
-			amock.NewDef(testViewRecordQName1, appdef.DefKind_null), // to return NullDef
-		)
+		appDef := appdef.New() // Def() must return NullDef
 		viewRecords := &mockViewRecords{}
 		viewRecords.
 			On("KeyBuilder", testViewRecordQName1).Return(&nilKeyBuilder{}).

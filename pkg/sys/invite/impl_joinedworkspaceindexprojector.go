@@ -8,12 +8,13 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 )
 
 func ProvideSyncProjectorJoinedWorkspaceIndexFactory() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         qNameViewJoinedWorkspaceIndex,
+			Name:         QNameViewJoinedWorkspaceIndex,
 			EventsFilter: []appdef.QName{qNameCmdCreateJoinedWorkspace},
 			Func:         joinedWorkspaceIndexProjector,
 		}
@@ -22,16 +23,16 @@ func ProvideSyncProjectorJoinedWorkspaceIndexFactory() istructs.ProjectorFactory
 
 var joinedWorkspaceIndexProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return event.CUDs(func(rec istructs.ICUDRow) (err error) {
-		if rec.QName() != qNameCDocJoinedWorkspace {
+		if rec.QName() != sysshared.QNameCDocJoinedWorkspace {
 			return
 		}
 
-		skbViewJoinedWorkspaceIndex, err := s.KeyBuilder(state.ViewRecordsStorage, qNameViewJoinedWorkspaceIndex)
+		skbViewJoinedWorkspaceIndex, err := s.KeyBuilder(state.ViewRecordsStorage, QNameViewJoinedWorkspaceIndex)
 		if err != nil {
 			return err
 		}
 		skbViewJoinedWorkspaceIndex.PutInt32(field_Dummy, value_Dummy_Two)
-		skbViewJoinedWorkspaceIndex.PutInt64(field_InvitingWorkspaceWSID, rec.AsInt64(field_InvitingWorkspaceWSID))
+		skbViewJoinedWorkspaceIndex.PutInt64(Field_InvitingWorkspaceWSID, rec.AsInt64(Field_InvitingWorkspaceWSID))
 
 		svbViewJoinedWorkspaceIndex, err := intents.NewValue(skbViewJoinedWorkspaceIndex)
 		if err != nil {

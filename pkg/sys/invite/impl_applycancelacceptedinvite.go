@@ -15,6 +15,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 )
 
 func ProvideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc func() time.Time, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
@@ -39,7 +40,7 @@ func applyCancelAcceptedInvite(timeFunc func() time.Time, federation coreutils.I
 			return
 		}
 
-		skbCDocSubject, err := s.KeyBuilder(state.RecordsStorage, QNameCDocSubject)
+		skbCDocSubject, err := s.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocSubject)
 		if err != nil {
 			return
 		}

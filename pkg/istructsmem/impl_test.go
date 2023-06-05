@@ -19,24 +19,24 @@ import (
 )
 
 /* Пояснения к тесту. */
-// Некто, представившийся как «Карлосон 哇"呀呀» совершал покупку в супермаркете № 1234.
+// Некто, представившийся как «Карлсон 哇"呀呀» совершал покупку в супермаркете № 1234.
 // Пока он выкладывал покупки на кассе самообслуживания № 762, автоматические средства магазина сфотографировали его,
 // вычислили его рост (1,75 м) и приблизительный возраст (33 г.).
 // Все эти данные вместе с данными о содержимом его корзины (печенье и варенье) попали к нам в testDataType. Наша задача:
 // — сформировать новое sync событие c командой «test.sales»
 // — записать его в журнал PLog по смещению 10000 и в WLog по смещению 1000
 // — записать характеристики этого покупателя в таблицу «test.photos» в новую запись
-// — вычитать данные из журналов PLog и WLog, из таблицы и из вьюхи фотографий
+// — вычитать данные из журналов PLog и WLog, из таблицы и из view фотографий
 //
 /* Test scenario. */
-// Someone who introduced himself as «Carloson 哇" 呀呀» was making a purchase at Supermarket # 1234.
+// Someone who introduced himself as «Carlson 哇" 呀呀» was making a purchase at Supermarket # 1234.
 // While he was uploading purchases at self-checkout # 762, the store's automated tools took a picture of him,
 // calculated his height (1.75 m) and approximate age (33 years).
 // All this data, along with the data on the contents of his basket (cookies and jam), came to us in testDataType. Our task:
 // - form new sync event width command «test.sales»
 // - write it to PLog at offset 10001 and in WLog at offset 1001
 // - write the characteristics of this customer to the «test.photos» table into a new record
-// - read the data from the PLog and WLog jounals, and from the «test.photo» table and from the «main.photoView» view
+// - read the data from the PLog and WLog journals, and from the «test.photo» table and from the «main.photoView» view
 //
 
 func TestBasicUsage(t *testing.T) {
@@ -46,29 +46,30 @@ func TestBasicUsage(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		bld := appdef.New()
 
-		saleParamsDef := bld.AddStruct(appdef.NewQName("test", "Sale"), appdef.DefKind_ODoc)
+		saleParamsDef := bld.AddODoc(appdef.NewQName("test", "Sale"))
 		saleParamsDef.
 			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
 			AddField("Height", appdef.DataKind_float32, false).
 			AddField("isHuman", appdef.DataKind_bool, false).
-			AddField("Photo", appdef.DataKind_bytes, false).
+			AddField("Photo", appdef.DataKind_bytes, false)
+		saleParamsDef.
 			AddContainer("Basket", appdef.NewQName("test", "Basket"), 1, 1)
 
-		basketDef := bld.AddStruct(appdef.NewQName("test", "Basket"), appdef.DefKind_ORecord)
+		basketDef := bld.AddORecord(appdef.NewQName("test", "Basket"))
 		basketDef.AddContainer("Good", appdef.NewQName("test", "Good"), 0, appdef.Occurs_Unbounded)
 
-		goodDef := bld.AddStruct(appdef.NewQName("test", "Good"), appdef.DefKind_ORecord)
+		goodDef := bld.AddORecord(appdef.NewQName("test", "Good"))
 		goodDef.
 			AddField("Name", appdef.DataKind_string, true).
 			AddField("Code", appdef.DataKind_int64, true).
 			AddField("Weight", appdef.DataKind_float64, false)
 
-		saleSecurParamsDef := bld.AddStruct(appdef.NewQName("test", "saleSecureArgs"), appdef.DefKind_Object)
-		saleSecurParamsDef.
+		saleSecureParamsDef := bld.AddObject(appdef.NewQName("test", "saleSecureArgs"))
+		saleSecureParamsDef.
 			AddField("password", appdef.DataKind_string, true)
 
-		docDef := bld.AddStruct(appdef.NewQName("test", "photos"), appdef.DefKind_CDoc)
+		docDef := bld.AddCDoc(appdef.NewQName("test", "photos"))
 		docDef.
 			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
@@ -113,7 +114,7 @@ func TestBasicUsage(t *testing.T) {
 	cmd := bld.ArgumentObjectBuilder()
 
 	cmd.PutRecordID(appdef.SystemField_ID, 1)
-	cmd.PutString("Buyer", "Карлосон 哇\"呀呀") // to test unicode issues
+	cmd.PutString("Buyer", "Карлсон 哇\"呀呀") // to test unicode issues
 	cmd.PutInt32("Age", 33)
 	cmd.PutFloat32("Height", 1.75)
 	cmd.PutBytes("Photo", []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 4, 4, 3, 2, 1, 0})
@@ -136,11 +137,11 @@ func TestBasicUsage(t *testing.T) {
 	security := bld.ArgumentUnloggedObjectBuilder()
 	security.PutString("password", "12345")
 
-	// 3. make result cuids
-	cuids := bld.CUDBuilder()
-	rec := cuids.Create(appdef.NewQName("test", "photos"))
+	// 3. make result cud
+	cud := bld.CUDBuilder()
+	rec := cud.Create(appdef.NewQName("test", "photos"))
 	rec.PutRecordID(appdef.SystemField_ID, 1)
-	rec.PutString("Buyer", "Карлосон 哇\"呀呀")
+	rec.PutString("Buyer", "Карлсон 哇\"呀呀")
 	rec.PutInt32("Age", 33)
 	rec.PutFloat32("Height", 1.75)
 	rec.PutBytes("Photo", []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 4, 4, 3, 2, 1, 0})
@@ -171,7 +172,7 @@ func TestBasicUsage(t *testing.T) {
 	err = app.Records().Apply(pLogEvent)
 	require.NoError(err)
 
-	// Read event from PLog & PLog and reads CUIDs demo
+	// Read event from PLog & PLog and reads CUDs demo
 	// 8. read PLog
 	var pLogEvent1 istructs.IPLogEvent
 	_ = app.Events().ReadPLog(context.Background(), 55, 10000, 1,
@@ -301,8 +302,8 @@ func TestBasicUsage_Resources(t *testing.T) {
 	require.NoError(err)
 
 	t.Run("Basic usage NewCommandFunction", func(t *testing.T) {
-		funcQName := appdef.NewQName("testpkg", "cfunc")
-		paramsDef := appdef.NewQName("testpkg", "cfuncParams")
+		funcQName := appdef.NewQName("test", "cmd")
+		paramsDef := appdef.NewQName("test", "cmdParams")
 		resultDef := appdef.NullQName
 
 		f := NewCommandFunction(funcQName, paramsDef, appdef.NullQName, resultDef, NullCommandExec)
@@ -329,8 +330,8 @@ func TestBasicUsage_Resources(t *testing.T) {
 			return nil
 		}
 
-		funcQName := appdef.NewQName("testpkg", "qfunc")
-		parDefs := appdef.NewQName("testpkg", "qfuncParams")
+		funcQName := appdef.NewQName("test", "query")
+		parDefs := appdef.NewQName("test", "queryParams")
 		resDefs := appdef.NullQName
 
 		f := NewQueryFunction(funcQName, parDefs, resDefs, myExecQuery)
@@ -371,7 +372,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 	require.NoError(err)
 
 	t.Run("I. test top level definition (command object)", func(t *testing.T) {
-		cmdDef := app.AppDef().Def(test.saleCmdDocName)
+		cmdDef := app.AppDef().ODoc(test.saleCmdDocName)
 
 		require.NotNil(cmdDef)
 		require.Equal(appdef.DefKind_ODoc, cmdDef.Kind())
@@ -393,7 +394,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 				require.Equal(test.basketIdent, c.Name())
 				require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.Def())
 				t.Run("II. test first level nested definition (basket)", func(t *testing.T) {
-					def := app.AppDef().Def(appdef.NewQName(test.pkgName, test.basketIdent))
+					def := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.basketIdent))
 					require.NotNil(def)
 					require.Equal(appdef.DefKind_ORecord, def.Kind())
 
@@ -403,7 +404,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 							require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.Def())
 
 							t.Run("III. test second level nested definition (good)", func(t *testing.T) {
-								def := app.AppDef().Def(appdef.NewQName(test.pkgName, test.goodIdent))
+								def := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.goodIdent))
 								require.NotNil(def)
 								require.Equal(appdef.DefKind_ORecord, def.Kind())
 
@@ -430,13 +431,14 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 	app := func() istructs.IAppStructs {
 		appDef := appdef.New()
 
-		recDef := appDef.AddStruct(appdef.NewQName("types", "CRec"), appdef.DefKind_CRecord)
+		recDef := appDef.AddCRecord(appdef.NewQName("types", "CRec"))
 		recDef.AddField("int", appdef.DataKind_int64, false)
 
 		docQName := appdef.NewQName("types", "CDoc")
-		docDef := appDef.AddStruct(docQName, appdef.DefKind_CDoc)
+		docDef := appDef.AddCDoc(docQName)
 		docDef.AddField("str", appdef.DataKind_string, true)
 		docDef.AddField("fld", appdef.DataKind_int32, true)
+		docDef.SetUniqueField("str")
 
 		docDef.AddContainer("rec", recDef.QName(), 0, appdef.Occurs_Unbounded)
 
@@ -445,7 +447,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		viewDef.AddClustColumn("str", appdef.DataKind_string)
 		viewDef.AddValueField("bool", appdef.DataKind_bool, false)
 
-		argDef := appDef.AddStruct(appdef.NewQName("types", "Arg"), appdef.DefKind_Object)
+		argDef := appDef.AddObject(appdef.NewQName("types", "Arg"))
 		argDef.AddField("bool", appdef.DataKind_bool, false)
 
 		cfgs := make(AppConfigsType)
@@ -464,10 +466,8 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 			NewQueryFunction(
 				qNameQry,
 				argDef.QName(),
-				viewDef.Name(),
+				viewDef.Value().QName(),
 				NullQueryExec))
-
-		cfg.Uniques.Add(docQName, []string{"str"})
 
 		cfg.FunctionRateLimits.AddAppLimit(qNameQry, istructs.RateLimit{
 			Period:                1,

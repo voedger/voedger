@@ -989,7 +989,6 @@ func (as *implIAppStructs) IsFunctionRateLimitsExceeded(appdef.QName, istructs.W
 }
 func (as *implIAppStructs) DescribePackageNames() []string               { panic("") }
 func (as *implIAppStructs) DescribePackage(string) interface{}           { panic("") }
-func (as *implIAppStructs) Uniques() istructs.IUniques                   { panic("") }
 func (as *implIAppStructs) SyncProjectors() []istructs.ProjectorFactory  { panic("") }
 func (as *implIAppStructs) AsyncProjectors() []istructs.ProjectorFactory { panic("") }
 func (as *implIAppStructs) CUDValidators() []istructs.CUDValidator       { panic("") }

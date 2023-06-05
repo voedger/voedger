@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"net/http"
@@ -16,26 +17,20 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
-	"golang.org/x/exp/slices"
 )
 
-func provideUniquesProjectorFunc(uniques istructs.IUniques, appDef appdef.IAppDef) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func provideUniquesProjectorFunc(appDef appdef.IAppDef) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
-		return event.CUDs(func(rec istructs.ICUDRow) error {
-			uniques := uniques.GetAll(rec.QName())
-			if len(uniques) == 0 {
-				return nil
-			}
-			for _, unique := range uniques {
-				if rec.IsNew() {
-					err = insert(rec, st, unique, appDef, intents)
-				} else {
-					// came here -> we're updating fields that are not part of an unique key
-					// e.g. updating sys.IsActive
-					err = update(rec, st, unique, appDef, intents)
-				}
-				if err != nil {
-					break
+		return event.CUDs(func(rec istructs.ICUDRow) (err error) {
+			if unique, ok := appDef.Def(rec.QName()).(appdef.IUniques); ok {
+				if field := unique.UniqueField(); field != nil {
+					if rec.IsNew() {
+						err = insert(rec, field, st, intents)
+					} else {
+						// came here -> we're updating fields that are not part of an unique key
+						// e.g. updating sys.IsActive
+						err = update(rec, field, st, intents)
+					}
 				}
 			}
 			return err
@@ -43,8 +38,8 @@ func provideUniquesProjectorFunc(uniques istructs.IUniques, appDef appdef.IAppDe
 	}
 }
 
-func insert(rec istructs.ICUDRow, state istructs.IState, unique istructs.IUnique, appDef appdef.IAppDef, intents istructs.IIntents) error {
-	uniqueViewRecord, uniqueViewKB, ok, err := getUniqueViewRecord(unique, appDef, state, rec)
+func insert(rec istructs.ICUDRow, uf appdef.IField, state istructs.IState, intents istructs.IIntents) error {
+	uniqueViewRecord, uniqueViewKB, ok, err := getUniqueViewRecord(state, rec, uf)
 	if err != nil {
 		return err
 	}
@@ -78,7 +73,7 @@ func insert(rec istructs.ICUDRow, state istructs.IState, unique istructs.IUnique
 	return err
 }
 
-func update(rec istructs.ICUDRow, st istructs.IState, unique istructs.IUnique, appDef appdef.IAppDef, intents istructs.IIntents) error {
+func update(rec istructs.ICUDRow, uf appdef.IField, st istructs.IState, intents istructs.IIntents) error {
 	// read current record
 	kb, err := st.KeyBuilder(state.RecordsStorage, rec.QName())
 	if err != nil {
@@ -91,7 +86,7 @@ func update(rec istructs.ICUDRow, st istructs.IState, unique istructs.IUnique, a
 	}
 
 	// unique view record
-	uniqueViewRecord, uniqueViewKB, _, err := getUniqueViewRecord(unique, appDef, st, currentRecord)
+	uniqueViewRecord, uniqueViewKB, _, err := getUniqueViewRecord(st, currentRecord, uf)
 	if err != nil {
 		return err
 	}
@@ -123,12 +118,12 @@ func update(rec istructs.ICUDRow, st istructs.IState, unique istructs.IUnique, a
 	return nil
 }
 
-func getUniqueViewRecord(unique istructs.IUnique, appDef appdef.IAppDef, st istructs.IState, rec istructs.IRowReader) (istructs.IStateValue, istructs.IStateKeyBuilder, bool, error) {
+func getUniqueViewRecord(st istructs.IState, rec istructs.IRowReader, uf appdef.IField) (istructs.IStateValue, istructs.IStateKeyBuilder, bool, error) {
 	kb, err := st.KeyBuilder(state.ViewRecordsStorage, QNameViewUniques)
 	if err != nil {
 		return nil, nil, false, err
 	}
-	if err := buildUniqueViewKey(kb, unique, appDef, rec); err != nil {
+	if err := buildUniqueViewKey(kb, rec, uf); err != nil {
 		// notest
 		return nil, nil, false, err
 	}
@@ -136,177 +131,149 @@ func getUniqueViewRecord(unique istructs.IUnique, appDef appdef.IAppDef, st istr
 	return sv, kb, ok, err
 }
 
-func appendValue(fieldName string, buf *bytes.Buffer, rec istructs.IRowReader, kind appdef.DataKind) error {
-	val := coreutils.ReadByKind(fieldName, kind, rec)
-	switch kind {
-	case appdef.DataKind_string:
-		if _, err := buf.WriteString(val.(string)); err != nil {
-			// notest
-			return err
-		}
-	case appdef.DataKind_bytes:
-		if _, err := buf.Write(val.([]byte)); err != nil {
-			// notest
-			return err
-		}
-	default:
-		return binary.Write(buf, binary.BigEndian, val)
-	}
-	return nil
-}
+func getUniqueKeyValues(rec istructs.IRowReader, uf appdef.IField) (res []byte, err error) {
+	buf := bytes.NewBuffer(nil)
 
-func getUniqueKeyValues(unique istructs.IUnique, appDef appdef.IAppDef, rec istructs.IRowReader) (res []byte, err error) {
-	valuesBytes := bytes.NewBuffer(nil)
-	varSizeFieldName := ""
-	varSizeFieldKind := appdef.DataKind_null
-	appDef.Def(unique.QName()).Fields(func(field appdef.IField) {
-		if err != nil {
-			// notest
-			return
-		}
-		if !slices.Contains(unique.Fields(), field.Name()) {
-			return
-		}
-		if field.DataKind() == appdef.DataKind_string || field.DataKind() == appdef.DataKind_bytes {
-			varSizeFieldName = field.Name()
-			varSizeFieldKind = field.DataKind()
-		} else {
-			err = appendValue(field.Name(), valuesBytes, rec, field.DataKind())
-		}
-	})
-	if err == nil && len(varSizeFieldName) > 0 {
-		err = appendValue(varSizeFieldName, valuesBytes, rec, varSizeFieldKind)
+	val := coreutils.ReadByKind(uf.Name(), uf.DataKind(), rec)
+	switch uf.DataKind() {
+	case appdef.DataKind_string:
+		_, err = buf.WriteString(val.(string))
+	case appdef.DataKind_bytes:
+		_, err = buf.Write(val.([]byte))
+	default:
+		err = binary.Write(buf, binary.BigEndian, val)
 	}
-	return valuesBytes.Bytes(), err
+
+	return buf.Bytes(), err
 }
 
 // notest err
-func buildUniqueViewKeyByValues(uniqueKeyValues []byte, kb istructs.IKeyBuilder, qName appdef.QName) error {
+func buildUniqueViewKeyByValues(kb istructs.IKeyBuilder, qName appdef.QName, uniqueKeyValues []byte) error {
 	h := fnv.New64()
 	if _, err := h.Write(uniqueKeyValues); err != nil {
 		// notest
 		return err
 	}
-	hash := int64(h.Sum64())
 	kb.PutQName(field_QName, qName)
-	kb.PutInt64(field_ValuesHash, hash)
+	kb.PutInt64(field_ValuesHash, int64(h.Sum64()))
 	kb.PutBytes(field_Values, uniqueKeyValues)
 	return nil
 }
 
 // notest err
-func buildUniqueViewKey(kb istructs.IKeyBuilder, unique istructs.IUnique, appDef appdef.IAppDef, rec istructs.IRowReader) error {
-	uniqueKeyValues, err := getUniqueKeyValues(unique, appDef, rec)
+func buildUniqueViewKey(kb istructs.IKeyBuilder, rec istructs.IRowReader, uf appdef.IField) error {
+	uniqueKeyValues, err := getUniqueKeyValues(rec, uf)
 	if err != nil {
 		// notest
 		return err
 	}
-	return buildUniqueViewKeyByValues(uniqueKeyValues, kb, unique.QName())
+	return buildUniqueViewKeyByValues(kb, rec.AsQName(appdef.SystemField_QName), uniqueKeyValues)
 }
 
-func provideCUDUniqueUpdateDenyValidator(uniques istructs.IUniques) func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) error {
+func provideCUDUniqueUpdateDenyValidator() func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) error {
 	return func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) (err error) {
 		if cudRow.IsNew() {
 			return nil
 		}
-		uniques := uniques.GetAll(cudRow.QName()) // note: len(unique) > 0 gauranted by the validator matcher
-		cudRow.ModifiedFields(func(fieldName string, newValue interface{}) {
-			if err != nil {
-				return
-			}
-			for _, unique := range uniques {
-				for _, uniqueKeyField := range unique.Fields() {
-					if uniqueKeyField == fieldName {
-						err = ErrUniqueFieldUpdateDeny
+		qName := cudRow.QName()
+		if uniques, ok := appStructs.AppDef().Def(qName).(appdef.IUniques); ok {
+			if field := uniques.UniqueField(); field != nil {
+				cudRow.ModifiedFields(func(fieldName string, newValue interface{}) {
+					if fieldName == field.Name() {
+						err = errors.Join(err,
+							fmt.Errorf("%v: unique field «%s» can not to be changed: %w", qName, fieldName, ErrUniqueFieldUpdateDeny))
 					}
-				}
+				})
 			}
-		})
+		}
 		return err
 	}
 }
 
-func provideEventUniqueValidator(uniques istructs.IUniques) func(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
+func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
 	return func(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
 		//                                      key         uvrID
 		uniquesState := map[appdef.QName]map[string]istructs.RecordID{}
-		err := rawEvent.CUDs(func(rec istructs.ICUDRow) (err error) {
-			uniques := uniques.GetAll(rec.QName())
-			if len(uniques) == 0 {
-				return nil
-			}
-			var actualRow istructs.IRowReader
-			if rec.IsNew() {
-				actualRow = rec
-			} else if actualRow, err = appStructs.Records().Get(wsid, true, rec.ID()); err != nil { // read current record
-				return err
-			}
-			for _, unique := range uniques {
-				cudUniqueKeyValues, err := getUniqueKeyValues(unique, appStructs.AppDef(), actualRow)
-				if err != nil {
-					// notest
+		err := rawEvent.CUDs(
+			func(rec istructs.ICUDRow) (err error) {
+				var actualRow istructs.IRowReader
+				if rec.IsNew() {
+					actualRow = rec
+				} else if actualRow, err = appStructs.Records().Get(wsid, true, rec.ID()); err != nil { // read current record
 					return err
 				}
-				// why to accumulate in a map?
-				//              field1 field2 IsActive
-				// stored: id1: 12     14     -
-				// cud1:   id2: 12     14     +        -ok
-				// cud2    id1:               +        -should be denied
-				qNameEventUniques, ok := uniquesState[rec.QName()]
-				if !ok {
-					qNameEventUniques = map[string]istructs.RecordID{}
-					uniquesState[rec.QName()] = qNameEventUniques
-				}
-				currentRecordID, ok := qNameEventUniques[string(cudUniqueKeyValues)]
-				if !ok {
-					if currentRecordID, err = getUniqueIDByValues(cudUniqueKeyValues, unique, appStructs, wsid); err != nil {
-						return err
-					}
-					qNameEventUniques[string(cudUniqueKeyValues)] = currentRecordID
-				}
 
-				// inserting a new inactive record, unique is inactive or active -> allowed, nothing to do
-				if rec.IsNew() {
-					if rec.AsBool(appdef.SystemField_IsActive) {
-						if currentRecordID == istructs.NullRecordID {
-							// inserting a new active record, unique is inactive -> allowed, update its ID in map
-							qNameEventUniques[string(cudUniqueKeyValues)] = rec.ID()
+				qName := rec.QName()
+				if uniques, ok := appStructs.AppDef().Def(qName).(appdef.IUniques); ok {
+					if field := uniques.UniqueField(); field != nil {
+						cudUniqueKeyValues, err := getUniqueKeyValues(actualRow, field)
+						if err != nil {
+							// notest
+							return err
+						}
+						// why to accumulate in a map?
+						//         id:  field: IsActive: Result:
+						// stored: 111: xxx    -
+						// …
+						// cud(I): 222: xxx    +         - should be ok to insert new record
+						// …
+						// cud(J): 111:        +         - should be denied to restore old record
+						qNameEventUniques, ok := uniquesState[qName]
+						if !ok {
+							qNameEventUniques = map[string]istructs.RecordID{}
+							uniquesState[qName] = qNameEventUniques
+						}
+						currentRecordID, ok := qNameEventUniques[string(cudUniqueKeyValues)]
+						if !ok {
+							if currentRecordID, err = getUniqueIDByValues(appStructs, wsid, qName, cudUniqueKeyValues); err != nil {
+								return err
+							}
+							qNameEventUniques[string(cudUniqueKeyValues)] = currentRecordID
+						}
+
+						// inserting a new inactive record, unique is inactive or active -> allowed, nothing to do
+						if rec.IsNew() {
+							if rec.AsBool(appdef.SystemField_IsActive) {
+								if currentRecordID == istructs.NullRecordID {
+									// inserting a new active record, unique is inactive -> allowed, update its ID in map
+									qNameEventUniques[string(cudUniqueKeyValues)] = rec.ID()
+								} else {
+									// inserting a new active record, unique is active -> deny
+									return conflict(qName, currentRecordID)
+								}
+							}
 						} else {
-							// inserting a new active record, unique is active -> deny
-							return conflict(rec.QName(), currentRecordID)
+							// came here -> we're updating fields that are not unique key fields
+							// let's check sys.IsActive only
+							recIsActive := rec.AsBool(appdef.SystemField_IsActive)
+							existingRecordIsActive := actualRow.AsBool(appdef.SystemField_IsActive)
+							isActivating := false
+							if recIsActive && !existingRecordIsActive {
+								isActivating = true
+							}
+							if (recIsActive && existingRecordIsActive) || (!recIsActive && !existingRecordIsActive) {
+								// no changes
+								return nil
+							}
+
+							if isActivating {
+								if currentRecordID == istructs.NullRecordID {
+									// activating, unique is active -> allowed, update its ID in map
+									qNameEventUniques[string(cudUniqueKeyValues)] = rec.ID()
+								} else {
+									// activating, unique is active -> deny
+									return conflict(qName, currentRecordID)
+								}
+							} else if currentRecordID != istructs.NullRecordID {
+								// deactivating, unique is active -> allowed, reset its ID in map
+								qNameEventUniques[string(cudUniqueKeyValues)] = istructs.NullRecordID
+							}
+							// deactivating, unique is deactivated -> allowed, nothing to do
 						}
 					}
-				} else {
-					// came here -> we're updating fields that are not unique key fields
-					// let's check sys.IsActive only
-					recIsActive := rec.AsBool(appdef.SystemField_IsActive)
-					existingRecordIsActive := actualRow.AsBool(appdef.SystemField_IsActive)
-					isActivating := false
-					if recIsActive && !existingRecordIsActive {
-						isActivating = true
-					}
-					if (recIsActive && existingRecordIsActive) || (!recIsActive && !existingRecordIsActive) {
-						// no changes
-						return nil
-					}
-
-					if isActivating {
-						if currentRecordID == istructs.NullRecordID {
-							// activating, unique is active -> allowed, update its ID in map
-							qNameEventUniques[string(cudUniqueKeyValues)] = rec.ID()
-						} else {
-							// activating, unique is active -> deny
-							return conflict(rec.QName(), currentRecordID)
-						}
-					} else if currentRecordID != istructs.NullRecordID {
-						// deactivating, unique is active -> allowed, reset its ID in map
-						qNameEventUniques[string(cudUniqueKeyValues)] = istructs.NullRecordID
-					}
-					// deactivating, unique is deactivated -> allowed, nothing to do
 				}
-			}
-			return nil
-		})
+				return nil
+			})
 		return err
 	}
 }

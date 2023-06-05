@@ -18,13 +18,101 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon1
+          - node.labels.AppNode1 == true
       replicas: 1
     logging:
       driver: "local"
       options: 
         max-size: 10m
         max-file: "3"
+
+  grafana1:
+    image: grafana/grafana:latest
+    volumes:
+      - ~/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ~/grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ~/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - /var/lib/grafana:/var/lib/grafana
+    ports:
+      - target: 3000
+        published: 3000
+        protocol: tcp
+        mode: host
+    deploy:
+      placement:
+        constraints:
+          - node.labels.AppNode1 == true
+      replicas: 1
+    logging:
+      driver: "local"
+      options: 
+        max-size: 10m
+        max-file: "3"
+    links:
+      - prometheus1
+
+  grafana2:
+    image: grafana/grafana:latest
+    volumes:
+      - ~/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ~/grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ~/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - /var/lib/grafana:/var/lib/grafana
+    ports:
+      - target: 3000
+        published: 3000
+        protocol: tcp
+        mode: host
+    deploy:
+      placement:
+        constraints:
+          - node.labels.AppNode2 == true
+      replicas: 1
+    logging:
+      driver: "local"
+      options: 
+        max-size: 10m
+        max-file: "3"
+    links:
+      - prometheus2
+
+  cadvisor1:
+    image: gcr.io/cadvisor/cadvisor:latest
+    ports:
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: host
+    deploy:
+      placement:
+        constraints:
+          - node.labels.AppNode1 == true
+
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    restart: unless-stopped
+
+  cadvisor2:
+    image: gcr.io/cadvisor/cadvisor:latest
+    ports:
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: host
+    deploy:
+      placement:
+        constraints:
+          - node.labels.AppNode2 == true
+
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    restart: unless-stopped
 
   prometheus2:
     image: prom/prometheus:latest
@@ -44,7 +132,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon2
+          - node.labels.AppNode2 == true
       replicas: 1
     logging:
       driver: "local"
@@ -60,9 +148,9 @@ services:
     command:
       - '--config.file=/etc/alertmanager/config.yml'
       - '--storage.path=/alertmanager'
-      - '--cluster.peer={se2}:9094' 
+      - '--cluster.peer={{.AppNode2}}:9094' 
       - '--cluster.listen-address=:9094'
-      - '--cluster.advertise-address={se1}:9094'
+      - '--cluster.advertise-address={{.AppNode1}}:9094'
     restart: unless-stopped
     ports:
       - target: 9093
@@ -76,7 +164,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon1
+          - node.labels.AppNode1 == true
       replicas: 1
 
   alertmanager2:
@@ -87,9 +175,9 @@ services:
     command:
       - '--config.file=/etc/alertmanager/config.yml'
       - '--storage.path=/alertmanager'
-      - '--cluster.peer={se1}:9094' 
+      - '--cluster.peer={{.AppNode1}}:9094' 
       - '--cluster.listen-address=:9094'
-      - '--cluster.advertise-address={se2}:9094'
+      - '--cluster.advertise-address={{.AppNode2}}:9094'
     restart: unless-stopped
     ports:
       - target: 9093
@@ -103,17 +191,20 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon2
+          - node.labels.AppNode2 == true
       replicas: 1
 
   node-exporter1:
     image: prom/node-exporter:latest
+
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon1
+          - node.labels.AppNode1 == true
       replicas: 1
     volumes:
+      - /etc/hostname:/etc/nodename
+      - /etc/node-exporter:/etc/node-exporter
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
@@ -122,6 +213,7 @@ services:
       - '--path.sysfs=/host/sys'
       - '--path.rootfs=/rootfs'
       - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.textfile.directory=/etc/node-exporter/'
     ports:
       - target: 9100
         published: 9100
@@ -131,12 +223,15 @@ services:
 
   node-exporter2:
     image: prom/node-exporter:latest
+
     deploy:
       placement:
         constraints:
-          - node.labels.mon == mon2
+          - node.labels.AppNode2 == true
       replicas: 1
     volumes:
+      - /etc/hostname:/etc/nodename
+      - /etc/node-exporter:/etc/node-exporter
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
@@ -145,6 +240,7 @@ services:
       - '--path.sysfs=/host/sys'
       - '--path.rootfs=/rootfs'
       - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.textfile.directory=/etc/node-exporter/'
     ports:
       - target: 9100
         published: 9100

@@ -18,7 +18,7 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 	return func(appAPI apps.AppAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 
 		// sys package
-		sys.Provide(appAPI.TimeFunc, cfg, appDefBuilder, smtpCfg, ep, nil, appAPI.IAppStructsProvider, appAPI.ITokens, appAPI.IFederation, appAPI.IAppTokensFactory)
+		sys.Provide(appAPI.TimeFunc, cfg, appDefBuilder, smtpCfg, ep, nil, appAPI.IAppStructsProvider, appAPI.ITokens, appAPI.IFederation, appAPI.IAppTokensFactory, vvmCfg.NumCommandProcessors)
 
 		// sys/registry resources
 		// note: q.sys.RefreshPrincipalToken is moved to sys package because it is strange to call it in sys/registry: provided token is issued for different app (e.g. airs-bp)

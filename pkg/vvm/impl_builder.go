@@ -5,6 +5,8 @@
 package vvm
 
 import (
+	"fmt"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
@@ -37,7 +39,25 @@ func (hap VVMAppsBuilder) Build(vvmCfg *VVMConfig, cfgs istructsmem.AppConfigsTy
 			epPostDoc := value.(IExtensionPoint)
 			postDocQName := eKey.(appdef.QName)
 			postDocDesc := epPostDoc.Value().(PostDocDesc)
-			doc := adf.AddStruct(postDocQName, postDocDesc.Kind)
+
+			var doc appdef.IFieldsBuilder
+			switch postDocDesc.Kind {
+			case appdef.DefKind_GDoc:
+				doc = adf.AddGDoc(postDocQName)
+			case appdef.DefKind_CDoc:
+				if postDocDesc.IsSingleton {
+					doc = adf.AddSingleton(postDocQName)
+				} else {
+					doc = adf.AddCDoc(postDocQName)
+				}
+			case appdef.DefKind_WDoc:
+				doc = adf.AddWDoc(postDocQName)
+			case appdef.DefKind_ODoc:
+				doc = adf.AddODoc(postDocQName)
+			default:
+				panic(fmt.Errorf("document «%s» has unexpected definition kind «%v»", postDocQName, postDocDesc.Kind))
+			}
+
 			epPostDoc.Iterate(func(eKey EKey, value interface{}) {
 				postDocField := value.(PostDocFieldType)
 				if len(postDocField.VerificationKinds) > 0 {
@@ -46,9 +66,6 @@ func (hap VVMAppsBuilder) Build(vvmCfg *VVMConfig, cfgs istructsmem.AppConfigsTy
 					doc.AddField(eKey.(string), postDocField.Kind, postDocField.Required)
 				}
 			})
-			if postDocDesc.IsSingleton {
-				doc.SetSingleton()
-			}
 		})
 		vvmApps = append(vvmApps, appQName)
 		// TODO: remove it after https://github.com/voedger/voedger/issues/56

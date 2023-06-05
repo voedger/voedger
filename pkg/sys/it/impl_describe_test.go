@@ -46,6 +46,7 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 					"Containers": []interface{}{
 						map[string]interface{}{"MaxOccurs": float64(1), "MinOccurs": float64(1), "Name": "sys.pkey", "Type": "my.View_PartitionKey"},
 						map[string]interface{}{"MaxOccurs": float64(1), "MinOccurs": float64(1), "Name": "sys.ccols", "Type": "my.View_ClusteringColumns"},
+						map[string]interface{}{"MaxOccurs": float64(1), "MinOccurs": float64(1), "Name": "sys.key", "Type": "my.View_FullKey"},
 						map[string]interface{}{"MaxOccurs": float64(1), "MinOccurs": float64(1), "Name": "sys.val", "Type": "my.View_Value"},
 					},
 					"Kind": "DefKind_ViewRecord",
@@ -56,11 +57,15 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 						map[string]interface{}{"Kind": "DataKind_int32", "Name": "ViewIntFld", "Required": true},
 						map[string]interface{}{"Kind": "DataKind_string", "Name": "ViewStrFld"},
 					},
-					"Kind": "DefKind_ViewRecord_ClusteringColumns",
+					"Containers": []interface{}{
+						map[string]interface{}{"MaxOccurs": float64(1), "MinOccurs": float64(1), "Name": "sys.pkey", "Type": "my.View_PartitionKey"},
+						map[string]interface{}{"MaxOccurs": float64(1), "MinOccurs": float64(1), "Name": "sys.ccols", "Type": "my.View_ClusteringColumns"},
+					},
+					"Kind": "DefKind_ViewRecord_Key",
 					"Name": "my.View_FullKey",
 				},
 				"my.View_ClusteringColumns": map[string]interface{}{
-					"Fields": []interface{}{map[string]interface{}{"Kind": "DataKind_string", "Name": "ViewStrFld", "Required": true}},
+					"Fields": []interface{}{map[string]interface{}{"Kind": "DataKind_string", "Name": "ViewStrFld"}},
 					"Kind":   "DefKind_ViewRecord_ClusteringColumns",
 					"Name":   "my.View_ClusteringColumns",
 				},
@@ -80,8 +85,9 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 						map[string]interface{}{"Kind": "DataKind_bool", "Name": "sys.IsActive"},
 						map[string]interface{}{"Kind": "DataKind_int32", "Name": "IntFld", "Required": true},
 						map[string]interface{}{"Kind": "DataKind_string", "Name": "StrFld"}},
-					"Kind": "DefKind_CDoc",
-					"Name": "my.WSKind",
+					"Kind":      "DefKind_CDoc",
+					"Name":      "my.WSKind",
+					"Singleton": true,
 				},
 			},
 		}

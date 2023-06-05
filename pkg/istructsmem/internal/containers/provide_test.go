@@ -27,7 +27,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	testName := "test"
 	appDefBuilder := appdef.New()
-	appDefBuilder.AddStruct(appdef.NewQName("test", "el"), appdef.DefKind_Element).
+	appDefBuilder.AddElement(appdef.NewQName("test", "el")).
 		AddContainer(testName, appdef.NewQName("test", "el"), 0, appdef.Occurs_Unbounded)
 	appDef, err := appDefBuilder.Build()
 	if err != nil {

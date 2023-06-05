@@ -10,18 +10,21 @@ import (
 )
 
 type Def struct {
-	Name       appdef.QName
-	Kind       appdef.DefKind
-	Fields     []*Field     `json:",omitempty"`
-	Containers []*Container `json:",omitempty"`
-	Uniques    []*Unique    `json:",omitempty"`
+	Name        appdef.QName
+	Kind        appdef.DefKind
+	Fields      []*Field     `json:",omitempty"`
+	Containers  []*Container `json:",omitempty"`
+	Uniques     []*Unique    `json:",omitempty"`
+	UniqueField string       `json:",omitempty"`
+	Singleton   bool         `json:",omitempty"`
 }
 
 type Field struct {
 	Name       string
 	Kind       appdef.DataKind
-	Required   bool `json:",omitempty"`
-	Verifiable bool `json:",omitempty"`
+	Required   bool     `json:",omitempty"`
+	Verifiable bool     `json:",omitempty"`
+	Refs       []string `json:",omitempty"`
 }
 
 type Container struct {

@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"mime"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -109,15 +108,16 @@ func (vit *VIT) getCDoc(appQName istructs.AppQName, qName appdef.QName, wsid ist
 	fields := []string{}
 	as, err := vit.IAppStructsProvider.AppStructs(appQName)
 	require.NoError(vit.T, err)
-	cdocDef := as.AppDef().Def(qName)
-	cdocDef.Fields(func(field appdef.IField) {
-		switch field.Name() {
-		case appdef.SystemField_ID, appdef.SystemField_QName, appdef.SystemField_IsActive:
-			return
-		}
-		body.WriteString(fmt.Sprintf(`,"%s"`, field.Name()))
-		fields = append(fields, field.Name())
-	})
+	if def := as.AppDef().CDoc(qName); def != nil {
+		def.Fields(func(field appdef.IField) {
+			switch field.Name() {
+			case appdef.SystemField_ID, appdef.SystemField_QName, appdef.SystemField_IsActive:
+				return
+			}
+			body.WriteString(fmt.Sprintf(`,"%s"`, field.Name()))
+			fields = append(fields, field.Name())
+		})
+	}
 	body.WriteString("]}]}")
 	sys := vit.GetSystemPrincipal(appQName)
 	resp := vit.PostApp(appQName, wsid, "q.sys.Collection", body.String(), coreutils.WithAuthorizeBy(sys.Token))
@@ -343,11 +343,6 @@ func (vit *VIT) SubscribeForN10n(ws *AppWorkspace, viewQName appdef.QName) chan 
 	})
 	vit.lock.Unlock()
 	return n10n
-}
-
-func IsCassandraStorage() bool {
-	_, ok := os.LookupEnv("CASSANDRA_TESTS_ENABLED")
-	return ok
 }
 
 func (vit *VIT) MetricsRequest(opts ...coreutils.ReqOptFunc) (resp string) {

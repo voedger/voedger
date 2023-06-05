@@ -89,7 +89,7 @@ func Test_newRecord(t *testing.T) {
 
 		t.Run("system field counters for test CDoc", func(t *testing.T) {
 			sysCnt := 0
-			doc.def.Fields(
+			doc.fieldsDef().Fields(
 				func(f appdef.IField) {
 					require.True(doc.HasValue(f.Name()))
 					if f.IsSys() {
@@ -110,7 +110,7 @@ func Test_newRecord(t *testing.T) {
 			cnt := 0
 			sysCnt := 0
 
-			doc.def.Fields(
+			doc.fieldsDef().Fields(
 				func(f appdef.IField) {
 					require.True(doc.HasValue(f.Name()))
 					if f.IsSys() {
@@ -121,7 +121,7 @@ func Test_newRecord(t *testing.T) {
 
 			require.Equal(3, sysCnt) // sys.QName, sys.ID and sys.IsActive
 			require.Equal(sysCnt+9, cnt)
-			require.Equal(doc.def.FieldCount(), cnt)
+			require.Equal(doc.fieldsDef().FieldCount(), cnt)
 		})
 
 		t.Run("newTestCRec must return non empty, full filled and valid «test.Record»", func(t *testing.T) {
@@ -147,7 +147,7 @@ func Test_newRecord(t *testing.T) {
 			t.Run("system field counters for test CRecord", func(t *testing.T) {
 				sysCnt := 0
 
-				rec.def.Fields(
+				rec.fieldsDef().Fields(
 					func(f appdef.IField) {
 						require.True(rec.HasValue(f.Name()))
 						if f.IsSys() {
@@ -169,7 +169,7 @@ func Test_newRecord(t *testing.T) {
 				cnt := 0
 				sysCnt := 0
 
-				rec.def.Fields(
+				rec.fieldsDef().Fields(
 					func(f appdef.IField) {
 						require.True(rec.HasValue(f.Name()))
 						if f.IsSys() {
@@ -180,7 +180,7 @@ func Test_newRecord(t *testing.T) {
 
 				require.Equal(5, sysCnt) // sys.QName, sys.ID sys.ParentID, sys.Container and sys.IsActive
 				require.Equal(sysCnt+9, cnt)
-				require.Equal(rec.def.FieldCount(), cnt)
+				require.Equal(rec.fieldsDef().FieldCount(), cnt)
 			})
 		})
 	})
@@ -369,7 +369,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 		appDef := appdef.New()
 		t.Run("must be ok to build application definition", func(t *testing.T) {
-			appDef.AddStruct(test.testCDoc, appdef.DefKind_CDoc).
+			appDef.AddCDoc(test.testCDoc).
 				AddField("int32_1", appdef.DataKind_int32, false).
 				AddField("int64_1", appdef.DataKind_int64, false).
 				AddField("float32_1", appdef.DataKind_float32, false).
@@ -379,7 +379,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 				AddField("QName_1", appdef.DataKind_QName, false).
 				AddField("bool_1", appdef.DataKind_bool, false).
 				AddField("RecordID_1", appdef.DataKind_RecordID, false)
-			appDef.AddStruct(test.tablePhotos, appdef.DefKind_Object) // for reading QName_1 field value
+			appDef.AddObject(test.tablePhotos) // for reading QName_1 field value
 		})
 
 		newConfig := newAppConfig(test.AppCfg.Name, appDef)

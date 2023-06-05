@@ -15,6 +15,6 @@ import (
 
 func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 	return func(appAPI apps.AppAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-		sys.Provide(appAPI, cfg, appDefBuilder, smtpCfg, ep, nil, appAPI.IAppStructsProvider, appAPI.ITokens, appAPI.IFederation, appAPI.IAppTokensFactory) // need to generate AppWorkspaces only
+		sys.Provide(appAPI, cfg, appDefBuilder, smtpCfg, ep, nil, appAPI.IAppStructsProvider, appAPI.ITokens, appAPI.IFederation, appAPI.IAppTokensFactory, vvmCfg.NumCommandProcessors) // need to generate AppWorkspaces only
 	}
 }

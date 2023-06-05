@@ -70,36 +70,18 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 		optFunc(opts)
 	}
 
-	if opts.nonNilsOnly {
-		obj.FieldNames(func(fieldName string) {
-			kind := def.Field(fieldName).DataKind()
-			if opts.filter != nil {
-				if !opts.filter(fieldName, kind) {
-					return
-				}
-			}
-			if kind == appdef.DataKind_Record {
-				if ival, ok := obj.(istructs.IValue); ok {
-					res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), appDef, optFuncs...)
-				} else {
-					panic("DataKind_Record field met -> IValue must be provided")
-				}
-			} else {
-				res[fieldName] = ReadByKind(fieldName, kind, obj)
-			}
-		})
-	} else {
-		def.Fields(
-			func(f appdef.IField) {
-				fieldName, kind := f.Name(), f.DataKind()
+	if fields, ok := def.(appdef.IFields); ok {
+		if opts.nonNilsOnly {
+			obj.FieldNames(func(fieldName string) {
+				kind := fields.Field(fieldName).DataKind()
 				if opts.filter != nil {
 					if !opts.filter(fieldName, kind) {
 						return
 					}
 				}
 				if kind == appdef.DataKind_Record {
-					if ival, ok := obj.(istructs.IValue); ok {
-						res[fieldName] = FieldsToMap(ival.AsRecord(fieldName), appDef, optFuncs...)
+					if v, ok := obj.(istructs.IValue); ok {
+						res[fieldName] = FieldsToMap(v.AsRecord(fieldName), appDef, optFuncs...)
 					} else {
 						panic("DataKind_Record field met -> IValue must be provided")
 					}
@@ -107,12 +89,32 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 					res[fieldName] = ReadByKind(fieldName, kind, obj)
 				}
 			})
+		} else {
+			fields.Fields(
+				func(f appdef.IField) {
+					fieldName, kind := f.Name(), f.DataKind()
+					if opts.filter != nil {
+						if !opts.filter(fieldName, kind) {
+							return
+						}
+					}
+					if kind == appdef.DataKind_Record {
+						if v, ok := obj.(istructs.IValue); ok {
+							res[fieldName] = FieldsToMap(v.AsRecord(fieldName), appDef, optFuncs...)
+						} else {
+							panic("DataKind_Record field met -> IValue must be provided")
+						}
+					} else {
+						res[fieldName] = ReadByKind(fieldName, kind, obj)
+					}
+				})
+		}
 	}
 	return res
 }
 
 func ObjectToMap(obj istructs.IObject, appDef appdef.IAppDef, opts ...MapperOpt) (res map[string]interface{}) {
-	if obj.AsQName(appdef.SystemField_QName) == appdef.NullQName {
+	if obj.QName() == appdef.NullQName {
 		return map[string]interface{}{}
 	}
 	res = FieldsToMap(obj, appDef, opts...)

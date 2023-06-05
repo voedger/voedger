@@ -25,6 +25,7 @@ var commandDirName string
 var mutex = &sync.Mutex{}
 
 func printLogLine(logLevel logger.TLogLevel, line string) {
+	line = fmt.Sprintf("\r%s", line)
 	if logFile != nil {
 		mutex.Lock()
 		fmt.Fprintln(logFile, line)
@@ -61,7 +62,7 @@ func mkCommandDirAndLogFile(cmd *cobra.Command, cluster *clusterType) error {
 		cmd = cmd.Parent()
 	}
 
-	if !cluster.Cmd.isEmpty() && !strings.Contains(s, cluster.Cmd.Kind) {
+	if cluster.Cmd != nil && !cluster.Cmd.isEmpty() && !strings.Contains(s, cluster.Cmd.Kind) {
 		s = fmt.Sprintf("%s-%s", s, cluster.Cmd.Kind)
 	}
 

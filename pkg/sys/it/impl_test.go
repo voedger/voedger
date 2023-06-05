@@ -15,8 +15,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
-	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/sys"
+	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -38,10 +38,10 @@ func TestBasicUsage(t *testing.T) {
 		it.WithApp(istructs.AppQName_test1_app1, func(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
 			cfg.Resources.Add(istructsmem.NewQueryFunction(
 				appdef.NewQName(appdef.SysPackage, "Greeter"),
-				appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "GreeterParams"), appdef.DefKind_Object).
-					AddField("Text", appdef.DataKind_string, true).QName(),
-				appDefBuilder.AddStruct(appdef.NewQName(appdef.SysPackage, "GreeterResult"), appdef.DefKind_Object).
-					AddField("Res", appdef.DataKind_string, true).QName(),
+				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
+					AddField("Text", appdef.DataKind_string, true).(appdef.IDef).QName(),
+				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterResult")).
+					AddField("Res", appdef.DataKind_string, true).(appdef.IDef).QName(),
 				func(_ context.Context, _ istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 					text := args.ArgumentObject.AsString("Text")
 					var rr = &greeterRR{text: text}
@@ -50,7 +50,7 @@ func TestBasicUsage(t *testing.T) {
 			))
 
 			// need to read cdoc.sys.Subject on auth
-			sys.Provide(vvmCfg.TimeFunc, cfg, appDefBuilder, vvmAPI, smtp.Cfg{}, sep, nil)
+			sys.Provide(vvmCfg.TimeFunc, cfg, appDefBuilder, vvmAPI, smtp.Cfg{}, sep, nil, vvmCfg.NumCommandProcessors)
 		}),
 	)
 	vit := it.NewVIT(t, &cfg)
@@ -95,9 +95,9 @@ func checkCDocsWSDesc(vvm *vvm.VVM, require *require.Assertions) {
 			as, err := vvm.IAppStructsProvider.AppStructs(appQName)
 			require.NoError(err)
 			appWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
-			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, commandprocessor.QNameCDocWorkspaceDescriptor)
+			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, sysshared.QNameCDocWorkspaceDescriptor)
 			require.NoError(err)
-			require.Equal(commandprocessor.QNameCDocWorkspaceDescriptor, existingCDocWSDesc.QName())
+			require.Equal(sysshared.QNameCDocWorkspaceDescriptor, existingCDocWSDesc.QName())
 		}
 	}
 }

@@ -30,7 +30,7 @@ func TestRenameQName(t *testing.T) {
 		require.NoError(err)
 
 		appDefBuilder := appdef.New()
-		_ = appDefBuilder.AddStruct(old, appdef.DefKind_Object)
+		_ = appDefBuilder.AddObject(old)
 		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
 

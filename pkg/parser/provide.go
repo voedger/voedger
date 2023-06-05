@@ -4,6 +4,8 @@
  */
 package parser
 
+import "github.com/voedger/voedger/pkg/appdef"
+
 // ParseFile parses content of the single file, creates FileSchemaAST and returns pointer to it.
 // Performs syntax analysis
 func ParseFile(fileName, content string) (*FileSchemaAST, error) {
@@ -33,6 +35,10 @@ func ParsePackageDir(qualifiedPackageName string, fs IReadFS, subDir string) (*P
 }
 
 // Application-level semantic analysis (e.g. cross-package references)
-func MergePackageSchemas(packages []*PackageSchemaAST) /*TODO: return .?.ISchema */ error {
+func MergePackageSchemas(packages []*PackageSchemaAST) (map[string]*PackageSchemaAST, error) {
 	return mergePackageSchemasImpl(packages)
+}
+
+func BuildAppDefs(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) error {
+	return buildAppDefs(packages, builder)
 }

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -104,6 +105,8 @@ func TestSqlQuery_plog(t *testing.T) {
 		pLogSize++
 	}
 
+	time.Sleep(ProjectionAwaitTime)
+
 	t.Run("Should read events with default Offset and limit", func(t *testing.T) {
 		require := require.New(t)
 		body := `{"args":{"Query":"select * from sys.plog"},"elements":[{"fields":["Result"]}]}`
@@ -130,6 +133,7 @@ func TestSqlQuery_plog(t *testing.T) {
 		m = map[string]interface{}{}
 		require.NoError(json.Unmarshal([]byte(resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)), &m))
 		lastPLogOffset = int(m["PlogOffset"].(float64))
+
 	})
 	t.Run("Should read one event by limit", func(t *testing.T) {
 		require := require.New(t)
@@ -141,6 +145,9 @@ func TestSqlQuery_plog(t *testing.T) {
 	t.Run("Should read one event by Offset", func(t *testing.T) {
 		require := require.New(t)
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.plog where Offset > %d"},"elements":[{"fields":["Result"]}]}`, lastPLogOffset-1)
+		if lastPLogOffset-1 <= 0 {
+			fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!")
+		}
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 
 		m := map[string]interface{}{}
