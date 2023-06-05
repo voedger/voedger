@@ -582,3 +582,96 @@ func Test_rowType_BuildErrors(t *testing.T) {
 		require.ErrorIs(row.build(), ErrWrongFieldType)
 	})
 }
+
+func Test_rowType_Nils(t *testing.T) {
+	require := require.New(t)
+	test := test()
+
+	t.Run("must be empty nils if no nil assignment", func(t *testing.T) {
+		row := newRow(test.AppCfg)
+		row.setQName(test.testRow)
+
+		row.PutInt32("int32", 8)
+		require.NoError(row.build())
+		require.Empty(row.nils)
+	})
+
+	t.Run("check nils", func(t *testing.T) {
+		row := newRow(test.AppCfg)
+		row.setQName(test.testRow)
+
+		t.Run("check first nil", func(t *testing.T) {
+			row.PutInt32("int32", 8)
+			row.PutChars("bytes", "")
+			require.NoError(row.build())
+			require.Len(row.nils, 1)
+			require.True(row.nils["bytes"])
+		})
+
+		t.Run("check second nil", func(t *testing.T) {
+			row.PutChars("string", "")
+			require.NoError(row.build())
+			require.Len(row.nils, 2)
+			require.True(row.nils["bytes"])
+			require.True(row.nils["string"])
+		})
+
+		t.Run("check nil can be reassigned", func(t *testing.T) {
+			row.PutChars("string", "ABC")
+			require.NoError(row.build())
+			require.Len(row.nils, 1)
+			require.True(row.nils["bytes"])
+		})
+	})
+
+	t.Run("check nil assignment", func(t *testing.T) {
+		row := newRow(test.AppCfg)
+		row.setQName(test.testRow)
+		row.PutInt32("int32", 0)
+		row.PutInt64("int64", 0)
+		row.PutFloat32("float32", 0)
+		row.PutFloat64("float64", 0)
+		row.PutBytes("bytes", []byte{})
+		row.PutString("string", "")
+		row.PutQName("QName", appdef.NullQName)
+		row.PutBool("bool", false)
+		row.PutRecordID("RecordID", istructs.NullRecordID)
+
+		require.NoError(row.build())
+
+		require.True(row.HasValue("int32"))
+		require.True(row.HasValue("int64"))
+		require.True(row.HasValue("float32"))
+		require.True(row.HasValue("float64"))
+		require.False(row.HasValue("bytes"))
+		require.False(row.HasValue("string"))
+		require.True(row.HasValue("QName"))
+		require.True(row.HasValue("bool"))
+		require.True(row.HasValue("RecordID"))
+
+		cnt := 0
+		row.dyB.IterateFields(nil, func(name string, newData interface{}) bool {
+			switch name {
+			case "int32", "int64", "float32", "float64":
+				require.Zero(newData)
+			case "QName":
+				var nullQNameBytes = []uint8([]byte{0x0, 0x0})
+				require.Equal(nullQNameBytes, newData)
+			case "bool":
+				require.False(newData.(bool))
+			case "RecordID":
+				require.EqualValues(istructs.NullRecordID, newData)
+			default:
+				require.Fail("unexpected field", "field name: «%s»", name)
+			}
+			cnt++
+			return true
+		})
+
+		require.Equal(7, cnt)
+
+		require.Len(row.nils, 2)
+		require.True(row.nils["bytes"])
+		require.True(row.nils["string"])
+	})
+}

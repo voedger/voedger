@@ -37,7 +37,7 @@ type rowType struct {
 	container string
 	isActive  bool
 	dyB       *dynobuffers.Buffer
-	nils      map[string]bool
+	nils      map[string]bool // nilled string and []bytes, which not stored in dynobuffer
 	err       error
 }
 
