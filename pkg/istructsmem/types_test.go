@@ -15,6 +15,21 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 )
 
+func Test_rowNullDefinition(t *testing.T) {
+	require := require.New(t)
+
+	row := newTestRow()
+
+	row.setQName(appdef.NullQName)
+	require.Equal(appdef.NullQName, row.QName())
+
+	row.setDef(appdef.NullDef)
+	require.Equal(appdef.NullQName, row.QName())
+
+	row.setDef(nil)
+	require.Equal(appdef.NullQName, row.QName())
+}
+
 func Test_dynoBufValue(t *testing.T) {
 	require := require.New(t)
 	test := test()
