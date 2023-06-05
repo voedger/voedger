@@ -414,3 +414,33 @@ func Test_UniqueFields(t *testing.T) {
 	require.NotNil(fld)
 	require.Equal("Int2", fld.Name())
 }
+
+func Test_NestedTables(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	TABLE NestedTable INHERITS CRecord (
+		ItemName text,
+		DeepNested TABLE DeepNestedTable (
+			ItemName text
+		)
+	);
+	`)
+	require.Nil(err)
+
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.Nil(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	def := appdef.New()
+	err = BuildAppDefs(packages, def)
+	require.NoError(err)
+
+	require.NotNil(def.CRecord(appdef.NewQName("test", "NestedTable")))
+	require.NotNil(def.CRecord(appdef.NewQName("test", "DeepNestedTable")))
+}
