@@ -222,18 +222,18 @@ func newKey(appCfg *AppConfigType, name appdef.QName) *keyType {
 // Builds partition and clustering columns rows and returns error if occurs
 func (key *keyType) build() (err error) {
 	changes := key.rowType.dyB.IsModified()
-	if _, err = key.rowType.build(); err != nil {
+	if err = key.rowType.build(); err != nil {
 		return err
 	}
 	if changes {
 		key.splitRow()
 	}
 
-	if _, err = key.partRow.build(); err != nil {
+	if err = key.partRow.build(); err != nil {
 		return err
 	}
 
-	if _, err = key.ccolsRow.build(); err != nil {
+	if err = key.ccolsRow.build(); err != nil {
 		return err
 	}
 
@@ -270,7 +270,7 @@ func (key *keyType) keyRow() (istructs.IRowReader, error) {
 			row.dyB.Set(f.Name(), key.ccolsRow.dyB.Get(f.Name()))
 		})
 
-	if _, err := row.build(); err != nil {
+	if err := row.build(); err != nil {
 		return nil, err
 	}
 
@@ -400,8 +400,7 @@ type valueType struct {
 }
 
 func (val *valueType) Build() istructs.IValue {
-	_, err := val.build()
-	if err != nil {
+	if err := val.build(); err != nil {
 		panic(err)
 	}
 	value := newValue(val.appCfg, val.viewName)

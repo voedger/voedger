@@ -431,7 +431,7 @@ func (cud *cudType) applyRecs(exists existsRecordType, load loadRecordFuncType, 
 // build builds creates and updates and returns error if occurs
 func (cud *cudType) build() (err error) {
 	for _, rec := range cud.creates {
-		if _, err = rec.build(); err != nil {
+		if err = rec.build(); err != nil {
 			return err
 		}
 	}
@@ -528,7 +528,7 @@ func regenerateIDsInRecord(rec *recordType, newIDs newIDsPlanType) (err error) {
 	})
 	if changes {
 		// rebuild record to apply changes to dyno-buffer
-		_, err = rec.build()
+		err = rec.build()
 	}
 	return err
 }
@@ -642,8 +642,7 @@ func (upd *updateRecType) build() (err error) {
 		return nil
 	}
 
-	nilledFields, err := upd.changes.build()
-	if err != nil {
+	if err = upd.changes.build(); err != nil {
 		return err
 	}
 
@@ -661,18 +660,19 @@ func (upd *updateRecType) build() (err error) {
 		upd.result.setActive(upd.changes.IsActive())
 	}
 
-	userChanges := len(nilledFields) > 0
+	userChanges := false
 	upd.changes.dyB.IterateFields(nil, func(name string, newData interface{}) bool {
 		upd.result.dyB.Set(name, newData)
 		userChanges = true
 		return true
 	})
-	for _, nilledField := range nilledFields {
-		upd.result.dyB.Set(nilledField, nil)
+	for n := range upd.changes.nils {
+		upd.result.dyB.Set(n, nil)
+		userChanges = true
 	}
 
 	if userChanges {
-		_, err = upd.result.build()
+		err = upd.result.build()
 	}
 
 	return err
@@ -718,8 +718,7 @@ func newElement(parent *elementType) elementType {
 // Build builds element record and all children recursive
 func (el *elementType) build() (err error) {
 	return el.forEach(func(e *elementType) error {
-		_, err := e.rowType.build()
-		return err
+		return e.rowType.build()
 	})
 }
 

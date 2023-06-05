@@ -448,8 +448,7 @@ func TestEventBuilder_Core(t *testing.T) {
 			r.PutFloat32(test.heightIdent, test.heightValue) // revert -10 cm
 			require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 			r.PutBytes(test.photoIdent, test.photoValue) // revert to old photo
-			_, err = r.build()
-			require.NoError(err)
+			require.NoError(r.build())
 
 			// hack: use low level appRecordsType putRecord()
 			bytes, err := r.storeToBytes()
@@ -1162,7 +1161,7 @@ func TestEventBuild_Error(t *testing.T) {
 			r.PutQName(appdef.SystemField_QName, test.tablePhotos)
 			r.PutRecordID(appdef.SystemField_ID, 100500)
 			r.PutString(test.buyerIdent, test.buyerValue)
-			_, err := r.build()
+			err := r.build()
 			require.NoError(err)
 			return &r
 		}
@@ -1206,7 +1205,7 @@ func TestEventBuild_Error(t *testing.T) {
 				r.PutString(appdef.SystemField_Container, test.remarkIdent)
 				r.PutRecordID(test.photoIdent, 100500)
 				r.PutString(test.remarkIdent, test.remarkValue)
-				_, err := r.build()
+				err := r.build()
 				require.NoError(err)
 				return &r
 			}
