@@ -100,7 +100,7 @@ func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName is
 			}
 
 			if _, err = coreutils.FederationFunc(federationURL(), createWSIDCmdURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
-				return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %w", err)
+				return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %w. Body:\n%s", err, body)
 			}
 			return nil
 		})
