@@ -37,6 +37,7 @@ type rowType struct {
 	container string
 	isActive  bool
 	dyB       *dynobuffers.Buffer
+	nils      map[string]bool // nilled string and []bytes, which not stored in dynobuffer
 	err       error
 }
 
@@ -50,32 +51,43 @@ func newRow(appCfg *AppConfigType) rowType {
 		container: "",
 		isActive:  true,
 		dyB:       nullDynoBuffer,
+		nils:      make(map[string]bool),
 		err:       nil,
 	}
 }
 
 // build builds the row. Must be called after all Put××× calls to build row. If there were errors during data puts, then their connection will be returned.
 // If there were no errors, then tries to form the dynoBuffer and returns the result
-func (row *rowType) build() (nilledFields []string, err error) {
+func (row *rowType) build() (err error) {
 	if row.err != nil {
-		return nil, row.error()
+		return row.error()
 	}
 
 	if row.QName() == appdef.NullQName {
-		return nil, nil
+		return nil
 	}
 
 	if row.dyB.IsModified() {
-		var bytes []byte
-		if bytes, nilledFields, err = row.dyB.ToBytesNilled(); err == nil {
+		var (
+			bytes []byte
+			nils  []string
+		)
+		if bytes, nils, err = row.dyB.ToBytesNilled(); err == nil {
 			row.dyB.Reset(utils.CopyBytes(bytes))
-			for _, nilledFieldName := range nilledFields {
-				row.dyB.Set(nilledFieldName, nil)
+			// append new nils
+			for _, n := range nils {
+				row.nils[n] = true
+			}
+			// remove extra nils
+			for n := range row.nils {
+				if row.dyB.HasValue(n) {
+					delete(row.nils, n)
+				}
 			}
 		}
 	}
 
-	return nilledFields, err
+	return err
 }
 
 // clear clears row by set QName to NullQName value
@@ -86,6 +98,7 @@ func (row *rowType) clear() {
 	row.container = ""
 	row.isActive = true
 	row.dyB = nullDynoBuffer
+	row.nils = make(map[string]bool)
 	row.err = nil
 }
 
@@ -121,7 +134,7 @@ func (row *rowType) copyFrom(src *rowType) {
 			return true
 		})
 
-	_, _ = row.build()
+	_ = row.build()
 }
 
 // empty returns true if no data except system fields

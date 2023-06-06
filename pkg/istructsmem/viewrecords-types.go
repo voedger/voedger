@@ -222,18 +222,18 @@ func newKey(appCfg *AppConfigType, name appdef.QName) *keyType {
 // Builds partition and clustering columns rows and returns error if occurs
 func (key *keyType) build() (err error) {
 	changes := key.rowType.dyB.IsModified()
-	if _, err = key.rowType.build(); err != nil {
+	if err = key.rowType.build(); err != nil {
 		return err
 	}
 	if changes {
 		key.splitRow()
 	}
 
-	if _, err = key.partRow.build(); err != nil {
+	if err = key.partRow.build(); err != nil {
 		return err
 	}
 
-	if _, err = key.ccolsRow.build(); err != nil {
+	if err = key.ccolsRow.build(); err != nil {
 		return err
 	}
 
@@ -243,7 +243,7 @@ func (key *keyType) build() (err error) {
 // Returns name of clustering columns key definition
 func (key *keyType) ccDef() appdef.QName {
 	if v := key.appCfg.AppDef.View(key.viewName); v != nil {
-		return v.ClustCols().QName()
+		return v.Key().ClustCols().QName()
 	}
 	return appdef.NullQName
 }
@@ -270,7 +270,7 @@ func (key *keyType) keyRow() (istructs.IRowReader, error) {
 			row.dyB.Set(f.Name(), key.ccolsRow.dyB.Get(f.Name()))
 		})
 
-	if _, err := row.build(); err != nil {
+	if err := row.build(); err != nil {
 		return nil, err
 	}
 
@@ -295,7 +295,7 @@ func (key *keyType) loadFromBytes(pKey, cKey []byte) (err error) {
 // Returns name of partition key definition
 func (key *keyType) pkDef() appdef.QName {
 	if v := key.appCfg.AppDef.View(key.viewName); v != nil {
-		return v.PartKey().QName()
+		return v.Key().PartKey().QName()
 	}
 
 	return appdef.NullQName
@@ -304,8 +304,8 @@ func (key *keyType) pkDef() appdef.QName {
 // Splits solid key row to partition key row and clustering columns row using view definitions
 func (key *keyType) splitRow() {
 	v := key.appCfg.AppDef.View(key.viewName)
-	pkDef := v.PartKey()
-	ccDef := v.ClustCols()
+	pkDef := v.Key().PartKey()
+	ccDef := v.Key().ClustCols()
 
 	key.rowType.dyB.IterateFields(nil,
 		func(name string, data interface{}) bool {
@@ -400,8 +400,7 @@ type valueType struct {
 }
 
 func (val *valueType) Build() istructs.IValue {
-	_, err := val.build()
-	if err != nil {
+	if err := val.build(); err != nil {
 		panic(err)
 	}
 	value := newValue(val.appCfg, val.viewName)

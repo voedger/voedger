@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -111,6 +112,39 @@ func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 	return targetPkgSch, nil
 }
 
+func resolveTable(fn DefQName, c *basicContext, pos *lexer.Position) (*TableStmt, error) {
+	var item *TableStmt
+	var checkStatement func(stmt interface{})
+	checkStatement = func(stmt interface{}) {
+		if t, ok := stmt.(*TableStmt); ok {
+			if t.Name == fn.Name {
+				item = t
+				return
+			}
+			for i := range t.Items {
+				if t.Items[i].NestedTable != nil {
+					checkStatement(&t.Items[i].NestedTable.Table)
+				}
+			}
+		}
+	}
+
+	schema, err := getTargetSchema(fn, c)
+	if err != nil {
+		return nil, errorAt(err, pos)
+	}
+
+	iterate(schema.Ast, func(stmt interface{}) {
+		checkStatement(stmt)
+	})
+
+	if item == nil {
+		return nil, errorAt(ErrUndefined(fn.String()), c.pos)
+	}
+
+	return item, nil
+}
+
 func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) {
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
@@ -158,7 +192,9 @@ func isSysDef(qn DefQName, ident string) bool {
 }
 
 func isPredefinedSysTable(table *TableStmt, c *buildContext) bool {
-	return c.pkg.QualifiedPackageName == appdef.SysPackage && (table.Name == nameCDOC || table.Name == nameWDOC || table.Name == nameODOC)
+	return c.pkg.QualifiedPackageName == appdef.SysPackage &&
+		(table.Name == nameCDOC || table.Name == nameWDOC || table.Name == nameODOC ||
+			table.Name == nameCRecord || table.Name == nameWRecord || table.Name == nameORecord)
 }
 
 func getTableInheritanceChain(table *TableStmt, ctx *buildContext) (chain []DefQName) {
@@ -180,11 +216,11 @@ func getTableInheritanceChain(table *TableStmt, ctx *buildContext) (chain []DefQ
 
 func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
 	switch rootTableKind {
-	case appdef.DefKind_CDoc:
+	case appdef.DefKind_CDoc, appdef.DefKind_CRecord:
 		return appdef.DefKind_CRecord
-	case appdef.DefKind_ODoc:
+	case appdef.DefKind_ODoc, appdef.DefKind_ORecord:
 		return appdef.DefKind_ORecord
-	case appdef.DefKind_WDoc:
+	case appdef.DefKind_WDoc, appdef.DefKind_WRecord:
 		return appdef.DefKind_WRecord
 	default:
 		panic(fmt.Sprintf("unexpected root table kind %d", rootTableKind))
@@ -211,6 +247,12 @@ func getTableDefKind(table *TableStmt, ctx *buildContext) (kind appdef.DefKind, 
 			return appdef.DefKind_ODoc, false
 		} else if isSysDef(t, nameWDOC) {
 			return appdef.DefKind_WDoc, false
+		} else if isSysDef(t, nameCRecord) {
+			return appdef.DefKind_CRecord, false
+		} else if isSysDef(t, nameORecord) {
+			return appdef.DefKind_ORecord, false
+		} else if isSysDef(t, nameWRecord) {
+			return appdef.DefKind_WRecord, false
 		}
 	}
 	return appdef.DefKind_null, false

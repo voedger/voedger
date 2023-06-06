@@ -18,14 +18,12 @@ import (
 
 func parseImpl(fileName string, content string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
-
 		{Name: "Comment", Pattern: `--.*`},
 		{Name: "Array", Pattern: `\[\]`},
 		{Name: "Float", Pattern: `[-+]?\d+\.\d+`},
 		{Name: "Int", Pattern: `[-+]?\d+`},
 		{Name: "Operators", Pattern: `<>|!=|<=|>=|[-+*/%,()=<>]`}, //( '<>' | '<=' | '>=' | '=' | '<' | '>' | '!=' )"
 		{Name: "Punct", Pattern: `[;\[\].]`},
-		{Name: "Keywords", Pattern: `ON|AND|OR`},
 		{Name: "DEFAULTNEXTVAL", Pattern: `DEFAULT[ \r\n\t]+NEXTVAL`},
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
 		{Name: "EXTENSIONENGINE", Pattern: `EXTENSION[ \r\n\t]+ENGINE`},
@@ -146,7 +144,9 @@ func analyseViews(schema *SchemaAST, errs []error) []error {
 func analyseDuplicateNames(schema *SchemaAST, errs []error) []error {
 	namedIndex := make(map[string]interface{})
 
-	iterate(schema, func(stmt interface{}) {
+	var checkStatement func(stmt interface{})
+
+	checkStatement = func(stmt interface{}) {
 		if named, ok := stmt.(INamedStatement); ok {
 			name := named.GetName()
 			if name == "" {
@@ -156,12 +156,22 @@ func analyseDuplicateNames(schema *SchemaAST, errs []error) []error {
 				}
 			}
 			if _, ok := namedIndex[name]; ok {
-				s := stmt.(IStatement)
-				errs = append(errs, errorAt(ErrRedeclared(name), s.GetPos()))
+				errs = append(errs, errorAt(ErrRedeclared(name), named.GetPos()))
 			} else {
 				namedIndex[name] = stmt
 			}
 		}
+		if t, ok := stmt.(*TableStmt); ok {
+			for i := range t.Items {
+				if t.Items[i].NestedTable != nil {
+					checkStatement(&t.Items[i].NestedTable.Table)
+				}
+			}
+		}
+	}
+
+	iterate(schema, func(stmt interface{}) {
+		checkStatement(stmt)
 	})
 	return errs
 }
@@ -433,68 +443,119 @@ func buildTables(ctx *buildContext) error {
 	return errors.Join(ctx.errs...)
 }
 
+func addFieldRefToDef(refField *RefFieldExpr, ctx *buildContext) {
+	if err := ctx.defCtx().checkName(refField.Name, &refField.Pos); err != nil {
+		ctx.errs = append(ctx.errs, err)
+		return
+	}
+	refs := make([]appdef.QName, 0)
+	errors := false
+	for i := range refField.RefDocs {
+		_, err := resolveTable(refField.RefDocs[i], &ctx.basicContext, &refField.Pos)
+		if err != nil {
+			ctx.errs = append(ctx.errs, err)
+			errors = true
+		}
+	}
+	if !errors {
+		ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).AddRefField(refField.Name, refField.NotNull, refs...)
+	}
+}
+
+func addFieldToDef(field *FieldExpr, ctx *buildContext) {
+	sysDataKind := getTypeDataKind(*field.Type)
+	if sysDataKind != appdef.DataKind_null {
+		if field.Type.IsArray {
+			ctx.errs = append(ctx.errs, errorAt(ErrArrayFieldsNotSupportedHere, &field.Pos))
+			return
+		}
+		if err := ctx.defCtx().checkName(field.Name, &field.Pos); err != nil {
+			ctx.errs = append(ctx.errs, err)
+			return
+		}
+		if field.Verifiable {
+			// TODO: Support different verification kindsbuilder, &c
+			ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).AddVerifiedField(field.Name, sysDataKind, field.NotNull, appdef.VerificationKind_EMail)
+		} else {
+			ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).AddField(field.Name, sysDataKind, field.NotNull)
+		}
+	} else {
+		// Record?
+		pkg := field.Type.Package
+		if pkg == "" {
+			pkg = ctx.pkg.Ast.Package
+		}
+		qname := appdef.NewQName(pkg, field.Type.Name)
+		wrec := ctx.builder.WRecord(qname)
+		crec := ctx.builder.CRecord(qname)
+		orec := ctx.builder.ORecord(qname)
+		if wrec != nil || orec != nil || crec != nil {
+			tk := getNestedTableKind(ctx.defs[0].kind)
+			if (wrec != nil && tk != appdef.DefKind_WRecord) ||
+				(orec != nil && tk != appdef.DefKind_ORecord) ||
+				(crec != nil && tk != appdef.DefKind_CRecord) {
+				ctx.errs = append(ctx.errs, ErrNestedTableIncorrectKind)
+				return
+			}
+			ctx.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(field.Name, qname, 0, maxNestedTableContainerOccurrences)
+		} else {
+			ctx.errs = append(ctx.errs, errorAt(ErrTypeNotSupported(field.Type.String()), &field.Pos))
+		}
+	}
+}
+
+func addConstraintToDef(constraint *TableConstraint, ctx *buildContext) {
+	if constraint.UniqueField != nil {
+		f := ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).Field(constraint.UniqueField.Field)
+		if f == nil {
+			ctx.errs = append(ctx.errs, errorAt(ErrUndefinedField(constraint.UniqueField.Field), &constraint.Pos))
+			return
+		}
+		if !f.Required() {
+			ctx.errs = append(ctx.errs, errorAt(ErrMustBeNotNull, &constraint.Pos))
+			return
+		}
+		// item.Constraint.ConstraintName  constraint name not used for old uniques
+		ctx.defCtx().defBuilder.(appdef.IUniquesBuilder).SetUniqueField(constraint.UniqueField.Field)
+	}
+}
+
+func addNestedTableToDef(nested *NestedTableStmt, ctx *buildContext) {
+	containerName := nested.Name
+	if err := ctx.defCtx().checkName(containerName, &nested.Pos); err != nil {
+		ctx.errs = append(ctx.errs, err)
+		return
+	}
+
+	kind, _ := getTableDefKind(&nested.Table, ctx)
+	if kind == appdef.DefKind_CDoc || kind == appdef.DefKind_ODoc || kind == appdef.DefKind_WDoc {
+		ctx.errs = append(ctx.errs, ErrNestedTableCannotBeDocument)
+		return
+	}
+
+	tk := getNestedTableKind(ctx.defs[0].kind)
+	if kind != appdef.DefKind_null && kind != tk {
+		ctx.errs = append(ctx.errs, ErrNestedTableIncorrectKind)
+		return
+	}
+
+	ctx.pushDef(nested.Table.Name, tk)
+	addFieldsOf(nested.Table.Of, ctx)
+	addTableItems(nested.Table.Items, ctx)
+	ctx.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(containerName, ctx.defCtx().qname, 0, maxNestedTableContainerOccurrences)
+	ctx.popDef()
+
+}
 func addTableItems(items []TableItemExpr, ctx *buildContext) {
 	for _, item := range items {
 		if item.RefField != nil {
-			if err := ctx.defCtx().checkName(item.RefField.Name, &item.RefField.Pos); err != nil {
-				ctx.errs = append(ctx.errs, err)
-				continue
-			}
-			ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).AddField(item.RefField.Name, appdef.DataKind_RecordID, item.RefField.NotNull)
+			addFieldRefToDef(item.RefField, ctx)
 		} else if item.Field != nil {
-			sysDataKind := getTypeDataKind(*item.Field.Type)
-			if sysDataKind != appdef.DataKind_null {
-				if item.Field.Type.IsArray {
-					ctx.errs = append(ctx.errs, errorAt(ErrArrayFieldsNotSupportedHere, &item.Field.Pos))
-					continue
-				}
-				if err := ctx.defCtx().checkName(item.Field.Name, &item.Field.Pos); err != nil {
-					ctx.errs = append(ctx.errs, err)
-					continue
-				}
-				if item.Field.Verifiable {
-					// TODO: Support different verification kindsbuilder, &c
-					ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).AddVerifiedField(item.Field.Name, sysDataKind, item.Field.NotNull, appdef.VerificationKind_EMail)
-				} else {
-					ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).AddField(item.Field.Name, sysDataKind, item.Field.NotNull)
-				}
-			} else {
-				ctx.errs = append(ctx.errs, errorAt(ErrTypeNotSupported(item.Field.Type.String()), &item.Field.Pos))
-			}
+			addFieldToDef(item.Field, ctx)
 		} else if item.Constraint != nil {
-			if item.Constraint.UniqueField != nil {
-				f := ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).Field(item.Constraint.UniqueField.Field)
-				if f == nil {
-					ctx.errs = append(ctx.errs, errorAt(ErrUndefinedField(item.Constraint.UniqueField.Field), &item.Constraint.Pos))
-					continue
-				}
-				if !f.Required() {
-					ctx.errs = append(ctx.errs, errorAt(ErrMustBeNotNull, &item.Constraint.Pos))
-					continue
-				}
-				// item.Constraint.ConstraintName  constraint name not used for old uniques
-				ctx.defCtx().defBuilder.(appdef.IUniquesBuilder).SetUniqueField(item.Constraint.UniqueField.Field)
-			}
-		} else if item.Table != nil {
-			// Add nested table
-			kind, singletone := getTableDefKind(item.Table, ctx)
-			if kind != appdef.DefKind_null || singletone {
-				ctx.errs = append(ctx.errs, ErrNestedTableCannotBeDocument)
-				continue
-			}
-
-			containerName := item.Table.Name // TODO: implement AS container_name
-			if err := ctx.defCtx().checkName(containerName, &item.Table.Pos); err != nil {
-				ctx.errs = append(ctx.errs, err)
-				continue
-			}
-			tk := getNestedTableKind(ctx.defs[0].kind)
-			ctx.pushDef(item.Table.Name, tk) // TODO: analyze for duplicates in the QNames of nested tables
-			addFieldsOf(item.Table.Of, ctx)
-			addTableItems(item.Table.Items, ctx)
-			ctx.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(containerName, ctx.defCtx().qname, 0, maxNestedTableContainerOccurrences)
-			ctx.popDef()
-
+			addConstraintToDef(item.Constraint, ctx)
+		} else if item.NestedTable != nil {
+			addNestedTableToDef(item.NestedTable, ctx)
 		}
 	}
 }

@@ -70,10 +70,10 @@ func Test_BasicUsage(t *testing.T) {
 	view := builder.View(appdef.NewQName("air", "XZReports"))
 	require.NotNil(view)
 	require.Equal(appdef.DefKind_ViewRecord, view.Kind())
-	require.Equal(2, builder.Def(view.Container(appdef.SystemContainer_ViewValue).Def()).(appdef.IFields).FieldCount()) // sys.Qname, XZReportWDocID
-	require.Equal(1, builder.Def(view.Container(appdef.SystemContainer_ViewPartitionKey).Def()).(appdef.IFields).FieldCount())
-	require.Equal(4, builder.Def(view.Container(appdef.SystemContainer_ViewClusteringCols).Def()).(appdef.IFields).FieldCount())
 
+	require.Equal(1, view.Value().UserFieldCount())
+	require.Equal(1, view.Key().PartKey().FieldCount())
+	require.Equal(4, view.Key().ClustCols().FieldCount())
 }
 
 func Test_DupFieldsInTypes(t *testing.T) {
@@ -142,7 +142,7 @@ func Test_DupFieldsInTables(t *testing.T) {
 		someField int,		-- duplicated in the second OF
 		Kind int,			-- duplicated in the first OF (2nd level)
 		Name int,			-- duplicated in the inherited table
-		ID text				-- duplicated in the inherited table (2nd level)
+		ID text				
 	)
 	`)
 	require.NoError(err)
@@ -162,7 +162,6 @@ func Test_DupFieldsInTables(t *testing.T) {
 		"file1.sql:20:3: someField redeclared",
 		"file1.sql:21:3: Kind redeclared",
 		"file1.sql:22:3: Name redeclared",
-		"file1.sql:23:3: ID redeclared",
 	}, "\n"))
 
 }
@@ -193,19 +192,24 @@ func Test_Duplicates(t *testing.T) {
 		FUNCTION MyTableValidator() RETURNS void;
 		FUNCTION MyTableValidator(TableRow) RETURNS string;	
 		FUNCTION MyFunc2() RETURNS void;
-	)
+	);
+	TABLE Rec1 INHERITS CRecord();
 	`)
 	require.NoError(err)
 
 	ast2, err := ParseFile("file2.sql", `SCHEMA test; 
 	WORKSPACE ChildWorkspace (
-		TAG MyFunc2; -- duplicate
+		TAG MyFunc2; -- redeclared
 		EXTENSION ENGINE BUILTIN (
 			FUNCTION MyFunc3() RETURNS void;
 			FUNCTION MyFunc4() RETURNS void;
 		);
 		WORKSPACE InnerWorkspace (
-			ROLE MyFunc4; -- duplicate
+			ROLE MyFunc4; -- redeclared
+		);
+		TABLE Doc1 INHERITS ODoc(
+			nested1 Rec1,
+			nested2 TABLE Rec1() -- redeclared
 		)
 	)
 	`)
@@ -217,6 +221,7 @@ func Test_Duplicates(t *testing.T) {
 		"file1.sql:4:3: MyTableValidator redeclared",
 		"file2.sql:3:3: MyFunc2 redeclared",
 		"file2.sql:9:4: MyFunc4 redeclared",
+		"file2.sql:13:12: Rec1 redeclared",
 	}, "\n"))
 
 }
@@ -408,4 +413,34 @@ func Test_UniqueFields(t *testing.T) {
 	fld := cdoc.UniqueField()
 	require.NotNil(fld)
 	require.Equal("Int2", fld.Name())
+}
+
+func Test_NestedTables(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	TABLE NestedTable INHERITS CRecord (
+		ItemName text,
+		DeepNested TABLE DeepNestedTable (
+			ItemName text
+		)
+	);
+	`)
+	require.Nil(err)
+
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.Nil(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	def := appdef.New()
+	err = BuildAppDefs(packages, def)
+	require.NoError(err)
+
+	require.NotNil(def.CRecord(appdef.NewQName("test", "NestedTable")))
+	require.NotNil(def.CRecord(appdef.NewQName("test", "DeepNestedTable")))
 }

@@ -23,6 +23,7 @@ var ErrPrimaryKeyRedeclared = errors.New("primary key redeclared")
 var ErrPrimaryKeyNotDeclared = errors.New("primary key not declared")
 var ErrUndefinedTableKind = errors.New("undefined table kind")
 var ErrNestedTableCannotBeDocument = errors.New("nested table cannot be declared as document")
+var ErrNestedTableIncorrectKind = errors.New("incorrect nested table kind")
 var ErrArrayFieldsNotSupportedHere = errors.New("array fields of system types not supported here")
 var ErrMustBeNotNull = errors.New("field has to be NOT NULL")
 

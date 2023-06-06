@@ -28,7 +28,7 @@ func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.
 	}
 
 	v := value.(*valueType)
-	if _, err = v.build(); err != nil {
+	if err = v.build(); err != nil {
 		return nil, nil, nil, err
 	}
 	if err = vr.app.config.validators.validViewValue(v); err != nil {
@@ -91,8 +91,7 @@ func loadViewPartKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 		return err
 	}
 
-	_, err = key.partRow.build()
-	return err
+	return key.partRow.build()
 }
 
 // Loads clustering columns from buffer
@@ -111,8 +110,7 @@ func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 		return err
 	}
 
-	_, err = key.ccolsRow.build()
-	return err
+	return key.ccolsRow.build()
 }
 
 // Loads view value from specified buf using specified codec.

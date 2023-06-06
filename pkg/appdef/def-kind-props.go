@@ -7,24 +7,17 @@ package appdef
 
 // Definition kind properties
 var defKindProps = map[DefKind]struct {
-	fieldsAllowed           bool
-	availableFieldKinds     map[DataKind]bool
-	systemFields            map[string]bool
-	containersAllowed       bool
-	availableContainerKinds map[DefKind]bool
-	availableUniques        bool
+	fieldKinds     map[DataKind]bool
+	systemFields   map[string]bool
+	containerKinds map[DefKind]bool
 }{
 	DefKind_null: {
-		fieldsAllowed:           false,
-		availableFieldKinds:     map[DataKind]bool{},
-		systemFields:            map[string]bool{},
-		containersAllowed:       false,
-		availableContainerKinds: map[DefKind]bool{},
-		availableUniques:        false,
+		fieldKinds:     map[DataKind]bool{},
+		systemFields:   map[string]bool{},
+		containerKinds: map[DefKind]bool{},
 	},
 	DefKind_GDoc: {
-		fieldsAllowed: true,
-		availableFieldKinds: map[DataKind]bool{
+		fieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
 			DataKind_int64:    true,
 			DataKind_float32:  true,
@@ -40,15 +33,12 @@ var defKindProps = map[DefKind]struct {
 			SystemField_QName:    true,
 			SystemField_IsActive: true,
 		},
-		containersAllowed: true,
-		availableContainerKinds: map[DefKind]bool{
+		containerKinds: map[DefKind]bool{
 			DefKind_GRecord: true,
 		},
-		availableUniques: true,
 	},
 	DefKind_CDoc: {
-		fieldsAllowed: true,
-		availableFieldKinds: map[DataKind]bool{
+		fieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
 			DataKind_int64:    true,
 			DataKind_float32:  true,
@@ -64,15 +54,12 @@ var defKindProps = map[DefKind]struct {
 			SystemField_QName:    true,
 			SystemField_IsActive: true,
 		},
-		containersAllowed: true,
-		availableContainerKinds: map[DefKind]bool{
+		containerKinds: map[DefKind]bool{
 			DefKind_CRecord: true,
 		},
-		availableUniques: true,
 	},
 	DefKind_ODoc: {
-		fieldsAllowed: true,
-		availableFieldKinds: map[DataKind]bool{
+		fieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
 			DataKind_int64:    true,
 			DataKind_float32:  true,
@@ -87,16 +74,13 @@ var defKindProps = map[DefKind]struct {
 			SystemField_ID:    true,
 			SystemField_QName: true,
 		},
-		containersAllowed: true,
-		availableContainerKinds: map[DefKind]bool{
+		containerKinds: map[DefKind]bool{
 			DefKind_ODoc:    true, // #19322!: ODocs should be able to contain ODocs
 			DefKind_ORecord: true,
 		},
-		availableUniques: false,
 	},
 	DefKind_WDoc: {
-		fieldsAllowed: true,
-		availableFieldKinds: map[DataKind]bool{
+		fieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
 			DataKind_int64:    true,
 			DataKind_float32:  true,
@@ -112,15 +96,12 @@ var defKindProps = map[DefKind]struct {
 			SystemField_QName:    true,
 			SystemField_IsActive: true,
 		},
-		containersAllowed: true,
-		availableContainerKinds: map[DefKind]bool{
+		containerKinds: map[DefKind]bool{
 			DefKind_WRecord: true,
 		},
-		availableUniques: true,
 	},
 	DefKind_GRecord: {
-		fieldsAllowed: true,
-		availableFieldKinds: map[DataKind]bool{
+		fieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
 			DataKind_int64:    true,
 			DataKind_float32:  true,
@@ -138,15 +119,12 @@ var defKindProps = map[DefKind]struct {
 			SystemField_Container: true,
 			SystemField_IsActive:  true,
 		},
-		containersAllowed: true,
-		availableContainerKinds: map[DefKind]bool{
+		containerKinds: map[DefKind]bool{
 			DefKind_GRecord: true,
 		},
-		availableUniques: true,
 	},
 	DefKind_CRecord: {
-		fieldsAllowed: true,
-		availableFieldKinds: map[DataKind]bool{
+		fieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
 			DataKind_int64:    true,
 			DataKind_float32:  true,
@@ -164,15 +142,12 @@ var defKindProps = map[DefKind]struct {
 			SystemField_Container: true,
 			SystemField_IsActive:  true,
 		},
-		containersAllowed: true,
-		availableContainerKinds: map[DefKind]bool{
+		containerKinds: map[DefKind]bool{
 			DefKind_CRecord: true,
 		},
-		availableUniques: true,
 	},
 	DefKind_ORecord: {
-		fieldsAllowed: true,
-		availableFieldKinds: map[DataKind]bool{
+		fieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
 			DataKind_int64:    true,
 			DataKind_float32:  true,
@@ -189,15 +164,12 @@ var defKindProps = map[DefKind]struct {
 			SystemField_ParentID:  true,
 			SystemField_Container: true,
 		},
-		containersAllowed: true,
-		availableContainerKinds: map[DefKind]bool{
+		containerKinds: map[DefKind]bool{
 			DefKind_ORecord: true,
 		},
-		availableUniques: false,
 	},
 	DefKind_WRecord: {
-		fieldsAllowed: true,
-		availableFieldKinds: map[DataKind]bool{
+		fieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
 			DataKind_int64:    true,
 			DataKind_float32:  true,
@@ -215,27 +187,22 @@ var defKindProps = map[DefKind]struct {
 			SystemField_Container: true,
 			SystemField_IsActive:  true,
 		},
-		containersAllowed: true,
-		availableContainerKinds: map[DefKind]bool{
+		containerKinds: map[DefKind]bool{
 			DefKind_WRecord: true,
 		},
-		availableUniques: true,
 	},
 	DefKind_ViewRecord: {
-		availableFieldKinds: map[DataKind]bool{},
-		systemFields:        map[string]bool{},
-		containersAllowed:   true,
-		availableContainerKinds: map[DefKind]bool{
+		fieldKinds:   map[DataKind]bool{},
+		systemFields: map[string]bool{},
+		containerKinds: map[DefKind]bool{
 			DefKind_ViewRecord_PartitionKey:      true,
 			DefKind_ViewRecord_ClusteringColumns: true,
 			DefKind_ViewRecord_Key:               true,
 			DefKind_ViewRecord_Value:             true,
 		},
-		availableUniques: false,
 	},
 	DefKind_ViewRecord_PartitionKey: {
-		fieldsAllowed: true,
-		availableFieldKinds: map[DataKind]bool{
+		fieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
 			DataKind_int64:    true,
 			DataKind_float32:  true,
@@ -244,14 +211,11 @@ var defKindProps = map[DefKind]struct {
 			DataKind_bool:     true,
 			DataKind_RecordID: true,
 		},
-		systemFields:            map[string]bool{},
-		containersAllowed:       false,
-		availableContainerKinds: map[DefKind]bool{},
-		availableUniques:        false,
+		systemFields:   map[string]bool{},
+		containerKinds: map[DefKind]bool{},
 	},
 	DefKind_ViewRecord_ClusteringColumns: {
-		fieldsAllowed: true,
-		availableFieldKinds: map[DataKind]bool{
+		fieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
 			DataKind_int64:    true,
 			DataKind_float32:  true,
@@ -262,14 +226,11 @@ var defKindProps = map[DefKind]struct {
 			DataKind_bool:     true,
 			DataKind_RecordID: true,
 		},
-		systemFields:            map[string]bool{},
-		containersAllowed:       false,
-		availableContainerKinds: map[DefKind]bool{},
-		availableUniques:        false,
+		systemFields:   map[string]bool{},
+		containerKinds: map[DefKind]bool{},
 	},
 	DefKind_ViewRecord_Key: {
-		fieldsAllowed: true,
-		availableFieldKinds: map[DataKind]bool{
+		fieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
 			DataKind_int64:    true,
 			DataKind_float32:  true,
@@ -280,17 +241,14 @@ var defKindProps = map[DefKind]struct {
 			DataKind_bool:     true,
 			DataKind_RecordID: true,
 		},
-		systemFields:      map[string]bool{},
-		containersAllowed: true,
-		availableContainerKinds: map[DefKind]bool{
+		systemFields: map[string]bool{},
+		containerKinds: map[DefKind]bool{
 			DefKind_ViewRecord_PartitionKey:      true,
 			DefKind_ViewRecord_ClusteringColumns: true,
 		},
-		availableUniques: false,
 	},
 	DefKind_ViewRecord_Value: {
-		fieldsAllowed: true,
-		availableFieldKinds: map[DataKind]bool{
+		fieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
 			DataKind_int64:    true,
 			DataKind_float32:  true,
@@ -306,13 +264,10 @@ var defKindProps = map[DefKind]struct {
 		systemFields: map[string]bool{
 			SystemField_QName: true,
 		},
-		containersAllowed:       false,
-		availableContainerKinds: map[DefKind]bool{},
-		availableUniques:        false,
+		containerKinds: map[DefKind]bool{},
 	},
 	DefKind_Object: {
-		fieldsAllowed: true,
-		availableFieldKinds: map[DataKind]bool{
+		fieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
 			DataKind_int64:    true,
 			DataKind_float32:  true,
@@ -326,15 +281,12 @@ var defKindProps = map[DefKind]struct {
 		systemFields: map[string]bool{
 			SystemField_QName: true,
 		},
-		containersAllowed: true,
-		availableContainerKinds: map[DefKind]bool{
+		containerKinds: map[DefKind]bool{
 			DefKind_Element: true,
 		},
-		availableUniques: false,
 	},
 	DefKind_Element: {
-		fieldsAllowed: true,
-		availableFieldKinds: map[DataKind]bool{
+		fieldKinds: map[DataKind]bool{
 			DataKind_int32:    true,
 			DataKind_int64:    true,
 			DataKind_float32:  true,
@@ -349,38 +301,30 @@ var defKindProps = map[DefKind]struct {
 			SystemField_QName:     true,
 			SystemField_Container: true,
 		},
-		containersAllowed: true,
-		availableContainerKinds: map[DefKind]bool{
+		containerKinds: map[DefKind]bool{
 			DefKind_Element: true,
 		},
-		availableUniques: false,
 	},
 	DefKind_QueryFunction: {
-		fieldsAllowed:       false,
-		availableFieldKinds: map[DataKind]bool{},
-		systemFields:        map[string]bool{},
-		containersAllowed:   true,
-		availableContainerKinds: map[DefKind]bool{
+		fieldKinds:   map[DataKind]bool{},
+		systemFields: map[string]bool{},
+		containerKinds: map[DefKind]bool{
 			DefKind_GDoc:   true,
 			DefKind_CDoc:   true,
 			DefKind_ODoc:   true,
 			DefKind_WDoc:   true,
 			DefKind_Object: true,
 		},
-		availableUniques: false,
 	},
 	DefKind_CommandFunction: {
-		fieldsAllowed:       false,
-		availableFieldKinds: map[DataKind]bool{},
-		systemFields:        map[string]bool{},
-		containersAllowed:   true,
-		availableContainerKinds: map[DefKind]bool{
+		fieldKinds:   map[DataKind]bool{},
+		systemFields: map[string]bool{},
+		containerKinds: map[DefKind]bool{
 			DefKind_GDoc:   true,
 			DefKind_CDoc:   true,
 			DefKind_ODoc:   true,
 			DefKind_WDoc:   true,
 			DefKind_Object: true,
 		},
-		availableUniques: false,
 	},
 }
