@@ -40,3 +40,9 @@ var (
 	QNameViewLoginIdx                     = appdef.NewQName(appdef.SysPackage, "LoginIdx")
 	qNameCmdChangePassword                = appdef.NewQName(appdef.SysPackage, "ChangePassword")
 )
+
+const (
+	ErrMessageLoginOrPasswordIsIncorrect = "login or password is incorrect"
+	ErrMessagePasswordIsIncorrect        = "password is incorrect"
+	ErrFormatMessageLoginDoesntExist     = "login %s does not exist"
+)
