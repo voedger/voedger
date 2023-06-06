@@ -11,7 +11,7 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -61,13 +61,22 @@ func provideIssuePrincipalTokenExec(asp istructs.IAppStructsProvider, itokens it
 			return err
 		}
 
-		cdocLogin, err := GetCDocLogin(login, args.State, args.Workspace, appName)
+		cdocLogin, doesLoginExist, err := GetCDocLogin(login, args.State, args.Workspace, appName)
 		if err != nil {
 			return err
 		}
 
-		if err = CheckPassword(cdocLogin, args.ArgumentObject.AsString(field_Passwrd)); err != nil {
+		if !doesLoginExist {
+			return coreutils.NewHTTPErrorf(http.StatusUnauthorized, ErrMessageLoginOrPasswordIsIncorrect)
+		}
+
+		isPasswordOK, err := CheckPassword(cdocLogin, args.ArgumentObject.AsString(field_Passwrd))
+		if err != nil {
 			return err
+		}
+
+		if !isPasswordOK {
+			return coreutils.NewHTTPErrorf(http.StatusUnauthorized, ErrMessageLoginOrPasswordIsIncorrect)
 		}
 
 		result := &iptRR{
