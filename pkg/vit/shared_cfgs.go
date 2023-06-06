@@ -60,8 +60,6 @@ var (
 
 			const simpleAppBLOBMaxSize = 5
 			cfg.BLOBMaxSize = simpleAppBLOBMaxSize
-			
-			cfg.NumCommandProcessors = 200
 		}),
 		WithCleanup(func(_ *VIT) {
 			MockCmdExec = func(input string) error { panic("") }
