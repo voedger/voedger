@@ -165,7 +165,8 @@ func Test_SubscribeUnsubscribe(t *testing.T) {
 	}
 	req := require.New(t)
 
-	nb := Provide(quotasExample)
+	nb, cleanup := ProvideEx2(quotasExample, time.Now)
+	defer cleanup()
 
 	var channel1ID in10n.ChannelID
 	t.Run("Create and subscribe channel 1", func(t *testing.T) {
@@ -207,6 +208,8 @@ func Test_SubscribeUnsubscribe(t *testing.T) {
 		}()
 	})
 
+	// Update and see data
+
 	for i := 1; i < 10; i++ {
 		nb.Update(projectionKey1, istructs.Offset(i))
 		<-cb1.data
@@ -216,6 +219,31 @@ func Test_SubscribeUnsubscribe(t *testing.T) {
 		<-cb2.data
 	}
 
+	// Unsubscribe all channels from projectionKey1
+
+	nb.Unsubscribe(channel1ID, projectionKey1)
+	nb.Unsubscribe(channel2ID, projectionKey1)
+
+	for i := 100; i < 110; i++ {
+
+		nb.Update(projectionKey2, istructs.Offset(i))
+		<-cb1.data
+		<-cb2.data
+
+		nb.Update(projectionKey1, istructs.Offset(i))
+		select {
+		case <-cb1.data:
+			t.Error("cb1.data must be empty")
+		default:
+			// TODO note that cb1.data may come later, should wait for broker idleness somehow
+		}
+		select {
+		case <-cb2.data:
+			t.Error("cb2.data must be empty")
+			// TODO See note above
+		default:
+		}
+	}
 	cancel()
 	wg.Wait()
 
@@ -251,6 +279,9 @@ func TestWatchNotExistsChannel(t *testing.T) {
 }
 
 func TestQuotas(t *testing.T) {
+
+	t.Parallel()
+
 	req := require.New(t)
 	quotasExample := in10n.Quotas{
 		Channels:               100,
