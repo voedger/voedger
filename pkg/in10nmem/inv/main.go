@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
+	"log"
 	"math/rand"
-	"runtime"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
+	"github.com/voedger/voedger/pkg/in10nmem"
 	in10nmemv1 "github.com/voedger/voedger/pkg/in10nmem/v1"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -24,8 +26,22 @@ func main() {
 		SubsciptionsPerSubject: BigNumber,
 	}
 
-	nb := in10nmemv1.Provide(quotas)
-	runChannels(nb)
+	if len(os.Args) < 2 {
+		println("Use v1 or v2 as argument")
+		return
+	}
+
+	if os.Args[1] == "v1" {
+		println("Running v1...")
+		nb := in10nmemv1.Provide(quotas)
+		runChannels(nb)
+	}
+	if os.Args[1] == "v2" {
+		println("Running v2...")
+		nb := in10nmem.Provide(quotas)
+		runChannels(nb)
+	}
+	log.Fatal("Unknown argument", os.Args[1])
 
 }
 
@@ -35,17 +51,14 @@ func checkErr(err error) {
 	}
 }
 
-const numCores = 4
 const numPartitions = 200
-const numProjectorsPerPartition = 500
-const eventsPerSeconds = 1
+const numProjectorsPerPartition = 1000
+const eventsPerSeconds = 500
 const subject istructs.SubjectLogin = "main"
 
 var projectionPLog = appdef.NewQName("sys", "plog")
 
 func runChannels(broker in10n.IN10nBroker) {
-
-	runtime.GOMAXPROCS(numCores)
 
 	wg := sync.WaitGroup{}
 
@@ -72,7 +85,6 @@ func runChannels(broker in10n.IN10nBroker) {
 
 	t := time.NewTicker(1 * time.Second / eventsPerSeconds)
 
-	println("numCores: ", numCores)
 	println("numPartitions: ", numPartitions)
 	println("numProjectorsPerPartition: ", numProjectorsPerPartition)
 	println("eventsPerSeconds: ", eventsPerSeconds)

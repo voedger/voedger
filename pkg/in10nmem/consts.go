@@ -5,8 +5,6 @@
 
 package in10nmem
 
-import "time"
-
 const (
-	pollingInterval = 300 * time.Millisecond
+	eventsChannelSize = 10
 )

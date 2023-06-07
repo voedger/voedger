@@ -1,6 +1,11 @@
 /*
  * Copyright (c) 2021-present Sigma-Soft, Ltd.
  * Aleksei Ponomarev
+ *
+ * Copyright (c) 2023-present unTill Pro, Ltd.
+ * @author Maxim Geraskin
+ * Deep refactoring, no timers
+ *
  */
 
 package in10nmem
@@ -12,30 +17,48 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
 type N10nBroker struct {
-	projections      map[in10n.ProjectionKey]*istructs.Offset
+	sync.RWMutex
+	projections      map[in10n.ProjectionKey]*projection
 	channels         map[in10n.ChannelID]*channelType
 	quotas           in10n.Quotas
 	metricBySubject  map[istructs.SubjectLogin]*metricType
 	numSubscriptions int
 	now              func() time.Time
-	sync.RWMutex
+	events           chan event
 }
 
-type projectionOffsets struct {
+type event struct {
+	prj *projection
+}
+
+type projection struct {
+	sync.Mutex
+
+	offsetPointer *istructs.Offset
+
+	toSubscribe map[in10n.ChannelID]*channelType
+
+	// merged by pnotifier using toSubscribe, toUnsubscribe
+	subscribedChannels map[in10n.ChannelID]*channelType
+}
+
+type subscription struct {
 	deliveredOffset istructs.Offset
 	currentOffset   *istructs.Offset
 }
 
 type channelType struct {
 	subject         istructs.SubjectLogin
-	subscriptions   map[in10n.ProjectionKey]*projectionOffsets
+	subscriptions   map[in10n.ProjectionKey]*subscription
 	channelDuration time.Duration
 	createTime      time.Time
+	cchan           chan struct{}
 }
 
 type metricType struct {
@@ -66,9 +89,10 @@ func (nb *N10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration 
 	channelID = in10n.ChannelID(uuid.New().String())
 	channel := channelType{
 		subject:         subject,
-		subscriptions:   make(map[in10n.ProjectionKey]*projectionOffsets),
+		subscriptions:   make(map[in10n.ProjectionKey]*subscription),
 		channelDuration: channelDuration,
 		createTime:      nb.now(),
+		cchan:           make(chan struct{}, 1),
 	}
 	nb.channels[channelID] = &channel
 	return channelID, err
@@ -96,17 +120,26 @@ func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.P
 		return in10n.ErrQuotaExceeded_SubsciptionsPerSubject
 	}
 
-	subscription := projectionOffsets{
+	subscription := subscription{
 		deliveredOffset: istructs.Offset(0),
-		currentOffset:   guaranteeOffsetPointer(nb.projections, projectionKey),
+		currentOffset:   guaranteeProjection(nb.projections, projectionKey),
 	}
 	channel.subscriptions[projectionKey] = &subscription
 	metric.numSubscriptions++
 	nb.numSubscriptions++
+
+	{
+		// Must exist because we create it in guaranteeProjection
+		prj := nb.projections[projectionKey]
+		prj.Lock()
+		defer prj.Unlock()
+		prj.toSubscribe[channelID] = channel
+	}
+
 	return err
 }
 
-func (nb *N10nBroker) Unsubscribe(channelID in10n.ChannelID, projection in10n.ProjectionKey) (err error) {
+func (nb *N10nBroker) Unsubscribe(channelID in10n.ChannelID, projectionKey in10n.ProjectionKey) (err error) {
 	nb.Lock()
 	defer nb.Unlock()
 
@@ -118,9 +151,17 @@ func (nb *N10nBroker) Unsubscribe(channelID in10n.ChannelID, projection in10n.Pr
 	if !mOK {
 		return ErrMetricDoesNotExists
 	}
-	delete(channel.subscriptions, projection)
+	delete(channel.subscriptions, projectionKey)
 	metric.numSubscriptions--
 	nb.numSubscriptions--
+
+	prj := nb.projections[projectionKey]
+	if prj != nil {
+		prj.Lock()
+		defer prj.Unlock()
+		prj.toSubscribe[channelID] = nil
+	}
+
 	return err
 }
 
@@ -152,56 +193,101 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 		nb.Unlock()
 	}()
 
-	ticker := time.NewTicker(pollingInterval)
-	defer ticker.Stop()
-
 	updateUnits := make([]UpdateUnit, 0)
-	for range ticker.C {
 
-		if ctx.Err() != nil {
-			return
+	// cycle for channel.cchan and ctx
+forctx:
+	for ctx.Err() == nil {
+		select {
+		case <-ctx.Done():
+			break forctx
+		case <-channel.cchan:
+			logger.Trace(channelID)
+
+			if ctx.Err() != nil {
+				return
+			}
+
+			err := nb.validateChannel(channel)
+			if err != nil {
+				return
+			}
+
+			// find projection for update and collect
+			nb.Lock()
+			for projection, channelOffsets := range channel.subscriptions {
+				if *channelOffsets.currentOffset > channelOffsets.deliveredOffset {
+					updateUnits = append(updateUnits,
+						UpdateUnit{
+							Projection: projection,
+							Offset:     *channelOffsets.currentOffset,
+						})
+					channelOffsets.deliveredOffset = *channelOffsets.currentOffset
+				}
+			}
+			nb.Unlock()
+			for _, unit := range updateUnits {
+				notifySubscriber(unit.Projection, unit.Offset)
+			}
+			updateUnits = updateUnits[:0]
 		}
 
-		err := nb.validateChannel(channel)
-		if err != nil {
-			return
+	}
+
+}
+
+func notifier(events chan event) {
+	for eve := range events {
+
+		prj := eve.prj
+
+		// Actualize subscriptions
+		{
+			prj.Lock()
+			for channelID, channel := range prj.toSubscribe {
+				if channel != nil {
+					prj.subscribedChannels[channelID] = channel
+				} else {
+					delete(prj.subscribedChannels, channelID)
+				}
+			}
+			prj.Unlock()
 		}
 
-		// find projection for update and collect
-		nb.Lock()
-		for projection, channelOffsets := range channel.subscriptions {
-			if *channelOffsets.currentOffset > channelOffsets.deliveredOffset {
-				updateUnits = append(updateUnits,
-					UpdateUnit{
-						Projection: projection,
-						Offset:     *channelOffsets.currentOffset,
-					})
-				channelOffsets.deliveredOffset = *channelOffsets.currentOffset
+		// Notify subscribers
+		for _, ch := range prj.subscribedChannels {
+			select {
+			case ch.cchan <- struct{}{}:
+			default:
 			}
 		}
-		nb.Unlock()
-		for _, unit := range updateUnits {
-			notifySubscriber(unit.Projection, unit.Offset)
-		}
-		updateUnits = updateUnits[:0]
 	}
 }
 
-func guaranteeOffsetPointer(projections map[in10n.ProjectionKey]*istructs.Offset, projection in10n.ProjectionKey) (offsetPointer *istructs.Offset) {
-	offsetPointer = projections[projection]
-	if offsetPointer == nil {
-		offsetPointer = new(istructs.Offset)
-		projections[projection] = offsetPointer
+func guaranteeProjection(projections map[in10n.ProjectionKey]*projection, projectionKey in10n.ProjectionKey) (offsetPointer *istructs.Offset) {
+	prj := projections[projectionKey]
+	if prj == nil {
+		prj = &projection{
+			subscribedChannels: make(map[in10n.ChannelID]*channelType),
+			offsetPointer:      new(istructs.Offset),
+			toSubscribe:        make(map[in10n.ChannelID]*channelType),
+		}
+		projections[projectionKey] = prj
+
 	}
-	return
+	return prj.offsetPointer
 }
 
 // Update @ConcurrentAccess
 // Update projections map with new offset
 func (nb *N10nBroker) Update(projection in10n.ProjectionKey, offset istructs.Offset) {
 	nb.Lock()
-	defer nb.Unlock()
-	*guaranteeOffsetPointer(nb.projections, projection) = offset
+	*guaranteeProjection(nb.projections, projection) = offset
+	prj := nb.projections[projection]
+	nb.Unlock()
+
+	e := event{prj: prj}
+	nb.events <- e
 }
 
 // MetricNumChannels @ConcurrentAccess
@@ -238,12 +324,14 @@ func (nb *N10nBroker) MetricSubject(ctx context.Context, cb func(subject istruct
 
 func NewN10nBroker(quotas in10n.Quotas, now func() time.Time) *N10nBroker {
 	broker := N10nBroker{
-		projections:     make(map[in10n.ProjectionKey]*istructs.Offset),
+		projections:     make(map[in10n.ProjectionKey]*projection),
 		channels:        make(map[in10n.ChannelID]*channelType),
 		metricBySubject: make(map[istructs.SubjectLogin]*metricType),
 		quotas:          quotas,
 		now:             now,
+		events:          make(chan event, eventsChannelSize),
 	}
+	go notifier(broker.events)
 	return &broker
 }
 

@@ -1,6 +1,12 @@
 /*
  * Copyright (c) 2021-present Sigma-Soft, Ltd.
  * Aleksei Ponomarev
+ *
+ * Copyright (c) 2023-present unTill Pro, Ltd.
+ * @author Maxim Geraskin
+ * Deep refactoring, no timers
+ *
+ *
  */
 
 package in10nmem
@@ -13,19 +19,23 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
 type callbackMock struct {
-	wait chan UpdateUnit
+	data chan UpdateUnit
 }
 
-func TestBasicUsage(t *testing.T) {
+func Test_BasicUsage(t *testing.T) {
+
+	logger.SetLogLevel(logger.LogLevelTrace)
+
 	var wg sync.WaitGroup
 	c := new(callbackMock)
-	c.wait = make(chan UpdateUnit)
+	c.data = make(chan UpdateUnit)
 
 	projectionKeyExample := in10n.ProjectionKey{
 		App:        istructs.AppQName_test1_app1,
@@ -84,14 +94,14 @@ func TestBasicUsage(t *testing.T) {
 		err = broker.Unsubscribe("Not exists channel", projectionKeyExample)
 		req.ErrorIs(err, in10n.ErrChannelDoesNotExist)
 
-		// Unsubscribe from exist channel
+		// Unsubscribe from an existing channel
 		err = broker.Unsubscribe(channel, projectionKeyExample)
 		req.NoError(err)
 		// After unsubscribe numSubscriptions must be equal 0
 		numSubscriptions = broker.MetricNumSubcriptions()
 		req.Equal(0, numSubscriptions)
 
-		// Subscribe on exist channel numSubscriptions must be equal 1
+		// Subscribe for and existing channel numSubscriptions must be equal 1
 		require.NoError(t, broker.Subscribe(channel, projectionKeyExample))
 		numSubscriptions = broker.MetricNumSubcriptions()
 		req.Equal(1, numSubscriptions)
@@ -104,12 +114,14 @@ func TestBasicUsage(t *testing.T) {
 	broker.Update(projectionKeyExample, istructs.Offset(125))
 	broker.Update(projectionKeyExample, istructs.Offset(126))
 
-	for update := range c.wait {
+	for update := range c.data {
+		logger.Info("update.Offset: ", update.Offset)
 		if update.Offset == istructs.Offset(126) {
 			break
 		}
 	}
 	cancel()
+	logger.Info("wg.Wait()")
 	wg.Wait()
 }
 
@@ -118,7 +130,7 @@ func (c *callbackMock) updatesMock(projection in10n.ProjectionKey, offset istruc
 		Projection: projection,
 		Offset:     offset,
 	}
-	c.wait <- unit
+	c.data <- unit
 }
 
 // Try watch on not exists channel. WatchChannel must exit.
