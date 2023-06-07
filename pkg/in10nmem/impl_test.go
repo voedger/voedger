@@ -52,7 +52,8 @@ func Test_BasicUsage(t *testing.T) {
 	req := require.New(t)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	broker := Provide(quotasExample)
+	broker, cleanup := ProvideEx2(quotasExample, time.Now)
+	defer cleanup()
 
 	var channel in10n.ChannelID
 	t.Run("Create channel.", func(t *testing.T) {

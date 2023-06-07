@@ -236,32 +236,42 @@ forctx:
 
 }
 
-func notifier(events chan event) {
-	for eve := range events {
+func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 
-		prj := eve.prj
+	logger.Info("notifier goroutine started")
 
-		// Actualize subscriptions
-		{
-			prj.Lock()
-			for channelID, channel := range prj.toSubscribe {
-				if channel != nil {
-					prj.subscribedChannels[channelID] = channel
-				} else {
-					delete(prj.subscribedChannels, channelID)
+forcycle:
+	for ctx.Err() == nil {
+		select {
+		case <-ctx.Done():
+			break forcycle
+		case eve := <-events:
+			prj := eve.prj
+
+			// Actualize subscriptions
+			{
+				prj.Lock()
+				for channelID, channel := range prj.toSubscribe {
+					if channel != nil {
+						prj.subscribedChannels[channelID] = channel
+					} else {
+						delete(prj.subscribedChannels, channelID)
+					}
 				}
+				prj.Unlock()
 			}
-			prj.Unlock()
-		}
 
-		// Notify subscribers
-		for _, ch := range prj.subscribedChannels {
-			select {
-			case ch.cchan <- struct{}{}:
-			default:
+			// Notify subscribers
+			for _, ch := range prj.subscribedChannels {
+				select {
+				case ch.cchan <- struct{}{}:
+				default:
+				}
 			}
 		}
 	}
+	logger.Info("notifier goroutine stopped")
+	wg.Done()
 }
 
 func guaranteeProjection(projections map[in10n.ProjectionKey]*projection, projectionKey in10n.ProjectionKey) (offsetPointer *istructs.Offset) {
@@ -322,7 +332,7 @@ func (nb *N10nBroker) MetricSubject(ctx context.Context, cb func(subject istruct
 	}
 }
 
-func NewN10nBroker(quotas in10n.Quotas, now func() time.Time) *N10nBroker {
+func NewN10nBroker(quotas in10n.Quotas, now func() time.Time) (nb *N10nBroker, cleanup func()) {
 	broker := N10nBroker{
 		projections:     make(map[in10n.ProjectionKey]*projection),
 		channels:        make(map[in10n.ChannelID]*channelType),
@@ -331,8 +341,17 @@ func NewN10nBroker(quotas in10n.Quotas, now func() time.Time) *N10nBroker {
 		now:             now,
 		events:          make(chan event, eventsChannelSize),
 	}
-	go notifier(broker.events)
-	return &broker
+	ctx, cancel := context.WithCancel(context.Background())
+	wg := sync.WaitGroup{}
+	cleanup = func() {
+		cancel()
+		wg.Wait()
+	}
+
+	wg.Add(1)
+	go notifier(ctx, &wg, broker.events)
+
+	return &broker, cleanup
 }
 
 func (nb *N10nBroker) validateChannel(channel *channelType) error {
