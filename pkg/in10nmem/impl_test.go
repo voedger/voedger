@@ -133,6 +133,93 @@ func (c *callbackMock) updatesMock(projection in10n.ProjectionKey, offset istruc
 	c.data <- unit
 }
 
+func Test_SubscribeUnsubscribe(t *testing.T) {
+
+	var wg sync.WaitGroup
+
+	cb1 := new(callbackMock)
+	cb1.data = make(chan UpdateUnit, 1)
+
+	cb2 := new(callbackMock)
+	cb2.data = make(chan UpdateUnit, 1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	projectionKey1 := in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: appdef.NewQName("test", "restaurant"),
+		WS:         istructs.WSID(0),
+	}
+	projectionKey2 := in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: appdef.NewQName("test", "restaurant2"),
+		WS:         istructs.WSID(0),
+	}
+
+	quotasExample := in10n.Quotas{
+		Channels:               10,
+		ChannelsPerSubject:     10,
+		Subsciptions:           10,
+		SubsciptionsPerSubject: 10,
+	}
+	req := require.New(t)
+
+	nb := Provide(quotasExample)
+
+	var channel1ID in10n.ChannelID
+	t.Run("Create and subscribe channel 1", func(t *testing.T) {
+		var subject istructs.SubjectLogin = "paa"
+		var err error
+		channel1ID, err = nb.NewChannel(subject, 24*time.Hour)
+		req.NoError(err)
+
+		err = nb.Subscribe(channel1ID, projectionKey1)
+		req.NoError(err)
+
+		err = nb.Subscribe(channel1ID, projectionKey2)
+		req.NoError(err)
+
+		wg.Add(1)
+		go func() {
+			nb.WatchChannel(ctx, channel1ID, cb1.updatesMock)
+			wg.Done()
+		}()
+	})
+
+	var channel2ID in10n.ChannelID
+	t.Run("Create and subscribe channel 2", func(t *testing.T) {
+		var subject istructs.SubjectLogin = "paa"
+		var err error
+		channel2ID, err = nb.NewChannel(subject, 24*time.Hour)
+		req.NoError(err)
+
+		err = nb.Subscribe(channel2ID, projectionKey1)
+		req.NoError(err)
+
+		err = nb.Subscribe(channel2ID, projectionKey2)
+		req.NoError(err)
+
+		wg.Add(1)
+		go func() {
+			nb.WatchChannel(ctx, channel2ID, cb2.updatesMock)
+			wg.Done()
+		}()
+	})
+
+	for i := 1; i < 10; i++ {
+		nb.Update(projectionKey1, istructs.Offset(i))
+		<-cb1.data
+		<-cb2.data
+		nb.Update(projectionKey2, istructs.Offset(i))
+		<-cb1.data
+		<-cb2.data
+	}
+
+	cancel()
+	wg.Wait()
+
+}
+
 // Try watch on not exists channel. WatchChannel must exit.
 func TestWatchNotExistsChannel(t *testing.T) {
 	req := require.New(t)
