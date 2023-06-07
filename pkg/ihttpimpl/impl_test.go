@@ -58,7 +58,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		err = testApp.api.DeployStaticContent(testApp.ctx, "embedded", testContentFS)
 		require.NoError(err)
 		body := testApp.get("/static/embedded/test.txt")
-		require.Equal([]byte("test file content\n"), body)
+		require.Equal([]byte("test file content"), body)
 	})
 
 	t.Run("404 not found on unknown resource", func(t *testing.T) {
