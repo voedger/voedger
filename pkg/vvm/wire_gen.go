@@ -97,7 +97,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	vvmApps := provideVVMApps(vvmConfig, appConfigsType, vvmapi, v3)
 	iBus := provideIBus(iAppStructsProvider, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsAmountType, vvmApps)
 	quotas := vvmConfig.Quotas
-	in10nBroker := in10nmem.ProvideEx(quotas, v2)
+	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, v2)
 	maxPrepareQueriesType := vvmConfig.MaxPrepareQueries
 	syncActualizerFactory := projectors.ProvideSyncActualizerFactory()
 	commandprocessorSyncActualizerFactory := provideSyncActualizerFactory(vvmApps, iAppStructsProvider, in10nBroker, maxPrepareQueriesType, syncActualizerFactory, iSecretReader)
@@ -153,6 +153,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		MetricsServicePort:  v7,
 	}
 	return vvm, func() {
+		cleanup()
 	}, nil
 }
 
