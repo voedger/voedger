@@ -458,6 +458,7 @@ func addFieldRefToDef(refField *RefFieldExpr, ctx *buildContext) {
 		}
 		if err = checkReference(refField.RefDocs[i], ctx, &refField.Pos); err != nil {
 			ctx.errs = append(ctx.errs, err)
+			errors = true
 			return
 		}
 	}
@@ -582,7 +583,7 @@ func checkReference(refTable DefQName, ctx *buildContext, pos *lexer.Position) e
 	refTableDef := ctx.builder.DefByName(appdef.NewQName(refTable.Package, refTable.Name))
 
 	if refTableDef == nil || !refTableDef.Kind().HasSystemField(appdef.SystemField_ID) {
-		return ErrTargetIsNotIdentified
+		return errorAt(ErrTargetIsNotIdentified, pos)
 	}
 
 	for _, defKind := range canNotReferenceTo[ctx.defCtx().kind] {
