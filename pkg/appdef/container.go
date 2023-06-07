@@ -131,3 +131,13 @@ func (c *containers) Containers(cb func(IContainer)) {
 func (c *containers) def() IDef {
 	return c.owner.(IDef)
 }
+
+// NullContainers is used for return then fields is not defined
+var NullContainers = new(nullContainers)
+
+type nullContainers struct{}
+
+func (c *nullContainers) Container(name string) IContainer { return nil }
+func (c *nullContainers) ContainerCount() int              { return 0 }
+func (c *nullContainers) Containers(func(IContainer))      {}
+func (c *nullContainers) ContainerDef(name string) IDef    { return NullDef }

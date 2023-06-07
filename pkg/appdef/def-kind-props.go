@@ -316,7 +316,7 @@ var defKindProps = map[DefKind]struct {
 			DefKind_Object: true,
 		},
 	},
-	DefKind_CommandFunction: {
+	DefKind_Command: {
 		fieldKinds:   map[DataKind]bool{},
 		systemFields: map[string]bool{},
 		containerKinds: map[DefKind]bool{

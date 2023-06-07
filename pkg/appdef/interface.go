@@ -35,6 +35,11 @@ type VerificationKind uint8
 // Ref. occurs.go for constants and methods
 type Occurs uint16
 
+// Extension engine kind enumeration
+//
+// Ref to extension-engine-kind.go for constants and methods
+type ExtensionEngineKind uint8
+
 // Application definition.
 //
 // Ref to apdef.go for implementation
@@ -109,6 +114,11 @@ type IAppDef interface {
 	//
 	// Returns nil if not found.
 	View(name QName) IView
+
+	// Returns Command by name.
+	//
+	// Returns nil if not found.
+	Command(QName) ICommand
 }
 
 // Application definition builder
@@ -212,6 +222,14 @@ type IAppDefBuilder interface {
 	//   - if name is invalid,
 	//   - if definition with name already exists.
 	AddView(QName) IViewBuilder
+
+	// Adds new command.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if definition with name already exists.
+	AddCommand(QName) ICommandBuilder
 
 	// Must be called after all definitions added. Validates and returns builded application definition or error
 	Build() (IAppDef, error)
@@ -690,4 +708,49 @@ type IUnique interface {
 	//
 	// Must be assigned during AppStruct construction by calling SetID(UniqueID)
 	ID() UniqueID
+}
+
+// Entry point for extension
+type IExtension interface {
+	// Extension entry point name
+	Name() string
+
+	// Engine kind
+	Engine() ExtensionEngineKind
+}
+
+// Command
+type ICommand interface {
+	IDef
+
+	// Argument. Returns NullObject if not assigned
+	Arg() IObject
+
+	// Unlogged (secure) argument. Returns NullObject if not assigned
+	UnloggedArg() IObject
+
+	// Result. Returns NullObject if not assigned
+	Result() IObject
+
+	// Extension
+	Extension() IExtension
+}
+
+type ICommandBuilder interface {
+	ICommand
+
+	// Sets command argument. Must be object or NullQName
+	SetArg(QName) ICommandBuilder
+
+	// Sets command unlogged (secure) argument. Must be object or NullQName
+	SetUnloggedArg(QName) ICommandBuilder
+
+	// Sets command result. Must be object or NullQName
+	SetResult(QName) ICommandBuilder
+
+	// Sets engine.
+	//
+	// # Panics:
+	//	- if name is empty or invalid identifier
+	SetExtension(name string, engine ExtensionEngineKind) ICommandBuilder
 }

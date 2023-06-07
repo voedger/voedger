@@ -60,7 +60,7 @@ const (
 
 	// Params are always ODoc + WDoc
 	// Commands have no explicit result
-	DefKind_CommandFunction
+	DefKind_Command
 
 	DefKind_FakeLast
 )

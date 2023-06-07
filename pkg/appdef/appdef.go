@@ -27,10 +27,8 @@ func (app *appDef) AddCDoc(name QName) ICDocBuilder {
 	return newCDoc(app, name)
 }
 
-func (app *appDef) AddSingleton(name QName) ICDocBuilder {
-	doc := newCDoc(app, name)
-	doc.SetSingleton()
-	return doc
+func (app *appDef) AddCommand(name QName) ICommandBuilder {
+	return newCommand(app, name)
 }
 
 func (app *appDef) AddCRecord(name QName) ICRecordBuilder {
@@ -61,6 +59,12 @@ func (app *appDef) AddORecord(name QName) IORecordBuilder {
 	return newORecord(app, name)
 }
 
+func (app *appDef) AddSingleton(name QName) ICDocBuilder {
+	doc := newCDoc(app, name)
+	doc.SetSingleton()
+	return doc
+}
+
 func (app *appDef) AddView(name QName) IViewBuilder {
 	return newView(app, name)
 }
@@ -88,6 +92,13 @@ func (app *appDef) Build() (result IAppDef, err error) {
 func (app *appDef) CDoc(name QName) (d ICDoc) {
 	if d := app.defByKind(name, DefKind_CDoc); d != nil {
 		return d.(ICDoc)
+	}
+	return nil
+}
+
+func (app *appDef) Command(name QName) ICommand {
+	if d := app.defByKind(name, DefKind_Command); d != nil {
+		return d.(ICommand)
 	}
 	return nil
 }

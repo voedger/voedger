@@ -40,3 +40,24 @@ func newElement(app *appDef, name QName) *element {
 	app.appendDef(elt)
 	return elt
 }
+
+// NullObject is used for return then object is not defined or not founded
+var NullObject = new(nullObject)
+
+type nullObject struct {
+	nullDef
+	nullFields
+	nullContainers
+}
+
+type objRef struct {
+	name QName
+	def  IObject
+}
+
+func (o *objRef) object(app *appDef) IObject {
+	if o.def.QName() != o.name {
+		o.def = app.Object(o.name)
+	}
+	return o.def
+}
