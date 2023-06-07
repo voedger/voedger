@@ -3,7 +3,7 @@
  * Aleksei Ponomarev
  */
 
-package in10nmem
+package in10nmemv1
 
 import (
 	"context"
