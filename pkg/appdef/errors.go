@@ -33,3 +33,5 @@ var ErrInvalidDataKind = errors.New("invalid data kind")
 var ErrInvalidOccurs = errors.New("invalid occurs value")
 
 var ErrFieldsMissed = errors.New("fields missed")
+
+var ErrExtensionEngineKindMissed = errors.New("extension engine kind is missed")

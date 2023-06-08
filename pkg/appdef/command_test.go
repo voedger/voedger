@@ -27,13 +27,16 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		cmd := appDef.AddCommand(cmdName)
 		require.Equal(DefKind_Command, cmd.Kind())
 		require.Equal(cmd, appDef.Command(cmdName))
+		require.Nil(cmd.Arg())
+		require.Nil(cmd.UnloggedArg())
+		require.Nil(cmd.Result())
 
 		t.Run("must be ok to assign cmd args and result", func(t *testing.T) {
 			cmd.
 				SetArg(argName).
 				SetUnloggedArg(unlName).
 				SetResult(resName).
-				SetExtension("cmd", ExtensionEngineKind_BuiltIn)
+				SetExtension("CmdExt", ExtensionEngineKind_BuiltIn)
 		})
 
 		t.Run("must be ok to build", func(t *testing.T) {
@@ -68,7 +71,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		require.Equal(resName, cmd.Result().QName())
 		require.Equal(DefKind_Object, cmd.Result().Kind())
 
-		require.Equal("cmd", cmd.Extension().Name())
+		require.Equal("CmdExt", cmd.Extension().Name())
 		require.Equal(ExtensionEngineKind_BuiltIn, cmd.Extension().Engine())
 	})
 
@@ -99,4 +102,70 @@ func Test_AppDef_AddCommand(t *testing.T) {
 			apb.AddCommand(testName)
 		})
 	})
+
+	t.Run("panic if extension name is empty", func(t *testing.T) {
+		apb := New()
+		cmd := apb.AddCommand(NewQName("test", "cmd"))
+		require.Panics(func() {
+			cmd.SetExtension("", ExtensionEngineKind_BuiltIn)
+		})
+	})
+
+	t.Run("panic if extension name is invalid", func(t *testing.T) {
+		apb := New()
+		cmd := apb.AddCommand(NewQName("test", "cmd"))
+		require.Panics(func() {
+			cmd.SetExtension("naked 🔫", ExtensionEngineKind_BuiltIn)
+		})
+	})
+}
+
+func Test_CommandValidate(t *testing.T) {
+	require := require.New(t)
+
+	appDef := New()
+
+	cmd := appDef.AddCommand(NewQName("test", "cmd"))
+
+	t.Run("must error if argument name is unknown", func(t *testing.T) {
+		arg := NewQName("test", "arg")
+		cmd.SetArg(arg)
+		_, err := appDef.Build()
+		require.ErrorIs(err, ErrNameNotFound)
+		require.ErrorContains(err, arg.String())
+
+		_ = appDef.AddObject(arg)
+	})
+
+	t.Run("must error if unlogged argument name is unknown", func(t *testing.T) {
+		unl := NewQName("test", "unl")
+		cmd.SetUnloggedArg(unl)
+		_, err := appDef.Build()
+		require.ErrorIs(err, ErrNameNotFound)
+		require.ErrorContains(err, unl.String())
+
+		_ = appDef.AddObject(unl)
+	})
+
+	t.Run("must error if result object name is unknown", func(t *testing.T) {
+		res := NewQName("test", "res")
+		cmd.SetResult(res)
+		_, err := appDef.Build()
+		require.ErrorIs(err, ErrNameNotFound)
+		require.ErrorContains(err, res.String())
+
+		_ = appDef.AddObject(res)
+	})
+
+	t.Run("must error if extension name or engine is missed", func(t *testing.T) {
+		_, err := appDef.Build()
+		require.ErrorIs(err, ErrNameMissed)
+		require.ErrorContains(err, "extension name")
+
+		require.ErrorIs(err, ErrExtensionEngineKindMissed)
+	})
+
+	cmd.SetExtension("CmdExt", ExtensionEngineKind_BuiltIn)
+	_, err := appDef.Build()
+	require.NoError(err)
 }
