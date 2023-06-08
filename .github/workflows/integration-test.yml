@@ -95,7 +95,7 @@ jobs:
            echo PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_03) >> $GITHUB_ENV
            echo CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00) >> $GITHUB_ENV
 
-    - name: Smoke test - wait for scylla initialization
+    - name: Smoke test - wait for db cluster building
       run: |
         echo "Work with ${{ env.PUBLIC_IP }}"
         count=0
@@ -145,14 +145,14 @@ jobs:
 
     - name: Smoke test - replace scylla node to new hardware
       run: | 
-        if [ $(ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.CTOOL_IP }} ~/voedger/cmd/ctool/ctool replace 10.0.0.13 10.0.0.16 --ssh-key /tmp/amazonKey.pem) -eq 0 ]; then
+        if ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace 10.0.0.13 10.0.0.16 --ssh-key /tmp/amazonKey.pem; exit \$?"; then
           echo "Replace node success"
         else 
           echo "Failed to replace scylla node in cluster"
           exit 1
         fi
 
-    - name: Smoke test - wait for scylla initialization after replace node
+    - name: Smoke test - wait until db replaced node is up
       run: |
         echo "Work with ${{ env.PUBLIC_IP }}"
         count=0
