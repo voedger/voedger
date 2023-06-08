@@ -93,6 +93,7 @@ jobs:
     - name: Load environment file
       run: |
            echo PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_03) >> $GITHUB_ENV
+           echo CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00) >> $GITHUB_ENV
 
     - name: Smoke test - wait for scylla initialization
       run: |
@@ -133,7 +134,37 @@ jobs:
             exit 1
           fi
         done
-      
+
+    - name: Smoke test - node fail simulation. Drop node.
+      run: terraform -chdir=cmd/ctool/scripts/terraform/ destroy -target=aws_instance.node_02 -auto-approve
+
+    - name: Smoke test - replace scylla node to new hardware
+      run: | 
+        if [ $(ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.CTOOL_IP }} ~/voedger/cmd/ctool/ctool replace 10.0.0.13 10.0.0.16 --ssh-key /tmp/amazonKey.pem) -eq 0 ]; then
+          echo "Replace node success"
+        else 
+          echo "Failed to replace scylla node in cluster"
+          exit 1
+        fi
+
+    - name: Smoke test - wait for scylla initialization after replace node
+      run: |
+        echo "Work with ${{ env.PUBLIC_IP }}"
+        count=0
+        while [ $count -lt 60 ]; do
+           if [ $(ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.PUBLIC_IP }} docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c "^UN\s") -eq 3 ]; then
+           echo "Scylla initialization success"
+             break
+           fi
+           echo "Still wait for scylla initialization.."
+           sleep 5
+           count=$((count+1))
+        done
+        if [ $count -eq 60 ]; then
+           echo "Scylla initialization timed out."
+           exit 1
+        fi
+
     - name: Terraform destroy
       if: always()
       run: terraform -chdir=cmd/ctool/scripts/terraform/ destroy -auto-approve
