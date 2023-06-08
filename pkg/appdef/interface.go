@@ -723,13 +723,13 @@ type IExtension interface {
 type ICommand interface {
 	IDef
 
-	// Argument. Returns NullObject if not assigned
+	// Argument. Returns nil if not assigned
 	Arg() IObject
 
-	// Unlogged (secure) argument. Returns NullObject if not assigned
+	// Unlogged (secure) argument. Returns nil if not assigned
 	UnloggedArg() IObject
 
-	// Result. Returns NullObject if not assigned
+	// Result. Returns nil if not assigned
 	Result() IObject
 
 	// Extension

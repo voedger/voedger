@@ -242,20 +242,6 @@ func (f *fields) makeSysFields() {
 	}
 }
 
-// NullFields is used for return then fields is not defined
-var NullFields = new(nullFields)
-
-type nullFields struct{}
-
-func (f *nullFields) Field(name string) IField       { return nil }
-func (f *nullFields) FieldCount() int                { return 0 }
-func (f *nullFields) Fields(func(IField))            {}
-func (f *nullFields) RefField(name string) IRefField { return nil }
-func (f *nullFields) RefFieldCount() int             { return 0 }
-func (f *nullFields) RefFields(func(IRefField))      {}
-func (f *nullFields) UserFieldCount() int            { return 0 }
-func (f *nullFields) UserFields(func(IField))        {}
-
 // # Implements:
 //   - IRefField
 type refField struct {

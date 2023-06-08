@@ -71,32 +71,6 @@ func Test_IsSysField(t *testing.T) {
 	}
 }
 
-func Test_NullFields(t *testing.T) {
-	require := require.New(t)
-	require.Nil(NullFields.Field("name"))
-	require.Zero(NullFields.FieldCount())
-	require.Zero(func() int {
-		c := 0
-		NullFields.Fields(func(IField) { c++ })
-		return c
-	}())
-
-	require.Nil(NullFields.RefField("ref"))
-	require.Zero(NullFields.RefFieldCount())
-	require.Zero(func() int {
-		c := 0
-		NullFields.RefFields(func(IRefField) { c++ })
-		return c
-	}())
-
-	require.Zero(NullFields.UserFieldCount())
-	require.Zero(func() int {
-		c := 0
-		NullFields.UserFields(func(IField) { c++ })
-		return c
-	}())
-}
-
 func Test_AddField(t *testing.T) {
 	require := require.New(t)
 

@@ -16,9 +16,9 @@ type command struct {
 func newCommand(app *appDef, name QName) *command {
 	cmd := &command{
 		def: makeDef(app, name, DefKind_Command),
-		arg: objRef{NullQName, NullObject},
-		unl: objRef{NullQName, NullObject},
-		res: objRef{NullQName, NullObject},
+		arg: objRef{NullQName, nil},
+		unl: objRef{NullQName, nil},
+		res: objRef{NullQName, nil},
 		ext: newExtension(),
 	}
 	app.appendDef(cmd)
