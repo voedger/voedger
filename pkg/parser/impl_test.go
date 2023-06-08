@@ -497,3 +497,29 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 		require.Contains(err.Error(), ErrTargetIsNotIdentified.Error())
 	})
 }
+
+func Test_ReferenceToNoTable(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	ROLE Admin;
+	TABLE CTable INHERITS CDoc (
+		RefField ref(Admin)
+	);
+	`)
+	require.Nil(err)
+
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.Nil(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	def := appdef.New()
+	err = BuildAppDefs(packages, def)
+
+	require.Contains(err.Error(), "Admin undefined")
+}

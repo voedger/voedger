@@ -139,7 +139,7 @@ func resolveTable(fn DefQName, c *basicContext, pos *lexer.Position) (*TableStmt
 	})
 
 	if item == nil {
-		return nil, errorAt(ErrUndefined(fn.String()), c.pos)
+		return nil, errorAt(ErrUndefined(fn.String()), pos)
 	}
 
 	return item, nil

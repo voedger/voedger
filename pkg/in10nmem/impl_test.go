@@ -260,7 +260,8 @@ func TestWatchNotExistsChannel(t *testing.T) {
 		SubsciptionsPerSubject: 1,
 	}
 
-	broker := Provide(quotasExample)
+	broker, cleanup := ProvideEx2(quotasExample, time.Now)
+	defer cleanup()
 	ctx := context.TODO()
 
 	t.Run("Create channel.", func(t *testing.T) {
@@ -291,7 +292,8 @@ func TestQuotas(t *testing.T) {
 	}
 
 	t.Run("Test channel quotas per subject. We create more channels than allowed for subject.", func(t *testing.T) {
-		broker := Provide(quotasExample)
+		broker, cleanup := ProvideEx2(quotasExample, time.Now)
+		defer cleanup()
 		for i := 0; i <= 10; i++ {
 			_, err := broker.NewChannel("paa", 24*time.Hour)
 			if i == 10 {
@@ -301,7 +303,8 @@ func TestQuotas(t *testing.T) {
 	})
 
 	t.Run("Test channel quotas for the whole service. We create more channels than allowed for service.", func(t *testing.T) {
-		broker := Provide(quotasExample)
+		broker, cleanup := ProvideEx2(quotasExample, time.Now)
+		defer cleanup()
 		var subject istructs.SubjectLogin
 		for i := 0; i < 10; i++ {
 			subject = istructs.SubjectLogin("paa" + strconv.Itoa(i))
@@ -320,7 +323,8 @@ func TestQuotas(t *testing.T) {
 			Projection: appdef.NewQName("test", "restaurant"),
 			WS:         istructs.WSID(1),
 		}
-		broker := Provide(quotasExample)
+		broker, cleanup := ProvideEx2(quotasExample, time.Now)
+		defer cleanup()
 		var subject istructs.SubjectLogin
 		for i := 0; i < 100; i++ {
 			subject = istructs.SubjectLogin("paa" + strconv.Itoa(i))

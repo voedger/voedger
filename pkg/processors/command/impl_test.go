@@ -576,20 +576,23 @@ func TestRateLimit(t *testing.T) {
 }
 
 type testApp struct {
-	ctx            context.Context
-	cfg            *istructsmem.AppConfigType
-	bus            ibus.IBus
-	cancel         context.CancelFunc
-	done           chan struct{}
-	cmdProcService pipeline.IService
-	serviceChannel CommandChannel
-	n10nBroker     in10n.IN10nBroker
-	appTokens      istructs.IAppTokens
-	sysAuthHeader  map[string][]string
+	ctx               context.Context
+	cfg               *istructsmem.AppConfigType
+	bus               ibus.IBus
+	cancel            context.CancelFunc
+	done              chan struct{}
+	cmdProcService    pipeline.IService
+	serviceChannel    CommandChannel
+	n10nBroker        in10n.IN10nBroker
+	n10nBrokerCleanup func()
+
+	appTokens     istructs.IAppTokens
+	sysAuthHeader map[string][]string
 }
 
 func tearDown(app testApp) {
 	// завершим command processor IService
+	app.n10nBrokerCleanup()
 	app.cancel()
 	<-app.done
 }
@@ -659,12 +662,12 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, 1, resource, token, "")
 		serviceChannel <- icm
 	})
-	n10nBroker := in10nmem.Provide(in10n.Quotas{
+	n10nBroker, n10nBrokerCleanup := in10nmem.ProvideEx2(in10n.Quotas{
 		Channels:               1000,
 		ChannelsPerSubject:     10,
 		Subsciptions:           1000,
 		SubsciptionsPerSubject: 10,
-	})
+	}, time.Now)
 
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_untill_airs_bp)
@@ -685,16 +688,17 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	AddDummyWS(2)
 
 	return testApp{
-		cfg:            cfg,
-		bus:            bus,
-		cancel:         cancel,
-		ctx:            ctx,
-		done:           done,
-		cmdProcService: cmdProcService,
-		serviceChannel: serviceChannel,
-		n10nBroker:     n10nBroker,
-		appTokens:      appTokens,
-		sysAuthHeader:  getAuthHeader(systemToken),
+		cfg:               cfg,
+		bus:               bus,
+		cancel:            cancel,
+		ctx:               ctx,
+		done:              done,
+		cmdProcService:    cmdProcService,
+		serviceChannel:    serviceChannel,
+		n10nBroker:        n10nBroker,
+		n10nBrokerCleanup: n10nBrokerCleanup,
+		appTokens:         appTokens,
+		sysAuthHeader:     getAuthHeader(systemToken),
 	}
 }
 

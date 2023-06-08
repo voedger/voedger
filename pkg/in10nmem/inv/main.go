@@ -43,7 +43,9 @@ func main() {
 	}
 	if os.Args[1] == "v2" {
 		println("Running v2...")
-		nb := in10nmem.Provide(quotas)
+		nb, cleanup := in10nmem.ProvideEx2(quotas, time.Now)
+		defer cleanup()
+
 		runChannels(nb)
 	}
 	log.Fatal("Unknown argument", os.Args[1])

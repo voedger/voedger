@@ -70,6 +70,16 @@ resource "aws_network_interface" "node_04" {
   }
 }
 
+resource "aws_network_interface" "node_instead" {
+  subnet_id   = aws_subnet.scylla_subnet.id
+  private_ips = ["10.0.0.16"]
+  security_groups = [aws_security_group.scylla_hosts.id]
+  tags = {
+    Name = "node_instead_interface"
+  }
+}
+
+
 resource "aws_instance" "node_00" {
   ami = "ami-0568936c8d2b91c4e"
   instance_type = "i3.large"
@@ -103,8 +113,7 @@ resource "aws_instance" "node_00" {
     "echo $GOROOT",
     "echo $PATH", 
     "cd $HOME/voedger/cmd/ctool && go build -o ctool",
-    "$HOME/voedger/cmd/ctool/ctool init SE 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15",
-    "$HOME/voedger/cmd/ctool/ctool apply /tmp/amazonKey.pem"
+    "$HOME/voedger/cmd/ctool/ctool init SE 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15 --ssh-key /tmp/amazonKey.pem"
     ]
   }
 
@@ -196,6 +205,27 @@ resource "aws_instance" "node_04" {
 output "public_ip_node_04" {
   value = aws_instance.node_04.public_ip
 }
+
+resource "aws_instance" "node_instead" {
+  ami = "ami-0568936c8d2b91c4e"
+  instance_type = "i3.large"
+  root_block_device {
+    volume_size = "30"
+    volume_type = "gp2"
+  }
+  placement_group = aws_placement_group.scylla_placement_group.id
+  network_interface {
+    network_interface_id = aws_network_interface.node_instead.id
+    device_index         = 0
+  }
+  key_name = "amazonKey"
+}
+
+output "public_ip_node_instead" {
+  value = aws_instance.node_instead.public_ip
+}
+
+
 
 resource "aws_internet_gateway" "gw" { vpc_id = aws_vpc.scylla_cluster_vpc.id }
 
