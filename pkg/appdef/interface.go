@@ -20,24 +20,24 @@ type QName struct {
 // Ref. def-kind.go for constants and methods
 type DefKind uint8
 
-// Data kind enumeration
+// Data kind enumeration.
 //
 // Ref. data-kind.go for constants and methods
 type DataKind uint8
 
-// Field Verification kind
+// Field Verification kind.
 //
 // Ref. verification-king.go for constants and methods
 type VerificationKind uint8
 
-// Numeric with OccursUnbounded value
+// Numeric with OccursUnbounded value.
 //
 // Ref. occurs.go for constants and methods
 type Occurs uint16
 
-// Extension engine kind enumeration
+// Extension engine kind enumeration.
 //
-// Ref to extension-engine-kind.go for constants and methods
+// Ref. to extension-engine-kind.go for constants and methods
 type ExtensionEngineKind uint8
 
 // Application definition.
@@ -256,6 +256,8 @@ type IDef interface {
 //	- DefKind_WDoc and DefKind_WRecord,
 //	- DefKind_Object and DefKind_Element,
 //	- DefKind_ViewRecord_PartitionKey, DefKind_ViewRecord_ClusteringColumns and DefKind_ViewRecord_Value
+//
+// Ref. to field.go for implementation
 type IFields interface {
 	// Finds field by name.
 	//
@@ -324,6 +326,8 @@ type IFieldsBuilder interface {
 //	- DefKind_WDoc and DefKind_WRecord,
 //	- DefKind_Object and DefKind_Element,
 //	- DefKind_ViewRecord and DefKind_ViewKey
+//
+// Ref. to container.go for implementation
 type IContainers interface {
 	// Finds container by name.
 	//
@@ -361,6 +365,8 @@ type IContainersBuilder interface {
 //	- DefKind_GDoc and DefKind_GRecord,
 //	- DefKind_CDoc and DefKind_CRecord,
 //	- DefKind_WDoc and DefKind_WRecord
+//
+// Ref. to unique.go for implementation
 type IUniques interface {
 	// Return unique by ID.
 	//
@@ -428,6 +434,8 @@ type IGDocBuilder interface {
 }
 
 // Global document record. DefKind() is DefKind_GRecord.
+//
+// Ref. to gdoc.go for implementation
 type IGRecord interface {
 	IDef
 	IFields
@@ -464,6 +472,8 @@ type ICDocBuilder interface {
 }
 
 // Configuration document record. DefKind() is DefKind_CRecord.
+//
+// Ref. to cdoc.go for implementation
 type ICRecord interface {
 	IDef
 	IFields
@@ -494,6 +504,8 @@ type IWDocBuilder interface {
 }
 
 // Workflow document record. DefKind() is DefKind_WRecord.
+//
+// Ref. to wdoc.go for implementation
 type IWRecord interface {
 	IDef
 	IFields
@@ -522,6 +534,8 @@ type IODocBuilder interface {
 }
 
 // Operation document record. DefKind() is DefKind_ORecord.
+//
+// Ref. to odoc.go for implementation
 type IORecord interface {
 	IDef
 	IFields
@@ -535,6 +549,8 @@ type IORecordBuilder interface {
 }
 
 // Object definition. DefKind() is DefKind_Object.
+//
+// Ref. to object.go for implementation
 type IObject interface {
 	IDef
 	IFields
@@ -548,6 +564,8 @@ type IObjectBuilder interface {
 }
 
 // Element definition. DefKind() is DefKind_Element.
+//
+// Ref. to object.go for implementation
 type IElement interface {
 	IDef
 	IFields
@@ -598,12 +616,16 @@ type IViewBuilder interface {
 }
 
 // View partition key definition. DefKind() is DefKind_ViewRecordPartitionKey
+//
+// Ref. to view.go for implementation
 type IPartKey interface {
 	IDef
 	IFields
 }
 
 // View clustering columns definition. DefKind() is DefKind_ViewRecordClusteringColumns
+//
+// Ref. to view.go for implementation
 type IClustCols interface {
 	IDef
 	IFields
@@ -612,6 +634,8 @@ type IClustCols interface {
 // View full (pk + cc) key definition. DefKind() is DefKind_ViewRecordFullKey
 //
 // Partition key fields is required, clustering columns is not.
+//
+// Ref. to view.go for implementation
 type IViewKey interface {
 	IDef
 	IFields
@@ -625,6 +649,8 @@ type IViewKey interface {
 }
 
 // View value definition. DefKind() is DefKind_ViewRecord_Value
+//
+// Ref. to view.go for implementation
 type IViewValue interface {
 	IDef
 	IFields
@@ -659,6 +685,8 @@ type IField interface {
 // Reference field. Describe field with DataKind_RecordID.
 //
 // Use Refs() to obtain list of target references.
+//
+// Ref. to fields.go for implementation
 type IRefField interface {
 	IField
 
@@ -711,6 +739,8 @@ type IUnique interface {
 }
 
 // Entry point for extension
+//
+// Ref. to extension.go for implementation
 type IExtension interface {
 	// Extension entry point name
 	Name() string
@@ -720,6 +750,8 @@ type IExtension interface {
 }
 
 // Command
+//
+// Ref. to command.go for implementation
 type ICommand interface {
 	IDef
 

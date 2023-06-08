@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -130,4 +131,26 @@ func (c *containers) Containers(cb func(IContainer)) {
 
 func (c *containers) def() IDef {
 	return c.owner.(IDef)
+}
+
+// Validates specified containers.
+//
+// # Validation:
+//   - every container definition must be known,
+//   - every container definition kind must be compatible with parent definition kind
+func validateDefContainers(def IDef) (err error) {
+	if cnt, ok := def.(IContainers); ok {
+		// resolve containers definitions
+		cnt.Containers(func(cont IContainer) {
+			contDef := def.App().DefByName(cont.Def())
+			if contDef == nil {
+				err = errors.Join(err, fmt.Errorf("%v: container «%s» uses unknown definition «%v»: %w", def.QName(), cont.Name(), cont.Def(), ErrNameNotFound))
+				return
+			}
+			if !def.Kind().ContainerKindAvailable(contDef.Kind()) {
+				err = errors.Join(err, fmt.Errorf("%v: container «%s» definition «%v» is incompatible: «%s» can`t contain «%s»: %w", def.QName(), cont.Name(), cont.Def(), def.Kind().TrimString(), contDef.Kind().TrimString(), ErrInvalidDefKind))
+			}
+		})
+	}
+	return err
 }

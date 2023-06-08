@@ -46,7 +46,7 @@ type objRef struct {
 	def  IObject
 }
 
-func (o *objRef) object(app *appDef) IObject {
+func (o *objRef) object(app IAppDef) IObject {
 	if (o.def == nil) || (o.def.QName() != o.name) {
 		o.def = app.Object(o.name)
 	}

@@ -12,6 +12,60 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_IsSysContainer(t *testing.T) {
+	type args struct {
+		name string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "true if sys.pkey",
+			args: args{SystemContainer_ViewPartitionKey},
+			want: true,
+		},
+		{
+			name: "true if sys.ccols",
+			args: args{SystemContainer_ViewClusteringCols},
+			want: true,
+		},
+		{
+			name: "true if sys.key",
+			args: args{SystemContainer_ViewKey},
+			want: true,
+		},
+		{
+			name: "true if sys.val",
+			args: args{SystemContainer_ViewValue},
+			want: true,
+		},
+		{
+			name: "false if empty",
+			args: args{""},
+			want: false,
+		},
+		{
+			name: "false if basic user",
+			args: args{"userContainer"},
+			want: false,
+		},
+		{
+			name: "false if curious user",
+			args: args{"sys.user"},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsSysContainer(tt.args.name); got != tt.want {
+				t.Errorf("IsSysContainer() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func Test_def_AddContainer(t *testing.T) {
 	require := require.New(t)
 
@@ -72,7 +126,7 @@ func Test_def_AddContainer(t *testing.T) {
 		require.Panics(func() { def.AddContainer("c3", elQName, 2, 1) })
 	})
 
-	t.Run("must be panic if container definition is not compatible", func(t *testing.T) {
+	t.Run("must be panic if container definition is incompatible", func(t *testing.T) {
 		require.Panics(func() { def.AddContainer("c2", def.QName(), 1, 1) })
 
 		d := def.ContainerDef("c2")
@@ -90,56 +144,42 @@ func Test_def_AddContainer(t *testing.T) {
 	})
 }
 
-func Test_IsSysContainer(t *testing.T) {
-	type args struct {
-		name string
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "true if sys.pkey",
-			args: args{SystemContainer_ViewPartitionKey},
-			want: true,
-		},
-		{
-			name: "true if sys.ccols",
-			args: args{SystemContainer_ViewClusteringCols},
-			want: true,
-		},
-		{
-			name: "true if sys.key",
-			args: args{SystemContainer_ViewKey},
-			want: true,
-		},
-		{
-			name: "true if sys.val",
-			args: args{SystemContainer_ViewValue},
-			want: true,
-		},
-		{
-			name: "false if empty",
-			args: args{""},
-			want: false,
-		},
-		{
-			name: "false if basic user",
-			args: args{"userContainer"},
-			want: false,
-		},
-		{
-			name: "false if curious user",
-			args: args{"sys.user"},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := IsSysContainer(tt.args.name); got != tt.want {
-				t.Errorf("IsSysContainer() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+func TestValidateContainer(t *testing.T) {
+	require := require.New(t)
+
+	app := New()
+	doc := app.AddCDoc(NewQName("test", "doc"))
+	doc.AddContainer("rec", NewQName("test", "rec"), 0, Occurs_Unbounded)
+
+	t.Run("must be error if container def not found", func(t *testing.T) {
+		_, err := app.Build()
+		require.ErrorIs(err, ErrNameNotFound)
+		require.ErrorContains(err, "unknown definition «test.rec»")
+	})
+
+	rec := app.AddCRecord(NewQName("test", "rec"))
+	_, err := app.Build()
+	require.NoError(err)
+
+	t.Run("must be ok container recurse", func(t *testing.T) {
+		rec.AddContainer("rec", NewQName("test", "rec"), 0, Occurs_Unbounded)
+		_, err := app.Build()
+		require.NoError(err)
+	})
+
+	t.Run("must be ok container sub recurse", func(t *testing.T) {
+		rec.AddContainer("rec1", NewQName("test", "rec1"), 0, Occurs_Unbounded)
+		rec1 := app.AddCRecord(NewQName("test", "rec1"))
+		rec1.AddContainer("rec", NewQName("test", "rec"), 0, Occurs_Unbounded)
+		_, err := app.Build()
+		require.NoError(err)
+	})
+
+	t.Run("must be error if container kind is incompatible", func(t *testing.T) {
+		doc.AddContainer("obj", NewQName("test", "obj"), 0, 1)
+		_ = app.AddObject(NewQName("test", "obj"))
+		_, err := app.Build()
+		require.ErrorIs(err, ErrInvalidDefKind)
+		require.ErrorContains(err, "«CDoc» can`t contain «Object»")
+	})
 }

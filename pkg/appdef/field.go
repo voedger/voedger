@@ -7,6 +7,7 @@
 package appdef
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -258,3 +259,28 @@ func newRefField(name string, required bool, ref ...QName) *refField {
 }
 
 func (f refField) Refs() []QName { return f.refs }
+
+// Validates specified fields.
+//
+// # Validation:
+//   - every RefField must refer to known definitions,
+//   - every referenced by RefField definition must have «sys.ID» system field
+func validateDefFields(def IDef) (err error) {
+	if fld, ok := def.(IFields); ok {
+		// resolve reference fields definitions
+		fld.RefFields(func(rf IRefField) {
+			for _, n := range rf.Refs() {
+				refDef := def.App().DefByName(n)
+				if refDef == nil {
+					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to unknown definition «%v»: %w", def.QName(), rf.Name(), n, ErrNameNotFound))
+					continue
+				}
+				if !refDef.Kind().HasSystemField(SystemField_ID) {
+					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to non referable definition «%v» kind «%v» without «%s» field: %w", def.QName(), rf.Name(), n, refDef.Kind(), SystemField_ID, ErrInvalidDefKind))
+					continue
+				}
+			}
+		})
+	}
+	return err
+}
