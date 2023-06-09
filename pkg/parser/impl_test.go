@@ -444,3 +444,82 @@ func Test_NestedTables(t *testing.T) {
 	require.NotNil(def.CRecord(appdef.NewQName("test", "NestedTable")))
 	require.NotNil(def.CRecord(appdef.NewQName("test", "DeepNestedTable")))
 }
+
+func Test_SemanticAnalysisForReferences(t *testing.T) {
+	t.Run("Should return error because CDoc references to ODoc", func(t *testing.T) {
+		require := require.New(t)
+
+		fs, err := ParseFile("example.sql", `SCHEMA test; 
+		TABLE OTable INHERITS ODoc ();
+		TABLE CTable INHERITS CDoc (
+			OTableRef ref(OTable)
+		);
+		`)
+		require.Nil(err)
+
+		pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+		require.Nil(err)
+
+		packages, err := MergePackageSchemas([]*PackageSchemaAST{
+			getSysPackageAST(),
+			pkg,
+		})
+		require.NoError(err)
+
+		def := appdef.New()
+		err = BuildAppDefs(packages, def)
+
+		require.Contains(err.Error(), "table test.CTable can not reference to table test.OTable")
+	})
+	t.Run("Should return error because CDoc references to not identified target", func(t *testing.T) {
+		require := require.New(t)
+
+		fs, err := ParseFile("example.sql", `SCHEMA test; 
+		TABLE UntillPaymentsUser ();
+		TABLE CTable INHERITS CDoc (
+			Ref ref(UntillPaymentsUser)
+		);
+		`)
+		require.Nil(err)
+
+		pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+		require.Nil(err)
+
+		packages, err := MergePackageSchemas([]*PackageSchemaAST{
+			getSysPackageAST(),
+			pkg,
+		})
+		require.NoError(err)
+
+		def := appdef.New()
+		err = BuildAppDefs(packages, def)
+
+		require.Contains(err.Error(), ErrTargetIsNotIdentified.Error())
+	})
+}
+
+func Test_ReferenceToNoTable(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	ROLE Admin;
+	TABLE CTable INHERITS CDoc (
+		RefField ref(Admin)
+	);
+	`)
+	require.Nil(err)
+
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.Nil(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	def := appdef.New()
+	err = BuildAppDefs(packages, def)
+
+	require.Contains(err.Error(), "Admin undefined")
+}

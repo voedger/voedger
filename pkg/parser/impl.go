@@ -456,6 +456,11 @@ func addFieldRefToDef(refField *RefFieldExpr, ctx *buildContext) {
 			ctx.errs = append(ctx.errs, err)
 			errors = true
 		}
+		if err = checkReference(refField.RefDocs[i], ctx, &refField.Pos); err != nil {
+			ctx.errs = append(ctx.errs, err)
+			errors = true
+			return
+		}
 	}
 	if !errors {
 		ctx.defCtx().defBuilder.(appdef.IFieldsBuilder).AddRefField(refField.Name, refField.NotNull, refs...)
@@ -568,4 +573,24 @@ func addFieldsOf(types []DefQName, ctx *buildContext) {
 			return nil
 		})
 	}
+}
+
+func checkReference(refTable DefQName, ctx *buildContext, pos *lexer.Position) error {
+	//TODO is it correct assumption?
+	if refTable.Package == "" {
+		refTable.Package = ctx.basicContext.pkg.Ast.Package
+	}
+	refTableDef := ctx.builder.DefByName(appdef.NewQName(refTable.Package, refTable.Name))
+
+	if refTableDef == nil || !refTableDef.Kind().HasSystemField(appdef.SystemField_ID) {
+		return errorAt(ErrTargetIsNotIdentified, pos)
+	}
+
+	for _, defKind := range canNotReferenceTo[ctx.defCtx().kind] {
+		if defKind == refTableDef.Kind() {
+			return errorAt(fmt.Errorf("table %s can not reference to table %s", ctx.defCtx().qname, refTableDef.QName()), pos)
+		}
+	}
+
+	return nil
 }
