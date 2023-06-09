@@ -131,7 +131,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		AddField(Field_InitStartedAtMs, appdef.DataKind_int64, false).
 		AddField(Field_InitError, appdef.DataKind_string, false).
 		AddField(Field_InitCompletedAtMs, appdef.DataKind_int64, false).
-		AddField(Field_Status, appdef.DataKind_int32, false)
+		AddField(authnz.Field_Status, appdef.DataKind_int32, false)
 
 	// q.sys.QueryChildWorkspaceByName
 	cfg.Resources.Add(istructsmem.NewQueryFunction(

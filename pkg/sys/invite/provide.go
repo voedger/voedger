@@ -7,6 +7,7 @@ package invite
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc) {

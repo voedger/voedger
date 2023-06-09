@@ -35,9 +35,7 @@ import (
 
 var now = time.Now()
 
-var timeFunc = coreutils.TimeFunc {
-	return now
-}
+var timeFunc = coreutils.TimeFunc(func() time.Time { return now })
 
 func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	require := require.New(t)

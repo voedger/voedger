@@ -30,7 +30,8 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	workspacemgmt "github.com/voedger/voedger/pkg/sys/authnz/workspace"
+
+	// workspacemgmt "github.com/voedger/voedger/pkg/sys/authnz/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -164,7 +165,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// TODO: query prcessor currently does not check workspace initialization
 				return nil
 			}
-			if wsDesc.AsInt32(workspacemgmt.Field_Status) != int32(workspacemgmt.WorkspaceStatus_Active) {
+			if wsDesc.AsInt32(authnz.Field_Status) != int32(workspacemgmt.WorkspaceStatus_Active) {
 				return processors.ErrWSInactive
 			}
 			return nil

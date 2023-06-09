@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // пример ограничения общего количества регистраций (не более 1000) и регистраций с одного адреса (10) в день
@@ -104,9 +105,7 @@ func TestBasicUsage(t *testing.T) {
 
 var testTime = time.Now()
 
-var testTimeFunc = coreutils.TimeFunc {
-	return testTime
-}
+var testTimeFunc = coreutils.TimeFunc(func() time.Time { return testTime })
 
 // быстрый тест функционала структуры buckets (реализации интерфейса irates.IBuckets)
 // для эмуляции временных диапазонеов используется функция testTimeFunc()

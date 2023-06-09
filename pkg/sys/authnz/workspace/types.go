@@ -31,4 +31,4 @@ type BLOB struct {
 
 type WSPostInitFunc func(targetAppQName istructs.AppQName, wsKind appdef.QName, newWSID istructs.WSID, federation coreutils.IFederation, authToken string) (err error)
 
-type WorkspaceStatus int32
+

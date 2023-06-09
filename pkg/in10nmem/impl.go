@@ -333,7 +333,7 @@ func (nb *N10nBroker) MetricSubject(ctx context.Context, cb func(subject istruct
 	}
 }
 
-func NewN10nBroker(quotas in10n.Quotas, now func() time.Time) (nb *N10nBroker, cleanup func()) {
+func NewN10nBroker(quotas in10n.Quotas, now coreutils.TimeFunc) (nb *N10nBroker, cleanup func()) {
 	broker := N10nBroker{
 		projections:     make(map[in10n.ProjectionKey]*projection),
 		channels:        make(map[in10n.ChannelID]*channelType),

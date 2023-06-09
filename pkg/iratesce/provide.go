@@ -7,6 +7,7 @@ package iratesce
 
 import (
 	irates "github.com/voedger/voedger/pkg/irates"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // Provide: constructs bucketFactory

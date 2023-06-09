@@ -30,7 +30,6 @@ const (
 	field_IDOfCDocWorkspaceID                       = "IDOfCDocWorkspaceID"
 	Field_InitError                                 = "InitError"
 	Field_InitCompletedAtMs                         = "InitCompletedAtMs"
-	Field_Status                                    = "Status"
 	EPWSTemplates             extensionpoints.EPKey = "WSTemplates"
 )
 
@@ -48,10 +47,4 @@ var (
 	QNameCommandCreateWorkspaceID          = appdef.NewQName(appdef.SysPackage, "CreateWorkspaceID")
 	QNameCommandCreateWorkspace            = appdef.NewQName(appdef.SysPackage, "CreateWorkspace")
 	nextWSIDGlobalLock                     = sync.Mutex{}
-)
-
-const (
-	WorkspaceStatus_Active WorkspaceStatus = iota
-	WorkspaceStatus_ToBeDeactivated
-	WorkspaceStatus_Inactive
 )

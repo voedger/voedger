@@ -12,7 +12,6 @@ import (
 	"hash/crc32"
 	"io/fs"
 	"net/http"
-	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -98,7 +97,7 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 				return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: %w", err)
 			}
 
-			if _, err = coreutils.FederationFunc(federationURL(), createWSIDCmdURL, body,
+			if _, err = coreutils.FederationFunc(federation.URL(), createWSIDCmdURL, body,
 				coreutils.WithAuthorizeBy(systemPrincipalToken),
 				coreutils.WithDiscardResponse(),
 				coreutils.WithExpectedCode(http.StatusOK),
