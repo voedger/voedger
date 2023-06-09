@@ -18,7 +18,7 @@ import (
 
 var (
 	testTime     = time.Now()
-	testTimeFunc = coreutils.TimeFunc { return testTime }
+	testTimeFunc = func() time.Time { return testTime }
 	testApp      = istructs.AppQName_test1_app1
 	testDuration = time.Minute
 )
