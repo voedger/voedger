@@ -87,7 +87,7 @@ func Test_def_AddContainer(t *testing.T) {
 		require.False(c.IsSys())
 
 		require.Equal(elQName, c.QName())
-		d := def.ContainerDef("c1")
+		d := c.Def()
 		require.NotNil(d)
 		require.Equal(elQName, d.QName())
 		require.Equal(DefKind_Element, d.Kind())
@@ -121,6 +121,10 @@ func Test_def_AddContainer(t *testing.T) {
 		require.Panics(func() { def.AddContainer("c1", elQName, 1, Occurs_Unbounded) })
 	})
 
+	t.Run("must be panic if container definition name missed", func(t *testing.T) {
+		require.Panics(func() { def.AddContainer("c1", NullQName, 1, Occurs_Unbounded) })
+	})
+
 	t.Run("must be panic if invalid occurrences", func(t *testing.T) {
 		require.Panics(func() { def.AddContainer("c2", elQName, 1, 0) })
 		require.Panics(func() { def.AddContainer("c3", elQName, 2, 1) })
@@ -128,10 +132,7 @@ func Test_def_AddContainer(t *testing.T) {
 
 	t.Run("must be panic if container definition is incompatible", func(t *testing.T) {
 		require.Panics(func() { def.AddContainer("c2", def.QName(), 1, 1) })
-
-		d := def.ContainerDef("c2")
-		require.NotNil(d)
-		require.Equal(DefKind_null, d.Kind())
+		require.Nil(def.Container("c2"))
 	})
 
 	t.Run("must be panic if too many containers", func(t *testing.T) {

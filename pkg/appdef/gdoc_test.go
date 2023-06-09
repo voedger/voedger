@@ -38,7 +38,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 			doc.AddContainer("rec", recName, 0, Occurs_Unbounded)
 			require.Equal(1, doc.ContainerCount())
-			require.Equal(rec, doc.ContainerDef("rec"))
+			require.Equal(rec, doc.Container("rec").Def())
 
 			t.Run("must be ok to add rec fields", func(t *testing.T) {
 				rec.
@@ -78,7 +78,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 		require.Equal(1, doc.ContainerCount())
 		require.Equal(recName, doc.Container("rec").QName())
-		require.Equal(DefKind_GRecord, doc.ContainerDef("rec").Kind())
+		require.Equal(DefKind_GRecord, doc.Container("rec").Def().Kind())
 
 		t.Run("must be ok to find builded record", func(t *testing.T) {
 			def := app.Def(recName)

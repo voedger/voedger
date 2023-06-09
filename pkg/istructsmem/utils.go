@@ -99,10 +99,9 @@ func FillElementFromJSON(data map[string]interface{}, def appdef.IDef, b istruct
 		case []interface{}:
 			// e.g. TestBasicUsage_Dashboard(), "order_item": [<2 elements>]
 			if cont, ok := def.(appdef.IContainers); ok {
-				containerName := fieldName
-				containerDef := cont.ContainerDef(containerName)
-				if containerDef.Kind() == appdef.DefKind_null {
-					return fmt.Errorf("container with name %s is not found", containerName)
+				container := cont.Container(fieldName)
+				if container == nil {
+					return fmt.Errorf("container with name %s is not found", fieldName)
 				}
 				for i, val := range fv {
 					objContainerElem, ok := val.(map[string]interface{})
@@ -110,7 +109,7 @@ func FillElementFromJSON(data map[string]interface{}, def appdef.IDef, b istruct
 						return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
 					}
 					containerElemBuilder := b.ElementBuilder(fieldName)
-					if err := FillElementFromJSON(objContainerElem, containerDef, containerElemBuilder); err != nil {
+					if err := FillElementFromJSON(objContainerElem, container.Def(), containerElemBuilder); err != nil {
 						return err
 					}
 				}

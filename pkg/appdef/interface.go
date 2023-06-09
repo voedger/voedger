@@ -339,11 +339,6 @@ type IContainers interface {
 
 	// Enumerates all containers in add order.
 	Containers(func(IContainer))
-
-	// Finds container definition by name.
-	//
-	// If not found empty definition with DefKind_null is returned
-	ContainerDef(name string) IDef
 }
 
 type IContainersBuilder interface {
@@ -355,9 +350,9 @@ type IContainersBuilder interface {
 	//   - if name is empty,
 	//   - if name is invalid,
 	//   - if container with name already exists,
+	//   - if definition name is empty,
 	//   - if invalid occurrences,
-	//   - if definition kind does not allow containers,
-	//   - if container definition kind is not compatible with definition kind.
+	//   - if container definition kind is not compatible with parent definition kind.
 	AddContainer(name string, def QName, min, max Occurs) IContainersBuilder
 }
 
@@ -703,6 +698,11 @@ type IContainer interface {
 
 	// Returns definition name of container
 	QName() QName
+
+	// Returns container definition.
+	//
+	// Returns nil if not found
+	Def() IDef
 
 	// Returns minimum occurs
 	MinOccurs() Occurs
