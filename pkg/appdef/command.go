@@ -39,17 +39,17 @@ func (cmd *command) Result() IObject {
 }
 
 func (cmd *command) SetArg(name QName) ICommandBuilder {
-	cmd.arg.name = name
+	cmd.arg.setName(name)
 	return cmd
 }
 
 func (cmd *command) SetUnloggedArg(name QName) ICommandBuilder {
-	cmd.unl.name = name
+	cmd.unl.setName(name)
 	return cmd
 }
 
 func (cmd *command) SetResult(name QName) ICommandBuilder {
-	cmd.res.name = name
+	cmd.res.setName(name)
 	return cmd
 }
 
@@ -73,19 +73,19 @@ func (cmd *command) UnloggedArg() IObject {
 func (cmd *command) Validate() (err error) {
 	if cmd.arg.name != NullQName {
 		if cmd.arg.object(cmd.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: argument object «%v» is not found: %w", cmd.QName(), cmd.arg.name, ErrNameNotFound))
+			err = errors.Join(err, fmt.Errorf("%v: argument definition «%v» is not found: %w", cmd.QName(), cmd.arg.name, ErrNameNotFound))
 		}
 	}
 
 	if cmd.unl.name != NullQName {
 		if cmd.unl.object(cmd.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: unlogged argument object «%v» is not found: %w", cmd.QName(), cmd.unl.name, ErrNameNotFound))
+			err = errors.Join(err, fmt.Errorf("%v: unlogged definition object «%v» is not found: %w", cmd.QName(), cmd.unl.name, ErrNameNotFound))
 		}
 	}
 
 	if cmd.res.name != NullQName {
 		if cmd.res.object(cmd.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: command result object «%v» is not found: %w", cmd.QName(), cmd.res.name, ErrNameNotFound))
+			err = errors.Join(err, fmt.Errorf("%v: command result definition «%v» is not found: %w", cmd.QName(), cmd.res.name, ErrNameNotFound))
 		}
 	}
 

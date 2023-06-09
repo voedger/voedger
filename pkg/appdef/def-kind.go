@@ -55,11 +55,11 @@ const (
 	// Elements of objects
 	DefKind_Element
 
-	// Params and Result are DefKind_Object
-	DefKind_QueryFunction
+	// Params and Result are Objects
+	DefKind_Query
 
-	// Params are always ODoc + WDoc
-	// Commands have no explicit result
+	// Params are always Objects.
+	// Commands may haven't explicit result
 	DefKind_Command
 
 	DefKind_FakeLast

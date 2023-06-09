@@ -305,26 +305,14 @@ var defKindProps = map[DefKind]struct {
 			DefKind_Element: true,
 		},
 	},
-	DefKind_QueryFunction: {
-		fieldKinds:   map[DataKind]bool{},
-		systemFields: map[string]bool{},
-		containerKinds: map[DefKind]bool{
-			DefKind_GDoc:   true,
-			DefKind_CDoc:   true,
-			DefKind_ODoc:   true,
-			DefKind_WDoc:   true,
-			DefKind_Object: true,
-		},
+	DefKind_Query: {
+		fieldKinds:     map[DataKind]bool{},
+		systemFields:   map[string]bool{},
+		containerKinds: map[DefKind]bool{},
 	},
 	DefKind_Command: {
-		fieldKinds:   map[DataKind]bool{},
-		systemFields: map[string]bool{},
-		containerKinds: map[DefKind]bool{
-			DefKind_GDoc:   true,
-			DefKind_CDoc:   true,
-			DefKind_ODoc:   true,
-			DefKind_WDoc:   true,
-			DefKind_Object: true,
-		},
+		fieldKinds:     map[DataKind]bool{},
+		systemFields:   map[string]bool{},
+		containerKinds: map[DefKind]bool{},
 	},
 }
