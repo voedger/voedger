@@ -38,11 +38,18 @@ func showProgress(done chan bool) {
 			fmt.Print("\r")
 			return
 		default:
-			fmt.Printf("\r%s\r", indicators[i])
+			if !verbose() {
+				fmt.Printf(green("\r%s\r"), indicators[i])
+			}
 			i = (i + 1) % len(indicators)
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
+}
+
+func verbose() bool {
+	b, err := rootCmd.Flags().GetBool("verbose")
+	return err == nil && b
 }
 
 func (se *scriptExecuterType) run(scriptName string, args ...string) error {
@@ -63,8 +70,13 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 	var stdoutWriter io.Writer
 	var stderrWriter io.Writer
 	if logFile != nil {
-		stdoutWriter = logFile
-		stderrWriter = logFile
+		if verbose() {
+			stdoutWriter = io.MultiWriter(os.Stdout, logFile)
+			stderrWriter = io.MultiWriter(os.Stderr, logFile)
+		} else {
+			stdoutWriter = logFile
+			stderrWriter = logFile
+		}
 	} else {
 		stdoutWriter = os.Stdout
 		stderrWriter = os.Stderr
