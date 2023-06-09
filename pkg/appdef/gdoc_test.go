@@ -77,7 +77,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 		require.Equal(DataKind_int64, doc.Field("f1").DataKind())
 
 		require.Equal(1, doc.ContainerCount())
-		require.Equal(recName, doc.Container("rec").Def())
+		require.Equal(recName, doc.Container("rec").QName())
 		require.Equal(DefKind_GRecord, doc.ContainerDef("rec").Kind())
 
 		t.Run("must be ok to find builded record", func(t *testing.T) {

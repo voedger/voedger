@@ -86,7 +86,7 @@ func Test_def_AddContainer(t *testing.T) {
 		require.Equal("c1", c.Name())
 		require.False(c.IsSys())
 
-		require.Equal(elQName, c.Def())
+		require.Equal(elQName, c.QName())
 		d := def.ContainerDef("c1")
 		require.NotNil(d)
 		require.Equal(elQName, d.QName())

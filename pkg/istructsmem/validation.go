@@ -123,9 +123,9 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 			}
 
 			childQName := child.QName()
-			if childQName != cont.Def() {
+			if childQName != cont.QName() {
 				err = errors.Join(err,
-					validateErrorf(ECode_InvalidDefName, "%s child[%d] «%s» has wrong definition name «%v», expected «%v»: %w", v.entName(el), idx, childName, childQName, cont.Def(), ErrNameNotFound))
+					validateErrorf(ECode_InvalidDefName, "%s child[%d] «%s» has wrong definition name «%v», expected «%v»: %w", v.entName(el), idx, childName, childQName, cont.QName(), ErrNameNotFound))
 				return
 			}
 

@@ -702,7 +702,7 @@ type IContainer interface {
 	Name() string
 
 	// Returns definition name of container
-	Def() QName
+	QName() QName
 
 	// Returns minimum occurs
 	MinOccurs() Occurs

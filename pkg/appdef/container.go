@@ -34,7 +34,7 @@ func newContainer(name string, def QName, minOccurs, maxOccurs Occurs) *containe
 	}
 }
 
-func (cont *container) Def() QName { return cont.def }
+func (cont *container) QName() QName { return cont.def }
 
 func (cont *container) IsSys() bool { return IsSysContainer(cont.name) }
 
@@ -118,7 +118,7 @@ func (c *containers) ContainerCount() int {
 
 func (c *containers) ContainerDef(contName string) IDef {
 	if cont := c.Container(contName); cont != nil {
-		return c.def().App().Def(cont.Def())
+		return c.def().App().Def(cont.QName())
 	}
 	return NullDef
 }
@@ -142,13 +142,13 @@ func validateDefContainers(def IDef) (err error) {
 	if cnt, ok := def.(IContainers); ok {
 		// resolve containers definitions
 		cnt.Containers(func(cont IContainer) {
-			contDef := def.App().DefByName(cont.Def())
+			contDef := def.App().DefByName(cont.QName())
 			if contDef == nil {
-				err = errors.Join(err, fmt.Errorf("%v: container «%s» uses unknown definition «%v»: %w", def.QName(), cont.Name(), cont.Def(), ErrNameNotFound))
+				err = errors.Join(err, fmt.Errorf("%v: container «%s» uses unknown definition «%v»: %w", def.QName(), cont.Name(), cont.QName(), ErrNameNotFound))
 				return
 			}
 			if !def.Kind().ContainerKindAvailable(contDef.Kind()) {
-				err = errors.Join(err, fmt.Errorf("%v: container «%s» definition «%v» is incompatible: «%s» can`t contain «%s»: %w", def.QName(), cont.Name(), cont.Def(), def.Kind().TrimString(), contDef.Kind().TrimString(), ErrInvalidDefKind))
+				err = errors.Join(err, fmt.Errorf("%v: container «%s» definition «%v» is incompatible: «%s» can`t contain «%s»: %w", def.QName(), cont.Name(), cont.QName(), def.Kind().TrimString(), contDef.Kind().TrimString(), ErrInvalidDefKind))
 			}
 		})
 	}
