@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -280,6 +281,42 @@ func TestRefIntegrity(t *testing.T) {
 	t.Run("CUDs", func(t *testing.T) {
 		body := `{"cuds":[{"fields":{"sys.ID":2,"sys.QName":"sys.department","pc_fix_button": 1,"rm_fix_button": 1, "id_food_group": 123456}}]}`
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
+
+		body = `{"cuds":[{"fields":{"sys.ID": 2, "sys.QName":"sys.cdoc1"}}]}`
+		resp := vit.PostWS(ws, "c.sys.CUD", body)
+		idCdoc1 := resp.NewIDs["2"]
+
+		body = `{"cuds":[{"fields":{"sys.ID": 2, "sys.QName":"sys.options"}}]}`
+		resp = vit.PostWS(ws, "c.sys.CUD", body)
+		idOption := resp.NewIDs["2"]
+
+		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"sys.department","pc_fix_button": 1,"rm_fix_button": 1}}]}`
+		resp = vit.PostWS(ws, "c.sys.CUD", body)
+		idDep := resp.NewIDs["2"]
+
+		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"sys.cdoc2"}}]}`
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"sys.cdoc2","field1": 123456}}]}`
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
+
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"sys.cdoc2","field1": %d}}]}`, idOption)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"sys.cdoc2","field2": 123456}}]}`
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
+
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"sys.cdoc2","field2": %d}}]}`, idOption)
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
+
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"sys.cdoc2","field2": %d}}]}`, idDep)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"sys.cdoc2","field2": %d}}]}`, idCdoc1)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"sys.cdoc2","field3": %d}}]}`, idOption)
+		vit.PostWS(ws, "c.sys.CUD", body)
 	})
 
 	t.Run("cmd args", func(t *testing.T) {
