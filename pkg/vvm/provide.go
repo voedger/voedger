@@ -319,10 +319,10 @@ func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBu
 	return vvmConfig.ProvideServiceChannelFactory(procbus)
 }
 
-func provideCommandProcessorsAmount(vvmCfg *VVMConfig) CommandProcessorsAmountType {
+func provideCommandProcessorsAmount(vvmCfg *VVMConfig) coreutils.CommandProcessorsCount {
 	for _, pc := range vvmCfg.processorsChannels {
 		if pc.ChannelType == ProcessorChannel_Command {
-			return CommandProcessorsAmountType(pc.NumChannels)
+			return coreutils.CommandProcessorsCount(pc.NumChannels)
 		}
 	}
 	panic("no command processor channel group")

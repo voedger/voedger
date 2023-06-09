@@ -48,7 +48,6 @@ type BlobAppStorage istorage.IAppStorage
 type BlobberAppStruct istructs.IAppStructs
 type CommandProcessorsChannelGroupIdxType int
 type QueryProcessorsChannelGroupIdxType int
-type CommandProcessorsAmountType int
 type MaxPrepareQueriesType int
 type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx int) iprocbus.ServiceChannel
 type AppStorageFactory func(appQName istructs.AppQName, appStorage istorage.IAppStorage) istorage.IAppStorage
