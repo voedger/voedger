@@ -18,23 +18,9 @@ const (
 	loginCnt = 20
 )
 
-// Test_Race_SUCreateLogin: Create login & sign up
-func Test_Race_SUCreateLogin(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
-	defer vit.TearDown()
-
-	wg := &sync.WaitGroup{}
-	for i := 0; i < loginCnt; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			login := fmt.Sprintf("login%s", strconv.Itoa(vit.NextNumber()))
-			// note: "token expired" messages here because we do not wait for user profile init. Next test -> next day -> "token expired" on updateOwner in logs (tests not failed)
-			vit.SignUp(login, "1", istructs.AppQName_test1_app1)
-		}()
-	}
-	wg.Wait()
-}
+// note: Test_Race_SUCreateLogin is eliminated because chain Test_Race_SUCreateLogin(t) + Test_Race_SUsignUpIn(t) hangs for 30 seconds
+// Do SignUps in Test_Race_SUCreateLogin, do not wait for accomplish, go to the next test and tokens became expired. Then workspace are continue to init in async projectors and
+// async projectors are failed due of expired tokens -> wait for 30 second before error (projectros/actualizerErrorDelay)
 
 // Test_Race_SUsignUpIn: sign up,sign in with existing logins & sign in with un-existing logins
 func Test_Race_SUsignUpIn(t *testing.T) {

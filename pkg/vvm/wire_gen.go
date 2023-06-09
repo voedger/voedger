@@ -97,7 +97,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	vvmApps := provideVVMApps(vvmConfig, appConfigsType, vvmapi, v3)
 	iBus := provideIBus(iAppStructsProvider, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsAmountType, vvmApps)
 	quotas := vvmConfig.Quotas
-	in10nBroker := in10nmem.ProvideEx(quotas, v2)
+	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, v2)
 	maxPrepareQueriesType := vvmConfig.MaxPrepareQueries
 	syncActualizerFactory := projectors.ProvideSyncActualizerFactory()
 	commandprocessorSyncActualizerFactory := provideSyncActualizerFactory(vvmApps, iAppStructsProvider, in10nBroker, maxPrepareQueriesType, syncActualizerFactory, iSecretReader)
@@ -123,16 +123,19 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	blobMaxSizeType := vvmConfig.BLOBMaxSize
 	blobberAppStruct, err := provideBlobberAppStruct(iAppStructsProvider)
 	if err != nil {
+		cleanup()
 		return nil, nil, err
 	}
 	blobberAppClusterID := provideBlobberClusterAppID(blobberAppStruct)
 	blobAppStorage, err := provideBlobAppStorage(iAppStorageProvider)
 	if err != nil {
+		cleanup()
 		return nil, nil, err
 	}
 	blobStorage := provideBlobStorage(blobAppStorage, v2)
 	routerAppStorage, err := provideRouterAppStorage(iAppStorageProvider)
 	if err != nil {
+		cleanup()
 		return nil, nil, err
 	}
 	cache := dbcertcache.ProvideDbCache(routerAppStorage)
@@ -153,6 +156,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		MetricsServicePort:  v7,
 	}
 	return vvm, func() {
+		cleanup()
 	}, nil
 }
 
@@ -163,7 +167,7 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 	voedgerVM = &VoedgerVM{vvmCtxCancel: cancel}
 	vvmCfg.addProcessorChannel(iprocbusmem.ChannelGroup{
 		NumChannels:       int(vvmCfg.NumCommandProcessors),
-		ChannelBufferSize: int(vvmCfg.NumCommandProcessors),
+		ChannelBufferSize: int(DefaultNumCommandProcessors),
 	}, ProcessorChannel_Command,
 	)
 

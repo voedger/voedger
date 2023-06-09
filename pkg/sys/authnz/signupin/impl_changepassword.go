@@ -6,11 +6,14 @@
 package signupin
 
 import (
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func provideChangePassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
@@ -40,13 +43,22 @@ func cmdChangePaswordExec(cf istructs.ICommandFunction, args istructs.ExecComman
 	oldPwd := args.ArgumentUnloggedObject.AsString(field_OldPassword)
 	newPwd := args.ArgumentUnloggedObject.AsString(field_NewPassword)
 
-	cdocLogin, err := GetCDocLogin(login, args.State, args.Workspace, appName)
+	cdocLogin, doesLoginExist, err := GetCDocLogin(login, args.State, args.Workspace, appName)
 	if err != nil {
 		return err
 	}
 
-	if err := CheckPassword(cdocLogin, oldPwd); err != nil {
+	if !doesLoginExist {
+		return coreutils.NewHTTPErrorf(http.StatusUnauthorized, fmt.Sprintf(ErrFormatMessageLoginDoesntExist, login))
+	}
+
+	isPasswordOK, err := CheckPassword(cdocLogin, oldPwd)
+	if err != nil {
 		return err
+	}
+
+	if !isPasswordOK {
+		return coreutils.NewHTTPErrorf(http.StatusUnauthorized, ErrMessagePasswordIsIncorrect)
 	}
 
 	return ChangePasswordCDocLogin(cdocLogin, newPwd, args.Intents, args.State)

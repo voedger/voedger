@@ -60,7 +60,7 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 		// each restaurant must go to the same cmd proc -> one single cmd processor behind the each command service channel
 		iprocbusmem.ChannelGroup{
 			NumChannels:       int(vvmCfg.NumCommandProcessors),
-			ChannelBufferSize: int(vvmCfg.NumCommandProcessors),
+			ChannelBufferSize: int(DefaultNumCommandProcessors), // to avoid bus timeout on big values of `vvmCfg.NumCommandProcessors``
 		},
 		ProcessorChannel_Command,
 	)
@@ -133,7 +133,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		itokensjwt.ProvideITokens,         // ITokens
 		istructsmem.Provide,               // IAppStructsProvider
 		payloads.ProvideIAppTokensFactory, // IAppTokensFactory
-		in10nmem.ProvideEx,
+		in10nmem.ProvideEx2,
 		queryprocessor.ProvideServiceFactory,
 		commandprocessor.ProvideServiceFactory,
 		metrics.ProvideMetricsService,

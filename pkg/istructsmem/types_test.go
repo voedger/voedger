@@ -15,6 +15,21 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 )
 
+func Test_rowNullDefinition(t *testing.T) {
+	require := require.New(t)
+
+	row := newTestRow()
+
+	row.setQName(appdef.NullQName)
+	require.Equal(appdef.NullQName, row.QName())
+
+	row.setDef(appdef.NullDef)
+	require.Equal(appdef.NullQName, row.QName())
+
+	row.setDef(nil)
+	require.Equal(appdef.NullQName, row.QName())
+}
+
 func Test_dynoBufValue(t *testing.T) {
 	require := require.New(t)
 	test := test()
@@ -246,8 +261,7 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		row.PutNumber("float64", 4)
 		row.PutNumber("RecordID", 5)
 
-		_, err := row.build()
-		require.NoError(err)
+		require.NoError(row.build())
 
 		require.Equal(int32(1), row.AsInt32("int32"))
 		require.Equal(int64(2), row.AsInt64("int64"))
@@ -266,8 +280,7 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		row.PutChars("bytes", "AQIDBA==")
 		// cspell:enable
 
-		_, err := row.build()
-		require.NoError(err)
+		require.NoError(row.build())
 
 		require.Equal("test 🏐 тест", row.AsString("string"))
 		require.Equal(test.saleCmdName, row.AsQName("QName"))
@@ -294,8 +307,7 @@ func Test_rowType_PutAs_ComplexTypes(t *testing.T) {
 		row := newEmptyViewValue()
 		row.PutString(test.testViewRecord.valueFields.buyer, "buyer")
 		row.PutRecord(test.testViewRecord.valueFields.record, NewNullRecord(istructs.NullRecordID))
-		_, err := row.build()
-		require.NoError(err)
+		require.NoError(row.build())
 
 		rec := row.AsRecord(test.testViewRecord.valueFields.record)
 		require.NotNil(rec)
@@ -314,8 +326,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 			row := newRow(test.AppCfg)
 			row.setQName(test.testRow)
 			put(&row)
-			_, err := row.build()
-			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorIs(row.build(), ErrNameNotFound)
 		}
 
 		testPut(func(row istructs.IRowWriter) { row.PutInt32("unknown_field", 1) })
@@ -339,8 +350,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 			row := newRow(test.AppCfg)
 			row.setQName(test.testRow)
 			put(&row)
-			_, err := row.build()
-			require.ErrorIs(err, ErrWrongFieldType)
+			require.ErrorIs(row.build(), ErrWrongFieldType)
 		}
 
 		testPut(func(row istructs.IRowWriter) { row.PutInt32("int64", 1) })
@@ -360,8 +370,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 		row.PutNumber("bytes", 29)
 
-		_, err := row.build()
-		require.ErrorIs(err, ErrWrongFieldType)
+		require.ErrorIs(row.build(), ErrWrongFieldType)
 	})
 
 	t.Run("PutQName with unknown QName value must be error", func(t *testing.T) {
@@ -370,8 +379,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 		row.PutQName("QName", appdef.NewQName("unknown", "unknown"))
 
-		_, err := row.build()
-		require.ErrorIs(err, qnames.ErrNameNotFound)
+		require.ErrorIs(row.build(), qnames.ErrNameNotFound)
 	})
 
 	t.Run("PutChars error handling", func(t *testing.T) {
@@ -381,8 +389,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 			row.PutChars("int32", "29")
 
-			_, err := row.build()
-			require.ErrorIs(err, ErrWrongFieldType)
+			require.ErrorIs(row.build(), ErrWrongFieldType)
 		})
 
 		t.Run("PutChars to QName-type fields non convertible value must be error", func(t *testing.T) {
@@ -391,8 +398,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 			row.PutChars("QName", "welcome.2.error")
 
-			_, err := row.build()
-			require.ErrorIs(err, appdef.ErrInvalidQNameStringRepresentation)
+			require.ErrorIs(row.build(), appdef.ErrInvalidQNameStringRepresentation)
 		})
 
 		t.Run("PutChars to bytes-type fields non convertible base64 value must be error", func(t *testing.T) {
@@ -401,8 +407,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 			row.PutChars("bytes", "welcome.2.error")
 
-			_, err := row.build()
-			require.Error(err)
+			require.ErrorContains(row.build(), "illegal base64 data")
 		})
 	})
 
@@ -413,7 +418,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 		row.PutFloat32("unknown_field", 555.5)
 		row.PutInt32("int64", 1)
 
-		_, err := row.build()
+		err := row.build()
 		require.ErrorIs(err, ErrNameNotFound)
 		require.ErrorIs(err, ErrWrongFieldType)
 	})
@@ -450,8 +455,7 @@ func Test_rowType_RecordIDs(t *testing.T) {
 		row.PutRecordID("RecordID", 1)
 		row.PutRecordID("RecordID_2", 2)
 
-		_, err := row.build()
-		require.NoError(err)
+		require.NoError(row.build())
 
 		cnt := 0
 		row.RecordIDs(true,
@@ -477,8 +481,7 @@ func Test_rowType_RecordIDs(t *testing.T) {
 		row.PutRecordID("RecordID", 1)
 		row.PutRecordID("RecordID_2", istructs.NullRecordID)
 
-		_, err := row.build()
-		require.NoError(err)
+		require.NoError(row.build())
 
 		cnt := 0
 		row.RecordIDs(false,
@@ -565,8 +568,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 		row.setQName(test.testRow)
 
 		row.PutInt32("unknown", 1)
-		_, err := row.build()
-		require.Error(err)
+		require.ErrorIs(row.build(), ErrNameNotFound)
 	})
 
 	t.Run("Put××× invalid field value type must have build error", func(t *testing.T) {
@@ -574,8 +576,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 		row.setQName(test.testRow)
 
 		row.PutString("int32", "a")
-		_, err := row.build()
-		require.Error(err)
+		require.ErrorIs(row.build(), ErrWrongFieldType)
 	})
 
 	t.Run("PutString to []byte type must collect convert error", func(t *testing.T) {
@@ -584,8 +585,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 
 		row.PutString("bytes", "some string")
 
-		_, err := row.build()
-		require.Error(err)
+		require.ErrorIs(row.build(), ErrWrongFieldType)
 	})
 
 	t.Run("PutQName invalid QName must have build error", func(t *testing.T) {
@@ -593,7 +593,100 @@ func Test_rowType_BuildErrors(t *testing.T) {
 		row.setQName(test.testRow)
 
 		row.PutString("QName", "zZz")
-		_, err := row.build()
-		require.Error(err)
+
+		require.ErrorIs(row.build(), ErrWrongFieldType)
+	})
+}
+
+func Test_rowType_Nils(t *testing.T) {
+	require := require.New(t)
+	test := test()
+
+	t.Run("must be empty nils if no nil assignment", func(t *testing.T) {
+		row := newRow(test.AppCfg)
+		row.setQName(test.testRow)
+
+		row.PutInt32("int32", 8)
+		require.NoError(row.build())
+		require.Empty(row.nils)
+	})
+
+	t.Run("check nils", func(t *testing.T) {
+		row := newRow(test.AppCfg)
+		row.setQName(test.testRow)
+
+		t.Run("check first nil", func(t *testing.T) {
+			row.PutInt32("int32", 8)
+			row.PutChars("bytes", "")
+			require.NoError(row.build())
+			require.Len(row.nils, 1)
+			require.True(row.nils["bytes"])
+		})
+
+		t.Run("check second nil", func(t *testing.T) {
+			row.PutChars("string", "")
+			require.NoError(row.build())
+			require.Len(row.nils, 2)
+			require.True(row.nils["bytes"])
+			require.True(row.nils["string"])
+		})
+
+		t.Run("check nil can be reassigned", func(t *testing.T) {
+			row.PutChars("string", "ABC")
+			require.NoError(row.build())
+			require.Len(row.nils, 1)
+			require.True(row.nils["bytes"])
+		})
+	})
+
+	t.Run("check nil assignment", func(t *testing.T) {
+		row := newRow(test.AppCfg)
+		row.setQName(test.testRow)
+		row.PutInt32("int32", 0)
+		row.PutInt64("int64", 0)
+		row.PutFloat32("float32", 0)
+		row.PutFloat64("float64", 0)
+		row.PutBytes("bytes", []byte{})
+		row.PutString("string", "")
+		row.PutQName("QName", appdef.NullQName)
+		row.PutBool("bool", false)
+		row.PutRecordID("RecordID", istructs.NullRecordID)
+
+		require.NoError(row.build())
+
+		require.True(row.HasValue("int32"))
+		require.True(row.HasValue("int64"))
+		require.True(row.HasValue("float32"))
+		require.True(row.HasValue("float64"))
+		require.False(row.HasValue("bytes"))
+		require.False(row.HasValue("string"))
+		require.True(row.HasValue("QName"))
+		require.True(row.HasValue("bool"))
+		require.True(row.HasValue("RecordID"))
+
+		cnt := 0
+		row.dyB.IterateFields(nil, func(name string, newData interface{}) bool {
+			switch name {
+			case "int32", "int64", "float32", "float64":
+				require.Zero(newData)
+			case "QName":
+				var nullQNameBytes = []uint8([]byte{0x0, 0x0})
+				require.Equal(nullQNameBytes, newData)
+			case "bool":
+				require.False(newData.(bool))
+			case "RecordID":
+				require.EqualValues(istructs.NullRecordID, newData)
+			default:
+				require.Fail("unexpected field", "field name: «%s»", name)
+			}
+			cnt++
+			return true
+		})
+
+		require.Equal(7, cnt)
+
+		require.Len(row.nils, 2)
+		require.True(row.nils["bytes"])
+		require.True(row.nils["string"])
 	})
 }

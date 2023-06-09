@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -134,7 +135,7 @@ func TestSignInErrors(t *testing.T) {
 	t.Run("unknown login", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "1","AppName": "%s"},"elements":[{"fields":["PrincipalToken", "WSID", "WSError"]}]}`,
 			login, istructs.AppQName_test1_app1.String())
-		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.IssuePrincipalToken", body, coreutils.Expect401())
+		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.IssuePrincipalToken", body, coreutils.Expect401()).Println()
 	})
 
 	t.Run("wrong WSID", func(t *testing.T) {
@@ -148,6 +149,6 @@ func TestSignInErrors(t *testing.T) {
 	t.Run("wrong password", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "wrongPass","AppName": "%s"},"elements":[{"fields":[]}]}`,
 			login, istructs.AppQName_test1_app1.String())
-		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.IssuePrincipalToken", body, coreutils.Expect401())
+		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.IssuePrincipalToken", body, coreutils.Expect401()).Println()
 	})
 }

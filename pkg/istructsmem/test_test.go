@@ -382,7 +382,7 @@ func fillTestRow(row *rowType) {
 	row.PutBool("bool", true)
 	row.PutRecordID("RecordID", 7777777)
 
-	if _, err := row.build(); err != nil {
+	if err := row.build(); err != nil {
 		panic(err)
 	}
 }
@@ -739,7 +739,7 @@ func fillTestViewValue(value *rowType) {
 	e.argUnlObj.maskValues()
 	value.PutEvent(test.testViewRecord.valueFields.event, e)
 
-	if _, err := value.build(); err != nil {
+	if err := value.build(); err != nil {
 		panic(err)
 	}
 }

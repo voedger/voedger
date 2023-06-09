@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io/fs"
+	"net/http"
 	"net/url"
 	"path/filepath"
 	"strconv"
@@ -99,8 +100,13 @@ func invokeCreateWorkspaceIDProjector(federationURL func() *url.URL, appQName is
 				return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: %w", err)
 			}
 
-			if _, err = coreutils.FederationFunc(federationURL(), createWSIDCmdURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
-				return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %w", err)
+			if _, err = coreutils.FederationFunc(federationURL(), createWSIDCmdURL, body,
+				coreutils.WithAuthorizeBy(systemPrincipalToken),
+				coreutils.WithDiscardResponse(),
+				coreutils.WithExpectedCode(http.StatusOK),
+				coreutils.WithExpectedCode(http.StatusConflict),
+			); err != nil {
+				return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %w. Body:\n%s", err, body)
 			}
 			return nil
 		})
@@ -126,7 +132,7 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istruct
 			return err
 		}
 		if ok {
-			return fmt.Errorf("workspace with name %s and ownerWSID %d already exists", wsName, ownerWSID)
+			return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("workspace with name %s and ownerWSID %d already exists", wsName, ownerWSID))
 		}
 
 		// ownerWSID := istructs.WSID(args.ArgumentObject.AsInt64(FldOwnerWSID))
