@@ -84,12 +84,13 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	// 5th (index 4 in pLog array)):
 	_ = storeProjectorOffset(app, partitionNr, decrementorName, istructs.Offset(4))
 
-	broker := in10nmem.Provide(in10n.Quotas{
+	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
 		SubsciptionsPerSubject: 2,
-	})
+	}, time.Now)
+	defer cleanup()
 
 	// init and launch two actualizers
 	actualizers := make([]pipeline.ISyncOperator, 2)
@@ -162,12 +163,13 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker := in10nmem.Provide(in10n.Quotas{
+	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
 		SubsciptionsPerSubject: 2,
-	})
+	}, time.Now)
+	defer cleanup()
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
@@ -229,12 +231,13 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker := in10nmem.Provide(in10n.Quotas{
+	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
 		SubsciptionsPerSubject: 2,
-	})
+	}, time.Now)
+	defer cleanup()
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
@@ -299,12 +302,13 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	errors := make(chan string, 10)
 	chanAfterError := make(chan time.Time)
 
-	broker := in10nmem.Provide(in10n.Quotas{
+	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
 		SubsciptionsPerSubject: 2,
-	})
+	}, time.Now)
+	defer cleanup()
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
@@ -396,12 +400,13 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker := in10nmem.Provide(in10n.Quotas{
+	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
 		SubsciptionsPerSubject: 2,
-	})
+	}, time.Now)
+	defer cleanup()
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
@@ -555,12 +560,13 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker := in10nmem.Provide(in10n.Quotas{
+	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
 		SubsciptionsPerSubject: 2,
-	})
+	}, time.Now)
+	defer cleanup()
 
 	metrics := simpleMetrics{}
 
@@ -652,12 +658,13 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker := in10nmem.Provide(in10n.Quotas{
+	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
 		Channels:               2,
 		ChannelsPerSubject:     2,
 		Subsciptions:           2,
 		SubsciptionsPerSubject: 2,
-	})
+	}, time.Now)
+	defer cleanup()
 
 	metrics := simpleMetrics{}
 

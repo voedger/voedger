@@ -1,16 +1,8 @@
 SCHEMA sys;
-
-TABLE CDoc(
-    ID int64
-);
-
-TABLE ODoc(
-    ID int64
-);
-
-TABLE WDoc(
-    ID int64
-);
-
-TABLE Singleton INHERITS CDoc (
-);
+TABLE CDoc();
+TABLE ODoc();
+TABLE WDoc();
+TABLE Singleton INHERITS CDoc();
+TABLE CRecord();
+TABLE WRecord();
+TABLE ORecord();

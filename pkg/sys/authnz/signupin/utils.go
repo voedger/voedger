@@ -9,12 +9,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func CheckAppWSID(login string, urlWSID istructs.WSID, appWSAmount istructs.AppWSAmount) error {
@@ -58,31 +59,36 @@ func GetLoginHash(login string) string {
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(login)))
 }
 
-func GetCDocLogin(login string, st istructs.IState, appWSID istructs.WSID, appName string) (cdocLogin istructs.IStateValue, err error) {
+func GetCDocLogin(login string, st istructs.IState, appWSID istructs.WSID, appName string) (cdocLogin istructs.IStateValue, doesLoginExist bool, err error) {
 	cdocLoginID, err := GetCDocLoginID(st, appWSID, appName, login)
+	doesLoginExist = true
 	if err != nil {
-		return nil, err
+		return nil, doesLoginExist, err
 	}
 	if cdocLoginID == istructs.NullRecordID {
-		return nil, coreutils.NewHTTPErrorf(http.StatusUnauthorized, "login ", login, " does not exist")
+		doesLoginExist = false
+		return nil, doesLoginExist, err
 	}
 
 	kb, err := st.KeyBuilder(state.RecordsStorage, authnz.QNameCDocLogin)
 	if err != nil {
-		return nil, err
+		return nil, doesLoginExist, err
 	}
 	kb.PutRecordID(state.Field_ID, cdocLoginID)
-	return st.MustExist(kb)
+	cdocLogin, err = st.MustExist(kb)
+	return
 }
 
-func CheckPassword(cdocLogin istructs.IStateValue, pwd string) error {
+func CheckPassword(cdocLogin istructs.IStateValue, pwd string) (isPasswordOK bool, err error) {
+	isPasswordOK = true
 	if err := bcrypt.CompareHashAndPassword(cdocLogin.AsBytes(field_PwdHash), []byte(pwd)); err != nil {
 		if err == bcrypt.ErrMismatchedHashAndPassword {
-			return coreutils.NewHTTPErrorf(http.StatusUnauthorized, "password is incorrect")
+			isPasswordOK = false
+			return isPasswordOK, nil
 		}
-		return fmt.Errorf("failed to authenticate: %w", err)
+		return isPasswordOK, fmt.Errorf("failed to authenticate: %w", err)
 	}
-	return nil
+	return isPasswordOK, err
 }
 
 func ChangePasswordCDocLogin(cdocLogin istructs.IStateValue, newPwd string, intents istructs.IIntents, st istructs.IState) error {
@@ -103,9 +109,14 @@ func ChangePasswordCDocLogin(cdocLogin istructs.IStateValue, newPwd string, inte
 }
 
 func ChangePassword(login string, st istructs.IState, intents istructs.IIntents, wsid istructs.WSID, appName string, newPwd string) error {
-	cdocLogin, err := GetCDocLogin(login, st, wsid, appName)
+	cdocLogin, doesLoginExist, err := GetCDocLogin(login, st, wsid, appName)
 	if err != nil {
 		return err
 	}
+
+	if !doesLoginExist {
+		return coreutils.NewHTTPErrorf(http.StatusUnauthorized, fmt.Sprintf(ErrFormatMessageLoginDoesntExist, login))
+	}
+
 	return ChangePasswordCDocLogin(cdocLogin, newPwd, intents, st)
 }

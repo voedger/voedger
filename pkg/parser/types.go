@@ -365,7 +365,6 @@ type NamedParam struct {
 	Type TypeQName `parser:"@@"`
 }
 
-// TODO: validate that table has no duplicated fields
 type TableStmt struct {
 	Statement
 	Name     string          `parser:"'TABLE' @Ident"`
@@ -377,11 +376,17 @@ type TableStmt struct {
 
 func (s TableStmt) GetName() string { return s.Name }
 
+type NestedTableStmt struct {
+	Pos   lexer.Position
+	Name  string    `parser:"@Ident"`
+	Table TableStmt `parser:"@@"`
+}
+
 type TableItemExpr struct {
-	Table      *TableStmt       `parser:"@@"`
-	Constraint *TableConstraint `parser:"| @@"`
-	RefField   *RefFieldExpr    `parser:"| @@"`
-	Field      *FieldExpr       `parser:"| @@"`
+	NestedTable *NestedTableStmt `parser:"@@"`
+	Constraint  *TableConstraint `parser:"| @@"`
+	RefField    *RefFieldExpr    `parser:"| @@"`
+	Field       *FieldExpr       `parser:"| @@"`
 }
 
 type TableConstraint struct {
@@ -406,9 +411,9 @@ type UniqueExpr struct {
 
 type RefFieldExpr struct {
 	Pos     lexer.Position
-	Name    string   `parser:"@Ident"`
-	RefDocs DefQName `parser:"'ref' ('(' @@ (',' @@)* ')')?"`
-	NotNull bool     `parser:"@(NOTNULL)?"`
+	Name    string     `parser:"@Ident"`
+	RefDocs []DefQName `parser:"'ref' ('(' @@ (',' @@)* ')')?"`
+	NotNull bool       `parser:"@(NOTNULL)?"`
 }
 
 type FieldExpr struct {
