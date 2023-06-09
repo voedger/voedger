@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	in10nmemv1 "github.com/voedger/voedger/pkg/in10nmem/v1"
+	in10nmemv3 "github.com/voedger/voedger/pkg/in10nmem/v3"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -48,6 +50,13 @@ func main() {
 
 		runChannels(nb)
 	}
+	if os.Args[1] == "v3" {
+		println("Running v3...")
+		nb, cleanup := in10nmemv3.ProvideEx2(quotas, time.Now)
+		defer cleanup()
+
+		runChannels(nb)
+	}
 	log.Fatal("Unknown argument", os.Args[1])
 
 }
@@ -58,9 +67,9 @@ func checkErr(err error) {
 	}
 }
 
-const numPartitions = 200
-const numProjectorsPerPartition = 1000
-const eventsPerSeconds = 500
+const numPartitions = 10000
+const numProjectorsPerPartition = 100
+const eventsPerSeconds = 1000
 const subject istructs.SubjectLogin = "main"
 
 var projectionPLog = appdef.NewQName("sys", "plog")
@@ -96,7 +105,10 @@ func runChannels(broker in10n.IN10nBroker) {
 	println("numProjectorsPerPartition: ", numProjectorsPerPartition)
 	println("eventsPerSeconds: ", eventsPerSeconds)
 
-	offset := 0
+	var sumDurations time.Duration
+
+	offset := istructs.Offset(0)
+	t1000 := time.Now()
 	for range t.C {
 
 		// nolint
@@ -107,7 +119,16 @@ func runChannels(broker in10n.IN10nBroker) {
 			Projection: projectionPLog,
 			WS:         istructs.WSID(partition),
 		}
-		broker.Update(projectionKeyExample, 0)
+		broker.Update(projectionKeyExample, offset)
+		// nolint
+		if offset%1000 == 0 && offset > 0 {
+			fmt.Println("offset: ", offset)
+			fmt.Println("avg Update duration: ", sumDurations/time.Duration(offset))
+			dur1000 := time.Since(t1000)
+			t1000 = time.Now()
+			fmt.Println("dur1000/1000: ", dur1000/1000)
+
+		}
 		offset++
 
 	}
@@ -123,5 +144,9 @@ func runChannel(channelID in10n.ChannelID, broker in10n.IN10nBroker) {
 }
 
 func updatesMock(projection in10n.ProjectionKey, offset istructs.Offset) {
+	// nolint
+	if offset%1000000000 == 0 {
+		fmt.Println("offset: ", offset, projection)
+	}
 
 }
