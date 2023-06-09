@@ -165,7 +165,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// TODO: query prcessor currently does not check workspace initialization
 				return nil
 			}
-			if wsDesc.AsInt32(authnz.Field_Status) != int32(workspacemgmt.WorkspaceStatus_Active) {
+			if wsDesc.AsInt32(authnz.Field_Status) != int32(authnz.WorkspaceStatus_Active) {
 				return processors.ErrWSInactive
 			}
 			return nil

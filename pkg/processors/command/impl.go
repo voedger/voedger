@@ -25,12 +25,12 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 	workspacemgmt "github.com/voedger/voedger/pkg/sys/authnz/workspace"
 	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"golang.org/x/exp/maps"
-	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
 func (cm *implICommandMessage) Body() []byte                      { return cm.body }
@@ -247,7 +247,7 @@ func checkWSActive(_ context.Context, work interface{}) (err error) {
 	if wsDesc.QName() == appdef.NullQName {
 		return nil
 	}
-	if wsDesc.AsInt32(workspacemgmt.Field_Status) == int32(workspacemgmt.WorkspaceStatus_Active) {
+	if wsDesc.AsInt32(authnz.Field_Status) == int32(authnz.WorkspaceStatus_Active) {
 		return nil
 	}
 	funcQName := cmd.cmdMes.Resource().(istructs.ICommandFunction).QName()
@@ -518,7 +518,7 @@ func checkWorkspaceDescriptorUpdating(_ context.Context, work interface{}) (err 
 	for _, cud := range cmd.parsedCUDs {
 		if cmd.wsInitialized {
 			if cud.qName == authnz.QNameCDocWorkspaceDescriptor && cud.opKind == iauthnz.OperationKind_UPDATE && len(cud.fields) == 1 {
-				if _, ok := cud.fields[workspacemgmt.Field_Status]; ok {
+				if _, ok := cud.fields[authnz.Field_Status]; ok {
 					continue
 				}
 			}

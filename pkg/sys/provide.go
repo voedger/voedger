@@ -73,6 +73,5 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	cfg.AddSyncProjectors(collection.ProvideSyncProjectorFactories(appDefBuilder)...)
 	uniques.Provide(cfg, appDefBuilder)
 	describe.Provide(cfg, asp, appDefBuilder)
-	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, atf)
 	cfg.AddCUDValidators(builtin.ProvideRefIntegrityValidator())
 }

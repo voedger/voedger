@@ -94,8 +94,8 @@ func cmdInitiateDeactivateWorkspaceExec(cf istructs.ICommandFunction, args istru
 		// notest
 		return err
 	}
-	status := wsDesc.AsInt32(Field_Status)
-	if status != int32(WorkspaceStatus_Active) {
+	status := wsDesc.AsInt32(authnz.Field_Status)
+	if status != int32(authnz.WorkspaceStatus_Active) {
 		return coreutils.NewHTTPErrorf(http.StatusConflict, "Workspace Status is not Active")
 	}
 
@@ -104,7 +104,7 @@ func cmdInitiateDeactivateWorkspaceExec(cf istructs.ICommandFunction, args istru
 		// notest
 		return err
 	}
-	wsDescUpdater.PutInt32(Field_Status, int32(WorkspaceStatus_ToBeDeactivated))
+	wsDescUpdater.PutInt32(authnz.Field_Status, int32(authnz.WorkspaceStatus_ToBeDeactivated))
 	return nil
 }
 
@@ -269,7 +269,7 @@ func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, appQNam
 		}
 
 		// cdoc.sys.WorkspaceDescriptor.Status = Inactive
-		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Status":%d}}]}`, wsDesc.AsRecordID(appdef.SystemField_ID), WorkspaceStatus_Inactive)
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Status":%d}}]}`, wsDesc.AsRecordID(appdef.SystemField_ID), authnz.WorkspaceStatus_Inactive)
 		if _, err := coreutils.FederationFunc(federation.URL(), fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()), body,
 			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(sysToken)); err != nil {
 			return fmt.Errorf("cdoc.sys.WorkspaceDescriptor.Status=Inactive failed: %w", err)

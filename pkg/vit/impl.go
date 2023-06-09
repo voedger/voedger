@@ -71,7 +71,7 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 	cfg.VVMPort = 0
 	cfg.MetricsServicePort = 0
 
-	cfg.TimeFunc = coreutils.TimeFunc { return ts.now() }
+	cfg.TimeFunc = coreutils.TimeFunc(func() time.Time { return ts.now() })
 
 	emailMessagesChan := make(chan smtptest.Message, 1) // must be buffered
 	cfg.ActualizerStateOpts = append(cfg.ActualizerStateOpts, state.WithEmailMessagesChan(emailMessagesChan))
