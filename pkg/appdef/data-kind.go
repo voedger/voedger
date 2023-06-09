@@ -65,7 +65,7 @@ func (k DataKind) MarshalText() ([]byte, error) {
 
 // Renders an DataKind in human-readable form, without "DataKind_" prefix,
 // suitable for debugging or error messages
-func (k DataKind) ToString() string {
+func (k DataKind) TrimString() string {
 	const pref = "DataKind_"
 	return strings.TrimPrefix(k.String(), pref)
 }

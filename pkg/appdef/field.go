@@ -205,7 +205,7 @@ func (f *fields) checkAddField(name string, kind DataKind) error {
 	}
 
 	if k := f.def().Kind(); !k.DataKindAvailable(kind) {
-		return fmt.Errorf("%v: definition kind «%v» does not support fields kind «%v»: %w", f.def().QName(), k, kind, ErrInvalidDataKind)
+		return fmt.Errorf("%v: definition kind «%s» does not support fields kind «%s»: %w", f.def().QName(), k.TrimString(), kind.TrimString(), ErrInvalidDataKind)
 	}
 
 	if len(f.fields) >= MaxDefFieldCount {
@@ -276,7 +276,7 @@ func validateDefFields(def IDef) (err error) {
 					continue
 				}
 				if !refDef.Kind().HasSystemField(SystemField_ID) {
-					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to non referable definition «%v» kind «%v» without «%s» field: %w", def.QName(), rf.Name(), n, refDef.Kind(), SystemField_ID, ErrInvalidDefKind))
+					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to non referable definition «%v» kind «%s» without «%s» field: %w", def.QName(), rf.Name(), n, refDef.Kind().TrimString(), SystemField_ID, ErrInvalidDefKind))
 					continue
 				}
 			}

@@ -90,7 +90,7 @@ func (c *containers) AddContainer(name string, contDef QName, minOccurs, maxOccu
 
 	if cd := c.def().App().DefByName(contDef); cd != nil {
 		if k := c.def().Kind(); !k.ContainerKindAvailable(cd.Kind()) {
-			panic(fmt.Errorf("%v: definition kind «%v» does not support child container kind «%v»: %w", c.def().QName(), k, cd.Kind(), ErrInvalidDefKind))
+			panic(fmt.Errorf("%v: definition kind «%s» does not support child container kind «%s»: %w", c.def().QName(), k.TrimString(), cd.Kind().TrimString(), ErrInvalidDefKind))
 		}
 	}
 

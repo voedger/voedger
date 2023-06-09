@@ -187,7 +187,7 @@ func loadFixedLenCellFromBuffer_00(row *rowType, field appdef.IField, appCfg *Ap
 		}
 		row.PutRecordID(field.Name(), istructs.RecordID(v))
 	default:
-		return fmt.Errorf("field «%s» in row «%v» has variable length or unsupported field type «%v»: %w", field.Name(), row.QName(), field.DataKind(), ErrWrongFieldType)
+		return fmt.Errorf("field «%s» in row «%v» has variable length or unsupported field type «%s»: %w", field.Name(), row.QName(), field.DataKind().TrimString(), ErrWrongFieldType)
 	}
 	return nil
 }
@@ -203,7 +203,7 @@ func loadCellFromBuffer_00(row *rowType, field appdef.IField, appCfg *AppConfigT
 	case appdef.DataKind_string:
 		row.PutString(field.Name(), buf.String())
 	default:
-		return fmt.Errorf("unable load data type «%s»: %w", field.DataKind().ToString(), ErrWrongFieldType)
+		return fmt.Errorf("unable load data type «%s»: %w", field.DataKind().TrimString(), ErrWrongFieldType)
 	}
 	return nil
 }

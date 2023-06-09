@@ -78,7 +78,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 	def, ok := v.def.(appdef.IContainers)
 	if !ok {
 		err = errors.Join(err,
-			validateErrorf(ECode_InvalidDefName, "%s has definition kind «%v» without containers: %w", v.entName(el), v.def.Kind(), ErrUnexpectedDefKind))
+			validateErrorf(ECode_InvalidDefName, "%s has definition kind «%s» without containers: %w", v.entName(el), v.def.Kind().TrimString(), ErrUnexpectedDefKind))
 		return err
 	}
 
@@ -242,7 +242,7 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 		def := v.appDef.Def(arg)
 		if (def.Kind() != appdef.DefKind_ODoc) && (def.Kind() != appdef.DefKind_Object) {
 			err = errors.Join(err,
-				validateErrorf(ECode_InvalidDefKind, "event command argument «%v» definition can not to be «%v», expected («%v» or «%v»): %w", arg, def.Kind(), appdef.DefKind_ODoc, appdef.DefKind_Object, ErrWrongDefinition))
+				validateErrorf(ECode_InvalidDefKind, "event command argument «%v» definition can not to be «%v», expected («%v» or «%v»): %w", arg, def.Kind().TrimString(), appdef.DefKind_ODoc.TrimString(), appdef.DefKind_Object.TrimString(), ErrWrongDefinition))
 		}
 		err = errors.Join(err,
 			v.validObject(&ev.argObject))
@@ -290,7 +290,7 @@ func (v *validators) validObject(obj *elementType) (err error) {
 		return validator.validObject(obj)
 	}
 
-	return validateErrorf(ECode_InvalidDefKind, "object refers to invalid definition «%v» kind «%v»: %w", obj.QName(), validator.def.Kind(), ErrUnexpectedDefKind)
+	return validateErrorf(ECode_InvalidDefKind, "object refers to invalid definition «%v» kind «%s»: %w", obj.QName(), validator.def.Kind().TrimString(), ErrUnexpectedDefKind)
 }
 
 // Validates specified CUD
@@ -444,5 +444,5 @@ func (v *validators) validRecord(rec *recordType, rawIDexpected bool) (err error
 		return validator.validRecord(rec, rawIDexpected)
 	}
 
-	return validateErrorf(ECode_InvalidDefKind, "record «%s» refers to invalid definition «%v» kind «%v»: %w", rec.Container(), rec.QName(), validator.def.Kind(), ErrUnexpectedDefKind)
+	return validateErrorf(ECode_InvalidDefKind, "record «%s» refers to invalid definition «%v» kind «%s»: %w", rec.Container(), rec.QName(), validator.def.Kind().TrimString(), ErrUnexpectedDefKind)
 }

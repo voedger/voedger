@@ -149,6 +149,11 @@ func TestQName_Compare(t *testing.T) {
 	require.False(q2 == q4)
 }
 
+func Test_NullQName(t *testing.T) {
+	require := require.New(t)
+	require.Equal(NullQName, QName{})
+}
+
 func TestQName_UnmarshalInvalidString(t *testing.T) {
 	require := require.New(t)
 

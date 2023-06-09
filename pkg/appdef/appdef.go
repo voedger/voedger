@@ -78,9 +78,8 @@ func (app *appDef) AddWRecord(name QName) IWRecordBuilder {
 }
 
 func (app *appDef) Build() (result IAppDef, err error) {
-	validator := newValidator()
 	app.Defs(func(d IDef) {
-		err = errors.Join(err, validator.validate(d))
+		err = errors.Join(err, validateDef(d))
 	})
 	if err != nil {
 		return nil, err

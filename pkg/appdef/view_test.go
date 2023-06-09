@@ -196,5 +196,6 @@ func TestViewValidate(t *testing.T) {
 		v.AddClustColumn("cc2", DataKind_int64)
 		_, err := app.Build()
 		require.ErrorIs(err, ErrInvalidDataKind)
+		require.ErrorContains(err, "cc1")
 	})
 }

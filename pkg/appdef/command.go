@@ -15,16 +15,12 @@ import (
 type command struct {
 	def
 	arg, unl, res objRef
-	ext           *extension
+	ext           extension
 }
 
 func newCommand(app *appDef, name QName) *command {
 	cmd := &command{
 		def: makeDef(app, name, DefKind_Command),
-		arg: objRef{NullQName, nil},
-		unl: objRef{NullQName, nil},
-		res: objRef{NullQName, nil},
-		ext: newExtension(),
 	}
 	app.appendDef(cmd)
 	return cmd
@@ -35,7 +31,7 @@ func (cmd *command) Arg() IObject {
 }
 
 func (cmd *command) Extension() IExtension {
-	return cmd.ext
+	return &cmd.ext
 }
 
 func (cmd *command) Result() IObject {

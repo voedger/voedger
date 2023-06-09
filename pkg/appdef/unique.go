@@ -158,7 +158,7 @@ func (u *uniques) addUnique(name string, fields []string) IUniquesBuilder {
 			ff = append(ff, f.Name())
 		}
 		if overlaps(fields, ff) {
-			panic(fmt.Errorf("%v: definition already has unique «%s» which overlaps with new unique: %w", u.def().QName(), name, ErrInvalidDefKind))
+			panic(fmt.Errorf("%v: definition already has unique «%s» which overlaps with new unique: %w", u.def().QName(), name, ErrUniqueOverlaps))
 		}
 	})
 

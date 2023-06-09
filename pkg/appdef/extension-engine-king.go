@@ -1,7 +1,6 @@
 /*
  * Copyright (c) 2023-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
- * @author Maxim Geraskin
  */
 
 package appdef
