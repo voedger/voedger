@@ -30,6 +30,7 @@ import (
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"golang.org/x/exp/maps"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
 func (cm *implICommandMessage) Body() []byte                      { return cm.body }
@@ -196,8 +197,8 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, work interface{}) (err error)
 
 func getWSDesc(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if !IsDummyWS(cmd.cmdMes.WSID()) {
-		cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), workspacemgmt.QNameCDocWorkspaceDescriptor)
+	if !coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
+		cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), authnz.QNameCDocWorkspaceDescriptor)
 	}
 	return
 }
@@ -206,7 +207,7 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	wsDesc := work.(*cmdWorkpiece).wsDesc
 	funcQName := cmd.cmdMes.Resource().(istructs.ICommandFunction).QName()
-	if IsDummyWS(cmd.cmdMes.WSID()) {
+	if coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
 		return nil
 	}
 	if funcQName == workspacemgmt.QNameCommandCreateWorkspace ||
@@ -233,7 +234,7 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 
 func checkWSActive(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if IsDummyWS(cmd.cmdMes.WSID()) {
+	if coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
 		return nil
 	}
 	for _, prn := range cmd.principals {
@@ -516,14 +517,14 @@ func checkWorkspaceDescriptorUpdating(_ context.Context, work interface{}) (err 
 	}
 	for _, cud := range cmd.parsedCUDs {
 		if cmd.wsInitialized {
-			if cud.qName == workspacemgmt.QNameCDocWorkspaceDescriptor && cud.opKind == iauthnz.OperationKind_UPDATE && len(cud.fields) == 1 {
+			if cud.qName == authnz.QNameCDocWorkspaceDescriptor && cud.opKind == iauthnz.OperationKind_UPDATE && len(cud.fields) == 1 {
 				if _, ok := cud.fields[workspacemgmt.Field_Status]; ok {
 					continue
 				}
 			}
 			return processors.ErrWSInactive
 		}
-		if (cud.qName == workspacemgmt.QNameCDocWorkspaceDescriptor || cud.qName == blobber.QNameWDocBLOB) && cud.opKind == iauthnz.OperationKind_UPDATE {
+		if (cud.qName == authnz.QNameCDocWorkspaceDescriptor || cud.qName == blobber.QNameWDocBLOB) && cud.opKind == iauthnz.OperationKind_UPDATE {
 			continue
 		}
 		return errWSNotInited

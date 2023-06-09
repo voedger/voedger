@@ -26,7 +26,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
@@ -184,7 +183,7 @@ func (vit *VIT) DummyWS(appQName istructs.AppQName, awsid ...istructs.WSID) *App
 	if len(awsid) > 0 {
 		wsid = awsid[0]
 	}
-	commandprocessor.AddDummyWS(wsid)
+	coreutils.AddDummyWS(wsid)
 	sysPrn := vit.GetSystemPrincipal(appQName)
 	return &AppWorkspace{
 		WorkspaceDescriptor: WorkspaceDescriptor{

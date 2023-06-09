@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/collection"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -41,11 +40,11 @@ func applyJoinWorkspace(timeFunc func() time.Time, federation coreutils.IFederat
 			return
 		}
 
-		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return err
 		}
-		skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, sysshared.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
 		svCDocWorkspaceDescriptor, err := s.MustExist(skbCDocWorkspaceDescriptor)
 		if err != nil {
 			return
@@ -71,7 +70,7 @@ func applyJoinWorkspace(timeFunc func() time.Time, federation coreutils.IFederat
 			return
 		}
 		skbViewCollection.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
-		skbViewCollection.PutQName(collection.Field_DocQName, sysshared.QNameCDocSubject)
+		skbViewCollection.PutQName(collection.Field_DocQName, QNameCDocSubject)
 
 		var svCDocSubject istructs.IStateValue
 		err = s.Read(skbViewCollection, func(key istructs.IKey, value istructs.IStateValue) (err error) {
@@ -91,7 +90,7 @@ func applyJoinWorkspace(timeFunc func() time.Time, federation coreutils.IFederat
 		//Store cdoc.sys.Subject
 		if svCDocSubject == nil {
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
-				svCDocInvite.AsString(Field_Login), svCDocInvite.AsString(Field_Roles), svCDocInvite.AsInt32(sysshared.Field_SubjectKind),
+				svCDocInvite.AsString(Field_Login), svCDocInvite.AsString(Field_Roles), svCDocInvite.AsInt32(authnz.Field_SubjectKind),
 				svCDocInvite.AsInt64(field_InviteeProfileWSID))
 		} else {
 			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID), svCDocInvite.AsString(Field_Roles))

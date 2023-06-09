@@ -681,8 +681,8 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	}()
 
 	// skip checking workspace initialization
-	AddDummyWS(1)
-	AddDummyWS(2)
+	coreutils.AddDummyWS(1)
+	coreutils.AddDummyWS(2)
 
 	return testApp{
 		cfg:            cfg,

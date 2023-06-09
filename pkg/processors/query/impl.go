@@ -29,6 +29,7 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 	workspacemgmt "github.com/voedger/voedger/pkg/sys/authnz/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -154,7 +155,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				}
 			}
 
-			wsDesc, err := qw.appStructs.Records().GetSingleton(qw.msg.WSID(), workspacemgmt.QNameCDocWorkspaceDescriptor)
+			wsDesc, err := qw.appStructs.Records().GetSingleton(qw.msg.WSID(), authnz.QNameCDocWorkspaceDescriptor)
 			if err != nil {
 				// notest
 				return err

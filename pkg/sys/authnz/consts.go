@@ -36,4 +36,7 @@ var (
 	QNameCommandResetPasswordByEmailUnloggedParams    = appdef.NewQName(appdef.SysPackage, "ResetPasswordByEmailUnloggedParams")
 	QNameQueryInitiateResetPasswordByEmail            = appdef.NewQName(appdef.SysPackage, "InitiateResetPasswordByEmail")
 	QNameQueryIssueVerifiedValueTokenForResetPassword = appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenForResetPassword")
+
+	// at workspace is wrong: deactivate workspace uses invite.QNameCDocSubject, invite uses cdoc.sys.WorkspaceDescriptor -> import cycle
+	QNameCDocWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
 )

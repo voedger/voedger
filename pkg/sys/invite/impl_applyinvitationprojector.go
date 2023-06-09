@@ -16,7 +16,6 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -48,11 +47,11 @@ func applyInvitationProjector(timeFunc func() time.Time, federation coreutils.IF
 		verificationCode := fmt.Sprintf("%06d", timeFunc().UnixMilli()%time.Second.Microseconds())
 		emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 
-		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return
 		}
-		skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, sysshared.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
 		svCDocWorkspaceDescriptor, err := s.MustExist(skbCDocWorkspaceDescriptor)
 		if err != nil {
 			return

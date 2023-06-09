@@ -17,9 +17,9 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/collection"
 	"github.com/voedger/voedger/pkg/sys/invite"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -42,7 +42,7 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 		appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivated"),
 		adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivatedParams")).
 			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
-			AddField(sysshared.Field_WSName, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(authnz.Field_WSName, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		cmdOnWorkspaceDeactivatedExec,
@@ -83,19 +83,19 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 }
 
 func cmdInitiateDeactivateWorkspaceExec(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-	kb, err := args.State.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocWorkspaceDescriptor)
+	kb, err := args.State.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
 	if err != nil {
 		// notest
 		return err
 	}
-	kb.PutQName(state.Field_Singleton, sysshared.QNameCDocWorkspaceDescriptor)
+	kb.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
 	wsDesc, err := args.State.MustExist(kb)
 	if err != nil {
 		// notest
 		return err
 	}
-	status := wsDesc.AsInt32(sysshared.Field_Status)
-	if status != int32(sysshared.WorkspaceStatus_Active) {
+	status := wsDesc.AsInt32(Field_Status)
+	if status != int32(WorkspaceStatus_Active) {
 		return coreutils.NewHTTPErrorf(http.StatusConflict, "Workspace Status is not Active")
 	}
 
@@ -104,7 +104,7 @@ func cmdInitiateDeactivateWorkspaceExec(cf istructs.ICommandFunction, args istru
 		// notest
 		return err
 	}
-	wsDescUpdater.PutInt32(sysshared.Field_Status, int32(sysshared.WorkspaceStatus_ToBeDeactivated))
+	wsDescUpdater.PutInt32(Field_Status, int32(WorkspaceStatus_ToBeDeactivated))
 	return nil
 }
 
@@ -129,14 +129,14 @@ func cmdOnJoinedWorkspaceDeactivateExec(cf istructs.ICommandFunction, args istru
 // app/pseudoProfileWSID, ownerApp
 func cmdOnWorkspaceDeactivatedExec(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 	ownerWSID := args.ArgumentObject.AsInt64(Field_OwnerWSID)
-	wsName := args.ArgumentObject.AsString(sysshared.Field_WSName)
+	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
 	kb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewWorkspaceIDIdx)
 	if err != nil {
 		// notest
 		return err
 	}
 	kb.PutInt64(Field_OwnerWSID, ownerWSID)
-	kb.PutString(sysshared.Field_WSName, wsName)
+	kb.PutString(authnz.Field_WSName, wsName)
 	viewRec, ok, err := args.State.CanExist(kb)
 	if err != nil {
 		// notest
@@ -203,12 +203,12 @@ func cmdOnChildWorkspaceDeactivatedExec(cf istructs.ICommandFunction, args istru
 func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens,
 	asp istructs.IAppStructsProvider) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		kb, err := s.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocWorkspaceDescriptor)
+		kb, err := s.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			// notest
 			return err
 		}
-		kb.PutQName(state.Field_Singleton, sysshared.QNameCDocWorkspaceDescriptor)
+		kb.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
 		wsDesc, err := s.MustExist(kb)
 		if err != nil {
 			// notest
@@ -232,13 +232,13 @@ func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, appQNam
 		}
 		subjectsKB := as.ViewRecords().KeyBuilder(collection.QNameViewCollection)
 		subjectsKB.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
-		subjectsKB.PutQName(collection.Field_DocQName, sysshared.QNameCDocSubject)
+		subjectsKB.PutQName(collection.Field_DocQName, invite.QNameCDocSubject)
 		err = as.ViewRecords().Read(context.Background(), event.Workspace(), subjectsKB, func(_ istructs.IKey, value istructs.IValue) (err error) {
 			subject := value.AsRecord(collection.Field_Record)
-			if istructs.SubjectKindType(subject.AsInt32(sysshared.Field_SubjectKind)) != istructs.SubjectKind_User {
+			if istructs.SubjectKindType(subject.AsInt32(authnz.Field_SubjectKind)) != istructs.SubjectKind_User {
 				return nil
 			}
-			profileWSID := istructs.WSID(subject.AsInt64(sysshared.Field_ProfileWSID))
+			profileWSID := istructs.WSID(subject.AsInt64(invite.Field_ProfileWSID))
 			// app is always current
 			// impossible to have logins from different apps among subjects (Michael said)
 			url := fmt.Sprintf(`api/%s/%d/c.sys.OnJoinedWorkspaceDeactivated`, appQName, profileWSID)
@@ -253,7 +253,7 @@ func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, appQNam
 		}
 
 		// currentApp/ApplicationWS/c.sys.OnWorkspaceDeactivated(OnwerWSID, WSName)
-		wsName := wsDesc.AsString(sysshared.Field_WSName)
+		wsName := wsDesc.AsString(authnz.Field_WSName)
 		body := fmt.Sprintf(`{"args":{"OwnerWSID":%d, "WSName":"%s"}}`, ownerWSID, wsName)
 		cdocWorkspaceIDWSID := coreutils.GetPseudoWSID(istructs.WSID(ownerWSID), wsName, event.Workspace().ClusterID())
 		if _, err := coreutils.FederationFunc(federation.URL(), fmt.Sprintf("api/%s/%d/c.sys.OnWorkspaceDeactivated", ownerApp, cdocWorkspaceIDWSID), body,
@@ -269,13 +269,13 @@ func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, appQNam
 		}
 
 		// cdoc.sys.WorkspaceDescriptor.Status = Inactive
-		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Status":%d}}]}`, wsDesc.AsRecordID(appdef.SystemField_ID), sysshared.WorkspaceStatus_Inactive)
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Status":%d}}]}`, wsDesc.AsRecordID(appdef.SystemField_ID), WorkspaceStatus_Inactive)
 		if _, err := coreutils.FederationFunc(federation.URL(), fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()), body,
 			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(sysToken)); err != nil {
 			return fmt.Errorf("cdoc.sys.WorkspaceDescriptor.Status=Inactive failed: %w", err)
 		}
 
-		logger.Info("workspace", wsDesc.AsString(sysshared.Field_WSName), "deactivated")
+		logger.Info("workspace", wsDesc.AsString(authnz.Field_WSName), "deactivated")
 		return nil
 	}
 }

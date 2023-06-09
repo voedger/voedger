@@ -58,7 +58,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	// c.sys.CreateWorkspaceID
 	// target app, (target cluster, base profile WSID)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		sysshared.QNameCommandCreateWorkspaceID,
+		QNameCommandCreateWorkspaceID,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateWorkspaceIDParams")).
 			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
 			AddField(Field_OwnerQName, appdef.DataKind_QName, true).
@@ -99,7 +99,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 
 	// c.sys.CreateWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		sysshared.QNameCommandCreateWorkspace,
+		QNameCommandCreateWorkspace,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateWorkspaceParams")).
 			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
 			AddField(Field_OwnerQName, appdef.DataKind_QName, true).
@@ -117,7 +117,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 
 	// singleton CDoc<sys.WorkspaceDescriptor>
 	// target app, new WSID
-	appDefBuilder.AddSingleton(sysshared.QNameCDocWorkspaceDescriptor).
+	appDefBuilder.AddSingleton(authnz.QNameCDocWorkspaceDescriptor).
 		AddField(Field_OwnerWSID, appdef.DataKind_int64, false). // owner* fields made non-required for app workspaces
 		AddField(Field_OwnerQName, appdef.DataKind_QName, false).
 		AddField(Field_OwnerID, appdef.DataKind_int64, false).
@@ -131,9 +131,9 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		AddField(Field_CreateError, appdef.DataKind_string, false).
 		AddField(authnz.Field_СreatedAtMs, appdef.DataKind_int64, true).
 		AddField(Field_InitStartedAtMs, appdef.DataKind_int64, false).
-		AddField(sysshared.Field_InitError, appdef.DataKind_string, false).
-		AddField(sysshared.Field_InitCompletedAtMs, appdef.DataKind_int64, false).
-		AddField(sysshared.Field_Status, appdef.DataKind_int32, false)
+		AddField(Field_InitError, appdef.DataKind_string, false).
+		AddField(Field_InitCompletedAtMs, appdef.DataKind_int64, false).
+		AddField(Field_Status, appdef.DataKind_int32, false)
 
 	// q.sys.QueryChildWorkspaceByName
 	cfg.Resources.Add(istructsmem.NewQueryFunction(

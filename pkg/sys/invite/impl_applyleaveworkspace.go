@@ -13,7 +13,6 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -45,7 +44,7 @@ func applyLeaveWorkspace(timeFunc func() time.Time, federation coreutils.IFedera
 				return
 			}
 
-			skbCDocSubject, err := s.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocSubject)
+			skbCDocSubject, err := s.KeyBuilder(state.RecordsStorage, QNameCDocSubject)
 			if err != nil {
 				return
 			}

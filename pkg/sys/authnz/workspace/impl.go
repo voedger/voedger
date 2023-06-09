@@ -26,7 +26,6 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -264,7 +263,7 @@ func execCmdCreateWorkspace(now func() time.Time, asp istructs.IAppStructsProvid
 		}()
 
 		// create CDoc<sys.WorkspaceDescriptor> (singleton)
-		kb, err := args.State.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocWorkspaceDescriptor)
+		kb, err := args.State.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return err
 		}
@@ -284,7 +283,7 @@ func execCmdCreateWorkspace(now func() time.Time, asp istructs.IAppStructsProvid
 		cdocWSDesc.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
 		cdocWSDesc.PutInt64(authnz.Field_WSID, int64(newWSID))
 		cdocWSDesc.PutInt64(authnz.Field_СreatedAtMs, now().UnixMilli())
-		cdocWSDesc.PutInt32(sysshared.Field_Status, int32(sysshared.WorkspaceStatus_Active))
+		cdocWSDesc.PutInt32(Field_Status, int32(WorkspaceStatus_Active))
 		if e != nil {
 			cdocWSDesc.PutString(Field_CreateError, e.Error())
 			logger.Info("c.sys.CreateWorkspace: ", e.Error())
@@ -311,7 +310,7 @@ func initializeWorkspaceProjector(nowFunc func() time.Time, targetAppQName istru
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) error {
-			if rec.QName() != sysshared.QNameCDocWorkspaceDescriptor {
+			if rec.QName() != authnz.QNameCDocWorkspaceDescriptor {
 				return nil
 			}
 			if rec.AsQName(authnz.Field_WSKind) == authnz.QNameCDoc_WorkspaceKind_AppWorkspace {
@@ -380,7 +379,7 @@ func initializeWorkspaceProjector(nowFunc func() time.Time, targetAppQName istru
 				info("initStartedAtMs = 0. WS init was not started")
 				// WS[currentWS].c.sys.CUD(wsDescr.ID, initStartedAtMs)
 				body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d,"fields": {"sys.QName": "%s","%s": %d}}]}`,
-					wsDescr.ID(), sysshared.QNameCDocWorkspaceDescriptor.String(), Field_InitStartedAtMs, nowFunc().UnixMilli())
+					wsDescr.ID(), authnz.QNameCDocWorkspaceDescriptor, Field_InitStartedAtMs, nowFunc().UnixMilli())
 				info("updating initStartedAtMs:", updateWSDescrURL)
 
 				if _, err := coreutils.FederationFunc(federation.URL(), updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
@@ -400,23 +399,23 @@ func initializeWorkspaceProjector(nowFunc func() time.Time, targetAppQName istru
 					wsErrStr = wsError.Error()
 				}
 				body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"%s","%s":%q,"%s":%d}}]}`,
-					wsDescr.ID(), sysshared.QNameCDocWorkspaceDescriptor.String(), sysshared.Field_InitError, wsErrStr, sysshared.Field_InitCompletedAtMs, nowFunc().UnixMilli())
+					wsDescr.ID(), authnz.QNameCDocWorkspaceDescriptor, Field_InitError, wsErrStr, Field_InitCompletedAtMs, nowFunc().UnixMilli())
 				if _, err = coreutils.FederationFunc(federation.URL(), updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
 					er("failed to update initError+initCompletedAtMs:", err)
 					return nil
 				}
-			} else if wsDescr.AsInt64(sysshared.Field_InitCompletedAtMs) == 0 {
+			} else if wsDescr.AsInt64(Field_InitCompletedAtMs) == 0 {
 				info("initCompletedAtMs = 0. WS data init was interrupted")
 				wsError = errors.New("workspace data initialization was interrupted")
 				body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.QName":"%s","%s":%q,"%s":%d}}]}`,
-					sysshared.QNameCDocWorkspaceDescriptor.String(), sysshared.Field_InitError, wsError.Error(), sysshared.Field_InitCompletedAtMs, nowFunc().UnixMilli())
+				authnz.QNameCDocWorkspaceDescriptor, Field_InitError, wsError.Error(), Field_InitCompletedAtMs, nowFunc().UnixMilli())
 				if _, err = coreutils.FederationFunc(federation.URL(), updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
 					er("failed to update initError+initCompletedAtMs:", err)
 					return nil
 				}
 			} else { // initCompletedAtMs > 0
 				info("initStartedAtMs > 0 && initCompletedAtMs > 0")
-				if initError := wsDescr.AsString(sysshared.Field_InitError); len(initError) > 0 {
+				if initError := wsDescr.AsString(Field_InitError); len(initError) > 0 {
 					wsError = errors.New(initError)
 				}
 			}
