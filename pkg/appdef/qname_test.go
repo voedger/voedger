@@ -63,6 +63,11 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 
 		// Compare
 		require.Equal(qname, qname2)
+
+		t.Run("UnmarshalText must do nothing", func(t *testing.T) {
+			qname := NewQName("test", "name")
+			require.NoError(qname.UnmarshalText([]byte(qname.String())))
+		})
 	})
 
 	t.Run("Marshall/Unmarshal QName as a part of the structure", func(t *testing.T) {

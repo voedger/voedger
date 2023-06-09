@@ -122,7 +122,7 @@ func Test_def_AddContainer(t *testing.T) {
 	})
 
 	t.Run("must be panic if container definition name missed", func(t *testing.T) {
-		require.Panics(func() { def.AddContainer("c1", NullQName, 1, Occurs_Unbounded) })
+		require.Panics(func() { def.AddContainer("c2", NullQName, 1, Occurs_Unbounded) })
 	})
 
 	t.Run("must be panic if invalid occurrences", func(t *testing.T) {
