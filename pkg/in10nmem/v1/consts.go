@@ -3,8 +3,10 @@
  * Aleksei Ponomarev
  */
 
-package in10nmem
+package in10nmemv1
+
+import "time"
 
 const (
-	eventsChannelSize = 10
+	pollingInterval = 300 * time.Millisecond
 )
