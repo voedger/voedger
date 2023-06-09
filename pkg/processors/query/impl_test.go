@@ -35,7 +35,7 @@ import (
 
 var now = time.Now()
 
-var timeFunc = func() time.Time {
+var timeFunc = coreutils.TimeFunc {
 	return now
 }
 

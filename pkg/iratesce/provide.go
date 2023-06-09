@@ -6,13 +6,11 @@
 package iratesce
 
 import (
-	"time"
-
 	irates "github.com/voedger/voedger/pkg/irates"
 )
 
 // Provide: constructs bucketFactory
-func Provide(timeFunc func() time.Time) (buckets irates.IBuckets) {
+func Provide(timeFunc coreutils.TimeFunc) (buckets irates.IBuckets) {
 	return &bucketsType{
 		buckets:       map[irates.BucketKey]*bucketType{},
 		defaultStates: map[string]irates.BucketState{},

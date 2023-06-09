@@ -232,7 +232,7 @@ func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 	}
 }
 
-func provideBucketsFactory(timeFunc func() time.Time) irates.BucketsFactoryType {
+func provideBucketsFactory(timeFunc coreutils.TimeFunc) irates.BucketsFactoryType {
 	return func() irates.IBuckets {
 		return iratesce.Provide(timeFunc)
 	}
@@ -435,7 +435,7 @@ func provideBlobAppStorage(astp istorage.IAppStorageProvider) (BlobAppStorage, e
 	return astp.AppStorage(istructs.AppQName_sys_blobber)
 }
 
-func provideBlobStorage(bas BlobAppStorage, nowFunc func() time.Time) BlobStorage {
+func provideBlobStorage(bas BlobAppStorage, nowFunc coreutils.TimeFunc) BlobStorage {
 	return iblobstoragestg.Provide(bas, nowFunc)
 }
 
@@ -445,7 +445,7 @@ func provideRouterAppStorage(astp istorage.IAppStorageProvider) (dbcertcache.Rou
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
 func provideRouterServices(vvmCtx context.Context, rp router2.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
-	nowFunc func() time.Time, bsc router2.BlobberServiceChannels, bms router2.BLOBMaxSizeType, blobberClusterAppID BlobberAppClusterID, blobStorage BlobStorage,
+	nowFunc coreutils.TimeFunc, bsc router2.BlobberServiceChannels, bms router2.BLOBMaxSizeType, blobberClusterAppID BlobberAppClusterID, blobStorage BlobStorage,
 	routerAppStorage dbcertcache.RouterAppStorage, autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, appsWSAmounts map[istructs.AppQName]istructs.AppWSAmount) RouterServices {
 	bp := &router2.BlobberParams{
 		ClusterAppBlobberID:    uint32(blobberClusterAppID),

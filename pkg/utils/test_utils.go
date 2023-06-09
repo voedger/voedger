@@ -13,7 +13,7 @@ import (
 
 var (
 	TestNow      = time.Now()
-	TestTimeFunc = func() time.Time { return TestNow }
+	TestTimeFunc = coreutils.TimeFunc { return TestNow }
 )
 
 type TestObject struct {

@@ -104,7 +104,7 @@ func TestBasicUsage(t *testing.T) {
 
 var testTime = time.Now()
 
-var testTimeFunc = func() time.Time {
+var testTimeFunc = coreutils.TimeFunc {
 	return testTime
 }
 

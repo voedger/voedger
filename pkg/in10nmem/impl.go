@@ -22,7 +22,7 @@ type N10nBroker struct {
 	quotas           in10n.Quotas
 	metricBySubject  map[istructs.SubjectLogin]*metricType
 	numSubscriptions int
-	now              func() time.Time
+	now              coreutils.TimeFunc
 	sync.RWMutex
 }
 
@@ -235,7 +235,7 @@ func (nb *N10nBroker) MetricSubject(ctx context.Context, cb func(subject istruct
 	}
 }
 
-func NewN10nBroker(quotas in10n.Quotas, now func() time.Time) *N10nBroker {
+func NewN10nBroker(quotas in10n.Quotas, now coreutils.TimeFunc) *N10nBroker {
 	broker := N10nBroker{
 		projections:     make(map[in10n.ProjectionKey]*istructs.Offset),
 		channels:        make(map[in10n.ChannelID]*channelType),

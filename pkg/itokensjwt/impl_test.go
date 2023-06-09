@@ -43,7 +43,7 @@ type TestPayload_BLOBUploading struct {
 
 var (
 	testTime     = time.Now()
-	testTimeFunc = func() time.Time {
+	testTimeFunc = coreutils.TimeFunc {
 		return testTime
 	}
 )

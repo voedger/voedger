@@ -5,13 +5,11 @@
 package iblobstoragestg
 
 import (
-	"time"
-
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
-func Provide(storage istorage.IAppStorage, now func() time.Time) iblobstorage.IBLOBStorage {
+func Provide(storage istorage.IAppStorage, now coreutils.TimeFunc) iblobstorage.IBLOBStorage {
 	return &bStorageType{
 		appStorage: storage,
 		now:        now,

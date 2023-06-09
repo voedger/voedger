@@ -6,7 +6,6 @@ package invite
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -15,7 +14,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdCancelSentInvite(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc func() time.Time) {
+func provideCmdCancelSentInvite(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdCancelSentInvite,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CancelSentInviteParams")).
@@ -26,7 +25,7 @@ func provideCmdCancelSentInvite(cfg *istructsmem.AppConfigType, appDefBuilder ap
 	))
 }
 
-func execCmdCancelSentInvite(timeFunc func() time.Time) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdCancelSentInvite(timeFunc coreutils.TimeFunc) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 		skbCDocInvite, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
 		if err != nil {

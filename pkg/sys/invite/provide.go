@@ -5,13 +5,11 @@
 package invite
 
 import (
-	"time"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc func() time.Time) {
+func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc) {
 	provideCmdInitiateInvitationByEMail(cfg, appDefBuilder, timeFunc)
 	provideCmdInitiateJoinWorkspace(cfg, appDefBuilder, timeFunc)
 	provideCmdInitiateUpdateInviteRoles(cfg, appDefBuilder, timeFunc)

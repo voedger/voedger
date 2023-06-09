@@ -5,8 +5,6 @@
 package workspace
 
 import (
-	"time"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -17,7 +15,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, timeFunc func() time.Time, tokensAPI itokens.ITokens,
+func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
 	federation coreutils.IFederation) {
 	// c.sys.InitChildWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
@@ -174,7 +172,7 @@ func ProvideSyncProjectorChildWorkspaceIdxFactory() istructs.ProjectorFactory {
 }
 
 // Projector<A, InitializeWorkspace>
-func ProvideAsyncProjectorInitializeWorkspace(federation coreutils.IFederation, nowFunc func() time.Time, appQName istructs.AppQName, ep extensionpoints.IExtensionPoint,
+func ProvideAsyncProjectorInitializeWorkspace(federation coreutils.IFederation, nowFunc coreutils.TimeFunc, appQName istructs.AppQName, ep extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
