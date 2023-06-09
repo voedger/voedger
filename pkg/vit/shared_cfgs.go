@@ -16,7 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	registryapp "github.com/voedger/voedger/pkg/apps/sys/registry"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz/wskinds"
@@ -94,7 +94,8 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 
 	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "options"))
 
-	dep := adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "department"))
+	qnameDep := appdef.NewQName(appdef.SysPackage, "department")
+	dep := adf.AddCDoc(qnameDep)
 	dep.AddField("pc_fix_button", appdef.DataKind_int32, true).
 		AddField("rm_fix_button", appdef.DataKind_int32, true).
 		AddField("id_food_group", appdef.DataKind_RecordID, false)
@@ -553,4 +554,12 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 	}
 	mockCmd := istructsmem.NewCommandFunction(mockCmdQName, mockCmdParamsQName, appdef.NullQName, appdef.NullQName, execCmdMockCmd)
 	cfg.Resources.Add(mockCmd)
+
+	qnameCdoc1 := appdef.NewQName(appdef.SysPackage, "cdoc1")
+	adf.AddCDoc(qnameCdoc1)
+
+	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "cdoc2")).
+		AddField("field1", appdef.DataKind_RecordID, false).
+		AddRefField("field2", false, qnameCdoc1, qnameDep).
+		AddRefField("field3", false)
 }
