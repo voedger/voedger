@@ -133,7 +133,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		itokensjwt.ProvideITokens,         // ITokens
 		istructsmem.Provide,               // IAppStructsProvider
 		payloads.ProvideIAppTokensFactory, // IAppTokensFactory
-		in10nmem.ProvideEx,
+		in10nmem.ProvideEx2,
 		queryprocessor.ProvideServiceFactory,
 		commandprocessor.ProvideServiceFactory,
 		metrics.ProvideMetricsService,
