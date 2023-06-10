@@ -118,13 +118,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	a.name = fmt.Sprintf("%s [%d]", p.projector.Name, a.conf.Partition)
 
-	var projectorOp *pipeline.WiredOperator
-
-	if p.projector.NonBuffered {
-		projectorOp = pipeline.WireAsyncOperator("Projector", p)
-	} else {
-		projectorOp = pipeline.WireAsyncOperator("Projector", p, a.conf.FlushInterval)
-	}
+	projectorOp := pipeline.WireAsyncOperator("Projector", p, a.conf.FlushInterval)
 
 	errorHandlerOp := pipeline.WireAsyncOperator("ErrorHandler", &asyncErrorHandler{readCtx: a.readCtx})
 
@@ -218,7 +212,9 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 		p.metrics.Set(aaCurrentOffset, p.partition, p.projector.Name, float64(p.pLogOffset))
 	}
 
-	if isAcceptable(p.projector, w.event) {
+	accepted := isAcceptable(p.projector, w.event)
+
+	if accepted {
 		err = p.projector.Func(w.event, p.state, p.state)
 		if err != nil {
 			return nil, err
@@ -230,7 +226,7 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 		return nil, err
 	}
 
-	if readyToFlushBundle || p.projector.NonBuffered {
+	if readyToFlushBundle || (p.projector.NonBuffered && accepted) {
 		return nil, p.flush()
 	}
 
