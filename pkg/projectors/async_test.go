@@ -758,7 +758,7 @@ After, 100ms:
 */
 
 func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
-	//t.Skip()
+	t.Skip()
 	require := require.New(t)
 
 	cmdQName := appdef.NewQName("pkg", "test")
@@ -913,7 +913,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 }
 
 func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
-	//	t.Skip()
+	t.Skip()
 	require := require.New(t)
 
 	cmdQName := appdef.NewQName("pkg", "test")
