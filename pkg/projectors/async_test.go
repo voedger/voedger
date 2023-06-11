@@ -975,7 +975,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 					AppStructs:    func() istructs.IAppStructs { return app },
 					IntentsLimit:  10,
 					BundlesLimit:  10,
-					FlushInterval: 100 * time.Millisecond,
+					FlushInterval: 1000 * time.Millisecond,
 					Broker:        broker,
 					Metrics:       &metrics,
 					LogError:      func(args ...interface{}) {},
