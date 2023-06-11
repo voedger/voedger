@@ -4,7 +4,9 @@
 
 package pipeline
 
-import "time"
+import (
+	"time"
+)
 
 func puller_async(wo *WiredOperator) {
 	flushTimer := newFlushTimer(wo.FlushInterval)

@@ -194,15 +194,12 @@ func (a *asyncActualizer) readOffset(projectorName appdef.QName) (err error) {
 
 type asyncProjector struct {
 	pipeline.AsyncNOOP
-	state                 state.IBundledHostState
-	partition             istructs.PartitionID
-	wsid                  istructs.WSID
-	projector             istructs.Projector
-	handledOffset         istructs.Offset
-	unsavedOffset         istructs.Offset
-	flushesSinceOffsSaved int
-
-	metrics AsyncActualizerMetrics
+	state      state.IBundledHostState
+	partition  istructs.PartitionID
+	wsid       istructs.WSID
+	projector  istructs.Projector
+	pLogOffset istructs.Offset
+	metrics    AsyncActualizerMetrics
 }
 
 func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
@@ -210,7 +207,7 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 	w := work.(*workpiece)
 
 	p.wsid = w.event.Workspace()
-	p.unsavedOffset = w.pLogOffset
+	p.pLogOffset = w.pLogOffset
 	if p.metrics != nil {
 		p.metrics.Set(aaCurrentOffset, p.partition, p.projector.Name, float64(w.pLogOffset))
 	}
@@ -222,7 +219,6 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 		if err != nil {
 			return nil, err
 		}
-		p.handledOffset = w.pLogOffset
 	}
 
 	readyToFlushBundle, err := p.state.ApplyIntents()
@@ -238,7 +234,13 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 }
 func (p *asyncProjector) Flush(_ pipeline.OpFuncFlush) (err error) { return p.flush() }
 func (p *asyncProjector) WSIDProvider() istructs.WSID              { return p.wsid }
-func (p *asyncProjector) savePosition() (err error) {
+func (p *asyncProjector) flush() (err error) {
+	if p.pLogOffset == istructs.NullOffset {
+		return
+	}
+	defer func() {
+		p.pLogOffset = istructs.NullOffset
+	}()
 	key, err := p.state.KeyBuilder(state.ViewRecordsStorage, qnameProjectionOffsets)
 	if err != nil {
 		return
@@ -250,50 +252,16 @@ func (p *asyncProjector) savePosition() (err error) {
 	if err != nil {
 		return
 	}
-	value.PutInt64(offsetFld, int64(p.unsavedOffset))
+	value.PutInt64(offsetFld, int64(p.pLogOffset))
 	_, err = p.state.ApplyIntents()
 	if err != nil {
 		return err
 	}
-	return nil
-
-}
-func (p *asyncProjector) flush() (err error) {
-	timeToSaveOffset := p.flushesSinceOffsSaved >= autoSavePositionEveryNFlushes
-	flushIntents := p.handledOffset != istructs.NullOffset
-
-	defer func() {
-		if p.metrics != nil {
-			p.metrics.Increase(aaFlushesTotal, p.partition, p.projector.Name, 1)
-		}
-	}()
-
-	defer func() {
-		if timeToSaveOffset {
-			p.flushesSinceOffsSaved = 0
-		} else {
-			p.flushesSinceOffsSaved = p.flushesSinceOffsSaved + 1
-		}
-	}()
-
-	if flushIntents || timeToSaveOffset {
-		defer func() {
-			p.unsavedOffset = istructs.NullOffset
-		}()
-		if err = p.savePosition(); err != nil {
-			return err
-		}
-		if p.metrics != nil {
-			p.metrics.Set(aaStoredOffset, p.partition, p.projector.Name, float64(p.unsavedOffset))
-		}
-		if flushIntents {
-			defer func() {
-				p.handledOffset = istructs.NullOffset
-			}()
-			return p.state.FlushBundles()
-		}
+	if p.metrics != nil {
+		p.metrics.Increase(aaFlushesTotal, p.partition, p.projector.Name, 1)
+		p.metrics.Set(aaStoredOffset, p.partition, p.projector.Name, float64(p.pLogOffset))
 	}
-	return nil
+	return p.state.FlushBundles()
 }
 
 type asyncErrorHandler struct {

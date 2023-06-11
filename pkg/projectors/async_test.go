@@ -721,6 +721,8 @@ type testPartition struct {
 
 /*
 
+40 partition x 5 projectors
+
 Before:
     /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:811: Initialized in 1.045626636s
     /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:821: Started in 796.852µs
@@ -756,7 +758,7 @@ After, 100ms:
 */
 
 func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
-	t.Skip()
+	//t.Skip()
 	require := require.New(t)
 
 	cmdQName := appdef.NewQName("pkg", "test")
@@ -818,13 +820,10 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 					AppStructs:    func() istructs.IAppStructs { return app },
 					IntentsLimit:  10,
 					BundlesLimit:  10,
-					FlushInterval: 1000 * time.Millisecond,
+					FlushInterval: 2 * time.Second,
 					Broker:        broker,
 					Metrics:       &metrics,
-					LogError: func(args ...interface{}) {
-						fmt.Print("error: ", args)
-					},
-					//LogError:      func(args ...interface{}) {},
+					LogError:      func(args ...interface{}) {},
 				}
 
 				projectorFactory := func(partition istructs.PartitionID) istructs.Projector {
@@ -886,13 +885,18 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 	// PutBatch calls
 	t0 = time.Now()
 
-	// stop services
-	cancelCtx()
 	flushesTotal := 0
 	for i := range partitions {
 		for k := 0; k < projectorsPerPartition; k++ {
-			partitions[i].actualizers[k].op.Close()
 			flushesTotal += int(partitions[i].actualizers[k].metrics.flushesTotal)
+		}
+	}
+
+	// stop services
+	cancelCtx()
+	for i := range partitions {
+		for k := 0; k < projectorsPerPartition; k++ {
+			partitions[i].actualizers[k].op.Close()
 		}
 	}
 
@@ -909,7 +913,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 }
 
 func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
-	t.Skip()
+	//	t.Skip()
 	require := require.New(t)
 
 	cmdQName := appdef.NewQName("pkg", "test")
@@ -1035,13 +1039,18 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	// PutBatch calls
 	t0 = time.Now()
 
-	// stop services
-	cancelCtx()
 	flushesTotal := 0
 	for i := range partitions {
 		for k := 0; k < projectorsPerPartition; k++ {
-			partitions[i].actualizers[k].op.Close()
 			flushesTotal += int(partitions[i].actualizers[k].metrics.flushesTotal)
+		}
+	}
+
+	// stop services
+	cancelCtx()
+	for i := range partitions {
+		for k := 0; k < projectorsPerPartition; k++ {
+			partitions[i].actualizers[k].op.Close()
 		}
 	}
 
