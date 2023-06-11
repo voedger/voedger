@@ -21,11 +21,12 @@ const (
 )
 
 const (
-	defaultIntentsLimit  = 100
-	defaultBundlesLimit  = 100
-	defaultFlushInterval = time.Millisecond * 100
-	actualizerErrorDelay = time.Second * 30
-	n10nChannelDuration  = 100 * 365 * 24 * time.Hour
+	defaultIntentsLimit           = 100
+	defaultBundlesLimit           = 100
+	defaultFlushInterval          = time.Millisecond * 100
+	actualizerErrorDelay          = time.Second * 30
+	n10nChannelDuration           = 100 * 365 * 24 * time.Hour
+	autoSavePositionEveryNFlushes = 10
 )
 
 var PlogQName = appdef.NewQName(appdef.SysPackage, "PLog")
