@@ -6,7 +6,6 @@ package invite
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -15,7 +14,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateLeaveWorkspace(cfg *istructsmem.AppConfigType, timeFunc func() time.Time) {
+func provideCmdInitiateLeaveWorkspace(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdInitiateLeaveWorkspace,
 		appdef.NullQName,
@@ -25,7 +24,7 @@ func provideCmdInitiateLeaveWorkspace(cfg *istructsmem.AppConfigType, timeFunc f
 	))
 }
 
-func execCmdInitiateLeaveWorkspace(timeFunc func() time.Time) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateLeaveWorkspace(timeFunc coreutils.TimeFunc) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 		skbPrincipal, err := args.State.KeyBuilder(state.SubjectStorage, appdef.NullQName)
 		if err != nil {

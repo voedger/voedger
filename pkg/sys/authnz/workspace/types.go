@@ -5,10 +5,9 @@
 package workspace
 
 import (
-	"net/url"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type cud struct {
@@ -30,4 +29,6 @@ type BLOB struct {
 	MimeType  string
 }
 
-type WSPostInitFunc func(targetAppQName istructs.AppQName, wsKind appdef.QName, newWSID istructs.WSID, federationURL *url.URL, authToken string) (err error)
+type WSPostInitFunc func(targetAppQName istructs.AppQName, wsKind appdef.QName, newWSID istructs.WSID, federation coreutils.IFederation, authToken string) (err error)
+
+

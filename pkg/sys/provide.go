@@ -5,10 +5,12 @@
 package sys
 
 import (
-	"time"
-
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/itokens"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
@@ -24,42 +26,43 @@ import (
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
 	"github.com/voedger/voedger/pkg/sys/uniques"
 	"github.com/voedger/voedger/pkg/sys/verifier"
-	"github.com/voedger/voedger/pkg/vvm"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, vvmAPI vvm.VVMAPI, smtpCfg smtp.Cfg,
-	sep vvm.IStandardExtensionPoints, wsPostInitFunc workspace.WSPostInitFunc, cpCount vvm.CommandProcessorsCount) {
+func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, smtpCfg smtp.Cfg,
+	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation coreutils.IFederation,
+	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount) {
 	blobber.ProvideBlobberCmds(cfg, appDefBuilder)
 	collection.ProvideCollectionFunc(cfg, appDefBuilder)
 	collection.ProvideCDocFunc(cfg, appDefBuilder)
 	collection.ProvideStateFunc(cfg, appDefBuilder)
-	journal.Provide(cfg, appDefBuilder, sep.EPJournalIndices(), sep.EPJournalPredicates())
+	journal.Provide(cfg, appDefBuilder, ep)
 	wskinds.ProvideCDocsWorkspaceKinds(appDefBuilder)
 	builtin.ProvideCmdCUD(cfg)
 	builtin.ProvideCmdInit(cfg)   // for import from air-importbo
 	builtin.ProivdeCmdImport(cfg) // for sync
 	builtin.ProvideQryEcho(cfg, appDefBuilder)
 	builtin.ProvideQryGRCount(cfg, appDefBuilder)
-	workspace.Provide(cfg, appDefBuilder, vvmAPI.IAppStructsProvider, timeFunc, vvmAPI.ITokens, vvmAPI.FederationURL)
-	sqlquery.Provide(cfg, appDefBuilder, vvmAPI.IAppStructsProvider, int(cpCount))
+	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation)
+	sqlquery.Provide(cfg, appDefBuilder, asp, numCommandProcessors)
 	projectors.ProvideOffsetsDef(appDefBuilder)
 	processors.ProvideJSONFuncParamsDef(appDefBuilder)
-	verifier.Provide(cfg, appDefBuilder, vvmAPI.ITokens, vvmAPI.FederationURL, vvmAPI.IAppStructsProvider)
-	signupin.ProvideQryRefreshPrincipalToken(cfg, appDefBuilder, vvmAPI.ITokens)
+	verifier.Provide(cfg, appDefBuilder, itokens, federation, asp)
+	signupin.ProvideQryRefreshPrincipalToken(cfg, appDefBuilder, itokens)
 	signupin.ProvideCDocLogin(appDefBuilder)
-	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, vvmAPI.IAppTokensFactory)
+	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, atf)
 	invite.Provide(cfg, appDefBuilder, timeFunc)
 	cfg.AddAsyncProjectors(
 		journal.ProvideWLogDatesAsyncProjectorFactory(),
-		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspace(vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens),
-		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens),
-		workspace.ProvideAsyncProjectorInitializeWorkspace(vvmAPI.FederationURL, timeFunc, cfg.Name, sep.EPWSTemplates(), vvmAPI.ITokens, wsPostInitFunc),
-		verifier.ProvideAsyncProjectorFactory_SendEmailVerificationCode(vvmAPI.FederationURL, smtpCfg),
-		invite.ProvideAsyncProjectorApplyInvitationFactory(timeFunc, vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens, smtpCfg),
-		invite.ProvideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc, vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens),
-		invite.ProvideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc, vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens, smtpCfg),
-		invite.ProvideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc, vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens),
-		invite.ProvideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc, vvmAPI.FederationURL, cfg.Name, vvmAPI.ITokens),
+		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspace(federation, cfg.Name, itokens),
+		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation, cfg.Name, itokens),
+		workspace.ProvideAsyncProjectorInitializeWorkspace(federation, timeFunc, cfg.Name, ep, itokens, wsPostInitFunc),
+		verifier.ProvideAsyncProjectorFactory_SendEmailVerificationCode(federation, smtpCfg),
+		invite.ProvideAsyncProjectorApplyInvitationFactory(timeFunc, federation, cfg.Name, itokens, smtpCfg),
+		invite.ProvideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc, federation, cfg.Name, itokens),
+		invite.ProvideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc, federation, cfg.Name, itokens, smtpCfg),
+		invite.ProvideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc, federation, cfg.Name, itokens),
+		invite.ProvideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc, federation, cfg.Name, itokens),
 	)
 	cfg.AddSyncProjectors(
 		workspace.ProvideSyncProjectorChildWorkspaceIdxFactory(),
@@ -69,6 +72,6 @@ func Provide(timeFunc func() time.Time, cfg *istructsmem.AppConfigType, appDefBu
 	)
 	cfg.AddSyncProjectors(collection.ProvideSyncProjectorFactories(appDefBuilder)...)
 	uniques.Provide(cfg, appDefBuilder)
-	describe.Provide(cfg, vvmAPI.IAppStructsProvider, appDefBuilder)
+	describe.Provide(cfg, asp, appDefBuilder)
 	cfg.AddCUDValidators(builtin.ProvideRefIntegrityValidator())
 }

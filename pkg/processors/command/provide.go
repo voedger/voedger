@@ -32,7 +32,7 @@ type cmdProc struct {
 	appPartition  *appPartition
 	appPartitions map[istructs.AppQName]*appPartition
 	n10nBroker    in10n.IN10nBroker
-	now           func() time.Time
+	now           coreutils.TimeFunc
 	authenticator iauthnz.IAuthenticator
 	authorizer    iauthnz.IAuthorizer
 }
@@ -48,7 +48,7 @@ func ProvideJSONFuncParamsDef(appDef appdef.IAppDefBuilder) {
 }
 
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
-func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now func() time.Time, syncActualizerFactory SyncActualizerFactory,
+func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
 	secretReader isecrets.ISecretReader) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
