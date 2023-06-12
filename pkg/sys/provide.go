@@ -5,12 +5,16 @@
 package sys
 
 import (
+	"embed"
+
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
@@ -28,6 +32,9 @@ import (
 	"github.com/voedger/voedger/pkg/sys/verifier"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
+
+//go:embed sys.sql
+var sysFS embed.FS
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, smtpCfg smtp.Cfg,
 	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation coreutils.IFederation,
@@ -74,4 +81,18 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	uniques.Provide(cfg, appDefBuilder)
 	describe.Provide(cfg, asp, appDefBuilder)
 	cfg.AddCUDValidators(builtin.ProvideRefIntegrityValidator())
+
+	// add sys sql schema
+	sysSQLContent, err := sysFS.ReadFile("sys.sql")
+	if err != nil {
+		// notest
+		panic(err)
+	}
+	sysFileScehmaAST, err := parser.ParseFile("sys.sql", string(sysSQLContent))
+	if err != nil {
+		// notest
+		panic(err)
+	}
+	epFileSchemaASTs := ep.ExtensionPoint(apps.EPPackageSchemasASTs)
+	epFileSchemaASTs.AddNamed(appdef.SysPackage, sysFileScehmaAST)
 }
