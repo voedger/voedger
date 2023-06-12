@@ -471,7 +471,7 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 
 		require.Contains(err.Error(), "table test.CTable can not reference to table test.OTable")
 	})
-	t.Run("Should return error because CDoc references to not identified target", func(t *testing.T) {
+	t.Run("Should return error because CDoc references to undefined table kind", func(t *testing.T) {
 		require := require.New(t)
 
 		fs, err := ParseFile("example.sql", `SCHEMA test; 
@@ -494,7 +494,7 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 		def := appdef.New()
 		err = BuildAppDefs(packages, def)
 
-		require.Contains(err.Error(), ErrTargetIsNotIdentified.Error())
+		require.Contains(err.Error(), ErrUndefinedTableKind.Error())
 	})
 }
 

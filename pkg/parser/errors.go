@@ -26,7 +26,6 @@ var ErrNestedTableCannotBeDocument = errors.New("nested table cannot be declared
 var ErrNestedTableIncorrectKind = errors.New("incorrect nested table kind")
 var ErrArrayFieldsNotSupportedHere = errors.New("array fields of system types not supported here")
 var ErrMustBeNotNull = errors.New("field has to be NOT NULL")
-var ErrTargetIsNotIdentified = errors.New("target is not identified")
 
 // Golang: could not import github.com/alecthomas/participle/v2/asd (no required module provides package "github.com/alecthomas/participle/v2/asd")
 func ErrCouldNotImport(pkgName string) error {
