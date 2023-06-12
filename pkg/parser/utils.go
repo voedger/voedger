@@ -199,6 +199,9 @@ func isPredefinedSysTable(table *TableStmt, c *buildContext) bool {
 
 func getTableInheritanceChain(table *TableStmt, ctx *buildContext) (chain []DefQName) {
 	chain = make([]DefQName, 0)
+	if table == nil {
+		return
+	}
 	var vf func(t *TableStmt)
 	vf = func(t *TableStmt) {
 		if t.Inherits != nil {
