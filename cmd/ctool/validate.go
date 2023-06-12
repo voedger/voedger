@@ -25,13 +25,13 @@ func validate(cmd *cobra.Command, arg []string) error {
 	mkCommandDirAndLogFile(cmd, cluster)
 
 	if !cluster.exists {
-		logger.Error(ErrClusterConfNotFound.Error)
+		logger.Error(red(ErrClusterConfNotFound.Error()))
 		return ErrClusterConfNotFound
 	}
 
 	err := cluster.validate()
 	if err == nil {
-		logger.Info("cluster configuration is ok")
+		logger.Info(green("cluster configuration is ok"))
 	}
 	return err
 }

@@ -6,15 +6,14 @@ package invite
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 )
 
 func provideCDocSubject(appDefBuilder appdef.IAppDefBuilder) {
-	doc := appDefBuilder.AddCDoc(sysshared.QNameCDocSubject)
+	doc := appDefBuilder.AddCDoc(QNameCDocSubject)
 	doc.
 		AddField(Field_Login, appdef.DataKind_string, true).
-		AddField(sysshared.Field_SubjectKind, appdef.DataKind_int32, true).
+		AddField(Field_SubjectKind, appdef.DataKind_int32, true).
 		AddField(Field_Roles, appdef.DataKind_string, true).
-		AddField(sysshared.Field_ProfileWSID, appdef.DataKind_int64, true)
+		AddField(Field_ProfileWSID, appdef.DataKind_int64, true)
 	doc.SetUniqueField(Field_Login)
 }
