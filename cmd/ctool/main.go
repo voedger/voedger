@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/cobrau"
 
@@ -21,8 +22,12 @@ var version string
 
 // path to SSH key (flag --ssh-key)
 var sshKey string
+var red func(a ...interface{}) string
+var green func(a ...interface{}) string
 
 func main() {
+	red = color.New(color.FgRed).SprintFunc()
+	green = color.New(color.FgGreen).SprintFunc()
 	logger.PrintLine = printLogLine
 	defer deleteScriptsTempDir()
 	err := execRootCmd(os.Args, version)
