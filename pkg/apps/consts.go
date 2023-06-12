@@ -7,4 +7,7 @@ package apps
 
 import "github.com/voedger/voedger/pkg/extensionpoints"
 
-const EPPostDocs extensionpoints.EPKey = "PostDocs"
+const (
+	EPPostDocs           extensionpoints.EPKey = "PostDocs"
+	EPPackageSchemasASTs extensionpoints.EPKey = "PackageSchemasASTs"
+)
