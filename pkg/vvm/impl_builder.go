@@ -36,7 +36,7 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 		for _, builder := range builders {
 			builder(apis, cfg, adf, appEPs)
 		}
-		epPostDocs := appEPs.ExtensionPoint(EPPostDocs)
+		epPostDocs := appEPs.ExtensionPoint(apps.EPPostDocs)
 		epPostDocs.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
 			epPostDoc := value.(extensionpoints.IExtensionPoint)
 			postDocQName := eKey.(appdef.QName)

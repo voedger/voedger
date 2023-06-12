@@ -122,7 +122,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideChannelGroups,
 		provideProcessorChannelGroupIdxCommand,
 		provideProcessorChannelGroupIdxQuery,
-		provideCommandProcessorsAmount,
 		provideQueryChannel,
 		provideCommandChannelFactory,
 		provideAppConfigs,
@@ -317,15 +316,6 @@ func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis 
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {
 	return vvmConfig.ProvideServiceChannelFactory(procbus)
-}
-
-func provideCommandProcessorsAmount(vvmCfg *VVMConfig) coreutils.CommandProcessorsCount {
-	for _, pc := range vvmCfg.processorsChannels {
-		if pc.ChannelType == ProcessorChannel_Command {
-			return coreutils.CommandProcessorsCount(pc.NumChannels)
-		}
-	}
-	panic("no command processor channel group")
 }
 
 func provideProcessorChannelGroupIdxCommand(vvmCfg *VVMConfig) CommandProcessorsChannelGroupIdxType {

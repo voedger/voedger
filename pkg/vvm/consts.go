@@ -8,28 +8,26 @@ import (
 	"time"
 
 	router "github.com/untillpro/airs-router2"
-	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istorageimpl/istoragecas"
 )
 
 const (
-	DefaultNumCommandProcessors                                = 10
-	DefaultNumQueryProcessors                                  = 10  // <=0 -> 1 query processor will exist anyway
-	DefaultQuotasChannelsFactor                                = 100 // Quotas.Channels will be NumCommandProcessors * DefaultQuotasFactor
-	DefaultQuotasChannelsPerSubject                            = 10
-	DefaultQuotasSubscriptionsFactor                           = 1000 // Quotas.Subscriptions will be NumCommandProcessors * DefaultQuotasSubscriptionsFactor
-	DefaultQuotasSubscriptionsPerSubject                       = 20
-	DefaultMetricsServicePort                                  = 8000
-	DefaultCacheSize                                           = 1024 * 1024 * 1024 // 1Gb
-	ShortestPossibleFunctionNameLen                            = len("q.a.a")
-	DefaultBLOBWorkersNum                                      = 10
-	DefaultRetryAfterSecondsOn503                              = 1
-	DefaultMaxPrepareQueries                                   = 10
-	DefaultBLOBMaxSize                                         = router.BLOBMaxSizeType(20971520) // 20Mb
-	DefaultVVMPort                                             = router.DefaultRouterPort
-	SecretKeyJWTName                                           = "secretKeyJWT"
-	actualizerIntentsLimit                                     = 128
-	EPPostDocs                           extensionpoints.EPKey = "PostDocs"
+	DefaultNumCommandProcessors          = 10
+	DefaultNumQueryProcessors            = 10  // <=0 -> 1 query processor will exist anyway
+	DefaultQuotasChannelsFactor          = 100 // Quotas.Channels will be NumCommandProcessors * DefaultQuotasFactor
+	DefaultQuotasChannelsPerSubject      = 10
+	DefaultQuotasSubscriptionsFactor     = 1000 // Quotas.Subscriptions will be NumCommandProcessors * DefaultQuotasSubscriptionsFactor
+	DefaultQuotasSubscriptionsPerSubject = 20
+	DefaultMetricsServicePort            = 8000
+	DefaultCacheSize                     = 1024 * 1024 * 1024 // 1Gb
+	ShortestPossibleFunctionNameLen      = len("q.a.a")
+	DefaultBLOBWorkersNum                = 10
+	DefaultRetryAfterSecondsOn503        = 1
+	DefaultMaxPrepareQueries             = 10
+	DefaultBLOBMaxSize                   = router.BLOBMaxSizeType(20971520) // 20Mb
+	DefaultVVMPort                       = router.DefaultRouterPort
+	SecretKeyJWTName                     = "secretKeyJWT"
+	actualizerIntentsLimit               = 128
 )
 
 const (

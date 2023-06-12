@@ -83,7 +83,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	iAppStructsProvider := istructsmem.Provide(appConfigsType, bucketsFactoryType, iAppTokensFactory, iAppStorageProvider)
 	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
 	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
-	commandProcessorsAmountType := provideCommandProcessorsAmount(vvmConfig)
 	vvmPortSource := provideVVMPortSource()
 	iFederation := provideIFederation(vvmConfig, vvmPortSource)
 	apIs := apps.APIs{
@@ -98,7 +97,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	}
 	v2 := provideAppsExtensionPoints(vvmConfig)
 	vvmApps := provideVVMApps(vvmConfig, appConfigsType, apIs, v2)
-	iBus := provideIBus(iAppStructsProvider, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsAmountType, vvmApps)
+	iBus := provideIBus(iAppStructsProvider, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
 	quotas := vvmConfig.Quotas
 	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, timeFunc)
 	maxPrepareQueriesType := vvmConfig.MaxPrepareQueries
@@ -342,15 +341,6 @@ func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis 
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {
 	return vvmConfig.ProvideServiceChannelFactory(procbus)
-}
-
-func provideCommandProcessorsAmount(vvmCfg *VVMConfig) CommandProcessorsAmountType {
-	for _, pc := range vvmCfg.processorsChannels {
-		if pc.ChannelType == ProcessorChannel_Command {
-			return CommandProcessorsAmountType(pc.NumChannels)
-		}
-	}
-	panic("no command processor channel group")
 }
 
 func provideProcessorChannelGroupIdxCommand(vvmCfg *VVMConfig) CommandProcessorsChannelGroupIdxType {
