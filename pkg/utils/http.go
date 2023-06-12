@@ -15,7 +15,6 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	netURL "net/url"
 	"testing"
 	"time"
 
@@ -246,19 +245,19 @@ func req(url string, body string, client *http.Client, opts *reqOpts) (*http.Res
 
 // wrapped ErrUnexpectedStatusCode is returned -> *HTTPResponse contains a valid response body
 // otherwise if err != nil (e.g. socket error)-> *HTTPResponse is nil
-func FederationPOST(federationUrl *netURL.URL, relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+func FederationPOST(federationUrl *url.URL, relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
 	optFuncs = append(optFuncs, WithMethod(http.MethodPost))
 	return FederationReq(federationUrl, relativeURL, body, optFuncs...)
 }
 
-func FederationReq(federationUrl *netURL.URL, relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+func FederationReq(federationUrl *url.URL, relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
 	url := federationUrl.String() + "/" + relativeURL
 	return Req(url, body, optFuncs...)
 }
 
 // status code expected -> DiscardBody, ResponseHandler are used
 // status code is unexpected -> DiscardBody, ResponseHandler are ignored, body is read out, wrapped ErrUnexpectedStatusCode is returned
-func Req(url string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+func Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
 	opts := &reqOpts{
 		headers:   map[string]string{},
 		cookies:   map[string]string{},
@@ -287,12 +286,12 @@ func Req(url string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 		opts.expectedHTTPCodes = append(opts.expectedHTTPCodes, http.StatusOK)
 	}
 	if len(opts.relativeURL) > 0 {
-		netURL, err := netURL.Parse(url)
+		netURL, err := url.Parse(urlStr)
 		if err != nil {
 			return nil, err
 		}
 		netURL.Path = opts.relativeURL
-		url = netURL.String()
+		urlStr = netURL.String()
 	}
 	client := &http.Client{}
 	var resp *http.Response
@@ -300,7 +299,7 @@ func Req(url string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 	deadline := time.UnixMilli(opts.timeoutMs)
 	tryNum := 0
 	for time.Now().Before(deadline) {
-		resp, err = req(url, body, client, opts)
+		resp, err = req(urlStr, body, client, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -349,7 +348,7 @@ func Req(url string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 	return httpResponse, statusErr
 }
 
-func FederationFunc(federationUrl *netURL.URL, relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
+func FederationFunc(federationUrl *url.URL, relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
 	httpResp, err := FederationPOST(federationUrl, relativeURL, body, optFuncs...)
 	isUnexpectedCode := errors.Is(err, ErrUnexpectedStatusCode)
 	if err != nil && !isUnexpectedCode {
@@ -477,7 +476,7 @@ func (f *implIFederation) POST(appQName istructs.AppQName, wsid istructs.WSID, f
 	return FederationPOST(f.federationURL(), fmt.Sprintf(`api/%s/%d/%s`, appQName, wsid, fn), body, opts...)
 }
 
-func (f *implIFederation) URL() *netURL.URL {
+func (f *implIFederation) URL() *url.URL {
 	return f.federationURL()
 }
 
