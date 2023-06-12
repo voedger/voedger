@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -67,7 +68,8 @@ func checkErr(err error) {
 	}
 }
 
-const numPartitions = 10000
+const numAttackers = 80
+const numPartitions = 100
 const numProjectorsPerPartition = 100
 const eventsPerSeconds = 1000
 const subject istructs.SubjectLogin = "main"
@@ -105,10 +107,32 @@ func runChannels(broker in10n.IN10nBroker) {
 	println("numProjectorsPerPartition: ", numProjectorsPerPartition)
 	println("eventsPerSeconds: ", eventsPerSeconds)
 
-	var sumDurations time.Duration
+	var count int64
+	var sumLatenciesNano int64
 
-	offset := istructs.Offset(0)
-	t1000 := time.Now()
+	startTime := time.Now()
+	lastInterval := startTime
+
+	for i := 0; i < numAttackers; i++ {
+		go func() {
+			// nolint
+			partition := rand.Intn(numPartitions)
+
+			projectionKeyExample := in10n.ProjectionKey{
+				App:        istructs.AppQName_test1_app1,
+				Projection: projectionPLog,
+				WS:         istructs.WSID(partition),
+			}
+
+			for offset := istructs.Offset(0); ; offset++ {
+				updateTime := time.Now()
+				broker.Update(projectionKeyExample, offset)
+				atomic.AddInt64(&sumLatenciesNano, int64(time.Since(updateTime).Nanoseconds()))
+				atomic.AddInt64(&count, 1)
+			}
+		}()
+	}
+
 	for range t.C {
 
 		// nolint
@@ -119,14 +143,20 @@ func runChannels(broker in10n.IN10nBroker) {
 			Projection: projectionPLog,
 			WS:         istructs.WSID(partition),
 		}
+
+		updateTime := time.Now()
 		broker.Update(projectionKeyExample, offset)
+		sumLatencies += time.Since(updateTime)
+
+		if time.Since(lastInterval) > 1*time.Second {
+			fmt.Println("offset: ", offset)
+			fmt.Println("update rate, ops: ", float64(offset)/time.Since(startTime).Seconds())
+			fmt.Println("update latency, mks: ", float64(sumLatencies.Microseconds())/float64(offset))
+			lastInterval = time.Now()
+		}
+
 		// nolint
 		if offset%1000 == 0 && offset > 0 {
-			fmt.Println("offset: ", offset)
-			fmt.Println("avg Update duration: ", sumDurations/time.Duration(offset))
-			dur1000 := time.Since(t1000)
-			t1000 = time.Now()
-			fmt.Println("dur1000/1000: ", dur1000/1000)
 
 		}
 		offset++
