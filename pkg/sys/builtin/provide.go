@@ -7,6 +7,7 @@ package builtin
 import (
 	"context"
 	"net/http"
+	"runtime/debug"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -14,7 +15,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder) {
+func Provide(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, buildInfo *debug.BuildInfo) {
 	// to edit BO fron Web
 	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 
@@ -25,7 +26,7 @@ func Provide(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(QNameCommandImport, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 
 	cfg.AddCUDValidators(provideRefIntegrityValidator())
-	provideQryModules(cfg, adf)
+	provideQryModules(cfg, adf, buildInfo)
 
 }
 
