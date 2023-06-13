@@ -183,6 +183,12 @@ func TestUtilFuncs(t *testing.T) {
 		resp := vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.GRCount", body)
 		resp.Println()
 	})
+
+	t.Run("func Modules", func(t *testing.T) {
+		body := `{"args": {},"elements":[{"fields":["Modules"]}]}`
+		resp := vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Modules", body)
+		resp.Println()
+	})
 }
 
 func Test400BadRequests(t *testing.T) {

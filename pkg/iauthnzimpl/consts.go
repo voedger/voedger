@@ -66,6 +66,7 @@ var (
 	qNameQryUPTerminalWebhook                       = appdef.NewQName(airPackage, "UPTerminalWebhook")
 	qNameCDocUntillPayments                         = appdef.NewQName(airPackage, "UntillPayments")
 	qNameCmdInitiateDeactivateWorkspace             = appdef.NewQName(appdef.SysPackage, "InitiateDeactivateWorkspace")
+	qNameQryModules                                 = appdef.NewQName(appdef.SysPackage, "Modules")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")

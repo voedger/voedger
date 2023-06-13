@@ -14,22 +14,22 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-// для редактирования BO с Web
-func ProvideCmdCUD(cfg *istructsmem.AppConfigType) {
+func Provide(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder) {
+	// to edit BO fron Web
 	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
-}
 
-// для импорта через ImportBO
-func ProvideCmdInit(cfg *istructsmem.AppConfigType) {
+	// to import via ImportBO
 	cfg.Resources.Add(istructsmem.NewCommandFunction(QNameCommandInit, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
-}
 
-// вместо Sync
-func ProivdeCmdImport(cfg *istructsmem.AppConfigType) {
+	// instead of sync
 	cfg.Resources.Add(istructsmem.NewCommandFunction(QNameCommandImport, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+
+	cfg.AddCUDValidators(provideRefIntegrityValidator())
+	provideQryModules(cfg, adf)
+
 }
 
-func ProvideRefIntegrityValidator() istructs.CUDValidator {
+func provideRefIntegrityValidator() istructs.CUDValidator {
 	return istructs.CUDValidator{
 		MatchFunc: func(qName appdef.QName) bool {
 			return true
