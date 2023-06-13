@@ -6,6 +6,7 @@ package sys
 
 import (
 	"embed"
+	"runtime/debug"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
@@ -38,14 +39,14 @@ var sysFS embed.FS
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, smtpCfg smtp.Cfg,
 	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation coreutils.IFederation,
-	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount) {
+	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount, buildInfo *debug.BuildInfo) {
 	blobber.ProvideBlobberCmds(cfg, appDefBuilder)
 	collection.ProvideCollectionFunc(cfg, appDefBuilder)
 	collection.ProvideCDocFunc(cfg, appDefBuilder)
 	collection.ProvideStateFunc(cfg, appDefBuilder)
 	journal.Provide(cfg, appDefBuilder, ep)
 	wskinds.ProvideCDocsWorkspaceKinds(appDefBuilder)
-	builtin.Provide(cfg, appDefBuilder)
+	builtin.Provide(cfg, appDefBuilder, buildInfo)
 	builtin.ProvideQryEcho(cfg, appDefBuilder)
 	builtin.ProvideQryGRCount(cfg, appDefBuilder)
 	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation)

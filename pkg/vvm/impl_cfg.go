@@ -6,6 +6,7 @@ package vvm
 
 import (
 	"os"
+	"runtime/debug"
 
 	ibus "github.com/untillpro/airs-ibus"
 	router "github.com/untillpro/airs-router2"
@@ -24,7 +25,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		// notest
 		panic(err)
 	}
-	return VVMConfig{
+	res := VVMConfig{
 		Routes:                 map[string]string{},
 		RoutesRewrite:          map[string]string{},
 		RouteDomains:           map[string]string{},
@@ -53,6 +54,12 @@ func NewVVMDefaultConfig() VVMConfig {
 			return istorage.ProvideMem(), nil
 		},
 	}
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		logger.Info("no build info")
+	}
+	res.BuildInfo = buildInfo
+	return res
 }
 
 func (tsr *testISecretReader) ReadSecret(name string) ([]byte, error) {
