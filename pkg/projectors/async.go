@@ -219,6 +219,9 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 		if err != nil {
 			return nil, err
 		}
+		if logger.IsTrace() {
+			logger.Trace(fmt.Sprintf("%s: handled %d", p.projector.Name, p.pLogOffset))
+		}
 	}
 
 	readyToFlushBundle, err := p.state.ApplyIntents()
