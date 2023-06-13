@@ -456,20 +456,20 @@ func fillTable(ctx *buildContext, table *TableStmt) {
 func buildTables(ctx *buildContext) error {
 	for _, schema := range ctx.pkgmap {
 		iterateStmt(schema.Ast, func(table *TableStmt) {
-			buildTable(ctx, schema, table, &table.Pos)
+			buildTable(ctx, schema, table)
 		})
 	}
 	return errors.Join(ctx.errs...)
 }
 
-func buildTable(ctx *buildContext, schema *PackageSchemaAST, table *TableStmt, pos *lexer.Position) {
+func buildTable(ctx *buildContext, schema *PackageSchemaAST, table *TableStmt) {
 	ctx.setSchema(schema)
 	if isPredefinedSysTable(table, ctx) {
 		return
 	}
 	tableType, singletone := getTableDefKind(table, ctx)
 	if tableType == appdef.DefKind_null {
-		ctx.errs = append(ctx.errs, errorAt(ErrUndefinedTableKind, pos))
+		ctx.errs = append(ctx.errs, errorAt(ErrUndefinedTableKind, &table.Pos))
 	} else {
 		if ctx.isExists(table.Name, tableType) {
 			return
@@ -495,11 +495,11 @@ func addFieldRefToDef(refField *RefFieldExpr, ctx *buildContext) {
 		if err != nil {
 			ctx.errs = append(ctx.errs, err)
 			errors = true
+			continue
 		}
 		if err = checkReference(ctx, refField.RefDocs[i], tableStmt, &refField.Pos); err != nil {
 			ctx.errs = append(ctx.errs, err)
 			errors = true
-			return
 		}
 	}
 	if !errors {
@@ -621,17 +621,13 @@ func checkReference(ctx *buildContext, refTable DefQName, table *TableStmt, pos 
 	}
 	refTableDef := ctx.builder.DefByName(appdef.NewQName(refTable.Package, refTable.Name))
 	if refTableDef == nil {
-		buildTable(ctx, ctx.fundSchemaByPkg(refTable.Package), table, pos)
+		buildTable(ctx, ctx.fundSchemaByPkg(refTable.Package), table)
 		refTableDef = ctx.builder.DefByName(appdef.NewQName(refTable.Package, refTable.Name))
 	}
 
 	if refTableDef == nil {
 		//if it happened it means that error occurred
 		return nil
-	}
-
-	if !refTableDef.Kind().HasSystemField(appdef.SystemField_ID) {
-		return errorAt(ErrTargetIsNotIdentified, pos)
 	}
 
 	for _, defKind := range canNotReferenceTo[ctx.defCtx().kind] {
