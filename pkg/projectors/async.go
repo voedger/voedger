@@ -154,7 +154,7 @@ func (a *asyncActualizer) keepReading() (err error) {
 			logger.Trace(fmt.Sprintf("%s received n10n: offset %d, last handled: %d", a.name, offset, a.offset))
 		}
 		if a.offset < offset {
-			err = a.readPlogToTheEnd()
+			err = a.readPlogToTheEnd2()
 			if err != nil {
 				a.conf.LogError(a.name, err)
 				a.readCtx.cancelWithError(err)
@@ -164,27 +164,38 @@ func (a *asyncActualizer) keepReading() (err error) {
 	return a.readCtx.error()
 }
 
-func (a *asyncActualizer) readPlogToTheEnd() (err error) {
-	return a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd, func(pLogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-		work := &workpiece{
-			event:      event,
-			pLogOffset: pLogOffset,
-		}
+func (a *asyncActualizer) handleEvent(pLogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+	work := &workpiece{
+		event:      event,
+		pLogOffset: pLogOffset,
+	}
 
-		err = a.pipeline.SendAsync(work)
-		if err != nil {
-			a.conf.LogError(a.name, err)
+	err = a.pipeline.SendAsync(work)
+	if err != nil {
+		a.conf.LogError(a.name, err)
+		return
+	}
+
+	a.offset = pLogOffset
+
+	if logger.IsTrace() {
+		logger.Trace(fmt.Sprintf("offset %d for %s", a.offset, a.name))
+	}
+
+	return
+}
+
+func (a *asyncActualizer) readPlogToTheEnd() (err error) {
+	return a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd, a.handleEvent)
+}
+
+func (a *asyncActualizer) readPlogToTheEnd2() (err error) {
+	for expected := a.offset + 1; expected == a.offset+1; expected++ {
+		if err = a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, expected, 1, a.handleEvent); err != nil {
 			return
 		}
-
-		a.offset = pLogOffset
-
-		if logger.IsTrace() {
-			logger.Trace(fmt.Sprintf("offset %d for %s", a.offset, a.name))
-		}
-
-		return
-	})
+	}
+	return nil
 }
 
 func (a *asyncActualizer) readOffset(projectorName appdef.QName) (err error) {
