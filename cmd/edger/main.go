@@ -10,6 +10,10 @@ import (
 	_ "embed"
 	"os"
 
+	"fmt"
+	"runtime/debug"
+
+
 	"github.com/untillpro/goutils/cobrau"
 )
 
@@ -17,6 +21,16 @@ import (
 var version string
 
 func main() {
+
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		fmt.Println("No build info")
+		return
+	}
+	for _, mod := range info.Deps {
+		fmt.Printf("path: %s version: %s\n", mod.Path, mod.Version)
+	}
+
 	if err := execRootCmd(os.Args, version); err != nil {
 		os.Exit(1)
 	}

@@ -71,9 +71,11 @@ func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.P
 
 func (nb *N10nBroker) Update(projection in10n.ProjectionKey, offset istructs.Offset) {
 	prj := nb.guaranteeProjection(projection)
+	nb.Lock()
 	oldvalue := prj.value.Load().(projectionValue)
 	prj.value.Store(projectionValue{offset: offset, sigchan: make(chan struct{})})
 	close(oldvalue.sigchan)
+	nb.Unlock()
 }
 
 func (nb *N10nBroker) MetricNumChannels() int {

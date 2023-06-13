@@ -68,10 +68,10 @@ func checkErr(err error) {
 	}
 }
 
-const numAttackers = 80
-const numPartitions = 100
+const numAttackers = 500
+const numPartitions = 10000
 const numProjectorsPerPartition = 100
-const eventsPerSeconds = 1000
+const eventsPerSeconds = 100
 const subject istructs.SubjectLogin = "main"
 
 var projectionPLog = appdef.NewQName("sys", "plog")
@@ -101,20 +101,19 @@ func runChannels(broker in10n.IN10nBroker) {
 		}
 	}
 
-	t := time.NewTicker(1 * time.Second / eventsPerSeconds)
-
+	println("numAttackers: ", numAttackers)
 	println("numPartitions: ", numPartitions)
 	println("numProjectorsPerPartition: ", numProjectorsPerPartition)
 	println("eventsPerSeconds: ", eventsPerSeconds)
 
-	var count int64
-	var sumLatenciesNano int64
-
-	startTime := time.Now()
-	lastInterval := startTime
+	var wrkCount int64
+	var wrkSumLatenciesNano int64
+	var wrkOffset int64 = 0
 
 	for i := 0; i < numAttackers; i++ {
 		go func() {
+			t := time.NewTicker(1 * time.Second / eventsPerSeconds)
+
 			// nolint
 			partition := rand.Intn(numPartitions)
 
@@ -124,42 +123,26 @@ func runChannels(broker in10n.IN10nBroker) {
 				WS:         istructs.WSID(partition),
 			}
 
-			for offset := istructs.Offset(0); ; offset++ {
+			for range t.C {
+				newOffset := atomic.AddInt64(&wrkOffset, 1)
 				updateTime := time.Now()
-				broker.Update(projectionKeyExample, offset)
-				atomic.AddInt64(&sumLatenciesNano, int64(time.Since(updateTime).Nanoseconds()))
-				atomic.AddInt64(&count, 1)
+				broker.Update(projectionKeyExample, istructs.Offset(newOffset))
+				atomic.AddInt64(&wrkSumLatenciesNano, int64(time.Since(updateTime).Nanoseconds()))
+				atomic.AddInt64(&wrkCount, 1)
 			}
 		}()
 	}
 
+	t := time.NewTicker(1 * time.Second)
+	startTime := time.Now()
 	for range t.C {
-
-		// nolint
-		partition := rand.Intn(numPartitions)
-
-		projectionKeyExample := in10n.ProjectionKey{
-			App:        istructs.AppQName_test1_app1,
-			Projection: projectionPLog,
-			WS:         istructs.WSID(partition),
-		}
-
-		updateTime := time.Now()
-		broker.Update(projectionKeyExample, offset)
-		sumLatencies += time.Since(updateTime)
-
-		if time.Since(lastInterval) > 1*time.Second {
-			fmt.Println("offset: ", offset)
-			fmt.Println("update rate, ops: ", float64(offset)/time.Since(startTime).Seconds())
-			fmt.Println("update latency, mks: ", float64(sumLatencies.Microseconds())/float64(offset))
-			lastInterval = time.Now()
-		}
-
-		// nolint
-		if offset%1000 == 0 && offset > 0 {
-
-		}
-		offset++
+		count := atomic.LoadInt64(&wrkCount)
+		sumLatenciesNano := atomic.LoadInt64(&wrkSumLatenciesNano)
+		fmt.Println("count: ", count,
+			"sumLatenciesNano: ", sumLatenciesNano,
+			"rps:", float64(count)/float64(time.Since(startTime).Seconds()),
+			"avg. latency, ns:", float64(sumLatenciesNano)/float64(count),
+		)
 
 	}
 
@@ -174,9 +157,6 @@ func runChannel(channelID in10n.ChannelID, broker in10n.IN10nBroker) {
 }
 
 func updatesMock(projection in10n.ProjectionKey, offset istructs.Offset) {
-	// nolint
-	if offset%1000000000 == 0 {
-		fmt.Println("offset: ", offset, projection)
-	}
+	time.Sleep(1 * time.Millisecond)
 
 }
