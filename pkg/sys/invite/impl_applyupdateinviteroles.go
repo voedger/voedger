@@ -6,32 +6,29 @@ package invite
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func ProvideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.ProjectorFactory {
+func ProvideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name:         qNameAPApplyUpdateInviteRoles,
 			EventsFilter: []appdef.QName{qNameCmdInitiateUpdateInviteRoles},
-			Func:         applyUpdateInviteRolesProjector(timeFunc, federationURL, appQName, tokens, smtpCfg),
+			Func:         applyUpdateInviteRolesProjector(timeFunc, federation, appQName, tokens, smtpCfg),
 			NonBuffered:  true,
 		}
 	}
 }
 
-func applyUpdateInviteRolesProjector(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyUpdateInviteRolesProjector(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbCDocInvite, err := s.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
 		if err != nil {
@@ -43,7 +40,7 @@ func applyUpdateInviteRolesProjector(timeFunc func() time.Time, federationURL fu
 			return
 		}
 
-		skbCDocSubject, err := s.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocSubject)
+		skbCDocSubject, err := s.KeyBuilder(state.RecordsStorage, QNameCDocSubject)
 		if err != nil {
 			return
 		}
@@ -60,7 +57,7 @@ func applyUpdateInviteRolesProjector(timeFunc func() time.Time, federationURL fu
 
 		//Update subject
 		_, err = coreutils.FederationFunc(
-			federationURL(),
+			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID), event.ArgumentObject().AsString(Field_Roles)),
 			coreutils.WithAuthorizeBy(token))
@@ -70,7 +67,7 @@ func applyUpdateInviteRolesProjector(timeFunc func() time.Time, federationURL fu
 
 		//Update joined workspace roles
 		_, err = coreutils.FederationFunc(
-			federationURL(),
+			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.UpdateJoinedWorkspaceRoles", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d}}`, event.ArgumentObject().AsString(Field_Roles), event.Workspace()),
 			coreutils.WithAuthorizeBy(token))
@@ -117,7 +114,7 @@ func applyUpdateInviteRolesProjector(timeFunc func() time.Time, federationURL fu
 
 		//Update invite
 		_, err = coreutils.FederationFunc(
-			federationURL(),
+			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d,"Roles":"%s"}}]}`, event.ArgumentObject().AsRecordID(field_InviteID), State_Joined, timeFunc().UnixMilli(), event.ArgumentObject().AsString(Field_Roles)),
 			coreutils.WithAuthorizeBy(token))

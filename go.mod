@@ -16,7 +16,7 @@ require (
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.2
 	github.com/untillpro/airs-ibus v0.0.0-20221105121917-d13e0967180d
-	github.com/untillpro/airs-router2 v0.0.0-20230502130533-7f4682c4959b
+	github.com/untillpro/airs-router2 v0.0.0-20230608110258-3c8307c1be69
 	github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195
 	github.com/untillpro/goutils v0.0.0-20230413153406-ba6af4dbd062
 	github.com/untillpro/ibusmem v0.0.0-20221105120342-e51c7ee7020c
@@ -25,6 +25,7 @@ require (
 	go.etcd.io/bbolt v1.3.7
 	golang.org/x/crypto v0.8.0
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
+	golang.org/x/text v0.9.0
 )
 
 require (
@@ -55,7 +56,6 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

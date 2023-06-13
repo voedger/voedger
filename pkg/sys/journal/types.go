@@ -9,9 +9,9 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/vvm"
 )
 
 type predicate func(appDef appdef.IAppDef, qName appdef.QName) bool
@@ -21,10 +21,10 @@ type Filter struct {
 	appDef     appdef.IAppDef
 }
 
-func NewFilter(appDef appdef.IAppDef, eventTypes []string, jp vvm.IEPJournalPredicates) (Filter, error) {
+func NewFilter(appDef appdef.IAppDef, eventTypes []string, epJournalPredicates extensionpoints.IExtensionPoint) (Filter, error) {
 	pp := make([]predicate, len(eventTypes))
 	for i, eventType := range eventTypes {
-		p, ok := jp.Find(eventType)
+		p, ok := epJournalPredicates.Find(eventType)
 		if !ok {
 			return Filter{}, fmt.Errorf("invalid event type: %s", eventType)
 		}

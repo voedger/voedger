@@ -11,6 +11,8 @@ import (
 	"fmt"
 
 	"github.com/untillpro/dynobuffers"
+	"golang.org/x/exp/slices"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -133,7 +135,7 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 	if fields, ok := def.(appdef.IFields); ok {
 		fields.Fields(
 			func(f appdef.IField) {
-				if f.DataKind() != appdef.DataKind_RecordID {
+				if f.DataKind() != appdef.DataKind_RecordID || err != nil {
 					return
 				}
 				recID := obj.AsRecordID(f.Name())
@@ -144,6 +146,13 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 					if rec.QName() == appdef.NullQName {
 						err = errors.Join(err,
 							fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, recID, qName, f.Name()))
+					} else {
+						if refField, ok := f.(appdef.IRefField); ok {
+							if len(refField.Refs()) > 0 && !slices.Contains(refField.Refs(), rec.QName()) {
+								err = errors.Join(err,
+									fmt.Errorf("%w: record ID %d referenced by %s.%s leads to wrong field", ErrReferentialIntegrityViolation, recID, qName, f.Name()))
+							}
+						}
 					}
 				} else {
 					err = errors.Join(err, readErr)

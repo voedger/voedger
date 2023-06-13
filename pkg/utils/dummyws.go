@@ -1,21 +1,21 @@
 /*
- * Copyright (c) 2022-present unTill Pro, Ltd.
+ * Copyright (c) 2020-present unTill Pro, Ltd.
+ * @author Denis Gribanov
  */
 
-package commandprocessor
+package coreutils
 
 import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var dummyWSLock = sync.RWMutex{}
 var dummyWSes = map[istructs.WSID]bool{}
 
 func IsDummyWS(wsid istructs.WSID) (res bool) {
-	if !coreutils.IsTest() {
+	if !IsTest() {
 		return false
 	}
 	dummyWSLock.RLock()

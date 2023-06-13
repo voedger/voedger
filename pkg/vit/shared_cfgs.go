@@ -9,12 +9,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	registryapp "github.com/voedger/voedger/pkg/apps/sys/registry"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz/wskinds"
@@ -70,17 +72,17 @@ var (
 	MockCmdExec func(input string) error
 )
 
-func EmptyApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
-	registryapp.Provide(smtp.Cfg{})(vvmCfg, vvmAPI, cfg, adf, sep)
-	adf.AddSingleton(QNameTestWSKind).
+func EmptyApp(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+	registryapp.Provide(smtp.Cfg{})(apis, cfg, appDefBuilder, ep)
+	appDefBuilder.AddSingleton(QNameTestWSKind).
 		AddField("IntFld", appdef.DataKind_int32, true).
 		AddField("StrFld", appdef.DataKind_string, false)
-	sep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
+	ep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
 }
 
-func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
+func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	// sys package
-	sys.Provide(vvmCfg.TimeFunc, cfg, adf, vvmAPI, smtp.Cfg{}, sep, nil, vvmCfg.NumCommandProcessors)
+	sys.Provide(cfg, adf, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory, apis.NumCommandProcessors)
 
 	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "articles")).
 		AddField("name", appdef.DataKind_string, false).
@@ -92,7 +94,8 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 
 	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "options"))
 
-	dep := adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "department"))
+	qnameDep := appdef.NewQName(appdef.SysPackage, "department")
+	dep := adf.AddCDoc(qnameDep)
 	dep.AddField("pc_fix_button", appdef.DataKind_int32, true).
 		AddField("rm_fix_button", appdef.DataKind_int32, true).
 		AddField("id_food_group", appdef.DataKind_RecordID, false)
@@ -465,7 +468,7 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 		b.AddPartField("ViewIntFld", appdef.DataKind_int32).
 			AddClustColumn("ViewStrFld", appdef.DataKind_string)
 	})
-	sep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
+	ep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
 
 	// for impl_verifier_test
 	adf.AddCDoc(QNameTestEmailVerificationDoc).
@@ -551,4 +554,12 @@ func ProvideSimpleApp(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem
 	}
 	mockCmd := istructsmem.NewCommandFunction(mockCmdQName, mockCmdParamsQName, appdef.NullQName, appdef.NullQName, execCmdMockCmd)
 	cfg.Resources.Add(mockCmd)
+
+	qnameCdoc1 := appdef.NewQName(appdef.SysPackage, "cdoc1")
+	adf.AddCDoc(qnameCdoc1)
+
+	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "cdoc2")).
+		AddField("field1", appdef.DataKind_RecordID, false).
+		AddRefField("field2", false, qnameCdoc1, qnameDep).
+		AddRefField("field3", false)
 }
