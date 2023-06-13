@@ -119,6 +119,11 @@ type IAppDef interface {
 	//
 	// Returns nil if not found.
 	Command(QName) ICommand
+
+	// Returns Query by name.
+	//
+	// Returns nil if not found.
+	Query(QName) IQuery
 }
 
 // Application definition builder
@@ -230,6 +235,14 @@ type IAppDefBuilder interface {
 	//   - if name is invalid,
 	//   - if definition with name already exists.
 	AddCommand(QName) ICommandBuilder
+
+	// Adds new query.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if definition with name already exists.
+	AddQuery(QName) IQueryBuilder
 
 	// Must be called after all definitions added. Validates and returns builded application definition or error
 	Build() (IAppDef, error)
@@ -785,4 +798,38 @@ type ICommandBuilder interface {
 	// # Panics:
 	//	- if name is empty or invalid identifier
 	SetExtension(name string, engine ExtensionEngineKind) ICommandBuilder
+}
+
+// Query
+//
+// Ref. to query.go for implementation
+type IQuery interface {
+	IDef
+
+	// Argument. Returns nil if not assigned
+	Arg() IObject
+
+	// Result. Returns nil if not assigned.
+	//
+	// If result is may be different, then NullQName is used
+	Result() IObject
+
+	// Extension
+	Extension() IExtension
+}
+
+type IQueryBuilder interface {
+	IQuery
+
+	// Sets query argument. Must be object or NullQName
+	SetArg(QName) IQueryBuilder
+
+	// Sets query result. Must be object or NullQName
+	SetResult(QName) IQueryBuilder
+
+	// Sets engine.
+	//
+	// # Panics:
+	//	- if name is empty or invalid identifier
+	SetExtension(name string, engine ExtensionEngineKind) IQueryBuilder
 }

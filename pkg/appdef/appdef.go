@@ -65,6 +65,10 @@ func (app *appDef) AddSingleton(name QName) ICDocBuilder {
 	return doc
 }
 
+func (app *appDef) AddQuery(name QName) IQueryBuilder {
+	return newQuery(app, name)
+}
+
 func (app *appDef) AddView(name QName) IViewBuilder {
 	return newView(app, name)
 }
@@ -171,6 +175,13 @@ func (app *appDef) ODoc(name QName) IODoc {
 func (app *appDef) ORecord(name QName) IORecord {
 	if d := app.defByKind(name, DefKind_ORecord); d != nil {
 		return d.(IORecord)
+	}
+	return nil
+}
+
+func (app *appDef) Query(name QName) IQuery {
+	if d := app.defByKind(name, DefKind_Query); d != nil {
+		return d.(IQuery)
 	}
 	return nil
 }
