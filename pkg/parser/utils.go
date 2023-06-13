@@ -199,9 +199,6 @@ func isPredefinedSysTable(table *TableStmt, c *buildContext) bool {
 
 func getTableInheritanceChain(table *TableStmt, ctx *buildContext) (chain []DefQName) {
 	chain = make([]DefQName, 0)
-	if table == nil {
-		return
-	}
 	var vf func(t *TableStmt)
 	vf = func(t *TableStmt) {
 		if t.Inherits != nil {
@@ -229,17 +226,6 @@ func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
 		panic(fmt.Sprintf("unexpected root table kind %d", rootTableKind))
 	}
 }
-
-// func genUniqueName(tablename string, bc appdef.IUniquesBuilder) string {
-// 	tn := strings.ToUpper(tablename)
-// 	for i := 1; i < appdef.MaxDefUniqueCount+1; i++ {
-// 		un := fmt.Sprintf("%s_UNIQUE%d", tn, i)
-// 		if bc.UniqueByName(un) == nil {
-// 			return un
-// 		}
-// 	}
-// 	return ""
-// }
 
 func getTableDefKind(table *TableStmt, ctx *buildContext) (kind appdef.DefKind, singletone bool) {
 	chain := getTableInheritanceChain(table, ctx)
