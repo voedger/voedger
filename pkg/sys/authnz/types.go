@@ -3,6 +3,6 @@
  * @author Denis Gribanov
  */
 
-package sysshared
+package authnz
 
 type WorkspaceStatus int32

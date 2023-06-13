@@ -29,7 +29,9 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
+	"github.com/voedger/voedger/pkg/sys/authnz"
+
+	// workspacemgmt "github.com/voedger/voedger/pkg/sys/authnz/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -153,8 +155,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 					return nil
 				}
 			}
-			
-			wsDesc, err := qw.appStructs.Records().GetSingleton(qw.msg.WSID(), sysshared.QNameCDocWorkspaceDescriptor)
+
+			wsDesc, err := qw.appStructs.Records().GetSingleton(qw.msg.WSID(), authnz.QNameCDocWorkspaceDescriptor)
 			if err != nil {
 				// notest
 				return err
@@ -163,7 +165,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// TODO: query prcessor currently does not check workspace initialization
 				return nil
 			}
-			if wsDesc.AsInt32(sysshared.Field_Status) != int32(sysshared.WorkspaceStatus_Active) {
+			if wsDesc.AsInt32(authnz.Field_Status) != int32(authnz.WorkspaceStatus_Active) {
 				return processors.ErrWSInactive
 			}
 			return nil

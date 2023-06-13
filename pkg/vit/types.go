@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -99,7 +100,7 @@ type app struct {
 	name            istructs.AppQName
 	logins          []Login
 	ws              map[string]WSParams
-	wsTemplateFuncs []func(vvm.IStandardExtensionPoints)
+	wsTemplateFuncs []func(extensionpoints.IExtensionPoint)
 }
 
 type BLOB struct {
