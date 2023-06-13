@@ -45,9 +45,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	collection.ProvideStateFunc(cfg, appDefBuilder)
 	journal.Provide(cfg, appDefBuilder, ep)
 	wskinds.ProvideCDocsWorkspaceKinds(appDefBuilder)
-	builtin.ProvideCmdCUD(cfg)
-	builtin.ProvideCmdInit(cfg)   // for import from air-importbo
-	builtin.ProivdeCmdImport(cfg) // for sync
+	builtin.Provide(cfg, appDefBuilder)
 	builtin.ProvideQryEcho(cfg, appDefBuilder)
 	builtin.ProvideQryGRCount(cfg, appDefBuilder)
 	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation)
@@ -80,7 +78,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	cfg.AddSyncProjectors(collection.ProvideSyncProjectorFactories(appDefBuilder)...)
 	uniques.Provide(cfg, appDefBuilder)
 	describe.Provide(cfg, asp, appDefBuilder)
-	cfg.AddCUDValidators(builtin.ProvideRefIntegrityValidator())
 
 	// add sys sql schema
 	sysSQLContent, err := sysFS.ReadFile("sys.sql")
