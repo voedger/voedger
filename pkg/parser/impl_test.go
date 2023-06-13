@@ -494,7 +494,7 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 		def := appdef.New()
 		err = BuildAppDefs(packages, def)
 
-		require.Contains(err.Error(), ErrTargetIsNotIdentified.Error())
+		require.Contains(err.Error(), ErrUndefinedTableKind.Error())
 	})
 }
 
