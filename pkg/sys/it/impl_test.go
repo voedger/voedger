@@ -185,6 +185,8 @@ func TestUtilFuncs(t *testing.T) {
 	})
 
 	t.Run("func Modules", func(t *testing.T) {
+		// should normally return nothing because there is no dpes information in tests
+		// returns actual deps if the Voedger is used in some main() and built using `go build`
 		body := `{"args": {},"elements":[{"fields":["Modules"]}]}`
 		resp := vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Modules", body)
 		resp.Println()
