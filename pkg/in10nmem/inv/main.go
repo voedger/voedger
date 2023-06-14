@@ -149,7 +149,6 @@ func runChannels(broker in10n.IN10nBroker) {
 			"avg. latency, ns:", float64(sumLatenciesNano)/float64(count),
 			"cpu%", cpu,
 		)
-		startCPU, _ = initCPUUsage()
 
 	}
 

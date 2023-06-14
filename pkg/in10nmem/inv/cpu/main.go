@@ -54,7 +54,8 @@ func calcCPUsage(data *CPUUsageData) (float64, error) {
 
 // getCPUTotalTime calculates the total time spent by CPU
 func getCPUTotalTime(t cpu.TimesStat) float64 {
-	return t.User + t.System + t.Idle + t.Nice + t.Iowait + t.Irq + t.Softirq + t.Steal
+	// return t.User + t.System + t.Idle + t.Nice + t.Iowait + t.Irq + t.Softirq + t.Steal
+	return t.User + t.System + t.Idle
 }
 
 func main() {
