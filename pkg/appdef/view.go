@@ -124,7 +124,7 @@ func (cc *viewCCols) Validate() (err error) {
 		}
 		if !fld.IsFixedWidth() {
 			err = errors.Join(err,
-				fmt.Errorf("%v: only last view clustering column field can be variable length; not last field «%s» has variable length type «%v»: %w", cc.QName(), fld.Name(), fld.DataKind(), ErrInvalidDataKind))
+				fmt.Errorf("%v: only last view clustering column field can be variable length; not last field «%s» has variable length type «%s»: %w", cc.QName(), fld.Name(), fld.DataKind().TrimString(), ErrInvalidDataKind))
 		}
 	})
 

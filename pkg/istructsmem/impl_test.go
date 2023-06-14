@@ -392,7 +392,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 		cmdDef.Containers(
 			func(c appdef.IContainer) {
 				require.Equal(test.basketIdent, c.Name())
-				require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.Def())
+				require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.QName())
 				t.Run("II. test first level nested definition (basket)", func(t *testing.T) {
 					def := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.basketIdent))
 					require.NotNil(def)
@@ -401,7 +401,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 					def.Containers(
 						func(c appdef.IContainer) {
 							require.Equal(test.goodIdent, c.Name())
-							require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.Def())
+							require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.QName())
 
 							t.Run("III. test second level nested definition (good)", func(t *testing.T) {
 								def := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.goodIdent))
