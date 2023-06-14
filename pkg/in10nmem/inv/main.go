@@ -21,6 +21,8 @@ import (
 	in10nmemv1 "github.com/voedger/voedger/pkg/in10nmem/v1"
 	in10nmemv3 "github.com/voedger/voedger/pkg/in10nmem/v3"
 	"github.com/voedger/voedger/pkg/istructs"
+
+	"github.com/shirou/gopsutil/cpu"
 )
 
 func main() {
@@ -68,10 +70,11 @@ func checkErr(err error) {
 	}
 }
 
-const numAttackers = 500
-const numPartitions = 10000
-const numProjectorsPerPartition = 100
-const eventsPerSeconds = 100
+const numPartitions = 1000
+const numProjectorsPerPartition = 1000
+const numAttackers = 100
+
+const eventsPerSeconds = 100000
 const subject istructs.SubjectLogin = "main"
 
 var projectionPLog = appdef.NewQName("sys", "plog")
@@ -133,16 +136,20 @@ func runChannels(broker in10n.IN10nBroker) {
 		}()
 	}
 
-	t := time.NewTicker(1 * time.Second)
+	t := time.NewTicker(5 * time.Second)
 	startTime := time.Now()
+	startCPU, _ := initCPUUsage()
 	for range t.C {
 		count := atomic.LoadInt64(&wrkCount)
 		sumLatenciesNano := atomic.LoadInt64(&wrkSumLatenciesNano)
+		cpu, _ := calcCPUsage(&startCPU)
 		fmt.Println("count: ", count,
 			"sumLatenciesNano: ", sumLatenciesNano,
 			"rps:", float64(count)/float64(time.Since(startTime).Seconds()),
 			"avg. latency, ns:", float64(sumLatenciesNano)/float64(count),
+			"cpu%", cpu,
 		)
+		startCPU, _ = initCPUUsage()
 
 	}
 
@@ -159,4 +166,49 @@ func runChannel(channelID in10n.ChannelID, broker in10n.IN10nBroker) {
 func updatesMock(projection in10n.ProjectionKey, offset istructs.Offset) {
 	time.Sleep(1 * time.Millisecond)
 
+}
+
+// CPUUsageData struct will hold the necessary data for CPU usage calculation
+type CPUUsageData struct {
+	lastTotalTime float64
+	lastIdleTime  float64
+}
+
+// initCPUUsage initializes and returns CPU usage data structure
+func initCPUUsage() (CPUUsageData, error) {
+	times, err := cpu.Times(false) // false for total system, not per-CPU stats
+	if err != nil {
+		return CPUUsageData{}, err
+	}
+
+	totalTime := getCPUTotalTime(times[0])
+	idleTime := times[0].Idle
+	return CPUUsageData{lastTotalTime: totalTime, lastIdleTime: idleTime}, nil
+}
+
+// calcCPUsage calculates and returns the CPU usage since last calculation
+func calcCPUsage(data *CPUUsageData) (float64, error) {
+	times, err := cpu.Times(false) // false for total system, not per-CPU stats
+	if err != nil {
+		return 0, err
+	}
+
+	totalTime := getCPUTotalTime(times[0])
+	idleTime := times[0].Idle
+
+	totalDelta := totalTime - data.lastTotalTime
+	idleDelta := idleTime - data.lastIdleTime
+
+	data.lastTotalTime = totalTime
+	data.lastIdleTime = idleTime
+
+	if totalDelta == 0 {
+		return 0, nil
+	}
+	return (totalDelta - idleDelta) / totalDelta, nil // returning usage in percentage
+}
+
+// getCPUTotalTime calculates the total time spent by CPU
+func getCPUTotalTime(t cpu.TimesStat) float64 {
+	return t.User + t.System + t.Idle + t.Nice + t.Iowait + t.Irq + t.Softirq + t.Steal
 }
