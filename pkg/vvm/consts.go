@@ -35,13 +35,6 @@ const (
 	ProcessorChannel_Query
 )
 
-const (
-	EPWSTemplates       EPKey = "WSTemplates"
-	EPJournalIndices    EPKey = "JournalIndices"
-	EPJournalPredicates EPKey = "JournalPredicates"
-	EPPostDocs          EPKey = "PostDocs"
-)
-
 var (
 	LocalHost        = "http://127.0.0.1"
 	DefaultTimeFunc  = time.Now

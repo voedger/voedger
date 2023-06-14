@@ -376,7 +376,7 @@ func (row *rowType) verifyToken(name string, token string) (value interface{}, e
 	fld := row.fieldDef(name)
 
 	if !fld.VerificationKind(payload.VerificationKind) {
-		return nil, fmt.Errorf("unavailable verification method %v: %w", payload.VerificationKind, ErrInvalidVerificationKind)
+		return nil, fmt.Errorf("unavailable verification method «%s»: %w", payload.VerificationKind.TrimString(), ErrInvalidVerificationKind)
 	}
 
 	if payload.Entity != row.QName() {
@@ -399,7 +399,7 @@ func (row *rowType) AsInt32(name string) (value int32) {
 		return value
 	}
 	if row.fieldDef(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_int32.ToString(), name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_int32.TrimString(), name, row.QName(), ErrNameNotFound))
 	}
 	return 0
 }
@@ -410,7 +410,7 @@ func (row *rowType) AsInt64(name string) (value int64) {
 		return value
 	}
 	if row.fieldDef(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_int64.ToString(), name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_int64.TrimString(), name, row.QName(), ErrNameNotFound))
 	}
 	return 0
 }
@@ -421,7 +421,7 @@ func (row *rowType) AsFloat32(name string) (value float32) {
 		return value
 	}
 	if row.fieldDef(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_float32.ToString(), name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_float32.TrimString(), name, row.QName(), ErrNameNotFound))
 	}
 	return 0
 }
@@ -432,7 +432,7 @@ func (row *rowType) AsFloat64(name string) (value float64) {
 		return value
 	}
 	if row.fieldDef(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_float64.ToString(), name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_float64.TrimString(), name, row.QName(), ErrNameNotFound))
 	}
 	return 0
 }
@@ -443,7 +443,7 @@ func (row *rowType) AsBytes(name string) (value []byte) {
 		return bytes.Bytes()
 	}
 	if row.fieldDef(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_bytes.ToString(), name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_bytes.TrimString(), name, row.QName(), ErrNameNotFound))
 	}
 	return nil
 }
@@ -459,7 +459,7 @@ func (row *rowType) AsString(name string) (value string) {
 	}
 
 	if row.fieldDef(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_string.ToString(), name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_string.TrimString(), name, row.QName(), ErrNameNotFound))
 	}
 	return ""
 }
@@ -480,7 +480,7 @@ func (row *rowType) AsQName(name string) appdef.QName {
 	}
 
 	if row.fieldDef(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_QName.ToString(), name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_QName.TrimString(), name, row.QName(), ErrNameNotFound))
 	}
 	return appdef.NullQName
 }
@@ -496,7 +496,7 @@ func (row *rowType) AsBool(name string) bool {
 	}
 
 	if row.fieldDef(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_bool.ToString(), name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_bool.TrimString(), name, row.QName(), ErrNameNotFound))
 	}
 
 	return false
@@ -517,7 +517,7 @@ func (row *rowType) AsRecordID(name string) istructs.RecordID {
 	}
 
 	if row.fieldDef(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_RecordID.ToString(), name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_RecordID.TrimString(), name, row.QName(), ErrNameNotFound))
 	}
 	return istructs.NullRecordID
 }
@@ -532,7 +532,7 @@ func (row *rowType) AsRecord(name string) istructs.IRecord {
 		return &record
 	}
 	if row.fieldDef(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_Record.ToString(), name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_Record.TrimString(), name, row.QName(), ErrNameNotFound))
 	}
 	return NewNullRecord(istructs.NullRecordID)
 }
@@ -547,7 +547,7 @@ func (row *rowType) AsEvent(name string) istructs.IDbEvent {
 		return &event
 	}
 	if row.fieldDef(name) == nil {
-		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_Event.ToString(), name, row.QName(), ErrNameNotFound))
+		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_Event.TrimString(), name, row.QName(), ErrNameNotFound))
 	}
 	return nil
 }
@@ -663,7 +663,7 @@ func (row *rowType) PutNumber(name string, value float64) {
 	case appdef.DataKind_RecordID:
 		row.PutRecordID(name, istructs.RecordID(value))
 	default:
-		row.collectErrorf(errFieldValueTypeMismatchWrap, appdef.DataKind_float64.ToString(), k, name, ErrWrongFieldType)
+		row.collectErrorf(errFieldValueTypeMismatchWrap, appdef.DataKind_float64.TrimString(), k, name, ErrWrongFieldType)
 	}
 }
 
@@ -716,7 +716,7 @@ func (row *rowType) PutChars(name string, value string) {
 	case appdef.DataKind_bytes:
 		bytes, err := base64.StdEncoding.DecodeString(value)
 		if err != nil {
-			row.collectErrorf(errFieldConvertErrorWrap, name, value, appdef.DataKind_bytes.ToString(), err)
+			row.collectErrorf(errFieldConvertErrorWrap, name, value, appdef.DataKind_bytes.TrimString(), err)
 			return
 		}
 		row.PutBytes(name, bytes)
@@ -725,12 +725,12 @@ func (row *rowType) PutChars(name string, value string) {
 	case appdef.DataKind_QName:
 		qName, err := appdef.ParseQName(value)
 		if err != nil {
-			row.collectErrorf(errFieldConvertErrorWrap, name, value, appdef.DataKind_QName.ToString(), err)
+			row.collectErrorf(errFieldConvertErrorWrap, name, value, appdef.DataKind_QName.TrimString(), err)
 			return
 		}
 		row.PutQName(name, qName)
 	default:
-		row.collectErrorf(errFieldValueTypeMismatchWrap, appdef.DataKind_string.ToString(), k, name, ErrWrongFieldType)
+		row.collectErrorf(errFieldValueTypeMismatchWrap, appdef.DataKind_string.TrimString(), k, name, ErrWrongFieldType)
 	}
 }
 

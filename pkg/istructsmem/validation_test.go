@@ -605,6 +605,7 @@ func Test_ValidCUD(t *testing.T) {
 		require.NoError(err)
 		err = cfg.validators.validCUD(&cud, false)
 		require.ErrorIs(err, ErrUnexpectedDefKind)
+		require.ErrorContains(err, "Object")
 	})
 
 	t.Run("test storage ID allow / disable in CUD.Create", func(t *testing.T) {
@@ -768,6 +769,7 @@ func Test_VerifiedFields(t *testing.T) {
 
 			_, err := row.Build()
 			require.ErrorIs(err, ErrInvalidVerificationKind)
+			require.ErrorContains(err, "Phone")
 		})
 
 		t.Run("error if wrong verified entity in token", func(t *testing.T) {

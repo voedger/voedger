@@ -7,11 +7,14 @@ package vvm
 import (
 	"context"
 	"net/url"
+	"runtime/debug"
 	"time"
 
 	ibus "github.com/untillpro/airs-ibus"
 	router "github.com/untillpro/airs-router2"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -19,12 +22,10 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/itokens"
-	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/pipeline"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/state"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
 )
 
@@ -48,16 +49,14 @@ type BlobAppStorage istorage.IAppStorage
 type BlobberAppStruct istructs.IAppStructs
 type CommandProcessorsChannelGroupIdxType int
 type QueryProcessorsChannelGroupIdxType int
-type CommandProcessorsAmountType int
 type MaxPrepareQueriesType int
 type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx int) iprocbus.ServiceChannel
 type AppStorageFactory func(appQName istructs.AppQName, appStorage istorage.IAppStorage) istorage.IAppStorage
 type StorageCacheSizeType int
 type VVMApps []istructs.AppQName
 type QueryProcessorsCount int
-type CommandProcessorsCount int
 type BusTimeout time.Duration
-type FederationURLType func() *url.URL
+type FederationURL func() *url.URL
 type VVMIdxType int
 type VVMPortType int
 type ProcessorChannelType int
@@ -72,8 +71,6 @@ type VVMPortSource struct {
 	getter func() VVMPortType
 }
 type IAppStorageUncachingProviderFactory func() (provider istorage.IAppStorageProvider)
-type EPKey string
-type EKey interface{}
 
 type PostDocFieldType struct {
 	Kind              appdef.DataKind
@@ -86,68 +83,22 @@ type PostDocDesc struct {
 	IsSingleton bool
 }
 
-type VVMAppBuilder func(vvmCfg *VVMConfig, vvmAPI VVMAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep IStandardExtensionPoints)
-type VVMAppsBuilder map[istructs.AppQName][]VVMAppBuilder
+// type VVMAppBuilder func(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep IStandardExtensionPoints)
+type VVMAppsBuilder map[istructs.AppQName][]apps.AppBuilder
 
 type VVM struct {
 	ServicePipeline
-	VVMAPI
+	apps.APIs
 	VVMApps
-	AppsExtensionPoints map[istructs.AppQName]IStandardExtensionPoints
+	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 }
 
-type VVMAPI struct {
-	itokens.ITokens
-	istructs.IAppStructsProvider
-	istructsmem.AppConfigsType
-	istorage.IAppStorageProvider
-	payloads.IAppTokensFactory
-	FederationURL FederationURLType
-}
-
-type AppsExtensionPoints map[istructs.AppQName]IStandardExtensionPoints
-
-type IStandardExtensionPoints interface {
-	EPWSTemplates() IEPWSTemplates
-	EPJournalIndices() IEPJournalIndices
-	EPJournalPredicates() IEPJournalPredicates
-	ExtensionPoint(epKey EPKey) IExtensionPoint
-}
-
-type NamedExtension struct {
-	key   EKey
-	value interface{}
-}
-
-// val could be map[interface{}]interface{} or IExtensionPoint
-type implIExtensionPoint struct {
-	key   EKey
-	exts  []interface{} // element could be any or NamedExtension or IExtensionPoint
-	value interface{}
-}
-
-type IEPWSTemplates IExtensionPoint
-type IEPJournalIndices IExtensionPoint
-type IEPJournalPredicates IExtensionPoint
-
-type IExtensionPoint interface {
-	// optional value is never set or set once. Otherwise -> panic
-	ExtensionPoint(eKey EKey, value ...interface{}) IExtensionPoint
-	AddNamed(eKey EKey, value interface{})
-	Add(value interface{})
-	Find(eKey EKey) (val interface{}, ok bool)
-	Iterate(callback func(eKey EKey, value interface{}))
-	Value() interface{}
-}
-
-type standardExtensionPointsImpl struct {
-	rootExtensionPoint *implIExtensionPoint
-}
+type AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 
 type VVMConfig struct {
 	VVMAppsBuilder             VVMAppsBuilder // is a map
-	TimeFunc                   func() time.Time
+	TimeFunc                   coreutils.TimeFunc
 	RouterWriteTimeout         int
 	RouterReadTimeout          int
 	RouterConnectionsLimit     int
@@ -162,7 +113,7 @@ type VVMConfig struct {
 	BlobberServiceChannels     router.BlobberServiceChannels
 	BLOBMaxSize                router.BLOBMaxSizeType
 	Name                       commandprocessor.VVMName
-	NumCommandProcessors       CommandProcessorsCount
+	NumCommandProcessors       coreutils.CommandProcessorsCount
 	NumQueryProcessors         QueryProcessorsCount
 	MaxPrepareQueries          MaxPrepareQueriesType
 	StorageCacheSize           StorageCacheSizeType
@@ -174,6 +125,7 @@ type VVMConfig struct {
 	// test and FederationURL contains port -> the port will be relaced with the actual VVMPort
 	FederationURL       *url.URL
 	ActualizerStateOpts []state.ActualizerStateOptFunc
+	BuildInfo           *debug.BuildInfo
 }
 
 type resultSenderErrorFirst struct {

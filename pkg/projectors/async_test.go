@@ -734,26 +734,15 @@ Before:
     /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:869: FlushesTotal: 1999999
 
 
-After, 1s:
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:845: Initialized in 986.296284ms
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:855: Started in 254.053µs
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:880: Actualized 400000 events in 1.098094955s
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:894: Stopped in 299.727µs
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:895: RPS: 364267.22
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:898: PutBatch: 201
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:899: Batch Per Second: 183.04
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:903: FlushesTotal: 200
-
-
-After, 100ms:
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:842: Initialized in 1.068562738s
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:852: Started in 173.071µs
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:877: Actualized 400000 events in 910.903971ms
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:891: Stopped in 319.802µs
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:892: RPS: 439124.22
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:895: PutBatch: 1575
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:896: Batch Per Second: 1729.05
-    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:900: FlushesTotal: 1574
+After:
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:849: Initialized in 1.010688701s
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:859: Started in 1.129661ms
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:884: Actualized 400000 events in 2.070089932s
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:903: Stopped in 518.795µs
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:904: RPS: 193228.32
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:907: PutBatch: 1
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:908: Batch Per Second: 0.48
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:912: FlushesTotal: 200
 
 */
 
@@ -912,6 +901,16 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 	t.Logf("FlushesTotal: %d", flushesTotal)
 }
 
+/*
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1004: Initialized in 1.959437968s
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1014: Started in 504.606µs
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1039: Actualized 800000 events in 2.052865863s
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1058: Stopped in 339.307µs
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1059: RPS: 389699.11
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1062: PutBatch: 1
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1063: Batch Per Second: 0.49
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1067: FlushesTotal: 400
+*/
 func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	t.Skip()
 	require := require.New(t)
@@ -920,7 +919,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	projectorFilter := appdef.NewQName("pkg", "fake")
 	const totalPartitions = 40
 	const projectorsPerPartition = 5
-	const eventsPerPartition = 10000
+	const eventsPerPartition = 20000
 
 	app := appStructsCached(
 		func(appDef appdef.IAppDefBuilder) {
@@ -970,15 +969,16 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 				metrics := simpleMetrics{}
 
 				conf := AsyncActualizerConf{
-					Ctx:           withCancel,
-					Partition:     pn,
-					AppStructs:    func() istructs.IAppStructs { return app },
-					IntentsLimit:  10,
-					BundlesLimit:  10,
-					FlushInterval: 1000 * time.Millisecond,
-					Broker:        broker,
-					Metrics:       &metrics,
-					LogError:      func(args ...interface{}) {},
+					Ctx:                   withCancel,
+					Partition:             pn,
+					AppStructs:            func() istructs.IAppStructs { return app },
+					IntentsLimit:          10,
+					BundlesLimit:          10,
+					FlushInterval:         1000 * time.Millisecond,
+					Broker:                broker,
+					Metrics:               &metrics,
+					LogError:              func(args ...interface{}) {},
+					FlushPositionInverval: 10 * time.Second,
 				}
 
 				projectorFactory := func(partition istructs.PartitionID) istructs.Projector {

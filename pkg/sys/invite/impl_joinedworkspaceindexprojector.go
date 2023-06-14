@@ -8,7 +8,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 )
 
 func ProvideSyncProjectorJoinedWorkspaceIndexFactory() istructs.ProjectorFactory {
@@ -23,7 +22,7 @@ func ProvideSyncProjectorJoinedWorkspaceIndexFactory() istructs.ProjectorFactory
 
 var joinedWorkspaceIndexProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return event.CUDs(func(rec istructs.ICUDRow) (err error) {
-		if rec.QName() != sysshared.QNameCDocJoinedWorkspace {
+		if rec.QName() != QNameCDocJoinedWorkspace {
 			return
 		}
 

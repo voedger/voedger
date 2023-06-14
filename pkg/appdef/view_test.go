@@ -26,18 +26,18 @@ func TestAddView(t *testing.T) {
 	require.Equal(2, v.ContainerCount()) // key + value
 
 	key := v.Key()
-	require.Equal(v.ContainerDef(SystemContainer_ViewKey), key)
+	require.Equal(v.Container(SystemContainer_ViewKey).Def(), key)
 	require.Equal(ViewKeyDefName(viewName), key.QName())
 	require.Equal(DefKind_ViewRecord_Key, key.Kind())
 	require.Equal(2, key.ContainerCount()) // pk + cc
 
 	pk := key.PartKey()
-	require.Equal(key.ContainerDef(SystemContainer_ViewPartitionKey), pk)
+	require.Equal(key.Container(SystemContainer_ViewPartitionKey).Def(), pk)
 	require.Equal(ViewPartitionKeyDefName(viewName), pk.QName())
 	require.Equal(DefKind_ViewRecord_PartitionKey, pk.Kind())
 
 	cc := key.ClustCols()
-	require.Equal(key.ContainerDef(SystemContainer_ViewClusteringCols), cc)
+	require.Equal(key.Container(SystemContainer_ViewClusteringCols).Def(), cc)
 	require.Equal(ViewClusteringColumnsDefName(viewName), cc.QName())
 	require.Equal(DefKind_ViewRecord_ClusteringColumns, cc.Kind())
 
@@ -196,5 +196,6 @@ func TestViewValidate(t *testing.T) {
 		v.AddClustColumn("cc2", DataKind_int64)
 		_, err := app.Build()
 		require.ErrorIs(err, ErrInvalidDataKind)
+		require.ErrorContains(err, "cc1")
 	})
 }

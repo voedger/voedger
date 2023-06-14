@@ -1,0 +1,33 @@
+/*
+ * Copyright (c) 2020-present unTill Pro, Ltd.
+ * @author Denis Gribanov
+ */
+
+package apps
+
+import (
+	"runtime/debug"
+
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/itokens"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	coreutils "github.com/voedger/voedger/pkg/utils"
+)
+
+type APIs struct {
+	itokens.ITokens
+	istructs.IAppStructsProvider
+	istructsmem.AppConfigsType
+	istorage.IAppStorageProvider
+	payloads.IAppTokensFactory
+	coreutils.IFederation
+	coreutils.TimeFunc
+	NumCommandProcessors coreutils.CommandProcessorsCount
+	*debug.BuildInfo
+}
+
+type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint)

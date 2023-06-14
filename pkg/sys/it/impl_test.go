@@ -13,10 +13,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -35,7 +37,7 @@ func (e *greeterRR) AsString(name string) string {
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	cfg := it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app1, func(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
+		it.WithApp(istructs.AppQName_test1_app1, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 			cfg.Resources.Add(istructsmem.NewQueryFunction(
 				appdef.NewQName(appdef.SysPackage, "Greeter"),
 				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
@@ -50,7 +52,8 @@ func TestBasicUsage(t *testing.T) {
 			))
 
 			// need to read cdoc.sys.Subject on auth
-			sys.Provide(vvmCfg.TimeFunc, cfg, appDefBuilder, vvmAPI, smtp.Cfg{}, sep, nil, vvmCfg.NumCommandProcessors)
+			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+				apis.NumCommandProcessors, apis.BuildInfo)
 		}),
 	)
 	vit := it.NewVIT(t, &cfg)
@@ -95,9 +98,9 @@ func checkCDocsWSDesc(vvm *vvm.VVM, require *require.Assertions) {
 			as, err := vvm.IAppStructsProvider.AppStructs(appQName)
 			require.NoError(err)
 			appWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
-			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, sysshared.QNameCDocWorkspaceDescriptor)
+			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, authnz.QNameCDocWorkspaceDescriptor)
 			require.NoError(err)
-			require.Equal(sysshared.QNameCDocWorkspaceDescriptor, existingCDocWSDesc.QName())
+			require.Equal(authnz.QNameCDocWorkspaceDescriptor, existingCDocWSDesc.QName())
 		}
 	}
 }
@@ -179,6 +182,14 @@ func TestUtilFuncs(t *testing.T) {
 	t.Run("func GRCount", func(t *testing.T) {
 		body := `{"args": {},"elements":[{"fields":["NumGoroutines"]}]}`
 		resp := vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.GRCount", body)
+		resp.Println()
+	})
+
+	t.Run("func Modules", func(t *testing.T) {
+		// should normally return nothing because there is no dpes information in tests
+		// returns actual deps if the Voedger is used in some main() and built using `go build`
+		body := `{"args": {},"elements":[{"fields":["Modules"]}]}`
+		resp := vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Modules", body)
 		resp.Println()
 	})
 }

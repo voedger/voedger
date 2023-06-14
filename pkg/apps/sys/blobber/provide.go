@@ -6,14 +6,16 @@ package blobberapp
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/smtp"
-	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func Provide(smtpCfg smtp.Cfg) vvm.VVMAppBuilder {
-	return func(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
-		sys.Provide(vvmCfg.TimeFunc, cfg, appDefBuilder, vvmAPI, smtpCfg, sep, nil, vvmCfg.NumCommandProcessors) // need to generate AppWorkspaces only
+func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
+	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+		sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+			apis.NumCommandProcessors, apis.BuildInfo) // need to generate AppWorkspaces only
 	}
 }

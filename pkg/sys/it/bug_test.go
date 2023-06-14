@@ -6,12 +6,16 @@ package sys_it
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
+	"runtime/debug"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
@@ -19,7 +23,6 @@ import (
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
-	"github.com/voedger/voedger/pkg/vvm"
 )
 
 type rr struct {
@@ -79,14 +82,26 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 	// ожидаем, что никаких посторонних ошибок нет: ничего не повисло, queryprocessor отдал управление, роутер не пытается писать в закрытую коннекцию и т.п.
 }
 
+func TestXxx(t *testing.T) {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		fmt.Println("No build info")
+		return
+	}
+	for _, mod := range info.Deps {
+		fmt.Printf("path: %s version: %s\n", mod.Path, mod.Version)
+	}
+}
+
 func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 	vitCfg := it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app1, func(vvmCfg *vvm.VVMConfig, vvmAPI vvm.VVMAPI, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
+		it.WithApp(istructs.AppQName_test1_app1, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 
-			sys.Provide(vvmCfg.TimeFunc, cfg, adf, vvmAPI, smtp.Cfg{}, sep, nil, vvmCfg.NumCommandProcessors)
+			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+				apis.NumCommandProcessors, apis.BuildInfo)
 
 			cdocQName := appdef.NewQName("test", "cdoc")
-			adf.AddCDoc(cdocQName)
+			appDefBuilder.AddCDoc(cdocQName)
 
 			cmdQName := appdef.NewQName(appdef.SysPackage, "testCmd")
 			cmd2CUDs := istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName,

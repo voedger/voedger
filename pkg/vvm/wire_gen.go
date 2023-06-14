@@ -11,6 +11,8 @@ import (
 	"github.com/untillpro/airs-ibus"
 	"github.com/untillpro/airs-router2"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
@@ -37,7 +39,6 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/collection"
 	"github.com/voedger/voedger/pkg/sys/invite"
-	"github.com/voedger/voedger/pkg/sys/shared"
 	"github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
@@ -58,14 +59,14 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	serviceChannelFactory := provideServiceChannelFactory(vvmConfig, iProcBus)
 	commandChannelFactory := provideCommandChannelFactory(serviceChannelFactory)
 	appConfigsType := provideAppConfigs(vvmConfig)
-	v2 := vvmConfig.TimeFunc
-	bucketsFactoryType := provideBucketsFactory(v2)
+	timeFunc := vvmConfig.TimeFunc
+	bucketsFactoryType := provideBucketsFactory(timeFunc)
 	iSecretReader := provideSecretReader()
 	secretKeyType, err := provideSecretKeyJWT(iSecretReader)
 	if err != nil {
 		return nil, nil, err
 	}
-	iTokens := itokensjwt.ProvideITokens(secretKeyType, v2)
+	iTokens := itokensjwt.ProvideITokens(secretKeyType, timeFunc)
 	iAppTokensFactory := payloads.ProvideIAppTokensFactory(iTokens)
 	storageCacheSizeType := vvmConfig.StorageCacheSize
 	iMetrics := imetrics.Provide()
@@ -82,29 +83,32 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	iAppStructsProvider := istructsmem.Provide(appConfigsType, bucketsFactoryType, iAppTokensFactory, iAppStorageProvider)
 	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
 	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
-	commandProcessorsAmountType := provideCommandProcessorsAmount(vvmConfig)
 	vvmPortSource := provideVVMPortSource()
-	federationURLType := provideFederationURL(vvmConfig, vvmPortSource)
-	vvmapi := VVMAPI{
-		ITokens:             iTokens,
-		IAppStructsProvider: iAppStructsProvider,
-		AppConfigsType:      appConfigsType,
-		IAppStorageProvider: iAppStorageProvider,
-		IAppTokensFactory:   iAppTokensFactory,
-		FederationURL:       federationURLType,
+	iFederation := provideIFederation(vvmConfig, vvmPortSource)
+	buildInfo := vvmConfig.BuildInfo
+	apIs := apps.APIs{
+		ITokens:              iTokens,
+		IAppStructsProvider:  iAppStructsProvider,
+		AppConfigsType:       appConfigsType,
+		IAppStorageProvider:  iAppStorageProvider,
+		IAppTokensFactory:    iAppTokensFactory,
+		IFederation:          iFederation,
+		TimeFunc:             timeFunc,
+		NumCommandProcessors: commandProcessorsCount,
+		BuildInfo:            buildInfo,
 	}
-	v3 := provideAppsExtensionPoints(vvmConfig)
-	vvmApps := provideVVMApps(vvmConfig, appConfigsType, vvmapi, v3)
-	iBus := provideIBus(iAppStructsProvider, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsAmountType, vvmApps)
+	v2 := provideAppsExtensionPoints(vvmConfig)
+	vvmApps := provideVVMApps(vvmConfig, appConfigsType, apIs, v2)
+	iBus := provideIBus(iAppStructsProvider, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
 	quotas := vvmConfig.Quotas
-	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, v2)
+	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, timeFunc)
 	maxPrepareQueriesType := vvmConfig.MaxPrepareQueries
 	syncActualizerFactory := projectors.ProvideSyncActualizerFactory()
 	commandprocessorSyncActualizerFactory := provideSyncActualizerFactory(vvmApps, iAppStructsProvider, in10nBroker, maxPrepareQueriesType, syncActualizerFactory, iSecretReader)
-	v4 := provideSubjectGetterFunc()
-	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v4)
+	v3 := provideSubjectGetterFunc()
+	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v3)
 	iAuthorizer := iauthnzimpl.NewDefaultAuthorizer()
-	serviceFactory := commandprocessor.ProvideServiceFactory(iBus, iAppStructsProvider, v2, commandprocessorSyncActualizerFactory, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader)
+	serviceFactory := commandprocessor.ProvideServiceFactory(iBus, iAppStructsProvider, timeFunc, commandprocessorSyncActualizerFactory, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader)
 	operatorCommandProcessors := provideCommandProcessors(commandProcessorsCount, commandChannelFactory, serviceFactory)
 	queryProcessorsCount := vvmConfig.NumQueryProcessors
 	queryChannel := provideQueryChannel(serviceChannelFactory)
@@ -112,8 +116,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	operatorQueryProcessors := provideQueryProcessors(queryProcessorsCount, queryChannel, iBus, iAppStructsProvider, queryprocessorServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iAuthorizer, appConfigsType)
 	asyncActualizerFactory := projectors.ProvideAsyncActualizerFactory()
 	asyncActualizersFactory := provideAsyncActualizersFactory(iAppStructsProvider, in10nBroker, asyncActualizerFactory, iSecretReader)
-	v5 := vvmConfig.ActualizerStateOpts
-	appPartitionFactory := provideAppPartitionFactory(asyncActualizersFactory, v5)
+	v4 := vvmConfig.ActualizerStateOpts
+	appPartitionFactory := provideAppPartitionFactory(asyncActualizersFactory, v4)
 	appServiceFactory := provideAppServiceFactory(appPartitionFactory, commandProcessorsCount)
 	operatorAppServicesFactory := provideOperatorAppServices(appServiceFactory, vvmApps, iAppStructsProvider)
 	vvmPortType := vvmConfig.VVMPort
@@ -132,28 +136,28 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	blobStorage := provideBlobStorage(blobAppStorage, v2)
+	blobStorage := provideBlobStorage(blobAppStorage, timeFunc)
 	routerAppStorage, err := provideRouterAppStorage(iAppStorageProvider)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
 	cache := dbcertcache.ProvideDbCache(routerAppStorage)
-	v6 := provideAppsWSAmounts(vvmApps, iAppStructsProvider)
-	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, v2, blobberServiceChannels, blobMaxSizeType, blobberAppClusterID, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v6)
+	v5 := provideAppsWSAmounts(vvmApps, iAppStructsProvider)
+	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobberAppClusterID, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v5)
 	routerServiceOperator := provideRouterServiceFactory(routerServices)
 	metricsServicePortInitial := vvmConfig.MetricsServicePort
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
 	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
 	metricsServiceOperator := provideMetricsServiceOperator(metricsService)
 	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, routerServiceOperator, metricsServiceOperator)
-	v7 := provideMetricsServicePortGetter(metricsService)
+	v6 := provideMetricsServicePortGetter(metricsService)
 	vvm := &VVM{
 		ServicePipeline:     servicePipeline,
-		VVMAPI:              vvmapi,
+		APIs:                apIs,
 		VVMApps:             vvmApps,
-		AppsExtensionPoints: v3,
-		MetricsServicePort:  v7,
+		AppsExtensionPoints: v2,
+		MetricsServicePort:  v6,
 	}
 	return vvm, func() {
 		cleanup()
@@ -214,7 +218,7 @@ func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 	return func(requestContext context.Context, name string, as istructs.IAppStructs, wsid istructs.WSID) ([]appdef.QName, error) {
 		kb := as.ViewRecords().KeyBuilder(collection.QNameViewCollection)
 		kb.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
-		kb.PutQName(collection.Field_DocQName, sysshared.QNameCDocSubject)
+		kb.PutQName(collection.Field_DocQName, invite.QNameCDocSubject)
 		res := []appdef.QName{}
 		err := as.ViewRecords().Read(requestContext, wsid, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 			record := value.AsRecord(collection.Field_Record)
@@ -236,7 +240,7 @@ func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 	}
 }
 
-func provideBucketsFactory(timeFunc func() time.Time) irates.BucketsFactoryType {
+func provideBucketsFactory(timeFunc coreutils.TimeFunc) irates.BucketsFactoryType {
 	return func() irates.IBuckets {
 		return iratesce.Provide(timeFunc)
 	}
@@ -286,8 +290,8 @@ func provideMetricsServiceOperator(ms metrics.MetricsService) MetricsServiceOper
 }
 
 // TODO: consider vvmIdx
-func provideFederationURL(cfg *VVMConfig, vvmPortSource *VVMPortSource) FederationURLType {
-	return func() *url.URL {
+func provideIFederation(cfg *VVMConfig, vvmPortSource *VVMPortSource) coreutils.IFederation {
+	return coreutils.NewIFederation(func() *url.URL {
 		if cfg.FederationURL != nil {
 			return cfg.FederationURL
 		}
@@ -297,7 +301,7 @@ func provideFederationURL(cfg *VVMConfig, vvmPortSource *VVMPortSource) Federati
 			panic(err)
 		}
 		return resultFU
-	}
+	})
 }
 
 // Metrics service port could be dynamic -> need a func that will return the actual port
@@ -329,25 +333,16 @@ func provideAppConfigs(vvmConfig *VVMConfig) istructsmem.AppConfigsType {
 	return istructsmem.AppConfigsType{}
 }
 
-func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[istructs.AppQName]IStandardExtensionPoints {
-	return vvmConfig.VVMAppsBuilder.PrepareStandardExtensionPoints()
+func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[istructs.AppQName]extensionpoints.IExtensionPoint {
+	return vvmConfig.VVMAppsBuilder.PrepareAppsExtensionPoints()
 }
 
-func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, vvmAPI VVMAPI, seps map[istructs.AppQName]IStandardExtensionPoints) VVMApps {
-	return vvmConfig.VVMAppsBuilder.Build(vvmConfig, cfgs, vvmAPI, seps)
+func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) VVMApps {
+	return vvmConfig.VVMAppsBuilder.Build(cfgs, apis, appsEPs)
 }
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {
 	return vvmConfig.ProvideServiceChannelFactory(procbus)
-}
-
-func provideCommandProcessorsAmount(vvmCfg *VVMConfig) CommandProcessorsAmountType {
-	for _, pc := range vvmCfg.processorsChannels {
-		if pc.ChannelType == ProcessorChannel_Command {
-			return CommandProcessorsAmountType(pc.NumChannels)
-		}
-	}
-	panic("no command processor channel group")
 }
 
 func provideProcessorChannelGroupIdxCommand(vvmCfg *VVMConfig) CommandProcessorsChannelGroupIdxType {
@@ -439,7 +434,7 @@ func provideBlobAppStorage(astp istorage.IAppStorageProvider) (BlobAppStorage, e
 	return astp.AppStorage(istructs.AppQName_sys_blobber)
 }
 
-func provideBlobStorage(bas BlobAppStorage, nowFunc func() time.Time) BlobStorage {
+func provideBlobStorage(bas BlobAppStorage, nowFunc coreutils.TimeFunc) BlobStorage {
 	return iblobstoragestg.Provide(bas, nowFunc)
 }
 
@@ -449,7 +444,7 @@ func provideRouterAppStorage(astp istorage.IAppStorageProvider) (dbcertcache.Rou
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
 func provideRouterServices(vvmCtx context.Context, rp router2.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
-	nowFunc func() time.Time, bsc router2.BlobberServiceChannels, bms router2.BLOBMaxSizeType, blobberClusterAppID BlobberAppClusterID, blobStorage BlobStorage,
+	nowFunc coreutils.TimeFunc, bsc router2.BlobberServiceChannels, bms router2.BLOBMaxSizeType, blobberClusterAppID BlobberAppClusterID, blobStorage BlobStorage,
 	routerAppStorage dbcertcache.RouterAppStorage, autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, appsWSAmounts map[istructs.AppQName]istructs.AppWSAmount) RouterServices {
 	bp := &router2.BlobberParams{
 		ClusterAppBlobberID:    uint32(blobberClusterAppID),
@@ -501,7 +496,7 @@ func provideQueryProcessors(qpCount QueryProcessorsCount, qc QueryChannel, bus i
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
 
-func provideCommandProcessors(cpCount CommandProcessorsCount, ccf CommandChannelFactory, cpFactory commandprocessor.ServiceFactory) OperatorCommandProcessors {
+func provideCommandProcessors(cpCount coreutils.CommandProcessorsCount, ccf CommandChannelFactory, cpFactory commandprocessor.ServiceFactory) OperatorCommandProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, cpCount)
 	for i := 0; i < int(cpCount); i++ {
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(cpFactory(ccf(i), istructs.PartitionID(i))))
@@ -548,7 +543,7 @@ func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.Actual
 	}
 }
 
-func provideAppServiceFactory(apf AppPartitionFactory, cpCount CommandProcessorsCount) AppServiceFactory {
+func provideAppServiceFactory(apf AppPartitionFactory, cpCount coreutils.CommandProcessorsCount) AppServiceFactory {
 	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories) pipeline.ISyncOperator {
 		forks := make([]pipeline.ForkOperatorOptionFunc, cpCount)
 		for i := 0; i < int(cpCount); i++ {

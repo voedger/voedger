@@ -13,7 +13,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func readPlog(ctx context.Context, WSID istructs.WSID, numCommandProcessors int, offset istructs.Offset, count int, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
+func readPlog(ctx context.Context, WSID istructs.WSID, numCommandProcessors coreutils.CommandProcessorsCount, offset istructs.Offset, count int, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
 	if !f.acceptAll {
 		for field := range f.fields {
 			if !plogDef[field] {
@@ -87,6 +87,6 @@ func readPlog(ctx context.Context, WSID istructs.WSID, numCommandProcessors int,
 	})
 }
 
-func partitionID(wsid istructs.WSID, numCommandProcessors int) istructs.PartitionID {
-	return istructs.PartitionID(int(wsid) % numCommandProcessors)
+func partitionID(wsid istructs.WSID, numCommandProcessors coreutils.CommandProcessorsCount) istructs.PartitionID {
+	return istructs.PartitionID(int(wsid) % int(numCommandProcessors))
 }

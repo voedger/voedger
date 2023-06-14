@@ -6,29 +6,26 @@ package invite
 
 import (
 	"fmt"
-	"net/url"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func ProvideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
+func ProvideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name:         qNameAPApplyLeaveWorkspace,
 			EventsFilter: []appdef.QName{qNameCmdInitiateLeaveWorkspace},
-			Func:         applyLeaveWorkspace(timeFunc, federationURL, appQName, tokens),
+			Func:         applyLeaveWorkspace(timeFunc, federation, appQName, tokens),
 		}
 	}
 }
 
-func applyLeaveWorkspace(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) (err error) {
 			//TODO additional check that CUD only once?
@@ -46,7 +43,7 @@ func applyLeaveWorkspace(timeFunc func() time.Time, federationURL func() *url.UR
 				return
 			}
 
-			skbCDocSubject, err := s.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocSubject)
+			skbCDocSubject, err := s.KeyBuilder(state.RecordsStorage, QNameCDocSubject)
 			if err != nil {
 				return
 			}
@@ -63,7 +60,7 @@ func applyLeaveWorkspace(timeFunc func() time.Time, federationURL func() *url.UR
 
 			//Update subject
 			_, err = coreutils.FederationFunc(
-				federationURL(),
+				federation.URL(),
 				fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID)),
 				coreutils.WithAuthorizeBy(token))
@@ -73,7 +70,7 @@ func applyLeaveWorkspace(timeFunc func() time.Time, federationURL func() *url.UR
 
 			//Deactivate joined workspace
 			_, err = coreutils.FederationFunc(
-				federationURL(),
+				federation.URL(),
 				fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 				fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
 				coreutils.WithAuthorizeBy(token))
@@ -83,7 +80,7 @@ func applyLeaveWorkspace(timeFunc func() time.Time, federationURL func() *url.UR
 
 			//Update invite
 			_, err = coreutils.FederationFunc(
-				federationURL(),
+				federation.URL(),
 				fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, rec.ID(), State_Left, timeFunc().UnixMilli()),
 				coreutils.WithAuthorizeBy(token))
