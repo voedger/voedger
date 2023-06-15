@@ -72,7 +72,7 @@ ssh $SSH_OPTIONS $SSH_USER@$src_ip "tar -czvf ~/$snapshot.tar.gz -C $snapshot_di
 scp $SSH_OPTIONS $SSH_USER@$src_ip:~/$snapshot.tar.gz ~
 
 # Extract the snapshot on the destination host
-mkdir -p $snapshot_dir && tar -xzvf $snapshot.tar.gz -C $snapshot_dir
+sudo mkdir -p $snapshot_dir && tar -xzvf $snapshot.tar.gz -C $snapshot_dir
 
 # Move the extracted snapshot to the appropriate Prometheus directory
 mv $snapshot_dir/$snapshot /prometheus
