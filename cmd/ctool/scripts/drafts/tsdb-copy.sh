@@ -18,7 +18,7 @@ set -euo pipefail
 
 # Check if both source and destination IP addresses are provided
 if [[ "$#" -ne 2 ]]; then
-  echo "Usage: ./prometheus-tsdb-cp.sh <src_ip> <dst_ip>"
+  echo "Usage: ./tsdb-copy.sh <src_ip> <dst_ip>"
   exit 1
 fi
 
@@ -65,7 +65,7 @@ fi
 #snapshot_basename=$(basename "$latest_snapshot")
 
 # Compress the snapshot on the source host
-ssh $SSH_OPTIONS $SSH_USER@$src_ip "tar -czvf $snapshot_dir/$snapshot.tar.gz -C $snapshot_dir $snapshot; echo \$?"
+ssh $SSH_OPTIONS $SSH_USER@$src_ip "sudo tar -czvf $snapshot_dir/$snapshot.tar.gz -C $snapshot_dir $snapshot; echo \$?"
 
 # Copy the compressed snapshot to the destination host
 scp $SSH_OPTIONS $SSH_USER@$src_ip:$snapshot_dir/$snapshot.tar.gz $SSH_USER@$dst_ip:~
