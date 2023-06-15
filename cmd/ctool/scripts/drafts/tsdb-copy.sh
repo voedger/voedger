@@ -65,19 +65,21 @@ fi
 #snapshot_basename=$(basename "$latest_snapshot")
 
 # Compress the snapshot on the source host
-ssh $SSH_USER@$src_ip "tar -czvf $snapshot_dir/$snapshot.tar.gz -C $snapshot_dir $snapshot; echo \$?"
+ssh $SSH_OPTIONS $SSH_USER@$src_ip "tar -czvf $snapshot_dir/$snapshot.tar.gz -C $snapshot_dir $snapshot; echo \$?"
 
 # Copy the compressed snapshot to the destination host
-scp $SSH_USER@$src_ip:$snapshot_dir/$snapshot.tar.gz $SSH_USER@$dst_ip:~
+scp $SSH_OPTIONS $SSH_USER@$src_ip:$snapshot_dir/$snapshot.tar.gz $SSH_USER@$dst_ip:~
 
 # Extract the snapshot on the destination host
-ssh $SSH_USER@$dst_ip "mkdir -p $snapshot_dir && tar -xzvf $snapshot.tar.gz -C $snapshot_dir; echo \$?"
+ssh $SSH_OPTIONS $SSH_USER@$dst_ip "mkdir -p $snapshot_dir && tar -xzvf $snapshot.tar.gz -C $snapshot_dir; echo \$?"
 
 # Move the extracted snapshot to the appropriate Prometheus directory
-ssh $SSH_USER@$dst_ip "mv $snapshot_dir/$snapshot /prometheus; echo \$?"
+ssh $SSH_OPTIONS $SSH_USER@$dst_ip "mv $snapshot_dir/$snapshot /prometheus; echo \$?"
+ssh $SSH_OPTIONS $SSH_USER@$dst_ip "sudo chown -R 65534:65534 /prometheus"
+
 
 # Cleanup: remove the snapshot files from both hosts
-ssh $SSH_USER@$src_ip "rm -rf $snapshot_dir/$snapshot.tar.gz"
-ssh $SSH_USER@$dst_ip "rm -f ~/$snapshot.tar.gz"
+ssh $SSH_OPTIONS $SSH_USER@$src_ip "rm -rf $snapshot_dir/$snapshot.tar.gz"
+ssh $SSH_OPTIONS $SSH_USER@$dst_ip "rm -f ~/$snapshot.tar.gz"
 
 echo "Prometheus base copied successfully!"
