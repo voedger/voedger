@@ -25,7 +25,7 @@ script="\
 			curl \
 			gnupg \
 		lsb-release \ 
-                yq jq -y;
+		yq jq -y;
 
 	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
 		sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg;
