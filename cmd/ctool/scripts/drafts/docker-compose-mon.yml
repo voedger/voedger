@@ -7,6 +7,7 @@ services:
       - ~/prometheus:/etc/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.enable-admin-api'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
     restart: unless-stopped
@@ -121,6 +122,7 @@ services:
       - ~/prometheus:/etc/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.enable-admin-api'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
     restart: unless-stopped
