@@ -75,7 +75,7 @@ scp $SSH_OPTIONS $SSH_USER@$src_ip:~/$snapshot.tar.gz ~
 sudo mkdir -p $snapshot_dir && sudo tar -xzvf ~/$snapshot.tar.gz -C $snapshot_dir
 
 # Move the extracted snapshot to the appropriate Prometheus directory
-mv $snapshot_dir/$snapshot /prometheus
+sudo mv $snapshot_dir/$snapshot /prometheus
 sudo chown -R 65534:65534 /prometheus
 
 
