@@ -8,11 +8,11 @@
 # By default, Prometheus stores its time series database (TSDB) 
 # data and snapshots in a subdirectory named data within the 
 # directory specified by --storage.tsdb.path. Therefore, 
-# the snapshots are stored in the data/snapshots directory 
+# the snapshots are stored in the snapshots directory 
 # relative to the --storage.tsdb.path.
-# In compose flie Mon stack use /prometheus folder on host and 
+# In compose file Mon stack use /prometheus folder on host and 
 # map this folder to prometheus image. So, snapshot will be store 
-# in /prometheus/data/snapshots
+# in /prometheus/snapshots
 
 set -euo pipefail
 
