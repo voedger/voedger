@@ -68,7 +68,7 @@ fi
 ssh $SSH_OPTIONS $SSH_USER@$src_ip "tar -czvf ~/$snapshot.tar.gz -C $snapshot_dir $snapshot; echo \$?"
 
 # Copy the compressed snapshot to the destination host
-scp $SSH_USER@$src_ip:~/$snapshot.tar.gz $SSH_USER@$dst_ip:~
+scp $SSH_OPTIONS $SSH_USER@$src_ip:~/$snapshot.tar.gz $SSH_USER@$dst_ip:~
 
 # Extract the snapshot on the destination host
 ssh $SSH_OPTIONS $SSH_USER@$dst_ip "mkdir -p $snapshot_dir && tar -xzvf $snapshot.tar.gz -C $snapshot_dir; echo \$?"
