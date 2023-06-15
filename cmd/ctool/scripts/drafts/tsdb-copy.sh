@@ -17,7 +17,7 @@
 set -euo pipefail
 
 # Check if both source and destination IP addresses are provided
-if [[ 0 -ne 2 ]]; then
+if [[ "$#" -ne 2 ]]; then
   echo "Usage: ./prometheus-tsdb-cp.sh <src_ip> <dst_ip>"
   exit 1
 fi
