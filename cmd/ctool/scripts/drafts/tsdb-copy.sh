@@ -65,7 +65,8 @@ fi
 #snapshot_basename=$(basename "$latest_snapshot")
 
 # Compress the snapshot on the source host
-ssh $SSH_OPTIONS $SSH_USER@$src_ip "tar -czvf ~/$snapshot.tar.gz -C $snapshot_dir $snapshot; echo \$?"
+# -- ssh $SSH_OPTIONS $SSH_USER@$src_ip "tar -czvf ~/$snapshot.tar.gz -C $snapshot_dir $snapshot; echo \$?"
+ssh $SSH_OPTIONS $SSH_USER@$src_ip "tar -czvf - -C $snapshot_dir $snapshot | ssh $SSH_OPTIONS $SSH_USER@$dst_ip cat > ~/$snapshot.tar.gz; echo \$?"
 
 # Copy the compressed snapshot to the destination host
 scp $SSH_OPTIONS $SSH_USER@$src_ip:~/$snapshot.tar.gz $SSH_USER@$dst_ip:~
