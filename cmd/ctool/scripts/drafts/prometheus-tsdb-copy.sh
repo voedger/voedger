@@ -19,7 +19,7 @@ set -euo pipefail
 
 # Check if both source and destination IP addresses are provided
 if [[ "$#" -ne 2 ]]; then
-  echo "Usage: ./tsdb-copy.sh <src_ip> <dst_ip>"
+  echo "Usage: ./prometheus-tsdb-copy.sh <src_ip> <dst_ip>"
   exit 1
 fi
 
@@ -33,17 +33,11 @@ dst_ip=$2
 # Define the snapshot directory
 snapshot_dir="/prometheus/snapshots"
 
-# Create the snapshot directory if it doesn't exist
-# mkdir -p "$snapshot_dir"
-
 # Generate a timestamp for the snapshot
 timestamp=$(date +%Y%m%d%H%M%S)
 
 # Generate the snapshot file name
 snapshot_file="prometheus_snapshot_$timestamp.tar.gz"
-
-# get prometheus container id from src host 
-# container_id=$(docker ps -q --filter "name=MonDockerStack_prometheus")
 
 snapshot=$(curl -X POST http://$src_ip:9090/api/v1/admin/tsdb/snapshot | jq -r '.data.name') 
 # Make the snapshot on source host
