@@ -398,7 +398,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	}
 	//Initial events in pLog
 	f.fill(1001)
-	f.fill(1002)
+	topOffset := f.fill(1002)
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
@@ -427,51 +427,21 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 
 	_ = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
 
-	time.Sleep(100 * time.Millisecond)
+	// Wait for the projectors
+	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
+		time.Sleep(time.Nanosecond)
+	}
 
 	//New events in pLog
-	offset := f.fill(1001)
 	f.fill(1001)
+	topOffset = f.fill(1001)
 
 	//Notify the projectors
 	broker.Update(in10n.ProjectionKey{
 		App:        istructs.AppQName_test1_app1,
 		Projection: PlogQName,
 		WS:         istructs.WSID(partitionNr),
-	}, offset)
-
-	//New events in pLog
-	f.fill(1001)
-	f.fill(1002)
-
-	//Notify the projectors
-	broker.Update(in10n.ProjectionKey{
-		App:        istructs.AppQName_test1_app1,
-		Projection: PlogQName,
-		WS:         istructs.WSID(partitionNr),
-	}, offset)
-
-	//New events in pLog
-	f.fill(1001)
-	f.fill(1001)
-
-	//Notify the projectors
-	broker.Update(in10n.ProjectionKey{
-		App:        istructs.AppQName_test1_app1,
-		Projection: PlogQName,
-		WS:         istructs.WSID(partitionNr),
-	}, offset)
-
-	//New events in pLog
-	f.fill(1001)
-	topOffset := f.fill(1001)
-
-	//Notify the projectors
-	broker.Update(in10n.ProjectionKey{
-		App:        istructs.AppQName_test1_app1,
-		Projection: PlogQName,
-		WS:         istructs.WSID(partitionNr),
-	}, offset)
+	}, topOffset)
 
 	// Wait for the projectors
 	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
@@ -483,8 +453,8 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	actualizer.Close()
 
 	// expected projection values
-	require.Equal(int32(8), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(2), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
+	require.Equal(int32(3), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
+	require.Equal(int32(1), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
 }
 
 type pLogFiller struct {

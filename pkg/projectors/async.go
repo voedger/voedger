@@ -156,7 +156,7 @@ func (a *asyncActualizer) keepReading() (err error) {
 			logger.Trace(fmt.Sprintf("%s received n10n: offset %d, last handled: %d", a.name, offset, a.offset))
 		}
 		if a.offset < offset {
-			err = a.readPlogToTheEnd2()
+			err = a.readPlogToTheEnd2(offset)
 			if err != nil {
 				a.conf.LogError(a.name, err)
 				a.readCtx.cancelWithError(err)
@@ -191,9 +191,9 @@ func (a *asyncActualizer) readPlogToTheEnd() (err error) {
 	return a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd, a.handleEvent)
 }
 
-func (a *asyncActualizer) readPlogToTheEnd2() (err error) {
-	for expected := a.offset + 1; expected == a.offset+1; expected++ {
-		if err = a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, expected, 1, a.handleEvent); err != nil {
+func (a *asyncActualizer) readPlogToTheEnd2(tillOffset istructs.Offset) (err error) {
+	for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
+		if err = a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, readOffset, 1, a.handleEvent); err != nil {
 			return
 		}
 	}
