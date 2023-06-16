@@ -6,10 +6,11 @@
 # Copy prometheus database to another host
 #
 # By default, Prometheus stores its time series database (TSDB) 
-# data and snapshots in a subdirectory named data within the 
+# data and snapshots in a subdirectory named within the 
 # directory specified by --storage.tsdb.path. Therefore, 
 # the snapshots are stored in the snapshots directory 
 # relative to the --storage.tsdb.path.
+#
 # In compose file Mon stack use /prometheus folder on host and 
 # map this folder to prometheus image. So, snapshot will be store 
 # in /prometheus/snapshots
@@ -30,7 +31,7 @@ src_ip=$1
 dst_ip=$2
 
 # Define the snapshot directory
-  snapshot_dir="/prometheus/snapshots"
+snapshot_dir="/prometheus/snapshots"
 
 # Create the snapshot directory if it doesn't exist
 # mkdir -p "$snapshot_dir"
@@ -47,29 +48,23 @@ snapshot_file="prometheus_snapshot_$timestamp.tar.gz"
 snapshot=$(curl -X POST http://$src_ip:9090/api/v1/admin/tsdb/snapshot | jq -r '.data.name') 
 # Make the snapshot on source host
 if [ -z $snapshot ]; then
-  echo "Error when take prometheus snapshot."
+  echo "Error make prometheus snapshot."
   exit 1
 else
   echo "Success make prometheus snapshot."
 fi
 
-# Find the latest snapshot directory
-#latest_snapshot=$(ssh $SSH_USER@$src_ip "ls -td $snapshot_dir/* | head -1")
-
-# Check if a snapshot directory was found
-#if [ -z "$latest_snapshot" ]; then
-#  echo "No snapshot directories found in $snapshot_dir on the source host."
-#  exit 1
-#fi
-
-#snapshot_basename=$(basename "$latest_snapshot")
-
 # Compress the snapshot on the source host
-ssh $SSH_OPTIONS $SSH_USER@$src_ip "tar -czvf ~/$snapshot.tar.gz -C $snapshot_dir $snapshot; echo \$?"
+if ssh $SSH_OPTIONS $SSH_USER@$src_ip "tar -czvf ~/$snapshot.tar.gz -C $snapshot_dir $snapshot; echo \$?"; then
+  echo "Success compress prometheus snapshot."
+else
+  echo "Error compress prometheus snapshot."
+  exit 1
+fi
 
 
 # Copy the compressed snapshot to the destination host
-scp $SSH_OPTIONS $SSH_USER@$src_ip:~/$snapshot.tar.gz ~
+scp -3 $SSH_OPTIONS $SSH_USER@$src_ip:~/$snapshot.tar.gz $SSH_USER@$dst_ip:~
 
 # Extract the snapshot on the destination host
 sudo mkdir -p $snapshot_dir && sudo tar -xzvf ~/$snapshot.tar.gz -C $snapshot_dir
@@ -84,3 +79,5 @@ ssh $SSH_OPTIONS $SSH_USER@$src_ip "rm -rf ~/$snapshot.tar.gz"
 rm -f ~/$snapshot.tar.gz
 
 echo "Prometheus base copied successfully!"
+
+exit 0
