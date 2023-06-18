@@ -39,7 +39,7 @@ func getSysPackageAST() *PackageSchemaAST {
 func Test_BasicUsage(t *testing.T) {
 
 	require := require.New(t)
-	mainPkgAST, err := ParsePackageDir("github.com/untillpro/main", fsMain, "example_app/main")
+	mainPkgAST, err := ParsePackageDir("github.com/untillpro/main", fsMain, "example_app/pmain")
 	require.NoError(err)
 
 	airPkgAST, err := ParsePackageDir("github.com/untillpro/airsbp", fsAir, "example_app/airsbp")

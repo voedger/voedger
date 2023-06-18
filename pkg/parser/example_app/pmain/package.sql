@@ -29,7 +29,7 @@ TABLE TablePlan INHERITS CDoc (
     Text1 text DEFAULT "a",
     Int2 int DEFAULT NEXTVAL('sequence'),
     ScreenGroupRef ref(ScreenGroup), 
-    AnyTableRef ref(untill.Articles),
+    AnyTableRef ref,
     FewTablesRef ref(ScreenGroup, TablePlan) NOT NULL,
     CheckedField text CHECK "^[0-9]{8}$", -- Field validated by regexp
     CHECK (ValidateRow(this)), -- Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
