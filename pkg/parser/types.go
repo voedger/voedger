@@ -327,9 +327,10 @@ func (s FunctionStmt) GetName() string { return s.Name }
 
 type CommandStmt struct {
 	Statement
-	Name   string          `parser:"'COMMAND' @Ident"`
-	Params []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
-	With   []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Name    string          `parser:"'COMMAND' @Ident"`
+	Params  []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
+	Returns *DefQName       `parser:"('RETURNS' @@)?"`
+	With    []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 }
 
 func (s CommandStmt) GetName() string { return s.Name }
