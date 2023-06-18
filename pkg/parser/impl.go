@@ -245,6 +245,21 @@ func analyse(c *basicContext) {
 		case *CommandStmt:
 			c.pos = &v.Pos
 			analyzeWithRefs(c, v.With)
+			if v.Returns != nil && !isVoid(*v.Returns) {
+				if getDefDataKind(*v.Returns) == appdef.DataKind_null {
+					tbl, err := lookup[*TableStmt](*v.Returns, c)
+					if err != nil {
+						c.errs = append(c.errs, errorAt(err, c.pos))
+						return
+					}
+					if tbl == nil {
+						resolve(*v.Returns, c, func(f *TypeStmt) error { return nil })
+					}
+
+				} else {
+					c.errs = append(c.errs, errorAt(ErrCommandCanOnlyReturnTypeOrVoid, c.pos))
+				}
+			}
 		case *QueryStmt:
 			c.pos = &v.Pos
 			analyzeWithRefs(c, v.With)
