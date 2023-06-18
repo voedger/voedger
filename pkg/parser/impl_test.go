@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-//go:embed example_app/main/*.sql
+//go:embed example_app/pmain/*.sql
 var fsMain embed.FS
 
 //go:embed example_app/airsbp/*.sql
