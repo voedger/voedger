@@ -123,20 +123,20 @@ WORKSPACE MyWorkspace (
         -- Commands can only be declared in workspaces
         -- Command can return TYPE
         COMMAND Orders(air.Order) RETURNS air.Order;
-
-        -- Command can return Document
-        COMMAND Orders2(air.Order) RETURNS WsTable;
         
+        -- Command can return void (in this case `RETURNS void` may be omitted)
+        COMMAND Orders2(air.Order) RETURNS void;
+
         -- Command with declared Comment, Tags and Rate
-        COMMAND Orders4(Order air.Order, air.PBill) WITH 
+        COMMAND Orders4(air.Order) WITH 
             Comment=PosComment, 
             Tags=[BackofficeTag, PosTag],
             Rate=BackofficeFuncRate1; 
 
         -- Qieries can only be declared in workspaces
-        QUERY Query1 RETURNS text;
-        QUERY _Query1() RETURNS text WITH Comment=PosComment, Tags=[BackofficeTag, PosTag];
-        QUERY Query2(Order air.Order, air.PBill) RETURNS text;
+        QUERY Query1 RETURNS void;
+        QUERY _Query1() RETURNS air.Order WITH Comment=PosComment, Tags=[BackofficeTag, PosTag];
+        QUERY Query2(air.Order) RETURNS air.Order;
     );
 
     -- ACLs

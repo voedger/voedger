@@ -305,10 +305,12 @@ func Test_Undefined(t *testing.T) {
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
 			COMMAND Orders() WITH Tags=[UndefinedTag];
-			QUERY Query1 RETURNS text WITH Rate=UndefinedRate, Comment=xyz.UndefinedComment;
+			QUERY Query1 RETURNS void WITH Rate=UndefinedRate, Comment=xyz.UndefinedComment;
 			PROJECTOR ImProjector ON COMMAND xyz.CreateUPProfile USES sys.HTTPStorage;
 			COMMAND CmdFakeReturn() RETURNS text;
 			COMMAND CmdNoReturn() RETURNS void;
+			COMMAND CmdFakeArg(text);
+			COMMAND CmdVoidArg(void);
 		)
 	)
 	`)
@@ -324,7 +326,8 @@ func Test_Undefined(t *testing.T) {
 		"example.sql:5:4: UndefinedRate undefined",
 		"example.sql:5:4: xyz undefined",
 		"example.sql:6:4: xyz undefined",
-		"example.sql:7:4: command can only return type or void",
+		"example.sql:7:4: only type or void allowed in result",
+		"example.sql:9:4: only type or void allowed in argument",
 	}, "\n"))
 }
 
@@ -337,9 +340,9 @@ func Test_Imports(t *testing.T) {
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
     		COMMAND Orders WITH Tags=[pkg2.SomeTag];
-    		QUERY Query1 RETURNS text WITH Comment=pkg2.SomeComment;
-    		QUERY Query2 RETURNS text WITH Comment=air.SomeComment;
-    		QUERY Query3 RETURNS text WITH Comment=air.SomeComment2; -- air.SomeComment2 undefined
+    		QUERY Query1 RETURNS void WITH Comment=pkg2.SomeComment;
+    		QUERY Query2 RETURNS void WITH Comment=air.SomeComment;
+    		QUERY Query3 RETURNS void WITH Comment=air.SomeComment2; -- air.SomeComment2 undefined
     		PROJECTOR ImProjector ON COMMAND Air.CreateUPProfil USES sys.HTTPStorage; -- Air undefined
 		)
 	)

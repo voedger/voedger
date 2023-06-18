@@ -244,24 +244,37 @@ func analyse(c *basicContext) {
 		switch v := stmt.(type) {
 		case *CommandStmt:
 			c.pos = &v.Pos
-			analyzeWithRefs(c, v.With)
-			if v.Returns != nil && !isVoid(*v.Returns) {
-				if getDefDataKind(*v.Returns) == appdef.DataKind_null {
-					tbl, err := lookup[*TableStmt](*v.Returns, c)
-					if err != nil {
-						c.errs = append(c.errs, errorAt(err, c.pos))
-						return
-					}
-					if tbl == nil {
-						resolve(*v.Returns, c, func(f *TypeStmt) error { return nil })
-					}
-
+			if v.Arg != nil && !isVoid(v.Arg.Package, v.Arg.Name) {
+				if getDefDataKind(v.Arg.Package, v.Arg.Name) == appdef.DataKind_null {
+					resolve(*v.Arg, c, func(f *TypeStmt) error { return nil })
 				} else {
-					c.errs = append(c.errs, errorAt(ErrCommandCanOnlyReturnTypeOrVoid, c.pos))
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForArgument, c.pos))
 				}
 			}
+			if v.Returns != nil && !isVoid(v.Returns.Package, v.Returns.Name) {
+				if getDefDataKind(v.Returns.Package, v.Returns.Name) == appdef.DataKind_null {
+					resolve(*v.Returns, c, func(f *TypeStmt) error { return nil })
+				} else {
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForResult, c.pos))
+				}
+			}
+			analyzeWithRefs(c, v.With)
 		case *QueryStmt:
 			c.pos = &v.Pos
+			if v.Arg != nil && !isVoid(v.Arg.Package, v.Arg.Name) {
+				if getDefDataKind(v.Arg.Package, v.Arg.Name) == appdef.DataKind_null {
+					resolve(*v.Arg, c, func(f *TypeStmt) error { return nil })
+				} else {
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForArgument, c.pos))
+				}
+			}
+			if !isVoid(v.Returns.Package, v.Returns.Name) {
+				if getDefDataKind(v.Returns.Package, v.Returns.Name) == appdef.DataKind_null {
+					resolve(v.Returns, c, func(f *TypeStmt) error { return nil })
+				} else {
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForResult, c.pos))
+				}
+			}
 			analyzeWithRefs(c, v.With)
 		case *ProjectorStmt:
 			c.pos = &v.Pos
@@ -407,6 +420,12 @@ func buildAppDefs(packages map[string]*PackageSchemaAST, builder appdef.IAppDefB
 	if err := buildViews(&ctx); err != nil {
 		return err
 	}
+	if err := buildCommands(&ctx); err != nil {
+		return err
+	}
+	if err := buildQueries(&ctx); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -451,6 +470,56 @@ func buildViews(ctx *buildContext) error {
 						vb.AddValueField(f.Field.Name, datakind, f.Field.NotNull)
 					}
 				}
+			}
+		})
+	}
+	return nil
+}
+
+func buildCommands(ctx *buildContext) error {
+	for _, schema := range ctx.pkgmap {
+		iterateStmt(schema.Ast, func(c *CommandStmt) {
+			ctx.setSchema(schema)
+			qname := appdef.NewQName(ctx.pkg.Ast.Package, c.Name)
+			b := ctx.builder.AddCommand(qname)
+			if c.Arg != nil && !isVoid(c.Arg.Package, c.Arg.Name) {
+				argQname := buildQname(ctx, c.Arg.Package, c.Arg.Name)
+				b.SetArg(argQname)
+			}
+			if c.Returns != nil && !isVoid(c.Returns.Package, c.Returns.Name) {
+				retQname := buildQname(ctx, c.Returns.Package, c.Returns.Name)
+				b.SetResult(retQname)
+			}
+			if c.Engine.WASM {
+				b.SetExtension(c.Name, appdef.ExtensionEngineKind_WASM)
+			} else {
+				b.SetExtension(c.Name, appdef.ExtensionEngineKind_BuiltIn)
+			}
+			// TODO: Unlogged arg?
+		})
+	}
+	return nil
+}
+
+func buildQueries(ctx *buildContext) error {
+	for _, schema := range ctx.pkgmap {
+		iterateStmt(schema.Ast, func(c *QueryStmt) {
+			ctx.setSchema(schema)
+			qname := appdef.NewQName(ctx.pkg.Ast.Package, c.Name)
+			b := ctx.builder.AddQuery(qname)
+			if c.Arg != nil && !isVoid(c.Arg.Package, c.Arg.Name) {
+				argQname := buildQname(ctx, c.Arg.Package, c.Arg.Name)
+				b.SetArg(argQname)
+			}
+			if !isVoid(c.Returns.Package, c.Returns.Name) {
+				retQname := buildQname(ctx, c.Returns.Package, c.Returns.Name)
+				b.SetResult(retQname) // TODO: support arrays?
+			}
+
+			if c.Engine.WASM {
+				b.SetExtension(c.Name, appdef.ExtensionEngineKind_WASM)
+			} else {
+				b.SetExtension(c.Name, appdef.ExtensionEngineKind_BuiltIn)
 			}
 		})
 	}

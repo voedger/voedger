@@ -39,6 +39,9 @@ type INamedStatement interface {
 type IStatementCollection interface {
 	Iterate(callback func(stmt interface{}))
 }
+type IExtensionStatement interface {
+	SetEngineType(EngineType)
+}
 
 type SchemaAST struct {
 	Package    string          `parser:"'SCHEMA' @Ident ';'"`
@@ -122,6 +125,9 @@ func (s *WorkspaceExtEngineStmt) Iterate(callback func(stmt interface{})) {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
 			raw.stmt = extractStatement(*raw)
+			if es, ok := raw.stmt.(IExtensionStatement); ok {
+				es.SetEngineType(s.Engine)
+			}
 		}
 		callback(raw.stmt)
 	}
@@ -137,6 +143,9 @@ func (s *RootExtEngineStmt) Iterate(callback func(stmt interface{})) {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
 			raw.stmt = extractStatement(*raw)
+			if es, ok := raw.stmt.(IExtensionStatement); ok {
+				es.SetEngineType(s.Engine)
+			}
 		}
 		callback(raw.stmt)
 	}
@@ -232,9 +241,11 @@ type ProjectorStmt struct {
 	Triggers []DefQName  `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
 	Use      []DefQName  `parser:"('USES' @@ ('AND' @@)*)?"`
 	Targets  []DefQName  `parser:"('MAKES' @@ ('AND' @@)*)?"`
+	Engine   EngineType  // Initialized with 1st pass
 }
 
-func (s ProjectorStmt) GetName() string { return s.Name }
+func (s *ProjectorStmt) GetName() string            { return s.Name }
+func (s *ProjectorStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type ProjectorOn struct {
 	CommandArgument bool `parser:"@('COMMAND' 'ARGUMENT')"`
@@ -321,19 +332,23 @@ type FunctionStmt struct {
 	Name    string          `parser:"'FUNCTION' @Ident"`
 	Params  []FunctionParam `parser:"'(' @@? (',' @@)* ')'"`
 	Returns TypeQName       `parser:"'RETURNS' @@"`
+	Engine  EngineType      // Initialized with 1st pass
 }
 
-func (s FunctionStmt) GetName() string { return s.Name }
+func (s *FunctionStmt) GetName() string            { return s.Name }
+func (s *FunctionStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type CommandStmt struct {
 	Statement
-	Name    string          `parser:"'COMMAND' @Ident"`
-	Params  []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
-	Returns *DefQName       `parser:"('RETURNS' @@)?"`
-	With    []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Name    string     `parser:"'COMMAND' @Ident"`
+	Arg     *DefQName  `parser:"('(' @@? ')')?"`
+	Returns *DefQName  `parser:"('RETURNS' @@)?"`
+	With    []WithItem `parser:"('WITH' @@ (',' @@)* )?"`
+	Engine  EngineType // Initialized with 1st pass
 }
 
-func (s CommandStmt) GetName() string { return s.Name }
+func (s *CommandStmt) GetName() string            { return s.Name }
+func (s *CommandStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type WithItem struct {
 	Comment *DefQName  `parser:"('Comment' '=' @@)"`
@@ -343,13 +358,15 @@ type WithItem struct {
 
 type QueryStmt struct {
 	Statement
-	Name    string          `parser:"'QUERY' @Ident"`
-	Params  []FunctionParam `parser:"('(' @@? (',' @@)* ')')?"`
-	Returns TypeQName       `parser:"'RETURNS' @@"`
-	With    []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Name    string     `parser:"'QUERY' @Ident"`
+	Arg     *DefQName  `parser:"('(' @@? ')')?"`
+	Returns DefQName   `parser:"'RETURNS' @@"`
+	With    []WithItem `parser:"('WITH' @@ (',' @@)* )?"`
+	Engine  EngineType // Initialized with 1st pass
 }
 
-func (s QueryStmt) GetName() string { return s.Name }
+func (s *QueryStmt) GetName() string            { return s.Name }
+func (s *QueryStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type EngineType struct {
 	WASM    bool `parser:"@'WASM'"`

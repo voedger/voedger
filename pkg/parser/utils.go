@@ -61,7 +61,7 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 	})
 }
 
-func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt](c IStatementCollection, callback func(stmt stmtType)) {
+func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt](c IStatementCollection, callback func(stmt stmtType)) {
 	c.Iterate(func(stmt interface{}) {
 		if s, ok := stmt.(stmtType); ok {
 			callback(s)
@@ -258,9 +258,9 @@ func getTableDefKind(table *TableStmt, ctx *buildContext) (kind appdef.DefKind, 
 	return appdef.DefKind_null, false
 }
 
-func isVoid(t DefQName) bool {
-	if maybeSysPkg(t.Package) {
-		return t.Name == sysVoid
+func isVoid(pkg string, name string) bool {
+	if maybeSysPkg(pkg) {
+		return name == sysVoid
 	}
 	return false
 }
@@ -300,9 +300,9 @@ func getTypeDataKind(t TypeQName) appdef.DataKind {
 	return appdef.DataKind_null
 }
 
-func getDefDataKind(t DefQName) appdef.DataKind {
-	if maybeSysPkg(t.Package) {
-		return getSysDataKind(t.Name)
+func getDefDataKind(pkg string, name string) appdef.DataKind {
+	if maybeSysPkg(pkg) {
+		return getSysDataKind(name)
 	}
 	return appdef.DataKind_null
 }
@@ -333,4 +333,11 @@ func viewFieldDataKind(f *ViewField) appdef.DataKind {
 		return appdef.DataKind_QName
 	}
 	return appdef.DataKind_string
+}
+
+func buildQname(ctx *buildContext, pkg string, name string) appdef.QName {
+	if pkg == "" {
+		pkg = ctx.pkg.Ast.Package
+	}
+	return appdef.NewQName(pkg, name)
 }
