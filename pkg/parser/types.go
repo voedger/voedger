@@ -340,11 +340,12 @@ func (s *FunctionStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type CommandStmt struct {
 	Statement
-	Name    string     `parser:"'COMMAND' @Ident"`
-	Arg     *DefQName  `parser:"('(' @@? ')')?"`
-	Returns *DefQName  `parser:"('RETURNS' @@)?"`
-	With    []WithItem `parser:"('WITH' @@ (',' @@)* )?"`
-	Engine  EngineType // Initialized with 1st pass
+	Name        string     `parser:"'COMMAND' @Ident"`
+	Arg         *DefQName  `parser:"('(' @@? "`
+	UnloggedArg *DefQName  `parser:"(','? UNLOGGED @@)? ')')?"`
+	Returns     *DefQName  `parser:"('RETURNS' @@)?"`
+	With        []WithItem `parser:"('WITH' @@ (',' @@)* )?"`
+	Engine      EngineType // Initialized with 1st pass
 }
 
 func (s *CommandStmt) GetName() string            { return s.Name }

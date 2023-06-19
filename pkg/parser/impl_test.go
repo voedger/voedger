@@ -311,6 +311,7 @@ func Test_Undefined(t *testing.T) {
 			COMMAND CmdNoReturn() RETURNS void;
 			COMMAND CmdFakeArg(text);
 			COMMAND CmdVoidArg(void);
+			COMMAND CmdFakeUnloggedArg(UNLOGGED text);
 		)
 	)
 	`)
@@ -328,6 +329,7 @@ func Test_Undefined(t *testing.T) {
 		"example.sql:6:4: xyz undefined",
 		"example.sql:7:4: only type or void allowed in result",
 		"example.sql:9:4: only type or void allowed in argument",
+		"example.sql:11:4: only type or void allowed in argument",
 	}, "\n"))
 }
 

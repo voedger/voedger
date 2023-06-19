@@ -121,14 +121,15 @@ WORKSPACE MyWorkspace (
         PROJECTOR NotifyOnChanges ON INSERT OR UPDATE IN (TablePlan, WsTable) USES sys.HTTPStorage MAKES sys.SendMailStorage;
 
         -- Commands can only be declared in workspaces
+        -- Command can have optional argument and/or unlogged argument
         -- Command can return TYPE
-        COMMAND Orders(air.Order) RETURNS air.Order;
+        COMMAND Orders(air.Order, UNLOGGED air.TypeWithName) RETURNS air.Order;
         
         -- Command can return void (in this case `RETURNS void` may be omitted)
         COMMAND Orders2(air.Order) RETURNS void;
 
         -- Command with declared Comment, Tags and Rate
-        COMMAND Orders4(air.Order) WITH 
+        COMMAND Orders4(UNLOGGED air.Order) WITH 
             Comment=PosComment, 
             Tags=[BackofficeTag, PosTag],
             Rate=BackofficeFuncRate1; 
