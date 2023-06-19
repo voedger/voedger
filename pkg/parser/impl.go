@@ -26,6 +26,7 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "Punct", Pattern: `[;\[\].]`},
 		{Name: "DEFAULTNEXTVAL", Pattern: `DEFAULT[ \r\n\t]+NEXTVAL`},
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
+		{Name: "UNLOGGED", Pattern: `UNLOGGED`},
 		{Name: "EXTENSIONENGINE", Pattern: `EXTENSION[ \r\n\t]+ENGINE`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
 		{Name: "String", Pattern: `("(\\"|[^"])*")|('(\\'|[^'])*')`},
@@ -247,6 +248,13 @@ func analyse(c *basicContext) {
 			if v.Arg != nil && !isVoid(v.Arg.Package, v.Arg.Name) {
 				if getDefDataKind(v.Arg.Package, v.Arg.Name) == appdef.DataKind_null {
 					resolve(*v.Arg, c, func(f *TypeStmt) error { return nil })
+				} else {
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForArgument, c.pos))
+				}
+			}
+			if v.UnloggedArg != nil && !isVoid(v.UnloggedArg.Package, v.UnloggedArg.Name) {
+				if getDefDataKind(v.UnloggedArg.Package, v.UnloggedArg.Name) == appdef.DataKind_null {
+					resolve(*v.UnloggedArg, c, func(f *TypeStmt) error { return nil })
 				} else {
 					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForArgument, c.pos))
 				}
@@ -486,6 +494,10 @@ func buildCommands(ctx *buildContext) error {
 				argQname := buildQname(ctx, c.Arg.Package, c.Arg.Name)
 				b.SetArg(argQname)
 			}
+			if c.UnloggedArg != nil && !isVoid(c.UnloggedArg.Package, c.UnloggedArg.Name) {
+				argQname := buildQname(ctx, c.UnloggedArg.Package, c.UnloggedArg.Name)
+				b.SetUnloggedArg(argQname)
+			}
 			if c.Returns != nil && !isVoid(c.Returns.Package, c.Returns.Name) {
 				retQname := buildQname(ctx, c.Returns.Package, c.Returns.Name)
 				b.SetResult(retQname)
@@ -495,7 +507,6 @@ func buildCommands(ctx *buildContext) error {
 			} else {
 				b.SetExtension(c.Name, appdef.ExtensionEngineKind_BuiltIn)
 			}
-			// TODO: Unlogged arg?
 		})
 	}
 	return nil
