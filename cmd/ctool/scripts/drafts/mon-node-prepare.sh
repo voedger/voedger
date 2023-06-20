@@ -29,11 +29,13 @@ count=0
 
 while [ $# -gt 0 ] && [ $count -lt 2 ]; do
   echo "Processing: $1"
-  ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /prometheus && mkdir -p ~/prometheus"
-  ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /alertmanager && mkdir -p ~/alertmanager"
-  ssh $SSH_OPTIONS $SSH_USER@$1 "mkdir -p ~/grafana/provisioning/dashboards"
-  ssh $SSH_OPTIONS $SSH_USER@$1 "mkdir -p ~/grafana/provisioning/datasources"
-  ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /var/lib/grafana"
+  ssh $SSH_OPTIONS $SSH_USER@$1 "bash -s" << EOF
+  sudo mkdir -p /prometheus && mkdir -p ~/prometheus;
+  sudo mkdir -p /alertmanager && mkdir -p ~/alertmanager;
+  mkdir -p ~/grafana/provisioning/dashboards;
+  mkdir -p ~/grafana/provisioning/datasources;
+  sudo mkdir -p /var/lib/grafana;
+EOF
 
    cat ./grafana/provisioning/dashboards/swarmprom-nodes-dash.json | \
       ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/provisioning/dashboards/swarmprom-nodes-dash.json'
@@ -65,12 +67,13 @@ while [ $# -gt 0 ] && [ $count -lt 2 ]; do
 
    echo "node_meta{node_id=\"$NODE_ID\", container_label_com_docker_swarm_node_id=\"$NODE_ID\", node_name=\"$NODE_NAME\"} 1" | \
      ssh $SSH_OPTIONS $SSH_USER@$1 "sudo sh -c 'cat > /etc/node-exporter/node-meta.prom'"
-     ssh $SSH_OPTIONS $SSH_USER@$1 "sudo chown -R 65534:65534 /etc/node-exporter/node-meta.prom"
 
-
-  ssh $SSH_OPTIONS $SSH_USER@$1 "sudo chown -R 65534:65534 /prometheus"
-  ssh $SSH_OPTIONS $SSH_USER@$1 "sudo chown -R 65534:65534 /alertmanager"
-  ssh $SSH_OPTIONS $SSH_USER@$1 "sudo chown -R 472:472 /var/lib/grafana"
+  ssh $SSH_OPTIONS $SSH_USER@$1  "bash -s" << EOF 
+  sudo chown -R 65534:65534 /etc/node-exporter/node-meta.prom;
+  sudo chown -R 65534:65534 /prometheus;
+  sudo chown -R 65534:65534 /alertmanager;
+  sudo chown -R 472:472 /var/lib/grafana;
+EOF
 
   count=$((count+1))
 
