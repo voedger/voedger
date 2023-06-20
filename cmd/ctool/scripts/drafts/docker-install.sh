@@ -24,7 +24,7 @@ script="\
 		ca-certificates \
 			curl \
 			gnupg \
-		lsb-release \ 
+		lsb-release \
 		yq jq -y;
 
 	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
