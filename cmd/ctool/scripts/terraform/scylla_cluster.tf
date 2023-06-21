@@ -105,15 +105,14 @@ resource "aws_instance" "node_00" {
   provisioner "remote-exec" {
     inline = [
     "echo '${var.ssh_private_key}' > /tmp/amazonKey.pem",
-    "chmod 400 /tmp/amazonKey.pem",
+    "chmod 755 /tmp/amazonKey.pem",
     "curl -L https://git.io/vQhTU | bash -s -- --version 1.20",
     "git clone https://github.com/voedger/voedger",
     "export GOROOT=$HOME/.go",
     "export PATH=$GOROOT/bin:$PATH",
     "echo $GOROOT",
     "echo $PATH", 
-    "cd $HOME/voedger/cmd/ctool && go build -o ctool",
-    "$HOME/voedger/cmd/ctool/ctool init SE 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15 --ssh-key /tmp/amazonKey.pem"
+    "cd $HOME/voedger/cmd/ctool && go build -o ctool"
     ]
   }
 
