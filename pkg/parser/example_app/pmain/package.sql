@@ -1,6 +1,6 @@
 -- package consists of schema and resources
 -- schema consists of few schema files
-SCHEMA air;
+SCHEMA main;
 
 IMPORT SCHEMA "github.com/untillpro/untill";
 IMPORT SCHEMA "github.com/untillpro/airsbp" AS air;
@@ -21,7 +21,7 @@ TABLE NestedTable INHERITS CRecord (
 TABLE ScreenGroup INHERITS CDoc();
 
 -- TABLE ... OF - declares the inheritance from type or table. PROJECTORS from the base table are not inherted.
-TABLE AirTablePlan INHERITS CDoc (
+TABLE TablePlan INHERITS CDoc (
     FState int,
     Name text NOT NULL,
     VerifiableField text NOT NULL VERIFIABLE, -- Verifiable field
@@ -30,18 +30,18 @@ TABLE AirTablePlan INHERITS CDoc (
     Int2 int DEFAULT NEXTVAL('sequence'),
     ScreenGroupRef ref(ScreenGroup), 
     AnyTableRef ref,
-    FewTablesRef ref(air.ScreenGroup, AirTablePlan) NOT NULL,
+    FewTablesRef ref(ScreenGroup, TablePlan) NOT NULL,
     CheckedField text CHECK "^[0-9]{8}$", -- Field validated by regexp
     CHECK (ValidateRow(this)), -- Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
     CONSTRAINT StateChecker CHECK (ValidateFState(FState)), -- Named CHECK table constraint
     -- UNIQUE (FState, Name), -- unnamed UNIQUE table constraint
     UNIQUEFIELD Name, -- deprecated. For Air backward compatibility only
-    TableItems TABLE AirTablePlanItem (
+    TableItems TABLE TablePlanItem (
         TableNo int,
         Chairs int
     ),
     items NestedTable,
-    ExcludedTableItems AirTablePlanItem
+    ExcludedTableItems TablePlanItem
 ) WITH Comment=BackofficeComment, Tags=[BackofficeTag]; -- Optional comment and tags
 
 
@@ -79,13 +79,9 @@ WORKSPACE MyWorkspace (
     RATE BackofficeFuncRate2 100 PER MINUTE PER IP;
 
     -- It is only allowed create table if it is defined in this workspace, or added with USE statement
-	USE TABLE AirTablePlan;
 	USE TABLE SomeSchema.SomeTable;
-	USE TABLE Untill.*; 
+	USE TABLE untill.*; 
 
-    TYPE TypeWithName (
-        Name text
-    );
     TYPE TypeWithKind (
         Kind int
     );
@@ -110,39 +106,44 @@ WORKSPACE MyWorkspace (
         -- TARGET - lists all QNames for which Intets are generated (QName of Entity or Storage)
         -- USE - lists all QNames for which Get/Read operations are done (QName of Entity or Storage). 
         --      (no need to specify in USES when already listed in TARGET)
-        PROJECTOR CountOrders ON COMMAND air.Orders MAKES air.OrdersCountView;
+        PROJECTOR CountOrders ON COMMAND Orders MAKES air.OrdersCountView;
         
         -- Projector triggered by command argument SubscriptionProfile which is a Storage
         -- Projector uses sys.HTTPStorage
         PROJECTOR UpdateSubscriptionProfile ON COMMAND ARGUMENT SubscriptionEvent USES sys.HTTPStorage;
 
         -- Projectors triggered by CUD operations
-        PROJECTOR AirPlanThumbnailGen ON INSERT air.AirTablePlan MAKES AirPlanThumbnails;
-        PROJECTOR UpdateDashboard ON COMMAND IN (air.Orders, air.Orders2) MAKES DashboardView;
-        PROJECTOR UpdateActivePlans ON ACTIVATE OR DEACTIVATE air.AirTablePlan MAKES ActiveTablePlansView;
+        PROJECTOR TablePlanThumbnailGen ON INSERT TablePlan MAKES TablePlanThumbnails;
+        PROJECTOR UpdateDashboard ON COMMAND IN (Orders, Orders2) MAKES DashboardView;
+        PROJECTOR UpdateActivePlans ON ACTIVATE OR DEACTIVATE TablePlan MAKES ActiveTablePlansView;
         
         -- Some projector which sends E-mails and performs HTTP queries
-        PROJECTOR NotifyOnChanges ON INSERT OR UPDATE IN (air.AirTablePlan, WsTable) USES sys.HTTPStorage MAKES sys.SendMailStorage;
+        PROJECTOR NotifyOnChanges ON INSERT OR UPDATE IN (TablePlan, WsTable) USES sys.HTTPStorage MAKES sys.SendMailStorage;
 
         -- Commands can only be declared in workspaces
-        COMMAND Orders(Untill.Orders);
+        -- Command can have optional argument and/or unlogged argument
+        -- Command can return TYPE
+        COMMAND Orders(air.Order, UNLOGGED air.TypeWithName) RETURNS air.Order;
         
+        -- Command can return void (in this case `RETURNS void` may be omitted)
+        COMMAND Orders2(air.Order) RETURNS void;
+
         -- Command with declared Comment, Tags and Rate
-        COMMAND Orders2(Order Untill.Orders, Untill.PBill) WITH 
-            Comment=air.PosComment, 
-            Tags=[BackofficeTag, air.PosTag],
+        COMMAND Orders4(UNLOGGED air.Order) WITH 
+            Comment=PosComment, 
+            Tags=[BackofficeTag, PosTag],
             Rate=BackofficeFuncRate1; 
 
         -- Qieries can only be declared in workspaces
-        QUERY Query1 RETURNS text;
-        QUERY _Query1() RETURNS text WITH Comment=air.PosComment, Tags=[BackofficeTag, air.PosTag];
-        QUERY Query2(Order Untill.Orders, Untill.PBill) RETURNS text;
+        QUERY Query1 RETURNS void;
+        QUERY _Query1() RETURNS air.Order WITH Comment=PosComment, Tags=[BackofficeTag, PosTag];
+        QUERY Query2(air.Order) RETURNS air.Order;
     );
 
     -- ACLs
-    GRANT ALL ON ALL TABLES WITH TAG untill.Backoffice TO LocationManager;
+    GRANT ALL ON ALL TABLES WITH TAG BackofficeTag TO LocationManager;
     GRANT INSERT,UPDATE ON ALL TABLES WITH TAG sys.ODoc TO LocationUser;
-    GRANT SELECT ON TABLE Untill.Orders TO LocationUser;
+    GRANT SELECT ON TABLE Orders TO LocationUser;
     GRANT EXECUTE ON COMMAND Orders TO LocationUser;
     GRANT EXECUTE ON QUERY TransactionHistory TO LocationUser;
     GRANT EXECUTE ON ALL QUERIES WITH TAG PosTag TO LocationUser;

@@ -50,7 +50,9 @@ func (a *asyncActualizer) Prepare(interface{}) error {
 	if a.conf.FlushInterval == 0 {
 		a.conf.FlushInterval = defaultFlushInterval
 	}
-
+	if a.conf.FlushPositionInverval == 0 {
+		a.conf.FlushPositionInverval = defaultFlushPositionInterval
+	}
 	if a.conf.AfterError == nil {
 		a.conf.AfterError = time.After
 	}
@@ -90,7 +92,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	a.readCtx.ctx, a.readCtx.cancel = context.WithCancel(ctx)
 
-	p := &asyncProjector{partition: a.conf.Partition, metrics: a.conf.Metrics}
+	p := &asyncProjector{partition: a.conf.Partition, metrics: a.conf.Metrics, flushPositionInterval: a.conf.FlushPositionInverval, lastSave: time.Now()}
 	p.projector = a.factory(a.conf.Partition)
 
 	err = a.readOffset(p.projector.Name)
@@ -154,7 +156,7 @@ func (a *asyncActualizer) keepReading() (err error) {
 			logger.Trace(fmt.Sprintf("%s received n10n: offset %d, last handled: %d", a.name, offset, a.offset))
 		}
 		if a.offset < offset {
-			err = a.readPlogToTheEnd()
+			err = a.readPlogToTheEnd2(offset)
 			if err != nil {
 				a.conf.LogError(a.name, err)
 				a.readCtx.cancelWithError(err)
@@ -164,27 +166,38 @@ func (a *asyncActualizer) keepReading() (err error) {
 	return a.readCtx.error()
 }
 
-func (a *asyncActualizer) readPlogToTheEnd() (err error) {
-	return a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd, func(pLogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-		work := &workpiece{
-			event:      event,
-			pLogOffset: pLogOffset,
-		}
+func (a *asyncActualizer) handleEvent(pLogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+	work := &workpiece{
+		event:      event,
+		pLogOffset: pLogOffset,
+	}
 
-		err = a.pipeline.SendAsync(work)
-		if err != nil {
-			a.conf.LogError(a.name, err)
+	err = a.pipeline.SendAsync(work)
+	if err != nil {
+		a.conf.LogError(a.name, err)
+		return
+	}
+
+	a.offset = pLogOffset
+
+	if logger.IsTrace() {
+		logger.Trace(fmt.Sprintf("offset %d for %s", a.offset, a.name))
+	}
+
+	return
+}
+
+func (a *asyncActualizer) readPlogToTheEnd() (err error) {
+	return a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd, a.handleEvent)
+}
+
+func (a *asyncActualizer) readPlogToTheEnd2(tillOffset istructs.Offset) (err error) {
+	for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
+		if err = a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, readOffset, 1, a.handleEvent); err != nil {
 			return
 		}
-
-		a.offset = pLogOffset
-
-		if logger.IsTrace() {
-			logger.Trace(fmt.Sprintf("offset %d for %s", a.offset, a.name))
-		}
-
-		return
-	})
+	}
+	return nil
 }
 
 func (a *asyncActualizer) readOffset(projectorName appdef.QName) (err error) {
@@ -194,12 +207,15 @@ func (a *asyncActualizer) readOffset(projectorName appdef.QName) (err error) {
 
 type asyncProjector struct {
 	pipeline.AsyncNOOP
-	state      state.IBundledHostState
-	partition  istructs.PartitionID
-	wsid       istructs.WSID
-	projector  istructs.Projector
-	pLogOffset istructs.Offset
-	metrics    AsyncActualizerMetrics
+	state                 state.IBundledHostState
+	partition             istructs.PartitionID
+	wsid                  istructs.WSID
+	projector             istructs.Projector
+	pLogOffset            istructs.Offset
+	metrics               AsyncActualizerMetrics
+	flushPositionInterval time.Duration
+	acceptedSinceSave     bool
+	lastSave              time.Time
 }
 
 func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
@@ -212,28 +228,50 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 		p.metrics.Set(aaCurrentOffset, p.partition, p.projector.Name, float64(w.pLogOffset))
 	}
 
-	accepted := isAcceptable(p.projector, w.event)
-
-	if accepted {
+	if isAcceptable(p.projector, w.event) {
 		err = p.projector.Func(w.event, p.state, p.state)
 		if err != nil {
 			return nil, err
 		}
-	}
+		if logger.IsVerbose() {
+			logger.Verbose(fmt.Sprintf("%s: handled %d", p.projector.Name, p.pLogOffset))
+		}
 
-	readyToFlushBundle, err := p.state.ApplyIntents()
-	if err != nil {
-		return nil, err
-	}
+		p.acceptedSinceSave = true
 
-	if readyToFlushBundle || (p.projector.NonBuffered && accepted) {
-		return nil, p.flush()
+		readyToFlushBundle, err := p.state.ApplyIntents()
+		if err != nil {
+			return nil, err
+		}
+
+		if readyToFlushBundle || p.projector.NonBuffered {
+			return nil, p.flush()
+		}
 	}
 
 	return nil, err
 }
 func (p *asyncProjector) Flush(_ pipeline.OpFuncFlush) (err error) { return p.flush() }
 func (p *asyncProjector) WSIDProvider() istructs.WSID              { return p.wsid }
+func (p *asyncProjector) savePosition() error {
+	defer func() {
+		p.acceptedSinceSave = false
+		p.lastSave = time.Now()
+	}()
+	key, e := p.state.KeyBuilder(state.ViewRecordsStorage, qnameProjectionOffsets)
+	if e != nil {
+		return e
+	}
+	key.PutInt64(state.Field_WSID, int64(istructs.NullWSID))
+	key.PutInt32(partitionFld, int32(p.partition))
+	key.PutQName(projectorNameFld, p.projector.Name)
+	value, e := p.state.NewValue(key)
+	if e != nil {
+		return e
+	}
+	value.PutInt64(offsetFld, int64(p.pLogOffset))
+	return nil
+}
 func (p *asyncProjector) flush() (err error) {
 	if p.pLogOffset == istructs.NullOffset {
 		return
@@ -241,18 +279,13 @@ func (p *asyncProjector) flush() (err error) {
 	defer func() {
 		p.pLogOffset = istructs.NullOffset
 	}()
-	key, err := p.state.KeyBuilder(state.ViewRecordsStorage, qnameProjectionOffsets)
-	if err != nil {
-		return
+
+	timeToSavePosition := time.Since(p.lastSave) >= p.flushPositionInterval
+	if p.acceptedSinceSave || timeToSavePosition {
+		if err = p.savePosition(); err != nil {
+			return
+		}
 	}
-	key.PutInt64(state.Field_WSID, int64(istructs.NullWSID))
-	key.PutInt32(partitionFld, int32(p.partition))
-	key.PutQName(projectorNameFld, p.projector.Name)
-	value, err := p.state.NewValue(key)
-	if err != nil {
-		return
-	}
-	value.PutInt64(offsetFld, int64(p.pLogOffset))
 	_, err = p.state.ApplyIntents()
 	if err != nil {
 		return err

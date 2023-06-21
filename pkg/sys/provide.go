@@ -5,12 +5,17 @@
 package sys
 
 import (
+	"embed"
+	"runtime/debug"
+
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
@@ -29,18 +34,19 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
+//go:embed sys.sql
+var sysFS embed.FS
+
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, smtpCfg smtp.Cfg,
 	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation coreutils.IFederation,
-	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount) {
+	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount, buildInfo *debug.BuildInfo) {
 	blobber.ProvideBlobberCmds(cfg, appDefBuilder)
 	collection.ProvideCollectionFunc(cfg, appDefBuilder)
 	collection.ProvideCDocFunc(cfg, appDefBuilder)
 	collection.ProvideStateFunc(cfg, appDefBuilder)
 	journal.Provide(cfg, appDefBuilder, ep)
 	wskinds.ProvideCDocsWorkspaceKinds(appDefBuilder)
-	builtin.ProvideCmdCUD(cfg)
-	builtin.ProvideCmdInit(cfg)   // for import from air-importbo
-	builtin.ProivdeCmdImport(cfg) // for sync
+	builtin.Provide(cfg, appDefBuilder, buildInfo)
 	builtin.ProvideQryEcho(cfg, appDefBuilder)
 	builtin.ProvideQryGRCount(cfg, appDefBuilder)
 	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation)
@@ -73,5 +79,18 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	cfg.AddSyncProjectors(collection.ProvideSyncProjectorFactories(appDefBuilder)...)
 	uniques.Provide(cfg, appDefBuilder)
 	describe.Provide(cfg, asp, appDefBuilder)
-	cfg.AddCUDValidators(builtin.ProvideRefIntegrityValidator())
+
+	// add sys sql schema
+	sysSQLContent, err := sysFS.ReadFile("sys.sql")
+	if err != nil {
+		// notest
+		panic(err)
+	}
+	sysFileScehmaAST, err := parser.ParseFile("sys.sql", string(sysSQLContent))
+	if err != nil {
+		// notest
+		panic(err)
+	}
+	epFileSchemaASTs := ep.ExtensionPoint(apps.EPPackageSchemasASTs)
+	epFileSchemaASTs.AddNamed(appdef.SysPackage, sysFileScehmaAST)
 }

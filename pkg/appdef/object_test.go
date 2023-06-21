@@ -48,7 +48,7 @@ func Test_AppDef_AddObject(t *testing.T) {
 		require.Equal(2, doc.UserFieldCount())
 		require.Equal(DataKind_int64, doc.Field("f1").DataKind())
 
-		require.Equal(DefKind_Element, doc.ContainerDef("child").Kind())
+		require.Equal(DefKind_Element, doc.Container("child").Def().Kind())
 
 		t.Run("must be ok to find builded element", func(t *testing.T) {
 			def := app.Def(elementName)

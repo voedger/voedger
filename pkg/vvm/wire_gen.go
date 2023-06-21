@@ -85,6 +85,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
 	vvmPortSource := provideVVMPortSource()
 	iFederation := provideIFederation(vvmConfig, vvmPortSource)
+	buildInfo := vvmConfig.BuildInfo
 	apIs := apps.APIs{
 		ITokens:              iTokens,
 		IAppStructsProvider:  iAppStructsProvider,
@@ -94,6 +95,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		IFederation:          iFederation,
 		TimeFunc:             timeFunc,
 		NumCommandProcessors: commandProcessorsCount,
+		BuildInfo:            buildInfo,
 	}
 	v2 := provideAppsExtensionPoints(vvmConfig)
 	vvmApps := provideVVMApps(vvmConfig, appConfigsType, apIs, v2)

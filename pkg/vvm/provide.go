@@ -172,6 +172,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"VVMPort",
 			"MetricsServicePort",
 			"ActualizerStateOpts",
+			"BuildInfo",
 		),
 	))
 }
