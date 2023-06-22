@@ -6,8 +6,10 @@ package sys_it
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
+	"runtime/debug"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -80,12 +82,23 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 	// ожидаем, что никаких посторонних ошибок нет: ничего не повисло, queryprocessor отдал управление, роутер не пытается писать в закрытую коннекцию и т.п.
 }
 
+func TestXxx(t *testing.T) {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		fmt.Println("No build info")
+		return
+	}
+	for _, mod := range info.Deps {
+		fmt.Printf("path: %s version: %s\n", mod.Path, mod.Version)
+	}
+}
+
 func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 	vitCfg := it.NewOwnVITConfig(
 		it.WithApp(istructs.AppQName_test1_app1, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 
 			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-				apis.NumCommandProcessors, false)
+				apis.NumCommandProcessors, apis.BuildInfo, false)
 
 			cdocQName := appdef.NewQName("test", "cdoc")
 			appDefBuilder.AddCDoc(cdocQName)

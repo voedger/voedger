@@ -7,6 +7,7 @@ package vvm
 import (
 	"context"
 	"net/url"
+	"runtime/debug"
 	"time"
 
 	ibus "github.com/untillpro/airs-ibus"
@@ -124,6 +125,7 @@ type VVMConfig struct {
 	// test and FederationURL contains port -> the port will be relaced with the actual VVMPort
 	FederationURL       *url.URL
 	ActualizerStateOpts []state.ActualizerStateOptFunc
+	BuildInfo           *debug.BuildInfo
 }
 
 type resultSenderErrorFirst struct {

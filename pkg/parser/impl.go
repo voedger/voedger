@@ -26,6 +26,7 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "Punct", Pattern: `[;\[\].]`},
 		{Name: "DEFAULTNEXTVAL", Pattern: `DEFAULT[ \r\n\t]+NEXTVAL`},
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
+		{Name: "UNLOGGED", Pattern: `UNLOGGED`},
 		{Name: "EXTENSIONENGINE", Pattern: `EXTENSION[ \r\n\t]+ENGINE`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
 		{Name: "String", Pattern: `("(\\"|[^"])*")|('(\\'|[^'])*')`},
@@ -244,9 +245,44 @@ func analyse(c *basicContext) {
 		switch v := stmt.(type) {
 		case *CommandStmt:
 			c.pos = &v.Pos
+			if v.Arg != nil && !isVoid(v.Arg.Package, v.Arg.Name) {
+				if getDefDataKind(v.Arg.Package, v.Arg.Name) == appdef.DataKind_null {
+					resolve(*v.Arg, c, func(f *TypeStmt) error { return nil })
+				} else {
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForArgument, c.pos))
+				}
+			}
+			if v.UnloggedArg != nil && !isVoid(v.UnloggedArg.Package, v.UnloggedArg.Name) {
+				if getDefDataKind(v.UnloggedArg.Package, v.UnloggedArg.Name) == appdef.DataKind_null {
+					resolve(*v.UnloggedArg, c, func(f *TypeStmt) error { return nil })
+				} else {
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForArgument, c.pos))
+				}
+			}
+			if v.Returns != nil && !isVoid(v.Returns.Package, v.Returns.Name) {
+				if getDefDataKind(v.Returns.Package, v.Returns.Name) == appdef.DataKind_null {
+					resolve(*v.Returns, c, func(f *TypeStmt) error { return nil })
+				} else {
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForResult, c.pos))
+				}
+			}
 			analyzeWithRefs(c, v.With)
 		case *QueryStmt:
 			c.pos = &v.Pos
+			if v.Arg != nil && !isVoid(v.Arg.Package, v.Arg.Name) {
+				if getDefDataKind(v.Arg.Package, v.Arg.Name) == appdef.DataKind_null {
+					resolve(*v.Arg, c, func(f *TypeStmt) error { return nil })
+				} else {
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForArgument, c.pos))
+				}
+			}
+			if !isVoid(v.Returns.Package, v.Returns.Name) {
+				if getDefDataKind(v.Returns.Package, v.Returns.Name) == appdef.DataKind_null {
+					resolve(v.Returns, c, func(f *TypeStmt) error { return nil })
+				} else {
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForResult, c.pos))
+				}
+			}
 			analyzeWithRefs(c, v.With)
 		case *ProjectorStmt:
 			c.pos = &v.Pos
@@ -392,6 +428,12 @@ func buildAppDefs(packages map[string]*PackageSchemaAST, builder appdef.IAppDefB
 	if err := buildViews(&ctx); err != nil {
 		return err
 	}
+	if err := buildCommands(&ctx); err != nil {
+		return err
+	}
+	if err := buildQueries(&ctx); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -436,6 +478,59 @@ func buildViews(ctx *buildContext) error {
 						vb.AddValueField(f.Field.Name, datakind, f.Field.NotNull)
 					}
 				}
+			}
+		})
+	}
+	return nil
+}
+
+func buildCommands(ctx *buildContext) error {
+	for _, schema := range ctx.pkgmap {
+		iterateStmt(schema.Ast, func(c *CommandStmt) {
+			ctx.setSchema(schema)
+			qname := appdef.NewQName(ctx.pkg.Ast.Package, c.Name)
+			b := ctx.builder.AddCommand(qname)
+			if c.Arg != nil && !isVoid(c.Arg.Package, c.Arg.Name) {
+				argQname := buildQname(ctx, c.Arg.Package, c.Arg.Name)
+				b.SetArg(argQname)
+			}
+			if c.UnloggedArg != nil && !isVoid(c.UnloggedArg.Package, c.UnloggedArg.Name) {
+				argQname := buildQname(ctx, c.UnloggedArg.Package, c.UnloggedArg.Name)
+				b.SetUnloggedArg(argQname)
+			}
+			if c.Returns != nil && !isVoid(c.Returns.Package, c.Returns.Name) {
+				retQname := buildQname(ctx, c.Returns.Package, c.Returns.Name)
+				b.SetResult(retQname)
+			}
+			if c.Engine.WASM {
+				b.SetExtension(c.Name, appdef.ExtensionEngineKind_WASM)
+			} else {
+				b.SetExtension(c.Name, appdef.ExtensionEngineKind_BuiltIn)
+			}
+		})
+	}
+	return nil
+}
+
+func buildQueries(ctx *buildContext) error {
+	for _, schema := range ctx.pkgmap {
+		iterateStmt(schema.Ast, func(c *QueryStmt) {
+			ctx.setSchema(schema)
+			qname := appdef.NewQName(ctx.pkg.Ast.Package, c.Name)
+			b := ctx.builder.AddQuery(qname)
+			if c.Arg != nil && !isVoid(c.Arg.Package, c.Arg.Name) {
+				argQname := buildQname(ctx, c.Arg.Package, c.Arg.Name)
+				b.SetArg(argQname)
+			}
+			if !isVoid(c.Returns.Package, c.Returns.Name) {
+				retQname := buildQname(ctx, c.Returns.Package, c.Returns.Name)
+				b.SetResult(retQname) // TODO: support arrays?
+			}
+
+			if c.Engine.WASM {
+				b.SetExtension(c.Name, appdef.ExtensionEngineKind_WASM)
+			} else {
+				b.SetExtension(c.Name, appdef.ExtensionEngineKind_BuiltIn)
 			}
 		})
 	}
