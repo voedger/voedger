@@ -101,7 +101,8 @@ func (m *mapMetrics) List(cb func(metric IMetric, metricValue float64) (err erro
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	for metric, value := range m.metrics {
-		err = cb(&metric, *value)
+		ptr := (*uint64)(unsafe.Pointer(value))
+		err = cb(&metric, math.Float64frombits(atomic.LoadUint64(ptr)))
 		if err != nil {
 			return
 		}
