@@ -7,8 +7,11 @@ package imetrics
 
 import (
 	"bytes"
+	"math"
 	"strconv"
 	"sync"
+	"sync/atomic"
+	"unsafe"
 
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -32,45 +35,72 @@ func (m *metric) App() istructs.AppQName {
 }
 
 type mapMetrics struct {
-	metrics map[metric]float64
+	metrics map[metric]*float64
 	lock    sync.Mutex
 }
 
 func newMetrics() IMetrics {
 	return &mapMetrics{
-		metrics: make(map[metric]float64),
+		metrics: make(map[metric]*float64),
 	}
 }
 
-func (m *mapMetrics) Increase(metricName string, vvm string, valueDelta float64) {
-	key := metric{
-		name: metricName,
-		app:  istructs.AppQName_null,
-		vvm:  vvm,
-	}
-	m.increase(key, valueDelta)
-}
-
-func (m *mapMetrics) IncreaseApp(metricName string, vvm string, app istructs.AppQName, valueDelta float64) {
-	key := metric{
+func (m *mapMetrics) AppMetricAddr(metricName string, vvm string, app istructs.AppQName) *float64 {
+	return m.get(metric{
 		name: metricName,
 		app:  app,
 		vvm:  vvm,
-	}
-	m.increase(key, valueDelta)
+	})
 }
 
-func (m *mapMetrics) increase(key metric, valueDelta float64) {
+func (m *mapMetrics) MetricAddr(metricName string, vvmName string) *float64 {
+	return m.get(metric{
+		name: metricName,
+		app:  istructs.AppQName_null,
+		vvm:  vvmName,
+	})
+}
+
+func (m *mapMetrics) Increase(metricName string, vvm string, valueDelta float64) {
+	mv := m.MetricAddr(metricName, vvm)
+	AddFloat64(mv, valueDelta)
+}
+
+func (m *mapMetrics) IncreaseApp(metricName string, vvm string, app istructs.AppQName, valueDelta float64) {
+	mv := m.AppMetricAddr(metricName, vvm, app)
+	AddFloat64(mv, valueDelta)
+}
+
+func (m *mapMetrics) get(key metric) *float64 {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	m.metrics[key] = m.metrics[key] + valueDelta
+	if mv, ok := m.metrics[key]; ok {
+		return mv
+	}
+	value := float64(0)
+	m.metrics[key] = &value
+	return &value
+
+}
+
+func AddFloat64(val *float64, delta float64) {
+	var swapped bool
+	for !swapped {
+		old := *val
+		new := old + delta
+		swapped = atomic.CompareAndSwapUint64(
+			(*uint64)(unsafe.Pointer(val)),
+			math.Float64bits(old),
+			math.Float64bits(new),
+		)
+	}
 }
 
 func (m *mapMetrics) List(cb func(metric IMetric, metricValue float64) (err error)) (err error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	for metric, value := range m.metrics {
-		err = cb(&metric, value)
+		err = cb(&metric, *value)
 		if err != nil {
 			return
 		}
