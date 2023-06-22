@@ -9,18 +9,17 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
-	istorage "github.com/voedger/voedger/pkg/istorage"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istructs"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
 
 type cachedAppStorage struct {
-	cache    *fastcache.Cache
-	storage  istorage.IAppStorage
-	vvm      string
-	appQName istructs.AppQName
-
-	/* metrics */
+	cache                *fastcache.Cache
+	keyPool              keyPool
+	storage              istorage.IAppStorage
+	vvm                  string
+	appQName             istructs.AppQName
 	mGetSeconds          *float64
 	mGetTotal            *float64
 	mGetCachedTotal      *float64
@@ -38,7 +37,7 @@ type cachedAppStorage struct {
 
 type implCachingAppStorageProvider struct {
 	storageProvider istorage.IAppStorageProvider
-	maxBytes        int
+	conf            StorageCacheConf
 	metrics         imetrics.IMetrics
 	vvmName         string
 }
@@ -48,13 +47,16 @@ func (asp *implCachingAppStorageProvider) AppStorage(appQName istructs.AppQName)
 	if err != nil {
 		return nil, err
 	}
-	return newCachingAppStorage(asp.maxBytes, nonCachingAppStorage, asp.metrics, asp.vvmName, appQName), nil
+	return newCachingAppStorage(asp.conf, nonCachingAppStorage, asp.metrics, asp.vvmName, appQName), nil
 }
 
-func newCachingAppStorage(maxBytes int, nonCachingAppStorage istorage.IAppStorage, metrics imetrics.IMetrics, vvm string, appQName istructs.AppQName) istorage.IAppStorage {
+func newCachingAppStorage(conf StorageCacheConf, nonCachingAppStorage istorage.IAppStorage, metrics imetrics.IMetrics, vvm string, appQName istructs.AppQName) istorage.IAppStorage {
 	return &cachedAppStorage{
-		cache:                fastcache.New(maxBytes),
+		cache:                fastcache.New(conf.MaxBytes),
+		keyPool:              newKeyPool(conf.PreAllocatedBuffersCount, conf.PreAllocatedBufferSize),
 		storage:              nonCachingAppStorage,
+		vvm:                  vvm,
+		appQName:             appQName,
 		mGetTotal:            metrics.AppMetricAddr(getTotal, vvm, appQName),
 		mGetCachedTotal:      metrics.AppMetricAddr(getCachedTotal, vvm, appQName),
 		mGetSeconds:          metrics.AppMetricAddr(getSeconds, vvm, appQName),
@@ -68,8 +70,6 @@ func newCachingAppStorage(maxBytes int, nonCachingAppStorage istorage.IAppStorag
 		mPutBatchItemsTotal:  metrics.AppMetricAddr(putBatchItemsTotal, vvm, appQName),
 		mReadTotal:           metrics.AppMetricAddr(readTotal, vvm, appQName),
 		mReadSeconds:         metrics.AppMetricAddr(readSeconds, vvm, appQName),
-		vvm:                  vvm,
-		appQName:             appQName,
 	}
 }
 
@@ -81,7 +81,12 @@ func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err err
 	imetrics.AddFloat64(s.mPutTotal, 1.0)
 	err = s.storage.Put(pKey, cCols, value)
 	if err == nil {
-		s.cache.Set(key(pKey, cCols), value)
+		bb, err := s.keyPool.get(pKey, cCols)
+		if err != nil {
+			return err
+		}
+		s.cache.Set(bb.Bytes(), value)
+		s.keyPool.put(bb)
 	}
 	return err
 }
@@ -97,7 +102,12 @@ func (s *cachedAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	err = s.storage.PutBatch(items)
 	if err == nil {
 		for _, i := range items {
-			s.cache.Set(key(i.PKey, i.CCols), i.Value)
+			bb, err := s.keyPool.get(i.PKey, i.CCols)
+			if err != nil {
+				return err
+			}
+			s.cache.Set(bb.Bytes(), i.Value)
+			s.keyPool.put(bb)
 		}
 	}
 	return err
@@ -110,8 +120,14 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 	}()
 	imetrics.AddFloat64(s.mGetTotal, 1.0)
 
+	bb, err := s.keyPool.get(pKey, cCols)
+	if err != nil {
+		return
+	}
+	defer s.keyPool.put(bb)
+
 	*data = (*data)[0:0]
-	*data = s.cache.Get(*data, key(pKey, cCols))
+	*data = s.cache.Get(*data, bb.Bytes())
 	if len(*data) != 0 {
 		imetrics.AddFloat64(s.mGetCachedTotal, 1.0)
 		return true, err
@@ -121,7 +137,12 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 		return false, err
 	}
 	if ok {
-		s.cache.Set(key(pKey, cCols), *data)
+		bb, err := s.keyPool.get(pKey, cCols)
+		if err != nil {
+			return false, err
+		}
+		defer s.keyPool.put(bb)
+		s.cache.Set(bb.Bytes(), *data)
 	}
 	return
 }
@@ -140,11 +161,16 @@ func (s *cachedAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) 
 
 func (s *cachedAppStorage) getBatchFromCache(pKey []byte, items []istorage.GetBatchItem) (ok bool) {
 	for i := range items {
-		*items[i].Data = s.cache.Get((*items[i].Data)[0:0], key(pKey, items[i].CCols))
+		bb, err := s.keyPool.get(pKey, items[i].CCols)
+		if err != nil {
+			return false
+		}
+		*items[i].Data = s.cache.Get((*items[i].Data)[0:0], bb.Bytes())
 		if len(*items[i].Data) == 0 {
 			return false
 		}
 		items[i].Ok = true
+		s.keyPool.put(bb)
 	}
 	imetrics.AddFloat64(s.mGetBatchCachedTotal, 1.0)
 	return true
@@ -156,11 +182,16 @@ func (s *cachedAppStorage) getBatchFromStorage(pKey []byte, items []istorage.Get
 		return err
 	}
 	for _, item := range items {
-		if item.Ok {
-			s.cache.Set(key(pKey, item.CCols), *item.Data)
-		} else {
-			s.cache.Del(key(pKey, item.CCols))
+		bb, e := s.keyPool.get(pKey, item.CCols)
+		if e != nil {
+			return e
 		}
+		if item.Ok {
+			s.cache.Set(bb.Bytes(), *item.Data)
+		} else {
+			s.cache.Del(bb.Bytes())
+		}
+		s.keyPool.put(bb)
 	}
 	return err
 }
@@ -173,8 +204,4 @@ func (s *cachedAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fi
 	imetrics.AddFloat64(s.mReadTotal, 1.0)
 
 	return s.storage.Read(ctx, pKey, startCCols, finishCCols, cb)
-}
-
-func key(pKey []byte, cCols []byte) []byte {
-	return append(pKey, cCols...)
 }

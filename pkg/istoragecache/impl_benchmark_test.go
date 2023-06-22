@@ -32,7 +32,7 @@ func BenchmarkAppStorage_Metrics(b *testing.B) {
 		return true, nil
 	}}
 	tsp := &testStorageProvider{storage: ts}
-	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+	cachingStorageProvider := Provide(testConf, tsp, imetrics.Provide(), "vvm")
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	if err != nil {
 		panic(err)

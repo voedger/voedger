@@ -5,14 +5,14 @@
 package istoragecache
 
 import (
-	istorage "github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
 
 // Provide s.e.
-func Provide(maxBytes int, storageProvider istorage.IAppStorageProvider, metrics imetrics.IMetrics, vvmName string) istorage.IAppStorageProvider {
+func Provide(conf StorageCacheConf, storageProvider istorage.IAppStorageProvider, metrics imetrics.IMetrics, vvmName string) istorage.IAppStorageProvider {
 	return &implCachingAppStorageProvider{
-		maxBytes:        maxBytes,
+		conf:            conf,
 		storageProvider: storageProvider,
 		metrics:         metrics,
 		vvmName:         vvmName,
