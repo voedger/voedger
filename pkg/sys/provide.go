@@ -38,7 +38,7 @@ var sysFS embed.FS
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, smtpCfg smtp.Cfg,
 	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation coreutils.IFederation,
-	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount) {
+	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount, buildSubjectsIdx bool) {
 	blobber.ProvideBlobberCmds(cfg, appDefBuilder)
 	collection.ProvideCollectionFunc(cfg, appDefBuilder)
 	collection.ProvideCDocFunc(cfg, appDefBuilder)
@@ -58,7 +58,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	signupin.ProvideQryRefreshPrincipalToken(cfg, appDefBuilder, itokens)
 	signupin.ProvideCDocLogin(appDefBuilder)
 	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, atf)
-	invite.Provide(cfg, appDefBuilder, timeFunc)
+	invite.Provide(cfg, appDefBuilder, timeFunc, buildSubjectsIdx)
 	cfg.AddAsyncProjectors(
 		journal.ProvideWLogDatesAsyncProjectorFactory(),
 		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspace(federation, cfg.Name, itokens),

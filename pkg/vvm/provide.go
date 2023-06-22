@@ -45,7 +45,6 @@ import (
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys/collection"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
@@ -188,28 +187,36 @@ func provideStorageFactory(vvmConfig *VVMConfig) (provider istorage.IAppStorageF
 
 func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 	return func(requestContext context.Context, name string, as istructs.IAppStructs, wsid istructs.WSID) ([]appdef.QName, error) {
-		kb := as.ViewRecords().KeyBuilder(collection.QNameViewCollection)
-		kb.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
-		kb.PutQName(collection.Field_DocQName, invite.QNameCDocSubject)
+		kb := as.ViewRecords().KeyBuilder(invite.QNameViewSubjectsIdx)
+		kb.PutInt64(invite.Field_LoginHash, coreutils.HashBytes([]byte(name)))
+		kb.PutString(invite.Field_Login, name)
+		subjectsIdx, err := as.ViewRecords().Get(wsid, kb)
+		if err != nil {
+			// notest
+			return nil, err
+		}
+		if subjectsIdx == nil {
+			return nil, nil
+		}
+
 		res := []appdef.QName{}
-		err := as.ViewRecords().Read(requestContext, wsid, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
-			record := value.AsRecord(collection.Field_Record)
-			if record.AsString(invite.Field_Login) != name {
-				return nil
+		subjectID := subjectsIdx.AsRecordID(invite.Field_SubjectID)
+		cdocSubject, err := as.Records().Get(wsid, true, istructs.RecordID(subjectID))
+		if err != nil {
+			// notest
+			return nil, err
+		}
+		roles := strings.Split(cdocSubject.AsString(invite.Field_Roles), ",")
+		for _, role := range roles {
+			roleQName, err := appdef.ParseQName(role)
+			if err != nil {
+				// notest
+				// must be gauranted by the side that inserted this qname
+				return nil, err
 			}
-			roles := strings.Split(record.AsString(invite.Field_Roles), ",")
-			for _, role := range roles {
-				roleQName, err := appdef.ParseQName(role)
-				if err != nil {
-					// notest
-					// must be gauranted by the side that inserted this qname
-					return err
-				}
-				res = append(res, roleQName)
-			}
-			return nil
-		})
-		return res, err
+			res = append(res, roleQName)
+		}
+		return res, nil
 	}
 }
 
