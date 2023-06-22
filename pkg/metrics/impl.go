@@ -85,11 +85,12 @@ func (m *mapMetrics) get(key metric) *float64 {
 
 func AddFloat64(val *float64, delta float64) {
 	var swapped bool
+	ptr := (*uint64)(unsafe.Pointer(val))
 	for !swapped {
-		old := *val
+		old := math.Float64frombits(atomic.LoadUint64(ptr))
 		new := old + delta
 		swapped = atomic.CompareAndSwapUint64(
-			(*uint64)(unsafe.Pointer(val)),
+			ptr,
 			math.Float64bits(old),
 			math.Float64bits(new),
 		)
