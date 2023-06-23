@@ -39,7 +39,7 @@ func provideCDocSubject(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAp
 
 func subjectIdxProjectorFactory(partition istructs.PartitionID) istructs.Projector {
 	return istructs.Projector{
-		Name: appdef.NewQName(appdef.SysPackage, "SubjectsIdx"),
+		Name: QNameViewSubjectsIdx,
 		Func: viewSubjectsIdxProjector,
 	}
 }
@@ -58,7 +58,7 @@ func viewSubjectsIdxProjector(event istructs.IPLogEvent, st istructs.IState, int
 		login := cdocSubject.AsString(Field_Login)
 		skbViewSubjectsIdx.PutInt64(Field_LoginHash, coreutils.HashBytes([]byte(login)))
 		skbViewSubjectsIdx.PutString(Field_Login, login)
-		_, ok , err := st.CanExist(skbViewSubjectsIdx)
+		_, ok, err := st.CanExist(skbViewSubjectsIdx)
 		if err != nil {
 			// notest
 			return err
