@@ -8,6 +8,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/valyala/bytebufferpool"
+
 	"github.com/VictoriaMetrics/fastcache"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -16,7 +18,6 @@ import (
 
 type cachedAppStorage struct {
 	cache                *fastcache.Cache
-	keyPool              keyPool
 	storage              istorage.IAppStorage
 	vvm                  string
 	appQName             istructs.AppQName
@@ -53,7 +54,6 @@ func (asp *implCachingAppStorageProvider) AppStorage(appQName istructs.AppQName)
 func newCachingAppStorage(conf StorageCacheConf, nonCachingAppStorage istorage.IAppStorage, metrics imetrics.IMetrics, vvm string, appQName istructs.AppQName) istorage.IAppStorage {
 	return &cachedAppStorage{
 		cache:                fastcache.New(conf.MaxBytes),
-		keyPool:              newKeyPool(conf.PreAllocatedBuffersCount, conf.PreAllocatedBufferSize),
 		storage:              nonCachingAppStorage,
 		vvm:                  vvm,
 		appQName:             appQName,
@@ -81,12 +81,17 @@ func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err err
 	imetrics.AddFloat64(s.mPutTotal, 1.0)
 	err = s.storage.Put(pKey, cCols, value)
 	if err == nil {
-		bb, err := s.keyPool.get(pKey, cCols)
+		bb := bytebufferpool.Get()
+		_, err := bb.Write(pKey)
+		if err != nil {
+			return err
+		}
+		_, err = bb.Write(cCols)
 		if err != nil {
 			return err
 		}
 		s.cache.Set(bb.Bytes(), value)
-		s.keyPool.put(bb)
+		bytebufferpool.Put(bb)
 	}
 	return err
 }
@@ -102,12 +107,17 @@ func (s *cachedAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	err = s.storage.PutBatch(items)
 	if err == nil {
 		for _, i := range items {
-			bb, err := s.keyPool.get(i.PKey, i.CCols)
+			bb := bytebufferpool.Get()
+			_, err := bb.Write(i.PKey)
+			if err != nil {
+				return err
+			}
+			_, err = bb.Write(i.CCols)
 			if err != nil {
 				return err
 			}
 			s.cache.Set(bb.Bytes(), i.Value)
-			s.keyPool.put(bb)
+			bytebufferpool.Put(bb)
 		}
 	}
 	return err
@@ -120,14 +130,21 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 	}()
 	imetrics.AddFloat64(s.mGetTotal, 1.0)
 
-	bb, err := s.keyPool.get(pKey, cCols)
+	bb := bytebufferpool.Get()
+	_, err = bb.Write(pKey)
 	if err != nil {
-		return
+		return false, err
 	}
-	defer s.keyPool.put(bb)
+	_, err = bb.Write(cCols)
+	if err != nil {
+		return false, err
+	}
 
 	*data = (*data)[0:0]
 	*data = s.cache.Get(*data, bb.Bytes())
+
+	bytebufferpool.Put(bb)
+
 	if len(*data) != 0 {
 		imetrics.AddFloat64(s.mGetCachedTotal, 1.0)
 		return true, err
@@ -137,12 +154,19 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 		return false, err
 	}
 	if ok {
-		bb, err := s.keyPool.get(pKey, cCols)
+		bb := bytebufferpool.Get()
+		_, err = bb.Write(pKey)
 		if err != nil {
 			return false, err
 		}
-		defer s.keyPool.put(bb)
+		_, err = bb.Write(cCols)
+		if err != nil {
+			return false, err
+		}
+
 		s.cache.Set(bb.Bytes(), *data)
+
+		bytebufferpool.Put(bb)
 	}
 	return
 }
@@ -161,16 +185,23 @@ func (s *cachedAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) 
 
 func (s *cachedAppStorage) getBatchFromCache(pKey []byte, items []istorage.GetBatchItem) (ok bool) {
 	for i := range items {
-		bb, err := s.keyPool.get(pKey, items[i].CCols)
+		bb := bytebufferpool.Get()
+		_, err := bb.Write(pKey)
 		if err != nil {
 			return false
 		}
+		_, err = bb.Write(items[i].CCols)
+		if err != nil {
+			return false
+		}
+
 		*items[i].Data = s.cache.Get((*items[i].Data)[0:0], bb.Bytes())
 		if len(*items[i].Data) == 0 {
 			return false
 		}
 		items[i].Ok = true
-		s.keyPool.put(bb)
+
+		bytebufferpool.Put(bb)
 	}
 	imetrics.AddFloat64(s.mGetBatchCachedTotal, 1.0)
 	return true
@@ -182,16 +213,23 @@ func (s *cachedAppStorage) getBatchFromStorage(pKey []byte, items []istorage.Get
 		return err
 	}
 	for _, item := range items {
-		bb, e := s.keyPool.get(pKey, item.CCols)
-		if e != nil {
-			return e
+		bb := bytebufferpool.Get()
+		_, err := bb.Write(pKey)
+		if err != nil {
+			return err
 		}
+		_, err = bb.Write(item.CCols)
+		if err != nil {
+			return err
+		}
+
 		if item.Ok {
 			s.cache.Set(bb.Bytes(), *item.Data)
 		} else {
 			s.cache.Del(bb.Bytes())
 		}
-		s.keyPool.put(bb)
+
+		bytebufferpool.Put(bb)
 	}
 	return err
 }

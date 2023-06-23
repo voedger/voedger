@@ -9,6 +9,8 @@ package istoragecache
 import (
 	"bytes"
 	"sync"
+
+	"github.com/valyala/bytebufferpool"
 )
 
 type StorageCacheConf struct {
@@ -76,4 +78,25 @@ func (p *keyPoolImpl) findIndex(bb *bytes.Buffer) int {
 		}
 	}
 	panic("impossible")
+}
+
+type byteBufferPool struct {
+}
+
+func (b *byteBufferPool) get(pKey []byte, cCols []byte) (bb *bytebufferpool.ByteBuffer, err error) {
+	byteBuffer := bytebufferpool.Get()
+	_, err = byteBuffer.Write(pKey)
+	if err != nil {
+		return nil, err
+	}
+	_, err = byteBuffer.Write(cCols)
+	if err != nil {
+		return nil, err
+	}
+
+	return byteBuffer, err
+}
+
+func (b *byteBufferPool) put(bb *bytebufferpool.ByteBuffer) {
+	bytebufferpool.Put(bb)
 }

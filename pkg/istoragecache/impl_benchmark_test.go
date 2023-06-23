@@ -24,6 +24,14 @@ BenchmarkAppStorage_Metrics/GET-20         	11087750	       102.1 ns/op	       8
 
 After:
 TBD
+goos: windows
+goarch: amd64
+pkg: github.com/voedger/voedger/pkg/istoragecache
+cpu: 12th Gen Intel(R) Core(TM) i7-12700
+BenchmarkAppStorage_Metrics
+BenchmarkAppStorage_Metrics/GET
+BenchmarkAppStorage_Metrics/GET-20              15856152                76.57 ns/op            0 B/op          0 allocs/op
+PASS
 */
 func BenchmarkAppStorage_Metrics(b *testing.B) {
 	testData := []byte("atestdata")
@@ -52,5 +60,7 @@ func BenchmarkAppStorage_Metrics(b *testing.B) {
 			}
 
 		}
+
+		b.ReportAllocs()
 	})
 }
