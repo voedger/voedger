@@ -7,6 +7,7 @@ package vit
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/voedger/voedger/pkg/apps"
@@ -82,8 +83,12 @@ func EmptyApp(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appd
 
 func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	// sys package
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		panic("no build info")
+	}
 	sys.Provide(cfg, adf, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-		apis.NumCommandProcessors, apis.BuildInfo)
+		apis.NumCommandProcessors, buildInfo, false)
 
 	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "articles")).
 		AddField("name", appdef.DataKind_string, false).

@@ -6,7 +6,6 @@ package vvm
 
 import (
 	"os"
-	"runtime/debug"
 
 	ibus "github.com/untillpro/airs-ibus"
 	router "github.com/untillpro/airs-router2"
@@ -54,11 +53,6 @@ func NewVVMDefaultConfig() VVMConfig {
 			return istorage.ProvideMem(), nil
 		},
 	}
-	buildInfo, ok := debug.ReadBuildInfo()
-	if !ok {
-		logger.Info("no build info")
-	}
-	res.BuildInfo = buildInfo
 	return res
 }
 
