@@ -35,17 +35,17 @@ func (m *metric) App() istructs.AppQName {
 }
 
 type mapMetrics struct {
-	metrics map[metric]*float64
+	metrics map[metric]*MetricValue
 	lock    sync.Mutex
 }
 
 func newMetrics() IMetrics {
 	return &mapMetrics{
-		metrics: make(map[metric]*float64),
+		metrics: make(map[metric]*MetricValue),
 	}
 }
 
-func (m *mapMetrics) AppMetricAddr(metricName string, vvm string, app istructs.AppQName) *float64 {
+func (m *mapMetrics) AppMetricAddr(metricName string, vvm string, app istructs.AppQName) *MetricValue {
 	return m.get(metric{
 		name: metricName,
 		app:  app,
@@ -53,7 +53,7 @@ func (m *mapMetrics) AppMetricAddr(metricName string, vvm string, app istructs.A
 	})
 }
 
-func (m *mapMetrics) MetricAddr(metricName string, vvmName string) *float64 {
+func (m *mapMetrics) MetricAddr(metricName string, vvmName string) *MetricValue {
 	return m.get(metric{
 		name: metricName,
 		app:  istructs.AppQName_null,
@@ -62,39 +62,22 @@ func (m *mapMetrics) MetricAddr(metricName string, vvmName string) *float64 {
 }
 
 func (m *mapMetrics) Increase(metricName string, vvm string, valueDelta float64) {
-	mv := m.MetricAddr(metricName, vvm)
-	AddFloat64(mv, valueDelta)
+	m.MetricAddr(metricName, vvm).Increase(valueDelta)
 }
 
 func (m *mapMetrics) IncreaseApp(metricName string, vvm string, app istructs.AppQName, valueDelta float64) {
-	mv := m.AppMetricAddr(metricName, vvm, app)
-	AddFloat64(mv, valueDelta)
+	m.AppMetricAddr(metricName, vvm, app).Increase(valueDelta)
 }
 
-func (m *mapMetrics) get(key metric) *float64 {
+func (m *mapMetrics) get(key metric) *MetricValue {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	if mv, ok := m.metrics[key]; ok {
 		return mv
 	}
-	value := float64(0)
+	value := MetricValue(0)
 	m.metrics[key] = &value
 	return &value
-
-}
-
-func AddFloat64(val *float64, delta float64) {
-	var swapped bool
-	ptr := (*uint64)(unsafe.Pointer(val))
-	for !swapped {
-		old := math.Float64frombits(atomic.LoadUint64(ptr))
-		new := old + delta
-		swapped = atomic.CompareAndSwapUint64(
-			ptr,
-			math.Float64bits(old),
-			math.Float64bits(new),
-		)
-	}
 }
 
 func (m *mapMetrics) List(cb func(metric IMetric, metricValue float64) (err error)) (err error) {

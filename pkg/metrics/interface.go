@@ -38,13 +38,13 @@ type IMetrics interface {
 	// Only use atomic operations with that address!
 	//
 	// @ConcurrentAccess
-	MetricAddr(metricName string, vvmName string) *float64
+	MetricAddr(metricName string, vvmName string) *MetricValue
 
 	// Returns address of metric value.
 	// Only use atomic operations with that address!
 	//
 	// @ConcurrentAccess
-	AppMetricAddr(metricName string, vvmName string, app istructs.AppQName) *float64
+	AppMetricAddr(metricName string, vvmName string, app istructs.AppQName) *MetricValue
 
 	// GetAll lists current values of all metrics
 	//
