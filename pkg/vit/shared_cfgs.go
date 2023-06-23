@@ -83,7 +83,7 @@ func EmptyApp(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appd
 func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	// sys package
 	sys.Provide(cfg, adf, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-		apis.NumCommandProcessors, apis.BuildInfo, false)
+		apis.NumCommandProcessors, nil, false)
 
 	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "articles")).
 		AddField("name", appdef.DataKind_string, false).
