@@ -191,14 +191,13 @@ func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 		kb.PutInt64(invite.Field_LoginHash, coreutils.HashBytes([]byte(name)))
 		kb.PutString(invite.Field_Login, name)
 		subjectsIdx, err := as.ViewRecords().Get(wsid, kb)
+		if err == istructsmem.ErrRecordNotFound {
+			return nil, nil
+		}
 		if err != nil {
 			// notest
 			return nil, err
 		}
-		if subjectsIdx == nil {
-			return nil, nil
-		}
-
 		res := []appdef.QName{}
 		subjectID := subjectsIdx.AsRecordID(invite.Field_SubjectID)
 		cdocSubject, err := as.Records().Get(wsid, true, istructs.RecordID(subjectID))
