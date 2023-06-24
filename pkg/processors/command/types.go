@@ -77,6 +77,8 @@ type cmdWorkpiece struct {
 	checkWSDescUpdating bool
 	hostStateProvider   *hostStateProvider
 	wsInitialized       bool
+	cmdResultBuilder    istructs.IObjectBuilder
+	cmdResult           istructs.IObject
 }
 
 type parsedCUD struct {
@@ -105,17 +107,18 @@ type wrongArgsCatcher struct {
 }
 
 type hostStateProvider struct {
-	as         istructs.IAppStructs
-	cud        istructs.ICUD
-	wsid       istructs.WSID
-	principals []iauthnz.Principal
-	state      state.IHostState
-	token      string
+	as               istructs.IAppStructs
+	cud              istructs.ICUD
+	wsid             istructs.WSID
+	principals       []iauthnz.Principal
+	state            state.IHostState
+	token            string
+	cmdResultBuilder istructs.IObjectBuilder
 }
 
-func newHostStateProvider(ctx context.Context, pid istructs.PartitionID, secretReader isecrets.ISecretReader) *hostStateProvider {
+func newHostStateProvider(ctx context.Context, pid istructs.PartitionID, secretReader isecrets.ISecretReader, cmdResultBuilder istructs.IObjectBuilder) *hostStateProvider {
 	p := &hostStateProvider{}
-	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid), p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, intentsLimit)
+	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid), p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, intentsLimit, cmdResultBuilder)
 	return p
 }
 
@@ -126,11 +129,12 @@ func (p *hostStateProvider) getPrincipals() []iauthnz.Principal {
 	return p.principals
 }
 func (p *hostStateProvider) getToken() string { return p.token }
-func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.WSID, cud istructs.ICUD, principals []iauthnz.Principal, token string) state.IHostState {
+func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.WSID, cud istructs.ICUD, principals []iauthnz.Principal, token string, cmdResultBuilder istructs.IObjectBuilder) state.IHostState {
 	p.as = appStructs
 	p.wsid = wsid
 	p.cud = cud
 	p.principals = principals
 	p.token = token
+	p.cmdResultBuilder = cmdResultBuilder
 	return p.state
 }

@@ -19,6 +19,7 @@ var (
 	SendMailStorage    = appdef.NewQName(appdef.SysPackage, "SendMailStorage")
 	AppSecretsStorage  = appdef.NewQName(appdef.SysPackage, "AppSecretsStorage")
 	SubjectStorage     = appdef.NewQName(appdef.SysPackage, "SubjectStorage")
+	CmdResultStorage   = appdef.NewQName(appdef.SysPackage, "CmdResultStorage")
 )
 
 const (

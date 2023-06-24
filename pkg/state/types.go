@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"container/list"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,7 +28,7 @@ type AppStructsFunc func() istructs.IAppStructs
 type CUDFunc func() istructs.ICUD
 type PrincipalsFunc func() []iauthnz.Principal
 type TokenFunc func() string
-type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int) IHostState
+type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilder istructs.IObjectBuilder) IHostState
 type SyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit int) IHostState
 type QueryProcessorStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc) IHostState
 type AsyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit, bundlesLimit int,
@@ -696,4 +697,33 @@ func (v *baseStateValue) GetAsValue(int) istructs.IStateValue {
 }
 func (v *baseStateValue) AsValue(string) istructs.IStateValue {
 	panic(errFieldByNameIsNotAnObjectOrArray)
+}
+
+type cmdResultKeyBuilder struct {
+	*keyBuilder
+}
+
+func newCmdResultKeyBuilder() *cmdResultKeyBuilder {
+	return &cmdResultKeyBuilder{
+		keyBuilder: newKeyBuilder(CmdResultStorage, appdef.NullQName),
+	}
+}
+
+type cmdResultStorageValue struct {
+	baseStateValue
+	result map[string]interface{}
+}
+
+func (c *cmdResultStorageValue) AsInt32(name string) int32     { return c.result[name].(int32) }
+func (c *cmdResultStorageValue) AsInt64(name string) int64     { return c.result[name].(int64) }
+func (c *cmdResultStorageValue) AsFloat32(name string) float32 { return c.result[name].(float32) }
+func (c *cmdResultStorageValue) AsFloat64(name string) float64 { return c.result[name].(float64) }
+func (c *cmdResultStorageValue) AsBytes(name string) []byte    { return c.result[name].([]byte) }
+func (c *cmdResultStorageValue) AsString(name string) string   { return c.result[name].(string) }
+func (c *cmdResultStorageValue) ToJSON(opts ...interface{}) (string, error) {
+	bb, err := json.Marshal(c.result)
+	if err != nil {
+		return "", err
+	}
+	return string(bb), nil
 }

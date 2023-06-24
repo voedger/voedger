@@ -66,6 +66,8 @@ func getStorageID(key istructs.IKeyBuilder) appdef.QName {
 		return HTTPStorage
 	case *viewRecordsKeyBuilder:
 		return ViewRecordsStorage
+	case *cmdResultKeyBuilder:
+		return CmdResultStorage
 	default:
 		panic(fmt.Errorf("key %+v: %w", key, ErrUnknownStorage))
 	}
