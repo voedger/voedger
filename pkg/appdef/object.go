@@ -40,3 +40,23 @@ func newElement(app *appDef, name QName) *element {
 	app.appendDef(elt)
 	return elt
 }
+
+type objRef struct {
+	name QName
+	def  IObject
+}
+
+func (o *objRef) object(app IAppDef) IObject {
+	if o.name == NullQName {
+		return nil
+	}
+	if (o.def == nil) || (o.def.QName() != o.name) {
+		o.def = app.Object(o.name)
+	}
+	return o.def
+}
+
+func (o *objRef) setName(n QName) {
+	o.name = n
+	o.def = nil
+}

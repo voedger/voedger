@@ -9,11 +9,14 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
 	blobberapp "github.com/voedger/voedger/pkg/apps/sys/blobber"
 	registryapp "github.com/voedger/voedger/pkg/apps/sys/registry"
 	routerapp "github.com/voedger/voedger/pkg/apps/sys/router"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/sys/authnz/workspace"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
@@ -37,7 +40,7 @@ func NewSharedVITConfig(opts ...vitConfigOptFunc) VITConfig {
 	return cfg
 }
 
-func WithBuilder(builder vvm.VVMAppBuilder) AppOptFunc {
+func WithBuilder(builder apps.AppBuilder) AppOptFunc {
 	return func(app *app, cfg *vvm.VVMConfig) {
 		cfg.VVMAppsBuilder.Add(app.name, builder)
 	}
@@ -56,8 +59,8 @@ func WithUserLogin(name, pwd string, opts ...PostConstructFunc) AppOptFunc {
 
 func WithWorkspaceTemplate(wsKind appdef.QName, templateName string, templateFS coreutils.EmbedFS) AppOptFunc {
 	return func(app *app, cfg *vvm.VVMConfig) {
-		app.wsTemplateFuncs = append(app.wsTemplateFuncs, func(sep vvm.IStandardExtensionPoints) {
-			epWSKindTemplates := sep.EPWSTemplates().ExtensionPoint(wsKind)
+		app.wsTemplateFuncs = append(app.wsTemplateFuncs, func(ep extensionpoints.IExtensionPoint) {
+			epWSKindTemplates := ep.ExtensionPoint(workspace.EPWSTemplates).ExtensionPoint(wsKind)
 			epWSKindTemplates.AddNamed(templateName, templateFS)
 		})
 	}
@@ -111,7 +114,7 @@ func WithCleanup(cleanup func(*VIT)) vitConfigOptFunc {
 	}
 }
 
-func WithApp(appQName istructs.AppQName, updater vvm.VVMAppBuilder, appOpts ...AppOptFunc) vitConfigOptFunc {
+func WithApp(appQName istructs.AppQName, updater apps.AppBuilder, appOpts ...AppOptFunc) vitConfigOptFunc {
 	return func(vpc *vitPreConfig) {
 		_, ok := vpc.vitApps[appQName]
 		if ok {
@@ -128,8 +131,8 @@ func WithApp(appQName istructs.AppQName, updater vvm.VVMAppBuilder, appOpts ...A
 		}
 		// to append tests templates to already declared templates
 		for _, wsTempalateFunc := range app.wsTemplateFuncs {
-			vpc.vvmCfg.VVMAppsBuilder.Add(appQName, func(_ *vvm.VVMConfig, _ vvm.VVMAPI, _ *istructsmem.AppConfigType, _ appdef.IAppDefBuilder, sep vvm.IStandardExtensionPoints) {
-				wsTempalateFunc(sep)
+			vpc.vvmCfg.VVMAppsBuilder.Add(appQName, func(appAPI apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+				wsTempalateFunc(ep)
 			})
 		}
 	}

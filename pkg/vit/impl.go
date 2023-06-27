@@ -26,7 +26,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
@@ -72,7 +71,7 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 	cfg.VVMPort = 0
 	cfg.MetricsServicePort = 0
 
-	cfg.TimeFunc = func() time.Time { return ts.now() }
+	cfg.TimeFunc = coreutils.TimeFunc(func() time.Time { return ts.now() })
 
 	emailMessagesChan := make(chan smtptest.Message, 1) // must be buffered
 	cfg.ActualizerStateOpts = append(cfg.ActualizerStateOpts, state.WithEmailMessagesChan(emailMessagesChan))
@@ -184,7 +183,7 @@ func (vit *VIT) DummyWS(appQName istructs.AppQName, awsid ...istructs.WSID) *App
 	if len(awsid) > 0 {
 		wsid = awsid[0]
 	}
-	commandprocessor.AddDummyWS(wsid)
+	coreutils.AddDummyWS(wsid)
 	sysPrn := vit.GetSystemPrincipal(appQName)
 	return &AppWorkspace{
 		WorkspaceDescriptor: WorkspaceDescriptor{
@@ -307,7 +306,7 @@ func (vit *VIT) PostFree(url string, body string, opts ...coreutils.ReqOptFunc) 
 
 func (vit *VIT) Post(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	res, err := coreutils.FederationPOST(vit.VVMAPI.FederationURL(), url, body, opts...)
+	res, err := coreutils.FederationPOST(vit.IFederation.URL(), url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
 }
@@ -315,14 +314,14 @@ func (vit *VIT) Post(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 func (vit *VIT) PostApp(appQName istructs.AppQName, wsid istructs.WSID, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
 	url := fmt.Sprintf("api/%s/%d/%s", appQName, wsid, funcName)
-	res, err := coreutils.FederationFunc(vit.VVMAPI.FederationURL(), url, body, opts...)
+	res, err := coreutils.FederationFunc(vit.IFederation.URL(), url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
 }
 
 func (vit *VIT) Get(url string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	res, err := coreutils.FederationReq(vit.VVMAPI.FederationURL(), url, "", opts...)
+	res, err := coreutils.FederationReq(vit.IFederation.URL(), url, "", opts...)
 	require.NoError(vit.T, err)
 	return res
 }

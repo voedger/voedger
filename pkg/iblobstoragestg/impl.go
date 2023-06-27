@@ -12,16 +12,16 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"time"
 
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istorage"
 	istructs "github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type bStorageType struct {
 	appStorage istorage.IAppStorage
-	now        func() time.Time
+	now        coreutils.TimeFunc
 }
 
 func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.KeyType, descr iblobstorage.DescrType, reader io.Reader, maxSize int64) (err error) {

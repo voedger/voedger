@@ -13,12 +13,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/authnz/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
-	"github.com/voedger/voedger/pkg/vvm"
 )
 
 func TestBasicUsage_Workspace(t *testing.T) {
@@ -222,7 +222,7 @@ func TestWorkspaceTemplatesValidationErrors(t *testing.T) {
 		// {desc: "unsupported data type in wsKindInitializationData", data: `[{"sys.ID":42}]`, wsInitData: `{"IntFld": {}}`},
 	}
 
-	epWSTemplates := vvm.NewRootExtensionPoint()
+	epWSTemplates := extensionpoints.NewRootExtensionPoint()
 	epTestWSKindTemplates := epWSTemplates.ExtensionPoint(it.QNameTestWSKind)
 	for i, c := range cases {
 		str := strconv.Itoa(i)

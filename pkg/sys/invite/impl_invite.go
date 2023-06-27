@@ -6,13 +6,13 @@ package invite
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
 func provideCDocInvite(appDefBuilder appdef.IAppDefBuilder) {
 	doc := appDefBuilder.AddCDoc(qNameCDocInvite)
 	doc.
-		AddField(sysshared.Field_SubjectKind, appdef.DataKind_int32, false).
+		AddField(authnz.Field_SubjectKind, appdef.DataKind_int32, false).
 		AddField(Field_Login, appdef.DataKind_string, true).
 		AddField(field_Email, appdef.DataKind_string, true).
 		AddField(Field_Roles, appdef.DataKind_string, false).

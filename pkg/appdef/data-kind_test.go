@@ -80,7 +80,7 @@ func TestDataKindType_MarshalText(t *testing.T) {
 	})
 }
 
-func TestDataKind_ToString(t *testing.T) {
+func TestDataKind_TrimString(t *testing.T) {
 	tests := []struct {
 		name string
 		k    DataKind
@@ -91,8 +91,8 @@ func TestDataKind_ToString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.k.ToString(); got != tt.want {
-				t.Errorf("DataKind.ToString() = %v, want %v", got, tt.want)
+			if got := tt.k.TrimString(); got != tt.want {
+				t.Errorf("%v.(DataKind).TrimString() = %v, want %v", tt.k, got, tt.want)
 			}
 		})
 	}

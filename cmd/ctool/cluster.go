@@ -73,7 +73,7 @@ type nodeType struct {
 
 func (n *nodeType) nodeControllerFunction() error {
 	switch n.NodeRole {
-	case nrDBNode, nrSENode:
+	case nrDBNode, nrAppNode:
 		return seNodeControllerFunction(n)
 	case nrCENode:
 		return ceNodeControllerFunction(n)
@@ -114,7 +114,7 @@ func (n *nodeType) label(key string) string {
 	switch n.NodeRole {
 	case nrCENode:
 		return "ce"
-	case nrSENode:
+	case nrAppNode:
 		if key == swarmAppLabelKey {
 			return "AppNode"
 		} else if key == swarmMonLabelKey {
@@ -453,7 +453,7 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 
 		for i := 0; i < initSeArgCount; i++ {
 			if i < seNodeCount {
-				c.Nodes[i].NodeRole = nrSENode
+				c.Nodes[i].NodeRole = nrAppNode
 			} else {
 				c.Nodes[i].NodeRole = nrDBNode
 			}

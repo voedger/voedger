@@ -63,6 +63,11 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 
 		// Compare
 		require.Equal(qname, qname2)
+
+		t.Run("UnmarshalText must do nothing", func(t *testing.T) {
+			qname := NewQName("test", "name")
+			require.NoError(qname.UnmarshalText([]byte(qname.String())))
+		})
 	})
 
 	t.Run("Marshall/Unmarshal QName as a part of the structure", func(t *testing.T) {
@@ -147,6 +152,11 @@ func TestQName_Compare(t *testing.T) {
 	q4 := NewQName("pkg_1", "entity")
 	require.NotEqual(q2, q4)
 	require.False(q2 == q4)
+}
+
+func Test_NullQName(t *testing.T) {
+	require := require.New(t)
+	require.Equal(NullQName, QName{})
 }
 
 func TestQName_UnmarshalInvalidString(t *testing.T) {

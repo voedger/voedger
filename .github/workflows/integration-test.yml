@@ -94,6 +94,28 @@ jobs:
       run: |
            echo PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_03) >> $GITHUB_ENV
            echo CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00) >> $GITHUB_ENV
+           echo SSH_OPTIONS="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR" >> $GITHUB_ENV
+
+    - name: Test deploy cluster. Simulate error when init. Continue with repeat after problem elimination.
+      run: | 
+        if ! ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool init SE 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15 -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+          echo "Error: SSH key permission too open."
+            if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "chmod 400 /tmp/amazonKey.pem; exit \$?"; then
+              echo "Changing ssh key permissions to more restrective."
+                if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool repeat -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+                  echo "Cluster init reepeat succesfull." 
+                else 
+                  echo "Error: cluster init repeat. Exit."
+                  exit 1
+                fi 
+            else 
+              echo "Error: changing ssh key permissions to more restrective. Exit."
+              exit 1
+            fi 
+        else 
+          echo "Error: connect to resources with too open ssh key not possible. Exit."
+          exit 1
+        fi
 
     - name: Smoke test - wait for db cluster building
       run: |
@@ -145,7 +167,7 @@ jobs:
 
     - name: Smoke test - replace scylla node to new hardware
       run: | 
-        if ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace 10.0.0.13 10.0.0.16 --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+        if ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace 10.0.0.13 10.0.0.16 -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
           echo "Replace node success"
         else 
           echo "Failed to replace scylla node in cluster"

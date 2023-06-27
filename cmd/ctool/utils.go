@@ -31,6 +31,9 @@ func printLogLine(logLevel logger.TLogLevel, line string) {
 		fmt.Fprintln(logFile, line)
 		mutex.Unlock()
 	}
+	if logLevel == 1 {
+		line = red(line)
+	}
 	logger.DefaultPrintLine(logLevel, line)
 }
 

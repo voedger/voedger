@@ -26,6 +26,7 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "Punct", Pattern: `[;\[\].]`},
 		{Name: "DEFAULTNEXTVAL", Pattern: `DEFAULT[ \r\n\t]+NEXTVAL`},
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
+		{Name: "UNLOGGED", Pattern: `UNLOGGED`},
 		{Name: "EXTENSIONENGINE", Pattern: `EXTENSION[ \r\n\t]+ENGINE`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
 		{Name: "String", Pattern: `("(\\"|[^"])*")|('(\\'|[^'])*')`},
@@ -244,9 +245,44 @@ func analyse(c *basicContext) {
 		switch v := stmt.(type) {
 		case *CommandStmt:
 			c.pos = &v.Pos
+			if v.Arg != nil && !isVoid(v.Arg.Package, v.Arg.Name) {
+				if getDefDataKind(v.Arg.Package, v.Arg.Name) == appdef.DataKind_null {
+					resolve(*v.Arg, c, func(f *TypeStmt) error { return nil })
+				} else {
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForArgument, c.pos))
+				}
+			}
+			if v.UnloggedArg != nil && !isVoid(v.UnloggedArg.Package, v.UnloggedArg.Name) {
+				if getDefDataKind(v.UnloggedArg.Package, v.UnloggedArg.Name) == appdef.DataKind_null {
+					resolve(*v.UnloggedArg, c, func(f *TypeStmt) error { return nil })
+				} else {
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForArgument, c.pos))
+				}
+			}
+			if v.Returns != nil && !isVoid(v.Returns.Package, v.Returns.Name) {
+				if getDefDataKind(v.Returns.Package, v.Returns.Name) == appdef.DataKind_null {
+					resolve(*v.Returns, c, func(f *TypeStmt) error { return nil })
+				} else {
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForResult, c.pos))
+				}
+			}
 			analyzeWithRefs(c, v.With)
 		case *QueryStmt:
 			c.pos = &v.Pos
+			if v.Arg != nil && !isVoid(v.Arg.Package, v.Arg.Name) {
+				if getDefDataKind(v.Arg.Package, v.Arg.Name) == appdef.DataKind_null {
+					resolve(*v.Arg, c, func(f *TypeStmt) error { return nil })
+				} else {
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForArgument, c.pos))
+				}
+			}
+			if !isVoid(v.Returns.Package, v.Returns.Name) {
+				if getDefDataKind(v.Returns.Package, v.Returns.Name) == appdef.DataKind_null {
+					resolve(v.Returns, c, func(f *TypeStmt) error { return nil })
+				} else {
+					c.errs = append(c.errs, errorAt(ErrOnlyTypeOrVoidAllowedForResult, c.pos))
+				}
+			}
 			analyzeWithRefs(c, v.With)
 		case *ProjectorStmt:
 			c.pos = &v.Pos
@@ -294,9 +330,11 @@ type buildContext struct {
 	defs    []defBuildContext
 }
 
-func (c *buildContext) newSchema(schema *PackageSchemaAST) {
+func (c *buildContext) setSchema(schema *PackageSchemaAST) {
 	c.pkg = schema
-	c.defs = make([]defBuildContext, 0)
+	if c.defs == nil {
+		c.defs = make([]defBuildContext, 0)
+	}
 }
 
 func (c *buildContext) pushDef(name string, kind appdef.DefKind) {
@@ -326,6 +364,37 @@ func (c *buildContext) pushDef(name string, kind appdef.DefKind) {
 		qname:      qname,
 		names:      make(map[string]bool),
 	})
+}
+
+func (c *buildContext) isExists(name string, kind appdef.DefKind) (exists bool) {
+	qname := appdef.NewQName(c.pkg.Ast.Package, name)
+	switch kind {
+	case appdef.DefKind_CDoc:
+		return c.builder.CDoc(qname) != nil
+	case appdef.DefKind_CRecord:
+		return c.builder.CRecord(qname) != nil
+	case appdef.DefKind_ODoc:
+		return c.builder.ODoc(qname) != nil
+	case appdef.DefKind_ORecord:
+		return c.builder.ORecord(qname) != nil
+	case appdef.DefKind_WDoc:
+		return c.builder.WDoc(qname) != nil
+	case appdef.DefKind_WRecord:
+		return c.builder.WRecord(qname) != nil
+	case appdef.DefKind_Object:
+		return c.builder.Object(qname) != nil
+	default:
+		panic(fmt.Sprintf("unsupported def kind %d", kind))
+	}
+}
+
+func (c *buildContext) fundSchemaByPkg(pkg string) *PackageSchemaAST {
+	for _, ast := range c.pkgmap {
+		if ast.Ast.Package == pkg {
+			return ast
+		}
+	}
+	return nil
 }
 
 func (c *buildContext) popDef() {
@@ -359,13 +428,19 @@ func buildAppDefs(packages map[string]*PackageSchemaAST, builder appdef.IAppDefB
 	if err := buildViews(&ctx); err != nil {
 		return err
 	}
+	if err := buildCommands(&ctx); err != nil {
+		return err
+	}
+	if err := buildQueries(&ctx); err != nil {
+		return err
+	}
 	return nil
 }
 
 func buildTypes(ctx *buildContext) error {
 	for _, schema := range ctx.pkgmap {
 		iterateStmt(schema.Ast, func(typ *TypeStmt) {
-			ctx.newSchema(schema)
+			ctx.setSchema(schema)
 			ctx.pushDef(typ.Name, appdef.DefKind_Object)
 			addFieldsOf(typ.Of, ctx)
 			addTableItems(typ.Items, ctx)
@@ -387,7 +462,7 @@ func contains(s []string, e string) bool {
 func buildViews(ctx *buildContext) error {
 	for _, schema := range ctx.pkgmap {
 		iterateStmt(schema.Ast, func(view *ViewStmt) {
-			ctx.newSchema(schema)
+			ctx.setSchema(schema)
 
 			qname := appdef.NewQName(ctx.pkg.Ast.Package, view.Name)
 			vb := ctx.builder.AddView(qname)
@@ -409,6 +484,59 @@ func buildViews(ctx *buildContext) error {
 	return nil
 }
 
+func buildCommands(ctx *buildContext) error {
+	for _, schema := range ctx.pkgmap {
+		iterateStmt(schema.Ast, func(c *CommandStmt) {
+			ctx.setSchema(schema)
+			qname := appdef.NewQName(ctx.pkg.Ast.Package, c.Name)
+			b := ctx.builder.AddCommand(qname)
+			if c.Arg != nil && !isVoid(c.Arg.Package, c.Arg.Name) {
+				argQname := buildQname(ctx, c.Arg.Package, c.Arg.Name)
+				b.SetArg(argQname)
+			}
+			if c.UnloggedArg != nil && !isVoid(c.UnloggedArg.Package, c.UnloggedArg.Name) {
+				argQname := buildQname(ctx, c.UnloggedArg.Package, c.UnloggedArg.Name)
+				b.SetUnloggedArg(argQname)
+			}
+			if c.Returns != nil && !isVoid(c.Returns.Package, c.Returns.Name) {
+				retQname := buildQname(ctx, c.Returns.Package, c.Returns.Name)
+				b.SetResult(retQname)
+			}
+			if c.Engine.WASM {
+				b.SetExtension(c.Name, appdef.ExtensionEngineKind_WASM)
+			} else {
+				b.SetExtension(c.Name, appdef.ExtensionEngineKind_BuiltIn)
+			}
+		})
+	}
+	return nil
+}
+
+func buildQueries(ctx *buildContext) error {
+	for _, schema := range ctx.pkgmap {
+		iterateStmt(schema.Ast, func(c *QueryStmt) {
+			ctx.setSchema(schema)
+			qname := appdef.NewQName(ctx.pkg.Ast.Package, c.Name)
+			b := ctx.builder.AddQuery(qname)
+			if c.Arg != nil && !isVoid(c.Arg.Package, c.Arg.Name) {
+				argQname := buildQname(ctx, c.Arg.Package, c.Arg.Name)
+				b.SetArg(argQname)
+			}
+			if !isVoid(c.Returns.Package, c.Returns.Name) {
+				retQname := buildQname(ctx, c.Returns.Package, c.Returns.Name)
+				b.SetResult(retQname) // TODO: support arrays?
+			}
+
+			if c.Engine.WASM {
+				b.SetExtension(c.Name, appdef.ExtensionEngineKind_WASM)
+			} else {
+				b.SetExtension(c.Name, appdef.ExtensionEngineKind_BuiltIn)
+			}
+		})
+	}
+	return nil
+}
+
 func fillTable(ctx *buildContext, table *TableStmt) {
 	if table.Inherits != nil {
 		resolve(*table.Inherits, &ctx.basicContext, func(t *TableStmt) error {
@@ -423,24 +551,31 @@ func fillTable(ctx *buildContext, table *TableStmt) {
 func buildTables(ctx *buildContext) error {
 	for _, schema := range ctx.pkgmap {
 		iterateStmt(schema.Ast, func(table *TableStmt) {
-			ctx.newSchema(schema)
-			if isPredefinedSysTable(table, ctx) {
-				return
-			}
-			tableType, singletone := getTableDefKind(table, ctx)
-			if tableType == appdef.DefKind_null {
-				ctx.errs = append(ctx.errs, errorAt(ErrUndefinedTableKind, &table.Pos))
-			} else {
-				ctx.pushDef(table.Name, tableType)
-				fillTable(ctx, table)
-				if singletone {
-					ctx.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
-				}
-				ctx.popDef()
-			}
+			buildTable(ctx, schema, table)
 		})
 	}
 	return errors.Join(ctx.errs...)
+}
+
+func buildTable(ctx *buildContext, schema *PackageSchemaAST, table *TableStmt) {
+	ctx.setSchema(schema)
+	if isPredefinedSysTable(table, ctx) {
+		return
+	}
+	tableType, singletone := getTableDefKind(table, ctx)
+	if tableType == appdef.DefKind_null {
+		ctx.errs = append(ctx.errs, errorAt(ErrUndefinedTableKind, &table.Pos))
+	} else {
+		if ctx.isExists(table.Name, tableType) {
+			return
+		}
+		ctx.pushDef(table.Name, tableType)
+		fillTable(ctx, table)
+		if singletone {
+			ctx.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
+		}
+		ctx.popDef()
+	}
 }
 
 func addFieldRefToDef(refField *RefFieldExpr, ctx *buildContext) {
@@ -451,15 +586,15 @@ func addFieldRefToDef(refField *RefFieldExpr, ctx *buildContext) {
 	refs := make([]appdef.QName, 0)
 	errors := false
 	for i := range refField.RefDocs {
-		_, err := resolveTable(refField.RefDocs[i], &ctx.basicContext, &refField.Pos)
+		tableStmt, err := resolveTable(refField.RefDocs[i], &ctx.basicContext, &refField.Pos)
 		if err != nil {
 			ctx.errs = append(ctx.errs, err)
 			errors = true
+			continue
 		}
-		if err = checkReference(refField.RefDocs[i], ctx, &refField.Pos); err != nil {
+		if err = checkReference(ctx, refField.RefDocs[i], tableStmt, &refField.Pos); err != nil {
 			ctx.errs = append(ctx.errs, err)
 			errors = true
-			return
 		}
 	}
 	if !errors {
@@ -575,15 +710,19 @@ func addFieldsOf(types []DefQName, ctx *buildContext) {
 	}
 }
 
-func checkReference(refTable DefQName, ctx *buildContext, pos *lexer.Position) error {
-	//TODO is it correct assumption?
+func checkReference(ctx *buildContext, refTable DefQName, table *TableStmt, pos *lexer.Position) error {
 	if refTable.Package == "" {
 		refTable.Package = ctx.basicContext.pkg.Ast.Package
 	}
 	refTableDef := ctx.builder.DefByName(appdef.NewQName(refTable.Package, refTable.Name))
+	if refTableDef == nil {
+		buildTable(ctx, ctx.fundSchemaByPkg(refTable.Package), table)
+		refTableDef = ctx.builder.DefByName(appdef.NewQName(refTable.Package, refTable.Name))
+	}
 
-	if refTableDef == nil || !refTableDef.Kind().HasSystemField(appdef.SystemField_ID) {
-		return errorAt(ErrTargetIsNotIdentified, pos)
+	if refTableDef == nil {
+		//if it happened it means that error occurred
+		return nil
 	}
 
 	for _, defKind := range canNotReferenceTo[ctx.defCtx().kind] {

@@ -33,9 +33,9 @@ const (
 	initCeArgCount = 1
 
 	// node Roles
-	nrCENode = "CENode"
-	nrSENode = "SENode"
-	nrDBNode = "DBNode"
+	nrCENode  = "CENode"
+	nrAppNode = "AppNode"
+	nrDBNode  = "DBNode"
 
 	embedScriptsDir = "scripts"
 

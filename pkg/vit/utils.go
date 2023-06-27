@@ -26,7 +26,7 @@ import (
 
 func (vit *VIT) GetBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID int64, token string) *BLOB {
 	vit.T.Helper()
-	resp, err := coreutils.FederationReq(vit.VVMAPI.FederationURL(), fmt.Sprintf(`blob/%s/%d/%d`, appQName.String(), wsid, blobID), "", coreutils.WithAuthorizeBy(token))
+	resp, err := coreutils.FederationReq(vit.IFederation.URL(), fmt.Sprintf(`blob/%s/%d/%d`, appQName.String(), wsid, blobID), "", coreutils.WithAuthorizeBy(token))
 	require.NoError(vit.T, err)
 	contentDisposition := resp.HTTPResp.Header.Get("Content-Disposition")
 	_, params, err := mime.ParseMediaType(contentDisposition)
@@ -285,7 +285,7 @@ func (vit *VIT) SubscribeForN10n(ws *AppWorkspace, viewQName appdef.QName) chan 
 	query := fmt.Sprintf(`{"SubjectLogin":"test_%d","ProjectionKey":[{"App":"%s","Projection":"%s","WS":%d}]}`,
 		ws.WSID, ws.Owner.AppQName, viewQName, ws.WSID)
 	params.Add("payload", query)
-	httpResp, err := coreutils.FederationReq(vit.VVMAPI.FederationURL(), fmt.Sprintf("n10n/channel?%s", params.Encode()), "",
+	httpResp, err := coreutils.FederationReq(vit.IFederation.URL(), fmt.Sprintf("n10n/channel?%s", params.Encode()), "",
 		coreutils.WithLongPolling())
 	require.NoError(vit.T, err)
 

@@ -19,6 +19,8 @@ import (
 	ibus "github.com/untillpro/airs-ibus"
 	router "github.com/untillpro/airs-router2"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
@@ -43,9 +45,7 @@ import (
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys/collection"
 	"github.com/voedger/voedger/pkg/sys/invite"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
@@ -102,7 +102,7 @@ func (vvm *VoedgerVM) Launch() error {
 func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxType) (*VVM, func(), error) {
 	panic(wire.Build(
 		wire.Struct(new(VVM), "*"),
-		wire.Struct(new(VVMAPI), "*"),
+		wire.Struct(new(apps.APIs), "*"),
 		provideServicePipeline,
 		provideCommandProcessors,
 		provideQueryProcessors,
@@ -121,19 +121,18 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideChannelGroups,
 		provideProcessorChannelGroupIdxCommand,
 		provideProcessorChannelGroupIdxQuery,
-		provideCommandProcessorsAmount,
 		provideQueryChannel,
 		provideCommandChannelFactory,
 		provideAppConfigs,
 		provideIBus,
 		provideRouterParams,
 		provideRouterAppStorage,
-		provideFederationURL,
+		provideIFederation,
 		provideCachingAppStorageProvider,  // IAppStorageProvider
 		itokensjwt.ProvideITokens,         // ITokens
 		istructsmem.Provide,               // IAppStructsProvider
 		payloads.ProvideIAppTokensFactory, // IAppTokensFactory
-		in10nmem.ProvideEx,
+		in10nmem.ProvideEx2,
 		queryprocessor.ProvideServiceFactory,
 		commandprocessor.ProvideServiceFactory,
 		metrics.ProvideMetricsService,
@@ -188,32 +187,39 @@ func provideStorageFactory(vvmConfig *VVMConfig) (provider istorage.IAppStorageF
 
 func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 	return func(requestContext context.Context, name string, as istructs.IAppStructs, wsid istructs.WSID) ([]appdef.QName, error) {
-		kb := as.ViewRecords().KeyBuilder(collection.QNameViewCollection)
-		kb.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
-		kb.PutQName(collection.Field_DocQName, sysshared.QNameCDocSubject)
+		kb := as.ViewRecords().KeyBuilder(invite.QNameViewSubjectsIdx)
+		kb.PutInt64(invite.Field_LoginHash, coreutils.HashBytes([]byte(name)))
+		kb.PutString(invite.Field_Login, name)
+		subjectsIdx, err := as.ViewRecords().Get(wsid, kb)
+		if err == istructsmem.ErrRecordNotFound {
+			return nil, nil
+		}
+		if err != nil {
+			// notest
+			return nil, err
+		}
 		res := []appdef.QName{}
-		err := as.ViewRecords().Read(requestContext, wsid, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
-			record := value.AsRecord(collection.Field_Record)
-			if record.AsString(invite.Field_Login) != name {
-				return nil
+		subjectID := subjectsIdx.AsRecordID(invite.Field_SubjectID)
+		cdocSubject, err := as.Records().Get(wsid, true, istructs.RecordID(subjectID))
+		if err != nil {
+			// notest
+			return nil, err
+		}
+		roles := strings.Split(cdocSubject.AsString(invite.Field_Roles), ",")
+		for _, role := range roles {
+			roleQName, err := appdef.ParseQName(role)
+			if err != nil {
+				// notest
+				// must be gauranted by the side that inserted this qname
+				return nil, err
 			}
-			roles := strings.Split(record.AsString(invite.Field_Roles), ",")
-			for _, role := range roles {
-				roleQName, err := appdef.ParseQName(role)
-				if err != nil {
-					// notest
-					// must be gauranted by the side that inserted this qname
-					return err
-				}
-				res = append(res, roleQName)
-			}
-			return nil
-		})
-		return res, err
+			res = append(res, roleQName)
+		}
+		return res, nil
 	}
 }
 
-func provideBucketsFactory(timeFunc func() time.Time) irates.BucketsFactoryType {
+func provideBucketsFactory(timeFunc coreutils.TimeFunc) irates.BucketsFactoryType {
 	return func() irates.IBuckets {
 		return iratesce.Provide(timeFunc)
 	}
@@ -263,8 +269,8 @@ func provideMetricsServiceOperator(ms metrics.MetricsService) MetricsServiceOper
 }
 
 // TODO: consider vvmIdx
-func provideFederationURL(cfg *VVMConfig, vvmPortSource *VVMPortSource) FederationURLType {
-	return func() *url.URL {
+func provideIFederation(cfg *VVMConfig, vvmPortSource *VVMPortSource) coreutils.IFederation {
+	return coreutils.NewIFederation(func() *url.URL {
 		if cfg.FederationURL != nil {
 			return cfg.FederationURL
 		}
@@ -274,7 +280,7 @@ func provideFederationURL(cfg *VVMConfig, vvmPortSource *VVMPortSource) Federati
 			panic(err)
 		}
 		return resultFU
-	}
+	})
 }
 
 // Metrics service port could be dynamic -> need a func that will return the actual port
@@ -306,25 +312,16 @@ func provideAppConfigs(vvmConfig *VVMConfig) istructsmem.AppConfigsType {
 	return istructsmem.AppConfigsType{}
 }
 
-func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[istructs.AppQName]IStandardExtensionPoints {
-	return vvmConfig.VVMAppsBuilder.PrepareStandardExtensionPoints()
+func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[istructs.AppQName]extensionpoints.IExtensionPoint {
+	return vvmConfig.VVMAppsBuilder.PrepareAppsExtensionPoints()
 }
 
-func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, vvmAPI VVMAPI, seps map[istructs.AppQName]IStandardExtensionPoints) VVMApps {
-	return vvmConfig.VVMAppsBuilder.Build(vvmConfig, cfgs, vvmAPI, seps)
+func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) VVMApps {
+	return vvmConfig.VVMAppsBuilder.Build(cfgs, apis, appsEPs)
 }
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {
 	return vvmConfig.ProvideServiceChannelFactory(procbus)
-}
-
-func provideCommandProcessorsAmount(vvmCfg *VVMConfig) CommandProcessorsAmountType {
-	for _, pc := range vvmCfg.processorsChannels {
-		if pc.ChannelType == ProcessorChannel_Command {
-			return CommandProcessorsAmountType(pc.NumChannels)
-		}
-	}
-	panic("no command processor channel group")
 }
 
 func provideProcessorChannelGroupIdxCommand(vvmCfg *VVMConfig) CommandProcessorsChannelGroupIdxType {
@@ -416,7 +413,7 @@ func provideBlobAppStorage(astp istorage.IAppStorageProvider) (BlobAppStorage, e
 	return astp.AppStorage(istructs.AppQName_sys_blobber)
 }
 
-func provideBlobStorage(bas BlobAppStorage, nowFunc func() time.Time) BlobStorage {
+func provideBlobStorage(bas BlobAppStorage, nowFunc coreutils.TimeFunc) BlobStorage {
 	return iblobstoragestg.Provide(bas, nowFunc)
 }
 
@@ -426,7 +423,7 @@ func provideRouterAppStorage(astp istorage.IAppStorageProvider) (dbcertcache.Rou
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
 func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
-	nowFunc func() time.Time, bsc router.BlobberServiceChannels, bms router.BLOBMaxSizeType, blobberClusterAppID BlobberAppClusterID, blobStorage BlobStorage,
+	nowFunc coreutils.TimeFunc, bsc router.BlobberServiceChannels, bms router.BLOBMaxSizeType, blobberClusterAppID BlobberAppClusterID, blobStorage BlobStorage,
 	routerAppStorage dbcertcache.RouterAppStorage, autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, appsWSAmounts map[istructs.AppQName]istructs.AppWSAmount) RouterServices {
 	bp := &router.BlobberParams{
 		ClusterAppBlobberID:    uint32(blobberClusterAppID),
@@ -479,7 +476,7 @@ func provideQueryProcessors(qpCount QueryProcessorsCount, qc QueryChannel, bus i
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
 
-func provideCommandProcessors(cpCount CommandProcessorsCount, ccf CommandChannelFactory, cpFactory commandprocessor.ServiceFactory) OperatorCommandProcessors {
+func provideCommandProcessors(cpCount coreutils.CommandProcessorsCount, ccf CommandChannelFactory, cpFactory commandprocessor.ServiceFactory) OperatorCommandProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, cpCount)
 	for i := 0; i < int(cpCount); i++ {
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(cpFactory(ccf(i), istructs.PartitionID(i))))
@@ -526,7 +523,7 @@ func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.Actual
 	}
 }
 
-func provideAppServiceFactory(apf AppPartitionFactory, cpCount CommandProcessorsCount) AppServiceFactory {
+func provideAppServiceFactory(apf AppPartitionFactory, cpCount coreutils.CommandProcessorsCount) AppServiceFactory {
 	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories) pipeline.ISyncOperator {
 		forks := make([]pipeline.ForkOperatorOptionFunc, cpCount)
 		for i := 0; i < int(cpCount); i++ {

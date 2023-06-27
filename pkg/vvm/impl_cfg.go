@@ -24,7 +24,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		// notest
 		panic(err)
 	}
-	return VVMConfig{
+	res := VVMConfig{
 		Routes:                 map[string]string{},
 		RoutesRewrite:          map[string]string{},
 		RouteDomains:           map[string]string{},
@@ -53,6 +53,7 @@ func NewVVMDefaultConfig() VVMConfig {
 			return istorage.ProvideMem(), nil
 		},
 	}
+	return res
 }
 
 func (tsr *testISecretReader) ReadSecret(name string) ([]byte, error) {

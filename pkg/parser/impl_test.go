@@ -13,8 +13,14 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-//go:embed example_app/*.sql
-var efs embed.FS
+//go:embed example_app/pmain/*.sql
+var fsMain embed.FS
+
+//go:embed example_app/airsbp/*.sql
+var fsAir embed.FS
+
+//go:embed example_app/untill/*.sql
+var fsUntill embed.FS
 
 //go:embed system_pkg/*.sql
 var sfs embed.FS
@@ -33,7 +39,13 @@ func getSysPackageAST() *PackageSchemaAST {
 func Test_BasicUsage(t *testing.T) {
 
 	require := require.New(t)
-	examplePkgAST, err := ParsePackageDir("github.com/untillpro/exampleschema", efs, "example_app")
+	mainPkgAST, err := ParsePackageDir("github.com/untillpro/main", fsMain, "example_app/pmain")
+	require.NoError(err)
+
+	airPkgAST, err := ParsePackageDir("github.com/untillpro/airsbp", fsAir, "example_app/airsbp")
+	require.NoError(err)
+
+	untillPkgAST, err := ParsePackageDir("github.com/untillpro/untill", fsUntill, "example_app/untill")
 	require.NoError(err)
 
 	// := repr.String(pkgExample, repr.Indent(" "), repr.IgnorePrivate())
@@ -41,7 +53,9 @@ func Test_BasicUsage(t *testing.T) {
 
 	packages, err := MergePackageSchemas([]*PackageSchemaAST{
 		getSysPackageAST(),
-		examplePkgAST,
+		mainPkgAST,
+		airPkgAST,
+		untillPkgAST,
 	})
 	require.NoError(err)
 
@@ -50,24 +64,24 @@ func Test_BasicUsage(t *testing.T) {
 	require.NoError(err)
 
 	// table
-	cdoc := builder.Def(appdef.NewQName("air", "AirTablePlan"))
+	cdoc := builder.Def(appdef.NewQName("main", "TablePlan"))
 	require.NotNil(cdoc)
 	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
 	require.Equal(appdef.DataKind_int32, cdoc.(appdef.IFields).Field("FState").DataKind())
 
 	// child table
-	crec := builder.Def(appdef.NewQName("air", "AirTablePlanItem"))
+	crec := builder.Def(appdef.NewQName("main", "TablePlanItem"))
 	require.NotNil(crec)
 	require.Equal(appdef.DefKind_CRecord, crec.Kind())
 	require.Equal(appdef.DataKind_int32, crec.(appdef.IFields).Field("TableNo").DataKind())
 
 	// type
-	obj := builder.Object(appdef.NewQName("air", "SubscriptionEvent"))
+	obj := builder.Object(appdef.NewQName("main", "SubscriptionEvent"))
 	require.Equal(appdef.DefKind_Object, obj.Kind())
 	require.Equal(appdef.DataKind_string, obj.Field("Origin").DataKind())
 
 	// view
-	view := builder.View(appdef.NewQName("air", "XZReports"))
+	view := builder.View(appdef.NewQName("main", "XZReports"))
 	require.NotNil(view)
 	require.Equal(appdef.DefKind_ViewRecord, view.Kind())
 
@@ -291,8 +305,13 @@ func Test_Undefined(t *testing.T) {
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
 			COMMAND Orders() WITH Tags=[UndefinedTag];
-			QUERY Query1 RETURNS text WITH Rate=UndefinedRate, Comment=xyz.UndefinedComment;
+			QUERY Query1 RETURNS void WITH Rate=UndefinedRate, Comment=xyz.UndefinedComment;
 			PROJECTOR ImProjector ON COMMAND xyz.CreateUPProfile USES sys.HTTPStorage;
+			COMMAND CmdFakeReturn() RETURNS text;
+			COMMAND CmdNoReturn() RETURNS void;
+			COMMAND CmdFakeArg(text);
+			COMMAND CmdVoidArg(void);
+			COMMAND CmdFakeUnloggedArg(UNLOGGED text);
 		)
 	)
 	`)
@@ -308,6 +327,9 @@ func Test_Undefined(t *testing.T) {
 		"example.sql:5:4: UndefinedRate undefined",
 		"example.sql:5:4: xyz undefined",
 		"example.sql:6:4: xyz undefined",
+		"example.sql:7:4: only type or void allowed in result",
+		"example.sql:9:4: only type or void allowed in argument",
+		"example.sql:11:4: only type or void allowed in argument",
 	}, "\n"))
 }
 
@@ -320,9 +342,9 @@ func Test_Imports(t *testing.T) {
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
     		COMMAND Orders WITH Tags=[pkg2.SomeTag];
-    		QUERY Query1 RETURNS text WITH Comment=pkg2.SomeComment;
-    		QUERY Query2 RETURNS text WITH Comment=air.SomeComment;
-    		QUERY Query3 RETURNS text WITH Comment=air.SomeComment2; -- air.SomeComment2 undefined
+    		QUERY Query1 RETURNS void WITH Comment=pkg2.SomeComment;
+    		QUERY Query2 RETURNS void WITH Comment=air.SomeComment;
+    		QUERY Query3 RETURNS void WITH Comment=air.SomeComment2; -- air.SomeComment2 undefined
     		PROJECTOR ImProjector ON COMMAND Air.CreateUPProfil USES sys.HTTPStorage; -- Air undefined
 		)
 	)
@@ -471,7 +493,7 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 
 		require.Contains(err.Error(), "table test.CTable can not reference to table test.OTable")
 	})
-	t.Run("Should return error because CDoc references to not identified target", func(t *testing.T) {
+	t.Run("Should return error because CDoc references to undefined table kind", func(t *testing.T) {
 		require := require.New(t)
 
 		fs, err := ParseFile("example.sql", `SCHEMA test; 
@@ -494,7 +516,7 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 		def := appdef.New()
 		err = BuildAppDefs(packages, def)
 
-		require.Contains(err.Error(), ErrTargetIsNotIdentified.Error())
+		require.Contains(err.Error(), ErrUndefinedTableKind.Error())
 	})
 }
 

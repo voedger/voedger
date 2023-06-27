@@ -20,6 +20,7 @@ import (
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type N10nBroker struct {
@@ -29,7 +30,7 @@ type N10nBroker struct {
 	quotas           in10n.Quotas
 	metricBySubject  map[istructs.SubjectLogin]*metricType
 	numSubscriptions int
-	now              func() time.Time
+	now              coreutils.TimeFunc
 	events           chan event
 }
 
@@ -332,7 +333,7 @@ func (nb *N10nBroker) MetricSubject(ctx context.Context, cb func(subject istruct
 	}
 }
 
-func NewN10nBroker(quotas in10n.Quotas, now func() time.Time) (nb *N10nBroker, cleanup func()) {
+func NewN10nBroker(quotas in10n.Quotas, now coreutils.TimeFunc) (nb *N10nBroker, cleanup func()) {
 	broker := N10nBroker{
 		projections:     make(map[in10n.ProjectionKey]*projection),
 		channels:        make(map[in10n.ChannelID]*channelType),

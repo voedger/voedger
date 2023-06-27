@@ -48,7 +48,7 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 		require.Equal(2, doc.UserFieldCount())
 		require.Equal(DataKind_int64, doc.Field("f1").DataKind())
 
-		require.Equal(DefKind_CRecord, doc.ContainerDef("rec").Kind())
+		require.Equal(DefKind_CRecord, doc.Container("rec").Def().Kind())
 
 		t.Run("must be ok to find builded record", func(t *testing.T) {
 			def := app.Def(recName)

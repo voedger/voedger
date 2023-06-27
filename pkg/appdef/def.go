@@ -5,7 +5,10 @@
 
 package appdef
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // # Implements:
 //   - IDef
@@ -48,3 +51,25 @@ type nullDef struct{}
 func (d *nullDef) App() IAppDef  { return nil }
 func (d *nullDef) Kind() DefKind { return DefKind_null }
 func (d *nullDef) QName() QName  { return NullQName }
+
+// Validate specified definition.
+//
+// # Validation:
+//   - if definition supports Validate() interface, then call this,
+//   - if definition has fields, validate fields,
+//   - if definition has containers, validate containers
+func validateDef(def IDef) (err error) {
+	if v, ok := def.(interface{ Validate() error }); ok {
+		err = v.Validate()
+	}
+
+	if _, ok := def.(IFields); ok {
+		err = errors.Join(err, validateDefFields(def))
+	}
+
+	if _, ok := def.(IContainers); ok {
+		err = errors.Join(err, validateDefContainers(def))
+	}
+
+	return err
+}

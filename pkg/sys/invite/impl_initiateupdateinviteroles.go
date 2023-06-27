@@ -6,7 +6,6 @@ package invite
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -15,7 +14,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateUpdateInviteRoles(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc func() time.Time) {
+func provideCmdInitiateUpdateInviteRoles(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdInitiateUpdateInviteRoles,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateUpdateInviteRolesParams")).
@@ -29,7 +28,7 @@ func provideCmdInitiateUpdateInviteRoles(cfg *istructsmem.AppConfigType, appDefB
 	))
 }
 
-func execCmdInitiateUpdateInviteRoles(timeFunc func() time.Time) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateUpdateInviteRoles(timeFunc coreutils.TimeFunc) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)

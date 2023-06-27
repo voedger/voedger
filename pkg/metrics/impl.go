@@ -7,8 +7,11 @@ package imetrics
 
 import (
 	"bytes"
+	"math"
 	"strconv"
 	"sync"
+	"sync/atomic"
+	"unsafe"
 
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -32,45 +35,57 @@ func (m *metric) App() istructs.AppQName {
 }
 
 type mapMetrics struct {
-	metrics map[metric]float64
+	metrics map[metric]*MetricValue
 	lock    sync.Mutex
 }
 
 func newMetrics() IMetrics {
 	return &mapMetrics{
-		metrics: make(map[metric]float64),
+		metrics: make(map[metric]*MetricValue),
 	}
 }
 
-func (m *mapMetrics) Increase(metricName string, vvm string, valueDelta float64) {
-	key := metric{
-		name: metricName,
-		app:  istructs.AppQName_null,
-		vvm:  vvm,
-	}
-	m.increase(key, valueDelta)
-}
-
-func (m *mapMetrics) IncreaseApp(metricName string, vvm string, app istructs.AppQName, valueDelta float64) {
-	key := metric{
+func (m *mapMetrics) AppMetricAddr(metricName string, vvm string, app istructs.AppQName) *MetricValue {
+	return m.get(metric{
 		name: metricName,
 		app:  app,
 		vvm:  vvm,
-	}
-	m.increase(key, valueDelta)
+	})
 }
 
-func (m *mapMetrics) increase(key metric, valueDelta float64) {
+func (m *mapMetrics) MetricAddr(metricName string, vvmName string) *MetricValue {
+	return m.get(metric{
+		name: metricName,
+		app:  istructs.AppQName_null,
+		vvm:  vvmName,
+	})
+}
+
+func (m *mapMetrics) Increase(metricName string, vvm string, valueDelta float64) {
+	m.MetricAddr(metricName, vvm).Increase(valueDelta)
+}
+
+func (m *mapMetrics) IncreaseApp(metricName string, vvm string, app istructs.AppQName, valueDelta float64) {
+	m.AppMetricAddr(metricName, vvm, app).Increase(valueDelta)
+}
+
+func (m *mapMetrics) get(key metric) *MetricValue {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	m.metrics[key] = m.metrics[key] + valueDelta
+	if mv, ok := m.metrics[key]; ok {
+		return mv
+	}
+	value := MetricValue(0)
+	m.metrics[key] = &value
+	return &value
 }
 
 func (m *mapMetrics) List(cb func(metric IMetric, metricValue float64) (err error)) (err error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	for metric, value := range m.metrics {
-		err = cb(&metric, value)
+		ptr := (*uint64)(unsafe.Pointer(value))
+		err = cb(&metric, math.Float64frombits(atomic.LoadUint64(ptr)))
 		if err != nil {
 			return
 		}

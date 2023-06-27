@@ -18,11 +18,11 @@ import (
 	state "github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/vvm"
 )
 
 // called at targetApp/profileWSID
-func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, asp istructs.IAppStructsProvider, federationURL vvm.FederationURLType) {
+func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens,
+	asp istructs.IAppStructsProvider, federation coreutils.IFederation) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryInitiateEmailVerification,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateEmailVerificationParams")).
@@ -34,7 +34,7 @@ func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, appDefB
 		(appdef.IDef).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitialEmailVerificationResult")).
 			AddField(field_VerificationToken, appdef.DataKind_string, true).(appdef.IDef).QName(),
-		provideIEVExec(cfg.Name, itokens, asp, federationURL),
+		provideIEVExec(cfg.Name, itokens, asp, federation),
 	))
 	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQueryInitiateEmailVerification, istructs.RateLimit{
 		Period:                InitiateEmailVerification_Period,
@@ -44,7 +44,7 @@ func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, appDefB
 
 // q.sys.InitiateEmailVerification
 // called at targetApp/profileWSID
-func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp istructs.IAppStructsProvider, federationURL vvm.FederationURLType) istructsmem.ExecQueryClosure {
+func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp istructs.IAppStructsProvider, federation coreutils.IFederation) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		entity := args.ArgumentObject.AsString(field_Entity)
 		targetWSID := istructs.WSID(args.ArgumentObject.AsInt64(field_TargetWSID))
@@ -80,7 +80,7 @@ func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp ist
 
 		// c.sys.SendEmailVerificationCode
 		body := fmt.Sprintf(`{"args":{"VerificationCode":"%s","Email":"%s","Reason":"%s"}}`, verificationCode, email, verifyEmailReason)
-		if _, err = coreutils.FederationFunc(federationURL(), fmt.Sprintf("api/%s/%d/c.sys.SendEmailVerificationCode", appQName, args.Workspace), body,
+		if _, err = coreutils.FederationFunc(federation.URL(), fmt.Sprintf("api/%s/%d/c.sys.SendEmailVerificationCode", appQName, args.Workspace), body,
 			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(systemPrincipalToken)); err != nil {
 			return fmt.Errorf("c.sys.SendEmailVerificationCode failed: %w", err)
 		}
@@ -89,7 +89,7 @@ func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp ist
 	}
 }
 
-func sendEmailVerificationCodeProjector(federationURL vvm.FederationURLType, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func sendEmailVerificationCodeProjector(federation coreutils.IFederation, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 
 		kb, err := st.KeyBuilder(state.SendMailStorage, appdef.NullQName)
@@ -99,7 +99,7 @@ func sendEmailVerificationCodeProjector(federationURL vvm.FederationURLType, smt
 		reason := event.ArgumentObject().AsString(field_Reason)
 		kb.PutString(state.Field_Subject, EmailSubject)
 		kb.PutString(state.Field_To, event.ArgumentObject().AsString(Field_Email))
-		kb.PutString(state.Field_Body, getVerificationEmailBody(federationURL, event.ArgumentObject().AsString(field_VerificationCode), reason))
+		kb.PutString(state.Field_Body, getVerificationEmailBody(federation, event.ArgumentObject().AsString(field_VerificationCode), reason))
 		kb.PutString(state.Field_From, EmailFrom)
 		kb.PutString(state.Field_Host, smtpCfg.Host)
 		kb.PutInt32(state.Field_Port, smtpCfg.Port)
@@ -205,7 +205,7 @@ func provideCmdSendEmailVerificationCode(cfg *istructsmem.AppConfigType, appDefB
 	))
 }
 
-func getVerificationEmailBody(federationURL vvm.FederationURLType, verificationCode string, reason string) string {
+func getVerificationEmailBody(federation coreutils.IFederation, verificationCode string, reason string) string {
 	return fmt.Sprintf(`
 <div style="font-family: Arial, Helvetica, sans-serif;">
 	<div
@@ -224,5 +224,5 @@ func getVerificationEmailBody(federationURL vvm.FederationURLType, verificationC
 		%d &copy; unTill
 	</div>
 </div>
-`, verificationCode, federationURL().String(), reason, time.Now().Year())
+`, verificationCode, federation.URL().String(), reason, time.Now().Year())
 }

@@ -190,7 +190,7 @@ func TestVerificationKind_TrimString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.k.TrimString(); got != tt.want {
-				t.Errorf("VerificationKind.ToString() = %v, want %v", got, tt.want)
+				t.Errorf("%v.(VerificationKind).TrimString() = %v, want %v", tt.k, got, tt.want)
 			}
 		})
 	}

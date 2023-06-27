@@ -51,6 +51,16 @@ func TestBasicUsage(t *testing.T) {
 		AddClustColumn("Buyer", DataKind_string).
 		AddValueField("BuyerID", DataKind_RecordID, true)
 
+	objBuyer := appDef.AddObject(NewQName("test", "buyer"))
+	objBuyer.
+		AddField("Name", DataKind_string, true).
+		AddField("Age", DataKind_int32, false).
+		AddField("isHuman", DataKind_bool, false)
+
+	newBuyerCmd := appDef.AddCommand(NewQName("test", "cmdNewBuyer"))
+	newBuyerCmd.SetArg(objBuyer.QName())
+	newBuyerCmd.SetExtension("newBuyer", ExtensionEngineKind_BuiltIn)
+
 	result, err := appDef.Build()
 
 	t.Run("test results", func(t *testing.T) {

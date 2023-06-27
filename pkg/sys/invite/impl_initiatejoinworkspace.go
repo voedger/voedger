@@ -6,17 +6,16 @@ package invite
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateJoinWorkspace(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc func() time.Time) {
+func provideCmdInitiateJoinWorkspace(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdInitiateJoinWorkspace,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateJoinWorkspaceParams")).
@@ -28,7 +27,7 @@ func provideCmdInitiateJoinWorkspace(cfg *istructsmem.AppConfigType, appDefBuild
 	))
 }
 
-func execCmdInitiateJoinWorkspace(timeFunc func() time.Time) func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 		skbCDocInvite, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
 		if err != nil {
@@ -67,7 +66,7 @@ func execCmdInitiateJoinWorkspace(timeFunc func() time.Time) func(cf istructs.IC
 			return
 		}
 		svbCDocInvite.PutInt64(field_InviteeProfileWSID, svPrincipal.AsInt64(state.Field_ProfileWSID))
-		svbCDocInvite.PutInt32(sysshared.Field_SubjectKind, svPrincipal.AsInt32(state.Field_Kind))
+		svbCDocInvite.PutInt32(authnz.Field_SubjectKind, svPrincipal.AsInt32(state.Field_Kind))
 		svbCDocInvite.PutInt64(field_Updated, timeFunc().UnixMilli())
 		svbCDocInvite.PutInt32(field_State, State_ToBeJoined)
 

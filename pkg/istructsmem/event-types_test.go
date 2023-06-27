@@ -189,65 +189,123 @@ func TestEventBuilder_Core(t *testing.T) {
 	t.Run("III. Read event from PLog & PLog and reads CUD demo", func(t *testing.T) {
 
 		t.Run("must be ok to read PLog", func(t *testing.T) {
-			var pLogEvent istructs.IPLogEvent
-			err := app.Events().ReadPLog(context.Background(), test.partition, test.plogOfs, 1,
-				func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-					require.Equal(test.plogOfs, plogOffset)
-					pLogEvent = event
-					return nil
-				})
+			check := func(event istructs.IPLogEvent, err error) {
+				require.NoError(err)
+				require.NotNil(event)
 
-			require.NoError(err)
-			require.NotNil(pLogEvent)
-			defer pLogEvent.Release()
+				testDbEvent(t, event)
+				require.Equal(test.workspace, event.Workspace())
+				require.Equal(test.wlogOfs, event.WLogOffset())
 
-			testDbEvent(t, pLogEvent)
-			require.Equal(test.workspace, pLogEvent.Workspace())
-			require.Equal(test.wlogOfs, pLogEvent.WLogOffset())
+				cmdRec := event.ArgumentObject().AsRecord()
+				require.Equal(saleID, cmdRec.ID())
+				require.Equal(test.buyerValue, cmdRec.AsString(test.buyerIdent))
+			}
 
-			cmdRec := pLogEvent.ArgumentObject().AsRecord()
-			require.Equal(saleID, cmdRec.ID())
-			require.Equal(test.buyerValue, cmdRec.AsString(test.buyerIdent))
+			t.Run("test single record reading", func(t *testing.T) {
+				var event istructs.IPLogEvent
+				err := app.Events().ReadPLog(context.Background(), test.partition, test.plogOfs, 1,
+					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
+						require.Equal(test.plogOfs, plogOffset)
+						event = ev
+						return nil
+					})
+				check(event, err)
+			})
+
+			t.Run("test sequential reading", func(t *testing.T) {
+				var event istructs.IPLogEvent
+				err := app.Events().ReadPLog(context.Background(), test.partition, test.plogOfs, istructs.ReadToTheEnd,
+					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
+						require.Equal(test.plogOfs, plogOffset)
+						event = ev
+						return nil
+					})
+				check(event, err)
+			})
 		})
 
 		t.Run("must be no events if read other PLog partition", func(t *testing.T) {
-			// #18096: see #18047
-			var pLogEvent istructs.IPLogEvent
-			err := app.Events().ReadPLog(context.Background(), test.partition+1, test.plogOfs, 1,
-				func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-					require.Fail("must be no events if read other PLog partition")
-					pLogEvent = event
-					return nil
-				})
-			require.NoError(err)
-			require.Nil(pLogEvent)
+
+			t.Run("test single record reading", func(t *testing.T) {
+				var event istructs.IPLogEvent
+				err := app.Events().ReadPLog(context.Background(), test.partition+1, test.plogOfs, 1,
+					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
+						require.Fail("must be no events if read other PLog partition")
+						event = ev
+						return nil
+					})
+				require.NoError(err)
+				require.Nil(event)
+			})
+
+			t.Run("test sequential reading", func(t *testing.T) {
+				var event istructs.IPLogEvent
+				err := app.Events().ReadPLog(context.Background(), test.partition+1, test.plogOfs, istructs.ReadToTheEnd,
+					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
+						require.Fail("must be no events if read other PLog partition")
+						event = ev
+						return nil
+					})
+				require.NoError(err)
+				require.Nil(event)
+			})
 		})
 
 		t.Run("must be ok to read WLog", func(t *testing.T) {
-			var wLogEvent istructs.IWLogEvent
-			err = app.Events().ReadWLog(context.Background(), test.workspace, test.wlogOfs, 1,
-				func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
-					require.Equal(test.wlogOfs, wlogOffset)
-					wLogEvent = event
-					return nil
-				})
 
-			require.NoError(err)
-			require.NotNil(wLogEvent)
-			defer wLogEvent.Release()
+			t.Run("test single record reading", func(t *testing.T) {
+				var event istructs.IWLogEvent
+				err = app.Events().ReadWLog(context.Background(), test.workspace, test.wlogOfs, 1,
+					func(wlogOffset istructs.Offset, ev istructs.IWLogEvent) (err error) {
+						require.Equal(test.wlogOfs, wlogOffset)
+						event = ev
+						return nil
+					})
 
-			testDbEvent(t, wLogEvent)
+				require.NoError(err)
+				require.NotNil(event)
+				testDbEvent(t, event)
+			})
+
+			t.Run("test sequential reading", func(t *testing.T) {
+				var event istructs.IWLogEvent
+				err = app.Events().ReadWLog(context.Background(), test.workspace, test.wlogOfs, 1,
+					func(wlogOffset istructs.Offset, ev istructs.IWLogEvent) (err error) {
+						require.Equal(test.wlogOfs, wlogOffset)
+						event = ev
+						return nil
+					})
+
+				require.NoError(err)
+				require.NotNil(event)
+				testDbEvent(t, event)
+			})
 		})
 
 		t.Run("must be no event if read WLog from other WSID", func(t *testing.T) {
-			var wLogEvent istructs.IWLogEvent
-			err = app.Events().ReadWLog(context.Background(), test.workspace+1, test.wlogOfs, 1,
-				func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
-					require.Fail("must be no event if read WLog from other WSID")
-					return nil
-				})
-			require.NoError(err)
-			require.Nil(wLogEvent)
+
+			t.Run("test single record reading", func(t *testing.T) {
+				var wLogEvent istructs.IWLogEvent
+				err = app.Events().ReadWLog(context.Background(), test.workspace+1, test.wlogOfs, 1,
+					func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+						require.Fail("must be no event if read WLog from other WSID")
+						return nil
+					})
+				require.NoError(err)
+				require.Nil(wLogEvent)
+			})
+
+			t.Run("test sequential reading", func(t *testing.T) {
+				var wLogEvent istructs.IWLogEvent
+				err = app.Events().ReadWLog(context.Background(), test.workspace+1, test.wlogOfs, istructs.ReadToTheEnd,
+					func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+						require.Fail("must be no event if read WLog from other WSID")
+						return nil
+					})
+				require.NoError(err)
+				require.Nil(wLogEvent)
+			})
 		})
 
 		t.Run("read ODoc from IRecords must return NullRecord, see #17185", func(t *testing.T) {
@@ -354,26 +412,13 @@ func TestEventBuilder_Core(t *testing.T) {
 
 	t.Run("VIII. Read event from PLog & WLog and reads CUD", func(t *testing.T) {
 
-		t.Run("test read PLog", func(t *testing.T) {
-
-			var pLogEvent istructs.IPLogEvent
-
-			t.Run("test read PLog", func(t *testing.T) {
-				err = app.Events().ReadPLog(context.Background(), test.partition, test.plogOfs+1, 1,
-					func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-						require.Equal(test.plogOfs+1, plogOffset)
-						pLogEvent = event
-						return nil
-					})
-
-				require.NoError(err)
-				require.NotNil(pLogEvent)
-				defer pLogEvent.Release()
-			})
+		checkEvent := func(event istructs.IDbEvent, err error) {
+			require.NoError(err)
+			require.NotNil(event)
 
 			t.Run("test PLog event CUDs", func(t *testing.T) {
 				cudCount := 0
-				pLogEvent.CUDs(func(rec istructs.ICUDRow) error {
+				event.CUDs(func(rec istructs.ICUDRow) error {
 					if rec.QName() == test.tablePhotos {
 						require.False(rec.IsNew())
 						require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
@@ -389,26 +434,63 @@ func TestEventBuilder_Core(t *testing.T) {
 				require.Equal(2, cudCount)
 
 				t.Run("test event CUDs (update) breakable by error", func(t *testing.T) {
-					err := pLogEvent.CUDs(func(rec istructs.ICUDRow) error {
-						return ErrNameNotFound
+					testError := errors.New("test error")
+					err := event.CUDs(func(rec istructs.ICUDRow) error {
+						return testError
 					})
-					require.ErrorIs(err, ErrNameNotFound)
+					require.ErrorIs(err, testError)
 				})
+			})
+		}
+
+		t.Run("must be ok to read PLog", func(t *testing.T) {
+
+			t.Run("test single record reading", func(t *testing.T) {
+				var event istructs.IPLogEvent
+				err := app.Events().ReadPLog(context.Background(), test.partition, test.plogOfs+1, 1,
+					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
+						require.Equal(test.plogOfs+1, plogOffset)
+						event = ev
+						return nil
+					})
+				checkEvent(event, err)
+			})
+
+			t.Run("test sequential reading", func(t *testing.T) {
+				var event istructs.IPLogEvent
+				err := app.Events().ReadPLog(context.Background(), test.partition, test.plogOfs+1, istructs.ReadToTheEnd,
+					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
+						require.Equal(test.plogOfs+1, plogOffset)
+						event = ev
+						return nil
+					})
+				checkEvent(event, err)
 			})
 		})
 
-		t.Run("test read WLog", func(t *testing.T) {
-			var wLogEvent istructs.IWLogEvent
-			err = app.Events().ReadWLog(context.Background(), test.workspace, test.wlogOfs+1, 1,
-				func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
-					require.Equal(test.wlogOfs+1, wlogOffset)
-					wLogEvent = event
-					return nil
-				})
+		t.Run("must be ok to read WLog", func(t *testing.T) {
 
-			require.NoError(err)
-			require.NotNil(wLogEvent)
-			defer wLogEvent.Release()
+			t.Run("test single record reading", func(t *testing.T) {
+				var event istructs.IWLogEvent
+				err = app.Events().ReadWLog(context.Background(), test.workspace, test.wlogOfs+1, 1,
+					func(wlogOffset istructs.Offset, ev istructs.IWLogEvent) (err error) {
+						require.Equal(test.wlogOfs+1, wlogOffset)
+						event = ev
+						return nil
+					})
+				checkEvent(event, err)
+			})
+
+			t.Run("test sequential reading", func(t *testing.T) {
+				var event istructs.IWLogEvent
+				err = app.Events().ReadWLog(context.Background(), test.workspace, test.wlogOfs+1, istructs.ReadToTheEnd,
+					func(wlogOffset istructs.Offset, ev istructs.IWLogEvent) (err error) {
+						require.Equal(test.wlogOfs+1, wlogOffset)
+						event = ev
+						return nil
+					})
+				checkEvent(event, err)
+			})
 		})
 
 		t.Run("test read changed record", func(t *testing.T) {

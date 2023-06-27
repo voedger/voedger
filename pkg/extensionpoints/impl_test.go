@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package vvm
+package extensionpoints
 
 import (
 	"testing"

@@ -45,6 +45,7 @@ var defaultACL = ACL{
 				qNameQryInitiateResetPasswordByEmail,
 				qNameQryIssueVerifiedValueTokenForResetPassword,
 				qNameCmdChangePassword,
+				qNameQryModules,
 			},
 		},
 		policy: ACPolicy_Allow,

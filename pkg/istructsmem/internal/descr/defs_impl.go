@@ -73,7 +73,7 @@ func newContainer() *Container { return &Container{} }
 
 func (c *Container) read(cont appdef.IContainer) {
 	c.Name = cont.Name()
-	c.Type = cont.Def()
+	c.Type = cont.QName()
 	c.MinOccurs = cont.MinOccurs()
 	c.MaxOccurs = cont.MaxOccurs()
 }

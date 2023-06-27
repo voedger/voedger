@@ -6,7 +6,6 @@ package invite
 
 import (
 	"fmt"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -17,23 +16,22 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func ProvideAsyncProjectorApplyInvitationFactory(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.ProjectorFactory {
+func ProvideAsyncProjectorApplyInvitationFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name:         qNameAPApplyInvitation,
 			EventsFilter: []appdef.QName{qNameCmdInitiateInvitationByEMail},
-			Func:         applyInvitationProjector(timeFunc, federationURL, appQName, tokens, smtpCfg),
+			Func:         applyInvitationProjector(timeFunc, federation, appQName, tokens, smtpCfg),
 			NonBuffered:  true,
 		}
 	}
 }
 
-func applyInvitationProjector(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbViewInviteIndex, err := s.KeyBuilder(state.ViewRecordsStorage, qNameViewInviteIndex)
 		if err != nil {
@@ -49,11 +47,11 @@ func applyInvitationProjector(timeFunc func() time.Time, federationURL func() *u
 		verificationCode := fmt.Sprintf("%06d", timeFunc().UnixMilli()%time.Second.Microseconds())
 		emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 
-		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return
 		}
-		skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, sysshared.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
 		svCDocWorkspaceDescriptor, err := s.MustExist(skbCDocWorkspaceDescriptor)
 		if err != nil {
 			return
@@ -106,7 +104,7 @@ func applyInvitationProjector(timeFunc func() time.Time, federationURL func() *u
 			return
 		}
 		_, err = coreutils.FederationFunc(
-			federationURL(),
+			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"VerificationCode":"%s","Updated":%d}}]}`, svViewInviteIndex.AsRecordID(field_InviteID), State_Invited, verificationCode, timeFunc().UnixMilli()),
 			coreutils.WithAuthorizeBy(authToken))

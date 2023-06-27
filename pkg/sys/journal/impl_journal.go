@@ -11,14 +11,14 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func provideQryJournal(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, jdi vvm.IEPJournalIndices, jp vvm.IEPJournalPredicates) {
+func provideQryJournal(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Journal"),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "JournalParams")).
@@ -31,18 +31,19 @@ func provideQryJournal(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IApp
 			AddField(Field_Offset, appdef.DataKind_int64, true).
 			AddField(Field_EventTime, appdef.DataKind_int64, true).
 			AddField(Field_Event, appdef.DataKind_string, true).(appdef.IDef).QName(),
-		qryJournalExec(jdi, jp, appDefBuilder),
+		qryJournalExec(ep, appDefBuilder),
 	))
 }
-func qryJournalExec(jdi vvm.IEPJournalIndices, jp vvm.IEPJournalPredicates, appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
+func qryJournalExec( /*jdi vvm.IEPJournalIndices, jp vvm.IEPJournalPredicates, */ ep extensionpoints.IExtensionPoint, appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		var fo, lo int64
-
+		ji := ep.ExtensionPoint(EPJournalIndices)
+		jp := ep.ExtensionPoint(EPJournalPredicates)
 		switch args.ArgumentObject.AsString(field_RangeUnit) {
 		case rangeUnit_UnixTimestamp:
 			fallthrough
 		case "":
-			fo, lo, err = handleTimestamps(args.ArgumentObject, jdi, args.State)
+			fo, lo, err = handleTimestamps(args.ArgumentObject, ji, args.State)
 		case rangeUnit_Offset:
 			fo, lo, err = handleOffsets(args.ArgumentObject)
 		default:
@@ -85,7 +86,7 @@ func qryJournalExec(jdi vvm.IEPJournalIndices, jp vvm.IEPJournalPredicates, appD
 	}
 }
 
-func handleTimestamps(args istructs.IObject, jdi vvm.IEPJournalIndices, state istructs.IState) (fo, lo int64, err error) {
+func handleTimestamps(args istructs.IObject, epJornalIndices extensionpoints.IExtensionPoint, state istructs.IState) (fo, lo int64, err error) {
 	resetTime := func(milli int64) time.Time {
 		y, m, d := time.UnixMilli(milli).UTC().Date()
 		return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
@@ -94,7 +95,7 @@ func handleTimestamps(args istructs.IObject, jdi vvm.IEPJournalIndices, state is
 	from := resetTime(args.AsInt64(field_From))
 	till := resetTime(args.AsInt64(field_Till))
 
-	idxIntf, ok := jdi.Find(args.AsString(field_IndexForTimestamps))
+	idxIntf, ok := epJornalIndices.Find(args.AsString(field_IndexForTimestamps))
 	if !ok {
 		return 0, 0, errIndexNotSupported
 	}

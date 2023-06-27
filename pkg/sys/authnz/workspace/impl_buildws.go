@@ -7,20 +7,19 @@ package workspace
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"strconv"
 
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/vvm"
 )
 
 // everything is validated already
-func buildWorkspace(templateName string, epWSTemplates vvm.IEPWSTemplates, wsKind appdef.QName, federationURL *url.URL, newWSID int64,
+func buildWorkspace(templateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName, federation coreutils.IFederation, newWSID int64,
 	targetAppQName istructs.AppQName, wsName string, systemPrincipalToken string) (err error) {
-	wsTemplateBLOBs, wsTemplateData, err := ValidateTemplate(templateName, epWSTemplates, wsKind)
+	wsTemplateBLOBs, wsTemplateData, err := ValidateTemplate(templateName, ep, wsKind)
 	if err != nil {
 		return fmt.Errorf("template validation failed: %w", err)
 	}
@@ -29,7 +28,7 @@ func buildWorkspace(templateName string, epWSTemplates vvm.IEPWSTemplates, wsKin
 	}
 
 	// upload blobs
-	blobsMap, err := uploadBLOBs(wsTemplateBLOBs, federationURL, targetAppQName, newWSID, systemPrincipalToken)
+	blobsMap, err := uploadBLOBs(wsTemplateBLOBs, federation, targetAppQName, newWSID, systemPrincipalToken)
 	if err != nil {
 		return fmt.Errorf("blobs uploading failed: %w", err)
 	}
@@ -69,7 +68,7 @@ func buildWorkspace(templateName string, epWSTemplates vvm.IEPWSTemplates, wsKin
 			return err
 		}
 
-		if _, err := coreutils.FederationFunc(federationURL, initCmdURL, string(bb), coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
+		if _, err := coreutils.FederationFunc(federation.URL(), initCmdURL, string(bb), coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
 			return fmt.Errorf("c.sys.Init failed: %w", err)
 		}
 	}
@@ -90,13 +89,13 @@ func updateBLOBsIDsMap(wsData []map[string]interface{}, blobsMap map[int64]map[s
 	}
 }
 
-func uploadBLOBs(blobs []BLOB, federationURL *url.URL, appQName istructs.AppQName, wsid int64, principalToken string) (blobsMap, error) {
+func uploadBLOBs(blobs []BLOB, federation coreutils.IFederation, appQName istructs.AppQName, wsid int64, principalToken string) (blobsMap, error) {
 	res := blobsMap{}
 	for _, blob := range blobs {
 		uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s", appQName.String(), wsid, blob.Name, blob.MimeType)
 		logger.Info("workspace build: uploading blob", blob.Name, "url:", uploadBLOBURL)
 
-		resp, err := coreutils.FederationPOST(federationURL, uploadBLOBURL, string(blob.Content), coreutils.WithAuthorizeBy(principalToken))
+		resp, err := coreutils.FederationPOST(federation.URL(), uploadBLOBURL, string(blob.Content), coreutils.WithAuthorizeBy(principalToken))
 		if err != nil {
 			return nil, fmt.Errorf("blob %s: %w", blob.Name, err)
 		}

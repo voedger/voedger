@@ -15,11 +15,13 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istoragecache"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -179,6 +181,38 @@ func appStructs(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istr
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
+	structs, err := prov.AppStructs(istructs.AppQName_test1_app1)
+	if err != nil {
+		panic(err)
+	}
+	return structs
+}
+
+var metrics imetrics.IMetrics
+
+func appStructsCached(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+	appDef := appdef.New()
+	appDef.AddObject(incrementorName)
+	appDef.AddObject(decrementorName)
+	if prepareAppDef != nil {
+		prepareAppDef(appDef)
+	}
+
+	cfgs := make(istructsmem.AppConfigsType, 1)
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+	if prepareAppCfg != nil {
+		prepareAppCfg(cfg)
+	}
+
+	asf := istorage.ProvideMem()
+	metrics = imetrics.Provide()
+	storageProvider := istorageimpl.Provide(asf)
+	cached := istoragecache.Provide(1000000, storageProvider, metrics, "testVM")
+	prov := istructsmem.Provide(
+		cfgs,
+		iratesce.TestBucketsFactory,
+		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
+		cached)
 	structs, err := prov.AppStructs(istructs.AppQName_test1_app1)
 	if err != nil {
 		panic(err)

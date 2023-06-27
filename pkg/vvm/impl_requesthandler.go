@@ -25,7 +25,7 @@ import (
 
 func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 	cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
-	cpAmount CommandProcessorsAmountType, vvmApps VVMApps) ibus.IBus {
+	cpAmount coreutils.CommandProcessorsCount, vvmApps VVMApps) ibus.IBus {
 	var bus ibus.IBus
 	bus = ibusmem.Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
 		// Handling Command/Query messages
@@ -83,7 +83,7 @@ func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 
 func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName istructs.AppQName, sender interface{}, resource istructs.IResource,
 	procbus iprocbus.IProcBus, bus ibus.IBus, token string, cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
-	cpAmount CommandProcessorsAmountType) {
+	cpAmount coreutils.CommandProcessorsCount) {
 	switch request.Resource[:1] {
 	case "q":
 		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, istructs.WSID(request.WSID), sender, request.Body, resource, request.Host, token)

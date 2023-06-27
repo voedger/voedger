@@ -9,6 +9,7 @@ package projectors
 import (
 	"context"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/in10nmem"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
@@ -396,7 +398,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	}
 	//Initial events in pLog
 	f.fill(1001)
-	f.fill(1002)
+	topOffset := f.fill(1002)
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
@@ -425,51 +427,21 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 
 	_ = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
 
-	time.Sleep(100 * time.Millisecond)
+	// Wait for the projectors
+	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
+		time.Sleep(time.Nanosecond)
+	}
 
 	//New events in pLog
-	offset := f.fill(1001)
 	f.fill(1001)
+	topOffset = f.fill(1001)
 
 	//Notify the projectors
 	broker.Update(in10n.ProjectionKey{
 		App:        istructs.AppQName_test1_app1,
 		Projection: PlogQName,
 		WS:         istructs.WSID(partitionNr),
-	}, offset)
-
-	//New events in pLog
-	f.fill(1001)
-	f.fill(1002)
-
-	//Notify the projectors
-	broker.Update(in10n.ProjectionKey{
-		App:        istructs.AppQName_test1_app1,
-		Projection: PlogQName,
-		WS:         istructs.WSID(partitionNr),
-	}, offset)
-
-	//New events in pLog
-	f.fill(1001)
-	f.fill(1001)
-
-	//Notify the projectors
-	broker.Update(in10n.ProjectionKey{
-		App:        istructs.AppQName_test1_app1,
-		Projection: PlogQName,
-		WS:         istructs.WSID(partitionNr),
-	}, offset)
-
-	//New events in pLog
-	f.fill(1001)
-	topOffset := f.fill(1001)
-
-	//Notify the projectors
-	broker.Update(in10n.ProjectionKey{
-		App:        istructs.AppQName_test1_app1,
-		Projection: PlogQName,
-		WS:         istructs.WSID(partitionNr),
-	}, offset)
+	}, topOffset)
 
 	// Wait for the projectors
 	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
@@ -481,8 +453,8 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	actualizer.Close()
 
 	// expected projection values
-	require.Equal(int32(8), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(2), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
+	require.Equal(int32(3), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
+	require.Equal(int32(1), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
 }
 
 type pLogFiller struct {
@@ -703,4 +675,363 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 	require.Equal(int64(2), metrics.flushesTotal)
 	require.Equal(int64(topOffset), metrics.currentOffset)
 	require.Equal(topOffset, getActualizerOffset(require, app, partitionNr, incrementorName))
+}
+
+type testActualizerCtx struct {
+	op      pipeline.ISyncOperator
+	metrics *simpleMetrics
+}
+
+type testPartition struct {
+	number      istructs.PartitionID
+	topOffset   istructs.Offset
+	filler      pLogFiller
+	actualizers []testActualizerCtx
+}
+
+/*
+
+40 partition x 5 projectors
+
+Before:
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:811: Initialized in 1.045626636s
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:821: Started in 796.852µs
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:846: Actualized 400000 events in 3.779736704s
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:860: Stopped in 312.125µs
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:861: RPS: 105827.48
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:864: PutBatch: 2000000
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:865: Batch Per Second: 529137.39
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:869: FlushesTotal: 1999999
+
+
+After:
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:849: Initialized in 1.010688701s
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:859: Started in 1.129661ms
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:884: Actualized 400000 events in 2.070089932s
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:903: Stopped in 518.795µs
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:904: RPS: 193228.32
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:907: PutBatch: 1
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:908: Batch Per Second: 0.48
+    /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:912: FlushesTotal: 200
+
+*/
+
+func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
+	t.Skip()
+	require := require.New(t)
+
+	cmdQName := appdef.NewQName("pkg", "test")
+	projectorFilter := appdef.NewQName("pkg", "fake")
+	const totalPartitions = 40
+	const projectorsPerPartition = 5
+	const eventsPerPartition = 10000
+
+	app := appStructsCached(
+		func(appDef appdef.IAppDefBuilder) {
+			ProvideOffsetsDef(appDef)
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+		})
+	partitions := make([]*testPartition, totalPartitions)
+
+	withCancel, cancelCtx := context.WithCancel(context.Background())
+
+	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
+		Channels:               totalPartitions * projectorsPerPartition,
+		ChannelsPerSubject:     totalPartitions * projectorsPerPartition,
+		Subsciptions:           totalPartitions * projectorsPerPartition,
+		SubsciptionsPerSubject: totalPartitions * projectorsPerPartition,
+	}, time.Now)
+	defer cleanup()
+
+	actualizerFactory := ProvideAsyncActualizerFactory()
+	t0 := time.Now()
+
+	var wg sync.WaitGroup
+
+	for i := range partitions {
+		pn := istructs.PartitionID(i)
+		partitions[i] = &testPartition{
+			number:      pn,
+			actualizers: make([]testActualizerCtx, projectorsPerPartition),
+			filler: pLogFiller{
+				app:       app,
+				partition: pn,
+				offset:    istructs.Offset(1),
+				cmdQName:  cmdQName,
+			},
+		}
+		for j := 0; j < eventsPerPartition; j++ {
+			partitions[i].topOffset = partitions[i].filler.fill(istructs.WSID(j))
+		}
+		for k := 0; k < projectorsPerPartition; k++ {
+			wg.Add(1)
+			k := k
+			i := i
+			go func() {
+				defer wg.Done()
+				metrics := simpleMetrics{}
+
+				conf := AsyncActualizerConf{
+					Ctx:           withCancel,
+					Partition:     pn,
+					AppStructs:    func() istructs.IAppStructs { return app },
+					IntentsLimit:  10,
+					BundlesLimit:  10,
+					FlushInterval: 2 * time.Second,
+					Broker:        broker,
+					Metrics:       &metrics,
+					LogError:      func(args ...interface{}) {},
+				}
+
+				projectorFactory := func(partition istructs.PartitionID) istructs.Projector {
+					return istructs.Projector{
+						Name:         incrementorName,
+						NonBuffered:  true,
+						Func:         incrementor,
+						EventsFilter: []appdef.QName{projectorFilter},
+					}
+				}
+				actualizer, err := actualizerFactory(conf, projectorFactory)
+				require.NoError(err)
+
+				partitions[i].actualizers[k] = testActualizerCtx{
+					op:      actualizer,
+					metrics: &metrics,
+				}
+
+			}()
+		}
+	}
+	wg.Wait()
+	t.Logf("Initialized in %s", time.Since(t0))
+
+	// init and launch actualizer
+	t0 = time.Now()
+	for i := range partitions {
+		for k := 0; k < projectorsPerPartition; k++ {
+			err := partitions[i].actualizers[k].op.DoSync(withCancel, struct{}{})
+			require.NoError(err)
+		}
+	}
+	t.Logf("Started in %s", time.Since(t0))
+	t0 = time.Now()
+
+	// Wait for the projectors
+	for {
+		complete := true
+		for i := 0; i < totalPartitions && complete; i++ {
+			tp := partitions[i]
+			for k := 0; k < projectorsPerPartition && complete; k++ {
+				ts := &tp.actualizers[k]
+				stored := atomic.LoadInt64(&ts.metrics.storedOffset)
+				for stored < int64(tp.topOffset) {
+					complete = false
+					break
+				}
+			}
+		}
+		if complete {
+			break
+		}
+		time.Sleep(time.Nanosecond)
+	}
+
+	duration := time.Since(t0)
+	totalEvents := totalPartitions * eventsPerPartition
+	t.Logf("Actualized %d events in %s ", totalEvents, duration)
+	// PutBatch calls
+	t0 = time.Now()
+
+	flushesTotal := 0
+	for i := range partitions {
+		for k := 0; k < projectorsPerPartition; k++ {
+			flushesTotal += int(partitions[i].actualizers[k].metrics.flushesTotal)
+		}
+	}
+
+	// stop services
+	cancelCtx()
+	for i := range partitions {
+		for k := 0; k < projectorsPerPartition; k++ {
+			partitions[i].actualizers[k].op.Close()
+		}
+	}
+
+	t.Logf("Stopped in %s ", time.Since(t0))
+	t.Logf("RPS: %.2f", float64(totalEvents)/float64(duration.Seconds()))
+	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
+		if metric.Name() == "heeus_istoragecache_putbatch_total" {
+			t.Logf("PutBatch: %.0f", metricValue)
+			t.Logf("Batch Per Second: %.2f", float64(metricValue)/float64(duration.Seconds()))
+		}
+		return nil
+	})
+	t.Logf("FlushesTotal: %d", flushesTotal)
+}
+
+/*
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1004: Initialized in 1.959437968s
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1014: Started in 504.606µs
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1039: Actualized 800000 events in 2.052865863s
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1058: Stopped in 339.307µs
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1059: RPS: 389699.11
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1062: PutBatch: 1
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1063: Batch Per Second: 0.49
+/home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1067: FlushesTotal: 400
+*/
+func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
+	t.Skip()
+	require := require.New(t)
+
+	cmdQName := appdef.NewQName("pkg", "test")
+	projectorFilter := appdef.NewQName("pkg", "fake")
+	const totalPartitions = 40
+	const projectorsPerPartition = 5
+	const eventsPerPartition = 20000
+
+	app := appStructsCached(
+		func(appDef appdef.IAppDefBuilder) {
+			ProvideOffsetsDef(appDef)
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+		})
+	partitions := make([]*testPartition, totalPartitions)
+
+	withCancel, cancelCtx := context.WithCancel(context.Background())
+
+	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
+		Channels:               totalPartitions * projectorsPerPartition,
+		ChannelsPerSubject:     totalPartitions * projectorsPerPartition,
+		Subsciptions:           totalPartitions * projectorsPerPartition,
+		SubsciptionsPerSubject: totalPartitions * projectorsPerPartition,
+	}, time.Now)
+	defer cleanup()
+
+	actualizerFactory := ProvideAsyncActualizerFactory()
+	t0 := time.Now()
+
+	var wg sync.WaitGroup
+
+	for i := range partitions {
+		pn := istructs.PartitionID(i)
+		partitions[i] = &testPartition{
+			number:      pn,
+			actualizers: make([]testActualizerCtx, projectorsPerPartition),
+			filler: pLogFiller{
+				app:       app,
+				partition: pn,
+				offset:    istructs.Offset(1),
+				cmdQName:  cmdQName,
+			},
+		}
+		for j := 0; j < eventsPerPartition; j++ {
+			partitions[i].topOffset = partitions[i].filler.fill(istructs.WSID(j))
+		}
+		for k := 0; k < projectorsPerPartition; k++ {
+			wg.Add(1)
+			k := k
+			i := i
+			go func() {
+				defer wg.Done()
+				metrics := simpleMetrics{}
+
+				conf := AsyncActualizerConf{
+					Ctx:                   withCancel,
+					Partition:             pn,
+					AppStructs:            func() istructs.IAppStructs { return app },
+					IntentsLimit:          10,
+					BundlesLimit:          10,
+					FlushInterval:         1000 * time.Millisecond,
+					Broker:                broker,
+					Metrics:               &metrics,
+					LogError:              func(args ...interface{}) {},
+					FlushPositionInverval: 10 * time.Second,
+				}
+
+				projectorFactory := func(partition istructs.PartitionID) istructs.Projector {
+					return istructs.Projector{
+						Name:         incrementorName,
+						Func:         incrementor,
+						EventsFilter: []appdef.QName{projectorFilter},
+					}
+				}
+				actualizer, err := actualizerFactory(conf, projectorFactory)
+				require.NoError(err)
+
+				partitions[i].actualizers[k] = testActualizerCtx{
+					op:      actualizer,
+					metrics: &metrics,
+				}
+
+			}()
+		}
+	}
+	wg.Wait()
+	t.Logf("Initialized in %s", time.Since(t0))
+
+	// init and launch actualizer
+	t0 = time.Now()
+	for i := range partitions {
+		for k := 0; k < projectorsPerPartition; k++ {
+			err := partitions[i].actualizers[k].op.DoSync(withCancel, struct{}{})
+			require.NoError(err)
+		}
+	}
+	t.Logf("Started in %s", time.Since(t0))
+	t0 = time.Now()
+
+	// Wait for the projectors
+	for {
+		complete := true
+		for i := 0; i < totalPartitions && complete; i++ {
+			tp := partitions[i]
+			for k := 0; k < projectorsPerPartition && complete; k++ {
+				ts := &tp.actualizers[k]
+				stored := atomic.LoadInt64(&ts.metrics.storedOffset)
+				for stored < int64(tp.topOffset) {
+					complete = false
+					break
+				}
+			}
+		}
+		if complete {
+			break
+		}
+		time.Sleep(time.Nanosecond)
+	}
+
+	duration := time.Since(t0)
+	totalEvents := totalPartitions * eventsPerPartition
+	t.Logf("Actualized %d events in %s ", totalEvents, duration)
+	// PutBatch calls
+	t0 = time.Now()
+
+	flushesTotal := 0
+	for i := range partitions {
+		for k := 0; k < projectorsPerPartition; k++ {
+			flushesTotal += int(partitions[i].actualizers[k].metrics.flushesTotal)
+		}
+	}
+
+	// stop services
+	cancelCtx()
+	for i := range partitions {
+		for k := 0; k < projectorsPerPartition; k++ {
+			partitions[i].actualizers[k].op.Close()
+		}
+	}
+
+	t.Logf("Stopped in %s ", time.Since(t0))
+	t.Logf("RPS: %.2f", float64(totalEvents)/float64(duration.Seconds()))
+	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
+		if metric.Name() == "heeus_istoragecache_putbatch_total" {
+			t.Logf("PutBatch: %.0f", metricValue)
+			t.Logf("Batch Per Second: %.2f", float64(metricValue)/float64(duration.Seconds()))
+		}
+		return nil
+	})
+	t.Logf("FlushesTotal: %d", flushesTotal)
 }

@@ -17,7 +17,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideQrySqlQuery(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, numCommandProcessors int) {
+func provideQrySqlQuery(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, numCommandProcessors coreutils.CommandProcessorsCount) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "SqlQuery"),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SqlQueryParams")).
@@ -27,7 +27,7 @@ func provideQrySqlQuery(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAp
 		execQrySqlQuery(asp, cfg.Name, numCommandProcessors),
 	))
 }
-func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQName, numCommandProcessors int) func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQName, numCommandProcessors coreutils.CommandProcessorsCount) func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, _ istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		wsid := args.Workspace
 		if index := strings.Index(args.ArgumentObject.AsString(field_Query), flag_WSID); index != -1 {

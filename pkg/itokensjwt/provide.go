@@ -8,10 +8,10 @@ package itokensjwt
 
 import (
 	"sync"
-	"time"
 
 	"github.com/golang-jwt/jwt"
 	itokens "github.com/voedger/voedger/pkg/itokens"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // jwt.TimeFunc will be set to timeFunc but jwt.TimeFunc can not be protected from simulaneous access -> must be set only once
@@ -20,7 +20,7 @@ var onceJWTTimeFuncSetter = sync.Once{}
 
 // ProvideITokens implementation by provided interface
 // To receive implementation you must provide Secret Key. Min length - 64 byte, panic otherwise
-func ProvideITokens(secretKey SecretKeyType, timeFunc func() time.Time) (tokenImpl itokens.ITokens) {
+func ProvideITokens(secretKey SecretKeyType, timeFunc coreutils.TimeFunc) (tokenImpl itokens.ITokens) {
 	onceJWTTimeFuncSetter.Do(func() {
 		jwt.TimeFunc = timeFunc
 	})

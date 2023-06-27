@@ -279,51 +279,71 @@ func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (event istructs.IWLogEve
 // istructs.IEvents.ReadPLog
 func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.PartitionID, offset istructs.Offset, toReadCount int, cb istructs.PLogEventsReaderCallback) error {
 
-	readPart := func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
-
-		count := 0
-		readEvent := func(ccols, viewRecord []byte) (err error) {
-			count++
-			event := newDbEvent(e.app.config)
-			if err = event.loadFromBytes(viewRecord); err == nil {
-				ofs := calcLogOffset(pk, ccols)
-				err = cb(ofs, &event)
-			}
-			return err
+	cbEvent := func(ofs istructs.Offset, data []byte) (err error) {
+		event := newDbEvent(e.app.config)
+		if err = event.loadFromBytes(data); err == nil {
+			err = cb(ofs, &event)
 		}
-
-		pKey := utils.PrefixBytes(pk, consts.SysView_PLog, partition) // + partition! see #18047
-		err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, readEvent)
-
-		return (err == nil) && (count > 0), err // stop iterate parts if error or no events in last partition
+		return err
 	}
 
-	return readLogParts(offset, toReadCount, readPart)
+	switch toReadCount {
+	case 1:
+		// See [#292](https://github.com/voedger/voedger/issues/292)
+		pKey, cCol := splitLogOffset(offset)
+		pKey = utils.PrefixBytes(pKey, consts.SysView_PLog, partition) // + partition! see #18047
+		data := make([]byte, 0)
+		if ok, err := e.app.config.storage.Get(pKey, cCol, &data); !ok {
+			return err
+		}
+		return cbEvent(offset, data)
+	default:
+		return readLogParts(offset, toReadCount, func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
+			count := 0
+			pKey := utils.PrefixBytes(pk, consts.SysView_PLog, partition) // + partition! see #18047
+			err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, func(ccols, data []byte) error {
+				count++
+				ofs := calcLogOffset(pk, ccols)
+				return cbEvent(ofs, data)
+			})
+			return (err == nil) && (count > 0), err // stop iterate parts if error or no events in last partition
+		})
+	}
 }
 
 // istructs.IEvents.ReadWLog
 func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, offset istructs.Offset, toReadCount int, cb istructs.WLogEventsReaderCallback) error {
 
-	readPart := func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
-
-		count := 0
-		readEvent := func(ccols, viewRecord []byte) (err error) {
-			count++
-			event := newDbEvent(e.app.config)
-			if err = event.loadFromBytes(viewRecord); err == nil {
-				ofs := calcLogOffset(pk, ccols)
-				err = cb(ofs, &event)
-			}
-			return err
+	cbEvent := func(ofs istructs.Offset, data []byte) (err error) {
+		event := newDbEvent(e.app.config)
+		if err = event.loadFromBytes(data); err == nil {
+			err = cb(ofs, &event)
 		}
-
-		pKey := utils.PrefixBytes(pk, consts.SysView_WLog, workspace)
-		err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, readEvent)
-
-		return (err == nil) && (count > 0), err // stop iterate parts if error or no events in last partition
+		return err
 	}
 
-	return readLogParts(offset, toReadCount, readPart)
+	switch toReadCount {
+	case 1:
+		// See [#292](https://github.com/voedger/voedger/issues/292)
+		pKey, cCol := splitLogOffset(offset)
+		pKey = utils.PrefixBytes(pKey, consts.SysView_WLog, workspace)
+		data := make([]byte, 0)
+		if ok, err := e.app.config.storage.Get(pKey, cCol, &data); !ok {
+			return err
+		}
+		return cbEvent(offset, data)
+	default:
+		return readLogParts(offset, toReadCount, func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
+			count := 0
+			pKey := utils.PrefixBytes(pk, consts.SysView_WLog, workspace)
+			err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, func(ccols, data []byte) error {
+				count++
+				ofs := calcLogOffset(pk, ccols)
+				return cbEvent(ofs, data)
+			})
+			return (err == nil) && (count > 0), err // stop iterate parts if error or no events in last partition
+		})
+	}
 }
 
 // appRecordsType implements IRecords

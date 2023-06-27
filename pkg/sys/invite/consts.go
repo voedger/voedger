@@ -30,6 +30,9 @@ var (
 	qNameAPApplyJoinWorkspace            = appdef.NewQName(appdef.SysPackage, "ApplyJoinWorkspace")
 	qNameAPApplyLeaveWorkspace           = appdef.NewQName(appdef.SysPackage, "ApplyLeaveWorkspace")
 	qNameAPApplyUpdateInviteRoles        = appdef.NewQName(appdef.SysPackage, "ApplyUpdateInviteRoles")
+	QNameCDocJoinedWorkspace             = appdef.NewQName(appdef.SysPackage, "JoinedWorkspace")
+	QNameCDocSubject                     = appdef.NewQName(appdef.SysPackage, "Subject")
+	QNameViewSubjectsIdx                 = appdef.NewQName(appdef.SysPackage, "ViewSubjectsIdx")
 )
 
 const (
@@ -49,6 +52,11 @@ const (
 	field_SubjectID             = "SubjectID"
 	field_Dummy                 = "Dummy"
 	field_JoinedWorkspaceID     = "JoinedWorkspaceID"
+	ield_WSName                 = "WSName"
+	Field_SubjectKind           = "SubjectKind"
+	Field_ProfileWSID           = "ProfileWSID"
+	Field_SubjectID             = "SubjectID"
+	Field_LoginHash             = "LoginHash"
 )
 
 type State int32

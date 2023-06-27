@@ -28,6 +28,8 @@ const (
 	sysBool    = "bool"
 	sysString  = "text"
 	sysBytes   = "blob"
+
+	sysVoid = "void"
 )
 
 const maxNestedTableContainerOccurrences = 100 // FIXME: 100 container occurrences

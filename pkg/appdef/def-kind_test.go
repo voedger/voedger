@@ -52,7 +52,7 @@ func TestDefKind_MarshalText(t *testing.T) {
 	})
 }
 
-func TestDefKindToString(t *testing.T) {
+func TestDefKindTrimString(t *testing.T) {
 	tests := []struct {
 		name string
 		k    DefKind
@@ -64,7 +64,7 @@ func TestDefKindToString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.k.TrimString(); got != tt.want {
-				t.Errorf("%v.(DefKind).ToString() = %v, want %v", tt.k, got, tt.want)
+				t.Errorf("%v.(DefKind).TrimString() = %v, want %v", tt.k, got, tt.want)
 			}
 		})
 	}

@@ -6,16 +6,18 @@ package journal
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, jdi vvm.IEPJournalIndices, jp vvm.IEPJournalPredicates) {
+func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	provideWLogDatesView(appDefBuilder)
-	provideQryJournal(cfg, appDefBuilder, jdi, jp)
-	jdi.AddNamed(QNameViewWLogDates.String(), QNameViewWLogDates)
-	jdi.AddNamed("", QNameViewWLogDates)                                                      // default index
+	provideQryJournal(cfg, appDefBuilder, ep)
+	ji := ep.ExtensionPoint(EPJournalIndices)
+	ji.AddNamed(QNameViewWLogDates.String(), QNameViewWLogDates)
+	ji.AddNamed("", QNameViewWLogDates) // default index
+	jp := ep.ExtensionPoint(EPJournalPredicates)
 	jp.AddNamed("all", func(schemas appdef.IAppDef, qName appdef.QName) bool { return true }) // default predicate
 }
 

@@ -6,6 +6,7 @@ package journal
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 )
 
 const (
@@ -24,8 +25,10 @@ const (
 )
 
 const (
-	rangeUnit_UnixTimestamp = "UnixTimestamp"
-	rangeUnit_Offset        = "Offset"
+	rangeUnit_UnixTimestamp                       = "UnixTimestamp"
+	rangeUnit_Offset                              = "Offset"
+	EPJournalIndices        extensionpoints.EPKey = "JournalIndices"
+	EPJournalPredicates     extensionpoints.EPKey = "JournalPredicates"
 )
 
 var QNameViewWLogDates = appdef.NewQName(appdef.SysPackage, "WLogDates")

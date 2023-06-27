@@ -6,8 +6,6 @@ package invite
 
 import (
 	"fmt"
-	"net/url"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -16,21 +14,20 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/collection"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func ProvideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
+func ProvideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name:         qNameAPApplyJoinWorkspace,
 			EventsFilter: []appdef.QName{qNameCmdInitiateJoinWorkspace},
-			Func:         applyJoinWorkspace(timeFunc, federationURL, appQName, tokens),
+			Func:         applyJoinWorkspace(timeFunc, federation, appQName, tokens),
 		}
 	}
 }
 
-func applyJoinWorkspace(timeFunc func() time.Time, federationURL func() *url.URL, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbCDocInvite, err := s.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
 		if err != nil {
@@ -42,11 +39,11 @@ func applyJoinWorkspace(timeFunc func() time.Time, federationURL func() *url.URL
 			return
 		}
 
-		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return err
 		}
-		skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, sysshared.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
 		svCDocWorkspaceDescriptor, err := s.MustExist(skbCDocWorkspaceDescriptor)
 		if err != nil {
 			return
@@ -57,7 +54,7 @@ func applyJoinWorkspace(timeFunc func() time.Time, federationURL func() *url.URL
 			return
 		}
 		_, err = coreutils.FederationFunc(
-			federationURL(),
+			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CreateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d,"WSName":"%s"}}`,
 				svCDocInvite.AsString(Field_Roles), event.Workspace(), svCDocWorkspaceDescriptor.AsString(authnz.Field_WSName)),
@@ -72,7 +69,7 @@ func applyJoinWorkspace(timeFunc func() time.Time, federationURL func() *url.URL
 			return
 		}
 		skbViewCollection.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
-		skbViewCollection.PutQName(collection.Field_DocQName, sysshared.QNameCDocSubject)
+		skbViewCollection.PutQName(collection.Field_DocQName, QNameCDocSubject)
 
 		var svCDocSubject istructs.IStateValue
 		err = s.Read(skbViewCollection, func(key istructs.IKey, value istructs.IStateValue) (err error) {
@@ -92,13 +89,13 @@ func applyJoinWorkspace(timeFunc func() time.Time, federationURL func() *url.URL
 		//Store cdoc.sys.Subject
 		if svCDocSubject == nil {
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
-				svCDocInvite.AsString(Field_Login), svCDocInvite.AsString(Field_Roles), svCDocInvite.AsInt32(sysshared.Field_SubjectKind),
+				svCDocInvite.AsString(Field_Login), svCDocInvite.AsString(Field_Roles), svCDocInvite.AsInt32(authnz.Field_SubjectKind),
 				svCDocInvite.AsInt64(field_InviteeProfileWSID))
 		} else {
 			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID), svCDocInvite.AsString(Field_Roles))
 		}
 		resp, err := coreutils.FederationFunc(
-			federationURL(),
+			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			body,
 			coreutils.WithAuthorizeBy(token))
@@ -114,7 +111,7 @@ func applyJoinWorkspace(timeFunc func() time.Time, federationURL func() *url.URL
 			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, svCDocInvite.AsRecordID(appdef.SystemField_ID), State_Joined, timeFunc().UnixMilli())
 		}
 		_, err = coreutils.FederationFunc(
-			federationURL(),
+			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			body,
 			coreutils.WithAuthorizeBy(token))

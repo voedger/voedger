@@ -6,12 +6,12 @@ package invite
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
 func provideCDocJoinedWorkspace(appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddCDoc(sysshared.QNameCDocJoinedWorkspace).
+	appDefBuilder.AddCDoc(QNameCDocJoinedWorkspace).
 		AddField(Field_Roles, appdef.DataKind_string, true).
 		AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).
-		AddField(sysshared.Field_WSName, appdef.DataKind_string, true)
+		AddField(authnz.Field_WSName, appdef.DataKind_string, true)
 }

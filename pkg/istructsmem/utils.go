@@ -11,6 +11,8 @@ import (
 	"fmt"
 
 	"github.com/untillpro/dynobuffers"
+	"golang.org/x/exp/slices"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -98,24 +100,23 @@ func FillElementFromJSON(data map[string]interface{}, def appdef.IDef, b istruct
 			b.PutBool(fieldName, fv)
 		case []interface{}:
 			// e.g. TestBasicUsage_Dashboard(), "order_item": [<2 elements>]
-			if cont, ok := def.(appdef.IContainers); ok {
-				containerName := fieldName
-				containerDef := cont.ContainerDef(containerName)
-				if containerDef.Kind() == appdef.DefKind_null {
-					return fmt.Errorf("container with name %s is not found", containerName)
+			containers, ok := def.(appdef.IContainers)
+			if !ok {
+				return fmt.Errorf("definition %v has no containers", def.QName())
+			}
+			container := containers.Container(fieldName)
+			if container == nil {
+				return fmt.Errorf("container with name %s is not found", fieldName)
+			}
+			for i, val := range fv {
+				objContainerElem, ok := val.(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
 				}
-				for i, val := range fv {
-					objContainerElem, ok := val.(map[string]interface{})
-					if !ok {
-						return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
-					}
-					containerElemBuilder := b.ElementBuilder(fieldName)
-					if err := FillElementFromJSON(objContainerElem, containerDef, containerElemBuilder); err != nil {
-						return err
-					}
+				containerElemBuilder := b.ElementBuilder(fieldName)
+				if err := FillElementFromJSON(objContainerElem, container.Def(), containerElemBuilder); err != nil {
+					return err
 				}
-			} else {
-				return fmt.Errorf("definition %v has not containers", def.QName())
 			}
 		}
 	}
@@ -134,7 +135,7 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 	if fields, ok := def.(appdef.IFields); ok {
 		fields.Fields(
 			func(f appdef.IField) {
-				if f.DataKind() != appdef.DataKind_RecordID {
+				if f.DataKind() != appdef.DataKind_RecordID || err != nil {
 					return
 				}
 				recID := obj.AsRecordID(f.Name())
@@ -145,6 +146,14 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 					if rec.QName() == appdef.NullQName {
 						err = errors.Join(err,
 							fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, recID, qName, f.Name()))
+					} else {
+						if refField, ok := f.(appdef.IRefField); ok {
+							if len(refField.Refs()) > 0 && !slices.Contains(refField.Refs(), rec.QName()) {
+								err = errors.Join(err,
+									fmt.Errorf("%w: record ID %d referenced by %s.%s is of QName %s whereas %v QNames are only allowed", ErrReferentialIntegrityViolation,
+										recID, qName, f.Name(), rec.QName(), refField.Refs()))
+							}
+						}
 					}
 				} else {
 					err = errors.Join(err, readErr)

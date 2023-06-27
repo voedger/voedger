@@ -8,7 +8,6 @@ package invite
 import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
-	sysshared "github.com/voedger/voedger/pkg/sys/shared"
 )
 
 func GetCDocJoinedWorkspaceForUpdateRequired(st istructs.IState, intents istructs.IIntents, invitingWorkspaceWSID int64) (svbCDocJoinedWorkspace istructs.IStateValueBuilder, err error) {
@@ -23,7 +22,7 @@ func GetCDocJoinedWorkspaceForUpdateRequired(st istructs.IState, intents istruct
 	if err != nil {
 		return nil, err
 	}
-	skb, err := st.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocJoinedWorkspace)
+	skb, err := st.KeyBuilder(state.RecordsStorage, QNameCDocJoinedWorkspace)
 	if err != nil {
 		// notest
 		return nil, err
@@ -54,7 +53,7 @@ func GetCDocJoinedWorkspace(st istructs.IState, intents istructs.IIntents, invit
 		return nil, nil, false, nil
 	}
 
-	skb, err = st.KeyBuilder(state.RecordsStorage, sysshared.QNameCDocJoinedWorkspace)
+	skb, err = st.KeyBuilder(state.RecordsStorage, QNameCDocJoinedWorkspace)
 	if err != nil {
 		// notest
 		return nil, nil, false, err
