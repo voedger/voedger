@@ -70,9 +70,9 @@ func checkErr(err error) {
 	}
 }
 
-const numPartitions = 1000
-const numProjectorsPerPartition = 1000
-const numAttackers = 100
+const numPartitions = 100
+const numProjectorsPerPartition = 10000
+const numAttackers = 1
 
 const eventsPerSeconds = 100000
 const subject istructs.SubjectLogin = "main"
