@@ -472,6 +472,7 @@ func TestCore_ViewRecords(t *testing.T) {
 
 			err := viewRecords.Put(1, kb, vb)
 			require.ErrorIs(err, ErrWrongDefinition)
+			require.ErrorContains(err, "test.viewDrinks")
 		})
 
 		t.Run("put batch must fail if error in any key-value item", func(t *testing.T) {

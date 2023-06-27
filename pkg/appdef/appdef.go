@@ -27,10 +27,8 @@ func (app *appDef) AddCDoc(name QName) ICDocBuilder {
 	return newCDoc(app, name)
 }
 
-func (app *appDef) AddSingleton(name QName) ICDocBuilder {
-	doc := newCDoc(app, name)
-	doc.SetSingleton()
-	return doc
+func (app *appDef) AddCommand(name QName) ICommandBuilder {
+	return newCommand(app, name)
 }
 
 func (app *appDef) AddCRecord(name QName) ICRecordBuilder {
@@ -61,6 +59,16 @@ func (app *appDef) AddORecord(name QName) IORecordBuilder {
 	return newORecord(app, name)
 }
 
+func (app *appDef) AddSingleton(name QName) ICDocBuilder {
+	doc := newCDoc(app, name)
+	doc.SetSingleton()
+	return doc
+}
+
+func (app *appDef) AddQuery(name QName) IQueryBuilder {
+	return newQuery(app, name)
+}
+
 func (app *appDef) AddView(name QName) IViewBuilder {
 	return newView(app, name)
 }
@@ -74,9 +82,8 @@ func (app *appDef) AddWRecord(name QName) IWRecordBuilder {
 }
 
 func (app *appDef) Build() (result IAppDef, err error) {
-	validator := newValidator()
 	app.Defs(func(d IDef) {
-		err = errors.Join(err, validator.validate(d))
+		err = errors.Join(err, validateDef(d))
 	})
 	if err != nil {
 		return nil, err
@@ -88,6 +95,13 @@ func (app *appDef) Build() (result IAppDef, err error) {
 func (app *appDef) CDoc(name QName) (d ICDoc) {
 	if d := app.defByKind(name, DefKind_CDoc); d != nil {
 		return d.(ICDoc)
+	}
+	return nil
+}
+
+func (app *appDef) Command(name QName) ICommand {
+	if d := app.defByKind(name, DefKind_Command); d != nil {
+		return d.(ICommand)
 	}
 	return nil
 }
@@ -161,6 +175,13 @@ func (app *appDef) ODoc(name QName) IODoc {
 func (app *appDef) ORecord(name QName) IORecord {
 	if d := app.defByKind(name, DefKind_ORecord); d != nil {
 		return d.(IORecord)
+	}
+	return nil
+}
+
+func (app *appDef) Query(name QName) IQuery {
+	if d := app.defByKind(name, DefKind_Query); d != nil {
+		return d.(IQuery)
 	}
 	return nil
 }

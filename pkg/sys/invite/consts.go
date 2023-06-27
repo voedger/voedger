@@ -32,6 +32,7 @@ var (
 	qNameAPApplyUpdateInviteRoles        = appdef.NewQName(appdef.SysPackage, "ApplyUpdateInviteRoles")
 	QNameCDocJoinedWorkspace             = appdef.NewQName(appdef.SysPackage, "JoinedWorkspace")
 	QNameCDocSubject                     = appdef.NewQName(appdef.SysPackage, "Subject")
+	QNameViewSubjectsIdx                 = appdef.NewQName(appdef.SysPackage, "ViewSubjectsIdx")
 )
 
 const (
@@ -54,6 +55,8 @@ const (
 	ield_WSName                 = "WSName"
 	Field_SubjectKind           = "SubjectKind"
 	Field_ProfileWSID           = "ProfileWSID"
+	Field_SubjectID             = "SubjectID"
+	Field_LoginHash             = "LoginHash"
 )
 
 type State int32

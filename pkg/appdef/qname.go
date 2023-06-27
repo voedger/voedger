@@ -66,17 +66,14 @@ func (qn QName) MarshalJSON() ([]byte, error) {
 
 // need to marshal map[QName]any
 func (qn QName) MarshalText() (text []byte, err error) {
-	js, err := json.Marshal(qn.pkg + QNameQualifierChar + qn.entity)
-	if err != nil {
-		// notest
-		return nil, err
+	var js []byte
+	if js, err = json.Marshal(qn.pkg + QNameQualifierChar + qn.entity); err == nil {
+		var res string
+		if res, err = strconv.Unquote(string(js)); err == nil {
+			text = []byte(res)
+		}
 	}
-	res, err := strconv.Unquote(string(js))
-	if err != nil {
-		// notest
-		return nil, err
-	}
-	return []byte(res), nil
+	return text, err
 }
 
 // JSON unmarshaling support
@@ -96,7 +93,6 @@ func (qn *QName) UnmarshalJSON(text []byte) (err error) {
 // but no UnmarshalText -> fail to unmarshal map[QName]any
 // see https://github.com/golang/go/issues/29732
 func (qn *QName) UnmarshalText(text []byte) (err error) {
-	// notest
 	return nil
 }
 

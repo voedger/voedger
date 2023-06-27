@@ -61,7 +61,7 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 	})
 }
 
-func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt](c IStatementCollection, callback func(stmt stmtType)) {
+func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt](c IStatementCollection, callback func(stmt stmtType)) {
 	c.Iterate(func(stmt interface{}) {
 		if s, ok := stmt.(stmtType); ok {
 			callback(s)
@@ -145,11 +145,11 @@ func resolveTable(fn DefQName, c *basicContext, pos *lexer.Position) (*TableStmt
 	return item, nil
 }
 
-func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) {
+// when not found, lookup returns (nil, nil)
+func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt](fn DefQName, c *basicContext) (stmtType, error) {
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
-		c.errs = append(c.errs, errorAt(err, c.pos))
-		return
+		return nil, err
 	}
 	var item stmtType
 	iter := func(s *SchemaAST) {
@@ -167,10 +167,21 @@ func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *C
 	if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
 		sysSchema := c.pkgmap[appdef.SysPackage]
 		if sysSchema == nil {
-			c.errs = append(c.errs, errorAt(ErrCouldNotImport(appdef.SysPackage), c.pos))
-		} else {
-			iter(sysSchema.Ast)
+			return nil, ErrCouldNotImport(appdef.SysPackage)
 		}
+		iter(sysSchema.Ast)
+	}
+
+	return item, nil
+}
+
+func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) {
+	var err error
+	var item stmtType
+	item, err = lookup[stmtType](fn, c)
+	if err != nil {
+		c.errs = append(c.errs, errorAt(err, c.pos))
+		return
 	}
 	if item == nil {
 		c.errs = append(c.errs, errorAt(ErrUndefined(fn.String()), c.pos))
@@ -247,32 +258,51 @@ func getTableDefKind(table *TableStmt, ctx *buildContext) (kind appdef.DefKind, 
 	return appdef.DefKind_null, false
 }
 
+func isVoid(pkg string, name string) bool {
+	if maybeSysPkg(pkg) {
+		return name == sysVoid
+	}
+	return false
+}
+
+func getSysDataKind(name string) appdef.DataKind {
+	if name == sysInt32 || name == sysInt {
+		return appdef.DataKind_int32
+	}
+	if name == sysInt64 {
+		return appdef.DataKind_int64
+	}
+	if name == sysFloat32 || name == sysFloat {
+		return appdef.DataKind_float32
+	}
+	if name == sysFloat64 {
+		return appdef.DataKind_float64
+	}
+	if name == sysQName {
+		return appdef.DataKind_QName
+	}
+	if name == sysBool {
+		return appdef.DataKind_bool
+	}
+	if name == sysString {
+		return appdef.DataKind_string
+	}
+	if name == sysBytes {
+		return appdef.DataKind_bytes
+	}
+	return appdef.DataKind_null
+}
+
 func getTypeDataKind(t TypeQName) appdef.DataKind {
 	if maybeSysPkg(t.Package) {
-		if t.Name == sysInt32 || t.Name == sysInt {
-			return appdef.DataKind_int32
-		}
-		if t.Name == sysInt64 {
-			return appdef.DataKind_int64
-		}
-		if t.Name == sysFloat32 || t.Name == sysFloat {
-			return appdef.DataKind_float32
-		}
-		if t.Name == sysFloat64 {
-			return appdef.DataKind_float64
-		}
-		if t.Name == sysQName {
-			return appdef.DataKind_QName
-		}
-		if t.Name == sysBool {
-			return appdef.DataKind_bool
-		}
-		if t.Name == sysString {
-			return appdef.DataKind_string
-		}
-		if t.Name == sysBytes {
-			return appdef.DataKind_bytes
-		}
+		return getSysDataKind(t.Name)
+	}
+	return appdef.DataKind_null
+}
+
+func getDefDataKind(pkg string, name string) appdef.DataKind {
+	if maybeSysPkg(pkg) {
+		return getSysDataKind(name)
 	}
 	return appdef.DataKind_null
 }
@@ -303,4 +333,11 @@ func viewFieldDataKind(f *ViewField) appdef.DataKind {
 		return appdef.DataKind_QName
 	}
 	return appdef.DataKind_string
+}
+
+func buildQname(ctx *buildContext, pkg string, name string) appdef.QName {
+	if pkg == "" {
+		pkg = ctx.pkg.Ast.Package
+	}
+	return appdef.NewQName(pkg, name)
 }

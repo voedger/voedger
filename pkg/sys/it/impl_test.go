@@ -52,7 +52,8 @@ func TestBasicUsage(t *testing.T) {
 			))
 
 			// need to read cdoc.sys.Subject on auth
-			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory, apis.NumCommandProcessors)
+			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+				apis.NumCommandProcessors, nil, false)
 		}),
 	)
 	vit := it.NewVIT(t, &cfg)
@@ -181,6 +182,14 @@ func TestUtilFuncs(t *testing.T) {
 	t.Run("func GRCount", func(t *testing.T) {
 		body := `{"args": {},"elements":[{"fields":["NumGoroutines"]}]}`
 		resp := vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.GRCount", body)
+		resp.Println()
+	})
+
+	t.Run("func Modules", func(t *testing.T) {
+		// should normally return nothing because there is no dpes information in tests
+		// returns actual deps if the Voedger is used in some main() and built using `go build`
+		body := `{"args": {},"elements":[{"fields":["Modules"]}]}`
+		resp := vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Modules", body)
 		resp.Println()
 	})
 }
