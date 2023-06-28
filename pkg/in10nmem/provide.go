@@ -11,5 +11,9 @@ import (
 )
 
 func ProvideEx2(quotas in10n.Quotas, now coreutils.TimeFunc) (nb in10n.IN10nBroker, cleanup func()) {
-	return NewN10nBroker(quotas, now)
+	return NewN10nBroker(quotas, now, 1)
+}
+
+func ProvideEx3(quotas in10n.Quotas, now coreutils.TimeFunc, numNotifiers int) (nb in10n.IN10nBroker, cleanup func()) {
+	return NewN10nBroker(quotas, now, numNotifiers)
 }

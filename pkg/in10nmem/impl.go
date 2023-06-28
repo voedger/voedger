@@ -249,26 +249,30 @@ forcycle:
 		case eve := <-events:
 			prj := eve.prj
 
-			// Actualize subscriptions
 			{
 				prj.Lock()
-				for channelID, channel := range prj.toSubscribe {
-					if channel != nil {
-						prj.subscribedChannels[channelID] = channel
-					} else {
-						delete(prj.subscribedChannels, channelID)
+				// Actualize subscriptions
+				{
+
+					for channelID, channel := range prj.toSubscribe {
+						if channel != nil {
+							prj.subscribedChannels[channelID] = channel
+						} else {
+							delete(prj.subscribedChannels, channelID)
+						}
+					}
+				}
+
+				// Notify subscribers
+				for _, ch := range prj.subscribedChannels {
+					select {
+					case ch.cchan <- struct{}{}:
+					default:
 					}
 				}
 				prj.Unlock()
 			}
 
-			// Notify subscribers
-			for _, ch := range prj.subscribedChannels {
-				select {
-				case ch.cchan <- struct{}{}:
-				default:
-				}
-			}
 		}
 	}
 	logger.Info("notifier goroutine stopped")
@@ -333,7 +337,7 @@ func (nb *N10nBroker) MetricSubject(ctx context.Context, cb func(subject istruct
 	}
 }
 
-func NewN10nBroker(quotas in10n.Quotas, now coreutils.TimeFunc) (nb *N10nBroker, cleanup func()) {
+func NewN10nBroker(quotas in10n.Quotas, now coreutils.TimeFunc, numNotifiers int) (nb *N10nBroker, cleanup func()) {
 	broker := N10nBroker{
 		projections:     make(map[in10n.ProjectionKey]*projection),
 		channels:        make(map[in10n.ChannelID]*channelType),
@@ -349,8 +353,10 @@ func NewN10nBroker(quotas in10n.Quotas, now coreutils.TimeFunc) (nb *N10nBroker,
 		wg.Wait()
 	}
 
-	wg.Add(1)
-	go notifier(ctx, &wg, broker.events)
+	for i := 0; i < numNotifiers; i++ {
+		wg.Add(1)
+		go notifier(ctx, &wg, broker.events)
+	}
 
 	return &broker, cleanup
 }

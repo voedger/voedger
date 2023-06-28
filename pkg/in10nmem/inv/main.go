@@ -8,13 +8,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/spf13/cobra"
+	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -25,10 +27,35 @@ import (
 	"github.com/shirou/gopsutil/cpu"
 )
 
+var numPartitions int
+var numProjectorsPerPartition int
+var v2NumNotifiers int
+var verbose bool
+
+var numN10nLock sync.Mutex
+var partitionNumN10ns = make(map[int]int64)
+var numN10ns int64
+
 func main() {
+	rootCmd := &cobra.Command{
+		Use:   "go run main.go v1/v2/v3",
+		Short: "",
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if verbose {
+				logger.SetLogLevel(logger.LogLevelVerbose)
+			}
+		},
+	}
+
+	// nolint
+	{
+		rootCmd.PersistentFlags().IntVar(&numPartitions, "numPartitions", 1000, "Number of partitions")
+		rootCmd.PersistentFlags().IntVar(&numProjectorsPerPartition, "numProjectorsPerPartition", 1000, "Number of projectors per partition")
+		rootCmd.PersistentFlags().IntVar(&v2NumNotifiers, "v2NumNotifiers", 1, "Number of v2 notifiers")
+		rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Verbose mode")
+	}
 
 	const BigNumber = 1000000000000000000
-
 	quotas := in10n.Quotas{
 		Channels:               BigNumber,
 		ChannelsPerSubject:     BigNumber,
@@ -36,32 +63,44 @@ func main() {
 		SubsciptionsPerSubject: BigNumber,
 	}
 
-	if len(os.Args) < 2 {
-		println("Use v1 or v2 as argument")
-		return
+	v1Cmd := &cobra.Command{
+		Use:   "v1",
+		Short: "Run notifier.v1",
+		Run: func(cmd *cobra.Command, args []string) {
+			println("Running v1...")
+			nb := in10nmemv1.Provide(quotas)
+			runChannels(nb)
+		},
 	}
 
-	if os.Args[1] == "v1" {
-		println("Running v1...")
-		nb := in10nmemv1.Provide(quotas)
-		runChannels(nb)
+	v2Cmd := &cobra.Command{
+		Use:   "v2",
+		Short: "Run notifier.v2",
+		Run: func(cmd *cobra.Command, args []string) {
+			println("Running v2...")
+			nb, cleanup := in10nmem.ProvideEx3(quotas, time.Now, v2NumNotifiers)
+			defer cleanup()
+			runChannels(nb)
+		},
 	}
-	if os.Args[1] == "v2" {
-		println("Running v2...")
-		nb, cleanup := in10nmem.ProvideEx2(quotas, time.Now)
-		defer cleanup()
 
-		runChannels(nb)
+	v3Cmd := &cobra.Command{
+		Use:   "v3",
+		Short: "Run notifier.v3",
+		Run: func(cmd *cobra.Command, args []string) {
+			println("Running v3...")
+			nb, cleanup := in10nmemv3.ProvideEx2(quotas, time.Now)
+			defer cleanup()
+			runChannels(nb)
+		},
 	}
-	if os.Args[1] == "v3" {
-		println("Running v3...")
-		nb, cleanup := in10nmemv3.ProvideEx2(quotas, time.Now)
-		defer cleanup()
 
-		runChannels(nb)
+	rootCmd.AddCommand(v1Cmd, v2Cmd, v3Cmd)
+
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
-	log.Fatal("Unknown argument", os.Args[1])
-
 }
 
 func checkErr(err error) {
@@ -70,11 +109,8 @@ func checkErr(err error) {
 	}
 }
 
-const numPartitions = 100
-const numProjectorsPerPartition = 10000
 const numAttackers = 1
-
-const eventsPerSeconds = 100000
+const eventsPerSeconds = 100000 // Just a very big number, doesn't matter for one attacker
 const subject istructs.SubjectLogin = "main"
 
 var projectionPLog = appdef.NewQName("sys", "plog")
@@ -104,34 +140,37 @@ func runChannels(broker in10n.IN10nBroker) {
 		}
 	}
 
-	println("numAttackers: ", numAttackers)
 	println("numPartitions: ", numPartitions)
 	println("numProjectorsPerPartition: ", numProjectorsPerPartition)
+	println("v2NumNotifiers: ", v2NumNotifiers)
+
+	println("numAttackers: ", numAttackers)
 	println("eventsPerSeconds: ", eventsPerSeconds)
 
-	var wrkCount int64
-	var wrkSumLatenciesNano int64
-	var wrkOffset int64 = 0
+	var updateCount int64
+	var updateSumLatenciesNano int64
+	var updateOffset int64 = 0
 
 	for i := 0; i < numAttackers; i++ {
 		go func() {
 			t := time.NewTicker(1 * time.Second / eventsPerSeconds)
 
-			// nolint
-			partition := rand.Intn(numPartitions)
-
 			projectionKeyExample := in10n.ProjectionKey{
 				App:        istructs.AppQName_test1_app1,
 				Projection: projectionPLog,
-				WS:         istructs.WSID(partition),
 			}
 
 			for range t.C {
-				newOffset := atomic.AddInt64(&wrkOffset, 1)
+
+				// nolint
+				partition := rand.Intn(numPartitions)
+				projectionKeyExample.WS = istructs.WSID(partition)
+
+				newOffset := atomic.AddInt64(&updateOffset, 1)
 				updateTime := time.Now()
 				broker.Update(projectionKeyExample, istructs.Offset(newOffset))
-				atomic.AddInt64(&wrkSumLatenciesNano, int64(time.Since(updateTime).Nanoseconds()))
-				atomic.AddInt64(&wrkCount, 1)
+				atomic.AddInt64(&updateSumLatenciesNano, int64(time.Since(updateTime).Nanoseconds()))
+				atomic.AddInt64(&updateCount, 1)
 			}
 		}()
 	}
@@ -139,32 +178,47 @@ func runChannels(broker in10n.IN10nBroker) {
 	t := time.NewTicker(5 * time.Second)
 	startTime := time.Now()
 	startCPU, _ := initCPUUsage()
+	measures := 0
+	var sumRAM uint64 = 0
 	for range t.C {
-		count := atomic.LoadInt64(&wrkCount)
-		sumLatenciesNano := atomic.LoadInt64(&wrkSumLatenciesNano)
-		cpu, _ := calcCPUsage(&startCPU)
-		fmt.Println("count: ", count,
-			"sumLatenciesNano: ", sumLatenciesNano,
+		measures++
+		var memStats runtime.MemStats
+		runtime.ReadMemStats(&memStats)
+
+		count := atomic.LoadInt64(&updateCount)
+		sumLatenciesNano := atomic.LoadInt64(&updateSumLatenciesNano)
+		CPU, _ := calcCPUsage(&startCPU)
+		RAM := memStats.Alloc
+		sumRAM += RAM
+		fmt.Println(
 			"rps:", float64(count)/float64(time.Since(startTime).Seconds()),
-			"avg. latency, ns:", float64(sumLatenciesNano)/float64(count),
-			"cpu%", cpu,
+			"latency, ns:", float64(sumLatenciesNano)/float64(count),
+			"n10n rate,%:", float64(numN10ns)/float64(count*int64(numProjectorsPerPartition))*100,
+			"CPU, %:", CPU*100,
+			"avg(RAM), MB:", sumRAM/uint64(measures)/1024/1024,
+			"RAM, MB:", memStats.Alloc/1024/1024,
 		)
-
+		if logger.IsVerbose() {
+			numN10nLock.Lock()
+			logger.Verbose("partitionN10ns: ", partitionNumN10ns)
+			numN10nLock.Unlock()
+		}
 	}
-
 	wg.Wait()
 
 }
 
 func runChannel(channelID in10n.ChannelID, broker in10n.IN10nBroker) {
 
-	broker.WatchChannel(context.Background(), channelID, updatesMock)
+	broker.WatchChannel(context.Background(), channelID, notifySubscriber)
 
 }
 
-func updatesMock(projection in10n.ProjectionKey, offset istructs.Offset) {
-	time.Sleep(1 * time.Millisecond)
-
+func notifySubscriber(projection in10n.ProjectionKey, offset istructs.Offset) {
+	numN10nLock.Lock()
+	defer numN10nLock.Unlock()
+	partitionNumN10ns[int(projection.WS)]++
+	numN10ns++
 }
 
 // CPUUsageData struct will hold the necessary data for CPU usage calculation
