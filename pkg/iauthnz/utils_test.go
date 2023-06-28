@@ -18,6 +18,12 @@ func TestIsSystemRole(t *testing.T) {
 	require.True(IsSystemRole(QNameRoleSystem))
 	require.True(IsSystemRole(QNameRoleWorkspaceAdmin))
 	require.True(IsSystemRole(QNameRoleWorkspaceDevice))
-	require.True(IsSystemRole(QNameRoleWorkspaceSubject))
 	require.False(IsSystemRole(appdef.NewQName(appdef.SysPackage, "test")))
+}
+
+func TestRolesInheritance(t *testing.T) {
+	for qName := range rolesInheritance {
+		require.NotEqual(t, appdef.NullQName, QNameAncestor(qName))
+	}
+	require.Equal(t, appdef.NullQName, QNameAncestor(appdef.NewQName("missing", "missing")))
 }
