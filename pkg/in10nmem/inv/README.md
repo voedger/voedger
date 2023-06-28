@@ -8,12 +8,20 @@ Notifiers perfomance investigation
 
 ```mermaid
 erDiagram
-	Projection ||--|| ProjectionKey : has
-	Projection ||--|| Offset : has
-	Projection ||..|{ Subscription : has
-	Subscription ||..|| ProjectionKey : uses
 	IN10nBroker ||--|{ "Update()" : has
-	"Update()" ||..|| ProjectionKey : uses
+	IN10nBroker ||--|{ ProjectionKey : has
+	IN10nBroker ||..|| "go IN10nBroker.WatchChannel()" : ""
+
+	ProjectionKey ||--|| Offset : has
+	
+	Channel ||--|{ Subscription : has
+	Channel ||--|| "go IN10nBroker.WatchChannel()" : has
+
+	Subscription ||..|| ProjectionKey : ""
+
+	"Update()" ||..|| Offset : updates
+
+	"go IN10nBroker.WatchChannel()" ||..|{ Offset : "reads"
 ```
 
 ### v1: Timers
