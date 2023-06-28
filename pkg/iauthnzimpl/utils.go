@@ -97,7 +97,18 @@ func matchOrNotSpecified_Principals(pattern [][]iauthnz.Principal, actualPrns []
 						return false
 					}
 					if prnAND.QName != appdef.NullQName && prnAND.QName != actualPrn.QName {
-						return false
+						ancestorMatched := false
+						ancestorQName := iauthnz.QNameAncestor(actualPrn.QName)
+						for ancestorQName != appdef.NullQName {
+							if ancestorQName == prnAND.QName {
+								ancestorMatched = true
+								break
+							}
+							ancestorQName = iauthnz.QNameAncestor(ancestorQName)
+						}
+						if !ancestorMatched {
+							return false
+						}
 					}
 					if prnAND.WSID > 0 && prnAND.WSID != actualPrn.WSID {
 						return false

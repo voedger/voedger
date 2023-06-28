@@ -71,7 +71,11 @@ var SysRoles = []appdef.QName{
 	QNameRoleSystem,
 	QNameRoleWorkspaceOwner,
 	QNameRoleWorkspaceDevice,
-	QNameRoleWorkspaceSubject,
 	QNameRoleProfileOwner,
 	QNameRoleWorkspaceAdmin,
+}
+
+var rolesInheritance = map[appdef.QName]appdef.QName{
+	QNameRoleProfileOwner:    QNameRoleWorkspaceOwner,
+	QNameRoleWorkspaceDevice: QNameRoleWorkspaceOwner,
 }
