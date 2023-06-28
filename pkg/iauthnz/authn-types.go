@@ -57,9 +57,6 @@ var (
 	QNameRoleWorkspaceOwner  = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceOwner")
 	QNameRoleWorkspaceDevice = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceDevice")
 
-	// assigned if additionally if WorkspaceOwner or WorkspaceDevice or ProfileOwner
-	// QNameRoleWorkspaceSubject = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceSubject")
-
 	// assigned if request is came to subject's profile
 	QNameRoleProfileOwner = appdef.NewQName(appdef.SysPackage, "RoleProfileOwner")
 

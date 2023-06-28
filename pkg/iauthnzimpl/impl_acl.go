@@ -79,7 +79,7 @@ var defaultACL = ACL{
 		policy: ACPolicy_Deny,
 	},
 	{
-		desc: "update only is allowed for CDoc<$wsKind> for WorkspaceSubject",
+		desc: "update only is allowed for CDoc<$wsKind> for WorkspaceOwner",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
 				qNameCDocWorkspaceKindUser,

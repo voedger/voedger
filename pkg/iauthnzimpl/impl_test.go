@@ -556,7 +556,7 @@ func TestAuthorize(t *testing.T) {
 			expected: false,
 		},
 		{
-			desc: "execute in an alien workspace but have role saying that we are workspacesubject -> ok",
+			desc: "execute in an alien workspace but have role saying that we are workspaceowner -> ok",
 			reqn: iauthnz.AuthnRequest{
 				RequestWSID: alienWSID,
 				Token:       userTokenWithRole,

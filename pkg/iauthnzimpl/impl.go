@@ -162,27 +162,6 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		}
 	}
 
-	// workspaceSubjectLoop:
-	// 	for _, prn := range principals {
-	// 		if prn.Kind != iauthnz.PrincipalKind_Role {
-	// 			continue
-	// 		}
-	// 		switch prn.QName {
-	// 		case iauthnz.QNameRoleWorkspaceSubject:
-	// 			break workspaceSubjectLoop
-	// 		case iauthnz.QNameRoleWorkspaceDevice, iauthnz.QNameRoleProfileOwner, iauthnz.QNameRoleWorkspaceOwner:
-	// 			prnWSSubject := iauthnz.Principal{
-	// 				Kind:  iauthnz.PrincipalKind_Role,
-	// 				WSID:  req.RequestWSID,
-	// 				QName: iauthnz.QNameRoleWorkspaceSubject,
-	// 			}
-	// 			if !slices.Contains(principals, prnWSSubject) {
-	// 				principals = append(principals, prnWSSubject)
-	// 			}
-	// 			break workspaceSubjectLoop
-	// 		}
-	// 	}
-
 	// ResellersAdmin || UntillPaymentsReseller -> WorkspaceAdmin
 	for _, prn := range principals {
 		if prn.Kind == iauthnz.PrincipalKind_Role && (prn.QName == qNameRoleResellersAdmin || prn.QName == qNameRoleUntillPaymentsReseller) {
