@@ -49,7 +49,6 @@ func GetComputersRecByDeviceProfileWSID(as istructs.IAppStructs, requestWSID ist
 	}
 	const prefix = "device profileWSID"
 	if !batchItems[0].Ok {
-
 		logger.Verbose(prefix, deviceProfileWSID, "is not found in view.sys.DeviceProfileWSIDIdx")
 		return &istructs.NullObject{}, &istructs.NullObject{}, nil
 	}
