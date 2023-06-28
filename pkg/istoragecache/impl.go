@@ -111,10 +111,10 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 	s.mGetTotal.Increase(1.0)
 
 	*data = (*data)[0:0]
-	*data = s.cache.Get(*data, key(pKey, cCols))
-	if len(*data) != 0 {
+	*data, ok = s.cache.HasGet(*data, key(pKey, cCols))
+	if ok {
 		s.mGetCachedTotal.Increase(1.0)
-		return true, err
+		return len(*data) != 0, nil
 	}
 	ok, err = s.storage.Get(pKey, cCols, data)
 	if err != nil {
@@ -122,6 +122,8 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 	}
 	if ok {
 		s.cache.Set(key(pKey, cCols), *data)
+	} else {
+		s.cache.Set(key(pKey, cCols), nil)
 	}
 	return
 }
@@ -140,11 +142,11 @@ func (s *cachedAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) 
 
 func (s *cachedAppStorage) getBatchFromCache(pKey []byte, items []istorage.GetBatchItem) (ok bool) {
 	for i := range items {
-		*items[i].Data = s.cache.Get((*items[i].Data)[0:0], key(pKey, items[i].CCols))
-		if len(*items[i].Data) == 0 {
+		*items[i].Data, ok = s.cache.HasGet((*items[i].Data)[0:0], key(pKey, items[i].CCols))
+		if !ok {
 			return false
 		}
-		items[i].Ok = true
+		items[i].Ok = len(*items[i].Data) != 0
 	}
 	s.mGetBatchCachedTotal.Increase(1.0)
 	return true
@@ -159,7 +161,7 @@ func (s *cachedAppStorage) getBatchFromStorage(pKey []byte, items []istorage.Get
 		if item.Ok {
 			s.cache.Set(key(pKey, item.CCols), *item.Data)
 		} else {
-			s.cache.Del(key(pKey, item.CCols))
+			s.cache.Set(key(pKey, item.CCols), nil)
 		}
 	}
 	return err
