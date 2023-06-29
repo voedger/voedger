@@ -6,9 +6,11 @@ package istoragecache
 
 import (
 	"context"
+	"runtime/debug"
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
+	"github.com/untillpro/goutils/logger"
 	istorage "github.com/voedger/voedger/pkg/istorage"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
@@ -115,6 +117,10 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 	if ok {
 		s.mGetCachedTotal.Increase(1.0)
 		return len(*data) != 0, nil
+	}
+	if logger.IsVerbose() {
+		stack := string(debug.Stack())
+		logger.Verbose(stack)
 	}
 	ok, err = s.storage.Get(pKey, cCols, data)
 	if err != nil {
