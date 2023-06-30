@@ -6,28 +6,48 @@ package state
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func TestCmdResultStorage_Insert(t *testing.T) {
-	require := require.New(t)
-	fieldName := "name"
-	value := "Voedger" //???
-	rw := &mockRowWriter{}
-	rw.
-		On("PutString", fieldName, value)
-	cud := &mockCUD{}
-	cud.On("Create").Return(rw)
-	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, func() istructs.ICUD { return cud }, nil, nil, 1, nil)
+func TestCmdResultStorage_InsertInValue(t *testing.T) {
+	cfg := istructsmem.AppConfigType{Name: istructs.NullAppQName}
+	cmdResBuilder := istructsmem.NewIObjectBuilder(&cfg, appdef.NullQName)
+	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder })
+
 	kb, err := s.KeyBuilder(CmdResultStorage, testRecordQName1)
-	require.NoError(err)
+	require.NoError(t, err)
 
 	vb, err := s.NewValue(kb)
-	require.NoError(err)
+	require.NoError(t, err)
+
+	fieldName := "name"
+	value := "value"
 
 	vb.PutString(fieldName, value)
+}
+
+func TestCmdResultStorage_InsertInKey(t *testing.T) {
+	defer func() {
+		r := fmt.Sprint(recover())
+		require.Equal(t, "runtime error: invalid memory address or nil pointer dereference", r)
+	}()
+
+	cfg := istructsmem.AppConfigType{Name: istructs.NullAppQName}
+	cmdResBuilder := istructsmem.NewIObjectBuilder(&cfg, appdef.NullQName)
+	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder })
+
+	kb, err := s.KeyBuilder(CmdResultStorage, testRecordQName1)
+	require.NoError(t, err)
+
+	fieldName := "name"
+	value := "value"
+
+	kb.PutString(fieldName, value)
 }
