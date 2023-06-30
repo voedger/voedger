@@ -383,6 +383,11 @@ func TestCacheNils(t *testing.T) {
 	})
 }
 
+func TestMakeKes(t *testing.T) {
+	require := require.New(t)
+	require.Equal([]byte{1, 2, 3, 4, 5, 6}, makeKey([]byte{1, 2, 3}, []byte{4, 5, 6}))
+}
+
 type testStorageProvider struct {
 	storage            *testStorage
 	appStorageGetError error
