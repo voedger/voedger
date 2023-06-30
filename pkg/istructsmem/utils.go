@@ -162,3 +162,8 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 	}
 	return err
 }
+
+func NewCmdResultBuilder(appCfg *AppConfigType) istructs.IObjectBuilder {
+	obj := newObject(appCfg, appdef.NewQName(appdef.SysPackage, "TestCmd"))
+	return &obj
+}

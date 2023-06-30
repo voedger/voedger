@@ -16,9 +16,11 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
+	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -51,7 +53,7 @@ func ProvideJSONFuncParamsDef(appDef appdef.IAppDefBuilder) {
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
 func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
-	secretReader isecrets.ISecretReader) ServiceFactory {
+	secretReader isecrets.ISecretReader, appConfigsType istructsmem.AppConfigsType) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
 		cmdProc := &cmdProc{
 			pNumber:       partitionID,
@@ -61,8 +63,10 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 			authenticator: authenticator,
 			authorizer:    authorizer,
 		}
+
+		cmdResBuilderFunc := state.GetCmdResultBuilderFunc()
 		return pipeline.NewService(func(vvmCtx context.Context) {
-			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader, nil)
+			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader, cmdResBuilderFunc)
 			cmdPipeline := pipeline.NewSyncPipeline(vvmCtx, "Command Processor",
 				pipeline.WireFunc("getAppStructs", getAppStructs),
 				pipeline.WireFunc("limitCallRate", limitCallRate),
@@ -109,6 +113,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 						asp:               asp,
 						generatedIDs:      map[istructs.RecordID]istructs.RecordID{},
 						hostStateProvider: hsp,
+						cmdResultBuilder:  cmdResBuilderFunc(),
 					}
 					cmd.metrics = commandProcessorMetrics{
 						vvm:     string(vvm),
@@ -126,6 +131,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 						cmd.wLogEvent.Release()
 					}
 					cmd.metrics.increase(CommandsSeconds, time.Since(start).Seconds())
+					//cmd.cmdResultBuilder = istructsmem.NewIObjectBuilder(cmd.cfg, cmd.cmdFunc.ResultDef())
 				case <-vvmCtx.Done():
 					cmdProc.appPartitions = map[istructs.AppQName]*appPartition{} // clear appPartitions to test recovery
 					return

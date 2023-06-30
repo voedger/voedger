@@ -105,7 +105,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	v3 := provideSubjectGetterFunc()
 	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v3)
 	iAuthorizer := iauthnzimpl.NewDefaultAuthorizer()
-	serviceFactory := commandprocessor.ProvideServiceFactory(iBus, iAppStructsProvider, timeFunc, commandprocessorSyncActualizerFactory, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader)
+	serviceFactory := commandprocessor.ProvideServiceFactory(iBus, iAppStructsProvider, timeFunc, commandprocessorSyncActualizerFactory, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader, appConfigsType)
 	operatorCommandProcessors := provideCommandProcessors(commandProcessorsCount, commandChannelFactory, serviceFactory)
 	queryProcessorsCount := vvmConfig.NumQueryProcessors
 	queryChannel := provideQueryChannel(serviceChannelFactory)
@@ -580,7 +580,6 @@ func provideOperatorAppServices(apf AppServiceFactory, vvmApps VVMApps, asp istr
 
 func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
 	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp),
-	)),
+	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp))),
 	)
 }

@@ -12,11 +12,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -252,4 +253,29 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		okToFinish <- nil
 	}
 	postDone.Wait()
+}
+
+func TestCmdResult(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	// basic usage
+	//body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 1)
+	body := `{"args":{"Arg1": 1}}`
+	resp := vit.PostWS(ws, "c.sys.TestCmd", body)
+	resp.Println()
+	require.Equal("Str", resp.CmdResult["Str"])
+
+	// error - missing mandatory result
+	body = fmt.Sprintf(`{"args":{"Arg1":%d}}`, 2)
+	resp = vit.PostWS(ws, "c.sys.TestCmd", body)
+	require.Equal("Str", resp.CmdResult["Str"])
+	resp.Println()
+
+	// error - missing mandatory result
+	body = fmt.Sprintf(`{"args":{"Arg1":%d}}`, 3)
+	resp = vit.PostWS(ws, "c.sys.TestCmd", body)
+	require.Equal("Str", resp.CmdResult["Str"])
+	resp.Println()
 }
