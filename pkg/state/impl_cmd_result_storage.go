@@ -10,9 +10,6 @@ import (
 )
 
 type cmdResultStorage struct {
-	*keyBuilder
-	istructs.IStateValueBuilder
-	rw                   istructs.IRowWriter
 	cmdResultBuilderFunc CmdResultBuilderFunc
 }
 
