@@ -83,7 +83,7 @@ func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err err
 	s.mPutTotal.Increase(1.0)
 	err = s.storage.Put(pKey, cCols, value)
 	if err == nil {
-		s.cache.Set(key(pKey, cCols), value)
+		s.cache.Set(makeKey(pKey, cCols), value)
 	}
 	return err
 }
@@ -99,7 +99,7 @@ func (s *cachedAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	err = s.storage.PutBatch(items)
 	if err == nil {
 		for _, i := range items {
-			s.cache.Set(key(i.PKey, i.CCols), i.Value)
+			s.cache.Set(makeKey(i.PKey, i.CCols), i.Value)
 		}
 	}
 	return err
@@ -112,8 +112,10 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 	}()
 	s.mGetTotal.Increase(1.0)
 
+	key := makeKey(pKey, cCols)
+	
 	*data = (*data)[0:0]
-	*data, ok = s.cache.HasGet(*data, key(pKey, cCols))
+	*data, ok = s.cache.HasGet(*data, key)
 	if ok {
 		s.mGetCachedTotal.Increase(1.0)
 		return len(*data) != 0, nil
@@ -127,11 +129,11 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 		return false, err
 	}
 	if ok {
-		s.cache.Set(key(pKey, cCols), *data)
+		s.cache.Set(key, *data)
 	} else {
-		s.cache.Set(key(pKey, cCols), nil)
+		s.cache.Set(key, nil)
 	}
-	return
+	return ok, nil
 }
 
 func (s *cachedAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) (err error) {
@@ -148,7 +150,7 @@ func (s *cachedAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) 
 
 func (s *cachedAppStorage) getBatchFromCache(pKey []byte, items []istorage.GetBatchItem) (ok bool) {
 	for i := range items {
-		*items[i].Data, ok = s.cache.HasGet((*items[i].Data)[0:0], key(pKey, items[i].CCols))
+		*items[i].Data, ok = s.cache.HasGet((*items[i].Data)[0:0], makeKey(pKey, items[i].CCols))
 		if !ok {
 			return false
 		}
@@ -165,9 +167,9 @@ func (s *cachedAppStorage) getBatchFromStorage(pKey []byte, items []istorage.Get
 	}
 	for _, item := range items {
 		if item.Ok {
-			s.cache.Set(key(pKey, item.CCols), *item.Data)
+			s.cache.Set(makeKey(pKey, item.CCols), *item.Data)
 		} else {
-			s.cache.Set(key(pKey, item.CCols), nil)
+			s.cache.Set(makeKey(pKey, item.CCols), nil)
 		}
 	}
 	return err
@@ -183,6 +185,10 @@ func (s *cachedAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fi
 	return s.storage.Read(ctx, pKey, startCCols, finishCCols, cb)
 }
 
-func key(pKey []byte, cCols []byte) []byte {
-	return append(pKey, cCols...)
+func makeKey(pKey []byte, cCols []byte) (res []byte) {
+	res = make([]byte, 0, stackKeySize)
+	// res = make([]byte, 0, len(pKey)+len(cCols)) // escapes to heap
+	res = append(res, pKey...)
+	res = append(res, cCols...)
+	return res
 }
