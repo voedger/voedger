@@ -129,9 +129,7 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (
 
 func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmdResultBuilder := istructsmem.NewIObjectBuilder(nil, cmd.cmdFunc.ResultDef())
-	cmd.cmdResultBuilder = cmdResultBuilder
-	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(), cmd.principals, cmd.cmdMes.Token(), cmdResultBuilder)
+	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(), cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder)
 	hs.ClearIntents()
 	cmd.eca = istructs.ExecCommandArgs{
 		CommandPrepareArgs: istructs.CommandPrepareArgs{
@@ -266,6 +264,16 @@ func getAppStructs(_ context.Context, work interface{}) (err error) {
 	cmd.appStructs, err = cmd.asp.AppStructs(cmd.cmdMes.AppQName())
 	return
 }
+
+//func (cmdProc *cmdProc) getAppConfig(_ context.Context, work interface{}) (err error) {
+//	cmd := work.(*cmdWorkpiece)
+//	cmd.cfg = cmdProc.cfgs[cmd.cmdMes.AppQName()]
+//	//if cmd.cmdFunc != nil {
+//	//	//if cmd.cmdFunc != nil && cmd.cmdFunc.ResultDef() != appdef.NullQName {
+//	//	cmd.cmdResultBuilder = istructsmem.NewCmdResultBuilder(cmd.cfg, cmd.cmdFunc.ResultDef())
+//	//}
+//	return
+//}
 
 func limitCallRate(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
@@ -447,13 +455,8 @@ func (cmdProc *cmdProc) validate(ctx context.Context, work interface{}) (err err
 			return
 		}
 	}
-	if cmd.cmdFunc.ResultDef() != appdef.NullQName {
-		cmdResult, err := cmd.cmdResultBuilder.Build()
-		if err != nil {
-			return err
-		}
-		cmd.cmdResult = cmdResult
-	}
+	cmdResult := cmd.cmdResultBuilder.BuildValue()
+	cmd.cmdResult = cmdResult
 	return nil
 }
 
@@ -669,11 +672,11 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 		body.WriteString("}")
 	}
 	if cmd.cmdResult != nil {
-		cmdResultMap := coreutils.ObjectToMap(cmd.cmdResult, nil)
-		body.WriteString(`,"Result":{`)
-		bb, _ := json.Marshal(cmdResultMap)
-		body.WriteString(string(bb))
-		body.WriteString(`}`)
+		cmdResultJSON, err := cmd.cmdResult.ToJSON()
+		if err == nil {
+			body.WriteString(`,"Result":`)
+			body.WriteString(cmdResultJSON)
+		}
 	}
 	body.WriteString("}")
 	coreutils.ReplyJSON(sr.bus, cmd.cmdMes.Sender(), http.StatusOK, body.String())
