@@ -704,9 +704,7 @@ type cmdResultKeyBuilder struct {
 }
 
 func newCmdResultKeyBuilder(entity appdef.QName) *cmdResultKeyBuilder {
-	return &cmdResultKeyBuilder{
-		keyBuilder: newKeyBuilder(CmdResultStorage, entity),
-	}
+	return nil // type of this "nil" will be *cmdResultKeyBuilder -> will be fired at state.getStorageID()
 }
 
 type cmdResultValueBuilder struct {

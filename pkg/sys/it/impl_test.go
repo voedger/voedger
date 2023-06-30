@@ -260,25 +260,31 @@ func TestCmdResult(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	// basic usage
-	//body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 1)
-	body := `{"args":{"Arg1": 1}}`
-	resp := vit.PostWS(ws, "c.sys.TestCmd", body)
-	resp.Println()
-	require.Equal("Str", resp.CmdResult["Str"])
-	require.Equal(float64(42), resp.CmdResult["Int"])
+
+	t.Run("basic usage", func(t *testing.T) {
+
+		body := `{"args":{"Arg1": 1}}`
+		resp := vit.PostWS(ws, "c.sys.TestCmd", body)
+		resp.Println()
+		require.Equal("Str", resp.CmdResult["Str"])
+		require.Equal(float64(42), resp.CmdResult["Int"])
+	})
 
 	// ok - just required field is filled
-	body = fmt.Sprintf(`{"args":{"Arg1":%d}}`, 2)
-	resp = vit.PostWS(ws, "c.sys.TestCmd", body)
-	resp.Println()
-	require.Equal(float64(42), resp.CmdResult["Int"])
+	t.Run("just required fields filled", func(t *testing.T) {
+		body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 2)
+		resp := vit.PostWS(ws, "c.sys.TestCmd", body)
+		resp.Println()
+		require.Equal(float64(42), resp.CmdResult["Int"])
+	})
 
-	// error - mandatory field missing
-	body = fmt.Sprintf(`{"args":{"Arg1":%d}}`, 3)
-	vit.PostWS(ws, "c.sys.TestCmd", body, coreutils.Expect500()).Println()
+	t.Run("missing required fields -> 500", func(t *testing.T) {
+		body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 3)
+		vit.PostWS(ws, "c.sys.TestCmd", body, coreutils.Expect500()).Println()
+	})
 
-	// error - wrong type
-	body = fmt.Sprintf(`{"args":{"Arg1":%d}}`, 4)
-	vit.PostWS(ws, "c.sys.TestCmd", body, coreutils.Expect500()).Println()
+	t.Run("wrong types -> 500", func(t *testing.T) {
+		body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 4)
+		vit.PostWS(ws, "c.sys.TestCmd", body, coreutils.Expect500()).Println()
+	})
 }

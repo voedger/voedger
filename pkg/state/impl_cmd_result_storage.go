@@ -10,9 +10,7 @@ import (
 )
 
 type cmdResultStorage struct {
-	*keyBuilder
 	istructs.IStateValueBuilder
-	rw                   istructs.IRowWriter
 	cmdResultBuilderFunc CmdResultBuilderFunc
 }
 
@@ -21,17 +19,13 @@ func (s *cmdResultStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateK
 }
 
 func (s *cmdResultStorage) Validate([]ApplyBatchItem) (err error) {
-	return nil
+	panic("not applicable")
 }
 
 func (s *cmdResultStorage) ApplyBatch([]ApplyBatchItem) (err error) {
-	return nil
+	panic("not applicable")
 }
 
 func (s *cmdResultStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) istructs.IStateValueBuilder {
 	return &cmdResultValueBuilder{cmdResultBuilder: s.cmdResultBuilderFunc()}
-}
-
-func (s *cmdResultStorage) ProvideValueBuilderForUpdate(istructs.IStateKeyBuilder, istructs.IStateValue, istructs.IStateValueBuilder) istructs.IStateValueBuilder {
-	return nil
 }
