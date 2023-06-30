@@ -94,6 +94,20 @@ go run main.go v3
 - v1TimerDuration: 300ms
 - vCPU: 20
 
+
+## Raw data
+
+
+Version| Parts x Projections | RPS | Latency | CPU Usage | Avg. RAM| N10n Rate
+-| - | - | - | - |-|-
+v1| 10x10000| 15892.26| 3.004µs| 5.26%| 168MB| 0.21%
+v2| 10x10000| 178.31| 5.572235ms| 23.21%| 283MB| 36.40%
+v3| 10x10000| 33486.30| 13.184µs| 53.88%| 104MB| 0.85%
+v1| 100x1000| 17820.12| 4.124µs| 5.68%| 167MB| 1.87%
+v2| 100x1000| 887.31| 941.33µs| 25.00%| 290MB| 96.53%
+v3| 100x1000| 26980.91| 20.12µs| 59.33%| 112MB| 10.42%
+
+
 ### By Metric
 
 |Part x Projections | Metric | v1 | v2 | v3|

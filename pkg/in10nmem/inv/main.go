@@ -31,6 +31,7 @@ var numPartitions int
 var numProjectorsPerPartition int
 var v2NumNotifiers int
 var verbose bool
+var csv bool
 
 var numN10nLock sync.Mutex
 var partitionNumN10ns = make(map[int]int64)
@@ -50,6 +51,7 @@ func main() {
 	// nolint
 	{
 		rootCmd.PersistentFlags().IntVar(&numPartitions, "numPartitions", 1000, "Number of partitions")
+		rootCmd.PersistentFlags().BoolVar(&csv, "csv", false, "Use comma-separated values output")
 		rootCmd.PersistentFlags().IntVar(&numProjectorsPerPartition, "numProjectorsPerPartition", 1000, "Number of projectors per partition")
 		rootCmd.PersistentFlags().IntVar(&v2NumNotifiers, "v2NumNotifiers", 1, "Number of v2 notifiers")
 		rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Verbose mode")
@@ -69,7 +71,7 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			println("Running v1...")
 			nb := in10nmemv1.Provide(quotas)
-			runChannels(nb)
+			runChannels(cmd.Use, nb)
 		},
 	}
 
@@ -80,7 +82,7 @@ func main() {
 			println("Running v2...")
 			nb, cleanup := in10nmem.ProvideEx3(quotas, time.Now, v2NumNotifiers)
 			defer cleanup()
-			runChannels(nb)
+			runChannels(cmd.Use, nb)
 		},
 	}
 
@@ -91,7 +93,7 @@ func main() {
 			println("Running v3...")
 			nb, cleanup := in10nmemv3.ProvideEx2(quotas, time.Now)
 			defer cleanup()
-			runChannels(nb)
+			runChannels(cmd.Use, nb)
 		},
 	}
 
@@ -115,7 +117,7 @@ const subject istructs.SubjectLogin = "main"
 
 var projectionPLog = appdef.NewQName("sys", "plog")
 
-func runChannels(broker in10n.IN10nBroker) {
+func runChannels(version string, broker in10n.IN10nBroker) {
 
 	wg := sync.WaitGroup{}
 
@@ -180,6 +182,9 @@ func runChannels(broker in10n.IN10nBroker) {
 	startCPU, _ := initCPUUsage()
 	measures := 0
 	var sumRAM uint64 = 0
+	if csv {
+		fmt.Println("Version, PartsxProjections, RPS, Latency, CPU, avgRAM, N10n Rate")
+	}
 	for range t.C {
 		measures++
 		var memStats runtime.MemStats
@@ -187,22 +192,39 @@ func runChannels(broker in10n.IN10nBroker) {
 
 		count := atomic.LoadInt64(&updateCount)
 		sumLatenciesNano := atomic.LoadInt64(&updateSumLatenciesNano)
-		CPU, _ := calcCPUsage(&startCPU)
+		CPU, _ := calcCPUsage2(startCPU)
 		RAM := memStats.Alloc
 		sumRAM += RAM
-		fmt.Println(
-			"rps:", float64(count)/float64(time.Since(startTime).Seconds()),
-			"latency, ns:", float64(sumLatenciesNano)/float64(count),
-			"n10n rate,%:", float64(numN10ns)/float64(count*int64(numProjectorsPerPartition))*100,
-			"CPU, %:", CPU*100,
-			"avg(RAM), MB:", sumRAM/uint64(measures)/1024/1024,
-			"RAM, MB:", memStats.Alloc/1024/1024,
-		)
+
+		rps := float64(count) / float64(time.Since(startTime).Seconds())
+		latency := float64(sumLatenciesNano) / float64(count)
+
+		//nolint
+		n10rate := float64(numN10ns) / float64(count*int64(numProjectorsPerPartition)) * 100
+		//nolint
+		avgRAM := float64(sumRAM) / float64(measures) / 1024 / 1024
+		if !csv {
+			fmt.Println(
+				"rps:", rps,
+				"latency, ns:", latency,
+				"n10n rate,%:", n10rate,
+				"CPU, %:", CPU*100,
+				"avg(RAM), MB:", avgRAM,
+				"RAM, MB:", memStats.Alloc/1024/1024,
+			)
+		} else {
+			//nolint
+			fmt.Printf("%s| %dx%d| %.2f| %v| %.2f%%| %.0fMB| %.2f%%\n",
+				version, numPartitions, numProjectorsPerPartition, rps, time.Duration(latency), CPU*100, avgRAM, n10rate,
+			)
+		}
+
 		if logger.IsVerbose() {
 			numN10nLock.Lock()
 			logger.Verbose("partitionN10ns: ", partitionNumN10ns)
 			numN10nLock.Unlock()
 		}
+
 	}
 	wg.Wait()
 
@@ -239,6 +261,26 @@ func initCPUUsage() (CPUUsageData, error) {
 	return CPUUsageData{lastTotalTime: totalTime, lastIdleTime: idleTime}, nil
 }
 
+// calcCPUsage calculates and returns the CPU usage since the first calculation
+func calcCPUsage2(firstData CPUUsageData) (float64, error) {
+	times, err := cpu.Times(false) // false for total system, not per-CPU stats
+	if err != nil {
+		return 0, err
+	}
+
+	totalTime := getCPUTotalTime(times[0])
+	idleTime := times[0].Idle
+
+	totalDelta := totalTime - firstData.lastTotalTime
+	idleDelta := idleTime - firstData.lastIdleTime
+
+	if totalDelta == 0 {
+		return 0, nil
+	}
+	return (totalDelta - idleDelta) / totalDelta, nil // returning usage in percentage
+}
+
+// nolint
 // calcCPUsage calculates and returns the CPU usage since last calculation
 func calcCPUsage(data *CPUUsageData) (float64, error) {
 	times, err := cpu.Times(false) // false for total system, not per-CPU stats
