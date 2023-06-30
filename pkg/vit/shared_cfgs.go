@@ -578,7 +578,7 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 			AddField("Arg1", appdef.DataKind_int32, true).(appdef.IDef).QName(),
 		appdef.NullQName,
 		adf.AddObject(testCmdResult).
-			AddField("Int", appdef.DataKind_int32, false).
+			AddField("Int", appdef.DataKind_int32, true).
 			AddField("Str", appdef.DataKind_string, false).(appdef.IDef).QName(),
 		func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 			key, err := args.State.KeyBuilder(state.CmdResultStorage, testCmdResult)
@@ -595,9 +595,12 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 			switch arg1 {
 			case 1:
 				value.PutString("Str", "Str")
+				value.PutInt32("Int", 42)
 			case 2:
 				value.PutInt32("Int", 42)
 			case 3:
+				value.PutString("Str", "Str")
+			case 4:
 				value.PutString("Int", "wrong")
 			}
 			return nil

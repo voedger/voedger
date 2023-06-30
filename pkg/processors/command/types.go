@@ -13,7 +13,6 @@ import (
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -78,9 +77,8 @@ type cmdWorkpiece struct {
 	checkWSDescUpdating bool
 	hostStateProvider   *hostStateProvider
 	wsInitialized       bool
-	cmdResultBuilder    istructs.IStateValueBuilder
-	cmdResult           istructs.IStateValue
-	cfg                 *istructsmem.AppConfigType
+	cmdResultBuilder    istructs.IObjectBuilder
+	cmdResult           istructs.IObject
 }
 
 type parsedCUD struct {
@@ -115,12 +113,12 @@ type hostStateProvider struct {
 	principals       []iauthnz.Principal
 	state            state.IHostState
 	token            string
-	cmdResultBuilder istructs.IStateValueBuilder
+	cmdResultBuilder istructs.IObjectBuilder
 }
 
-func newHostStateProvider(ctx context.Context, pid istructs.PartitionID, secretReader isecrets.ISecretReader, cmdResultBuilderFunc state.CmdResultBuilderFunc) *hostStateProvider {
+func newHostStateProvider(ctx context.Context, pid istructs.PartitionID, secretReader isecrets.ISecretReader) *hostStateProvider {
 	p := &hostStateProvider{}
-	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid), p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, intentsLimit, cmdResultBuilderFunc)
+	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid), p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, intentsLimit, p.getCmdResultBuilder)
 	return p
 }
 
@@ -130,8 +128,9 @@ func (p *hostStateProvider) getCUD() istructs.ICUD               { return p.cud 
 func (p *hostStateProvider) getPrincipals() []iauthnz.Principal {
 	return p.principals
 }
-func (p *hostStateProvider) getToken() string { return p.token }
-func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.WSID, cud istructs.ICUD, principals []iauthnz.Principal, token string, cmdResultBuilder istructs.IStateValueBuilder) state.IHostState {
+func (p *hostStateProvider) getToken() string                             { return p.token }
+func (p *hostStateProvider) getCmdResultBuilder() istructs.IObjectBuilder { return p.cmdResultBuilder }
+func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.WSID, cud istructs.ICUD, principals []iauthnz.Principal, token string, cmdResultBuilder istructs.IObjectBuilder) state.IHostState {
 	p.as = appStructs
 	p.wsid = wsid
 	p.cud = cud
