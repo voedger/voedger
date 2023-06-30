@@ -10,7 +10,6 @@ import (
 )
 
 type cmdResultStorage struct {
-	istructs.IStateValueBuilder
 	cmdResultBuilderFunc CmdResultBuilderFunc
 }
 
