@@ -127,6 +127,16 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (
 	return nil
 }
 
+func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	qNameCmdResult := cmd.cmdFunc.ResultDef()
+	if qNameCmdResult != appdef.NullQName {
+		cfg := cmdProc.cfgs[cmd.cmdMes.AppQName()]
+		cmd.cmdResultBuilder = istructsmem.NewIObjectBuilder(cfg, qNameCmdResult)
+	}
+	return nil
+}
+
 func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(), cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder)
@@ -432,6 +442,18 @@ func buildRawEvent(_ context.Context, work interface{}) (err error) {
 	return
 }
 
+func validateCmdResult(ctx context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	if cmd.cmdResultBuilder != nil {
+		cmdResult, err := cmd.cmdResultBuilder.Build()
+		if err != nil {
+			return err
+		}
+		cmd.cmdResult = cmdResult
+	}
+	return nil
+}
+
 func (cmdProc *cmdProc) validate(ctx context.Context, work interface{}) (err error) {
 	defer func() {
 		err = coreutils.WrapSysError(err, http.StatusForbidden)
@@ -455,8 +477,6 @@ func (cmdProc *cmdProc) validate(ctx context.Context, work interface{}) (err err
 			return
 		}
 	}
-	cmdResult := cmd.cmdResultBuilder.BuildValue()
-	cmd.cmdResult = cmdResult
 	return nil
 }
 
@@ -672,11 +692,14 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 		body.WriteString("}")
 	}
 	if cmd.cmdResult != nil {
-		cmdResultJSON, err := cmd.cmdResult.ToJSON()
-		if err == nil {
-			body.WriteString(`,"Result":`)
-			body.WriteString(cmdResultJSON)
+		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.AppDef())
+		cmdResultBytes, err := json.Marshal(cmdResult)
+		if err != nil {
+			// notest
+			return err
 		}
+		body.WriteString(`,"Result":`)
+		body.WriteString(string(cmdResultBytes))
 	}
 	body.WriteString("}")
 	coreutils.ReplyJSON(sr.bus, cmd.cmdMes.Sender(), http.StatusOK, body.String())

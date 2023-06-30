@@ -266,16 +266,19 @@ func TestCmdResult(t *testing.T) {
 	resp := vit.PostWS(ws, "c.sys.TestCmd", body)
 	resp.Println()
 	require.Equal("Str", resp.CmdResult["Str"])
+	require.Equal(float64(42), resp.CmdResult["Int"])
 
-	// error - missing mandatory result
+	// ok - just required field is filled
 	body = fmt.Sprintf(`{"args":{"Arg1":%d}}`, 2)
 	resp = vit.PostWS(ws, "c.sys.TestCmd", body)
-	require.Equal("Str", resp.CmdResult["Str"])
 	resp.Println()
+	require.Equal(float64(42), resp.CmdResult["Int"])
 
-	// error - missing mandatory result
+	// error - mandatory field missing
 	body = fmt.Sprintf(`{"args":{"Arg1":%d}}`, 3)
-	resp = vit.PostWS(ws, "c.sys.TestCmd", body)
-	require.Equal("Str", resp.CmdResult["Str"])
-	resp.Println()
+	vit.PostWS(ws, "c.sys.TestCmd", body, coreutils.Expect500()).Println()
+
+	// error - wrong type
+	body = fmt.Sprintf(`{"args":{"Arg1":%d}}`, 4)
+	vit.PostWS(ws, "c.sys.TestCmd", body, coreutils.Expect500()).Println()
 }

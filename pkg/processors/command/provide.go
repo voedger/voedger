@@ -20,7 +20,6 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
-	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -38,6 +37,7 @@ type cmdProc struct {
 	now           coreutils.TimeFunc
 	authenticator iauthnz.IAuthenticator
 	authorizer    iauthnz.IAuthorizer
+	cfgs          istructsmem.AppConfigsType
 }
 
 type appPartition struct {
@@ -62,11 +62,11 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 			now:           now,
 			authenticator: authenticator,
 			authorizer:    authorizer,
+			cfgs:          appConfigsType,
 		}
 
-		cmdResBuilderFunc := state.GetCmdResultBuilderFunc()
 		return pipeline.NewService(func(vvmCtx context.Context) {
-			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader, cmdResBuilderFunc)
+			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader)
 			cmdPipeline := pipeline.NewSyncPipeline(vvmCtx, "Command Processor",
 				pipeline.WireFunc("getAppStructs", getAppStructs),
 				pipeline.WireFunc("limitCallRate", limitCallRate),
@@ -88,10 +88,12 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("checkWSDescUpdating", checkWorkspaceDescriptorUpdating),
 				pipeline.WireFunc("authorizeCUDs", cmdProc.authorizeCUDs),
 				pipeline.WireFunc("writeCUDs", cmdProc.writeCUDs),
+				pipeline.WireFunc("getCmdResultBuilder", cmdProc.getCmdResultBuilder),
 				pipeline.WireFunc("buildCommandArgs", cmdProc.buildCommandArgs),
 				pipeline.WireFunc("execCommand", execCommand),
 				pipeline.WireFunc("build raw event", buildRawEvent),
 				pipeline.WireFunc("validate", cmdProc.validate),
+				pipeline.WireFunc("validateCmdResult", validateCmdResult),
 				pipeline.WireFunc("putPLog", cmdProc.putPLog),
 				pipeline.WireFunc("applyPLogEvent", applyPLogEvent),
 				pipeline.WireFunc("syncProjectorsStart", syncProjectorsBegin),
@@ -113,7 +115,6 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 						asp:               asp,
 						generatedIDs:      map[istructs.RecordID]istructs.RecordID{},
 						hostStateProvider: hsp,
-						cmdResultBuilder:  cmdResBuilderFunc(),
 					}
 					cmd.metrics = commandProcessorMetrics{
 						vvm:     string(vvm),
