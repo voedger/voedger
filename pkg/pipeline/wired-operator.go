@@ -27,6 +27,7 @@ func WireAsyncOperator(name string, op IAsyncOperator, flushIntvl ...time.Durati
 	if len(flushIntvl) > 0 {
 		flush = flushIntvl[0]
 	}
+
 	res := &WiredOperator{
 		name:          name,
 		Stdin:         nil,
@@ -34,7 +35,14 @@ func WireAsyncOperator(name string, op IAsyncOperator, flushIntvl ...time.Durati
 		Operator:      op,
 		FlushInterval: flush,
 	}
-	res.flushCB = res.flush
+
+	flushCB := func(work IWorkpiece) {
+		if res.isActive() {
+			res.Stdout <- work
+		}
+	}
+
+	res.flushCB = flushCB
 	return res
 }
 
@@ -44,12 +52,6 @@ func WireSyncOperator(name string, op ISyncOperator) *WiredOperator {
 		Stdin:    nil,
 		Stdout:   make(chan interface{}, 1),
 		Operator: op,
-	}
-}
-
-func (wo *WiredOperator) flush(work IWorkpiece) {
-	if wo.isActive() {
-		wo.Stdout <- work
 	}
 }
 
