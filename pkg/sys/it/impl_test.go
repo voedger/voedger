@@ -12,11 +12,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -252,4 +253,39 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		okToFinish <- nil
 	}
 	postDone.Wait()
+}
+
+func TestCmdResult(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("basic usage", func(t *testing.T) {
+
+		body := `{"args":{"Arg1": 1}}`
+		resp := vit.PostWS(ws, "c.sys.TestCmd", body)
+		resp.Println()
+		require.Equal("Str", resp.CmdResult["Str"])
+		require.Equal(float64(42), resp.CmdResult["Int"])
+	})
+
+	// ok - just required field is filled
+	t.Run("just required fields filled", func(t *testing.T) {
+		body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 2)
+		resp := vit.PostWS(ws, "c.sys.TestCmd", body)
+		resp.Println()
+		require.Equal(float64(42), resp.CmdResult["Int"])
+	})
+
+	t.Run("missing required fields -> 500", func(t *testing.T) {
+		body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 3)
+		vit.PostWS(ws, "c.sys.TestCmd", body, coreutils.Expect500()).Println()
+	})
+
+	t.Run("wrong types -> 500", func(t *testing.T) {
+		body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 4)
+		vit.PostWS(ws, "c.sys.TestCmd", body, coreutils.Expect500()).Println()
+	})
 }

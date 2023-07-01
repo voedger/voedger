@@ -21,8 +21,9 @@ import (
 	"github.com/stretchr/testify/require"
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
-	"github.com/voedger/voedger/pkg/istructs"
 	"golang.org/x/exp/slices"
+
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func NewHTTPErrorf(httpStatus int, args ...interface{}) SysError {
@@ -382,6 +383,7 @@ func FederationFunc(federationUrl *url.URL, relativeURL string, body string, opt
 	res := &FuncResponse{
 		HTTPResponse: httpResp,
 		NewIDs:       map[string]int64{},
+		CmdResult:    map[string]interface{}{},
 	}
 	if len(httpResp.Body) == 0 {
 		return res, nil

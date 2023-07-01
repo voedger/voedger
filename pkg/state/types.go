@@ -25,9 +25,10 @@ type WSIDFunc func() istructs.WSID
 type N10nFunc func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset)
 type AppStructsFunc func() istructs.IAppStructs
 type CUDFunc func() istructs.ICUD
+type CmdResultBuilderFunc func() istructs.IObjectBuilder
 type PrincipalsFunc func() []iauthnz.Principal
 type TokenFunc func() string
-type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int) IHostState
+type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc) IHostState
 type SyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit int) IHostState
 type QueryProcessorStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc) IHostState
 type AsyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit, bundlesLimit int,
@@ -696,4 +697,52 @@ func (v *baseStateValue) GetAsValue(int) istructs.IStateValue {
 }
 func (v *baseStateValue) AsValue(string) istructs.IStateValue {
 	panic(errFieldByNameIsNotAnObjectOrArray)
+}
+
+type cmdResultKeyBuilder struct {
+	*keyBuilder
+}
+
+func newCmdResultKeyBuilder(entity appdef.QName) *cmdResultKeyBuilder {
+	return nil // type of this "nil" will be *cmdResultKeyBuilder -> will be fired at state.getStorageID()
+}
+
+type cmdResultValueBuilder struct {
+	istructs.IStateValueBuilder
+	cmdResultBuilder istructs.IObjectBuilder
+}
+
+func (c *cmdResultValueBuilder) PutInt32(name string, value int32) {
+	c.cmdResultBuilder.PutInt32(name, value)
+}
+
+func (c *cmdResultValueBuilder) PutInt64(name string, value int64) {
+	c.cmdResultBuilder.PutInt64(name, value)
+}
+func (c *cmdResultValueBuilder) PutBytes(name string, value []byte) {
+	c.cmdResultBuilder.PutBytes(name, value)
+}
+func (c *cmdResultValueBuilder) PutString(name, value string) {
+	c.cmdResultBuilder.PutString(name, value)
+}
+func (c *cmdResultValueBuilder) PutBool(name string, value bool) {
+	c.cmdResultBuilder.PutBool(name, value)
+}
+func (c *cmdResultValueBuilder) PutChars(name string, value string) {
+	c.cmdResultBuilder.PutChars(name, value)
+}
+func (c *cmdResultValueBuilder) PutFloat32(name string, value float32) {
+	c.cmdResultBuilder.PutFloat32(name, value)
+}
+func (c *cmdResultValueBuilder) PutFloat64(name string, value float64) {
+	c.cmdResultBuilder.PutFloat64(name, value)
+}
+func (c *cmdResultValueBuilder) PutQName(name string, value appdef.QName) {
+	c.cmdResultBuilder.PutQName(name, value)
+}
+func (c *cmdResultValueBuilder) PutNumber(name string, value float64) {
+	c.cmdResultBuilder.PutNumber(name, value)
+}
+func (c *cmdResultValueBuilder) PutRecordID(name string, value istructs.RecordID) {
+	c.cmdResultBuilder.PutRecordID(name, value)
 }
