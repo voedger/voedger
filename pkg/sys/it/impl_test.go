@@ -258,6 +258,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 func TestCmdResult(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
