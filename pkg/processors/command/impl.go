@@ -275,16 +275,6 @@ func getAppStructs(_ context.Context, work interface{}) (err error) {
 	return
 }
 
-//func (cmdProc *cmdProc) getAppConfig(_ context.Context, work interface{}) (err error) {
-//	cmd := work.(*cmdWorkpiece)
-//	cmd.cfg = cmdProc.cfgs[cmd.cmdMes.AppQName()]
-//	//if cmd.cmdFunc != nil {
-//	//	//if cmd.cmdFunc != nil && cmd.cmdFunc.ResultDef() != appdef.NullQName {
-//	//	cmd.cmdResultBuilder = istructsmem.NewCmdResultBuilder(cmd.cfg, cmd.cmdFunc.ResultDef())
-//	//}
-//	return
-//}
-
 func limitCallRate(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if cmd.appStructs.IsFunctionRateLimitsExceeded(cmd.cmdMes.Resource().QName(), cmd.cmdMes.WSID()) {
@@ -703,7 +693,7 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 	}
 	body.WriteString("}")
 	coreutils.ReplyJSON(sr.bus, cmd.cmdMes.Sender(), http.StatusOK, body.String())
-	return
+	return nil
 }
 
 // nolint (result is always nil)
