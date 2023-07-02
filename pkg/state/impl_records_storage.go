@@ -28,7 +28,43 @@ func (s *recordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKey
 		entity:    entity,
 	}
 }
+
+func (s *recordsStorage) GetSingle(item *GetBatchItem) error {
+	k := item.key.(*recordsKeyBuilder)
+	if k.singleton != appdef.NullQName {
+		singleton, e := s.recordsFunc().GetSingleton(k.wsid, k.singleton)
+		if e != nil {
+			return e
+		}
+		if singleton.QName() == appdef.NullQName {
+			return nil
+		}
+		item.value = &recordsStorageValue{
+			record:     singleton,
+			toJSONFunc: s.toJSON,
+		}
+		return nil
+	}
+	record, err := s.recordsFunc().Get(k.wsid, true, k.id)
+	if err != nil {
+		return err
+	}
+	if record.QName() == appdef.NullQName {
+		return nil
+	}
+	item.value = &recordsStorageValue{
+		record:     record,
+		toJSONFunc: s.toJSON,
+	}
+	return nil
+}
+
 func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
+
+	if len(items) == 1 {
+		return s.GetSingle(&items[0])
+	}
+
 	type getSingletonParams struct {
 		wsid    istructs.WSID
 		qname   appdef.QName
