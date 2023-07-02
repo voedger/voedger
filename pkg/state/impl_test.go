@@ -171,6 +171,10 @@ type mockRecords struct {
 func (r *mockRecords) GetBatch(workspace istructs.WSID, highConsistency bool, ids []istructs.RecordGetBatchItem) (err error) {
 	return r.Called(workspace, highConsistency, ids).Error(0)
 }
+func (r *mockRecords) Get(workspace istructs.WSID, highConsistency bool, id istructs.RecordID) (record istructs.IRecord, err error) {
+	args := r.Called(workspace, highConsistency, id)
+	return args.Get(0).(istructs.IRecord), args.Error(1)
+}
 func (r *mockRecords) GetSingleton(workspace istructs.WSID, qName appdef.QName) (record istructs.IRecord, err error) {
 	aa := r.Called(workspace, qName)
 	return aa.Get(0).(istructs.IRecord), aa.Error(1)

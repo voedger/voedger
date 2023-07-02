@@ -23,6 +23,7 @@ func BenchmarkRecordsGet(b *testing.B) {
 	require := require.New(b)
 	records := &mockRecords{}
 	records.
+		On("Get", istructs.WSID(1), true, istructs.RecordID(2)).Return(record, nil).
 		On("GetBatch", istructs.WSID(1), true, mock.AnythingOfType("[]istructs.RecordGetBatchItem")).
 		Return(nil).
 		Run(func(args mock.Arguments) {
@@ -31,8 +32,7 @@ func BenchmarkRecordsGet(b *testing.B) {
 			record.On("QName").Return(testRecordQName1)
 			record.On("AsInt64", "number").Return(int64(10))
 			items[0].Record = record
-		}).
-		On("Get", istructs.WSID(1), true, mock.AnythingOfType("istructs.RecordID")).Return(record, nil)
+		})
 
 	appDef := appdef.New()
 	appDef.AddObject(testRecordQName1).
