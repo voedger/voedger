@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -14,26 +12,32 @@ import (
 Before:
 BenchmarkRecordsGet-20    	   21326	     51747 ns/op	   30498 B/op	     329 allocs/op
 */
+
+type mockBenchRecs struct {
+	istructs.IRecords
+}
+
+type mockBenchRec struct {
+	istructs.IRecord
+}
+
+func (r *mockBenchRec) QName() appdef.QName {
+	return testRecordQName1
+}
+
+var mockRec istructs.IRecord
+
+//	func (r *mockBenchRecs) GetBatch(workspace istructs.WSID, highConsistency bool, ids []istructs.RecordGetBatchItem) (err error) {
+//		return r.Called(workspace, highConsistency, ids).Error(0)
+//	}
+func (r *mockBenchRecs) Get(workspace istructs.WSID, highConsistency bool, id istructs.RecordID) (record istructs.IRecord, err error) {
+	return mockRec, nil
+}
 func BenchmarkRecordsGet(b *testing.B) {
 
-	record := &mockRecord{}
-	record.On("QName").Return(testRecordQName1)
-	record.On("AsInt64", "number").Return(int64(10))
+	mockRec = &mockBenchRec{}
 
-	require := require.New(b)
-	records := &mockRecords{}
-	records.
-		On("Get", istructs.WSID(1), true, istructs.RecordID(2)).Return(record, nil).
-		On("GetBatch", istructs.WSID(1), true, mock.AnythingOfType("[]istructs.RecordGetBatchItem")).
-		Return(nil).
-		Run(func(args mock.Arguments) {
-			items := args.Get(2).([]istructs.RecordGetBatchItem)
-			record := &mockRecord{}
-			record.On("QName").Return(testRecordQName1)
-			record.On("AsInt64", "number").Return(int64(10))
-			items[0].Record = record
-		})
-
+	records := &mockBenchRecs{}
 	appDef := appdef.New()
 	appDef.AddObject(testRecordQName1).
 		AddField("number", appdef.DataKind_int64, false)
@@ -48,7 +52,9 @@ func BenchmarkRecordsGet(b *testing.B) {
 		On("Events").Return(&nilEvents{})
 	s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 	k1, err := s.KeyBuilder(RecordsStorage, appdef.NullQName)
-	require.NoError(err)
+	if err != nil {
+		panic(err)
+	}
 	k1.PutRecordID(Field_ID, 2)
 	k1.PutInt64(Field_WSID, 1)
 
