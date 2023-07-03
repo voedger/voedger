@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 
+	"github.com/voedger/voedger/pkg/istructsmem/internal/bytespool"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
@@ -292,11 +293,13 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 		// See [#292](https://github.com/voedger/voedger/issues/292)
 		pKey, cCol := splitLogOffset(offset)
 		pKey = utils.PrefixBytes(pKey, consts.SysView_PLog, partition) // + partition! see #18047
-		data := make([]byte, 0)
-		if ok, err := e.app.config.storage.Get(pKey, cCol, &data); !ok {
-			return err
+		data := bytespool.Get()
+		ok, err := e.app.config.storage.Get(pKey, cCol, &data)
+		if ok {
+			err = cbEvent(offset, data)
 		}
-		return cbEvent(offset, data)
+		bytespool.Put(data)
+		return err
 	default:
 		return readLogParts(offset, toReadCount, func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
 			count := 0
@@ -327,11 +330,13 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 		// See [#292](https://github.com/voedger/voedger/issues/292)
 		pKey, cCol := splitLogOffset(offset)
 		pKey = utils.PrefixBytes(pKey, consts.SysView_WLog, workspace)
-		data := make([]byte, 0)
-		if ok, err := e.app.config.storage.Get(pKey, cCol, &data); !ok {
-			return err
+		data := bytespool.Get()
+		ok, err := e.app.config.storage.Get(pKey, cCol, &data)
+		if ok {
+			err = cbEvent(offset, data)
 		}
-		return cbEvent(offset, data)
+		bytespool.Put(data)
+		return err
 	default:
 		return readLogParts(offset, toReadCount, func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
 			count := 0
