@@ -317,8 +317,6 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 		"db-stack-update.sh", "docker-compose-template.yml", "swarm-set-label.sh", "docker-compose-prepare.sh",
 		"scylla.yaml", "swarm-get-manager-token.sh")
 
-	//prepareManagerToken(cluster)
-
 	conf := newSeConfigType(cluster)
 
 	if err = newScriptExecuter(cluster.sshKey, "localhost").
