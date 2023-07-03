@@ -25,7 +25,9 @@ type workpiece struct {
 	pLogOffset istructs.Offset
 }
 
-func (w *workpiece) Release() {}
+func (w *workpiece) Release() {
+	w.event.Release()
+}
 
 // implements ServiceOperator
 type asyncActualizer struct {
