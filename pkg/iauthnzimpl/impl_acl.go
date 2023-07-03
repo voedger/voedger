@@ -51,9 +51,9 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
-		desc: "everything is allowed to WorkspaceSubject",
+		desc: "everything is allowed to WorkspaceOwner",
 		pattern: PatternType{
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceSubject}}},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
 		},
 		policy: ACPolicy_Allow,
 	},
@@ -79,7 +79,7 @@ var defaultACL = ACL{
 		policy: ACPolicy_Deny,
 	},
 	{
-		desc: "update only is allowed for CDoc<$wsKind> for WorkspaceSubject",
+		desc: "update only is allowed for CDoc<$wsKind> for WorkspaceOwner",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
 				qNameCDocWorkspaceKindUser,
@@ -88,7 +88,7 @@ var defaultACL = ACL{
 				qNameCDocWorkspaceKindAppWorkspace,
 			},
 			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_UPDATE},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceSubject}}},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
 		},
 		policy: ACPolicy_Allow,
 	},

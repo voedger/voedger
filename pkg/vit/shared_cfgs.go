@@ -7,10 +7,12 @@ package vit
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -82,8 +84,12 @@ func EmptyApp(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appd
 
 func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	// sys package
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		panic("no build info")
+	}
 	sys.Provide(cfg, adf, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-		apis.NumCommandProcessors, apis.BuildInfo)
+		apis.NumCommandProcessors, buildInfo, false)
 
 	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "articles")).
 		AddField("name", appdef.DataKind_string, false).
@@ -563,4 +569,41 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 		AddField("field1", appdef.DataKind_RecordID, false).
 		AddRefField("field2", false, qnameCdoc1, qnameDep).
 		AddRefField("field3", false)
+
+	testCmdResult := appdef.NewQName(appdef.SysPackage, "TestCmdResult")
+	testCmdParams := appdef.NewQName(appdef.SysPackage, "TestCmdParams")
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		appdef.NewQName(appdef.SysPackage, "TestCmd"),
+		adf.AddObject(testCmdParams).
+			AddField("Arg1", appdef.DataKind_int32, true).(appdef.IDef).QName(),
+		appdef.NullQName,
+		adf.AddObject(testCmdResult).
+			AddField("Int", appdef.DataKind_int32, true).
+			AddField("Str", appdef.DataKind_string, false).(appdef.IDef).QName(),
+		func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+			key, err := args.State.KeyBuilder(state.CmdResultStorage, testCmdResult)
+			if err != nil {
+				return err
+			}
+
+			value, err := args.Intents.NewValue(key)
+			if err != nil {
+				return err
+			}
+
+			arg1 := args.ArgumentObject.AsInt32("Arg1")
+			switch arg1 {
+			case 1:
+				value.PutString("Str", "Str")
+				value.PutInt32("Int", 42)
+			case 2:
+				value.PutInt32("Int", 42)
+			case 3:
+				value.PutString("Str", "Str")
+			case 4:
+				value.PutString("Int", "wrong")
+			}
+			return nil
+		},
+	))
 }

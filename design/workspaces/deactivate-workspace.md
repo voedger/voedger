@@ -20,9 +20,9 @@
 
 ## c.sys.InitiateDeactivateWorkspace()
 
-- AuthZ: role.sys.WorkspaceSubject
+- AuthZ: role.sys.WorkspaceOwner
 - Params: none
-- открментировать почему exists (backward compatibility) (возможно в принципах есть) что такое previously?
+- `cdoc.sys.WorkspaceID` existance in appWS is checked by `view.sys.WorkspaceIDIdx` but there was no this view before. So need to check the existance of the link to `cdoc.sys.WorkspaceID` before checking `cdoc.sys.WorkspaceID.IsActive`
 
 ```mermaid
     sequenceDiagram
@@ -49,7 +49,7 @@
     end
 
     ws ->> appws: sys.OnWorkspaceDeactivated(ownerWSID, wsName)
-    opt exists && !WorkspaceID.IsActive
+    opt cdoc.sys.WorkspaceID could be found && !cdoc.sys.WorkspaceID.IsActive
       appws ->> appws: WorkspaceID.IsActive = false
     end
 
