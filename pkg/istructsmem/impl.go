@@ -280,14 +280,6 @@ func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (event istructs.IWLogEve
 // istructs.IEvents.ReadPLog
 func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.PartitionID, offset istructs.Offset, toReadCount int, cb istructs.PLogEventsReaderCallback) error {
 
-	cbEvent := func(ofs istructs.Offset, data []byte) (err error) {
-		event := newDbEvent(e.app.config)
-		if err = event.loadFromBytes(data); err == nil {
-			err = cb(ofs, &event)
-		}
-		return err
-	}
-
 	switch toReadCount {
 	case 1:
 		// See [#292](https://github.com/voedger/voedger/issues/292)
@@ -296,9 +288,14 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 		data := bytespool.Get()
 		ok, err := e.app.config.storage.Get(pKey, cCol, &data)
 		if ok {
-			err = cbEvent(offset, data)
+			event := newDbEvent(e.app.config)
+			if err = event.loadFromBytes(data); err == nil {
+				event.pooledData = data
+				err = cb(offset, &event)
+			}
+		} else {
+			bytespool.Put(data)
 		}
-		bytespool.Put(data)
 		return err
 	default:
 		return readLogParts(offset, toReadCount, func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
@@ -307,7 +304,11 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 			err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, func(ccols, data []byte) error {
 				count++
 				ofs := calcLogOffset(pk, ccols)
-				return cbEvent(ofs, data)
+				event := newDbEvent(e.app.config)
+				if err = event.loadFromBytes(data); err == nil {
+					err = cb(ofs, &event)
+				}
+				return err
 			})
 			return (err == nil) && (count > 0), err // stop iterate parts if error or no events in last partition
 		})
@@ -317,14 +318,6 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 // istructs.IEvents.ReadWLog
 func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, offset istructs.Offset, toReadCount int, cb istructs.WLogEventsReaderCallback) error {
 
-	cbEvent := func(ofs istructs.Offset, data []byte) (err error) {
-		event := newDbEvent(e.app.config)
-		if err = event.loadFromBytes(data); err == nil {
-			err = cb(ofs, &event)
-		}
-		return err
-	}
-
 	switch toReadCount {
 	case 1:
 		// See [#292](https://github.com/voedger/voedger/issues/292)
@@ -333,9 +326,14 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 		data := bytespool.Get()
 		ok, err := e.app.config.storage.Get(pKey, cCol, &data)
 		if ok {
-			err = cbEvent(offset, data)
+			event := newDbEvent(e.app.config)
+			if err = event.loadFromBytes(data); err == nil {
+				event.pooledData = data
+				err = cb(offset, &event)
+			}
+		} else {
+			bytespool.Put(data)
 		}
-		bytespool.Put(data)
 		return err
 	default:
 		return readLogParts(offset, toReadCount, func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
@@ -344,7 +342,11 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 			err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, func(ccols, data []byte) error {
 				count++
 				ofs := calcLogOffset(pk, ccols)
-				return cbEvent(ofs, data)
+				event := newDbEvent(e.app.config)
+				if err = event.loadFromBytes(data); err == nil {
+					err = cb(ofs, &event)
+				}
+				return err
 			})
 			return (err == nil) && (count > 0), err // stop iterate parts if error or no events in last partition
 		})
