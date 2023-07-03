@@ -6,10 +6,8 @@ package sys_it
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
-	"runtime/debug"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -80,17 +78,6 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 
 	<-goOn // подождем, пока ошибки проверятся
 	// ожидаем, что никаких посторонних ошибок нет: ничего не повисло, queryprocessor отдал управление, роутер не пытается писать в закрытую коннекцию и т.п.
-}
-
-func TestXxx(t *testing.T) {
-	info, ok := debug.ReadBuildInfo()
-	if !ok {
-		fmt.Println("No build info")
-		return
-	}
-	for _, mod := range info.Deps {
-		fmt.Printf("path: %s version: %s\n", mod.Path, mod.Version)
-	}
 }
 
 func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
