@@ -141,8 +141,10 @@ type IElement interface {
 	AsRecord() IRecord
 }
 
+// It's desirable but not necessary to call event.Release() after event using
 type PLogEventsReaderCallback func(plogOffset Offset, event IPLogEvent) (err error)
 
+// It's desirable but not necessary to call event.Release() after event using
 type WLogEventsReaderCallback func(wlogOffset Offset, event IWLogEvent) (err error)
 
 type GenericRawEventBuilderParams struct {
