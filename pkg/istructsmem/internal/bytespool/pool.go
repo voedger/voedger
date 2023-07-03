@@ -8,15 +8,18 @@ package bytespool
 import "sync"
 
 var bp = sync.Pool{
-	New: func() any { return []byte{} },
+	New: func() any { return new([]byte) },
 }
 
-func Get() []byte { return bp.Get().([]byte) }
+func Get() []byte {
+	b := bp.Get().(*[]byte)
+	return *b
+}
 
 func Put(b []byte) {
 	const maxCapacity = 64 * 1024
 	if cap(b) < maxCapacity {
-		b = (b)[:0]
-		bp.Put(b)
+		b = b[:0]
+		bp.Put(&b)
 	}
 }
