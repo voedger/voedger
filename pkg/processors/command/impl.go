@@ -16,6 +16,8 @@ import (
 
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
+	"golang.org/x/exp/maps"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -30,7 +32,6 @@ import (
 	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	coreutils "github.com/voedger/voedger/pkg/utils"
-	"golang.org/x/exp/maps"
 )
 
 func (cm *implICommandMessage) Body() []byte                      { return cm.body }
@@ -126,9 +127,19 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (
 	return nil
 }
 
+func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	qNameCmdResult := cmd.cmdFunc.ResultDef()
+	if qNameCmdResult != appdef.NullQName {
+		cfg := cmdProc.cfgs[cmd.cmdMes.AppQName()]
+		cmd.cmdResultBuilder = istructsmem.NewIObjectBuilder(cfg, qNameCmdResult)
+	}
+	return nil
+}
+
 func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(), cmd.principals, cmd.cmdMes.Token())
+	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(), cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder)
 	hs.ClearIntents()
 	cmd.eca = istructs.ExecCommandArgs{
 		CommandPrepareArgs: istructs.CommandPrepareArgs{
@@ -421,6 +432,18 @@ func buildRawEvent(_ context.Context, work interface{}) (err error) {
 	return
 }
 
+func validateCmdResult(ctx context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	if cmd.cmdResultBuilder != nil {
+		cmdResult, err := cmd.cmdResultBuilder.Build()
+		if err != nil {
+			return err
+		}
+		cmd.cmdResult = cmdResult
+	}
+	return nil
+}
+
 func (cmdProc *cmdProc) validate(ctx context.Context, work interface{}) (err error) {
 	defer func() {
 		err = coreutils.WrapSysError(err, http.StatusForbidden)
@@ -658,9 +681,19 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 		body.Truncate(body.Len() - 1)
 		body.WriteString("}")
 	}
+	if cmd.cmdResult != nil {
+		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.AppDef())
+		cmdResultBytes, err := json.Marshal(cmdResult)
+		if err != nil {
+			// notest
+			return err
+		}
+		body.WriteString(`,"Result":`)
+		body.WriteString(string(cmdResultBytes))
+	}
 	body.WriteString("}")
 	coreutils.ReplyJSON(sr.bus, cmd.cmdMes.Sender(), http.StatusOK, body.String())
-	return
+	return nil
 }
 
 // nolint (result is always nil)

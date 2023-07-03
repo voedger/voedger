@@ -100,23 +100,23 @@ func FillElementFromJSON(data map[string]interface{}, def appdef.IDef, b istruct
 			b.PutBool(fieldName, fv)
 		case []interface{}:
 			// e.g. TestBasicUsage_Dashboard(), "order_item": [<2 elements>]
-			if cont, ok := def.(appdef.IContainers); ok {
-				container := cont.Container(fieldName)
-				if container == nil {
-					return fmt.Errorf("container with name %s is not found", fieldName)
+			containers, ok := def.(appdef.IContainers)
+			if !ok {
+				return fmt.Errorf("definition %v has no containers", def.QName())
+			}
+			container := containers.Container(fieldName)
+			if container == nil {
+				return fmt.Errorf("container with name %s is not found", fieldName)
+			}
+			for i, val := range fv {
+				objContainerElem, ok := val.(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
 				}
-				for i, val := range fv {
-					objContainerElem, ok := val.(map[string]interface{})
-					if !ok {
-						return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
-					}
-					containerElemBuilder := b.ElementBuilder(fieldName)
-					if err := FillElementFromJSON(objContainerElem, container.Def(), containerElemBuilder); err != nil {
-						return err
-					}
+				containerElemBuilder := b.ElementBuilder(fieldName)
+				if err := FillElementFromJSON(objContainerElem, container.Def(), containerElemBuilder); err != nil {
+					return err
 				}
-			} else {
-				return fmt.Errorf("definition %v has not containers", def.QName())
 			}
 		}
 	}
@@ -150,7 +150,8 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 						if refField, ok := f.(appdef.IRefField); ok {
 							if len(refField.Refs()) > 0 && !slices.Contains(refField.Refs(), rec.QName()) {
 								err = errors.Join(err,
-									fmt.Errorf("%w: record ID %d referenced by %s.%s leads to wrong field", ErrReferentialIntegrityViolation, recID, qName, f.Name()))
+									fmt.Errorf("%w: record ID %d referenced by %s.%s is of QName %s whereas %v QNames are only allowed", ErrReferentialIntegrityViolation,
+										recID, qName, f.Name(), rec.QName(), refField.Refs()))
 							}
 						}
 					}
@@ -160,4 +161,9 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 			})
 	}
 	return err
+}
+
+func NewCmdResultBuilder(appCfg *AppConfigType) istructs.IObjectBuilder {
+	obj := newObject(appCfg, appdef.NewQName(appdef.SysPackage, "TestCmd"))
+	return &obj
 }

@@ -319,6 +319,75 @@ func TestTechnologyCompatibilityKit(t *testing.T) {
 	istorage.TechnologyCompatibilityKit_Storage(t, storage)
 }
 
+func TestCacheNils(t *testing.T) {
+	require := require.New(t)
+	dbQueriedTimes := 0
+	ts := &testStorage{
+		get: func(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+			dbQueriedTimes++
+			return false, err
+		},
+		getBatch: func(pKey []byte, items []istorage.GetBatchItem) (err error) {
+			items[0].Ok = true
+			*items[0].Data = []byte{1}
+			items[1].Ok = false
+			dbQueriedTimes++
+			return nil
+		},
+	}
+	tsp := &testStorageProvider{storage: ts}
+	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
+	require.NoError(err)
+
+	t.Run("Get()", func(t *testing.T) {
+		dbQueriedTimes = 0
+		// first Get() call -> no data for the key -> missing key state is cached
+		data := make([]byte, 0, 100)
+		require.Equal(0, dbQueriedTimes)
+		ok, err := storage.Get([]byte("missing"), []byte("missing"), &data)
+		require.NoError(err)
+		require.False(ok)
+		require.Equal(1, dbQueriedTimes)
+
+		// second Get() call by missing key -> missing key state should be taken from the cache, db should not be queried
+		ok, err = storage.Get([]byte("missing"), []byte("missing"), &data)
+		require.NoError(err)
+		require.False(ok)
+		require.Equal(1, dbQueriedTimes)
+	})
+
+	t.Run("GetBatch()", func(t *testing.T) {
+		dbQueriedTimes = 0
+		batch := []istorage.GetBatchItem{
+			{
+				CCols: []byte("Beverage"),
+				Data:  &[]byte{},
+			},
+			{
+				CCols: []byte("missing"),
+				Data:  &[]byte{},
+			},
+		}
+		// 1st call -> no data in the cache, db should be queried, missing key state should be cached
+		require.NoError(storage.GetBatch([]byte("UK"), batch))
+		require.True(batch[0].Ok)
+		require.False(batch[1].Ok)
+		require.Equal(1, dbQueriedTimes)
+
+		// 2st call -> no data in the cache, db should be queried, missing key state should be cached
+		require.NoError(storage.GetBatch([]byte("UK"), batch))
+		require.True(batch[0].Ok)
+		require.False(batch[1].Ok)
+		require.Equal(1, dbQueriedTimes)
+	})
+}
+
+func TestMakeKes(t *testing.T) {
+	require := require.New(t)
+	require.Equal([]byte{1, 2, 3, 4, 5, 6}, makeKey([]byte{1, 2, 3}, []byte{4, 5, 6}))
+}
+
 type testStorageProvider struct {
 	storage            *testStorage
 	appStorageGetError error

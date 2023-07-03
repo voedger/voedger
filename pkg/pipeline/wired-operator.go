@@ -19,6 +19,7 @@ type WiredOperator struct {
 	FlushInterval time.Duration
 	ctx           context.Context
 	err           IErrorPipeline
+	flushCB       OpFuncFlush
 }
 
 func WireAsyncOperator(name string, op IAsyncOperator, flushIntvl ...time.Duration) *WiredOperator {
@@ -26,13 +27,23 @@ func WireAsyncOperator(name string, op IAsyncOperator, flushIntvl ...time.Durati
 	if len(flushIntvl) > 0 {
 		flush = flushIntvl[0]
 	}
-	return &WiredOperator{
+
+	res := &WiredOperator{
 		name:          name,
 		Stdin:         nil,
 		Stdout:        make(chan interface{}, 1),
 		Operator:      op,
 		FlushInterval: flush,
 	}
+
+	flushCB := func(work IWorkpiece) {
+		if res.isActive() {
+			res.Stdout <- work
+		}
+	}
+
+	res.flushCB = flushCB
+	return res
 }
 
 func WireSyncOperator(name string, op ISyncOperator) *WiredOperator {

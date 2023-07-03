@@ -37,7 +37,6 @@ import (
 	"github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys/collection"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	"github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
@@ -85,7 +84,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
 	vvmPortSource := provideVVMPortSource()
 	iFederation := provideIFederation(vvmConfig, vvmPortSource)
-	buildInfo := vvmConfig.BuildInfo
 	apIs := apps.APIs{
 		ITokens:              iTokens,
 		IAppStructsProvider:  iAppStructsProvider,
@@ -95,7 +93,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		IFederation:          iFederation,
 		TimeFunc:             timeFunc,
 		NumCommandProcessors: commandProcessorsCount,
-		BuildInfo:            buildInfo,
 	}
 	v2 := provideAppsExtensionPoints(vvmConfig)
 	vvmApps := provideVVMApps(vvmConfig, appConfigsType, apIs, v2)
@@ -108,7 +105,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	v3 := provideSubjectGetterFunc()
 	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v3)
 	iAuthorizer := iauthnzimpl.NewDefaultAuthorizer()
-	serviceFactory := commandprocessor.ProvideServiceFactory(iBus, iAppStructsProvider, timeFunc, commandprocessorSyncActualizerFactory, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader)
+	serviceFactory := commandprocessor.ProvideServiceFactory(iBus, iAppStructsProvider, timeFunc, commandprocessorSyncActualizerFactory, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader, appConfigsType)
 	operatorCommandProcessors := provideCommandProcessors(commandProcessorsCount, commandChannelFactory, serviceFactory)
 	queryProcessorsCount := vvmConfig.NumQueryProcessors
 	queryChannel := provideQueryChannel(serviceChannelFactory)
@@ -216,27 +213,34 @@ func provideStorageFactory(vvmConfig *VVMConfig) (provider istorage.IAppStorageF
 
 func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 	return func(requestContext context.Context, name string, as istructs.IAppStructs, wsid istructs.WSID) ([]appdef.QName, error) {
-		kb := as.ViewRecords().KeyBuilder(collection.QNameViewCollection)
-		kb.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
-		kb.PutQName(collection.Field_DocQName, invite.QNameCDocSubject)
-		res := []appdef.QName{}
-		err := as.ViewRecords().Read(requestContext, wsid, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
-			record := value.AsRecord(collection.Field_Record)
-			if record.AsString(invite.Field_Login) != name {
-				return nil
-			}
-			roles := strings.Split(record.AsString(invite.Field_Roles), ",")
-			for _, role := range roles {
-				roleQName, err := appdef.ParseQName(role)
-				if err != nil {
+		kb := as.ViewRecords().KeyBuilder(invite.QNameViewSubjectsIdx)
+		kb.PutInt64(invite.Field_LoginHash, coreutils.HashBytes([]byte(name)))
+		kb.PutString(invite.Field_Login, name)
+		subjectsIdx, err := as.ViewRecords().Get(wsid, kb)
+		if err == istructsmem.ErrRecordNotFound {
+			return nil, nil
+		}
+		if err != nil {
 
-					return err
-				}
-				res = append(res, roleQName)
+			return nil, err
+		}
+		res := []appdef.QName{}
+		subjectID := subjectsIdx.AsRecordID(invite.Field_SubjectID)
+		cdocSubject, err := as.Records().Get(wsid, true, istructs.RecordID(subjectID))
+		if err != nil {
+
+			return nil, err
+		}
+		roles := strings.Split(cdocSubject.AsString(invite.Field_Roles), ",")
+		for _, role := range roles {
+			roleQName, err := appdef.ParseQName(role)
+			if err != nil {
+
+				return nil, err
 			}
-			return nil
-		})
-		return res, err
+			res = append(res, roleQName)
+		}
+		return res, nil
 	}
 }
 
@@ -576,7 +580,6 @@ func provideOperatorAppServices(apf AppServiceFactory, vvmApps VVMApps, asp istr
 
 func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
 	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp),
-	)),
+	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp))),
 	)
 }

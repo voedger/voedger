@@ -10,7 +10,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"hash/fnv"
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -149,13 +148,8 @@ func getUniqueKeyValues(rec istructs.IRowReader, uf appdef.IField) (res []byte, 
 
 // notest err
 func buildUniqueViewKeyByValues(kb istructs.IKeyBuilder, qName appdef.QName, uniqueKeyValues []byte) error {
-	h := fnv.New64()
-	if _, err := h.Write(uniqueKeyValues); err != nil {
-		// notest
-		return err
-	}
 	kb.PutQName(field_QName, qName)
-	kb.PutInt64(field_ValuesHash, int64(h.Sum64()))
+	kb.PutInt64(field_ValuesHash, coreutils.HashBytes(uniqueKeyValues))
 	kb.PutBytes(field_Values, uniqueKeyValues)
 	return nil
 }
