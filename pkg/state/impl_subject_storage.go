@@ -20,6 +20,9 @@ type subjectStorage struct {
 func (s *subjectStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return newKeyBuilder(SubjectStorage, appdef.NullQName)
 }
+func (s *subjectStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
+	return nil, nil
+}
 func (s *subjectStorage) GetBatch(items []GetBatchItem) (err error) {
 	ssv := &subjectStorageValue{
 		token:      s.tokenFunc(),

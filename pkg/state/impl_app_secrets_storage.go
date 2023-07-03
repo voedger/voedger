@@ -21,6 +21,9 @@ type appSecretsStorage struct {
 func (s *appSecretsStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return newKeyBuilder(AppSecretsStorage, appdef.NullQName)
 }
+func (s *appSecretsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
+	return nil, err
+}
 func (s *appSecretsStorage) GetBatch(items []GetBatchItem) (err error) {
 	for i, item := range items {
 		k := item.key.(*keyBuilder)

@@ -69,17 +69,13 @@ func (s *hostState) KeyBuilder(storage, entity appdef.QName) (builder istructs.I
 	return strg.NewKeyBuilder(entity, nil), nil
 }
 func (s *hostState) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, ok bool, err error) {
-	items := []GetBatchItem{{key: key}}
 	storage, ok := s.withGetBatch[getStorageID(key)]
 	if !ok {
 		return nil, false, s.errOperationNotSupported(getStorageID(key), ErrGetBatchNotSupportedByStorage)
 	}
-
-	err = storage.GetBatch(items)
-	if err != nil {
-		return nil, false, err
-	}
-	return items[0].value, items[0].value != nil, err
+	value, err = storage.Get(key)
+	ok = value != nil
+	return
 }
 func (s *hostState) CanExistAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback) (err error) {
 	batches := make(map[appdef.QName][]GetBatchItem)

@@ -28,6 +28,9 @@ func (s *viewRecordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStat
 		wsid:        s.wsidFunc(),
 	}
 }
+func (s *viewRecordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
+	return nil, err
+}
 func (s *viewRecordsStorage) GetBatch(items []GetBatchItem) (err error) {
 	wsidToItemIdx := make(map[istructs.WSID][]int)
 	batches := make(map[istructs.WSID][]istructs.ViewRecordGetBatchItem)

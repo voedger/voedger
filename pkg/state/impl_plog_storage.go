@@ -29,6 +29,9 @@ func (s *pLogStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) ist
 		partitionID: s.partitionIDFunc(),
 	}
 }
+func (s *pLogStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
+	return nil, nil
+}
 func (s *pLogStorage) GetBatch(items []GetBatchItem) (err error) {
 	for i := range items {
 		skip := false
