@@ -15,12 +15,18 @@ func TestBasicUsage(t *testing.T) {
 
 	require := require.New(t)
 
+	var capacity int
+
 	t.Run("use", func(t *testing.T) {
 		b := Get()
 
 		require.Empty(b)
+		require.Zero(cap(b))
 
 		b = append(b, []byte{1, 2, 3}...)
+
+		capacity = cap(b)
+		require.Positive(capacity)
 
 		Put(b)
 	})
@@ -29,9 +35,7 @@ func TestBasicUsage(t *testing.T) {
 		b := Get()
 
 		require.Empty(b)
-
-		b = b[:3]
-		require.Equal([]byte{1, 2, 3}, b)
+		require.Equal(cap(b), capacity)
 
 		Put(b)
 	})
