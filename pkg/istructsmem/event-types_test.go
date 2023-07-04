@@ -210,6 +210,7 @@ func TestEventBuilder_Core(t *testing.T) {
 						event = ev
 						return nil
 					})
+				defer event.Release()
 				check(event, err)
 			})
 
@@ -221,6 +222,7 @@ func TestEventBuilder_Core(t *testing.T) {
 						event = ev
 						return nil
 					})
+				defer event.Release() // not necessary
 				check(event, err)
 			})
 		})
@@ -265,6 +267,7 @@ func TestEventBuilder_Core(t *testing.T) {
 
 				require.NoError(err)
 				require.NotNil(event)
+				defer event.Release()
 				testDbEvent(t, event)
 			})
 
@@ -279,6 +282,7 @@ func TestEventBuilder_Core(t *testing.T) {
 
 				require.NoError(err)
 				require.NotNil(event)
+				defer event.Release()
 				testDbEvent(t, event)
 			})
 		})
@@ -453,6 +457,7 @@ func TestEventBuilder_Core(t *testing.T) {
 						event = ev
 						return nil
 					})
+				defer event.Release()
 				checkEvent(event, err)
 			})
 
@@ -464,6 +469,7 @@ func TestEventBuilder_Core(t *testing.T) {
 						event = ev
 						return nil
 					})
+				defer event.Release() // not necessary
 				checkEvent(event, err)
 			})
 		})
@@ -478,6 +484,7 @@ func TestEventBuilder_Core(t *testing.T) {
 						event = ev
 						return nil
 					})
+				defer event.Release()
 				checkEvent(event, err)
 			})
 
@@ -489,6 +496,7 @@ func TestEventBuilder_Core(t *testing.T) {
 						event = ev
 						return nil
 					})
+				defer event.Release() // not necessary
 				checkEvent(event, err)
 			})
 		})
@@ -872,6 +880,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 					})
 					require.NoError(err)
 					require.NotNil(pLogEvent)
+					defer pLogEvent.Release()
 					require.True(pLogEvent.Error().ValidEvent())
 				})
 			}

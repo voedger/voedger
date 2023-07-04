@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/bytespool"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 )
 
@@ -277,7 +278,8 @@ func (ev *eventType) WLogOffset() istructs.Offset {
 //     — istructs.IWLogEvent
 type dbEventType struct {
 	eventType
-	buildErr eventErrorType
+	buildErr   eventErrorType
+	pooledData []byte
 }
 
 // newDbEvent creates an empty DB event
@@ -365,7 +367,12 @@ func (ev *dbEventType) QName() appdef.QName {
 }
 
 // istructs.IPLogEvent.Release and IWLogEvent.Release
-func (ev *dbEventType) Release() {}
+func (ev *dbEventType) Release() {
+	if ev.pooledData != nil {
+		bytespool.Put(ev.pooledData)
+		ev.pooledData = nil
+	}
+}
 
 // cudType implements event cud member
 //   - methods:
