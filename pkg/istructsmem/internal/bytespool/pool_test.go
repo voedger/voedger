@@ -35,7 +35,12 @@ func TestBasicUsage(t *testing.T) {
 		b := Get()
 
 		require.Empty(b)
-		require.Equal(cap(b), capacity)
+
+		// there is no guarantee that the garbage collector will not clean up some element of the pool in parallel with your code
+		// see [issue 358](https://github.com/voedger/voedger/issues/358)
+		if c := cap(b); c > 0 {
+			require.Equal(c, capacity)
+		}
 
 		Put(b)
 	})
