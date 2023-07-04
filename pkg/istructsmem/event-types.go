@@ -673,7 +673,7 @@ func (upd *updateRecType) build() (err error) {
 		userChanges = true
 		return true
 	})
-	for n := range upd.changes.nils {
+	for _, n := range upd.changes.nils {
 		upd.result.dyB.Set(n, nil)
 		userChanges = true
 	}

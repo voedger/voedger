@@ -37,7 +37,7 @@ type rowType struct {
 	container string
 	isActive  bool
 	dyB       *dynobuffers.Buffer
-	nils      map[string]bool // nilled string and []bytes, which not stored in dynobuffer
+	nils      []string // nilled string and []bytes, which not stored in dynobuffer
 	err       error
 }
 
@@ -51,7 +51,7 @@ func newRow(appCfg *AppConfigType) rowType {
 		container: "",
 		isActive:  true,
 		dyB:       nullDynoBuffer,
-		nils:      make(map[string]bool),
+		nils:      nil,
 		err:       nil,
 	}
 }
@@ -75,13 +75,32 @@ func (row *rowType) build() (err error) {
 		if bytes, nils, err = row.dyB.ToBytesNilled(); err == nil {
 			row.dyB.Reset(utils.CopyBytes(bytes))
 			// append new nils
-			for _, n := range nils {
-				row.nils[n] = true
+			if len(nils) > 0 {
+				if row.nils == nil {
+					row.nils = append(row.nils, nils...)
+				} else {
+					for _, n := range nils {
+						if new := func() bool {
+							for i := range row.nils {
+								if row.nils[i] == n {
+									return false
+								}
+							}
+							return true
+						}(); new {
+							row.nils = append(row.nils, n)
+						}
+					}
+				}
 			}
 			// remove extra nils
-			for n := range row.nils {
-				if row.dyB.HasValue(n) {
-					delete(row.nils, n)
+			l := len(row.nils) - 1
+			for i := l; i >= 0; i-- {
+				if row.dyB.HasValue(row.nils[i]) {
+					copy(row.nils[i:], row.nils[i+1:])
+					row.nils[l] = ""
+					row.nils = row.nils[:l]
+					l--
 				}
 			}
 		}
@@ -98,7 +117,7 @@ func (row *rowType) clear() {
 	row.container = ""
 	row.isActive = true
 	row.dyB = nullDynoBuffer
-	row.nils = make(map[string]bool)
+	row.nils = nil
 	row.err = nil
 }
 
@@ -116,7 +135,7 @@ func (row *rowType) containerID() (id containers.ContainerID, err error) {
 	return row.appCfg.cNames.ID(row.Container())
 }
 
-// copyFrom assigns from specified row
+// Assigns from specified row
 func (row *rowType) copyFrom(src *rowType) {
 	row.clear()
 
@@ -137,7 +156,7 @@ func (row *rowType) copyFrom(src *rowType) {
 	_ = row.build()
 }
 
-// empty returns true if no data except system fields
+// Returns true if no data except system fields
 func (row *rowType) empty() bool {
 	userFields := false
 	row.dyB.IterateFields(nil,
@@ -148,7 +167,7 @@ func (row *rowType) empty() bool {
 	return !userFields
 }
 
-// error returns concatenation of collected errors. Errors are collected from Put××× methods fails
+// Returns concatenation of collected errors. Errors are collected from Put××× methods fails
 func (row *rowType) error() error {
 	return row.err
 }
@@ -184,7 +203,7 @@ func (row *rowType) loadFromBytes(in []byte) (err error) {
 	return nil
 }
 
-// maskValues masks values in row. Digital values are masked by zeros, strings — by star «*». System fields are not masked
+// Masks values in row. Digital values are masked by zeros, strings — by star «*». System fields are not masked
 func (row *rowType) maskValues() {
 	row.dyB.IterateFields(nil,
 		func(name string, data interface{}) bool {
