@@ -51,7 +51,7 @@ func newRow(appCfg *AppConfigType) rowType {
 		container: "",
 		isActive:  true,
 		dyB:       nullDynoBuffer,
-		nils:      make(map[string]bool),
+		nils:      nil,
 		err:       nil,
 	}
 }
@@ -75,8 +75,13 @@ func (row *rowType) build() (err error) {
 		if bytes, nils, err = row.dyB.ToBytesNilled(); err == nil {
 			row.dyB.Reset(utils.CopyBytes(bytes))
 			// append new nils
-			for _, n := range nils {
-				row.nils[n] = true
+			if len(nils) > 0 {
+				if row.nils == nil {
+					row.nils = make(map[string]bool)
+				}
+				for _, n := range nils {
+					row.nils[n] = true
+				}
 			}
 			// remove extra nils
 			for n := range row.nils {
@@ -98,7 +103,7 @@ func (row *rowType) clear() {
 	row.container = ""
 	row.isActive = true
 	row.dyB = nullDynoBuffer
-	row.nils = make(map[string]bool)
+	row.nils = nil
 	row.err = nil
 }
 
