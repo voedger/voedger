@@ -617,6 +617,7 @@ func TestAuthorize(t *testing.T) {
 }
 
 func TestACLAllow(t *testing.T) {
+	logger.SetLogLevel(logger.LogLevelVerbose)
 	defer logger.SetLogLevel(logger.LogLevelInfo)
 	require := require.New(t)
 	testQName1 := appdef.NewQName(appdef.SysPackage, "testQName")

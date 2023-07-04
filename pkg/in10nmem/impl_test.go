@@ -32,6 +32,7 @@ type callbackMock struct {
 func Test_BasicUsage(t *testing.T) {
 
 	logger.SetLogLevel(logger.LogLevelTrace)
+	defer logger.SetLogLevel(logger.LogLevelInfo)
 
 	var wg sync.WaitGroup
 	c := new(callbackMock)

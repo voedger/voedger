@@ -61,6 +61,10 @@ func NewVIT(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 
 	vit.initialGoroutinesNum = runtime.NumGoroutine()
 
+	if testing.Verbose() {
+		logger.SetLogLevel(logger.LogLevelVerbose)
+	}
+
 	return vit
 }
 
@@ -224,6 +228,9 @@ func (vit *VIT) TearDown() {
 		vit.T.Log("unexpected email message received")
 		vit.T.Fail()
 	default:
+	}
+	if testing.Verbose() {
+		logger.SetLogLevel(logger.LogLevelInfo)
 	}
 	if vit.isOnSharedConfig {
 		return

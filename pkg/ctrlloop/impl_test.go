@@ -18,6 +18,7 @@ import (
 
 func Test_BasicUsage(t *testing.T) {
 	logger.SetLogLevel(logger.LogLevelVerbose)
+	defer logger.SetLogLevel(logger.LogLevelInfo)
 
 	mockGetNextTimeFunc := func(cronSchedule string, startTimeTolerance time.Duration, nowTime time.Time) time.Time {
 		return nowTime
