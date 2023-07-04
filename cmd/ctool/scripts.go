@@ -59,7 +59,6 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 	if len(se.sshKeyPath) > 0 {
 		args = append([]string{fmt.Sprintf("eval $(ssh-agent -s); ssh-add %s; ./%s", se.sshKeyPath, scriptName)}, args...)
 		pExec = new(exec.PipedExec).Command("bash", "-c", strings.Join(args, " "))
-		pExec.GetCmd(0).Env = append(os.Environ(), "SSH_AUTH_SOCK="+getEnvValue1("SSH_AUTH_SOCK"), "SSH_AGENT_PID="+getEnvValue1("SSH_AGENT_PID"))
 	} else {
 		args = append([]string{scriptName}, args...)
 		pExec = new(exec.PipedExec).Command("bash", args...)

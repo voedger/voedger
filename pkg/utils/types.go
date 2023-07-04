@@ -36,7 +36,8 @@ type FuncResponse struct {
 	} `json:"sections"`
 	NewIDs            map[string]int64
 	CurrentWLogOffset int64
-	SysError          SysError `json:"sys.Error"`
+	SysError          SysError               `json:"sys.Error"`
+	CmdResult         map[string]interface{} `json:"Result"`
 }
 
 type FuncError struct {
