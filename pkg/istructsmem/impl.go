@@ -243,13 +243,12 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 		dbEvent.argUnlObj.maskValues()
 	}
 
-	var evData []byte
-	if evData, err = dbEvent.storeToBytes(); err == nil {
-		pKey, cCols := splitLogOffset(ev.PLogOffset())
-		pKey = utils.PrefixBytes(pKey, consts.SysView_PLog, ev.HandlingPartition()) // + partition! see #18047
-		if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
-			event = dbEvent
-		}
+	evData := dbEvent.storeToBytes()
+	pKey, cCols := splitLogOffset(ev.PLogOffset())
+	pKey = utils.PrefixBytes(pKey, consts.SysView_PLog, ev.HandlingPartition()) // + partition! see #18047
+
+	if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
+		event = dbEvent
 	}
 
 	return event, err
@@ -257,16 +256,11 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 
 // istructs.IEvents.PutWlog
 func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
-	dbEvent := ev.(*eventType)
+	evData := ev.(*eventType).storeToBytes()
+	pKey, cCols := splitLogOffset(ev.WLogOffset())
+	pKey = utils.PrefixBytes(pKey, consts.SysView_WLog, ev.Workspace())
 
-	var evData []byte
-	if evData, err = dbEvent.storeToBytes(); err == nil {
-		pKey, cCols := splitLogOffset(ev.WLogOffset())
-		pKey = utils.PrefixBytes(pKey, consts.SysView_WLog, ev.Workspace())
-		err = e.app.config.storage.Put(pKey, cCols, evData)
-	}
-
-	return err
+	return e.app.config.storage.Put(pKey, cCols, evData)
 }
 
 // istructs.IEvents.ReadPLog

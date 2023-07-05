@@ -790,9 +790,8 @@ func (row *rowType) PutRecord(name string, record istructs.IRecord) {
 // istructs.IValueBuilder.PutEvent
 func (row *rowType) PutEvent(name string, event istructs.IDbEvent) {
 	if ev, ok := event.(*eventType); ok {
-		if bytes, err := ev.storeToBytes(); err == nil {
-			row.putValue(name, dynobuffers.FieldTypeByte, bytes)
-		}
+		bytes := ev.storeToBytes()
+		row.putValue(name, dynobuffers.FieldTypeByte, bytes)
 	}
 }
 

@@ -205,18 +205,19 @@ func (ev *eventType) setName(n appdef.QName) {
 	}
 }
 
-// Stores event into bytes slice and returns error if occurs
-func (ev *eventType) storeToBytes() (out []byte, err error) {
+// Stores event into bytes slice
+//
+// # Panics:
+//
+//   - Must be called *after* event validation. Overwise function may panic!
+func (ev *eventType) storeToBytes() []byte {
 	if ev.eventBytes == nil {
 		buf := new(bytes.Buffer)
 		utils.SafeWriteBuf(buf, codec_LastVersion)
-
-		if err = storeEvent(ev, buf); err == nil {
-			ev.eventBytes = buf.Bytes()
-		}
+		storeEvent(ev, buf)
+		ev.eventBytes = buf.Bytes()
 	}
-
-	return ev.eventBytes, err
+	return ev.eventBytes
 }
 
 // Returns is event valid
@@ -300,17 +301,11 @@ func (ev *eventType) Synced() bool {
 
 // istructs.IAbstractEvent.DeviceID
 func (ev *eventType) DeviceID() istructs.ConnectedDeviceID {
-	if !ev.sync {
-		return 0
-	}
 	return ev.device
 }
 
 // istructs.IAbstractEvent.SyncedAt
 func (ev *eventType) SyncedAt() istructs.UnixMilli {
-	if !ev.sync {
-		return 0
-	}
 	return ev.syncTime
 }
 

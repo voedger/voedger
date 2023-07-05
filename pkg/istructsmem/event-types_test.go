@@ -1424,11 +1424,10 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 
 	ev1.argUnlObj.maskValues()
 
-	b, err := ev1.storeToBytes()
-	require.NoError(err)
+	b := ev1.storeToBytes()
 
 	ev2 := newEmptyTestEvent()
-	err = ev2.loadFromBytes(b)
+	err := ev2.loadFromBytes(b)
 	require.NoError(err)
 
 	require.Equal(istructs.Offset(100500), ev2.pLogOffs)
@@ -1444,9 +1443,7 @@ func Test_LoadEvent_CorruptedBytes(t *testing.T) {
 	ev1 := newTestEvent(100500, 500)
 	testDbEvent(t, ev1)
 
-	b, err := ev1.storeToBytes()
-	require.NoError(err)
-
+	b := ev1.storeToBytes()
 	len := len(b)
 
 	t.Run("load/store from truncated bytes", func(t *testing.T) {
@@ -1454,7 +1451,7 @@ func Test_LoadEvent_CorruptedBytes(t *testing.T) {
 			corrupted := b[0:i]
 
 			ev2 := newEmptyTestEvent()
-			err = ev2.loadFromBytes(corrupted)
+			err := ev2.loadFromBytes(corrupted)
 			require.Error(err, fmt.Sprintf("unexpected success load event from bytes truncated at %d", i))
 		}
 	})
@@ -1475,7 +1472,7 @@ func Test_LoadEvent_CorruptedBytes(t *testing.T) {
 							stat["Panics"]++
 						}
 					}()
-					if err = ev2.loadFromBytes(b); err != nil {
+					if err := ev2.loadFromBytes(b); err != nil {
 						log.Verbose("%d: error at load: %v\n", i, err)
 						stat["Errors"]++
 						return
@@ -1529,8 +1526,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 			ev1.setBuildError(buildErr)
 			require.False(ev1.valid())
 
-			b, err := ev1.storeToBytes()
-			require.NoError(err)
+			b := ev1.storeToBytes()
 
 			ev2 := newEmptyTestEvent()
 			err = ev2.loadFromBytes(b)
@@ -1567,8 +1563,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 				ev1.argUnlObj.clear() // to prevent EventBytes obfuscate
 				ev1.setBuildError(errors.New(msg))
 
-				b, err := ev1.storeToBytes()
-				require.NoError(err)
+				b := ev1.storeToBytes()
 
 				ev2 := newEmptyTestEvent()
 				err = ev2.loadFromBytes(b)
@@ -1595,15 +1590,14 @@ func Test_LoadErrorEvent_CorruptedBytes(t *testing.T) {
 	ev1.argUnlObj.clear() // to prevent EventBytes obfuscate
 	ev1.setBuildError(errors.New(errMsg))
 
-	b, err := ev1.storeToBytes()
-	require.NoError(err)
+	b := ev1.storeToBytes()
 
 	len := len(b)
 	for i := 0; i < len; i++ {
 		corrupted := b[0:i]
 
 		ev2 := newEmptyTestEvent()
-		err = ev2.loadFromBytes(corrupted)
+		err := ev2.loadFromBytes(corrupted)
 		require.Error(err, fmt.Sprintf("unexpected success load event from bytes truncated at %d", i))
 	}
 }
@@ -1612,11 +1606,10 @@ func Test_LoadStoreNullEvent_Bytes(t *testing.T) {
 	require := require.New(t)
 
 	ev1 := newEmptyTestEvent()
-	b, err := ev1.storeToBytes()
-	require.NoError(err)
+	b := ev1.storeToBytes()
 
 	ev2 := newEmptyTestEvent()
-	err = ev2.loadFromBytes(b)
+	err := ev2.loadFromBytes(b)
 	require.NoError(err)
 
 	require.Equal(appdef.NullQName, ev2.QName())

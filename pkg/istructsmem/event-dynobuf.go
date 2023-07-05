@@ -16,25 +16,18 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
-func storeEvent(ev *eventType, buf *bytes.Buffer) (err error) {
+func storeEvent(ev *eventType, buf *bytes.Buffer) {
 	utils.SafeWriteBuf(buf, uint16(ev.qNameID()))
 
 	storeEventCreateParams(ev, buf)
 	storeEventBuildError(ev, buf)
 
 	if !ev.valid() {
-		return nil
+		return
 	}
 
-	if err := storeEventArguments(ev, buf); err != nil {
-		return err
-	}
-
-	if err := storeEventCUDs(ev, buf); err != nil {
-		return err
-	}
-
-	return nil
+	storeEventArguments(ev, buf)
+	storeEventCUDs(ev, buf)
 }
 
 func storeEventCreateParams(ev *eventType, buf *bytes.Buffer) {
@@ -77,58 +70,38 @@ func storeEventBuildError(ev *eventType, buf *bytes.Buffer) {
 	}
 }
 
-func storeEventArguments(ev *eventType, buf *bytes.Buffer) (err error) {
-
-	if err := storeElement(&ev.argObject, buf); err != nil {
-		return fmt.Errorf("can not store event command «%v» argument «%v»: %w", ev.name, ev.argObject.QName(), err)
-	}
-
-	if err := storeElement(&ev.argUnlObj, buf); err != nil {
-		return fmt.Errorf("can not store event command «%v» un-logged argument «%v»: %w", ev.name, ev.argUnlObj.QName(), err)
-	}
-
-	return nil
+func storeEventArguments(ev *eventType, buf *bytes.Buffer) {
+	storeElement(&ev.argObject, buf)
+	storeElement(&ev.argUnlObj, buf)
 }
 
-func storeEventCUDs(ev *eventType, buf *bytes.Buffer) (err error) {
+func storeEventCUDs(ev *eventType, buf *bytes.Buffer) {
 	count := uint16(len(ev.cud.creates))
 	utils.SafeWriteBuf(buf, count)
 	for _, rec := range ev.cud.creates {
-		if err = storeRow(&rec.rowType, buf); err != nil {
-			return fmt.Errorf("error write event cud.create() record: %w", err)
-		}
+		storeRow(&rec.rowType, buf)
 	}
 
 	count = uint16(len(ev.cud.updates))
 	utils.SafeWriteBuf(buf, count)
 	for _, rec := range ev.cud.updates {
-		if err = storeRow(&rec.changes.rowType, buf); err != nil {
-			return fmt.Errorf("error write event cud.update() record: %w", err)
-		}
+		storeRow(&rec.changes.rowType, buf)
 	}
-
-	return nil
 }
 
-func storeElement(el *elementType, buf *bytes.Buffer) (err error) {
+func storeElement(el *elementType, buf *bytes.Buffer) {
 
-	if err := storeRow(&el.rowType, buf); err != nil {
-		return err
-	}
+	storeRow(&el.rowType, buf)
 
 	if el.QName() == appdef.NullQName {
-		return nil
+		return
 	}
 
 	childCount := uint16(len(el.child))
 	utils.SafeWriteBuf(buf, childCount)
 	for _, c := range el.child {
-		if err := storeElement(c, buf); err != nil {
-			return err
-		}
+		storeElement(c, buf)
 	}
-
-	return nil
 }
 
 func loadEvent(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) {

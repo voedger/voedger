@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
 // Converts specified value to dyno-buffer compatible type using specified data kind.
@@ -108,17 +109,12 @@ func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (inter
 	case appdef.DataKind_Record:
 		switch v := value.(type) {
 		case *recordType:
-			bytes := v.storeToBytes()
-			return bytes, nil
+			return v.storeToBytes(), nil
 		}
 	case appdef.DataKind_Event:
 		switch v := value.(type) {
 		case *eventType:
-			bytes, err := v.storeToBytes()
-			if err != nil {
-				return nil, err
-			}
-			return bytes, nil
+			return v.storeToBytes(), nil
 		}
 	}
 	return nil, fmt.Errorf("value has type «%T», but «%s» expected: %w", value, kind.TrimString(), ErrWrongFieldType)
@@ -134,29 +130,25 @@ func dynoBufGetWord(dyB *dynobuffers.Buffer, fieldName string) (value uint16, ok
 	return 0, false
 }
 
-func storeRow(row *rowType, buf *bytes.Buffer) (err error) {
+func storeRow(row *rowType, buf *bytes.Buffer) {
 	id, err := row.qNameID()
 	if err != nil {
-		return err
+		panic(fmt.Errorf(errMustValidatedBeforeStore, "row", err))
 	}
-	_ = binary.Write(buf, binary.BigEndian, int16(id))
+	utils.SafeWriteBuf(buf, int16(id))
 	if row.QName() == appdef.NullQName {
-		return nil
+		return
 	}
 
-	if err = storeRowSysFields(row, buf); err != nil {
-		return err
-	}
+	storeRowSysFields(row, buf)
 
 	b, err := row.dyB.ToBytes()
 	if err != nil {
-		return err
+		panic(fmt.Errorf(errMustValidatedBeforeStore, row.QName(), err))
 	}
 	len := uint32(len(b))
-	_ = binary.Write(buf, binary.BigEndian, &len)
-	_, _ = buf.Write(b)
-
-	return nil
+	utils.SafeWriteBuf(buf, &len)
+	utils.SafeWriteBuf(buf, b)
 }
 
 func storeRowSysFields(row *rowType, buf *bytes.Buffer) (err error) {
@@ -174,23 +166,23 @@ func storeRowSysFields(row *rowType, buf *bytes.Buffer) (err error) {
 		sysFieldMask |= sfm_IsActive
 	}
 
-	_ = binary.Write(buf, binary.BigEndian, sysFieldMask)
+	utils.SafeWriteBuf(buf, sysFieldMask)
 
 	if row.ID() != istructs.NullRecordID {
-		_ = binary.Write(buf, binary.BigEndian, uint64(row.ID()))
+		utils.SafeWriteBuf(buf, uint64(row.ID()))
 	}
 	if row.parentID != istructs.NullRecordID {
-		_ = binary.Write(buf, binary.BigEndian, uint64(row.parentID))
+		utils.SafeWriteBuf(buf, uint64(row.parentID))
 	}
 	if row.container != "" {
 		id, err := row.containerID()
 		if err != nil {
 			return err
 		}
-		_ = binary.Write(buf, binary.BigEndian, int16(id))
+		utils.SafeWriteBuf(buf, int16(id))
 	}
 	if !row.isActive {
-		_ = binary.Write(buf, binary.BigEndian, false)
+		utils.SafeWriteBuf(buf, false)
 	}
 
 	return nil
