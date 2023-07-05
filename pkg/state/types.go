@@ -123,6 +123,10 @@ type pLogKeyBuilder struct {
 	partitionID istructs.PartitionID
 }
 
+func (b *pLogKeyBuilder) String() string {
+	return fmt.Sprintf("plog partitionID - %d, offset - %d, count - %d", b.partitionID, b.offset, b.count)
+}
+
 func (b *pLogKeyBuilder) PutInt32(name string, value int32) {
 	if name == Field_PartitionID {
 		b.partitionID = istructs.PartitionID(value)
@@ -132,6 +136,10 @@ func (b *pLogKeyBuilder) PutInt32(name string, value int32) {
 type wLogKeyBuilder struct {
 	logKeyBuilder
 	wsid istructs.WSID
+}
+
+func (b *wLogKeyBuilder) String() string {
+	return fmt.Sprintf("wlog wsid - %d, offset - %d, count - %d", b.wsid, b.offset, b.count)
 }
 
 func (b *wLogKeyBuilder) PutInt64(name string, value int64) {
