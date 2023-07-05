@@ -17,7 +17,7 @@ import (
 )
 
 // istructs.IViewRecords.Put
-func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.IKeyBuilder, value istructs.IValueBuilder) (partKey, clustCols, data []byte, err error) {
+func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.IKeyBuilder, value istructs.IValueBuilder) (partKey, cCols, data []byte, err error) {
 
 	k := key.(*keyType)
 	if err = k.build(); err != nil {
@@ -39,14 +39,12 @@ func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.
 		return nil, nil, nil, fmt.Errorf("key and value are from different views (key view is «%v», value view is «%v»): %w", k.viewName, v.viewName, ErrWrongDefinition)
 	}
 
-	partKey, clustCols = k.storeToBytes()
+	partKey, cCols = k.storeToBytes()
 	partKey = utils.PrefixBytes(partKey, k.viewID, workspace)
 
-	if data, err = v.storeToBytes(); err != nil {
-		return nil, nil, nil, err
-	}
+	data = v.storeToBytes()
 
-	return partKey, clustCols, data, nil
+	return partKey, cCols, data, nil
 }
 
 // Stores partition key to bytes. Must be called only if valid key

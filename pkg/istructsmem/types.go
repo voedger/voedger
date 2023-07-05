@@ -369,16 +369,18 @@ func (row *rowType) setDef(value appdef.IDef) {
 	}
 }
 
-// Stores row to bytes and returns error if occurs
-func (row *rowType) storeToBytes() (out []byte, err error) {
+// Stores row to bytes.
+//
+// # Panics:
+//
+//   - Must be called *after* event validation. Overwise function may panic!
+func (row *rowType) storeToBytes() []byte {
 	buf := new(bytes.Buffer)
-	_ = binary.Write(buf, binary.BigEndian, codec_LastVersion)
+	utils.SafeWriteBuf(buf, codec_LastVersion)
 
-	if err := storeRow(row, buf); err != nil {
-		return nil, err
-	}
+	storeRow(row, buf)
 
-	return buf.Bytes(), nil
+	return buf.Bytes()
 }
 
 // verifyToken verifies specified token for specified field and returns successfully verified token payload value or error
@@ -780,9 +782,8 @@ func (row *rowType) PutRecordID(name string, value istructs.RecordID) {
 // istructs.IValueBuilder.PutRecord
 func (row *rowType) PutRecord(name string, record istructs.IRecord) {
 	if rec, ok := record.(*recordType); ok {
-		if bytes, err := rec.storeToBytes(); err == nil {
-			row.putValue(name, dynobuffers.FieldTypeByte, bytes)
-		}
+		bytes := rec.storeToBytes()
+		row.putValue(name, dynobuffers.FieldTypeByte, bytes)
 	}
 }
 

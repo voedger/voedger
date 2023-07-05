@@ -536,8 +536,7 @@ func TestEventBuilder_Core(t *testing.T) {
 			require.NoError(r.build())
 
 			// hack: use low level appRecordsType putRecord()
-			bytes, err := r.storeToBytes()
-			require.NoError(err)
+			bytes := r.storeToBytes()
 			require.True(len(bytes) > 0)
 			err = app.Records().(*appRecordsType).putRecord(test.workspace, photoID, bytes)
 			require.NoError(err)

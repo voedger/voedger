@@ -492,13 +492,12 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 	records := make([]*recordType, 0)
 	batch := make([]recordBatchItemType, 0)
 
-	storeRecord := func(rec *recordType) (err error) {
-		var data []byte
-		if data, err = rec.storeToBytes(); err == nil {
-			records = append(records, rec)
-			batch = append(batch, recordBatchItemType{rec.ID(), data})
-		}
-		return err
+	storeRecord := func(rec *recordType) error {
+		data := rec.storeToBytes()
+		records = append(records, rec)
+		batch = append(batch, recordBatchItemType{rec.ID(), data})
+
+		return nil
 	}
 
 	if err = ev.applyCommandRecs(existsRecord, loadRecord, storeRecord); err == nil {
