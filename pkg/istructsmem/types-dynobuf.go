@@ -116,7 +116,7 @@ func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (inter
 		}
 	case appdef.DataKind_Event:
 		switch v := value.(type) {
-		case *dbEventType:
+		case *eventType:
 			bytes, err := v.storeToBytes()
 			if err != nil {
 				return nil, err

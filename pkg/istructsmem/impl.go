@@ -220,21 +220,17 @@ func newEvents(app *appStructsType) appEventsType {
 
 // istructs.IEvents.GetSyncRawEventBuilder
 func (e *appEventsType) GetSyncRawEventBuilder(params istructs.SyncRawEventBuilderParams) istructs.IRawEventBuilder {
-	b := newSyncEvent(e.app.config, params)
-	return &b
+	return newSyncEventBuilder(e.app.config, params)
 }
 
 // istructs.IEvents.GetNewRawEventBuilder
 func (e *appEventsType) GetNewRawEventBuilder(params istructs.NewRawEventBuilderParams) istructs.IRawEventBuilder {
-	b := newEvent(e.app.config, params)
-	return &b
+	return newEventBuilder(e.app.config, params)
 }
 
 // istructs.IEvents.PutPlog
 func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator istructs.IDGenerator) (event istructs.IPLogEvent, err error) {
-	dbEvent := newDbEvent(e.app.config)
-
-	dbEvent.eventType.copyFrom(ev.(*eventType))
+	dbEvent := ev.(*eventType)
 
 	dbEvent.setBuildError(buildErr)
 	if dbEvent.valid() {
@@ -252,7 +248,7 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 		pKey, cCols := splitLogOffset(ev.PLogOffset())
 		pKey = utils.PrefixBytes(pKey, consts.SysView_PLog, ev.HandlingPartition()) // + partition! see #18047
 		if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
-			event = &dbEvent
+			event = dbEvent
 		}
 	}
 
@@ -261,7 +257,7 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 
 // istructs.IEvents.PutWlog
 func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
-	dbEvent := ev.(*dbEventType)
+	dbEvent := ev.(*eventType)
 
 	var evData []byte
 	if evData, err = dbEvent.storeToBytes(); err == nil {
@@ -284,10 +280,10 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 		data := bytespool.Get()
 		ok, err := e.app.config.storage.Get(pKey, cCol, &data)
 		if ok {
-			event := newDbEvent(e.app.config)
+			event := newEvent(e.app.config)
 			if err = event.loadFromBytes(data); err == nil {
-				event.pooledData = data
-				err = cb(offset, &event)
+				event.pooledBytes = data
+				err = cb(offset, event)
 			}
 		} else {
 			bytespool.Put(data)
@@ -300,9 +296,9 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 			err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, func(ccols, data []byte) error {
 				count++
 				ofs := calcLogOffset(pk, ccols)
-				event := newDbEvent(e.app.config)
+				event := newEvent(e.app.config)
 				if err = event.loadFromBytes(data); err == nil {
-					err = cb(ofs, &event)
+					err = cb(ofs, event)
 				}
 				return err
 			})
@@ -322,10 +318,10 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 		data := bytespool.Get()
 		ok, err := e.app.config.storage.Get(pKey, cCol, &data)
 		if ok {
-			event := newDbEvent(e.app.config)
+			event := newEvent(e.app.config)
 			if err = event.loadFromBytes(data); err == nil {
-				event.pooledData = data
-				err = cb(offset, &event)
+				event.pooledBytes = data
+				err = cb(offset, event)
 			}
 		} else {
 			bytespool.Put(data)
@@ -338,9 +334,9 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 			err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, func(ccols, data []byte) error {
 				count++
 				ofs := calcLogOffset(pk, ccols)
-				event := newDbEvent(e.app.config)
+				event := newEvent(e.app.config)
 				if err = event.loadFromBytes(data); err == nil {
-					err = cb(ofs, &event)
+					err = cb(ofs, event)
 				}
 				return err
 			})
@@ -463,12 +459,12 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
 // istructs.IRecords.Apply
 func (recs *appRecordsType) Apply(event istructs.IPLogEvent) (err error) {
-	return recs.Apply2(event, func(_ istructs.IRecord) {})
+	return recs.Apply2(event, func(istructs.IRecord) {})
 }
 
 // istructs.IRecords.Apply2
 func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istructs.IRecord)) (err error) {
-	ev := event.(*dbEventType)
+	ev := event.(*eventType)
 
 	if !ev.Error().ValidEvent() {
 		panic(fmt.Errorf("can not apply not valid event: %s: %w", ev.Error().ErrStr(), ErrorEventNotValid))

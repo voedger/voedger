@@ -1526,8 +1526,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 			require.Error(buildErr)
 			require.NotNil(rawEvent)
 
-			ev1 := newEmptyTestEvent()
-			ev1.eventType.copyFrom(rawEvent.(*eventType))
+			ev1 := rawEvent.(*eventType)
 			ev1.setBuildError(buildErr)
 			require.False(ev1.valid())
 
@@ -1628,7 +1627,7 @@ func Test_ObjectMask(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	value := newObject(test.AppCfg, test.saleCmdDocName)
+	value := makeObject(test.AppCfg, test.saleCmdDocName)
 	fillTestObject(&value)
 
 	value.maskValues()

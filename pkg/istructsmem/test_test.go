@@ -634,19 +634,19 @@ func fillTestCUD(cud *cudType) {
 	recRem.PutString(test.remarkIdent, test.remarkValue)
 }
 
-func newTestEvent(pLogOffs, wLogOffs istructs.Offset) *dbEventType {
+func newTestEvent(pLogOffs, wLogOffs istructs.Offset) *eventType {
 	test := test()
-	ev := newDbEvent(test.AppCfg)
+	ev := newEvent(test.AppCfg)
 
 	ev.pLogOffs = pLogOffs
 	ev.wLogOffs = wLogOffs
 
-	fillTestEvent(&ev)
+	fillTestEvent(ev)
 
-	return &ev
+	return ev
 }
 
-func fillTestEvent(ev *dbEventType) {
+func fillTestEvent(ev *eventType) {
 	test := test()
 	ev.setName(test.saleCmdName)
 
@@ -673,7 +673,7 @@ func testTestEvent(t *testing.T, value istructs.IDbEvent, pLogOffs, wLogOffs ist
 	require := require.New(t)
 	test := test()
 
-	event := value.(*dbEventType)
+	event := value.(*eventType)
 
 	require.Equal(pLogOffs, event.pLogOffs)
 	require.Equal(wLogOffs, event.wLogOffs)
@@ -699,11 +699,11 @@ func testTestEvent(t *testing.T, value istructs.IDbEvent, pLogOffs, wLogOffs ist
 	require.Equal(2, cnt)
 }
 
-func newEmptyTestEvent() *dbEventType {
+func newEmptyTestEvent() *eventType {
 	test := test()
-	ev := newDbEvent(test.AppCfg)
+	ev := newEvent(test.AppCfg)
 	ev.name = appdef.NullQName
-	return &ev
+	return ev
 }
 
 func newEmptyViewValue() (val *rowType) {

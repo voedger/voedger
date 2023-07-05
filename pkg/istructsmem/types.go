@@ -559,11 +559,11 @@ func (row *rowType) AsRecord(name string) istructs.IRecord {
 // IValue.AsEvent
 func (row *rowType) AsEvent(name string) istructs.IDbEvent {
 	if bytes := row.dyB.GetByteArray(name); bytes != nil {
-		event := newDbEvent(row.appCfg)
+		event := newEvent(row.appCfg)
 		if err := event.loadFromBytes(bytes.Bytes()); err != nil {
 			panic(err)
 		}
-		return &event
+		return event
 	}
 	if row.fieldDef(name) == nil {
 		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_Event.TrimString(), name, row.QName(), ErrNameNotFound))
@@ -788,7 +788,7 @@ func (row *rowType) PutRecord(name string, record istructs.IRecord) {
 
 // istructs.IValueBuilder.PutEvent
 func (row *rowType) PutEvent(name string, event istructs.IDbEvent) {
-	if ev, ok := event.(*dbEventType); ok {
+	if ev, ok := event.(*eventType); ok {
 		if bytes, err := ev.storeToBytes(); err == nil {
 			row.putValue(name, dynobuffers.FieldTypeByte, bytes)
 		}
