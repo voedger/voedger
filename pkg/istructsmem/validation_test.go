@@ -418,7 +418,7 @@ func Test_ValidElement(t *testing.T) {
 	t.Run("test build object", func(t *testing.T) {
 		t.Run("must error if null-name object", func(t *testing.T) {
 			obj := func() istructs.IObjectBuilder {
-				o := newObject(cfg, appdef.NullQName)
+				o := makeObject(cfg, appdef.NullQName)
 				return &o
 			}()
 			_, err := obj.Build()
@@ -427,7 +427,7 @@ func Test_ValidElement(t *testing.T) {
 
 		t.Run("must error if unknown-name object", func(t *testing.T) {
 			obj := func() istructs.IObjectBuilder {
-				o := newObject(cfg, appdef.NewQName("test", "unknownDef"))
+				o := makeObject(cfg, appdef.NewQName("test", "unknownDef"))
 				return &o
 			}()
 			_, err := obj.Build()
@@ -436,7 +436,7 @@ func Test_ValidElement(t *testing.T) {
 
 		t.Run("must error if invalid definition kind object", func(t *testing.T) {
 			obj := func() istructs.IObjectBuilder {
-				o := newObject(cfg, appdef.NewQName("test", "element"))
+				o := makeObject(cfg, appdef.NewQName("test", "element"))
 				return &o
 			}()
 			_, err := obj.Build()
@@ -444,7 +444,7 @@ func Test_ValidElement(t *testing.T) {
 		})
 
 		obj := func() istructs.IObjectBuilder {
-			o := newObject(cfg, appdef.NewQName("test", "object"))
+			o := makeObject(cfg, appdef.NewQName("test", "object"))
 			return &o
 		}()
 
@@ -487,7 +487,7 @@ func Test_ValidElement(t *testing.T) {
 
 	t.Run("test build operation document", func(t *testing.T) {
 		doc := func() istructs.IObjectBuilder {
-			d := newObject(cfg, appdef.NewQName("test", "document"))
+			d := makeObject(cfg, appdef.NewQName("test", "document"))
 			return &d
 		}()
 		require.NotNil(doc)
@@ -581,7 +581,7 @@ func Test_ValidCUD(t *testing.T) {
 	require.NoError(err)
 
 	t.Run("empty CUD must be valid", func(t *testing.T) {
-		cud := newCUD(cfg)
+		cud := makeCUD(cfg)
 		err := cud.build()
 		require.NoError(err)
 		err = cfg.validators.validCUD(&cud, false)
@@ -589,7 +589,7 @@ func Test_ValidCUD(t *testing.T) {
 	})
 
 	t.Run("must error if empty CUD QName", func(t *testing.T) {
-		cud := newCUD(cfg)
+		cud := makeCUD(cfg)
 		_ = cud.Create(appdef.NullQName)
 		err := cud.build()
 		require.NoError(err)
@@ -598,7 +598,7 @@ func Test_ValidCUD(t *testing.T) {
 	})
 
 	t.Run("must error if wrong CUD definition kind", func(t *testing.T) {
-		cud := newCUD(cfg)
+		cud := makeCUD(cfg)
 		c := cud.Create(appdef.NewQName("test", "object"))
 		c.PutInt32("int32Field", 7)
 		err := cud.build()
@@ -609,7 +609,7 @@ func Test_ValidCUD(t *testing.T) {
 	})
 
 	t.Run("test storage ID allow / disable in CUD.Create", func(t *testing.T) {
-		cud := newCUD(cfg)
+		cud := makeCUD(cfg)
 		c := cud.Create(appdef.NewQName("test", "document"))
 		c.PutRecordID(appdef.SystemField_ID, 100500)
 		c.PutInt32("int32Field", 7)
@@ -626,7 +626,7 @@ func Test_ValidCUD(t *testing.T) {
 	})
 
 	t.Run("must error if raw ID duplication", func(t *testing.T) {
-		cud := newCUD(cfg)
+		cud := makeCUD(cfg)
 
 		c1 := cud.Create(appdef.NewQName("test", "document"))
 		c1.PutRecordID(appdef.SystemField_ID, 1)
@@ -644,7 +644,7 @@ func Test_ValidCUD(t *testing.T) {
 	})
 
 	t.Run("must error if invalid ID refs", func(t *testing.T) {
-		cud := newCUD(cfg)
+		cud := makeCUD(cfg)
 
 		c1 := cud.Create(appdef.NewQName("test", "document"))
 		c1.PutRecordID(appdef.SystemField_ID, 1)
@@ -721,7 +721,7 @@ func Test_VerifiedFields(t *testing.T) {
 				return token
 			}()
 
-			row := newObject(cfg, objName)
+			row := makeObject(cfg, objName)
 			row.PutInt32("int32", 1)
 			row.PutString("email", okEmailToken)
 			row.PutString("age", okAgeToken)
@@ -732,7 +732,7 @@ func Test_VerifiedFields(t *testing.T) {
 
 		t.Run("error if not token, but not string value", func(t *testing.T) {
 
-			row := newObject(cfg, objName)
+			row := makeObject(cfg, objName)
 			row.PutInt32("int32", 1)
 			row.PutInt32("age", 7)
 
@@ -742,7 +742,7 @@ func Test_VerifiedFields(t *testing.T) {
 
 		t.Run("error if not a token, but plain string value", func(t *testing.T) {
 
-			row := newObject(cfg, objName)
+			row := makeObject(cfg, objName)
 			row.PutInt32("int32", 1)
 			row.PutString("email", email)
 
@@ -763,7 +763,7 @@ func Test_VerifiedFields(t *testing.T) {
 				return token
 			}()
 
-			row := newObject(cfg, objName)
+			row := makeObject(cfg, objName)
 			row.PutInt32("int32", 1)
 			row.PutString("email", ukToken)
 
@@ -785,7 +785,7 @@ func Test_VerifiedFields(t *testing.T) {
 				return token
 			}()
 
-			row := newObject(cfg, objName)
+			row := makeObject(cfg, objName)
 			row.PutInt32("int32", 1)
 			row.PutString("email", weToken)
 
@@ -806,7 +806,7 @@ func Test_VerifiedFields(t *testing.T) {
 				return token
 			}()
 
-			row := newObject(cfg, objName)
+			row := makeObject(cfg, objName)
 			row.PutInt32("int32", 1)
 			row.PutString("email", wfToken)
 
@@ -827,7 +827,7 @@ func Test_VerifiedFields(t *testing.T) {
 				return token
 			}()
 
-			row := newObject(cfg, objName)
+			row := makeObject(cfg, objName)
 			row.PutInt32("int32", 1)
 			row.PutString("email", wtToken)
 

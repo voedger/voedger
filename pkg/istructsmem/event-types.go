@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/bytespool"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
 type (
@@ -23,11 +24,16 @@ type (
 	storeRecordFuncType func(rec *recordType) error
 )
 
-// eventType implements event structure
-//   - interfaces:
-//     — istructs.IRawEventBuilder
-//     — istructs.IAbstractEvent
-//     — istructs.IRawEvent
+// Implements event structure
+//
+//	# Implemented interfaces:
+//	   — istructs.IRawEventBuilder
+//	   — istructs.IAbstractEvent
+//	   — istructs.IRawEvent
+//
+//	   — istructs.IDbEvent,
+//	   — istructs.IPLogEvent,
+//	   — istructs.IWLogEvent
 type eventType struct {
 	appCfg    *AppConfigType
 	rawBytes  []byte
@@ -43,22 +49,28 @@ type eventType struct {
 	argObject elementType
 	argUnlObj elementType
 	cud       cudType
+
+	// db event members
+	buildErr eventErrorType
+
+	pooledBytes []byte
 }
 
-// newRawEvent creates new empty raw event
-func newRawEvent(appCfg *AppConfigType) eventType {
-	event := eventType{
+// Returns new empty event
+func newEvent(appCfg *AppConfigType) *eventType {
+	event := &eventType{
 		appCfg:    appCfg,
-		argObject: newObject(appCfg, appdef.NullQName),
-		argUnlObj: newObject(appCfg, appdef.NullQName),
-		cud:       newCUD(appCfg),
+		argObject: makeObject(appCfg, appdef.NullQName),
+		argUnlObj: makeObject(appCfg, appdef.NullQName),
+		cud:       makeCUD(appCfg),
+		buildErr:  makeEventError(),
 	}
 	return event
 }
 
-// newEventParams creates new empty raw event with specified params
-func newEventParams(appCfg *AppConfigType, params istructs.GenericRawEventBuilderParams) eventType {
-	ev := newRawEvent(appCfg)
+// Returns new empty raw event with specified params
+func newRawEventBuilder(appCfg *AppConfigType, params istructs.GenericRawEventBuilderParams) *eventType {
+	ev := newEvent(appCfg)
 	ev.rawBytes = make([]byte, len(params.EventBytes))
 	copy(ev.rawBytes, params.EventBytes)
 	ev.partition = params.HandlingPartition
@@ -70,18 +82,23 @@ func newEventParams(appCfg *AppConfigType, params istructs.GenericRawEventBuilde
 	return ev
 }
 
-// newEvent creates new raw event
-func newEvent(appCfg *AppConfigType, params istructs.NewRawEventBuilderParams) eventType {
-	return newEventParams(appCfg, params.GenericRawEventBuilderParams)
+// Returns new raw event builder
+func newEventBuilder(appCfg *AppConfigType, params istructs.NewRawEventBuilderParams) *eventType {
+	return newRawEventBuilder(appCfg, params.GenericRawEventBuilderParams)
 }
 
-// newSyncEvent creates new synced raw event
-func newSyncEvent(appCfg *AppConfigType, params istructs.SyncRawEventBuilderParams) eventType {
-	ev := newEventParams(appCfg, params.GenericRawEventBuilderParams)
+// Returns new synced raw event builder
+func newSyncEventBuilder(appCfg *AppConfigType, params istructs.SyncRawEventBuilderParams) *eventType {
+	ev := newRawEventBuilder(appCfg, params.GenericRawEventBuilderParams)
 	ev.sync = true
 	ev.device = params.Device
 	ev.syncTime = params.SyncedAt
 	return ev
+}
+
+// applyCommandRecs store all event CUDs into storage records using specified cb functions
+func (ev *eventType) applyCommandRecs(exists existsRecordType, load loadRecordFuncType, store storeRecordFuncType) error {
+	return ev.cud.applyRecs(exists, load, store)
 }
 
 // argumentNames returns argument and un-logged argument QNames
@@ -127,28 +144,36 @@ func (ev *eventType) build() (err error) {
 	return err
 }
 
-// copyFrom copies event from specified source
-func (ev *eventType) copyFrom(src *eventType) {
-	ev.appCfg = src.appCfg
+// Loads event from bytes and returns error if occurs
+func (ev *eventType) loadFromBytes(in []byte) (err error) {
+	buf := bytes.NewBuffer(in)
+	var codec byte
+	if err = binary.Read(buf, binary.BigEndian, &codec); err != nil {
+		return fmt.Errorf("error read codec version: %w", err)
+	}
+	switch codec {
+	case codec_RawDynoBuffer, codec_RDB_1:
+		if err := loadEvent(ev, codec, buf); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unknown codec version «%d»: %w", codec, ErrUnknownCodec)
+	}
 
-	ev.rawBytes = make([]byte, len(src.rawBytes))
-	copy(ev.rawBytes, src.rawBytes)
-	ev.partition = src.HandlingPartition()
-	ev.pLogOffs = src.PLogOffset()
-	ev.ws = src.Workspace()
-	ev.wLogOffs = src.WLogOffset()
-	ev.setName(src.QName())
-	ev.regTime = src.RegisteredAt()
-	ev.sync = src.Synced()
-	ev.device = src.DeviceID()
-	ev.syncTime = src.SyncedAt()
-
-	ev.argObject.copyFrom(&src.argObject)
-	ev.argUnlObj.copyFrom(&src.argUnlObj)
-	ev.cud.copyFrom(&src.cud)
+	return nil
 }
 
-// regenerateIDs regenerates all raw IDs in event arguments and CUDs using specified generator
+// Retrieves ID for event command name
+func (ev *eventType) qNameID() qnames.QNameID {
+	if ev.valid() {
+		if id, err := ev.appCfg.qNames.ID(ev.QName()); err == nil {
+			return id
+		}
+	}
+	return qnames.QNameIDForError
+}
+
+// Regenerates all raw IDs in event arguments and CUDs using specified generator
 func (ev *eventType) regenerateIDs(generator istructs.IDGenerator) (err error) {
 	if (ev.argObject.QName() != appdef.NullQName) && ev.argObject.isDocument() {
 		if err := ev.argObject.regenerateIDs(generator); err != nil {
@@ -162,7 +187,12 @@ func (ev *eventType) regenerateIDs(generator istructs.IDGenerator) (err error) {
 	return nil
 }
 
-// setName sets specified command name for event. Command name may be ODoc name, see #!16208
+// Sets specified error as build event error
+func (ev *eventType) setBuildError(err error) {
+	ev.buildErr.setError(ev, err)
+}
+
+// Sets specified command name for event. Command name may be ODoc name, see #!16208
 func (ev *eventType) setName(n appdef.QName) {
 	ev.name = n
 	if ev.appCfg != nil {
@@ -171,6 +201,26 @@ func (ev *eventType) setName(n appdef.QName) {
 			ev.argUnlObj.setQName(argUnl)
 		}
 	}
+}
+
+// Stores event into bytes slice
+//
+// # Panics:
+//
+//   - Must be called *after* event validation. Overwise function may panic!
+func (ev *eventType) storeToBytes() []byte {
+	if ev.pooledBytes == nil {
+		buf := bytes.NewBuffer(bytespool.Get())
+		utils.SafeWriteBuf(buf, codec_LastVersion)
+		storeEvent(ev, buf)
+		ev.pooledBytes = buf.Bytes()
+	}
+	return ev.pooledBytes
+}
+
+// Returns is event valid
+func (ev *eventType) valid() bool {
+	return ev.buildErr.validEvent
 }
 
 // istructs.IRawEventBuilder.ArgumentObjectBuilder() IObjectBuilder
@@ -205,11 +255,6 @@ func (ev *eventType) BuildRawEvent() (raw istructs.IRawEvent, err error) {
 	return ev, nil
 }
 
-// istructs.IAbstractEvent.QName. Be careful — this method is overridden by dbEventType
-func (ev *eventType) QName() appdef.QName {
-	return ev.name
-}
-
 // istructs.IAbstractEvent.ArgumentObject
 func (ev *eventType) ArgumentObject() istructs.IObject {
 	return &ev.argObject
@@ -220,9 +265,31 @@ func (ev *eventType) CUDs(cb func(rec istructs.ICUDRow) error) (err error) {
 	return ev.cud.enumRecs(cb)
 }
 
+// istructs.IDbEvent.Error
+func (ev *eventType) Error() istructs.IEventError {
+	return &ev.buildErr
+}
+
+// istructs.IDbEvent.QName
+func (ev *eventType) QName() appdef.QName {
+	qName := istructs.QNameForError
+	if ev.valid() {
+		qName = ev.name
+	}
+	return qName
+}
+
 // istructs.IAbstractEvent.RegisteredAt
 func (ev *eventType) RegisteredAt() istructs.UnixMilli {
 	return ev.regTime
+}
+
+// istructs.IPLogEvent.Release and IWLogEvent.Release
+func (ev *eventType) Release() {
+	if ev.pooledBytes != nil {
+		bytespool.Put(ev.pooledBytes)
+		ev.pooledBytes = nil
+	}
 }
 
 // istructs.IAbstractEvent.Synced
@@ -232,17 +299,11 @@ func (ev *eventType) Synced() bool {
 
 // istructs.IAbstractEvent.DeviceID
 func (ev *eventType) DeviceID() istructs.ConnectedDeviceID {
-	if !ev.sync {
-		return 0
-	}
 	return ev.device
 }
 
 // istructs.IAbstractEvent.SyncedAt
 func (ev *eventType) SyncedAt() istructs.UnixMilli {
-	if !ev.sync {
-		return 0
-	}
 	return ev.syncTime
 }
 
@@ -271,109 +332,6 @@ func (ev *eventType) WLogOffset() istructs.Offset {
 	return ev.wLogOffs
 }
 
-// dbEventType Implements storable into DB event
-//   - interfaces:
-//     — istructs.IDbEvent,
-//     — istructs.IPLogEvent,
-//     — istructs.IWLogEvent
-type dbEventType struct {
-	eventType
-	buildErr   eventErrorType
-	pooledData []byte
-}
-
-// newDbEvent creates an empty DB event
-func newDbEvent(appCfg *AppConfigType) (ev dbEventType) {
-	event := dbEventType{
-		eventType: newRawEvent(appCfg),
-	}
-	event.buildErr = newEventError()
-	return event
-}
-
-// applyCommandRecs store all event CUDs into storage records using specified cb functions
-func (ev *dbEventType) applyCommandRecs(exists existsRecordType, load loadRecordFuncType, store storeRecordFuncType) error {
-	return ev.cud.applyRecs(exists, load, store)
-}
-
-// copyFrom copies members from source
-func (ev *dbEventType) copyFrom(src *dbEventType) {
-	ev.eventType.copyFrom(&src.eventType)
-	ev.buildErr.copyFrom(&src.buildErr)
-}
-
-// loadFromBytes loads event from bytes and returns error if occurs
-func (ev *dbEventType) loadFromBytes(in []byte) (err error) {
-	buf := bytes.NewBuffer(in)
-	var codec byte
-	if err = binary.Read(buf, binary.BigEndian, &codec); err != nil {
-		return fmt.Errorf("error read codec version: %w", err)
-	}
-	switch codec {
-	case codec_RawDynoBuffer, codec_RDB_1:
-		if err := loadEvent(ev, codec, buf); err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("unknown codec version «%d»: %w", codec, ErrUnknownCodec)
-	}
-
-	return nil
-}
-
-// qNameID retrieves ID for event command name
-func (ev *dbEventType) qNameID() qnames.QNameID {
-	if ev.valid() {
-		if id, err := ev.appCfg.qNames.ID(ev.QName()); err == nil {
-			return id
-		}
-	}
-	return qnames.QNameIDForError
-}
-
-// setBuildError sets specified error as build event error
-func (ev *dbEventType) setBuildError(err error) {
-	ev.buildErr.setError(ev, err)
-}
-
-// storeToBytes stores event into bytes slice and returns error if occurs
-func (ev *dbEventType) storeToBytes() (out []byte, err error) {
-	buf := new(bytes.Buffer)
-	_ = binary.Write(buf, binary.BigEndian, codec_LastVersion)
-
-	if err = storeEvent(ev, buf); err == nil {
-		out = buf.Bytes()
-	}
-
-	return out, err
-}
-
-func (ev *dbEventType) valid() bool {
-	return ev.buildErr.validEvent
-}
-
-// istructs.IDbEvent.Error
-func (ev *dbEventType) Error() istructs.IEventError {
-	return &ev.buildErr
-}
-
-// istructs.IDbEvent.QName — overrides IAbstractEvent.QName()
-func (ev *dbEventType) QName() appdef.QName {
-	qName := istructs.QNameForError
-	if ev.valid() {
-		qName = ev.name
-	}
-	return qName
-}
-
-// istructs.IPLogEvent.Release and IWLogEvent.Release
-func (ev *dbEventType) Release() {
-	if ev.pooledData != nil {
-		bytespool.Put(ev.pooledData)
-		ev.pooledData = nil
-	}
-}
-
 // cudType implements event cud member
 //   - methods:
 //     — regenerateIDs: regenerates all raw IDs by specified generator
@@ -386,7 +344,7 @@ type cudType struct {
 	updates map[istructs.RecordID]*updateRecType
 }
 
-func newCUD(appCfg *AppConfigType) cudType {
+func makeCUD(appCfg *AppConfigType) cudType {
 	return cudType{
 		appCfg:  appCfg,
 		creates: make([]*recordType, 0),
@@ -449,23 +407,6 @@ func (cud *cudType) build() (err error) {
 		}
 	}
 	return nil
-}
-
-// copyFrom copies members from source
-func (cud *cudType) copyFrom(src *cudType) {
-	cud.creates = make([]*recordType, len(src.creates))
-	for i, srcRec := range src.creates {
-		rec := newRecord(cud.appCfg)
-		cud.creates[i] = &rec
-		rec.copyFrom(srcRec)
-	}
-
-	cud.updates = make(map[istructs.RecordID]*updateRecType)
-	for id, srcRec := range src.updates {
-		rec := newUpdateRec(cud.appCfg, &srcRec.originRec)
-		cud.updates[id] = &rec
-		rec.copyFrom(srcRec)
-	}
 }
 
 // empty return is all members is empty
@@ -685,13 +626,6 @@ func (upd *updateRecType) build() (err error) {
 	return err
 }
 
-// copyFrom copies members from source
-func (upd *updateRecType) copyFrom(src *updateRecType) {
-	upd.changes.copyFrom(&src.changes)
-	upd.originRec.copyFrom(&src.originRec)
-	upd.result.copyFrom(&src.result)
-}
-
 // elementType implements object and element (as part of object) structure
 //   - interfaces:
 //     — istructs.IObjectBuilder
@@ -704,7 +638,7 @@ type elementType struct {
 	child  []*elementType
 }
 
-func newObject(appCfg *AppConfigType, qn appdef.QName) elementType {
+func makeObject(appCfg *AppConfigType, qn appdef.QName) elementType {
 	obj := elementType{
 		recordType: newRecord(appCfg),
 		child:      make([]*elementType, 0),
@@ -733,17 +667,6 @@ func (el *elementType) build() (err error) {
 func (el *elementType) clear() {
 	el.recordType.clear()
 	el.child = make([]*elementType, 0)
-}
-
-// copyFrom copies element record row and clone all children hierarchy recursive
-func (el *elementType) copyFrom(src *elementType) {
-	el.clear()
-	el.recordType.copyFrom(&src.recordType)
-	for _, srcC := range src.child {
-		c := newElement(el)
-		c.copyFrom(srcC)
-		el.child = append(el.child, &c)
-	}
 }
 
 // forEach applies cb function to element and all it children recursive
@@ -899,23 +822,15 @@ type eventErrorType struct {
 	bytes      []byte
 }
 
-func newEventError() eventErrorType {
+func makeEventError() eventErrorType {
 	return eventErrorType{
 		validEvent: true,
 		qName:      appdef.NullQName,
 	}
 }
 
-// Copies members from source
-func (e *eventErrorType) copyFrom(src *eventErrorType) {
-	e.validEvent = src.validEvent
-	e.errStr = src.errStr
-	e.qName = src.qName
-	e.bytes = src.bytes
-}
-
 // Sets event build error
-func (e *eventErrorType) setError(event *dbEventType, err error) {
+func (e *eventErrorType) setError(event *eventType, err error) {
 	if err == nil {
 		e.validEvent = true
 		e.errStr = ""
@@ -925,8 +840,7 @@ func (e *eventErrorType) setError(event *dbEventType, err error) {
 		e.validEvent = false
 		e.errStr = err.Error()
 		e.qName = event.name
-		e.bytes = make([]byte, len(event.rawBytes))
-		copy(e.bytes, event.rawBytes)
+		e.bytes = utils.CopyBytes(event.rawBytes)
 	}
 }
 

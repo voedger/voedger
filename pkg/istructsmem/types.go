@@ -369,16 +369,18 @@ func (row *rowType) setDef(value appdef.IDef) {
 	}
 }
 
-// Stores row to bytes and returns error if occurs
-func (row *rowType) storeToBytes() (out []byte, err error) {
+// Stores row to bytes.
+//
+// # Panics:
+//
+//   - Must be called *after* event validation. Overwise function may panic!
+func (row *rowType) storeToBytes() []byte {
 	buf := new(bytes.Buffer)
-	_ = binary.Write(buf, binary.BigEndian, codec_LastVersion)
+	utils.SafeWriteBuf(buf, codec_LastVersion)
 
-	if err := storeRow(row, buf); err != nil {
-		return nil, err
-	}
+	storeRow(row, buf)
 
-	return buf.Bytes(), nil
+	return buf.Bytes()
 }
 
 // verifyToken verifies specified token for specified field and returns successfully verified token payload value or error
@@ -559,11 +561,11 @@ func (row *rowType) AsRecord(name string) istructs.IRecord {
 // IValue.AsEvent
 func (row *rowType) AsEvent(name string) istructs.IDbEvent {
 	if bytes := row.dyB.GetByteArray(name); bytes != nil {
-		event := newDbEvent(row.appCfg)
+		event := newEvent(row.appCfg)
 		if err := event.loadFromBytes(bytes.Bytes()); err != nil {
 			panic(err)
 		}
-		return &event
+		return event
 	}
 	if row.fieldDef(name) == nil {
 		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_Event.TrimString(), name, row.QName(), ErrNameNotFound))
@@ -780,18 +782,16 @@ func (row *rowType) PutRecordID(name string, value istructs.RecordID) {
 // istructs.IValueBuilder.PutRecord
 func (row *rowType) PutRecord(name string, record istructs.IRecord) {
 	if rec, ok := record.(*recordType); ok {
-		if bytes, err := rec.storeToBytes(); err == nil {
-			row.putValue(name, dynobuffers.FieldTypeByte, bytes)
-		}
+		bytes := rec.storeToBytes()
+		row.putValue(name, dynobuffers.FieldTypeByte, bytes)
 	}
 }
 
 // istructs.IValueBuilder.PutEvent
 func (row *rowType) PutEvent(name string, event istructs.IDbEvent) {
-	if ev, ok := event.(*dbEventType); ok {
-		if bytes, err := ev.storeToBytes(); err == nil {
-			row.putValue(name, dynobuffers.FieldTypeByte, bytes)
-		}
+	if ev, ok := event.(*eventType); ok {
+		bytes := ev.storeToBytes()
+		row.putValue(name, dynobuffers.FieldTypeByte, bytes)
 	}
 }
 

@@ -40,7 +40,7 @@ func (res *Resources) QueryResource(resource appdef.QName) (r istructs.IResource
 
 // Returns argument object builder for query function
 func (res *Resources) QueryFunctionArgsBuilder(query istructs.IQueryFunction) istructs.IObjectBuilder {
-	r := newObject(res.cfg, query.ParamsDef())
+	r := makeObject(res.cfg, query.ParamsDef())
 	return &r
 }
 
