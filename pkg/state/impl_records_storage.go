@@ -40,8 +40,8 @@ func (s *recordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.ISta
 			return nil, nil
 		}
 		return &recordsStorageValue{
-			record:     singleton,
-			toJSONFunc: s.toJSON,
+			record: singleton,
+			ijson:  s,
 		}, nil
 	}
 	record, err := s.recordsFunc().Get(k.wsid, true, k.id)
@@ -52,8 +52,8 @@ func (s *recordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.ISta
 		return nil, nil
 	}
 	return &recordsStorageValue{
-		record:     record,
-		toJSONFunc: s.toJSON,
+		record: record,
+		ijson:  s,
 	}, nil
 }
 
@@ -94,8 +94,8 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 				continue
 			}
 			items[wsidToItemIdx[wsid][i]].value = &recordsStorageValue{
-				record:     batchItem.Record,
-				toJSONFunc: s.toJSON,
+				record: batchItem.Record,
+				ijson:  s,
 			}
 		}
 	}
@@ -108,8 +108,8 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 			continue
 		}
 		items[g.itemIdx].value = &recordsStorageValue{
-			record:     singleton,
-			toJSONFunc: s.toJSON,
+			record: singleton,
+			ijson:  s,
 		}
 	}
 	return err
@@ -123,7 +123,7 @@ func (s *recordsStorage) ProvideValueBuilder(key istructs.IStateKeyBuilder, _ is
 func (s *recordsStorage) ProvideValueBuilderForUpdate(_ istructs.IStateKeyBuilder, existingValue istructs.IStateValue, _ istructs.IStateValueBuilder) istructs.IStateValueBuilder {
 	return &recordsValueBuilder{rw: s.cudFunc().Update(existingValue.AsRecord(""))}
 }
-func (s *recordsStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
+func (s *recordsStorage) ToJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
 	obj := coreutils.FieldsToMap(sv, s.appDefFunc())
 	bb, err := json.Marshal(&obj)
 	return string(bb), err

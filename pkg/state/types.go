@@ -42,6 +42,9 @@ type appDefFunc func() appdef.IAppDef
 type ToJSONOptions struct{ excludedFields map[string]bool }
 type ToJSONOption func(opts *ToJSONOptions)
 type toJSONFunc func(e istructs.IStateValue, opts ...interface{}) (string, error)
+type IToJson interface {
+	ToJSON(sv istructs.IStateValue, _ ...interface{}) (string, error)
+}
 
 type ApplyBatchItem struct {
 	key   istructs.IStateKeyBuilder
@@ -277,8 +280,8 @@ func (b *viewRecordsValueBuilder) BuildValue() istructs.IStateValue {
 
 type recordsStorageValue struct {
 	baseStateValue
-	record     istructs.IRecord
-	toJSONFunc toJSONFunc
+	record istructs.IRecord
+	ijson  IToJson
 }
 
 func (v *recordsStorageValue) AsInt32(name string) int32        { return v.record.AsInt32(name) }
@@ -294,7 +297,7 @@ func (v *recordsStorageValue) AsRecordID(name string) istructs.RecordID {
 }
 func (v *recordsStorageValue) AsRecord(string) (record istructs.IRecord) { return v.record }
 func (v *recordsStorageValue) ToJSON(opts ...interface{}) (string, error) {
-	return v.toJSONFunc(v, opts...)
+	return v.ijson.ToJSON(v, opts...)
 }
 
 type pLogStorageValue struct {
