@@ -187,39 +187,4 @@ func TestViewRecordsStorage_toJSON(t *testing.T) {
 		On("AsInt64", "Count").Return(int64(1001)).
 		On("AsQName", mock.Anything).Return(appdef.ViewValueDefName(testViewRecordQName1))
 
-	s := viewRecordsStorage{
-		appDefFunc: func() appdef.IAppDef { return appDef },
-	}
-	t.Run("Should marshal entire element", func(t *testing.T) {
-		require := require.New(t)
-		sv := &viewRecordsStorageValue{
-			value:      value,
-			toJSONFunc: s.toJSON,
-		}
-
-		json, err := sv.ToJSON()
-		require.NoError(err)
-
-		require.JSONEq(`{
-											"sys.QName":"test.viewRecord1_Value",					  
-											"Count": 1001,
-								  		"ID": 42,
-								  		"Name": "John"
-										}`, json)
-	})
-	t.Run("Should filter fields", func(t *testing.T) {
-		require := require.New(t)
-		sv := &viewRecordsStorageValue{
-			value:      value,
-			toJSONFunc: s.toJSON,
-		}
-
-		json, err := sv.ToJSON(WithExcludeFields("ID", "Count"))
-		require.NoError(err)
-
-		require.JSONEq(`{
-											"sys.QName":"test.viewRecord1_Value",					  
-											"Name": "John"
-									  }`, json)
-	})
 }

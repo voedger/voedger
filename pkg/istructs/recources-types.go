@@ -102,7 +102,6 @@ type IIntents interface {
 }
 type IStateValue interface {
 	IValue
-	ToJSON(opts ...interface{}) (string, error)
 	AsValue(name string) IStateValue
 	Length() int
 	GetAsString(index int) string

@@ -19,9 +19,6 @@ type httpStorage struct{}
 func (s *httpStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return newHTTPStorageKeyBuilder()
 }
-func (s *httpStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
-	return nil, nil
-}
 func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	kb := key.(*httpStorageKeyBuilder)
 

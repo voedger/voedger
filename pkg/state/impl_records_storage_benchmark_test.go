@@ -10,9 +10,9 @@ import (
 
 /*
 Before:
-BenchmarkRecordsGet-20    	  105993	      9932 ns/op	    7424 B/op	      75 allocs/op
+BenchmarkRecordsGet-20    	 3476623	       332.4 ns/op	     104 B/op	       5 allocs/op
 After:
-BenchmarkRecordsGet-20    	13395648	        94.79 ns/op	      32 B/op	       1 allocs/op
+BenchmarkRecordsGet-20    	23072106	        55.72 ns/op	      16 B/op	       1 allocs/op
 */
 func BenchmarkRecordsGet(b *testing.B) {
 	mockRec = &mockBenchRec{}

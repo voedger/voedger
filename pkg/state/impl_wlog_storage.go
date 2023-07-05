@@ -30,19 +30,20 @@ func (s *wLogStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) ist
 	}
 }
 func (s *wLogStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
-	return nil, nil
+	skip := false
+	err = s.Read(key, func(_ istructs.IKey, v istructs.IStateValue) (err error) {
+		if skip {
+			return
+		}
+		value = v
+		skip = true
+		return
+	})
+	return value, err
 }
 func (s *wLogStorage) GetBatch(items []GetBatchItem) (err error) {
 	for i := range items {
-		skip := false
-		err = s.Read(items[i].key, func(_ istructs.IKey, value istructs.IStateValue) (err error) {
-			if skip {
-				return
-			}
-			items[i].value = value
-			skip = true
-			return
-		})
+		items[i].value, err = s.Get(items[i].key)
 		if err != nil {
 			break
 		}

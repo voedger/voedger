@@ -39,10 +39,7 @@ func (s *recordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.ISta
 		if singleton.QName() == appdef.NullQName {
 			return nil, nil
 		}
-		return &recordsStorageValue{
-			record: singleton,
-			ijson:  s,
-		}, nil
+		return &recordsStorageValue{singleton}, nil
 	}
 	record, err := s.recordsFunc().Get(k.wsid, true, k.id)
 	if err != nil {
@@ -51,10 +48,7 @@ func (s *recordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.ISta
 	if record.QName() == appdef.NullQName {
 		return nil, nil
 	}
-	return &recordsStorageValue{
-		record: record,
-		ijson:  s,
-	}, nil
+	return &recordsStorageValue{record}, nil
 }
 
 func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
@@ -93,10 +87,7 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 			if batchItem.Record.QName() == appdef.NullQName {
 				continue
 			}
-			items[wsidToItemIdx[wsid][i]].value = &recordsStorageValue{
-				record: batchItem.Record,
-				ijson:  s,
-			}
+			items[wsidToItemIdx[wsid][i]].value = &recordsStorageValue{batchItem.Record}
 		}
 	}
 	for _, g := range gg {
@@ -107,10 +98,7 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 		if singleton.QName() == appdef.NullQName {
 			continue
 		}
-		items[g.itemIdx].value = &recordsStorageValue{
-			record: singleton,
-			ijson:  s,
-		}
+		items[g.itemIdx].value = &recordsStorageValue{singleton}
 	}
 	return err
 }

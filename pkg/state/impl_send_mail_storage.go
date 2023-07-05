@@ -19,10 +19,6 @@ type sendMailStorage struct {
 	messages chan smtptest.Message // not nil in tests only
 }
 
-func (s *sendMailStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
-	return nil, nil
-}
-
 func (s *sendMailStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &sendMailStorageKeyBuilder{
 		keyBuilder: newKeyBuilder(SendMailStorage, appdef.NullQName),

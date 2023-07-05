@@ -29,7 +29,15 @@ func (s *viewRecordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStat
 	}
 }
 func (s *viewRecordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
-	return nil, err
+	k := key.(*viewRecordsKeyBuilder)
+	v, err := s.viewRecordsFunc().Get(k.wsid, k.IKeyBuilder)
+	if err != nil {
+		return nil, err
+	}
+	if v == nil {
+		return nil, nil
+	}
+	return &viewRecordsStorageValue{value: v}, err
 }
 func (s *viewRecordsStorage) GetBatch(items []GetBatchItem) (err error) {
 	wsidToItemIdx := make(map[istructs.WSID][]int)
@@ -50,8 +58,7 @@ func (s *viewRecordsStorage) GetBatch(items []GetBatchItem) (err error) {
 				continue
 			}
 			items[itemIndex].value = &viewRecordsStorageValue{
-				value:      batchItem.Value,
-				toJSONFunc: s.toJSON,
+				value: batchItem.Value,
 			}
 		}
 	}
@@ -60,8 +67,7 @@ func (s *viewRecordsStorage) GetBatch(items []GetBatchItem) (err error) {
 func (s *viewRecordsStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	cb := func(k istructs.IKey, v istructs.IValue) (err error) {
 		return callback(k, &viewRecordsStorageValue{
-			value:      v,
-			toJSONFunc: s.toJSON,
+			value: v,
 		})
 	}
 	vrkb := kb.(*viewRecordsKeyBuilder)

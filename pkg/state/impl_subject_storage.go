@@ -21,9 +21,6 @@ func (s *subjectStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuild
 	return newKeyBuilder(SubjectStorage, appdef.NullQName)
 }
 func (s *subjectStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
-	return nil, nil
-}
-func (s *subjectStorage) GetBatch(items []GetBatchItem) (err error) {
 	ssv := &subjectStorageValue{
 		token:      s.tokenFunc(),
 		toJSONFunc: s.toJSON,
@@ -40,8 +37,14 @@ func (s *subjectStorage) GetBatch(items []GetBatchItem) (err error) {
 			break
 		}
 	}
+	return ssv, nil
+}
+func (s *subjectStorage) GetBatch(items []GetBatchItem) (err error) {
 	for i := range items {
-		items[i].value = ssv
+		items[i].value, err = s.Get(items[i].key)
+		if err != nil {
+			break
+		}
 	}
 	return
 }
