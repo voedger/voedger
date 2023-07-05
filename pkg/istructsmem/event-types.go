@@ -54,8 +54,6 @@ type eventType struct {
 	buildErr eventErrorType
 
 	pooledBytes []byte
-
-	eventBytes []byte
 }
 
 // Returns new empty event
@@ -211,13 +209,13 @@ func (ev *eventType) setName(n appdef.QName) {
 //
 //   - Must be called *after* event validation. Overwise function may panic!
 func (ev *eventType) storeToBytes() []byte {
-	if ev.eventBytes == nil {
-		buf := new(bytes.Buffer)
+	if ev.pooledBytes == nil {
+		buf := bytes.NewBuffer(bytespool.Get())
 		utils.SafeWriteBuf(buf, codec_LastVersion)
 		storeEvent(ev, buf)
-		ev.eventBytes = buf.Bytes()
+		ev.pooledBytes = buf.Bytes()
 	}
-	return ev.eventBytes
+	return ev.pooledBytes
 }
 
 // Returns is event valid
