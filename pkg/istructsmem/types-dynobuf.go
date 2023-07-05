@@ -133,6 +133,7 @@ func dynoBufGetWord(dyB *dynobuffers.Buffer, fieldName string) (value uint16, ok
 func storeRow(row *rowType, buf *bytes.Buffer) {
 	id, err := row.qNameID()
 	if err != nil {
+		//no test
 		panic(fmt.Errorf(errMustValidatedBeforeStore, "row", err))
 	}
 	utils.SafeWriteBuf(buf, int16(id))
@@ -144,6 +145,7 @@ func storeRow(row *rowType, buf *bytes.Buffer) {
 
 	b, err := row.dyB.ToBytes()
 	if err != nil {
+		//no test
 		panic(fmt.Errorf(errMustValidatedBeforeStore, row.QName(), err))
 	}
 	len := uint32(len(b))
@@ -151,7 +153,7 @@ func storeRow(row *rowType, buf *bytes.Buffer) {
 	utils.SafeWriteBuf(buf, b)
 }
 
-func storeRowSysFields(row *rowType, buf *bytes.Buffer) (err error) {
+func storeRowSysFields(row *rowType, buf *bytes.Buffer) {
 	sysFieldMask := uint16(0)
 	if row.ID() != istructs.NullRecordID {
 		sysFieldMask |= sfm_ID
@@ -177,15 +179,14 @@ func storeRowSysFields(row *rowType, buf *bytes.Buffer) (err error) {
 	if row.container != "" {
 		id, err := row.containerID()
 		if err != nil {
-			return err
+			//no test
+			panic(fmt.Errorf(errMustValidatedBeforeStore, row.QName(), err))
 		}
 		utils.SafeWriteBuf(buf, int16(id))
 	}
 	if !row.isActive {
 		utils.SafeWriteBuf(buf, false)
 	}
-
-	return nil
 }
 
 func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
