@@ -260,21 +260,17 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 }
 
 // istructs.IEvents.PutWlog
-func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (event istructs.IWLogEvent, err error) {
-	dbEvent := newDbEvent(e.app.config)
-
-	dbEvent.copyFrom(ev.(*dbEventType))
+func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
+	dbEvent := ev.(*dbEventType)
 
 	var evData []byte
 	if evData, err = dbEvent.storeToBytes(); err == nil {
 		pKey, cCols := splitLogOffset(ev.WLogOffset())
 		pKey = utils.PrefixBytes(pKey, consts.SysView_WLog, ev.Workspace())
-		if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
-			event = &dbEvent
-		}
+		err = e.app.config.storage.Put(pKey, cCols, evData)
 	}
 
-	return event, err
+	return err
 }
 
 // istructs.IEvents.ReadPLog

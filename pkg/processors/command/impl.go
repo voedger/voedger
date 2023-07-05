@@ -632,7 +632,7 @@ func (cmdProc *cmdProc) n10n(_ context.Context, work interface{}) (err error) {
 
 func putWLog(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmd.wLogEvent, err = cmd.appStructs.Events().PutWlog(cmd.pLogEvent)
+	err = cmd.appStructs.Events().PutWlog(cmd.pLogEvent)
 	if err != nil {
 		cmd.workspace.NextWLogOffset++
 	}

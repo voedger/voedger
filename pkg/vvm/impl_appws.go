@@ -69,11 +69,12 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 			if err != nil {
 				return err
 			}
+			defer pLogEvent.Release()
 			pLogOffsets[partition]++
 			if err := as.Records().Apply(pLogEvent); err != nil {
 				return err
 			}
-			if _, err = as.Events().PutWlog(pLogEvent); err != nil {
+			if err = as.Events().PutWlog(pLogEvent); err != nil {
 				return err
 			}
 			wLogOffset++

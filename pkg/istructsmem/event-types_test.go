@@ -158,11 +158,8 @@ func TestEventBuilder_Core(t *testing.T) {
 		require.Equal(test.wlogOfs, pLogEvent.WLogOffset())
 
 		// 2. save to WLog
-		wLogEvent, err := app.Events().PutWlog(pLogEvent)
+		err := app.Events().PutWlog(pLogEvent)
 		require.NoError(err)
-		defer wLogEvent.Release()
-
-		testDbEvent(t, wLogEvent)
 
 		// 3. save event command CUDs
 		idP := istructs.NullRecordID
@@ -402,10 +399,8 @@ func TestEventBuilder_Core(t *testing.T) {
 		defer pLogEvent.Release()
 
 		t.Run("test save to WLog", func(t *testing.T) {
-			wLogEvent, err := app.Events().PutWlog(pLogEvent)
+			err := app.Events().PutWlog(pLogEvent)
 			require.NoError(err)
-			require.NotNil(wLogEvent)
-			defer wLogEvent.Release()
 		})
 
 		t.Run("test apply PLog event records", func(t *testing.T) {

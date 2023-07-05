@@ -237,7 +237,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 	})
 	require.NoError(err)
 	require.NoError(as.Records().Apply(pLogEvent))
-	_, err = as.Events().PutWlog(pLogEvent)
+	err = as.Events().PutWlog(pLogEvent)
 	require.NoError(err)
 	appTokens = payloads.TestAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 	return cfgs, asp, appTokens
