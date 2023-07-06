@@ -11,9 +11,10 @@ import (
 	"errors"
 	"fmt"
 
+	bytespool "github.com/valyala/bytebufferpool"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/bytespool"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
@@ -53,7 +54,7 @@ type eventType struct {
 	// db event members
 	buildErr eventErrorType
 
-	pooledBytes []byte
+	buffer *bytespool.ByteBuffer
 }
 
 // Returns new empty event
@@ -209,13 +210,14 @@ func (ev *eventType) setName(n appdef.QName) {
 //
 //   - Must be called *after* event validation. Overwise function may panic!
 func (ev *eventType) storeToBytes() []byte {
-	if ev.pooledBytes == nil {
-		buf := bytes.NewBuffer(bytespool.Get())
+	if ev.buffer == nil {
+		ev.buffer = bytespool.Get()
+		buf := bytes.NewBuffer(ev.buffer.B)
 		utils.SafeWriteBuf(buf, codec_LastVersion)
 		storeEvent(ev, buf)
-		ev.pooledBytes = buf.Bytes()
+		ev.buffer.B = buf.Bytes()
 	}
-	return ev.pooledBytes
+	return ev.buffer.B
 }
 
 // Returns is event valid
@@ -286,9 +288,9 @@ func (ev *eventType) RegisteredAt() istructs.UnixMilli {
 
 // istructs.IPLogEvent.Release and IWLogEvent.Release
 func (ev *eventType) Release() {
-	if ev.pooledBytes != nil {
-		bytespool.Put(ev.pooledBytes)
-		ev.pooledBytes = nil
+	if ev.buffer != nil {
+		bytespool.Put(ev.buffer)
+		ev.buffer = nil
 	}
 }
 
