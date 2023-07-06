@@ -10,16 +10,16 @@ import (
 	"fmt"
 	"sync"
 
+	bytespool "github.com/valyala/bytebufferpool"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
-	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-
-	"github.com/voedger/voedger/pkg/istructsmem/internal/bytespool"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
 
 // appStructsProviderType implements IAppStructsProvider interface
@@ -272,11 +272,11 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 		pKey, cCol := splitLogOffset(offset)
 		pKey = utils.PrefixBytes(pKey, consts.SysView_PLog, partition) // + partition! see #18047
 		data := bytespool.Get()
-		ok, err := e.app.config.storage.Get(pKey, cCol, &data)
+		ok, err := e.app.config.storage.Get(pKey, cCol, &data.B)
 		if ok {
 			event := newEvent(e.app.config)
-			if err = event.loadFromBytes(data); err == nil {
-				event.pooledBytes = data
+			if err = event.loadFromBytes(data.B); err == nil {
+				event.buffer = data
 				err = cb(offset, event)
 			}
 		} else {
@@ -310,11 +310,11 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 		pKey, cCol := splitLogOffset(offset)
 		pKey = utils.PrefixBytes(pKey, consts.SysView_WLog, workspace)
 		data := bytespool.Get()
-		ok, err := e.app.config.storage.Get(pKey, cCol, &data)
+		ok, err := e.app.config.storage.Get(pKey, cCol, &data.B)
 		if ok {
 			event := newEvent(e.app.config)
-			if err = event.loadFromBytes(data); err == nil {
-				event.pooledBytes = data
+			if err = event.loadFromBytes(data.B); err == nil {
+				event.buffer = data
 				err = cb(offset, event)
 			}
 		} else {

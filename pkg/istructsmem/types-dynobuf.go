@@ -149,7 +149,7 @@ func storeRow(row *rowType, buf *bytes.Buffer) {
 		panic(fmt.Errorf(errMustValidatedBeforeStore, row.QName(), err))
 	}
 	len := uint32(len(b))
-	utils.SafeWriteBuf(buf, &len)
+	utils.SafeWriteBuf(buf, len)
 	utils.SafeWriteBuf(buf, b)
 }
 
