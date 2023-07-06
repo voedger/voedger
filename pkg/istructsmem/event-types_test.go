@@ -866,6 +866,8 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			switch test {
 			case retryTest:
 				t.Run("must ok to reread PLog event", func(t *testing.T) {
+					pLogEvent.Release()
+
 					pLogEvent = nil
 					err := app.Events().ReadPLog(context.Background(), 1, istructs.Offset(100501+test), 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 						require.EqualValues(100501+test, plogOffset)
@@ -874,7 +876,6 @@ func Test_EventUpdateRawCud(t *testing.T) {
 					})
 					require.NoError(err)
 					require.NotNil(pLogEvent)
-					defer pLogEvent.Release()
 					require.True(pLogEvent.Error().ValidEvent())
 				})
 			}
@@ -885,12 +886,12 @@ func Test_EventUpdateRawCud(t *testing.T) {
 					switch id := r.ID(); id {
 					case docID:
 						require.EqualValues(docName, r.QName())
-						require.EqualValues(r.AsRecordID("rec"), recID, "error #25853 here!")
+						require.EqualValues(recID, r.AsRecordID("rec"), "error #25853 here!")
 					case recID:
 						require.EqualValues(recName, r.QName())
-						require.EqualValues(r.Parent(), docID)
-						require.EqualValues(r.Container(), "rec")
-						require.EqualValues(r.AsString("data"), "test data")
+						require.EqualValues(docID, r.Parent())
+						require.EqualValues("rec", r.Container())
+						require.EqualValues("test data", r.AsString("data"))
 					default:
 						require.Fail("unexpected record applied")
 					}
@@ -898,6 +899,8 @@ func Test_EventUpdateRawCud(t *testing.T) {
 				})
 				require.Equal(2, recCnt)
 			})
+
+			pLogEvent.Release()
 
 			t.Run("must ok to reread CDoc record", func(t *testing.T) {
 				rec, err := app.Records().Get(ws, true, docID)
