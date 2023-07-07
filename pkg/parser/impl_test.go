@@ -90,6 +90,37 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(4, view.Key().ClustCols().FieldCount())
 }
 
+func Test_Refs_NestedTables(t *testing.T) {
+
+	require := require.New(t)
+
+	fs, err := ParseFile("file1.sql", `SCHEMA untill;
+	TABLE table1 INHERITS CDoc (
+		items TABLE inner1 (
+			table1 ref, 
+			ref1 ref(table3),
+			urg_number int32
+		)
+	);
+	TABLE table2 INHERITS CRecord (
+	);	
+	TABLE table3 INHERITS CDoc (
+		items table2
+	);
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+	require.NoError(BuildAppDefs(packages, appdef.New()))
+
+}
+
 func Test_DupFieldsInTypes(t *testing.T) {
 	require := require.New(t)
 
@@ -492,31 +523,6 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 		err = BuildAppDefs(packages, def)
 
 		require.Contains(err.Error(), "table test.CTable can not reference to table test.OTable")
-	})
-	t.Run("Should return error because CDoc references to undefined table kind", func(t *testing.T) {
-		require := require.New(t)
-
-		fs, err := ParseFile("example.sql", `SCHEMA test; 
-		TABLE UntillPaymentsUser ();
-		TABLE CTable INHERITS CDoc (
-			Ref ref(UntillPaymentsUser)
-		);
-		`)
-		require.Nil(err)
-
-		pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
-		require.Nil(err)
-
-		packages, err := MergePackageSchemas([]*PackageSchemaAST{
-			getSysPackageAST(),
-			pkg,
-		})
-		require.NoError(err)
-
-		def := appdef.New()
-		err = BuildAppDefs(packages, def)
-
-		require.Contains(err.Error(), ErrUndefinedTableKind.Error())
 	})
 }
 

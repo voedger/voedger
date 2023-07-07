@@ -202,19 +202,19 @@ func isSysDef(qn DefQName, ident string) bool {
 	return maybeSysPkg(qn.Package) && qn.Name == ident
 }
 
-func isPredefinedSysTable(table *TableStmt, c *buildContext) bool {
-	return c.pkg.QualifiedPackageName == appdef.SysPackage &&
+func isPredefinedSysTable(packageName string, table *TableStmt) bool {
+	return packageName == appdef.SysPackage &&
 		(table.Name == nameCDOC || table.Name == nameWDOC || table.Name == nameODOC ||
 			table.Name == nameCRecord || table.Name == nameWRecord || table.Name == nameORecord)
 }
 
-func getTableInheritanceChain(table *TableStmt, ctx *buildContext) (chain []DefQName) {
+func getTableInheritanceChain(table *TableStmt, ctx *basicContext) (chain []DefQName) {
 	chain = make([]DefQName, 0)
 	var vf func(t *TableStmt)
 	vf = func(t *TableStmt) {
 		if t.Inherits != nil {
 			inherited := *t.Inherits
-			resolve(inherited, &ctx.basicContext, func(t *TableStmt) error {
+			resolve(inherited, ctx, func(t *TableStmt) error {
 				chain = append(chain, inherited)
 				vf(t)
 				return nil
@@ -238,7 +238,7 @@ func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
 	}
 }
 
-func getTableDefKind(table *TableStmt, ctx *buildContext) (kind appdef.DefKind, singletone bool) {
+func getTableDefKind(table *TableStmt, ctx *basicContext) (kind appdef.DefKind, singletone bool) {
 	chain := getTableInheritanceChain(table, ctx)
 	for _, t := range chain {
 		if isSysDef(t, nameCDOC) || isSysDef(t, nameSingleton) {
@@ -289,6 +289,9 @@ func getSysDataKind(name string) appdef.DataKind {
 	}
 	if name == sysBytes {
 		return appdef.DataKind_bytes
+	}
+	if name == sysBlob {
+		return appdef.DataKind_RecordID
 	}
 	return appdef.DataKind_null
 }
