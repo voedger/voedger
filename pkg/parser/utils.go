@@ -290,6 +290,9 @@ func getSysDataKind(name string) appdef.DataKind {
 	if name == sysBytes {
 		return appdef.DataKind_bytes
 	}
+	if name == sysBlob {
+		return appdef.DataKind_RecordID
+	}
 	return appdef.DataKind_null
 }
 
