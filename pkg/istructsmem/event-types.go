@@ -288,6 +288,9 @@ func (ev *eventType) RegisteredAt() istructs.UnixMilli {
 
 // istructs.IPLogEvent.Release and IWLogEvent.Release
 func (ev *eventType) Release() {
+	ev.argObject.release()
+	ev.argUnlObj.release()
+	ev.cud.release()
 	if ev.buffer != nil {
 		bytespool.Put(ev.buffer)
 		ev.buffer = nil
@@ -527,6 +530,16 @@ func (cud *cudType) regenerateIDs(generator istructs.IDGenerator) error {
 	return nil
 }
 
+// Returns dynobuffers for all creates and updates to pool
+func (cud *cudType) release() {
+	for _, c := range cud.creates {
+		c.release()
+	}
+	for _, u := range cud.updates {
+		u.release()
+	}
+}
+
 // istructs.ICUD.Create
 func (cud *cudType) Create(qName appdef.QName) istructs.IRowWriter {
 	r := newRecord(cud.appCfg)
@@ -628,6 +641,13 @@ func (upd *updateRecType) build() (err error) {
 	return err
 }
 
+// Return dynobuffers of all recs (origin, changes and result) to pool
+func (upd *updateRecType) release() {
+	upd.originRec.release()
+	upd.changes.release()
+	upd.result.release()
+}
+
 // elementType implements object and element (as part of object) structure
 //   - interfaces:
 //     — istructs.IObjectBuilder
@@ -668,6 +688,9 @@ func (el *elementType) build() (err error) {
 // Clears element record and all children recursive
 func (el *elementType) clear() {
 	el.recordType.clear()
+	for _, e := range el.child {
+		e.clear()
+	}
 	el.child = make([]*elementType, 0)
 }
 
@@ -743,6 +766,14 @@ func (el *elementType) regenerateIDs(generator istructs.IDGenerator) (err error)
 		})
 
 	return err
+}
+
+// Return dynobuffer to pool for element and all it children recursive
+func (el *elementType) release() {
+	el.recordType.release()
+	for _, e := range el.child {
+		e.release()
+	}
 }
 
 // istructs.IElementBuilder.ElementBuilder

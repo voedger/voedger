@@ -116,7 +116,7 @@ func (row *rowType) clear() {
 	row.parentID = istructs.NullRecordID
 	row.container = ""
 	row.isActive = true
-	row.dyB = nullDynoBuffer
+	row.release()
 	row.nils = nil
 	row.err = nil
 }
@@ -267,6 +267,14 @@ func (row *rowType) qNameID() (qnames.QNameID, error) {
 	return row.appCfg.qNames.ID(name)
 }
 
+// Returns dynobuffer to pull
+func (row *rowType) release() {
+	if row.dyB != nullDynoBuffer {
+		row.dyB.Release()
+		row.dyB = nullDynoBuffer
+	}
+}
+
 // setActive sets record IsActive activity flag
 func (row *rowType) setActive(value bool) {
 	row.isActive = value
@@ -362,9 +370,9 @@ func (row *rowType) setDef(value appdef.IDef) {
 		row.def = value
 	}
 
-	if row.def.QName() == appdef.NullQName {
-		row.dyB = nullDynoBuffer
-	} else {
+	row.release()
+
+	if row.def.QName() != appdef.NullQName {
 		row.dyB = dynobuffers.NewBuffer(row.appCfg.dynoSchemes[row.def.QName()])
 	}
 }
