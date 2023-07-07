@@ -10,6 +10,7 @@ import (
 	fs "io/fs"
 
 	"github.com/alecthomas/participle/v2/lexer"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 type FileSchemaAST struct {
@@ -386,11 +387,13 @@ type NamedParam struct {
 
 type TableStmt struct {
 	Statement
-	Name     string          `parser:"'TABLE' @Ident"`
-	Inherits *DefQName       `parser:"('INHERITS' @@)?"`
-	Of       []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
-	Items    []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	With     []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Name         string          `parser:"'TABLE' @Ident"`
+	Inherits     *DefQName       `parser:"('INHERITS' @@)?"`
+	Of           []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
+	Items        []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	With         []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	tableDefKind appdef.DefKind  // filled on the analysis stage
+	singletone   bool
 }
 
 func (s TableStmt) GetName() string { return s.Name }

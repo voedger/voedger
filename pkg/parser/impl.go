@@ -298,7 +298,19 @@ func analyse(c *basicContext) {
 			}
 		case *TableStmt:
 			c.pos = &v.Pos
+
+			if isPredefinedSysTable(c.pkg.QualifiedPackageName, v) {
+				return
+			}
+
+			v.tableDefKind, v.singletone = getTableDefKind(v, c)
+			if v.tableDefKind == appdef.DefKind_null {
+				c.errs = append(c.errs, errorAt(ErrUndefinedTableKind, &v.Pos))
+				return
+			}
+
 			analyzeWithRefs(c, v.With)
+			analyzeNestedTables(c, v, v.tableDefKind)
 			if v.Inherits != nil {
 				resolve(*v.Inherits, c, func(f *TableStmt) error { return nil })
 			}
@@ -307,6 +319,30 @@ func analyse(c *basicContext) {
 			}
 		}
 	})
+}
+
+func analyzeNestedTables(c *basicContext, tbl *TableStmt, rootTableKind appdef.DefKind) {
+	for i := range tbl.Items {
+		item := &tbl.Items[i]
+		if item.NestedTable != nil {
+			nestedTable := &item.NestedTable.Table
+			if nestedTable.Inherits == nil {
+				nestedTable.tableDefKind = getNestedTableKind(rootTableKind)
+			} else {
+				nestedTable.tableDefKind, nestedTable.singletone = getTableDefKind(nestedTable, c)
+				if nestedTable.tableDefKind == appdef.DefKind_null {
+					c.errs = append(c.errs, errorAt(ErrUndefinedTableKind, &nestedTable.Pos))
+					return
+				}
+				tk := getNestedTableKind(rootTableKind)
+				if nestedTable.tableDefKind != tk {
+					c.errs = append(c.errs, ErrNestedTableIncorrectKind)
+					return
+				}
+			}
+			analyzeNestedTables(c, nestedTable, rootTableKind)
+		}
+	}
 }
 
 type defBuildContext struct {
@@ -366,8 +402,7 @@ func (c *buildContext) pushDef(name string, kind appdef.DefKind) {
 	})
 }
 
-func (c *buildContext) isExists(name string, kind appdef.DefKind) (exists bool) {
-	qname := appdef.NewQName(c.pkg.Ast.Package, name)
+func (c *buildContext) isExists(qname appdef.QName, kind appdef.DefKind) (exists bool) {
 	switch kind {
 	case appdef.DefKind_CDoc:
 		return c.builder.CDoc(qname) != nil
@@ -559,23 +594,20 @@ func buildTables(ctx *buildContext) error {
 
 func buildTable(ctx *buildContext, schema *PackageSchemaAST, table *TableStmt) {
 	ctx.setSchema(schema)
-	if isPredefinedSysTable(table, ctx) {
+	if isPredefinedSysTable(ctx.pkg.QualifiedPackageName, table) {
 		return
 	}
-	tableType, singletone := getTableDefKind(table, ctx)
-	if tableType == appdef.DefKind_null {
-		ctx.errs = append(ctx.errs, errorAt(ErrUndefinedTableKind, &table.Pos))
-	} else {
-		if ctx.isExists(table.Name, tableType) {
-			return
-		}
-		ctx.pushDef(table.Name, tableType)
-		fillTable(ctx, table)
-		if singletone {
-			ctx.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
-		}
-		ctx.popDef()
+
+	qname := appdef.NewQName(ctx.pkg.Ast.Package, table.Name)
+	if ctx.isExists(qname, table.tableDefKind) {
+		return
 	}
+	ctx.pushDef(table.Name, table.tableDefKind)
+	fillTable(ctx, table)
+	if table.singletone {
+		ctx.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
+	}
+	ctx.popDef()
 }
 
 func addFieldRefToDef(refField *RefFieldExpr, ctx *buildContext) {
@@ -629,8 +661,27 @@ func addFieldToDef(field *FieldExpr, ctx *buildContext) {
 		wrec := ctx.builder.WRecord(qname)
 		crec := ctx.builder.CRecord(qname)
 		orec := ctx.builder.ORecord(qname)
+
+		if wrec == nil && orec == nil && crec == nil { // not yet built
+			tbl, err := lookup[*TableStmt](DefQName{Package: qname.Pkg(), Name: qname.Entity()}, &ctx.basicContext)
+			if err != nil {
+				ctx.errs = append(ctx.errs, err)
+				return
+			}
+			if tbl.tableDefKind == appdef.DefKind_CRecord || tbl.tableDefKind == appdef.DefKind_ORecord || tbl.tableDefKind == appdef.DefKind_WRecord {
+				buildTable(ctx, ctx.pkg, tbl)
+				wrec = ctx.builder.WRecord(qname)
+				crec = ctx.builder.CRecord(qname)
+				orec = ctx.builder.ORecord(qname)
+			} else {
+				ctx.errs = append(ctx.errs, errorAt(ErrTypeNotSupported(field.Type.String()), &field.Pos))
+				return
+			}
+		}
+
 		if wrec != nil || orec != nil || crec != nil {
-			tk := getNestedTableKind(ctx.defs[0].kind)
+			//tk := getNestedTableKind(ctx.defs[0].kind)
+			tk := getNestedTableKind(ctx.defCtx().kind)
 			if (wrec != nil && tk != appdef.DefKind_WRecord) ||
 				(orec != nil && tk != appdef.DefKind_ORecord) ||
 				(crec != nil && tk != appdef.DefKind_CRecord) {
@@ -661,29 +712,27 @@ func addConstraintToDef(constraint *TableConstraint, ctx *buildContext) {
 }
 
 func addNestedTableToDef(nested *NestedTableStmt, ctx *buildContext) {
+	nestedTable := &nested.Table
+	if nestedTable.tableDefKind == appdef.DefKind_null {
+		ctx.errs = append(ctx.errs, errorAt(ErrUndefinedTableKind, &nestedTable.Pos))
+		return
+	}
+
 	containerName := nested.Name
 	if err := ctx.defCtx().checkName(containerName, &nested.Pos); err != nil {
 		ctx.errs = append(ctx.errs, err)
 		return
 	}
 
-	kind, _ := getTableDefKind(&nested.Table, ctx)
-	if kind == appdef.DefKind_CDoc || kind == appdef.DefKind_ODoc || kind == appdef.DefKind_WDoc {
-		ctx.errs = append(ctx.errs, ErrNestedTableCannotBeDocument)
-		return
+	contQName := appdef.NewQName(ctx.pkg.Ast.Package, nestedTable.Name)
+	if !ctx.isExists(contQName, nestedTable.tableDefKind) {
+		ctx.pushDef(nestedTable.Name, nestedTable.tableDefKind)
+		addFieldsOf(nestedTable.Of, ctx)
+		addTableItems(nestedTable.Items, ctx)
+		ctx.popDef()
 	}
 
-	tk := getNestedTableKind(ctx.defs[0].kind)
-	if kind != appdef.DefKind_null && kind != tk {
-		ctx.errs = append(ctx.errs, ErrNestedTableIncorrectKind)
-		return
-	}
-
-	ctx.pushDef(nested.Table.Name, tk)
-	addFieldsOf(nested.Table.Of, ctx)
-	addTableItems(nested.Table.Items, ctx)
-	ctx.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(containerName, ctx.defCtx().qname, 0, maxNestedTableContainerOccurrences)
-	ctx.popDef()
+	ctx.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(containerName, contQName, 0, maxNestedTableContainerOccurrences)
 
 }
 func addTableItems(items []TableItemExpr, ctx *buildContext) {
