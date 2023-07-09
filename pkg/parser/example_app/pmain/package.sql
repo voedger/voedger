@@ -113,7 +113,8 @@ WORKSPACE MyWorkspace (
         PROJECTOR UpdateSubscriptionProfile ON COMMAND ARGUMENT SubscriptionEvent USES sys.HTTPStorage;
 
         -- Projectors triggered by CUD operations
-        PROJECTOR TablePlanThumbnailGen ON INSERT TablePlan MAKES TablePlanThumbnails;
+        -- SYNC means that projector is synchronous 
+        SYNC PROJECTOR TablePlanThumbnailGen ON INSERT TablePlan MAKES TablePlanThumbnails;
         PROJECTOR UpdateDashboard ON COMMAND IN (Orders, Orders2) MAKES DashboardView;
         PROJECTOR UpdateActivePlans ON ACTIVATE OR DEACTIVATE TablePlan MAKES ActiveTablePlansView;
         

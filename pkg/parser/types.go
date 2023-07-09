@@ -237,6 +237,7 @@ func (s *Statement) GetComments() *[]string {
 
 type ProjectorStmt struct {
 	Statement
+	Sync     bool        `parser:"@'SYNC'?"`
 	Name     string      `parser:"'PROJECTOR' @Ident"`
 	On       ProjectorOn `parser:"'ON' @@"`
 	Triggers []DefQName  `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
