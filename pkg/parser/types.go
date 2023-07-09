@@ -484,11 +484,10 @@ type ViewFieldType struct {
 	Int64   bool `parser:"| @(('sys' '.')? 'int64')"`
 	Float32 bool `parser:"@(('sys' '.')? ('float'|'float32'))"`
 	Float64 bool `parser:"| @(('sys' '.')? 'float64')"`
-	Bytes   bool `parser:"| @('sys.'? 'blob')"` // TODO: blob or byte[] ?
-	Text    bool `parser:"| @('sys.'? 'text')"` // TODO: string or text ?
+	Blob    bool `parser:"| @('sys.'? 'blob')"`
+	Bytes   bool `parser:"| @('sys.'? 'bytes')"`
+	Text    bool `parser:"| @('sys.'? 'text')"`
 	QName   bool `parser:"| @('sys.'? 'qname')"`
 	Bool    bool `parser:"| @('sys.'? 'bool')"`
 	Id      bool `parser:"| @(('sys' '.')? 'id')"`
 }
-
-// TODO TYPE + "TABLE|WORKSPACE OF" validation
