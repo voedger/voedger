@@ -25,6 +25,9 @@ var fsUntill embed.FS
 //go:embed sql_example_syspkg/*.sql
 var sfs embed.FS
 
+//go:embed sql_example_app/vrestaurant/*.sql
+var fsvRestaurant embed.FS
+
 //_go:embed example_app/expectedParsed.schema
 //var expectedParsedExampledSchemaStr string
 
@@ -562,4 +565,58 @@ func Test_ReferenceToNoTable(t *testing.T) {
 	err = BuildAppDefs(packages, def)
 
 	require.Contains(err.Error(), "Admin undefined")
+}
+
+func Test_VRestaurantBasic(t *testing.T) {
+
+	require := require.New(t)
+
+	vRestaurantPkgAST, err := ParsePackageDir("github.com/untillpro/vrestaurant", fsvRestaurant, "sql_example_app/vrestaurant")
+	require.NoError(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		vRestaurantPkgAST,
+	})
+	require.NoError(err)
+
+	builder := appdef.New()
+	err = BuildAppDefs(packages, builder)
+	require.NoError(err)
+
+	// table
+	cdoc := builder.Def(appdef.NewQName("vrestaurant", "table_plan"))
+	require.NotNil(cdoc)
+	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
+	require.Equal(appdef.DataKind_RecordID, cdoc.(appdef.IFields).Field("picture").DataKind())
+
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "restaurant_settings"))
+	require.NotNil(cdoc)
+
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "clients"))
+	require.NotNil(cdoc)
+
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "users"))
+	require.NotNil(cdoc)
+
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "departments"))
+	require.NotNil(cdoc)
+
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "articles"))
+	require.NotNil(cdoc)
+
+	// child table
+	crec := builder.Def(appdef.NewQName("vrestaurant", "table_items"))
+	require.NotNil(crec)
+	require.Equal(appdef.DefKind_CRecord, crec.Kind())
+	require.Equal(appdef.DataKind_int32, crec.(appdef.IFields).Field("tableno").DataKind())
+
+	// view
+	view := builder.View(appdef.NewQName("vrestaurant", "XZReports"))
+	require.NotNil(view)
+	require.Equal(appdef.DefKind_ViewRecord, view.Kind())
+
+	require.Equal(1, view.Value().UserFieldCount())
+	require.Equal(1, view.Key().PartKey().FieldCount())
+	require.Equal(4, view.Key().ClustCols().FieldCount())
 }
