@@ -6,6 +6,22 @@ on:
       - 'pkg/**'
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set Ignore Build BP3
+        run: |
+          if [[ ${{ github.repository }} == 'voedger/voedger' ]]; then
+            echo "IGNORE_BP3='false'" >> $GITHUB_ENV
+          else
+            echo "IGNORE_BP3='true'" >> $GITHUB_ENV
+          fi
+
+      - name: Check Ignore Build BP3
+        run: |
+            echo "IGNORE_BP3 = $IGNORE_BP3"
+
   call-workflow-ci-pkg:
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
     with: 
@@ -24,6 +40,7 @@ jobs:
       test_folder: 'cmd'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
       short_test: 'true'
+      ignore_bp3: $IGNORE_BP3
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
