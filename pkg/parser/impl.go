@@ -310,20 +310,37 @@ func analyse(c *basicContext) {
 			}
 
 			analyzeWithRefs(c, v.With)
-			analyzeNestedTables(c, v, v.tableDefKind)
+			analyzeNestedTables(c, v.Items, v.tableDefKind)
 			if v.Inherits != nil {
 				resolve(*v.Inherits, c, func(f *TableStmt) error { return nil })
 			}
 			for _, of := range v.Of {
 				resolve(of, c, func(f *TypeStmt) error { return nil })
 			}
+		case *WorkspaceStmt:
+			analyzeWorkspace(v, c)
 		}
 	})
 }
 
-func analyzeNestedTables(c *basicContext, tbl *TableStmt, rootTableKind appdef.DefKind) {
-	for i := range tbl.Items {
-		item := &tbl.Items[i]
+func analyzeWorkspace(v *WorkspaceStmt, c *basicContext) {
+	if v.Descriptor != nil {
+		for _, of := range v.Of {
+			resolve(of, c, func(f *TypeStmt) error { return nil })
+		}
+		for _, of := range v.Of {
+			resolve(of, c, func(f *WorkspaceStmt) error { return nil })
+		}
+		for _, of := range v.Descriptor.Of {
+			resolve(of, c, func(f *TypeStmt) error { return nil })
+		}
+		analyzeNestedTables(c, v.Descriptor.Items, appdef.DefKind_CDoc)
+	}
+}
+
+func analyzeNestedTables(c *basicContext, items []TableItemExpr, rootTableKind appdef.DefKind) {
+	for i := range items {
+		item := items[i]
 		if item.NestedTable != nil {
 			nestedTable := &item.NestedTable.Table
 			if nestedTable.Inherits == nil {
@@ -340,7 +357,7 @@ func analyzeNestedTables(c *basicContext, tbl *TableStmt, rootTableKind appdef.D
 					return
 				}
 			}
-			analyzeNestedTables(c, nestedTable, rootTableKind)
+			analyzeNestedTables(c, nestedTable.Items, rootTableKind)
 		}
 	}
 }
@@ -588,8 +605,26 @@ func buildTables(ctx *buildContext) error {
 		iterateStmt(schema.Ast, func(table *TableStmt) {
 			buildTable(ctx, schema, table)
 		})
+		iterateStmt(schema.Ast, func(w *WorkspaceStmt) {
+			buildWorkspaceDescriptor(ctx, schema, w)
+		})
 	}
 	return errors.Join(ctx.errs...)
+}
+
+func buildWorkspaceDescriptor(ctx *buildContext, schema *PackageSchemaAST, w *WorkspaceStmt) {
+	if w.Descriptor != nil {
+		ctx.setSchema(schema)
+		qname := appdef.NewQName(ctx.pkg.Ast.Package, w.Name)
+		if ctx.isExists(qname, appdef.DefKind_CDoc) {
+			return
+		}
+		ctx.pushDef(w.Name, appdef.DefKind_CDoc)
+		addFieldsOf(w.Descriptor.Of, ctx)
+		addTableItems(w.Descriptor.Items, ctx)
+		ctx.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
+		ctx.popDef()
+	}
 }
 
 func buildTable(ctx *buildContext, schema *PackageSchemaAST, table *TableStmt) {

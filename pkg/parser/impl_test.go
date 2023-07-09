@@ -88,6 +88,13 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(1, view.Value().UserFieldCount())
 	require.Equal(1, view.Key().PartKey().FieldCount())
 	require.Equal(4, view.Key().ClustCols().FieldCount())
+
+	// workspace descriptor
+	cdoc = builder.Def(appdef.NewQName("main", "MyWorkspace"))
+	require.NotNil(cdoc)
+	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
+	require.Equal(appdef.DataKind_string, cdoc.(appdef.IFields).Field("Name").DataKind())
+	require.Equal(appdef.DataKind_string, cdoc.(appdef.IFields).Field("Country").DataKind())
 }
 
 func Test_Refs_NestedTables(t *testing.T) {

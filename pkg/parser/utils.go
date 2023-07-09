@@ -61,7 +61,7 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 	})
 }
 
-func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt](c IStatementCollection, callback func(stmt stmtType)) {
+func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt | *WorkspaceStmt](c IStatementCollection, callback func(stmt stmtType)) {
 	c.Iterate(func(stmt interface{}) {
 		if s, ok := stmt.(stmtType); ok {
 			callback(s)
@@ -146,7 +146,7 @@ func resolveTable(fn DefQName, c *basicContext, pos *lexer.Position) (*TableStmt
 }
 
 // when not found, lookup returns (nil, nil)
-func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt](fn DefQName, c *basicContext) (stmtType, error) {
+func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt | *WorkspaceStmt](fn DefQName, c *basicContext) (stmtType, error) {
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *Co
 	return item, nil
 }
 
-func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) {
+func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt | *WorkspaceStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) {
 	var err error
 	var item stmtType
 	item, err = lookup[stmtType](fn, c)
