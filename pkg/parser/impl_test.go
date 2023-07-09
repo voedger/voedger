@@ -13,23 +13,23 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-//go:embed example_app/pmain/*.sql
+//go:embed sql_example_app/pmain/*.sql
 var fsMain embed.FS
 
-//go:embed example_app/airsbp/*.sql
+//go:embed sql_example_app/airsbp/*.sql
 var fsAir embed.FS
 
-//go:embed example_app/untill/*.sql
+//go:embed sql_example_app/untill/*.sql
 var fsUntill embed.FS
 
-//go:embed system_pkg/*.sql
+//go:embed sql_example_syspkg/*.sql
 var sfs embed.FS
 
 //_go:embed example_app/expectedParsed.schema
 //var expectedParsedExampledSchemaStr string
 
 func getSysPackageAST() *PackageSchemaAST {
-	pkgSys, err := ParsePackageDir(appdef.SysPackage, sfs, "system_pkg")
+	pkgSys, err := ParsePackageDir(appdef.SysPackage, sfs, "sql_example_syspkg")
 	if err != nil {
 		panic(err)
 	}
@@ -39,13 +39,13 @@ func getSysPackageAST() *PackageSchemaAST {
 func Test_BasicUsage(t *testing.T) {
 
 	require := require.New(t)
-	mainPkgAST, err := ParsePackageDir("github.com/untillpro/main", fsMain, "example_app/pmain")
+	mainPkgAST, err := ParsePackageDir("github.com/untillpro/main", fsMain, "sql_example_app/pmain")
 	require.NoError(err)
 
-	airPkgAST, err := ParsePackageDir("github.com/untillpro/airsbp", fsAir, "example_app/airsbp")
+	airPkgAST, err := ParsePackageDir("github.com/untillpro/airsbp", fsAir, "sql_example_app/airsbp")
 	require.NoError(err)
 
-	untillPkgAST, err := ParsePackageDir("github.com/untillpro/untill", fsUntill, "example_app/untill")
+	untillPkgAST, err := ParsePackageDir("github.com/untillpro/untill", fsUntill, "sql_example_app/untill")
 	require.NoError(err)
 
 	// := repr.String(pkgExample, repr.Indent(" "), repr.IgnorePrivate())
@@ -294,7 +294,12 @@ func Test_DuplicatesInViews(t *testing.T) {
 	`)
 	require.NoError(err)
 
-	_, err = MergeFileSchemaASTs("", []*FileSchemaAST{ast})
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{ast})
+	require.NoError(err)
+
+	_, err = MergePackageSchemas([]*PackageSchemaAST{
+		pkg,
+	})
 
 	require.EqualError(err, strings.Join([]string{
 		"file2.sql:6:4: field1 redeclared",

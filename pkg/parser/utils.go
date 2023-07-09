@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -112,7 +111,7 @@ func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 	return targetPkgSch, nil
 }
 
-func resolveTable(fn DefQName, c *basicContext, pos *lexer.Position) (*TableStmt, error) {
+func resolveTable(fn DefQName, c *basicContext) (*TableStmt, error) {
 	var item *TableStmt
 	var checkStatement func(stmt interface{})
 	checkStatement = func(stmt interface{}) {
@@ -131,7 +130,7 @@ func resolveTable(fn DefQName, c *basicContext, pos *lexer.Position) (*TableStmt
 
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
-		return nil, errorAt(err, pos)
+		return nil, err
 	}
 
 	iterate(schema.Ast, func(stmt interface{}) {
@@ -139,7 +138,7 @@ func resolveTable(fn DefQName, c *basicContext, pos *lexer.Position) (*TableStmt
 	})
 
 	if item == nil {
-		return nil, errorAt(ErrUndefined(fn.String()), pos)
+		return nil, ErrUndefined(fn.String())
 	}
 
 	return item, nil
@@ -175,23 +174,17 @@ func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *Co
 	return item, nil
 }
 
-func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt | *WorkspaceStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) {
+func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt | *WorkspaceStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) error {
 	var err error
 	var item stmtType
 	item, err = lookup[stmtType](fn, c)
 	if err != nil {
-		c.errs = append(c.errs, errorAt(err, c.pos))
-		return
+		return err
 	}
 	if item == nil {
-		c.errs = append(c.errs, errorAt(ErrUndefined(fn.String()), c.pos))
-		return
+		return ErrUndefined(fn.String())
 	}
-	err = cb(item)
-	if err != nil {
-		c.errs = append(c.errs, errorAt(err, c.pos))
-		return
-	}
+	return cb(item)
 }
 
 func maybeSysPkg(pkg string) bool {
@@ -208,23 +201,6 @@ func isPredefinedSysTable(packageName string, table *TableStmt) bool {
 			table.Name == nameCRecord || table.Name == nameWRecord || table.Name == nameORecord)
 }
 
-func getTableInheritanceChain(table *TableStmt, ctx *basicContext) (chain []DefQName) {
-	chain = make([]DefQName, 0)
-	var vf func(t *TableStmt)
-	vf = func(t *TableStmt) {
-		if t.Inherits != nil {
-			inherited := *t.Inherits
-			resolve(inherited, ctx, func(t *TableStmt) error {
-				chain = append(chain, inherited)
-				vf(t)
-				return nil
-			})
-		}
-	}
-	vf(table)
-	return chain
-}
-
 func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
 	switch rootTableKind {
 	case appdef.DefKind_CDoc, appdef.DefKind_CRecord:
@@ -236,26 +212,6 @@ func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
 	default:
 		panic(fmt.Sprintf("unexpected root table kind %d", rootTableKind))
 	}
-}
-
-func getTableDefKind(table *TableStmt, ctx *basicContext) (kind appdef.DefKind, singletone bool) {
-	chain := getTableInheritanceChain(table, ctx)
-	for _, t := range chain {
-		if isSysDef(t, nameCDOC) || isSysDef(t, nameSingleton) {
-			return appdef.DefKind_CDoc, isSysDef(t, nameSingleton)
-		} else if isSysDef(t, nameODOC) {
-			return appdef.DefKind_ODoc, false
-		} else if isSysDef(t, nameWDOC) {
-			return appdef.DefKind_WDoc, false
-		} else if isSysDef(t, nameCRecord) {
-			return appdef.DefKind_CRecord, false
-		} else if isSysDef(t, nameORecord) {
-			return appdef.DefKind_ORecord, false
-		} else if isSysDef(t, nameWRecord) {
-			return appdef.DefKind_WRecord, false
-		}
-	}
-	return appdef.DefKind_null, false
 }
 
 func isVoid(pkg string, name string) bool {
@@ -343,4 +299,13 @@ func buildQname(ctx *buildContext, pkg string, name string) appdef.QName {
 		pkg = ctx.pkg.Ast.Package
 	}
 	return appdef.NewQName(pkg, name)
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
