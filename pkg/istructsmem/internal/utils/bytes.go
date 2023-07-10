@@ -59,19 +59,124 @@ func WriteShortString(buf *bytes.Buffer, str string) {
 	SafeWriteBuf(buf, line)
 }
 
+// Returns error if buf shorter than len bytes
+func checkBufLen(buf *bytes.Buffer, len int) error {
+	if l := buf.Len(); l < len {
+		return fmt.Errorf("error read data from byte buffer, expected %d bytes, but only %d bytes is available: %w", len, l, io.ErrUnexpectedEOF)
+	}
+	return nil
+}
+
+// Reads int8 from buf
+func ReadInt8(buf *bytes.Buffer) (int8, error) {
+	i, e := buf.ReadByte()
+	if e == io.EOF {
+		e = io.ErrUnexpectedEOF
+	}
+	return int8(i), e
+}
+
+// Reads byte from buf
+func ReadByte(buf *bytes.Buffer) (byte, error) {
+	i, e := buf.ReadByte()
+	if e == io.EOF {
+		e = io.ErrUnexpectedEOF
+	}
+	return i, e
+}
+
+// Reads bool from buf
+func ReadBool(buf *bytes.Buffer) (bool, error) {
+	i, e := ReadByte(buf)
+	return i != 0, e
+}
+
+// Reads int16 from buf
+func ReadInt16(buf *bytes.Buffer) (int16, error) {
+	const size = 2
+	if err := checkBufLen(buf, size); err != nil {
+		return 0, err
+	}
+	return int16(binary.BigEndian.Uint16(buf.Next(size))), nil
+}
+
+// Reads uint16 from buf
+func ReadUInt16(buf *bytes.Buffer) (uint16, error) {
+	const size = 2
+	if err := checkBufLen(buf, size); err != nil {
+		return 0, err
+	}
+	return binary.BigEndian.Uint16(buf.Next(size)), nil
+}
+
+// Reads int32 from buf
+func ReadInt32(buf *bytes.Buffer) (int32, error) {
+	const size = 4
+	if err := checkBufLen(buf, size); err != nil {
+		return 0, err
+	}
+	return int32(binary.BigEndian.Uint32(buf.Next(size))), nil
+}
+
+// Reads uint32 from buf
+func ReadUInt32(buf *bytes.Buffer) (uint32, error) {
+	const size = 4
+	if err := checkBufLen(buf, size); err != nil {
+		return 0, err
+	}
+	return binary.BigEndian.Uint32(buf.Next(size)), nil
+}
+
+// Reads int64 from buf
+func ReadInt64(buf *bytes.Buffer) (int64, error) {
+	const size = 8
+	if err := checkBufLen(buf, size); err != nil {
+		return 0, err
+	}
+	return int64(binary.BigEndian.Uint64(buf.Next(size))), nil
+}
+
+// Reads uint64 from buf
+func ReadUInt64(buf *bytes.Buffer) (uint64, error) {
+	const size = 8
+	if err := checkBufLen(buf, size); err != nil {
+		return 0, err
+	}
+	return binary.BigEndian.Uint64(buf.Next(size)), nil
+}
+
+// Reads float32 from buf
+func ReadFloat32(buf *bytes.Buffer) (float32, error) {
+	const size = 4
+	if err := checkBufLen(buf, size); err != nil {
+		return 0, err
+	}
+	return math.Float32frombits(binary.BigEndian.Uint32(buf.Next(size))), nil
+}
+
+// Reads float64 from buf
+func ReadFloat64(buf *bytes.Buffer) (float64, error) {
+	const size = 8
+	if err := checkBufLen(buf, size); err != nil {
+		return 0, err
+	}
+	return math.Float64frombits(binary.BigEndian.Uint64(buf.Next(size))), nil
+}
+
 // Reads short (< 64K) string from a buffer
 func ReadShortString(buf *bytes.Buffer) (string, error) {
-	var strLen uint16
-	if err := binary.Read(buf, binary.BigEndian, &strLen); err != nil {
-		return "", fmt.Errorf("error read string length: %w", err)
+	const size = 2
+	if err := checkBufLen(buf, size); err != nil {
+		return "", err
 	}
+	strLen := int(binary.BigEndian.Uint16(buf.Next(size)))
 	if strLen == 0 {
 		return "", nil
 	}
-	if buf.Len() < int(strLen) {
-		return "", fmt.Errorf("error read string, expected %d bytes, but only %d bytes is available: %w", strLen, buf.Len(), io.ErrUnexpectedEOF)
+	if err := checkBufLen(buf, strLen); err != nil {
+		return "", err
 	}
-	return string(buf.Next(int(strLen))), nil
+	return string(buf.Next(strLen)), nil
 }
 
 // Expands (from left) value by write specified prefixes

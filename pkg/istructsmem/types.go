@@ -188,7 +188,7 @@ func (row *rowType) loadFromBytes(in []byte) (err error) {
 	buf := bytes.NewBuffer(in)
 
 	var codec byte
-	if err = binary.Read(buf, binary.BigEndian, &codec); err != nil {
+	if codec, err = utils.ReadByte(buf); err != nil {
 		return fmt.Errorf("error read codec version: %w", err)
 	}
 	switch codec {

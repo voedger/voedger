@@ -193,7 +193,7 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 	row.clear()
 
 	var qnameId uint16
-	if err = binary.Read(buf, binary.BigEndian, &qnameId); err != nil {
+	if qnameId, err = utils.ReadUInt16(buf); err != nil {
 		return fmt.Errorf("error read row QNameID: %w", err)
 	}
 	if err = row.setQNameID(qnames.QNameID(qnameId)); err != nil {
@@ -208,7 +208,7 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 	}
 
 	len := uint32(0)
-	if err := binary.Read(buf, binary.BigEndian, &len); err != nil {
+	if len, err = utils.ReadUInt32(buf); err != nil {
 		return fmt.Errorf("error read dynobuffer length: %w", err)
 	}
 	if buf.Len() < int(len) {
@@ -243,28 +243,28 @@ func loadRowSysFields(row *rowType, codecVer byte, buf *bytes.Buffer) (err error
 	if codecVer == codec_RawDynoBuffer {
 		sysFieldMask = defKindSysFieldsMask(row.def.Kind())
 	} else {
-		if err = binary.Read(buf, binary.BigEndian, &sysFieldMask); err != nil {
+		if sysFieldMask, err = utils.ReadUInt16(buf); err != nil {
 			return fmt.Errorf("error read system fields mask: %w", err)
 		}
 	}
 
 	if (sysFieldMask & sfm_ID) == sfm_ID {
 		var id uint64
-		if err = binary.Read(buf, binary.BigEndian, &id); err != nil {
+		if id, err = utils.ReadUInt64(buf); err != nil {
 			return fmt.Errorf("error read record ID: %w", err)
 		}
 		row.setID(istructs.RecordID(id))
 	}
 	if (sysFieldMask & sfm_ParentID) == sfm_ParentID {
 		var id uint64
-		if err = binary.Read(buf, binary.BigEndian, &id); err != nil {
+		if id, err = utils.ReadUInt64(buf); err != nil {
 			return fmt.Errorf("error read parent record ID: %w", err)
 		}
 		row.setParent(istructs.RecordID(id))
 	}
 	if (sysFieldMask & sfm_Container) == sfm_Container {
 		var id uint16
-		if err = binary.Read(buf, binary.BigEndian, &id); err != nil {
+		if id, err = utils.ReadUInt16(buf); err != nil {
 			return fmt.Errorf("error read record container ID: %w", err)
 		}
 		if err = row.setContainerID(containers.ContainerID(id)); err != nil {
@@ -273,7 +273,7 @@ func loadRowSysFields(row *rowType, codecVer byte, buf *bytes.Buffer) (err error
 	}
 	if (sysFieldMask & sfm_IsActive) == sfm_IsActive {
 		var a bool
-		if err = binary.Read(buf, binary.BigEndian, &a); err != nil {
+		if a, err = utils.ReadBool(buf); err != nil {
 			return fmt.Errorf("error read record is active: %w", err)
 		}
 		row.setActive(a)
