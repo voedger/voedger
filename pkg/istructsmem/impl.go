@@ -10,16 +10,16 @@ import (
 	"fmt"
 	"sync"
 
+	bytespool "github.com/valyala/bytebufferpool"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
-	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-
-	"github.com/voedger/voedger/pkg/istructsmem/internal/bytespool"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
 
 // appStructsProviderType implements IAppStructsProvider interface
@@ -220,21 +220,17 @@ func newEvents(app *appStructsType) appEventsType {
 
 // istructs.IEvents.GetSyncRawEventBuilder
 func (e *appEventsType) GetSyncRawEventBuilder(params istructs.SyncRawEventBuilderParams) istructs.IRawEventBuilder {
-	b := newSyncEvent(e.app.config, params)
-	return &b
+	return newSyncEventBuilder(e.app.config, params)
 }
 
 // istructs.IEvents.GetNewRawEventBuilder
 func (e *appEventsType) GetNewRawEventBuilder(params istructs.NewRawEventBuilderParams) istructs.IRawEventBuilder {
-	b := newEvent(e.app.config, params)
-	return &b
+	return newEventBuilder(e.app.config, params)
 }
 
 // istructs.IEvents.PutPlog
 func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator istructs.IDGenerator) (event istructs.IPLogEvent, err error) {
-	dbEvent := newDbEvent(e.app.config)
-
-	dbEvent.eventType.copyFrom(ev.(*eventType))
+	dbEvent := ev.(*eventType)
 
 	dbEvent.setBuildError(buildErr)
 	if dbEvent.valid() {
@@ -247,34 +243,24 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 		dbEvent.argUnlObj.maskValues()
 	}
 
-	var evData []byte
-	if evData, err = dbEvent.storeToBytes(); err == nil {
-		pKey, cCols := splitLogOffset(ev.PLogOffset())
-		pKey = utils.PrefixBytes(pKey, consts.SysView_PLog, ev.HandlingPartition()) // + partition! see #18047
-		if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
-			event = &dbEvent
-		}
+	evData := dbEvent.storeToBytes()
+	pKey, cCols := splitLogOffset(ev.PLogOffset())
+	pKey = utils.PrefixBytes(pKey, consts.SysView_PLog, ev.HandlingPartition()) // + partition! see #18047
+
+	if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
+		event = dbEvent
 	}
 
 	return event, err
 }
 
 // istructs.IEvents.PutWlog
-func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (event istructs.IWLogEvent, err error) {
-	dbEvent := newDbEvent(e.app.config)
+func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
+	evData := ev.(*eventType).storeToBytes()
+	pKey, cCols := splitLogOffset(ev.WLogOffset())
+	pKey = utils.PrefixBytes(pKey, consts.SysView_WLog, ev.Workspace())
 
-	dbEvent.copyFrom(ev.(*dbEventType))
-
-	var evData []byte
-	if evData, err = dbEvent.storeToBytes(); err == nil {
-		pKey, cCols := splitLogOffset(ev.WLogOffset())
-		pKey = utils.PrefixBytes(pKey, consts.SysView_WLog, ev.Workspace())
-		if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
-			event = &dbEvent
-		}
-	}
-
-	return event, err
+	return e.app.config.storage.Put(pKey, cCols, evData)
 }
 
 // istructs.IEvents.ReadPLog
@@ -286,12 +272,12 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 		pKey, cCol := splitLogOffset(offset)
 		pKey = utils.PrefixBytes(pKey, consts.SysView_PLog, partition) // + partition! see #18047
 		data := bytespool.Get()
-		ok, err := e.app.config.storage.Get(pKey, cCol, &data)
+		ok, err := e.app.config.storage.Get(pKey, cCol, &data.B)
 		if ok {
-			event := newDbEvent(e.app.config)
-			if err = event.loadFromBytes(data); err == nil {
-				event.pooledData = data
-				err = cb(offset, &event)
+			event := newEvent(e.app.config)
+			if err = event.loadFromBytes(data.B); err == nil {
+				event.buffer = data
+				err = cb(offset, event)
 			}
 		} else {
 			bytespool.Put(data)
@@ -304,9 +290,9 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 			err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, func(ccols, data []byte) error {
 				count++
 				ofs := calcLogOffset(pk, ccols)
-				event := newDbEvent(e.app.config)
+				event := newEvent(e.app.config)
 				if err = event.loadFromBytes(data); err == nil {
-					err = cb(ofs, &event)
+					err = cb(ofs, event)
 				}
 				return err
 			})
@@ -324,12 +310,12 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 		pKey, cCol := splitLogOffset(offset)
 		pKey = utils.PrefixBytes(pKey, consts.SysView_WLog, workspace)
 		data := bytespool.Get()
-		ok, err := e.app.config.storage.Get(pKey, cCol, &data)
+		ok, err := e.app.config.storage.Get(pKey, cCol, &data.B)
 		if ok {
-			event := newDbEvent(e.app.config)
-			if err = event.loadFromBytes(data); err == nil {
-				event.pooledData = data
-				err = cb(offset, &event)
+			event := newEvent(e.app.config)
+			if err = event.loadFromBytes(data.B); err == nil {
+				event.buffer = data
+				err = cb(offset, event)
 			}
 		} else {
 			bytespool.Put(data)
@@ -342,9 +328,9 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 			err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, func(ccols, data []byte) error {
 				count++
 				ofs := calcLogOffset(pk, ccols)
-				event := newDbEvent(e.app.config)
+				event := newEvent(e.app.config)
 				if err = event.loadFromBytes(data); err == nil {
-					err = cb(ofs, &event)
+					err = cb(ofs, event)
 				}
 				return err
 			})
@@ -467,12 +453,12 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
 // istructs.IRecords.Apply
 func (recs *appRecordsType) Apply(event istructs.IPLogEvent) (err error) {
-	return recs.Apply2(event, func(_ istructs.IRecord) {})
+	return recs.Apply2(event, func(istructs.IRecord) {})
 }
 
 // istructs.IRecords.Apply2
 func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istructs.IRecord)) (err error) {
-	ev := event.(*dbEventType)
+	ev := event.(*eventType)
 
 	if !ev.Error().ValidEvent() {
 		panic(fmt.Errorf("can not apply not valid event: %s: %w", ev.Error().ErrStr(), ErrorEventNotValid))
@@ -500,13 +486,12 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 	records := make([]*recordType, 0)
 	batch := make([]recordBatchItemType, 0)
 
-	storeRecord := func(rec *recordType) (err error) {
-		var data []byte
-		if data, err = rec.storeToBytes(); err == nil {
-			records = append(records, rec)
-			batch = append(batch, recordBatchItemType{rec.ID(), data})
-		}
-		return err
+	storeRecord := func(rec *recordType) error {
+		data := rec.storeToBytes()
+		records = append(records, rec)
+		batch = append(batch, recordBatchItemType{rec.ID(), data})
+
+		return nil
 	}
 
 	if err = ev.applyCommandRecs(existsRecord, loadRecord, storeRecord); err == nil {

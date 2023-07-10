@@ -64,7 +64,7 @@ EXTENSION ENGINE WASM (
 );
 
 WORKSPACE MyWorkspace (
-    DESCRIPTOR OF TypeWithName ( -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
+    DESCRIPTOR OF air.TypeWithName ( -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
         Country text CHECK "^[A-Za-z]{2}$",
         Description text
     );
@@ -113,7 +113,8 @@ WORKSPACE MyWorkspace (
         PROJECTOR UpdateSubscriptionProfile ON COMMAND ARGUMENT SubscriptionEvent USES sys.HTTPStorage;
 
         -- Projectors triggered by CUD operations
-        PROJECTOR TablePlanThumbnailGen ON INSERT TablePlan MAKES TablePlanThumbnails;
+        -- SYNC means that projector is synchronous 
+        SYNC PROJECTOR TablePlanThumbnailGen ON INSERT TablePlan MAKES TablePlanThumbnails;
         PROJECTOR UpdateDashboard ON COMMAND IN (Orders, Orders2) MAKES DashboardView;
         PROJECTOR UpdateActivePlans ON ACTIVATE OR DEACTIVATE TablePlan MAKES ActiveTablePlansView;
         

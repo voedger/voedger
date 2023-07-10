@@ -740,8 +740,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	v1.PutRecord("vf_record", NewNullRecord(istructs.NullRecordID))
 	require.NoError(v1.build())
 
-	v, err := v1.storeToBytes()
-	require.NoError(err)
+	v := v1.storeToBytes()
 
 	v2 := newValue(cfg, viewName)
 	err = v2.loadFromBytes(v)

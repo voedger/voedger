@@ -40,8 +40,7 @@ func Test_RecordsRead(t *testing.T) {
 		batch := make([]recordBatchItemType, 0)
 		for id := minTestRecordID; id <= maxTestRecordID; id++ {
 			rec := newTestCRecord(id)
-			data, err := rec.storeToBytes()
-			require.NoError(err)
+			data := rec.storeToBytes()
 			batch = append(batch, recordBatchItemType{id, data})
 		}
 		err := app.Records().(*appRecordsType).putRecordsBatch(test.workspace, batch)
@@ -172,8 +171,7 @@ func Test_RecordsRead(t *testing.T) {
 		require.NoError(err)
 
 		rec := newTestCRecord(testID)
-		data, err := rec.storeToBytes()
-		require.NoError(err)
+		data := rec.storeToBytes()
 		app.Records().(*appRecordsType).putRecord(test.workspace, testID, data)
 
 		recs := make([]istructs.RecordGetBatchItem, 3)

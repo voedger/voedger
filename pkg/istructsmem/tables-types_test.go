@@ -193,11 +193,10 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 	t.Run("test rec1 must be success storeToBytes() and test rec2 must success loadFromBytes(). rec1 and rec2 must be equals", func(t *testing.T) {
 		rec1 := newTestCDoc(100500)
 
-		b, err := rec1.storeToBytes()
-		require.NoError(err)
+		b := rec1.storeToBytes()
 
 		rec2 := newRecord(test.AppCfg)
-		err = rec2.loadFromBytes(b)
+		err := rec2.loadFromBytes(b)
 		require.NoError(err)
 		testTestCDoc(t, &rec2, 100500)
 
@@ -208,11 +207,10 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		rec1 := newTestCDoc(100501)
 		rec1.PutBool(appdef.SystemField_IsActive, false)
 
-		b, err := rec1.storeToBytes()
-		require.NoError(err)
+		b := rec1.storeToBytes()
 
 		rec2 := newRecord(test.AppCfg)
-		err = rec2.loadFromBytes(b)
+		err := rec2.loadFromBytes(b)
 		require.NoError(err)
 		testTestCDoc(t, &rec2, 100501)
 		require.False(rec2.AsBool(appdef.SystemField_IsActive))
@@ -282,11 +280,10 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 	t.Run("null records (with NullQName) must be success storeToBytes() and success loadFromBytes()", func(t *testing.T) {
 		rec1 := newRecord(test.AppCfg)
-		b, err := rec1.storeToBytes()
-		require.NoError(err)
+		b := rec1.storeToBytes()
 
 		rec2 := newEmptyTestCDoc()
-		err = rec2.loadFromBytes(b)
+		err := rec2.loadFromBytes(b)
 		require.NoError(err)
 
 		require.Equal(appdef.NullQName, rec2.QName())
@@ -295,11 +292,10 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 	t.Run("empty records (with «test.record» QName) must be success storeToBytes() and success loadFromBytes()", func(t *testing.T) {
 		rec1 := newEmptyTestCDoc()
-		b, err := rec1.storeToBytes()
-		require.NoError(err)
+		b := rec1.storeToBytes()
 
 		rec2 := newRecord(test.AppCfg)
-		err = rec2.loadFromBytes(b)
+		err := rec2.loadFromBytes(b)
 		require.NoError(err)
 
 		require.Equal(test.testCDoc, rec2.QName())
@@ -309,14 +305,13 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 	t.Run("test rec1 must be success storeToBytes(); rec2 loadFromBytes() from truncated bytes must fails", func(t *testing.T) {
 		rec1 := newTestCDoc(100500)
 
-		b, err := rec1.storeToBytes()
-		require.NoError(err)
+		b := rec1.storeToBytes()
 
 		len := len(b)
 		for i := 0; i < len; i++ {
 			corrupted := b[0:i]
 			rec2 := newRecord(test.AppCfg)
-			err = rec2.loadFromBytes(corrupted)
+			err := rec2.loadFromBytes(corrupted)
 			require.Error(err, fmt.Sprintf("unexpected success load record from bytes truncated at length «%d»", i))
 		}
 	})
@@ -328,8 +323,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		func(t *testing.T) {
 			rec1 := newTestCDoc(100500)
 
-			b, err := rec1.storeToBytes()
-			require.NoError(err)
+			b := rec1.storeToBytes()
 
 			len := len(b)
 			stat := make(map[string]int)
@@ -343,7 +337,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 							stat["Panics"]++
 						}
 					}()
-					if err = rec2.loadFromBytes(b); err != nil {
+					if err := rec2.loadFromBytes(b); err != nil {
 						log.Verbose("%d: error at load: %v\n", i, err)
 						stat["Errors"]++
 						return
@@ -364,8 +358,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 	t.Run("test field renaming availability", func(t *testing.T) {
 		rec1 := newTestCDoc(100500)
 
-		b, err := rec1.storeToBytes()
-		require.NoError(err)
+		b := rec1.storeToBytes()
 
 		appDef := appdef.New()
 		t.Run("must be ok to build application definition", func(t *testing.T) {
@@ -384,7 +377,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 		newConfig := newAppConfig(test.AppCfg.Name, appDef)
 
-		err = newConfig.prepare(nil, test.AppCfg.storage)
+		err := newConfig.prepare(nil, test.AppCfg.storage)
 		require.NoError(err)
 
 		rec2 := newRecord(newConfig)

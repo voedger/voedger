@@ -7,54 +7,46 @@ package istructsmem
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"io"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
-func storeEvent(ev *dbEventType, buf *bytes.Buffer) (err error) {
-	id := ev.qNameID()
-	_ = binary.Write(buf, binary.BigEndian, uint16(id))
+func storeEvent(ev *eventType, buf *bytes.Buffer) {
+	utils.SafeWriteBuf(buf, uint16(ev.qNameID()))
 
 	storeEventCreateParams(ev, buf)
 	storeEventBuildError(ev, buf)
 
 	if !ev.valid() {
-		return nil
+		return
 	}
 
-	if err := storeEventArguments(ev, buf); err != nil {
-		return err
-	}
-
-	if err := storeEventCUDs(ev, buf); err != nil {
-		return err
-	}
-
-	return nil
+	storeEventArguments(ev, buf)
+	storeEventCUDs(ev, buf)
 }
 
-func storeEventCreateParams(ev *dbEventType, buf *bytes.Buffer) {
-	_ = binary.Write(buf, binary.BigEndian, &ev.partition)
-	_ = binary.Write(buf, binary.BigEndian, &ev.pLogOffs)
-	_ = binary.Write(buf, binary.BigEndian, &ev.ws)
-	_ = binary.Write(buf, binary.BigEndian, &ev.wLogOffs)
-	_ = binary.Write(buf, binary.BigEndian, &ev.regTime)
-	_ = binary.Write(buf, binary.BigEndian, &ev.sync)
+func storeEventCreateParams(ev *eventType, buf *bytes.Buffer) {
+	utils.SafeWriteBuf(buf, ev.partition)
+	utils.SafeWriteBuf(buf, ev.pLogOffs)
+	utils.SafeWriteBuf(buf, ev.ws)
+	utils.SafeWriteBuf(buf, ev.wLogOffs)
+	utils.SafeWriteBuf(buf, ev.regTime)
+	utils.SafeWriteBuf(buf, ev.sync)
 	if ev.sync {
-		_ = binary.Write(buf, binary.BigEndian, &ev.device)
-		_ = binary.Write(buf, binary.BigEndian, &ev.syncTime)
+		utils.SafeWriteBuf(buf, ev.device)
+		utils.SafeWriteBuf(buf, ev.syncTime)
 	}
 }
 
-func storeEventBuildError(ev *dbEventType, buf *bytes.Buffer) {
+func storeEventBuildError(ev *eventType, buf *bytes.Buffer) {
 
 	valid := ev.valid()
-	_ = binary.Write(buf, binary.BigEndian, &valid)
+	utils.SafeWriteBuf(buf, valid)
 
 	if valid {
 		return
@@ -71,70 +63,50 @@ func storeEventBuildError(ev *dbEventType, buf *bytes.Buffer) {
 		bytesLen = 0 // to protect logging security data
 	}
 
-	_ = binary.Write(buf, binary.BigEndian, &bytesLen)
+	utils.SafeWriteBuf(buf, bytesLen)
 
 	if bytesLen > 0 {
-		_, _ = buf.Write(bytes)
+		utils.SafeWriteBuf(buf, bytes)
 	}
 }
 
-func storeEventArguments(ev *dbEventType, buf *bytes.Buffer) (err error) {
-
-	if err := storeElement(&ev.argObject, buf); err != nil {
-		return fmt.Errorf("can not store event command «%v» argument «%v»: %w", ev.name, ev.argObject.QName(), err)
-	}
-
-	if err := storeElement(&ev.argUnlObj, buf); err != nil {
-		return fmt.Errorf("can not store event command «%v» un-logged argument «%v»: %w", ev.name, ev.argUnlObj.QName(), err)
-	}
-
-	return nil
+func storeEventArguments(ev *eventType, buf *bytes.Buffer) {
+	storeElement(&ev.argObject, buf)
+	storeElement(&ev.argUnlObj, buf)
 }
 
-func storeEventCUDs(ev *dbEventType, buf *bytes.Buffer) (err error) {
+func storeEventCUDs(ev *eventType, buf *bytes.Buffer) {
 	count := uint16(len(ev.cud.creates))
-	_ = binary.Write(buf, binary.BigEndian, &count)
+	utils.SafeWriteBuf(buf, count)
 	for _, rec := range ev.cud.creates {
-		if err = storeRow(&rec.rowType, buf); err != nil {
-			return fmt.Errorf("error write event cud.create() record: %w", err)
-		}
+		storeRow(&rec.rowType, buf)
 	}
 
 	count = uint16(len(ev.cud.updates))
-	_ = binary.Write(buf, binary.BigEndian, &count)
+	utils.SafeWriteBuf(buf, count)
 	for _, rec := range ev.cud.updates {
-		if err = storeRow(&rec.changes.rowType, buf); err != nil {
-			return fmt.Errorf("error write event cud.update() record: %w", err)
-		}
+		storeRow(&rec.changes.rowType, buf)
 	}
-
-	return nil
 }
 
-func storeElement(el *elementType, buf *bytes.Buffer) (err error) {
+func storeElement(el *elementType, buf *bytes.Buffer) {
 
-	if err := storeRow(&el.rowType, buf); err != nil {
-		return err
-	}
+	storeRow(&el.rowType, buf)
 
 	if el.QName() == appdef.NullQName {
-		return nil
+		return
 	}
 
 	childCount := uint16(len(el.child))
-	_ = binary.Write(buf, binary.BigEndian, &childCount)
+	utils.SafeWriteBuf(buf, childCount)
 	for _, c := range el.child {
-		if err := storeElement(c, buf); err != nil {
-			return err
-		}
+		storeElement(c, buf)
 	}
-
-	return nil
 }
 
-func loadEvent(ev *dbEventType, codecVer byte, buf *bytes.Buffer) (err error) {
+func loadEvent(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) {
 	var id uint16
-	if err := binary.Read(buf, binary.BigEndian, &id); err != nil {
+	if id, err = utils.ReadUInt16(buf); err != nil {
 		return fmt.Errorf("error read event name ID: %w", err)
 	}
 	if ev.name, err = ev.appCfg.qNames.QName(qnames.QNameID(id)); err != nil {
@@ -167,30 +139,51 @@ func loadEvent(ev *dbEventType, codecVer byte, buf *bytes.Buffer) (err error) {
 	return nil
 }
 
-func loadEventCreateParams(ev *dbEventType, buf *bytes.Buffer) (err error) {
-	if err := binary.Read(buf, binary.BigEndian, &ev.partition); err != nil {
+func loadEventCreateParams(ev *eventType, buf *bytes.Buffer) (err error) {
+	if p, err := utils.ReadUInt16(buf); err == nil {
+		ev.partition = istructs.PartitionID(p)
+	} else {
 		return fmt.Errorf("error read event partition: %w", err)
 	}
-	if err := binary.Read(buf, binary.BigEndian, &ev.pLogOffs); err != nil {
+
+	if o, err := utils.ReadUInt64(buf); err == nil {
+		ev.pLogOffs = istructs.Offset(o)
+	} else {
 		return fmt.Errorf("error read event PLog offset: %w", err)
 	}
-	if err := binary.Read(buf, binary.BigEndian, &ev.ws); err != nil {
+
+	if w, err := utils.ReadUInt64(buf); err == nil {
+		ev.ws = istructs.WSID(w)
+	} else {
 		return fmt.Errorf("error read event workspace: %w", err)
 	}
-	if err := binary.Read(buf, binary.BigEndian, &ev.wLogOffs); err != nil {
+
+	if o, err := utils.ReadUInt64(buf); err == nil {
+		ev.wLogOffs = istructs.Offset(o)
+	} else {
 		return fmt.Errorf("error read event WLog offset: %w", err)
 	}
-	if err := binary.Read(buf, binary.BigEndian, &ev.regTime); err != nil {
+
+	if t, err := utils.ReadInt64(buf); err == nil {
+		ev.regTime = istructs.UnixMilli(t)
+	} else {
 		return fmt.Errorf("error read event register time: %w", err)
 	}
-	if err := binary.Read(buf, binary.BigEndian, &ev.sync); err != nil {
+
+	if ev.sync, err = utils.ReadBool(buf); err != nil {
 		return fmt.Errorf("error read event synch flag: %w", err)
 	}
+
 	if ev.sync {
-		if err := binary.Read(buf, binary.BigEndian, &ev.device); err != nil {
+		if d, err := utils.ReadUInt16(buf); err == nil {
+			ev.device = istructs.ConnectedDeviceID(d)
+		} else {
 			return fmt.Errorf("error read event device ID: %w", err)
 		}
-		if err := binary.Read(buf, binary.BigEndian, &ev.syncTime); err != nil {
+
+		if t, err := utils.ReadInt64(buf); err == nil {
+			ev.syncTime = istructs.UnixMilli(t)
+		} else {
 			return fmt.Errorf("error read event synch time: %w", err)
 		}
 	}
@@ -198,8 +191,8 @@ func loadEventCreateParams(ev *dbEventType, buf *bytes.Buffer) (err error) {
 	return nil
 }
 
-func loadEventBuildError(ev *dbEventType, buf *bytes.Buffer) (err error) {
-	if err := binary.Read(buf, binary.BigEndian, &ev.buildErr.validEvent); err != nil {
+func loadEventBuildError(ev *eventType, buf *bytes.Buffer) (err error) {
+	if ev.buildErr.validEvent, err = utils.ReadBool(buf); err != nil {
 		return fmt.Errorf("error read event validation result: %w", err)
 	}
 
@@ -220,22 +213,24 @@ func loadEventBuildError(ev *dbEventType, buf *bytes.Buffer) (err error) {
 	}
 
 	bytesLen := uint32(0)
-	if err := binary.Read(buf, binary.BigEndian, &bytesLen); err != nil {
+	if bytesLen, err = utils.ReadUInt32(buf); err != nil {
 		return fmt.Errorf("error read event source raw bytes length: %w", err)
 	}
-	ev.buildErr.bytes = make([]byte, bytesLen)
-	var len int
-	if len, err = buf.Read(ev.buildErr.bytes); err != nil {
-		return fmt.Errorf("error read event source raw bytes: %w", err)
+
+	if buf.Len() < int(bytesLen) {
+		return fmt.Errorf("error read event source raw bytes, expected %d bytes, but only %d bytes is available: %w", bytesLen, buf.Len(), io.ErrUnexpectedEOF)
 	}
-	if len < int(bytesLen) {
-		return fmt.Errorf("error read event source raw bytes, expected %d bytes, but only %d bytes is available: %w", len, buf.Len(), io.ErrUnexpectedEOF)
+
+	ev.buildErr.bytes = make([]byte, bytesLen)
+	if _, err = buf.Read(ev.buildErr.bytes); err != nil {
+		//no test: possible error (only EOF) is handled above
+		return fmt.Errorf("error read event source raw bytes: %w", err)
 	}
 
 	return nil
 }
 
-func loadEventArguments(ev *dbEventType, codecVer byte, buf *bytes.Buffer) (err error) {
+func loadEventArguments(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) {
 	if err := loadElement(&ev.argObject, codecVer, buf); err != nil {
 		return fmt.Errorf("can not load event command «%v» argument: %w", ev.name, err)
 	}
@@ -247,9 +242,9 @@ func loadEventArguments(ev *dbEventType, codecVer byte, buf *bytes.Buffer) (err 
 	return nil
 }
 
-func loadEventCUDs(ev *dbEventType, codecVer byte, buf *bytes.Buffer) (err error) {
+func loadEventCUDs(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) {
 	count := uint16(0)
-	if err := binary.Read(buf, binary.BigEndian, &count); err != nil {
+	if count, err = utils.ReadUInt16(buf); err != nil {
 		return fmt.Errorf("error read event cud.create() count: %w", err)
 	}
 	for ; count > 0; count-- {
@@ -263,7 +258,7 @@ func loadEventCUDs(ev *dbEventType, codecVer byte, buf *bytes.Buffer) (err error
 	}
 
 	count = uint16(0)
-	if err := binary.Read(buf, binary.BigEndian, &count); err != nil {
+	if count, err = utils.ReadUInt16(buf); err != nil {
 		return fmt.Errorf("error read event cud.update() count: %w", err)
 	}
 	for ; count > 0; count-- {
@@ -295,11 +290,11 @@ func loadElement(el *elementType, codecVer byte, buf *bytes.Buffer) (err error) 
 		return nil
 	}
 
-	childCount := uint16(0)
-	if err := binary.Read(buf, binary.BigEndian, &childCount); err != nil {
+	count := uint16(0)
+	if count, err = utils.ReadUInt16(buf); err != nil {
 		return err
 	}
-	for ; childCount > 0; childCount-- {
+	for ; count > 0; count-- {
 		child := newElement(el)
 		if err := loadElement(&child, codecVer, buf); err != nil {
 			return err

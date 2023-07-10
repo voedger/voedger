@@ -7,7 +7,6 @@ package istructsmem
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -71,6 +70,13 @@ func (vr *appViewRecords) Get(workspace istructs.WSID, key istructs.IKeyBuilder)
 
 	pKey, cKey := k.storeToBytes()
 	pKey = utils.PrefixBytes(pKey, k.viewID, workspace)
+
+	/*
+		bytes   len    type     desc
+		0…1      2     uint16   QNameID
+		2…3      2     uint16   WSID
+		4…       ~     []~      User fields
+	*/
 
 	data := make([]byte, 0)
 	if ok, err := vr.app.config.storage.Get(pKey, cKey, &data); !ok {
@@ -427,7 +433,7 @@ func (val *valueType) loadFromBytes(in []byte) (err error) {
 	buf := bytes.NewBuffer(in)
 
 	var codec byte
-	if err = binary.Read(buf, binary.BigEndian, &codec); err != nil {
+	if codec, err = utils.ReadByte(buf); err != nil {
 		return fmt.Errorf("error read codec version: %w", err)
 	}
 	switch codec {

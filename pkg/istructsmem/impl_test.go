@@ -164,9 +164,8 @@ func TestBasicUsage(t *testing.T) {
 	defer pLogEvent.Release()
 
 	// 6. save to WLog
-	wLogEvent, err := app.Events().PutWlog(pLogEvent)
+	err = app.Events().PutWlog(pLogEvent)
 	require.NoError(err)
-	defer wLogEvent.Release()
 
 	// 7. save CUD
 	err = app.Records().Apply(pLogEvent)
