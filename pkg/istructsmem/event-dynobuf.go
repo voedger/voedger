@@ -7,11 +7,11 @@ package istructsmem
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"io"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
@@ -106,7 +106,7 @@ func storeElement(el *elementType, buf *bytes.Buffer) {
 
 func loadEvent(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) {
 	var id uint16
-	if err := binary.Read(buf, binary.BigEndian, &id); err != nil {
+	if id, err = utils.ReadUInt16(buf); err != nil {
 		return fmt.Errorf("error read event name ID: %w", err)
 	}
 	if ev.name, err = ev.appCfg.qNames.QName(qnames.QNameID(id)); err != nil {
@@ -140,29 +140,50 @@ func loadEvent(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) {
 }
 
 func loadEventCreateParams(ev *eventType, buf *bytes.Buffer) (err error) {
-	if err := binary.Read(buf, binary.BigEndian, &ev.partition); err != nil {
+	if p, err := utils.ReadUInt16(buf); err == nil {
+		ev.partition = istructs.PartitionID(p)
+	} else {
 		return fmt.Errorf("error read event partition: %w", err)
 	}
-	if err := binary.Read(buf, binary.BigEndian, &ev.pLogOffs); err != nil {
+
+	if o, err := utils.ReadUInt64(buf); err == nil {
+		ev.pLogOffs = istructs.Offset(o)
+	} else {
 		return fmt.Errorf("error read event PLog offset: %w", err)
 	}
-	if err := binary.Read(buf, binary.BigEndian, &ev.ws); err != nil {
+
+	if w, err := utils.ReadUInt64(buf); err == nil {
+		ev.ws = istructs.WSID(w)
+	} else {
 		return fmt.Errorf("error read event workspace: %w", err)
 	}
-	if err := binary.Read(buf, binary.BigEndian, &ev.wLogOffs); err != nil {
+
+	if o, err := utils.ReadUInt64(buf); err == nil {
+		ev.wLogOffs = istructs.Offset(o)
+	} else {
 		return fmt.Errorf("error read event WLog offset: %w", err)
 	}
-	if err := binary.Read(buf, binary.BigEndian, &ev.regTime); err != nil {
+
+	if t, err := utils.ReadInt64(buf); err == nil {
+		ev.regTime = istructs.UnixMilli(t)
+	} else {
 		return fmt.Errorf("error read event register time: %w", err)
 	}
-	if err := binary.Read(buf, binary.BigEndian, &ev.sync); err != nil {
+
+	if ev.sync, err = utils.ReadBool(buf); err != nil {
 		return fmt.Errorf("error read event synch flag: %w", err)
 	}
+
 	if ev.sync {
-		if err := binary.Read(buf, binary.BigEndian, &ev.device); err != nil {
+		if d, err := utils.ReadUInt16(buf); err == nil {
+			ev.device = istructs.ConnectedDeviceID(d)
+		} else {
 			return fmt.Errorf("error read event device ID: %w", err)
 		}
-		if err := binary.Read(buf, binary.BigEndian, &ev.syncTime); err != nil {
+
+		if t, err := utils.ReadInt64(buf); err == nil {
+			ev.syncTime = istructs.UnixMilli(t)
+		} else {
 			return fmt.Errorf("error read event synch time: %w", err)
 		}
 	}
@@ -171,7 +192,7 @@ func loadEventCreateParams(ev *eventType, buf *bytes.Buffer) (err error) {
 }
 
 func loadEventBuildError(ev *eventType, buf *bytes.Buffer) (err error) {
-	if err := binary.Read(buf, binary.BigEndian, &ev.buildErr.validEvent); err != nil {
+	if ev.buildErr.validEvent, err = utils.ReadBool(buf); err != nil {
 		return fmt.Errorf("error read event validation result: %w", err)
 	}
 
@@ -192,16 +213,18 @@ func loadEventBuildError(ev *eventType, buf *bytes.Buffer) (err error) {
 	}
 
 	bytesLen := uint32(0)
-	if err := binary.Read(buf, binary.BigEndian, &bytesLen); err != nil {
+	if bytesLen, err = utils.ReadUInt32(buf); err != nil {
 		return fmt.Errorf("error read event source raw bytes length: %w", err)
 	}
-	ev.buildErr.bytes = make([]byte, bytesLen)
-	var len int
-	if len, err = buf.Read(ev.buildErr.bytes); err != nil {
-		return fmt.Errorf("error read event source raw bytes: %w", err)
+
+	if buf.Len() < int(bytesLen) {
+		return fmt.Errorf("error read event source raw bytes, expected %d bytes, but only %d bytes is available: %w", bytesLen, buf.Len(), io.ErrUnexpectedEOF)
 	}
-	if len < int(bytesLen) {
-		return fmt.Errorf("error read event source raw bytes, expected %d bytes, but only %d bytes is available: %w", len, buf.Len(), io.ErrUnexpectedEOF)
+
+	ev.buildErr.bytes = make([]byte, bytesLen)
+	if _, err = buf.Read(ev.buildErr.bytes); err != nil {
+		//no test: possible error (only EOF) is handled above
+		return fmt.Errorf("error read event source raw bytes: %w", err)
 	}
 
 	return nil
@@ -221,7 +244,7 @@ func loadEventArguments(ev *eventType, codecVer byte, buf *bytes.Buffer) (err er
 
 func loadEventCUDs(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) {
 	count := uint16(0)
-	if err := binary.Read(buf, binary.BigEndian, &count); err != nil {
+	if count, err = utils.ReadUInt16(buf); err != nil {
 		return fmt.Errorf("error read event cud.create() count: %w", err)
 	}
 	for ; count > 0; count-- {
@@ -235,7 +258,7 @@ func loadEventCUDs(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) 
 	}
 
 	count = uint16(0)
-	if err := binary.Read(buf, binary.BigEndian, &count); err != nil {
+	if count, err = utils.ReadUInt16(buf); err != nil {
 		return fmt.Errorf("error read event cud.update() count: %w", err)
 	}
 	for ; count > 0; count-- {
@@ -267,11 +290,11 @@ func loadElement(el *elementType, codecVer byte, buf *bytes.Buffer) (err error) 
 		return nil
 	}
 
-	childCount := uint16(0)
-	if err := binary.Read(buf, binary.BigEndian, &childCount); err != nil {
+	count := uint16(0)
+	if count, err = utils.ReadUInt16(buf); err != nil {
 		return err
 	}
-	for ; childCount > 0; childCount-- {
+	for ; count > 0; count-- {
 		child := newElement(el)
 		if err := loadElement(&child, codecVer, buf); err != nil {
 			return err

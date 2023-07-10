@@ -6,7 +6,6 @@ package istructsmem
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -115,8 +114,7 @@ func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 //
 // This method uses the name of the definition set by the caller (val.QName), ignoring that is read from the buffer.
 func loadViewValue(val *valueType, codecVer byte, buf *bytes.Buffer) (err error) {
-	var qnameId uint16
-	if err = binary.Read(buf, binary.BigEndian, &qnameId); err != nil {
+	if _, err = utils.ReadUInt16(buf); err != nil {
 		return fmt.Errorf("error read value QNameID: %w", err)
 	}
 	if err = loadRowSysFields(&val.rowType, codecVer, buf); err != nil {
@@ -124,7 +122,7 @@ func loadViewValue(val *valueType, codecVer byte, buf *bytes.Buffer) (err error)
 	}
 
 	len := uint32(0)
-	if err := binary.Read(buf, binary.BigEndian, &len); err != nil {
+	if len, err = utils.ReadUInt32(buf); err != nil {
 		return fmt.Errorf("error read value dynobuffer length: %w", err)
 	}
 	if buf.Len() < int(len) {
@@ -140,31 +138,31 @@ func loadFixedLenCellFromBuffer_00(row *rowType, field appdef.IField, appCfg *Ap
 	switch field.DataKind() {
 	case appdef.DataKind_int32:
 		v := int32(0)
-		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
+		if v, err = utils.ReadInt32(buf); err != nil {
 			return err
 		}
 		row.PutInt32(field.Name(), v)
 	case appdef.DataKind_int64:
 		v := int64(0)
-		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
+		if v, err = utils.ReadInt64(buf); err != nil {
 			return err
 		}
 		row.PutInt64(field.Name(), v)
 	case appdef.DataKind_float32:
 		v := float32(0)
-		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
+		if v, err = utils.ReadFloat32(buf); err != nil {
 			return err
 		}
 		row.PutFloat32(field.Name(), v)
 	case appdef.DataKind_float64:
 		v := float64(0)
-		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
+		if v, err = utils.ReadFloat64(buf); err != nil {
 			return err
 		}
 		row.PutFloat64(field.Name(), v)
 	case appdef.DataKind_QName:
 		v := uint16(0)
-		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
+		if v, err = utils.ReadUInt16(buf); err != nil {
 			return err
 		}
 		var name appdef.QName
@@ -174,13 +172,13 @@ func loadFixedLenCellFromBuffer_00(row *rowType, field appdef.IField, appCfg *Ap
 		row.PutQName(field.Name(), name)
 	case appdef.DataKind_bool:
 		v := false
-		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
+		if v, err = utils.ReadBool(buf); err != nil {
 			return err
 		}
 		row.PutBool(field.Name(), v)
 	case appdef.DataKind_RecordID:
 		v := int64(istructs.NullRecordID)
-		if err := binary.Read(buf, binary.BigEndian, &v); err != nil {
+		if v, err = utils.ReadInt64(buf); err != nil {
 			return err
 		}
 		row.PutRecordID(field.Name(), istructs.RecordID(v))
