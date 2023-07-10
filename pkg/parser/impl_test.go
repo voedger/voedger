@@ -69,6 +69,17 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
 	require.Equal(appdef.DataKind_int32, cdoc.(appdef.IFields).Field("FState").DataKind())
 
+	// container of the table
+	container := cdoc.(appdef.IContainers).Container("TableItems")
+	require.Equal("TableItems", container.Name())
+	require.Equal(appdef.NewQName("main", "TablePlanItem"), container.QName())
+	require.Equal(appdef.Occurs(0), container.MinOccurs())
+	require.Equal(appdef.Occurs(maxNestedTableContainerOccurrences), container.MaxOccurs())
+	require.Equal(appdef.DefKind_CRecord, container.Def().Kind())
+	require.Equal(2+5 /*system fields*/, container.Def().(appdef.IFields).FieldCount())
+	require.Equal(appdef.DataKind_int32, container.Def().(appdef.IFields).Field("TableNo").DataKind())
+	require.Equal(appdef.DataKind_int32, container.Def().(appdef.IFields).Field("Chairs").DataKind())
+
 	// child table
 	crec := builder.Def(appdef.NewQName("main", "TablePlanItem"))
 	require.NotNil(crec)
@@ -104,13 +115,13 @@ func Test_Refs_NestedTables(t *testing.T) {
 	fs, err := ParseFile("file1.sql", `SCHEMA untill;
 	TABLE table1 INHERITS CDoc (
 		items TABLE inner1 (
-			table1 ref, 
+			table1 ref,
 			ref1 ref(table3),
 			urg_number int32
 		)
 	);
 	TABLE table2 INHERITS CRecord (
-	);	
+	);
 	TABLE table3 INHERITS CDoc (
 		items table2
 	);
@@ -194,7 +205,7 @@ func Test_DupFieldsInTables(t *testing.T) {
 		someField int,		-- duplicated in the second OF
 		Kind int,			-- duplicated in the first OF (2nd level)
 		Name int,			-- duplicated in the inherited table
-		ID text				
+		ID text
 	)
 	`)
 	require.NoError(err)
@@ -221,14 +232,14 @@ func Test_DupFieldsInTables(t *testing.T) {
 func Test_Expressions(t *testing.T) {
 	require := require.New(t)
 
-	_, err := ParseFile("file1.sql", `SCHEMA test; 
+	_, err := ParseFile("file1.sql", `SCHEMA test;
 	TABLE MyTable(
 		Int1 text DEFAULT 1 CHECK(Int1 > Int2),
 		Int1 int DEFAULT 1 CHECK(Text != "asd"),
 		Int1 int DEFAULT 1 CHECK(Int2 > -5),
 		Int1 int DEFAULT 1 CHECK(TextField > "asd" AND (SomeFloat/3.2)*4 != 5.003),
 		Int1 int DEFAULT 1 CHECK(SomeFunc("a", TextField) AND BoolField=FALSE),
-		
+
 		CHECK(MyRowValidator(this))
 	)
 	`)
@@ -239,17 +250,17 @@ func Test_Expressions(t *testing.T) {
 func Test_Duplicates(t *testing.T) {
 	require := require.New(t)
 
-	ast1, err := ParseFile("file1.sql", `SCHEMA test; 
+	ast1, err := ParseFile("file1.sql", `SCHEMA test;
 	EXTENSION ENGINE BUILTIN (
 		FUNCTION MyTableValidator() RETURNS void;
-		FUNCTION MyTableValidator(TableRow) RETURNS string;	
+		FUNCTION MyTableValidator(TableRow) RETURNS string;
 		FUNCTION MyFunc2() RETURNS void;
 	);
 	TABLE Rec1 INHERITS CRecord();
 	`)
 	require.NoError(err)
 
-	ast2, err := ParseFile("file2.sql", `SCHEMA test; 
+	ast2, err := ParseFile("file2.sql", `SCHEMA test;
 	WORKSPACE ChildWorkspace (
 		TAG MyFunc2; -- redeclared
 		EXTENSION ENGINE BUILTIN (
@@ -281,14 +292,14 @@ func Test_Duplicates(t *testing.T) {
 func Test_DuplicatesInViews(t *testing.T) {
 	require := require.New(t)
 
-	ast, err := ParseFile("file2.sql", `SCHEMA test; 
+	ast, err := ParseFile("file2.sql", `SCHEMA test;
 	WORKSPACE Workspace (
 		VIEW test(
 			field1 int,
 			field2 int,
 			field1 text,
 			PRIMARY KEY(field1),
-			PRIMARY KEY(field2)			
+			PRIMARY KEY(field2)
 		) AS RESULT OF Proj1;
 	)
 	`)
@@ -310,7 +321,7 @@ func Test_DuplicatesInViews(t *testing.T) {
 func Test_Comments(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	fs, err := ParseFile("example.sql", `SCHEMA test;
 	EXTENSION ENGINE BUILTIN (
 		-- My function
 		-- line 2
@@ -344,7 +355,7 @@ func Test_UnexpectedSchema(t *testing.T) {
 func Test_Undefined(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	fs, err := ParseFile("example.sql", `SCHEMA test;
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
 			COMMAND Orders() WITH Tags=[UndefinedTag];
@@ -422,7 +433,7 @@ func Test_Imports(t *testing.T) {
 func Test_AbstractWorkspace(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	fs, err := ParseFile("example.sql", `SCHEMA test;
 	WORKSPACE ws1 ();
 	ABSTRACT WORKSPACE ws2();
 	ABSTRACT WORKSPACE ws3();
@@ -445,7 +456,7 @@ func Test_AbstractWorkspace(t *testing.T) {
 func Test_UniqueFields(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	fs, err := ParseFile("example.sql", `SCHEMA test;
 	TABLE MyTable INHERITS CDoc (
 		Int1 int32,
 		Int2 int32 NOT NULL,
@@ -483,7 +494,7 @@ func Test_UniqueFields(t *testing.T) {
 func Test_NestedTables(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	fs, err := ParseFile("example.sql", `SCHEMA test;
 	TABLE NestedTable INHERITS CRecord (
 		ItemName text,
 		DeepNested TABLE DeepNestedTable (
@@ -514,7 +525,7 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 	t.Run("Should return error because CDoc references to ODoc", func(t *testing.T) {
 		require := require.New(t)
 
-		fs, err := ParseFile("example.sql", `SCHEMA test; 
+		fs, err := ParseFile("example.sql", `SCHEMA test;
 		TABLE OTable INHERITS ODoc ();
 		TABLE CTable INHERITS CDoc (
 			OTableRef ref(OTable)
@@ -541,7 +552,7 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 func Test_ReferenceToNoTable(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	fs, err := ParseFile("example.sql", `SCHEMA test;
 	ROLE Admin;
 	TABLE CTable INHERITS CDoc (
 		RefField ref(Admin)
