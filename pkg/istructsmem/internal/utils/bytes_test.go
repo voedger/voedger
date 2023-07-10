@@ -7,6 +7,7 @@ package utils
 
 import (
 	"bytes"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -119,15 +120,140 @@ func TestReadWriteShortString(t *testing.T) {
 		b := bytes.NewBuffer(nil)
 		_, err := ReadShortString(b)
 
-		require.ErrorContains(err, "length")
+		require.ErrorIs(err, io.ErrUnexpectedEOF)
 	})
 
 	t.Run("must be error if not enough chars to read", func(t *testing.T) {
 		b := bytes.NewBuffer([]byte{0, 3, 65, 65})
 		_, err := ReadShortString(b)
 
+		require.ErrorIs(err, io.ErrUnexpectedEOF)
 		require.ErrorContains(err, "expected 3 bytes, but only 2")
 	})
+}
+
+func TestReadXXX(t *testing.T) {
+	type s struct {
+		int8
+		byte
+		bool
+		int16
+		uint16
+		int32
+		uint32
+		int64
+		uint64
+		float32
+		float64
+		string
+	}
+	s1 := s{
+		int8:    -1,
+		byte:    1,
+		bool:    true,
+		int16:   -2222,
+		uint16:  3333,
+		int32:   -444444,
+		uint32:  555555,
+		int64:   -66666666666,
+		uint64:  77777777777,
+		float32: -8.888e8,
+		float64: 9.9999e99,
+		string:  "test 🧪 test",
+	}
+
+	buf := new(bytes.Buffer)
+	SafeWriteBuf(buf, s1.int8)
+	SafeWriteBuf(buf, s1.byte)
+	SafeWriteBuf(buf, s1.bool)
+	SafeWriteBuf(buf, s1.int16)
+	SafeWriteBuf(buf, s1.uint16)
+	SafeWriteBuf(buf, s1.int32)
+	SafeWriteBuf(buf, s1.uint32)
+	SafeWriteBuf(buf, s1.int64)
+	SafeWriteBuf(buf, s1.uint64)
+	SafeWriteBuf(buf, s1.float32)
+	SafeWriteBuf(buf, s1.float64)
+	WriteShortString(buf, s1.string)
+
+	data := buf.Bytes()
+
+	t.Run("Read×××", func(t *testing.T) {
+		require := require.New(t)
+
+		s2 := s{}
+		buf := bytes.NewBuffer(data)
+
+		var e error
+
+		s2.int8, e = ReadInt8(buf)
+		require.NoError(e)
+		s2.byte, e = ReadByte(buf)
+		require.NoError(e)
+		s2.bool, e = ReadBool(buf)
+		require.NoError(e)
+		s2.int16, e = ReadInt16(buf)
+		require.NoError(e)
+		s2.uint16, e = ReadUInt16(buf)
+		require.NoError(e)
+		s2.int32, e = ReadInt32(buf)
+		require.NoError(e)
+		s2.uint32, e = ReadUInt32(buf)
+		require.NoError(e)
+		s2.int64, e = ReadInt64(buf)
+		require.NoError(e)
+		s2.uint64, e = ReadUInt64(buf)
+		require.NoError(e)
+		s2.float32, e = ReadFloat32(buf)
+		require.NoError(e)
+		s2.float64, e = ReadFloat64(buf)
+		require.NoError(e)
+		s2.string, e = ReadShortString(buf)
+		require.NoError(e)
+
+		require.EqualValues(s1, s2)
+	})
+}
+
+func TestReadXXXerrors(t *testing.T) {
+	var e error
+	require := require.New(t)
+
+	b := bytes.NewBuffer([]byte{0})
+	_ = b.Next(1)
+
+	_, e = ReadInt8(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadByte(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadBool(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadInt16(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadUInt16(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadInt32(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadUInt32(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadInt64(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadUInt64(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadFloat32(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadFloat64(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
 }
 
 func TestCopyBytes(t *testing.T) {
