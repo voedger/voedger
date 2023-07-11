@@ -254,11 +254,10 @@ func checkWSActive(_ context.Context, work interface{}) (err error) {
 			return nil
 		}
 	}
-	wsDesc := work.(*cmdWorkpiece).wsDesc
-	if wsDesc.QName() == appdef.NullQName {
+	if cmd.wsDesc.QName() == appdef.NullQName {
 		return nil
 	}
-	if wsDesc.AsInt32(authnz.Field_Status) == int32(authnz.WorkspaceStatus_Active) {
+	if cmd.wsDesc.AsInt32(authnz.Field_Status) == int32(authnz.WorkspaceStatus_Active) {
 		return nil
 	}
 	funcQName := cmd.cmdMes.Resource().(istructs.ICommandFunction).QName()
