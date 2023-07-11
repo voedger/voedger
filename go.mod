@@ -20,6 +20,7 @@ require (
 	github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195
 	github.com/untillpro/goutils v0.0.0-20230413153406-ba6af4dbd062
 	github.com/untillpro/ibusmem v0.0.0-20221105120342-e51c7ee7020c
+	github.com/valyala/bytebufferpool v1.0.0
 	github.com/voedger/wazero v0.0.0-20230501104804-47700bcd4177
 	github.com/wneessen/go-mail v0.3.9
 	go.etcd.io/bbolt v1.3.7
@@ -53,7 +54,6 @@ require (
 	github.com/untillpro/gochips v1.12.1-0.20210610114844-885fd59e2d55 // indirect
 	github.com/untillpro/godif v0.18.0 // indirect
 	github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c // indirect
-	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
