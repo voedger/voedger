@@ -21,6 +21,12 @@ TYPE Payment (
     tips float32 
 );
 
+TYPE TypeNameNumber (
+    Name text,
+    Number int
+);  
+    
+
 TYPE PaymentItems(
     payment_type int64,
     payment_name text,
@@ -45,15 +51,16 @@ COMMENT PaymentTypeComment "Payment type defines parameters of Payment method";
 COMMENT TransactionComment "Transaction defines properties of ordered table";
 COMMENT OrderComment "Order defines act of ordering";
 COMMENT BillComment "Bill defines act of payment";
+COMMENT ChefOrderQueueComment "Queue of orders on cook screen";
 
-
--- need to added in future
--- -ums - unity of measure
--- -ingredients
--- -recipes
--- -suppliers
--- -stock_orders
--- -stock_order_items
+--      need to add in future
+--      Tables:
+--          ums  - unity of measure
+--          ingredients
+--          recipes
+--          suppliers
+--          stock_orders
+--          stock_order_items
 
 -- WDOC data schemes
 
@@ -75,14 +82,13 @@ TABLE restaurant_settings INHERITS Singleton(
 -- TABLE boEntity : is an Abstract base data struct for many CDOC tables
 --   name   : Entity name 
 --   number : Entity number
-TABLE boEntity INHERITS CDoc(
-	name text,
-	number text
+TABLE boEntity INHERITS CDoc OF TypeNameNumber(
 ) WITH Tags=[BackofficeTag];
 
 -- TABLE price_levels: describes Price level entity. 
 -- Restaurant can use different price levels for f.e. outside, inside and take away servives. 
 TABLE price_levels INHERITS boEntity(
+    
 );
 
 -- TABLE person : is an Abstract data struct for Waiters, Clients, Adminitsrators, Manager
@@ -191,10 +197,8 @@ TABLE payment_types INHERITS boEntity(
 --   close_datetime     : Time of final payment and closing table transaction
 --   id_user            : Ref on User, who made very first order on table
 --   id_client          : Ref on Client, paying the bill
-TABLE transactions INHERITS WDoc(
+TABLE transactions INHERITS WDoc OF TypeNameNumber(
     tableno int, 
-    name text,
-    number int,
     open_datetime int64,
     close_datetime int64,
     id_user ref(users) NOT NULL, 
@@ -248,13 +252,6 @@ TABLE bills INHERITS ODoc(
     )
 ) WITH Tags=[PosTag], Comment=BillComment;
 
--- TABLE table_status   : defines status of table(free/occupied)
---  tableno             : Table number
---  status   - state of table(free/occupied)
-TABLE table_status INHERITS ODoc(
-    tableno int,
-    status int
-);
 
 -- TABLE ChefOrderQueue : defines set of Bill in Cook screen
 --  sequence            : sertial number of transactuon in list 
@@ -264,7 +261,7 @@ TABLE ChefOrderQueue INHERITS ODoc(
     id_user ref(users) NOT NULL, 
     sequence int,
     status int
-);
+) WITH Tags=[PosTag], Comment=ChefOrderQueueComment;
 
 WORKSPACE Restaurant (
     EXTENSION ENGINE BUILTIN (
@@ -275,6 +272,15 @@ WORKSPACE Restaurant (
         PROJECTOR UpdateSales ON COMMAND IN (order, pay) MAKES SalesView;
     );
 
+    -- VIEW TableStatus     : keeps actual status of table(free/occupied)
+    --  tableno             : Table number
+    --  status   - state of table(free/occupied)
+    TABLE table_status INHERITS ODoc(
+        tableno int,
+        status int
+    );
+
+    -- VIEW XZReports   : keeps printed XZ reports 
     VIEW XZReports(
         Year int32,
         Month int32, 
