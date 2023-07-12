@@ -523,6 +523,8 @@ func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.Actual
 	}
 }
 
+// forks appPartition(just async actualizers for now) by cmd processors amount (or by partitions amount) per one app
+// [partitionAmount]appPartition(asyncActualizers)
 func provideAppServiceFactory(apf AppPartitionFactory, cpCount coreutils.CommandProcessorsCount) AppServiceFactory {
 	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories) pipeline.ISyncOperator {
 		forks := make([]pipeline.ForkOperatorOptionFunc, cpCount)
@@ -533,6 +535,8 @@ func provideAppServiceFactory(apf AppPartitionFactory, cpCount coreutils.Command
 	}
 }
 
+// forks appServices per apps
+// [appsAmount]appServices
 func provideOperatorAppServices(apf AppServiceFactory, vvmApps VVMApps, asp istructs.IAppStructsProvider) OperatorAppServicesFactory {
 	return func(vvmCtx context.Context) pipeline.ISyncOperator {
 		var branches []pipeline.ForkOperatorOptionFunc
