@@ -7,6 +7,7 @@ package coreutils
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -241,6 +242,7 @@ func req(url string, body string, client *http.Client, opts *reqOpts) (*http.Res
 	if err != nil {
 		return nil, fmt.Errorf("request do() failed: %w", err)
 	}
+	resp.Close = true
 	return resp, nil
 }
 
@@ -294,7 +296,13 @@ func Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, err
 		netURL.Path = opts.relativeURL
 		urlStr = netURL.String()
 	}
-	client := &http.Client{}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+		DisableKeepAlives: true,
+	}
+	client := &http.Client{Transport: tr}
 	var resp *http.Response
 	var err error
 	deadline := time.UnixMilli(opts.timeoutMs)
@@ -342,11 +350,10 @@ func Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, err
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 	httpResponse.Body = respBody
-	var statusErr error
-	if !isCodeExpected {
-		statusErr = fmt.Errorf("%w: %d, %s", ErrUnexpectedStatusCode, resp.StatusCode, respBody)
+	if isCodeExpected {
+		return httpResponse, nil
 	}
-	return httpResponse, statusErr
+	return httpResponse, fmt.Errorf("%w: %d, %s", ErrUnexpectedStatusCode, resp.StatusCode, respBody)
 }
 
 func FederationFunc(federationUrl *url.URL, relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
