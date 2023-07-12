@@ -106,20 +106,20 @@ WORKSPACE MyWorkspace (
         -- TARGET - lists all QNames for which Intets are generated (QName of Entity or Storage)
         -- USE - lists all QNames for which Get/Read operations are done (QName of Entity or Storage). 
         --      (no need to specify in USES when already listed in TARGET)
-        PROJECTOR CountOrders ON COMMAND Orders MAKES air.OrdersCountView;
+        PROJECTOR CountOrders ON COMMAND Orders INTENTS View(air.OrdersCountView);
         
         -- Projector triggered by command argument SubscriptionProfile which is a Storage
         -- Projector uses sys.HTTPStorage
-        PROJECTOR UpdateSubscriptionProfile ON COMMAND ARGUMENT SubscriptionEvent USES sys.HTTPStorage;
+        PROJECTOR UpdateSubscriptionProfile ON COMMAND ARGUMENT SubscriptionEvent STATE sys.Http;
 
         -- Projectors triggered by CUD operations
         -- SYNC means that projector is synchronous 
-        SYNC PROJECTOR TablePlanThumbnailGen ON INSERT TablePlan MAKES TablePlanThumbnails;
-        PROJECTOR UpdateDashboard ON COMMAND IN (Orders, Orders2) MAKES DashboardView;
-        PROJECTOR UpdateActivePlans ON ACTIVATE OR DEACTIVATE TablePlan MAKES ActiveTablePlansView;
+        SYNC PROJECTOR TablePlanThumbnailGen ON INSERT TablePlan INTENTS View(TablePlanThumbnails);
+        PROJECTOR UpdateDashboard ON COMMAND IN (Orders, Orders2) INTENTS View(DashboardView);
+        PROJECTOR UpdateActivePlans ON ACTIVATE OR DEACTIVATE TablePlan INTENTS View(ActiveTablePlansView);
         
         -- Some projector which sends E-mails and performs HTTP queries
-        PROJECTOR NotifyOnChanges ON INSERT OR UPDATE IN (TablePlan, WsTable) USES sys.HTTPStorage MAKES sys.SendMailStorage;
+        PROJECTOR NotifyOnChanges ON INSERT OR UPDATE IN (TablePlan, WsTable) STATE Http INTENTS SendMail;
 
         -- Commands can only be declared in workspaces
         -- Command can have optional argument and/or unlogged argument
