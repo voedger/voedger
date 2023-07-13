@@ -103,9 +103,9 @@ WORKSPACE MyWorkspace (
 
         -- Projector can only be declared in workspace.
         -- A builtin function OrdersCountProjector must exist in package resources.
-        -- TARGET - lists all QNames for which Intets are generated (QName of Entity or Storage)
-        -- USE - lists all QNames for which Get/Read operations are done (QName of Entity or Storage). 
-        --      (no need to specify in USES when already listed in TARGET)
+        -- INTENTS - lists all storages (and enities, if required by storage), projector generates intents for
+        -- STATE - lists all storages (and enities, if required by storage), projector reads state from
+        --      (no need to specify in STATE when already listed in INTENTS)
         PROJECTOR CountOrders 
             ON COMMAND Orders 
             INTENTS View(air.OrdersCountView);
@@ -114,7 +114,7 @@ WORKSPACE MyWorkspace (
         -- Projector uses sys.HTTPStorage
         PROJECTOR UpdateSubscriptionProfile 
             ON COMMAND ARGUMENT SubscriptionEvent 
-            STATE sys.Http;
+            STATE sys.Http AND AppSecrets;
 
         -- Projectors triggered by CUD operations
         -- SYNC means that projector is synchronous 
@@ -133,8 +133,8 @@ WORKSPACE MyWorkspace (
         -- Some projector which sends E-mails and performs HTTP queries
         PROJECTOR NotifyOnChanges 
             ON INSERT OR UPDATE IN (TablePlan, WsTable) 
-            STATE Http 
-            INTENTS SendMail, View(air.NotificationsHistory);
+            STATE Http AND AppSecrets
+            INTENTS SendMail AND View(air.NotificationsHistory);
 
         -- Commands can only be declared in workspaces
         -- Command can have optional argument and/or unlogged argument
