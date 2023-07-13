@@ -337,11 +337,11 @@ type StorageStmt struct {
 }
 
 type StorageOp struct {
-	Get      bool           `parser:" ( @'GET'"`
-	GetBatch bool           `parser:" | @'GETBATCH'"`
-	Read     bool           `parser:" | @'READ'"`
-	Insert   bool           `parser:" | @'INSERT'"`
-	Update   bool           `parser:" | @'UPDATE')"`
+	Get      bool           `parser:"( (@'GET'"`
+	GetBatch bool           `parser:"   @'BATCH')"`
+	Read     bool           `parser:"| @'READ'"`
+	Insert   bool           `parser:"| @'INSERT'"`
+	Update   bool           `parser:"| @'UPDATE')"`
 	Scope    []StorageScope `parser:"('SCOPE' @@ ('AND' @@)*)?"`
 }
 
