@@ -337,9 +337,10 @@ type GrantStmt struct {
 
 type StorageStmt struct {
 	Statement
-	Name           string      `parser:"'STORAGE' @Ident"`
-	Ops            []StorageOp `parser:"'(' @@ (',' @@)* ')'"`
-	RequiresEntity bool        `parser:"@('REQUIRES' 'ENTITY')?"`
+	Name                 string      `parser:"'STORAGE' @Ident"`
+	Ops                  []StorageOp `parser:"'(' @@ (',' @@)* ')'"`
+	RequiresRecordEntity bool        `parser:"@('REQUIRES' 'RECORD' 'ENTITY')?"`
+	RequiresViewEntity   bool        `parser:"@('REQUIRES' 'VIEW' 'ENTITY')?"`
 }
 
 func (s StorageStmt) GetName() string { return s.Name }
@@ -498,7 +499,7 @@ type ViewItemExpr struct {
 
 type PrimaryKeyExpr struct {
 	PartitionKeyFields      []string `parser:"('(' @Ident (',' @Ident)* ')')?"`
-	ClusteringColumnsFields []string `parser:"','? @Ident (',' @Ident)*"`
+	ClusteringColumnsFields []string `parser:"(','? @Ident (',' @Ident)*)?"`
 }
 
 func (s ViewStmt) GetName() string { return s.Name }

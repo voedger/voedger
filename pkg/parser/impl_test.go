@@ -360,7 +360,7 @@ func Test_Undefined(t *testing.T) {
 		EXTENSION ENGINE WASM (
 			COMMAND Orders() WITH Tags=(UndefinedTag);
 			QUERY Query1 RETURNS void WITH Rate=UndefinedRate, Comment=xyz.UndefinedComment;
-			PROJECTOR ImProjector ON COMMAND xyz.CreateUPProfile STATE(sys.HTTPStorage);
+			PROJECTOR ImProjector ON COMMAND xyz.CreateUPProfile;
 			COMMAND CmdFakeReturn() RETURNS text;
 			COMMAND CmdNoReturn() RETURNS void;
 			COMMAND CmdFakeArg(text);
@@ -399,7 +399,7 @@ func Test_Imports(t *testing.T) {
     		QUERY Query1 RETURNS void WITH Comment=pkg2.SomeComment;
     		QUERY Query2 RETURNS void WITH Comment=air.SomeComment;
     		QUERY Query3 RETURNS void WITH Comment=air.SomeComment2; -- air.SomeComment2 undefined
-    		PROJECTOR ImProjector ON COMMAND Air.CreateUPProfil STATE(sys.HTTPStorage); -- Air undefined
+    		PROJECTOR ImProjector ON COMMAND Air.CreateUPProfil; -- Air undefined
 		)
 	)
 	`)
