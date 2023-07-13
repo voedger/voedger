@@ -105,6 +105,7 @@ type WorkspaceStatement struct {
 
 type RootExtEngineStatement struct {
 	Function *FunctionStmt `parser:"@@"`
+	Storage  *StorageStmt  `parser:"| @@"`
 	stmt     interface{}
 }
 
@@ -235,15 +236,20 @@ func (s *Statement) GetComments() *[]string {
 	return &s.Comments
 }
 
+type StorageKey struct {
+	Storage DefQName  `parser:"@@"`
+	Entity  *DefQName `parser:"('(' @@ ')')?"`
+}
+
 type ProjectorStmt struct {
 	Statement
-	Sync     bool        `parser:"@'SYNC'?"`
-	Name     string      `parser:"'PROJECTOR' @Ident"`
-	On       ProjectorOn `parser:"'ON' @@"`
-	Triggers []DefQName  `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
-	Use      []DefQName  `parser:"('STATE' @@ ('AND' @@)*)?"`
-	Targets  []DefQName  `parser:"('INTENTS' @@ ('AND' @@)*)?"`
-	Engine   EngineType  // Initialized with 1st pass
+	Sync     bool         `parser:"@'SYNC'?"`
+	Name     string       `parser:"'PROJECTOR' @Ident"`
+	On       ProjectorOn  `parser:"'ON' @@"`
+	Triggers []DefQName   `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
+	State    []StorageKey `parser:"('STATE' @@ ('AND' @@)*)?"`
+	Intents  []StorageKey `parser:"('INTENTS' @@ ('AND' @@)*)?"`
+	Engine   EngineType   // Initialized with 1st pass
 }
 
 func (s *ProjectorStmt) GetName() string            { return s.Name }
@@ -333,12 +339,12 @@ type StorageStmt struct {
 	Statement
 	Name           string      `parser:"'STORAGE' @Ident"`
 	Ops            []StorageOp `parser:"'(' @@ (',' @@)* ')'"`
-	RequiresEntity bool        `parser:"@('REQUIRES' 'ENTITY')"`
+	RequiresEntity bool        `parser:"@('REQUIRES' 'ENTITY')?"`
 }
 
 type StorageOp struct {
 	Get      bool           `parser:"( (@'GET'"`
-	GetBatch bool           `parser:"   @'BATCH')"`
+	GetBatch bool           `parser:"   @'BATCH'?)"`
 	Read     bool           `parser:"| @'READ'"`
 	Insert   bool           `parser:"| @'INSERT'"`
 	Update   bool           `parser:"| @'UPDATE')"`

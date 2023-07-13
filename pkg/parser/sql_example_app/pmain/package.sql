@@ -103,8 +103,9 @@ WORKSPACE MyWorkspace (
 
         -- Projector can only be declared in workspace.
         -- A builtin function OrdersCountProjector must exist in package resources.
-        -- INTENTS - lists all storages (and enities, if required by storage), projector generates intents for
-        -- STATE - lists all storages (and enities, if required by storage), projector reads state from
+        -- INTENTS - lists all storage keys, projector generates intents for
+        -- STATE - lists all storage keys, projector reads state from
+        --      (key consist of Storage Qname, and Entity name, when required by storage)
         --      (no need to specify in STATE when already listed in INTENTS)
         PROJECTOR CountOrders 
             ON COMMAND Orders 
