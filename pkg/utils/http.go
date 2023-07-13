@@ -300,7 +300,10 @@ func Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, err
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		dialer := net.Dialer{}
 		conn, err := dialer.DialContext(ctx, network, addr)
-		conn.(*net.TCPConn).SetLinger(0)
+		if err != nil {
+			return nil, err
+		}
+		err = conn.(*net.TCPConn).SetLinger(0)
 		return conn, err
 	}
 	client := &http.Client{Transport: tr}
