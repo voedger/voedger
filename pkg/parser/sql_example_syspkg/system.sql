@@ -10,7 +10,7 @@ TABLE ORecord();
 
 EXTENSION ENGINE BUILTIN (
 
-    STORAGE Document( 
+    STORAGE Records( 
         GET BATCH,
         INSERT SCOPE COMMANDS,
         UPDATE SCOPE COMMANDS
