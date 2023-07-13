@@ -238,7 +238,7 @@ func (s *Statement) GetComments() *[]string {
 
 type StorageKey struct {
 	Storage DefQName  `parser:"@@"`
-	Entity  *DefQName `parser:"('(' @@ ')')?"`
+	Entity  *DefQName `parser:"( @@ )?"`
 }
 
 type ProjectorStmt struct {
@@ -247,8 +247,8 @@ type ProjectorStmt struct {
 	Name     string       `parser:"'PROJECTOR' @Ident"`
 	On       ProjectorOn  `parser:"'ON' @@"`
 	Triggers []DefQName   `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
-	State    []StorageKey `parser:"('STATE' @@ ('AND' @@)*)?"`
-	Intents  []StorageKey `parser:"('INTENTS' @@ ('AND' @@)*)?"`
+	State    []StorageKey `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Intents  []StorageKey `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
 	Engine   EngineType   // Initialized with 1st pass
 }
 
@@ -345,12 +345,12 @@ type StorageStmt struct {
 func (s StorageStmt) GetName() string { return s.Name }
 
 type StorageOp struct {
-	Get      bool           `parser:"( (@'GET'"`
-	GetBatch bool           `parser:"   @'BATCH'?)"`
+	Get      bool           `parser:"( @'GET'"`
+	GetBatch bool           `parser:"| @'GETBATCH'"`
 	Read     bool           `parser:"| @'READ'"`
 	Insert   bool           `parser:"| @'INSERT'"`
 	Update   bool           `parser:"| @'UPDATE')"`
-	Scope    []StorageScope `parser:"('SCOPE' @@ ('AND' @@)*)?"`
+	Scope    []StorageScope `parser:"'SCOPE' '(' @@ (',' @@)* ')'"`
 }
 
 type StorageScope struct {

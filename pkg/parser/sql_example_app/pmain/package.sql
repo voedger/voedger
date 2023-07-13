@@ -109,33 +109,33 @@ WORKSPACE MyWorkspace (
         --      (no need to specify in STATE when already listed in INTENTS)
         PROJECTOR CountOrders 
             ON COMMAND Orders 
-            INTENTS View(air.OrdersCountView);
+            INTENTS(View air.OrdersCountView);
         
         -- Projector triggered by command argument SubscriptionProfile which is a Storage
         -- Projector uses sys.HTTPStorage
         PROJECTOR UpdateSubscriptionProfile 
             ON COMMAND ARGUMENT SubscriptionEvent 
-            STATE sys.Http AND AppSecrets;
+            STATE(sys.Http, AppSecrets);
 
         -- Projectors triggered by CUD operations
         -- SYNC means that projector is synchronous 
         SYNC PROJECTOR TablePlanThumbnailGen 
             ON INSERT TablePlan 
-            INTENTS View(TablePlanThumbnails);
+            INTENTS(View TablePlanThumbnails);
 
         PROJECTOR UpdateDashboard 
             ON COMMAND IN (Orders, Orders2) 
-            INTENTS View(DashboardView);
+            INTENTS(View DashboardView);
 
         PROJECTOR UpdateActivePlans 
             ON ACTIVATE OR DEACTIVATE TablePlan 
-            INTENTS View(ActiveTablePlansView);
+            INTENTS(View ActiveTablePlansView);
         
         -- Some projector which sends E-mails and performs HTTP queries
         PROJECTOR NotifyOnChanges 
             ON INSERT OR UPDATE IN (TablePlan, WsTable) 
-            STATE Http AND AppSecrets
-            INTENTS SendMail AND View(air.NotificationsHistory);
+            STATE(Http, AppSecrets)
+            INTENTS(SendMail, View air.NotificationsHistory);
 
         -- Commands can only be declared in workspaces
         -- Command can have optional argument and/or unlogged argument
