@@ -42,7 +42,7 @@ TABLE TablePlan INHERITS CDoc (
     ),
     items NestedTable,
     ExcludedTableItems TablePlanItem
-) WITH Comment=BackofficeComment, Tags=[BackofficeTag]; -- Optional comment and tags
+) WITH Comment=BackofficeComment, Tags=(BackofficeTag); -- Optional comment and tags
 
 
 -- Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC
@@ -148,12 +148,12 @@ WORKSPACE MyWorkspace (
         -- Command with declared Comment, Tags and Rate
         COMMAND Orders4(UNLOGGED air.Order) WITH 
             Comment=PosComment, 
-            Tags=[BackofficeTag, PosTag],
+            Tags=(BackofficeTag, PosTag),
             Rate=BackofficeFuncRate1; 
 
         -- Qieries can only be declared in workspaces
         QUERY Query1 RETURNS void;
-        QUERY _Query1() RETURNS air.Order WITH Comment=PosComment, Tags=[BackofficeTag, PosTag];
+        QUERY _Query1() RETURNS air.Order WITH Comment=PosComment, Tags=(BackofficeTag, PosTag);
         QUERY Query2(air.Order) RETURNS air.Order;
     );
 

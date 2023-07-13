@@ -385,7 +385,7 @@ func (s *CommandStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type WithItem struct {
 	Comment *DefQName  `parser:"('Comment' '=' @@)"`
-	Tags    []DefQName `parser:"| ('Tags' '=' '[' @@ (',' @@)* ']')"`
+	Tags    []DefQName `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
 	Rate    *DefQName  `parser:"| ('Rate' '=' @@)"`
 }
 
