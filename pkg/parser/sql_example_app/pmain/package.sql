@@ -134,7 +134,7 @@ WORKSPACE MyWorkspace (
         PROJECTOR NotifyOnChanges 
             ON INSERT OR UPDATE IN (TablePlan, WsTable) 
             STATE Http 
-            INTENTS SendMail;
+            INTENTS SendMail, View(air.NotificationsHistory);
 
         -- Commands can only be declared in workspaces
         -- Command can have optional argument and/or unlogged argument

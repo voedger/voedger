@@ -241,8 +241,8 @@ type ProjectorStmt struct {
 	Name     string      `parser:"'PROJECTOR' @Ident"`
 	On       ProjectorOn `parser:"'ON' @@"`
 	Triggers []DefQName  `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
-	Use      []DefQName  `parser:"('USES' @@ ('AND' @@)*)?"`
-	Targets  []DefQName  `parser:"('MAKES' @@ ('AND' @@)*)?"`
+	Use      []DefQName  `parser:"('STATE' @@ ('AND' @@)*)?"`
+	Targets  []DefQName  `parser:"('INTENTS' @@ ('AND' @@)*)?"`
 	Engine   EngineType  // Initialized with 1st pass
 }
 
@@ -327,6 +327,28 @@ type GrantStmt struct {
 	On     string   `parser:"'ON' @('TABLE' | ('ALL' 'TABLES' 'WITH' 'TAG') | 'COMMAND' | ('ALL' 'COMMANDS' 'WITH' 'TAG') | 'QUERY' | ('ALL' 'QUERIES' 'WITH' 'TAG'))"`
 	Target DefQName `parser:"@@"`
 	To     string   `parser:"'TO' @Ident"`
+}
+
+type StorageStmt struct {
+	Statement
+	Name           string      `parser:"'STORAGE' @Ident"`
+	Ops            []StorageOp `parser:"'(' @@ (',' @@)* ')'"`
+	RequiresEntity bool        `parser:"@('REQUIRES' 'ENTITY')"`
+}
+
+type StorageOp struct {
+	Get      bool           `parser:" ( @'GET'"`
+	GetBatch bool           `parser:" | @'GETBATCH'"`
+	Read     bool           `parser:" | @'READ'"`
+	Insert   bool           `parser:" | @'INSERT'"`
+	Update   bool           `parser:" | @'UPDATE')"`
+	Scope    []StorageScope `parser:"('SCOPE' @@ ('AND' @@)*)?"`
+}
+
+type StorageScope struct {
+	Commands   bool `parser:" ( @'COMMANDS'"`
+	Queries    bool `parser:" | @'QUERIES'"`
+	Projectors bool `parser:" | @'PROJECTORS')"`
 }
 
 type FunctionStmt struct {
