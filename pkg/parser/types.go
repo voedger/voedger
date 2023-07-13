@@ -342,6 +342,8 @@ type StorageStmt struct {
 	RequiresEntity bool        `parser:"@('REQUIRES' 'ENTITY')?"`
 }
 
+func (s StorageStmt) GetName() string { return s.Name }
+
 type StorageOp struct {
 	Get      bool           `parser:"( (@'GET'"`
 	GetBatch bool           `parser:"   @'BATCH'?)"`
