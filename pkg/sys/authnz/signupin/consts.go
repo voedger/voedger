@@ -31,6 +31,7 @@ const (
 	field_Login                     = "Login"
 	field_NewPassword               = "NewPassword"
 	field_OldPassword               = "OldPassword"
+	field_Language                  = "Language"
 	DefaultPrincipalTokenExpiration = 24 * time.Hour
 )
 

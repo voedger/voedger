@@ -11,7 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
@@ -27,7 +27,8 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder 
 		authnz.QNameQueryInitiateResetPasswordByEmail,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateResetPasswordByEmailParams")).
 			AddField(Field_AppName, appdef.DataKind_string, true).
-			AddField(field_Email, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_Email, appdef.DataKind_string, true).
+			AddField(field_Language, appdef.DataKind_string, false).(appdef.IDef).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateResetPasswordByEmailResult")).
 			AddField(field_VerificationToken, appdef.DataKind_string, true).
 			AddField(field_ProfileWSID, appdef.DataKind_int64, true).(appdef.IDef).QName(),
