@@ -76,21 +76,21 @@ func isInternalName(name DefQName, schema *SchemaAST) bool {
 	return pkg == "" || pkg == schema.Package
 }
 
-func getQualifiedPackageName(pkgName string, schema *SchemaAST) (string, error) {
+func getQualifiedPackageName(pkgName string, schema *SchemaAST) string {
 	for i := 0; i < len(schema.Imports); i++ {
 		imp := schema.Imports[i]
 		if imp.Alias != nil && *imp.Alias == pkgName {
-			return imp.Name, nil
+			return imp.Name
 		}
 	}
 	suffix := fmt.Sprintf("/%s", pkgName)
 	for i := 0; i < len(schema.Imports); i++ {
 		imp := schema.Imports[i]
 		if strings.HasSuffix(imp.Name, suffix) {
-			return imp.Name, nil
+			return imp.Name
 		}
 	}
-	return "", ErrUndefined(pkgName)
+	return ""
 }
 
 func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
@@ -100,9 +100,17 @@ func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 		return c.pkg, nil
 	}
 
-	pkgQN, err := getQualifiedPackageName(n.Package, c.pkg.Ast)
-	if err != nil {
-		return nil, err
+	if n.Package == appdef.SysPackage {
+		sysSchema := c.pkgmap[appdef.SysPackage]
+		if sysSchema == nil {
+			return nil, ErrCouldNotImport(appdef.SysPackage)
+		}
+		return sysSchema, nil
+	}
+
+	pkgQN := getQualifiedPackageName(n.Package, c.pkg.Ast)
+	if pkgQN == "" {
+		return nil, ErrUndefined(n.Package)
 	}
 	targetPkgSch = c.pkgmap[pkgQN]
 	if targetPkgSch == nil {
@@ -145,7 +153,8 @@ func resolveTable(fn DefQName, c *basicContext) (*TableStmt, error) {
 }
 
 // when not found, lookup returns (nil, nil)
-func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt | *WorkspaceStmt](fn DefQName, c *basicContext) (stmtType, error) {
+func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt |
+	*WorkspaceStmt | *ViewStmt | *StorageStmt](fn DefQName, c *basicContext) (stmtType, error) {
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
 		return nil, err
@@ -174,7 +183,8 @@ func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *Co
 	return item, nil
 }
 
-func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt | *WorkspaceStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) error {
+func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt |
+	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) error {
 	var err error
 	var item stmtType
 	item, err = lookup[stmtType](fn, c)

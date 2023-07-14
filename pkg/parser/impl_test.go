@@ -358,9 +358,9 @@ func Test_Undefined(t *testing.T) {
 	fs, err := ParseFile("example.sql", `SCHEMA test;
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
-			COMMAND Orders() WITH Tags=[UndefinedTag];
+			COMMAND Orders() WITH Tags=(UndefinedTag);
 			QUERY Query1 RETURNS void WITH Rate=UndefinedRate, Comment=xyz.UndefinedComment;
-			PROJECTOR ImProjector ON COMMAND xyz.CreateUPProfile USES sys.HTTPStorage;
+			PROJECTOR ImProjector ON COMMAND xyz.CreateUPProfile;
 			COMMAND CmdFakeReturn() RETURNS text;
 			COMMAND CmdNoReturn() RETURNS void;
 			COMMAND CmdFakeArg(text);
@@ -395,11 +395,11 @@ func Test_Imports(t *testing.T) {
 	IMPORT SCHEMA "github.com/untillpro/airsbp3/pkg3" AS air;
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
-    		COMMAND Orders WITH Tags=[pkg2.SomeTag];
+    		COMMAND Orders WITH Tags=(pkg2.SomeTag);
     		QUERY Query1 RETURNS void WITH Comment=pkg2.SomeComment;
     		QUERY Query2 RETURNS void WITH Comment=air.SomeComment;
     		QUERY Query3 RETURNS void WITH Comment=air.SomeComment2; -- air.SomeComment2 undefined
-    		PROJECTOR ImProjector ON COMMAND Air.CreateUPProfil USES sys.HTTPStorage; -- Air undefined
+    		PROJECTOR ImProjector ON COMMAND Air.CreateUPProfil; -- Air undefined
 		)
 	)
 	`)
