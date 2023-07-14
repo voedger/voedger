@@ -294,4 +294,18 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
+	{
+		// https://github.com/voedger/voedger/issues/422
+		desc: "grant exec on few funcs to role air.UntillPaymentsReseller",
+		pattern: PatternType{
+			qNamesPattern: []appdef.QName{
+				qNameQryGetDailyPayoutCfg,
+				qNameCmdUpdateScheduledPayout,
+				qNameQryGetUPTransfers,
+				qNameCmdCreateUPTransfer,
+			},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
+		},
+		policy: ACPolicy_Allow,
+	},
 }
