@@ -308,4 +308,12 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
+	{
+		desc: "grant exec on c.air.UpdateUPLocationRates to role air.UntillPaymentsReseller",
+		pattern: PatternType{
+			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPLocationRates},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
+		},
+		policy: ACPolicy_Allow,
+	},
 }
