@@ -134,6 +134,77 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 			}
 		}
 	}
+
+	checkEntity := func(key StorageKey, f *StorageStmt) error {
+		if f.EntityRecord {
+			if key.Entity == nil {
+				return ErrStorageRequiresEntity(key.Storage.String())
+			}
+			if err2 := resolve(*key.Entity, c.basicContext, func(f *TableStmt) error { return nil }); err2 != nil {
+				return err2
+			}
+		}
+		if f.EntityView {
+			if key.Entity == nil {
+				return ErrStorageRequiresEntity(key.Storage.String())
+			}
+			if err2 := resolve(*key.Entity, c.basicContext, func(f *ViewStmt) error { return nil }); err2 != nil {
+				return err2
+			}
+		}
+		return nil
+	}
+
+	for _, key := range v.State {
+		if err := resolve(key.Storage, c.basicContext, func(f *StorageStmt) error {
+			if e := checkEntity(key, f); e != nil {
+				return e
+			}
+			read := false
+			for _, op := range f.Ops {
+				if op.Get || op.GetBatch || op.Read {
+					for _, sc := range op.Scope {
+						if sc.Projectors {
+							read = true
+							break
+						}
+					}
+				}
+			}
+			if !read {
+				return ErrStorageNotInProjectorState(key.Storage.String())
+			}
+			return nil
+		}); err != nil {
+			c.stmtErr(&v.Pos, err)
+		}
+	}
+
+	for _, key := range v.Intents {
+		if err := resolve(key.Storage, c.basicContext, func(f *StorageStmt) error {
+			if e := checkEntity(key, f); e != nil {
+				return e
+			}
+			read := false
+			for _, op := range f.Ops {
+				if op.Insert || op.Update {
+					for _, sc := range op.Scope {
+						if sc.Projectors {
+							read = true
+							break
+						}
+					}
+				}
+			}
+			if !read {
+				return ErrStorageNotInProjectorIntents(key.Storage.String())
+			}
+			return nil
+		}); err != nil {
+			c.stmtErr(&v.Pos, err)
+		}
+	}
+
 }
 
 func (c *analyseCtx) with(with []WithItem, pos *lexer.Position) {

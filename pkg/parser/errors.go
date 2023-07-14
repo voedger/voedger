@@ -47,6 +47,18 @@ func ErrTypeNotSupported(name string) error {
 	return fmt.Errorf("%s type not supported", name)
 }
 
+func ErrStorageRequiresEntity(name string) error {
+	return fmt.Errorf("storage %s requires entity", name)
+}
+
+func ErrStorageNotInProjectorState(name string) error {
+	return fmt.Errorf("storage %s is not available in the state of projectors", name)
+}
+
+func ErrStorageNotInProjectorIntents(name string) error {
+	return fmt.Errorf("storage %s is not available in the intents of projectors", name)
+}
+
 func ErrRedeclared(name string) error {
 	return fmt.Errorf("%s redeclared", name)
 }
