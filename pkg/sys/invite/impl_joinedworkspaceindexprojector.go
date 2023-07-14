@@ -13,7 +13,7 @@ import (
 func ProvideSyncProjectorJoinedWorkspaceIndexFactory() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         QNameViewJoinedWorkspaceIndex,
+			Name:         QNameProjectorJoinedWorkspaceIndex,
 			EventsFilter: []appdef.QName{qNameCmdCreateJoinedWorkspace},
 			Func:         joinedWorkspaceIndexProjector,
 		}

@@ -165,8 +165,8 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 func ProvideSyncProjectorChildWorkspaceIdxFactory() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name: QNameViewChildWorkspaceIdx,
-			Func: ChildWorkspaceIdxProjector,
+			Name: QNameProjectorChildWorkspaceIdx,
+			Func: projectorChildWorkspaceIdx,
 		}
 	}
 }
@@ -206,7 +206,7 @@ func ProvideAsyncProjectorFactoryInvokeCreateWorkspace(federation coreutils.IFed
 func ProvideAsyncProjectorWorkspaceIDIdx() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name: QNameViewWorkspaceIDIdx,
+			Name: QNameProjectorViewWorkspaceIDIdx,
 			Func: workspaceIDIdxProjector,
 		}
 	}

@@ -32,7 +32,7 @@ func provideWLogDatesView(appDefBuilder appdef.IAppDefBuilder) {
 func ProvideWLogDatesAsyncProjectorFactory() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         QNameViewWLogDates,
+			Name:         QNameProjectorWLogDates,
 			Func:         wLogDatesProjector,
 			HandleErrors: true,
 		}
