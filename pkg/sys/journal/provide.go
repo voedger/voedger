@@ -19,6 +19,16 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	ji.AddNamed("", QNameViewWLogDates) // default index
 	jp := ep.ExtensionPoint(EPJournalPredicates)
 	jp.AddNamed("all", func(schemas appdef.IAppDef, qName appdef.QName) bool { return true }) // default predicate
+
+	appDefBuilder.AddObject(QNameProjectorWLogDates)
+
+	cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+		return istructs.Projector{
+			Name:         QNameProjectorWLogDates,
+			Func:         wLogDatesProjector,
+			HandleErrors: true,
+		}
+	})
 }
 
 func provideWLogDatesView(appDefBuilder appdef.IAppDefBuilder) {
@@ -27,14 +37,4 @@ func provideWLogDatesView(appDefBuilder appdef.IAppDefBuilder) {
 		AddClustColumn(field_DayOfYear, appdef.DataKind_int32).
 		AddValueField(field_FirstOffset, appdef.DataKind_int64, true).
 		AddValueField(field_LastOffset, appdef.DataKind_int64, true)
-}
-
-func ProvideWLogDatesAsyncProjectorFactory() istructs.ProjectorFactory {
-	return func(partition istructs.PartitionID) istructs.Projector {
-		return istructs.Projector{
-			Name:         QNameProjectorWLogDates,
-			Func:         wLogDatesProjector,
-			HandleErrors: true,
-		}
-	}
 }

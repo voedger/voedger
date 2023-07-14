@@ -16,7 +16,7 @@ import (
 )
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
-	federation coreutils.IFederation) {
+	federation coreutils.IFederation, itokens itokens.ITokens, ep extensionpoints.IExtensionPoint, wsPostInitFunc WSPostInitFunc) {
 	// c.sys.InitChildWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		authnz.QNameCommandInitChildWorkspace,
@@ -150,19 +150,28 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		qcwbnQryExec,
 	))
 
-	//register asynchronous projector QNames
-	appDefBuilder.AddObject(qNameAPInitializeWorkspace)
-	appDefBuilder.AddObject(qNameAPInvokeCreateWorkspaceID)
-	appDefBuilder.AddObject(qNameAPInvokeCreateWorkspace)
-
 	ProvideViewNextWSID(appDefBuilder)
 
 	// deactivate workspace
 	provideDeactivateWorkspace(cfg, appDefBuilder, tokensAPI, federation, asp)
+
+	// projectors
+	appDefBuilder.AddObject(qNameAPInvokeCreateWorkspace)
+	appDefBuilder.AddObject(qNameAPInvokeCreateWorkspaceID)
+	appDefBuilder.AddObject(qNameAPInitializeWorkspace)
+	cfg.AddAsyncProjectors(
+		provideAsyncProjectorFactoryInvokeCreateWorkspace(federation, cfg.Name, itokens),
+		provideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation, cfg.Name, itokens),
+		provideAsyncProjectorInitializeWorkspace(federation, timeFunc, cfg.Name, ep, itokens, wsPostInitFunc),
+	)
+	cfg.AddSyncProjectors(
+		provideSyncProjectorChildWorkspaceIdxFactory(),
+		provideAsyncProjectorWorkspaceIDIdx(),
+	)
 }
 
 // proj.sys.ChildWorkspaceIdx
-func ProvideSyncProjectorChildWorkspaceIdxFactory() istructs.ProjectorFactory {
+func provideSyncProjectorChildWorkspaceIdxFactory() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: QNameProjectorChildWorkspaceIdx,
@@ -172,7 +181,7 @@ func ProvideSyncProjectorChildWorkspaceIdxFactory() istructs.ProjectorFactory {
 }
 
 // Projector<A, InitializeWorkspace>
-func ProvideAsyncProjectorInitializeWorkspace(federation coreutils.IFederation, nowFunc coreutils.TimeFunc, appQName istructs.AppQName, ep extensionpoints.IExtensionPoint,
+func provideAsyncProjectorInitializeWorkspace(federation coreutils.IFederation, nowFunc coreutils.TimeFunc, appQName istructs.AppQName, ep extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
@@ -183,7 +192,7 @@ func ProvideAsyncProjectorInitializeWorkspace(federation coreutils.IFederation, 
 }
 
 // Projector<A, InvokeCreateWorkspaceID>
-func ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
+func provideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPInvokeCreateWorkspaceID,
@@ -193,7 +202,7 @@ func ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation coreutils.IF
 }
 
 // Projector<A, InvokeCreateWorkspace>
-func ProvideAsyncProjectorFactoryInvokeCreateWorkspace(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
+func provideAsyncProjectorFactoryInvokeCreateWorkspace(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPInvokeCreateWorkspace,
@@ -203,7 +212,7 @@ func ProvideAsyncProjectorFactoryInvokeCreateWorkspace(federation coreutils.IFed
 }
 
 // sp.sys.WorkspaceIDIdx
-func ProvideAsyncProjectorWorkspaceIDIdx() istructs.ProjectorFactory {
+func provideAsyncProjectorWorkspaceIDIdx() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: QNameProjectorViewWorkspaceIDIdx,

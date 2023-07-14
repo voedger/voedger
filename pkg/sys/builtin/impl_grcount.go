@@ -19,7 +19,7 @@ type grcountRR struct {
 
 func (e *grcountRR) AsInt32(string) int32 { return int32(runtime.NumGoroutine()) }
 
-func ProvideQryGRCount(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func provideQryGRCount(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "GRCount"),
 		appdef.NullQName,
