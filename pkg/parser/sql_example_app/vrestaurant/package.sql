@@ -1,5 +1,7 @@
 SCHEMA vrestaurant;
 
+WORKSPACE Restaurant (
+
 -- TYPE Order: describes data structure, retuned after executing Command Order
 TYPE Order (
     ord_datetime int64,
@@ -25,7 +27,7 @@ TYPE TypeNameNumber (
     Name text,
     Number int
 );  
-    
+   
 
 TYPE PaymentItems(
     payment_type int64,
@@ -263,7 +265,6 @@ TABLE ChefOrderQueue INHERITS ODoc(
     status int
 ) WITH Tags=[PosTag], Comment=ChefOrderQueueComment;
 
-WORKSPACE Restaurant (
     EXTENSION ENGINE BUILTIN (
     -- COMMAND order: creates Order ?
         COMMAND order(vrestaurant.Order) RETURNS vrestaurant.Order;
