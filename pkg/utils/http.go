@@ -7,12 +7,14 @@ package coreutils
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"math"
+	"net"
 	"net/http"
 	"net/url"
 	"testing"
@@ -294,14 +296,23 @@ func Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, err
 		netURL.Path = opts.relativeURL
 		urlStr = netURL.String()
 	}
-	client := &http.Client{}
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		dialer := net.Dialer{}
+		conn, err := dialer.DialContext(ctx, network, addr)
+		if err != nil {
+			return nil, err
+		}
+		err = conn.(*net.TCPConn).SetLinger(0)
+		return conn, err
+	}
+	client := &http.Client{Transport: tr}
 	var resp *http.Response
 	var err error
 	deadline := time.UnixMilli(opts.timeoutMs)
 	tryNum := 0
 	for time.Now().Before(deadline) {
-		resp, err = req(urlStr, body, client, opts)
-		if err != nil {
+		if resp, err = req(urlStr, body, client, opts); err != nil {
 			return nil, err
 		}
 		if resp.StatusCode == http.StatusServiceUnavailable && !slices.Contains(opts.expectedHTTPCodes, http.StatusServiceUnavailable) {
