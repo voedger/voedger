@@ -136,7 +136,7 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 	}
 
 	checkEntity := func(key StorageKey, f *StorageStmt) error {
-		if f.RequiresRecordEntity {
+		if f.EntityRecord {
 			if key.Entity == nil {
 				return ErrStorageRequiresEntity(key.Storage.String())
 			}
@@ -144,7 +144,7 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 				return err2
 			}
 		}
-		if f.RequiresViewEntity {
+		if f.EntityView {
 			if key.Entity == nil {
 				return ErrStorageRequiresEntity(key.Storage.String())
 			}

@@ -337,10 +337,10 @@ type GrantStmt struct {
 
 type StorageStmt struct {
 	Statement
-	Name                 string      `parser:"'STORAGE' @Ident"`
-	Ops                  []StorageOp `parser:"'(' @@ (',' @@)* ')'"`
-	RequiresRecordEntity bool        `parser:"@('REQUIRES' 'RECORD' 'ENTITY')?"`
-	RequiresViewEntity   bool        `parser:"@('REQUIRES' 'VIEW' 'ENTITY')?"`
+	Name         string      `parser:"'STORAGE' @Ident"`
+	Ops          []StorageOp `parser:"'(' @@ (',' @@)* ')'"`
+	EntityRecord bool        `parser:"@('ENTITY' 'RECORD')?"`
+	EntityView   bool        `parser:"@('ENTITY' 'VIEW')?"`
 }
 
 func (s StorageStmt) GetName() string { return s.Name }
