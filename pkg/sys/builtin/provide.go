@@ -28,6 +28,8 @@ func Provide(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, buildInf
 	cfg.AddCUDValidators(provideRefIntegrityValidator())
 	provideQryModules(cfg, adf, buildInfo)
 
+	provideQryEcho(cfg, adf)
+	provideQryGRCount(cfg, adf)
 }
 
 func provideRefIntegrityValidator() istructs.CUDValidator {

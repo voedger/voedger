@@ -31,4 +31,7 @@ const (
 	EPJournalPredicates     extensionpoints.EPKey = "JournalPredicates"
 )
 
-var QNameViewWLogDates = appdef.NewQName(appdef.SysPackage, "WLogDates")
+var (
+	QNameViewWLogDates      = appdef.NewQName(appdef.SysPackage, "WLogDates")
+	QNameProjectorWLogDates = appdef.NewQName(appdef.SysPackage, "ProjectorWLogDates")
+)

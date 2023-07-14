@@ -10,10 +10,10 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 )
 
-func ProvideSyncProjectorInviteIndexFactory() istructs.ProjectorFactory {
+func provideSyncProjectorInviteIndexFactory() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         qNameViewInviteIndex,
+			Name:         qNameProjectorInviteIndex,
 			EventsFilter: []appdef.QName{qNameCmdInitiateInvitationByEMail},
 			Func:         inviteIndexProjector,
 		}

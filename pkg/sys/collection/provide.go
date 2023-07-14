@@ -14,7 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/projectors"
 )
 
-func ProvideCollectionFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunctionCustomResult(
 		qNameQueryCollection,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CollectionParams")).
@@ -26,12 +26,11 @@ func ProvideCollectionFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.
 
 	// Register collection def
 	projectors.ProvideViewDef(appDefBuilder, QNameViewCollection, CollectionViewBuilderFunc)
-}
 
-func ProvideSyncProjectorFactories(appDef appdef.IAppDef) []istructs.ProjectorFactory {
-	return []istructs.ProjectorFactory{
-		collectionProjectorFactory(appDef),
-	}
+	provideQryCDoc(cfg, appDefBuilder)
+	provideStateFunc(cfg, appDefBuilder)
+
+	cfg.AddSyncProjectors(collectionProjectorFactory(appDefBuilder))
 }
 
 // should be used in tests only. Sync Actualizer per app will be wired in production
@@ -43,14 +42,5 @@ func provideSyncActualizer(ctx context.Context, as istructs.IAppStructs, partiti
 		N10nFunc:   func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {},
 	}
 	actualizerFactory := projectors.ProvideSyncActualizerFactory()
-	projections := ProvideSyncProjectorFactories(as.AppDef())
-	return actualizerFactory(actualizerConfig, projections[0], projections[1:]...)
-}
-
-func ProvideCDocFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
-	provideQryCDoc(cfg, appDefBuilder)
-}
-
-func ProvideStateFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
-	provideStateFunc(cfg, appDefBuilder)
+	return actualizerFactory(actualizerConfig, collectionProjectorFactory(as.AppDef()))
 }

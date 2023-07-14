@@ -38,6 +38,7 @@ var (
 	// see https://dev.untill.com/projects/#!537026
 	validLoginRegexp       *regexp.Regexp = regexp.MustCompile(`^[a-z0-9!#$%&'*+-\/=?^_{|}~@]+$`)
 	QNameViewLoginIdx                     = appdef.NewQName(appdef.SysPackage, "LoginIdx")
+	QNameProjectorLoginIdx                = appdef.NewQName(appdef.SysPackage, "ProjectorLoginIdx")
 	qNameCmdChangePassword                = appdef.NewQName(appdef.SysPackage, "ChangePassword")
 )
 
