@@ -71,6 +71,7 @@ var (
 	qNameCmdUpdateScheduledPayout                   = appdef.NewQName(airPackage, "UpdateScheduledPayout")
 	qNameQryGetUPTransfers                          = appdef.NewQName(airPackage, "GetUPTransfers")
 	qNameCmdCreateUPTransfer                        = appdef.NewQName(airPackage, "CreateUPTransfer")
+	qNameCmdUpdateUPLocationRates                   = appdef.NewQName(airPackage, "UpdateUPLocationRates")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
