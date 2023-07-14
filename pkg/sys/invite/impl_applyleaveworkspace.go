@@ -15,7 +15,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func ProvideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
+func provideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name:         qNameAPApplyLeaveWorkspace,

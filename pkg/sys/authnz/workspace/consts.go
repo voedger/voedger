@@ -35,7 +35,9 @@ const (
 
 var (
 	QNameViewChildWorkspaceIdx             = appdef.NewQName(appdef.SysPackage, "ChildWorkspaceIdx")
+	QNameProjectorChildWorkspaceIdx        = appdef.NewQName(appdef.SysPackage, "ProjectorChildWorkspaceIdx")
 	QNameViewWorkspaceIDIdx                = appdef.NewQName(appdef.SysPackage, "WorkspaceIDIdx")
+	QNameProjectorViewWorkspaceIDIdx       = appdef.NewQName(appdef.SysPackage, "ProjectorWorkspaceIDIdx")
 	QNameQueryChildWorkspaceByName         = appdef.NewQName(appdef.SysPackage, "QueryChildWorkspaceByName")
 	QNameCDocWorkspaceID                   = appdef.NewQName(appdef.SysPackage, "WorkspaceID")
 	qNameAPInitializeWorkspace             = appdef.NewQName(appdef.SysPackage, "InitializeWorkspace")

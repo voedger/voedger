@@ -25,7 +25,8 @@ const (
 var (
 	// TODO: air.CollectionView must be sys.CollectionView. But if so many records in the view will not be found by air.CollectionView
 	// so keep air.CollectionView for backward compatibility
-	QNameViewCollection = appdef.NewQName("air", "CollectionView")
+	QNameViewCollection      = appdef.NewQName("air", "CollectionView")
+	QNameProjectorCollection = appdef.NewQName("sys", "ProjectorCollection")
 )
 
 // ///////////////////////////////////

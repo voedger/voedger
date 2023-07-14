@@ -59,7 +59,7 @@ func execCmdInitChildWorkspace(_ istructs.ICommandFunction, args istructs.ExecCo
 	return err
 }
 
-var ChildWorkspaceIdxProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+var projectorChildWorkspaceIdx = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return event.CUDs(func(rec istructs.ICUDRow) (err error) {
 		if rec.QName() != authnz.QNameCDocChildWorkspace || !rec.IsNew() {
 			return nil
