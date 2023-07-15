@@ -132,7 +132,70 @@ func TestReadWriteShortString(t *testing.T) {
 	})
 }
 
-func TestReadXXX(t *testing.T) {
+func TestWriteXXX(t *testing.T) {
+	type s struct {
+		int8
+		byte
+		bool
+		int16
+		uint16
+		int32
+		uint32
+		int64
+		uint64
+		float32
+		float64
+	}
+	s1 := s{
+		int8:    -1,
+		byte:    1,
+		bool:    true,
+		int16:   -2222,
+		uint16:  3333,
+		int32:   -444444,
+		uint32:  555555,
+		int64:   -66666666666,
+		uint64:  77777777777,
+		float32: -8.888e8,
+		float64: 9.9999e99,
+	}
+
+	buf := new(bytes.Buffer)
+	SafeWriteBuf(buf, s1.int8)
+	SafeWriteBuf(buf, s1.byte)
+	SafeWriteBuf(buf, s1.bool)
+	SafeWriteBuf(buf, s1.int16)
+	SafeWriteBuf(buf, s1.uint16)
+	SafeWriteBuf(buf, s1.int32)
+	SafeWriteBuf(buf, s1.uint32)
+	SafeWriteBuf(buf, s1.int64)
+	SafeWriteBuf(buf, s1.uint64)
+	SafeWriteBuf(buf, s1.float32)
+	SafeWriteBuf(buf, s1.float64)
+
+	data := buf.Bytes()
+
+	t.Run("Write×××", func(t *testing.T) {
+		require := require.New(t)
+
+		buf := bytes.NewBuffer(nil)
+		WriteInt8(buf, s1.int8)
+		WriteByte(buf, s1.byte)
+		WriteBool(buf, s1.bool)
+		WriteInt16(buf, s1.int16)
+		WriteUint16(buf, s1.uint16)
+		WriteInt32(buf, s1.int32)
+		WriteUint32(buf, s1.uint32)
+		WriteInt64(buf, s1.int64)
+		WriteUint64(buf, s1.uint64)
+		WriteFloat32(buf, s1.float32)
+		WriteFloat64(buf, s1.float64)
+
+		require.EqualValues(data, buf.Bytes())
+	})
+}
+
+func TestReadWriteXXX(t *testing.T) {
 	type s struct {
 		int8
 		byte
@@ -162,24 +225,30 @@ func TestReadXXX(t *testing.T) {
 		string:  "test 🧪 test",
 	}
 
-	buf := new(bytes.Buffer)
-	SafeWriteBuf(buf, s1.int8)
-	SafeWriteBuf(buf, s1.byte)
-	SafeWriteBuf(buf, s1.bool)
-	SafeWriteBuf(buf, s1.int16)
-	SafeWriteBuf(buf, s1.uint16)
-	SafeWriteBuf(buf, s1.int32)
-	SafeWriteBuf(buf, s1.uint32)
-	SafeWriteBuf(buf, s1.int64)
-	SafeWriteBuf(buf, s1.uint64)
-	SafeWriteBuf(buf, s1.float32)
-	SafeWriteBuf(buf, s1.float64)
-	WriteShortString(buf, s1.string)
+	var data []byte
 
-	data := buf.Bytes()
+	require := require.New(t)
+
+	t.Run("Write×××", func(t *testing.T) {
+		buf := new(bytes.Buffer)
+		WriteInt8(buf, s1.int8)
+		WriteByte(buf, s1.byte)
+		WriteBool(buf, s1.bool)
+		WriteInt16(buf, s1.int16)
+		WriteUint16(buf, s1.uint16)
+		WriteInt32(buf, s1.int32)
+		WriteUint32(buf, s1.uint32)
+		WriteInt64(buf, s1.int64)
+		WriteUint64(buf, s1.uint64)
+		WriteFloat32(buf, s1.float32)
+		WriteFloat64(buf, s1.float64)
+		WriteShortString(buf, s1.string)
+		data = buf.Bytes()
+
+		require.NotEmpty(data)
+	})
 
 	t.Run("Read×××", func(t *testing.T) {
-		require := require.New(t)
 
 		s2 := s{}
 		buf := bytes.NewBuffer(data)
