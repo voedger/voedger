@@ -212,7 +212,7 @@ func (ev *eventType) storeToBytes() []byte {
 	if ev.buffer == nil {
 		ev.buffer = bytespool.Get()
 		buf := bytes.NewBuffer(ev.buffer.B)
-		utils.SafeWriteBuf(buf, codec_LastVersion)
+		utils.WriteByte(buf, codec_LastVersion)
 		storeEvent(ev, buf)
 		ev.buffer.B = buf.Bytes()
 	}
