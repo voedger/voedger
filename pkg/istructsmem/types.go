@@ -384,7 +384,7 @@ func (row *rowType) setDef(value appdef.IDef) {
 //   - Must be called *after* event validation. Overwise function may panic!
 func (row *rowType) storeToBytes() []byte {
 	buf := new(bytes.Buffer)
-	utils.SafeWriteBuf(buf, codec_LastVersion)
+	utils.WriteByte(buf, codec_LastVersion)
 
 	storeRow(row, buf)
 

@@ -136,7 +136,7 @@ func storeRow(row *rowType, buf *bytes.Buffer) {
 		//no test
 		panic(fmt.Errorf(errMustValidatedBeforeStore, "row", err))
 	}
-	utils.SafeWriteBuf(buf, int16(id))
+	utils.WriteUint16(buf, uint16(id))
 	if row.QName() == appdef.NullQName {
 		return
 	}
@@ -149,7 +149,7 @@ func storeRow(row *rowType, buf *bytes.Buffer) {
 		panic(fmt.Errorf(errMustValidatedBeforeStore, row.QName(), err))
 	}
 	len := uint32(len(b))
-	utils.SafeWriteBuf(buf, len)
+	utils.WriteUint32(buf, len)
 	utils.SafeWriteBuf(buf, b)
 }
 
@@ -168,13 +168,13 @@ func storeRowSysFields(row *rowType, buf *bytes.Buffer) {
 		sysFieldMask |= sfm_IsActive
 	}
 
-	utils.SafeWriteBuf(buf, sysFieldMask)
+	utils.WriteUint16(buf, sysFieldMask)
 
 	if row.ID() != istructs.NullRecordID {
-		utils.SafeWriteBuf(buf, uint64(row.ID()))
+		utils.WriteUint64(buf, uint64(row.ID()))
 	}
 	if row.parentID != istructs.NullRecordID {
-		utils.SafeWriteBuf(buf, uint64(row.parentID))
+		utils.WriteUint64(buf, uint64(row.parentID))
 	}
 	if row.container != "" {
 		id, err := row.containerID()
@@ -182,10 +182,10 @@ func storeRowSysFields(row *rowType, buf *bytes.Buffer) {
 			//no test
 			panic(fmt.Errorf(errMustValidatedBeforeStore, row.QName(), err))
 		}
-		utils.SafeWriteBuf(buf, int16(id))
+		utils.WriteUint16(buf, uint16(id))
 	}
 	if !row.isActive {
-		utils.SafeWriteBuf(buf, false)
+		utils.WriteBool(buf, false)
 	}
 }
 
