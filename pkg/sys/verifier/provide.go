@@ -13,19 +13,17 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federation coreutils.IFederation, asp istructs.IAppStructsProvider) {
+func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federation coreutils.IFederation, asp istructs.IAppStructsProvider,
+	smtpCfg smtp.Cfg) {
 	provideQryInitiateEmailVerification(cfg, appDefBuilder, itokens, asp, federation)
 	provideQryIssueVerifiedValueToken(cfg, appDefBuilder, itokens, asp)
 	provideCmdSendEmailVerificationCode(cfg, appDefBuilder)
 	appDefBuilder.AddObject(qNameAPSendEmailVerificationCode)
-}
-
-func ProvideAsyncProjectorFactory_SendEmailVerificationCode(federation coreutils.IFederation, smtpCfg smtp.Cfg) istructs.ProjectorFactory {
-	return func(partition istructs.PartitionID) istructs.Projector {
+	cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name:         qNameAPSendEmailVerificationCode,
 			Func:         sendEmailVerificationCodeProjector(federation, smtpCfg),
 			EventsFilter: []appdef.QName{QNameCommandSendEmailVerificationCode},
 		}
-	}
+	})
 }

@@ -6,13 +6,16 @@ package istoragecache
 
 import (
 	"context"
+	"encoding/binary"
+	"fmt"
 	"runtime/debug"
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
 	"github.com/untillpro/goutils/logger"
-	istorage "github.com/voedger/voedger/pkg/istorage"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istructs"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
 
@@ -113,7 +116,7 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 	s.mGetTotal.Increase(1.0)
 
 	key := makeKey(pKey, cCols)
-	
+
 	*data = (*data)[0:0]
 	*data, ok = s.cache.HasGet(*data, key)
 	if ok {
@@ -123,6 +126,8 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 	if logger.IsVerbose() {
 		stack := string(debug.Stack())
 		logger.Verbose(stack)
+		qNameID := binary.BigEndian.Uint16(pKey)
+		logger.Verbose(fmt.Sprintf("missed cache by QNameID = %d", qNameID))
 	}
 	ok, err = s.storage.Get(pKey, cCols, data)
 	if err != nil {

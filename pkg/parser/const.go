@@ -27,7 +27,8 @@ const (
 	sysQName   = "qname"
 	sysBool    = "bool"
 	sysString  = "text"
-	sysBytes   = "blob"
+	sysBytes   = "bytes"
+	sysBlob    = "blob"
 
 	sysVoid = "void"
 )

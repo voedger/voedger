@@ -15,7 +15,7 @@ import (
 func collectionProjectorFactory(appDef appdef.IAppDef) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name: QNameViewCollection,
+			Name: QNameProjectorCollection,
 			Func: collectionProjector(appDef),
 		}
 	}

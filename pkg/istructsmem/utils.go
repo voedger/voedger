@@ -124,7 +124,7 @@ func FillElementFromJSON(data map[string]interface{}, def appdef.IDef, b istruct
 }
 
 func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectBuilder {
-	obj := newObject(cfg, qName)
+	obj := makeObject(cfg, qName)
 	return &obj
 }
 
@@ -164,6 +164,6 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 }
 
 func NewCmdResultBuilder(appCfg *AppConfigType) istructs.IObjectBuilder {
-	obj := newObject(appCfg, appdef.NewQName(appdef.SysPackage, "TestCmd"))
+	obj := makeObject(appCfg, appdef.NewQName(appdef.SysPackage, "TestCmd"))
 	return &obj
 }
