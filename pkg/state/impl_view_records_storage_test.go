@@ -29,12 +29,8 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		viewRecords := &mockViewRecords{}
 		viewRecords.
 			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(ViewRecordsStorage, testViewRecordQName1)).
-			On("GetBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewRecordGetBatchItem")).Return(nil).
-			Run(func(args mock.Arguments) {
-				items := args.Get(1).([]istructs.ViewRecordGetBatchItem)
-				items[0].Ok = true
-				items[0].Value = value
-			})
+			On("Get", istructs.WSID(1), mock.AnythingOfType("*state.viewRecordsKeyBuilder")).Return(value, nil)
+
 		appStructs := &mockAppStructs{}
 		appStructs.
 			On("AppDef").Return(appDef).
@@ -53,7 +49,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		require.True(ok)
 		require.Equal("value", sv.AsString("vk"))
 	})
-	t.Run("Should return error on get batch", func(t *testing.T) {
+	t.Run("Should return error on get", func(t *testing.T) {
 		require := require.New(t)
 
 		appDef := appdef.New()
@@ -65,7 +61,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		viewRecords := &mockViewRecords{}
 		viewRecords.
 			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(ViewRecordsStorage, testViewRecordQName1)).
-			On("GetBatch", istructs.WSID(1), mock.Anything).Return(errTest)
+			On("Get", istructs.WSID(1), mock.Anything).Return(nil, errTest)
 		appStructs := &mockAppStructs{}
 		appStructs.
 			On("AppDef").Return(appDef).

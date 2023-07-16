@@ -65,7 +65,7 @@ func TestPLogStorage_Read(t *testing.T) {
 		require.ErrorIs(err, errTest)
 	})
 }
-func TestPLogStorage_GetBatch(t *testing.T) {
+func TestPLogStorage_Get(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		require := require.New(t)
 		events := &mockEvents{}
@@ -74,8 +74,6 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 			Run(func(args mock.Arguments) {
 				cb := args.Get(4).(istructs.PLogEventsReaderCallback)
 				require.NoError(cb(istructs.FirstOffset, nil))
-				require.NoError(cb(istructs.Offset(2), nil))
-				require.NoError(cb(istructs.Offset(3), nil))
 			})
 		appStructs := &mockAppStructs{}
 		appStructs.On("AppDef").Return(&nilAppDef{})

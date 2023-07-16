@@ -67,6 +67,7 @@ func newKeyBuilder(storage, entity appdef.QName) *keyBuilder {
 	}
 }
 
+func (b *keyBuilder) Storage() appdef.QName                            { return b.storage }
 func (b *keyBuilder) Entity() appdef.QName                             { return b.entity }
 func (b *keyBuilder) PutInt32(name string, value int32)                { b.data[name] = value }
 func (b *keyBuilder) PutInt64(name string, value int64)                { b.data[name] = value }
@@ -123,6 +124,10 @@ type pLogKeyBuilder struct {
 	partitionID istructs.PartitionID
 }
 
+func (b *pLogKeyBuilder) Storage() appdef.QName {
+	return PLogStorage
+}
+
 func (b *pLogKeyBuilder) PutInt32(name string, value int32) {
 	if name == Field_PartitionID {
 		b.partitionID = istructs.PartitionID(value)
@@ -132,6 +137,10 @@ func (b *pLogKeyBuilder) PutInt32(name string, value int32) {
 type wLogKeyBuilder struct {
 	logKeyBuilder
 	wsid istructs.WSID
+}
+
+func (b *wLogKeyBuilder) Storage() appdef.QName {
+	return WLogStorage
 }
 
 func (b *wLogKeyBuilder) PutInt64(name string, value int64) {
@@ -147,6 +156,10 @@ type recordsKeyBuilder struct {
 	singleton appdef.QName
 	wsid      istructs.WSID
 	entity    appdef.QName
+}
+
+func (b *recordsKeyBuilder) Storage() appdef.QName {
+	return RecordsStorage
 }
 
 func (b *recordsKeyBuilder) String() string {
@@ -230,6 +243,9 @@ func (b *viewRecordsKeyBuilder) PutQName(name string, value appdef.QName) {
 }
 func (b *viewRecordsKeyBuilder) Entity() appdef.QName {
 	return b.view
+}
+func (b *viewRecordsKeyBuilder) Storage() appdef.QName {
+	return ViewRecordsStorage
 }
 func (b *viewRecordsKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	kb, ok := src.(*viewRecordsKeyBuilder)
@@ -703,8 +719,12 @@ type cmdResultKeyBuilder struct {
 	*keyBuilder
 }
 
-func newCmdResultKeyBuilder(entity appdef.QName) *cmdResultKeyBuilder {
-	return nil // type of this "nil" will be *cmdResultKeyBuilder -> will be fired at state.getStorageID()
+func newCmdResultKeyBuilder() *cmdResultKeyBuilder {
+	return &cmdResultKeyBuilder{
+		&keyBuilder{
+			storage: CmdResultStorage,
+		},
+	}
 }
 
 type cmdResultValueBuilder struct {

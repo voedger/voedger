@@ -78,8 +78,6 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 			Run(func(args mock.Arguments) {
 				cb := args.Get(4).(istructs.WLogEventsReaderCallback)
 				require.NoError(cb(istructs.FirstOffset, event))
-				require.NoError(cb(istructs.Offset(2), event))
-				require.NoError(cb(istructs.Offset(3), event))
 			})
 		appStructs := &mockAppStructs{}
 		appStructs.On("AppDef").Return(&nilAppDef{})

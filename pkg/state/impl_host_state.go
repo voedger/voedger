@@ -14,6 +14,7 @@ import (
 type hostState struct {
 	name           string
 	storages       map[appdef.QName]IStateStorage
+	withGet        map[appdef.QName]IWithGet
 	withGetBatch   map[appdef.QName]IWithGetBatch
 	withRead       map[appdef.QName]IWithRead
 	withApplyBatch map[appdef.QName]IWithApplyBatch
@@ -27,6 +28,7 @@ func newHostState(name string, intentsLimit int) *hostState {
 	return &hostState{
 		name:           name,
 		storages:       make(map[appdef.QName]IStateStorage),
+		withGet:        make(map[appdef.QName]IWithGet),
 		withGetBatch:   make(map[appdef.QName]IWithGetBatch),
 		withRead:       make(map[appdef.QName]IWithRead),
 		withApplyBatch: make(map[appdef.QName]IWithApplyBatch),
@@ -43,6 +45,9 @@ func supports(ops int, op int) bool {
 
 func (s *hostState) addStorage(storageName appdef.QName, storage IStateStorage, ops int) {
 	s.storages[storageName] = storage
+	if supports(ops, S_GET) {
+		s.withGet[storageName] = storage.(IWithGet)
+	}
 	if supports(ops, S_GET_BATCH) {
 		s.withGetBatch[storageName] = storage.(IWithGetBatch)
 	}
@@ -69,10 +74,17 @@ func (s *hostState) KeyBuilder(storage, entity appdef.QName) (builder istructs.I
 	return strg.NewKeyBuilder(entity, nil), nil
 }
 func (s *hostState) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, ok bool, err error) {
+
+	get, ok := s.withGet[key.Storage()]
+	if ok {
+		value, err = get.Get(key)
+		return value, value != nil, err
+	}
+
 	items := []GetBatchItem{{key: key}}
-	storage, ok := s.withGetBatch[getStorageID(key)]
+	storage, ok := s.withGetBatch[key.Storage()]
 	if !ok {
-		return nil, false, s.errOperationNotSupported(getStorageID(key), ErrGetBatchNotSupportedByStorage)
+		return nil, false, s.errOperationNotSupported(key.Storage(), ErrGetNotSupportedByStorage)
 	}
 
 	err = storage.GetBatch(items)
@@ -84,23 +96,37 @@ func (s *hostState) CanExist(key istructs.IStateKeyBuilder) (value istructs.ISta
 func (s *hostState) CanExistAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback) (err error) {
 	batches := make(map[appdef.QName][]GetBatchItem)
 	for _, k := range keys {
-		batches[getStorageID(k)] = append(batches[getStorageID(k)], GetBatchItem{key: k})
+		batches[k.Storage()] = append(batches[k.Storage()], GetBatchItem{key: k})
 	}
 	for sid, batch := range batches {
-		storage, ok := s.withGetBatch[sid]
-		if !ok {
-			return s.errOperationNotSupported(sid, ErrGetBatchNotSupportedByStorage)
+		getBatch, ok := s.withGetBatch[sid]
+		if ok { // GetBatch supported
+			err = getBatch.GetBatch(batch)
+			if err != nil {
+				return
+			}
+		} else { // GetBatch not supported
+			get, okGet := s.withGet[sid]
+			if !okGet {
+				return s.errOperationNotSupported(sid, ErrGetNotSupportedByStorage)
+			}
+			for _, item := range batch {
+				item.value, err = get.Get(item.key)
+				if err != nil {
+					return err
+				}
+			}
 		}
-		err = storage.GetBatch(batch)
-		if err != nil {
-			return
-		}
+	}
+
+	for _, batch := range batches {
 		for _, item := range batch {
 			if err := callback(item.key, item.value, item.value != nil); err != nil {
 				return err
 			}
 		}
 	}
+
 	return
 }
 func (s *hostState) MustExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
@@ -116,20 +142,33 @@ func (s *hostState) MustExist(key istructs.IStateKeyBuilder) (value istructs.ISt
 func (s *hostState) MustExistAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback) (err error) {
 	batches := make(map[appdef.QName][]GetBatchItem)
 	for _, k := range keys {
-		batches[getStorageID(k)] = append(batches[getStorageID(k)], GetBatchItem{key: k})
+		batches[k.Storage()] = append(batches[k.Storage()], GetBatchItem{key: k})
 	}
 	for sid, batch := range batches {
-		storage, ok := s.withGetBatch[sid]
-		if !ok {
-			return s.errOperationNotSupported(sid, ErrGetBatchNotSupportedByStorage)
-		}
-		err = storage.GetBatch(batch)
-		if err != nil {
-			return
-		}
-		for _, item := range batch {
-			if item.value == nil {
-				return s.err(item.key, ErrNotExists)
+		getBatch, ok := s.withGetBatch[sid]
+		if ok { // GetBatch supported
+			err = getBatch.GetBatch(batch)
+			if err != nil {
+				return
+			}
+			for _, item := range batch {
+				if item.value == nil {
+					return s.err(item.key, ErrNotExists)
+				}
+			}
+		} else { // GetBatch not supported
+			get, okGet := s.withGet[sid]
+			if !okGet {
+				return s.errOperationNotSupported(sid, ErrGetNotSupportedByStorage)
+			}
+			for _, item := range batch {
+				item.value, err = get.Get(item.key)
+				if err != nil {
+					return err
+				}
+				if item.value == nil {
+					return s.err(item.key, ErrNotExists)
+				}
 			}
 		}
 	}
@@ -155,36 +194,49 @@ func (s *hostState) MustNotExist(key istructs.IStateKeyBuilder) (err error) {
 func (s *hostState) MustNotExistAll(keys []istructs.IStateKeyBuilder) (err error) {
 	batches := make(map[appdef.QName][]GetBatchItem)
 	for _, k := range keys {
-		batches[getStorageID(k)] = append(batches[getStorageID(k)], GetBatchItem{key: k})
+		batches[k.Storage()] = append(batches[k.Storage()], GetBatchItem{key: k})
 	}
 	for sid, batch := range batches {
-		storage, ok := s.withGetBatch[sid]
-		if !ok {
-			return s.errOperationNotSupported(sid, ErrGetBatchNotSupportedByStorage)
-		}
-		err = storage.GetBatch(batch)
-		if err != nil {
-			return
-		}
-		for _, item := range batch {
-			if item.value != nil {
-				return s.err(item.key, ErrExists)
+		getBatch, ok := s.withGetBatch[sid]
+		if ok { // GetBatch supported
+			err = getBatch.GetBatch(batch)
+			if err != nil {
+				return
+			}
+			for _, item := range batch {
+				if item.value != nil {
+					return s.err(item.key, ErrExists)
+				}
+			}
+		} else { // GetBatch not supported
+			get, okGet := s.withGet[sid]
+			if !okGet {
+				return s.errOperationNotSupported(sid, ErrGetNotSupportedByStorage)
+			}
+			for _, item := range batch {
+				item.value, err = get.Get(item.key)
+				if err != nil {
+					return err
+				}
+				if item.value != nil {
+					return s.err(item.key, ErrNotExists)
+				}
 			}
 		}
 	}
 	return
 }
 func (s *hostState) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
-	storage, ok := s.withRead[getStorageID(key)]
+	storage, ok := s.withRead[key.Storage()]
 	if !ok {
-		return s.errOperationNotSupported(getStorageID(key), ErrReadNotSupportedByStorage)
+		return s.errOperationNotSupported(key.Storage(), ErrReadNotSupportedByStorage)
 	}
 	return storage.Read(key, callback)
 }
 func (s *hostState) NewValue(key istructs.IStateKeyBuilder) (eb istructs.IStateValueBuilder, err error) {
-	storage, ok := s.withInsert[getStorageID(key)]
+	storage, ok := s.withInsert[key.Storage()]
 	if !ok {
-		return nil, s.errOperationNotSupported(getStorageID(key), ErrInsertNotSupportedByStorage)
+		return nil, s.errOperationNotSupported(key.Storage(), ErrInsertNotSupportedByStorage)
 	}
 
 	if s.isIntentsFull() {
@@ -193,14 +245,14 @@ func (s *hostState) NewValue(key istructs.IStateKeyBuilder) (eb istructs.IStateV
 
 	// TODO later: implement re-using of value builders
 	builder := storage.ProvideValueBuilder(key, nil)
-	s.putToIntents(getStorageID(key), key, builder)
+	s.putToIntents(key.Storage(), key, builder)
 
 	return builder, nil
 }
 func (s *hostState) UpdateValue(key istructs.IStateKeyBuilder, existingValue istructs.IStateValue) (eb istructs.IStateValueBuilder, err error) {
-	storage, ok := s.withUpdate[getStorageID(key)]
+	storage, ok := s.withUpdate[key.Storage()]
 	if !ok {
-		return nil, s.errOperationNotSupported(getStorageID(key), ErrUpdateNotSupportedByStorage)
+		return nil, s.errOperationNotSupported(key.Storage(), ErrUpdateNotSupportedByStorage)
 	}
 
 	if s.isIntentsFull() {
@@ -209,7 +261,7 @@ func (s *hostState) UpdateValue(key istructs.IStateKeyBuilder, existingValue ist
 
 	// TODO later: implement re-using of value builders
 	builder := storage.ProvideValueBuilderForUpdate(key, existingValue, nil)
-	s.putToIntents(getStorageID(key), key, builder)
+	s.putToIntents(key.Storage(), key, builder)
 
 	return builder, nil
 }

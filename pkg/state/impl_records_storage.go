@@ -29,42 +29,39 @@ func (s *recordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKey
 	}
 }
 
-func (s *recordsStorage) GetSingle(item *GetBatchItem) error {
-	k := item.key.(*recordsKeyBuilder)
+func (s *recordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
+	k := key.(*recordsKeyBuilder)
 	if k.singleton != appdef.NullQName {
 		singleton, e := s.recordsFunc().GetSingleton(k.wsid, k.singleton)
 		if e != nil {
-			return e
+			return nil, e
 		}
 		if singleton.QName() == appdef.NullQName {
-			return nil
+			return nil, nil
 		}
-		item.value = &recordsStorageValue{
+		return &recordsStorageValue{
 			record:     singleton,
 			toJSONFunc: s.toJSON,
-		}
-		return nil
+		}, nil
+	}
+	if k.id == istructs.NullRecordID {
+		// error message according to https://dev.untill.com/projects/#!637229
+		return nil, fmt.Errorf("value of one of RecordID fields is 0: %w", ErrNotFound)
 	}
 	record, err := s.recordsFunc().Get(k.wsid, true, k.id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if record.QName() == appdef.NullQName {
-		return nil
+		return nil, nil
 	}
-	item.value = &recordsStorageValue{
+	return &recordsStorageValue{
 		record:     record,
 		toJSONFunc: s.toJSON,
-	}
-	return nil
+	}, nil
 }
 
 func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
-
-	if len(items) == 1 {
-		return s.GetSingle(&items[0])
-	}
-
 	type getSingletonParams struct {
 		wsid    istructs.WSID
 		qname   appdef.QName

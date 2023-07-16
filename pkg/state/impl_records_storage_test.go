@@ -198,10 +198,10 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		require.False(ok)
 		require.ErrorIs(err, ErrNotFound)
 	})
-	t.Run("Should return error on get batch", func(t *testing.T) {
+	t.Run("Should return error on get", func(t *testing.T) {
 		require := require.New(t)
 		records := &mockRecords{}
-		records.On("GetBatch", istructs.WSID(1), true, mock.AnythingOfType("[]istructs.RecordGetBatchItem")).Return(errTest)
+		records.On("Get", istructs.WSID(1), true, mock.Anything).Return(nil, errTest)
 		appStructs := &mockAppStructs{}
 		appStructs.
 			On("AppDef").Return(&nilAppDef{}).

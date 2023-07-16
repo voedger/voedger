@@ -20,7 +20,7 @@ type subjectStorage struct {
 func (s *subjectStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return newKeyBuilder(SubjectStorage, appdef.NullQName)
 }
-func (s *subjectStorage) GetBatch(items []GetBatchItem) (err error) {
+func (s *subjectStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	ssv := &subjectStorageValue{
 		token:      s.tokenFunc(),
 		toJSONFunc: s.toJSON,
@@ -37,11 +37,9 @@ func (s *subjectStorage) GetBatch(items []GetBatchItem) (err error) {
 			break
 		}
 	}
-	for i := range items {
-		items[i].value = ssv
-	}
-	return
+	return ssv, nil
 }
+
 func (s *subjectStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
 	value := sv.(*subjectStorageValue)
 	obj := make(map[string]interface{})

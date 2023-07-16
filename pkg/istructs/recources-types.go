@@ -121,6 +121,7 @@ type IStateValueBuilder interface {
 }
 type IStateKeyBuilder interface {
 	IKeyBuilder
+	Storage() appdef.QName
 	Entity() appdef.QName
 }
 type StateValueCallback func(key IKeyBuilder, value IStateValue, ok bool) (err error)
