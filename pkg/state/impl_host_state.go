@@ -99,7 +99,7 @@ func (s *hostState) CanExistAll(keys []istructs.IStateKeyBuilder, callback istru
 		if ok { // GetBatch supported
 			err = getBatch.GetBatch(batch)
 			if err != nil {
-				return
+				return err
 			}
 		} else { // GetBatch not supported
 			get, okGet := s.withGet[sid]
@@ -123,7 +123,7 @@ func (s *hostState) CanExistAll(keys []istructs.IStateKeyBuilder, callback istru
 		}
 	}
 
-	return
+	return nil
 }
 func (s *hostState) MustExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	value, ok, err := s.CanExist(key)
@@ -175,7 +175,7 @@ func (s *hostState) MustExistAll(keys []istructs.IStateKeyBuilder, callback istr
 			}
 		}
 	}
-	return
+	return nil
 }
 func (s *hostState) MustNotExist(key istructs.IStateKeyBuilder) (err error) {
 	_, ok, err := s.CanExist(key)
@@ -220,7 +220,7 @@ func (s *hostState) MustNotExistAll(keys []istructs.IStateKeyBuilder) (err error
 			}
 		}
 	}
-	return
+	return nil
 }
 func (s *hostState) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	storage, ok := s.withRead[key.Storage()]
