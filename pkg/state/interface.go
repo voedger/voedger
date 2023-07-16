@@ -24,6 +24,9 @@ type IWithGet interface {
 type IWithGetBatch interface {
 	//GetBatch reads items from storage
 	GetBatch(items []GetBatchItem) (err error)
+
+	// returns nil when not found
+	Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error)
 }
 type IWithRead interface {
 	//Read reads items with callback. Can return many more than 1 item for the same get

@@ -102,11 +102,6 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 	})
 	t.Run("Should handle singleton records", func(t *testing.T) {
 		require := require.New(t)
-		toJSON := func(sv istructs.IStateValue) string {
-			json, err := sv.ToJSON()
-			require.NoError(err)
-			return json
-		}
 		singleton1 := &mockRecord{}
 		singleton1.
 			On("QName").Return(testRecordQName1).
@@ -172,20 +167,12 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		require.Len(rr, 3)
 		require.Equal(int64(10), rr[0].value.AsInt64("number"))
 		require.True(rr[0].exists)
-		require.JSONEq(`{
-											"sys.QName":"test.record1",
-											"number":10
-										}`, toJSON(rr[0].value))
 		require.Equal(istructs.WSID(2), rr[1].key.(*recordsKeyBuilder).wsid)
 		require.Nil(rr[1].value)
 		require.False(rr[1].exists)
 		require.Equal(istructs.WSID(3), rr[2].key.(*recordsKeyBuilder).wsid)
 		require.True(rr[2].exists)
 		require.Equal(int64(18), rr[2].value.AsInt64("age"))
-		require.JSONEq(`{
-											"sys.QName":"test.record2",
-											"age":18
-										}`, toJSON(rr[2].value))
 	})
 	t.Run("Should return error when 'id' not found", func(t *testing.T) {
 		require := require.New(t)
@@ -267,7 +254,7 @@ func TestRecordsStorage_Update(t *testing.T) {
 	rw := &mockRowWriter{}
 	rw.On("PutString", fieldName, value)
 	r := &mockRecord{}
-	sv := &recordsStorageValue{record: r}
+	sv := &recordsStorageValue{r}
 	cud := &mockCUD{}
 	cud.On("Update", r).Return(rw)
 	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, func() istructs.ICUD { return cud }, nil, nil, 1, nil)

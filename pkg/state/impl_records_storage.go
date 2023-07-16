@@ -96,10 +96,7 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 			if batchItem.Record.QName() == appdef.NullQName {
 				continue
 			}
-			items[wsidToItemIdx[wsid][i]].value = &recordsStorageValue{
-				record:     batchItem.Record,
-				toJSONFunc: s.toJSON,
-			}
+			items[wsidToItemIdx[wsid][i]].value = &recordsStorageValue{batchItem.Record}
 		}
 	}
 	for _, g := range gg {
@@ -110,10 +107,7 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 		if singleton.QName() == appdef.NullQName {
 			continue
 		}
-		items[g.itemIdx].value = &recordsStorageValue{
-			record:     singleton,
-			toJSONFunc: s.toJSON,
-		}
+		items[g.itemIdx].value = &recordsStorageValue{singleton}
 	}
 	return err
 }
@@ -126,7 +120,7 @@ func (s *recordsStorage) ProvideValueBuilder(key istructs.IStateKeyBuilder, _ is
 func (s *recordsStorage) ProvideValueBuilderForUpdate(_ istructs.IStateKeyBuilder, existingValue istructs.IStateValue, _ istructs.IStateValueBuilder) istructs.IStateValueBuilder {
 	return &recordsValueBuilder{rw: s.cudFunc().Update(existingValue.AsRecord(""))}
 }
-func (s *recordsStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
+func (s *recordsStorage) ToJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
 	obj := coreutils.FieldsToMap(sv, s.appDefFunc())
 	bb, err := json.Marshal(&obj)
 	return string(bb), err

@@ -10,6 +10,7 @@ import (
 	fs "io/fs"
 
 	"github.com/alecthomas/participle/v2/lexer"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 type FileSchemaAST struct {
@@ -104,6 +105,7 @@ type WorkspaceStatement struct {
 
 type RootExtEngineStatement struct {
 	Function *FunctionStmt `parser:"@@"`
+	Storage  *StorageStmt  `parser:"| @@"`
 	stmt     interface{}
 }
 
@@ -234,14 +236,20 @@ func (s *Statement) GetComments() *[]string {
 	return &s.Comments
 }
 
+type StorageKey struct {
+	Storage DefQName  `parser:"@@"`
+	Entity  *DefQName `parser:"( @@ )?"`
+}
+
 type ProjectorStmt struct {
 	Statement
-	Name     string      `parser:"'PROJECTOR' @Ident"`
-	On       ProjectorOn `parser:"'ON' @@"`
-	Triggers []DefQName  `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
-	Use      []DefQName  `parser:"('USES' @@ ('AND' @@)*)?"`
-	Targets  []DefQName  `parser:"('MAKES' @@ ('AND' @@)*)?"`
-	Engine   EngineType  // Initialized with 1st pass
+	Sync     bool         `parser:"@'SYNC'?"`
+	Name     string       `parser:"'PROJECTOR' @Ident"`
+	On       ProjectorOn  `parser:"'ON' @@"`
+	Triggers []DefQName   `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
+	State    []StorageKey `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Intents  []StorageKey `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
+	Engine   EngineType   // Initialized with 1st pass
 }
 
 func (s *ProjectorStmt) GetName() string            { return s.Name }
@@ -327,6 +335,31 @@ type GrantStmt struct {
 	To     string   `parser:"'TO' @Ident"`
 }
 
+type StorageStmt struct {
+	Statement
+	Name         string      `parser:"'STORAGE' @Ident"`
+	Ops          []StorageOp `parser:"'(' @@ (',' @@)* ')'"`
+	EntityRecord bool        `parser:"@('ENTITY' 'RECORD')?"`
+	EntityView   bool        `parser:"@('ENTITY' 'VIEW')?"`
+}
+
+func (s StorageStmt) GetName() string { return s.Name }
+
+type StorageOp struct {
+	Get      bool           `parser:"( @'GET'"`
+	GetBatch bool           `parser:"| @'GETBATCH'"`
+	Read     bool           `parser:"| @'READ'"`
+	Insert   bool           `parser:"| @'INSERT'"`
+	Update   bool           `parser:"| @'UPDATE')"`
+	Scope    []StorageScope `parser:"'SCOPE' '(' @@ (',' @@)* ')'"`
+}
+
+type StorageScope struct {
+	Commands   bool `parser:" ( @'COMMANDS'"`
+	Queries    bool `parser:" | @'QUERIES'"`
+	Projectors bool `parser:" | @'PROJECTORS')"`
+}
+
 type FunctionStmt struct {
 	Statement
 	Name    string          `parser:"'FUNCTION' @Ident"`
@@ -353,7 +386,7 @@ func (s *CommandStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type WithItem struct {
 	Comment *DefQName  `parser:"('Comment' '=' @@)"`
-	Tags    []DefQName `parser:"| ('Tags' '=' '[' @@ (',' @@)* ']')"`
+	Tags    []DefQName `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
 	Rate    *DefQName  `parser:"| ('Rate' '=' @@)"`
 }
 
@@ -386,11 +419,13 @@ type NamedParam struct {
 
 type TableStmt struct {
 	Statement
-	Name     string          `parser:"'TABLE' @Ident"`
-	Inherits *DefQName       `parser:"('INHERITS' @@)?"`
-	Of       []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
-	Items    []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	With     []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Name         string          `parser:"'TABLE' @Ident"`
+	Inherits     *DefQName       `parser:"('INHERITS' @@)?"`
+	Of           []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
+	Items        []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	With         []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	tableDefKind appdef.DefKind  // filled on the analysis stage
+	singletone   bool
 }
 
 func (s TableStmt) GetName() string { return s.Name }
@@ -464,7 +499,7 @@ type ViewItemExpr struct {
 
 type PrimaryKeyExpr struct {
 	PartitionKeyFields      []string `parser:"('(' @Ident (',' @Ident)* ')')?"`
-	ClusteringColumnsFields []string `parser:"','? @Ident (',' @Ident)*"`
+	ClusteringColumnsFields []string `parser:"(','? @Ident (',' @Ident)*)?"`
 }
 
 func (s ViewStmt) GetName() string { return s.Name }
@@ -480,11 +515,10 @@ type ViewFieldType struct {
 	Int64   bool `parser:"| @(('sys' '.')? 'int64')"`
 	Float32 bool `parser:"@(('sys' '.')? ('float'|'float32'))"`
 	Float64 bool `parser:"| @(('sys' '.')? 'float64')"`
-	Bytes   bool `parser:"| @('sys.'? 'blob')"` // TODO: blob or byte[] ?
-	Text    bool `parser:"| @('sys.'? 'text')"` // TODO: string or text ?
+	Blob    bool `parser:"| @('sys.'? 'blob')"`
+	Bytes   bool `parser:"| @('sys.'? 'bytes')"`
+	Text    bool `parser:"| @('sys.'? 'text')"`
 	QName   bool `parser:"| @('sys.'? 'qname')"`
 	Bool    bool `parser:"| @('sys.'? 'bool')"`
 	Id      bool `parser:"| @(('sys' '.')? 'id')"`
 }
-
-// TODO TYPE + "TABLE|WORKSPACE OF" validation

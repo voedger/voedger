@@ -56,7 +56,7 @@ func (s *appSecretsStorage) GetBatch(items []GetBatchItem) (err error) {
 			toJSONFunc: s.toJSON,
 		}
 	}
-	return
+	return nil
 }
 func (s *appSecretsStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
 	return fmt.Sprintf(`{"Body":"%s"}`, sv.(*appSecretsStorageValue).content), nil

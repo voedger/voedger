@@ -271,6 +271,9 @@ func (s *mockStorage) NewKeyBuilder(entity appdef.QName, existingBuilder istruct
 func (s *mockStorage) GetBatch(items []GetBatchItem) (err error) {
 	return s.Called(items).Error(0)
 }
+func (s *mockStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
+	return s.Called(key).Get(0).(istructs.IStateValue), s.Called(key).Error(1)
+}
 func (s *mockStorage) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	return s.Called(key, callback).Error(0)
 }

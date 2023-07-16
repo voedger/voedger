@@ -42,6 +42,9 @@ type appDefFunc func() appdef.IAppDef
 type ToJSONOptions struct{ excludedFields map[string]bool }
 type ToJSONOption func(opts *ToJSONOptions)
 type toJSONFunc func(e istructs.IStateValue, opts ...interface{}) (string, error)
+type IToJson interface {
+	ToJSON(sv istructs.IStateValue, _ ...interface{}) (string, error)
+}
 
 type ApplyBatchItem struct {
 	key   istructs.IStateKeyBuilder
@@ -128,6 +131,10 @@ func (b *pLogKeyBuilder) Storage() appdef.QName {
 	return PLogStorage
 }
 
+func (b *pLogKeyBuilder) String() string {
+	return fmt.Sprintf("plog partitionID - %d, offset - %d, count - %d", b.partitionID, b.offset, b.count)
+}
+
 func (b *pLogKeyBuilder) PutInt32(name string, value int32) {
 	if name == Field_PartitionID {
 		b.partitionID = istructs.PartitionID(value)
@@ -141,6 +148,10 @@ type wLogKeyBuilder struct {
 
 func (b *wLogKeyBuilder) Storage() appdef.QName {
 	return WLogStorage
+}
+
+func (b *wLogKeyBuilder) String() string {
+	return fmt.Sprintf("wlog wsid - %d, offset - %d, count - %d", b.wsid, b.offset, b.count)
 }
 
 func (b *wLogKeyBuilder) PutInt64(name string, value int64) {
@@ -286,32 +297,41 @@ func (b *viewRecordsValueBuilder) Build() istructs.IValue {
 
 func (b *viewRecordsValueBuilder) BuildValue() istructs.IStateValue {
 	return &viewRecordsStorageValue{
-		value:      b.Build(),
-		toJSONFunc: b.toJSONFunc,
+		value: b.Build(),
 	}
 }
 
-type recordsStorageValue struct {
-	baseStateValue
-	record     istructs.IRecord
-	toJSONFunc toJSONFunc
+type recordsStorageValue struct{ istructs.IRecord }
+
+func (v recordsStorageValue) AsRecord(name string) (record istructs.IRecord) { return v }
+func (v *recordsStorageValue) AsEvent(name string) (event istructs.IDbEvent) {
+	panic(errNotImplemented)
+}
+func (v *recordsStorageValue) AsValue(name string) istructs.IStateValue {
+	panic(errFieldByNameIsNotAnObjectOrArray)
+}
+func (v *recordsStorageValue) Length() int { panic(errFieldByNameIsNotAnObjectOrArray) }
+func (v *recordsStorageValue) GetAsString(index int) string {
+	panic(errFieldByNameIsNotAnObjectOrArray)
+}
+func (v *recordsStorageValue) GetAsBytes(index int) []byte { panic(errFieldByNameIsNotAnObjectOrArray) }
+func (v *recordsStorageValue) GetAsInt32(index int) int32  { panic(errFieldByNameIsNotAnObjectOrArray) }
+func (v *recordsStorageValue) GetAsInt64(index int) int64  { panic(errFieldByNameIsNotAnObjectOrArray) }
+func (v *recordsStorageValue) GetAsFloat32(index int) float32 {
+	panic(errFieldByNameIsNotAnObjectOrArray)
+}
+func (v *recordsStorageValue) GetAsFloat64(index int) float64 {
+	panic(errFieldByNameIsNotAnObjectOrArray)
+}
+func (v *recordsStorageValue) GetAsQName(index int) appdef.QName {
+	panic(errFieldByNameIsNotAnObjectOrArray)
+}
+func (v *recordsStorageValue) GetAsBool(index int) bool { panic(errFieldByNameIsNotAnObjectOrArray) }
+func (v *recordsStorageValue) GetAsValue(index int) istructs.IStateValue {
+	panic(errFieldByNameIsNotAnObjectOrArray)
 }
 
-func (v *recordsStorageValue) AsInt32(name string) int32        { return v.record.AsInt32(name) }
-func (v *recordsStorageValue) AsInt64(name string) int64        { return v.record.AsInt64(name) }
-func (v *recordsStorageValue) AsFloat32(name string) float32    { return v.record.AsFloat32(name) }
-func (v *recordsStorageValue) AsFloat64(name string) float64    { return v.record.AsFloat64(name) }
-func (v *recordsStorageValue) AsBytes(name string) []byte       { return v.record.AsBytes(name) }
-func (v *recordsStorageValue) AsString(name string) string      { return v.record.AsString(name) }
-func (v *recordsStorageValue) AsQName(name string) appdef.QName { return v.record.AsQName(name) }
-func (v *recordsStorageValue) AsBool(name string) bool          { return v.record.AsBool(name) }
-func (v *recordsStorageValue) AsRecordID(name string) istructs.RecordID {
-	return v.record.AsRecordID(name)
-}
-func (v *recordsStorageValue) AsRecord(string) (record istructs.IRecord) { return v.record }
-func (v *recordsStorageValue) ToJSON(opts ...interface{}) (string, error) {
-	return v.toJSONFunc(v, opts...)
-}
+//func (v *recordsStorageValue) AsRecord(string) (record istructs.IRecord) { return v.record }
 
 type pLogStorageValue struct {
 	baseStateValue
@@ -629,8 +649,7 @@ func (v *subjectStorageValue) ToJSON(opts ...interface{}) (string, error) {
 
 type viewRecordsStorageValue struct {
 	baseStateValue
-	value      istructs.IValue
-	toJSONFunc toJSONFunc
+	value istructs.IValue
 }
 
 func (v *viewRecordsStorageValue) AsInt32(name string) int32        { return v.value.AsInt32(name) }
@@ -646,9 +665,6 @@ func (v *viewRecordsStorageValue) AsRecordID(name string) istructs.RecordID {
 }
 func (v *viewRecordsStorageValue) AsRecord(name string) istructs.IRecord {
 	return v.value.AsRecord(name)
-}
-func (v *viewRecordsStorageValue) ToJSON(opts ...interface{}) (string, error) {
-	return v.toJSONFunc(v, opts...)
 }
 
 type cudsStorageValue struct {
@@ -698,7 +714,6 @@ func (v *baseStateValue) RecordIDs(bool, func(string, istructs.RecordID)) { pani
 func (v *baseStateValue) FieldNames(func(string))                         { panic(errNotImplemented) }
 func (v *baseStateValue) AsRecord(string) istructs.IRecord                { panic(errNotImplemented) }
 func (v *baseStateValue) AsEvent(string) istructs.IDbEvent                { panic(errNotImplemented) }
-func (v *baseStateValue) ToJSON(...interface{}) (string, error)           { panic(errNotImplemented) }
 func (v *baseStateValue) Length() int                                     { panic(errCurrentValueIsNotAnArray) }
 func (v *baseStateValue) GetAsString(int) string                          { panic(errCurrentValueIsNotAnArray) }
 func (v *baseStateValue) GetAsBytes(int) []byte                           { panic(errCurrentValueIsNotAnArray) }

@@ -26,6 +26,11 @@ func seNodeControllerFunction(n *nodeType) error {
 
 	var err error
 
+	if err = seNodeValidate(n); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
 	if err = deployDocker(n); err != nil {
 		logger.Error(err.Error())
 	} else {
@@ -33,6 +38,33 @@ func seNodeControllerFunction(n *nodeType) error {
 	}
 
 	return err
+}
+
+func seNodeValidate(n *nodeType) error {
+	prepareScripts("host-validate.sh")
+
+	logger.Info(fmt.Sprintf("checking host %s requirements...", n.DesiredNodeState.Address))
+
+	var minRAM string
+
+	if skipNodeMemoryCheck {
+		minRAM = "0"
+	} else {
+		minRAM = n.minAmountOfRAM()
+	}
+
+	var err error
+
+	if err = newScriptExecuter(n.cluster.sshKey, n.DesiredNodeState.Address).
+		run("host-validate.sh", n.DesiredNodeState.Address, minRAM); err != nil {
+		logger.Error(err.Error())
+		n.Error = err.Error()
+	} else {
+		logger.Info(fmt.Sprintf("host %s requirements checked successfully", n.DesiredNodeState.Address))
+	}
+
+	return err
+
 }
 
 func seClusterControllerFunction(c *clusterType) error {
@@ -316,8 +348,6 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 		"db-node-prepare.sh", "db-bootstrap-prepare.sh", "swarm-rm-node.sh",
 		"db-stack-update.sh", "docker-compose-template.yml", "swarm-set-label.sh", "docker-compose-prepare.sh",
 		"scylla.yaml", "swarm-get-manager-token.sh")
-
-	//prepareManagerToken(cluster)
 
 	conf := newSeConfigType(cluster)
 

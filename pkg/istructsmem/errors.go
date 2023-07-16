@@ -67,6 +67,8 @@ const errCantGetFieldQNameIDWrap = "QName field «%s» can not get ID for value 
 
 const errDefNotFoundWrap = "definition «%v» not found: %w"
 
+const errMustValidatedBeforeStore = "%v must be validated before store: %w"
+
 // ValidateError: an interface for describing errors that occurred during validation
 //   - methods:
 //     — Code(): returns error code, see ECode_××× constants

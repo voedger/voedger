@@ -7,7 +7,6 @@ package istructsmem
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -71,6 +70,13 @@ func (vr *appViewRecords) Get(workspace istructs.WSID, key istructs.IKeyBuilder)
 
 	pKey, cKey := k.storeToBytes()
 	pKey = utils.PrefixBytes(pKey, k.viewID, workspace)
+
+	/*
+		bytes   len    type     desc
+		0…1      2     uint16   QNameID
+		2…3      2     uint16   WSID
+		4…       ~     []~      User fields
+	*/
 
 	data := make([]byte, 0)
 	if ok, err := vr.app.config.storage.Get(pKey, cKey, &data); !ok {
@@ -179,16 +185,11 @@ func (vr *appViewRecords) Read(ctx context.Context, workspace istructs.WSID, key
 			return err
 		}
 
-		var keyRow istructs.IRowReader
-		if keyRow, err = recKey.keyRow(); err != nil {
-			return err
-		}
-
 		valRow := newValue(k.appCfg, k.viewName)
 		if err := valRow.loadFromBytes(value); err != nil {
 			return err
 		}
-		return cb(keyRow, valRow)
+		return cb(recKey, valRow)
 	}
 
 	pk := utils.PrefixBytes(pKey, k.viewID, workspace)
@@ -196,10 +197,12 @@ func (vr *appViewRecords) Read(ctx context.Context, workspace istructs.WSID, key
 }
 
 // keyType is complex key from two parts (partition key and clustering key)
-//   - interfaces:
-//     — IKeyBuilder
+//
+// # Implements interfaces:
+//   - IKeyBuilder & IRowWriter
+//   - IKey & IRowReader
 type keyType struct {
-	rowType
+	appCfg   *AppConfigType
 	viewName appdef.QName
 	viewID   qnames.QNameID
 	partRow  rowType
@@ -208,12 +211,11 @@ type keyType struct {
 
 func newKey(appCfg *AppConfigType, name appdef.QName) *keyType {
 	key := keyType{
-		rowType:  newRow(appCfg),
+		appCfg:   appCfg,
 		viewName: name,
 		partRow:  newRow(appCfg),
 		ccolsRow: newRow(appCfg),
 	}
-	key.rowType.setQName(key.fkDef())
 	key.partRow.setQName(key.pkDef())
 	key.ccolsRow.setQName(key.ccDef())
 	return &key
@@ -221,22 +223,12 @@ func newKey(appCfg *AppConfigType, name appdef.QName) *keyType {
 
 // Builds partition and clustering columns rows and returns error if occurs
 func (key *keyType) build() (err error) {
-	changes := key.rowType.dyB.IsModified()
-	if err = key.rowType.build(); err != nil {
-		return err
-	}
-	if changes {
-		key.splitRow()
-	}
-
 	if err = key.partRow.build(); err != nil {
 		return err
 	}
-
 	if err = key.ccolsRow.build(); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -248,36 +240,7 @@ func (key *keyType) ccDef() appdef.QName {
 	return appdef.NullQName
 }
 
-// Returns name of full key definition
-func (key *keyType) fkDef() appdef.QName {
-	if v := key.appCfg.AppDef.View(key.viewName); v != nil {
-		return v.Key().QName()
-	}
-	return appdef.NullQName
-}
-
-// Return new key row, contained all fields from partition key and clustering columns
-func (key *keyType) keyRow() (istructs.IRowReader, error) {
-	row := newRow(key.appCfg)
-	row.setQName(key.fkDef())
-
-	key.partRow.fieldsDef().Fields(
-		func(f appdef.IField) {
-			row.dyB.Set(f.Name(), key.partRow.dyB.Get(f.Name()))
-		})
-	key.ccolsRow.fieldsDef().Fields(
-		func(f appdef.IField) {
-			row.dyB.Set(f.Name(), key.ccolsRow.dyB.Get(f.Name()))
-		})
-
-	if err := row.build(); err != nil {
-		return nil, err
-	}
-
-	return &row, nil
-}
-
-// loadFromBytes reads key from partition key bytes and clustering columns bytes
+// Reads key from partition key bytes and clustering columns bytes
 func (key *keyType) loadFromBytes(pKey, cKey []byte) (err error) {
 	buf := bytes.NewBuffer(pKey)
 	if err = loadViewPartKey_00(key, buf); err != nil {
@@ -299,24 +262,6 @@ func (key *keyType) pkDef() appdef.QName {
 	}
 
 	return appdef.NullQName
-}
-
-// Splits solid key row to partition key row and clustering columns row using view definitions
-func (key *keyType) splitRow() {
-	v := key.appCfg.AppDef.View(key.viewName)
-	pkDef := v.Key().PartKey()
-	ccDef := v.Key().ClustCols()
-
-	key.rowType.dyB.IterateFields(nil,
-		func(name string, data interface{}) bool {
-			if pkDef.Field(name) != nil {
-				key.partRow.dyB.Set(name, data)
-			}
-			if ccDef.Field(name) != nil {
-				key.ccolsRow.dyB.Set(name, data)
-			}
-			return true
-		})
 }
 
 // Stores key to partition key bytes and to clustering columns bytes
@@ -343,6 +288,81 @@ func (key *keyType) validDefs() (ok bool, err error) {
 	}
 
 	return true, nil
+}
+
+// istructs.IRowReader.AsBool
+func (key *keyType) AsBool(name string) bool {
+	if key.partRow.fieldsDef().Field(name) != nil {
+		return key.partRow.AsBool(name)
+	}
+	return key.ccolsRow.AsBool(name)
+}
+
+// istructs.IRowReader.AsBytes
+func (key *keyType) AsBytes(name string) []byte {
+	return key.ccolsRow.AsBytes(name)
+}
+
+// istructs.IRowReader.AsFloat32
+func (key *keyType) AsFloat32(name string) float32 {
+	if key.partRow.fieldsDef().Field(name) != nil {
+		return key.partRow.AsFloat32(name)
+	}
+	return key.ccolsRow.AsFloat32(name)
+}
+
+// istructs.IRowReader.AsFloat64
+func (key *keyType) AsFloat64(name string) float64 {
+	if key.partRow.fieldsDef().Field(name) != nil {
+		return key.partRow.AsFloat64(name)
+	}
+	return key.ccolsRow.AsFloat64(name)
+}
+
+// istructs.IRowReader.AsInt32
+func (key *keyType) AsInt32(name string) int32 {
+	if key.partRow.fieldsDef().Field(name) != nil {
+		return key.partRow.AsInt32(name)
+	}
+	return key.ccolsRow.AsInt32(name)
+}
+
+// istructs.IRowReader.AsInt64
+func (key *keyType) AsInt64(name string) int64 {
+	if key.partRow.fieldsDef().Field(name) != nil {
+		return key.partRow.AsInt64(name)
+	}
+	return key.ccolsRow.AsInt64(name)
+}
+
+// istructs.IRowReader.AsQName
+func (key *keyType) AsQName(name string) appdef.QName {
+	if name == appdef.SystemField_QName {
+		// special case: «sys.QName» field must return full key definition
+		return appdef.ViewKeyDefName(key.viewName)
+	}
+	if key.partRow.fieldsDef().Field(name) != nil {
+		return key.partRow.AsQName(name)
+	}
+	return key.ccolsRow.AsQName(name)
+}
+
+// istructs.IRowReader.AsRecordID
+func (key *keyType) AsRecordID(name string) istructs.RecordID {
+	if key.partRow.fieldsDef().Field(name) != nil {
+		return key.partRow.AsRecordID(name)
+	}
+	return key.ccolsRow.AsRecordID(name)
+}
+
+// istructs.IRowReader.AsString
+func (key *keyType) AsString(name string) string {
+	return key.ccolsRow.AsString(name)
+}
+
+// istructs.IKeyBuilder.ClusteringColumns
+func (key *keyType) ClusteringColumns() istructs.IRowWriter {
+	return &key.ccolsRow
 }
 
 // istructs.IKeyBuilder.Equals
@@ -383,14 +403,108 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 	return false
 }
 
+// istructs.IRowReader.FieldNames
+func (key *keyType) FieldNames(cb func(string)) {
+	key.partRow.FieldNames(cb)
+	key.ccolsRow.FieldNames(cb)
+}
+
 // istructs.IKeyBuilder.PartitionKey
 func (key *keyType) PartitionKey() istructs.IRowWriter {
 	return &key.partRow
 }
 
-// istructs.IKeyBuilder.ClusteringColumns
-func (key *keyType) ClusteringColumns() istructs.IRowWriter {
-	return &key.ccolsRow
+// istructs.IRowWriter.PutBool
+func (key *keyType) PutBool(name string, value bool) {
+	if key.partRow.fieldsDef().Field(name) != nil {
+		key.partRow.PutBool(name, value)
+	} else {
+		key.ccolsRow.PutBool(name, value)
+	}
+}
+
+// istructs.IRowWriter.PutBytes
+func (key *keyType) PutBytes(name string, value []byte) {
+	key.ccolsRow.PutBytes(name, value)
+}
+
+// istructs.IRowWriter.PutChars
+func (key *keyType) PutChars(name string, value string) {
+	key.ccolsRow.PutChars(name, value)
+}
+
+// istructs.IRowWriter.PutFloat32
+func (key *keyType) PutFloat32(name string, value float32) {
+	if key.partRow.fieldsDef().Field(name) != nil {
+		key.partRow.PutFloat32(name, value)
+	} else {
+		key.ccolsRow.PutFloat32(name, value)
+	}
+}
+
+// istructs.IRowWriter.PutFloat64
+func (key *keyType) PutFloat64(name string, value float64) {
+	if key.partRow.fieldsDef().Field(name) != nil {
+		key.partRow.PutFloat64(name, value)
+	} else {
+		key.ccolsRow.PutFloat64(name, value)
+	}
+}
+
+// istructs.IRowWriter.PutInt32
+func (key *keyType) PutInt32(name string, value int32) {
+	if key.partRow.fieldsDef().Field(name) != nil {
+		key.partRow.PutInt32(name, value)
+	} else {
+		key.ccolsRow.PutInt32(name, value)
+	}
+}
+
+// istructs.IRowWriter.PutInt64
+func (key *keyType) PutInt64(name string, value int64) {
+	if key.partRow.fieldsDef().Field(name) != nil {
+		key.partRow.PutInt64(name, value)
+	} else {
+		key.ccolsRow.PutInt64(name, value)
+	}
+}
+
+// istructs.IRowWriter.PutNumber
+func (key *keyType) PutNumber(name string, value float64) {
+	if key.partRow.fieldsDef().Field(name) != nil {
+		key.partRow.PutNumber(name, value)
+	} else {
+		key.ccolsRow.PutNumber(name, value)
+	}
+}
+
+// istructs.IRowWriter.PutQName
+func (key *keyType) PutQName(name string, value appdef.QName) {
+	if key.partRow.fieldsDef().Field(name) != nil {
+		key.partRow.PutQName(name, value)
+	} else {
+		key.ccolsRow.PutQName(name, value)
+	}
+}
+
+// istructs.IRowWriter.PutRecordID
+func (key *keyType) PutRecordID(name string, value istructs.RecordID) {
+	if key.partRow.fieldsDef().Field(name) != nil {
+		key.partRow.PutRecordID(name, value)
+	} else {
+		key.ccolsRow.PutRecordID(name, value)
+	}
+}
+
+// istructs.IRowWriter.PutString
+func (key *keyType) PutString(name string, value string) {
+	key.ccolsRow.PutString(name, value)
+}
+
+// istructs.IRowReader.RecordIDs
+func (key *keyType) RecordIDs(includeNulls bool, cb func(string, istructs.RecordID)) {
+	key.partRow.RecordIDs(includeNulls, cb)
+	key.ccolsRow.RecordIDs(includeNulls, cb)
 }
 
 // valueType implements IValue, IValueBuilder
@@ -427,7 +541,7 @@ func (val *valueType) loadFromBytes(in []byte) (err error) {
 	buf := bytes.NewBuffer(in)
 
 	var codec byte
-	if err = binary.Read(buf, binary.BigEndian, &codec); err != nil {
+	if codec, err = utils.ReadByte(buf); err != nil {
 		return fmt.Errorf("error read codec version: %w", err)
 	}
 	switch codec {

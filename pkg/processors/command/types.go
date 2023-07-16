@@ -63,7 +63,6 @@ type cmdWorkpiece struct {
 	reb                 istructs.IRawEventBuilder
 	rawEvent            istructs.IRawEvent
 	pLogEvent           istructs.IPLogEvent
-	wLogEvent           istructs.IWLogEvent
 	err                 error
 	workspace           *workspace
 	generatedIDs        map[istructs.RecordID]istructs.RecordID

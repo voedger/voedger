@@ -294,4 +294,38 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
+	{
+		// https://github.com/voedger/voedger/issues/422
+		desc: "grant exec on few funcs to role air.UntillPaymentsReseller",
+		pattern: PatternType{
+			qNamesPattern: []appdef.QName{
+				qNameQryGetDailyPayoutCfg,
+				qNameCmdUpdateScheduledPayout,
+				qNameQryGetUPTransfers,
+				qNameCmdCreateUPTransfer,
+			},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
+		desc: "grant exec on c.air.UpdateUPLocationRates to role air.UntillPaymentsReseller",
+		pattern: PatternType{
+			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPLocationRates},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
+		// https://github.com/voedger/voedger/issues/430
+		desc: "allow SELECT wdoc.air.UPTransfer to air.UntillPaymentsReseller",
+		pattern: PatternType{
+			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+			qNamesPattern:  []appdef.QName{qNameWDocUPTransfer},
+			principalsPattern: [][]iauthnz.Principal{
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
+			},
+		},
+		policy: ACPolicy_Allow,
+	},
 }

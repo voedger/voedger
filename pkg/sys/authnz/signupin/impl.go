@@ -89,7 +89,7 @@ func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecComman
 }
 
 // sys/registry, appWorkspace, triggered by CDoc<Login>
-var loginIdxProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+var projectorLoginIdx = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return event.CUDs(func(rec istructs.ICUDRow) (err error) {
 		if rec.QName() != authnz.QNameCDocLogin {
 			return nil

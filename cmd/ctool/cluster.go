@@ -71,6 +71,18 @@ type nodeType struct {
 	DesiredNodeState *nodeStateType `json:"DesiredNodeState,omitempty"`
 }
 
+// the minimum amount of RAM required by the node (as string)
+func (n *nodeType) minAmountOfRAM() string {
+	switch n.NodeRole {
+	case nrAppNode:
+		return minRamOnAppNode
+	case nrDBNode:
+		return minRamOnDBNode
+	default:
+		return minRamCENode
+	}
+}
+
 func (n *nodeType) nodeControllerFunction() error {
 	switch n.NodeRole {
 	case nrDBNode, nrAppNode:

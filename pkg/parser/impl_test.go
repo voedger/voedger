@@ -13,23 +13,23 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-//go:embed example_app/pmain/*.sql
+//go:embed sql_example_app/pmain/*.sql
 var fsMain embed.FS
 
-//go:embed example_app/airsbp/*.sql
+//go:embed sql_example_app/airsbp/*.sql
 var fsAir embed.FS
 
-//go:embed example_app/untill/*.sql
+//go:embed sql_example_app/untill/*.sql
 var fsUntill embed.FS
 
-//go:embed system_pkg/*.sql
+//go:embed sql_example_syspkg/*.sql
 var sfs embed.FS
 
 //_go:embed example_app/expectedParsed.schema
 //var expectedParsedExampledSchemaStr string
 
 func getSysPackageAST() *PackageSchemaAST {
-	pkgSys, err := ParsePackageDir(appdef.SysPackage, sfs, "system_pkg")
+	pkgSys, err := ParsePackageDir(appdef.SysPackage, sfs, "sql_example_syspkg")
 	if err != nil {
 		panic(err)
 	}
@@ -39,13 +39,13 @@ func getSysPackageAST() *PackageSchemaAST {
 func Test_BasicUsage(t *testing.T) {
 
 	require := require.New(t)
-	mainPkgAST, err := ParsePackageDir("github.com/untillpro/main", fsMain, "example_app/pmain")
+	mainPkgAST, err := ParsePackageDir("github.com/untillpro/main", fsMain, "sql_example_app/pmain")
 	require.NoError(err)
 
-	airPkgAST, err := ParsePackageDir("github.com/untillpro/airsbp", fsAir, "example_app/airsbp")
+	airPkgAST, err := ParsePackageDir("github.com/untillpro/airsbp", fsAir, "sql_example_app/airsbp")
 	require.NoError(err)
 
-	untillPkgAST, err := ParsePackageDir("github.com/untillpro/untill", fsUntill, "example_app/untill")
+	untillPkgAST, err := ParsePackageDir("github.com/untillpro/untill", fsUntill, "sql_example_app/untill")
 	require.NoError(err)
 
 	// := repr.String(pkgExample, repr.Indent(" "), repr.IgnorePrivate())
@@ -69,6 +69,17 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
 	require.Equal(appdef.DataKind_int32, cdoc.(appdef.IFields).Field("FState").DataKind())
 
+	// container of the table
+	container := cdoc.(appdef.IContainers).Container("TableItems")
+	require.Equal("TableItems", container.Name())
+	require.Equal(appdef.NewQName("main", "TablePlanItem"), container.QName())
+	require.Equal(appdef.Occurs(0), container.MinOccurs())
+	require.Equal(appdef.Occurs(maxNestedTableContainerOccurrences), container.MaxOccurs())
+	require.Equal(appdef.DefKind_CRecord, container.Def().Kind())
+	require.Equal(2+5 /*system fields*/, container.Def().(appdef.IFields).FieldCount())
+	require.Equal(appdef.DataKind_int32, container.Def().(appdef.IFields).Field("TableNo").DataKind())
+	require.Equal(appdef.DataKind_int32, container.Def().(appdef.IFields).Field("Chairs").DataKind())
+
 	// child table
 	crec := builder.Def(appdef.NewQName("main", "TablePlanItem"))
 	require.NotNil(crec)
@@ -88,6 +99,44 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(1, view.Value().UserFieldCount())
 	require.Equal(1, view.Key().PartKey().FieldCount())
 	require.Equal(4, view.Key().ClustCols().FieldCount())
+
+	// workspace descriptor
+	cdoc = builder.Def(appdef.NewQName("main", "MyWorkspace"))
+	require.NotNil(cdoc)
+	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
+	require.Equal(appdef.DataKind_string, cdoc.(appdef.IFields).Field("Name").DataKind())
+	require.Equal(appdef.DataKind_string, cdoc.(appdef.IFields).Field("Country").DataKind())
+}
+
+func Test_Refs_NestedTables(t *testing.T) {
+
+	require := require.New(t)
+
+	fs, err := ParseFile("file1.sql", `SCHEMA untill;
+	TABLE table1 INHERITS CDoc (
+		items TABLE inner1 (
+			table1 ref,
+			ref1 ref(table3),
+			urg_number int32
+		)
+	);
+	TABLE table2 INHERITS CRecord (
+	);
+	TABLE table3 INHERITS CDoc (
+		items table2
+	);
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+	require.NoError(BuildAppDefs(packages, appdef.New()))
+
 }
 
 func Test_DupFieldsInTypes(t *testing.T) {
@@ -156,7 +205,7 @@ func Test_DupFieldsInTables(t *testing.T) {
 		someField int,		-- duplicated in the second OF
 		Kind int,			-- duplicated in the first OF (2nd level)
 		Name int,			-- duplicated in the inherited table
-		ID text				
+		ID text
 	)
 	`)
 	require.NoError(err)
@@ -183,14 +232,14 @@ func Test_DupFieldsInTables(t *testing.T) {
 func Test_Expressions(t *testing.T) {
 	require := require.New(t)
 
-	_, err := ParseFile("file1.sql", `SCHEMA test; 
+	_, err := ParseFile("file1.sql", `SCHEMA test;
 	TABLE MyTable(
 		Int1 text DEFAULT 1 CHECK(Int1 > Int2),
 		Int1 int DEFAULT 1 CHECK(Text != "asd"),
 		Int1 int DEFAULT 1 CHECK(Int2 > -5),
 		Int1 int DEFAULT 1 CHECK(TextField > "asd" AND (SomeFloat/3.2)*4 != 5.003),
 		Int1 int DEFAULT 1 CHECK(SomeFunc("a", TextField) AND BoolField=FALSE),
-		
+
 		CHECK(MyRowValidator(this))
 	)
 	`)
@@ -201,17 +250,17 @@ func Test_Expressions(t *testing.T) {
 func Test_Duplicates(t *testing.T) {
 	require := require.New(t)
 
-	ast1, err := ParseFile("file1.sql", `SCHEMA test; 
+	ast1, err := ParseFile("file1.sql", `SCHEMA test;
 	EXTENSION ENGINE BUILTIN (
 		FUNCTION MyTableValidator() RETURNS void;
-		FUNCTION MyTableValidator(TableRow) RETURNS string;	
+		FUNCTION MyTableValidator(TableRow) RETURNS string;
 		FUNCTION MyFunc2() RETURNS void;
 	);
 	TABLE Rec1 INHERITS CRecord();
 	`)
 	require.NoError(err)
 
-	ast2, err := ParseFile("file2.sql", `SCHEMA test; 
+	ast2, err := ParseFile("file2.sql", `SCHEMA test;
 	WORKSPACE ChildWorkspace (
 		TAG MyFunc2; -- redeclared
 		EXTENSION ENGINE BUILTIN (
@@ -243,20 +292,25 @@ func Test_Duplicates(t *testing.T) {
 func Test_DuplicatesInViews(t *testing.T) {
 	require := require.New(t)
 
-	ast, err := ParseFile("file2.sql", `SCHEMA test; 
+	ast, err := ParseFile("file2.sql", `SCHEMA test;
 	WORKSPACE Workspace (
 		VIEW test(
 			field1 int,
 			field2 int,
 			field1 text,
 			PRIMARY KEY(field1),
-			PRIMARY KEY(field2)			
+			PRIMARY KEY(field2)
 		) AS RESULT OF Proj1;
 	)
 	`)
 	require.NoError(err)
 
-	_, err = MergeFileSchemaASTs("", []*FileSchemaAST{ast})
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{ast})
+	require.NoError(err)
+
+	_, err = MergePackageSchemas([]*PackageSchemaAST{
+		pkg,
+	})
 
 	require.EqualError(err, strings.Join([]string{
 		"file2.sql:6:4: field1 redeclared",
@@ -267,7 +321,7 @@ func Test_DuplicatesInViews(t *testing.T) {
 func Test_Comments(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	fs, err := ParseFile("example.sql", `SCHEMA test;
 	EXTENSION ENGINE BUILTIN (
 		-- My function
 		-- line 2
@@ -301,12 +355,12 @@ func Test_UnexpectedSchema(t *testing.T) {
 func Test_Undefined(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	fs, err := ParseFile("example.sql", `SCHEMA test;
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
-			COMMAND Orders() WITH Tags=[UndefinedTag];
+			COMMAND Orders() WITH Tags=(UndefinedTag);
 			QUERY Query1 RETURNS void WITH Rate=UndefinedRate, Comment=xyz.UndefinedComment;
-			PROJECTOR ImProjector ON COMMAND xyz.CreateUPProfile USES sys.HTTPStorage;
+			PROJECTOR ImProjector ON COMMAND xyz.CreateUPProfile;
 			COMMAND CmdFakeReturn() RETURNS text;
 			COMMAND CmdNoReturn() RETURNS void;
 			COMMAND CmdFakeArg(text);
@@ -341,11 +395,11 @@ func Test_Imports(t *testing.T) {
 	IMPORT SCHEMA "github.com/untillpro/airsbp3/pkg3" AS air;
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
-    		COMMAND Orders WITH Tags=[pkg2.SomeTag];
+    		COMMAND Orders WITH Tags=(pkg2.SomeTag);
     		QUERY Query1 RETURNS void WITH Comment=pkg2.SomeComment;
     		QUERY Query2 RETURNS void WITH Comment=air.SomeComment;
     		QUERY Query3 RETURNS void WITH Comment=air.SomeComment2; -- air.SomeComment2 undefined
-    		PROJECTOR ImProjector ON COMMAND Air.CreateUPProfil USES sys.HTTPStorage; -- Air undefined
+    		PROJECTOR ImProjector ON COMMAND Air.CreateUPProfil; -- Air undefined
 		)
 	)
 	`)
@@ -379,7 +433,7 @@ func Test_Imports(t *testing.T) {
 func Test_AbstractWorkspace(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	fs, err := ParseFile("example.sql", `SCHEMA test;
 	WORKSPACE ws1 ();
 	ABSTRACT WORKSPACE ws2();
 	ABSTRACT WORKSPACE ws3();
@@ -402,7 +456,7 @@ func Test_AbstractWorkspace(t *testing.T) {
 func Test_UniqueFields(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	fs, err := ParseFile("example.sql", `SCHEMA test;
 	TABLE MyTable INHERITS CDoc (
 		Int1 int32,
 		Int2 int32 NOT NULL,
@@ -440,7 +494,7 @@ func Test_UniqueFields(t *testing.T) {
 func Test_NestedTables(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	fs, err := ParseFile("example.sql", `SCHEMA test;
 	TABLE NestedTable INHERITS CRecord (
 		ItemName text,
 		DeepNested TABLE DeepNestedTable (
@@ -471,7 +525,7 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 	t.Run("Should return error because CDoc references to ODoc", func(t *testing.T) {
 		require := require.New(t)
 
-		fs, err := ParseFile("example.sql", `SCHEMA test; 
+		fs, err := ParseFile("example.sql", `SCHEMA test;
 		TABLE OTable INHERITS ODoc ();
 		TABLE CTable INHERITS CDoc (
 			OTableRef ref(OTable)
@@ -493,37 +547,12 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 
 		require.Contains(err.Error(), "table test.CTable can not reference to table test.OTable")
 	})
-	t.Run("Should return error because CDoc references to undefined table kind", func(t *testing.T) {
-		require := require.New(t)
-
-		fs, err := ParseFile("example.sql", `SCHEMA test; 
-		TABLE UntillPaymentsUser ();
-		TABLE CTable INHERITS CDoc (
-			Ref ref(UntillPaymentsUser)
-		);
-		`)
-		require.Nil(err)
-
-		pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
-		require.Nil(err)
-
-		packages, err := MergePackageSchemas([]*PackageSchemaAST{
-			getSysPackageAST(),
-			pkg,
-		})
-		require.NoError(err)
-
-		def := appdef.New()
-		err = BuildAppDefs(packages, def)
-
-		require.Contains(err.Error(), ErrUndefinedTableKind.Error())
-	})
 }
 
 func Test_ReferenceToNoTable(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.sql", `SCHEMA test; 
+	fs, err := ParseFile("example.sql", `SCHEMA test;
 	ROLE Admin;
 	TABLE CTable INHERITS CDoc (
 		RefField ref(Admin)

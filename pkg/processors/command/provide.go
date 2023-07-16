@@ -128,9 +128,6 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 					if cmd.pLogEvent != nil {
 						cmd.pLogEvent.Release()
 					}
-					if cmd.wLogEvent != nil {
-						cmd.wLogEvent.Release()
-					}
 					cmd.metrics.increase(CommandsSeconds, time.Since(start).Seconds())
 				case <-vvmCtx.Done():
 					cmdProc.appPartitions = map[istructs.AppQName]*appPartition{} // clear appPartitions to test recovery

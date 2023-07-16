@@ -42,7 +42,7 @@ TABLE TablePlan INHERITS CDoc (
     ),
     items NestedTable,
     ExcludedTableItems TablePlanItem
-) WITH Comment=BackofficeComment, Tags=[BackofficeTag]; -- Optional comment and tags
+) WITH Comment=BackofficeComment, Tags=(BackofficeTag); -- Optional comment and tags
 
 
 -- Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC
@@ -64,7 +64,7 @@ EXTENSION ENGINE WASM (
 );
 
 WORKSPACE MyWorkspace (
-    DESCRIPTOR OF TypeWithName ( -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
+    DESCRIPTOR OF air.TypeWithName ( -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
         Country text CHECK "^[A-Za-z]{2}$",
         Description text
     );
@@ -103,22 +103,39 @@ WORKSPACE MyWorkspace (
 
         -- Projector can only be declared in workspace.
         -- A builtin function OrdersCountProjector must exist in package resources.
-        -- TARGET - lists all QNames for which Intets are generated (QName of Entity or Storage)
-        -- USE - lists all QNames for which Get/Read operations are done (QName of Entity or Storage). 
-        --      (no need to specify in USES when already listed in TARGET)
-        PROJECTOR CountOrders ON COMMAND Orders MAKES air.OrdersCountView;
+        -- INTENTS - lists all storage keys, projector generates intents for
+        -- STATE - lists all storage keys, projector reads state from
+        --      (key consist of Storage Qname, and Entity name, when required by storage)
+        --      (no need to specify in STATE when already listed in INTENTS)
+        PROJECTOR CountOrders 
+            ON COMMAND Orders 
+            INTENTS(View OrdersCountView);
         
         -- Projector triggered by command argument SubscriptionProfile which is a Storage
         -- Projector uses sys.HTTPStorage
-        PROJECTOR UpdateSubscriptionProfile ON COMMAND ARGUMENT SubscriptionEvent USES sys.HTTPStorage;
+        PROJECTOR UpdateSubscriptionProfile 
+            ON COMMAND ARGUMENT SubscriptionEvent 
+            STATE(sys.Http, AppSecret);
 
         -- Projectors triggered by CUD operations
-        PROJECTOR TablePlanThumbnailGen ON INSERT TablePlan MAKES TablePlanThumbnails;
-        PROJECTOR UpdateDashboard ON COMMAND IN (Orders, Orders2) MAKES DashboardView;
-        PROJECTOR UpdateActivePlans ON ACTIVATE OR DEACTIVATE TablePlan MAKES ActiveTablePlansView;
+        -- SYNC means that projector is synchronous 
+        SYNC PROJECTOR TablePlanThumbnailGen 
+            ON INSERT TablePlan 
+            INTENTS(View TablePlanThumbnails);
+
+        PROJECTOR UpdateDashboard 
+            ON COMMAND IN (Orders, Orders2) 
+            INTENTS(View DashboardView);
+
+        PROJECTOR UpdateActivePlans 
+            ON ACTIVATE OR DEACTIVATE TablePlan 
+            INTENTS(View ActiveTablePlansView);
         
         -- Some projector which sends E-mails and performs HTTP queries
-        PROJECTOR NotifyOnChanges ON INSERT OR UPDATE IN (TablePlan, WsTable) USES sys.HTTPStorage MAKES sys.SendMailStorage;
+        PROJECTOR NotifyOnChanges 
+            ON INSERT OR UPDATE IN (TablePlan, WsTable) 
+            STATE(Http, AppSecret)
+            INTENTS(SendMail, View NotificationsHistory);
 
         -- Commands can only be declared in workspaces
         -- Command can have optional argument and/or unlogged argument
@@ -131,12 +148,12 @@ WORKSPACE MyWorkspace (
         -- Command with declared Comment, Tags and Rate
         COMMAND Orders4(UNLOGGED air.Order) WITH 
             Comment=PosComment, 
-            Tags=[BackofficeTag, PosTag],
+            Tags=(BackofficeTag, PosTag),
             Rate=BackofficeFuncRate1; 
 
         -- Qieries can only be declared in workspaces
         QUERY Query1 RETURNS void;
-        QUERY _Query1() RETURNS air.Order WITH Comment=PosComment, Tags=[BackofficeTag, PosTag];
+        QUERY _Query1() RETURNS air.Order WITH Comment=PosComment, Tags=(BackofficeTag, PosTag);
         QUERY Query2(air.Order) RETURNS air.Order;
     );
 
@@ -169,6 +186,24 @@ WORKSPACE MyWorkspace (
         SomeField int32,
         PRIMARY KEY ((Year), Month, Day)
     ) AS RESULT OF CountOrders;
+
+    VIEW TablePlanThumbnails(
+        Dummy int,
+        PRIMARY KEY ((Dummy))
+    ) AS RESULT OF TablePlanThumbnailGen;
+
+    VIEW DashboardView(
+        Dummy int,
+        PRIMARY KEY ((Dummy))
+    ) AS RESULT OF UpdateDashboard;
+    VIEW NotificationsHistory(
+        Dummy int,
+        PRIMARY KEY ((Dummy))
+    ) AS RESULT OF UpdateDashboard;
+    VIEW ActiveTablePlansView(
+        Dummy int,
+        PRIMARY KEY ((Dummy))
+    ) AS RESULT OF UpdateDashboard;
 
 );
 

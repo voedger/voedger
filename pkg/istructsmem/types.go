@@ -37,7 +37,7 @@ type rowType struct {
 	container string
 	isActive  bool
 	dyB       *dynobuffers.Buffer
-	nils      map[string]bool // nilled string and []bytes, which not stored in dynobuffer
+	nils      []string // nilled string and []bytes, which not stored in dynobuffer
 	err       error
 }
 
@@ -51,7 +51,7 @@ func newRow(appCfg *AppConfigType) rowType {
 		container: "",
 		isActive:  true,
 		dyB:       nullDynoBuffer,
-		nils:      make(map[string]bool),
+		nils:      nil,
 		err:       nil,
 	}
 }
@@ -75,13 +75,32 @@ func (row *rowType) build() (err error) {
 		if bytes, nils, err = row.dyB.ToBytesNilled(); err == nil {
 			row.dyB.Reset(utils.CopyBytes(bytes))
 			// append new nils
-			for _, n := range nils {
-				row.nils[n] = true
+			if len(nils) > 0 {
+				if row.nils == nil {
+					row.nils = append(row.nils, nils...)
+				} else {
+					for _, n := range nils {
+						if new := func() bool {
+							for i := range row.nils {
+								if row.nils[i] == n {
+									return false
+								}
+							}
+							return true
+						}(); new {
+							row.nils = append(row.nils, n)
+						}
+					}
+				}
 			}
 			// remove extra nils
-			for n := range row.nils {
-				if row.dyB.HasValue(n) {
-					delete(row.nils, n)
+			l := len(row.nils) - 1
+			for i := l; i >= 0; i-- {
+				if row.dyB.HasValue(row.nils[i]) {
+					copy(row.nils[i:], row.nils[i+1:])
+					row.nils[l] = ""
+					row.nils = row.nils[:l]
+					l--
 				}
 			}
 		}
@@ -97,8 +116,8 @@ func (row *rowType) clear() {
 	row.parentID = istructs.NullRecordID
 	row.container = ""
 	row.isActive = true
-	row.dyB = nullDynoBuffer
-	row.nils = make(map[string]bool)
+	row.release()
+	row.nils = nil
 	row.err = nil
 }
 
@@ -116,7 +135,7 @@ func (row *rowType) containerID() (id containers.ContainerID, err error) {
 	return row.appCfg.cNames.ID(row.Container())
 }
 
-// copyFrom assigns from specified row
+// Assigns from specified row
 func (row *rowType) copyFrom(src *rowType) {
 	row.clear()
 
@@ -137,7 +156,7 @@ func (row *rowType) copyFrom(src *rowType) {
 	_ = row.build()
 }
 
-// empty returns true if no data except system fields
+// Returns true if no data except system fields
 func (row *rowType) empty() bool {
 	userFields := false
 	row.dyB.IterateFields(nil,
@@ -148,7 +167,7 @@ func (row *rowType) empty() bool {
 	return !userFields
 }
 
-// error returns concatenation of collected errors. Errors are collected from Put××× methods fails
+// Returns concatenation of collected errors. Errors are collected from Put××× methods fails
 func (row *rowType) error() error {
 	return row.err
 }
@@ -169,7 +188,7 @@ func (row *rowType) loadFromBytes(in []byte) (err error) {
 	buf := bytes.NewBuffer(in)
 
 	var codec byte
-	if err = binary.Read(buf, binary.BigEndian, &codec); err != nil {
+	if codec, err = utils.ReadByte(buf); err != nil {
 		return fmt.Errorf("error read codec version: %w", err)
 	}
 	switch codec {
@@ -184,7 +203,7 @@ func (row *rowType) loadFromBytes(in []byte) (err error) {
 	return nil
 }
 
-// maskValues masks values in row. Digital values are masked by zeros, strings — by star «*». System fields are not masked
+// Masks values in row. Digital values are masked by zeros, strings — by star «*». System fields are not masked
 func (row *rowType) maskValues() {
 	row.dyB.IterateFields(nil,
 		func(name string, data interface{}) bool {
@@ -246,6 +265,14 @@ func (row *rowType) qNameID() (qnames.QNameID, error) {
 		return qnames.NullQNameID, nil
 	}
 	return row.appCfg.qNames.ID(name)
+}
+
+// Returns dynobuffer to pull
+func (row *rowType) release() {
+	if row.dyB != nullDynoBuffer {
+		row.dyB.Release()
+		row.dyB = nullDynoBuffer
+	}
 }
 
 // setActive sets record IsActive activity flag
@@ -343,23 +370,25 @@ func (row *rowType) setDef(value appdef.IDef) {
 		row.def = value
 	}
 
-	if row.def.QName() == appdef.NullQName {
-		row.dyB = nullDynoBuffer
-	} else {
+	row.release()
+
+	if row.def.QName() != appdef.NullQName {
 		row.dyB = dynobuffers.NewBuffer(row.appCfg.dynoSchemes[row.def.QName()])
 	}
 }
 
-// Stores row to bytes and returns error if occurs
-func (row *rowType) storeToBytes() (out []byte, err error) {
+// Stores row to bytes.
+//
+// # Panics:
+//
+//   - Must be called *after* event validation. Overwise function may panic!
+func (row *rowType) storeToBytes() []byte {
 	buf := new(bytes.Buffer)
-	_ = binary.Write(buf, binary.BigEndian, codec_LastVersion)
+	utils.WriteByte(buf, codec_LastVersion)
 
-	if err := storeRow(row, buf); err != nil {
-		return nil, err
-	}
+	storeRow(row, buf)
 
-	return buf.Bytes(), nil
+	return buf.Bytes()
 }
 
 // verifyToken verifies specified token for specified field and returns successfully verified token payload value or error
@@ -540,11 +569,11 @@ func (row *rowType) AsRecord(name string) istructs.IRecord {
 // IValue.AsEvent
 func (row *rowType) AsEvent(name string) istructs.IDbEvent {
 	if bytes := row.dyB.GetByteArray(name); bytes != nil {
-		event := newDbEvent(row.appCfg)
+		event := newEvent(row.appCfg)
 		if err := event.loadFromBytes(bytes.Bytes()); err != nil {
 			panic(err)
 		}
-		return &event
+		return event
 	}
 	if row.fieldDef(name) == nil {
 		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_Event.TrimString(), name, row.QName(), ErrNameNotFound))
@@ -761,18 +790,16 @@ func (row *rowType) PutRecordID(name string, value istructs.RecordID) {
 // istructs.IValueBuilder.PutRecord
 func (row *rowType) PutRecord(name string, record istructs.IRecord) {
 	if rec, ok := record.(*recordType); ok {
-		if bytes, err := rec.storeToBytes(); err == nil {
-			row.putValue(name, dynobuffers.FieldTypeByte, bytes)
-		}
+		bytes := rec.storeToBytes()
+		row.putValue(name, dynobuffers.FieldTypeByte, bytes)
 	}
 }
 
 // istructs.IValueBuilder.PutEvent
 func (row *rowType) PutEvent(name string, event istructs.IDbEvent) {
-	if ev, ok := event.(*dbEventType); ok {
-		if bytes, err := ev.storeToBytes(); err == nil {
-			row.putValue(name, dynobuffers.FieldTypeByte, bytes)
-		}
+	if ev, ok := event.(*eventType); ok {
+		bytes := ev.storeToBytes()
+		row.putValue(name, dynobuffers.FieldTypeByte, bytes)
 	}
 }
 

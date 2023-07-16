@@ -41,42 +41,19 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation coreutils.IFederation,
 	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount, buildInfo *debug.BuildInfo, buildSubjectsIdx bool) {
 	blobber.ProvideBlobberCmds(cfg, appDefBuilder)
-	collection.ProvideCollectionFunc(cfg, appDefBuilder)
-	collection.ProvideCDocFunc(cfg, appDefBuilder)
-	collection.ProvideStateFunc(cfg, appDefBuilder)
+	collection.Provide(cfg, appDefBuilder)
 	journal.Provide(cfg, appDefBuilder, ep)
 	wskinds.ProvideCDocsWorkspaceKinds(appDefBuilder)
 	builtin.Provide(cfg, appDefBuilder, buildInfo)
-	builtin.ProvideQryEcho(cfg, appDefBuilder)
-	builtin.ProvideQryGRCount(cfg, appDefBuilder)
-	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation)
+	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
 	sqlquery.Provide(cfg, appDefBuilder, asp, numCommandProcessors)
 	projectors.ProvideOffsetsDef(appDefBuilder)
 	processors.ProvideJSONFuncParamsDef(appDefBuilder)
-	verifier.Provide(cfg, appDefBuilder, itokens, federation, asp)
+	verifier.Provide(cfg, appDefBuilder, itokens, federation, asp, smtpCfg)
 	signupin.ProvideQryRefreshPrincipalToken(cfg, appDefBuilder, itokens)
 	signupin.ProvideCDocLogin(appDefBuilder)
 	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, atf)
-	invite.Provide(cfg, appDefBuilder, timeFunc, buildSubjectsIdx)
-	cfg.AddAsyncProjectors(
-		journal.ProvideWLogDatesAsyncProjectorFactory(),
-		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspace(federation, cfg.Name, itokens),
-		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation, cfg.Name, itokens),
-		workspace.ProvideAsyncProjectorInitializeWorkspace(federation, timeFunc, cfg.Name, ep, itokens, wsPostInitFunc),
-		verifier.ProvideAsyncProjectorFactory_SendEmailVerificationCode(federation, smtpCfg),
-		invite.ProvideAsyncProjectorApplyInvitationFactory(timeFunc, federation, cfg.Name, itokens, smtpCfg),
-		invite.ProvideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc, federation, cfg.Name, itokens),
-		invite.ProvideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc, federation, cfg.Name, itokens, smtpCfg),
-		invite.ProvideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc, federation, cfg.Name, itokens),
-		invite.ProvideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc, federation, cfg.Name, itokens),
-	)
-	cfg.AddSyncProjectors(
-		workspace.ProvideSyncProjectorChildWorkspaceIdxFactory(),
-		invite.ProvideSyncProjectorInviteIndexFactory(),
-		invite.ProvideSyncProjectorJoinedWorkspaceIndexFactory(),
-		workspace.ProvideAsyncProjectorWorkspaceIDIdx(),
-	)
-	cfg.AddSyncProjectors(collection.ProvideSyncProjectorFactories(appDefBuilder)...)
+	invite.Provide(cfg, appDefBuilder, timeFunc, buildSubjectsIdx, federation, itokens, smtpCfg)
 	uniques.Provide(cfg, appDefBuilder)
 	describe.Provide(cfg, asp, appDefBuilder)
 

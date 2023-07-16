@@ -24,8 +24,9 @@ var ErrPrimaryKeyNotDeclared = errors.New("primary key not declared")
 var ErrUndefinedTableKind = errors.New("undefined table kind")
 var ErrOnlyTypeOrVoidAllowedForArgument = errors.New("only type or void allowed in argument")
 var ErrOnlyTypeOrVoidAllowedForResult = errors.New("only type or void allowed in result")
-var ErrNestedTableCannotBeDocument = errors.New("nested table cannot be declared as document")
 var ErrNestedTableIncorrectKind = errors.New("incorrect nested table kind")
+var ErrNestedTablesNotSupportedInTypes = errors.New("nested tables not supported in types")
+
 var ErrArrayFieldsNotSupportedHere = errors.New("array fields of system types not supported here")
 var ErrMustBeNotNull = errors.New("field has to be NOT NULL")
 
@@ -44,6 +45,18 @@ func ErrUndefinedField(name string) error {
 
 func ErrTypeNotSupported(name string) error {
 	return fmt.Errorf("%s type not supported", name)
+}
+
+func ErrStorageRequiresEntity(name string) error {
+	return fmt.Errorf("storage %s requires entity", name)
+}
+
+func ErrStorageNotInProjectorState(name string) error {
+	return fmt.Errorf("storage %s is not available in the state of projectors", name)
+}
+
+func ErrStorageNotInProjectorIntents(name string) error {
+	return fmt.Errorf("storage %s is not available in the intents of projectors", name)
 }
 
 func ErrRedeclared(name string) error {
