@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -30,8 +31,11 @@ func (s *viewRecordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStat
 }
 func (s *viewRecordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	k := key.(*viewRecordsKeyBuilder)
-	v, err := s.viewRecordsFunc().Get(k.wsid, key)
+	v, err := s.viewRecordsFunc().Get(k.wsid, k.IKeyBuilder)
 	if err != nil {
+		if err == istructsmem.ErrRecordNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 	if v == nil {

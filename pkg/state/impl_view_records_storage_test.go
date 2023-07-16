@@ -29,7 +29,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		viewRecords := &mockViewRecords{}
 		viewRecords.
 			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(ViewRecordsStorage, testViewRecordQName1)).
-			On("Get", istructs.WSID(1), mock.AnythingOfType("*state.viewRecordsKeyBuilder")).Return(value, nil)
+			On("Get", istructs.WSID(1), mock.Anything).Return(value, nil)
 
 		appStructs := &mockAppStructs{}
 		appStructs.
