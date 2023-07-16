@@ -40,8 +40,7 @@ func (s *recordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.ISta
 			return nil, nil
 		}
 		return &recordsStorageValue{
-			record:     singleton,
-			toJSONFunc: s.toJSON,
+			IRecord: singleton,
 		}, nil
 	}
 	if k.id == istructs.NullRecordID {
@@ -56,8 +55,7 @@ func (s *recordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.ISta
 		return nil, nil
 	}
 	return &recordsStorageValue{
-		record:     record,
-		toJSONFunc: s.toJSON,
+		IRecord: record,
 	}, nil
 }
 

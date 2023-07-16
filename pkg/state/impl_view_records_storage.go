@@ -38,8 +38,7 @@ func (s *viewRecordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.
 		return nil, nil
 	}
 	return &viewRecordsStorageValue{
-		value:      v,
-		toJSONFunc: s.toJSON,
+		value: v,
 	}, nil
 }
 

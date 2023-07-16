@@ -256,7 +256,7 @@ func TestRecordsStorage_Update(t *testing.T) {
 	r := &mockRecord{}
 	sv := &recordsStorageValue{r}
 	cud := &mockCUD{}
-	cud.On("Update", r).Return(rw)
+	cud.On("Update", mock.Anything).Return(rw)
 	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, func() istructs.ICUD { return cud }, nil, nil, 1, nil)
 	kb, err := s.KeyBuilder(RecordsStorage, testRecordQName1)
 	require.NoError(err)
