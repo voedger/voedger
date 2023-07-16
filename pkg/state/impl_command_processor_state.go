@@ -45,7 +45,7 @@ func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStr
 		partitionIDFunc: partitionIDFunc,
 	}, S_GET)
 
-	bs.addStorage(AppSecretsStorage, &appSecretsStorage{secretReader: secretReader}, S_GET_BATCH)
+	bs.addStorage(AppSecretsStorage, &appSecretsStorage{secretReader: secretReader}, S_GET)
 
 	bs.addStorage(SubjectStorage, &subjectStorage{
 		principalsFunc: principalsFunc,
