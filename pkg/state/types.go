@@ -301,35 +301,23 @@ func (b *viewRecordsValueBuilder) BuildValue() istructs.IStateValue {
 	}
 }
 
-type recordsStorageValue struct{ istructs.IRecord }
+type recordsStorageValue struct {
+	baseStateValue
+	record istructs.IRecord
+}
 
-func (v recordsStorageValue) AsRecord(name string) (record istructs.IRecord) { return v }
-func (v *recordsStorageValue) AsEvent(name string) (event istructs.IDbEvent) {
-	panic(errNotImplemented)
+func (v *recordsStorageValue) AsInt32(name string) int32        { return v.record.AsInt32(name) }
+func (v *recordsStorageValue) AsInt64(name string) int64        { return v.record.AsInt64(name) }
+func (v *recordsStorageValue) AsFloat32(name string) float32    { return v.record.AsFloat32(name) }
+func (v *recordsStorageValue) AsFloat64(name string) float64    { return v.record.AsFloat64(name) }
+func (v *recordsStorageValue) AsBytes(name string) []byte       { return v.record.AsBytes(name) }
+func (v *recordsStorageValue) AsString(name string) string      { return v.record.AsString(name) }
+func (v *recordsStorageValue) AsQName(name string) appdef.QName { return v.record.AsQName(name) }
+func (v *recordsStorageValue) AsBool(name string) bool          { return v.record.AsBool(name) }
+func (v *recordsStorageValue) AsRecordID(name string) istructs.RecordID {
+	return v.record.AsRecordID(name)
 }
-func (v *recordsStorageValue) AsValue(name string) istructs.IStateValue {
-	panic(errFieldByNameIsNotAnObjectOrArray)
-}
-func (v *recordsStorageValue) Length() int { panic(errFieldByNameIsNotAnObjectOrArray) }
-func (v *recordsStorageValue) GetAsString(index int) string {
-	panic(errFieldByNameIsNotAnObjectOrArray)
-}
-func (v *recordsStorageValue) GetAsBytes(index int) []byte { panic(errFieldByNameIsNotAnObjectOrArray) }
-func (v *recordsStorageValue) GetAsInt32(index int) int32  { panic(errFieldByNameIsNotAnObjectOrArray) }
-func (v *recordsStorageValue) GetAsInt64(index int) int64  { panic(errFieldByNameIsNotAnObjectOrArray) }
-func (v *recordsStorageValue) GetAsFloat32(index int) float32 {
-	panic(errFieldByNameIsNotAnObjectOrArray)
-}
-func (v *recordsStorageValue) GetAsFloat64(index int) float64 {
-	panic(errFieldByNameIsNotAnObjectOrArray)
-}
-func (v *recordsStorageValue) GetAsQName(index int) appdef.QName {
-	panic(errFieldByNameIsNotAnObjectOrArray)
-}
-func (v *recordsStorageValue) GetAsBool(index int) bool { panic(errFieldByNameIsNotAnObjectOrArray) }
-func (v *recordsStorageValue) GetAsValue(index int) istructs.IStateValue {
-	panic(errFieldByNameIsNotAnObjectOrArray)
-}
+func (v *recordsStorageValue) AsRecord(string) (record istructs.IRecord) { return v.record }
 
 //func (v *recordsStorageValue) AsRecord(string) (record istructs.IRecord) { return v.record }
 

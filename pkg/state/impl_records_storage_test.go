@@ -254,7 +254,7 @@ func TestRecordsStorage_Update(t *testing.T) {
 	rw := &mockRowWriter{}
 	rw.On("PutString", fieldName, value)
 	r := &mockRecord{}
-	sv := &recordsStorageValue{r}
+	sv := &recordsStorageValue{record: r}
 	cud := &mockCUD{}
 	cud.On("Update", mock.Anything).Return(rw)
 	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, func() istructs.ICUD { return cud }, nil, nil, 1, nil)
