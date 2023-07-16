@@ -140,7 +140,8 @@ func TestBasicUsage_Collection(t *testing.T) {
 			newArPriceCUD(event, 1, 2, normalPriceID, 2.4)
 			newArPriceCUD(event, 1, 3, happyHourPriceID, 1.8)
 		}))
-		require.Nil(processor.SendSync(event))
+		err := processor.SendSync(event)
+		require.NoError(err)
 	}
 
 	cocaColaDocID = idGen.idmap[1]

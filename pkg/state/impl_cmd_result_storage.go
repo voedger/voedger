@@ -13,8 +13,8 @@ type cmdResultStorage struct {
 	cmdResultBuilderFunc CmdResultBuilderFunc
 }
 
-func (s *cmdResultStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newCmdResultKeyBuilder(entity)
+func (s *cmdResultStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
+	return newCmdResultKeyBuilder()
 }
 
 func (s *cmdResultStorage) Validate([]ApplyBatchItem) (err error) {

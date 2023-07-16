@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -28,6 +29,23 @@ func (s *viewRecordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStat
 		wsid:        s.wsidFunc(),
 	}
 }
+func (s *viewRecordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
+	k := key.(*viewRecordsKeyBuilder)
+	v, err := s.viewRecordsFunc().Get(k.wsid, k.IKeyBuilder)
+	if err != nil {
+		if err == istructsmem.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if v == nil {
+		return nil, nil
+	}
+	return &viewRecordsStorageValue{
+		value: v,
+	}, nil
+}
+
 func (s *viewRecordsStorage) GetBatch(items []GetBatchItem) (err error) {
 	wsidToItemIdx := make(map[istructs.WSID][]int)
 	batches := make(map[istructs.WSID][]istructs.ViewRecordGetBatchItem)
@@ -47,8 +65,7 @@ func (s *viewRecordsStorage) GetBatch(items []GetBatchItem) (err error) {
 				continue
 			}
 			items[itemIndex].value = &viewRecordsStorageValue{
-				value:      batchItem.Value,
-				toJSONFunc: s.toJSON,
+				value: batchItem.Value,
 			}
 		}
 	}
@@ -57,8 +74,7 @@ func (s *viewRecordsStorage) GetBatch(items []GetBatchItem) (err error) {
 func (s *viewRecordsStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	cb := func(k istructs.IKey, v istructs.IValue) (err error) {
 		return callback(k, &viewRecordsStorageValue{
-			value:      v,
-			toJSONFunc: s.toJSON,
+			value: v,
 		})
 	}
 	vrkb := kb.(*viewRecordsKeyBuilder)
