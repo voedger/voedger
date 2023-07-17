@@ -98,7 +98,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	updateRolesEmailTemplate := "text:" + invite.EmailTemplatePlaceholder_Roles
 	updateRolesEmailSubject := "your roles are updated"
 	inviteID := InitiateInvitationByEMail(vit, newWS, expireDatetime, it.TestEmail2, roleOwner, updateRolesEmailTemplate, updateRolesEmailSubject)
-	vit.ExpectEmail().Capture()
+	vit.CaptureEmail()
 	WaitForInviteState(vit, newWS, invite.State_Invited, inviteID)
 	expireDatetimeStr := strconv.FormatInt(expireDatetime, 10)
 	verificationCode := expireDatetimeStr[len(expireDatetimeStr)-6:]
