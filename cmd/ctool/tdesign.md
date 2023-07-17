@@ -168,3 +168,53 @@ Works if: Cmd exists
   - UpdateMonDockerStack()
   - Assign ActualClusterVersion = DesiredClusterVersion
   - Remove Cmd
+
+
+## cluster.json: Upgrade
+
+
+- the ctool version is linked from the `version` file;
+- when running ctool, the cluster structure is read from `cluster.json` for comparing the weights of `ctool`, `ActualClusterVersion` and `DesiredClusterVersion`;
+- if in `cluster.json` has an incomplete command and `DesiredClusterVersion` differs from the version of the `ctool`, then the work of the ctool stops with a message about the need to install the ctool version of the `DesiredClusterVersion` to complete the command;
+- if in `cluster.json` `ActualClusterVersion` is older than the version of the `ctool`, then the work of the ctool stops with a message about the need to install the ctool version of the `ActualClusterVersion` to continue working;
+- if in `cluster.json` `ActualClusterVersion` is not empty and it is younger than the `ctool` version, then a message is displayed about the need to execute the `upgrade` command. Any other commands that change the cluster configuration can be executed only after the upgrade command is successfully completed;
+- the algorithm for extracting the `upgrade` command is similar to the algorithm of the `init` command. `Upgrade` deploys the cluster on top of the previously deployed one. This operation reinstalls, if necessary, docker stacks. User data is not affected.  
+
+
+Example of the fragment `cluster.json` with `upgrade` command.
+
+In the full version of `cluster.json` array `Nodes` contains 5 elements.
+
+```txt
+{
+  // Edition
+  "EditionType": "SE", 
+  
+  // ctool version
+  "ActualClusterVersion": "0.0.2",
+  "DesiredClusterVersion": "0.0.3",
+
+  // upgrade command
+  "Cmd": {
+    "Kind": "upgrade",
+    "Args": ""
+  },
+
+  "Nodes": [
+    {
+      // Node role
+      "NodeRole": "SENode",
+
+      "ActualNodeState": {
+        "Address": "5.255.255.55",
+        "NodeVersion": "0.0.2"
+      }
+      "DesiredNodeState": {
+        "Address": "5.255.255.55",
+        "NodeVersion": "0.0.3"
+      }
+
+    },
+  ]
+}
+```
