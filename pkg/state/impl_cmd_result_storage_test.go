@@ -36,7 +36,7 @@ func TestCmdResultStorage_InsertInValue(t *testing.T) {
 func TestCmdResultStorage_InsertInKey(t *testing.T) {
 	defer func() {
 		r := fmt.Sprint(recover())
-		require.Equal(t, "runtime error: invalid memory address or nil pointer dereference", r)
+		require.Equal(t, "assignment to entry in nil map", r)
 	}()
 
 	cfg := istructsmem.AppConfigType{Name: istructs.NullAppQName}

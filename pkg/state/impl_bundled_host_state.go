@@ -18,7 +18,7 @@ type bundledHostState struct {
 }
 
 func (s *bundledHostState) CanExist(key istructs.IStateKeyBuilder) (stateValue istructs.IStateValue, ok bool, err error) {
-	bundledStorage, ok := s.bundles[getStorageID(key)]
+	bundledStorage, ok := s.bundles[key.Storage()]
 	if ok {
 		// can be already in a bundles
 		if value, ok := bundledStorage.get(key); ok {
@@ -88,7 +88,7 @@ func (s *bundledHostState) MustNotExistAll(keys []istructs.IStateKeyBuilder) (er
 	return
 }
 func (s *bundledHostState) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
-	bundledStorage, ok := s.bundles[getStorageID(key)]
+	bundledStorage, ok := s.bundles[key.Storage()]
 	if ok {
 		if bundledStorage.containsKeysForSameEntity(key) {
 			err = s.FlushBundles()

@@ -102,7 +102,6 @@ type IIntents interface {
 }
 type IStateValue interface {
 	IValue
-	ToJSON(opts ...interface{}) (string, error)
 	AsValue(name string) IStateValue
 	Length() int
 	GetAsString(index int) string
@@ -121,6 +120,7 @@ type IStateValueBuilder interface {
 }
 type IStateKeyBuilder interface {
 	IKeyBuilder
+	Storage() appdef.QName
 	Entity() appdef.QName
 }
 type StateValueCallback func(key IKeyBuilder, value IStateValue, ok bool) (err error)

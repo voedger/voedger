@@ -28,6 +28,33 @@ func (s *recordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKey
 		entity:    entity,
 	}
 }
+
+func (s *recordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
+	k := key.(*recordsKeyBuilder)
+	if k.singleton != appdef.NullQName {
+		singleton, e := s.recordsFunc().GetSingleton(k.wsid, k.singleton)
+		if e != nil {
+			return nil, e
+		}
+		if singleton.QName() == appdef.NullQName {
+			return nil, nil
+		}
+		return &recordsStorageValue{record: singleton}, nil
+	}
+	if k.id == istructs.NullRecordID {
+		// error message according to https://dev.untill.com/projects/#!637229
+		return nil, fmt.Errorf("value of one of RecordID fields is 0: %w", ErrNotFound)
+	}
+	record, err := s.recordsFunc().Get(k.wsid, true, k.id)
+	if err != nil {
+		return nil, err
+	}
+	if record.QName() == appdef.NullQName {
+		return nil, nil
+	}
+	return &recordsStorageValue{record: record}, nil
+}
+
 func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 	type getSingletonParams struct {
 		wsid    istructs.WSID
@@ -63,10 +90,7 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 			if batchItem.Record.QName() == appdef.NullQName {
 				continue
 			}
-			items[wsidToItemIdx[wsid][i]].value = &recordsStorageValue{
-				record:     batchItem.Record,
-				toJSONFunc: s.toJSON,
-			}
+			items[wsidToItemIdx[wsid][i]].value = &recordsStorageValue{record: batchItem.Record}
 		}
 	}
 	for _, g := range gg {
@@ -77,10 +101,7 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 		if singleton.QName() == appdef.NullQName {
 			continue
 		}
-		items[g.itemIdx].value = &recordsStorageValue{
-			record:     singleton,
-			toJSONFunc: s.toJSON,
-		}
+		items[g.itemIdx].value = &recordsStorageValue{record: singleton}
 	}
 	return err
 }
@@ -93,7 +114,7 @@ func (s *recordsStorage) ProvideValueBuilder(key istructs.IStateKeyBuilder, _ is
 func (s *recordsStorage) ProvideValueBuilderForUpdate(_ istructs.IStateKeyBuilder, existingValue istructs.IStateValue, _ istructs.IStateValueBuilder) istructs.IStateValueBuilder {
 	return &recordsValueBuilder{rw: s.cudFunc().Update(existingValue.AsRecord(""))}
 }
-func (s *recordsStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
+func (s *recordsStorage) ToJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
 	obj := coreutils.FieldsToMap(sv, s.appDefFunc())
 	bb, err := json.Marshal(&obj)
 	return string(bb), err
