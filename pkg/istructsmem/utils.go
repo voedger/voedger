@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 )
@@ -54,26 +55,69 @@ func glueLogOffset(hi uint64, low uint16) istructs.Offset {
 	return istructs.Offset(hi<<partitionBits | uint64(low))
 }
 
-const uint64bits, uint16bits = 8, 2
+const uint64len, uint16len = 8, 2
 
 // splitRecordID splits record ID to two-parts key — partition key and clustering columns
 func splitRecordID(id istructs.RecordID) (pk, cc []byte) {
 	hi, lo := crackRecordID(id)
-	pkBuf := make([]byte, uint64bits)
-	binary.BigEndian.PutUint64(pkBuf, hi)
-	ccBuf := make([]byte, uint16bits)
-	binary.BigEndian.PutUint16(ccBuf, lo)
-	return pkBuf, ccBuf
+	pk = make([]byte, uint64len)
+	binary.BigEndian.PutUint64(pk, hi)
+	cc = make([]byte, uint16len)
+	binary.BigEndian.PutUint16(cc, lo)
+	return pk, cc
+}
+
+// Returns partition key and clustering columns bytes for specified record id in specified workspace
+func recordKey(ws istructs.WSID, id istructs.RecordID) (pkey, ccols []byte) {
+	hi, lo := crackRecordID(id)
+
+	pkey = make([]byte, uint16len+uint64len+uint64len)
+	binary.BigEndian.PutUint16(pkey, consts.SysView_Records)
+	binary.BigEndian.PutUint64(pkey[uint16len:], uint64(ws))
+	binary.BigEndian.PutUint64(pkey[uint16len+uint64len:], hi)
+
+	ccols = make([]byte, uint16len)
+	binary.BigEndian.PutUint16(ccols, lo)
+
+	return pkey, ccols
 }
 
 // splitLogOffset splits offset to two-parts key — partition key and clustering columns
 func splitLogOffset(offset istructs.Offset) (pk, cc []byte) {
 	hi, lo := crackLogOffset(offset)
-	pkBuf := make([]byte, uint64bits)
-	binary.BigEndian.PutUint64(pkBuf, hi)
-	ccBuf := make([]byte, uint16bits)
-	binary.BigEndian.PutUint16(ccBuf, lo)
-	return pkBuf, ccBuf
+	pk = make([]byte, uint64len)
+	binary.BigEndian.PutUint64(pk, hi)
+	cc = make([]byte, uint16len)
+	binary.BigEndian.PutUint16(cc, lo)
+	return pk, cc
+}
+
+// Returns partition key and clustering columns bytes for specified plog partition and offset
+func plogKey(partition istructs.PartitionID, offset istructs.Offset) (pkey, ccols []byte) {
+	hi, lo := crackLogOffset(offset)
+
+	pkey = make([]byte, uint16len+uint16len+uint64len)
+	binary.BigEndian.PutUint16(pkey, consts.SysView_PLog)
+	binary.BigEndian.PutUint16(pkey[uint16len:], uint16(partition))
+	binary.BigEndian.PutUint64(pkey[uint16len+uint16len:], hi)
+
+	ccols = make([]byte, uint16len)
+	binary.BigEndian.PutUint16(ccols, lo)
+	return pkey, ccols
+}
+
+// Returns partition key and clustering columns bytes for specified wlog workspace and offset
+func wlogKey(ws istructs.WSID, offset istructs.Offset) (pkey, ccols []byte) {
+	hi, lo := crackLogOffset(offset)
+
+	pkey = make([]byte, uint16len+uint64len+uint64len)
+	binary.BigEndian.PutUint16(pkey, consts.SysView_WLog)
+	binary.BigEndian.PutUint64(pkey[uint16len:], uint64(ws))
+	binary.BigEndian.PutUint64(pkey[uint16len+uint64len:], hi)
+
+	ccols = make([]byte, uint16len)
+	binary.BigEndian.PutUint16(ccols, lo)
+	return pkey, ccols
 }
 
 // calcLogOffset calculate log offset from two-parts key — partition key and clustering columns

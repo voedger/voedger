@@ -117,7 +117,9 @@ func WriteShortString(buf *bytes.Buffer, str string) {
 
 // Writes data to buffer.
 //
-// Warning: To avoid escaping values to heap during interface conversion use Write××× routines as possible.
+// # Hints:
+//   - To exclude slow write through binary.Write() cast user types to go-types as possible.
+//   - To avoid escaping values to heap during interface conversion use Write××× routines as possible.
 func SafeWriteBuf(b *bytes.Buffer, data any) {
 	var err error
 	switch v := data.(type) {

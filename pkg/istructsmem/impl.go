@@ -243,9 +243,9 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 		dbEvent.argUnlObj.maskValues()
 	}
 
+	pKey, cCols := plogKey(ev.HandlingPartition(), ev.PLogOffset())
+
 	evData := dbEvent.storeToBytes()
-	pKey, cCols := splitLogOffset(ev.PLogOffset())
-	pKey = utils.PrefixBytes(pKey, consts.SysView_PLog, ev.HandlingPartition()) // + partition! see #18047
 
 	if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
 		event = dbEvent
@@ -256,9 +256,8 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 
 // istructs.IEvents.PutWlog
 func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
+	pKey, cCols := wlogKey(ev.Workspace(), ev.WLogOffset())
 	evData := ev.(*eventType).storeToBytes()
-	pKey, cCols := splitLogOffset(ev.WLogOffset())
-	pKey = utils.PrefixBytes(pKey, consts.SysView_WLog, ev.Workspace())
 
 	return e.app.config.storage.Put(pKey, cCols, evData)
 }
@@ -269,10 +268,9 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 	switch toReadCount {
 	case 1:
 		// See [#292](https://github.com/voedger/voedger/issues/292)
-		pKey, cCol := splitLogOffset(offset)
-		pKey = utils.PrefixBytes(pKey, consts.SysView_PLog, partition) // + partition! see #18047
+		pKey, cCols := plogKey(partition, offset)
 		data := bytespool.Get()
-		ok, err := e.app.config.storage.Get(pKey, cCol, &data.B)
+		ok, err := e.app.config.storage.Get(pKey, cCols, &data.B)
 		if ok {
 			event := newEvent(e.app.config)
 			if err = event.loadFromBytes(data.B); err == nil {
@@ -286,7 +284,7 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 	default:
 		return readLogParts(offset, toReadCount, func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
 			count := 0
-			pKey := utils.PrefixBytes(pk, consts.SysView_PLog, partition) // + partition! see #18047
+			pKey := utils.PrefixBytes(pk, consts.SysView_PLog, uint16(partition)) // + partition! see #18047
 			err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, func(ccols, data []byte) error {
 				count++
 				ofs := calcLogOffset(pk, ccols)
@@ -307,10 +305,9 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 	switch toReadCount {
 	case 1:
 		// See [#292](https://github.com/voedger/voedger/issues/292)
-		pKey, cCol := splitLogOffset(offset)
-		pKey = utils.PrefixBytes(pKey, consts.SysView_WLog, workspace)
+		pKey, cCols := wlogKey(workspace, offset)
 		data := bytespool.Get()
-		ok, err := e.app.config.storage.Get(pKey, cCol, &data.B)
+		ok, err := e.app.config.storage.Get(pKey, cCols, &data.B)
 		if ok {
 			event := newEvent(e.app.config)
 			if err = event.loadFromBytes(data.B); err == nil {
@@ -324,7 +321,7 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 	default:
 		return readLogParts(offset, toReadCount, func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
 			count := 0
-			pKey := utils.PrefixBytes(pk, consts.SysView_WLog, workspace)
+			pKey := utils.PrefixBytes(pk, consts.SysView_WLog, uint64(workspace))
 			err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, func(ccols, data []byte) error {
 				count++
 				ofs := calcLogOffset(pk, ccols)
@@ -354,9 +351,8 @@ func newRecords(app *appStructsType) appRecordsType {
 
 // getRecord reads record from application storage through view-records methods
 func (recs *appRecordsType) getRecord(workspace istructs.WSID, id istructs.RecordID, data *[]byte) (ok bool, err error) {
-	idHi, idLow := splitRecordID(id)
-	pk := utils.PrefixBytes(idHi, consts.SysView_Records, workspace)
-	return recs.app.config.storage.Get(pk, idLow, data)
+	pk, cc := recordKey(workspace, id)
+	return recs.app.config.storage.Get(pk, cc, data)
 }
 
 // getRecordBatch reads record from application storage through view-records methods
@@ -368,18 +364,17 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 	plan := make(map[string][]istorage.GetBatchItem)
 	for i := 0; i < len(ids); i++ {
 		ids[i].Record = NewNullRecord(ids[i].ID)
-		idHi, idLow := splitRecordID(ids[i].ID)
-		batch, ok := plan[string(idHi)]
+		pk, cc := recordKey(workspace, ids[i].ID)
+		batch, ok := plan[string(pk)]
 		if !ok {
-			batch = make([]istorage.GetBatchItem, 0, len(ids)) // to prevent reallocation
+			batch = make([]istorage.GetBatchItem, 0, len(ids)-i) // to prevent reallocation
 		}
-		batch = append(batch, istorage.GetBatchItem{CCols: idLow, Data: new([]byte)})
-		plan[string(idHi)] = batch
+		batch = append(batch, istorage.GetBatchItem{CCols: cc, Data: new([]byte)})
+		plan[string(pk)] = batch
 		batches[i] = &batch[len(batch)-1]
 	}
 	for idHi, batch := range plan {
-		pk := utils.PrefixBytes([]byte(idHi), consts.SysView_Records, workspace)
-		if err = recs.app.config.storage.GetBatch(pk, batch); err != nil {
+		if err = recs.app.config.storage.GetBatch([]byte(idHi), batch); err != nil {
 			return err
 		}
 	}
@@ -398,9 +393,8 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 
 // putRecord puts record to application storage through view-records methods
 func (recs *appRecordsType) putRecord(workspace istructs.WSID, id istructs.RecordID, data []byte) (err error) {
-	idHi, idLow := splitRecordID(id)
-	pk := utils.PrefixBytes(idHi, consts.SysView_Records, workspace)
-	return recs.app.config.storage.Put(pk, idLow, data)
+	pk, cc := recordKey(workspace, id)
+	return recs.app.config.storage.Put(pk, cc, data)
 }
 
 // putRecordsBatch puts record array to application storage through view-records batch methods
@@ -412,9 +406,7 @@ type recordBatchItemType struct {
 func (recs *appRecordsType) putRecordsBatch(workspace istructs.WSID, records []recordBatchItemType) (err error) {
 	batch := make([]istorage.BatchItem, len(records))
 	for i, r := range records {
-		idHi, idLow := splitRecordID(r.id)
-		batch[i].PKey = utils.PrefixBytes(idHi, consts.SysView_Records, workspace)
-		batch[i].CCols = idLow
+		batch[i].PKey, batch[i].CCols = recordKey(workspace, r.id)
 		batch[i].Value = r.data
 	}
 	return recs.app.config.storage.PutBatch(batch)
