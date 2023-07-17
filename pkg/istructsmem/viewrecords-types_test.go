@@ -148,12 +148,13 @@ func Test_KeyType(t *testing.T) {
 	t.Run("key must supports IKey interface", func(t *testing.T) { testIKey(t, key) })
 
 	t.Run("must be ok to load/store key to bytes", func(t *testing.T) {
-		p, c := key.storeToBytes()
+		p, c := key.storeToBytes(0)
 		require.NotEmpty(p)
 		require.NotEmpty(c)
 
 		dupe := newKey(appCfg, viewName)
-		require.NoError(dupe.loadFromBytes(p, c))
+		dupe.partRow.copyFrom(&key.partRow)
+		require.NoError(dupe.loadFromBytes(c))
 
 		t.Run("key must supports IKey interface", func(t *testing.T) { testIKey(t, dupe) })
 
@@ -840,13 +841,14 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	err := k1.build()
 	require.NoError(err)
 
-	p, c := k1.storeToBytes()
+	p, c := k1.storeToBytes(0)
 	require.NotNil(p)
 	require.NotNil(c)
 
 	t.Run("should be success load", func(t *testing.T) {
 		k2 := newKey(cfg, viewName)
-		err := k2.loadFromBytes(p, c)
+		k2.partRow.copyFrom(&k1.partRow)
+		err := k2.loadFromBytes(c)
 		require.NoError(err)
 
 		testRowsIsEqual(t, &k1.partRow, &k2.partRow)
@@ -859,14 +861,10 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 		require.False(k1.Equals(k2))
 	})
 
-	t.Run("should be load error if truncated key bytes", func(t *testing.T) {
+	t.Run("should be load error if truncated clustering columns bytes", func(t *testing.T) {
 		k2 := newKey(cfg, viewName)
-		for i := 0; i < len(p); i++ {
-			err := k2.loadFromBytes(p[:i], c)
-			require.Error(err, i)
-		}
-		for i := 0; i < len(p)-4; i++ { // 4 - is length of variable bytes "test" that can be truncated with impunity
-			err := k2.loadFromBytes(p, c[:i])
+		for i := 0; i < len(c)-4; i++ { // 4 - is length of variable bytes "test" that can be truncated with impunity
+			err := k2.loadFromBytes(c[:i])
 			require.Error(err, i)
 		}
 	})
@@ -893,13 +891,12 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	testRowsIsEqual(t, &v1.rowType, &v2.rowType)
 
 	t.Run("should be load error if truncated value bytes", func(t *testing.T) {
-		for i := 0; i < len(p); i++ {
+		for i := 0; i < len(v); i++ {
 			v2 := newValue(cfg, viewName)
-			err := v2.loadFromBytes(p[:i])
+			err := v2.loadFromBytes(v[:i])
 			require.Error(err, i)
 		}
 	})
-
 }
 
 // Test_ViewRecords_ClustColumnsQName: see https://dev.heeus.io/launchpad/#!16377 problem
