@@ -10,7 +10,7 @@ import (
 )
 
 // logReadPartFuncType is function type to read log part (≤ 4096 events). Must return ok and nil error to read next part.
-type logReadPartFuncType func(pk []byte, ccolsFrom, ccolsTo []byte) (ok bool, err error)
+type logReadPartFuncType func(partID uint64, ccolsFrom, ccolsTo []byte) (ok bool, err error)
 
 // readLogParts in a loop reads events from the log by parts (≤ 4096 events) by call readPart() function
 func readLogParts(startOffset istructs.Offset, toReadCount int, readPart logReadPartFuncType) error {
@@ -29,7 +29,6 @@ func readLogParts(startOffset istructs.Offset, toReadCount int, readPart logRead
 	maxPart, _ := crackLogOffset(finishOffset - 1)
 
 	for part := minPart; part <= maxPart; part++ {
-		pk, _ := splitLogOffset(glueLogOffset(part, 0))
 		ccolsFrom := []byte(nil)
 		if part == minPart {
 			_, ccolsFrom = splitLogOffset(startOffset)
@@ -39,7 +38,7 @@ func readLogParts(startOffset istructs.Offset, toReadCount int, readPart logRead
 			_, ccolsTo = splitLogOffset(finishOffset)
 		}
 
-		ok, err := readPart(pk, ccolsFrom, ccolsTo)
+		ok, err := readPart(part, ccolsFrom, ccolsTo)
 
 		if err != nil {
 			return err

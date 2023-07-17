@@ -6,6 +6,7 @@
 package istructsmem
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"testing"
@@ -143,17 +144,16 @@ func Test_readLogParts(t *testing.T) {
 		},
 	}
 
-	calcOffsets := func(pk []byte, ccolsFrom, ccolsTo []byte) (startOffs, finishOffs istructs.Offset) {
+	calcOffsets := func(partID uint64, ccolsFrom, ccolsTo []byte) (startOffs, finishOffs istructs.Offset) {
 		if ccolsFrom == nil {
-			startOffs = calcLogOffset(pk, []byte{0, 0})
+			startOffs = glueLogOffset(partID, 0)
 		} else {
-			startOffs = calcLogOffset(pk, ccolsFrom)
+			startOffs = glueLogOffset(partID, binary.BigEndian.Uint16(ccolsFrom))
 		}
 		if ccolsTo == nil {
-			finishOffs = calcLogOffset(pk, []byte{0, 0})
-			finishOffs |= istructs.Offset(lowMask)
+			finishOffs = glueLogOffset(partID, 0) | istructs.Offset(lowMask)
 		} else {
-			finishOffs = calcLogOffset(pk, ccolsTo) - 1
+			finishOffs = glueLogOffset(partID, binary.BigEndian.Uint16(ccolsTo)) - 1
 		}
 		return startOffs, finishOffs
 	}
@@ -165,8 +165,8 @@ func Test_readLogParts(t *testing.T) {
 			ranges := make(ranges, 0)
 			totalReads := uint64(0)
 
-			readPart := func(pk []byte, ccolsFrom, ccolsTo []byte) (bool, error) {
-				o1, o2 := calcOffsets(pk, ccolsFrom, ccolsTo)
+			readPart := func(partID uint64, ccolsFrom, ccolsTo []byte) (bool, error) {
+				o1, o2 := calcOffsets(partID, ccolsFrom, ccolsTo)
 				if uint64(o1) >= logSize {
 					return false, io.EOF
 				}
@@ -205,8 +205,8 @@ func Test_readLogParts(t *testing.T) {
 
 		bytesRead := 0
 
-		readPart := func(pk []byte, ccolsFrom, ccolsTo []byte) (bool, error) {
-			o1, o2 := calcOffsets(pk, ccolsFrom, ccolsTo)
+		readPart := func(partID uint64, ccolsFrom, ccolsTo []byte) (bool, error) {
+			o1, o2 := calcOffsets(partID, ccolsFrom, ccolsTo)
 
 			bytesRead += int(o2-o1) + 1
 
@@ -226,8 +226,8 @@ func Test_readLogParts(t *testing.T) {
 
 		testError := fmt.Errorf("test error")
 
-		readPart := func(pk []byte, ccolsFrom, ccolsTo []byte) (bool, error) {
-			o1, o2 := calcOffsets(pk, ccolsFrom, ccolsTo)
+		readPart := func(partID uint64, ccolsFrom, ccolsTo []byte) (bool, error) {
+			o1, o2 := calcOffsets(partID, ccolsFrom, ccolsTo)
 
 			bytesRead += int(o2-o1) + 1
 

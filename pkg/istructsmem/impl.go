@@ -7,6 +7,7 @@ package istructsmem
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"sync"
 
@@ -16,9 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
 
@@ -282,12 +281,12 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 		}
 		return err
 	default:
-		return readLogParts(offset, toReadCount, func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
+		return readLogParts(offset, toReadCount, func(partID uint64, ccFrom, ccTo []byte) (ok bool, err error) {
 			count := 0
-			pKey := utils.PrefixBytes(pk, consts.SysView_PLog, uint16(partition)) // + partition! see #18047
+			pKey, _ := plogKey(partition, glueLogOffset(partID, 0))
 			err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, func(ccols, data []byte) error {
 				count++
-				ofs := calcLogOffset(pk, ccols)
+				ofs := glueLogOffset(partID, binary.BigEndian.Uint16(ccols))
 				event := newEvent(e.app.config)
 				if err = event.loadFromBytes(data); err == nil {
 					err = cb(ofs, event)
@@ -319,12 +318,12 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 		}
 		return err
 	default:
-		return readLogParts(offset, toReadCount, func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
+		return readLogParts(offset, toReadCount, func(partID uint64, ccFrom, ccTo []byte) (ok bool, err error) {
 			count := 0
-			pKey := utils.PrefixBytes(pk, consts.SysView_WLog, uint64(workspace))
+			pKey, _ := wlogKey(workspace, glueLogOffset(partID, 0))
 			err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, func(ccols, data []byte) error {
 				count++
-				ofs := calcLogOffset(pk, ccols)
+				ofs := glueLogOffset(partID, binary.BigEndian.Uint16(ccols))
 				event := newEvent(e.app.config)
 				if err = event.loadFromBytes(data); err == nil {
 					err = cb(ofs, event)
