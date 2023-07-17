@@ -283,8 +283,12 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 	default:
 		return readLogParts(offset, toReadCount, func(ofsHi uint64, ofsLo1, ofsLo2 uint16) (ok bool, err error) {
 			count := 0
-			pKey, _ := plogKey(partition, glueLogOffset(ofsHi, 0))
-			err = e.app.config.storage.Read(ctx, pKey, uint16bytes(ofsLo1), uint16bytes(ofsLo2), func(ccols, data []byte) error {
+			pKey, cFrom := plogKey(partition, glueLogOffset(ofsHi, ofsLo1))
+			cTo := uint16bytes(ofsLo2 + 1) // storage.Read() pass half-open interval [cFrom, cTo)
+			if ofsLo2 >= lowMask {
+				cTo = nil
+			}
+			err = e.app.config.storage.Read(ctx, pKey, cFrom, cTo, func(ccols, data []byte) error {
 				count++
 				ofs := glueLogOffset(ofsHi, binary.BigEndian.Uint16(ccols))
 				event := newEvent(e.app.config)
@@ -320,8 +324,12 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 	default:
 		return readLogParts(offset, toReadCount, func(ofsHi uint64, ofsLo1, ofsLo2 uint16) (ok bool, err error) {
 			count := 0
-			pKey, _ := wlogKey(workspace, glueLogOffset(ofsHi, 0))
-			err = e.app.config.storage.Read(ctx, pKey, uint16bytes(ofsLo1), uint16bytes(ofsLo2), func(ccols, data []byte) error {
+			pKey, cFrom := wlogKey(workspace, glueLogOffset(ofsHi, ofsLo1))
+			cTo := uint16bytes(ofsLo2 + 1) // storage.Read() pass half-open interval [cFrom, cTo)
+			if ofsLo2 >= lowMask {
+				cTo = nil
+			}
+			err = e.app.config.storage.Read(ctx, pKey, cFrom, cTo, func(ccols, data []byte) error {
 				count++
 				ofs := glueLogOffset(ofsHi, binary.BigEndian.Uint16(ccols))
 				event := newEvent(e.app.config)

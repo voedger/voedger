@@ -9,7 +9,9 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// Function type to read log part (≤ 4096 events). Must return ok and nil error to read next part
+// Function type to read log part (≤ 4096 events). Must read all records offsets within closed range [ofsHi+ofsLo1 … ofsHi+ofsLo2]
+//
+// Must return ok and nil error to read next part
 type logReadPartFuncType func(ofsHi uint64, ofsLo1, ofsLo2 uint16) (ok bool, err error)
 
 // readLogParts in a loop reads events from the log by parts (≤ 4096 events) by call readPart() function
