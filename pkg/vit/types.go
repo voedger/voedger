@@ -31,7 +31,7 @@ type VIT struct {
 	isOnSharedConfig     bool
 	initialGoroutinesNum int
 	configCleanupsAmount int
-	emailMessagesChan    chan smtptest.Message
+	emailCaptor          emailCaptor
 }
 
 type timeService struct {
@@ -118,7 +118,4 @@ type signUpOpts struct {
 	reqOpts          []coreutils.ReqOptFunc
 }
 
-type EmailCaptor struct {
-	vit *VIT
-	ch  chan smtptest.Message
-}
+type emailCaptor chan smtptest.Message

@@ -31,7 +31,6 @@ func TestBasicUsage_Verifier(t *testing.T) {
 	verificationToken := ""
 	verificationCode := ""
 	t.Run("initiate verification and get the verification token", func(t *testing.T) {
-		emailCaptor := vit.ExpectEmail()
 		body := fmt.Sprintf(`
 			{
 				"args":{
@@ -46,7 +45,7 @@ func TestBasicUsage_Verifier(t *testing.T) {
 		// call q.sys.InitiateEmailVerification at user profile to avoid guests
 		// call in target app
 		resp := vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body)
-		email := emailCaptor.Capture()
+		email := vit.CaptureEmail()
 		require.Equal([]string{it.TestEmail}, email.To)
 		require.Equal(verifier.EmailSubject, email.Subject)
 		require.Equal(verifier.EmailFrom, email.From)
