@@ -68,15 +68,7 @@ func (vr *appViewRecords) Get(workspace istructs.WSID, key istructs.IKeyBuilder)
 		return value, err
 	}
 
-	pKey, cKey := k.storeToBytes()
-	pKey = utils.PrefixBytes(pKey, k.viewID, workspace)
-
-	/*
-		bytes   len    type     desc
-		0…1      2     uint16   QNameID
-		2…3      2     uint16   WSID
-		4…       ~     []~      User fields
-	*/
+	pKey, cKey := k.storeToBytes(workspace)
 
 	data := make([]byte, 0)
 	if ok, err := vr.app.config.storage.Get(pKey, cKey, &data); !ok {
@@ -116,8 +108,7 @@ func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRe
 		if err = vr.app.config.validators.validKey(k, false); err != nil {
 			return fmt.Errorf("not valid key at batch item %d: %w", i, err)
 		}
-		pKey, cKey := k.storeToBytes()
-		pKey = utils.PrefixBytes(pKey, k.viewID, workspace)
+		pKey, cKey := k.storeToBytes(workspace)
 		batch, ok := plan[string(pKey)]
 		if !ok {
 			batch = make([]istorage.GetBatchItem, 0, len(kv)) // to prevent reallocation
@@ -177,11 +168,10 @@ func (vr *appViewRecords) Read(ctx context.Context, workspace istructs.WSID, key
 		return err
 	}
 
-	pKey, cKey := k.storeToBytes()
-
 	readRecord := func(ccols, value []byte) (err error) {
 		recKey := newKey(k.appCfg, k.viewName)
-		if err := recKey.loadFromBytes(pKey, ccols); err != nil {
+		recKey.partRow.copyFrom(&k.partRow)
+		if err := recKey.loadFromBytes(ccols); err != nil {
 			return err
 		}
 
@@ -192,8 +182,8 @@ func (vr *appViewRecords) Read(ctx context.Context, workspace istructs.WSID, key
 		return cb(recKey, valRow)
 	}
 
-	pk := utils.PrefixBytes(pKey, k.viewID, workspace)
-	return vr.app.config.storage.Read(ctx, pk, cKey, utils.IncBytes(cKey), readRecord)
+	pKey, cKey := k.storeToBytes(workspace)
+	return vr.app.config.storage.Read(ctx, pKey, cKey, utils.IncBytes(cKey), readRecord)
 }
 
 // keyType is complex key from two parts (partition key and clustering key)
@@ -240,14 +230,9 @@ func (key *keyType) ccDef() appdef.QName {
 	return appdef.NullQName
 }
 
-// Reads key from partition key bytes and clustering columns bytes
-func (key *keyType) loadFromBytes(pKey, cKey []byte) (err error) {
-	buf := bytes.NewBuffer(pKey)
-	if err = loadViewPartKey_00(key, buf); err != nil {
-		return err
-	}
-
-	buf = bytes.NewBuffer(cKey)
+// Reads key from clustering columns bytes. Partition part of key must be filled (or copied) from key builder
+func (key *keyType) loadFromBytes(cKey []byte) (err error) {
+	buf := bytes.NewBuffer(cKey)
 	if err = loadViewClustKey_00(key, buf); err != nil {
 		return err
 	}
@@ -265,8 +250,8 @@ func (key *keyType) pkDef() appdef.QName {
 }
 
 // Stores key to partition key bytes and to clustering columns bytes
-func (key *keyType) storeToBytes() (pKey, cKey []byte) {
-	return key.storeViewPartKey(), key.storeViewClustKey()
+func (key *keyType) storeToBytes(ws istructs.WSID) (pKey, cKey []byte) {
+	return key.storeViewPartKey(ws), key.storeViewClustKey()
 }
 
 // Checks what key has correct view, partition and clustering columns names and returns error if not

@@ -13,6 +13,103 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Benchmark_BufWriteCustomTypes(b *testing.B) {
+
+	type (
+		synType = uint64
+		usrType uint64
+	)
+
+	const cap = 1000 // test slices capacity
+
+	int64slice := make([]uint64, cap)
+	for i := range int64slice {
+		int64slice[i] = uint64(2 * i)
+	}
+
+	usrSlice := make([]usrType, cap)
+	for i := range usrSlice {
+		usrSlice[i] = usrType(2 * i)
+	}
+
+	synSlice := make([]synType, cap)
+	for i := range synSlice {
+		synSlice[i] = synType(2 * i)
+	}
+
+	var int64bytes []byte
+	b.Run("1. SafeWriteBuf go-type", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			buf := bytes.NewBuffer(nil)
+			for i := range int64slice {
+				SafeWriteBuf(buf, int64slice[i])
+			}
+			if len(int64bytes) == 0 {
+				int64bytes = buf.Bytes()
+			}
+		}
+	})
+
+	var usrBytes []byte
+	b.Run("2. SafeWriteBuf user type", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			buf := bytes.NewBuffer(nil)
+			for i := range usrSlice {
+				SafeWriteBuf(buf, usrSlice[i])
+			}
+			if len(usrBytes) == 0 {
+				usrBytes = buf.Bytes()
+			}
+		}
+	})
+
+	var synBytes []byte
+	b.Run("3. SafeWriteBuf synonym type", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			buf := bytes.NewBuffer(nil)
+			for i := range synSlice {
+				SafeWriteBuf(buf, synSlice[i])
+			}
+			if len(synBytes) == 0 {
+				synBytes = buf.Bytes()
+			}
+		}
+	})
+
+	var castBytes []byte
+	b.Run("4. SafeWriteBuf cast user type", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			buf := bytes.NewBuffer(nil)
+			for i := range usrSlice {
+				SafeWriteBuf(buf, uint64(usrSlice[i]))
+			}
+			if len(castBytes) == 0 {
+				castBytes = buf.Bytes()
+			}
+		}
+	})
+
+	require := require.New(b)
+	require.EqualValues(int64bytes, usrBytes)
+	require.EqualValues(int64bytes, synBytes)
+	require.EqualValues(int64bytes, castBytes)
+
+	var b_ []byte
+	b.Run("5. WriteUint64, no heap escapes", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			buf := bytes.NewBuffer(nil)
+			for i := range int64slice {
+				WriteUint64(buf, int64slice[i])
+			}
+			if len(b_) == 0 {
+				b_ = buf.Bytes()
+			}
+		}
+	})
+
+	require.EqualValues(int64bytes, b_)
+}
+
 // Writes value to bytes buffer.
 //
 // Deprecated. For benchmark test purposes only
