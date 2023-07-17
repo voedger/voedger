@@ -232,7 +232,7 @@ func TestEmailExpectation(t *testing.T) {
 
 	// provide VIT email sending chan to the IBundledHostState, then use it to send an email
 	s := state.ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 1, 0,
-		state.WithEmailMessagesChan(vit.emailMessagesChan))
+		state.WithEmailMessagesChan(vit.emailCaptor))
 	k, err := s.KeyBuilder(state.SendMailStorage, appdef.NullQName)
 	require.NoError(err)
 
@@ -252,13 +252,12 @@ func TestEmailExpectation(t *testing.T) {
 	k.PutString(state.Field_Body, "Hello world")
 
 	t.Run("basic usage", func(t *testing.T) {
-		emailCaptor := vit.ExpectEmail()
 		require.Nil(s.NewValue(k))
 		readyToFlush, err := s.ApplyIntents()
 		require.True(readyToFlush)
 		require.NoError(err)
 		require.NoError(s.FlushBundles())
-		email := emailCaptor.Capture()
+		email := vit.CaptureEmail()
 		log.Println(email)
 	})
 

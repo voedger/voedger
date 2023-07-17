@@ -97,10 +97,10 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	//Check that emails were send
-	require.Equal(verificationCode, strings.Split(vit.ExpectEmail().Capture().Body, ";")[0])
-	require.Equal(verificationCode, strings.Split(vit.ExpectEmail().Capture().Body, ";")[0])
+	require.Equal(verificationCode, strings.Split(vit.CaptureEmail().Body, ";")[0])
+	require.Equal(verificationCode, strings.Split(vit.CaptureEmail().Body, ";")[0])
 
-	message := vit.ExpectEmail().Capture()
+	message := vit.CaptureEmail()
 	ss := strings.Split(message.Body, ";")
 	require.Equal(inviteEmailSubject, message.Subject)
 	require.Equal(invite.EmailFrom, message.From)
@@ -125,7 +125,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	WaitForInviteState(vit, ws, invite.State_Cancelled, inviteID3)
 	InitiateInvitationByEMail(vit, ws, expireDatetime, it.TestEmail3, initialRoles, inviteEmailTemplate, inviteEmailSubject)
 	WaitForInviteState(vit, ws, invite.State_ToBeInvited, inviteID3)
-	_ = vit.ExpectEmail().Capture()
+	_ = vit.CaptureEmail()
 	WaitForInviteState(vit, ws, invite.State_Invited, inviteID3)
 
 	//Join workspaces
@@ -166,8 +166,8 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	//Check that emails were send
-	require.Equal(updatedRoles, vit.ExpectEmail().Capture().Body)
-	message = vit.ExpectEmail().Capture()
+	require.Equal(updatedRoles, vit.CaptureEmail().Body)
+	message = vit.CaptureEmail()
 	require.Equal(updateRolesEmailSubject, message.Subject)
 	require.Equal(invite.EmailFrom, message.From)
 	require.Equal([]string{it.TestEmail2}, message.To)

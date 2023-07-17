@@ -17,30 +17,20 @@ REMOTE_HOST=$1
 MIN_RAM=$2
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
-
+SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR -o ConnectTimeout=15'
 
 # Check if minimum RAM is set to 0
 if [ "$MIN_RAM" -eq 0 ]; then
-  ssh $SSH_OPTIONS $SSH_USER@$REMOTE_HOST exit
-  ssh_exit_status=$?
-
-  if [ $ssh_exit_status -eq 0 ]; then
+  if ssh $SSH_OPTIONS $SSH_USER@$REMOTE_HOST exit; then
     echo "SSH connection established with host $REMOTE_HOST."
   else
-    echo "Failed to establish SSH connection with host $remote_host."
+    echo "Failed to establish SSH connection with host $REMOTE_HOST."
     exit 1  # Exit the script with an error
   fi
   # Check SSH connection
   echo "Skipping RAM check."
 else
-  # Establish SSH connection with the remote host and retrieve RAM information
-  ram=$(ssh $SSH_OPTIONS $SSH_USER@$REMOTE_HOST free -m 2>/dev/null | awk 'NR==2{print $2}')
-
-  # Check the exit status of the ssh command
-  ssh_exit_status=$?
-
-  if [ $ssh_exit_status -eq 0 ]; then
+  if ram=$(ssh $SSH_OPTIONS $SSH_USER@$REMOTE_HOST free -m 2>/dev/null | awk 'NR==2{print $2}'); then
     echo "SSH connection established with host $REMOTE_HOST."
     # Compare RAM size with the minimum requirement
     if [ $ram -ge $MIN_RAM ]; then
