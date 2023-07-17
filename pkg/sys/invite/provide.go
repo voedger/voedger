@@ -7,10 +7,13 @@ package invite
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc, buildSubjectsIdx bool) {
+func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc, buildSubjectsIdx bool,
+	federation coreutils.IFederation, itokens itokens.ITokens, smtpCfg smtp.Cfg) {
 	provideCmdInitiateInvitationByEMail(cfg, appDefBuilder, timeFunc)
 	provideCmdInitiateJoinWorkspace(cfg, appDefBuilder, timeFunc)
 	provideCmdInitiateUpdateInviteRoles(cfg, appDefBuilder, timeFunc)
@@ -30,4 +33,15 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	appDefBuilder.AddObject(qNameAPApplyJoinWorkspace)
 	appDefBuilder.AddObject(qNameAPApplyLeaveWorkspace)
 	appDefBuilder.AddObject(qNameAPApplyUpdateInviteRoles)
+	cfg.AddAsyncProjectors(
+		provideAsyncProjectorApplyInvitationFactory(timeFunc, federation, cfg.Name, itokens, smtpCfg),
+		provideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc, federation, cfg.Name, itokens),
+		provideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc, federation, cfg.Name, itokens, smtpCfg),
+		provideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc, federation, cfg.Name, itokens),
+		provideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc, federation, cfg.Name, itokens),
+	)
+	cfg.AddSyncProjectors(
+		provideSyncProjectorInviteIndexFactory(),
+		provideSyncProjectorJoinedWorkspaceIndexFactory(),
+	)
 }

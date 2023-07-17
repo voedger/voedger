@@ -44,27 +44,27 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IA
 		appDefFunc:      func() appdef.IAppDef { return appStructs.AppDef() },
 		wsidFunc:        wsidFunc,
 		n10nFunc:        n10nFunc,
-	}, S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
+	}, S_GET|S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
 
 	state.addStorage(RecordsStorage, &recordsStorage{
 		recordsFunc: func() istructs.IRecords { return appStructs.Records() },
 		appDefFunc:  func() appdef.IAppDef { return appStructs.AppDef() },
 		wsidFunc:    wsidFunc,
-	}, S_GET_BATCH)
+	}, S_GET|S_GET_BATCH)
 
 	state.addStorage(WLogStorage, &wLogStorage{
 		ctx:        ctx,
 		eventsFunc: func() istructs.IEvents { return appStructs.Events() },
 		appDefFunc: func() appdef.IAppDef { return appStructs.AppDef() },
 		wsidFunc:   wsidFunc,
-	}, S_GET_BATCH|S_READ)
+	}, S_GET|S_READ)
 
 	state.addStorage(PLogStorage, &pLogStorage{
 		ctx:             ctx,
 		eventsFunc:      func() istructs.IEvents { return appStructs.Events() },
 		appDefFunc:      func() appdef.IAppDef { return appStructs.AppDef() },
 		partitionIDFunc: partitionIDFunc,
-	}, S_GET_BATCH|S_READ)
+	}, S_GET|S_READ)
 
 	state.addStorage(SendMailStorage, &sendMailStorage{
 		messages: opts.messages,
@@ -72,7 +72,7 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IA
 
 	state.addStorage(HTTPStorage, &httpStorage{}, S_READ)
 
-	state.addStorage(AppSecretsStorage, &appSecretsStorage{secretReader: secretReader}, S_GET_BATCH)
+	state.addStorage(AppSecretsStorage, &appSecretsStorage{secretReader: secretReader}, S_GET)
 
 	return state
 }

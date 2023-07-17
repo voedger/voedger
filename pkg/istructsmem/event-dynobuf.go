@@ -17,7 +17,7 @@ import (
 )
 
 func storeEvent(ev *eventType, buf *bytes.Buffer) {
-	utils.SafeWriteBuf(buf, uint16(ev.qNameID()))
+	utils.WriteUint16(buf, uint16(ev.qNameID()))
 
 	storeEventCreateParams(ev, buf)
 	storeEventBuildError(ev, buf)
@@ -31,22 +31,22 @@ func storeEvent(ev *eventType, buf *bytes.Buffer) {
 }
 
 func storeEventCreateParams(ev *eventType, buf *bytes.Buffer) {
-	utils.SafeWriteBuf(buf, ev.partition)
-	utils.SafeWriteBuf(buf, ev.pLogOffs)
-	utils.SafeWriteBuf(buf, ev.ws)
-	utils.SafeWriteBuf(buf, ev.wLogOffs)
-	utils.SafeWriteBuf(buf, ev.regTime)
-	utils.SafeWriteBuf(buf, ev.sync)
+	utils.WriteUint16(buf, uint16(ev.partition))
+	utils.WriteUint64(buf, uint64(ev.pLogOffs))
+	utils.WriteUint64(buf, uint64(ev.ws))
+	utils.WriteUint64(buf, uint64(ev.wLogOffs))
+	utils.WriteInt64(buf, int64(ev.regTime))
+	utils.WriteBool(buf, ev.sync)
 	if ev.sync {
-		utils.SafeWriteBuf(buf, ev.device)
-		utils.SafeWriteBuf(buf, ev.syncTime)
+		utils.WriteUint16(buf, uint16(ev.device))
+		utils.WriteInt64(buf, int64(ev.syncTime))
 	}
 }
 
 func storeEventBuildError(ev *eventType, buf *bytes.Buffer) {
 
 	valid := ev.valid()
-	utils.SafeWriteBuf(buf, valid)
+	utils.WriteBool(buf, valid)
 
 	if valid {
 		return
@@ -63,7 +63,7 @@ func storeEventBuildError(ev *eventType, buf *bytes.Buffer) {
 		bytesLen = 0 // to protect logging security data
 	}
 
-	utils.SafeWriteBuf(buf, bytesLen)
+	utils.WriteUint32(buf, bytesLen)
 
 	if bytesLen > 0 {
 		utils.SafeWriteBuf(buf, bytes)
@@ -77,13 +77,13 @@ func storeEventArguments(ev *eventType, buf *bytes.Buffer) {
 
 func storeEventCUDs(ev *eventType, buf *bytes.Buffer) {
 	count := uint16(len(ev.cud.creates))
-	utils.SafeWriteBuf(buf, count)
+	utils.WriteUint16(buf, count)
 	for _, rec := range ev.cud.creates {
 		storeRow(&rec.rowType, buf)
 	}
 
 	count = uint16(len(ev.cud.updates))
-	utils.SafeWriteBuf(buf, count)
+	utils.WriteUint16(buf, count)
 	for _, rec := range ev.cud.updates {
 		storeRow(&rec.changes.rowType, buf)
 	}
@@ -98,7 +98,7 @@ func storeElement(el *elementType, buf *bytes.Buffer) {
 	}
 
 	childCount := uint16(len(el.child))
-	utils.SafeWriteBuf(buf, childCount)
+	utils.WriteUint16(buf, childCount)
 	for _, c := range el.child {
 		storeElement(c, buf)
 	}

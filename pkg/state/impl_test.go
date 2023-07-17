@@ -104,11 +104,8 @@ func Test_getStorageID(t *testing.T) {
 			},
 		}
 		for _, test := range tests {
-			require.Equal(t, test.expectedStorage, getStorageID(test.kb))
+			require.Equal(t, test.expectedStorage, test.kb.Storage())
 		}
-	})
-	t.Run("Should panic when key not supported", func(t *testing.T) {
-		require.ErrorIs(t, errorFromPanic(func() { getStorageID(nil) }), ErrUnknownStorage)
 	})
 }
 
@@ -171,6 +168,15 @@ type mockRecords struct {
 func (r *mockRecords) GetBatch(workspace istructs.WSID, highConsistency bool, ids []istructs.RecordGetBatchItem) (err error) {
 	return r.Called(workspace, highConsistency, ids).Error(0)
 }
+func (r *mockRecords) Get(workspace istructs.WSID, highConsistency bool, id istructs.RecordID) (record istructs.IRecord, err error) {
+	args := r.Called(workspace, highConsistency, id)
+
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+
+	}
+	return args.Get(0).(istructs.IRecord), args.Error(1)
+}
 func (r *mockRecords) GetSingleton(workspace istructs.WSID, qName appdef.QName) (record istructs.IRecord, err error) {
 	aa := r.Called(workspace, qName)
 	return aa.Get(0).(istructs.IRecord), aa.Error(1)
@@ -189,6 +195,13 @@ func (r *mockViewRecords) NewValueBuilder(view appdef.QName) istructs.IValueBuil
 }
 func (r *mockViewRecords) UpdateValueBuilder(view appdef.QName, existing istructs.IValue) istructs.IValueBuilder {
 	return r.Called(view, existing).Get(0).(istructs.IValueBuilder)
+}
+func (r *mockViewRecords) Get(workspace istructs.WSID, key istructs.IKeyBuilder) (value istructs.IValue, err error) {
+	c := r.Called(workspace, key)
+	if c.Get(0) == nil {
+		return nil, c.Error(1)
+	}
+	return c.Get(0).(istructs.IValue), c.Error(1)
 }
 func (r *mockViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRecordGetBatchItem) (err error) {
 	return r.Called(workspace, kv).Error(0)
@@ -257,6 +270,9 @@ func (s *mockStorage) NewKeyBuilder(entity appdef.QName, existingBuilder istruct
 }
 func (s *mockStorage) GetBatch(items []GetBatchItem) (err error) {
 	return s.Called(items).Error(0)
+}
+func (s *mockStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
+	return s.Called(key).Get(0).(istructs.IStateValue), s.Called(key).Error(1)
 }
 func (s *mockStorage) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	return s.Called(key, callback).Error(0)
