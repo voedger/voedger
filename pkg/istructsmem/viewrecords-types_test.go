@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
 func Test_KeyType(t *testing.T) {
@@ -719,7 +718,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		kb.PutBool("clusteringColumn2", true)
 		kb.PutString("clusteringColumn3", "cider")
 
-		c := utils.PrefixBytes([]byte("cider"), int64(100), true)
+		_, c := kb.(*keyType).storeToBytes(2)
 
 		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, c)
 		_, err := viewRecords.Get(2, kb)

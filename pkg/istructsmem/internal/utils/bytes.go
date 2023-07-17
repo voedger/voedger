@@ -154,7 +154,6 @@ func SafeWriteBuf(b *bytes.Buffer, data any) {
 		err = binary.Write(b, binary.BigEndian, v)
 	}
 	if err != nil {
-		// notest: Difficult to get an error when writing to bytes.buffer
 		panic(err)
 	}
 }
@@ -279,21 +278,13 @@ func ReadShortString(buf *bytes.Buffer) (string, error) {
 	return string(buf.Next(strLen)), nil
 }
 
-// Expands (from left) value by write specified prefixes
-func PrefixBytes(value []byte, prefix ...interface{}) []byte {
-	buf := new(bytes.Buffer)
-	for _, p := range prefix {
-		SafeWriteBuf(buf, p)
-	}
-	if len(value) > 0 {
-		SafeWriteBuf(buf, value)
-	}
-	return buf.Bytes()
-}
-
 // Returns a slice of bytes built from the specified values, written from left to right
 func ToBytes(value ...interface{}) []byte {
-	return PrefixBytes(nil, value...)
+	buf := new(bytes.Buffer)
+	for _, p := range value {
+		SafeWriteBuf(buf, p)
+	}
+	return buf.Bytes()
 }
 
 // Returns is all bytes is max (0xFF)
