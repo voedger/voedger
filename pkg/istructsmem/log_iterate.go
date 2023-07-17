@@ -9,8 +9,8 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// logReadPartFuncType is function type to read log part (≤ 4096 events). Must return ok and nil error to read next part.
-type logReadPartFuncType func(partID uint64, ccolsFrom, ccolsTo []byte) (ok bool, err error)
+// Function type to read log part (≤ 4096 events). Must return ok and nil error to read next part
+type logReadPartFuncType func(ofsHi uint64, ofsLo1, ofsLo2 uint16) (ok bool, err error)
 
 // readLogParts in a loop reads events from the log by parts (≤ 4096 events) by call readPart() function
 func readLogParts(startOffset istructs.Offset, toReadCount int, readPart logReadPartFuncType) error {
@@ -22,20 +22,20 @@ func readLogParts(startOffset istructs.Offset, toReadCount int, readPart logRead
 	if toReadCount == istructs.ReadToTheEnd {
 		finishOffset = istructs.Offset(istructs.ReadToTheEnd)
 	} else {
-		finishOffset = startOffset + istructs.Offset(toReadCount)
+		finishOffset = startOffset + istructs.Offset(toReadCount) - 1
 	}
 
 	minPart, _ := crackLogOffset(startOffset)
-	maxPart, _ := crackLogOffset(finishOffset - 1)
+	maxPart, _ := crackLogOffset(finishOffset)
 
 	for part := minPart; part <= maxPart; part++ {
-		ccolsFrom := []byte(nil)
+		ccolsFrom := uint16(0)
 		if part == minPart {
-			_, ccolsFrom = splitLogOffset(startOffset)
+			_, ccolsFrom = crackLogOffset(startOffset)
 		}
-		ccolsTo := []byte(nil)
+		ccolsTo := lowMask
 		if (part == maxPart) && (toReadCount != istructs.ReadToTheEnd) && (finishOffset%partitionRecordCount != 0) {
-			_, ccolsTo = splitLogOffset(finishOffset)
+			_, ccolsTo = crackLogOffset(finishOffset)
 		}
 
 		ok, err := readPart(part, ccolsFrom, ccolsTo)
