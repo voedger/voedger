@@ -21,6 +21,7 @@ const (
 	field_Reason             = "Reason"
 	field_TargetWSID         = "TargetWSID"
 	field_ForRegistry        = "ForRegistry"
+	field_Language           = "Language"
 
 	VerifiedValueTokenDuration              = 10 * time.Minute
 	VerificationTokenDuration               = 10 * time.Minute
