@@ -723,6 +723,35 @@ func TestACLAllow(t *testing.T) {
 				},
 			},
 		},
+		{
+			acl: ACL{
+				{
+					desc:   "allow everything",
+					policy: ACPolicy_Allow,
+				},
+				{
+					desc: "but deny to select one field",
+					pattern: PatternType{
+						opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+						qNamesPattern:  []appdef.QName{qNameCDocUntillPayments},
+						fieldsPattern:  [][]string{{appdef.SystemField_IsActive}},
+					},
+					policy: ACPolicy_Deny,
+				},
+			},
+			reqs: []req{
+				{
+					req: iauthnz.AuthzRequest{
+						OperationKind: iauthnz.OperationKind_SELECT,
+						Resource:      qNameCDocUntillPayments,
+						Fields:        []string{appdef.SystemField_ID}, // select non-denied field -> expect allow
+					},
+					prns: [][]iauthnz.Principal{
+						nil,
+					},
+				},
+			},
+		},
 	}
 
 	for _, c := range cases {
@@ -748,121 +777,158 @@ func TestACLDeny(t *testing.T) {
 		prns [][]iauthnz.Principal
 	}
 
-	acl := ACL{
+	cases := []struct {
+		acl  ACL
+		reqs []req
+	}{
 		{
-			desc: "deny rule",
-			pattern: PatternType{
-				qNamesPattern:  []appdef.QName{testQName1},
-				opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_INSERT},
-				principalsPattern: [][]iauthnz.Principal{
-					// OR
-					{{Kind: iauthnz.PrincipalKind_User, Name: "testnamefordeny", ID: 1, WSID: 2}},
-					{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}},
+			acl: ACL{
+				{
+					desc: "deny rule",
+					pattern: PatternType{
+						qNamesPattern:  []appdef.QName{testQName1},
+						opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_INSERT},
+						principalsPattern: [][]iauthnz.Principal{
+							// OR
+							{{Kind: iauthnz.PrincipalKind_User, Name: "testnamefordeny", ID: 1, WSID: 2}},
+							{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}},
+						},
+					},
+					policy: ACPolicy_Deny,
 				},
 			},
-			policy: ACPolicy_Deny,
+			reqs: []req{
+				{
+					req: iauthnz.AuthzRequest{
+						OperationKind: iauthnz.OperationKind_INSERT,
+						Resource:      testQName1,
+						Fields:        []string{"fld1", "fld2"}, // just an example
+					},
+					prns: [][]iauthnz.Principal{
+						{{}},
+						{
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "testname",
+							},
+						},
+						{
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "wrongName",
+							},
+							{
+								Kind:  iauthnz.PrincipalKind_Role,
+								QName: iauthnz.QNameRoleWorkspaceOwner,
+							},
+						},
+						{
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "testname",
+							},
+							{
+								Kind:  iauthnz.PrincipalKind_Role,
+								QName: iauthnz.QNameRoleWorkspaceOwner,
+							},
+						},
+						{
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "testname",
+								ID:   1,
+							},
+							{
+								Kind:  iauthnz.PrincipalKind_Role,
+								QName: iauthnz.QNameRoleWorkspaceOwner,
+							},
+						},
+						{
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "testname",
+								WSID: 2,
+							},
+							{
+								Kind:  iauthnz.PrincipalKind_Role,
+								QName: iauthnz.QNameRoleWorkspaceOwner,
+							},
+						},
+						{
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "testnamefordeny",
+								ID:   1,
+								WSID: 42,
+							},
+						},
+						{
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "wrong",
+							},
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "testnamefordeny",
+								ID:   1,
+								WSID: 2,
+							},
+							{
+								Kind: iauthnz.PrincipalKind_Host,
+								Name: "127.0.0.1",
+							},
+							{
+								Kind:  iauthnz.PrincipalKind_Role,
+								QName: iauthnz.QNameRoleProfileOwner,
+							},
+							{
+								Kind:  iauthnz.PrincipalKind_Role,
+								QName: iauthnz.QNameRoleWorkspaceOwner,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			acl: ACL{
+				{
+					desc:   "allow all",
+					policy: ACPolicy_Allow,
+				},
+				{
+					desc: "but deny to select one field",
+					pattern: PatternType{
+						opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+						qNamesPattern:  []appdef.QName{qNameCDocUntillPayments},
+						fieldsPattern:  [][]string{{appdef.SystemField_IsActive}},
+					},
+					policy: ACPolicy_Deny,
+				},
+			},
+			reqs: []req{
+				{
+					req: iauthnz.AuthzRequest{
+						OperationKind: iauthnz.OperationKind_SELECT,
+						Resource:      qNameCDocUntillPayments,
+						Fields:        []string{appdef.SystemField_IsActive, appdef.SystemField_ID},
+					},
+					prns: [][]iauthnz.Principal{
+						nil,
+					},
+				},
+			},
 		},
 	}
 
-	reqs := []req{
-		{
-			req: iauthnz.AuthzRequest{
-				OperationKind: iauthnz.OperationKind_INSERT,
-				Resource:      testQName1,
-				Fields:        []string{"fld1", "fld2"}, // just an example
-			},
-			prns: [][]iauthnz.Principal{
-				{{}},
-				{
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "testname",
-					},
-				},
-				{
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "wrongName",
-					},
-					{
-						Kind:  iauthnz.PrincipalKind_Role,
-						QName: iauthnz.QNameRoleWorkspaceOwner,
-					},
-				},
-				{
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "testname",
-					},
-					{
-						Kind:  iauthnz.PrincipalKind_Role,
-						QName: iauthnz.QNameRoleWorkspaceOwner,
-					},
-				},
-				{
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "testname",
-						ID:   1,
-					},
-					{
-						Kind:  iauthnz.PrincipalKind_Role,
-						QName: iauthnz.QNameRoleWorkspaceOwner,
-					},
-				},
-				{
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "testname",
-						WSID: 2,
-					},
-					{
-						Kind:  iauthnz.PrincipalKind_Role,
-						QName: iauthnz.QNameRoleWorkspaceOwner,
-					},
-				},
-				{
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "testnamefordeny",
-						ID:   1,
-						WSID: 42,
-					},
-				},
-				{
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "wrong",
-					},
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "testnamefordeny",
-						ID:   1,
-						WSID: 2,
-					},
-					{
-						Kind: iauthnz.PrincipalKind_Host,
-						Name: "127.0.0.1",
-					},
-					{
-						Kind:  iauthnz.PrincipalKind_Role,
-						QName: iauthnz.QNameRoleProfileOwner,
-					},
-					{
-						Kind:  iauthnz.PrincipalKind_Role,
-						QName: iauthnz.QNameRoleWorkspaceOwner,
-					},
-				},
-			},
-		},
-	}
-
-	authz := implIAuthorizer{acl: acl}
-	for _, req := range reqs {
-		for _, prns := range req.prns {
-			ok, err := authz.Authorize(nil, prns, req.req)
-			require.NoError(err)
-			require.False(ok)
+	for _, c := range cases {
+		authz := implIAuthorizer{acl: c.acl}
+		for _, req := range c.reqs {
+			for _, prns := range req.prns {
+				ok, err := authz.Authorize(nil, prns, req.req)
+				require.NoError(err)
+				require.False(ok)
+			}
 		}
 	}
 }
