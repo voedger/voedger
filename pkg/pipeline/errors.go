@@ -3,6 +3,7 @@
 * Copyright (c) 2021-present unTill Pro, Ltd.
 *
 * @author Michael Saigachenko
+* @author Alisher Nurmanov
 *
  */
 
@@ -17,11 +18,15 @@ type IErrorPipeline interface {
 	error
 	IWorkpiece
 	GetWork() interface{}
+	GetOpName() string
+	GetPlace() string
 }
 
 type errPipeline struct {
-	err  error
-	work interface{}
+	err    error
+	work   interface{}
+	place  string
+	opName string
 }
 
 func (e errPipeline) Release() {
@@ -37,6 +42,14 @@ func (e errPipeline) Unwrap() error {
 
 func (e errPipeline) GetWork() interface{} {
 	return e.work
+}
+
+func (e errPipeline) GetOpName() string {
+	return e.opName
+}
+
+func (e errPipeline) GetPlace() string {
+	return e.place
 }
 
 type ErrInBranches struct {
