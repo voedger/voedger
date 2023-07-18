@@ -35,7 +35,7 @@ const (
 	InitiateEmailVerification_MaxAllowed    = uint32(3)
 	IssueVerifiedValueToken_Period          = time.Hour
 	IssueVerifiedValueToken_MaxAllowed      = uint32(3)
-	verifyEmailReason                       = "confirm your E-mail"
+	verifyEmailReason                       = "to confirm your E-mail"
 )
 
 var (
