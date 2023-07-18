@@ -124,6 +124,11 @@ type IAppDef interface {
 	//
 	// Returns nil if not found.
 	Query(QName) IQuery
+
+	// Returns workspace by name.
+	//
+	// Returns nil if not found.
+	Workspace(QName) IWorkspace
 }
 
 // Application definition builder
@@ -243,6 +248,14 @@ type IAppDefBuilder interface {
 	//   - if name is invalid,
 	//   - if definition with name already exists.
 	AddQuery(QName) IQueryBuilder
+
+	// Adds new workspace.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if definition with name already exists.
+	AddWorkspace(QName) IWorkspaceBuilder
 
 	// Must be called after all definitions added. Validates and returns builded application definition or error
 	Build() (IAppDef, error)
@@ -832,4 +845,30 @@ type IQueryBuilder interface {
 	// # Panics:
 	//	- if name is empty or invalid identifier
 	SetExtension(name string, engine ExtensionEngineKind) IQueryBuilder
+}
+
+// Workspace
+//
+// Ref. to workspace.go for implementation
+type IWorkspace interface {
+	IDef
+
+	// Returns definition by name.
+	//
+	// Nil is returned if not found
+	Def(QName) IDef
+
+	// Enumerates all workspace definitions
+	Defs(func(IDef))
+}
+
+type IWorkspaceBuilder interface {
+	IWorkspace
+
+	// Adds definition to workspace. Definition must be defined for application before.
+	//
+	// # Panics:
+	//	- if name is empty
+	//	- if name is not defined for application
+	AddDef(QName) IWorkspaceBuilder
 }
