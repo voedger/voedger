@@ -62,6 +62,8 @@ const (
 	// Commands may haven't explicit result
 	DefKind_Command
 
+	DefKind_Workspace
+
 	DefKind_FakeLast
 )
 
