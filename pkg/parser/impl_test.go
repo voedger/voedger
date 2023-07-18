@@ -106,6 +106,11 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
 	require.Equal(appdef.DataKind_string, cdoc.(appdef.IFields).Field("Name").DataKind())
 	require.Equal(appdef.DataKind_string, cdoc.(appdef.IFields).Field("Country").DataKind())
+
+	// QUERY
+	q1 := builder.Query(appdef.NewQName("main", "_Query1"))
+	require.NotNil(q1)
+	require.Equal(appdef.DefKind_Query, q1.Kind())
 }
 
 func Test_Refs_NestedTables(t *testing.T) {
