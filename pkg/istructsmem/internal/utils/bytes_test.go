@@ -74,6 +74,11 @@ func TestSafeWriteBuf(t *testing.T) {
 			require.EqualValues(tt.want, b.Bytes())
 		})
 	}
+
+	require.Panics(func() {
+		p := func() {}
+		SafeWriteBuf(bytes.NewBuffer(nil), p)
+	}, "must be panic if unknown data size")
 }
 
 func TestReadWriteShortString(t *testing.T) {
@@ -352,56 +357,6 @@ func TestCopyBytes(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestPrefixBytes(t *testing.T) {
-	type args struct {
-		bytes  []byte
-		prefix []interface{}
-	}
-	tests := []struct {
-		name string
-		args args
-		want []byte
-	}{
-		{
-			name: "add uint16 to two bytes",
-			args: args{
-				bytes:  []byte{0x01, 0x02},
-				prefix: []interface{}{uint16(1)},
-			},
-			want: []byte{0x00, 0x01, 0x01, 0x02},
-		},
-		{
-			name: "add uint16 and uint64",
-			args: args{
-				bytes:  []byte{0x01, 0x02},
-				prefix: []interface{}{uint16(0x0107), uint64(0xA7010203)},
-			},
-			want: []byte{0x01, 0x07, 0x00, 0x00, 0x00, 0x00, 0xA7, 0x01, 0x02, 0x03, 0x01, 0x02},
-		},
-		{
-			name: "add uint16 and uint64 to nil",
-			args: args{
-				bytes:  nil,
-				prefix: []interface{}{uint16(0x0107), uint64(0xA7010203)},
-			},
-			want: []byte{0x01, 0x07, 0x00, 0x00, 0x00, 0x00, 0xA7, 0x01, 0x02, 0x03},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := PrefixBytes(tt.args.bytes, tt.args.prefix...); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("prefixBytes() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-
-	require.New(t).Panics(func() {
-		bytes := []byte{0x01, 0x02}
-		const value = 55 // unknown type size!
-		_ = PrefixBytes(bytes, value)
-	}, "must panic if expand bytes slice by unknown/variable size values")
 }
 
 type testInt uint16

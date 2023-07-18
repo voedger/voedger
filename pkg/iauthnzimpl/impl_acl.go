@@ -334,4 +334,12 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
+	{
+		desc: "grant exec on c.air.UpdateUPProfile to role air.RoleUntillPaymentsUser",
+		pattern: PatternType{
+			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPProfile},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}}},
+		},
+		policy: ACPolicy_Allow,
+	},
 }

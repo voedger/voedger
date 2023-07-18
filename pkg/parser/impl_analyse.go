@@ -211,8 +211,10 @@ func (c *analyseCtx) with(with []WithItem, pos *lexer.Position) {
 	for i := range with {
 		wi := &with[i]
 		if wi.Comment != nil {
-			if err := resolve(*wi.Comment, c.basicContext, func(f *CommentStmt) error { return nil }); err != nil {
-				c.stmtErr(pos, err)
+			if wi.Comment.Ref != nil {
+				if err := resolve(*wi.Comment.Ref, c.basicContext, func(f *CommentStmt) error { return nil }); err != nil {
+					c.stmtErr(pos, err)
+				}
 			}
 		} else if wi.Rate != nil {
 			if err := resolve(*wi.Rate, c.basicContext, func(f *RateStmt) error { return nil }); err != nil {

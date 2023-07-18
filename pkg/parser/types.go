@@ -384,10 +384,15 @@ type CommandStmt struct {
 func (s *CommandStmt) GetName() string            { return s.Name }
 func (s *CommandStmt) SetEngineType(e EngineType) { s.Engine = e }
 
+type WithCommentItem struct {
+	Inplace string    `parser:"( @String )"`
+	Ref     *DefQName `parser:"| @@"`
+}
+
 type WithItem struct {
-	Comment *DefQName  `parser:"('Comment' '=' @@)"`
-	Tags    []DefQName `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
-	Rate    *DefQName  `parser:"| ('Rate' '=' @@)"`
+	Comment *WithCommentItem `parser:"('Comment' '=' @@)"`
+	Tags    []DefQName       `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
+	Rate    *DefQName        `parser:"| ('Rate' '=' @@)"`
 }
 
 type QueryStmt struct {

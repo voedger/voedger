@@ -12,9 +12,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys/verifier"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -37,7 +38,8 @@ func TestBasicUsage_Verifier(t *testing.T) {
 					"Entity":"%s",
 					"Field":"EmailField",
 					"Email":"%s",
-					"TargetWSID": %d
+					"TargetWSID": %d,
+					"Language":"en"
 				},
 				"elements":[{"fields":["VerificationToken"]}]
 			}
@@ -56,6 +58,8 @@ func TestBasicUsage_Verifier(t *testing.T) {
 		verificationCode = matches[0]
 		verificationToken = resp.SectionRow()[0].(string)
 		log.Println(verificationCode)
+		match, _ := regexp.MatchString(`Here is your verification code`, email.Body)
+		require.True(match)
 	})
 
 	verifiedValueToken := ""

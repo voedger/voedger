@@ -73,6 +73,7 @@ var (
 	qNameCmdCreateUPTransfer                        = appdef.NewQName(airPackage, "CreateUPTransfer")
 	qNameCmdUpdateUPLocationRates                   = appdef.NewQName(airPackage, "UpdateUPLocationRates")
 	qNameWDocUPTransfer                             = appdef.NewQName(airPackage, "UPTransfer")
+	qNameCmdUpdateUPProfile                         = appdef.NewQName(airPackage, "UpdateUPProfile")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")

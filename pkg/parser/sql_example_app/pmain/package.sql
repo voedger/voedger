@@ -153,8 +153,8 @@ WORKSPACE MyWorkspace (
 
         -- Qieries can only be declared in workspaces
         QUERY Query1 RETURNS void;
-        QUERY _Query1() RETURNS air.Order WITH Comment=PosComment, Tags=(BackofficeTag, PosTag);
-        QUERY Query2(air.Order) RETURNS air.Order;
+        QUERY _Query1() RETURNS air.Order WITH Comment="Inplace comment";
+        QUERY Query2(air.Order) RETURNS air.Order WITH Comment='Inplace comment';
     );
 
     -- ACLs

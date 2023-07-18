@@ -8,7 +8,7 @@ package qnames
 import "github.com/voedger/voedger/pkg/appdef"
 
 // Identifier for QNames
-type QNameID uint16
+type QNameID = uint16
 
 // QNames system view
 //
