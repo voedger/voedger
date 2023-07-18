@@ -32,6 +32,7 @@ type PatternType struct {
 	opKindsPattern    []iauthnz.OperationKindType
 	principalsPattern [][]iauthnz.Principal // first OR, second AND
 	qNamesPattern     []appdef.QName
+	fieldsPattern     [][]string // first OR, second AND
 }
 
 type ACPolicyType int

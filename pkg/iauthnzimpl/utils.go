@@ -138,6 +138,25 @@ func matchOrNotSpecified_QNames(arr []appdef.QName, toFind appdef.QName) bool {
 	return len(arr) == 0 || slices.Contains(arr, toFind)
 }
 
+func matchOrNotSpecified_Fields(patternFields [][]string, requestedFields []string) bool {
+	if len(patternFields) == 0 {
+		return true
+	}
+	if len(requestedFields) == 0 {
+		return false
+	}
+or:
+	for _, patternORFields := range patternFields {
+		for _, patternANDField := range patternORFields {
+			if !slices.Contains(requestedFields, patternANDField) {
+				continue or
+			}
+		}
+		return true
+	}
+	return false
+}
+
 func authNZToString(req iauthnz.AuthzRequest) string {
 	res := strings.Builder{}
 	switch req.OperationKind {
