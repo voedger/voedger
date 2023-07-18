@@ -296,7 +296,8 @@ var defaultACL = ACL{
 	},
 	{
 		// https://github.com/voedger/voedger/issues/422
-		desc: "grant exec on few funcs to role air.UntillPaymentsReseller",
+		// https://dev.untill.com/projects/#!649352
+		desc: "grant exec on few funcs to role air.UntillPaymentsReseller and role air.UntillPaymentsUser",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
 				qNameQryGetDailyPayoutCfg,
@@ -304,7 +305,11 @@ var defaultACL = ACL{
 				qNameQryGetUPTransfers,
 				qNameCmdCreateUPTransfer,
 			},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
+			principalsPattern: [][]iauthnz.Principal{
+				// OR
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
+			},
 		},
 		policy: ACPolicy_Allow,
 	},
@@ -325,6 +330,14 @@ var defaultACL = ACL{
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
 			},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
+		desc: "grant exec on c.air.UpdateUPProfile to role air.RoleUntillPaymentsUser",
+		pattern: PatternType{
+			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPProfile},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}}},
 		},
 		policy: ACPolicy_Allow,
 	},

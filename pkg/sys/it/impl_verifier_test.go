@@ -12,9 +12,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys/verifier"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -27,6 +28,25 @@ func TestBasicUsage_Verifier(t *testing.T) {
 	defer vit.TearDown()
 
 	userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
+
+	t.Run("check verification email text", func(t *testing.T) {
+		body := fmt.Sprintf(`
+			{
+				"args":{
+					"Entity":"%s",
+					"Field":"EmailField",
+					"Email":"%s",
+					"TargetWSID": %d,
+					"Language": "en"
+				},
+				"elements":[{"fields":["VerificationToken"]}]
+			}
+		`, it.QNameTestEmailVerificationDoc, it.TestEmail, userPrincipal.ProfileWSID)
+		vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body)
+		email := vit.CaptureEmail()
+		match, _ := regexp.MatchString(`Here is your verification code`, email.Body)
+		require.True(match)
+	})
 
 	verificationToken := ""
 	verificationCode := ""
