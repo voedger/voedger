@@ -30,7 +30,6 @@ func TestBasicUsage_Verifier(t *testing.T) {
 	userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 
 	t.Run("check verification email text", func(t *testing.T) {
-		emailCaptor := vit.ExpectEmail()
 		body := fmt.Sprintf(`
 			{
 				"args":{
@@ -44,7 +43,7 @@ func TestBasicUsage_Verifier(t *testing.T) {
 			}
 		`, it.QNameTestEmailVerificationDoc, it.TestEmail, userPrincipal.ProfileWSID)
 		vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body)
-		email := emailCaptor.Capture()
+		email := vit.CaptureEmail()
 		match, _ := regexp.MatchString(`Here is your verification code`, email.Body)
 		require.True(match)
 	})
