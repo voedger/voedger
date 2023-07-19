@@ -73,6 +73,8 @@ func TestWiredOperator_doAsync(t *testing.T) {
 
 		require.Nil(t, work)
 		require.Equal(t, "boom", err.Error())
+		require.Equal(t, "doAsync, outWork==nil", err.GetPlace())
+		require.Equal(t, "", err.GetOpName())
 	})
 	t.Run("Should return error on not nil work", func(t *testing.T) {
 		operator := WiredOperator{
@@ -89,5 +91,7 @@ func TestWiredOperator_doAsync(t *testing.T) {
 
 		require.Nil(t, work)
 		require.Equal(t, "boom", err.Error())
+		require.Equal(t, "doAsync, outWork!=nil", err.GetPlace())
+		require.Equal(t, "", err.GetOpName())
 	})
 }

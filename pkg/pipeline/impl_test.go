@@ -106,6 +106,8 @@ func TestBasicUsage_CatchInSyncOperator(t *testing.T) {
 	perr := work.slots["error"].(IErrorPipeline)
 
 	require.Equal(t, "test failure", perr.Error())
+	require.Equal(t, "fail-here", perr.GetOpName())
+	require.Equal(t, "doSync", perr.GetPlace())
 	pctx := work.slots["error-ctx"].(IWorkpieceContext)
 	require.Equal(t, "my-pipeline", pctx.GetPipelineName())
 	require.Equal(t, "operator: apply-name, operator: fail-here, operator: catch-error", pctx.GetPipelineStruct())
