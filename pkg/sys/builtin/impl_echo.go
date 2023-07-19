@@ -14,7 +14,7 @@ import (
 
 func (e *echoRR) AsString(string) string { return e.text }
 
-func ProvideQryEcho(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func provideQryEcho(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Echo"),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "EchoParams")).

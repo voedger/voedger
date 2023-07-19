@@ -105,6 +105,7 @@ type WorkspaceStatement struct {
 
 type RootExtEngineStatement struct {
 	Function *FunctionStmt `parser:"@@"`
+	Storage  *StorageStmt  `parser:"| @@"`
 	stmt     interface{}
 }
 
@@ -235,15 +236,20 @@ func (s *Statement) GetComments() *[]string {
 	return &s.Comments
 }
 
+type StorageKey struct {
+	Storage DefQName  `parser:"@@"`
+	Entity  *DefQName `parser:"( @@ )?"`
+}
+
 type ProjectorStmt struct {
 	Statement
-	Sync     bool        `parser:"@'SYNC'?"`
-	Name     string      `parser:"'PROJECTOR' @Ident"`
-	On       ProjectorOn `parser:"'ON' @@"`
-	Triggers []DefQName  `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
-	Use      []DefQName  `parser:"('USES' @@ ('AND' @@)*)?"`
-	Targets  []DefQName  `parser:"('MAKES' @@ ('AND' @@)*)?"`
-	Engine   EngineType  // Initialized with 1st pass
+	Sync     bool         `parser:"@'SYNC'?"`
+	Name     string       `parser:"'PROJECTOR' @Ident"`
+	On       ProjectorOn  `parser:"'ON' @@"`
+	Triggers []DefQName   `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
+	State    []StorageKey `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Intents  []StorageKey `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
+	Engine   EngineType   // Initialized with 1st pass
 }
 
 func (s *ProjectorStmt) GetName() string            { return s.Name }
@@ -329,6 +335,31 @@ type GrantStmt struct {
 	To     string   `parser:"'TO' @Ident"`
 }
 
+type StorageStmt struct {
+	Statement
+	Name         string      `parser:"'STORAGE' @Ident"`
+	Ops          []StorageOp `parser:"'(' @@ (',' @@)* ')'"`
+	EntityRecord bool        `parser:"@('ENTITY' 'RECORD')?"`
+	EntityView   bool        `parser:"@('ENTITY' 'VIEW')?"`
+}
+
+func (s StorageStmt) GetName() string { return s.Name }
+
+type StorageOp struct {
+	Get      bool           `parser:"( @'GET'"`
+	GetBatch bool           `parser:"| @'GETBATCH'"`
+	Read     bool           `parser:"| @'READ'"`
+	Insert   bool           `parser:"| @'INSERT'"`
+	Update   bool           `parser:"| @'UPDATE')"`
+	Scope    []StorageScope `parser:"'SCOPE' '(' @@ (',' @@)* ')'"`
+}
+
+type StorageScope struct {
+	Commands   bool `parser:" ( @'COMMANDS'"`
+	Queries    bool `parser:" | @'QUERIES'"`
+	Projectors bool `parser:" | @'PROJECTORS')"`
+}
+
 type FunctionStmt struct {
 	Statement
 	Name    string          `parser:"'FUNCTION' @Ident"`
@@ -353,10 +384,15 @@ type CommandStmt struct {
 func (s *CommandStmt) GetName() string            { return s.Name }
 func (s *CommandStmt) SetEngineType(e EngineType) { s.Engine = e }
 
+type WithCommentItem struct {
+	Inplace string    `parser:"( @String )"`
+	Ref     *DefQName `parser:"| @@"`
+}
+
 type WithItem struct {
-	Comment *DefQName  `parser:"('Comment' '=' @@)"`
-	Tags    []DefQName `parser:"| ('Tags' '=' '[' @@ (',' @@)* ']')"`
-	Rate    *DefQName  `parser:"| ('Rate' '=' @@)"`
+	Comment *WithCommentItem `parser:"('Comment' '=' @@)"`
+	Tags    []DefQName       `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
+	Rate    *DefQName        `parser:"| ('Rate' '=' @@)"`
 }
 
 type QueryStmt struct {
@@ -468,7 +504,7 @@ type ViewItemExpr struct {
 
 type PrimaryKeyExpr struct {
 	PartitionKeyFields      []string `parser:"('(' @Ident (',' @Ident)* ')')?"`
-	ClusteringColumnsFields []string `parser:"','? @Ident (',' @Ident)*"`
+	ClusteringColumnsFields []string `parser:"(','? @Ident (',' @Ident)*)?"`
 }
 
 func (s ViewStmt) GetName() string { return s.Name }

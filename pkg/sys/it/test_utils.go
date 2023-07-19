@@ -25,9 +25,8 @@ func InitiateEmailVerification(vit *vit.VIT, prn *vit.Principal, entity appdef.Q
 }
 
 func InitiateEmailVerificationFunc(vit *vit.VIT, f func() *coreutils.FuncResponse) (token, code string) {
-	emailCaptor := vit.ExpectEmail()
 	resp := f()
-	emailMessage := emailCaptor.Capture()
+	emailMessage := vit.CaptureEmail()
 	r := regexp.MustCompile(`(?P<code>\d{6})`)
 	matches := r.FindStringSubmatch(emailMessage.Body)
 	code = matches[0]

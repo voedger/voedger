@@ -29,22 +29,12 @@ func (s *wLogStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) ist
 		wsid: s.wsidFunc(),
 	}
 }
-func (s *wLogStorage) GetBatch(items []GetBatchItem) (err error) {
-	for i := range items {
-		skip := false
-		err = s.Read(items[i].key, func(_ istructs.IKey, value istructs.IStateValue) (err error) {
-			if skip {
-				return
-			}
-			items[i].value = value
-			skip = true
-			return
-		})
-		if err != nil {
-			break
-		}
-	}
-	return err
+func (s *wLogStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
+	err = s.Read(key, func(_ istructs.IKey, v istructs.IStateValue) (err error) {
+		value = v
+		return nil
+	})
+	return value, err
 }
 func (s *wLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	k := kb.(*wLogKeyBuilder)

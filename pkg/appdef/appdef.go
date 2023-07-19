@@ -81,6 +81,10 @@ func (app *appDef) AddWRecord(name QName) IWRecordBuilder {
 	return newWRecord(app, name)
 }
 
+func (app *appDef) AddWorkspace(name QName) IWorkspaceBuilder {
+	return newWorkspace(app, name)
+}
+
 func (app *appDef) Build() (result IAppDef, err error) {
 	app.Defs(func(d IDef) {
 		err = errors.Join(err, validateDef(d))
@@ -203,6 +207,13 @@ func (app *appDef) WDoc(name QName) IWDoc {
 func (app *appDef) WRecord(name QName) IWRecord {
 	if d := app.defByKind(name, DefKind_WRecord); d != nil {
 		return d.(IWRecord)
+	}
+	return nil
+}
+
+func (app *appDef) Workspace(name QName) IWorkspace {
+	if d := app.defByKind(name, DefKind_Workspace); d != nil {
+		return d.(IWorkspace)
 	}
 	return nil
 }

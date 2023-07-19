@@ -45,17 +45,11 @@ func appConfigs() (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
 	// конфиг приложения airs-bp
 	adf := appdef.New()
 	cfg := cfgs.AddConfig(test.appQName, adf)
+	{
+		Provide(cfg, adf)
+	}
 	{ // "modify" function
 		cfg.Resources.Add(istructsmem.NewCommandFunction(test.modifyCmdName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
-	}
-	{ // "collection" function
-		ProvideCollectionFunc(cfg, adf)
-	}
-	{ // "cdoc" function
-		ProvideCDocFunc(cfg, adf)
-	}
-	{ // "state " function
-		ProvideStateFunc(cfg, adf)
 	}
 	{ // CDoc: articles
 		articlesDef := adf.AddCDoc(test.tableArticles)
@@ -146,7 +140,8 @@ func TestBasicUsage_Collection(t *testing.T) {
 			newArPriceCUD(event, 1, 2, normalPriceID, 2.4)
 			newArPriceCUD(event, 1, 3, happyHourPriceID, 1.8)
 		}))
-		require.Nil(processor.SendSync(event))
+		err := processor.SendSync(event)
+		require.NoError(err)
 	}
 
 	cocaColaDocID = idGen.idmap[1]

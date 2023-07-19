@@ -278,9 +278,8 @@ func (vit *VIT) CreateWorkspace(wsp WSParams, owner *Principal) *AppWorkspace {
 	return ws
 }
 
-// will be finalized automatically on vit.TearDown()
-func (vit *VIT) SubscribeForN10n(ws *AppWorkspace, viewQName appdef.QName) chan int64 {
-	n10n := make(chan int64)
+func (vit *VIT) SubscribeForN10nCleanup(ws *AppWorkspace, viewQName appdef.QName) (n10n chan int64, unsubscribe func()) {
+	n10n = make(chan int64)
 	params := url.Values{}
 	query := fmt.Sprintf(`{"SubjectLogin":"test_%d","ProjectionKey":[{"App":"%s","Projection":"%s","WS":%d}]}`,
 		ws.WSID, ws.Owner.AppQName, viewQName, ws.WSID)
@@ -320,8 +319,7 @@ func (vit *VIT) SubscribeForN10n(ws *AppWorkspace, viewQName appdef.QName) chan 
 			n10n <- int64(offset)
 		}
 	}()
-	vit.lock.Lock() // need to lock because the vit instance is used in different goroutines in e.g. Test_Race_RestaurantIntenseUsage()
-	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
+	unsubscribe = func() {
 		body := fmt.Sprintf(`
 			{
 				"Channel": "%s",
@@ -340,9 +338,19 @@ func (vit *VIT) SubscribeForN10n(ws *AppWorkspace, viewQName appdef.QName) chan 
 		httpResp.HTTPResp.Body.Close()
 		for range n10n {
 		}
+	}
+	return n10n, unsubscribe
+}
+
+// will be finalized automatically on vit.TearDown()
+func (vit *VIT) SubscribeForN10n(ws *AppWorkspace, viewQName appdef.QName) chan int64 {
+	n10nChan, unsubscribe := vit.SubscribeForN10nCleanup(ws, viewQName)
+	vit.lock.Lock() // need to lock because the vit instance is used in different goroutines in e.g. Test_Race_RestaurantIntenseUsage()
+	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
+		unsubscribe()
 	})
 	vit.lock.Unlock()
-	return n10n
+	return n10nChan
 }
 
 func (vit *VIT) MetricsRequest(opts ...coreutils.ReqOptFunc) (resp string) {

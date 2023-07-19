@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -32,8 +31,6 @@ func WrapSysError(err error, defaultStatusCode int) error {
 	if !errors.As(err, &res) {
 		res = SysError{Message: err.Error(), HTTPStatus: defaultStatusCode}
 	}
-	res.Message = strings.Replace(res.Message, "[exec function/doSync] ", "", -1) // TODO: how to remove this error part?
-	res.Message = strings.Replace(res.Message, "[execCommand/doSync] ", "", -1)
 	return res
 }
 

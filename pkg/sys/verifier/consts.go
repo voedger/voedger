@@ -21,6 +21,7 @@ const (
 	field_Reason             = "Reason"
 	field_TargetWSID         = "TargetWSID"
 	field_ForRegistry        = "ForRegistry"
+	field_Language           = "Language"
 
 	VerifiedValueTokenDuration              = 10 * time.Minute
 	VerificationTokenDuration               = 10 * time.Minute
@@ -34,7 +35,7 @@ const (
 	InitiateEmailVerification_MaxAllowed    = uint32(3)
 	IssueVerifiedValueToken_Period          = time.Hour
 	IssueVerifiedValueToken_MaxAllowed      = uint32(3)
-	verifyEmailReason                       = "confirm your E-mail"
+	verifyEmailReason                       = "to confirm your E-mail"
 )
 
 var (

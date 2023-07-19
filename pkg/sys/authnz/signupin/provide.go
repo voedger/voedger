@@ -95,8 +95,8 @@ func provideCmdCreateLogin(cfg *istructsmem.AppConfigType, appDefBuilder appdef.
 func ProvideSyncProjectorLoginIdxFactory() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name: QNameViewLoginIdx,
-			Func: loginIdxProjector,
+			Name: QNameProjectorLoginIdx,
+			Func: projectorLoginIdx,
 		}
 	}
 }

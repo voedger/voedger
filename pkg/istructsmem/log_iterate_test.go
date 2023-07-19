@@ -143,21 +143,6 @@ func Test_readLogParts(t *testing.T) {
 		},
 	}
 
-	calcOffsets := func(pk []byte, ccolsFrom, ccolsTo []byte) (startOffs, finishOffs istructs.Offset) {
-		if ccolsFrom == nil {
-			startOffs = calcLogOffset(pk, []byte{0, 0})
-		} else {
-			startOffs = calcLogOffset(pk, ccolsFrom)
-		}
-		if ccolsTo == nil {
-			finishOffs = calcLogOffset(pk, []byte{0, 0})
-			finishOffs |= istructs.Offset(lowMask)
-		} else {
-			finishOffs = calcLogOffset(pk, ccolsTo) - 1
-		}
-		return startOffs, finishOffs
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			require := require.New(t)
@@ -165,12 +150,12 @@ func Test_readLogParts(t *testing.T) {
 			ranges := make(ranges, 0)
 			totalReads := uint64(0)
 
-			readPart := func(pk []byte, ccolsFrom, ccolsTo []byte) (bool, error) {
-				o1, o2 := calcOffsets(pk, ccolsFrom, ccolsTo)
+			readPart := func(partID uint64, ccolsFrom, ccolsTo uint16) (bool, error) {
+				o1 := glueLogOffset(partID, ccolsFrom)
 				if uint64(o1) >= logSize {
 					return false, io.EOF
 				}
-
+				o2 := glueLogOffset(partID, ccolsTo)
 				r := readRange{
 					min: o1,
 					max: o2,
@@ -205,8 +190,9 @@ func Test_readLogParts(t *testing.T) {
 
 		bytesRead := 0
 
-		readPart := func(pk []byte, ccolsFrom, ccolsTo []byte) (bool, error) {
-			o1, o2 := calcOffsets(pk, ccolsFrom, ccolsTo)
+		readPart := func(partID uint64, ccolsFrom, ccolsTo uint16) (bool, error) {
+			o1 := glueLogOffset(partID, ccolsFrom)
+			o2 := glueLogOffset(partID, ccolsTo)
 
 			bytesRead += int(o2-o1) + 1
 
@@ -226,8 +212,9 @@ func Test_readLogParts(t *testing.T) {
 
 		testError := fmt.Errorf("test error")
 
-		readPart := func(pk []byte, ccolsFrom, ccolsTo []byte) (bool, error) {
-			o1, o2 := calcOffsets(pk, ccolsFrom, ccolsTo)
+		readPart := func(partID uint64, ccolsFrom, ccolsTo uint16) (bool, error) {
+			o1 := glueLogOffset(partID, ccolsFrom)
+			o2 := glueLogOffset(partID, ccolsTo)
 
 			bytesRead += int(o2-o1) + 1
 

@@ -135,7 +135,7 @@ func Test_RecordsRead(t *testing.T) {
 	t.Run("must fail batch read records if storage batch failed", func(t *testing.T) {
 		testError := fmt.Errorf("test error")
 		testID := istructs.RecordID(100500)
-		_, cc := splitRecordID(testID)
+		_, cc := recordKey(0, testID)
 
 		storage.ScheduleGetError(testError, nil, cc)
 		defer storage.Reset()
@@ -158,7 +158,7 @@ func Test_RecordsRead(t *testing.T) {
 
 	t.Run("must fail batch read records if storage returns damaged data", func(t *testing.T) {
 		testID := istructs.RecordID(100500)
-		_, cc := splitRecordID(testID)
+		_, cc := recordKey(0, testID)
 
 		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, cc)
 		defer storage.Reset()

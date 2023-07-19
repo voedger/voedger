@@ -42,6 +42,9 @@ type appDefFunc func() appdef.IAppDef
 type ToJSONOptions struct{ excludedFields map[string]bool }
 type ToJSONOption func(opts *ToJSONOptions)
 type toJSONFunc func(e istructs.IStateValue, opts ...interface{}) (string, error)
+type IToJson interface {
+	ToJSON(sv istructs.IStateValue, _ ...interface{}) (string, error)
+}
 
 type ApplyBatchItem struct {
 	key   istructs.IStateKeyBuilder
@@ -67,6 +70,7 @@ func newKeyBuilder(storage, entity appdef.QName) *keyBuilder {
 	}
 }
 
+func (b *keyBuilder) Storage() appdef.QName                            { return b.storage }
 func (b *keyBuilder) Entity() appdef.QName                             { return b.entity }
 func (b *keyBuilder) PutInt32(name string, value int32)                { b.data[name] = value }
 func (b *keyBuilder) PutInt64(name string, value int64)                { b.data[name] = value }
@@ -123,6 +127,10 @@ type pLogKeyBuilder struct {
 	partitionID istructs.PartitionID
 }
 
+func (b *pLogKeyBuilder) Storage() appdef.QName {
+	return PLogStorage
+}
+
 func (b *pLogKeyBuilder) String() string {
 	return fmt.Sprintf("plog partitionID - %d, offset - %d, count - %d", b.partitionID, b.offset, b.count)
 }
@@ -136,6 +144,10 @@ func (b *pLogKeyBuilder) PutInt32(name string, value int32) {
 type wLogKeyBuilder struct {
 	logKeyBuilder
 	wsid istructs.WSID
+}
+
+func (b *wLogKeyBuilder) Storage() appdef.QName {
+	return WLogStorage
 }
 
 func (b *wLogKeyBuilder) String() string {
@@ -155,6 +167,10 @@ type recordsKeyBuilder struct {
 	singleton appdef.QName
 	wsid      istructs.WSID
 	entity    appdef.QName
+}
+
+func (b *recordsKeyBuilder) Storage() appdef.QName {
+	return RecordsStorage
 }
 
 func (b *recordsKeyBuilder) String() string {
@@ -239,6 +255,9 @@ func (b *viewRecordsKeyBuilder) PutQName(name string, value appdef.QName) {
 func (b *viewRecordsKeyBuilder) Entity() appdef.QName {
 	return b.view
 }
+func (b *viewRecordsKeyBuilder) Storage() appdef.QName {
+	return ViewRecordsStorage
+}
 func (b *viewRecordsKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	kb, ok := src.(*viewRecordsKeyBuilder)
 	if !ok {
@@ -278,15 +297,13 @@ func (b *viewRecordsValueBuilder) Build() istructs.IValue {
 
 func (b *viewRecordsValueBuilder) BuildValue() istructs.IStateValue {
 	return &viewRecordsStorageValue{
-		value:      b.Build(),
-		toJSONFunc: b.toJSONFunc,
+		value: b.Build(),
 	}
 }
 
 type recordsStorageValue struct {
 	baseStateValue
-	record     istructs.IRecord
-	toJSONFunc toJSONFunc
+	record istructs.IRecord
 }
 
 func (v *recordsStorageValue) AsInt32(name string) int32        { return v.record.AsInt32(name) }
@@ -301,9 +318,8 @@ func (v *recordsStorageValue) AsRecordID(name string) istructs.RecordID {
 	return v.record.AsRecordID(name)
 }
 func (v *recordsStorageValue) AsRecord(string) (record istructs.IRecord) { return v.record }
-func (v *recordsStorageValue) ToJSON(opts ...interface{}) (string, error) {
-	return v.toJSONFunc(v, opts...)
-}
+
+//func (v *recordsStorageValue) AsRecord(string) (record istructs.IRecord) { return v.record }
 
 type pLogStorageValue struct {
 	baseStateValue
@@ -621,8 +637,7 @@ func (v *subjectStorageValue) ToJSON(opts ...interface{}) (string, error) {
 
 type viewRecordsStorageValue struct {
 	baseStateValue
-	value      istructs.IValue
-	toJSONFunc toJSONFunc
+	value istructs.IValue
 }
 
 func (v *viewRecordsStorageValue) AsInt32(name string) int32        { return v.value.AsInt32(name) }
@@ -638,9 +653,6 @@ func (v *viewRecordsStorageValue) AsRecordID(name string) istructs.RecordID {
 }
 func (v *viewRecordsStorageValue) AsRecord(name string) istructs.IRecord {
 	return v.value.AsRecord(name)
-}
-func (v *viewRecordsStorageValue) ToJSON(opts ...interface{}) (string, error) {
-	return v.toJSONFunc(v, opts...)
 }
 
 type cudsStorageValue struct {
@@ -690,7 +702,6 @@ func (v *baseStateValue) RecordIDs(bool, func(string, istructs.RecordID)) { pani
 func (v *baseStateValue) FieldNames(func(string))                         { panic(errNotImplemented) }
 func (v *baseStateValue) AsRecord(string) istructs.IRecord                { panic(errNotImplemented) }
 func (v *baseStateValue) AsEvent(string) istructs.IDbEvent                { panic(errNotImplemented) }
-func (v *baseStateValue) ToJSON(...interface{}) (string, error)           { panic(errNotImplemented) }
 func (v *baseStateValue) Length() int                                     { panic(errCurrentValueIsNotAnArray) }
 func (v *baseStateValue) GetAsString(int) string                          { panic(errCurrentValueIsNotAnArray) }
 func (v *baseStateValue) GetAsBytes(int) []byte                           { panic(errCurrentValueIsNotAnArray) }
@@ -711,8 +722,12 @@ type cmdResultKeyBuilder struct {
 	*keyBuilder
 }
 
-func newCmdResultKeyBuilder(entity appdef.QName) *cmdResultKeyBuilder {
-	return nil // type of this "nil" will be *cmdResultKeyBuilder -> will be fired at state.getStorageID()
+func newCmdResultKeyBuilder() *cmdResultKeyBuilder {
+	return &cmdResultKeyBuilder{
+		&keyBuilder{
+			storage: CmdResultStorage,
+		},
+	}
 }
 
 type cmdResultValueBuilder struct {

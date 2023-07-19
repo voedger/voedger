@@ -6,6 +6,7 @@ package istructsmem
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"testing"
 
@@ -14,8 +15,151 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
+
+func Test_KeyType(t *testing.T) {
+	require := require.New(t)
+
+	viewName := appdef.NewQName("test", "view")
+
+	appConfigs := func() AppConfigsType {
+		cfgs := make(AppConfigsType, 1)
+
+		appDef := appdef.New()
+		t.Run("must be ok to build view definition", func(t *testing.T) {
+			viewDef := appDef.AddView(viewName)
+			viewDef.
+				AddPartField("pk_int32", appdef.DataKind_int32).
+				AddPartField("pk_int64", appdef.DataKind_int64).
+				AddPartField("pk_float32", appdef.DataKind_float32).
+				AddPartField("pk_float64", appdef.DataKind_float64).
+				AddPartField("pk_qname", appdef.DataKind_QName).
+				AddPartField("pk_bool", appdef.DataKind_bool).
+				AddPartField("pk_recID", appdef.DataKind_RecordID).
+				AddPartField("pk_number", appdef.DataKind_float64).
+				AddClustColumn("cc_int32", appdef.DataKind_int32).
+				AddClustColumn("cc_int64", appdef.DataKind_int64).
+				AddClustColumn("cc_float32", appdef.DataKind_float32).
+				AddClustColumn("cc_float64", appdef.DataKind_float64).
+				AddClustColumn("cc_qname", appdef.DataKind_QName).
+				AddClustColumn("cc_bool", appdef.DataKind_bool).
+				AddClustColumn("cc_recID", appdef.DataKind_RecordID).
+				AddClustColumn("cc_number", appdef.DataKind_float64).
+				AddClustColumn("cc_bytes", appdef.DataKind_bytes).
+				AddValueField("val_string", appdef.DataKind_string, false)
+		})
+
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+
+		return cfgs
+	}
+
+	appCfgs := appConfigs()
+	appCfg := appCfgs.GetConfig(istructs.AppQName_test1_app1)
+
+	appProvider := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), teststore.NewStorageProvider(teststore.NewStorage()))
+	app, err := appProvider.AppStructs(istructs.AppQName_test1_app1)
+	require.NoError(err)
+	require.NotNil(app)
+
+	key := newKey(appCfg, viewName)
+	require.Equal(appdef.ViewKeyDefName(viewName), key.AsQName(appdef.SystemField_QName))
+
+	t.Run("key must supports IKeyBuilder interface", func(t *testing.T) {
+		kb := istructs.IKeyBuilder(key)
+
+		require.NotNil(kb)
+
+		kb.PutInt32("pk_int32", 1111111)
+		kb.PutInt64("pk_int64", 222222222222)
+		kb.PutFloat32("pk_float32", 3.333e3)
+		kb.PutFloat64("pk_float64", -4.4444e-44)
+		kb.PutQName("pk_qname", istructs.QNameForError)
+		kb.PutBool("pk_bool", true)
+		kb.PutRecordID("pk_recID", istructs.RecordID(5555555))
+		kb.PutNumber("pk_number", 1.23456789)
+
+		kb.PutInt32("cc_int32", 6666666)
+		kb.PutInt64("cc_int64", 777777777777)
+		kb.PutFloat32("cc_float32", 8.888e8)
+		kb.PutFloat64("cc_float64", -9.9999e-99)
+		kb.PutQName("cc_qname", viewName)
+		kb.PutBool("cc_bool", true)
+		kb.PutRecordID("cc_recID", istructs.RecordID(314159265358))
+		kb.PutNumber("cc_number", -9.87654321)
+		kb.PutChars("cc_bytes", base64.StdEncoding.EncodeToString([]byte(`naked 🔫`)))
+	})
+
+	require.NoError(key.build())
+
+	testIKey := func(t *testing.T, key *keyType) {
+		k := istructs.IKey(key)
+
+		require.NotNil(k)
+
+		require.EqualValues(1111111, k.AsInt32("pk_int32"))
+		require.EqualValues(222222222222, k.AsInt32("pk_int64"))
+		require.EqualValues(3.333e3, k.AsFloat32("pk_float32"))
+		require.EqualValues(-4.4444e-44, k.AsFloat64("pk_float64"))
+		require.EqualValues(istructs.QNameForError, k.AsQName("pk_qname"))
+		require.True(k.AsBool("pk_bool"))
+		require.EqualValues(5555555, k.AsRecordID("pk_recID"))
+		require.EqualValues(1.23456789, k.AsFloat64("pk_number"))
+
+		require.EqualValues(6666666, k.AsInt32("cc_int32"))
+		require.EqualValues(777777777777, k.AsInt64("cc_int64"))
+		require.EqualValues(8.888e8, k.AsFloat32("cc_float32"))
+		require.EqualValues(-9.9999e-99, k.AsFloat64("cc_float64"))
+		require.EqualValues(viewName, k.AsQName("cc_qname"))
+		require.True(k.AsBool("cc_bool"))
+		require.EqualValues(314159265358, k.AsRecordID("cc_recID"))
+		require.EqualValues(-9.87654321, k.AsFloat64("cc_number"))
+		require.EqualValues(`naked 🔫`, k.AsBytes("cc_bytes"))
+
+		t.Run("IKey.FieldNames() must be ok", func(t *testing.T) {
+			view := appCfg.AppDef.View(viewName)
+			cnt := 0
+			k.FieldNames(func(n string) {
+				require.NotNil(view.Key().Field(n))
+				cnt++
+			})
+			require.Positive(cnt)
+			require.Equal(view.Key().FieldCount(), cnt)
+		})
+
+		t.Run("IKey.RecordIDs() must be ok", func(t *testing.T) {
+			cnt := 0
+			k.RecordIDs(true, func(n string, v istructs.RecordID) {
+				switch n {
+				case "pk_recID":
+					require.EqualValues(5555555, v)
+				case "cc_recID":
+					require.EqualValues(314159265358, v)
+				default:
+					require.Fail("unknown RecordID field passed in callback from IKey.RecordIDs()", "fieldName: %q", n)
+				}
+				cnt++
+			})
+			require.Equal(2, cnt)
+		})
+	}
+
+	t.Run("key must supports IKey interface", func(t *testing.T) { testIKey(t, key) })
+
+	t.Run("must be ok to load/store key to bytes", func(t *testing.T) {
+		p, c := key.storeToBytes(0)
+		require.NotEmpty(p)
+		require.NotEmpty(c)
+
+		dupe := newKey(appCfg, viewName)
+		dupe.partRow.copyFrom(&key.partRow)
+		require.NoError(dupe.loadFromBytes(c))
+
+		t.Run("key must supports IKey interface", func(t *testing.T) { testIKey(t, dupe) })
+
+		require.True(key.Equals(dupe))
+	})
+}
 
 // TestCore_ViewRecords: test https://dev.heeus.io/launchpad/#!14470
 func TestCore_ViewRecords(t *testing.T) {
@@ -574,7 +718,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		kb.PutBool("clusteringColumn2", true)
 		kb.PutString("clusteringColumn3", "cider")
 
-		c := utils.PrefixBytes([]byte("cider"), int64(100), true)
+		_, c := kb.(*keyType).storeToBytes(2)
 
 		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, c)
 		_, err := viewRecords.Get(2, kb)
@@ -696,13 +840,14 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	err := k1.build()
 	require.NoError(err)
 
-	p, c := k1.storeToBytes()
+	p, c := k1.storeToBytes(0)
 	require.NotNil(p)
 	require.NotNil(c)
 
 	t.Run("should be success load", func(t *testing.T) {
 		k2 := newKey(cfg, viewName)
-		err := k2.loadFromBytes(p, c)
+		k2.partRow.copyFrom(&k1.partRow)
+		err := k2.loadFromBytes(c)
 		require.NoError(err)
 
 		testRowsIsEqual(t, &k1.partRow, &k2.partRow)
@@ -715,14 +860,10 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 		require.False(k1.Equals(k2))
 	})
 
-	t.Run("should be load error if truncated key bytes", func(t *testing.T) {
+	t.Run("should be load error if truncated clustering columns bytes", func(t *testing.T) {
 		k2 := newKey(cfg, viewName)
-		for i := 0; i < len(p); i++ {
-			err := k2.loadFromBytes(p[:i], c)
-			require.Error(err, i)
-		}
-		for i := 0; i < len(p)-4; i++ { // 4 - is length of variable bytes "test" that can be truncated with impunity
-			err := k2.loadFromBytes(p, c[:i])
+		for i := 0; i < len(c)-4; i++ { // 4 - is length of variable bytes "test" that can be truncated with impunity
+			err := k2.loadFromBytes(c[:i])
 			require.Error(err, i)
 		}
 	})
@@ -749,13 +890,12 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	testRowsIsEqual(t, &v1.rowType, &v2.rowType)
 
 	t.Run("should be load error if truncated value bytes", func(t *testing.T) {
-		for i := 0; i < len(p); i++ {
+		for i := 0; i < len(v); i++ {
 			v2 := newValue(cfg, viewName)
-			err := v2.loadFromBytes(p[:i])
+			err := v2.loadFromBytes(v[:i])
 			require.Error(err, i)
 		}
 	})
-
 }
 
 // Test_ViewRecords_ClustColumnsQName: see https://dev.heeus.io/launchpad/#!16377 problem

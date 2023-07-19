@@ -52,9 +52,6 @@ func TestHttpStorage_BasicUsage(t *testing.T) {
 	require.Equal(int32(http.StatusOK), v.AsInt32(Field_StatusCode))
 	require.Contains(v.AsString(Field_Header), "Content-Length: 19")
 	require.Contains(v.AsString(Field_Header), "Content-Type: text/plain")
-	json, err := v.ToJSON()
-	require.NoError(err)
-	require.NotEmpty(json)
 }
 func TestHttpStorage_Timeout(t *testing.T) {
 	t.Run("Should panic when url not found", func(t *testing.T) {

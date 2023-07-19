@@ -20,24 +20,24 @@ func implProvideSyncActualizerState(ctx context.Context, appStructs istructs.IAp
 		appDefFunc:      func() appdef.IAppDef { return appStructs.AppDef() },
 		wsidFunc:        wsidFunc,
 		n10nFunc:        n10nFunc,
-	}, S_GET_BATCH|S_INSERT|S_UPDATE)
+	}, S_GET|S_GET_BATCH|S_INSERT|S_UPDATE)
 	hs.addStorage(RecordsStorage, &recordsStorage{
 		recordsFunc: func() istructs.IRecords { return appStructs.Records() },
 		appDefFunc:  func() appdef.IAppDef { return appStructs.AppDef() },
 		wsidFunc:    wsidFunc,
-	}, S_GET_BATCH)
+	}, S_GET|S_GET_BATCH)
 	hs.addStorage(WLogStorage, &wLogStorage{
 		ctx:        ctx,
 		eventsFunc: func() istructs.IEvents { return appStructs.Events() },
 		appDefFunc: func() appdef.IAppDef { return appStructs.AppDef() },
 		wsidFunc:   wsidFunc,
-	}, S_GET_BATCH)
+	}, S_GET)
 	hs.addStorage(PLogStorage, &pLogStorage{
 		ctx:             ctx,
 		eventsFunc:      func() istructs.IEvents { return appStructs.Events() },
 		appDefFunc:      func() appdef.IAppDef { return appStructs.AppDef() },
 		partitionIDFunc: partitionIDFunc,
-	}, S_GET_BATCH)
-	hs.addStorage(AppSecretsStorage, &appSecretsStorage{secretReader: secretReader}, S_GET_BATCH)
+	}, S_GET)
+	hs.addStorage(AppSecretsStorage, &appSecretsStorage{secretReader: secretReader}, S_GET)
 	return hs
 }

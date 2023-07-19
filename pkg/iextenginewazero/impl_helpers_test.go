@@ -229,6 +229,7 @@ type mockKeyBuilder struct {
 	storage appdef.QName
 }
 
+func (kb *mockKeyBuilder) Storage() appdef.QName                            { return kb.storage }
 func (kb *mockKeyBuilder) Entity() appdef.QName                             { return kb.entity }
 func (kb *mockKeyBuilder) PartitionKey() istructs.IRowWriter                { return nil }
 func (kb *mockKeyBuilder) ClusteringColumns() istructs.IRowWriter           { return nil }

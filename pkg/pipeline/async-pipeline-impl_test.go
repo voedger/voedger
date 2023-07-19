@@ -104,6 +104,13 @@ func TestAsyncPipeline_OnError(t *testing.T) {
 	defer pipeline.Close()
 
 	require.Nil(t, pipeline.SendAsync(newTestWork()))
-	require.Equal(t, "[operator1/doAsync, outWork==nil] test error", (<-handledErrs).Error())
-	require.Equal(t, "[operator1/doAsync, outWork==nil] test error", (<-handledErrs).Error())
+	err := (<-handledErrs).(IErrorPipeline)
+	require.Equal(t, "test error", err.Error())
+	require.Equal(t, "doAsync, outWork==nil", err.GetPlace())
+	require.Equal(t, "operator1", err.GetOpName())
+
+	err = (<-handledErrs).(IErrorPipeline)
+	require.Equal(t, "test error", err.Error())
+	require.Equal(t, "doAsync, outWork==nil", err.GetPlace())
+	require.Equal(t, "operator1", err.GetOpName())
 }

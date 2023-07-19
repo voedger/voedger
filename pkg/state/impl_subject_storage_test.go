@@ -35,7 +35,4 @@ func TestSubjectStorage_BasicUsage(t *testing.T) {
 	require.Equal(int32(istructs.SubjectKind_User), v.AsInt32(Field_Kind))
 	require.Equal(principals[0].Name, v.AsString(Field_Name))
 	require.Equal(token, v.AsString(Field_Token))
-	json, err := v.ToJSON()
-	require.NoError(err)
-	require.JSONEq(`{"ProfileWSID":42,"Kind":1,"Name":"john.doe@acme.com","Token":"token"}`, json)
 }

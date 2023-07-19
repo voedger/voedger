@@ -6,7 +6,6 @@ package pipeline
 
 import (
 	"context"
-	"fmt"
 	"time"
 )
 
@@ -78,8 +77,10 @@ func (wo WiredOperator) String() string {
 
 func (wo *WiredOperator) NewError(err error, work interface{}, place string) IErrorPipeline {
 	ep := errPipeline{
-		err:  fmt.Errorf("[%s/%s] %w", wo.name, place, err),
-		work: work,
+		err:    err,
+		work:   work,
+		place:  place,
+		opName: wo.name,
 	}
 	wo.err = &ep
 	return &ep
