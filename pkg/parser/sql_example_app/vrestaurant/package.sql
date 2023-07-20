@@ -228,7 +228,7 @@ WORKSPACE Restaurant (
     VIEW TableStatus (
         TableNumber int,
         Status int,
-        PRIMARY KEY ((TableNumber))        
+        PRIMARY KEY (TableNumber)        
     ) AS RESULT OF UpdateTableStatus;
 
     -- VIEW XZReports   : keeps printed XZ reports 
