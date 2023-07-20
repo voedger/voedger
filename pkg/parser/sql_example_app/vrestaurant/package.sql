@@ -1,20 +1,18 @@
 SCHEMA vrestaurant;
 
+WORKSPACE Restaurant (
+
     ROLE LocationUser;
     ROLE LocationManager;
 
-    TYPE Timestamp (
-        dt int64
-    );
-
     -- TYPE Order: describes data structure, retuned after executing Command Order
     TYPE Order (
-        OrdTimeStamp Timestamp,
-        UserID ref(POSUsers)
+        OrdTimeStamp int64,
+        User text
     );
 
     TYPE OrderItems( 
-        ArticleID ref(Articles),
+        Article text,
         Quantity int,
         Comment text,
         Price float32,
@@ -24,8 +22,8 @@ SCHEMA vrestaurant;
     
     -- TYPE Payment: describes data structure,  retuned after executing Command Pay
     TYPE Payment (
-        PayTimeStamp Timestamp,
-        UserID ref(Users),
+        PayTimeStamp int64,
+        User text,
         Tips float32 
     );
 
@@ -52,7 +50,7 @@ SCHEMA vrestaurant;
 	    Location text,
 	    Currency text,
 	    Phone text,
-	    OpenTimeStamp Timestamp,
+	    OpenTimeStamp int64,
 	    OwnerName text
     ) WITH Comment="Restaurant settings defines information about";
 
@@ -81,7 +79,7 @@ SCHEMA vrestaurant;
     --   Card           : Client payment card number, used for payments in Restaurant
     --   Discount_percent : Percent of permanent discount
     TABLE Clients INHERITS Person(
-        Datebirth Timestamp,
+        Datebirth int64,
         Card text,
         Discount_percent int
     ) WITH Comment="Client defines customer data";
@@ -152,8 +150,8 @@ SCHEMA vrestaurant;
         Name text,
         Number int,
         Tableno int, 
-        OpenTimeStamp Timestamp,
-        CloseTimeStamp Timestamp,
+        OpenTimeStamp int64,
+        CloseTimeStamp int64,
         UserID ref(POSUsers) NOT NULL, 
         Client ref(Clients) NOT NULL 
     ) WITH Tags=(PosTag), Comment="Transaction defines properties of ordered table";
@@ -171,7 +169,7 @@ SCHEMA vrestaurant;
     --   Vat            : absolute value VAT of article
     TABLE Orders INHERITS ODoc(
         TransactionID ref(Transactions) NOT NULL, 
-        OrdTimeStamp Timestamp,
+        OrdTimeStamp int64,
         UserID ref(POSUsers) NOT NULL, 
         OrderItems TABLE OrderItem (
             Order ref(Orders) NOT NULL,
@@ -196,7 +194,7 @@ SCHEMA vrestaurant;
         TransactionID ref(Transactions) NOT NULL, 
         UserID ref(POSUsers) NOT NULL, 
         Number int,
-        PayTimeStamp Timestamp,
+        PayTimeStamp int64,
         Tips float32,
         BillPayments TABLE BillPayments (
             Bill ref(Bills) NOT NULL,
@@ -205,7 +203,6 @@ SCHEMA vrestaurant;
         )
     ) WITH Tags=(PosTag), Comment="Bill defines act of payment";
 
-WORKSPACE Restaurant (
     EXTENSION ENGINE BUILTIN (
     -- COMMAND order: creates Order ?
         COMMAND order(vrestaurant.Order) RETURNS vrestaurant.Order;
