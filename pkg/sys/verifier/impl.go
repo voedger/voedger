@@ -7,6 +7,7 @@ package verifier
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"golang.org/x/text/language"
@@ -108,7 +109,7 @@ func sendEmailVerificationCodeProjector(federation coreutils.IFederation, smtpCf
 		kb.PutString(state.Field_Subject, EmailSubject)
 		kb.PutString(state.Field_To, event.ArgumentObject().AsString(Field_Email))
 		kb.PutString(state.Field_Body, getVerificationEmailBody(federation, event.ArgumentObject().AsString(field_VerificationCode), reason, language.Make(lng), translationsCatalog))
-		kb.PutString(state.Field_From, EmailFrom)
+		kb.PutString(state.Field_From, strings.ReplaceAll(smtpCfg.Username, "mailto:", ""))
 		kb.PutString(state.Field_Host, smtpCfg.Host)
 		kb.PutInt32(state.Field_Port, smtpCfg.Port)
 		kb.PutString(state.Field_Username, smtpCfg.Username)
