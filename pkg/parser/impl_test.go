@@ -601,31 +601,31 @@ func Test_VRestaurantBasic(t *testing.T) {
 	require.NoError(err)
 
 	// table
-	cdoc := builder.Def(appdef.NewQName("vrestaurant", "table_plan"))
+	cdoc := builder.Def(appdef.NewQName("vrestaurant", "TablePlan"))
 	require.NotNil(cdoc)
 	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
-	require.Equal(appdef.DataKind_RecordID, cdoc.(appdef.IFields).Field("picture").DataKind())
+	require.Equal(appdef.DataKind_RecordID, cdoc.(appdef.IFields).Field("Picture").DataKind())
 
-	cdoc = builder.Def(appdef.NewQName("vrestaurant", "restaurant_settings"))
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "RestaurantSettings"))
 	require.NotNil(cdoc)
 
-	cdoc = builder.Def(appdef.NewQName("vrestaurant", "clients"))
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "Clients"))
 	require.NotNil(cdoc)
 
-	cdoc = builder.Def(appdef.NewQName("vrestaurant", "users"))
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "POSUsers"))
 	require.NotNil(cdoc)
 
-	cdoc = builder.Def(appdef.NewQName("vrestaurant", "departments"))
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "Departments"))
 	require.NotNil(cdoc)
 
-	cdoc = builder.Def(appdef.NewQName("vrestaurant", "articles"))
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "Articles"))
 	require.NotNil(cdoc)
 
 	// child table
-	crec := builder.Def(appdef.NewQName("vrestaurant", "table_items"))
+	crec := builder.Def(appdef.NewQName("vrestaurant", "TableItems"))
 	require.NotNil(crec)
 	require.Equal(appdef.DefKind_CRecord, crec.Kind())
-	require.Equal(appdef.DataKind_int32, crec.(appdef.IFields).Field("tableno").DataKind())
+	require.Equal(appdef.DataKind_int32, crec.(appdef.IFields).Field("Tableno").DataKind())
 
 	// view
 	view := builder.View(appdef.NewQName("vrestaurant", "XZReports"))
