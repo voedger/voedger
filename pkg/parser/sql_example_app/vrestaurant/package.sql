@@ -1,12 +1,10 @@
 SCHEMA vrestaurant;
 
-WORKSPACE Restaurant (
-
     ROLE LocationUser;
     ROLE LocationManager;
 
     TYPE Timestamp (
-    dt int64
+        dt int64
     );
 
     -- TYPE Order: describes data structure, retuned after executing Command Order
@@ -23,6 +21,7 @@ WORKSPACE Restaurant (
         Vat_percent float32,
         Vat float32
     );
+    
     -- TYPE Payment: describes data structure,  retuned after executing Command Pay
     TYPE Payment (
         PayTimeStamp Timestamp,
@@ -206,6 +205,7 @@ WORKSPACE Restaurant (
         )
     ) WITH Tags=(PosTag), Comment="Bill defines act of payment";
 
+WORKSPACE Restaurant (
     EXTENSION ENGINE BUILTIN (
     -- COMMAND order: creates Order ?
         COMMAND order(vrestaurant.Order) RETURNS vrestaurant.Order;
