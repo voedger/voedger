@@ -28,11 +28,3 @@ func new[K comparable, V any](size int, onEvicted func(K, V)) (c *Cache[K, V]) {
 
 	return c
 }
-
-func (c *Cache[K, V]) Get(key K) (value V, ok bool) {
-	return c.lru.Get(key)
-}
-
-func (c *Cache[K, V]) Put(key K, value V) {
-	_ = c.lru.Add(key, value)
-}

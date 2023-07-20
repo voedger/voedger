@@ -1,3 +1,5 @@
+# `objcache` package
+
 [![codecov](https://codecov.io/gh/voedger/voedger/branch/main/graph/badge.svg?token=1O1pA6zdYs)](https://codecov.io/gh/voedger/voedger/objcache)
 
 ## Proposal
@@ -20,12 +22,12 @@
 1. [imcache](https://github.com/erni27/imcache)
 1. [theine-go](https://github.com/Yiling-J/theine-go)
 
-- theine-go seems as a techincal leader, but not popular (yet?)
-- theine-go [claims](https://github.com/dgraph-io/ristretto/issues/336) that Ristretto hits ration is very low (???). Strange that the Ristretto Team has not answered it yet 
-- ristretto dies NOT provide generic interface
+- *theine-go* seems as a techincal leader, but not popular (yet?)
+- *theine-go* [claims](https://github.com/dgraph-io/ristretto/issues/336) that *Ristretto* hits ration is very low (???). Strange that the *Ristretto* Team has not answered it yet 
+- *Ristretto* dies NOT provide generic interface
 - theine-go and hashicorp/golang-lru DOES provide generic interface
-- hashicorp/golang-lru seems as a preferrable solution (generic + popular)
-  -  lru, since it is not clear how to handle evict event in mru version
+- hashicorp/golang-lru seems as a preferable solution (generic + popular)
+  - LRU, since it is not clear how to handle event eviction in MRU version
 
 ## Technical Design
 
