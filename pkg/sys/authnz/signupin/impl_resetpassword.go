@@ -67,6 +67,7 @@ func provideQryInitiateResetPasswordByEmailExec(asp istructs.IAppStructsProvider
 	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		loginAppStr := args.ArgumentObject.AsString(Field_AppName)
 		email := args.ArgumentObject.AsString(field_Email)
+		language := args.ArgumentObject.AsString(field_Language)
 		login := email // TODO: considering login is email
 
 		loginAppQName, err := istructs.ParseAppQName(loginAppStr)
@@ -111,8 +112,8 @@ func provideQryInitiateResetPasswordByEmailExec(asp istructs.IAppStructsProvider
 		if err != nil {
 			return err
 		}
-		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s","TargetWSID":%d,"ForRegistry":true},"elements":[{"fields":["VerificationToken"]}]}`,
-			authnz.QNameCommandResetPasswordByEmailUnloggedParams, field_Email, email, profileWSID) // targetWSID - is the workspace we're going to use the verified value at
+		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s","TargetWSID":%d,"ForRegistry":true,"Language":"%s"},"elements":[{"fields":["VerificationToken"]}]}`,
+			authnz.QNameCommandResetPasswordByEmailUnloggedParams, field_Email, email, profileWSID, language) // targetWSID - is the workspace we're going to use the verified value at
 		resp, err := coreutils.FederationFunc(federation.URL(), fmt.Sprintf("api/%s/%d/q.sys.InitiateEmailVerification", loginAppQName, profileWSID), body, coreutils.WithAuthorizeBy(sysToken))
 		if err != nil {
 			return fmt.Errorf("q.sys.InitiateEmailVerification failed: %w", err)

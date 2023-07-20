@@ -29,25 +29,6 @@ func TestBasicUsage_Verifier(t *testing.T) {
 
 	userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 
-	t.Run("check verification email text", func(t *testing.T) {
-		body := fmt.Sprintf(`
-			{
-				"args":{
-					"Entity":"%s",
-					"Field":"EmailField",
-					"Email":"%s",
-					"TargetWSID": %d,
-					"Language": "en"
-				},
-				"elements":[{"fields":["VerificationToken"]}]
-			}
-		`, it.QNameTestEmailVerificationDoc, it.TestEmail, userPrincipal.ProfileWSID)
-		vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body)
-		email := vit.CaptureEmail()
-		match, _ := regexp.MatchString(`Here is your verification code`, email.Body)
-		require.True(match)
-	})
-
 	verificationToken := ""
 	verificationCode := ""
 	t.Run("initiate verification and get the verification token", func(t *testing.T) {
@@ -57,7 +38,8 @@ func TestBasicUsage_Verifier(t *testing.T) {
 					"Entity":"%s",
 					"Field":"EmailField",
 					"Email":"%s",
-					"TargetWSID": %d
+					"TargetWSID": %d,
+					"Language":"en"
 				},
 				"elements":[{"fields":["VerificationToken"]}]
 			}
@@ -76,6 +58,8 @@ func TestBasicUsage_Verifier(t *testing.T) {
 		verificationCode = matches[0]
 		verificationToken = resp.SectionRow()[0].(string)
 		log.Println(verificationCode)
+		match, _ := regexp.MatchString(`Here is your verification code`, email.Body)
+		require.True(match)
 	})
 
 	verifiedValueToken := ""

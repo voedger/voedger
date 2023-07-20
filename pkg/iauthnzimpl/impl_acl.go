@@ -19,6 +19,7 @@ func (acl ACL) IsAllowed(principals []iauthnz.Principal, req iauthnz.AuthzReques
 	for _, acElem := range acl {
 		if matchOrNotSpecified_OpKinds(acElem.pattern.opKindsPattern, req.OperationKind) &&
 			matchOrNotSpecified_QNames(acElem.pattern.qNamesPattern, req.Resource) &&
+			matchOrNotSpecified_Fields(acElem.pattern.fieldsPattern, req.Fields) &&
 			matchOrNotSpecified_Principals(acElem.pattern.principalsPattern, principals) {
 			if policy = acElem.policy; policy == ACPolicy_Deny {
 				lastDenyingACElem = acElem
