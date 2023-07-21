@@ -50,7 +50,7 @@ func TestBasicUsage_Verifier(t *testing.T) {
 		email := vit.CaptureEmail()
 		require.Equal([]string{it.TestEmail}, email.To)
 		require.Equal(verifier.EmailSubject, email.Subject)
-		require.Equal(it.TestSMTPUsername, email.From)
+		require.Equal(it.TestSMTPCfg.GetFrom(), email.From)
 		require.Empty(email.CC)
 		require.Empty(email.BCC)
 		r := regexp.MustCompile(`(?P<code>\d{6})`)

@@ -84,7 +84,7 @@ func (c *cmdWorkpiece) WSID() istructs.WSID {
 	return c.cmdMes.WSID()
 }
 
-// used by c.air.RegenerateUPProfileApiToken
+// used by e.g. c.air.RegenerateUPProfileApiToken
 func (c *cmdWorkpiece) GetPrincipalPayload() payloads.PrincipalPayload {
 	return c.principalPayload
 }
