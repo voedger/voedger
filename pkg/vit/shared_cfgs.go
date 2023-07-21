@@ -32,7 +32,6 @@ const (
 	TestEmail3       = "125@125.com"
 	TestServicePort  = 10000
 	defaultMaxOccurs = 100
-	TestSMTPUsername = "username@gmail.com"
 )
 
 var (
@@ -44,6 +43,9 @@ var (
 	QNameTestSingleton            = appdef.NewQName("test", "Config")
 	QNameCmdRated                 = appdef.NewQName(appdef.SysPackage, "RatedCmd")
 	QNameQryRated                 = appdef.NewQName(appdef.SysPackage, "RatedQry")
+	TestSMTPCfg                   = smtp.Cfg{
+		Username: "username@gmail.com",
+	}
 
 	// BLOBMaxSize 5
 	SharedConfig_Simple = NewSharedVITConfig(
@@ -89,7 +91,7 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 	if !ok {
 		panic("no build info")
 	}
-	sys.Provide(cfg, adf, smtp.Cfg{Username: TestSMTPUsername}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, false)
 
 	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "articles")).
