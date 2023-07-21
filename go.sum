@@ -195,8 +195,8 @@ github.com/untillpro/airs-ibus v0.0.0-20221105121917-d13e0967180d h1:R1XgQwgeUL1
 github.com/untillpro/airs-ibus v0.0.0-20221105121917-d13e0967180d/go.mod h1:v+HG60Ywc61ZGR8tbZQBOvBnB3g8bxchyh8aluDSs2Q=
 github.com/untillpro/airs-ibusnats v0.0.0-20220602094345-4a16b77c871c h1:SHVDjwkot4RS82P7DSOfLNRRHq92za1KKsmicCvA8hw=
 github.com/untillpro/airs-ibusnats v0.0.0-20220602094345-4a16b77c871c/go.mod h1:BbRgv6P4ro2vXk0xSom0vLTJ7g1Ek9QA7BJMaBNTrmw=
-github.com/untillpro/airs-router2 v0.0.0-20230608110258-3c8307c1be69 h1:pEz+R9Kohc4DVAV6Fpm0n6wWQ/+kvtIPoAA4k9S69LA=
-github.com/untillpro/airs-router2 v0.0.0-20230608110258-3c8307c1be69/go.mod h1:UDHcAN3+e+ZzVRC8IzWuNFxEYaR8Z3mW3D/ybDvtCU0=
+github.com/untillpro/airs-router2 v0.0.0-20230721082420-e43fd07266c3 h1:Uh0hvBAuYCgQTka0l40rwy2o0vd6fVAriJS+Jiqpz14=
+github.com/untillpro/airs-router2 v0.0.0-20230721082420-e43fd07266c3/go.mod h1:UDHcAN3+e+ZzVRC8IzWuNFxEYaR8Z3mW3D/ybDvtCU0=
 github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195 h1:nq0/Di+aBZ1yMtNHd+yjKPOvfWeGGsJ486HHh+RNywI=
 github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195/go.mod h1:+q8szMmVnNfUqqieAtVi96uYPBrdy+BhZoHBzxgdCUM=
 github.com/untillpro/gochips v1.12.1-0.20191205115612-9cd10d0ac2b3/go.mod h1:us8QSJtQx+8SiWFqh2oAT7UMzhF73t21p3WFGn6Apao=

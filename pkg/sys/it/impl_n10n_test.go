@@ -44,6 +44,7 @@ func TestBasicUsage_n10n(t *testing.T) {
 	resp := vit.Get(fmt.Sprintf("n10n/channel?%s", params.Encode()), coreutils.WithLongPolling())
 
 	done := make(chan interface{})
+	subscribed := make(chan interface{})
 	channelID := ""
 	go func() {
 		defer close(done) // отсигналим, что прочитали
@@ -55,27 +56,29 @@ func TestBasicUsage_n10n(t *testing.T) {
 			}
 			messages := strings.Split(scanner.Text(), "\n") // делим кадр на событие и данные
 			var event, data string
-
 			for _, str := range messages { // вычитываем
 				if strings.HasPrefix(str, "event: ") {
 					event = strings.TrimPrefix(str, "event: ")
-					log.Println("Receive event: " + event)
 				}
 				if strings.HasPrefix(str, "data: ") {
 					data = strings.TrimPrefix(str, "data: ")
-					log.Println("Receive data: " + data)
 				}
-				if event == "channelId" {
-					channelID = data
-				}
+
 			}
-			if strings.Compare(event, "{\"App\":\"untill/Application\",\"Projection\":\"paa.price\",\"WS\":1}") == 0 {
+			log.Printf("Receive event: %s, data: %s\n", event, data)
+			switch event {
+			case "channelId":
+				channelID = data
+				close(subscribed)
+			case `{"App":"untill/Application","Projection":"paa.price","WS":1}`:
 				require.Equal(data, "13")
 				done <- nil
 			}
 		}
 		log.Println("done")
 	}()
+
+	<-subscribed
 
 	// вызовем тестовый метод update для обновления проекции
 	body := `
