@@ -1,37 +1,17 @@
 SCHEMA vrestaurant;
 
 WORKSPACE Restaurant (
+    DESCRITOR (
+	    Address text,
+	    Currency text,
+	    Phone text,
+	    OpenTimeStamp int64, -- TODO timestamp
+	    OwnerName text
+    );
+
 
     ROLE LocationUser;
     ROLE LocationManager;
-
-    -- TYPE Order: describes data structure, retuned after executing Command Order
-    TYPE Order (
-        OrdTimeStamp int64,
-        User text
-    );
-
-    TYPE OrderItems( 
-        Article text,
-        Quantity int,
-        Comment text,
-        Price float32,
-        Vat_percent float32,
-        Vat float32
-    );
-    
-    -- TYPE Payment: describes data structure,  retuned after executing Command Pay
-    TYPE Payment (
-        PayTimeStamp int64,
-        User text,
-        Tips float32 
-    );
-
-    TYPE PaymentItems(
-        payment_type int64,
-        payment_name text,
-        amount float32
-    );
 
     -- Declare tag to assign it later to definition(s)
     TAG BackofficeTag;
@@ -39,25 +19,10 @@ WORKSPACE Restaurant (
 
     -- CDOC data schemes
 
-    -- TABLE restaurant_settings: has commnon partameters for Restaurant
-    --   name       : Restaurant name 
-    --   location   : Full adrress
-    --   phone      : Restaurant phone
-    --   open_time  : Time of opening 
-    --   owner_name : Owner name, adrress, phone ...
-    TABLE RestaurantSettings INHERITS Singleton(
-	    Name text,
-	    Location text,
-	    Currency text,
-	    Phone text,
-	    OpenTimeStamp int64,
-	    OwnerName text
-    ) WITH Comment="Restaurant settings defines information about";
-
     -- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
     --   Name   : Entity name 
     --   Number : Entity number
-    TABLE BOEntity INHERITS CDoc(
+    TABLE BOEntity INHERITS CDoc( -- TODO ABSTRACT
         Name text,
         Number int
     ) WITH Tags=(BackofficeTag);
@@ -67,7 +32,7 @@ WORKSPACE Restaurant (
     --   Email      : email of person
     --   Phone      : phone number of person
     --   Picture    : Image of person
-    TABLE Person INHERITS BOEntity (
+    TABLE Person INHERITS BOEntity ( -- ABSTRACT
 	    Address text,
         Email text,
 	    Phone text,
@@ -78,19 +43,19 @@ WORKSPACE Restaurant (
     --   Datebirth      : Date of birth, can be needed to define age limitations
     --   Card           : Client payment card number, used for payments in Restaurant
     --   Discount_percent : Percent of permanent discount
-    TABLE Clients INHERITS Person(
-        Datebirth int64,
+    TABLE Client INHERITS Person(
+        Datebirth int64, -- access to alcohol
         Card text,
-        Discount_percent int
+        DiscountPercent int
     ) WITH Comment="Client defines customer data";
 
     -- TABLE POSUsers   : describes restaurant user entity (Waiter/Administrator/Manager)
     --   Code       : personal code in inner login syustem    
     --   Position   : Name of position in Restaurant
     --   Wage       : Wage/salary rate
-    TABLE POSUsers INHERITS Person(
+    TABLE POSUser INHERITS Person(
         Code text,
-	    Position text,
+	Position text, -- PositionID ref(Position)
         Wage float32
     ) WITH Comment="Waiter defines restaurant staff data";
 
@@ -104,15 +69,14 @@ WORKSPACE Restaurant (
     --   Width, Height    : Table size
     TABLE TablePlan INHERITS BOEntity (
         Picture blob,
-        TableItems TABLE TableItems (
-            TablePlan ref(TablePlan) NOT NULL,
+        TableItem TABLE TableItem (
             Tableno int,
     	    Color int,
             Chairs int,
             Left int,
             Top int,
- 	        Width int,
-	        Height int    
+ 	    Width int,
+	    Height int
         )
     ) WITH Comment="Table plan defines restaurant tables schema";
 
@@ -167,7 +131,7 @@ WORKSPACE Restaurant (
     --   Price          : Price of article, when order is created
     --   VatPercent    : VAT% of article
     --   Vat            : absolute value VAT of article
-    TABLE Orders INHERITS ODoc(
+    TABLE Order INHERITS ODoc(
         TransactionID ref(Transactions) NOT NULL, 
         OrdTimeStamp int64,
         UserID ref(POSUsers) NOT NULL, 
@@ -183,17 +147,19 @@ WORKSPACE Restaurant (
     ) WITH Tags=(PosTag), Comment="Order defines act of ordering";
 
     -- TABLE Bill       : defines parameters of bill on table. One transaction can have several bills
-    --   UserID         : ref of User, who took created bill and takes payment
+    --   UserID         : ref of User, who took created bill and takes payment -- TODO must be a field comment
     --   Number         : Bill number, unique per cash register 
     --   PayTimeStamp   : Time of Bill creating
-    --   Tips           : waiter Tips amount, included into bill
     -- TABLE BillPayments  : Defines set of payment methods related to bill
     --   PaymentType    : ref on payment_kind, defines kind of payment
     --   Amount         : Amount of payment
     TABLE Bills INHERITS ODoc(
-        TransactionID ref(Transactions) NOT NULL, 
-        UserID ref(POSUsers) NOT NULL, 
-        Number int,
+        TransactionID ref(Transaction) NOT NULL, 
+       	AuthorID ref(POSUser) NOT NULL,
+	RegisterID ref(Register) NOT NULL,
+        -- Unique per register
+	Number int,
+	    
         PayTimeStamp int64,
         Tips float32,
         BillPayments TABLE BillPayments (
@@ -204,14 +170,12 @@ WORKSPACE Restaurant (
     ) WITH Tags=(PosTag), Comment="Bill defines act of payment";
 
     EXTENSION ENGINE BUILTIN (
-    -- COMMAND order: creates Order ?
-        COMMAND order(vrestaurant.Order) RETURNS vrestaurant.Order;
-    -- COMMAND pay: pays bill ?
-        COMMAND pay(vrestaurant.Payment) RETURNS vrestaurant.Payment;
-
-        PROJECTOR UpdateTableStatus
-            ON COMMAND IN (order, pay)
-            INTENTS(View TableStatus);
+	    COMMAND MakeOrder(vrestaurant.Order)
+	    COMMAND MakePayment(vrestaurant.Payment)
+	
+	    PROJECTOR UpdateTableStatus
+	        ON COMMAND IN (Order, MakePayment)
+		INTENTS(View TableStatus);
     );
 
 -- ACLs
@@ -228,17 +192,18 @@ WORKSPACE Restaurant (
     VIEW TableStatus (
         TableNumber int,
         Status int,
-        PRIMARY KEY (TableNumber)        
+        PRIMARY KEY (TableNumber)
     ) AS RESULT OF UpdateTableStatus;
 
-    -- VIEW XZReports   : keeps printed XZ reports 
-    VIEW XZReports(
+    VIEW SalesPerDay(
         Year int32,
-        Month int32, 
-        Day int32, 
+        Month int32,
+        Day int32,
+
+	-- ???
         Kind int32, 
         Number int32, 
         XZReportWDocID id NOT NULL,
         PRIMARY KEY ((Year), Month, Day, Kind, Number)
-    ) AS RESULT OF vrestaurant.UpdateSales;
+    ) AS RESULT OF vrestaurant.UpdateSalesPerDay;
 );    
