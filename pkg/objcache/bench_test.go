@@ -86,7 +86,7 @@ func (b *bomber) getEvents(cache ICache[IKey, IEvent]) {
 	}
 }
 
-func SequenceBench(b *testing.B, p CacheProvider, maxOfs int) {
+func sequenceBench(b *testing.B, p CacheProvider, maxOfs int) {
 
 	bomber := newBomber(0, uint64(maxOfs))
 
@@ -109,7 +109,7 @@ func SequenceBench(b *testing.B, p CacheProvider, maxOfs int) {
 	fmt.Printf("\t— %v:\t (Sequenced)\t Put:\t%10d ns/op; Get:\t%10d ns/op\n", p, put, get)
 }
 
-func ParallelBench(b *testing.B, p CacheProvider, maxOfs int, bCount int) {
+func parallelBench(b *testing.B, p CacheProvider, maxOfs int, bCount int) {
 
 	bombers := make([]*bomber, bCount)
 	for p := 0; p < bCount; p++ {
@@ -155,63 +155,58 @@ func ParallelBench(b *testing.B, p CacheProvider, maxOfs int, bCount int) {
 	fmt.Printf("\t— %v:\t (Parallel-%d)\t Put:\t%10d ns/op; Get:\t%10d ns/op\n", p, bCount, put, get)
 }
 
-func BenchmarkAll(b *testing.B) {
+func generalBench(b *testing.B, p CacheProvider) {
 	b.Run("1. Small cache 100 events", func(b *testing.B) {
 		b.Run("1.1. Sequenced", func(b *testing.B) {
-			SequenceBench(b, Hashicorp, 100)
-			SequenceBench(b, Theine, 100)
+			sequenceBench(b, p, 100)
 		})
-		b.Run("1.2. Parallel", func(b *testing.B) {
-			ParallelBench(b, Hashicorp, 50, 2)
-			ParallelBench(b, Theine, 50, 2)
+		b.Run("1.2. Parallel (2×50)", func(b *testing.B) {
+			parallelBench(b, p, 50, 2)
 		})
 	})
 
 	b.Run("2. Middle cache 1’000 events", func(b *testing.B) {
 		b.Run("2.1. Sequenced", func(b *testing.B) {
-			SequenceBench(b, Hashicorp, 1000)
-			SequenceBench(b, Theine, 1000)
+			sequenceBench(b, p, 1000)
 		})
-		b.Run("2.2. Parallel", func(b *testing.B) {
-			ParallelBench(b, Hashicorp, 100, 10)
-			ParallelBench(b, Theine, 100, 10)
+		b.Run("2.2. Parallel (10×100)", func(b *testing.B) {
+			parallelBench(b, p, 100, 10)
 		})
 	})
 
 	b.Run("3. Big cache 10’000 events", func(b *testing.B) {
 		b.Run("3.1. Sequenced", func(b *testing.B) {
-			SequenceBench(b, Hashicorp, 10000)
-			SequenceBench(b, Theine, 10000)
+			sequenceBench(b, p, 10000)
 		})
-		b.Run("3.2. Parallel", func(b *testing.B) {
-			ParallelBench(b, Hashicorp, 500, 20)
-			ParallelBench(b, Theine, 500, 20)
+		b.Run("3.2. Parallel (20×500)", func(b *testing.B) {
+			parallelBench(b, p, 500, 20)
 		})
 	})
 
 	b.Run("4. Large cache 100’000 events", func(b *testing.B) {
 		b.Run("3.1. Sequenced", func(b *testing.B) {
-			SequenceBench(b, Hashicorp, 100000)
-			SequenceBench(b, Theine, 100000)
+			sequenceBench(b, p, 100000)
 		})
-		b.Run("3.2. Parallel", func(b *testing.B) {
-			ParallelBench(b, Hashicorp, 1000, 100)
-			ParallelBench(b, Theine, 1000, 100)
+		b.Run("3.2. Parallel (100×1000)", func(b *testing.B) {
+			parallelBench(b, p, 1000, 100)
 		})
 	})
 }
 
-func BenchmarkCacheParallelism(b *testing.B) {
-	const (
-		maxOfs  = 1000
-		maxPart = 101
-	)
-	for part := 1; part <= maxPart; part += 10 {
-		runtime.GC()
-		ParallelBench(b, Hashicorp, maxOfs, part)
-		runtime.GC()
-		ParallelBench(b, Theine, maxOfs, part)
-	}
+func BenchmarkCacheGeneralHashicorp(b *testing.B) {
+	generalBench(b, Hashicorp)
+}
+
+func BenchmarkCacheGeneralTheine(b *testing.B) {
+	generalBench(b, Theine)
+}
+
+func BenchmarkCacheGeneralFloatdrop(b *testing.B) {
+	generalBench(b, Floatdrop)
+}
+
+func BenchmarkCacheGeneralImcache(b *testing.B) {
+	generalBench(b, Imcache)
 }
 
 func BenchmarkCacheParallelismHashicorp(b *testing.B) {
@@ -222,7 +217,7 @@ func BenchmarkCacheParallelismHashicorp(b *testing.B) {
 	for part := 1; part <= maxPart; part += 10 {
 		runtime.GC()
 		time.Sleep(time.Second)
-		ParallelBench(b, Hashicorp, maxOfs, part)
+		parallelBench(b, Hashicorp, maxOfs, part)
 	}
 }
 
@@ -234,7 +229,7 @@ func BenchmarkCacheParallelismTheine(b *testing.B) {
 	for part := 1; part <= maxPart; part += 10 {
 		runtime.GC()
 		time.Sleep(time.Second)
-		ParallelBench(b, Theine, maxOfs, part)
+		parallelBench(b, Theine, maxOfs, part)
 	}
 }
 
@@ -246,7 +241,7 @@ func BenchmarkCacheParallelismFloatdrop(b *testing.B) {
 	for part := 1; part <= maxPart; part += 10 {
 		runtime.GC()
 		time.Sleep(time.Second)
-		ParallelBench(b, Floatdrop, maxOfs, part)
+		parallelBench(b, Floatdrop, maxOfs, part)
 	}
 }
 
@@ -258,6 +253,6 @@ func BenchmarkCacheParallelismImcache(b *testing.B) {
 	for part := 1; part <= maxPart; part += 10 {
 		runtime.GC()
 		time.Sleep(time.Second)
-		ParallelBench(b, Imcache, maxOfs, part)
+		parallelBench(b, Imcache, maxOfs, part)
 	}
 }

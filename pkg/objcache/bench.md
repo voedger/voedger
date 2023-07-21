@@ -2,140 +2,144 @@
 
 ## Results
 
-```txt
-Running tool: D:\Go\bin\go.exe test -benchmem -run=^$ -bench ^BenchmarkAll$ github.com/voedger/voedger/pkg/objcache
+```text
+Running tool: D:\Go\bin\go.exe test -benchmem -run=^$ -bench ^BenchmarkCacheGeneralHashicorp$ github.com/voedger/voedger/pkg/objcache
 
 goos: windows
 goarch: amd64
 pkg: github.com/voedger/voedger/pkg/objcache
 cpu: Intel(R) Core(TM) i5-3570 CPU @ 3.40GHz
-BenchmarkAll/1._Small_cache_100_events/1.1._Sequenced/Hashicorp-Seq-Put-100-4         	   42867	     25835 ns/op	   15209 B/op	     116 allocs/op
-BenchmarkAll/1._Small_cache_100_events/1.1._Sequenced/Hashicorp-Seq-Get-100-4         	  166681	      7397 ns/op	       0 B/op	       0 allocs/op
-	— Hashicorp:	 (Sequenced)	 Put:	       258 ns/op; Get:	        73 ns/op
-BenchmarkAll/1._Small_cache_100_events/1.1._Sequenced/Theine-Seq-Put-100-4            	    6850	    194799 ns/op	   48843 B/op	     461 allocs/op
-BenchmarkAll/1._Small_cache_100_events/1.1._Sequenced/Theine-Seq-Get-100-4            	   45661	     24057 ns/op	       2 B/op	       0 allocs/op
-	— Theine:	 (Sequenced)	 Put:	      1947 ns/op; Get:	       240 ns/op
-BenchmarkAll/1._Small_cache_100_events/1.2._Parallel/Hashicorp-Par-Put-50-2-4         	   21315	     58972 ns/op	   15404 B/op	     121 allocs/op
-BenchmarkAll/1._Small_cache_100_events/1.2._Parallel/Hashicorp-Par-Get-50-2-4         	   81544	     14254 ns/op	     192 B/op	       5 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	       589 ns/op; Get:	       142 ns/op
-BenchmarkAll/1._Small_cache_100_events/1.2._Parallel/Theine-Par-Put-50-2-4            	    8340	    146029 ns/op	   49858 B/op	     468 allocs/op
-BenchmarkAll/1._Small_cache_100_events/1.2._Parallel/Theine-Par-Get-50-2-4            	   47247	     25557 ns/op	     192 B/op	       5 allocs/op
-	— Theine:	 (Parallel)	 Put:	      1460 ns/op; Get:	       255 ns/op
-BenchmarkAll/2._Middle_cache_1’000_events/2.1._Sequenced/Hashicorp-Seq-Put-1000-4     	    3750	    364665 ns/op	  187104 B/op	    1048 allocs/op
-BenchmarkAll/2._Middle_cache_1’000_events/2.1._Sequenced/Hashicorp-Seq-Get-1000-4     	   12714	     81102 ns/op	       0 B/op	       0 allocs/op
-	— Hashicorp:	 (Sequenced)	 Put:	       364 ns/op; Get:	        81 ns/op
-BenchmarkAll/2._Middle_cache_1’000_events/2.1._Sequenced/Theine-Seq-Put-1000-4        	    1353	    804341 ns/op	  264441 B/op	    1478 allocs/op
-BenchmarkAll/2._Middle_cache_1’000_events/2.1._Sequenced/Theine-Seq-Get-1000-4        	    5217	    236225 ns/op	       1 B/op	       0 allocs/op
-	— Theine:	 (Sequenced)	 Put:	       804 ns/op; Get:	       236 ns/op
-BenchmarkAll/2._Middle_cache_1’000_events/2.2._Parallel/Hashicorp-Par-Put-100-10-4    	    2757	    504467 ns/op	  188013 B/op	    1069 allocs/op
-BenchmarkAll/2._Middle_cache_1’000_events/2.2._Parallel/Hashicorp-Par-Get-100-10-4    	    5262	    239191 ns/op	     897 B/op	      21 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	       504 ns/op; Get:	       239 ns/op
-BenchmarkAll/2._Middle_cache_1’000_events/2.2._Parallel/Theine-Par-Put-100-10-4       	    2473	    492463 ns/op	  273925 B/op	    1504 allocs/op
-BenchmarkAll/2._Middle_cache_1’000_events/2.2._Parallel/Theine-Par-Get-100-10-4       	   10564	    118386 ns/op	     908 B/op	      21 allocs/op
-	— Theine:	 (Parallel)	 Put:	       492 ns/op; Get:	       118 ns/op
-BenchmarkAll/3._Big_cache_10’000_events/3.1._Sequenced/Hashicorp-Seq-Put-10000-4      	     398	   3187714 ns/op	 1615289 B/op	   10288 allocs/op
-BenchmarkAll/3._Big_cache_10’000_events/3.1._Sequenced/Hashicorp-Seq-Get-10000-4      	    1258	    897341 ns/op	       0 B/op	       0 allocs/op
-	— Hashicorp:	 (Sequenced)	 Put:	       318 ns/op; Get:	        89 ns/op
-BenchmarkAll/3._Big_cache_10’000_events/3.1._Sequenced/Theine-Seq-Put-10000-4         	     208	   6013545 ns/op	 2241917 B/op	   10722 allocs/op
-BenchmarkAll/3._Big_cache_10’000_events/3.1._Sequenced/Theine-Seq-Get-10000-4         	     496	   2614798 ns/op	      18 B/op	       0 allocs/op
-	— Theine:	 (Sequenced)	 Put:	       601 ns/op; Get:	       261 ns/op
-BenchmarkAll/3._Big_cache_10’000_events/3.2._Parallel/Hashicorp-Par-Put-500-20-4      	     258	   5069605 ns/op	 1617304 B/op	   10331 allocs/op
-BenchmarkAll/3._Big_cache_10’000_events/3.2._Parallel/Hashicorp-Par-Get-500-20-4      	     422	   2568238 ns/op	    1777 B/op	      41 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	       506 ns/op; Get:	       256 ns/op
-BenchmarkAll/3._Big_cache_10’000_events/3.2._Parallel/Theine-Par-Put-500-20-4         	     307	   4701337 ns/op	 2244061 B/op	   10764 allocs/op
-BenchmarkAll/3._Big_cache_10’000_events/3.2._Parallel/Theine-Par-Get-500-20-4         	    1557	   1030962 ns/op	    2563 B/op	      45 allocs/op
-	— Theine:	 (Parallel)	 Put:	       470 ns/op; Get:	       103 ns/op
-BenchmarkAll/4._Large_cache_100’000_events/3.1._Sequenced/Hashicorp-Seq-Put-100000-4           	      37	  65677443 ns/op	14490362 B/op	  104015 allocs/op
-BenchmarkAll/4._Large_cache_100’000_events/3.1._Sequenced/Hashicorp-Seq-Get-100000-4           	      68	  18812243 ns/op	       0 B/op	       0 allocs/op
-	— Hashicorp:	 (Sequenced)	 Put:	       656 ns/op; Get:	       188 ns/op
-BenchmarkAll/4._Large_cache_100’000_events/3.1._Sequenced/Theine-Seq-Put-100000-4              	      16	  64079738 ns/op	19865739 B/op	  104134 allocs/op
-BenchmarkAll/4._Large_cache_100’000_events/3.1._Sequenced/Theine-Seq-Get-100000-4              	      34	  34799138 ns/op	     265 B/op	       1 allocs/op
-	— Theine:	 (Sequenced)	 Put:	       640 ns/op; Get:	       347 ns/op
-BenchmarkAll/4._Large_cache_100’000_events/3.2._Parallel/Hashicorp-Par-Put-1000-100-4          	      25	  68356940 ns/op	14501165 B/op	  104226 allocs/op
-BenchmarkAll/4._Large_cache_100’000_events/3.2._Parallel/Hashicorp-Par-Get-1000-100-4          	      28	  37938100 ns/op	    9090 B/op	     203 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	       683 ns/op; Get:	       379 ns/op
-BenchmarkAll/4._Large_cache_100’000_events/3.2._Parallel/Theine-Par-Put-1000-100-4             	      33	 120494927 ns/op	19889985 B/op	  104366 allocs/op
-BenchmarkAll/4._Large_cache_100’000_events/3.2._Parallel/Theine-Par-Get-1000-100-4             	     100	  10171516 ns/op	   27345 B/op	     313 allocs/op
-	— Theine:	 (Parallel)	 Put:	      1204 ns/op; Get:	       101 ns/op
+BenchmarkCacheGeneralHashicorp/1._Small_cache_100_events/1.1._Sequenced/Hashicorp-Seq-Put-100-4         	   46047	     26144 ns/op	   15211 B/op	     116 allocs/op
+BenchmarkCacheGeneralHashicorp/1._Small_cache_100_events/1.1._Sequenced/Hashicorp-Seq-Get-100-4         	  164077	      7864 ns/op	       0 B/op	       0 allocs/op
+	— Hashicorp:	 (Sequenced)	 Put:	       261 ns/op; Get:	        78 ns/op
+BenchmarkCacheGeneralHashicorp/1._Small_cache_100_events/1.2._Parallel_(2×50)/Hashicorp-Par-Put-50-2-4  	   29967	     43315 ns/op	   15403 B/op	     121 allocs/op
+BenchmarkCacheGeneralHashicorp/1._Small_cache_100_events/1.2._Parallel_(2×50)/Hashicorp-Par-Get-50-2-4  	   82412	     15037 ns/op	     192 B/op	       5 allocs/op
+	— Hashicorp:	 (Parallel-2)	 Put:	       433 ns/op; Get:	       150 ns/op
+BenchmarkCacheGeneralHashicorp/2._Middle_cache_1’000_events/2.1._Sequenced/Hashicorp-Seq-Put-1000-4     	    4137	    309117 ns/op	  187057 B/op	    1048 allocs/op
+BenchmarkCacheGeneralHashicorp/2._Middle_cache_1’000_events/2.1._Sequenced/Hashicorp-Seq-Get-1000-4     	   15458	     78974 ns/op	       0 B/op	       0 allocs/op
+	— Hashicorp:	 (Sequenced)	 Put:	       309 ns/op; Get:	        78 ns/op
+BenchmarkCacheGeneralHashicorp/2._Middle_cache_1’000_events/2.2._Parallel_(10×100)/Hashicorp-Par-Put-100-10-4            	    2440	    468361 ns/op	  188003 B/op	    1069 allocs/op
+BenchmarkCacheGeneralHashicorp/2._Middle_cache_1’000_events/2.2._Parallel_(10×100)/Hashicorp-Par-Get-100-10-4            	    6000	    253779 ns/op	     899 B/op	      21 allocs/op
+	— Hashicorp:	 (Parallel-10)	 Put:	       468 ns/op; Get:	       253 ns/op
+BenchmarkCacheGeneralHashicorp/3._Big_cache_10’000_events/3.1._Sequenced/Hashicorp-Seq-Put-10000-4                       	     421	   2700528 ns/op	 1615487 B/op	   10289 allocs/op
+BenchmarkCacheGeneralHashicorp/3._Big_cache_10’000_events/3.1._Sequenced/Hashicorp-Seq-Get-10000-4                       	    1432	    881061 ns/op	       0 B/op	       0 allocs/op
+	— Hashicorp:	 (Sequenced)	 Put:	       270 ns/op; Get:	        88 ns/op
+BenchmarkCacheGeneralHashicorp/3._Big_cache_10’000_events/3.2._Parallel_(20×500)/Hashicorp-Par-Put-500-20-4              	     280	   4227757 ns/op	 1616954 B/op	   10329 allocs/op
+BenchmarkCacheGeneralHashicorp/3._Big_cache_10’000_events/3.2._Parallel_(20×500)/Hashicorp-Par-Get-500-20-4              	     399	   2966633 ns/op	    1793 B/op	      41 allocs/op
+	— Hashicorp:	 (Parallel-20)	 Put:	       422 ns/op; Get:	       296 ns/op
+BenchmarkCacheGeneralHashicorp/4._Large_cache_100’000_events/3.1._Sequenced/Hashicorp-Seq-Put-100000-4                   	      36	  30243231 ns/op	14487036 B/op	  103999 allocs/op
+BenchmarkCacheGeneralHashicorp/4._Large_cache_100’000_events/3.1._Sequenced/Hashicorp-Seq-Get-100000-4                   	      85	  16338988 ns/op	       0 B/op	       0 allocs/op
+	— Hashicorp:	 (Sequenced)	 Put:	       302 ns/op; Get:	       163 ns/op
+BenchmarkCacheGeneralHashicorp/4._Large_cache_100’000_events/3.2._Parallel_(100×1000)/Hashicorp-Par-Put-1000-100-4       	      25	  45697420 ns/op	14495254 B/op	  104199 allocs/op
+BenchmarkCacheGeneralHashicorp/4._Large_cache_100’000_events/3.2._Parallel_(100×1000)/Hashicorp-Par-Get-1000-100-4       	      34	  34895209 ns/op	    9036 B/op	     203 allocs/op
+	— Hashicorp:	 (Parallel-100)	 Put:	       456 ns/op; Get:	       348 ns/op
 PASS
-ok  	github.com/voedger/voedger/pkg/objcache	110.138s
+ok  	github.com/voedger/voedger/pkg/objcache	24.436s
+```
+
+```txt
+Running tool: D:\Go\bin\go.exe test -benchmem -run=^$ -bench ^BenchmarkCacheGeneralTheine$ github.com/voedger/voedger/pkg/objcache
+
+goos: windows
+goarch: amd64
+pkg: github.com/voedger/voedger/pkg/objcache
+cpu: Intel(R) Core(TM) i5-3570 CPU @ 3.40GHz
+BenchmarkCacheGeneralTheine/1._Small_cache_100_events/1.1._Sequenced/Theine-Seq-Put-100-4         	    6082	    202105 ns/op	   49285 B/op	     462 allocs/op
+BenchmarkCacheGeneralTheine/1._Small_cache_100_events/1.1._Sequenced/Theine-Seq-Get-100-4         	   52164	     22858 ns/op	       0 B/op	       0 allocs/op
+	— Theine:	 (Sequenced)	 Put:	      2021 ns/op; Get:	       228 ns/op
+BenchmarkCacheGeneralTheine/1._Small_cache_100_events/1.2._Parallel_(2×50)/Theine-Par-Put-50-2-4  	    8880	    183616 ns/op	   49032 B/op	     466 allocs/op
+BenchmarkCacheGeneralTheine/1._Small_cache_100_events/1.2._Parallel_(2×50)/Theine-Par-Get-50-2-4  	   45476	     25117 ns/op	     192 B/op	       5 allocs/op
+	— Theine:	 (Parallel-2)	 Put:	      1836 ns/op; Get:	       251 ns/op
+BenchmarkCacheGeneralTheine/2._Middle_cache_1’000_events/2.1._Sequenced/Theine-Seq-Put-1000-4     	    1072	   1114225 ns/op	  264523 B/op	    1478 allocs/op
+BenchmarkCacheGeneralTheine/2._Middle_cache_1’000_events/2.1._Sequenced/Theine-Seq-Get-1000-4     	    5454	    233584 ns/op	       1 B/op	       0 allocs/op
+	— Theine:	 (Sequenced)	 Put:	      1114 ns/op; Get:	       233 ns/op
+BenchmarkCacheGeneralTheine/2._Middle_cache_1’000_events/2.2._Parallel_(10×100)/Theine-Par-Put-100-10-4            	    2498	    588270 ns/op	  269723 B/op	    1501 allocs/op
+BenchmarkCacheGeneralTheine/2._Middle_cache_1’000_events/2.2._Parallel_(10×100)/Theine-Par-Get-100-10-4            	   10000	    114334 ns/op	     912 B/op	      21 allocs/op
+	— Theine:	 (Parallel-10)	 Put:	       588 ns/op; Get:	       114 ns/op
+BenchmarkCacheGeneralTheine/3._Big_cache_10’000_events/3.1._Sequenced/Theine-Seq-Put-10000-4                       	     169	   7247201 ns/op	 2242579 B/op	   10725 allocs/op
+BenchmarkCacheGeneralTheine/3._Big_cache_10’000_events/3.1._Sequenced/Theine-Seq-Get-10000-4                       	     477	   2469586 ns/op	      14 B/op	       0 allocs/op
+	— Theine:	 (Sequenced)	 Put:	       724 ns/op; Get:	       246 ns/op
+BenchmarkCacheGeneralTheine/3._Big_cache_10’000_events/3.2._Parallel_(20×500)/Theine-Par-Put-500-20-4              	     303	  11543313 ns/op	 2243851 B/op	   10764 allocs/op
+BenchmarkCacheGeneralTheine/3._Big_cache_10’000_events/3.2._Parallel_(20×500)/Theine-Par-Get-500-20-4              	    1471	    823591 ns/op	    2446 B/op	      42 allocs/op
+	— Theine:	 (Parallel-20)	 Put:	      1154 ns/op; Get:	        82 ns/op
+BenchmarkCacheGeneralTheine/4._Large_cache_100’000_events/3.1._Sequenced/Theine-Seq-Put-100000-4                   	      16	  83282762 ns/op	19869874 B/op	  104154 allocs/op
+BenchmarkCacheGeneralTheine/4._Large_cache_100’000_events/3.1._Sequenced/Theine-Seq-Get-100000-4                   	      34	  38475574 ns/op	     202 B/op	       0 allocs/op
+	— Theine:	 (Sequenced)	 Put:	       832 ns/op; Get:	       384 ns/op
+BenchmarkCacheGeneralTheine/4._Large_cache_100’000_events/3.2._Parallel_(100×1000)/Theine-Par-Put-1000-100-4       	      33	 166193382 ns/op	19883453 B/op	  104377 allocs/op
+BenchmarkCacheGeneralTheine/4._Large_cache_100’000_events/3.2._Parallel_(100×1000)/Theine-Par-Get-1000-100-4       	     112	  10315779 ns/op	   22890 B/op	     201 allocs/op
+	— Theine:	 (Parallel-100)	 Put:	      1661 ns/op; Get:	       103 ns/op
+PASS
+ok  	github.com/voedger/voedger/pkg/objcache	72.576s
 ```
 
 ```text
-Running tool: D:\Go\bin\go.exe test -benchmem -run=^$ -bench ^BenchmarkCacheParallelism$ github.com/voedger/voedger/pkg/objcache
+Running tool: D:\Go\bin\go.exe test -benchmem -run=^$ -bench ^BenchmarkCacheGeneralFloatdrop$ github.com/voedger/voedger/pkg/objcache
 
 goos: windows
 goarch: amd64
 pkg: github.com/voedger/voedger/pkg/objcache
 cpu: Intel(R) Core(TM) i5-3570 CPU @ 3.40GHz
-BenchmarkCacheParallelism/Hashicorp-Par-Put-1000-1-4         	    3870	    310085 ns/op	  187192 B/op	    1051 allocs/op
-BenchmarkCacheParallelism/Hashicorp-Par-Get-1000-1-4         	   13912	     86115 ns/op	     104 B/op	       3 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	       310 ns/op; Get:	        86 ns/op
-BenchmarkCacheParallelism/Theine-Par-Put-1000-1-4            	    1058	   1085792 ns/op	  264784 B/op	    1481 allocs/op
-BenchmarkCacheParallelism/Theine-Par-Get-1000-1-4            	    4999	    248679 ns/op	     105 B/op	       3 allocs/op
-	— Theine:	 (Parallel)	 Put:	      1085 ns/op; Get:	       248 ns/op
-BenchmarkCacheParallelism/Hashicorp-Par-Put-1000-11-4        	     211	   4816381 ns/op	 1688306 B/op	   11350 allocs/op
-BenchmarkCacheParallelism/Hashicorp-Par-Get-1000-11-4        	     398	   2918865 ns/op	    1013 B/op	      23 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	       437 ns/op; Get:	       265 ns/op
-BenchmarkCacheParallelism/Theine-Par-Put-1000-11-4           	     253	   5226777 ns/op	 2348518 B/op	   11791 allocs/op
-BenchmarkCacheParallelism/Theine-Par-Get-1000-11-4           	    1062	   1065135 ns/op	    1913 B/op	      25 allocs/op
-	— Theine:	 (Parallel)	 Put:	       475 ns/op; Get:	        96 ns/op
-BenchmarkCacheParallelism/Hashicorp-Par-Put-1000-21-4        	     100	  10905279 ns/op	 3295243 B/op	   21644 allocs/op
-BenchmarkCacheParallelism/Hashicorp-Par-Get-1000-21-4        	     176	   6937866 ns/op	    1894 B/op	      43 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	       519 ns/op; Get:	       330 ns/op
-BenchmarkCacheParallelism/Theine-Par-Put-1000-21-4           	     147	   8232852 ns/op	 4545900 B/op	   22087 allocs/op
-BenchmarkCacheParallelism/Theine-Par-Get-1000-21-4           	     651	   1962346 ns/op	    4488 B/op	      60 allocs/op
-	— Theine:	 (Parallel)	 Put:	       392 ns/op; Get:	        93 ns/op
-BenchmarkCacheParallelism/Hashicorp-Par-Put-1000-31-4        	      82	  18428568 ns/op	 5859436 B/op	   32209 allocs/op
-BenchmarkCacheParallelism/Hashicorp-Par-Get-1000-31-4        	     100	  11332895 ns/op	    2785 B/op	      63 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	       594 ns/op; Get:	       365 ns/op
-BenchmarkCacheParallelism/Theine-Par-Put-1000-31-4           	     100	  12441000 ns/op	 7455483 B/op	   32654 allocs/op
-BenchmarkCacheParallelism/Theine-Par-Get-1000-31-4           	     424	   2792709 ns/op	    7285 B/op	      84 allocs/op
-	— Theine:	 (Parallel)	 Put:	       401 ns/op; Get:	        90 ns/op
-BenchmarkCacheParallelism/Hashicorp-Par-Put-1000-41-4        	      62	  21278156 ns/op	 6509532 B/op	   42272 allocs/op
-BenchmarkCacheParallelism/Hashicorp-Par-Get-1000-41-4        	      79	  15145216 ns/op	    3624 B/op	      83 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	       518 ns/op; Get:	       369 ns/op
-BenchmarkCacheParallelism/Theine-Par-Put-1000-41-4           	      69	  15266887 ns/op	 8946547 B/op	   42693 allocs/op
-BenchmarkCacheParallelism/Theine-Par-Get-1000-41-4           	     337	   3550960 ns/op	    9306 B/op	      92 allocs/op
-	— Theine:	 (Parallel)	 Put:	       372 ns/op; Get:	        86 ns/op
-BenchmarkCacheParallelism/Hashicorp-Par-Put-1000-51-4        	      60	  27181523 ns/op	 7335544 B/op	   53183 allocs/op
-BenchmarkCacheParallelism/Hashicorp-Par-Get-1000-51-4        	      60	  18628932 ns/op	    4612 B/op	     104 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	       532 ns/op; Get:	       365 ns/op
-BenchmarkCacheParallelism/Theine-Par-Put-1000-51-4           	      74	  26010997 ns/op	10308183 B/op	   53529 allocs/op
-BenchmarkCacheParallelism/Theine-Par-Get-1000-51-4           	     258	   4505719 ns/op	   13597 B/op	     143 allocs/op
-	— Theine:	 (Parallel)	 Put:	       510 ns/op; Get:	        88 ns/op
-BenchmarkCacheParallelism/Hashicorp-Par-Put-1000-61-4        	      38	  73477937 ns/op	11654616 B/op	   63478 allocs/op
-BenchmarkCacheParallelism/Hashicorp-Par-Get-1000-61-4        	      51	  23387878 ns/op	    5464 B/op	     123 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	      1204 ns/op; Get:	       383 ns/op
-BenchmarkCacheParallelism/Theine-Par-Put-1000-61-4           	      49	  42310961 ns/op	14775931 B/op	   63839 allocs/op
-BenchmarkCacheParallelism/Theine-Par-Get-1000-61-4           	     186	   6166116 ns/op	   13603 B/op	     142 allocs/op
-	— Theine:	 (Parallel)	 Put:	       693 ns/op; Get:	       101 ns/op
-BenchmarkCacheParallelism/Hashicorp-Par-Put-1000-71-4        	      28	 139990068 ns/op	12293104 B/op	   73487 allocs/op
-BenchmarkCacheParallelism/Hashicorp-Par-Get-1000-71-4        	      39	  27671395 ns/op	    6468 B/op	     145 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	      1971 ns/op; Get:	       389 ns/op
-BenchmarkCacheParallelism/Theine-Par-Put-1000-71-4           	      49	  54240927 ns/op	16785685 B/op	   73850 allocs/op
-BenchmarkCacheParallelism/Theine-Par-Get-1000-71-4           	     156	   7090469 ns/op	   13839 B/op	     143 allocs/op
-	— Theine:	 (Parallel)	 Put:	       763 ns/op; Get:	        99 ns/op
-BenchmarkCacheParallelism/Hashicorp-Par-Put-1000-81-4        	      26	  71008046 ns/op	12938704 B/op	   83531 allocs/op
-BenchmarkCacheParallelism/Hashicorp-Par-Get-1000-81-4        	      38	  32361082 ns/op	    7425 B/op	     165 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	       876 ns/op; Get:	       399 ns/op
-BenchmarkCacheParallelism/Theine-Par-Put-1000-81-4           	      22	  60169568 ns/op	17749574 B/op	   83877 allocs/op
-BenchmarkCacheParallelism/Theine-Par-Get-1000-81-4           	     124	   8354519 ns/op	   16687 B/op	     163 allocs/op
-	— Theine:	 (Parallel)	 Put:	       742 ns/op; Get:	       103 ns/op
-BenchmarkCacheParallelism/Hashicorp-Par-Put-1000-91-4        	      25	  85583956 ns/op	13740915 B/op	   94328 allocs/op
-BenchmarkCacheParallelism/Hashicorp-Par-Get-1000-91-4        	      36	  36099803 ns/op	    8128 B/op	     184 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	       940 ns/op; Get:	       396 ns/op
-BenchmarkCacheParallelism/Theine-Par-Put-1000-91-4           	      37	 104631341 ns/op	18830781 B/op	   94456 allocs/op
-BenchmarkCacheParallelism/Theine-Par-Get-1000-91-4           	     114	  11423564 ns/op	   16090 B/op	     183 allocs/op
-	— Theine:	 (Parallel)	 Put:	      1149 ns/op; Get:	       125 ns/op
-BenchmarkCacheParallelism/Hashicorp-Par-Put-1000-101-4       	      21	  81814210 ns/op	14583623 B/op	  105320 allocs/op
-BenchmarkCacheParallelism/Hashicorp-Par-Get-1000-101-4       	      28	  41022696 ns/op	    9042 B/op	     204 allocs/op
-	— Hashicorp:	 (Parallel)	 Put:	       810 ns/op; Get:	       406 ns/op
-BenchmarkCacheParallelism/Theine-Par-Put-1000-101-4          	      28	 100510575 ns/op	20001274 B/op	  105483 allocs/op
-BenchmarkCacheParallelism/Theine-Par-Get-1000-101-4          	     100	  10702592 ns/op	   30540 B/op	     339 allocs/op
-	— Theine:	 (Parallel)	 Put:	       995 ns/op; Get:	       105 ns/op
+BenchmarkCacheGeneralFloatdrop/1._Small_cache_100_events/1.1._Sequenced/Floatdrop-Seq-Put-100-4         	   39700	     33154 ns/op	   11524 B/op	     306 allocs/op
+BenchmarkCacheGeneralFloatdrop/1._Small_cache_100_events/1.1._Sequenced/Floatdrop-Seq-Get-100-4         	  172318	      6901 ns/op	       0 B/op	       0 allocs/op
+	— Floatdrop:	 (Sequenced)	 Put:	       331 ns/op; Get:	        69 ns/op
+BenchmarkCacheGeneralFloatdrop/1._Small_cache_100_events/1.2._Parallel_(2×50)/Floatdrop-Par-Put-50-2-4  	   27726	     44205 ns/op	   11717 B/op	     311 allocs/op
+BenchmarkCacheGeneralFloatdrop/1._Small_cache_100_events/1.2._Parallel_(2×50)/Floatdrop-Par-Get-50-2-4  	   83119	     14254 ns/op	     192 B/op	       5 allocs/op
+	— Floatdrop:	 (Parallel-2)	 Put:	       442 ns/op; Get:	       142 ns/op
+BenchmarkCacheGeneralFloatdrop/2._Middle_cache_1’000_events/2.1._Sequenced/Floatdrop-Seq-Put-1000-4     	    3994	    298928 ns/op	  129512 B/op	    3006 allocs/op
+BenchmarkCacheGeneralFloatdrop/2._Middle_cache_1’000_events/2.1._Sequenced/Floatdrop-Seq-Get-1000-4     	   16044	     74115 ns/op	       0 B/op	       0 allocs/op
+	— Floatdrop:	 (Sequenced)	 Put:	       298 ns/op; Get:	        74 ns/op
+BenchmarkCacheGeneralFloatdrop/2._Middle_cache_1’000_events/2.2._Parallel_(10×100)/Floatdrop-Par-Put-100-10-4            	    2408	    493750 ns/op	  130419 B/op	    3027 allocs/op
+BenchmarkCacheGeneralFloatdrop/2._Middle_cache_1’000_events/2.2._Parallel_(10×100)/Floatdrop-Par-Get-100-10-4            	    5448	    229614 ns/op	     900 B/op	      21 allocs/op
+	— Floatdrop:	 (Parallel-10)	 Put:	       493 ns/op; Get:	       229 ns/op
+BenchmarkCacheGeneralFloatdrop/3._Big_cache_10’000_events/3.1._Sequenced/Floatdrop-Seq-Put-10000-4                       	     406	   2867865 ns/op	 1178924 B/op	   30006 allocs/op
+BenchmarkCacheGeneralFloatdrop/3._Big_cache_10’000_events/3.1._Sequenced/Floatdrop-Seq-Get-10000-4                       	    1578	    807278 ns/op	       0 B/op	       0 allocs/op
+	— Floatdrop:	 (Sequenced)	 Put:	       286 ns/op; Get:	        80 ns/op
+BenchmarkCacheGeneralFloatdrop/3._Big_cache_10’000_events/3.2._Parallel_(20×500)/Floatdrop-Par-Put-500-20-4              	     247	   4798548 ns/op	 1180718 B/op	   30047 allocs/op
+BenchmarkCacheGeneralFloatdrop/3._Big_cache_10’000_events/3.2._Parallel_(20×500)/Floatdrop-Par-Get-500-20-4              	     438	   2622757 ns/op	    1777 B/op	      41 allocs/op
+	— Floatdrop:	 (Parallel-20)	 Put:	       479 ns/op; Get:	       262 ns/op
+BenchmarkCacheGeneralFloatdrop/4._Large_cache_100’000_events/3.1._Sequenced/Floatdrop-Seq-Put-100000-4                   	      31	  38576661 ns/op	11165178 B/op	  301660 allocs/op
+BenchmarkCacheGeneralFloatdrop/4._Large_cache_100’000_events/3.1._Sequenced/Floatdrop-Seq-Get-100000-4                   	      63	  16773417 ns/op	       0 B/op	       0 allocs/op
+	— Floatdrop:	 (Sequenced)	 Put:	       385 ns/op; Get:	       167 ns/op
+BenchmarkCacheGeneralFloatdrop/4._Large_cache_100’000_events/3.2._Parallel_(100×1000)/Floatdrop-Par-Put-1000-100-4       	      21	  51614019 ns/op	11176176 B/op	  301869 allocs/op
+BenchmarkCacheGeneralFloatdrop/4._Large_cache_100’000_events/3.2._Parallel_(100×1000)/Floatdrop-Par-Get-1000-100-4       	      39	  31268567 ns/op	    9072 B/op	     203 allocs/op
+	— Floatdrop:	 (Parallel-100)	 Put:	       516 ns/op; Get:	       312 ns/op
 PASS
-ok  	github.com/voedger/voedger/pkg/objcache	276.279s
+ok  	github.com/voedger/voedger/pkg/objcache	23.871s
+```
+
+```txt
+Running tool: D:\Go\bin\go.exe test -benchmem -run=^$ -bench ^BenchmarkCacheGeneralImcache$ github.com/voedger/voedger/pkg/objcache
+
+goos: windows
+goarch: amd64
+pkg: github.com/voedger/voedger/pkg/objcache
+cpu: Intel(R) Core(TM) i5-3570 CPU @ 3.40GHz
+BenchmarkCacheGeneralImcache/1._Small_cache_100_events/1.1._Sequenced/Imcache-Seq-Put-100-4         	   34545	     33359 ns/op	   26230 B/op	     218 allocs/op
+BenchmarkCacheGeneralImcache/1._Small_cache_100_events/1.1._Sequenced/Imcache-Seq-Get-100-4         	  160992	      7471 ns/op	       0 B/op	       0 allocs/op
+	— Imcache:	 (Sequenced)	 Put:	       333 ns/op; Get:	        74 ns/op
+BenchmarkCacheGeneralImcache/1._Small_cache_100_events/1.2._Parallel_(2×50)/Imcache-Par-Put-50-2-4  	   22195	     54166 ns/op	   26413 B/op	     223 allocs/op
+BenchmarkCacheGeneralImcache/1._Small_cache_100_events/1.2._Parallel_(2×50)/Imcache-Par-Get-50-2-4  	   83616	     14259 ns/op	     192 B/op	       5 allocs/op
+	— Imcache:	 (Parallel-2)	 Put:	       541 ns/op; Get:	       142 ns/op
+BenchmarkCacheGeneralImcache/2._Middle_cache_1’000_events/2.1._Sequenced/Imcache-Seq-Put-1000-4     	    2998	    436877 ns/op	  355919 B/op	    2047 allocs/op
+BenchmarkCacheGeneralImcache/2._Middle_cache_1’000_events/2.1._Sequenced/Imcache-Seq-Get-1000-4     	   14568	     86515 ns/op	       0 B/op	       0 allocs/op
+	— Imcache:	 (Sequenced)	 Put:	       436 ns/op; Get:	        86 ns/op
+BenchmarkCacheGeneralImcache/2._Middle_cache_1’000_events/2.2._Parallel_(10×100)/Imcache-Par-Put-100-10-4            	    1904	    611287 ns/op	  356910 B/op	    2068 allocs/op
+BenchmarkCacheGeneralImcache/2._Middle_cache_1’000_events/2.2._Parallel_(10×100)/Imcache-Par-Get-100-10-4            	    4894	    241071 ns/op	     898 B/op	      21 allocs/op
+	— Imcache:	 (Parallel-10)	 Put:	       611 ns/op; Get:	       241 ns/op
+BenchmarkCacheGeneralImcache/3._Big_cache_10’000_events/3.1._Sequenced/Imcache-Seq-Put-10000-4                       	     315	   3834050 ns/op	 2969493 B/op	   20291 allocs/op
+BenchmarkCacheGeneralImcache/3._Big_cache_10’000_events/3.1._Sequenced/Imcache-Seq-Get-10000-4                       	    1294	    899718 ns/op	       0 B/op	       0 allocs/op
+	— Imcache:	 (Sequenced)	 Put:	       383 ns/op; Get:	        89 ns/op
+BenchmarkCacheGeneralImcache/3._Big_cache_10’000_events/3.2._Parallel_(20×500)/Imcache-Par-Put-500-20-4              	     220	   5298648 ns/op	 2971499 B/op	   20333 allocs/op
+BenchmarkCacheGeneralImcache/3._Big_cache_10’000_events/3.2._Parallel_(20×500)/Imcache-Par-Get-500-20-4              	     390	   3070017 ns/op	    1778 B/op	      41 allocs/op
+	— Imcache:	 (Parallel-20)	 Put:	       529 ns/op; Get:	       307 ns/op
+BenchmarkCacheGeneralImcache/4._Large_cache_100’000_events/3.1._Sequenced/Imcache-Seq-Put-100000-4                   	      24	  41888617 ns/op	26108452 B/op	  204043 allocs/op
+BenchmarkCacheGeneralImcache/4._Large_cache_100’000_events/3.1._Sequenced/Imcache-Seq-Get-100000-4                   	      62	  16304469 ns/op	       0 B/op	       0 allocs/op
+	— Imcache:	 (Sequenced)	 Put:	       418 ns/op; Get:	       163 ns/op
+BenchmarkCacheGeneralImcache/4._Large_cache_100’000_events/3.2._Parallel_(100×1000)/Imcache-Par-Put-1000-100-4       	      19	  60722732 ns/op	26119742 B/op	  204257 allocs/op
+BenchmarkCacheGeneralImcache/4._Large_cache_100’000_events/3.2._Parallel_(100×1000)/Imcache-Par-Get-1000-100-4       	      37	  32419335 ns/op	    9265 B/op	     204 allocs/op
+	— Imcache:	 (Parallel-100)	 Put:	       607 ns/op; Get:	       324 ns/op
+PASS
+ok  	github.com/voedger/voedger/pkg/objcache	22.992s
 ```
 
 ```text
