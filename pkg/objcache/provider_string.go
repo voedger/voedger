@@ -11,11 +11,12 @@ func _() {
 	_ = x[Hashicorp-0]
 	_ = x[Theine-1]
 	_ = x[Floatdrop-2]
+	_ = x[Imcache-3]
 }
 
-const _CacheProvider_name = "HashicorpTheineFloatdrop"
+const _CacheProvider_name = "HashicorpTheineFloatdropImcache"
 
-var _CacheProvider_index = [...]uint8{0, 9, 15, 24}
+var _CacheProvider_index = [...]uint8{0, 9, 15, 24, 31}
 
 func (i CacheProvider) String() string {
 	if i >= CacheProvider(len(_CacheProvider_index)-1) {

@@ -269,3 +269,47 @@ BenchmarkCacheParallelismFloatdrop/Floatdrop-Par-Get-1000-101-4       	      34	
 PASS
 ok  	github.com/voedger/voedger/pkg/objcache	40.497s
 ```
+
+```text
+Running tool: D:\Go\bin\go.exe test -benchmem -run=^$ -bench ^BenchmarkCacheParallelismImcache$ github.com/voedger/voedger/pkg/objcache
+
+goos: windows
+goarch: amd64
+pkg: github.com/voedger/voedger/pkg/objcache
+cpu: Intel(R) Core(TM) i5-3570 CPU @ 3.40GHz
+BenchmarkCacheParallelismImcache/Imcache-Par-Put-1000-1-4         	    2589	    414451 ns/op	  356091 B/op	    2050 allocs/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Get-1000-1-4         	   13496	     89748 ns/op	     104 B/op	       3 allocs/op
+	— Imcache:	 (Parallel-1)	 Put:	       414 ns/op; Get:	        89 ns/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Put-1000-11-4        	     189	   5995678 ns/op	 3078352 B/op	   22372 allocs/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Get-1000-11-4        	     400	   3109524 ns/op	    1014 B/op	      23 allocs/op
+	— Imcache:	 (Parallel-11)	 Put:	       545 ns/op; Get:	       282 ns/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Put-1000-21-4        	     103	  11164650 ns/op	 6036871 B/op	   42674 allocs/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Get-1000-21-4        	     181	   6507617 ns/op	    1895 B/op	      43 allocs/op
+	— Imcache:	 (Parallel-21)	 Put:	       531 ns/op; Get:	       309 ns/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Put-1000-31-4        	      62	  18544590 ns/op	11138797 B/op	   63243 allocs/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Get-1000-31-4        	     120	  10006134 ns/op	    2752 B/op	      63 allocs/op
+	— Imcache:	 (Parallel-31)	 Put:	       598 ns/op; Get:	       322 ns/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Put-1000-41-4        	      50	  23175732 ns/op	11963045 B/op	   83312 allocs/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Get-1000-41-4        	      91	  13341621 ns/op	    3691 B/op	      83 allocs/op
+	— Imcache:	 (Parallel-41)	 Put:	       565 ns/op; Get:	       325 ns/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Put-1000-51-4        	      42	  28102752 ns/op	13193097 B/op	  104225 allocs/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Get-1000-51-4        	      74	  16645423 ns/op	    4504 B/op	     103 allocs/op
+	— Imcache:	 (Parallel-51)	 Put:	       551 ns/op; Get:	       326 ns/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Put-1000-61-4        	      27	  40763907 ns/op	22191536 B/op	  124504 allocs/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Get-1000-61-4        	      54	  21011093 ns/op	    5494 B/op	     123 allocs/op
+	— Imcache:	 (Parallel-61)	 Put:	       668 ns/op; Get:	       344 ns/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Put-1000-71-4        	      26	  45834869 ns/op	22995568 B/op	  144529 allocs/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Get-1000-71-4        	      49	  24391698 ns/op	    6620 B/op	     146 allocs/op
+	— Imcache:	 (Parallel-71)	 Put:	       645 ns/op; Get:	       343 ns/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Put-1000-81-4        	      24	  50768296 ns/op	23807898 B/op	  164571 allocs/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Get-1000-81-4        	      43	  27538681 ns/op	    7437 B/op	     165 allocs/op
+	— Imcache:	 (Parallel-81)	 Put:	       626 ns/op; Get:	       339 ns/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Put-1000-91-4        	      21	  55270424 ns/op	24973270 B/op	  185351 allocs/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Get-1000-91-4        	      38	  31118745 ns/op	    8315 B/op	     185 allocs/op
+	— Imcache:	 (Parallel-91)	 Put:	       607 ns/op; Get:	       341 ns/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Put-1000-101-4       	      19	  59131089 ns/op	26237865 B/op	  206337 allocs/op
+BenchmarkCacheParallelismImcache/Imcache-Par-Get-1000-101-4       	      34	  34163671 ns/op	    9146 B/op	     205 allocs/op
+	— Imcache:	 (Parallel-101)	 Put:	       585 ns/op; Get:	       338 ns/op
+PASS
+ok  	github.com/voedger/voedger/pkg/objcache	47.037s
+```
