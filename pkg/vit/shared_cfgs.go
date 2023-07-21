@@ -21,7 +21,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys"
-	"github.com/voedger/voedger/pkg/sys/authnz/wskinds"
 	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
 	"github.com/voedger/voedger/pkg/vvm"
 )
@@ -82,7 +81,6 @@ func EmptyApp(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appd
 	appDefBuilder.AddSingleton(QNameTestWSKind).
 		AddField("IntFld", appdef.DataKind_int32, true).
 		AddField("StrFld", appdef.DataKind_string, false)
-	ep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
 }
 
 func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
@@ -478,7 +476,6 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 		b.AddPartField("ViewIntFld", appdef.DataKind_int32).
 			AddClustColumn("ViewStrFld", appdef.DataKind_string)
 	})
-	ep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
 
 	// for impl_verifier_test
 	adf.AddCDoc(QNameTestEmailVerificationDoc).
