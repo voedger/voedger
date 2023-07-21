@@ -18,9 +18,9 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
 	"github.com/voedger/voedger/pkg/sys/authnz/workspace"
-	"github.com/voedger/voedger/pkg/sys/authnz/wskinds"
 	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	"github.com/voedger/voedger/pkg/sys/collection"
@@ -43,8 +43,8 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	blobber.ProvideBlobberCmds(cfg, appDefBuilder)
 	collection.Provide(cfg, appDefBuilder)
 	journal.Provide(cfg, appDefBuilder, ep)
-	wskinds.ProvideCDocsWorkspaceKinds(appDefBuilder)
 	builtin.Provide(cfg, appDefBuilder, buildInfo)
+	authnz.Provide(appDefBuilder)
 	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
 	sqlquery.Provide(cfg, appDefBuilder, asp, numCommandProcessors)
 	projectors.ProvideOffsetsDef(appDefBuilder)
