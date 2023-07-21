@@ -237,3 +237,15 @@ func BenchmarkCacheParallelismTheine(b *testing.B) {
 		ParallelBench(b, Theine, maxOfs, part)
 	}
 }
+
+func BenchmarkCacheParallelismFloatdrop(b *testing.B) {
+	const (
+		maxOfs  = 1000
+		maxPart = 101
+	)
+	for part := 1; part <= maxPart; part += 10 {
+		runtime.GC()
+		time.Sleep(time.Second)
+		ParallelBench(b, Floatdrop, maxOfs, part)
+	}
+}

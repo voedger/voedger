@@ -18,9 +18,9 @@
 1. [Ristretto, 4.8K stars](https://github.com/dgraph-io/ristretto)
 1. [hashicorp/golang-lru, 3.6K starts](https://github.com/hashicorp/golang-lru)
 1. [gcache, 2.4K stars](https://github.com/bluele/gcache)
-1. [2q](https://github.com/floatdrop/2q)
-1. [imcache](https://github.com/erni27/imcache)
-1. [theine-go](https://github.com/Yiling-J/theine-go)
+1. [floatdrop, 19 stars](https://github.com/floatdrop/lru)
+1. [imcache, 66 stars](https://github.com/erni27/imcache)
+1. [theine-go, 103 stars](https://github.com/Yiling-J/theine-go)
 
 - *theine-go* seems as a techincal leader, but not popular (yet?)
 - *theine-go* [claims](https://github.com/dgraph-io/ristretto/issues/336) that *Ristretto* hits ration is very low (???). Strange that the *Ristretto* Team has not answered it yet 

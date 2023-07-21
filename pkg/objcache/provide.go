@@ -8,6 +8,7 @@ package objcache
 import (
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/objcache/internal/floatdrop"
 	"github.com/voedger/voedger/pkg/objcache/internal/hashicorp"
 	"github.com/voedger/voedger/pkg/objcache/internal/theine"
 )
@@ -25,6 +26,7 @@ type CacheProvider uint8
 const (
 	Hashicorp CacheProvider = iota
 	Theine
+	Floatdrop
 )
 
 func NewProvider[K comparable, V any](p CacheProvider, size int, onEvicted func(K, V)) ICache[K, V] {
@@ -33,6 +35,8 @@ func NewProvider[K comparable, V any](p CacheProvider, size int, onEvicted func(
 		return hashicorp.New[K, V](size, onEvicted)
 	case Theine:
 		return theine.New[K, V](size, onEvicted)
+	case Floatdrop:
+		return floatdrop.New[K, V](size, onEvicted)
 	}
 	panic(fmt.Errorf("unknown cache provider specified %v", p))
 }
