@@ -103,7 +103,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	message := vit.CaptureEmail()
 	ss := strings.Split(message.Body, ";")
 	require.Equal(inviteEmailSubject, message.Subject)
-	require.Equal(invite.EmailFrom, message.From)
+	require.Equal(it.TestSMTPCfg.GetFrom(), message.From)
 	require.Equal([]string{it.TestEmail3}, message.To)
 	require.Equal(verificationCode, ss[0])
 	require.Equal(strconv.FormatInt(inviteID3, 10), ss[1])
@@ -169,7 +169,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(updatedRoles, vit.CaptureEmail().Body)
 	message = vit.CaptureEmail()
 	require.Equal(updateRolesEmailSubject, message.Subject)
-	require.Equal(invite.EmailFrom, message.From)
+	require.Equal(it.TestSMTPCfg.GetFrom(), message.From)
 	require.Equal([]string{it.TestEmail2}, message.To)
 	require.Equal(updatedRoles, message.Body)
 
