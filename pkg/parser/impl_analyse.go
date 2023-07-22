@@ -106,14 +106,17 @@ func (c *analyseCtx) query(v *QueryStmt) {
 			c.stmtErr(&v.Pos, ErrOnlyTypeOrVoidAllowedForArgument)
 		}
 	}
-	if !isVoid(v.Returns.Package, v.Returns.Name) {
-		if getDefDataKind(v.Returns.Package, v.Returns.Name) == appdef.DataKind_null {
-			if err := resolve(v.Returns, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
-				c.stmtErr(&v.Pos, err)
+	if !isAny(v.Returns.Package, v.Returns.Name) {
+		if !isVoid(v.Returns.Package, v.Returns.Name) {
+			if getDefDataKind(v.Returns.Package, v.Returns.Name) == appdef.DataKind_null {
+				if err := resolve(v.Returns, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
+					c.stmtErr(&v.Pos, err)
+				}
+			} else {
+				c.stmtErr(&v.Pos, ErrOnlyTypeOrVoidAllowedForResult)
 			}
-		} else {
-			c.stmtErr(&v.Pos, ErrOnlyTypeOrVoidAllowedForResult)
 		}
+
 	}
 	c.with(v.With, &v.Pos)
 

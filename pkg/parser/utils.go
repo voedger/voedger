@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func extractStatement(s any) interface{} {
@@ -227,6 +228,13 @@ func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
 func isVoid(pkg string, name string) bool {
 	if maybeSysPkg(pkg) {
 		return name == sysVoid
+	}
+	return false
+}
+
+func isAny(pkg string, name string) bool {
+	if maybeSysPkg(pkg) {
+		return name == istructs.QNameANY.Entity()
 	}
 	return false
 }

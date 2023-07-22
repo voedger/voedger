@@ -10,6 +10,7 @@ import (
 
 	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type buildContext struct {
@@ -124,9 +125,14 @@ func (c *buildContext) queries() error {
 				argQname := buildQname(c, q.Arg.Package, q.Arg.Name)
 				b.SetArg(argQname)
 			}
-			if !isVoid(q.Returns.Package, q.Returns.Name) {
-				retQname := buildQname(c, q.Returns.Package, q.Returns.Name)
-				b.SetResult(retQname) // TODO: support arrays?
+
+			if isAny(q.Returns.Package, q.Returns.Name) {
+				b.SetResult(istructs.QNameANY)
+			} else {
+				if !isVoid(q.Returns.Package, q.Returns.Name) {
+					retQname := buildQname(c, q.Returns.Package, q.Returns.Name)
+					b.SetResult(retQname)
+				}
 			}
 
 			if q.Engine.WASM {
