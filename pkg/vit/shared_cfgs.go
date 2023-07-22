@@ -21,7 +21,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys"
-	"github.com/voedger/voedger/pkg/sys/authnz/wskinds"
 	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
 	"github.com/voedger/voedger/pkg/vvm"
 )
@@ -43,6 +42,9 @@ var (
 	QNameTestSingleton            = appdef.NewQName("test", "Config")
 	QNameCmdRated                 = appdef.NewQName(appdef.SysPackage, "RatedCmd")
 	QNameQryRated                 = appdef.NewQName(appdef.SysPackage, "RatedQry")
+	TestSMTPCfg                   = smtp.Cfg{
+		Username: "username@gmail.com",
+	}
 
 	// BLOBMaxSize 5
 	SharedConfig_Simple = NewSharedVITConfig(
@@ -79,7 +81,6 @@ func EmptyApp(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appd
 	appDefBuilder.AddSingleton(QNameTestWSKind).
 		AddField("IntFld", appdef.DataKind_int32, true).
 		AddField("StrFld", appdef.DataKind_string, false)
-	ep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
 }
 
 func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
@@ -88,7 +89,7 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 	if !ok {
 		panic("no build info")
 	}
-	sys.Provide(cfg, adf, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, false)
 
 	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "articles")).
@@ -475,7 +476,6 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 		b.AddPartField("ViewIntFld", appdef.DataKind_int32).
 			AddClustColumn("ViewStrFld", appdef.DataKind_string)
 	})
-	ep.ExtensionPoint(wskinds.EPWorkspaceKind).Add(QNameTestWSKind)
 
 	// for impl_verifier_test
 	adf.AddCDoc(QNameTestEmailVerificationDoc).

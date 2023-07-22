@@ -100,7 +100,6 @@ func wlogKey(ws istructs.WSID, offset istructs.Offset) (pkey, ccols []byte) {
 	return pkey, uint16bytes(lo)
 }
 
-// used in tests only
 func IBucketsFromIAppStructs(as istructs.IAppStructs) irates.IBuckets {
 	// appStructs implementation has method Buckets()
 	return as.(interface{ Buckets() irates.IBuckets }).Buckets()

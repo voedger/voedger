@@ -30,7 +30,6 @@ const (
 	maxByte                                 = ^byte(0)
 	byteRangeToVerifcationSymbolsRangeCoeff = (float32(maxByte) + 1) / float32(len(verificationCodeSymbols))
 	EmailSubject                            = "Your verification code"
-	EmailFrom                               = "noreply@air.com"
 	InitiateEmailVerification_Period        = time.Hour
 	InitiateEmailVerification_MaxAllowed    = uint32(3)
 	IssueVerifiedValueToken_Period          = time.Hour

@@ -5,9 +5,6 @@ SCHEMA main;
 IMPORT SCHEMA "github.com/untillpro/untill";
 IMPORT SCHEMA "github.com/untillpro/airsbp" AS air;
 
--- Declare comment to assign it later to definition(s)
-COMMENT BackofficeComment "Backoffice Comment";
-
 -- Declare tag to assign it later to definition(s)
 TAG BackofficeTag;
 
@@ -24,6 +21,8 @@ TABLE ScreenGroup INHERITS CDoc();
 TABLE TablePlan INHERITS CDoc (
     FState int,
     Name text NOT NULL,
+    Rate currency NOT NULL,
+    Expiration timestamp,
     VerifiableField text NOT NULL VERIFIABLE, -- Verifiable field
     Int1 int DEFAULT 1 CHECK(Int1 >= 1 AND Int2 < 10000),  -- Expressions evaluating to TRUE or UNKNOWN succeed.
     Text1 text DEFAULT "a",
@@ -42,10 +41,11 @@ TABLE TablePlan INHERITS CDoc (
     ),
     items NestedTable,
     ExcludedTableItems TablePlanItem
-) WITH Comment=BackofficeComment, Tags=(BackofficeTag); -- Optional comment and tags
+) WITH Comment="Backoffice Table", Tags=(BackofficeTag); -- Optional comment and tags
 
 
 -- Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC
+-- These comments are included in the statement definition, but may be overriden with `WITH Comment=...`
 TABLE SubscriptionProfile INHERITS Singleton (
     CustomerID text,
     CustomerKind int,
@@ -64,13 +64,13 @@ EXTENSION ENGINE WASM (
 );
 
 WORKSPACE MyWorkspace (
-    DESCRIPTOR OF air.TypeWithName ( -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
+    DESCRIPTOR( -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
+        air.TypeWithName,
         Country text CHECK "^[A-Za-z]{2}$",
         Description text
     );
 
     -- Declare comments, tags and roles which only available in this workspace
-    COMMENT PosComment "Pos Comment";
     TAG PosTag;
     ROLE LocationManager;
 
@@ -91,9 +91,12 @@ WORKSPACE MyWorkspace (
     );
 
 
-    TABLE WsTable INHERITS CDoc OF air.TypeWithName, TypeWithKind ( -- Multiple types
+    TABLE WsTable INHERITS CDoc ( 
+        air.TypeWithName,   -- Fieldset
+
         PsName text,
         items TABLE Child (
+            TypeWithKind, -- Fieldset
             Number int				
         )
     );	
@@ -147,14 +150,15 @@ WORKSPACE MyWorkspace (
 
         -- Command with declared Comment, Tags and Rate
         COMMAND Orders4(UNLOGGED air.Order) WITH 
-            Comment=PosComment, 
             Tags=(BackofficeTag, PosTag),
             Rate=BackofficeFuncRate1; 
 
         -- Qieries can only be declared in workspaces
         QUERY Query1 RETURNS void;
-        QUERY _Query1() RETURNS air.Order WITH Comment="Inplace comment";
-        QUERY Query2(air.Order) RETURNS air.Order WITH Comment='Inplace comment';
+        QUERY _Query1() RETURNS air.Order WITH Comment="A comment";
+        
+        -- Query which can return any value
+        QUERY Query2(air.Order) RETURNS ANY;
     );
 
     -- ACLs

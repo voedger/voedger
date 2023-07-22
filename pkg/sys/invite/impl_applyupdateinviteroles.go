@@ -87,7 +87,7 @@ func applyUpdateInviteRolesProjector(timeFunc coreutils.TimeFunc, federation cor
 		skbSendMail.PutString(state.Field_Subject, event.ArgumentObject().AsString(field_EmailSubject))
 		skbSendMail.PutString(state.Field_To, svCDocInvite.AsString(field_Email))
 		skbSendMail.PutString(state.Field_Body, replacer.Replace(emailTemplate))
-		skbSendMail.PutString(state.Field_From, EmailFrom)
+		skbSendMail.PutString(state.Field_From, smtpCfg.GetFrom())
 		skbSendMail.PutString(state.Field_Host, smtpCfg.Host)
 		skbSendMail.PutInt32(state.Field_Port, smtpCfg.Port)
 		skbSendMail.PutString(state.Field_Username, smtpCfg.Username)
