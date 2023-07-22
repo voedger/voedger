@@ -176,7 +176,6 @@ func (s *WorkspaceStmt) Iterate(callback func(stmt interface{})) {
 type TypeStmt struct {
 	Statement
 	Name  string          `parser:"'TYPE' @Ident "`
-	Of    []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
 	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
 }
 
@@ -184,7 +183,6 @@ func (s TypeStmt) GetName() string { return s.Name }
 
 type WsDescriptorStmt struct {
 	Statement
-	Of    []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
 	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
 	_     int             `parser:"';'"`
 }
@@ -411,7 +409,6 @@ type TableStmt struct {
 	Statement
 	Name         string          `parser:"'TABLE' @Ident"`
 	Inherits     *DefQName       `parser:"('INHERITS' @@)?"`
-	Of           []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
 	Items        []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	With         []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 	tableDefKind appdef.DefKind  // filled on the analysis stage
@@ -426,11 +423,17 @@ type NestedTableStmt struct {
 	Table TableStmt `parser:"@@"`
 }
 
+type FieldSetItem struct {
+	Pos  lexer.Position
+	Type DefQName `parser:"@@"`
+}
+
 type TableItemExpr struct {
 	NestedTable *NestedTableStmt `parser:"@@"`
 	Constraint  *TableConstraint `parser:"| @@"`
 	RefField    *RefFieldExpr    `parser:"| @@"`
 	Field       *FieldExpr       `parser:"| @@"`
+	FieldSet    *FieldSetItem    `parser:"| @@"`
 }
 
 type TableConstraint struct {

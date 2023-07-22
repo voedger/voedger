@@ -64,7 +64,8 @@ EXTENSION ENGINE WASM (
 );
 
 WORKSPACE MyWorkspace (
-    DESCRIPTOR OF air.TypeWithName ( -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
+    DESCRIPTOR( -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
+        air.TypeWithName,
         Country text CHECK "^[A-Za-z]{2}$",
         Description text
     );
@@ -90,9 +91,12 @@ WORKSPACE MyWorkspace (
     );
 
 
-    TABLE WsTable INHERITS CDoc OF air.TypeWithName, TypeWithKind ( -- Multiple types
+    TABLE WsTable INHERITS CDoc ( 
+        air.TypeWithName,   -- Fieldset
+
         PsName text,
         items TABLE Child (
+            TypeWithKind, -- Fieldset
             Number int				
         )
     );	
