@@ -72,7 +72,6 @@ type RootStatement struct {
 
 	// Also allowed in root
 	Role      *RoleStmt          `parser:"| @@"`
-	Comment   *CommentStmt       `parser:"| @@"`
 	Tag       *TagStmt           `parser:"| @@"`
 	ExtEngine *RootExtEngineStmt `parser:"| @@"`
 	Workspace *WorkspaceStmt     `parser:"| @@"`
@@ -91,7 +90,6 @@ type WorkspaceStatement struct {
 
 	// Also allowed in workspace
 	Role      *RoleStmt               `parser:"| @@"`
-	Comment   *CommentStmt            `parser:"| @@"`
 	Tag       *TagStmt                `parser:"| @@"`
 	ExtEngine *WorkspaceExtEngineStmt `parser:"| @@"`
 	Workspace *WorkspaceStmt          `parser:"| @@"`
@@ -225,7 +223,7 @@ func (q TypeQName) String() (s string) {
 
 type Statement struct {
 	Pos      lexer.Position
-	Comments []string `parser:"@Comment*"`
+	Comments []string `parser:"@PreStmtComment*"`
 }
 
 func (s *Statement) GetPos() *lexer.Position {
@@ -286,14 +284,6 @@ type TagStmt struct {
 }
 
 func (s TagStmt) GetName() string { return s.Name }
-
-type CommentStmt struct {
-	Statement
-	Name  string `parser:"'COMMENT' @Ident"`
-	Value string `parser:"@String"`
-}
-
-func (s CommentStmt) GetName() string { return s.Name }
 
 type UseTableStmt struct {
 	Statement
@@ -384,15 +374,10 @@ type CommandStmt struct {
 func (s *CommandStmt) GetName() string            { return s.Name }
 func (s *CommandStmt) SetEngineType(e EngineType) { s.Engine = e }
 
-type WithCommentItem struct {
-	Inplace string    `parser:"( @String )"`
-	Ref     *DefQName `parser:"| @@"`
-}
-
 type WithItem struct {
-	Comment *WithCommentItem `parser:"('Comment' '=' @@)"`
-	Tags    []DefQName       `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
-	Rate    *DefQName        `parser:"| ('Rate' '=' @@)"`
+	Comment *string    `parser:"('Comment' '=' @String)"`
+	Tags    []DefQName `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
+	Rate    *DefQName  `parser:"| ('Rate' '=' @@)"`
 }
 
 type QueryStmt struct {

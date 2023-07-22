@@ -364,7 +364,7 @@ func Test_Undefined(t *testing.T) {
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
 			COMMAND Orders() WITH Tags=(UndefinedTag);
-			QUERY Query1 RETURNS void WITH Rate=UndefinedRate, Comment=xyz.UndefinedComment;
+			QUERY Query1 RETURNS void WITH Rate=UndefinedRate;
 			PROJECTOR ImProjector ON COMMAND xyz.CreateUPProfile;
 			COMMAND CmdFakeReturn() RETURNS text;
 			COMMAND CmdNoReturn() RETURNS void;
@@ -384,7 +384,6 @@ func Test_Undefined(t *testing.T) {
 	require.EqualError(err, strings.Join([]string{
 		"example.sql:4:4: UndefinedTag undefined",
 		"example.sql:5:4: UndefinedRate undefined",
-		"example.sql:5:4: xyz undefined",
 		"example.sql:6:4: xyz undefined",
 		"example.sql:7:4: only type or void allowed in result",
 		"example.sql:9:4: only type or void allowed in argument",
@@ -401,9 +400,8 @@ func Test_Imports(t *testing.T) {
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
     		COMMAND Orders WITH Tags=(pkg2.SomeTag);
-    		QUERY Query1 RETURNS void WITH Comment=pkg2.SomeComment;
-    		QUERY Query2 RETURNS void WITH Comment=air.SomeComment;
-    		QUERY Query3 RETURNS void WITH Comment=air.SomeComment2; -- air.SomeComment2 undefined
+    		QUERY Query2 RETURNS void WITH Tags=(air.SomePkg3Tag);
+    		QUERY Query3 RETURNS void WITH Tags=(air.UnknownTag); -- air.UnknownTag undefined
     		PROJECTOR ImProjector ON COMMAND Air.CreateUPProfil; -- Air undefined
 		)
 	)
@@ -414,14 +412,13 @@ func Test_Imports(t *testing.T) {
 
 	fs, err = ParseFile("example.sql", `SCHEMA pkg2;
 	TAG SomeTag;
-	COMMENT SomeComment "Hello world!";
 	`)
 	require.NoError(err)
 	pkg2, err := MergeFileSchemaASTs("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
 	require.NoError(err)
 
 	fs, err = ParseFile("example.sql", `SCHEMA pkg3;
-	COMMENT SomeComment "Hello world!";
+	TAG SomePkg3Tag;
 	`)
 	require.NoError(err)
 	pkg3, err := MergeFileSchemaASTs("github.com/untillpro/airsbp3/pkg3", []*FileSchemaAST{fs})
@@ -429,8 +426,8 @@ func Test_Imports(t *testing.T) {
 
 	_, err = MergePackageSchemas([]*PackageSchemaAST{getSysPackageAST(), pkg1, pkg2, pkg3})
 	require.EqualError(err, strings.Join([]string{
-		"example.sql:9:7: air.SomeComment2 undefined",
-		"example.sql:10:7: Air undefined",
+		"example.sql:8:7: air.UnknownTag undefined",
+		"example.sql:9:7: Air undefined",
 	}, "\n"))
 
 }

@@ -5,7 +5,8 @@
 package parser
 
 import (
-	"github.com/alecthomas/participle/v2/lexer"
+	"strings"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -93,7 +94,7 @@ func (c *analyseCtx) command(v *CommandStmt) {
 			c.stmtErr(&v.Pos, ErrOnlyTypeOrVoidAllowedForResult)
 		}
 	}
-	c.with(v.With, &v.Pos)
+	c.with(&v.With, v)
 }
 
 func (c *analyseCtx) query(v *QueryStmt) {
@@ -118,7 +119,7 @@ func (c *analyseCtx) query(v *QueryStmt) {
 		}
 
 	}
-	c.with(v.With, &v.Pos)
+	c.with(&v.With, v)
 
 }
 func (c *analyseCtx) projector(v *ProjectorStmt) {
@@ -210,25 +211,34 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 
 }
 
-func (c *analyseCtx) with(with []WithItem, pos *lexer.Position) {
-	for i := range with {
-		wi := &with[i]
-		if wi.Comment != nil {
-			if wi.Comment.Ref != nil {
-				if err := resolve(*wi.Comment.Ref, c.basicContext, func(f *CommentStmt) error { return nil }); err != nil {
-					c.stmtErr(pos, err)
-				}
-			}
-		} else if wi.Rate != nil {
-			if err := resolve(*wi.Rate, c.basicContext, func(f *RateStmt) error { return nil }); err != nil {
-				c.stmtErr(pos, err)
+// Note: function may update with argument
+func (c *analyseCtx) with(with *[]WithItem, statement IStatement) {
+	var comment *WithItem
+
+	for i := range *with {
+		item := &(*with)[i]
+		if item.Comment != nil {
+			comment = item
+		} else if item.Rate != nil {
+			if err := resolve(*item.Rate, c.basicContext, func(f *RateStmt) error { return nil }); err != nil {
+				c.stmtErr(statement.GetPos(), err)
 			}
 		}
-		for j := range wi.Tags {
-			tag := wi.Tags[j]
+		for j := range item.Tags {
+			tag := item.Tags[j]
 			if err := resolve(tag, c.basicContext, func(f *TagStmt) error { return nil }); err != nil {
-				c.stmtErr(pos, err)
+				c.stmtErr(statement.GetPos(), err)
 			}
+		}
+	}
+
+	if comment == nil && statement.GetComments() != nil { // #484
+		comments := statement.GetComments()
+		if len(*comments) > 0 {
+			cmt := strings.Join(*comments, "\n")
+			*with = append(*with, WithItem{
+				Comment: &cmt,
+			})
 		}
 	}
 }
@@ -243,7 +253,7 @@ func (c *analyseCtx) table(v *TableStmt) {
 		c.stmtErr(&v.Pos, nil)
 		return
 	}
-	c.with(v.With, &v.Pos)
+	c.with(&v.With, v)
 	c.nestedTables(v.Items, v.tableDefKind)
 	if v.Inherits != nil {
 		if err := resolve(*v.Inherits, c.basicContext, func(f *TableStmt) error { return nil }); err != nil {
