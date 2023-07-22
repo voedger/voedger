@@ -19,6 +19,7 @@ import (
 func parseImpl(fileName string, content string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
 		{Name: "Comment", Pattern: `--.*`},
+		{Name: "PreStmtComment", Pattern: `\n+\s*--.*`},
 		{Name: "Array", Pattern: `\[\]`},
 		{Name: "Float", Pattern: `[-+]?\d+\.\d+`},
 		{Name: "Int", Pattern: `[-+]?\d+`},
@@ -36,7 +37,7 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 
 	parser := participle.MustBuild[SchemaAST](
 		participle.Lexer(basicLexer),
-		participle.Elide("Whitespace", "Comment"),
+		participle.Elide("Whitespace", "Comment", "PreStmtComment"),
 		participle.Unquote("String"),
 	)
 	return parser.ParseString(fileName, content)
@@ -143,6 +144,7 @@ func cleanupComments(schema *SchemaAST) {
 		if s, ok := stmt.(IStatement); ok {
 			comments := *s.GetComments()
 			for i := 0; i < len(comments); i++ {
+				comments[i] = strings.TrimSpace(comments[i])
 				comments[i], _ = strings.CutPrefix(comments[i], "--")
 				comments[i] = strings.TrimSpace(comments[i])
 			}
