@@ -1,11 +1,26 @@
 SCHEMA vrestaurant;
 
+
+-- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
+TABLE BOEntity INHERITS CDoc( 
+    Name text, 
+    Number int
+) WITH Tags=(BackofficeTag);
+
+-- TABLE Person : is an Abstract data struct for Waiters, Clients, Adminitsrators, Manager
+TABLE Person INHERITS BOEntity ( 
+    Address text,
+    Email text,
+    Phone text,
+    Picture blob
+) WITH Tags=(BackofficeTag);
+
 WORKSPACE Restaurant (
     DESCRIPTOR (
 	    Address text,
 	    Currency text,
 	    Phone text,
-	    OpenTimeStamp int64, -- TODO timestamp
+	    OpenTimeStamp timestamp,
 	    OwnerName text
     );
 
@@ -16,21 +31,35 @@ WORKSPACE Restaurant (
     TAG BackofficeTag;
     TAG PosTag;
 
+    TYPE TOrderItem (
+        Article text,
+        Quantity int,
+        Comment text,
+        Price currency,
+        VatPercent currency,
+        Vat float32
+    );
+    -- TYPE TOrder: describes data structure, retuned after executing Command Order
+    TYPE TOrder (
+        OrdTimeStamp timestamp,
+        User text,
+        TOrderItem
+    );
+
+    TYPE TPaymentItem(
+        PaymentType int64,
+        PaymentName text,
+        Amount currency
+    );   
+    -- TYPE TPayment: describes data structure,  retuned after executing Command Pay
+    TYPE TPayment (
+        PayTimeStamp int64,
+        User text,
+        Tips float32,
+        TPaymentItem 
+    );
+
     -- CDOC data schemes
-
-    -- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
-    TABLE BOEntity INHERITS CDoc( 
-        Name text, 
-        Number int
-    ) WITH Tags=(BackofficeTag);
-
-    -- TABLE Person : is an Abstract data struct for Waiters, Clients, Adminitsrators, Manager
-    TABLE Person INHERITS BOEntity ( 
-	    Address text,
-        Email text,
-	    Phone text,
-        Picture blob
-    ) WITH Tags=(BackofficeTag);
 
     -- TABLE Client   : describes restaurant client entity
     TABLE Client INHERITS Person(
@@ -66,6 +95,7 @@ WORKSPACE Restaurant (
         Picture blob, 
         Width int,
         Height int,
+        -- List of tables on table plan
         TableItem TABLE TableItem (
             Tableno int,  
             -- color of empty table
@@ -89,9 +119,9 @@ WORKSPACE Restaurant (
         -- article barcode to order by scanner
         Barcode text,  
         -- article sale price 
-        Price float32, 
+        Price currency, 
         -- V.A.T. in percent
-        VatPercent float32, 
+        VatPercent currency, 
         -- Absolut V.A.T. value 
         Vat float32         
     );
@@ -108,9 +138,9 @@ WORKSPACE Restaurant (
         Number int,
         Tableno int, 
         --time of very first order on table
-        OpenTimeStamp int64, 
+        OpenTimeStamp timestamp, 
         -- time of final payment and closing table transaction
-        CloseTimeStamp int64,
+        CloseTimeStamp timestamp,
         -- POS user, who created made very first order
         CreatorID ref(POSUser) NOT NULL, 
         -- client, assigned to transaction
@@ -118,12 +148,12 @@ WORKSPACE Restaurant (
     ) WITH Tags=(PosTag);
 
     -- TABLE Orders     : defines parameters of order on table. One transaction can have several orders
-    -- TABLE order_items : the list articles, options, comments, from which order consists of
     TABLE Order INHERITS ODoc(
         TransactionID ref(Transaction) NOT NULL, 
         -- time of creating order
-        OrdTimeStamp int64, 
+        OrdTimeStamp timestamp, 
         UserID ref(POSUser) NOT NULL, 
+        -- TABLE order_items : the list articles, options, comments, from which order consists of
         OrderItem TABLE OrderItem (
             Order ref(Order) NOT NULL,
             -- can be null for text comments
@@ -132,15 +162,14 @@ WORKSPACE Restaurant (
             Quantity int,           
             -- text message, added to the order
             Comment text,           
-            Price int64,
-            VatPercent float32,
+            Price currency,
+            VatPercent currency,
             Vat float32
         )
     ) WITH Tags=(PosTag);
 
     -- TABLE Bill          : defines parameters of bill on table. One transaction can have several bills
-    -- TABLE BillPayments  : Defines set of payment methods related to bill
-    TABLE Bills INHERITS ODoc(
+    TABLE Bill INHERITS ODoc(
         TransactionID ref(Transaction) NOT NULL, 
         --   ref of POSUser, who took created Transaction
        	AuthorID ref(POSUser) NOT NULL,
@@ -148,22 +177,23 @@ WORKSPACE Restaurant (
         -- bill number, unique per cash register   
 	    Number int,  
         -- time of Bill creating
-        PayTimeStamp int64,
+        PayTimeStamp timestamp,
         Tips float32,
-        BillPayments TABLE BillPayments (
+        -- TABLE BillPayments  : Defines set of payment methods related to bill
+        BillPayment TABLE BillPayment (
             Bill ref(Bill) NOT NULL,
-            PaymentType ref(PaymentTypes) NOT NULL,
+            PaymentType ref(PaymentType) NOT NULL,
             -- amount of payment
-            Amount int64
+            Amount currency
         )
     ) WITH Tags=(PosTag);
 
     EXTENSION ENGINE BUILTIN (
-	    COMMAND MakeOrder(vrestaurant.Order);
-	    COMMAND MakePayment(vrestaurant.Payment);
+	    COMMAND MakeOrder(TOrder);
+	    COMMAND MakePayment(TPayment);
 	
 	    PROJECTOR UpdateTableStatus
-	        ON COMMAND IN (Order, MakePayment)
+	        ON COMMAND IN (MakeOrder, MakePayment)
 		INTENTS(View TableStatus);
 
 	    PROJECTOR UpdateSalesReport
@@ -191,16 +221,10 @@ WORKSPACE Restaurant (
     -- VIEW SalesPerDay     : sales report per day
     VIEW SalesPerDay(
         Year int32,
-        Month int32,
-        Day int32,
+        Month int32, 
+        Day int32, 
         Number int32, 
-        Article text,
-        -- can be f.e. 0.34
-        Quantity float32, 
-        Price int64,
-        Vat float64,
-        VatPercent float64,
-        PaymentType ref(PaymentTypes) NOT NULL,
+        XZReportWDocID id NOT NULL,
         PRIMARY KEY (Year, Month, Day, Number)
     ) AS RESULT OF UpdateSalesReport;
 );    

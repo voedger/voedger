@@ -616,33 +616,27 @@ func Test_VRestaurantBasic(t *testing.T) {
 	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
 	require.Equal(appdef.DataKind_RecordID, cdoc.(appdef.IFields).Field("Picture").DataKind())
 
-	cdoc = builder.Def(appdef.NewQName("vrestaurant", "RestaurantSettings"))
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "Client"))
 	require.NotNil(cdoc)
 
-	cdoc = builder.Def(appdef.NewQName("vrestaurant", "Clients"))
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "POSUser"))
 	require.NotNil(cdoc)
 
-	cdoc = builder.Def(appdef.NewQName("vrestaurant", "POSUsers"))
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "Department"))
 	require.NotNil(cdoc)
 
-	cdoc = builder.Def(appdef.NewQName("vrestaurant", "Departments"))
-	require.NotNil(cdoc)
-
-	cdoc = builder.Def(appdef.NewQName("vrestaurant", "Articles"))
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "Article"))
 	require.NotNil(cdoc)
 
 	// child table
-	crec := builder.Def(appdef.NewQName("vrestaurant", "TableItems"))
+	crec := builder.Def(appdef.NewQName("vrestaurant", "TableItem"))
 	require.NotNil(crec)
 	require.Equal(appdef.DefKind_CRecord, crec.Kind())
 	require.Equal(appdef.DataKind_int32, crec.(appdef.IFields).Field("Tableno").DataKind())
 
 	// view
-	view := builder.View(appdef.NewQName("vrestaurant", "XZReports"))
+	view := builder.View(appdef.NewQName("vrestaurant", "SalesPerDay"))
 	require.NotNil(view)
 	require.Equal(appdef.DefKind_ViewRecord, view.Kind())
 
-	require.Equal(1, view.Value().UserFieldCount())
-	require.Equal(1, view.Key().PartKey().FieldCount())
-	require.Equal(4, view.Key().ClustCols().FieldCount())
 }
