@@ -210,17 +210,12 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 
 // Note: function may update with argument
 func (c *analyseCtx) with(with *[]WithItem, statement IStatement) {
-	var comment *WithCommentItem
+	var comment *WithItem
 
 	for i := range *with {
 		item := &(*with)[i]
 		if item.Comment != nil {
-			comment = item.Comment
-			if item.Comment.Ref != nil {
-				if err := resolve(*item.Comment.Ref, c.basicContext, func(f *CommentStmt) error { return nil }); err != nil {
-					c.stmtErr(statement.GetPos(), err)
-				}
-			}
+			comment = item
 		} else if item.Rate != nil {
 			if err := resolve(*item.Rate, c.basicContext, func(f *RateStmt) error { return nil }); err != nil {
 				c.stmtErr(statement.GetPos(), err)
@@ -237,12 +232,10 @@ func (c *analyseCtx) with(with *[]WithItem, statement IStatement) {
 	if comment == nil && statement.GetComments() != nil { // #484
 		comments := statement.GetComments()
 		if len(*comments) > 0 {
-			newItem := WithItem{
-				Comment: &WithCommentItem{
-					Inplace: strings.Join(*comments, "\n"),
-				},
-			}
-			*with = append(*with, newItem)
+			cmt := strings.Join(*comments, "\n")
+			*with = append(*with, WithItem{
+				Comment: &cmt,
+			})
 		}
 	}
 }
