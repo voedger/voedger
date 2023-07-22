@@ -225,7 +225,7 @@ func (q TypeQName) String() (s string) {
 
 type Statement struct {
 	Pos      lexer.Position
-	Comments []string `parser:"@Comment*"`
+	Comments []string `parser:"@PreStmtComment*"`
 }
 
 func (s *Statement) GetPos() *lexer.Position {
