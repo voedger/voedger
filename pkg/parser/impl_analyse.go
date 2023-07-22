@@ -255,29 +255,21 @@ func (c *analyseCtx) table(v *TableStmt) {
 	}
 	c.with(&v.With, v)
 	c.nestedTables(v.Items, v.tableDefKind)
+	c.fieldSets(v.Items)
 	if v.Inherits != nil {
 		if err := resolve(*v.Inherits, c.basicContext, func(f *TableStmt) error { return nil }); err != nil {
-			c.stmtErr(&v.Pos, err)
-		}
-	}
-	for _, of := range v.Of {
-		if err := resolve(of, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
 			c.stmtErr(&v.Pos, err)
 		}
 	}
 }
 
 func (c *analyseCtx) doType(v *TypeStmt) {
-	for _, of := range v.Of {
-		if err := resolve(of, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
-			c.stmtErr(&v.Pos, err)
-		}
-	}
 	for _, i := range v.Items {
 		if i.NestedTable != nil {
 			c.stmtErr(&v.Pos, ErrNestedTablesNotSupportedInTypes)
 		}
 	}
+	c.fieldSets(v.Items)
 }
 
 func (c *analyseCtx) workspace(v *WorkspaceStmt) {
@@ -292,12 +284,8 @@ func (c *analyseCtx) workspace(v *WorkspaceStmt) {
 				c.stmtErr(&v.Pos, err)
 			}
 		}
-		for _, of := range v.Descriptor.Of {
-			if err := resolve(of, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
-				c.stmtErr(&v.Pos, err)
-			}
-		}
 		c.nestedTables(v.Descriptor.Items, appdef.DefKind_CDoc)
+		c.fieldSets(v.Descriptor.Items)
 	}
 }
 
@@ -322,6 +310,22 @@ func (c *analyseCtx) nestedTables(items []TableItemExpr, rootTableKind appdef.De
 				}
 			}
 			c.nestedTables(nestedTable.Items, rootTableKind)
+		}
+	}
+}
+
+func (c *analyseCtx) fieldSets(items []TableItemExpr) {
+	for i := range items {
+		item := items[i]
+		if item.FieldSet != nil {
+			if err := resolve(item.FieldSet.Type, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
+				c.stmtErr(&item.FieldSet.Pos, err)
+				continue
+			}
+		}
+		if item.NestedTable != nil {
+			nestedTable := &item.NestedTable.Table
+			c.fieldSets(nestedTable.Items)
 		}
 	}
 }

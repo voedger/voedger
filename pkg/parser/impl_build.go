@@ -54,7 +54,6 @@ func (c *buildContext) types() error {
 		iterateStmt(schema.Ast, func(typ *TypeStmt) {
 			c.setSchema(schema)
 			c.pushDef(typ.Name, appdef.DefKind_Object)
-			c.addFieldsOf(&typ.Pos, typ.Of)
 			c.addTableItems(typ.Items)
 			c.popDef()
 		})
@@ -166,7 +165,6 @@ func (c *buildContext) fillTable(table *TableStmt) {
 			c.stmtErr(&table.Pos, err)
 		}
 	}
-	c.addFieldsOf(&table.Pos, table.Of)
 	c.addTableItems(table.Items)
 }
 
@@ -178,7 +176,6 @@ func (c *buildContext) workspaceDescriptor(schema *PackageSchemaAST, w *Workspac
 			return
 		}
 		c.pushDef(w.Name, appdef.DefKind_CDoc)
-		c.addFieldsOf(&w.Descriptor.Pos, w.Descriptor.Of)
 		c.addTableItems(w.Descriptor.Items)
 		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
 		c.popDef()
@@ -320,7 +317,6 @@ func (c *buildContext) addNestedTableToDef(nested *NestedTableStmt) {
 	contQName := appdef.NewQName(c.pkg.Ast.Package, nestedTable.Name)
 	if !c.isExists(contQName, nestedTable.tableDefKind) {
 		c.pushDef(nestedTable.Name, nestedTable.tableDefKind)
-		c.addFieldsOf(&nestedTable.Pos, nestedTable.Of)
 		c.addTableItems(nestedTable.Items)
 		c.popDef()
 	}
@@ -338,19 +334,18 @@ func (c *buildContext) addTableItems(items []TableItemExpr) {
 			c.addConstraintToDef(item.Constraint)
 		} else if item.NestedTable != nil {
 			c.addNestedTableToDef(item.NestedTable)
+		} else if item.FieldSet != nil {
+			c.addFieldsOf(&item.FieldSet.Pos, item.FieldSet.Type)
 		}
 	}
 }
 
-func (c *buildContext) addFieldsOf(pos *lexer.Position, types []DefQName) {
-	for _, of := range types {
-		if err := resolve(of, &c.basicContext, func(t *TypeStmt) error {
-			c.addFieldsOf(&t.Pos, t.Of)
-			c.addTableItems(t.Items)
-			return nil
-		}); err != nil {
-			c.stmtErr(pos, err)
-		}
+func (c *buildContext) addFieldsOf(pos *lexer.Position, of DefQName) {
+	if err := resolve(of, &c.basicContext, func(t *TypeStmt) error {
+		c.addTableItems(t.Items)
+		return nil
+	}); err != nil {
+		c.stmtErr(pos, err)
 	}
 }
 

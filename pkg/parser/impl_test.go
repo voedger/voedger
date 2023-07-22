@@ -107,6 +107,13 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DataKind_string, cdoc.(appdef.IFields).Field("Name").DataKind())
 	require.Equal(appdef.DataKind_string, cdoc.(appdef.IFields).Field("Country").DataKind())
 
+	// fieldsets
+	cdoc = builder.CDoc(appdef.NewQName("main", "WsTable"))
+	require.Equal(appdef.DataKind_string, cdoc.(appdef.IFields).Field("Name").DataKind())
+
+	cdoc = builder.CRecord(appdef.NewQName("main", "Child"))
+	require.Equal(appdef.DataKind_int32, cdoc.(appdef.IFields).Field("Kind").DataKind())
+
 	// QUERY
 	q1 := builder.Query(appdef.NewQName("main", "_Query1"))
 	require.NotNil(q1)
@@ -151,13 +158,16 @@ func Test_DupFieldsInTypes(t *testing.T) {
 	TYPE RootType (
 		Id int32
 	);
-	TYPE BaseType OF RootType(
+	TYPE BaseType(
+		RootType,
 		baseField int
 	);
 	TYPE BaseType2 (
 		someField int
 	);
-	TYPE MyType OF BaseType, BaseType2 (
+	TYPE MyType(
+		BaseType,
+		BaseType2,
 		field text,
 		field text,
 		baseField text,
@@ -177,10 +187,10 @@ func Test_DupFieldsInTypes(t *testing.T) {
 
 	err = BuildAppDefs(packages, appdef.New())
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:13:3: field redeclared",
-		"file1.sql:14:3: baseField redeclared",
-		"file1.sql:15:3: someField redeclared",
-		"file1.sql:16:3: Id redeclared",
+		"file1.sql:16:3: field redeclared",
+		"file1.sql:17:3: baseField redeclared",
+		"file1.sql:18:3: someField redeclared",
+		"file1.sql:19:3: Id redeclared",
 	}, "\n"))
 
 }
@@ -192,7 +202,8 @@ func Test_DupFieldsInTables(t *testing.T) {
 	TYPE RootType (
 		Kind int32
 	);
-	TYPE BaseType OF RootType(
+	TYPE BaseType(
+		RootType,
 		baseField int
 	);
 	TYPE BaseType2 (
@@ -202,7 +213,9 @@ func Test_DupFieldsInTables(t *testing.T) {
 		Name text,
 		Code text
 	);
-	TABLE MyTable INHERITS ByBaseTable OF BaseType, BaseType2 (
+	TABLE MyTable INHERITS ByBaseTable(
+		BaseType,
+		BaseType2,
 		newField text,
 		field text,
 		field text, 		-- duplicated in the this table
@@ -225,11 +238,11 @@ func Test_DupFieldsInTables(t *testing.T) {
 
 	err = BuildAppDefs(packages, appdef.New())
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:18:3: field redeclared",
-		"file1.sql:19:3: baseField redeclared",
-		"file1.sql:20:3: someField redeclared",
-		"file1.sql:21:3: Kind redeclared",
-		"file1.sql:22:3: Name redeclared",
+		"file1.sql:21:3: field redeclared",
+		"file1.sql:22:3: baseField redeclared",
+		"file1.sql:23:3: someField redeclared",
+		"file1.sql:24:3: Kind redeclared",
+		"file1.sql:25:3: Name redeclared",
 	}, "\n"))
 
 }
