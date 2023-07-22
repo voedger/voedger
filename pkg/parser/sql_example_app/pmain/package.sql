@@ -152,7 +152,9 @@ WORKSPACE MyWorkspace (
         -- Qieries can only be declared in workspaces
         QUERY Query1 RETURNS void;
         QUERY _Query1() RETURNS air.Order WITH Comment="A comment";
-        QUERY Query2(air.Order) RETURNS air.Order;
+        
+        -- Query which can return any value
+        QUERY Query2(air.Order) RETURNS ANY;
     );
 
     -- ACLs
