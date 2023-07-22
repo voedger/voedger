@@ -24,6 +24,8 @@ TABLE ScreenGroup INHERITS CDoc();
 TABLE TablePlan INHERITS CDoc (
     FState int,
     Name text NOT NULL,
+    Rate currency NOT NULL,
+    Expiration timestamp,
     VerifiableField text NOT NULL VERIFIABLE, -- Verifiable field
     Int1 int DEFAULT 1 CHECK(Int1 >= 1 AND Int2 < 10000),  -- Expressions evaluating to TRUE or UNKNOWN succeed.
     Text1 text DEFAULT "a",
