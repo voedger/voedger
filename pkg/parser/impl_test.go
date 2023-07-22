@@ -451,8 +451,7 @@ func Test_AbstractWorkspace(t *testing.T) {
 	fs, err := ParseFile("example.sql", `SCHEMA test;
 	WORKSPACE ws1 ();
 	ABSTRACT WORKSPACE ws2();
-	ABSTRACT WORKSPACE ws3();
-	WORKSPACE ws4 OF ws2,test.ws3 ();
+	WORKSPACE ws4 INHERITS ws2 ();
 	`)
 	require.Nil(err)
 
@@ -461,10 +460,8 @@ func Test_AbstractWorkspace(t *testing.T) {
 
 	require.False(ps.Ast.Statements[0].Workspace.Abstract)
 	require.True(ps.Ast.Statements[1].Workspace.Abstract)
-	require.True(ps.Ast.Statements[2].Workspace.Abstract)
-	require.False(ps.Ast.Statements[3].Workspace.Abstract)
-	require.Equal("ws2", ps.Ast.Statements[3].Workspace.Of[0].String())
-	require.Equal("test.ws3", ps.Ast.Statements[3].Workspace.Of[1].String())
+	require.False(ps.Ast.Statements[2].Workspace.Abstract)
+	require.Equal("ws2", ps.Ast.Statements[2].Workspace.Inherits.String())
 
 }
 

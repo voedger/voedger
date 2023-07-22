@@ -274,13 +274,8 @@ func (c *analyseCtx) doType(v *TypeStmt) {
 
 func (c *analyseCtx) workspace(v *WorkspaceStmt) {
 	if v.Descriptor != nil {
-		for _, of := range v.Of {
-			if err := resolve(of, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
-				c.stmtErr(&v.Pos, err)
-			}
-		}
-		for _, of := range v.Of {
-			if err := resolve(of, c.basicContext, func(f *WorkspaceStmt) error { return nil }); err != nil {
+		if v.Inherits != nil {
+			if err := resolve(*v.Inherits, c.basicContext, func(f *WorkspaceStmt) error { return nil }); err != nil {
 				c.stmtErr(&v.Pos, err)
 			}
 		}
