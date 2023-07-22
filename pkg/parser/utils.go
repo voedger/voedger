@@ -259,6 +259,12 @@ func getSysDataKind(name string) appdef.DataKind {
 	if name == sysBlob {
 		return appdef.DataKind_RecordID
 	}
+	if name == sysTimestamp {
+		return appdef.DataKind_int64
+	}
+	if name == sysCurrency {
+		return appdef.DataKind_int64
+	}
 	return appdef.DataKind_null
 }
 
