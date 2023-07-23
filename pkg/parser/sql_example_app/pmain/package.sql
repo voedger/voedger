@@ -17,7 +17,7 @@ TABLE NestedTable INHERITS CRecord (
 
 TABLE ScreenGroup INHERITS CDoc();
 
--- TABLE ... OF - declares the inheritance from type or table. PROJECTORS from the base table are not inherted.
+-- TABLE ... INHERITS - declares the inheritance from table. PROJECTORS from the base table are not inherted.
 TABLE TablePlan INHERITS CDoc (
     FState int,
     Name text NOT NULL,
@@ -215,7 +215,7 @@ ABSTRACT WORKSPACE AWorkspace (
     -- Abstract workspaces cannot be created
 );
 
-WORKSPACE MyWorkspace1 OF AWorkspace (
+WORKSPACE MyWorkspace1 INHERITS AWorkspace (
     -- Inherits everything declared in AWorkspace
     POOL OF WORKSPACE MyPool ()
 );

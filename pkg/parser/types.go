@@ -156,7 +156,7 @@ type WorkspaceStmt struct {
 	Abstract   bool                 `parser:"@'ABSTRACT'?"`
 	Pool       bool                 `parser:"@('POOL' 'OF')?"`
 	Name       string               `parser:"'WORKSPACE' @Ident "`
-	Of         []DefQName           `parser:"('OF' @@ (',' @@)*)?"`
+	Inherits   *DefQName            `parser:"('INHERITS' @@)?"`
 	A          int                  `parser:"'('"`
 	Descriptor *WsDescriptorStmt    `parser:"('DESCRIPTOR' @@)?"`
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
