@@ -17,11 +17,7 @@ type Cache[K comparable, V any] struct {
 func new[K comparable, V any](size int, onEvicted func(K, V)) (c *Cache[K, V]) {
 	var err error
 	c = &Cache[K, V]{}
-	if onEvicted != nil {
-		c.lru, err = lru.NewWithEvict[K, V](size, onEvicted)
-	} else {
-		c.lru, err = lru.New[K, V](size)
-	}
+	c.lru, err = lru.NewWithEvict[K, V](size, onEvicted)
 	if err != nil {
 		panic(err)
 	}
