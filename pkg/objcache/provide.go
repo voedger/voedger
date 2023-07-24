@@ -21,7 +21,6 @@ func New[K comparable, V any](size int, onEvicted func(K, V)) ICache[K, V] {
 	return hashicorp.New[K, V](size, onEvicted)
 }
 
-//go:generate stringer -type=CacheProvider -output=provider_string.go
 type CacheProvider uint8
 
 const (
@@ -29,6 +28,8 @@ const (
 	Theine
 	Floatdrop
 	Imcache
+
+	CacheProvider_Count
 )
 
 func NewProvider[K comparable, V any](p CacheProvider, size int, onEvicted func(K, V)) ICache[K, V] {
