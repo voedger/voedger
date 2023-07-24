@@ -34,7 +34,8 @@ func NewOffset(p, o uint64) IOffset {
 }
 
 func NewEvent(p, o uint64) IEvent {
-	return &event{p, o, make([]byte, 1024)}
+	const eventSize = 1024
+	return &event{p, o, make([]byte, eventSize)}
 }
 
 func NewBomber(part uint64, maxOfs uint64) IBomber {
