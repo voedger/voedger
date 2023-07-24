@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func extractStatement(s any) interface{} {
@@ -153,7 +154,7 @@ func resolveTable(fn DefQName, c *basicContext) (*TableStmt, error) {
 }
 
 // when not found, lookup returns (nil, nil)
-func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt |
+func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt |
 	*WorkspaceStmt | *ViewStmt | *StorageStmt](fn DefQName, c *basicContext) (stmtType, error) {
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
@@ -183,7 +184,7 @@ func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *Co
 	return item, nil
 }
 
-func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt |
+func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt |
 	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) error {
 	var err error
 	var item stmtType
@@ -231,6 +232,13 @@ func isVoid(pkg string, name string) bool {
 	return false
 }
 
+func isAny(pkg string, name string) bool {
+	if maybeSysPkg(pkg) {
+		return name == istructs.QNameANY.Entity()
+	}
+	return false
+}
+
 func getSysDataKind(name string) appdef.DataKind {
 	if name == sysInt32 || name == sysInt {
 		return appdef.DataKind_int32
@@ -258,6 +266,12 @@ func getSysDataKind(name string) appdef.DataKind {
 	}
 	if name == sysBlob {
 		return appdef.DataKind_RecordID
+	}
+	if name == sysTimestamp {
+		return appdef.DataKind_int64
+	}
+	if name == sysCurrency {
+		return appdef.DataKind_int64
 	}
 	return appdef.DataKind_null
 }

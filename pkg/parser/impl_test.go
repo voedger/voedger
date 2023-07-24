@@ -107,6 +107,13 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DataKind_string, cdoc.(appdef.IFields).Field("Name").DataKind())
 	require.Equal(appdef.DataKind_string, cdoc.(appdef.IFields).Field("Country").DataKind())
 
+	// fieldsets
+	cdoc = builder.CDoc(appdef.NewQName("main", "WsTable"))
+	require.Equal(appdef.DataKind_string, cdoc.(appdef.IFields).Field("Name").DataKind())
+
+	cdoc = builder.CRecord(appdef.NewQName("main", "Child"))
+	require.Equal(appdef.DataKind_int32, cdoc.(appdef.IFields).Field("Kind").DataKind())
+
 	// QUERY
 	q1 := builder.Query(appdef.NewQName("main", "_Query1"))
 	require.NotNil(q1)
@@ -151,13 +158,16 @@ func Test_DupFieldsInTypes(t *testing.T) {
 	TYPE RootType (
 		Id int32
 	);
-	TYPE BaseType OF RootType(
+	TYPE BaseType(
+		RootType,
 		baseField int
 	);
 	TYPE BaseType2 (
 		someField int
 	);
-	TYPE MyType OF BaseType, BaseType2 (
+	TYPE MyType(
+		BaseType,
+		BaseType2,
 		field text,
 		field text,
 		baseField text,
@@ -177,10 +187,10 @@ func Test_DupFieldsInTypes(t *testing.T) {
 
 	err = BuildAppDefs(packages, appdef.New())
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:13:3: field redeclared",
-		"file1.sql:14:3: baseField redeclared",
-		"file1.sql:15:3: someField redeclared",
-		"file1.sql:16:3: Id redeclared",
+		"file1.sql:16:3: field redeclared",
+		"file1.sql:17:3: baseField redeclared",
+		"file1.sql:18:3: someField redeclared",
+		"file1.sql:19:3: Id redeclared",
 	}, "\n"))
 
 }
@@ -192,7 +202,8 @@ func Test_DupFieldsInTables(t *testing.T) {
 	TYPE RootType (
 		Kind int32
 	);
-	TYPE BaseType OF RootType(
+	TYPE BaseType(
+		RootType,
 		baseField int
 	);
 	TYPE BaseType2 (
@@ -202,7 +213,9 @@ func Test_DupFieldsInTables(t *testing.T) {
 		Name text,
 		Code text
 	);
-	TABLE MyTable INHERITS ByBaseTable OF BaseType, BaseType2 (
+	TABLE MyTable INHERITS ByBaseTable(
+		BaseType,
+		BaseType2,
 		newField text,
 		field text,
 		field text, 		-- duplicated in the this table
@@ -225,11 +238,11 @@ func Test_DupFieldsInTables(t *testing.T) {
 
 	err = BuildAppDefs(packages, appdef.New())
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:18:3: field redeclared",
-		"file1.sql:19:3: baseField redeclared",
-		"file1.sql:20:3: someField redeclared",
-		"file1.sql:21:3: Kind redeclared",
-		"file1.sql:22:3: Name redeclared",
+		"file1.sql:21:3: field redeclared",
+		"file1.sql:22:3: baseField redeclared",
+		"file1.sql:23:3: someField redeclared",
+		"file1.sql:24:3: Kind redeclared",
+		"file1.sql:25:3: Name redeclared",
 	}, "\n"))
 
 }
@@ -364,7 +377,7 @@ func Test_Undefined(t *testing.T) {
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
 			COMMAND Orders() WITH Tags=(UndefinedTag);
-			QUERY Query1 RETURNS void WITH Rate=UndefinedRate, Comment=xyz.UndefinedComment;
+			QUERY Query1 RETURNS void WITH Rate=UndefinedRate;
 			PROJECTOR ImProjector ON COMMAND xyz.CreateUPProfile;
 			COMMAND CmdFakeReturn() RETURNS text;
 			COMMAND CmdNoReturn() RETURNS void;
@@ -384,7 +397,6 @@ func Test_Undefined(t *testing.T) {
 	require.EqualError(err, strings.Join([]string{
 		"example.sql:4:4: UndefinedTag undefined",
 		"example.sql:5:4: UndefinedRate undefined",
-		"example.sql:5:4: xyz undefined",
 		"example.sql:6:4: xyz undefined",
 		"example.sql:7:4: only type or void allowed in result",
 		"example.sql:9:4: only type or void allowed in argument",
@@ -401,9 +413,8 @@ func Test_Imports(t *testing.T) {
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
     		COMMAND Orders WITH Tags=(pkg2.SomeTag);
-    		QUERY Query1 RETURNS void WITH Comment=pkg2.SomeComment;
-    		QUERY Query2 RETURNS void WITH Comment=air.SomeComment;
-    		QUERY Query3 RETURNS void WITH Comment=air.SomeComment2; -- air.SomeComment2 undefined
+    		QUERY Query2 RETURNS void WITH Tags=(air.SomePkg3Tag);
+    		QUERY Query3 RETURNS void WITH Tags=(air.UnknownTag); -- air.UnknownTag undefined
     		PROJECTOR ImProjector ON COMMAND Air.CreateUPProfil; -- Air undefined
 		)
 	)
@@ -414,14 +425,13 @@ func Test_Imports(t *testing.T) {
 
 	fs, err = ParseFile("example.sql", `SCHEMA pkg2;
 	TAG SomeTag;
-	COMMENT SomeComment "Hello world!";
 	`)
 	require.NoError(err)
 	pkg2, err := MergeFileSchemaASTs("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
 	require.NoError(err)
 
 	fs, err = ParseFile("example.sql", `SCHEMA pkg3;
-	COMMENT SomeComment "Hello world!";
+	TAG SomePkg3Tag;
 	`)
 	require.NoError(err)
 	pkg3, err := MergeFileSchemaASTs("github.com/untillpro/airsbp3/pkg3", []*FileSchemaAST{fs})
@@ -429,8 +439,8 @@ func Test_Imports(t *testing.T) {
 
 	_, err = MergePackageSchemas([]*PackageSchemaAST{getSysPackageAST(), pkg1, pkg2, pkg3})
 	require.EqualError(err, strings.Join([]string{
-		"example.sql:9:7: air.SomeComment2 undefined",
-		"example.sql:10:7: Air undefined",
+		"example.sql:8:7: air.UnknownTag undefined",
+		"example.sql:9:7: Air undefined",
 	}, "\n"))
 
 }
@@ -441,8 +451,7 @@ func Test_AbstractWorkspace(t *testing.T) {
 	fs, err := ParseFile("example.sql", `SCHEMA test;
 	WORKSPACE ws1 ();
 	ABSTRACT WORKSPACE ws2();
-	ABSTRACT WORKSPACE ws3();
-	WORKSPACE ws4 OF ws2,test.ws3 ();
+	WORKSPACE ws4 INHERITS ws2 ();
 	`)
 	require.Nil(err)
 
@@ -451,10 +460,8 @@ func Test_AbstractWorkspace(t *testing.T) {
 
 	require.False(ps.Ast.Statements[0].Workspace.Abstract)
 	require.True(ps.Ast.Statements[1].Workspace.Abstract)
-	require.True(ps.Ast.Statements[2].Workspace.Abstract)
-	require.False(ps.Ast.Statements[3].Workspace.Abstract)
-	require.Equal("ws2", ps.Ast.Statements[3].Workspace.Of[0].String())
-	require.Equal("test.ws3", ps.Ast.Statements[3].Workspace.Of[1].String())
+	require.False(ps.Ast.Statements[2].Workspace.Abstract)
+	require.Equal("ws2", ps.Ast.Statements[2].Workspace.Inherits.String())
 
 }
 
