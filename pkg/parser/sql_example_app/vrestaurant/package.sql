@@ -31,34 +31,6 @@ WORKSPACE Restaurant (
     TAG BackofficeTag;
     TAG PosTag;
 
-    TYPE TOrderItem (
-        Article text,
-        Quantity int,
-        Comment text,
-        Price currency,
-        VatPercent currency,
-        Vat float32
-    );
-    -- TYPE TOrder: describes data structure, retuned after executing Command Order
-    TYPE TOrder (
-        OrdTimeStamp timestamp,
-        User text,
-        TOrderItem
-    );
-
-    TYPE TPaymentItem(
-        PaymentType int64,
-        PaymentName text,
-        Amount currency
-    );   
-    -- TYPE TPayment: describes data structure,  retuned after executing Command Pay
-    TYPE TPayment (
-        PayTimeStamp int64,
-        User text,
-        Tips float32,
-        TPaymentItem 
-    );
-
     -- CDOC data schemes
 
     -- TABLE Client   : describes restaurant client entity
@@ -182,22 +154,20 @@ WORKSPACE Restaurant (
         -- TABLE BillPayments  : Defines set of payment methods related to bill
         BillPayment TABLE BillPayment (
             Bill ref(Bill) NOT NULL,
-            PaymentType ref(PaymentType) NOT NULL,
+            PaymentTypeID ref(PaymentType) NOT NULL,
             -- amount of payment
             Amount currency
         )
     ) WITH Tags=(PosTag);
 
     EXTENSION ENGINE BUILTIN (
-	    COMMAND MakeOrder(TOrder);
-	    COMMAND MakePayment(TPayment);
 	
-	    PROJECTOR UpdateTableStatus
-	        ON COMMAND IN (MakeOrder, MakePayment)
+	    SYNC PROJECTOR UpdateTableStatus
+	        ON INSERT IN (Order, Bill)
 		INTENTS(View TableStatus);
 
 	    PROJECTOR UpdateSalesReport
-	        ON COMMAND IN (MakePayment)
+	        ON INSERT Bill 
 		INTENTS(View SalesPerDay);
 
     );
@@ -224,7 +194,13 @@ WORKSPACE Restaurant (
         Month int32, 
         Day int32, 
         Number int32, 
-        XZReportWDocID id NOT NULL,
+        DepartmentID id NOT NULL,
+        ArticleID id NOT NULL,
+        Quantity int32, --!!! Must be float32
+        Amount int32,--!!! Must be Currency
+        Vat int32, --!!! Must be float32
+        VatPercent int32, --!!! Must be Currency
+        PaymentTypeID id NOT NULL,
         PRIMARY KEY (Year, Month, Day, Number)
     ) AS RESULT OF UpdateSalesReport;
 );    
