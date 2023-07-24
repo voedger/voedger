@@ -4,10 +4,12 @@ go 1.20
 
 require (
 	github.com/VictoriaMetrics/fastcache v1.12.1
+	github.com/Yiling-J/theine-go v0.3.1
 	github.com/alecthomas/participle/v2 v2.0.0
 	github.com/aptible/supercronic v0.2.2
 	github.com/blastrain/vitess-sqlparser v0.0.0-20201030050434-a139afbb1aba
 	github.com/emersion/go-smtp v0.15.0
+	github.com/floatdrop/lru v1.3.0
 	github.com/gocql/gocql v1.3.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/gofuzz v1.0.0
@@ -30,9 +32,7 @@ require (
 )
 
 require (
-	github.com/Yiling-J/theine-go v0.3.1 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
-	github.com/floatdrop/lru v1.3.0 // indirect
 	github.com/gammazero/deque v0.2.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/ncw/directio v1.0.5 // indirect
