@@ -411,7 +411,7 @@ func TestSqlQuery_view_records(t *testing.T) {
 
 	t.Run("Should read record with all fields", func(t *testing.T) {
 		require := require.New(t)
-		body = `{"args":{"Query":"select * from air.CollectionView where PartKey = 1 and DocQName = 'sys.payments'"}, "elements":[{"fields":["Result"]}]}`
+		body = `{"args":{"Query":"select * from sys.CollectionView where PartKey = 1 and DocQName = 'sys.payments'"}, "elements":[{"fields":["Result"]}]}`
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
 
 		respStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
@@ -421,31 +421,31 @@ func TestSqlQuery_view_records(t *testing.T) {
 		require.Contains(respStr, fmt.Sprintf(`"offs":%d`, lastWLogOffset))
 		require.Contains(respStr, `"PartKey":1`)
 		require.Contains(respStr, `"Record":{`)
-		require.Contains(respStr, `"sys.QName":"air.CollectionView_Value"`)
+		require.Contains(respStr, `"sys.QName":"sys.CollectionView_Value"`)
 	})
 	t.Run("Should return error when operator not supported", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from air.CollectionView where partKey > 1"}}`
+		body = `{"args":{"Query":"select * from sys.CollectionView where partKey > 1"}}`
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
 		resp.RequireError(t, "unsupported operator: >")
 	})
 	t.Run("Should return error when expression not supported", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from air.CollectionView where partKey = 1 or docQname = 'sys.payments'"}}`
+		body = `{"args":{"Query":"select * from sys.CollectionView where partKey = 1 or docQname = 'sys.payments'"}}`
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
 		resp.RequireError(t, "unsupported expression: *sqlparser.OrExpr")
 	})
 	t.Run("Should return error when field does not exist in value def", func(t *testing.T) {
-		body = `{"args":{"Query":"select abracadabra from air.CollectionView where PartKey = 1"}}`
+		body = `{"args":{"Query":"select abracadabra from sys.CollectionView where PartKey = 1"}}`
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, "field 'abracadabra' does not exist in 'air.CollectionView' value def")
+		resp.RequireError(t, "field 'abracadabra' does not exist in 'sys.CollectionView' value def")
 	})
 	t.Run("Should return error when field does not exist in key def", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from air.CollectionView where partKey = 1"}}`
+		body = `{"args":{"Query":"select * from sys.CollectionView where partKey = 1"}}`
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, "field 'partKey' does not exist in 'air.CollectionView' key def")
+		resp.RequireError(t, "field 'partKey' does not exist in 'sys.CollectionView' key def")
 	})
 }
 
