@@ -31,6 +31,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	provideStateFunc(cfg, appDefBuilder)
 
 	if rebuildCollection {
+		appDefBuilder.AddObject(QNameProjectorCollection)
 		cfg.AddAsyncProjectors(collectionProjectorFactory(appDefBuilder))
 	} else {
 		cfg.AddSyncProjectors(collectionProjectorFactory(appDefBuilder))
