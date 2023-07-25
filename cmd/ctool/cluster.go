@@ -22,7 +22,7 @@ import (
 	"github.com/untillpro/goutils/logger"
 )
 
-func newCluster() *clusterType {
+func newCluster() (*clusterType, error) {
 	var cluster = clusterType{
 		DesiredClusterVersion: version,
 		ActualClusterVersion:  "",
@@ -34,6 +34,16 @@ func newCluster() *clusterType {
 	dir, _ := os.Getwd()
 	cluster.configFileName = filepath.Join(dir, clusterConfFileName)
 	cluster.exists = cluster.loadFromJSON() == nil
+
+	vr := compareVersions(version, cluster.ActualClusterVersion)
+
+	if cluster.ActualClusterVersion == "" || cluster.ActualClusterVersion == version{
+		return &cluster, nil
+	}
+
+    vr := compareVersions(version, cluster.ActualClusterVersion)
+	if vr
+
 	return &cluster
 }
 
