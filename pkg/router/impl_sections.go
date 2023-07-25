@@ -1,0 +1,248 @@
+/*
+ * Copyright (c) 2020-present unTill Pro, Ltd.
+ * @author Denis Gribanov
+ */
+
+package router
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"strconv"
+	"strings"
+
+	"github.com/gorilla/mux"
+	ibus "github.com/untillpro/airs-ibus"
+	"github.com/valyala/bytebufferpool"
+	istructs "github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
+)
+
+func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) (res ibus.Request, ok bool) {
+	vars := mux.Vars(req)
+	wsidStr := vars[wsid]
+	wsidInt, err := strconv.ParseInt(wsidStr, parseInt64Base, parseInt64Bits)
+	if err != nil {
+		//  impossible because of regexp in a handler
+		// notest
+		panic(err)
+	}
+	appQNameStr := vars[appOwner] + "/" + vars[appName]
+	wsid := istructs.WSID(wsidInt)
+	if appQName, err := istructs.ParseAppQName(appQNameStr); err == nil {
+		if appWSAmount, ok := appsWSAmount[appQName]; ok {
+			baseWSID := wsid.BaseWSID()
+			if baseWSID < istructs.MaxPseudoBaseWSID {
+				wsid = coreutils.GetAppWSID(wsid, appWSAmount)
+			}
+		}
+	}
+	res = ibus.Request{
+		Method:   ibus.NameToHTTPMethod[reqMethod],
+		WSID:     int64(wsid),
+		Query:    req.URL.Query(),
+		Header:   req.Header,
+		AppQName: appQNameStr,
+		Host:     req.Host,
+	}
+	if req.Body != nil && req.Body != http.NoBody {
+		if res.Body, err = io.ReadAll(req.Body); err != nil {
+			http.Error(rw, "failed to read body", http.StatusInternalServerError)
+		}
+	}
+	return res, err == nil
+}
+
+func writeSectionedResponse(requestCtx context.Context, w http.ResponseWriter, sections <-chan ibus.ISection, secErr *error, onSendFailed func()) {
+	ok := true
+	var iSection ibus.ISection
+	defer func() {
+		if !ok {
+			onSendFailed()
+			// consume all pending sections or elems to avoid hanging on ibusnats side
+			// normally should one pending elem or section because ibusnats implementation
+			// will terminate on next elem or section because `onSendFailed()` actually closes the context
+			discardSection(iSection)
+			for iSection := range sections {
+				discardSection(iSection)
+			}
+		}
+	}()
+
+	sectionsOpened := false
+	sectionedResponseStarted := false
+
+	closer := ""
+	// ctx done -> sections will be closed by ibusnats implementation
+	for iSection = range sections {
+		// possible: ctx is done but on select {sections<-section, <-ctx.Done()} write to sections channel is triggered.
+		// ctx.Done() must have the priority
+		if requestCtx.Err() != nil {
+			ok = false
+			break
+		}
+
+		if !sectionedResponseStarted {
+			if ok = startSectionedResponse(w); !ok {
+				return
+			}
+			sectionedResponseStarted = true
+		}
+
+		if !sectionsOpened {
+			if ok = writeResponse(w, `"sections":[`); !ok {
+				return
+			}
+			closer = "]"
+			sectionsOpened = true
+		} else {
+			if ok = writeResponse(w, ","); !ok {
+				return
+			}
+		}
+		if ok = writeSection(w, iSection); !ok {
+			return
+		}
+		if onAfterSectionWrite != nil {
+			// happens in tests
+			onAfterSectionWrite(w)
+		}
+	}
+
+	if requestCtx.Err() != nil {
+		if onRequestCtxClosed != nil {
+			onRequestCtxClosed()
+		}
+		log.Println("client disconnected during sections sending")
+		return
+	}
+
+	if *secErr != nil {
+		if !sectionedResponseStarted {
+			if !startSectionedResponse(w) {
+				return
+			}
+		}
+		if sectionsOpened {
+			closer = "],"
+		}
+		var jsonableErr interface{ ToJSON() string }
+		if errors.As(*secErr, &jsonableErr) {
+			jsonErr := jsonableErr.ToJSON()
+			jsonErr = strings.TrimPrefix(jsonErr, "{")
+			jsonErr = strings.TrimSuffix(jsonErr, "}")
+			writeResponse(w, fmt.Sprintf(`%s%s}`, closer, jsonErr))
+		} else {
+			writeResponse(w, fmt.Sprintf(`%s"status":%d,"errorDescription":"%s"}`, closer, http.StatusInternalServerError, *secErr))
+		}
+	} else {
+		if sectionedResponseStarted {
+			writeResponse(w, fmt.Sprintf(`%s}`, closer))
+		}
+	}
+}
+
+func discardSection(iSection ibus.ISection) {
+	switch t := iSection.(type) {
+	case nil:
+	case ibus.IObjectSection:
+		t.Value()
+	case ibus.IMapSection:
+		for _, _, ok := t.Next(); ok; _, _, ok = t.Next() {
+		}
+	case ibus.IArraySection:
+		for _, ok := t.Next(); ok; _, ok = t.Next() {
+		}
+	}
+}
+
+func startSectionedResponse(w http.ResponseWriter) bool {
+	w.Header().Set(coreutils.ContentType, coreutils.ApplicationJSON)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+	return writeResponse(w, "{")
+}
+
+func writeSection(w http.ResponseWriter, isec ibus.ISection) bool {
+	switch sec := isec.(type) {
+	case ibus.IArraySection:
+		if !writeSectionHeader(w, sec) {
+			return false
+		}
+		isFirst := true
+		closer := "}"
+		// ctx.Done() is tracked by ibusnats implementation: writing to section elem channel -> read here, ctxdone -> close elem channel
+		for val, ok := sec.Next(); ok; val, ok = sec.Next() {
+			if isFirst {
+				if !writeResponse(w, fmt.Sprintf(`,"elements":[%s`, string(val))) {
+					return false
+				}
+				isFirst = false
+				closer = "]}"
+			} else {
+				if !writeResponse(w, fmt.Sprintf(`,%s`, string(val))) {
+					return false
+				}
+			}
+		}
+		if !writeResponse(w, closer) {
+			return false
+		}
+	case ibus.IObjectSection:
+		if !writeSectionHeader(w, sec) {
+			return false
+		}
+		val := sec.Value()
+		if !writeResponse(w, fmt.Sprintf(`,"elements":%s}`, string(val))) {
+			return false
+		}
+	case ibus.IMapSection:
+		if !writeSectionHeader(w, sec) {
+			return false
+		}
+		isFirst := true
+		closer := "}"
+		// ctx.Done() is tracked by ibusnats implementation: writing to section elem channel -> read here, ctxdone -> close elem channel
+		for name, val, ok := sec.Next(); ok; name, val, ok = sec.Next() {
+			if isFirst {
+				if !writeResponse(w, fmt.Sprintf(`,"elements":{%q:%s`, name, string(val))) {
+					return false
+				}
+				isFirst = false
+				closer = "}}"
+			} else {
+				if !writeResponse(w, fmt.Sprintf(`,%q:%s`, name, string(val))) {
+					return false
+				}
+			}
+		}
+		if !writeResponse(w, closer) {
+			return false
+		}
+	}
+	return true
+}
+
+func writeSectionHeader(w http.ResponseWriter, sec ibus.IDataSection) bool {
+	buf := bytebufferpool.Get()
+	defer bytebufferpool.Put(buf)
+	_, _ = buf.WriteString(fmt.Sprintf(`{"type":%q`, sec.Type())) // error impossible
+	if len(sec.Path()) > 0 {
+		_, _ = buf.WriteString(`,"path":[`) // error impossible
+		for i, p := range sec.Path() {
+			if i > 0 {
+				_, _ = buf.WriteString(",") // error impossible
+			}
+			_, _ = buf.WriteString(fmt.Sprintf(`%q`, p)) // error impossible
+		}
+		_, _ = buf.WriteString("]") // error impossible
+	}
+	if !writeResponse(w, string(buf.Bytes())) {
+		return false
+	}
+	return true
+}
