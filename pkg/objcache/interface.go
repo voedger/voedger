@@ -7,9 +7,18 @@ package objcache
 
 // Objects cache
 type ICache[K comparable, V any] interface {
-	// Gets value by key. Returns true and value if key exists, false and nil overwise
+	// Gets value by key. Returns true and value if key exists, false and
+	// nil overwise
+	//
+	// If value supports IReleasable case, then
+	//  - calls value AddRef()
+	//  - client should call FreeRef() after using value
 	Get(K) (value V, ok bool)
 
-	// Puts value with key
+	// Puts value into cache.
+	//
+	// If value supports IReleasable case, then
+	//  - calls value AddRef()
+	//  - then the value will be evicted from the cache, FreeRef() will be called
 	Put(K, V)
 }

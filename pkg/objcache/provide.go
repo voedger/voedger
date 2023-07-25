@@ -5,43 +5,19 @@
 
 package objcache
 
-import (
-	"fmt"
-
-	"github.com/voedger/voedger/pkg/objcache/internal/floatdrop"
-	"github.com/voedger/voedger/pkg/objcache/internal/hashicorp"
-	"github.com/voedger/voedger/pkg/objcache/internal/imcache"
-	"github.com/voedger/voedger/pkg/objcache/internal/theine"
-)
+import lru "github.com/hashicorp/golang-lru/v2"
 
 // Creates and return new LRU object cache with K key type and V value type.
 //
 // Maximum cache size is limited by size param. Optional onEvicted cb is called then some value evicted from cache.
-func New[K comparable, V any](size int, onEvicted func(K, V)) ICache[K, V] {
-	return hashicorp.New[K, V](size, onEvicted)
-}
-
-type CacheProvider uint8
-
-const (
-	Hashicorp CacheProvider = iota
-	Theine
-	Floatdrop
-	Imcache
-
-	CacheProvider_Count
-)
-
-func NewProvider[K comparable, V any](p CacheProvider, size int, onEvicted func(K, V)) ICache[K, V] {
-	switch p {
-	case Hashicorp:
-		return hashicorp.New[K, V](size, onEvicted)
-	case Theine:
-		return theine.New[K, V](size, onEvicted)
-	case Floatdrop:
-		return floatdrop.New[K, V](size, onEvicted)
-	case Imcache:
-		return imcache.New[K, V](size, onEvicted)
+func New[K comparable, V any](size int) ICache[K, V] {
+	var err error
+	c := &cache[K, V]{}
+	c.lru, err = lru.NewWithEvict[K, V](size, c.evicted)
+	if err != nil {
+		// notest
+		panic(err)
 	}
-	panic(fmt.Errorf("unknown cache provider specified %v", p))
+
+	return c
 }
