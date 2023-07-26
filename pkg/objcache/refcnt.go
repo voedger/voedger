@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 )
 
-// Client cache values can include this structure to automate value references
-// and value releasing.
+// Client cache values can include RefCounter to automate value references
+// and value freeing.
 //
 // # Automation:
 //  1. Client cache value should has Free() method.
@@ -36,26 +36,26 @@ type RefCounter struct {
 //
 // # Panics
 // - if reference count is zero and item value is about released
-func (i *RefCounter) AddRef() {
-	if i.tryAddRef() {
+func (rc *RefCounter) AddRef() {
+	if rc.tryAddRef() {
 		return
 	}
 	panic(ErrRefCountIsZero)
 }
 
 // Returns current reference count
-func (i *RefCounter) RefCount() int {
-	return int(i.count.Load() + 1)
+func (rc *RefCounter) RefCount() int {
+	return int(rc.count.Load() + 1)
 }
 
-// Decrease reference count by 1. If counter decreases to zero then calls
+// Decreases reference count by 1. If counter decreases to zero, then calls
 // item value Free() method
-func (i *RefCounter) Release() {
-	for cnt := i.count.Load(); cnt >= 0; cnt = i.count.Load() {
-		if new := cnt - 1; i.count.CompareAndSwap(cnt, new) {
+func (rc *RefCounter) Release() {
+	for cnt := rc.count.Load(); cnt >= 0; cnt = rc.count.Load() {
+		if new := cnt - 1; rc.count.CompareAndSwap(cnt, new) {
 			if new == -1 {
-				if i.Value != nil {
-					i.Value.Free()
+				if rc.Value != nil {
+					rc.Value.Free()
 				}
 			}
 			break
@@ -63,11 +63,11 @@ func (i *RefCounter) Release() {
 	}
 }
 
-// Tries to increases reference count by 1. Return false if reference count is zero
+// Tries to increase reference count by 1. Return false if reference count is zero
 // and item value is about released
-func (i *RefCounter) tryAddRef() bool {
-	for cnt := i.count.Load(); cnt >= 0; cnt = i.count.Load() {
-		if new := cnt + 1; i.count.CompareAndSwap(cnt, new) {
+func (rc *RefCounter) tryAddRef() bool {
+	for cnt := rc.count.Load(); cnt >= 0; cnt = rc.count.Load() {
+		if new := cnt + 1; rc.count.CompareAndSwap(cnt, new) {
 			return true
 		}
 	}

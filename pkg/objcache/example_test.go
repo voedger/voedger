@@ -44,23 +44,25 @@ func Example() {
 		// reference count for new value is one
 		fmt.Printf("new value      : refs: %d, data: %v\n", v.RefCount(), v.data)
 
-		// put value to cache increase reference count
+		// put value to cache increases reference count
 		cache.Put(1, v)
 		fmt.Printf("after put      : refs: %d, data: %v\n", v.RefCount(), v.data)
 
 		// cache.Put(1, v) — DO NOT PUT SAME VALUE TWICE! this increases ref count and avoids freeing.
 
-		// release decrease reference count
+		// release decreases reference count
 		v.Release()
 		fmt.Printf("after release 1: refs: %d, data: %v\n", v.RefCount(), v.data)
 	}
 
 	// get value from cache
 	{
+		// get value from cache increases reference count
 		v, ok := cache.Get(1)
-		fmt.Println("founded        :", ok)
+		fmt.Printf("founded        : %v\n", ok)
 		fmt.Printf("after get      : refs: %d, data: %v\n", v.RefCount(), v.data)
 
+		// release decreases reference count
 		v.Release()
 		fmt.Printf("after release 2: refs: %d, data: %v\n", v.RefCount(), v.data)
 	}
