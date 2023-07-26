@@ -26,7 +26,7 @@ func (s *value) Free() {
 }
 
 // creates new value with RefCounter
-func newValue(dataSize int) *value {
+func newValue() *value {
 	v := &value{}
 	v.RefCounter.Value = v
 	v.data = "allocated"
@@ -37,7 +37,7 @@ func Example() {
 	// Create cache with size 1 to demonstrate cache value eviction
 	cache := objcache.New[int64, *value](1)
 
-	v := newValue(1024)
+	v := newValue()
 
 	// put value into cache
 	{
@@ -69,7 +69,7 @@ func Example() {
 
 	// evict value from cache
 	{
-		v2 := newValue(1024)
+		v2 := newValue()
 		cache.Put(2, v2)
 	}
 
