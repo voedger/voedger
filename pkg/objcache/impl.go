@@ -13,7 +13,7 @@ import (
 )
 
 // internally used interface
-type automated interface {
+type refCounter interface {
 	tryAddRef() bool
 	Release()
 }
@@ -26,7 +26,7 @@ type cache[K comparable, V any] struct {
 func (c *cache[K, V]) Get(key K) (value V, ok bool) {
 	value, ok = c.lru.Get(key)
 	if ok {
-		if ref, auto := any(value).(automated); auto {
+		if ref, auto := any(value).(refCounter); auto {
 			ok = ref.tryAddRef()
 		}
 	}
@@ -37,7 +37,7 @@ func (c *cache[K, V]) Put(key K, value V) {
 	// The problem of the twice put (value won’t be freed) is solved by convention (*DO NOT PUT SAME VALUE TWICE*)
 	// if old, exists := c.lru.Peek(key); exists && (any(old) == any(value)) { return }
 
-	if ref, auto := any(value).(automated); auto {
+	if ref, auto := any(value).(refCounter); auto {
 		if !ref.tryAddRef() {
 			// notest: looks like value right now released
 			return
@@ -47,7 +47,7 @@ func (c *cache[K, V]) Put(key K, value V) {
 }
 
 func (c *cache[K, V]) evicted(_ K, value V) {
-	if ref, ok := any(value).(automated); ok {
+	if ref, ok := any(value).(refCounter); ok {
 		ref.Release()
 	}
 }
