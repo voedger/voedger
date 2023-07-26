@@ -30,8 +30,8 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "UNLOGGED", Pattern: `UNLOGGED`},
 		{Name: "EXTENSIONENGINE", Pattern: `EXTENSION[ \r\n\t]+ENGINE`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
-		{Name: "String", Pattern: `("(\\"|[^"])*")|('(\\'|[^'])*')`},
-		{Name: "Ident", Pattern: `[a-zA-Z_]\w*`},
+		{Name: "String", Pattern: `('(\\'|[^'])*')`},
+		{Name: "Ident", Pattern: `([a-zA-Z_]\w*)|("[a-zA-Z_]\w*")`},
 		{Name: "Whitespace", Pattern: `[ \r\n\t]+`},
 	})
 
@@ -94,7 +94,7 @@ func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST)
 	for i := 1; i < len(asts); i++ {
 		f := asts[i]
 		if f.Ast.Package != headAst.Package {
-			return nil, ErrUnexpectedSchema(f.FileName, f.Ast.Package, headAst.Package)
+			return nil, ErrUnexpectedSchema(f.FileName, string(f.Ast.Package), string(headAst.Package))
 		}
 		mergeSchemas(f.Ast, headAst)
 	}

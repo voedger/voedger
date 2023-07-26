@@ -2,8 +2,8 @@
 -- schema consists of few schema files
 SCHEMA main;
 
-IMPORT SCHEMA "github.com/untillpro/untill";
-IMPORT SCHEMA "github.com/untillpro/airsbp" AS air;
+IMPORT SCHEMA 'github.com/untillpro/untill';
+IMPORT SCHEMA 'github.com/untillpro/airsbp' AS air;
 
 -- Declare tag to assign it later to definition(s)
 TAG BackofficeTag;
@@ -17,6 +17,9 @@ TABLE NestedTable INHERITS CRecord (
 
 TABLE ScreenGroup INHERITS CDoc();
 
+-- Optional quotes for identifiers
+TABLE "TABLE" INHERITS CDoc();
+
 -- TABLE ... INHERITS - declares the inheritance from table. PROJECTORS from the base table are not inherted.
 TABLE TablePlan INHERITS CDoc (
     FState int,
@@ -25,12 +28,13 @@ TABLE TablePlan INHERITS CDoc (
     Expiration timestamp,
     VerifiableField text NOT NULL VERIFIABLE, -- Verifiable field
     Int1 int DEFAULT 1 CHECK(Int1 >= 1 AND Int2 < 10000),  -- Expressions evaluating to TRUE or UNKNOWN succeed.
-    Text1 text DEFAULT "a",
+    Text1 text DEFAULT 'a',
     Int2 int DEFAULT NEXTVAL('sequence'),
+    "int" int, -- optional quotes
     ScreenGroupRef ref(ScreenGroup), 
     AnyTableRef ref,
     FewTablesRef ref(ScreenGroup, TablePlan) NOT NULL,
-    CheckedField text CHECK "^[0-9]{8}$", -- Field validated by regexp
+    CheckedField text CHECK '^[0-9]{8}$', -- Field validated by regexp
     CHECK (ValidateRow(this)), -- Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
     CONSTRAINT StateChecker CHECK (ValidateFState(FState)), -- Named CHECK table constraint
     -- UNIQUE (FState, Name), -- unnamed UNIQUE table constraint
@@ -41,7 +45,7 @@ TABLE TablePlan INHERITS CDoc (
     ),
     items NestedTable,
     ExcludedTableItems TablePlanItem
-) WITH Comment="Backoffice Table", Tags=(BackofficeTag); -- Optional comment and tags
+) WITH Comment='Backoffice Table', Tags=(BackofficeTag); -- Optional comment and tags
 
 
 -- Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC
@@ -66,7 +70,7 @@ EXTENSION ENGINE WASM (
 WORKSPACE MyWorkspace (
     DESCRIPTOR( -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
         air.TypeWithName,
-        Country text CHECK "^[A-Za-z]{2}$",
+        Country text CHECK '^[A-Za-z]{2}$',
         Description text
     );
 
@@ -155,7 +159,7 @@ WORKSPACE MyWorkspace (
 
         -- Qieries can only be declared in workspaces
         QUERY Query1 RETURNS void;
-        QUERY _Query1() RETURNS air.Order WITH Comment="A comment";
+        QUERY _Query1() RETURNS air.Order WITH Comment='A comment';
         
         -- Query which can return any value
         QUERY Query2(air.Order) RETURNS ANY;
