@@ -253,10 +253,10 @@ func Test_Expressions(t *testing.T) {
 	_, err := ParseFile("file1.sql", `SCHEMA test;
 	TABLE MyTable(
 		Int1 text DEFAULT 1 CHECK(Int1 > Int2),
-		Int1 int DEFAULT 1 CHECK(Text != "asd"),
+		Int1 int DEFAULT 1 CHECK(Text != 'asd'),
 		Int1 int DEFAULT 1 CHECK(Int2 > -5),
-		Int1 int DEFAULT 1 CHECK(TextField > "asd" AND (SomeFloat/3.2)*4 != 5.003),
-		Int1 int DEFAULT 1 CHECK(SomeFunc("a", TextField) AND BoolField=FALSE),
+		Int1 int DEFAULT 1 CHECK(TextField > 'asd' AND (SomeFloat/3.2)*4 != 5.003),
+		Int1 int DEFAULT 1 CHECK(SomeFunc('a', TextField) AND BoolField=FALSE),
 
 		CHECK(MyRowValidator(this))
 	)
@@ -408,8 +408,8 @@ func Test_Imports(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("example.sql", `SCHEMA pkg1;
-	IMPORT SCHEMA "github.com/untillpro/airsbp3/pkg2";
-	IMPORT SCHEMA "github.com/untillpro/airsbp3/pkg3" AS air;
+	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2';
+	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg3' AS air;
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
     		COMMAND Orders WITH Tags=(pkg2.SomeTag);
