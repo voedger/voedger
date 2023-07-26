@@ -37,6 +37,7 @@ require (
 	github.com/google/flatbuffers v1.12.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.4
 	github.com/heeus/core-logger v0.0.0-20211015110533-1499b5b04842 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/juju/errors v0.0.0-20170703010042-c7d06af17c68 // indirect
@@ -55,7 +56,7 @@ require (
 	github.com/untillpro/godif v0.18.0 // indirect
 	github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c // indirect
 	golang.org/x/net v0.9.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
