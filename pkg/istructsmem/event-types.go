@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	"github.com/voedger/voedger/pkg/objcache"
 )
 
 type (
@@ -54,6 +55,9 @@ type eventType struct {
 	buildErr eventErrorType
 
 	buffer *bytespool.ByteBuffer
+
+	// cache supports
+	objcache.RefCounter
 }
 
 // Returns new empty event
@@ -65,6 +69,7 @@ func newEvent(appCfg *AppConfigType) *eventType {
 		cud:       makeCUD(appCfg),
 		buildErr:  makeEventError(),
 	}
+	event.RefCounter.Value = event
 	return event
 }
 
@@ -271,6 +276,17 @@ func (ev *eventType) Error() istructs.IEventError {
 	return &ev.buildErr
 }
 
+// objcache.Free
+func (ev *eventType) Free() {
+	ev.argObject.release()
+	ev.argUnlObj.release()
+	ev.cud.release()
+	if ev.buffer != nil {
+		bytespool.Put(ev.buffer)
+		ev.buffer = nil
+	}
+}
+
 // istructs.IDbEvent.QName
 func (ev *eventType) QName() appdef.QName {
 	qName := istructs.QNameForError
@@ -287,13 +303,8 @@ func (ev *eventType) RegisteredAt() istructs.UnixMilli {
 
 // istructs.IPLogEvent.Release and IWLogEvent.Release
 func (ev *eventType) Release() {
-	ev.argObject.release()
-	ev.argUnlObj.release()
-	ev.cud.release()
-	if ev.buffer != nil {
-		bytespool.Put(ev.buffer)
-		ev.buffer = nil
-	}
+	// Free() will called through a RefCounter.Release() then reference counter decrease zero
+	ev.RefCounter.Release()
 }
 
 // istructs.IAbstractEvent.Synced

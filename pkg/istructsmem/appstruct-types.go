@@ -49,6 +49,9 @@ type AppConfigType struct {
 	AppDef        appdef.IAppDef
 	Resources     Resources
 
+	// Application configuration parameters
+	Params AppConfigParams
+
 	dynoSchemes dynobuf.DynoBufSchemes
 	validators  *validators
 
@@ -67,7 +70,10 @@ type AppConfigType struct {
 }
 
 func newAppConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
-	cfg := AppConfigType{Name: appName}
+	cfg := AppConfigType{
+		Name:   appName,
+		Params: makeAppConfigParams(),
+	}
 
 	qNameID, ok := istructs.ClusterApps[appName]
 	if !ok {
@@ -163,4 +169,16 @@ func (cfg *AppConfigType) AddCUDValidators(cudValidators ...istructs.CUDValidato
 
 func (cfg *AppConfigType) AddEventValidators(eventValidators ...istructs.EventValidator) {
 	cfg.eventValidators = append(cfg.eventValidators, eventValidators...)
+}
+
+// Application configuration parameters
+type AppConfigParams struct {
+	// PLog events cache size
+	PLogEventCacheSize int
+}
+
+func makeAppConfigParams() AppConfigParams {
+	return AppConfigParams{
+		PLogEventCacheSize: DefaultPLogEventCacheSize, // 10’000
+	}
 }
