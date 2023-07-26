@@ -13,6 +13,8 @@ import (
 // and value releasing.
 //
 // # Automation:
+//  1. Client cache value should has Release() method.
+//  2. Item struct should be included into client value and Item.Value field must be assigned to client value.
 //
 // Cache increments reference counter then you put value into cache and
 // then you get value from it. So, you do not need to call AddRef() manually.
@@ -21,16 +23,16 @@ import (
 // decrement reference counter. If value evicted from cache, then cache calls
 // Release() too. When reference counter decreases to zero, Released()
 // method of value will be called.
-type Ref struct {
+type Item struct {
 	count atomic.Int32
 	Value interface{ Released() }
 }
 
 // Increases reference count by 1. Return false if reference count is zero
-// and value is about released
-func (r *Ref) AddRef() bool {
-	for ref := r.count.Load(); ref >= 0; ref = r.count.Load() {
-		if new := ref + 1; r.count.CompareAndSwap(ref, new) {
+// and item value is about released
+func (i *Item) AddRef() bool {
+	for cnt := i.count.Load(); cnt >= 0; cnt = i.count.Load() {
+		if new := cnt + 1; i.count.CompareAndSwap(cnt, new) {
 			return true
 		}
 	}
@@ -39,18 +41,18 @@ func (r *Ref) AddRef() bool {
 }
 
 // Returns current reference count
-func (r *Ref) RefCount() int {
-	return int(r.count.Load() + 1)
+func (i *Item) RefCount() int {
+	return int(i.count.Load() + 1)
 }
 
 // Decrease reference count by 1. If counter decreases to zero then calls
-// value Released() method
-func (r *Ref) Release() {
-	for ref := r.count.Load(); ref >= 0; ref = r.count.Load() {
-		if new := ref - 1; r.count.CompareAndSwap(ref, new) {
+// item value Released() method
+func (i *Item) Release() {
+	for cnt := i.count.Load(); cnt >= 0; cnt = i.count.Load() {
+		if new := cnt - 1; i.count.CompareAndSwap(cnt, new) {
 			if new == -1 {
-				if r.Value != nil {
-					r.Value.Released()
+				if i.Value != nil {
+					i.Value.Released()
 				}
 			}
 			break

@@ -13,7 +13,7 @@ import (
 
 // value with Ref
 type value struct {
-	objcache.Ref
+	objcache.Item
 	data string
 }
 
@@ -25,12 +25,12 @@ func (s *value) Released() {
 // creates new value with Ref
 func newValue(dataSize int) *value {
 	v := &value{}
-	v.Value = v
+	v.Item.Value = v
 	v.data = "assigned"
 	return v
 }
 
-func ExampleRef() {
+func ExampleItem() {
 	cache := objcache.New[int64, *value](1)
 
 	v := newValue(1024)
@@ -52,7 +52,7 @@ func ExampleRef() {
 	// get value from cache
 	{
 		v, ok := cache.Get(1)
-		fmt.Println(ok)
+		fmt.Println("founded        :", ok)
 		fmt.Printf("after get      : refs: %d, data: %v\n", v.RefCount(), v.data)
 
 		v.Release()
@@ -71,7 +71,7 @@ func ExampleRef() {
 	// new value      : refs: 1, data: assigned
 	// after put      : refs: 2, data: assigned
 	// after release 1: refs: 1, data: assigned
-	// true
+	// founded        : true
 	// after get      : refs: 2, data: assigned
 	// after release 2: refs: 1, data: assigned
 	// after evicted  : refs: 0, data: released
