@@ -2,14 +2,12 @@
 
 [![codecov](https://codecov.io/gh/voedger/voedger/branch/main/graph/badge.svg?token=1O1pA6zdYs)](https://codecov.io/gh/voedger/voedger/objcache)
 
+Reference count cache with values release automation.
 
 ## Motivation
 
 [performance: istructsmem: PLog Events cache](https://github.com/voedger/voedger/issues/455)
-## Basic usage
 
-```golang
+## Example
 
-test.TechnologyCompatibilityKit(t, objcache.New[test.IOffset, test.IEvent])
-
-```
+[example](example_test.go)
