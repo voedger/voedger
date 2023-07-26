@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -248,7 +249,7 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	require.NoError(processor.SendSync(&plogEvent{wsid: 1002}))
 	err := processor.SendSync(&plogEvent{wsid: 1099})
 	require.NotNil(err)
-	require.Equal("[actualizer/doSync] [ErrorHandler/doSync] [SyncActualizer/doSync] [Projector/doSync] test err", err.Error())
+	require.Equal("test err", err.Error())
 
 	// now read the projection values in workspaces
 	require.Equal(int32(2), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))

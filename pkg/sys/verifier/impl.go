@@ -57,7 +57,7 @@ func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp ist
 		field := args.ArgumentObject.AsString(field_Field)
 		email := args.ArgumentObject.AsString(Field_Email)
 		forRegistry := args.ArgumentObject.AsBool(field_ForRegistry)
-		language := args.ArgumentObject.AsString(field_Language)
+		lng := args.ArgumentObject.AsString(field_Language)
 
 		as, err := asp.AppStructs(appQName)
 		if err != nil {
@@ -86,7 +86,7 @@ func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp ist
 		}
 
 		// c.sys.SendEmailVerificationCode
-		body := fmt.Sprintf(`{"args":{"VerificationCode":"%s","Email":"%s","Reason":"%s","Language":"%s"}}`, verificationCode, email, verifyEmailReason, language)
+		body := fmt.Sprintf(`{"args":{"VerificationCode":"%s","Email":"%s","Reason":"%s","Language":"%s"}}`, verificationCode, email, verifyEmailReason, lng)
 		if _, err = coreutils.FederationFunc(federation.URL(), fmt.Sprintf("api/%s/%d/c.sys.SendEmailVerificationCode", appQName, args.Workspace), body,
 			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(systemPrincipalToken)); err != nil {
 			return fmt.Errorf("c.sys.SendEmailVerificationCode failed: %w", err)
@@ -108,7 +108,7 @@ func sendEmailVerificationCodeProjector(federation coreutils.IFederation, smtpCf
 		kb.PutString(state.Field_Subject, EmailSubject)
 		kb.PutString(state.Field_To, event.ArgumentObject().AsString(Field_Email))
 		kb.PutString(state.Field_Body, getVerificationEmailBody(federation, event.ArgumentObject().AsString(field_VerificationCode), reason, language.Make(lng), translationsCatalog))
-		kb.PutString(state.Field_From, EmailFrom)
+		kb.PutString(state.Field_From, smtpCfg.GetFrom())
 		kb.PutString(state.Field_Host, smtpCfg.Host)
 		kb.PutInt32(state.Field_Port, smtpCfg.Port)
 		kb.PutString(state.Field_Username, smtpCfg.Username)
@@ -216,7 +216,7 @@ func provideCmdSendEmailVerificationCode(cfg *istructsmem.AppConfigType, appDefB
 
 func getVerificationEmailBody(federation coreutils.IFederation, verificationCode string, reason string, lng language.Tag, ctlg catalog.Catalog) string {
 	text1 := message.NewPrinter(lng, message.Catalog(ctlg)).Sprintf(`Here is your verification code`)
-	text2 := message.NewPrinter(lng, message.Catalog(ctlg)).Sprintf(`Please, enter this code on the`)
+	text2 := message.NewPrinter(lng, message.Catalog(ctlg)).Sprintf(`Please, enter this code on`)
 	text3 := message.NewPrinter(lng, message.Catalog(ctlg)).Sprintf(reason)
 	return fmt.Sprintf(`
 <div style="font-family: Arial, Helvetica, sans-serif;">

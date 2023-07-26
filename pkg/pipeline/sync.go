@@ -8,7 +8,6 @@
 
 package pipeline
 
-
 import (
 	"fmt"
 )
@@ -21,7 +20,7 @@ func puller_sync(wo *WiredOperator) {
 		if err, ok := work.(IErrorPipeline); ok {
 			if catch, ok := wo.Operator.(ICatch); ok {
 				if newerr := catch.OnErr(err, err.GetWork(), wo.wctx); newerr != nil {
-					wo.Stdout <- wo.NewError(fmt.Errorf("nested error '%w' while handling '%s'", newerr, err.Error()), err.GetWork(), placeCatchOnErr)
+					wo.Stdout <- wo.NewError(fmt.Errorf("nested error '%w' while handling '%w'", newerr, err), err.GetWork(), placeCatchOnErr)
 					continue
 				}
 			} else {

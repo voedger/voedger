@@ -72,7 +72,6 @@ type RootStatement struct {
 
 	// Also allowed in root
 	Role      *RoleStmt          `parser:"| @@"`
-	Comment   *CommentStmt       `parser:"| @@"`
 	Tag       *TagStmt           `parser:"| @@"`
 	ExtEngine *RootExtEngineStmt `parser:"| @@"`
 	Workspace *WorkspaceStmt     `parser:"| @@"`
@@ -91,7 +90,6 @@ type WorkspaceStatement struct {
 
 	// Also allowed in workspace
 	Role      *RoleStmt               `parser:"| @@"`
-	Comment   *CommentStmt            `parser:"| @@"`
 	Tag       *TagStmt                `parser:"| @@"`
 	ExtEngine *WorkspaceExtEngineStmt `parser:"| @@"`
 	Workspace *WorkspaceStmt          `parser:"| @@"`
@@ -158,7 +156,7 @@ type WorkspaceStmt struct {
 	Abstract   bool                 `parser:"@'ABSTRACT'?"`
 	Pool       bool                 `parser:"@('POOL' 'OF')?"`
 	Name       string               `parser:"'WORKSPACE' @Ident "`
-	Of         []DefQName           `parser:"('OF' @@ (',' @@)*)?"`
+	Inherits   *DefQName            `parser:"('INHERITS' @@)?"`
 	A          int                  `parser:"'('"`
 	Descriptor *WsDescriptorStmt    `parser:"('DESCRIPTOR' @@)?"`
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
@@ -178,7 +176,6 @@ func (s *WorkspaceStmt) Iterate(callback func(stmt interface{})) {
 type TypeStmt struct {
 	Statement
 	Name  string          `parser:"'TYPE' @Ident "`
-	Of    []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
 	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
 }
 
@@ -186,7 +183,6 @@ func (s TypeStmt) GetName() string { return s.Name }
 
 type WsDescriptorStmt struct {
 	Statement
-	Of    []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
 	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
 	_     int             `parser:"';'"`
 }
@@ -225,7 +221,7 @@ func (q TypeQName) String() (s string) {
 
 type Statement struct {
 	Pos      lexer.Position
-	Comments []string `parser:"@Comment*"`
+	Comments []string `parser:"@PreStmtComment*"`
 }
 
 func (s *Statement) GetPos() *lexer.Position {
@@ -286,14 +282,6 @@ type TagStmt struct {
 }
 
 func (s TagStmt) GetName() string { return s.Name }
-
-type CommentStmt struct {
-	Statement
-	Name  string `parser:"'COMMENT' @Ident"`
-	Value string `parser:"@String"`
-}
-
-func (s CommentStmt) GetName() string { return s.Name }
 
 type UseTableStmt struct {
 	Statement
@@ -384,15 +372,10 @@ type CommandStmt struct {
 func (s *CommandStmt) GetName() string            { return s.Name }
 func (s *CommandStmt) SetEngineType(e EngineType) { s.Engine = e }
 
-type WithCommentItem struct {
-	Inplace string    `parser:"( @String )"`
-	Ref     *DefQName `parser:"| @@"`
-}
-
 type WithItem struct {
-	Comment *WithCommentItem `parser:"('Comment' '=' @@)"`
-	Tags    []DefQName       `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
-	Rate    *DefQName        `parser:"| ('Rate' '=' @@)"`
+	Comment *string    `parser:"('Comment' '=' @String)"`
+	Tags    []DefQName `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
+	Rate    *DefQName  `parser:"| ('Rate' '=' @@)"`
 }
 
 type QueryStmt struct {
@@ -426,7 +409,6 @@ type TableStmt struct {
 	Statement
 	Name         string          `parser:"'TABLE' @Ident"`
 	Inherits     *DefQName       `parser:"('INHERITS' @@)?"`
-	Of           []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
 	Items        []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	With         []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 	tableDefKind appdef.DefKind  // filled on the analysis stage
@@ -441,11 +423,17 @@ type NestedTableStmt struct {
 	Table TableStmt `parser:"@@"`
 }
 
+type FieldSetItem struct {
+	Pos  lexer.Position
+	Type DefQName `parser:"@@"`
+}
+
 type TableItemExpr struct {
 	NestedTable *NestedTableStmt `parser:"@@"`
 	Constraint  *TableConstraint `parser:"| @@"`
 	RefField    *RefFieldExpr    `parser:"| @@"`
 	Field       *FieldExpr       `parser:"| @@"`
+	FieldSet    *FieldSetItem    `parser:"| @@"`
 }
 
 type TableConstraint struct {

@@ -89,7 +89,6 @@ const (
 	EmailTemplatePlaceholder_Roles            = "${Roles}"
 	EmailTemplatePlaceholder_WSName           = "${WSName}"
 	EmailTemplatePlaceholder_Email            = "${Email}"
-	EmailFrom                                 = "info@air.untill.com"
 )
 
 var inviteValidStates = map[appdef.QName]map[int32]bool{
