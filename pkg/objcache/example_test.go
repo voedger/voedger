@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2023-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 package objcache_test
@@ -11,9 +14,9 @@ import (
 	"github.com/voedger/voedger/pkg/objcache"
 )
 
-// value with Ref
+// value with RefCounter
 type value struct {
-	objcache.Item
+	objcache.RefCounter
 	data string
 }
 
@@ -22,10 +25,10 @@ func (s *value) Free() {
 	s.data = "freed"
 }
 
-// creates new value with Ref
+// creates new value with RefCounter
 func newValue(dataSize int) *value {
 	v := &value{}
-	v.Item.Value = v
+	v.RefCounter.Value = v
 	v.data = "allocated"
 	return v
 }
@@ -44,6 +47,8 @@ func Example() {
 		// put value to cache increase reference count
 		cache.Put(1, v)
 		fmt.Printf("after put      : refs: %d, data: %v\n", v.RefCount(), v.data)
+
+		// cache.Put(1, v) — DO NOT PUT SAME VALUE TWICE! this increases ref count and avoids freeing.
 
 		// release decrease reference count
 		v.Release()
