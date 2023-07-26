@@ -28,7 +28,7 @@ const (
 	codec_LastVersion = codec_RDB_1
 )
 
-// maskString is charaster to mask values in string cell, used for obfuscate unlogged command arguments data
+// maskString is character to mask values in string cell, used for obfuscate unlogged command arguments data
 const maskString = "*"
 
 // constants to split IDs to two-parts key — partition key and clustering columns

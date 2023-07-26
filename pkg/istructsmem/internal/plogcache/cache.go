@@ -20,20 +20,26 @@ type Cache struct {
 }
 
 func New(size int) *Cache {
-	cache := &Cache{
-		cache: objcache.New[plogEvKey, istructs.IPLogEvent](size),
+	cache := &Cache{}
+	if size > 0 {
+		cache.cache = objcache.New[plogEvKey, istructs.IPLogEvent](size)
 	}
 	return cache
 }
 
 // Gets PLOG event on the key from the specified partition and offset
 func (c *Cache) Get(partition istructs.PartitionID, offset istructs.Offset) (e istructs.IPLogEvent, ok bool) {
-	return c.cache.Get(plogEvKey{partition, offset})
+	if c.cache != nil {
+		return c.cache.Get(plogEvKey{partition, offset})
+	}
+	return nil, false
 }
 
 // Puts the specified PLOG event on the key from the specified partition and offset
 func (c *Cache) Put(partition istructs.PartitionID, offset istructs.Offset, event istructs.IPLogEvent) {
-	c.cache.Put(plogEvKey{partition, offset}, event)
+	if c.cache != nil {
+		c.cache.Put(plogEvKey{partition, offset}, event)
+	}
 }
 
 type plogEvKey struct {

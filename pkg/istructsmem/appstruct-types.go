@@ -173,7 +173,10 @@ func (cfg *AppConfigType) AddEventValidators(eventValidators ...istructs.EventVa
 
 // Application configuration parameters
 type AppConfigParams struct {
-	// PLog events cache size
+	// PLog events cache size.
+	//
+	// Default value is DefaultPLogEventCacheSize (10’000 events).
+	// Zero (0) means that cache will not be used
 	PLogEventCacheSize int
 }
 
