@@ -34,12 +34,9 @@ func (c *cache[K, V]) Get(key K) (value V, ok bool) {
 }
 
 func (c *cache[K, V]) Put(key K, value V) {
-	// TODO: twice put problem
-	// if old, exists := c.lru.Peek(key); exists {
-	// 	if any(old) == any(value) {
-	// 		return
-	// 	}
-	// }
+	// The problem of the twice put (value won’t be freed) is solved by convention (*DO NOT PUT SAME VALUE TWICE*)
+	// if old, exists := c.lru.Peek(key); exists && (any(old) == any(value)) { return }
+
 	if ref, auto := any(value).(automated); auto {
 		if !ref.tryAddRef() {
 			// notest: looks like value right now released
