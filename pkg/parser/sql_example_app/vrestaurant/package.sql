@@ -1,15 +1,16 @@
 SCHEMA vrestaurant;
 
+NULLABILITY DEFAULT IS NOT NULL -- TODO, smm??
 
 -- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
-TABLE BOEntity INHERITS CDoc( 
-    Name text, 
-    Number int
+TABLE BOEntity INHERITS CDoc( -- TODO: ABSTRACT
+    Name text NOT NULL, -- TODO NOT NULL everywhere
+    Number int  NOT NULL -- Number sequence(1) ??? smm
 ) WITH Tags=(BackofficeTag);
 
 -- TABLE Person : is an Abstract data struct for Waiters, Clients, Adminitsrators, Manager
-TABLE Person INHERITS BOEntity ( 
-    Address text,
+TABLE Person INHERITS BOEntity ( --TODO:  ABSTRACT
+    Address text, --TODO: get rid of text, use varchar, varchar(30) by default? smm
     Email text,
     Phone text,
     Picture blob
@@ -20,7 +21,8 @@ WORKSPACE Restaurant (
 	    Address text,
 	    Currency text,
 	    Phone text,
-	    OpenTimeStamp timestamp,
+	    OpenHours    int,
+	    OpenMinutes  int,
 	    OwnerName text
     );
 
