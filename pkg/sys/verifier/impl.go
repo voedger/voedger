@@ -105,7 +105,8 @@ func sendEmailVerificationCodeProjector(federation coreutils.IFederation, smtpCf
 			return
 		}
 		reason := event.ArgumentObject().AsString(field_Reason)
-		kb.PutString(state.Field_Subject, EmailSubject)
+		translatedEmailSubject := message.NewPrinter(language.Make(lng), message.Catalog(translationsCatalog)).Sprintf(EmailSubject)
+		kb.PutString(state.Field_Subject, translatedEmailSubject)
 		kb.PutString(state.Field_To, event.ArgumentObject().AsString(Field_Email))
 		kb.PutString(state.Field_Body, getVerificationEmailBody(federation, event.ArgumentObject().AsString(field_VerificationCode), reason, language.Make(lng), translationsCatalog))
 		kb.PutString(state.Field_From, smtpCfg.GetFrom())
