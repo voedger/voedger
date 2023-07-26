@@ -17,20 +17,21 @@ type value struct {
 	data string
 }
 
-// releases value resource data
-func (s *value) Released() {
-	s.data = "released"
+// frees value resource data
+func (s *value) Free() {
+	s.data = "freed"
 }
 
 // creates new value with Ref
 func newValue(dataSize int) *value {
 	v := &value{}
 	v.Item.Value = v
-	v.data = "assigned"
+	v.data = "allocated"
 	return v
 }
 
-func ExampleItem() {
+func Example() {
+	// Create cache with size 1 to demonstrate cache value eviction
 	cache := objcache.New[int64, *value](1)
 
 	v := newValue(1024)
@@ -68,11 +69,11 @@ func ExampleItem() {
 	fmt.Printf("after evicted  : refs: %d, data: %v\n", v.RefCount(), v.data)
 
 	// Output:
-	// new value      : refs: 1, data: assigned
-	// after put      : refs: 2, data: assigned
-	// after release 1: refs: 1, data: assigned
+	// new value      : refs: 1, data: allocated
+	// after put      : refs: 2, data: allocated
+	// after release 1: refs: 1, data: allocated
 	// founded        : true
-	// after get      : refs: 2, data: assigned
-	// after release 2: refs: 1, data: assigned
-	// after evicted  : refs: 0, data: released
+	// after get      : refs: 2, data: allocated
+	// after release 2: refs: 1, data: allocated
+	// after evicted  : refs: 0, data: freed
 }

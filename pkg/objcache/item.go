@@ -13,7 +13,7 @@ import (
 // and value releasing.
 //
 // # Automation:
-//  1. Client cache value should has Release() method.
+//  1. Client cache value should has Free() method.
 //  2. Item struct should be included into client value and Item.Value field must be assigned to client value.
 //
 // Cache increments reference counter then you put value into cache and
@@ -21,11 +21,11 @@ import (
 //
 // Every time then you finish use value you should call Release(), this
 // decrement reference counter. If value evicted from cache, then cache calls
-// Release() too. When reference counter decreases to zero, Released()
+// Release() too. When reference counter decreases to zero, Free()
 // method of value will be called.
 type Item struct {
 	count atomic.Int32
-	Value interface{ Released() }
+	Value interface{ Free() }
 }
 
 // Increases reference count by 1. Return false if reference count is zero
@@ -46,13 +46,13 @@ func (i *Item) RefCount() int {
 }
 
 // Decrease reference count by 1. If counter decreases to zero then calls
-// item value Released() method
+// item value Free() method
 func (i *Item) Release() {
 	for cnt := i.count.Load(); cnt >= 0; cnt = i.count.Load() {
 		if new := cnt - 1; i.count.CompareAndSwap(cnt, new) {
 			if new == -1 {
 				if i.Value != nil {
-					i.Value.Released()
+					i.Value.Free()
 				}
 			}
 			break
