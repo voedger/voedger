@@ -90,7 +90,7 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 		panic("no build info")
 	}
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-		apis.NumCommandProcessors, buildInfo, false)
+		apis.NumCommandProcessors, buildInfo, false, false)
 
 	adf.AddCDoc(appdef.NewQName(appdef.SysPackage, "articles")).
 		AddField("name", appdef.DataKind_string, false).

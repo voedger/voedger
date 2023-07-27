@@ -73,11 +73,11 @@ func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *Q
 }
 
 func isInternalName(name DefQName, schema *SchemaAST) bool {
-	pkg := strings.TrimSpace(name.Package)
-	return pkg == "" || pkg == schema.Package
+	pkg := strings.TrimSpace(string(name.Package))
+	return pkg == "" || pkg == string(schema.Package)
 }
 
-func getQualifiedPackageName(pkgName string, schema *SchemaAST) string {
+func getQualifiedPackageName(pkgName Ident, schema *SchemaAST) string {
 	for i := 0; i < len(schema.Imports); i++ {
 		imp := schema.Imports[i]
 		if imp.Alias != nil && *imp.Alias == pkgName {
@@ -111,7 +111,7 @@ func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 
 	pkgQN := getQualifiedPackageName(n.Package, c.pkg.Ast)
 	if pkgQN == "" {
-		return nil, ErrUndefined(n.Package)
+		return nil, ErrUndefined(string(n.Package))
 	}
 	targetPkgSch = c.pkgmap[pkgQN]
 	if targetPkgSch == nil {
@@ -165,7 +165,7 @@ func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *Ra
 		iterate(s, func(stmt interface{}) {
 			if f, ok := stmt.(stmtType); ok {
 				named := any(f).(INamedStatement)
-				if named.GetName() == fn.Name {
+				if named.GetName() == string(fn.Name) {
 					item = f
 				}
 			}
@@ -198,11 +198,11 @@ func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt |
 	return cb(item)
 }
 
-func maybeSysPkg(pkg string) bool {
+func maybeSysPkg(pkg Ident) bool {
 	return (pkg == "" || pkg == appdef.SysPackage)
 }
 
-func isSysDef(qn DefQName, ident string) bool {
+func isSysDef(qn DefQName, ident Ident) bool {
 	return maybeSysPkg(qn.Package) && qn.Name == ident
 }
 
@@ -225,21 +225,21 @@ func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
 	}
 }
 
-func isVoid(pkg string, name string) bool {
+func isVoid(pkg Ident, name Ident) bool {
 	if maybeSysPkg(pkg) {
 		return name == sysVoid
 	}
 	return false
 }
 
-func isAny(pkg string, name string) bool {
+func isAny(pkg Ident, name Ident) bool {
 	if maybeSysPkg(pkg) {
-		return name == istructs.QNameANY.Entity()
+		return string(name) == istructs.QNameANY.Entity()
 	}
 	return false
 }
 
-func getSysDataKind(name string) appdef.DataKind {
+func getSysDataKind(name Ident) appdef.DataKind {
 	if name == sysInt32 || name == sysInt {
 		return appdef.DataKind_int32
 	}
@@ -283,7 +283,7 @@ func getTypeDataKind(t TypeQName) appdef.DataKind {
 	return appdef.DataKind_null
 }
 
-func getDefDataKind(pkg string, name string) appdef.DataKind {
+func getDefDataKind(pkg Ident, name Ident) appdef.DataKind {
 	if maybeSysPkg(pkg) {
 		return getSysDataKind(name)
 	}
@@ -318,14 +318,14 @@ func viewFieldDataKind(f *ViewField) appdef.DataKind {
 	return appdef.DataKind_string
 }
 
-func buildQname(ctx *buildContext, pkg string, name string) appdef.QName {
+func buildQname(ctx *buildContext, pkg Ident, name Ident) appdef.QName {
 	if pkg == "" {
 		pkg = ctx.pkg.Ast.Package
 	}
-	return appdef.NewQName(pkg, name)
+	return appdef.NewQName(string(pkg), string(name))
 }
 
-func contains(s []string, e string) bool {
+func contains(s []Ident, e Ident) bool {
 	for _, a := range s {
 		if a == e {
 			return true

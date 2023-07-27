@@ -14,10 +14,10 @@ type Translations map[string]map[language.Tag]string
 
 func GetCatalogFromTranslations(t Translations) catalog.Catalog {
 	ctlg := catalog.NewBuilder()
-	for key, langTranslationMap := range t {
+	for toBeTranslated, langTranslationMap := range t {
 		for lang, translation := range langTranslationMap {
-			if err := ctlg.SetString(lang, key, translation); err != nil {
-				return nil
+			if err := ctlg.SetString(lang, toBeTranslated, translation); err != nil {
+				panic(err)
 			}
 		}
 	}

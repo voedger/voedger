@@ -25,10 +25,9 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 		body := `{"args":{},"elements":[{"fields":["Names"]}]}`
 		namesStr := vit.PostProfile(prn, "q.sys.DescribePackageNames", body).SectionRow()[0].(string)
 		names := strings.Split(namesStr, ",")
-		require.Len(names, 4)
+		require.Len(names, 3)
 		require.Contains(names, "sys")
 		require.Contains(names, "my")
-		require.Contains(names, "air")
 		require.Contains(names, "test")
 	})
 

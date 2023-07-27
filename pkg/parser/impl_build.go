@@ -65,19 +65,18 @@ func (c *buildContext) views() error {
 	for _, schema := range c.pkgmap {
 		iterateStmt(schema.Ast, func(view *ViewStmt) {
 			c.setSchema(schema)
-
-			qname := appdef.NewQName(c.pkg.Ast.Package, view.Name)
+			qname := c.pkg.Ast.NewQName(view.Name)
 			vb := c.builder.AddView(qname)
 			for i := range view.Fields {
 				f := &view.Fields[i]
 				if f.Field != nil {
 					datakind := viewFieldDataKind(f.Field)
 					if contains(view.pkRef.ClusteringColumnsFields, f.Field.Name) {
-						vb.AddClustColumn(f.Field.Name, datakind)
+						vb.AddClustColumn(string(f.Field.Name), datakind)
 					} else if contains(view.pkRef.PartitionKeyFields, f.Field.Name) {
-						vb.AddPartField(f.Field.Name, datakind)
+						vb.AddPartField(string(f.Field.Name), datakind)
 					} else {
-						vb.AddValueField(f.Field.Name, datakind, f.Field.NotNull)
+						vb.AddValueField(string(f.Field.Name), datakind, f.Field.NotNull)
 					}
 				}
 			}
@@ -90,7 +89,7 @@ func (c *buildContext) commands() error {
 	for _, schema := range c.pkgmap {
 		iterateStmt(schema.Ast, func(cmd *CommandStmt) {
 			c.setSchema(schema)
-			qname := appdef.NewQName(c.pkg.Ast.Package, cmd.Name)
+			qname := c.pkg.Ast.NewQName(cmd.Name)
 			b := c.builder.AddCommand(qname)
 			if cmd.Arg != nil && !isVoid(cmd.Arg.Package, cmd.Arg.Name) {
 				argQname := buildQname(c, cmd.Arg.Package, cmd.Arg.Name)
@@ -105,9 +104,9 @@ func (c *buildContext) commands() error {
 				b.SetResult(retQname)
 			}
 			if cmd.Engine.WASM {
-				b.SetExtension(cmd.Name, appdef.ExtensionEngineKind_WASM)
+				b.SetExtension(cmd.GetName(), appdef.ExtensionEngineKind_WASM)
 			} else {
-				b.SetExtension(cmd.Name, appdef.ExtensionEngineKind_BuiltIn)
+				b.SetExtension(cmd.GetName(), appdef.ExtensionEngineKind_BuiltIn)
 			}
 		})
 	}
@@ -118,7 +117,7 @@ func (c *buildContext) queries() error {
 	for _, schema := range c.pkgmap {
 		iterateStmt(schema.Ast, func(q *QueryStmt) {
 			c.setSchema(schema)
-			qname := appdef.NewQName(c.pkg.Ast.Package, q.Name)
+			qname := c.pkg.Ast.NewQName(q.Name)
 			b := c.builder.AddQuery(qname)
 			if q.Arg != nil && !isVoid(q.Arg.Package, q.Arg.Name) {
 				argQname := buildQname(c, q.Arg.Package, q.Arg.Name)
@@ -135,9 +134,9 @@ func (c *buildContext) queries() error {
 			}
 
 			if q.Engine.WASM {
-				b.SetExtension(q.Name, appdef.ExtensionEngineKind_WASM)
+				b.SetExtension(string(q.Name), appdef.ExtensionEngineKind_WASM)
 			} else {
-				b.SetExtension(q.Name, appdef.ExtensionEngineKind_BuiltIn)
+				b.SetExtension(string(q.Name), appdef.ExtensionEngineKind_BuiltIn)
 			}
 		})
 	}
@@ -171,7 +170,7 @@ func (c *buildContext) fillTable(table *TableStmt) {
 func (c *buildContext) workspaceDescriptor(schema *PackageSchemaAST, w *WorkspaceStmt) {
 	if w.Descriptor != nil {
 		c.setSchema(schema)
-		qname := appdef.NewQName(c.pkg.Ast.Package, w.Name)
+		qname := c.pkg.Ast.NewQName(w.Name)
 		if c.isExists(qname, appdef.DefKind_CDoc) {
 			return
 		}
@@ -188,7 +187,7 @@ func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt) {
 		return
 	}
 
-	qname := appdef.NewQName(c.pkg.Ast.Package, table.Name)
+	qname := c.pkg.Ast.NewQName(table.Name)
 	if c.isExists(qname, table.tableDefKind) {
 		return
 	}
@@ -201,7 +200,7 @@ func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt) {
 }
 
 func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
-	if err := c.defCtx().checkName(refField.Name); err != nil {
+	if err := c.defCtx().checkName(string(refField.Name)); err != nil {
 		c.stmtErr(&refField.Pos, err)
 		return
 	}
@@ -220,7 +219,7 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
 		}
 	}
 	if !errors {
-		c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddRefField(refField.Name, refField.NotNull, refs...)
+		c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddRefField(string(refField.Name), refField.NotNull, refs...)
 	}
 }
 
@@ -231,15 +230,15 @@ func (c *buildContext) addFieldToDef(field *FieldExpr) {
 			c.stmtErr(&field.Pos, ErrArrayFieldsNotSupportedHere)
 			return
 		}
-		if err := c.defCtx().checkName(field.Name); err != nil {
+		if err := c.defCtx().checkName(string(field.Name)); err != nil {
 			c.stmtErr(&field.Pos, err)
 			return
 		}
 		if field.Verifiable {
 			// TODO: Support different verification kindsbuilder, &c
-			c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddVerifiedField(field.Name, sysDataKind, field.NotNull, appdef.VerificationKind_EMail)
+			c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddVerifiedField(string(field.Name), sysDataKind, field.NotNull, appdef.VerificationKind_EMail)
 		} else {
-			c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddField(field.Name, sysDataKind, field.NotNull)
+			c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddField(string(field.Name), sysDataKind, field.NotNull)
 		}
 	} else {
 		// Record?
@@ -247,13 +246,13 @@ func (c *buildContext) addFieldToDef(field *FieldExpr) {
 		if pkg == "" {
 			pkg = c.pkg.Ast.Package
 		}
-		qname := appdef.NewQName(pkg, field.Type.Name)
+		qname := appdef.NewQName(string(pkg), string(field.Type.Name))
 		wrec := c.builder.WRecord(qname)
 		crec := c.builder.CRecord(qname)
 		orec := c.builder.ORecord(qname)
 
 		if wrec == nil && orec == nil && crec == nil { // not yet built
-			tbl, err := lookup[*TableStmt](DefQName{Package: qname.Pkg(), Name: qname.Entity()}, &c.basicContext)
+			tbl, err := lookup[*TableStmt](DefQName{Package: Ident(qname.Pkg()), Name: Ident(qname.Entity())}, &c.basicContext)
 			if err != nil {
 				c.errs = append(c.errs, err)
 				return
@@ -278,7 +277,7 @@ func (c *buildContext) addFieldToDef(field *FieldExpr) {
 				c.errs = append(c.errs, ErrNestedTableIncorrectKind)
 				return
 			}
-			c.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(field.Name, qname, 0, maxNestedTableContainerOccurrences)
+			c.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(string(field.Name), qname, 0, maxNestedTableContainerOccurrences)
 		} else {
 			c.stmtErr(&field.Pos, ErrTypeNotSupported(field.Type.String()))
 		}
@@ -287,9 +286,9 @@ func (c *buildContext) addFieldToDef(field *FieldExpr) {
 
 func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 	if constraint.UniqueField != nil {
-		f := c.defCtx().defBuilder.(appdef.IFieldsBuilder).Field(constraint.UniqueField.Field)
+		f := c.defCtx().defBuilder.(appdef.IFieldsBuilder).Field(string(constraint.UniqueField.Field))
 		if f == nil {
-			c.stmtErr(&constraint.Pos, ErrUndefinedField(constraint.UniqueField.Field))
+			c.stmtErr(&constraint.Pos, ErrUndefinedField(string(constraint.UniqueField.Field)))
 			return
 		}
 		if !f.Required() {
@@ -297,7 +296,7 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 			return
 		}
 		// item.Constraint.ConstraintName  constraint name not used for old uniques
-		c.defCtx().defBuilder.(appdef.IUniquesBuilder).SetUniqueField(constraint.UniqueField.Field)
+		c.defCtx().defBuilder.(appdef.IUniquesBuilder).SetUniqueField(string(constraint.UniqueField.Field))
 	}
 }
 
@@ -308,13 +307,13 @@ func (c *buildContext) addNestedTableToDef(nested *NestedTableStmt) {
 		return
 	}
 
-	containerName := nested.Name
+	containerName := string(nested.Name)
 	if err := c.defCtx().checkName(containerName); err != nil {
 		c.stmtErr(&nested.Pos, err)
 		return
 	}
 
-	contQName := appdef.NewQName(c.pkg.Ast.Package, nestedTable.Name)
+	contQName := c.pkg.Ast.NewQName(nestedTable.Name)
 	if !c.isExists(contQName, nestedTable.tableDefKind) {
 		c.pushDef(nestedTable.Name, nestedTable.tableDefKind)
 		c.addTableItems(nestedTable.Items)
@@ -371,8 +370,8 @@ func (c *buildContext) setSchema(schema *PackageSchemaAST) {
 	}
 }
 
-func (c *buildContext) pushDef(name string, kind appdef.DefKind) {
-	qname := appdef.NewQName(c.pkg.Ast.Package, name)
+func (c *buildContext) pushDef(name Ident, kind appdef.DefKind) {
+	qname := c.pkg.Ast.NewQName(name)
 	var builder interface{}
 	switch kind {
 	case appdef.DefKind_CDoc:
@@ -421,7 +420,7 @@ func (c *buildContext) isExists(qname appdef.QName, kind appdef.DefKind) (exists
 	}
 }
 
-func (c *buildContext) fundSchemaByPkg(pkg string) *PackageSchemaAST {
+func (c *buildContext) fundSchemaByPkg(pkg Ident) *PackageSchemaAST {
 	for _, ast := range c.pkgmap {
 		if ast.Ast.Package == pkg {
 			return ast
@@ -442,10 +441,10 @@ func (c *buildContext) checkReference(refTable DefQName, table *TableStmt) error
 	if refTable.Package == "" {
 		refTable.Package = c.basicContext.pkg.Ast.Package
 	}
-	refTableDef := c.builder.DefByName(appdef.NewQName(refTable.Package, refTable.Name))
+	refTableDef := c.builder.DefByName(appdef.NewQName(string(refTable.Package), string(refTable.Name)))
 	if refTableDef == nil {
 		c.table(c.fundSchemaByPkg(refTable.Package), table)
-		refTableDef = c.builder.DefByName(appdef.NewQName(refTable.Package, refTable.Name))
+		refTableDef = c.builder.DefByName(appdef.NewQName(string(refTable.Package), string(refTable.Name)))
 	}
 
 	if refTableDef == nil {
