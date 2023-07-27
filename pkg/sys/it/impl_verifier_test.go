@@ -49,7 +49,7 @@ func TestBasicUsage_Verifier(t *testing.T) {
 		resp := vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body)
 		email := vit.CaptureEmail()
 		require.Equal([]string{it.TestEmail}, email.To)
-		require.Equal(verifier.EmailSubject, email.Subject)
+		require.Equal("Votre code de vérification", email.Subject)
 		require.Equal(it.TestSMTPCfg.GetFrom(), email.From)
 		require.Empty(email.CC)
 		require.Empty(email.BCC)
