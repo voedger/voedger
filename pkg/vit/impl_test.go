@@ -122,6 +122,9 @@ func TestBasicUsage_Workspaces(t *testing.T) {
 }
 
 func TestBasicUsage_N10N(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	require := require.New(t)
 	vit := NewVIT(t, &SharedConfig_Simple)
 
