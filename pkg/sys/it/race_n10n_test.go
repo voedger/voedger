@@ -18,6 +18,9 @@ import (
 
 // Test_Race_n10n_perSubject: Just Create channel
 func Test_Race_n10n_perSubject(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	if coreutils.IsCassandraStorage() {
 		return
 	}
@@ -44,6 +47,9 @@ func Test_Race_n10n_perSubject(t *testing.T) {
 
 // Test_Race_n10nCHS: Create channel and read event
 func Test_Race_n10nCHS(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	if coreutils.IsCassandraStorage() {
 		return
 	}
@@ -75,6 +81,9 @@ func Test_Race_n10nCHS(t *testing.T) {
 
 // Test_Race_n10nCHSU: Create channel,  read event, send update
 func Test_Race_n10nCHSU(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	if coreutils.IsCassandraStorage() {
 		return
 	}
