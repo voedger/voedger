@@ -20,9 +20,22 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/singletons"
 )
 
-func TestEventBuilder_Core(t *testing.T) {
+func TestEventBuilder(t *testing.T) {
+	testEventBuilderCore(t, true)
+}
+
+func TestEventBuilderNoCache(t *testing.T) {
+	testEventBuilderCore(t, false)
+}
+
+func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 	require := require.New(t)
 	test := test()
+
+	if !cachedPLog {
+		// switch off plog cache
+		test.AppCfg.Params.PLogEventCacheSize = 0
+	}
 
 	// gets AppStructProvider and AppStructs
 	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
@@ -199,7 +212,7 @@ func TestEventBuilder_Core(t *testing.T) {
 				require.Equal(test.buyerValue, cmdRec.AsString(test.buyerIdent))
 			}
 
-			t.Run("test single record reading", func(t *testing.T) {
+			t.Run("test single plog event reading", func(t *testing.T) {
 				var event istructs.IPLogEvent
 				err := app.Events().ReadPLog(context.Background(), test.partition, test.plogOfs, 1,
 					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
@@ -211,16 +224,25 @@ func TestEventBuilder_Core(t *testing.T) {
 				check(event, err)
 			})
 
-			t.Run("test sequential reading", func(t *testing.T) {
-				var event istructs.IPLogEvent
+			t.Run("test sequential plog reading", func(t *testing.T) {
+				cnt := 0
 				err := app.Events().ReadPLog(context.Background(), test.partition, test.plogOfs, istructs.ReadToTheEnd,
 					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
-						require.Equal(test.plogOfs, plogOffset)
-						event = ev
+						defer ev.Release()
+						cnt++
+						switch ev.QName() {
+						case test.saleCmdName:
+							require.Equal(test.plogOfs, plogOffset)
+							check(ev, err)
+						case test.changeCmdName:
+							require.Equal(test.plogOfs+1, plogOffset)
+						default:
+							require.Fail("unexpected event in plog", "offset: %d, qname: %v", plogOffset, ev.QName())
+						}
 						return nil
 					})
-				defer event.Release() // not necessary
-				check(event, err)
+				require.NoError(err)
+				require.Positive(cnt)
 			})
 		})
 

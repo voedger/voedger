@@ -54,7 +54,7 @@ func TestBasicUsage(t *testing.T) {
 
 			// need to read cdoc.sys.Subject on auth
 			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-				apis.NumCommandProcessors, nil, false)
+				apis.NumCommandProcessors, nil, false, false)
 		}),
 	)
 	vit := it.NewVIT(t, &cfg)

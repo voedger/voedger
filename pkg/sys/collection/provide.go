@@ -14,7 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/projectors"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, rebuildCollection bool) {
 	cfg.Resources.Add(istructsmem.NewQueryFunctionCustomResult(
 		qNameQueryCollection,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CollectionParams")).
@@ -30,7 +30,12 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	provideQryCDoc(cfg, appDefBuilder)
 	provideStateFunc(cfg, appDefBuilder)
 
-	cfg.AddSyncProjectors(collectionProjectorFactory(appDefBuilder))
+	if rebuildCollection {
+		appDefBuilder.AddObject(QNameProjectorCollection)
+		cfg.AddAsyncProjectors(collectionProjectorFactory(appDefBuilder))
+	} else {
+		cfg.AddSyncProjectors(collectionProjectorFactory(appDefBuilder))
+	}
 }
 
 // should be used in tests only. Sync Actualizer per app will be wired in production

@@ -256,10 +256,10 @@ func Test_Expressions(t *testing.T) {
 	_, err := ParseFile("file1.sql", `SCHEMA test;
 	TABLE MyTable(
 		Int1 text DEFAULT 1 CHECK(Int1 > Int2),
-		Int1 int DEFAULT 1 CHECK(Text != "asd"),
+		Int1 int DEFAULT 1 CHECK(Text != 'asd'),
 		Int1 int DEFAULT 1 CHECK(Int2 > -5),
-		Int1 int DEFAULT 1 CHECK(TextField > "asd" AND (SomeFloat/3.2)*4 != 5.003),
-		Int1 int DEFAULT 1 CHECK(SomeFunc("a", TextField) AND BoolField=FALSE),
+		Int1 int DEFAULT 1 CHECK(TextField > 'asd' AND (SomeFloat/3.2)*4 != 5.003),
+		Int1 int DEFAULT 1 CHECK(SomeFunc('a', TextField) AND BoolField=FALSE),
 
 		CHECK(MyRowValidator(this))
 	)
@@ -411,8 +411,8 @@ func Test_Imports(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("example.sql", `SCHEMA pkg1;
-	IMPORT SCHEMA "github.com/untillpro/airsbp3/pkg2";
-	IMPORT SCHEMA "github.com/untillpro/airsbp3/pkg3" AS air;
+	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2';
+	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg3' AS air;
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
     		COMMAND Orders WITH Tags=(pkg2.SomeTag);
@@ -454,8 +454,7 @@ func Test_AbstractWorkspace(t *testing.T) {
 	fs, err := ParseFile("example.sql", `SCHEMA test;
 	WORKSPACE ws1 ();
 	ABSTRACT WORKSPACE ws2();
-	ABSTRACT WORKSPACE ws3();
-	WORKSPACE ws4 OF ws2,test.ws3 ();
+	WORKSPACE ws4 INHERITS ws2 ();
 	`)
 	require.Nil(err)
 
@@ -464,10 +463,8 @@ func Test_AbstractWorkspace(t *testing.T) {
 
 	require.False(ps.Ast.Statements[0].Workspace.Abstract)
 	require.True(ps.Ast.Statements[1].Workspace.Abstract)
-	require.True(ps.Ast.Statements[2].Workspace.Abstract)
-	require.False(ps.Ast.Statements[3].Workspace.Abstract)
-	require.Equal("ws2", ps.Ast.Statements[3].Workspace.Of[0].String())
-	require.Equal("test.ws3", ps.Ast.Statements[3].Workspace.Of[1].String())
+	require.False(ps.Ast.Statements[2].Workspace.Abstract)
+	require.Equal("ws2", ps.Ast.Statements[2].Workspace.Inherits.String())
 
 }
 

@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/plogcache"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
 
@@ -208,12 +209,14 @@ func (app *appStructsType) DescribePackage(name string) interface{} {
 //   - interfaces:
 //     — istructs.IEvents
 type appEventsType struct {
-	app *appStructsType
+	app       *appStructsType
+	plogCache *plogcache.Cache
 }
 
 func newEvents(app *appStructsType) appEventsType {
 	return appEventsType{
-		app: app,
+		app:       app,
+		plogCache: plogcache.New(app.config.Params.PLogEventCacheSize),
 	}
 }
 
@@ -242,13 +245,16 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 		dbEvent.argUnlObj.maskValues()
 	}
 
-	pKey, cCols := plogKey(ev.HandlingPartition(), ev.PLogOffset())
+	p, o := ev.HandlingPartition(), ev.PLogOffset()
+	pKey, cCols := plogKey(p, o)
 
 	evData := dbEvent.storeToBytes()
 
 	if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
 		event = dbEvent
 	}
+
+	e.plogCache.Put(p, o, event)
 
 	return event, err
 }
@@ -267,6 +273,10 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 	switch toReadCount {
 	case 1:
 		// See [#292](https://github.com/voedger/voedger/issues/292)
+		if e, ok := e.plogCache.Get(partition, offset); ok {
+			return cb(offset, e)
+		}
+
 		pKey, cCols := plogKey(partition, offset)
 		data := bytespool.Get()
 		ok, err := e.app.config.storage.Get(pKey, cCols, &data.B)

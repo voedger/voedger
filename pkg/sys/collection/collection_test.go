@@ -46,7 +46,7 @@ func appConfigs() (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
 	adf := appdef.New()
 	cfg := cfgs.AddConfig(test.appQName, adf)
 	{
-		Provide(cfg, adf)
+		Provide(cfg, adf, false)
 	}
 	{ // "modify" function
 		cfg.Resources.Add(istructsmem.NewCommandFunction(test.modifyCmdName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
