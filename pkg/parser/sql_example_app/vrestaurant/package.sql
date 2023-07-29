@@ -1,11 +1,9 @@
 SCHEMA vrestaurant;
 
-NULLABILITY DEFAULT IS NOT NULL -- TODO, smm??
-
 -- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
 TABLE BOEntity INHERITS CDoc( -- TODO: ABSTRACT
     Name text NOT NULL, -- TODO NOT NULL everywhere
-    Number int  NOT NULL -- Number sequence(1) ??? smm
+    Number int NOT NULL -- Number sequence(1) ??? smm
 ) WITH Tags=(BackofficeTag);
 
 -- TABLE Person : is an Abstract data struct for Waiters, Clients, Adminitsrators, Manager
@@ -63,7 +61,7 @@ WORKSPACE Restaurant (
         Wage float32
     );
 
-    -- TABLE TablePlan    : describes Physical plan of tables/bar counters. etc. in Restaurant.
+    -- TABLE TablePlan : describes Physical plan of tables/bar counters. etc. in Restaurant.
     TABLE TablePlan INHERITS BOEntity (
         -- Image of restaurant plan
         Picture blob, 
@@ -81,7 +79,7 @@ WORKSPACE Restaurant (
  	        Width int,
 	        Height int
         )
-    ) WITH Comment="Table plan defines restaurant tables schema";
+    );
 
     -- TABLE departments : defines Restaurant department button entity
     TABLE Department INHERITS BOEntity (
