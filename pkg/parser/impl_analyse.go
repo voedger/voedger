@@ -53,10 +53,10 @@ func (c *analyseCtx) view(view *ViewStmt) {
 			}
 		}
 		if fe.Field != nil {
-			if _, ok := fields[fe.Field.Name]; ok {
-				c.stmtErr(&fe.Pos, ErrRedeclared(fe.Field.Name))
+			if _, ok := fields[string(fe.Field.Name)]; ok {
+				c.stmtErr(&fe.Pos, ErrRedeclared(string(fe.Field.Name)))
 			} else {
-				fields[fe.Field.Name] = i
+				fields[string(fe.Field.Name)] = i
 			}
 		}
 	}
