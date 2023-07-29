@@ -11,6 +11,7 @@ type object struct {
 	def
 	fields
 	containers
+	withAbstract
 }
 
 func newObject(app *appDef, name QName) *object {
@@ -29,6 +30,7 @@ type element struct {
 	def
 	fields
 	containers
+	withAbstract
 }
 
 func newElement(app *appDef, name QName) *element {

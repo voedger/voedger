@@ -275,6 +275,27 @@ type IDef interface {
 	Kind() DefKind
 }
 
+// See [Issue #524](https://github.com/voedger/voedger/issues/524)
+// Definition can be abstract:
+//	- DefKind_GDoc and DefKind_GRecord,
+//	- DefKind_CDoc and DefKind_CRecord,
+//	- DefKind_ODoc and DefKind_CRecord,
+//	- DefKind_WDoc and DefKind_WRecord,
+//	- DefKind_Object and DefKind_Element
+//
+// Ref to abstract.go for implementation
+type IWithAbstract interface {
+	// Returns is definition abstract
+	Abstract() bool
+}
+
+type IWithAbstractBuilder interface {
+	IWithAbstract
+
+	// Makes definition abstract
+	SetAbstract()
+}
+
 // Definitions with fields:
 //	- DefKind_GDoc and DefKind_GRecord,
 //	- DefKind_CDoc and DefKind_CRecord,
@@ -445,6 +466,7 @@ type IGDoc interface {
 	IFields
 	IContainers
 	IUniques
+	IWithAbstract
 }
 
 type IGDocBuilder interface {
@@ -452,6 +474,7 @@ type IGDocBuilder interface {
 	IFieldsBuilder
 	IContainersBuilder
 	IUniquesBuilder
+	IWithAbstractBuilder
 }
 
 // Global document record. DefKind() is DefKind_GRecord.
@@ -462,6 +485,7 @@ type IGRecord interface {
 	IFields
 	IContainers
 	IUniques
+	IWithAbstract
 }
 
 type IGRecordBuilder interface {
@@ -469,6 +493,7 @@ type IGRecordBuilder interface {
 	IFieldsBuilder
 	IContainersBuilder
 	IUniquesBuilder
+	IWithAbstractBuilder
 }
 
 // Configuration document. DefKind() is DefKind_CDoc.
@@ -477,6 +502,7 @@ type ICDoc interface {
 	IFields
 	IContainers
 	IUniques
+	IWithAbstract
 
 	// Returns is singleton
 	Singleton() bool
@@ -487,6 +513,7 @@ type ICDocBuilder interface {
 	IFieldsBuilder
 	IContainersBuilder
 	IUniquesBuilder
+	IWithAbstractBuilder
 
 	// Sets CDoc singleton
 	SetSingleton()
@@ -500,6 +527,7 @@ type ICRecord interface {
 	IFields
 	IContainers
 	IUniques
+	IWithAbstract
 }
 
 type ICRecordBuilder interface {
@@ -507,6 +535,7 @@ type ICRecordBuilder interface {
 	IFieldsBuilder
 	IContainersBuilder
 	IUniquesBuilder
+	IWithAbstractBuilder
 }
 
 // Workflow document. DefKind() is DefKind_WDoc.
@@ -515,6 +544,7 @@ type IWDoc interface {
 	IFields
 	IContainers
 	IUniques
+	IWithAbstract
 }
 
 type IWDocBuilder interface {
@@ -522,6 +552,7 @@ type IWDocBuilder interface {
 	IFieldsBuilder
 	IContainersBuilder
 	IUniquesBuilder
+	IWithAbstractBuilder
 }
 
 // Workflow document record. DefKind() is DefKind_WRecord.
@@ -532,6 +563,7 @@ type IWRecord interface {
 	IFields
 	IContainers
 	IUniques
+	IWithAbstract
 }
 
 type IWRecordBuilder interface {
@@ -539,6 +571,7 @@ type IWRecordBuilder interface {
 	IFieldsBuilder
 	IContainersBuilder
 	IUniquesBuilder
+	IWithAbstractBuilder
 }
 
 // Operation document. DefKind() is DefKind_ODoc.
@@ -546,12 +579,14 @@ type IODoc interface {
 	IDef
 	IFields
 	IContainers
+	IWithAbstract
 }
 
 type IODocBuilder interface {
 	IODoc
 	IFieldsBuilder
 	IContainersBuilder
+	IWithAbstractBuilder
 }
 
 // Operation document record. DefKind() is DefKind_ORecord.
@@ -561,12 +596,14 @@ type IORecord interface {
 	IDef
 	IFields
 	IContainers
+	IWithAbstract
 }
 
 type IORecordBuilder interface {
 	IORecord
 	IFieldsBuilder
 	IContainersBuilder
+	IWithAbstractBuilder
 }
 
 // Object definition. DefKind() is DefKind_Object.
@@ -576,12 +613,14 @@ type IObject interface {
 	IDef
 	IFields
 	IContainers
+	IWithAbstract
 }
 
 type IObjectBuilder interface {
 	IObject
 	IFieldsBuilder
 	IContainersBuilder
+	IWithAbstractBuilder
 }
 
 // Element definition. DefKind() is DefKind_Element.
@@ -591,12 +630,14 @@ type IElement interface {
 	IDef
 	IFields
 	IContainers
+	IWithAbstract
 }
 
 type IElementBuilder interface {
 	IElement
 	IFieldsBuilder
 	IContainersBuilder
+	IWithAbstractBuilder
 }
 
 // View definition. DefKind() is DefKind_ViewRecord
