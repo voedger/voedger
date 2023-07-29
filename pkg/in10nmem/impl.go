@@ -7,7 +7,7 @@
  * Deep refactoring, no timers
  *
  * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree. 
+ * LICENSE file in the root directory of this source tree.
  */
 
 package in10nmem
@@ -205,7 +205,9 @@ forctx:
 		case <-ctx.Done():
 			break forctx
 		case <-channel.cchan:
-			logger.Trace(channelID)
+			if logger.IsTrace() {
+				logger.Trace(channelID)
+			}
 
 			if ctx.Err() != nil {
 				return
