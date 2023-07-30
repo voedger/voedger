@@ -247,6 +247,32 @@ func Test_DupFieldsInTables(t *testing.T) {
 
 }
 
+func Test_PanicUnknownFieldType(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("file1.sql", `SCHEMA test;
+	TABLE MyTable INHERITS CDoc (
+		Name asdasd,
+		Code text
+	);
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	err = BuildAppDefs(packages, appdef.New())
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:3:3: asdasd type not supported",
+	}, "\n"))
+
+}
+
 func Test_Expressions(t *testing.T) {
 	require := require.New(t)
 
