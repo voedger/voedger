@@ -64,7 +64,8 @@ func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDe
 		panic(err)
 	}
 	epFileSchemaASTs := ep.ExtensionPoint(apps.EPPackageSchemasASTs)
-	epFileSchemaASTs.AddNamed("github.com/voedger/voedger/pkg/sys/signupin", sysFileScehmaAST)
+	epFileSchemaASTs_sys := epFileSchemaASTs.ExtensionPoint(appdef.SysPackage)
+	epFileSchemaASTs_sys.Add(sysFileScehmaAST)
 }
 
 func ProvideCmdEnrichPrincipalToken(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, atf payloads.IAppTokensFactory) {

@@ -69,5 +69,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		panic(err)
 	}
 	epFileSchemaASTs := ep.ExtensionPoint(apps.EPPackageSchemasASTs)
-	epFileSchemaASTs.AddNamed(appdef.SysPackage, sysFileScehmaAST)
+	epFileSchemaASTs_sys := epFileSchemaASTs.ExtensionPoint(appdef.SysPackage)
+	epFileSchemaASTs_sys.Add(sysFileScehmaAST)
 }
