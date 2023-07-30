@@ -6,17 +6,20 @@ package signupin
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federation coreutils.IFederation,
-	asp istructs.IAppStructsProvider) {
+	asp istructs.IAppStructsProvider, ep extensionpoints.IExtensionPoint) {
 
 	// c.sys.CreateLogin
 	provideCmdCreateLogin(cfgRegistry, appDefBuilder, asp)
@@ -49,6 +52,19 @@ func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDe
 
 	provideResetPassword(cfgRegistry, appDefBuilder, asp, itokens, federation)
 	provideChangePassword(cfgRegistry, appDefBuilder)
+
+	sqlContent, err := schemasSQL.ReadFile("schemas.sql")
+	if err != nil {
+		// notest
+		panic(err)
+	}
+	sysFileScehmaAST, err := parser.ParseFile("schemas.sql", string(sqlContent))
+	if err != nil {
+		// notest
+		panic(err)
+	}
+	epFileSchemaASTs := ep.ExtensionPoint(apps.EPPackageSchemasASTs)
+	epFileSchemaASTs.AddNamed("github.com/voedger/voedger/pkg/sys/signupin", sysFileScehmaAST)
 }
 
 func ProvideCmdEnrichPrincipalToken(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, atf payloads.IAppTokensFactory) {
@@ -64,17 +80,17 @@ func ProvideCmdEnrichPrincipalToken(cfg *istructsmem.AppConfigType, appDefBuilde
 
 // CDoc<Login> must be known in each target app. "unknown ownerQName scheme CDoc<Login>" on c.sys.CreatWorkspaceID otherwise
 // has no ownerApp field because it is sys/registry always
-func ProvideCDocLogin(appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddCDoc(authnz.QNameCDocLogin).
-		AddField(authnz.Field_ProfileClusterID, appdef.DataKind_int32, true).
-		AddField(field_PwdHash, appdef.DataKind_bytes, true).
-		AddField(Field_AppName, appdef.DataKind_string, true).
-		AddField(authnz.Field_SubjectKind, appdef.DataKind_int32, false).
-		AddField(authnz.Field_LoginHash, appdef.DataKind_string, true).
-		AddField(authnz.Field_WSID, appdef.DataKind_int64, false).     // to be written after workspace init
-		AddField(authnz.Field_WSError, appdef.DataKind_string, false). // to be written after workspace init
-		AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, true)
-}
+// func ProvideCDocLogin(appDefBuilder appdef.IAppDefBuilder) {
+// 	appDefBuilder.AddCDoc(authnz.QNameCDocLogin).
+// 		AddField(authnz.Field_ProfileClusterID, appdef.DataKind_int32, true).
+// 		AddField(field_PwdHash, appdef.DataKind_bytes, true).
+// 		AddField(Field_AppName, appdef.DataKind_string, true).
+// 		AddField(authnz.Field_SubjectKind, appdef.DataKind_int32, false).
+// 		AddField(authnz.Field_LoginHash, appdef.DataKind_string, true).
+// 		AddField(authnz.Field_WSID, appdef.DataKind_int64, false).     // to be written after workspace init
+// 		AddField(authnz.Field_WSError, appdef.DataKind_string, false). // to be written after workspace init
+// 		AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, true)
+// }
 
 func provideCmdCreateLogin(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
