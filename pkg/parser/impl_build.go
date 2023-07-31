@@ -254,7 +254,11 @@ func (c *buildContext) addFieldToDef(field *FieldExpr) {
 		if wrec == nil && orec == nil && crec == nil { // not yet built
 			tbl, err := lookup[*TableStmt](DefQName{Package: Ident(qname.Pkg()), Name: Ident(qname.Entity())}, &c.basicContext)
 			if err != nil {
-				c.errs = append(c.errs, err)
+				c.stmtErr(&field.Pos, err)
+				return
+			}
+			if tbl == nil {
+				c.stmtErr(&field.Pos, ErrTypeNotSupported(field.Type.String()))
 				return
 			}
 			if tbl.tableDefKind == appdef.DefKind_CRecord || tbl.tableDefKind == appdef.DefKind_ORecord || tbl.tableDefKind == appdef.DefKind_WRecord {

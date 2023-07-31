@@ -250,7 +250,7 @@ func (c *analyseCtx) table(v *TableStmt) {
 	var err error
 	v.tableDefKind, v.singletone, err = c.getTableDefKind(v)
 	if err != nil {
-		c.stmtErr(&v.Pos, nil)
+		c.stmtErr(&v.Pos, err)
 		return
 	}
 	c.with(&v.With, v)
