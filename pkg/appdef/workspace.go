@@ -11,6 +11,7 @@ import "fmt"
 //   - IWDoc, IWDocBuilder
 type workspace struct {
 	def
+	withAbstract
 	defs map[QName]interface{}
 }
 

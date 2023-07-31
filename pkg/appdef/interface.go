@@ -893,6 +893,7 @@ type IQueryBuilder interface {
 // Ref. to workspace.go for implementation
 type IWorkspace interface {
 	IDef
+	IWithAbstract
 
 	// Returns definition by name.
 	//
@@ -905,6 +906,7 @@ type IWorkspace interface {
 
 type IWorkspaceBuilder interface {
 	IWorkspace
+	IWithAbstractBuilder
 
 	// Adds definition to workspace. Definition must be defined for application before.
 	//
