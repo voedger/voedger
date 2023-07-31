@@ -12,6 +12,7 @@ type wDoc struct {
 	fields
 	containers
 	uniques
+	withAbstract
 }
 
 func newWDoc(app *appDef, name QName) *wDoc {
@@ -32,6 +33,7 @@ type wRecord struct {
 	fields
 	containers
 	uniques
+	withAbstract
 }
 
 func newWRecord(app *appDef, name QName) *wRecord {

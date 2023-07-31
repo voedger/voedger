@@ -12,6 +12,7 @@ type cDoc struct {
 	fields
 	containers
 	uniques
+	withAbstract
 	singleton bool
 }
 
@@ -41,6 +42,7 @@ type cRecord struct {
 	fields
 	containers
 	uniques
+	withAbstract
 }
 
 func newCRecord(app *appDef, name QName) *cRecord {

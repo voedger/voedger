@@ -12,6 +12,7 @@ type gDoc struct {
 	fields
 	containers
 	uniques
+	withAbstract
 }
 
 func newGDoc(app *appDef, name QName) *gDoc {
@@ -32,6 +33,7 @@ type gRecord struct {
 	fields
 	containers
 	uniques
+	withAbstract
 }
 
 func newGRecord(app *appDef, name QName) *gRecord {

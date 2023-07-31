@@ -11,6 +11,7 @@ type oDoc struct {
 	def
 	fields
 	containers
+	withAbstract
 }
 
 func newODoc(app *appDef, name QName) *oDoc {
@@ -29,6 +30,7 @@ type oRecord struct {
 	def
 	fields
 	containers
+	withAbstract
 }
 
 func newORecord(app *appDef, name QName) *oRecord {
