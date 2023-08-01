@@ -9,6 +9,7 @@ package appdef
 //   - IODoc, IODocBuilder
 type oDoc struct {
 	def
+	comment
 	fields
 	containers
 	withAbstract
@@ -28,6 +29,7 @@ func newODoc(app *appDef, name QName) *oDoc {
 //   - IORecord, IORecordBuilder
 type oRecord struct {
 	def
+	comment
 	fields
 	containers
 	withAbstract

@@ -13,6 +13,7 @@ import (
 //   - IAppDef
 //   - IAppDefBuilder
 type appDef struct {
+	comment
 	defs map[QName]interface{}
 }
 

@@ -9,6 +9,7 @@ package appdef
 //   - ICDoc, ICDocBuilder
 type cDoc struct {
 	def
+	comment
 	fields
 	containers
 	uniques
@@ -39,6 +40,7 @@ func (d *cDoc) Singleton() bool {
 //   - ICRecord, ICRecordBuilder
 type cRecord struct {
 	def
+	comment
 	fields
 	containers
 	uniques

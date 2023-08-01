@@ -15,6 +15,7 @@ import (
 //   - IViewBuilder
 type view struct {
 	def
+	comment
 	containers
 	key   *viewKey
 	value *viewValue
@@ -35,23 +36,23 @@ func newView(app *appDef, name QName) *view {
 	return v
 }
 
-func (v *view) AddPartField(name string, kind DataKind) IViewBuilder {
+func (v *view) AddPartField(name string, kind DataKind, comment ...string) IViewBuilder {
 	v.panicIfFieldDuplication(name)
 	v.key.pkey.AddField(name, kind, true)
-	v.key.AddField(name, kind, true)
+	v.key.AddField(name, kind, true, comment...)
 	return v
 }
 
-func (v *view) AddClustColumn(name string, kind DataKind) IViewBuilder {
+func (v *view) AddClustColumn(name string, kind DataKind, comment ...string) IViewBuilder {
 	v.panicIfFieldDuplication(name)
 	v.key.ccols.AddField(name, kind, false)
-	v.key.AddField(name, kind, false)
+	v.key.AddField(name, kind, false, comment...)
 	return v
 }
 
-func (v *view) AddValueField(name string, kind DataKind, required bool) IViewBuilder {
+func (v *view) AddValueField(name string, kind DataKind, required bool, comment ...string) IViewBuilder {
 	v.panicIfFieldDuplication(name)
-	v.value.AddField(name, kind, required)
+	v.value.AddField(name, kind, required, comment...)
 	return v
 }
 
@@ -78,6 +79,7 @@ func (v *view) panicIfFieldDuplication(name string) {
 //   - IPartKey
 type viewPKey struct {
 	def
+	comment
 	fields
 }
 
@@ -100,6 +102,7 @@ func (pk *viewPKey) Validate() error {
 //   - IClustCols
 type viewCCols struct {
 	def
+	comment
 	fields
 }
 
@@ -135,6 +138,7 @@ func (cc *viewCCols) Validate() (err error) {
 //   - IViewKey
 type viewKey struct {
 	def
+	comment
 	fields
 	containers
 	pkey  *viewPKey
@@ -169,6 +173,7 @@ func (key *viewKey) ClustCols() IClustCols {
 //   - IViewValue
 type viewValue struct {
 	def
+	comment
 	fields
 }
 

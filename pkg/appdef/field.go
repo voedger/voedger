@@ -23,6 +23,7 @@ const (
 // # Implements:
 //   - IField
 type field struct {
+	comment
 	name       string
 	kind       DataKind
 	required   bool
@@ -31,7 +32,7 @@ type field struct {
 }
 
 func makeField(name string, kind DataKind, required, verified bool, vk ...VerificationKind) field {
-	f := field{name, kind, required, verified, make(map[VerificationKind]bool)}
+	f := field{comment{}, name, kind, required, verified, make(map[VerificationKind]bool)}
 	if verified {
 		for _, kind := range vk {
 			f.verify[kind] = true
@@ -91,11 +92,13 @@ func makeFields(def interface{}) fields {
 	return f
 }
 
-func (f *fields) AddField(name string, kind DataKind, required bool) IFieldsBuilder {
+func (f *fields) AddField(name string, kind DataKind, required bool, comment ...string) IFieldsBuilder {
 	if err := f.checkAddField(name, kind); err != nil {
 		panic(err)
 	}
-	f.appendField(name, newField(name, kind, required, false))
+	fld := newField(name, kind, required, false)
+	fld.SetComment(comment...)
+	f.appendField(name, fld)
 	return f.parent.(IFieldsBuilder)
 }
 

@@ -20,8 +20,9 @@ func Example() {
 		appDef := appdef.New()
 
 		doc := appDef.AddCDoc(docName)
+		doc.SetComment("This is example doc")
 		doc.
-			AddField("f1", appdef.DataKind_int64, true).
+			AddField("f1", appdef.DataKind_int64, true, "Field may have comments too").
 			AddField("f2", appdef.DataKind_string, false)
 		rec := appDef.AddCRecord(recName)
 
@@ -52,7 +53,7 @@ func Example() {
 
 		// how to find CDoc by name
 		doc := app.CDoc(docName)
-		fmt.Printf("doc %q: %v\n", doc.QName(), doc.Kind())
+		fmt.Printf("doc %q: %v. %s\n", doc.QName(), doc.Kind(), d.Comment())
 
 		// how to inspect doc fields
 		fmt.Printf("doc field count: %v\n", doc.UserFieldCount())
@@ -68,7 +69,11 @@ func Example() {
 			} else {
 				fmt.Print(" ")
 			}
-			fmt.Printf("%d. Name: %q, kind: %v, required: %v\n", fldCnt, f.Name(), f.DataKind(), f.Required())
+			info := fmt.Sprintf("%d. Name: %q, kind: %v, required: %v", fldCnt, f.Name(), f.DataKind(), f.Required())
+			if f.Comment() != "" {
+				info += ". " + f.Comment()
+			}
+			fmt.Println(info)
 		})
 
 		// how to inspect doc containers
@@ -88,13 +93,13 @@ func Example() {
 	// 2 definitions
 	// def "test.doc": DefKind_CDoc
 	// "test.doc" is CDoc: true
-	// doc "test.doc": DefKind_CDoc
+	// doc "test.doc": DefKind_CDoc. This is example doc
 	// doc field count: 2
 	// field "f1": kind: DataKind_int64, required: true
 	// *1. Name: "sys.QName", kind: DataKind_QName, required: true
 	// *2. Name: "sys.ID", kind: DataKind_RecordID, required: true
 	// *3. Name: "sys.IsActive", kind: DataKind_bool, required: false
-	//  4. Name: "f1", kind: DataKind_int64, required: true
+	//  4. Name: "f1", kind: DataKind_int64, required: true. Field may have comments too
 	//  5. Name: "f2", kind: DataKind_string, required: false
 	// doc container count: 1
 	// container "rec": QName: "test.rec", occurs: 0…unbounded

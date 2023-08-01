@@ -19,6 +19,7 @@ const SystemContainer_ViewValue = SystemPackagePrefix + "val"
 // # Implements:
 //   - Container
 type container struct {
+	comment
 	parent    interface{}
 	name      string
 	qName     QName
@@ -82,7 +83,7 @@ func makeContainers(def interface{}) containers {
 	return c
 }
 
-func (c *containers) AddContainer(name string, contDef QName, minOccurs, maxOccurs Occurs) IContainersBuilder {
+func (c *containers) AddContainer(name string, contDef QName, minOccurs, maxOccurs Occurs, comment ...string) IContainersBuilder {
 	if name == NullName {
 		panic(fmt.Errorf("%v: empty container name: %w", c.parentDef().QName(), ErrNameMissed))
 	}
@@ -117,6 +118,7 @@ func (c *containers) AddContainer(name string, contDef QName, minOccurs, maxOccu
 	}
 
 	cont := newContainer(c.parent, name, contDef, minOccurs, maxOccurs)
+	cont.SetComment(comment...)
 	c.containers[name] = cont
 	c.containersOrdered = append(c.containersOrdered, name)
 

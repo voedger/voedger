@@ -11,6 +11,7 @@ import "fmt"
 //   - IWDoc, IWDocBuilder
 type workspace struct {
 	def
+	comment
 	withAbstract
 	defs map[QName]interface{}
 	desc ICDoc
