@@ -9,6 +9,7 @@ package appdef
 //   - IGDoc, IGDocBuilder
 type gDoc struct {
 	def
+	comment
 	fields
 	containers
 	uniques
@@ -30,6 +31,7 @@ func newGDoc(app *appDef, name QName) *gDoc {
 //   - IGRecord, IGRecordBuilder
 type gRecord struct {
 	def
+	comment
 	fields
 	containers
 	uniques

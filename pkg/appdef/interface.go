@@ -702,19 +702,19 @@ type IViewBuilder interface {
 	// # Panics:
 	//	- if field already exists in clustering columns or value fields,
 	//	- if not fixed size data kind.
-	AddPartField(name string, kind DataKind) IViewBuilder
+	AddPartField(name string, kind DataKind, comment ...string) IViewBuilder
 
 	// AddClustColumn adds specified field to view clustering columns definition. Fields is optional
 	//
 	// # Panics:
 	//	- if field already exists in partition key or value fields.
-	AddClustColumn(name string, kind DataKind) IViewBuilder
+	AddClustColumn(name string, kind DataKind, comment ...string) IViewBuilder
 
 	// AddValueField adds specified field to view value definition
 	//
 	// # Panics:
 	//	- if field already exists in partition key or clustering columns fields.
-	AddValueField(name string, kind DataKind, required bool) IViewBuilder
+	AddValueField(name string, kind DataKind, required bool, comment ...string) IViewBuilder
 }
 
 // View partition key definition. DefKind() is DefKind_ViewRecordPartitionKey

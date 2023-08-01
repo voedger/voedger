@@ -14,6 +14,7 @@ import (
 //   - IQuery & IQueryBuilder
 type query struct {
 	def
+	comment
 	arg, res objRef
 	ext      extension
 }

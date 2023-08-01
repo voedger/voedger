@@ -98,6 +98,7 @@ func (f *fields) AddField(name string, kind DataKind, required bool, comment ...
 	}
 	fld := newField(name, kind, required, false)
 	fld.SetComment(comment...)
+	f.appendField(name, fld)
 	return f.parent.(IFieldsBuilder)
 }
 

@@ -114,11 +114,11 @@ func Test_generateUniqueName(t *testing.T) {
 			def.AddField("b"+strconv.Itoa(i), DataKind_bool, false)
 		}
 		for i := 1; i < MaxDefUniqueCount; i++ {
-			def.AddUnique("", []string{"i" + strconv.Itoa(i), "b" + strconv.Itoa(i)})
+			def.AddUnique("", []string{"i" + strconv.Itoa(i), "b" + strconv.Itoa(i)}, "")
 		}
 
 		require.Panics(func() {
-			def.AddUnique("", []string{"i01", "b99"})
+			def.AddUnique("", []string{"i01", "b99"}, "")
 		})
 	})
 }

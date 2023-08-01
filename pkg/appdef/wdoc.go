@@ -9,6 +9,7 @@ package appdef
 //   - IWDoc, IWDocBuilder
 type wDoc struct {
 	def
+	comment
 	fields
 	containers
 	uniques
@@ -30,6 +31,7 @@ func newWDoc(app *appDef, name QName) *wDoc {
 //   - IWRecord, IWRecordBuilder
 type wRecord struct {
 	def
+	comment
 	fields
 	containers
 	uniques
