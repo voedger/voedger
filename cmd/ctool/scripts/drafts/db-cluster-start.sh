@@ -25,19 +25,19 @@ update_hosts_file() {
   local ip=$2
   local hr=$3 
   # SSH command to execute on the remote host
-  ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
+#  ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
 }
 
 args_array=("$@")
 i=0
 # Prepare for name resolving - iterate over each hostname and update /etc/hosts on each host
 for host in "${hosts[@]}"; do
-   ip=${args_array[$i]}
+   ip=${args_array[i]}
   # Inner loop: Iterate over the three IP addresses
-  for ip_address in "$@"; do
+  for ip_address in ${args_array[@]}; do
    update_hosts_file $host $ip_address $ip
   done
-((i++))
+((++i))
 done
 
 DBNode1=$1
@@ -46,14 +46,12 @@ DBNode3=$3
 
 # Replace the template values in the YAML file with the arguments (scylla nodes ip addresses)
 # and store as prod compose file for start swarm services
-#--cat docker-compose-template.yml | \
-#    sed "s/{{\.${hosts[0]}}}/${hosts[0]}/g; s/{{\.${hosts[1]}}}/${hosts[1]}/g; s/{{\.${hosts[2]}}}/${hosts[2]}/g" \
-#    > ./docker-compose.yml
+cat docker-compose-template.yml | \
+    sed "s/{{\.${hosts[0]}}}/${hosts[0]}/g; s/{{\.${hosts[1]}}}/${hosts[1]}/g; s/{{\.${hosts[2]}}}/${hosts[2]}/g" \
+    > ./docker-compose.yml
 
-#cat ./docker-compose.yml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/docker-compose.yml'
+cat ./docker-compose.yml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/docker-compose.yml'
 
-#ssh $SSH_OPTIONS $SSH_USER@$1 "docker stack deploy --compose-file ~/docker-compose.yml DBDockerStack"
+ssh $SSH_OPTIONS $SSH_USER@$1 "docker stack deploy --compose-file ~/docker-compose.yml DBDockerStack"
 
 set +x
-
-exit 0

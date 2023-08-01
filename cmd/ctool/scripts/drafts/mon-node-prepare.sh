@@ -45,7 +45,7 @@ for host in "${hosts[@]}"; do
       update_hosts_file $host $ip_address $ip
     fi
   done
-((i++))
+((++i))
 done
 
 count=0
