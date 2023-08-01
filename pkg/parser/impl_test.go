@@ -212,7 +212,7 @@ func Test_DupFieldsInTables(t *testing.T) {
 	TYPE BaseType2 (
 		someField int
 	);
-	TABLE ByBaseTable INHERITS CDoc (
+	ABSTRACT TABLE ByBaseTable INHERITS CDoc (
 		Name text,
 		Code text
 	);
@@ -250,6 +250,98 @@ func Test_DupFieldsInTables(t *testing.T) {
 
 }
 
+func Test_AbstractTables(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("file1.sql", `SCHEMA test;
+	TABLE ByBaseTable INHERITS CDoc (
+		Name text
+	);
+	TABLE MyTable INHERITS ByBaseTable(		-- NOT ALLOWED
+	);
+
+	TABLE My1 INHERITS CRecord(
+		f1 ref(AbstractTable)				-- NOT ALLOWED
+	);
+
+	ABSTRACT TABLE AbstractTable INHERITS CDoc(
+	);
+
+	WORKSPACE MyWorkspace1(
+		EXTENSION ENGINE BUILTIN (
+
+			PROJECTOR proj1 
+            ON INSERT AbstractTable 		-- NOT ALLOWED
+            INTENTS(SendMail);
+			
+			SYNC PROJECTOR proj2 
+            ON INSERT My1 
+            INTENTS(Record AbstractTable);	-- NOT ALLOWED
+
+			PROJECTOR proj3 
+            ON INSERT My1 
+			STATE(Record AbstractTable)		-- NOT ALLOWED
+            INTENTS(SendMail);
+		);
+		TABLE My2 INHERITS CRecord(
+			nested AbstractTable			-- NOT ALLOWED
+		);	
+		USE TABLE AbstractTable;			-- NOT ALLOWED
+		TABLE My3 INHERITS CRecord(
+			f int,
+			items ABSTRACT TABLE Nested()	-- NOT ALLOWED
+		);	
+	)
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	_, err = MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:5:2: base table must be abstract",
+		"file1.sql:9:3: reference to abstract table AbstractTable",
+		"file1.sql:18:4: projector refers to abstract table AbstractTable",
+		"file1.sql:22:4: projector refers to abstract table AbstractTable",
+		"file1.sql:26:4: projector refers to abstract table AbstractTable",
+		"file1.sql:34:3: use of abstract table AbstractTable",
+		"file1.sql:37:10: nested abstract table Nested",
+	}, "\n"))
+
+}
+
+func Test_AbstractTables2(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("file1.sql", `SCHEMA test;
+	ABSTRACT TABLE AbstractTable INHERITS CDoc(
+	);
+
+	WORKSPACE MyWorkspace1(
+		TABLE My2 INHERITS CRecord(
+			nested AbstractTable			-- NOT ALLOWED
+		);	
+	);
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	err = BuildAppDefs(packages, appdef.New())
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:7:4: nested abstract table AbstractTable",
+	}, "\n"))
+
+}
 func Test_PanicUnknownFieldType(t *testing.T) {
 	require := require.New(t)
 
@@ -604,16 +696,12 @@ func Test_ReferenceToNoTable(t *testing.T) {
 	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
 	require.Nil(err)
 
-	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+	_, err = MergePackageSchemas([]*PackageSchemaAST{
 		getSysPackageAST(),
 		pkg,
 	})
-	require.NoError(err)
-
-	def := appdef.New()
-	err = BuildAppDefs(packages, def)
-
 	require.Contains(err.Error(), "Admin undefined")
+
 }
 
 func Test_VRestaurantBasic(t *testing.T) {

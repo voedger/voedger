@@ -196,6 +196,9 @@ func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt) {
 	if table.singletone {
 		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
 	}
+	if table.Abstract {
+		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetAbstract()
+	}
 	c.popDef()
 }
 
@@ -259,6 +262,10 @@ func (c *buildContext) addFieldToDef(field *FieldExpr) {
 			}
 			if tbl == nil {
 				c.stmtErr(&field.Pos, ErrTypeNotSupported(field.Type.String()))
+				return
+			}
+			if tbl.Abstract {
+				c.stmtErr(&field.Pos, ErrNestedAbstractTable(field.Type.String()))
 				return
 			}
 			if tbl.tableDefKind == appdef.DefKind_CRecord || tbl.tableDefKind == appdef.DefKind_ORecord || tbl.tableDefKind == appdef.DefKind_WRecord {
