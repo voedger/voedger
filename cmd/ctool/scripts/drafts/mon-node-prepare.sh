@@ -15,6 +15,8 @@ if [[ $# -ne 5 ]]; then
   exit 1
 fi
 
+SSH_USER=$LOGNAME
+SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 AppNode1=$1
 AppNode2=$2
@@ -22,8 +24,27 @@ DBNode1=$3
 DBNode2=$4
 DBNode3=$5
 
-SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
+hosts=("AppNode1" "AppNode2" "DBNode1" "DBNode2" "DBNode3")
+
+# Function to update /etc/hosts on a remote host using SSH
+update_hosts_file() {
+  local host="$1"
+  local ip="$2"
+
+  # SSH command to execute on the remote host
+  ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$ip\t$host\" >> /etc/hosts'"
+}
+
+# Prepare for name resolving - iterate over each hostname and update /etc/hosts on each host
+i=1
+for host in "${hosts[@]}"; do
+  # Inner loop: Iterate over the three IP addresses
+  for ip_address in "$@"; do
+    if (( i < 2 )) && [[ ! $host =~ ^(DBNode1|DBNode2|DBNode3)$ ]]; then
+    update_hosts_file $host $ip_address
+  done
+((i++))
+done
 
 count=0
 
@@ -47,14 +68,14 @@ EOF
       ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/provisioning/dashboards/swarmprom_dashboards.yml'
 
   cat ./grafana/provisioning/datasources/datasource.yml | \
-      sed "s/{{.AppNode}}/$1/g" \
+      sed "s/{{.AppNode}}/${hosts[$count]}/g" \
       | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/provisioning/datasources/datasource.yml'
 
   cat ./grafana/grafana.ini | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/grafana.ini'
 
 
   cat ./prometheus/prometheus.yml | \
-      sed "s/{{.DBNode1}}/$DBNode1/g; s/{{.DBNode2}}/$DBNode2/g; s/{{.DBNode3}}/$DBNode3/g; s/{{.AppNode1}}/$AppNode1/g; s/{{.AppNode2}}/$AppNode2/g; s/{{.Label}}/AppNode$((count+1))/g" \
+      sed "s/{{.DBNode1}}/${hosts[2]}/g; s/{{.DBNode2}}/${hosts[3]}/g; s/{{.DBNode3}}/${hosts[4]}/g; s/{{.AppNode1}}/${hosts[0]}/g; s/{{.AppNode2}}/${hosts[1]}/g; s/{{.Label}}/AppNode$((count+1))/g" \
       | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/prometheus/prometheus.yml'
 
   cat ./prometheus/alert.rules | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/prometheus/alert.rules'

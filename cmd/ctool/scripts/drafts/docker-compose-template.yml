@@ -36,6 +36,7 @@ services:
     volumes:
       - scylla1-data:/var/lib/scylla
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
+      - /etc/hosts:/etc/hosts
 
   scylla2:
     image: scylladb/scylla:4.5.3
@@ -68,6 +69,7 @@ services:
     volumes:
       - scylla2-data:/var/lib/scylla
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
+      - /etc/hosts:/etc/hosts
 
   scylla3:
     image: scylladb/scylla:4.5.3
@@ -100,6 +102,7 @@ services:
     volumes:
       - scylla3-data:/var/lib/scylla
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
+      - /etc/hosts:/etc/hosts
 
 volumes:
   scylla1-data:
