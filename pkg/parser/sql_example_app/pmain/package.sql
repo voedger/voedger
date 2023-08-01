@@ -83,7 +83,7 @@ WORKSPACE MyWorkspace (
     RATE BackofficeFuncRate2 100 PER MINUTE PER IP;
 
     -- It is only allowed create table if it is defined in this workspace, or added with USE statement
-	USE TABLE SomeSchema.SomeTable;
+	USE TABLE SubscriptionProfile;
 	USE TABLE untill.*; 
 
     TYPE TypeWithKind (

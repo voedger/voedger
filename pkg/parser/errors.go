@@ -25,6 +25,7 @@ var ErrUndefinedTableKind = errors.New("undefined table kind")
 var ErrOnlyTypeOrVoidAllowedForArgument = errors.New("only type or void allowed in argument")
 var ErrOnlyTypeOrVoidAllowedForResult = errors.New("only type or void allowed in result")
 var ErrNestedTableIncorrectKind = errors.New("incorrect nested table kind")
+var ErrBaseTableMustBeAbstract = errors.New("base table must be abstract")
 var ErrNestedTablesNotSupportedInTypes = errors.New("nested tables not supported in types")
 
 var ErrArrayFieldsNotSupportedHere = errors.New("array fields of system types not supported here")
@@ -33,6 +34,22 @@ var ErrMustBeNotNull = errors.New("field has to be NOT NULL")
 // Golang: could not import github.com/alecthomas/participle/v2/asd (no required module provides package "github.com/alecthomas/participle/v2/asd")
 func ErrCouldNotImport(pkgName string) error {
 	return fmt.Errorf("could not import %s", pkgName)
+}
+
+func ErrReferenceToAbstractTable(tblName string) error {
+	return fmt.Errorf("reference to abstract table %s", tblName)
+}
+
+func ErrNestedAbstractTable(tblName string) error {
+	return fmt.Errorf("nested abstract table %s", tblName)
+}
+
+func ErrUseOfAbstractTable(tblName string) error {
+	return fmt.Errorf("use of abstract table %s", tblName)
+}
+
+func ErrAbstractTableNotAlowedInProjectors(tblName string) error {
+	return fmt.Errorf("projector refers to abstract table %s", tblName)
 }
 
 func ErrUndefined(name string) error {

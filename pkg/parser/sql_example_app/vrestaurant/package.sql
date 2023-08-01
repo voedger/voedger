@@ -1,13 +1,13 @@
 SCHEMA vrestaurant;
 
 -- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
-TABLE BOEntity INHERITS CDoc( -- TODO: ABSTRACT
+ABSTRACT TABLE BOEntity INHERITS CDoc( -- TODO: ABSTRACT
     Name text NOT NULL, -- TODO NOT NULL everywhere
     Number int NOT NULL -- Number sequence(1) ??? smm
 ) WITH Tags=(BackofficeTag);
 
 -- TABLE Person : is an Abstract data struct for Waiters, Clients, Adminitsrators, Manager
-TABLE Person INHERITS BOEntity ( --TODO:  ABSTRACT
+ABSTRACT TABLE Person INHERITS BOEntity ( --TODO:  ABSTRACT
     Address text, --TODO: get rid of text, use varchar, varchar(30) by default? smm
     Email text,
     Phone text,
