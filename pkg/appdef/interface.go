@@ -290,7 +290,7 @@ type IComment interface {
 
 type ICommentBuilder interface {
 	// Sets comment as string with lines, concatenated with LF
-	SetComment(...string) ICommentBuilder
+	SetComment(...string)
 }
 
 // See [Issue #524](https://github.com/voedger/voedger/issues/524)

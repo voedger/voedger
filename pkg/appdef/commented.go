@@ -18,7 +18,6 @@ func (c *comment) Comment() string {
 	return c.c
 }
 
-func (c *comment) SetComment(v ...string) ICommentBuilder {
+func (c *comment) SetComment(v ...string) {
 	c.c = strings.Join(v, "\n")
-	return c
 }
