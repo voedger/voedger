@@ -34,12 +34,13 @@ update_hosts_file() {
   ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
 }
 
+args_array=("$@")
 # Prepare for name resolving - iterate over each hostname and update /etc/hosts on each host
 i=1
 for host in "${hosts[@]}"; do
+   ip=${args_array[((i-1))]}
   # Inner loop: Iterate over the three IP addresses
   for ip_address in "$@"; do
-    ip=$ip_address
     if (( i < 2 )) && [[ ! $host =~ ^(DBNode1|DBNode2|DBNode3)$ ]]; then
       update_hosts_file $host $ip_address $ip
     fi

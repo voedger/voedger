@@ -28,13 +28,16 @@ update_hosts_file() {
   ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
 }
 
+args_array=("$@")
+i=0
 # Prepare for name resolving - iterate over each hostname and update /etc/hosts on each host
 for host in "${hosts[@]}"; do
+   ip=${args_array[$i]}
   # Inner loop: Iterate over the three IP addresses
   for ip_address in "$@"; do
-   ip=$ip_address
    update_hosts_file $host $ip_address $ip
   done
+  ((i++))
 done
 
 DBNode1=$1
