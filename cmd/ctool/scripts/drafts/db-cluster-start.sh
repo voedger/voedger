@@ -21,18 +21,19 @@ hosts=("DBNode1" "DBNode2" "DBNode3")
 
 # Function to update /etc/hosts on a remote host using SSH
 update_hosts_file() {
-  local host="$1"
-  local ip="$2"
-
+  local host=$1
+  local ip=$2
+  local hr=$3 
   # SSH command to execute on the remote host
-  ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$ip\t$host\" >> /etc/hosts'"
+  ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
 }
 
 # Prepare for name resolving - iterate over each hostname and update /etc/hosts on each host
 for host in "${hosts[@]}"; do
   # Inner loop: Iterate over the three IP addresses
   for ip_address in "$@"; do
-   update_hosts_file $host $ip_address
+   ip=$ip_address
+   update_hosts_file $host $ip_address $ip
   done
 done
 
