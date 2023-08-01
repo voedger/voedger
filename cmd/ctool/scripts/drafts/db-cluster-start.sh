@@ -25,7 +25,7 @@ update_hosts_file() {
   local ip=$2
   local hr=$3 
   # SSH command to execute on the remote host
-#  ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
+  ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
 }
 
 args_array=("$@")
