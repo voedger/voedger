@@ -32,7 +32,7 @@ update_hosts_file() {
 for host in "${hosts[@]}"; do
   # Inner loop: Iterate over the three IP addresses
   for ip_address in "$@"; do
-    update_hosts_file "$host" "$ip_address"
+   update_hosts_file $host $ip_address
   done
 done
 

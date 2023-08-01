@@ -41,7 +41,8 @@ for host in "${hosts[@]}"; do
   # Inner loop: Iterate over the three IP addresses
   for ip_address in "$@"; do
     if (( i < 2 )) && [[ ! $host =~ ^(DBNode1|DBNode2|DBNode3)$ ]]; then
-    update_hosts_file $host $ip_address
+      update_hosts_file $host $ip_address
+    fi
   done
 ((i++))
 done
