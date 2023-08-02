@@ -36,9 +36,9 @@ update_hosts_file() {
 
 args_array=("$@")
 # Prepare for name resolving - iterate over each hostname and update /etc/hosts on each host
-i=1
+i=0
 for host in "${hosts[@]}"; do
-   ip=${args_array[((i-1))]}
+   ip=${args_array[i]}
   # Inner loop: Iterate over the three IP addresses
   for ip_address in "$@"; do
     if (( i < 2 )) && [[ ! $host =~ ^(DBNode1|DBNode2|DBNode3)$ ]]; then
