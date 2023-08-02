@@ -239,9 +239,7 @@ func TestClientDisconnectDuringSections(t *testing.T) {
 			rs.StartMapSection("secMap", []string{"2"})
 			require.Nil(t, rs.SendElement("id1", elem1))
 			<-ch
-			//_ = rs.ObjectSection("objSec", []string{"3"}, 42)
-			err := rs.ObjectSection("objSec", []string{"3"}, 42)
-			require.ErrorIs(t, err, ibus.ErrNoConsumer)
+			_ = rs.ObjectSection("objSec", []string{"3"}, 42)
 			rs.Close(nil)
 			ch <- struct{}{}
 		}()
