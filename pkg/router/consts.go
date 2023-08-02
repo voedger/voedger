@@ -26,9 +26,14 @@ const (
 	blobID                          = "blobID"
 	resourceName                    = "resourceName"
 	//Timeouts should be greater than NATS timeouts to proper use in browser(multiply responses)
-	DefaultReadTimeout      = 15
-	DefaultWriteTimeout     = 15
-	DefaultConnectionsLimit = 10000
+	DefaultReadTimeout            = 15
+	DefaultWriteTimeout           = 15
+	DefaultConnectionsLimit       = 10000
+	DefaultRouterPort             = 8822
+	DefaultRouterConnectionsLimit = 10000
+	//Timeouts should be greater than NATS timeouts to proper use in browser(multiply responses)
+	DefaultRouterReadTimeout  = 15
+	DefaultRouterWriteTimeout = 15
 )
 
 var (

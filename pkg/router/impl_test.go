@@ -11,13 +11,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/ibusmem"
+
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -40,7 +44,7 @@ func TestBasicUsage_SingleResponse(t *testing.T) {
 			StatusCode:  http.StatusOK,
 			Data:        []byte("test resp"),
 		})
-	})
+	}, ibus.DefaultTimeout)
 	defer tearDown()
 
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/somefunc", router.port(), testWSID), "application/json", http.NoBody)
@@ -63,6 +67,22 @@ func TestBasicUsage_SingleResponse(t *testing.T) {
 // 	require.NoError(t, err)
 // 	fmt.Println(string(b))
 // }
+
+func TestSectionedSendResponseError(t *testing.T) {
+	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
+	}, time.Millisecond)
+	defer tearDown()
+
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/somefunc", router.port(), testWSID), "application/json", http.NoBody)
+	require.Nil(t, err, err)
+	defer resp.Body.Close()
+	defer resp.Request.Body.Close()
+
+	respBodyBytes, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, ibus.ErrTimeoutExpired.Error(), string(respBodyBytes))
+	expect500RespPlainText(t, resp)
+}
 
 func TestBasicUsage_SectionedResponse(t *testing.T) {
 	var (
@@ -101,13 +121,13 @@ func TestBasicUsage_SectionedResponse(t *testing.T) {
 			require.NoError(rs.SendElement("", elem22))
 			rs.Close(nil)
 		}()
-	})
+	}, ibus.DefaultTimeout)
 	defer tearDown()
 
 	body := []byte("test body")
 	bodyReader := bytes.NewReader(body)
 
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/somefunc", router.port(), testWSID), "application/json", bodyReader)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), appOwner, appName, testWSID), "application/json", bodyReader)
 	require.NoError(err)
 	defer resp.Body.Close()
 
@@ -160,7 +180,7 @@ func TestEmptySectionedResponse(t *testing.T) {
 	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
 		rs := bus.SendParallelResponse2(sender)
 		rs.Close(nil)
-	})
+	}, ibus.DefaultTimeout)
 	defer tearDown()
 	body := []byte("test body")
 	bodyReader := bytes.NewReader(body)
@@ -176,7 +196,7 @@ func TestSimpleErrorSectionedResponse(t *testing.T) {
 	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
 		rs := bus.SendParallelResponse2(sender)
 		rs.Close(errors.New("test error"))
-	})
+	}, ibus.DefaultTimeout)
 	defer tearDown()
 
 	body := []byte("")
@@ -190,6 +210,145 @@ func TestSimpleErrorSectionedResponse(t *testing.T) {
 	expectJSONResp(t, expectedJSON, resp)
 }
 
+func TestHandlerPanic(t *testing.T) {
+	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
+		panic("test panic")
+	}, ibus.DefaultTimeout)
+	defer tearDown()
+
+	body := []byte("")
+	bodyReader := bytes.NewReader(body)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/untill/airs-bp/%d/somefunc", router.port(), testWSID), "application/json", bodyReader)
+	require.Nil(t, err)
+	defer resp.Body.Close()
+
+	respBodyBytes, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Contains(t, string(respBodyBytes), "test panic")
+	expect500RespPlainText(t, resp)
+}
+
+func TestClientDisconnectDuringSections(t *testing.T) {
+	var (
+		elem1 = map[string]interface{}{"fld1": "fld1Val"}
+	)
+	ch := make(chan struct{})
+	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
+		go func() {
+			rs := bus.SendParallelResponse2(sender)
+			rs.StartMapSection("secMap", []string{"2"})
+			require.Nil(t, rs.SendElement("id1", elem1))
+			<-ch
+			//_ = rs.ObjectSection("objSec", []string{"3"}, 42)
+			err := rs.ObjectSection("objSec", []string{"3"}, 42)
+			require.ErrorIs(t, err, ibus.ErrNoConsumer)
+			rs.Close(nil)
+			ch <- struct{}{}
+		}()
+	}, 10*time.Millisecond)
+	defer tearDown()
+
+	body := []byte("")
+	bodyReader := bytes.NewReader(body)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), appOwner, appName, testWSID), "application/json", bodyReader)
+	require.NoError(t, err)
+	entireResp := []byte{}
+	for string(entireResp) != `{"sections":[{"type":"secMap","path":["2"],"elements":{"id1":{"fld1":"fld1Val"}` {
+		buf := make([]byte, 512)
+		n, _ := resp.Body.Read(buf)
+		require.Nil(t, err)
+		entireResp = append(entireResp, buf[:n]...)
+		log.Println(string(entireResp))
+	}
+	//resp.Request.Body.Close()
+	resp.Body.Close()
+	ch <- struct{}{}
+	<-ch
+}
+
+func TestCheck(t *testing.T) {
+	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
+	}, 1*time.Second)
+	defer tearDown()
+
+	bodyReader := bytes.NewReader(nil)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/check", router.port()), "application/json", bodyReader)
+	require.Nil(t, err, err)
+	defer resp.Body.Close()
+	respBodyBytes, err := ioutil.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, "ok", string(respBodyBytes))
+	expectOKRespPlainText(t, resp)
+}
+
+func Test404(t *testing.T) {
+	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
+	}, 1*time.Second)
+	defer tearDown()
+
+	bodyReader := bytes.NewReader(nil)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/wrong", router.port()), "", bodyReader)
+	require.Nil(t, err, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestFailedToWriteResponse(t *testing.T) {
+	var (
+		elem1 = map[string]interface{}{"fld1": "fld1Val"}
+	)
+	ch := make(chan struct{})
+	failToWrite := make(chan struct{})
+	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
+		go func() {
+			rs := bus.SendParallelResponse2(sender)
+			rs.StartMapSection("secMap", []string{"2"})
+			require.Nil(t, rs.SendElement("id1", elem1))
+
+			// now let's wait for client disconnect
+			ch <- struct{}{}
+			<-ch
+
+			// next section should be failed with ErrNoConsumer
+			_ = rs.ObjectSection("objSec", []string{"3"}, 42)
+			//require.ErrorIs(t, err, ibus.ErrNoConsumer)
+			rs.Close(nil)
+			ch <- struct{}{}
+		}()
+	}, 10*time.Second)
+	onRequestCtxClosed = func() {
+		failToWrite <- struct{}{}
+	}
+	defer tearDown()
+
+	body := []byte("")
+	bodyReader := bytes.NewReader(body)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), appOwner, appName, testWSID), "application/json", bodyReader)
+	require.Nil(t, err, err)
+	<-ch
+	onAfterSectionWrite = func(w http.ResponseWriter) {
+		// disconnect the client
+		resp.Body.Close()
+		// wait for the write to the closed socket error. Sometimes does not appear on first write after socket close
+		for {
+			_, err := w.Write([]byte{0})
+			if err != nil {
+				break
+			}
+		}
+		log.Println()
+	}
+	ch <- struct{}{}
+	resp.Request.Body.Close()
+	resp.Body.Close()
+
+	// wait for fail to write response
+	<-failToWrite
+
+	// wait for communication done
+	<-ch
+}
+
 type testRouter struct {
 	cancel     context.CancelFunc
 	wg         *sync.WaitGroup
@@ -199,9 +358,9 @@ type testRouter struct {
 	bus        ibus.IBus
 }
 
-func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus) {
+func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus, busTimeout time.Duration) {
 	ctx, cancel := context.WithCancel(context.Background())
-	httpSrv, acmeSrv := Provide(ctx, rp, ibus.DefaultTimeout, nil, in10n.Quotas{}, nil, nil, bus, map[istructs.AppQName]istructs.AppWSAmount{istructs.AppQName_test1_app1: 10})
+	httpSrv, acmeSrv := Provide(ctx, rp, busTimeout, nil, in10n.Quotas{}, nil, nil, bus, map[istructs.AppQName]istructs.AppWSAmount{istructs.AppQName_test1_app1: 10})
 	require.Nil(t, acmeSrv)
 	require.NoError(t, httpSrv.Prepare(nil))
 	wg := sync.WaitGroup{}
@@ -213,12 +372,12 @@ func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus) {
 	router.httpServer = httpSrv
 }
 
-func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus)) {
+func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus), busTimeout time.Duration) {
 	if router != nil {
 		router.handler = handlerFunc
 		if !isRouterRestartTested {
 			// let's test router restart once
-			startRouter(t, router.params, router.bus)
+			startRouter(t, router.params, router.bus, busTimeout)
 			isRouterRestartTested = true
 		}
 		return
@@ -239,7 +398,7 @@ func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender int
 		handler: handlerFunc,
 	}
 
-	startRouter(t, rp, bus)
+	startRouter(t, rp, bus, busTimeout)
 }
 
 func tearDown() {
@@ -250,6 +409,7 @@ func tearDown() {
 		// let's test router shutdown once
 		router.cancel()
 		router.wg.Wait()
+		router = nil
 	}
 }
 
@@ -274,6 +434,24 @@ func expectJSONResp(t *testing.T, expectedJSON string, resp *http.Response) {
 	require.JSONEq(t, expectedJSON, string(b))
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	require.Contains(t, resp.Header["Content-Type"][0], "application/json", resp.Header)
+	require.Equal(t, []string{"*"}, resp.Header["Access-Control-Allow-Origin"])
+	require.Equal(t, []string{"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization"}, resp.Header["Access-Control-Allow-Headers"])
+}
+
+func expect500RespPlainText(t *testing.T, resp *http.Response) {
+	t.Helper()
+	expectResp(t, resp, "text/plain", http.StatusInternalServerError)
+}
+
+func expectOKRespPlainText(t *testing.T, resp *http.Response) {
+	t.Helper()
+	expectResp(t, resp, "text/plain", http.StatusOK)
+}
+
+func expectResp(t *testing.T, resp *http.Response, contentType string, statusCode int) {
+	t.Helper()
+	require.Equal(t, statusCode, resp.StatusCode)
+	require.Contains(t, resp.Header["Content-Type"][0], contentType, resp.Header)
 	require.Equal(t, []string{"*"}, resp.Header["Access-Control-Allow-Origin"])
 	require.Equal(t, []string{"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization"}, resp.Header["Access-Control-Allow-Headers"])
 }

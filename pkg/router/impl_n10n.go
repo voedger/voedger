@@ -15,15 +15,16 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/untillpro/goutils/logger"
+
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 /*
 curl -G --data-urlencode "payload={\"SubjectLogin\": \"paa\", \"ProjectionKey\":[{\"App\":\"Application\",\"Projection\":\"paa.price\",\"WS\":1}, {\"App\":\"Application\",\"Projection\":\"paa.wine_price\",\"WS\":1}]}" https://alpha2.dev.untill.ru/n10n/channel -H "Content-Type: application/json"
 */
-func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
+func (s *HTTPService) subscribeAndWatchHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var (
 			urlParams createChannelParamsType
@@ -111,7 +112,7 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 /*
 curl -G --data-urlencode "payload={\"Channel\": \"a23b2050-b90c-4ed1-adb7-1ecc4f346f2b\", \"ProjectionKey\":[{\"App\":\"Application\",\"Projection\":\"paa.wine_price\",\"WS\":1}]}" https://alpha2.dev.untill.ru/n10n/subscribe -H "Content-Type: application/json"
 */
-func (s *httpService) subscribeHandler() http.HandlerFunc {
+func (s *HTTPService) subscribeHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var parameters subscriberParamsType
 		err := getJsonPayload(req, &parameters)
@@ -133,7 +134,7 @@ func (s *httpService) subscribeHandler() http.HandlerFunc {
 /*
 curl -G --data-urlencode "payload={\"Channel\": \"a23b2050-b90c-4ed1-adb7-1ecc4f346f2b\", \"ProjectionKey\":[{\"App\":\"Application\",\"Projection\":\"paa.wine_price\",\"WS\":1}]}" https://alpha2.dev.untill.ru/n10n/unsubscribe -H "Content-Type: application/json"
 */
-func (s *httpService) unSubscribeHandler() http.HandlerFunc {
+func (s *HTTPService) unSubscribeHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var parameters subscriberParamsType
 		err := getJsonPayload(req, &parameters)
@@ -154,7 +155,7 @@ func (s *httpService) unSubscribeHandler() http.HandlerFunc {
 
 // curl -X POST "http://localhost:3001/n10n/update" -H "Content-Type: application/json" -d "{\"App\":\"Application\",\"Projection\":\"paa.price\",\"WS\":1}"
 // TODO: eliminate after airs-bp3 integration tests implementation
-func (s *httpService) updateHandler() http.HandlerFunc {
+func (s *HTTPService) updateHandler() http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		var p in10n.ProjectionKey
 		body, err := io.ReadAll(req.Body)

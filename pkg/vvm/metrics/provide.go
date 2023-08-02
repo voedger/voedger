@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"time"
 
-	router2 "github.com/untillpro/airs-router2"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
+	router2 "github.com/voedger/voedger/pkg/router"
 )
 
 func ProvideMetricsService(vvmCtx context.Context, metricsServicePort MetricsServicePort, imetrics imetrics.IMetrics) MetricsService {

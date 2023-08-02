@@ -20,9 +20,10 @@ import (
 
 	"github.com/gorilla/mux"
 	ibus "github.com/untillpro/airs-ibus"
+
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iprocbus"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -251,7 +252,7 @@ func blobMessageHandler(hvmCtx context.Context, sc iprocbus.ServiceChannel, blob
 	}
 }
 
-func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Request, details interface{}) {
+func (s *HTTPService) blobRequestHandler(resp http.ResponseWriter, req *http.Request, details interface{}) {
 	vars := mux.Vars(req)
 	wsid, err := strconv.ParseInt(vars[wsid], parseInt64Base, parseInt64Bits)
 	if err != nil {
@@ -291,7 +292,7 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 	}
 }
 
-func (s *httpService) blobReadRequestHandler() http.HandlerFunc {
+func (s *HTTPService) blobReadRequestHandler() http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		blobID, err := strconv.ParseInt(vars[blobID], parseInt64Base, parseInt64Bits)
@@ -311,7 +312,7 @@ func (s *httpService) blobReadRequestHandler() http.HandlerFunc {
 	}
 }
 
-func (s *httpService) blobWriteRequestHandler() http.HandlerFunc {
+func (s *HTTPService) blobWriteRequestHandler() http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		principalToken, isHandled := headerAuth(resp, req)
 		if len(principalToken) == 0 {

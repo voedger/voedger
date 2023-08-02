@@ -14,12 +14,13 @@ import (
 
 	"github.com/gorilla/mux"
 	ibus "github.com/untillpro/airs-ibus"
+	"golang.org/x/crypto/acme/autocert"
+
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/istructs"
-	"golang.org/x/crypto/acme/autocert"
 )
 
 type RouterParams struct {
@@ -35,7 +36,7 @@ type RouterParams struct {
 	RouteDomains         map[string]string // resellerportal.dev.untill.ru=http://resellerportal : https://resellerportal.dev.untill.ru/foo -> http://resellerportal/foo
 }
 
-type httpService struct {
+type HTTPService struct {
 	RouterParams
 	*BlobberParams
 	router       *mux.Router
@@ -49,15 +50,17 @@ type httpService struct {
 }
 
 type httpsService struct {
-	*httpService
+	*HTTPService
 	crtMgr *autocert.Manager
 }
 
-type acmeService struct {
+type ACMEService struct {
 	http.Server
 }
 
 type BLOBMaxSizeType int64
+
+type BlobberServiceChannels []iprocbusmem.ChannelGroup
 
 type BlobberParams struct {
 	ServiceChannels        []iprocbusmem.ChannelGroup

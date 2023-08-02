@@ -20,13 +20,14 @@ import (
 	"github.com/gorilla/mux"
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
-	istructs "github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"golang.org/x/net/netutil"
+
+	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func (s *httpsService) Prepare(work interface{}) error {
-	if err := s.httpService.Prepare(work); err != nil {
+	if err := s.HTTPService.Prepare(work); err != nil {
 		return err
 	}
 
@@ -44,7 +45,7 @@ func (s *httpsService) Run(ctx context.Context) {
 }
 
 // pipeline.IService
-func (s *httpService) Prepare(work interface{}) (err error) {
+func (s *HTTPService) Prepare(work interface{}) (err error) {
 	s.router = mux.NewRouter()
 
 	// https://dev.untill.com/projects/#!627072
@@ -75,7 +76,7 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 }
 
 // pipeline.IService
-func (s *httpService) Run(ctx context.Context) {
+func (s *HTTPService) Run(ctx context.Context) {
 	s.server.BaseContext = func(l net.Listener) context.Context {
 		return ctx // need to track both client disconnect and app finalize
 	}
@@ -86,7 +87,7 @@ func (s *httpService) Run(ctx context.Context) {
 }
 
 // pipeline.IService
-func (s *httpService) Stop() {
+func (s *HTTPService) Stop() {
 	// ctx here is used to avoid eternal waiting for close idle connections and listeners
 	// all connections and listeners are closed in the explicit way (they're tracks ctx.Done()) so it is not necessary to track ctx here
 	if err := s.server.Shutdown(context.Background()); err != nil {
@@ -102,11 +103,11 @@ func (s *httpService) Stop() {
 	s.blobWG.Wait()
 }
 
-func (s *httpService) GetPort() int {
+func (s *HTTPService) GetPort() int {
 	return s.listener.Addr().(*net.TCPAddr).Port
 }
 
-func (s *httpService) registerHandlers(busTimeout time.Duration, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) (err error) {
+func (s *HTTPService) registerHandlers(busTimeout time.Duration, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) (err error) {
 	redirectMatcher, err := s.getRedirectMatcher()
 	if err != nil {
 		return err

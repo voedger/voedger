@@ -40,7 +40,7 @@ func parseRoutes(routesURLs map[string]route, routes map[string]string, isRewrit
 // route rewrite: /grafana-rewrite=http://10.0.0.3:3000/rewritten : https://alpha.dev.untill.ru/grafana-rewrite/foo -> http://10.0.0.3:3000/rewritten/foo
 // default route: http://10.0.0.3:3000/not-found : https://alpha.dev.untill.ru/unknown/foo -> http://10.0.0.3:3000/not-found/unknown/foo
 // route domain : resellerportal.dev.untill.ru=http://resellerportal : https://resellerportal.dev.untill.ru/foo -> http://resellerportal/foo
-func (s *httpService) getRedirectMatcher() (redirectMatcher mux.MatcherFunc, err error) {
+func (s *HTTPService) getRedirectMatcher() (redirectMatcher mux.MatcherFunc, err error) {
 	routes := map[string]route{}
 	reverseProxy := &httputil.ReverseProxy{Director: func(r *http.Request) {}} // director's job is done by redirectMatcher
 	if err := parseRoutes(routes, s.Routes, false); err != nil {

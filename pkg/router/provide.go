@@ -12,17 +12,18 @@ import (
 
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
+	"golang.org/x/crypto/acme/autocert"
+
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"golang.org/x/crypto/acme/autocert"
 )
 
-// port == 443 -> httpsService + acmeService, otherwise -> httpService only, acmeService is nil
+// port == 443 -> httpsService + ACMEService, otherwise -> HTTPService only, ACMEService is nil
 func Provide(hvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, quotas in10n.Quotas, bp *BlobberParams, autocertCache autocert.Cache,
 	bus ibus.IBus, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) (httpSrv pipeline.IService, acmeSrv pipeline.IService) {
-	httpService := &httpService{
+	httpService := &HTTPService{
 		RouterParams:  rp,
 		n10n:          broker,
 		BlobberParams: bp,
@@ -62,12 +63,12 @@ func Provide(hvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration,
 		crtMgr.Cache = autocert.DirCache(rp.CertDir)
 	}
 	httpsService := &httpsService{
-		httpService: httpService,
+		HTTPService: httpService,
 		crtMgr:      crtMgr,
 	}
 
 	// handle Lets Encrypt callback over 80 port - only port 80 allowed
-	acmeService := &acmeService{
+	acmeService := &ACMEService{
 		Server: http.Server{
 			Addr:         ":80",
 			ReadTimeout:  DefaultACMEServerReadTimeout,
