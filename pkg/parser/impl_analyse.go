@@ -36,8 +36,25 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 			ac.doType(v)
 		case *ViewStmt:
 			ac.view(v)
+		case *UseTableStmt:
+			ac.useTable(v)
 		}
 	})
+}
+
+func (c *analyseCtx) useTable(u *UseTableStmt) {
+	if !u.AllTables {
+		name := DefQName{Package: u.Package, Name: u.Name}
+		resolveFunc := func(f *TableStmt) error {
+			if f.Abstract {
+				return ErrUseOfAbstractTable(name.String())
+			}
+			return nil
+		}
+		if err := resolve(name, c.basicContext, resolveFunc); err != nil {
+			c.stmtErr(&u.Pos, err)
+		}
+	}
 }
 
 func (c *analyseCtx) view(view *ViewStmt) {
@@ -125,7 +142,13 @@ func (c *analyseCtx) query(v *QueryStmt) {
 func (c *analyseCtx) projector(v *ProjectorStmt) {
 	for _, target := range v.Triggers {
 		if v.On.Activate || v.On.Deactivate || v.On.Insert || v.On.Update {
-			if err := resolve(target, c.basicContext, func(f *TableStmt) error { return nil }); err != nil {
+			resolveFunc := func(f *TableStmt) error {
+				if f.Abstract {
+					return ErrAbstractTableNotAlowedInProjectors(target.String())
+				}
+				return nil
+			}
+			if err := resolve(target, c.basicContext, resolveFunc); err != nil {
 				c.stmtErr(&v.Pos, err)
 			}
 		} else if v.On.Command {
@@ -144,7 +167,13 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 			if key.Entity == nil {
 				return ErrStorageRequiresEntity(key.Storage.String())
 			}
-			if err2 := resolve(*key.Entity, c.basicContext, func(f *TableStmt) error { return nil }); err2 != nil {
+			resolveFunc := func(f *TableStmt) error {
+				if f.Abstract {
+					return ErrAbstractTableNotAlowedInProjectors(key.Entity.String())
+				}
+				return nil
+			}
+			if err2 := resolve(*key.Entity, c.basicContext, resolveFunc); err2 != nil {
 				return err2
 			}
 		}
@@ -250,16 +279,24 @@ func (c *analyseCtx) table(v *TableStmt) {
 	var err error
 	v.tableDefKind, v.singletone, err = c.getTableDefKind(v)
 	if err != nil {
-		c.stmtErr(&v.Pos, nil)
+		c.stmtErr(&v.Pos, err)
 		return
 	}
 	c.with(&v.With, v)
 	c.nestedTables(v.Items, v.tableDefKind)
 	c.fieldSets(v.Items)
+	c.fields(v.Items)
 	if v.Inherits != nil {
-		if err := resolve(*v.Inherits, c.basicContext, func(f *TableStmt) error { return nil }); err != nil {
+		resolvedFunc := func(f *TableStmt) error {
+			if !f.Abstract {
+				return ErrBaseTableMustBeAbstract
+			}
+			return nil
+		}
+		if err := resolve(*v.Inherits, c.basicContext, resolvedFunc); err != nil {
 			c.stmtErr(&v.Pos, err)
 		}
+
 	}
 }
 
@@ -289,6 +326,10 @@ func (c *analyseCtx) nestedTables(items []TableItemExpr, rootTableKind appdef.De
 		item := items[i]
 		if item.NestedTable != nil {
 			nestedTable := &item.NestedTable.Table
+			if nestedTable.Abstract {
+				c.stmtErr(&nestedTable.Pos, ErrNestedAbstractTable(nestedTable.GetName()))
+				return
+			}
 			if nestedTable.Inherits == nil {
 				nestedTable.tableDefKind = getNestedTableKind(rootTableKind)
 			} else {
@@ -321,6 +362,30 @@ func (c *analyseCtx) fieldSets(items []TableItemExpr) {
 		if item.NestedTable != nil {
 			nestedTable := &item.NestedTable.Table
 			c.fieldSets(nestedTable.Items)
+		}
+	}
+}
+
+func (c *analyseCtx) fields(items []TableItemExpr) {
+	for i := range items {
+		item := items[i]
+		if item.RefField != nil {
+			rf := item.RefField
+			for i := range rf.RefDocs {
+				tableStmt, err := resolveTable(rf.RefDocs[i], c.basicContext)
+				if err != nil {
+					c.stmtErr(&rf.Pos, err)
+					continue
+				}
+				if tableStmt.Abstract {
+					c.stmtErr(&rf.Pos, ErrReferenceToAbstractTable(rf.RefDocs[i].String()))
+					continue
+				}
+			}
+		}
+		if item.NestedTable != nil {
+			nestedTable := &item.NestedTable.Table
+			c.fields(nestedTable.Items)
 		}
 	}
 }

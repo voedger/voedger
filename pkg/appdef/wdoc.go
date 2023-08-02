@@ -9,9 +9,11 @@ package appdef
 //   - IWDoc, IWDocBuilder
 type wDoc struct {
 	def
+	comment
 	fields
 	containers
 	uniques
+	withAbstract
 }
 
 func newWDoc(app *appDef, name QName) *wDoc {
@@ -29,9 +31,11 @@ func newWDoc(app *appDef, name QName) *wDoc {
 //   - IWRecord, IWRecordBuilder
 type wRecord struct {
 	def
+	comment
 	fields
 	containers
 	uniques
+	withAbstract
 }
 
 func newWRecord(app *appDef, name QName) *wRecord {

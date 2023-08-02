@@ -419,7 +419,8 @@ type NamedParam struct {
 
 type TableStmt struct {
 	Statement
-	Name         Ident           `parser:"'TABLE' @Ident"`
+	Abstract     bool            `parser:"@'ABSTRACT'? 'TABLE'"`
+	Name         Ident           `parser:"@Ident"`
 	Inherits     *DefQName       `parser:"('INHERITS' @@)?"`
 	Items        []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	With         []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`

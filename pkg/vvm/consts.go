@@ -28,6 +28,7 @@ const (
 	DefaultVVMPort                       = router.DefaultRouterPort
 	SecretKeyJWTName                     = "secretKeyJWT"
 	actualizerIntentsLimit               = 128
+	actualizerFlushInterval              = time.Millisecond * 500
 )
 
 const (

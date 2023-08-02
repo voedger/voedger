@@ -25,6 +25,9 @@ var fsUntill embed.FS
 //go:embed sql_example_syspkg/*.sql
 var sfs embed.FS
 
+//go:embed sql_example_app/vrestaurant/*.sql
+var fsvRestaurant embed.FS
+
 //_go:embed example_app/expectedParsed.schema
 //var expectedParsedExampledSchemaStr string
 
@@ -209,7 +212,7 @@ func Test_DupFieldsInTables(t *testing.T) {
 	TYPE BaseType2 (
 		someField int
 	);
-	TABLE ByBaseTable INHERITS CDoc (
+	ABSTRACT TABLE ByBaseTable INHERITS CDoc (
 		Name text,
 		Code text
 	);
@@ -243,6 +246,124 @@ func Test_DupFieldsInTables(t *testing.T) {
 		"file1.sql:23:3: someField redeclared",
 		"file1.sql:24:3: Kind redeclared",
 		"file1.sql:25:3: Name redeclared",
+	}, "\n"))
+
+}
+
+func Test_AbstractTables(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("file1.sql", `SCHEMA test;
+	TABLE ByBaseTable INHERITS CDoc (
+		Name text
+	);
+	TABLE MyTable INHERITS ByBaseTable(		-- NOT ALLOWED
+	);
+
+	TABLE My1 INHERITS CRecord(
+		f1 ref(AbstractTable)				-- NOT ALLOWED
+	);
+
+	ABSTRACT TABLE AbstractTable INHERITS CDoc(
+	);
+
+	WORKSPACE MyWorkspace1(
+		EXTENSION ENGINE BUILTIN (
+
+			PROJECTOR proj1 
+            ON INSERT AbstractTable 		-- NOT ALLOWED
+            INTENTS(SendMail);
+			
+			SYNC PROJECTOR proj2 
+            ON INSERT My1 
+            INTENTS(Record AbstractTable);	-- NOT ALLOWED
+
+			PROJECTOR proj3 
+            ON INSERT My1 
+			STATE(Record AbstractTable)		-- NOT ALLOWED
+            INTENTS(SendMail);
+		);
+		TABLE My2 INHERITS CRecord(
+			nested AbstractTable			-- NOT ALLOWED
+		);	
+		USE TABLE AbstractTable;			-- NOT ALLOWED
+		TABLE My3 INHERITS CRecord(
+			f int,
+			items ABSTRACT TABLE Nested()	-- NOT ALLOWED
+		);	
+	)
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	_, err = MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:5:2: base table must be abstract",
+		"file1.sql:9:3: reference to abstract table AbstractTable",
+		"file1.sql:18:4: projector refers to abstract table AbstractTable",
+		"file1.sql:22:4: projector refers to abstract table AbstractTable",
+		"file1.sql:26:4: projector refers to abstract table AbstractTable",
+		"file1.sql:34:3: use of abstract table AbstractTable",
+		"file1.sql:37:10: nested abstract table Nested",
+	}, "\n"))
+
+}
+
+func Test_AbstractTables2(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("file1.sql", `SCHEMA test;
+	ABSTRACT TABLE AbstractTable INHERITS CDoc(
+	);
+
+	WORKSPACE MyWorkspace1(
+		TABLE My2 INHERITS CRecord(
+			nested AbstractTable			-- NOT ALLOWED
+		);	
+	);
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	err = BuildAppDefs(packages, appdef.New())
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:7:4: nested abstract table AbstractTable",
+	}, "\n"))
+
+}
+func Test_PanicUnknownFieldType(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("file1.sql", `SCHEMA test;
+	TABLE MyTable INHERITS CDoc (
+		Name asdasd,
+		Code text
+	);
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	err = BuildAppDefs(packages, appdef.New())
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:3:3: asdasd type not supported",
 	}, "\n"))
 
 }
@@ -575,14 +696,58 @@ func Test_ReferenceToNoTable(t *testing.T) {
 	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
 	require.Nil(err)
 
-	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+	_, err = MergePackageSchemas([]*PackageSchemaAST{
 		getSysPackageAST(),
 		pkg,
 	})
+	require.Contains(err.Error(), "Admin undefined")
+
+}
+
+func Test_VRestaurantBasic(t *testing.T) {
+
+	require := require.New(t)
+
+	vRestaurantPkgAST, err := ParsePackageDir("github.com/untillpro/vrestaurant", fsvRestaurant, "sql_example_app/vrestaurant")
 	require.NoError(err)
 
-	def := appdef.New()
-	err = BuildAppDefs(packages, def)
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		vRestaurantPkgAST,
+	})
+	require.NoError(err)
 
-	require.Contains(err.Error(), "Admin undefined")
+	builder := appdef.New()
+	err = BuildAppDefs(packages, builder)
+	require.NoError(err)
+
+	// table
+	cdoc := builder.Def(appdef.NewQName("vrestaurant", "TablePlan"))
+	require.NotNil(cdoc)
+	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
+	require.Equal(appdef.DataKind_RecordID, cdoc.(appdef.IFields).Field("Picture").DataKind())
+
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "Client"))
+	require.NotNil(cdoc)
+
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "POSUser"))
+	require.NotNil(cdoc)
+
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "Department"))
+	require.NotNil(cdoc)
+
+	cdoc = builder.Def(appdef.NewQName("vrestaurant", "Article"))
+	require.NotNil(cdoc)
+
+	// child table
+	crec := builder.Def(appdef.NewQName("vrestaurant", "TableItem"))
+	require.NotNil(crec)
+	require.Equal(appdef.DefKind_CRecord, crec.Kind())
+	require.Equal(appdef.DataKind_int32, crec.(appdef.IFields).Field("Tableno").DataKind())
+
+	// view
+	view := builder.View(appdef.NewQName("vrestaurant", "SalesPerDay"))
+	require.NotNil(view)
+	require.Equal(appdef.DefKind_ViewRecord, view.Kind())
+
 }

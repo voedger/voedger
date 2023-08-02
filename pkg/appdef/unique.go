@@ -18,6 +18,7 @@ const (
 // # Implements:
 //   - IUnique
 type unique struct {
+	comment
 	owner  interface{}
 	name   string
 	fields []IField
@@ -25,7 +26,12 @@ type unique struct {
 }
 
 func newUnique(def interface{}, name string, fields []string) *unique {
-	u := &unique{def, name, make([]IField, 0), NullUniqueID}
+	u := &unique{
+		owner:  def,
+		name:   name,
+		fields: make([]IField, 0),
+		id:     NullUniqueID,
+	}
 	sort.Strings(fields)
 	fieldsDef := def.(IFields)
 	for _, f := range fields {
@@ -74,11 +80,11 @@ func makeUniques(def interface{}) uniques {
 	return u
 }
 
-func (u *uniques) AddUnique(name string, fields []string) IUniquesBuilder {
+func (u *uniques) AddUnique(name string, fields []string, comment ...string) IUniquesBuilder {
 	if name == NullName {
 		name = generateUniqueName(u, fields)
 	}
-	return u.addUnique(name, fields)
+	return u.addUnique(name, fields, comment...)
 }
 
 func (u *uniques) SetUniqueField(name string) IUniquesBuilder {
@@ -133,7 +139,7 @@ func (u *uniques) Uniques(enum func(IUnique)) {
 	}
 }
 
-func (u *uniques) addUnique(name string, fields []string) IUniquesBuilder {
+func (u *uniques) addUnique(name string, fields []string, comment ...string) IUniquesBuilder {
 	if ok, err := ValidIdent(name); !ok {
 		panic(fmt.Errorf("%v: unique name «%v» is invalid: %w", u.parentDef().QName(), name, err))
 	}
@@ -167,6 +173,7 @@ func (u *uniques) addUnique(name string, fields []string) IUniquesBuilder {
 	}
 
 	un := newUnique(u.parent, name, fields)
+	un.SetComment(comment...)
 	u.uniques[name] = un
 	u.uniquesOrdered = append(u.uniquesOrdered, name)
 

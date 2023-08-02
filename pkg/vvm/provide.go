@@ -496,12 +496,13 @@ func provideAsyncActualizersFactory(appStructsProvider istructs.IAppStructsProvi
 			Ctx:      vvmCtx,
 			AppQName: appQName,
 			// FIXME: это правильно, что постоянную appStrcuts возвращаем? Каждый раз не надо запрашивать у appStructsProvider?
-			AppStructs:   func() istructs.IAppStructs { return appStructs },
-			SecretReader: secretReader,
-			Partition:    partitionID,
-			Broker:       n10nBroker,
-			Opts:         opts,
-			IntentsLimit: actualizerIntentsLimit,
+			AppStructs:    func() istructs.IAppStructs { return appStructs },
+			SecretReader:  secretReader,
+			Partition:     partitionID,
+			Broker:        n10nBroker,
+			Opts:          opts,
+			IntentsLimit:  actualizerIntentsLimit,
+			FlushInterval: actualizerFlushInterval,
 		}
 
 		asyncProjectors = make([]pipeline.ForkOperatorOptionFunc, len(asyncProjectorFactories))

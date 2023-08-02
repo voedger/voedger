@@ -1,15 +1,15 @@
 -- note: this schema is for tests only. Voedger sys package uses copy of this schema
 SCHEMA test_sys;
 
-TABLE CRecord();
-TABLE WRecord();
-TABLE ORecord();
+ABSTRACT TABLE CRecord();
+ABSTRACT TABLE WRecord();
+ABSTRACT TABLE ORecord();
 
-TABLE CDoc INHERITS CRecord ();
-TABLE ODoc INHERITS ORecord ();
-TABLE WDoc INHERITS WRecord ();
+ABSTRACT TABLE CDoc INHERITS CRecord();
+ABSTRACT TABLE ODoc INHERITS ORecord();
+ABSTRACT TABLE WDoc INHERITS WRecord();
 
-TABLE Singleton INHERITS CDoc();
+ABSTRACT TABLE Singleton INHERITS CDoc();
 
 EXTENSION ENGINE BUILTIN (
 
