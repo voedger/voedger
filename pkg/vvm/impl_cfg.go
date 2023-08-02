@@ -8,14 +8,15 @@ import (
 	"os"
 
 	ibus "github.com/untillpro/airs-ibus"
-	router "github.com/untillpro/airs-router2"
 	"github.com/untillpro/goutils/logger"
+
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
+	"github.com/voedger/voedger/pkg/router"
 )
 
 func NewVVMDefaultConfig() VVMConfig {
