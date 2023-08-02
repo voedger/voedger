@@ -159,7 +159,7 @@ services:
       - '--storage.path=/alertmanager'
       - '--cluster.peer={{.AppNode2}}:9094' 
       - '--cluster.listen-address=:9094'
-      - '--cluster.advertise-address={{.AppNode1}}:9094'
+      - '--cluster.advertise-address=:9094'
     restart: unless-stopped
     ports:
       - target: 9093
@@ -187,7 +187,7 @@ services:
       - '--storage.path=/alertmanager'
       - '--cluster.peer={{.AppNode1}}:9094' 
       - '--cluster.listen-address=:9094'
-      - '--cluster.advertise-address={{.AppNode2}}:9094'
+      - '--cluster.advertise-address=:9094'
     restart: unless-stopped
     ports:
       - target: 9093
