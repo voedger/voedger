@@ -26,12 +26,22 @@ DBNode3=$5
 
 hosts=("AppNode1" "AppNode2" "DBNode1" "DBNode2" "DBNode3")
 
+# Function to update /etc/hosts on a remote host using SSH
 update_hosts_file() {
   local host=$1
   local ip=$2
   local hr=$3 
+  # Check if the hostname already exists in /etc/hosts
+  if ssh $SSH_OPTIONS $SSH_USER@$ip "sudo grep -qF '$hr' /etc/hosts"; then
+      # If the hostname exists, replace the existing entry
+      ssh $SSH_OPTIONS $SSH_USER@$ip "sudo sed -i -E 's/.*\b$hr\b.*$/$hr\t$host/' /etc/hosts"
+  else
+      # If the hostname doesn't exist, add the new record
+      ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
+  fi
+
   # SSH command to execute on the remote host
-  ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
+  # ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
 }
 
 args_array=("$@")
