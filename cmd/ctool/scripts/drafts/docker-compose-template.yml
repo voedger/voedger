@@ -27,7 +27,7 @@ services:
           - node.labels.DBNode1 == true
       replicas: 1
     healthcheck:
-      test: ["CMD-SHELL", "nodetool status | awk '/^UN/ {print $$2}' | grep -w '{{.DBNode1}}'"]
+      test: ["CMD-SHELL", "nodetool status | awk '/^UN/ {print $$2}' | grep -w $$(getent hosts {{.DBNode1}} | awk '{print $$1}')"]
       interval: 15s
       timeout: 5s
       retries: 30  
@@ -60,7 +60,7 @@ services:
           - node.labels.DBNode2 == true
       replicas: 1
     healthcheck:
-      test: ["CMD-SHELL", "nodetool status | awk '/^UN/ {print $$2}' | grep -w '{{.DBNode2}}'"]
+      test: ["CMD-SHELL", "nodetool status | awk '/^UN/ {print $$2}' | grep -w $$(getent hosts {{.DBNode2}} | awk '{print $$1}')"]
       interval: 15s
       timeout: 5s
       retries: 30  
@@ -93,7 +93,7 @@ services:
           - node.labels.DBNode3 == true
       replicas: 1
     healthcheck:
-      test: ["CMD-SHELL", "nodetool status | awk '/^UN/ {print $$2}' | grep -w '{{.DBNode3}}'"]
+      test: ["CMD-SHELL", "nodetool status | awk '/^UN/ {print $$2}' | grep -w $$(getent hosts {{.DBNode3}} | awk '{print $$1}')"]
       interval: 15s
       timeout: 5s
       retries: 30  
