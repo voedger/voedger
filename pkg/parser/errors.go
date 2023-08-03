@@ -26,6 +26,8 @@ var ErrOnlyTypeOrVoidAllowedForArgument = errors.New("only type or void allowed 
 var ErrOnlyTypeOrVoidAllowedForResult = errors.New("only type or void allowed in result")
 var ErrNestedTableIncorrectKind = errors.New("incorrect nested table kind")
 var ErrBaseTableMustBeAbstract = errors.New("base table must be abstract")
+var ErrBaseWorkspaceMustBeAbstract = errors.New("base workspace must be abstract")
+var ErrAbstractWorkspaceDescriptor = errors.New("abstract workspace cannot have a descriptor")
 var ErrNestedTablesNotSupportedInTypes = errors.New("nested tables not supported in types")
 
 var ErrArrayFieldsNotSupportedHere = errors.New("array fields of system types not supported here")

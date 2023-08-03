@@ -310,11 +310,20 @@ func (c *analyseCtx) doType(v *TypeStmt) {
 }
 
 func (c *analyseCtx) workspace(v *WorkspaceStmt) {
-	if v.Descriptor != nil {
-		if v.Inherits != nil {
-			if err := resolve(*v.Inherits, c.basicContext, func(f *WorkspaceStmt) error { return nil }); err != nil {
-				c.stmtErr(&v.Pos, err)
+	if v.Inherits != nil {
+		resolveFunc := func(w *WorkspaceStmt) error {
+			if !w.Abstract {
+				return ErrBaseWorkspaceMustBeAbstract
 			}
+			return nil
+		}
+		if err := resolve(*v.Inherits, c.basicContext, resolveFunc); err != nil {
+			c.stmtErr(&v.Pos, err)
+		}
+	}
+	if v.Descriptor != nil {
+		if v.Abstract {
+			c.stmtErr(&v.Pos, ErrAbstractWorkspaceDescriptor)
 		}
 		c.nestedTables(v.Descriptor.Items, appdef.DefKind_CDoc)
 		c.fieldSets(v.Descriptor.Items)
