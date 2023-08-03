@@ -170,17 +170,10 @@ func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error)
 
 // Validates specified row
 func (v *validator) validRow(row *rowType) (err error) {
-	v.def.(appdef.IFields).Fields(
-		func(f appdef.IField) {
-			if f.Required() {
-				if !row.HasValue(f.Name()) {
-					err = errors.Join(err,
-						validateErrorf(ECode_EmptyData, "%s misses field «%s» required by definition «%v»: %w", v.entName(row), f.Name(), v.def.QName(), ErrNameNotFound))
-				}
-			}
-		})
-
-	return err
+	fv := fieldValidatorPoolGet_validRequired(v, row)
+	defer fieldValidatorPoolPut_validRequired(fv)
+	v.def.(appdef.IFields).Fields(fv.closureValidRequired)
+	return fv.err
 }
 
 // Validate specified object
@@ -390,25 +383,16 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 		return validateErrorf(ECode_InvalidDefName, "wrong view clustering columns definition «%v», for view «%v» expected «%v»: %w", key.ccolsRow.QName(), key.viewName, ccDef, ErrWrongDefinition)
 	}
 
-	key.partRow.fieldsDef().Fields(
-		func(f appdef.IField) {
-			if !key.partRow.HasValue(f.Name()) {
-				err = errors.Join(err,
-					validateErrorf(ECode_EmptyData, "view «%v» partition key «%v» field «%s» is empty: %w", key.viewName, pkDef, f.Name(), ErrFieldIsEmpty))
-			}
-		})
+	kv := fieldValidatorPoolGet_validKey(key)
+	defer fieldValidatorPoolPut_validKey(kv)
+
+	key.partRow.fieldsDef().Fields(kv.closureValidPK)
 
 	if !partialClust {
-		key.ccolsRow.fieldsDef().Fields(
-			func(f appdef.IField) {
-				if !key.ccolsRow.HasValue(f.Name()) {
-					err = errors.Join(err,
-						validateErrorf(ECode_EmptyData, "view «%v» clustering columns «%v» field «%s» is empty: %w", key.viewName, ccDef, f.Name(), ErrFieldIsEmpty))
-				}
-			})
+		key.ccolsRow.fieldsDef().Fields(kv.closureValidCC)
 	}
 
-	return err
+	return kv.err
 }
 
 // Validates specified view value
