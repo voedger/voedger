@@ -68,8 +68,8 @@ EXTENSION ENGINE WASM (
 );
 
 WORKSPACE MyWorkspace (
-    DESCRIPTOR( -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
-        air.TypeWithName,
+    DESCRIPTOR(                     -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
+        air.TypeWithName,           -- Fieldset
         Country text CHECK '^[A-Za-z]{2}$',
         Description text
     );
