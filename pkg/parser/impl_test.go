@@ -571,8 +571,13 @@ func Test_AbstractWorkspace(t *testing.T) {
 
 	fs, err := ParseFile("example.sql", `SCHEMA test;
 	WORKSPACE ws1 ();
-	ABSTRACT WORKSPACE ws2();
+	ABSTRACT WORKSPACE ws2(		
+		DESCRIPTOR(					-- Incorrect
+			a int
+		);
+	);
 	WORKSPACE ws4 INHERITS ws2 ();
+	WORKSPACE ws5 INHERITS ws1 ();  -- Incorrect
 	`)
 	require.Nil(err)
 
@@ -583,6 +588,15 @@ func Test_AbstractWorkspace(t *testing.T) {
 	require.True(ps.Ast.Statements[1].Workspace.Abstract)
 	require.False(ps.Ast.Statements[2].Workspace.Abstract)
 	require.Equal("ws2", ps.Ast.Statements[2].Workspace.Inherits.String())
+
+	_, err = MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		ps,
+	})
+	require.EqualError(err, strings.Join([]string{
+		"example.sql:3:2: abstract workspace cannot have a descriptor",
+		"example.sql:9:2: base workspace must be abstract",
+	}, "\n"))
 
 }
 
