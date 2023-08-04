@@ -11,6 +11,14 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
+ABSTRACT WORKSPACE Workspace (
+    EXTENSION ENGINE BUILTIN (
+        -- QUERY Collection(...) RETURNS ANY;
+        -- COMMAND...
+        -- GRANT...
+    )
+)
+
 EXTENSION ENGINE BUILTIN (
 
     STORAGE Record( 

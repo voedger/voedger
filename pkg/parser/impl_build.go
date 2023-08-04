@@ -30,21 +30,67 @@ func newBuildContext(packages map[string]*PackageSchemaAST, builder appdef.IAppD
 	}
 }
 
+type buildFunc func() error
+
 func (c *buildContext) build() error {
-	if err := c.types(); err != nil {
-		return err
+	var steps = []buildFunc{
+		c.types,
+		c.tables,
+		c.views,
+		c.commands,
+		c.queries,
+		c.workspaces,
 	}
-	if err := c.tables(); err != nil {
-		return err
+	for _, step := range steps {
+		if err := step(); err != nil {
+			return err
+		}
+
 	}
-	if err := c.views(); err != nil {
-		return err
+	return nil
+}
+
+type wsBuildCtx struct {
+	schema  *SchemaAST
+	builder appdef.IWorkspaceBuilder
+	qname   appdef.QName
+}
+
+func (c *buildContext) workspaces() error {
+	workspaces := make(map[*WorkspaceStmt]*wsBuildCtx)
+	for _, schema := range c.pkgmap {
+		iterateStmt(schema.Ast, func(w *WorkspaceStmt) {
+			qname := schema.Ast.NewQName(w.Name)
+			workspaces[w] = &wsBuildCtx{
+				schema:  schema.Ast,
+				qname:   qname,
+				builder: c.builder.AddWorkspace(qname),
+			}
+		})
 	}
-	if err := c.commands(); err != nil {
-		return err
+
+	var iter func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection)
+
+	iter = func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection) {
+		if ws.Inherits != nil {
+			//TODO: implement
+		}
+		coll.Iterate(func(stmt interface{}) {
+			if named, ok := stmt.(INamedStatement); ok {
+				wsctx.builder.AddDef(appdef.NewQName(string(wsctx.schema.Package), named.GetName()))
+			}
+			if collection, ok := stmt.(IStatementCollection); ok {
+				if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
+					iter(ws, wsctx, collection)
+				}
+			}
+		})
 	}
-	if err := c.queries(); err != nil {
-		return err
+
+	for w, ctx := range workspaces {
+		if !w.Abstract {
+			iter(w, ctx, w)
+		}
 	}
 	return nil
 }
