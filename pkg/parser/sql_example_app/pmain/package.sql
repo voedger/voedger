@@ -75,7 +75,7 @@ WORKSPACE MyWorkspace (
     );
 
     -- Declare comments, tags and roles which only available in this workspace
-    TAG PosTag;
+    TAG PosTag;  
     ROLE LocationManager;
 
     -- Declare rates

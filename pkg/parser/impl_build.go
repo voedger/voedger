@@ -56,6 +56,23 @@ type wsBuildCtx struct {
 	qname   appdef.QName
 }
 
+func supported(stmt interface{}) bool {
+	// FIXME: this must be empty in the end
+	if _, ok := stmt.(*TagStmt); ok {
+		return false
+	}
+	if _, ok := stmt.(*RoleStmt); ok {
+		return false
+	}
+	if _, ok := stmt.(*RateStmt); ok {
+		return false
+	}
+	if _, ok := stmt.(*ProjectorStmt); ok {
+		return false
+	}
+	return true
+}
+
 func (c *buildContext) workspaces() error {
 	workspaces := make(map[*WorkspaceStmt]*wsBuildCtx)
 	for _, schema := range c.pkgmap {
@@ -72,12 +89,19 @@ func (c *buildContext) workspaces() error {
 	var iter func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection)
 
 	iter = func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection) {
-		if ws.Inherits != nil {
-			//TODO: implement
+		if ws.Inherits != nil { // include from inherited
+			baseWs, err := lookup[*WorkspaceStmt](*ws.Inherits, &c.basicContext)
+			if err != nil {
+				c.stmtErr(&ws.Pos, err)
+				return
+			}
+			iter(baseWs, wsctx, baseWs)
 		}
 		coll.Iterate(func(stmt interface{}) {
 			if named, ok := stmt.(INamedStatement); ok {
-				wsctx.builder.AddDef(appdef.NewQName(string(wsctx.schema.Package), named.GetName()))
+				if supported(stmt) {
+					wsctx.builder.AddDef(appdef.NewQName(string(wsctx.schema.Package), named.GetName()))
+				}
 			}
 			if collection, ok := stmt.(IStatementCollection); ok {
 				if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
@@ -216,11 +240,11 @@ func (c *buildContext) fillTable(table *TableStmt) {
 func (c *buildContext) workspaceDescriptor(schema *PackageSchemaAST, w *WorkspaceStmt) {
 	if w.Descriptor != nil {
 		c.setSchema(schema)
-		qname := c.pkg.Ast.NewQName(w.Name)
+		qname := c.pkg.Ast.NewQName(w.Descriptor.Name)
 		if c.isExists(qname, appdef.DefKind_CDoc) {
 			return
 		}
-		c.pushDef(w.Name, appdef.DefKind_CDoc)
+		c.pushDef(w.Descriptor.Name, appdef.DefKind_CDoc)
 		c.addTableItems(w.Descriptor.Items)
 		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
 		c.popDef()

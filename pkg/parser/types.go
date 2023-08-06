@@ -165,7 +165,8 @@ func (s *RootExtEngineStmt) Iterate(callback func(stmt interface{})) {
 
 type WorkspaceStmt struct {
 	Statement
-	Abstract   bool                 `parser:"@'ABSTRACT'?"`
+	Abstract   bool                 `parser:"(@'ABSTRACT' "`
+	Alterable  bool                 `parser:"| @'ALTERABLE')?"`
 	Pool       bool                 `parser:"@('POOL' 'OF')?"`
 	Name       Ident                `parser:"'WORKSPACE' @Ident "`
 	Inherits   *DefQName            `parser:"('INHERITS' @@)?"`
@@ -176,6 +177,9 @@ type WorkspaceStmt struct {
 
 func (s WorkspaceStmt) GetName() string { return string(s.Name) }
 func (s *WorkspaceStmt) Iterate(callback func(stmt interface{})) {
+	if s.Descriptor != nil {
+		callback(s.Descriptor)
+	}
 	for i := 0; i < len(s.Statements); i++ {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
@@ -195,9 +199,12 @@ func (s TypeStmt) GetName() string { return string(s.Name) }
 
 type WsDescriptorStmt struct {
 	Statement
+	Name  Ident           `parser:"@Ident?"`
 	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
 	_     int             `parser:"';'"`
 }
+
+func (s WsDescriptorStmt) GetName() string { return string(s.Name) }
 
 type DefQName struct {
 	Package Ident `parser:"(@Ident '.')?"`
@@ -327,6 +334,7 @@ type RateStmt struct {
 
 func (s RateStmt) GetName() string { return string(s.Name) }
 
+// TODO: better Grant syntax
 type GrantStmt struct {
 	Statement
 	Grants []string `parser:"'GRANT' @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE') (','  @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE'))*"`

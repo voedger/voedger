@@ -325,6 +325,9 @@ func (c *analyseCtx) workspace(v *WorkspaceStmt) {
 		if v.Abstract {
 			c.stmtErr(&v.Pos, ErrAbstractWorkspaceDescriptor)
 		}
+		if v.Descriptor.Name == "" {
+			v.Descriptor.Name = defaultDescriptorName(v.GetName())
+		}
 		c.nestedTables(v.Descriptor.Items, appdef.DefKind_CDoc)
 		c.fieldSets(v.Descriptor.Items)
 	}

@@ -5,7 +5,11 @@
 
 package parser
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"fmt"
+
+	"github.com/voedger/voedger/pkg/appdef"
+)
 
 const (
 	nameCDOC      = "CDoc"
@@ -44,4 +48,8 @@ var canNotReferenceTo = map[appdef.DefKind][]appdef.DefKind{
 	appdef.DefKind_WRecord: {appdef.DefKind_ODoc, appdef.DefKind_ORecord},
 	appdef.DefKind_CDoc:    {appdef.DefKind_WDoc, appdef.DefKind_WRecord, appdef.DefKind_ODoc, appdef.DefKind_ORecord},
 	appdef.DefKind_CRecord: {appdef.DefKind_WDoc, appdef.DefKind_WRecord, appdef.DefKind_ODoc, appdef.DefKind_ORecord},
+}
+
+func defaultDescriptorName(wsName string) Ident {
+	return Ident(fmt.Sprintf("%sDescriptor", wsName))
 }

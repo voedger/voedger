@@ -17,7 +17,11 @@ ABSTRACT WORKSPACE Workspace (
         -- COMMAND...
         -- GRANT...
     )
-)
+);
+
+ALTERABLE WORKSPACE Profile(
+
+);
 
 EXTENSION ENGINE BUILTIN (
 
