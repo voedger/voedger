@@ -219,7 +219,7 @@ func (s TypeStmt) GetName() string { return string(s.Name) }
 type WsDescriptorStmt struct {
 	Statement
 	Name  Ident           `parser:"@Ident?"`
-	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
+	Items []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	_     int             `parser:"';'"`
 }
 
