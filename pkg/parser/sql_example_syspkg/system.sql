@@ -1,5 +1,5 @@
 -- note: this schema is for tests only. Voedger sys package uses copy of this schema
-SCHEMA test_sys;
+SCHEMA sys;
 
 ABSTRACT TABLE CRecord();
 ABSTRACT TABLE WRecord();

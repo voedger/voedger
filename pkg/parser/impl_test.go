@@ -587,7 +587,7 @@ func Test_AbstractWorkspace(t *testing.T) {
 	require.False(ps.Ast.Statements[0].Workspace.Abstract)
 	require.True(ps.Ast.Statements[1].Workspace.Abstract)
 	require.False(ps.Ast.Statements[2].Workspace.Abstract)
-	require.Equal("ws2", ps.Ast.Statements[2].Workspace.Inherits.String())
+	require.Equal("ws2", ps.Ast.Statements[2].Workspace.Inherits[0].String())
 
 	_, err = MergePackageSchemas([]*PackageSchemaAST{
 		getSysPackageAST(),

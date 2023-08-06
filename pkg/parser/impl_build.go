@@ -15,8 +15,9 @@ import (
 
 type buildContext struct {
 	basicContext
-	builder appdef.IAppDefBuilder
-	defs    []defBuildContext
+	builder     appdef.IAppDefBuilder
+	defs        []defBuildContext
+	wsBuildCtxs map[*WorkspaceStmt]*wsBuildCtx
 }
 
 func newBuildContext(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) *buildContext {
@@ -26,7 +27,8 @@ func newBuildContext(packages map[string]*PackageSchemaAST, builder appdef.IAppD
 			pkgmap: packages,
 			errs:   make([]error, 0),
 		},
-		builder: builder,
+		builder:     builder,
+		wsBuildCtxs: make(map[*WorkspaceStmt]*wsBuildCtx),
 	}
 }
 
@@ -40,6 +42,7 @@ func (c *buildContext) build() error {
 		c.commands,
 		c.queries,
 		c.workspaces,
+		c.alterWorkspaces,
 	}
 	for _, step := range steps {
 		if err := step(); err != nil {
@@ -47,11 +50,11 @@ func (c *buildContext) build() error {
 		}
 
 	}
-	return nil
+	return errors.Join(c.errs...)
 }
 
 type wsBuildCtx struct {
-	schema  *SchemaAST
+	schema  *PackageSchemaAST
 	builder appdef.IWorkspaceBuilder
 	qname   appdef.QName
 }
@@ -73,13 +76,28 @@ func supported(stmt interface{}) bool {
 	return true
 }
 
+func (c *buildContext) useStmtInWs(wsctx *wsBuildCtx, stmtPackage string, stmt interface{}) {
+	if named, ok := stmt.(INamedStatement); ok {
+		if supported(stmt) {
+			wsctx.builder.AddDef(appdef.NewQName(stmtPackage, named.GetName()))
+		}
+	}
+	if useTable, ok := stmt.(*UseTableStmt); ok {
+		wsctx.builder.AddDef(appdef.NewQName(stmtPackage, string(useTable.Table)))
+	}
+	if useWorkspace, ok := stmt.(*UseWorkspaceStmt); ok {
+		wsctx.builder.AddDef(appdef.NewQName(stmtPackage, string(useWorkspace.Workspace)))
+	}
+}
+
 func (c *buildContext) workspaces() error {
-	workspaces := make(map[*WorkspaceStmt]*wsBuildCtx)
+	c.wsBuildCtxs = make(map[*WorkspaceStmt]*wsBuildCtx)
 	for _, schema := range c.pkgmap {
+		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(w *WorkspaceStmt) {
 			qname := schema.Ast.NewQName(w.Name)
-			workspaces[w] = &wsBuildCtx{
-				schema:  schema.Ast,
+			c.wsBuildCtxs[w] = &wsBuildCtx{
+				schema:  schema,
 				qname:   qname,
 				builder: c.builder.AddWorkspace(qname),
 			}
@@ -89,20 +107,18 @@ func (c *buildContext) workspaces() error {
 	var iter func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection)
 
 	iter = func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection) {
-		if ws.Inherits != nil { // include from inherited
-			baseWs, err := lookup[*WorkspaceStmt](*ws.Inherits, &c.basicContext)
+
+		for _, inherits := range ws.Inherits {
+			baseWs, err := lookup[*WorkspaceStmt](inherits, &c.basicContext)
 			if err != nil {
 				c.stmtErr(&ws.Pos, err)
 				return
 			}
 			iter(baseWs, wsctx, baseWs)
 		}
+
 		coll.Iterate(func(stmt interface{}) {
-			if named, ok := stmt.(INamedStatement); ok {
-				if supported(stmt) {
-					wsctx.builder.AddDef(appdef.NewQName(string(wsctx.schema.Package), named.GetName()))
-				}
-			}
+			c.useStmtInWs(wsctx, string(wsctx.schema.Ast.Package), stmt)
 			if collection, ok := stmt.(IStatementCollection); ok {
 				if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
 					iter(ws, wsctx, collection)
@@ -111,18 +127,59 @@ func (c *buildContext) workspaces() error {
 		})
 	}
 
-	for w, ctx := range workspaces {
+	for w, ctx := range c.wsBuildCtxs {
 		if !w.Abstract {
+			c.pkg = ctx.schema
 			iter(w, ctx, w)
+
+			// TODO: explicit inheritance from sys.Workspace must not be allowed
+
+			// include sys.Workspace
+			rootWs, err := lookup[*WorkspaceStmt](DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName}, &c.basicContext)
+			if err != nil {
+				c.stmtErr(&w.Pos, err)
+				continue
+			}
+			iter(rootWs, ctx, rootWs)
 		}
+	}
+	return nil
+}
+
+func (c *buildContext) alterWorkspaces() error {
+	for _, schema := range c.pkgmap {
+		c.setSchema(schema)
+		iterateStmt(schema.Ast, func(a *AlterWorkspaceStmt) {
+
+			var iter func(wsctx *wsBuildCtx, coll IStatementCollection)
+			iter = func(wsctx *wsBuildCtx, coll IStatementCollection) {
+				coll.Iterate(func(stmt interface{}) {
+					c.useStmtInWs(wsctx, string(schema.Ast.Package), stmt)
+					if collection, ok := stmt.(IStatementCollection); ok {
+						if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
+							iter(wsctx, collection)
+						}
+					}
+				})
+			}
+
+			err := resolve[*WorkspaceStmt](a.Name, &c.basicContext, func(f *WorkspaceStmt) error {
+				iter(c.wsBuildCtxs[f], a)
+				return nil
+			})
+
+			if err != nil {
+				c.stmtErr(&a.Pos, err)
+			}
+		})
 	}
 	return nil
 }
 
 func (c *buildContext) types() error {
 	for _, schema := range c.pkgmap {
+		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(typ *TypeStmt) {
-			c.setSchema(schema)
 			c.pushDef(typ.Name, appdef.DefKind_Object)
 			c.addTableItems(typ.Items)
 			c.popDef()
@@ -133,8 +190,8 @@ func (c *buildContext) types() error {
 
 func (c *buildContext) views() error {
 	for _, schema := range c.pkgmap {
+		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(view *ViewStmt) {
-			c.setSchema(schema)
 			qname := c.pkg.Ast.NewQName(view.Name)
 			vb := c.builder.AddView(qname)
 			for i := range view.Fields {
@@ -157,8 +214,8 @@ func (c *buildContext) views() error {
 
 func (c *buildContext) commands() error {
 	for _, schema := range c.pkgmap {
+		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(cmd *CommandStmt) {
-			c.setSchema(schema)
 			qname := c.pkg.Ast.NewQName(cmd.Name)
 			b := c.builder.AddCommand(qname)
 			if cmd.Arg != nil && !isVoid(cmd.Arg.Package, cmd.Arg.Name) {
@@ -185,8 +242,8 @@ func (c *buildContext) commands() error {
 
 func (c *buildContext) queries() error {
 	for _, schema := range c.pkgmap {
+		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(q *QueryStmt) {
-			c.setSchema(schema)
 			qname := c.pkg.Ast.NewQName(q.Name)
 			b := c.builder.AddQuery(qname)
 			if q.Arg != nil && !isVoid(q.Arg.Package, q.Arg.Name) {
@@ -215,6 +272,7 @@ func (c *buildContext) queries() error {
 
 func (c *buildContext) tables() error {
 	for _, schema := range c.pkgmap {
+		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(table *TableStmt) {
 			c.table(schema, table)
 		})

@@ -39,6 +39,8 @@ const (
 	sysVoid = "void"
 )
 
+const rootWorkspaceName = "Workspace"
+
 const maxNestedTableContainerOccurrences = 100 // FIXME: 100 container occurrences
 
 var canNotReferenceTo = map[appdef.DefKind][]appdef.DefKind{

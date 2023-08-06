@@ -83,12 +83,13 @@ type RootStatement struct {
 	Template *TemplateStmt `parser:"@@"`
 
 	// Also allowed in root
-	Role      *RoleStmt          `parser:"| @@"`
-	Tag       *TagStmt           `parser:"| @@"`
-	ExtEngine *RootExtEngineStmt `parser:"| @@"`
-	Workspace *WorkspaceStmt     `parser:"| @@"`
-	Table     *TableStmt         `parser:"| @@"`
-	Type      *TypeStmt          `parser:"| @@"`
+	Role           *RoleStmt           `parser:"| @@"`
+	Tag            *TagStmt            `parser:"| @@"`
+	ExtEngine      *RootExtEngineStmt  `parser:"| @@"`
+	Workspace      *WorkspaceStmt      `parser:"| @@"`
+	AlterWorkspace *AlterWorkspaceStmt `parser:"| @@"`
+	Table          *TableStmt          `parser:"| @@"`
+	Type           *TypeStmt           `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
 
 	stmt interface{}
@@ -96,9 +97,10 @@ type RootStatement struct {
 
 type WorkspaceStatement struct {
 	// Only allowed in workspace
-	Rate     *RateStmt     `parser:"@@"`
-	View     *ViewStmt     `parser:"| @@"`
-	UseTable *UseTableStmt `parser:"| @@"`
+	Rate         *RateStmt         `parser:"@@"`
+	View         *ViewStmt         `parser:"| @@"`
+	UseTable     *UseTableStmt     `parser:"| @@"`
+	UseWorkspace *UseWorkspaceStmt `parser:"| @@"`
 
 	// Also allowed in workspace
 	Role      *RoleStmt               `parser:"| @@"`
@@ -169,7 +171,7 @@ type WorkspaceStmt struct {
 	Alterable  bool                 `parser:"| @'ALTERABLE')?"`
 	Pool       bool                 `parser:"@('POOL' 'OF')?"`
 	Name       Ident                `parser:"'WORKSPACE' @Ident "`
-	Inherits   *DefQName            `parser:"('INHERITS' @@)?"`
+	Inherits   []DefQName           `parser:"('INHERITS' @@ (',' @@)* )?"`
 	A          int                  `parser:"'('"`
 	Descriptor *WsDescriptorStmt    `parser:"('DESCRIPTOR' @@)?"`
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
@@ -180,6 +182,23 @@ func (s *WorkspaceStmt) Iterate(callback func(stmt interface{})) {
 	if s.Descriptor != nil {
 		callback(s.Descriptor)
 	}
+	for i := 0; i < len(s.Statements); i++ {
+		raw := &s.Statements[i]
+		if raw.stmt == nil {
+			raw.stmt = extractStatement(*raw)
+		}
+		callback(raw.stmt)
+	}
+}
+
+type AlterWorkspaceStmt struct {
+	Statement
+	Name       DefQName             `parser:"'ALTER' 'WORKSPACE' @@ "`
+	A          int                  `parser:"'('"`
+	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
+}
+
+func (s *AlterWorkspaceStmt) Iterate(callback func(stmt interface{})) {
 	for i := 0; i < len(s.Statements); i++ {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
@@ -304,15 +323,12 @@ func (s TagStmt) GetName() string { return string(s.Name) }
 
 type UseTableStmt struct {
 	Statement
-	Package   Ident `parser:"'USE' 'TABLE' (@Ident '.')?"`
-	Name      Ident `parser:"(@Ident "`
-	AllTables bool  `parser:"| @'*')"`
+	Table Ident `parser:"'USE' 'TABLE' @Ident"`
 }
 
-type UseTableItem struct {
-	Package   Ident `parser:"(@Ident '.')?"`
-	Name      Ident `parser:"(@Ident "`
-	AllTables bool  `parser:"| @'*')"`
+type UseWorkspaceStmt struct {
+	Statement
+	Workspace Ident `parser:"'USE' 'WORKSPACE' @Ident"`
 }
 
 /*type sequenceStmt struct {
