@@ -75,7 +75,7 @@ WORKSPACE MyWorkspace (
     );
 
     -- Declare comments, tags and roles which only available in this workspace
-    TAG PosTag;
+    TAG PosTag;  
     ROLE LocationManager;
 
     -- Declare rates
@@ -83,8 +83,10 @@ WORKSPACE MyWorkspace (
     RATE BackofficeFuncRate2 100 PER MINUTE PER IP;
 
     -- It is only allowed create table if it is defined in this workspace, or added with USE statement
+    -- Not allowed to USE tables or workspaces from other schemas
 	USE TABLE SubscriptionProfile;
-	USE TABLE untill.*; 
+
+    USE WORKSPACE MyWorkspace;  -- Possible to create MyWorkspace in MyWorkspace
 
     TYPE TypeWithKind (
         Kind int
@@ -219,7 +221,14 @@ ABSTRACT WORKSPACE AWorkspace (
     -- Abstract workspaces cannot be created
 );
 
-WORKSPACE MyWorkspace1 INHERITS AWorkspace (
-    -- Inherits everything declared in AWorkspace
-    POOL OF WORKSPACE MyPool ()
+-- Workspace  MyWorkspace1 inherits everything from multiple workspaces
+WORKSPACE MyWorkspace1 INHERITS AWorkspace, untill.UntillAWorkspace (
+    POOL OF WORKSPACE MyPool ();
+);
+
+-- Use my statements in sys.Profile. 
+-- sys.Profile workspace is declared as ALTERABLE
+ALTER WORKSPACE sys.Profile(
+    USE TABLE WsTable;
+    USE WORKSPACE MyWorkspace1; 
 );
