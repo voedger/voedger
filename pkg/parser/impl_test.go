@@ -342,6 +342,33 @@ func Test_AbstractTables2(t *testing.T) {
 	}, "\n"))
 
 }
+
+func Test_WorkspaceDescriptors(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("file1.sql", `SCHEMA test;
+	ROLE R1;
+	WORKSPACE W1(
+		DESCRIPTOR(); -- gets name W1Descriptor
+	);
+	WORKSPACE W2(
+		DESCRIPTOR W2D(); -- gets name W2D
+	);
+	WORKSPACE W3(
+		DESCRIPTOR R1(); -- duplicated name
+	);
+	ROLE W2D; -- duplicated name
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:10:14: R1 redeclared",
+		"file1.sql:12:2: W2D redeclared",
+	}, "\n"))
+
+	require.Equal(Ident("W1Descriptor"), pkg.Ast.Statements[1].Workspace.Descriptor.Name)
+	require.Equal(Ident("W2D"), pkg.Ast.Statements[2].Workspace.Descriptor.Name)
+}
 func Test_PanicUnknownFieldType(t *testing.T) {
 	require := require.New(t)
 

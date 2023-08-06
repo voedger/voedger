@@ -141,6 +141,13 @@ func (c *buildContext) workspaces() error {
 				continue
 			}
 			iter(rootWs, ctx, rootWs)
+
+			if w.Abstract {
+				ctx.builder.SetAbstract()
+			}
+			if w.Descriptor != nil {
+				ctx.builder.SetDescriptor(appdef.NewQName(string(ctx.schema.Ast.Package), w.Descriptor.GetName()))
+			}
 		}
 	}
 	return nil
