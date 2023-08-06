@@ -104,7 +104,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(4, view.Key().ClustCols().FieldCount())
 
 	// workspace descriptor
-	cdoc = builder.Def(appdef.NewQName("main", "MyWorkspace"))
+	cdoc = builder.Def(appdef.NewQName("main", "MyWorkspaceDescriptor"))
 	require.NotNil(cdoc)
 	require.Equal(appdef.DefKind_CDoc, cdoc.Kind())
 	require.Equal(appdef.DataKind_string, cdoc.(appdef.IFields).Field("Name").DataKind())
@@ -587,7 +587,7 @@ func Test_AbstractWorkspace(t *testing.T) {
 	require.False(ps.Ast.Statements[0].Workspace.Abstract)
 	require.True(ps.Ast.Statements[1].Workspace.Abstract)
 	require.False(ps.Ast.Statements[2].Workspace.Abstract)
-	require.Equal("ws2", ps.Ast.Statements[2].Workspace.Inherits.String())
+	require.Equal("ws2", ps.Ast.Statements[2].Workspace.Inherits[0].String())
 
 	_, err = MergePackageSchemas([]*PackageSchemaAST{
 		getSysPackageAST(),

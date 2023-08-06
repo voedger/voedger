@@ -50,6 +50,14 @@ func ErrUseOfAbstractTable(tblName string) error {
 	return fmt.Errorf("use of abstract table %s", tblName)
 }
 
+func ErrUseOfAbstractWorkspace(wsName string) error {
+	return fmt.Errorf("use of abstract workspace %s", wsName)
+}
+
+func ErrWorkspaceIsNotAlterable(wsName string) error {
+	return fmt.Errorf("workspace %s is not alterable", wsName)
+}
+
 func ErrAbstractTableNotAlowedInProjectors(tblName string) error {
 	return fmt.Errorf("projector refers to abstract table %s", tblName)
 }

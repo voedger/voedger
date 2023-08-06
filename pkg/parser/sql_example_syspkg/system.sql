@@ -1,5 +1,5 @@
 -- note: this schema is for tests only. Voedger sys package uses copy of this schema
-SCHEMA test_sys;
+SCHEMA sys;
 
 ABSTRACT TABLE CRecord();
 ABSTRACT TABLE WRecord();
@@ -10,6 +10,18 @@ ABSTRACT TABLE ODoc INHERITS ORecord();
 ABSTRACT TABLE WDoc INHERITS WRecord();
 
 ABSTRACT TABLE Singleton INHERITS CDoc();
+
+ABSTRACT WORKSPACE Workspace (
+    EXTENSION ENGINE BUILTIN (
+        -- QUERY Collection(...) RETURNS ANY;
+        -- COMMAND...
+        -- GRANT...
+    )
+);
+
+ALTERABLE WORKSPACE Profile(
+
+);
 
 EXTENSION ENGINE BUILTIN (
 

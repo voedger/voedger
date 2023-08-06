@@ -38,22 +38,49 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 			ac.view(v)
 		case *UseTableStmt:
 			ac.useTable(v)
+		case *UseWorkspaceStmt:
+			ac.useWorkspace(v)
+		case *AlterWorkspaceStmt:
+			ac.alterWorkspace(v)
 		}
 	})
 }
 
 func (c *analyseCtx) useTable(u *UseTableStmt) {
-	if !u.AllTables {
-		name := DefQName{Package: u.Package, Name: u.Name}
-		resolveFunc := func(f *TableStmt) error {
-			if f.Abstract {
-				return ErrUseOfAbstractTable(name.String())
-			}
-			return nil
+	tbl, err := resolveTable(DefQName{Package: c.pkg.Ast.Package, Name: u.Table}, c.basicContext)
+	if err != nil {
+		c.stmtErr(&u.Pos, err)
+	} else {
+		if tbl.Abstract {
+			c.stmtErr(&u.Pos, ErrUseOfAbstractTable(string(u.Table)))
 		}
-		if err := resolve(name, c.basicContext, resolveFunc); err != nil {
-			c.stmtErr(&u.Pos, err)
+		// TODO: Only documents allowed to be USEd, not records
+	}
+}
+
+func (c *analyseCtx) useWorkspace(u *UseWorkspaceStmt) {
+	resolveFunc := func(f *WorkspaceStmt) error {
+		if f.Abstract {
+			return ErrUseOfAbstractWorkspace(string(u.Workspace))
 		}
+		return nil
+	}
+	err := resolve[*WorkspaceStmt](DefQName{Package: c.pkg.Ast.Package, Name: u.Workspace}, c.basicContext, resolveFunc)
+	if err != nil {
+		c.stmtErr(&u.Pos, err)
+	}
+}
+
+func (c *analyseCtx) alterWorkspace(u *AlterWorkspaceStmt) {
+	resolveFunc := func(f *WorkspaceStmt) error {
+		if !f.Alterable {
+			return ErrWorkspaceIsNotAlterable(u.Name.String())
+		}
+		return nil
+	}
+	err := resolve[*WorkspaceStmt](u.Name, c.basicContext, resolveFunc)
+	if err != nil {
+		c.stmtErr(&u.Pos, err)
 	}
 }
 
@@ -310,20 +337,23 @@ func (c *analyseCtx) doType(v *TypeStmt) {
 }
 
 func (c *analyseCtx) workspace(v *WorkspaceStmt) {
-	if v.Inherits != nil {
+	for _, inherits := range v.Inherits {
 		resolveFunc := func(w *WorkspaceStmt) error {
 			if !w.Abstract {
 				return ErrBaseWorkspaceMustBeAbstract
 			}
 			return nil
 		}
-		if err := resolve(*v.Inherits, c.basicContext, resolveFunc); err != nil {
+		if err := resolve(inherits, c.basicContext, resolveFunc); err != nil {
 			c.stmtErr(&v.Pos, err)
 		}
 	}
 	if v.Descriptor != nil {
 		if v.Abstract {
 			c.stmtErr(&v.Pos, ErrAbstractWorkspaceDescriptor)
+		}
+		if v.Descriptor.Name == "" {
+			v.Descriptor.Name = defaultDescriptorName(v.GetName())
 		}
 		c.nestedTables(v.Descriptor.Items, appdef.DefKind_CDoc)
 		c.fieldSets(v.Descriptor.Items)

@@ -204,3 +204,4 @@ WORKSPACE Restaurant (
         PRIMARY KEY (Year, Month, Day, Number)
     ) AS RESULT OF UpdateSalesReport;
 );    
+
