@@ -18,8 +18,8 @@ import (
 
 func parseImpl(fileName string, content string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
-		{Name: "Comment", Pattern: `--.*`},
-		{Name: "PreStmtComment", Pattern: `\n+\s*--.*`},
+		{Name: "MultilineComment", Pattern: `\/\*(.|\n)*\*\/`},
+		{Name: "Comment", Pattern: `\s*--[^\n]*`},
 		{Name: "Array", Pattern: `\[\]`},
 		{Name: "Float", Pattern: `[-+]?\d+\.\d+`},
 		{Name: "Int", Pattern: `[-+]?\d+`},
@@ -37,7 +37,7 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 
 	parser := participle.MustBuild[SchemaAST](
 		participle.Lexer(basicLexer),
-		participle.Elide("Whitespace", "Comment", "PreStmtComment"),
+		participle.Elide("Whitespace", "Comment", "MultilineComment"),
 		participle.Unquote("String"),
 	)
 	return parser.ParseString(fileName, content)
@@ -152,10 +152,18 @@ func cleanupComments(schema *SchemaAST) {
 	iterate(schema, func(stmt interface{}) {
 		if s, ok := stmt.(IStatement); ok {
 			comments := *s.GetComments()
+			fixedComments := make([]string, 0)
 			for i := 0; i < len(comments); i++ {
-				comments[i] = strings.TrimSpace(comments[i])
-				comments[i], _ = strings.CutPrefix(comments[i], "--")
-				comments[i] = strings.TrimSpace(comments[i])
+				if i == 0 && !strings.HasPrefix(comments[i], "\r\n") && !strings.HasPrefix(comments[i], "\n") {
+					continue
+				}
+				fixed := strings.TrimSpace(comments[i])
+				fixed, _ = strings.CutPrefix(fixed, "--")
+				fixed = strings.TrimSpace(fixed)
+				fixedComments = append(fixedComments, fixed)
+			}
+			if len(fixedComments) > 0 {
+				s.ReplaceComments(fixedComments)
 			}
 		}
 	})

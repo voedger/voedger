@@ -96,11 +96,13 @@ func (c *buildContext) workspaces() error {
 		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(w *WorkspaceStmt) {
 			qname := schema.Ast.NewQName(w.Name)
+			bld := c.builder.AddWorkspace(qname)
 			c.wsBuildCtxs[w] = &wsBuildCtx{
 				schema:  schema,
 				qname:   qname,
-				builder: c.builder.AddWorkspace(qname),
+				builder: bld,
 			}
+			c.addComments(w, bld)
 		})
 	}
 
@@ -183,11 +185,19 @@ func (c *buildContext) alterWorkspaces() error {
 	return nil
 }
 
+func (c *buildContext) addComments(s IStatement, builder appdef.ICommentBuilder) {
+	comments := s.GetComments()
+	if comments != nil && len(*comments) > 0 {
+		builder.SetComment(*comments...)
+	}
+}
+
 func (c *buildContext) types() error {
 	for _, schema := range c.pkgmap {
 		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(typ *TypeStmt) {
 			c.pushDef(typ.Name, appdef.DefKind_Object)
+			c.addComments(typ, c.defCtx().defBuilder.(appdef.ICommentBuilder))
 			c.addTableItems(typ.Items)
 			c.popDef()
 		})
@@ -201,6 +211,7 @@ func (c *buildContext) views() error {
 		iterateStmt(schema.Ast, func(view *ViewStmt) {
 			qname := c.pkg.Ast.NewQName(view.Name)
 			vb := c.builder.AddView(qname)
+			c.addComments(view, vb)
 			for i := range view.Fields {
 				f := &view.Fields[i]
 				if f.Field != nil {
@@ -225,6 +236,7 @@ func (c *buildContext) commands() error {
 		iterateStmt(schema.Ast, func(cmd *CommandStmt) {
 			qname := c.pkg.Ast.NewQName(cmd.Name)
 			b := c.builder.AddCommand(qname)
+			c.addComments(cmd, b)
 			if cmd.Arg != nil && !isVoid(cmd.Arg.Package, cmd.Arg.Name) {
 				argQname := buildQname(c, cmd.Arg.Package, cmd.Arg.Name)
 				b.SetArg(argQname)
@@ -253,6 +265,7 @@ func (c *buildContext) queries() error {
 		iterateStmt(schema.Ast, func(q *QueryStmt) {
 			qname := c.pkg.Ast.NewQName(q.Name)
 			b := c.builder.AddQuery(qname)
+			c.addComments(q, b)
 			if q.Arg != nil && !isVoid(q.Arg.Package, q.Arg.Name) {
 				argQname := buildQname(c, q.Arg.Package, q.Arg.Name)
 				b.SetArg(argQname)
@@ -310,6 +323,7 @@ func (c *buildContext) workspaceDescriptor(schema *PackageSchemaAST, w *Workspac
 			return
 		}
 		c.pushDef(w.Descriptor.Name, appdef.DefKind_CDoc)
+		c.addComments(w.Descriptor, c.defCtx().defBuilder.(appdef.ICommentBuilder))
 		c.addTableItems(w.Descriptor.Items)
 		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
 		c.popDef()
@@ -327,6 +341,7 @@ func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt) {
 		return
 	}
 	c.pushDef(table.Name, table.tableDefKind)
+	c.addComments(table, c.defCtx().defBuilder.(appdef.ICommentBuilder))
 	c.fillTable(table)
 	if table.singletone {
 		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()

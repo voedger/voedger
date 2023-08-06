@@ -288,14 +288,8 @@ func (c *analyseCtx) with(with *[]WithItem, statement IStatement) {
 		}
 	}
 
-	if comment == nil && statement.GetComments() != nil { // #484
-		comments := statement.GetComments()
-		if len(*comments) > 0 {
-			cmt := strings.Join(*comments, "\n")
-			*with = append(*with, WithItem{
-				Comment: &cmt,
-			})
-		}
+	if comment != nil {
+		statement.ReplaceComments(strings.Split(*comment.Comment, "\n"))
 	}
 }
 

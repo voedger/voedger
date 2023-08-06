@@ -39,6 +39,7 @@ func (b *Ident) Capture(values []string) error {
 type IStatement interface {
 	GetPos() *lexer.Position
 	GetComments() *[]string
+	ReplaceComments(comments []string)
 }
 
 type INamedStatement interface {
@@ -259,7 +260,7 @@ func (q TypeQName) String() (s string) {
 
 type Statement struct {
 	Pos      lexer.Position
-	Comments []string `parser:"@PreStmtComment*"`
+	Comments []string `parser:"@(Comment* | MultilineComment?)"`
 }
 
 func (s *Statement) GetPos() *lexer.Position {
@@ -270,11 +271,20 @@ func (s *Statement) GetComments() *[]string {
 	return &s.Comments
 }
 
+func (s *Statement) ReplaceComments(comments []string) {
+	s.Comments = comments
+}
+
 type StorageKey struct {
 	Storage DefQName  `parser:"@@"`
 	Entity  *DefQName `parser:"( @@ )?"`
 }
 
+/*
+	ProjectorStmt: asdas
+
+zczxczxc
+*/
 type ProjectorStmt struct {
 	Statement
 	Sync     bool         `parser:"@'SYNC'?"`
