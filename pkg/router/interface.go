@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2023-present unTill Pro, Ltd.
+ * @author Denis Gribanov
+ */
+
 package router
 
 import "github.com/voedger/voedger/pkg/pipeline"
