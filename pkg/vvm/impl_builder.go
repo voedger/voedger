@@ -33,9 +33,14 @@ func buildSchemasASTs(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPo
 	epPackageSchemasASTs := ep.ExtensionPoint(apps.EPPackageSchemasASTs)
 	packageSchemaASTs := []*parser.PackageSchemaAST{}
 	epPackageSchemasASTs.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
-		packageName := eKey.(string)
-		fileSchemaASTs := value.(*parser.FileSchemaAST)
-		packageSchemaAST, err := parser.MergeFileSchemaASTs(packageName, []*parser.FileSchemaAST{fileSchemaASTs})
+		qualifiedPackageName := eKey.(string)
+		packageFilesSchemasASTsEP := value.(extensionpoints.IExtensionPoint)
+		packageFilesSchemasASTs := []*parser.FileSchemaAST{}
+		packageFilesSchemasASTsEP.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
+			fileSchemaAST := value.(*parser.FileSchemaAST)
+			packageFilesSchemasASTs = append(packageFilesSchemasASTs, fileSchemaAST)
+		})
+		packageSchemaAST, err := parser.MergeFileSchemaASTs(qualifiedPackageName, packageFilesSchemasASTs)
 		if err != nil {
 			panic(err)
 		}

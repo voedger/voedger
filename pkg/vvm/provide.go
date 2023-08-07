@@ -302,7 +302,6 @@ func provideRouterParams(cfg *VVMConfig, port VVMPortType, vvmIdx VVMIdxType) ro
 		Routes:               cfg.Routes,
 		RoutesRewrite:        cfg.RoutesRewrite,
 		RouteDomains:         cfg.RouteDomains,
-		UseBP3:               true,
 	}
 	if port != 0 {
 		res.Port = int(port) + int(vvmIdx)
@@ -426,7 +425,7 @@ func provideRouterAppStorage(astp istorage.IAppStorageProvider) (dbcertcache.Rou
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
 func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
 	nowFunc coreutils.TimeFunc, bsc router.BlobberServiceChannels, bms router.BLOBMaxSizeType, blobberClusterAppID BlobberAppClusterID, blobStorage BlobStorage,
-	routerAppStorage dbcertcache.RouterAppStorage, autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, appsWSAmounts map[istructs.AppQName]istructs.AppWSAmount) (*router.HTTPService, *router.ACMEService) {
+	routerAppStorage dbcertcache.RouterAppStorage, autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, appsWSAmounts map[istructs.AppQName]istructs.AppWSAmount) routerServices {
 	bp := &router.BlobberParams{
 		ClusterAppBlobberID:    uint32(blobberClusterAppID),
 		ServiceChannels:        bsc,
@@ -437,15 +436,15 @@ func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTi
 	}
 	httpSrv, acmeSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, quotas, bp, autocertCache, bus, appsWSAmounts)
 	vvmPortSource.getter = func() VVMPortType {
-		return VVMPortType(res[0].(interface{ GetPort() int }).GetPort())
+		return VVMPortType(httpSrv.(interface{ GetPort() int }).GetPort())
 	}
-	return httpSrv, acmeSrv
+	return routerServices{httpService: httpSrv, acmeService: acmeSrv}
 }
 
-func provideRouterServiceFactory(services ...pipeline.IService) RouterServiceOperator {
-	routerServices := []pipeline.ForkOperatorOptionFunc{}
-	for _, srv := range services {
-		routerServices = append(routerServices, pipeline.ForkBranch(pipeline.ServiceOperator(srv)))
+func provideRouterServiceFactory(services routerServices) RouterServiceOperator {
+	routerServices := []pipeline.ForkOperatorOptionFunc{pipeline.ForkBranch(pipeline.ServiceOperator(services.httpService))}
+	if services.acmeService != nil {
+		routerServices = append(routerServices, pipeline.ForkBranch(pipeline.ServiceOperator(services.acmeService)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, routerServices[0], routerServices[1:]...)
 }

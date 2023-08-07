@@ -70,6 +70,10 @@ type VVMPortSource struct {
 	getter func() VVMPortType
 }
 type IAppStorageUncachingProviderFactory func() (provider istorage.IAppStorageProvider)
+type routerServices struct {
+	httpService pipeline.IService
+	acmeService pipeline.IService
+}
 
 type PostDocFieldType struct {
 	Kind              appdef.DataKind

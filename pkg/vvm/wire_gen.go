@@ -8,14 +8,7 @@ package vvm
 
 import (
 	"context"
-	"net/url"
-	"strconv"
-	"strings"
-	"time"
-
 	"github.com/untillpro/airs-ibus"
-	"golang.org/x/crypto/acme/autocert"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -48,6 +41,11 @@ import (
 	"github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
+	"golang.org/x/crypto/acme/autocert"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
 )
 
 // Injectors from provide.go:
@@ -143,8 +141,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	}
 	cache := dbcertcache.ProvideDbCache(routerAppStorage)
 	v5 := provideAppsWSAmounts(vvmApps, iAppStructsProvider)
-	httpSrv, acmeSrv := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobberAppClusterID, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v5)
-	routerServiceOperator := provideRouterServiceFactory(httpSrv, acmeSrv)
+	vvmRouterServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobberAppClusterID, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v5)
+	routerServiceOperator := provideRouterServiceFactory(vvmRouterServices)
 	metricsServicePortInitial := vvmConfig.MetricsServicePort
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
 	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
@@ -450,7 +448,7 @@ func provideRouterAppStorage(astp istorage.IAppStorageProvider) (dbcertcache.Rou
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
 func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
 	nowFunc coreutils.TimeFunc, bsc router.BlobberServiceChannels, bms router.BLOBMaxSizeType, blobberClusterAppID BlobberAppClusterID, blobStorage BlobStorage,
-	routerAppStorage dbcertcache.RouterAppStorage, autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, appsWSAmounts map[istructs.AppQName]istructs.AppWSAmount) (pipeline.IService, pipeline.IService) {
+	routerAppStorage dbcertcache.RouterAppStorage, autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, appsWSAmounts map[istructs.AppQName]istructs.AppWSAmount) routerServices {
 	bp := &router.BlobberParams{
 		ClusterAppBlobberID:    uint32(blobberClusterAppID),
 		ServiceChannels:        bsc,
@@ -461,18 +459,17 @@ func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTi
 	}
 	httpSrv, acmeSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, quotas, bp, autocertCache, bus, appsWSAmounts)
 	vvmPortSource.getter = func() VVMPortType {
-		return VVMPortType(httpSrv.(*router.HTTPService).GetPort())
+		return VVMPortType(httpSrv.(interface{ GetPort() int }).GetPort())
 	}
-	return httpSrv, acmeSrv
+	return routerServices{httpService: httpSrv, acmeService: acmeSrv}
 }
 
-func provideRouterServiceFactory(httpSrv, acmeSrv pipeline.IService) RouterServiceOperator {
-	routerServices := []pipeline.ForkOperatorOptionFunc{}
-	routerServices = append(routerServices, pipeline.ForkBranch(pipeline.ServiceOperator(httpSrv)))
-	if acmeSrv != nil {
-		routerServices = append(routerServices, pipeline.ForkBranch(pipeline.ServiceOperator(acmeSrv)))
+func provideRouterServiceFactory(services routerServices) RouterServiceOperator {
+	routerServices2 := []pipeline.ForkOperatorOptionFunc{pipeline.ForkBranch(pipeline.ServiceOperator(services.httpService))}
+	if services.acmeService != nil {
+		routerServices2 = append(routerServices2, pipeline.ForkBranch(pipeline.ServiceOperator(services.acmeService)))
 	}
-	return pipeline.ForkOperator(pipeline.ForkSame, routerServices[0], routerServices[1:]...)
+	return pipeline.ForkOperator(pipeline.ForkSame, routerServices2[0], routerServices2[1:]...)
 }
 
 func provideQueryChannel(sch ServiceChannelFactory) QueryChannel {
@@ -587,5 +584,7 @@ func provideOperatorAppServices(apf AppServiceFactory, vvmApps VVMApps, asp istr
 
 func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
 	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp))))
+	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp),
+	)),
+	)
 }

@@ -6,22 +6,24 @@ package blobber
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
 )
 
-func ProvideBlobberCmds(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func ProvideBlobberCmds(cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) {
 	provideUploadBLOBHelperCmd(cfg)
 	provideDownloadBLOBHelperCmd(cfg)
-	provideBLOBWDoc(appDefBuilder)
+	apps.Parse(schemasFS, appdef.SysPackage, ep)
 }
 
-func provideBLOBWDoc(appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddWDoc(QNameWDocBLOB).
-		AddField(fldStatus, appdef.DataKind_int32, true)
-}
+// func provideBLOBWDoc(appDefBuilder appdef.IAppDefBuilder) {
+// 	appDefBuilder.AddWDoc(QNameWDocBLOB).
+// 		AddField(fldStatus, appdef.DataKind_int32, true)
+// }
 
 func provideDownloadBLOBHelperCmd(cfg *istructsmem.AppConfigType) {
 	dbhQName := appdef.NewQName(appdef.SysPackage, "DownloadBLOBHelper")

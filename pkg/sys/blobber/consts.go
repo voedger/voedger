@@ -4,14 +4,17 @@
 
 package blobber
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"embed"
 
-const (
-	FldBLOBID = "blobID"
-	fldStatus = "status"
+	"github.com/voedger/voedger/pkg/appdef"
 )
+
+const fldStatus = "status"
 
 var (
 	QNameCommandUploadBLOBHelper = appdef.NewQName(appdef.SysPackage, "UploadBLOBHelper")
 	QNameWDocBLOB                = appdef.NewQName(appdef.SysPackage, "BLOB")
+	//go:embed schemas.sql
+	schemasFS embed.FS
 )

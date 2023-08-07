@@ -6,6 +6,8 @@ package invite
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -13,7 +15,7 @@ import (
 )
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc, buildSubjectsIdx bool,
-	federation coreutils.IFederation, itokens itokens.ITokens, smtpCfg smtp.Cfg) {
+	federation coreutils.IFederation, itokens itokens.ITokens, smtpCfg smtp.Cfg, ep extensionpoints.IExtensionPoint) {
 	provideCmdInitiateInvitationByEMail(cfg, appDefBuilder, timeFunc)
 	provideCmdInitiateJoinWorkspace(cfg, appDefBuilder, timeFunc)
 	provideCmdInitiateUpdateInviteRoles(cfg, appDefBuilder, timeFunc)
@@ -24,8 +26,8 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	provideCmdUpdateJoinedWorkspaceRoles(cfg, appDefBuilder)
 	provideCmdDeactivateJoinedWorkspace(cfg, appDefBuilder)
 	provideCDocSubject(cfg, appDefBuilder, buildSubjectsIdx)
-	provideCDocInvite(appDefBuilder)
-	provideCDocJoinedWorkspace(appDefBuilder)
+	// provideCDocInvite(appDefBuilder)
+	// provideCDocJoinedWorkspace(appDefBuilder)
 	provideViewInviteIndex(appDefBuilder)
 	provideViewJoinedWorkspaceIndex(appDefBuilder)
 	appDefBuilder.AddObject(qNameAPApplyCancelAcceptedInvite)
@@ -44,4 +46,5 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		provideSyncProjectorInviteIndexFactory(),
 		provideSyncProjectorJoinedWorkspaceIndexFactory(),
 	)
+	apps.Parse(schemasFS, appdef.SysPackage, ep)
 }
