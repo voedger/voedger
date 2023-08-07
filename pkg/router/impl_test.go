@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"sync"
@@ -86,7 +85,6 @@ func TestSectionedSendResponseError(t *testing.T) {
 
 func TestBasicUsage_SectionedResponse(t *testing.T) {
 	var (
-		elem1  = map[string]interface{}{"fld1": "fld1Val"}
 		elem11 = map[string]interface{}{"fld2": `哇"呀呀`}
 		elem21 = "e1"
 		elem22 = `哇"呀呀`
@@ -229,9 +227,6 @@ func TestHandlerPanic(t *testing.T) {
 }
 
 func TestClientDisconnectDuringSections(t *testing.T) {
-	var (
-		elem1 = map[string]interface{}{"fld1": "fld1Val"}
-	)
 	ch := make(chan struct{})
 	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
 		go func() {
@@ -239,16 +234,15 @@ func TestClientDisconnectDuringSections(t *testing.T) {
 			rs.StartMapSection("secMap", []string{"2"})
 			require.Nil(t, rs.SendElement("id1", elem1))
 			<-ch
-			_ = rs.ObjectSection("objSec", []string{"3"}, 42)
+			err := rs.ObjectSection("objSec", []string{"3"}, 42)
+			require.ErrorIs(t, err, context.Canceled)
 			rs.Close(nil)
 			ch <- struct{}{}
 		}()
-	}, 10*time.Millisecond)
+	}, 5*time.Second)
 	defer tearDown()
 
-	body := []byte("")
-	bodyReader := bytes.NewReader(body)
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), appOwner, appName, testWSID), "application/json", bodyReader)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), appOwner, appName, testWSID), "application/json", http.NoBody)
 	require.NoError(t, err)
 	entireResp := []byte{}
 	for string(entireResp) != `{"sections":[{"type":"secMap","path":["2"],"elements":{"id1":{"fld1":"fld1Val"}` {
@@ -258,7 +252,7 @@ func TestClientDisconnectDuringSections(t *testing.T) {
 		entireResp = append(entireResp, buf[:n]...)
 		log.Println(string(entireResp))
 	}
-	//resp.Request.Body.Close()
+	resp.Request.Body.Close()
 	resp.Body.Close()
 	ch <- struct{}{}
 	<-ch
@@ -273,7 +267,7 @@ func TestCheck(t *testing.T) {
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/check", router.port()), "application/json", bodyReader)
 	require.Nil(t, err, err)
 	defer resp.Body.Close()
-	respBodyBytes, err := ioutil.ReadAll(resp.Body)
+	respBodyBytes, err := io.ReadAll(resp.Body)
 	require.Nil(t, err)
 	require.Equal(t, "ok", string(respBodyBytes))
 	expectOKRespPlainText(t, resp)
@@ -292,9 +286,6 @@ func Test404(t *testing.T) {
 }
 
 func TestFailedToWriteResponse(t *testing.T) {
-	var (
-		elem1 = map[string]interface{}{"fld1": "fld1Val"}
-	)
 	ch := make(chan struct{})
 	failToWrite := make(chan struct{})
 	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
@@ -308,12 +299,12 @@ func TestFailedToWriteResponse(t *testing.T) {
 			<-ch
 
 			// next section should be failed with ErrNoConsumer
-			_ = rs.ObjectSection("objSec", []string{"3"}, 42)
-			//require.ErrorIs(t, err, ibus.ErrNoConsumer)
+			err := rs.ObjectSection("objSec", []string{"3"}, 42)
+			require.ErrorIs(t, err, context.Canceled)
 			rs.Close(nil)
 			ch <- struct{}{}
 		}()
-	}, 10*time.Second)
+	}, 2*time.Second)
 	onRequestCtxClosed = func() {
 		failToWrite <- struct{}{}
 	}
