@@ -36,7 +36,7 @@ type RouterParams struct {
 	RouteDomains         map[string]string // resellerportal.dev.untill.ru=http://resellerportal : https://resellerportal.dev.untill.ru/foo -> http://resellerportal/foo
 }
 
-type HTTPService struct {
+type httpService struct {
 	RouterParams
 	*BlobberParams
 	router       *mux.Router
@@ -50,11 +50,11 @@ type HTTPService struct {
 }
 
 type httpsService struct {
-	*HTTPService
+	*httpService
 	crtMgr *autocert.Manager
 }
 
-type ACMEService struct {
+type acmeService struct {
 	http.Server
 }
 

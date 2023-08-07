@@ -17,13 +17,12 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 // port == 443 -> httpsService + ACMEService, otherwise -> HTTPService only, ACMEService is nil
 func Provide(hvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, quotas in10n.Quotas, bp *BlobberParams, autocertCache autocert.Cache,
-	bus ibus.IBus, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) (httpSrv pipeline.IService, acmeSrv pipeline.IService) {
-	httpService := &HTTPService{
+	bus ibus.IBus, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) (httpSrv IHTTPService, acmeSrv IACMEService) {
+	httpService := &httpService{
 		RouterParams:  rp,
 		n10n:          broker,
 		BlobberParams: bp,
@@ -63,12 +62,12 @@ func Provide(hvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration,
 		crtMgr.Cache = autocert.DirCache(rp.CertDir)
 	}
 	httpsService := &httpsService{
-		HTTPService: httpService,
+		httpService: httpService,
 		crtMgr:      crtMgr,
 	}
 
 	// handle Lets Encrypt callback over 80 port - only port 80 allowed
-	acmeService := &ACMEService{
+	acmeService := &acmeService{
 		Server: http.Server{
 			Addr:         ":80",
 			ReadTimeout:  DefaultACMEServerReadTimeout,
