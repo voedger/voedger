@@ -8,6 +8,7 @@ package appdef
 // # Implements:
 //	- IExtension
 type extension struct {
+	comment
 	name   string
 	engine ExtensionEngineKind
 }

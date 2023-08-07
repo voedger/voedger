@@ -68,14 +68,16 @@ EXTENSION ENGINE WASM (
 );
 
 WORKSPACE MyWorkspace (
-    DESCRIPTOR( -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
-        air.TypeWithName,
+    DESCRIPTOR(                     -- Workspace descriptor is always SINGLETON
+                                    -- If name omitted, then QName is "MyWorkspaceDescriptor"
+
+        air.TypeWithName,           -- Fieldset
         Country text CHECK '^[A-Za-z]{2}$',
         Description text
     );
 
     -- Declare comments, tags and roles which only available in this workspace
-    TAG PosTag;
+    TAG PosTag;  
     ROLE LocationManager;
 
     -- Declare rates
@@ -83,8 +85,10 @@ WORKSPACE MyWorkspace (
     RATE BackofficeFuncRate2 100 PER MINUTE PER IP;
 
     -- It is only allowed create table if it is defined in this workspace, or added with USE statement
-	USE TABLE SomeSchema.SomeTable;
-	USE TABLE untill.*; 
+    -- Not allowed to USE tables or workspaces from other schemas
+	USE TABLE SubscriptionProfile;
+
+    USE WORKSPACE MyWorkspace;  -- Possible to create MyWorkspace in MyWorkspace
 
     TYPE TypeWithKind (
         Kind int
@@ -219,7 +223,14 @@ ABSTRACT WORKSPACE AWorkspace (
     -- Abstract workspaces cannot be created
 );
 
-WORKSPACE MyWorkspace1 INHERITS AWorkspace (
-    -- Inherits everything declared in AWorkspace
-    POOL OF WORKSPACE MyPool ()
+-- Workspace  MyWorkspace1 inherits everything from multiple workspaces
+WORKSPACE MyWorkspace1 INHERITS AWorkspace, untill.UntillAWorkspace (
+    POOL OF WORKSPACE MyPool ();
+);
+
+-- Use my statements in sys.Profile. 
+-- sys.Profile workspace is declared as ALTERABLE
+ALTER WORKSPACE sys.Profile(
+    USE TABLE WsTable;
+    USE WORKSPACE MyWorkspace1; 
 );

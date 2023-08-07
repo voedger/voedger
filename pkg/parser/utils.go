@@ -61,7 +61,8 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 	})
 }
 
-func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt | *WorkspaceStmt](c IStatementCollection, callback func(stmt stmtType)) {
+func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt |
+	*WorkspaceStmt | *AlterWorkspaceStmt](c IStatementCollection, callback func(stmt stmtType)) {
 	c.Iterate(func(stmt interface{}) {
 		if s, ok := stmt.(stmtType); ok {
 			callback(s)

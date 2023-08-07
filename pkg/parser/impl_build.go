@@ -15,8 +15,9 @@ import (
 
 type buildContext struct {
 	basicContext
-	builder appdef.IAppDefBuilder
-	defs    []defBuildContext
+	builder     appdef.IAppDefBuilder
+	defs        []defBuildContext
+	wsBuildCtxs map[*WorkspaceStmt]*wsBuildCtx
 }
 
 func newBuildContext(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) *buildContext {
@@ -26,33 +27,166 @@ func newBuildContext(packages map[string]*PackageSchemaAST, builder appdef.IAppD
 			pkgmap: packages,
 			errs:   make([]error, 0),
 		},
-		builder: builder,
+		builder:     builder,
+		wsBuildCtxs: make(map[*WorkspaceStmt]*wsBuildCtx),
 	}
 }
 
+type buildFunc func() error
+
 func (c *buildContext) build() error {
-	if err := c.types(); err != nil {
-		return err
+	var steps = []buildFunc{
+		c.types,
+		c.tables,
+		c.views,
+		c.commands,
+		c.queries,
+		c.workspaces,
+		c.alterWorkspaces,
 	}
-	if err := c.tables(); err != nil {
-		return err
+	for _, step := range steps {
+		if err := step(); err != nil {
+			return err
+		}
+
 	}
-	if err := c.views(); err != nil {
-		return err
+	return errors.Join(c.errs...)
+}
+
+type wsBuildCtx struct {
+	schema  *PackageSchemaAST
+	builder appdef.IWorkspaceBuilder
+	qname   appdef.QName
+}
+
+func supported(stmt interface{}) bool {
+	// FIXME: this must be empty in the end
+	if _, ok := stmt.(*TagStmt); ok {
+		return false
 	}
-	if err := c.commands(); err != nil {
-		return err
+	if _, ok := stmt.(*RoleStmt); ok {
+		return false
 	}
-	if err := c.queries(); err != nil {
-		return err
+	if _, ok := stmt.(*RateStmt); ok {
+		return false
+	}
+	if _, ok := stmt.(*ProjectorStmt); ok {
+		return false
+	}
+	return true
+}
+
+func (c *buildContext) useStmtInWs(wsctx *wsBuildCtx, stmtPackage string, stmt interface{}) {
+	if named, ok := stmt.(INamedStatement); ok {
+		if supported(stmt) {
+			wsctx.builder.AddDef(appdef.NewQName(stmtPackage, named.GetName()))
+		}
+	}
+	if useTable, ok := stmt.(*UseTableStmt); ok {
+		wsctx.builder.AddDef(appdef.NewQName(stmtPackage, string(useTable.Table)))
+	}
+	if useWorkspace, ok := stmt.(*UseWorkspaceStmt); ok {
+		wsctx.builder.AddDef(appdef.NewQName(stmtPackage, string(useWorkspace.Workspace)))
+	}
+}
+
+func (c *buildContext) workspaces() error {
+	c.wsBuildCtxs = make(map[*WorkspaceStmt]*wsBuildCtx)
+	for _, schema := range c.pkgmap {
+		c.setSchema(schema)
+		iterateStmt(schema.Ast, func(w *WorkspaceStmt) {
+			qname := schema.Ast.NewQName(w.Name)
+			c.wsBuildCtxs[w] = &wsBuildCtx{
+				schema:  schema,
+				qname:   qname,
+				builder: c.builder.AddWorkspace(qname),
+			}
+		})
+	}
+
+	var iter func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection)
+
+	iter = func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection) {
+
+		for _, inherits := range ws.Inherits {
+			baseWs, err := lookup[*WorkspaceStmt](inherits, &c.basicContext)
+			if err != nil {
+				c.stmtErr(&ws.Pos, err)
+				return
+			}
+			iter(baseWs, wsctx, baseWs)
+		}
+
+		coll.Iterate(func(stmt interface{}) {
+			c.useStmtInWs(wsctx, string(wsctx.schema.Ast.Package), stmt)
+			if collection, ok := stmt.(IStatementCollection); ok {
+				if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
+					iter(ws, wsctx, collection)
+				}
+			}
+		})
+	}
+
+	for w, ctx := range c.wsBuildCtxs {
+		if !w.Abstract {
+			c.pkg = ctx.schema
+			iter(w, ctx, w)
+
+			// TODO: explicit inheritance from sys.Workspace must not be allowed
+
+			// include sys.Workspace
+			rootWs, err := lookup[*WorkspaceStmt](DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName}, &c.basicContext)
+			if err != nil {
+				c.stmtErr(&w.Pos, err)
+				continue
+			}
+			iter(rootWs, ctx, rootWs)
+
+			if w.Abstract {
+				ctx.builder.SetAbstract()
+			}
+			if w.Descriptor != nil {
+				ctx.builder.SetDescriptor(appdef.NewQName(string(ctx.schema.Ast.Package), w.Descriptor.GetName()))
+			}
+		}
+	}
+	return nil
+}
+
+func (c *buildContext) alterWorkspaces() error {
+	for _, schema := range c.pkgmap {
+		c.setSchema(schema)
+		iterateStmt(schema.Ast, func(a *AlterWorkspaceStmt) {
+
+			var iter func(wsctx *wsBuildCtx, coll IStatementCollection)
+			iter = func(wsctx *wsBuildCtx, coll IStatementCollection) {
+				coll.Iterate(func(stmt interface{}) {
+					c.useStmtInWs(wsctx, string(schema.Ast.Package), stmt)
+					if collection, ok := stmt.(IStatementCollection); ok {
+						if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
+							iter(wsctx, collection)
+						}
+					}
+				})
+			}
+
+			err := resolve[*WorkspaceStmt](a.Name, &c.basicContext, func(f *WorkspaceStmt) error {
+				iter(c.wsBuildCtxs[f], a)
+				return nil
+			})
+
+			if err != nil {
+				c.stmtErr(&a.Pos, err)
+			}
+		})
 	}
 	return nil
 }
 
 func (c *buildContext) types() error {
 	for _, schema := range c.pkgmap {
+		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(typ *TypeStmt) {
-			c.setSchema(schema)
 			c.pushDef(typ.Name, appdef.DefKind_Object)
 			c.addTableItems(typ.Items)
 			c.popDef()
@@ -63,8 +197,8 @@ func (c *buildContext) types() error {
 
 func (c *buildContext) views() error {
 	for _, schema := range c.pkgmap {
+		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(view *ViewStmt) {
-			c.setSchema(schema)
 			qname := c.pkg.Ast.NewQName(view.Name)
 			vb := c.builder.AddView(qname)
 			for i := range view.Fields {
@@ -87,8 +221,8 @@ func (c *buildContext) views() error {
 
 func (c *buildContext) commands() error {
 	for _, schema := range c.pkgmap {
+		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(cmd *CommandStmt) {
-			c.setSchema(schema)
 			qname := c.pkg.Ast.NewQName(cmd.Name)
 			b := c.builder.AddCommand(qname)
 			if cmd.Arg != nil && !isVoid(cmd.Arg.Package, cmd.Arg.Name) {
@@ -115,8 +249,8 @@ func (c *buildContext) commands() error {
 
 func (c *buildContext) queries() error {
 	for _, schema := range c.pkgmap {
+		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(q *QueryStmt) {
-			c.setSchema(schema)
 			qname := c.pkg.Ast.NewQName(q.Name)
 			b := c.builder.AddQuery(qname)
 			if q.Arg != nil && !isVoid(q.Arg.Package, q.Arg.Name) {
@@ -145,6 +279,7 @@ func (c *buildContext) queries() error {
 
 func (c *buildContext) tables() error {
 	for _, schema := range c.pkgmap {
+		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(table *TableStmt) {
 			c.table(schema, table)
 		})
@@ -170,11 +305,11 @@ func (c *buildContext) fillTable(table *TableStmt) {
 func (c *buildContext) workspaceDescriptor(schema *PackageSchemaAST, w *WorkspaceStmt) {
 	if w.Descriptor != nil {
 		c.setSchema(schema)
-		qname := c.pkg.Ast.NewQName(w.Name)
+		qname := c.pkg.Ast.NewQName(w.Descriptor.Name)
 		if c.isExists(qname, appdef.DefKind_CDoc) {
 			return
 		}
-		c.pushDef(w.Name, appdef.DefKind_CDoc)
+		c.pushDef(w.Descriptor.Name, appdef.DefKind_CDoc)
 		c.addTableItems(w.Descriptor.Items)
 		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
 		c.popDef()
@@ -195,6 +330,9 @@ func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt) {
 	c.fillTable(table)
 	if table.singletone {
 		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
+	}
+	if table.Abstract {
+		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetAbstract()
 	}
 	c.popDef()
 }
@@ -254,7 +392,15 @@ func (c *buildContext) addFieldToDef(field *FieldExpr) {
 		if wrec == nil && orec == nil && crec == nil { // not yet built
 			tbl, err := lookup[*TableStmt](DefQName{Package: Ident(qname.Pkg()), Name: Ident(qname.Entity())}, &c.basicContext)
 			if err != nil {
-				c.errs = append(c.errs, err)
+				c.stmtErr(&field.Pos, err)
+				return
+			}
+			if tbl == nil {
+				c.stmtErr(&field.Pos, ErrTypeNotSupported(field.Type.String()))
+				return
+			}
+			if tbl.Abstract {
+				c.stmtErr(&field.Pos, ErrNestedAbstractTable(field.Type.String()))
 				return
 			}
 			if tbl.tableDefKind == appdef.DefKind_CRecord || tbl.tableDefKind == appdef.DefKind_ORecord || tbl.tableDefKind == appdef.DefKind_WRecord {

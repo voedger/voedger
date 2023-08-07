@@ -9,9 +9,11 @@ package appdef
 //   - IGDoc, IGDocBuilder
 type gDoc struct {
 	def
+	comment
 	fields
 	containers
 	uniques
+	withAbstract
 }
 
 func newGDoc(app *appDef, name QName) *gDoc {
@@ -29,9 +31,11 @@ func newGDoc(app *appDef, name QName) *gDoc {
 //   - IGRecord, IGRecordBuilder
 type gRecord struct {
 	def
+	comment
 	fields
 	containers
 	uniques
+	withAbstract
 }
 
 func newGRecord(app *appDef, name QName) *gRecord {

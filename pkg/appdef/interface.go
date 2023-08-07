@@ -44,6 +44,8 @@ type ExtensionEngineKind uint8
 //
 // Ref to apdef.go for implementation
 type IAppDef interface {
+	IComment
+
 	// Returns definition by name.
 	//
 	// If not found empty definition with DefKind_null is returned
@@ -136,6 +138,7 @@ type IAppDef interface {
 // Ref to appdef.go for implementation
 type IAppDefBuilder interface {
 	IAppDef
+	ICommentBuilder
 
 	// Adds new GDoc definition with specified name.
 	//
@@ -275,6 +278,42 @@ type IDef interface {
 	Kind() DefKind
 }
 
+// See [Issue #488](https://github.com/voedger/voedger/issues/488)
+//
+// Any definition may have comment
+//
+// Ref to commented.go for implementation
+type IComment interface {
+	// Returns comment
+	Comment() string
+}
+
+type ICommentBuilder interface {
+	// Sets comment as string with lines, concatenated with LF
+	SetComment(...string)
+}
+
+// See [Issue #524](https://github.com/voedger/voedger/issues/524)
+// Definition can be abstract:
+//	- DefKind_GDoc and DefKind_GRecord,
+//	- DefKind_CDoc and DefKind_CRecord,
+//	- DefKind_ODoc and DefKind_CRecord,
+//	- DefKind_WDoc and DefKind_WRecord,
+//	- DefKind_Object and DefKind_Element
+//
+// Ref to abstract.go for implementation
+type IWithAbstract interface {
+	// Returns is definition abstract
+	Abstract() bool
+}
+
+type IWithAbstractBuilder interface {
+	IWithAbstract
+
+	// Makes definition abstract
+	SetAbstract()
+}
+
 // Definitions with fields:
 //	- DefKind_GDoc and DefKind_GRecord,
 //	- DefKind_CDoc and DefKind_CRecord,
@@ -324,7 +363,7 @@ type IFieldsBuilder interface {
 	//   - if name is invalid,
 	//   - if field with name is already exists,
 	//   - if specified data kind is not allowed by definition kind.
-	AddField(name string, kind DataKind, required bool) IFieldsBuilder
+	AddField(name string, kind DataKind, required bool, comment ...string) IFieldsBuilder
 
 	// Adds reference field specified name and target refs.
 	//
@@ -379,7 +418,7 @@ type IContainersBuilder interface {
 	//   - if definition name is empty,
 	//   - if invalid occurrences,
 	//   - if container definition kind is not compatible with parent definition kind.
-	AddContainer(name string, def QName, min, max Occurs) IContainersBuilder
+	AddContainer(name string, def QName, min, max Occurs, comment ...string) IContainersBuilder
 }
 
 // Definitions with uniques:
@@ -425,7 +464,7 @@ type IUniquesBuilder interface {
 	//   - if fields has duplicates,
 	//   - if fields is already exists or overlaps with an existing unique,
 	//   - if some field not found.
-	AddUnique(name string, fields []string) IUniquesBuilder
+	AddUnique(name string, fields []string, comment ...string) IUniquesBuilder
 
 	// Sets single field unique.
 	// Calling SetUniqueField again changes unique field. If specified name is empty, then clears unique field.
@@ -442,16 +481,20 @@ type IUniquesBuilder interface {
 // Global document. DefKind() is DefKind_GDoc.
 type IGDoc interface {
 	IDef
+	IComment
 	IFields
 	IContainers
 	IUniques
+	IWithAbstract
 }
 
 type IGDocBuilder interface {
 	IGDoc
+	ICommentBuilder
 	IFieldsBuilder
 	IContainersBuilder
 	IUniquesBuilder
+	IWithAbstractBuilder
 }
 
 // Global document record. DefKind() is DefKind_GRecord.
@@ -459,24 +502,30 @@ type IGDocBuilder interface {
 // Ref. to gdoc.go for implementation
 type IGRecord interface {
 	IDef
+	IComment
 	IFields
 	IContainers
 	IUniques
+	IWithAbstract
 }
 
 type IGRecordBuilder interface {
 	IGRecord
+	ICommentBuilder
 	IFieldsBuilder
 	IContainersBuilder
 	IUniquesBuilder
+	IWithAbstractBuilder
 }
 
 // Configuration document. DefKind() is DefKind_CDoc.
 type ICDoc interface {
 	IDef
+	IComment
 	IFields
 	IContainers
 	IUniques
+	IWithAbstract
 
 	// Returns is singleton
 	Singleton() bool
@@ -484,9 +533,11 @@ type ICDoc interface {
 
 type ICDocBuilder interface {
 	ICDoc
+	ICommentBuilder
 	IFieldsBuilder
 	IContainersBuilder
 	IUniquesBuilder
+	IWithAbstractBuilder
 
 	// Sets CDoc singleton
 	SetSingleton()
@@ -497,31 +548,39 @@ type ICDocBuilder interface {
 // Ref. to cdoc.go for implementation
 type ICRecord interface {
 	IDef
+	IComment
 	IFields
 	IContainers
 	IUniques
+	IWithAbstract
 }
 
 type ICRecordBuilder interface {
 	ICRecord
+	ICommentBuilder
 	IFieldsBuilder
 	IContainersBuilder
 	IUniquesBuilder
+	IWithAbstractBuilder
 }
 
 // Workflow document. DefKind() is DefKind_WDoc.
 type IWDoc interface {
 	IDef
+	IComment
 	IFields
 	IContainers
 	IUniques
+	IWithAbstract
 }
 
 type IWDocBuilder interface {
 	IWDoc
+	ICommentBuilder
 	IFieldsBuilder
 	IContainersBuilder
 	IUniquesBuilder
+	IWithAbstractBuilder
 }
 
 // Workflow document record. DefKind() is DefKind_WRecord.
@@ -529,29 +588,37 @@ type IWDocBuilder interface {
 // Ref. to wdoc.go for implementation
 type IWRecord interface {
 	IDef
+	IComment
 	IFields
 	IContainers
 	IUniques
+	IWithAbstract
 }
 
 type IWRecordBuilder interface {
 	IWRecord
+	ICommentBuilder
 	IFieldsBuilder
 	IContainersBuilder
 	IUniquesBuilder
+	IWithAbstractBuilder
 }
 
 // Operation document. DefKind() is DefKind_ODoc.
 type IODoc interface {
 	IDef
+	IComment
 	IFields
 	IContainers
+	IWithAbstract
 }
 
 type IODocBuilder interface {
 	IODoc
+	ICommentBuilder
 	IFieldsBuilder
 	IContainersBuilder
+	IWithAbstractBuilder
 }
 
 // Operation document record. DefKind() is DefKind_ORecord.
@@ -559,14 +626,18 @@ type IODocBuilder interface {
 // Ref. to odoc.go for implementation
 type IORecord interface {
 	IDef
+	IComment
 	IFields
 	IContainers
+	IWithAbstract
 }
 
 type IORecordBuilder interface {
 	IORecord
+	ICommentBuilder
 	IFieldsBuilder
 	IContainersBuilder
+	IWithAbstractBuilder
 }
 
 // Object definition. DefKind() is DefKind_Object.
@@ -574,14 +645,18 @@ type IORecordBuilder interface {
 // Ref. to object.go for implementation
 type IObject interface {
 	IDef
+	IComment
 	IFields
 	IContainers
+	IWithAbstract
 }
 
 type IObjectBuilder interface {
 	IObject
+	ICommentBuilder
 	IFieldsBuilder
 	IContainersBuilder
+	IWithAbstractBuilder
 }
 
 // Element definition. DefKind() is DefKind_Element.
@@ -589,14 +664,18 @@ type IObjectBuilder interface {
 // Ref. to object.go for implementation
 type IElement interface {
 	IDef
+	IComment
 	IFields
 	IContainers
+	IWithAbstract
 }
 
 type IElementBuilder interface {
 	IElement
+	ICommentBuilder
 	IFieldsBuilder
 	IContainersBuilder
+	IWithAbstractBuilder
 }
 
 // View definition. DefKind() is DefKind_ViewRecord
@@ -604,6 +683,7 @@ type IElementBuilder interface {
 // Ref to view.go for implementation
 type IView interface {
 	IDef
+	IComment
 	IContainers
 
 	// Returns full (pk + ccols) view key definition
@@ -615,25 +695,26 @@ type IView interface {
 
 type IViewBuilder interface {
 	IView
+	ICommentBuilder
 
 	// AddPartField adds specified field to view partition key definition. Fields is always required
 	//
 	// # Panics:
 	//	- if field already exists in clustering columns or value fields,
 	//	- if not fixed size data kind.
-	AddPartField(name string, kind DataKind) IViewBuilder
+	AddPartField(name string, kind DataKind, comment ...string) IViewBuilder
 
 	// AddClustColumn adds specified field to view clustering columns definition. Fields is optional
 	//
 	// # Panics:
 	//	- if field already exists in partition key or value fields.
-	AddClustColumn(name string, kind DataKind) IViewBuilder
+	AddClustColumn(name string, kind DataKind, comment ...string) IViewBuilder
 
 	// AddValueField adds specified field to view value definition
 	//
 	// # Panics:
 	//	- if field already exists in partition key or clustering columns fields.
-	AddValueField(name string, kind DataKind, required bool) IViewBuilder
+	AddValueField(name string, kind DataKind, required bool, comment ...string) IViewBuilder
 }
 
 // View partition key definition. DefKind() is DefKind_ViewRecordPartitionKey
@@ -641,6 +722,7 @@ type IViewBuilder interface {
 // Ref. to view.go for implementation
 type IPartKey interface {
 	IDef
+	IComment
 	IFields
 }
 
@@ -649,6 +731,7 @@ type IPartKey interface {
 // Ref. to view.go for implementation
 type IClustCols interface {
 	IDef
+	IComment
 	IFields
 }
 
@@ -659,6 +742,7 @@ type IClustCols interface {
 // Ref. to view.go for implementation
 type IViewKey interface {
 	IDef
+	IComment
 	IFields
 	IContainers
 
@@ -674,6 +758,7 @@ type IViewKey interface {
 // Ref. to view.go for implementation
 type IViewValue interface {
 	IDef
+	IComment
 	IFields
 }
 
@@ -681,6 +766,8 @@ type IViewValue interface {
 //
 // Ref to field.go for constants and implementation
 type IField interface {
+	IComment
+
 	// Returns field name
 	Name() string
 
@@ -719,6 +806,8 @@ type IRefField interface {
 //
 // Ref to container.go for implementation
 type IContainer interface {
+	IComment
+
 	// Returns name of container
 	Name() string
 
@@ -747,6 +836,8 @@ type UniqueID uint32
 //
 // Ref to unique.go for implementation
 type IUnique interface {
+	IComment
+
 	// returns parent definition
 	Def() IDef
 
@@ -768,6 +859,8 @@ type IUnique interface {
 //
 // Ref. to extension.go for implementation
 type IExtension interface {
+	IComment
+
 	// Extension entry point name
 	Name() string
 
@@ -780,6 +873,7 @@ type IExtension interface {
 // Ref. to command.go for implementation
 type ICommand interface {
 	IDef
+	IComment
 
 	// Argument. Returns nil if not assigned
 	Arg() IObject
@@ -796,6 +890,7 @@ type ICommand interface {
 
 type ICommandBuilder interface {
 	ICommand
+	ICommentBuilder
 
 	// Sets command argument. Must be object or NullQName
 	SetArg(QName) ICommandBuilder
@@ -810,7 +905,7 @@ type ICommandBuilder interface {
 	//
 	// # Panics:
 	//	- if name is empty or invalid identifier
-	SetExtension(name string, engine ExtensionEngineKind) ICommandBuilder
+	SetExtension(name string, engine ExtensionEngineKind, comment ...string) ICommandBuilder
 }
 
 // Query
@@ -818,6 +913,7 @@ type ICommandBuilder interface {
 // Ref. to query.go for implementation
 type IQuery interface {
 	IDef
+	IComment
 
 	// Argument. Returns nil if not assigned
 	Arg() IObject
@@ -833,6 +929,7 @@ type IQuery interface {
 
 type IQueryBuilder interface {
 	IQuery
+	ICommentBuilder
 
 	// Sets query argument. Must be object or NullQName
 	SetArg(QName) IQueryBuilder
@@ -852,6 +949,8 @@ type IQueryBuilder interface {
 // Ref. to workspace.go for implementation
 type IWorkspace interface {
 	IDef
+	IComment
+	IWithAbstract
 
 	// Returns definition by name.
 	//
@@ -860,10 +959,19 @@ type IWorkspace interface {
 
 	// Enumerates all workspace definitions
 	Defs(func(IDef))
+
+	// Workspace descriptor document.
+	// See [#466](https://github.com/voedger/voedger/issues/466)
+	//
+	// Descriptor is CDoc document.
+	// If the Descriptor is an abstract document, the workspace must also be abstract.
+	Descriptor() QName
 }
 
 type IWorkspaceBuilder interface {
 	IWorkspace
+	ICommentBuilder
+	IWithAbstractBuilder
 
 	// Adds definition to workspace. Definition must be defined for application before.
 	//
@@ -871,4 +979,12 @@ type IWorkspaceBuilder interface {
 	//	- if name is empty
 	//	- if name is not defined for application
 	AddDef(QName) IWorkspaceBuilder
+
+	// Sets descriptor.
+	//
+	// # Panics:
+	//	- if name is empty
+	//	- if name is not defined for application
+	//	- if name is not CDoc
+	SetDescriptor(QName) IWorkspaceBuilder
 }
