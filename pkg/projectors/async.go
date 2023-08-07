@@ -176,7 +176,7 @@ func (a *asyncActualizer) handleEvent(pLogOffset istructs.Offset, event istructs
 
 	err = a.pipeline.SendAsync(work)
 	if err != nil {
-		a.conf.LogError(a.name, err)
+		a.conf.LogError(a.name, event.Workspace(), event.WLogOffset(), err)
 		return
 	}
 
