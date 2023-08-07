@@ -64,6 +64,10 @@ type ProcesorChannel struct {
 	iprocbusmem.ChannelGroup
 	ChannelType ProcessorChannelType
 }
+type RouterServices struct {
+	router.IHTTPService
+	router.IACMEService
+}
 type MetricsServiceOperator pipeline.ISyncOperator
 type MetricsServicePortInitial int
 type VVMPortSource struct {
