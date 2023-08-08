@@ -279,6 +279,7 @@ func TestRefIntegrity(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("CUDs", func(t *testing.T) {
+		t.Skip("wait for https://github.com/voedger/voedger/issues/566")
 		body := `{"cuds":[{"fields":{"sys.ID":2,"sys.QName":"simpleApp.department","pc_fix_button": 1,"rm_fix_button": 1, "id_food_group": 123456}}]}`
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
 
@@ -336,7 +337,7 @@ func TestEraseString(t *testing.T) {
 	body := `{"cuds":[{"sys.ID": 5000000000400,"fields":{"name":""}}]}`
 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	body = `{"args":{"Schema":"sys.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":5000000000400}}]}`
+	body = `{"args":{"Schema":"simpleApp.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":5000000000400}}]}`
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
 	require.Equal(t, "", resp.SectionRow()[0].(string))

@@ -50,7 +50,6 @@ var (
 	QNameCommandCreateWorkspaceID          = appdef.NewQName(appdef.SysPackage, "CreateWorkspaceID")
 	QNameCommandCreateWorkspace            = appdef.NewQName(appdef.SysPackage, "CreateWorkspace")
 	nextWSIDGlobalLock                     = sync.Mutex{}
+	//go:embed schemas.sql
+	schemasFS embed.FS
 )
-
-//go:embed schemas.sql
-var schemasFS embed.FS

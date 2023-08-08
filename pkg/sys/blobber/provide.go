@@ -20,11 +20,6 @@ func ProvideBlobberCmds(cfg *istructsmem.AppConfigType, ep extensionpoints.IExte
 	apps.Parse(schemasFS, appdef.SysPackage, ep)
 }
 
-// func provideBLOBWDoc(appDefBuilder appdef.IAppDefBuilder) {
-// 	appDefBuilder.AddWDoc(QNameWDocBLOB).
-// 		AddField(fldStatus, appdef.DataKind_int32, true)
-// }
-
 func provideDownloadBLOBHelperCmd(cfg *istructsmem.AppConfigType) {
 	dbhQName := appdef.NewQName(appdef.SysPackage, "DownloadBLOBHelper")
 

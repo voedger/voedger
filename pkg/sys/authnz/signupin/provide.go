@@ -76,17 +76,6 @@ func ProvideCDocLogin(appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IE
 	apps.Parse(schemasFS, appdef.SysPackage, ep)
 }
 
-// 	appDefBuilder.AddCDoc(authnz.QNameCDocLogin).
-// 		AddField(authnz.Field_ProfileClusterID, appdef.DataKind_int32, true).
-// 		AddField(field_PwdHash, appdef.DataKind_bytes, true).
-// 		AddField(Field_AppName, appdef.DataKind_string, true).
-// 		AddField(authnz.Field_SubjectKind, appdef.DataKind_int32, false).
-// 		AddField(authnz.Field_LoginHash, appdef.DataKind_string, true).
-// 		AddField(authnz.Field_WSID, appdef.DataKind_int64, false).     // to be written after workspace init
-// 		AddField(authnz.Field_WSError, appdef.DataKind_string, false). // to be written after workspace init
-// 		AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, true)
-// }
-
 func provideCmdCreateLogin(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		authnz.QNameCommandCreateLogin,

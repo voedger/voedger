@@ -76,7 +76,7 @@ TABLE printers INHERITS CDoc (
 	fiscal int32,
 	dont_auto_open_drawer int32,
 	connection_type int32,
-	printer_ip int32,
+	printer_ip text,
 	printer_port int32,
 	cant_be_redirected_to int32,
 	com_params bytes,
