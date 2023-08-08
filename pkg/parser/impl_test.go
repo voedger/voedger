@@ -150,7 +150,7 @@ func Test_Refs_NestedTables(t *testing.T) {
 		pkg,
 	})
 	require.NoError(err)
-	require.NoError(BuildAppDefs(packages, appdef.New()))
+	require.NoError(BuildAppDefs(packages, ))
 
 }
 
@@ -270,27 +270,27 @@ func Test_AbstractTables(t *testing.T) {
 	WORKSPACE MyWorkspace1(
 		EXTENSION ENGINE BUILTIN (
 
-			PROJECTOR proj1 
+			PROJECTOR proj1
             ON INSERT AbstractTable 		-- NOT ALLOWED
             INTENTS(SendMail);
-			
-			SYNC PROJECTOR proj2 
-            ON INSERT My1 
+
+			SYNC PROJECTOR proj2
+            ON INSERT My1
             INTENTS(Record AbstractTable);	-- NOT ALLOWED
 
-			PROJECTOR proj3 
-            ON INSERT My1 
+			PROJECTOR proj3
+            ON INSERT My1
 			STATE(Record AbstractTable)		-- NOT ALLOWED
             INTENTS(SendMail);
 		);
 		TABLE My2 INHERITS CRecord(
 			nested AbstractTable			-- NOT ALLOWED
-		);	
+		);
 		USE TABLE AbstractTable;			-- NOT ALLOWED
 		TABLE My3 INHERITS CRecord(
 			f int,
 			items ABSTRACT TABLE Nested()	-- NOT ALLOWED
-		);	
+		);
 	)
 	`)
 	require.NoError(err)
@@ -323,7 +323,7 @@ func Test_AbstractTables2(t *testing.T) {
 	WORKSPACE MyWorkspace1(
 		TABLE My2 INHERITS CRecord(
 			nested AbstractTable			-- NOT ALLOWED
-		);	
+		);
 	);
 	`)
 	require.NoError(err)
@@ -598,7 +598,7 @@ func Test_AbstractWorkspace(t *testing.T) {
 
 	fs, err := ParseFile("example.sql", `SCHEMA test;
 	WORKSPACE ws1 ();
-	ABSTRACT WORKSPACE ws2(		
+	ABSTRACT WORKSPACE ws2(
 		DESCRIPTOR(					-- Incorrect
 			a int
 		);
