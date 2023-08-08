@@ -76,9 +76,7 @@ var (
 
 func EmptyApp(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	registryapp.Provide(smtp.Cfg{})(apis, cfg, appDefBuilder, ep)
-	appDefBuilder.AddSingleton(QNameTestWSKind).
-		AddField("IntFld", appdef.DataKind_int32, true).
-		AddField("StrFld", appdef.DataKind_string, false)
+	apps.Parse(schemasEmptyApp, "emptyApp", ep)
 }
 
 func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {

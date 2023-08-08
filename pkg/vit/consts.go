@@ -30,6 +30,8 @@ var (
 	workspaceInitAwaitTimeout = defaultWorkspaceAwaitTimeout
 	//go:embed schemasSimpleApp.sql
 	schemasSimpleApp embed.FS
+	//go:embed schemasEmptyApp.sql
+	schemasEmptyApp embed.FS
 )
 
 func init() {
