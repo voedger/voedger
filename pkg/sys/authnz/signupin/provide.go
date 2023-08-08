@@ -5,8 +5,6 @@
 package signupin
 
 import (
-	"embed"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -18,9 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
-
-//go:embed schemas.sql
-var schemasFS embed.FS
 
 func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federation coreutils.IFederation,
 	asp istructs.IAppStructsProvider, ep extensionpoints.IExtensionPoint) {

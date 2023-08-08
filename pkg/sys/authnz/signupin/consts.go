@@ -51,4 +51,4 @@ const (
 )
 
 //go:embed schemas.sql
-var schemasSQL embed.FS
+var schemasFS embed.FS
