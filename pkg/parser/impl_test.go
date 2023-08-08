@@ -150,7 +150,7 @@ func Test_Refs_NestedTables(t *testing.T) {
 		pkg,
 	})
 	require.NoError(err)
-	require.NoError(BuildAppDefs(packages, ))
+	require.NoError(BuildAppDefs(packages, appdef.New()))
 
 }
 
