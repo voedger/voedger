@@ -55,18 +55,6 @@ func TestBasicUsage_SingleResponse(t *testing.T) {
 	require.Equal("test resp", string(respBodyBytes))
 }
 
-// func TestXxx(t *testing.T) {
-// 	type tx struct {
-// 		Str string //`json:"Str,omitempty"`
-// 	}
-
-// 	x := tx{}
-
-// 	b, err := json.Marshal(&x)
-// 	require.NoError(t, err)
-// 	fmt.Println(string(b))
-// }
-
 func TestSectionedSendResponseError(t *testing.T) {
 	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
 	}, time.Millisecond)

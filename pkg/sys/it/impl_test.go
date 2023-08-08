@@ -113,7 +113,7 @@ func TestAuthorization(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	prn := ws.Owner
 
-	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"%s"}}]}`, it.QNameTestTable)
+	body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"simpleApp.air_table_plan"}}]}`
 
 	t.Run("basic usage", func(t *testing.T) {
 		t.Run("Bearer scheme", func(t *testing.T) {
