@@ -176,7 +176,7 @@ func (a *asyncActualizer) handleEvent(pLogOffset istructs.Offset, event istructs
 
 	err = a.pipeline.SendAsync(work)
 	if err != nil {
-		a.conf.LogError(a.name, event.Workspace(), event.WLogOffset(), err)
+		a.conf.LogError(a.name, err)
 		return
 	}
 
@@ -233,6 +233,7 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 	if isAcceptable(p.projector, w.event) {
 		err = p.projector.Func(w.event, p.state, p.state)
 		if err != nil {
+			logger.Error(fmt.Sprintf("%s [%d:%d] %s", p.projector.Name, w.event.Workspace(), w.event.WLogOffset(), err))
 			return nil, err
 		}
 		if logger.IsVerbose() {
