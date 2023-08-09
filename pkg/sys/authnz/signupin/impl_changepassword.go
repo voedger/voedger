@@ -26,7 +26,7 @@ func provideChangePassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder
 			AddField(field_OldPassword, appdef.DataKind_string, true).
 			AddField(field_NewPassword, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		appdef.NullQName,
-		cmdChangePaswordExec,
+		cmdChangePasswordExec,
 	))
 
 	cfgRegistry.FunctionRateLimits.AddAppLimit(qNameCmdChangePassword, istructs.RateLimit{
@@ -37,7 +37,7 @@ func provideChangePassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder
 
 // sys/registry/pseudoWSID
 // null auth
-func cmdChangePaswordExec(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func cmdChangePasswordExec(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 	appName := args.ArgumentObject.AsString(Field_AppName)
 	login := args.ArgumentObject.AsString(field_Login)
 	oldPwd := args.ArgumentUnloggedObject.AsString(field_OldPassword)

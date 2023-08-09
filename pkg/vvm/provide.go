@@ -17,7 +17,10 @@ import (
 
 	"github.com/google/wire"
 	ibus "github.com/untillpro/airs-ibus"
-	router "github.com/untillpro/airs-router2"
+	"golang.org/x/crypto/acme/autocert"
+
+	"github.com/voedger/voedger/pkg/router"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -32,13 +35,13 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
-	istorage "github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istoragecache"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	itokensjwt "github.com/voedger/voedger/pkg/itokensjwt"
+	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
@@ -49,7 +52,6 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
-	"golang.org/x/crypto/acme/autocert"
 )
 
 func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err error) {
@@ -300,7 +302,6 @@ func provideRouterParams(cfg *VVMConfig, port VVMPortType, vvmIdx VVMIdxType) ro
 		Routes:               cfg.Routes,
 		RoutesRewrite:        cfg.RoutesRewrite,
 		RouteDomains:         cfg.RouteDomains,
-		UseBP3:               true,
 	}
 	if port != 0 {
 		res.Port = int(port) + int(vvmIdx)
@@ -433,19 +434,22 @@ func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTi
 		RetryAfterSecondsOn503: DefaultRetryAfterSecondsOn503,
 		BLOBMaxSize:            bms,
 	}
-	res := router.ProvideBP3(vvmCtx, rp, time.Duration(busTimeout), broker, quotas, bp, autocertCache, bus, appsWSAmounts)
+	httpSrv, acmeSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, quotas, bp, autocertCache, bus, appsWSAmounts)
 	vvmPortSource.getter = func() VVMPortType {
-		return VVMPortType(res[0].(interface{ GetPort() int }).GetPort())
+		return VVMPortType(httpSrv.GetPort())
 	}
-	return res
+	return RouterServices{
+		httpSrv, acmeSrv,
+	}
 }
 
 func provideRouterServiceFactory(rs RouterServices) RouterServiceOperator {
-	routerServices := []pipeline.ForkOperatorOptionFunc{}
-	for _, routerSrvIntf := range rs {
-		routerServices = append(routerServices, pipeline.ForkBranch(pipeline.ServiceOperator(routerSrvIntf.(pipeline.IService))))
+	funcs := make([]pipeline.ForkOperatorOptionFunc, 1, 2)
+	funcs[0] = pipeline.ForkBranch(pipeline.ServiceOperator(rs.IHTTPService))
+	if rs.IACMEService != nil {
+		funcs = append(funcs, pipeline.ForkBranch(pipeline.ServiceOperator(rs.IACMEService)))
 	}
-	return pipeline.ForkOperator(pipeline.ForkSame, routerServices[0], routerServices[1:]...)
+	return pipeline.ForkOperator(pipeline.ForkSame, funcs[0], funcs[1:]...)
 }
 
 func provideQueryChannel(sch ServiceChannelFactory) QueryChannel {
@@ -496,12 +500,13 @@ func provideAsyncActualizersFactory(appStructsProvider istructs.IAppStructsProvi
 			Ctx:      vvmCtx,
 			AppQName: appQName,
 			// FIXME: это правильно, что постоянную appStrcuts возвращаем? Каждый раз не надо запрашивать у appStructsProvider?
-			AppStructs:   func() istructs.IAppStructs { return appStructs },
-			SecretReader: secretReader,
-			Partition:    partitionID,
-			Broker:       n10nBroker,
-			Opts:         opts,
-			IntentsLimit: actualizerIntentsLimit,
+			AppStructs:    func() istructs.IAppStructs { return appStructs },
+			SecretReader:  secretReader,
+			Partition:     partitionID,
+			Broker:        n10nBroker,
+			Opts:          opts,
+			IntentsLimit:  actualizerIntentsLimit,
+			FlushInterval: actualizerFlushInterval,
 		}
 
 		asyncProjectors = make([]pipeline.ForkOperatorOptionFunc, len(asyncProjectorFactories))

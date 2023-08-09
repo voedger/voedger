@@ -14,6 +14,7 @@ import (
 //   - ICommand & ICommandBuilder
 type command struct {
 	def
+	comment
 	arg, unl, res objRef
 	ext           extension
 }
@@ -53,7 +54,7 @@ func (cmd *command) SetResult(name QName) ICommandBuilder {
 	return cmd
 }
 
-func (cmd *command) SetExtension(name string, engine ExtensionEngineKind) ICommandBuilder {
+func (cmd *command) SetExtension(name string, engine ExtensionEngineKind, comment ...string) ICommandBuilder {
 	if name == "" {
 		panic(fmt.Errorf("%v: extension name is empty: %w", cmd.QName(), ErrNameMissed))
 	}

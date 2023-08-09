@@ -116,6 +116,15 @@ func checkDuplicateNames(schema *SchemaAST, errs []error) []error {
 	var checkStatement func(stmt interface{})
 
 	checkStatement = func(stmt interface{}) {
+
+		if ws, ok := stmt.(*WorkspaceStmt); ok {
+			if ws.Descriptor != nil {
+				if ws.Descriptor.Name == "" {
+					ws.Descriptor.Name = defaultDescriptorName(ws.GetName())
+				}
+			}
+		}
+
 		if named, ok := stmt.(INamedStatement); ok {
 			name := named.GetName()
 			if _, ok := namedIndex[name]; ok {

@@ -27,7 +27,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 				"cuds": [{
 				  "fields": {
 					"sys.ID": 1,
-					"sys.QName": "sys.bill",
+					"sys.QName": "simpleApp.bill",
 					"tableno": %d,
 					"id_untill_users": 100000000000,
 					"table_part": "a",
@@ -60,14 +60,14 @@ func TestBasicUsage_Journal(t *testing.T) {
 			"proforma": 3,
 			"sys.ID": %[1]d,
 			"sys.IsActive": true,
-			"sys.QName": "sys.bill",
+			"sys.QName": "simpleApp.bill",
 			"table_part": "a",
 			"tableno": %[2]d,
 			"working_day": "20230228"
 		  },
 		  "IsNew": true,
 		  "sys.ID": %[1]d,
-		  "sys.QName": "sys.bill"
+		  "sys.QName": "simpleApp.bill"
 		}
 	  ],
 	  "DeviceID": 0,
@@ -87,14 +87,14 @@ func TestBasicUsage_Journal(t *testing.T) {
 				"proforma": 3,
 				"sys.ID": %[1]d,
 				"sys.IsActive": true,
-				"sys.QName": "sys.bill",
+				"sys.QName": "simpleApp.bill",
 				"table_part": "a",
 				"tableno": %[2]d,
 				"working_day": "20230228"
 				},
 				"IsNew": true,
 				"sys.ID": %[1]d,
-				"sys.QName": "sys.bill"
+				"sys.QName": "simpleApp.bill"
 			}
 			],
 			"DeviceID": 0,
@@ -126,14 +126,14 @@ func TestBasicUsage_Journal(t *testing.T) {
 			"proforma": 3,
 			"sys.ID": %[1]d,
 			"sys.IsActive": true,
-			"sys.QName": "sys.bill",
+			"sys.QName": "simpleApp.bill",
 			"table_part": "a",
 			"tableno": %[2]d,
 			"working_day": "20230228"
 		  },
 		  "IsNew": true,
 		  "sys.ID": %[1]d,
-		  "sys.QName": "sys.bill"
+		  "sys.QName": "simpleApp.bill"
 		}
 	  ],
 	  "DeviceID": 0,
@@ -153,14 +153,14 @@ func TestBasicUsage_Journal(t *testing.T) {
 				"proforma": 3,
 				"sys.ID": %[1]d,
 				"sys.IsActive": true,
-				"sys.QName": "sys.bill",
+				"sys.QName": "simpleApp.bill",
 				"table_part": "a",
 				"tableno": %[2]d,
 				"working_day": "20230228"
 				},
 				"IsNew": true,
 				"sys.ID": %[1]d,
-				"sys.QName": "sys.bill"
+				"sys.QName": "simpleApp.bill"
 			}
 			],
 			"DeviceID": 0,
@@ -190,7 +190,7 @@ func TestJournal_read_in_years_range_1(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	createBill := func(tableNo int) int64 {
-		bill := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.bill","tableno":%d,"id_untill_users":100000000000,"table_part":"a","proforma":3,"working_day":"20230227"}}]}`, tableNo)
+		bill := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.bill","tableno":%d,"id_untill_users":100000000000,"table_part":"a","proforma":3,"working_day":"20230227"}}]}`, tableNo)
 		return vit.PostWS(ws, "c.sys.CUD", bill).CurrentWLogOffset
 	}
 
