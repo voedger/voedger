@@ -11,7 +11,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
 )
