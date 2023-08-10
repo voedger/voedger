@@ -38,8 +38,9 @@ func (b *Ident) Capture(values []string) error {
 
 type IStatement interface {
 	GetPos() *lexer.Position
-	GetComments() *[]string
-	ReplaceComments(comments []string)
+	GetRawCommentBlocks() []string
+	SetComments(comments []string)
+	GetComments() []string
 }
 
 type INamedStatement interface {
@@ -259,19 +260,24 @@ func (q TypeQName) String() (s string) {
 }
 
 type Statement struct {
-	Pos      lexer.Position
-	Comments []string `parser:"@(Comment* | MultilineComment?)"`
+	Pos              lexer.Position
+	RawCommentBlocks []string `parser:"@PreStmtComment*"`
+	Comments         []string // will be set after 1st pass
 }
 
 func (s *Statement) GetPos() *lexer.Position {
 	return &s.Pos
 }
 
-func (s *Statement) GetComments() *[]string {
-	return &s.Comments
+func (s *Statement) GetRawCommentBlocks() []string {
+	return s.RawCommentBlocks
 }
 
-func (s *Statement) ReplaceComments(comments []string) {
+func (s *Statement) GetComments() []string {
+	return s.Comments
+}
+
+func (s *Statement) SetComments(comments []string) {
 	s.Comments = comments
 }
 

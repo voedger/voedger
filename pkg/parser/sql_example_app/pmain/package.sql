@@ -148,9 +148,12 @@ WORKSPACE MyWorkspace (
             STATE(Http, AppSecret)
             INTENTS(SendMail, View NotificationsHistory);
 
-        -- Multiline comments:
 
-        /* Commands can only be declared in workspaces
+        -- Some comment in between
+
+        /* Multiline comments:
+        
+        Commands can only be declared in workspaces
          Command can have optional argument and/or unlogged argument
          Command can return TYPE */ 
         COMMAND Orders(air.Order, UNLOGGED air.TypeWithName) RETURNS air.Order;

@@ -187,8 +187,8 @@ func (c *buildContext) alterWorkspaces() error {
 
 func (c *buildContext) addComments(s IStatement, builder appdef.ICommentBuilder) {
 	comments := s.GetComments()
-	if comments != nil && len(*comments) > 0 {
-		builder.SetComment(*comments...)
+	if len(comments) > 0 {
+		builder.SetComment(comments...)
 	}
 }
 

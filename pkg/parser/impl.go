@@ -18,8 +18,9 @@ import (
 
 func parseImpl(fileName string, content string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
-		{Name: "MultilineComment", Pattern: `\/\*(.|\n)*\*\/`},
-		{Name: "Comment", Pattern: `\s*--[^\n]*`},
+		{Name: "PreStmtComment", Pattern: `(?:(?:\n+\s*--[^\n]*)+)|(?:\n\s*\/\*(?:.|\n)*\*\/)`},
+		{Name: "MultilineComment", Pattern: `\/\*(.|\n|\r)*\*\/`},
+		{Name: "Comment", Pattern: `\s*--[^\r\n]*`},
 		{Name: "Array", Pattern: `\[\]`},
 		{Name: "Float", Pattern: `[-+]?\d+\.\d+`},
 		{Name: "Int", Pattern: `[-+]?\d+`},
@@ -37,7 +38,7 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 
 	parser := participle.MustBuild[SchemaAST](
 		participle.Lexer(basicLexer),
-		participle.Elide("Whitespace", "Comment", "MultilineComment"),
+		participle.Elide("Whitespace", "Comment", "MultilineComment", "PreStmtComment"),
 		participle.Unquote("String"),
 	)
 	return parser.ParseString(fileName, content)
@@ -150,21 +151,34 @@ func checkDuplicateNames(schema *SchemaAST, errs []error) []error {
 
 func cleanupComments(schema *SchemaAST) {
 	iterate(schema, func(stmt interface{}) {
+
 		if s, ok := stmt.(IStatement); ok {
-			comments := *s.GetComments()
-			fixedComments := make([]string, 0)
-			for i := 0; i < len(comments); i++ {
-				if i == 0 && !strings.HasPrefix(comments[i], "\r\n") && !strings.HasPrefix(comments[i], "\n") {
-					continue
+			var rawComments string
+			var mult bool
+
+			if len(s.GetRawCommentBlocks()) < 1 {
+				return
+			}
+
+			// last block is the statement's comment
+			rawComments = s.GetRawCommentBlocks()[len(s.GetRawCommentBlocks())-1]
+			rawComments = strings.TrimSpace(rawComments)
+			rawComments, mult = strings.CutPrefix(rawComments, "/*")
+			if mult {
+				rawComments, _ = strings.CutSuffix(rawComments, "*/")
+			}
+
+			split := strings.Split(rawComments, "\n")
+			for i := 0; i < len(split); i++ {
+				fixed := strings.TrimSpace(split[i])
+				if !mult {
+					fixed, _ = strings.CutPrefix(fixed, "--")
+					fixed = strings.TrimSpace(fixed)
 				}
-				fixed := strings.TrimSpace(comments[i])
-				fixed, _ = strings.CutPrefix(fixed, "--")
-				fixed = strings.TrimSpace(fixed)
-				fixedComments = append(fixedComments, fixed)
+				split[i] = fixed
 			}
-			if len(fixedComments) > 0 {
-				s.ReplaceComments(fixedComments)
-			}
+
+			s.SetComments(split)
 		}
 	})
 }

@@ -45,6 +45,14 @@ func Test_BasicUsage(t *testing.T) {
 	mainPkgAST, err := ParsePackageDir("github.com/untillpro/main", fsMain, "sql_example_app/pmain")
 	require.NoError(err)
 
+	table := mainPkgAST.Ast.Statements[5].Table
+	comments := table.GetComments()
+	require.Equal(1, len(comments))
+
+	table = mainPkgAST.Ast.Statements[6].Table
+	comments = table.GetComments()
+	require.Equal(2, len(comments))
+
 	airPkgAST, err := ParsePackageDir("github.com/untillpro/airsbp", fsAir, "sql_example_app/airsbp")
 	require.NoError(err)
 
@@ -95,7 +103,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal("Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC\nThese comments are included in the statement definition, but may be overriden with `WITH Comment=...`", singleton.Comment())
 
 	cmd := builder.Command(appdef.NewQName("main", "Orders"))
-	require.Equal("Commands can only be declared in workspaces\nCommand can have optional argument and/or unlogged argument\nCommand can return TYPE", cmd.Comment())
+	require.Equal("Multiline comments:\n\nCommands can only be declared in workspaces\nCommand can have optional argument and/or unlogged argument\nCommand can return TYPE", cmd.Comment())
 
 	// type
 	obj := builder.Object(appdef.NewQName("main", "SubscriptionEvent"))
@@ -498,20 +506,34 @@ func Test_Comments(t *testing.T) {
 
 	fs, err := ParseFile("example.sql", `SCHEMA test;
 	EXTENSION ENGINE BUILTIN (
-		-- My function
-		-- line 2
-		FUNCTION MyFunc() RETURNS void;
+
+	-- My function
+	-- line 2
+	FUNCTION MyFunc() RETURNS void;
+
+	/* 	Multiline 
+		comment  */
+	FUNCTION MyFunc1() RETURNS void;
 	);
+
 	`)
-	require.Nil(err)
+	require.NoError(err)
 
 	ps, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
 	require.Nil(err)
 
 	require.NotNil(ps.Ast.Statements[0].ExtEngine.Statements[0].Function.Comments)
-	require.Equal(2, len(ps.Ast.Statements[0].ExtEngine.Statements[0].Function.Comments))
-	require.Equal("My function", ps.Ast.Statements[0].ExtEngine.Statements[0].Function.Comments[0])
-	require.Equal("line 2", ps.Ast.Statements[0].ExtEngine.Statements[0].Function.Comments[1])
+
+	comments := ps.Ast.Statements[0].ExtEngine.Statements[0].Function.GetComments()
+	require.Equal(2, len(comments))
+	require.Equal("My function", comments[0])
+	require.Equal("line 2", comments[1])
+
+	fn := ps.Ast.Statements[0].ExtEngine.Statements[1].Function
+	comments = fn.GetComments()
+	require.Equal(2, len(comments))
+	require.Equal("Multiline", comments[0])
+	require.Equal("comment", comments[1])
 }
 
 func Test_UnexpectedSchema(t *testing.T) {

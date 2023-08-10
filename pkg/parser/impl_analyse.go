@@ -289,7 +289,7 @@ func (c *analyseCtx) with(with *[]WithItem, statement IStatement) {
 	}
 
 	if comment != nil {
-		statement.ReplaceComments(strings.Split(*comment.Comment, "\n"))
+		statement.SetComments(strings.Split(*comment.Comment, "\n"))
 	}
 }
 
