@@ -28,3 +28,4 @@ type APIs struct {
 }
 
 type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint)
+
