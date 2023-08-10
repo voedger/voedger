@@ -18,7 +18,7 @@ import (
 
 func parseImpl(fileName string, content string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
-		{Name: "PreStmtComment", Pattern: `(?:(?:\n+\s*--[^\n]*)+)|(?:\n\s*\/\*(?:.|\n)*\*\/)`},
+		{Name: "PreStmtComment", Pattern: `(?:(?:[\n\r]+\s*--[^\n]*)+)|(?:[\n\r]\s*\/\*(?:.|\n)*\*\/)`},
 		{Name: "MultilineComment", Pattern: `\/\*(.|\n|\r)*\*\/`},
 		{Name: "Comment", Pattern: `\s*--[^\r\n]*`},
 		{Name: "Array", Pattern: `\[\]`},

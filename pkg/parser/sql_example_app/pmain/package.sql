@@ -49,7 +49,7 @@ TABLE TablePlan INHERITS CDoc (
 
 
 -- Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC
--- These comments are included in the statement definition, but may be overriden with `WITH Comment=...`
+-- These comments are included in the statement definition, but may be overridden with `WITH Comment=...`
 TABLE SubscriptionProfile INHERITS Singleton (
     CustomerID text,
     CustomerKind int,

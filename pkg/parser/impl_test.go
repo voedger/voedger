@@ -100,7 +100,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	// multinine comments
 	singleton := builder.CDoc(appdef.NewQName("main", "SubscriptionProfile"))
-	require.Equal("Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC\nThese comments are included in the statement definition, but may be overriden with `WITH Comment=...`", singleton.Comment())
+	require.Equal("Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC\nThese comments are included in the statement definition, but may be overridden with `WITH Comment=...`", singleton.Comment())
 
 	cmd := builder.Command(appdef.NewQName("main", "Orders"))
 	require.Equal("Multiline comments:\n\nCommands can only be declared in workspaces\nCommand can have optional argument and/or unlogged argument\nCommand can return TYPE", cmd.Comment())
