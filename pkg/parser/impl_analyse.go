@@ -47,7 +47,7 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 }
 
 func (c *analyseCtx) useTable(u *UseTableStmt) {
-	tbl, err := resolveTable(DefQName{Package: c.pkg.Ast.Package, Name: u.Table}, c.basicContext)
+	tbl, _, err := resolveTable(DefQName{Package: c.pkg.Ast.Package, Name: u.Table}, c.basicContext)
 	if err != nil {
 		c.stmtErr(&u.Pos, err)
 	} else {
@@ -423,7 +423,7 @@ func (c *analyseCtx) fields(items []TableItemExpr) {
 		if item.RefField != nil {
 			rf := item.RefField
 			for i := range rf.RefDocs {
-				tableStmt, err := resolveTable(rf.RefDocs[i], c.basicContext)
+				tableStmt, _, err := resolveTable(rf.RefDocs[i], c.basicContext)
 				if err != nil {
 					c.stmtErr(&rf.Pos, err)
 					continue

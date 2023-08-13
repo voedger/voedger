@@ -387,7 +387,7 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
 	refs := make([]appdef.QName, 0)
 	errors := false
 	for i := range refField.RefDocs {
-		tableStmt, err := resolveTable(refField.RefDocs[i], &c.basicContext)
+		tableStmt, schema, err := resolveTable(refField.RefDocs[i], &c.basicContext)
 		if err != nil {
 			c.stmtErr(&refField.Pos, err)
 			errors = true
@@ -397,6 +397,7 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
 			c.stmtErr(&refField.Pos, err)
 			errors = true
 		}
+		refs = append(refs, appdef.NewQName(string(schema.Ast.Package), string(refField.RefDocs[i].Name)))
 	}
 	if !errors {
 		c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddRefField(string(refField.Name), refField.NotNull, refs...)
