@@ -25,6 +25,8 @@ TAG BackofficeTag;
         - making CUD in any workspace;
 */
 ABSTRACT TABLE NestedWithName INHERITS CRecord (
+    /*  Field is added to any table inherited from NestedWithName
+        The current comment is also added to scheme for this field  */
     ItemName text
 );
 
