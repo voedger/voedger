@@ -43,6 +43,7 @@ func (c *buildContext) build() error {
 		c.queries,
 		c.workspaces,
 		c.alterWorkspaces,
+		c.inheritedWorkspaces,
 	}
 	for _, step := range steps {
 		if err := step(); err != nil {
@@ -109,16 +110,6 @@ func (c *buildContext) workspaces() error {
 	var iter func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection)
 
 	iter = func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection) {
-
-		for _, inherits := range ws.Inherits {
-			baseWs, _, err := lookup[*WorkspaceStmt](inherits, &c.basicContext)
-			if err != nil {
-				c.stmtErr(&ws.Pos, err)
-				return
-			}
-			iter(baseWs, wsctx, baseWs)
-		}
-
 		coll.Iterate(func(stmt interface{}) {
 			c.useStmtInWs(wsctx, string(wsctx.schema.Ast.Package), stmt)
 			if collection, ok := stmt.(IStatementCollection); ok {
@@ -130,26 +121,13 @@ func (c *buildContext) workspaces() error {
 	}
 
 	for w, ctx := range c.wsBuildCtxs {
-		if !w.Abstract {
-			c.pkg = ctx.schema
-			iter(w, ctx, w)
-
-			// TODO: explicit inheritance from sys.Workspace must not be allowed
-
-			// include sys.Workspace
-			rootWs, _, err := lookup[*WorkspaceStmt](DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName}, &c.basicContext)
-			if err != nil {
-				c.stmtErr(&w.Pos, err)
-				continue
-			}
-			iter(rootWs, ctx, rootWs)
-
-			if w.Abstract {
-				ctx.builder.SetAbstract()
-			}
-			if w.Descriptor != nil {
-				ctx.builder.SetDescriptor(appdef.NewQName(string(ctx.schema.Ast.Package), w.Descriptor.GetName()))
-			}
+		c.pkg = ctx.schema
+		iter(w, ctx, w)
+		if w.Abstract {
+			ctx.builder.SetAbstract()
+		}
+		if w.Descriptor != nil {
+			ctx.builder.SetDescriptor(appdef.NewQName(string(ctx.schema.Ast.Package), w.Descriptor.GetName()))
 		}
 	}
 	return nil
@@ -172,8 +150,11 @@ func (c *buildContext) alterWorkspaces() error {
 				})
 			}
 
-			err := resolve[*WorkspaceStmt](a.Name, &c.basicContext, func(f *WorkspaceStmt) error {
-				iter(c.wsBuildCtxs[f], a)
+			err := resolveEx[*WorkspaceStmt](a.Name, &c.basicContext, func(w *WorkspaceStmt, pkg *PackageSchemaAST) error {
+				if !w.Alterable && schema != pkg {
+					return ErrWorkspaceIsNotAlterable(w.GetName())
+				}
+				iter(c.wsBuildCtxs[w], a)
 				return nil
 			})
 
@@ -181,6 +162,52 @@ func (c *buildContext) alterWorkspaces() error {
 				c.stmtErr(&a.Pos, err)
 			}
 		})
+	}
+	return nil
+}
+
+func (c *buildContext) addDefsFromCtx(srcCtx *wsBuildCtx, destBuilder appdef.IWorkspaceBuilder) {
+	srcCtx.builder.Defs(func(i appdef.IDef) {
+		destBuilder.AddDef(i.QName())
+	})
+}
+
+func (c *buildContext) inheritedWorkspaces() error {
+
+	sysWorkspace, _, err := lookup[*WorkspaceStmt](DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName}, &c.basicContext)
+	if err != nil {
+		return ErrSysWorkspaceNotFound
+	}
+
+	var addFromInheritedWs func(ws *WorkspaceStmt, wsctx *wsBuildCtx)
+	addFromInheritedWs = func(ws *WorkspaceStmt, wsctx *wsBuildCtx) {
+
+		inheritsAnything := false
+
+		for _, inherits := range ws.Inherits {
+
+			inheritsAnything = true
+			baseWs, _, err := lookup[*WorkspaceStmt](inherits, &c.basicContext)
+			if err != nil {
+				c.stmtErr(&ws.Pos, err)
+				return
+			}
+			if baseWs == sysWorkspace {
+				c.stmtErr(&ws.Pos, ErrInheritanceFromSysWorkspaceNotAllowed)
+				return
+			}
+			addFromInheritedWs(baseWs, wsctx)
+			c.addDefsFromCtx(c.wsBuildCtxs[baseWs], wsctx.builder)
+		}
+
+		if !inheritsAnything {
+			c.addDefsFromCtx(c.wsBuildCtxs[sysWorkspace], wsctx.builder)
+		}
+	}
+
+	for w, ctx := range c.wsBuildCtxs {
+		c.pkg = ctx.schema
+		addFromInheritedWs(w, ctx)
 	}
 	return nil
 }

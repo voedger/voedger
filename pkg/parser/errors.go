@@ -29,6 +29,8 @@ var ErrBaseTableMustBeAbstract = errors.New("base table must be abstract")
 var ErrBaseWorkspaceMustBeAbstract = errors.New("base workspace must be abstract")
 var ErrAbstractWorkspaceDescriptor = errors.New("abstract workspace cannot have a descriptor")
 var ErrNestedTablesNotSupportedInTypes = errors.New("nested tables not supported in types")
+var ErrSysWorkspaceNotFound = errors.New("sys.Workspace definition not found")
+var ErrInheritanceFromSysWorkspaceNotAllowed = errors.New("explicit inheritance from sys.Workspace not allowed")
 
 var ErrArrayFieldsNotSupportedHere = errors.New("array fields of system types not supported here")
 var ErrMustBeNotNull = errors.New("field has to be NOT NULL")
