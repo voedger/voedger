@@ -121,7 +121,7 @@ func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 	return targetPkgSch, nil
 }
 
-func resolveTable(fn DefQName, c *basicContext) (*TableStmt, error) {
+func resolveTable(fn DefQName, c *basicContext) (*TableStmt, *PackageSchemaAST, error) {
 	var item *TableStmt
 	var checkStatement func(stmt interface{})
 	checkStatement = func(stmt interface{}) {
@@ -140,7 +140,7 @@ func resolveTable(fn DefQName, c *basicContext) (*TableStmt, error) {
 
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	iterate(schema.Ast, func(stmt interface{}) {
@@ -148,10 +148,10 @@ func resolveTable(fn DefQName, c *basicContext) (*TableStmt, error) {
 	})
 
 	if item == nil {
-		return nil, ErrUndefined(fn.String())
+		return nil, nil, ErrUndefined(fn.String())
 	}
 
-	return item, nil
+	return item, schema, nil
 }
 
 // when not found, lookup returns (nil, ?, nil)

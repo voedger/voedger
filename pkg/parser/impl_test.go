@@ -144,7 +144,7 @@ func Test_Refs_NestedTables(t *testing.T) {
 
 	require := require.New(t)
 
-	fs, err := ParseFile("file1.sql", `SCHEMA untill;
+	fs, err := ParseFile("file1.sql", `SCHEMA test;
 	TABLE table1 INHERITS CDoc (
 		items TABLE inner1 (
 			table1 ref,
@@ -167,7 +167,12 @@ func Test_Refs_NestedTables(t *testing.T) {
 		pkg,
 	})
 	require.NoError(err)
-	require.NoError(BuildAppDefs(packages, appdef.New()))
+	adf := appdef.New()
+	require.NoError(BuildAppDefs(packages, adf))
+	inner1 := adf.Def(appdef.NewQName("test", "inner1"))
+	ref1 := inner1.(appdef.IFields).RefField("ref1")
+	require.Len(ref1.Refs(), 1)
+	require.Equal(appdef.NewQName("test", "table3"), ref1.Refs()[0])
 
 }
 
