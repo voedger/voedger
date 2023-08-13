@@ -171,6 +171,82 @@ func Test_Refs_NestedTables(t *testing.T) {
 
 }
 
+func Test_Workspace_Defs(t *testing.T) {
+
+	require := require.New(t)
+
+	fs1, err := ParseFile("file1.sql", `SCHEMA myschema;
+		ABSTRACT WORKSPACE AWorkspace(
+			TABLE table1 INHERITS CDoc (a ref);		
+		);
+	`)
+	require.NoError(err)
+	fs2, err := ParseFile("file2.sql", `SCHEMA myschema;
+		ALTER WORKSPACE AWorkspace(
+			TABLE table2 INHERITS CDoc (a ref);		
+		);
+		WORKSPACE MyWorkspace INHERITS AWorkspace();
+		WORKSPACE MyWorkspace2 INHERITS AWorkspace();
+		ALTER WORKSPACE sys.Profile(
+			USE WORKSPACE MyWorkspace;
+		);
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs1, fs2})
+	require.NoError(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+	builder := appdef.New()
+	require.NoError(BuildAppDefs(packages, builder))
+	ws := builder.Workspace(appdef.NewQName("myschema", "MyWorkspace"))
+
+	require.Equal(appdef.DefKind_CDoc, ws.Def(appdef.NewQName("myschema", "table1")).Kind())
+	require.Equal(appdef.DefKind_CDoc, ws.Def(appdef.NewQName("myschema", "table2")).Kind())
+	require.Equal(appdef.DefKind_Command, ws.Def(appdef.NewQName("sys", "CreateLogin")).Kind())
+
+	wsProfile := builder.Workspace(appdef.NewQName("sys", "Profile"))
+
+	require.Equal(appdef.DefKind_Workspace, wsProfile.Def(appdef.NewQName("myschema", "MyWorkspace")).Kind())
+	require.Nil(wsProfile.Def(appdef.NewQName("myschema", "MyWorkspace2")))
+}
+
+func Test_Alter_Workspace(t *testing.T) {
+
+	require := require.New(t)
+
+	fs1, err := ParseFile("file1.sql", `SCHEMA pkg1;
+		ABSTRACT WORKSPACE AWorkspace(
+			TABLE table1 INHERITS CDoc (a ref);		
+		);
+	`)
+	require.NoError(err)
+	pkg1, err := MergeFileSchemaASTs("org/pkg1", []*FileSchemaAST{fs1})
+	require.NoError(err)
+
+	fs2, err := ParseFile("file2.sql", `SCHEMA pkg2;
+		IMPORT SCHEMA 'org/pkg1'
+		ALTER WORKSPACE pkg1.AWorkspace(
+			TABLE table2 INHERITS CDoc (a ref);		
+		);
+	`)
+	require.NoError(err)
+	pkg2, err := MergeFileSchemaASTs("org/pkg2", []*FileSchemaAST{fs2})
+	require.NoError(err)
+
+	_, err = MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg1,
+		pkg2,
+	})
+	require.EqualError(err, strings.Join([]string{
+		"file2.sql:3:3: workspace pkg1.AWorkspace is not alterable",
+	}, "\n"))
+}
+
 func Test_DupFieldsInTypes(t *testing.T) {
 	require := require.New(t)
 

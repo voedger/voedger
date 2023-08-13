@@ -12,10 +12,18 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
 ABSTRACT WORKSPACE Workspace (
+    TYPE CreateLoginParams(
+        Login                       text,
+        AppName                     text,
+        SubjectKind                 int32,
+        WSKindInitializationData    text,
+        ProfileCluster              int32
+    );
+    TYPE CreateLoginUnloggedParams(
+        Password text
+    );
     EXTENSION ENGINE BUILTIN (
-        -- QUERY Collection(...) RETURNS ANY;
-        -- COMMAND...
-        -- GRANT...
+        COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
     )
 );
 
