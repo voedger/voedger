@@ -171,6 +171,62 @@ func Test_Refs_NestedTables(t *testing.T) {
 
 }
 
+func Test_CircularReferences(t *testing.T) {
+
+	require := require.New(t)
+
+	// Tables
+	fs, err := ParseFile("file1.sql", `SCHEMA untill;
+	TABLE table2 INHERITS table2 ();
+	ABSTRACT TABLE table3 INHERITS table3 ();
+	ABSTRACT TABLE table4 INHERITS table5 ();
+	ABSTRACT TABLE table5 INHERITS table6 ();
+	ABSTRACT TABLE table6 INHERITS table4 ();
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	_, err = MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:2:2: circular reference in INHERITS",
+		"file1.sql:3:2: circular reference in INHERITS",
+		"file1.sql:4:2: circular reference in INHERITS",
+		"file1.sql:5:2: circular reference in INHERITS",
+		"file1.sql:6:2: circular reference in INHERITS",
+	}, "\n"))
+
+	// Workspaces
+	fs, err = ParseFile("file1.sql", `SCHEMA untill;
+	ABSTRACT WORKSPACE w1();
+	ABSTRACT WORKSPACE w2 INHERITS w1,w2(
+		TABLE table4 INHERITS CDoc();
+	);
+	ABSTRACT WORKSPACE w3 INHERITS w4();
+	ABSTRACT WORKSPACE w4 INHERITS w5();
+	ABSTRACT WORKSPACE w5 INHERITS w3();
+	`)
+	require.NoError(err)
+	pkg, err = MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	_, err = MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:3:2: circular reference in INHERITS",
+		"file1.sql:6:2: circular reference in INHERITS",
+		"file1.sql:7:2: circular reference in INHERITS",
+		"file1.sql:8:2: circular reference in INHERITS",
+	}, "\n"))
+}
+
 func Test_Workspace_Defs(t *testing.T) {
 
 	require := require.New(t)

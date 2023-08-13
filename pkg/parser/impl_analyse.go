@@ -331,14 +331,35 @@ func (c *analyseCtx) doType(v *TypeStmt) {
 }
 
 func (c *analyseCtx) workspace(v *WorkspaceStmt) {
-	for _, inherits := range v.Inherits {
+
+	var chain []DefQName
+	var checkChain func(qn DefQName) error
+
+	checkChain = func(qn DefQName) error {
 		resolveFunc := func(w *WorkspaceStmt) error {
 			if !w.Abstract {
 				return ErrBaseWorkspaceMustBeAbstract
 			}
+			for i := range chain {
+				if chain[i] == qn {
+					return ErrCircularReferenceInInherits
+				}
+			}
+			chain = append(chain, qn)
+			for _, w := range w.Inherits {
+				e := checkChain(w)
+				if e != nil {
+					return e
+				}
+			}
 			return nil
 		}
-		if err := resolve(inherits, c.basicContext, resolveFunc); err != nil {
+		return resolve(qn, c.basicContext, resolveFunc)
+	}
+
+	for _, inherits := range v.Inherits {
+		chain = make([]DefQName, 0)
+		if err := checkChain(inherits); err != nil {
 			c.stmtErr(&v.Pos, err)
 		}
 	}
@@ -422,11 +443,22 @@ func (c *analyseCtx) fields(items []TableItemExpr) {
 
 func (c *analyseCtx) getTableInheritanceChain(table *TableStmt) (chain []DefQName, err error) {
 	chain = make([]DefQName, 0)
+	refCycle := func(qname DefQName) bool {
+		for i := range chain {
+			if chain[i] == qname {
+				return true
+			}
+		}
+		return false
+	}
 	var vf func(t *TableStmt) error
 	vf = func(t *TableStmt) error {
 		if t.Inherits != nil {
 			inherited := *t.Inherits
 			if err := resolve(inherited, c.basicContext, func(t *TableStmt) error {
+				if refCycle(inherited) {
+					return ErrCircularReferenceInInherits
+				}
 				chain = append(chain, inherited)
 				return vf(t)
 			}); err != nil {
