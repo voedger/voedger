@@ -18,8 +18,8 @@ import (
 
 func parseImpl(fileName string, content string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
-		{Name: "PreStmtComment", Pattern: `(?:(?:[\n\r]+\s*--[^\n]*)+)|(?:[\n\r]\s*\/\*(?:.|\n)*\*\/)`},
-		{Name: "MultilineComment", Pattern: `\/\*(.|\n|\r)*\*\/`},
+		{Name: "PreStmtComment", Pattern: `(?:(?:[\n\r]+\s*--[^\n]*)+)|(?:[\n\r]\s*\/\*[\s\S]*?\*\/)`},
+		{Name: "MultilineComment", Pattern: `\/\*[\s\S]*?\*\/`},
 		{Name: "Comment", Pattern: `\s*--[^\r\n]*`},
 		{Name: "Array", Pattern: `\[\]`},
 		{Name: "Float", Pattern: `[-+]?\d+\.\d+`},
@@ -169,16 +169,19 @@ func cleanupComments(schema *SchemaAST) {
 			}
 
 			split := strings.Split(rawComments, "\n")
+			fixedComments := make([]string, 0)
 			for i := 0; i < len(split); i++ {
 				fixed := strings.TrimSpace(split[i])
 				if !mult {
 					fixed, _ = strings.CutPrefix(fixed, "--")
 					fixed = strings.TrimSpace(fixed)
 				}
-				split[i] = fixed
+				if len(fixed) > 0 {
+					fixedComments = append(fixedComments, fixed)
+				}
 			}
 
-			s.SetComments(split)
+			s.SetComments(fixedComments)
 		}
 	})
 }
