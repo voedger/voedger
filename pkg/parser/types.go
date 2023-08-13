@@ -468,7 +468,15 @@ type TableStmt struct {
 	singletone   bool
 }
 
-func (s TableStmt) GetName() string { return string(s.Name) }
+func (s *TableStmt) GetName() string { return string(s.Name) }
+func (s *TableStmt) Iterate(callback func(stmt interface{})) {
+	for i := 0; i < len(s.Items); i++ {
+		item := &s.Items[i]
+		if item.Field != nil {
+			callback(item.Field)
+		}
+	}
+}
 
 type NestedTableStmt struct {
 	Pos   lexer.Position
@@ -517,7 +525,7 @@ type RefFieldExpr struct {
 }
 
 type FieldExpr struct {
-	Pos                lexer.Position
+	Statement
 	Name               Ident       `parser:"@Ident"`
 	Type               *TypeQName  `parser:"@@"`
 	NotNull            bool        `parser:"@(NOTNULL)?"`

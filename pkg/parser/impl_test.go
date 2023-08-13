@@ -90,6 +90,13 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DefKind_CRecord, crec.Kind())
 	require.Equal(appdef.DataKind_int32, crec.Field("TableNo").DataKind())
 
+	crec = builder.CRecord(appdef.NewQName("main", "NestedWithName"))
+	require.NotNil(crec)
+	require.True(crec.Abstract())
+	field := crec.Field("ItemName")
+	require.NotNil(field)
+	require.Equal("Field is added to any table inherited from NestedWithName\nThe current comment is also added to scheme for this field", field.Comment())
+
 	// multinine comments
 	singleton := builder.CDoc(appdef.NewQName("main", "SubscriptionProfile"))
 	require.Equal("Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC\nThese comments are included in the statement definition, but may be overridden with `WITH Comment=...`", singleton.Comment())

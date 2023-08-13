@@ -419,7 +419,7 @@ func (c *buildContext) addFieldToDef(field *FieldExpr) {
 			// TODO: Support different verification kindsbuilder, &c
 			c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddVerifiedField(string(field.Name), sysDataKind, field.NotNull, appdef.VerificationKind_EMail)
 		} else {
-			c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddField(string(field.Name), sysDataKind, field.NotNull)
+			c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddField(string(field.Name), sysDataKind, field.NotNull, field.Statement.GetComments()...)
 		}
 	} else {
 		// Record?
