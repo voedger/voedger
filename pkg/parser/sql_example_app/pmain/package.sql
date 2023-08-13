@@ -1,6 +1,10 @@
+/*
+* Copyright (c) 2023-present unTill Pro, Ltd.
+*/
+
 /* 
-    Package consists of schema and resources
-    Schema consists of few schema files
+* Package consists of schema and resources
+* Schema consists of few schema files
 */
 SCHEMA main;
 
