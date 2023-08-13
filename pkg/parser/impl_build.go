@@ -374,7 +374,7 @@ func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt) {
 		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
 	}
 	if table.Abstract {
-		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetAbstract()
+		c.defCtx().defBuilder.(appdef.IWithAbstractBuilder).SetAbstract()
 	}
 	c.popDef()
 }
