@@ -34,6 +34,7 @@ var ErrInheritanceFromSysWorkspaceNotAllowed = errors.New("explicit inheritance 
 
 var ErrArrayFieldsNotSupportedHere = errors.New("array fields of system types not supported here")
 var ErrMustBeNotNull = errors.New("field has to be NOT NULL")
+var ErrCircularReferenceInInherits = errors.New("circular reference in INHERITS")
 
 // Golang: could not import github.com/alecthomas/participle/v2/asd (no required module provides package "github.com/alecthomas/participle/v2/asd")
 func ErrCouldNotImport(pkgName string) error {
