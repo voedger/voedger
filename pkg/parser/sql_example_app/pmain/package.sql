@@ -234,6 +234,7 @@ WORKSPACE MyWorkspace1 INHERITS AWorkspace, untill.UntillAWorkspace (
 
 -- Use my statements in sys.Profile. 
 -- sys.Profile workspace is declared as ALTERABLE
+-- We can also ALTER non-alterable workspaces when they are in the same package
 ALTER WORKSPACE sys.Profile(
     USE TABLE WsTable;
     USE WORKSPACE MyWorkspace1; 

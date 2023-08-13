@@ -111,7 +111,7 @@ func (c *buildContext) workspaces() error {
 	iter = func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection) {
 
 		for _, inherits := range ws.Inherits {
-			baseWs, err := lookup[*WorkspaceStmt](inherits, &c.basicContext)
+			baseWs, _, err := lookup[*WorkspaceStmt](inherits, &c.basicContext)
 			if err != nil {
 				c.stmtErr(&ws.Pos, err)
 				return
@@ -137,7 +137,7 @@ func (c *buildContext) workspaces() error {
 			// TODO: explicit inheritance from sys.Workspace must not be allowed
 
 			// include sys.Workspace
-			rootWs, err := lookup[*WorkspaceStmt](DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName}, &c.basicContext)
+			rootWs, _, err := lookup[*WorkspaceStmt](DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName}, &c.basicContext)
 			if err != nil {
 				c.stmtErr(&w.Pos, err)
 				continue
@@ -405,7 +405,7 @@ func (c *buildContext) addFieldToDef(field *FieldExpr) {
 		orec := c.builder.ORecord(qname)
 
 		if wrec == nil && orec == nil && crec == nil { // not yet built
-			tbl, err := lookup[*TableStmt](DefQName{Package: Ident(qname.Pkg()), Name: Ident(qname.Entity())}, &c.basicContext)
+			tbl, _, err := lookup[*TableStmt](DefQName{Package: Ident(qname.Pkg()), Name: Ident(qname.Entity())}, &c.basicContext)
 			if err != nil {
 				c.stmtErr(&field.Pos, err)
 				return

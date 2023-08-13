@@ -72,13 +72,13 @@ func (c *analyseCtx) useWorkspace(u *UseWorkspaceStmt) {
 }
 
 func (c *analyseCtx) alterWorkspace(u *AlterWorkspaceStmt) {
-	resolveFunc := func(f *WorkspaceStmt) error {
-		if !f.Alterable {
+	resolveFunc := func(w *WorkspaceStmt, schema *PackageSchemaAST) error {
+		if !w.Alterable && schema != c.pkg {
 			return ErrWorkspaceIsNotAlterable(u.Name.String())
 		}
 		return nil
 	}
-	err := resolve[*WorkspaceStmt](u.Name, c.basicContext, resolveFunc)
+	err := resolveEx[*WorkspaceStmt](u.Name, c.basicContext, resolveFunc)
 	if err != nil {
 		c.stmtErr(&u.Pos, err)
 	}
