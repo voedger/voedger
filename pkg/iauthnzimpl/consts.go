@@ -69,11 +69,10 @@ var (
 	qNameQryModules                                 = appdef.NewQName(appdef.SysPackage, "Modules")
 	qNameQryGetDailyPayoutCfg                       = appdef.NewQName(airPackage, "GetDailyPayoutCfg")
 	qNameCmdUpdateScheduledPayout                   = appdef.NewQName(airPackage, "UpdateScheduledPayout")
-	qNameQryGetUPTransfers                          = appdef.NewQName(airPackage, "GetUPTransfers")
-	qNameCmdCreateUPTransfer                        = appdef.NewQName(airPackage, "CreateUPTransfer")
 	qNameCmdUpdateUPLocationRates                   = appdef.NewQName(airPackage, "UpdateUPLocationRates")
-	qNameWDocUPTransfer                             = appdef.NewQName(airPackage, "UPTransfer")
 	qNameCmdUpdateUPProfile                         = appdef.NewQName(airPackage, "UpdateUPProfile")
+	qNameCmdRequestOnDemandPayout                   = appdef.NewQName(airPackage, "RequestOnDemandPayout")
+	qNameQryGetPayouts                              = appdef.NewQName(airPackage, "GetPayouts")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
