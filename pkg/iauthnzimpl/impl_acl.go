@@ -299,6 +299,7 @@ var defaultACL = ACL{
 		// https://github.com/voedger/voedger/issues/422
 		// https://dev.untill.com/projects/#!649352
 		// https://dev.untill.com/projects/#!650998
+		// https://dev.untill.com/projects/#!653137
 		desc: "grant exec on few funcs to role air.UntillPaymentsReseller and role air.UntillPaymentsUser",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
@@ -306,6 +307,7 @@ var defaultACL = ACL{
 				qNameCmdUpdateScheduledPayout,
 				qNameCmdRequestOnDemandPayout,
 				qNameQryGetPayouts,
+				qNameQryGetCreditInvoice,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				// OR
