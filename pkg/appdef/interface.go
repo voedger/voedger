@@ -5,6 +5,8 @@
 
 package appdef
 
+import "regexp"
+
 // Qualified name
 //
 // <pkg>.<entity>
@@ -372,6 +374,15 @@ type IFieldsBuilder interface {
 	//   - if name is invalid,
 	//   - if field with name is already exists.
 	AddRefField(name string, required bool, ref ...QName) IFieldsBuilder
+
+	// Adds string field specified name and restricts.
+	//
+	// # Panics:
+	//   - if name is empty,
+	//   - if name is invalid,
+	//   - if field with name is already exists,
+	//   - if restricts are not compatible.
+	AddStringField(name string, required bool, restricts ...IStringFieldRestrict) IFieldsBuilder
 
 	// Adds verified field specified name and kind.
 	//
@@ -809,6 +820,46 @@ type IRefField interface {
 	// Returns list of target references
 	Refs() []QName
 }
+
+// String field. Describe field with DataKind_String.
+//
+// Use Restricts() to obtain field restricts for length, pattern.
+//
+// Ref. to fields.go for implementation
+type IStringField interface {
+	IField
+
+	// Returns restricts
+	Restricts() IStringFieldRestricts
+}
+
+// String field restricts
+type IStringFieldRestricts interface {
+	// Returns minimum length
+	//
+	// Returns 0 if not assigned
+	MinLen() uint16
+
+	// Returns maximum length
+	//
+	// Returns MaxStringFieldLength (1024) if not assigned
+	MaxLen() uint16
+
+	// Returns pattern regular expression.
+	//
+	// Returns nil if not assigned
+	Pattern() *regexp.Regexp
+}
+
+// String field restrict.
+//
+// Interface functions to obtain new restricts:
+//   - MinLen()
+//   - MaxLen()
+//   - Pattern()
+//
+// Ref. to fields-restrict.go for implementation
+type IStringFieldRestrict interface{}
 
 // Describes single inclusion of child definition in parent definition.
 //
