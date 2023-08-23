@@ -171,6 +171,15 @@ func (f *fields) RefFieldCount() int {
 	return cnt
 }
 
+func (f *fields) SetFieldComment(name string, comment ...string) IFieldsBuilder {
+	fld := f.fields[name]
+	if fld == nil {
+		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parentDef().QName(), name, ErrNameNotFound))
+	}
+	fld.(ICommentBuilder).SetComment(comment...)
+	return f
+}
+
 func (f *fields) UserFields(cb func(IField)) {
 	f.Fields(func(fld IField) {
 		if !fld.IsSys() {

@@ -138,9 +138,13 @@ func Test_AddVerifiedField(t *testing.T) {
 	require.NotNil(obj)
 
 	t.Run("must be ok to add verified field", func(t *testing.T) {
-		obj.AddVerifiedField("f1", DataKind_int64, true, VerificationKind_Phone)
-		obj.AddVerifiedField("f2", DataKind_int64, true, VerificationKind_Any...)
+		obj.
+			AddVerifiedField("f1", DataKind_int64, true, VerificationKind_Phone).
+			SetFieldComment("f1", "comment").
+			AddVerifiedField("f2", DataKind_int64, true, VerificationKind_Any...)
+	})
 
+	t.Run("must be ok to obtain verified field", func(t *testing.T) {
 		require.Equal(3, obj.FieldCount()) // + sys.QName
 		f1 := obj.Field("f1")
 		require.NotNil(f1)
@@ -149,6 +153,7 @@ func Test_AddVerifiedField(t *testing.T) {
 		require.False(f1.VerificationKind(VerificationKind_EMail))
 		require.True(f1.VerificationKind(VerificationKind_Phone))
 		require.False(f1.VerificationKind(VerificationKind_FakeLast))
+		require.Equal("comment", f1.Comment())
 
 		f2 := obj.Field("f2")
 		require.NotNil(f2)
@@ -161,6 +166,10 @@ func Test_AddVerifiedField(t *testing.T) {
 
 	t.Run("must be panic if no verification kinds", func(t *testing.T) {
 		require.Panics(func() { obj.AddVerifiedField("f3", DataKind_int64, true) })
+	})
+
+	t.Run("must be panic if unknown field name passed to comment", func(t *testing.T) {
+		require.Panics(func() { obj.SetFieldComment("unknownField", "error here") })
 	})
 }
 

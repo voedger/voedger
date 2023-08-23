@@ -382,6 +382,14 @@ type IFieldsBuilder interface {
 	//   - if data kind is not allowed by definition kind,
 	//   - if no verification kinds are specified
 	AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder
+
+	// Sets fields comment.
+	// Useful for reference or verified fields, what Add×××Field has not comments
+	// argument.
+	//
+	// # Panics:
+	//   - if field not found.
+	SetFieldComment(name string, comment ...string) IFieldsBuilder
 }
 
 // Definitions with containers:
