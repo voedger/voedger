@@ -65,6 +65,7 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 			logger.Error("failed to write created channel id to client:", err)
 			return
 		}
+		flusher.Flush()
 		for _, projection := range urlParams.ProjectionKey {
 			err = s.n10n.Subscribe(channel, projection)
 			if err != nil {
@@ -73,7 +74,6 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 				return
 			}
 		}
-		flusher.Flush()
 		ch := make(chan in10nmem.UpdateUnit)
 		go func() {
 			defer close(ch)
