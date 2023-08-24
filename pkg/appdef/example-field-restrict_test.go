@@ -15,13 +15,14 @@ func ExampleIFieldsBuilder_AddStringField() {
 	var app appdef.IAppDef
 	docName := appdef.NewQName("test", "doc")
 
-	// how to build CDoc with string field
+	// how to build doc with string field
 	{
 		appDef := appdef.New()
 
 		doc := appDef.AddCDoc(docName)
 		doc.
-			AddStringField("code", true, appdef.MinLen(1), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)) // from one to four digits
+			AddStringField("code", true, appdef.MinLen(1), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)).
+			SetFieldComment("code", "Code is string containing from one to four digits")
 
 		if a, err := appDef.Build(); err == nil {
 			app = a
@@ -30,14 +31,14 @@ func ExampleIFieldsBuilder_AddStringField() {
 		}
 	}
 
-	// how to inspected builded CDoc with string field
+	// how to inspect string field
 	{
 		doc := app.CDoc(docName)
 		fmt.Printf("doc %q: %v\n", doc.QName(), doc.Kind())
 		fmt.Printf("doc field count: %v\n", doc.UserFieldCount())
 
 		f := doc.Field("code")
-		fmt.Printf("field %q: kind: %v, required: %v\n", f.Name(), f.DataKind(), f.Required())
+		fmt.Printf("field %q: kind: %v, required: %v, comment: %s\n", f.Name(), f.DataKind(), f.Required(), f.Comment())
 
 		if f, ok := f.(appdef.IStringField); ok {
 			fmt.Printf("minLen: %d, maxLen: %d, pattern: `%v`", f.Restricts().MinLen(), f.Restricts().MaxLen(), f.Restricts().Pattern())
@@ -47,6 +48,6 @@ func ExampleIFieldsBuilder_AddStringField() {
 	// Output:
 	// doc "test.doc": DefKind_CDoc
 	// doc field count: 1
-	// field "code": kind: DataKind_string, required: true
+	// field "code": kind: DataKind_string, required: true, comment: Code is string containing from one to four digits
 	// minLen: 1, maxLen: 4, pattern: `^\d+$`
 }
