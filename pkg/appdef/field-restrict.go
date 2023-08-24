@@ -31,18 +31,29 @@ type fieldRestrictData struct {
 //   - if value is greater then MaxStringFieldLength (1024)
 func MinLen(value uint16) IStringFieldRestrict {
 	if value > MaxStringFieldLength {
-		panic(fmt.Errorf("minimum field length value (%d) is too large, %d is maximum: %w", value, MaxStringFieldLength, MaxFieldLengthExceeds))
+		panic(fmt.Errorf("minimum field length value (%d) is too large, %d is maximum: %w", value, MaxStringFieldLength, ErrMaxFieldLengthExceeds))
 	}
 	return &fieldRestrictData{fieldRestrict_MinLen, &value}
 }
 
+// Default string field max length.
+//
+// Used if MaxLen() restriction is not used.
+//
+// Using MaxLen (), you can both limit the minimum length by a smaller value, and increase it to MaxStringFieldLength (1024)
+const DefaultStringFieldMaxLength = 255
+
 // Return new maximum length restriction for string field
 //
 // # Panics:
+//   - if value is zero
 //   - if value is greater then MaxStringFieldLength (1024)
 func MaxLen(value uint16) IStringFieldRestrict {
+	if value == 0 {
+		panic(fmt.Errorf("maximum field length value is zero: %w", ErrIncompatibleRestricts))
+	}
 	if value > MaxStringFieldLength {
-		panic(fmt.Errorf("maximum field length value (%d) is too large, %d is maximum: %w", value, MaxStringFieldLength, MaxFieldLengthExceeds))
+		panic(fmt.Errorf("maximum field length value (%d) is too large, %d is maximum: %w", value, MaxStringFieldLength, ErrMaxFieldLengthExceeds))
 	}
 	return &fieldRestrictData{fieldRestrict_MaxLen, &value}
 }
@@ -82,7 +93,7 @@ func (r *fieldRestricts) MaxLen() uint16 {
 		v := v.(*uint16)
 		return *v
 	}
-	return MaxStringFieldLength
+	return DefaultStringFieldMaxLength
 }
 
 func (r *fieldRestricts) Pattern() *regexp.Regexp {
@@ -92,10 +103,17 @@ func (r *fieldRestricts) Pattern() *regexp.Regexp {
 	return nil
 }
 
+func (r *fieldRestricts) checkCompatibles() {
+	if min, max := r.MinLen(), r.MaxLen(); min > max {
+		panic(fmt.Errorf("min length (%d) is greater then max length (%d): %w", min, max, ErrIncompatibleRestricts))
+	}
+}
+
 func (r *fieldRestricts) set(restricts ...IStringFieldRestrict) {
 	for i := range restricts {
 		if v, ok := restricts[i].(*fieldRestrictData); ok {
 			(*r)[v.fieldRestrict] = v.value
 		}
 	}
+	r.checkCompatibles()
 }

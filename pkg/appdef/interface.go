@@ -842,7 +842,7 @@ type IStringFieldRestricts interface {
 
 	// Returns maximum length
 	//
-	// Returns MaxStringFieldLength (1024) if not assigned
+	// Returns DefaultStringFieldMaxLength (255) if not assigned
 	MaxLen() uint16
 
 	// Returns pattern regular expression.
@@ -854,11 +854,11 @@ type IStringFieldRestricts interface {
 // String field restrict.
 //
 // Interface functions to obtain new restricts:
-//   - MinLen()
-//   - MaxLen()
-//   - Pattern()
+//   - MinLen(uint16)
+//   - MaxLen(uint16)
+//   - Pattern(string)
 //
-// Ref. to fields-restrict.go for implementation
+// Ref. to fields-restrict.go
 type IStringFieldRestrict interface{}
 
 // Describes single inclusion of child definition in parent definition.

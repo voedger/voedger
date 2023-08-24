@@ -24,7 +24,9 @@ var ErrVerificationKindMissed = errors.New("verification kind is missed")
 
 var ErrTooManyFields = errors.New("too many fields")
 
-var MaxFieldLengthExceeds = errors.New("too large field length")
+var ErrMaxFieldLengthExceeds = errors.New("too large field length")
+
+var ErrIncompatibleRestricts = errors.New("incompatible restricts")
 
 var ErrTooManyContainers = errors.New("too many containers")
 
