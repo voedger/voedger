@@ -14,18 +14,18 @@ import (
 func TestMinLen(t *testing.T) {
 	require := require.New(t)
 
-	require.NotNil(MinLen(1), "must be ok to obtain MinLen")
+	require.NotNil(MinLen(1), "must be ok to obtain MinLen(1+)")
 
-	require.Panics(func() { _ = MinLen(MaxStringFieldLength + 1) }, "must be panic to obtain MinLen with too large argument")
+	require.Panics(func() { _ = MinLen(MaxStringFieldLength + 1) }, "must be panic to obtain MinLen(tooLarge)")
 }
 
 func TestMaxLen(t *testing.T) {
 	require := require.New(t)
 
-	require.NotNil(MaxLen(1), "must be ok to obtain MaxLen")
+	require.NotNil(MaxLen(1), "must be ok to obtain MaxLen(1+)")
 
-	require.Panics(func() { _ = MaxLen(0) }, "must be panic to obtain MaxLen with zero argument")
-	require.Panics(func() { _ = MaxLen(MaxStringFieldLength + 1) }, "must be panic to obtain MaxLen with too large argument")
+	require.Panics(func() { _ = MaxLen(0) }, "must be panic to obtain MaxLen(0)")
+	require.Panics(func() { _ = MaxLen(MaxStringFieldLength + 1) }, "must be panic to obtain MaxLen(tooLarge)")
 }
 
 func TestPattern(t *testing.T) {
