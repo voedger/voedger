@@ -41,7 +41,7 @@ func ExampleIFieldsBuilder_AddStringField() {
 		fmt.Printf("field %q: kind: %v, required: %v, comment: %s\n", f.Name(), f.DataKind(), f.Required(), f.Comment())
 
 		if f, ok := f.(appdef.IStringField); ok {
-			fmt.Printf("minLen: %d, maxLen: %d, pattern: `%v`", f.Restricts().MinLen(), f.Restricts().MaxLen(), f.Restricts().Pattern())
+			fmt.Println(f.Restricts())
 		}
 	}
 
@@ -49,5 +49,5 @@ func ExampleIFieldsBuilder_AddStringField() {
 	// doc "test.doc": DefKind_CDoc
 	// doc field count: 1
 	// field "code": kind: DataKind_string, required: true, comment: Code is string containing from one to four digits
-	// minLen: 1, maxLen: 4, pattern: `^\d+$`
+	// MinLen: 1, MaxLen: 4, Pattern: `^\d+$`
 }

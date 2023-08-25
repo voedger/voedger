@@ -8,15 +8,26 @@ package appdef
 import (
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 type fieldRestrict uint8
 
 const (
-	fieldRestrict_MinLen fieldRestrict = iota + 1
+	fieldRestrict_MinLen fieldRestrict = iota
 	fieldRestrict_MaxLen
 	fieldRestrict_Pattern
+
+	fieldRestrict_Count
 )
+
+func (r fieldRestrict) String() string {
+	var fieldRestrict_String = [fieldRestrict_Count]string{"MinLen", "MaxLen", "Pattern"}
+	if r < fieldRestrict_Count {
+		return fieldRestrict_String[r]
+	}
+	return fmt.Sprintf("fieldRestrict(%d)", r)
+}
 
 // # Implements:
 //   - IStringFieldRestrict
@@ -101,6 +112,21 @@ func (r *fieldRestricts) Pattern() *regexp.Regexp {
 		return v.(*regexp.Regexp)
 	}
 	return nil
+}
+
+func (r fieldRestricts) String() string {
+	s := make([]string, 0, len(r))
+	for i, v := range r {
+		d := ""
+		switch i {
+		case fieldRestrict_MinLen, fieldRestrict_MaxLen:
+			d = fmt.Sprintf("%d", *(v.(*uint16)))
+		case fieldRestrict_Pattern:
+			d = fmt.Sprintf("`%s`", v.(*regexp.Regexp))
+		}
+		s = append(s, fmt.Sprintf("%v: %s", i, d))
+	}
+	return strings.Join(s, ", ")
 }
 
 func (r *fieldRestricts) checkCompatibles() {
