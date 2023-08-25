@@ -136,14 +136,18 @@ func (r fieldRestricts) String() string {
 }
 
 func (r fieldRestricts) checkCompatibles() {
-	// for i := range r.r {
-	// 	switch i {
-	// 	case fieldRestrict_MinLen, fieldRestrict_MaxLen, fieldRestrict_Pattern:
-	// 		if k := r.f.DataKind(); (k != DataKind_string) && (k != DataKind_bytes) {
-	// 			panic(fmt.Errorf("%v restrict is not compatible with %s-field «%s»: %w", i, k.TrimString(), r.f.Name(), ErrIncompatibleRestricts))
-	// 		}
-	// 	}
-	// }
+	/* Uncomment when there are restricts for numeric fields
+
+	for i := range r.r {
+		switch i {
+		case fieldRestrict_MinLen, fieldRestrict_MaxLen, fieldRestrict_Pattern:
+			if k := r.f.DataKind(); (k != DataKind_string) && (k != DataKind_bytes) {
+				panic(fmt.Errorf("%v restrict is not compatible with %s-field «%s»: %w", i, k.TrimString(), r.f.Name(), ErrIncompatibleRestricts))
+			}
+		}
+	}
+
+	*/
 
 	if min, max := r.MinLen(), r.MaxLen(); min > max {
 		panic(fmt.Errorf("min length (%d) is greater then max length (%d): %w", min, max, ErrIncompatibleRestricts))
