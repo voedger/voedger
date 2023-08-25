@@ -44,7 +44,7 @@ func MinLen(value uint16) IStringFieldRestrict {
 	if value > MaxStringFieldLength {
 		panic(fmt.Errorf("minimum field length value (%d) is too large, %d is maximum: %w", value, MaxStringFieldLength, ErrMaxFieldLengthExceeds))
 	}
-	return &fieldRestrictData{fieldRestrict_MinLen, &value}
+	return &fieldRestrictData{fieldRestrict_MinLen, value}
 }
 
 // Default string field max length.
@@ -66,7 +66,7 @@ func MaxLen(value uint16) IStringFieldRestrict {
 	if value > MaxStringFieldLength {
 		panic(fmt.Errorf("maximum field length value (%d) is too large, %d is maximum: %w", value, MaxStringFieldLength, ErrMaxFieldLengthExceeds))
 	}
-	return &fieldRestrictData{fieldRestrict_MaxLen, &value}
+	return &fieldRestrictData{fieldRestrict_MaxLen, value}
 }
 
 // Return new pattern restriction for string field
@@ -91,45 +91,47 @@ func newFieldRestricts(r ...IStringFieldRestrict) *fieldRestricts {
 	return f
 }
 
-func (r *fieldRestricts) MinLen() uint16 {
-	if v, ok := (*r)[fieldRestrict_MinLen]; ok {
-		v := v.(*uint16)
-		return *v
+func (r fieldRestricts) MinLen() uint16 {
+	if v, ok := (r)[fieldRestrict_MinLen]; ok {
+		return v.(uint16)
 	}
 	return 0
 }
 
-func (r *fieldRestricts) MaxLen() uint16 {
-	if v, ok := (*r)[fieldRestrict_MaxLen]; ok {
-		v := v.(*uint16)
-		return *v
+func (r fieldRestricts) MaxLen() uint16 {
+	if v, ok := r[fieldRestrict_MaxLen]; ok {
+		return v.(uint16)
 	}
 	return DefaultStringFieldMaxLength
 }
 
-func (r *fieldRestricts) Pattern() *regexp.Regexp {
-	if v, ok := (*r)[fieldRestrict_Pattern]; ok {
+func (r fieldRestricts) Pattern() *regexp.Regexp {
+	if v, ok := r[fieldRestrict_Pattern]; ok {
 		return v.(*regexp.Regexp)
 	}
 	return nil
 }
 
 func (r fieldRestricts) String() string {
-	s := make([]string, 0, len(r))
-	for i, v := range r {
-		d := ""
-		switch i {
-		case fieldRestrict_MinLen, fieldRestrict_MaxLen:
-			d = fmt.Sprintf("%d", *(v.(*uint16)))
-		case fieldRestrict_Pattern:
-			d = fmt.Sprintf("`%s`", v.(*regexp.Regexp))
-		}
-		s = append(s, fmt.Sprintf("%v: %s", i, d))
+	if len(r) == 0 {
+		return ""
 	}
+
+	s := make([]string, 0, len(r))
+	for i := fieldRestrict(0); i < fieldRestrict_Count; i++ {
+		if v, ok := r[i]; ok {
+			switch i {
+			case fieldRestrict_Pattern:
+				v = fmt.Sprintf("`%v`", v)
+			}
+			s = append(s, fmt.Sprintf("%v: %v", i, v))
+		}
+	}
+
 	return strings.Join(s, ", ")
 }
 
-func (r *fieldRestricts) checkCompatibles() {
+func (r fieldRestricts) checkCompatibles() {
 	if min, max := r.MinLen(), r.MaxLen(); min > max {
 		panic(fmt.Errorf("min length (%d) is greater then max length (%d): %w", min, max, ErrIncompatibleRestricts))
 	}

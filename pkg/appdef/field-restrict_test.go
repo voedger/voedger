@@ -87,13 +87,19 @@ func Test_fieldRestricts_String(t *testing.T) {
 	}{
 		{`nil -> ""`, nil, ""},
 		{`empty -> ""`, *newFieldRestricts(), ""},
-		{`MinLen(4) -> "MinLen: 4"`, *newFieldRestricts(MinLen(4)), "MinLen: 4"},
-		{`MinLen(4), MaxLen(10) -> "MinLen: 4, MaxLen: 10"`, *newFieldRestricts(MinLen(4), MaxLen(10)), "MinLen: 4, MaxLen: 10"},
-		{`MinLen(4), MaxLen(10), Pattern('^\d+$') -> "MinLen: 4, MaxLen: 10, Pattern: '^\d+$'`, *newFieldRestricts(MinLen(4), MaxLen(10), Pattern(`^\d+$`)), "MinLen: 4, MaxLen: 10, Pattern: `^\\d+$`"},
+		{`MinLen(4) -> "MinLen: 4"`,
+			*newFieldRestricts(MinLen(4)),
+			"MinLen: 4"},
+		{`MinLen(4), MaxLen(10) -> "MinLen: 4, MaxLen: 10"`,
+			*newFieldRestricts(MinLen(4), MaxLen(10)),
+			"MinLen: 4, MaxLen: 10"},
+		{`MinLen(4), MaxLen(10), Pattern('^\d+$') -> "MinLen: 4, MaxLen: 10, Pattern: '^\d+$'"`,
+			*newFieldRestricts(MinLen(4), MaxLen(10), Pattern(`^\d+$`)),
+			"MinLen: 4, MaxLen: 10, Pattern: `^\\d+$`"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.r.String(); got != tt.want {
+			if got := fmt.Sprintf("%v", tt.r); got != tt.want {
 				t.Errorf("fieldRestricts.String() = %v, want %v", got, tt.want)
 			}
 		})
