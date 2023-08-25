@@ -38,7 +38,7 @@ func ExampleIWorkspace() {
 		}
 	}
 
-	// how to inspected builded AppDef with workspace
+	// how to inspect workspace
 	{
 		// how to find workspace by name
 		ws := app.Workspace(wsName)
