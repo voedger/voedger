@@ -377,12 +377,25 @@ type IFieldsBuilder interface {
 
 	// Adds string field specified name and restricts.
 	//
+	// If no restrictions specified, then field has maximum length 255.
+	//
 	// # Panics:
 	//   - if name is empty,
 	//   - if name is invalid,
 	//   - if field with name is already exists,
 	//   - if restricts are not compatible.
-	AddStringField(name string, required bool, restricts ...IStringFieldRestrict) IFieldsBuilder
+	AddStringField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder
+
+	// Adds bytes field specified name and restricts.
+	//
+	// If no restrictions specified, then field has maximum length 255.
+	//
+	// # Panics:
+	//   - if name is empty,
+	//   - if name is invalid,
+	//   - if field with name is already exists,
+	//   - if restricts are not compatible.
+	AddBytesField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder
 
 	// Adds verified field specified name and kind.
 	//
@@ -821,7 +834,7 @@ type IRefField interface {
 	Refs() []QName
 }
 
-// String field. Describe field with DataKind_String.
+// String field. Describe field with DataKind_string.
 //
 // Use Restricts() to obtain field restricts for length, pattern.
 //
@@ -833,7 +846,7 @@ type IStringField interface {
 	Restricts() IStringFieldRestricts
 }
 
-// String field restricts
+// String or bytes field restricts
 type IStringFieldRestricts interface {
 	// Returns minimum length
 	//
@@ -842,7 +855,7 @@ type IStringFieldRestricts interface {
 
 	// Returns maximum length
 	//
-	// Returns DefaultStringFieldMaxLength (255) if not assigned
+	// Returns DefaultFieldMaxLength (255) if not assigned
 	MaxLen() uint16
 
 	// Returns pattern regular expression.
@@ -851,15 +864,31 @@ type IStringFieldRestricts interface {
 	Pattern() *regexp.Regexp
 }
 
-// String field restrict.
+// Bytes field. Describe field with DataKind_bytes.
+//
+// Use Restricts() to obtain field restricts for length.
+//
+// Ref. to fields.go for implementation
+type IBytesField interface {
+	IField
+
+	// Returns restricts
+	Restricts() IBytesFieldRestricts
+}
+
+type IBytesFieldRestricts = IStringFieldRestricts
+
+// Field restrict. Describe single restrict for field.
 //
 // Interface functions to obtain new restricts:
+//
+// # String fields:
 //   - MinLen(uint16)
 //   - MaxLen(uint16)
 //   - Pattern(string)
 //
 // Ref. to fields-restrict.go
-type IStringFieldRestrict interface{}
+type IFieldRestrict interface{}
 
 // Describes single inclusion of child definition in parent definition.
 //

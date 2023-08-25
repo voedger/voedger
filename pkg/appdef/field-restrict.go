@@ -31,40 +31,41 @@ func (r fieldRestrict) String() string {
 
 // # Implements:
 //   - IStringFieldRestrict
+//   - IBytesFieldRestrict
 type fieldRestrictData struct {
 	fieldRestrict
 	value any
 }
 
-// Return new minimum length restriction for string field
+// Return new minimum length restriction for string or bytes field
 //
 // # Panics:
-//   - if value is greater then MaxStringFieldLength (1024)
-func MinLen(value uint16) IStringFieldRestrict {
-	if value > MaxStringFieldLength {
-		panic(fmt.Errorf("minimum field length value (%d) is too large, %d is maximum: %w", value, MaxStringFieldLength, ErrMaxFieldLengthExceeds))
+//   - if value is greater then MaxFieldLength (1024)
+func MinLen(value uint16) IFieldRestrict {
+	if value > MaxFieldLength {
+		panic(fmt.Errorf("minimum field length value (%d) is too large, %d is maximum: %w", value, MaxFieldLength, ErrMaxFieldLengthExceeds))
 	}
 	return &fieldRestrictData{fieldRestrict_MinLen, value}
 }
 
-// Default string field max length.
+// Default field max length.
 //
 // Used if MaxLen() restriction is not used.
 //
-// Using MaxLen (), you can both limit the minimum length by a smaller value, and increase it to MaxStringFieldLength (1024)
-const DefaultStringFieldMaxLength = 255
+// Using MaxLen(), you can both limit the minimum length by a smaller value, and increase it to MaxFieldLength (1024)
+const DefaultFieldMaxLength = 255
 
-// Return new maximum length restriction for string field
+// Return new maximum length restriction for string or bytes field
 //
 // # Panics:
 //   - if value is zero
 //   - if value is greater then MaxStringFieldLength (1024)
-func MaxLen(value uint16) IStringFieldRestrict {
+func MaxLen(value uint16) IFieldRestrict {
 	if value == 0 {
 		panic(fmt.Errorf("maximum field length value is zero: %w", ErrIncompatibleRestricts))
 	}
-	if value > MaxStringFieldLength {
-		panic(fmt.Errorf("maximum field length value (%d) is too large, %d is maximum: %w", value, MaxStringFieldLength, ErrMaxFieldLengthExceeds))
+	if value > MaxFieldLength {
+		panic(fmt.Errorf("maximum field length value (%d) is too large, %d is maximum: %w", value, MaxFieldLength, ErrMaxFieldLengthExceeds))
 	}
 	return &fieldRestrictData{fieldRestrict_MaxLen, value}
 }
@@ -73,7 +74,7 @@ func MaxLen(value uint16) IStringFieldRestrict {
 //
 // # Panics:
 //   - if value is not valid regular expression
-func Pattern(value string) IStringFieldRestrict {
+func Pattern(value string) IFieldRestrict {
 	re, err := regexp.Compile(value)
 	if err != nil {
 		panic(err)
@@ -82,44 +83,47 @@ func Pattern(value string) IStringFieldRestrict {
 }
 
 // # Implements:
-//   - IStringFieldRestricts
-type fieldRestricts map[fieldRestrict]any
+//   - IStringFieldRestricts & IBytesFieldRestricts
+type fieldRestricts struct {
+	f *field
+	r map[fieldRestrict]any
+}
 
-func newFieldRestricts(r ...IStringFieldRestrict) *fieldRestricts {
-	f := &fieldRestricts{}
-	f.set(r...)
-	return f
+func newFieldRestricts(f *field, r ...IFieldRestrict) *fieldRestricts {
+	rest := &fieldRestricts{f, make(map[fieldRestrict]any)}
+	rest.set(r...)
+	return rest
 }
 
 func (r fieldRestricts) MinLen() uint16 {
-	if v, ok := (r)[fieldRestrict_MinLen]; ok {
+	if v, ok := r.r[fieldRestrict_MinLen]; ok {
 		return v.(uint16)
 	}
 	return 0
 }
 
 func (r fieldRestricts) MaxLen() uint16 {
-	if v, ok := r[fieldRestrict_MaxLen]; ok {
+	if v, ok := r.r[fieldRestrict_MaxLen]; ok {
 		return v.(uint16)
 	}
-	return DefaultStringFieldMaxLength
+	return DefaultFieldMaxLength
 }
 
 func (r fieldRestricts) Pattern() *regexp.Regexp {
-	if v, ok := r[fieldRestrict_Pattern]; ok {
+	if v, ok := r.r[fieldRestrict_Pattern]; ok {
 		return v.(*regexp.Regexp)
 	}
 	return nil
 }
 
 func (r fieldRestricts) String() string {
-	if len(r) == 0 {
+	if len(r.r) == 0 {
 		return ""
 	}
 
-	s := make([]string, 0, len(r))
+	s := make([]string, 0, len(r.r))
 	for i := fieldRestrict(0); i < fieldRestrict_Count; i++ {
-		if v, ok := r[i]; ok {
+		if v, ok := r.r[i]; ok {
 			switch i {
 			case fieldRestrict_Pattern:
 				v = fmt.Sprintf("`%v`", v)
@@ -132,15 +136,24 @@ func (r fieldRestricts) String() string {
 }
 
 func (r fieldRestricts) checkCompatibles() {
+	// for i := range r.r {
+	// 	switch i {
+	// 	case fieldRestrict_MinLen, fieldRestrict_MaxLen, fieldRestrict_Pattern:
+	// 		if k := r.f.DataKind(); (k != DataKind_string) && (k != DataKind_bytes) {
+	// 			panic(fmt.Errorf("%v restrict is not compatible with %s-field «%s»: %w", i, k.TrimString(), r.f.Name(), ErrIncompatibleRestricts))
+	// 		}
+	// 	}
+	// }
+
 	if min, max := r.MinLen(), r.MaxLen(); min > max {
 		panic(fmt.Errorf("min length (%d) is greater then max length (%d): %w", min, max, ErrIncompatibleRestricts))
 	}
 }
 
-func (r *fieldRestricts) set(restricts ...IStringFieldRestrict) {
+func (r *fieldRestricts) set(restricts ...IFieldRestrict) {
 	for i := range restricts {
 		if v, ok := restricts[i].(*fieldRestrictData); ok {
-			(*r)[v.fieldRestrict] = v.value
+			r.r[v.fieldRestrict] = v.value
 		}
 	}
 	r.checkCompatibles()

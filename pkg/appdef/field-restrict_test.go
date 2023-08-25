@@ -35,7 +35,7 @@ func TestMinLen(t *testing.T) {
 
 	require.NotNil(MinLen(1), "must be ok to obtain MinLen(1+)")
 
-	require.Panics(func() { _ = MinLen(MaxStringFieldLength + 1) }, "must be panic to obtain MinLen(tooLarge)")
+	require.Panics(func() { _ = MinLen(MaxFieldLength + 1) }, "must be panic to obtain MinLen(tooLarge)")
 }
 
 func TestMaxLen(t *testing.T) {
@@ -44,7 +44,7 @@ func TestMaxLen(t *testing.T) {
 	require.NotNil(MaxLen(1), "must be ok to obtain MaxLen(1+)")
 
 	require.Panics(func() { _ = MaxLen(0) }, "must be panic to obtain MaxLen(0)")
-	require.Panics(func() { _ = MaxLen(MaxStringFieldLength + 1) }, "must be panic to obtain MaxLen(tooLarge)")
+	require.Panics(func() { _ = MaxLen(MaxFieldLength + 1) }, "must be panic to obtain MaxLen(tooLarge)")
 }
 
 func TestPattern(t *testing.T) {
@@ -59,47 +59,46 @@ func Test_fieldRestricts(t *testing.T) {
 	require := require.New(t)
 
 	t.Run("check empty restrict members", func(t *testing.T) {
-		empty := newFieldRestricts()
+		empty := newCharsField("test", DataKind_string, false).Restricts()
 		require.Zero(empty.MinLen())
-		require.EqualValues(DefaultStringFieldMaxLength, empty.MaxLen())
+		require.EqualValues(DefaultFieldMaxLength, empty.MaxLen())
 		require.Nil(empty.Pattern())
 	})
 
 	t.Run("check restrict members", func(t *testing.T) {
-		r := newFieldRestricts(
+		r := newCharsField("test", DataKind_string, false,
 			MinLen(1),
 			MaxLen(4),
 			Pattern(`^/a+$`),
-		)
+		).Restricts()
 		require.EqualValues(1, r.MinLen())
 		require.EqualValues(4, r.MaxLen())
 		require.EqualValues(`^/a+$`, r.Pattern().String())
 	})
 
-	require.Panics(func() { _ = newFieldRestricts(MinLen(2), MaxLen(1)) }, "must be panic is incompatible restricts")
+	require.Panics(func() { _ = newCharsField("test", DataKind_bytes, false, MinLen(2), MaxLen(1)) }, "must be panic is incompatible restricts")
 }
 
 func Test_fieldRestricts_String(t *testing.T) {
 	tests := []struct {
-		name string
-		r    fieldRestricts
-		want string
+		name  string
+		field *charsField
+		want  string
 	}{
-		{`nil -> ""`, nil, ""},
-		{`empty -> ""`, *newFieldRestricts(), ""},
+		{`empty -> ""`, newCharsField("test", DataKind_bytes, false), ""},
 		{`MinLen(4) -> "MinLen: 4"`,
-			*newFieldRestricts(MinLen(4)),
+			newCharsField("test", DataKind_bytes, false, MinLen(4)),
 			"MinLen: 4"},
 		{`MinLen(4), MaxLen(10) -> "MinLen: 4, MaxLen: 10"`,
-			*newFieldRestricts(MinLen(4), MaxLen(10)),
+			newCharsField("test", DataKind_bytes, false, MinLen(4), MaxLen(10)),
 			"MinLen: 4, MaxLen: 10"},
 		{`MinLen(4), MaxLen(10), Pattern('^\d+$') -> "MinLen: 4, MaxLen: 10, Pattern: '^\d+$'"`,
-			*newFieldRestricts(MinLen(4), MaxLen(10), Pattern(`^\d+$`)),
+			newCharsField("test", DataKind_string, false, MinLen(4), MaxLen(10), Pattern(`^\d+$`)),
 			"MinLen: 4, MaxLen: 10, Pattern: `^\\d+$`"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := fmt.Sprintf("%v", tt.r); got != tt.want {
+			if got := fmt.Sprintf("%v", tt.field.Restricts()); got != tt.want {
 				t.Errorf("fieldRestricts.String() = %v, want %v", got, tt.want)
 			}
 		})

@@ -92,6 +92,12 @@ func makeFields(def interface{}) fields {
 	return f
 }
 
+func (f *fields) AddBytesField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder {
+	f.checkAddField(name, DataKind_bytes)
+	f.appendField(name, newCharsField(name, DataKind_bytes, required, restricts...))
+	return f.parent.(IFieldsBuilder)
+}
+
 func (f *fields) AddField(name string, kind DataKind, required bool, comment ...string) IFieldsBuilder {
 	f.checkAddField(name, kind)
 	fld := newField(name, kind, required, false)
@@ -106,9 +112,9 @@ func (f *fields) AddRefField(name string, required bool, ref ...QName) IFieldsBu
 	return f.parent.(IFieldsBuilder)
 }
 
-func (f *fields) AddStringField(name string, required bool, restricts ...IStringFieldRestrict) IFieldsBuilder {
+func (f *fields) AddStringField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder {
 	f.checkAddField(name, DataKind_string)
-	f.appendField(name, newStringField(name, required, restricts...))
+	f.appendField(name, newCharsField(name, DataKind_string, required, restricts...))
 	return f.parent.(IFieldsBuilder)
 }
 
@@ -271,22 +277,23 @@ func newRefField(name string, required bool, ref ...QName) *refField {
 
 func (f refField) Refs() []QName { return f.refs }
 
+// Chars (string or bytes) field.
+//
 // # Implements:
 //   - IStringField
-type stringField struct {
+//   - IBytesField
+type charsField struct {
 	field
 	restricts *fieldRestricts
 }
 
-func newStringField(name string, required bool, restricts ...IStringFieldRestrict) *stringField {
-	f := &stringField{
-		field:     makeField(name, DataKind_string, required, false),
-		restricts: newFieldRestricts(restricts...),
-	}
+func newCharsField(name string, kind DataKind, required bool, restricts ...IFieldRestrict) *charsField {
+	f := &charsField{field: makeField(name, kind, required, false)}
+	f.restricts = newFieldRestricts(&f.field, restricts...)
 	return f
 }
 
-func (f stringField) Restricts() IStringFieldRestricts {
+func (f charsField) Restricts() IStringFieldRestricts {
 	return f.restricts
 }
 
