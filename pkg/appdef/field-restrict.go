@@ -136,6 +136,7 @@ func (r fieldRestricts) String() string {
 }
 
 func (r fieldRestricts) checkCompatibles() {
+	//nolint
 	/* Uncomment when there are restricts for numeric fields
 
 	for i := range r.r {
