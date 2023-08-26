@@ -27,7 +27,8 @@ TAG BackofficeTag;
 ABSTRACT TABLE NestedWithName INHERITS CRecord (
     /*  Field is added to any table inherited from NestedWithName
         The current comment is also added to scheme for this field  */
-    ItemName text
+    
+    ItemName varchar(50) -- Max length is 1024
 );
 
 /*
@@ -35,7 +36,7 @@ ABSTRACT TABLE NestedWithName INHERITS CRecord (
     Note: Quotes can be optionally used with identifiers
 */
 TABLE "NestedTable" INHERITS NestedWithName (
-    ItemDescr text
+    ItemDescr varchar -- Default length is 255
 );
 
 /*
@@ -52,18 +53,17 @@ TABLE "NestedTable" INHERITS NestedWithName (
 */
 TABLE TablePlan INHERITS CDoc (
     FState int,
-    Name text NOT NULL,
+    Name varchar NOT NULL,
     Rate currency NOT NULL,
     Expiration timestamp,
-    VerifiableField text NOT NULL VERIFIABLE, -- Verifiable field
+    VerifiableField varchar NOT NULL VERIFIABLE, -- Verifiable field
     Int1 int DEFAULT 1 CHECK(Int1 >= 1 AND Int2 < 10000),  -- Expressions evaluating to TRUE or UNKNOWN succeed.
-    Text1 text DEFAULT 'a',
-    Int2 int DEFAULT NEXTVAL('sequence'),
+    Text1 varchar DEFAULT 'a',
     "int" int, -- optional quotes
     ScreenGroupRef ref(ScreenGroup), 
     AnyTableRef ref,
     FewTablesRef ref(ScreenGroup, TablePlan) NOT NULL,
-    CheckedField text CHECK '^[0-9]{8}$', -- Field validated by regexp
+    CheckedField varchar(8) CHECK '^[0-9]{8}$', -- Field validated by regexp
     CHECK (ValidateRow(this)), -- Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
     CONSTRAINT StateChecker CHECK (ValidateFState(FState)), -- Named CHECK table constraint
     -- UNIQUE (FState, Name), -- unnamed UNIQUE table constraint
@@ -83,9 +83,9 @@ TABLE ScreenGroup INHERITS CDoc();
     These comments are included in the statement definition, but may be overridden with `WITH Comment=...`
 */
 TABLE SubscriptionProfile INHERITS Singleton (
-    CustomerID text,
+    CustomerID varchar,
     CustomerKind int,
-    CompanyName text
+    CompanyName varchar
 );
 
 -- Package-level extensions
@@ -105,8 +105,8 @@ WORKSPACE MyWorkspace (
                                     -- If name omitted, then QName is: <WorkspaceName>+"Descriptor"
 
         air.TypeWithName,           -- Fieldset
-        Country text CHECK '^[A-Za-z]{2}$',
-        Description text
+        Country varchar(2) CHECK '^[A-Za-z]{2}$',
+        Description varchar(100)
     );
 
     -- Definitions declared in the workspace are only available in this workspace
@@ -116,8 +116,8 @@ WORKSPACE MyWorkspace (
         Kind int
     );
     TYPE SubscriptionEvent (
-        Origin text,
-        Data text
+        Origin varchar(20),
+        Data varchar(20)
     );
     RATE BackofficeFuncRate1 1000 PER HOUR;
     RATE BackofficeFuncRate2 100 PER MINUTE PER IP;
@@ -130,7 +130,7 @@ WORKSPACE MyWorkspace (
     TABLE WsTable INHERITS CDoc ( 
         air.TypeWithName,   -- Fieldset
 
-        PsName text,
+        PsName varchar(15),
         items TABLE Child (
             TypeWithKind, -- Fieldset
             Number int				
@@ -223,14 +223,14 @@ WORKSPACE MyWorkspace (
         Day int32, 
         Kind int32, 
         Number int32, 
-        XZReportWDocID id NOT NULL,
+        XZReportWDocID ref NOT NULL,
         PRIMARY KEY ((Year), Month, Day, Kind, Number)
     ) AS RESULT OF air.UpdateDashboard;
 
     VIEW OrdersCountView(
         Year int, -- same as int32
         Month int32, 
-        Day sys.int32, -- same as int32
+        Day int32, 
         Qnantity int32,
         SomeField int32,
         PRIMARY KEY ((Year), Month, Day)

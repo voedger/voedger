@@ -73,6 +73,10 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DataKind_int32, cdoc.Field("FState").DataKind())
 	require.Equal("Backoffice Table", cdoc.Comment())
 
+	// TODO: sf := cdoc.Field("CheckedField").(appdef.IStringField)
+	// TODO: require.Equal(uint16(8), sf.Restricts().MaxLen())
+	// TODO: require.NotNil(sf.Restricts().Pattern())
+
 	// container of the table
 	container := cdoc.Container("TableItems")
 	require.Equal("TableItems", container.Name())
@@ -324,11 +328,11 @@ func Test_DupFieldsInTypes(t *testing.T) {
 	TYPE MyType(
 		BaseType,
 		BaseType2,
-		field text,
-		field text,
-		baseField text,
+		field varchar,
+		field varchar,
+		baseField varchar,
 		someField int,
-		Id text
+		Id varchar
 	)
 	`)
 	require.NoError(err)
@@ -351,6 +355,32 @@ func Test_DupFieldsInTypes(t *testing.T) {
 
 }
 
+func Test_Varchar(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("file1.sql", `SCHEMA test;
+	TYPE RootType (
+		Oversize varchar(1025)
+	);
+	TYPE CDoc1 (
+		Oversize varchar(1025)
+	);
+	`)
+	require.NoError(err)
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	_, err = MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.EqualError(err, strings.Join([]string{
+		"file1.sql:3:3: maximum field length is 1024",
+		"file1.sql:6:3: maximum field length is 1024",
+	}, "\n"))
+
+}
+
 func Test_DupFieldsInTables(t *testing.T) {
 	require := require.New(t)
 
@@ -366,20 +396,20 @@ func Test_DupFieldsInTables(t *testing.T) {
 		someField int
 	);
 	ABSTRACT TABLE ByBaseTable INHERITS CDoc (
-		Name text,
-		Code text
+		Name varchar,
+		Code varchar
 	);
 	TABLE MyTable INHERITS ByBaseTable(
 		BaseType,
 		BaseType2,
-		newField text,
-		field text,
-		field text, 		-- duplicated in the this table
-		baseField text,		-- duplicated in the first OF
+		newField varchar,
+		field varchar,
+		field varchar, 		-- duplicated in the this table
+		baseField varchar,		-- duplicated in the first OF
 		someField int,		-- duplicated in the second OF
 		Kind int,			-- duplicated in the first OF (2nd level)
 		Name int,			-- duplicated in the inherited table
-		ID text
+		ID varchar
 	)
 	`)
 	require.NoError(err)
@@ -408,7 +438,7 @@ func Test_AbstractTables(t *testing.T) {
 
 	fs, err := ParseFile("file1.sql", `SCHEMA test;
 	TABLE ByBaseTable INHERITS CDoc (
-		Name text
+		Name varchar
 	);
 	TABLE MyTable INHERITS ByBaseTable(		-- NOT ALLOWED
 	);
@@ -528,7 +558,7 @@ func Test_PanicUnknownFieldType(t *testing.T) {
 	fs, err := ParseFile("file1.sql", `SCHEMA test;
 	TABLE MyTable INHERITS CDoc (
 		Name asdasd,
-		Code text
+		Code varchar
 	);
 	`)
 	require.NoError(err)
@@ -553,7 +583,7 @@ func Test_Expressions(t *testing.T) {
 
 	_, err := ParseFile("file1.sql", `SCHEMA test;
 	TABLE MyTable(
-		Int1 text DEFAULT 1 CHECK(Int1 > Int2),
+		Int1 varchar DEFAULT 1 CHECK(Int1 > Int2),
 		Int1 int DEFAULT 1 CHECK(Text != 'asd'),
 		Int1 int DEFAULT 1 CHECK(Int2 > -5),
 		Int1 int DEFAULT 1 CHECK(TextField > 'asd' AND (SomeFloat/3.2)*4 != 5.003),
@@ -616,7 +646,7 @@ func Test_DuplicatesInViews(t *testing.T) {
 		VIEW test(
 			field1 int,
 			field2 int,
-			field1 text,
+			field1 varchar,
 			PRIMARY KEY(field1),
 			PRIMARY KEY(field2)
 		) AS RESULT OF Proj1;
@@ -633,7 +663,7 @@ func Test_DuplicatesInViews(t *testing.T) {
 
 	require.EqualError(err, strings.Join([]string{
 		"file2.sql:6:4: field1 redeclared",
-		"file2.sql:8:4: primary key redeclared",
+		"file2.sql:8:16: primary key redeclared",
 	}, "\n"))
 
 }
@@ -713,9 +743,9 @@ func Test_Undefined(t *testing.T) {
 		"example.sql:4:4: UndefinedTag undefined",
 		"example.sql:5:4: UndefinedRate undefined",
 		"example.sql:6:4: xyz undefined",
-		"example.sql:7:4: only type or void allowed in result",
-		"example.sql:9:4: only type or void allowed in argument",
-		"example.sql:11:4: only type or void allowed in argument",
+		"example.sql:7:4: text undefined",
+		"example.sql:9:4: text undefined",
+		"example.sql:11:4: text undefined",
 	}, "\n"))
 }
 
@@ -837,9 +867,9 @@ func Test_NestedTables(t *testing.T) {
 
 	fs, err := ParseFile("example.sql", `SCHEMA test;
 	TABLE NestedTable INHERITS CRecord (
-		ItemName text,
+		ItemName varchar,
 		DeepNested TABLE DeepNestedTable (
-			ItemName text
+			ItemName varchar
 		)
 	);
 	`)

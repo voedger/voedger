@@ -241,16 +241,35 @@ func (c *buildContext) views() error {
 			c.addComments(view, vb)
 			for i := range view.Fields {
 				f := &view.Fields[i]
-				if f.Field != nil {
-					datakind := viewFieldDataKind(f.Field)
-					if contains(view.pkRef.ClusteringColumnsFields, f.Field.Name) {
-						vb.AddClustColumn(string(f.Field.Name), datakind)
-					} else if contains(view.pkRef.PartitionKeyFields, f.Field.Name) {
-						vb.AddPartField(string(f.Field.Name), datakind)
-					} else {
-						vb.AddValueField(string(f.Field.Name), datakind, f.Field.NotNull)
-					}
+
+				if f.PrimaryKey != nil {
+					continue
 				}
+
+				var datakind appdef.DataKind
+				var fieldname Ident
+				var notnull bool
+
+				if f.Field != nil {
+					// TODO: strings/bytes with limitations
+					datakind = dataTypeToDataKind(f.Field.Type)
+					fieldname = f.Field.Name
+					notnull = f.Field.NotNull
+				} else if f.RefField != nil {
+					// TODO: support references
+					datakind = appdef.DataKind_RecordID
+					fieldname = f.RefField.Name
+					notnull = f.RefField.NotNull
+				}
+
+				if contains(view.pkRef.ClusteringColumnsFields, fieldname) {
+					vb.AddClustColumn(string(fieldname), datakind)
+				} else if contains(view.pkRef.PartitionKeyFields, fieldname) {
+					vb.AddPartField(string(fieldname), datakind)
+				} else {
+					vb.AddValueField(string(fieldname), datakind, notnull)
+				}
+
 			}
 		})
 	}
@@ -264,16 +283,16 @@ func (c *buildContext) commands() error {
 			qname := c.pkg.Ast.NewQName(cmd.Name)
 			b := c.builder.AddCommand(qname)
 			c.addComments(cmd, b)
-			if cmd.Arg != nil && !isVoid(cmd.Arg.Package, cmd.Arg.Name) {
-				argQname := buildQname(c, cmd.Arg.Package, cmd.Arg.Name)
+			if cmd.Arg != nil && cmd.Arg.Def != nil {
+				argQname := buildQname(c, cmd.Arg.Def.Package, cmd.Arg.Def.Name)
 				b.SetArg(argQname)
 			}
-			if cmd.UnloggedArg != nil && !isVoid(cmd.UnloggedArg.Package, cmd.UnloggedArg.Name) {
-				argQname := buildQname(c, cmd.UnloggedArg.Package, cmd.UnloggedArg.Name)
+			if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
+				argQname := buildQname(c, cmd.UnloggedArg.Def.Package, cmd.UnloggedArg.Def.Name)
 				b.SetUnloggedArg(argQname)
 			}
-			if cmd.Returns != nil && !isVoid(cmd.Returns.Package, cmd.Returns.Name) {
-				retQname := buildQname(c, cmd.Returns.Package, cmd.Returns.Name)
+			if cmd.Returns != nil && cmd.Returns.Def != nil {
+				retQname := buildQname(c, cmd.Returns.Def.Package, cmd.Returns.Def.Name)
 				b.SetResult(retQname)
 			}
 			if cmd.Engine.WASM {
@@ -293,16 +312,16 @@ func (c *buildContext) queries() error {
 			qname := c.pkg.Ast.NewQName(q.Name)
 			b := c.builder.AddQuery(qname)
 			c.addComments(q, b)
-			if q.Arg != nil && !isVoid(q.Arg.Package, q.Arg.Name) {
-				argQname := buildQname(c, q.Arg.Package, q.Arg.Name)
+			if q.Arg != nil && q.Arg.Def != nil {
+				argQname := buildQname(c, q.Arg.Def.Package, q.Arg.Def.Name)
 				b.SetArg(argQname)
 			}
 
-			if isAny(q.Returns.Package, q.Returns.Name) {
+			if q.Returns.Any {
 				b.SetResult(istructs.QNameANY)
 			} else {
-				if !isVoid(q.Returns.Package, q.Returns.Name) {
-					retQname := buildQname(c, q.Returns.Package, q.Returns.Name)
+				if q.Returns.Def != nil {
+					retQname := buildQname(c, q.Returns.Def.Package, q.Returns.Def.Name)
 					b.SetResult(retQname)
 				}
 			}
@@ -405,29 +424,58 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
 }
 
 func (c *buildContext) addFieldToDef(field *FieldExpr) {
-	sysDataKind := getTypeDataKind(*field.Type)
-	if sysDataKind != appdef.DataKind_null {
-		if field.Type.IsArray {
-			c.stmtErr(&field.Pos, ErrArrayFieldsNotSupportedHere)
-			return
-		}
+
+	if field.Type.DataType != nil { // embedded type
 		if err := c.defCtx().checkName(string(field.Name)); err != nil {
 			c.stmtErr(&field.Pos, err)
 			return
 		}
-		if field.Verifiable {
-			// TODO: Support different verification kindsbuilder, &c
-			c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddVerifiedField(string(field.Name), sysDataKind, field.NotNull, appdef.VerificationKind_EMail)
+
+		bld := c.defCtx().defBuilder.(appdef.IFieldsBuilder)
+		fieldName := string(field.Name)
+
+		if field.Type.DataType.Bytes != nil {
+			if field.Type.DataType.Bytes.MaxLen != nil {
+				bld.AddBytesField(fieldName, field.NotNull, appdef.MaxLen(*field.Type.DataType.Bytes.MaxLen))
+			} else {
+				bld.AddBytesField(fieldName, field.NotNull)
+			}
+		} else if field.Type.DataType.Varchar != nil {
+			restricts := make([]appdef.IFieldRestrict, 0)
+
+			if field.Type.DataType.Varchar.MaxLen != nil {
+				restricts = append(restricts, appdef.MaxLen(*field.Type.DataType.Varchar.MaxLen))
+			}
+
+			if field.CheckRegexp != nil {
+				restricts = append(restricts, appdef.Pattern(*field.CheckRegexp))
+			}
+
+			bld.AddStringField(fieldName, field.NotNull, restricts)
 		} else {
-			c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddField(string(field.Name), sysDataKind, field.NotNull, field.Statement.GetComments()...)
+			sysDataKind := dataTypeToDataKind(*field.Type.DataType)
+			if field.Verifiable {
+				// TODO: Support different verification kindsbuilder, &c
+				bld.AddVerifiedField(fieldName, sysDataKind, field.NotNull, appdef.VerificationKind_EMail)
+			} else {
+				bld.AddField(fieldName, sysDataKind, field.NotNull)
+			}
 		}
-	} else {
+
+		comments := field.Statement.GetComments()
+		if len(comments) > 0 {
+			bld.SetFieldComment(fieldName, comments...)
+		}
+
+		//TODO: add VERIFIED for bytes and varchar fields
+
+	} else { // field.Type.Def
 		// Record?
-		pkg := field.Type.Package
+		pkg := field.Type.Def.Package
 		if pkg == "" {
 			pkg = c.pkg.Ast.Package
 		}
-		qname := appdef.NewQName(string(pkg), string(field.Type.Name))
+		qname := appdef.NewQName(string(pkg), string(field.Type.Def.Name))
 		wrec := c.builder.WRecord(qname)
 		crec := c.builder.CRecord(qname)
 		orec := c.builder.ORecord(qname)
