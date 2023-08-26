@@ -1,3 +1,6 @@
+/*
+* Copyright (c) 2023-present unTill Pro, Ltd.
+*/
 SCHEMA vrestaurant;
 
 -- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
@@ -204,3 +207,4 @@ WORKSPACE Restaurant (
         PRIMARY KEY (Year, Month, Day, Number)
     ) AS RESULT OF UpdateSalesReport;
 );    
+

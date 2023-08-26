@@ -38,7 +38,9 @@ func (b *Ident) Capture(values []string) error {
 
 type IStatement interface {
 	GetPos() *lexer.Position
-	GetComments() *[]string
+	GetRawCommentBlocks() []string
+	SetComments(comments []string)
+	GetComments() []string
 }
 
 type INamedStatement interface {
@@ -83,12 +85,13 @@ type RootStatement struct {
 	Template *TemplateStmt `parser:"@@"`
 
 	// Also allowed in root
-	Role      *RoleStmt          `parser:"| @@"`
-	Tag       *TagStmt           `parser:"| @@"`
-	ExtEngine *RootExtEngineStmt `parser:"| @@"`
-	Workspace *WorkspaceStmt     `parser:"| @@"`
-	Table     *TableStmt         `parser:"| @@"`
-	Type      *TypeStmt          `parser:"| @@"`
+	Role           *RoleStmt           `parser:"| @@"`
+	Tag            *TagStmt            `parser:"| @@"`
+	ExtEngine      *RootExtEngineStmt  `parser:"| @@"`
+	Workspace      *WorkspaceStmt      `parser:"| @@"`
+	AlterWorkspace *AlterWorkspaceStmt `parser:"| @@"`
+	Table          *TableStmt          `parser:"| @@"`
+	Type           *TypeStmt           `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
 
 	stmt interface{}
@@ -96,9 +99,10 @@ type RootStatement struct {
 
 type WorkspaceStatement struct {
 	// Only allowed in workspace
-	Rate     *RateStmt     `parser:"@@"`
-	View     *ViewStmt     `parser:"| @@"`
-	UseTable *UseTableStmt `parser:"| @@"`
+	Rate         *RateStmt         `parser:"@@"`
+	View         *ViewStmt         `parser:"| @@"`
+	UseTable     *UseTableStmt     `parser:"| @@"`
+	UseWorkspace *UseWorkspaceStmt `parser:"| @@"`
 
 	// Also allowed in workspace
 	Role      *RoleStmt               `parser:"| @@"`
@@ -165,10 +169,11 @@ func (s *RootExtEngineStmt) Iterate(callback func(stmt interface{})) {
 
 type WorkspaceStmt struct {
 	Statement
-	Abstract   bool                 `parser:"@'ABSTRACT'?"`
+	Abstract   bool                 `parser:"(@'ABSTRACT' "`
+	Alterable  bool                 `parser:"| @'ALTERABLE')?"`
 	Pool       bool                 `parser:"@('POOL' 'OF')?"`
 	Name       Ident                `parser:"'WORKSPACE' @Ident "`
-	Inherits   *DefQName            `parser:"('INHERITS' @@)?"`
+	Inherits   []DefQName           `parser:"('INHERITS' @@ (',' @@)* )?"`
 	A          int                  `parser:"'('"`
 	Descriptor *WsDescriptorStmt    `parser:"('DESCRIPTOR' @@)?"`
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
@@ -176,6 +181,26 @@ type WorkspaceStmt struct {
 
 func (s WorkspaceStmt) GetName() string { return string(s.Name) }
 func (s *WorkspaceStmt) Iterate(callback func(stmt interface{})) {
+	if s.Descriptor != nil {
+		callback(s.Descriptor)
+	}
+	for i := 0; i < len(s.Statements); i++ {
+		raw := &s.Statements[i]
+		if raw.stmt == nil {
+			raw.stmt = extractStatement(*raw)
+		}
+		callback(raw.stmt)
+	}
+}
+
+type AlterWorkspaceStmt struct {
+	Statement
+	Name       DefQName             `parser:"'ALTER' 'WORKSPACE' @@ "`
+	A          int                  `parser:"'('"`
+	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
+}
+
+func (s *AlterWorkspaceStmt) Iterate(callback func(stmt interface{})) {
 	for i := 0; i < len(s.Statements); i++ {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
@@ -195,9 +220,12 @@ func (s TypeStmt) GetName() string { return string(s.Name) }
 
 type WsDescriptorStmt struct {
 	Statement
-	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
+	Name  Ident           `parser:"@Ident?"`
+	Items []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	_     int             `parser:"';'"`
 }
+
+func (s WsDescriptorStmt) GetName() string { return string(s.Name) }
 
 type DefQName struct {
 	Package Ident `parser:"(@Ident '.')?"`
@@ -232,16 +260,25 @@ func (q TypeQName) String() (s string) {
 }
 
 type Statement struct {
-	Pos      lexer.Position
-	Comments []string `parser:"@PreStmtComment*"`
+	Pos              lexer.Position
+	RawCommentBlocks []string `parser:"@PreStmtComment*"`
+	Comments         []string // will be set after 1st pass
 }
 
 func (s *Statement) GetPos() *lexer.Position {
 	return &s.Pos
 }
 
-func (s *Statement) GetComments() *[]string {
-	return &s.Comments
+func (s *Statement) GetRawCommentBlocks() []string {
+	return s.RawCommentBlocks
+}
+
+func (s *Statement) GetComments() []string {
+	return s.Comments
+}
+
+func (s *Statement) SetComments(comments []string) {
+	s.Comments = comments
 }
 
 type StorageKey struct {
@@ -249,6 +286,11 @@ type StorageKey struct {
 	Entity  *DefQName `parser:"( @@ )?"`
 }
 
+/*
+	ProjectorStmt: asdas
+
+zczxczxc
+*/
 type ProjectorStmt struct {
 	Statement
 	Sync     bool         `parser:"@'SYNC'?"`
@@ -297,15 +339,12 @@ func (s TagStmt) GetName() string { return string(s.Name) }
 
 type UseTableStmt struct {
 	Statement
-	Package   Ident `parser:"'USE' 'TABLE' (@Ident '.')?"`
-	Name      Ident `parser:"(@Ident "`
-	AllTables bool  `parser:"| @'*')"`
+	Table Ident `parser:"'USE' 'TABLE' @Ident"`
 }
 
-type UseTableItem struct {
-	Package   Ident `parser:"(@Ident '.')?"`
-	Name      Ident `parser:"(@Ident "`
-	AllTables bool  `parser:"| @'*')"`
+type UseWorkspaceStmt struct {
+	Statement
+	Workspace Ident `parser:"'USE' 'WORKSPACE' @Ident"`
 }
 
 /*type sequenceStmt struct {
@@ -327,6 +366,7 @@ type RateStmt struct {
 
 func (s RateStmt) GetName() string { return string(s.Name) }
 
+// TODO: better Grant syntax
 type GrantStmt struct {
 	Statement
 	Grants []string `parser:"'GRANT' @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE') (','  @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE'))*"`
@@ -428,7 +468,15 @@ type TableStmt struct {
 	singletone   bool
 }
 
-func (s TableStmt) GetName() string { return string(s.Name) }
+func (s *TableStmt) GetName() string { return string(s.Name) }
+func (s *TableStmt) Iterate(callback func(stmt interface{})) {
+	for i := 0; i < len(s.Items); i++ {
+		item := &s.Items[i]
+		if item.Field != nil {
+			callback(item.Field)
+		}
+	}
+}
 
 type NestedTableStmt struct {
 	Pos   lexer.Position
@@ -477,7 +525,7 @@ type RefFieldExpr struct {
 }
 
 type FieldExpr struct {
-	Pos                lexer.Position
+	Statement
 	Name               Ident       `parser:"@Ident"`
 	Type               *TypeQName  `parser:"@@"`
 	NotNull            bool        `parser:"@(NOTNULL)?"`

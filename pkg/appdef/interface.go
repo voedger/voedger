@@ -5,6 +5,8 @@
 
 package appdef
 
+import "regexp"
+
 // Qualified name
 //
 // <pkg>.<entity>
@@ -373,6 +375,28 @@ type IFieldsBuilder interface {
 	//   - if field with name is already exists.
 	AddRefField(name string, required bool, ref ...QName) IFieldsBuilder
 
+	// Adds string field specified name and restricts.
+	//
+	// If no restrictions specified, then field has maximum length 255.
+	//
+	// # Panics:
+	//   - if name is empty,
+	//   - if name is invalid,
+	//   - if field with name is already exists,
+	//   - if restricts are not compatible.
+	AddStringField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder
+
+	// Adds bytes field specified name and restricts.
+	//
+	// If no restrictions specified, then field has maximum length 255.
+	//
+	// # Panics:
+	//   - if name is empty,
+	//   - if name is invalid,
+	//   - if field with name is already exists,
+	//   - if restricts are not compatible.
+	AddBytesField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder
+
 	// Adds verified field specified name and kind.
 	//
 	// # Panics:
@@ -382,6 +406,14 @@ type IFieldsBuilder interface {
 	//   - if data kind is not allowed by definition kind,
 	//   - if no verification kinds are specified
 	AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder
+
+	// Sets fields comment.
+	// Useful for reference or verified fields, what Add×××Field has not comments
+	// argument.
+	//
+	// # Panics:
+	//   - if field not found.
+	SetFieldComment(name string, comment ...string) IFieldsBuilder
 }
 
 // Definitions with containers:
@@ -801,6 +833,62 @@ type IRefField interface {
 	// Returns list of target references
 	Refs() []QName
 }
+
+// String field. Describe field with DataKind_string.
+//
+// Use Restricts() to obtain field restricts for length, pattern.
+//
+// Ref. to fields.go for implementation
+type IStringField interface {
+	IField
+
+	// Returns restricts
+	Restricts() IStringFieldRestricts
+}
+
+// String or bytes field restricts
+type IStringFieldRestricts interface {
+	// Returns minimum length
+	//
+	// Returns 0 if not assigned
+	MinLen() uint16
+
+	// Returns maximum length
+	//
+	// Returns DefaultFieldMaxLength (255) if not assigned
+	MaxLen() uint16
+
+	// Returns pattern regular expression.
+	//
+	// Returns nil if not assigned
+	Pattern() *regexp.Regexp
+}
+
+// Bytes field. Describe field with DataKind_bytes.
+//
+// Use Restricts() to obtain field restricts for length.
+//
+// Ref. to fields.go for implementation
+type IBytesField interface {
+	IField
+
+	// Returns restricts
+	Restricts() IBytesFieldRestricts
+}
+
+type IBytesFieldRestricts = IStringFieldRestricts
+
+// Field restrict. Describe single restrict for field.
+//
+// Interface functions to obtain new restricts:
+//
+// # String fields:
+//   - MinLen(uint16)
+//   - MaxLen(uint16)
+//   - Pattern(string)
+//
+// Ref. to fields-restrict.go
+type IFieldRestrict interface{}
 
 // Describes single inclusion of child definition in parent definition.
 //

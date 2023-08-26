@@ -1,5 +1,5 @@
 -- note: this schema is for tests only. Voedger sys package uses copy of this schema
-SCHEMA test_sys;
+SCHEMA sys;
 
 ABSTRACT TABLE CRecord();
 ABSTRACT TABLE WRecord();
@@ -10,6 +10,26 @@ ABSTRACT TABLE ODoc INHERITS ORecord();
 ABSTRACT TABLE WDoc INHERITS WRecord();
 
 ABSTRACT TABLE Singleton INHERITS CDoc();
+
+ABSTRACT WORKSPACE Workspace (
+    TYPE CreateLoginParams(
+        Login                       text,
+        AppName                     text,
+        SubjectKind                 int32,
+        WSKindInitializationData    text,
+        ProfileCluster              int32
+    );
+    TYPE CreateLoginUnloggedParams(
+        Password text
+    );
+    EXTENSION ENGINE BUILTIN (
+        COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
+    )
+);
+
+ALTERABLE WORKSPACE Profile(
+
+);
 
 EXTENSION ENGINE BUILTIN (
 

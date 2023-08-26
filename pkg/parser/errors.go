@@ -26,10 +26,15 @@ var ErrOnlyTypeOrVoidAllowedForArgument = errors.New("only type or void allowed 
 var ErrOnlyTypeOrVoidAllowedForResult = errors.New("only type or void allowed in result")
 var ErrNestedTableIncorrectKind = errors.New("incorrect nested table kind")
 var ErrBaseTableMustBeAbstract = errors.New("base table must be abstract")
+var ErrBaseWorkspaceMustBeAbstract = errors.New("base workspace must be abstract")
+var ErrAbstractWorkspaceDescriptor = errors.New("abstract workspace cannot have a descriptor")
 var ErrNestedTablesNotSupportedInTypes = errors.New("nested tables not supported in types")
+var ErrSysWorkspaceNotFound = errors.New("sys.Workspace definition not found")
+var ErrInheritanceFromSysWorkspaceNotAllowed = errors.New("explicit inheritance from sys.Workspace not allowed")
 
 var ErrArrayFieldsNotSupportedHere = errors.New("array fields of system types not supported here")
 var ErrMustBeNotNull = errors.New("field has to be NOT NULL")
+var ErrCircularReferenceInInherits = errors.New("circular reference in INHERITS")
 
 // Golang: could not import github.com/alecthomas/participle/v2/asd (no required module provides package "github.com/alecthomas/participle/v2/asd")
 func ErrCouldNotImport(pkgName string) error {
@@ -46,6 +51,14 @@ func ErrNestedAbstractTable(tblName string) error {
 
 func ErrUseOfAbstractTable(tblName string) error {
 	return fmt.Errorf("use of abstract table %s", tblName)
+}
+
+func ErrUseOfAbstractWorkspace(wsName string) error {
+	return fmt.Errorf("use of abstract workspace %s", wsName)
+}
+
+func ErrWorkspaceIsNotAlterable(wsName string) error {
+	return fmt.Errorf("workspace %s is not alterable", wsName)
 }
 
 func ErrAbstractTableNotAlowedInProjectors(tblName string) error {

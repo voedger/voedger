@@ -38,22 +38,49 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 			ac.view(v)
 		case *UseTableStmt:
 			ac.useTable(v)
+		case *UseWorkspaceStmt:
+			ac.useWorkspace(v)
+		case *AlterWorkspaceStmt:
+			ac.alterWorkspace(v)
 		}
 	})
 }
 
 func (c *analyseCtx) useTable(u *UseTableStmt) {
-	if !u.AllTables {
-		name := DefQName{Package: u.Package, Name: u.Name}
-		resolveFunc := func(f *TableStmt) error {
-			if f.Abstract {
-				return ErrUseOfAbstractTable(name.String())
-			}
-			return nil
+	tbl, _, err := resolveTable(DefQName{Package: c.pkg.Ast.Package, Name: u.Table}, c.basicContext)
+	if err != nil {
+		c.stmtErr(&u.Pos, err)
+	} else {
+		if tbl.Abstract {
+			c.stmtErr(&u.Pos, ErrUseOfAbstractTable(string(u.Table)))
 		}
-		if err := resolve(name, c.basicContext, resolveFunc); err != nil {
-			c.stmtErr(&u.Pos, err)
+		// TODO: Only documents allowed to be USEd, not records
+	}
+}
+
+func (c *analyseCtx) useWorkspace(u *UseWorkspaceStmt) {
+	resolveFunc := func(f *WorkspaceStmt) error {
+		if f.Abstract {
+			return ErrUseOfAbstractWorkspace(string(u.Workspace))
 		}
+		return nil
+	}
+	err := resolve[*WorkspaceStmt](DefQName{Package: c.pkg.Ast.Package, Name: u.Workspace}, c.basicContext, resolveFunc)
+	if err != nil {
+		c.stmtErr(&u.Pos, err)
+	}
+}
+
+func (c *analyseCtx) alterWorkspace(u *AlterWorkspaceStmt) {
+	resolveFunc := func(w *WorkspaceStmt, schema *PackageSchemaAST) error {
+		if !w.Alterable && schema != c.pkg {
+			return ErrWorkspaceIsNotAlterable(u.Name.String())
+		}
+		return nil
+	}
+	err := resolveEx[*WorkspaceStmt](u.Name, c.basicContext, resolveFunc)
+	if err != nil {
+		c.stmtErr(&u.Pos, err)
 	}
 }
 
@@ -261,14 +288,8 @@ func (c *analyseCtx) with(with *[]WithItem, statement IStatement) {
 		}
 	}
 
-	if comment == nil && statement.GetComments() != nil { // #484
-		comments := statement.GetComments()
-		if len(*comments) > 0 {
-			cmt := strings.Join(*comments, "\n")
-			*with = append(*with, WithItem{
-				Comment: &cmt,
-			})
-		}
+	if comment != nil {
+		statement.SetComments(strings.Split(*comment.Comment, "\n"))
 	}
 }
 
@@ -310,11 +331,41 @@ func (c *analyseCtx) doType(v *TypeStmt) {
 }
 
 func (c *analyseCtx) workspace(v *WorkspaceStmt) {
-	if v.Descriptor != nil {
-		if v.Inherits != nil {
-			if err := resolve(*v.Inherits, c.basicContext, func(f *WorkspaceStmt) error { return nil }); err != nil {
-				c.stmtErr(&v.Pos, err)
+
+	var chain []DefQName
+	var checkChain func(qn DefQName) error
+
+	checkChain = func(qn DefQName) error {
+		resolveFunc := func(w *WorkspaceStmt) error {
+			if !w.Abstract {
+				return ErrBaseWorkspaceMustBeAbstract
 			}
+			for i := range chain {
+				if chain[i] == qn {
+					return ErrCircularReferenceInInherits
+				}
+			}
+			chain = append(chain, qn)
+			for _, w := range w.Inherits {
+				e := checkChain(w)
+				if e != nil {
+					return e
+				}
+			}
+			return nil
+		}
+		return resolve(qn, c.basicContext, resolveFunc)
+	}
+
+	for _, inherits := range v.Inherits {
+		chain = make([]DefQName, 0)
+		if err := checkChain(inherits); err != nil {
+			c.stmtErr(&v.Pos, err)
+		}
+	}
+	if v.Descriptor != nil {
+		if v.Abstract {
+			c.stmtErr(&v.Pos, ErrAbstractWorkspaceDescriptor)
 		}
 		c.nestedTables(v.Descriptor.Items, appdef.DefKind_CDoc)
 		c.fieldSets(v.Descriptor.Items)
@@ -372,7 +423,7 @@ func (c *analyseCtx) fields(items []TableItemExpr) {
 		if item.RefField != nil {
 			rf := item.RefField
 			for i := range rf.RefDocs {
-				tableStmt, err := resolveTable(rf.RefDocs[i], c.basicContext)
+				tableStmt, _, err := resolveTable(rf.RefDocs[i], c.basicContext)
 				if err != nil {
 					c.stmtErr(&rf.Pos, err)
 					continue
@@ -392,11 +443,22 @@ func (c *analyseCtx) fields(items []TableItemExpr) {
 
 func (c *analyseCtx) getTableInheritanceChain(table *TableStmt) (chain []DefQName, err error) {
 	chain = make([]DefQName, 0)
+	refCycle := func(qname DefQName) bool {
+		for i := range chain {
+			if chain[i] == qname {
+				return true
+			}
+		}
+		return false
+	}
 	var vf func(t *TableStmt) error
 	vf = func(t *TableStmt) error {
 		if t.Inherits != nil {
 			inherited := *t.Inherits
 			if err := resolve(inherited, c.basicContext, func(t *TableStmt) error {
+				if refCycle(inherited) {
+					return ErrCircularReferenceInInherits
+				}
 				chain = append(chain, inherited)
 				return vf(t)
 			}); err != nil {

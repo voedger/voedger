@@ -1,5 +1,11 @@
--- package consists of schema and resources
--- schema consists of few schema files
+/*
+* Copyright (c) 2023-present unTill Pro, Ltd.
+*/
+
+/* 
+* Package consists of schema and resources
+* Schema consists of few schema files
+*/
 SCHEMA main;
 
 IMPORT SCHEMA 'github.com/untillpro/untill';
@@ -8,19 +14,42 @@ IMPORT SCHEMA 'github.com/untillpro/airsbp' AS air;
 -- Declare tag to assign it later to definition(s)
 TAG BackofficeTag;
 
--- Declares ROLE
-ROLE UntillPaymentsUser;
-
-TABLE NestedTable INHERITS CRecord (
+/*
+    Abstract tables can only be used for INHERITance by other tables.
+    INHERITS includes all the fields, nested tables and constraints from an ancestor table.
+    It is not allowed to use abstract tables for:
+        - including into workspaces with USE statement;
+        - declaring as nested table;
+        - specifying in reference fields;
+        - using in projectors;
+        - making CUD in any workspace;
+*/
+ABSTRACT TABLE NestedWithName INHERITS CRecord (
+    /*  Field is added to any table inherited from NestedWithName
+        The current comment is also added to scheme for this field  */
     ItemName text
 );
 
-TABLE ScreenGroup INHERITS CDoc();
+/*
+    Declare a table to use it later as nested.
+    Note: Quotes can be optionally used with identifiers
+*/
+TABLE "NestedTable" INHERITS NestedWithName (
+    ItemDescr text
+);
 
--- Optional quotes for identifiers
-TABLE "TABLE" INHERITS CDoc();
+/*
+    Any declared table must have one of the following tables as a root anchestor:
+        - CDoc (Configuration)
+        - ODoc (Operational)
+        - WDoc (Workflow)
+        - Singleton (Configration singleton)
 
--- TABLE ... INHERITS - declares the inheritance from table. PROJECTORS from the base table are not inherted.
+    Nested tables must have one of the following tables as a root anchestor:
+        - CRecord (Configuration)
+        - ODoc (Operational)
+        - WDoc (Workflow)
+*/
 TABLE TablePlan INHERITS CDoc (
     FState int,
     Name text NOT NULL,
@@ -43,13 +72,16 @@ TABLE TablePlan INHERITS CDoc (
         TableNo int,
         Chairs int
     ),
-    items NestedTable,
+    items NestedTable, -- Include table declared in different place. Must be one of Record types
     ExcludedTableItems TablePlanItem
 ) WITH Comment='Backoffice Table', Tags=(BackofficeTag); -- Optional comment and tags
 
+TABLE ScreenGroup INHERITS CDoc();
 
--- Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC
--- These comments are included in the statement definition, but may be overriden with `WITH Comment=...`
+/*
+    Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC
+    These comments are included in the statement definition, but may be overridden with `WITH Comment=...`
+*/
 TABLE SubscriptionProfile INHERITS Singleton (
     CustomerID text,
     CustomerKind int,
@@ -67,25 +99,19 @@ EXTENSION ENGINE WASM (
 
 );
 
+-- WORKSPACE statement declares the Workspace, descriptor and definitions, allowed in this workspace
 WORKSPACE MyWorkspace (
-    DESCRIPTOR(                     -- Workspace descriptor is always SINGLETONE. Error is thrown on attempt to declare it as WDOC or ODOC
+    DESCRIPTOR(                     -- Workspace descriptor is always SINGLETON
+                                    -- If name omitted, then QName is: <WorkspaceName>+"Descriptor"
+
         air.TypeWithName,           -- Fieldset
         Country text CHECK '^[A-Za-z]{2}$',
         Description text
     );
 
-    -- Declare comments, tags and roles which only available in this workspace
-    TAG PosTag;
+    -- Definitions declared in the workspace are only available in this workspace
+    TAG PosTag;  
     ROLE LocationManager;
-
-    -- Declare rates
-    RATE BackofficeFuncRate1 1000 PER HOUR;
-    RATE BackofficeFuncRate2 100 PER MINUTE PER IP;
-
-    -- It is only allowed create table if it is defined in this workspace, or added with USE statement
-	USE TABLE SubscriptionProfile;
-	USE TABLE untill.*; 
-
     TYPE TypeWithKind (
         Kind int
     );
@@ -93,8 +119,14 @@ WORKSPACE MyWorkspace (
         Origin text,
         Data text
     );
+    RATE BackofficeFuncRate1 1000 PER HOUR;
+    RATE BackofficeFuncRate2 100 PER MINUTE PER IP;
 
+    -- To include table or workspace declared in different place of the schema, they must be USEd:
+	USE TABLE SubscriptionProfile;
+    USE WORKSPACE MyWorkspace;  -- It's now possible to create MyWorkspace in MyWorkspace hierarchy
 
+    -- Declare table within workspace
     TABLE WsTable INHERITS CDoc ( 
         air.TypeWithName,   -- Fieldset
 
@@ -108,12 +140,15 @@ WORKSPACE MyWorkspace (
     -- Workspace-level extensions 
     EXTENSION ENGINE BUILTIN (
 
-        -- Projector can only be declared in workspace.
-        -- A builtin function OrdersCountProjector must exist in package resources.
-        -- INTENTS - lists all storage keys, projector generates intents for
-        -- STATE - lists all storage keys, projector reads state from
-        --      (key consist of Storage Qname, and Entity name, when required by storage)
-        --      (no need to specify in STATE when already listed in INTENTS)
+        /*
+        Projector can only be declared in workspace.
+        
+        A builtin function OrdersCountProjector must exist in package resources.
+            INTENTS - lists all storage keys, projector generates intents for
+            STATE - lists all storage keys, projector reads state from
+                (key consist of Storage Qname, and Entity name, when required by storage)
+                (no need to specify in STATE when already listed in INTENTS)
+        */
         PROJECTOR CountOrders 
             ON COMMAND Orders 
             INTENTS(View OrdersCountView);
@@ -130,10 +165,12 @@ WORKSPACE MyWorkspace (
             ON INSERT TablePlan 
             INTENTS(View TablePlanThumbnails);
 
+        -- Projector triggered by few commands
         PROJECTOR UpdateDashboard 
             ON COMMAND IN (Orders, Orders2) 
             INTENTS(View DashboardView);
 
+        -- Projector triggered by few types of CUD operations
         PROJECTOR UpdateActivePlans 
             ON ACTIVATE OR DEACTIVATE TablePlan 
             INTENTS(View ActiveTablePlansView);
@@ -144,9 +181,12 @@ WORKSPACE MyWorkspace (
             STATE(Http, AppSecret)
             INTENTS(SendMail, View NotificationsHistory);
 
-        -- Commands can only be declared in workspaces
-        -- Command can have optional argument and/or unlogged argument
-        -- Command can return TYPE
+
+        /*         
+        Commands can only be declared in workspaces
+        Command can have optional argument and/or unlogged argument
+        Command can return TYPE 
+        */ 
         COMMAND Orders(air.Order, UNLOGGED air.TypeWithName) RETURNS air.Order;
         
         -- Command can return void (in this case `RETURNS void` may be omitted)
@@ -159,6 +199,8 @@ WORKSPACE MyWorkspace (
 
         -- Qieries can only be declared in workspaces
         QUERY Query1 RETURNS void;
+
+        -- WITH Comment... overrides this comment
         QUERY _Query1() RETURNS air.Order WITH Comment='A comment';
         
         -- Query which can return any value
@@ -173,8 +215,7 @@ WORKSPACE MyWorkspace (
     GRANT EXECUTE ON QUERY TransactionHistory TO LocationUser;
     GRANT EXECUTE ON ALL QUERIES WITH TAG PosTag TO LocationUser;
 
-
-    -- VIEW generated by PROJECTOR. 
+    -- VIEWs generated by the PROJECTOR. 
     -- Primary Key must be declared in View.
     VIEW XZReports(
         Year int32,
@@ -215,11 +256,32 @@ WORKSPACE MyWorkspace (
 
 );
 
-ABSTRACT WORKSPACE AWorkspace (
-    -- Abstract workspaces cannot be created
+/*
+    Abstract workspaces:
+        - Cannot be created
+        - Cannot declare DESCRIPTOR
+        - Cannot be USEd in other workspaces
+        - Can only be used by other workspaces for INHERITance 
+*/
+ABSTRACT WORKSPACE AWorkspace ();
+
+/* 
+    INHERITS includes everything which is declared and/or USEd by other workspace.
+    Possible to inherit from multiple workspaces 
+*/
+WORKSPACE MyWorkspace1 INHERITS AWorkspace, untill.UntillAWorkspace (
+    POOL OF WORKSPACE MyPool ();
 );
 
-WORKSPACE MyWorkspace1 INHERITS AWorkspace (
-    -- Inherits everything declared in AWorkspace
-    POOL OF WORKSPACE MyPool ()
+/*
+    Allow my statements to be used in sys.Profile. 
+    sys.Profile workspace is declared as ALTERABLE, this allows other packages to extend it with ALTER WORKSPACE.
+    We can also ALTER non-alterable workspaces when they are in the same package
+*/
+ALTER WORKSPACE sys.Profile(
+    USE TABLE WsTable;
+    USE WORKSPACE MyWorkspace1; 
 );
+
+-- Declares ROLE
+ROLE UntillPaymentsUser;

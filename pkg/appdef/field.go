@@ -92,10 +92,14 @@ func makeFields(def interface{}) fields {
 	return f
 }
 
+func (f *fields) AddBytesField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder {
+	f.checkAddField(name, DataKind_bytes)
+	f.appendField(name, newCharsField(name, DataKind_bytes, required, restricts...))
+	return f.parent.(IFieldsBuilder)
+}
+
 func (f *fields) AddField(name string, kind DataKind, required bool, comment ...string) IFieldsBuilder {
-	if err := f.checkAddField(name, kind); err != nil {
-		panic(err)
-	}
+	f.checkAddField(name, kind)
 	fld := newField(name, kind, required, false)
 	fld.SetComment(comment...)
 	f.appendField(name, fld)
@@ -103,17 +107,19 @@ func (f *fields) AddField(name string, kind DataKind, required bool, comment ...
 }
 
 func (f *fields) AddRefField(name string, required bool, ref ...QName) IFieldsBuilder {
-	if err := f.checkAddField(name, DataKind_RecordID); err != nil {
-		panic(err)
-	}
+	f.checkAddField(name, DataKind_RecordID)
 	f.appendField(name, newRefField(name, required, ref...))
 	return f.parent.(IFieldsBuilder)
 }
 
+func (f *fields) AddStringField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder {
+	f.checkAddField(name, DataKind_string)
+	f.appendField(name, newCharsField(name, DataKind_string, required, restricts...))
+	return f.parent.(IFieldsBuilder)
+}
+
 func (f *fields) AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder {
-	if err := f.checkAddField(name, kind); err != nil {
-		panic(err)
-	}
+	f.checkAddField(name, kind)
 	if len(vk) == 0 {
 		panic(fmt.Errorf("%v: missed verification kind for field «%s»: %w", f.parentDef().QName(), name, ErrVerificationKindMissed))
 	}
@@ -171,6 +177,15 @@ func (f *fields) RefFieldCount() int {
 	return cnt
 }
 
+func (f *fields) SetFieldComment(name string, comment ...string) IFieldsBuilder {
+	fld := f.fields[name]
+	if fld == nil {
+		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parentDef().QName(), name, ErrNameNotFound))
+	}
+	fld.(ICommentBuilder).SetComment(comment...)
+	return f
+}
+
 func (f *fields) UserFields(cb func(IField)) {
 	f.Fields(func(fld IField) {
 		if !fld.IsSys() {
@@ -194,28 +209,27 @@ func (f *fields) appendField(name string, fld interface{}) {
 	f.fieldsOrdered = append(f.fieldsOrdered, name)
 }
 
-func (f *fields) checkAddField(name string, kind DataKind) error {
+// Panics if invalid add field argument value
+func (f *fields) checkAddField(name string, kind DataKind) {
 	if name == NullName {
-		return fmt.Errorf("%v: empty field name: %w", f.parentDef().QName(), ErrNameMissed)
+		panic(fmt.Errorf("%v: empty field name: %w", f.parentDef().QName(), ErrNameMissed))
 	}
 	if !IsSysField(name) {
 		if ok, err := ValidIdent(name); !ok {
-			return fmt.Errorf("%v: field name «%v» is invalid: %w", f.parentDef().QName(), name, err)
+			panic(fmt.Errorf("%v: field name «%v» is invalid: %w", f.parentDef().QName(), name, err))
 		}
 	}
 	if f.Field(name) != nil {
-		return fmt.Errorf("%v: field «%s» is already exists: %w", f.parentDef().QName(), name, ErrNameUniqueViolation)
+		panic(fmt.Errorf("%v: field «%s» is already exists: %w", f.parentDef().QName(), name, ErrNameUniqueViolation))
 	}
 
 	if k := f.parentDef().Kind(); !k.DataKindAvailable(kind) {
-		return fmt.Errorf("%v: definition kind «%s» does not support fields kind «%s»: %w", f.parentDef().QName(), k.TrimString(), kind.TrimString(), ErrInvalidDataKind)
+		panic(fmt.Errorf("%v: definition kind «%s» does not support fields kind «%s»: %w", f.parentDef().QName(), k.TrimString(), kind.TrimString(), ErrInvalidDataKind))
 	}
 
 	if len(f.fields) >= MaxDefFieldCount {
-		return fmt.Errorf("%v: maximum field count (%d) exceeds: %w", f.parentDef().QName(), MaxDefFieldCount, ErrTooManyFields)
+		panic(fmt.Errorf("%v: maximum field count (%d) exceeds: %w", f.parentDef().QName(), MaxDefFieldCount, ErrTooManyFields))
 	}
-
-	return nil
 }
 
 func (f *fields) parentDef() IDef {
@@ -262,6 +276,26 @@ func newRefField(name string, required bool, ref ...QName) *refField {
 }
 
 func (f refField) Refs() []QName { return f.refs }
+
+// Chars (string or bytes) field.
+//
+// # Implements:
+//   - IStringField
+//   - IBytesField
+type charsField struct {
+	field
+	restricts *fieldRestricts
+}
+
+func newCharsField(name string, kind DataKind, required bool, restricts ...IFieldRestrict) *charsField {
+	f := &charsField{field: makeField(name, kind, required, false)}
+	f.restricts = newFieldRestricts(&f.field, restricts...)
+	return f
+}
+
+func (f charsField) Restricts() IStringFieldRestricts {
+	return f.restricts
+}
 
 // Validates specified fields.
 //

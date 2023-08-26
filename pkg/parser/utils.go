@@ -61,7 +61,8 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 	})
 }
 
-func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt | *WorkspaceStmt](c IStatementCollection, callback func(stmt stmtType)) {
+func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt |
+	*WorkspaceStmt | *AlterWorkspaceStmt](c IStatementCollection, callback func(stmt stmtType)) {
 	c.Iterate(func(stmt interface{}) {
 		if s, ok := stmt.(stmtType); ok {
 			callback(s)
@@ -120,7 +121,7 @@ func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 	return targetPkgSch, nil
 }
 
-func resolveTable(fn DefQName, c *basicContext) (*TableStmt, error) {
+func resolveTable(fn DefQName, c *basicContext) (*TableStmt, *PackageSchemaAST, error) {
 	var item *TableStmt
 	var checkStatement func(stmt interface{})
 	checkStatement = func(stmt interface{}) {
@@ -139,7 +140,7 @@ func resolveTable(fn DefQName, c *basicContext) (*TableStmt, error) {
 
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	iterate(schema.Ast, func(stmt interface{}) {
@@ -147,18 +148,18 @@ func resolveTable(fn DefQName, c *basicContext) (*TableStmt, error) {
 	})
 
 	if item == nil {
-		return nil, ErrUndefined(fn.String())
+		return nil, nil, ErrUndefined(fn.String())
 	}
 
-	return item, nil
+	return item, schema, nil
 }
 
-// when not found, lookup returns (nil, nil)
+// when not found, lookup returns (nil, ?, nil)
 func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt |
-	*WorkspaceStmt | *ViewStmt | *StorageStmt](fn DefQName, c *basicContext) (stmtType, error) {
+	*WorkspaceStmt | *ViewStmt | *StorageStmt](fn DefQName, c *basicContext) (stmtType, *PackageSchemaAST, error) {
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var item stmtType
 	iter := func(s *SchemaAST) {
@@ -174,21 +175,21 @@ func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *Ra
 	iter(schema.Ast)
 
 	if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
-		sysSchema := c.pkgmap[appdef.SysPackage]
-		if sysSchema == nil {
-			return nil, ErrCouldNotImport(appdef.SysPackage)
+		schema = c.pkgmap[appdef.SysPackage]
+		if schema == nil {
+			return nil, nil, ErrCouldNotImport(appdef.SysPackage)
 		}
-		iter(sysSchema.Ast)
+		iter(schema.Ast)
 	}
 
-	return item, nil
+	return item, schema, nil
 }
 
 func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt |
 	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) error {
 	var err error
 	var item stmtType
-	item, err = lookup[stmtType](fn, c)
+	item, _, err = lookup[stmtType](fn, c)
 	if err != nil {
 		return err
 	}
@@ -196,6 +197,21 @@ func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt |
 		return ErrUndefined(fn.String())
 	}
 	return cb(item)
+}
+
+func resolveEx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt |
+	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt](fn DefQName, c *basicContext, cb func(f stmtType, schema *PackageSchemaAST) error) error {
+	var err error
+	var item stmtType
+	var schema *PackageSchemaAST
+	item, schema, err = lookup[stmtType](fn, c)
+	if err != nil {
+		return err
+	}
+	if item == nil {
+		return ErrUndefined(fn.String())
+	}
+	return cb(item, schema)
 }
 
 func maybeSysPkg(pkg Ident) bool {

@@ -24,7 +24,7 @@ import (
 /*
 curl -G --data-urlencode "payload={\"SubjectLogin\": \"paa\", \"ProjectionKey\":[{\"App\":\"Application\",\"Projection\":\"paa.price\",\"WS\":1}, {\"App\":\"Application\",\"Projection\":\"paa.wine_price\",\"WS\":1}]}" https://alpha2.dev.untill.ru/n10n/channel -H "Content-Type: application/json"
 */
-func (s *HTTPService) subscribeAndWatchHandler() http.HandlerFunc {
+func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var (
 			urlParams createChannelParamsType
@@ -65,7 +65,6 @@ func (s *HTTPService) subscribeAndWatchHandler() http.HandlerFunc {
 			logger.Error("failed to write created channel id to client:", err)
 			return
 		}
-		flusher.Flush()
 		for _, projection := range urlParams.ProjectionKey {
 			err = s.n10n.Subscribe(channel, projection)
 			if err != nil {
@@ -74,6 +73,7 @@ func (s *HTTPService) subscribeAndWatchHandler() http.HandlerFunc {
 				return
 			}
 		}
+		flusher.Flush()
 		ch := make(chan in10nmem.UpdateUnit)
 		go func() {
 			defer close(ch)
@@ -112,7 +112,7 @@ func (s *HTTPService) subscribeAndWatchHandler() http.HandlerFunc {
 /*
 curl -G --data-urlencode "payload={\"Channel\": \"a23b2050-b90c-4ed1-adb7-1ecc4f346f2b\", \"ProjectionKey\":[{\"App\":\"Application\",\"Projection\":\"paa.wine_price\",\"WS\":1}]}" https://alpha2.dev.untill.ru/n10n/subscribe -H "Content-Type: application/json"
 */
-func (s *HTTPService) subscribeHandler() http.HandlerFunc {
+func (s *httpService) subscribeHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var parameters subscriberParamsType
 		err := getJsonPayload(req, &parameters)
@@ -134,7 +134,7 @@ func (s *HTTPService) subscribeHandler() http.HandlerFunc {
 /*
 curl -G --data-urlencode "payload={\"Channel\": \"a23b2050-b90c-4ed1-adb7-1ecc4f346f2b\", \"ProjectionKey\":[{\"App\":\"Application\",\"Projection\":\"paa.wine_price\",\"WS\":1}]}" https://alpha2.dev.untill.ru/n10n/unsubscribe -H "Content-Type: application/json"
 */
-func (s *HTTPService) unSubscribeHandler() http.HandlerFunc {
+func (s *httpService) unSubscribeHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var parameters subscriberParamsType
 		err := getJsonPayload(req, &parameters)
@@ -155,7 +155,7 @@ func (s *HTTPService) unSubscribeHandler() http.HandlerFunc {
 
 // curl -X POST "http://localhost:3001/n10n/update" -H "Content-Type: application/json" -d "{\"App\":\"Application\",\"Projection\":\"paa.price\",\"WS\":1}"
 // TODO: eliminate after airs-bp3 integration tests implementation
-func (s *HTTPService) updateHandler() http.HandlerFunc {
+func (s *httpService) updateHandler() http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		var p in10n.ProjectionKey
 		body, err := io.ReadAll(req.Body)

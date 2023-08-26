@@ -6,6 +6,7 @@ package workspace
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -41,18 +42,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			AddValueField(Field_ChildWorkspaceID, appdef.DataKind_int64, true)
 	})
 
-	// CDoc<ChildWorkspace>
-	// many, target app, user profile
-	appDefBuilder.AddCDoc(authnz.QNameCDocChildWorkspace).
-		AddField(authnz.Field_WSName, appdef.DataKind_string, true).
-		AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
-		AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
-		AddField(field_TemplateName, appdef.DataKind_string, false).
-		AddField(Field_TemplateParams, appdef.DataKind_string, false).
-		AddField(authnz.Field_WSClusterID, appdef.DataKind_int32, true).
-		AddField(authnz.Field_WSID, appdef.DataKind_int64, false).    // to be updated afterwards
-		AddField(authnz.Field_WSError, appdef.DataKind_string, false) // to be updated afterwards
-
 	// c.sys.CreateWorkspaceID
 	// target app, (target cluster, base profile WSID)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
@@ -81,20 +70,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			AddValueField(field_IDOfCDocWorkspaceID, appdef.DataKind_RecordID, false) // TODO: not required for backward compatibility. Actually is required
 	})
 
-	// CDoc<WorkspaceID>
-	// target app, (target cluster, base profile WSID)
-	appDefBuilder.AddCDoc(QNameCDocWorkspaceID).
-		AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
-		AddField(Field_OwnerQName, appdef.DataKind_QName, true).
-		AddField(Field_OwnerID, appdef.DataKind_int64, true).
-		AddField(Field_OwnerApp, appdef.DataKind_string, true).
-		AddField(authnz.Field_WSName, appdef.DataKind_string, true).
-		AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
-		AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
-		AddField(field_TemplateName, appdef.DataKind_string, false).
-		AddField(Field_TemplateParams, appdef.DataKind_string, false).
-		AddField(authnz.Field_WSID, appdef.DataKind_int64, false)
-
 	// c.sys.CreateWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandCreateWorkspace,
@@ -112,26 +87,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		appdef.NullQName,
 		execCmdCreateWorkspace(timeFunc, asp, cfg.Name),
 	))
-
-	// singleton CDoc<sys.WorkspaceDescriptor>
-	// target app, new WSID
-	appDefBuilder.AddSingleton(authnz.QNameCDocWorkspaceDescriptor).
-		AddField(Field_OwnerWSID, appdef.DataKind_int64, false). // owner* fields made non-required for app workspaces
-		AddField(Field_OwnerQName, appdef.DataKind_QName, false).
-		AddField(Field_OwnerID, appdef.DataKind_int64, false).
-		AddField(Field_OwnerApp, appdef.DataKind_string, false). // QName -> each target app must know the owner QName -> string
-		AddField(authnz.Field_WSName, appdef.DataKind_string, true).
-		AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
-		AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
-		AddField(field_TemplateName, appdef.DataKind_string, false).
-		AddField(Field_TemplateParams, appdef.DataKind_string, false).
-		AddField(authnz.Field_WSID, appdef.DataKind_int64, false).
-		AddField(Field_CreateError, appdef.DataKind_string, false).
-		AddField(authnz.Field_СreatedAtMs, appdef.DataKind_int64, true).
-		AddField(Field_InitStartedAtMs, appdef.DataKind_int64, false).
-		AddField(Field_InitError, appdef.DataKind_string, false).
-		AddField(Field_InitCompletedAtMs, appdef.DataKind_int64, false).
-		AddField(authnz.Field_Status, appdef.DataKind_int32, false)
 
 	// q.sys.QueryChildWorkspaceByName
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
@@ -168,6 +123,8 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		provideSyncProjectorChildWorkspaceIdxFactory(),
 		provideAsyncProjectorWorkspaceIDIdx(),
 	)
+
+	apps.Parse(schemasFS, appdef.SysPackage, ep)
 }
 
 // proj.sys.ChildWorkspaceIdx
