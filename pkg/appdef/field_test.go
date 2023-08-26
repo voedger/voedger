@@ -155,7 +155,7 @@ func Test_SetFieldComment(t *testing.T) {
 	})
 }
 
-func Test_SetVerifiedField(t *testing.T) {
+func Test_SetFieldVerify(t *testing.T) {
 	require := require.New(t)
 
 	obj := New().AddObject(NewQName("test", "object"))
