@@ -405,6 +405,8 @@ type IFieldsBuilder interface {
 	//   - if field with name is already exists,
 	//   - if data kind is not allowed by definition kind,
 	//   - if no verification kinds are specified
+	//
+	//Deprecated: use SetVerifiedField instead
 	AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder
 
 	// Sets fields comment.
@@ -414,6 +416,14 @@ type IFieldsBuilder interface {
 	// # Panics:
 	//   - if field not found.
 	SetFieldComment(name string, comment ...string) IFieldsBuilder
+
+	// Sets verification kind for specified field.
+	//
+	// If not verification kinds are specified then it means that field is not verifiable.
+	//
+	// # Panics:
+	//   - if field not found.
+	SetFieldVerify(name string, vk ...VerificationKind) IFieldsBuilder
 }
 
 // Definitions with containers:
