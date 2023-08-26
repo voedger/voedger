@@ -21,24 +21,6 @@ const (
 	nameWRecord   = "WRecord"
 )
 
-const (
-	sysInt       = "int"
-	sysInt32     = "int32"
-	sysInt64     = "int64"
-	sysFloat     = "float"
-	sysFloat32   = "float32"
-	sysFloat64   = "float64"
-	sysQName     = "qname"
-	sysBool      = "bool"
-	sysString    = "text"
-	sysBytes     = "bytes"
-	sysBlob      = "blob"
-	sysTimestamp = "timestamp"
-	sysCurrency  = "currency"
-
-	sysVoid = "void"
-)
-
 const rootWorkspaceName = "Workspace"
 
 const maxNestedTableContainerOccurrences = 100 // FIXME: 100 container occurrences
