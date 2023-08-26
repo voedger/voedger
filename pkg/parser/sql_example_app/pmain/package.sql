@@ -59,7 +59,7 @@ TABLE TablePlan INHERITS CDoc (
     VerifiableField varchar NOT NULL VERIFIABLE, -- Verifiable field
     Int1 int DEFAULT 1 CHECK(Int1 >= 1 AND Int2 < 10000),  -- Expressions evaluating to TRUE or UNKNOWN succeed.
     Text1 varchar DEFAULT 'a',
-    "int" int, -- optional quotes
+    "bytes" bytes, -- optional quotes
     ScreenGroupRef ref(ScreenGroup), 
     AnyTableRef ref,
     FewTablesRef ref(ScreenGroup, TablePlan) NOT NULL,
