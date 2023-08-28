@@ -39,7 +39,7 @@ func Example() {
 		}
 	}
 
-	// how to inspected builded AppDef with CDoc
+	// how to inspect builded AppDef with CDoc
 	{
 		fmt.Printf("%d definitions\n", app.DefCount())
 

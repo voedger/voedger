@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func extractStatement(s any) interface{} {
@@ -26,7 +25,7 @@ func extractStatement(s any) interface{} {
 }
 
 func CompareParam(left, right FunctionParam) bool {
-	var lt, rt TypeQName
+	var lt, rt DataTypeOrDef
 	if left.NamedParam != nil {
 		lt = left.NamedParam.Type
 	} else {
@@ -121,7 +120,7 @@ func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 	return targetPkgSch, nil
 }
 
-func resolveTable(fn DefQName, c *basicContext) (*TableStmt, error) {
+func resolveTable(fn DefQName, c *basicContext) (*TableStmt, *PackageSchemaAST, error) {
 	var item *TableStmt
 	var checkStatement func(stmt interface{})
 	checkStatement = func(stmt interface{}) {
@@ -140,7 +139,7 @@ func resolveTable(fn DefQName, c *basicContext) (*TableStmt, error) {
 
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	iterate(schema.Ast, func(stmt interface{}) {
@@ -148,18 +147,18 @@ func resolveTable(fn DefQName, c *basicContext) (*TableStmt, error) {
 	})
 
 	if item == nil {
-		return nil, ErrUndefined(fn.String())
+		return nil, nil, ErrUndefined(fn.String())
 	}
 
-	return item, nil
+	return item, schema, nil
 }
 
-// when not found, lookup returns (nil, nil)
+// when not found, lookup returns (nil, ?, nil)
 func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt |
-	*WorkspaceStmt | *ViewStmt | *StorageStmt](fn DefQName, c *basicContext) (stmtType, error) {
+	*WorkspaceStmt | *ViewStmt | *StorageStmt](fn DefQName, c *basicContext) (stmtType, *PackageSchemaAST, error) {
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var item stmtType
 	iter := func(s *SchemaAST) {
@@ -175,21 +174,21 @@ func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *Ra
 	iter(schema.Ast)
 
 	if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
-		sysSchema := c.pkgmap[appdef.SysPackage]
-		if sysSchema == nil {
-			return nil, ErrCouldNotImport(appdef.SysPackage)
+		schema = c.pkgmap[appdef.SysPackage]
+		if schema == nil {
+			return nil, nil, ErrCouldNotImport(appdef.SysPackage)
 		}
-		iter(sysSchema.Ast)
+		iter(schema.Ast)
 	}
 
-	return item, nil
+	return item, schema, nil
 }
 
 func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt |
 	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) error {
 	var err error
 	var item stmtType
-	item, err = lookup[stmtType](fn, c)
+	item, _, err = lookup[stmtType](fn, c)
 	if err != nil {
 		return err
 	}
@@ -197,6 +196,21 @@ func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt |
 		return ErrUndefined(fn.String())
 	}
 	return cb(item)
+}
+
+func resolveEx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt |
+	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt](fn DefQName, c *basicContext, cb func(f stmtType, schema *PackageSchemaAST) error) error {
+	var err error
+	var item stmtType
+	var schema *PackageSchemaAST
+	item, schema, err = lookup[stmtType](fn, c)
+	if err != nil {
+		return err
+	}
+	if item == nil {
+		return ErrUndefined(fn.String())
+	}
+	return cb(item, schema)
 }
 
 func maybeSysPkg(pkg Ident) bool {
@@ -226,97 +240,41 @@ func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
 	}
 }
 
-func isVoid(pkg Ident, name Ident) bool {
-	if maybeSysPkg(pkg) {
-		return name == sysVoid
+func dataTypeToDataKind(t DataType) appdef.DataKind {
+	if t.Blob {
+		return appdef.DataKind_RecordID
 	}
-	return false
-}
-
-func isAny(pkg Ident, name Ident) bool {
-	if maybeSysPkg(pkg) {
-		return string(name) == istructs.QNameANY.Entity()
-	}
-	return false
-}
-
-func getSysDataKind(name Ident) appdef.DataKind {
-	if name == sysInt32 || name == sysInt {
-		return appdef.DataKind_int32
-	}
-	if name == sysInt64 {
-		return appdef.DataKind_int64
-	}
-	if name == sysFloat32 || name == sysFloat {
-		return appdef.DataKind_float32
-	}
-	if name == sysFloat64 {
-		return appdef.DataKind_float64
-	}
-	if name == sysQName {
-		return appdef.DataKind_QName
-	}
-	if name == sysBool {
+	if t.Bool {
 		return appdef.DataKind_bool
 	}
-	if name == sysString {
+	if t.Bytes != nil {
+		return appdef.DataKind_bytes
+	}
+	if t.Currency {
+		return appdef.DataKind_int64
+	}
+	if t.Float32 {
+		return appdef.DataKind_float32
+	}
+	if t.Float64 {
+		return appdef.DataKind_float64
+	}
+	if t.Int32 {
+		return appdef.DataKind_int32
+	}
+	if t.Int64 {
+		return appdef.DataKind_int64
+	}
+	if t.QName {
+		return appdef.DataKind_QName
+	}
+	if t.Varchar != nil {
 		return appdef.DataKind_string
 	}
-	if name == sysBytes {
-		return appdef.DataKind_bytes
-	}
-	if name == sysBlob {
-		return appdef.DataKind_RecordID
-	}
-	if name == sysTimestamp {
-		return appdef.DataKind_int64
-	}
-	if name == sysCurrency {
+	if t.Timestamp {
 		return appdef.DataKind_int64
 	}
 	return appdef.DataKind_null
-}
-
-func getTypeDataKind(t TypeQName) appdef.DataKind {
-	if maybeSysPkg(t.Package) {
-		return getSysDataKind(t.Name)
-	}
-	return appdef.DataKind_null
-}
-
-func getDefDataKind(pkg Ident, name Ident) appdef.DataKind {
-	if maybeSysPkg(pkg) {
-		return getSysDataKind(name)
-	}
-	return appdef.DataKind_null
-}
-
-func viewFieldDataKind(f *ViewField) appdef.DataKind {
-	if f.Type.Bool {
-		return appdef.DataKind_bool
-	}
-	if f.Type.Bytes {
-		return appdef.DataKind_bytes
-	}
-	if f.Type.Float32 {
-		return appdef.DataKind_float32
-	}
-	if f.Type.Float64 {
-		return appdef.DataKind_float64
-	}
-	if f.Type.Id {
-		return appdef.DataKind_RecordID
-	}
-	if f.Type.Int32 {
-		return appdef.DataKind_int32
-	}
-	if f.Type.Int64 {
-		return appdef.DataKind_int64
-	}
-	if f.Type.QName {
-		return appdef.DataKind_QName
-	}
-	return appdef.DataKind_string
 }
 
 func buildQname(ctx *buildContext, pkg Ident, name Ident) appdef.QName {

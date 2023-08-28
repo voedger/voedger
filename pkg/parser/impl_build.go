@@ -43,6 +43,7 @@ func (c *buildContext) build() error {
 		c.queries,
 		c.workspaces,
 		c.alterWorkspaces,
+		c.inheritedWorkspaces,
 	}
 	for _, step := range steps {
 		if err := step(); err != nil {
@@ -96,27 +97,19 @@ func (c *buildContext) workspaces() error {
 		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(w *WorkspaceStmt) {
 			qname := schema.Ast.NewQName(w.Name)
+			bld := c.builder.AddWorkspace(qname)
 			c.wsBuildCtxs[w] = &wsBuildCtx{
 				schema:  schema,
 				qname:   qname,
-				builder: c.builder.AddWorkspace(qname),
+				builder: bld,
 			}
+			c.addComments(w, bld)
 		})
 	}
 
 	var iter func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection)
 
 	iter = func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection) {
-
-		for _, inherits := range ws.Inherits {
-			baseWs, err := lookup[*WorkspaceStmt](inherits, &c.basicContext)
-			if err != nil {
-				c.stmtErr(&ws.Pos, err)
-				return
-			}
-			iter(baseWs, wsctx, baseWs)
-		}
-
 		coll.Iterate(func(stmt interface{}) {
 			c.useStmtInWs(wsctx, string(wsctx.schema.Ast.Package), stmt)
 			if collection, ok := stmt.(IStatementCollection); ok {
@@ -128,26 +121,13 @@ func (c *buildContext) workspaces() error {
 	}
 
 	for w, ctx := range c.wsBuildCtxs {
-		if !w.Abstract {
-			c.pkg = ctx.schema
-			iter(w, ctx, w)
-
-			// TODO: explicit inheritance from sys.Workspace must not be allowed
-
-			// include sys.Workspace
-			rootWs, err := lookup[*WorkspaceStmt](DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName}, &c.basicContext)
-			if err != nil {
-				c.stmtErr(&w.Pos, err)
-				continue
-			}
-			iter(rootWs, ctx, rootWs)
-
-			if w.Abstract {
-				ctx.builder.SetAbstract()
-			}
-			if w.Descriptor != nil {
-				ctx.builder.SetDescriptor(appdef.NewQName(string(ctx.schema.Ast.Package), w.Descriptor.GetName()))
-			}
+		c.pkg = ctx.schema
+		iter(w, ctx, w)
+		if w.Abstract {
+			ctx.builder.SetAbstract()
+		}
+		if w.Descriptor != nil {
+			ctx.builder.SetDescriptor(appdef.NewQName(string(ctx.schema.Ast.Package), w.Descriptor.GetName()))
 		}
 	}
 	return nil
@@ -170,8 +150,11 @@ func (c *buildContext) alterWorkspaces() error {
 				})
 			}
 
-			err := resolve[*WorkspaceStmt](a.Name, &c.basicContext, func(f *WorkspaceStmt) error {
-				iter(c.wsBuildCtxs[f], a)
+			err := resolveEx[*WorkspaceStmt](a.Name, &c.basicContext, func(w *WorkspaceStmt, pkg *PackageSchemaAST) error {
+				if !w.Alterable && schema != pkg {
+					return ErrWorkspaceIsNotAlterable(w.GetName())
+				}
+				iter(c.wsBuildCtxs[w], a)
 				return nil
 			})
 
@@ -183,11 +166,65 @@ func (c *buildContext) alterWorkspaces() error {
 	return nil
 }
 
+func (c *buildContext) addDefsFromCtx(srcCtx *wsBuildCtx, destBuilder appdef.IWorkspaceBuilder) {
+	srcCtx.builder.Defs(func(i appdef.IDef) {
+		destBuilder.AddDef(i.QName())
+	})
+}
+
+func (c *buildContext) inheritedWorkspaces() error {
+
+	sysWorkspace, _, err := lookup[*WorkspaceStmt](DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName}, &c.basicContext)
+	if err != nil {
+		return ErrSysWorkspaceNotFound
+	}
+
+	var addFromInheritedWs func(ws *WorkspaceStmt, wsctx *wsBuildCtx)
+	addFromInheritedWs = func(ws *WorkspaceStmt, wsctx *wsBuildCtx) {
+
+		inheritsAnything := false
+
+		for _, inherits := range ws.Inherits {
+
+			inheritsAnything = true
+			baseWs, _, err := lookup[*WorkspaceStmt](inherits, &c.basicContext)
+			if err != nil {
+				c.stmtErr(&ws.Pos, err)
+				return
+			}
+			if baseWs == sysWorkspace {
+				c.stmtErr(&ws.Pos, ErrInheritanceFromSysWorkspaceNotAllowed)
+				return
+			}
+			addFromInheritedWs(baseWs, wsctx)
+			c.addDefsFromCtx(c.wsBuildCtxs[baseWs], wsctx.builder)
+		}
+
+		if !inheritsAnything {
+			c.addDefsFromCtx(c.wsBuildCtxs[sysWorkspace], wsctx.builder)
+		}
+	}
+
+	for w, ctx := range c.wsBuildCtxs {
+		c.pkg = ctx.schema
+		addFromInheritedWs(w, ctx)
+	}
+	return nil
+}
+
+func (c *buildContext) addComments(s IStatement, builder appdef.ICommentBuilder) {
+	comments := s.GetComments()
+	if len(comments) > 0 {
+		builder.SetComment(comments...)
+	}
+}
+
 func (c *buildContext) types() error {
 	for _, schema := range c.pkgmap {
 		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(typ *TypeStmt) {
 			c.pushDef(typ.Name, appdef.DefKind_Object)
+			c.addComments(typ, c.defCtx().defBuilder.(appdef.ICommentBuilder))
 			c.addTableItems(typ.Items)
 			c.popDef()
 		})
@@ -201,18 +238,38 @@ func (c *buildContext) views() error {
 		iterateStmt(schema.Ast, func(view *ViewStmt) {
 			qname := c.pkg.Ast.NewQName(view.Name)
 			vb := c.builder.AddView(qname)
+			c.addComments(view, vb)
 			for i := range view.Fields {
 				f := &view.Fields[i]
-				if f.Field != nil {
-					datakind := viewFieldDataKind(f.Field)
-					if contains(view.pkRef.ClusteringColumnsFields, f.Field.Name) {
-						vb.AddClustColumn(string(f.Field.Name), datakind)
-					} else if contains(view.pkRef.PartitionKeyFields, f.Field.Name) {
-						vb.AddPartField(string(f.Field.Name), datakind)
-					} else {
-						vb.AddValueField(string(f.Field.Name), datakind, f.Field.NotNull)
-					}
+
+				if f.PrimaryKey != nil {
+					continue
 				}
+
+				var datakind appdef.DataKind
+				var fieldname Ident
+				var notnull bool
+
+				if f.Field != nil {
+					// TODO: strings/bytes with limitations
+					datakind = dataTypeToDataKind(f.Field.Type)
+					fieldname = f.Field.Name
+					notnull = f.Field.NotNull
+				} else if f.RefField != nil {
+					// TODO: support references
+					datakind = appdef.DataKind_RecordID
+					fieldname = f.RefField.Name
+					notnull = f.RefField.NotNull
+				}
+
+				if contains(view.pkRef.ClusteringColumnsFields, fieldname) {
+					vb.AddClustColumn(string(fieldname), datakind)
+				} else if contains(view.pkRef.PartitionKeyFields, fieldname) {
+					vb.AddPartField(string(fieldname), datakind)
+				} else {
+					vb.AddValueField(string(fieldname), datakind, notnull)
+				}
+
 			}
 		})
 	}
@@ -225,16 +282,17 @@ func (c *buildContext) commands() error {
 		iterateStmt(schema.Ast, func(cmd *CommandStmt) {
 			qname := c.pkg.Ast.NewQName(cmd.Name)
 			b := c.builder.AddCommand(qname)
-			if cmd.Arg != nil && !isVoid(cmd.Arg.Package, cmd.Arg.Name) {
-				argQname := buildQname(c, cmd.Arg.Package, cmd.Arg.Name)
+			c.addComments(cmd, b)
+			if cmd.Arg != nil && cmd.Arg.Def != nil {
+				argQname := buildQname(c, cmd.Arg.Def.Package, cmd.Arg.Def.Name)
 				b.SetArg(argQname)
 			}
-			if cmd.UnloggedArg != nil && !isVoid(cmd.UnloggedArg.Package, cmd.UnloggedArg.Name) {
-				argQname := buildQname(c, cmd.UnloggedArg.Package, cmd.UnloggedArg.Name)
+			if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
+				argQname := buildQname(c, cmd.UnloggedArg.Def.Package, cmd.UnloggedArg.Def.Name)
 				b.SetUnloggedArg(argQname)
 			}
-			if cmd.Returns != nil && !isVoid(cmd.Returns.Package, cmd.Returns.Name) {
-				retQname := buildQname(c, cmd.Returns.Package, cmd.Returns.Name)
+			if cmd.Returns != nil && cmd.Returns.Def != nil {
+				retQname := buildQname(c, cmd.Returns.Def.Package, cmd.Returns.Def.Name)
 				b.SetResult(retQname)
 			}
 			if cmd.Engine.WASM {
@@ -253,16 +311,17 @@ func (c *buildContext) queries() error {
 		iterateStmt(schema.Ast, func(q *QueryStmt) {
 			qname := c.pkg.Ast.NewQName(q.Name)
 			b := c.builder.AddQuery(qname)
-			if q.Arg != nil && !isVoid(q.Arg.Package, q.Arg.Name) {
-				argQname := buildQname(c, q.Arg.Package, q.Arg.Name)
+			c.addComments(q, b)
+			if q.Arg != nil && q.Arg.Def != nil {
+				argQname := buildQname(c, q.Arg.Def.Package, q.Arg.Def.Name)
 				b.SetArg(argQname)
 			}
 
-			if isAny(q.Returns.Package, q.Returns.Name) {
+			if q.Returns.Any {
 				b.SetResult(istructs.QNameANY)
 			} else {
-				if !isVoid(q.Returns.Package, q.Returns.Name) {
-					retQname := buildQname(c, q.Returns.Package, q.Returns.Name)
+				if q.Returns.Def != nil {
+					retQname := buildQname(c, q.Returns.Def.Package, q.Returns.Def.Name)
 					b.SetResult(retQname)
 				}
 			}
@@ -310,6 +369,7 @@ func (c *buildContext) workspaceDescriptor(schema *PackageSchemaAST, w *Workspac
 			return
 		}
 		c.pushDef(w.Descriptor.Name, appdef.DefKind_CDoc)
+		c.addComments(w.Descriptor, c.defCtx().defBuilder.(appdef.ICommentBuilder))
 		c.addTableItems(w.Descriptor.Items)
 		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
 		c.popDef()
@@ -327,12 +387,13 @@ func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt) {
 		return
 	}
 	c.pushDef(table.Name, table.tableDefKind)
+	c.addComments(table, c.defCtx().defBuilder.(appdef.ICommentBuilder))
 	c.fillTable(table)
 	if table.singletone {
 		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
 	}
 	if table.Abstract {
-		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetAbstract()
+		c.defCtx().defBuilder.(appdef.IWithAbstractBuilder).SetAbstract()
 	}
 	c.popDef()
 }
@@ -345,7 +406,7 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
 	refs := make([]appdef.QName, 0)
 	errors := false
 	for i := range refField.RefDocs {
-		tableStmt, err := resolveTable(refField.RefDocs[i], &c.basicContext)
+		tableStmt, schema, err := resolveTable(refField.RefDocs[i], &c.basicContext)
 		if err != nil {
 			c.stmtErr(&refField.Pos, err)
 			errors = true
@@ -355,6 +416,7 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
 			c.stmtErr(&refField.Pos, err)
 			errors = true
 		}
+		refs = append(refs, appdef.NewQName(string(schema.Ast.Package), string(refField.RefDocs[i].Name)))
 	}
 	if !errors {
 		c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddRefField(string(refField.Name), refField.NotNull, refs...)
@@ -362,35 +424,59 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
 }
 
 func (c *buildContext) addFieldToDef(field *FieldExpr) {
-	sysDataKind := getTypeDataKind(*field.Type)
-	if sysDataKind != appdef.DataKind_null {
-		if field.Type.IsArray {
-			c.stmtErr(&field.Pos, ErrArrayFieldsNotSupportedHere)
-			return
-		}
+
+	if field.Type.DataType != nil { // embedded type
 		if err := c.defCtx().checkName(string(field.Name)); err != nil {
 			c.stmtErr(&field.Pos, err)
 			return
 		}
-		if field.Verifiable {
-			// TODO: Support different verification kindsbuilder, &c
-			c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddVerifiedField(string(field.Name), sysDataKind, field.NotNull, appdef.VerificationKind_EMail)
+
+		bld := c.defCtx().defBuilder.(appdef.IFieldsBuilder)
+		fieldName := string(field.Name)
+		sysDataKind := dataTypeToDataKind(*field.Type.DataType)
+
+		if field.Type.DataType.Bytes != nil {
+			if field.Type.DataType.Bytes.MaxLen != nil {
+				bld.AddBytesField(fieldName, field.NotNull, appdef.MaxLen(*field.Type.DataType.Bytes.MaxLen))
+			} else {
+				bld.AddBytesField(fieldName, field.NotNull)
+			}
+		} else if field.Type.DataType.Varchar != nil {
+			restricts := make([]appdef.IFieldRestrict, 0)
+			if field.Type.DataType.Varchar.MaxLen != nil {
+				restricts = append(restricts, appdef.MaxLen(*field.Type.DataType.Varchar.MaxLen))
+			}
+			if field.CheckRegexp != nil {
+				restricts = append(restricts, appdef.Pattern(*field.CheckRegexp))
+			}
+			bld.AddStringField(fieldName, field.NotNull, restricts)
 		} else {
-			c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddField(string(field.Name), sysDataKind, field.NotNull)
+			bld.AddField(fieldName, sysDataKind, field.NotNull)
 		}
-	} else {
+
+		if field.Verifiable {
+			bld.SetFieldVerify(fieldName, appdef.VerificationKind_EMail)
+			// TODO: Support different verification kindsbuilder, &c
+		}
+
+		comments := field.Statement.GetComments()
+		if len(comments) > 0 {
+			bld.SetFieldComment(fieldName, comments...)
+		}
+
+	} else { // field.Type.Def
 		// Record?
-		pkg := field.Type.Package
+		pkg := field.Type.Def.Package
 		if pkg == "" {
 			pkg = c.pkg.Ast.Package
 		}
-		qname := appdef.NewQName(string(pkg), string(field.Type.Name))
+		qname := appdef.NewQName(string(pkg), string(field.Type.Def.Name))
 		wrec := c.builder.WRecord(qname)
 		crec := c.builder.CRecord(qname)
 		orec := c.builder.ORecord(qname)
 
 		if wrec == nil && orec == nil && crec == nil { // not yet built
-			tbl, err := lookup[*TableStmt](DefQName{Package: Ident(qname.Pkg()), Name: Ident(qname.Entity())}, &c.basicContext)
+			tbl, _, err := lookup[*TableStmt](DefQName{Package: Ident(qname.Pkg()), Name: Ident(qname.Entity())}, &c.basicContext)
 			if err != nil {
 				c.stmtErr(&field.Pos, err)
 				return

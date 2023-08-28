@@ -5,6 +5,7 @@
 package parser
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -47,7 +48,7 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 }
 
 func (c *analyseCtx) useTable(u *UseTableStmt) {
-	tbl, err := resolveTable(DefQName{Package: c.pkg.Ast.Package, Name: u.Table}, c.basicContext)
+	tbl, _, err := resolveTable(DefQName{Package: c.pkg.Ast.Package, Name: u.Table}, c.basicContext)
 	if err != nil {
 		c.stmtErr(&u.Pos, err)
 	} else {
@@ -72,13 +73,13 @@ func (c *analyseCtx) useWorkspace(u *UseWorkspaceStmt) {
 }
 
 func (c *analyseCtx) alterWorkspace(u *AlterWorkspaceStmt) {
-	resolveFunc := func(f *WorkspaceStmt) error {
-		if !f.Alterable {
+	resolveFunc := func(w *WorkspaceStmt, schema *PackageSchemaAST) error {
+		if !w.Alterable && schema != c.pkg {
 			return ErrWorkspaceIsNotAlterable(u.Name.String())
 		}
 		return nil
 	}
-	err := resolve[*WorkspaceStmt](u.Name, c.basicContext, resolveFunc)
+	err := resolveEx[*WorkspaceStmt](u.Name, c.basicContext, resolveFunc)
 	if err != nil {
 		c.stmtErr(&u.Pos, err)
 	}
@@ -91,16 +92,31 @@ func (c *analyseCtx) view(view *ViewStmt) {
 		fe := view.Fields[i]
 		if fe.PrimaryKey != nil {
 			if view.pkRef != nil {
-				c.stmtErr(&fe.Pos, ErrPrimaryKeyRedeclared)
+				c.stmtErr(&fe.PrimaryKey.Pos, ErrPrimaryKeyRedeclared)
 			} else {
 				view.pkRef = fe.PrimaryKey
 			}
 		}
 		if fe.Field != nil {
-			if _, ok := fields[string(fe.Field.Name)]; ok {
-				c.stmtErr(&fe.Pos, ErrRedeclared(string(fe.Field.Name)))
+			f := fe.Field
+			if _, ok := fields[string(f.Name)]; ok {
+				c.stmtErr(&f.Pos, ErrRedeclared(string(f.Name)))
 			} else {
-				fields[string(fe.Field.Name)] = i
+				fields[string(f.Name)] = i
+			}
+		}
+		if fe.RefField != nil {
+			rf := fe.RefField
+			for i := range rf.RefDocs {
+				tableStmt, _, err := resolveTable(rf.RefDocs[i], c.basicContext)
+				if err != nil {
+					c.stmtErr(&rf.Pos, err)
+					continue
+				}
+				if tableStmt.Abstract {
+					c.stmtErr(&rf.Pos, ErrReferenceToAbstractTable(rf.RefDocs[i].String()))
+					continue
+				}
 			}
 		}
 	}
@@ -111,57 +127,35 @@ func (c *analyseCtx) view(view *ViewStmt) {
 }
 
 func (c *analyseCtx) command(v *CommandStmt) {
-	if v.Arg != nil && !isVoid(v.Arg.Package, v.Arg.Name) {
-		if getDefDataKind(v.Arg.Package, v.Arg.Name) == appdef.DataKind_null {
-			if err := resolve(*v.Arg, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
-				c.stmtErr(&v.Pos, err)
-			}
-		} else {
-			c.stmtErr(&v.Pos, ErrOnlyTypeOrVoidAllowedForArgument)
+	if v.Arg != nil && v.Arg.Def != nil {
+		if err := resolve(*v.Arg.Def, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
+			c.stmtErr(&v.Pos, err)
 		}
 	}
-	if v.UnloggedArg != nil && !isVoid(v.UnloggedArg.Package, v.UnloggedArg.Name) {
-		if getDefDataKind(v.UnloggedArg.Package, v.UnloggedArg.Name) == appdef.DataKind_null {
-			if err := resolve(*v.UnloggedArg, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
-				c.stmtErr(&v.Pos, err)
-			}
-		} else {
-			c.stmtErr(&v.Pos, ErrOnlyTypeOrVoidAllowedForArgument)
+	if v.UnloggedArg != nil && v.UnloggedArg.Def != nil {
+		if err := resolve(*v.UnloggedArg.Def, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
+			c.stmtErr(&v.Pos, err)
 		}
 	}
-	if v.Returns != nil && !isVoid(v.Returns.Package, v.Returns.Name) {
-		if getDefDataKind(v.Returns.Package, v.Returns.Name) == appdef.DataKind_null {
-			if err := resolve(*v.Returns, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
-				c.stmtErr(&v.Pos, err)
-			}
-		} else {
-			c.stmtErr(&v.Pos, ErrOnlyTypeOrVoidAllowedForResult)
+	if v.Returns != nil && v.Returns.Def != nil {
+		if err := resolve(*v.Returns.Def, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
+			c.stmtErr(&v.Pos, err)
 		}
 	}
 	c.with(&v.With, v)
 }
 
 func (c *analyseCtx) query(v *QueryStmt) {
-	if v.Arg != nil && !isVoid(v.Arg.Package, v.Arg.Name) {
-		if getDefDataKind(v.Arg.Package, v.Arg.Name) == appdef.DataKind_null {
-			if err := resolve(*v.Arg, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
-				c.stmtErr(&v.Pos, err)
-			}
-		} else {
-			c.stmtErr(&v.Pos, ErrOnlyTypeOrVoidAllowedForArgument)
-		}
-	}
-	if !isAny(v.Returns.Package, v.Returns.Name) {
-		if !isVoid(v.Returns.Package, v.Returns.Name) {
-			if getDefDataKind(v.Returns.Package, v.Returns.Name) == appdef.DataKind_null {
-				if err := resolve(v.Returns, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
-					c.stmtErr(&v.Pos, err)
-				}
-			} else {
-				c.stmtErr(&v.Pos, ErrOnlyTypeOrVoidAllowedForResult)
-			}
+	if v.Arg != nil && v.Arg.Def != nil {
+		if err := resolve(*v.Arg.Def, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
+			c.stmtErr(&v.Pos, err)
 		}
 
+	}
+	if v.Returns.Def != nil {
+		if err := resolve(*v.Returns.Def, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
+			c.stmtErr(&v.Pos, err)
+		}
 	}
 	c.with(&v.With, v)
 
@@ -288,14 +282,8 @@ func (c *analyseCtx) with(with *[]WithItem, statement IStatement) {
 		}
 	}
 
-	if comment == nil && statement.GetComments() != nil { // #484
-		comments := statement.GetComments()
-		if len(*comments) > 0 {
-			cmt := strings.Join(*comments, "\n")
-			*with = append(*with, WithItem{
-				Comment: &cmt,
-			})
-		}
+	if comment != nil {
+		statement.SetComments(strings.Split(*comment.Comment, "\n"))
 	}
 }
 
@@ -334,17 +322,39 @@ func (c *analyseCtx) doType(v *TypeStmt) {
 		}
 	}
 	c.fieldSets(v.Items)
+	c.fields(v.Items)
 }
 
 func (c *analyseCtx) workspace(v *WorkspaceStmt) {
-	for _, inherits := range v.Inherits {
+
+	var chain []DefQName
+	var checkChain func(qn DefQName) error
+
+	checkChain = func(qn DefQName) error {
 		resolveFunc := func(w *WorkspaceStmt) error {
 			if !w.Abstract {
 				return ErrBaseWorkspaceMustBeAbstract
 			}
+			for i := range chain {
+				if chain[i] == qn {
+					return ErrCircularReferenceInInherits
+				}
+			}
+			chain = append(chain, qn)
+			for _, w := range w.Inherits {
+				e := checkChain(w)
+				if e != nil {
+					return e
+				}
+			}
 			return nil
 		}
-		if err := resolve(inherits, c.basicContext, resolveFunc); err != nil {
+		return resolve(qn, c.basicContext, resolveFunc)
+	}
+
+	for _, inherits := range v.Inherits {
+		chain = make([]DefQName, 0)
+		if err := checkChain(inherits); err != nil {
 			c.stmtErr(&v.Pos, err)
 		}
 	}
@@ -405,10 +415,28 @@ func (c *analyseCtx) fieldSets(items []TableItemExpr) {
 func (c *analyseCtx) fields(items []TableItemExpr) {
 	for i := range items {
 		item := items[i]
+		if item.Field != nil {
+			field := item.Field
+			if field.CheckRegexp != nil {
+				if field.Type.DataType != nil && field.Type.DataType.Varchar != nil {
+					_, err := regexp.Compile(*field.CheckRegexp)
+					if err != nil {
+						c.stmtErr(&field.Pos, ErrCheckRegexpErr(err))
+					}
+				} else {
+					c.stmtErr(&field.Pos, ErrRegexpCheckOnlyForVarcharField)
+				}
+			}
+			if field.Type.DataType != nil && field.Type.DataType.Varchar != nil && field.Type.DataType.Varchar.MaxLen != nil {
+				if *field.Type.DataType.Varchar.MaxLen > appdef.MaxFieldLength {
+					c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+				}
+			}
+		}
 		if item.RefField != nil {
 			rf := item.RefField
 			for i := range rf.RefDocs {
-				tableStmt, err := resolveTable(rf.RefDocs[i], c.basicContext)
+				tableStmt, _, err := resolveTable(rf.RefDocs[i], c.basicContext)
 				if err != nil {
 					c.stmtErr(&rf.Pos, err)
 					continue
@@ -428,11 +456,22 @@ func (c *analyseCtx) fields(items []TableItemExpr) {
 
 func (c *analyseCtx) getTableInheritanceChain(table *TableStmt) (chain []DefQName, err error) {
 	chain = make([]DefQName, 0)
+	refCycle := func(qname DefQName) bool {
+		for i := range chain {
+			if chain[i] == qname {
+				return true
+			}
+		}
+		return false
+	}
 	var vf func(t *TableStmt) error
 	vf = func(t *TableStmt) error {
 		if t.Inherits != nil {
 			inherited := *t.Inherits
 			if err := resolve(inherited, c.basicContext, func(t *TableStmt) error {
+				if refCycle(inherited) {
+					return ErrCircularReferenceInInherits
+				}
 				chain = append(chain, inherited)
 				return vf(t)
 			}); err != nil {

@@ -19,3 +19,6 @@ const MaxDefUniqueFieldsCount = 256
 
 // Maximum uniques
 const MaxDefUniqueCount = 100
+
+// Maximum string and bytes field length
+const MaxFieldLength = 1024

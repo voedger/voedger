@@ -54,8 +54,31 @@ classDiagram
   IFieldsBuilder --|> IFields : inherits
   class IFieldsBuilder {
     <<Interface>>
-    AddField(…) IField
-    AddVerifiedField(…) IField
+    AddField(…)
+    AddVerifiedField(…)
+    AddRefField(…)
+    AddStringField(…)
+  }
+
+  IRefField --|> IField : inherits
+  class IRefField {
+    <<Interface>>
+    Refs() []QName
+  }
+
+  IStringField --|> IField : inherits
+  class IStringField {
+    <<Interface>>
+    Refs() []QName
+    Restricts() IStringFieldRestricts
+  }
+
+  IStringField "1" --o "1" IStringFieldRestricts : aggregates
+  class IStringFieldRestricts {
+    <<Interface>>
+    MinValue() uint16
+    MaxValue() uint16
+    Pattern() string
   }
 
   class IContainer {
@@ -375,6 +398,7 @@ Invalid names examples:
 ### Fields
 
 - Maximum fields per definition is 65536.
+- Maximum string field length is 1024.
 
 ### Containers
 

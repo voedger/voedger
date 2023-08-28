@@ -298,13 +298,16 @@ var defaultACL = ACL{
 	{
 		// https://github.com/voedger/voedger/issues/422
 		// https://dev.untill.com/projects/#!649352
+		// https://dev.untill.com/projects/#!650998
+		// https://dev.untill.com/projects/#!653137
 		desc: "grant exec on few funcs to role air.UntillPaymentsReseller and role air.UntillPaymentsUser",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
 				qNameQryGetDailyPayoutCfg,
 				qNameCmdUpdateScheduledPayout,
-				qNameQryGetUPTransfers,
-				qNameCmdCreateUPTransfer,
+				qNameCmdRequestOnDemandPayout,
+				qNameQryGetPayouts,
+				qNameQryGetCreditInvoice,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				// OR
@@ -319,18 +322,6 @@ var defaultACL = ACL{
 		pattern: PatternType{
 			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPLocationRates},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		// https://github.com/voedger/voedger/issues/430
-		desc: "allow SELECT wdoc.air.UPTransfer to air.UntillPaymentsReseller",
-		pattern: PatternType{
-			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
-			qNamesPattern:  []appdef.QName{qNameWDocUPTransfer},
-			principalsPattern: [][]iauthnz.Principal{
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
-			},
 		},
 		policy: ACPolicy_Allow,
 	},
