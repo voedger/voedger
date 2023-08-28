@@ -340,9 +340,8 @@ func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus, busTimeout time.D
 	httpSrv, acmeSrv := Provide(ctx, rp, busTimeout, nil, in10n.Quotas{}, nil, nil, bus, map[istructs.AppQName]istructs.AppWSAmount{istructs.AppQName_test1_app1: 10})
 	require.Nil(t, acmeSrv)
 	require.NoError(t, httpSrv.Prepare(nil))
-	wg := sync.WaitGroup{}
 	go func() {
-		defer wg.Done()
+		defer router.wg.Done()
 		httpSrv.Run(ctx)
 	}()
 	router.cancel = cancel

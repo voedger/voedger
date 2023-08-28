@@ -111,11 +111,9 @@ func TestToMap_Basic(t *testing.T) {
 
 	t.Run("null QName", func(t *testing.T) {
 		obj = &TestObject{
-			Name: testQName,
+			Name: appdef.NullQName,
 			Id:   42,
-			Data: map[string]interface{}{
-				appdef.SystemField_QName: appdef.NullQName,
-			},
+			Data: map[string]interface{}{},
 		}
 		m := ObjectToMap(obj, appDef)
 		require.Empty(m)

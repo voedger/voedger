@@ -48,3 +48,21 @@ func TestPairsToMapErrors(t *testing.T) {
 		require.Error(PairsToMap(c, m))
 	}
 }
+
+func TestMarshal(t *testing.T) {
+	o := &TestObject{
+		Data: map[string]interface{}{},
+	}
+	require := require.New(t)
+	require.NoError(Marshal(o, map[string]interface{}{
+		"float64": float64(42),
+		"str":     "str1",
+		"bool":    true,
+	}))
+	require.Len(o.Data, 3)
+	require.Equal(float64(42), o.Data["float64"])
+	require.Equal("str1", o.Data["str"])
+	require.Equal(true, o.Data["bool"])
+
+	require.Error(Marshal(o, map[string]interface{}{"fld": 42}))
+}
