@@ -48,7 +48,7 @@ func TestBasicUsage(t *testing.T) {
 
 		saleParamsDef := bld.AddODoc(appdef.NewQName("test", "Sale"))
 		saleParamsDef.
-			AddField("Buyer", appdef.DataKind_string, true).
+			AddStringField("Buyer", true).
 			AddField("Age", appdef.DataKind_int32, false).
 			AddField("Height", appdef.DataKind_float32, false).
 			AddField("isHuman", appdef.DataKind_bool, false).
@@ -61,17 +61,17 @@ func TestBasicUsage(t *testing.T) {
 
 		goodDef := bld.AddORecord(appdef.NewQName("test", "Good"))
 		goodDef.
-			AddField("Name", appdef.DataKind_string, true).
+			AddStringField("Name", true).
 			AddField("Code", appdef.DataKind_int64, true).
 			AddField("Weight", appdef.DataKind_float64, false)
 
 		saleSecureParamsDef := bld.AddObject(appdef.NewQName("test", "saleSecureArgs"))
 		saleSecureParamsDef.
-			AddField("password", appdef.DataKind_string, true)
+			AddStringField("password", true)
 
 		docDef := bld.AddCDoc(appdef.NewQName("test", "photos"))
 		docDef.
-			AddField("Buyer", appdef.DataKind_string, true).
+			AddStringField("Buyer", true).
 			AddField("Age", appdef.DataKind_int32, false).
 			AddField("Height", appdef.DataKind_float32, false).
 			AddField("isHuman", appdef.DataKind_bool, false).
@@ -435,7 +435,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 		docQName := appdef.NewQName("types", "CDoc")
 		docDef := appDef.AddCDoc(docQName)
-		docDef.AddField("str", appdef.DataKind_string, true)
+		docDef.AddStringField("str", true)
 		docDef.AddField("fld", appdef.DataKind_int32, true)
 		docDef.SetUniqueField("str")
 

@@ -216,11 +216,11 @@ func test() *testDataType {
 		{
 			saleParamsDef := appDef.AddODoc(testData.saleCmdDocName)
 			saleParamsDef.
-				AddField(testData.buyerIdent, appdef.DataKind_string, true).
+				AddStringField(testData.buyerIdent, true, appdef.MinLen(1), appdef.MaxLen(50)).
 				AddField(testData.ageIdent, appdef.DataKind_int32, false).
 				AddField(testData.heightIdent, appdef.DataKind_float32, false).
 				AddField(testData.humanIdent, appdef.DataKind_bool, false).
-				AddField(testData.photoIdent, appdef.DataKind_bytes, false)
+				AddBytesField(testData.photoIdent, false, appdef.MaxLen(1024))
 			saleParamsDef.
 				AddContainer(testData.basketIdent, appdef.NewQName(testData.pkgName, testData.basketIdent), 1, 1)
 
@@ -231,27 +231,27 @@ func test() *testDataType {
 			goodDef := appDef.AddORecord(appdef.NewQName(testData.pkgName, testData.goodIdent))
 			goodDef.
 				AddField(testData.saleIdent, appdef.DataKind_RecordID, true).
-				AddField(testData.nameIdent, appdef.DataKind_string, true).
+				AddStringField(testData.nameIdent, true, appdef.MinLen(1)).
 				AddField(testData.codeIdent, appdef.DataKind_int64, true).
 				AddField(testData.weightIdent, appdef.DataKind_float64, false)
 
 			saleSecureParamsDef := appDef.AddObject(testData.saleSecureParsName)
 			saleSecureParamsDef.
-				AddField(testData.passwordIdent, appdef.DataKind_string, true)
+				AddStringField(testData.passwordIdent, true)
 
 			photoParamsDef := appDef.AddObject(testData.queryPhotoFunctionParamsName)
 			photoParamsDef.
-				AddField(testData.buyerIdent, appdef.DataKind_string, true)
+				AddStringField(testData.buyerIdent, true, appdef.MinLen(1), appdef.MaxLen(50))
 		}
 
 		{
 			recDef := appDef.AddCDoc(testData.tablePhotos)
 			recDef.
-				AddField(testData.buyerIdent, appdef.DataKind_string, true).
+				AddStringField(testData.buyerIdent, true, appdef.MinLen(1), appdef.MaxLen(50)).
 				AddField(testData.ageIdent, appdef.DataKind_int32, false).
 				AddField(testData.heightIdent, appdef.DataKind_float32, false).
 				AddField(testData.humanIdent, appdef.DataKind_bool, false).
-				AddField(testData.photoIdent, appdef.DataKind_bytes, false)
+				AddBytesField(testData.photoIdent, false, appdef.MaxLen(1024))
 			recDef.
 				AddUnique("", []string{testData.buyerIdent})
 			recDef.
@@ -260,8 +260,8 @@ func test() *testDataType {
 			recChildDef := appDef.AddCRecord(testData.tablePhotoRems)
 			recChildDef.
 				AddField(testData.photoIdent, appdef.DataKind_RecordID, true).
-				AddField(testData.remarkIdent, appdef.DataKind_string, true).
-				AddField(testData.emptinessIdent, appdef.DataKind_string, false)
+				AddStringField(testData.remarkIdent, true, appdef.MaxLen(1024)).
+				AddStringField(testData.emptinessIdent, false)
 		}
 
 		{
@@ -271,8 +271,8 @@ func test() *testDataType {
 				AddField("int64", appdef.DataKind_int64, false).
 				AddField("float32", appdef.DataKind_float32, false).
 				AddField("float64", appdef.DataKind_float64, false).
-				AddField("bytes", appdef.DataKind_bytes, false).
-				AddField("string", appdef.DataKind_string, false).
+				AddBytesField("bytes", false).
+				AddStringField("string", false).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false).
@@ -286,8 +286,8 @@ func test() *testDataType {
 				AddField("int64", appdef.DataKind_int64, false).
 				AddField("float32", appdef.DataKind_float32, false).
 				AddField("float64", appdef.DataKind_float64, false).
-				AddField("bytes", appdef.DataKind_bytes, false).
-				AddField("string", appdef.DataKind_string, false).
+				AddBytesField("bytes", false).
+				AddStringField("string", false).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false)
@@ -300,8 +300,8 @@ func test() *testDataType {
 				AddField("int64", appdef.DataKind_int64, false).
 				AddField("float32", appdef.DataKind_float32, false).
 				AddField("float64", appdef.DataKind_float64, false).
-				AddField("bytes", appdef.DataKind_bytes, false).
-				AddField("string", appdef.DataKind_string, false).
+				AddBytesField("bytes", false).
+				AddStringField("string", false).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false)
