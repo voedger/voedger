@@ -187,7 +187,7 @@ func (f *fields) SetFieldComment(name string, comment ...string) IFieldsBuilder 
 		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parentDef().QName(), name, ErrNameNotFound))
 	}
 	fld.(ICommentBuilder).SetComment(comment...)
-	return f
+	return f.parent.(IFieldsBuilder)
 }
 
 func (f *fields) SetFieldVerify(name string, vk ...VerificationKind) IFieldsBuilder {
@@ -197,7 +197,7 @@ func (f *fields) SetFieldVerify(name string, vk ...VerificationKind) IFieldsBuil
 	}
 	vf := fld.(interface{ setVerify(k ...VerificationKind) })
 	vf.setVerify(vk...)
-	return f
+	return f.parent.(IFieldsBuilder)
 }
 
 func (f *fields) UserFields(cb func(IField)) {

@@ -67,6 +67,25 @@ func (f *Field) read(field appdef.IField) {
 			f.Refs = append(f.Refs, r.String())
 		}
 	}
+
+	switch field.DataKind() {
+	case appdef.DataKind_string, appdef.DataKind_bytes:
+		if sf, ok := field.(appdef.IStringField); ok {
+			r := FieldRestricts{}
+			if m := sf.Restricts().MinLen(); m != 0 {
+				r.MinLen = m
+				f.Restricts = &r
+			}
+			if m := sf.Restricts().MaxLen(); m != appdef.DefaultFieldMaxLength {
+				r.MaxLen = m
+				f.Restricts = &r
+			}
+			if p := sf.Restricts().Pattern(); p != nil {
+				r.Pattern = p.String()
+				f.Restricts = &r
+			}
+		}
+	}
 }
 
 func newContainer() *Container { return &Container{} }
