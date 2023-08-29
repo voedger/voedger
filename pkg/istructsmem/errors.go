@@ -55,6 +55,8 @@ var ErrDefChanged = errors.New("definition has been changed")
 
 var ErrReferentialIntegrityViolation = errors.New("referential integrity violation")
 
+var ErrFieldValueRestricted = errors.New("value does not meet the restricts")
+
 const errFieldNotFoundWrap = "%s-type field «%s» is not found in definition «%v»: %w" // int32-type field «myField» is not found …
 
 const errFieldValueTypeMismatchWrap = "value type «%s» is not applicable for %s-type field «%s»: %w" // value type «float64» is not applicable for int32-type field «myField»: …
