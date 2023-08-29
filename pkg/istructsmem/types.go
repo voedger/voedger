@@ -225,8 +225,17 @@ func (row *rowType) maskValues() {
 //
 // If exists then puts specified field value into dynoBuffer else collects error.
 //
+// If field has restricts (length, pattern, etc.) then checks value by field restricts.
+//
 // Remark: if field must be verified before put then collects error «field must be verified»
 func (row *rowType) putValue(name string, kind dynobuffers.FieldType, value interface{}) {
+
+	if a, ok := row.def.(appdef.IWithAbstract); ok {
+		if a.Abstract() {
+			row.collectErrorf("%v: unable to put to abstract definition: %w", row.QName(), ErrAbstractDefinition)
+			return
+		}
+	}
 
 	f, ok := row.dyB.Scheme.FieldsMap[name]
 	if !ok {

@@ -422,6 +422,16 @@ func Test_rowType_PutErrors(t *testing.T) {
 		require.ErrorIs(err, ErrNameNotFound)
 		require.ErrorIs(err, ErrWrongFieldType)
 	})
+
+	t.Run("Must be error to put into abstract table", func(t *testing.T) {
+		row := newRow(test.AppCfg)
+		row.setQName(test.abstractDef)
+
+		row.PutInt32("int32", 1)
+
+		err := row.build()
+		require.ErrorIs(err, ErrAbstractDefinition)
+	})
 }
 
 func Test_rowType_AsPanics(t *testing.T) {

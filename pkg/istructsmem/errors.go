@@ -43,6 +43,8 @@ var ErrUnableToUpdateSystemField = errors.New("unable to update system field")
 
 var ErrWrongDefinition = errors.New("wrong definition")
 
+var ErrAbstractDefinition = errors.New("abstract definition")
+
 var ErrUnexpectedDefKind = errors.New("unexpected definition kind")
 
 var ErrUnknownCodec = errors.New("unknown codec")

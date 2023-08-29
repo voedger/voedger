@@ -85,7 +85,8 @@ type (
 		queryPhotoFunctionParamsName appdef.QName
 
 		// tested rows
-		testRow appdef.QName
+		abstractDef appdef.QName
+		testRow     appdef.QName
 
 		// tested records
 		testCDoc appdef.QName
@@ -182,9 +183,10 @@ var testData = testDataType{
 	queryPhotoFunctionName:       appdef.NewQName("test", "QueryPhoto"),
 	queryPhotoFunctionParamsName: appdef.NewQName("test", "QueryPhotoParams"),
 
-	testRow:  appdef.NewQName("test", "Row"),
-	testCDoc: appdef.NewQName("test", "CDoc"),
-	testCRec: appdef.NewQName("test", "Record"),
+	abstractDef: appdef.NewQName("test", "abstract"),
+	testRow:     appdef.NewQName("test", "Row"),
+	testCDoc:    appdef.NewQName("test", "CDoc"),
+	testCRec:    appdef.NewQName("test", "Record"),
 
 	testViewRecord: testViewRecordType{
 		name: appdef.NewQName("test", "ViewPhotos"),
@@ -262,6 +264,14 @@ func test() *testDataType {
 				AddField(testData.photoIdent, appdef.DataKind_RecordID, true).
 				AddStringField(testData.remarkIdent, true, appdef.MaxLen(1024)).
 				AddStringField(testData.emptinessIdent, false)
+		}
+
+		{
+			abstractDef := appDef.AddCDoc(testData.abstractDef)
+			abstractDef.SetComment("abstract test cdoc")
+			abstractDef.SetAbstract()
+			abstractDef.
+				AddField("int32", appdef.DataKind_int32, false)
 		}
 
 		{
