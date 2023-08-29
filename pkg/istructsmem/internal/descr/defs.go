@@ -10,6 +10,7 @@ import (
 )
 
 type Def struct {
+	Comment     string `json:",omitempty"`
 	Name        appdef.QName
 	Kind        appdef.DefKind
 	Fields      []*Field     `json:",omitempty"`
@@ -20,6 +21,7 @@ type Def struct {
 }
 
 type Field struct {
+	Comment    string `json:",omitempty"`
 	Name       string
 	Kind       appdef.DataKind
 	Required   bool            `json:",omitempty"`
@@ -35,6 +37,7 @@ type FieldRestricts struct {
 }
 
 type Container struct {
+	Comment   string `json:",omitempty"`
 	Name      string
 	Type      appdef.QName
 	MinOccurs appdef.Occurs
@@ -42,6 +45,7 @@ type Container struct {
 }
 
 type Unique struct {
-	Name   string
-	Fields []string
+	Comment string `json:",omitempty"`
+	Name    string
+	Fields  []string
 }

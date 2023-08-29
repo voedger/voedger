@@ -23,10 +23,12 @@ func TestBasicUsage(t *testing.T) {
 	doc := appDef.AddSingleton(docName)
 	doc.
 		AddField("f1", appdef.DataKind_int64, true).
+		SetFieldComment("f1", "field comment").
 		AddStringField("f2", false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`)).
 		AddRefField("mainChild", false, recName).(appdef.ICDocBuilder).
-		AddContainer("rec", recName, 0, 100).(appdef.ICDocBuilder).
+		AddContainer("rec", recName, 0, 100, "container comment").(appdef.ICDocBuilder).
 		AddUnique("", []string{"f1", "f2"})
+	doc.SetComment(`comment 1`, `comment 2`)
 
 	rec := appDef.AddCRecord(recName)
 	rec.
@@ -61,7 +63,12 @@ func TestBasicUsage(t *testing.T) {
 
 	require.Regexp(`("Name")(\s*:\s*)("test1/app1")`, string(json), "app name expected")
 
-	require.Regexp(`("Name")(\s*:\s*)("test\.doc")`, string(json), "doc «test.doc» expected")
+	require.Regexp(
+		`("test\.doc")(\s*:\s*{\s*)`+
+			`("Comment")(\s*:\s*)("comment 1\\ncomment 2")(\s*,\s*)`+
+			`("Name")(\s*:\s*)("test\.doc")(\s*,\s*)`+
+			`("Kind")(\s*:\s*)("DefKind_CDoc")`,
+		string(json), "doc «test.doc» expected")
 
 	require.Regexp(
 		`("Name")(\s*:\s*)("sys\.QName")(\s*,\s*)`+
@@ -70,7 +77,8 @@ func TestBasicUsage(t *testing.T) {
 		"system field «sys.QName» expected")
 
 	require.Regexp(
-		`("Name")(\s*:\s*)("f1")(\s*,\s*)`+
+		`("Comment")(\s*:\s*)("field comment")(\s*,\s*)`+
+			`("Name")(\s*:\s*)("f1")(\s*,\s*)`+
 			`("Kind")(\s*:\s*)("DataKind_int64")(\s*,\s*)`+
 			`("Required")(\s*:\s*)(true)`,
 		string(json),
@@ -104,6 +112,7 @@ func TestBasicUsage(t *testing.T) {
 
 	require.Regexp(
 		`("Containers")(\s*:\s*\[\s*{\s*)`+
+			`("Comment")(\s*:\s*)("container comment")(\s*,\s*)`+
 			`("Name")(\s*:\s*)("rec")(\s*,\s*)`+
 			`("Type")(\s*:\s*)("test\.rec")(\s*,\s*)`+
 			`("MinOccurs")(\s*:\s*)(0)(\s*,\s*)`+
