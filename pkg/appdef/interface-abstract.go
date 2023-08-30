@@ -12,6 +12,7 @@ package appdef
 //	- DefKind_ODoc and DefKind_CRecord,
 //	- DefKind_WDoc and DefKind_WRecord,
 //	- DefKind_Object and DefKind_Element
+//	- DefKind_Workspace
 //
 // Ref to abstract.go for implementation
 type IWithAbstract interface {
