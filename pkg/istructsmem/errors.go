@@ -43,6 +43,8 @@ var ErrUnableToUpdateSystemField = errors.New("unable to update system field")
 
 var ErrWrongDefinition = errors.New("wrong definition")
 
+var ErrAbstractDefinition = errors.New("abstract definition")
+
 var ErrUnexpectedDefKind = errors.New("unexpected definition kind")
 
 var ErrUnknownCodec = errors.New("unknown codec")
@@ -54,6 +56,8 @@ var ErrWrongFieldType = errors.New("wrong field type")
 var ErrDefChanged = errors.New("definition has been changed")
 
 var ErrReferentialIntegrityViolation = errors.New("referential integrity violation")
+
+var ErrFieldValueRestricted = errors.New("value does not meet the restricts")
 
 const errFieldNotFoundWrap = "%s-type field «%s» is not found in definition «%v»: %w" // int32-type field «myField» is not found …
 

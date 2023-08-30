@@ -143,7 +143,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 	appDef := func() appdef.IAppDefBuilder {
 		app := appdef.New()
 		doc := app.AddSingleton(appdef.NewQName("test", "doc"))
-		doc.AddField("f1", appdef.DataKind_string, true)
+		doc.AddStringField("f1", true)
 		doc.AddContainer("rec", appdef.NewQName("test", "rec"), 0, 1)
 		doc.AddUnique("", []string{"f1"})
 		app.AddCRecord(appdef.NewQName("test", "rec"))

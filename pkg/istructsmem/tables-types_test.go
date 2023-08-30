@@ -367,8 +367,8 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 				AddField("int64_1", appdef.DataKind_int64, false).
 				AddField("float32_1", appdef.DataKind_float32, false).
 				AddField("float64_1", appdef.DataKind_float64, false).
-				AddField("bytes_1", appdef.DataKind_bytes, false).
-				AddField("string_1", appdef.DataKind_string, false).
+				AddBytesField("bytes_1", false).
+				AddStringField("string_1", false).
 				AddField("QName_1", appdef.DataKind_QName, false).
 				AddField("bool_1", appdef.DataKind_bool, false).
 				AddField("RecordID_1", appdef.DataKind_RecordID, false)

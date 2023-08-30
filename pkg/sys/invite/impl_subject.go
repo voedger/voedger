@@ -14,7 +14,7 @@ import (
 )
 
 // buildSubjectsIdx need to build view.sys.SubjectIdx on an existing storage: true -> async projector will be registered, sync otherwise
-func provideCDocSubject(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, buildSubjectsIdx bool) {
+func provideCDocSubject(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	projectors.ProvideViewDef(appDefBuilder, QNameViewSubjectsIdx, func(b appdef.IViewBuilder) {
 		b.
 			AddPartField(Field_LoginHash, appdef.DataKind_int64).
@@ -22,11 +22,7 @@ func provideCDocSubject(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAp
 			AddValueField(Field_SubjectID, appdef.DataKind_RecordID, true)
 	})
 
-	if buildSubjectsIdx {
-		cfg.AddAsyncProjectors(subjectIdxProjectorFactory)
-	} else {
-		cfg.AddSyncProjectors(subjectIdxProjectorFactory)
-	}
+	cfg.AddSyncProjectors(subjectIdxProjectorFactory)
 }
 
 func subjectIdxProjectorFactory(partition istructs.PartitionID) istructs.Projector {

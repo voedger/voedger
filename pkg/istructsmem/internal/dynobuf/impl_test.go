@@ -26,8 +26,8 @@ func TestDynoBufSchemes(t *testing.T) {
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
 			AddField("float64Field", appdef.DataKind_float64, false).
-			AddField("bytesField", appdef.DataKind_bytes, false).
-			AddField("strField", appdef.DataKind_string, false).
+			AddBytesField("bytesField", false).
+			AddStringField("strField", false).
 			AddField("qnameField", appdef.DataKind_QName, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false)
 		rootDef.
@@ -39,8 +39,8 @@ func TestDynoBufSchemes(t *testing.T) {
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
 			AddField("float64Field", appdef.DataKind_float64, false).
-			AddField("bytesField", appdef.DataKind_bytes, false).
-			AddField("strField", appdef.DataKind_string, false).
+			AddBytesField("bytesField", false).
+			AddStringField("strField", false).
 			AddField("qnameField", appdef.DataKind_QName, false).
 			AddField("boolField", appdef.DataKind_bool, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false)

@@ -6,6 +6,8 @@
 package istructsmem
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -41,18 +43,18 @@ func Test_ValidEvent(t *testing.T) {
 		t.Run("must be ok to build application definition", func(t *testing.T) {
 			appDef.AddCDoc(cDocName).
 				AddField("Int32", appdef.DataKind_int32, true).
-				AddField("String", appdef.DataKind_string, false)
+				AddStringField("String", false)
 
 			oDoc := appDef.AddODoc(oDocName)
 			oDoc.
 				AddField("Int32", appdef.DataKind_int32, true).
-				AddField("String", appdef.DataKind_string, false)
+				AddStringField("String", false)
 			oDoc.
 				AddContainer("child", oDocName, 0, 2) // ODocs should be able to contain ODocs, see #!19332
 
 			appDef.AddObject(oObjName).
 				AddField("Int32", appdef.DataKind_int32, true).
-				AddField("String", appdef.DataKind_string, false)
+				AddStringField("String", false)
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -354,7 +356,7 @@ func Test_ValidElement(t *testing.T) {
 				AddField("float32Field", appdef.DataKind_float32, false).
 				AddField("float64Field", appdef.DataKind_float64, false).
 				AddField("bytesField", appdef.DataKind_bytes, false).
-				AddField("strField", appdef.DataKind_string, false).
+				AddStringField("strField", false).
 				AddField("qnameField", appdef.DataKind_QName, false).
 				AddField("recIDField", appdef.DataKind_RecordID, false)
 			objDef.
@@ -367,7 +369,7 @@ func Test_ValidElement(t *testing.T) {
 				AddField("float32Field", appdef.DataKind_float32, false).
 				AddField("float64Field", appdef.DataKind_float64, false).
 				AddField("bytesField", appdef.DataKind_bytes, false).
-				AddField("strField", appdef.DataKind_string, false).
+				AddStringField("strField", false).
 				AddField("qnameField", appdef.DataKind_QName, false).
 				AddField("boolField", appdef.DataKind_bool, false).
 				AddField("recIDField", appdef.DataKind_RecordID, false)
@@ -387,7 +389,7 @@ func Test_ValidElement(t *testing.T) {
 				AddField("float32Field", appdef.DataKind_float32, false).
 				AddField("float64Field", appdef.DataKind_float64, false).
 				AddField("bytesField", appdef.DataKind_bytes, false).
-				AddField("strField", appdef.DataKind_string, false).
+				AddStringField("strField", false).
 				AddField("qnameField", appdef.DataKind_QName, false).
 				AddField("recIDField", appdef.DataKind_RecordID, false)
 			docDef.
@@ -400,7 +402,7 @@ func Test_ValidElement(t *testing.T) {
 				AddField("float32Field", appdef.DataKind_float32, false).
 				AddField("float64Field", appdef.DataKind_float64, false).
 				AddField("bytesField", appdef.DataKind_bytes, false).
-				AddField("strField", appdef.DataKind_string, false).
+				AddStringField("strField", false).
 				AddField("qnameField", appdef.DataKind_QName, false).
 				AddField("boolField", appdef.DataKind_bool, false).
 				AddField("recIDField", appdef.DataKind_RecordID, false)
@@ -542,7 +544,7 @@ func Test_ValidCUD(t *testing.T) {
 			AddField("float32Field", appdef.DataKind_float32, false).
 			AddField("float64Field", appdef.DataKind_float64, false).
 			AddField("bytesField", appdef.DataKind_bytes, false).
-			AddField("strField", appdef.DataKind_string, false).
+			AddStringField("strField", false).
 			AddField("qnameField", appdef.DataKind_QName, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false)
 		docDef.
@@ -555,7 +557,7 @@ func Test_ValidCUD(t *testing.T) {
 			AddField("float32Field", appdef.DataKind_float32, false).
 			AddField("float64Field", appdef.DataKind_float64, false).
 			AddField("bytesField", appdef.DataKind_bytes, false).
-			AddField("strField", appdef.DataKind_string, false).
+			AddStringField("strField", false).
 			AddField("qnameField", appdef.DataKind_QName, false).
 			AddField("boolField", appdef.DataKind_bool, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false)
@@ -567,7 +569,7 @@ func Test_ValidCUD(t *testing.T) {
 			AddField("float32Field", appdef.DataKind_float32, false).
 			AddField("float64Field", appdef.DataKind_float64, false).
 			AddField("bytesField", appdef.DataKind_bytes, false).
-			AddField("strField", appdef.DataKind_string, false).
+			AddStringField("strField", false).
 			AddField("qnameField", appdef.DataKind_QName, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false)
 	})
@@ -676,8 +678,10 @@ func Test_VerifiedFields(t *testing.T) {
 		def := appDef.AddObject(objName)
 		def.
 			AddField("int32", appdef.DataKind_int32, true).
-			AddVerifiedField("email", appdef.DataKind_string, false, appdef.VerificationKind_EMail).
-			AddVerifiedField("age", appdef.DataKind_int32, false, appdef.VerificationKind_Any...)
+			AddStringField("email", false).
+			SetFieldVerify("email", appdef.VerificationKind_EMail).
+			AddField("age", appdef.DataKind_int32, false).
+			SetFieldVerify("age", appdef.VerificationKind_Any...)
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -835,6 +839,77 @@ func Test_VerifiedFields(t *testing.T) {
 			require.ErrorIs(err, ErrWrongFieldType)
 		})
 
+	})
+}
+
+func Test_CharsFieldRestricts(t *testing.T) {
+	require := require.New(t)
+	test := test()
+
+	objName := appdef.NewQName("test", "obj")
+
+	appDef := appdef.New()
+	t.Run("must be ok to build application definition", func(t *testing.T) {
+		def := appDef.AddObject(objName)
+		def.
+			AddStringField("email", true, appdef.MinLen(6), appdef.MaxLen(100), appdef.Pattern(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`)).
+			AddBytesField("mime", false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`))
+	})
+
+	cfgs := make(AppConfigsType, 1)
+	cfg := cfgs.AddConfig(test.appName, appDef)
+
+	storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
+	require.NoError(err)
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
+	require.NoError(err)
+	_, err = asp.AppStructs(test.appName)
+	require.NoError(err)
+
+	t.Run("test field restricts", func(t *testing.T) {
+
+		t.Run("must be ok check good value", func(t *testing.T) {
+			row := makeObject(cfg, objName)
+			row.PutString("email", `test@test.io`)
+			row.PutBytes("mime", []byte(`abcd`))
+
+			_, err := row.Build()
+			require.NoError(err)
+		})
+
+		t.Run("must be error if min length restricted", func(t *testing.T) {
+			row := makeObject(cfg, objName)
+			row.PutString("email", `t@t`)
+			row.PutBytes("mime", []byte(`abc`))
+
+			_, err := row.Build()
+			require.ErrorIs(err, ErrFieldValueRestricted)
+			require.ErrorContains(err, "field «email» is too short")
+			require.ErrorContains(err, "field «mime» is too short")
+		})
+
+		t.Run("must be error if max length restricted", func(t *testing.T) {
+			row := makeObject(cfg, objName)
+			row.PutString("email", fmt.Sprintf("%s.com", strings.Repeat("test", 100)))
+			row.PutBytes("mime", []byte(`abcde`))
+
+			_, err := row.Build()
+			require.ErrorIs(err, ErrFieldValueRestricted)
+			require.ErrorContains(err, "field «email» is too long")
+			require.ErrorContains(err, "field «mime» is too long")
+		})
+
+		t.Run("must be error if pattern restricted", func(t *testing.T) {
+			row := makeObject(cfg, objName)
+			row.PutString("email", "naked@🔫.error")
+			row.PutBytes("mime", []byte(`++++`))
+
+			_, err := row.Build()
+			require.ErrorIs(err, ErrFieldValueRestricted)
+			require.ErrorContains(err, "field «email» does not match pattern")
+			require.ErrorContains(err, "field «mime» does not match pattern")
+		})
 	})
 }
 

@@ -920,6 +920,37 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 	})
 }
 
+func Test_1KStringField(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("example.sql", `SCHEMA test;
+	TABLE MyTable INHERITS CDoc (
+		KB varchar(1024)
+	)
+	`)
+	require.Nil(err)
+
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.Nil(err)
+
+	packages, err := MergePackageSchemas([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	def := appdef.New()
+	err = BuildAppDefs(packages, def)
+	require.NoError(err)
+
+	cdoc := def.CDoc(appdef.NewQName("test", "MyTable"))
+	require.NotNil(cdoc)
+
+	fld := cdoc.Field("KB").(appdef.IStringField)
+	require.NotNil(fld)
+	require.EqualValues(1024, fld.Restricts().MaxLen())
+}
+
 func Test_ReferenceToNoTable(t *testing.T) {
 	require := require.New(t)
 

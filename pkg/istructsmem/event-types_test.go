@@ -765,11 +765,11 @@ func Test_EventUpdateRawCud(t *testing.T) {
 		doc := appDef.AddCDoc(docName)
 		doc.AddField("new", appdef.DataKind_bool, true)
 		doc.AddField("rec", appdef.DataKind_RecordID, false)
-		doc.AddField("emptied", appdef.DataKind_string, false)
+		doc.AddStringField("emptied", false)
 		doc.AddContainer("rec", recName, 0, 1)
 
 		rec := appDef.AddCRecord(recName)
-		rec.AddField("data", appdef.DataKind_string, false)
+		rec.AddStringField("data", false)
 	})
 
 	cfgs := func() AppConfigsType {
