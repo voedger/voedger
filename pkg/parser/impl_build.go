@@ -449,7 +449,7 @@ func (c *buildContext) addFieldToDef(field *FieldExpr) {
 			if field.CheckRegexp != nil {
 				restricts = append(restricts, appdef.Pattern(*field.CheckRegexp))
 			}
-			bld.AddStringField(fieldName, field.NotNull, restricts)
+			bld.AddStringField(fieldName, field.NotNull, restricts...)
 		} else {
 			bld.AddField(fieldName, sysDataKind, field.NotNull)
 		}
