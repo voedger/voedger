@@ -4,7 +4,7 @@
 SCHEMA sys;
 
 TABLE Subject INHERITS CDoc (
-	Login text NOT NULL,
+	Login string NOT NULL,
 	SubjectKind int32 NOT NULL,
 	Roles text NOT NULL,
 	ProfileWSID int64 NOT NULL,
@@ -13,11 +13,11 @@ TABLE Subject INHERITS CDoc (
 
 TABLE Invite INHERITS CDoc (
 	SubjectKind int32,
-	Login text NOT NULL,
-	Email text NOT NULL,
+	Login varchar NOT NULL,
+	Email varchar NOT NULL,
 	Roles text,
 	ExpireDatetime int64,
-	VerificationCode text,
+	VerificationCode varchar,
 	State int32 NOT NULL,
 	Created int64,
 	Updated int64 NOT NULL,
@@ -29,5 +29,5 @@ TABLE Invite INHERITS CDoc (
 TABLE JoinedWorkspace INHERITS CDoc (
 	Roles text NOT NULL,
 	InvitingWorkspaceWSID int64 NOT NULL,
-	WSName text NOT NULL
+	WSName varchar NOT NULL
 );

@@ -4,7 +4,7 @@
 SCHEMA simpleApp;
 
 TABLE articles INHERITS CDoc (
-	name text,
+	name varchar,
 	article_manual int32 NOT NULL,
 	article_hash int32 NOT NULL,
 	hideonhold int32 NOT NULL,
@@ -28,7 +28,7 @@ TABLE department INHERITS CDoc (
 
 TABLE air_table_plan INHERITS CDoc (
 	fstate int32,
-	name text,
+	name varchar,
 	ml_name bytes,
 	num int32,
 	width int32,
@@ -48,19 +48,19 @@ TABLE air_table_plan INHERITS CDoc (
 		width int32,
 		height int32,
 		places int32,
-		chair_type text,
-		table_type text,
+		chair_type varchar,
+		table_type varchar,
 		type int32,
 		color int32,
-		code text,
-		text text,
+		code varchar,
+		text varchar,
 		hide_seats bool
 	)
 );
 
 TABLE printers INHERITS CDoc (
-	guid text NOT NULL,
-	name text,
+	guid varchar NOT NULL,
+	name varchar,
 	id_printer_drivers ref,
 	width int32,
 	top_lines int32,
@@ -68,7 +68,7 @@ TABLE printers INHERITS CDoc (
 	con int32,
 	port int32,
 	speed int32,
-	backup_printer text,
+	backup_printer varchar,
 	id_computers ref,
 	error_flag int32 NOT NULL,
 	codepage int32,
@@ -76,22 +76,22 @@ TABLE printers INHERITS CDoc (
 	fiscal int32,
 	dont_auto_open_drawer int32,
 	connection_type int32,
-	printer_ip text,
+	printer_ip varchar,
 	printer_port int32,
 	cant_be_redirected_to int32,
 	com_params bytes,
 	printer_type int32,
 	exclude_message int32,
 	driver_kind int32,
-	driver_id text,
+	driver_id varchar,
 	driver_params bytes,
 	check_status int32,
 	id_ordermans ref,
 	id_falcon_terminals ref,
 	hht_printer_port  int32,
 	ml_name bytes,
-	posprinter_driver_id text,
-	posprinter_driver_params text,
+	posprinter_driver_id varchar,
+	posprinter_driver_params varchar,
 	id_bill_ticket ref,
 	id_order_ticket ref,
 	purpose_receipt_enabled bool,
@@ -99,7 +99,7 @@ TABLE printers INHERITS CDoc (
 );
 
 TABLE sales_area INHERITS CDoc (
-	name text,
+	name varchar,
 	bmanual int32 NOT NULL,
 	id_prices ref,
 	number int32,
@@ -112,62 +112,62 @@ TABLE sales_area INHERITS CDoc (
 	sccovers int32,
 	id_scplan ref,
 	price_dt int64,
-	sa_external_id text,
+	sa_external_id varchar,
 	is_default bool,
 	id_table_plan ref
 );
 
 TABLE payments INHERITS CDoc (
-	name text,
+	name varchar,
 	kind int32,
 	number int32,
 	psp_model int32,
 	id_bookkp ref,
 	id_currency ref,
-	params text,
+	params varchar,
 	driver_kind int32,
-	driver_id text,
-	guid text,
+	driver_id varchar,
+	guid varchar,
 	ml_name bytes,
-	paym_external_id text
+	paym_external_id varchar
 );
 
 TABLE untill_users INHERITS CDoc (
-	name text,
+	name varchar,
 	mandates bytes,
 	user_void int32 NOT NULL,
-	user_code text,
-	user_card text,
-	language text,
+	user_code varchar,
+	user_card varchar,
+	language varchar,
 	language_char int32,
 	user_training int32,
-	address text,
+	address varchar,
 	id_countries ref,
-	phone text,
+	phone varchar,
 	datebirth int64,
-	insurance text,
-	user_poscode text,
-	terminal_id text,
+	insurance varchar,
+	user_poscode varchar,
+	terminal_id varchar,
 	user_clock_in int32,
-	user_poscode_remoteterm text,
+	user_poscode_remoteterm varchar,
 	is_custom_remoteterm_poscode int32,
 	id_group_users ref,
-	tp_api_pwd text,
-	firstname text,
-	lastname text,
+	tp_api_pwd varchar,
+	firstname varchar,
+	lastname varchar,
 	user_transfer int32,
 	personal_drawer int32,
 	start_week_day int32,
 	start_week_time int32,
 	needcashdeclaration int32,
-	smartcard_uid text,
+	smartcard_uid varchar,
 	not_print_waiter_report int32,
 	exclude_message int32,
 	lefthand int32,
-	login_message text,
-	email text,
+	login_message varchar,
+	email varchar,
 	number int32,
-	hq_id text,
+	hq_id varchar,
 	void_number int32,
 	last_update_dt int64,
 	block_time_break int32,
@@ -178,24 +178,24 @@ TABLE untill_users INHERITS CDoc (
 );
 
 TABLE computers INHERITS CDoc (
-	name text,
+	name varchar,
 	show_cursor int32,
 	on_hold int32,
 	untillsrv_port int32,
 	id_screen_groups ref,
 	id_tickets_clock ref,
-	guid_printers_clock text,
+	guid_printers_clock varchar,
 	keyboard_input_text int32,
-	extra_data text,
-	extra_data_new text,
-	startup_message text,
-	guid_cash_printers text,
+	extra_data varchar,
+	extra_data_new varchar,
+	startup_message varchar,
+	guid_cash_printers varchar,
 	id_cash_tickets ref,
 	term_uid int32,
-	production_nr text,
+	production_nr varchar,
 	tpapi int32,
 	ignore_prn_errors bytes,
-	default_a4_printer text,
+	default_a4_printer varchar,
 	login_screen int32,
 	id_themes ref,
 	device_profile_wsid int64,
@@ -234,7 +234,7 @@ TABLE computers INHERITS CDoc (
 		id_tickets_order_journal ref,
 		id_tickets_control_journal ref,
 		id_drawer_layout ref,
-		table_info text,
+		table_info varchar,
 		table_pc_font bytes,
 		table_hht_font bytes,
 		id_return_layout ref,
@@ -298,26 +298,26 @@ TABLE computers INHERITS CDoc (
 TABLE bill INHERITS CDoc (
 	tableno int32 NOT NULL,
 	id_untill_users ref NOT NULL,
-	table_part text NOT NULL,
+	table_part varchar NOT NULL,
 	id_courses ref,
 	id_clients ref,
-	name text,
+	name varchar,
 	proforma int32 NOT NULL,
 	modified int64,
 	open_datetime int64,
 	close_datetime int64,
 	number int32,
 	failurednumber int32,
-	suffix text,
+	suffix varchar,
 	pbill_number int32,
 	pbill_failurednumber int32,
-	pbill_suffix text,
+	pbill_suffix varchar,
 	hc_foliosequence int32,
-	hc_folionumber text,
+	hc_folionumber varchar,
 	tip int64,
 	qty_persons int32,
 	isdirty int32,
-	reservationid text,
+	reservationid varchar,
 	id_alter_user ref,
 	service_charge float64,
 	number_of_covers int32,
@@ -328,30 +328,30 @@ TABLE bill INHERITS CDoc (
 	timer_start int64,
 	timer_stop int64,
 	isactive int32,
-	table_name text,
+	table_name varchar,
 	group_vat_level int32,
-	comments text,
+	comments varchar,
 	id_cardprice ref,
 	discount float64,
 	discount_value int64,
 	id_discount_reasons ref,
-	hc_roomnumber text,
+	hc_roomnumber varchar,
 	ignore_auto_sc int32,
 	extra_fields bytes,
 	id_bo_service_charge ref,
-	free_comments text,
+	free_comments varchar,
 	id_t2o_groups ref,
 	service_tax int64,
 	sc_plan bytes,
-	client_phone text,
+	client_phone varchar,
 	age int64,
 	description bytes,
-	sdescription text,
+	sdescription varchar,
 	vars bytes,
 	take_away int32,
 	fiscal_number int32,
 	fiscal_failurednumber int32,
-	fiscal_suffix text,
+	fiscal_suffix varchar,
 	id_order_type ref,
 	not_paid int64,
 	total int64,
@@ -362,39 +362,39 @@ TABLE bill INHERITS CDoc (
 	vat_excluded int32,
 	day_number int32,
 	day_failurednumber int32,
-	day_suffix text,
+	day_suffix varchar,
 	ayce_time int64,
 	remaining_quantity float64,
-	working_day text
+	working_day varchar
 );
 
 TABLE pos_emails INHERITS CDoc (
 	kind int32,
-	email text,
-	description text
+	email varchar,
+	description varchar
 );
 
 TABLE WSKind INHERITS Singleton (
 	IntFld int32 NOT NULL,
-	StrFld text
+	StrFld varchar
 );
 
 TABLE category INHERITS CDoc (
-	name text,
-	hq_id text,
+	name varchar,
+	hq_id varchar,
 	ml_name bytes,
-	cat_external_id text
+	cat_external_id varchar
 );
 
 TABLE Doc INHERITS CDoc (
-	EmailField text NOT NULL VERIFIABLE,
-	PhoneField text,
-	NonVerifiedField text
+	EmailField varchar NOT NULL VERIFIABLE,
+	PhoneField varchar,
+	NonVerifiedField varchar
 );
 
 TABLE DocConstraints INHERITS CDoc (
 	Int int32 NOT NULL,
-	Str text NOT NULL,
+	Str varchar NOT NULL,
 	Bool bool NOT NULL,
 	Float32 float32,
 	Bytes bytes NOT NULL,
@@ -402,7 +402,7 @@ TABLE DocConstraints INHERITS CDoc (
 );
 
 TABLE Config INHERITS Singleton (
-	Fld1 text NOT NULL
+	Fld1 varchar NOT NULL
 );
 
 TABLE cdoc1 INHERITS CDoc ();

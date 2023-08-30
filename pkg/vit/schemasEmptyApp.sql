@@ -5,5 +5,5 @@ SCHEMA emptyApp;
 
 TABLE WSKind INHERITS Singleton (
 	IntFld int32 NOT NULL,
-	StrFld text
+	StrFld varchar
 )
