@@ -789,7 +789,7 @@ type IViewKey interface {
 	IContainers
 
 	// Returns partition key definition
-	PartKey() IPartKey
+	Partition() IPartKey
 
 	// Returns clustering columns definition
 	ClustCols() IClustCols

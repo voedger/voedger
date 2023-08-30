@@ -243,7 +243,7 @@ func (key *keyType) loadFromBytes(cKey []byte) (err error) {
 // Returns name of partition key definition
 func (key *keyType) pkDef() appdef.QName {
 	if v := key.appCfg.AppDef.View(key.viewName); v != nil {
-		return v.Key().PartKey().QName()
+		return v.Key().Partition().QName()
 	}
 
 	return appdef.NullQName

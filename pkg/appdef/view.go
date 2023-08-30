@@ -161,7 +161,7 @@ func newViewKey(app *appDef, viewName QName) *viewKey {
 	return key
 }
 
-func (key *viewKey) PartKey() IPartKey {
+func (key *viewKey) Partition() IPartKey {
 	return key.pkey
 }
 

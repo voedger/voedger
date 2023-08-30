@@ -31,7 +31,7 @@ func TestAddView(t *testing.T) {
 	require.Equal(DefKind_ViewRecord_Key, key.Kind())
 	require.Equal(2, key.ContainerCount()) // pk + cc
 
-	pk := key.PartKey()
+	pk := key.Partition()
 	require.Equal(key.Container(SystemContainer_ViewPartitionKey).Def(), pk)
 	require.Equal(ViewPartitionKeyDefName(viewName), pk.QName())
 	require.Equal(DefKind_ViewRecord_PartitionKey, pk.Kind())
