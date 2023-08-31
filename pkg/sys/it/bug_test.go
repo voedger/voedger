@@ -11,12 +11,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
+	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -86,7 +85,7 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 		it.WithApp(istructs.AppQName_test1_app1, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 
 			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-				apis.NumCommandProcessors, nil)
+				apis.NumCommandProcessors, nil, false, false)
 
 			cdocQName := appdef.NewQName("test", "cdoc")
 			appDefBuilder.AddCDoc(cdocQName)
