@@ -21,7 +21,7 @@ type IView interface {
 }
 
 type IViewBuilder interface {
-	//IView
+	IView
 	ICommentBuilder
 
 	/* old, will be deprecated */
