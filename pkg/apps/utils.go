@@ -30,7 +30,6 @@ func Parse(fsi embed.FS, schemaName string, ep extensionpoints.IExtensionPoint) 
 		fileSchemaAST, err := parser.ParseFile(path.Join(file, dirEntry.Name()), string(sqlContent))
 		if err != nil {
 			// notest
-			// panic("from " + file + ": " + err.Error())
 			panic(err)
 		}
 		epFileSchemaASTs := ep.ExtensionPoint(EPPackageSchemasASTs)
