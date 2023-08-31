@@ -7,21 +7,20 @@ package apps
 
 import (
 	"embed"
+	"runtime"
 
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/parser"
 )
 
-// package qualified name is the package the `fs` is declared at
-func Parse(fs embed.FS, packageQualifedName string, ep extensionpoints.IExtensionPoint) {
-	// legacy unTill table schemas
-	dirEntries, err := embed.FS(fs).ReadDir(".")
+func Parse(fsi embed.FS, schemaName string, ep extensionpoints.IExtensionPoint) {
+	dirEntries, err := fsi.ReadDir(".")
 	if err != nil {
 		//notest
 		panic(err)
 	}
 	for _, dirEntry := range dirEntries {
-		sqlContent, err := embed.FS(fs).ReadFile(dirEntry.Name())
+		sqlContent, err := fsi.ReadFile(dirEntry.Name())
 		if err != nil {
 			// notest
 			panic(err)
@@ -29,10 +28,11 @@ func Parse(fs embed.FS, packageQualifedName string, ep extensionpoints.IExtensio
 		fileSchemaAST, err := parser.ParseFile(dirEntry.Name(), string(sqlContent))
 		if err != nil {
 			// notest
-			panic(err)
+			_, file, _, _ := runtime.Caller(1)
+			panic("from " + file + ": " + err.Error())
 		}
 		epFileSchemaASTs := ep.ExtensionPoint(EPPackageSchemasASTs)
-		epSysFileSchemaASTs := epFileSchemaASTs.ExtensionPoint(packageQualifedName)
+		epSysFileSchemaASTs := epFileSchemaASTs.ExtensionPoint(schemaName)
 		epSysFileSchemaASTs.Add(fileSchemaAST)
 	}
 }

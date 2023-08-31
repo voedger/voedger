@@ -225,33 +225,57 @@ func (row *rowType) maskValues() {
 //
 // If exists then puts specified field value into dynoBuffer else collects error.
 //
+// If field has restricts (length, pattern, etc.) then checks value by field restricts.
+//
 // Remark: if field must be verified before put then collects error «field must be verified»
 func (row *rowType) putValue(name string, kind dynobuffers.FieldType, value interface{}) {
-	fld, ok := row.dyB.Scheme.FieldsMap[name]
+
+	if a, ok := row.def.(appdef.IWithAbstract); ok {
+		if a.Abstract() {
+			row.collectErrorf("%v: unable to put to abstract definition: %w", row.QName(), ErrAbstractDefinition)
+			return
+		}
+	}
+
+	f, ok := row.dyB.Scheme.FieldsMap[name]
 	if !ok {
 		row.collectErrorf(errFieldNotFoundWrap, dynobuf.FieldTypeToString(kind), name, row.QName(), ErrNameNotFound)
 		return
 	}
 
-	if fld := row.fieldDef(name); fld != nil {
-		if fld.Verifiable() {
-			token, ok := value.(string)
-			if !ok {
-				row.collectErrorf(errFieldMustBeVerified, name, value, ErrWrongFieldType)
-				return
-			}
-			data, err := row.verifyToken(name, token)
-			if err != nil {
-				row.collectError(err)
-				return
-			}
-			row.dyB.Set(name, data)
-			return
-		}
+	fld := row.fieldDef(name)
+	if fld == nil {
+		//notest
+		row.collectErrorf(errFieldNotFoundWrap, dynobuf.FieldTypeToString(kind), name, row.QName(), ErrNameNotFound)
+		return
 	}
 
-	if (kind != dynobuffers.FieldTypeUnspecified) && (fld.Ft != kind) {
-		row.collectErrorf(errFieldValueTypeMismatchWrap, dynobuf.FieldTypeToString(kind), dynobuf.FieldTypeToString(fld.Ft), name, ErrWrongFieldType)
+	if fld.Verifiable() {
+		token, ok := value.(string)
+		if !ok {
+			row.collectErrorf(errFieldMustBeVerified, name, value, ErrWrongFieldType)
+			return
+		}
+		data, err := row.verifyToken(name, token)
+		if err != nil {
+			row.collectError(err)
+			return
+		}
+		if err := checkRestricts(fld, data); err != nil {
+			row.collectError(err)
+			return
+		}
+		row.dyB.Set(name, data)
+		return
+	}
+
+	if (kind != dynobuffers.FieldTypeUnspecified) && (f.Ft != kind) {
+		row.collectErrorf(errFieldValueTypeMismatchWrap, dynobuf.FieldTypeToString(kind), dynobuf.FieldTypeToString(f.Ft), name, ErrWrongFieldType)
+		return
+	}
+
+	if err := checkRestricts(fld, value); err != nil {
+		row.collectError(err)
 		return
 	}
 
