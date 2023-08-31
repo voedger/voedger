@@ -21,8 +21,10 @@ type IView interface {
 }
 
 type IViewBuilder interface {
-	IView
+	//IView
 	ICommentBuilder
+
+	/* old, will be deprecated */
 
 	// AddPartField adds specified field to view partition key definition. Fields is always required
 	//
@@ -42,12 +44,14 @@ type IViewBuilder interface {
 	// # Panics:
 	//	- if field already exists in partition key or clustering columns fields.
 	AddValueField(name string, kind DataKind, required bool, comment ...string) IViewBuilder
+
+	/* new, under development */
 }
 
 // View partition key definition. DefKind() is DefKind_ViewRecordPartitionKey
 //
 // Ref. to view.go for implementation
-type IPartKey interface {
+type IViewPartKey interface {
 	IDef
 	IComment
 	IFields
@@ -56,7 +60,7 @@ type IPartKey interface {
 // View clustering columns definition. DefKind() is DefKind_ViewRecordClusteringColumns
 //
 // Ref. to view.go for implementation
-type IClustCols interface {
+type IViewClustCols interface {
 	IDef
 	IComment
 	IFields
@@ -74,10 +78,10 @@ type IViewKey interface {
 	IContainers
 
 	// Returns partition key definition
-	Partition() IPartKey
+	Partition() IViewPartKey
 
 	// Returns clustering columns definition
-	ClustCols() IClustCols
+	ClustCols() IViewClustCols
 }
 
 // View value definition. DefKind() is DefKind_ViewRecord_Value

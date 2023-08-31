@@ -76,7 +76,7 @@ func (v *view) panicIfFieldDuplication(name string) {
 }
 
 // # Implements:
-//   - IPartKey
+//   - IViewPartKey
 type viewPKey struct {
 	def
 	comment
@@ -99,7 +99,7 @@ func (pk *viewPKey) Validate() error {
 }
 
 // # Implements:
-//   - IClustCols
+//   - IViewClustCols
 type viewCCols struct {
 	def
 	comment
@@ -161,11 +161,11 @@ func newViewKey(app *appDef, viewName QName) *viewKey {
 	return key
 }
 
-func (key *viewKey) Partition() IPartKey {
+func (key *viewKey) Partition() IViewPartKey {
 	return key.pkey
 }
 
-func (key *viewKey) ClustCols() IClustCols {
+func (key *viewKey) ClustCols() IViewClustCols {
 	return key.ccols
 }
 
