@@ -6,9 +6,9 @@ SCHEMA sys;
 TABLE ChildWorkspace INHERITS CDoc (
 	WSName varchar NOT NULL,
 	WSKind qname NOT NULL,
-	WSKindInitializationData text,
+	WSKindInitializationData varchar(1024),
 	TemplateName varchar,
-	TemplateParams text,
+	TemplateParams varchar(1024),
 	WSClusterID int32 NOT NULL,
 	WSID int64,  -- to be updated afterwards
 	WSError varchar(1024) -- to be updated afterwards
@@ -22,9 +22,9 @@ TABLE WorkspaceID INHERITS CDoc (
 	OwnerApp varchar NOT NULL,
 	WSName varchar NOT NULL,
 	WSKind qname NOT NULL,
-	WSKindInitializationData text,
+	WSKindInitializationData varchar(1024),
 	TemplateName varchar,
-	TemplateParams text,
+	TemplateParams varchar(1024),
 	WSID int64
 );
 
@@ -36,9 +36,9 @@ TABLE WorkspaceDescriptor INHERITS Singleton (
 	OwnerApp varchar, -- QName -> each target app must know the owner QName -> string
 	WSName varchar NOT NULL,
 	WSKind qname NOT NULL,
-	WSKindInitializationData text,
+	WSKindInitializationData varchar(1024),
 	TemplateName varchar,
-	TemplateParams text,
+	TemplateParams varchar(1024),
 	WSID int64,
 	CreateError varchar(1024),
 	CreatedAtMs int64 NOT NULL,

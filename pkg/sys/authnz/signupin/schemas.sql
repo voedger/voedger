@@ -13,5 +13,5 @@ TABLE Login INHERITS CDoc (
 	LoginHash varchar NOT NULL,
 	WSID int64,      -- to be written after workspace init
 	WSError varchar, -- to be written after workspace init
-	WSKindInitializationData text NOT NULL
+	WSKindInitializationData varchar(1024) NOT NULL
 );
