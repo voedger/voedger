@@ -8,10 +8,10 @@ SCHEMA sys;
 TABLE Login INHERITS CDoc (
 	ProfileCluster int32 NOT NULL,
 	PwdHash bytes NOT NULL,
-	AppName text NOT NULL,
+	AppName varchar NOT NULL,
 	SubjectKind int32,
-	LoginHash text NOT NULL,
-	WSID int64,     -- to be written after workspace init
-	WSError text,   -- to be written after workspace init
-	WSKindInitializationData text NOT NULL
+	LoginHash varchar NOT NULL,
+	WSID int64,      -- to be written after workspace init
+	WSError varchar(1024), -- to be written after workspace init
+	WSKindInitializationData varchar(1024) NOT NULL
 );

@@ -7,6 +7,7 @@ package apps
 
 import (
 	"embed"
+	"path"
 	"runtime"
 
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -25,11 +26,11 @@ func Parse(fsi embed.FS, schemaName string, ep extensionpoints.IExtensionPoint) 
 			// notest
 			panic(err)
 		}
-		fileSchemaAST, err := parser.ParseFile(dirEntry.Name(), string(sqlContent))
+		_, file, _, _ := runtime.Caller(1)
+		fileSchemaAST, err := parser.ParseFile(path.Join(file, dirEntry.Name()), string(sqlContent))
 		if err != nil {
 			// notest
-			_, file, _, _ := runtime.Caller(1)
-			panic("from " + file + ": " + err.Error())
+			panic(err)
 		}
 		epFileSchemaASTs := ep.ExtensionPoint(EPPackageSchemasASTs)
 		epSysFileSchemaASTs := epFileSchemaASTs.ExtensionPoint(schemaName)
