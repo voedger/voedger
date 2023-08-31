@@ -64,6 +64,10 @@ func (v *view) Value() IViewValue {
 	return v.value
 }
 
+func (v *view) View() IView {
+	return v
+}
+
 func (v *view) panicIfFieldDuplication(name string) {
 	check := func(f IFields) {
 		if fld := f.Field(name); fld != nil {

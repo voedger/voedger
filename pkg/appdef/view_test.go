@@ -21,12 +21,12 @@ func TestAddView(t *testing.T) {
 
 	viewName := NewQName("test", "view")
 	v := app.AddView(viewName)
-	require.Equal(viewName, v.QName())
-	require.Equal(DefKind_ViewRecord, v.Kind())
-	require.Equal(2, v.ContainerCount()) // key + value
+	require.Equal(viewName, v.View().QName())
+	require.Equal(DefKind_ViewRecord, v.View().Kind())
+	require.Equal(2, v.View().ContainerCount()) // key + value
 
-	key := v.Key()
-	require.Equal(v.Container(SystemContainer_ViewKey).Def(), key)
+	key := v.View().Key()
+	require.Equal(v.View().Container(SystemContainer_ViewKey).Def(), key)
 	require.Equal(ViewKeyDefName(viewName), key.QName())
 	require.Equal(DefKind_ViewRecord_Key, key.Kind())
 	require.Equal(2, key.ContainerCount()) // pk + cc
@@ -41,12 +41,12 @@ func TestAddView(t *testing.T) {
 	require.Equal(ViewClusteringColumnsDefName(viewName), cc.QName())
 	require.Equal(DefKind_ViewRecord_ClusteringColumns, cc.Kind())
 
-	val := v.Value()
+	val := v.View().Value()
 	require.NotNil(val)
 	require.Equal(ViewValueDefName(viewName), val.QName())
 	require.Equal(DefKind_ViewRecord_Value, val.Kind())
 
-	require.Equal(v, app.View(v.QName()))
+	require.Equal(v, app.View(v.View().QName()))
 	require.Nil(app.View(NewQName("test", "unknown")))
 
 	t.Run("must be ok to add partition key fields", func(t *testing.T) {

@@ -21,8 +21,10 @@ type IView interface {
 }
 
 type IViewBuilder interface {
-	IView
 	ICommentBuilder
+
+	// Returns builded view
+	View() IView
 
 	/* old, will be deprecated */
 
@@ -46,6 +48,7 @@ type IViewBuilder interface {
 	AddValueField(name string, kind DataKind, required bool, comment ...string) IViewBuilder
 
 	/* new, under development */
+
 }
 
 // View partition key definition. DefKind() is DefKind_ViewRecordPartitionKey
