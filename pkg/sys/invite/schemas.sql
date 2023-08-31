@@ -4,7 +4,7 @@
 SCHEMA sys;
 
 TABLE Subject INHERITS CDoc (
-	Login string NOT NULL,
+	Login varchar NOT NULL,
 	SubjectKind int32 NOT NULL,
 	Roles varchar(1024) NOT NULL,
 	ProfileWSID int64 NOT NULL,
