@@ -33,9 +33,9 @@ func validateWSKindInitializationData(as istructs.IAppStructs, data map[string]i
 
 func ProvideViewNextWSID(appDefBuilder appdef.IAppDefBuilder) {
 	projectors.ProvideViewDef(appDefBuilder, ViewQNameNextBaseWSID, func(b appdef.IViewBuilder) {
-		b.AddPartField(fldDummy1, appdef.DataKind_int32).
-			AddClustColumn(fldDummy2, appdef.DataKind_int32).
-			AddValueField(fldNextBaseWSID, appdef.DataKind_int64, true)
+		b.Key().Partition().AddField(fldDummy1, appdef.DataKind_int32)
+		b.Key().ClustCols().AddField(fldDummy2, appdef.DataKind_int32)
+		b.Value().AddField(fldNextBaseWSID, appdef.DataKind_int64, true)
 	})
 }
 

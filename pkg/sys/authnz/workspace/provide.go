@@ -36,10 +36,9 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	// View<ChildWorkspaceIdx>
 	// target app, user profile
 	projectors.ProvideViewDef(appDefBuilder, QNameViewChildWorkspaceIdx, func(b appdef.IViewBuilder) {
-		b.
-			AddPartField(field_dummy, appdef.DataKind_int32).
-			AddClustColumn(authnz.Field_WSName, appdef.DataKind_string).
-			AddValueField(Field_ChildWorkspaceID, appdef.DataKind_int64, true)
+		b.Key().Partition().AddField(field_dummy, appdef.DataKind_int32)
+		b.Key().ClustCols().AddStringField(authnz.Field_WSName, appdef.DefaultFieldMaxLength)
+		b.Value().AddField(Field_ChildWorkspaceID, appdef.DataKind_int64, true)
 	})
 
 	// c.sys.CreateWorkspaceID
@@ -63,11 +62,11 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 
 	// View<WorkspaceIDIdx>
 	projectors.ProvideViewDef(appDefBuilder, QNameViewWorkspaceIDIdx, func(b appdef.IViewBuilder) {
-		b.
-			AddPartField(Field_OwnerWSID, appdef.DataKind_int64).
-			AddClustColumn(authnz.Field_WSName, appdef.DataKind_string).
-			AddValueField(authnz.Field_WSID, appdef.DataKind_int64, true).
-			AddValueField(field_IDOfCDocWorkspaceID, appdef.DataKind_RecordID, false) // TODO: not required for backward compatibility. Actually is required
+		b.Key().Partition().AddField(Field_OwnerWSID, appdef.DataKind_int64)
+		b.Key().ClustCols().AddStringField(authnz.Field_WSName, appdef.DefaultFieldMaxLength)
+		b.Value().
+			AddField(authnz.Field_WSID, appdef.DataKind_int64, true).
+			AddRefField(field_IDOfCDocWorkspaceID, false) // TODO: not required for backward compatibility. Actually is required
 	})
 
 	// c.sys.CreateWorkspace

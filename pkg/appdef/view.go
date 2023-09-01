@@ -75,21 +75,6 @@ func newViewBuilder(app *appDef, name QName) *viewBuilder {
 	}
 }
 
-func (v *viewBuilder) AddPartField(name string, kind DataKind, comment ...string) IViewBuilder {
-	v.Key().Partition().AddField(name, kind, comment...)
-	return v
-}
-
-func (v *viewBuilder) AddClustColumn(name string, kind DataKind, comment ...string) IViewBuilder {
-	v.Key().ClustCols().AddField(name, kind, comment...)
-	return v
-}
-
-func (v *viewBuilder) AddValueField(name string, kind DataKind, required bool, comment ...string) IViewBuilder {
-	v.Value().AddField(name, kind, required, comment...)
-	return v
-}
-
 func (v *viewBuilder) Key() IViewKeyBuilder {
 	return v.key
 }

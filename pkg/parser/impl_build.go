@@ -263,11 +263,11 @@ func (c *buildContext) views() error {
 				}
 
 				if contains(view.pkRef.ClusteringColumnsFields, fieldname) {
-					vb.AddClustColumn(string(fieldname), datakind)
+					vb.Key().ClustCols().AddField(string(fieldname), datakind)
 				} else if contains(view.pkRef.PartitionKeyFields, fieldname) {
-					vb.AddPartField(string(fieldname), datakind)
+					vb.Key().Partition().AddField(string(fieldname), datakind)
 				} else {
-					vb.AddValueField(string(fieldname), datakind, notnull)
+					vb.Value().AddField(string(fieldname), datakind, notnull)
 				}
 
 			}

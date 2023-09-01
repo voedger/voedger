@@ -201,14 +201,15 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		bld := appdef.New()
 		viewDef := bld.AddView(appdef.NewQName("test", "viewDrinks"))
-		viewDef.
-			AddPartField("partitionKey1", appdef.DataKind_int64).
-			AddClustColumn("clusteringColumn1", appdef.DataKind_int64).
-			AddClustColumn("clusteringColumn2", appdef.DataKind_bool).
-			AddClustColumn("clusteringColumn3", appdef.DataKind_string).
-			AddValueField("id", appdef.DataKind_int64, true).
-			AddValueField("name", appdef.DataKind_string, true).
-			AddValueField("active", appdef.DataKind_bool, true)
+		viewDef.Key().Partition().AddField("partitionKey1", appdef.DataKind_int64)
+		viewDef.Key().ClustCols().
+			AddField("clusteringColumn1", appdef.DataKind_int64).
+			AddField("clusteringColumn2", appdef.DataKind_bool).
+			AddStringField("clusteringColumn3", 100)
+		viewDef.Value().
+			AddField("id", appdef.DataKind_int64, true).
+			AddStringField("name", true).
+			AddField("active", appdef.DataKind_bool, true)
 
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
@@ -443,9 +444,9 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 		viewName := appdef.NewQName("types", "View")
 		viewDef := appDef.AddView(viewName)
-		viewDef.AddPartField("int", appdef.DataKind_int64)
-		viewDef.AddClustColumn("str", appdef.DataKind_string)
-		viewDef.AddValueField("bool", appdef.DataKind_bool, false)
+		viewDef.Key().Partition().AddField("int", appdef.DataKind_int64)
+		viewDef.Key().ClustCols().AddStringField("str", 100)
+		viewDef.Value().AddField("bool", appdef.DataKind_bool, false)
 
 		argDef := appDef.AddObject(appdef.NewQName("types", "Arg"))
 		argDef.AddField("bool", appdef.DataKind_bool, false)

@@ -55,10 +55,9 @@ func TestDynoBufSchemes(t *testing.T) {
 		require.NoError(err)
 
 		viewDef := appDefBuilder.AddView(appdef.NewQName("test", "view"))
-		viewDef.
-			AddPartField("pk1", appdef.DataKind_int64).
-			AddClustColumn("cc1", appdef.DataKind_string).
-			AddValueField("val1", appdef.DataKind_RecordID, true)
+		viewDef.Key().Partition().AddField("pk1", appdef.DataKind_int64)
+		viewDef.Key().ClustCols().AddStringField("cc1", 100)
+		viewDef.Value().AddRefField("val1", true)
 		appDef = sch
 	})
 
