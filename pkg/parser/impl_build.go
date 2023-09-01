@@ -518,7 +518,7 @@ func (c *buildContext) addFieldToDef(field *FieldExpr) {
 
 func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 	if constraint.UniqueField != nil {
-		f := c.defCtx().defBuilder.(appdef.IFieldsBuilder).Field(string(constraint.UniqueField.Field))
+		f := c.defCtx().defBuilder.(appdef.IFields).Field(string(constraint.UniqueField.Field))
 		if f == nil {
 			c.stmtErr(&constraint.Pos, ErrUndefinedField(string(constraint.UniqueField.Field)))
 			return

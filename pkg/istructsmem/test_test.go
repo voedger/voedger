@@ -331,7 +331,7 @@ func test() *testDataType {
 				AddValueField(testData.testViewRecord.valueFields.photo, appdef.DataKind_bytes, false).
 				AddValueField(testData.testViewRecord.valueFields.record, appdef.DataKind_Record, false).
 				AddValueField(testData.testViewRecord.valueFields.event, appdef.DataKind_Event, false)
-			testData.testViewRecord.valueName = viewDef.Value().QName()
+			testData.testViewRecord.valueName = appdef.ViewValueDefName(testData.testViewRecord.name)
 		}
 
 		return appDef

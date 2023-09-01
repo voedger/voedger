@@ -57,8 +57,6 @@ type IFields interface {
 }
 
 type IFieldsBuilder interface {
-	IFields
-
 	// Adds field specified name and kind.
 	//
 	// # Panics:

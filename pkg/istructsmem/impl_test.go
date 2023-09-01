@@ -441,7 +441,8 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 		docDef.AddContainer("rec", recDef.QName(), 0, appdef.Occurs_Unbounded)
 
-		viewDef := appDef.AddView(appdef.NewQName("types", "View"))
+		viewName := appdef.NewQName("types", "View")
+		viewDef := appDef.AddView(viewName)
 		viewDef.AddPartField("int", appdef.DataKind_int64)
 		viewDef.AddClustColumn("str", appdef.DataKind_string)
 		viewDef.AddValueField("bool", appdef.DataKind_bool, false)
@@ -465,7 +466,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 			NewQueryFunction(
 				qNameQry,
 				argDef.QName(),
-				viewDef.Value().QName(),
+				appdef.ViewValueDefName(viewName),
 				NullQueryExec))
 
 		cfg.FunctionRateLimits.AddAppLimit(qNameQry, istructs.RateLimit{

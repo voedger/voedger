@@ -38,8 +38,6 @@ type IUniques interface {
 }
 
 type IUniquesBuilder interface {
-	IUniques
-
 	// Adds new unique with specified name and fields.
 	// If name is omitted, then default name is used, e.g. `unique01`.
 	//
