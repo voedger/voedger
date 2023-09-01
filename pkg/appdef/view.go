@@ -12,7 +12,6 @@ import (
 
 // # Implements:
 //   - IView
-//   - IViewBuilder
 type view struct {
 	def
 	comment
@@ -38,14 +37,18 @@ func newView(app *appDef, name QName) *view {
 
 func (v *view) AddPartField(name string, kind DataKind, comment ...string) IViewBuilder {
 	v.panicIfFieldDuplication(name)
-	v.key.pkey.AddField(name, kind, true)
+	v.key.pkey.
+		AddField(name, kind, true).
+		SetFieldComment(name, comment...)
 	v.key.AddField(name, kind, true, comment...)
 	return v
 }
 
 func (v *view) AddClustColumn(name string, kind DataKind, comment ...string) IViewBuilder {
 	v.panicIfFieldDuplication(name)
-	v.key.ccols.AddField(name, kind, false)
+	v.key.ccols.
+		AddField(name, kind, false).
+		SetFieldComment(name, comment...)
 	v.key.AddField(name, kind, false, comment...)
 	return v
 }
@@ -77,6 +80,14 @@ func (v *view) panicIfFieldDuplication(name string) {
 
 	check(v.Key())
 	check(v.Value())
+}
+
+// View builder
+//
+// # Implements:
+//   - IViewBuilder
+type viewBuilder struct {
+	view
 }
 
 // # Implements:
