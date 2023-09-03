@@ -123,6 +123,32 @@ func (c *analyseCtx) view(view *ViewStmt) {
 	if view.pkRef == nil {
 		c.stmtErr(&view.Pos, ErrPrimaryKeyNotDeclared)
 	}
+	for _, pkf := range view.pkRef.PartitionKeyFields {
+		index, ok := fields[string(pkf)]
+		if !ok {
+			c.stmtErr(&view.pkRef.Pos, ErrUndefinedField(string(pkf)))
+		}
+		if view.Fields[index].Field.Type.Varchar != nil {
+			c.stmtErr(&view.pkRef.Pos, ErrViewFieldVarchar(string(pkf)))
+		}
+		if view.Fields[index].Field.Type.Bytes != nil {
+			c.stmtErr(&view.pkRef.Pos, ErrViewFieldBytes(string(pkf)))
+		}
+	}
+
+	for ccIndex, ccf := range view.pkRef.ClusteringColumnsFields {
+		fieldIndex, ok := fields[string(ccf)]
+		last := ccIndex == len(view.pkRef.ClusteringColumnsFields)-1
+		if !ok {
+			c.stmtErr(&view.pkRef.Pos, ErrUndefinedField(string(ccf)))
+		}
+		if view.Fields[fieldIndex].Field.Type.Varchar != nil && !last {
+			c.stmtErr(&view.pkRef.Pos, ErrVarcharFieldInCC(string(ccf)))
+		}
+		if view.Fields[fieldIndex].Field.Type.Bytes != nil && !last {
+			c.stmtErr(&view.pkRef.Pos, ErrBytesFieldInCC(string(ccf)))
+		}
+	}
 
 }
 
