@@ -667,6 +667,63 @@ func Test_DuplicatesInViews(t *testing.T) {
 	}, "\n"))
 
 }
+func Test_Views(t *testing.T) {
+	require := require.New(t)
+
+	f := func(sql string, expectErrors ...string) {
+		ast, err := ParseFile("file2.sql", sql)
+		require.NoError(err)
+		pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{ast})
+		require.NoError(err)
+
+		_, err = MergePackageSchemas([]*PackageSchemaAST{
+			pkg,
+		})
+		require.EqualError(err, strings.Join(expectErrors, "\n"))
+	}
+
+	f(`SCHEMA test; WORKSPACE Workspace (
+			VIEW test(
+				field1 int,
+				PRIMARY KEY(field2)
+			) AS RESULT OF Proj1;
+		)
+	`, "file2.sql:4:17: undefined field field2")
+
+	f(`SCHEMA test; WORKSPACE Workspace (
+			VIEW test(
+				field1 varchar,
+				PRIMARY KEY((field1))
+			) AS RESULT OF Proj1;
+		)
+	`, "file2.sql:4:17: varchar field field1 not supported in partition key")
+
+	f(`SCHEMA test; WORKSPACE Workspace (
+		VIEW test(
+			field1 bytes,
+			PRIMARY KEY((field1))
+		) AS RESULT OF Proj1;
+	)
+	`, "file2.sql:4:16: bytes field field1 not supported in partition key")
+
+	f(`SCHEMA test; WORKSPACE Workspace (
+		VIEW test(
+			field1 varchar,
+			field2 int,
+			PRIMARY KEY(field1, field2)
+		) AS RESULT OF Proj1;
+	)
+	`, "file2.sql:5:16: varchar field field1 can only be the last one in clustering key")
+
+	f(`SCHEMA test; WORKSPACE Workspace (
+		VIEW test(
+			field1 bytes,
+			field2 int,
+			PRIMARY KEY(field1, field2)
+		) AS RESULT OF Proj1;
+	)
+	`, "file2.sql:5:16: bytes field field1 can only be the last one in clustering key")
+}
 func Test_Comments(t *testing.T) {
 	require := require.New(t)
 

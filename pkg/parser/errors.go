@@ -106,6 +106,22 @@ func ErrPackageRedeclared(name string) error {
 	return fmt.Errorf("package %s redeclared", name)
 }
 
+func ErrViewFieldVarchar(name string) error {
+	return fmt.Errorf("varchar field %s not supported in partition key", name)
+}
+
+func ErrViewFieldBytes(name string) error {
+	return fmt.Errorf("bytes field %s not supported in partition key", name)
+}
+
+func ErrVarcharFieldInCC(name string) error {
+	return fmt.Errorf("varchar field %s can only be the last one in clustering key", name)
+}
+
+func ErrBytesFieldInCC(name string) error {
+	return fmt.Errorf("bytes field %s can only be the last one in clustering key", name)
+}
+
 func errorAt(err error, pos *lexer.Position) error {
 	return fmt.Errorf("%s: %w", pos.String(), err)
 }
