@@ -35,6 +35,11 @@ var ErrMustBeNotNull = errors.New("field has to be NOT NULL")
 var ErrCircularReferenceInInherits = errors.New("circular reference in INHERITS")
 var ErrRegexpCheckOnlyForVarcharField = errors.New("regexp CHECK only available for varchar field")
 var ErrMaxFieldLengthTooLarge = fmt.Errorf("maximum field length is %d", appdef.MaxFieldLength)
+var ErrOnlyInsertForOdocOrORecord = errors.New("only INSERT allowed for ODoc or ORecord")
+
+func ErrUndefinedExpectedCommandTypeOrTable(name DefQName) error {
+	return fmt.Errorf("%s undefined, expected command, type or table", name.String())
+}
 
 func ErrCheckRegexpErr(e error) error {
 	return fmt.Errorf("CHECK regexp error:  %w", e)

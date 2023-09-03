@@ -150,7 +150,7 @@ func (c *buildContext) alterWorkspaces() error {
 				})
 			}
 
-			err := resolveEx[*WorkspaceStmt](a.Name, &c.basicContext, func(w *WorkspaceStmt, pkg *PackageSchemaAST) error {
+			err := resolveEx(a.Name, &c.basicContext, func(w *WorkspaceStmt, pkg *PackageSchemaAST) error {
 				if !w.Alterable && schema != pkg {
 					return ErrWorkspaceIsNotAlterable(w.GetName())
 				}
