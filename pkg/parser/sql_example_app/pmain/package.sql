@@ -143,41 +143,42 @@ WORKSPACE MyWorkspace (
         /*
         Projector can only be declared in workspace.
         
-        A builtin function OrdersCountProjector must exist in package resources.
+        A builtin function CountOrders must exist in package resources.
+            ON Orders - points to a command
             INTENTS - lists all storage keys, projector generates intents for
             STATE - lists all storage keys, projector reads state from
                 (key consist of Storage Qname, and Entity name, when required by storage)
                 (no need to specify in STATE when already listed in INTENTS)
         */
         PROJECTOR CountOrders 
-            ON COMMAND Orders 
+            ON Orders 
             INTENTS(View OrdersCountView);
         
-        -- Projector triggered by command argument SubscriptionProfile which is a Storage
+        -- Projector triggered by command argument SubscriptionEvent
         -- Projector uses sys.HTTPStorage
         PROJECTOR UpdateSubscriptionProfile 
-            ON COMMAND ARGUMENT SubscriptionEvent 
+            ON SubscriptionEvent 
             STATE(sys.Http, AppSecret);
 
-        -- Projectors triggered by CUD operations
+        -- Projectors triggered by CUD operation
         -- SYNC means that projector is synchronous 
         SYNC PROJECTOR TablePlanThumbnailGen 
-            ON INSERT TablePlan 
+            AFTER INSERT ON TablePlan 
             INTENTS(View TablePlanThumbnails);
 
-        -- Projector triggered by few commands
+        -- Projector triggered by few COMMANDs
         PROJECTOR UpdateDashboard 
-            ON COMMAND IN (Orders, Orders2) 
+            ON (Orders, Orders2) 
             INTENTS(View DashboardView);
 
         -- Projector triggered by few types of CUD operations
         PROJECTOR UpdateActivePlans 
-            ON ACTIVATE OR DEACTIVATE TablePlan 
+            AFTER ACTIVATE OR DEACTIVATE ON TablePlan 
             INTENTS(View ActiveTablePlansView);
         
         -- Some projector which sends E-mails and performs HTTP queries
         PROJECTOR NotifyOnChanges 
-            ON INSERT OR UPDATE IN (TablePlan, WsTable) 
+            AFTER INSERT OR UPDATE ON (TablePlan, WsTable) 
             STATE(Http, AppSecret)
             INTENTS(SendMail, View NotificationsHistory);
 

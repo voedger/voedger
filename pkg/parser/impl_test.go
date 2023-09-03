@@ -454,15 +454,15 @@ func Test_AbstractTables(t *testing.T) {
 		EXTENSION ENGINE BUILTIN (
 
 			PROJECTOR proj1
-            ON INSERT AbstractTable 		-- NOT ALLOWED
+            AFTER INSERT ON AbstractTable 	-- NOT ALLOWED
             INTENTS(SendMail);
 
 			SYNC PROJECTOR proj2
-            ON INSERT My1
+            AFTER INSERT ON My1
             INTENTS(Record AbstractTable);	-- NOT ALLOWED
 
 			PROJECTOR proj3
-            ON INSERT My1
+            AFTER INSERT ON My1
 			STATE(Record AbstractTable)		-- NOT ALLOWED
             INTENTS(SendMail);
 		);
@@ -723,7 +723,7 @@ func Test_Undefined(t *testing.T) {
 		EXTENSION ENGINE WASM (
 			COMMAND Orders() WITH Tags=(UndefinedTag);
 			QUERY Query1 RETURNS void WITH Rate=UndefinedRate;
-			PROJECTOR ImProjector ON COMMAND xyz.CreateUPProfile;
+			PROJECTOR ImProjector ON xyz.CreateUPProfile;
 			COMMAND CmdFakeReturn() RETURNS text;
 			COMMAND CmdNoReturn() RETURNS void;
 			COMMAND CmdFakeArg(text);
@@ -749,6 +749,37 @@ func Test_Undefined(t *testing.T) {
 	}, "\n"))
 }
 
+func Test_Projectors(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("example.sql", `SCHEMA test;
+	WORKSPACE test (
+		TABLE Order INHERITS ODoc();
+		EXTENSION ENGINE WASM (
+			COMMAND Orders();
+			PROJECTOR ImProjector1 ON test.CreateUPProfile; 		-- Undefined
+			PROJECTOR ImProjector2 ON Order; 						-- Good
+			PROJECTOR ImProjector3 AFTER UPDATE ON Order; 			-- Bad
+			PROJECTOR ImProjector4 AFTER ACTIVATE ON Order; 		-- Bad
+			PROJECTOR ImProjector5 AFTER DEACTIVATE ON Order; 		-- Bad
+		)
+	)
+	`)
+	require.Nil(err)
+
+	pkg, err := MergeFileSchemaASTs("", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	_, err = MergePackageSchemas([]*PackageSchemaAST{pkg, getSysPackageAST()})
+
+	require.EqualError(err, strings.Join([]string{
+		"example.sql:6:4: test.CreateUPProfile undefined, expected command, type or table",
+		"example.sql:8:4: only INSERT allowed for ODoc or ORecord",
+		"example.sql:9:4: only INSERT allowed for ODoc or ORecord",
+		"example.sql:10:4: only INSERT allowed for ODoc or ORecord",
+	}, "\n"))
+}
+
 func Test_Imports(t *testing.T) {
 	require := require.New(t)
 
@@ -760,7 +791,7 @@ func Test_Imports(t *testing.T) {
     		COMMAND Orders WITH Tags=(pkg2.SomeTag);
     		QUERY Query2 RETURNS void WITH Tags=(air.SomePkg3Tag);
     		QUERY Query3 RETURNS void WITH Tags=(air.UnknownTag); -- air.UnknownTag undefined
-    		PROJECTOR ImProjector ON COMMAND Air.CreateUPProfil; -- Air undefined
+    		PROJECTOR ImProjector ON Air.CreateUPProfil; -- Air undefined
 		)
 	)
 	`)
