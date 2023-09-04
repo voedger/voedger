@@ -352,26 +352,33 @@ zczxczxc
 */
 type ProjectorStmt struct {
 	Statement
-	Sync     bool         `parser:"@'SYNC'?"`
-	Name     Ident        `parser:"'PROJECTOR' @Ident"`
-	On       ProjectorOn  `parser:"'ON' @@"`
-	Triggers []DefQName   `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
-	State    []StorageKey `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
-	Intents  []StorageKey `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
-	Engine   EngineType   // Initialized with 1st pass
+	Sync      bool                `parser:"@'SYNC'?"`
+	Name      Ident               `parser:"'PROJECTOR' @Ident"`
+	CUDEvents *ProjectorCUDEvents `parser:"('AFTER' @@)?"`
+	On        []DefQName          `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!"`
+	State     []StorageKey        `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Intents   []StorageKey        `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
+	Engine    EngineType          // Initialized with 1st pass
 }
 
 func (s *ProjectorStmt) GetName() string            { return string(s.Name) }
 func (s *ProjectorStmt) SetEngineType(e EngineType) { s.Engine = e }
 
-type ProjectorOn struct {
+type ProjectorCUDEvents struct {
+	Insert     bool `parser:"  @(('INSERT' ('OR' 'UPDATE')?) | ('UPDATE' 'OR' 'INSERT'))"`
+	Update     bool `parser:"| @(('UPDATE' ('OR' 'INSERT')?) | ('INSERT' 'OR' 'UPDATE'))"`
+	Activate   bool `parser:"| @(('ACTIVATE' ('OR' 'DEACTIVATE')?) | ('DEACTIVATE' 'OR' 'ACTIVATE'))"`
+	Deactivate bool `parser:"| @(('DEACTIVATE' ('OR' 'ACTIVATE')?) | ('ACTIVATE' 'OR' 'DEACTIVATE'))"`
+}
+
+/*type ProjectorOn struct {
 	CommandArgument bool `parser:"@('COMMAND' 'ARGUMENT')"`
 	Command         bool `parser:"| @('COMMAND')"`
 	Insert          bool `parser:"| @(('INSERT' ('OR' 'UPDATE')?) | ('UPDATE' 'OR' 'INSERT'))"`
 	Update          bool `parser:"| @(('UPDATE' ('OR' 'INSERT')?) | ('INSERT' 'OR' 'UPDATE'))"`
 	Activate        bool `parser:"| @(('ACTIVATE' ('OR' 'DEACTIVATE')?) | ('DEACTIVATE' 'OR' 'ACTIVATE'))"`
 	Deactivate      bool `parser:"| @(('DEACTIVATE' ('OR' 'ACTIVATE')?) | ('ACTIVATE' 'OR' 'DEACTIVATE'))"`
-}
+}*/
 
 type TemplateStmt struct {
 	Statement

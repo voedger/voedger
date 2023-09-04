@@ -14,11 +14,15 @@ import (
 var QNameViewUniques = appdef.NewQName(appdef.SysPackage, "Uniques")
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
-	projectors.ProvideViewDef(appDefBuilder, QNameViewUniques, func(b appdef.IViewBuilder) {
-		b.AddPartField(field_QName, appdef.DataKind_QName).
-			AddPartField(field_ValuesHash, appdef.DataKind_int64).
-			AddClustColumn(field_Values, appdef.DataKind_bytes).
-			AddValueField(field_ID, appdef.DataKind_RecordID, true)
+
+	projectors.ProvideViewDef(appDefBuilder, QNameViewUniques, func(view appdef.IViewBuilder) {
+		view.Key().Partition().
+			AddField(field_QName, appdef.DataKind_QName).
+			AddField(field_ValuesHash, appdef.DataKind_int64)
+		view.Key().ClustCols().
+			AddBytesField(field_Values, appdef.DefaultFieldMaxLength)
+		view.Value().
+			AddRefField(field_ID, true)
 	})
 	cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{

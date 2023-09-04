@@ -19,7 +19,7 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 
 		// sys package
 		sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-			apis.NumCommandProcessors, nil)
+			apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
 
 		// sys/registry resources
 		// note: q.sys.RefreshPrincipalToken is moved to sys package because it is strange to call it in sys/registry: provided token is issued for different app (e.g. airs-bp)

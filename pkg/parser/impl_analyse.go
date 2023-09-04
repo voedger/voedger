@@ -66,7 +66,7 @@ func (c *analyseCtx) useWorkspace(u *UseWorkspaceStmt) {
 		}
 		return nil
 	}
-	err := resolve[*WorkspaceStmt](DefQName{Package: c.pkg.Ast.Package, Name: u.Workspace}, c.basicContext, resolveFunc)
+	err := resolve(DefQName{Package: c.pkg.Ast.Package, Name: u.Workspace}, c.basicContext, resolveFunc)
 	if err != nil {
 		c.stmtErr(&u.Pos, err)
 	}
@@ -79,7 +79,7 @@ func (c *analyseCtx) alterWorkspace(u *AlterWorkspaceStmt) {
 		}
 		return nil
 	}
-	err := resolveEx[*WorkspaceStmt](u.Name, c.basicContext, resolveFunc)
+	err := resolveEx(u.Name, c.basicContext, resolveFunc)
 	if err != nil {
 		c.stmtErr(&u.Pos, err)
 	}
@@ -123,6 +123,32 @@ func (c *analyseCtx) view(view *ViewStmt) {
 	if view.pkRef == nil {
 		c.stmtErr(&view.Pos, ErrPrimaryKeyNotDeclared)
 	}
+	for _, pkf := range view.pkRef.PartitionKeyFields {
+		index, ok := fields[string(pkf)]
+		if !ok {
+			c.stmtErr(&view.pkRef.Pos, ErrUndefinedField(string(pkf)))
+		}
+		if view.Fields[index].Field.Type.Varchar != nil {
+			c.stmtErr(&view.pkRef.Pos, ErrViewFieldVarchar(string(pkf)))
+		}
+		if view.Fields[index].Field.Type.Bytes != nil {
+			c.stmtErr(&view.pkRef.Pos, ErrViewFieldBytes(string(pkf)))
+		}
+	}
+
+	for ccIndex, ccf := range view.pkRef.ClusteringColumnsFields {
+		fieldIndex, ok := fields[string(ccf)]
+		last := ccIndex == len(view.pkRef.ClusteringColumnsFields)-1
+		if !ok {
+			c.stmtErr(&view.pkRef.Pos, ErrUndefinedField(string(ccf)))
+		}
+		if view.Fields[fieldIndex].Field.Type.Varchar != nil && !last {
+			c.stmtErr(&view.pkRef.Pos, ErrVarcharFieldInCC(string(ccf)))
+		}
+		if view.Fields[fieldIndex].Field.Type.Bytes != nil && !last {
+			c.stmtErr(&view.pkRef.Pos, ErrBytesFieldInCC(string(ccf)))
+		}
+	}
 
 }
 
@@ -161,24 +187,56 @@ func (c *analyseCtx) query(v *QueryStmt) {
 
 }
 func (c *analyseCtx) projector(v *ProjectorStmt) {
-	for _, target := range v.Triggers {
-		if v.On.Activate || v.On.Deactivate || v.On.Insert || v.On.Update {
-			resolveFunc := func(f *TableStmt) error {
-				if f.Abstract {
+	for _, target := range v.On {
+		if v.CUDEvents != nil {
+			resolveFunc := func(table *TableStmt) error {
+				if table.Abstract {
 					return ErrAbstractTableNotAlowedInProjectors(target.String())
+				}
+				defKind, _, err := c.getTableDefKind(table)
+				if err != nil {
+					return err
+				}
+				if defKind == appdef.DefKind_ODoc || defKind == appdef.DefKind_ORecord {
+					if v.CUDEvents.Activate || v.CUDEvents.Deactivate || v.CUDEvents.Update {
+						return ErrOnlyInsertForOdocOrORecord
+					}
 				}
 				return nil
 			}
 			if err := resolve(target, c.basicContext, resolveFunc); err != nil {
 				c.stmtErr(&v.Pos, err)
 			}
-		} else if v.On.Command {
-			if err := resolve(target, c.basicContext, func(f *CommandStmt) error { return nil }); err != nil {
+		} else { // The type of ON not defined
+			// Command?
+			cmd, _, err := lookup[*CommandStmt](target, c.basicContext)
+			if err != nil {
 				c.stmtErr(&v.Pos, err)
+				continue
 			}
-		} else if v.On.CommandArgument {
-			if err := resolve(target, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
+			if cmd != nil {
+				continue // resolved
+			}
+
+			// Command Argument?
+			cmdArg, _, err := lookup[*TypeStmt](target, c.basicContext)
+			if err != nil {
 				c.stmtErr(&v.Pos, err)
+				continue
+			}
+			if cmdArg != nil {
+				continue // resolved
+			}
+
+			// Table?
+			table, _, err := lookup[*TableStmt](target, c.basicContext)
+			if err != nil {
+				c.stmtErr(&v.Pos, err)
+				continue
+			}
+			if table == nil {
+				c.stmtErr(&v.Pos, ErrUndefinedExpectedCommandTypeOrTable(target))
+				continue
 			}
 		}
 	}

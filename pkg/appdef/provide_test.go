@@ -16,7 +16,7 @@ func TestBasicUsage(t *testing.T) {
 
 	saleParamsDef := appDef.AddODoc(NewQName("test", "Sale"))
 	saleParamsDef.
-		AddField("Buyer", DataKind_string, true).
+		AddStringField("Buyer", true, MaxLen(100)).
 		AddField("Age", DataKind_int32, false).
 		AddField("Height", DataKind_float32, false).
 		AddField("isHuman", DataKind_bool, false).
@@ -37,23 +37,23 @@ func TestBasicUsage(t *testing.T) {
 	saleSecureParamsDef.
 		AddField("password", DataKind_string, true)
 
-	docDef := appDef.AddCDoc(NewQName("test", "photos"))
+	docName := NewQName("test", "photos")
+	docDef := appDef.AddCDoc(docName)
 	docDef.
-		AddField("Buyer", DataKind_string, true).
+		AddStringField("Buyer", true, MaxLen(100)).
 		AddField("Age", DataKind_int32, false).
 		AddField("Height", DataKind_float32, false).
 		AddField("isHuman", DataKind_bool, false).
 		AddField("Photo", DataKind_bytes, false)
 
 	viewDef := appDef.AddView(NewQName("test", "viewBuyerByHeight"))
-	viewDef.
-		AddPartField("Height", DataKind_float32).
-		AddClustColumn("Buyer", DataKind_string).
-		AddValueField("BuyerID", DataKind_RecordID, true)
+	viewDef.Key().Partition().AddField("Height", DataKind_float32)
+	viewDef.Key().ClustCols().AddStringField("Buyer", 100)
+	viewDef.Value().AddRefField("BuyerID", true, docName)
 
 	objBuyer := appDef.AddObject(NewQName("test", "buyer"))
 	objBuyer.
-		AddField("Name", DataKind_string, true).
+		AddStringField("Name", true).
 		AddField("Age", DataKind_int32, false).
 		AddField("isHuman", DataKind_bool, false)
 
