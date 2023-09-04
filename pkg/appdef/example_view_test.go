@@ -19,18 +19,23 @@ func ExampleIView() {
 	{
 		appDef := appdef.New()
 
+		docName := appdef.NewQName("test", "doc")
+		_ = appDef.AddCDoc(docName)
+
 		view := appDef.AddView(viewName)
 		view.SetComment("view comment")
 		view.Key().Partition().
-			AddField("pk1", appdef.DataKind_int64).
-			AddField("pk2", appdef.DataKind_bool)
+			AddField("pk_int", appdef.DataKind_int64).
+			AddRefField("pk_ref", docName)
 		view.Key().ClustCols().
-			AddField("cc1", appdef.DataKind_float64).
-			AddStringField("cc2", 100)
+			AddField("cc_int", appdef.DataKind_int64).
+			AddRefField("cc_ref", docName).
+			AddStringField("cc_name", 100)
 		view.Value().
-			AddField("v1", appdef.DataKind_float64, true).
-			AddBytesField("v2", false, 1024)
-
+			AddField("vv_int", appdef.DataKind_int64, true).
+			AddRefField("vv_ref", true, docName).
+			AddStringField("vv_code", false, appdef.MaxLen(10), appdef.Pattern(`^\w+$`)).
+			AddBytesField("vv_data", false, appdef.MaxLen(1024))
 		if a, err := appDef.Build(); err == nil {
 			app = a
 		} else {
@@ -44,35 +49,51 @@ func ExampleIView() {
 		view := app.View(viewName)
 		fmt.Printf("view %q: %v, %s\n", view.QName(), view.Kind(), view.Comment())
 
+		field := func(f appdef.IField) {
+			fmt.Printf("- %s: %s", f.Name(), f.DataKind().TrimString())
+			if f.IsSys() {
+				fmt.Print(", sys")
+			}
+			if f.Required() {
+				fmt.Print(", required")
+			}
+			if r, ok := f.(appdef.IRefField); ok {
+				if len(r.Refs()) != 0 {
+					fmt.Printf(", refs: %v", r.Refs())
+				}
+			}
+			if s, ok := f.(appdef.IStringField); ok {
+				fmt.Printf(", restricts: %v", s.Restricts())
+			}
+			fmt.Println()
+		}
+
 		// how to inspect view partition key
 		fmt.Printf("view partition key is %q, %d fields:\n", view.Key().Partition().QName(), view.Key().Partition().FieldCount())
-		view.Key().Partition().Fields(func(f appdef.IField) {
-			fmt.Printf("- %s: %s\n", f.Name(), f.DataKind().TrimString())
-		})
+		view.Key().Partition().Fields(field)
 
 		// how to inspect view clustering columns
 		fmt.Printf("view clustering columns key is %q, %d fields:\n", view.Key().ClustCols().QName(), view.Key().ClustCols().FieldCount())
-		view.Key().ClustCols().Fields(func(f appdef.IField) {
-			fmt.Printf("- %s: %s\n", f.Name(), f.DataKind().TrimString())
-		})
+		view.Key().ClustCols().Fields(field)
 
 		// how to inspect view value
 		fmt.Printf("view value is %q, %d fields:\n", view.Value().QName(), view.Value().FieldCount())
-		view.Value().Fields(func(f appdef.IField) {
-			fmt.Printf("- %s: %s, required: %v\n", f.Name(), f.DataKind().TrimString(), f.Required())
-		})
+		view.Value().Fields(field)
 	}
 
 	// Output:
 	// view "test.view": DefKind_ViewRecord, view comment
 	// view partition key is "test.view_PartitionKey", 2 fields:
-	// - pk1: int64
-	// - pk2: bool
-	// view clustering columns key is "test.view_ClusteringColumns", 2 fields:
-	// - cc1: float64
-	// - cc2: string
-	// view value is "test.view_Value", 3 fields:
-	// - sys.QName: QName, required: true
-	// - v1: float64, required: true
-	// - v2: bytes, required: false
+	// - pk_int: int64, required
+	// - pk_ref: RecordID, required, refs: [test.doc]
+	// view clustering columns key is "test.view_ClusteringColumns", 3 fields:
+	// - cc_int: int64
+	// - cc_ref: RecordID, refs: [test.doc]
+	// - cc_name: string, restricts: MaxLen: 100
+	// view value is "test.view_Value", 5 fields:
+	// - sys.QName: QName, sys, required
+	// - vv_int: int64, required
+	// - vv_ref: RecordID, required, refs: [test.doc]
+	// - vv_code: string, restricts: MaxLen: 10, Pattern: `^\w+$`
+	// - vv_data: bytes, restricts: MaxLen: 1024
 }
