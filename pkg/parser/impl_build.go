@@ -263,11 +263,11 @@ func (c *buildContext) views() error {
 				}
 
 				if contains(view.pkRef.ClusteringColumnsFields, fieldname) {
-					vb.AddClustColumn(string(fieldname), datakind)
+					vb.Key().ClustCols().AddField(string(fieldname), datakind)
 				} else if contains(view.pkRef.PartitionKeyFields, fieldname) {
-					vb.AddPartField(string(fieldname), datakind)
+					vb.Key().Partition().AddField(string(fieldname), datakind)
 				} else {
-					vb.AddValueField(string(fieldname), datakind, notnull)
+					vb.Value().AddField(string(fieldname), datakind, notnull)
 				}
 
 			}
@@ -518,7 +518,7 @@ func (c *buildContext) addFieldToDef(field *FieldExpr) {
 
 func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 	if constraint.UniqueField != nil {
-		f := c.defCtx().defBuilder.(appdef.IFieldsBuilder).Field(string(constraint.UniqueField.Field))
+		f := c.defCtx().defBuilder.(appdef.IFields).Field(string(constraint.UniqueField.Field))
 		if f == nil {
 			c.stmtErr(&constraint.Pos, ErrUndefinedField(string(constraint.UniqueField.Field)))
 			return

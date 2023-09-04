@@ -150,9 +150,9 @@ var (
 )
 
 var buildProjectionView = func(view appdef.IViewBuilder) {
-	view.AddPartField("pk", appdef.DataKind_int32)
-	view.AddClustColumn("cc", appdef.DataKind_int32)
-	view.AddValueField(colValue, appdef.DataKind_int32, true)
+	view.Key().Partition().AddField("pk", appdef.DataKind_int32)
+	view.Key().ClustCols().AddField("cc", appdef.DataKind_int32)
+	view.Value().AddField(colValue, appdef.DataKind_int32, true)
 }
 
 type (

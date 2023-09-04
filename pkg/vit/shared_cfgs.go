@@ -90,9 +90,9 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 
 	apps.Parse(schemasSimpleApp, "simpleApp", ep)
 
-	projectors.ProvideViewDef(adf, QNameTestView, func(b appdef.IViewBuilder) {
-		b.AddPartField("ViewIntFld", appdef.DataKind_int32).
-			AddClustColumn("ViewStrFld", appdef.DataKind_string)
+	projectors.ProvideViewDef(adf, QNameTestView, func(view appdef.IViewBuilder) {
+		view.Key().Partition().AddField("ViewIntFld", appdef.DataKind_int32)
+		view.Key().ClustCols().AddStringField("ViewStrFld", appdef.DefaultFieldMaxLength)
 	})
 
 	// for rates test

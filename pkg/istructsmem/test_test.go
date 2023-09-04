@@ -319,19 +319,21 @@ func test() *testDataType {
 
 		{
 			viewDef := appDef.AddView(testData.testViewRecord.name)
-			viewDef.
-				AddPartField(testData.testViewRecord.partFields.partition, appdef.DataKind_int32).
-				AddPartField(testData.testViewRecord.partFields.workspace, appdef.DataKind_int64).
-				AddClustColumn(testData.testViewRecord.ccolsFields.device, appdef.DataKind_int32).
-				AddClustColumn(testData.testViewRecord.ccolsFields.sorter, appdef.DataKind_string).
-				AddValueField(testData.testViewRecord.valueFields.buyer, appdef.DataKind_string, true).
-				AddValueField(testData.testViewRecord.valueFields.age, appdef.DataKind_int32, false).
-				AddValueField(testData.testViewRecord.valueFields.heights, appdef.DataKind_float32, false).
-				AddValueField(testData.testViewRecord.valueFields.human, appdef.DataKind_bool, false).
-				AddValueField(testData.testViewRecord.valueFields.photo, appdef.DataKind_bytes, false).
-				AddValueField(testData.testViewRecord.valueFields.record, appdef.DataKind_Record, false).
-				AddValueField(testData.testViewRecord.valueFields.event, appdef.DataKind_Event, false)
-			testData.testViewRecord.valueName = viewDef.Value().QName()
+			viewDef.Key().Partition().
+				AddField(testData.testViewRecord.partFields.partition, appdef.DataKind_int32).
+				AddField(testData.testViewRecord.partFields.workspace, appdef.DataKind_int64)
+			viewDef.Key().ClustCols().
+				AddField(testData.testViewRecord.ccolsFields.device, appdef.DataKind_int32).
+				AddStringField(testData.testViewRecord.ccolsFields.sorter, 100)
+			viewDef.Value().
+				AddStringField(testData.testViewRecord.valueFields.buyer, true).
+				AddField(testData.testViewRecord.valueFields.age, appdef.DataKind_int32, false).
+				AddField(testData.testViewRecord.valueFields.heights, appdef.DataKind_float32, false).
+				AddField(testData.testViewRecord.valueFields.human, appdef.DataKind_bool, false).
+				AddBytesField(testData.testViewRecord.valueFields.photo, false, appdef.MaxLen(1024)).
+				AddField(testData.testViewRecord.valueFields.record, appdef.DataKind_Record, false).
+				AddField(testData.testViewRecord.valueFields.event, appdef.DataKind_Event, false)
+			testData.testViewRecord.valueName = appdef.ViewValueDefName(testData.testViewRecord.name)
 		}
 
 		return appDef

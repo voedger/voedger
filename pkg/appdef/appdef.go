@@ -71,7 +71,7 @@ func (app *appDef) AddQuery(name QName) IQueryBuilder {
 }
 
 func (app *appDef) AddView(name QName) IViewBuilder {
-	return newView(app, name)
+	return newViewBuilder(app, name)
 }
 
 func (app *appDef) AddWDoc(name QName) IWDocBuilder {
