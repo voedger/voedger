@@ -4,7 +4,7 @@
 SCHEMA sys;
 
 TABLE UserProfile INHERITS Singleton (
-	DisplayName text
+	DisplayName varchar
 );
 
 TABLE DeviceProfile INHERITS Singleton ();

@@ -35,6 +35,11 @@ var ErrMustBeNotNull = errors.New("field has to be NOT NULL")
 var ErrCircularReferenceInInherits = errors.New("circular reference in INHERITS")
 var ErrRegexpCheckOnlyForVarcharField = errors.New("regexp CHECK only available for varchar field")
 var ErrMaxFieldLengthTooLarge = fmt.Errorf("maximum field length is %d", appdef.MaxFieldLength)
+var ErrOnlyInsertForOdocOrORecord = errors.New("only INSERT allowed for ODoc or ORecord")
+
+func ErrUndefinedExpectedCommandTypeOrTable(name DefQName) error {
+	return fmt.Errorf("%s undefined, expected command, type or table", name.String())
+}
 
 func ErrCheckRegexpErr(e error) error {
 	return fmt.Errorf("CHECK regexp error:  %w", e)
@@ -99,6 +104,22 @@ func ErrRedeclared(name string) error {
 
 func ErrPackageRedeclared(name string) error {
 	return fmt.Errorf("package %s redeclared", name)
+}
+
+func ErrViewFieldVarchar(name string) error {
+	return fmt.Errorf("varchar field %s not supported in partition key", name)
+}
+
+func ErrViewFieldBytes(name string) error {
+	return fmt.Errorf("bytes field %s not supported in partition key", name)
+}
+
+func ErrVarcharFieldInCC(name string) error {
+	return fmt.Errorf("varchar field %s can only be the last one in clustering key", name)
+}
+
+func ErrBytesFieldInCC(name string) error {
+	return fmt.Errorf("bytes field %s can only be the last one in clustering key", name)
 }
 
 func errorAt(err error, pos *lexer.Position) error {

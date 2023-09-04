@@ -166,11 +166,11 @@ WORKSPACE Restaurant (
     EXTENSION ENGINE BUILTIN (
 	
 	    SYNC PROJECTOR UpdateTableStatus
-	        ON INSERT IN (Order, Bill)
+	        AFTER INSERT ON (Order, Bill)
 		INTENTS(View TableStatus);
 
 	    PROJECTOR UpdateSalesReport
-	        ON INSERT Bill 
+	        AFTER INSERT ON Bill 
 		INTENTS(View SalesPerDay);
 
     );
