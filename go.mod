@@ -17,10 +17,10 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.4
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.2
-	github.com/untillpro/airs-ibus v0.0.0-20221105121917-d13e0967180d
+	github.com/untillpro/airs-ibus v0.0.0-20230904100809-21eaae083040
 	github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195
 	github.com/untillpro/goutils v0.0.0-20230413153406-ba6af4dbd062
-	github.com/untillpro/ibusmem v0.0.0-20221105120342-e51c7ee7020c
+	github.com/untillpro/ibusmem v0.0.0-20230904100952-cc8a0d2caa40
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/voedger/wazero v0.0.0-20230501104804-47700bcd4177
 	github.com/wneessen/go-mail v0.3.9
@@ -38,7 +38,6 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/flatbuffers v1.12.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
-	github.com/heeus/core-logger v0.0.0-20211015110533-1499b5b04842 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/juju/errors v0.0.0-20170703010042-c7d06af17c68 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
