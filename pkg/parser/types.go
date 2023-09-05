@@ -612,9 +612,20 @@ type FieldExpr struct {
 type ViewStmt struct {
 	Statement
 	Name     Ident          `parser:"'VIEW' @Ident"`
-	Fields   []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	Items    []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	ResultOf DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
 	pkRef    *PrimaryKeyExpr
+}
+
+func (s *ViewStmt) Iterate(callback func(stmt interface{})) {
+	for i := 0; i < len(s.Items); i++ {
+		item := &s.Items[i]
+		if item.Field != nil {
+			callback(item.Field)
+		} else if item.RefField != nil {
+			callback(item.RefField)
+		}
+	}
 }
 
 type ViewItemExpr struct {
@@ -633,14 +644,14 @@ type PrimaryKeyExpr struct {
 func (s ViewStmt) GetName() string { return string(s.Name) }
 
 type ViewRefField struct {
-	Pos     lexer.Position
+	Statement
 	Name    Ident      `parser:"@Ident"`
 	RefDocs []DefQName `parser:"'ref' ('(' @@ (',' @@)* ')')?"`
 	NotNull bool       `parser:"@(NOTNULL)?"`
 }
 
 type ViewField struct {
-	Pos     lexer.Position
+	Statement
 	Name    Ident    `parser:"@Ident"`
 	Type    DataType `parser:"@@"`
 	NotNull bool     `parser:"@(NOTNULL)?"`
