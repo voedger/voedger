@@ -174,7 +174,10 @@ func (row *rowType) error() error {
 
 // Returns specified field definition
 func (row *rowType) fieldDef(name string) appdef.IField {
-	return row.fieldsDef().Field(name)
+	if f, ok := row.def.(appdef.IFields); ok {
+		return f.Field(name)
+	}
+	return nil
 }
 
 // Returns fields definition
@@ -427,6 +430,11 @@ func (row *rowType) verifyToken(name string, token string) (value interface{}, e
 	// if expTime := payload.IssuedAt.Add(payload.Duration); time.Now().After(expTime) { … } // redundant check, must be check by IAppToken.ValidateToken()
 
 	fld := row.fieldDef(name)
+	if fld == nil {
+		//notest
+		row.collectErrorf(errFieldNotFoundWrap, "verified token", name, row.QName(), ErrNameNotFound)
+		return
+	}
 
 	if !fld.VerificationKind(payload.VerificationKind) {
 		return nil, fmt.Errorf("unavailable verification method «%s»: %w", payload.VerificationKind.TrimString(), ErrInvalidVerificationKind)
@@ -836,17 +844,19 @@ func (row *rowType) QName() appdef.QName {
 }
 
 // istructs.IRowReader.RecordIDs
-func (row *rowType) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {
+func (row *rowType) RecordIDs(includeNulls bool, cb func(string, istructs.RecordID)) {
 	if row.QName() == appdef.NullQName {
 		return
 	}
-	row.fieldsDef().Fields(
-		func(fld appdef.IField) {
-			if fld.DataKind() == appdef.DataKind_RecordID {
-				id := row.AsRecordID(fld.Name())
-				if (id != istructs.NullRecordID) || includeNulls {
-					cb(fld.Name(), id)
+	if f, ok := row.def.(appdef.IFields); ok {
+		f.Fields(
+			func(fld appdef.IField) {
+				if fld.DataKind() == appdef.DataKind_RecordID {
+					id := row.AsRecordID(fld.Name())
+					if (id != istructs.NullRecordID) || includeNulls {
+						cb(fld.Name(), id)
+					}
 				}
-			}
-		})
+			})
+	}
 }
