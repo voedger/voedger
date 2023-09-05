@@ -88,8 +88,8 @@ func (c *analyseCtx) alterWorkspace(u *AlterWorkspaceStmt) {
 func (c *analyseCtx) view(view *ViewStmt) {
 	view.pkRef = nil
 	fields := make(map[string]int)
-	for i := range view.Fields {
-		fe := view.Fields[i]
+	for i := range view.Items {
+		fe := &view.Items[i]
 		if fe.PrimaryKey != nil {
 			if view.pkRef != nil {
 				c.stmtErr(&fe.PrimaryKey.Pos, ErrPrimaryKeyRedeclared)
@@ -104,9 +104,13 @@ func (c *analyseCtx) view(view *ViewStmt) {
 			} else {
 				fields[string(f.Name)] = i
 			}
-		}
-		if fe.RefField != nil {
+		} else if fe.RefField != nil {
 			rf := fe.RefField
+			if _, ok := fields[string(rf.Name)]; ok {
+				c.stmtErr(&rf.Pos, ErrRedeclared(string(rf.Name)))
+			} else {
+				fields[string(rf.Name)] = i
+			}
 			for i := range rf.RefDocs {
 				tableStmt, _, err := resolveTable(rf.RefDocs[i], c.basicContext)
 				if err != nil {
@@ -128,11 +132,13 @@ func (c *analyseCtx) view(view *ViewStmt) {
 		if !ok {
 			c.stmtErr(&view.pkRef.Pos, ErrUndefinedField(string(pkf)))
 		}
-		if view.Fields[index].Field.Type.Varchar != nil {
-			c.stmtErr(&view.pkRef.Pos, ErrViewFieldVarchar(string(pkf)))
-		}
-		if view.Fields[index].Field.Type.Bytes != nil {
-			c.stmtErr(&view.pkRef.Pos, ErrViewFieldBytes(string(pkf)))
+		if view.Items[index].Field != nil {
+			if view.Items[index].Field.Type.Varchar != nil {
+				c.stmtErr(&view.pkRef.Pos, ErrViewFieldVarchar(string(pkf)))
+			}
+			if view.Items[index].Field.Type.Bytes != nil {
+				c.stmtErr(&view.pkRef.Pos, ErrViewFieldBytes(string(pkf)))
+			}
 		}
 	}
 
@@ -142,11 +148,13 @@ func (c *analyseCtx) view(view *ViewStmt) {
 		if !ok {
 			c.stmtErr(&view.pkRef.Pos, ErrUndefinedField(string(ccf)))
 		}
-		if view.Fields[fieldIndex].Field.Type.Varchar != nil && !last {
-			c.stmtErr(&view.pkRef.Pos, ErrVarcharFieldInCC(string(ccf)))
-		}
-		if view.Fields[fieldIndex].Field.Type.Bytes != nil && !last {
-			c.stmtErr(&view.pkRef.Pos, ErrBytesFieldInCC(string(ccf)))
+		if view.Items[fieldIndex].Field != nil {
+			if view.Items[fieldIndex].Field.Type.Varchar != nil && !last {
+				c.stmtErr(&view.pkRef.Pos, ErrVarcharFieldInCC(string(ccf)))
+			}
+			if view.Items[fieldIndex].Field.Type.Bytes != nil && !last {
+				c.stmtErr(&view.pkRef.Pos, ErrBytesFieldInCC(string(ccf)))
+			}
 		}
 	}
 
