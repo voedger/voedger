@@ -304,7 +304,7 @@ WORKSPACE Resellers {
 -------------------------------------------------------------------------------------
 -- WORKSPACE Templates
 --
-TEMPLATE demo OF WORKSPACE air.RestaurantWS SOURCE wsTemplate_demo;
-TEMPLATE resdemo OF WORKSPACE untill.ResellersWS SOURCE wsTemplate_demo_resellers;
+TEMPLATE demo OF WORKSPACE air.Restaurant SOURCE wsTemplate_demo;
+TEMPLATE resdemo OF WORKSPACE untill.Resellers SOURCE wsTemplate_demo_resellers;
 
 
