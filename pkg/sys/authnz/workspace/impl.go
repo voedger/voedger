@@ -158,7 +158,7 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istruct
 		cdocWorkspaceID.PutInt64(Field_OwnerID, args.ArgumentObject.AsInt64(Field_OwnerID))       // CDoc<Login>.ID or CDoc<ChildWorkspace>.ID
 		cdocWorkspaceID.PutString(Field_OwnerApp, args.ArgumentObject.AsString(Field_OwnerApp))
 		cdocWorkspaceID.PutString(authnz.Field_WSName, args.ArgumentObject.AsString(authnz.Field_WSName)) // CDoc<Login> -> "hardcoded", CDoc<ChildWorkspace> -> wsName
-		cdocWorkspaceID.PutQName(authnz.Field_WSKind, args.ArgumentObject.AsQName(authnz.Field_WSKind))   // CDoc<Login> -> sys.DeviceProfile or sys.UserProfile, CDoc<ChildWorkspace> -> provided wsKind (e.g. air.Restaurant)
+		cdocWorkspaceID.PutQName(authnz.Field_WSKind, args.ArgumentObject.AsQName(authnz.Field_WSKind))   // CDoc<Login> -> sys.DeviceProfile or sys.UserProfile, CDoc<ChildWorkspace> -> provided wsKind (e.g. air.RestaurantWS)
 		cdocWorkspaceID.PutString(authnz.Field_WSKindInitializationData, args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData))
 		cdocWorkspaceID.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
 		cdocWorkspaceID.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
@@ -281,7 +281,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 		cdocWSDesc.PutQName(Field_OwnerQName, args.ArgumentObject.AsQName(Field_OwnerQName))         // sys.Login or sys.UserProfile
 		cdocWSDesc.PutInt64(Field_OwnerID, args.ArgumentObject.AsInt64(Field_OwnerID))               // CDoc<Login>.ID or CDoc<ChildWorkspace>.ID
 		cdocWSDesc.PutString(authnz.Field_WSName, args.ArgumentObject.AsString(authnz.Field_WSName)) // CDoc<Login> -> "hardcoded", CDoc<ChildWorkspace> -> wsName
-		cdocWSDesc.PutQName(authnz.Field_WSKind, wsKind)                                             // CDoc<Login> -> sys.DeviceProfile or sys.UserProfile, CDoc<ChildWorkspace> -> provided wsKind (e.g. air.Restaurant)
+		cdocWSDesc.PutQName(authnz.Field_WSKind, wsKind)                                             // CDoc<Login> -> sys.DeviceProfile or sys.UserProfile, CDoc<ChildWorkspace> -> provided wsKind (e.g. air.RestaurantWS)
 		cdocWSDesc.PutString(Field_OwnerApp, args.ArgumentObject.AsString(Field_OwnerApp))
 		cdocWSDesc.PutString(authnz.Field_WSKindInitializationData, wsKindInitializationDataStr)
 		cdocWSDesc.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
