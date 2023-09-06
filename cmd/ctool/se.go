@@ -31,6 +31,11 @@ func seNodeControllerFunction(n *nodeType) error {
 		return err
 	}
 
+	if err = setHostname(n); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
 	if err = deployDocker(n); err != nil {
 		logger.Error(err.Error())
 	} else {
@@ -39,6 +44,25 @@ func seNodeControllerFunction(n *nodeType) error {
 
 	return err
 }
+
+func setHostname(node *nodeType) error {
+	var err error
+
+	prepareScripts("node-set-hostname.sh")
+
+	logger.Info(fmt.Sprintf("settting hostname to %s for a %s host...", node.nodeName(), node.DesiredNodeState.Address))
+
+	if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
+		run("node-set-hostname.sh", node.DesiredNodeState.Address, node.nodeName()); err != nil {
+		logger.Error(err.Error())
+		node.Error = err.Error()
+	} else {
+		logger.Info(fmt.Sprintf("set hostname to %s for a %s host with success.", node.nodeName(), node.DesiredNodeState.Address))
+	}
+
+	return err
+}
+
 
 func seNodeValidate(n *nodeType) error {
 	prepareScripts("host-validate.sh")
@@ -306,6 +330,11 @@ type seConfigType struct {
 	DBNode1   string
 	DBNode2   string
 	DBNode3   string
+	AppNode1Name string
+	AppNode2Name string
+	DBNode1Name  string
+	DBNode2Name  string
+	DBNode3Name  string
 }
 
 func newSeConfigType(cluster *clusterType) *seConfigType {
@@ -319,9 +348,15 @@ func newSeConfigType(cluster *clusterType) *seConfigType {
 		config.DBNode1 = cluster.Nodes[idxDBNode1].ActualNodeState.Address
 		config.DBNode2 = cluster.Nodes[idxDBNode2].ActualNodeState.Address
 		config.DBNode3 = cluster.Nodes[idxDBNode3].ActualNodeState.Address
+		config.AppNode1Name = cluster.Nodes[idxSENode1].nodeName()
+		config.AppNode2Name = cluster.Nodes[idxSENode2].nodeName()
+		config.DBNode1Name = cluster.Nodes[idxDBNode1].nodeName()
+		config.DBNode2Name = cluster.Nodes[idxDBNode2].nodeName()
+		config.DBNode3Name = cluster.Nodes[idxDBNode3].nodeName()
 	}
 	return &config
 }
+
 
 func deployDocker(node *nodeType) error {
 	var err error

@@ -2,10 +2,7 @@
 #
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
-#
-# Add node to Swarm. Find node id with dedicated ip. If node id not found - join node to swarm cluster.
-# Token, stored in 'manager.token' file used for join node.
-
+# set hostnames for all node in voedger cluster
 set -euo pipefail
 
 set +x

@@ -44,6 +44,21 @@ update_hosts_file() {
   # ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
 }
 
+update_hosts_file_refactored() {
+  local host=$1
+  local ip=$2
+  local hr=$3
+
+  # SSH command to execute on the remote host
+  ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c '
+    if grep -qF \"$hr\" /etc/hosts; then
+      sed -i -E \"s/.*\b$hr\b.*$/$hr\t$host/\" /etc/hosts
+    else
+      echo -e \"$hr\t$host\" >> /etc/hosts
+    fi
+  '"
+}
+
 args_array=("$@")
 # Prepare for name resolving - iterate over each hostname and update /etc/hosts on each host
 i=0

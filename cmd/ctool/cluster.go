@@ -71,6 +71,30 @@ type nodeType struct {
 	DesiredNodeState *nodeStateType `json:"DesiredNodeState,omitempty"`
 }
 
+func (n *nodeType) nodeName() string {
+	if n.cluster.Edition == clusterEditionSE {
+		switch n.idx {
+		case 1:
+			return "AppNode1"
+		case 2:
+			return "AppNode2"
+		case 3:
+			return "DBNode1"
+		case 4:
+			return "DBNode2"
+		case 5:
+			return "DBNode3"
+		default:
+			return "Node"
+		}
+	} else if n.cluster.Edition == clusterEditionCE {
+		return "CENode"
+	} else {
+		return "Node"
+	}
+
+}
+
 // the minimum amount of RAM required by the node (as string)
 func (n *nodeType) minAmountOfRAM() string {
 	switch n.NodeRole {
