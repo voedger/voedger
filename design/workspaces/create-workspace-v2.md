@@ -60,7 +60,7 @@ Projectors:
 |---|---|---|---|
 |c.sys.InitChildWorkspace()<br/>cdoc.sys.ChildWorkspace (owner)<br/>aproj.sys.InvokeCreateWorkspaceID()|Tagret App|Profile|Profile Cluster
 |c.sys.CreateWorkspaceID()<br/>cdoc.sys.WorkspaceID<br/>aproj.sys.InvokeCreateWorkspace()|Target App|(Target Cluster, CRC16(ownerWSID+"/"+wsName))|Target Cluster
-|c.sys.CreateWorkspace()<br/>cdoc.sys.WorkspaceDescriptor<br/>cdoc.$wsKind (air.RestaurantWS)<br/>aproj.sys.InitializeWorkspace()|Target App|new WSID|Target Cluster
+|c.sys.CreateWorkspace()<br/>cdoc.sys.WorkspaceDescriptor<br/>cdoc.$wsKind (air.Restaurant)<br/>aproj.sys.InitializeWorkspace()|Target App|new WSID|Target Cluster
 
 ## c.sys.InitChildWorkspace()
 
