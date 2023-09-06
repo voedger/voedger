@@ -165,7 +165,7 @@ Subject:
 ## Related commits
 
 - https://github.com/untillpro/airs-bp3/commit/97e00bec13020357215a39d1587aa30441d6231a
-- https://github.com/untillpro/airs-router2/commit/d31bbd2c8740183a7cbf0020395e6eb9ebdad641
+- https://github.com/voedger/voedger/pkg/router/commit/d31bbd2c8740183a7cbf0020395e6eb9ebdad641
 - https://github.com/heeus/core/commit/05b23292969b0fd78e367d77ad9d8310ce01e7d7
 
 ## Notes

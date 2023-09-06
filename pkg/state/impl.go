@@ -50,27 +50,6 @@ func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istr
 	}
 }
 
-func getStorageID(key istructs.IKeyBuilder) appdef.QName {
-	switch k := key.(type) {
-	case *pLogKeyBuilder:
-		return PLogStorage
-	case *wLogKeyBuilder:
-		return WLogStorage
-	case *recordsKeyBuilder:
-		return RecordsStorage
-	case *keyBuilder:
-		return k.storage
-	case *sendMailStorageKeyBuilder:
-		return SendMailStorage
-	case *httpStorageKeyBuilder:
-		return HTTPStorage
-	case *viewRecordsKeyBuilder:
-		return ViewRecordsStorage
-	default:
-		panic(fmt.Errorf("key %+v: %w", key, ErrUnknownStorage))
-	}
-}
-
 func cudRowToMap(rec istructs.ICUDRow, cache appDefFunc) (res map[string]interface{}) {
 	res = coreutils.FieldsToMap(rec, cache())
 	res["IsNew"] = rec.IsNew()

@@ -6,17 +6,17 @@ package vvm
 
 import (
 	"os"
-	"runtime/debug"
 
 	ibus "github.com/untillpro/airs-ibus"
-	router "github.com/untillpro/airs-router2"
 	"github.com/untillpro/goutils/logger"
+
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
+	"github.com/voedger/voedger/pkg/router"
 )
 
 func NewVVMDefaultConfig() VVMConfig {
@@ -54,11 +54,6 @@ func NewVVMDefaultConfig() VVMConfig {
 			return istorage.ProvideMem(), nil
 		},
 	}
-	buildInfo, ok := debug.ReadBuildInfo()
-	if !ok {
-		logger.Info("no build info")
-	}
-	res.BuildInfo = buildInfo
 	return res
 }
 

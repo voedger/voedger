@@ -14,7 +14,7 @@ import (
 
 func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc,
 	wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalsFunc PrincipalsFunc,
-	tokenFunc TokenFunc, intentsLimit int) IHostState {
+	tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc) IHostState {
 	bs := newHostState("CommandProcessor", intentsLimit)
 
 	bs.addStorage(ViewRecordsStorage, &viewRecordsStorage{
@@ -22,35 +22,39 @@ func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStr
 		viewRecordsFunc: func() istructs.IViewRecords { return appStructsFunc().ViewRecords() },
 		appDefFunc:      func() appdef.IAppDef { return appStructsFunc().AppDef() },
 		wsidFunc:        wsidFunc,
-	}, S_GET_BATCH)
+	}, S_GET|S_GET_BATCH)
 
 	bs.addStorage(RecordsStorage, &recordsStorage{
 		recordsFunc: func() istructs.IRecords { return appStructsFunc().Records() },
 		cudFunc:     cudFunc,
 		appDefFunc:  func() appdef.IAppDef { return appStructsFunc().AppDef() },
 		wsidFunc:    wsidFunc,
-	}, S_GET_BATCH|S_INSERT|S_UPDATE)
+	}, S_GET|S_GET_BATCH|S_INSERT|S_UPDATE)
 
 	bs.addStorage(WLogStorage, &wLogStorage{
 		ctx:        ctx,
 		eventsFunc: func() istructs.IEvents { return appStructsFunc().Events() },
 		appDefFunc: func() appdef.IAppDef { return appStructsFunc().AppDef() },
 		wsidFunc:   wsidFunc,
-	}, S_GET_BATCH)
+	}, S_GET)
 
 	bs.addStorage(PLogStorage, &pLogStorage{
 		ctx:             ctx,
 		eventsFunc:      func() istructs.IEvents { return appStructsFunc().Events() },
 		appDefFunc:      func() appdef.IAppDef { return appStructsFunc().AppDef() },
 		partitionIDFunc: partitionIDFunc,
-	}, S_GET_BATCH)
+	}, S_GET)
 
-	bs.addStorage(AppSecretsStorage, &appSecretsStorage{secretReader: secretReader}, S_GET_BATCH)
+	bs.addStorage(AppSecretsStorage, &appSecretsStorage{secretReader: secretReader}, S_GET)
 
 	bs.addStorage(SubjectStorage, &subjectStorage{
 		principalsFunc: principalsFunc,
 		tokenFunc:      tokenFunc,
-	}, S_GET_BATCH)
+	}, S_GET)
+
+	bs.addStorage(CmdResultStorage, &cmdResultStorage{
+		cmdResultBuilderFunc: cmdResultBuilderFunc,
+	}, S_INSERT)
 
 	return bs
 }

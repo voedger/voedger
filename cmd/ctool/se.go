@@ -26,6 +26,11 @@ func seNodeControllerFunction(n *nodeType) error {
 
 	var err error
 
+	if err = seNodeValidate(n); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
 	if err = deployDocker(n); err != nil {
 		logger.Error(err.Error())
 	} else {
@@ -33,6 +38,33 @@ func seNodeControllerFunction(n *nodeType) error {
 	}
 
 	return err
+}
+
+func seNodeValidate(n *nodeType) error {
+	prepareScripts("host-validate.sh")
+
+	logger.Info(fmt.Sprintf("checking host %s requirements...", n.DesiredNodeState.Address))
+
+	var minRAM string
+
+	if skipNodeMemoryCheck {
+		minRAM = "0"
+	} else {
+		minRAM = n.minAmountOfRAM()
+	}
+
+	var err error
+
+	if err = newScriptExecuter(n.cluster.sshKey, n.DesiredNodeState.Address).
+		run("host-validate.sh", n.DesiredNodeState.Address, minRAM); err != nil {
+		logger.Error(err.Error())
+		n.Error = err.Error()
+	} else {
+		logger.Info(fmt.Sprintf("host %s requirements checked successfully", n.DesiredNodeState.Address))
+	}
+
+	return err
+
 }
 
 func seClusterControllerFunction(c *clusterType) error {
@@ -317,8 +349,6 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 		"db-stack-update.sh", "docker-compose-template.yml", "swarm-set-label.sh", "docker-compose-prepare.sh",
 		"scylla.yaml", "swarm-get-manager-token.sh")
 
-	//prepareManagerToken(cluster)
-
 	conf := newSeConfigType(cluster)
 
 	if err = newScriptExecuter(cluster.sshKey, "localhost").
@@ -364,7 +394,7 @@ func replaceSeAppNode(cluster *clusterType) error {
 	var err error
 
 	prepareScripts("swarm-add-node.sh", "swarm-get-manager-token.sh", "swarm-rm-node.sh", "swarm-set-label.sh",
-		"mon-node-prepare.sh", "copy-prometheus-db.sh")
+		"mon-node-prepare.sh", "prometheus-tsdb-copy.sh")
 
 	prepareScripts("alertmanager/config.yml", "prometheus/prometheus.yml", "prometheus/alert.rules",
 		"docker-compose-mon.yml")
@@ -381,15 +411,11 @@ func replaceSeAppNode(cluster *clusterType) error {
 	oldAddr := cluster.Cmd.args()[0]
 	newAddr := cluster.Cmd.args()[1]
 
-	var liveOldService, newService, liveOldAddr string
+	var liveOldAddr string
 
 	if conf.AppNode1 == newAddr {
-		liveOldService = "MonDockerStack_prometheus2"
-		newService = "MonDockerStack_prometheus1"
 		liveOldAddr = conf.AppNode2
 	} else {
-		liveOldService = "MonDockerStack_prometheus1"
-		newService = "MonDockerStack_prometheus2"
 		liveOldAddr = conf.AppNode1
 	}
 
@@ -411,6 +437,13 @@ func replaceSeAppNode(cluster *clusterType) error {
 		return err
 	}
 
+	logger.Info("copy prometheus data base from", liveOldAddr, "to", newAddr)
+	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s, %s", liveOldAddr, newAddr)).
+		run("prometheus-tsdb-copy.sh", liveOldAddr, newAddr); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
 	logger.Info("mon node prepare ", newAddr)
 	if err = newScriptExecuter(cluster.sshKey, newAddr).
 		run("mon-node-prepare.sh", conf.AppNode1, conf.AppNode2, conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
@@ -428,13 +461,6 @@ func replaceSeAppNode(cluster *clusterType) error {
 	logger.Info("swarm set label on", newAddr, newNode.label(swarmMonLabelKey))
 	if err = newScriptExecuter(cluster.sshKey, newAddr).
 		run("swarm-set-label.sh", conf.DBNode1, newAddr, newNode.label(swarmMonLabelKey), "true"); err != nil {
-		logger.Error(err.Error())
-		return err
-	}
-
-	logger.Info("copy prometheus data base from", liveOldAddr, "to", newAddr)
-	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s, %s", oldAddr, newAddr)).
-		run("copy-prometheus-db.sh", liveOldService, liveOldAddr, newService, newAddr); err != nil {
 		logger.Error(err.Error())
 		return err
 	}

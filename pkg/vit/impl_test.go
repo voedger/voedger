@@ -68,7 +68,7 @@ func TestBasicUsage_WorkWithFunctions(t *testing.T) {
 	})
 
 	t.Run("command", func(t *testing.T) {
-		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.air_table_plan","name":"test"}}]}`
+		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.air_table_plan","name":"test"}}]}`
 		resp := vit.PostWS(ws, "c.sys.CUD", body)
 		require.Len(resp.NewIDs, 1)
 		require.True(resp.NewID() > 1)
@@ -122,6 +122,9 @@ func TestBasicUsage_Workspaces(t *testing.T) {
 }
 
 func TestBasicUsage_N10N(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	require := require.New(t)
 	vit := NewVIT(t, &SharedConfig_Simple)
 
@@ -156,7 +159,7 @@ func TestBasicUsage_POST(t *testing.T) {
 	// unexpected result code -> test is failed
 	// response body is read out and closed
 	bodyEcho := `{"args": {"Text": "world"},"elements": [{"fields": ["Res"]}]}`
-	bodyCUD := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.air_table_plan","name":"test"}}]}`
+	bodyCUD := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.air_table_plan","name":"test"}}]}`
 	httpResp := vit.Post("api/test1/app1/1/q.sys.Echo", bodyEcho) // HTTPResponse is returned
 	require.Equal(`{"sections":[{"type":"","elements":[[[["world"]]]]}]}`, httpResp.Body)
 
@@ -232,7 +235,7 @@ func TestEmailExpectation(t *testing.T) {
 
 	// provide VIT email sending chan to the IBundledHostState, then use it to send an email
 	s := state.ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 1, 0,
-		state.WithEmailMessagesChan(vit.emailMessagesChan))
+		state.WithEmailMessagesChan(vit.emailCaptor))
 	k, err := s.KeyBuilder(state.SendMailStorage, appdef.NullQName)
 	require.NoError(err)
 
@@ -252,13 +255,12 @@ func TestEmailExpectation(t *testing.T) {
 	k.PutString(state.Field_Body, "Hello world")
 
 	t.Run("basic usage", func(t *testing.T) {
-		emailCaptor := vit.ExpectEmail()
 		require.Nil(s.NewValue(k))
 		readyToFlush, err := s.ApplyIntents()
 		require.True(readyToFlush)
 		require.NoError(err)
 		require.NoError(s.FlushBundles())
-		email := emailCaptor.Capture()
+		email := vit.CaptureEmail()
 		log.Println(email)
 	})
 

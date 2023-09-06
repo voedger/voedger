@@ -5,6 +5,8 @@
 package invite
 
 import (
+	"embed"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -24,7 +26,9 @@ var (
 	qNameCmdCancelSentInvite             = appdef.NewQName(appdef.SysPackage, "CancelSentInvite")
 	qNameCDocInvite                      = appdef.NewQName(appdef.SysPackage, "Invite")
 	qNameViewInviteIndex                 = appdef.NewQName(appdef.SysPackage, "InviteIndexView")
+	qNameProjectorInviteIndex            = appdef.NewQName(appdef.SysPackage, "ProjectorInviteIndex")
 	QNameViewJoinedWorkspaceIndex        = appdef.NewQName(appdef.SysPackage, "JoinedWorkspaceIndexView")
+	QNameProjectorJoinedWorkspaceIndex   = appdef.NewQName(appdef.SysPackage, "ProjectorJoinedWorkspaceIndex")
 	qNameAPApplyCancelAcceptedInvite     = appdef.NewQName(appdef.SysPackage, "ApplyCancelAcceptedInvite")
 	qNameAPApplyInvitation               = appdef.NewQName(appdef.SysPackage, "ApplyInvitation")
 	qNameAPApplyJoinWorkspace            = appdef.NewQName(appdef.SysPackage, "ApplyJoinWorkspace")
@@ -32,6 +36,9 @@ var (
 	qNameAPApplyUpdateInviteRoles        = appdef.NewQName(appdef.SysPackage, "ApplyUpdateInviteRoles")
 	QNameCDocJoinedWorkspace             = appdef.NewQName(appdef.SysPackage, "JoinedWorkspace")
 	QNameCDocSubject                     = appdef.NewQName(appdef.SysPackage, "Subject")
+	QNameViewSubjectsIdx                 = appdef.NewQName(appdef.SysPackage, "ViewSubjectsIdx")
+	//go:embed schemas.sql
+	schemasFS embed.FS
 )
 
 const (
@@ -54,6 +61,8 @@ const (
 	ield_WSName                 = "WSName"
 	Field_SubjectKind           = "SubjectKind"
 	Field_ProfileWSID           = "ProfileWSID"
+	Field_SubjectID             = "SubjectID"
+	Field_LoginHash             = "LoginHash"
 )
 
 type State int32
@@ -84,7 +93,6 @@ const (
 	EmailTemplatePlaceholder_Roles            = "${Roles}"
 	EmailTemplatePlaceholder_WSName           = "${WSName}"
 	EmailTemplatePlaceholder_Email            = "${Email}"
-	EmailFrom                                 = "info@air.untill.com"
 )
 
 var inviteValidStates = map[appdef.QName]map[int32]bool{

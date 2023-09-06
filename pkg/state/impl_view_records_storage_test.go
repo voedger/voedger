@@ -19,22 +19,18 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		require := require.New(t)
 
 		appDef := appdef.New()
-		appDef.AddView(testViewRecordQName1).
-			AddPartField("pkk", appdef.DataKind_int64).
-			AddClustColumn("cck", appdef.DataKind_string).
-			AddValueField("vk", appdef.DataKind_string, false)
+		view := appDef.AddView(testViewRecordQName1)
+		view.Key().Partition().AddField("pkk", appdef.DataKind_int64)
+		view.Key().ClustCols().AddStringField("cck", appdef.DefaultFieldMaxLength)
+		view.Value().AddStringField("vk", false)
 
 		value := &mockValue{}
 		value.On("AsString", "vk").Return("value")
 		viewRecords := &mockViewRecords{}
 		viewRecords.
 			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(ViewRecordsStorage, testViewRecordQName1)).
-			On("GetBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewRecordGetBatchItem")).Return(nil).
-			Run(func(args mock.Arguments) {
-				items := args.Get(1).([]istructs.ViewRecordGetBatchItem)
-				items[0].Ok = true
-				items[0].Value = value
-			})
+			On("Get", istructs.WSID(1), mock.Anything).Return(value, nil)
+
 		appStructs := &mockAppStructs{}
 		appStructs.
 			On("AppDef").Return(appDef).
@@ -53,19 +49,20 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		require.True(ok)
 		require.Equal("value", sv.AsString("vk"))
 	})
-	t.Run("Should return error on get batch", func(t *testing.T) {
+	t.Run("Should return error on get", func(t *testing.T) {
 		require := require.New(t)
 
 		appDef := appdef.New()
-		appDef.AddView(testViewRecordQName1).
-			AddPartField("pkk", appdef.DataKind_int64).
-			AddClustColumn("cck", appdef.DataKind_string).
-			AddValueField("vk", appdef.DataKind_string, false)
+
+		view := appDef.AddView(testViewRecordQName1)
+		view.Key().Partition().AddField("pkk", appdef.DataKind_int64)
+		view.Key().ClustCols().AddStringField("cck", appdef.DefaultFieldMaxLength)
+		view.Value().AddStringField("vk", false)
 
 		viewRecords := &mockViewRecords{}
 		viewRecords.
 			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(ViewRecordsStorage, testViewRecordQName1)).
-			On("GetBatch", istructs.WSID(1), mock.Anything).Return(errTest)
+			On("Get", istructs.WSID(1), mock.Anything).Return(nil, errTest)
 		appStructs := &mockAppStructs{}
 		appStructs.
 			On("AppDef").Return(appDef).
@@ -140,10 +137,11 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 	require := require.New(t)
 
 	appDef := appdef.New()
-	appDef.AddView(testViewRecordQName1).
-		AddPartField("pkk", appdef.DataKind_int64).
-		AddClustColumn("cck", appdef.DataKind_string).
-		AddValueField("vk", appdef.DataKind_string, false)
+
+	view := appDef.AddView(testViewRecordQName1)
+	view.Key().Partition().AddField("pkk", appdef.DataKind_int64)
+	view.Key().ClustCols().AddStringField("cck", appdef.DefaultFieldMaxLength)
+	view.Value().AddStringField("vk", false)
 
 	viewRecords := &mockViewRecords{}
 	viewRecords.
@@ -173,12 +171,14 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 func TestViewRecordsStorage_toJSON(t *testing.T) {
 
 	appDef := appdef.New()
-	appDef.AddView(testViewRecordQName1).
-		AddPartField("pkFld", appdef.DataKind_int64).
-		AddClustColumn("ccFld", appdef.DataKind_string).
-		AddValueField("ID", appdef.DataKind_RecordID, false).
-		AddValueField("Name", appdef.DataKind_string, false).
-		AddValueField("Count", appdef.DataKind_int64, false)
+
+	view := appDef.AddView(testViewRecordQName1)
+	view.Key().Partition().AddField("pkFld", appdef.DataKind_int64)
+	view.Key().ClustCols().AddStringField("ccFld", appdef.DefaultFieldMaxLength)
+	view.Value().
+		AddRefField("ID", false).
+		AddStringField("Name", false).
+		AddField("Count", appdef.DataKind_int64, false)
 
 	value := &mockValue{}
 	value.
@@ -187,39 +187,4 @@ func TestViewRecordsStorage_toJSON(t *testing.T) {
 		On("AsInt64", "Count").Return(int64(1001)).
 		On("AsQName", mock.Anything).Return(appdef.ViewValueDefName(testViewRecordQName1))
 
-	s := viewRecordsStorage{
-		appDefFunc: func() appdef.IAppDef { return appDef },
-	}
-	t.Run("Should marshal entire element", func(t *testing.T) {
-		require := require.New(t)
-		sv := &viewRecordsStorageValue{
-			value:      value,
-			toJSONFunc: s.toJSON,
-		}
-
-		json, err := sv.ToJSON()
-		require.NoError(err)
-
-		require.JSONEq(`{
-											"sys.QName":"test.viewRecord1_Value",					  
-											"Count": 1001,
-								  		"ID": 42,
-								  		"Name": "John"
-										}`, json)
-	})
-	t.Run("Should filter fields", func(t *testing.T) {
-		require := require.New(t)
-		sv := &viewRecordsStorageValue{
-			value:      value,
-			toJSONFunc: s.toJSON,
-		}
-
-		json, err := sv.ToJSON(WithExcludeFields("ID", "Count"))
-		require.NoError(err)
-
-		require.JSONEq(`{
-											"sys.QName":"test.viewRecord1_Value",					  
-											"Name": "John"
-									  }`, json)
-	})
 }

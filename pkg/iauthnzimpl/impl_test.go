@@ -80,15 +80,13 @@ func TestBasicUsage(t *testing.T) {
 		}
 		principals, principalPayload, err := authn.Authenticate(context.Background(), appStructs, appTokens, req)
 		require.NoError(err)
-		require.Len(principals, 4)
+		require.Len(principals, 3)
 		require.Equal(iauthnz.PrincipalKind_User, principals[0].Kind)
 
 		// request to the profile -> ProfileOwner role got
 		require.Equal(iauthnz.PrincipalKind_Role, principals[1].Kind)
 		require.Equal(iauthnz.QNameRoleProfileOwner, principals[1].QName)
-		require.Equal(iauthnz.PrincipalKind_Role, principals[2].Kind)
-		require.Equal(iauthnz.QNameRoleWorkspaceSubject, principals[2].QName)
-		require.Equal(iauthnz.PrincipalKind_Host, principals[3].Kind)
+		require.Equal(iauthnz.PrincipalKind_Host, principals[2].Kind)
 		require.Equal(pp, principalPayload)
 	})
 
@@ -101,15 +99,13 @@ func TestBasicUsage(t *testing.T) {
 		// request to WSID 2, there is a cdoc.sys.WorkspaceDescriptor.OwnerWSID = 1 -> the workspace is owned by the user with ProfileWSID=1
 		principals, principalPayload, err := authn.Authenticate(context.Background(), appStructs, appTokens, req)
 		require.NoError(err)
-		require.Len(principals, 4)
+		require.Len(principals, 3)
 		require.Equal(iauthnz.PrincipalKind_User, principals[0].Kind)
 
 		// request to the owned workspace -> WorkspaceOwner role got
 		require.Equal(iauthnz.PrincipalKind_Role, principals[1].Kind)
 		require.Equal(iauthnz.QNameRoleWorkspaceOwner, principals[1].QName)
-		require.Equal(iauthnz.PrincipalKind_Role, principals[2].Kind)
-		require.Equal(iauthnz.QNameRoleWorkspaceSubject, principals[2].QName)
-		require.Equal(iauthnz.PrincipalKind_Host, principals[3].Kind)
+		require.Equal(iauthnz.PrincipalKind_Host, principals[2].Kind)
 		require.Equal(pp, principalPayload)
 	})
 
@@ -135,15 +131,13 @@ func TestBasicUsage(t *testing.T) {
 		// request to WSID 2, there is a cdoc.sys.WorkspaceDescriptor.OwnerWSID = 1 -> the workspace is owned by the user with ProfileWSID=1
 		principals, principalPayload, err := authn.Authenticate(context.Background(), appStructs, appTokens, req)
 		require.NoError(err)
-		require.Len(principals, 4)
+		require.Len(principals, 3)
 		require.Equal(iauthnz.PrincipalKind_User, principals[0].Kind)
 
 		// request to a workspace with a token enriched by WorkspaceOwne role -> WorkspaceOwner role got
 		require.Equal(iauthnz.PrincipalKind_Role, principals[1].Kind)
 		require.Equal(iauthnz.QNameRoleWorkspaceOwner, principals[1].QName)
-		require.Equal(iauthnz.PrincipalKind_Role, principals[2].Kind)
-		require.Equal(iauthnz.QNameRoleWorkspaceSubject, principals[2].QName)
-		require.Equal(iauthnz.PrincipalKind_Host, principals[3].Kind)
+		require.Equal(iauthnz.PrincipalKind_Host, principals[2].Kind)
 		require.Equal(pp, principalPayload)
 	})
 
@@ -297,7 +291,6 @@ func TestAuthenticate(t *testing.T) {
 			expectedPrincipals: []iauthnz.Principal{
 				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleProfileOwner},
-				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleWorkspaceSubject},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},
@@ -311,7 +304,6 @@ func TestAuthenticate(t *testing.T) {
 			expectedPrincipals: []iauthnz.Principal{
 				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceOwner},
-				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceSubject},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},
@@ -349,7 +341,6 @@ func TestAuthenticate(t *testing.T) {
 			expectedPrincipals: []iauthnz.Principal{
 				{Kind: iauthnz.PrincipalKind_Device, WSID: 1},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleWorkspaceDevice},
-				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleWorkspaceSubject},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},
@@ -376,7 +367,6 @@ func TestAuthenticate(t *testing.T) {
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: qNameRoleResellersAdmin},
 				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceOwner},
-				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceSubject},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceAdmin},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
@@ -393,7 +383,6 @@ func TestAuthenticate(t *testing.T) {
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: qNameRoleUntillPaymentsReseller},
 				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceOwner},
-				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceSubject},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceAdmin},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
@@ -441,7 +430,7 @@ func TestAuthorize(t *testing.T) {
 
 	pp.Roles = append(pp.Roles, payloads.RoleType{
 		WSID:  2,
-		QName: iauthnz.QNameRoleWorkspaceSubject,
+		QName: iauthnz.QNameRoleWorkspaceOwner,
 	})
 	userTokenWithRole, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
@@ -567,7 +556,7 @@ func TestAuthorize(t *testing.T) {
 			expected: false,
 		},
 		{
-			desc: "execute in an alien workspace but have role saying that we are workspacesubject -> ok",
+			desc: "execute in an alien workspace but have role saying that we are workspaceowner -> ok",
 			reqn: iauthnz.AuthnRequest{
 				RequestWSID: alienWSID,
 				Token:       userTokenWithRole,
@@ -734,6 +723,35 @@ func TestACLAllow(t *testing.T) {
 				},
 			},
 		},
+		{
+			acl: ACL{
+				{
+					desc:   "allow everything",
+					policy: ACPolicy_Allow,
+				},
+				{
+					desc: "but deny to select one field",
+					pattern: PatternType{
+						opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+						qNamesPattern:  []appdef.QName{qNameCDocUntillPayments},
+						fieldsPattern:  [][]string{{appdef.SystemField_IsActive}},
+					},
+					policy: ACPolicy_Deny,
+				},
+			},
+			reqs: []req{
+				{
+					req: iauthnz.AuthzRequest{
+						OperationKind: iauthnz.OperationKind_SELECT,
+						Resource:      qNameCDocUntillPayments,
+						Fields:        []string{appdef.SystemField_ID}, // select non-denied field -> expect allow
+					},
+					prns: [][]iauthnz.Principal{
+						nil,
+					},
+				},
+			},
+		},
 	}
 
 	for _, c := range cases {
@@ -759,121 +777,158 @@ func TestACLDeny(t *testing.T) {
 		prns [][]iauthnz.Principal
 	}
 
-	acl := ACL{
+	cases := []struct {
+		acl  ACL
+		reqs []req
+	}{
 		{
-			desc: "deny rule",
-			pattern: PatternType{
-				qNamesPattern:  []appdef.QName{testQName1},
-				opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_INSERT},
-				principalsPattern: [][]iauthnz.Principal{
-					// OR
-					{{Kind: iauthnz.PrincipalKind_User, Name: "testnamefordeny", ID: 1, WSID: 2}},
-					{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}},
+			acl: ACL{
+				{
+					desc: "deny rule",
+					pattern: PatternType{
+						qNamesPattern:  []appdef.QName{testQName1},
+						opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_INSERT},
+						principalsPattern: [][]iauthnz.Principal{
+							// OR
+							{{Kind: iauthnz.PrincipalKind_User, Name: "testnamefordeny", ID: 1, WSID: 2}},
+							{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}},
+						},
+					},
+					policy: ACPolicy_Deny,
 				},
 			},
-			policy: ACPolicy_Deny,
+			reqs: []req{
+				{
+					req: iauthnz.AuthzRequest{
+						OperationKind: iauthnz.OperationKind_INSERT,
+						Resource:      testQName1,
+						Fields:        []string{"fld1", "fld2"}, // just an example
+					},
+					prns: [][]iauthnz.Principal{
+						{{}},
+						{
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "testname",
+							},
+						},
+						{
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "wrongName",
+							},
+							{
+								Kind:  iauthnz.PrincipalKind_Role,
+								QName: iauthnz.QNameRoleWorkspaceOwner,
+							},
+						},
+						{
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "testname",
+							},
+							{
+								Kind:  iauthnz.PrincipalKind_Role,
+								QName: iauthnz.QNameRoleWorkspaceOwner,
+							},
+						},
+						{
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "testname",
+								ID:   1,
+							},
+							{
+								Kind:  iauthnz.PrincipalKind_Role,
+								QName: iauthnz.QNameRoleWorkspaceOwner,
+							},
+						},
+						{
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "testname",
+								WSID: 2,
+							},
+							{
+								Kind:  iauthnz.PrincipalKind_Role,
+								QName: iauthnz.QNameRoleWorkspaceOwner,
+							},
+						},
+						{
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "testnamefordeny",
+								ID:   1,
+								WSID: 42,
+							},
+						},
+						{
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "wrong",
+							},
+							{
+								Kind: iauthnz.PrincipalKind_User,
+								Name: "testnamefordeny",
+								ID:   1,
+								WSID: 2,
+							},
+							{
+								Kind: iauthnz.PrincipalKind_Host,
+								Name: "127.0.0.1",
+							},
+							{
+								Kind:  iauthnz.PrincipalKind_Role,
+								QName: iauthnz.QNameRoleProfileOwner,
+							},
+							{
+								Kind:  iauthnz.PrincipalKind_Role,
+								QName: iauthnz.QNameRoleWorkspaceOwner,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			acl: ACL{
+				{
+					desc:   "allow all",
+					policy: ACPolicy_Allow,
+				},
+				{
+					desc: "but deny to select one field",
+					pattern: PatternType{
+						opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+						qNamesPattern:  []appdef.QName{qNameCDocUntillPayments},
+						fieldsPattern:  [][]string{{appdef.SystemField_IsActive}},
+					},
+					policy: ACPolicy_Deny,
+				},
+			},
+			reqs: []req{
+				{
+					req: iauthnz.AuthzRequest{
+						OperationKind: iauthnz.OperationKind_SELECT,
+						Resource:      qNameCDocUntillPayments,
+						Fields:        []string{appdef.SystemField_IsActive, appdef.SystemField_ID},
+					},
+					prns: [][]iauthnz.Principal{
+						nil,
+					},
+				},
+			},
 		},
 	}
 
-	reqs := []req{
-		{
-			req: iauthnz.AuthzRequest{
-				OperationKind: iauthnz.OperationKind_INSERT,
-				Resource:      testQName1,
-				Fields:        []string{"fld1", "fld2"}, // just an example
-			},
-			prns: [][]iauthnz.Principal{
-				{{}},
-				{
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "testname",
-					},
-				},
-				{
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "wrongName",
-					},
-					{
-						Kind:  iauthnz.PrincipalKind_Role,
-						QName: iauthnz.QNameRoleWorkspaceOwner,
-					},
-				},
-				{
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "testname",
-					},
-					{
-						Kind:  iauthnz.PrincipalKind_Role,
-						QName: iauthnz.QNameRoleWorkspaceOwner,
-					},
-				},
-				{
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "testname",
-						ID:   1,
-					},
-					{
-						Kind:  iauthnz.PrincipalKind_Role,
-						QName: iauthnz.QNameRoleWorkspaceOwner,
-					},
-				},
-				{
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "testname",
-						WSID: 2,
-					},
-					{
-						Kind:  iauthnz.PrincipalKind_Role,
-						QName: iauthnz.QNameRoleWorkspaceOwner,
-					},
-				},
-				{
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "testnamefordeny",
-						ID:   1,
-						WSID: 42,
-					},
-				},
-				{
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "wrong",
-					},
-					{
-						Kind: iauthnz.PrincipalKind_User,
-						Name: "testnamefordeny",
-						ID:   1,
-						WSID: 2,
-					},
-					{
-						Kind: iauthnz.PrincipalKind_Host,
-						Name: "127.0.0.1",
-					},
-					{
-						Kind:  iauthnz.PrincipalKind_Role,
-						QName: iauthnz.QNameRoleProfileOwner,
-					},
-					{
-						Kind:  iauthnz.PrincipalKind_Role,
-						QName: iauthnz.QNameRoleWorkspaceOwner,
-					},
-				},
-			},
-		},
-	}
-
-	authz := implIAuthorizer{acl: acl}
-	for _, req := range reqs {
-		for _, prns := range req.prns {
-			ok, err := authz.Authorize(nil, prns, req.req)
-			require.NoError(err)
-			require.False(ok)
+	for _, c := range cases {
+		authz := implIAuthorizer{acl: c.acl}
+		for _, req := range c.reqs {
+			for _, prns := range req.prns {
+				ok, err := authz.Authorize(nil, prns, req.req)
+				require.NoError(err)
+				require.False(ok)
+			}
 		}
 	}
 }

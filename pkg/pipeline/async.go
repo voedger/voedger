@@ -58,13 +58,7 @@ func p_flush(wo *WiredOperator, place string) {
 		return
 	}
 
-	flushProc := func(work IWorkpiece) {
-		if wo.isActive() {
-			wo.Stdout <- work
-		}
-	}
-
-	if err := wo.Operator.(IAsyncOperator).Flush(flushProc); err != nil {
+	if err := wo.Operator.(IAsyncOperator).Flush(wo.flushCB); err != nil {
 		if wo.isActive() {
 			wo.Stdout <- wo.NewError(err, nil, place)
 		}

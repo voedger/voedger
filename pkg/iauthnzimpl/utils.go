@@ -49,7 +49,6 @@ func GetComputersRecByDeviceProfileWSID(as istructs.IAppStructs, requestWSID ist
 	}
 	const prefix = "device profileWSID"
 	if !batchItems[0].Ok {
-
 		logger.Verbose(prefix, deviceProfileWSID, "is not found in view.sys.DeviceProfileWSIDIdx")
 		return &istructs.NullObject{}, &istructs.NullObject{}, nil
 	}
@@ -98,7 +97,18 @@ func matchOrNotSpecified_Principals(pattern [][]iauthnz.Principal, actualPrns []
 						return false
 					}
 					if prnAND.QName != appdef.NullQName && prnAND.QName != actualPrn.QName {
-						return false
+						ancestorMatched := false
+						ancestorQName := iauthnz.QNameAncestor(actualPrn.QName)
+						for ancestorQName != appdef.NullQName {
+							if ancestorQName == prnAND.QName {
+								ancestorMatched = true
+								break
+							}
+							ancestorQName = iauthnz.QNameAncestor(ancestorQName)
+						}
+						if !ancestorMatched {
+							return false
+						}
 					}
 					if prnAND.WSID > 0 && prnAND.WSID != actualPrn.WSID {
 						return false
@@ -126,6 +136,25 @@ func matchOrNotSpecified_OpKinds(arr []iauthnz.OperationKindType, toFind iauthnz
 
 func matchOrNotSpecified_QNames(arr []appdef.QName, toFind appdef.QName) bool {
 	return len(arr) == 0 || slices.Contains(arr, toFind)
+}
+
+func matchOrNotSpecified_Fields(patternFields [][]string, requestedFields []string) bool {
+	if len(patternFields) == 0 {
+		return true
+	}
+	if len(requestedFields) == 0 {
+		return false
+	}
+or:
+	for _, patternORFields := range patternFields {
+		for _, patternANDField := range patternORFields {
+			if !slices.Contains(requestedFields, patternANDField) {
+				continue or
+			}
+		}
+		return true
+	}
+	return false
 }
 
 func authNZToString(req iauthnz.AuthzRequest) string {

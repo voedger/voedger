@@ -9,9 +9,11 @@ package appdef
 //   - ICDoc, ICDocBuilder
 type cDoc struct {
 	def
+	comment
 	fields
 	containers
 	uniques
+	withAbstract
 	singleton bool
 }
 
@@ -38,9 +40,11 @@ func (d *cDoc) Singleton() bool {
 //   - ICRecord, ICRecordBuilder
 type cRecord struct {
 	def
+	comment
 	fields
 	containers
 	uniques
+	withAbstract
 }
 
 func newCRecord(app *appDef, name QName) *cRecord {

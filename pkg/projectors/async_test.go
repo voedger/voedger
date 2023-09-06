@@ -18,8 +18,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
-	istructs "github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
@@ -352,7 +352,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 
 	// Wait for the logged error
 	errStr := <-errors
-	require.Equal("error: [test.failing_projector [1] [Projector/doAsync, outWork==nil] test error]", errStr)
+	require.Equal("error: [test.failing_projector [1] wsid[1002] offset[0]: test error]", errStr)
 
 	// wait until the istructs.Projector version is updated with the 1st record
 	for getActualizerOffset(require, app, partitionNr, name) < istructs.Offset(1) {

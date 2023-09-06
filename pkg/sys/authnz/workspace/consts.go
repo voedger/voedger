@@ -5,6 +5,7 @@
 package workspace
 
 import (
+	"embed"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -35,7 +36,9 @@ const (
 
 var (
 	QNameViewChildWorkspaceIdx             = appdef.NewQName(appdef.SysPackage, "ChildWorkspaceIdx")
+	QNameProjectorChildWorkspaceIdx        = appdef.NewQName(appdef.SysPackage, "ProjectorChildWorkspaceIdx")
 	QNameViewWorkspaceIDIdx                = appdef.NewQName(appdef.SysPackage, "WorkspaceIDIdx")
+	QNameProjectorViewWorkspaceIDIdx       = appdef.NewQName(appdef.SysPackage, "ProjectorWorkspaceIDIdx")
 	QNameQueryChildWorkspaceByName         = appdef.NewQName(appdef.SysPackage, "QueryChildWorkspaceByName")
 	QNameCDocWorkspaceID                   = appdef.NewQName(appdef.SysPackage, "WorkspaceID")
 	qNameAPInitializeWorkspace             = appdef.NewQName(appdef.SysPackage, "InitializeWorkspace")
@@ -47,4 +50,6 @@ var (
 	QNameCommandCreateWorkspaceID          = appdef.NewQName(appdef.SysPackage, "CreateWorkspaceID")
 	QNameCommandCreateWorkspace            = appdef.NewQName(appdef.SysPackage, "CreateWorkspace")
 	nextWSIDGlobalLock                     = sync.Mutex{}
+	//go:embed schemas.sql
+	schemasFS embed.FS
 )

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -23,7 +24,7 @@ func TestSubjectStorage_BasicUsage(t *testing.T) {
 	}}
 	token := "token"
 	tokenFunc := func() string { return token }
-	s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} }, nil, nil, nil, nil, func() []iauthnz.Principal { return principals }, tokenFunc, 1)
+	s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} }, nil, nil, nil, nil, func() []iauthnz.Principal { return principals }, tokenFunc, 1, nil)
 	k, err := s.KeyBuilder(SubjectStorage, appdef.NullQName)
 	require.NoError(err)
 
@@ -34,7 +35,4 @@ func TestSubjectStorage_BasicUsage(t *testing.T) {
 	require.Equal(int32(istructs.SubjectKind_User), v.AsInt32(Field_Kind))
 	require.Equal(principals[0].Name, v.AsString(Field_Name))
 	require.Equal(token, v.AsString(Field_Token))
-	json, err := v.ToJSON()
-	require.NoError(err)
-	require.JSONEq(`{"ProfileWSID":42,"Kind":1,"Name":"john.doe@acme.com","Token":"token"}`, json)
 }

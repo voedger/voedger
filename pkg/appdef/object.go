@@ -9,8 +9,10 @@ package appdef
 //   - IObject, IObjectBuilder
 type object struct {
 	def
+	comment
 	fields
 	containers
+	withAbstract
 }
 
 func newObject(app *appDef, name QName) *object {
@@ -27,8 +29,10 @@ func newObject(app *appDef, name QName) *object {
 //   - IElement, IElementBuilder
 type element struct {
 	def
+	comment
 	fields
 	containers
+	withAbstract
 }
 
 func newElement(app *appDef, name QName) *element {

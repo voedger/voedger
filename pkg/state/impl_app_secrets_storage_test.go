@@ -30,9 +30,6 @@ func TestAppSecretsStorage_BasicUsage(t *testing.T) {
 	require.NoError(err)
 
 	require.Equal(secretBody, sv.AsString(""))
-	json, err := sv.ToJSON()
-	require.NoError(err)
-	require.Equal(`{"Body":"{"secret":"key"}"}`, json)
 }
 func TestAppSecretsStorage(t *testing.T) {
 	t.Run("Should return error when key invalid", func(t *testing.T) {

@@ -19,13 +19,15 @@ var (
 	SendMailStorage    = appdef.NewQName(appdef.SysPackage, "SendMailStorage")
 	AppSecretsStorage  = appdef.NewQName(appdef.SysPackage, "AppSecretsStorage")
 	SubjectStorage     = appdef.NewQName(appdef.SysPackage, "SubjectStorage")
+	CmdResultStorage   = appdef.NewQName(appdef.SysPackage, "CmdResultStorage")
 )
 
 const (
-	S_GET_BATCH = 1
-	S_READ      = 2
-	S_INSERT    = 4
-	S_UPDATE    = 8
+	S_GET       = 1
+	S_GET_BATCH = 2
+	S_READ      = 4
+	S_INSERT    = 8
+	S_UPDATE    = 16
 )
 
 const (

@@ -48,6 +48,11 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 			})
 		})
 
+		t.Run("must be ok to make doc abstract", func(t *testing.T) {
+			doc.SetAbstract()
+			require.True(doc.Abstract())
+		})
+
 		require.Equal(2, appDef.DefCount())
 
 		t.Run("must be ok to build", func(t *testing.T) {
@@ -75,6 +80,8 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 		require.Equal(2, doc.UserFieldCount())
 		require.Equal(DataKind_int64, doc.Field("f1").DataKind())
+
+		require.True(doc.Abstract())
 
 		require.Equal(1, doc.ContainerCount())
 		require.Equal(recName, doc.Container("rec").QName())

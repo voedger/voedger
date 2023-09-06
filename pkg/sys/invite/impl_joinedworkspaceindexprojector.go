@@ -10,10 +10,10 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 )
 
-func ProvideSyncProjectorJoinedWorkspaceIndexFactory() istructs.ProjectorFactory {
+func provideSyncProjectorJoinedWorkspaceIndexFactory() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         QNameViewJoinedWorkspaceIndex,
+			Name:         QNameProjectorJoinedWorkspaceIndex,
 			EventsFilter: []appdef.QName{qNameCmdCreateJoinedWorkspace},
 			Func:         joinedWorkspaceIndexProjector,
 		}

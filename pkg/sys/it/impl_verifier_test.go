@@ -12,9 +12,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys/verifier"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -31,14 +32,14 @@ func TestBasicUsage_Verifier(t *testing.T) {
 	verificationToken := ""
 	verificationCode := ""
 	t.Run("initiate verification and get the verification token", func(t *testing.T) {
-		emailCaptor := vit.ExpectEmail()
 		body := fmt.Sprintf(`
 			{
 				"args":{
 					"Entity":"%s",
 					"Field":"EmailField",
 					"Email":"%s",
-					"TargetWSID": %d
+					"TargetWSID": %d,
+					"Language":"fr"
 				},
 				"elements":[{"fields":["VerificationToken"]}]
 			}
@@ -46,10 +47,10 @@ func TestBasicUsage_Verifier(t *testing.T) {
 		// call q.sys.InitiateEmailVerification at user profile to avoid guests
 		// call in target app
 		resp := vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body)
-		email := emailCaptor.Capture()
+		email := vit.CaptureEmail()
 		require.Equal([]string{it.TestEmail}, email.To)
-		require.Equal(verifier.EmailSubject, email.Subject)
-		require.Equal(verifier.EmailFrom, email.From)
+		require.Equal("Votre code de vérification", email.Subject)
+		require.Equal(it.TestSMTPCfg.GetFrom(), email.From)
 		require.Empty(email.CC)
 		require.Empty(email.BCC)
 		r := regexp.MustCompile(`(?P<code>\d{6})`)
@@ -57,6 +58,8 @@ func TestBasicUsage_Verifier(t *testing.T) {
 		verificationCode = matches[0]
 		verificationToken = resp.SectionRow()[0].(string)
 		log.Println(verificationCode)
+		match, _ := regexp.MatchString(`Voici votre code de vérification`, email.Body)
+		require.True(match)
 	})
 
 	verifiedValueToken := ""

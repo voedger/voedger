@@ -17,7 +17,10 @@ import (
 
 	"github.com/google/wire"
 	ibus "github.com/untillpro/airs-ibus"
-	router "github.com/untillpro/airs-router2"
+	"golang.org/x/crypto/acme/autocert"
+
+	"github.com/voedger/voedger/pkg/router"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -32,25 +35,23 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
-	istorage "github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istoragecache"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	itokensjwt "github.com/voedger/voedger/pkg/itokensjwt"
+	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys/collection"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
-	"golang.org/x/crypto/acme/autocert"
 )
 
 func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err error) {
@@ -172,7 +173,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"VVMPort",
 			"MetricsServicePort",
 			"ActualizerStateOpts",
-			"BuildInfo",
 		),
 	))
 }
@@ -189,28 +189,35 @@ func provideStorageFactory(vvmConfig *VVMConfig) (provider istorage.IAppStorageF
 
 func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 	return func(requestContext context.Context, name string, as istructs.IAppStructs, wsid istructs.WSID) ([]appdef.QName, error) {
-		kb := as.ViewRecords().KeyBuilder(collection.QNameViewCollection)
-		kb.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
-		kb.PutQName(collection.Field_DocQName, invite.QNameCDocSubject)
+		kb := as.ViewRecords().KeyBuilder(invite.QNameViewSubjectsIdx)
+		kb.PutInt64(invite.Field_LoginHash, coreutils.HashBytes([]byte(name)))
+		kb.PutString(invite.Field_Login, name)
+		subjectsIdx, err := as.ViewRecords().Get(wsid, kb)
+		if err == istructsmem.ErrRecordNotFound {
+			return nil, nil
+		}
+		if err != nil {
+			// notest
+			return nil, err
+		}
 		res := []appdef.QName{}
-		err := as.ViewRecords().Read(requestContext, wsid, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
-			record := value.AsRecord(collection.Field_Record)
-			if record.AsString(invite.Field_Login) != name {
-				return nil
+		subjectID := subjectsIdx.AsRecordID(invite.Field_SubjectID)
+		cdocSubject, err := as.Records().Get(wsid, true, istructs.RecordID(subjectID))
+		if err != nil {
+			// notest
+			return nil, err
+		}
+		roles := strings.Split(cdocSubject.AsString(invite.Field_Roles), ",")
+		for _, role := range roles {
+			roleQName, err := appdef.ParseQName(role)
+			if err != nil {
+				// notest
+				// must be gauranted by the side that inserted this qname
+				return nil, err
 			}
-			roles := strings.Split(record.AsString(invite.Field_Roles), ",")
-			for _, role := range roles {
-				roleQName, err := appdef.ParseQName(role)
-				if err != nil {
-					// notest
-					// must be gauranted by the side that inserted this qname
-					return err
-				}
-				res = append(res, roleQName)
-			}
-			return nil
-		})
-		return res, err
+			res = append(res, roleQName)
+		}
+		return res, nil
 	}
 }
 
@@ -295,7 +302,6 @@ func provideRouterParams(cfg *VVMConfig, port VVMPortType, vvmIdx VVMIdxType) ro
 		Routes:               cfg.Routes,
 		RoutesRewrite:        cfg.RoutesRewrite,
 		RouteDomains:         cfg.RouteDomains,
-		UseBP3:               true,
 	}
 	if port != 0 {
 		res.Port = int(port) + int(vvmIdx)
@@ -428,19 +434,22 @@ func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTi
 		RetryAfterSecondsOn503: DefaultRetryAfterSecondsOn503,
 		BLOBMaxSize:            bms,
 	}
-	res := router.ProvideBP3(vvmCtx, rp, time.Duration(busTimeout), broker, quotas, bp, autocertCache, bus, appsWSAmounts)
+	httpSrv, acmeSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, quotas, bp, autocertCache, bus, appsWSAmounts)
 	vvmPortSource.getter = func() VVMPortType {
-		return VVMPortType(res[0].(interface{ GetPort() int }).GetPort())
+		return VVMPortType(httpSrv.GetPort())
 	}
-	return res
+	return RouterServices{
+		httpSrv, acmeSrv,
+	}
 }
 
 func provideRouterServiceFactory(rs RouterServices) RouterServiceOperator {
-	routerServices := []pipeline.ForkOperatorOptionFunc{}
-	for _, routerSrvIntf := range rs {
-		routerServices = append(routerServices, pipeline.ForkBranch(pipeline.ServiceOperator(routerSrvIntf.(pipeline.IService))))
+	funcs := make([]pipeline.ForkOperatorOptionFunc, 1, 2)
+	funcs[0] = pipeline.ForkBranch(pipeline.ServiceOperator(rs.IHTTPService))
+	if rs.IACMEService != nil {
+		funcs = append(funcs, pipeline.ForkBranch(pipeline.ServiceOperator(rs.IACMEService)))
 	}
-	return pipeline.ForkOperator(pipeline.ForkSame, routerServices[0], routerServices[1:]...)
+	return pipeline.ForkOperator(pipeline.ForkSame, funcs[0], funcs[1:]...)
 }
 
 func provideQueryChannel(sch ServiceChannelFactory) QueryChannel {
@@ -491,12 +500,13 @@ func provideAsyncActualizersFactory(appStructsProvider istructs.IAppStructsProvi
 			Ctx:      vvmCtx,
 			AppQName: appQName,
 			// FIXME: это правильно, что постоянную appStrcuts возвращаем? Каждый раз не надо запрашивать у appStructsProvider?
-			AppStructs:   func() istructs.IAppStructs { return appStructs },
-			SecretReader: secretReader,
-			Partition:    partitionID,
-			Broker:       n10nBroker,
-			Opts:         opts,
-			IntentsLimit: actualizerIntentsLimit,
+			AppStructs:    func() istructs.IAppStructs { return appStructs },
+			SecretReader:  secretReader,
+			Partition:     partitionID,
+			Broker:        n10nBroker,
+			Opts:          opts,
+			IntentsLimit:  actualizerIntentsLimit,
+			FlushInterval: actualizerFlushInterval,
 		}
 
 		asyncProjectors = make([]pipeline.ForkOperatorOptionFunc, len(asyncProjectorFactories))
@@ -518,6 +528,8 @@ func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.Actual
 	}
 }
 
+// forks appPartition(just async actualizers for now) by cmd processors amount (or by partitions amount) per one app
+// [partitionAmount]appPartition(asyncActualizers)
 func provideAppServiceFactory(apf AppPartitionFactory, cpCount coreutils.CommandProcessorsCount) AppServiceFactory {
 	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories) pipeline.ISyncOperator {
 		forks := make([]pipeline.ForkOperatorOptionFunc, cpCount)
@@ -528,6 +540,8 @@ func provideAppServiceFactory(apf AppPartitionFactory, cpCount coreutils.Command
 	}
 }
 
+// forks appServices per apps
+// [appsAmount]appServices
 func provideOperatorAppServices(apf AppServiceFactory, vvmApps VVMApps, asp istructs.IAppStructsProvider) OperatorAppServicesFactory {
 	return func(vvmCtx context.Context) pipeline.ISyncOperator {
 		var branches []pipeline.ForkOperatorOptionFunc

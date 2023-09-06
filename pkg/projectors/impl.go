@@ -11,7 +11,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -120,8 +120,8 @@ func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildF
 }
 
 func provideOffsetsDefImpl(appDef appdef.IAppDefBuilder) {
-	def := appDef.AddView(qnameProjectionOffsets)
-	def.AddPartField(partitionFld, appdef.DataKind_int32)
-	def.AddClustColumn(projectorNameFld, appdef.DataKind_QName)
-	def.AddValueField(offsetFld, appdef.DataKind_int64, true)
+	view := appDef.AddView(qnameProjectionOffsets)
+	view.Key().Partition().AddField(partitionFld, appdef.DataKind_int32)
+	view.Key().ClustCols().AddField(projectorNameFld, appdef.DataKind_QName)
+	view.Value().AddField(offsetFld, appdef.DataKind_int64, true)
 }

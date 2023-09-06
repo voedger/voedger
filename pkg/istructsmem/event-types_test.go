@@ -20,9 +20,22 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/singletons"
 )
 
-func TestEventBuilder_Core(t *testing.T) {
+func TestEventBuilder(t *testing.T) {
+	testEventBuilderCore(t, true)
+}
+
+func TestEventBuilderNoCache(t *testing.T) {
+	testEventBuilderCore(t, false)
+}
+
+func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 	require := require.New(t)
 	test := test()
+
+	if !cachedPLog {
+		// switch off plog cache
+		test.AppCfg.Params.PLogEventCacheSize = 0
+	}
 
 	// gets AppStructProvider and AppStructs
 	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
@@ -158,11 +171,8 @@ func TestEventBuilder_Core(t *testing.T) {
 		require.Equal(test.wlogOfs, pLogEvent.WLogOffset())
 
 		// 2. save to WLog
-		wLogEvent, err := app.Events().PutWlog(pLogEvent)
+		err := app.Events().PutWlog(pLogEvent)
 		require.NoError(err)
-		defer wLogEvent.Release()
-
-		testDbEvent(t, wLogEvent)
 
 		// 3. save event command CUDs
 		idP := istructs.NullRecordID
@@ -202,7 +212,7 @@ func TestEventBuilder_Core(t *testing.T) {
 				require.Equal(test.buyerValue, cmdRec.AsString(test.buyerIdent))
 			}
 
-			t.Run("test single record reading", func(t *testing.T) {
+			t.Run("test single plog event reading", func(t *testing.T) {
 				var event istructs.IPLogEvent
 				err := app.Events().ReadPLog(context.Background(), test.partition, test.plogOfs, 1,
 					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
@@ -210,18 +220,29 @@ func TestEventBuilder_Core(t *testing.T) {
 						event = ev
 						return nil
 					})
+				defer event.Release()
 				check(event, err)
 			})
 
-			t.Run("test sequential reading", func(t *testing.T) {
-				var event istructs.IPLogEvent
+			t.Run("test sequential plog reading", func(t *testing.T) {
+				cnt := 0
 				err := app.Events().ReadPLog(context.Background(), test.partition, test.plogOfs, istructs.ReadToTheEnd,
 					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
-						require.Equal(test.plogOfs, plogOffset)
-						event = ev
+						defer ev.Release()
+						cnt++
+						switch ev.QName() {
+						case test.saleCmdName:
+							require.Equal(test.plogOfs, plogOffset)
+							check(ev, err)
+						case test.changeCmdName:
+							require.Equal(test.plogOfs+1, plogOffset)
+						default:
+							require.Fail("unexpected event in plog", "offset: %d, qname: %v", plogOffset, ev.QName())
+						}
 						return nil
 					})
-				check(event, err)
+				require.NoError(err)
+				require.Positive(cnt)
 			})
 		})
 
@@ -265,6 +286,7 @@ func TestEventBuilder_Core(t *testing.T) {
 
 				require.NoError(err)
 				require.NotNil(event)
+				defer event.Release()
 				testDbEvent(t, event)
 			})
 
@@ -279,6 +301,7 @@ func TestEventBuilder_Core(t *testing.T) {
 
 				require.NoError(err)
 				require.NotNil(event)
+				defer event.Release()
 				testDbEvent(t, event)
 			})
 		})
@@ -398,10 +421,8 @@ func TestEventBuilder_Core(t *testing.T) {
 		defer pLogEvent.Release()
 
 		t.Run("test save to WLog", func(t *testing.T) {
-			wLogEvent, err := app.Events().PutWlog(pLogEvent)
+			err := app.Events().PutWlog(pLogEvent)
 			require.NoError(err)
-			require.NotNil(wLogEvent)
-			defer wLogEvent.Release()
 		})
 
 		t.Run("test apply PLog event records", func(t *testing.T) {
@@ -453,6 +474,7 @@ func TestEventBuilder_Core(t *testing.T) {
 						event = ev
 						return nil
 					})
+				defer event.Release()
 				checkEvent(event, err)
 			})
 
@@ -464,6 +486,7 @@ func TestEventBuilder_Core(t *testing.T) {
 						event = ev
 						return nil
 					})
+				defer event.Release() // not necessary
 				checkEvent(event, err)
 			})
 		})
@@ -478,6 +501,7 @@ func TestEventBuilder_Core(t *testing.T) {
 						event = ev
 						return nil
 					})
+				defer event.Release()
 				checkEvent(event, err)
 			})
 
@@ -489,6 +513,7 @@ func TestEventBuilder_Core(t *testing.T) {
 						event = ev
 						return nil
 					})
+				defer event.Release() // not necessary
 				checkEvent(event, err)
 			})
 		})
@@ -533,8 +558,7 @@ func TestEventBuilder_Core(t *testing.T) {
 			require.NoError(r.build())
 
 			// hack: use low level appRecordsType putRecord()
-			bytes, err := r.storeToBytes()
-			require.NoError(err)
+			bytes := r.storeToBytes()
 			require.True(len(bytes) > 0)
 			err = app.Records().(*appRecordsType).putRecord(test.workspace, photoID, bytes)
 			require.NoError(err)
@@ -741,11 +765,11 @@ func Test_EventUpdateRawCud(t *testing.T) {
 		doc := appDef.AddCDoc(docName)
 		doc.AddField("new", appdef.DataKind_bool, true)
 		doc.AddField("rec", appdef.DataKind_RecordID, false)
-		doc.AddField("emptied", appdef.DataKind_string, false)
+		doc.AddStringField("emptied", false)
 		doc.AddContainer("rec", recName, 0, 1)
 
 		rec := appDef.AddCRecord(recName)
-		rec.AddField("data", appdef.DataKind_string, false)
+		rec.AddStringField("data", false)
 	})
 
 	cfgs := func() AppConfigsType {
@@ -864,6 +888,8 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			switch test {
 			case retryTest:
 				t.Run("must ok to reread PLog event", func(t *testing.T) {
+					pLogEvent.Release()
+
 					pLogEvent = nil
 					err := app.Events().ReadPLog(context.Background(), 1, istructs.Offset(100501+test), 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 						require.EqualValues(100501+test, plogOffset)
@@ -882,12 +908,12 @@ func Test_EventUpdateRawCud(t *testing.T) {
 					switch id := r.ID(); id {
 					case docID:
 						require.EqualValues(docName, r.QName())
-						require.EqualValues(r.AsRecordID("rec"), recID, "error #25853 here!")
+						require.EqualValues(recID, r.AsRecordID("rec"), "error #25853 here!")
 					case recID:
 						require.EqualValues(recName, r.QName())
-						require.EqualValues(r.Parent(), docID)
-						require.EqualValues(r.Container(), "rec")
-						require.EqualValues(r.AsString("data"), "test data")
+						require.EqualValues(docID, r.Parent())
+						require.EqualValues("rec", r.Container())
+						require.EqualValues("test data", r.AsString("data"))
 					default:
 						require.Fail("unexpected record applied")
 					}
@@ -895,6 +921,8 @@ func Test_EventUpdateRawCud(t *testing.T) {
 				})
 				require.Equal(2, recCnt)
 			})
+
+			pLogEvent.Release()
 
 			t.Run("must ok to reread CDoc record", func(t *testing.T) {
 				rec, err := app.Records().Get(ws, true, docID)
@@ -1421,11 +1449,10 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 
 	ev1.argUnlObj.maskValues()
 
-	b, err := ev1.storeToBytes()
-	require.NoError(err)
+	b := ev1.storeToBytes()
 
 	ev2 := newEmptyTestEvent()
-	err = ev2.loadFromBytes(b)
+	err := ev2.loadFromBytes(b)
 	require.NoError(err)
 
 	require.Equal(istructs.Offset(100500), ev2.pLogOffs)
@@ -1441,9 +1468,7 @@ func Test_LoadEvent_CorruptedBytes(t *testing.T) {
 	ev1 := newTestEvent(100500, 500)
 	testDbEvent(t, ev1)
 
-	b, err := ev1.storeToBytes()
-	require.NoError(err)
-
+	b := ev1.storeToBytes()
 	len := len(b)
 
 	t.Run("load/store from truncated bytes", func(t *testing.T) {
@@ -1451,7 +1476,7 @@ func Test_LoadEvent_CorruptedBytes(t *testing.T) {
 			corrupted := b[0:i]
 
 			ev2 := newEmptyTestEvent()
-			err = ev2.loadFromBytes(corrupted)
+			err := ev2.loadFromBytes(corrupted)
 			require.Error(err, fmt.Sprintf("unexpected success load event from bytes truncated at %d", i))
 		}
 	})
@@ -1472,7 +1497,7 @@ func Test_LoadEvent_CorruptedBytes(t *testing.T) {
 							stat["Panics"]++
 						}
 					}()
-					if err = ev2.loadFromBytes(b); err != nil {
+					if err := ev2.loadFromBytes(b); err != nil {
 						log.Verbose("%d: error at load: %v\n", i, err)
 						stat["Errors"]++
 						return
@@ -1522,13 +1547,11 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 			require.Error(buildErr)
 			require.NotNil(rawEvent)
 
-			ev1 := newEmptyTestEvent()
-			ev1.eventType.copyFrom(rawEvent.(*eventType))
+			ev1 := rawEvent.(*eventType)
 			ev1.setBuildError(buildErr)
 			require.False(ev1.valid())
 
-			b, err := ev1.storeToBytes()
-			require.NoError(err)
+			b := ev1.storeToBytes()
 
 			ev2 := newEmptyTestEvent()
 			err = ev2.loadFromBytes(b)
@@ -1565,8 +1588,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 				ev1.argUnlObj.clear() // to prevent EventBytes obfuscate
 				ev1.setBuildError(errors.New(msg))
 
-				b, err := ev1.storeToBytes()
-				require.NoError(err)
+				b := ev1.storeToBytes()
 
 				ev2 := newEmptyTestEvent()
 				err = ev2.loadFromBytes(b)
@@ -1593,15 +1615,14 @@ func Test_LoadErrorEvent_CorruptedBytes(t *testing.T) {
 	ev1.argUnlObj.clear() // to prevent EventBytes obfuscate
 	ev1.setBuildError(errors.New(errMsg))
 
-	b, err := ev1.storeToBytes()
-	require.NoError(err)
+	b := ev1.storeToBytes()
 
 	len := len(b)
 	for i := 0; i < len; i++ {
 		corrupted := b[0:i]
 
 		ev2 := newEmptyTestEvent()
-		err = ev2.loadFromBytes(corrupted)
+		err := ev2.loadFromBytes(corrupted)
 		require.Error(err, fmt.Sprintf("unexpected success load event from bytes truncated at %d", i))
 	}
 }
@@ -1610,11 +1631,10 @@ func Test_LoadStoreNullEvent_Bytes(t *testing.T) {
 	require := require.New(t)
 
 	ev1 := newEmptyTestEvent()
-	b, err := ev1.storeToBytes()
-	require.NoError(err)
+	b := ev1.storeToBytes()
 
 	ev2 := newEmptyTestEvent()
-	err = ev2.loadFromBytes(b)
+	err := ev2.loadFromBytes(b)
 	require.NoError(err)
 
 	require.Equal(appdef.NullQName, ev2.QName())
@@ -1624,7 +1644,7 @@ func Test_ObjectMask(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	value := newObject(test.AppCfg, test.saleCmdDocName)
+	value := makeObject(test.AppCfg, test.saleCmdDocName)
 	fillTestObject(&value)
 
 	value.maskValues()

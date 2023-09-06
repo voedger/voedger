@@ -19,6 +19,7 @@ func (acl ACL) IsAllowed(principals []iauthnz.Principal, req iauthnz.AuthzReques
 	for _, acElem := range acl {
 		if matchOrNotSpecified_OpKinds(acElem.pattern.opKindsPattern, req.OperationKind) &&
 			matchOrNotSpecified_QNames(acElem.pattern.qNamesPattern, req.Resource) &&
+			matchOrNotSpecified_Fields(acElem.pattern.fieldsPattern, req.Fields) &&
 			matchOrNotSpecified_Principals(acElem.pattern.principalsPattern, principals) {
 			if policy = acElem.policy; policy == ACPolicy_Deny {
 				lastDenyingACElem = acElem
@@ -51,9 +52,9 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
-		desc: "everything is allowed to WorkspaceSubject",
+		desc: "everything is allowed to WorkspaceOwner",
 		pattern: PatternType{
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceSubject}}},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
 		},
 		policy: ACPolicy_Allow,
 	},
@@ -79,7 +80,7 @@ var defaultACL = ACL{
 		policy: ACPolicy_Deny,
 	},
 	{
-		desc: "update only is allowed for CDoc<$wsKind> for WorkspaceSubject",
+		desc: "update only is allowed for CDoc<$wsKind> for WorkspaceOwner",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
 				qNameCDocWorkspaceKindUser,
@@ -88,7 +89,7 @@ var defaultACL = ACL{
 				qNameCDocWorkspaceKindAppWorkspace,
 			},
 			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_UPDATE},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceSubject}}},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
 		},
 		policy: ACPolicy_Allow,
 	},
@@ -291,6 +292,44 @@ var defaultACL = ACL{
 		pattern: PatternType{
 			qNamesPattern:     []appdef.QName{qNameQryUPTerminalWebhook},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsTerminal}}},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
+		// https://github.com/voedger/voedger/issues/422
+		// https://dev.untill.com/projects/#!649352
+		// https://dev.untill.com/projects/#!650998
+		// https://dev.untill.com/projects/#!653137
+		desc: "grant exec on few funcs to role air.UntillPaymentsReseller and role air.UntillPaymentsUser",
+		pattern: PatternType{
+			qNamesPattern: []appdef.QName{
+				qNameQryGetDailyPayoutCfg,
+				qNameCmdUpdateScheduledPayout,
+				qNameCmdRequestOnDemandPayout,
+				qNameQryGetPayouts,
+				qNameQryGetCreditInvoice,
+			},
+			principalsPattern: [][]iauthnz.Principal{
+				// OR
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
+			},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
+		desc: "grant exec on c.air.UpdateUPLocationRates to role air.UntillPaymentsReseller",
+		pattern: PatternType{
+			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPLocationRates},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
+		desc: "grant exec on c.air.UpdateUPProfile to role air.RoleUntillPaymentsUser",
+		pattern: PatternType{
+			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPProfile},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}}},
 		},
 		policy: ACPolicy_Allow,
 	},

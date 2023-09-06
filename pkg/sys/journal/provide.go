@@ -19,22 +19,23 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	ji.AddNamed("", QNameViewWLogDates) // default index
 	jp := ep.ExtensionPoint(EPJournalPredicates)
 	jp.AddNamed("all", func(schemas appdef.IAppDef, qName appdef.QName) bool { return true }) // default predicate
-}
 
-func provideWLogDatesView(appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddView(QNameViewWLogDates).
-		AddPartField(field_Year, appdef.DataKind_int32).
-		AddClustColumn(field_DayOfYear, appdef.DataKind_int32).
-		AddValueField(field_FirstOffset, appdef.DataKind_int64, true).
-		AddValueField(field_LastOffset, appdef.DataKind_int64, true)
-}
+	appDefBuilder.AddObject(QNameProjectorWLogDates)
 
-func ProvideWLogDatesAsyncProjectorFactory() istructs.ProjectorFactory {
-	return func(partition istructs.PartitionID) istructs.Projector {
+	cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         QNameViewWLogDates,
+			Name:         QNameProjectorWLogDates,
 			Func:         wLogDatesProjector,
 			HandleErrors: true,
 		}
-	}
+	})
+}
+
+func provideWLogDatesView(app appdef.IAppDefBuilder) {
+	view := app.AddView(QNameViewWLogDates)
+	view.Key().Partition().AddField(field_Year, appdef.DataKind_int32)
+	view.Key().ClustCols().AddField(field_DayOfYear, appdef.DataKind_int32)
+	view.Value().
+		AddField(field_FirstOffset, appdef.DataKind_int64, true).
+		AddField(field_LastOffset, appdef.DataKind_int64, true)
 }

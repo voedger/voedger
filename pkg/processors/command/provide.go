@@ -10,11 +10,13 @@ import (
 
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
@@ -35,6 +37,7 @@ type cmdProc struct {
 	now           coreutils.TimeFunc
 	authenticator iauthnz.IAuthenticator
 	authorizer    iauthnz.IAuthorizer
+	cfgs          istructsmem.AppConfigsType
 }
 
 type appPartition struct {
@@ -50,7 +53,7 @@ func ProvideJSONFuncParamsDef(appDef appdef.IAppDefBuilder) {
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
 func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
-	secretReader isecrets.ISecretReader) ServiceFactory {
+	secretReader isecrets.ISecretReader, appConfigsType istructsmem.AppConfigsType) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
 		cmdProc := &cmdProc{
 			pNumber:       partitionID,
@@ -59,7 +62,9 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 			now:           now,
 			authenticator: authenticator,
 			authorizer:    authorizer,
+			cfgs:          appConfigsType,
 		}
+
 		return pipeline.NewService(func(vvmCtx context.Context) {
 			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader)
 			cmdPipeline := pipeline.NewSyncPipeline(vvmCtx, "Command Processor",
@@ -83,10 +88,12 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("checkWSDescUpdating", checkWorkspaceDescriptorUpdating),
 				pipeline.WireFunc("authorizeCUDs", cmdProc.authorizeCUDs),
 				pipeline.WireFunc("writeCUDs", cmdProc.writeCUDs),
+				pipeline.WireFunc("getCmdResultBuilder", cmdProc.getCmdResultBuilder),
 				pipeline.WireFunc("buildCommandArgs", cmdProc.buildCommandArgs),
 				pipeline.WireFunc("execCommand", execCommand),
 				pipeline.WireFunc("build raw event", buildRawEvent),
 				pipeline.WireFunc("validate", cmdProc.validate),
+				pipeline.WireFunc("validateCmdResult", validateCmdResult),
 				pipeline.WireFunc("putPLog", cmdProc.putPLog),
 				pipeline.WireFunc("applyPLogEvent", applyPLogEvent),
 				pipeline.WireFunc("syncProjectorsStart", syncProjectorsBegin),
@@ -120,9 +127,6 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 					}
 					if cmd.pLogEvent != nil {
 						cmd.pLogEvent.Release()
-					}
-					if cmd.wLogEvent != nil {
-						cmd.wLogEvent.Release()
 					}
 					cmd.metrics.increase(CommandsSeconds, time.Since(start).Seconds())
 				case <-vvmCtx.Done():

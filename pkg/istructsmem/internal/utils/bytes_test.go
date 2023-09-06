@@ -7,6 +7,7 @@ package utils
 
 import (
 	"bytes"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -73,6 +74,11 @@ func TestSafeWriteBuf(t *testing.T) {
 			require.EqualValues(tt.want, b.Bytes())
 		})
 	}
+
+	require.Panics(func() {
+		p := func() {}
+		SafeWriteBuf(bytes.NewBuffer(nil), p)
+	}, "must be panic if unknown data size")
 }
 
 func TestReadWriteShortString(t *testing.T) {
@@ -119,15 +125,209 @@ func TestReadWriteShortString(t *testing.T) {
 		b := bytes.NewBuffer(nil)
 		_, err := ReadShortString(b)
 
-		require.ErrorContains(err, "length")
+		require.ErrorIs(err, io.ErrUnexpectedEOF)
 	})
 
 	t.Run("must be error if not enough chars to read", func(t *testing.T) {
 		b := bytes.NewBuffer([]byte{0, 3, 65, 65})
 		_, err := ReadShortString(b)
 
+		require.ErrorIs(err, io.ErrUnexpectedEOF)
 		require.ErrorContains(err, "expected 3 bytes, but only 2")
 	})
+}
+
+func TestWriteXXX(t *testing.T) {
+	type s struct {
+		int8
+		byte
+		bool
+		int16
+		uint16
+		int32
+		uint32
+		int64
+		uint64
+		float32
+		float64
+	}
+	s1 := s{
+		int8:    -1,
+		byte:    1,
+		bool:    true,
+		int16:   -2222,
+		uint16:  3333,
+		int32:   -444444,
+		uint32:  555555,
+		int64:   -66666666666,
+		uint64:  77777777777,
+		float32: -8.888e8,
+		float64: 9.9999e99,
+	}
+
+	buf := new(bytes.Buffer)
+	SafeWriteBuf(buf, s1.int8)
+	SafeWriteBuf(buf, s1.byte)
+	SafeWriteBuf(buf, s1.bool)
+	SafeWriteBuf(buf, s1.int16)
+	SafeWriteBuf(buf, s1.uint16)
+	SafeWriteBuf(buf, s1.int32)
+	SafeWriteBuf(buf, s1.uint32)
+	SafeWriteBuf(buf, s1.int64)
+	SafeWriteBuf(buf, s1.uint64)
+	SafeWriteBuf(buf, s1.float32)
+	SafeWriteBuf(buf, s1.float64)
+
+	data := buf.Bytes()
+
+	t.Run("Write×××", func(t *testing.T) {
+		require := require.New(t)
+
+		buf := bytes.NewBuffer(nil)
+		WriteInt8(buf, s1.int8)
+		WriteByte(buf, s1.byte)
+		WriteBool(buf, s1.bool)
+		WriteInt16(buf, s1.int16)
+		WriteUint16(buf, s1.uint16)
+		WriteInt32(buf, s1.int32)
+		WriteUint32(buf, s1.uint32)
+		WriteInt64(buf, s1.int64)
+		WriteUint64(buf, s1.uint64)
+		WriteFloat32(buf, s1.float32)
+		WriteFloat64(buf, s1.float64)
+
+		require.EqualValues(data, buf.Bytes())
+	})
+}
+
+func TestReadWriteXXX(t *testing.T) {
+	type s struct {
+		int8
+		byte
+		bool
+		int16
+		uint16
+		int32
+		uint32
+		int64
+		uint64
+		float32
+		float64
+		string
+	}
+	s1 := s{
+		int8:    -1,
+		byte:    1,
+		bool:    true,
+		int16:   -2222,
+		uint16:  3333,
+		int32:   -444444,
+		uint32:  555555,
+		int64:   -66666666666,
+		uint64:  77777777777,
+		float32: -8.888e8,
+		float64: 9.9999e99,
+		string:  "test 🧪 test",
+	}
+
+	var data []byte
+
+	require := require.New(t)
+
+	t.Run("Write×××", func(t *testing.T) {
+		buf := new(bytes.Buffer)
+		WriteInt8(buf, s1.int8)
+		WriteByte(buf, s1.byte)
+		WriteBool(buf, s1.bool)
+		WriteInt16(buf, s1.int16)
+		WriteUint16(buf, s1.uint16)
+		WriteInt32(buf, s1.int32)
+		WriteUint32(buf, s1.uint32)
+		WriteInt64(buf, s1.int64)
+		WriteUint64(buf, s1.uint64)
+		WriteFloat32(buf, s1.float32)
+		WriteFloat64(buf, s1.float64)
+		WriteShortString(buf, s1.string)
+		data = buf.Bytes()
+
+		require.NotEmpty(data)
+	})
+
+	t.Run("Read×××", func(t *testing.T) {
+
+		s2 := s{}
+		buf := bytes.NewBuffer(data)
+
+		var e error
+
+		s2.int8, e = ReadInt8(buf)
+		require.NoError(e)
+		s2.byte, e = ReadByte(buf)
+		require.NoError(e)
+		s2.bool, e = ReadBool(buf)
+		require.NoError(e)
+		s2.int16, e = ReadInt16(buf)
+		require.NoError(e)
+		s2.uint16, e = ReadUInt16(buf)
+		require.NoError(e)
+		s2.int32, e = ReadInt32(buf)
+		require.NoError(e)
+		s2.uint32, e = ReadUInt32(buf)
+		require.NoError(e)
+		s2.int64, e = ReadInt64(buf)
+		require.NoError(e)
+		s2.uint64, e = ReadUInt64(buf)
+		require.NoError(e)
+		s2.float32, e = ReadFloat32(buf)
+		require.NoError(e)
+		s2.float64, e = ReadFloat64(buf)
+		require.NoError(e)
+		s2.string, e = ReadShortString(buf)
+		require.NoError(e)
+
+		require.EqualValues(s1, s2)
+	})
+}
+
+func TestReadXXXerrors(t *testing.T) {
+	var e error
+	require := require.New(t)
+
+	b := bytes.NewBuffer([]byte{0})
+	_ = b.Next(1)
+
+	_, e = ReadInt8(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadByte(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadBool(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadInt16(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadUInt16(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadInt32(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadUInt32(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadInt64(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadUInt64(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadFloat32(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
+
+	_, e = ReadFloat64(b)
+	require.ErrorIs(e, io.ErrUnexpectedEOF)
 }
 
 func TestCopyBytes(t *testing.T) {
@@ -157,56 +357,6 @@ func TestCopyBytes(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestPrefixBytes(t *testing.T) {
-	type args struct {
-		bytes  []byte
-		prefix []interface{}
-	}
-	tests := []struct {
-		name string
-		args args
-		want []byte
-	}{
-		{
-			name: "add uint16 to two bytes",
-			args: args{
-				bytes:  []byte{0x01, 0x02},
-				prefix: []interface{}{uint16(1)},
-			},
-			want: []byte{0x00, 0x01, 0x01, 0x02},
-		},
-		{
-			name: "add uint16 and uint64",
-			args: args{
-				bytes:  []byte{0x01, 0x02},
-				prefix: []interface{}{uint16(0x0107), uint64(0xA7010203)},
-			},
-			want: []byte{0x01, 0x07, 0x00, 0x00, 0x00, 0x00, 0xA7, 0x01, 0x02, 0x03, 0x01, 0x02},
-		},
-		{
-			name: "add uint16 and uint64 to nil",
-			args: args{
-				bytes:  nil,
-				prefix: []interface{}{uint16(0x0107), uint64(0xA7010203)},
-			},
-			want: []byte{0x01, 0x07, 0x00, 0x00, 0x00, 0x00, 0xA7, 0x01, 0x02, 0x03},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := PrefixBytes(tt.args.bytes, tt.args.prefix...); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("prefixBytes() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-
-	require.New(t).Panics(func() {
-		bytes := []byte{0x01, 0x02}
-		const value = 55 // unknown type size!
-		_ = PrefixBytes(bytes, value)
-	}, "must panic if expand bytes slice by unknown/variable size values")
 }
 
 type testInt uint16

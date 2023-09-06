@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -101,11 +102,6 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 	})
 	t.Run("Should handle singleton records", func(t *testing.T) {
 		require := require.New(t)
-		toJSON := func(sv istructs.IStateValue) string {
-			json, err := sv.ToJSON()
-			require.NoError(err)
-			return json
-		}
 		singleton1 := &mockRecord{}
 		singleton1.
 			On("QName").Return(testRecordQName1).
@@ -171,20 +167,12 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		require.Len(rr, 3)
 		require.Equal(int64(10), rr[0].value.AsInt64("number"))
 		require.True(rr[0].exists)
-		require.JSONEq(`{
-											"sys.QName":"test.record1",
-											"number":10
-										}`, toJSON(rr[0].value))
 		require.Equal(istructs.WSID(2), rr[1].key.(*recordsKeyBuilder).wsid)
 		require.Nil(rr[1].value)
 		require.False(rr[1].exists)
 		require.Equal(istructs.WSID(3), rr[2].key.(*recordsKeyBuilder).wsid)
 		require.True(rr[2].exists)
 		require.Equal(int64(18), rr[2].value.AsInt64("age"))
-		require.JSONEq(`{
-											"sys.QName":"test.record2",
-											"age":18
-										}`, toJSON(rr[2].value))
 	})
 	t.Run("Should return error when 'id' not found", func(t *testing.T) {
 		require := require.New(t)
@@ -197,10 +185,10 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		require.False(ok)
 		require.ErrorIs(err, ErrNotFound)
 	})
-	t.Run("Should return error on get batch", func(t *testing.T) {
+	t.Run("Should return error on get", func(t *testing.T) {
 		require := require.New(t)
 		records := &mockRecords{}
-		records.On("GetBatch", istructs.WSID(1), true, mock.AnythingOfType("[]istructs.RecordGetBatchItem")).Return(errTest)
+		records.On("Get", istructs.WSID(1), true, mock.Anything).Return(nil, errTest)
 		appStructs := &mockAppStructs{}
 		appStructs.
 			On("AppDef").Return(&nilAppDef{}).
@@ -247,7 +235,7 @@ func TestRecordsStorage_Insert(t *testing.T) {
 		On("PutString", fieldName, value)
 	cud := &mockCUD{}
 	cud.On("Create").Return(rw)
-	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, func() istructs.ICUD { return cud }, nil, nil, 1)
+	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, func() istructs.ICUD { return cud }, nil, nil, 1, nil)
 	kb, err := s.KeyBuilder(RecordsStorage, testRecordQName1)
 	require.NoError(err)
 
@@ -268,8 +256,8 @@ func TestRecordsStorage_Update(t *testing.T) {
 	r := &mockRecord{}
 	sv := &recordsStorageValue{record: r}
 	cud := &mockCUD{}
-	cud.On("Update", r).Return(rw)
-	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, func() istructs.ICUD { return cud }, nil, nil, 1)
+	cud.On("Update", mock.Anything).Return(rw)
+	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, func() istructs.ICUD { return cud }, nil, nil, 1, nil)
 	kb, err := s.KeyBuilder(RecordsStorage, testRecordQName1)
 	require.NoError(err)
 

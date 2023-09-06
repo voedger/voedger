@@ -48,7 +48,7 @@ func TestBasicUsage(t *testing.T) {
 
 		saleParamsDef := bld.AddODoc(appdef.NewQName("test", "Sale"))
 		saleParamsDef.
-			AddField("Buyer", appdef.DataKind_string, true).
+			AddStringField("Buyer", true).
 			AddField("Age", appdef.DataKind_int32, false).
 			AddField("Height", appdef.DataKind_float32, false).
 			AddField("isHuman", appdef.DataKind_bool, false).
@@ -61,17 +61,17 @@ func TestBasicUsage(t *testing.T) {
 
 		goodDef := bld.AddORecord(appdef.NewQName("test", "Good"))
 		goodDef.
-			AddField("Name", appdef.DataKind_string, true).
+			AddStringField("Name", true).
 			AddField("Code", appdef.DataKind_int64, true).
 			AddField("Weight", appdef.DataKind_float64, false)
 
 		saleSecureParamsDef := bld.AddObject(appdef.NewQName("test", "saleSecureArgs"))
 		saleSecureParamsDef.
-			AddField("password", appdef.DataKind_string, true)
+			AddStringField("password", true)
 
 		docDef := bld.AddCDoc(appdef.NewQName("test", "photos"))
 		docDef.
-			AddField("Buyer", appdef.DataKind_string, true).
+			AddStringField("Buyer", true).
 			AddField("Age", appdef.DataKind_int32, false).
 			AddField("Height", appdef.DataKind_float32, false).
 			AddField("isHuman", appdef.DataKind_bool, false).
@@ -164,9 +164,8 @@ func TestBasicUsage(t *testing.T) {
 	defer pLogEvent.Release()
 
 	// 6. save to WLog
-	wLogEvent, err := app.Events().PutWlog(pLogEvent)
+	err = app.Events().PutWlog(pLogEvent)
 	require.NoError(err)
-	defer wLogEvent.Release()
 
 	// 7. save CUD
 	err = app.Records().Apply(pLogEvent)
@@ -202,14 +201,15 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		bld := appdef.New()
 		viewDef := bld.AddView(appdef.NewQName("test", "viewDrinks"))
-		viewDef.
-			AddPartField("partitionKey1", appdef.DataKind_int64).
-			AddClustColumn("clusteringColumn1", appdef.DataKind_int64).
-			AddClustColumn("clusteringColumn2", appdef.DataKind_bool).
-			AddClustColumn("clusteringColumn3", appdef.DataKind_string).
-			AddValueField("id", appdef.DataKind_int64, true).
-			AddValueField("name", appdef.DataKind_string, true).
-			AddValueField("active", appdef.DataKind_bool, true)
+		viewDef.Key().Partition().AddField("partitionKey1", appdef.DataKind_int64)
+		viewDef.Key().ClustCols().
+			AddField("clusteringColumn1", appdef.DataKind_int64).
+			AddField("clusteringColumn2", appdef.DataKind_bool).
+			AddStringField("clusteringColumn3", 100)
+		viewDef.Value().
+			AddField("id", appdef.DataKind_int64, true).
+			AddStringField("name", true).
+			AddField("active", appdef.DataKind_bool, true)
 
 		cfgs := make(AppConfigsType, 1)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
@@ -436,16 +436,17 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 		docQName := appdef.NewQName("types", "CDoc")
 		docDef := appDef.AddCDoc(docQName)
-		docDef.AddField("str", appdef.DataKind_string, true)
+		docDef.AddStringField("str", true)
 		docDef.AddField("fld", appdef.DataKind_int32, true)
 		docDef.SetUniqueField("str")
 
 		docDef.AddContainer("rec", recDef.QName(), 0, appdef.Occurs_Unbounded)
 
-		viewDef := appDef.AddView(appdef.NewQName("types", "View"))
-		viewDef.AddPartField("int", appdef.DataKind_int64)
-		viewDef.AddClustColumn("str", appdef.DataKind_string)
-		viewDef.AddValueField("bool", appdef.DataKind_bool, false)
+		viewName := appdef.NewQName("types", "View")
+		viewDef := appDef.AddView(viewName)
+		viewDef.Key().Partition().AddField("int", appdef.DataKind_int64)
+		viewDef.Key().ClustCols().AddStringField("str", 100)
+		viewDef.Value().AddField("bool", appdef.DataKind_bool, false)
 
 		argDef := appDef.AddObject(appdef.NewQName("types", "Arg"))
 		argDef.AddField("bool", appdef.DataKind_bool, false)
@@ -466,7 +467,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 			NewQueryFunction(
 				qNameQry,
 				argDef.QName(),
-				viewDef.Value().QName(),
+				appdef.ViewValueDefName(viewName),
 				NullQueryExec))
 
 		cfg.FunctionRateLimits.AddAppLimit(qNameQry, istructs.RateLimit{

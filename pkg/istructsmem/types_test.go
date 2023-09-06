@@ -422,6 +422,16 @@ func Test_rowType_PutErrors(t *testing.T) {
 		require.ErrorIs(err, ErrNameNotFound)
 		require.ErrorIs(err, ErrWrongFieldType)
 	})
+
+	t.Run("Must be error to put into abstract table", func(t *testing.T) {
+		row := newRow(test.AppCfg)
+		row.setQName(test.abstractDef)
+
+		row.PutInt32("int32", 1)
+
+		err := row.build()
+		require.ErrorIs(err, ErrAbstractDefinition)
+	})
 }
 
 func Test_rowType_AsPanics(t *testing.T) {
@@ -620,22 +630,38 @@ func Test_rowType_Nils(t *testing.T) {
 			row.PutChars("bytes", "")
 			require.NoError(row.build())
 			require.Len(row.nils, 1)
-			require.True(row.nils["bytes"])
+			require.Contains(row.nils, "bytes")
 		})
 
 		t.Run("check second nil", func(t *testing.T) {
 			row.PutChars("string", "")
 			require.NoError(row.build())
 			require.Len(row.nils, 2)
-			require.True(row.nils["bytes"])
-			require.True(row.nils["string"])
+			require.Contains(row.nils, "bytes")
+			require.Contains(row.nils, "string")
+		})
+
+		t.Run("check repeat nil", func(t *testing.T) {
+			row.PutChars("bytes", "")
+			require.NoError(row.build())
+			require.Len(row.nils, 2)
+			require.Contains(row.nils, "bytes")
+			require.Contains(row.nils, "string")
+		})
+
+		t.Run("check nils are kept", func(t *testing.T) {
+			row.PutInt32("int32", 888)
+			require.NoError(row.build())
+			require.Len(row.nils, 2)
+			require.Contains(row.nils, "bytes")
+			require.Contains(row.nils, "string")
 		})
 
 		t.Run("check nil can be reassigned", func(t *testing.T) {
-			row.PutChars("string", "ABC")
+			row.PutBytes("bytes", []byte{0})
 			require.NoError(row.build())
 			require.Len(row.nils, 1)
-			require.True(row.nils["bytes"])
+			require.Contains(row.nils, "string")
 		})
 	})
 
@@ -686,7 +712,7 @@ func Test_rowType_Nils(t *testing.T) {
 		require.Equal(7, cnt)
 
 		require.Len(row.nils, 2)
-		require.True(row.nils["bytes"])
-		require.True(row.nils["string"])
+		require.Contains(row.nils, "bytes")
+		require.Contains(row.nils, "string")
 	})
 }

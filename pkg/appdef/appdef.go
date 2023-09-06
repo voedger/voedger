@@ -13,6 +13,7 @@ import (
 //   - IAppDef
 //   - IAppDefBuilder
 type appDef struct {
+	comment
 	defs map[QName]interface{}
 }
 
@@ -70,7 +71,7 @@ func (app *appDef) AddQuery(name QName) IQueryBuilder {
 }
 
 func (app *appDef) AddView(name QName) IViewBuilder {
-	return newView(app, name)
+	return newViewBuilder(app, name)
 }
 
 func (app *appDef) AddWDoc(name QName) IWDocBuilder {
@@ -79,6 +80,10 @@ func (app *appDef) AddWDoc(name QName) IWDocBuilder {
 
 func (app *appDef) AddWRecord(name QName) IWRecordBuilder {
 	return newWRecord(app, name)
+}
+
+func (app *appDef) AddWorkspace(name QName) IWorkspaceBuilder {
+	return newWorkspace(app, name)
 }
 
 func (app *appDef) Build() (result IAppDef, err error) {
@@ -203,6 +208,13 @@ func (app *appDef) WDoc(name QName) IWDoc {
 func (app *appDef) WRecord(name QName) IWRecord {
 	if d := app.defByKind(name, DefKind_WRecord); d != nil {
 		return d.(IWRecord)
+	}
+	return nil
+}
+
+func (app *appDef) Workspace(name QName) IWorkspace {
+	if d := app.defByKind(name, DefKind_Workspace); d != nil {
+		return d.(IWorkspace)
 	}
 	return nil
 }

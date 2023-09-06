@@ -45,7 +45,7 @@ Deploy [Heeus Community Edition (CE)](https://github.com/heeus/heeus-design#comm
 
     $ ctool repeat --ssh-key ./adm.key
 
-**Update the cluster version to the ctool version**
+**Upgrade the cluster version to the ctool version**
 
     $ ctool upgrade --ssh-key ./adm.key
 

@@ -6,20 +6,39 @@ package istoragecache
 
 import (
 	"context"
+	"encoding/binary"
+	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
-	istorage "github.com/voedger/voedger/pkg/istorage"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/untillpro/goutils/logger"
+
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istructs"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
 
 type cachedAppStorage struct {
 	cache    *fastcache.Cache
 	storage  istorage.IAppStorage
-	metrics  imetrics.IMetrics
 	vvm      string
 	appQName istructs.AppQName
+
+	/* metrics */
+	mGetSeconds          *imetrics.MetricValue
+	mGetTotal            *imetrics.MetricValue
+	mGetCachedTotal      *imetrics.MetricValue
+	mGetBatchSeconds     *imetrics.MetricValue
+	mGetBatchTotal       *imetrics.MetricValue
+	mGetBatchCachedTotal *imetrics.MetricValue
+	mPutTotal            *imetrics.MetricValue
+	mPutSeconds          *imetrics.MetricValue
+	mPutBatchTotal       *imetrics.MetricValue
+	mPutBatchSeconds     *imetrics.MetricValue
+	mPutBatchItemsTotal  *imetrics.MetricValue
+	mReadTotal           *imetrics.MetricValue
+	mReadSeconds         *imetrics.MetricValue
 }
 
 type implCachingAppStorageProvider struct {
@@ -39,24 +58,35 @@ func (asp *implCachingAppStorageProvider) AppStorage(appQName istructs.AppQName)
 
 func newCachingAppStorage(maxBytes int, nonCachingAppStorage istorage.IAppStorage, metrics imetrics.IMetrics, vvm string, appQName istructs.AppQName) istorage.IAppStorage {
 	return &cachedAppStorage{
-		cache:    fastcache.New(maxBytes),
-		storage:  nonCachingAppStorage,
-		metrics:  metrics,
-		vvm:      vvm,
-		appQName: appQName,
+		cache:                fastcache.New(maxBytes),
+		storage:              nonCachingAppStorage,
+		mGetTotal:            metrics.AppMetricAddr(getTotal, vvm, appQName),
+		mGetCachedTotal:      metrics.AppMetricAddr(getCachedTotal, vvm, appQName),
+		mGetSeconds:          metrics.AppMetricAddr(getSeconds, vvm, appQName),
+		mGetBatchSeconds:     metrics.AppMetricAddr(getBatchSeconds, vvm, appQName),
+		mGetBatchTotal:       metrics.AppMetricAddr(getBatchTotal, vvm, appQName),
+		mGetBatchCachedTotal: metrics.AppMetricAddr(getBatchCachedTotal, vvm, appQName),
+		mPutTotal:            metrics.AppMetricAddr(putTotal, vvm, appQName),
+		mPutSeconds:          metrics.AppMetricAddr(putSeconds, vvm, appQName),
+		mPutBatchTotal:       metrics.AppMetricAddr(putBatchTotal, vvm, appQName),
+		mPutBatchSeconds:     metrics.AppMetricAddr(putBatchSeconds, vvm, appQName),
+		mPutBatchItemsTotal:  metrics.AppMetricAddr(putBatchItemsTotal, vvm, appQName),
+		mReadTotal:           metrics.AppMetricAddr(readTotal, vvm, appQName),
+		mReadSeconds:         metrics.AppMetricAddr(readSeconds, vvm, appQName),
+		vvm:                  vvm,
+		appQName:             appQName,
 	}
 }
 
 func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 	start := time.Now()
 	defer func() {
-		s.metrics.IncreaseApp(putSeconds, s.vvm, s.appQName, time.Since(start).Seconds())
+		s.mPutSeconds.Increase(time.Since(start).Seconds())
 	}()
-	s.metrics.IncreaseApp(putTotal, s.vvm, s.appQName, 1.0)
-
+	s.mPutTotal.Increase(1.0)
 	err = s.storage.Put(pKey, cCols, value)
 	if err == nil {
-		s.cache.Set(key(pKey, cCols), value)
+		s.cache.Set(makeKey(pKey, cCols), value)
 	}
 	return err
 }
@@ -64,15 +94,15 @@ func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err err
 func (s *cachedAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	start := time.Now()
 	defer func() {
-		s.metrics.IncreaseApp(putBatchSeconds, s.vvm, s.appQName, time.Since(start).Seconds())
+		s.mPutBatchSeconds.Increase(time.Since(start).Seconds())
 	}()
-	s.metrics.IncreaseApp(putBatchTotal, s.vvm, s.appQName, 1.0)
-	s.metrics.IncreaseApp(putBatchItemsTotal, s.vvm, s.appQName, float64(len(items)))
+	s.mPutBatchTotal.Increase(1.0)
+	s.mPutBatchItemsTotal.Increase(float64(len(items)))
 
 	err = s.storage.PutBatch(items)
 	if err == nil {
 		for _, i := range items {
-			s.cache.Set(key(i.PKey, i.CCols), i.Value)
+			s.cache.Set(makeKey(i.PKey, i.CCols), i.Value)
 		}
 	}
 	return err
@@ -81,32 +111,42 @@ func (s *cachedAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
 	start := time.Now()
 	defer func() {
-		s.metrics.IncreaseApp(getSeconds, s.vvm, s.appQName, time.Since(start).Seconds())
+		s.mGetSeconds.Increase(time.Since(start).Seconds())
 	}()
-	s.metrics.IncreaseApp(getTotal, s.vvm, s.appQName, 1.0)
+	s.mGetTotal.Increase(1.0)
+
+	key := makeKey(pKey, cCols)
 
 	*data = (*data)[0:0]
-	*data = s.cache.Get(*data, key(pKey, cCols))
-	if len(*data) != 0 {
-		s.metrics.IncreaseApp(getCachedTotal, s.vvm, s.appQName, 1.0)
-		return true, err
+	*data, ok = s.cache.HasGet(*data, key)
+	if ok {
+		s.mGetCachedTotal.Increase(1.0)
+		return len(*data) != 0, nil
+	}
+	if logger.IsVerbose() {
+		stack := string(debug.Stack())
+		logger.Verbose(stack)
+		qNameID := binary.BigEndian.Uint16(pKey)
+		logger.Verbose(fmt.Sprintf("missed cache by QNameID = %d", qNameID))
 	}
 	ok, err = s.storage.Get(pKey, cCols, data)
 	if err != nil {
 		return false, err
 	}
 	if ok {
-		s.cache.Set(key(pKey, cCols), *data)
+		s.cache.Set(key, *data)
+	} else {
+		s.cache.Set(key, nil)
 	}
-	return
+	return ok, nil
 }
 
 func (s *cachedAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) (err error) {
 	start := time.Now()
 	defer func() {
-		s.metrics.IncreaseApp(getBatchSeconds, s.vvm, s.appQName, time.Since(start).Seconds())
+		s.mGetBatchSeconds.Increase(time.Since(start).Seconds())
 	}()
-	s.metrics.IncreaseApp(getBatchTotal, s.vvm, s.appQName, 1.0)
+	s.mGetBatchTotal.Increase(1.0)
 	if !s.getBatchFromCache(pKey, items) {
 		return s.getBatchFromStorage(pKey, items)
 	}
@@ -115,13 +155,13 @@ func (s *cachedAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) 
 
 func (s *cachedAppStorage) getBatchFromCache(pKey []byte, items []istorage.GetBatchItem) (ok bool) {
 	for i := range items {
-		*items[i].Data = s.cache.Get((*items[i].Data)[0:0], key(pKey, items[i].CCols))
-		if len(*items[i].Data) == 0 {
+		*items[i].Data, ok = s.cache.HasGet((*items[i].Data)[0:0], makeKey(pKey, items[i].CCols))
+		if !ok {
 			return false
 		}
-		items[i].Ok = true
+		items[i].Ok = len(*items[i].Data) != 0
 	}
-	s.metrics.IncreaseApp(getBatchCachedTotal, s.vvm, s.appQName, 1.0)
+	s.mGetBatchCachedTotal.Increase(1.0)
 	return true
 }
 
@@ -132,9 +172,9 @@ func (s *cachedAppStorage) getBatchFromStorage(pKey []byte, items []istorage.Get
 	}
 	for _, item := range items {
 		if item.Ok {
-			s.cache.Set(key(pKey, item.CCols), *item.Data)
+			s.cache.Set(makeKey(pKey, item.CCols), *item.Data)
 		} else {
-			s.cache.Del(key(pKey, item.CCols))
+			s.cache.Set(makeKey(pKey, item.CCols), nil)
 		}
 	}
 	return err
@@ -143,13 +183,17 @@ func (s *cachedAppStorage) getBatchFromStorage(pKey []byte, items []istorage.Get
 func (s *cachedAppStorage) Read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
 	start := time.Now()
 	defer func() {
-		s.metrics.IncreaseApp(readSeconds, s.vvm, s.appQName, time.Since(start).Seconds())
+		s.mReadSeconds.Increase(time.Since(start).Seconds())
 	}()
-	s.metrics.IncreaseApp(readTotal, s.vvm, s.appQName, 1.0)
+	s.mReadTotal.Increase(1.0)
 
 	return s.storage.Read(ctx, pKey, startCCols, finishCCols, cb)
 }
 
-func key(pKey []byte, cCols []byte) []byte {
-	return append(pKey, cCols...)
+func makeKey(pKey []byte, cCols []byte) (res []byte) {
+	res = make([]byte, 0, stackKeySize)
+	// res = make([]byte, 0, len(pKey)+len(cCols)) // escapes to heap
+	res = append(res, pKey...)
+	res = append(res, cCols...)
+	return res
 }

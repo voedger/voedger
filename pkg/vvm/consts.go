@@ -7,8 +7,8 @@ package vvm
 import (
 	"time"
 
-	router "github.com/untillpro/airs-router2"
 	"github.com/voedger/voedger/pkg/istorageimpl/istoragecas"
+	"github.com/voedger/voedger/pkg/router"
 )
 
 const (
@@ -28,6 +28,7 @@ const (
 	DefaultVVMPort                       = router.DefaultRouterPort
 	SecretKeyJWTName                     = "secretKeyJWT"
 	actualizerIntentsLimit               = 128
+	actualizerFlushInterval              = time.Millisecond * 500
 )
 
 const (

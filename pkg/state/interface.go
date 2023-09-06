@@ -16,6 +16,11 @@ import (
 type IStateStorage interface {
 	NewKeyBuilder(entity appdef.QName, existingKeyBuilder istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder)
 }
+type IWithGet interface {
+	//Get reads item from storage
+	//Nil value returned when item not found
+	Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error)
+}
 type IWithGetBatch interface {
 	//GetBatch reads items from storage
 	GetBatch(items []GetBatchItem) (err error)

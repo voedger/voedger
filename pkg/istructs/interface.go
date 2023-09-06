@@ -72,8 +72,12 @@ type IEvents interface {
 
 	// @ConcurrentAccess RW
 	// buildOrValidationErr taken either BuildRawEvent() or from extra validation
+	//
+	// Raw event `ev` valid until `event.Release()`
 	PutPlog(ev IRawEvent, buildOrValidationErr error, generator IDGenerator) (event IPLogEvent, saveErr error)
-	PutWlog(ev IPLogEvent) (event IWLogEvent, saveErr error)
+
+	// @ConcurrentAccess RW
+	PutWlog(IPLogEvent) error
 
 	// @ConcurrentAccess R
 	// consts.ReadToTheEnd can be used for the toReadCount parameter

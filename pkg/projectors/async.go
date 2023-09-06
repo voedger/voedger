@@ -25,7 +25,9 @@ type workpiece struct {
 	pLogOffset istructs.Offset
 }
 
-func (w *workpiece) Release() {}
+func (w *workpiece) Release() {
+	w.event.Release()
+}
 
 // implements ServiceOperator
 type asyncActualizer struct {
@@ -231,7 +233,7 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 	if isAcceptable(p.projector, w.event) {
 		err = p.projector.Func(w.event, p.state, p.state)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("wsid[%d] offset[%d]: %w", w.event.Workspace(), w.event.WLogOffset(), err)
 		}
 		if logger.IsVerbose() {
 			logger.Verbose(fmt.Sprintf("%s: handled %d", p.projector.Name, p.pLogOffset))

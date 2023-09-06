@@ -58,6 +58,8 @@ func mockedHostStateStructs() istructs.IAppStructs {
 	mkb := &mockKeyBuilder{}
 	mkb.
 		On("PutInt64", "pkFld", int64(64))
+	value := &mockValue{}
+	value.On("AsString", "vk").Return("value")
 	viewRecords := &mockViewRecords{}
 	viewRecords.
 		On("KeyBuilder", testViewRecordQName1).Return(mkb).
@@ -66,20 +68,19 @@ func mockedHostStateStructs() istructs.IAppStructs {
 		On("GetBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewRecordGetBatchItem")).
 		Return(nil).
 		Run(func(args mock.Arguments) {
-			value := &mockValue{}
-			value.On("AsString", "vk").Return("value")
 			args.Get(1).([]istructs.ViewRecordGetBatchItem)[0].Value = value
 		}).
+		On("Get", istructs.WSID(1), mock.Anything).Return(nil, nil).
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
 
 	appDef := appdef.New()
 
 	view := appDef.AddView(testViewRecordQName1)
-	view.
-		AddPartField("pkFld", appdef.DataKind_int64).
-		AddClustColumn("ccFld", appdef.DataKind_string).
-		AddValueField("vFld", appdef.DataKind_int64, false).
-		AddValueField(ColOffset, appdef.DataKind_int64, false)
+	view.Key().Partition().AddField("pkFld", appdef.DataKind_int64)
+	view.Key().ClustCols().AddStringField("ccFld", appdef.DefaultFieldMaxLength)
+	view.Value().
+		AddField("vFld", appdef.DataKind_int64, false).
+		AddField(ColOffset, appdef.DataKind_int64, false)
 
 	appStructs := &mockAppStructs{}
 	appStructs.
@@ -141,7 +142,7 @@ func TestHostState_CanExist(t *testing.T) {
 
 		_, _, err = s.CanExist(kb)
 
-		require.ErrorIs(err, ErrGetBatchNotSupportedByStorage)
+		require.ErrorIs(err, ErrGetNotSupportedByStorage)
 	})
 }
 func TestHostState_CanExistAll(t *testing.T) {
@@ -184,7 +185,7 @@ func TestHostState_CanExistAll(t *testing.T) {
 
 		require.ErrorIs(err, errTest)
 	})
-	t.Run("Should return get batch not supported by storage error", func(t *testing.T) {
+	t.Run("Should return get not supported by storage error", func(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName))
@@ -194,7 +195,7 @@ func TestHostState_CanExistAll(t *testing.T) {
 
 		err = s.CanExistAll([]istructs.IStateKeyBuilder{kb}, nil)
 
-		require.ErrorIs(err, ErrGetBatchNotSupportedByStorage)
+		require.ErrorIs(err, ErrGetNotSupportedByStorage)
 	})
 }
 func TestHostState_MustExist(t *testing.T) {
@@ -313,7 +314,7 @@ func TestHostState_MustExistAll(t *testing.T) {
 
 		require.ErrorIs(err, ErrNotExists)
 	})
-	t.Run("Should return get batch not supported by storage error", func(t *testing.T) {
+	t.Run("Should return get not supported by storage error", func(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName))
@@ -323,7 +324,7 @@ func TestHostState_MustExistAll(t *testing.T) {
 
 		err = s.MustExistAll([]istructs.IStateKeyBuilder{kb}, nil)
 
-		require.ErrorIs(err, ErrGetBatchNotSupportedByStorage)
+		require.ErrorIs(err, ErrGetNotSupportedByStorage)
 	})
 }
 func TestHostState_MustNotExist(t *testing.T) {
@@ -435,7 +436,7 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 
 		require.ErrorIs(err, ErrExists)
 	})
-	t.Run("Should return get batch not supported by storage error", func(t *testing.T) {
+	t.Run("Should return get not supported by storage error", func(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName))
@@ -445,7 +446,7 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 
 		err = s.MustNotExistAll([]istructs.IStateKeyBuilder{kb})
 
-		require.ErrorIs(err, ErrGetBatchNotSupportedByStorage)
+		require.ErrorIs(err, ErrGetNotSupportedByStorage)
 	})
 }
 func TestHostState_Read(t *testing.T) {

@@ -315,4 +315,9 @@ var defKindProps = map[DefKind]struct {
 		systemFields:   map[string]bool{},
 		containerKinds: map[DefKind]bool{},
 	},
+	DefKind_Workspace: {
+		fieldKinds:     map[DataKind]bool{},
+		systemFields:   map[string]bool{},
+		containerKinds: map[DefKind]bool{},
+	},
 }

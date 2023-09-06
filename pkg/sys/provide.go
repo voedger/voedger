@@ -11,16 +11,16 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
 	"github.com/voedger/voedger/pkg/sys/authnz/workspace"
-	"github.com/voedger/voedger/pkg/sys/authnz/wskinds"
 	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	"github.com/voedger/voedger/pkg/sys/collection"
@@ -39,58 +39,24 @@ var sysFS embed.FS
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, smtpCfg smtp.Cfg,
 	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation coreutils.IFederation,
-	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount, buildInfo *debug.BuildInfo) {
-	blobber.ProvideBlobberCmds(cfg, appDefBuilder)
-	collection.ProvideCollectionFunc(cfg, appDefBuilder)
-	collection.ProvideCDocFunc(cfg, appDefBuilder)
-	collection.ProvideStateFunc(cfg, appDefBuilder)
+	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount, buildInfo *debug.BuildInfo, storageProvider istorage.IAppStorageProvider) {
+	blobber.ProvideBlobberCmds(cfg, ep)
+	collection.Provide(cfg, appDefBuilder)
 	journal.Provide(cfg, appDefBuilder, ep)
-	wskinds.ProvideCDocsWorkspaceKinds(appDefBuilder)
-	builtin.Provide(cfg, appDefBuilder, buildInfo)
-	builtin.ProvideQryEcho(cfg, appDefBuilder)
-	builtin.ProvideQryGRCount(cfg, appDefBuilder)
-	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation)
+	builtin.Provide(cfg, appDefBuilder, buildInfo, storageProvider)
+	authnz.Provide(appDefBuilder, ep)
+	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
 	sqlquery.Provide(cfg, appDefBuilder, asp, numCommandProcessors)
 	projectors.ProvideOffsetsDef(appDefBuilder)
 	processors.ProvideJSONFuncParamsDef(appDefBuilder)
-	verifier.Provide(cfg, appDefBuilder, itokens, federation, asp)
+	verifier.Provide(cfg, appDefBuilder, itokens, federation, asp, smtpCfg)
 	signupin.ProvideQryRefreshPrincipalToken(cfg, appDefBuilder, itokens)
-	signupin.ProvideCDocLogin(appDefBuilder)
+	signupin.ProvideCDocLogin(appDefBuilder, ep)
 	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, atf)
-	invite.Provide(cfg, appDefBuilder, timeFunc)
-	cfg.AddAsyncProjectors(
-		journal.ProvideWLogDatesAsyncProjectorFactory(),
-		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspace(federation, cfg.Name, itokens),
-		workspace.ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation, cfg.Name, itokens),
-		workspace.ProvideAsyncProjectorInitializeWorkspace(federation, timeFunc, cfg.Name, ep, itokens, wsPostInitFunc),
-		verifier.ProvideAsyncProjectorFactory_SendEmailVerificationCode(federation, smtpCfg),
-		invite.ProvideAsyncProjectorApplyInvitationFactory(timeFunc, federation, cfg.Name, itokens, smtpCfg),
-		invite.ProvideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc, federation, cfg.Name, itokens),
-		invite.ProvideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc, federation, cfg.Name, itokens, smtpCfg),
-		invite.ProvideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc, federation, cfg.Name, itokens),
-		invite.ProvideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc, federation, cfg.Name, itokens),
-	)
-	cfg.AddSyncProjectors(
-		workspace.ProvideSyncProjectorChildWorkspaceIdxFactory(),
-		invite.ProvideSyncProjectorInviteIndexFactory(),
-		invite.ProvideSyncProjectorJoinedWorkspaceIndexFactory(),
-		workspace.ProvideAsyncProjectorWorkspaceIDIdx(),
-	)
-	cfg.AddSyncProjectors(collection.ProvideSyncProjectorFactories(appDefBuilder)...)
+	invite.Provide(cfg, appDefBuilder, timeFunc, federation, itokens, smtpCfg, ep)
 	uniques.Provide(cfg, appDefBuilder)
 	describe.Provide(cfg, asp, appDefBuilder)
 
 	// add sys sql schema
-	sysSQLContent, err := sysFS.ReadFile("sys.sql")
-	if err != nil {
-		// notest
-		panic(err)
-	}
-	sysFileScehmaAST, err := parser.ParseFile("sys.sql", string(sysSQLContent))
-	if err != nil {
-		// notest
-		panic(err)
-	}
-	epFileSchemaASTs := ep.ExtensionPoint(apps.EPPackageSchemasASTs)
-	epFileSchemaASTs.AddNamed(appdef.SysPackage, sysFileScehmaAST)
+	apps.Parse(sysFS, appdef.SysPackage, ep)
 }

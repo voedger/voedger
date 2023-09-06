@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -26,7 +25,7 @@ func extractStatement(s any) interface{} {
 }
 
 func CompareParam(left, right FunctionParam) bool {
-	var lt, rt TypeQName
+	var lt, rt DataTypeOrDef
 	if left.NamedParam != nil {
 		lt = left.NamedParam.Type
 	} else {
@@ -61,7 +60,8 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 	})
 }
 
-func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt](c IStatementCollection, callback func(stmt stmtType)) {
+func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt |
+	*WorkspaceStmt | *AlterWorkspaceStmt](c IStatementCollection, callback func(stmt stmtType)) {
 	c.Iterate(func(stmt interface{}) {
 		if s, ok := stmt.(stmtType); ok {
 			callback(s)
@@ -73,25 +73,25 @@ func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *Q
 }
 
 func isInternalName(name DefQName, schema *SchemaAST) bool {
-	pkg := strings.TrimSpace(name.Package)
-	return pkg == "" || pkg == schema.Package
+	pkg := strings.TrimSpace(string(name.Package))
+	return pkg == "" || pkg == string(schema.Package)
 }
 
-func getQualifiedPackageName(pkgName string, schema *SchemaAST) (string, error) {
+func getQualifiedPackageName(pkgName Ident, schema *SchemaAST) string {
 	for i := 0; i < len(schema.Imports); i++ {
 		imp := schema.Imports[i]
 		if imp.Alias != nil && *imp.Alias == pkgName {
-			return imp.Name, nil
+			return imp.Name
 		}
 	}
 	suffix := fmt.Sprintf("/%s", pkgName)
 	for i := 0; i < len(schema.Imports); i++ {
 		imp := schema.Imports[i]
 		if strings.HasSuffix(imp.Name, suffix) {
-			return imp.Name, nil
+			return imp.Name
 		}
 	}
-	return "", ErrUndefined(pkgName)
+	return ""
 }
 
 func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
@@ -101,9 +101,17 @@ func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 		return c.pkg, nil
 	}
 
-	pkgQN, err := getQualifiedPackageName(n.Package, c.pkg.Ast)
-	if err != nil {
-		return nil, err
+	if n.Package == appdef.SysPackage {
+		sysSchema := c.pkgmap[appdef.SysPackage]
+		if sysSchema == nil {
+			return nil, ErrCouldNotImport(appdef.SysPackage)
+		}
+		return sysSchema, nil
+	}
+
+	pkgQN := getQualifiedPackageName(n.Package, c.pkg.Ast)
+	if pkgQN == "" {
+		return nil, ErrUndefined(string(n.Package))
 	}
 	targetPkgSch = c.pkgmap[pkgQN]
 	if targetPkgSch == nil {
@@ -112,7 +120,7 @@ func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 	return targetPkgSch, nil
 }
 
-func resolveTable(fn DefQName, c *basicContext, pos *lexer.Position) (*TableStmt, error) {
+func resolveTable(fn DefQName, c *basicContext) (*TableStmt, *PackageSchemaAST, error) {
 	var item *TableStmt
 	var checkStatement func(stmt interface{})
 	checkStatement = func(stmt interface{}) {
@@ -131,7 +139,7 @@ func resolveTable(fn DefQName, c *basicContext, pos *lexer.Position) (*TableStmt
 
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
-		return nil, errorAt(err, pos)
+		return nil, nil, err
 	}
 
 	iterate(schema.Ast, func(stmt interface{}) {
@@ -139,24 +147,25 @@ func resolveTable(fn DefQName, c *basicContext, pos *lexer.Position) (*TableStmt
 	})
 
 	if item == nil {
-		return nil, errorAt(ErrUndefined(fn.String()), pos)
+		return nil, nil, ErrUndefined(fn.String())
 	}
 
-	return item, nil
+	return item, schema, nil
 }
 
-// when not found, lookup returns (nil, nil)
-func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt](fn DefQName, c *basicContext) (stmtType, error) {
+// when not found, lookup returns (nil, ?, nil)
+func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt |
+	*WorkspaceStmt | *ViewStmt | *StorageStmt](fn DefQName, c *basicContext) (stmtType, *PackageSchemaAST, error) {
 	schema, err := getTargetSchema(fn, c)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var item stmtType
 	iter := func(s *SchemaAST) {
 		iterate(s, func(stmt interface{}) {
 			if f, ok := stmt.(stmtType); ok {
 				named := any(f).(INamedStatement)
-				if named.GetName() == fn.Name {
+				if named.GetName() == string(fn.Name) {
 					item = f
 				}
 			}
@@ -165,64 +174,57 @@ func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *Co
 	iter(schema.Ast)
 
 	if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
-		sysSchema := c.pkgmap[appdef.SysPackage]
-		if sysSchema == nil {
-			return nil, ErrCouldNotImport(appdef.SysPackage)
+		schema = c.pkgmap[appdef.SysPackage]
+		if schema == nil {
+			return nil, nil, ErrCouldNotImport(appdef.SysPackage)
 		}
-		iter(sysSchema.Ast)
+		iter(schema.Ast)
 	}
 
-	return item, nil
+	return item, schema, nil
 }
 
-func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *CommentStmt | *RateStmt | *TagStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) {
+func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt |
+	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) error {
 	var err error
 	var item stmtType
-	item, err = lookup[stmtType](fn, c)
+	item, _, err = lookup[stmtType](fn, c)
 	if err != nil {
-		c.errs = append(c.errs, errorAt(err, c.pos))
-		return
+		return err
 	}
 	if item == nil {
-		c.errs = append(c.errs, errorAt(ErrUndefined(fn.String()), c.pos))
-		return
+		return ErrUndefined(fn.String())
 	}
-	err = cb(item)
-	if err != nil {
-		c.errs = append(c.errs, errorAt(err, c.pos))
-		return
-	}
+	return cb(item)
 }
 
-func maybeSysPkg(pkg string) bool {
+func resolveEx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt |
+	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt](fn DefQName, c *basicContext, cb func(f stmtType, schema *PackageSchemaAST) error) error {
+	var err error
+	var item stmtType
+	var schema *PackageSchemaAST
+	item, schema, err = lookup[stmtType](fn, c)
+	if err != nil {
+		return err
+	}
+	if item == nil {
+		return ErrUndefined(fn.String())
+	}
+	return cb(item, schema)
+}
+
+func maybeSysPkg(pkg Ident) bool {
 	return (pkg == "" || pkg == appdef.SysPackage)
 }
 
-func isSysDef(qn DefQName, ident string) bool {
+func isSysDef(qn DefQName, ident Ident) bool {
 	return maybeSysPkg(qn.Package) && qn.Name == ident
 }
 
-func isPredefinedSysTable(table *TableStmt, c *buildContext) bool {
-	return c.pkg.QualifiedPackageName == appdef.SysPackage &&
+func isPredefinedSysTable(packageName string, table *TableStmt) bool {
+	return packageName == appdef.SysPackage &&
 		(table.Name == nameCDOC || table.Name == nameWDOC || table.Name == nameODOC ||
 			table.Name == nameCRecord || table.Name == nameWRecord || table.Name == nameORecord)
-}
-
-func getTableInheritanceChain(table *TableStmt, ctx *buildContext) (chain []DefQName) {
-	chain = make([]DefQName, 0)
-	var vf func(t *TableStmt)
-	vf = func(t *TableStmt) {
-		if t.Inherits != nil {
-			inherited := *t.Inherits
-			resolve(inherited, &ctx.basicContext, func(t *TableStmt) error {
-				chain = append(chain, inherited)
-				vf(t)
-				return nil
-			})
-		}
-	}
-	vf(table)
-	return chain
 }
 
 func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
@@ -238,106 +240,55 @@ func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
 	}
 }
 
-func getTableDefKind(table *TableStmt, ctx *buildContext) (kind appdef.DefKind, singletone bool) {
-	chain := getTableInheritanceChain(table, ctx)
-	for _, t := range chain {
-		if isSysDef(t, nameCDOC) || isSysDef(t, nameSingleton) {
-			return appdef.DefKind_CDoc, isSysDef(t, nameSingleton)
-		} else if isSysDef(t, nameODOC) {
-			return appdef.DefKind_ODoc, false
-		} else if isSysDef(t, nameWDOC) {
-			return appdef.DefKind_WDoc, false
-		} else if isSysDef(t, nameCRecord) {
-			return appdef.DefKind_CRecord, false
-		} else if isSysDef(t, nameORecord) {
-			return appdef.DefKind_ORecord, false
-		} else if isSysDef(t, nameWRecord) {
-			return appdef.DefKind_WRecord, false
-		}
-	}
-	return appdef.DefKind_null, false
-}
-
-func isVoid(pkg string, name string) bool {
-	if maybeSysPkg(pkg) {
-		return name == sysVoid
-	}
-	return false
-}
-
-func getSysDataKind(name string) appdef.DataKind {
-	if name == sysInt32 || name == sysInt {
-		return appdef.DataKind_int32
-	}
-	if name == sysInt64 {
-		return appdef.DataKind_int64
-	}
-	if name == sysFloat32 || name == sysFloat {
-		return appdef.DataKind_float32
-	}
-	if name == sysFloat64 {
-		return appdef.DataKind_float64
-	}
-	if name == sysQName {
-		return appdef.DataKind_QName
-	}
-	if name == sysBool {
-		return appdef.DataKind_bool
-	}
-	if name == sysString {
-		return appdef.DataKind_string
-	}
-	if name == sysBytes {
-		return appdef.DataKind_bytes
-	}
-	return appdef.DataKind_null
-}
-
-func getTypeDataKind(t TypeQName) appdef.DataKind {
-	if maybeSysPkg(t.Package) {
-		return getSysDataKind(t.Name)
-	}
-	return appdef.DataKind_null
-}
-
-func getDefDataKind(pkg string, name string) appdef.DataKind {
-	if maybeSysPkg(pkg) {
-		return getSysDataKind(name)
-	}
-	return appdef.DataKind_null
-}
-
-func viewFieldDataKind(f *ViewField) appdef.DataKind {
-	if f.Type.Bool {
-		return appdef.DataKind_bool
-	}
-	if f.Type.Bytes {
-		return appdef.DataKind_bytes
-	}
-	if f.Type.Float32 {
-		return appdef.DataKind_float32
-	}
-	if f.Type.Float64 {
-		return appdef.DataKind_float64
-	}
-	if f.Type.Id {
+func dataTypeToDataKind(t DataType) appdef.DataKind {
+	if t.Blob {
 		return appdef.DataKind_RecordID
 	}
-	if f.Type.Int32 {
-		return appdef.DataKind_int32
+	if t.Bool {
+		return appdef.DataKind_bool
 	}
-	if f.Type.Int64 {
+	if t.Bytes != nil {
+		return appdef.DataKind_bytes
+	}
+	if t.Currency {
 		return appdef.DataKind_int64
 	}
-	if f.Type.QName {
+	if t.Float32 {
+		return appdef.DataKind_float32
+	}
+	if t.Float64 {
+		return appdef.DataKind_float64
+	}
+	if t.Int32 {
+		return appdef.DataKind_int32
+	}
+	if t.Int64 {
+		return appdef.DataKind_int64
+	}
+	if t.QName {
 		return appdef.DataKind_QName
 	}
-	return appdef.DataKind_string
+	if t.Varchar != nil {
+		return appdef.DataKind_string
+	}
+	if t.Timestamp {
+		return appdef.DataKind_int64
+	}
+	return appdef.DataKind_null
 }
 
-func buildQname(ctx *buildContext, pkg string, name string) appdef.QName {
+func buildQname(ctx *buildContext, pkg Ident, name Ident) appdef.QName {
 	if pkg == "" {
 		pkg = ctx.pkg.Ast.Package
 	}
-	return appdef.NewQName(pkg, name)
+	return appdef.NewQName(string(pkg), string(name))
+}
+
+func contains(s []Ident, e Ident) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }

@@ -7,11 +7,10 @@ package vvm
 import (
 	"context"
 	"net/url"
-	"runtime/debug"
 	"time"
 
 	ibus "github.com/untillpro/airs-ibus"
-	router "github.com/untillpro/airs-router2"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -24,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
+	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
@@ -64,7 +64,10 @@ type ProcesorChannel struct {
 	iprocbusmem.ChannelGroup
 	ChannelType ProcessorChannelType
 }
-type RouterServices []interface{}
+type RouterServices struct {
+	router.IHTTPService
+	router.IACMEService
+}
 type MetricsServiceOperator pipeline.ISyncOperator
 type MetricsServicePortInitial int
 type VVMPortSource struct {
@@ -125,7 +128,6 @@ type VVMConfig struct {
 	// test and FederationURL contains port -> the port will be relaced with the actual VVMPort
 	FederationURL       *url.URL
 	ActualizerStateOpts []state.ActualizerStateOptFunc
-	BuildInfo           *debug.BuildInfo
 }
 
 type resultSenderErrorFirst struct {

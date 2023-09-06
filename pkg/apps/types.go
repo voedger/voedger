@@ -6,8 +6,6 @@
 package apps
 
 import (
-	"runtime/debug"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -27,7 +25,7 @@ type APIs struct {
 	coreutils.IFederation
 	coreutils.TimeFunc
 	NumCommandProcessors coreutils.CommandProcessorsCount
-	*debug.BuildInfo
 }
 
 type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint)
+

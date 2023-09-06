@@ -43,7 +43,7 @@ func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
 	waitForDeactivate(vit, ws)
 
 	// 410 Gone on work in an inactive workspace
-	bodyCmd := `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
+	bodyCmd := `{"cuds":[{"fields":{"sys.QName":"simpleApp.computers","sys.ID":1}}]}`
 	vit.PostWS(ws, "c.sys.CUD", bodyCmd, coreutils.Expect410()).Println()
 	bodyQry := `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`
 	vit.PostWS(ws, "q.sys.Collection", bodyQry, coreutils.Expect410()).Println()
@@ -89,7 +89,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	newWS := vit.CreateWorkspace(wsp, prn1)
 
 	// check prn2 could not work in ws1
-	body := `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
+	body := `{"cuds":[{"fields":{"sys.QName":"simpleApp.computers","sys.ID":1}}]}`
 	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn2.Token), coreutils.Expect403())
 
 	// join login TestEmail2 to ws1
@@ -98,7 +98,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	updateRolesEmailTemplate := "text:" + invite.EmailTemplatePlaceholder_Roles
 	updateRolesEmailSubject := "your roles are updated"
 	inviteID := InitiateInvitationByEMail(vit, newWS, expireDatetime, it.TestEmail2, roleOwner, updateRolesEmailTemplate, updateRolesEmailSubject)
-	vit.ExpectEmail().Capture()
+	vit.CaptureEmail()
 	WaitForInviteState(vit, newWS, invite.State_Invited, inviteID)
 	expireDatetimeStr := strconv.FormatInt(expireDatetime, 10)
 	verificationCode := expireDatetimeStr[len(expireDatetimeStr)-6:]
@@ -106,7 +106,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	WaitForInviteState(vit, newWS, invite.State_Joined, inviteID)
 
 	// check prn2 could work in ws1
-	body = `{"cuds":[{"fields":{"sys.QName":"sys.computers","sys.ID":1}}]}`
+	body = `{"cuds":[{"fields":{"sys.QName":"simpleApp.computers","sys.ID":1}}]}`
 	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn2.Token))
 
 	// deactivate

@@ -57,14 +57,12 @@ const (
 	ckInit    = "init"
 	ckUpgrade = "upgrade"
 	ckReplace = "replace"
-)
 
-const (
-	ceSettingsFileName = "ce-settings.json"
-	seSettingsFileName = "se-settings.json"
-)
+	// minimum amount of RAM per node in MB
+	minRamOnAppNode = "8192"
+	minRamOnDBNode  = "8192"
+	minRamCENode    = "8192"
 
-const (
 	swarmDbmsLabelKey = "dbm"
 	swarmAppLabelKey  = "app"
 	swarmMonLabelKey  = "mon"

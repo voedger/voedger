@@ -43,6 +43,8 @@ var ErrUnableToUpdateSystemField = errors.New("unable to update system field")
 
 var ErrWrongDefinition = errors.New("wrong definition")
 
+var ErrAbstractDefinition = errors.New("abstract definition")
+
 var ErrUnexpectedDefKind = errors.New("unexpected definition kind")
 
 var ErrUnknownCodec = errors.New("unknown codec")
@@ -55,6 +57,8 @@ var ErrDefChanged = errors.New("definition has been changed")
 
 var ErrReferentialIntegrityViolation = errors.New("referential integrity violation")
 
+var ErrFieldValueRestricted = errors.New("value does not meet the restricts")
+
 const errFieldNotFoundWrap = "%s-type field «%s» is not found in definition «%v»: %w" // int32-type field «myField» is not found …
 
 const errFieldValueTypeMismatchWrap = "value type «%s» is not applicable for %s-type field «%s»: %w" // value type «float64» is not applicable for int32-type field «myField»: …
@@ -66,6 +70,8 @@ const errFieldConvertErrorWrap = "field «%s» value type «%T» can not to be c
 const errCantGetFieldQNameIDWrap = "QName field «%s» can not get ID for value «%v»: %w"
 
 const errDefNotFoundWrap = "definition «%v» not found: %w"
+
+const errMustValidatedBeforeStore = "%v must be validated before store: %w"
 
 // ValidateError: an interface for describing errors that occurred during validation
 //   - methods:

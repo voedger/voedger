@@ -6,6 +6,7 @@ package workspace
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -16,7 +17,7 @@ import (
 )
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
-	federation coreutils.IFederation) {
+	federation coreutils.IFederation, itokens itokens.ITokens, ep extensionpoints.IExtensionPoint, wsPostInitFunc WSPostInitFunc) {
 	// c.sys.InitChildWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		authnz.QNameCommandInitChildWorkspace,
@@ -35,23 +36,10 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	// View<ChildWorkspaceIdx>
 	// target app, user profile
 	projectors.ProvideViewDef(appDefBuilder, QNameViewChildWorkspaceIdx, func(b appdef.IViewBuilder) {
-		b.
-			AddPartField(field_dummy, appdef.DataKind_int32).
-			AddClustColumn(authnz.Field_WSName, appdef.DataKind_string).
-			AddValueField(Field_ChildWorkspaceID, appdef.DataKind_int64, true)
+		b.Key().Partition().AddField(field_dummy, appdef.DataKind_int32)
+		b.Key().ClustCols().AddStringField(authnz.Field_WSName, appdef.DefaultFieldMaxLength)
+		b.Value().AddField(Field_ChildWorkspaceID, appdef.DataKind_int64, true)
 	})
-
-	// CDoc<ChildWorkspace>
-	// many, target app, user profile
-	appDefBuilder.AddCDoc(authnz.QNameCDocChildWorkspace).
-		AddField(authnz.Field_WSName, appdef.DataKind_string, true).
-		AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
-		AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
-		AddField(field_TemplateName, appdef.DataKind_string, false).
-		AddField(Field_TemplateParams, appdef.DataKind_string, false).
-		AddField(authnz.Field_WSClusterID, appdef.DataKind_int32, true).
-		AddField(authnz.Field_WSID, appdef.DataKind_int64, false).    // to be updated afterwards
-		AddField(authnz.Field_WSError, appdef.DataKind_string, false) // to be updated afterwards
 
 	// c.sys.CreateWorkspaceID
 	// target app, (target cluster, base profile WSID)
@@ -74,26 +62,12 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 
 	// View<WorkspaceIDIdx>
 	projectors.ProvideViewDef(appDefBuilder, QNameViewWorkspaceIDIdx, func(b appdef.IViewBuilder) {
-		b.
-			AddPartField(Field_OwnerWSID, appdef.DataKind_int64).
-			AddClustColumn(authnz.Field_WSName, appdef.DataKind_string).
-			AddValueField(authnz.Field_WSID, appdef.DataKind_int64, true).
-			AddValueField(field_IDOfCDocWorkspaceID, appdef.DataKind_RecordID, false) // TODO: not required for backward compatibility. Actually is required
+		b.Key().Partition().AddField(Field_OwnerWSID, appdef.DataKind_int64)
+		b.Key().ClustCols().AddStringField(authnz.Field_WSName, appdef.DefaultFieldMaxLength)
+		b.Value().
+			AddField(authnz.Field_WSID, appdef.DataKind_int64, true).
+			AddRefField(field_IDOfCDocWorkspaceID, false) // TODO: not required for backward compatibility. Actually is required
 	})
-
-	// CDoc<WorkspaceID>
-	// target app, (target cluster, base profile WSID)
-	appDefBuilder.AddCDoc(QNameCDocWorkspaceID).
-		AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
-		AddField(Field_OwnerQName, appdef.DataKind_QName, true).
-		AddField(Field_OwnerID, appdef.DataKind_int64, true).
-		AddField(Field_OwnerApp, appdef.DataKind_string, true).
-		AddField(authnz.Field_WSName, appdef.DataKind_string, true).
-		AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
-		AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
-		AddField(field_TemplateName, appdef.DataKind_string, false).
-		AddField(Field_TemplateParams, appdef.DataKind_string, false).
-		AddField(authnz.Field_WSID, appdef.DataKind_int64, false)
 
 	// c.sys.CreateWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
@@ -113,26 +87,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		execCmdCreateWorkspace(timeFunc, asp, cfg.Name),
 	))
 
-	// singleton CDoc<sys.WorkspaceDescriptor>
-	// target app, new WSID
-	appDefBuilder.AddSingleton(authnz.QNameCDocWorkspaceDescriptor).
-		AddField(Field_OwnerWSID, appdef.DataKind_int64, false). // owner* fields made non-required for app workspaces
-		AddField(Field_OwnerQName, appdef.DataKind_QName, false).
-		AddField(Field_OwnerID, appdef.DataKind_int64, false).
-		AddField(Field_OwnerApp, appdef.DataKind_string, false). // QName -> each target app must know the owner QName -> string
-		AddField(authnz.Field_WSName, appdef.DataKind_string, true).
-		AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
-		AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
-		AddField(field_TemplateName, appdef.DataKind_string, false).
-		AddField(Field_TemplateParams, appdef.DataKind_string, false).
-		AddField(authnz.Field_WSID, appdef.DataKind_int64, false).
-		AddField(Field_CreateError, appdef.DataKind_string, false).
-		AddField(authnz.Field_СreatedAtMs, appdef.DataKind_int64, true).
-		AddField(Field_InitStartedAtMs, appdef.DataKind_int64, false).
-		AddField(Field_InitError, appdef.DataKind_string, false).
-		AddField(Field_InitCompletedAtMs, appdef.DataKind_int64, false).
-		AddField(authnz.Field_Status, appdef.DataKind_int32, false)
-
 	// q.sys.QueryChildWorkspaceByName
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryChildWorkspaceByName,
@@ -150,29 +104,40 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		qcwbnQryExec,
 	))
 
-	//register asynchronous projector QNames
-	appDefBuilder.AddObject(qNameAPInitializeWorkspace)
-	appDefBuilder.AddObject(qNameAPInvokeCreateWorkspaceID)
-	appDefBuilder.AddObject(qNameAPInvokeCreateWorkspace)
-
 	ProvideViewNextWSID(appDefBuilder)
 
 	// deactivate workspace
 	provideDeactivateWorkspace(cfg, appDefBuilder, tokensAPI, federation, asp)
+
+	// projectors
+	appDefBuilder.AddObject(qNameAPInvokeCreateWorkspace)
+	appDefBuilder.AddObject(qNameAPInvokeCreateWorkspaceID)
+	appDefBuilder.AddObject(qNameAPInitializeWorkspace)
+	cfg.AddAsyncProjectors(
+		provideAsyncProjectorFactoryInvokeCreateWorkspace(federation, cfg.Name, itokens),
+		provideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation, cfg.Name, itokens),
+		provideAsyncProjectorInitializeWorkspace(federation, timeFunc, cfg.Name, ep, itokens, wsPostInitFunc),
+	)
+	cfg.AddSyncProjectors(
+		provideSyncProjectorChildWorkspaceIdxFactory(),
+		provideAsyncProjectorWorkspaceIDIdx(),
+	)
+
+	apps.Parse(schemasFS, appdef.SysPackage, ep)
 }
 
 // proj.sys.ChildWorkspaceIdx
-func ProvideSyncProjectorChildWorkspaceIdxFactory() istructs.ProjectorFactory {
+func provideSyncProjectorChildWorkspaceIdxFactory() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name: QNameViewChildWorkspaceIdx,
-			Func: ChildWorkspaceIdxProjector,
+			Name: QNameProjectorChildWorkspaceIdx,
+			Func: projectorChildWorkspaceIdx,
 		}
 	}
 }
 
 // Projector<A, InitializeWorkspace>
-func ProvideAsyncProjectorInitializeWorkspace(federation coreutils.IFederation, nowFunc coreutils.TimeFunc, appQName istructs.AppQName, ep extensionpoints.IExtensionPoint,
+func provideAsyncProjectorInitializeWorkspace(federation coreutils.IFederation, nowFunc coreutils.TimeFunc, appQName istructs.AppQName, ep extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
@@ -183,7 +148,7 @@ func ProvideAsyncProjectorInitializeWorkspace(federation coreutils.IFederation, 
 }
 
 // Projector<A, InvokeCreateWorkspaceID>
-func ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
+func provideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPInvokeCreateWorkspaceID,
@@ -193,7 +158,7 @@ func ProvideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation coreutils.IF
 }
 
 // Projector<A, InvokeCreateWorkspace>
-func ProvideAsyncProjectorFactoryInvokeCreateWorkspace(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
+func provideAsyncProjectorFactoryInvokeCreateWorkspace(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPInvokeCreateWorkspace,
@@ -203,10 +168,10 @@ func ProvideAsyncProjectorFactoryInvokeCreateWorkspace(federation coreutils.IFed
 }
 
 // sp.sys.WorkspaceIDIdx
-func ProvideAsyncProjectorWorkspaceIDIdx() istructs.ProjectorFactory {
+func provideAsyncProjectorWorkspaceIDIdx() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name: QNameViewWorkspaceIDIdx,
+			Name: QNameProjectorViewWorkspaceIDIdx,
 			Func: workspaceIDIdxProjector,
 		}
 	}

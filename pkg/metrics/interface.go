@@ -34,6 +34,18 @@ type IMetrics interface {
 	// @ConcurrentAccess
 	IncreaseApp(metricName string, vvmName string, app istructs.AppQName, valueDelta float64)
 
+	// Returns address of metric value.
+	// Only use atomic operations with that address!
+	//
+	// @ConcurrentAccess
+	MetricAddr(metricName string, vvmName string) *MetricValue
+
+	// Returns address of metric value.
+	// Only use atomic operations with that address!
+	//
+	// @ConcurrentAccess
+	AppMetricAddr(metricName string, vvmName string, app istructs.AppQName) *MetricValue
+
 	// GetAll lists current values of all metrics
 	//
 	// @ConcurrentAccess

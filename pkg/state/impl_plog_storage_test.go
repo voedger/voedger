@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -64,7 +65,7 @@ func TestPLogStorage_Read(t *testing.T) {
 		require.ErrorIs(err, errTest)
 	})
 }
-func TestPLogStorage_GetBatch(t *testing.T) {
+func TestPLogStorage_Get(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		require := require.New(t)
 		events := &mockEvents{}
@@ -73,15 +74,13 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 			Run(func(args mock.Arguments) {
 				cb := args.Get(4).(istructs.PLogEventsReaderCallback)
 				require.NoError(cb(istructs.FirstOffset, nil))
-				require.NoError(cb(istructs.Offset(2), nil))
-				require.NoError(cb(istructs.Offset(3), nil))
 			})
 		appStructs := &mockAppStructs{}
 		appStructs.On("AppDef").Return(&nilAppDef{})
 		appStructs.On("Events").Return(events)
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
-		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, nil, 0)
+		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, nil, 0, nil)
 		kb, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
@@ -109,7 +108,7 @@ func TestPLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Events").Return(events)
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
-		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, nil, 0)
+		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, nil, 0, nil)
 		kb1, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
 		require.NoError(err)
 		kb1.PutInt64(Field_Offset, 1)

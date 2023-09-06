@@ -13,3 +13,8 @@ import (
 func IsSystemRole(role appdef.QName) bool {
 	return slices.Contains(SysRoles, role)
 }
+
+// returns NullQName if missing
+func QNameAncestor(qName appdef.QName) appdef.QName {
+	return rolesInheritance[qName]
+}

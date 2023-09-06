@@ -5,6 +5,7 @@
 package signupin
 
 import (
+	"embed"
 	"regexp"
 	"time"
 
@@ -31,6 +32,7 @@ const (
 	field_Login                     = "Login"
 	field_NewPassword               = "NewPassword"
 	field_OldPassword               = "OldPassword"
+	field_Language                  = "Language"
 	DefaultPrincipalTokenExpiration = 24 * time.Hour
 )
 
@@ -38,6 +40,7 @@ var (
 	// see https://dev.untill.com/projects/#!537026
 	validLoginRegexp       *regexp.Regexp = regexp.MustCompile(`^[a-z0-9!#$%&'*+-\/=?^_{|}~@]+$`)
 	QNameViewLoginIdx                     = appdef.NewQName(appdef.SysPackage, "LoginIdx")
+	QNameProjectorLoginIdx                = appdef.NewQName(appdef.SysPackage, "ProjectorLoginIdx")
 	qNameCmdChangePassword                = appdef.NewQName(appdef.SysPackage, "ChangePassword")
 )
 
@@ -46,3 +49,6 @@ const (
 	ErrMessagePasswordIsIncorrect        = "password is incorrect"
 	ErrFormatMessageLoginDoesntExist     = "login %s does not exist"
 )
+
+//go:embed schemas.sql
+var schemasFS embed.FS

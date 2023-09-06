@@ -150,9 +150,9 @@ var (
 )
 
 var buildProjectionView = func(view appdef.IViewBuilder) {
-	view.AddPartField("pk", appdef.DataKind_int32)
-	view.AddClustColumn("cc", appdef.DataKind_int32)
-	view.AddValueField(colValue, appdef.DataKind_int32, true)
+	view.Key().Partition().AddField("pk", appdef.DataKind_int32)
+	view.Key().ClustCols().AddField("cc", appdef.DataKind_int32)
+	view.Value().AddField(colValue, appdef.DataKind_int32, true)
 }
 
 type (
@@ -248,7 +248,7 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	require.NoError(processor.SendSync(&plogEvent{wsid: 1002}))
 	err := processor.SendSync(&plogEvent{wsid: 1099})
 	require.NotNil(err)
-	require.Equal("[actualizer/doSync] [ErrorHandler/doSync] [SyncActualizer/doSync] [Projector/doSync] test err", err.Error())
+	require.Equal("test err", err.Error())
 
 	// now read the projection values in workspaces
 	require.Equal(int32(2), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
