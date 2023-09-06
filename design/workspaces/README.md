@@ -17,7 +17,7 @@
 - Workspace can be AppWorkspace, ProfileWorkspace or ChildWorkspace
 - ProfileWorkspace keeps Subject data, including list of ChildWorkspace-s
   - `sys.UserProfile`, `sys.DeviceProfile`
-- ChildWorkspace: `air.Restaurant` etc.
+- ChildWorkspace: `air.RestaurantWS` etc.
 - Workspace has the OwningDocument
 - OwningDocument: a document whose fields {WSID, wsError} will be updated when workspace will be ready
 - Currently, OwningDocument kinds: `cdoc.sys.Login`, `cdoc.sys.ChildWorkspace`
