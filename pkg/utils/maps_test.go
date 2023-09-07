@@ -58,6 +58,7 @@ func TestMarshal(t *testing.T) {
 		"float64": float64(42),
 		"str":     "str1",
 		"bool":    true,
+		"any":     nil, // will be ignored
 	}))
 	require.Len(o.Data, 3)
 	require.Equal(float64(42), o.Data["float64"])
