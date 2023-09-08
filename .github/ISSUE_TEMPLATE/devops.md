@@ -2,7 +2,7 @@
 name: DevOps
 about: Something nice to improve workflow
 title: ''
-labels: backlog, document, kind/devops
+labels: backlog, kind/devops
 assignees: ivvist
 
 ---
