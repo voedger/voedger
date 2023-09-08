@@ -7,7 +7,10 @@ assignees: ivvist
 
 ---
 
-## Problem/Motivation/Requirements
+## Pain/Problem/Motivation/Requirements
+
+What is the pain?
+
 
 ## Solution
 
