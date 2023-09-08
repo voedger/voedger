@@ -38,18 +38,18 @@ update_hosts_file() {
 }
 
 args_array=("$@")
-i=0
+# i=0
 # Prepare for name resolving - iterate over each hostname and update /etc/hosts on each host
-for host in "${hosts[@]}"; do
-   ip=${args_array[i]}
+# for host in "${hosts[@]}"; do
+#    ip=${args_array[i]}
 
   # Iterate over the three nodes
-  for ip_address in ${args_array[@]}; do
-   update_hosts_file $host $ip_address $ip
-  done
+#   for ip_address in ${args_array[@]}; do
+#    update_hosts_file $host $ip_address $ip
+#   done
 
-((++i))
-done
+# ((++i))
+# done
 
 DBNode1=$1
 DBNode2=$2

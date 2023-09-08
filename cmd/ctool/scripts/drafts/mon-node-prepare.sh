@@ -61,15 +61,15 @@ update_hosts_file_refactored() {
 
 args_array=("$@")
 # Prepare for name resolving - iterate over each hostname and update /etc/hosts on each host
-i=0
-for host in "${hosts[@]}"; do
-  ip=${args_array[i]}
+#i=0
+#for host in "${hosts[@]}"; do
+#  ip=${args_array[i]}
   # Iterate over the three IP addresses
-  for ip_address in "$@"; do
-      update_hosts_file $host $ip_address $ip
-  done
-((++i))
-done
+#  for ip_address in "$@"; do
+#      update_hosts_file $host $ip_address $ip
+#  done
+#((++i))
+#done
 
 count=0
 
