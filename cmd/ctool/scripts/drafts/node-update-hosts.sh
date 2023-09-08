@@ -25,7 +25,7 @@ update_hosts_file() {
 
   ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c '
     if grep -qF \"$name\" /etc/hosts; then
-      sed -i -E \"s/.*\b$name\b.*$/$ip\t$name/\" /etc/hosts
+      sed -i -E \"s/.*\\b$name\\b.*\$/$ip\t$name/\" /etc/hosts
     else
       echo -e \"$ip\t$name\" >> /etc/hosts
     fi
