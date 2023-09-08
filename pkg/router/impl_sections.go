@@ -66,9 +66,9 @@ func writeSectionedResponse(requestCtx context.Context, w http.ResponseWriter, s
 			// consume all pending sections or elems to avoid hanging on ibusnats side
 			// normally should one pending elem or section because ibusnats implementation
 			// will terminate on next elem or section because `onSendFailed()` actually closes the context
-			discardSection(iSection)
+			discardSection(iSection, requestCtx)
 			for iSection := range sections {
-				discardSection(iSection)
+				discardSection(iSection, requestCtx)
 			}
 		}
 	}()
@@ -77,47 +77,51 @@ func writeSectionedResponse(requestCtx context.Context, w http.ResponseWriter, s
 	sectionedResponseStarted := false
 
 	closer := ""
-	// ctx done -> sections will be closed by ibusnats implementation
-	for iSection = range sections {
-		// possible: ctx is done but on select {sections<-section, <-ctx.Done()} write to sections channel is triggered.
-		// ctx.Done() must have the priority
-		if requestCtx.Err() != nil {
-			ok = false
-			break
-		}
+	readSections := func() bool {
+		for iSection = range sections {
+			// possible: ctx is done but on select {sections<-section, <-ctx.Done()} write to sections channel is triggered.
+			// ctx.Done() must have the priority
+			if requestCtx.Err() != nil {
+				ok = false
+				break
+			}
+			if !sectionedResponseStarted {
+				if ok = startSectionedResponse(w); !ok {
+					return false
+				}
+				sectionedResponseStarted = true
+			}
 
-		if !sectionedResponseStarted {
-			if ok = startSectionedResponse(w); !ok {
-				return
+			if !sectionsOpened {
+				if ok = writeResponse(w, `"sections":[`); !ok {
+					return false
+				}
+				closer = "]"
+				sectionsOpened = true
+			} else {
+				if ok = writeResponse(w, ","); !ok {
+					return false
+				}
 			}
-			sectionedResponseStarted = true
-		}
-
-		if !sectionsOpened {
-			if ok = writeResponse(w, `"sections":[`); !ok {
-				return
+			if ok = writeSection(w, iSection, requestCtx); !ok {
+				return false
 			}
-			closer = "]"
-			sectionsOpened = true
-		} else {
-			if ok = writeResponse(w, ","); !ok {
-				return
+			if onAfterSectionWrite != nil {
+				// happens in tests
+				onAfterSectionWrite(w)
 			}
 		}
-		if ok = writeSection(w, iSection); !ok {
-			return
-		}
-		if onAfterSectionWrite != nil {
-			// happens in tests
-			onAfterSectionWrite(w)
-		}
+		return true
 	}
-
+	mustReturn := readSections()
 	if requestCtx.Err() != nil {
 		if onRequestCtxClosed != nil {
 			onRequestCtxClosed()
 		}
 		log.Println("client disconnected during sections sending")
+		return
+	}
+	if !mustReturn {
 		return
 	}
 
@@ -146,16 +150,16 @@ func writeSectionedResponse(requestCtx context.Context, w http.ResponseWriter, s
 	}
 }
 
-func discardSection(iSection ibus.ISection) {
+func discardSection(iSection ibus.ISection, requestCtx context.Context) {
 	switch t := iSection.(type) {
 	case nil:
 	case ibus.IObjectSection:
-		t.Value()
+		t.Value(requestCtx)
 	case ibus.IMapSection:
-		for _, _, ok := t.Next(); ok; _, _, ok = t.Next() {
+		for _, _, ok := t.Next(requestCtx); ok; _, _, ok = t.Next(requestCtx) {
 		}
 	case ibus.IArraySection:
-		for _, ok := t.Next(); ok; _, ok = t.Next() {
+		for _, ok := t.Next(requestCtx); ok; _, ok = t.Next(requestCtx) {
 		}
 	}
 }
@@ -167,7 +171,7 @@ func startSectionedResponse(w http.ResponseWriter) bool {
 	return writeResponse(w, "{")
 }
 
-func writeSection(w http.ResponseWriter, isec ibus.ISection) bool {
+func writeSection(w http.ResponseWriter, isec ibus.ISection, requestCtx context.Context) bool {
 	switch sec := isec.(type) {
 	case ibus.IArraySection:
 		if !writeSectionHeader(w, sec) {
@@ -176,7 +180,7 @@ func writeSection(w http.ResponseWriter, isec ibus.ISection) bool {
 		isFirst := true
 		closer := "}"
 		// ctx.Done() is tracked by ibusnats implementation: writing to section elem channel -> read here, ctxdone -> close elem channel
-		for val, ok := sec.Next(); ok; val, ok = sec.Next() {
+		for val, ok := sec.Next(requestCtx); ok; val, ok = sec.Next(requestCtx) {
 			if isFirst {
 				if !writeResponse(w, fmt.Sprintf(`,"elements":[%s`, string(val))) {
 					return false
@@ -196,7 +200,7 @@ func writeSection(w http.ResponseWriter, isec ibus.ISection) bool {
 		if !writeSectionHeader(w, sec) {
 			return false
 		}
-		val := sec.Value()
+		val := sec.Value(requestCtx)
 		if !writeResponse(w, fmt.Sprintf(`,"elements":%s}`, string(val))) {
 			return false
 		}
@@ -207,7 +211,7 @@ func writeSection(w http.ResponseWriter, isec ibus.ISection) bool {
 		isFirst := true
 		closer := "}"
 		// ctx.Done() is tracked by ibusnats implementation: writing to section elem channel -> read here, ctxdone -> close elem channel
-		for name, val, ok := sec.Next(); ok; name, val, ok = sec.Next() {
+		for name, val, ok := sec.Next(requestCtx); ok; name, val, ok = sec.Next(requestCtx) {
 			if isFirst {
 				if !writeResponse(w, fmt.Sprintf(`,"elements":{%q:%s`, name, string(val))) {
 					return false

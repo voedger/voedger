@@ -8,9 +8,9 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func provideViewInviteIndex(appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddView(qNameViewInviteIndex).
-		AddPartField(field_Dummy, appdef.DataKind_int32).
-		AddClustColumn(Field_Login, appdef.DataKind_string).
-		AddValueField(field_InviteID, appdef.DataKind_RecordID, true)
+func provideViewInviteIndex(app appdef.IAppDefBuilder) {
+	view := app.AddView(qNameViewInviteIndex)
+	view.Key().Partition().AddField(field_Dummy, appdef.DataKind_int32)
+	view.Key().ClustCols().AddStringField(Field_Login, appdef.DefaultFieldMaxLength)
+	view.Value().AddRefField(field_InviteID, true)
 }

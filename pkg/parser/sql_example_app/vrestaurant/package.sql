@@ -5,26 +5,26 @@ SCHEMA vrestaurant;
 
 -- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
 ABSTRACT TABLE BOEntity INHERITS CDoc( -- TODO: ABSTRACT
-    Name text NOT NULL, -- TODO NOT NULL everywhere
+    Name varchar(50) NOT NULL, -- TODO NOT NULL everywhere
     Number int NOT NULL -- Number sequence(1) ??? smm
 ) WITH Tags=(BackofficeTag);
 
 -- TABLE Person : is an Abstract data struct for Waiters, Clients, Adminitsrators, Manager
 ABSTRACT TABLE Person INHERITS BOEntity ( --TODO:  ABSTRACT
-    Address text, --TODO: get rid of text, use varchar, varchar(30) by default? smm
-    Email text,
-    Phone text,
+    Address varchar(50), 
+    Email varchar(50) CHECK '^\\S+@\\S+\\.\\S+$',
+    Phone varchar(20),
     Picture blob
 ) WITH Tags=(BackofficeTag);
 
 WORKSPACE Restaurant (
     DESCRIPTOR (
-	    Address text,
-	    Currency text,
-	    Phone text,
+	    Address varchar(50),
+	    Currency varchar(3),
+	    Phone varchar(20),
 	    OpenHours    int,
 	    OpenMinutes  int,
-	    OwnerName text
+	    OwnerName varchar(30)
     );
 
     ROLE LocationUser;
@@ -41,14 +41,14 @@ WORKSPACE Restaurant (
         -- access to alcohol
         Datebirth int64, 
         -- payment card number, used for payments in Restaurant
-        Card text,       
+        Card varchar(20),
         -- percent of permanent discount
         DiscountPercent int 
     );
 
     -- TABLE Register   : describes payment resgitration devices
     TABLE Register INHERITS Person(
-        Code text -- personal code in inner login system    
+        Code varchar(20) -- personal code in inner login system    
     );
 
     -- TABLE Position   : Restaurant job list
@@ -58,7 +58,7 @@ WORKSPACE Restaurant (
     -- TABLE POSUser   : describes restaurant user entity (Waiter/Administrator/Manager)
     TABLE POSUser INHERITS Person(
         -- personal code in inner login system    
-        Code text, 
+        Code varchar(20), 
 	    PositionID ref(Position),
         -- wage/salary rate
         Wage float32
@@ -92,7 +92,7 @@ WORKSPACE Restaurant (
     TABLE Article INHERITS BOEntity(
         DepartamentID ref(Department),
         -- article barcode to order by scanner
-        Barcode text,  
+        Barcode varchar(20),  
         -- article sale price 
         Price currency, 
         -- V.A.T. in percent
@@ -109,7 +109,7 @@ WORKSPACE Restaurant (
 
     -- TABLE Transaction   : defines parameters of table, occupied by client
     TABLE Transaction INHERITS WDoc(
-        Name text,
+        Name varchar(50),
         Number int,
         Tableno int, 
         --time of very first order on table
@@ -136,7 +136,7 @@ WORKSPACE Restaurant (
             -- number of articles in order
             Quantity int,           
             -- text message, added to the order
-            Comment text,           
+            Comment varchar(50),
             Price currency,
             VatPercent currency,
             Vat float32
@@ -166,11 +166,11 @@ WORKSPACE Restaurant (
     EXTENSION ENGINE BUILTIN (
 	
 	    SYNC PROJECTOR UpdateTableStatus
-	        ON INSERT IN (Order, Bill)
+	        AFTER INSERT ON (Order, Bill)
 		INTENTS(View TableStatus);
 
 	    PROJECTOR UpdateSalesReport
-	        ON INSERT Bill 
+	        AFTER INSERT ON Bill 
 		INTENTS(View SalesPerDay);
 
     );
@@ -197,13 +197,13 @@ WORKSPACE Restaurant (
         Month int32, 
         Day int32, 
         Number int32, 
-        DepartmentID id NOT NULL,
-        ArticleID id NOT NULL,
+        DepartmentID ref(Department) NOT NULL,
+        ArticleID ref(Article) NOT NULL,
         Quantity int32, --!!! Must be float32
         Amount int32,--!!! Must be Currency
         Vat int32, --!!! Must be float32
         VatPercent int32, --!!! Must be Currency
-        PaymentTypeID id NOT NULL,
+        PaymentTypeID ref(PaymentType) NOT NULL,
         PRIMARY KEY (Year, Month, Day, Number)
     ) AS RESULT OF UpdateSalesReport;
 );    

@@ -240,23 +240,82 @@ func (q DefQName) String() string {
 
 }
 
-type TypeQName struct {
-	Package Ident `parser:"(@Ident '.')?"`
-	Name    Ident `parser:"@Ident"`
-	IsArray bool  `parser:"@Array?"`
+type TypeVarchar struct {
+	MaxLen *uint16 `parser:"('varchar' | 'text') ( '(' @Int ')' )?"`
 }
 
-func (q TypeQName) String() (s string) {
-	if q.Package == "" {
-		s = string(q.Name)
-	} else {
-		s = fmt.Sprintf("%s.%s", q.Package, q.Name)
+type TypeBytes struct {
+	MaxLen *uint16 `parser:"'bytes' ( '(' @Int ')' )?"`
+}
+
+type VoidOrDataType struct {
+	Void     bool           `parser:"( @'void'"`
+	DataType *DataTypeOrDef `parser:"| @@)"`
+}
+
+type VoidOrDef struct {
+	Void bool      `parser:"( @'void'"`
+	Def  *DefQName `parser:"| @@)"`
+}
+
+type DataType struct {
+	Varchar   *TypeVarchar `parser:"( @@"`
+	Bytes     *TypeBytes   `parser:"| @@"`
+	Int32     bool         `parser:"| @('int' | 'int32')"`
+	Int64     bool         `parser:"| @'int64'"`
+	Float32   bool         `parser:"| @('float' | 'float32')"`
+	Float64   bool         `parser:"| @'float64'"`
+	QName     bool         `parser:"| @'qname'"`
+	Bool      bool         `parser:"| @'bool'"`
+	Blob      bool         `parser:"| @'blob'"`
+	Timestamp bool         `parser:"| @'timestamp'"`
+	Currency  bool         `parser:"| @'currency' )"`
+}
+
+func (q DataType) String() (s string) {
+	if q.Varchar != nil {
+		if q.Varchar.MaxLen != nil {
+			return fmt.Sprintf("varchar[%d]", *q.Varchar.MaxLen)
+		}
+		return fmt.Sprintf("varchar[%d]", appdef.DefaultFieldMaxLength)
+	} else if q.Int32 {
+		return "int32"
+	} else if q.Int64 {
+		return "int64"
+	} else if q.Float32 {
+		return "int32"
+	} else if q.Float64 {
+		return "int64"
+	} else if q.QName {
+		return "qname"
+	} else if q.Bool {
+		return "bool"
+	} else if q.Bytes != nil {
+		if q.Bytes.MaxLen != nil {
+			return fmt.Sprintf("bytes[%d]", *q.Bytes.MaxLen)
+		}
+		return fmt.Sprintf("bytes[%d]", appdef.DefaultFieldMaxLength)
+	} else if q.Blob {
+		return "blob"
+	} else if q.Timestamp {
+		return "timestamp"
+	} else if q.Currency {
+		return "currency"
 	}
 
-	if q.IsArray {
-		return fmt.Sprintf("[]%s", s)
+	return "?"
+}
+
+type DataTypeOrDef struct {
+	DataType *DataType `parser:"( @@"`
+	Def      *DefQName `parser:"| @@ )"`
+}
+
+func (q DataTypeOrDef) String() (s string) {
+	if q.DataType != nil {
+		return q.DataType.String()
 	}
-	return s
+	return q.Def.String()
 }
 
 type Statement struct {
@@ -293,26 +352,33 @@ zczxczxc
 */
 type ProjectorStmt struct {
 	Statement
-	Sync     bool         `parser:"@'SYNC'?"`
-	Name     Ident        `parser:"'PROJECTOR' @Ident"`
-	On       ProjectorOn  `parser:"'ON' @@"`
-	Triggers []DefQName   `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
-	State    []StorageKey `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
-	Intents  []StorageKey `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
-	Engine   EngineType   // Initialized with 1st pass
+	Sync      bool                `parser:"@'SYNC'?"`
+	Name      Ident               `parser:"'PROJECTOR' @Ident"`
+	CUDEvents *ProjectorCUDEvents `parser:"('AFTER' @@)?"`
+	On        []DefQName          `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!"`
+	State     []StorageKey        `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Intents   []StorageKey        `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
+	Engine    EngineType          // Initialized with 1st pass
 }
 
 func (s *ProjectorStmt) GetName() string            { return string(s.Name) }
 func (s *ProjectorStmt) SetEngineType(e EngineType) { s.Engine = e }
 
-type ProjectorOn struct {
+type ProjectorCUDEvents struct {
+	Insert     bool `parser:"  @(('INSERT' ('OR' 'UPDATE')?) | ('UPDATE' 'OR' 'INSERT'))"`
+	Update     bool `parser:"| @(('UPDATE' ('OR' 'INSERT')?) | ('INSERT' 'OR' 'UPDATE'))"`
+	Activate   bool `parser:"| @(('ACTIVATE' ('OR' 'DEACTIVATE')?) | ('DEACTIVATE' 'OR' 'ACTIVATE'))"`
+	Deactivate bool `parser:"| @(('DEACTIVATE' ('OR' 'ACTIVATE')?) | ('ACTIVATE' 'OR' 'DEACTIVATE'))"`
+}
+
+/*type ProjectorOn struct {
 	CommandArgument bool `parser:"@('COMMAND' 'ARGUMENT')"`
 	Command         bool `parser:"| @('COMMAND')"`
 	Insert          bool `parser:"| @(('INSERT' ('OR' 'UPDATE')?) | ('UPDATE' 'OR' 'INSERT'))"`
 	Update          bool `parser:"| @(('UPDATE' ('OR' 'INSERT')?) | ('INSERT' 'OR' 'UPDATE'))"`
 	Activate        bool `parser:"| @(('ACTIVATE' ('OR' 'DEACTIVATE')?) | ('DEACTIVATE' 'OR' 'ACTIVATE'))"`
 	Deactivate      bool `parser:"| @(('DEACTIVATE' ('OR' 'ACTIVATE')?) | ('ACTIVATE' 'OR' 'DEACTIVATE'))"`
-}
+}*/
 
 type TemplateStmt struct {
 	Statement
@@ -404,7 +470,7 @@ type FunctionStmt struct {
 	Statement
 	Name    Ident           `parser:"'FUNCTION' @Ident"`
 	Params  []FunctionParam `parser:"'(' @@? (',' @@)* ')'"`
-	Returns TypeQName       `parser:"'RETURNS' @@"`
+	Returns DataTypeOrDef   `parser:"'RETURNS' @@"`
 	Engine  EngineType      // Initialized with 1st pass
 }
 
@@ -414,9 +480,9 @@ func (s *FunctionStmt) SetEngineType(e EngineType) { s.Engine = e }
 type CommandStmt struct {
 	Statement
 	Name        Ident      `parser:"'COMMAND' @Ident"`
-	Arg         *DefQName  `parser:"('(' @@? "`
-	UnloggedArg *DefQName  `parser:"(','? UNLOGGED @@)? ')')?"`
-	Returns     *DefQName  `parser:"('RETURNS' @@)?"`
+	Arg         *VoidOrDef `parser:"('(' @@? "`
+	UnloggedArg *VoidOrDef `parser:"(','? UNLOGGED @@)? ')')?"`
+	Returns     *VoidOrDef `parser:"('RETURNS' @@)?"`
 	With        []WithItem `parser:"('WITH' @@ (',' @@)* )?"`
 	Engine      EngineType // Initialized with 1st pass
 }
@@ -430,13 +496,19 @@ type WithItem struct {
 	Rate    *DefQName  `parser:"| ('Rate' '=' @@)"`
 }
 
+type AnyOrVoidOrDef struct {
+	Any  bool      `parser:"@'ANY'"`
+	Void bool      `parser:"| @'void'"`
+	Def  *DefQName `parser:"| @@"`
+}
+
 type QueryStmt struct {
 	Statement
-	Name    Ident      `parser:"'QUERY' @Ident"`
-	Arg     *DefQName  `parser:"('(' @@? ')')?"`
-	Returns DefQName   `parser:"'RETURNS' @@"`
-	With    []WithItem `parser:"('WITH' @@ (',' @@)* )?"`
-	Engine  EngineType // Initialized with 1st pass
+	Name    Ident          `parser:"'QUERY' @Ident"`
+	Arg     *VoidOrDef     `parser:"('(' @@? ')')?"`
+	Returns AnyOrVoidOrDef `parser:"'RETURNS' @@"`
+	With    []WithItem     `parser:"('WITH' @@ (',' @@)* )?"`
+	Engine  EngineType     // Initialized with 1st pass
 }
 
 func (s *QueryStmt) GetName() string            { return string(s.Name) }
@@ -448,13 +520,13 @@ type EngineType struct {
 }
 
 type FunctionParam struct {
-	NamedParam       *NamedParam `parser:"@@"`
-	UnnamedParamType *TypeQName  `parser:"| @@"`
+	NamedParam       *NamedParam    `parser:"@@"`
+	UnnamedParamType *DataTypeOrDef `parser:"| @@"`
 }
 
 type NamedParam struct {
-	Name Ident     `parser:"@Ident"`
-	Type TypeQName `parser:"@@"`
+	Name Ident         `parser:"@Ident"`
+	Type DataTypeOrDef `parser:"@@"`
 }
 
 type TableStmt struct {
@@ -526,53 +598,61 @@ type RefFieldExpr struct {
 
 type FieldExpr struct {
 	Statement
-	Name               Ident       `parser:"@Ident"`
-	Type               *TypeQName  `parser:"@@"`
-	NotNull            bool        `parser:"@(NOTNULL)?"`
-	Verifiable         bool        `parser:"@('VERIFIABLE')?"`
-	DefaultIntValue    *int        `parser:"('DEFAULT' @Int)?"`
-	DefaultStringValue *string     `parser:"('DEFAULT' @String)?"`
-	DefaultNextVal     *string     `parser:"(DEFAULTNEXTVAL  '(' @String ')')?"`
-	CheckRegexp        *string     `parser:"('CHECK' @String)?"`
-	CheckExpression    *Expression `parser:"('CHECK' '(' @@ ')')? "`
+	Name               Ident         `parser:"@Ident"`
+	Type               DataTypeOrDef `parser:"@@"`
+	NotNull            bool          `parser:"@(NOTNULL)?"`
+	Verifiable         bool          `parser:"@('VERIFIABLE')?"`
+	DefaultIntValue    *int          `parser:"('DEFAULT' @Int)?"`
+	DefaultStringValue *string       `parser:"('DEFAULT' @String)?"`
+	//	DefaultNextVal     *string       `parser:"(DEFAULTNEXTVAL  '(' @String ')')?"`
+	CheckRegexp     *string     `parser:"('CHECK' @String)?"`
+	CheckExpression *Expression `parser:"('CHECK' '(' @@ ')')? "`
 }
 
 type ViewStmt struct {
 	Statement
 	Name     Ident          `parser:"'VIEW' @Ident"`
-	Fields   []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	Items    []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	ResultOf DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
 	pkRef    *PrimaryKeyExpr
+}
+
+func (s *ViewStmt) Iterate(callback func(stmt interface{})) {
+	for i := 0; i < len(s.Items); i++ {
+		item := &s.Items[i]
+		if item.Field != nil {
+			callback(item.Field)
+		} else if item.RefField != nil {
+			callback(item.RefField)
+		}
+	}
 }
 
 type ViewItemExpr struct {
 	Pos        lexer.Position
 	PrimaryKey *PrimaryKeyExpr `parser:"(PRIMARYKEY '(' @@ ')')"`
+	RefField   *ViewRefField   `parser:"| @@"`
 	Field      *ViewField      `parser:"| @@"`
 }
 
 type PrimaryKeyExpr struct {
+	Pos                     lexer.Position
 	PartitionKeyFields      []Ident `parser:"('(' @Ident (',' @Ident)* ')')?"`
 	ClusteringColumnsFields []Ident `parser:"(','? @Ident (',' @Ident)*)?"`
 }
 
 func (s ViewStmt) GetName() string { return string(s.Name) }
 
-type ViewField struct {
-	Name    Ident         `parser:"@Ident"`
-	Type    ViewFieldType `parser:"@@"`
-	NotNull bool          `parser:"@(NOTNULL)?"`
+type ViewRefField struct {
+	Statement
+	Name    Ident      `parser:"@Ident"`
+	RefDocs []DefQName `parser:"'ref' ('(' @@ (',' @@)* ')')?"`
+	NotNull bool       `parser:"@(NOTNULL)?"`
 }
 
-type ViewFieldType struct {
-	Int32   bool `parser:"@(('sys' '.')? ('int'|'int32'))"`
-	Int64   bool `parser:"| @(('sys' '.')? 'int64')"`
-	Float32 bool `parser:"@(('sys' '.')? ('float'|'float32'))"`
-	Float64 bool `parser:"| @(('sys' '.')? 'float64')"`
-	Blob    bool `parser:"| @('sys.'? 'blob')"`
-	Bytes   bool `parser:"| @('sys.'? 'bytes')"`
-	Text    bool `parser:"| @('sys.'? 'text')"`
-	QName   bool `parser:"| @('sys.'? 'qname')"`
-	Bool    bool `parser:"| @('sys.'? 'bool')"`
-	Id      bool `parser:"| @(('sys' '.')? 'id')"`
+type ViewField struct {
+	Statement
+	Name    Ident    `parser:"@Ident"`
+	Type    DataType `parser:"@@"`
+	NotNull bool     `parser:"@(NOTNULL)?"`
 }

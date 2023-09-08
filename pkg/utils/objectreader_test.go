@@ -222,19 +222,19 @@ func TestReadValue(t *testing.T) {
 	iValueFields["record"] = appdef.DataKind_Record
 
 	appDefs := testAppDef()
-	view := appDefs.AddView(appdef.NewQName("test", "view"))
-	view.
-		AddPartField("pk", appdef.DataKind_int64).
-		AddClustColumn("cc", appdef.DataKind_string)
+	viewName := appdef.NewQName("test", "view")
+	view := appDefs.AddView(viewName)
+	view.Key().Partition().AddField("pk", appdef.DataKind_int64)
+	view.Key().ClustCols().AddStringField("cc", appdef.DefaultFieldMaxLength)
 	for n, k := range iValueFields {
-		view.AddValueField(n, k, false)
+		view.Value().AddField(n, k, false)
 	}
 
 	iValueValues := map[string]interface{}{}
 	for k, v := range testData {
 		iValueValues[k] = v
 	}
-	vvQName := view.Value().QName()
+	vvQName := appdef.ViewValueDefName(viewName)
 	iValueValues[appdef.SystemField_QName] = vvQName
 	iValueValues["record"] = &TestObject{
 		Data: testDataSimple,

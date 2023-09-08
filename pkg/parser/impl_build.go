@@ -150,7 +150,7 @@ func (c *buildContext) alterWorkspaces() error {
 				})
 			}
 
-			err := resolveEx[*WorkspaceStmt](a.Name, &c.basicContext, func(w *WorkspaceStmt, pkg *PackageSchemaAST) error {
+			err := resolveEx(a.Name, &c.basicContext, func(w *WorkspaceStmt, pkg *PackageSchemaAST) error {
 				if !w.Alterable && schema != pkg {
 					return ErrWorkspaceIsNotAlterable(w.GetName())
 				}
@@ -236,22 +236,107 @@ func (c *buildContext) views() error {
 	for _, schema := range c.pkgmap {
 		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(view *ViewStmt) {
-			qname := c.pkg.Ast.NewQName(view.Name)
-			vb := c.builder.AddView(qname)
-			c.addComments(view, vb)
-			for i := range view.Fields {
-				f := &view.Fields[i]
+			c.pushDef(view.Name, appdef.DefKind_ViewRecord)
+			vb := func() appdef.IViewBuilder {
+				return c.defCtx().defBuilder.(appdef.IViewBuilder)
+			}
+			c.addComments(view, vb())
+			for i := range view.Items {
+				f := &view.Items[i]
+
+				if f.PrimaryKey != nil {
+					continue
+				}
+
+				ccComments := func(fieldname string, comments []string) {
+					if len(comments) > 0 {
+						vb().Key().ClustCols().SetFieldComment(string(fieldname), comments...)
+					}
+				}
+				pkComments := func(fieldname string, comments []string) {
+					if len(comments) > 0 {
+						vb().Key().Partition().SetFieldComment(string(fieldname), comments...)
+					}
+				}
+				valComments := func(fieldname string, comments []string) {
+					if len(comments) > 0 {
+						vb().Value().SetFieldComment(string(fieldname), comments...)
+					}
+				}
+
 				if f.Field != nil {
-					datakind := viewFieldDataKind(f.Field)
-					if contains(view.pkRef.ClusteringColumnsFields, f.Field.Name) {
-						vb.AddClustColumn(string(f.Field.Name), datakind)
-					} else if contains(view.pkRef.PartitionKeyFields, f.Field.Name) {
-						vb.AddPartField(string(f.Field.Name), datakind)
-					} else {
-						vb.AddValueField(string(f.Field.Name), datakind, f.Field.NotNull)
+					fieldname := f.Field.Name
+					comments := f.Field.Statement.GetComments()
+					var length uint16 = appdef.DefaultFieldMaxLength
+					if f.Field.Type.Varchar != nil {
+						if f.Field.Type.Varchar.MaxLen != nil {
+							length = *f.Field.Type.Varchar.MaxLen
+						}
+						if contains(view.pkRef.ClusteringColumnsFields, fieldname) {
+							vb().Key().ClustCols().AddStringField(string(fieldname), length)
+							ccComments(string(fieldname), comments)
+						} else {
+							vb().Value().AddStringField(string(fieldname), f.Field.NotNull, length)
+							valComments(string(fieldname), comments)
+						}
+					} else if f.Field.Type.Bytes != nil {
+						if f.Field.Type.Bytes.MaxLen != nil {
+							length = *f.Field.Type.Bytes.MaxLen
+						}
+						if contains(view.pkRef.ClusteringColumnsFields, fieldname) {
+							vb().Key().ClustCols().AddBytesField(string(fieldname), length)
+							ccComments(string(fieldname), comments)
+						} else {
+							vb().Value().AddBytesField(string(fieldname), f.Field.NotNull, length)
+							valComments(string(fieldname), comments)
+						}
+					} else { // Other data types
+						datakind := dataTypeToDataKind(f.Field.Type)
+						if contains(view.pkRef.ClusteringColumnsFields, fieldname) {
+							vb().Key().ClustCols().AddField(string(fieldname), datakind)
+							ccComments(string(fieldname), comments)
+						} else if contains(view.pkRef.PartitionKeyFields, fieldname) {
+							vb().Key().Partition().AddField(string(fieldname), datakind)
+							pkComments(string(fieldname), comments)
+						} else {
+							vb().Value().AddField(string(fieldname), datakind, f.Field.NotNull)
+							valComments(string(fieldname), comments)
+						}
+
+					}
+				} else if f.RefField != nil {
+					fieldname := f.RefField.Name
+					comments := f.RefField.Statement.GetComments()
+					refs := make([]appdef.QName, 0)
+					errors := false
+					for i := range f.RefField.RefDocs {
+						tableStmt, schema, err := resolveTable(f.RefField.RefDocs[i], &c.basicContext)
+						if err != nil {
+							c.stmtErr(&f.RefField.Pos, err)
+							errors = true
+							continue
+						}
+						if err = c.checkReference(f.RefField.RefDocs[i], tableStmt); err != nil {
+							c.stmtErr(&f.RefField.Pos, err)
+							errors = true
+						}
+						refs = append(refs, appdef.NewQName(string(schema.Ast.Package), string(f.RefField.RefDocs[i].Name)))
+					}
+					if !errors {
+						if contains(view.pkRef.ClusteringColumnsFields, fieldname) {
+							vb().Key().ClustCols().AddRefField(string(fieldname), refs...)
+							ccComments(string(fieldname), comments)
+						} else if contains(view.pkRef.PartitionKeyFields, fieldname) {
+							vb().Key().Partition().AddRefField(string(fieldname), refs...)
+							pkComments(string(fieldname), comments)
+						} else {
+							vb().Value().AddRefField(string(fieldname), f.RefField.NotNull, refs...)
+							valComments(string(fieldname), comments)
+						}
 					}
 				}
 			}
+			c.popDef()
 		})
 	}
 	return nil
@@ -264,16 +349,16 @@ func (c *buildContext) commands() error {
 			qname := c.pkg.Ast.NewQName(cmd.Name)
 			b := c.builder.AddCommand(qname)
 			c.addComments(cmd, b)
-			if cmd.Arg != nil && !isVoid(cmd.Arg.Package, cmd.Arg.Name) {
-				argQname := buildQname(c, cmd.Arg.Package, cmd.Arg.Name)
+			if cmd.Arg != nil && cmd.Arg.Def != nil {
+				argQname := buildQname(c, cmd.Arg.Def.Package, cmd.Arg.Def.Name)
 				b.SetArg(argQname)
 			}
-			if cmd.UnloggedArg != nil && !isVoid(cmd.UnloggedArg.Package, cmd.UnloggedArg.Name) {
-				argQname := buildQname(c, cmd.UnloggedArg.Package, cmd.UnloggedArg.Name)
+			if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
+				argQname := buildQname(c, cmd.UnloggedArg.Def.Package, cmd.UnloggedArg.Def.Name)
 				b.SetUnloggedArg(argQname)
 			}
-			if cmd.Returns != nil && !isVoid(cmd.Returns.Package, cmd.Returns.Name) {
-				retQname := buildQname(c, cmd.Returns.Package, cmd.Returns.Name)
+			if cmd.Returns != nil && cmd.Returns.Def != nil {
+				retQname := buildQname(c, cmd.Returns.Def.Package, cmd.Returns.Def.Name)
 				b.SetResult(retQname)
 			}
 			if cmd.Engine.WASM {
@@ -293,16 +378,16 @@ func (c *buildContext) queries() error {
 			qname := c.pkg.Ast.NewQName(q.Name)
 			b := c.builder.AddQuery(qname)
 			c.addComments(q, b)
-			if q.Arg != nil && !isVoid(q.Arg.Package, q.Arg.Name) {
-				argQname := buildQname(c, q.Arg.Package, q.Arg.Name)
+			if q.Arg != nil && q.Arg.Def != nil {
+				argQname := buildQname(c, q.Arg.Def.Package, q.Arg.Def.Name)
 				b.SetArg(argQname)
 			}
 
-			if isAny(q.Returns.Package, q.Returns.Name) {
+			if q.Returns.Any {
 				b.SetResult(istructs.QNameANY)
 			} else {
-				if !isVoid(q.Returns.Package, q.Returns.Name) {
-					retQname := buildQname(c, q.Returns.Package, q.Returns.Name)
+				if q.Returns.Def != nil {
+					retQname := buildQname(c, q.Returns.Def.Package, q.Returns.Def.Name)
 					b.SetResult(retQname)
 				}
 			}
@@ -405,29 +490,53 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
 }
 
 func (c *buildContext) addFieldToDef(field *FieldExpr) {
-	sysDataKind := getTypeDataKind(*field.Type)
-	if sysDataKind != appdef.DataKind_null {
-		if field.Type.IsArray {
-			c.stmtErr(&field.Pos, ErrArrayFieldsNotSupportedHere)
-			return
-		}
+
+	if field.Type.DataType != nil { // embedded type
 		if err := c.defCtx().checkName(string(field.Name)); err != nil {
 			c.stmtErr(&field.Pos, err)
 			return
 		}
-		if field.Verifiable {
-			// TODO: Support different verification kindsbuilder, &c
-			c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddVerifiedField(string(field.Name), sysDataKind, field.NotNull, appdef.VerificationKind_EMail)
+
+		bld := c.defCtx().defBuilder.(appdef.IFieldsBuilder)
+		fieldName := string(field.Name)
+		sysDataKind := dataTypeToDataKind(*field.Type.DataType)
+
+		if field.Type.DataType.Bytes != nil {
+			if field.Type.DataType.Bytes.MaxLen != nil {
+				bld.AddBytesField(fieldName, field.NotNull, appdef.MaxLen(*field.Type.DataType.Bytes.MaxLen))
+			} else {
+				bld.AddBytesField(fieldName, field.NotNull)
+			}
+		} else if field.Type.DataType.Varchar != nil {
+			restricts := make([]appdef.IFieldRestrict, 0)
+			if field.Type.DataType.Varchar.MaxLen != nil {
+				restricts = append(restricts, appdef.MaxLen(*field.Type.DataType.Varchar.MaxLen))
+			}
+			if field.CheckRegexp != nil {
+				restricts = append(restricts, appdef.Pattern(*field.CheckRegexp))
+			}
+			bld.AddStringField(fieldName, field.NotNull, restricts...)
 		} else {
-			c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddField(string(field.Name), sysDataKind, field.NotNull, field.Statement.GetComments()...)
+			bld.AddField(fieldName, sysDataKind, field.NotNull)
 		}
-	} else {
+
+		if field.Verifiable {
+			bld.SetFieldVerify(fieldName, appdef.VerificationKind_EMail)
+			// TODO: Support different verification kindsbuilder, &c
+		}
+
+		comments := field.Statement.GetComments()
+		if len(comments) > 0 {
+			bld.SetFieldComment(fieldName, comments...)
+		}
+
+	} else { // field.Type.Def
 		// Record?
-		pkg := field.Type.Package
+		pkg := field.Type.Def.Package
 		if pkg == "" {
 			pkg = c.pkg.Ast.Package
 		}
-		qname := appdef.NewQName(string(pkg), string(field.Type.Name))
+		qname := appdef.NewQName(string(pkg), string(field.Type.Def.Name))
 		wrec := c.builder.WRecord(qname)
 		crec := c.builder.CRecord(qname)
 		orec := c.builder.ORecord(qname)
@@ -475,7 +584,7 @@ func (c *buildContext) addFieldToDef(field *FieldExpr) {
 
 func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 	if constraint.UniqueField != nil {
-		f := c.defCtx().defBuilder.(appdef.IFieldsBuilder).Field(string(constraint.UniqueField.Field))
+		f := c.defCtx().defBuilder.(appdef.IFields).Field(string(constraint.UniqueField.Field))
 		if f == nil {
 			c.stmtErr(&constraint.Pos, ErrUndefinedField(string(constraint.UniqueField.Field)))
 			return
@@ -577,6 +686,8 @@ func (c *buildContext) pushDef(name Ident, kind appdef.DefKind) {
 		builder = c.builder.AddWRecord(qname)
 	case appdef.DefKind_Object:
 		builder = c.builder.AddObject(qname)
+	case appdef.DefKind_ViewRecord:
+		builder = c.builder.AddView(qname)
 	default:
 		panic(fmt.Sprintf("unsupported def kind %d", kind))
 	}

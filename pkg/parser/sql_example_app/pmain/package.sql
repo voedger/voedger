@@ -27,7 +27,8 @@ TAG BackofficeTag;
 ABSTRACT TABLE NestedWithName INHERITS CRecord (
     /*  Field is added to any table inherited from NestedWithName
         The current comment is also added to scheme for this field  */
-    ItemName text
+    
+    ItemName varchar(50) -- Max length is 1024
 );
 
 /*
@@ -35,7 +36,7 @@ ABSTRACT TABLE NestedWithName INHERITS CRecord (
     Note: Quotes can be optionally used with identifiers
 */
 TABLE "NestedTable" INHERITS NestedWithName (
-    ItemDescr text
+    ItemDescr varchar -- Default length is 255
 );
 
 /*
@@ -52,18 +53,17 @@ TABLE "NestedTable" INHERITS NestedWithName (
 */
 TABLE TablePlan INHERITS CDoc (
     FState int,
-    Name text NOT NULL,
+    Name varchar NOT NULL,
     Rate currency NOT NULL,
     Expiration timestamp,
-    VerifiableField text NOT NULL VERIFIABLE, -- Verifiable field
+    VerifiableField varchar NOT NULL VERIFIABLE, -- Verifiable field
     Int1 int DEFAULT 1 CHECK(Int1 >= 1 AND Int2 < 10000),  -- Expressions evaluating to TRUE or UNKNOWN succeed.
-    Text1 text DEFAULT 'a',
-    Int2 int DEFAULT NEXTVAL('sequence'),
-    "int" int, -- optional quotes
+    Text1 varchar DEFAULT 'a',
+    "bytes" bytes, -- optional quotes
     ScreenGroupRef ref(ScreenGroup), 
     AnyTableRef ref,
     FewTablesRef ref(ScreenGroup, TablePlan) NOT NULL,
-    CheckedField text CHECK '^[0-9]{8}$', -- Field validated by regexp
+    CheckedField varchar(8) CHECK '^[0-9]{8}$', -- Field validated by regexp
     CHECK (ValidateRow(this)), -- Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
     CONSTRAINT StateChecker CHECK (ValidateFState(FState)), -- Named CHECK table constraint
     -- UNIQUE (FState, Name), -- unnamed UNIQUE table constraint
@@ -83,9 +83,9 @@ TABLE ScreenGroup INHERITS CDoc();
     These comments are included in the statement definition, but may be overridden with `WITH Comment=...`
 */
 TABLE SubscriptionProfile INHERITS Singleton (
-    CustomerID text,
+    CustomerID varchar,
     CustomerKind int,
-    CompanyName text
+    CompanyName varchar
 );
 
 -- Package-level extensions
@@ -105,8 +105,8 @@ WORKSPACE MyWorkspace (
                                     -- If name omitted, then QName is: <WorkspaceName>+"Descriptor"
 
         air.TypeWithName,           -- Fieldset
-        Country text CHECK '^[A-Za-z]{2}$',
-        Description text
+        Country varchar(2) CHECK '^[A-Za-z]{2}$',
+        Description varchar(100)
     );
 
     -- Definitions declared in the workspace are only available in this workspace
@@ -116,8 +116,8 @@ WORKSPACE MyWorkspace (
         Kind int
     );
     TYPE SubscriptionEvent (
-        Origin text,
-        Data text
+        Origin varchar(20),
+        Data varchar(20)
     );
     RATE BackofficeFuncRate1 1000 PER HOUR;
     RATE BackofficeFuncRate2 100 PER MINUTE PER IP;
@@ -130,7 +130,7 @@ WORKSPACE MyWorkspace (
     TABLE WsTable INHERITS CDoc ( 
         air.TypeWithName,   -- Fieldset
 
-        PsName text,
+        PsName varchar(15),
         items TABLE Child (
             TypeWithKind, -- Fieldset
             Number int				
@@ -143,41 +143,42 @@ WORKSPACE MyWorkspace (
         /*
         Projector can only be declared in workspace.
         
-        A builtin function OrdersCountProjector must exist in package resources.
+        A builtin function CountOrders must exist in package resources.
+            ON Orders - points to a command
             INTENTS - lists all storage keys, projector generates intents for
             STATE - lists all storage keys, projector reads state from
                 (key consist of Storage Qname, and Entity name, when required by storage)
                 (no need to specify in STATE when already listed in INTENTS)
         */
         PROJECTOR CountOrders 
-            ON COMMAND Orders 
+            ON Orders 
             INTENTS(View OrdersCountView);
         
-        -- Projector triggered by command argument SubscriptionProfile which is a Storage
+        -- Projector triggered by command argument SubscriptionEvent
         -- Projector uses sys.HTTPStorage
         PROJECTOR UpdateSubscriptionProfile 
-            ON COMMAND ARGUMENT SubscriptionEvent 
+            ON SubscriptionEvent 
             STATE(sys.Http, AppSecret);
 
-        -- Projectors triggered by CUD operations
+        -- Projectors triggered by CUD operation
         -- SYNC means that projector is synchronous 
         SYNC PROJECTOR TablePlanThumbnailGen 
-            ON INSERT TablePlan 
+            AFTER INSERT ON TablePlan 
             INTENTS(View TablePlanThumbnails);
 
-        -- Projector triggered by few commands
+        -- Projector triggered by few COMMANDs
         PROJECTOR UpdateDashboard 
-            ON COMMAND IN (Orders, Orders2) 
+            ON (Orders, Orders2) 
             INTENTS(View DashboardView);
 
         -- Projector triggered by few types of CUD operations
         PROJECTOR UpdateActivePlans 
-            ON ACTIVATE OR DEACTIVATE TablePlan 
+            AFTER ACTIVATE OR DEACTIVATE ON TablePlan 
             INTENTS(View ActiveTablePlansView);
         
         -- Some projector which sends E-mails and performs HTTP queries
         PROJECTOR NotifyOnChanges 
-            ON INSERT OR UPDATE IN (TablePlan, WsTable) 
+            AFTER INSERT OR UPDATE ON (TablePlan, WsTable) 
             STATE(Http, AppSecret)
             INTENTS(SendMail, View NotificationsHistory);
 
@@ -218,19 +219,33 @@ WORKSPACE MyWorkspace (
     -- VIEWs generated by the PROJECTOR. 
     -- Primary Key must be declared in View.
     VIEW XZReports(
+
+        -- Report Year
         Year int32,
+
+        -- Report Month
         Month int32, 
+
+        -- Report Day
         Day int32, 
+
+        /*
+            Field comment:  
+            0=X, 1=Z
+        */
         Kind int32, 
-        Number int32, 
-        XZReportWDocID id NOT NULL,
+        Number int32,
+        Description varchar(50), 
+
+        -- Reference to WDoc 
+        XZReportWDocID ref NOT NULL,
         PRIMARY KEY ((Year), Month, Day, Kind, Number)
     ) AS RESULT OF air.UpdateDashboard;
 
     VIEW OrdersCountView(
         Year int, -- same as int32
         Month int32, 
-        Day sys.int32, -- same as int32
+        Day int32, 
         Qnantity int32,
         SomeField int32,
         PRIMARY KEY ((Year), Month, Day)

@@ -31,18 +31,14 @@ type field struct {
 	verify     map[VerificationKind]bool
 }
 
-func makeField(name string, kind DataKind, required, verified bool, vk ...VerificationKind) field {
-	f := field{comment{}, name, kind, required, verified, make(map[VerificationKind]bool)}
-	if verified {
-		for _, kind := range vk {
-			f.verify[kind] = true
-		}
-	}
+func makeField(name string, kind DataKind, required bool, comments ...string) field {
+	f := field{comment{}, name, kind, required, false, make(map[VerificationKind]bool)}
+	f.SetComment(comments...)
 	return f
 }
 
-func newField(name string, kind DataKind, required, verified bool, vk ...VerificationKind) *field {
-	f := makeField(name, kind, required, verified, vk...)
+func newField(name string, kind DataKind, required bool, comments ...string) *field {
+	f := makeField(name, kind, required, comments...)
 	return &f
 }
 
@@ -64,6 +60,14 @@ func (fld *field) Verifiable() bool { return fld.verifiable }
 
 func (fld *field) VerificationKind(vk VerificationKind) bool {
 	return fld.verifiable && fld.verify[vk]
+}
+
+func (fld *field) setVerify(k ...VerificationKind) {
+	fld.verify = make(map[VerificationKind]bool)
+	for _, kind := range k {
+		fld.verify[kind] = true
+	}
+	fld.verifiable = len(fld.verify) > 0
 }
 
 // Returns is field system
@@ -98,10 +102,9 @@ func (f *fields) AddBytesField(name string, required bool, restricts ...IFieldRe
 	return f.parent.(IFieldsBuilder)
 }
 
-func (f *fields) AddField(name string, kind DataKind, required bool, comment ...string) IFieldsBuilder {
+func (f *fields) AddField(name string, kind DataKind, required bool, comments ...string) IFieldsBuilder {
 	f.checkAddField(name, kind)
-	fld := newField(name, kind, required, false)
-	fld.SetComment(comment...)
+	fld := newField(name, kind, required, comments...)
 	f.appendField(name, fld)
 	return f.parent.(IFieldsBuilder)
 }
@@ -123,7 +126,8 @@ func (f *fields) AddVerifiedField(name string, kind DataKind, required bool, vk 
 	if len(vk) == 0 {
 		panic(fmt.Errorf("%v: missed verification kind for field «%s»: %w", f.parentDef().QName(), name, ErrVerificationKindMissed))
 	}
-	f.appendField(name, newField(name, kind, required, true, vk...))
+	f.appendField(name, newField(name, kind, required))
+	f.SetFieldVerify(name, vk...)
 	return f.parent.(IFieldsBuilder)
 }
 
@@ -183,7 +187,17 @@ func (f *fields) SetFieldComment(name string, comment ...string) IFieldsBuilder 
 		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parentDef().QName(), name, ErrNameNotFound))
 	}
 	fld.(ICommentBuilder).SetComment(comment...)
-	return f
+	return f.parent.(IFieldsBuilder)
+}
+
+func (f *fields) SetFieldVerify(name string, vk ...VerificationKind) IFieldsBuilder {
+	fld := f.fields[name]
+	if fld == nil {
+		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parentDef().QName(), name, ErrNameNotFound))
+	}
+	vf := fld.(interface{ setVerify(k ...VerificationKind) })
+	vf.setVerify(vk...)
+	return f.parent.(IFieldsBuilder)
 }
 
 func (f *fields) UserFields(cb func(IField)) {
@@ -269,7 +283,7 @@ type refField struct {
 
 func newRefField(name string, required bool, ref ...QName) *refField {
 	f := &refField{
-		field: makeField(name, DataKind_RecordID, required, false),
+		field: makeField(name, DataKind_RecordID, required),
 		refs:  append([]QName{}, ref...),
 	}
 	return f
@@ -288,7 +302,7 @@ type charsField struct {
 }
 
 func newCharsField(name string, kind DataKind, required bool, restricts ...IFieldRestrict) *charsField {
-	f := &charsField{field: makeField(name, kind, required, false)}
+	f := &charsField{field: makeField(name, kind, required)}
 	f.restricts = newFieldRestricts(&f.field, restricts...)
 	return f
 }

@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/alecthomas/participle/v2/lexer"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 var ErrDirContainsNoSchemaFiles = errors.New("no schema files in directory")
@@ -22,8 +23,6 @@ var ErrFunctionResultIncorrect = errors.New("function result do not match")
 var ErrPrimaryKeyRedeclared = errors.New("primary key redeclared")
 var ErrPrimaryKeyNotDeclared = errors.New("primary key not declared")
 var ErrUndefinedTableKind = errors.New("undefined table kind")
-var ErrOnlyTypeOrVoidAllowedForArgument = errors.New("only type or void allowed in argument")
-var ErrOnlyTypeOrVoidAllowedForResult = errors.New("only type or void allowed in result")
 var ErrNestedTableIncorrectKind = errors.New("incorrect nested table kind")
 var ErrBaseTableMustBeAbstract = errors.New("base table must be abstract")
 var ErrBaseWorkspaceMustBeAbstract = errors.New("base workspace must be abstract")
@@ -32,9 +31,19 @@ var ErrNestedTablesNotSupportedInTypes = errors.New("nested tables not supported
 var ErrSysWorkspaceNotFound = errors.New("sys.Workspace definition not found")
 var ErrInheritanceFromSysWorkspaceNotAllowed = errors.New("explicit inheritance from sys.Workspace not allowed")
 
-var ErrArrayFieldsNotSupportedHere = errors.New("array fields of system types not supported here")
 var ErrMustBeNotNull = errors.New("field has to be NOT NULL")
 var ErrCircularReferenceInInherits = errors.New("circular reference in INHERITS")
+var ErrRegexpCheckOnlyForVarcharField = errors.New("regexp CHECK only available for varchar field")
+var ErrMaxFieldLengthTooLarge = fmt.Errorf("maximum field length is %d", appdef.MaxFieldLength)
+var ErrOnlyInsertForOdocOrORecord = errors.New("only INSERT allowed for ODoc or ORecord")
+
+func ErrUndefinedExpectedCommandTypeOrTable(name DefQName) error {
+	return fmt.Errorf("%s undefined, expected command, type or table", name.String())
+}
+
+func ErrCheckRegexpErr(e error) error {
+	return fmt.Errorf("CHECK regexp error:  %w", e)
+}
 
 // Golang: could not import github.com/alecthomas/participle/v2/asd (no required module provides package "github.com/alecthomas/participle/v2/asd")
 func ErrCouldNotImport(pkgName string) error {
@@ -95,6 +104,22 @@ func ErrRedeclared(name string) error {
 
 func ErrPackageRedeclared(name string) error {
 	return fmt.Errorf("package %s redeclared", name)
+}
+
+func ErrViewFieldVarchar(name string) error {
+	return fmt.Errorf("varchar field %s not supported in partition key", name)
+}
+
+func ErrViewFieldBytes(name string) error {
+	return fmt.Errorf("bytes field %s not supported in partition key", name)
+}
+
+func ErrVarcharFieldInCC(name string) error {
+	return fmt.Errorf("varchar field %s can only be the last one in clustering key", name)
+}
+
+func ErrBytesFieldInCC(name string) error {
+	return fmt.Errorf("bytes field %s can only be the last one in clustering key", name)
 }
 
 func errorAt(err error, pos *lexer.Position) error {

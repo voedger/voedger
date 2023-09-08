@@ -30,11 +30,11 @@ func TestUniques(t *testing.T) {
 
 		def := app.AddCDoc(testName)
 		def.
-			AddField("name", appdef.DataKind_string, true).
-			AddField("surname", appdef.DataKind_string, false).
-			AddField("lastName", appdef.DataKind_string, false).
-			AddField("passportNumber", appdef.DataKind_string, false).
-			AddField("passportSerial", appdef.DataKind_string, false)
+			AddStringField("name", true).
+			AddStringField("surname", false).
+			AddStringField("lastName", false).
+			AddStringField("passportNumber", false).
+			AddStringField("passportSerial", false)
 
 		if ver > 1 {
 			def.AddUnique("absurdUnique", []string{"lastName", "passportSerial"})
@@ -127,11 +127,11 @@ func TestUniquesErrors(t *testing.T) {
 		app := appdef.New()
 		def := app.AddCDoc(testName)
 		def.
-			AddField("name", appdef.DataKind_string, true).
-			AddField("surname", appdef.DataKind_string, false).
-			AddField("lastName", appdef.DataKind_string, false).
-			AddField("passportNumber", appdef.DataKind_string, false).
-			AddField("passportSerial", appdef.DataKind_string, false)
+			AddStringField("name", true).
+			AddStringField("surname", false).
+			AddStringField("lastName", false).
+			AddStringField("passportNumber", false).
+			AddStringField("passportSerial", false)
 		def.
 			AddUnique("fullNameUnique", []string{"name", "surname", "lastName"}).
 			AddUnique("passportUnique", []string{"passportSerial", "passportNumber"})
@@ -185,7 +185,7 @@ func TestUniquesErrors(t *testing.T) {
 		t.Run("inject unknown definition to AppDef", func(t *testing.T) {
 			def := appDef.(appdef.IAppDefBuilder).AddCDoc(appdef.NewQName("test", "unknown"))
 			def.
-				AddField("fld", appdef.DataKind_string, false)
+				AddStringField("fld", false)
 			def.
 				AddUnique("", []string{"fld"})
 		})

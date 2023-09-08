@@ -86,13 +86,13 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 		panic("no build info")
 	}
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-		apis.NumCommandProcessors, buildInfo, false, false)
+		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
 
 	apps.Parse(schemasSimpleApp, "simpleApp", ep)
 
-	projectors.ProvideViewDef(adf, QNameTestView, func(b appdef.IViewBuilder) {
-		b.AddPartField("ViewIntFld", appdef.DataKind_int32).
-			AddClustColumn("ViewStrFld", appdef.DataKind_string)
+	projectors.ProvideViewDef(adf, QNameTestView, func(view appdef.IViewBuilder) {
+		view.Key().Partition().AddField("ViewIntFld", appdef.DataKind_int32)
+		view.Key().ClustCols().AddStringField("ViewStrFld", appdef.DefaultFieldMaxLength)
 	})
 
 	// for rates test

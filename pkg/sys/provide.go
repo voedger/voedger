@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -38,12 +39,11 @@ var sysFS embed.FS
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, smtpCfg smtp.Cfg,
 	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation coreutils.IFederation,
-	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount, buildInfo *debug.BuildInfo, buildSubjectsIdx bool,
-	rebuildCollection bool) {
+	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount, buildInfo *debug.BuildInfo, storageProvider istorage.IAppStorageProvider) {
 	blobber.ProvideBlobberCmds(cfg, ep)
-	collection.Provide(cfg, appDefBuilder, rebuildCollection)
+	collection.Provide(cfg, appDefBuilder)
 	journal.Provide(cfg, appDefBuilder, ep)
-	builtin.Provide(cfg, appDefBuilder, buildInfo)
+	builtin.Provide(cfg, appDefBuilder, buildInfo, storageProvider)
 	authnz.Provide(appDefBuilder, ep)
 	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
 	sqlquery.Provide(cfg, appDefBuilder, asp, numCommandProcessors)
@@ -53,7 +53,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	signupin.ProvideQryRefreshPrincipalToken(cfg, appDefBuilder, itokens)
 	signupin.ProvideCDocLogin(appDefBuilder, ep)
 	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, atf)
-	invite.Provide(cfg, appDefBuilder, timeFunc, buildSubjectsIdx, federation, itokens, smtpCfg, ep)
+	invite.Provide(cfg, appDefBuilder, timeFunc, federation, itokens, smtpCfg, ep)
 	uniques.Provide(cfg, appDefBuilder)
 	describe.Provide(cfg, asp, appDefBuilder)
 
