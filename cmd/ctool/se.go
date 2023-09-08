@@ -74,7 +74,7 @@ func updateHosts(node *nodeType) error {
 	prepareScripts("node-update-hosts.sh")
 
 	 for _, clusterNode := range node.cluster.Nodes {
-		 logger.Info(node.DesiredNodeState.Address,  clusterNode.DesiredNodeState.Address, clusterNode.nodeName())
+		 logger.Info("node.DesiredNodeState.Address", node.DesiredNodeState.Address,  "clusterNode.DesiredNodeState.Address", clusterNode.DesiredNodeState.Address, "clusterNode.nodeName()", clusterNode.nodeName())
 		 if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
 			 run("node-update-hosts.sh", node.DesiredNodeState.Address,  clusterNode.DesiredNodeState.Address, clusterNode.nodeName()); err != nil {
 			 logger.Error(err.Error())
