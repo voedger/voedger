@@ -23,7 +23,7 @@ update_hosts_file() {
   local ip=$2
   local name=$3
 
-  ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c '
+  ssh $SSH_OPTIONS $SSH_USER@$node "sudo bash -c '
     if grep -qF \"$name\" /etc/hosts; then
       sed -i -E \"s/.*\\b$name\\b.*\$/$ip\t$name/\" /etc/hosts
     else
