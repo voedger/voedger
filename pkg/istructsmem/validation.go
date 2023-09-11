@@ -343,21 +343,50 @@ func (v *validators) validCUDsUnique(cud *cudType) (err error) {
 // Validates references to raw IDs in specified CUD
 func (v *validators) validCUDRefRawIDs(cud *cudType) (err error) {
 
-	rawIDs := make(map[istructs.RecordID]bool)
+	rawIDs := make(map[istructs.RecordID]appdef.QName)
 
 	for _, rec := range cud.creates {
 		id := rec.ID()
 		if id.IsRaw() {
-			rawIDs[id] = true
+			rawIDs[id] = rec.QName()
 		}
 	}
 
 	checkRefs := func(rec *recordType, cu string) (err error) {
 		rec.RecordIDs(false,
 			func(name string, id istructs.RecordID) {
-				if id.IsRaw() && !rawIDs[id] {
-					err = errors.Join(err,
-						validateErrorf(ECode_InvalidRefRecordID, "cud.%s record «%s» field «%s» refers to unknown raw ID «%d»: %w", cu, rec.Container(), name, id, ErrorRecordIDNotFound))
+				if id.IsRaw() {
+					target, ok := rawIDs[id]
+					if !ok {
+						err = errors.Join(err,
+							validateErrorf(ECode_InvalidRefRecordID, "cud.%s record «%s: %s» field «%s» refers to unknown raw ID «%d»: %w", cu, rec.Container(), rec.QName(), name, id, ErrorRecordIDNotFound))
+						return
+					}
+					switch name {
+					case appdef.SystemField_ParentID:
+						if parentDef, ok := v.appDef.Def(target).(appdef.IContainers); ok {
+							cont := parentDef.Container(rec.Container())
+							if cont == nil {
+								err = errors.Join(err,
+									validateErrorf(ECode_InvalidRefRecordID, "cud.%s record «%s: %s» with raw parent ID «%d» refers to «%s», which has no container «%s»: %w", cu, rec.Container(), rec.QName(), id, target, rec.Container(), ErrWrongRecordID))
+								return
+							}
+							if cont.QName() != rec.QName() {
+								err = errors.Join(err,
+									validateErrorf(ECode_InvalidRefRecordID, "cud.%s record «%s: %s» with raw parent ID «%d» refers to «%s» container «%s», which has another QName «%s»: %w", cu, rec.Container(), rec.QName(), id, target, rec.Container(), cont.QName(), ErrWrongRecordID))
+								return
+							}
+						}
+					default:
+						fld := rec.fieldDef(name)
+						if ref, ok := fld.(appdef.IRefField); ok {
+							if !ref.Ref(target) {
+								err = errors.Join(err,
+									validateErrorf(ECode_InvalidRefRecordID, "cud.%s record «%s: %s» field «%s» refers to raw ID «%d» that has unavailable target QName «%s»: %w", cu, rec.Container(), rec.QName(), name, id, target, ErrWrongRecordID))
+								return
+							}
+						}
+					}
 				}
 			})
 		return err
