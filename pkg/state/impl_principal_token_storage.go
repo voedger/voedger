@@ -35,3 +35,16 @@ func (p *principalTokenStorage) ApplyBatch([]ApplyBatchItem) (err error) {
 func (p *principalTokenStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) istructs.IStateValueBuilder {
 	panic(ErrNotSupported)
 }
+
+func GetPrincipalTokenFromState(st istructs.IState) (token string, err error) {
+	kb, err := st.KeyBuilder(PrincipalTokenStorage, appdef.NullQName)
+	if err != nil {
+		return "", err
+	}
+	principalTokenValue, err := st.MustExist(kb)
+	if err != nil {
+		return "", err
+	}
+	token = principalTokenValue.AsString(Field_Token)
+	return token, nil
+}
