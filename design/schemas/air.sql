@@ -1,3 +1,5 @@
+-- Copyright (c) 2020-present unTill Pro, Ltd.
+
 SCHEMA air;
 
 IMPORT SCHEMA "github.com/untillpro/airs-bp3/packages/untill"
@@ -12,7 +14,7 @@ IMPORT SCHEMA "github.com/untillpro/airs-bp3/packages/untill"
 
 
 WORKSPACE Restaurant (
-    
+
     -------------------------------------------------------------------------------------
     -- Roles
     --
@@ -23,14 +25,14 @@ WORKSPACE Restaurant (
     -------------------------------------------------------------------------------------
     -- Checks
     --
-    FUNCTION MyTableValidator(sys.TableRow) RETURNS void ENGINE BUILTIN; 
-    FUNCTION MyFieldsValidator(fieldA text, fieldB text) RETURNS void ENGINE BUILTIN; 
+    FUNCTION MyTableValidator(sys.TableRow) RETURNS void ENGINE BUILTIN;
+    FUNCTION MyFieldsValidator(fieldA text, fieldB text) RETURNS void ENGINE BUILTIN;
     FUNCTION ApproxEqual(param1 float, param2 float) RETURNS boolean ENGINE BUILTIN;
 
     ALTER TABLE untill.bill ADD CHECK (MyTableValidator(row));  -- ??? row/this/current ?
     ALTER TABLE untill.bill ADD CONSTRAINT MyBillCheck CHECK (MyFieldsValidator(name, pcname)); -- with name
-    ALTER TABLE untill.bill ADD CHECK (text != pcname); 
-    ALTER TABLE untill.bill ALTER name SET CHECK (name != ''); 
+    ALTER TABLE untill.bill ADD CHECK (text != pcname);
+    ALTER TABLE untill.bill ALTER name SET CHECK (name != '');
     ALTER TABLE untill.bill ALTER working_day SET CHECK '^[0-9]{8}$';
     ALTER TABLE sometable ADD CHECK (!ApproxEqual(netto, brutto));
 
@@ -39,10 +41,10 @@ WORKSPACE Restaurant (
     -- Was:
     -- CHECK ON TABLE untill.bill IS MyTableValidator;
     -- CHECK MyBillCheck ON TABLE untill.bill(name text, pcname text) IS MyFieldsValidator; -- name is optional
-    -- CHECK ON TABLE untill.bill(name text, pcname text) IS (text != pcname); 
+    -- CHECK ON TABLE untill.bill(name text, pcname text) IS (text != pcname);
     -- CHECK ON FIELD name OF TABLE untill.bill IS (name != '')
     -- CHECK ON FIELD working_day OF TABLE untill.bill IS '^[0-9]{8}$'
-    -- CHECK NettoBruttoCheck ON TABLE sometable(netto float, brutto float) IS (!ApproxEqual(netto, brutto)); 
+    -- CHECK NettoBruttoCheck ON TABLE sometable(netto float, brutto float) IS (!ApproxEqual(netto, brutto));
 
     -------------------------------------------------------------------------------------
     -- Projectors
@@ -51,17 +53,17 @@ WORKSPACE Restaurant (
 
     PROJECTOR ApplyUPProfile ON COMMAND IN (air.CreateUPProfile, air.UpdateUPProfile) AS FillUPProfile; -- name is optional
     PROJECTOR ON COMMAND air.CreateUPProfile AS SomeFunc;
-    PROJECTOR ON COMMAND ARGUMENT untill.QNameOrders AS SomeFunc; 
+    PROJECTOR ON COMMAND ARGUMENT untill.QNameOrders AS SomeFunc;
 
     -------------------------------------------------------------------------------------
     -- Commands
     --
-    FUNCTION OrdersFunc(untill.orders) RETURNS void ENGINE BUILTIN; 
-    FUNCTION PbillFunc(untill.pbill) RETURNS PbillResult ENGINE BUILTIN; 
+    FUNCTION OrdersFunc(untill.orders) RETURNS void ENGINE BUILTIN;
+    FUNCTION PbillFunc(untill.pbill) RETURNS PbillResult ENGINE BUILTIN;
 
     COMMAND Orders(untill.orders) AS PbillFunc;
     COMMAND Pbill(untill.pbill) AS PbillFunc;
-    
+
     -------------------------------------------------------------------------------------
     -- Comments
     --
@@ -79,10 +81,10 @@ WORKSPACE Restaurant (
     -- was:
     -- COMMENT BackofficeComment "This is a backoffice table";
     --
-    -- COMMENT ON QUERY TransactionHistory IS 'Transaction History'; -- Do we allow inline values?     
-    -- COMMENT ON QUERY IN (TransactionHistory, ...) IS 'Transaction History';  
-    -- COMMENT ON ALL QUERIES WITH TAG Backoffice IS BackofficeComment;  
-    
+    -- COMMENT ON QUERY TransactionHistory IS 'Transaction History'; -- Do we allow inline values?
+    -- COMMENT ON QUERY IN (TransactionHistory, ...) IS 'Transaction History';
+    -- COMMENT ON ALL QUERIES WITH TAG Backoffice IS BackofficeComment;
+
     TYPE QueryResellerInfoResult (
         reseller_phone text,
         reseller_company text,
@@ -91,12 +93,12 @@ WORKSPACE Restaurant (
     ) WITH Comment='Contains information about Reseller';
 
     -------------------------------------------------------------------------------------
-    -- Rates 
+    -- Rates
     --
-    
+
     -- Declare rate
-    RATE BackofficeFuncRate 100 PER MINUTE PER IP; 
-    
+    RATE BackofficeFuncRate 100 PER MINUTE PER IP;
+
     -- Apply rate
     ALTER QUERY TransactionHistory SET Rate=BackofficeFuncRate;
     ALTER QUERY TransactionHistory SET Rate=101 PER MINUTE PER IP;
@@ -158,7 +160,7 @@ WORKSPACE Restaurant (
 
     FUNCTION MyFunc(reseller_id text) RETURNS QueryResellerInfoResult ENGINE WASM;
 
-    QUERY QueryResellerInfo(reseller_id text) RETURNS QueryResellerInfoResult AS MyFunc 
+    QUERY QueryResellerInfo(reseller_id text) RETURNS QueryResellerInfoResult AS MyFunc
         WITH Rate=BackofficeFuncRate,
         Comment='Transaction History',
         Tags=[PosTag1, PosTag2];
@@ -171,9 +173,9 @@ WORKSPACE Restaurant (
     -------------------------------------------------------------------------------------
     -- Tables
     --
-    
+
     -- Every workspace Restaurant has all tables from schema `untill`
-    USE TABLE untill.*; 
+    USE TABLE untill.*;
 
     -- ??? Do we need to USE something else besides TABLEs?
 
@@ -224,26 +226,26 @@ WORKSPACE Restaurant (
 
     -- ??? AS or IS
     VIEW HourlySalesView(
-        yyyymmdd, 
-        hour, 
-        total, 
+        yyyymmdd,
+        hour,
+        total,
         count
     ) AS SELECT
         working_day,
         EXTRACT(hour from ord_datetime),
         (select sum(price * quantity) from order_item),
         (select sum(quantity) from order_item),
-        from untill.orders 
+        from untill.orders
     WITH Comment=PosComment, PrimaryKey='(yyyymmdd, hour), asdas';
 
     VIEW HourlySalesView AS SELECT
         working_day,
         EXTRACT(hour from ord_datetime) as hour,
         (select open_datetime from bill where id=orders.id_bill),
-        (select close_datetime from bill where id=orders.id_bill),        
+        (select close_datetime from bill where id=orders.id_bill),
         (select sum(price * quantity) from order_item) as total, -- available for child tables
         (select sum(quantity) from order_item) as count,
-        from untill.orders 
+        from untill.orders
     WITH Comment=PosComment, PrimaryKey='(yyyymmdd, hour), asdas';
 
     VIEW BillsCount AS SELECT count(*) from bill
@@ -257,40 +259,40 @@ WORKSPACE Restaurant (
         close_datetime,
         (select sum(price * quantity) from order_item) as total, -- available for child tables
         (select sum(quantity) from order_item) as count,
-        from untill.orders 
+        from untill.orders
         join bill on id_bill=bill.id
     WITH Comment=PosComment, PrimaryKey='(yyyymmdd, hour), asdas';
 
 --    VIEW HourlySalesView AS SELECT
-        ---working_day, 
+        ---working_day,
         --EXTRACT(hour from ord_datetime) as hour, -- alias
         --SUM(price * quantity) as total,
         --SUM(quantity) as count
-        --from untill.orders 
-            --join order_item on order_item.id_orders=orders.id        
+        --from untill.orders
+            --join order_item on order_item.id_orders=orders.id
         --group by working_day, hour
     --WITH Comment=PosComment, PrimaryKey='(yyyymmdd, hour), asdas';
 
 
     VIEW XZReports(
         Year int32,
-        Month int32, 
-        Day int32, 
-        Kind int32, 
-        Number int32, 
+        Month int32,
+        Day int32,
+        Kind int32,
+        Number int32,
         XZReportWDocID id
     ) AS RESULT OF UpdateXZReportsView
     WITH PrimaryKey='(Year), Month, Day, Kind, Number'
 
     -- see also air-views.sql
-    
-) 
+
+)
 
 -------------------------------------------------------------------------------------
 -- Child Workspaces
 --
 WORKSPACE Resellers {
-    
+
     ROLE ResellersAdmin;
 
     -- Child workspace
