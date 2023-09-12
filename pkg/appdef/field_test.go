@@ -261,8 +261,12 @@ func Test_AddRefField(t *testing.T) {
 					switch cnt {
 					case 0:
 						require.Equal(doc.RefField("rf1"), rf)
+						require.True(rf.Ref(docName))
+						require.True(rf.Ref(NewQName("test", "unknown")), "must be ok because any links are allowed in the field rf1")
 					case 1:
 						require.Equal(docName, rf.Refs()[0])
+						require.True(rf.Ref(docName))
+						require.False(rf.Ref(NewQName("test", "unknown")))
 					default:
 						require.Failf("unexpected reference field", "field name: %s", rf.Name())
 					}

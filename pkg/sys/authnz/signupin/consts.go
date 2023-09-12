@@ -26,7 +26,6 @@ const (
 	field_VerificationCode          = "VerificationCode"
 	field_VerifiedValueToken        = "VerifiedValueToken"
 	field_ProfileWSID               = "ProfileWSID"
-	field_ExistingPrincipalToken    = "ExistingPrincipalToken"
 	field_NewPrincipalToken         = "NewPrincipalToken"
 	field_EnrichedToken             = "EnrichedToken"
 	field_Login                     = "Login"

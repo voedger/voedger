@@ -2,12 +2,15 @@
 name: DevOps
 about: Something nice to improve workflow
 title: ''
-labels: backlog, document, kind/devops
+labels: backlog, kind/devops
 assignees: ivvist
 
 ---
 
-## Problem/Motivation/Requirements
+## Pain/Problem/Motivation/Requirements
+
+What is the pain?
+
 
 ## Solution
 

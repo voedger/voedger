@@ -163,6 +163,9 @@ type IRefField interface {
 
 	// Returns list of target references
 	Refs() []QName
+
+	// Returns, is the link available
+	Ref(QName) bool
 }
 
 // String field. Describe field with DataKind_string.

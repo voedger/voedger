@@ -23,7 +23,6 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
@@ -82,11 +81,6 @@ func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
 // used by ProvideSyncActualizerFactory
 func (c *cmdWorkpiece) WSID() istructs.WSID {
 	return c.cmdMes.WSID()
-}
-
-// used by e.g. c.air.RegenerateUPProfileApiToken
-func (c *cmdWorkpiece) GetPrincipalPayload() payloads.PrincipalPayload {
-	return c.principalPayload
 }
 
 func (ws *workspace) nextRecordID(def appdef.IDef) (res istructs.RecordID) {

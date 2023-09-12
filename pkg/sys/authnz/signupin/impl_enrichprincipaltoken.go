@@ -11,6 +11,8 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/state"
+
 	"golang.org/x/exp/slices"
 )
 
@@ -27,12 +29,18 @@ func (r *enrichPrincipalTokenRR) AsString(string) string {
 // basic auth, WorkspaceOwner
 func provideExecQryEnrichPrincipalToken(atf payloads.IAppTokensFactory) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		principalPayload := args.Workpiece.(interface {
-			GetPrincipalPayload() payloads.PrincipalPayload
-		}).GetPrincipalPayload()
-
 		appQName := args.Workpiece.(interface{ AppQName() istructs.AppQName }).AppQName()
 		appTokens := atf.New(appQName)
+
+		principalToken, err := state.GetPrincipalTokenFromState(args.State)
+		if err != nil {
+			return err
+		}
+
+		principalPayload, err := payloads.GetPrincipalPayload(appTokens, principalToken)
+		if err != nil {
+			return err
+		}
 
 		principals := args.Workpiece.(interface{ GetPrincipals() []iauthnz.Principal }).GetPrincipals()
 		for _, prn := range principals {
