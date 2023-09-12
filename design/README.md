@@ -154,6 +154,23 @@ flowchart TD
 
 ```
 
+## VVM
+
+```mermaid
+    erDiagram
+
+    VVM ||--|{ CommandProcessor : "has"
+    VVM ||--|{ QueryProcessor : "has"
+    VVM ||--|{ AppPartitionActualizers : "has"
+    AppPartitionActualizers ||--|{ Actualizer : "has"
+    VVM ||--|{ AppPartition : "execute"
+    AppPartitionActualizers ||..|| AppPartition: ""
+
+    AppPartition ||--|{ Projector: "has"
+
+    Actualizer ||..|| Projector: ""
+```
+
 ## AppPartition
 
 > AppPartition is a scheduling unit
@@ -162,44 +179,13 @@ flowchart TD
     erDiagram
 
     AppPartition ||--|| AppPartitionStorage : "has"
-    AppPartition ||--|| CommandProcessor : "has"
     AppPartition ||--|{ Actualizer : "has"
     Actualizer ||--|{ Projector : "manages"
 
 
-    AppPartitionStorage ||--|| AppStorage : "to work with"
+    AppPartitionStorage ||..|| AppStorage : "to work with"
     AppStorage ||--|| AppPartitionCache : "through"
 
-
-    AppPartitionStorage ||--|{  QueryProcessor: "used by"
-    AppPartitionStorage ||--||  CommandProcessor: "used by"
-    AppPartitionStorage ||--|{  Projector: "used by"
-
-    AppPartition ||--|{ QueryProcessor : "has"
-
-    AppStorage ||--|{ Workspace: has
-    Workspace ||--|{ InternalProjection: "keeps"
-    AppStorage ||--|| PLog: has
-    PLog ||--|{ PLogPartition : has
-
-    PLogPartition ||--|{ Actualizer: "is read by"
-
-    Projector ||--|{ Projection: "prepares write intents for"
-    Projection ||--|| InternalProjection: "can be"
-    Projection ||--|| ExternalProjection: "can be"
-
-    ExternalProjection ||--|| Email: like
-
-
-    InternalProjection ||--|| WLog: "can be"
-    InternalProjection ||--|| Table: "can be"
-    InternalProjection ||--|| View: "can be"
-
-
-    CommandProcessor ||--|| PLogPartition: "writes Event to"
-
-    QueryProcessor ||--|{ QueryFunction: "reads from"
-    QueryFunction ||--|| Projection: "can be"
 ```
 
 ## Repository & Application Schema
@@ -317,6 +303,18 @@ flowchart TD
     Projector ||--|{ Projection: "prepares write intents for"
     QueryProcessor ||--|{ ReadModel: "reads from"
     ReadModel ||--|| Projection: "implemented by"
+
+    Projection ||--|| InternalProjection: "can be"
+    Projection ||--|| ExternalProjection: "can be"
+
+    ExternalProjection ||--|| Email: like
+
+
+    InternalProjection ||--|| WLog: "can be"
+    InternalProjection ||--|| Table: "can be"
+    InternalProjection ||--|| View: "can be"    
+    
+    Workspace ||--|{ InternalProjection: keeps    
 ```
 
 ## Extensions
