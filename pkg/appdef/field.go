@@ -289,6 +289,19 @@ func newRefField(name string, required bool, ref ...QName) *refField {
 	return f
 }
 
+func (f refField) Ref(n QName) bool {
+	l := len(f.refs)
+	if l == 0 {
+		return true // any ref available
+	}
+	for i := 0; i < l; i++ {
+		if f.refs[i] == n {
+			return true
+		}
+	}
+	return false
+}
+
 func (f refField) Refs() []QName { return f.refs }
 
 // Chars (string or bytes) field.
