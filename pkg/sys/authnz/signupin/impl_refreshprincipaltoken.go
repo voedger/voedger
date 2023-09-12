@@ -10,16 +10,16 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/state"
 )
 
 func ProvideQryRefreshPrincipalToken(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "RefreshPrincipalToken"),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "RefreshPrincipalTokenParams")).
-			AddField(field_ExistingPrincipalToken, appdef.DataKind_string, true).(appdef.IDef).QName(),
+		appdef.NullQName,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "RefreshPrincipalTokenResult")).
 			AddField(field_NewPrincipalToken, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		provideRefreshPrincipalTokenExec(itokens),
@@ -28,7 +28,10 @@ func ProvideQryRefreshPrincipalToken(cfg *istructsmem.AppConfigType, appDefBuild
 
 func provideRefreshPrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQueryClosure {
 	return func(_ context.Context, _ istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		existingPrincipalToken := args.ArgumentObject.AsString(field_ExistingPrincipalToken)
+		existingPrincipalToken, err := state.GetPrincipalTokenFromState(args.State)
+		if err != nil {
+			return err
+		}
 
 		principalPayload := payloads.PrincipalPayload{}
 		gp, err := payloads.GetPayloadRegistry(itokens, existingPrincipalToken, &principalPayload)

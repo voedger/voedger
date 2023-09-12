@@ -327,13 +327,6 @@ func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appStructsProvide
 }
 
 // need for q.sys.EnrichPrincipalToken
-// failed to implement this via stroage because payloads.PrincipalPayload is too complex structrue -> need to get via .AsJSON() only
-// but it is bad idea to parse json in an extension, so just let q.sys.EnrichPrincipalToken work using this hidden func
-func (qw *queryWork) GetPrincipalPayload() payloads.PrincipalPayload {
-	return qw.principalPayload
-}
-
-// need for q.sys.EnrichPrincipalToken
 func (qw *queryWork) GetPrincipals() []iauthnz.Principal {
 	return qw.principals
 }
