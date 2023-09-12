@@ -117,11 +117,11 @@ flowchart TD
 ```mermaid
     erDiagram
     Federation ||--|| MainCluster : has
-    MainCluster  ||--||  Cluster: "is"
+    MainCluster  ||..||  Cluster: "is"
     MainCluster  ||--||  sys_registry: "has deployed Application"
 
     Federation ||--o{ WorkerCluster : has
-    WorkerCluster  ||--||  Cluster: "is"
+    WorkerCluster  ||..||  Cluster: "is"
     Cluster ||--o{ Application : "has deployed"
 ```
 
@@ -130,7 +130,7 @@ flowchart TD
 ```mermaid
     erDiagram
     Cluster ||--|{ Router : has
-    Cluster ||--|{ HVM : has
+    Cluster ||--|{ VVM : has
     Cluster ||--o{ Application : "has deployed"
     Cluster ||--|| ClusterStorage : has
     ClusterStorage ||--|{ AppStorage : has
@@ -150,9 +150,7 @@ flowchart TD
     Workspace ||--|{ InternalProjection: keeps
     PLog ||--|{ PLogPartition : has
 
-
-
-    HVM ||--o{ AppPartition : executes
+    VVM ||--o{ AppPartition : "executes q/c/a for"
 
 ```
 
@@ -419,24 +417,24 @@ ref. [se/README.md](se/README.md)
 ```mermaid
     erDiagram
     EECluster ||--|{ RouterNode : "has 2+ nodes with role Router"
-    EECluster ||--|{ HVMNode : "has 2+ nodes with role HVM"
+    EECluster ||--|{ VVMNode : "has 2+ nodes with role VVM"
     EECluster ||--|{ DBNode : "has 3+ nodes with role DBNode"
     EECluster ||--|| ClusterStorage : "has"
     ClusterStorage ||--|| DBMS: has
 
     RouterNode ||--|| Node : "is"
-    HVMNode ||--|| Node : "is"
+    VVMNode ||--|| Node : "is"
     DBNode ||--|| Node : "is"
     DBNode |{--|| ClusterStorage : "used by"
     DBNode ||--|| DBMS : "runs"
 
     Node ||--|| agent_exe : "has process"
 
-    HVMNode ||--|| hvm_exe : "has process"
+    VVMNode ||--|| VVM_exe : "has process"
     RouterNode ||--|| router_exe : "has process"
 
     agent_exe ||--|| router_exe : "controls"
-    agent_exe ||--|| hvm_exe : "controls"
+    agent_exe ||--|| VVM_exe : "controls"
     agent_exe ||--|| DBMS : "controls"
 
     DBMS ||--|| Cassandra : "can be"
