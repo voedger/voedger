@@ -239,7 +239,7 @@ type IPartitions interface {
     
     commandsEnginePool ||..|| "IPartitions_Borrow()": "can be used by"
     queryEnginePool ||..|| "IPartitions_Borrow()": "can be used by"
-    projectionEnginePool ||..|| "IPartitions_Borrow()": "can beused by"
+    projectionEnginePool ||..|| "IPartitions_Borrow()": "can be used by"
 
     "IPartitions_Borrow()" ||..|| "IPartition": "returns"
 
