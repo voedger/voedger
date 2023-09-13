@@ -106,12 +106,6 @@ flowchart TD
 
     VVM ||--o{ AppPartition : "executes q/c/a for"
 ```
-### VVM and AppPartitions
-
-```mermaid
-    erDiagram
-    VVM ||--o{ AppPartition : "executes using processors"
-```
 ### AppPartition Execution
 
 #### Processors
@@ -177,7 +171,7 @@ type IPartitions interface {
 
     IPartitions ||--|{ partitionRTStructs : "has per AppPartition"
 
-    partitionRTStructs ||--|{ AppDef : "has"
+    partitionRTStructs ||--|| AppDef : "has"
     partitionRTStructs  ||--|{ commandsEnginePool : "has"
     partitionRTStructs  ||--|{ queryEnginePool : "has"
     partitionRTStructs  ||--|{ projectionEnginePool : "has"
