@@ -1,52 +1,3 @@
-## Heeus concepts
-
-- [Federation](#federation)
-- [Cluster](#cluster)
-- [AppPartition](#apppartition)
-- [Event Sourcing & CQRS](#event-sourcing--cqrs)
-- [Repository & Application Schema](#repository--application-schema)
-- [Package Schema](#package-schema)
-- [Application Image](#application-image)
-- [Extensions](#extensions)
-- [Bus](#bus)
-- [Edge Computing](#edge-computing)
-
-
-## Heeus products
-
-- [Editions](#editions)
-- [Community Edition (CE)](#community-edition-ce)
-- [Standart Edition (SE)](se/README.md)
-- [Enterprise Edition (EE)](#enterprise-edition-ee)
-
-## DevOps
-
-- [Building](building)
-
-## Detailed design
-
-Features
-- [Orchestration](orchestration/README.md)
-- [Workspaces](workspaces/README.md)
-- [HTTPS+ACME](https-acme/README.md)
-- [Edge Computing](edge/README.md)
-
-Non-Functional Reqiurements (Quality Attributes, Quality Requirements, Qualities)
-- [Consistency](consistency)
-- Security
-  - [Authentication and Authorization (AuthNZ)](authnz)
-  - Encryption: [HTTPS + ACME](https-acme)
-- Maintainability, Perfomance, Portability, Usability ([ISO 25010](https://iso25000.com/index.php/en/iso-25000-standards/iso-25010), System and software quality models)
-
-System Design
-
-- [Bus](https://github.com/heeus/core/tree/main/ibus)
-- [State](state/README.md)
-- [Command Processor](commandprocessor/README.md)
-- [Query Processor](queryprocessor/README.md)
-- [Projectors](projectors/README.md)
-- [Storage](storage/README.md)
-
 ## Notation
 
 Notation based on:
@@ -112,7 +63,10 @@ flowchart TD
   classDef H fill:#C9E7B7
 ```
 
-## Federation
+
+## Technical Concepts
+
+### Federation
 
 ```mermaid
     erDiagram
@@ -125,7 +79,7 @@ flowchart TD
     Cluster ||--o{ Application : "has deployed"
 ```
 
-## Cluster
+### Cluster
 
 ```mermaid
     erDiagram
@@ -151,19 +105,16 @@ flowchart TD
     PLog ||--|{ PLogPartition : has
 
     VVM ||--o{ AppPartition : "executes q/c/a for"
-
 ```
-
-## AppPartition Execution
-
 ### VVM and AppPartitions
 
 ```mermaid
     erDiagram
     VVM ||--o{ AppPartition : "executes using processors"
 ```
+### AppPartition Execution
 
-### Execution
+#### Processors
 
 | Old term      | New term|
 | ----------- | ----------- |
@@ -211,7 +162,7 @@ flowchart TD
 ```
 
 
-### Borrow IPartition
+#### Borrow IPartition
 
 ```go
 type IPartitions interface {
@@ -250,92 +201,7 @@ type IPartitions interface {
     "Exec()" ||..|| ExtensionEngine : "uses"
 ```
 
-## Repository & Application Schema
-
-```mermaid
-    erDiagram
-    Repository ||--|{ Application: defines
-    Application ||--|| ApplicationSchema: "defines"
-    ApplicationSchema ||--o{ PackageSchema: "has"
-    Application ||--o{ Package: "has"
-    Package ||--|| PackageSchema : "defines"
-    Package ||--|{ SchemaFile : "has *.heeus"
-    PackageSchema ||--|{ SchemaFile: "defined by"
-```
-
-## Package Schema
-
-```mermaid
-    erDiagram
-    PackageSchema ||--o{ Def: "has"
-    Def ||--|| TableDef: "can be"
-    Def ||--|| ViewDef: "can be"
-    Def ||--|| ExtensionDef: "can be"
-    ExtensionDef ||--|| FunctionDef : "can be"
-    FunctionDef ||--|| CommandFunctionDef: "can be"
-    FunctionDef ||--|| QueryFunctionDef: "can be"
-    ExtensionDef ||--|| ValidatorDef: "can be"
-    ExtensionDef |{--|| ExtEngineKind: "has"
-    ExtEngineKind ||..|| ExtEngineKind_WASM: "can be"
-    ExtEngineKind ||..|| ExtEngineKind_BuiltIn: "can be"
-```
-
-## Application Image
-
-```mermaid
-    erDiagram
-    ApplicationImage ||--|| ApplicationSchema: "has"
-    ApplicationImage ||--o{ Resource: "has"
-    Resource ||--|| Image: "can be"
-    Resource ||--|| ExtensionsPackage: "can be"
-    ExtensionsPackage ||--|| ExtEngineKind: "has a property"
-```
-
-## Bus
-
-### Bus principles
-
-- Limit number of concurrent requests: maxNumOfConcurrentRequests
-  - Example: million of http connections but 1000 concurrent requests
-  - "ibus.ErrBusUnavailable" (503) is returned if the number of concurrent requests is exceeded
-- Sender and Receiver both respect timeouts: readWriteTimeout
-  - E.g. 5 seconds, by (weak) analogy with FoundationDB, Long-running read/write
-
-### Bus Nodes
-```mermaid
-    erDiagram
-    Bus ||--o{ BusNode : "connects"
-    BusNode ||--o| Sender : "can be"
-    BusNode ||--o| Receiver : "can be"
-    Receiver ||--|| Address : "has"
-    Address{
-        owner string
-        app string
-        partition int
-        part string "e.g. 'q' or 'c'"
-    }
-```
-
-### Some known Bus Nodes
-```mermaid
-    erDiagram
-    AppPartitionController||--o{ AppPartition : "sends to"
-    HTTPProcessorController||--|| HTTPProcessor : "sends to"
-    HTTPProcessor ||--|{ QueryProcessor : "sends to <owner>/<app>/<partition>/q"
-    HTTPProcessor ||--|{ CommandProcessor : "sends to <owner>/<app>/<partition>/c"
-    HTTPProcessor ||--|| FederationGateway : "sends to"
-    QueryProcessor ||--|{ Gateway : "sends to"
-    Actualizer ||--|{  Gateway : "sends to"
-
-    Gateway ||--|| FederationGateway: "can be"
-    Gateway ||--|| HTTPGateway: "can be"
-    Gateway ||--|| MailerGateway: "can be"
-```
-### See also
-- [Bus detailed design](https://github.com/heeus/core/tree/main/ibus)
-
-
-## Event Sourcing & CQRS
+### Event Sourcing & CQRS
 
 **Event Sourcing**
 
@@ -379,16 +245,56 @@ type IPartitions interface {
     Workspace ||--|{ InternalProjection: keeps    
 ```
 
-## Extensions
+### Repository & Application Schema
 
-### Principles
+```mermaid
+    erDiagram
+    Repository ||--|{ Application: defines
+    Application ||--|| ApplicationSchema: "defines"
+    ApplicationSchema ||--o{ PackageSchema: "has"
+    Application ||--o{ Package: "has"
+    Package ||--|| PackageSchema : "defines"
+    Package ||--|{ SchemaFile : "has *.heeus"
+    PackageSchema ||--|{ SchemaFile: "defined by"
+```
+
+### Package Schema
+
+```mermaid
+    erDiagram
+    PackageSchema ||--o{ Def: "has"
+    Def ||--|| TableDef: "can be"
+    Def ||--|| ViewDef: "can be"
+    Def ||--|| ExtensionDef: "can be"
+    ExtensionDef ||--|| FunctionDef : "can be"
+    FunctionDef ||--|| CommandFunctionDef: "can be"
+    FunctionDef ||--|| QueryFunctionDef: "can be"
+    ExtensionDef ||--|| ValidatorDef: "can be"
+    ExtensionDef |{--|| ExtEngineKind: "has"
+    ExtEngineKind ||..|| ExtEngineKind_WASM: "can be"
+    ExtEngineKind ||..|| ExtEngineKind_BuiltIn: "can be"
+```
+
+### Application Image
+
+```mermaid
+    erDiagram
+    ApplicationImage ||--|| ApplicationSchema: "has"
+    ApplicationImage ||--o{ Resource: "has"
+    Resource ||--|| Image: "can be"
+    Resource ||--|| ExtensionsPackage: "can be"
+    ExtensionsPackage ||--|| ExtEngineKind: "has a property"
+```
+### Extensions
+
+#### Principles
 
 - Extensions extend Core functionality
   - Расширения расширяют функциональность ядра
 - Extensions can be loaded/updated/unloaded dynamically
   - But BuiltIn Extensions
 
-### Extensions Site
+#### Extensions Site
 - Extensions Site: Сайт расширений
 
 ```mermaid
@@ -409,7 +315,7 @@ Extension Site examples:
     Validators ||--|| ExtensionPoint : "is"
 ```
 
-### Extension Engines
+#### Extension Engines
 - Extension Engine: Механизм расширения
 
 ```mermaid
@@ -434,6 +340,97 @@ Extension Site examples:
     ExtEngineKind ||..|| ExtEngineKind_WASM: "can be"
     ExtEngineKind ||..|| ExtEngineKind_BuiltIn: "can be"
 ```
+
+### Bus
+
+#### Bus principles
+
+- Limit number of concurrent requests: maxNumOfConcurrentRequests
+  - Example: million of http connections but 1000 concurrent requests
+  - "ibus.ErrBusUnavailable" (503) is returned if the number of concurrent requests is exceeded
+- Sender and Receiver both respect timeouts: readWriteTimeout
+  - E.g. 5 seconds, by (weak) analogy with FoundationDB, Long-running read/write
+
+#### Bus Nodes
+```mermaid
+    erDiagram
+    Bus ||--o{ BusNode : "connects"
+    BusNode ||--o| Sender : "can be"
+    BusNode ||--o| Receiver : "can be"
+    Receiver ||--|| Address : "has"
+    Address{
+        owner string
+        app string
+        partition int
+        part string "e.g. 'q' or 'c'"
+    }
+```
+
+#### Some known Bus Nodes
+```mermaid
+    erDiagram
+    AppPartitionController||--o{ AppPartition : "sends to"
+    HTTPProcessorController||--|| HTTPProcessor : "sends to"
+    HTTPProcessor ||--|{ QueryProcessor : "sends to <owner>/<app>/<partition>/q"
+    HTTPProcessor ||--|{ CommandProcessor : "sends to <owner>/<app>/<partition>/c"
+    HTTPProcessor ||--|| FederationGateway : "sends to"
+    QueryProcessor ||--|{ Gateway : "sends to"
+    Actualizer ||--|{  Gateway : "sends to"
+
+    Gateway ||--|| FederationGateway: "can be"
+    Gateway ||--|| HTTPGateway: "can be"
+    Gateway ||--|| MailerGateway: "can be"
+```
+#### See also
+- [Bus detailed design](https://github.com/heeus/core/tree/main/ibus)
+- [Bus](#bus)
+
+### Edge Computing
+
+[redhat.com An Architect's guide to edge computing essentials](https://www.redhat.com/architect/edge-computing-essentials)
+
+- Edge computing (периферийные вычисления, граничные вычисления) is a distributed computing pattern (модель распределенных вычислений). Computing assets on a very wide network are organized so that certain computational and storage devices that are essential to a particular task are positioned close to the physical location where a task is being executed
+- Edge computing is definitely a thing in today's technical landscape. The market size for edge computing products and services has more than doubled since 2017. And, according to the statistics site, Statista, it's projected to explode by 2025. (See Figure 1, below)
+
+[tadviser.ru: https://www.tadviser.ru/](https://www.tadviser.ru/index.php/%D0%A1%D1%82%D0%B0%D1%82%D1%8C%D1%8F:%D0%9F%D0%B5%D1%80%D0%B8%D1%84%D0%B5%D1%80%D0%B8%D0%B9%D0%BD%D1%8B%D0%B5_%D0%B2%D1%8B%D1%87%D0%B8%D1%81%D0%BB%D0%B5%D0%BD%D0%B8%D1%8F_(Edge_computing%))
+
+- Выступая на конференции Open Networking Summit в Бельгии в сентябре 2019 года руководитель сетевых проектов Linux Foundation Арпит Джошипура (Arpit Joshipura) заявил, что периферийные вычисления станут важнее облачных к 2025 году.
+
+```mermaid
+    flowchart TB
+
+    %% Entities ====================
+
+    Node:::G
+    Cloud:::G
+
+    subgraph Node["Edge Node"]
+
+
+        edger[edger]:::S
+        DockerStack[Docker stack]:::S
+        CE[CE]:::S
+        CheckedOutWorkspace[(Checked-out Workspace)]:::H
+
+        edger --- |controls| DockerStack
+        DockerStack --- |runs| CE
+
+        CE --x |works with| CheckedOutWorkspace
+    end
+
+    subgraph Cloud
+        OriginalWorskpace[(Original Worskpace)]:::H
+    end
+
+    CheckedOutWorkspace  ---> |replicated to| OriginalWorskpace
+
+    classDef B fill:#FFFFB5
+    classDef S fill:#B5FFFF
+    classDef H fill:#C9E7B7
+    classDef G fill:#FFFFFF,stroke:#000000, stroke-width:1px, stroke-dasharray: 5 5
+```
+- [Detailed design](edge/README.md)
+
 ## Editions
 
 |             | CE          |SE          |Enterprise  |
@@ -502,51 +499,28 @@ ref. [se/README.md](se/README.md)
     DBMS ||--|| FoundationDB : "can be"
 ```
 
-## Edge Computing
+## Functional Design
+- [Orchestration](orchestration/README.md)
+- [Workspaces](workspaces/README.md)
+- [HTTPS+ACME](https-acme/README.md)
+- [Edge Computing](edge/README.md)
 
-[redhat.com An Architect's guide to edge computing essentials](https://www.redhat.com/architect/edge-computing-essentials)
+## Non-Functional Reqiurements (Quality Attributes, Quality Requirements, Qualities)
+- [Consistency](consistency)
+- Security
+  - [Authentication and Authorization (AuthNZ)](authnz)
+  - Encryption: [HTTPS + ACME](https-acme)
+- Maintainability, Perfomance, Portability, Usability ([ISO 25010](https://iso25000.com/index.php/en/iso-25000-standards/iso-25010), System and software quality models)
 
-- Edge computing (периферийные вычисления, граничные вычисления) is a distributed computing pattern (модель распределенных вычислений). Computing assets on a very wide network are organized so that certain computational and storage devices that are essential to a particular task are positioned close to the physical location where a task is being executed
-- Edge computing is definitely a thing in today's technical landscape. The market size for edge computing products and services has more than doubled since 2017. And, according to the statistics site, Statista, it's projected to explode by 2025. (See Figure 1, below)
+## Technical Design
 
-[tadviser.ru: https://www.tadviser.ru/](https://www.tadviser.ru/index.php/%D0%A1%D1%82%D0%B0%D1%82%D1%8C%D1%8F:%D0%9F%D0%B5%D1%80%D0%B8%D1%84%D0%B5%D1%80%D0%B8%D0%B9%D0%BD%D1%8B%D0%B5_%D0%B2%D1%8B%D1%87%D0%B8%D1%81%D0%BB%D0%B5%D0%BD%D0%B8%D1%8F_(Edge_computing%))
+- [Bus](https://github.com/heeus/core/tree/main/ibus)
+- [State](state/README.md)
+- [Command Processor](commandprocessor/README.md)
+- [Query Processor](queryprocessor/README.md)
+- [Projectors](projectors/README.md)
+- [Storage](storage/README.md)
 
-- Выступая на конференции Open Networking Summit в Бельгии в сентябре 2019 года руководитель сетевых проектов Linux Foundation Арпит Джошипура (Arpit Joshipura) заявил, что периферийные вычисления станут важнее облачных к 2025 году.
+## DevOps
 
-```mermaid
-    flowchart TB
-
-    %% Entities ====================
-
-    Node:::G
-    Cloud:::G
-
-    subgraph Node["Edge Node"]
-
-
-        edger[edger]:::S
-        DockerStack[Docker stack]:::S
-        CE[CE]:::S
-        CheckedOutWorkspace[(Checked-out Workspace)]:::H
-
-        edger --- |controls| DockerStack
-        DockerStack --- |runs| CE
-
-        CE --x |works with| CheckedOutWorkspace
-    end
-
-    subgraph Cloud
-        OriginalWorskpace[(Original Worskpace)]:::H
-    end
-
-    CheckedOutWorkspace  ---> |replicated to| OriginalWorskpace
-
-    classDef B fill:#FFFFB5
-    classDef S fill:#B5FFFF
-    classDef H fill:#C9E7B7
-    classDef G fill:#FFFFFF,stroke:#000000, stroke-width:1px, stroke-dasharray: 5 5
-```
-### Detailed design
-
-- [edge/README.md](edge/README.md)
-
+- [Building](building)
