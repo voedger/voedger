@@ -154,38 +154,100 @@ flowchart TD
 
 ```
 
-## VVM
+## AppPartition Execution
+
+### VVM and AppPartitions
 
 ```mermaid
     erDiagram
-
-    VVM ||--|{ CommandProcessor : "has"
-    VVM ||--|{ QueryProcessor : "has"
-    VVM ||--|{ AppPartitionActualizers : "has"
-    AppPartitionActualizers ||--|{ Actualizer : "has"
-    VVM ||--|{ AppPartition : "execute"
-    AppPartitionActualizers ||..|| AppPartition: ""
-
-    AppPartition ||--|{ Projector: "has"
-
-    Actualizer ||..|| Projector: ""
+    VVM ||--o{ AppPartition : "executes using processors"
 ```
 
-## AppPartition
+### Execution
 
-> AppPartition is a scheduling unit
+| Old term      | New term|
+| ----------- | ----------- |
+| IAppStructsProvider      | IPartitions       |
+| IAppStructs   | IPartition      |
+
+
+
+```mermaid
+    erDiagram
+    
+    %% Entities
+
+    Projector{
+        Type   appdef_IProjector
+    }
+    Query{
+        Type   appdef_IQuery
+    }
+    Command {
+        Type   appdef_ICommand
+    }   
+    IPartition {
+        Release() method
+    }       
+
+    %% Relations
+
+    VVM ||--|{ Processor : "has"
+
+    Processor ||--|| CommandProcessor : "can be"
+    Processor ||--|| QueryProcessor : "can be"
+    Processor ||--|| Actualizer : "can be"   
+
+
+    Actualizer ||..|| Projector: executes
+    CommandProcessor ||..|| Command: "executes"
+    QueryProcessor ||..|| Query: "executes"
+
+    Command ||..|| IPartition: "taken from"
+    Query ||..|| IPartition: "taken from"
+    Projector ||..|| IPartition: "taken from"
+
+    IPartition ||..|| IPartitions: "borrowed from"
+```
+
+
+### Borrow IPartition
+
+```go
+type IPartitions interface {
+    ...
+    Borrow(procKind ProcessorKind) (IPartition, error)
+    ...
+}
+```
 
 ```mermaid
     erDiagram
 
-    AppPartition ||--|| AppPartitionStorage : "has"
-    AppPartition ||--|{ Actualizer : "has"
-    Actualizer ||--|{ Projector : "manages"
+    IPartitions ||--|{ partitionRTStructs : "has per AppPartition"
+
+    partitionRTStructs ||--|{ AppDef : "has"
+    partitionRTStructs  ||--|{ commandsEnginePool : "has"
+    partitionRTStructs  ||--|{ queryEnginePool : "has"
+    partitionRTStructs  ||--|{ projectionEnginePool : "has"
 
 
-    AppPartitionStorage ||..|| AppStorage : "to work with"
-    AppStorage ||--|| AppPartitionCache : "through"
+    AppDef ||--|{ appdef_IPackage : "has"
+    appdef_IPackage ||--|{ appdef_IEngine : "has one per EngineKind"
 
+    appdef_IEngine ||..|| "IPartitions_Borrow()": "used by"
+    
+    commandsEnginePool ||..|| "IPartitions_Borrow()": "can be used by"
+    queryEnginePool ||..|| "IPartitions_Borrow()": "can be used by"
+    projectionEnginePool ||..|| "IPartitions_Borrow()": "can beused by"
+
+    "IPartitions_Borrow()" ||..|| "IPartition": "returns"
+
+    IPartition ||--|{ package : "has"
+    package ||--|{ ExtensionEngine : "has one per kind"
+    IPartition ||--|{ "Exec()" : "has"
+
+    "Exec()" ||..|| ExtensionEngine : "uses"
 ```
 
 ## Repository & Application Schema
