@@ -104,7 +104,7 @@ flowchart TD
     Workspace ||--|{ InternalProjection: keeps
     PLog ||--|{ PLogPartition : has
 
-    VVM ||--o{ AppPartition : "assigned to"
+    VVM ||--o{ AppPartition : "assigned by Scheduler to"
 ```
 ### VVM: Execute assigned AppPartition
 
