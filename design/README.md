@@ -169,28 +169,30 @@ type IAppPartitions interface {
 ```mermaid
     erDiagram
 
-    IAppPartitions ||--|{ partitionRTStructs : "has per AppPartition"
+    IAppPartitions ||--|{ appPartitionStructs : "has"
 
-    partitionRTStructs ||--|| AppDef : "has"
-    partitionRTStructs  ||--|{ commandsEnginePool : "has"
-    partitionRTStructs  ||--|{ queryEnginePool : "has"
-    partitionRTStructs  ||--|{ projectionEnginePool : "has"
+    appPartitionStructs ||--|| AppDef : "has"
+    appPartitionStructs  ||--|{ commandsExEnginePool : "has"
+    appPartitionStructs  ||--|{ queryExEnginePool : "has"
+    appPartitionStructs  ||--|{ projectionExEnginePool : "has"
+    appPartitionStructs  ||--|| partitionCache: "has"
 
 
     AppDef ||--|{ appdef_IPackage : "has"
     appdef_IPackage ||--|{ appdef_IEngine : "has one per EngineKind"
 
-    appdef_IEngine ||..|| "IAppPartitions_Borrow()": "used by"
+    appdef_IEngine ||..|| "IAppPartitions_Borrow()": "copied by ref by"
     
-    commandsEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
-    queryEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
-    projectionEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
+    commandsExEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
+    queryExEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
+    projectionExEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
+    partitionCache ||..|| "IAppPartitions_Borrow()": "copied by ref by"
 
     "IAppPartitions_Borrow()" ||..|| "IAppPartition": "returns"
 
     IAppPartition ||--|{ package : "has"
     package ||--|{ ExtensionEngine : "has one per kind"
-    IAppPartition ||--|{ "Exec()" : "has"
+    IAppPartition ||--|{ "Exec()" : "has something like"
 
     "Exec()" ||..|| ExtensionEngine : "uses"
 ```
@@ -484,3 +486,7 @@ ref. [se/README.md](se/README.md)
 ## DevOps
 
 - [Building](building)
+
+## Previous incompatible versions
+
+- [Prior 2023-09-13](https://github.com/voedger/voedger/blob/7f9ff095d66e390028abe9037806dcd28bde5d9e/design/README.md)
