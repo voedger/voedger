@@ -112,8 +112,8 @@ flowchart TD
 
 | Old term      | New term|
 | ----------- | ----------- |
-| IAppStructsProvider      | IPartitions       |
-| IAppStructs   | IPartition      |
+| IAppStructsProvider      | IAppPartitions       |
+| IAppStructs   | IAppPartition      |
 
 
 
@@ -131,7 +131,7 @@ flowchart TD
     Command {
         Type   appdef_ICommand
     }   
-    IPartition {
+    IAppPartition {
         Release() method
     }       
 
@@ -148,20 +148,20 @@ flowchart TD
     CommandProcessor ||..|| Command: "executes"
     QueryProcessor ||..|| Query: "executes"
 
-    Command ||..|| IPartition: "taken from"
-    Query ||..|| IPartition: "taken from"
-    Projector ||..|| IPartition: "taken from"
+    Command ||..|| IAppPartition: "taken from"
+    Query ||..|| IAppPartition: "taken from"
+    Projector ||..|| IAppPartition: "taken from"
 
-    IPartition ||..|| IPartitions: "borrowed from"
+    IAppPartition ||..|| IAppPartitions: "borrowed from"
 ```
 
 
-#### Borrow IPartition
+#### Borrow IAppPartition
 
 ```go
-type IPartitions interface {
+type IAppPartitions interface {
     ...
-    Borrow(procKind ProcessorKind) (IPartition, error)
+    Borrow(procKind ProcessorKind) (IAppPartition, error)
     ...
 }
 ```
@@ -169,7 +169,7 @@ type IPartitions interface {
 ```mermaid
     erDiagram
 
-    IPartitions ||--|{ partitionRTStructs : "has per AppPartition"
+    IAppPartitions ||--|{ partitionRTStructs : "has per AppPartition"
 
     partitionRTStructs ||--|| AppDef : "has"
     partitionRTStructs  ||--|{ commandsEnginePool : "has"
@@ -180,17 +180,17 @@ type IPartitions interface {
     AppDef ||--|{ appdef_IPackage : "has"
     appdef_IPackage ||--|{ appdef_IEngine : "has one per EngineKind"
 
-    appdef_IEngine ||..|| "IPartitions_Borrow()": "used by"
+    appdef_IEngine ||..|| "IAppPartitions_Borrow()": "used by"
     
-    commandsEnginePool ||..|| "IPartitions_Borrow()": "can be used by"
-    queryEnginePool ||..|| "IPartitions_Borrow()": "can be used by"
-    projectionEnginePool ||..|| "IPartitions_Borrow()": "can be used by"
+    commandsEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
+    queryEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
+    projectionEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
 
-    "IPartitions_Borrow()" ||..|| "IPartition": "returns"
+    "IAppPartitions_Borrow()" ||..|| "IAppPartition": "returns"
 
-    IPartition ||--|{ package : "has"
+    IAppPartition ||--|{ package : "has"
     package ||--|{ ExtensionEngine : "has one per kind"
-    IPartition ||--|{ "Exec()" : "has"
+    IAppPartition ||--|{ "Exec()" : "has"
 
     "Exec()" ||..|| ExtensionEngine : "uses"
 ```
