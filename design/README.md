@@ -169,13 +169,15 @@ type IAppPartitions interface {
 ```mermaid
     erDiagram
 
-    IAppPartitions ||--|{ appPartitionStructs : "has"
+    IAppPartitions ||--|{ appRT : "has"
 
-    appPartitionStructs ||--|| AppDef : "has"
-    appPartitionStructs  ||--|{ commandsExEnginePool : "has"
-    appPartitionStructs  ||--|{ queryExEnginePool : "has"
-    appPartitionStructs  ||--|{ projectionExEnginePool : "has"
-    appPartitionStructs  ||--|| partitionCache: "has"
+    appRT ||--|{ appPartitionRT : "has"
+
+    appPartitionRT ||--|| AppDef : "has"
+    appPartitionRT  ||--|{ commandsExEnginePool : "has"
+    appPartitionRT  ||--|{ queryExEnginePool : "has"
+    appPartitionRT  ||--|{ projectionExEnginePool : "has"
+    appPartitionRT  ||--|| partitionCache: "has"
 
 
     AppDef ||--|{ appdef_IPackage : "has"
@@ -292,15 +294,19 @@ type IAppPartitions interface {
 
 #### Extension Engines
 - Extension Engine: Движок расширения
+- ??? Does DockerExtensionEngine need memory?
 
 ```mermaid
     erDiagram
     ExtensionEngine ||..|| ExtensionEngineFactory : "created by"
-    ExtensionEngine ||..|{ "Invoke()": "has"
+    ExtensionEngine ||--|{ Memory: "has"
+    ExtensionEngine ||--|{ "Invoke()": "has"
     ExtensionEngine ||--|| ExtEngineKind: has
     ExtensionEngineFactory ||..|| ExtEngineKind : "one per"
     ExtEngineKind ||..|| ExtEngineKind_WASM: "can be"
     ExtEngineKind ||..|| ExtEngineKind_BuiltIn: "can be"
+
+    Memory ||..|| "Invoke()": "used by"
 ```
 
 ### Bus
