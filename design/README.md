@@ -104,7 +104,7 @@ flowchart TD
     Workspace ||--|{ InternalProjection: keeps
     PLog ||--|{ PLogPartition : has
 
-    VVM ||--o{ AppPartition : "executes q/c/a for"
+    VVM ||--o{ AppPartition : "executes"
 ```
 ### AppPartition Execution
 
