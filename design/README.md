@@ -288,49 +288,15 @@ type IPartitions interface {
 - Extensions can be loaded/updated/unloaded dynamically
   - But BuiltIn Extensions
 
-#### Extensions Site
-- Extensions Site: Сайт расширений
-
-```mermaid
-    erDiagram
-    ExtensionsSite ||--|{ ExtensionPoint : "has"
-    ExtensionPoint ||--|{ Extension : "has"
-```
-Extension Site examples:
-```mermaid
-    erDiagram
-    ExtensionsSite ||--|| CommandProcessor : "can be e.g."
-    CommandProcessor ||--|| CommandFunctions : "has"
-    CommandProcessor ||--|| Validators : "has"
-    ExtensionsSite ||--|| QueryProcessor : "can be e.g."
-    QueryProcessor ||--|| QueryFunctions : "has"
-    CommandFunctions ||--|| ExtensionPoint : "is"
-    QueryFunctions ||--|| ExtensionPoint : "is"
-    Validators ||--|| ExtensionPoint : "is"
-```
-
 #### Extension Engines
-- Extension Engine: Механизм расширения
+- Extension Engine: Движок расширения
 
 ```mermaid
     erDiagram
-    ExtensionsSite ||--|{ ExtensionPoint : "has"
-    ExtensionsSite ||--|{ ExtensionEngine : "has"
-
-    ExtensionEngine ||--|| Limits : "has"
     ExtensionEngine ||..|| ExtensionEngineFactory : "created by"
-    ExtensionEngine ||..|{ Extension: "executes"
-    ExtensionEngine |{..|| ExtensionEngineFactory: "created by"
+    ExtensionEngine ||..|{ "Invoke()": "has"
     ExtensionEngine ||--|| ExtEngineKind: has
-
-    Limits ||..|| MemoryLimit: "can be"
-    Limits ||..|| GasLimit: "can be"
-
     ExtensionEngineFactory ||..|| ExtEngineKind : "one per"
-    ExtensionPoint ||--|{ Extension : "has"
-
-    Extension |{..|| ExtEngineKind: has
-
     ExtEngineKind ||..|| ExtEngineKind_WASM: "can be"
     ExtEngineKind ||..|| ExtEngineKind_BuiltIn: "can be"
 ```
