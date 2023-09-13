@@ -161,7 +161,7 @@ flowchart TD
 ```go
 type IAppPartitions interface {
     ...
-    Borrow(procKind ProcessorKind) (IAppPartition, error)
+    Borrow(qpp AppQName, part PartitionID, procKind ProcessorKind) (IAppPartition, error)
     ...
 }
 ```
