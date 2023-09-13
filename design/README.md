@@ -104,9 +104,9 @@ flowchart TD
     Workspace ||--|{ InternalProjection: keeps
     PLog ||--|{ PLogPartition : has
 
-    VVM ||--o{ AppPartition : "executes"
+    VVM ||--o{ AppPartition : "assigned to"
 ```
-### AppPartition Execution
+### VVM: Execute assigned AppPartition
 
 #### Processors
 
