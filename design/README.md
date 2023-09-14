@@ -1,4 +1,4 @@
-## Sections
+## Top-level sections
 
 - [Operational Concepts](#operational-concepts)
 - [Development Concepts](#development-concepts)
