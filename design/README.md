@@ -484,7 +484,7 @@ ref. [se/README.md](se/README.md)
     DBMS ||--|| FoundationDB : "can be"
 ```
 
-## Design
+## Detailed design
 
 Functional Design
 
@@ -498,7 +498,7 @@ Non-Functional Reqiurements, aka Quality Attributes, Quality Requirements, Quali
 - Security
   - Encryption: [HTTPS + ACME](https-acme)
   - [Authentication and Authorization (AuthNZ)](authnz)
-- Maintainability, Perfomance, Portability, Usability ([ISO 25010](https://iso25000.com/index.php/en/iso-25000-standards/iso-25010), System and software quality models)
+- TBD: Maintainability, Perfomance, Portability, Usability ([ISO 25010](https://iso25000.com/index.php/en/iso-25000-standards/iso-25010), System and software quality models)
 
 Technical Design
 
@@ -509,7 +509,7 @@ Technical Design
 - [Projectors](projectors/README.md)
 - [Storage](storage/README.md)
 
-## Mis
+## Misc
 
 DevOps
 
