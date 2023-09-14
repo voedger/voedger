@@ -1,3 +1,11 @@
+## Sections
+
+- [Operational Concepts](#operational-concepts)
+- [Development Concepts](#development-concepts)
+- [Editions](#editions)
+- [Design](#design)
+
+
 ## Notation
 
 Notation based on:
@@ -476,14 +484,15 @@ ref. [se/README.md](se/README.md)
     DBMS ||--|| FoundationDB : "can be"
 ```
 
-## Functional Design
+## Design
+
+Functional Design
+
 - [Orchestration](orchestration/README.md)
 - [Workspaces](workspaces/README.md)
 - [Edge Computing](edge/README.md)
 
-## Non-Functional Reqiurements
-
-Aka Quality Attributes, Quality Requirements, Qualities
+Non-Functional Reqiurements, aka Quality Attributes, Quality Requirements, Qualities
 
 - [Consistency](consistency)
 - Security
@@ -491,7 +500,7 @@ Aka Quality Attributes, Quality Requirements, Qualities
   - [Authentication and Authorization (AuthNZ)](authnz)
 - Maintainability, Perfomance, Portability, Usability ([ISO 25010](https://iso25000.com/index.php/en/iso-25000-standards/iso-25010), System and software quality models)
 
-## Technical Design
+Technical Design
 
 - [Bus](https://github.com/heeus/core/tree/main/ibus)
 - [State](state/README.md)
@@ -500,10 +509,12 @@ Aka Quality Attributes, Quality Requirements, Qualities
 - [Projectors](projectors/README.md)
 - [Storage](storage/README.md)
 
-## DevOps
+## Mis
+
+DevOps
 
 - [Building](building)
 
-## Previous incompatible versions
+Previous incompatible versions
 
 - [Prior 2023-09-13](https://github.com/voedger/voedger/blob/7f9ff095d66e390028abe9037806dcd28bde5d9e/design/README.md)
