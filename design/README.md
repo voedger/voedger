@@ -116,12 +116,12 @@ flowchart TD
 ```
 ### VVM: Execute assigned AppPartition
 
-#### Processors
-
 | Old term      | New term|
 | ----------- | ----------- |
 | IAppStructsProvider      | IAppPartitions       |
 | IAppStructs   | IAppPartition      |
+
+#### Processors
 
 
 
@@ -205,9 +205,9 @@ type IAppPartitions interface {
 
     IAppPartition ||--|{ package : "has"
     package ||--|{ ExtensionEngine : "has one per kind"
-    IAppPartition ||--|{ "Exec()" : "has something like"
+    IAppPartition ||--|{ "Invoke()" : "has something like"
 
-    "Exec()" ||..|| ExtensionEngine : "uses"
+    "Invoke()" ||..|| ExtensionEngine : "uses"
 ```
 
 ### Event Sourcing & CQRS
@@ -269,15 +269,15 @@ type IAppPartitions interface {
 
 ```mermaid
     erDiagram
+    ExtensionEngine {
+      Memory MB
+      Invoke() func()
+      Kind ExtEngineKind  "e.g. WASM, BuiltIn, Container"
+    }
     ExtensionEngine ||..|| ExtensionEngineFactory : "created by"
-    ExtensionEngine ||--|{ Memory: "has"
-    ExtensionEngine ||--|{ "Invoke()": "has"
-    ExtensionEngine ||--|| ExtEngineKind: has
-    ExtensionEngineFactory ||..|| ExtEngineKind : "one per"
-    ExtEngineKind ||..|| ExtEngineKind_WASM: "can be"
-    ExtEngineKind ||..|| ExtEngineKind_BuiltIn: "can be"
+    ExtensionEngine ||--|| Kind: has
+    ExtensionEngineFactory ||..|| Kind : "one per"
 
-    Memory ||..|| "Invoke()": "used by"
 ```
 
 ### Bus
