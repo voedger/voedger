@@ -1,3 +1,5 @@
+-- Copyright (c) 2020-present unTill Pro, Ltd.
+
 SCHEMA untill
 
 TABLE bill OF WDOC (
@@ -33,7 +35,7 @@ TABLE orders OF ODOC (
 
 TABLE articles OF CDOC {
     name text,
-    number int32,    
+    number int32,
     id_department id references departments,
     -- ...
 }
@@ -50,5 +52,5 @@ TABLE currency OF CDOC (
     digcode int32,
     round_down int64,
     CHECK MyValidator(round, rate)
-    
+
 )

@@ -1,3 +1,5 @@
+-- Copyright (c) 2020-present unTill Pro, Ltd.
+
 SCHEMA air;
 
 IMPORT SCHEMA github.com/untillpro/airs-bp3/packages/untill
@@ -9,7 +11,7 @@ IMPORT SCHEMA github.com/untillpro/airs-bp3/packages/untill
 ----    TEMPLATE
 
 WORKSPACE Restaurant (
-    
+
     -------------------------------------------------------------------------------------
     -- Roles
     --
@@ -20,21 +22,21 @@ WORKSPACE Restaurant (
     -------------------------------------------------------------------------------------
     -- Checks
     --
-    FUNCTION MyTableValidator(sys.TableRow) RETURNS void ENGINE BUILTIN; 
+    FUNCTION MyTableValidator(sys.TableRow) RETURNS void ENGINE BUILTIN;
     FUNCTION MyTableValidator RETURNS void ENGINE BUILTIN; -- parameters may be omitted
-    FUNCTION MyFieldsValidator(fieldA text, fieldB text) RETURNS void ENGINE BUILTIN; 
+    FUNCTION MyFieldsValidator(fieldA text, fieldB text) RETURNS void ENGINE BUILTIN;
     PROCEDURE MyFieldsValidator ENGINE BUILTIN; -- same as previous
     FUNCTION ApproxEqual(param1 float, param2 float) RETURNS boolean ENGINE BUILTIN;
 
     CHECK ON TABLE untill.bill IS MyTableValidator;
-    CHECK ON TABLE untill.bill AS PROCEDURE MyTableValidator(sys.TableRow) ENGINE BUILTIN; 
+    CHECK ON TABLE untill.bill AS PROCEDURE MyTableValidator(sys.TableRow) ENGINE BUILTIN;
     CHECK MyBillCheck ON TABLE untill.bill(name text, pcname text) IS MyFieldsValidator; -- name is optional
     CHECK ON TABLE untill.bill(name text, pcname text) AS FUNCTION MyFieldsValidator(text, text) RETURNS void ENGINE BUILTIN;
     CHECK ON TABLE untill.bill(name text, pcname text) AS PROCEDURE MyFieldsValidator ENGINE BUILTIN; -- same as previous
-    CHECK ON TABLE untill.bill(name text, pcname text) AS (text != pcname); 
+    CHECK ON TABLE untill.bill(name text, pcname text) AS (text != pcname);
     CHECK ON FIELD name OF TABLE untill.bill AS (name != '')
     CHECK ON FIELD working_day OF TABLE untill.bill AS '^[0-9]{8}$'
-    CHECK NettoBruttoCheck ON TABLE sometable(netto float, brutto float) AS (!ApproxEqual(netto, brutto)); 
+    CHECK NettoBruttoCheck ON TABLE sometable(netto float, brutto float) AS (!ApproxEqual(netto, brutto));
     -------------------------------------------------------------------------------------
     -- Projectors
     --
@@ -44,14 +46,14 @@ WORKSPACE Restaurant (
     PROJECTOR ApplyUPProfile ON COMMAND IN (air.CreateUPProfile, air.UpdateUPProfile) IS FillUPProfile; -- name is optional
     PROJECTOR ON COMMAND air.CreateUPProfile AS FUNCTION FillUPProfile(sys.Event) RETURNS void ENGINE WASM;
     PROJECTOR ON COMMAND air.CreateUPProfile AS PROCEDURE FillUPProfile(sys.Event) ENGINE WASM; -- same as previous
-    PROJECTOR ON COMMAND ARGUMENT untill.QNameOrders AS PROCEDURE OrdersDatesProjector(sys.Event) ENGINE BUILTIN; 
+    PROJECTOR ON COMMAND ARGUMENT untill.QNameOrders AS PROCEDURE OrdersDatesProjector(sys.Event) ENGINE BUILTIN;
 
 
     -------------------------------------------------------------------------------------
     -- Commands
     --
-    PROCEDURE OrdersFunc(untill.orders) ENGINE BUILTIN; 
-    FUNCTION PbillFunc(untill.pbill) RETURNS PbillResult ENGINE BUILTIN; 
+    PROCEDURE OrdersFunc(untill.orders) ENGINE BUILTIN;
+    FUNCTION PbillFunc(untill.pbill) RETURNS PbillResult ENGINE BUILTIN;
 
     COMMAND Orders(untill.orders) IS PbillFunc;
     COMMAND Pbill(untill.pbill) IS PbillFunc;
@@ -62,12 +64,12 @@ WORKSPACE Restaurant (
     --
     STRING BackofficeComment AS "This is a backoffice table";
 
-    COMMENT ON QUERY TransactionHistory AS 'Transaction History';      
-    COMMENT ON QUERY IN (TransactionHistory, ...) AS 'Transaction History';  
-    COMMENT ON ALL QUERIES WITH TAG Backoffice IS BackofficeComment;  
-    
+    COMMENT ON QUERY TransactionHistory AS 'Transaction History';
+    COMMENT ON QUERY IN (TransactionHistory, ...) AS 'Transaction History';
+    COMMENT ON ALL QUERIES WITH TAG Backoffice IS BackofficeComment;
+
     -- ??? optional name
-    COMMENT BackofficeQueriesComment ON ALL QUERIES WITH TAG Backoffice IS BackofficeComment;  
+    COMMENT BackofficeQueriesComment ON ALL QUERIES WITH TAG Backoffice IS BackofficeComment;
 
     TYPE QueryResellerInfoResult (
         reseller_phone text,
@@ -79,18 +81,18 @@ WORKSPACE Restaurant (
     -------------------------------------------------------------------------------------
     -- Rates and Limits
     --
-    
-    -- "Limit defines the maximum frequency of some events. 
-    -- Limit is represented as number of events per second." 
+
+    -- "Limit defines the maximum frequency of some events.
+    -- Limit is represented as number of events per second."
     -- https://pkg.go.dev/golang.org/x/time/rate
 
-    LIMIT BackofficeFuncLimit AS 100 PER MINUTE PER IP; 
-    
+    LIMIT BackofficeFuncLimit AS 100 PER MINUTE PER IP;
+
     RATE ON QUERY TransactionHistory IS BackofficeFuncLimit;
-    RATE ON QUERY TransactionHistory AS 101 PER MINUTE PER IP; 
+    RATE ON QUERY TransactionHistory AS 101 PER MINUTE PER IP;
 
     -- ??? optional name
-    RATE TransactionHistoryRate ON QUERY TransactionHistory AS 101 PER MINUTE PER IP; 
+    RATE TransactionHistoryRate ON QUERY TransactionHistory AS 101 PER MINUTE PER IP;
 
     -------------------------------------------------------------------------------------
     -- Tags
@@ -101,7 +103,7 @@ WORKSPACE Restaurant (
     STRING CollectionTag AS "Collection";
 
     TAG ON TABLE bill IS PosTag;
-    TAG ON COMMAND Orders IS PosTag; 
+    TAG ON COMMAND Orders IS PosTag;
     TAG ON QUERY QueryResellerInfo AS "Resellers";
 
     -- Collection is applied to all tables with tag "sys.Collection"
@@ -110,7 +112,7 @@ WORKSPACE Restaurant (
     TAG ON ALL TABLES WITH TAG BackofficeTag IS CollectionTag; --same as previous
 
     -- ??? optional name
-    TAG AllBackofficeTablesHaveCollection ON ALL TABLES WITH TAG BackofficeTag IS CollectionTag; 
+    TAG AllBackofficeTablesHaveCollection ON ALL TABLES WITH TAG BackofficeTag IS CollectionTag;
 
     -------------------------------------------------------------------------------------
     -- Sequences
@@ -141,13 +143,13 @@ WORKSPACE Restaurant (
 
     FUNCTION MyFunc(reseller_id text) RETURNS QueryResellerInfoResult ENGINE WASM;
 
-    QUERY QueryResellerInfo(reseller_id text) RETURNS QueryResellerInfoResult IS MyFunc 
-        WITH Rate IS BackofficeFuncRate    
+    QUERY QueryResellerInfo(reseller_id text) RETURNS QueryResellerInfoResult IS MyFunc
+        WITH Rate IS BackofficeFuncRate
         AND Comment AS 'Transaction History';
 
     -- same as:
     QUERY TransactionHistory(TransactionHistoryParams) AS
-        FUNCTION MyFunc(TransactionHistoryParams) RETURNS TransactionHistoryResult[] ENGINE WASM  
+        FUNCTION MyFunc(TransactionHistoryParams) RETURNS TransactionHistoryResult[] ENGINE WASM
         WITH Rate AS PosRate
         AND Comment IS PosComment
         AND Tag IS PosTag;
@@ -156,9 +158,9 @@ WORKSPACE Restaurant (
     -------------------------------------------------------------------------------------
     -- Tables
     --
-    
+
     -- Every workspace Restaurant has all tables from schema `untill`
-    USE TABLE untill.*; 
+    USE TABLE untill.*;
 
     -- ??? Do we need to USE something else besides TABLEs?
 
@@ -206,40 +208,40 @@ WORKSPACE Restaurant (
     -- Views
     --
     VIEW HourlySalesView(
-        yyyymmdd text, 
-        hour int, 
-        total int, 
+        yyyymmdd text,
+        hour int,
+        total int,
         count int,
         primary key((yyyymmdd, hour))
-    ) AS SELECT 
+    ) AS SELECT
         working_day as yyyymmdd,
         EXTRACT(hour from ord_datetime) as hour,
         SUM(price * quantity) as total,
         SUM(quantity) as count
-        from untill.orders 
-            join order_item on order_item.id_orders=orders.id        
+        from untill.orders
+            join order_item on order_item.id_orders=orders.id
         group by working_day, hour
     WITH Comment IS PosComment;
 
     VIEW XZReports(
-        Year int32, 
-        Month int32, 
-        Day int32, 
-        Kind int32, 
-        Number int32, 
+        Year int32,
+        Month int32,
+        Day int32,
+        Kind int32,
+        Number int32,
         XZReportWDocID id,
         PRIMARY KEY((Year), Month, Day, Kind, Number)
     ) AS RESULT OF UpdateXZReportsView
 
     -- see also air-views.sql
-    
-) 
+
+)
 
 -------------------------------------------------------------------------------------
 -- Child Workspaces
 --
 WORKSPACE Resellers {
-    
+
     ROLE ResellersAdmin;
 
     -- Child workspace

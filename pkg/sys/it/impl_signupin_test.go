@@ -39,7 +39,7 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 	// refresh principal token
 	// simulate delay to make the new token be different
 	vit.TimeAdd(time.Minute)
-	body := fmt.Sprintf(`{"args":{"ExistingPrincipalToken":"%s"},"elements":[{"fields":["NewPrincipalToken"]}]}`, prn1.Token)
+	body := `{"args":{},"elements":[{"fields":["NewPrincipalToken"]}]}`
 	resp := vit.PostProfile(prn1, "q.sys.RefreshPrincipalToken", body)
 
 	refreshedPrincipalToken := resp.SectionRow()[0].(string)
