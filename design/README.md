@@ -1,9 +1,9 @@
 ## Top-level sections
 
-- [Operational Concepts](#operational-concepts)
+- [Operations Concepts](#operations-concepts)
 - [Development Concepts](#development-concepts)
 - [Editions](#editions)
-- [Design](#design)
+- [Detailed design](#detailed-design)
 
 
 ## Notation
@@ -72,7 +72,7 @@ flowchart TD
 ```
 
 
-## Operation Concepts
+## Operations Concepts
 
 ### Federation
 
