@@ -64,7 +64,7 @@ flowchart TD
 ```
 
 
-## Technical Concepts
+## Operation Concepts
 
 ### Federation
 
@@ -173,11 +173,14 @@ type IAppPartitions interface {
 
     appRT ||--|{ appPartitionRT : "has"
 
-    appPartitionRT ||--|| AppDef : "has"
-    appPartitionRT  ||--|{ commandsExEnginePool : "has"
-    appPartitionRT  ||--|{ queryExEnginePool : "has"
-    appPartitionRT  ||--|{ projectionExEnginePool : "has"
-    appPartitionRT  ||--|| partitionCache: "has"
+    appPartitionRT ||--|| latestVersion : "has"
+    appPartitionRT ||--|| permanent : "has"
+
+    latestVersion ||--|| AppDef : "has"
+    latestVersion  ||--|{ commandsExEnginePool : "has"
+    latestVersion  ||--|{ queryExEnginePool : "has"
+    latestVersion  ||--|{ projectionExEnginePool : "has"
+    permanent  ||--|| partitionCache: "has"
 
 
     AppDef ||--|{ appdef_IPackage : "has"
@@ -243,46 +246,6 @@ type IAppPartitions interface {
     Workspace ||--|{ InternalProjection: keeps    
 ```
 
-### Repository & Application Schema
-
-```mermaid
-    erDiagram
-    Repository ||--|{ Application: defines
-    Application ||--|| ApplicationSchema: "defines"
-    ApplicationSchema ||--o{ PackageSchema: "has"
-    Application ||--o{ Package: "has"
-    Package ||--|| PackageSchema : "defines"
-    Package ||--|{ SchemaFile : "has *.heeus"
-    PackageSchema ||--|{ SchemaFile: "defined by"
-```
-
-### Package Schema
-
-```mermaid
-    erDiagram
-    PackageSchema ||--o{ Def: "has"
-    Def ||--|| TableDef: "can be"
-    Def ||--|| ViewDef: "can be"
-    Def ||--|| ExtensionDef: "can be"
-    ExtensionDef ||--|| FunctionDef : "can be"
-    FunctionDef ||--|| CommandFunctionDef: "can be"
-    FunctionDef ||--|| QueryFunctionDef: "can be"
-    ExtensionDef ||--|| ValidatorDef: "can be"
-    ExtensionDef |{--|| ExtEngineKind: "has"
-    ExtEngineKind ||..|| ExtEngineKind_WASM: "can be"
-    ExtEngineKind ||..|| ExtEngineKind_BuiltIn: "can be"
-```
-
-### Application Image
-
-```mermaid
-    erDiagram
-    ApplicationImage ||--|| ApplicationSchema: "has"
-    ApplicationImage ||--o{ Resource: "has"
-    Resource ||--|| Image: "can be"
-    Resource ||--|| ExtensionsPackage: "can be"
-    ExtensionsPackage ||--|| ExtEngineKind: "has a property"
-```
 ### Extensions
 
 #### Principles
@@ -398,6 +361,52 @@ type IAppPartitions interface {
     classDef G fill:#FFFFFF,stroke:#000000, stroke-width:1px, stroke-dasharray: 5 5
 ```
 - [Detailed design](edge/README.md)
+
+
+## Development Concepts
+
+### Repository & Application Schema
+
+```mermaid
+    erDiagram
+    Repository ||--|{ Application: defines
+    Application ||--|| ApplicationSchema: "defines"
+    ApplicationSchema ||--o{ PackageSchema: "has"
+    Application ||--o{ Package: "has"
+    Package ||--|| PackageSchema : "defines"
+    Package ||--|{ SchemaFile : "has *.heeus"
+    PackageSchema ||--|{ SchemaFile: "defined by"
+```
+
+### Package Schema
+
+```mermaid
+    erDiagram
+    PackageSchema ||--o{ Def: "has"
+    Def ||--|| TableDef: "can be"
+    Def ||--|| ViewDef: "can be"
+    Def ||--|| ExtensionDef: "can be"
+    ExtensionDef ||--|| FunctionDef : "can be"
+    FunctionDef ||--|| CommandFunctionDef: "can be"
+    FunctionDef ||--|| QueryFunctionDef: "can be"
+    ExtensionDef ||--|| ValidatorDef: "can be"
+    ExtensionDef |{--|| ExtEngineKind: "has"
+    ExtEngineKind ||..|| ExtEngineKind_WASM: "can be"
+    ExtEngineKind ||..|| ExtEngineKind_BuiltIn: "can be"
+```
+
+### Application Image
+
+```mermaid
+    erDiagram
+    ApplicationImage ||--|| ApplicationSchema: "has"
+    ApplicationImage ||--o{ Resource: "has"
+    Resource ||--|| Image: "can be"
+    Resource ||--|| ExtensionsPackage: "can be"
+    ExtensionsPackage ||--|| ExtEngineKind: "has a property"
+```
+
+
 
 ## Editions
 
