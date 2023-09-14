@@ -479,14 +479,16 @@ ref. [se/README.md](se/README.md)
 ## Functional Design
 - [Orchestration](orchestration/README.md)
 - [Workspaces](workspaces/README.md)
-- [HTTPS+ACME](https-acme/README.md)
 - [Edge Computing](edge/README.md)
 
-## Non-Functional Reqiurements (Quality Attributes, Quality Requirements, Qualities)
+## Non-Functional Reqiurements
+
+Aka Quality Attributes, Quality Requirements, Qualities
+
 - [Consistency](consistency)
 - Security
-  - [Authentication and Authorization (AuthNZ)](authnz)
   - Encryption: [HTTPS + ACME](https-acme)
+  - [Authentication and Authorization (AuthNZ)](authnz)
 - Maintainability, Perfomance, Portability, Usability ([ISO 25010](https://iso25000.com/index.php/en/iso-25000-standards/iso-25010), System and software quality models)
 
 ## Technical Design
