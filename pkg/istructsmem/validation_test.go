@@ -1166,29 +1166,52 @@ func Test_ValidateErrors(t *testing.T) {
 	})
 
 	t.Run("ECode_InvalidRefRecordID", func(t *testing.T) {
-		bld := app.Events().GetSyncRawEventBuilder(
-			istructs.SyncRawEventBuilderParams{
-				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-					HandlingPartition: test.partition,
-					PLogOffset:        test.plogOfs,
-					Workspace:         test.workspace,
-					WLogOffset:        test.wlogOfs,
-					QName:             test.changeCmdName,
-					RegisteredAt:      test.registeredTime,
-				},
-				Device:   test.device,
-				SyncedAt: test.syncTime,
-			})
+		eventBuilder := func() istructs.IRawEventBuilder {
+			return app.Events().GetSyncRawEventBuilder(
+				istructs.SyncRawEventBuilderParams{
+					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+						HandlingPartition: test.partition,
+						PLogOffset:        test.plogOfs,
+						Workspace:         test.workspace,
+						WLogOffset:        test.wlogOfs,
+						QName:             test.changeCmdName,
+						RegisteredAt:      test.registeredTime,
+					},
+					Device:   test.device,
+					SyncedAt: test.syncTime,
+				})
+		}
+		t.Run("no record to update", func(t *testing.T) {
+			bld := eventBuilder()
+			cud := bld.CUDBuilder()
+			r := newTestCDoc(7)
+			_ = cud.Update(r)
 
-		cud := bld.CUDBuilder()
-		r := newTestCDoc(7)
-		_ = cud.Update(r)
+			_, buildErr := bld.BuildRawEvent()
+			require.ErrorIs(buildErr, ErrorRecordIDNotFound)
+			validateErr := validateErrorf(0, "")
+			require.ErrorAs(buildErr, &validateErr)
+			require.Equal(ECode_InvalidRefRecordID, validateErr.Code())
+		})
+		t.Run("0 value ref field", func(t *testing.T) {
+			bld := eventBuilder()
+			icud := bld.CUDBuilder()
+			rec := icud.Create(test.tablePhotos)
+			rec.PutRecordID(appdef.SystemField_ID, test.tempPhotoID)
+			rec.PutString(test.buyerIdent, test.buyerValue)
 
-		_, buildErr := bld.BuildRawEvent()
-		require.ErrorIs(buildErr, ErrorRecordIDNotFound)
-		validateErr := validateErrorf(0, "")
-		require.ErrorAs(buildErr, &validateErr)
-		require.Equal(ECode_InvalidRefRecordID, validateErr.Code())
+			recRem := icud.Create(test.tablePhotoRems)
+			recRem.PutRecordID(appdef.SystemField_ID, test.tempRemarkID)
+			recRem.PutRecordID(appdef.SystemField_ParentID, test.tempPhotoID)
+			recRem.PutString(appdef.SystemField_Container, test.remarkIdent)
+			recRem.PutRecordID(test.photoIdent, istructs.NullRecordID) // 0 value in not null ref field here
+			recRem.PutString(test.remarkIdent, test.remarkValue)
+			_, buildErr := bld.BuildRawEvent()
+			require.ErrorIs(buildErr, ErrWrongRecordID)
+			validateErr := validateErrorf(0, "")
+			require.ErrorAs(buildErr, &validateErr)
+			require.Equal(ECode_InvalidRefRecordID, validateErr.Code())
+		})
 	})
 
 	t.Run("ECode_EEmptyCUDs", func(t *testing.T) {

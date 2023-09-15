@@ -22,7 +22,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		view.Key().ClustCols().
 			AddBytesField(field_Values, appdef.DefaultFieldMaxLength)
 		view.Value().
-			AddRefField(field_ID, true)
+			AddRefField(field_ID, false) // true -> NullRecordID in required ref field error otherwise
 	})
 	cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
