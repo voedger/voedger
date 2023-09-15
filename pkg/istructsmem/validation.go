@@ -176,9 +176,9 @@ func (v *validator) validRow(row *rowType) (err error) {
 				if !row.HasValue(f.Name()) {
 					err = errors.Join(err,
 						validateErrorf(ECode_EmptyData, "%s misses field «%s» required by definition «%v»: %w", v.entName(row), f.Name(), v.def.QName(), ErrNameNotFound))
-				} else if !appdef.IsSysField(f.Name()) && f.DataKind() == appdef.DataKind_RecordID && row.AsInt64(f.Name()) == int64(istructs.NullRecordID) {
+				} else if !appdef.IsSysField(f.Name()) && (f.DataKind() == appdef.DataKind_RecordID) && (row.AsInt64(f.Name()) == int64(istructs.NullRecordID)) {
 					err = errors.Join(err,
-						validateErrorf(ECode_InvalidRefRecordID, "%s not null ref field «%s» has zero value: %w", v.entName(row), f.Name(), ErrWrongRecordID))
+						validateErrorf(ECode_InvalidRefRecordID, "%s required ref field «%s» has NullRecordID value: %w", v.entName(row), f.Name(), ErrWrongRecordID))
 				}
 			}
 		})
