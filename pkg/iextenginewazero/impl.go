@@ -15,12 +15,13 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/experimental/sys"
+	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/wazero"
-	"github.com/voedger/wazero/api"
-	"github.com/voedger/wazero/wasi"
 )
 
 type wazeroExtEngine struct {
@@ -29,9 +30,9 @@ type wazeroExtEngine struct {
 	host       api.Module
 	recoverMem api.Memory
 
-	mwasi api.Module
-	ce    api.ICallEngine
-	cep   api.CallEngineParams
+	//mwasi api.Module
+	// ce    api.ICallEngine
+	// cep   api.CallEngineParams
 
 	allocatedBufs []*allocatedBuf
 
@@ -51,9 +52,10 @@ type wazeroExtEngine struct {
 	funcGc           api.Function
 	funcOnReadValue  api.Function
 
-	ctx  context.Context
-	io   iextengine.IExtentionIO
-	exts map[string]api.Function
+	ctx        context.Context
+	io         iextengine.IExtentionIO
+	exts       map[string]api.Function
+	wasiCloser api.Closer
 }
 
 type allocatedBuf struct {
@@ -89,10 +91,6 @@ func ExtEngineWazeroFactory(ctx context.Context, moduleURL *url.URL, extensionNa
 	return impl, nil
 }
 
-func (f *wazeroExtEngine) SetLimits(limits iextengine.ExtensionLimits) {
-	f.cep.Duration = limits.ExecutionInterval
-}
-
 func (f *wazeroExtEngine) importFuncs(funcs map[string]*api.Function) error {
 
 	for k, v := range funcs {
@@ -121,24 +119,89 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 		return fmt.Errorf("the minimum limit of memory is: %.1f bytes, requested limit is: %.1f", limit, float32(memoryLimit))
 	}
 
-	f.ctx = ctx
 	rtConf := wazero.NewRuntimeConfigInterpreter().
-		WithFeatureBulkMemoryOperations(true).
+		//WithFeatureBulkMemoryOperations(true).
 		//WithFeatureSignExtensionOps(true).
 		//WithFeatureNonTrappingFloatToIntConversion(true).
 		WithMemoryLimitPages(uint32(memPages))
 
-	rtm := wazero.NewRuntimeWithConfig(rtConf)
+	rtm := wazero.NewRuntimeWithConfig(ctx, rtConf)
+	f.wasiCloser, err = wasi_snapshot_preview1.Instantiate(ctx, rtm)
+	if err != nil {
+		return err
+	}
 
-	f.host, err = rtm.NewModuleBuilder("wasi_snapshot_preview1").
-		ExportFunction("fd_write", f.fdWrite).
+	f.host, err = rtm.NewHostModuleBuilder("wasi_snapshot_preview1").
+		// TODO: NewFunctionBuilder().WithFunc(f.fdWrite).Export("fd_write").
+		NewFunctionBuilder().WithFunc(f.hostGetKey).Export("hostGetKey").
+		NewFunctionBuilder().WithFunc(f.hostMustExist).Export("hostGetValue").
+		NewFunctionBuilder().WithFunc(f.hostCanExist).Export("hostQueryValue").
+		NewFunctionBuilder().WithFunc(f.hostReadValues).Export("hostReadValues").
+		NewFunctionBuilder().WithFunc(f.hostPanic).Export("hostPanic").
+		// IKey
+		NewFunctionBuilder().WithFunc(f.hostKeyAsString).Export("hostKeyAsString").
+		NewFunctionBuilder().WithFunc(f.hostKeyAsBytes).Export("hostKeyAsBytes").
+		NewFunctionBuilder().WithFunc(f.hostKeyAsInt32).Export("hostKeyAsInt32").
+		NewFunctionBuilder().WithFunc(f.hostKeyAsInt64).Export("hostKeyAsInt64").
+		NewFunctionBuilder().WithFunc(f.hostKeyAsFloat32).Export("hostKeyAsFloat32").
+		NewFunctionBuilder().WithFunc(f.hostKeyAsFloat64).Export("hostKeyAsFloat64").
+		NewFunctionBuilder().WithFunc(f.hostKeyAsBool).Export("hostKeyAsBool").
+		NewFunctionBuilder().WithFunc(f.hostKeyAsQNamePkg).Export("hostKeyAsQNamePkg").
+		NewFunctionBuilder().WithFunc(f.hostKeyAsQNameEntity).Export("hostKeyAsQNameEntity").
+		// IValue
+		NewFunctionBuilder().WithFunc(f.hostValueLength).Export("hostValueLength").
+		NewFunctionBuilder().WithFunc(f.hostValueAsValue).Export("hostValueAsValue").
+		NewFunctionBuilder().WithFunc(f.hostValueAsString).Export("hostValueAsString").
+		NewFunctionBuilder().WithFunc(f.hostValueAsBytes).Export("hostValueAsBytes").
+		NewFunctionBuilder().WithFunc(f.hostValueAsInt32).Export("hostValueAsInt32").
+		NewFunctionBuilder().WithFunc(f.hostValueAsInt64).Export("hostValueAsInt64").
+		NewFunctionBuilder().WithFunc(f.hostValueAsFloat32).Export("hostValueAsFloat32").
+		NewFunctionBuilder().WithFunc(f.hostValueAsFloat64).Export("hostValueAsFloat64").
+		NewFunctionBuilder().WithFunc(f.hostValueAsQNamePkg).Export("hostValueAsQNamePkg").
+		NewFunctionBuilder().WithFunc(f.hostValueAsQNameEntity).Export("hostValueAsQNameEntity").
+		NewFunctionBuilder().WithFunc(f.hostValueAsBool).Export("hostValueAsBool").
+		NewFunctionBuilder().WithFunc(f.hostValueGetAsBytes).Export("hostValueGetAsBytes").
+		NewFunctionBuilder().WithFunc(f.hostValueGetAsString).Export("hostValueGetAsString").
+		NewFunctionBuilder().WithFunc(f.hostValueGetAsInt32).Export("hostValueGetAsInt32").
+		NewFunctionBuilder().WithFunc(f.hostValueGetAsInt64).Export("hostValueGetAsInt64").
+		NewFunctionBuilder().WithFunc(f.hostValueGetAsFloat32).Export("hostValueGetAsFloat32").
+		NewFunctionBuilder().WithFunc(f.hostValueGetAsFloat64).Export("hostValueGetAsFloat64").
+		NewFunctionBuilder().WithFunc(f.hostValueGetAsValue).Export("hostValueGetAsValue").
+		NewFunctionBuilder().WithFunc(f.hostValueGetAsQNamePkg).Export("hostValueGetAsQNamePkg").
+		NewFunctionBuilder().WithFunc(f.hostValueGetAsQNameEntity).Export("hostValueGetAsQNameEntity").
+		NewFunctionBuilder().WithFunc(f.hostValueGetAsBool).Export("hostValueGetAsBool").
+		// Intents
+		NewFunctionBuilder().WithFunc(f.hostNewValue).Export("hostNewValue").
+		NewFunctionBuilder().WithFunc(f.hostUpdateValue).Export("hostUpdateValue").
+		// RowWriters
+		NewFunctionBuilder().WithFunc(f.hostRowWriterPutString).Export("hostRowWriterPutString").
+		NewFunctionBuilder().WithFunc(f.hostRowWriterPutBytes).Export("hostRowWriterPutBytes").
+		NewFunctionBuilder().WithFunc(f.hostRowWriterPutInt32).Export("hostRowWriterPutInt32").
+		NewFunctionBuilder().WithFunc(f.hostRowWriterPutInt64).Export("hostRowWriterPutInt64").
+		NewFunctionBuilder().WithFunc(f.hostRowWriterPutFloat32).Export("hostRowWriterPutFloat32").
+		NewFunctionBuilder().WithFunc(f.hostRowWriterPutFloat64).Export("hostRowWriterPutFloat64").
+		NewFunctionBuilder().WithFunc(f.hostRowWriterPutBool).Export("hostRowWriterPutBool").
+		NewFunctionBuilder().WithFunc(f.hostRowWriterPutQName).Export("hostRowWriterPutQName").
+		//ExportFunction("printstr", f.printStr).
+
 		Instantiate(ctx)
 	if err != nil {
 		return err
 	}
 
-	f.host, err = rtm.NewModuleBuilder("env").
-		ExportFunction("hostGetKey", f.hostGetKey).
+	compiledWasm, err := rtm.CompileModule(ctx, f.data)
+	if err != nil {
+		return err
+	}
+
+	f.host, err = rtm.InstantiateModule(ctx, compiledWasm, wazero.NewModuleConfig().WithName("env"))
+	if err != nil {
+		return err
+	}
+
+	/*
+		f.host.ExportedFunction("hostGetKey", f.hostGetKey)
+
 		ExportFunction("hostGetValue", f.hostMustExist).
 		ExportFunction("hostQueryValue", f.hostCanExist).
 		ExportFunction("hostReadValues", f.hostReadValues).
@@ -194,14 +257,15 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 
 		//ExportFunction("printstr", f.printStr).
 		Instantiate(ctx)
+	*/
 	if err != nil {
 		return err
 	}
 
-	f.module, err = rtm.InstantiateModuleFromCode(ctx, f.data)
-	if err != nil {
-		return err
-	}
+	// f.module, err = rtm.InstantiateModuleFromCode(ctx, f.data)
+	// if err != nil {
+	// 	return err
+	// }
 
 	err = f.importFuncs(map[string]*api.Function{
 		"malloc":               &f.funcMalloc,
@@ -218,10 +282,10 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 		return err
 	}
 
-	f.ce = f.module.NewCallEngine()
+	//f.ce = f.module.NewCallEngine()
 
 	// Check WASM SDK version
-	_, err = f.funcVer.CallEx(ctx, f.ce, nil)
+	_, err = f.funcVer.Call(f.ctx)
 	if err != nil {
 		return errors.New("unsupported WASM version")
 	}
@@ -230,7 +294,7 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 	f.values = make([]istructs.IStateValue, 0, valuesCapacity)
 	f.valueBuilders = make([]istructs.IStateValueBuilder, 0, valueBuildersCapacity)
 
-	res, err := f.funcMalloc.Call(f.ctx, uint64(WasmPreallocatedBufferSize))
+	res, err := f.funcMalloc.Call(ctx, uint64(WasmPreallocatedBufferSize))
 	if err != nil {
 		return err
 	}
@@ -240,7 +304,7 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 		cap:  WasmPreallocatedBufferSize,
 	})
 
-	f.recoverMem = f.module.Memory().Backup()
+	// TODO: f.recoverMem = f.module.Memory().Backup()
 
 	f.exts = make(map[string]api.Function)
 
@@ -262,25 +326,26 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 
 }
 
-func (f *wazeroExtEngine) Close() {
+func (f *wazeroExtEngine) Close(ctx context.Context) {
 	if f.module != nil {
-		f.module.Close(f.ctx)
+		f.module.Close(ctx)
 	}
 	if f.host != nil {
-		f.host.Close(f.ctx)
+		f.host.Close(ctx)
 	}
-	if f.mwasi != nil {
-		f.mwasi.Close(f.ctx)
+	if f.wasiCloser != nil {
+		f.wasiCloser.Close(ctx)
 	}
 }
 
 func (f *wazeroExtEngine) recover() {
-	f.module.Memory().Restore(f.recoverMem)
+	//TODO: f.module.Memory().Restore(f.recoverMem)
 }
 
 func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName string, io iextengine.IExtentionIO) (err error) {
 
 	f.io = io
+	f.ctx = ctx
 
 	if len(f.keys) > 0 {
 		f.keys = make([]istructs.IKey, 0, keysCapacity)
@@ -302,7 +367,7 @@ func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName string, io i
 	if funct == nil {
 		return invalidExtensionName(extentionName)
 	}
-	_, err = funct.CallEx(f.ctx, f.ce, &f.cep)
+	_, err = funct.Call(ctx)
 
 	if err != nil {
 		f.recover()
@@ -312,14 +377,15 @@ func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName string, io i
 }
 
 func (f *wazeroExtEngine) decodeStr(ptr, size uint32) string {
-	if bytes, ok := f.module.Memory().Read(f.ctx, uint32(ptr), uint32(size)); ok {
+	if bytes, ok := f.module.Memory().Read(uint32(ptr), uint32(size)); ok {
 		return string(bytes)
 	}
 	panic(ErrUnableToReadMemory)
 }
 
-func (f *wazeroExtEngine) fdWrite(fd, iovs, iovsCount, resultSize uint32) wasi.Errno {
-	return wasi.ErrnoNosys
+func (f *wazeroExtEngine) fdWrite(fd, iovs, iovsCount, resultSize uint32) sys.Errno {
+	//return sys.ENOSYS
+	return 0
 }
 
 const thirdArgument = 3
@@ -428,7 +494,7 @@ func (f *wazeroExtEngine) allocAndSend(buf []byte) (result []uint64) {
 	if e != nil {
 		panic(e)
 	}
-	if !f.module.Memory().Write(f.ctx, addrPkg, buf) {
+	if !f.module.Memory().Write(addrPkg, buf) {
 		panic(e)
 	}
 	return []uint64{(uint64(addrPkg) << uint64(bitsInFourBytes)) | uint64(len(buf))}
@@ -643,7 +709,7 @@ func (f *wazeroExtEngine) allocBuf(size uint32) (addr uint32, err error) {
 	}
 
 	var res []uint64
-	res, err = f.funcMalloc.CallEx(f.ctx, f.ce, &f.cep, uint64(newBufferSize))
+	res, err = f.funcMalloc.Call(f.ctx, uint64(newBufferSize))
 	if err != nil {
 		return 0, err
 	}
@@ -760,7 +826,7 @@ func (f *wazeroExtEngine) hostRowWriterPutBytes(args []uint64) []uint64 {
 
 	var bytes []byte
 	var ok bool
-	bytes, ok = f.module.Memory().Read(f.ctx, uint32(valuePtr), uint32(valueSize))
+	bytes, ok = f.module.Memory().Read(uint32(valuePtr), uint32(valueSize))
 	if !ok {
 		panic(ErrUnableToReadMemory)
 	}

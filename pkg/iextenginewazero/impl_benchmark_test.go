@@ -20,7 +20,6 @@ func bench_purecall(b *testing.B) {
 	if err != nil {
 		panic(err)
 	}
-	ee.SetLimits(limits)
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -29,7 +28,7 @@ func bench_purecall(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	ee.Close()
+	ee.Close(ctx)
 }
 
 func bench_gc(b *testing.B, cycles int) {
@@ -42,7 +41,6 @@ func bench_gc(b *testing.B, cycles int) {
 	if err != nil {
 		panic(err)
 	}
-	ee.SetLimits(limits)
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -62,7 +60,7 @@ func bench_gc(b *testing.B, cycles int) {
 	}
 
 	b.StopTimer()
-	ee.Close()
+	ee.Close(ctx)
 
 }
 
@@ -104,7 +102,7 @@ func bench_extensions(b *testing.B, gc bool) {
 	if err != nil {
 		panic(err)
 	}
-	defer ee.Close()
+	defer ee.Close(ctx)
 
 	for _, extname := range funcs {
 		b.Run(extname, func(b *testing.B) {
@@ -144,7 +142,7 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 	if err != nil {
 		panic(err)
 	}
-	defer ee.Close()
+	defer ee.Close(ctx)
 
 	we := ee.(*wazeroExtEngine)
 
@@ -154,7 +152,7 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 		}
 	}
 
-	memoryFull := we.module.Memory().Backup()
+	// TODO: memoryFull := we.module.Memory().Backup()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -165,7 +163,7 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 		// }
 		//require.Equal(b, uint64(0x6ebc50), h)
 		b.StopTimer()
-		we.module.Memory().Restore(memoryFull)
+		// TODO: we.module.Memory().Restore(memoryFull)
 	}
 }
 
@@ -176,7 +174,7 @@ func benchmarkRecoverClean(b *testing.B, limitPages uint) {
 	if err != nil {
 		panic(err)
 	}
-	defer ee.Close()
+	defer ee.Close(ctx)
 	we := ee.(*wazeroExtEngine)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

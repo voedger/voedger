@@ -8,7 +8,6 @@ package iextengine
 import (
 	"context"
 	"net/url"
-	"time"
 
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
@@ -18,12 +17,6 @@ type IExtensionsModule interface {
 	//
 	// Example: file:///home/user1/myextension.wasm
 	GetURL() string
-}
-
-type ExtensionLimits struct {
-
-	// Default is 0 (execution interval not specified)
-	ExecutionInterval time.Duration
 }
 
 type ExtEngineConfig struct {
@@ -43,9 +36,8 @@ type IExtentionIO interface {
 //
 // Extension engine is not thread safe
 type IExtensionEngine interface {
-	SetLimits(limits ExtensionLimits)
 	Invoke(ctx context.Context, extentionName string, io IExtentionIO) (err error)
-	Close()
+	Close(ctx context.Context)
 }
 
 type ExtensionEngineFactory = func(context context.Context, moduleURL *url.URL, extensionNames []string, config ExtEngineConfig) (e IExtensionEngine, err error)
