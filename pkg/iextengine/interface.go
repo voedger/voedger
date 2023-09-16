@@ -39,16 +39,13 @@ type IExtentionIO interface {
 	istructs.IIntents
 }
 
-type IExtension interface {
-	Invoke(io IExtentionIO) (err error)
-}
-
 // 1 package = 1 ext engine instance
 //
 // Extension engine is not thread safe
 type IExtensionEngine interface {
 	SetLimits(limits ExtensionLimits)
-	ForEach(callback func(name string, ext IExtension))
+	Invoke(ctx context.Context, extentionName string, io IExtentionIO) (err error)
+	Close()
 }
 
-type ExtensionEngineFactory = func(context context.Context, moduleURL *url.URL, config ExtEngineConfig) (e IExtensionEngine, cleanup func(), err error)
+type ExtensionEngineFactory = func(context context.Context, moduleURL *url.URL, extensionNames []string, config ExtEngineConfig) (e IExtensionEngine, err error)
