@@ -14,8 +14,6 @@ jobs:
         go-version: 'stable'
 
     - name: Vulnerability management
-      run: |
-        go install golang.org/x/vuln/cmd/govulncheck@latest
-        govulncheck ./...
+      run: curl -s https://raw.githubusercontent.com/untillpro/ci-action/master/scripts/vulncheck.sh | bash
 
 
