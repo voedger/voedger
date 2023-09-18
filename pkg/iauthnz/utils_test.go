@@ -27,3 +27,7 @@ func TestRolesInheritance(t *testing.T) {
 	}
 	require.Equal(t, appdef.NullQName, QNameAncestor(appdef.NewQName("missing", "missing")))
 }
+
+func TestIsSystemPrincipal(t *testing.T) {
+	t.Fatal()
+}

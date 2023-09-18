@@ -65,7 +65,7 @@ type cmdWorkpiece struct {
 	pLogEvent           istructs.IPLogEvent
 	err                 error
 	workspace           *workspace
-	generatedIDs        map[istructs.RecordID]istructs.RecordID
+	idGenerator         *implIDGenerator
 	eca                 istructs.ExecCommandArgs
 	metrics             commandProcessorMetrics
 	syncProjectorsStart time.Time
@@ -73,11 +73,15 @@ type cmdWorkpiece struct {
 	principalPayload    payloads.PrincipalPayload
 	parsedCUDs          []parsedCUD
 	wsDesc              istructs.IRecord
-	checkWSDescUpdating bool
 	hostStateProvider   *hostStateProvider
 	wsInitialized       bool
 	cmdResultBuilder    istructs.IObjectBuilder
 	cmdResult           istructs.IObject
+}
+
+type implIDGenerator struct {
+	istructs.IIDGenerator
+	generatedIDs map[istructs.RecordID]istructs.RecordID
 }
 
 type parsedCUD struct {

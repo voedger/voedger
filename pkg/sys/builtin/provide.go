@@ -17,14 +17,11 @@ import (
 )
 
 func Provide(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, buildInfo *debug.BuildInfo, asp istorage.IAppStorageProvider) {
-	// to edit BO fron Web
 	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 
+	// Deprecated: use c.sys.CUD instead. Kept for backward compatibility only
 	// to import via ImportBO
 	cfg.Resources.Add(istructsmem.NewCommandFunction(QNameCommandInit, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
-
-	// instead of sync
-	cfg.Resources.Add(istructsmem.NewCommandFunction(QNameCommandImport, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 
 	cfg.AddCUDValidators(provideRefIntegrityValidator())
 	provideQryModules(cfg, adf, buildInfo)
@@ -40,7 +37,7 @@ func provideRefIntegrityValidator() istructs.CUDValidator {
 			return true
 		},
 		Validate: func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) (err error) {
-			if coreutils.IsDummyWS(wsid) || cmdQName == QNameCommandImport || cmdQName == QNameCommandInit {
+			if coreutils.IsDummyWS(wsid) || cmdQName == QNameCommandInit {
 				return nil
 			}
 			return coreutils.WrapSysError(istructsmem.CheckRefIntegrity(cudRow, appStructs, wsid), http.StatusBadRequest)

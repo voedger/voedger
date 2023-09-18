@@ -231,7 +231,7 @@ func (e *appEventsType) GetNewRawEventBuilder(params istructs.NewRawEventBuilder
 }
 
 // istructs.IEvents.PutPlog
-func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator istructs.IDGenerator) (event istructs.IPLogEvent, err error) {
+func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator istructs.IIDGenerator) (event istructs.IPLogEvent, err error) {
 	dbEvent := ev.(*eventType)
 
 	dbEvent.setBuildError(buildErr)

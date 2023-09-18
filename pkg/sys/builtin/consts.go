@@ -7,10 +7,8 @@ package builtin
 
 import "github.com/voedger/voedger/pkg/appdef"
 
-var (
-	QNameCommandInit   = appdef.NewQName(appdef.SysPackage, "Init")
-	QNameCommandImport = appdef.NewQName(appdef.SysPackage, "Import")
-)
+// Deprecated: use c.sys.CUD instead. Kept for backward compatibility only
+var QNameCommandInit = appdef.NewQName(appdef.SysPackage, "Init")
 
 const (
 	field_ExistingQName = "ExistingQName"
