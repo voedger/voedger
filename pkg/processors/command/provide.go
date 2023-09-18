@@ -86,7 +86,6 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("checkArgsRefIntegrity", checkArgsRefIntegrity),
 				pipeline.WireFunc("parseCUDs", parseCUDs),
 				pipeline.WireSyncOperator("wrongArgsCatcher", &wrongArgsCatcher{}), // any error before -> wrap error into bad request http error
-				// pipeline.WireFunc("checkWSDescUpdating", checkWorkspaceDescriptorUpdating),
 				pipeline.WireFunc("authorizeCUDs", cmdProc.authorizeCUDs),
 				pipeline.WireFunc("writeCUDs", cmdProc.writeCUDs),
 				pipeline.WireFunc("getCmdResultBuilder", cmdProc.getCmdResultBuilder),
