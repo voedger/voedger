@@ -101,7 +101,7 @@ func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 			// NextBaseID:            istructs.FirstBaseRecordID,
 			// NextCDocCRecordBaseID: istructs.FirstBaseRecordID,
 			NextWLogOffset: istructs.FirstOffset,
-			idGenerator:    processors.NewIDGenerator(),
+			idGenerator:    istructsmem.NewIDGenerator(),
 		}
 		ap.workspaces[wsid] = ws
 	}
@@ -722,4 +722,10 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 func (sr *opSendResponse) OnErr(err error, work interface{}, _ pipeline.IWorkpieceContext) error {
 	work.(*cmdWorkpiece).err = err
 	return nil
+}
+
+func (idGen *implIDGenerator) NextID(rawID istructs.RecordID, def appdef.IDef) (storageID istructs.RecordID, err error) {
+	storageID, err = idGen.IIDGenerator.NextID(rawID, def)
+	idGen.generatedIDs[rawID] = storageID
+	return
 }

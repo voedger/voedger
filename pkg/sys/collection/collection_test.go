@@ -136,7 +136,7 @@ func TestBasicUsage_Collection(t *testing.T) {
 	coldDrinks, _ := insertDepartments(require, as, &idGen)
 
 	{ // CUDs: Insert coca-cola
-		event := saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, as, idGen.IIDGenerator, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 1, coldDrinks, test.cocaColaNumber, "Coca-cola")
 			newArPriceCUD(event, 1, 2, normalPriceID, 2.4)
 			newArPriceCUD(event, 1, 3, happyHourPriceID, 1.8)
@@ -150,7 +150,7 @@ func TestBasicUsage_Collection(t *testing.T) {
 	cocaColaHappyHourPriceElementId := idGen.idmap[3]
 
 	{ // CUDs: modify coca-cola number and normal price
-		event := saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, as, idGen.IIDGenerator, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			updateArticleCUD(event, as, cocaColaDocID, test.cocaColaNumber2, "Coca-cola")
 			updateArPriceCUD(event, as, cocaColaNormalPriceElementId, normalPriceID, 2.2)
 		}))
@@ -158,7 +158,7 @@ func TestBasicUsage_Collection(t *testing.T) {
 	}
 
 	{ // CUDs: insert fanta
-		event := saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, as, idGen.IIDGenerator, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 7, coldDrinks, test.fantaNumber, "Fanta")
 			newArPriceCUD(event, 7, 8, normalPriceID, 2.1)
 			newArPriceCUD(event, 7, 9, happyHourPriceID, 1.7)
@@ -198,7 +198,7 @@ func Test_updateChildRecord(t *testing.T) {
 	coldDrinks, _ := insertDepartments(require, as, &idGen)
 
 	{ // CUDs: Insert coca-cola
-		saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		saveEvent(require, as, idGen.IIDGenerator, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 1, coldDrinks, test.cocaColaNumber, "Coca-cola")
 			newArPriceCUD(event, 1, 2, normalPriceID, 2.4)
 		}))
@@ -207,7 +207,7 @@ func Test_updateChildRecord(t *testing.T) {
 	cocaColaNormalPriceElementId := idGen.idmap[2]
 
 	{ // CUDs: modify normal price
-		saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		saveEvent(require, as, idGen.IIDGenerator, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			updateArPriceCUD(event, as, cocaColaNormalPriceElementId, normalPriceID, 2.2)
 		}))
 	}
@@ -269,7 +269,7 @@ func Test_Collection_3levels(t *testing.T) {
 
 	// insert coca-cola
 	{
-		event := saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, as, idGen.IIDGenerator, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 1, coldDrinks, test.cocaColaNumber, "Coca-cola")
 			newArPriceCUD(event, 1, 2, normalPriceID, 2.0)
 			newArPriceCUD(event, 1, 3, happyHourPriceID, 1.5)
@@ -289,7 +289,7 @@ func Test_Collection_3levels(t *testing.T) {
 
 	// insert fanta
 	{
-		event := saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, as, idGen.IIDGenerator, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 6, coldDrinks, test.fantaNumber, "Fanta")
 			newArPriceCUD(event, 6, 7, normalPriceID, 2.1)
 			{
@@ -313,7 +313,7 @@ func Test_Collection_3levels(t *testing.T) {
 
 	// modify coca-cola
 	{
-		event := saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, as, idGen.IIDGenerator, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			newArPriceExceptionCUD(event, cocaColaNormalPriceElementId, 15, holiday, 1.8)
 			updateArPriceExceptionCUD(event, as, cocaColaHappyHourExceptionHolidayElementId, holiday, 0.9)
 		}))
@@ -806,7 +806,7 @@ func TestState_withAfterArgument(t *testing.T) {
 	require.JSONEq(expected, out.resultRows[0][0][0][0].(string))
 }
 
-func createEvent(require *require.Assertions, app istructs.IAppStructs, generator istructs.IDGenerator, bld istructs.IRawEventBuilder) istructs.IPLogEvent {
+func createEvent(require *require.Assertions, app istructs.IAppStructs, generator istructs.IIDGenerator, bld istructs.IRawEventBuilder) istructs.IPLogEvent {
 	rawEvent, buildErr := bld.BuildRawEvent()
 	var pLogEvent istructs.IPLogEvent
 	var err error
@@ -815,7 +815,7 @@ func createEvent(require *require.Assertions, app istructs.IAppStructs, generato
 	return pLogEvent
 }
 
-func saveEvent(require *require.Assertions, app istructs.IAppStructs, generator istructs.IDGenerator, bld istructs.IRawEventBuilder) (pLogEvent istructs.IPLogEvent) {
+func saveEvent(require *require.Assertions, app istructs.IAppStructs, generator istructs.IIDGenerator, bld istructs.IRawEventBuilder) (pLogEvent istructs.IPLogEvent) {
 	pLogEvent = createEvent(require, app, generator, bld)
 	err := app.Records().Apply(pLogEvent)
 	require.NoError(err)
@@ -919,7 +919,7 @@ func updateArPriceExceptionCUD(bld istructs.IRawEventBuilder, app istructs.IAppS
 	writer.PutFloat32(test.articlePriceExceptionsPriceIdent, price)
 }
 func insertPrices(require *require.Assertions, app istructs.IAppStructs, idGen *idsGeneratorType) (normalPrice, happyHourPrice istructs.RecordID, event istructs.IPLogEvent) {
-	event = saveEvent(require, app, idGen.newID, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
+	event = saveEvent(require, app, idGen.IIDGenerator, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
 		newPriceCUD(event, 51, 1, "Normal Price")
 		newPriceCUD(event, 52, 2, "Happy Hour Price")
 	}))
@@ -927,7 +927,7 @@ func insertPrices(require *require.Assertions, app istructs.IAppStructs, idGen *
 }
 
 func insertPeriods(require *require.Assertions, app istructs.IAppStructs, idGen *idsGeneratorType) (holiday, newYear istructs.RecordID, event istructs.IPLogEvent) {
-	event = saveEvent(require, app, idGen.newID, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
+	event = saveEvent(require, app, idGen.IIDGenerator, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
 		newPeriodCUD(event, 71, 1, "Holiday")
 		newPeriodCUD(event, 72, 2, "New Year")
 	}))
@@ -935,7 +935,7 @@ func insertPeriods(require *require.Assertions, app istructs.IAppStructs, idGen 
 }
 
 func insertDepartments(require *require.Assertions, app istructs.IAppStructs, idGen *idsGeneratorType) (coldDrinks istructs.RecordID, event istructs.IPLogEvent) {
-	event = saveEvent(require, app, idGen.newID, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
+	event = saveEvent(require, app, idGen.IIDGenerator, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
 		newDepartmentCUD(event, 61, 1, "Cold Drinks")
 		newDepartmentCUD(event, 62, 2, "Hot Drinks")
 	}))
@@ -980,7 +980,7 @@ func Test_Idempotency(t *testing.T) {
 	coldDrinks, _ := insertDepartments(require, as, &idGen)
 
 	// CUDs: Insert coca-cola
-	event1 := createEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+	event1 := createEvent(require, as, idGen.IIDGenerator, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 		newArticleCUD(event, 1, coldDrinks, test.cocaColaNumber, "Coca-cola")
 	}))
 	require.Nil(as.Records().Apply(event1))
@@ -988,7 +988,7 @@ func Test_Idempotency(t *testing.T) {
 	require.Nil(processor.SendSync(event1))
 
 	// CUDs: modify coca-cola number and normal price
-	event2 := createEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+	event2 := createEvent(require, as, idGen.IIDGenerator, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 		updateArticleCUD(event, as, cocaColaDocID, test.cocaColaNumber2, "Coca-cola")
 	}))
 	require.Nil(as.Records().Apply(event2))
@@ -996,7 +996,7 @@ func Test_Idempotency(t *testing.T) {
 
 	// simulate sending event with the same offset
 	idGen.decOffset()
-	event2copy := createEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+	event2copy := createEvent(require, as, idGen.IIDGenerator, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 		updateArticleCUD(event, as, cocaColaDocID, test.cocaColaNumber, "Coca-cola")
 	}))
 	require.Nil(as.Records().Apply(event2copy))

@@ -229,7 +229,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 
 	rawEvent, err := reb.BuildRawEvent()
 	require.NoError(err)
-	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, processors.NewIDGenerator())
+	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
 	require.NoError(err)
 	require.NoError(as.Records().Apply(pLogEvent))
 	err = as.Events().PutWlog(pLogEvent)

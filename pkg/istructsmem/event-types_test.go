@@ -781,13 +781,14 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 	ws := istructs.WSID(1)
 
+	expectedQName := docName
 	idGenerator := NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IDef) error {
 		require.EqualValues(1, rawID)
-		require.EqualValues(docName, def.QName())
+		require.EqualValues(expectedQName, def.QName())
 		return nil
 	})
 
-	for test := simpleTest; test < testCount; test++ {
+	for test := simpleTest; test < testCount*2; test += 2 { // test - docID, test+1 - recID
 
 		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
@@ -817,6 +818,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			require.NoError(err)
 			require.NotNil(rawEvent)
 
+			expectedQName = docName
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, idGenerator)
 			require.NotNil(pLogEvent)
 			require.NoError(saveErr, saveErr)
@@ -834,7 +836,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			})
 		})
 
-		recID := docID+1
+		recID := docID + 1
 
 		t.Run("must ok to update CDoc", func(t *testing.T) {
 			bld := app.Events().GetNewRawEventBuilder(
@@ -869,11 +871,8 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			require.NoError(err)
 			require.NotNil(rawEvent)
 
-			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IDef) error {
-				require.EqualValues(1, rawID)
-				require.EqualValues(recName, def.QName())
-				return nil
-			}))
+			expectedQName = recName
+			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, idGenerator)
 			require.NotNil(pLogEvent)
 			require.NoError(saveErr, saveErr)
 			require.True(pLogEvent.Error().ValidEvent())
