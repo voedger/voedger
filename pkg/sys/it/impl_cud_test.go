@@ -138,6 +138,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 	})
 }
 
+// Deprecated: use c.sys.CUD. Kept to not to break the exitsing events only
 func TestBasicUsage_Init(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_Simple)
@@ -150,7 +151,7 @@ func TestBasicUsage_Init(t *testing.T) {
 			"cuds": [
 				{
 					"fields": {
-						"sys.ID": 1000000002,
+						"sys.ID": 1,
 						"sys.QName": "simpleApp.articles",
 						"name": "cola",
 						"article_manual": 11,
@@ -182,7 +183,7 @@ func TestBasicUsage_Init(t *testing.T) {
 	id := resp.SectionRow()[2].(float64)
 	require.Equal("cola", actualName)
 	require.Equal(float64(51), actualControlActive)
-	require.Equal(float64(1000000002), id)
+	require.Greater(istructs.RecordID(id), istructs.MaxRawRecordID)
 }
 
 func TestBasicUsage_Singletons(t *testing.T) {
