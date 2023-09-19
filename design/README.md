@@ -1,51 +1,10 @@
-## Heeus concepts
+## Top-level sections
 
-- [Federation](#federation)
-- [Cluster](#cluster)
-- [AppPartition](#apppartition)
-- [Event Sourcing & CQRS](#event-sourcing--cqrs)
-- [Repository & Application Schema](#repository--application-schema)
-- [Package Schema](#package-schema)
-- [Application Image](#application-image)
-- [Extensions](#extensions)
-- [Bus](#bus)
-- [Edge Computing](#edge-computing)
-
-
-## Heeus products
-
+- [Operations Concepts](#operations-concepts)
+- [Development Concepts](#development-concepts)
 - [Editions](#editions)
-- [Community Edition (CE)](#community-edition-ce)
-- [Standart Edition (SE)](se/README.md)
-- [Enterprise Edition (EE)](#enterprise-edition-ee)
+- [Detailed design](#detailed-design)
 
-## DevOps
-
-- [Building](building)
-
-## Detailed design
-
-Features
-- [Orchestration](orchestration/README.md)
-- [Workspaces](workspaces/README.md)
-- [HTTPS+ACME](https-acme/README.md)
-- [Edge Computing](edge/README.md)
-
-Non-Functional Reqiurements (Quality Attributes, Quality Requirements, Qualities)
-- [Consistency](consistency)
-- Security
-  - [Authentication and Authorization (AuthNZ)](authnz)
-  - Encryption: [HTTPS + ACME](https-acme)
-- Maintainability, Perfomance, Portability, Usability ([ISO 25010](https://iso25000.com/index.php/en/iso-25000-standards/iso-25010), System and software quality models)
-
-System Design
-
-- [Bus](https://github.com/heeus/core/tree/main/ibus)
-- [State](state/README.md)
-- [Command Processor](commandprocessor/README.md)
-- [Query Processor](queryprocessor/README.md)
-- [Projectors](projectors/README.md)
-- [Storage](storage/README.md)
 
 ## Notation
 
@@ -112,25 +71,28 @@ flowchart TD
   classDef H fill:#C9E7B7
 ```
 
-## Federation
+
+## Operations Concepts
+
+### Federation
 
 ```mermaid
     erDiagram
     Federation ||--|| MainCluster : has
-    MainCluster  ||--||  Cluster: "is"
+    MainCluster  ||..||  Cluster: "is"
     MainCluster  ||--||  sys_registry: "has deployed Application"
 
     Federation ||--o{ WorkerCluster : has
-    WorkerCluster  ||--||  Cluster: "is"
+    WorkerCluster  ||..||  Cluster: "is"
     Cluster ||--o{ Application : "has deployed"
 ```
 
-## Cluster
+### Cluster
 
 ```mermaid
     erDiagram
     Cluster ||--|{ Router : has
-    Cluster ||--|{ HVM : has
+    Cluster ||--|{ VVM : has
     Cluster ||--o{ Application : "has deployed"
     Cluster ||--|| ClusterStorage : has
     ClusterStorage ||--|{ AppStorage : has
@@ -150,146 +112,105 @@ flowchart TD
     Workspace ||--|{ InternalProjection: keeps
     PLog ||--|{ PLogPartition : has
 
-
-
-    HVM ||--o{ AppPartition : executes
-
+    VVM ||--o{ AppPartition : "assigned by Scheduler to"
 ```
+### VVM: Execute assigned AppPartition
 
-## AppPartition
+| Old term      | New term|
+| ----------- | ----------- |
+| IAppStructsProvider      | IAppPartitions       |
+| IAppStructs   | IAppPartition      |
 
-> AppPartition is a scheduling unit
+#### Processors
+
+
 
 ```mermaid
     erDiagram
+    
+    %% Entities
 
-    AppPartition ||--|| AppPartitionStorage : "has"
-    AppPartition ||--|| CommandProcessor : "has"
-    AppPartition ||--|{ Actualizer : "has"
-    Actualizer ||--|{ Projector : "manages"
-
-
-    AppPartitionStorage ||--|| AppStorage : "to work with"
-    AppStorage ||--|| AppPartitionCache : "through"
-
-
-    AppPartitionStorage ||--|{  QueryProcessor: "used by"
-    AppPartitionStorage ||--||  CommandProcessor: "used by"
-    AppPartitionStorage ||--|{  Projector: "used by"
-
-    AppPartition ||--|{ QueryProcessor : "has"
-
-    AppStorage ||--|{ Workspace: has
-    Workspace ||--|{ InternalProjection: "keeps"
-    AppStorage ||--|| PLog: has
-    PLog ||--|{ PLogPartition : has
-
-    PLogPartition ||--|{ Actualizer: "is read by"
-
-    Projector ||--|{ Projection: "prepares write intents for"
-    Projection ||--|| InternalProjection: "can be"
-    Projection ||--|| ExternalProjection: "can be"
-
-    ExternalProjection ||--|| Email: like
-
-
-    InternalProjection ||--|| WLog: "can be"
-    InternalProjection ||--|| Table: "can be"
-    InternalProjection ||--|| View: "can be"
-
-
-    CommandProcessor ||--|| PLogPartition: "writes Event to"
-
-    QueryProcessor ||--|{ QueryFunction: "reads from"
-    QueryFunction ||--|| Projection: "can be"
-```
-
-## Repository & Application Schema
-
-```mermaid
-    erDiagram
-    Repository ||--|{ Application: defines
-    Application ||--|| ApplicationSchema: "defines"
-    ApplicationSchema ||--o{ PackageSchema: "has"
-    Application ||--o{ Package: "has"
-    Package ||--|| PackageSchema : "defines"
-    Package ||--|{ SchemaFile : "has *.heeus"
-    PackageSchema ||--|{ SchemaFile: "defined by"
-```
-
-## Package Schema
-
-```mermaid
-    erDiagram
-    PackageSchema ||--o{ Def: "has"
-    Def ||--|| TableDef: "can be"
-    Def ||--|| ViewDef: "can be"
-    Def ||--|| ExtensionDef: "can be"
-    ExtensionDef ||--|| FunctionDef : "can be"
-    FunctionDef ||--|| CommandFunctionDef: "can be"
-    FunctionDef ||--|| QueryFunctionDef: "can be"
-    ExtensionDef ||--|| ValidatorDef: "can be"
-    ExtensionDef |{--|| ExtEngineKind: "has"
-    ExtEngineKind ||..|| ExtEngineKind_WASM: "can be"
-    ExtEngineKind ||..|| ExtEngineKind_BuiltIn: "can be"
-```
-
-## Application Image
-
-```mermaid
-    erDiagram
-    ApplicationImage ||--|| ApplicationSchema: "has"
-    ApplicationImage ||--o{ Resource: "has"
-    Resource ||--|| Image: "can be"
-    Resource ||--|| ExtensionsPackage: "can be"
-    ExtensionsPackage ||--|| ExtEngineKind: "has a property"
-```
-
-## Bus
-
-### Bus principles
-
-- Limit number of concurrent requests: maxNumOfConcurrentRequests
-  - Example: million of http connections but 1000 concurrent requests
-  - "ibus.ErrBusUnavailable" (503) is returned if the number of concurrent requests is exceeded
-- Sender and Receiver both respect timeouts: readWriteTimeout
-  - E.g. 5 seconds, by (weak) analogy with FoundationDB, Long-running read/write
-
-### Bus Nodes
-```mermaid
-    erDiagram
-    Bus ||--o{ BusNode : "connects"
-    BusNode ||--o| Sender : "can be"
-    BusNode ||--o| Receiver : "can be"
-    Receiver ||--|| Address : "has"
-    Address{
-        owner string
-        app string
-        partition int
-        part string "e.g. 'q' or 'c'"
+    Projector{
+        Type   appdef_IProjector
     }
+    Query{
+        Type   appdef_IQuery
+    }
+    Command {
+        Type   appdef_ICommand
+    }   
+    IAppPartition {
+        Release() method
+    }       
+
+    %% Relations
+
+    VVM ||--|{ Processor : "has"
+
+    Processor ||--|| CommandProcessor : "can be"
+    Processor ||--|| QueryProcessor : "can be"
+    Processor ||--|| Actualizer : "can be"   
+
+
+    Actualizer ||..|| Projector: executes
+    CommandProcessor ||..|| Command: "executes"
+    QueryProcessor ||..|| Query: "executes"
+
+    Command ||..|| IAppPartition: "taken from"
+    Query ||..|| IAppPartition: "taken from"
+    Projector ||..|| IAppPartition: "taken from"
+
+    IAppPartition ||..|| IAppPartitions: "borrowed from"
 ```
 
-### Some known Bus Nodes
+
+#### Borrow IAppPartition
+
+```go
+type IAppPartitions interface {
+    ...
+    Borrow(qpp AppQName, part PartitionID, procKind ProcessorKind) (IAppPartition, error)
+    ...
+}
+```
+
 ```mermaid
     erDiagram
-    AppPartitionController||--o{ AppPartition : "sends to"
-    HTTPProcessorController||--|| HTTPProcessor : "sends to"
-    HTTPProcessor ||--|{ QueryProcessor : "sends to <owner>/<app>/<partition>/q"
-    HTTPProcessor ||--|{ CommandProcessor : "sends to <owner>/<app>/<partition>/c"
-    HTTPProcessor ||--|| FederationGateway : "sends to"
-    QueryProcessor ||--|{ Gateway : "sends to"
-    Actualizer ||--|{  Gateway : "sends to"
 
-    Gateway ||--|| FederationGateway: "can be"
-    Gateway ||--|| HTTPGateway: "can be"
-    Gateway ||--|| MailerGateway: "can be"
+    IAppPartitions ||--|{ appRT : "has"
+
+    appRT ||--|{ appPartitionRT : "has"
+
+    appPartitionRT ||--|| latestVersion : "has"
+    appPartitionRT ||--|| permanent : "has"
+
+    latestVersion ||--|| AppDef : "has"
+    latestVersion  ||--|{ commandsExEnginePool : "has"
+    latestVersion  ||--|{ queryExEnginePool : "has"
+    latestVersion  ||--|{ projectionExEnginePool : "has"
+    permanent  ||--|| partitionCache: "has"
+
+
+    AppDef ||--|{ appdef_IPackage : "has"
+    appdef_IPackage ||--|{ appdef_IEngine : "has one per EngineKind"
+
+    appdef_IEngine ||..|| "IAppPartitions_Borrow()": "copied by ref by"
+    
+    commandsExEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
+    queryExEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
+    projectionExEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
+    partitionCache ||..|| "IAppPartitions_Borrow()": "copied by ref by"
+
+    "IAppPartitions_Borrow()" ||..|| "IAppPartition": "returns"
+
+    IAppPartition ||--|{ package : "has"
+    package ||--|{ ExtensionEngine : "has one per kind"
+    IAppPartition ||--|{ "Invoke()" : "has something like"
+
+    "Invoke()" ||..|| ExtensionEngine : "uses"
 ```
-### See also
-- [Bus detailed design](https://github.com/heeus/core/tree/main/ibus)
 
-
-## Event Sourcing & CQRS
+### Event Sourcing & CQRS
 
 **Event Sourcing**
 
@@ -319,132 +240,91 @@ flowchart TD
     Projector ||--|{ Projection: "prepares write intents for"
     QueryProcessor ||--|{ ReadModel: "reads from"
     ReadModel ||--|| Projection: "implemented by"
+
+    Projection ||--|| InternalProjection: "can be"
+    Projection ||--|| ExternalProjection: "can be"
+
+    ExternalProjection ||--|| Email: like
+
+
+    InternalProjection ||--|| WLog: "can be"
+    InternalProjection ||--|| Table: "can be"
+    InternalProjection ||--|| View: "can be"    
+    
+    Workspace ||--|{ InternalProjection: keeps    
 ```
 
-## Extensions
+### Extensions
 
-### Principles
+#### Principles
 
 - Extensions extend Core functionality
   - Расширения расширяют функциональность ядра
 - Extensions can be loaded/updated/unloaded dynamically
   - But BuiltIn Extensions
 
-### Extensions Site
-- Extensions Site: Сайт расширений
+#### Extension Engines
+- Extension Engine: Движок расширения
+- ??? Does DockerExtensionEngine need memory?
 
 ```mermaid
     erDiagram
-    ExtensionsSite ||--|{ ExtensionPoint : "has"
-    ExtensionPoint ||--|{ Extension : "has"
-```
-Extension Site examples:
-```mermaid
-    erDiagram
-    ExtensionsSite ||--|| CommandProcessor : "can be e.g."
-    CommandProcessor ||--|| CommandFunctions : "has"
-    CommandProcessor ||--|| Validators : "has"
-    ExtensionsSite ||--|| QueryProcessor : "can be e.g."
-    QueryProcessor ||--|| QueryFunctions : "has"
-    CommandFunctions ||--|| ExtensionPoint : "is"
-    QueryFunctions ||--|| ExtensionPoint : "is"
-    Validators ||--|| ExtensionPoint : "is"
-```
-
-### Extension Engines
-- Extension Engine: Механизм расширения
-
-```mermaid
-    erDiagram
-    ExtensionsSite ||--|{ ExtensionPoint : "has"
-    ExtensionsSite ||--|{ ExtensionEngine : "has"
-
-    ExtensionEngine ||--|| Limits : "has"
+    ExtensionEngine {
+      Memory MB
+      Invoke() func()
+      Kind ExtEngineKind  "e.g. WASM, BuiltIn, Container"
+    }
     ExtensionEngine ||..|| ExtensionEngineFactory : "created by"
-    ExtensionEngine ||..|{ Extension: "executes"
-    ExtensionEngine |{..|| ExtensionEngineFactory: "created by"
-    ExtensionEngine ||--|| ExtEngineKind: has
+    ExtensionEngine ||--|| Kind: has
+    ExtensionEngineFactory ||..|| Kind : "one per"
 
-    Limits ||..|| MemoryLimit: "can be"
-    Limits ||..|| GasLimit: "can be"
-
-    ExtensionEngineFactory ||..|| ExtEngineKind : "one per"
-    ExtensionPoint ||--|{ Extension : "has"
-
-    Extension |{..|| ExtEngineKind: has
-
-    ExtEngineKind ||..|| ExtEngineKind_WASM: "can be"
-    ExtEngineKind ||..|| ExtEngineKind_BuiltIn: "can be"
 ```
-## Editions
 
-|             | CE          |SE          |Enterprise  |
-| ----------- | ----------- |----------- |----------- |
-| Federation  | Yes         |Yes         |Yes         |
-| Router      | 1           |1           |Many        |
-| VM          | 1           |1           |Many        |
-| HA          | No          |Yes         |Yes         |
-| Scalability | No          |No          |Yes         |
+### Bus
 
-### Community Edition (CE)
+#### Bus principles
 
-Principles
+- Limit number of concurrent requests: maxNumOfConcurrentRequests
+  - Example: million of http connections but 1000 concurrent requests
+  - "ibus.ErrBusUnavailable" (503) is returned if the number of concurrent requests is exceeded
+- Sender and Receiver both respect timeouts: readWriteTimeout
+  - E.g. 5 seconds, by (weak) analogy with FoundationDB, Long-running read/write
 
-- Node can run other software, unlike the SE (all nodes must be clean)
-- Docker
-  - So we won't support FreeBSD as a host OS
-  - Reason: We beleive (paa) that FreeBSD is for things like routers
-- Scylla as a ClusterStorage  
-  - Reason: We do not want to learn how to operate bbolt
-- Scylla is also containerized
-  - Reason: [The cost of containerization is within 10%](https://scylladb.medium.com/the-cost-of-containerization-for-your-scylla-a24559d17d01), so ok
-
+#### Bus Nodes
 ```mermaid
     erDiagram
-    CECluster ||--|| Node : "always has one"
-    Node ||--|| CEDockerStack : "runs"
-    CEDockerStack ||--|| voedger : "contains"
-    CEDockerStack ||--|| prometheus : "contains"
-    CEDockerStack ||--|| graphana : "contains"
-    CEDockerStack ||--|| scylla : "contains"
-    voedger ||..|| scylla : "uses as ClusterStorage"
+    Bus ||--o{ BusNode : "connects"
+    BusNode ||--o| Sender : "can be"
+    BusNode ||--o| Receiver : "can be"
+    Receiver ||--|| Address : "has"
+    Address{
+        owner string
+        app string
+        partition int
+        part string "e.g. 'q' or 'c'"
+    }
 ```
 
-### Standart Edition (SE)
-
-ref. [se/README.md](se/README.md)
-
-### Enterprise Edition (EE)
-
+#### Some known Bus Nodes
 ```mermaid
     erDiagram
-    EECluster ||--|{ RouterNode : "has 2+ nodes with role Router"
-    EECluster ||--|{ HVMNode : "has 2+ nodes with role HVM"
-    EECluster ||--|{ DBNode : "has 3+ nodes with role DBNode"
-    EECluster ||--|| ClusterStorage : "has"
-    ClusterStorage ||--|| DBMS: has
+    AppPartitionController||--o{ AppPartition : "sends to"
+    HTTPProcessorController||--|| HTTPProcessor : "sends to"
+    HTTPProcessor ||--|{ QueryProcessor : "sends to <owner>/<app>/<partition>/q"
+    HTTPProcessor ||--|{ CommandProcessor : "sends to <owner>/<app>/<partition>/c"
+    HTTPProcessor ||--|| FederationGateway : "sends to"
+    QueryProcessor ||--|{ Gateway : "sends to"
+    Actualizer ||--|{  Gateway : "sends to"
 
-    RouterNode ||--|| Node : "is"
-    HVMNode ||--|| Node : "is"
-    DBNode ||--|| Node : "is"
-    DBNode |{--|| ClusterStorage : "used by"
-    DBNode ||--|| DBMS : "runs"
-
-    Node ||--|| agent_exe : "has process"
-
-    HVMNode ||--|| hvm_exe : "has process"
-    RouterNode ||--|| router_exe : "has process"
-
-    agent_exe ||--|| router_exe : "controls"
-    agent_exe ||--|| hvm_exe : "controls"
-    agent_exe ||--|| DBMS : "controls"
-
-    DBMS ||--|| Cassandra : "can be"
-    DBMS ||--|| Scylla : "can be"
-    DBMS ||--|| FoundationDB : "can be"
+    Gateway ||--|| FederationGateway: "can be"
+    Gateway ||--|| HTTPGateway: "can be"
+    Gateway ||--|| MailerGateway: "can be"
 ```
+#### See also
+- [Bus detailed design](https://github.com/heeus/core/tree/main/ibus)
+- [Bus](#bus)
 
-## Edge Computing
+### Edge Computing
 
 [redhat.com An Architect's guide to edge computing essentials](https://www.redhat.com/architect/edge-computing-essentials)
 
@@ -488,7 +368,153 @@ ref. [se/README.md](se/README.md)
     classDef H fill:#C9E7B7
     classDef G fill:#FFFFFF,stroke:#000000, stroke-width:1px, stroke-dasharray: 5 5
 ```
-### Detailed design
+- [Detailed design](edge/README.md)
 
-- [edge/README.md](edge/README.md)
 
+## Development Concepts
+
+### Repository & Application Schema
+
+```mermaid
+    erDiagram
+    Repository ||--|{ Application: defines
+    Application ||--|| ApplicationSchema: "defines"
+    ApplicationSchema ||--o{ PackageSchema: "has"
+    Application ||--o{ Package: "has"
+    Package ||--|| PackageSchema : "defines"
+    Package ||--|{ SchemaFile : "has *.heeus"
+    PackageSchema ||--|{ SchemaFile: "defined by"
+```
+
+### Package Schema
+
+```mermaid
+    erDiagram
+    PackageSchema ||--o{ Def: "has"
+    Def ||--|| TableDef: "can be"
+    Def ||--|| ViewDef: "can be"
+    Def ||--|| ExtensionDef: "can be"
+    ExtensionDef ||--|| FunctionDef : "can be"
+    FunctionDef ||--|| CommandFunctionDef: "can be"
+    FunctionDef ||--|| QueryFunctionDef: "can be"
+    ExtensionDef ||--|| ValidatorDef: "can be"
+    ExtensionDef |{--|| ExtEngineKind: "has"
+    ExtEngineKind ||..|| ExtEngineKind_WASM: "can be"
+    ExtEngineKind ||..|| ExtEngineKind_BuiltIn: "can be"
+```
+
+### Application Image
+
+```mermaid
+    erDiagram
+    ApplicationImage ||--|| ApplicationSchema: "has"
+    ApplicationImage ||--o{ Resource: "has"
+    Resource ||--|| Image: "can be"
+    Resource ||--|| ExtensionsPackage: "can be"
+    ExtensionsPackage ||--|| ExtEngineKind: "has a property"
+```
+
+
+
+## Editions
+
+|             | CE          |SE          |Enterprise  |
+| ----------- | ----------- |----------- |----------- |
+| Federation  | Yes         |Yes         |Yes         |
+| Router      | 1           |1           |Many        |
+| VM          | 1           |1           |Many        |
+| HA          | No          |Yes         |Yes         |
+| Scalability | No          |No          |Yes         |
+
+### Community Edition (CE)
+
+Principles
+
+- Node can run other software, unlike the SE (all nodes must be clean)
+- Docker
+  - So we won't support FreeBSD as a host OS
+  - Reason: We beleive (paa) that FreeBSD is for things like routers
+- Scylla as a ClusterStorage  
+  - Reason: We do not want to learn how to operate bbolt
+- Scylla is also containerized
+  - Reason: [The cost of containerization is within 10%](https://scylladb.medium.com/the-cost-of-containerization-for-your-scylla-a24559d17d01), so ok
+
+```mermaid
+    erDiagram
+    CECluster ||--|| Node : "always has one"
+    Node ||--|| CEDockerStack : "runs"
+    CEDockerStack ||--|| voedger : "contains"
+    CEDockerStack ||--|| prometheus : "contains"
+    CEDockerStack ||--|| graphana : "contains"
+    CEDockerStack ||--|| scylla : "contains"
+    voedger ||..|| scylla : "uses as ClusterStorage"
+```
+
+### Standart Edition (SE)
+
+ref. [se/README.md](se/README.md)
+
+### Enterprise Edition (EE)
+
+```mermaid
+    erDiagram
+    EECluster ||--|{ RouterNode : "has 2+ nodes with role Router"
+    EECluster ||--|{ VVMNode : "has 2+ nodes with role VVM"
+    EECluster ||--|{ DBNode : "has 3+ nodes with role DBNode"
+    EECluster ||--|| ClusterStorage : "has"
+    ClusterStorage ||--|| DBMS: has
+
+    RouterNode ||--|| Node : "is"
+    VVMNode ||--|| Node : "is"
+    DBNode ||--|| Node : "is"
+    DBNode |{--|| ClusterStorage : "used by"
+    DBNode ||--|| DBMS : "runs"
+
+    Node ||--|| agent_exe : "has process"
+
+    VVMNode ||--|| VVM_exe : "has process"
+    RouterNode ||--|| router_exe : "has process"
+
+    agent_exe ||--|| router_exe : "controls"
+    agent_exe ||--|| VVM_exe : "controls"
+    agent_exe ||--|| DBMS : "controls"
+
+    DBMS ||--|| Cassandra : "can be"
+    DBMS ||--|| Scylla : "can be"
+    DBMS ||--|| FoundationDB : "can be"
+```
+
+## Detailed design
+
+Functional Design
+
+- [Orchestration](orchestration/README.md)
+- [Workspaces](workspaces/README.md)
+- [Edge Computing](edge/README.md)
+
+Non-Functional Reqiurements, aka Quality Attributes, Quality Requirements, Qualities
+
+- [Consistency](consistency)
+- Security
+  - Encryption: [HTTPS + ACME](https-acme)
+  - [Authentication and Authorization (AuthNZ)](authnz)
+- TBD: Maintainability, Perfomance, Portability, Usability ([ISO 25010](https://iso25000.com/index.php/en/iso-25000-standards/iso-25010), System and software quality models)
+
+Technical Design
+
+- [Bus](https://github.com/heeus/core/tree/main/ibus)
+- [State](state/README.md)
+- [Command Processor](commandprocessor/README.md)
+- [Query Processor](queryprocessor/README.md)
+- [Projectors](projectors/README.md)
+- [Storage](storage/README.md)
+
+## Misc
+
+DevOps
+
+- [Building](building)
+
+Previous incompatible versions
+
+- [Prior 2023-09-13](https://github.com/voedger/voedger/blob/7f9ff095d66e390028abe9037806dcd28bde5d9e/design/README.md)

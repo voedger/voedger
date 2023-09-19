@@ -144,7 +144,7 @@ Subject:
 
 - if wsDecr.initStartedAtMs == 0
   - WS[currentWS].c.sys.CUD(wsDescr.ID, initStartedAtMs)
-  - err = bp3.BuildWorkspace() // to init data
+  - err = workspace.buildWorkspace() // to init data
   - if err != nil: error = ("Workspace data initialization failed: %v", err)
   - WS[currentWS].c.sys.CUD(wsDescr.ID, initError: error, initCompletedAtMs)
   - UpdateOwner(wsParams, new.WSID, error)
