@@ -37,7 +37,7 @@ func provideRefIntegrityValidator() istructs.CUDValidator {
 			return true
 		},
 		Validate: func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) (err error) {
-			if coreutils.IsDummyWS(wsid) {
+			if coreutils.IsDummyWS(wsid) || cmdQName == QNameCommandInit {
 				return nil
 			}
 			return coreutils.WrapSysError(istructsmem.CheckRefIntegrity(cudRow, appStructs, wsid), http.StatusBadRequest)

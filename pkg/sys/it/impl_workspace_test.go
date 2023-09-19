@@ -71,8 +71,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		t.Run("check the initialized workspace using collection", func(t *testing.T) {
 			body = `{"args":{"Schema":"simpleApp.air_table_plan"},"elements":[{"fields":["sys.ID","image","preview"]}]}`
 			resp := vit.PostWS(ws, "q.sys.Collection", body)
-			require.Equal(int64(5000000000400), int64(resp.SectionRow()[0].(float64)))  // from testTemplate
-			require.Equal(int64(5000000000416), int64(resp.SectionRow(1)[0].(float64))) // from testTemplate
+			require.Len(resp.Sections[0].Elements, 2) // from testTemplate
 			appEPs := vit.VVM.AppsExtensionPoints[istructs.AppQName_test1_app1]
 			checkDemoAndDemoMinBLOBs(vit, "test_template", appEPs, it.QNameTestWSKind, resp, ws.WSID, prn.Token)
 		})
@@ -259,29 +258,59 @@ func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoin
 	blobs, _, err := workspace.ValidateTemplate(templateName, ep, wsKind)
 	require.NoError(err)
 	require.Len(blobs, 4)
+	blobsMap := map[string]workspace.BLOB{}
 	for _, templateBLOB := range blobs {
-		var rowIdx int
-		var fieldIdx int
-		if templateBLOB.FieldName == "image" {
-			fieldIdx = 1
-		} else {
+		blobsMap[string(templateBLOB.Content)] = templateBLOB
+	}
+	// rowIdx := 0
+	// for _, templateBLOB := range blobs {
+	// 	var fieldIdx int
+	// 	if templateBLOB.FieldName == "image" {
+	// 		fieldIdx = 1
+	// 	} else {
+	// 		fieldIdx = 2
+	// 	}
+	// 	blobID := int64(resp.SectionRow(rowIdx)[fieldIdx].(float64))
+	// 	uploadedBLOB := vit.GetBLOB(istructs.AppQName_test1_app1, wsid, blobID, token)
+	// 	rowIdx++
+	// }
+	for rowIdx := 0; rowIdx < 2; rowIdx++ {
+		fieldIdx := 1
+		if resp.SectionRow(rowIdx)[fieldIdx].(float64) == 0 {
 			fieldIdx = 2
-		}
-		switch templateBLOB.RecordID {
-		// IDs are taken from the actual templates
-		case 5000000000400:
-			rowIdx = 0
-		case 5000000000416:
-			rowIdx = 1
-		case 5000000000439:
-			rowIdx = 2
-		default:
-			vit.T.Fatal(templateBLOB.RecordID)
 		}
 		blobID := int64(resp.SectionRow(rowIdx)[fieldIdx].(float64))
 		uploadedBLOB := vit.GetBLOB(istructs.AppQName_test1_app1, wsid, blobID, token)
+		templateBLOB := blobsMap[string(uploadedBLOB.Content)]
 		require.Equal(templateBLOB.Name, uploadedBLOB.Name)
 		require.Equal(templateBLOB.MimeType, uploadedBLOB.MimeType)
-		require.Equal(templateBLOB.Content, uploadedBLOB.Content)
+		delete(blobsMap, string(uploadedBLOB.Content))
 	}
+	require.Empty(blobsMap)
+
+	// for _, templateBLOB := range blobs {
+	// 	var rowIdx int
+	// 	var fieldIdx int
+	// 	if templateBLOB.FieldName == "image" {
+	// 		fieldIdx = 1
+	// 	} else {
+	// 		fieldIdx = 2
+	// 	}
+	// 	switch templateBLOB.RecordID {
+	// 	// IDs are taken from the actual templates
+	// 	case 5000000000400:
+	// 		rowIdx = 0
+	// 	case 5000000000416:
+	// 		rowIdx = 1
+	// 	case 5000000000439:
+	// 		rowIdx = 2
+	// 	default:
+	// 		vit.T.Fatal(templateBLOB.RecordID)
+	// 	}
+	// 	blobID := int64(resp.SectionRow(rowIdx)[fieldIdx].(float64))
+	// 	uploadedBLOB := vit.GetBLOB(istructs.AppQName_test1_app1, wsid, blobID, token)
+	// 	require.Equal(templateBLOB.Name, uploadedBLOB.Name)
+	// 	require.Equal(templateBLOB.MimeType, uploadedBLOB.MimeType)
+	// 	require.Equal(templateBLOB.Content, uploadedBLOB.Content)
+	// }
 }

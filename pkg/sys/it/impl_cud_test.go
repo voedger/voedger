@@ -151,7 +151,7 @@ func TestBasicUsage_Init(t *testing.T) {
 			"cuds": [
 				{
 					"fields": {
-						"sys.ID": 1,
+						"sys.ID": 100000,
 						"sys.QName": "simpleApp.articles",
 						"name": "cola",
 						"article_manual": 11,
@@ -334,11 +334,12 @@ func TestEraseString(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	idAnyAirTablePlan := vit.GetAny("simpleApp.air_table_plan", ws)
 
-	body := `{"cuds":[{"sys.ID": 5000000000400,"fields":{"name":""}}]}`
+	body := fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"name":""}}]}`, idAnyAirTablePlan)
 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	body = `{"args":{"Schema":"simpleApp.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":5000000000400}}]}`
+	body = fmt.Sprintf(`{"args":{"Schema":"simpleApp.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, idAnyAirTablePlan)
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
 	require.Equal(t, "", resp.SectionRow()[0].(string))
