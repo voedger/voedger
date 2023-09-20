@@ -321,9 +321,8 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work interface{}) 
 		WLogOffset:        cmd.workspace.NextWLogOffset,
 	}
 
-	// init - для импорта, Import - это sync
 	switch cmd.cmdMes.Resource().QName() {
-	case builtin.QNameCommandInit:
+	case builtin.QNameCommandInit: // kept to not to break existing events only
 		cmd.reb = cmd.appStructs.Events().GetSyncRawEventBuilder(
 			istructs.SyncRawEventBuilderParams{
 				SyncedAt:                     istructs.UnixMilli(cmdProc.now().UnixMilli()),
