@@ -100,9 +100,6 @@ func (u *uniques) SetUniqueField(name string) IUniquesBuilder {
 	if fld == nil {
 		panic((fmt.Errorf("%v: unique field name «%v» not found: %w", u.parentDef().QName(), name, ErrNameNotFound)))
 	}
-	if !fld.Required() {
-		panic((fmt.Errorf("%v: unique field «%v» must be required", u.parentDef().QName(), name)))
-	}
 
 	u.field = fld
 

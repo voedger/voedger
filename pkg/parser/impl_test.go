@@ -241,13 +241,13 @@ func Test_Workspace_Defs(t *testing.T) {
 
 	fs1, err := ParseFile("file1.sql", `SCHEMA myschema;
 		ABSTRACT WORKSPACE AWorkspace(
-			TABLE table1 INHERITS CDoc (a ref);		
+			TABLE table1 INHERITS CDoc (a ref);
 		);
 	`)
 	require.NoError(err)
 	fs2, err := ParseFile("file2.sql", `SCHEMA myschema;
 		ALTER WORKSPACE AWorkspace(
-			TABLE table2 INHERITS CDoc (a ref);		
+			TABLE table2 INHERITS CDoc (a ref);
 		);
 		WORKSPACE MyWorkspace INHERITS AWorkspace();
 		WORKSPACE MyWorkspace2 INHERITS AWorkspace();
@@ -284,7 +284,7 @@ func Test_Alter_Workspace(t *testing.T) {
 
 	fs1, err := ParseFile("file1.sql", `SCHEMA pkg1;
 		ABSTRACT WORKSPACE AWorkspace(
-			TABLE table1 INHERITS CDoc (a ref);		
+			TABLE table1 INHERITS CDoc (a ref);
 		);
 	`)
 	require.NoError(err)
@@ -294,7 +294,7 @@ func Test_Alter_Workspace(t *testing.T) {
 	fs2, err := ParseFile("file2.sql", `SCHEMA pkg2;
 		IMPORT SCHEMA 'org/pkg1'
 		ALTER WORKSPACE pkg1.AWorkspace(
-			TABLE table2 INHERITS CDoc (a ref);		
+			TABLE table2 INHERITS CDoc (a ref);
 		);
 	`)
 	require.NoError(err)
@@ -814,7 +814,7 @@ func Test_Comments(t *testing.T) {
 	-- line 2
 	FUNCTION MyFunc() RETURNS void;
 
-	/* 	Multiline 
+	/* 	Multiline
 		comment  */
 	FUNCTION MyFunc1() RETURNS void;
 	);
@@ -1019,7 +1019,6 @@ func Test_UniqueFields(t *testing.T) {
 	err = BuildAppDefs(packages, def)
 	require.EqualError(err, strings.Join([]string{
 		"example.sql:5:3: undefined field UnknownField",
-		"example.sql:6:3: field has to be NOT NULL",
 	}, "\n"))
 
 	cdoc := def.CDoc(appdef.NewQName("test", "MyTable"))

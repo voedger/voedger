@@ -195,9 +195,5 @@ func Test_def_UniqueField(t *testing.T) {
 		require.Panics(func() {
 			def.SetUniqueField("unknownField")
 		}, "panics if unknown unique field name")
-
-		require.Panics(func() {
-			def.SetUniqueField("surname")
-		}, "panics if unique field is not required")
 	})
 }

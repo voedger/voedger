@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
@@ -24,7 +25,13 @@ func provideUniquesProjectorFunc(appDef appdef.IAppDef) func(event istructs.IPLo
 			if unique, ok := appDef.Def(rec.QName()).(appdef.IUniques); ok {
 				if field := unique.UniqueField(); field != nil {
 					if rec.IsNew() {
-						err = insert(rec, field, st, intents)
+						// check if unique field is null
+						uniqueFieldIsNotNull, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(s string, _ interface{}) bool {
+							return s == field.Name()
+						})
+						if uniqueFieldIsNotNull {
+							err = insert(rec, field, st, intents)
+						}
 					} else {
 						// came here -> we're updating fields that are not part of an unique key
 						// e.g. updating sys.IsActive
