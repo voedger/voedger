@@ -1,0 +1,18 @@
+name: Link issue to Milestone
+
+on:
+  issues:
+    types: [closed]
+
+jobs: 
+  link:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Link issue to milestone
+      env: 
+        GH_TOKEN: ${{ secrets.REPOREADING_TOKEN }}
+        repo: ${{ GITHUB.REPOSITORY }}
+        issue: ${{ github.event.issue.number }}
+      run: curl -s https://raw.githubusercontent.com/untillpro/ci-action/master/scripts/linkmilestone.sh | bash 
+
