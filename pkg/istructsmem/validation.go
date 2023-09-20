@@ -297,10 +297,10 @@ func (v *validators) validObject(obj *elementType) (err error) {
 }
 
 // Validates specified CUD
-func (v *validators) validCUD(cud *cudType, allowStorageIDsInCreate bool) (err error) {
+func (v *validators) validCUD(cud *cudType, isSyncEvent bool) (err error) {
 	for _, newRec := range cud.creates {
 		err = errors.Join(err,
-			v.validRecord(newRec, !allowStorageIDsInCreate))
+			v.validRecord(newRec, !isSyncEvent))
 	}
 
 	err = errors.Join(err,

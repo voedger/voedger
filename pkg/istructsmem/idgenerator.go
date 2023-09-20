@@ -16,6 +16,7 @@ type implIIDGenerator struct {
 	onNewID               func(rawID, storageID istructs.RecordID, def appdef.IDef) error
 }
 
+// used in tests
 func NewIDGeneratorWithHook(onNewID func(rawID, storageID istructs.RecordID, def appdef.IDef) error) istructs.IIDGenerator {
 	return &implIIDGenerator{
 		nextBaseID:            istructs.FirstBaseRecordID,

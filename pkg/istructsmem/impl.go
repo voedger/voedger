@@ -434,11 +434,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
 	existsRecord := func(id istructs.RecordID) (bool, error) {
 		data := make([]byte, 0)
-		ok, err := recs.getRecord(ev.ws, id, &data)
-		if err != nil {
-			return false, err
-		}
-		return ok, nil
+		return recs.getRecord(ev.ws, id, &data)
 	}
 
 	for _, rec := range ev.cud.creates {

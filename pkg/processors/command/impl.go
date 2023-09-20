@@ -401,6 +401,11 @@ func execCommand(_ context.Context, work interface{}) (err error) {
 func buildRawEvent(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	cmd.rawEvent, err = cmd.reb.BuildRawEvent()
+	status := http.StatusBadRequest
+	if errors.Is(err, istructsmem.ErrRecordIDUniqueViolation) {
+		status = http.StatusConflict
+	}
+	err = coreutils.WrapSysError(err, status)
 	return
 }
 
@@ -615,9 +620,6 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 			cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
 		}
 		logger.Error(cmd.err)
-		if errors.Is(cmd.err, istructsmem.ErrRecordIDUniqueViolation) {
-			cmd.err = coreutils.NewHTTPError(http.StatusConflict, cmd.err)
-		}
 		coreutils.ReplyErr(sr.bus, cmd.cmdMes.Sender(), cmd.err)
 		return
 	}

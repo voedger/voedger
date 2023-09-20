@@ -361,3 +361,12 @@ func TestEraseString1(t *testing.T) {
 
 	require.Equal(t, "", resp.SectionRow()[0].(string))
 }
+
+func TestDenyCreateNonRawIDs(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	body := `{"cuds": [{"fields": {"sys.ID": 1000000000,"sys.QName": "simpleApp.options"}}]}`
+	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
+}
