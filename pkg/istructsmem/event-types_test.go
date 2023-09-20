@@ -793,7 +793,6 @@ func Test_EventUpdateRawCud(t *testing.T) {
 		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
-		// docID := istructs.RecordID(322685000131087 + test)
 		docID := istructs.NewCDocCRecordID(istructs.FirstBaseRecordID + istructs.RecordID(test))
 
 		t.Run("must ok to create CDoc", func(t *testing.T) {
@@ -1383,13 +1382,6 @@ func TestEventBuild_Error(t *testing.T) {
 				}
 				return nil
 			}))
-			// func(tempId istructs.RecordID, def appdef.IDef) (storageID istructs.RecordID, err error) {
-			// 	if tempId == test.tempBasketID {
-			// 		require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), def.QName())
-			// 		return istructs.NullRecordID, fmt.Errorf("test error: %w", ErrWrongRecordID)
-			// 	}
-			// 	return 100500, nil
-			// })
 			require.False(pLogEvent.Error().ValidEvent())
 			require.Contains(pLogEvent.Error().ErrStr(), ErrWrongRecordID.Error())
 			require.NoError(saveErr, saveErr)

@@ -29,5 +29,11 @@ func TestRolesInheritance(t *testing.T) {
 }
 
 func TestIsSystemPrincipal(t *testing.T) {
-	t.Fatal()
+	require := require.New(t)
+	require.True(IsSystemPrincipal([]Principal{{Kind: PrincipalKind_Role, WSID: 42, QName: QNameRoleSystem}}, 42))
+	require.False(IsSystemPrincipal([]Principal{{Kind: PrincipalKind_Group, WSID: 42, QName: QNameRoleSystem}}, 42))
+	require.False(IsSystemPrincipal([]Principal{{Kind: PrincipalKind_Role, WSID: 43, QName: QNameRoleSystem}}, 42))
+	require.False(IsSystemPrincipal([]Principal{{Kind: PrincipalKind_Role, WSID: 42, QName: QNameRoleSystem}}, 43))
+	require.False(IsSystemPrincipal([]Principal{{Kind: PrincipalKind_Role, WSID: 42, QName: QNameRoleWorkspaceAdmin}}, 42))
+	require.False(IsSystemPrincipal(nil, 42))
 }

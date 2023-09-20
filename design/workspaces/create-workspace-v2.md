@@ -39,7 +39,7 @@ Projectors:
     - It is not possible to work with uninitialized workspaces
 - Client calls `c.sys.CreateLogin` using pseudo WS calculated as (main cluster, crc16(login))
 - If router sees that baseWSID of WSID is < MaxPseudoBaseWSID then it replaces that pseudo base WSID with app base WSID:
-  - (main cluser, (baseWSID  appWSAmount) + FirstBaseAppWSID)
+  - (main cluser, (baseWSID %% appWSAmount) + FirstBaseAppWSID)
 - `crc16 = crc32.ChecksumIEEE & (MaxUint32 >> 16)`
 - `cdoc.sys.Login` stores login hash only
 

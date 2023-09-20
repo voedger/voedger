@@ -25,8 +25,6 @@ import (
 
 type workspace struct {
 	NextWLogOffset istructs.Offset
-	// NextBaseID            istructs.RecordID
-	// NextCDocCRecordBaseID istructs.RecordID
 	idGenerator istructs.IIDGenerator
 }
 

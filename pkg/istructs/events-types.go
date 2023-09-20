@@ -77,8 +77,6 @@ type IIDGenerator interface {
 	UpdateOnSync(syncID RecordID, def appdef.IDef)
 }
 
-// type IDGenerator func(custom RecordID, def appdef.IDef) (storage RecordID, err error)
-
 type IRawEvent interface {
 	IAbstractEvent
 	ArgumentUnloggedObject() IObject
