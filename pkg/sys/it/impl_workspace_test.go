@@ -262,21 +262,21 @@ func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoin
 	for _, templateBLOB := range blobs {
 		blobsMap[string(templateBLOB.Content)] = templateBLOB
 	}
-	// rowIdx := 0
-	// for _, templateBLOB := range blobs {
-	// 	var fieldIdx int
-	// 	if templateBLOB.FieldName == "image" {
-	// 		fieldIdx = 1
-	// 	} else {
-	// 		fieldIdx = 2
-	// 	}
-	// 	blobID := int64(resp.SectionRow(rowIdx)[fieldIdx].(float64))
-	// 	uploadedBLOB := vit.GetBLOB(istructs.AppQName_test1_app1, wsid, blobID, token)
-	// 	rowIdx++
-	// }
-	for rowIdx := 0; rowIdx < 2; rowIdx++ {
-		fieldIdx := 1
-		if resp.SectionRow(rowIdx)[fieldIdx].(float64) == 0 {
+	rowIdx := 0
+	for _, temp := range blobs {
+		switch temp.RecordID {
+		// IDs are taken from the actual templates
+		case 1:
+			rowIdx = 0
+		case 2:
+			rowIdx = 1
+		default:
+			vit.T.Fatal(temp.RecordID)
+		}
+		var fieldIdx int
+		if temp.FieldName == "image" {
+			fieldIdx = 1
+		} else {
 			fieldIdx = 2
 		}
 		blobID := int64(resp.SectionRow(rowIdx)[fieldIdx].(float64))
@@ -285,32 +285,7 @@ func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoin
 		require.Equal(templateBLOB.Name, uploadedBLOB.Name)
 		require.Equal(templateBLOB.MimeType, uploadedBLOB.MimeType)
 		delete(blobsMap, string(uploadedBLOB.Content))
+		rowIdx++
 	}
 	require.Empty(blobsMap)
-
-	// for _, templateBLOB := range blobs {
-	// 	var rowIdx int
-	// 	var fieldIdx int
-	// 	if templateBLOB.FieldName == "image" {
-	// 		fieldIdx = 1
-	// 	} else {
-	// 		fieldIdx = 2
-	// 	}
-	// 	switch templateBLOB.RecordID {
-	// 	// IDs are taken from the actual templates
-	// 	case 5000000000400:
-	// 		rowIdx = 0
-	// 	case 5000000000416:
-	// 		rowIdx = 1
-	// 	case 5000000000439:
-	// 		rowIdx = 2
-	// 	default:
-	// 		vit.T.Fatal(templateBLOB.RecordID)
-	// 	}
-	// 	blobID := int64(resp.SectionRow(rowIdx)[fieldIdx].(float64))
-	// 	uploadedBLOB := vit.GetBLOB(istructs.AppQName_test1_app1, wsid, blobID, token)
-	// 	require.Equal(templateBLOB.Name, uploadedBLOB.Name)
-	// 	require.Equal(templateBLOB.MimeType, uploadedBLOB.MimeType)
-	// 	require.Equal(templateBLOB.Content, uploadedBLOB.Content)
-	// }
 }
