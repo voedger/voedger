@@ -17,6 +17,7 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys/builtin"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -121,7 +122,7 @@ type hostStateProvider struct {
 
 func newHostStateProvider(ctx context.Context, pid istructs.PartitionID, secretReader isecrets.ISecretReader) *hostStateProvider {
 	p := &hostStateProvider{}
-	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid), p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, intentsLimit, p.getCmdResultBuilder)
+	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid), p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, builtin.MaxCUDs, p.getCmdResultBuilder)
 	return p
 }
 

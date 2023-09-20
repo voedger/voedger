@@ -450,6 +450,9 @@ func parseCUDs(_ context.Context, work interface{}) (err error) {
 		return err
 	}
 	for cudNumber, cudIntf := range cuds {
+		if cudNumber > builtin.MaxCUDs {
+			return ErrTooManyCUDs
+		}
 		xPath := xPath("cuds[" + strconv.Itoa(cudNumber) + "]")
 		cudDataMap, ok := cudIntf.(map[string]interface{})
 		if !ok {
