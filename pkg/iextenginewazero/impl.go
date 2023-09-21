@@ -123,15 +123,20 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 		//WithFeatureBulkMemoryOperations(true).
 		//WithFeatureSignExtensionOps(true).
 		//WithFeatureNonTrappingFloatToIntConversion(true).
+		WithCoreFeatures(api.CoreFeaturesV1).
+		WithCoreFeatures(api.CoreFeatureMultiValue).
+		WithCoreFeatures(api.CoreFeatureNonTrappingFloatToIntConversion).
+		WithCoreFeatures(api.CoreFeatureBulkMemoryOperations).
 		WithMemoryLimitPages(uint32(memPages))
 
 	rtm := wazero.NewRuntimeWithConfig(ctx, rtConf)
 	f.wasiCloser, err = wasi_snapshot_preview1.Instantiate(ctx, rtm)
+
 	if err != nil {
 		return err
 	}
 
-	f.host, err = rtm.NewHostModuleBuilder("wasi_snapshot_preview1").
+	f.host, err = rtm.NewHostModuleBuilder("host").
 		// TODO: NewFunctionBuilder().WithFunc(f.fdWrite).Export("fd_write").
 		NewFunctionBuilder().WithFunc(f.hostGetKey).Export("hostGetKey").
 		NewFunctionBuilder().WithFunc(f.hostMustExist).Export("hostGetValue").
@@ -194,7 +199,7 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 		return err
 	}
 
-	f.host, err = rtm.InstantiateModule(ctx, compiledWasm, wazero.NewModuleConfig().WithName("env"))
+	f.module, err = rtm.InstantiateModule(ctx, compiledWasm, wazero.NewModuleConfig().WithName("env"))
 	if err != nil {
 		return err
 	}
@@ -388,18 +393,7 @@ func (f *wazeroExtEngine) fdWrite(fd, iovs, iovsCount, resultSize uint32) sys.Er
 	return 0
 }
 
-const thirdArgument = 3
-const fourthArgument = 4
-const fifthArgument = 5
-const sixthArgument = 6
-const seventhArgument = 7
-
-func (f *wazeroExtEngine) hostGetKey(args []uint64) (res []uint64) {
-
-	var storagePtr uint32 = uint32(args[0])
-	var storageSize uint32 = uint32(args[1])
-	var entityPtr uint32 = uint32(args[2])
-	var entitySize uint32 = uint32(args[thirdArgument])
+func (f *wazeroExtEngine) hostGetKey(storagePtr, storageSize, entityPtr, entitySize uint32) (res uint64) {
 
 	var storage appdef.QName
 	var entity appdef.QName
@@ -419,19 +413,16 @@ func (f *wazeroExtEngine) hostGetKey(args []uint64) (res []uint64) {
 	if e != nil {
 		panic(e)
 	}
-	res = []uint64{uint64(len(f.keyBuilders))}
+	res = uint64(len(f.keyBuilders))
 	f.keyBuilders = append(f.keyBuilders, k)
 	return
 }
 
-func (f *wazeroExtEngine) hostPanic(args []uint64) (result []uint64) {
-	var namePtr uint32 = uint32(args[0])
-	var nameSize uint32 = uint32(args[1])
+func (f *wazeroExtEngine) hostPanic(namePtr, nameSize uint32) {
 	panic(f.decodeStr(namePtr, nameSize))
 }
 
-func (f *wazeroExtEngine) hostReadValues(args []uint64) (result []uint64) {
-	var keyId uint64 = args[0]
+func (f *wazeroExtEngine) hostReadValues(keyId uint64) {
 	if int(keyId) >= len(f.keyBuilders) {
 		panic(PanicIncorrectKeyBuilder)
 	}
@@ -453,11 +444,10 @@ func (f *wazeroExtEngine) hostReadValues(args []uint64) (result []uint64) {
 	if err != nil {
 		panic(err.Error())
 	}
-	return []uint64{}
 }
 
-func (f *wazeroExtEngine) hostMustExist(args []uint64) (result []uint64) {
-	var keyId uint64 = args[0]
+func (f *wazeroExtEngine) hostMustExist(keyId uint64) (result uint64) {
+
 	if int(keyId) >= len(f.keyBuilders) {
 		panic(PanicIncorrectKeyBuilder)
 	}
@@ -465,15 +455,14 @@ func (f *wazeroExtEngine) hostMustExist(args []uint64) (result []uint64) {
 	if e != nil {
 		panic(e)
 	}
-	result = []uint64{uint64(len(f.values))}
+	result = uint64(len(f.values))
 	f.values = append(f.values, v)
 	return
 }
 
 const maxUint64 = ^uint64(0)
 
-func (f *wazeroExtEngine) hostCanExist(args []uint64) (result []uint64) {
-	var keyId uint64 = args[0]
+func (f *wazeroExtEngine) hostCanExist(keyId uint64) (result uint64) {
 	if int(keyId) >= len(f.keyBuilders) {
 		panic(PanicIncorrectKeyBuilder)
 	}
@@ -482,14 +471,14 @@ func (f *wazeroExtEngine) hostCanExist(args []uint64) (result []uint64) {
 		panic(e)
 	}
 	if !ok {
-		return []uint64{maxUint64}
+		return maxUint64
 	}
-	result = []uint64{uint64(len(f.values))}
+	result = uint64(len(f.values))
 	f.values = append(f.values, v)
 	return
 }
 
-func (f *wazeroExtEngine) allocAndSend(buf []byte) (result []uint64) {
+func (f *wazeroExtEngine) allocAndSend(buf []byte) (result uint64) {
 	addrPkg, e := f.allocBuf(uint32(len(buf)))
 	if e != nil {
 		panic(e)
@@ -497,7 +486,7 @@ func (f *wazeroExtEngine) allocAndSend(buf []byte) (result []uint64) {
 	if !f.module.Memory().Write(addrPkg, buf) {
 		panic(e)
 	}
-	return []uint64{(uint64(addrPkg) << uint64(bitsInFourBytes)) | uint64(len(buf))}
+	return (uint64(addrPkg) << uint64(bitsInFourBytes)) | uint64(len(buf))
 }
 
 func (f *wazeroExtEngine) keyargs(id uint64, namePtr uint32, nameSize uint32) (istructs.IKey, string) {
@@ -521,42 +510,42 @@ func (f *wazeroExtEngine) value(id uint64) istructs.IStateValue {
 	return f.values[id]
 }
 
-func (f *wazeroExtEngine) hostKeyAsString(args []uint64) (result []uint64) {
-	key, name := f.keyargs(args[0], uint32(args[1]), uint32(args[2]))
+func (f *wazeroExtEngine) hostKeyAsString(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	key, name := f.keyargs(id, namePtr, nameSize)
 	return f.allocAndSend([]byte(key.AsString(name)))
 }
 
-func (f *wazeroExtEngine) hostKeyAsBytes(args []uint64) (result []uint64) {
-	key, name := f.keyargs(args[0], uint32(args[1]), uint32(args[2]))
+func (f *wazeroExtEngine) hostKeyAsBytes(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	key, name := f.keyargs(id, namePtr, nameSize)
 	return f.allocAndSend(key.AsBytes(name))
 }
 
-func (f *wazeroExtEngine) hostKeyAsInt32(args []uint64) (result []uint64) {
-	key, name := f.keyargs(args[0], uint32(args[1]), uint32(args[2]))
-	return []uint64{uint64(key.AsInt32(name))}
+func (f *wazeroExtEngine) hostKeyAsInt32(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	key, name := f.keyargs(id, namePtr, nameSize)
+	return uint64(key.AsInt32(name))
 }
 
-func (f *wazeroExtEngine) hostKeyAsInt64(args []uint64) (result []uint64) {
-	key, name := f.keyargs(args[0], uint32(args[1]), uint32(args[2]))
-	return []uint64{uint64(key.AsInt64(name))}
+func (f *wazeroExtEngine) hostKeyAsInt64(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	key, name := f.keyargs(id, namePtr, nameSize)
+	return uint64(key.AsInt64(name))
 }
 
-func (f *wazeroExtEngine) hostKeyAsBool(args []uint64) (result []uint64) {
-	key, name := f.keyargs(args[0], uint32(args[1]), uint32(args[2]))
+func (f *wazeroExtEngine) hostKeyAsBool(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	key, name := f.keyargs(id, namePtr, nameSize)
 	if key.AsBool(name) {
-		return []uint64{1}
+		return uint64(1)
 	}
-	return []uint64{0}
+	return uint64(0)
 }
 
-func (f *wazeroExtEngine) hostKeyAsQNamePkg(args []uint64) (result []uint64) {
-	key, name := f.keyargs(args[0], uint32(args[1]), uint32(args[2]))
+func (f *wazeroExtEngine) hostKeyAsQNamePkg(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	key, name := f.keyargs(id, namePtr, nameSize)
 	qname := key.AsQName(name)
 	return f.allocAndSend([]byte(qname.Pkg()))
 }
 
-func (f *wazeroExtEngine) hostKeyAsQNameEntity(args []uint64) (result []uint64) {
-	key, name := f.keyargs(args[0], uint32(args[1]), uint32(args[2]))
+func (f *wazeroExtEngine) hostKeyAsQNameEntity(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	key, name := f.keyargs(id, namePtr, nameSize)
 	qname := key.AsQName(name)
 	return f.allocAndSend([]byte(qname.Entity()))
 }
@@ -571,44 +560,44 @@ func (f *wazeroExtEngine) hostKeyAsFloat64(key uint64, namePtr uint32, nameSize 
 	return k.AsFloat64(name)
 }
 
-func (f *wazeroExtEngine) hostValueGetAsString(args []uint64) (result []uint64) {
-	v := f.value(args[0])
-	return f.allocAndSend([]byte(v.GetAsString(int(args[1]))))
+func (f *wazeroExtEngine) hostValueGetAsString(value uint64, index uint32) (result uint64) {
+	v := f.value(value)
+	return f.allocAndSend([]byte(v.GetAsString(int(index))))
 }
 
-func (f *wazeroExtEngine) hostValueGetAsQNameEntity(args []uint64) (result []uint64) {
-	v := f.value(args[0])
-	qname := v.GetAsQName(int(args[1]))
+func (f *wazeroExtEngine) hostValueGetAsQNameEntity(value uint64, index uint32) (result uint64) {
+	v := f.value(value)
+	qname := v.GetAsQName(int(index))
 	return f.allocAndSend([]byte(qname.Entity()))
 }
 
-func (f *wazeroExtEngine) hostValueGetAsQNamePkg(args []uint64) (result []uint64) {
-	v := f.value(args[0])
-	qname := v.GetAsQName(int(args[1]))
+func (f *wazeroExtEngine) hostValueGetAsQNamePkg(value uint64, index uint32) (result uint64) {
+	v := f.value(value)
+	qname := v.GetAsQName(int(index))
 	return f.allocAndSend([]byte(qname.Pkg()))
 }
 
-func (f *wazeroExtEngine) hostValueGetAsBytes(args []uint64) (result []uint64) {
-	v := f.value(args[0])
-	return f.allocAndSend(v.GetAsBytes(int(args[1])))
+func (f *wazeroExtEngine) hostValueGetAsBytes(value uint64, index uint32) (result uint64) {
+	v := f.value(value)
+	return f.allocAndSend(v.GetAsBytes(int(index)))
 }
 
-func (f *wazeroExtEngine) hostValueGetAsBool(args []uint64) (result []uint64) {
-	v := f.value(args[0])
-	if v.GetAsBool(int(args[1])) {
-		return []uint64{1}
+func (f *wazeroExtEngine) hostValueGetAsBool(value uint64, index uint32) (result uint64) {
+	v := f.value(value)
+	if v.GetAsBool(int(index)) {
+		return 1
 	}
-	return []uint64{0}
+	return 0
 }
 
-func (f *wazeroExtEngine) hostValueGetAsInt32(args []uint64) (result []uint64) {
-	v := f.value(args[0])
-	return []uint64{uint64(v.GetAsInt32(int(args[1])))}
+func (f *wazeroExtEngine) hostValueGetAsInt32(value uint64, index uint32) (result uint64) {
+	v := f.value(value)
+	return uint64(v.GetAsInt32(int(index)))
 }
 
-func (f *wazeroExtEngine) hostValueGetAsInt64(args []uint64) (result []uint64) {
-	v := f.value(args[0])
-	return []uint64{uint64(v.GetAsInt64(int(args[1])))}
+func (f *wazeroExtEngine) hostValueGetAsInt64(value uint64, index uint32) (result uint64) {
+	v := f.value(value)
+	return uint64(v.GetAsInt64(int(index)))
 }
 
 func (f *wazeroExtEngine) hostValueGetAsFloat32(id uint64, index uint32) float32 {
@@ -619,40 +608,40 @@ func (f *wazeroExtEngine) hostValueGetAsFloat64(id uint64, index uint32) float64
 	return f.value(id).GetAsFloat64(int(index))
 }
 
-func (f *wazeroExtEngine) hostValueGetAsValue(args []uint64) (result []uint64) {
-	v := f.value(args[0])
-	value := v.GetAsValue(int(args[1]))
-	result = []uint64{uint64(len(f.values))}
+func (f *wazeroExtEngine) hostValueGetAsValue(val uint64, index uint32) (result uint64) {
+	v := f.value(val)
+	value := v.GetAsValue(int(index))
+	result = uint64(len(f.values))
 	f.values = append(f.values, value)
 	return
 }
 
-func (f *wazeroExtEngine) hostValueAsString(args []uint64) (result []uint64) {
-	v, name := f.valueargs(args[0], uint32(args[1]), uint32(args[2]))
+func (f *wazeroExtEngine) hostValueAsString(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	v, name := f.valueargs(id, namePtr, nameSize)
 	return f.allocAndSend([]byte(v.AsString(name)))
 }
 
-func (f *wazeroExtEngine) hostValueAsBytes(args []uint64) (result []uint64) {
-	v, name := f.valueargs(args[0], uint32(args[1]), uint32(args[2]))
+func (f *wazeroExtEngine) hostValueAsBytes(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	v, name := f.valueargs(id, namePtr, nameSize)
 	return f.allocAndSend(v.AsBytes(name))
 }
 
-func (f *wazeroExtEngine) hostValueAsInt32(args []uint64) (result []uint64) {
-	v, name := f.valueargs(args[0], uint32(args[1]), uint32(args[2]))
-	return []uint64{uint64(v.AsInt32(name))}
+func (f *wazeroExtEngine) hostValueAsInt32(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	v, name := f.valueargs(id, namePtr, nameSize)
+	return uint64(v.AsInt32(name))
 }
 
-func (f *wazeroExtEngine) hostValueAsInt64(args []uint64) (result []uint64) {
-	v, name := f.valueargs(args[0], uint32(args[1]), uint32(args[2]))
-	return []uint64{uint64(v.AsInt64(name))}
+func (f *wazeroExtEngine) hostValueAsInt64(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	v, name := f.valueargs(id, namePtr, nameSize)
+	return uint64(v.AsInt64(name))
 }
 
-func (f *wazeroExtEngine) hostValueAsBool(args []uint64) (result []uint64) {
-	v, name := f.valueargs(args[0], uint32(args[1]), uint32(args[2]))
+func (f *wazeroExtEngine) hostValueAsBool(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	v, name := f.valueargs(id, namePtr, nameSize)
 	if v.AsBool(name) {
-		return []uint64{uint64(1)}
+		return 1
 	}
-	return []uint64{uint64(0)}
+	return 0
 }
 
 func (f *wazeroExtEngine) hostValueAsFloat32(id uint64, namePtr, nameSize uint32) float32 {
@@ -665,32 +654,31 @@ func (f *wazeroExtEngine) hostValueAsFloat64(id uint64, namePtr, nameSize uint32
 	return v.AsFloat64(name)
 }
 
-func (f *wazeroExtEngine) hostValueAsQNameEntity(args []uint64) (result []uint64) {
-	v, name := f.valueargs(args[0], uint32(args[1]), uint32(args[2]))
+func (f *wazeroExtEngine) hostValueAsQNameEntity(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	v, name := f.valueargs(id, namePtr, nameSize)
 	qname := v.AsQName(name)
 	return f.allocAndSend([]byte(qname.Entity()))
 }
 
-func (f *wazeroExtEngine) hostValueAsQNamePkg(args []uint64) (result []uint64) {
-	v, name := f.valueargs(args[0], uint32(args[1]), uint32(args[2]))
+func (f *wazeroExtEngine) hostValueAsQNamePkg(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	v, name := f.valueargs(id, namePtr, nameSize)
 	qname := v.AsQName(name)
 	return f.allocAndSend([]byte(qname.Pkg()))
 }
 
-func (f *wazeroExtEngine) hostValueAsValue(args []uint64) (result []uint64) {
-	v, name := f.valueargs(args[0], uint32(args[1]), uint32(args[2]))
+func (f *wazeroExtEngine) hostValueAsValue(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+	v, name := f.valueargs(id, namePtr, nameSize)
 	value := v.AsValue(name)
-	result = []uint64{uint64(len(f.values))}
+	result = uint64(len(f.values))
 	f.values = append(f.values, value)
 	return
 }
 
-func (f *wazeroExtEngine) hostValueLength(args []uint64) (result []uint64) {
-	var id uint64 = args[0]
+func (f *wazeroExtEngine) hostValueLength(id uint64) (result uint64) {
 	if int(id) >= len(f.values) {
 		panic(PanicIncorrectValue)
 	}
-	return []uint64{uint64(f.values[id].Length())}
+	return uint64(f.values[id].Length())
 }
 
 func (f *wazeroExtEngine) allocBuf(size uint32) (addr uint32, err error) {
@@ -762,8 +750,7 @@ func (f *wazeroExtEngine) getMallocs() (uint64, error) {
 	return res[0], nil
 }
 
-func (f *wazeroExtEngine) hostNewValue(args []uint64) (result []uint64) {
-	var keyId uint64 = args[0]
+func (f *wazeroExtEngine) hostNewValue(keyId uint64) (result uint64) {
 	if int(keyId) >= len(f.keyBuilders) {
 		panic(PanicIncorrectKeyBuilder)
 	}
@@ -771,14 +758,12 @@ func (f *wazeroExtEngine) hostNewValue(args []uint64) (result []uint64) {
 	if err != nil {
 		panic(err)
 	}
-	result = []uint64{uint64(len(f.valueBuilders))}
+	result = uint64(len(f.valueBuilders))
 	f.valueBuilders = append(f.valueBuilders, vb)
 	return
 }
 
-func (f *wazeroExtEngine) hostUpdateValue(args []uint64) (result []uint64) {
-	var keyId uint64 = args[0]
-	var existingValueId uint64 = args[1]
+func (f *wazeroExtEngine) hostUpdateValue(keyId, existingValueId uint64) (result uint64) {
 	if int(keyId) >= len(f.keyBuilders) {
 		panic(PanicIncorrectKeyBuilder)
 	}
@@ -789,7 +774,7 @@ func (f *wazeroExtEngine) hostUpdateValue(args []uint64) (result []uint64) {
 	if err != nil {
 		panic(err)
 	}
-	result = []uint64{uint64(len(f.valueBuilders))}
+	result = uint64(len(f.valueBuilders))
 	f.valueBuilders = append(f.valueBuilders, vb)
 	return
 }
@@ -811,18 +796,13 @@ func (f *wazeroExtEngine) getWriterArgs(id uint64, typ uint32, namePtr uint32, n
 	return
 }
 
-func (f *wazeroExtEngine) hostRowWriterPutString(args []uint64) []uint64 {
-	writer, name := f.getWriterArgs(args[0], uint32(args[1]), uint32(args[2]), uint32(args[thirdArgument]))
-	var valuePtr uint32 = uint32(args[fourthArgument])
-	var valueSize uint32 = uint32(args[fifthArgument])
+func (f *wazeroExtEngine) hostRowWriterPutString(id uint64, typ uint32, namePtr uint32, nameSize, valuePtr, valueSize uint32) {
+	writer, name := f.getWriterArgs(id, typ, namePtr, nameSize)
 	writer.PutString(name, f.decodeStr(valuePtr, valueSize))
-	return []uint64{}
 }
 
-func (f *wazeroExtEngine) hostRowWriterPutBytes(args []uint64) []uint64 {
-	writer, name := f.getWriterArgs(args[0], uint32(args[1]), uint32(args[2]), uint32(args[thirdArgument]))
-	var valuePtr uint32 = uint32(args[fourthArgument])
-	var valueSize uint32 = uint32(args[fifthArgument])
+func (f *wazeroExtEngine) hostRowWriterPutBytes(id uint64, typ uint32, namePtr uint32, nameSize, valuePtr, valueSize uint32) {
+	writer, name := f.getWriterArgs(id, typ, namePtr, nameSize)
 
 	var bytes []byte
 	var ok bool
@@ -832,36 +812,31 @@ func (f *wazeroExtEngine) hostRowWriterPutBytes(args []uint64) []uint64 {
 	}
 
 	writer.PutBytes(name, bytes)
-	return []uint64{}
 }
 
-func (f *wazeroExtEngine) hostRowWriterPutInt32(args []uint64) []uint64 {
-	writer, name := f.getWriterArgs(args[0], uint32(args[1]), uint32(args[2]), uint32(args[thirdArgument]))
-	writer.PutInt32(name, int32(args[fourthArgument]))
-	return []uint64{}
+func (f *wazeroExtEngine) hostRowWriterPutInt32(id uint64, typ uint32, namePtr uint32, nameSize uint32, value int32) {
+	writer, name := f.getWriterArgs(id, typ, namePtr, nameSize)
+	writer.PutInt32(name, value)
 }
 
-func (f *wazeroExtEngine) hostRowWriterPutInt64(args []uint64) []uint64 {
-	writer, name := f.getWriterArgs(args[0], uint32(args[1]), uint32(args[2]), uint32(args[thirdArgument]))
-	writer.PutInt64(name, int64(args[fourthArgument]))
-	return []uint64{}
+func (f *wazeroExtEngine) hostRowWriterPutInt64(id uint64, typ uint32, namePtr uint32, nameSize uint32, value int64) {
+	writer, name := f.getWriterArgs(id, typ, namePtr, nameSize)
+	writer.PutInt64(name, value)
 }
 
-func (f *wazeroExtEngine) hostRowWriterPutQName(args []uint64) []uint64 {
-	writer, name := f.getWriterArgs(args[0], uint32(args[1]), uint32(args[2]), uint32(args[thirdArgument]))
-	pkg := f.decodeStr(uint32(args[fourthArgument]), uint32(args[fifthArgument]))
-	entity := f.decodeStr(uint32(args[sixthArgument]), uint32(args[seventhArgument]))
+func (f *wazeroExtEngine) hostRowWriterPutQName(id uint64, typ uint32, namePtr uint32, nameSize uint32, value int64, pkgPtr, pkgSize, entityPtr, entitySize uint32) {
+	writer, name := f.getWriterArgs(id, typ, namePtr, nameSize)
+	pkg := f.decodeStr(pkgPtr, pkgSize)
+	entity := f.decodeStr(entityPtr, entitySize)
 	writer.PutQName(name, appdef.NewQName(pkg, entity))
-	return []uint64{}
 }
 
-func (f *wazeroExtEngine) hostRowWriterPutBool(args []uint64) []uint64 {
-	writer, name := f.getWriterArgs(args[0], uint32(args[1]), uint32(args[2]), uint32(args[thirdArgument]))
-	writer.PutBool(name, int32(args[fourthArgument]) > 0)
-	return []uint64{}
+func (f *wazeroExtEngine) hostRowWriterPutBool(id uint64, typ uint32, namePtr uint32, nameSize uint32, value int32) {
+	writer, name := f.getWriterArgs(id, typ, namePtr, nameSize)
+	writer.PutBool(name, value > 0)
 }
 
-func (f *wazeroExtEngine) hostRowWriterPutFloat32(id uint64, typ uint32, namePtr, nameSize uint32, value float32) {
+func (f *wazeroExtEngine) hostRowWriterPutFloat32(id uint64, typ uint32, namePtr uint32, nameSize uint32, value float32) {
 	writer, name := f.getWriterArgs(id, typ, namePtr, nameSize)
 	writer.PutFloat32(name, value)
 }
