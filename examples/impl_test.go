@@ -23,6 +23,8 @@ const (
 const (
 	modeOrder = iota
 	modeBill
+	modeBill1
+	modeBill2
 )
 
 //go:embed sys/*.sql
@@ -46,10 +48,12 @@ func Test_BasicUsageMockWasmExt(t *testing.T) {
 
 	extEngine.SetLimits(limits)
 
+	// Init mock strorage
+	mv = *mockedValue()
+
 	//
 	// Invoke Order
 	//
-
 	var order = &mockIo{}
 	mockmode = modeOrder
 
@@ -73,6 +77,67 @@ func Test_BasicUsageMockWasmExt(t *testing.T) {
 	require.Equal(int32(0), b.items["Amount"])
 	require.Equal(int32(0), b.items["Status"])
 }
+
+func Test_BasicUsageFullMockWasmExt(t *testing.T) {
+
+	require := require.New(t)
+	ctx := context.Background()
+
+	// Init mock strorage
+	mv = *mockedValue()
+
+	moduleURL := testModuleURL("./vrestaurant/extwasm/ext.wasm")
+	extEngine, err := wasm.ExtEngineWazeroFactory(ctx, moduleURL, []string{extUpdateTableStatus}, iextengine.ExtEngineConfig{})
+	require.Nil(err)
+
+	extEngine.SetLimits(limits)
+
+	//
+	// Invoke Order
+	//
+
+	var order = &mockIo{}
+	mockmode = modeOrder
+
+	err = extEngine.Invoke(ctx, extUpdateTableStatus, order)
+	require.NoError(err)
+	require.Equal(int64(1560), mv.Data["NotPaid"])
+	require.Equal(int32(1), mv.Data["Status"])
+	require.Equal(int(1), len(order.intents))
+	v := order.intents[0].value.(*mockValueBuilder)
+	require.Equal(int64(1560), v.items["NotPaid"])
+	require.Equal(int32(1), v.items["Status"])
+
+	//
+	// Invoke Payment1
+	//
+	var bill1 = &mockIo{}
+	mockmode = modeBill1
+	err = extEngine.Invoke(ctx, extUpdateTableStatus, bill1)
+	require.NoError(err)
+	require.Equal(int64(860), mv.Data["NotPaid"])
+	require.Equal(int32(1), mv.Data["Status"])
+	require.Equal(int(1), len(order.intents))
+	v = bill1.intents[0].value.(*mockValueBuilder)
+	require.Equal(int64(860), v.items["NotPaid"])
+	require.Equal(int32(1), v.items["Status"])
+
+	//
+	// Invoke Payment1
+	//
+	var bill2 = &mockIo{}
+	mockmode = modeBill2
+	err = extEngine.Invoke(ctx, extUpdateTableStatus, bill2)
+	require.NoError(err)
+
+	require.Equal(int64(0), mv.Data["NotPaid"])
+	require.Equal(int32(0), mv.Data["Status"])
+	require.Equal(int(1), len(order.intents))
+	v = bill2.intents[0].value.(*mockValueBuilder)
+	require.Equal(int64(0), v.items["NotPaid"])
+	require.Equal(int32(0), v.items["Status"])
+}
+
 /*
 func Test_BasicUsageWasmExt(t *testing.T) {
 

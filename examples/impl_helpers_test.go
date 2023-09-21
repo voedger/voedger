@@ -30,6 +30,7 @@ var orderQName = appdef.NewQName("vrestaurant", "Order")
 var billQName = appdef.NewQName("vrestaurant", "Bill")
 
 var mockmode int
+var mv mockValue
 
 type mockIo struct {
 	istructs.IState
@@ -60,26 +61,23 @@ func (s *mockIo) KeyBuilder(storage, entity appdef.QName) (builder istructs.ISta
 	}, nil
 }
 
-func mockedValue(name string, value interface{}) istructs.IStateValue {
+func mockedValue() *mockValue {
 	mv := mockValue{
 		TestObject: coreutils.TestObject{Data: map[string]interface{}{}},
 	}
-	mv.Data[name] = value
 	return &mv
 }
 
 func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, ok bool, err error) {
 	k := key.(*mockKeyBuilder)
-	mv := mockValue{
-		TestObject: coreutils.TestObject{Data: map[string]interface{}{}},
-	}
 	if k.storage == tableStatusQName {
 		mv.Data["NotPaid"] = mockTableRest
 		if mockTableRest > 0 {
-			mv.Data["Status"] = 1
+			mv.Data["Status"] = int32(1)
 		} else {
-			mv.Data["Status"] = 0
+			mv.Data["Status"] = int32(0)
 		}
+		return &mv, true, nil
 	}
 	if k.storage == transactionQName {
 		mv.Data["qname"] = transactionQName
@@ -114,7 +112,7 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 					]
 				}
 			`)
-		} else {
+		} else if mockmode == modeBill {
 			mockTableRest = 0
 			mv.Data["qname"] = billQName
 			mv.Data["arg"] = newJsonValue(`
@@ -132,6 +130,34 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 					]
 				}
 			`)
+		} else if mockmode == modeBill1 {
+			mockTableRest = 860
+			mv.Data["qname"] = billQName
+			mv.Data["arg"] = newJsonValue(`
+					{
+						"transactionID": 1, 
+						"BillPayment": [
+							{
+							  "Kind": 1,
+							  "Amount": 700
+							}
+						]
+					}
+				`)
+		} else if mockmode == modeBill2 {
+			mockTableRest = 0
+			mv.Data["qname"] = billQName
+			mv.Data["arg"] = newJsonValue(`
+						{
+							"transactionID": 1, 
+							"BillPayment": [
+								{
+									"Kind": 2,
+									"Amount": 860
+								}
+							]
+						}
+					`)
 		}
 		return &mv, true, nil
 	}
