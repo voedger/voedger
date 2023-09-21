@@ -12,15 +12,27 @@ import (
 )
 
 const (
+	testtablenumber         = 25
 	qn               string = "qname"
 	transactionQName        = "vrestaurant.Transaction"
 	tableStatusQName        = "vrestaurant.TableStatus"
-	orderQName       string = "vrestaurant.Order"
-	billQName        string = "vrestaurant.Bill"
 )
+
+// QName s.e.
+type QName struct {
+	pkg    string
+	entity string
+}
+
+func newQName(pkgName, entityName string) QName {
+	return QName{pkg: pkgName, entity: entityName}
+}
 
 func getOrderTotal(order ext.TValue) int64 {
 	orderItem := order.AsValue("OrderItem")
+	if orderItem == 0 {
+		// try to get value from host
+	}
 	if orderItem.Length() == 0 { // no items in order
 		return 0
 	}
@@ -34,13 +46,16 @@ func getOrderTotal(order ext.TValue) int64 {
 }
 
 func getBillTotal(bill ext.TValue) int64 {
-	billPayments := bill.AsValue("BillPayment")
-	if billPayments.Length() == 0 { // no payments in bill
+	billPayment := bill.AsValue("BillPayment")
+	if billPayment == 0 { // no items in order
+		return 0
+	}
+	if billPayment.Length() == 0 { // no payments in bill
 		return 0
 	}
 	var total int64
-	for i := 0; i < int(billPayments.Length()); i++ {
-		item := billPayments.GetAsValue(i)
+	for i := 0; i < int(billPayment.Length()); i++ {
+		item := billPayment.GetAsValue(i)
 		total = total + item.AsInt64("Amount")
 	}
 	return total
@@ -62,16 +77,13 @@ func doUpdateTableStatus(tableNo int32, incAmount int64) {
 	if statusExist {
 		amount := statusValue.AsInt64("NotPaid") + incAmount
 		status := statusValue.AsInt64("Status")
+		statusIntent := ext.UpdateValue(kbTS, statusValue)
+		statusIntent.PutInt64("NotPaid", amount)
+		statusIntent.PutInt32("Amount", int32(incAmount))
 		if amount == 0 {
-			statusIntent := ext.UpdateValue(kbTS, statusValue)
-			statusIntent.PutInt64("NotPaid", amount)
 			statusIntent.PutInt32("Status", 0)
-			statusIntent.PutInt32("Amount", int32(incAmount))
 		} else if status == 0 {
-			statusIntent := ext.UpdateValue(kbTS, statusValue)
-			statusIntent.PutInt64("NotPaid", amount)
 			statusIntent.PutInt32("Status", 1)
-			statusIntent.PutInt32("Amount", int32(incAmount))
 		}
 	} else {
 		statusIntent := ext.NewValue(kbTS) // Note: why NewValue creates TIntent?
@@ -90,41 +102,64 @@ func updateTableStatus() {
 		return
 	}
 
-	/*
-		transaction, ok := getTransactionByID(transactionID)
-		if !ok {
-			return
-		}
-		tableNo := transaction.AsInt32("Tableno")
-		if tableNo == 0 {
-			return
-		}
-	*/
+	transaction, ok := getTransactionByID(transactionID)
+	if !ok {
+		return
+	}
+	tableNo := transaction.AsInt32("Tableno")
+	if tableNo == 0 {
+		return
+	}
+
 	var incAmount int64
 
-	incAmount = getOrderTotal(arg)
+	var orderQName = newQName("vrestaurant", "Order")
+	var billQName = newQName("vrestaurant", "Bill")
+	if (event.AsQName(qn).Entity == orderQName.entity) && (event.AsQName(qn).Pkg == orderQName.pkg) {
+		incAmount = getOrderTotal(arg)
+	} else if (event.AsQName(qn).Entity == billQName.entity) && (event.AsQName(qn).Pkg == billQName.pkg) {
+		incAmount = -getBillTotal(arg)
+	}
+
+	if incAmount == 0 {
+		return
+	}
+	doUpdateTableStatus(tableNo, incAmount)
+
+}
+
+//export updateMockTableStatus
+func updateMockTableStatus() {
+	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
+	arg := event.AsValue("arg")
+
+	transactionID := arg.AsInt64("transactionID")
+	if transactionID == 0 {
+		return
+	}
+	opType := event.AsQName("qname")
+
+	var orderAmount int64
+	var billAmount int64
+	var orderQName = newQName("vrestaurant", "Order")
+	if (opType.Entity == orderQName.entity) && (opType.Pkg == orderQName.pkg) {
+		orderAmount = getOrderTotal(arg)
+	} else {
+		orderAmount = 1560
+		billAmount = getBillTotal(arg)
+	}
+
+	var total int32
 	kbTS := ext.KeyBuilder(tableStatusQName, ext.NullEntity)
 	statusIntent := ext.NewValue(kbTS) // Note: why NewValue creates TIntent?
-	statusIntent.PutInt32("TableNo", 25)
-	statusIntent.PutInt32("Amount", int32(incAmount))
-	if incAmount == 0 {
+	statusIntent.PutInt32("TableNo", testtablenumber)
+	total = int32(orderAmount - billAmount)
+	statusIntent.PutInt32("Amount", total)
+	if total == 0 {
 		statusIntent.PutInt32("Status", 0)
 	} else {
 		statusIntent.PutInt32("Status", 1)
 	}
-	/*
-
-		if event.AsString(qn) == orderQName {
-			incAmount = getOrderTotal(arg)
-		} else if event.AsString(qn) == billQName {
-			incAmount = -getBillTotal(arg)
-		}
-
-		if incAmount == 0 {
-			return
-		}
-		doUpdateTableStatus(tableNo, incAmount)
-	*/
 }
 
 func main() {

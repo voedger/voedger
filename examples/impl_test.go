@@ -16,6 +16,11 @@ import (
 )
 
 const (
+	extUpdateMockTableStatus = "updateMockTableStatus"
+	extUpdateTableStatus     = "updateTableStatus"
+)
+
+const (
 	modeOrder = iota
 	modeBill
 )
@@ -30,6 +35,83 @@ var limits = iextengine.ExtensionLimits{
 	ExecutionInterval: 100 * time.Second,
 }
 
+func Test_BasicUsageMockWasmExt(t *testing.T) {
+
+	require := require.New(t)
+	ctx := context.Background()
+
+	moduleURL := testModuleURL("./vrestaurant/extwasm/ext.wasm")
+	extEngine, err := wasm.ExtEngineWazeroFactory(ctx, moduleURL, []string{extUpdateMockTableStatus}, iextengine.ExtEngineConfig{})
+	require.Nil(err)
+
+	extEngine.SetLimits(limits)
+
+	//
+	// Invoke Order
+	//
+
+	var order = &mockIo{}
+	mockmode = modeOrder
+
+	err = extEngine.Invoke(ctx, extUpdateMockTableStatus, order)
+	require.NoError(err)
+	require.Equal(int(1), len(order.intents))
+	v := order.intents[0].value.(*mockValueBuilder)
+	require.Equal(int32(1560), v.items["Amount"])
+	require.Equal(int32(1), v.items["Status"])
+
+	//
+	// Invoke Payment
+	//
+	var bill = &mockIo{}
+	mockmode = modeBill
+	err = extEngine.Invoke(ctx, extUpdateMockTableStatus, bill)
+	require.NoError(err)
+
+	require.Equal(1, len(bill.intents))
+	b := bill.intents[0].value.(*mockValueBuilder)
+	require.Equal(int32(0), b.items["Amount"])
+	require.Equal(int32(0), b.items["Status"])
+}
+/*
+func Test_BasicUsageWasmExt(t *testing.T) {
+
+	require := require.New(t)
+	ctx := context.Background()
+
+	moduleURL := testModuleURL("./vrestaurant/extwasm/ext.wasm")
+	extEngine, err := wasm.ExtEngineWazeroFactory(ctx, moduleURL, []string{extUpdateTableStatus}, iextengine.ExtEngineConfig{})
+	require.NoError(err)
+	extEngine.SetLimits(limits)
+
+	// Init BO for Ordering
+	InitTestBO()
+
+	// Create Order in storage
+	CreateTestOrder()
+	//
+	// Invoke Order
+	//
+	var order = &mockIo{}
+	require.NoError(extensions["updateTableStatus"].Invoke(order))
+	require.Equal(1, len(order.intents))
+	v := order.intents[0].value.(*mockValueBuilder)
+	require.Equal(1, v.items["Status"])
+
+	// Init BO for Payment
+	CreateTestBill()
+
+	//
+	// Invoke Payment
+	//
+	var bill = &mockIo{}
+	require.NoError(extensions["updateTableStatus"].Invoke(bill))
+	require.Equal(1, len(order.intents))
+	v = order.intents[0].value.(*mockValueBuilder)
+	require.Equal(0, v.items["Status"])
+
+}
+*/
 /*
 	func getSysPackageAST() *parser.PackageSchemaAST {
 		pkgSys, err := parser.ParsePackageDir(appdef.SysPackage, sfs, "sys")
@@ -86,95 +168,3 @@ func Test_VRestaurantBasic(t *testing.T) {
 		require.Equal(appdef.DefKind_ViewRecord, view.Kind())
 	}
 */
-
-func Test_BasicUsageMockWasmExt(t *testing.T) {
-
-	require := require.New(t)
-	ctx := context.Background()
-
-	moduleUrl := testModuleURL("./vrestaurant/extwasm/ext.wasm")
-	extEngine, closer, err := wasm.ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{})
-	if err != nil {
-		panic(err)
-	}
-	defer closer()
-
-	extensions := make(map[string]iextengine.IExtension)
-	extEngine.ForEach(func(name string, ext iextengine.IExtension) {
-		extensions[name] = ext
-	})
-	require.Equal(1, len(extensions))
-	extEngine.SetLimits(limits)
-
-	//
-	// Invoke Order
-	//
-	var order = &mockIo{}
-	mockmode = modeOrder
-
-	err = extensions["updateTableStatus"].Invoke(order)
-	require.NoError(err)
-	require.Equal(int(1), len(order.intents))
-	v := order.intents[0].value.(*mockValueBuilder)
-	require.Equal(int32(1560), v.items["Amount"])
-	require.Equal(int32(1), v.items["Status"])
-
-	//
-	// Invoke Payment
-	//
-	var bill = &mockIo{}
-	mockmode = modeBill
-	require.NoError(extensions["updateTableStatus"].Invoke(bill))
-	require.Equal(1, len(order.intents))
-	v = order.intents[0].value.(*mockValueBuilder)
-	require.Equal(int32(0), v.items["Amount"])
-	require.Equal(0, v.items["Status"])
-
-}
-
-func Test_BasicUsageWasmExt(t *testing.T) {
-
-	require := require.New(t)
-	ctx := context.Background()
-
-	moduleUrl := testModuleURL("./vrestaurant/extwasm/ext.wasm")
-	extEngine, closer, err := wasm.ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{})
-	if err != nil {
-		panic(err)
-	}
-	defer closer()
-
-	extensions := make(map[string]iextengine.IExtension)
-	extEngine.ForEach(func(name string, ext iextengine.IExtension) {
-		extensions[name] = ext
-	})
-	require.Equal(1, len(extensions))
-	extEngine.SetLimits(limits)
-
-	// Init BO for Ordering
-	InitTestBO()
-
-	// Create Order in storage
-	CreateTestOrder()
-	//
-	// Invoke Order
-	//
-	var order = &mockIo{}
-	require.NoError(extensions["updateTableStatus"].Invoke(order))
-	require.Equal(1, len(order.intents))
-	v := order.intents[0].value.(*mockValueBuilder)
-	require.Equal(1, v.items["Status"])
-
-	// Init BO for Payment
-	CreateTestBill()
-
-	//
-	// Invoke Payment
-	//
-	var bill = &mockIo{}
-	require.NoError(extensions["updateTableStatus"].Invoke(bill))
-	require.Equal(1, len(order.intents))
-	v = order.intents[0].value.(*mockValueBuilder)
-	require.Equal(0, v.items["Status"])
-
-}

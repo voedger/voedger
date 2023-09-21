@@ -93,8 +93,8 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 	}
 	if k.storage == storageEvent {
 		if mockmode == modeOrder {
+			mockTableRest = 1560
 			mv.Data["qname"] = orderQName
-			mockTableRest = 1560.0
 			mv.Data["arg"] = newJsonValue(`
 				{
 					"transactionID": 1, 
@@ -120,7 +120,7 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 			mv.Data["arg"] = newJsonValue(`
 				{
 					"transactionID": 1, 
-					"OrderItem": [
+					"BillPayment": [
 						{
 						  "Kind": 1,
 						  "Amount": 700
