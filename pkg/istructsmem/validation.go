@@ -362,7 +362,7 @@ func (v *validators) validCUDRefRawIDs(cud *cudType) (err error) {
 					target, ok := rawIDs[id]
 					if !ok {
 						err = errors.Join(err,
-							validateErrorf(ECode_InvalidRefRecordID, "cud.%s record «%s: %s» field «%s» refers to unknown raw ID «%d»: %w", cu, rec.Container(), rec.QName(), name, id, ErrorRecordIDNotFound))
+							validateErrorf(ECode_InvalidRefRecordID, "cud.%s record «%s: %s» field «%s» refers to unknown raw ID «%d»: %w", cu, rec.Container(), rec.QName(), name, id, ErrRecordIDNotFound))
 						return
 					}
 					switch name {
