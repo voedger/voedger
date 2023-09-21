@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 )
 
@@ -107,16 +108,17 @@ var test = testDataType{
 }
 
 type idsGeneratorType struct {
+	istructs.IIDGenerator
 	idmap          map[istructs.RecordID]istructs.RecordID
-	nextID         istructs.RecordID
 	nextPlogOffset istructs.Offset
 }
 
-func (me *idsGeneratorType) newID(tempId istructs.RecordID, _ appdef.IDef) (storageID istructs.RecordID, err error) {
-	storageID = me.nextID
-	me.nextID++
-	me.idmap[tempId] = storageID
-	return storageID, nil
+func (me *idsGeneratorType) NextID(rawID istructs.RecordID, def appdef.IDef) (storageID istructs.RecordID, err error) {
+	if storageID, err = me.IIDGenerator.NextID(rawID, def); err != nil {
+		return istructs.NullRecordID, err
+	}
+	me.idmap[rawID] = storageID
+	return
 }
 
 func (me *idsGeneratorType) nextOffset() (offset istructs.Offset) {
@@ -132,8 +134,8 @@ func (me *idsGeneratorType) decOffset() {
 func newIdsGenerator() idsGeneratorType {
 	return idsGeneratorType{
 		idmap:          make(map[istructs.RecordID]istructs.RecordID),
-		nextID:         istructs.FirstBaseRecordID,
 		nextPlogOffset: test.plogStartOfs,
+		IIDGenerator:   istructsmem.NewIDGenerator(),
 	}
 }
 

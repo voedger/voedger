@@ -152,14 +152,7 @@ func TestBasicUsage(t *testing.T) {
 
 	// Save raw event to PLog & WLog and save CUD demo
 	// 5. save to PLog
-	var nextID = istructs.FirstBaseRecordID
-	pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr,
-		func(tempId istructs.RecordID, _ appdef.IDef) (storageID istructs.RecordID, err error) {
-			storageID = nextID
-			nextID++
-			return storageID, nil
-		},
-	)
+	pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGenerator())
 	require.NoError(saveErr, saveErr)
 	defer pLogEvent.Release()
 

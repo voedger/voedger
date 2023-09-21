@@ -72,7 +72,10 @@ type ICUDRow interface {
 	ModifiedFields(cb func(fieldName string, newValue interface{}))
 }
 
-type IDGenerator func(custom RecordID, def appdef.IDef) (storage RecordID, err error)
+type IIDGenerator interface {
+	NextID(rawID RecordID, def appdef.IDef) (storageID RecordID, err error)
+	UpdateOnSync(syncID RecordID, def appdef.IDef)
+}
 
 type IRawEvent interface {
 	IAbstractEvent

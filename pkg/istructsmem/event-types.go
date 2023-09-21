@@ -179,7 +179,7 @@ func (ev *eventType) qNameID() qnames.QNameID {
 }
 
 // Regenerates all raw IDs in event arguments and CUDs using specified generator
-func (ev *eventType) regenerateIDs(generator istructs.IDGenerator) (err error) {
+func (ev *eventType) regenerateIDs(generator istructs.IIDGenerator) (err error) {
 	if (ev.argObject.QName() != appdef.NullQName) && ev.argObject.isDocument() {
 		if err := ev.argObject.regenerateIDs(generator); err != nil {
 			return err
@@ -450,12 +450,14 @@ func (cud *cudType) enumRecs(cb func(rec istructs.ICUDRow) error) (err error) {
 type newIDsPlanType map[istructs.RecordID]istructs.RecordID
 
 // regenerateIDsPlan creates new ID regeneration plan
-func (cud *cudType) regenerateIDsPlan(generator istructs.IDGenerator) (newIDs newIDsPlanType, err error) {
+func (cud *cudType) regenerateIDsPlan(generator istructs.IIDGenerator) (newIDs newIDsPlanType, err error) {
 	plan := make(newIDsPlanType)
 	for _, rec := range cud.creates {
 		id := rec.ID()
 		if !id.IsRaw() {
-			continue // storage IDs is allowed for sync events…
+			// storage IDs are allowed for sync events
+			generator.UpdateOnSync(id, rec.def)
+			continue
 		}
 
 		var storeID istructs.RecordID
@@ -465,7 +467,7 @@ func (cud *cudType) regenerateIDsPlan(generator istructs.IDGenerator) (newIDs ne
 				return nil, err
 			}
 		} else {
-			if storeID, err = generator(id, rec.def); err != nil {
+			if storeID, err = generator.NextID(id, rec.def); err != nil {
 				return nil, err
 			}
 		}
@@ -518,7 +520,7 @@ func regenerateIDsInUpdateRecord(rec *updateRecType, newIDs newIDsPlanType) (err
 }
 
 // Regenerates all raw IDs to storage IDs
-func (cud *cudType) regenerateIDs(generator istructs.IDGenerator) error {
+func (cud *cudType) regenerateIDs(generator istructs.IIDGenerator) error {
 
 	newIDs, err := cud.regenerateIDsPlan(generator)
 	if err != nil {
@@ -736,13 +738,13 @@ func (el *elementType) maskValues() {
 
 // regenerateIDs regenerates element record IDs and all elements children recursive.
 // If some child record ID reference (e.c. «sys.Parent» fields) refers to regenerated parent ID fields, this replaced too.
-func (el *elementType) regenerateIDs(generator istructs.IDGenerator) (err error) {
+func (el *elementType) regenerateIDs(generator istructs.IIDGenerator) (err error) {
 	newIDs := make(newIDsPlanType)
 
 	err = el.forEach(
 		func(e *elementType) error {
 			if id := e.ID(); id.IsRaw() {
-				storeID, err := generator(id, e.def)
+				storeID, err := generator.NextID(id, e.def)
 				if err != nil {
 					return err
 				}

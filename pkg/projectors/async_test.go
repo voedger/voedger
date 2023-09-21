@@ -479,10 +479,7 @@ func (f *pLogFiller) fill(WSID istructs.WSID) (offset istructs.Offset) {
 	}
 	offset = f.offset
 	f.offset++
-	generator := func(istructs.RecordID, appdef.IDef) (storage istructs.RecordID, err error) {
-		return istructs.NullRecordID, nil
-	}
-	_, err = f.app.Events().PutPlog(rawEvent, nil, generator)
+	_, err = f.app.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
 	if err != nil {
 		panic(err)
 	}

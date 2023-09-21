@@ -30,13 +30,17 @@ type TSidsGeneratorType struct {
 	nextPlogOffset istructs.Offset
 }
 
-func (me *TSidsGeneratorType) newID(tempId istructs.RecordID, _ appdef.IDef) (storageID istructs.RecordID, err error) {
+func (me *TSidsGeneratorType) NextID(tempId istructs.RecordID, _ appdef.IDef) (storageID istructs.RecordID, err error) {
 	me.lock.Lock()
 	defer me.lock.Unlock()
 	storageID = me.nextID
 	me.nextID++
 	me.idmap[tempId] = storageID
 	return storageID, nil
+}
+
+func (me *TSidsGeneratorType) UpdateOnSync(_ istructs.RecordID, _ appdef.IDef) {
+	panic("must not be called")
 }
 
 func (me *TSidsGeneratorType) nextOffset() (offset istructs.Offset) {
@@ -47,8 +51,8 @@ func (me *TSidsGeneratorType) nextOffset() (offset istructs.Offset) {
 	return
 }
 
-func newTSIdsGenerator() TSidsGeneratorType {
-	return TSidsGeneratorType{
+func newTSIdsGenerator() *TSidsGeneratorType {
+	return &TSidsGeneratorType{
 		idmap:          make(map[istructs.RecordID]istructs.RecordID),
 		nextID:         istructs.FirstBaseRecordID,
 		nextPlogOffset: test.plogStartOfs,
@@ -69,10 +73,10 @@ func Test_Race_SimpleInsertOne(t *testing.T) {
 		wg.Add(1)
 		go func(areq *require.Assertions, _ istructs.IAppStructs, aidGen *TSidsGeneratorType) {
 			defer wg.Done()
-			saveEvent(areq, app, idGen.newID, newTSModify(app, aidGen, func(event istructs.IRawEventBuilder) {
+			saveEvent(areq, app, idGen, newTSModify(app, aidGen, func(event istructs.IRawEventBuilder) {
 				newDepartmentCUD(event, 1, 1, "Cold Drinks")
 			}))
-		}(req, app, &idGen)
+		}(req, app, idGen)
 	}
 	wg.Wait()
 }
@@ -91,10 +95,10 @@ func Test_Race_SimpleInsertMany(t *testing.T) {
 		wg.Add(1)
 		go func(areq *require.Assertions, _ istructs.IAppStructs, aidGen *TSidsGeneratorType, ai int) {
 			defer wg.Done()
-			saveEvent(areq, app, idGen.newID, newTSModify(app, aidGen, func(event istructs.IRawEventBuilder) {
+			saveEvent(areq, app, idGen, newTSModify(app, aidGen, func(event istructs.IRawEventBuilder) {
 				newDepartmentCUD(event, istructs.RecordID(ai), int32(ai), "Hot Drinks"+strconv.Itoa(ai))
 			}))
-		}(req, app, &idGen, i+1)
+		}(req, app, idGen, i+1)
 	}
 	wg.Wait()
 }
