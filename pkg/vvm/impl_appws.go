@@ -10,6 +10,7 @@ import (
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/authnz/workspace"
 )
@@ -18,7 +19,6 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 	for _, appQName := range vvm.VVMApps {
 		pLogOffsets := map[istructs.PartitionID]istructs.Offset{}
 		wLogOffset := istructs.FirstOffset
-		nextRecordID := istructs.FirstBaseRecordID + 1
 		as, err := vvm.IAppStructsProvider.AppStructs(appQName)
 		if err != nil {
 			return err
@@ -61,11 +61,8 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 			if err != nil {
 				return err
 			}
-			pLogEvent, err := as.Events().PutPlog(rawEvent, nil, func(_ istructs.RecordID, _ appdef.IDef) (storage istructs.RecordID, err error) {
-				storage = nextRecordID
-				nextRecordID++
-				return
-			})
+			// ok to local IDGenerator here. Actual next record IDs will be determined on the partition recovery stage
+			pLogEvent, err := as.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
 			if err != nil {
 				return err
 			}
