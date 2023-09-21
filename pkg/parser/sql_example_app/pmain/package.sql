@@ -6,10 +6,15 @@
 * Package consists of schema and resources
 * Schema consists of few schema files
 */
-SCHEMA main;
 
 IMPORT SCHEMA 'github.com/untillpro/untill';
 IMPORT SCHEMA 'github.com/untillpro/airsbp' AS air;
+
+-- Only one APPLICATION statement allowed per package
+APPLICATION example_app (
+    USE air; -- name or alias. This actually identifies package in QNames of the app
+    USE untill;
+);
 
 -- Declare tag to assign it later to definition(s)
 TAG BackofficeTag;

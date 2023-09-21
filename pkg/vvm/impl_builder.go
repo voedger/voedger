@@ -38,13 +38,13 @@ func buildSchemasASTs(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPo
 			fileSchemaAST := value.(*parser.FileSchemaAST)
 			packageFilesSchemasASTs = append(packageFilesSchemasASTs, fileSchemaAST)
 		})
-		packageSchemaAST, err := parser.MergeFileSchemaASTs(qualifiedPackageName, packageFilesSchemasASTs)
+		packageSchemaAST, err := parser.BuildPackageSchema(qualifiedPackageName, packageFilesSchemasASTs)
 		if err != nil {
 			panic(err)
 		}
 		packageSchemaASTs = append(packageSchemaASTs, packageSchemaAST)
 	})
-	packageSchemas, err := parser.MergePackageSchemas(packageSchemaASTs)
+	packageSchemas, err := parser.BuildAppSchema(packageSchemaASTs)
 	if err != nil {
 		panic(err)
 	}

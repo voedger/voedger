@@ -20,12 +20,12 @@ type buildContext struct {
 	wsBuildCtxs map[*WorkspaceStmt]*wsBuildCtx
 }
 
-func newBuildContext(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) *buildContext {
+func newBuildContext(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) *buildContext {
 	return &buildContext{
 		basicContext: basicContext{
-			pkg:    nil,
-			pkgmap: packages,
-			errs:   make([]error, 0),
+			pkg:  nil,
+			app:  appSchema,
+			errs: make([]error, 0),
 		},
 		builder:     builder,
 		wsBuildCtxs: make(map[*WorkspaceStmt]*wsBuildCtx),
@@ -55,7 +55,7 @@ func (c *buildContext) build() error {
 }
 
 type wsBuildCtx struct {
-	schema  *PackageSchemaAST
+	pkg     *PackageSchemaAST
 	builder appdef.IWorkspaceBuilder
 	qname   appdef.QName
 }
@@ -93,13 +93,13 @@ func (c *buildContext) useStmtInWs(wsctx *wsBuildCtx, stmtPackage string, stmt i
 
 func (c *buildContext) workspaces() error {
 	c.wsBuildCtxs = make(map[*WorkspaceStmt]*wsBuildCtx)
-	for _, schema := range c.pkgmap {
+	for _, schema := range c.app.Packages {
 		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(w *WorkspaceStmt) {
-			qname := schema.Ast.NewQName(w.Name)
+			qname := schema.NewQName(w.Name)
 			bld := c.builder.AddWorkspace(qname)
 			c.wsBuildCtxs[w] = &wsBuildCtx{
-				schema:  schema,
+				pkg:     schema,
 				qname:   qname,
 				builder: bld,
 			}
@@ -111,7 +111,7 @@ func (c *buildContext) workspaces() error {
 
 	iter = func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection) {
 		coll.Iterate(func(stmt interface{}) {
-			c.useStmtInWs(wsctx, string(wsctx.schema.Ast.Package), stmt)
+			c.useStmtInWs(wsctx, wsctx.pkg.Name, stmt)
 			if collection, ok := stmt.(IStatementCollection); ok {
 				if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
 					iter(ws, wsctx, collection)
@@ -121,27 +121,27 @@ func (c *buildContext) workspaces() error {
 	}
 
 	for w, ctx := range c.wsBuildCtxs {
-		c.pkg = ctx.schema
+		c.pkg = ctx.pkg
 		iter(w, ctx, w)
 		if w.Abstract {
 			ctx.builder.SetAbstract()
 		}
 		if w.Descriptor != nil {
-			ctx.builder.SetDescriptor(appdef.NewQName(string(ctx.schema.Ast.Package), w.Descriptor.GetName()))
+			ctx.builder.SetDescriptor(appdef.NewQName(string(ctx.pkg.Name), w.Descriptor.GetName()))
 		}
 	}
 	return nil
 }
 
 func (c *buildContext) alterWorkspaces() error {
-	for _, schema := range c.pkgmap {
-		c.setSchema(schema)
-		iterateStmt(schema.Ast, func(a *AlterWorkspaceStmt) {
+	for _, pkgAst := range c.app.Packages {
+		c.setSchema(pkgAst)
+		iterateStmt(pkgAst.Ast, func(a *AlterWorkspaceStmt) {
 
 			var iter func(wsctx *wsBuildCtx, coll IStatementCollection)
 			iter = func(wsctx *wsBuildCtx, coll IStatementCollection) {
 				coll.Iterate(func(stmt interface{}) {
-					c.useStmtInWs(wsctx, string(schema.Ast.Package), stmt)
+					c.useStmtInWs(wsctx, string(pkgAst.Name), stmt)
 					if collection, ok := stmt.(IStatementCollection); ok {
 						if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
 							iter(wsctx, collection)
@@ -151,7 +151,7 @@ func (c *buildContext) alterWorkspaces() error {
 			}
 
 			err := resolveEx(a.Name, &c.basicContext, func(w *WorkspaceStmt, pkg *PackageSchemaAST) error {
-				if !w.Alterable && schema != pkg {
+				if !w.Alterable && pkg != pkgAst {
 					return ErrWorkspaceIsNotAlterable(w.GetName())
 				}
 				iter(c.wsBuildCtxs[w], a)
@@ -206,7 +206,7 @@ func (c *buildContext) inheritedWorkspaces() error {
 	}
 
 	for w, ctx := range c.wsBuildCtxs {
-		c.pkg = ctx.schema
+		c.pkg = ctx.pkg
 		addFromInheritedWs(w, ctx)
 	}
 	return nil
@@ -220,7 +220,7 @@ func (c *buildContext) addComments(s IStatement, builder appdef.ICommentBuilder)
 }
 
 func (c *buildContext) types() error {
-	for _, schema := range c.pkgmap {
+	for _, schema := range c.app.Packages {
 		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(typ *TypeStmt) {
 			c.pushDef(typ.Name, appdef.DefKind_Object)
@@ -233,7 +233,7 @@ func (c *buildContext) types() error {
 }
 
 func (c *buildContext) views() error {
-	for _, schema := range c.pkgmap {
+	for _, schema := range c.app.Packages {
 		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(view *ViewStmt) {
 			c.pushDef(view.Name, appdef.DefKind_ViewRecord)
@@ -310,7 +310,7 @@ func (c *buildContext) views() error {
 					refs := make([]appdef.QName, 0)
 					errors := false
 					for i := range f.RefField.RefDocs {
-						tableStmt, schema, err := resolveTable(f.RefField.RefDocs[i], &c.basicContext)
+						tableStmt, pkg, err := resolveTable(f.RefField.RefDocs[i], &c.basicContext)
 						if err != nil {
 							c.stmtErr(&f.RefField.Pos, err)
 							errors = true
@@ -320,7 +320,7 @@ func (c *buildContext) views() error {
 							c.stmtErr(&f.RefField.Pos, err)
 							errors = true
 						}
-						refs = append(refs, appdef.NewQName(string(schema.Ast.Package), string(f.RefField.RefDocs[i].Name)))
+						refs = append(refs, appdef.NewQName(string(pkg.Name), string(f.RefField.RefDocs[i].Name)))
 					}
 					if !errors {
 						if contains(view.pkRef.ClusteringColumnsFields, fieldname) {
@@ -343,10 +343,10 @@ func (c *buildContext) views() error {
 }
 
 func (c *buildContext) commands() error {
-	for _, schema := range c.pkgmap {
+	for _, schema := range c.app.Packages {
 		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(cmd *CommandStmt) {
-			qname := c.pkg.Ast.NewQName(cmd.Name)
+			qname := c.pkg.NewQName(cmd.Name)
 			b := c.builder.AddCommand(qname)
 			c.addComments(cmd, b)
 			if cmd.Arg != nil && cmd.Arg.Def != nil {
@@ -372,10 +372,10 @@ func (c *buildContext) commands() error {
 }
 
 func (c *buildContext) queries() error {
-	for _, schema := range c.pkgmap {
+	for _, schema := range c.app.Packages {
 		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(q *QueryStmt) {
-			qname := c.pkg.Ast.NewQName(q.Name)
+			qname := c.pkg.NewQName(q.Name)
 			b := c.builder.AddQuery(qname)
 			c.addComments(q, b)
 			if q.Arg != nil && q.Arg.Def != nil {
@@ -403,7 +403,7 @@ func (c *buildContext) queries() error {
 }
 
 func (c *buildContext) tables() error {
-	for _, schema := range c.pkgmap {
+	for _, schema := range c.app.Packages {
 		c.setSchema(schema)
 		iterateStmt(schema.Ast, func(table *TableStmt) {
 			c.table(schema, table)
@@ -430,7 +430,7 @@ func (c *buildContext) fillTable(table *TableStmt) {
 func (c *buildContext) workspaceDescriptor(schema *PackageSchemaAST, w *WorkspaceStmt) {
 	if w.Descriptor != nil {
 		c.setSchema(schema)
-		qname := c.pkg.Ast.NewQName(w.Descriptor.Name)
+		qname := c.pkg.NewQName(w.Descriptor.Name)
 		if c.isExists(qname, appdef.DefKind_CDoc) {
 			return
 		}
@@ -448,7 +448,7 @@ func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt) {
 		return
 	}
 
-	qname := c.pkg.Ast.NewQName(table.Name)
+	qname := c.pkg.NewQName(table.Name)
 	if c.isExists(qname, table.tableDefKind) {
 		return
 	}
@@ -472,7 +472,7 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
 	refs := make([]appdef.QName, 0)
 	errors := false
 	for i := range refField.RefDocs {
-		tableStmt, schema, err := resolveTable(refField.RefDocs[i], &c.basicContext)
+		tableStmt, pkg, err := resolveTable(refField.RefDocs[i], &c.basicContext)
 		if err != nil {
 			c.stmtErr(&refField.Pos, err)
 			errors = true
@@ -482,7 +482,7 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
 			c.stmtErr(&refField.Pos, err)
 			errors = true
 		}
-		refs = append(refs, appdef.NewQName(string(schema.Ast.Package), string(refField.RefDocs[i].Name)))
+		refs = append(refs, appdef.NewQName(pkg.Name, string(refField.RefDocs[i].Name)))
 	}
 	if !errors {
 		c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddRefField(string(refField.Name), refField.NotNull, refs...)
@@ -532,11 +532,11 @@ func (c *buildContext) addFieldToDef(field *FieldExpr) {
 
 	} else { // field.Type.Def
 		// Record?
-		pkg := field.Type.Def.Package
+		pkg := string(field.Type.Def.Package)
 		if pkg == "" {
-			pkg = c.pkg.Ast.Package
+			pkg = c.pkg.Name
 		}
-		qname := appdef.NewQName(string(pkg), string(field.Type.Def.Name))
+		qname := appdef.NewQName(pkg, string(field.Type.Def.Name))
 		wrec := c.builder.WRecord(qname)
 		crec := c.builder.CRecord(qname)
 		orec := c.builder.ORecord(qname)
@@ -611,7 +611,7 @@ func (c *buildContext) addNestedTableToDef(nested *NestedTableStmt) {
 		return
 	}
 
-	contQName := c.pkg.Ast.NewQName(nestedTable.Name)
+	contQName := c.pkg.NewQName(nestedTable.Name)
 	if !c.isExists(contQName, nestedTable.tableDefKind) {
 		c.pushDef(nestedTable.Name, nestedTable.tableDefKind)
 		c.addTableItems(nestedTable.Items)
@@ -655,7 +655,7 @@ type defBuildContext struct {
 
 func (c *defBuildContext) checkName(name string) error {
 	if _, ok := c.names[name]; ok {
-		return ErrRedeclared(name)
+		return ErrRedefined(name)
 	}
 	c.names[name] = true
 	return nil
@@ -669,7 +669,7 @@ func (c *buildContext) setSchema(schema *PackageSchemaAST) {
 }
 
 func (c *buildContext) pushDef(name Ident, kind appdef.DefKind) {
-	qname := c.pkg.Ast.NewQName(name)
+	qname := c.pkg.NewQName(name)
 	var builder interface{}
 	switch kind {
 	case appdef.DefKind_CDoc:
@@ -720,9 +720,9 @@ func (c *buildContext) isExists(qname appdef.QName, kind appdef.DefKind) (exists
 	}
 }
 
-func (c *buildContext) fundSchemaByPkg(pkg Ident) *PackageSchemaAST {
-	for _, ast := range c.pkgmap {
-		if ast.Ast.Package == pkg {
+func (c *buildContext) fundSchemaByPkg(pkg string) *PackageSchemaAST {
+	for _, ast := range c.app.Packages {
+		if ast.Name == pkg {
 			return ast
 		}
 	}
@@ -739,11 +739,11 @@ func (c *buildContext) defCtx() *defBuildContext {
 
 func (c *buildContext) checkReference(refTable DefQName, table *TableStmt) error {
 	if refTable.Package == "" {
-		refTable.Package = c.basicContext.pkg.Ast.Package
+		refTable.Package = Ident(c.basicContext.pkg.Name)
 	}
 	refTableDef := c.builder.DefByName(appdef.NewQName(string(refTable.Package), string(refTable.Name)))
 	if refTableDef == nil {
-		c.table(c.fundSchemaByPkg(refTable.Package), table)
+		c.table(c.fundSchemaByPkg(string(refTable.Package)), table)
 		refTableDef = c.builder.DefByName(appdef.NewQName(string(refTable.Package), string(refTable.Name)))
 	}
 

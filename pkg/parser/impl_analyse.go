@@ -15,6 +15,18 @@ type analyseCtx struct {
 	*basicContext
 }
 
+func findApplication(c *basicContext, p *PackageSchemaAST) (result *ApplicationStmt, err error) {
+	for _, stmt := range p.Ast.Statements {
+		if stmt.Application != nil {
+			if result != nil {
+				return nil, c.newStmtErr(&stmt.Application.Pos, ErrApplicationRedefined)
+			}
+			result = stmt.Application
+		}
+	}
+	return result, nil
+}
+
 func analyse(c *basicContext, p *PackageSchemaAST) {
 
 	ac := analyseCtx{
@@ -48,7 +60,7 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 }
 
 func (c *analyseCtx) useTable(u *UseTableStmt) {
-	tbl, _, err := resolveTable(DefQName{Package: c.pkg.Ast.Package, Name: u.Table}, c.basicContext)
+	tbl, _, err := resolveTable(DefQName{Package: Ident(c.pkg.Name), Name: u.Table}, c.basicContext)
 	if err != nil {
 		c.stmtErr(&u.Pos, err)
 	} else {
@@ -66,7 +78,7 @@ func (c *analyseCtx) useWorkspace(u *UseWorkspaceStmt) {
 		}
 		return nil
 	}
-	err := resolve(DefQName{Package: c.pkg.Ast.Package, Name: u.Workspace}, c.basicContext, resolveFunc)
+	err := resolve(DefQName{Package: Ident(c.pkg.Name), Name: u.Workspace}, c.basicContext, resolveFunc)
 	if err != nil {
 		c.stmtErr(&u.Pos, err)
 	}
@@ -92,7 +104,7 @@ func (c *analyseCtx) view(view *ViewStmt) {
 		fe := &view.Items[i]
 		if fe.PrimaryKey != nil {
 			if view.pkRef != nil {
-				c.stmtErr(&fe.PrimaryKey.Pos, ErrPrimaryKeyRedeclared)
+				c.stmtErr(&fe.PrimaryKey.Pos, ErrPrimaryKeyRedefined)
 			} else {
 				view.pkRef = fe.PrimaryKey
 			}
@@ -100,14 +112,14 @@ func (c *analyseCtx) view(view *ViewStmt) {
 		if fe.Field != nil {
 			f := fe.Field
 			if _, ok := fields[string(f.Name)]; ok {
-				c.stmtErr(&f.Pos, ErrRedeclared(string(f.Name)))
+				c.stmtErr(&f.Pos, ErrRedefined(string(f.Name)))
 			} else {
 				fields[string(f.Name)] = i
 			}
 		} else if fe.RefField != nil {
 			rf := fe.RefField
 			if _, ok := fields[string(rf.Name)]; ok {
-				c.stmtErr(&rf.Pos, ErrRedeclared(string(rf.Name)))
+				c.stmtErr(&rf.Pos, ErrRedefined(string(rf.Name)))
 			} else {
 				fields[string(rf.Name)] = i
 			}
@@ -125,7 +137,7 @@ func (c *analyseCtx) view(view *ViewStmt) {
 		}
 	}
 	if view.pkRef == nil {
-		c.stmtErr(&view.Pos, ErrPrimaryKeyNotDeclared)
+		c.stmtErr(&view.Pos, ErrPrimaryKeyNotDefined)
 	}
 	for _, pkf := range view.pkRef.PartitionKeyFields {
 		index, ok := fields[string(pkf)]

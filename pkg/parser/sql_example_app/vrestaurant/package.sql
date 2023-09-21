@@ -1,7 +1,8 @@
 /*
 * Copyright (c) 2023-present unTill Pro, Ltd.
 */
-SCHEMA vrestaurant;
+
+APPLICATION vrestaurant();
 
 -- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
 ABSTRACT TABLE BOEntity INHERITS CDoc( -- TODO: ABSTRACT
