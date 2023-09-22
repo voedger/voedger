@@ -231,7 +231,7 @@ func (e *appEventsType) GetNewRawEventBuilder(params istructs.NewRawEventBuilder
 }
 
 // istructs.IEvents.PutPlog
-func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator istructs.IDGenerator) (event istructs.IPLogEvent, err error) {
+func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator istructs.IIDGenerator) (event istructs.IPLogEvent, err error) {
 	dbEvent := ev.(*eventType)
 
 	dbEvent.setBuildError(buildErr)
@@ -434,11 +434,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
 	existsRecord := func(id istructs.RecordID) (bool, error) {
 		data := make([]byte, 0)
-		ok, err := recs.getRecord(ev.ws, id, &data)
-		if err != nil {
-			return false, err
-		}
-		return ok, nil
+		return recs.getRecord(ev.ws, id, &data)
 	}
 
 	for _, rec := range ev.cud.creates {

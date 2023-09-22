@@ -74,7 +74,7 @@ type IEvents interface {
 	// buildOrValidationErr taken either BuildRawEvent() or from extra validation
 	//
 	// Raw event `ev` valid until `event.Release()`
-	PutPlog(ev IRawEvent, buildOrValidationErr error, generator IDGenerator) (event IPLogEvent, saveErr error)
+	PutPlog(ev IRawEvent, buildOrValidationErr error, generator IIDGenerator) (event IPLogEvent, saveErr error)
 
 	// @ConcurrentAccess RW
 	PutWlog(IPLogEvent) error
