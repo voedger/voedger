@@ -393,3 +393,94 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 		})
 	})
 }
+
+func TestNoValueForUniqueField(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("insert", func(t *testing.T) {
+		_, bts := getUniqueNumber(vit)
+
+		// insert a doc record that has no value for the unique field
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		// ok to insert 2nd record that has no value for the unique field as well
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		// insert a record that has a value for the unique field
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true,"Int":0,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		// failed to insert the same record
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
+
+		// ok to insert a record that has no value for the unique field again
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
+		vit.PostWS(ws, "c.sys.CUD", body)
+	})
+
+	t.Run("set the unique field value on update for the first time", func(t *testing.T) {
+		_, bts := getUniqueNumber(vit)
+
+		// insert a doc record that has no value for the unique field
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
+		newID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		// initialize the value of the unique field for the first time
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","Int":0}}]}`, newID)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		// failed to insert the coflicting record
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true,"Int":0,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
+
+		// failed to update the existing unique field value
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","Int":1}}]}`, newID)
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403())
+	})
+
+	t.Run("deactivate", func(t *testing.T) {
+		num, bts := getUniqueNumber(vit)
+		_ = num
+
+		// insert a record that has no value for the unique field
+		// + <no value>
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
+		newID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		// deactivate the record
+		// - <no value>
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","sys.IsActive":false}}]}`, newID)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		// activate the record again
+		// + <no value>
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true}}]}`, newID)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		// deactivate the record again
+		// - <no value>
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","sys.IsActive":false}}]}`, newID)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		// insert a record that has no value for the unique field again
+		// - <no value>
+		// + <no value>
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		// insert a record that has a value for the unique field
+		// - <no value>
+		// + <no value>
+		// + <has value>
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		// activate the initial record again -> no coflicting records
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true}}]}`, newID)
+		vit.PostWS(ws, "c.sys.CUD", body)
+	})
+}

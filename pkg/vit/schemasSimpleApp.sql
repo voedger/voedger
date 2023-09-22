@@ -401,6 +401,12 @@ TABLE DocConstraints INHERITS CDoc (
 	UNIQUEFIELD Int
 );
 
+TABLE DocConstraintsString INHERITS CDoc (
+	Str varchar,
+	Int int32,
+	UNIQUEFIELD Str
+);
+
 TABLE Config INHERITS Singleton (
 	Fld1 varchar NOT NULL
 );
