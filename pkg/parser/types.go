@@ -425,7 +425,8 @@ func (s TagStmt) GetName() string { return string(s.Name) }
 
 type UseTableStmt struct {
 	Statement
-	Table Ident `parser:"'USE' 'TABLE' @Ident"`
+	Table DefQName `parser:"'USE' 'TABLE' @@"`
+	// TODO: Use all tables from package
 }
 
 type UseWorkspaceStmt struct {

@@ -10,14 +10,15 @@
 IMPORT SCHEMA 'github.com/untillpro/untill';
 IMPORT SCHEMA 'github.com/untillpro/airsbp' AS air;
 
--- Only one APPLICATION statement allowed per package
+/*
+* APPLICATION statement defines the application.
+* Package cannot contain more than one APPLICATION statement
+* When building Application schema from packages, exactly one package must have APPLICATION statement
+*/
 APPLICATION example_app (
-    USE air; -- name or alias. This actually identifies package in QNames of the app
+    USE air; -- name or alias. This identifies package name in QNames of the app
     USE untill;
 );
-
--- Declare tag to assign it later to definition(s)
-TAG BackofficeTag;
 
 /*
     Abstract tables can only be used for INHERITance by other tables.
@@ -43,6 +44,9 @@ ABSTRACT TABLE NestedWithName INHERITS CRecord (
 TABLE "NestedTable" INHERITS NestedWithName (
     ItemDescr varchar -- Default length is 255
 );
+
+-- Declare tag to assign it later to definition(s)
+TAG BackofficeTag;
 
 /*
     Any declared table must have one of the following tables as a root anchestor:

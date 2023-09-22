@@ -84,7 +84,13 @@ func (c *buildContext) useStmtInWs(wsctx *wsBuildCtx, stmtPackage string, stmt i
 		}
 	}
 	if useTable, ok := stmt.(*UseTableStmt); ok {
-		wsctx.builder.AddDef(appdef.NewQName(stmtPackage, string(useTable.Table)))
+		tbl, pkg, err := resolveTable(useTable.Table, &c.basicContext)
+		if err != nil {
+			// notest
+			c.stmtErr(&useTable.Pos, err)
+			return
+		}
+		wsctx.builder.AddDef(pkg.NewQName(tbl.Name))
 	}
 	if useWorkspace, ok := stmt.(*UseWorkspaceStmt); ok {
 		wsctx.builder.AddDef(appdef.NewQName(stmtPackage, string(useWorkspace.Workspace)))

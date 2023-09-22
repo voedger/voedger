@@ -111,7 +111,7 @@ func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 
 	if n.Package == appdef.SysPackage {
 		sysSchema := c.app.Packages[appdef.SysPackage]
-		if sysSchema == nil { // TODO: should not be here
+		if sysSchema == nil {
 			return nil, ErrCouldNotImport(appdef.SysPackage)
 		}
 		return sysSchema, nil

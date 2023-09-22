@@ -1189,4 +1189,130 @@ func Test_VRestaurantBasic(t *testing.T) {
 
 }
 
-//TODO: test that package name in QNames is what is actually taken from APPLICATION definition
+func Test_AppSchema(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("example1.sql", `
+	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2' AS air1;
+	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg3' AS air2;
+	APPLICATION test(
+		USE air1;
+		USE air2;
+	);`)
+	require.NoError(err)
+	pkg1, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg1", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	fs, err = ParseFile("example2.sql", `
+	TABLE MyTable INHERITS CDoc ();
+	`)
+	require.NoError(err)
+	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	fs, err = ParseFile("example3.sql", `
+	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2' AS p2;
+	WORKSPACE myWorkspace (
+		USE TABLE p2.MyTable;
+	);
+	`)
+	require.NoError(err)
+	pkg3, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg3", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	appSchema, err := BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), pkg1, pkg2, pkg3})
+	require.NoError(err)
+
+	builder := appdef.New()
+	err = BuildAppDefs(appSchema, builder)
+	require.NoError(err)
+
+	cdoc := builder.CDoc(appdef.NewQName("air1", "MyTable"))
+	require.NotNil(cdoc)
+
+	ws := builder.Workspace(appdef.NewQName("air2", "myWorkspace"))
+	require.NotNil(ws)
+	require.NotNil(ws.Def(appdef.NewQName("air1", "MyTable")))
+}
+
+func Test_AppSchemaErrors(t *testing.T) {
+	require := require.New(t)
+	fs, err := ParseFile("example2.sql", ``)
+	require.NoError(err)
+	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	fs, err = ParseFile("example3.sql", ``)
+	require.NoError(err)
+	pkg3, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg3", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	f := func(sql string, expectErrors ...string) {
+		ast, err := ParseFile("file2.sql", sql)
+		require.NoError(err)
+		pkg, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg4", []*FileSchemaAST{ast})
+		require.NoError(err)
+
+		_, err = BuildAppSchema([]*PackageSchemaAST{
+			pkg, pkg2, pkg3,
+		})
+		require.EqualError(err, strings.Join(expectErrors, "\n"))
+	}
+
+	f(`IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg3';
+	APPLICATION test(
+		USE air1;
+		USE pkg3;
+		)`, "file2.sql:3:3: air1 undefined",
+		"application does not define use of package github.com/untillpro/airsbp3/pkg2")
+
+	f(`IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2' AS air1;
+		IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg3';
+		APPLICATION test(
+			USE air1;
+			USE pkg3;
+			USE pkg3;
+		)`, "file2.sql:6:4: package with the same name already included in application")
+
+	f(`IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2' AS air1;
+		IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg3';
+		APPLICATION test(
+			USE air1;
+			USE pkg3;
+		);
+		APPLICATION test(
+			USE air1;
+			USE pkg3;
+		)`, "file2.sql:7:3: redefinition of application")
+
+	f(`IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2' AS air1;
+		IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg3';
+		`, "application not defined")
+
+	f(`IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkgX' AS air1;
+		IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg3';
+		APPLICATION test(
+			USE pkg3;
+			USE air1;
+		)
+		`, "file2.sql:5:4: could not import github.com/untillpro/airsbp3/pkgX")
+}
+
+func Test_AppIn2Schemas(t *testing.T) {
+	require := require.New(t)
+	fs, err := ParseFile("example2.sql", `APPLICATION test1();`)
+	require.NoError(err)
+	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	fs, err = ParseFile("example3.sql", `APPLICATION test2();`)
+	require.NoError(err)
+	pkg3, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg3", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	_, err = BuildAppSchema([]*PackageSchemaAST{
+		pkg2, pkg3,
+	})
+	require.EqualError(err, "example3.sql:1:1: redefinition of application")
+
+}

@@ -60,12 +60,12 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 }
 
 func (c *analyseCtx) useTable(u *UseTableStmt) {
-	tbl, _, err := resolveTable(DefQName{Package: Ident(c.pkg.Name), Name: u.Table}, c.basicContext)
+	tbl, _, err := resolveTable(u.Table, c.basicContext)
 	if err != nil {
 		c.stmtErr(&u.Pos, err)
 	} else {
 		if tbl.Abstract {
-			c.stmtErr(&u.Pos, ErrUseOfAbstractTable(string(u.Table)))
+			c.stmtErr(&u.Pos, ErrUseOfAbstractTable(u.Table.String()))
 		}
 		// TODO: Only documents allowed to be USEd, not records
 	}
