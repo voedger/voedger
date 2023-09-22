@@ -38,7 +38,7 @@ func getUniqueIDByValues(appStructs istructs.IAppStructs, wsid istructs.WSID, qN
 		return val.AsRecordID(field_ID), nil
 	}
 	if err == istructsmem.ErrRecordNotFound {
-		return istructs.NullRecordID, nil
+		err = nil
 	}
 	return istructs.NullRecordID, err
 }
