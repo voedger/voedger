@@ -40,7 +40,7 @@ func Test_ValidEvent(t *testing.T) {
 	t.Run("builds application", func(t *testing.T) {
 		appDef := appdef.New()
 
-		t.Run("must be ok to build application definition", func(t *testing.T) {
+		t.Run("must be ok to build application", func(t *testing.T) {
 			appDef.AddCDoc(cDocName).
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddStringField("String", false)
@@ -117,7 +117,7 @@ func Test_ValidEvent(t *testing.T) {
 		cmd.PutQName(appdef.SystemField_QName, oObjName)
 
 		_, err := bld.BuildRawEvent()
-		require.ErrorIs(err, ErrWrongDefinition)
+		require.ErrorIs(err, ErrWrongType)
 		validateErr := validateErrorf(0, "")
 		require.ErrorAs(err, &validateErr)
 		require.Equal(ECode_InvalidDefName, validateErr.Code())
@@ -233,10 +233,10 @@ func Test_ValidEvent(t *testing.T) {
 			require.NotNil(rawEvent)
 		})
 
-		t.Run("must failed build raw event (unexpected argument definition)", func(t *testing.T) {
+		t.Run("must failed build raw event (unexpected argument type)", func(t *testing.T) {
 			cmd.PutQName(appdef.SystemField_QName, oDocName)
 			rawEvent, err := bld.BuildRawEvent()
-			require.ErrorIs(err, ErrDefChanged) // expected «test.Object», but not «test.ODoc»
+			require.ErrorIs(err, ErrTypeChanged) // expected «test.Object», but not «test.ODoc»
 			require.NotNil(rawEvent)
 		})
 	})
@@ -285,7 +285,7 @@ func Test_ValidEvent(t *testing.T) {
 
 		t.Run("must failed build raw event", func(t *testing.T) {
 			rawEvent, err := bld.BuildRawEvent()
-			require.ErrorIs(err, ErrWrongDefinition) // CDoc deprecated, ODoc or Object expected
+			require.ErrorIs(err, ErrWrongType) // CDoc deprecated, ODoc or Object expected
 			require.NotNil(rawEvent)
 		})
 	})
@@ -346,9 +346,9 @@ func Test_ValidElement(t *testing.T) {
 
 	appDef := appdef.New()
 
-	t.Run("must be ok to build test application definition", func(t *testing.T) {
+	t.Run("must be ok to build test application", func(t *testing.T) {
 
-		t.Run("build object definition", func(t *testing.T) {
+		t.Run("build object type", func(t *testing.T) {
 			objDef := appDef.AddObject(appdef.NewQName("test", "object"))
 			objDef.
 				AddField("int32Field", appdef.DataKind_int32, true).
@@ -381,7 +381,7 @@ func Test_ValidElement(t *testing.T) {
 				AddField("recIDField", appdef.DataKind_RecordID, false)
 		})
 
-		t.Run("build ODoc definition", func(t *testing.T) {
+		t.Run("build ODoc type", func(t *testing.T) {
 			docDef := appDef.AddODoc(appdef.NewQName("test", "document"))
 			docDef.
 				AddField("int32Field", appdef.DataKind_int32, true).
@@ -436,13 +436,13 @@ func Test_ValidElement(t *testing.T) {
 			require.ErrorIs(err, ErrNameNotFound)
 		})
 
-		t.Run("must error if invalid definition kind object", func(t *testing.T) {
+		t.Run("must error if invalid type kind object", func(t *testing.T) {
 			obj := func() istructs.IObjectBuilder {
 				o := makeObject(cfg, appdef.NewQName("test", "element"))
 				return &o
 			}()
 			_, err := obj.Build()
-			require.ErrorIs(err, ErrUnexpectedDefKind)
+			require.ErrorIs(err, ErrUnexpectedTypeKind)
 		})
 
 		obj := func() istructs.IObjectBuilder {
@@ -543,7 +543,7 @@ func Test_ValidCUD(t *testing.T) {
 	objName := appdef.NewQName("test", "object")
 	elemName := appdef.NewQName("test", "element")
 
-	t.Run("must be ok to build test application definition", func(t *testing.T) {
+	t.Run("must be ok to build test application", func(t *testing.T) {
 		docDef := appDef.AddCDoc(docName)
 		docDef.
 			AddField("int32Field", appdef.DataKind_int32, true).
@@ -613,14 +613,14 @@ func Test_ValidCUD(t *testing.T) {
 		require.ErrorIs(err, ErrNameMissed)
 	})
 
-	t.Run("must error if wrong CUD definition kind", func(t *testing.T) {
+	t.Run("must error if wrong CUD type kind", func(t *testing.T) {
 		cud := makeCUD(cfg)
 		c := cud.Create(objName)
 		c.PutInt32("int32Field", 7)
 		err := cud.build()
 		require.NoError(err)
 		err = cfg.validators.validCUD(&cud, false)
-		require.ErrorIs(err, ErrUnexpectedDefKind)
+		require.ErrorIs(err, ErrUnexpectedTypeKind)
 		require.ErrorContains(err, objName.String())
 	})
 
@@ -752,7 +752,7 @@ func Test_VerifiedFields(t *testing.T) {
 	objName := appdef.NewQName("test", "obj")
 
 	appDef := appdef.New()
-	t.Run("must be ok to build application definition", func(t *testing.T) {
+	t.Run("must be ok to build application", func(t *testing.T) {
 		def := appDef.AddObject(objName)
 		def.
 			AddField("int32", appdef.DataKind_int32, true).
@@ -927,7 +927,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 	objName := appdef.NewQName("test", "obj")
 
 	appDef := appdef.New()
-	t.Run("must be ok to build application definition", func(t *testing.T) {
+	t.Run("must be ok to build application", func(t *testing.T) {
 		def := appDef.AddObject(objName)
 		def.
 			AddStringField("email", true, appdef.MinLen(6), appdef.MaxLen(100), appdef.Pattern(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`)).
@@ -1042,7 +1042,7 @@ func Test_ValidateErrors(t *testing.T) {
 		require.Equal(ECode_InvalidDefName, validateErr.Code())
 	})
 
-	t.Run("ECode_InvalidDefKind", func(t *testing.T) {
+	t.Run("ECode_InvalidTypeKind", func(t *testing.T) {
 		var app istructs.IAppStructs
 
 		cDocName := appdef.NewQName("test", "CDoc")
@@ -1051,7 +1051,7 @@ func Test_ValidateErrors(t *testing.T) {
 		t.Run("builds application", func(t *testing.T) {
 			appDef := appdef.New()
 
-			t.Run("must be ok to build application definition", func(t *testing.T) {
+			t.Run("must be ok to build application", func(t *testing.T) {
 				cDocDef := appDef.AddCDoc(cDocName)
 				cDocDef.AddField("Int32", appdef.DataKind_int32, false)
 			})
@@ -1085,10 +1085,10 @@ func Test_ValidateErrors(t *testing.T) {
 				SyncedAt: test.syncTime,
 			})
 		_, buildErr := bld.BuildRawEvent()
-		require.ErrorIs(buildErr, ErrWrongDefinition)
+		require.ErrorIs(buildErr, ErrWrongType)
 		validateErr := validateErrorf(0, "")
 		require.ErrorAs(buildErr, &validateErr)
-		require.Equal(ECode_InvalidDefKind, validateErr.Code())
+		require.Equal(ECode_InvalidTypeKind, validateErr.Code())
 	})
 
 	t.Run("ECode_EmptyFieldData", func(t *testing.T) {

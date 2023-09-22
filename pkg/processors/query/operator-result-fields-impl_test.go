@@ -21,7 +21,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 
 		appDef := appdef.New()
 
-		commonDef := func(n appdef.QName) appdef.IDef {
+		commonDef := func(n appdef.QName) appdef.IType {
 			d := appDef.AddObject(n)
 			d.AddField("name", appdef.DataKind_string, false)
 			return d

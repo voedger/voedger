@@ -623,7 +623,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	asf := istorage.ProvideMem()
 	appStorageProvider := istorageimpl.Provide(asf)
 
-	// build application definition
+	// build application
 	appDef := appdef.New()
 	processors.ProvideJSONFuncParamsDef(appDef)
 	if prepareAppDef != nil {

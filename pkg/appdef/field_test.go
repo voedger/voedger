@@ -100,7 +100,7 @@ func Test_AddField(t *testing.T) {
 		d := New().AddObject(NewQName("test", "obj"))
 		n := d.AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_int32, false).
-			AddField("f3", DataKind_string, false).(IDef).QName()
+			AddField("f3", DataKind_string, false).(IType).QName()
 		require.Equal(d.QName(), n)
 		require.Equal(3, d.UserFieldCount())
 	})
@@ -117,7 +117,7 @@ func Test_AddField(t *testing.T) {
 		require.Panics(func() { obj.AddField("f1", DataKind_int64, true) })
 	})
 
-	t.Run("must be panic if field data kind is not allowed by definition kind", func(t *testing.T) {
+	t.Run("must be panic if field data kind is not allowed by type kind", func(t *testing.T) {
 		view := New().AddView(NewQName("test", "view"))
 		require.Panics(func() { view.Key().Partition().AddField("f1", DataKind_string) })
 	})
@@ -349,13 +349,13 @@ func TestValidateRefFields(t *testing.T) {
 		rec.AddRefField("f2", true, NewQName("test", "obj"))
 		_, err := app.Build()
 		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, "unknown definition «test.obj»")
+		require.ErrorContains(err, "unknown type «test.obj»")
 	})
 
-	t.Run("must be error if reference field refs to non referable definition", func(t *testing.T) {
+	t.Run("must be error if reference field refs to non referable type", func(t *testing.T) {
 		app.AddObject(NewQName("test", "obj"))
 		_, err := app.Build()
-		require.ErrorIs(err, ErrInvalidDefKind)
-		require.ErrorContains(err, "non referable definition «test.obj»")
+		require.ErrorIs(err, ErrInvalidTypeKind)
+		require.ErrorContains(err, "non referable type «test.obj»")
 	})
 }

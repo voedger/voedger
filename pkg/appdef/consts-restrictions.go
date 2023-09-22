@@ -8,10 +8,10 @@ package appdef
 // Maximum identifier length
 const MaxIdentLen = 255
 
-// Maximum fields per one definition
+// Maximum fields per one structured type
 const MaxDefFieldCount = 65536
 
-// Maximum containers per one definition
+// Maximum containers per one structured type
 const MaxDefContainerCount = 65536
 
 // Maximum fields per one unique

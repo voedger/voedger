@@ -34,7 +34,7 @@ func newUniques() *uniques {
 	}
 }
 
-// Loads all uniques IDs from storage, add all uniques from application definitions and store if some changes.
+// Loads all uniques IDs from storage, add all uniques from application types and store if some changes.
 // Must be called at application starts
 func (un *uniques) prepare(storage istorage.IAppStorage, versions *vers.Versions, qnames *qnames.QNames, appDef appdef.IAppDef) (err error) {
 	if err = un.load(storage, versions); err != nil {
@@ -61,12 +61,12 @@ func (un *uniques) prepare(storage istorage.IAppStorage, versions *vers.Versions
 // Returns key for unique.
 //
 // Keys structure:
-//   - definition QNameID in 4-digit hexadecimal form, e.g. "0x07b5"
+//   - type QNameID in 4-digit hexadecimal form, e.g. "0x07b5"
 //   - field names pipe-separated concatenation, e.g. "|name|surname|"
 //
 // e.g. "0x07b5|name|surname|"
 func (un *uniques) key(u appdef.IUnique) (string, error) {
-	id, err := un.qnames.ID(u.Def().QName())
+	id, err := un.qnames.ID(u.ParentType().QName())
 	if err != nil {
 		return "", err
 	}
@@ -138,8 +138,8 @@ func (un *uniques) collect(u appdef.IUnique) (err error) {
 
 // Collect all application uniques
 func (un *uniques) collectAll(appDef appdef.IAppDef) (err error) {
-	appDef.Defs(
-		func(d appdef.IDef) {
+	appDef.Types(
+		func(d appdef.IType) {
 			if uni, ok := d.(appdef.IUniques); ok {
 				uni.Uniques(func(u appdef.IUnique) {
 					err = errors.Join(err, un.collect(u))

@@ -238,7 +238,7 @@ func (f *fields) checkAddField(name string, kind DataKind) {
 	}
 
 	if k := f.parentDef().Kind(); !k.DataKindAvailable(kind) {
-		panic(fmt.Errorf("%v: definition kind «%s» does not support fields kind «%s»: %w", f.parentDef().QName(), k.TrimString(), kind.TrimString(), ErrInvalidDataKind))
+		panic(fmt.Errorf("%v: type kind «%s» does not support fields kind «%s»: %w", f.parentDef().QName(), k.TrimString(), kind.TrimString(), ErrInvalidDataKind))
 	}
 
 	if len(f.fields) >= MaxDefFieldCount {
@@ -246,8 +246,8 @@ func (f *fields) checkAddField(name string, kind DataKind) {
 	}
 }
 
-func (f *fields) parentDef() IDef {
-	return f.parent.(IDef)
+func (f *fields) parentDef() IType {
+	return f.parent.(IType)
 }
 
 func (f *fields) makeSysFields() {
@@ -327,20 +327,20 @@ func (f charsField) Restricts() IStringFieldRestricts {
 // Validates specified fields.
 //
 // # Validation:
-//   - every RefField must refer to known definitions,
-//   - every referenced by RefField definition must have «sys.ID» system field
-func validateDefFields(def IDef) (err error) {
+//   - every RefField must refer to known types,
+//   - every referenced by RefField type must have «sys.ID» system field
+func validateTypeFields(def IType) (err error) {
 	if fld, ok := def.(IFields); ok {
-		// resolve reference fields definitions
+		// resolve reference types
 		fld.RefFields(func(rf IRefField) {
 			for _, n := range rf.Refs() {
-				refDef := def.App().DefByName(n)
+				refDef := def.App().TypeByName(n)
 				if refDef == nil {
-					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to unknown definition «%v»: %w", def.QName(), rf.Name(), n, ErrNameNotFound))
+					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to unknown type «%v»: %w", def.QName(), rf.Name(), n, ErrNameNotFound))
 					continue
 				}
 				if !refDef.Kind().HasSystemField(SystemField_ID) {
-					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to non referable definition «%v» kind «%s» without «%s» field: %w", def.QName(), rf.Name(), n, refDef.Kind().TrimString(), SystemField_ID, ErrInvalidDefKind))
+					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to non referable type «%v» kind «%s» without «%s» field: %w", def.QName(), rf.Name(), n, refDef.Kind().TrimString(), SystemField_ID, ErrInvalidTypeKind))
 					continue
 				}
 			}

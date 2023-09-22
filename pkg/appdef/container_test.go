@@ -87,10 +87,10 @@ func Test_def_AddContainer(t *testing.T) {
 		require.False(c.IsSys())
 
 		require.Equal(elQName, c.QName())
-		d := c.Def()
+		d := c.Type()
 		require.NotNil(d)
 		require.Equal(elQName, d.QName())
-		require.Equal(DefKind_Element, d.Kind())
+		require.Equal(TypeKind_Element, d.Kind())
 
 		require.EqualValues(1, c.MinOccurs())
 		require.Equal(Occurs_Unbounded, c.MaxOccurs())
@@ -100,7 +100,7 @@ func Test_def_AddContainer(t *testing.T) {
 		d := New().AddObject(NewQName("test", "obj"))
 		n := d.AddContainer("c1", elQName, 1, Occurs_Unbounded).
 			AddContainer("c2", elQName, 1, Occurs_Unbounded).
-			AddContainer("c3", elQName, 1, Occurs_Unbounded).(IDef).QName()
+			AddContainer("c3", elQName, 1, Occurs_Unbounded).(IType).QName()
 		require.Equal(d.QName(), n)
 		require.Equal(3, d.ContainerCount())
 	})
@@ -121,7 +121,7 @@ func Test_def_AddContainer(t *testing.T) {
 		require.Panics(func() { def.AddContainer("c1", elQName, 1, Occurs_Unbounded) })
 	})
 
-	t.Run("must be panic if container definition name missed", func(t *testing.T) {
+	t.Run("must be panic if container type name missed", func(t *testing.T) {
 		require.Panics(func() { def.AddContainer("c2", NullQName, 1, Occurs_Unbounded) })
 	})
 
@@ -130,7 +130,7 @@ func Test_def_AddContainer(t *testing.T) {
 		require.Panics(func() { def.AddContainer("c3", elQName, 2, 1) })
 	})
 
-	t.Run("must be panic if container definition is incompatible", func(t *testing.T) {
+	t.Run("must be panic if container type is incompatible", func(t *testing.T) {
 		require.Panics(func() { def.AddContainer("c2", def.QName(), 1, 1) })
 		require.Nil(def.Container("c2"))
 	})
@@ -155,7 +155,7 @@ func TestValidateContainer(t *testing.T) {
 	t.Run("must be error if container def not found", func(t *testing.T) {
 		_, err := app.Build()
 		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, "unknown definition «test.rec»")
+		require.ErrorContains(err, "unknown type «test.rec»")
 	})
 
 	rec := app.AddCRecord(NewQName("test", "rec"))
@@ -180,7 +180,7 @@ func TestValidateContainer(t *testing.T) {
 		doc.AddContainer("obj", NewQName("test", "obj"), 0, 1)
 		_ = app.AddObject(NewQName("test", "obj"))
 		_, err := app.Build()
-		require.ErrorIs(err, ErrInvalidDefKind)
+		require.ErrorIs(err, ErrInvalidTypeKind)
 		require.ErrorContains(err, "«CDoc» can`t contain «Object»")
 	})
 }

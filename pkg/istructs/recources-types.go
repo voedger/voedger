@@ -45,7 +45,7 @@ type ICommandFunction interface {
 
 type IQueryFunction interface {
 	IFunction
-	ResultDef(args PrepareArgs) appdef.QName
+	ResultType(args PrepareArgs) appdef.QName
 	Exec(ctx context.Context, args ExecQueryArgs, callback ExecQueryCallback) error
 }
 

@@ -228,17 +228,17 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			if row.QName() == appdef.NullQName {
 				return buf.Bytes()
 			}
-			if row.def.Kind().HasSystemField(appdef.SystemField_ID) {
+			if row.typ.Kind().HasSystemField(appdef.SystemField_ID) {
 				require.NoError(binary.Write(buf, binary.BigEndian, uint64(row.ID())))
 			}
-			if row.def.Kind().HasSystemField(appdef.SystemField_ParentID) {
+			if row.typ.Kind().HasSystemField(appdef.SystemField_ParentID) {
 				require.NoError(binary.Write(buf, binary.BigEndian, uint64(row.parentID)))
 			}
-			if row.def.Kind().HasSystemField(appdef.SystemField_Container) {
+			if row.typ.Kind().HasSystemField(appdef.SystemField_Container) {
 				id, _ := row.containerID()
 				require.NoError(binary.Write(buf, binary.BigEndian, int16(id)))
 			}
-			if row.def.Kind().HasSystemField(appdef.SystemField_IsActive) {
+			if row.typ.Kind().HasSystemField(appdef.SystemField_IsActive) {
 				require.NoError(binary.Write(buf, binary.BigEndian, row.isActive))
 			}
 			b, err := row.dyB.ToBytes()
@@ -361,7 +361,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		b := rec1.storeToBytes()
 
 		appDef := appdef.New()
-		t.Run("must be ok to build application definition", func(t *testing.T) {
+		t.Run("must be ok to build application", func(t *testing.T) {
 			appDef.AddCDoc(test.testCDoc).
 				AddField("int32_1", appdef.DataKind_int32, false).
 				AddField("int64_1", appdef.DataKind_int64, false).

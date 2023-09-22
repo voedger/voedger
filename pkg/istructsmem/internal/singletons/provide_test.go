@@ -76,8 +76,8 @@ func Test_BasicUsage(t *testing.T) {
 
 func test_AppDefSingletons(t *testing.T, appDef appdef.IAppDef, st *Singletons) {
 	require := require.New(t)
-	appDef.Defs(
-		func(d appdef.IDef) {
+	appDef.Types(
+		func(d appdef.IType) {
 			if cDoc, ok := d.(appdef.ICDoc); ok {
 				if cDoc.Singleton() {
 					id, err := st.ID(cDoc.QName())

@@ -36,7 +36,7 @@ import (
 )
 
 func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state istructs.IState, params IQueryParams,
-	resultMeta appdef.IDef, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline {
+	resultMeta appdef.IType, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline {
 	operators := make([]*pipeline.WiredOperator, 0)
 	if resultMeta.QName() == istructs.QNameJSON {
 		operators = append(operators, pipeline.WireAsyncOperator("Raw result", &RawResultOperator{
@@ -198,7 +198,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.queryFunction = qw.msg.Resource().(istructs.IQueryFunction)
-			parDef := qw.appStructs.AppDef().Def(qw.queryFunction.ParamsDef())
+			parDef := qw.appStructs.AppDef().Type(qw.queryFunction.ParamsDef())
 			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), parDef, qw.appCfg, qw)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
@@ -214,11 +214,11 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			qw.execQueryArgs.State = qw.state
 			return
 		}),
-		operator("validate: get result definition", func(ctx context.Context, qw *queryWork) (err error) {
-			def := qw.queryFunction.ResultDef(qw.execQueryArgs.PrepareArgs)
-			qw.resultDef = qw.appStructs.AppDef().Def(def)
-			err = errIfFalse(qw.resultDef.Kind() != appdef.DefKind_null, func() error {
-				return fmt.Errorf("result definition %s: %w", def, ErrNotFound)
+		operator("validate: get result type", func(ctx context.Context, qw *queryWork) (err error) {
+			typ := qw.queryFunction.ResultType(qw.execQueryArgs.PrepareArgs)
+			qw.resultDef = qw.appStructs.AppDef().Type(typ)
+			err = errIfFalse(qw.resultDef.Kind() != appdef.TypeKind_null, func() error {
+				return fmt.Errorf("result type %s: %w", typ, ErrNotFound)
 			})
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
@@ -302,7 +302,7 @@ type queryWork struct {
 	queryParams       IQueryParams
 	appStructs        istructs.IAppStructs
 	queryFunction     istructs.IQueryFunction
-	resultDef         appdef.IDef
+	resultDef         appdef.IType
 	execQueryArgs     istructs.ExecQueryArgs
 	maxPrepareQueries int
 	rowsProcessor     pipeline.IAsyncPipeline
@@ -413,7 +413,7 @@ func (r *outputRow) Values() []interface{}               { return r.values }
 func (r *outputRow) Value(alias string) interface{}      { return r.values[r.keyToIdx[alias]] }
 func (r *outputRow) MarshalJSON() ([]byte, error)        { return json.Marshal(r.values) }
 
-func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, argsDef appdef.IDef, appCfg *istructsmem.AppConfigType,
+func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, argsDef appdef.IType, appCfg *istructsmem.AppConfigType,
 	qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
 	args, _, err := data.AsObject("args")
 	if err != nil {
@@ -496,7 +496,7 @@ func (c *fieldsDefs) get(name appdef.QName) FieldsKinds {
 	defer c.lock.Unlock()
 	fd, ok := c.fields[name]
 	if !ok {
-		fd = newFieldsKinds(c.appDef.Def(name))
+		fd = newFieldsKinds(c.appDef.Type(name))
 		c.fields[name] = fd
 	}
 	return fd
@@ -546,7 +546,7 @@ func (o *jsonObject) AsString(name string) string {
 	return o.NullObject.AsString(name)
 }
 
-func newFieldsKinds(def appdef.IDef) FieldsKinds {
+func newFieldsKinds(def appdef.IType) FieldsKinds {
 	res := FieldsKinds{}
 	if fields, ok := def.(appdef.IFields); ok {
 		fields.Fields(func(f appdef.IField) {

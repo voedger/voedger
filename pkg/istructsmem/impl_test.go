@@ -331,7 +331,7 @@ func TestBasicUsage_Resources(t *testing.T) {
 		require.Equal(funcQName, f.QName())
 		require.Equal(istructs.ResourceKind_QueryFunction, f.Kind())
 		require.Equal(parDefs, f.ParamsDef())
-		require.Equal(resDefs, f.ResultDef(istructs.PrepareArgs{})) // ???
+		require.Equal(resDefs, f.ResultType(istructs.PrepareArgs{})) // ???
 
 		// Depends on myExecQuery
 		f.Exec(context.Background(), istructs.ExecQueryArgs{}, func(istructs.IObject) error { return nil })
@@ -353,7 +353,7 @@ func TestBasicUsage_Resources(t *testing.T) {
 	})
 }
 
-// Demonstrates basic usage application definition
+// Demonstrates basic usage application
 func TestBasicUsage_AppDef(t *testing.T) {
 	require := require.New(t)
 	test := test()
@@ -364,11 +364,11 @@ func TestBasicUsage_AppDef(t *testing.T) {
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
 
-	t.Run("I. test top level definition (command object)", func(t *testing.T) {
+	t.Run("I. test top level type (command object)", func(t *testing.T) {
 		cmdDef := app.AppDef().ODoc(test.saleCmdDocName)
 
 		require.NotNil(cmdDef)
-		require.Equal(appdef.DefKind_ODoc, cmdDef.Kind())
+		require.Equal(appdef.TypeKind_ODoc, cmdDef.Kind())
 
 		// check fields
 		fields := make(map[string]appdef.DataKind)
@@ -386,20 +386,20 @@ func TestBasicUsage_AppDef(t *testing.T) {
 			func(c appdef.IContainer) {
 				require.Equal(test.basketIdent, c.Name())
 				require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.QName())
-				t.Run("II. test first level nested definition (basket)", func(t *testing.T) {
+				t.Run("II. test first level nested type (basket)", func(t *testing.T) {
 					def := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.basketIdent))
 					require.NotNil(def)
-					require.Equal(appdef.DefKind_ORecord, def.Kind())
+					require.Equal(appdef.TypeKind_ORecord, def.Kind())
 
 					def.Containers(
 						func(c appdef.IContainer) {
 							require.Equal(test.goodIdent, c.Name())
 							require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.QName())
 
-							t.Run("III. test second level nested definition (good)", func(t *testing.T) {
+							t.Run("III. test second level nested type (good)", func(t *testing.T) {
 								def := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.goodIdent))
 								require.NotNil(def)
-								require.Equal(appdef.DefKind_ORecord, def.Kind())
+								require.Equal(appdef.TypeKind_ORecord, def.Kind())
 
 								fields := make(map[string]appdef.DataKind)
 								def.Fields(func(f appdef.IField) {

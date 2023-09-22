@@ -58,9 +58,9 @@ func ProvideCmdEnrichPrincipalToken(cfg *istructsmem.AppConfigType, appDefBuilde
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "EnrichPrincipalToken"),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "EnrichPrincipalTokenParams")).
-			AddField(field_Login, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_Login, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "EnrichPrincipalTokenResult")).
-			AddField(field_EnrichedToken, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_EnrichedToken, appdef.DataKind_string, true).(appdef.IType).QName(),
 		provideExecQryEnrichPrincipalToken(atf),
 	))
 }
@@ -79,9 +79,9 @@ func provideCmdCreateLogin(cfg *istructsmem.AppConfigType, appDefBuilder appdef.
 			AddField(Field_AppName, appdef.DataKind_string, true).
 			AddField(authnz.Field_SubjectKind, appdef.DataKind_int32, true).
 			AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, true).
-			AddField(authnz.Field_ProfileClusterID, appdef.DataKind_int32, true).(appdef.IDef).QName(),
+			AddField(authnz.Field_ProfileClusterID, appdef.DataKind_int32, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateLoginUnloggedParams")).
-			AddField(field_Password, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_Password, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		execCmdCreateLogin(asp),
 	))

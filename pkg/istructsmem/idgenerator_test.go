@@ -30,27 +30,27 @@ func TestIDGenerator(t *testing.T) {
 
 		expectedCRecordID := istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)
 
-		storageID, err := idGen.NextID(1, appDef.Def(qNameCDoc))
+		storageID, err := idGen.NextID(1, appDef.Type(qNameCDoc))
 		require.NoError(err)
 		require.Equal(expectedCRecordID, storageID)
 
 		expectedCRecordID++
-		storageID, err = idGen.NextID(1, appDef.Def(qNameCDoc))
+		storageID, err = idGen.NextID(1, appDef.Type(qNameCDoc))
 		require.NoError(err)
 		require.Equal(expectedCRecordID, storageID)
 
 		expectedCRecordID++
-		storageID, err = idGen.NextID(1, appDef.Def(qNameCRecord))
+		storageID, err = idGen.NextID(1, appDef.Type(qNameCRecord))
 		require.NoError(err)
 		require.Equal(expectedCRecordID, storageID)
 
 		expectedRecordID := istructs.NewRecordID(istructs.FirstBaseRecordID)
-		storageID, err = idGen.NextID(1, appDef.Def(qNameWDoc))
+		storageID, err = idGen.NextID(1, appDef.Type(qNameWDoc))
 		require.NoError(err)
 		require.Equal(expectedRecordID, storageID)
 
 		expectedRecordID++
-		storageID, err = idGen.NextID(1, appDef.Def(qNameWDoc))
+		storageID, err = idGen.NextID(1, appDef.Type(qNameWDoc))
 		require.NoError(err)
 		require.Equal(expectedRecordID, storageID)
 	})
@@ -58,21 +58,21 @@ func TestIDGenerator(t *testing.T) {
 	t.Run("UpdateOnSync", func(t *testing.T) {
 		qNames := []appdef.QName{qNameCDoc, qNameWDoc}
 		for _, qName := range qNames {
-			storageID, err := idGen.NextID(1, appDef.Def(qName))
+			storageID, err := idGen.NextID(1, appDef.Type(qName))
 			require.NoError(err)
 
-			idGen.UpdateOnSync(storageID, appDef.Def(qName))
-			storageIDNew, err := idGen.NextID(1, appDef.Def(qName))
+			idGen.UpdateOnSync(storageID, appDef.Type(qName))
+			storageIDNew, err := idGen.NextID(1, appDef.Type(qName))
 			require.NoError(err)
 			require.Equal(storageID+1, storageIDNew)
 
-			idGen.UpdateOnSync(storageIDNew+100, appDef.Def(qName))
-			storageIDNew, err = idGen.NextID(1, appDef.Def(qName))
+			idGen.UpdateOnSync(storageIDNew+100, appDef.Type(qName))
+			storageIDNew, err = idGen.NextID(1, appDef.Type(qName))
 			require.NoError(err)
 			require.Equal(storageID+102, storageIDNew)
 
-			idGen.UpdateOnSync(storageIDNew-1, appDef.Def(qName))
-			storageIDNew, err = idGen.NextID(1, appDef.Def(qName))
+			idGen.UpdateOnSync(storageIDNew-1, appDef.Type(qName))
+			storageIDNew, err = idGen.NextID(1, appDef.Type(qName))
 			require.NoError(err)
 			require.Equal(storageID+103, storageIDNew)
 		}

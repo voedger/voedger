@@ -14,7 +14,7 @@ import (
 // Unique could be obtained by appStructs.AppDef().Def(doc.QName()).Uniques().UniqueField()
 func GetUniqueID(appStructs istructs.IAppStructs, doc istructs.IRowReader, wsid istructs.WSID) (istructs.RecordID, error) {
 	qName := doc.AsQName(appdef.SystemField_QName)
-	if uniques, ok := appStructs.AppDef().Def(qName).(appdef.IUniques); ok {
+	if uniques, ok := appStructs.AppDef().Type(qName).(appdef.IUniques); ok {
 		if field := uniques.UniqueField(); field != nil {
 			uniqueKeyValues, err := getUniqueKeyValues(doc, field)
 			if err != nil {

@@ -21,9 +21,9 @@ func provideQrySqlQuery(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAp
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "SqlQuery"),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SqlQueryParams")).
-			AddField(field_Query, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_Query, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SqlQueryResult")).
-			AddField(field_Result, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_Result, appdef.DataKind_string, true).(appdef.IType).QName(),
 		execQrySqlQuery(asp, cfg.Name, numCommandProcessors),
 	))
 }
@@ -74,14 +74,14 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 		table := s.From[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName)
 		source := appdef.NewQName(table.Qualifier.String(), table.Name.String())
 
-		switch appStructs.AppDef().Def(source).Kind() {
-		case appdef.DefKind_ViewRecord:
+		switch appStructs.AppDef().Type(source).Kind() {
+		case appdef.TypeKind_ViewRecord:
 			return readViewRecords(ctx, wsid, appdef.NewQName(table.Qualifier.String(), table.Name.String()), whereExpr, appStructs, f, callback)
-		case appdef.DefKind_CDoc:
+		case appdef.TypeKind_CDoc:
 			fallthrough
-		case appdef.DefKind_CRecord:
+		case appdef.TypeKind_CRecord:
 			fallthrough
-		case appdef.DefKind_WDoc:
+		case appdef.TypeKind_WDoc:
 			return readRecords(wsid, source, whereExpr, appStructs, f, callback)
 		default:
 			if source != plog && source != wlog {

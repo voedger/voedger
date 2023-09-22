@@ -26,7 +26,7 @@ func Test_KeyType(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 
 		appDef := appdef.New()
-		t.Run("must be ok to build view definition", func(t *testing.T) {
+		t.Run("must be ok to build view", func(t *testing.T) {
 			viewDef := appDef.AddView(viewName)
 			viewDef.Key().Partition().
 				AddField("pk_int32", appdef.DataKind_int32).
@@ -174,7 +174,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 
 		appDef := appdef.New()
-		t.Run("must be ok to build application definition", func(t *testing.T) {
+		t.Run("must be ok to build application", func(t *testing.T) {
 			viewDef := appDef.AddView(appdef.NewQName("test", "viewDrinks"))
 			viewDef.Key().Partition().
 				AddField("partitionKey1", appdef.DataKind_int64)
@@ -426,30 +426,30 @@ func TestCore_ViewRecords(t *testing.T) {
 
 	t.Run("Invalid key building test", func(t *testing.T) {
 
-		t.Run("Must have panic if key definition missed", func(t *testing.T) {
+		t.Run("Must have panic if key type missed", func(t *testing.T) {
 			require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NullQName) })
 		})
 
-		t.Run("Must have panic if invalid key definition name", func(t *testing.T) {
+		t.Run("Must have panic if invalid key type name", func(t *testing.T) {
 			require.Panics(func() { _ = viewRecords.KeyBuilder(istructs.QNameForError) })
 			require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NewQName("test", "unknownDrinks")) })
 		})
 
-		t.Run("Must have panic if invalid key definition kind", func(t *testing.T) {
+		t.Run("Must have panic if invalid key type kind", func(t *testing.T) {
 			require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks_Value")) })
 		})
 
-		t.Run("Must have error if wrong partition key definition", func(t *testing.T) {
+		t.Run("Must have error if wrong partition key type", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			pk := kb.PartitionKey()
 			pk.PutQName(appdef.SystemField_QName, appdef.NewQName("test", "viewDrinks_Value"))
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
-			require.ErrorIs(err, ErrDefChanged)
+			require.ErrorIs(err, ErrTypeChanged)
 		})
 
-		t.Run("Must have error if wrong clustering columns definition", func(t *testing.T) {
+		t.Run("Must have error if wrong clustering columns type", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			pk := kb.PartitionKey()
 			pk.PutInt64("partitionKey1", 1)
@@ -458,10 +458,10 @@ func TestCore_ViewRecords(t *testing.T) {
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
-			require.ErrorIs(err, ErrDefChanged)
+			require.ErrorIs(err, ErrTypeChanged)
 		})
 
-		t.Run("Must have error if wrong value definition", func(t *testing.T) {
+		t.Run("Must have error if wrong value type", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PutInt64("partitionKey1", 1)
 			kb.PutInt64("clusteringColumn1", 100)
@@ -472,7 +472,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			vb.PutQName(appdef.SystemField_QName, appdef.NewQName("test", "viewDrinks_ClusteringColumns"))
 
 			err := viewRecords.Put(1, kb, vb)
-			require.ErrorIs(err, ErrDefChanged)
+			require.ErrorIs(err, ErrTypeChanged)
 		})
 
 		t.Run("Must have error if empty partition key", func(t *testing.T) {
@@ -558,19 +558,19 @@ func TestCore_ViewRecords(t *testing.T) {
 
 	t.Run("Invalid value building test", func(t *testing.T) {
 
-		t.Run("Must have panic if value definition missed", func(t *testing.T) {
+		t.Run("Must have panic if value type missed", func(t *testing.T) {
 			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NullQName) })
 		})
 
-		t.Run("Must have panic if unknown value definition specified", func(t *testing.T) {
+		t.Run("Must have panic if unknown value type specified", func(t *testing.T) {
 			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "unknownDrinks")) })
 		})
 
-		t.Run("Must have panic if wrong value definition specified", func(t *testing.T) {
+		t.Run("Must have panic if wrong value type specified", func(t *testing.T) {
 			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks_PartitionKey")) })
 		})
 
-		t.Run("Must have panic if wrong existing value definition specified", func(t *testing.T) {
+		t.Run("Must have panic if wrong existing value type specified", func(t *testing.T) {
 			exists := newValue(appCfg, appdef.NewQName("test", "otherView"))
 			require.Panics(func() {
 				_ = viewRecords.UpdateValueBuilder(appdef.NewQName("test", "viewDrinks"), exists)
@@ -621,7 +621,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			vb.PutBool("active", true)
 
 			err := viewRecords.Put(1, kb, vb)
-			require.ErrorIs(err, ErrWrongDefinition)
+			require.ErrorIs(err, ErrWrongType)
 			require.ErrorContains(err, "test.viewDrinks")
 		})
 
@@ -783,7 +783,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	viewName := appdef.NewQName("test", "view")
 
 	appDef := appdef.New()
-	t.Run("must be ok to build application definition", func(t *testing.T) {
+	t.Run("must be ok to build application", func(t *testing.T) {
 		v := appDef.AddView(viewName)
 		v.Key().Partition().
 			AddField("pf_int32", appdef.DataKind_int32).
@@ -912,12 +912,12 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	require := require.New(t)
 	ws := istructs.WSID(1234)
 
-	// App definition, same as previous but with RecordID field in the clustering key
+	// Application, same as previous but with RecordID field in the clustering key
 	//
 	appConfigs := func() AppConfigsType {
 
 		appDef := appdef.New()
-		t.Run("must be ok to build application definition", func(t *testing.T) {
+		t.Run("must be ok to build application", func(t *testing.T) {
 			v := appDef.AddView(appdef.NewQName("test", "viewDrinks"))
 			v.Key().Partition().
 				AddField("partitionKey1", appdef.DataKind_int64)
@@ -991,7 +991,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	championsView := appdef.NewQName("test", "champions")
 
 	appDef := appdef.New()
-	t.Run("must be ok to build application definition", func(t *testing.T) {
+	t.Run("must be ok to build application", func(t *testing.T) {
 		v := appDef.AddView(championshipsView)
 		v.Key().Partition().
 			AddField("Year", appdef.DataKind_int32)

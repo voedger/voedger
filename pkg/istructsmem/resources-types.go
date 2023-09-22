@@ -126,7 +126,7 @@ func (qf *queryFunction) Kind() istructs.ResourceKindType {
 }
 
 // istructs.IQueryFunction
-func (qf *queryFunction) ResultDef(args istructs.PrepareArgs) appdef.QName {
+func (qf *queryFunction) ResultType(args istructs.PrepareArgs) appdef.QName {
 	return qf.abstractFunction.ResultDef(args)
 }
 

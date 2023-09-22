@@ -21,7 +21,7 @@ import (
 func provideUniquesProjectorFunc(appDef appdef.IAppDef) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) (err error) {
-			if unique, ok := appDef.Def(rec.QName()).(appdef.IUniques); ok {
+			if unique, ok := appDef.Type(rec.QName()).(appdef.IUniques); ok {
 				if field := unique.UniqueField(); field != nil {
 					if rec.IsNew() {
 						err = insert(rec, field, st, intents)
@@ -170,7 +170,7 @@ func provideCUDUniqueUpdateDenyValidator() func(ctx context.Context, appStructs 
 			return nil
 		}
 		qName := cudRow.QName()
-		if uniques, ok := appStructs.AppDef().Def(qName).(appdef.IUniques); ok {
+		if uniques, ok := appStructs.AppDef().Type(qName).(appdef.IUniques); ok {
 			if field := uniques.UniqueField(); field != nil {
 				cudRow.ModifiedFields(func(fieldName string, newValue interface{}) {
 					if fieldName == field.Name() {
@@ -198,7 +198,7 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 				}
 
 				qName := rec.QName()
-				if uniques, ok := appStructs.AppDef().Def(qName).(appdef.IUniques); ok {
+				if uniques, ok := appStructs.AppDef().Type(qName).(appdef.IUniques); ok {
 					if field := uniques.UniqueField(); field != nil {
 						cudUniqueKeyValues, err := getUniqueKeyValues(actualRow, field)
 						if err != nil {

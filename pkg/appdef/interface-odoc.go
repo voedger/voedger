@@ -5,9 +5,11 @@
 
 package appdef
 
-// Operation document. DefKind() is DefKind_ODoc.
+// Operation document.
+//
+// Ref. to odoc.go for implementation
 type IODoc interface {
-	IDef
+	IType
 	IComment
 	IFields
 	IContainers
@@ -22,11 +24,11 @@ type IODocBuilder interface {
 	IWithAbstractBuilder
 }
 
-// Operation document record. DefKind() is DefKind_ORecord.
+// Operation document record.
 //
 // Ref. to odoc.go for implementation
 type IORecord interface {
-	IDef
+	IType
 	IComment
 	IFields
 	IContainers

@@ -63,7 +63,7 @@ func (cnt *Containers) Prepare(storage istorage.IAppStorage, versions *vers.Vers
 	return nil
 }
 
-// Retrieves and stores IDs for all known containers in application definition. Must be called then application starts
+// Retrieves and stores IDs for all known containers in application types. Must be called then application starts
 func (cnt *Containers) collectAll(appDef appdef.IAppDef) (err error) {
 
 	// system containers
@@ -71,8 +71,8 @@ func (cnt *Containers) collectAll(appDef appdef.IAppDef) (err error) {
 
 	// application containers
 	if appDef != nil {
-		appDef.Defs(
-			func(d appdef.IDef) {
+		appDef.Types(
+			func(d appdef.IType) {
 				if cont, ok := d.(appdef.IContainers); ok {
 					cont.Containers(
 						func(c appdef.IContainer) {

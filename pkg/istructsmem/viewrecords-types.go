@@ -50,7 +50,7 @@ func (vr *appViewRecords) UpdateValueBuilder(view appdef.QName, existing istruct
 	value := vr.NewValueBuilder(view).(*valueType)
 	src := existing.(*valueType)
 	if qName := src.QName(); qName != value.QName() {
-		panic(fmt.Errorf("invalid existing value definition «%v»; expected «%v»: %w", qName, value.QName(), ErrWrongDefinition))
+		panic(fmt.Errorf("invalid existing value type «%v»; expected «%v»: %w", qName, value.QName(), ErrWrongType))
 	}
 	value.copyFrom(&src.rowType)
 	return value
@@ -222,7 +222,7 @@ func (key *keyType) build() (err error) {
 	return nil
 }
 
-// Returns name of clustering columns key definition
+// Returns name of clustering columns key type
 func (key *keyType) ccDef() appdef.QName {
 	if v := key.appCfg.AppDef.View(key.viewName); v != nil {
 		return v.Key().ClustCols().QName()
@@ -240,7 +240,7 @@ func (key *keyType) loadFromBytes(cKey []byte) (err error) {
 	return nil
 }
 
-// Returns name of partition key definition
+// Returns name of partition key type
 func (key *keyType) pkDef() appdef.QName {
 	if v := key.appCfg.AppDef.View(key.viewName); v != nil {
 		return v.Key().Partition().QName()
@@ -257,19 +257,19 @@ func (key *keyType) storeToBytes(ws istructs.WSID) (pKey, cKey []byte) {
 // Checks what key has correct view, partition and clustering columns names and returns error if not
 func (key *keyType) validDefs() (ok bool, err error) {
 	if key.viewName == appdef.NullQName {
-		return false, fmt.Errorf("missed view definition: %w", ErrNameMissed)
+		return false, fmt.Errorf("missed view type: %w", ErrNameMissed)
 	}
 
 	if key.viewID, err = key.appCfg.qNames.ID(key.viewName); err != nil {
 		return false, err
 	}
 
-	d := key.appCfg.AppDef.DefByName(key.viewName)
+	d := key.appCfg.AppDef.TypeByName(key.viewName)
 	if d == nil {
-		return false, fmt.Errorf("unknown view key definition «%v»: %w", key.viewName, ErrNameNotFound)
+		return false, fmt.Errorf("unknown view key type «%v»: %w", key.viewName, ErrNameNotFound)
 	}
-	if d.Kind() != appdef.DefKind_ViewRecord {
-		return false, fmt.Errorf("invalid view key definition «%v» kind: %w", key.viewName, ErrUnexpectedDefKind)
+	if d.Kind() != appdef.TypeKind_ViewRecord {
+		return false, fmt.Errorf("invalid view key type «%v» kind: %w", key.viewName, ErrUnexpectedTypeKind)
 	}
 
 	return true, nil
@@ -323,7 +323,7 @@ func (key *keyType) AsInt64(name string) int64 {
 // istructs.IRowReader.AsQName
 func (key *keyType) AsQName(name string) appdef.QName {
 	if name == appdef.SystemField_QName {
-		// special case: «sys.QName» field must return full key definition
+		// special case: «sys.QName» field must return full key type
 		return appdef.ViewKeyDefName(key.viewName)
 	}
 	if key.partRow.fieldsDef().Field(name) != nil {
@@ -541,7 +541,7 @@ func (val *valueType) loadFromBytes(in []byte) (err error) {
 	return nil
 }
 
-// valueDef returns name of view value definition
+// valueDef returns name of view value type
 func (val *valueType) valueDef() appdef.QName {
 	if v := val.appCfg.AppDef.View(val.viewName); v != nil {
 		return v.Value().QName()
@@ -549,18 +549,18 @@ func (val *valueType) valueDef() appdef.QName {
 	return appdef.NullQName
 }
 
-// Checks what value has correct view and value definitions and returns error if not
+// Checks what value has correct view and value types and returns error if not
 func (val *valueType) validDefs() (ok bool, err error) {
 	if val.viewName == appdef.NullQName {
-		return false, fmt.Errorf("missed view definition: %w", ErrNameMissed)
+		return false, fmt.Errorf("missed view type: %w", ErrNameMissed)
 	}
 
-	d := val.appCfg.AppDef.DefByName(val.viewName)
+	d := val.appCfg.AppDef.TypeByName(val.viewName)
 	if d == nil {
-		return false, fmt.Errorf("unknown view definition «%v»: %w", val.viewName, ErrNameNotFound)
+		return false, fmt.Errorf("unknown view type «%v»: %w", val.viewName, ErrNameNotFound)
 	}
-	if d.Kind() != appdef.DefKind_ViewRecord {
-		return false, fmt.Errorf("invalid view definition «%v» kind: %w", val.viewName, ErrUnexpectedDefKind)
+	if d.Kind() != appdef.TypeKind_ViewRecord {
+		return false, fmt.Errorf("invalid view type «%v» kind: %w", val.viewName, ErrUnexpectedTypeKind)
 	}
 
 	return true, nil

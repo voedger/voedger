@@ -21,10 +21,10 @@ func provideChangePassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder
 		qNameCmdChangePassword,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "ChangePasswordParams")).
 			AddField(field_Login, appdef.DataKind_string, true).
-			AddField(Field_AppName, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(Field_AppName, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "ChangePasswordUnloggedParams")).
 			AddField(field_OldPassword, appdef.DataKind_string, true).
-			AddField(field_NewPassword, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_NewPassword, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		cmdChangePasswordExec,
 	))

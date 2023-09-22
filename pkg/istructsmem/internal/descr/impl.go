@@ -22,13 +22,13 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 
 	a.Name = app.AppQName()
 
-	app.AppDef().Defs(func(def appdef.IDef) {
+	app.AppDef().Types(func(def appdef.IType) {
 		defName := def.QName()
 		pkg := getPkg(defName, a)
 		d := newDef()
 		d.Name = defName
 		pkg.Defs[defName.String()] = d
-		d.read(app.AppDef().Def(defName))
+		d.read(app.AppDef().Type(defName))
 	})
 
 	app.Resources().Resources(func(resName appdef.QName) {

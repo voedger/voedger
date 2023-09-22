@@ -37,15 +37,15 @@ func newUnique(def interface{}, name string, fields []string) *unique {
 	for _, f := range fields {
 		fld := fieldsDef.Field(f)
 		if fld == nil {
-			panic(fmt.Errorf("%v: can not create unique «%s»: field «%s» not found: %w", def.(IDef).QName(), name, f, ErrNameNotFound))
+			panic(fmt.Errorf("%v: can not create unique «%s»: field «%s» not found: %w", def.(IType).QName(), name, f, ErrNameNotFound))
 		}
 		u.fields = append(u.fields, fld)
 	}
 	return u
 }
 
-func (u unique) Def() IDef {
-	return u.owner.(IDef)
+func (u unique) ParentType() IType {
+	return u.owner.(IType)
 }
 
 func (u unique) Name() string {
@@ -164,7 +164,7 @@ func (u *uniques) addUnique(name string, fields []string, comment ...string) IUn
 			ff = append(ff, f.Name())
 		}
 		if overlaps(fields, ff) {
-			panic(fmt.Errorf("%v: definition already has unique «%s» which overlaps with new unique: %w", u.parentDef().QName(), name, ErrUniqueOverlaps))
+			panic(fmt.Errorf("%v: type already has unique «%s» which overlaps with new unique: %w", u.parentDef().QName(), name, ErrUniqueOverlaps))
 		}
 	})
 
@@ -180,8 +180,8 @@ func (u *uniques) addUnique(name string, fields []string, comment ...string) IUn
 	return u.parent.(IUniquesBuilder)
 }
 
-func (u *uniques) parentDef() IDef {
-	return u.parent.(IDef)
+func (u *uniques) parentDef() IType {
+	return u.parent.(IType)
 }
 
 func (u *uniques) parentFields() IFields {

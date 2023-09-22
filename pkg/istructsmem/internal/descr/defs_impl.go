@@ -17,7 +17,7 @@ func newDef() *Def {
 	}
 }
 
-func (d *Def) read(def appdef.IDef) {
+func (d *Def) read(def appdef.IType) {
 	d.Comment = readComment(def)
 
 	d.Name = def.QName()

@@ -15,21 +15,21 @@ type QName struct {
 	entity string
 }
 
-// Definition kind enumeration.
+// Types kinds enumeration.
 //
-// Ref. def-kind.go for constants and methods
-type DefKind uint8
+// Ref. type-kind.go for constants and methods
+type TypeKind uint8
 
-// Definition describes the entity, such as document, record or view. Definitions may have fields and containers.
+// Type describes the entity, such as document, record or view.
 //
 // Ref to def.go for implementation
-type IDef interface {
+type IType interface {
 	// Parent cache
 	App() IAppDef
 
-	// Definition qualified name
+	// Type qualified name.
 	QName() QName
 
-	// Definition kind.
-	Kind() DefKind
+	// Type kind
+	Kind() TypeKind
 }

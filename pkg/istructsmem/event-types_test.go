@@ -128,7 +128,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 	t.Run("II. Save raw event to PLog & WLog and save Docs and CUDs demo", func(t *testing.T) {
 		// 1. save to PLog
-		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IDef) error {
+		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IType) error {
 			require.True(rawID.IsRaw())
 			switch rawID {
 			case test.tempPhotoID:
@@ -753,7 +753,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 	appDef := appdef.New()
 
-	t.Run("must ok to construct application definition", func(t *testing.T) {
+	t.Run("must ok to construct application", func(t *testing.T) {
 		doc := appDef.AddCDoc(docName)
 		doc.AddField("new", appdef.DataKind_bool, true)
 		doc.AddField("rec", appdef.DataKind_RecordID, false)
@@ -782,7 +782,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 	ws := istructs.WSID(1)
 
 	expectedQName := docName
-	idGenerator := NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IDef) error {
+	idGenerator := NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IType) error {
 		require.EqualValues(1, rawID)
 		require.EqualValues(expectedQName, def.QName())
 		return nil
@@ -984,7 +984,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		require.NoError(err)
 		require.NotNil(rawEvent)
 
-		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IDef) error {
+		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IType) error {
 			return errors.New("unexpected call ID generator from singleton CDoc creation")
 		}))
 		require.NotNil(pLogEvent)
@@ -1052,7 +1052,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		require.NotNil(rawEvent)
 		require.ErrorIs(buildErr, ErrRecordIDUniqueViolation)
 
-		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IDef) error {
+		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IType) error {
 			return errors.New("unexpected call ID generator from singleton CDoc creation")
 		}))
 		require.NotNil(pLogEvent)
@@ -1116,7 +1116,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		require.NoError(err)
 		require.NotNil(rawEvent)
 
-		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IDef) error {
+		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IType) error {
 			return errors.New("unexpected call ID generator while singleton CDoc update")
 		}))
 		require.NotNil(pLogEvent)
@@ -1324,7 +1324,7 @@ func TestEventBuild_Error(t *testing.T) {
 			cud.PutString(test.remarkIdent, test.remarkValue)
 
 			_, buildErr = bld.BuildRawEvent()
-			require.ErrorIs(buildErr, ErrDefChanged)
+			require.ErrorIs(buildErr, ErrTypeChanged)
 		})
 
 		t.Run("update unknown field", func(t *testing.T) {
@@ -1408,7 +1408,7 @@ func TestEventBuild_Error(t *testing.T) {
 			require.NoError(buildErr, buildErr)
 			require.NotNil(rawEvent)
 
-			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IDef) error {
+			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IType) error {
 				if rawID == test.tempBasketID {
 					require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), def.QName())
 					return fmt.Errorf("test error: %w", ErrWrongRecordID)
@@ -1439,7 +1439,7 @@ func TestEventBuild_Error(t *testing.T) {
 			require.NoError(buildErr, buildErr)
 			require.NotNil(rawEvent)
 
-			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IDef) error {
+			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, def appdef.IType) error {
 				if rawID == 7 {
 					require.Equal(test.tablePhotoRems, def.QName())
 					return fmt.Errorf("test error: %w", ErrWrongRecordID)

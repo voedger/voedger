@@ -18,7 +18,7 @@ func TestDynoBufSchemes(t *testing.T) {
 
 	var appDef appdef.IAppDef
 
-	t.Run("must ok to build application definition", func(t *testing.T) {
+	t.Run("must ok to build application", func(t *testing.T) {
 		appDefBuilder := appdef.New()
 		rootDef := appDefBuilder.AddObject(appdef.NewQName("test", "obj"))
 		rootDef.
@@ -74,7 +74,7 @@ func TestDynoBufSchemes(t *testing.T) {
 		defName, err := appdef.ParseQName(dynoScheme.Name)
 		require.NoError(err)
 
-		def := appDef.DefByName(defName)
+		def := appDef.TypeByName(defName)
 		require.NotNil(def)
 
 		for _, fld := range dynoScheme.Fields {
@@ -102,8 +102,8 @@ func TestDynoBufSchemes(t *testing.T) {
 		}
 	}
 
-	appDef.Defs(
-		func(s appdef.IDef) {
+	appDef.Types(
+		func(s appdef.IType) {
 			if _, ok := s.(appdef.IFields); ok {
 				checkScheme(schemes[s.QName()])
 			}

@@ -10,7 +10,7 @@ import "fmt"
 // # Implements:
 //   - IWDoc, IWDocBuilder
 type workspace struct {
-	def
+	typ
 	comment
 	withAbstract
 	defs map[QName]interface{}
@@ -19,33 +19,33 @@ type workspace struct {
 
 func newWorkspace(app *appDef, name QName) *workspace {
 	ws := &workspace{
-		def:  makeDef(app, name, DefKind_Workspace),
+		typ:  makeType(app, name, TypeKind_Workspace),
 		defs: make(map[QName]interface{}),
 	}
-	app.appendDef(ws)
+	app.appendType(ws)
 	return ws
 }
 
-func (ws *workspace) AddDef(name QName) IWorkspaceBuilder {
-	d, ok := ws.app.defs[name]
+func (ws *workspace) AddType(name QName) IWorkspaceBuilder {
+	d, ok := ws.app.types[name]
 	if !ok {
-		panic(fmt.Errorf("unable to add unknown definition «%v» to workspace «%v»: %w", name, ws.QName(), ErrNameNotFound))
+		panic(fmt.Errorf("unable to add unknown type «%v» to workspace «%v»: %w", name, ws.QName(), ErrNameNotFound))
 	}
 
 	ws.defs[name] = d
 	return ws
 }
 
-func (ws *workspace) Def(name QName) IDef {
+func (ws *workspace) Type(name QName) IType {
 	if d, ok := ws.defs[name]; ok {
-		return d.(IDef)
+		return d.(IType)
 	}
 	return nil
 }
 
-func (ws *workspace) Defs(cb func(IDef)) {
+func (ws *workspace) Types(cb func(IType)) {
 	for _, d := range ws.defs {
-		cb(d.(IDef))
+		cb(d.(IType))
 	}
 }
 
@@ -58,7 +58,7 @@ func (ws *workspace) Descriptor() QName {
 
 func (ws *workspace) SetDescriptor(q QName) IWorkspaceBuilder {
 	if ws.desc = ws.app.CDoc(q); ws.desc == nil {
-		panic(fmt.Errorf("definition «%v» is unknown CDoc name to assign as descriptor for workspace «%v»: %w", q, ws.QName(), ErrNameNotFound))
+		panic(fmt.Errorf("type «%v» is unknown CDoc name to assign as descriptor for workspace «%v»: %w", q, ws.QName(), ErrNameNotFound))
 	}
 	if ws.desc.Abstract() {
 		ws.SetAbstract()

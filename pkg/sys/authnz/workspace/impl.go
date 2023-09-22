@@ -250,8 +250,8 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 			if err != nil {
 				return fmt.Errorf("failed to get appStructs for appQName %s: %w", appQName.String(), err)
 			}
-			wsKindDef := as.AppDef().Def(wsKind)
-			if wsKindDef.Kind() == appdef.DefKind_null {
+			wsKindDef := as.AppDef().Type(wsKind)
+			if wsKindDef.Kind() == appdef.TypeKind_null {
 				return fmt.Errorf("unknown workspace kind: %s", wsKind.String())
 			}
 			if len(wsKindInitializationDataStr) == 0 {

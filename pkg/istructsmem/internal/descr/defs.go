@@ -12,7 +12,7 @@ import (
 type Def struct {
 	Comment     string `json:",omitempty"`
 	Name        appdef.QName
-	Kind        appdef.DefKind
+	Kind        appdef.TypeKind
 	Fields      []*Field     `json:",omitempty"`
 	Containers  []*Container `json:",omitempty"`
 	Uniques     []*Unique    `json:",omitempty"`

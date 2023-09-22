@@ -113,7 +113,7 @@ type idsGeneratorType struct {
 	nextPlogOffset istructs.Offset
 }
 
-func (me *idsGeneratorType) NextID(rawID istructs.RecordID, def appdef.IDef) (storageID istructs.RecordID, err error) {
+func (me *idsGeneratorType) NextID(rawID istructs.RecordID, def appdef.IType) (storageID istructs.RecordID, err error) {
 	if storageID, err = me.IIDGenerator.NextID(rawID, def); err != nil {
 		return istructs.NullRecordID, err
 	}

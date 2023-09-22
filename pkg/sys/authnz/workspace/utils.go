@@ -13,7 +13,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func validateWSKindInitializationData(as istructs.IAppStructs, data map[string]interface{}, def appdef.IDef) (err error) {
+func validateWSKindInitializationData(as istructs.IAppStructs, data map[string]interface{}, def appdef.IType) (err error) {
 	reb := as.Events().GetNewRawEventBuilder(
 		istructs.NewRawEventBuilderParams{
 			GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{

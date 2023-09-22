@@ -5,11 +5,11 @@
 
 package appdef
 
-// Object definition. DefKind() is DefKind_Object.
+// Object type.
 //
 // Ref. to object.go for implementation
 type IObject interface {
-	IDef
+	IType
 	IComment
 	IFields
 	IContainers
@@ -24,11 +24,11 @@ type IObjectBuilder interface {
 	IWithAbstractBuilder
 }
 
-// Element definition. DefKind() is DefKind_Element.
+// Element type.
 //
 // Ref. to object.go for implementation
 type IElement interface {
-	IDef
+	IType
 	IComment
 	IFields
 	IContainers

@@ -74,7 +74,7 @@ func readRecords(WSID istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 		return err
 	}
 
-	def := appStructs.AppDef().Def(qName)
+	def := appStructs.AppDef().Type(qName)
 
 	if !f.acceptAll {
 		for field := range f.fields {

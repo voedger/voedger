@@ -66,7 +66,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	stringFieldNames := make([]string, numOfIntFields)
 	stringFieldValues := make(map[string]string)
 
-	// application definition
+	// application
 	appDef := func() appdef.IAppDefBuilder {
 		cache := appdef.New()
 

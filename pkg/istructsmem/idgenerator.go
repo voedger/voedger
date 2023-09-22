@@ -13,11 +13,11 @@ import (
 type implIIDGenerator struct {
 	nextBaseID            istructs.RecordID
 	nextCDocCRecordBaseID istructs.RecordID
-	onNewID               func(rawID, storageID istructs.RecordID, def appdef.IDef) error
+	onNewID               func(rawID, storageID istructs.RecordID, def appdef.IType) error
 }
 
 // used in tests
-func NewIDGeneratorWithHook(onNewID func(rawID, storageID istructs.RecordID, def appdef.IDef) error) istructs.IIDGenerator {
+func NewIDGeneratorWithHook(onNewID func(rawID, storageID istructs.RecordID, def appdef.IType) error) istructs.IIDGenerator {
 	return &implIIDGenerator{
 		nextBaseID:            istructs.FirstBaseRecordID,
 		nextCDocCRecordBaseID: istructs.FirstBaseRecordID,
@@ -29,8 +29,8 @@ func NewIDGenerator() istructs.IIDGenerator {
 	return NewIDGeneratorWithHook(nil)
 }
 
-func (g *implIIDGenerator) NextID(rawID istructs.RecordID, def appdef.IDef) (storageID istructs.RecordID, err error) {
-	if def.Kind() == appdef.DefKind_CDoc || def.Kind() == appdef.DefKind_CRecord {
+func (g *implIIDGenerator) NextID(rawID istructs.RecordID, def appdef.IType) (storageID istructs.RecordID, err error) {
+	if def.Kind() == appdef.TypeKind_CDoc || def.Kind() == appdef.TypeKind_CRecord {
 		storageID = istructs.NewCDocCRecordID(g.nextCDocCRecordBaseID)
 		g.nextCDocCRecordBaseID++
 	} else {
@@ -45,8 +45,8 @@ func (g *implIIDGenerator) NextID(rawID istructs.RecordID, def appdef.IDef) (sto
 	return storageID, nil
 }
 
-func (g *implIIDGenerator) UpdateOnSync(syncID istructs.RecordID, def appdef.IDef) {
-	if def.Kind() == appdef.DefKind_CDoc || def.Kind() == appdef.DefKind_CRecord {
+func (g *implIIDGenerator) UpdateOnSync(syncID istructs.RecordID, def appdef.IType) {
+	if def.Kind() == appdef.TypeKind_CDoc || def.Kind() == appdef.TypeKind_CRecord {
 		if syncID.BaseRecordID() >= g.nextCDocCRecordBaseID {
 			g.nextCDocCRecordBaseID = syncID.BaseRecordID() + 1
 		}

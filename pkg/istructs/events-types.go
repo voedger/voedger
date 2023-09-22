@@ -73,8 +73,8 @@ type ICUDRow interface {
 }
 
 type IIDGenerator interface {
-	NextID(rawID RecordID, def appdef.IDef) (storageID RecordID, err error)
-	UpdateOnSync(syncID RecordID, def appdef.IDef)
+	NextID(rawID RecordID, def appdef.IType) (storageID RecordID, err error)
+	UpdateOnSync(syncID RecordID, def appdef.IType)
 }
 
 type IRawEvent interface {

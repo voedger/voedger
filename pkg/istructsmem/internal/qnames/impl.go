@@ -74,8 +74,8 @@ func (names *QNames) collectAll(appDef appdef.IAppDef, r istructs.IResources) (e
 		collectSys(istructs.QNameCommandCUD, QNameIDCommandCUD)
 
 	if appDef != nil {
-		appDef.Defs(
-			func(d appdef.IDef) {
+		appDef.Types(
+			func(d appdef.IType) {
 				err = errors.Join(err,
 					names.collect(d.QName()))
 			})

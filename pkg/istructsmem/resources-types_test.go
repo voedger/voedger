@@ -42,7 +42,7 @@ func TestResourceEnumerator(t *testing.T) {
 	t.Run("builds app", func(t *testing.T) {
 
 		appDef := appdef.New()
-		t.Run("must be ok to build application definition", func(t *testing.T) {
+		t.Run("must be ok to build application", func(t *testing.T) {
 			cDocDef := appDef.AddCDoc(cDocName)
 			cDocDef.
 				AddField("Int32", appdef.DataKind_int32, true).

@@ -8,7 +8,7 @@ package appdef
 // # Implements:
 //   - IObject, IObjectBuilder
 type object struct {
-	def
+	typ
 	comment
 	fields
 	containers
@@ -17,18 +17,18 @@ type object struct {
 
 func newObject(app *appDef, name QName) *object {
 	obj := &object{
-		def: makeDef(app, name, DefKind_Object),
+		typ: makeType(app, name, TypeKind_Object),
 	}
 	obj.fields = makeFields(obj)
 	obj.containers = makeContainers(obj)
-	app.appendDef(obj)
+	app.appendType(obj)
 	return obj
 }
 
 // # Implements:
 //   - IElement, IElementBuilder
 type element struct {
-	def
+	typ
 	comment
 	fields
 	containers
@@ -37,11 +37,11 @@ type element struct {
 
 func newElement(app *appDef, name QName) *element {
 	elt := &element{
-		def: makeDef(app, name, DefKind_Element),
+		typ: makeType(app, name, TypeKind_Element),
 	}
 	elt.fields = makeFields(elt)
 	elt.containers = makeContainers(elt)
-	app.appendDef(elt)
+	app.appendType(elt)
 	return elt
 }
 

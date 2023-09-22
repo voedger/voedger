@@ -8,7 +8,7 @@ package appdef
 // # Implements:
 //   - IGDoc, IGDocBuilder
 type gDoc struct {
-	def
+	typ
 	comment
 	fields
 	containers
@@ -18,19 +18,19 @@ type gDoc struct {
 
 func newGDoc(app *appDef, name QName) *gDoc {
 	doc := &gDoc{
-		def: makeDef(app, name, DefKind_GDoc),
+		typ: makeType(app, name, TypeKind_GDoc),
 	}
 	doc.fields = makeFields(doc)
 	doc.containers = makeContainers(doc)
 	doc.uniques = makeUniques(doc)
-	app.appendDef(doc)
+	app.appendType(doc)
 	return doc
 }
 
 // # Implements:
 //   - IGRecord, IGRecordBuilder
 type gRecord struct {
-	def
+	typ
 	comment
 	fields
 	containers
@@ -40,11 +40,11 @@ type gRecord struct {
 
 func newGRecord(app *appDef, name QName) *gRecord {
 	rec := &gRecord{
-		def: makeDef(app, name, DefKind_GRecord),
+		typ: makeType(app, name, TypeKind_GRecord),
 	}
 	rec.fields = makeFields(rec)
 	rec.containers = makeContainers(rec)
 	rec.uniques = makeUniques(rec)
-	app.appendDef(rec)
+	app.appendType(rec)
 	return rec
 }

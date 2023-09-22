@@ -147,7 +147,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		ws := ap.getWorkspace(event.Workspace())
 		_ = event.CUDs(func(rec istructs.ICUDRow) error { // no errors to return
 			if rec.IsNew() {
-				def := cmd.AppDef().Def(rec.QName())
+				def := cmd.AppDef().Type(rec.QName())
 				ws.idGenerator.UpdateOnSync(rec.ID(), def)
 			}
 			return nil
@@ -350,7 +350,7 @@ func getArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"args" field must be an object`)
 		}
-		parsDef := cmd.appStructs.AppDef().Def(cmd.cmdFunc.ParamsDef())
+		parsDef := cmd.appStructs.AppDef().Type(cmd.cmdFunc.ParamsDef())
 		if err = istructsmem.FillElementFromJSON(args, parsDef, aob); err != nil {
 			return err
 		}
@@ -372,7 +372,7 @@ func getUnloggedArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"unloggedArgs" field must be an object`)
 		}
-		unloggedParsDef := cmd.appStructs.AppDef().Def(cmd.cmdFunc.UnloggedParamsDef())
+		unloggedParsDef := cmd.appStructs.AppDef().Type(cmd.cmdFunc.UnloggedParamsDef())
 		if err = istructsmem.FillElementFromJSON(unloggedArgs, unloggedParsDef, auob); err != nil {
 			return err
 		}
@@ -653,7 +653,7 @@ func (sr *opSendResponse) OnErr(err error, work interface{}, _ pipeline.IWorkpie
 	return nil
 }
 
-func (idGen *implIDGenerator) NextID(rawID istructs.RecordID, def appdef.IDef) (storageID istructs.RecordID, err error) {
+func (idGen *implIDGenerator) NextID(rawID istructs.RecordID, def appdef.IType) (storageID istructs.RecordID, err error) {
 	storageID, err = idGen.IIDGenerator.NextID(rawID, def)
 	idGen.generatedIDs[rawID] = storageID
 	return

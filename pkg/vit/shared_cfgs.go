@@ -100,13 +100,13 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 		QNameQryRated,
 		appdef.NullQName,
 		adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedQryParams")).
-			AddField("Fld", appdef.DataKind_string, false).(appdef.IDef).QName(),
+			AddField("Fld", appdef.DataKind_string, false).(appdef.IType).QName(),
 		istructsmem.NullQueryExec,
 	))
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCmdRated,
 		adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedCmdParams")).
-			AddField("Fld", appdef.DataKind_string, false).(appdef.IDef).QName(),
+			AddField("Fld", appdef.DataKind_string, false).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		istructsmem.NullCommandExec,
@@ -166,11 +166,11 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "TestCmd"),
 		adf.AddObject(testCmdParams).
-			AddField("Arg1", appdef.DataKind_int32, true).(appdef.IDef).QName(),
+			AddField("Arg1", appdef.DataKind_int32, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		adf.AddObject(testCmdResult).
 			AddField("Int", appdef.DataKind_int32, true).
-			AddField("Str", appdef.DataKind_string, false).(appdef.IDef).QName(),
+			AddField("Str", appdef.DataKind_string, false).(appdef.IType).QName(),
 		func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
 			key, err := args.State.KeyBuilder(state.CmdResultStorage, testCmdResult)
 			if err != nil {

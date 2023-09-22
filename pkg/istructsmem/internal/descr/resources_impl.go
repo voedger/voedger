@@ -52,7 +52,7 @@ func (r *Resource) readQuery(query istructs.IQueryFunction) {
 	if n := query.ParamsDef(); n != appdef.NullQName {
 		r.Query.Params = &n
 	}
-	if n := query.ResultDef(istructs.PrepareArgs{}); n != appdef.NullQName {
+	if n := query.ResultType(istructs.PrepareArgs{}); n != appdef.NullQName {
 		r.Query.Result = &n
 	}
 }

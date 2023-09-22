@@ -167,7 +167,7 @@ func TestUniquesErrors(t *testing.T) {
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
 
-	t.Run("must error if unknown definition uniques passed to Prepare()", func(t *testing.T) {
+	t.Run("must error if unknown type uniques passed to Prepare()", func(t *testing.T) {
 		storage := teststore.NewStorage()
 
 		versions := vers.New()
@@ -182,7 +182,7 @@ func TestUniquesErrors(t *testing.T) {
 			panic(err)
 		}
 
-		t.Run("inject unknown definition to AppDef", func(t *testing.T) {
+		t.Run("inject unknown type to AppDef", func(t *testing.T) {
 			def := appDef.(appdef.IAppDefBuilder).AddCDoc(appdef.NewQName("test", "unknown"))
 			def.
 				AddStringField("fld", false)

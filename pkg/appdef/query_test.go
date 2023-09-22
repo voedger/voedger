@@ -24,7 +24,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 		_ = appDef.AddObject(resName)
 
 		query := appDef.AddQuery(queryName)
-		require.Equal(DefKind_Query, query.Kind())
+		require.Equal(TypeKind_Query, query.Kind())
 		require.Equal(query, appDef.Query(queryName))
 		require.Nil(query.Arg())
 		require.Nil(query.Result())
@@ -48,22 +48,22 @@ func Test_AppDef_AddQuery(t *testing.T) {
 	require.NotNil(app)
 
 	t.Run("must be ok to find builded query", func(t *testing.T) {
-		def := app.Def(queryName)
-		require.Equal(DefKind_Query, def.Kind())
+		def := app.Type(queryName)
+		require.Equal(TypeKind_Query, def.Kind())
 
 		d, ok := def.(IQuery)
 		require.True(ok)
-		require.Equal(DefKind_Query, d.Kind())
+		require.Equal(TypeKind_Query, d.Kind())
 
 		query := app.Query(queryName)
-		require.Equal(DefKind_Query, query.Kind())
+		require.Equal(TypeKind_Query, query.Kind())
 		require.Equal(d, query)
 
 		require.Equal(argName, query.Arg().QName())
-		require.Equal(DefKind_Object, query.Arg().Kind())
+		require.Equal(TypeKind_Object, query.Arg().Kind())
 
 		require.Equal(resName, query.Result().QName())
-		require.Equal(DefKind_Object, query.Result().Kind())
+		require.Equal(TypeKind_Object, query.Result().Kind())
 
 		require.Equal("QueryExt", query.Extension().Name())
 		require.Equal(ExtensionEngineKind_BuiltIn, query.Extension().Engine())
@@ -88,7 +88,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 		})
 	})
 
-	t.Run("panic if definition with name already exists", func(t *testing.T) {
+	t.Run("panic if type with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "dupe")
 		apb := New()
 		apb.AddObject(testName)
