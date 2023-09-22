@@ -929,7 +929,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 func Test_SingletonCDocEvent(t *testing.T) {
 	require := require.New(t)
 
-	docName := appdef.NewQName("test", "cDoc")
+	docName, doc2Name := appdef.NewQName("test", "cDoc"), appdef.NewQName("test", "cDoc2")
 	docID := istructs.NullRecordID
 
 	appDef := appdef.New()
@@ -937,6 +937,9 @@ func Test_SingletonCDocEvent(t *testing.T) {
 	t.Run("must ok to construct singleton CDoc", func(t *testing.T) {
 		def := appDef.AddSingleton(docName)
 		def.AddField("option", appdef.DataKind_int64, true)
+
+		def2 := appDef.AddSingleton(doc2Name)
+		def2.AddField("option", appdef.DataKind_int64, true)
 	})
 
 	cfgs := func() AppConfigsType {
@@ -1061,6 +1064,31 @@ func Test_SingletonCDocEvent(t *testing.T) {
 				_ = app.Records().Apply2(pLogEvent, func(_ istructs.IRecord) {})
 			},
 			"must panic if apply invalid event")
+	})
+
+	t.Run("must fail to repeatedly create singleton CDoc", func(t *testing.T) {
+		bld := app.Events().GetNewRawEventBuilder(
+			istructs.NewRawEventBuilderParams{
+				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+					HandlingPartition: 1,
+					PLogOffset:        100501,
+					Workspace:         1,
+					WLogOffset:        100501,
+					QName:             istructs.QNameCommandCUD, // sys.CUD
+					RegisteredAt:      1,
+				},
+			})
+
+		for i := 1; i <= 2; i++ {
+			cud := bld.CUDBuilder().Create(doc2Name)
+			cud.PutRecordID(appdef.SystemField_ID, istructs.RecordID(i))
+			cud.PutInt64("option", 88)
+		}
+
+		rawEvent, buildErr := bld.BuildRawEvent()
+		require.NotNil(rawEvent)
+		require.ErrorIs(buildErr, ErrRecordIDUniqueViolation)
+		require.ErrorContains(buildErr, "repeatedly creates the same singleton")
 	})
 
 	t.Run("must ok to update singleton CDoc", func(t *testing.T) {

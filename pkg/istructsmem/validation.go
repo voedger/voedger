@@ -321,14 +321,23 @@ func (v *validators) validCUDsUnique(cud *cudType) (err error) {
 	const errRecIDViolatedWrap = "cud.%s record ID «%d» is used repeatedly: %w"
 
 	ids := make(map[istructs.RecordID]bool)
+	singletons := make(map[appdef.QName]istructs.RecordID)
 
 	for _, rec := range cud.creates {
 		id := rec.ID()
 		if _, exists := ids[id]; exists {
 			err = errors.Join(err,
-				validateErrorf(ECode_InvalidRecordID, errRecIDViolatedWrap, "create", id, ErrRecordIDUniqueViolation))
+				validateErrorf(ECode_InvalidRawRecordID, errRecIDViolatedWrap, "create", id, ErrRecordIDUniqueViolation))
 		}
 		ids[id] = true
+
+		if cDoc, ok := rec.def.(appdef.ICDoc); ok && cDoc.Singleton() {
+			if id, ok := singletons[cDoc.QName()]; ok {
+				err = errors.Join(err,
+					validateErrorf(ECode_InvalidRawRecordID, "cud.create repeatedly creates the same singleton «%v» (record ID «%d» and «%d»): %w ", cDoc.QName(), id, rec.id, ErrRecordIDUniqueViolation))
+			}
+			singletons[cDoc.QName()] = rec.id
+		}
 	}
 
 	for _, rec := range cud.updates {

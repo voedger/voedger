@@ -339,11 +339,10 @@ func (ev *eventType) WLogOffset() istructs.Offset {
 }
 
 // cudType implements event cud member
-//   - methods:
-//     — regenerateIDs: regenerates all raw IDs by specified generator
-//     — validRawIDs: validates raw IDs and refers to raw IDs
-//   - interfaces:
-//     — istructs.ICUD
+//
+// # Implements:
+//
+//	— istructs.ICUD
 type cudType struct {
 	appCfg  *AppConfigType
 	creates []*recordType
