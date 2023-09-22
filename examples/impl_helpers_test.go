@@ -91,7 +91,8 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 	}
 	if k.storage == storageEvent {
 		if mockmode == modeOrder {
-			mockTableRest = 1560
+			mv.Data["new"] = true
+			mockTableRest = 0
 			mv.Data["qname"] = orderQName
 			mv.Data["arg"] = newJsonValue(`
 				{
@@ -113,7 +114,8 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 				}
 			`)
 		} else if mockmode == modeBill {
-			mockTableRest = 0
+			mv.Data["new"] = false
+			mockTableRest = 1560
 			mv.Data["qname"] = billQName
 			mv.Data["arg"] = newJsonValue(`
 				{
@@ -131,7 +133,8 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 				}
 			`)
 		} else if mockmode == modeBill1 {
-			mockTableRest = 860
+			mv.Data["new"] = false
+			mockTableRest = 1560
 			mv.Data["qname"] = billQName
 			mv.Data["arg"] = newJsonValue(`
 					{
@@ -145,7 +148,8 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 					}
 				`)
 		} else if mockmode == modeBill2 {
-			mockTableRest = 0
+			mv.Data["new"] = false
+			mockTableRest = 860
 			mv.Data["qname"] = billQName
 			mv.Data["arg"] = newJsonValue(`
 						{
@@ -359,7 +363,7 @@ func (kb *mockValueBuilder) PutRecord(name string, record istructs.IRecord)   {}
 func (kb *mockValueBuilder) PutEvent(name string, event istructs.IDbEvent)    {}
 func (kb *mockValueBuilder) Build() istructs.IValue                           { return nil }
 func (kb *mockValueBuilder) PutInt32(name string, value int32)                { kb.items[name] = value }
-func (kb *mockValueBuilder) PutInt64(name string, value int64)                {}
+func (kb *mockValueBuilder) PutInt64(name string, value int64)                { kb.items[name] = value }
 func (kb *mockValueBuilder) PutFloat32(name string, value float32)            {}
 func (kb *mockValueBuilder) PutFloat64(name string, value float64)            {}
 func (kb *mockValueBuilder) PutBytes(name string, value []byte)               { kb.items[name] = value }

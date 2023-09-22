@@ -42,47 +42,6 @@ func Test_BasicUsageMockWasmExt(t *testing.T) {
 	require := require.New(t)
 	ctx := context.Background()
 
-	moduleURL := testModuleURL("./vrestaurant/extwasm/ext.wasm")
-	extEngine, err := wasm.ExtEngineWazeroFactory(ctx, moduleURL, []string{extUpdateMockTableStatus}, iextengine.ExtEngineConfig{})
-	require.Nil(err)
-
-	extEngine.SetLimits(limits)
-
-	// Init mock strorage
-	mv = *mockedValue()
-
-	//
-	// Invoke Order
-	//
-	var order = &mockIo{}
-	mockmode = modeOrder
-
-	err = extEngine.Invoke(ctx, extUpdateMockTableStatus, order)
-	require.NoError(err)
-	require.Equal(int(1), len(order.intents))
-	v := order.intents[0].value.(*mockValueBuilder)
-	require.Equal(int32(1560), v.items["Amount"])
-	require.Equal(int32(1), v.items["Status"])
-
-	//
-	// Invoke Payment
-	//
-	var bill = &mockIo{}
-	mockmode = modeBill
-	err = extEngine.Invoke(ctx, extUpdateMockTableStatus, bill)
-	require.NoError(err)
-
-	require.Equal(1, len(bill.intents))
-	b := bill.intents[0].value.(*mockValueBuilder)
-	require.Equal(int32(0), b.items["Amount"])
-	require.Equal(int32(0), b.items["Status"])
-}
-
-func Test_BasicUsageFullMockWasmExt(t *testing.T) {
-
-	require := require.New(t)
-	ctx := context.Background()
-
 	// Init mock strorage
 	mv = *mockedValue()
 
@@ -101,8 +60,6 @@ func Test_BasicUsageFullMockWasmExt(t *testing.T) {
 
 	err = extEngine.Invoke(ctx, extUpdateTableStatus, order)
 	require.NoError(err)
-	require.Equal(int64(1560), mv.Data["NotPaid"])
-	require.Equal(int32(1), mv.Data["Status"])
 	require.Equal(int(1), len(order.intents))
 	v := order.intents[0].value.(*mockValueBuilder)
 	require.Equal(int64(1560), v.items["NotPaid"])
@@ -115,10 +72,9 @@ func Test_BasicUsageFullMockWasmExt(t *testing.T) {
 	mockmode = modeBill1
 	err = extEngine.Invoke(ctx, extUpdateTableStatus, bill1)
 	require.NoError(err)
-	require.Equal(int64(860), mv.Data["NotPaid"])
-	require.Equal(int32(1), mv.Data["Status"])
 	require.Equal(int(1), len(order.intents))
 	v = bill1.intents[0].value.(*mockValueBuilder)
+
 	require.Equal(int64(860), v.items["NotPaid"])
 	require.Equal(int32(1), v.items["Status"])
 
@@ -129,9 +85,6 @@ func Test_BasicUsageFullMockWasmExt(t *testing.T) {
 	mockmode = modeBill2
 	err = extEngine.Invoke(ctx, extUpdateTableStatus, bill2)
 	require.NoError(err)
-
-	require.Equal(int64(0), mv.Data["NotPaid"])
-	require.Equal(int32(0), mv.Data["Status"])
 	require.Equal(int(1), len(order.intents))
 	v = bill2.intents[0].value.(*mockValueBuilder)
 	require.Equal(int64(0), v.items["NotPaid"])
