@@ -300,7 +300,7 @@ func (v *validators) validObject(obj *elementType) (err error) {
 func (v *validators) validCUD(cud *cudType, isSyncEvent bool) (err error) {
 	for _, newRec := range cud.creates {
 		err = errors.Join(err,
-			v.validRecord(newRec, !isSyncEvent))
+			v.validCUDRecord(newRec, !isSyncEvent))
 	}
 
 	err = errors.Join(err,
@@ -310,7 +310,7 @@ func (v *validators) validCUD(cud *cudType, isSyncEvent bool) (err error) {
 
 	for _, updRec := range cud.updates {
 		err = errors.Join(err,
-			v.validRecord(&updRec.result, false))
+			v.validCUDRecord(&updRec.result, false))
 	}
 
 	return err
@@ -467,10 +467,10 @@ func (v *validators) validViewValue(value *valueType) (err error) {
 	return validator.validRow(&value.rowType)
 }
 
-// Validates specified record.
+// Validates specified CUD record.
 //
 // If rawIDexpected then raw IDs is required
-func (v *validators) validRecord(rec *recordType, rawIDexpected bool) (err error) {
+func (v *validators) validCUDRecord(rec *recordType, rawIDexpected bool) (err error) {
 	if rec.QName() == appdef.NullQName {
 		return validateErrorf(ECode_EmptyDefName, "record «%s» has empty definition name: %w", rec.Container(), ErrNameMissed)
 	}
@@ -481,7 +481,7 @@ func (v *validators) validRecord(rec *recordType, rawIDexpected bool) (err error
 	}
 
 	switch validator.def.Kind() {
-	case appdef.DefKind_GDoc, appdef.DefKind_CDoc, appdef.DefKind_ODoc, appdef.DefKind_WDoc, appdef.DefKind_GRecord, appdef.DefKind_CRecord, appdef.DefKind_ORecord, appdef.DefKind_WRecord:
+	case appdef.DefKind_GDoc, appdef.DefKind_CDoc, appdef.DefKind_WDoc, appdef.DefKind_GRecord, appdef.DefKind_CRecord, appdef.DefKind_WRecord:
 		return validator.validRecord(rec, rawIDexpected)
 	}
 
