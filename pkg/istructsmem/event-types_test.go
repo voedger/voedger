@@ -597,7 +597,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 					case test.tablePhotoRems:
 						require.Equal(changedRems, r.AsString(test.remarkIdent))
 					default:
-						require.FailNow("unexpected record QName from Apply2 to callback returned: «%v»", r.QName())
+						require.FailNow("unexpected record QName from Apply2 to callback returned", "QName: «%v»", r.QName())
 					}
 					recCnt++
 				})
@@ -929,7 +929,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 func Test_SingletonCDocEvent(t *testing.T) {
 	require := require.New(t)
 
-	docName := appdef.NewQName("test", "cDoc")
+	docName, doc2Name := appdef.NewQName("test", "cDoc"), appdef.NewQName("test", "cDoc2")
 	docID := istructs.NullRecordID
 
 	appDef := appdef.New()
@@ -937,6 +937,9 @@ func Test_SingletonCDocEvent(t *testing.T) {
 	t.Run("must ok to construct singleton CDoc", func(t *testing.T) {
 		def := appDef.AddSingleton(docName)
 		def.AddField("option", appdef.DataKind_int64, true)
+
+		def2 := appDef.AddSingleton(doc2Name)
+		def2.AddField("option", appdef.DataKind_int64, true)
 	})
 
 	cfgs := func() AppConfigsType {
@@ -1011,13 +1014,6 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			})
 			require.Equal(1, recCnt)
 		})
-
-		t.Run("must fail if attempt to reapply singleton CDoc creation", func(t *testing.T) {
-			err = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {
-				require.Fail("must fail if attempt to reapply singleton CDoc creation")
-			})
-			require.ErrorIs(err, ErrRecordIDUniqueViolation)
-		})
 	})
 
 	t.Run("must ok to read singleton CDoc by QName", func(t *testing.T) {
@@ -1068,6 +1064,31 @@ func Test_SingletonCDocEvent(t *testing.T) {
 				_ = app.Records().Apply2(pLogEvent, func(_ istructs.IRecord) {})
 			},
 			"must panic if apply invalid event")
+	})
+
+	t.Run("must fail to repeatedly create singleton CDoc", func(t *testing.T) {
+		bld := app.Events().GetNewRawEventBuilder(
+			istructs.NewRawEventBuilderParams{
+				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+					HandlingPartition: 1,
+					PLogOffset:        100501,
+					Workspace:         1,
+					WLogOffset:        100501,
+					QName:             istructs.QNameCommandCUD, // sys.CUD
+					RegisteredAt:      1,
+				},
+			})
+
+		for i := 1; i <= 2; i++ {
+			cud := bld.CUDBuilder().Create(doc2Name)
+			cud.PutRecordID(appdef.SystemField_ID, istructs.RecordID(i))
+			cud.PutInt64("option", 88)
+		}
+
+		rawEvent, buildErr := bld.BuildRawEvent()
+		require.NotNil(rawEvent)
+		require.ErrorIs(buildErr, ErrRecordIDUniqueViolation)
+		require.ErrorContains(buildErr, "repeatedly creates the same singleton")
 	})
 
 	t.Run("must ok to update singleton CDoc", func(t *testing.T) {
@@ -1261,8 +1282,33 @@ func TestEventBuild_Error(t *testing.T) {
 			r.PutString(test.buyerIdent, test.buyerValue)
 			err := r.build()
 			require.NoError(err)
-			return &r
+			return r
 		}
+
+		getPhotoRem := func() istructs.IRecord {
+			r := newRecord(test.AppCfg)
+			r.PutQName(appdef.SystemField_QName, test.tablePhotoRems)
+			r.PutRecordID(appdef.SystemField_ID, 100501)
+			r.PutRecordID(appdef.SystemField_ParentID, 100500)
+			r.PutString(appdef.SystemField_Container, test.remarkIdent)
+			r.PutRecordID(test.photoIdent, 100500)
+			r.PutString(test.remarkIdent, test.remarkValue)
+			err := r.build()
+			require.NoError(err)
+			return r
+		}
+
+		t.Run("prepare exists photo records", func(t *testing.T) {
+			rec := getPhoto().(*recordType)
+			data := rec.storeToBytes()
+			err := app.Records().(*appRecordsType).putRecord(test.workspace, rec.id, data)
+			require.NoError(err)
+
+			rec = getPhotoRem().(*recordType)
+			data = rec.storeToBytes()
+			err = app.Records().(*appRecordsType).putRecord(test.workspace, rec.id, data)
+			require.NoError(err)
+		})
 
 		t.Run("update not applicable by QName", func(t *testing.T) {
 			bld := eventBuilder(test.changeCmdName)
@@ -1294,19 +1340,6 @@ func TestEventBuild_Error(t *testing.T) {
 		})
 
 		t.Run("can`t change system fields", func(t *testing.T) {
-
-			getPhotoRem := func() istructs.IRecord {
-				r := newRecord(test.AppCfg)
-				r.PutQName(appdef.SystemField_QName, test.tablePhotoRems)
-				r.PutRecordID(appdef.SystemField_ID, 100501)
-				r.PutRecordID(appdef.SystemField_ParentID, 100500)
-				r.PutString(appdef.SystemField_Container, test.remarkIdent)
-				r.PutRecordID(test.photoIdent, 100500)
-				r.PutString(test.remarkIdent, test.remarkValue)
-				err := r.build()
-				require.NoError(err)
-				return &r
-			}
 
 			t.Run("can`t change sys.ID", func(t *testing.T) {
 				bld := eventBuilder(test.changeCmdName)
