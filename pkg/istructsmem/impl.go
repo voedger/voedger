@@ -480,7 +480,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
 // istructs.IRecords.Apply
 func (recs *appRecordsType) Apply(event istructs.IPLogEvent) (err error) {
-	return recs.Apply2(event, func(istructs.IRecord) {})
+	return recs.Apply2(event, nil)
 }
 
 // istructs.IRecords.Apply2
@@ -517,8 +517,10 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 	if err = ev.cud.applyRecs(load, store); err == nil {
 		if len(records) > 0 {
 			if err = recs.putRecordsBatch(ev.ws, batch); err == nil {
-				for _, rec := range records {
-					cb(rec)
+				if cb != nil {
+					for _, rec := range records {
+						cb(rec)
+					}
 				}
 			}
 		}
