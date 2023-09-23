@@ -19,7 +19,7 @@ var ErrInvalidName = errors.New("name not valid")
 
 var ErrIDNotFound = errors.New("ID not found")
 
-var ErrorRecordIDNotFound = fmt.Errorf("recordID cannot be found: %w", ErrIDNotFound)
+var ErrRecordIDNotFound = fmt.Errorf("recordID cannot be found: %w", ErrIDNotFound)
 
 var ErrRecordNotFound = errors.New("record cannot be found")
 

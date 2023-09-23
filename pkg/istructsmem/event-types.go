@@ -19,11 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/objcache"
 )
 
-type (
-	existsRecordType    func(id istructs.RecordID) (bool, error)
-	loadRecordFuncType  func(rec *recordType) error
-	storeRecordFuncType func(rec *recordType) error
-)
+type recordFunc func(rec *recordType) error
 
 // Implements event structure
 //
@@ -101,11 +97,6 @@ func newSyncEventBuilder(appCfg *AppConfigType, params istructs.SyncRawEventBuil
 	return ev
 }
 
-// applyCommandRecs store all event CUDs into storage records using specified cb functions
-func (ev *eventType) applyCommandRecs(exists existsRecordType, load loadRecordFuncType, store storeRecordFuncType) error {
-	return ev.cud.applyRecs(exists, load, store)
-}
-
 // argumentNames returns argument and un-logged argument QNames
 func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 	arg = appdef.NullQName
@@ -179,7 +170,7 @@ func (ev *eventType) qNameID() qnames.QNameID {
 }
 
 // Regenerates all raw IDs in event arguments and CUDs using specified generator
-func (ev *eventType) regenerateIDs(generator istructs.IDGenerator) (err error) {
+func (ev *eventType) regenerateIDs(generator istructs.IIDGenerator) (err error) {
 	if (ev.argObject.QName() != appdef.NullQName) && ev.argObject.isDocument() {
 		if err := ev.argObject.regenerateIDs(generator); err != nil {
 			return err
@@ -348,11 +339,10 @@ func (ev *eventType) WLogOffset() istructs.Offset {
 }
 
 // cudType implements event cud member
-//   - methods:
-//     — regenerateIDs: regenerates all raw IDs by specified generator
-//     — validRawIDs: validates raw IDs and refers to raw IDs
-//   - interfaces:
-//     — istructs.ICUD
+//
+// # Implements:
+//
+//	— istructs.ICUD
 type cudType struct {
 	appCfg  *AppConfigType
 	creates []*recordType
@@ -368,24 +358,9 @@ func makeCUD(appCfg *AppConfigType) cudType {
 }
 
 // applyRecs call store callback func for each record
-func (cud *cudType) applyRecs(exists existsRecordType, load loadRecordFuncType, store storeRecordFuncType) (err error) {
+func (cud *cudType) applyRecs(load, store recordFunc) (err error) {
 
 	for _, rec := range cud.creates {
-		if cDoc, ok := rec.def.(appdef.ICDoc); ok {
-			if cDoc.Singleton() {
-				id, err := cud.appCfg.singletons.ID(rec.QName())
-				if err != nil {
-					return err
-				}
-				isExists, err := exists(id)
-				if err != nil {
-					return err
-				}
-				if isExists {
-					return fmt.Errorf("can not create singleton, CDoc «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
-				}
-			}
-		}
 		if err = store(rec); err != nil {
 			return err
 		}
@@ -393,6 +368,10 @@ func (cud *cudType) applyRecs(exists existsRecordType, load loadRecordFuncType, 
 
 	for _, rec := range cud.updates {
 		if rec.originRec.empty() {
+			// this case reread event from PLog after restart.
+			// It is necessary to:
+			//	- load the existing record from the storage and
+			// 	- rebuild the result with changes
 			if err = load(&rec.originRec); err != nil {
 				return err
 			}
@@ -450,12 +429,14 @@ func (cud *cudType) enumRecs(cb func(rec istructs.ICUDRow) error) (err error) {
 type newIDsPlanType map[istructs.RecordID]istructs.RecordID
 
 // regenerateIDsPlan creates new ID regeneration plan
-func (cud *cudType) regenerateIDsPlan(generator istructs.IDGenerator) (newIDs newIDsPlanType, err error) {
+func (cud *cudType) regenerateIDsPlan(generator istructs.IIDGenerator) (newIDs newIDsPlanType, err error) {
 	plan := make(newIDsPlanType)
 	for _, rec := range cud.creates {
 		id := rec.ID()
 		if !id.IsRaw() {
-			continue // storage IDs is allowed for sync events…
+			// storage IDs are allowed for sync events
+			generator.UpdateOnSync(id, rec.def)
+			continue
 		}
 
 		var storeID istructs.RecordID
@@ -465,7 +446,7 @@ func (cud *cudType) regenerateIDsPlan(generator istructs.IDGenerator) (newIDs ne
 				return nil, err
 			}
 		} else {
-			if storeID, err = generator(id, rec.def); err != nil {
+			if storeID, err = generator.NextID(id, rec.def); err != nil {
 				return nil, err
 			}
 		}
@@ -518,7 +499,7 @@ func regenerateIDsInUpdateRecord(rec *updateRecType, newIDs newIDsPlanType) (err
 }
 
 // Regenerates all raw IDs to storage IDs
-func (cud *cudType) regenerateIDs(generator istructs.IDGenerator) error {
+func (cud *cudType) regenerateIDs(generator istructs.IIDGenerator) error {
 
 	newIDs, err := cud.regenerateIDsPlan(generator)
 	if err != nil {
@@ -552,10 +533,9 @@ func (cud *cudType) release() {
 
 // istructs.ICUD.Create
 func (cud *cudType) Create(qName appdef.QName) istructs.IRowWriter {
-	r := newRecord(cud.appCfg)
-	r.isNew = true
-	r.setQName(qName)
-	rec := &r
+	rec := newRecord(cud.appCfg)
+	rec.isNew = true
+	rec.setQName(qName)
 
 	cud.creates = append(cud.creates, rec)
 
@@ -586,9 +566,9 @@ type updateRecType struct {
 func newUpdateRec(appCfg *AppConfigType, rec istructs.IRecord) updateRecType {
 	upd := updateRecType{
 		appCfg:    appCfg,
-		originRec: newRecord(appCfg),
-		changes:   newRecord(appCfg),
-		result:    newRecord(appCfg),
+		originRec: makeRecord(appCfg),
+		changes:   makeRecord(appCfg),
+		result:    makeRecord(appCfg),
 	}
 	upd.originRec.copyFrom(rec.(*recordType))
 
@@ -672,16 +652,16 @@ type elementType struct {
 
 func makeObject(appCfg *AppConfigType, qn appdef.QName) elementType {
 	obj := elementType{
-		recordType: newRecord(appCfg),
+		recordType: makeRecord(appCfg),
 		child:      make([]*elementType, 0),
 	}
 	obj.setQName(qn)
 	return obj
 }
 
-func newElement(parent *elementType) elementType {
+func makeElement(parent *elementType) elementType {
 	el := elementType{
-		recordType: newRecord(parent.appCfg),
+		recordType: makeRecord(parent.appCfg),
 		parent:     parent,
 		child:      make([]*elementType, 0),
 	}
@@ -736,13 +716,13 @@ func (el *elementType) maskValues() {
 
 // regenerateIDs regenerates element record IDs and all elements children recursive.
 // If some child record ID reference (e.c. «sys.Parent» fields) refers to regenerated parent ID fields, this replaced too.
-func (el *elementType) regenerateIDs(generator istructs.IDGenerator) (err error) {
+func (el *elementType) regenerateIDs(generator istructs.IIDGenerator) (err error) {
 	newIDs := make(newIDsPlanType)
 
 	err = el.forEach(
 		func(e *elementType) error {
 			if id := e.ID(); id.IsRaw() {
-				storeID, err := generator(id, e.def)
+				storeID, err := generator.NextID(id, e.def)
 				if err != nil {
 					return err
 				}
@@ -788,7 +768,7 @@ func (el *elementType) release() {
 
 // istructs.IElementBuilder.ElementBuilder
 func (el *elementType) ElementBuilder(containerName string) istructs.IElementBuilder {
-	c := newElement(el)
+	c := makeElement(el)
 	el.child = append(el.child, &c)
 	if el.QName() != appdef.NullQName {
 		if cont := el.def.(appdef.IContainers).Container(containerName); cont != nil {

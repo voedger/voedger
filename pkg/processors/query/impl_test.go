@@ -229,12 +229,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 
 	rawEvent, err := reb.BuildRawEvent()
 	require.NoError(err)
-	nextRecordID := istructs.FirstBaseRecordID
-	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, func(istructs.RecordID, appdef.IDef) (storage istructs.RecordID, err error) {
-		storage = nextRecordID
-		nextRecordID++
-		return
-	})
+	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
 	require.NoError(err)
 	require.NoError(as.Records().Apply(pLogEvent))
 	err = as.Events().PutWlog(pLogEvent)

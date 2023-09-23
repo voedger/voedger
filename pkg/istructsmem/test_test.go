@@ -481,15 +481,15 @@ func newTestCRecord(id istructs.RecordID) *recordType {
 	test := test()
 	rec := newRecord(test.AppCfg)
 	rec.setQName(test.testCRec)
-	fillTestCRecord(&rec, id)
-	return &rec
+	fillTestCRecord(rec, id)
+	return rec
 }
 
 func newEmptyTestCRecord() *recordType {
 	test := test()
 	rec := newRecord(test.AppCfg)
 	rec.setQName(test.testCRec)
-	return &rec
+	return rec
 }
 
 func fillTestCRecord(rec *recordType, id istructs.RecordID) {
@@ -508,15 +508,15 @@ func newTestCDoc(id istructs.RecordID) *recordType {
 	test := test()
 	rec := newRecord(test.AppCfg)
 	rec.setQName(test.testCDoc)
-	fillTestCDoc(&rec, id)
-	return &rec
+	fillTestCDoc(rec, id)
+	return rec
 }
 
 func newEmptyTestCDoc() *recordType {
 	test := test()
 	rec := newRecord(test.AppCfg)
 	rec.setQName(test.testCDoc)
-	return &rec
+	return rec
 }
 
 func fillTestCDoc(doc *recordType, id istructs.RecordID) {
