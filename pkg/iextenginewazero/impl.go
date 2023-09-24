@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"net/url"
 	"os"
@@ -120,13 +121,8 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 	}
 
 	rtConf := wazero.NewRuntimeConfigInterpreter().
-		//WithFeatureBulkMemoryOperations(true).
-		//WithFeatureSignExtensionOps(true).
-		//WithFeatureNonTrappingFloatToIntConversion(true).
-		WithCoreFeatures(api.CoreFeaturesV1).
-		WithCoreFeatures(api.CoreFeatureMultiValue).
-		WithCoreFeatures(api.CoreFeatureNonTrappingFloatToIntConversion).
 		WithCoreFeatures(api.CoreFeatureBulkMemoryOperations).
+		//WithCloseOnContextDone(true).
 		WithMemoryLimitPages(uint32(memPages))
 
 	rtm := wazero.NewRuntimeWithConfig(ctx, rtConf)
@@ -136,8 +132,8 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 		return err
 	}
 
-	f.host, err = rtm.NewHostModuleBuilder("host").
-		// TODO: NewFunctionBuilder().WithFunc(f.fdWrite).Export("fd_write").
+	f.host, err = rtm.NewHostModuleBuilder("env").
+		//NewFunctionBuilder().WithFunc(f.fdWrite).Export("fd_write").
 		NewFunctionBuilder().WithFunc(f.hostGetKey).Export("hostGetKey").
 		NewFunctionBuilder().WithFunc(f.hostMustExist).Export("hostGetValue").
 		NewFunctionBuilder().WithFunc(f.hostCanExist).Export("hostQueryValue").
@@ -199,7 +195,7 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 		return err
 	}
 
-	f.module, err = rtm.InstantiateModule(ctx, compiledWasm, wazero.NewModuleConfig().WithName("env"))
+	f.module, err = rtm.InstantiateModule(ctx, compiledWasm, wazero.NewModuleConfig().WithName("wasm").WithStdout(io.Discard).WithStderr(io.Discard))
 	if err != nil {
 		return err
 	}
@@ -290,7 +286,7 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 	//f.ce = f.module.NewCallEngine()
 
 	// Check WASM SDK version
-	_, err = f.funcVer.Call(f.ctx)
+	_, err = f.funcVer.Call(ctx)
 	if err != nil {
 		return errors.New("unsupported WASM version")
 	}
@@ -347,8 +343,7 @@ func (f *wazeroExtEngine) recover() {
 	//TODO: f.module.Memory().Restore(f.recoverMem)
 }
 
-func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName string, io iextengine.IExtentionIO) (err error) {
-
+func (f *wazeroExtEngine) invoke(ctx context.Context, funct api.Function, io iextengine.IExtentionIO) (err error) {
 	f.io = io
 	f.ctx = ctx
 
@@ -368,11 +363,26 @@ func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName string, io i
 		f.allocatedBufs[i].offs = 0 // reuse pre-allocated memory
 	}
 
+	_, err = funct.Call(ctx)
+
+	if err != nil {
+		f.recover()
+	}
+
+	return err
+}
+
+func (f *wazeroExtEngine) getExt(extentionName string) api.Function {
+	return f.exts[extentionName]
+}
+
+func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName string, io iextengine.IExtentionIO) (err error) {
+
 	funct := f.exts[extentionName]
 	if funct == nil {
 		return invalidExtensionName(extentionName)
 	}
-	_, err = funct.Call(ctx)
+	_, err = f, f.invoke(ctx, funct, io)
 
 	if err != nil {
 		f.recover()
@@ -389,7 +399,6 @@ func (f *wazeroExtEngine) decodeStr(ptr, size uint32) string {
 }
 
 func (f *wazeroExtEngine) fdWrite(fd, iovs, iovsCount, resultSize uint32) sys.Errno {
-	//return sys.ENOSYS
 	return 0
 }
 
@@ -520,9 +529,9 @@ func (f *wazeroExtEngine) hostKeyAsBytes(id uint64, namePtr uint32, nameSize uin
 	return f.allocAndSend(key.AsBytes(name))
 }
 
-func (f *wazeroExtEngine) hostKeyAsInt32(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+func (f *wazeroExtEngine) hostKeyAsInt32(id uint64, namePtr uint32, nameSize uint32) (result uint32) {
 	key, name := f.keyargs(id, namePtr, nameSize)
-	return uint64(key.AsInt32(name))
+	return uint32(key.AsInt32(name))
 }
 
 func (f *wazeroExtEngine) hostKeyAsInt64(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
@@ -590,9 +599,9 @@ func (f *wazeroExtEngine) hostValueGetAsBool(value uint64, index uint32) (result
 	return 0
 }
 
-func (f *wazeroExtEngine) hostValueGetAsInt32(value uint64, index uint32) (result uint64) {
+func (f *wazeroExtEngine) hostValueGetAsInt32(value uint64, index uint32) (result int32) {
 	v := f.value(value)
-	return uint64(v.GetAsInt32(int(index)))
+	return v.GetAsInt32(int(index))
 }
 
 func (f *wazeroExtEngine) hostValueGetAsInt64(value uint64, index uint32) (result uint64) {
@@ -626,9 +635,9 @@ func (f *wazeroExtEngine) hostValueAsBytes(id uint64, namePtr uint32, nameSize u
 	return f.allocAndSend(v.AsBytes(name))
 }
 
-func (f *wazeroExtEngine) hostValueAsInt32(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
+func (f *wazeroExtEngine) hostValueAsInt32(id uint64, namePtr uint32, nameSize uint32) (result int32) {
 	v, name := f.valueargs(id, namePtr, nameSize)
-	return uint64(v.AsInt32(name))
+	return v.AsInt32(name)
 }
 
 func (f *wazeroExtEngine) hostValueAsInt64(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
@@ -674,11 +683,11 @@ func (f *wazeroExtEngine) hostValueAsValue(id uint64, namePtr uint32, nameSize u
 	return
 }
 
-func (f *wazeroExtEngine) hostValueLength(id uint64) (result uint64) {
+func (f *wazeroExtEngine) hostValueLength(id uint64) (result uint32) {
 	if int(id) >= len(f.values) {
 		panic(PanicIncorrectValue)
 	}
-	return uint64(f.values[id].Length())
+	return uint32(f.values[id].Length())
 }
 
 func (f *wazeroExtEngine) allocBuf(size uint32) (addr uint32, err error) {
@@ -710,40 +719,40 @@ func (f *wazeroExtEngine) allocBuf(size uint32) (addr uint32, err error) {
 	return addr, nil
 }
 
-func (f *wazeroExtEngine) getFrees() (uint64, error) {
-	res, err := f.funcGetFrees.Call(f.ctx)
+func (f *wazeroExtEngine) getFrees(ctx context.Context) (uint64, error) {
+	res, err := f.funcGetFrees.Call(ctx)
 	if err != nil {
 		return 0, err
 	}
 	return res[0], nil
 }
 
-func (f *wazeroExtEngine) gc() error {
-	_, err := f.funcGc.Call(f.ctx)
+func (f *wazeroExtEngine) gc(ctx context.Context) error {
+	_, err := f.funcGc.Call(ctx)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (f *wazeroExtEngine) getHeapinuse() (uint64, error) {
-	res, err := f.funcGetHeapInuse.Call(f.ctx)
+func (f *wazeroExtEngine) getHeapinuse(ctx context.Context) (uint64, error) {
+	res, err := f.funcGetHeapInuse.Call(ctx)
 	if err != nil {
 		return 0, err
 	}
 	return res[0], nil
 }
 
-func (f *wazeroExtEngine) getHeapSys() (uint64, error) {
-	res, err := f.funcGetHeapSys.Call(f.ctx)
+func (f *wazeroExtEngine) getHeapSys(ctx context.Context) (uint64, error) {
+	res, err := f.funcGetHeapSys.Call(ctx)
 	if err != nil {
 		return 0, err
 	}
 	return res[0], nil
 }
 
-func (f *wazeroExtEngine) getMallocs() (uint64, error) {
-	res, err := f.funcGetMallocs.Call(f.ctx)
+func (f *wazeroExtEngine) getMallocs(ctx context.Context) (uint64, error) {
+	res, err := f.funcGetMallocs.Call(ctx)
 	if err != nil {
 		return 0, err
 	}

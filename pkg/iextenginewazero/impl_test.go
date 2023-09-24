@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tetratelabs/wazero/sys"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -58,11 +59,11 @@ func Test_BasicUsage(t *testing.T) {
 }
 
 func requireMemStat(t *testing.T, wasmEngine *wazeroExtEngine, mallocs, frees, heapInUse uint32) {
-	m, err := wasmEngine.getMallocs()
+	m, err := wasmEngine.getMallocs(context.Background())
 	require.NoError(t, err)
-	f, err := wasmEngine.getFrees()
+	f, err := wasmEngine.getFrees(context.Background())
 	require.NoError(t, err)
-	h, err := wasmEngine.getHeapinuse()
+	h, err := wasmEngine.getHeapinuse(context.Background())
 	require.NoError(t, err)
 
 	require.Equal(t, mallocs, uint32(m))
@@ -72,7 +73,7 @@ func requireMemStat(t *testing.T, wasmEngine *wazeroExtEngine, mallocs, frees, h
 
 func requireMemStatEx(t *testing.T, wasmEngine *wazeroExtEngine, mallocs, frees, heapSys, heapInUse uint32) {
 	requireMemStat(t, wasmEngine, mallocs, frees, heapInUse)
-	h, err := wasmEngine.getHeapSys()
+	h, err := wasmEngine.getHeapSys(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, heapSys, uint32(h))
 }
@@ -107,7 +108,7 @@ func Test_Allocs_ManualGC(t *testing.T) {
 	require.NoError(extEngine.Invoke(context.Background(), arrReset, extIO))
 	requireMemStatEx(t, wasmEngine, 7, 0, expectedHeapSize, WasmPreallocatedBufferSize+6*16)
 
-	require.NoError(wasmEngine.gc())
+	require.NoError(wasmEngine.gc(ctx))
 	requireMemStatEx(t, wasmEngine, 7, 6, expectedHeapSize, WasmPreallocatedBufferSize)
 }
 
@@ -202,15 +203,13 @@ func Test_SetLimitsExecutionInterval(t *testing.T) {
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 
-	maxDuration := time.Millisecond * 50
-	// TODO: extEngine.SetLimits(iextengine.ExtensionLimits{
-	// 	ExecutionInterval: maxDuration,
-	// })
-	t0 := time.Now()
-	err = extEngine.Invoke(context.Background(), "longFunc", extIO)
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), time.Millisecond*50)
+	defer cancel()
 
-	// TODO:  require.ErrorIs(err, api.ErrDuration)
-	require.Less(time.Since(t0), maxDuration*2)
+	t0 := time.Now()
+	err = extEngine.Invoke(ctxTimeout, "longFunc", extIO)
+	require.ErrorIs(err, sys.NewExitError(sys.ExitCodeDeadlineExceeded))
+	require.Less(time.Since(t0), time.Millisecond*100)
 }
 
 type panicsUnit struct {

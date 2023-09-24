@@ -54,7 +54,7 @@ func bench_gc(b *testing.B, cycles int) {
 			panic(e)
 		}
 		b.StartTimer()
-		if e := ee.(*wazeroExtEngine).gc(); e != nil {
+		if e := ee.(*wazeroExtEngine).gc(ctx); e != nil {
 			panic(e)
 		}
 	}
@@ -103,12 +103,14 @@ func bench_extensions(b *testing.B, gc bool) {
 		panic(err)
 	}
 	defer ee.Close(ctx)
+	eew := ee.(*wazeroExtEngine)
 
 	for _, extname := range funcs {
 		b.Run(extname, func(b *testing.B) {
+			ext := eew.getExt(extname)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				err := ee.Invoke(context.Background(), extname, extIO)
+				err := eew.invoke(context.Background(), ext, extIO)
 				if err != nil {
 					panic(err)
 				}
