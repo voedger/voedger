@@ -1198,7 +1198,9 @@ func Test_AppSchema(t *testing.T) {
 	APPLICATION test(
 		USE air1;
 		USE air2;
-	);`)
+	);
+	TABLE MyTable INHERITS CDoc ();
+	`)
 	require.NoError(err)
 	pkg1, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg1", []*FileSchemaAST{fs})
 	require.NoError(err)
@@ -1227,7 +1229,10 @@ func Test_AppSchema(t *testing.T) {
 	err = BuildAppDefs(appSchema, builder)
 	require.NoError(err)
 
-	cdoc := builder.CDoc(appdef.NewQName("air1", "MyTable"))
+	cdoc := builder.CDoc(appdef.NewQName("pkg1", "MyTable"))
+	require.NotNil(cdoc)
+
+	cdoc = builder.CDoc(appdef.NewQName("air1", "MyTable"))
 	require.NotNil(cdoc)
 
 	ws := builder.Workspace(appdef.NewQName("air2", "myWorkspace"))
