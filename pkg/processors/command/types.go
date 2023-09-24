@@ -17,6 +17,7 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys/builtin"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -65,7 +66,7 @@ type cmdWorkpiece struct {
 	pLogEvent           istructs.IPLogEvent
 	err                 error
 	workspace           *workspace
-	generatedIDs        map[istructs.RecordID]istructs.RecordID
+	idGenerator         *implIDGenerator
 	eca                 istructs.ExecCommandArgs
 	metrics             commandProcessorMetrics
 	syncProjectorsStart time.Time
@@ -73,11 +74,15 @@ type cmdWorkpiece struct {
 	principalPayload    payloads.PrincipalPayload
 	parsedCUDs          []parsedCUD
 	wsDesc              istructs.IRecord
-	checkWSDescUpdating bool
 	hostStateProvider   *hostStateProvider
 	wsInitialized       bool
 	cmdResultBuilder    istructs.IObjectBuilder
 	cmdResult           istructs.IObject
+}
+
+type implIDGenerator struct {
+	istructs.IIDGenerator
+	generatedIDs map[istructs.RecordID]istructs.RecordID
 }
 
 type parsedCUD struct {
@@ -117,7 +122,7 @@ type hostStateProvider struct {
 
 func newHostStateProvider(ctx context.Context, pid istructs.PartitionID, secretReader isecrets.ISecretReader) *hostStateProvider {
 	p := &hostStateProvider{}
-	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid), p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, intentsLimit, p.getCmdResultBuilder)
+	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid), p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, builtin.MaxCUDs, p.getCmdResultBuilder)
 	return p
 }
 

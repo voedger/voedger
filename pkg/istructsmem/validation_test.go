@@ -679,7 +679,7 @@ func Test_ValidCUD(t *testing.T) {
 			require.NoError(err)
 
 			err = cfg.validators.validCUD(&cud, false)
-			require.ErrorIs(err, ErrorRecordIDNotFound)
+			require.ErrorIs(err, ErrRecordIDNotFound)
 		})
 
 		t.Run("must error if ID refs to invalid QName", func(t *testing.T) {
@@ -1188,7 +1188,7 @@ func Test_ValidateErrors(t *testing.T) {
 			_ = cud.Update(r)
 
 			_, buildErr := bld.BuildRawEvent()
-			require.ErrorIs(buildErr, ErrorRecordIDNotFound)
+			require.ErrorIs(buildErr, ErrRecordIDNotFound)
 			validateErr := validateErrorf(0, "")
 			require.ErrorAs(buildErr, &validateErr)
 			require.Equal(ECode_InvalidRefRecordID, validateErr.Code())

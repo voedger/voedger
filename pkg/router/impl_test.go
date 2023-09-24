@@ -222,7 +222,13 @@ func TestClientDisconnectDuringSections(t *testing.T) {
 			rs := bus.SendParallelResponse2(sender)
 			rs.StartMapSection("secMap", []string{"2"})
 			require.Nil(t, rs.SendElement("id1", elem1))
+			// sometimes Request.Body.Close() happens before checking if requestCtx.Err() nil or not after sending a section
+			// So let's wait for successful SendElelemnt(), then close the request
+			ch <- struct{}{}
 			<-ch
+			// requestCtx closes not immediately after request.Body.Close(). So let's wait for ctx close
+			for requestCtx.Err() == nil {
+			}
 			err := rs.ObjectSection("objSec", []string{"3"}, 42)
 			require.ErrorIs(t, err, context.Canceled)
 			rs.Close(nil)
@@ -241,6 +247,7 @@ func TestClientDisconnectDuringSections(t *testing.T) {
 		entireResp = append(entireResp, buf[:n]...)
 		log.Println(string(entireResp))
 	}
+	<-ch
 	resp.Request.Body.Close()
 	resp.Body.Close()
 	ch <- struct{}{}

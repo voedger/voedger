@@ -586,11 +586,11 @@ func (row *rowType) AsRecordID(name string) istructs.RecordID {
 // IValue.AsRecord
 func (row *rowType) AsRecord(name string) istructs.IRecord {
 	if bytes := row.dyB.GetByteArray(name); bytes != nil {
-		record := newRecord(row.appCfg)
-		if err := record.loadFromBytes(bytes.Bytes()); err != nil {
+		rec := newRecord(row.appCfg)
+		if err := rec.loadFromBytes(bytes.Bytes()); err != nil {
 			panic(err)
 		}
-		return &record
+		return rec
 	}
 	if row.fieldDef(name) == nil {
 		panic(fmt.Errorf(errFieldNotFoundWrap, appdef.DataKind_Record.TrimString(), name, row.QName(), ErrNameNotFound))

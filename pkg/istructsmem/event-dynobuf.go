@@ -248,9 +248,8 @@ func loadEventCUDs(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) 
 		return fmt.Errorf("error read event cud.create() count: %w", err)
 	}
 	for ; count > 0; count-- {
-		r := newRecord(ev.cud.appCfg)
-		r.isNew = true
-		rec := &r
+		rec := newRecord(ev.cud.appCfg)
+		rec.isNew = true
 		if err := loadRow(&rec.rowType, codecVer, buf); err != nil {
 			return fmt.Errorf("error read event cud.create() record: %w", err)
 		}
@@ -262,8 +261,7 @@ func loadEventCUDs(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) 
 		return fmt.Errorf("error read event cud.update() count: %w", err)
 	}
 	for ; count > 0; count-- {
-		r := newRecord(ev.cud.appCfg)
-		upd := newUpdateRec(ev.cud.appCfg, &r)
+		upd := newUpdateRec(ev.cud.appCfg, newRecord(ev.cud.appCfg))
 		if err := loadRow(&upd.changes.rowType, codecVer, buf); err != nil {
 			return fmt.Errorf("error read event cud.update() record: %w", err)
 		}
@@ -295,7 +293,7 @@ func loadElement(el *elementType, codecVer byte, buf *bytes.Buffer) (err error) 
 		return err
 	}
 	for ; count > 0; count-- {
-		child := newElement(el)
+		child := makeElement(el)
 		if err := loadElement(&child, codecVer, buf); err != nil {
 			return err
 		}

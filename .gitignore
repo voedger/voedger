@@ -16,6 +16,7 @@ o
 .*/
 
 coverage.txt
+**/tmp.md
 
 go.work.sum
 

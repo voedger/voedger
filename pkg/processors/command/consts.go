@@ -11,10 +11,6 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-const (
-	intentsLimit = 128
-)
-
 var (
 	ViewQNamePLogKnownOffsets = appdef.NewQName(appdef.SysPackage, "PLogKnownOffsets")
 	ViewQNameWLogKnownOffsets = appdef.NewQName(appdef.SysPackage, "WLogKnownOffsets")
