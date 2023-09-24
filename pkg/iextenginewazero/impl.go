@@ -122,7 +122,7 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 
 	rtConf := wazero.NewRuntimeConfigInterpreter().
 		WithCoreFeatures(api.CoreFeatureBulkMemoryOperations).
-		//WithCloseOnContextDone(true).
+		//FIXME: WithCloseOnContextDone(true).
 		WithMemoryLimitPages(uint32(memPages))
 
 	rtm := wazero.NewRuntimeWithConfig(ctx, rtConf)
@@ -133,7 +133,6 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 	}
 
 	f.host, err = rtm.NewHostModuleBuilder("env").
-		//NewFunctionBuilder().WithFunc(f.fdWrite).Export("fd_write").
 		NewFunctionBuilder().WithFunc(f.hostGetKey).Export("hostGetKey").
 		NewFunctionBuilder().WithFunc(f.hostMustExist).Export("hostGetValue").
 		NewFunctionBuilder().WithFunc(f.hostCanExist).Export("hostQueryValue").
@@ -200,73 +199,9 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 		return err
 	}
 
-	/*
-		f.host.ExportedFunction("hostGetKey", f.hostGetKey)
-
-		ExportFunction("hostGetValue", f.hostMustExist).
-		ExportFunction("hostQueryValue", f.hostCanExist).
-		ExportFunction("hostReadValues", f.hostReadValues).
-		ExportFunction("hostPanic", f.hostPanic).
-
-		// IKey
-		ExportFunction("hostKeyAsString", f.hostKeyAsString).
-		ExportFunction("hostKeyAsBytes", f.hostKeyAsBytes).
-		ExportFunction("hostKeyAsInt32", f.hostKeyAsInt32).
-		ExportFunction("hostKeyAsInt64", f.hostKeyAsInt64).
-		ExportFunction("hostKeyAsFloat32", f.hostKeyAsFloat32).
-		ExportFunction("hostKeyAsFloat64", f.hostKeyAsFloat64).
-		ExportFunction("hostKeyAsBool", f.hostKeyAsBool).
-		ExportFunction("hostKeyAsQNamePkg", f.hostKeyAsQNamePkg).
-		ExportFunction("hostKeyAsQNameEntity", f.hostKeyAsQNameEntity).
-
-		// IValue
-		ExportFunction("hostValueLength", f.hostValueLength).
-		ExportFunction("hostValueAsValue", f.hostValueAsValue).
-		ExportFunction("hostValueAsString", f.hostValueAsString).
-		ExportFunction("hostValueAsBytes", f.hostValueAsBytes).
-		ExportFunction("hostValueAsInt32", f.hostValueAsInt32).
-		ExportFunction("hostValueAsInt64", f.hostValueAsInt64).
-		ExportFunction("hostValueAsFloat32", f.hostValueAsFloat32).
-		ExportFunction("hostValueAsFloat64", f.hostValueAsFloat64).
-		ExportFunction("hostValueAsQNamePkg", f.hostValueAsQNamePkg).
-		ExportFunction("hostValueAsQNameEntity", f.hostValueAsQNameEntity).
-		ExportFunction("hostValueAsBool", f.hostValueAsBool).
-		ExportFunction("hostValueGetAsBytes", f.hostValueGetAsBytes).
-		ExportFunction("hostValueGetAsString", f.hostValueGetAsString).
-		ExportFunction("hostValueGetAsInt32", f.hostValueGetAsInt32).
-		ExportFunction("hostValueGetAsInt64", f.hostValueGetAsInt64).
-		ExportFunction("hostValueGetAsFloat32", f.hostValueGetAsFloat32).
-		ExportFunction("hostValueGetAsFloat64", f.hostValueGetAsFloat64).
-		ExportFunction("hostValueGetAsValue", f.hostValueGetAsValue).
-		ExportFunction("hostValueGetAsQNamePkg", f.hostValueGetAsQNamePkg).
-		ExportFunction("hostValueGetAsQNameEntity", f.hostValueGetAsQNameEntity).
-		ExportFunction("hostValueGetAsBool", f.hostValueGetAsBool).
-
-		// Intents
-		ExportFunction("hostNewValue", f.hostNewValue).
-		ExportFunction("hostUpdateValue", f.hostUpdateValue).
-
-		// RowWriters
-		ExportFunction("hostRowWriterPutString", f.hostRowWriterPutString).
-		ExportFunction("hostRowWriterPutBytes", f.hostRowWriterPutBytes).
-		ExportFunction("hostRowWriterPutInt32", f.hostRowWriterPutInt32).
-		ExportFunction("hostRowWriterPutInt64", f.hostRowWriterPutInt64).
-		ExportFunction("hostRowWriterPutFloat32", f.hostRowWriterPutFloat32).
-		ExportFunction("hostRowWriterPutFloat64", f.hostRowWriterPutFloat64).
-		ExportFunction("hostRowWriterPutBool", f.hostRowWriterPutBool).
-		ExportFunction("hostRowWriterPutQName", f.hostRowWriterPutQName).
-
-		//ExportFunction("printstr", f.printStr).
-		Instantiate(ctx)
-	*/
 	if err != nil {
 		return err
 	}
-
-	// f.module, err = rtm.InstantiateModuleFromCode(ctx, f.data)
-	// if err != nil {
-	// 	return err
-	// }
 
 	err = f.importFuncs(map[string]*api.Function{
 		"malloc":               &f.funcMalloc,
@@ -282,8 +217,6 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 	if err != nil {
 		return err
 	}
-
-	//f.ce = f.module.NewCallEngine()
 
 	// Check WASM SDK version
 	_, err = f.funcVer.Call(ctx)
@@ -343,7 +276,13 @@ func (f *wazeroExtEngine) recover() {
 	//TODO: f.module.Memory().Restore(f.recoverMem)
 }
 
-func (f *wazeroExtEngine) invoke(ctx context.Context, funct api.Function, io iextengine.IExtentionIO) (err error) {
+func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName string, io iextengine.IExtentionIO) (err error) {
+
+	funct := f.exts[extentionName]
+	if funct == nil {
+		return invalidExtensionName(extentionName)
+	}
+
 	f.io = io
 	f.ctx = ctx
 
@@ -368,21 +307,6 @@ func (f *wazeroExtEngine) invoke(ctx context.Context, funct api.Function, io iex
 	if err != nil {
 		f.recover()
 	}
-
-	return err
-}
-
-func (f *wazeroExtEngine) getExt(extentionName string) api.Function {
-	return f.exts[extentionName]
-}
-
-func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName string, io iextengine.IExtentionIO) (err error) {
-
-	funct := f.exts[extentionName]
-	if funct == nil {
-		return invalidExtensionName(extentionName)
-	}
-	_, err = f, f.invoke(ctx, funct, io)
 
 	if err != nil {
 		f.recover()

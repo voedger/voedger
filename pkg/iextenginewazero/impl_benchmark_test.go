@@ -20,6 +20,7 @@ func bench_purecall(b *testing.B) {
 	if err != nil {
 		panic(err)
 	}
+	//ee.SetLimits(limits)
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -41,6 +42,7 @@ func bench_gc(b *testing.B, cycles int) {
 	if err != nil {
 		panic(err)
 	}
+	//ee.SetLimits(limits)
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -103,14 +105,12 @@ func bench_extensions(b *testing.B, gc bool) {
 		panic(err)
 	}
 	defer ee.Close(ctx)
-	eew := ee.(*wazeroExtEngine)
 
 	for _, extname := range funcs {
 		b.Run(extname, func(b *testing.B) {
-			ext := eew.getExt(extname)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				err := eew.invoke(context.Background(), ext, extIO)
+				err := ee.Invoke(context.Background(), extname, extIO)
 				if err != nil {
 					panic(err)
 				}
@@ -154,7 +154,7 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 		}
 	}
 
-	// TODO: memoryFull := we.module.Memory().Backup()
+	//TODO: memoryFull := we.module.Memory().Backup()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -165,7 +165,7 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 		// }
 		//require.Equal(b, uint64(0x6ebc50), h)
 		b.StopTimer()
-		// TODO: we.module.Memory().Restore(memoryFull)
+		//we.module.Memory().Restore(memoryFull)
 	}
 }
 
