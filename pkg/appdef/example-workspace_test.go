@@ -47,8 +47,8 @@ func ExampleIWorkspace() {
 		// how to inspect workspace types names
 		fmt.Printf("workspace %q descriptor is %q\n", ws.QName(), ws.Descriptor())
 
-		ws.Types(func(d appdef.IType) {
-			fmt.Printf("- Type: %q, kind: %v\n", d.QName(), d.Kind())
+		ws.Types(func(t appdef.IType) {
+			fmt.Printf("- Type: %q, kind: %v\n", t.QName(), t.Kind())
 		})
 	}
 

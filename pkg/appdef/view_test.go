@@ -117,12 +117,12 @@ func TestAddView(t *testing.T) {
 			require.Equal(2, val.UserFieldCount())
 		})
 
-		t.Run("must be ok to cast Def() as IView", func(t *testing.T) {
-			d := app.Type(viewName)
-			require.NotNil(d)
-			require.Equal(TypeKind_ViewRecord, d.Kind())
+		t.Run("must be ok to cast Type() as IView", func(t *testing.T) {
+			typ := app.Type(viewName)
+			require.NotNil(typ)
+			require.Equal(TypeKind_ViewRecord, typ.Kind())
 
-			v, ok := d.(IView)
+			v, ok := typ.(IView)
 			require.True(ok)
 			require.Equal(v, view)
 
@@ -136,9 +136,9 @@ func TestAddView(t *testing.T) {
 		t.Run("must be nil if not view", func(t *testing.T) {
 			require.Nil(app.View(docName))
 
-			d := app.Type(docName)
-			require.NotNil(d)
-			v, ok := d.(IView)
+			typ := app.Type(docName)
+			require.NotNil(typ)
+			v, ok := typ.(IView)
 			require.False(ok)
 			require.Nil(v)
 		})

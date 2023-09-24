@@ -13,39 +13,39 @@ type workspace struct {
 	typ
 	comment
 	withAbstract
-	defs map[QName]interface{}
-	desc ICDoc
+	types map[QName]interface{}
+	desc  ICDoc
 }
 
 func newWorkspace(app *appDef, name QName) *workspace {
 	ws := &workspace{
-		typ:  makeType(app, name, TypeKind_Workspace),
-		defs: make(map[QName]interface{}),
+		typ:   makeType(app, name, TypeKind_Workspace),
+		types: make(map[QName]interface{}),
 	}
 	app.appendType(ws)
 	return ws
 }
 
 func (ws *workspace) AddType(name QName) IWorkspaceBuilder {
-	d, ok := ws.app.types[name]
+	t, ok := ws.app.types[name]
 	if !ok {
 		panic(fmt.Errorf("unable to add unknown type «%v» to workspace «%v»: %w", name, ws.QName(), ErrNameNotFound))
 	}
 
-	ws.defs[name] = d
+	ws.types[name] = t
 	return ws
 }
 
 func (ws *workspace) Type(name QName) IType {
-	if d, ok := ws.defs[name]; ok {
-		return d.(IType)
+	if t, ok := ws.types[name]; ok {
+		return t.(IType)
 	}
 	return nil
 }
 
 func (ws *workspace) Types(cb func(IType)) {
-	for _, d := range ws.defs {
-		cb(d.(IType))
+	for _, t := range ws.types {
+		cb(t.(IType))
 	}
 }
 

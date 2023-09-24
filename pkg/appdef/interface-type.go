@@ -22,7 +22,7 @@ type TypeKind uint8
 
 // Type describes the entity, such as document, record or view.
 //
-// Ref to def.go for implementation
+// Ref to type.go for implementation
 type IType interface {
 	// Parent cache
 	App() IAppDef

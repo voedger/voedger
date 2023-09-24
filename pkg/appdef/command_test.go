@@ -51,10 +51,10 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	require.NotNil(app)
 
 	t.Run("must be ok to find builded command", func(t *testing.T) {
-		def := app.Type(cmdName)
-		require.Equal(TypeKind_Command, def.Kind())
+		typ := app.Type(cmdName)
+		require.Equal(TypeKind_Command, typ.Kind())
 
-		d, ok := def.(ICommand)
+		d, ok := typ.(ICommand)
 		require.True(ok)
 		require.Equal(TypeKind_Command, d.Kind())
 

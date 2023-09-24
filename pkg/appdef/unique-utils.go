@@ -60,7 +60,7 @@ func generateUniqueName(u IUniques, fields []string) string {
 			return s
 		}
 	}
-	const tryCnt = MaxDefUniqueCount
+	const tryCnt = MaxTypeUniqueCount
 	for i := 1; i < tryCnt; i++ {
 		s := pref + fmt.Sprintf("%02d", i)
 		if u.UniqueByName(s) == nil {

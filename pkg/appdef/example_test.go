@@ -43,12 +43,12 @@ func Example() {
 	{
 		fmt.Printf("%d types\n", app.TypeCount())
 
-		// how to find def by name
-		def := app.Type(docName)
-		fmt.Printf("type %q: %v\n", def.QName(), def.Kind())
+		// how to find type by name
+		t := app.Type(docName)
+		fmt.Printf("type %q: %v\n", t.QName(), t.Kind())
 
-		// how to cast def to cdoc
-		d, ok := def.(appdef.ICDoc)
+		// how to cast type to cdoc
+		d, ok := t.(appdef.ICDoc)
 		fmt.Printf("%q is CDoc: %v\n", d.QName(), ok && (d.Kind() == appdef.TypeKind_CDoc))
 
 		// how to find CDoc by name

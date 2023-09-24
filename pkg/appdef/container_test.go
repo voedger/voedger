@@ -66,82 +66,82 @@ func Test_IsSysContainer(t *testing.T) {
 	}
 }
 
-func Test_def_AddContainer(t *testing.T) {
+func Test_type_AddContainer(t *testing.T) {
 	require := require.New(t)
 
 	appDef := New()
-	def := appDef.AddObject(NewQName("test", "object"))
-	require.NotNil(def)
+	obj := appDef.AddObject(NewQName("test", "object"))
+	require.NotNil(obj)
 
 	elQName := NewQName("test", "element")
 	_ = appDef.AddElement(elQName)
 
 	t.Run("must be ok to add container", func(t *testing.T) {
-		def.AddContainer("c1", elQName, 1, Occurs_Unbounded)
+		obj.AddContainer("c1", elQName, 1, Occurs_Unbounded)
 
-		require.Equal(1, def.ContainerCount())
-		c := def.Container("c1")
+		require.Equal(1, obj.ContainerCount())
+		c := obj.Container("c1")
 		require.NotNil(c)
 
 		require.Equal("c1", c.Name())
 		require.False(c.IsSys())
 
 		require.Equal(elQName, c.QName())
-		d := c.Type()
-		require.NotNil(d)
-		require.Equal(elQName, d.QName())
-		require.Equal(TypeKind_Element, d.Kind())
+		typ := c.Type()
+		require.NotNil(typ)
+		require.Equal(elQName, typ.QName())
+		require.Equal(TypeKind_Element, typ.Kind())
 
 		require.EqualValues(1, c.MinOccurs())
 		require.Equal(Occurs_Unbounded, c.MaxOccurs())
 	})
 
 	t.Run("chain notation is ok to add containers", func(t *testing.T) {
-		d := New().AddObject(NewQName("test", "obj"))
-		n := d.AddContainer("c1", elQName, 1, Occurs_Unbounded).
+		obj := New().AddObject(NewQName("test", "obj"))
+		n := obj.AddContainer("c1", elQName, 1, Occurs_Unbounded).
 			AddContainer("c2", elQName, 1, Occurs_Unbounded).
 			AddContainer("c3", elQName, 1, Occurs_Unbounded).(IType).QName()
-		require.Equal(d.QName(), n)
-		require.Equal(3, d.ContainerCount())
+		require.Equal(obj.QName(), n)
+		require.Equal(3, obj.ContainerCount())
 	})
 
 	t.Run("must be panic if empty container name", func(t *testing.T) {
-		require.Panics(func() { def.AddContainer("", elQName, 1, Occurs_Unbounded) })
+		require.Panics(func() { obj.AddContainer("", elQName, 1, Occurs_Unbounded) })
 	})
 
 	t.Run("must be panic if invalid container name", func(t *testing.T) {
-		require.Panics(func() { def.AddContainer("naked_🔫", elQName, 1, Occurs_Unbounded) })
+		require.Panics(func() { obj.AddContainer("naked_🔫", elQName, 1, Occurs_Unbounded) })
 		t.Run("but ok if system container", func(t *testing.T) {
-			require.NotPanics(func() { def.AddContainer(SystemContainer_ViewValue, elQName, 1, Occurs_Unbounded) })
-			require.Equal(2, def.ContainerCount())
+			require.NotPanics(func() { obj.AddContainer(SystemContainer_ViewValue, elQName, 1, Occurs_Unbounded) })
+			require.Equal(2, obj.ContainerCount())
 		})
 	})
 
 	t.Run("must be panic if container name dupe", func(t *testing.T) {
-		require.Panics(func() { def.AddContainer("c1", elQName, 1, Occurs_Unbounded) })
+		require.Panics(func() { obj.AddContainer("c1", elQName, 1, Occurs_Unbounded) })
 	})
 
 	t.Run("must be panic if container type name missed", func(t *testing.T) {
-		require.Panics(func() { def.AddContainer("c2", NullQName, 1, Occurs_Unbounded) })
+		require.Panics(func() { obj.AddContainer("c2", NullQName, 1, Occurs_Unbounded) })
 	})
 
 	t.Run("must be panic if invalid occurrences", func(t *testing.T) {
-		require.Panics(func() { def.AddContainer("c2", elQName, 1, 0) })
-		require.Panics(func() { def.AddContainer("c3", elQName, 2, 1) })
+		require.Panics(func() { obj.AddContainer("c2", elQName, 1, 0) })
+		require.Panics(func() { obj.AddContainer("c3", elQName, 2, 1) })
 	})
 
 	t.Run("must be panic if container type is incompatible", func(t *testing.T) {
-		require.Panics(func() { def.AddContainer("c2", def.QName(), 1, 1) })
-		require.Nil(def.Container("c2"))
+		require.Panics(func() { obj.AddContainer("c2", obj.QName(), 1, 1) })
+		require.Nil(obj.Container("c2"))
 	})
 
 	t.Run("must be panic if too many containers", func(t *testing.T) {
 		qn := NewQName("test", "el")
-		d := New().AddElement(qn)
-		for i := 0; i < MaxDefContainerCount; i++ {
-			d.AddContainer(fmt.Sprintf("c_%#x", i), qn, 0, Occurs_Unbounded)
+		el := New().AddElement(qn)
+		for i := 0; i < MaxTypeContainerCount; i++ {
+			el.AddContainer(fmt.Sprintf("c_%#x", i), qn, 0, Occurs_Unbounded)
 		}
-		require.Panics(func() { d.AddContainer("errorContainer", qn, 0, Occurs_Unbounded) })
+		require.Panics(func() { el.AddContainer("errorContainer", qn, 0, Occurs_Unbounded) })
 	})
 }
 
@@ -152,7 +152,7 @@ func TestValidateContainer(t *testing.T) {
 	doc := app.AddCDoc(NewQName("test", "doc"))
 	doc.AddContainer("rec", NewQName("test", "rec"), 0, Occurs_Unbounded)
 
-	t.Run("must be error if container def not found", func(t *testing.T) {
+	t.Run("must be error if container type not found", func(t *testing.T) {
 		_, err := app.Build()
 		require.ErrorIs(err, ErrNameNotFound)
 		require.ErrorContains(err, "unknown type «test.rec»")

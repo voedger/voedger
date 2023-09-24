@@ -38,12 +38,12 @@ func Test_AppDef_AddODoc(t *testing.T) {
 	})
 
 	t.Run("must be ok to find builded doc", func(t *testing.T) {
-		def := app.Type(docName)
-		require.Equal(TypeKind_ODoc, def.Kind())
+		typ := app.Type(docName)
+		require.Equal(TypeKind_ODoc, typ.Kind())
 
 		doc := app.ODoc(docName)
 		require.Equal(TypeKind_ODoc, doc.Kind())
-		require.Equal(def.(IODoc), doc)
+		require.Equal(typ.(IODoc), doc)
 
 		require.Equal(2, doc.UserFieldCount())
 		require.Equal(DataKind_int64, doc.Field("f1").DataKind())
@@ -51,12 +51,12 @@ func Test_AppDef_AddODoc(t *testing.T) {
 		require.Equal(TypeKind_ORecord, doc.Container("rec").Type().Kind())
 
 		t.Run("must be ok to find builded record", func(t *testing.T) {
-			def := app.Type(recName)
-			require.Equal(TypeKind_ORecord, def.Kind())
+			typ := app.Type(recName)
+			require.Equal(TypeKind_ORecord, typ.Kind())
 
 			rec := app.ORecord(recName)
 			require.Equal(TypeKind_ORecord, rec.Kind())
-			require.Equal(def.(IORecord), rec)
+			require.Equal(typ.(IORecord), rec)
 
 			require.Equal(2, rec.UserFieldCount())
 			require.Equal(DataKind_int64, rec.Field("f1").DataKind())

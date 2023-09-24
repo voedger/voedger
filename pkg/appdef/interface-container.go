@@ -42,7 +42,7 @@ type IContainersBuilder interface {
 	//   - if type name is empty,
 	//   - if invalid occurrences,
 	//   - if container type kind is not compatible with parent type kind.
-	AddContainer(name string, def QName, min, max Occurs, comment ...string) IContainersBuilder
+	AddContainer(name string, typeName QName, min, max Occurs, comment ...string) IContainersBuilder
 }
 
 // Describes single inclusion of child in parent.

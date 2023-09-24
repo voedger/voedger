@@ -67,10 +67,10 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 	require.NotNil(app)
 
 	t.Run("must be ok to find builded doc", func(t *testing.T) {
-		def := app.Type(docName)
-		require.Equal(TypeKind_GDoc, def.Kind())
+		typ := app.Type(docName)
+		require.Equal(TypeKind_GDoc, typ.Kind())
 
-		d, ok := def.(IGDoc)
+		d, ok := typ.(IGDoc)
 		require.True(ok)
 		require.Equal(TypeKind_GDoc, d.Kind())
 
@@ -88,10 +88,10 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 		require.Equal(TypeKind_GRecord, doc.Container("rec").Type().Kind())
 
 		t.Run("must be ok to find builded record", func(t *testing.T) {
-			def := app.Type(recName)
-			require.Equal(TypeKind_GRecord, def.Kind())
+			typ := app.Type(recName)
+			require.Equal(TypeKind_GRecord, typ.Kind())
 
-			r, ok := def.(IGRecord)
+			r, ok := typ.(IGRecord)
 			require.True(ok)
 			require.Equal(TypeKind_GRecord, r.Kind())
 

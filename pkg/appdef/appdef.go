@@ -219,8 +219,8 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 	return nil
 }
 
-func (app *appDef) appendType(def interface{}) {
-	app.types[def.(IType).QName()] = def
+func (app *appDef) appendType(t interface{}) {
+	app.types[t.(IType).QName()] = t
 }
 
 func (app *appDef) typeByKind(name QName, kind TypeKind) interface{} {

@@ -41,21 +41,21 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 	})
 
 	t.Run("must be ok to find workspace", func(t *testing.T) {
-		def := app.Type(wsName)
-		require.Equal(TypeKind_Workspace, def.Kind())
+		typ := app.Type(wsName)
+		require.Equal(TypeKind_Workspace, typ.Kind())
 
 		ws := app.Workspace(wsName)
 		require.Equal(TypeKind_Workspace, ws.Kind())
-		require.Equal(def.(IWorkspace), ws)
+		require.Equal(typ.(IWorkspace), ws)
 
 		require.Equal(descName, ws.Descriptor(), "must be ok to get workspace descriptor")
 
 		t.Run("must be ok to find object in workspace", func(t *testing.T) {
-			def := ws.Type(objName)
-			require.NotNil(def)
-			require.Equal(TypeKind_Object, def.Kind())
+			typ := ws.Type(objName)
+			require.NotNil(typ)
+			require.Equal(TypeKind_Object, typ.Kind())
 
-			obj, ok := def.(IObject)
+			obj, ok := typ.(IObject)
 			require.True(ok)
 			require.NotNil(obj)
 			require.Equal(app.Object(objName), obj)
@@ -84,13 +84,13 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 	t.Run("must be panic if unknown descriptor assigned to workspace", func(t *testing.T) {
 		appDef := New()
 		ws := appDef.AddWorkspace(wsName)
-		require.Panics(func() { ws.SetDescriptor(NewQName("unknown", "def")) })
+		require.Panics(func() { ws.SetDescriptor(NewQName("unknown", "type")) })
 	})
 
 	t.Run("must be panic if add unknown type to workspace", func(t *testing.T) {
 		appDef := New()
 		ws := appDef.AddWorkspace(wsName)
-		require.Panics(func() { ws.AddType(NewQName("unknown", "def")) })
+		require.Panics(func() { ws.AddType(NewQName("unknown", "type")) })
 	})
 }
 

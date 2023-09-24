@@ -48,16 +48,16 @@ func Test_AppDef_AddQuery(t *testing.T) {
 	require.NotNil(app)
 
 	t.Run("must be ok to find builded query", func(t *testing.T) {
-		def := app.Type(queryName)
-		require.Equal(TypeKind_Query, def.Kind())
+		typ := app.Type(queryName)
+		require.Equal(TypeKind_Query, typ.Kind())
 
-		d, ok := def.(IQuery)
+		q, ok := typ.(IQuery)
 		require.True(ok)
-		require.Equal(TypeKind_Query, d.Kind())
+		require.Equal(TypeKind_Query, q.Kind())
 
 		query := app.Query(queryName)
 		require.Equal(TypeKind_Query, query.Kind())
-		require.Equal(d, query)
+		require.Equal(q, query)
 
 		require.Equal(argName, query.Arg().QName())
 		require.Equal(TypeKind_Object, query.Arg().Kind())

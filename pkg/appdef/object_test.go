@@ -38,12 +38,12 @@ func Test_AppDef_AddObject(t *testing.T) {
 	})
 
 	t.Run("must be ok to find builded object", func(t *testing.T) {
-		def := app.Type(objName)
-		require.Equal(TypeKind_Object, def.Kind())
+		typ := app.Type(objName)
+		require.Equal(TypeKind_Object, typ.Kind())
 
 		doc := app.Object(objName)
 		require.Equal(TypeKind_Object, doc.Kind())
-		require.Equal(def.(IObject), doc)
+		require.Equal(typ.(IObject), doc)
 
 		require.Equal(2, doc.UserFieldCount())
 		require.Equal(DataKind_int64, doc.Field("f1").DataKind())
@@ -51,12 +51,12 @@ func Test_AppDef_AddObject(t *testing.T) {
 		require.Equal(TypeKind_Element, doc.Container("child").Type().Kind())
 
 		t.Run("must be ok to find builded element", func(t *testing.T) {
-			def := app.Type(elementName)
-			require.Equal(TypeKind_Element, def.Kind())
+			typ := app.Type(elementName)
+			require.Equal(TypeKind_Element, typ.Kind())
 
 			rec := app.Element(elementName)
 			require.Equal(TypeKind_Element, rec.Kind())
-			require.Equal(def.(IElement), rec)
+			require.Equal(typ.(IElement), rec)
 
 			require.Equal(2, rec.UserFieldCount())
 			require.Equal(DataKind_int64, rec.Field("f1").DataKind())

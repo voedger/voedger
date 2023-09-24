@@ -9,16 +9,16 @@ package appdef
 const MaxIdentLen = 255
 
 // Maximum fields per one structured type
-const MaxDefFieldCount = 65536
+const MaxTypeFieldCount = 65536
 
 // Maximum containers per one structured type
-const MaxDefContainerCount = 65536
+const MaxTypeContainerCount = 65536
 
 // Maximum fields per one unique
-const MaxDefUniqueFieldsCount = 256
+const MaxTypeUniqueFieldsCount = 256
 
 // Maximum uniques
-const MaxDefUniqueCount = 100
+const MaxTypeUniqueCount = 100
 
 // Maximum string and bytes field length
 const MaxFieldLength = 1024

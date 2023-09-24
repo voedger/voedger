@@ -38,12 +38,12 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 	})
 
 	t.Run("must be ok to find builded doc", func(t *testing.T) {
-		def := app.Type(docName)
-		require.Equal(TypeKind_CDoc, def.Kind())
+		typ := app.Type(docName)
+		require.Equal(TypeKind_CDoc, typ.Kind())
 
 		doc := app.CDoc(docName)
 		require.Equal(TypeKind_CDoc, doc.Kind())
-		require.Equal(def.(ICDoc), doc)
+		require.Equal(typ.(ICDoc), doc)
 
 		require.Equal(2, doc.UserFieldCount())
 		require.Equal(DataKind_int64, doc.Field("f1").DataKind())
@@ -51,12 +51,12 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 		require.Equal(TypeKind_CRecord, doc.Container("rec").Type().Kind())
 
 		t.Run("must be ok to find builded record", func(t *testing.T) {
-			def := app.Type(recName)
-			require.Equal(TypeKind_CRecord, def.Kind())
+			typ := app.Type(recName)
+			require.Equal(TypeKind_CRecord, typ.Kind())
 
 			rec := app.CRecord(recName)
 			require.Equal(TypeKind_CRecord, rec.Kind())
-			require.Equal(def.(ICRecord), rec)
+			require.Equal(typ.(ICRecord), rec)
 
 			require.Equal(2, rec.UserFieldCount())
 			require.Equal(DataKind_int64, rec.Field("f1").DataKind())
@@ -87,12 +87,12 @@ func Test_AppDef_AddSingleton(t *testing.T) {
 	})
 
 	t.Run("must be ok to find builded singleton", func(t *testing.T) {
-		def := app.Type(docName)
-		require.Equal(TypeKind_CDoc, def.Kind())
+		typ := app.Type(docName)
+		require.Equal(TypeKind_CDoc, typ.Kind())
 
 		doc := app.CDoc(docName)
 		require.Equal(TypeKind_CDoc, doc.Kind())
-		require.Equal(def.(ICDoc), doc)
+		require.Equal(typ.(ICDoc), doc)
 
 		require.True(doc.Singleton())
 	})

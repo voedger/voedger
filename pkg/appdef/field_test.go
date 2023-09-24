@@ -97,12 +97,12 @@ func Test_AddField(t *testing.T) {
 	})
 
 	t.Run("chain notation is ok to add fields", func(t *testing.T) {
-		d := New().AddObject(NewQName("test", "obj"))
-		n := d.AddField("f1", DataKind_int64, true).
+		o := New().AddObject(NewQName("test", "obj"))
+		n := o.AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_int32, false).
 			AddField("f3", DataKind_string, false).(IType).QName()
-		require.Equal(d.QName(), n)
-		require.Equal(3, d.UserFieldCount())
+		require.Equal(o.QName(), n)
+		require.Equal(3, o.UserFieldCount())
 	})
 
 	t.Run("must be panic if empty field name", func(t *testing.T) {
@@ -124,7 +124,7 @@ func Test_AddField(t *testing.T) {
 
 	t.Run("must be panic if too many fields", func(t *testing.T) {
 		o := New().AddObject(NewQName("test", "obj"))
-		for i := 0; i < MaxDefFieldCount-1; i++ { // -1 for sys.QName field
+		for i := 0; i < MaxTypeFieldCount-1; i++ { // -1 for sys.QName field
 			o.AddField(fmt.Sprintf("f_%#x", i), DataKind_bool, false)
 		}
 		require.Panics(func() { o.AddField("errorField", DataKind_bool, true) })

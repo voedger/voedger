@@ -107,7 +107,7 @@ func Test_def_AddUnique(t *testing.T) {
 		t.Run("panics if too many fields", func(t *testing.T) {
 			typ := New().AddCRecord(NewQName("test", "rec"))
 			fldNames := []string{}
-			for i := 0; i <= MaxDefUniqueFieldsCount; i++ {
+			for i := 0; i <= MaxTypeUniqueFieldsCount; i++ {
 				n := fmt.Sprintf("f_%#x", i)
 				typ.AddField(n, DataKind_bool, false)
 				fldNames = append(fldNames, n)
@@ -133,7 +133,7 @@ func Test_def_AddUnique(t *testing.T) {
 
 		t.Run("panics if too many uniques", func(t *testing.T) {
 			typ := New().AddCRecord(NewQName("test", "rec"))
-			for i := 0; i < MaxDefUniqueCount; i++ {
+			for i := 0; i < MaxTypeUniqueCount; i++ {
 				n := fmt.Sprintf("f_%#x", i)
 				typ.AddField(n, DataKind_int32, false)
 				typ.AddUnique("", []string{n})
@@ -144,24 +144,24 @@ func Test_def_AddUnique(t *testing.T) {
 	})
 }
 
-func Test_def_UniqueField(t *testing.T) {
+func Test_type_UniqueField(t *testing.T) {
 	// This tests old-style uniques. See [issue #173](https://github.com/voedger/voedger/issues/173)
 	require := require.New(t)
 
 	qName := NewQName("test", "user")
 	appDef := New()
 
-	def := appDef.AddCDoc(qName)
-	require.NotNil(def)
+	doc := appDef.AddCDoc(qName)
+	require.NotNil(doc)
 
-	def.
+	doc.
 		AddField("name", DataKind_string, true).
 		AddField("surname", DataKind_string, false).
 		AddField("lastName", DataKind_string, false).
 		AddField("birthday", DataKind_int64, false).
 		AddField("sex", DataKind_bool, false).
 		AddField("eMail", DataKind_string, true)
-	def.SetUniqueField("eMail")
+	doc.SetUniqueField("eMail")
 
 	t.Run("test is ok", func(t *testing.T) {
 		app, err := appDef.Build()
@@ -176,7 +176,7 @@ func Test_def_UniqueField(t *testing.T) {
 	})
 
 	t.Run("must be ok to clear unique field", func(t *testing.T) {
-		def.SetUniqueField("")
+		doc.SetUniqueField("")
 
 		app, err := appDef.Build()
 		require.NoError(err)
@@ -189,15 +189,15 @@ func Test_def_UniqueField(t *testing.T) {
 
 	t.Run("test panics", func(t *testing.T) {
 		require.Panics(func() {
-			def.SetUniqueField("naked-🔫")
+			doc.SetUniqueField("naked-🔫")
 		}, "panics if invalid unique field name")
 
 		require.Panics(func() {
-			def.SetUniqueField("unknownField")
+			doc.SetUniqueField("unknownField")
 		}, "panics if unknown unique field name")
 
 		require.Panics(func() {
-			def.SetUniqueField("surname")
+			doc.SetUniqueField("surname")
 		}, "panics if unique field is not required")
 	})
 }
