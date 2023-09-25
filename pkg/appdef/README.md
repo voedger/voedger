@@ -164,7 +164,6 @@ classDiagram
     }
 ```
 
-
 ### Types composing
 
 ```mermaid
