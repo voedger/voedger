@@ -30,7 +30,7 @@ func provideQryCDoc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDef
 }
 
 func execQryCDoc(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		rkb, err := args.State.KeyBuilder(state.RecordsStorage, appdef.NullQName)
 		if err != nil {
 			return

@@ -51,7 +51,7 @@ func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, appDefB
 // q.sys.InitiateEmailVerification
 // called at targetApp/profileWSID
 func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp istructs.IAppStructsProvider, federation coreutils.IFederation) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		entity := args.ArgumentObject.AsString(field_Entity)
 		targetWSID := istructs.WSID(args.ArgumentObject.AsInt64(field_TargetWSID))
 		field := args.ArgumentObject.AsString(field_Field)
@@ -163,7 +163,7 @@ func provideQryIssueVerifiedValueToken(cfg *istructsmem.AppConfigType, appDefBui
 // called at targetApp/profileWSID
 // a helper is used for ResetPassword that calls `q.sys.IssueVerifiedValueToken` at the profile
 func provideIVVTExec(itokens itokens.ITokens, appQName istructs.AppQName, asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		verificationToken := args.ArgumentObject.AsString(field_VerificationToken)
 		verificationCode := args.ArgumentObject.AsString(field_VerificationCode)
 		forRegistry := args.ArgumentObject.AsBool(field_ForRegistry)

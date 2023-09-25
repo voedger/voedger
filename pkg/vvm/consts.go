@@ -7,6 +7,7 @@ package vvm
 import (
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorageimpl/istoragecas"
 	"github.com/voedger/voedger/pkg/router"
 )
@@ -43,4 +44,7 @@ var (
 		Port:                    9042,
 		KeyspaceWithReplication: istoragecas.SimpleWithReplication,
 	}
+	// https://github.com/voedger/voedger/issues/673
+	// TODO: remove it after switching to func declaration in sql only
+	qNameQueryCollection = appdef.NewQName(appdef.SysPackage, "Collection")
 )

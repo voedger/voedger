@@ -142,7 +142,7 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 	mockQryResScheme.AddField("Res", appdef.DataKind_string, true)
 
 	mockQry := istructsmem.NewQueryFunction(mockQryQName, mockQryParamsQName, mockQryResQName,
-		func(_ context.Context, _ istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+		func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			input := args.ArgumentObject.AsString(field_Input)
 			return MockQryExec(input, callback)
 		},
@@ -154,7 +154,7 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 	adf.AddObject(mockCmdParamsQName).
 		AddField(field_Input, appdef.DataKind_string, true)
 
-	execCmdMockCmd := func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+	execCmdMockCmd := func(args istructs.ExecCommandArgs) (err error) {
 		input := args.ArgumentObject.AsString(field_Input)
 		return MockCmdExec(input)
 	}
@@ -171,7 +171,7 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 		adf.AddObject(testCmdResult).
 			AddField("Int", appdef.DataKind_int32, true).
 			AddField("Str", appdef.DataKind_string, false).(appdef.IDef).QName(),
-		func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+		func(args istructs.ExecCommandArgs) (err error) {
 			key, err := args.State.KeyBuilder(state.CmdResultStorage, testCmdResult)
 			if err != nil {
 				return err

@@ -29,8 +29,8 @@ func provideCmdInitiateInvitationByEMail(cfg *istructsmem.AppConfigType, appDefB
 	))
 }
 
-func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
 		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
 		}

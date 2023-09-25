@@ -63,9 +63,25 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 		}
 		buildSchemasASTs(adf, appEPs)
 		vvmApps = append(vvmApps, appQName)
-		if _, err := adf.Build(); err != nil {
+		appDef, err := adf.Build()
+		if err != nil {
 			panic(err)
 		}
+		appDef.Defs(func(iDef appdef.IDef) {
+			switch iDef.Kind() {
+			case appdef.DefKind_Command:
+				cmd := iDef.(appdef.ICommand)
+				cmdResource := cfg.Resources.QueryResource(cmd.QName()).(istructs.ICommandFunction)
+				istructsmem.ReplaceCommandDefinitions(cmdResource, cmd.Arg().QName(), cmd.UnloggedArg().QName(), cmd.Result().QName())
+			case appdef.DefKind_Query:
+				if iDef.QName() == qNameQueryCollection {
+					return
+				}
+				query := iDef.(appdef.IQuery)
+				queryResource := cfg.Resources.QueryResource(query.QName()).(istructs.IQueryFunction)
+				istructsmem.ReplaceQueryDefinitions(queryResource, query.Arg().QName(), query.Result().QName())
+			}
+		})
 	}
 	return vvmApps
 }
