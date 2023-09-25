@@ -113,7 +113,7 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 // c.sys.CreateWorkspaceID
 // targetApp/appWS
 func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istructs.AppQName) istructsmem.ExecCommandClosure {
-	return func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
 		// TODO: AuthZ: System,SystemToken in header
 		ownerWSID := args.ArgumentObject.AsInt64(Field_OwnerWSID)
 		wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
@@ -236,7 +236,7 @@ func invokeCreateWorkspaceProjector(federation coreutils.IFederation, appQName i
 // c.sys.CreateWorkspace
 // должно быть вызвано в целевом приложении, т.к. профиль пользователя находится в целевом приложении на схеме!!!
 func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProvider, appQName istructs.AppQName) istructsmem.ExecCommandClosure {
-	return func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) error {
+	return func(args istructs.ExecCommandArgs) error {
 		// TODO: AuthZ: System, SystemToken in header
 		// Check that CDoc<sys.WorkspaceDescriptor> does not exist yet (IRecords.GetSingleton())
 		wsKindInitializationDataStr := args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData)

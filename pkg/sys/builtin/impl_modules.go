@@ -32,7 +32,7 @@ type qryModulesRR struct {
 }
 
 func provideQryModulesExec(buildInfo *debug.BuildInfo) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		sb := bytes.NewBufferString("")
 		for _, mod := range buildInfo.Deps {
 			sb.WriteString(fmt.Sprintf("path: %s version: %s\n", mod.Path, mod.Version))

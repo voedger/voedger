@@ -25,7 +25,7 @@ func provideCmdCreateJoinedWorkspace(cfg *istructsmem.AppConfigType, appDefBuild
 	))
 }
 
-func execCmdCreateJoinedWorkspace(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdCreateJoinedWorkspace(args istructs.ExecCommandArgs) (err error) {
 	svbCDocJoinedWorkspace, ok, err := GetCDocJoinedWorkspaceForUpdate(args.State, args.Intents, args.ArgumentObject.AsInt64(Field_InvitingWorkspaceWSID))
 	if err != nil {
 		// notest

@@ -85,7 +85,7 @@ func (af *abstractFunction) String() string {
 
 type (
 	// Function type to call for query execute action
-	ExecQueryClosure func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error)
+	ExecQueryClosure func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error)
 
 	// Implements istructs.IQueryFunction
 	queryFunction struct {
@@ -111,13 +111,13 @@ func NewQueryFunctionCustomResult(name, pars appdef.QName, resultDef func(istruc
 }
 
 // Null execute action closure for query functions
-func NullQueryExec(_ context.Context, _ istructs.IQueryFunction, _ istructs.ExecQueryArgs, _ istructs.ExecQueryCallback) error {
+func NullQueryExec(_ context.Context, _ istructs.ExecQueryArgs, _ istructs.ExecQueryCallback) error {
 	return nil
 }
 
 // istructs.IQueryFunction
 func (qf *queryFunction) Exec(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-	return qf.exec(ctx, qf, args, callback)
+	return qf.exec(ctx, args, callback)
 }
 
 // istructs.IResource
@@ -137,7 +137,7 @@ func (qf *queryFunction) String() string {
 
 type (
 	// Function type to call for command execute action
-	ExecCommandClosure func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error)
+	ExecCommandClosure func(args istructs.ExecCommandArgs) (err error)
 
 	// Implements istructs.ICommandFunction
 	commandFunction struct {
@@ -161,13 +161,13 @@ func NewCommandFunction(name, params, unlogged, result appdef.QName, exec ExecCo
 }
 
 // NullCommandExec is null execute action closure for command functions
-func NullCommandExec(_ istructs.ICommandFunction, _ istructs.ExecCommandArgs) error {
+func NullCommandExec(_ istructs.ExecCommandArgs) error {
 	return nil
 }
 
 // istructs.ICommandFunction
 func (cf *commandFunction) Exec(args istructs.ExecCommandArgs) error {
-	return cf.exec(cf, args)
+	return cf.exec(args)
 }
 
 // istructs.IResource

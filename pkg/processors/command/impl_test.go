@@ -86,7 +86,7 @@ func TestBasicUsage(t *testing.T) {
 
 	// сама тестовая команда
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
-	testExec := func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+	testExec := func(args istructs.ExecCommandArgs) (err error) {
 		cuds := args.Workpiece.(*cmdWorkpiece).parsedCUDs
 		if len(cuds) > 0 {
 			require.True(len(cuds) == 1)
@@ -355,7 +355,7 @@ func Test400BadRequests(t *testing.T) {
 	defer tearDown(app)
 
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
-	qryGreeter := istructsmem.NewCommandFunction(testCmdQName, testCmdQNameParams, testCmdQNameParamsUnlogged, appdef.NullQName, func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+	qryGreeter := istructsmem.NewCommandFunction(testCmdQName, testCmdQNameParams, testCmdQNameParamsUnlogged, appdef.NullQName, func(args istructs.ExecCommandArgs) (err error) {
 		_ = args.ArgumentObject.AsString("Text")
 		_ = args.ArgumentUnloggedObject.AsString("Password")
 		return nil
@@ -501,7 +501,7 @@ func TestBasicUsage_QNameJSONFunc(t *testing.T) {
 
 	ch := make(chan interface{})
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
-	testExec := func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+	testExec := func(args istructs.ExecCommandArgs) (err error) {
 		require.Equal("custom content", args.ArgumentObject.AsString(processors.Field_JSONDef_Body))
 		close(ch)
 		return

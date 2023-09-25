@@ -37,7 +37,7 @@ func provideChangePassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder
 
 // sys/registry/pseudoWSID
 // null auth
-func cmdChangePasswordExec(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func cmdChangePasswordExec(args istructs.ExecCommandArgs) (err error) {
 	appName := args.ArgumentObject.AsString(Field_AppName)
 	login := args.ArgumentObject.AsString(field_Login)
 	oldPwd := args.ArgumentUnloggedObject.AsString(field_OldPassword)
