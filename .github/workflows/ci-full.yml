@@ -16,9 +16,13 @@ jobs:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
-  call-workflow-cd-voeger:
+  call-workflow-vulncheck:
     needs: call-workflow-ci
-    if: github.repository == 'voedger/voedger'
+    uses: voedger/voedger/.github/workflows/ci-vulncheck.yml@main
+    secrets:
+      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
+  call-workflow-cd-voeger:
+    needs: call-workflow-vulncheck
     uses: voedger/voedger/.github/workflows/cd-voedger.yml@main
     secrets:
       dockerusername: ${{ secrets.DOCKER_USERNAME }}
