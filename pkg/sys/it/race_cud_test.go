@@ -328,7 +328,7 @@ func writeArt(ws *it.AppWorkspace, vit *it.VIT) (artNumber int) {
 				{
 					"fields": {
 						"sys.ID": ` + idstr + `,
-						"sys.QName": "simpleApp.articles",
+						"sys.QName": "app1.articles",
 						"name": "` + artname + `",
 						"article_manual": 1,
 						"article_hash": 2,
@@ -347,7 +347,7 @@ func readArt(vit *it.VIT, ws *it.AppWorkspace) *coreutils.FuncResponse {
 	body := `
 	{
 		"args":{
-			"Schema":"simpleApp.articles"
+			"Schema":"app1.articles"
 		},
 		"elements":[
 			{

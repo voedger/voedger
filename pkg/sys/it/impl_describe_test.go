@@ -28,7 +28,7 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 		require.Len(names, 3)
 		require.Contains(names, "sys")
 		require.Contains(names, "my")
-		require.Contains(names, "simpleApp")
+		require.Contains(names, "app1")
 	})
 
 	t.Run("describe package", func(t *testing.T) {

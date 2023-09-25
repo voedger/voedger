@@ -68,7 +68,7 @@ func TestBasicUsage_WorkWithFunctions(t *testing.T) {
 	})
 
 	t.Run("command", func(t *testing.T) {
-		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.air_table_plan","name":"test"}}]}`
+		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.air_table_plan","name":"test"}}]}`
 		resp := vit.PostWS(ws, "c.sys.CUD", body)
 		require.Len(resp.NewIDs, 1)
 		require.True(resp.NewID() > 1)
@@ -96,7 +96,7 @@ func TestBasicUsage_Workspaces(t *testing.T) {
 			Name:         "my workspace",
 			TemplateName: "test_template",  // from SharedConfig_Simple
 			InitDataJSON: `{"IntFld": 42}`, // intFld is required field, from SharedConfig_Simple
-			Kind:         QNameTestWSKind,
+			Kind:         QNameApp1_TestWSKind,
 			ClusterID:    istructs.MainClusterID,
 		}
 		newWS := vit.CreateWorkspace(wsp, ownerPrincipal)
@@ -159,7 +159,7 @@ func TestBasicUsage_POST(t *testing.T) {
 	// unexpected result code -> test is failed
 	// response body is read out and closed
 	bodyEcho := `{"args": {"Text": "world"},"elements": [{"fields": ["Res"]}]}`
-	bodyCUD := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.air_table_plan","name":"test"}}]}`
+	bodyCUD := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.air_table_plan","name":"test"}}]}`
 	httpResp := vit.Post("api/test1/app1/1/q.sys.Echo", bodyEcho) // HTTPResponse is returned
 	require.Equal(`{"sections":[{"type":"","elements":[[[["world"]]]]}]}`, httpResp.Body)
 

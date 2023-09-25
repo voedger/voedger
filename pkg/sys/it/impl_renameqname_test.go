@@ -17,14 +17,14 @@ func TestBasicUsage_RenameQName(t *testing.T) {
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	// ensure untill.category is not renamed yet
-	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.category","name":"Awesome food"}}]}`
+	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.category","name":"Awesome food"}}]}`
 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	bodyRename := `{"args":{"ExistingQName":"simpleApp.category","NewQName":"simpleApp.categorynew"}}`
+	bodyRename := `{"args":{"ExistingQName":"app1.category","NewQName":"app1.categorynew"}}`
 	vit.PostWS(ws, "c.sys.RenameQName", bodyRename)
 
 	// need to restart the server
-	// body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.categorynew","name":"Awesome food"}}]}`
+	// body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.categorynew","name":"Awesome food"}}]}`
 	// vit.PostWS(ws, "c.sys.CUD", body)
 
 	// hit.PostApp(istructs.AppQName_test1_app1, ws.Owner.PseudoProfileWSID, "c.sys.RenameQName", body, utils.WithAuthorizeBy(sysToken))

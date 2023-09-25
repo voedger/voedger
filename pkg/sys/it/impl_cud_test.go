@@ -30,7 +30,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 					{
 						"fields": {
 							"sys.ID": 1,
-							"sys.QName": "simpleApp.articles",
+							"sys.QName": "app1.articles",
 							"name": "cola",
 							"article_manual": 1,
 							"article_hash": 2,
@@ -49,7 +49,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 		body := `
 		{
 			"args":{
-				"Schema":"simpleApp.articles"
+				"Schema":"app1.articles"
 			},
 			"elements":[
 				{
@@ -88,7 +88,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 		body = `
 		{
 			"args":{
-				"Schema":"simpleApp.articles"
+				"Schema":"app1.articles"
 			},
 			"elements":[
 				{
@@ -151,7 +151,7 @@ func TestBasicUsage_Init(t *testing.T) {
 				{
 					"fields": {
 						"sys.ID": 1000000002,
-						"sys.QName": "simpleApp.articles",
+						"sys.QName": "app1.articles",
 						"name": "cola",
 						"article_manual": 11,
 						"article_hash": 21,
@@ -167,7 +167,7 @@ func TestBasicUsage_Init(t *testing.T) {
 	body = `
 		{
 			"args":{
-				"Schema":"simpleApp.articles"
+				"Schema":"app1.articles"
 			},
 			"elements":[
 				{
@@ -196,7 +196,7 @@ func TestBasicUsage_Singletons(t *testing.T) {
 				{
 					"fields": {
 						"sys.ID": 1,
-						"sys.QName": "simpleApp.Config",
+						"sys.QName": "app1.Config",
 						"Fld1": "42"
 					}
 				}
@@ -211,7 +211,7 @@ func TestBasicUsage_Singletons(t *testing.T) {
 
 	// запросим ID через collection
 	body = `{
-		"args":{ "Schema":"simpleApp.Config" },
+		"args":{ "Schema":"app1.Config" },
 		"elements":[{ "fields": ["sys.ID"] }]
 	}`
 	resp = vit.PostProfile(prn, "q.sys.Collection", body)
@@ -233,13 +233,13 @@ func TestUnlinkReference(t *testing.T) {
 				{
 					"fields": {
 						"sys.ID": 1,
-						"sys.QName": "simpleApp.options"
+						"sys.QName": "app1.options"
 					}
 				},
 				{
 					"fields": {
 						"sys.ID": 2,
-						"sys.QName": "simpleApp.department",
+						"sys.QName": "app1.department",
 						"pc_fix_button": 1,
 						"rm_fix_button": 1
 					}
@@ -247,7 +247,7 @@ func TestUnlinkReference(t *testing.T) {
 				{
 					"fields": {
 						"sys.ID": 3,
-						"sys.QName": "simpleApp.department_options",
+						"sys.QName": "app1.department_options",
 						"id_options": 1,
 						"id_department": 2,
 						"sys.ParentID": 2,
@@ -280,43 +280,43 @@ func TestRefIntegrity(t *testing.T) {
 
 	t.Run("CUDs", func(t *testing.T) {
 		t.Skip("wait for https://github.com/voedger/voedger/issues/566")
-		body := `{"cuds":[{"fields":{"sys.ID":2,"sys.QName":"simpleApp.department","pc_fix_button": 1,"rm_fix_button": 1, "id_food_group": 123456}}]}`
+		body := `{"cuds":[{"fields":{"sys.ID":2,"sys.QName":"app1.department","pc_fix_button": 1,"rm_fix_button": 1, "id_food_group": 123456}}]}`
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
 
-		body = `{"cuds":[{"fields":{"sys.ID": 2, "sys.QName":"simpleApp.cdoc1"}}]}`
+		body = `{"cuds":[{"fields":{"sys.ID": 2, "sys.QName":"app1.cdoc1"}}]}`
 		resp := vit.PostWS(ws, "c.sys.CUD", body)
 		idCdoc1 := resp.NewIDs["2"]
 
-		body = `{"cuds":[{"fields":{"sys.ID": 2, "sys.QName":"simpleApp.options"}}]}`
+		body = `{"cuds":[{"fields":{"sys.ID": 2, "sys.QName":"app1.options"}}]}`
 		resp = vit.PostWS(ws, "c.sys.CUD", body)
 		idOption := resp.NewIDs["2"]
 
-		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"simpleApp.department","pc_fix_button": 1,"rm_fix_button": 1}}]}`
+		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.department","pc_fix_button": 1,"rm_fix_button": 1}}]}`
 		resp = vit.PostWS(ws, "c.sys.CUD", body)
 		idDep := resp.NewIDs["2"]
 
-		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"simpleApp.cdoc2"}}]}`
+		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2"}}]}`
 		vit.PostWS(ws, "c.sys.CUD", body)
 
-		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"simpleApp.cdoc2","field1": 123456}}]}`
+		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field1": 123456}}]}`
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
 
-		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"simpleApp.cdoc2","field1": %d}}]}`, idOption)
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field1": %d}}]}`, idOption)
 		vit.PostWS(ws, "c.sys.CUD", body)
 
-		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"simpleApp.cdoc2","field2": 123456}}]}`
+		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": 123456}}]}`
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
 
-		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"simpleApp.cdoc2","field2": %d}}]}`, idOption)
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": %d}}]}`, idOption)
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
 
-		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"simpleApp.cdoc2","field2": %d}}]}`, idDep)
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": %d}}]}`, idDep)
 		vit.PostWS(ws, "c.sys.CUD", body)
 
-		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"simpleApp.cdoc2","field2": %d}}]}`, idCdoc1)
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": %d}}]}`, idCdoc1)
 		vit.PostWS(ws, "c.sys.CUD", body)
 
-		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"simpleApp.cdoc2","field3": %d}}]}`, idOption)
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field3": %d}}]}`, idOption)
 		vit.PostWS(ws, "c.sys.CUD", body)
 	})
 
@@ -337,7 +337,7 @@ func TestEraseString(t *testing.T) {
 	body := `{"cuds":[{"sys.ID": 5000000000400,"fields":{"name":""}}]}`
 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	body = `{"args":{"Schema":"simpleApp.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":5000000000400}}]}`
+	body = `{"args":{"Schema":"app1.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":5000000000400}}]}`
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
 	require.Equal(t, "", resp.SectionRow()[0].(string))
@@ -348,13 +348,13 @@ func TestEraseString1(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "simpleApp.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
+	body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
 	id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	body = fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"name":""}}]}`, id)
 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	body = fmt.Sprintf(`{"args":{"Schema":"simpleApp.articles"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, id)
+	body = fmt.Sprintf(`{"args":{"Schema":"app1.articles"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, id)
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
 	require.Equal(t, "", resp.SectionRow()[0].(string))

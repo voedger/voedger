@@ -38,7 +38,7 @@ func (e *greeterRR) AsString(name string) string {
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	cfg := it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app1, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 			cfg.Resources.Add(istructsmem.NewQueryFunction(
 				appdef.NewQName(appdef.SysPackage, "Greeter"),
 				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
@@ -55,6 +55,7 @@ func TestBasicUsage(t *testing.T) {
 			// need to read cdoc.sys.Subject on auth
 			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
+			apps.Parse(it.SchemaTestApp2, "app2", ep)
 		}),
 	)
 	vit := it.NewVIT(t, &cfg)
@@ -73,7 +74,7 @@ func TestBasicUsage(t *testing.T) {
 		]
 	  }
 	`
-	ws := vit.DummyWS(istructs.AppQName_test1_app1, 1)
+	ws := vit.DummyWS(istructs.AppQName_test1_app2, 1)
 	resp := vit.PostWSSys(ws, "q.sys.Greeter", body)
 	require.Equal(`{"sections":[{"type":"","elements":[[[["hello, world"]]]]}]}`, resp.Body)
 	resp.Println()
@@ -113,7 +114,7 @@ func TestAuthorization(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	prn := ws.Owner
 
-	body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"simpleApp.air_table_plan"}}]}`
+	body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1.air_table_plan"}}]}`
 
 	t.Run("basic usage", func(t *testing.T) {
 		t.Run("Bearer scheme", func(t *testing.T) {

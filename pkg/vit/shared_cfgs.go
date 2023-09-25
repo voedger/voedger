@@ -34,25 +34,25 @@ const (
 )
 
 var (
-	QNameTestWSKind               = appdef.NewQName("simpleApp", "WSKind")
-	QNameTestView                 = appdef.NewQName("my", "View")
-	QNameTestEmailVerificationDoc = appdef.NewQName("simpleApp", "Doc")
-	QNameCDocTestConstraints      = appdef.NewQName("simpleApp", "DocConstraints")
-	QNameCmdRated                 = appdef.NewQName(appdef.SysPackage, "RatedCmd")
-	QNameQryRated                 = appdef.NewQName(appdef.SysPackage, "RatedQry")
-	TestSMTPCfg                   = smtp.Cfg{
+	QNameApp1_TestWSKind               = appdef.NewQName("app1", "WSKind")
+	QNameTestView                      = appdef.NewQName("my", "View")
+	QNameApp1_TestEmailVerificationDoc = appdef.NewQName("app1", "Doc")
+	QNameApp1_CDocTestConstraints      = appdef.NewQName("app1", "DocConstraints")
+	QNameCmdRated                      = appdef.NewQName(appdef.SysPackage, "RatedCmd")
+	QNameQryRated                      = appdef.NewQName(appdef.SysPackage, "RatedQry")
+	TestSMTPCfg                        = smtp.Cfg{
 		Username: "username@gmail.com",
 	}
 
 	// BLOBMaxSize 5
 	SharedConfig_App1 = NewSharedVITConfig(
 		WithApp(istructs.AppQName_test1_app1, ProvideApp1,
-			WithWorkspaceTemplate(QNameTestWSKind, "test_template", sys_test_template.TestTemplateFS),
+			WithWorkspaceTemplate(QNameApp1_TestWSKind, "test_template", sys_test_template.TestTemplateFS),
 			WithUserLogin("login", "pwd"),
 			WithUserLogin(TestEmail, "1"),
 			WithUserLogin(TestEmail2, "1"),
 			WithUserLogin(TestEmail3, "1"),
-			WithChildWorkspace(QNameTestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
+			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
 		),
 		WithApp(istructs.AppQName_test1_app2, ProvideApp1, WithUserLogin("login", "1")),
 		WithVVMConfig(func(cfg *vvm.VVMConfig) {
@@ -62,8 +62,8 @@ var (
 			cfg.RouteDefault = fmt.Sprintf("http://127.0.0.1:%d/not-found", TestServicePort)
 			cfg.RouteDomains["localhost"] = "http://127.0.0.1"
 
-			const simpleAppBLOBMaxSize = 5
-			cfg.BLOBMaxSize = simpleAppBLOBMaxSize
+			const app1_BLOBMaxSize = 5
+			cfg.BLOBMaxSize = app1_BLOBMaxSize
 		}),
 		WithCleanup(func(_ *VIT) {
 			MockCmdExec = func(input string) error { panic("") }
