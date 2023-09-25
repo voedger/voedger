@@ -103,7 +103,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	// multinine comments
 	singleton := builder.CDoc(appdef.NewQName("main", "SubscriptionProfile"))
-	require.Equal("Singletons are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC\nThese comments are included in the statement type, but may be overridden with `WITH Comment=...`", singleton.Comment())
+	require.Equal("Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC\nThese comments are included in the statement definition, but may be overridden with `WITH Comment=...`", singleton.Comment())
 
 	cmd := builder.Command(appdef.NewQName("main", "Orders"))
 	require.Equal("Commands can only be declared in workspaces\nCommand can have optional argument and/or unlogged argument\nCommand can return TYPE", cmd.Comment())
@@ -764,11 +764,11 @@ func Test_Views2(t *testing.T) {
 		})
 		require.NoError(err)
 
-		def := appdef.New()
-		err = BuildAppDefs(packages, def)
+		appBld := appdef.New()
+		err = BuildAppDefs(packages, appBld)
 		require.NoError(err)
 
-		v := def.View(appdef.NewQName("test", "test"))
+		v := appBld.View(appdef.NewQName("test", "test"))
 		require.NotNil(v)
 	}
 	{
@@ -794,11 +794,11 @@ func Test_Views2(t *testing.T) {
 		})
 		require.NoError(err)
 
-		def := appdef.New()
-		err = BuildAppDefs(packages, def)
+		appBld := appdef.New()
+		err = BuildAppDefs(packages, appBld)
 		require.NoError(err)
 
-		v := def.View(appdef.NewQName("test", "test"))
+		v := appBld.View(appdef.NewQName("test", "test"))
 		require.NotNil(v)
 
 	}
@@ -1015,14 +1015,14 @@ func Test_UniqueFields(t *testing.T) {
 	})
 	require.NoError(err)
 
-	def := appdef.New()
-	err = BuildAppDefs(packages, def)
+	appBld := appdef.New()
+	err = BuildAppDefs(packages, appBld)
 	require.EqualError(err, strings.Join([]string{
 		"example.sql:5:3: undefined field UnknownField",
 		"example.sql:6:3: field has to be NOT NULL",
 	}, "\n"))
 
-	cdoc := def.CDoc(appdef.NewQName("test", "MyTable"))
+	cdoc := appBld.CDoc(appdef.NewQName("test", "MyTable"))
 	require.NotNil(cdoc)
 
 	fld := cdoc.UniqueField()
@@ -1052,12 +1052,12 @@ func Test_NestedTables(t *testing.T) {
 	})
 	require.NoError(err)
 
-	def := appdef.New()
-	err = BuildAppDefs(packages, def)
+	appBld := appdef.New()
+	err = BuildAppDefs(packages, appBld)
 	require.NoError(err)
 
-	require.NotNil(def.CRecord(appdef.NewQName("test", "NestedTable")))
-	require.NotNil(def.CRecord(appdef.NewQName("test", "DeepNestedTable")))
+	require.NotNil(appBld.CRecord(appdef.NewQName("test", "NestedTable")))
+	require.NotNil(appBld.CRecord(appdef.NewQName("test", "DeepNestedTable")))
 }
 
 func Test_SemanticAnalysisForReferences(t *testing.T) {
@@ -1081,8 +1081,8 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 		})
 		require.NoError(err)
 
-		def := appdef.New()
-		err = BuildAppDefs(packages, def)
+		appBld := appdef.New()
+		err = BuildAppDefs(packages, appBld)
 
 		require.Contains(err.Error(), "table test.CTable can not reference to table test.OTable")
 	})
@@ -1107,11 +1107,11 @@ func Test_1KStringField(t *testing.T) {
 	})
 	require.NoError(err)
 
-	def := appdef.New()
-	err = BuildAppDefs(packages, def)
+	appBld := appdef.New()
+	err = BuildAppDefs(packages, appBld)
 	require.NoError(err)
 
-	cdoc := def.CDoc(appdef.NewQName("test", "MyTable"))
+	cdoc := appBld.CDoc(appdef.NewQName("test", "MyTable"))
 	require.NotNil(cdoc)
 
 	fld := cdoc.Field("KB").(appdef.IStringField)

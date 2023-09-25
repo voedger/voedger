@@ -105,7 +105,7 @@ func IBucketsFromIAppStructs(as istructs.IAppStructs) irates.IBuckets {
 	return as.(interface{ Buckets() irates.IBuckets }).Buckets()
 }
 
-func FillElementFromJSON(data map[string]interface{}, def appdef.IType, b istructs.IElementBuilder) error {
+func FillElementFromJSON(data map[string]interface{}, t appdef.IType, b istructs.IElementBuilder) error {
 	for fieldName, fieldValue := range data {
 		switch fv := fieldValue.(type) {
 		case float64:
@@ -116,9 +116,9 @@ func FillElementFromJSON(data map[string]interface{}, def appdef.IType, b istruc
 			b.PutBool(fieldName, fv)
 		case []interface{}:
 			// e.g. TestBasicUsage_Dashboard(), "order_item": [<2 elements>]
-			containers, ok := def.(appdef.IContainers)
+			containers, ok := t.(appdef.IContainers)
 			if !ok {
-				return fmt.Errorf("type %v has no containers", def.QName())
+				return fmt.Errorf("type %v has no containers", t.QName())
 			}
 			container := containers.Container(fieldName)
 			if container == nil {
@@ -147,8 +147,8 @@ func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectB
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
 	appDef := appStructs.AppDef()
 	qName := obj.AsQName(appdef.SystemField_QName)
-	def := appDef.Type(qName)
-	if fields, ok := def.(appdef.IFields); ok {
+	t := appDef.Type(qName)
+	if fields, ok := t.(appdef.IFields); ok {
 		fields.Fields(
 			func(f appdef.IField) {
 				if f.DataKind() != appdef.DataKind_RecordID || err != nil {

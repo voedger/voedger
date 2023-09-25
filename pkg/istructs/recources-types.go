@@ -33,13 +33,13 @@ type IResource interface {
 
 type IFunction interface {
 	IResource
-	ParamsDef() appdef.QName
+	ParamsType() appdef.QName
 }
 
 type ICommandFunction interface {
 	IFunction
-	ResultDef() appdef.QName
-	UnloggedParamsDef() appdef.QName
+	ResultType() appdef.QName
+	UnloggedParamsType() appdef.QName
 	Exec(args ExecCommandArgs) error
 }
 

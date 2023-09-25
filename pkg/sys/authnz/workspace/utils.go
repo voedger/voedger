@@ -13,16 +13,16 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func validateWSKindInitializationData(as istructs.IAppStructs, data map[string]interface{}, def appdef.IType) (err error) {
+func validateWSKindInitializationData(as istructs.IAppStructs, data map[string]interface{}, t appdef.IType) (err error) {
 	reb := as.Events().GetNewRawEventBuilder(
 		istructs.NewRawEventBuilderParams{
 			GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-				QName: def.QName(),
+				QName: t.QName(),
 			},
 		},
 	)
 	aob := reb.ArgumentObjectBuilder()
-	aob.PutQName(appdef.SystemField_QName, def.QName())
+	aob.PutQName(appdef.SystemField_QName, t.QName())
 	aob.PutRecordID(appdef.SystemField_ID, 1)
 	if err = coreutils.Marshal(aob, data); err != nil {
 		return err

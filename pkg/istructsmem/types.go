@@ -351,13 +351,13 @@ func (row *rowType) setQName(value appdef.QName) {
 		return
 	}
 
-	def := row.appCfg.AppDef.TypeByName(value)
-	if def == nil {
+	t := row.appCfg.AppDef.TypeByName(value)
+	if t == nil {
 		row.collectErrorf(errTypeNotFoundWrap, value, ErrNameNotFound)
 		return
 	}
 
-	row.setType(def)
+	row.setType(t)
 }
 
 // Same as setQName, useful from loadFromBytes()
@@ -375,13 +375,13 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 	}
 
 	if qName != appdef.NullQName {
-		def := row.appCfg.AppDef.TypeByName(qName)
-		if def == nil {
+		t := row.appCfg.AppDef.TypeByName(qName)
+		if t == nil {
 			err = fmt.Errorf(errTypeNotFoundWrap, qName, ErrNameNotFound)
 			row.collectError(err)
 			return err
 		}
-		row.setType(def)
+		row.setType(t)
 	}
 
 	return nil
@@ -390,11 +390,11 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 // Assign specified type to row and rebuild row.
 //
 // Type can not to be nil and must be valid
-func (row *rowType) setType(value appdef.IType) {
-	if value == nil {
+func (row *rowType) setType(t appdef.IType) {
+	if t == nil {
 		row.typ = appdef.NullType
 	} else {
-		row.typ = value
+		row.typ = t
 	}
 
 	row.release()

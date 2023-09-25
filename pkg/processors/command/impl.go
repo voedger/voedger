@@ -111,10 +111,10 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (
 
 func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	qNameCmdResult := cmd.cmdFunc.ResultDef()
-	if qNameCmdResult != appdef.NullQName {
+	res := cmd.cmdFunc.ResultType()
+	if res != appdef.NullQName {
 		cfg := cmdProc.cfgs[cmd.cmdMes.AppQName()]
-		cmd.cmdResultBuilder = istructsmem.NewIObjectBuilder(cfg, qNameCmdResult)
+		cmd.cmdResultBuilder = istructsmem.NewIObjectBuilder(cfg, res)
 	}
 	return nil
 }
@@ -147,8 +147,8 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		ws := ap.getWorkspace(event.Workspace())
 		_ = event.CUDs(func(rec istructs.ICUDRow) error { // no errors to return
 			if rec.IsNew() {
-				def := cmd.AppDef().Type(rec.QName())
-				ws.idGenerator.UpdateOnSync(rec.ID(), def)
+				t := cmd.AppDef().Type(rec.QName())
+				ws.idGenerator.UpdateOnSync(rec.ID(), t)
 			}
 			return nil
 		})
@@ -294,7 +294,7 @@ func getFunction(_ context.Context, work interface{}) (err error) {
 
 func unmarshalRequestBody(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdFunc.ParamsDef() == istructs.QNameJSON {
+	if cmd.cmdFunc.ParamsType() == istructs.QNameJSON {
 		cmd.requestData["args"] = map[string]interface{}{
 			processors.Field_JSONDef_Body: string(cmd.cmdMes.Body()),
 		}
@@ -341,7 +341,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work interface{}) 
 
 func getArgsObject(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdFunc.ParamsDef() == appdef.NullQName {
+	if cmd.cmdFunc.ParamsType() == appdef.NullQName {
 		return nil
 	}
 	aob := cmd.reb.ArgumentObjectBuilder()
@@ -350,8 +350,8 @@ func getArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"args" field must be an object`)
 		}
-		parsDef := cmd.appStructs.AppDef().Type(cmd.cmdFunc.ParamsDef())
-		if err = istructsmem.FillElementFromJSON(args, parsDef, aob); err != nil {
+		parsType := cmd.appStructs.AppDef().Type(cmd.cmdFunc.ParamsType())
+		if err = istructsmem.FillElementFromJSON(args, parsType, aob); err != nil {
 			return err
 		}
 	}
@@ -363,7 +363,7 @@ func getArgsObject(_ context.Context, work interface{}) (err error) {
 
 func getUnloggedArgsObject(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdFunc.UnloggedParamsDef() == appdef.NullQName {
+	if cmd.cmdFunc.UnloggedParamsType() == appdef.NullQName {
 		return nil
 	}
 	auob := cmd.reb.ArgumentUnloggedObjectBuilder()
@@ -372,8 +372,8 @@ func getUnloggedArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"unloggedArgs" field must be an object`)
 		}
-		unloggedParsDef := cmd.appStructs.AppDef().Type(cmd.cmdFunc.UnloggedParamsDef())
-		if err = istructsmem.FillElementFromJSON(unloggedArgs, unloggedParsDef, auob); err != nil {
+		unloggedParsType := cmd.appStructs.AppDef().Type(cmd.cmdFunc.UnloggedParamsType())
+		if err = istructsmem.FillElementFromJSON(unloggedArgs, unloggedParsType, auob); err != nil {
 			return err
 		}
 	}
@@ -653,8 +653,8 @@ func (sr *opSendResponse) OnErr(err error, work interface{}, _ pipeline.IWorkpie
 	return nil
 }
 
-func (idGen *implIDGenerator) NextID(rawID istructs.RecordID, def appdef.IType) (storageID istructs.RecordID, err error) {
-	storageID, err = idGen.IIDGenerator.NextID(rawID, def)
+func (idGen *implIDGenerator) NextID(rawID istructs.RecordID, t appdef.IType) (storageID istructs.RecordID, err error) {
+	storageID, err = idGen.IIDGenerator.NextID(rawID, t)
 	idGen.generatedIDs[rawID] = storageID
 	return
 }

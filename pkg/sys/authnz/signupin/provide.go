@@ -39,8 +39,8 @@ func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDe
 		AddField(Field_AppName, appdef.DataKind_string, true)
 
 	iptResQName := appdef.NewQName(appdef.SysPackage, "IssuePrincipalTokenResult")
-	iptResDef := appDefBuilder.AddObject(iptResQName)
-	iptResDef.
+	iptRes := appDefBuilder.AddObject(iptResQName)
+	iptRes.
 		AddField(authnz.Field_PrincipalToken, appdef.DataKind_string, true).
 		AddField(authnz.Field_WSID, appdef.DataKind_int64, true).
 		AddField(authnz.Field_WSError, appdef.DataKind_string, true)

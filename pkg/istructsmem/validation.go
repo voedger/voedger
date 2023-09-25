@@ -21,8 +21,8 @@ type validator struct {
 	typ        appdef.IType
 }
 
-func newValidator(validators *validators, def appdef.IType) *validator {
-	return &validator{validators, def}
+func newValidator(validators *validators, t appdef.IType) *validator {
+	return &validator{validators, t}
 }
 
 // Return readable name of entity to validate.
@@ -207,8 +207,8 @@ func newValidators() *validators {
 func (v *validators) prepare(appDef appdef.IAppDef) {
 	v.appDef = appDef
 	v.appDef.Types(
-		func(d appdef.IType) {
-			v.validators[d.QName()] = newValidator(v, d)
+		func(t appdef.IType) {
+			v.validators[t.QName()] = newValidator(v, t)
 		})
 }
 
@@ -242,10 +242,10 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 			validateErrorf(ECode_InvalidDefName, "event command argument «%v» uses wrong type «%v», expected «%v»: %w", ev.name, ev.argObject.QName(), arg, ErrWrongType))
 	} else if arg != appdef.NullQName {
 		// #!17185: must be ODoc or Object only
-		def := v.appDef.Type(arg)
-		if (def.Kind() != appdef.TypeKind_ODoc) && (def.Kind() != appdef.TypeKind_Object) {
+		t := v.appDef.Type(arg)
+		if (t.Kind() != appdef.TypeKind_ODoc) && (t.Kind() != appdef.TypeKind_Object) {
 			err = errors.Join(err,
-				validateErrorf(ECode_InvalidTypeKind, "event command argument «%v» type can not to be «%v», expected («%v» or «%v»): %w", arg, def.Kind().TrimString(), appdef.TypeKind_ODoc.TrimString(), appdef.TypeKind_Object.TrimString(), ErrWrongType))
+				validateErrorf(ECode_InvalidTypeKind, "event command argument «%v» type can not to be «%v», expected («%v» or «%v»): %w", arg, t.Kind().TrimString(), appdef.TypeKind_ODoc.TrimString(), appdef.TypeKind_Object.TrimString(), ErrWrongType))
 		}
 		err = errors.Join(err,
 			v.validObject(&ev.argObject))
@@ -376,8 +376,8 @@ func (v *validators) validCUDRefRawIDs(cud *cudType) (err error) {
 					}
 					switch name {
 					case appdef.SystemField_ParentID:
-						if parentDef, ok := v.appDef.Type(target).(appdef.IContainers); ok {
-							cont := parentDef.Container(rec.Container())
+						if parentType, ok := v.appDef.Type(target).(appdef.IContainers); ok {
+							cont := parentType.Container(rec.Container())
 							if cont == nil {
 								err = errors.Join(err,
 									validateErrorf(ECode_InvalidRefRecordID, "cud.%s record «%s: %s» with raw parent ID «%d» refers to «%s», which has no container «%s»: %w", cu, rec.Container(), rec.QName(), id, target, rec.Container(), ErrWrongRecordID))
@@ -421,21 +421,21 @@ func (v *validators) validCUDRefRawIDs(cud *cudType) (err error) {
 //
 // If partialClust specified then clustering columns row may be partially filled
 func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
-	pkDef := key.pkDef()
-	if key.partRow.QName() != pkDef {
-		return validateErrorf(ECode_InvalidDefName, "wrong view partition key type «%v», for view «%v» expected «%v»: %w", key.partRow.QName(), key.viewName, pkDef, ErrWrongType)
+	pk := key.pkDef()
+	if key.partRow.QName() != pk {
+		return validateErrorf(ECode_InvalidDefName, "wrong view partition key type «%v», for view «%v» expected «%v»: %w", key.partRow.QName(), key.viewName, pk, ErrWrongType)
 	}
 
-	ccDef := key.ccDef()
-	if key.ccolsRow.QName() != ccDef {
-		return validateErrorf(ECode_InvalidDefName, "wrong view clustering columns type «%v», for view «%v» expected «%v»: %w", key.ccolsRow.QName(), key.viewName, ccDef, ErrWrongType)
+	cc := key.ccDef()
+	if key.ccolsRow.QName() != cc {
+		return validateErrorf(ECode_InvalidDefName, "wrong view clustering columns type «%v», for view «%v» expected «%v»: %w", key.ccolsRow.QName(), key.viewName, cc, ErrWrongType)
 	}
 
 	key.partRow.fieldsDef().Fields(
 		func(f appdef.IField) {
 			if !key.partRow.HasValue(f.Name()) {
 				err = errors.Join(err,
-					validateErrorf(ECode_EmptyData, "view «%v» partition key «%v» field «%s» is empty: %w", key.viewName, pkDef, f.Name(), ErrFieldIsEmpty))
+					validateErrorf(ECode_EmptyData, "view «%v» partition key «%v» field «%s» is empty: %w", key.viewName, pk, f.Name(), ErrFieldIsEmpty))
 			}
 		})
 
@@ -444,7 +444,7 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 			func(f appdef.IField) {
 				if !key.ccolsRow.HasValue(f.Name()) {
 					err = errors.Join(err,
-						validateErrorf(ECode_EmptyData, "view «%v» clustering columns «%v» field «%s» is empty: %w", key.viewName, ccDef, f.Name(), ErrFieldIsEmpty))
+						validateErrorf(ECode_EmptyData, "view «%v» clustering columns «%v» field «%s» is empty: %w", key.viewName, cc, f.Name(), ErrFieldIsEmpty))
 				}
 			})
 	}
@@ -454,14 +454,14 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 
 // Validates specified view value
 func (v *validators) validViewValue(value *valueType) (err error) {
-	valDef := value.valueDef()
-	if value.QName() != valDef {
-		return validateErrorf(ECode_InvalidDefName, "wrong view value type «%v», for view «%v» expected «%v»: %w", value.QName(), value.viewName, valDef, ErrWrongType)
+	valName := value.valueDef()
+	if value.QName() != valName {
+		return validateErrorf(ECode_InvalidDefName, "wrong view value type «%v», for view «%v» expected «%v»: %w", value.QName(), value.viewName, valName, ErrWrongType)
 	}
 
-	validator := v.validator(valDef)
+	validator := v.validator(valName)
 	if validator == nil {
-		return validateErrorf(ECode_InvalidDefName, "view value «%v» type not found: %w", valDef, ErrNameNotFound)
+		return validateErrorf(ECode_InvalidDefName, "view value «%v» type not found: %w", valName, ErrNameNotFound)
 	}
 
 	return validator.validRow(&value.rowType)

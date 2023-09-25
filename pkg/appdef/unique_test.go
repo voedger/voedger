@@ -105,14 +105,14 @@ func Test_def_AddUnique(t *testing.T) {
 		}, "if fields has duplicates")
 
 		t.Run("panics if too many fields", func(t *testing.T) {
-			typ := New().AddCRecord(NewQName("test", "rec"))
+			rec := New().AddCRecord(NewQName("test", "rec"))
 			fldNames := []string{}
 			for i := 0; i <= MaxTypeUniqueFieldsCount; i++ {
 				n := fmt.Sprintf("f_%#x", i)
-				typ.AddField(n, DataKind_bool, false)
+				rec.AddField(n, DataKind_bool, false)
 				fldNames = append(fldNames, n)
 			}
-			require.Panics(func() { typ.AddUnique("", fldNames) })
+			require.Panics(func() { rec.AddUnique("", fldNames) })
 		})
 
 		require.Panics(func() {
@@ -132,14 +132,14 @@ func Test_def_AddUnique(t *testing.T) {
 		}, "if fields not exists")
 
 		t.Run("panics if too many uniques", func(t *testing.T) {
-			typ := New().AddCRecord(NewQName("test", "rec"))
+			rec := New().AddCRecord(NewQName("test", "rec"))
 			for i := 0; i < MaxTypeUniqueCount; i++ {
 				n := fmt.Sprintf("f_%#x", i)
-				typ.AddField(n, DataKind_int32, false)
-				typ.AddUnique("", []string{n})
+				rec.AddField(n, DataKind_int32, false)
+				rec.AddUnique("", []string{n})
 			}
-			typ.AddField("lastStraw", DataKind_int32, false)
-			require.Panics(func() { typ.AddUnique("", []string{"lastStraw"}) })
+			rec.AddField("lastStraw", DataKind_int32, false)
+			require.Panics(func() { rec.AddUnique("", []string{"lastStraw"}) })
 		})
 	})
 }

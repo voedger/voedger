@@ -9,7 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-type Def struct {
+type Type struct {
 	Comment     string `json:",omitempty"`
 	Name        appdef.QName
 	Kind        appdef.TypeKind

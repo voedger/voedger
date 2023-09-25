@@ -200,9 +200,9 @@ func TestContainersPrepareErrors(t *testing.T) {
 			func() appdef.IAppDef {
 				appDef := appdef.New()
 				qName := appdef.NewQName("test", "test")
-				def := appDef.AddElement(qName)
+				el := appDef.AddElement(qName)
 				for i := 0; i <= MaxAvailableContainerID; i++ {
-					def.AddContainer(fmt.Sprintf("cont_%d", i), qName, 0, 1)
+					el.AddContainer(fmt.Sprintf("cont_%d", i), qName, 0, 1)
 				}
 				result, err := appDef.Build()
 				require.NoError(err)

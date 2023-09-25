@@ -139,8 +139,8 @@ func (un *uniques) collect(u appdef.IUnique) (err error) {
 // Collect all application uniques
 func (un *uniques) collectAll(appDef appdef.IAppDef) (err error) {
 	appDef.Types(
-		func(d appdef.IType) {
-			if uni, ok := d.(appdef.IUniques); ok {
+		func(t appdef.IType) {
+			if uni, ok := t.(appdef.IUniques); ok {
 				uni.Uniques(func(u appdef.IUnique) {
 					err = errors.Join(err, un.collect(u))
 				})

@@ -97,8 +97,8 @@ func (st *Singletons) load01(storage istorage.IAppStorage) error {
 // Collect all application singleton IDs
 func (st *Singletons) collectAllSingletons(appDef appdef.IAppDef) (err error) {
 	appDef.Types(
-		func(d appdef.IType) {
-			if cDoc, ok := d.(appdef.ICDoc); ok {
+		func(t appdef.IType) {
+			if cDoc, ok := t.(appdef.ICDoc); ok {
 				if cDoc.Singleton() {
 					err = errors.Join(err,
 						st.collectSingleton(cDoc.QName()))

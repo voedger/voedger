@@ -27,8 +27,8 @@ func Test_KeyType(t *testing.T) {
 
 		appDef := appdef.New()
 		t.Run("must be ok to build view", func(t *testing.T) {
-			viewDef := appDef.AddView(viewName)
-			viewDef.Key().Partition().
+			view := appDef.AddView(viewName)
+			view.Key().Partition().
 				AddField("pk_int32", appdef.DataKind_int32).
 				AddField("pk_int64", appdef.DataKind_int64).
 				AddField("pk_float32", appdef.DataKind_float32).
@@ -37,7 +37,7 @@ func Test_KeyType(t *testing.T) {
 				AddField("pk_bool", appdef.DataKind_bool).
 				AddRefField("pk_recID").
 				AddField("pk_number", appdef.DataKind_float64)
-			viewDef.Key().ClustCols().
+			view.Key().ClustCols().
 				AddField("cc_int32", appdef.DataKind_int32).
 				AddField("cc_int64", appdef.DataKind_int64).
 				AddField("cc_float32", appdef.DataKind_float32).
@@ -47,7 +47,7 @@ func Test_KeyType(t *testing.T) {
 				AddRefField("cc_recID").
 				AddField("cc_number", appdef.DataKind_float64).
 				AddBytesField("cc_bytes", 64)
-			viewDef.Value().
+			view.Value().
 				AddStringField("val_string", false, appdef.MaxLen(1024))
 		})
 
@@ -175,26 +175,26 @@ func TestCore_ViewRecords(t *testing.T) {
 
 		appDef := appdef.New()
 		t.Run("must be ok to build application", func(t *testing.T) {
-			viewDef := appDef.AddView(appdef.NewQName("test", "viewDrinks"))
-			viewDef.Key().Partition().
+			view := appDef.AddView(appdef.NewQName("test", "viewDrinks"))
+			view.Key().Partition().
 				AddField("partitionKey1", appdef.DataKind_int64)
-			viewDef.Key().ClustCols().
+			view.Key().ClustCols().
 				AddField("clusteringColumn1", appdef.DataKind_int64).
 				AddField("clusteringColumn2", appdef.DataKind_bool).
 				AddStringField("clusteringColumn3", 64)
-			viewDef.Value().
+			view.Value().
 				AddField("id", appdef.DataKind_int64, true).
 				AddStringField("name", true).
 				AddField("active", appdef.DataKind_bool, true)
 
-			otherViewDef := appDef.AddView(appdef.NewQName("test", "otherView"))
-			otherViewDef.Key().Partition().
+			otherView := appDef.AddView(appdef.NewQName("test", "otherView"))
+			otherView.Key().Partition().
 				AddField("partitionKey1", appdef.DataKind_QName)
-			otherViewDef.Key().ClustCols().
+			otherView.Key().ClustCols().
 				AddField("clusteringColumn1", appdef.DataKind_float32).
 				AddField("clusteringColumn2", appdef.DataKind_float64).
 				AddBytesField("clusteringColumn3", 128)
-			otherViewDef.Value().
+			otherView.Value().
 				AddField("valueField1", appdef.DataKind_int64, false)
 		})
 

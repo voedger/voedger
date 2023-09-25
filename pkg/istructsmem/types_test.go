@@ -425,7 +425,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 	t.Run("Must be error to put into abstract table", func(t *testing.T) {
 		row := newRow(test.AppCfg)
-		row.setQName(test.abstractDef)
+		row.setQName(test.abstractCDoc)
 
 		row.PutInt32("int32", 1)
 

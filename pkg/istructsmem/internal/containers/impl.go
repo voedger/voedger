@@ -72,8 +72,8 @@ func (cnt *Containers) collectAll(appDef appdef.IAppDef) (err error) {
 	// application containers
 	if appDef != nil {
 		appDef.Types(
-			func(d appdef.IType) {
-				if cont, ok := d.(appdef.IContainers); ok {
+			func(t appdef.IType) {
+				if cont, ok := t.(appdef.IContainers); ok {
 					cont.Containers(
 						func(c appdef.IContainer) {
 							if !c.IsSys() {

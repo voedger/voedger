@@ -18,9 +18,9 @@ func newSchemes() DynoBufSchemes {
 // Prepares schemes
 func (sch DynoBufSchemes) Prepare(appDef appdef.IAppDef) {
 	appDef.Types(
-		func(d appdef.IType) {
-			if fld, ok := d.(appdef.IFields); ok {
-				sch.add(d.QName(), fld)
+		func(t appdef.IType) {
+			if fld, ok := t.(appdef.IFields); ok {
+				sch.add(t.QName(), fld)
 			}
 		})
 }

@@ -40,7 +40,7 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 
 		expected := map[string]interface{}{
 			"Name": "my",
-			"Defs": map[string]interface{}{
+			"Types": map[string]interface{}{
 				"my.View": map[string]interface{}{
 					"Containers": []interface{}{
 						map[string]interface{}{"MaxOccurs": float64(1), "MinOccurs": float64(1), "Name": "sys.key", "Type": "my.View_FullKey"},

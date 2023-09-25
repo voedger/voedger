@@ -108,11 +108,11 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 
 	cmd := ev.appCfg.Resources.CommandFunction(ev.name)
 	if cmd != nil {
-		arg = cmd.ParamsDef()
-		argUnl = cmd.UnloggedParamsDef()
+		arg = cmd.ParamsType()
+		argUnl = cmd.UnloggedParamsType()
 	} else {
 		// #!16208: Must be possible to use TypeKind_ODoc as Event.QName
-		if d := ev.appCfg.AppDef.TypeByName(ev.name); (d == nil) || (d.Kind() != appdef.TypeKind_ODoc) {
+		if t := ev.appCfg.AppDef.TypeByName(ev.name); (t == nil) || (t.Kind() != appdef.TypeKind_ODoc) {
 			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
 		}
 		arg = ev.name

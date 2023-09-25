@@ -264,12 +264,9 @@ func (key *keyType) validDefs() (ok bool, err error) {
 		return false, err
 	}
 
-	d := key.appCfg.AppDef.TypeByName(key.viewName)
-	if d == nil {
-		return false, fmt.Errorf("unknown view key type «%v»: %w", key.viewName, ErrNameNotFound)
-	}
-	if d.Kind() != appdef.TypeKind_ViewRecord {
-		return false, fmt.Errorf("invalid view key type «%v» kind: %w", key.viewName, ErrUnexpectedTypeKind)
+	v := key.appCfg.AppDef.View(key.viewName)
+	if v == nil {
+		return false, fmt.Errorf("unknown view «%v»: %w", key.viewName, ErrNameNotFound)
 	}
 
 	return true, nil
@@ -555,12 +552,9 @@ func (val *valueType) validDefs() (ok bool, err error) {
 		return false, fmt.Errorf("missed view type: %w", ErrNameMissed)
 	}
 
-	d := val.appCfg.AppDef.TypeByName(val.viewName)
-	if d == nil {
+	v := val.appCfg.AppDef.View(val.viewName)
+	if v == nil {
 		return false, fmt.Errorf("unknown view type «%v»: %w", val.viewName, ErrNameNotFound)
-	}
-	if d.Kind() != appdef.TypeKind_ViewRecord {
-		return false, fmt.Errorf("invalid view type «%v» kind: %w", val.viewName, ErrUnexpectedTypeKind)
 	}
 
 	return true, nil

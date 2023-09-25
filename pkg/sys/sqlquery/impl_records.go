@@ -74,11 +74,11 @@ func readRecords(WSID istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 		return err
 	}
 
-	def := appStructs.AppDef().Type(qName)
+	t := appStructs.AppDef().Type(qName)
 
 	if !f.acceptAll {
 		for field := range f.fields {
-			if def.(appdef.IFields).Field(field) == nil {
+			if t.(appdef.IFields).Field(field) == nil {
 				return fmt.Errorf("field '%s' not found in def", field)
 			}
 		}

@@ -167,8 +167,8 @@ func (c *buildContext) alterWorkspaces() error {
 }
 
 func (c *buildContext) addDefsFromCtx(srcCtx *wsBuildCtx, destBuilder appdef.IWorkspaceBuilder) {
-	srcCtx.builder.Types(func(i appdef.IType) {
-		destBuilder.AddType(i.QName())
+	srcCtx.builder.Types(func(t appdef.IType) {
+		destBuilder.AddType(t.QName())
 	})
 }
 

@@ -108,8 +108,8 @@ func (vit *VIT) getCDoc(appQName istructs.AppQName, qName appdef.QName, wsid ist
 	fields := []string{}
 	as, err := vit.IAppStructsProvider.AppStructs(appQName)
 	require.NoError(vit.T, err)
-	if def := as.AppDef().CDoc(qName); def != nil {
-		def.Fields(func(field appdef.IField) {
+	if doc := as.AppDef().CDoc(qName); doc != nil {
+		doc.Fields(func(field appdef.IField) {
 			switch field.Name() {
 			case appdef.SystemField_ID, appdef.SystemField_QName, appdef.SystemField_IsActive:
 				return
@@ -361,7 +361,7 @@ func (vit *VIT) MetricsRequest(opts ...coreutils.ReqOptFunc) (resp string) {
 	return res.Body
 }
 
-func (vit *VIT) GetAny(entity string, ws *AppWorkspace) (istructs.RecordID) {
+func (vit *VIT) GetAny(entity string, ws *AppWorkspace) istructs.RecordID {
 	vit.T.Helper()
 	body := fmt.Sprintf(`{"args":{"Query":"select DocID from sys.CollectionView where PartKey = 1 and DocQName = '%s'"},"elements":[{"fields":["Result"]}]}`, entity)
 	resp := vit.PostWS(ws, "q.sys.SqlQuery", body)

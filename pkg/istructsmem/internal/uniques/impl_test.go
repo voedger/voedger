@@ -28,8 +28,8 @@ func TestUniques(t *testing.T) {
 	testAppDef := func(ver uint) appdef.IAppDef {
 		app := appdef.New()
 
-		def := app.AddCDoc(testName)
-		def.
+		doc := app.AddCDoc(testName)
+		doc.
 			AddStringField("name", true).
 			AddStringField("surname", false).
 			AddStringField("lastName", false).
@@ -37,10 +37,10 @@ func TestUniques(t *testing.T) {
 			AddStringField("passportSerial", false)
 
 		if ver > 1 {
-			def.AddUnique("absurdUnique", []string{"lastName", "passportSerial"})
+			doc.AddUnique("absurdUnique", []string{"lastName", "passportSerial"})
 		}
 
-		def.
+		doc.
 			AddUnique("fullNameUnique", []string{"name", "surname", "lastName"}).
 			AddUnique("passportUnique", []string{"passportSerial", "passportNumber"})
 
@@ -74,12 +74,12 @@ func TestUniques(t *testing.T) {
 	require := require.New(t)
 
 	t.Run("basic Uniques methods", func(t *testing.T) {
-		def := appDef1.CDoc(testName)
+		doc := appDef1.CDoc(testName)
 
-		require.Equal(2, def.UniqueCount())
-		require.Equal(def.UniqueCount(), func() int {
+		require.Equal(2, doc.UniqueCount())
+		require.Equal(doc.UniqueCount(), func() int {
 			cnt := 0
-			def.Uniques(func(u appdef.IUnique) {
+			doc.Uniques(func(u appdef.IUnique) {
 				cnt++
 				require.Greater(u.ID(), appdef.FirstUniqueID)
 			})
@@ -104,17 +104,17 @@ func TestUniques(t *testing.T) {
 			panic(err)
 		}
 
-		def1 := appDef1.CDoc(testName)
-		require.Equal(2, def1.UniqueCount())
+		doc1 := appDef1.CDoc(testName)
+		require.Equal(2, doc1.UniqueCount())
 
-		def2 := appDef2.CDoc(testName)
-		require.Equal(3, def2.UniqueCount())
+		doc2 := appDef2.CDoc(testName)
+		require.Equal(3, doc2.UniqueCount())
 
-		def1.Uniques(func(u1 appdef.IUnique) {
-			u2 := def2.UniqueByName(u1.Name())
+		doc1.Uniques(func(u1 appdef.IUnique) {
+			u2 := doc2.UniqueByName(u1.Name())
 			require.Equal(u1.ID(), u2.ID())
 
-			u2 = def2.UniqueByID(u1.ID())
+			u2 = doc2.UniqueByID(u1.ID())
 			require.Equal(u1.Name(), u2.Name())
 		})
 	})
@@ -125,14 +125,14 @@ func TestUniquesErrors(t *testing.T) {
 
 	testAppDef := func() appdef.IAppDef {
 		app := appdef.New()
-		def := app.AddCDoc(testName)
-		def.
+		doc := app.AddCDoc(testName)
+		doc.
 			AddStringField("name", true).
 			AddStringField("surname", false).
 			AddStringField("lastName", false).
 			AddStringField("passportNumber", false).
 			AddStringField("passportSerial", false)
-		def.
+		doc.
 			AddUnique("fullNameUnique", []string{"name", "surname", "lastName"}).
 			AddUnique("passportUnique", []string{"passportSerial", "passportNumber"})
 
@@ -183,10 +183,10 @@ func TestUniquesErrors(t *testing.T) {
 		}
 
 		t.Run("inject unknown type to AppDef", func(t *testing.T) {
-			def := appDef.(appdef.IAppDefBuilder).AddCDoc(appdef.NewQName("test", "unknown"))
-			def.
+			doc := appDef.(appdef.IAppDefBuilder).AddCDoc(appdef.NewQName("test", "unknown"))
+			doc.
 				AddStringField("fld", false)
-			def.
+			doc.
 				AddUnique("", []string{"fld"})
 		})
 

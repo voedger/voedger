@@ -59,8 +59,8 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		On("MustExist", mock.Anything).Return(department("Sweet")).Once()
 
 	appDef := appdef.New()
-	departmentDef := appDef.AddObject(qNamePosDepartment)
-	departmentDef.AddField("name", appdef.DataKind_string, false)
+	departmentObj := appDef.AddObject(qNamePosDepartment)
+	departmentObj.AddField("name", appdef.DataKind_string, false)
 	resultMeta := appDef.AddObject(appdef.NewQName("pos", "DepartmentResult"))
 	resultMeta.
 		AddField("id", appdef.DataKind_int64, true).
