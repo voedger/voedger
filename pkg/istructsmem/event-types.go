@@ -19,11 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/objcache"
 )
 
-type (
-	existsRecordType    func(id istructs.RecordID) (bool, error)
-	loadRecordFuncType  func(rec *recordType) error
-	storeRecordFuncType func(rec *recordType) error
-)
+type recordFunc func(rec *recordType) error
 
 // Implements event structure
 //
@@ -99,11 +95,6 @@ func newSyncEventBuilder(appCfg *AppConfigType, params istructs.SyncRawEventBuil
 	ev.device = params.Device
 	ev.syncTime = params.SyncedAt
 	return ev
-}
-
-// applyCommandRecs store all event CUDs into storage records using specified cb functions
-func (ev *eventType) applyCommandRecs(exists existsRecordType, load loadRecordFuncType, store storeRecordFuncType) error {
-	return ev.cud.applyRecs(exists, load, store)
 }
 
 // argumentNames returns argument and un-logged argument QNames
@@ -348,11 +339,10 @@ func (ev *eventType) WLogOffset() istructs.Offset {
 }
 
 // cudType implements event cud member
-//   - methods:
-//     — regenerateIDs: regenerates all raw IDs by specified generator
-//     — validRawIDs: validates raw IDs and refers to raw IDs
-//   - interfaces:
-//     — istructs.ICUD
+//
+// # Implements:
+//
+//	— istructs.ICUD
 type cudType struct {
 	appCfg  *AppConfigType
 	creates []*recordType
@@ -368,24 +358,9 @@ func makeCUD(appCfg *AppConfigType) cudType {
 }
 
 // applyRecs call store callback func for each record
-func (cud *cudType) applyRecs(exists existsRecordType, load loadRecordFuncType, store storeRecordFuncType) (err error) {
+func (cud *cudType) applyRecs(load, store recordFunc) (err error) {
 
 	for _, rec := range cud.creates {
-		if cDoc, ok := rec.def.(appdef.ICDoc); ok {
-			if cDoc.Singleton() {
-				id, err := cud.appCfg.singletons.ID(rec.QName())
-				if err != nil {
-					return err
-				}
-				isExists, err := exists(id)
-				if err != nil {
-					return err
-				}
-				if isExists {
-					return fmt.Errorf("can not create singleton, CDoc «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
-				}
-			}
-		}
 		if err = store(rec); err != nil {
 			return err
 		}
@@ -393,6 +368,10 @@ func (cud *cudType) applyRecs(exists existsRecordType, load loadRecordFuncType, 
 
 	for _, rec := range cud.updates {
 		if rec.originRec.empty() {
+			// this case reread event from PLog after restart.
+			// It is necessary to:
+			//	- load the existing record from the storage and
+			// 	- rebuild the result with changes
 			if err = load(&rec.originRec); err != nil {
 				return err
 			}
@@ -554,10 +533,9 @@ func (cud *cudType) release() {
 
 // istructs.ICUD.Create
 func (cud *cudType) Create(qName appdef.QName) istructs.IRowWriter {
-	r := newRecord(cud.appCfg)
-	r.isNew = true
-	r.setQName(qName)
-	rec := &r
+	rec := newRecord(cud.appCfg)
+	rec.isNew = true
+	rec.setQName(qName)
 
 	cud.creates = append(cud.creates, rec)
 
@@ -588,9 +566,9 @@ type updateRecType struct {
 func newUpdateRec(appCfg *AppConfigType, rec istructs.IRecord) updateRecType {
 	upd := updateRecType{
 		appCfg:    appCfg,
-		originRec: newRecord(appCfg),
-		changes:   newRecord(appCfg),
-		result:    newRecord(appCfg),
+		originRec: makeRecord(appCfg),
+		changes:   makeRecord(appCfg),
+		result:    makeRecord(appCfg),
 	}
 	upd.originRec.copyFrom(rec.(*recordType))
 
@@ -674,16 +652,16 @@ type elementType struct {
 
 func makeObject(appCfg *AppConfigType, qn appdef.QName) elementType {
 	obj := elementType{
-		recordType: newRecord(appCfg),
+		recordType: makeRecord(appCfg),
 		child:      make([]*elementType, 0),
 	}
 	obj.setQName(qn)
 	return obj
 }
 
-func newElement(parent *elementType) elementType {
+func makeElement(parent *elementType) elementType {
 	el := elementType{
-		recordType: newRecord(parent.appCfg),
+		recordType: makeRecord(parent.appCfg),
 		parent:     parent,
 		child:      make([]*elementType, 0),
 	}
@@ -790,7 +768,7 @@ func (el *elementType) release() {
 
 // istructs.IElementBuilder.ElementBuilder
 func (el *elementType) ElementBuilder(containerName string) istructs.IElementBuilder {
-	c := newElement(el)
+	c := makeElement(el)
 	el.child = append(el.child, &c)
 	if el.QName() != appdef.NullQName {
 		if cont := el.def.(appdef.IContainers).Container(containerName); cont != nil {
