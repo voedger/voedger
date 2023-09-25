@@ -373,48 +373,43 @@ type IAppPartitions interface {
 
 ## Development Concepts
 
-### Repository & Application Schema
+### Schemas
 
 ```mermaid
-    erDiagram
-    Repository ||--|{ Application: defines
-    Application ||--|| ApplicationSchema: "defines"
-    ApplicationSchema ||--o{ PackageSchema: "has"
-    Application ||--o{ Package: "has"
-    Package ||--|| PackageSchema : "defines"
-    Package ||--|{ SchemaFile : "has *.heeus"
-    PackageSchema ||--|{ SchemaFile: "defined by"
+  erDiagram
+  
+  %% Entities
+
+  Repository
+  Folder
+  PackageSchema 
+  SchemaFile
+  ApplicationSchema
+  ApplicationStmt
+
+  %% Relationships
+  Repository ||--|{ Folder : "has"
+  Folder ||--|| SchemaFile : "has" 
+  SchemaFile |{..|| PackageSchema : "used to build"
+  PackageSchema ||--o| ApplicationStmt : "can have"
+  PackageSchema |{..|| ApplicationSchema : "used to build"
+  ApplicationSchema ||..|| ApplicationStmt : "defined by exactly one"
 ```
 
-### Package Schema
+### Example of ApplicationStmt
+- **Package name**: last part of the package path or alias from the IMPORT statement
 
-```mermaid
-    erDiagram
-    PackageSchema ||--o{ Def: "has"
-    Def ||--|| TableDef: "can be"
-    Def ||--|| ViewDef: "can be"
-    Def ||--|| ExtensionDef: "can be"
-    ExtensionDef ||--|| FunctionDef : "can be"
-    FunctionDef ||--|| CommandFunctionDef: "can be"
-    FunctionDef ||--|| QueryFunctionDef: "can be"
-    ExtensionDef ||--|| ValidatorDef: "can be"
-    ExtensionDef |{--|| ExtEngineKind: "has"
-    ExtEngineKind ||..|| ExtEngineKind_WASM: "can be"
-    ExtEngineKind ||..|| ExtEngineKind_BuiltIn: "can be"
+```sql
+IMPORT SCHEMA 'github.com/untillpro/untill' AS air;
+IMPORT SCHEMA 'github.com/untillpro/airsbp';
+
+-- Only one APPLICATION statement allowed per package and per application
+APPLICATION bp3 (
+  -- "sys" is always used in any application
+  USE air;  -- name or alias. This actually identifies package in QNames of the app
+  USE airsbp; 
+)
 ```
-
-### Application Image
-
-```mermaid
-    erDiagram
-    ApplicationImage ||--|| ApplicationSchema: "has"
-    ApplicationImage ||--o{ Resource: "has"
-    Resource ||--|| Image: "can be"
-    Resource ||--|| ExtensionsPackage: "can be"
-    ExtensionsPackage ||--|| ExtEngineKind: "has a property"
-```
-
-
 
 ## Editions
 
