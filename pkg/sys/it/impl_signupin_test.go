@@ -18,7 +18,7 @@ import (
 
 func TestBasicUsage_SignUpIn(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	loginName1 := vit.NextName()
 	loginName2 := vit.NextName()
@@ -64,7 +64,7 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 }
 
 func TestCreateLoginErrors(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	t.Run("wrong url wsid", func(t *testing.T) {
@@ -126,7 +126,7 @@ func TestCreateLoginErrors(t *testing.T) {
 }
 
 func TestSignInErrors(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	login := vit.NextName()

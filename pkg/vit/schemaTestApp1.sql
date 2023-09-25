@@ -1,7 +1,7 @@
 -- Copyright (c) 2020-present unTill Pro, Ltd.
 -- @author Denis Gribanov
 
-APPLICATION simpleApp();
+APPLICATION app1();
 
 TABLE articles INHERITS CDoc (
 	name varchar,
