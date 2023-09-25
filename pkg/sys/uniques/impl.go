@@ -325,7 +325,6 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 							qNameEventUniques[string(cudUniqueKeyValues)] = currentUniqueRecordID
 						}
 
-						// inserting a new inactive record, unique is inactive or active -> allowed, nothing to do
 						if rec.IsNew() {
 							if rec.AsBool(appdef.SystemField_IsActive) {
 								if !uniqueFieldHasValue {
@@ -340,10 +339,12 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 									return conflict(qName, currentUniqueRecordID)
 								}
 							}
+							// inserting a new inactive record, unique is inactive or active -> allowed, nothing to do
 						} else {
 							// update
 							// тут надо проверить именно наличе записи в unique view: если запись есть, то вообще править нельзя
 							if currentUniqueRecordID != istructs.NullRecordID && uniqueFieldHasValue {
+								// have unique
 								return fmt.Errorf("%v: unique field «%s» can not be changed: %w", qName, uniqueField.Name(), ErrUniqueFieldUpdateDeny)
 							}
 							if currentUniqueRecordID == istructs.NullRecordID && uniqueFieldHasValue {
@@ -351,7 +352,7 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 								qNameEventUniques[string(cudUniqueKeyValues)] = rec.ID()
 								return nil
 							}
-							
+
 						}
 					}
 				}
