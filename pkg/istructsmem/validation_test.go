@@ -489,8 +489,8 @@ func Test_ValidElement(t *testing.T) {
 
 	t.Run("test build operation document", func(t *testing.T) {
 		doc := func() istructs.IObjectBuilder {
-			d := makeObject(cfg, appdef.NewQName("test", "document"))
-			return &d
+			o := makeObject(cfg, appdef.NewQName("test", "document"))
+			return &o
 		}()
 		require.NotNil(doc)
 

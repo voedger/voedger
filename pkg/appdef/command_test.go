@@ -54,13 +54,13 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		typ := app.Type(cmdName)
 		require.Equal(TypeKind_Command, typ.Kind())
 
-		d, ok := typ.(ICommand)
+		c, ok := typ.(ICommand)
 		require.True(ok)
-		require.Equal(TypeKind_Command, d.Kind())
+		require.Equal(TypeKind_Command, c.Kind())
 
 		cmd := app.Command(cmdName)
 		require.Equal(TypeKind_Command, cmd.Kind())
-		require.Equal(d, cmd)
+		require.Equal(c, cmd)
 
 		require.Equal(argName, cmd.Arg().QName())
 		require.Equal(TypeKind_Object, cmd.Arg().Kind())
