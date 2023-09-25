@@ -23,7 +23,7 @@ import (
 )
 
 func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	wsName := vit.NextName()
@@ -73,7 +73,7 @@ func waitForDeactivate(vit *it.VIT, ws *it.AppWorkspace) {
 
 func TestDeactivateJoinedWorkspace(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	wsName1 := vit.NextName()

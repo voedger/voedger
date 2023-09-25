@@ -16,7 +16,7 @@ import (
 
 func TestBasicUsage_DescribeSchema(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")

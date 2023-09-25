@@ -19,7 +19,7 @@ import (
 )
 
 func TestBasicUsage_Metrics(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	require := require.New(t)
 
@@ -35,7 +35,7 @@ func TestBasicUsage_Metrics(t *testing.T) {
 }
 
 func TestMetricsService(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	t.Run("service check", func(t *testing.T) {
@@ -52,7 +52,7 @@ func TestMetricsService(t *testing.T) {
 }
 
 func TestCommandProcessorMetrics(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	require := require.New(t)
 

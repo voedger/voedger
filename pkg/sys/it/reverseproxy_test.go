@@ -19,7 +19,7 @@ import (
 
 func TestBasicUsage_ReverseProxy(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	targetListener, err := net.Listen("tcp", fmt.Sprintf(":%d", it.TestServicePort))

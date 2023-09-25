@@ -24,7 +24,7 @@ import (
 
 func TestBasicUsage_Verifier(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
@@ -130,7 +130,7 @@ func TestBasicUsage_Verifier(t *testing.T) {
 }
 
 func TestVerifierErrors(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	// funcs should be called in the user profile
@@ -177,7 +177,7 @@ func TestVerifierErrors(t *testing.T) {
 }
 
 func TestVerificationLimits(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	rateLimitName_InitiateEmailVerification := istructsmem.GetFunctionRateLimitName(verifier.QNameQueryInitiateEmailVerification, istructs.RateLimitKind_byWorkspace)
@@ -240,7 +240,7 @@ func TestVerificationLimits(t *testing.T) {
 }
 
 func TestForRegistry(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	// funcs should be called in the user profile

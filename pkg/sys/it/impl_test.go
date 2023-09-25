@@ -81,7 +81,7 @@ func TestBasicUsage(t *testing.T) {
 
 func TestAppWSAutoInitialization(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	checkCDocsWSDesc(vit.VVM, require)
@@ -107,7 +107,7 @@ func checkCDocsWSDesc(vvm *vvm.VVM, require *require.Assertions) {
 }
 
 func TestAuthorization(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -170,7 +170,7 @@ func TestAuthorization(t *testing.T) {
 
 func TestUtilFuncs(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	t.Run("func Echo", func(t *testing.T) {
@@ -196,7 +196,7 @@ func TestUtilFuncs(t *testing.T) {
 }
 
 func Test400BadRequests(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	var err error
 
@@ -231,7 +231,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		<-okToFinish
 		return nil
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
@@ -257,7 +257,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 
 func TestCmdResult(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")

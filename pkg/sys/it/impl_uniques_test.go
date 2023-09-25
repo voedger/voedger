@@ -28,7 +28,7 @@ func getUniqueNumber(vit *it.VIT) (int, string) {
 }
 
 func TestBasicUsage_Uniques(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -49,7 +49,7 @@ func TestBasicUsage_Uniques(t *testing.T) {
 }
 
 func TestActivateDeactivateRecordWithUniques(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -83,7 +83,7 @@ func TestActivateDeactivateRecordWithUniques(t *testing.T) {
 }
 
 func TestUniquesUpdate(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -119,7 +119,7 @@ func TestUniquesUpdate(t *testing.T) {
 }
 
 func TestUniquesDenyUpdate(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -135,7 +135,7 @@ func TestUniquesDenyUpdate(t *testing.T) {
 }
 
 func TestInsertDeactivatedRecord(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -163,7 +163,7 @@ func TestInsertDeactivatedRecord(t *testing.T) {
 }
 
 func TestUniquesTrickyValues(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -190,7 +190,7 @@ func TestUniquesTrickyValues(t *testing.T) {
 }
 
 func TestMultipleCUDs(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -302,7 +302,7 @@ func TestMultipleCUDs(t *testing.T) {
 
 func TestBasicUsage_GetUniqueID(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")

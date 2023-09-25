@@ -45,8 +45,8 @@ var (
 	}
 
 	// BLOBMaxSize 5
-	SharedConfig_Simple = NewSharedVITConfig(
-		WithApp(istructs.AppQName_test1_app1, ProvideSimpleApp,
+	SharedConfig_App1 = NewSharedVITConfig(
+		WithApp(istructs.AppQName_test1_app1, ProvideApp1,
 			WithWorkspaceTemplate(QNameTestWSKind, "test_template", sys_test_template.TestTemplateFS),
 			WithUserLogin("login", "pwd"),
 			WithUserLogin(TestEmail, "1"),
@@ -54,7 +54,7 @@ var (
 			WithUserLogin(TestEmail3, "1"),
 			WithChildWorkspace(QNameTestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
 		),
-		WithApp(istructs.AppQName_test1_app2, ProvideSimpleApp, WithUserLogin("login", "1")),
+		WithApp(istructs.AppQName_test1_app2, ProvideApp1, WithUserLogin("login", "1")),
 		WithVVMConfig(func(cfg *vvm.VVMConfig) {
 			// for impl_reverseproxy_test
 			cfg.Routes["/grafana"] = fmt.Sprintf("http://127.0.0.1:%d", TestServicePort)
@@ -74,12 +74,12 @@ var (
 	MockCmdExec func(input string) error
 )
 
-func EmptyApp(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	registryapp.Provide(smtp.Cfg{})(apis, cfg, appDefBuilder, ep)
-	apps.Parse(schemasEmptyApp, "emptyApp", ep)
+	apps.Parse(SchemaTestApp2, "app2", ep)
 }
 
-func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	// sys package
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
@@ -88,7 +88,7 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
 
-	apps.Parse(schemasSimpleApp, "simpleApp", ep)
+	apps.Parse(SchemaTestApp1, "app1", ep)
 
 	projectors.ProvideViewDef(adf, QNameTestView, func(view appdef.IViewBuilder) {
 		view.Key().Partition().AddField("ViewIntFld", appdef.DataKind_int32)

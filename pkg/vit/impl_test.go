@@ -24,7 +24,7 @@ import (
 func TestBasicUsage_SharedTestConfig(t *testing.T) {
 	require := require.New(t)
 
-	vit := NewVIT(t, &SharedConfig_Simple)
+	vit := NewVIT(t, &SharedConfig_App1)
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("basic run", func(t *testing.T) {
@@ -34,12 +34,12 @@ func TestBasicUsage_SharedTestConfig(t *testing.T) {
 	})
 
 	t.Run("no Teardown() in previous test -> panic on quering VIT for the same shared config", func(t *testing.T) {
-		require.Panics(func() { NewVIT(t, &SharedConfig_Simple) })
+		require.Panics(func() { NewVIT(t, &SharedConfig_App1) })
 	})
 
 	vit.TearDown()
 	t.Run("query again the same shared config -> VIT with an existing VVM is returned", func(t *testing.T) {
-		newVit := NewVIT(t, &SharedConfig_Simple)
+		newVit := NewVIT(t, &SharedConfig_App1)
 		defer newVit.TearDown()
 		body := `{"args": {},"elements":[{"fields":["NumGoroutines"]}]}`
 		resp := newVit.PostWS(ws, "q.sys.GRCount", body)
@@ -50,7 +50,7 @@ func TestBasicUsage_SharedTestConfig(t *testing.T) {
 
 func TestBasicUsage_WorkWithFunctions(t *testing.T) {
 	require := require.New(t)
-	vit := NewVIT(t, &SharedConfig_Simple)
+	vit := NewVIT(t, &SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -82,7 +82,7 @@ func TestBasicUsage_WorkWithFunctions(t *testing.T) {
 
 func TestBasicUsage_Workspaces(t *testing.T) {
 	require := require.New(t)
-	vit := NewVIT(t, &SharedConfig_Simple)
+	vit := NewVIT(t, &SharedConfig_App1)
 	defer vit.TearDown()
 
 	t.Run("create workspace manually", func(t *testing.T) {
@@ -126,7 +126,7 @@ func TestBasicUsage_N10N(t *testing.T) {
 		t.Skip()
 	}
 	require := require.New(t)
-	vit := NewVIT(t, &SharedConfig_Simple)
+	vit := NewVIT(t, &SharedConfig_App1)
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
@@ -152,7 +152,7 @@ func TestBasicUsage_N10N(t *testing.T) {
 
 func TestBasicUsage_POST(t *testing.T) {
 	require := require.New(t)
-	vit := NewVIT(t, &SharedConfig_Simple)
+	vit := NewVIT(t, &SharedConfig_App1)
 	defer vit.TearDown()
 
 	// 200ok is expected by default
@@ -208,7 +208,7 @@ func TestBasicUsage_POST(t *testing.T) {
 }
 
 func TestBasicUsage_OwnTestConfig(t *testing.T) {
-	ownCfg := NewOwnVITConfig(WithApp(istructs.AppQName_test1_app1, EmptyApp))
+	ownCfg := NewOwnVITConfig(WithApp(istructs.AppQName_test1_app1, ProvideApp2))
 
 	t.Run("basic - VIT on own config", func(t *testing.T) {
 		vit := NewVIT(t, &ownCfg)
@@ -230,7 +230,7 @@ func TestBasicUsage_OwnTestConfig(t *testing.T) {
 
 func TestEmailExpectation(t *testing.T) {
 	require := require.New(t)
-	vit := NewVIT(t, &SharedConfig_Simple)
+	vit := NewVIT(t, &SharedConfig_App1)
 	defer vit.TearDown()
 
 	// provide VIT email sending chan to the IBundledHostState, then use it to send an email
@@ -267,7 +267,7 @@ func TestEmailExpectation(t *testing.T) {
 	t.Run("fail the test if an unexpected email is sent", func(t *testing.T) {
 		vit.TearDown()
 		newT := &testing.T{}
-		vit = NewVIT(newT, &SharedConfig_Simple)
+		vit = NewVIT(newT, &SharedConfig_App1)
 		require.Nil(s.NewValue(k))
 		readyToFlush, err := s.ApplyIntents()
 		require.True(readyToFlush)
@@ -275,7 +275,7 @@ func TestEmailExpectation(t *testing.T) {
 		require.NoError(s.FlushBundles())
 		vit.TearDown()
 		require.True(newT.Failed())
-		vit = NewVIT(t, &SharedConfig_Simple)
+		vit = NewVIT(t, &SharedConfig_App1)
 	})
 
 	vit.TearDown()

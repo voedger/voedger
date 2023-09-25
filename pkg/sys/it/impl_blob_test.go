@@ -23,7 +23,7 @@ import (
 
 func TestBasicUsage_BLOBProcessors(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	as, err := vit.AppStructs(istructs.AppQName_test1_app1)
@@ -84,7 +84,7 @@ func TestBasicUsage_BLOBProcessors(t *testing.T) {
 
 func TestBlobberErrors(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -148,7 +148,7 @@ func TestBlobberErrors(t *testing.T) {
 
 func TestBlobMultipartUpload(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")

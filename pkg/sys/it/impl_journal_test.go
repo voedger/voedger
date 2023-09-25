@@ -17,7 +17,7 @@ import (
 
 func TestBasicUsage_Journal(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -177,7 +177,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 
 func TestJournal_read_in_years_range_1(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	vit.SetNow(vit.Now().AddDate(1, 0, 0))
 

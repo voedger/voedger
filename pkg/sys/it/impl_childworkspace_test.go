@@ -21,7 +21,7 @@ import (
 
 func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	parentWS := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -87,7 +87,7 @@ func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 
 func TestForeignAuthorization(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	// sign up a new login
