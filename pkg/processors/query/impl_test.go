@@ -174,7 +174,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 		qNameFunction,
 		qNameFindArticlesByModificationTimeStampRangeParams,
 		appdef.NewQName("bo", "Article"),
-		func(_ context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+		func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			require.Equal(int64(1257894000), args.ArgumentObject.AsInt64("from"))
 			require.Equal(int64(2257894000), args.ArgumentObject.AsInt64("till"))
 			objects := []istructs.IObject{

@@ -20,7 +20,7 @@ import (
 // sys/registry, pseudoProfileWSID translated to appWSID
 // creation of CDoc<Login> triggers opAsyncProjectorInvokeCreateWorkspaceID
 func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecCommandClosure {
-	return func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
 		loginStr := args.ArgumentObject.AsString(authnz.Field_Login)
 		appName := args.ArgumentObject.AsString(Field_AppName)
 

@@ -93,7 +93,7 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 
 			cmdQName := appdef.NewQName(appdef.SysPackage, "testCmd")
 			cmd2CUDs := istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName,
-				func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+				func(args istructs.ExecCommandArgs) (err error) {
 					// 2 раза используем один и тот же rawID -> 500 internal server error
 					kb, err := args.State.KeyBuilder(state.RecordsStorage, cdocQName)
 					if err != nil {
