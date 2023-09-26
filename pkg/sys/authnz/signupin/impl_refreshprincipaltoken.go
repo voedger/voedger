@@ -27,7 +27,7 @@ func ProvideQryRefreshPrincipalToken(cfg *istructsmem.AppConfigType, appDefBuild
 }
 
 func provideRefreshPrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQueryClosure {
-	return func(_ context.Context, _ istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		existingPrincipalToken, err := state.GetPrincipalTokenFromState(args.State)
 		if err != nil {
 			return err

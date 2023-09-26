@@ -24,7 +24,7 @@ func proivideRenameQName(cfg *istructsmem.AppConfigType, adb appdef.IAppDefBuild
 }
 
 func provideExecCmdRenameQName(asp istorage.IAppStorageProvider, cfg *istructsmem.AppConfigType) istructsmem.ExecCommandClosure {
-	return func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
 		storage, err := asp.AppStorage(cfg.Name)
 		if err != nil {
 			// notest

@@ -26,7 +26,7 @@ func provideStateFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppD
 }
 
 func stateFuncExec(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		after := args.ArgumentObject.AsInt64(field_After)
 
 		kb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewCollection)

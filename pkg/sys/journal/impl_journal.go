@@ -35,7 +35,7 @@ func provideQryJournal(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IApp
 	))
 }
 func qryJournalExec( /*jdi vvm.IEPJournalIndices, jp vvm.IEPJournalPredicates, */ ep extensionpoints.IExtensionPoint, appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		var fo, lo int64
 		ji := ep.ExtensionPoint(EPJournalIndices)
 		jp := ep.ExtensionPoint(EPJournalPredicates)

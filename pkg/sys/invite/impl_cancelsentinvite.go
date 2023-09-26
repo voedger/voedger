@@ -25,8 +25,8 @@ func provideCmdCancelSentInvite(cfg *istructsmem.AppConfigType, appDefBuilder ap
 	))
 }
 
-func execCmdCancelSentInvite(timeFunc coreutils.TimeFunc) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdCancelSentInvite(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
 		skbCDocInvite, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
 		if err != nil {
 			return

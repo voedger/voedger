@@ -314,9 +314,9 @@ func TestBasicUsage_Resources(t *testing.T) {
 	})
 
 	t.Run("Basic usage NewQueryFunction", func(t *testing.T) {
-		myExecQuery := func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
+		myExecQuery := func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
 			// Can use NullExecQuery instead of myExecQuery, it does nothing
-			NullQueryExec(ctx, qf, args, callback)
+			NullQueryExec(ctx, args, callback)
 
 			callback(&istructs.NullObject{})
 			return nil

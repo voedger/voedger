@@ -27,8 +27,8 @@ func provideQrySqlQuery(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAp
 		execQrySqlQuery(asp, cfg.Name, numCommandProcessors),
 	))
 }
-func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQName, numCommandProcessors coreutils.CommandProcessorsCount) func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-	return func(ctx context.Context, _ istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQName, numCommandProcessors coreutils.CommandProcessorsCount) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		wsid := args.Workspace
 		if index := strings.Index(args.ArgumentObject.AsString(field_Query), flag_WSID); index != -1 {
 			v, err := strconv.Atoi(args.ArgumentObject.AsString(field_Query)[index+len(flag_WSID):])

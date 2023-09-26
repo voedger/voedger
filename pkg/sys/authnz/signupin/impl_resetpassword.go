@@ -64,7 +64,7 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder 
 // sys/registry/pseudoWSID
 // null auth
 func provideQryInitiateResetPasswordByEmailExec(asp istructs.IAppStructsProvider, itokens itokens.ITokens, federation coreutils.IFederation) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		loginAppStr := args.ArgumentObject.AsString(Field_AppName)
 		email := args.ArgumentObject.AsString(field_Email)
 		language := args.ArgumentObject.AsString(field_Language)
@@ -127,7 +127,7 @@ func provideQryInitiateResetPasswordByEmailExec(asp istructs.IAppStructsProvider
 // sys/registry/pseudoWSID
 // null auth
 func provideIssueVerifiedValueTokenForResetPasswordExec(itokens itokens.ITokens, federation coreutils.IFederation) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		token := args.ArgumentObject.AsString(field_VerificationToken)
 		code := args.ArgumentObject.AsString(field_VerificationCode)
 		profileWSID := args.ArgumentObject.AsInt64(field_ProfileWSID)
@@ -155,7 +155,7 @@ func provideIssueVerifiedValueTokenForResetPasswordExec(itokens itokens.ITokens,
 
 // sys/registry/pseudoWSID
 // null auth
-func cmdResetPasswordByEmailExec(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func cmdResetPasswordByEmailExec(args istructs.ExecCommandArgs) (err error) {
 	email := args.ArgumentUnloggedObject.AsString(field_Email)
 	newPwd := args.ArgumentUnloggedObject.AsString(field_NewPwd)
 	appName := args.ArgumentObject.AsString(Field_AppName)

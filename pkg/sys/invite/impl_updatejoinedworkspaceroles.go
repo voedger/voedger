@@ -22,7 +22,7 @@ func provideCmdUpdateJoinedWorkspaceRoles(cfg *istructsmem.AppConfigType, appDef
 	))
 }
 
-func execCmdUpdateJoinedWorkspaceRoles(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdUpdateJoinedWorkspaceRoles(args istructs.ExecCommandArgs) (err error) {
 	svbCDocJoinedWorkspace, err := GetCDocJoinedWorkspaceForUpdateRequired(args.State, args.Intents, args.ArgumentObject.AsInt64(Field_InvitingWorkspaceWSID))
 	if err != nil {
 		// notest

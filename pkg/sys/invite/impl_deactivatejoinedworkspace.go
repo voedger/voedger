@@ -21,7 +21,7 @@ func provideCmdDeactivateJoinedWorkspace(cfg *istructsmem.AppConfigType, appDefB
 	))
 }
 
-func execCmdDeactivateJoinedWorkspace(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdDeactivateJoinedWorkspace(args istructs.ExecCommandArgs) (err error) {
 	svbCDocJoinedWorkspace, err := GetCDocJoinedWorkspaceForUpdateRequired(args.State, args.Intents, args.ArgumentObject.AsInt64(Field_InvitingWorkspaceWSID))
 	if err == nil {
 		svbCDocJoinedWorkspace.PutBool(appdef.SystemField_IsActive, false)

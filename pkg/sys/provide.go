@@ -43,7 +43,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	blobber.ProvideBlobberCmds(cfg, ep)
 	collection.Provide(cfg, appDefBuilder)
 	journal.Provide(cfg, appDefBuilder, ep)
-	builtin.Provide(cfg, appDefBuilder, buildInfo, storageProvider)
+	builtin.Provide(cfg, appDefBuilder, buildInfo, storageProvider, ep)
 	authnz.Provide(appDefBuilder, ep)
 	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
 	sqlquery.Provide(cfg, appDefBuilder, asp, numCommandProcessors)
