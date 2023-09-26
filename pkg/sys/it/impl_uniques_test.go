@@ -530,13 +530,11 @@ func TestNoValueForUniqueField(t *testing.T) {
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true}}]}`, newIDs["1"])
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 
-
 		// failed to set the conflicting value for the 2nd record
 		// - <has conflicting value>
 		// + <has conflicting value> <- deny
 		// + <has value>
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","Int":%d}}]}`, newIDs["2"], num)
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
-
 	})
 }
