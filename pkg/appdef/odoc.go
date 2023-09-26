@@ -8,7 +8,7 @@ package appdef
 // # Implements:
 //   - IODoc, IODocBuilder
 type oDoc struct {
-	def
+	typ
 	comment
 	fields
 	containers
@@ -17,18 +17,18 @@ type oDoc struct {
 
 func newODoc(app *appDef, name QName) *oDoc {
 	doc := &oDoc{
-		def: makeDef(app, name, DefKind_ODoc),
+		typ: makeType(app, name, TypeKind_ODoc),
 	}
 	doc.fields = makeFields(doc)
 	doc.containers = makeContainers(doc)
-	app.appendDef(doc)
+	app.appendType(doc)
 	return doc
 }
 
 // # Implements:
 //   - IORecord, IORecordBuilder
 type oRecord struct {
-	def
+	typ
 	comment
 	fields
 	containers
@@ -37,10 +37,10 @@ type oRecord struct {
 
 func newORecord(app *appDef, name QName) *oRecord {
 	rec := &oRecord{
-		def: makeDef(app, name, DefKind_ORecord),
+		typ: makeType(app, name, TypeKind_ORecord),
 	}
 	rec.fields = makeFields(rec)
 	rec.containers = makeContainers(rec)
-	app.appendDef(rec)
+	app.appendType(rec)
 	return rec
 }

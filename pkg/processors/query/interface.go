@@ -22,7 +22,7 @@ import (
 // The pipeline is used to process data fetched by QueryHandler
 // TODO In my opinion we have to remove it from export
 type RowsProcessorFactory func(ctx context.Context, appDef appdef.IAppDef, state istructs.IState,
-	params IQueryParams, resultMeta appdef.IDef, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline
+	params IQueryParams, resultMeta appdef.IType, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline
 
 type ServiceFactory func(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
 	appStructsProvider istructs.IAppStructsProvider, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,

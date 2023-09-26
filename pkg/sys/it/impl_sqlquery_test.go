@@ -371,7 +371,7 @@ func TestSqlQuery_records(t *testing.T) {
 		body = `{"args":{"Query":"select * from simpleApp.payments"}}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, "unable to find singleton ID for definition «simpleApp.payments»: name not found")
+		resp.RequireError(t, "unable to find singleton ID for type «simpleApp.payments»: name not found")
 	})
 	t.Run("Should return error when requested record has mismatching QName", func(t *testing.T) {
 		body = fmt.Sprintf(`{"args":{"Query":"select * from simpleApp.payments where id = %d"}}`, emailId)

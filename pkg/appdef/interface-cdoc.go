@@ -5,9 +5,9 @@
 
 package appdef
 
-// Configuration document. DefKind() is DefKind_CDoc.
+// Configuration document
 type ICDoc interface {
-	IDef
+	IType
 	IComment
 	IFields
 	IContainers
@@ -30,11 +30,11 @@ type ICDocBuilder interface {
 	SetSingleton()
 }
 
-// Configuration document record. DefKind() is DefKind_CRecord.
+// Configuration document record.
 //
 // Ref. to cdoc.go for implementation
 type ICRecord interface {
-	IDef
+	IType
 	IComment
 	IFields
 	IContainers

@@ -22,13 +22,13 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 
 	a.Name = app.AppQName()
 
-	app.AppDef().Defs(func(def appdef.IDef) {
-		defName := def.QName()
-		pkg := getPkg(defName, a)
-		d := newDef()
-		d.Name = defName
-		pkg.Defs[defName.String()] = d
-		d.read(app.AppDef().Def(defName))
+	app.AppDef().Types(func(typ appdef.IType) {
+		name := typ.QName()
+		pkg := getPkg(name, a)
+		t := newType()
+		t.Name = name
+		pkg.Types[name.String()] = t
+		t.read(typ)
 	})
 
 	app.Resources().Resources(func(resName appdef.QName) {
@@ -65,7 +65,7 @@ func getPkg(name appdef.QName, a *Application) *Package {
 
 func newPackage() *Package {
 	return &Package{
-		Defs:       make(map[string]*Def),
+		Types:      make(map[string]*Type),
 		Resources:  make(map[string]*Resource),
 		RateLimits: make(map[string][]*RateLimit),
 	}

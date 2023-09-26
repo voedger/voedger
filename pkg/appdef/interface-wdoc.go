@@ -5,9 +5,9 @@
 
 package appdef
 
-// Workflow document. DefKind() is DefKind_WDoc.
+// Workflow document.
 type IWDoc interface {
-	IDef
+	IType
 	IComment
 	IFields
 	IContainers
@@ -24,11 +24,11 @@ type IWDocBuilder interface {
 	IWithAbstractBuilder
 }
 
-// Workflow document record. DefKind() is DefKind_WRecord.
+// Workflow document record.
 //
 // Ref. to wdoc.go for implementation
 type IWRecord interface {
-	IDef
+	IType
 	IComment
 	IFields
 	IContainers

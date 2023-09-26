@@ -40,7 +40,7 @@ func (res *Resources) QueryResource(resource appdef.QName) (r istructs.IResource
 
 // Returns argument object builder for query function
 func (res *Resources) QueryFunctionArgsBuilder(query istructs.IQueryFunction) istructs.IObjectBuilder {
-	r := makeObject(res.cfg, query.ParamsDef())
+	r := makeObject(res.cfg, query.ParamsType())
 	return &r
 }
 
@@ -71,7 +71,7 @@ type abstractFunction struct {
 func (af *abstractFunction) QName() appdef.QName { return af.name }
 
 // istructs.IFunction
-func (af *abstractFunction) ParamsDef() appdef.QName { return af.parsDef }
+func (af *abstractFunction) ParamsType() appdef.QName { return af.parsDef }
 
 // istructs.IFunction
 func (af *abstractFunction) ResultDef(args istructs.PrepareArgs) appdef.QName {
@@ -126,7 +126,7 @@ func (qf *queryFunction) Kind() istructs.ResourceKindType {
 }
 
 // istructs.IQueryFunction
-func (qf *queryFunction) ResultDef(args istructs.PrepareArgs) appdef.QName {
+func (qf *queryFunction) ResultType(args istructs.PrepareArgs) appdef.QName {
 	return qf.abstractFunction.ResultDef(args)
 }
 
@@ -176,7 +176,7 @@ func (cf *commandFunction) Kind() istructs.ResourceKindType {
 }
 
 // istructs.ICommandFunction
-func (cf *commandFunction) ResultDef() appdef.QName {
+func (cf *commandFunction) ResultType() appdef.QName {
 	return cf.abstractFunction.ResultDef(nullPrepareArgs)
 }
 
@@ -185,7 +185,7 @@ func (cf *commandFunction) String() string {
 	return fmt.Sprintf("c:%v", cf.abstractFunction.String())
 }
 
-func (cf *commandFunction) UnloggedParamsDef() appdef.QName {
+func (cf *commandFunction) UnloggedParamsType() appdef.QName {
 	return cf.unlParsDef
 }
 

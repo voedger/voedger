@@ -25,14 +25,14 @@ const rootWorkspaceName = "Workspace"
 
 const maxNestedTableContainerOccurrences = 100 // FIXME: 100 container occurrences
 
-var canNotReferenceTo = map[appdef.DefKind][]appdef.DefKind{
-	appdef.DefKind_ODoc:       {},
-	appdef.DefKind_ORecord:    {},
-	appdef.DefKind_WDoc:       {appdef.DefKind_ODoc, appdef.DefKind_ORecord},
-	appdef.DefKind_WRecord:    {appdef.DefKind_ODoc, appdef.DefKind_ORecord},
-	appdef.DefKind_CDoc:       {appdef.DefKind_WDoc, appdef.DefKind_WRecord, appdef.DefKind_ODoc, appdef.DefKind_ORecord},
-	appdef.DefKind_CRecord:    {appdef.DefKind_WDoc, appdef.DefKind_WRecord, appdef.DefKind_ODoc, appdef.DefKind_ORecord},
-	appdef.DefKind_ViewRecord: {appdef.DefKind_ODoc, appdef.DefKind_ORecord},
+var canNotReferenceTo = map[appdef.TypeKind][]appdef.TypeKind{
+	appdef.TypeKind_ODoc:       {},
+	appdef.TypeKind_ORecord:    {},
+	appdef.TypeKind_WDoc:       {appdef.TypeKind_ODoc, appdef.TypeKind_ORecord},
+	appdef.TypeKind_WRecord:    {appdef.TypeKind_ODoc, appdef.TypeKind_ORecord},
+	appdef.TypeKind_CDoc:       {appdef.TypeKind_WDoc, appdef.TypeKind_WRecord, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord},
+	appdef.TypeKind_CRecord:    {appdef.TypeKind_WDoc, appdef.TypeKind_WRecord, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord},
+	appdef.TypeKind_ViewRecord: {appdef.TypeKind_ODoc, appdef.TypeKind_ORecord},
 }
 
 func defaultDescriptorName(wsName string) Ident {

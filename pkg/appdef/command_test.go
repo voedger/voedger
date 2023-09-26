@@ -25,7 +25,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		_ = appDef.AddObject(resName)
 
 		cmd := appDef.AddCommand(cmdName)
-		require.Equal(DefKind_Command, cmd.Kind())
+		require.Equal(TypeKind_Command, cmd.Kind())
 		require.Equal(cmd, appDef.Command(cmdName))
 		require.Nil(cmd.Arg())
 		require.Nil(cmd.UnloggedArg())
@@ -51,25 +51,25 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	require.NotNil(app)
 
 	t.Run("must be ok to find builded command", func(t *testing.T) {
-		def := app.Def(cmdName)
-		require.Equal(DefKind_Command, def.Kind())
+		typ := app.Type(cmdName)
+		require.Equal(TypeKind_Command, typ.Kind())
 
-		d, ok := def.(ICommand)
+		c, ok := typ.(ICommand)
 		require.True(ok)
-		require.Equal(DefKind_Command, d.Kind())
+		require.Equal(TypeKind_Command, c.Kind())
 
 		cmd := app.Command(cmdName)
-		require.Equal(DefKind_Command, cmd.Kind())
-		require.Equal(d, cmd)
+		require.Equal(TypeKind_Command, cmd.Kind())
+		require.Equal(c, cmd)
 
 		require.Equal(argName, cmd.Arg().QName())
-		require.Equal(DefKind_Object, cmd.Arg().Kind())
+		require.Equal(TypeKind_Object, cmd.Arg().Kind())
 
 		require.Equal(unlName, cmd.UnloggedArg().QName())
-		require.Equal(DefKind_Object, cmd.UnloggedArg().Kind())
+		require.Equal(TypeKind_Object, cmd.UnloggedArg().Kind())
 
 		require.Equal(resName, cmd.Result().QName())
-		require.Equal(DefKind_Object, cmd.Result().Kind())
+		require.Equal(TypeKind_Object, cmd.Result().Kind())
 
 		require.Equal("CmdExt", cmd.Extension().Name())
 		require.Equal(ExtensionEngineKind_BuiltIn, cmd.Extension().Engine())
@@ -94,7 +94,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		})
 	})
 
-	t.Run("panic if definition with name already exists", func(t *testing.T) {
+	t.Run("panic if type with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "dupe")
 		apb := New()
 		apb.AddObject(testName)

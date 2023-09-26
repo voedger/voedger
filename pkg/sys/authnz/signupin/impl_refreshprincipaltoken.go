@@ -21,7 +21,7 @@ func ProvideQryRefreshPrincipalToken(cfg *istructsmem.AppConfigType, appDefBuild
 		appdef.NewQName(appdef.SysPackage, "RefreshPrincipalToken"),
 		appdef.NullQName,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "RefreshPrincipalTokenResult")).
-			AddField(field_NewPrincipalToken, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_NewPrincipalToken, appdef.DataKind_string, true).(appdef.IType).QName(),
 		provideRefreshPrincipalTokenExec(itokens),
 	))
 }

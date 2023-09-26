@@ -8,7 +8,7 @@ package appdef
 // # Implements:
 //   - ICDoc, ICDocBuilder
 type cDoc struct {
-	def
+	typ
 	comment
 	fields
 	containers
@@ -19,12 +19,12 @@ type cDoc struct {
 
 func newCDoc(app *appDef, name QName) *cDoc {
 	doc := &cDoc{
-		def: makeDef(app, name, DefKind_CDoc),
+		typ: makeType(app, name, TypeKind_CDoc),
 	}
 	doc.fields = makeFields(doc)
 	doc.containers = makeContainers(doc)
 	doc.uniques = makeUniques(doc)
-	app.appendDef(doc)
+	app.appendType(doc)
 	return doc
 }
 
@@ -39,7 +39,7 @@ func (d *cDoc) Singleton() bool {
 // # Implements:
 //   - ICRecord, ICRecordBuilder
 type cRecord struct {
-	def
+	typ
 	comment
 	fields
 	containers
@@ -49,11 +49,11 @@ type cRecord struct {
 
 func newCRecord(app *appDef, name QName) *cRecord {
 	rec := &cRecord{
-		def: makeDef(app, name, DefKind_CRecord),
+		typ: makeType(app, name, TypeKind_CRecord),
 	}
 	rec.fields = makeFields(rec)
 	rec.containers = makeContainers(rec)
 	rec.uniques = makeUniques(rec)
-	app.appendDef(rec)
+	app.appendType(rec)
 	return rec
 }

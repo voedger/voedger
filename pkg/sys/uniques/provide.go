@@ -32,7 +32,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	})
 	cfg.AddCUDValidators(istructs.CUDValidator{
 		MatchFunc: func(qName appdef.QName) bool {
-			if uniques, ok := appDefBuilder.Def(qName).(appdef.IUniques); ok {
+			if uniques, ok := appDefBuilder.Type(qName).(appdef.IUniques); ok {
 				return uniques.UniqueField() != nil
 			}
 			return false

@@ -15,7 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 )
 
-func Test_rowNullDefinition(t *testing.T) {
+func Test_rowNullType(t *testing.T) {
 	require := require.New(t)
 
 	row := newTestRow()
@@ -23,10 +23,10 @@ func Test_rowNullDefinition(t *testing.T) {
 	row.setQName(appdef.NullQName)
 	require.Equal(appdef.NullQName, row.QName())
 
-	row.setDef(appdef.NullDef)
+	row.setType(appdef.NullType)
 	require.Equal(appdef.NullQName, row.QName())
 
-	row.setDef(nil)
+	row.setType(nil)
 	require.Equal(appdef.NullQName, row.QName())
 }
 
@@ -425,12 +425,12 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 	t.Run("Must be error to put into abstract table", func(t *testing.T) {
 		row := newRow(test.AppCfg)
-		row.setQName(test.abstractDef)
+		row.setQName(test.abstractCDoc)
 
 		row.PutInt32("int32", 1)
 
 		err := row.build()
-		require.ErrorIs(err, ErrAbstractDefinition)
+		require.ErrorIs(err, ErrAbstractType)
 	})
 }
 
