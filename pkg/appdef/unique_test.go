@@ -195,9 +195,5 @@ func Test_type_UniqueField(t *testing.T) {
 		require.Panics(func() {
 			doc.SetUniqueField("unknownField")
 		}, "panics if unknown unique field name")
-
-		require.Panics(func() {
-			doc.SetUniqueField("surname")
-		}, "panics if unique field is not required")
 	})
 }

@@ -589,11 +589,6 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 			c.stmtErr(&constraint.Pos, ErrUndefinedField(string(constraint.UniqueField.Field)))
 			return
 		}
-		if !f.Required() {
-			c.stmtErr(&constraint.Pos, ErrMustBeNotNull)
-			return
-		}
-		// item.Constraint.ConstraintName  constraint name not used for old uniques
 		c.defCtx().defBuilder.(appdef.IUniquesBuilder).SetUniqueField(string(constraint.UniqueField.Field))
 	}
 }
