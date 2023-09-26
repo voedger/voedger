@@ -75,15 +75,6 @@ func provideUniquesProjectorFunc(appDef appdef.IAppDef) func(event istructs.IPLo
 						}
 						// нет значения и не было раньше -> ничего не делаем
 						return nil
-
-						// if !storedUniqueFieldHasValue && uniqueFieldIsNotNull {
-						// 	return insert(rec, uniqueField, st, intents)
-						// }
-						// if !storedUniqueFieldHasValue && !uniqueFieldIsNotNull {
-						// 	// unique field value is not inited && we're not initing it -> so nothing
-						// 	return nil
-						// }
-						// return update(rec, uniqueField, st, intents)
 					}
 				}
 			}
@@ -220,46 +211,6 @@ func buildUniqueViewKey(kb istructs.IKeyBuilder, rec istructs.IRowReader, uf app
 	return buildUniqueViewKeyByValues(kb, rec.AsQName(appdef.SystemField_QName), uniqueKeyValues)
 }
 
-// func provideCUDUniqueUpdateDenyValidator() func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) error {
-// 	return func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) (err error) {
-// 		if cudRow.IsNew() {
-// 			return nil
-// 		}
-// 		qName := cudRow.QName()
-// 		if uniques, ok := appStructs.AppDef().Def(qName).(appdef.IUniques); ok {
-// 			if uniqueField := uniques.UniqueField(); uniqueField != nil {
-// 				var storageError error
-// 				var storedRow istructs.IRowReader
-// 				cudRow.ModifiedFields(func(fieldName string, newValue interface{}) {
-// 					if storageError != nil {
-// 						// notest
-// 						return
-// 					}
-// 					if fieldName == uniqueField.Name() {
-// 						// read the stored record
-// 						if storedRow == nil {
-// 							storedRow, storageError = appStructs.Records().Get(wsid, true, cudRow.ID())
-// 							if storageError != nil {
-// 								// notest
-// 								return
-// 							}
-// 						}
-// 						uniqueFieldHasStoredValue, _ := iterate.FindFirst(storedRow.FieldNames, func(storedUniqueFieldNameThatHasValue string) bool {
-// 							return storedUniqueFieldNameThatHasValue == uniqueField.Name()
-// 						})
-// 						// no value for the unique field yet -> allow to set the value
-// 						if uniqueFieldHasStoredValue {
-// 							err = errors.Join(err,
-// 								fmt.Errorf("%v: unique field «%s» can not to be changed: %w", qName, fieldName, ErrUniqueFieldUpdateDeny))
-// 						}
-// 					}
-// 				})
-// 			}
-// 		}
-// 		return err
-// 	}
-// }
-
 type uniqueViewRecord struct {
 	exists      bool
 	refRecordID istructs.RecordID
@@ -300,13 +251,6 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 						if storedUniqueFieldHasValue {
 							sourceRow = storedRow
 						}
-						// // unique field already has value in the stored row -> use it
-						// // otherwise -> use unique field value from CUD
-						// uniqueKeyValues, err = getUniqueKeyValues(sourceRow, uniqueField)
-						// if err != nil {
-						// 	// notest
-						// 	return err
-						// }
 					}
 					uniqueKeyValues, err = getUniqueKeyValues(sourceRow, uniqueField)
 					if err != nil {
@@ -324,7 +268,6 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 						if cudRec.AsBool(appdef.SystemField_IsActive) {
 							if currentUniqueRecord.refRecordID == istructs.NullRecordID {
 								// inserting a new active record, unique is inactive -> allowed, update its ID in map
-								// qNameEventUniques[string(cudUniqueKeyValues)] = rec.ID()
 								currentUniqueRecord.refRecordID = cudRec.ID()
 								currentUniqueRecord.exists = true // avoid: 1st CUD insert a unique record, 2nd modify the unique value
 							} else {
@@ -341,7 +284,7 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 					} else {
 						cudRecIsActive := cudRec.AsBool(appdef.SystemField_IsActive)
 						if currentUniqueRecord.exists {
-							if cudUniqueFieldHasValue {
+							if cudUniqueFieldHasValue && (currentUniqueRecord.refRecordID == cudRec.ID() || currentUniqueRecord.refRecordID == istructs.NullRecordID) {
 								return fmt.Errorf("%v: unique field «%s» can not be changed: %w", qName, uniqueField.Name(), ErrUniqueFieldUpdateDeny)
 							}
 							if currentUniqueRecord.refRecordID == istructs.NullRecordID {

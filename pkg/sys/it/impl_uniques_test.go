@@ -498,8 +498,38 @@ func TestNoValueForUniqueField(t *testing.T) {
 		vit.PostWS(ws, "c.sys.CUD", body)
 
 		// set the unique field value of the initial record for the first time, make a conflict
-		// 403 forbidden in this case because unique combination exists already
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","Int":%d}}]}`, newID, num)
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403())
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
+	})
+
+	t.Run("update +", func(t *testing.T) {
+		num, bts := getUniqueNumber(vit)
+
+		// insert a record that has no value for the unique field
+		// - <no value>
+		// + <no value>
+		// + <has value>
+		body := fmt.Sprintf(`{"cuds":[
+			{"fields":{"sys.ID":1,"sys.QName":"simpleApp.DocConstraints","sys.IsActive":false,"Str":"str","Bool":true,"Bytes":"%[2]s"}},
+			{"fields":{"sys.ID":2,"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true,"Str":"str","Bool":true,"Bytes":"%[2]s"}},
+			{"fields":{"sys.ID":3,"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true,"Int":%[1]d,"Str":"str","Bool":true,"Bytes":"%[2]s"}}
+		]}`, num, bts)
+		newIDs := vit.PostWS(ws, "c.sys.CUD", body).NewIDs
+
+		// set conflicting value for the first time for an inactive record
+		// - <has conflicting value>
+		// + <no value>
+		// + <has value>
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","Int":%d}}]}`, newIDs["1"], num)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		// activate the conflicting record
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true}}]}`, newIDs["1"])
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
+
+		// failed to set the conflicting value for the 2nd record
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","Int":%d}}]}`, newIDs["2"], num)
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
+
 	})
 }
