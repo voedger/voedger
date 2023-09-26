@@ -16,12 +16,11 @@ func GetUniqueID(appStructs istructs.IAppStructs, doc istructs.IRowReader, wsid 
 	qName := doc.AsQName(appdef.SystemField_QName)
 	if uniques, ok := appStructs.AppDef().Type(qName).(appdef.IUniques); ok {
 		if field := uniques.UniqueField(); field != nil {
-			uniqueKeyValues, err := getUniqueKeyValues(doc, field)
-			if err != nil {
-				// notest
-				return istructs.NullRecordID, err
+			var uniqueKeyValues []byte
+			uniqueKeyValues, err = getUniqueKeyValues(doc, field)
+			if err == nil {
+				recID, _, err = getUniqueIDByValues(appStructs, wsid, qName, uniqueKeyValues)
 			}
-			recID, _, err = getUniqueIDByValues(appStructs, wsid, qName, uniqueKeyValues)
 		}
 	}
 	return recID, err
