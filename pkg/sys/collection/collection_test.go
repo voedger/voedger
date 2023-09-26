@@ -53,45 +53,45 @@ func appConfigs() (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
 		cfg.Resources.Add(istructsmem.NewCommandFunction(test.modifyCmdName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 	}
 	{ // CDoc: articles
-		articlesDef := adf.AddCDoc(test.tableArticles)
-		articlesDef.
+		articles := adf.AddCDoc(test.tableArticles)
+		articles.
 			AddField(test.articleNameIdent, appdef.DataKind_string, true).
 			AddField(test.articleNumberIdent, appdef.DataKind_int32, false).
 			AddField(test.articleDeptIdent, appdef.DataKind_RecordID, false)
-		articlesDef.
+		articles.
 			AddContainer(test.tableArticlePrices.Entity(), test.tableArticlePrices, appdef.Occurs(0), appdef.Occurs(100))
 	}
 	{ // CDoc: departments
-		depDef := adf.AddCDoc(test.tableDepartments)
-		depDef.
+		departments := adf.AddCDoc(test.tableDepartments)
+		departments.
 			AddField(test.depNameIdent, appdef.DataKind_string, true).
 			AddField(test.depNumberIdent, appdef.DataKind_int32, false)
 	}
 	{ // CDoc: periods
-		periodsDef := adf.AddCDoc(test.tablePeriods)
-		periodsDef.
+		periods := adf.AddCDoc(test.tablePeriods)
+		periods.
 			AddField(test.periodNameIdent, appdef.DataKind_string, true).
 			AddField(test.periodNumberIdent, appdef.DataKind_int32, false)
 	}
 	{ // CDoc: prices
-		pricesDef := adf.AddCDoc(test.tablePrices)
-		pricesDef.
+		prices := adf.AddCDoc(test.tablePrices)
+		prices.
 			AddField(test.priceNameIdent, appdef.DataKind_string, true).
 			AddField(test.priceNumberIdent, appdef.DataKind_int32, false)
 	}
 
 	{ // CDoc: article prices
-		articlesPricesDef := adf.AddCRecord(test.tableArticlePrices)
-		articlesPricesDef.
+		articlesPrices := adf.AddCRecord(test.tableArticlePrices)
+		articlesPrices.
 			AddField(test.articlePricesPriceIdIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePricesPriceIdent, appdef.DataKind_float32, true)
-		articlesPricesDef.
+		articlesPrices.
 			AddContainer(test.tableArticlePriceExceptions.Entity(), test.tableArticlePriceExceptions, appdef.Occurs(0), appdef.Occurs(100))
 	}
 
 	{ // CDoc: article price exceptions
-		articlesPricesExceptionsDef := adf.AddCRecord(test.tableArticlePriceExceptions)
-		articlesPricesExceptionsDef.
+		articlesPricesExceptions := adf.AddCRecord(test.tableArticlePriceExceptions)
+		articlesPricesExceptions.
 			AddField(test.articlePriceExceptionsPeriodIdIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePriceExceptionsPriceIdent, appdef.DataKind_float32, true)
 	}

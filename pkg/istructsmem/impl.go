@@ -444,7 +444,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 	}
 
 	for _, rec := range ev.cud.creates {
-		if cDoc, ok := rec.def.(appdef.ICDoc); ok && cDoc.Singleton() {
+		if cDoc, ok := rec.typ.(appdef.ICDoc); ok && cDoc.Singleton() {
 			id, err := recs.app.config.singletons.ID(rec.QName())
 			if err != nil {
 				return err
@@ -471,7 +471,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
 		// check exists record has correct QName
 		if rec.originRec.QName() != old.QName() {
-			return fmt.Errorf("updated «%v» record «%d» has unexpected QName value «%v»: %w", rec.originRec.QName(), rec.originRec.ID(), old.QName(), ErrWrongDefinition)
+			return fmt.Errorf("updated «%v» record «%d» has unexpected QName value «%v»: %w", rec.originRec.QName(), rec.originRec.ID(), old.QName(), ErrWrongType)
 		}
 	}
 

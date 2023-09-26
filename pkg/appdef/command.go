@@ -13,7 +13,7 @@ import (
 // # Implements:
 //   - ICommand & ICommandBuilder
 type command struct {
-	def
+	typ
 	comment
 	arg, unl, res objRef
 	ext           extension
@@ -21,9 +21,9 @@ type command struct {
 
 func newCommand(app *appDef, name QName) *command {
 	cmd := &command{
-		def: makeDef(app, name, DefKind_Command),
+		typ: makeType(app, name, TypeKind_Command),
 	}
-	app.appendDef(cmd)
+	app.appendType(cmd)
 	return cmd
 }
 
@@ -74,19 +74,19 @@ func (cmd *command) UnloggedArg() IObject {
 func (cmd *command) Validate() (err error) {
 	if cmd.arg.name != NullQName {
 		if cmd.arg.object(cmd.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: argument definition «%v» is not found: %w", cmd.QName(), cmd.arg.name, ErrNameNotFound))
+			err = errors.Join(err, fmt.Errorf("%v: argument type «%v» is not found: %w", cmd.QName(), cmd.arg.name, ErrNameNotFound))
 		}
 	}
 
 	if cmd.unl.name != NullQName {
 		if cmd.unl.object(cmd.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: unlogged definition object «%v» is not found: %w", cmd.QName(), cmd.unl.name, ErrNameNotFound))
+			err = errors.Join(err, fmt.Errorf("%v: unlogged object type «%v» is not found: %w", cmd.QName(), cmd.unl.name, ErrNameNotFound))
 		}
 	}
 
 	if cmd.res.name != NullQName {
 		if cmd.res.object(cmd.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: command result definition «%v» is not found: %w", cmd.QName(), cmd.res.name, ErrNameNotFound))
+			err = errors.Join(err, fmt.Errorf("%v: command result type «%v» is not found: %w", cmd.QName(), cmd.res.name, ErrNameNotFound))
 		}
 	}
 

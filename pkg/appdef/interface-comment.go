@@ -7,7 +7,7 @@ package appdef
 
 // See [Issue #488](https://github.com/voedger/voedger/issues/488)
 //
-// Any definition may have comment
+// Any type may have comment
 //
 // Ref to commented.go for implementation
 type IComment interface {

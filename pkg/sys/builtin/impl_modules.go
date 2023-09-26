@@ -21,7 +21,7 @@ func provideQryModules(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IApp
 		appdef.NewQName(appdef.SysPackage, "Modules"),
 		appdef.NullQName,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "ModulesResult")).
-			AddField("Modules", appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField("Modules", appdef.DataKind_string, true).(appdef.IType).QName(),
 		provideQryModulesExec(buildInfo),
 	))
 }

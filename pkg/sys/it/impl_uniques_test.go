@@ -316,7 +316,7 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 	require.NoError(err)
 
 	t.Run("must be ok to find unique field for test CDoc", func(t *testing.T) {
-		unique, ok := as.AppDef().Def(it.QNameCDocTestConstraints).(appdef.IUniques)
+		unique, ok := as.AppDef().Type(it.QNameCDocTestConstraints).(appdef.IUniques)
 		require.True(ok)
 		require.NotNil(unique.UniqueField())
 	})

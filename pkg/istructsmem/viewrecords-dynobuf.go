@@ -35,7 +35,7 @@ func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.
 	}
 
 	if k.viewName != v.viewName {
-		return nil, nil, nil, fmt.Errorf("key and value are from different views (key view is «%v», value view is «%v»): %w", k.viewName, v.viewName, ErrWrongDefinition)
+		return nil, nil, nil, fmt.Errorf("key and value are from different views (key view is «%v», value view is «%v»): %w", k.viewName, v.viewName, ErrWrongType)
 	}
 
 	partKey, cCols = k.storeToBytes(workspace)
@@ -99,7 +99,7 @@ func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 
 // Loads view value from specified buf using specified codec.
 //
-// This method uses the name of the definition set by the caller (val.QName), ignoring that is read from the buffer.
+// This method uses the name of the type set by the caller (val.QName), ignoring that is read from the buffer.
 func loadViewValue(val *valueType, codecVer byte, buf *bytes.Buffer) (err error) {
 	if _, err = utils.ReadUInt16(buf); err != nil {
 		return fmt.Errorf("error read value QNameID: %w", err)

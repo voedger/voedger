@@ -15,15 +15,15 @@ func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, a
 		appdef.NewQName(appdef.SysPackage, "DescribePackageNames"),
 		appdef.NullQName,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "DescribePackageNamesResult")).
-			AddField("Names", appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField("Names", appdef.DataKind_string, true).(appdef.IType).QName(),
 		provideQryDescribePackageNames(asp, cfg.Name),
 	))
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "DescribePackage"),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "DescribePackageParams")).
-			AddField(field_PackageName, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_PackageName, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "DescribePackageResult")).
-			AddField("PackageDesc", appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField("PackageDesc", appdef.DataKind_string, true).(appdef.IType).QName(),
 		provideQryDescribePackage(asp, cfg.Name),
 	))
 }

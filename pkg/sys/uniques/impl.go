@@ -21,7 +21,7 @@ import (
 func provideUniquesProjectorFunc(appDef appdef.IAppDef) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) (err error) {
-			if unique, ok := appDef.Def(rec.QName()).(appdef.IUniques); ok {
+			if unique, ok := appDef.Type(rec.QName()).(appdef.IUniques); ok {
 				if uniqueField := unique.UniqueField(); uniqueField != nil {
 					uniqueFieldIsNotNull, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(s string, _ interface{}) bool {
 						return s == uniqueField.Name()
@@ -222,7 +222,7 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 		uniquesState := map[appdef.QName]map[string]*uniqueViewRecord{}
 		err := rawEvent.CUDs(func(cudRec istructs.ICUDRow) (err error) {
 			qName := cudRec.QName()
-			if uniques, ok := appStructs.AppDef().Def(qName).(appdef.IUniques); ok {
+			if uniques, ok := appStructs.AppDef().Type(qName).(appdef.IUniques); ok {
 				if uniqueField := uniques.UniqueField(); uniqueField != nil {
 					cudUniqueFieldHasValue, _ := iterate.FindFirst(cudRec.FieldNames, func(fieldNameThatHasValue string) bool {
 						return fieldNameThatHasValue == uniqueField.Name()

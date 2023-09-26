@@ -6,23 +6,23 @@
 package appdef
 
 // See [Issue #524](https://github.com/voedger/voedger/issues/524)
-// Definition can be abstract:
-//	- DefKind_GDoc and DefKind_GRecord,
-//	- DefKind_CDoc and DefKind_CRecord,
-//	- DefKind_ODoc and DefKind_CRecord,
-//	- DefKind_WDoc and DefKind_WRecord,
-//	- DefKind_Object and DefKind_Element
-//	- DefKind_Workspace
+// Types can be abstract:
+//	- TypeKind_GDoc and TypeKind_GRecord,
+//	- TypeKind_CDoc and TypeKind_CRecord,
+//	- TypeKind_ODoc and TypeKind_CRecord,
+//	- TypeKind_WDoc and TypeKind_WRecord,
+//	- TypeKind_Object and TypeKind_Element
+//	- TypeKind_Workspace
 //
 // Ref to abstract.go for implementation
 type IWithAbstract interface {
-	// Returns is definition abstract
+	// Returns is type abstract
 	Abstract() bool
 }
 
 type IWithAbstractBuilder interface {
 	IWithAbstract
 
-	// Makes definition abstract
+	// Makes type abstract
 	SetAbstract()
 }

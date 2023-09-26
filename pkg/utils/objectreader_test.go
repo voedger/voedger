@@ -29,11 +29,11 @@ var (
 	testAppDef = func() appdef.IAppDefBuilder {
 		app := appdef.New()
 
-		def := app.AddObject(testQName)
-		addFieldDefs(def, testFieldDefs)
+		obj := app.AddObject(testQName)
+		addFieldDefs(obj, testFieldDefs)
 
-		simpleDef := app.AddObject(testQNameSimple)
-		simpleDef.AddField("int32", appdef.DataKind_int32, false)
+		simpleObj := app.AddObject(testQNameSimple)
+		simpleObj.AddField("int32", appdef.DataKind_int32, false)
 
 		return app
 	}
@@ -68,10 +68,10 @@ var (
 	}
 )
 
-func addFieldDefs(def appdef.IFieldsBuilder, fd map[string]appdef.DataKind) {
+func addFieldDefs(fields appdef.IFieldsBuilder, fd map[string]appdef.DataKind) {
 	for n, k := range fd {
 		if !appdef.IsSysField(n) {
-			def.AddField(n, k, false)
+			fields.AddField(n, k, false)
 		}
 	}
 }

@@ -17,7 +17,7 @@ func proivideRenameQName(cfg *istructsmem.AppConfigType, adb appdef.IAppDefBuild
 		appdef.NewQName(appdef.SysPackage, "RenameQName"),
 		adb.AddObject(appdef.NewQName(appdef.SysPackage, "RenameQNameParams")).
 			AddField(field_ExistingQName, appdef.DataKind_QName, true).
-			AddField(field_NewQName, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_NewQName, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		provideExecCmdRenameQName(asp, cfg)))

@@ -82,7 +82,7 @@ func ExampleIView() {
 	}
 
 	// Output:
-	// view "test.view": DefKind_ViewRecord, view comment
+	// view "test.view": TypeKind_ViewRecord, view comment
 	// view partition key is "test.view_PartitionKey", 2 fields:
 	// - pk_int: int64, required
 	// - pk_ref: RecordID, required, refs: [test.doc]

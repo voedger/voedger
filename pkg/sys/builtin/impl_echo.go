@@ -22,9 +22,9 @@ func provideQryEcho(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDef
 		appdef.NullQName,
 		appdef.NullQName,
 		// appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "EchoParams")).
-		// 	AddField("Text", appdef.DataKind_string, true).(appdef.IDef).QName(),
+		// 	AddField("Text", appdef.DataKind_string, true).(appdef.IType).QName(),
 		// appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "EchoResult")).
-		// 	AddField("Res", appdef.DataKind_string, true).(appdef.IDef).QName(),
+		// 	AddField("Res", appdef.DataKind_string, true).(appdef.IType).QName(),
 		func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			text := args.ArgumentObject.AsString("Text")
 			return callback(&echoRR{text: text})

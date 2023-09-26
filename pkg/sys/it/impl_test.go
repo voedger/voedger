@@ -42,9 +42,9 @@ func TestBasicUsage(t *testing.T) {
 			cfg.Resources.Add(istructsmem.NewQueryFunction(
 				appdef.NewQName(appdef.SysPackage, "Greeter"),
 				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
-					AddField("Text", appdef.DataKind_string, true).(appdef.IDef).QName(),
+					AddField("Text", appdef.DataKind_string, true).(appdef.IType).QName(),
 				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterResult")).
-					AddField("Res", appdef.DataKind_string, true).(appdef.IDef).QName(),
+					AddField("Res", appdef.DataKind_string, true).(appdef.IType).QName(),
 				func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 					text := args.ArgumentObject.AsString("Text")
 					var rr = &greeterRR{text: text}
