@@ -17,8 +17,7 @@ func GetUniqueID(appStructs istructs.IAppStructs, doc istructs.IRowReader, wsid 
 	if uniques, ok := appStructs.AppDef().Type(qName).(appdef.IUniques); ok {
 		if field := uniques.UniqueField(); field != nil {
 			var uniqueKeyValues []byte
-			uniqueKeyValues, err = getUniqueKeyValues(doc, field)
-			if err == nil {
+			if uniqueKeyValues, err = getUniqueKeyValues(doc, field); err == nil {
 				recID, _, err = getUniqueIDByValues(appStructs, wsid, qName, uniqueKeyValues)
 			}
 		}
