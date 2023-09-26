@@ -269,36 +269,52 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 	return func(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
 		//                                      key         uvrID
 		uniquesState := map[appdef.QName]map[string]*uniqueViewRecord{}
-		err := rawEvent.CUDs(func(rec istructs.ICUDRow) (err error) {
+		err := rawEvent.CUDs(func(cudRec istructs.ICUDRow) (err error) {
 
 			// } else {
 			// 	if actualRow, err = appStructs.Records().Get(wsid, true, rec.ID()); err != nil { // read current record
 			// 		return err
 			// 	}
 			// }
-			qName := rec.QName()
+			qName := cudRec.QName()
 			if uniques, ok := appStructs.AppDef().Def(qName).(appdef.IUniques); ok {
 				if uniqueField := uniques.UniqueField(); uniqueField != nil {
-					uniqueFieldHasValue, _ := iterate.FindFirst(rec.FieldNames, func(fieldNameThatHasValue string) bool {
+					cudUniqueFieldHasValue, _ := iterate.FindFirst(cudRec.FieldNames, func(fieldNameThatHasValue string) bool {
 						return fieldNameThatHasValue == uniqueField.Name()
 					})
-					var cudUniqueKeyValues []byte
-					if rec.IsNew() {
-						if !uniqueFieldHasValue {
+					var uniqueKeyValues []byte
+					var existingRow istructs.IRecord
+					if cudRec.IsNew() {
+						if !cudUniqueFieldHasValue {
 							return nil
 						}
-						cudUniqueKeyValues, err = getUniqueKeyValues(rec, uniqueField)
+						uniqueKeyValues, err = getUniqueKeyValues(cudRec, uniqueField)
 						if err != nil {
 							// notest
 							return err
 						}
 					} else {
-						actualRow, err := appStructs.Records().Get(wsid, true, rec.ID())
+						/*
+							что если мы обновляем строку, но не устанавливаем уникальность и ее раньше не было?
+							как узнать, что ее раньше не было?
+						*/
+						existingRow, err = appStructs.Records().Get(wsid, true, cudRec.ID())
 						if err != nil { // need to check activate\deactivate, read current record
 							// notest
 							return err
 						}
-						cudUniqueKeyValues, err = getUniqueKeyValues(actualRow, uniqueField)
+						storedUniqueFieldHasValue, _ := iterate.FindFirst(existingRow.FieldNames, func(uniqueFieldNameThatHasStoredValue string) bool {
+							return uniqueFieldNameThatHasStoredValue == uniqueField.Name()
+						})
+						sourceRow := cudRec.(istructs.IRecord)
+						if storedUniqueFieldHasValue {
+							sourceRow = existingRow
+						}
+						if !storedUniqueFieldHasValue && !cudUniqueFieldHasValue {
+							// had no unique field value before and update something else _. nothing to do
+							return nil
+						}
+						uniqueKeyValues, err = getUniqueKeyValues(sourceRow, uniqueField)
 						if err != nil {
 							// notest
 							return err
@@ -316,36 +332,66 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 						qNameEventUniques = map[string]*uniqueViewRecord{}
 						uniquesState[qName] = qNameEventUniques
 					}
-					currentUniqueRecord, ok := qNameEventUniques[string(cudUniqueKeyValues)]
+					currentUniqueRecord, ok := qNameEventUniques[string(uniqueKeyValues)]
 					if !ok {
-						currentUniqueRecordID, uniqueViewRecordExists, err := getUniqueIDByValues(appStructs, wsid, qName, cudUniqueKeyValues)
+						currentUniqueRecordID, uniqueViewRecordExists, err := getUniqueIDByValues(appStructs, wsid, qName, uniqueKeyValues)
 						if err != nil {
 							return err
 						}
-						currentUniqueRecord := &uniqueViewRecord{
+						currentUniqueRecord = &uniqueViewRecord{
 							exists:      uniqueViewRecordExists,
 							refRecordID: currentUniqueRecordID,
 						}
-						qNameEventUniques[string(cudUniqueKeyValues)] = currentUniqueRecord
+						qNameEventUniques[string(uniqueKeyValues)] = currentUniqueRecord
 					}
 
-					if rec.IsNew() {
-						if rec.AsBool(appdef.SystemField_IsActive) {
+					if cudRec.IsNew() {
+						if cudRec.AsBool(appdef.SystemField_IsActive) {
 							if currentUniqueRecord.refRecordID == istructs.NullRecordID {
 								// inserting a new active record, unique is inactive -> allowed, update its ID in map
 								// qNameEventUniques[string(cudUniqueKeyValues)] = rec.ID()
-								currentUniqueRecord.refRecordID = rec.ID()
+								currentUniqueRecord.refRecordID = cudRec.ID()
 								currentUniqueRecord.exists = true // avoid: 1st CUD insert a unique record, 2nd modify the unique value
 							} else {
 								// inserting a new active record, unique is active -> deny
 								return conflict(qName, currentUniqueRecord.refRecordID)
 							}
+						} else {
+							if cudUniqueFieldHasValue {
+								currentUniqueRecord.exists = true
+								currentUniqueRecord.refRecordID = istructs.NullRecordID
+							}
+							// insert an inactive record, no unique value -> allow, do nothing
 						}
-						// insert an inactive record -> allow, do nothing
 					} else {
-						
+						cudRecIsActive := cudRec.AsBool(appdef.SystemField_IsActive)
+						if currentUniqueRecord.exists {
+							if cudUniqueFieldHasValue {
+								return fmt.Errorf("%v: unique field «%s» can not be changed: %w", qName, uniqueField.Name(), ErrUniqueFieldUpdateDeny)
+							}
+							if currentUniqueRecord.refRecordID == istructs.NullRecordID {
+								if cudRecIsActive {
+									currentUniqueRecord.refRecordID = cudRec.ID()
+								}
+							} else {
+								if currentUniqueRecord.refRecordID == cudRec.ID() {
+									if !cudRecIsActive {
+										currentUniqueRecord.refRecordID = istructs.NullRecordID
+									}
+								} else {
+									if cudRecIsActive {
+										return conflict(qName, currentUniqueRecord.refRecordID)
+									}
+								}
+							}
+						} else {
+							// update, no unique view record
+							if cudRecIsActive && cudUniqueFieldHasValue {
+								currentUniqueRecord.exists = true
+								currentUniqueRecord.refRecordID = cudRec.ID()
+							}
+						}
 					}
-
 				}
 			}
 			return nil

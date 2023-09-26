@@ -433,7 +433,7 @@ func TestNoValueForUniqueField(t *testing.T) {
 	})
 
 	t.Run("set the unique field value on update for the first time", func(t *testing.T) {
-		_, bts := getUniqueNumber(vit)
+		num, bts := getUniqueNumber(vit)
 
 		// insert a doc record that has no value for the unique field
 		// + <no value>
@@ -442,21 +442,20 @@ func TestNoValueForUniqueField(t *testing.T) {
 
 		// initialize the value of the unique field for the first time
 		// + <has value>
-		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","Int":0}}]}`, newID)
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","Int":%d}}]}`, newID, num)
 		vit.PostWS(ws, "c.sys.CUD", body)
 
 		// failed to insert the coflicting record
-		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true,"Int":0,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.DocConstraints","sys.IsActive":true,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 
 		// failed to update the existing unique field value
-		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","Int":1}}]}`, newID)
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","Int":%d}}]}`, newID, num+1)
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403())
 	})
 
 	t.Run("deactivate", func(t *testing.T) {
 		num, bts := getUniqueNumber(vit)
-		_ = num
 
 		// insert a record that has no value for the unique field
 		// + <no value>
@@ -499,7 +498,8 @@ func TestNoValueForUniqueField(t *testing.T) {
 		vit.PostWS(ws, "c.sys.CUD", body)
 
 		// set the unique field value of the initial record for the first time, make a conflict
+		// 403 forbidden in this case because unique combination exists already
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"simpleApp.DocConstraints","Int":%d}}]}`, newID, num)
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403())
 	})
 }
