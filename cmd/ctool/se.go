@@ -73,20 +73,21 @@ func updateHosts(node *nodeType) error {
 
 	prepareScripts("node-update-hosts.sh")
 
-	 for _, clusterNode := range node.cluster.Nodes {
-		 if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
-			 run("node-update-hosts.sh", node.DesiredNodeState.Address,  clusterNode.DesiredNodeState.Address, clusterNode.nodeName()); err != nil {
-			 logger.Error(err.Error())
-			 node.Error = err.Error()
-			 break
-		 } else {
-			 logger.Info(fmt.Sprintf("Update /etc/hosts on node %s with values: %s, %s",
-				 node.DesiredNodeState.Address,
-				 clusterNode.DesiredNodeState.Address, clusterNode.nodeName()))
-		 }
-	 }
+	for _, clusterNode := range node.cluster.Nodes {
+		logger.info(fmt.Sprintf("node.DesiredNodeState.Address %s,  clusterNode.DesiredNodeState.Address %s, clusterNode.nodeName() %s", node.DesiredNodeState.Address, clusterNode.DesiredNodeState.Address, clusterNode.nodeName()))
+		if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
+			run("node-update-hosts.sh", node.DesiredNodeState.Address, clusterNode.DesiredNodeState.Address, clusterNode.nodeName()); err != nil {
+			logger.Error(err.Error())
+			node.Error = err.Error()
+			break
+		} else {
+			logger.Info(fmt.Sprintf("Update /etc/hosts on node %s with values: %s, %s",
+				node.DesiredNodeState.Address,
+				clusterNode.DesiredNodeState.Address, clusterNode.nodeName()))
+		}
+	}
 
-	 return err
+	return err
 }
 
 func seNodeValidate(n *nodeType) error {
@@ -349,12 +350,12 @@ func deployMonDockerStack(cluster *clusterType) error {
 }
 
 type seConfigType struct {
-	StackName string
-	AppNode1  string
-	AppNode2  string
-	DBNode1   string
-	DBNode2   string
-	DBNode3   string
+	StackName    string
+	AppNode1     string
+	AppNode2     string
+	DBNode1      string
+	DBNode2      string
+	DBNode3      string
 	AppNode1Name string
 	AppNode2Name string
 	DBNode1Name  string
@@ -381,7 +382,6 @@ func newSeConfigType(cluster *clusterType) *seConfigType {
 	}
 	return &config
 }
-
 
 func deployDocker(node *nodeType) error {
 	var err error
