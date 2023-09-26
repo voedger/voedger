@@ -75,7 +75,7 @@ func (v *validator) validElement(el *elementType, storable bool) (err error) {
 
 // Validates element containers
 func (v *validator) validElementContainers(el *elementType, storable bool) (err error) {
-	def, ok := v.typ.(appdef.IContainers)
+	t, ok := v.typ.(appdef.IContainers)
 	if !ok {
 		err = errors.Join(err,
 			validateErrorf(ECode_InvalidDefName, "%s has type kind «%s» without containers: %w", v.entName(el), v.typ.Kind().TrimString(), ErrUnexpectedTypeKind))
@@ -83,7 +83,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 	}
 
 	// validates element containers occurs
-	def.Containers(
+	t.Containers(
 		func(cont appdef.IContainer) {
 			occurs := appdef.Occurs(0)
 			el.EnumElements(
@@ -115,7 +115,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 					validateErrorf(ECode_EmptyElementName, "%s child[%d] has empty container name: %w", v.entName(el), idx, ErrNameMissed))
 				return
 			}
-			cont := def.Container(childName)
+			cont := t.Container(childName)
 			if cont == nil {
 				err = errors.Join(err,
 					validateErrorf(ECode_InvalidElementName, "%s child[%d] has unknown container name «%s»: %w", v.entName(el), idx, childName, ErrNameNotFound))
@@ -176,9 +176,16 @@ func (v *validator) validRow(row *rowType) (err error) {
 				if !row.HasValue(f.Name()) {
 					err = errors.Join(err,
 						validateErrorf(ECode_EmptyData, "%s misses field «%s» required for type «%v»: %w", v.entName(row), f.Name(), v.typ.QName(), ErrNameNotFound))
-				} else if !appdef.IsSysField(f.Name()) && (f.DataKind() == appdef.DataKind_RecordID) && (row.AsInt64(f.Name()) == int64(istructs.NullRecordID)) {
-					err = errors.Join(err,
-						validateErrorf(ECode_InvalidRefRecordID, "%s required ref field «%s» has NullRecordID value: %w", v.entName(row), f.Name(), ErrWrongRecordID))
+					return
+				}
+				if !f.IsSys() {
+					switch f.DataKind() {
+					case appdef.DataKind_RecordID:
+						if row.AsRecordID(f.Name()) == istructs.NullRecordID {
+							err = errors.Join(err,
+								validateErrorf(ECode_InvalidRefRecordID, "%s required ref field «%s» has NullRecordID value: %w", v.entName(row), f.Name(), ErrWrongRecordID))
+						}
+					}
 				}
 			}
 		})
