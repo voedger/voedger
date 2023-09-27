@@ -67,9 +67,6 @@ func TestAddView(t *testing.T) {
 		t.Run("must be ok to read view full key", func(t *testing.T) {
 			key := view.Key()
 			require.Equal(view.Container(SystemContainer_ViewKey).Type(), key)
-			require.Equal(ViewKeyDefName(viewName), key.QName())
-			require.Equal(TypeKind_ViewRecord_Key, key.Kind())
-			require.Equal(2, key.ContainerCount()) // pk + cc
 			require.Equal(4, key.FieldCount())
 			cnt := 0
 			key.Fields(func(f IField) {
@@ -96,24 +93,16 @@ func TestAddView(t *testing.T) {
 
 		t.Run("must be ok to read view partition key", func(t *testing.T) {
 			pk := view.Key().Partition()
-			require.Equal(view.Key().Container(SystemContainer_ViewPartitionKey).Type(), pk)
-			require.Equal(ViewPartitionKeyDefName(viewName), pk.QName())
-			require.Equal(TypeKind_ViewRecord_PartitionKey, pk.Kind())
 			require.Equal(2, pk.FieldCount())
 		})
 
 		t.Run("must be ok to read view clustering columns", func(t *testing.T) {
 			cc := view.Key().ClustCols()
-			require.Equal(view.Key().Container(SystemContainer_ViewClusteringCols).Type(), cc)
-			require.Equal(ViewClusteringColumnsDefName(viewName), cc.QName())
-			require.Equal(TypeKind_ViewRecord_ClusteringColumns, cc.Kind())
 			require.Equal(2, cc.FieldCount())
 		})
 
 		t.Run("must be ok to read view value", func(t *testing.T) {
 			val := view.Value()
-			require.Equal(ViewValueDefName(viewName), val.QName())
-			require.Equal(TypeKind_ViewRecord_Value, val.Kind())
 			require.Equal(2, val.UserFieldCount())
 		})
 

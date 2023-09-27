@@ -13,10 +13,10 @@ type IView interface {
 	IComment
 	IContainers
 
-	// Returns full (pk + ccols) view key type
+	// Returns full (pk + ccols) view key
 	Key() IViewKey
 
-	// Returns view value type
+	// Returns view value
 	Value() IViewValue
 }
 
@@ -30,20 +30,18 @@ type IViewBuilder interface {
 	Value() IViewValueBuilder
 }
 
-// View full (pk + cc) key type.
+// View full (pk + cc) key.
 //
 // Partition key fields is required, clustering columns is not.
 //
 // Ref. to view.go for implementation
 type IViewKey interface {
-	IType
 	IFields
-	IContainers
 
-	// Returns partition key type
+	// Returns partition key
 	Partition() IViewPartKey
 
-	// Returns clustering columns type
+	// Returns clustering columns
 	ClustCols() IViewClustCols
 }
 
@@ -58,11 +56,10 @@ type IViewKeyBuilder interface {
 	ClustCols() IViewClustColsBuilder
 }
 
-// View partition key type.
+// View partition key.
 //
 // Ref. to view.go for implementation
 type IViewPartKey interface {
-	IType
 	IFields
 }
 
@@ -87,11 +84,10 @@ type IViewPartKeyBuilder interface {
 	SetFieldComment(name string, comment ...string) IViewPartKeyBuilder
 }
 
-// View clustering columns type.
+// View clustering columns.
 //
 // Ref. to view.go for implementation
 type IViewClustCols interface {
-	IType
 	IFields
 }
 
@@ -117,14 +113,16 @@ type IViewClustColsBuilder interface {
 	SetFieldComment(name string, comment ...string) IViewClustColsBuilder
 }
 
-// View value type.
+// View value.
 //
 // Ref. to view.go for implementation
 type IViewValue interface {
-	IType
 	IFields
 }
 
+// View value builder.
+//
+// Ref. to view.go for implementation
 type IViewValueBuilder interface {
 	IFieldsBuilder
 }
