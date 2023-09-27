@@ -552,13 +552,13 @@ type NamedParam struct {
 
 type TableStmt struct {
 	Statement
-	Abstract     bool            `parser:"@'ABSTRACT'? 'TABLE'"`
-	Name         Ident           `parser:"@Ident"`
-	Inherits     *DefQName       `parser:"('INHERITS' @@)?"`
-	Items        []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	With         []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
-	tableDefKind appdef.DefKind  // filled on the analysis stage
-	singletone   bool
+	Abstract      bool            `parser:"@'ABSTRACT'? 'TABLE'"`
+	Name          Ident           `parser:"@Ident"`
+	Inherits      *DefQName       `parser:"('INHERITS' @@)?"`
+	Items         []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	With          []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	tableTypeKind appdef.TypeKind // filled on the analysis stage
+	singletone    bool
 }
 
 func (s *TableStmt) GetName() string { return string(s.Name) }

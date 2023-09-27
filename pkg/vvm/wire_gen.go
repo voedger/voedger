@@ -37,6 +37,7 @@ import (
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys/builtin"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	"github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
@@ -141,8 +142,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	}
 	cache := dbcertcache.ProvideDbCache(routerAppStorage)
 	v5 := provideAppsWSAmounts(vvmApps, iAppStructsProvider)
-	vvmRouterServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobberAppClusterID, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v5)
-	routerServiceOperator := provideRouterServiceFactory(vvmRouterServices)
+	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobberAppClusterID, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v5)
+	routerServiceOperator := provideRouterServiceFactory(routerServices)
 	metricsServicePortInitial := vvmConfig.MetricsServicePort
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
 	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
@@ -416,7 +417,7 @@ func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IApp
 						WS:         wsid,
 					}, offset)
 				},
-				IntentsLimit: actualizerIntentsLimit,
+				IntentsLimit: builtin.MaxCUDs,
 			}
 			actualizer := actualizerFactory(conf, appStructs.SyncProjectors()[0], appStructs.SyncProjectors()[1:]...)
 			actualizers = append(actualizers, pipeline.SwitchBranch(appQName.String(), actualizer))
@@ -527,7 +528,7 @@ func provideAsyncActualizersFactory(appStructsProvider istructs.IAppStructsProvi
 			Partition:     partitionID,
 			Broker:        n10nBroker,
 			Opts:          opts,
-			IntentsLimit:  actualizerIntentsLimit,
+			IntentsLimit:  builtin.MaxCUDs,
 			FlushInterval: actualizerFlushInterval,
 		}
 

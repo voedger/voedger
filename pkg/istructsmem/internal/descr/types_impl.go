@@ -9,50 +9,50 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func newDef() *Def {
-	return &Def{
+func newType() *Type {
+	return &Type{
 		Fields:     make([]*Field, 0),
 		Containers: make([]*Container, 0),
 		Uniques:    make([]*Unique, 0),
 	}
 }
 
-func (d *Def) read(def appdef.IDef) {
-	d.Comment = readComment(def)
+func (t *Type) read(typ appdef.IType) {
+	t.Comment = readComment(typ)
 
-	d.Name = def.QName()
-	d.Kind = def.Kind()
+	t.Name = typ.QName()
+	t.Kind = typ.Kind()
 
-	if fld, ok := def.(appdef.IFields); ok {
+	if fld, ok := typ.(appdef.IFields); ok {
 		fld.Fields(func(field appdef.IField) {
 			f := newField()
 			f.read(field)
-			d.Fields = append(d.Fields, f)
+			t.Fields = append(t.Fields, f)
 		})
 	}
 
-	if cnt, ok := def.(appdef.IContainers); ok {
+	if cnt, ok := typ.(appdef.IContainers); ok {
 		cnt.Containers(func(cont appdef.IContainer) {
 			c := newContainer()
 			c.read(cont)
-			d.Containers = append(d.Containers, c)
+			t.Containers = append(t.Containers, c)
 		})
 	}
 
-	if uni, ok := def.(appdef.IUniques); ok {
+	if uni, ok := typ.(appdef.IUniques); ok {
 		uni.Uniques(func(unique appdef.IUnique) {
 			u := newUnique()
 			u.read(unique)
-			d.Uniques = append(d.Uniques, u)
+			t.Uniques = append(t.Uniques, u)
 		})
 		if uf := uni.UniqueField(); uf != nil {
-			d.UniqueField = uf.Name()
+			t.UniqueField = uf.Name()
 		}
 	}
 
-	if cDoc, ok := def.(appdef.ICDoc); ok {
+	if cDoc, ok := typ.(appdef.ICDoc); ok {
 		if cDoc.Singleton() {
-			d.Singleton = true
+			t.Singleton = true
 		}
 	}
 }

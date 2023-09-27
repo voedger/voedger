@@ -49,7 +49,7 @@ func overlaps[T comparable](set1, set2 []T) bool {
 // Generates name for unique.
 //
 // For single field unique, the concatenation of `Unique` word and the field name is used.
-// E.g., for definition with single field «eMail» name "UniqueEMail" will returned.
+// E.g., for type with single field «eMail» name "UniqueEMail" will returned.
 //
 // For multiply fields unique, the concatenation of the `Unique` word and two digits is used, e.g. "Unique01".
 func generateUniqueName(u IUniques, fields []string) string {
@@ -60,12 +60,12 @@ func generateUniqueName(u IUniques, fields []string) string {
 			return s
 		}
 	}
-	const tryCnt = MaxDefUniqueCount
+	const tryCnt = MaxTypeUniqueCount
 	for i := 1; i < tryCnt; i++ {
 		s := pref + fmt.Sprintf("%02d", i)
 		if u.UniqueByName(s) == nil {
 			return s
 		}
 	}
-	panic(fmt.Errorf("unable to generate unique name for definition: %w", ErrTooManyUniques))
+	panic(fmt.Errorf("unable to generate unique name for type: %w", ErrTooManyUniques))
 }

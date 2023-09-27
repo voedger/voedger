@@ -138,6 +138,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 	})
 }
 
+// Deprecated: use c.sys.CUD. Kept to not to break the exitsing events only
 func TestBasicUsage_Init(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
@@ -150,8 +151,8 @@ func TestBasicUsage_Init(t *testing.T) {
 			"cuds": [
 				{
 					"fields": {
-						"sys.ID": 1000000002,
-						"sys.QName": "app1.articles",
+						"sys.ID": 100000,
+						"sys.QName": "simpleApp.articles",
 						"name": "cola",
 						"article_manual": 11,
 						"article_hash": 21,
@@ -182,7 +183,7 @@ func TestBasicUsage_Init(t *testing.T) {
 	id := resp.SectionRow()[2].(float64)
 	require.Equal("cola", actualName)
 	require.Equal(float64(51), actualControlActive)
-	require.Equal(float64(1000000002), id)
+	require.Greater(istructs.RecordID(id), istructs.MaxRawRecordID)
 }
 
 func TestBasicUsage_Singletons(t *testing.T) {
@@ -333,11 +334,12 @@ func TestEraseString(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	idAnyAirTablePlan := vit.GetAny("simpleApp.air_table_plan", ws)
 
-	body := `{"cuds":[{"sys.ID": 5000000000400,"fields":{"name":""}}]}`
+	body := fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"name":""}}]}`, idAnyAirTablePlan)
 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	body = `{"args":{"Schema":"app1.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":5000000000400}}]}`
+	body = fmt.Sprintf(`{"args":{"Schema":"simpleApp.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, idAnyAirTablePlan)
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
 	require.Equal(t, "", resp.SectionRow()[0].(string))
@@ -358,4 +360,13 @@ func TestEraseString1(t *testing.T) {
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
 	require.Equal(t, "", resp.SectionRow()[0].(string))
+}
+
+func TestDenyCreateNonRawIDs(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	body := `{"cuds": [{"fields": {"sys.ID": 1000000000,"sys.QName": "simpleApp.options"}}]}`
+	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
 }

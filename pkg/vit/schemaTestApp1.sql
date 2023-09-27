@@ -393,12 +393,18 @@ TABLE Doc INHERITS CDoc (
 );
 
 TABLE DocConstraints INHERITS CDoc (
-	Int int32 NOT NULL,
+	Int int32,
 	Str varchar NOT NULL,
 	Bool bool NOT NULL,
 	Float32 float32,
 	Bytes bytes NOT NULL,
 	UNIQUEFIELD Int
+);
+
+TABLE DocConstraintsString INHERITS CDoc (
+	Str varchar,
+	Int int32,
+	UNIQUEFIELD Str
 );
 
 TABLE Config INHERITS Singleton (

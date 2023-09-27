@@ -27,7 +27,7 @@ type IExtension interface {
 //
 // Ref. to command.go for implementation
 type ICommand interface {
-	IDef
+	IType
 	IComment
 
 	// Argument. Returns nil if not assigned

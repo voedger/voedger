@@ -231,7 +231,7 @@ func (e *appEventsType) GetNewRawEventBuilder(params istructs.NewRawEventBuilder
 }
 
 // istructs.IEvents.PutPlog
-func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator istructs.IDGenerator) (event istructs.IPLogEvent, err error) {
+func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator istructs.IIDGenerator) (event istructs.IPLogEvent, err error) {
 	dbEvent := ev.(*eventType)
 
 	dbEvent.setBuildError(buildErr)
@@ -402,7 +402,7 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 			if err = rec.loadFromBytes(*b.Data); err != nil {
 				return err
 			}
-			ids[i].Record = &rec
+			ids[i].Record = rec
 		}
 	}
 	return nil
@@ -429,31 +429,49 @@ func (recs *appRecordsType) putRecordsBatch(workspace istructs.WSID, records []r
 	return recs.app.config.storage.PutBatch(batch)
 }
 
-// validEvent returns error if event has non-committable data, such as singleton unique violations or invalid record id references
+// validEvent returns error if event has non-committable data, such as singleton unique violations or non exists updated record id
 func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
-	existsRecord := func(id istructs.RecordID) (bool, error) {
+	load := func(id istructs.RecordID, rec *recordType) (exists bool, err error) {
 		data := make([]byte, 0)
-		ok, err := recs.getRecord(ev.ws, id, &data)
-		if err != nil {
-			return false, err
+		if exists, err = recs.getRecord(ev.ws, id, &data); exists {
+			if rec != nil {
+				err = rec.loadFromBytes(data)
+			}
 		}
-		return ok, nil
+
+		return exists, err
 	}
 
 	for _, rec := range ev.cud.creates {
-		if cDoc, ok := rec.def.(appdef.ICDoc); ok && cDoc.Singleton() {
+		if cDoc, ok := rec.typ.(appdef.ICDoc); ok && cDoc.Singleton() {
 			id, err := recs.app.config.singletons.ID(rec.QName())
 			if err != nil {
 				return err
 			}
-			isExists, err := existsRecord(id)
+			exists, err := load(id, nil)
 			if err != nil {
-				return err
+				return fmt.Errorf("error checking singleton CDoc «%v» record «%d» existence: %w", rec.QName(), id, err)
 			}
-			if isExists {
+			if exists {
 				return fmt.Errorf("can not create singleton, CDoc «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
 			}
+		}
+	}
+
+	for _, rec := range ev.cud.updates {
+		old := newRecord(recs.app.config)
+		exists, err := load(rec.originRec.ID(), old)
+		if err != nil {
+			return fmt.Errorf("error load updated «%v» record «%d»: %w", rec.originRec.QName(), rec.originRec.ID(), err)
+		}
+		if !exists {
+			return fmt.Errorf("updated «%v» record «%d» not exists: %w", rec.originRec.QName(), rec.originRec.ID(), ErrRecordIDNotFound)
+		}
+
+		// check exists record has correct QName
+		if rec.originRec.QName() != old.QName() {
+			return fmt.Errorf("updated «%v» record «%d» has unexpected QName value «%v»: %w", rec.originRec.QName(), rec.originRec.ID(), old.QName(), ErrWrongType)
 		}
 	}
 
@@ -462,7 +480,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
 // istructs.IRecords.Apply
 func (recs *appRecordsType) Apply(event istructs.IPLogEvent) (err error) {
-	return recs.Apply2(event, func(istructs.IRecord) {})
+	return recs.Apply2(event, nil)
 }
 
 // istructs.IRecords.Apply2
@@ -473,29 +491,10 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 		panic(fmt.Errorf("can not apply not valid event: %s: %w", ev.Error().ErrStr(), ErrorEventNotValid))
 	}
 
-	existsRecord := func(id istructs.RecordID) (bool, error) {
-		data := make([]byte, 0)
-		ok, err := recs.getRecord(ev.ws, id, &data)
-		if err != nil {
-			return false, err
-		}
-		return ok, nil
-	}
-
-	loadRecord := func(rec *recordType) error {
-		data := make([]byte, 0)
-		var ok bool
-		if ok, err = recs.getRecord(ev.ws, rec.ID(), &data); ok {
-			err = rec.loadFromBytes(data)
-		}
-
-		return err
-	}
-
 	records := make([]*recordType, 0)
 	batch := make([]recordBatchItemType, 0)
 
-	storeRecord := func(rec *recordType) error {
+	store := func(rec *recordType) error {
 		data := rec.storeToBytes()
 		records = append(records, rec)
 		batch = append(batch, recordBatchItemType{rec.ID(), data})
@@ -503,11 +502,25 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 		return nil
 	}
 
-	if err = ev.applyCommandRecs(existsRecord, loadRecord, storeRecord); err == nil {
+	load := func(rec *recordType) error {
+		data := make([]byte, 0)
+		exists, err := recs.getRecord(ev.ws, rec.ID(), &data)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("record «%d» not exists: %w", rec.ID(), ErrRecordIDNotFound)
+		}
+		return rec.loadFromBytes(data)
+	}
+
+	if err = ev.cud.applyRecs(load, store); err == nil {
 		if len(records) > 0 {
 			if err = recs.putRecordsBatch(ev.ws, batch); err == nil {
-				for _, rec := range records {
-					cb(rec)
+				if cb != nil {
+					for _, rec := range records {
+						cb(rec)
+					}
 				}
 			}
 		}
@@ -523,7 +536,7 @@ func (recs *appRecordsType) Get(workspace istructs.WSID, highConsistency bool, i
 	if ok, err = recs.getRecord(workspace, id, &data); ok {
 		rec := newRecord(recs.app.config)
 		if err = rec.loadFromBytes(data); err == nil {
-			return &rec, nil
+			return rec, nil
 		}
 	}
 	return NewNullRecord(id), err

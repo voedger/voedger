@@ -67,7 +67,7 @@ func TestBasicUsage(t *testing.T) {
 		`("test\.doc")(\s*:\s*{\s*)`+
 			`("Comment")(\s*:\s*)("comment 1\\ncomment 2")(\s*,\s*)`+
 			`("Name")(\s*:\s*)("test\.doc")(\s*,\s*)`+
-			`("Kind")(\s*:\s*)("DefKind_CDoc")`,
+			`("Kind")(\s*:\s*)("TypeKind_CDoc")`,
 		string(json), "doc «test.doc» expected")
 
 	require.Regexp(

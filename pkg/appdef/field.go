@@ -90,8 +90,8 @@ type fields struct {
 	fieldsOrdered []string
 }
 
-func makeFields(def interface{}) fields {
-	f := fields{def, make(map[string]interface{}), make([]string, 0)}
+func makeFields(parent interface{}) fields {
+	f := fields{parent, make(map[string]interface{}), make([]string, 0)}
 	f.makeSysFields()
 	return f
 }
@@ -124,7 +124,7 @@ func (f *fields) AddStringField(name string, required bool, restricts ...IFieldR
 func (f *fields) AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder {
 	f.checkAddField(name, kind)
 	if len(vk) == 0 {
-		panic(fmt.Errorf("%v: missed verification kind for field «%s»: %w", f.parentDef().QName(), name, ErrVerificationKindMissed))
+		panic(fmt.Errorf("%v: missed verification kind for field «%s»: %w", f.parentType().QName(), name, ErrVerificationKindMissed))
 	}
 	f.appendField(name, newField(name, kind, required))
 	f.SetFieldVerify(name, vk...)
@@ -184,7 +184,7 @@ func (f *fields) RefFieldCount() int {
 func (f *fields) SetFieldComment(name string, comment ...string) IFieldsBuilder {
 	fld := f.fields[name]
 	if fld == nil {
-		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parentDef().QName(), name, ErrNameNotFound))
+		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parentType().QName(), name, ErrNameNotFound))
 	}
 	fld.(ICommentBuilder).SetComment(comment...)
 	return f.parent.(IFieldsBuilder)
@@ -193,7 +193,7 @@ func (f *fields) SetFieldComment(name string, comment ...string) IFieldsBuilder 
 func (f *fields) SetFieldVerify(name string, vk ...VerificationKind) IFieldsBuilder {
 	fld := f.fields[name]
 	if fld == nil {
-		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parentDef().QName(), name, ErrNameNotFound))
+		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parentType().QName(), name, ErrNameNotFound))
 	}
 	vf := fld.(interface{ setVerify(k ...VerificationKind) })
 	vf.setVerify(vk...)
@@ -226,32 +226,32 @@ func (f *fields) appendField(name string, fld interface{}) {
 // Panics if invalid add field argument value
 func (f *fields) checkAddField(name string, kind DataKind) {
 	if name == NullName {
-		panic(fmt.Errorf("%v: empty field name: %w", f.parentDef().QName(), ErrNameMissed))
+		panic(fmt.Errorf("%v: empty field name: %w", f.parentType().QName(), ErrNameMissed))
 	}
 	if !IsSysField(name) {
 		if ok, err := ValidIdent(name); !ok {
-			panic(fmt.Errorf("%v: field name «%v» is invalid: %w", f.parentDef().QName(), name, err))
+			panic(fmt.Errorf("%v: field name «%v» is invalid: %w", f.parentType().QName(), name, err))
 		}
 	}
 	if f.Field(name) != nil {
-		panic(fmt.Errorf("%v: field «%s» is already exists: %w", f.parentDef().QName(), name, ErrNameUniqueViolation))
+		panic(fmt.Errorf("%v: field «%s» is already exists: %w", f.parentType().QName(), name, ErrNameUniqueViolation))
 	}
 
-	if k := f.parentDef().Kind(); !k.DataKindAvailable(kind) {
-		panic(fmt.Errorf("%v: definition kind «%s» does not support fields kind «%s»: %w", f.parentDef().QName(), k.TrimString(), kind.TrimString(), ErrInvalidDataKind))
+	if k := f.parentType().Kind(); !k.DataKindAvailable(kind) {
+		panic(fmt.Errorf("%v: type kind «%s» does not support fields kind «%s»: %w", f.parentType().QName(), k.TrimString(), kind.TrimString(), ErrInvalidDataKind))
 	}
 
-	if len(f.fields) >= MaxDefFieldCount {
-		panic(fmt.Errorf("%v: maximum field count (%d) exceeds: %w", f.parentDef().QName(), MaxDefFieldCount, ErrTooManyFields))
+	if len(f.fields) >= MaxTypeFieldCount {
+		panic(fmt.Errorf("%v: maximum field count (%d) exceeds: %w", f.parentType().QName(), MaxTypeFieldCount, ErrTooManyFields))
 	}
 }
 
-func (f *fields) parentDef() IDef {
-	return f.parent.(IDef)
+func (f *fields) parentType() IType {
+	return f.parent.(IType)
 }
 
 func (f *fields) makeSysFields() {
-	k := f.parentDef().Kind()
+	k := f.parentType().Kind()
 
 	if k.HasSystemField(SystemField_QName) {
 		f.AddField(SystemField_QName, DataKind_QName, true)
@@ -327,20 +327,20 @@ func (f charsField) Restricts() IStringFieldRestricts {
 // Validates specified fields.
 //
 // # Validation:
-//   - every RefField must refer to known definitions,
-//   - every referenced by RefField definition must have «sys.ID» system field
-func validateDefFields(def IDef) (err error) {
-	if fld, ok := def.(IFields); ok {
-		// resolve reference fields definitions
+//   - every RefField must refer to known types,
+//   - every referenced by RefField type must have «sys.ID» system field
+func validateTypeFields(t IType) (err error) {
+	if fld, ok := t.(IFields); ok {
+		// resolve reference types
 		fld.RefFields(func(rf IRefField) {
 			for _, n := range rf.Refs() {
-				refDef := def.App().DefByName(n)
-				if refDef == nil {
-					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to unknown definition «%v»: %w", def.QName(), rf.Name(), n, ErrNameNotFound))
+				refType := t.App().TypeByName(n)
+				if refType == nil {
+					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to unknown type «%v»: %w", t.QName(), rf.Name(), n, ErrNameNotFound))
 					continue
 				}
-				if !refDef.Kind().HasSystemField(SystemField_ID) {
-					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to non referable definition «%v» kind «%s» without «%s» field: %w", def.QName(), rf.Name(), n, refDef.Kind().TrimString(), SystemField_ID, ErrInvalidDefKind))
+				if !refType.Kind().HasSystemField(SystemField_ID) {
+					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to non referable type «%v» kind «%s» without «%s» field: %w", t.QName(), rf.Name(), n, refType.Kind().TrimString(), SystemField_ID, ErrInvalidTypeKind))
 					continue
 				}
 			}

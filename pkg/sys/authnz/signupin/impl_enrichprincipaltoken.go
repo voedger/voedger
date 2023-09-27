@@ -28,7 +28,7 @@ func (r *enrichPrincipalTokenRR) AsString(string) string {
 // targetApp/parentWS/q.sys.EnrichPrincipalToken
 // basic auth, WorkspaceOwner
 func provideExecQryEnrichPrincipalToken(atf payloads.IAppTokensFactory) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		appQName := args.Workpiece.(interface{ AppQName() istructs.AppQName }).AppQName()
 		appTokens := atf.New(appQName)
 

@@ -23,12 +23,18 @@ type recordType struct {
 	isNew bool
 }
 
-// newRecord create new null (appdef.NullQName) record
-func newRecord(appCfg *AppConfigType) recordType {
+// makeRecord makes null (appdef.NullQName) record
+func makeRecord(appCfg *AppConfigType) recordType {
 	rec := recordType{
 		rowType: newRow(appCfg),
 	}
 	return rec
+}
+
+// newRecord create new null (appdef.NullQName) record
+func newRecord(appCfg *AppConfigType) *recordType {
+	r := makeRecord(appCfg)
+	return &r
 }
 
 // copyFrom assigns record from specified source record
@@ -45,7 +51,7 @@ func (rec *recordType) IsNew() bool {
 func NewNullRecord(id istructs.RecordID) istructs.IRecord {
 	rec := newRecord(NullAppConfig)
 	rec.setID(id)
-	return &rec
+	return rec
 }
 
 // istructs.ICUDRow.ModifiedFields

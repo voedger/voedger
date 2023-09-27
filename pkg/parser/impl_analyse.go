@@ -213,11 +213,11 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 				if table.Abstract {
 					return ErrAbstractTableNotAlowedInProjectors(target.String())
 				}
-				defKind, _, err := c.getTableDefKind(table)
+				k, _, err := c.getTableTypeKind(table)
 				if err != nil {
 					return err
 				}
-				if defKind == appdef.DefKind_ODoc || defKind == appdef.DefKind_ORecord {
+				if k == appdef.TypeKind_ODoc || k == appdef.TypeKind_ORecord {
 					if v.CUDEvents.Activate || v.CUDEvents.Deactivate || v.CUDEvents.Update {
 						return ErrOnlyInsertForOdocOrORecord
 					}
@@ -370,13 +370,13 @@ func (c *analyseCtx) table(v *TableStmt) {
 		return
 	}
 	var err error
-	v.tableDefKind, v.singletone, err = c.getTableDefKind(v)
+	v.tableTypeKind, v.singletone, err = c.getTableTypeKind(v)
 	if err != nil {
 		c.stmtErr(&v.Pos, err)
 		return
 	}
 	c.with(&v.With, v)
-	c.nestedTables(v.Items, v.tableDefKind)
+	c.nestedTables(v.Items, v.tableTypeKind)
 	c.fieldSets(v.Items)
 	c.fields(v.Items)
 	if v.Inherits != nil {
@@ -440,12 +440,12 @@ func (c *analyseCtx) workspace(v *WorkspaceStmt) {
 		if v.Abstract {
 			c.stmtErr(&v.Pos, ErrAbstractWorkspaceDescriptor)
 		}
-		c.nestedTables(v.Descriptor.Items, appdef.DefKind_CDoc)
+		c.nestedTables(v.Descriptor.Items, appdef.TypeKind_CDoc)
 		c.fieldSets(v.Descriptor.Items)
 	}
 }
 
-func (c *analyseCtx) nestedTables(items []TableItemExpr, rootTableKind appdef.DefKind) {
+func (c *analyseCtx) nestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind) {
 	for i := range items {
 		item := items[i]
 		if item.NestedTable != nil {
@@ -455,16 +455,16 @@ func (c *analyseCtx) nestedTables(items []TableItemExpr, rootTableKind appdef.De
 				return
 			}
 			if nestedTable.Inherits == nil {
-				nestedTable.tableDefKind = getNestedTableKind(rootTableKind)
+				nestedTable.tableTypeKind = getNestedTableKind(rootTableKind)
 			} else {
 				var err error
-				nestedTable.tableDefKind, nestedTable.singletone, err = c.getTableDefKind(nestedTable)
+				nestedTable.tableTypeKind, nestedTable.singletone, err = c.getTableTypeKind(nestedTable)
 				if err != nil {
 					c.stmtErr(&nestedTable.Pos, err)
 					return
 				}
 				tk := getNestedTableKind(rootTableKind)
-				if nestedTable.tableDefKind != tk {
+				if nestedTable.tableTypeKind != tk {
 					c.stmtErr(&nestedTable.Pos, ErrNestedTableIncorrectKind)
 					return
 				}
@@ -562,25 +562,25 @@ func (c *analyseCtx) getTableInheritanceChain(table *TableStmt) (chain []DefQNam
 	return
 }
 
-func (c *analyseCtx) getTableDefKind(table *TableStmt) (kind appdef.DefKind, singletone bool, err error) {
+func (c *analyseCtx) getTableTypeKind(table *TableStmt) (kind appdef.TypeKind, singletone bool, err error) {
 	chain, e := c.getTableInheritanceChain(table)
 	if e != nil {
-		return appdef.DefKind_null, false, e
+		return appdef.TypeKind_null, false, e
 	}
 	for _, t := range chain {
 		if isSysDef(t, nameCDOC) || isSysDef(t, nameSingleton) {
-			return appdef.DefKind_CDoc, isSysDef(t, nameSingleton), nil
+			return appdef.TypeKind_CDoc, isSysDef(t, nameSingleton), nil
 		} else if isSysDef(t, nameODOC) {
-			return appdef.DefKind_ODoc, false, nil
+			return appdef.TypeKind_ODoc, false, nil
 		} else if isSysDef(t, nameWDOC) {
-			return appdef.DefKind_WDoc, false, nil
+			return appdef.TypeKind_WDoc, false, nil
 		} else if isSysDef(t, nameCRecord) {
-			return appdef.DefKind_CRecord, false, nil
+			return appdef.TypeKind_CRecord, false, nil
 		} else if isSysDef(t, nameORecord) {
-			return appdef.DefKind_ORecord, false, nil
+			return appdef.TypeKind_ORecord, false, nil
 		} else if isSysDef(t, nameWRecord) {
-			return appdef.DefKind_WRecord, false, nil
+			return appdef.TypeKind_WRecord, false, nil
 		}
 	}
-	return appdef.DefKind_null, false, ErrUndefinedTableKind
+	return appdef.TypeKind_null, false, ErrUndefinedTableKind
 }

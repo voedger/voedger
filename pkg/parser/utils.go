@@ -235,14 +235,14 @@ func isPredefinedSysTable(packageName string, table *TableStmt) bool {
 			table.Name == nameCRecord || table.Name == nameWRecord || table.Name == nameORecord)
 }
 
-func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
+func getNestedTableKind(rootTableKind appdef.TypeKind) appdef.TypeKind {
 	switch rootTableKind {
-	case appdef.DefKind_CDoc, appdef.DefKind_CRecord:
-		return appdef.DefKind_CRecord
-	case appdef.DefKind_ODoc, appdef.DefKind_ORecord:
-		return appdef.DefKind_ORecord
-	case appdef.DefKind_WDoc, appdef.DefKind_WRecord:
-		return appdef.DefKind_WRecord
+	case appdef.TypeKind_CDoc, appdef.TypeKind_CRecord:
+		return appdef.TypeKind_CRecord
+	case appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
+		return appdef.TypeKind_ORecord
+	case appdef.TypeKind_WDoc, appdef.TypeKind_WRecord:
+		return appdef.TypeKind_WRecord
 	default:
 		panic(fmt.Sprintf("unexpected root table kind %d", rootTableKind))
 	}

@@ -108,8 +108,8 @@ func (vit *VIT) getCDoc(appQName istructs.AppQName, qName appdef.QName, wsid ist
 	fields := []string{}
 	as, err := vit.IAppStructsProvider.AppStructs(appQName)
 	require.NoError(vit.T, err)
-	if def := as.AppDef().CDoc(qName); def != nil {
-		def.Fields(func(field appdef.IField) {
+	if doc := as.AppDef().CDoc(qName); doc != nil {
+		doc.Fields(func(field appdef.IField) {
 			switch field.Name() {
 			case appdef.SystemField_ID, appdef.SystemField_QName, appdef.SystemField_IsActive:
 				return
@@ -359,6 +359,18 @@ func (vit *VIT) MetricsRequest(opts ...coreutils.ReqOptFunc) (resp string) {
 	res, err := coreutils.Req(url, "", opts...)
 	require.NoError(vit.T, err)
 	return res.Body
+}
+
+func (vit *VIT) GetAny(entity string, ws *AppWorkspace) istructs.RecordID {
+	vit.T.Helper()
+	body := fmt.Sprintf(`{"args":{"Query":"select DocID from sys.CollectionView where PartKey = 1 and DocQName = '%s'"},"elements":[{"fields":["Result"]}]}`, entity)
+	resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+	if len(resp.Sections) == 0 {
+		vit.T.Fatalf("no %s at workspace id %d", entity, ws.WSID)
+	}
+	data := map[string]interface{}{}
+	require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &data))
+	return istructs.RecordID(data["DocID"].(float64))
 }
 
 func NewLogin(name, pwd string, appQName istructs.AppQName, subjectKind istructs.SubjectKindType, clusterID istructs.ClusterID) Login {

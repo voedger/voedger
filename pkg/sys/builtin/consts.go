@@ -5,14 +5,20 @@
 
 package builtin
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"embed"
 
-var (
-	QNameCommandInit   = appdef.NewQName(appdef.SysPackage, "Init")
-	QNameCommandImport = appdef.NewQName(appdef.SysPackage, "Import")
+	"github.com/voedger/voedger/pkg/appdef"
 )
+
+// Deprecated: use c.sys.CUD instead. Kept to not to break existing events only
+var QNameCommandInit = appdef.NewQName(appdef.SysPackage, "Init")
+
+//go:embed schema.sql
+var schemaBuiltinFS embed.FS
 
 const (
 	field_ExistingQName = "ExistingQName"
 	field_NewQName      = "NewQName"
+	MaxCUDs             = 351 // max rawID in perftest template is 351
 )

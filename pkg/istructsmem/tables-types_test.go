@@ -35,7 +35,7 @@ func Test_newRecord(t *testing.T) {
 		require.True(rec.empty())
 
 		t.Run("test as IRecord", func(t *testing.T) {
-			var r istructs.IRecord = &rec
+			var r istructs.IRecord = rec
 			require.Equal(appdef.NullQName, r.QName())
 			require.Equal(istructs.NullRecordID, r.ID())
 			require.Equal(istructs.NullRecordID, r.Parent())
@@ -43,12 +43,12 @@ func Test_newRecord(t *testing.T) {
 		})
 
 		t.Run("test as ICRecord", func(t *testing.T) {
-			var r istructs.ICRecord = &rec
+			var r istructs.ICRecord = rec
 			require.True(r.IsActive())
 		})
 
 		t.Run("test as IRowReader", func(t *testing.T) {
-			var r istructs.IRowReader = &rec
+			var r istructs.IRowReader = rec
 			require.Equal(appdef.NullQName, r.AsQName(appdef.SystemField_QName))
 			require.Equal(istructs.NullRecordID, r.AsRecordID(appdef.SystemField_ID))
 			require.Equal(istructs.NullRecordID, r.AsRecordID(appdef.SystemField_ParentID))
@@ -198,9 +198,9 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		rec2 := newRecord(test.AppCfg)
 		err := rec2.loadFromBytes(b)
 		require.NoError(err)
-		testTestCDoc(t, &rec2, 100500)
+		testTestCDoc(t, rec2, 100500)
 
-		testRecsIsEqual(t, rec1, &rec2)
+		testRecsIsEqual(t, rec1, rec2)
 	})
 
 	t.Run("same as previous test, but for deactivated CDoc", func(t *testing.T) {
@@ -212,10 +212,10 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		rec2 := newRecord(test.AppCfg)
 		err := rec2.loadFromBytes(b)
 		require.NoError(err)
-		testTestCDoc(t, &rec2, 100501)
+		testTestCDoc(t, rec2, 100501)
 		require.False(rec2.AsBool(appdef.SystemField_IsActive))
 
-		testRecsIsEqual(t, rec1, &rec2)
+		testRecsIsEqual(t, rec1, rec2)
 	})
 
 	t.Run("must be ok to read data stored with previous codec versions", func(t *testing.T) {
@@ -228,17 +228,17 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			if row.QName() == appdef.NullQName {
 				return buf.Bytes()
 			}
-			if row.def.Kind().HasSystemField(appdef.SystemField_ID) {
+			if row.typ.Kind().HasSystemField(appdef.SystemField_ID) {
 				require.NoError(binary.Write(buf, binary.BigEndian, uint64(row.ID())))
 			}
-			if row.def.Kind().HasSystemField(appdef.SystemField_ParentID) {
+			if row.typ.Kind().HasSystemField(appdef.SystemField_ParentID) {
 				require.NoError(binary.Write(buf, binary.BigEndian, uint64(row.parentID)))
 			}
-			if row.def.Kind().HasSystemField(appdef.SystemField_Container) {
+			if row.typ.Kind().HasSystemField(appdef.SystemField_Container) {
 				id, _ := row.containerID()
 				require.NoError(binary.Write(buf, binary.BigEndian, int16(id)))
 			}
-			if row.def.Kind().HasSystemField(appdef.SystemField_IsActive) {
+			if row.typ.Kind().HasSystemField(appdef.SystemField_IsActive) {
 				require.NoError(binary.Write(buf, binary.BigEndian, row.isActive))
 			}
 			b, err := row.dyB.ToBytes()
@@ -258,9 +258,9 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			doc2 := newRecord(test.AppCfg)
 			err := doc2.loadFromBytes(bytes)
 			require.NoError(err)
-			testTestCDoc(t, &doc2, 100502)
+			testTestCDoc(t, doc2, 100502)
 
-			testRecsIsEqual(t, doc1, &doc2)
+			testRecsIsEqual(t, doc1, doc2)
 		})
 
 		t.Run("test CRecords", func(t *testing.T) {
@@ -274,7 +274,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			err := rec2.loadFromBytes(bytes)
 			require.NoError(err)
 
-			testRecsIsEqual(t, rec1, &rec2)
+			testRecsIsEqual(t, rec1, rec2)
 		})
 	})
 
@@ -342,7 +342,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 						stat["Errors"]++
 						return
 					}
-					if ok, diff := recsIsEqual(rec1, &rec2); ok {
+					if ok, diff := recsIsEqual(rec1, rec2); ok {
 						log.Verbose("%d: success load, data is ok\n", i)
 						stat["Lucky"]++
 					} else {
@@ -361,7 +361,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		b := rec1.storeToBytes()
 
 		appDef := appdef.New()
-		t.Run("must be ok to build application definition", func(t *testing.T) {
+		t.Run("must be ok to build application", func(t *testing.T) {
 			appDef.AddCDoc(test.testCDoc).
 				AddField("int32_1", appdef.DataKind_int32, false).
 				AddField("int64_1", appdef.DataKind_int64, false).

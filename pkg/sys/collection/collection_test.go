@@ -53,45 +53,45 @@ func appConfigs() (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
 		cfg.Resources.Add(istructsmem.NewCommandFunction(test.modifyCmdName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 	}
 	{ // CDoc: articles
-		articlesDef := adf.AddCDoc(test.tableArticles)
-		articlesDef.
+		articles := adf.AddCDoc(test.tableArticles)
+		articles.
 			AddField(test.articleNameIdent, appdef.DataKind_string, true).
 			AddField(test.articleNumberIdent, appdef.DataKind_int32, false).
 			AddField(test.articleDeptIdent, appdef.DataKind_RecordID, false)
-		articlesDef.
+		articles.
 			AddContainer(test.tableArticlePrices.Entity(), test.tableArticlePrices, appdef.Occurs(0), appdef.Occurs(100))
 	}
 	{ // CDoc: departments
-		depDef := adf.AddCDoc(test.tableDepartments)
-		depDef.
+		departments := adf.AddCDoc(test.tableDepartments)
+		departments.
 			AddField(test.depNameIdent, appdef.DataKind_string, true).
 			AddField(test.depNumberIdent, appdef.DataKind_int32, false)
 	}
 	{ // CDoc: periods
-		periodsDef := adf.AddCDoc(test.tablePeriods)
-		periodsDef.
+		periods := adf.AddCDoc(test.tablePeriods)
+		periods.
 			AddField(test.periodNameIdent, appdef.DataKind_string, true).
 			AddField(test.periodNumberIdent, appdef.DataKind_int32, false)
 	}
 	{ // CDoc: prices
-		pricesDef := adf.AddCDoc(test.tablePrices)
-		pricesDef.
+		prices := adf.AddCDoc(test.tablePrices)
+		prices.
 			AddField(test.priceNameIdent, appdef.DataKind_string, true).
 			AddField(test.priceNumberIdent, appdef.DataKind_int32, false)
 	}
 
 	{ // CDoc: article prices
-		articlesPricesDef := adf.AddCRecord(test.tableArticlePrices)
-		articlesPricesDef.
+		articlesPrices := adf.AddCRecord(test.tableArticlePrices)
+		articlesPrices.
 			AddField(test.articlePricesPriceIdIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePricesPriceIdent, appdef.DataKind_float32, true)
-		articlesPricesDef.
+		articlesPrices.
 			AddContainer(test.tableArticlePriceExceptions.Entity(), test.tableArticlePriceExceptions, appdef.Occurs(0), appdef.Occurs(100))
 	}
 
 	{ // CDoc: article price exceptions
-		articlesPricesExceptionsDef := adf.AddCRecord(test.tableArticlePriceExceptions)
-		articlesPricesExceptionsDef.
+		articlesPricesExceptions := adf.AddCRecord(test.tableArticlePriceExceptions)
+		articlesPricesExceptions.
 			AddField(test.articlePriceExceptionsPeriodIdIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePriceExceptionsPriceIdent, appdef.DataKind_float32, true)
 	}
@@ -136,7 +136,7 @@ func TestBasicUsage_Collection(t *testing.T) {
 	coldDrinks, _ := insertDepartments(require, as, &idGen)
 
 	{ // CUDs: Insert coca-cola
-		event := saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, as, &idGen, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 1, coldDrinks, test.cocaColaNumber, "Coca-cola")
 			newArPriceCUD(event, 1, 2, normalPriceID, 2.4)
 			newArPriceCUD(event, 1, 3, happyHourPriceID, 1.8)
@@ -150,7 +150,7 @@ func TestBasicUsage_Collection(t *testing.T) {
 	cocaColaHappyHourPriceElementId := idGen.idmap[3]
 
 	{ // CUDs: modify coca-cola number and normal price
-		event := saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, as, &idGen, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			updateArticleCUD(event, as, cocaColaDocID, test.cocaColaNumber2, "Coca-cola")
 			updateArPriceCUD(event, as, cocaColaNormalPriceElementId, normalPriceID, 2.2)
 		}))
@@ -158,7 +158,7 @@ func TestBasicUsage_Collection(t *testing.T) {
 	}
 
 	{ // CUDs: insert fanta
-		event := saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, as, &idGen, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 7, coldDrinks, test.fantaNumber, "Fanta")
 			newArPriceCUD(event, 7, 8, normalPriceID, 2.1)
 			newArPriceCUD(event, 7, 9, happyHourPriceID, 1.7)
@@ -198,7 +198,7 @@ func Test_updateChildRecord(t *testing.T) {
 	coldDrinks, _ := insertDepartments(require, as, &idGen)
 
 	{ // CUDs: Insert coca-cola
-		saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		saveEvent(require, as, &idGen, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 1, coldDrinks, test.cocaColaNumber, "Coca-cola")
 			newArPriceCUD(event, 1, 2, normalPriceID, 2.4)
 		}))
@@ -207,7 +207,7 @@ func Test_updateChildRecord(t *testing.T) {
 	cocaColaNormalPriceElementId := idGen.idmap[2]
 
 	{ // CUDs: modify normal price
-		saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		saveEvent(require, as, &idGen, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			updateArPriceCUD(event, as, cocaColaNormalPriceElementId, normalPriceID, 2.2)
 		}))
 	}
@@ -269,7 +269,7 @@ func Test_Collection_3levels(t *testing.T) {
 
 	// insert coca-cola
 	{
-		event := saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, as, &idGen, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 1, coldDrinks, test.cocaColaNumber, "Coca-cola")
 			newArPriceCUD(event, 1, 2, normalPriceID, 2.0)
 			newArPriceCUD(event, 1, 3, happyHourPriceID, 1.5)
@@ -289,7 +289,7 @@ func Test_Collection_3levels(t *testing.T) {
 
 	// insert fanta
 	{
-		event := saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, as, &idGen, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 6, coldDrinks, test.fantaNumber, "Fanta")
 			newArPriceCUD(event, 6, 7, normalPriceID, 2.1)
 			{
@@ -313,7 +313,7 @@ func Test_Collection_3levels(t *testing.T) {
 
 	// modify coca-cola
 	{
-		event := saveEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, as, &idGen, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 			newArPriceExceptionCUD(event, cocaColaNormalPriceElementId, 15, holiday, 1.8)
 			updateArPriceExceptionCUD(event, as, cocaColaHappyHourExceptionHolidayElementId, holiday, 0.9)
 		}))
@@ -513,77 +513,77 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 			{
 				"article_price_exceptions":[
 					{
-						"id_periods":131076,
+						"id_periods":3.22685000131076e+14,
 						"price":1.8,
-						"sys.ID":131089,
+						"sys.ID":3.22685000131089e+14,
 						"sys.IsActive":true
 					}
 				],
-				"id_prices":131072,
+				"id_prices":3.22685000131072e+14,
 				"price":2,
-				"sys.ID":131079,
+				"sys.ID":3.22685000131079e+14,
 				"sys.IsActive":true
 			},
 			{
 				"article_price_exceptions":[
 					{
-						"id_periods":131076,
+						"id_periods":3.22685000131076e+14,
 						"price":0.9,
-						"sys.ID":131081,
+						"sys.ID":3.22685000131081e+14,
 						"sys.IsActive":true
 					},
 					{
-						"id_periods":131077,
+						"id_periods":3.22685000131077e+14,
 						"price":0.8,
-						"sys.ID":131082,
+						"sys.ID":3.22685000131082e+14,
 						"sys.IsActive":true
 					}
 				],
-				"id_prices":131073,
+				"id_prices":3.22685000131073e+14,
 				"price":1.5,
-				"sys.ID":131080,
+				"sys.ID":3.2268500013108e+14,
 				"sys.IsActive":true
 			}
 		],
-		"id_department":131074,
+		"id_department":3.22685000131074e+14,
 		"name":"Coca-cola",
 		"number":10,
-		"sys.ID":131078,
+		"sys.ID":3.22685000131078e+14,
 		"sys.IsActive":true,
 		"xrefs":{
 			"test.departments":{
-				"131074":{
+				"322685000131074":{
 					"name":"Cold Drinks",
 					"number":1,
-					"sys.ID":131074,
+					"sys.ID":3.22685000131074e+14,
 					"sys.IsActive":true
 				}
 			},
 			"test.periods":{
-				"131076":{
+				"322685000131076":{
 					"name":"Holiday",
 					"number":1,
-					"sys.ID":131076,
+					"sys.ID":322685000131076,
 					"sys.IsActive":true
 				},
-				"131077":{
+				"322685000131077":{
 					"name":"New Year",
 					"number":2,
-					"sys.ID":131077,
+					"sys.ID":322685000131077,
 					"sys.IsActive":true
 				}
 			},
 			"test.prices":{
-				"131072":{
+				"322685000131072":{
 					"name":"Normal Price",
 					"number":1,
-					"sys.ID":131072,
+					"sys.ID":322685000131072,
 					"sys.IsActive":true
 				},
-				"131073":{
+				"322685000131073":{
 					"name":"Happy Hour Price",
 					"number":2,
-					"sys.ID":131073,
+					"sys.ID":322685000131073,
 					"sys.IsActive":true
 				}
 			}
@@ -622,134 +622,134 @@ func TestBasicUsage_State(t *testing.T) {
 	require.Equal(1, len(out.resultRows[0][0][0])) // 1 cell in a row element
 	expected := `{
 		"test.article_price_exceptions":{
-			"131081":{
-				"id_periods":131076,
+			"322685000131081":{
+				"id_periods":3.22685000131076e+14,
 				"price":0.9,
-				"sys.ID":131081,
+				"sys.ID":322685000131081,
 				"sys.IsActive":true,
-				"sys.ParentID":131080
+				"sys.ParentID":3.2268500013108e+14
 			},
-			"131082":{
-				"id_periods":131077,
+			"322685000131082":{
+				"id_periods": 3.22685000131077e+14,
 				"price":0.8,
-				"sys.ID":131082,
+				"sys.ID":322685000131082,
 				"sys.IsActive":true,
-				"sys.ParentID":131080
+				"sys.ParentID":3.2268500013108e+14
 			},
-			"131085":{
-				"id_periods":131076,
+			"322685000131085":{
+				"id_periods":3.22685000131076e+14,
 				"price":1.6,
-				"sys.ID":131085,
+				"sys.ID":322685000131085,
 				"sys.IsActive":true,
-				"sys.ParentID":131084
+				"sys.ParentID":3.22685000131084e+14
 			},
-			"131086":{
-				"id_periods":131077,
+			"322685000131086":{
+				"id_periods":3.22685000131077e+14,
 				"price":1.2,
-				"sys.ID":131086,
+				"sys.ID":322685000131086,
 				"sys.IsActive":true,
-				"sys.ParentID":131084
+				"sys.ParentID":3.22685000131084e+14
 			},
-			"131088":{
-				"id_periods":131076,
+			"322685000131088":{
+				"id_periods":3.22685000131076e+14,
 				"price":1.1,
-				"sys.ID":131088,
+				"sys.ID":322685000131088,
 				"sys.IsActive":true,
-				"sys.ParentID":131087
+				"sys.ParentID":3.22685000131087e+14
 			},
-			"131089":{
-				"id_periods":131076,
+			"322685000131089":{
+				"id_periods":3.22685000131076e+14,
 				"price":1.8,
-				"sys.ID":131089,
+				"sys.ID":322685000131089,
 				"sys.IsActive":true,
-				"sys.ParentID":131079
+				"sys.ParentID":3.22685000131079e+14
 			}
 		},
 		"test.article_prices":{
-			"131079":{
-				"id_prices":131072,
+			"322685000131079":{
+				"id_prices":3.22685000131072e+14,
 				"price":2,
-				"sys.ID":131079,
+				"sys.ID":322685000131079,
 				"sys.IsActive":true,
-				"sys.ParentID":131078
+				"sys.ParentID":3.22685000131078e+14
 			},
-			"131080":{
-				"id_prices":131073,
+			"322685000131080":{
+				"id_prices":3.22685000131073e+14,
 				"price":1.5,
-				"sys.ID":131080,
+				"sys.ID":322685000131080,
 				"sys.IsActive":true,
-				"sys.ParentID":131078
+				"sys.ParentID":3.22685000131078e+14
 			},
-			"131084":{
-				"id_prices":131072,
+			"322685000131084":{
+				"id_prices":3.22685000131072e+14,
 				"price":2.1,
-				"sys.ID":131084,
+				"sys.ID":322685000131084,
 				"sys.IsActive":true,
-				"sys.ParentID":131083
+				"sys.ParentID":3.22685000131083e+14
 			},
-			"131087":{
-				"id_prices":131073,
+			"322685000131087":{
+				"id_prices":3.22685000131073e+14,
 				"price":1.6,
-				"sys.ID":131087,
+				"sys.ID":322685000131087,
 				"sys.IsActive":true,
-				"sys.ParentID":131083
+				"sys.ParentID":3.22685000131083e+14
 			}
 		},
 		"test.articles":{
-			"131078":{
-				"id_department":131074,
+			"322685000131078":{
+				"id_department":3.22685000131074e+14,
 				"name":"Coca-cola",
 				"number":10,
-				"sys.ID":131078,
+				"sys.ID":322685000131078,
 				"sys.IsActive":true
 			},
-			"131083":{
-				"id_department":131074,
+			"322685000131083":{
+				"id_department":3.22685000131074e+14,
 				"name":"Fanta",
 				"number":12,
-				"sys.ID":131083,
+				"sys.ID":322685000131083,
 				"sys.IsActive":true
 			}
 		},
 		"test.departments":{
-			"131074":{
+			"322685000131074":{
 				"name":"Cold Drinks",
 				"number":1,
-				"sys.ID":131074,
+				"sys.ID":322685000131074,
 				"sys.IsActive":true
 			},
-			"131075":{
+			"322685000131075":{
 				"name":"Hot Drinks",
 				"number":2,
-				"sys.ID":131075,
+				"sys.ID":322685000131075,
 				"sys.IsActive":true
 			}
 		},
 		"test.periods":{
-			"131076":{
+			"322685000131076":{
 				"name":"Holiday",
 				"number":1,
-				"sys.ID":131076,
+				"sys.ID":322685000131076,
 				"sys.IsActive":true
 			},
-			"131077":{
+			"322685000131077":{
 				"name":"New Year",
 				"number":2,
-				"sys.ID":131077,
+				"sys.ID":322685000131077,
 				"sys.IsActive":true
 			}
 		},
 		"test.prices":{
-			"131072":{
+			"322685000131072":{
 				"name":"Normal Price",
 				"number":1,
-				"sys.ID":131072,
+				"sys.ID":322685000131072,
 				"sys.IsActive":true
 			},
-			"131073":{
+			"322685000131073":{
 				"name":"Happy Hour Price",
 				"number":2,
-				"sys.ID":131073,
+				"sys.ID":322685000131073,
 				"sys.IsActive":true
 			}
 		}
@@ -787,26 +787,26 @@ func TestState_withAfterArgument(t *testing.T) {
 	expected := `
 	{
 		"test.article_price_exceptions":{
-			"131081":{
-				"id_periods":131076,
+			"322685000131081":{
+				"id_periods":3.22685000131076e+14,
 				"price":0.9,
-				"sys.ID":131081,
+				"sys.ID":322685000131081,
 				"sys.IsActive":true,
-				"sys.ParentID":131080
+				"sys.ParentID":3.2268500013108e+14
 			},
-			"131089":{
-				"id_periods":131076,
+			"322685000131089":{
+				"id_periods":3.22685000131076e+14,
 				"price":1.8,
-				"sys.ID":131089,
+				"sys.ID":322685000131089,
 				"sys.IsActive":true,
-				"sys.ParentID":131079
+				"sys.ParentID": 3.22685000131079e+14
 			}
 		}
 	}`
 	require.JSONEq(expected, out.resultRows[0][0][0][0].(string))
 }
 
-func createEvent(require *require.Assertions, app istructs.IAppStructs, generator istructs.IDGenerator, bld istructs.IRawEventBuilder) istructs.IPLogEvent {
+func createEvent(require *require.Assertions, app istructs.IAppStructs, generator istructs.IIDGenerator, bld istructs.IRawEventBuilder) istructs.IPLogEvent {
 	rawEvent, buildErr := bld.BuildRawEvent()
 	var pLogEvent istructs.IPLogEvent
 	var err error
@@ -815,7 +815,7 @@ func createEvent(require *require.Assertions, app istructs.IAppStructs, generato
 	return pLogEvent
 }
 
-func saveEvent(require *require.Assertions, app istructs.IAppStructs, generator istructs.IDGenerator, bld istructs.IRawEventBuilder) (pLogEvent istructs.IPLogEvent) {
+func saveEvent(require *require.Assertions, app istructs.IAppStructs, generator istructs.IIDGenerator, bld istructs.IRawEventBuilder) (pLogEvent istructs.IPLogEvent) {
 	pLogEvent = createEvent(require, app, generator, bld)
 	err := app.Records().Apply(pLogEvent)
 	require.NoError(err)
@@ -919,7 +919,7 @@ func updateArPriceExceptionCUD(bld istructs.IRawEventBuilder, app istructs.IAppS
 	writer.PutFloat32(test.articlePriceExceptionsPriceIdent, price)
 }
 func insertPrices(require *require.Assertions, app istructs.IAppStructs, idGen *idsGeneratorType) (normalPrice, happyHourPrice istructs.RecordID, event istructs.IPLogEvent) {
-	event = saveEvent(require, app, idGen.newID, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
+	event = saveEvent(require, app, idGen, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
 		newPriceCUD(event, 51, 1, "Normal Price")
 		newPriceCUD(event, 52, 2, "Happy Hour Price")
 	}))
@@ -927,7 +927,7 @@ func insertPrices(require *require.Assertions, app istructs.IAppStructs, idGen *
 }
 
 func insertPeriods(require *require.Assertions, app istructs.IAppStructs, idGen *idsGeneratorType) (holiday, newYear istructs.RecordID, event istructs.IPLogEvent) {
-	event = saveEvent(require, app, idGen.newID, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
+	event = saveEvent(require, app, idGen, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
 		newPeriodCUD(event, 71, 1, "Holiday")
 		newPeriodCUD(event, 72, 2, "New Year")
 	}))
@@ -935,7 +935,7 @@ func insertPeriods(require *require.Assertions, app istructs.IAppStructs, idGen 
 }
 
 func insertDepartments(require *require.Assertions, app istructs.IAppStructs, idGen *idsGeneratorType) (coldDrinks istructs.RecordID, event istructs.IPLogEvent) {
-	event = saveEvent(require, app, idGen.newID, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
+	event = saveEvent(require, app, idGen, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
 		newDepartmentCUD(event, 61, 1, "Cold Drinks")
 		newDepartmentCUD(event, 62, 2, "Hot Drinks")
 	}))
@@ -980,7 +980,7 @@ func Test_Idempotency(t *testing.T) {
 	coldDrinks, _ := insertDepartments(require, as, &idGen)
 
 	// CUDs: Insert coca-cola
-	event1 := createEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+	event1 := createEvent(require, as, &idGen, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 		newArticleCUD(event, 1, coldDrinks, test.cocaColaNumber, "Coca-cola")
 	}))
 	require.Nil(as.Records().Apply(event1))
@@ -988,7 +988,7 @@ func Test_Idempotency(t *testing.T) {
 	require.Nil(processor.SendSync(event1))
 
 	// CUDs: modify coca-cola number and normal price
-	event2 := createEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+	event2 := createEvent(require, as, &idGen, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 		updateArticleCUD(event, as, cocaColaDocID, test.cocaColaNumber2, "Coca-cola")
 	}))
 	require.Nil(as.Records().Apply(event2))
@@ -996,7 +996,7 @@ func Test_Idempotency(t *testing.T) {
 
 	// simulate sending event with the same offset
 	idGen.decOffset()
-	event2copy := createEvent(require, as, idGen.newID, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
+	event2copy := createEvent(require, as, &idGen, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 		updateArticleCUD(event, as, cocaColaDocID, test.cocaColaNumber, "Coca-cola")
 	}))
 	require.Nil(as.Records().Apply(event2copy))

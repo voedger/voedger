@@ -12,7 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 )
 
-// Loads all uniques IDs from storage, add all uniques from application definitions and store if some changes.
+// Loads all uniques IDs from storage, add all uniques from application types and store if some changes.
 // Must be called at application starts
 func PrepareAppDefUniqueIDs(storage istorage.IAppStorage, versions *vers.Versions, qnames *qnames.QNames, appDef appdef.IAppDef) (err error) {
 	return newUniques().prepare(storage, versions, qnames, appDef)

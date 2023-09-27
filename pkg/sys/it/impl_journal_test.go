@@ -22,6 +22,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	tableNum := vit.NextNumber()
+	idUntillUsers := vit.GetAny("simpleApp.untill_users", ws)
 
 	bill := fmt.Sprintf(`{
 				"cuds": [{
@@ -29,13 +30,13 @@ func TestBasicUsage_Journal(t *testing.T) {
 					"sys.ID": 1,
 					"sys.QName": "app1.bill",
 					"tableno": %d,
-					"id_untill_users": 100000000000,
+					"id_untill_users": %d,
 					"table_part": "a",
 					"proforma": 3,
 					"working_day": "20230228"
 				  }
 				}]
-			}`, tableNum)
+			}`, tableNum, idUntillUsers)
 	resp := vit.PostWS(ws, "c.sys.CUD", bill)
 	ID := resp.NewID()
 	expectedOffset := resp.CurrentWLogOffset
@@ -56,7 +57,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 	  "cuds": [
 		{
 		  "fields": {
-			"id_untill_users": 100000000000,
+			"id_untill_users": %[4]d,
 			"proforma": 3,
 			"sys.ID": %[1]d,
 			"sys.IsActive": true,
@@ -75,7 +76,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 	  "Synced": false,
 	  "SyncedAt": 0,
 	  "sys.QName": "sys.CUD"
-	}`, ID, tableNum, vit.Now().UnixMilli()), resp.SectionRow()[2].(string))
+	}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers), resp.SectionRow()[2].(string))
 
 	expectedEvent := fmt.Sprintf(`
 		{
@@ -83,7 +84,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 			"cuds": [
 			{
 				"fields": {
-				"id_untill_users": 100000000000,
+				"id_untill_users": %[4]d,
 				"proforma": 3,
 				"sys.ID": %[1]d,
 				"sys.IsActive": true,
@@ -102,7 +103,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 			"Synced": false,
 			"SyncedAt": 0,
 			"sys.QName": "sys.CUD"
-		}`, ID, tableNum, vit.Now().UnixMilli())
+		}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers)
 
 	require.Equal(int64(resp.SectionRow()[0].(float64)), expectedOffset)
 	require.Equal(int64(resp.SectionRow()[1].(float64)), vit.Now().UnixMilli())
@@ -122,7 +123,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 	  "cuds": [
 		{
 		  "fields": {
-			"id_untill_users": 100000000000,
+			"id_untill_users": %[4]d,
 			"proforma": 3,
 			"sys.ID": %[1]d,
 			"sys.IsActive": true,
@@ -141,7 +142,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 	  "Synced": false,
 	  "SyncedAt": 0,
 	  "sys.QName": "sys.CUD"
-	}`, ID, tableNum, vit.Now().UnixMilli()), resp.SectionRow()[2].(string))
+	}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers), resp.SectionRow()[2].(string))
 
 	expectedEvent = fmt.Sprintf(`
 		{
@@ -149,7 +150,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 			"cuds": [
 			{
 				"fields": {
-				"id_untill_users": 100000000000,
+				"id_untill_users": %[4]d,
 				"proforma": 3,
 				"sys.ID": %[1]d,
 				"sys.IsActive": true,
@@ -168,7 +169,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 			"Synced": false,
 			"SyncedAt": 0,
 			"sys.QName": "sys.CUD"
-		}`, ID, tableNum, vit.Now().UnixMilli())
+		}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers)
 
 	require.Equal(int64(resp.SectionRow()[0].(float64)), expectedOffset)
 	require.Equal(int64(resp.SectionRow()[1].(float64)), vit.Now().UnixMilli())
@@ -188,9 +189,10 @@ func TestJournal_read_in_years_range_1(t *testing.T) {
 	}
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	idUntillUsers := vit.GetAny("simpleApp.untill_users", ws)
 
 	createBill := func(tableNo int) int64 {
-		bill := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.bill","tableno":%d,"id_untill_users":100000000000,"table_part":"a","proforma":3,"working_day":"20230227"}}]}`, tableNo)
+		bill := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":3,"working_day":"20230227"}}]}`, tableNo, idUntillUsers)
 		return vit.PostWS(ws, "c.sys.CUD", bill).CurrentWLogOffset
 	}
 
