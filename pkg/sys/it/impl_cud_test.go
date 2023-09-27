@@ -152,7 +152,7 @@ func TestBasicUsage_Init(t *testing.T) {
 				{
 					"fields": {
 						"sys.ID": 100000,
-						"sys.QName": "simpleApp.articles",
+						"sys.QName": "app1.articles",
 						"name": "cola",
 						"article_manual": 11,
 						"article_hash": 21,
@@ -334,12 +334,12 @@ func TestEraseString(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	idAnyAirTablePlan := vit.GetAny("simpleApp.air_table_plan", ws)
+	idAnyAirTablePlan := vit.GetAny("app1.air_table_plan", ws)
 
 	body := fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"name":""}}]}`, idAnyAirTablePlan)
 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	body = fmt.Sprintf(`{"args":{"Schema":"simpleApp.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, idAnyAirTablePlan)
+	body = fmt.Sprintf(`{"args":{"Schema":"app1.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, idAnyAirTablePlan)
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
 	require.Equal(t, "", resp.SectionRow()[0].(string))
@@ -367,6 +367,6 @@ func TestDenyCreateNonRawIDs(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	body := `{"cuds": [{"fields": {"sys.ID": 1000000000,"sys.QName": "simpleApp.options"}}]}`
+	body := `{"cuds": [{"fields": {"sys.ID": 1000000000,"sys.QName": "app1.options"}}]}`
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
 }

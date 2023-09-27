@@ -24,7 +24,7 @@ func TestBasicUsage_SqlQuery(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	idUntillUsers := vit.GetAny("simpleApp.untill_users", ws)
+	idUntillUsers := vit.GetAny("app1.untill_users", ws)
 
 	findPLogOffsetByWLogOffset := func(wLogOffset int64) int64 {
 		type row struct {
@@ -48,7 +48,7 @@ func TestBasicUsage_SqlQuery(t *testing.T) {
 
 	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.category","name":"Awesome food"}}]}`
 	vit.PostWS(ws, "c.sys.CUD", body)
-	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":0,"working_day":"20230227"}}]}`, tableNum, idUntillUsers)
+	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":0,"working_day":"20230227"}}]}`, tableNum, idUntillUsers)
 	vit.PostWS(ws, "c.sys.CUD", body)
 	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.payments","name":"EFT","guid":"0a53b7c6-2c47-491c-ac00-307b8d5ba6f2"}}]}`
 	resp := vit.PostWS(ws, "c.sys.CUD", body)
@@ -64,7 +64,7 @@ func TestSqlQuery_plog(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	idUntillUsers := vit.GetAny("simpleApp.untill_users", ws)
+	idUntillUsers := vit.GetAny("app1.untill_users", ws)
 
 	pLogSize := 0
 	// it is wrong to consider last resp.CurrentWLogOffset as the pLog events amount because pLog contains events from different workspaces
@@ -102,7 +102,7 @@ func TestSqlQuery_plog(t *testing.T) {
 
 	for i := 1; i <= 101; i++ {
 		tableno := vit.NextNumber()
-		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":%d,"sys.QName":"simpleApp.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":0,"working_day":"20230227"}}]}`, i, tableno, idUntillUsers)
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":%d,"sys.QName":"app1.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":0,"working_day":"20230227"}}]}`, i, tableno, idUntillUsers)
 		vit.PostWS(ws, "c.sys.CUD", body)
 		pLogSize++
 	}
@@ -193,12 +193,12 @@ func TestSqlQuery_wlog(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	idUntillUsers := vit.GetAny("simpleApp.untill_users", ws)
+	idUntillUsers := vit.GetAny("app1.untill_users", ws)
 
 	var lastWLogOffset int64
 	for i := 1; i <= 101; i++ {
 		tableno := vit.NextNumber()
-		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":%d,"sys.QName":"simpleApp.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":0,"working_day":"20230227"}}]}`, i, tableno, idUntillUsers)
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":%d,"sys.QName":"app1.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":0,"working_day":"20230227"}}]}`, i, tableno, idUntillUsers)
 		resp := vit.PostWS(ws, "c.sys.CUD", body)
 		lastWLogOffset = resp.CurrentWLogOffset
 	}
@@ -371,7 +371,7 @@ func TestSqlQuery_records(t *testing.T) {
 		body = `{"args":{"Query":"select * from app1.payments"}}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, "unable to find singleton ID for type «simpleApp.payments»: name not found")
+		resp.RequireError(t, "unable to find singleton ID for type app1.payments»: name not found")
 	})
 	t.Run("Should return error when requested record has mismatching QName", func(t *testing.T) {
 		body = fmt.Sprintf(`{"args":{"Query":"select * from app1.payments where id = %d"}}`, emailId)
