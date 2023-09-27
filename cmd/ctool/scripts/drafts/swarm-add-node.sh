@@ -25,13 +25,15 @@ shift
 # Add remaining nodes as managers and workers
 while [ $# -gt 0 ]; do
 
+ip=$(getent hosts "$1" | awk '{print $1}')
+
 # Get the ID of the node with the specified IP address
-node_id=$(ssh $SSH_OPTIONS $SSH_USER@$MANAGER "docker node ls --format '{{.ID}}' | while read id; do docker node inspect --format '{{.Status.Addr}} {{.ID}}' \$id; done | grep $1 | awk '{print \$2}'")
+node_id=$(ssh $SSH_OPTIONS $SSH_USER@$MANAGER "docker node ls --format '{{.ID}}' | while read id; do docker node inspect --format '{{.Status.Addr}} {{.ID}}' \$id; done | grep $ip | awk '{print \$2}'")
   if [[ -n "$node_id" ]]; then
     echo "Host is already a member of Docker Swarm cluster."
   else 
     echo "Join node to Docker Swarm..."
-    ssh $SSH_OPTIONS $SSH_USER@$1 "docker swarm join --token $JOIN_TOKEN --listen-addr $1:2377 $MANAGER:2377"
+    ssh $SSH_OPTIONS $SSH_USER@$1 "docker swarm join --token $JOIN_TOKEN --listen-addr $ip:2377 $MANAGER:2377"
   fi
 
 shift

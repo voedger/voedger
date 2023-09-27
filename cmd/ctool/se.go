@@ -36,9 +36,11 @@ func seNodeControllerFunction(n *nodeType) error {
 		return err
 	}
 
-	if err = updateHosts(n); err != nil {
-		logger.Error(err.Error())
-		return err
+	if n.cluster.Cmd.Kind != ckInit {
+		if err = updateHosts(n); err != nil {
+			logger.Error(err.Error())
+			return err
+		}
 	}
 
 	if err = deployDocker(n); err != nil {
