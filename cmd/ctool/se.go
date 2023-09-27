@@ -70,6 +70,7 @@ func setHostname(node *nodeType) error {
 	return err
 }
 
+// ssh-keygen -f "/home/ubuntu/.ssh/known_hosts" -R "dbnode2"
 // Update hosts file on all nodes in cluster with new value
 func updateHosts(node *nodeType) error {
 	var err error
