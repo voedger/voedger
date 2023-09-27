@@ -141,7 +141,7 @@ func TestVerifierErrors(t *testing.T) {
 		"EmailField", it.TestEmail, ws.WSID, coreutils.WithAuthorizeBy(userPrincipal.Token))
 
 	t.Run("error 400 on set the raw value instead of verified value token for the verified field", func(t *testing.T) {
-		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameTestEmailVerificationDoc, it.TestEmail)
+		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, it.TestEmail)
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400()).Println()
 	})
 
@@ -153,12 +153,12 @@ func TestVerifierErrors(t *testing.T) {
 		emailVerifiedValueToken = resp.SectionRow()[0].(string)
 
 		// use the email token for the phone field
-		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","PhoneField": "%s"}}]}`, it.QNameTestEmailVerificationDoc, emailVerifiedValueToken)
+		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","PhoneField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, emailVerifiedValueToken)
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400()).Println()
 	})
 
 	t.Run("error 400 on wrong app", func(t *testing.T) {
-		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameTestEmailVerificationDoc, emailVerifiedValueToken)
+		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, emailVerifiedValueToken)
 		userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
 		wsApp2 := vit.DummyWS(istructs.AppQName_test1_app2, userPrincipal.ProfileWSID)
 		vit.PostWS(wsApp2, "c.sys.CUD", body, coreutils.Expect400()).Println()

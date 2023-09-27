@@ -363,7 +363,7 @@ func TestEraseString1(t *testing.T) {
 }
 
 func TestDenyCreateNonRawIDs(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
