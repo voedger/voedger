@@ -26,8 +26,7 @@ SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 MANAGER=$3
-
-NEW_NODE_NAME=$(getent hosts "$2" | awk '{print $1}')
+NEW_NODE_NAME=$(getent hosts "$2" | awk '{print $2}')
 
 ./docker-install.sh $2
 
