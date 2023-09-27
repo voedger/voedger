@@ -27,6 +27,8 @@ SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogL
 
 MANAGER=$3
 
+NEW_NODE_NAME=$(getent hosts "$2" | awk '{print $1}')
+
 ./docker-install.sh $2
 
 ./swarm-add-node.sh $MANAGER $2
@@ -37,7 +39,7 @@ MANAGER=$3
 
 ./swarm-rm-node.sh $MANAGER $1
 
-service_label=$(./db-stack-update.sh $1 $2 | tail -n 1)
+service_label=$(./db-stack-update.sh "$NEW_NODE_NAME" | tail -n 1)
 
 cat ./docker-compose.yml | ssh $SSH_OPTIONS $SSH_USER@$2 'cat > ~/docker-compose.yml'
 
