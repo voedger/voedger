@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-if [ $# -ne 2 ]; then
+if [ $# -ne 1 ]; then
 #  echo "Usage: $0 <lost_node> <new_node>"
    echo "Usage: $0 <cluster node name>"
   exit 1
