@@ -205,77 +205,7 @@ var typeKindProps = map[TypeKind]struct {
 			DataKind_Record:   true,
 			DataKind_Event:    true,
 		},
-		systemFields: map[string]bool{},
-		containerKinds: map[TypeKind]bool{
-			TypeKind_ViewRecord_PartitionKey:      true,
-			TypeKind_ViewRecord_ClusteringColumns: true,
-			TypeKind_ViewRecord_Key:               true,
-			TypeKind_ViewRecord_Value:             true,
-		},
-	},
-	TypeKind_ViewRecord_PartitionKey: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
-		},
 		systemFields:   map[string]bool{},
-		containerKinds: map[TypeKind]bool{},
-	},
-	TypeKind_ViewRecord_ClusteringColumns: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_bytes:    true, // last field
-			DataKind_string:   true, // last field
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
-		},
-		systemFields:   map[string]bool{},
-		containerKinds: map[TypeKind]bool{},
-	},
-	TypeKind_ViewRecord_Key: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_bytes:    true,
-			DataKind_string:   true,
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
-		},
-		systemFields: map[string]bool{},
-		containerKinds: map[TypeKind]bool{
-			TypeKind_ViewRecord_PartitionKey:      true,
-			TypeKind_ViewRecord_ClusteringColumns: true,
-		},
-	},
-	TypeKind_ViewRecord_Value: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_bytes:    true,
-			DataKind_string:   true,
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
-			DataKind_Record:   true, // +
-			DataKind_Event:    true, // +
-		},
-		systemFields: map[string]bool{
-			SystemField_QName: true,
-		},
 		containerKinds: map[TypeKind]bool{},
 	},
 	TypeKind_Object: {

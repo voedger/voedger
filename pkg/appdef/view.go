@@ -378,32 +378,3 @@ func (v *viewValueBuilder) SetFieldVerify(name string, vk ...VerificationKind) I
 	v.view.value.SetFieldVerify(name, vk...)
 	return v
 }
-
-// Returns partition key type name for specified view
-func ViewPartitionKeyDefName(viewName QName) QName {
-	const suffix = "_PartitionKey"
-	return suffixedQName(viewName, suffix)
-}
-
-// Returns clustering columns type name for specified view
-func ViewClusteringColumnsDefName(viewName QName) QName {
-	const suffix = "_ClusteringColumns"
-	return suffixedQName(viewName, suffix)
-}
-
-// Returns full key type name for specified view
-func ViewKeyDefName(viewName QName) QName {
-	const suffix = "_FullKey"
-	return suffixedQName(viewName, suffix)
-}
-
-// Returns value type name for specified view
-func ViewValueDefName(viewName QName) QName {
-	const suffix = "_Value"
-	return suffixedQName(viewName, suffix)
-}
-
-// Appends suffix to QName entity name and returns new QName
-func suffixedQName(name QName, suffix string) QName {
-	return NewQName(name.Pkg(), name.Entity()+suffix)
-}

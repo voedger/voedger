@@ -12,6 +12,9 @@ type IView interface {
 	IType
 	IComment
 
+	// All view fields, include key and value.
+	IFields
+
 	// Returns full (pk + ccols) view key
 	Key() IViewKey
 
@@ -31,10 +34,11 @@ type IViewBuilder interface {
 
 // View full (pk + cc) key.
 //
-// Partition key fields is required, clustering columns is not.
-//
 // Ref. to view.go for implementation
 type IViewKey interface {
+	// All key fields, include partition key and clustering columns.
+	//
+	// Partition key fields is required, clustering columns is not.
 	IFields
 
 	// Returns partition key

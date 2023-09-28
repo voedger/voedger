@@ -118,8 +118,8 @@ func Test_AddField(t *testing.T) {
 	})
 
 	t.Run("must be panic if field data kind is not allowed by type kind", func(t *testing.T) {
-		view := New().AddView(NewQName("test", "view"))
-		require.Panics(func() { view.Key().Partition().AddField("f1", DataKind_string) })
+		o := New().AddObject(NewQName("test", "object"))
+		require.Panics(func() { o.AddField("f1", DataKind_Event, false) })
 	})
 
 	t.Run("must be panic if too many fields", func(t *testing.T) {

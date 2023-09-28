@@ -63,6 +63,35 @@ func TestAddView(t *testing.T) {
 		require.Equal(viewName, view.QName())
 		require.Equal(TypeKind_ViewRecord, view.Kind())
 
+		require.Equal(6, view.FieldCount())
+		cnt := 0
+		view.Fields(func(f IField) {
+			cnt++
+			switch cnt {
+			case 1:
+				require.Equal("pkF1", f.Name())
+				require.True(f.Required())
+			case 2:
+				require.Equal("pkF2", f.Name())
+				require.True(f.Required())
+			case 3:
+				require.Equal("ccF1", f.Name())
+				require.False(f.Required())
+			case 4:
+				require.Equal("ccF2", f.Name())
+				require.False(f.Required())
+			case 5:
+				require.Equal("valF1", f.Name())
+				require.True(f.Required())
+			case 6:
+				require.Equal("valF2", f.Name())
+				require.False(f.Required())
+			default:
+				require.Fail("unexpected field «%s»", f.Name())
+			}
+		})
+		require.Equal(view.FieldCount(), cnt)
+
 		t.Run("must be ok to read view full key", func(t *testing.T) {
 			key := view.Key()
 			require.Equal(4, key.FieldCount())
@@ -198,6 +227,9 @@ func TestAddView(t *testing.T) {
 		require.Equal(3, view.Key().Partition().FieldCount())
 		require.Equal(3, view.Key().ClustCols().FieldCount())
 		require.Equal(6, view.Key().FieldCount())
+
+		require.Equal(view.Key().FieldCount()+view.Value().FieldCount(), view.FieldCount())
+
 		require.Equal("test comment", view.Key().Field("pkF3").Comment())
 		require.Equal("test comment", view.Key().Field("ccF3").Comment())
 

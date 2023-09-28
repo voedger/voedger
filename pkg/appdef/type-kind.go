@@ -42,13 +42,6 @@ const (
 	// collection (BO)  ((wsid, qname), id), record
 	// logins ((wsid0), login) id
 	TypeKind_ViewRecord
-	// No fields with variable length allowed
-	TypeKind_ViewRecord_PartitionKey
-	// Only one variable length field is allowed (must be last field)
-	TypeKind_ViewRecord_ClusteringColumns
-	// FullKey type = PartitionKey + ClusteringColumns
-	TypeKind_ViewRecord_Key
-	TypeKind_ViewRecord_Value
 
 	// Function params, results, Event.command (this is command function params)
 	TypeKind_Object
