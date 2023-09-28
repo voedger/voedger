@@ -122,7 +122,7 @@ func updateHosts(node *nodeType) error {
 
 	if node.cluster.Cmd.Kind == ckReplace {
 		for host, hostname := range aliveHosts {
-			logger.Info("newnode: %s host: %s hostname: %s", newNode, host, hostname)
+			logger.Info(fmt.Sprintf("newnode: %s host: %s hostname: %s", newNode, host, hostname))
 			if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
 				run("node-update-hosts.sh", newNode, host, hostname); err != nil {
 				logger.Error(err.Error())
