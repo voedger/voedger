@@ -118,6 +118,10 @@ func updateHosts(node *nodeType) error {
 		}
 	}
 
+	for host, hostname := range aliveHosts {
+		logger.Info(fmt.Sprintf("node.DesiredNodeState.Address: %s, host: %s, hostname: %s", node.DesiredNodeState.Address, host, hostname))
+	}
+
 	if node.cluster.Cmd.Kind == ckReplace {
 		for host, hostname := range aliveHosts {
 			logger.Info(fmt.Sprintf("newnode: %s host: %s hostname: %s", node.DesiredNodeState.Address, host, hostname))
