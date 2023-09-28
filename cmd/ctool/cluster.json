@@ -1,0 +1,47 @@
+{
+  "Edition": "SE",
+  "ActualClusterVersion": "0.0.1-alpha",
+  "DesiredClusterVersion": "0.0.1-alpha",
+  "Cmd": {
+    "Kind": "replace",
+    "Args": "10.0.0.14 10.0.0.16"
+  },
+  "Nodes": [
+    {
+      "NodeRole": "AppNode",
+      "ActualNodeState": {
+        "Address": "10.0.0.11",
+        "NodeVersion": "0.0.1-alpha"
+      }
+    },
+    {
+      "NodeRole": "AppNode",
+      "ActualNodeState": {
+        "Address": "10.0.0.12",
+        "NodeVersion": "0.0.1-alpha"
+      }
+    },
+    {
+      "NodeRole": "DBNode",
+      "ActualNodeState": {
+        "Address": "10.0.0.13",
+        "NodeVersion": "0.0.1-alpha"
+      }
+    },
+    {
+      "NodeRole": "DBNode",
+      "Error": "exit status 1",
+      "DesiredNodeState": {
+        "Address": "10.0.0.16",
+        "NodeVersion": "0.0.1-alpha"
+      }
+    },
+    {
+      "NodeRole": "DBNode",
+      "ActualNodeState": {
+        "Address": "10.0.0.15",
+        "NodeVersion": "0.0.1-alpha"
+      }
+    }
+  ]
+}
