@@ -97,12 +97,12 @@ func Test_AddField(t *testing.T) {
 	})
 
 	t.Run("chain notation is ok to add fields", func(t *testing.T) {
-		d := New().AddObject(NewQName("test", "obj"))
-		n := d.AddField("f1", DataKind_int64, true).
+		o := New().AddObject(NewQName("test", "obj"))
+		n := o.AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_int32, false).
-			AddField("f3", DataKind_string, false).(IDef).QName()
-		require.Equal(d.QName(), n)
-		require.Equal(3, d.UserFieldCount())
+			AddField("f3", DataKind_string, false).(IType).QName()
+		require.Equal(o.QName(), n)
+		require.Equal(3, o.UserFieldCount())
 	})
 
 	t.Run("must be panic if empty field name", func(t *testing.T) {
@@ -117,14 +117,14 @@ func Test_AddField(t *testing.T) {
 		require.Panics(func() { obj.AddField("f1", DataKind_int64, true) })
 	})
 
-	t.Run("must be panic if field data kind is not allowed by definition kind", func(t *testing.T) {
+	t.Run("must be panic if field data kind is not allowed by type kind", func(t *testing.T) {
 		view := New().AddView(NewQName("test", "view"))
 		require.Panics(func() { view.Key().Partition().AddField("f1", DataKind_string) })
 	})
 
 	t.Run("must be panic if too many fields", func(t *testing.T) {
 		o := New().AddObject(NewQName("test", "obj"))
-		for i := 0; i < MaxDefFieldCount-1; i++ { // -1 for sys.QName field
+		for i := 0; i < MaxTypeFieldCount-1; i++ { // -1 for sys.QName field
 			o.AddField(fmt.Sprintf("f_%#x", i), DataKind_bool, false)
 		}
 		require.Panics(func() { o.AddField("errorField", DataKind_bool, true) })
@@ -349,13 +349,13 @@ func TestValidateRefFields(t *testing.T) {
 		rec.AddRefField("f2", true, NewQName("test", "obj"))
 		_, err := app.Build()
 		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, "unknown definition «test.obj»")
+		require.ErrorContains(err, "unknown type «test.obj»")
 	})
 
-	t.Run("must be error if reference field refs to non referable definition", func(t *testing.T) {
+	t.Run("must be error if reference field refs to non referable type", func(t *testing.T) {
 		app.AddObject(NewQName("test", "obj"))
 		_, err := app.Build()
-		require.ErrorIs(err, ErrInvalidDefKind)
-		require.ErrorContains(err, "non referable definition «test.obj»")
+		require.ErrorIs(err, ErrInvalidTypeKind)
+		require.ErrorContains(err, "non referable type «test.obj»")
 	})
 }

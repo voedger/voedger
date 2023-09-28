@@ -1,8 +1,6 @@
 -- Copyright (c) 2020-present unTill Pro, Ltd.
 -- @author Denis Gribanov
 
-SCHEMA sys;
-
 ABSTRACT TABLE CRecord();
 ABSTRACT TABLE WRecord();
 ABSTRACT TABLE ORecord();

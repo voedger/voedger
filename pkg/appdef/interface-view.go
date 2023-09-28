@@ -5,18 +5,18 @@
 
 package appdef
 
-// View definition. DefKind() is DefKind_ViewRecord
+// View type.
 //
 // Ref to view.go for implementation
 type IView interface {
-	IDef
+	IType
 	IComment
 	IContainers
 
-	// Returns full (pk + ccols) view key definition
+	// Returns full (pk + ccols) view key type
 	Key() IViewKey
 
-	// Returns view value definition
+	// Returns view value type
 	Value() IViewValue
 }
 
@@ -30,20 +30,20 @@ type IViewBuilder interface {
 	Value() IViewValueBuilder
 }
 
-// View full (pk + cc) key definition. DefKind() is DefKind_ViewRecordFullKey
+// View full (pk + cc) key type.
 //
 // Partition key fields is required, clustering columns is not.
 //
 // Ref. to view.go for implementation
 type IViewKey interface {
-	IDef
+	IType
 	IFields
 	IContainers
 
-	// Returns partition key definition
+	// Returns partition key type
 	Partition() IViewPartKey
 
-	// Returns clustering columns definition
+	// Returns clustering columns type
 	ClustCols() IViewClustCols
 }
 
@@ -51,22 +51,22 @@ type IViewKey interface {
 //
 // Ref. to view.go for implementation
 type IViewKeyBuilder interface {
-	// Returns partition key definition
+	// Returns partition key type builder
 	Partition() IViewPartKeyBuilder
 
-	// Returns clustering columns definition
+	// Returns clustering columns type builder
 	ClustCols() IViewClustColsBuilder
 }
 
-// View partition key definition. DefKind() is DefKind_ViewRecordPartitionKey
+// View partition key type.
 //
 // Ref. to view.go for implementation
 type IViewPartKey interface {
-	IDef
+	IType
 	IFields
 }
 
-// View partition key builder.
+// View partition key type builder.
 //
 // Ref. to view.go for implementation
 type IViewPartKeyBuilder interface {
@@ -87,15 +87,15 @@ type IViewPartKeyBuilder interface {
 	SetFieldComment(name string, comment ...string) IViewPartKeyBuilder
 }
 
-// View clustering columns definition. DefKind() is DefKind_ViewRecordClusteringColumns
+// View clustering columns type.
 //
 // Ref. to view.go for implementation
 type IViewClustCols interface {
-	IDef
+	IType
 	IFields
 }
 
-// View clustering columns builder.
+// View clustering columns type builder.
 //
 // Ref. to view.go for implementation
 type IViewClustColsBuilder interface {
@@ -117,11 +117,11 @@ type IViewClustColsBuilder interface {
 	SetFieldComment(name string, comment ...string) IViewClustColsBuilder
 }
 
-// View value definition. DefKind() is DefKind_ViewRecord_Value
+// View value type.
 //
 // Ref. to view.go for implementation
 type IViewValue interface {
-	IDef
+	IType
 	IFields
 }
 

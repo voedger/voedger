@@ -1,8 +1,6 @@
 -- Copyright (c) 2020-present unTill Pro, Ltd.
 -- @author Denis Gribanov
 
-SCHEMA sys;
-
 TABLE Subject INHERITS CDoc (
 	Login varchar NOT NULL,
 	SubjectKind int32 NOT NULL,

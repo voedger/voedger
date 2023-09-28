@@ -23,26 +23,26 @@ type container struct {
 	parent    interface{}
 	name      string
 	qName     QName
-	def       IDef
+	typ       IType
 	minOccurs Occurs
 	maxOccurs Occurs
 }
 
-func newContainer(parent interface{}, name string, def QName, minOccurs, maxOccurs Occurs) *container {
+func newContainer(parent interface{}, name string, typeName QName, minOccurs, maxOccurs Occurs) *container {
 	return &container{
 		parent:    parent,
 		name:      name,
-		qName:     def,
+		qName:     typeName,
 		minOccurs: minOccurs,
 		maxOccurs: maxOccurs,
 	}
 }
 
-func (cont *container) Def() IDef {
-	if (cont.def == nil) || (cont.def.QName() != cont.QName()) {
-		cont.def = cont.parentDef().App().DefByName(cont.QName())
+func (cont *container) Type() IType {
+	if (cont.typ == nil) || (cont.typ.QName() != cont.QName()) {
+		cont.typ = cont.parentType().App().TypeByName(cont.QName())
 	}
-	return cont.def
+	return cont.typ
 }
 
 func (cont *container) IsSys() bool { return IsSysContainer(cont.name) }
@@ -55,8 +55,8 @@ func (cont *container) Name() string { return cont.name }
 
 func (cont *container) QName() QName { return cont.qName }
 
-func (cont *container) parentDef() IDef {
-	return cont.parent.(IDef)
+func (cont *container) parentType() IType {
+	return cont.parent.(IType)
 }
 
 // Returns is container system
@@ -78,46 +78,46 @@ type containers struct {
 	containersOrdered []string
 }
 
-func makeContainers(def interface{}) containers {
-	c := containers{def, make(map[string]*container), make([]string, 0)}
+func makeContainers(parent interface{}) containers {
+	c := containers{parent, make(map[string]*container), make([]string, 0)}
 	return c
 }
 
-func (c *containers) AddContainer(name string, contDef QName, minOccurs, maxOccurs Occurs, comment ...string) IContainersBuilder {
+func (c *containers) AddContainer(name string, contType QName, minOccurs, maxOccurs Occurs, comment ...string) IContainersBuilder {
 	if name == NullName {
-		panic(fmt.Errorf("%v: empty container name: %w", c.parentDef().QName(), ErrNameMissed))
+		panic(fmt.Errorf("%v: empty container name: %w", c.parentType().QName(), ErrNameMissed))
 	}
 	if !IsSysContainer(name) {
 		if ok, err := ValidIdent(name); !ok {
-			panic(fmt.Errorf("%v: invalid container name «%v»: %w", c.parentDef().QName(), name, err))
+			panic(fmt.Errorf("%v: invalid container name «%v»: %w", c.parentType().QName(), name, err))
 		}
 	}
 	if c.Container(name) != nil {
-		panic(fmt.Errorf("%v: container «%v» is already exists: %w", c.parentDef().QName(), name, ErrNameUniqueViolation))
+		panic(fmt.Errorf("%v: container «%v» is already exists: %w", c.parentType().QName(), name, ErrNameUniqueViolation))
 	}
 
-	if contDef == NullQName {
-		panic(fmt.Errorf("%v: missed container «%v» definition name: %w", c.parentDef().QName(), name, ErrNameMissed))
+	if contType == NullQName {
+		panic(fmt.Errorf("%v: missed container «%v» type name: %w", c.parentType().QName(), name, ErrNameMissed))
 	}
 
 	if maxOccurs == 0 {
-		panic(fmt.Errorf("%v: max occurs value (0) must be positive number: %w", c.parentDef().QName(), ErrInvalidOccurs))
+		panic(fmt.Errorf("%v: max occurs value (0) must be positive number: %w", c.parentType().QName(), ErrInvalidOccurs))
 	}
 	if maxOccurs < minOccurs {
-		panic(fmt.Errorf("%v: max occurs (%v) must be greater or equal to min occurs (%v): %w", c.parentDef().QName(), maxOccurs, minOccurs, ErrInvalidOccurs))
+		panic(fmt.Errorf("%v: max occurs (%v) must be greater or equal to min occurs (%v): %w", c.parentType().QName(), maxOccurs, minOccurs, ErrInvalidOccurs))
 	}
 
-	if cd := c.parentDef().App().DefByName(contDef); cd != nil {
-		if k := c.parentDef().Kind(); !k.ContainerKindAvailable(cd.Kind()) {
-			panic(fmt.Errorf("%v: definition kind «%s» does not support child container kind «%s»: %w", c.parentDef().QName(), k.TrimString(), cd.Kind().TrimString(), ErrInvalidDefKind))
+	if typ := c.parentType().App().TypeByName(contType); typ != nil {
+		if k := c.parentType().Kind(); !k.ContainerKindAvailable(typ.Kind()) {
+			panic(fmt.Errorf("%v: type kind «%s» does not support child container kind «%s»: %w", c.parentType().QName(), k.TrimString(), typ.Kind().TrimString(), ErrInvalidTypeKind))
 		}
 	}
 
-	if len(c.containers) >= MaxDefContainerCount {
-		panic(fmt.Errorf("%v: maximum container count (%d) exceeds: %w", c.parentDef().QName(), MaxDefContainerCount, ErrTooManyContainers))
+	if len(c.containers) >= MaxTypeContainerCount {
+		panic(fmt.Errorf("%v: maximum container count (%d) exceeds: %w", c.parentType().QName(), MaxTypeContainerCount, ErrTooManyContainers))
 	}
 
-	cont := newContainer(c.parent, name, contDef, minOccurs, maxOccurs)
+	cont := newContainer(c.parent, name, contType, minOccurs, maxOccurs)
 	cont.SetComment(comment...)
 	c.containers[name] = cont
 	c.containersOrdered = append(c.containersOrdered, name)
@@ -142,26 +142,26 @@ func (c *containers) Containers(cb func(IContainer)) {
 	}
 }
 
-func (c *containers) parentDef() IDef {
-	return c.parent.(IDef)
+func (c *containers) parentType() IType {
+	return c.parent.(IType)
 }
 
 // Validates specified containers.
 //
 // # Validation:
-//   - every container definition must be known,
-//   - every container definition kind must be compatible with parent definition kind
-func validateDefContainers(def IDef) (err error) {
-	if cnt, ok := def.(IContainers); ok {
-		// resolve containers definitions
+//   - every container type must be known,
+//   - every container type kind must be compatible with parent type kind
+func validateTypeContainers(t IType) (err error) {
+	if cnt, ok := t.(IContainers); ok {
+		// resolve containers types
 		cnt.Containers(func(cont IContainer) {
-			contDef := cont.Def()
-			if contDef == nil {
-				err = errors.Join(err, fmt.Errorf("%v: container «%s» uses unknown definition «%v»: %w", def.QName(), cont.Name(), cont.QName(), ErrNameNotFound))
+			contType := cont.Type()
+			if contType == nil {
+				err = errors.Join(err, fmt.Errorf("%v: container «%s» uses unknown type «%v»: %w", t.QName(), cont.Name(), cont.QName(), ErrNameNotFound))
 				return
 			}
-			if !def.Kind().ContainerKindAvailable(contDef.Kind()) {
-				err = errors.Join(err, fmt.Errorf("%v: container «%s» definition «%v» is incompatible: «%s» can`t contain «%s»: %w", def.QName(), cont.Name(), cont.QName(), def.Kind().TrimString(), contDef.Kind().TrimString(), ErrInvalidDefKind))
+			if !t.Kind().ContainerKindAvailable(contType.Kind()) {
+				err = errors.Join(err, fmt.Errorf("%v: container «%s» type «%v» is incompatible: «%s» can`t contain «%s»: %w", t.QName(), cont.Name(), cont.QName(), t.Kind().TrimString(), contType.Kind().TrimString(), ErrInvalidTypeKind))
 			}
 		})
 	}

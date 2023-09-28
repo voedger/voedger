@@ -30,14 +30,5 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			Func: provideUniquesProjectorFunc(appDefBuilder),
 		}
 	})
-	cfg.AddCUDValidators(istructs.CUDValidator{
-		MatchFunc: func(qName appdef.QName) bool {
-			if uniques, ok := appDefBuilder.Def(qName).(appdef.IUniques); ok {
-				return uniques.UniqueField() != nil
-			}
-			return false
-		},
-		Validate: provideCUDUniqueUpdateDenyValidator(),
-	})
 	cfg.AddEventValidators(provideEventUniqueValidator())
 }

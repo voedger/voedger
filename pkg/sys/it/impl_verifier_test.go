@@ -24,7 +24,7 @@ import (
 
 func TestBasicUsage_Verifier(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
@@ -43,7 +43,7 @@ func TestBasicUsage_Verifier(t *testing.T) {
 				},
 				"elements":[{"fields":["VerificationToken"]}]
 			}
-		`, it.QNameTestEmailVerificationDoc, it.TestEmail, userPrincipal.ProfileWSID) // targetWSID - is the workspace we're going to use the verified value at
+		`, it.QNameApp1_TestEmailVerificationDoc, it.TestEmail, userPrincipal.ProfileWSID) // targetWSID - is the workspace we're going to use the verified value at
 		// call q.sys.InitiateEmailVerification at user profile to avoid guests
 		// call in target app
 		resp := vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body)
@@ -88,7 +88,7 @@ func TestBasicUsage_Verifier(t *testing.T) {
 		require.Equal(istructs.AppQName_test1_app1, gp.AppQName)
 		require.Equal(verifier.VerifiedValueTokenDuration, gp.Duration)
 		require.Equal(vit.Now(), gp.IssuedAt)
-		require.Equal(it.QNameTestEmailVerificationDoc, vvp.Entity)
+		require.Equal(it.QNameApp1_TestEmailVerificationDoc, vvp.Entity)
 		require.Equal("EmailField", vvp.Field)
 		require.Equal(it.TestEmail, vvp.Value)
 	})
@@ -105,16 +105,16 @@ func TestBasicUsage_Verifier(t *testing.T) {
 						}
 					}
 				]
-			}`, it.QNameTestEmailVerificationDoc, verifiedValueToken)
+			}`, it.QNameApp1_TestEmailVerificationDoc, verifiedValueToken)
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 		vit.PostWS(ws, "c.sys.CUD", body)
 	})
 
 	t.Run("bug: one token could be used in any wsid", func(t *testing.T) {
-		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameTestEmailVerificationDoc, verifiedValueToken)
+		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, verifiedValueToken)
 		ws2 := vit.CreateWorkspace(it.WSParams{
 			Name:         "testws" + vit.NextName(),
-			Kind:         it.QNameTestWSKind,
+			Kind:         it.QNameApp1_TestWSKind,
 			ClusterID:    istructs.MainClusterID,
 			InitDataJSON: `{"IntFld":42}`, // from config template
 		}, userPrincipal)
@@ -122,7 +122,7 @@ func TestBasicUsage_Verifier(t *testing.T) {
 	})
 
 	t.Run("read the actual verified field value - it should be the value decoded from the token", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"Schema":"%s"},"elements":[{"fields": ["EmailField"]}]}`, it.QNameTestEmailVerificationDoc)
+		body := fmt.Sprintf(`{"args":{"Schema":"%s"},"elements":[{"fields": ["EmailField"]}]}`, it.QNameApp1_TestEmailVerificationDoc)
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 		resp := vit.PostWS(ws, "q.sys.Collection", body)
 		require.Equal(it.TestEmail, resp.SectionRow()[0])
@@ -130,18 +130,18 @@ func TestBasicUsage_Verifier(t *testing.T) {
 }
 
 func TestVerifierErrors(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	// funcs should be called in the user profile
 	userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 	ws := vit.DummyWS(istructs.AppQName_test1_app1, userPrincipal.ProfileWSID)
 
-	verificationToken, verificationCode := InitiateEmailVerification(vit, userPrincipal, it.QNameTestEmailVerificationDoc,
+	verificationToken, verificationCode := InitiateEmailVerification(vit, userPrincipal, it.QNameApp1_TestEmailVerificationDoc,
 		"EmailField", it.TestEmail, ws.WSID, coreutils.WithAuthorizeBy(userPrincipal.Token))
 
 	t.Run("error 400 on set the raw value instead of verified value token for the verified field", func(t *testing.T) {
-		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameTestEmailVerificationDoc, it.TestEmail)
+		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, it.TestEmail)
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400()).Println()
 	})
 
@@ -153,12 +153,12 @@ func TestVerifierErrors(t *testing.T) {
 		emailVerifiedValueToken = resp.SectionRow()[0].(string)
 
 		// use the email token for the phone field
-		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","PhoneField": "%s"}}]}`, it.QNameTestEmailVerificationDoc, emailVerifiedValueToken)
+		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","PhoneField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, emailVerifiedValueToken)
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400()).Println()
 	})
 
 	t.Run("error 400 on wrong app", func(t *testing.T) {
-		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameTestEmailVerificationDoc, emailVerifiedValueToken)
+		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, emailVerifiedValueToken)
 		userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
 		wsApp2 := vit.DummyWS(istructs.AppQName_test1_app2, userPrincipal.ProfileWSID)
 		vit.PostWS(wsApp2, "c.sys.CUD", body, coreutils.Expect400()).Println()
@@ -170,14 +170,14 @@ func TestVerifierErrors(t *testing.T) {
 		resp := vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", body)
 		emailVerifiedValueToken = resp.SectionRow()[0].(string)
 
-		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameTestEmailVerificationDoc, emailVerifiedValueToken)
+		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, emailVerifiedValueToken)
 		dws := vit.DummyWS(istructs.AppQName_test1_app1, ws.WSID+1)
 		vit.PostWS(dws, "c.sys.CUD", body, coreutils.Expect500()).Println()
 	})
 }
 
 func TestVerificationLimits(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	rateLimitName_InitiateEmailVerification := istructsmem.GetFunctionRateLimitName(verifier.QNameQueryInitiateEmailVerification, istructs.RateLimitKind_byWorkspace)
@@ -196,21 +196,21 @@ func TestVerificationLimits(t *testing.T) {
 	t.Run("q.sys.InitiateEmailVerification limits", func(t *testing.T) {
 
 		// first q.sys.InitiateEmailVerifications are ok
-		InitiateEmailVerification(vit, userPrincipal, it.QNameTestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, coreutils.WithAuthorizeBy(userPrincipal.Token))
+		InitiateEmailVerification(vit, userPrincipal, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, coreutils.WithAuthorizeBy(userPrincipal.Token))
 
 		// 2nd exceeds the limit -> 429 Too many requests
-		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken"]}]}`, it.QNameTestEmailVerificationDoc, "EmailField", it.TestEmail)
+		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken"]}]}`, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail)
 		vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body, coreutils.Expect429())
 
 		// still able to send to call in antoher profile because the limit is per-profile
 		otherPrn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail2)
-		InitiateEmailVerification(vit, otherPrn, it.QNameTestEmailVerificationDoc, "EmailField", it.TestEmail2, testWSID, coreutils.WithAuthorizeBy(otherPrn.Token))
+		InitiateEmailVerification(vit, otherPrn, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail2, testWSID, coreutils.WithAuthorizeBy(otherPrn.Token))
 
 		// proceed to the next minute -> limits will be reset
 		vit.TimeAdd(time.Minute)
 
 		// expect no errors
-		token, code = InitiateEmailVerification(vit, userPrincipal, it.QNameTestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, coreutils.WithAuthorizeBy(userPrincipal.Token))
+		token, code = InitiateEmailVerification(vit, userPrincipal, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, coreutils.WithAuthorizeBy(userPrincipal.Token))
 	})
 
 	t.Run("q.sys.IssueVerifiedValueToken limits", func(t *testing.T) {
@@ -229,7 +229,7 @@ func TestVerificationLimits(t *testing.T) {
 		vit.TimeAdd(verifier.IssueVerifiedValueToken_Period)
 
 		// regenerate token and code because previous ones are expired already
-		token, code = InitiateEmailVerification(vit, userPrincipal, it.QNameTestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, coreutils.WithAuthorizeBy(userPrincipal.Token))
+		token, code = InitiateEmailVerification(vit, userPrincipal, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, coreutils.WithAuthorizeBy(userPrincipal.Token))
 		bodyGoodCode = fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
 
 		// now check that limits are restored and that limits are reset on successful code verification
@@ -240,7 +240,7 @@ func TestVerificationLimits(t *testing.T) {
 }
 
 func TestForRegistry(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	// funcs should be called in the user profile
@@ -248,7 +248,7 @@ func TestForRegistry(t *testing.T) {
 
 	verificationToken, verificationCode := InitiateEmailVerificationFunc(vit, func() *coreutils.FuncResponse {
 		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"EmailField","Email":"%s","TargetWSID":%d,"ForRegistry":true},"elements":[{"fields":["VerificationToken"]}]}`,
-			it.QNameTestEmailVerificationDoc, it.TestEmail, userPrincipal.ProfileWSID)
+			it.QNameApp1_TestEmailVerificationDoc, it.TestEmail, userPrincipal.ProfileWSID)
 		resp := vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body)
 		return resp
 	})

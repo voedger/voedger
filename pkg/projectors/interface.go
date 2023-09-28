@@ -67,7 +67,7 @@ type SyncActualizerConf struct {
 	N10nFunc     state.N10nFunc
 }
 
-type ViewDefBuilder func(builder appdef.IViewBuilder)
+type ViewTypeBuilder func(builder appdef.IViewBuilder)
 
 type WorkToEventFunc func(work interface{}) istructs.IPLogEvent
 

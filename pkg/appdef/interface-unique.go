@@ -8,10 +8,10 @@ package appdef
 // Unique identifier type
 type UniqueID uint32
 
-// Definitions with uniques:
-//	- DefKind_GDoc and DefKind_GRecord,
-//	- DefKind_CDoc and DefKind_CRecord,
-//	- DefKind_WDoc and DefKind_WRecord
+// Types with uniques:
+//	- TypeKind_GDoc and TypeKind_GRecord,
+//	- TypeKind_CDoc and TypeKind_CRecord,
+//	- TypeKind_WDoc and TypeKind_WRecord
 //
 // Ref. to unique.go for implementation
 type IUniques interface {
@@ -44,7 +44,7 @@ type IUniquesBuilder interface {
 	// # Panics:
 	//   - if unique name is invalid,
 	//   - if unique with name is already exists,
-	//   - if definition kind is not supports uniques,
+	//   - if structured type kind is not supports uniques,
 	//   - if fields list is empty,
 	//   - if fields has duplicates,
 	//   - if fields is already exists or overlaps with an existing unique,
@@ -63,14 +63,14 @@ type IUniquesBuilder interface {
 	SetUniqueField(name string) IUniquesBuilder
 }
 
-// Describe single unique for definition.
+// Describe single unique for structured type.
 //
 // Ref to unique.go for implementation
 type IUnique interface {
 	IComment
 
-	// returns parent definition
-	Def() IDef
+	// Returns parent type
+	ParentType() IType
 
 	// Returns name of unique.
 	//

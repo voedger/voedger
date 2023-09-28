@@ -22,7 +22,7 @@ func TestBasicUsage_n10n(t *testing.T) {
 		t.Skip()
 	}
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	// создадим канал и подпишемся на изменения проекции

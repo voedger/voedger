@@ -38,25 +38,25 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 	})
 
 	t.Run("must be ok to find builded doc", func(t *testing.T) {
-		def := app.Def(docName)
-		require.Equal(DefKind_WDoc, def.Kind())
+		typ := app.Type(docName)
+		require.Equal(TypeKind_WDoc, typ.Kind())
 
 		doc := app.WDoc(docName)
-		require.Equal(DefKind_WDoc, doc.Kind())
-		require.Equal(def.(IWDoc), doc)
+		require.Equal(TypeKind_WDoc, doc.Kind())
+		require.Equal(typ.(IWDoc), doc)
 
 		require.Equal(2, doc.UserFieldCount())
 		require.Equal(DataKind_int64, doc.Field("f1").DataKind())
 
-		require.Equal(DefKind_WRecord, doc.Container("rec").Def().Kind())
+		require.Equal(TypeKind_WRecord, doc.Container("rec").Type().Kind())
 
 		t.Run("must be ok to find builded record", func(t *testing.T) {
-			def := app.Def(recName)
-			require.Equal(DefKind_WRecord, def.Kind())
+			typ := app.Type(recName)
+			require.Equal(TypeKind_WRecord, typ.Kind())
 
 			rec := app.WRecord(recName)
-			require.Equal(DefKind_WRecord, rec.Kind())
-			require.Equal(def.(IWRecord), rec)
+			require.Equal(TypeKind_WRecord, rec.Kind())
+			require.Equal(typ.(IWRecord), rec)
 
 			require.Equal(2, rec.UserFieldCount())
 			require.Equal(DataKind_int64, rec.Field("f1").DataKind())

@@ -51,7 +51,7 @@ const (
 	SubjectKind_FakeLast
 )
 
-// panics if name does not exist in definition
+// panics if name does not exist in type
 // If field is nil zero value is returned
 type IRowReader interface {
 	AsInt32(name string) int32

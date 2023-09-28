@@ -13,7 +13,7 @@ import (
 // # Implements:
 //   - IQuery & IQueryBuilder
 type query struct {
-	def
+	typ
 	comment
 	arg, res objRef
 	ext      extension
@@ -21,9 +21,9 @@ type query struct {
 
 func newQuery(app *appDef, name QName) *query {
 	q := &query{
-		def: makeDef(app, name, DefKind_Query),
+		typ: makeType(app, name, TypeKind_Query),
 	}
-	app.appendDef(q)
+	app.appendType(q)
 	return q
 }
 
@@ -65,13 +65,13 @@ func (q *query) SetExtension(name string, engine ExtensionEngineKind) IQueryBuil
 func (q *query) Validate() (err error) {
 	if q.arg.name != NullQName {
 		if q.arg.object(q.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: argument definition «%v» is not found: %w", q.QName(), q.arg.name, ErrNameNotFound))
+			err = errors.Join(err, fmt.Errorf("%v: argument type «%v» is not found: %w", q.QName(), q.arg.name, ErrNameNotFound))
 		}
 	}
 
 	if q.res.name != NullQName {
 		if q.res.object(q.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: query result definition «%v» is not found: %w", q.QName(), q.res.name, ErrNameNotFound))
+			err = errors.Join(err, fmt.Errorf("%v: query result type «%v» is not found: %w", q.QName(), q.res.name, ErrNameNotFound))
 		}
 	}
 

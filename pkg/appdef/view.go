@@ -15,7 +15,7 @@ import (
 // # Implements:
 //   - IView
 type view struct {
-	def
+	typ
 	comment
 	containers
 	key   *viewKey
@@ -23,7 +23,7 @@ type view struct {
 }
 
 func newView(app *appDef, name QName) *view {
-	v := &view{def: makeDef(app, name, DefKind_ViewRecord)}
+	v := &view{typ: makeType(app, name, TypeKind_ViewRecord)}
 	v.containers = makeContainers(v)
 
 	v.key = newViewKey(app, name)
@@ -32,7 +32,7 @@ func newView(app *appDef, name QName) *view {
 		AddContainer(SystemContainer_ViewKey, v.key.QName(), 1, 1).
 		AddContainer(SystemContainer_ViewValue, v.value.QName(), 1, 1)
 
-	app.appendDef(v)
+	app.appendType(v)
 
 	return v
 }
@@ -92,7 +92,7 @@ func (v *viewBuilder) Value() IViewValueBuilder {
 // # Implements:
 //   - IViewKey
 type viewKey struct {
-	def
+	typ
 	fields
 	containers
 	pkey  *viewPartKey
@@ -100,7 +100,7 @@ type viewKey struct {
 }
 
 func newViewKey(app *appDef, viewName QName) *viewKey {
-	key := &viewKey{def: makeDef(app, ViewKeyDefName(viewName), DefKind_ViewRecord_Key)}
+	key := &viewKey{typ: makeType(app, ViewKeyDefName(viewName), TypeKind_ViewRecord_Key)}
 	key.fields = makeFields(key)
 	key.containers = makeContainers(key)
 
@@ -111,7 +111,7 @@ func newViewKey(app *appDef, viewName QName) *viewKey {
 		AddContainer(SystemContainer_ViewPartitionKey, key.pkey.QName(), 1, 1).
 		AddContainer(SystemContainer_ViewClusteringCols, key.ccols.QName(), 1, 1)
 
-	app.appendDef(key)
+	app.appendType(key)
 	return key
 }
 
@@ -155,14 +155,14 @@ func (k *viewKeyBuilder) ClustCols() IViewClustColsBuilder {
 // # Implements:
 //   - IViewPartKey
 type viewPartKey struct {
-	def
+	typ
 	fields
 }
 
 func newViewPartKey(app *appDef, name QName) *viewPartKey {
-	pKey := &viewPartKey{def: makeDef(app, name, DefKind_ViewRecord_PartitionKey)}
+	pKey := &viewPartKey{typ: makeType(app, name, TypeKind_ViewRecord_PartitionKey)}
 	pKey.fields = makeFields(pKey)
-	app.appendDef(pKey)
+	app.appendType(pKey)
 	return pKey
 }
 
@@ -211,14 +211,14 @@ func (k *viewPartKeyBuilder) SetFieldComment(name string, comment ...string) IVi
 // # Implements:
 //   - IViewClustCols
 type viewClustCols struct {
-	def
+	typ
 	fields
 }
 
 func newViewClustCols(app *appDef, name QName) *viewClustCols {
-	cc := &viewClustCols{def: makeDef(app, name, DefKind_ViewRecord_ClusteringColumns)}
+	cc := &viewClustCols{typ: makeType(app, name, TypeKind_ViewRecord_ClusteringColumns)}
 	cc.fields = makeFields(cc)
-	app.appendDef(cc)
+	app.appendType(cc)
 	return cc
 }
 
@@ -294,14 +294,14 @@ func (c *viewClustColsBuilder) SetFieldComment(name string, comment ...string) I
 // # Implements:
 //   - IViewValue
 type viewValue struct {
-	def
+	typ
 	fields
 }
 
 func newViewValue(app *appDef, viewName QName) *viewValue {
-	val := &viewValue{def: makeDef(app, ViewValueDefName(viewName), DefKind_ViewRecord_Value)}
+	val := &viewValue{typ: makeType(app, ViewValueDefName(viewName), TypeKind_ViewRecord_Value)}
 	val.fields = makeFields(val)
-	app.appendDef(val)
+	app.appendType(val)
 	return val
 }
 
@@ -357,25 +357,25 @@ func (v *viewValueBuilder) SetFieldVerify(name string, vk ...VerificationKind) I
 	return v
 }
 
-// Returns partition key definition name for specified view
+// Returns partition key type name for specified view
 func ViewPartitionKeyDefName(viewName QName) QName {
 	const suffix = "_PartitionKey"
 	return suffixedQName(viewName, suffix)
 }
 
-// Returns clustering columns definition name for specified view
+// Returns clustering columns type name for specified view
 func ViewClusteringColumnsDefName(viewName QName) QName {
 	const suffix = "_ClusteringColumns"
 	return suffixedQName(viewName, suffix)
 }
 
-// Returns full key definition name for specified view
+// Returns full key type name for specified view
 func ViewKeyDefName(viewName QName) QName {
 	const suffix = "_FullKey"
 	return suffixedQName(viewName, suffix)
 }
 
-// Returns value definition name for specified view
+// Returns value type name for specified view
 func ViewValueDefName(viewName QName) QName {
 	const suffix = "_Value"
 	return suffixedQName(viewName, suffix)

@@ -76,9 +76,9 @@ func Test_BasicUsage(t *testing.T) {
 
 func test_AppDefSingletons(t *testing.T, appDef appdef.IAppDef, st *Singletons) {
 	require := require.New(t)
-	appDef.Defs(
-		func(d appdef.IDef) {
-			if cDoc, ok := d.(appdef.ICDoc); ok {
+	appDef.Types(
+		func(t appdef.IType) {
+			if cDoc, ok := t.(appdef.ICDoc); ok {
 				if cDoc.Singleton() {
 					id, err := st.ID(cDoc.QName())
 					require.NoError(err)
@@ -105,8 +105,8 @@ func Test_SingletonsGetID(t *testing.T) {
 			require.NoError(err)
 
 			app := appdef.New()
-			def := app.AddSingleton(cDocName)
-			def.AddField("f1", appdef.DataKind_QName, true)
+			app.AddSingleton(cDocName).
+				AddField("f1", appdef.DataKind_QName, true)
 			appDef, err := app.Build()
 			require.NoError(err)
 
@@ -196,8 +196,8 @@ func Test_Singletons_Errors(t *testing.T) {
 		require.NoError(err)
 
 		app := appdef.New()
-		def := app.AddSingleton(cDocName)
-		def.AddField("f1", appdef.DataKind_QName, true)
+		app.AddSingleton(cDocName).
+			AddField("f1", appdef.DataKind_QName, true)
 		appDef, err := app.Build()
 		require.NoError(err)
 

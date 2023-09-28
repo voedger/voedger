@@ -1,4 +1,4 @@
-name: Merge PR
+name: Vulnerability management
 
 on: workflow_call
 
@@ -13,7 +13,7 @@ jobs:
       with:
         go-version: 'stable'
 
-    - name: Vulnerability management
+    - name: Check vulnerability 
       run: |
         go install golang.org/x/vuln/cmd/govulncheck@latest
         govulncheck voedger/voedger/...

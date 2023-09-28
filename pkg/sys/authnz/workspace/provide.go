@@ -27,7 +27,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
 			AddField(authnz.Field_WSClusterID, appdef.DataKind_int32, true).
 			AddField(field_TemplateName, appdef.DataKind_string, false).
-			AddField(Field_TemplateParams, appdef.DataKind_string, false).(appdef.IDef).QName(),
+			AddField(Field_TemplateParams, appdef.DataKind_string, false).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdInitChildWorkspace,
@@ -54,7 +54,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
 			AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
 			AddField(field_TemplateName, appdef.DataKind_string, false).
-			AddField(Field_TemplateParams, appdef.DataKind_string, false).(appdef.IDef).QName(),
+			AddField(Field_TemplateParams, appdef.DataKind_string, false).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdCreateWorkspaceID(asp, cfg.Name),
@@ -81,7 +81,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
 			AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
 			AddField(field_TemplateName, appdef.DataKind_string, false).
-			AddField(Field_TemplateParams, appdef.DataKind_string, false).(appdef.IDef).QName(),
+			AddField(Field_TemplateParams, appdef.DataKind_string, false).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdCreateWorkspace(timeFunc, asp, cfg.Name),
@@ -91,7 +91,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryChildWorkspaceByName,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "QueryChildWorkspaceByNameParams")).
-			AddField(authnz.Field_WSName, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(authnz.Field_WSName, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "QueryChildWorkspaceByNameResult")).
 			AddField(authnz.Field_WSName, appdef.DataKind_string, true).
 			AddField(authnz.Field_WSKind, appdef.DataKind_string, true).
@@ -100,7 +100,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			AddField(Field_TemplateParams, appdef.DataKind_string, false).
 			AddField(authnz.Field_WSID, appdef.DataKind_int64, false).
 			AddField(authnz.Field_WSError, appdef.DataKind_string, false).
-			AddField(appdef.SystemField_IsActive, appdef.DataKind_bool, true).(appdef.IDef).QName(),
+			AddField(appdef.SystemField_IsActive, appdef.DataKind_bool, true).(appdef.IType).QName(),
 		qcwbnQryExec,
 	))
 

@@ -25,7 +25,7 @@ func TestBasicUsage_HTTPConventions(t *testing.T) {
 	vit.MockCmdExec = func(input string) error {
 		return errors.New("test error")
 	}
-	vit := vit.NewVIT(t, &vit.SharedConfig_Simple)
+	vit := vit.NewVIT(t, &vit.SharedConfig_App1)
 	defer vit.TearDown()
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
 

@@ -72,9 +72,17 @@ func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *Q
 	})
 }
 
-func isInternalName(name DefQName, schema *SchemaAST) bool {
+func isInternalName(name DefQName, pkgAst *PackageSchemaAST) bool {
 	pkg := strings.TrimSpace(string(name.Package))
-	return pkg == "" || pkg == string(schema.Package)
+	return pkg == "" || pkg == string(pkgAst.Name)
+}
+
+func getPackageName(pkgQN string) string {
+	parts := strings.Split(pkgQN, "/")
+	if len(parts) == 0 {
+		return ""
+	}
+	return parts[len(parts)-1]
 }
 
 func getQualifiedPackageName(pkgName Ident, schema *SchemaAST) string {
@@ -97,12 +105,12 @@ func getQualifiedPackageName(pkgName Ident, schema *SchemaAST) string {
 func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 	var targetPkgSch *PackageSchemaAST
 
-	if isInternalName(n, c.pkg.Ast) {
+	if isInternalName(n, c.pkg) {
 		return c.pkg, nil
 	}
 
 	if n.Package == appdef.SysPackage {
-		sysSchema := c.pkgmap[appdef.SysPackage]
+		sysSchema := c.app.Packages[appdef.SysPackage]
 		if sysSchema == nil {
 			return nil, ErrCouldNotImport(appdef.SysPackage)
 		}
@@ -113,7 +121,7 @@ func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 	if pkgQN == "" {
 		return nil, ErrUndefined(string(n.Package))
 	}
-	targetPkgSch = c.pkgmap[pkgQN]
+	targetPkgSch = c.app.Packages[pkgQN]
 	if targetPkgSch == nil {
 		return nil, ErrCouldNotImport(pkgQN)
 	}
@@ -174,7 +182,7 @@ func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *Ra
 	iter(schema.Ast)
 
 	if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
-		schema = c.pkgmap[appdef.SysPackage]
+		schema = c.app.Packages[appdef.SysPackage]
 		if schema == nil {
 			return nil, nil, ErrCouldNotImport(appdef.SysPackage)
 		}
@@ -227,14 +235,14 @@ func isPredefinedSysTable(packageName string, table *TableStmt) bool {
 			table.Name == nameCRecord || table.Name == nameWRecord || table.Name == nameORecord)
 }
 
-func getNestedTableKind(rootTableKind appdef.DefKind) appdef.DefKind {
+func getNestedTableKind(rootTableKind appdef.TypeKind) appdef.TypeKind {
 	switch rootTableKind {
-	case appdef.DefKind_CDoc, appdef.DefKind_CRecord:
-		return appdef.DefKind_CRecord
-	case appdef.DefKind_ODoc, appdef.DefKind_ORecord:
-		return appdef.DefKind_ORecord
-	case appdef.DefKind_WDoc, appdef.DefKind_WRecord:
-		return appdef.DefKind_WRecord
+	case appdef.TypeKind_CDoc, appdef.TypeKind_CRecord:
+		return appdef.TypeKind_CRecord
+	case appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
+		return appdef.TypeKind_ORecord
+	case appdef.TypeKind_WDoc, appdef.TypeKind_WRecord:
+		return appdef.TypeKind_WRecord
 	default:
 		panic(fmt.Sprintf("unexpected root table kind %d", rootTableKind))
 	}
@@ -279,7 +287,7 @@ func dataTypeToDataKind(t DataType) appdef.DataKind {
 
 func buildQname(ctx *buildContext, pkg Ident, name Ident) appdef.QName {
 	if pkg == "" {
-		pkg = ctx.pkg.Ast.Package
+		pkg = Ident(ctx.pkg.Name)
 	}
 	return appdef.NewQName(string(pkg), string(name))
 }
