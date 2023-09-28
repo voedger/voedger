@@ -192,7 +192,19 @@ var typeKindProps = map[TypeKind]struct {
 		},
 	},
 	TypeKind_ViewRecord: {
-		fieldKinds:   map[DataKind]bool{},
+		fieldKinds: map[DataKind]bool{
+			DataKind_int32:    true,
+			DataKind_int64:    true,
+			DataKind_float32:  true,
+			DataKind_float64:  true,
+			DataKind_bytes:    true,
+			DataKind_string:   true,
+			DataKind_QName:    true,
+			DataKind_bool:     true,
+			DataKind_RecordID: true,
+			DataKind_Record:   true,
+			DataKind_Event:    true,
+		},
 		systemFields: map[string]bool{},
 		containerKinds: map[TypeKind]bool{
 			TypeKind_ViewRecord_PartitionKey:      true,

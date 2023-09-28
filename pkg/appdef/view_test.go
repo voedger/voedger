@@ -62,11 +62,9 @@ func TestAddView(t *testing.T) {
 		require.Equal("test view", view.Comment())
 		require.Equal(viewName, view.QName())
 		require.Equal(TypeKind_ViewRecord, view.Kind())
-		require.Equal(2, view.ContainerCount()) // key + value
 
 		t.Run("must be ok to read view full key", func(t *testing.T) {
 			key := view.Key()
-			require.Equal(view.Container(SystemContainer_ViewKey).Type(), key)
 			require.Equal(4, key.FieldCount())
 			cnt := 0
 			key.Fields(func(f IField) {
@@ -94,16 +92,61 @@ func TestAddView(t *testing.T) {
 		t.Run("must be ok to read view partition key", func(t *testing.T) {
 			pk := view.Key().Partition()
 			require.Equal(2, pk.FieldCount())
+			cnt := 0
+			pk.Fields(func(f IField) {
+				cnt++
+				switch cnt {
+				case 1:
+					require.Equal("pkF1", f.Name())
+					require.True(f.Required())
+				case 2:
+					require.Equal("pkF2", f.Name())
+					require.True(f.Required())
+				default:
+					require.Fail("unexpected field «%s»", f.Name())
+				}
+			})
+			require.Equal(pk.FieldCount(), cnt)
 		})
 
 		t.Run("must be ok to read view clustering columns", func(t *testing.T) {
 			cc := view.Key().ClustCols()
 			require.Equal(2, cc.FieldCount())
+			cnt := 0
+			cc.Fields(func(f IField) {
+				cnt++
+				switch cnt {
+				case 1:
+					require.Equal("ccF1", f.Name())
+					require.False(f.Required())
+				case 2:
+					require.Equal("ccF2", f.Name())
+					require.False(f.Required())
+				default:
+					require.Fail("unexpected field «%s»", f.Name())
+				}
+			})
+			require.Equal(cc.FieldCount(), cnt)
 		})
 
 		t.Run("must be ok to read view value", func(t *testing.T) {
 			val := view.Value()
-			require.Equal(2, val.UserFieldCount())
+			require.Equal(2, val.FieldCount())
+			cnt := 0
+			val.Fields(func(f IField) {
+				cnt++
+				switch cnt {
+				case 1:
+					require.Equal("valF1", f.Name())
+					require.True(f.Required())
+				case 2:
+					require.Equal("valF2", f.Name())
+					require.False(f.Required())
+				default:
+					require.Fail("unexpected field «%s»", f.Name())
+				}
+			})
+			require.Equal(val.FieldCount(), cnt)
 		})
 
 		t.Run("must be ok to cast Type() as IView", func(t *testing.T) {
@@ -114,10 +157,6 @@ func TestAddView(t *testing.T) {
 			v, ok := typ.(IView)
 			require.True(ok)
 			require.Equal(v, view)
-
-			k, ok := app.Type(ViewKeyDefName(viewName)).(IViewKey)
-			require.True(ok)
-			require.Equal(k, v.Key())
 		})
 
 		require.Nil(ab.View(NewQName("test", "unknown")), "find unknown view must return nil")
@@ -141,6 +180,12 @@ func TestAddView(t *testing.T) {
 		vb.Key().ClustCols().
 			AddBytesField("ccF3", 100).
 			SetFieldComment("ccF3", "test comment")
+
+		t.Run("panic if add second variable length field", func(t *testing.T) {
+			require.Panics(func() {
+				vb.Key().ClustCols().AddBytesField("ccF3_1", 100)
+			})
+		})
 
 		vb.Value().
 			AddRefField("valF3", false, docName).
@@ -215,11 +260,4 @@ func TestViewValidate(t *testing.T) {
 	v.Key().ClustCols().AddStringField("cc1", 100)
 	_, err := app.Build()
 	require.NoError(err)
-
-	t.Run("must be error if there a variable length field is not last in ccols", func(t *testing.T) {
-		v.Key().ClustCols().AddField("cc2", DataKind_int64)
-		_, err := app.Build()
-		require.ErrorIs(err, ErrInvalidDataKind)
-		require.ErrorContains(err, "cc1")
-	})
 }

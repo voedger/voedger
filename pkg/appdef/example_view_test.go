@@ -90,8 +90,7 @@ func ExampleIView() {
 	// - cc_int: int64
 	// - cc_ref: RecordID, refs: [test.doc]
 	// - cc_name: string, restricts: MaxLen: 100
-	// view value has 5 fields:
-	// - sys.QName: QName, sys, required
+	// view value has 4 fields:
 	// - vv_int: int64, required
 	// - vv_ref: RecordID, required, refs: [test.doc]
 	// - vv_code: string, restricts: MaxLen: 10, Pattern: `^\w+$`

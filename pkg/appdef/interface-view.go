@@ -11,7 +11,6 @@ package appdef
 type IView interface {
 	IType
 	IComment
-	IContainers
 
 	// Returns full (pk + ccols) view key
 	Key() IViewKey
