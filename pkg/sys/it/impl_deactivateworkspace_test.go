@@ -23,7 +23,7 @@ import (
 )
 
 func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	wsName := vit.NextName()
@@ -31,7 +31,7 @@ func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
 	prn1 := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 	wsp := it.WSParams{
 		Name:         wsName,
-		Kind:         it.QNameTestWSKind,
+		Kind:         it.QNameApp1_TestWSKind,
 		InitDataJSON: `{"IntFld":42}`,
 		ClusterID:    istructs.MainClusterID,
 	}
@@ -43,7 +43,7 @@ func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
 	waitForDeactivate(vit, ws)
 
 	// 410 Gone on work in an inactive workspace
-	bodyCmd := `{"cuds":[{"fields":{"sys.QName":"simpleApp.computers","sys.ID":1}}]}`
+	bodyCmd := `{"cuds":[{"fields":{"sys.QName":"app1.computers","sys.ID":1}}]}`
 	vit.PostWS(ws, "c.sys.CUD", bodyCmd, coreutils.Expect410()).Println()
 	bodyQry := `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`
 	vit.PostWS(ws, "q.sys.Collection", bodyQry, coreutils.Expect410()).Println()
@@ -73,7 +73,7 @@ func waitForDeactivate(vit *it.VIT, ws *it.AppWorkspace) {
 
 func TestDeactivateJoinedWorkspace(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	wsName1 := vit.NextName()
@@ -81,7 +81,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	prn2 := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail2)
 	wsp := it.WSParams{
 		Name:         wsName1,
-		Kind:         it.QNameTestWSKind,
+		Kind:         it.QNameApp1_TestWSKind,
 		InitDataJSON: `{"IntFld":42}`,
 		ClusterID:    istructs.MainClusterID,
 	}
@@ -89,7 +89,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	newWS := vit.CreateWorkspace(wsp, prn1)
 
 	// check prn2 could not work in ws1
-	body := `{"cuds":[{"fields":{"sys.QName":"simpleApp.computers","sys.ID":1}}]}`
+	body := `{"cuds":[{"fields":{"sys.QName":"app1.computers","sys.ID":1}}]}`
 	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn2.Token), coreutils.Expect403())
 
 	// join login TestEmail2 to ws1
@@ -106,7 +106,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	WaitForInviteState(vit, newWS, invite.State_Joined, inviteID)
 
 	// check prn2 could work in ws1
-	body = `{"cuds":[{"fields":{"sys.QName":"simpleApp.computers","sys.ID":1}}]}`
+	body = `{"cuds":[{"fields":{"sys.QName":"app1.computers","sys.ID":1}}]}`
 	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn2.Token))
 
 	// deactivate

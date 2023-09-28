@@ -20,8 +20,17 @@ type FileSchemaAST struct {
 }
 
 type PackageSchemaAST struct {
+	Name                 string // Fill on the analysis stage, when the APPLICATION statement is found
 	QualifiedPackageName string
 	Ast                  *SchemaAST
+}
+
+type AppSchemaAST struct {
+	// Application name
+	Name string
+
+	// key = Fully Qualified Name
+	Packages map[string]*PackageSchemaAST
 }
 
 type IReadFS interface {
@@ -55,13 +64,12 @@ type IExtensionStatement interface {
 }
 
 type SchemaAST struct {
-	Package    Ident           `parser:"'SCHEMA' @Ident ';'"`
 	Imports    []ImportStmt    `parser:"@@? (';' @@)* ';'?"`
 	Statements []RootStatement `parser:"@@? (';' @@)* ';'?"`
 }
 
-func (s *SchemaAST) NewQName(name Ident) appdef.QName {
-	return appdef.NewQName(string(s.Package), string(name))
+func (p *PackageSchemaAST) NewQName(name Ident) appdef.QName {
+	return appdef.NewQName(string(p.Name), string(name))
 }
 
 func (s *SchemaAST) Iterate(callback func(stmt interface{})) {
@@ -92,6 +100,7 @@ type RootStatement struct {
 	AlterWorkspace *AlterWorkspaceStmt `parser:"| @@"`
 	Table          *TableStmt          `parser:"| @@"`
 	Type           *TypeStmt           `parser:"| @@"`
+	Application    *ApplicationStmt    `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
 
 	stmt interface{}
@@ -165,6 +174,17 @@ func (s *RootExtEngineStmt) Iterate(callback func(stmt interface{})) {
 		}
 		callback(raw.stmt)
 	}
+}
+
+type UseStmt struct {
+	Statement
+	Name Ident `parser:"'USE' @Ident"`
+}
+
+type ApplicationStmt struct {
+	Statement
+	Name Ident     `parser:"'APPLICATION' @Ident '('"`
+	Uses []UseStmt `parser:"@@? (';' @@)* ';'? ')'"`
 }
 
 type WorkspaceStmt struct {
@@ -405,7 +425,8 @@ func (s TagStmt) GetName() string { return string(s.Name) }
 
 type UseTableStmt struct {
 	Statement
-	Table Ident `parser:"'USE' 'TABLE' @Ident"`
+	Table DefQName `parser:"'USE' 'TABLE' @@"`
+	// TODO: Use all tables from package
 }
 
 type UseWorkspaceStmt struct {

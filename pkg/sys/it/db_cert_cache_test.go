@@ -21,7 +21,7 @@ func TestBasicUsage_db_cache(t *testing.T) {
 	ctx := context.TODO()
 	require := require.New(t)
 
-	vit := vit.NewVIT(t, &vit.SharedConfig_Simple)
+	vit := vit.NewVIT(t, &vit.SharedConfig_App1)
 	defer vit.TearDown()
 
 	storage, err := vit.IAppStorageProvider.AppStorage(istructs.AppQName_sys_router)
