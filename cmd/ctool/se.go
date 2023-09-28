@@ -8,6 +8,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os/exec"
+	"strings"
 
 	"github.com/untillpro/goutils/logger"
 )
@@ -34,6 +36,20 @@ func seNodeControllerFunction(n *nodeType) error {
 	if err = setHostname(n); err != nil {
 		logger.Error(err.Error())
 		return err
+	}
+
+	if n.cluster.Cmd.Kind == ckReplace {
+		cmd := fmt.Sprintf("ssh-keygen -f \"~/.ssh/known_hosts\" -R \"%s\"", n.nodeName())
+		parts := strings.Fields(cmd)
+		command := parts[0]
+		args := parts[1:]
+		// Run the command
+		output, err := exec.Command(command, args...).Output()
+		if err != nil {
+			logger.Error(err.Error())
+			return err
+		}
+		logger.Info(string(output))
 	}
 
 	if n.cluster.Cmd.Kind != ckInit {
@@ -70,7 +86,6 @@ func setHostname(node *nodeType) error {
 	return err
 }
 
-// ssh-keygen -f "/home/ubuntu/.ssh/known_hosts" -R "dbnode2"
 // Update hosts file on all nodes in cluster with new value
 func updateHosts(node *nodeType) error {
 	var err error
