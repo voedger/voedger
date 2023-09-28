@@ -1,6 +1,0 @@
-09/28 15:53:19.806: ===: [main.seNodeValidate:140]: checking host 10.0.0.16 requirements...
-host-validate.sh: line 19: LOGNAME: unbound variable
-09/28 15:53:20.020: *****: [main.seNodeValidate:154]: exit status 1
-09/28 15:53:20.020: *****: [main.seNodeControllerFunction:29]: exit status 1
-09/28 15:53:20.022: *****: [main.(*cmdType).apply.func1:213]: 0xc1dae0
-09/28 15:53:20.024: *****: [main.repeat:37]: error preparing cluster nodes, command is aborted
