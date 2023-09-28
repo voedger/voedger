@@ -41,10 +41,11 @@ func seNodeControllerFunction(n *nodeType) error {
 	if n.cluster.Cmd.Kind == ckReplace {
 		cmd := fmt.Sprintf("ssh-keygen -f \"~/.ssh/known_hosts\" -R \"%s\"", n.nodeName())
 		parts := strings.Fields(cmd)
+		var output []byte
 		command := parts[0]
 		args := parts[1:]
 		// Run the command
-		output, err := exec.Command(command, args...).Output()
+		output, err = exec.Command(command, args...).Output()
 		if err != nil {
 			logger.Error(err.Error())
 			return err
