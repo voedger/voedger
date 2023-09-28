@@ -52,11 +52,9 @@ func seNodeControllerFunction(n *nodeType) error {
 		logger.Info(string(output))
 	}
 
-	if n.cluster.Cmd.Kind != ckInit {
-		if err = updateHosts(n); err != nil {
-			logger.Error(err.Error())
-			return err
-		}
+	if err = updateHosts(n); err != nil {
+		logger.Error(err.Error())
+		return err
 	}
 
 	if err = deployDocker(n); err != nil {
@@ -99,12 +97,18 @@ func updateHosts(node *nodeType) error {
 
 	for _, clusterNode := range node.cluster.Nodes {
 		var ip string
-		if clusterNode.ActualNodeState.Address != "" {
-			ip = clusterNode.ActualNodeState.Address
-		} else {
+		if clusterNode.ActualNodeState == nil {
 			ip = clusterNode.DesiredNodeState.Address
 			newNode = ip
+		} else {
+			ip = clusterNode.ActualNodeState.Address
 		}
+		/*		if clusterNode.ActualNodeState.Address != "" {
+					ip = clusterNode.ActualNodeState.Address
+				} else {
+					ip = clusterNode.DesiredNodeState.Address
+					newNode = ip
+				}*/
 		aliveHosts[ip] = clusterNode.nodeName()
 		if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
 			run("node-update-hosts.sh", ip, node.DesiredNodeState.Address, node.nodeName()); err != nil {
@@ -118,12 +122,14 @@ func updateHosts(node *nodeType) error {
 		}
 	}
 
-	for host, hostname := range aliveHosts {
-		if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
-			run("node-update-hosts.sh", newNode, host, hostname); err != nil {
-			logger.Error(err.Error())
-			node.Error = err.Error()
-			break
+	if node.cluster.Cmd.Kind == ckReplace {
+		for host, hostname := range aliveHosts {
+			if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
+				run("node-update-hosts.sh", newNode, host, hostname); err != nil {
+				logger.Error(err.Error())
+				node.Error = err.Error()
+				break
+			}
 		}
 	}
 
