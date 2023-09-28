@@ -97,7 +97,6 @@ func updateHosts(node *nodeType) error {
 		var ip string
 		if clusterNode.ActualNodeState == nil {
 			ip = clusterNode.DesiredNodeState.Address
-			newNode = ip
 		} else {
 			ip = clusterNode.ActualNodeState.Address
 		}
@@ -122,9 +121,9 @@ func updateHosts(node *nodeType) error {
 
 	if node.cluster.Cmd.Kind == ckReplace {
 		for host, hostname := range aliveHosts {
-			logger.Info(fmt.Sprintf("newnode: %s host: %s hostname: %s", newNode, host, hostname))
+			logger.Info(fmt.Sprintf("newnode: %s host: %s hostname: %s", node.DesiredNodeState.Address, host, hostname))
 			if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
-				run("node-update-hosts.sh", newNode, host, hostname); err != nil {
+				run("node-update-hosts.sh", node.DesiredNodeState.Address, host, hostname); err != nil {
 				logger.Error(err.Error())
 				node.Error = err.Error()
 				break
