@@ -115,8 +115,8 @@ func updateHosts(node *nodeType) error {
 			break
 		} else {
 			logger.Info(fmt.Sprintf("Update /etc/hosts on node %s with values: %s, %s",
-				node.DesiredNodeState.Address,
-				clusterNode.DesiredNodeState.Address, clusterNode.nodeName()))
+				ip,
+				node.DesiredNodeState.Address, node.nodeName()))
 		}
 	}
 
