@@ -85,7 +85,6 @@ func setHostname(node *nodeType) error {
 // Update hosts file on all nodes in cluster with new value
 func updateHosts(node *nodeType) error {
 	var err error
-	var newNode string
 	aliveHosts := make(map[string]string)
 	if err = prepareScripts("node-update-hosts.sh"); err != nil {
 		logger.Error(err.Error())
