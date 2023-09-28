@@ -94,10 +94,10 @@ func updateHosts(node *nodeType) error {
 
 	for _, clusterNode := range node.cluster.Nodes {
 		var ip string
-		if clusterNode.ActualNodeState == nil {
-			ip = clusterNode.DesiredNodeState.Address
-		} else {
+		if clusterNode.ActualNodeState != nil && clusterNode.ActualNodeState.Address != "" {
 			ip = clusterNode.ActualNodeState.Address
+		} else {
+			ip = clusterNode.DesiredNodeState.Address
 		}
 		/*		if clusterNode.ActualNodeState.Address != "" {
 					ip = clusterNode.ActualNodeState.Address
