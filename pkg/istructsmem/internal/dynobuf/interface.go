@@ -7,8 +7,9 @@ package dynobuf
 
 import (
 	"github.com/untillpro/dynobuffers"
-	"github.com/voedger/voedger/pkg/appdef"
 )
 
 // Dynobuffer schemes map
-type DynoBufSchemes map[appdef.QName]*dynobuffers.Scheme
+type DynoBufSchemes struct {
+	schemes map[string]*dynobuffers.Scheme
+}

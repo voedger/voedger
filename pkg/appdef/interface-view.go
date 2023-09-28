@@ -63,6 +63,7 @@ type IViewKeyBuilder interface {
 //
 // Ref. to view.go for implementation
 type IViewPartKey interface {
+	// Partition key fields.
 	IFields
 }
 
@@ -91,6 +92,7 @@ type IViewPartKeyBuilder interface {
 //
 // Ref. to view.go for implementation
 type IViewClustCols interface {
+	// Clustering columns fields.
 	IFields
 }
 
@@ -100,8 +102,11 @@ type IViewClustCols interface {
 type IViewClustColsBuilder interface {
 	// Adds clustering columns field.
 	//
+	// Only last column field can be variable length.
+	//
 	// # Panics:
-	//	- if field already exists in partition key or value fields.
+	//	- if field already exists in view;
+	//	- if already contains a variable length field.
 	AddField(name string, kind DataKind, comment ...string) IViewClustColsBuilder
 	AddRefField(name string, ref ...QName) IViewClustColsBuilder
 	AddStringField(name string, maxLen uint16) IViewClustColsBuilder
@@ -120,6 +125,7 @@ type IViewClustColsBuilder interface {
 //
 // Ref. to view.go for implementation
 type IViewValue interface {
+	// View value fields.
 	IFields
 }
 

@@ -35,3 +35,10 @@ var dynobufferFieldTypeToStr = map[dynobuffers.FieldType]string{
 	dynobuffers.FieldTypeBool:        "bool",
 	dynobuffers.FieldTypeByte:        "[]byte",
 }
+
+const (
+	viewKeySuffix       = "$key"
+	viewPartKeySuffix   = "$pkey"
+	viewClustColsSuffix = "$ccols"
+	viewValueSuffix     = "$value"
+)

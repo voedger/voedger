@@ -10,37 +10,66 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func newSchemes() DynoBufSchemes {
-	cache := DynoBufSchemes{}
+func newSchemes() *DynoBufSchemes {
+	cache := &DynoBufSchemes{
+		schemes: make(map[string]*dynobuffers.Scheme),
+	}
 	return cache
 }
 
 // Prepares schemes
-func (sch DynoBufSchemes) Prepare(appDef appdef.IAppDef) {
+func (sch *DynoBufSchemes) Prepare(appDef appdef.IAppDef) {
 	appDef.Types(
 		func(t appdef.IType) {
+			if view, ok := t.(appdef.IView); ok {
+				sch.addView(view)
+				return
+			}
 			if fld, ok := t.(appdef.IFields); ok {
-				sch.add(t.QName(), fld)
+				sch.add(t.QName().String(), fld)
 			}
 		})
 }
 
+// Returns structure scheme. Nil if not found
+func (sch DynoBufSchemes) Scheme(name appdef.QName) *dynobuffers.Scheme {
+	return sch.schemes[name.String()]
+}
+
+// Returns view key scheme. Nil if not found
+func (sch DynoBufSchemes) ViewKeyScheme(name appdef.QName) *dynobuffers.Scheme {
+	return sch.schemes[name.String()+viewKeySuffix]
+}
+
+// Returns view partition key scheme. Nil if not found
+func (sch DynoBufSchemes) ViewPartKeyScheme(name appdef.QName) *dynobuffers.Scheme {
+	return sch.schemes[name.String()+viewPartKeySuffix]
+}
+
+// Returns view clustering columns scheme. Nil if not found
+func (sch DynoBufSchemes) ViewClustColsScheme(name appdef.QName) *dynobuffers.Scheme {
+	return sch.schemes[name.String()+viewClustColsSuffix]
+}
+
+// Returns view value scheme. Nil if not found
+func (sch DynoBufSchemes) ViewValueScheme(name appdef.QName) *dynobuffers.Scheme {
+	return sch.schemes[name.String()+viewValueSuffix]
+}
+
 // Adds scheme
-func (sch DynoBufSchemes) add(name appdef.QName, fields appdef.IFields) {
-	db := dynobuffers.NewScheme()
+func (sch *DynoBufSchemes) add(name string, fields appdef.IFields) {
+	sch.schemes[name] = NewFieldsScheme(name, fields)
+}
 
-	db.Name = name.String()
-	fields.Fields(
-		func(f appdef.IField) {
-			if !f.IsSys() { // #18142: extract system fields from dynobuffer
-				fieldType := DataKindToFieldType(f.DataKind())
-				if fieldType == dynobuffers.FieldTypeByte {
-					db.AddArray(f.Name(), fieldType, false)
-				} else {
-					db.AddField(f.Name(), fieldType, false)
-				}
-			}
-		})
-
-	sch[name] = db
+// Adds four view schemes:
+//   - view key,
+//   - partition key,
+//   - clustering columns and
+//   - view value
+func (sch *DynoBufSchemes) addView(view appdef.IView) {
+	name := view.QName().String()
+	sch.add(name+viewKeySuffix, view.Key())
+	sch.add(name+viewPartKeySuffix, view.Key().Partition())
+	sch.add(name+viewClustColsSuffix, view.Key().ClustCols())
+	sch.add(name+viewValueSuffix, view.Value())
 }

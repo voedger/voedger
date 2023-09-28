@@ -51,13 +51,14 @@ func TestDynoBufSchemes(t *testing.T) {
 		subEl.
 			AddField("recIDField", appdef.DataKind_RecordID, false)
 
-		sch, err := appDefBuilder.Build()
-		require.NoError(err)
-
 		view := appDefBuilder.AddView(appdef.NewQName("test", "view"))
 		view.Key().Partition().AddField("pk1", appdef.DataKind_int64)
 		view.Key().ClustCols().AddStringField("cc1", 100)
 		view.Value().AddRefField("val1", true)
+
+		sch, err := appDefBuilder.Build()
+		require.NoError(err)
+
 		appDef = sch
 	})
 
@@ -66,46 +67,38 @@ func TestDynoBufSchemes(t *testing.T) {
 
 	schemes.Prepare(appDef)
 
-	var checkScheme func(dynoScheme *dynobuffers.Scheme)
+	checkScheme := func(name appdef.QName, fields appdef.IFields, dynoScheme *dynobuffers.Scheme) {
+		require.NotNil(dynoScheme, "dynobuffer scheme for «%v» not found", name)
 
-	checkScheme = func(dynoScheme *dynobuffers.Scheme) {
-		require.NotNil(dynoScheme)
-
-		typeName, err := appdef.ParseQName(dynoScheme.Name)
-		require.NoError(err)
-
-		typ := appDef.TypeByName(typeName)
-		require.NotNil(typ)
+		require.EqualValues(len(dynoScheme.FieldsMap), fields.UserFieldCount())
 
 		for _, fld := range dynoScheme.Fields {
-			if fld.Ft == dynobuffers.FieldTypeObject {
-				cont, ok := typ.(appdef.IContainers)
-				require.True(ok)
-
-				c := cont.Container(fld.Name)
-				require.NotNil(c)
-
-				require.Equal(fld.IsMandatory, c.MinOccurs() > 0)
-				require.Equal(fld.IsArray, c.MaxOccurs() > 1)
-
-				require.NotNil(fld.FieldScheme)
-
-				checkScheme(fld.FieldScheme)
-
-				continue
-			}
-
-			field := typ.(appdef.IFields).Field(fld.Name)
+			field := fields.Field(fld.Name)
 			require.NotNil(field)
-
 			require.Equal(DataKindToFieldType(field.DataKind()), fld.Ft)
 		}
+
+		fields.Fields(func(field appdef.IField) {
+			if !field.IsSys() {
+				fld, ok := dynoScheme.FieldsMap[field.Name()]
+				require.True(ok)
+				require.Equal(DataKindToFieldType(field.DataKind()), fld.Ft)
+			}
+		})
 	}
 
 	appDef.Types(
 		func(typ appdef.IType) {
-			if _, ok := typ.(appdef.IFields); ok {
-				checkScheme(schemes[typ.QName()])
+			name := typ.QName()
+			if view, ok := typ.(appdef.IView); ok {
+				checkScheme(name, view.Key(), schemes.ViewKeyScheme(name))
+				checkScheme(name, view.Key().Partition(), schemes.ViewPartKeyScheme(name))
+				checkScheme(name, view.Key().ClustCols(), schemes.ViewClustColsScheme(name))
+				checkScheme(name, view.Value(), schemes.ViewValueScheme(name))
+				return
+			}
+			if fld, ok := typ.(appdef.IFields); ok {
+				checkScheme(name, fld, schemes.Scheme(name))
 			}
 		})
 }
