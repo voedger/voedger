@@ -8,9 +8,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os/exec"
-	"strings"
-
 	"github.com/untillpro/goutils/logger"
 )
 
@@ -38,7 +35,7 @@ func seNodeControllerFunction(n *nodeType) error {
 		return err
 	}
 
-	if n.cluster.Cmd.Kind == ckReplace {
+	/*	if n.cluster.Cmd.Kind == ckReplace {
 		cmd := fmt.Sprintf("ssh-keygen -f \"~/.ssh/known_hosts\" -R \"%s\"", n.nodeName())
 		parts := strings.Fields(cmd)
 		var output []byte
@@ -51,7 +48,7 @@ func seNodeControllerFunction(n *nodeType) error {
 			return err
 		}
 		logger.Info(string(output))
-	}
+	}*/
 
 	if err = updateHosts(n); err != nil {
 		logger.Error(err.Error())
