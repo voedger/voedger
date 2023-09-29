@@ -41,7 +41,7 @@ var (
 	qNameQryCollection                              = appdef.NewQName(appdef.SysPackage, "Collection")
 	qNameCmdInitiateUpdateInviteRoles               = appdef.NewQName(appdef.SysPackage, "InitiateUpdateInviteRoles")
 	qNameCmdInitiateCancelAcceptedInvite            = appdef.NewQName(appdef.SysPackage, "InitiateCancelAcceptedInvite")
-	qNameCmdCancelSendInvite                        = appdef.NewQName(appdef.SysPackage, "CancelSendInvite")
+	qNameCmdCancelSentInvite                        = appdef.NewQName(appdef.SysPackage, "CancelSentInvite")
 	qNameCmdInitChildWorkspace                      = appdef.NewQName(appdef.SysPackage, "InitChildWorkspace")
 	qNameCmdEnrichPrincipalToken                    = appdef.NewQName(appdef.SysPackage, "EnrichPrincipalToken")
 	qNameCDocUPProfile                              = appdef.NewQName(airPackage, "UPProfile")
