@@ -216,8 +216,8 @@ func newKey(appCfg *AppConfigType, name appdef.QName) *keyType {
 		viewName: name,
 		viewID:   id,
 		view:     view,
-		partRow:  newRow(appCfg),
-		ccolsRow: newRow(appCfg),
+		partRow:  makeRow(appCfg),
+		ccolsRow: makeRow(appCfg),
 	}
 	key.partRow.setViewPartKey(view)
 	key.ccolsRow.setViewClustCols(view)
@@ -485,7 +485,7 @@ func newValue(appCfg *AppConfigType, name appdef.QName) *valueType {
 	}
 
 	value := valueType{
-		rowType:  newRow(appCfg),
+		rowType:  makeRow(appCfg),
 		viewName: name,
 	}
 	value.rowType.setType(view)
@@ -495,7 +495,7 @@ func newValue(appCfg *AppConfigType, name appdef.QName) *valueType {
 // newNullValue return new empty (null) value. Useful as result if no view record found
 func newNullValue() istructs.IValue {
 	return &valueType{
-		rowType:  newRow(NullAppConfig),
+		rowType:  makeRow(NullAppConfig),
 		viewName: appdef.NullQName,
 	}
 }

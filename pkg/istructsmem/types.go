@@ -42,11 +42,8 @@ type rowType struct {
 	err       error
 }
 
-// Makes new row (QName is appdef.NullQName)
-//
-// FIXME: rename newRow —> makeRow
-// then TODO: add newRow() and replace &makeRow() with it
-func newRow(appCfg *AppConfigType) rowType {
+// Makes new empty row (QName is appdef.NullQName)
+func makeRow(appCfg *AppConfigType) rowType {
 	return rowType{
 		appCfg:    appCfg,
 		typ:       appdef.NullType,
@@ -59,6 +56,12 @@ func newRow(appCfg *AppConfigType) rowType {
 		nils:      nil,
 		err:       nil,
 	}
+}
+
+// makes new empty row (QName is appdef.NullQName)
+func newRow(appCfg *AppConfigType) *rowType {
+	r := makeRow(appCfg)
+	return &r
 }
 
 // build builds the row. Must be called after all Put××× calls to build row. If there were errors during data puts, then their connection will be returned.

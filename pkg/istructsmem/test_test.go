@@ -368,7 +368,7 @@ func newEmptyTestRow() (row *rowType) {
 	test := test()
 	r := newRow(test.AppCfg)
 	r.setQName(test.testRow)
-	return &r
+	return r
 }
 
 func newTestRow() (row *rowType) {
@@ -376,8 +376,8 @@ func newTestRow() (row *rowType) {
 	r := newRow(test.AppCfg)
 	r.setQName(test.testRow)
 
-	fillTestRow(&r)
-	return &r
+	fillTestRow(r)
+	return r
 }
 
 func fillTestRow(row *rowType) {
