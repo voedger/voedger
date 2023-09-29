@@ -326,10 +326,18 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
-		desc: "grant exec on c.air.UpdateUPProfile to role air.RoleUntillPaymentsUser",
+		desc: "grant exec on c.air.UpdateUPProfile to role air.UntillPaymentsUser",
 		pattern: PatternType{
 			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPProfile},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}}},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
+		desc: "grant exec on q.air.GetAllUPPayouts to role air.UntillPaymentsManager",
+		pattern: PatternType{
+			qNamesPattern:     []appdef.QName{qNameQryGetAllUPPayouts},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsManager}}},
 		},
 		policy: ACPolicy_Allow,
 	},
