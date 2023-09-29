@@ -185,6 +185,6 @@ func TestViewRecordsStorage_toJSON(t *testing.T) {
 		On("AsRecordID", "ID").Return(istructs.RecordID(42)).
 		On("AsString", "Name").Return("John").
 		On("AsInt64", "Count").Return(int64(1001)).
-		On("AsQName", mock.Anything).Return(appdef.ViewValueDefName(testViewRecordQName1))
+		On("AsQName", mock.Anything).Return(testViewRecordQName1)
 
 }
