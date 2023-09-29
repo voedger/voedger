@@ -89,7 +89,7 @@ func Test_newRecord(t *testing.T) {
 
 		t.Run("system field counters for test CDoc", func(t *testing.T) {
 			sysCnt := 0
-			doc.fieldsDef().Fields(
+			doc.fields.Fields(
 				func(f appdef.IField) {
 					require.True(doc.HasValue(f.Name()))
 					if f.IsSys() {
@@ -110,7 +110,7 @@ func Test_newRecord(t *testing.T) {
 			cnt := 0
 			sysCnt := 0
 
-			doc.fieldsDef().Fields(
+			doc.fields.Fields(
 				func(f appdef.IField) {
 					require.True(doc.HasValue(f.Name()))
 					if f.IsSys() {
@@ -121,7 +121,7 @@ func Test_newRecord(t *testing.T) {
 
 			require.Equal(3, sysCnt) // sys.QName, sys.ID and sys.IsActive
 			require.Equal(sysCnt+9, cnt)
-			require.Equal(doc.fieldsDef().FieldCount(), cnt)
+			require.Equal(doc.fields.FieldCount(), cnt)
 		})
 
 		t.Run("newTestCRec must return non empty, full filled and valid «test.Record»", func(t *testing.T) {
@@ -147,7 +147,7 @@ func Test_newRecord(t *testing.T) {
 			t.Run("system field counters for test CRecord", func(t *testing.T) {
 				sysCnt := 0
 
-				rec.fieldsDef().Fields(
+				rec.fields.Fields(
 					func(f appdef.IField) {
 						require.True(rec.HasValue(f.Name()))
 						if f.IsSys() {
@@ -169,7 +169,7 @@ func Test_newRecord(t *testing.T) {
 				cnt := 0
 				sysCnt := 0
 
-				rec.fieldsDef().Fields(
+				rec.fields.Fields(
 					func(f appdef.IField) {
 						require.True(rec.HasValue(f.Name()))
 						if f.IsSys() {
@@ -180,7 +180,7 @@ func Test_newRecord(t *testing.T) {
 
 				require.Equal(5, sysCnt) // sys.QName, sys.ID sys.ParentID, sys.Container and sys.IsActive
 				require.Equal(sysCnt+9, cnt)
-				require.Equal(rec.fieldsDef().FieldCount(), cnt)
+				require.Equal(rec.fields.FieldCount(), cnt)
 			})
 		})
 	})

@@ -88,7 +88,7 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 			})
 
 			t.Run("value scheme", func(t *testing.T) {
-				val := schemes.ViewValueScheme(viewName)
+				val := schemes.Scheme(viewName)
 				require.NotNil(val, "schemes.ViewValueScheme returns nil", "viewName: %q", viewName)
 
 				require.Len(val.Fields, 1)

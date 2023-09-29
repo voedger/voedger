@@ -65,7 +65,6 @@ func Test_KeyType(t *testing.T) {
 	require.NotNil(app)
 
 	key := newKey(appCfg, viewName)
-	require.Equal(appdef.ViewKeyDefName(viewName), key.AsQName(appdef.SystemField_QName))
 
 	t.Run("key must supports IKeyBuilder interface", func(t *testing.T) {
 		kb := istructs.IKeyBuilder(key)

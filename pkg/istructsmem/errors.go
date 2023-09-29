@@ -73,6 +73,8 @@ const errTypeNotFoundWrap = "type «%v» not found: %w"
 
 const errMustValidatedBeforeStore = "%v must be validated before store: %w"
 
+const errViewNotFoundWrap = "view «%v» not found: %w"
+
 // ValidateError: an interface for describing errors that occurred during validation
 //   - methods:
 //     — Code(): returns error code, see ECode_××× constants

@@ -359,3 +359,18 @@ func TestValidateRefFields(t *testing.T) {
 		require.ErrorContains(err, "non referable type «test.obj»")
 	})
 }
+
+func TestNullFields(t *testing.T) {
+	require := require.New(t)
+
+	require.Nil(NullFields.Field("field"))
+	require.Zero(NullFields.FieldCount())
+	NullFields.Fields(func(IField) { require.Fail("Fields() must be empty") })
+
+	require.Nil(NullFields.RefField("field"))
+	require.Zero(NullFields.RefFieldCount())
+	NullFields.RefFields(func(IRefField) { require.Fail("RefFields() must be empty") })
+
+	require.Zero(NullFields.UserFieldCount())
+	NullFields.UserFields(func(IField) { require.Fail("UserFields() must be empty") })
+}

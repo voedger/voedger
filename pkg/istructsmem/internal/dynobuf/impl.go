@@ -32,11 +32,17 @@ func (sch *DynoBufSchemes) Prepare(appDef appdef.IAppDef) {
 }
 
 // Returns structure scheme. Nil if not found
+//
+// This method can be used to get scheme for:
+//   - any structured type (doc or record),
+//   - view value
 func (sch DynoBufSchemes) Scheme(name appdef.QName) *dynobuffers.Scheme {
 	return sch.schemes[name.String()]
 }
 
 // Returns view key scheme. Nil if not found
+//
+// TODO: check this method is used?
 func (sch DynoBufSchemes) ViewKeyScheme(name appdef.QName) *dynobuffers.Scheme {
 	return sch.schemes[name.String()+viewKeySuffix]
 }
@@ -49,11 +55,6 @@ func (sch DynoBufSchemes) ViewPartKeyScheme(name appdef.QName) *dynobuffers.Sche
 // Returns view clustering columns scheme. Nil if not found
 func (sch DynoBufSchemes) ViewClustColsScheme(name appdef.QName) *dynobuffers.Scheme {
 	return sch.schemes[name.String()+viewClustColsSuffix]
-}
-
-// Returns view value scheme. Nil if not found
-func (sch DynoBufSchemes) ViewValueScheme(name appdef.QName) *dynobuffers.Scheme {
-	return sch.schemes[name.String()+viewValueSuffix]
 }
 
 // Adds scheme
@@ -71,5 +72,5 @@ func (sch *DynoBufSchemes) addView(view appdef.IView) {
 	sch.add(name+viewKeySuffix, view.Key())
 	sch.add(name+viewPartKeySuffix, view.Key().Partition())
 	sch.add(name+viewClustColsSuffix, view.Key().ClustCols())
-	sch.add(name+viewValueSuffix, view.Value())
+	sch.add(name, view.Value())
 }

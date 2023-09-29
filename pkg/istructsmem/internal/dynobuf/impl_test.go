@@ -94,7 +94,7 @@ func TestDynoBufSchemes(t *testing.T) {
 				checkScheme(name, view.Key(), schemes.ViewKeyScheme(name))
 				checkScheme(name, view.Key().Partition(), schemes.ViewPartKeyScheme(name))
 				checkScheme(name, view.Key().ClustCols(), schemes.ViewClustColsScheme(name))
-				checkScheme(name, view.Value(), schemes.ViewValueScheme(name))
+				checkScheme(name, view.Value(), schemes.Scheme(name))
 				return
 			}
 			if fld, ok := typ.(appdef.IFields); ok {

@@ -97,10 +97,10 @@ type (
 	}
 
 	testViewRecordType struct {
-		name, valueName appdef.QName
-		partFields      testViewRecordPartKeyFieldsType
-		ccolsFields     testViewRecordClustKeyFieldsType
-		valueFields     testViewRecordValueFieldsType
+		name        appdef.QName
+		partFields  testViewRecordPartKeyFieldsType
+		ccolsFields testViewRecordClustKeyFieldsType
+		valueFields testViewRecordValueFieldsType
 	}
 
 	testViewRecordPartKeyFieldsType struct {
@@ -333,7 +333,6 @@ func test() *testDataType {
 				AddBytesField(testData.testViewRecord.valueFields.photo, false, appdef.MaxLen(1024)).
 				AddField(testData.testViewRecord.valueFields.record, appdef.DataKind_Record, false).
 				AddField(testData.testViewRecord.valueFields.event, appdef.DataKind_Event, false)
-			testData.testViewRecord.valueName = appdef.ViewValueDefName(testData.testViewRecord.name)
 		}
 
 		return appDef
@@ -718,24 +717,20 @@ func newEmptyTestEvent() *eventType {
 	return ev
 }
 
-func newEmptyViewValue() (val *rowType) {
+func newEmptyTestViewValue() *valueType {
 	test := test()
-	v := newRow(test.AppCfg)
-	v.setQName(test.testViewRecord.valueName)
-	return &v
+	return newValue(test.AppCfg, test.testViewRecord.name)
 }
 
-func newTestViewValue() (val *rowType) {
-	test := test()
-	v := newRow(test.AppCfg)
+func newTestViewValue() *valueType {
+	v := newEmptyTestViewValue()
 
-	v.setQName(test.testViewRecord.valueName)
-	fillTestViewValue(&v)
+	fillTestViewValue(v)
 
-	return &v
+	return v
 }
 
-func fillTestViewValue(value *rowType) {
+func fillTestViewValue(value *valueType) {
 	test := test()
 
 	value.PutString(test.testViewRecord.valueFields.buyer, test.buyerValue)

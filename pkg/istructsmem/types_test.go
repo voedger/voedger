@@ -245,7 +245,7 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		require.Equal(false, row.AsBool("bool"))
 		require.Equal(istructs.NullRecordID, row.AsRecordID("RecordID"))
 
-		val := newEmptyViewValue()
+		val := newEmptyTestViewValue()
 		require.Equal(istructs.IDbEvent(nil), val.AsEvent(test.testViewRecord.valueFields.event))
 		rec := val.AsRecord(test.testViewRecord.valueFields.record)
 		require.Equal(appdef.NullQName, rec.QName())
@@ -293,18 +293,18 @@ func Test_rowType_PutAs_ComplexTypes(t *testing.T) {
 	test := test()
 
 	t.Run("PutRecord and PutEvent / AsRecord and AsEvent row methods (via IValue)", func(t *testing.T) {
-		row1 := newTestViewValue()
-		testTestViewValue(t, row1)
+		v1 := newTestViewValue()
+		testTestViewValue(t, v1)
 
-		row2 := newRow(test.AppCfg)
-		row2.copyFrom(row1)
-		testTestViewValue(t, &row2)
+		v2 := newTestViewValue()
+		v2.copyFrom(&v1.rowType)
+		testTestViewValue(t, v2)
 
-		testRowsIsEqual(t, row1, &row2)
+		testRowsIsEqual(t, &v1.rowType, &v2.rowType)
 	})
 
 	t.Run("must success NullRecord value for PutRecord / AsRecord methods", func(t *testing.T) {
-		row := newEmptyViewValue()
+		row := newEmptyTestViewValue()
 		row.PutString(test.testViewRecord.valueFields.buyer, "buyer")
 		row.PutRecord(test.testViewRecord.valueFields.record, NewNullRecord(istructs.NullRecordID))
 		require.NoError(row.build())
