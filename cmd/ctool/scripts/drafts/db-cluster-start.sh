@@ -10,14 +10,14 @@ set -euo pipefail
 set -x
 
 if [[ $# -ne 3 ]]; then
-  echo "Usage: $0 <DBNode1> <DBNode2> <DBNode3>"
+  echo "Usage: $0 <db-node-1> <db-node-2> <db-node-3>"
   exit 1
 fi
 
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
-hosts=("DBNode1" "DBNode2" "DBNode3")
+hosts=("db-node-1" "db-node-2" "db-node-3")
 
 # Function to update /etc/hosts on a remote host using SSH
 update_hosts_file() {
@@ -51,14 +51,14 @@ args_array=("$@")
 # ((++i))
 # done
 
-DBNode1=$1
-DBNode2=$2
-DBNode3=$3
+DBNode1="DBNode1"
+DBNode2="DBNode2"
+DBNode3="DBNode3"
 
 # Replace the template values in the YAML file with the arguments (scylla nodes ip addresses)
 # and store as prod compose file for start swarm services
 cat docker-compose-template.yml | \
-    sed "s/{{\.${hosts[0]}}}/${hosts[0]}/g; s/{{\.${hosts[1]}}}/${hosts[1]}/g; s/{{\.${hosts[2]}}}/${hosts[2]}/g" \
+    sed "s/{{\.$DBNode1}}/${hosts[0]}/g; s/{{\.$DBNode2}}/${hosts[1]}/g; s/{{\.$DBNode3}}/${hosts[2]}/g" \
     > ./docker-compose.yml
 
 cat ./docker-compose.yml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/docker-compose.yml'

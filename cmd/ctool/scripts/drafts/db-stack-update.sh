@@ -46,26 +46,20 @@ if [ -z "$service_name" ]; then
   exit 1
 fi
 
-# echo "Updating service $service_name"
+echo "Updating service $service_name"
 
-# not need because use hostname instead ip address
-# scy_cmd=$(yq eval '.services.'$service_name'.command' docker-compose.yml)
-# echo "Updating scylla command '$scy_cmd'"
+scy_cmd=$(yq eval '.services.'$service_name'.command' docker-compose.yml)
+echo "Updating scylla command '$scy_cmd'"
 
 # new_scy_cmd=$(modify_clp $lost_node $new_node "$scy_cmd")
 
-# not need because use hostname instead ip address
-# new_scy_cmd=$(modify_clp $1 "$scy_cmd")
-# echo "With new command '$new_scy_cmd'"
+new_scy_cmd=$(modify_clp $1 "$scy_cmd")
+echo "With new command '$new_scy_cmd'"
 
-# not need because use hostname instead ip address
-# export new_scy_cmd; yq eval --inplace --prettyPrint '.services."'$service_name'".command = strenv(new_scy_cmd)' docker-compose.yml
+export new_scy_cmd; yq eval --inplace --prettyPrint '.services."'$service_name'".command = strenv(new_scy_cmd)' docker-compose.yml
 
 #echo "Update healthcheck ip address with new one"
 #yq eval --inplace '.services."'$service_name'".healthcheck = {"test": ["CMD-SHELL", "nodetool status | awk '\''/^UN/ {print $$2}'\'' | grep -w '\'''$new_node''\''"], "interval": "15s", "timeout": "5s", "retries": 90}' docker-compose.yml
 
-# echo "Service '$service_name' updated successfully"
+echo "Service '$service_name' updated successfully"
 echo "$service_name"
-
-
-

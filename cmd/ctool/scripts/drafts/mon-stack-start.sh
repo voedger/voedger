@@ -10,7 +10,7 @@ set -euo pipefail
 set -x
 
 if [[ $# -ne 2 ]]; then
-  echo "Usage: $0 <AppNode1> <AppNode2>" 
+  echo "Usage: $0 <app-node-1> <app-node-2>"
   exit 1
 fi
 

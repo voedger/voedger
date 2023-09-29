@@ -24,7 +24,7 @@ DBNode1=$3
 DBNode2=$4
 DBNode3=$5
 
-hosts=("AppNode1" "AppNode2" "DBNode1" "DBNode2" "DBNode3")
+hosts=("app-node-1" "app-node-2" "db-node-1" "db-node-2" "db-node-3")
 
 # Function to update /etc/hosts on a remote host using SSH
 update_hosts_file() {

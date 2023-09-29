@@ -75,22 +75,22 @@ func (n *nodeType) nodeName() string {
 	if n.cluster.Edition == clusterEditionSE {
 		switch n.idx {
 		case 1:
-			return "AppNode1"
+			return "app-node-1"
 		case 2:
-			return "AppNode2"
+			return "app-node-2"
 		case 3:
-			return "DBNode1"
+			return "db-node-1"
 		case 4:
-			return "DBNode2"
+			return "db-node-2"
 		case 5:
-			return "DBNode3"
+			return "db-node-3"
 		default:
-			return "Node"
+			return "node"
 		}
 	} else if n.cluster.Edition == clusterEditionCE {
 		return "CENode"
 	} else {
-		return "Node"
+		return "node"
 	}
 
 }

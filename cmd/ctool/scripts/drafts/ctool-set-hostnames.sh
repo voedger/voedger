@@ -8,11 +8,11 @@ set -euo pipefail
 set +x
 
 if [ "$#" -lt 5 ]; then
-  echo "Usage: $0 <AppNode1> <AppNode2> <DBNode1> <DBNode2> <DBNode3>" >&2
+  echo "Usage: $0 <app-node-1> <app-node-2> <db-node-1> <db-node-2> <db-node-3>" >&2
   exit 1
 fi
 
-hosts=("AppNode1" "AppNode2" "DBNode1" "DBNode2" "DBNode3")
+hosts=("app-node-1" "app-node-2" "db-node-1" "db-node-2" "db-node-3")
 
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
