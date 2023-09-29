@@ -157,7 +157,7 @@ var defaultACL = ACL{
 				qNameQryCollection,
 				qNameCmdInitiateUpdateInviteRoles,
 				qNameCmdInitiateCancelAcceptedInvite,
-				qNameCmdCancelSendInvite,
+				qNameCmdCancelSentInvite,
 				qNameCDocChildWorkspace,
 				qNameCmdInitChildWorkspace,
 				qNameCmdEnrichPrincipalToken,
