@@ -97,7 +97,7 @@ type viewKey struct {
 func newViewKey(v *view) *viewKey {
 	key := &viewKey{
 		view:   v,
-		fields: makeFields(v),
+		fields: makeViewKeyFields(v),
 		pkey:   newViewPartKey(v),
 		ccols:  newViewClustCols(v),
 	}
@@ -159,7 +159,7 @@ type viewPartKey struct {
 func newViewPartKey(v *view) *viewPartKey {
 	pKey := &viewPartKey{
 		view:   v,
-		fields: makeFields(v),
+		fields: makeViewKeyFields(v),
 	}
 	return pKey
 }
@@ -221,7 +221,7 @@ type viewClustCols struct {
 func newViewClustCols(v *view) *viewClustCols {
 	cc := &viewClustCols{
 		view:   v,
-		fields: makeFields(v),
+		fields: makeViewKeyFields(v),
 	}
 	return cc
 }

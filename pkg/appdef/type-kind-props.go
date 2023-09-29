@@ -205,7 +205,9 @@ var typeKindProps = map[TypeKind]struct {
 			DataKind_Record:   true,
 			DataKind_Event:    true,
 		},
-		systemFields:   map[string]bool{},
+		systemFields: map[string]bool{
+			SystemField_QName: true,
+		},
 		containerKinds: map[TypeKind]bool{},
 	},
 	TypeKind_Object: {

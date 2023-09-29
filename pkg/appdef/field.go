@@ -90,9 +90,16 @@ type fields struct {
 	fieldsOrdered []string
 }
 
+// Makes new fields instance. System fields needed for parent type are added automatically.
 func makeFields(parent interface{}) fields {
 	f := fields{parent, make(map[string]interface{}), make([]string, 0)}
 	f.makeSysFields()
+	return f
+}
+
+// Makes new fields instance for view key
+func makeViewKeyFields(view interface{}) fields {
+	f := fields{view, make(map[string]interface{}), make([]string, 0)}
 	return f
 }
 

@@ -63,27 +63,30 @@ func TestAddView(t *testing.T) {
 		require.Equal(viewName, view.QName())
 		require.Equal(TypeKind_ViewRecord, view.Kind())
 
-		require.Equal(6, view.FieldCount())
+		require.Equal(7, view.FieldCount())
 		cnt := 0
 		view.Fields(func(f IField) {
 			cnt++
 			switch cnt {
 			case 1:
+				require.Equal(SystemField_QName, f.Name())
+				require.True(f.IsSys())
+			case 2:
 				require.Equal("pkF1", f.Name())
 				require.True(f.Required())
-			case 2:
+			case 3:
 				require.Equal("pkF2", f.Name())
 				require.True(f.Required())
-			case 3:
+			case 4:
 				require.Equal("ccF1", f.Name())
 				require.False(f.Required())
-			case 4:
+			case 5:
 				require.Equal("ccF2", f.Name())
 				require.False(f.Required())
-			case 5:
+			case 6:
 				require.Equal("valF1", f.Name())
 				require.True(f.Required())
-			case 6:
+			case 7:
 				require.Equal("valF2", f.Name())
 				require.False(f.Required())
 			default:
@@ -160,15 +163,18 @@ func TestAddView(t *testing.T) {
 
 		t.Run("must be ok to read view value", func(t *testing.T) {
 			val := view.Value()
-			require.Equal(2, val.FieldCount())
+			require.Equal(3, val.FieldCount())
 			cnt := 0
 			val.Fields(func(f IField) {
 				cnt++
 				switch cnt {
 				case 1:
+					require.Equal(SystemField_QName, f.Name())
+					require.True(f.IsSys())
+				case 2:
 					require.Equal("valF1", f.Name())
 					require.True(f.Required())
-				case 2:
+				case 3:
 					require.Equal("valF2", f.Name())
 					require.False(f.Required())
 				default:
