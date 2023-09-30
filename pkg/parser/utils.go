@@ -60,14 +60,114 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 	})
 }
 
-func iterateStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt |
-	*WorkspaceStmt | *AlterWorkspaceStmt](c IStatementCollection, callback func(stmt stmtType)) {
-	c.Iterate(func(stmt interface{}) {
-		if s, ok := stmt.(stmtType); ok {
-			callback(s)
+func resolveInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt |
+	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt](fn DefQName, ictx *iterateCtx, cb func(f stmtType, schema *PackageSchemaAST) error) error {
+	var err error
+	var item stmtType
+	var p *PackageSchemaAST
+	item, p, err = lookupInCtx[stmtType](fn, ictx)
+	if err != nil {
+		return err
+	}
+	if item == nil {
+		return ErrUndefined(fn.String())
+	}
+	return cb(item, p)
+}
+
+func lookupInSysPackage[stmtType *WorkspaceStmt](ctx *basicContext, fn DefQName) (stmtType, error) {
+	sysSchema := ctx.app.Packages[appdef.SysPackage]
+	if sysSchema == nil {
+		return nil, ErrCouldNotImport(appdef.SysPackage)
+	}
+	ictx := &iterateCtx{
+		basicContext: ctx,
+		collection:   sysSchema.Ast,
+		pkg:          sysSchema,
+		parent:       nil,
+	}
+	s, _, e := lookupInCtx[stmtType](fn, ictx)
+	return s, e
+}
+
+func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt |
+	*WorkspaceStmt | *ViewStmt | *StorageStmt](fn DefQName, ictx *iterateCtx) (stmtType, *PackageSchemaAST, error) {
+	schema, err := getTargetSchema(fn, ictx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var item stmtType
+	var lookupCallback func(stmt interface{})
+	lookupCallback = func(stmt interface{}) {
+		if f, ok := stmt.(stmtType); ok {
+			named := any(f).(INamedStatement)
+			if named.GetName() == string(fn.Name) {
+				item = f
+			}
 		}
 		if collection, ok := stmt.(IStatementCollection); ok {
-			iterateStmt(collection, callback)
+			if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
+				collection.Iterate(lookupCallback)
+			}
+		}
+
+	}
+
+	if schema == ictx.pkg {
+		var ic *iterateCtx = ictx
+		for ic != nil && item == nil {
+			ic.collection.Iterate(lookupCallback)
+			ic = ic.parent
+		}
+
+		if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
+			schema = ictx.app.Packages[appdef.SysPackage]
+			if schema == nil {
+				return nil, nil, ErrCouldNotImport(appdef.SysPackage)
+			}
+			iterPkg := func(coll IStatementCollection) {
+				coll.Iterate(lookupCallback)
+			}
+			iterPkg(schema.Ast)
+		}
+		return item, schema, nil
+	}
+
+	schema.Ast.Iterate(lookupCallback)
+	return item, schema, nil
+}
+
+func iteratePackage(pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt interface{}, ctx *iterateCtx)) {
+	ictx := &iterateCtx{
+		basicContext: ctx,
+		collection:   pkg.Ast,
+		pkg:          pkg,
+		parent:       nil,
+	}
+	iterateContext(ictx, callback)
+}
+
+func iteratePackageStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt |
+	*WorkspaceStmt | *AlterWorkspaceStmt](pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt stmtType, ctx *iterateCtx)) {
+	iteratePackage(pkg, ctx, func(stmt interface{}, ctx *iterateCtx) {
+		if s, ok := stmt.(stmtType); ok {
+			callback(s, ctx)
+		}
+	})
+}
+
+func iterateContext(ictx *iterateCtx, callback func(stmt interface{}, ctx *iterateCtx)) {
+	ictx.collection.Iterate(func(stmt interface{}) {
+		callback(stmt, ictx)
+		if collection, ok := stmt.(IStatementCollection); ok {
+			iNestedCtx := &iterateCtx{
+				basicContext: ictx.basicContext,
+				collection:   collection,
+				pkg:          ictx.pkg,
+				parent:       ictx,
+			}
+			iterateContext(iNestedCtx, callback)
 		}
 	})
 }
@@ -102,7 +202,7 @@ func getQualifiedPackageName(pkgName Ident, schema *SchemaAST) string {
 	return ""
 }
 
-func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
+func getTargetSchema(n DefQName, c *iterateCtx) (*PackageSchemaAST, error) {
 	var targetPkgSch *PackageSchemaAST
 
 	if isInternalName(n, c.pkg) {
@@ -126,99 +226,6 @@ func getTargetSchema(n DefQName, c *basicContext) (*PackageSchemaAST, error) {
 		return nil, ErrCouldNotImport(pkgQN)
 	}
 	return targetPkgSch, nil
-}
-
-func resolveTable(fn DefQName, c *basicContext) (*TableStmt, *PackageSchemaAST, error) {
-	var item *TableStmt
-	var checkStatement func(stmt interface{})
-	checkStatement = func(stmt interface{}) {
-		if t, ok := stmt.(*TableStmt); ok {
-			if t.Name == fn.Name {
-				item = t
-				return
-			}
-			for i := range t.Items {
-				if t.Items[i].NestedTable != nil {
-					checkStatement(&t.Items[i].NestedTable.Table)
-				}
-			}
-		}
-	}
-
-	schema, err := getTargetSchema(fn, c)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	iterate(schema.Ast, func(stmt interface{}) {
-		checkStatement(stmt)
-	})
-
-	if item == nil {
-		return nil, nil, ErrUndefined(fn.String())
-	}
-
-	return item, schema, nil
-}
-
-// when not found, lookup returns (nil, ?, nil)
-func lookup[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt |
-	*WorkspaceStmt | *ViewStmt | *StorageStmt](fn DefQName, c *basicContext) (stmtType, *PackageSchemaAST, error) {
-	schema, err := getTargetSchema(fn, c)
-	if err != nil {
-		return nil, nil, err
-	}
-	var item stmtType
-	iter := func(s *SchemaAST) {
-		iterate(s, func(stmt interface{}) {
-			if f, ok := stmt.(stmtType); ok {
-				named := any(f).(INamedStatement)
-				if named.GetName() == string(fn.Name) {
-					item = f
-				}
-			}
-		})
-	}
-	iter(schema.Ast)
-
-	if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
-		schema = c.app.Packages[appdef.SysPackage]
-		if schema == nil {
-			return nil, nil, ErrCouldNotImport(appdef.SysPackage)
-		}
-		iter(schema.Ast)
-	}
-
-	return item, schema, nil
-}
-
-func resolve[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt |
-	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt](fn DefQName, c *basicContext, cb func(f stmtType) error) error {
-	var err error
-	var item stmtType
-	item, _, err = lookup[stmtType](fn, c)
-	if err != nil {
-		return err
-	}
-	if item == nil {
-		return ErrUndefined(fn.String())
-	}
-	return cb(item)
-}
-
-func resolveEx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt |
-	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt](fn DefQName, c *basicContext, cb func(f stmtType, schema *PackageSchemaAST) error) error {
-	var err error
-	var item stmtType
-	var schema *PackageSchemaAST
-	item, schema, err = lookup[stmtType](fn, c)
-	if err != nil {
-		return err
-	}
-	if item == nil {
-		return ErrUndefined(fn.String())
-	}
-	return cb(item, schema)
 }
 
 func maybeSysPkg(pkg Ident) bool {
@@ -285,7 +292,7 @@ func dataTypeToDataKind(t DataType) appdef.DataKind {
 	return appdef.DataKind_null
 }
 
-func buildQname(ctx *buildContext, pkg Ident, name Ident) appdef.QName {
+func buildQname(ctx *iterateCtx, pkg Ident, name Ident) appdef.QName {
 	if pkg == "" {
 		pkg = Ident(ctx.pkg.Name)
 	}

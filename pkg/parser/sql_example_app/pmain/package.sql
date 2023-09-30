@@ -303,7 +303,7 @@ WORKSPACE MyWorkspace1 INHERITS AWorkspace, untill.UntillAWorkspace (
     We can also ALTER non-alterable workspaces when they are in the same package
 */
 ALTER WORKSPACE sys.Profile(
-    USE TABLE WsTable;
+    USE TABLE TablePlan;
     USE WORKSPACE MyWorkspace1;
 );
 
