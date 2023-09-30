@@ -413,7 +413,7 @@ func (c *buildContext) tables() error {
 			c.table(schema, table, ictx)
 		})
 		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, ictx *iterateCtx) {
-			c.workspaceDescriptor(schema, w, ictx)
+			c.workspaceDescriptor(w, ictx)
 		})
 	}
 	return errors.Join(c.errs...)
@@ -431,7 +431,7 @@ func (c *buildContext) fillTable(table *TableStmt, ictx *iterateCtx) {
 	c.addTableItems(table.Items, ictx)
 }
 
-func (c *buildContext) workspaceDescriptor(schema *PackageSchemaAST, w *WorkspaceStmt, ictx *iterateCtx) {
+func (c *buildContext) workspaceDescriptor(w *WorkspaceStmt, ictx *iterateCtx) {
 	if w.Descriptor != nil {
 		qname := ictx.pkg.NewQName(w.Descriptor.Name)
 		if c.isExists(qname, appdef.TypeKind_CDoc) {
