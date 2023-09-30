@@ -38,7 +38,8 @@ func Test_View(t *testing.T) {
 			AddField("vv_int", appdef.DataKind_int64, true).
 			AddRefField("vv_ref", true, docName).
 			AddStringField("vv_code", false, appdef.MaxLen(10), appdef.Pattern(`^\w+$`)).
-			AddBytesField("vv_data", false, appdef.MaxLen(1024))
+			AddBytesField("vv_data", false, appdef.MaxLen(1024)).
+			SetFieldComment("vv_data", "One kilobyte of data")
 		if a, err := appDef.Build(); err == nil {
 			app = a
 		} else {
@@ -117,6 +118,7 @@ func Test_View(t *testing.T) {
 			}
 		}, 
 		{
+			"Comment": "One kilobyte of data",
 			"Kind": "DataKind_bytes", 
 			"Name":	"vv_data", 
 			"Restricts": {
