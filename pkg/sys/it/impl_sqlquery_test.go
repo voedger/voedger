@@ -424,7 +424,7 @@ func TestSqlQuery_view_records(t *testing.T) {
 		require.Contains(respStr, fmt.Sprintf(`"offs":%d`, lastWLogOffset))
 		require.Contains(respStr, `"PartKey":1`)
 		require.Contains(respStr, `"Record":{`)
-		require.Contains(respStr, `"sys.QName":"sys.CollectionView_Value"`)
+		require.Contains(respStr, `"sys.QName":"sys.CollectionView"`)
 	})
 	t.Run("Should return error when operator not supported", func(t *testing.T) {
 		body = `{"args":{"Query":"select * from sys.CollectionView where partKey > 1"}}`
