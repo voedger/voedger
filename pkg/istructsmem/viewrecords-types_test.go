@@ -121,7 +121,7 @@ func Test_KeyType(t *testing.T) {
 			view := appCfg.AppDef.View(viewName)
 			cnt := 0
 			k.FieldNames(func(n string) {
-				require.NotNil(view.Key().Field(n))
+				require.NotNil(view.Key().Field(n), "unknown field name passed in callback from IKey.FieldNames(): %q", n)
 				cnt++
 			})
 			require.Positive(cnt)

@@ -647,7 +647,7 @@ func (row *rowType) Container() string {
 // istructs.IRowReader.FieldNames
 func (row *rowType) FieldNames(cb func(fieldName string)) {
 	// system fields
-	if row.typ.Kind().HasSystemField(appdef.SystemField_QName) {
+	if row.fieldDef(appdef.SystemField_QName) != nil {
 		cb(appdef.SystemField_QName)
 	}
 	if row.id != istructs.NullRecordID {
@@ -677,7 +677,7 @@ func (row *rowType) FieldNames(cb func(fieldName string)) {
 func (row *rowType) HasValue(name string) (value bool) {
 	if name == appdef.SystemField_QName {
 		// special case: sys.QName is always presents
-		return true
+		return row.typ.QName() != appdef.NullQName
 	}
 	if name == appdef.SystemField_ID {
 		return row.id != istructs.NullRecordID

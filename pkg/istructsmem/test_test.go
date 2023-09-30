@@ -672,7 +672,6 @@ func fillTestEvent(ev *eventType) {
 	fillTestObject(&ev.argObject)
 	fillTestSecureObject(&ev.argUnlObj)
 	fillTestCUD(&ev.cud)
-	// fill_test_CUD(&ev.resCUD) TODO:
 
 	err := ev.build()
 	if err != nil {

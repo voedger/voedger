@@ -13,8 +13,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// TODO: move to internal/validate package
-
 // Provides validation application structures by single type
 type validator struct {
 	validators *validators
