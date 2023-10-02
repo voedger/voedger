@@ -1384,9 +1384,9 @@ func Test_Scope_TableRefs(t *testing.T) {
 			Items TABLE MyInnerTable()
 		);
 		TABLE MyTable2 INHERITS CDoc (
-			--r1 ref(MyTable),
-			--r2 ref(MyTable2),
-			--r3 ref(PkgTable),
+			r1 ref(MyTable),
+			r2 ref(MyTable2),
+			r3 ref(PkgTable),
 			r4 ref(MyInnerTable)
 		);
 	);
