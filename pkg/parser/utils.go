@@ -100,27 +100,59 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 	var item stmtType
 	var lookupCallback func(stmt interface{})
 	lookupCallback = func(stmt interface{}) {
+		if item != nil {
+			return
+		}
 		if f, ok := stmt.(stmtType); ok {
 			named := any(f).(INamedStatement)
 			if named.GetName() == string(fn.Name) {
 				item = f
 			}
 		}
+		if item != nil {
+			return
+		}
 		if collection, ok := stmt.(IStatementCollection); ok {
-			if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
+			if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace { // do not go into workspaces
 				collection.Iterate(lookupCallback)
+			}
+		}
+		if item != nil {
+			return
+		}
+		if t, ok := stmt.(*TableStmt); ok {
+			for i := range t.Items {
+				if t.Items[i].NestedTable != nil {
+					lookupCallback(&t.Items[i].NestedTable.Table)
+				}
 			}
 		}
 
 	}
 
 	if schema == ictx.pkg {
+
+		// Am I in a workspace?
 		var ic *iterateCtx = ictx
-		for ic != nil && item == nil {
-			ic.collection.Iterate(lookupCallback)
+		var ws *WorkspaceStmt = nil
+		for ic != nil && ws == nil {
+			if _, isWorkspace := ic.collection.(*WorkspaceStmt); isWorkspace {
+				ws = ic.collection.(*WorkspaceStmt)
+				break
+			}
 			ic = ic.parent
 		}
+		// First look in the current workspace
+		if ws != nil {
+			ws.Iterate(lookupCallback)
+		}
 
+		// Look in the package
+		if item == nil {
+			schema.Ast.Iterate(lookupCallback)
+		}
+
+		// Look in the sys package
 		if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
 			schema = ictx.app.Packages[appdef.SysPackage]
 			if schema == nil {
