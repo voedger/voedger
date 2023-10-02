@@ -6,6 +6,7 @@
 package istructsmem
 
 import (
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -77,4 +78,44 @@ func TestIDGenerator(t *testing.T) {
 			require.Equal(storageID+103, storageIDNew)
 		}
 	})
+}
+
+// https://github.com/voedger/voedger/issues/688
+// 9999999999 ID causes next IDs collision
+func TestIDGenCollision(t *testing.T) {
+	require := require.New(t)
+	idGen := NewIDGenerator()
+	qNameCDoc := appdef.NewQName(appdef.SysPackage, "cdoc")
+	bld := appdef.New()
+	bld.AddCDoc(qNameCDoc)
+	appDef, err := bld.Build()
+	require.NoError(err)
+	tp := appDef.Type(qNameCDoc)
+
+	// server starts, 9999999999 record is met
+	storedRecID := istructs.RecordID(9999999999)
+	idGen.UpdateOnSync(storedRecID, tp)
+
+	// let's work, query the next ID
+	newIDBeforeRestart, err := idGen.NextID(1, tp)
+	require.NoError(err)
+	log.Println("ID generated before restart:", newIDBeforeRestart)
+	// assume id 322690000000000 is inserted
+
+	// server restarts 9B record is met again on recovery
+	idGen = NewIDGenerator()
+	storedRecID = istructs.RecordID(9999999999)
+	idGen.UpdateOnSync(storedRecID, tp)
+	// then record 322690000000000 is met
+	storedRecID = istructs.RecordID(322690000000000)
+	log.Println("322690000000000.BaseID = ", storedRecID.BaseRecordID())
+	idGen.UpdateOnSync(storedRecID, tp) // its BaseRecordID is 0 which is <idGen.nextCDocCRecordBaseID(5000000000) so idGen.nextCDocCRecordBaseID is still 5000000000
+	require.NoError(err)
+
+	// now let's work, query the next ID
+	// but it is still 322690000000000 because nextCDocCRecordBaseID was not bumped on UpdateOnSync()
+	newIDAfterRestart, err := idGen.NextID(1, tp)
+	require.NoError(err)
+	log.Println("ID generated after restart:",newIDAfterRestart)
+	require.Equal(newIDBeforeRestart, newIDAfterRestart) // should not be equal. 9999999999 ID causes next IDs collision
 }
