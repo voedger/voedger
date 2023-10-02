@@ -1317,6 +1317,47 @@ func Test_AppIn2Schemas(t *testing.T) {
 	_, err = BuildAppSchema([]*PackageSchemaAST{
 		pkg2, pkg3,
 	})
-	require.EqualError(err, "example3.sql:1:1: redefinition of application")
+	require.ErrorContains(err, "redefinition of application")
+}
+
+func Test_Scope(t *testing.T) {
+	require := require.New(t)
+
+	// *****  main
+	fs, err := ParseFile("example1.sql", `
+	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg1';
+	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2';
+	APPLICATION test(
+		USE pkg1;
+		USE pkg2;
+	);
+	`)
+	require.NoError(err)
+	main, err := BuildPackageSchema("github.com/untillpro/airsbp3/main", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	// *****  pkg1
+	fs, err = ParseFile("example2.sql", `
+	WORKSPACE myWorkspace1 (
+		TABLE MyTable INHERITS CDoc ();
+	);
+	`)
+	require.NoError(err)
+	pkg1, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg1", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	// *****  pkg2
+	fs, err = ParseFile("example3.sql", `
+	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg1' AS p1;
+	WORKSPACE myWorkspace2 (
+		USE TABLE p1.MyTable;
+	);
+	`)
+	require.NoError(err)
+	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	_, err = BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), main, pkg1, pkg2})
+	require.EqualError(err, "example3.sql:4:3: p1.MyTable undefined")
 
 }

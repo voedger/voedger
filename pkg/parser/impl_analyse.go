@@ -11,8 +11,11 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-type analyseCtx struct {
+type iterateCtx struct {
 	*basicContext
+	pkg        *PackageSchemaAST
+	collection IStatementCollection
+	parent     *iterateCtx
 }
 
 func findApplication(c *basicContext, p *PackageSchemaAST) (result *ApplicationStmt, err error) {
@@ -29,75 +32,71 @@ func findApplication(c *basicContext, p *PackageSchemaAST) (result *ApplicationS
 
 func analyse(c *basicContext, p *PackageSchemaAST) {
 
-	ac := analyseCtx{
-		basicContext: c,
-	}
-	c.pkg = p
-	iterate(c.pkg.Ast, func(stmt interface{}) {
+	iteratePackage(p, c, func(stmt interface{}, ictx *iterateCtx) {
 		switch v := stmt.(type) {
 		case *CommandStmt:
-			ac.command(v)
+			analyzeCommand(v, ictx)
 		case *QueryStmt:
-			ac.query(v)
+			analyzeQuery(v, ictx)
 		case *ProjectorStmt:
-			ac.projector(v)
+			analyseProjector(v, ictx)
 		case *TableStmt:
-			ac.table(v)
+			analyseTable(v, ictx)
 		case *WorkspaceStmt:
-			ac.workspace(v)
+			analyseWorkspace(v, ictx)
 		case *TypeStmt:
-			ac.doType(v)
+			analyseType(v, ictx)
 		case *ViewStmt:
-			ac.view(v)
+			analyseView(v, ictx)
 		case *UseTableStmt:
-			ac.useTable(v)
+			analyseUseTable(v, ictx)
 		case *UseWorkspaceStmt:
-			ac.useWorkspace(v)
+			analyseUseWorkspace(v, ictx)
 		case *AlterWorkspaceStmt:
-			ac.alterWorkspace(v)
+			analyseAlterWorkspace(v, ictx)
 		}
 	})
 }
 
-func (c *analyseCtx) useTable(u *UseTableStmt) {
-	tbl, _, err := resolveTable(u.Table, c.basicContext)
+func analyseUseTable(u *UseTableStmt, c *iterateCtx) {
+	err := resolveInCtx(u.Table, c, func(f *TableStmt, _ *PackageSchemaAST) error {
+		if f.Abstract {
+			return ErrUseOfAbstractTable(u.Table.String())
+		}
+		return nil
+	})
 	if err != nil {
 		c.stmtErr(&u.Pos, err)
-	} else {
-		if tbl.Abstract {
-			c.stmtErr(&u.Pos, ErrUseOfAbstractTable(u.Table.String()))
-		}
-		// TODO: Only documents allowed to be USEd, not records
 	}
 }
 
-func (c *analyseCtx) useWorkspace(u *UseWorkspaceStmt) {
-	resolveFunc := func(f *WorkspaceStmt) error {
+func analyseUseWorkspace(u *UseWorkspaceStmt, c *iterateCtx) {
+	resolveFunc := func(f *WorkspaceStmt, _ *PackageSchemaAST) error {
 		if f.Abstract {
 			return ErrUseOfAbstractWorkspace(string(u.Workspace))
 		}
 		return nil
 	}
-	err := resolve(DefQName{Package: Ident(c.pkg.Name), Name: u.Workspace}, c.basicContext, resolveFunc)
+	err := resolveInCtx(DefQName{Package: Ident(c.pkg.Name), Name: u.Workspace}, c, resolveFunc)
 	if err != nil {
 		c.stmtErr(&u.Pos, err)
 	}
 }
 
-func (c *analyseCtx) alterWorkspace(u *AlterWorkspaceStmt) {
+func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 	resolveFunc := func(w *WorkspaceStmt, schema *PackageSchemaAST) error {
 		if !w.Alterable && schema != c.pkg {
 			return ErrWorkspaceIsNotAlterable(u.Name.String())
 		}
 		return nil
 	}
-	err := resolveEx(u.Name, c.basicContext, resolveFunc)
+	err := resolveInCtx(u.Name, c, resolveFunc)
 	if err != nil {
 		c.stmtErr(&u.Pos, err)
 	}
 }
 
-func (c *analyseCtx) view(view *ViewStmt) {
+func analyseView(view *ViewStmt, c *iterateCtx) {
 	view.pkRef = nil
 	fields := make(map[string]int)
 	for i := range view.Items {
@@ -124,13 +123,14 @@ func (c *analyseCtx) view(view *ViewStmt) {
 				fields[string(rf.Name)] = i
 			}
 			for i := range rf.RefDocs {
-				tableStmt, _, err := resolveTable(rf.RefDocs[i], c.basicContext)
+				err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, _ *PackageSchemaAST) error {
+					if f.Abstract {
+						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
+					}
+					return nil
+				})
 				if err != nil {
 					c.stmtErr(&rf.Pos, err)
-					continue
-				}
-				if tableStmt.Abstract {
-					c.stmtErr(&rf.Pos, ErrReferenceToAbstractTable(rf.RefDocs[i].String()))
 					continue
 				}
 			}
@@ -172,48 +172,48 @@ func (c *analyseCtx) view(view *ViewStmt) {
 
 }
 
-func (c *analyseCtx) command(v *CommandStmt) {
-	if v.Arg != nil && v.Arg.Def != nil {
-		if err := resolve(*v.Arg.Def, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
-			c.stmtErr(&v.Pos, err)
+func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
+	if cmd.Arg != nil && cmd.Arg.Def != nil {
+		if err := resolveInCtx(*cmd.Arg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&cmd.Pos, err)
 		}
 	}
-	if v.UnloggedArg != nil && v.UnloggedArg.Def != nil {
-		if err := resolve(*v.UnloggedArg.Def, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
-			c.stmtErr(&v.Pos, err)
+	if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
+		if err := resolveInCtx(*cmd.UnloggedArg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&cmd.Pos, err)
 		}
 	}
-	if v.Returns != nil && v.Returns.Def != nil {
-		if err := resolve(*v.Returns.Def, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
-			c.stmtErr(&v.Pos, err)
+	if cmd.Returns != nil && cmd.Returns.Def != nil {
+		if err := resolveInCtx(*cmd.Returns.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&cmd.Pos, err)
 		}
 	}
-	c.with(&v.With, v)
+	analyseWith(&cmd.With, cmd, c)
 }
 
-func (c *analyseCtx) query(v *QueryStmt) {
-	if v.Arg != nil && v.Arg.Def != nil {
-		if err := resolve(*v.Arg.Def, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
-			c.stmtErr(&v.Pos, err)
+func analyzeQuery(query *QueryStmt, c *iterateCtx) {
+	if query.Arg != nil && query.Arg.Def != nil {
+		if err := resolveInCtx(*query.Arg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&query.Pos, err)
 		}
 
 	}
-	if v.Returns.Def != nil {
-		if err := resolve(*v.Returns.Def, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
-			c.stmtErr(&v.Pos, err)
+	if query.Returns.Def != nil {
+		if err := resolveInCtx(*query.Returns.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&query.Pos, err)
 		}
 	}
-	c.with(&v.With, v)
+	analyseWith(&query.With, query, c)
 
 }
-func (c *analyseCtx) projector(v *ProjectorStmt) {
+func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 	for _, target := range v.On {
 		if v.CUDEvents != nil {
-			resolveFunc := func(table *TableStmt) error {
+			resolveFunc := func(table *TableStmt, _ *PackageSchemaAST) error {
 				if table.Abstract {
 					return ErrAbstractTableNotAlowedInProjectors(target.String())
 				}
-				k, _, err := c.getTableTypeKind(table)
+				k, _, err := getTableTypeKind(table, c)
 				if err != nil {
 					return err
 				}
@@ -224,12 +224,12 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 				}
 				return nil
 			}
-			if err := resolve(target, c.basicContext, resolveFunc); err != nil {
+			if err := resolveInCtx(target, c, resolveFunc); err != nil {
 				c.stmtErr(&v.Pos, err)
 			}
 		} else { // The type of ON not defined
 			// Command?
-			cmd, _, err := lookup[*CommandStmt](target, c.basicContext)
+			cmd, _, err := lookupInCtx[*CommandStmt](target, c)
 			if err != nil {
 				c.stmtErr(&v.Pos, err)
 				continue
@@ -239,7 +239,7 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 			}
 
 			// Command Argument?
-			cmdArg, _, err := lookup[*TypeStmt](target, c.basicContext)
+			cmdArg, _, err := lookupInCtx[*TypeStmt](target, c)
 			if err != nil {
 				c.stmtErr(&v.Pos, err)
 				continue
@@ -249,7 +249,7 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 			}
 
 			// Table?
-			table, _, err := lookup[*TableStmt](target, c.basicContext)
+			table, _, err := lookupInCtx[*TableStmt](target, c)
 			if err != nil {
 				c.stmtErr(&v.Pos, err)
 				continue
@@ -266,13 +266,13 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 			if key.Entity == nil {
 				return ErrStorageRequiresEntity(key.Storage.String())
 			}
-			resolveFunc := func(f *TableStmt) error {
+			resolveFunc := func(f *TableStmt, _ *PackageSchemaAST) error {
 				if f.Abstract {
 					return ErrAbstractTableNotAlowedInProjectors(key.Entity.String())
 				}
 				return nil
 			}
-			if err2 := resolve(*key.Entity, c.basicContext, resolveFunc); err2 != nil {
+			if err2 := resolveInCtx(*key.Entity, c, resolveFunc); err2 != nil {
 				return err2
 			}
 		}
@@ -280,7 +280,7 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 			if key.Entity == nil {
 				return ErrStorageRequiresEntity(key.Storage.String())
 			}
-			if err2 := resolve(*key.Entity, c.basicContext, func(f *ViewStmt) error { return nil }); err2 != nil {
+			if err2 := resolveInCtx(*key.Entity, c, func(*ViewStmt, *PackageSchemaAST) error { return nil }); err2 != nil {
 				return err2
 			}
 		}
@@ -288,7 +288,7 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 	}
 
 	for _, key := range v.State {
-		if err := resolve(key.Storage, c.basicContext, func(f *StorageStmt) error {
+		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, _ *PackageSchemaAST) error {
 			if e := checkEntity(key, f); e != nil {
 				return e
 			}
@@ -313,7 +313,7 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 	}
 
 	for _, key := range v.Intents {
-		if err := resolve(key.Storage, c.basicContext, func(f *StorageStmt) error {
+		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, _ *PackageSchemaAST) error {
 			if e := checkEntity(key, f); e != nil {
 				return e
 			}
@@ -340,7 +340,7 @@ func (c *analyseCtx) projector(v *ProjectorStmt) {
 }
 
 // Note: function may update with argument
-func (c *analyseCtx) with(with *[]WithItem, statement IStatement) {
+func analyseWith(with *[]WithItem, statement IStatement, c *iterateCtx) {
 	var comment *WithItem
 
 	for i := range *with {
@@ -348,13 +348,13 @@ func (c *analyseCtx) with(with *[]WithItem, statement IStatement) {
 		if item.Comment != nil {
 			comment = item
 		} else if item.Rate != nil {
-			if err := resolve(*item.Rate, c.basicContext, func(f *RateStmt) error { return nil }); err != nil {
+			if err := resolveInCtx(*item.Rate, c, func(*RateStmt, *PackageSchemaAST) error { return nil }); err != nil {
 				c.stmtErr(statement.GetPos(), err)
 			}
 		}
 		for j := range item.Tags {
 			tag := item.Tags[j]
-			if err := resolve(tag, c.basicContext, func(f *TagStmt) error { return nil }); err != nil {
+			if err := resolveInCtx(tag, c, func(*TagStmt, *PackageSchemaAST) error { return nil }); err != nil {
 				c.stmtErr(statement.GetPos(), err)
 			}
 		}
@@ -365,51 +365,51 @@ func (c *analyseCtx) with(with *[]WithItem, statement IStatement) {
 	}
 }
 
-func (c *analyseCtx) table(v *TableStmt) {
+func analyseTable(v *TableStmt, c *iterateCtx) {
 	if isPredefinedSysTable(c.pkg.QualifiedPackageName, v) {
 		return
 	}
 	var err error
-	v.tableTypeKind, v.singletone, err = c.getTableTypeKind(v)
+	v.tableTypeKind, v.singletone, err = getTableTypeKind(v, c)
 	if err != nil {
 		c.stmtErr(&v.Pos, err)
 		return
 	}
-	c.with(&v.With, v)
-	c.nestedTables(v.Items, v.tableTypeKind)
-	c.fieldSets(v.Items)
-	c.fields(v.Items)
+	analyseWith(&v.With, v, c)
+	analyseNestedTables(v.Items, v.tableTypeKind, c)
+	analyseFieldSets(v.Items, c)
+	analyseFields(v.Items, c)
 	if v.Inherits != nil {
-		resolvedFunc := func(f *TableStmt) error {
+		resolvedFunc := func(f *TableStmt, _ *PackageSchemaAST) error {
 			if !f.Abstract {
 				return ErrBaseTableMustBeAbstract
 			}
 			return nil
 		}
-		if err := resolve(*v.Inherits, c.basicContext, resolvedFunc); err != nil {
+		if err := resolveInCtx(*v.Inherits, c, resolvedFunc); err != nil {
 			c.stmtErr(&v.Pos, err)
 		}
 
 	}
 }
 
-func (c *analyseCtx) doType(v *TypeStmt) {
+func analyseType(v *TypeStmt, c *iterateCtx) {
 	for _, i := range v.Items {
 		if i.NestedTable != nil {
 			c.stmtErr(&v.Pos, ErrNestedTablesNotSupportedInTypes)
 		}
 	}
-	c.fieldSets(v.Items)
-	c.fields(v.Items)
+	analyseFieldSets(v.Items, c)
+	analyseFields(v.Items, c)
 }
 
-func (c *analyseCtx) workspace(v *WorkspaceStmt) {
+func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 
 	var chain []DefQName
 	var checkChain func(qn DefQName) error
 
 	checkChain = func(qn DefQName) error {
-		resolveFunc := func(w *WorkspaceStmt) error {
+		resolveFunc := func(w *WorkspaceStmt, _ *PackageSchemaAST) error {
 			if !w.Abstract {
 				return ErrBaseWorkspaceMustBeAbstract
 			}
@@ -427,7 +427,7 @@ func (c *analyseCtx) workspace(v *WorkspaceStmt) {
 			}
 			return nil
 		}
-		return resolve(qn, c.basicContext, resolveFunc)
+		return resolveInCtx(qn, c, resolveFunc)
 	}
 
 	for _, inherits := range v.Inherits {
@@ -440,12 +440,12 @@ func (c *analyseCtx) workspace(v *WorkspaceStmt) {
 		if v.Abstract {
 			c.stmtErr(&v.Pos, ErrAbstractWorkspaceDescriptor)
 		}
-		c.nestedTables(v.Descriptor.Items, appdef.TypeKind_CDoc)
-		c.fieldSets(v.Descriptor.Items)
+		analyseNestedTables(v.Descriptor.Items, appdef.TypeKind_CDoc, c)
+		analyseFieldSets(v.Descriptor.Items, c)
 	}
 }
 
-func (c *analyseCtx) nestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind) {
+func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c *iterateCtx) {
 	for i := range items {
 		item := items[i]
 		if item.NestedTable != nil {
@@ -458,7 +458,7 @@ func (c *analyseCtx) nestedTables(items []TableItemExpr, rootTableKind appdef.Ty
 				nestedTable.tableTypeKind = getNestedTableKind(rootTableKind)
 			} else {
 				var err error
-				nestedTable.tableTypeKind, nestedTable.singletone, err = c.getTableTypeKind(nestedTable)
+				nestedTable.tableTypeKind, nestedTable.singletone, err = getTableTypeKind(nestedTable, c)
 				if err != nil {
 					c.stmtErr(&nestedTable.Pos, err)
 					return
@@ -469,28 +469,28 @@ func (c *analyseCtx) nestedTables(items []TableItemExpr, rootTableKind appdef.Ty
 					return
 				}
 			}
-			c.nestedTables(nestedTable.Items, rootTableKind)
+			analyseNestedTables(nestedTable.Items, rootTableKind, c)
 		}
 	}
 }
 
-func (c *analyseCtx) fieldSets(items []TableItemExpr) {
+func analyseFieldSets(items []TableItemExpr, c *iterateCtx) {
 	for i := range items {
 		item := items[i]
 		if item.FieldSet != nil {
-			if err := resolve(item.FieldSet.Type, c.basicContext, func(f *TypeStmt) error { return nil }); err != nil {
+			if err := resolveInCtx(item.FieldSet.Type, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
 				c.stmtErr(&item.FieldSet.Pos, err)
 				continue
 			}
 		}
 		if item.NestedTable != nil {
 			nestedTable := &item.NestedTable.Table
-			c.fieldSets(nestedTable.Items)
+			analyseFieldSets(nestedTable.Items, c)
 		}
 	}
 }
 
-func (c *analyseCtx) fields(items []TableItemExpr) {
+func analyseFields(items []TableItemExpr, c *iterateCtx) {
 	for i := range items {
 		item := items[i]
 		if item.Field != nil {
@@ -514,25 +514,25 @@ func (c *analyseCtx) fields(items []TableItemExpr) {
 		if item.RefField != nil {
 			rf := item.RefField
 			for i := range rf.RefDocs {
-				tableStmt, _, err := resolveTable(rf.RefDocs[i], c.basicContext)
-				if err != nil {
+				if err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, _ *PackageSchemaAST) error {
+					if f.Abstract {
+						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
+					}
+					return nil
+				}); err != nil {
 					c.stmtErr(&rf.Pos, err)
-					continue
-				}
-				if tableStmt.Abstract {
-					c.stmtErr(&rf.Pos, ErrReferenceToAbstractTable(rf.RefDocs[i].String()))
 					continue
 				}
 			}
 		}
 		if item.NestedTable != nil {
 			nestedTable := &item.NestedTable.Table
-			c.fields(nestedTable.Items)
+			analyseFields(nestedTable.Items, c)
 		}
 	}
 }
 
-func (c *analyseCtx) getTableInheritanceChain(table *TableStmt) (chain []DefQName, err error) {
+func getTableInheritanceChain(table *TableStmt, c *iterateCtx) (chain []DefQName, err error) {
 	chain = make([]DefQName, 0)
 	refCycle := func(qname DefQName) bool {
 		for i := range chain {
@@ -546,7 +546,7 @@ func (c *analyseCtx) getTableInheritanceChain(table *TableStmt) (chain []DefQNam
 	vf = func(t *TableStmt) error {
 		if t.Inherits != nil {
 			inherited := *t.Inherits
-			if err := resolve(inherited, c.basicContext, func(t *TableStmt) error {
+			if err := resolveInCtx(inherited, c, func(t *TableStmt, _ *PackageSchemaAST) error {
 				if refCycle(inherited) {
 					return ErrCircularReferenceInInherits
 				}
@@ -562,8 +562,8 @@ func (c *analyseCtx) getTableInheritanceChain(table *TableStmt) (chain []DefQNam
 	return
 }
 
-func (c *analyseCtx) getTableTypeKind(table *TableStmt) (kind appdef.TypeKind, singletone bool, err error) {
-	chain, e := c.getTableInheritanceChain(table)
+func getTableTypeKind(table *TableStmt, c *iterateCtx) (kind appdef.TypeKind, singletone bool, err error) {
+	chain, e := getTableInheritanceChain(table, c)
 	if e != nil {
 		return appdef.TypeKind_null, false, e
 	}

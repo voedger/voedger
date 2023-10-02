@@ -269,7 +269,6 @@ func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 	}
 
 	c := basicContext{
-		pkg:  nil,
 		app:  appSchema,
 		errs: make([]error, 0),
 	}
@@ -286,7 +285,6 @@ func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 }
 
 type basicContext struct {
-	pkg  *PackageSchemaAST
 	app  *AppSchemaAST
 	errs []error
 }
