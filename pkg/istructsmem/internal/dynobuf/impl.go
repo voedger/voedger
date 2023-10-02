@@ -40,13 +40,6 @@ func (sch DynoBufSchemes) Scheme(name appdef.QName) *dynobuffers.Scheme {
 	return sch.schemes[name.String()]
 }
 
-// Returns view key scheme. Nil if not found
-//
-// TODO: check this method is used?
-func (sch DynoBufSchemes) ViewKeyScheme(name appdef.QName) *dynobuffers.Scheme {
-	return sch.schemes[name.String()+viewKeySuffix]
-}
-
 // Returns view partition key scheme. Nil if not found
 func (sch DynoBufSchemes) ViewPartKeyScheme(name appdef.QName) *dynobuffers.Scheme {
 	return sch.schemes[name.String()+viewPartKeySuffix]
@@ -69,7 +62,6 @@ func (sch *DynoBufSchemes) add(name string, fields appdef.IFields) {
 //   - view value
 func (sch *DynoBufSchemes) addView(view appdef.IView) {
 	name := view.QName().String()
-	sch.add(name+viewKeySuffix, view.Key())
 	sch.add(name+viewPartKeySuffix, view.Key().Partition())
 	sch.add(name+viewClustColsSuffix, view.Key().ClustCols())
 	sch.add(name, view.Value())

@@ -55,16 +55,6 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 		t.Run("view scheme", func(t *testing.T) {
 
 			t.Run("key scheme", func(t *testing.T) {
-				key := schemes.ViewKeyScheme(viewName)
-				require.NotNil(key, "schemes.ViewKeyScheme returns nil", "viewName: %q", viewName)
-
-				require.Len(key.Fields, 2)
-
-				require.Equal("pkF1", key.Fields[0].Name)
-				require.Equal(dynobuffers.FieldTypeInt32, key.Fields[0].Ft)
-
-				require.Equal("ccF1", key.Fields[1].Name)
-				require.Equal(dynobuffers.FieldTypeString, key.Fields[1].Ft)
 
 				t.Run("part key scheme", func(t *testing.T) {
 					pk := schemes.ViewPartKeyScheme(viewName)

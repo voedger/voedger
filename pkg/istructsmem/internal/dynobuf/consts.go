@@ -37,7 +37,6 @@ var dynobufferFieldTypeToStr = map[dynobuffers.FieldType]string{
 }
 
 const (
-	viewKeySuffix       = "$key"
 	viewPartKeySuffix   = "$pkey"
 	viewClustColsSuffix = "$ccols"
 	viewValueSuffix     = "$value"
