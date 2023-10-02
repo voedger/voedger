@@ -17,18 +17,18 @@ import (
 
 func TestBasicUsage_Journal(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	tableNum := vit.NextNumber()
-	idUntillUsers := vit.GetAny("simpleApp.untill_users", ws)
+	idUntillUsers := vit.GetAny("app1.untill_users", ws)
 
 	bill := fmt.Sprintf(`{
 				"cuds": [{
 				  "fields": {
 					"sys.ID": 1,
-					"sys.QName": "simpleApp.bill",
+					"sys.QName": "app1.bill",
 					"tableno": %d,
 					"id_untill_users": %d,
 					"table_part": "a",
@@ -61,14 +61,14 @@ func TestBasicUsage_Journal(t *testing.T) {
 			"proforma": 3,
 			"sys.ID": %[1]d,
 			"sys.IsActive": true,
-			"sys.QName": "simpleApp.bill",
+			"sys.QName": "app1.bill",
 			"table_part": "a",
 			"tableno": %[2]d,
 			"working_day": "20230228"
 		  },
 		  "IsNew": true,
 		  "sys.ID": %[1]d,
-		  "sys.QName": "simpleApp.bill"
+		  "sys.QName": "app1.bill"
 		}
 	  ],
 	  "DeviceID": 0,
@@ -88,14 +88,14 @@ func TestBasicUsage_Journal(t *testing.T) {
 				"proforma": 3,
 				"sys.ID": %[1]d,
 				"sys.IsActive": true,
-				"sys.QName": "simpleApp.bill",
+				"sys.QName": "app1.bill",
 				"table_part": "a",
 				"tableno": %[2]d,
 				"working_day": "20230228"
 				},
 				"IsNew": true,
 				"sys.ID": %[1]d,
-				"sys.QName": "simpleApp.bill"
+				"sys.QName": "app1.bill"
 			}
 			],
 			"DeviceID": 0,
@@ -127,14 +127,14 @@ func TestBasicUsage_Journal(t *testing.T) {
 			"proforma": 3,
 			"sys.ID": %[1]d,
 			"sys.IsActive": true,
-			"sys.QName": "simpleApp.bill",
+			"sys.QName": "app1.bill",
 			"table_part": "a",
 			"tableno": %[2]d,
 			"working_day": "20230228"
 		  },
 		  "IsNew": true,
 		  "sys.ID": %[1]d,
-		  "sys.QName": "simpleApp.bill"
+		  "sys.QName": "app1.bill"
 		}
 	  ],
 	  "DeviceID": 0,
@@ -154,14 +154,14 @@ func TestBasicUsage_Journal(t *testing.T) {
 				"proforma": 3,
 				"sys.ID": %[1]d,
 				"sys.IsActive": true,
-				"sys.QName": "simpleApp.bill",
+				"sys.QName": "app1.bill",
 				"table_part": "a",
 				"tableno": %[2]d,
 				"working_day": "20230228"
 				},
 				"IsNew": true,
 				"sys.ID": %[1]d,
-				"sys.QName": "simpleApp.bill"
+				"sys.QName": "app1.bill"
 			}
 			],
 			"DeviceID": 0,
@@ -178,7 +178,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 
 func TestJournal_read_in_years_range_1(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	vit.SetNow(vit.Now().AddDate(1, 0, 0))
 
@@ -189,10 +189,10 @@ func TestJournal_read_in_years_range_1(t *testing.T) {
 	}
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	idUntillUsers := vit.GetAny("simpleApp.untill_users", ws)
+	idUntillUsers := vit.GetAny("app1.untill_users", ws)
 
 	createBill := func(tableNo int) int64 {
-		bill := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"simpleApp.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":3,"working_day":"20230227"}}]}`, tableNo, idUntillUsers)
+		bill := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":3,"working_day":"20230227"}}]}`, tableNo, idUntillUsers)
 		return vit.PostWS(ws, "c.sys.CUD", bill).CurrentWLogOffset
 	}
 

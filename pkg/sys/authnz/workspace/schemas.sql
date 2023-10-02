@@ -1,6 +1,5 @@
 -- Copyright (c) 2020-present unTill Pro, Ltd.
 -- @author Denis Gribanov
-SCHEMA sys;
 
 -- many, target app, user profile
 TABLE ChildWorkspace INHERITS CDoc (

@@ -27,5 +27,6 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 		cfg.AddSyncProjectors(
 			signupin.ProvideSyncProjectorLoginIdxFactory(),
 		)
+		apps.Parse(registrySchemaFS, appdef.SysPackage, ep)
 	}
 }

@@ -23,7 +23,7 @@ import (
 
 func TestBasicUsage_Workspace(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	loginName := vit.NextName()
@@ -52,7 +52,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		{
 			"args": {
 				"WSName": "%s",
-				"WSKind": "simpleApp.WSKind",
+				"WSKind": "app1.WSKind",
 				"WSKindInitializationData": "{\"IntFld\": 10}",
 				"TemplateName": "test_template",
 				"WSClusterID": 1
@@ -63,17 +63,17 @@ func TestBasicUsage_Workspace(t *testing.T) {
 
 		require.Empty(ws.WSError)
 		require.Equal(wsName, ws.Name)
-		require.Equal(it.QNameTestWSKind, ws.Kind)
+		require.Equal(it.QNameApp1_TestWSKind, ws.Kind)
 		require.Equal(`{"IntFld": 10}`, ws.InitDataJSON)
 		require.Equal("test_template", ws.TemplateName)
 		require.Equal(istructs.ClusterID(1), ws.WSID.ClusterID())
 
 		t.Run("check the initialized workspace using collection", func(t *testing.T) {
-			body = `{"args":{"Schema":"simpleApp.air_table_plan"},"elements":[{"fields":["sys.ID","image","preview"]}]}`
+			body = `{"args":{"Schema":"app1.air_table_plan"},"elements":[{"fields":["sys.ID","image","preview"]}]}`
 			resp := vit.PostWS(ws, "q.sys.Collection", body)
 			require.Len(resp.Sections[0].Elements, 2) // from testTemplate
 			appEPs := vit.VVM.AppsExtensionPoints[istructs.AppQName_test1_app1]
-			checkDemoAndDemoMinBLOBs(vit, "test_template", appEPs, it.QNameTestWSKind, resp, ws.WSID, prn.Token)
+			checkDemoAndDemoMinBLOBs(vit, "test_template", appEPs, it.QNameApp1_TestWSKind, resp, ws.WSID, prn.Token)
 		})
 
 		var idOfCDocWSKind int64
@@ -87,14 +87,14 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		})
 
 		t.Run("reconfigure the workspace", func(t *testing.T) {
-			// CDoc<simpleApp.WSKind> is a singleton
+			// CDoc<app1.WSKind> is a singleton
 			body = fmt.Sprintf(`
 				{
 					"cuds": [
 						{
 							"sys.ID": %d,
 							"fields": {
-								"sys.QName": "simpleApp.WSKind",
+								"sys.QName": "app1.WSKind",
 								"IntFld": 42,
 								"StrFld": "str"
 							}
@@ -112,7 +112,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 	})
 
 	t.Run("create a new workspace with an existing name -> 409 conflict", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "simpleApp.WSKind","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
+		body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1.WSKind","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
 		resp := vit.PostProfile(prn, "c.sys.InitChildWorkspace", body, coreutils.Expect409())
 		resp.Println()
 	})
@@ -127,13 +127,13 @@ func TestBasicUsage_Workspace(t *testing.T) {
 }
 
 func TestWorkspaceAuthorization(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	prn := ws.Owner
 
-	body := `{"cuds": [{"sys.ID": 1,"fields": {"sys.QName": "simpleApp.WSKind"}}]}`
+	body := `{"cuds": [{"sys.ID": 1,"fields": {"sys.QName": "app1.WSKind"}}]}`
 
 	t.Run("403 forbidden", func(t *testing.T) {
 		t.Run("workspace is not initialized", func(t *testing.T) {
@@ -169,7 +169,7 @@ func TestDenyCreateCDocWSKind(t *testing.T) {
 }
 
 func TestDenyCUDCDocOwnerModification(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -212,7 +212,7 @@ func TestWorkspaceTemplatesValidationErrors(t *testing.T) {
 	}
 
 	epWSTemplates := extensionpoints.NewRootExtensionPoint()
-	epTestWSKindTemplates := epWSTemplates.ExtensionPoint(it.QNameTestWSKind)
+	epTestWSKindTemplates := epWSTemplates.ExtensionPoint(it.QNameApp1_TestWSKind)
 	for i, c := range cases {
 		str := strconv.Itoa(i)
 		fs := fstest.MapFS{}
@@ -239,7 +239,7 @@ func TestWorkspaceTemplatesValidationErrors(t *testing.T) {
 				fs[df] = dummyFile
 			}
 			str := strconv.Itoa(i)
-			_, _, err := workspace.ValidateTemplate("test"+str, epTestWSKindTemplates, it.QNameTestWSKind)
+			_, _, err := workspace.ValidateTemplate("test"+str, epTestWSKindTemplates, it.QNameApp1_TestWSKind)
 			require.NotNil(t, err)
 			log.Println(err)
 		})

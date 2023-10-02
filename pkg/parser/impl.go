@@ -86,20 +86,18 @@ func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
 	return schemas, nil
 }
 
-func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
+func buildPackageSchemaImpl(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
+	if qualifiedPackageName == "" {
+		return nil, ErrNoQualifiedName
+	}
 	if len(asts) == 0 {
 		return nil, nil
 	}
 	headAst := asts[0].Ast
-	// TODO: do we need to check that last element in qualifiedPackageName path corresponds to f.Ast.Package?
 	for i := 1; i < len(asts); i++ {
 		f := asts[i]
-		if f.Ast.Package != headAst.Package {
-			return nil, ErrUnexpectedSchema(f.FileName, string(f.Ast.Package), string(headAst.Package))
-		}
 		mergeSchemas(f.Ast, headAst)
 	}
-
 	errs := make([]error, 0)
 	errs = checkDuplicateNames(headAst, errs)
 	cleanupComments(headAst)
@@ -129,7 +127,7 @@ func checkDuplicateNames(schema *SchemaAST, errs []error) []error {
 		if named, ok := stmt.(INamedStatement); ok {
 			name := named.GetName()
 			if _, ok := namedIndex[name]; ok {
-				errs = append(errs, errorAt(ErrRedeclared(name), named.GetPos()))
+				errs = append(errs, errorAt(ErrRedefined(name), named.GetPos()))
 			} else {
 				namedIndex[name] = stmt
 			}
@@ -193,7 +191,71 @@ func cleanupImports(schema *SchemaAST) {
 	}
 }
 
-func mergePackageSchemasImpl(packages []*PackageSchemaAST) (map[string]*PackageSchemaAST, error) {
+func defineApp(c *basicContext) {
+	var app *ApplicationStmt
+	var appAst *PackageSchemaAST
+
+	for _, p := range c.app.Packages {
+		a, err := findApplication(c, p)
+		if err != nil {
+			c.errs = append(c.errs, err)
+			return
+		}
+		if a != nil {
+			if app != nil {
+				c.stmtErr(a.GetPos(), ErrApplicationRedefined)
+				return
+			}
+			app = a
+			appAst = p
+		}
+	}
+	if app == nil {
+		c.errs = append(c.errs, ErrApplicationNotDefined)
+		return
+	}
+
+	appAst.Name = getPackageName(appAst.QualifiedPackageName)
+	pkgNames := make(map[string]bool)
+	pkgNames[appAst.Name] = true
+
+	for _, use := range app.Uses {
+
+		if _, ok := pkgNames[string(use.Name)]; ok {
+			c.stmtErr(use.GetPos(), ErrPackageWithSameNameAlreadyIncludedInApp)
+			continue
+		}
+		pkgNames[string(use.Name)] = true
+
+		pkgQN := getQualifiedPackageName(use.Name, appAst.Ast)
+		if pkgQN == "" {
+			c.stmtErr(use.GetPos(), ErrUndefined(string(use.Name)))
+			continue
+		}
+
+		pkg := c.app.Packages[pkgQN]
+		if pkg == nil {
+			c.stmtErr(use.GetPos(), ErrCouldNotImport(pkgQN))
+			continue
+		}
+
+		pkg.Name = string(use.Name)
+	}
+
+	for _, p := range c.app.Packages {
+		if p.QualifiedPackageName == appdef.SysPackage {
+			p.Name = appdef.SysPackage
+			continue
+		}
+
+		if p.Name == "" {
+			c.err(ErrAppDoesNotDefineUseOfPackage(p.QualifiedPackageName))
+		}
+	}
+}
+
+func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
+
 	pkgmap := make(map[string]*PackageSchemaAST)
 	for _, p := range packages {
 		if _, ok := pkgmap[p.QualifiedPackageName]; ok {
@@ -202,29 +264,44 @@ func mergePackageSchemasImpl(packages []*PackageSchemaAST) (map[string]*PackageS
 		pkgmap[p.QualifiedPackageName] = p
 	}
 
+	appSchema := &AppSchemaAST{
+		Packages: pkgmap,
+	}
+
 	c := basicContext{
-		pkg:    nil,
-		pkgmap: pkgmap,
-		errs:   make([]error, 0),
+		app:  appSchema,
+		errs: make([]error, 0),
+	}
+
+	defineApp(&c)
+	if len(c.errs) > 0 {
+		return nil, errors.Join(c.errs...)
 	}
 
 	for _, p := range packages {
 		analyse(&c, p)
 	}
-	return pkgmap, errors.Join(c.errs...)
+	return appSchema, errors.Join(c.errs...)
 }
 
 type basicContext struct {
-	pkg    *PackageSchemaAST
-	pkgmap map[string]*PackageSchemaAST
-	errs   []error
+	app  *AppSchemaAST
+	errs []error
+}
+
+func (c *basicContext) newStmtErr(pos *lexer.Position, err error) error {
+	return fmt.Errorf("%s: %w", pos.String(), err)
 }
 
 func (c *basicContext) stmtErr(pos *lexer.Position, err error) {
-	c.errs = append(c.errs, fmt.Errorf("%s: %w", pos.String(), err))
+	c.err(c.newStmtErr(pos, err))
 }
 
-func buildAppDefs(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) error {
-	ctx := newBuildContext(packages, builder)
+func (c *basicContext) err(err error) {
+	c.errs = append(c.errs, err)
+}
+
+func buildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) error {
+	ctx := newBuildContext(appSchema, builder)
 	return ctx.build()
 }
