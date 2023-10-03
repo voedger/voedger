@@ -1410,3 +1410,53 @@ func Test_Scope_TableRefs(t *testing.T) {
 	}, "\n"))
 
 }
+
+func Test_Alter_Workspace_In_Package(t *testing.T) {
+
+	require := require.New(t)
+
+	fs0, err := ParseFile("file0.sql", `
+	IMPORT SCHEMA 'org/pkg1';
+	IMPORT SCHEMA 'org/pkg2';
+	APPLICATION test(
+		USE pkg1;
+	);
+	`)
+	require.NoError(err)
+	pkg0, err := BuildPackageSchema("org/main", []*FileSchemaAST{fs0})
+	require.NoError(err)
+
+	fs1, err := ParseFile("file1.sql", `
+		ALTERABLE WORKSPACE _Ws(
+			TABLE _wst1 INHERITS CDoc();
+		);
+		ABSTRACT WORKSPACE AWs(
+			TABLE awst1 INHERITS CDoc();
+		);
+		WORKSPACE Ws(
+			TABLE wst1 INHERITS CDoc();
+		);
+	`)
+	require.NoError(err)
+	fs2, err := ParseFile("file2.sql", `
+		ALTER WORKSPACE _Ws(
+			TABLE _wst2 INHERITS CDoc();
+		);
+		ALTER WORKSPACE AWs(
+			TABLE awst2 INHERITS CDoc();
+		);
+		ALTER WORKSPACE Ws(
+			TABLE wst2 INHERITS CDoc();
+		);
+	`)
+	require.NoError(err)
+	pkg1, err := BuildPackageSchema("org/pkg1", []*FileSchemaAST{fs1, fs2})
+	require.NoError(err)
+
+	_, err = BuildAppSchema([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg0,
+		pkg1,
+	})
+	require.NoError(err)
+}

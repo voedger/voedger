@@ -100,34 +100,24 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 	var item stmtType
 	var lookupCallback func(stmt interface{})
 	lookupCallback = func(stmt interface{}) {
-		if item != nil {
-			return
-		}
-		if f, ok := stmt.(stmtType); ok {
+		if f, ok := stmt.(stmtType); ok && item == nil {
 			named := any(f).(INamedStatement)
 			if named.GetName() == string(fn.Name) {
 				item = f
 			}
 		}
-		if item != nil {
-			return
-		}
-		if collection, ok := stmt.(IStatementCollection); ok {
+		if collection, ok := stmt.(IStatementCollection); ok && item == nil {
 			if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace { // do not go into workspaces
 				collection.Iterate(lookupCallback)
 			}
 		}
-		if item != nil {
-			return
-		}
-		if t, ok := stmt.(*TableStmt); ok {
+		if t, ok := stmt.(*TableStmt); ok && item == nil {
 			for i := range t.Items {
 				if t.Items[i].NestedTable != nil {
 					lookupCallback(&t.Items[i].NestedTable.Table)
 				}
 			}
 		}
-
 	}
 
 	if schema == ictx.pkg {
