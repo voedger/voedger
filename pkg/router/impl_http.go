@@ -66,7 +66,7 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 	}
 
 	s.server = &http.Server{
-		Addr:         ":" + port,
+		Addr:         "127.0.0.1:" + port,
 		Handler:      s.router,
 		ReadTimeout:  time.Duration(s.RouterParams.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(s.RouterParams.WriteTimeout) * time.Second,

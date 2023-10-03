@@ -22,7 +22,7 @@ func TestBasicUsage_ReverseProxy(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	targetListener, err := net.Listen("tcp", fmt.Sprintf(":%d", it.TestServicePort))
+	targetListener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", it.TestServicePort))
 	require.NoError(err)
 	errs := make(chan error)
 	targetHandler := targetHandler{t, &sync.Mutex{}, "", ""}
