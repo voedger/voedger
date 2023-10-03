@@ -8,13 +8,7 @@ package appdef
 import (
 	"errors"
 	"fmt"
-	"strings"
 )
-
-const SystemContainer_ViewPartitionKey = SystemPackagePrefix + "pkey"
-const SystemContainer_ViewClusteringCols = SystemPackagePrefix + "ccols"
-const SystemContainer_ViewKey = SystemPackagePrefix + "key"
-const SystemContainer_ViewValue = SystemPackagePrefix + "val"
 
 // # Implements:
 //   - Container
@@ -45,8 +39,6 @@ func (cont *container) Type() IType {
 	return cont.typ
 }
 
-func (cont *container) IsSys() bool { return IsSysContainer(cont.name) }
-
 func (cont *container) MaxOccurs() Occurs { return cont.maxOccurs }
 
 func (cont *container) MinOccurs() Occurs { return cont.minOccurs }
@@ -57,16 +49,6 @@ func (cont *container) QName() QName { return cont.qName }
 
 func (cont *container) parentType() IType {
 	return cont.parent.(IType)
-}
-
-// Returns is container system
-func IsSysContainer(n string) bool {
-	return strings.HasPrefix(n, SystemPackagePrefix) && // fast check
-		// then more accuracy
-		((n == SystemContainer_ViewPartitionKey) ||
-			(n == SystemContainer_ViewClusteringCols) ||
-			(n == SystemContainer_ViewKey) ||
-			(n == SystemContainer_ViewValue))
 }
 
 // # Implements:
@@ -87,10 +69,8 @@ func (c *containers) AddContainer(name string, contType QName, minOccurs, maxOcc
 	if name == NullName {
 		panic(fmt.Errorf("%v: empty container name: %w", c.parentType().QName(), ErrNameMissed))
 	}
-	if !IsSysContainer(name) {
-		if ok, err := ValidIdent(name); !ok {
-			panic(fmt.Errorf("%v: invalid container name «%v»: %w", c.parentType().QName(), name, err))
-		}
+	if ok, err := ValidIdent(name); !ok {
+		panic(fmt.Errorf("%v: invalid container name «%v»: %w", c.parentType().QName(), name, err))
 	}
 	if c.Container(name) != nil {
 		panic(fmt.Errorf("%v: container «%v» is already exists: %w", c.parentType().QName(), name, ErrNameUniqueViolation))

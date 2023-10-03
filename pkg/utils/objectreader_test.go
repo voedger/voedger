@@ -234,14 +234,13 @@ func TestReadValue(t *testing.T) {
 	for k, v := range testData {
 		iValueValues[k] = v
 	}
-	vvQName := appdef.ViewValueDefName(viewName)
-	iValueValues[appdef.SystemField_QName] = vvQName
+	iValueValues[appdef.SystemField_QName] = viewName
 	iValueValues["record"] = &TestObject{
 		Data: testDataSimple,
 	}
 	iValue := &TestValue{
 		TestObject: &TestObject{
-			Name: vvQName,
+			Name: viewName,
 			Id:   42,
 			Data: iValueValues,
 		},
@@ -249,13 +248,13 @@ func TestReadValue(t *testing.T) {
 
 	t.Run("FieldsToMap", func(t *testing.T) {
 		m := FieldsToMap(iValue, appDefs)
-		testBasic(vvQName, m, require)
+		testBasic(viewName, m, require)
 		require.Equal(map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"}, m["record"])
 	})
 
 	t.Run("FieldsToMap non-nils only", func(t *testing.T) {
 		m := FieldsToMap(iValue, appDefs, WithNonNilsOnly())
-		testBasic(vvQName, m, require)
+		testBasic(viewName, m, require)
 		require.Equal(map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"}, m["record"])
 	})
 

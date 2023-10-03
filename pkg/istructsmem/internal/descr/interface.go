@@ -15,6 +15,7 @@ type Application struct {
 type Package struct {
 	Name       string
 	Types      map[string]*Type        `json:",omitempty"`
+	Views      map[string]*View        `json:",omitempty"`
 	Resources  map[string]*Resource    `json:",omitempty"`
 	RateLimits map[string][]*RateLimit `json:",omitempty"`
 }

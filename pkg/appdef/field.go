@@ -90,9 +90,16 @@ type fields struct {
 	fieldsOrdered []string
 }
 
+// Makes new fields instance. System fields needed for parent type are added automatically.
 func makeFields(parent interface{}) fields {
 	f := fields{parent, make(map[string]interface{}), make([]string, 0)}
 	f.makeSysFields()
+	return f
+}
+
+// Makes new fields instance for view key
+func makeViewKeyFields(view interface{}) fields {
+	f := fields{view, make(map[string]interface{}), make([]string, 0)}
 	return f
 }
 
@@ -348,3 +355,17 @@ func validateTypeFields(t IType) (err error) {
 	}
 	return err
 }
+
+// NullFields is used for return then IFields is not supported
+var NullFields = new(nullFields)
+
+type nullFields struct{}
+
+func (f *nullFields) Field(name string) IField       { return nil }
+func (f *nullFields) FieldCount() int                { return 0 }
+func (f *nullFields) Fields(func(IField))            {}
+func (f *nullFields) RefField(name string) IRefField { return nil }
+func (f *nullFields) RefFields(func(IRefField))      {}
+func (f *nullFields) RefFieldCount() int             { return 0 }
+func (f *nullFields) UserFields(func(IField))        {}
+func (f *nullFields) UserFieldCount() int            { return 0 }

@@ -649,11 +649,63 @@ func (s *ViewStmt) Iterate(callback func(stmt interface{})) {
 	}
 }
 
+// Returns view item with field by field name
+func (s ViewStmt) Field(fieldName Ident) *ViewItemExpr {
+	for i := 0; i < len(s.Items); i++ {
+		item := &s.Items[i]
+		if item.FieldName() == fieldName {
+			return item
+		}
+	}
+	return nil
+}
+
+// Iterate view partition fields
+func (s ViewStmt) PartitionFields(callback func(f *ViewItemExpr)) {
+	for i := 0; i < len(s.pkRef.PartitionKeyFields); i++ {
+		if f := s.Field(s.pkRef.PartitionKeyFields[i]); f != nil {
+			callback(f)
+		}
+	}
+}
+
+// Iterate view clustering columns
+func (s ViewStmt) ClusteringColumns(callback func(f *ViewItemExpr)) {
+	for i := 0; i < len(s.pkRef.ClusteringColumnsFields); i++ {
+		if f := s.Field(s.pkRef.ClusteringColumnsFields[i]); f != nil {
+			callback(f)
+		}
+	}
+}
+
+// Iterate view value fields
+func (s ViewStmt) ValueFields(callback func(f *ViewItemExpr)) {
+	for i := 0; i < len(s.Items); i++ {
+		f := &s.Items[i]
+		if n := f.FieldName(); len(n) > 0 {
+			if !contains(s.pkRef.PartitionKeyFields, n) && !contains(s.pkRef.ClusteringColumnsFields, n) {
+				callback(f)
+			}
+		}
+	}
+}
+
 type ViewItemExpr struct {
 	Pos        lexer.Position
 	PrimaryKey *PrimaryKeyExpr `parser:"(PRIMARYKEY '(' @@ ')')"`
 	RefField   *ViewRefField   `parser:"| @@"`
 	Field      *ViewField      `parser:"| @@"`
+}
+
+// Returns field name
+func (i ViewItemExpr) FieldName() Ident {
+	if i.Field != nil {
+		return i.Field.Name
+	}
+	if i.RefField != nil {
+		return i.RefField.Name
+	}
+	return ""
 }
 
 type PrimaryKeyExpr struct {

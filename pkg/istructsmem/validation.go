@@ -13,8 +13,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// TODO: move to internal/validate package
-
 // Provides validation application structures by single type
 type validator struct {
 	validators *validators
@@ -170,7 +168,7 @@ func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error)
 
 // Validates specified row
 func (v *validator) validRow(row *rowType) (err error) {
-	v.typ.(appdef.IFields).Fields(
+	row.fields.Fields(
 		func(f appdef.IField) {
 			if f.Required() {
 				if !row.HasValue(f.Name()) {
@@ -427,31 +425,21 @@ func (v *validators) validCUDRefRawIDs(cud *cudType) (err error) {
 // Validates specified view key.
 //
 // If partialClust specified then clustering columns row may be partially filled
-func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
-	pk := key.pkDef()
-	if key.partRow.QName() != pk {
-		return validateErrorf(ECode_InvalidDefName, "wrong view partition key type «%v», for view «%v» expected «%v»: %w", key.partRow.QName(), key.viewName, pk, ErrWrongType)
-	}
-
-	cc := key.ccDef()
-	if key.ccolsRow.QName() != cc {
-		return validateErrorf(ECode_InvalidDefName, "wrong view clustering columns type «%v», for view «%v» expected «%v»: %w", key.ccolsRow.QName(), key.viewName, cc, ErrWrongType)
-	}
-
-	key.partRow.fieldsDef().Fields(
+func (v *validators) validViewKey(key *keyType, partialClust bool) (err error) {
+	key.partRow.fields.Fields(
 		func(f appdef.IField) {
 			if !key.partRow.HasValue(f.Name()) {
 				err = errors.Join(err,
-					validateErrorf(ECode_EmptyData, "view «%v» partition key «%v» field «%s» is empty: %w", key.viewName, pk, f.Name(), ErrFieldIsEmpty))
+					validateErrorf(ECode_EmptyData, "view «%v» partition key field «%s» is empty: %w", key.viewName, f.Name(), ErrFieldIsEmpty))
 			}
 		})
 
 	if !partialClust {
-		key.ccolsRow.fieldsDef().Fields(
+		key.ccolsRow.fields.Fields(
 			func(f appdef.IField) {
 				if !key.ccolsRow.HasValue(f.Name()) {
 					err = errors.Join(err,
-						validateErrorf(ECode_EmptyData, "view «%v» clustering columns «%v» field «%s» is empty: %w", key.viewName, cc, f.Name(), ErrFieldIsEmpty))
+						validateErrorf(ECode_EmptyData, "view «%v» clustering columns field «%s» is empty: %w", key.viewName, f.Name(), ErrFieldIsEmpty))
 				}
 			})
 	}
@@ -461,14 +449,9 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 
 // Validates specified view value
 func (v *validators) validViewValue(value *valueType) (err error) {
-	valName := value.valueDef()
-	if value.QName() != valName {
-		return validateErrorf(ECode_InvalidDefName, "wrong view value type «%v», for view «%v» expected «%v»: %w", value.QName(), value.viewName, valName, ErrWrongType)
-	}
-
-	validator := v.validator(valName)
+	validator := v.validator(value.viewName)
 	if validator == nil {
-		return validateErrorf(ECode_InvalidDefName, "view value «%v» type not found: %w", valName, ErrNameNotFound)
+		return validateErrorf(ECode_InvalidDefName, "view value «%v» type not found: %w", value.viewName, ErrNameNotFound)
 	}
 
 	return validator.validRow(&value.rowType)

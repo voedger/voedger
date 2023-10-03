@@ -26,7 +26,7 @@ type recordType struct {
 // makeRecord makes null (appdef.NullQName) record
 func makeRecord(appCfg *AppConfigType) recordType {
 	rec := recordType{
-		rowType: newRow(appCfg),
+		rowType: makeRow(appCfg),
 	}
 	return rec
 }

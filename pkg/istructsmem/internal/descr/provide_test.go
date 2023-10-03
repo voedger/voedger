@@ -38,6 +38,15 @@ func TestBasicUsage(t *testing.T) {
 		SetFieldVerify("phone", appdef.VerificationKind_Any...).(appdef.ICRecordBuilder).
 		SetUniqueField("phone")
 
+	viewName := appdef.NewQName("test", "view")
+	view := appDef.AddView(viewName)
+	view.Key().Partition().
+		AddField("pk_1", appdef.DataKind_int64)
+	view.Key().ClustCols().
+		AddStringField("cc_1", 100)
+	view.Value().
+		AddRefField("vv_1", true, docName)
+
 	res := &mockResources{}
 	res.
 		On("Resources", mock.AnythingOfType("func(appdef.QName)")).Run(func(args mock.Arguments) {})
