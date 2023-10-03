@@ -14,6 +14,26 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+func TestID(t *testing.T) {
+	recID := istructs.RecordID(5000000000000)
+	log.Println(recID.BaseRecordID())
+	log.Println(istructs.NewCDocCRecordID(0))
+	log.Println(istructs.NewCDocCRecordID(1))
+	log.Println(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID))
+	recID = istructs.RecordID(5000000000333)
+	log.Println(recID.BaseRecordID())
+	log.Println(istructs.NewCDocCRecordID(recID.BaseRecordID()))
+	recID = istructs.RecordID(10000008911)
+	log.Println(recID.BaseRecordID())
+	log.Println(istructs.NewCDocCRecordID(recID.BaseRecordID()))
+	recID = istructs.RecordID(9999999996)
+	log.Println(recID.BaseRecordID())
+	log.Println(istructs.NewCDocCRecordID(recID.BaseRecordID()))
+	recID = istructs.RecordID(5000000333)
+	log.Println(recID.BaseRecordID())
+	log.Println(istructs.NewCDocCRecordID(recID.BaseRecordID()))
+}
+
 func TestIDGenerator(t *testing.T) {
 	require := require.New(t)
 	bld := appdef.New()
@@ -116,6 +136,6 @@ func TestIDGenCollision(t *testing.T) {
 	// but it is still 322690000000000 because nextCDocCRecordBaseID was not bumped on UpdateOnSync()
 	newIDAfterRestart, err := idGen.NextID(1, tp)
 	require.NoError(err)
-	log.Println("ID generated after restart:",newIDAfterRestart)
+	log.Println("ID generated after restart:", newIDAfterRestart)
 	require.Equal(newIDBeforeRestart, newIDAfterRestart) // should not be equal. 9999999999 ID causes next IDs collision
 }
