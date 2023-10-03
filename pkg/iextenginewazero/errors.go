@@ -15,3 +15,15 @@ var (
 	PanicIncorrectValue      = "incorrect value"
 	PanicIncorrectIntent     = "incorrect intent"
 )
+
+func missingExportedFunction(name string) error {
+	return errors.New("missing exported function: " + name)
+}
+
+func incorrectExtensionName(name string) error {
+	return errors.New("incorrect extension name: " + name)
+}
+
+func invalidExtensionName(name string) error {
+	return errors.New("invalid extension name: " + name)
+}

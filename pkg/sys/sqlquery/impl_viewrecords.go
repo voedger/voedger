@@ -17,14 +17,14 @@ import (
 )
 
 func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
-	viewDef := appStructs.AppDef().View(viewRecordQName)
+	view := appStructs.AppDef().View(viewRecordQName)
 
 	if !f.acceptAll {
-		allowedFields := make(map[string]bool, viewDef.Key().FieldCount()+viewDef.Value().FieldCount())
-		viewDef.Key().Fields(func(f appdef.IField) {
+		allowedFields := make(map[string]bool, view.Key().FieldCount()+view.Value().FieldCount())
+		view.Key().Fields(func(f appdef.IField) {
 			allowedFields[f.Name()] = true
 		})
-		viewDef.Value().Fields(func(f appdef.IField) {
+		view.Value().Fields(func(f appdef.IField) {
 			allowedFields[f.Name()] = true
 		})
 		for field := range f.fields {
@@ -79,7 +79,7 @@ func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName ap
 	kb := appStructs.ViewRecords().KeyBuilder(viewRecordQName)
 
 	for _, k := range kk {
-		f := viewDef.Key().Field(k.name)
+		f := view.Key().Field(k.name)
 		if f == nil {
 			return fmt.Errorf("field '%s' does not exist in '%s' key def", k.name, viewRecordQName)
 		}

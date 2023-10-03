@@ -19,10 +19,10 @@ func ParseFile(fileName, content string) (*FileSchemaAST, error) {
 	}, nil
 }
 
-// MergeFileSchemaASTs merges File Schema ASTs into Package Schema AST.
+// BuildPackageSchema merges File Schema ASTs into Package Schema AST.
 // Performs package-level semantic analysis
-func MergeFileSchemaASTs(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
-	return mergeFileSchemaASTsImpl(qualifiedPackageName, asts)
+func BuildPackageSchema(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
+	return buildPackageSchemaImpl(qualifiedPackageName, asts)
 }
 
 // ParsePackageDir is a helper which parses all SQL schemas from specified FS and returns Package Schema.
@@ -31,14 +31,14 @@ func ParsePackageDir(qualifiedPackageName string, fs IReadFS, subDir string) (*P
 	if err != nil {
 		return nil, err
 	}
-	return MergeFileSchemaASTs(qualifiedPackageName, asts)
+	return BuildPackageSchema(qualifiedPackageName, asts)
 }
 
 // Application-level semantic analysis (e.g. cross-package references)
-func MergePackageSchemas(packages []*PackageSchemaAST) (map[string]*PackageSchemaAST, error) {
-	return mergePackageSchemasImpl(packages)
+func BuildAppSchema(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
+	return buildAppSchemaImpl(packages)
 }
 
-func BuildAppDefs(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) error {
-	return buildAppDefs(packages, builder)
+func BuildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) error {
+	return buildAppDefs(appSchema, builder)
 }

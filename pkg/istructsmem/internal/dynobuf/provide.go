@@ -6,6 +6,6 @@
 package dynobuf
 
 // Creates and returns new dynobuffer schemes
-func New() DynoBufSchemes {
+func New() *DynoBufSchemes {
 	return newSchemes()
 }

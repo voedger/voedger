@@ -318,6 +318,9 @@ func (v *recordsStorageValue) AsRecordID(name string) istructs.RecordID {
 	return v.record.AsRecordID(name)
 }
 func (v *recordsStorageValue) AsRecord(string) (record istructs.IRecord) { return v.record }
+func (v *recordsStorageValue) FieldNames(cb func(fieldName string)) {
+	v.record.FieldNames(cb)
+}
 
 //func (v *recordsStorageValue) AsRecord(string) (record istructs.IRecord) { return v.record }
 
@@ -768,4 +771,69 @@ func (c *cmdResultValueBuilder) PutNumber(name string, value float64) {
 }
 func (c *cmdResultValueBuilder) PutRecordID(name string, value istructs.RecordID) {
 	c.cmdResultBuilder.PutRecordID(name, value)
+}
+
+type principalTokenKeyBuilder struct {
+	*keyBuilder
+}
+
+func newPrincipalTokenKeyBuilder() *principalTokenKeyBuilder {
+	return &principalTokenKeyBuilder{
+		&keyBuilder{
+			storage: PrincipalTokenStorage,
+		},
+	}
+}
+
+func (c *principalTokenKeyBuilder) PutInt32(name string, value int32)        { panic(ErrNotSupported) }
+func (c *principalTokenKeyBuilder) PutInt64(name string, value int64)        { panic(ErrNotSupported) }
+func (c *principalTokenKeyBuilder) PutBytes(name string, value []byte)       { panic(ErrNotSupported) }
+func (c *principalTokenKeyBuilder) PutString(name, value string)             { panic(ErrNotSupported) }
+func (c *principalTokenKeyBuilder) PutBool(name string, value bool)          { panic(ErrNotSupported) }
+func (c *principalTokenKeyBuilder) PutChars(name string, value string)       { panic(ErrNotSupported) }
+func (c *principalTokenKeyBuilder) PutFloat32(name string, value float32)    { panic(ErrNotSupported) }
+func (c *principalTokenKeyBuilder) PutFloat64(name string, value float64)    { panic(ErrNotSupported) }
+func (c *principalTokenKeyBuilder) PutQName(name string, value appdef.QName) { panic(ErrNotSupported) }
+func (c *principalTokenKeyBuilder) PutNumber(name string, value float64)     { panic(ErrNotSupported) }
+func (c *principalTokenKeyBuilder) PutRecordID(name string, value istructs.RecordID) {
+	panic(ErrNotSupported)
+}
+func (c *principalTokenKeyBuilder) PartitionKey() istructs.IRowWriter      { panic(ErrNotSupported) }
+func (c *principalTokenKeyBuilder) ClusteringColumns() istructs.IRowWriter { panic(ErrNotSupported) }
+func (c *principalTokenKeyBuilder) Equals(src istructs.IKeyBuilder) bool   { panic(ErrNotSupported) }
+
+type principalTokenStorageValue struct {
+	baseStateValue
+	token string
+}
+
+func (v *principalTokenStorageValue) AsString(name string) string {
+	switch name {
+	case Field_Token:
+		return v.token
+	default:
+		return ""
+	}
+}
+
+func (v *principalTokenStorageValue) AsRecord(name string) (record istructs.IRecord) {
+	panic(ErrNotSupported)
+}
+func (v *principalTokenStorageValue) AsEvent(name string) (event istructs.IDbEvent) {
+	panic(ErrNotSupported)
+}
+func (v *principalTokenStorageValue) AsValue(name string) istructs.IStateValue {
+	panic(ErrNotSupported)
+}
+func (v *principalTokenStorageValue) Length() int                       { panic(ErrNotSupported) }
+func (v *principalTokenStorageValue) GetAsString(index int) string      { panic(ErrNotSupported) }
+func (v *principalTokenStorageValue) GetAsBytes(index int) []byte       { panic(ErrNotSupported) }
+func (v *principalTokenStorageValue) GetAsInt32(index int) int32        { panic(ErrNotSupported) }
+func (v *principalTokenStorageValue) GetAsInt64(index int) int64        { panic(ErrNotSupported) }
+func (v *principalTokenStorageValue) GetAsFloat32(index int) float32    { panic(ErrNotSupported) }
+func (v *principalTokenStorageValue) GetAsFloat64(index int) float64    { panic(ErrNotSupported) }
+func (v *principalTokenStorageValue) GetAsQName(index int) appdef.QName { panic(ErrNotSupported) }
+func (v *principalTokenStorageValue) GetAsBool(index int) bool          { panic(ErrNotSupported) }
+func (v *principalTokenStorageValue) GetAsValue(index int) istructs.IStateValue {
+	panic(ErrNotSupported)
 }

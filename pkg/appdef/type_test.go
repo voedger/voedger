@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_NullDef(t *testing.T) {
+func Test_NullType(t *testing.T) {
 	require := require.New(t)
 
-	require.Nil(NullDef.App())
-	require.Equal(NullQName, NullDef.QName())
-	require.Equal(DefKind_null, NullDef.Kind())
+	require.Nil(NullType.App())
+	require.Equal(NullQName, NullType.QName())
+	require.Equal(TypeKind_null, NullType.Kind())
 }

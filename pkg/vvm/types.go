@@ -82,7 +82,7 @@ type PostDocFieldType struct {
 }
 
 type PostDocDesc struct {
-	Kind        appdef.DefKind
+	Kind        appdef.TypeKind
 	IsSingleton bool
 }
 

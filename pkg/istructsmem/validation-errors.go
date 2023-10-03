@@ -13,7 +13,7 @@ const (
 
 	ECode_EmptyDefName
 	ECode_InvalidDefName
-	ECode_InvalidDefKind
+	ECode_InvalidTypeKind
 
 	ECode_EmptyData
 

@@ -41,7 +41,7 @@ var (
 	qNameQryCollection                              = appdef.NewQName(appdef.SysPackage, "Collection")
 	qNameCmdInitiateUpdateInviteRoles               = appdef.NewQName(appdef.SysPackage, "InitiateUpdateInviteRoles")
 	qNameCmdInitiateCancelAcceptedInvite            = appdef.NewQName(appdef.SysPackage, "InitiateCancelAcceptedInvite")
-	qNameCmdCancelSendInvite                        = appdef.NewQName(appdef.SysPackage, "CancelSendInvite")
+	qNameCmdCancelSentInvite                        = appdef.NewQName(appdef.SysPackage, "CancelSentInvite")
 	qNameCmdInitChildWorkspace                      = appdef.NewQName(appdef.SysPackage, "InitChildWorkspace")
 	qNameCmdEnrichPrincipalToken                    = appdef.NewQName(appdef.SysPackage, "EnrichPrincipalToken")
 	qNameCDocUPProfile                              = appdef.NewQName(airPackage, "UPProfile")
@@ -74,6 +74,7 @@ var (
 	qNameCmdRequestOnDemandPayout                   = appdef.NewQName(airPackage, "RequestOnDemandPayout")
 	qNameQryGetPayouts                              = appdef.NewQName(airPackage, "GetPayouts")
 	qNameQryGetCreditInvoice                        = appdef.NewQName(airPackage, "GetCreditInvoice")
+	qNameQryGetAllUPPayouts                         = appdef.NewQName(airPackage, "GetAllUPPayouts")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
@@ -81,6 +82,7 @@ var (
 	qNameRoleUntillPaymentsUser     = appdef.NewQName(airPackage, "UntillPaymentsUser")
 	qNameRoleAirReseller            = appdef.NewQName(airPackage, "AirReseller")
 	qNameRoleUntillPaymentsTerminal = appdef.NewQName(airPackage, "UntillPaymentsTerminal")
+	qNameRoleUntillPaymentsManager  = appdef.NewQName(airPackage, "UntillPaymentsManager")
 )
 
 const (

@@ -40,7 +40,7 @@ func Test_ValidEvent(t *testing.T) {
 	t.Run("builds application", func(t *testing.T) {
 		appDef := appdef.New()
 
-		t.Run("must be ok to build application definition", func(t *testing.T) {
+		t.Run("must be ok to build application", func(t *testing.T) {
 			appDef.AddCDoc(cDocName).
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddStringField("String", false)
@@ -117,7 +117,7 @@ func Test_ValidEvent(t *testing.T) {
 		cmd.PutQName(appdef.SystemField_QName, oObjName)
 
 		_, err := bld.BuildRawEvent()
-		require.ErrorIs(err, ErrWrongDefinition)
+		require.ErrorIs(err, ErrWrongType)
 		validateErr := validateErrorf(0, "")
 		require.ErrorAs(err, &validateErr)
 		require.Equal(ECode_InvalidDefName, validateErr.Code())
@@ -233,10 +233,10 @@ func Test_ValidEvent(t *testing.T) {
 			require.NotNil(rawEvent)
 		})
 
-		t.Run("must failed build raw event (unexpected argument definition)", func(t *testing.T) {
+		t.Run("must failed build raw event (unexpected argument type)", func(t *testing.T) {
 			cmd.PutQName(appdef.SystemField_QName, oDocName)
 			rawEvent, err := bld.BuildRawEvent()
-			require.ErrorIs(err, ErrDefChanged) // expected «test.Object», but not «test.ODoc»
+			require.ErrorIs(err, ErrTypeChanged) // expected «test.Object», but not «test.ODoc»
 			require.NotNil(rawEvent)
 		})
 	})
@@ -285,7 +285,7 @@ func Test_ValidEvent(t *testing.T) {
 
 		t.Run("must failed build raw event", func(t *testing.T) {
 			rawEvent, err := bld.BuildRawEvent()
-			require.ErrorIs(err, ErrWrongDefinition) // CDoc deprecated, ODoc or Object expected
+			require.ErrorIs(err, ErrWrongType) // CDoc deprecated, ODoc or Object expected
 			require.NotNil(rawEvent)
 		})
 	})
@@ -346,11 +346,11 @@ func Test_ValidElement(t *testing.T) {
 
 	appDef := appdef.New()
 
-	t.Run("must be ok to build test application definition", func(t *testing.T) {
+	t.Run("must be ok to build test application", func(t *testing.T) {
 
-		t.Run("build object definition", func(t *testing.T) {
-			objDef := appDef.AddObject(appdef.NewQName("test", "object"))
-			objDef.
+		t.Run("build object type", func(t *testing.T) {
+			obj := appDef.AddObject(appdef.NewQName("test", "object"))
+			obj.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
 				AddField("float32Field", appdef.DataKind_float32, false).
@@ -359,11 +359,11 @@ func Test_ValidElement(t *testing.T) {
 				AddStringField("strField", false).
 				AddField("qnameField", appdef.DataKind_QName, false).
 				AddField("recIDField", appdef.DataKind_RecordID, false)
-			objDef.
+			obj.
 				AddContainer("child", appdef.NewQName("test", "element"), 1, appdef.Occurs_Unbounded)
 
-			elDef := appDef.AddElement(appdef.NewQName("test", "element"))
-			elDef.
+			el := appDef.AddElement(appdef.NewQName("test", "element"))
+			el.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
 				AddField("float32Field", appdef.DataKind_float32, false).
@@ -373,17 +373,17 @@ func Test_ValidElement(t *testing.T) {
 				AddField("qnameField", appdef.DataKind_QName, false).
 				AddField("boolField", appdef.DataKind_bool, false).
 				AddField("recIDField", appdef.DataKind_RecordID, false)
-			elDef.
+			el.
 				AddContainer("grandChild", appdef.NewQName("test", "grandChild"), 0, 1)
 
-			subElDef := appDef.AddElement(appdef.NewQName("test", "grandChild"))
-			subElDef.
+			subEl := appDef.AddElement(appdef.NewQName("test", "grandChild"))
+			subEl.
 				AddField("recIDField", appdef.DataKind_RecordID, false)
 		})
 
-		t.Run("build ODoc definition", func(t *testing.T) {
-			docDef := appDef.AddODoc(appdef.NewQName("test", "document"))
-			docDef.
+		t.Run("build ODoc type", func(t *testing.T) {
+			doc := appDef.AddODoc(appdef.NewQName("test", "document"))
+			doc.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
 				AddField("float32Field", appdef.DataKind_float32, false).
@@ -392,11 +392,11 @@ func Test_ValidElement(t *testing.T) {
 				AddStringField("strField", false).
 				AddField("qnameField", appdef.DataKind_QName, false).
 				AddField("recIDField", appdef.DataKind_RecordID, false)
-			docDef.
+			doc.
 				AddContainer("child", appdef.NewQName("test", "record"), 1, appdef.Occurs_Unbounded)
 
-			recDef := appDef.AddORecord(appdef.NewQName("test", "record"))
-			recDef.
+			rec := appDef.AddORecord(appdef.NewQName("test", "record"))
+			rec.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
 				AddField("float32Field", appdef.DataKind_float32, false).
@@ -436,13 +436,13 @@ func Test_ValidElement(t *testing.T) {
 			require.ErrorIs(err, ErrNameNotFound)
 		})
 
-		t.Run("must error if invalid definition kind object", func(t *testing.T) {
+		t.Run("must error if invalid type kind object", func(t *testing.T) {
 			obj := func() istructs.IObjectBuilder {
 				o := makeObject(cfg, appdef.NewQName("test", "element"))
 				return &o
 			}()
 			_, err := obj.Build()
-			require.ErrorIs(err, ErrUnexpectedDefKind)
+			require.ErrorIs(err, ErrUnexpectedTypeKind)
 		})
 
 		obj := func() istructs.IObjectBuilder {
@@ -489,8 +489,8 @@ func Test_ValidElement(t *testing.T) {
 
 	t.Run("test build operation document", func(t *testing.T) {
 		doc := func() istructs.IObjectBuilder {
-			d := makeObject(cfg, appdef.NewQName("test", "document"))
-			return &d
+			o := makeObject(cfg, appdef.NewQName("test", "document"))
+			return &o
 		}()
 		require.NotNil(doc)
 
@@ -536,9 +536,16 @@ func Test_ValidCUD(t *testing.T) {
 
 	appDef := appdef.New()
 
-	t.Run("must be ok to build test application definition", func(t *testing.T) {
-		docDef := appDef.AddCDoc(appdef.NewQName("test", "document"))
-		docDef.
+	docName := appdef.NewQName("test", "document")
+	rec1Name := appdef.NewQName("test", "record1")
+	rec2Name := appdef.NewQName("test", "record2")
+
+	objName := appdef.NewQName("test", "object")
+	elemName := appdef.NewQName("test", "element")
+
+	t.Run("must be ok to build test application", func(t *testing.T) {
+		doc := appDef.AddCDoc(docName)
+		doc.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
@@ -546,12 +553,13 @@ func Test_ValidCUD(t *testing.T) {
 			AddField("bytesField", appdef.DataKind_bytes, false).
 			AddStringField("strField", false).
 			AddField("qnameField", appdef.DataKind_QName, false).
-			AddField("recIDField", appdef.DataKind_RecordID, false)
-		docDef.
-			AddContainer("child", appdef.NewQName("test", "record"), 1, appdef.Occurs_Unbounded)
+			AddRefField("recIDField", false, rec1Name)
+		doc.
+			AddContainer("child", rec1Name, 0, appdef.Occurs_Unbounded).
+			AddContainer("childAgain", rec2Name, 0, appdef.Occurs_Unbounded)
 
-		recDef := appDef.AddCRecord(appdef.NewQName("test", "record"))
-		recDef.
+		rec1 := appDef.AddCRecord(rec1Name)
+		rec1.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
@@ -560,10 +568,12 @@ func Test_ValidCUD(t *testing.T) {
 			AddStringField("strField", false).
 			AddField("qnameField", appdef.DataKind_QName, false).
 			AddField("boolField", appdef.DataKind_bool, false).
-			AddField("recIDField", appdef.DataKind_RecordID, false)
+			AddRefField("recIDField", false, docName)
 
-		objDef := appDef.AddObject(appdef.NewQName("test", "object"))
-		objDef.
+		_ = appDef.AddCRecord(rec2Name)
+
+		obj := appDef.AddObject(objName)
+		obj.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
@@ -571,7 +581,11 @@ func Test_ValidCUD(t *testing.T) {
 			AddField("bytesField", appdef.DataKind_bytes, false).
 			AddStringField("strField", false).
 			AddField("qnameField", appdef.DataKind_QName, false).
-			AddField("recIDField", appdef.DataKind_RecordID, false)
+			AddRefField("recIDField", false, docName, rec1Name)
+		obj.
+			AddContainer("childElement", elemName, 0, appdef.Occurs_Unbounded)
+
+		_ = appDef.AddElement(elemName)
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -599,20 +613,20 @@ func Test_ValidCUD(t *testing.T) {
 		require.ErrorIs(err, ErrNameMissed)
 	})
 
-	t.Run("must error if wrong CUD definition kind", func(t *testing.T) {
+	t.Run("must error if wrong CUD type kind", func(t *testing.T) {
 		cud := makeCUD(cfg)
-		c := cud.Create(appdef.NewQName("test", "object"))
+		c := cud.Create(objName)
 		c.PutInt32("int32Field", 7)
 		err := cud.build()
 		require.NoError(err)
 		err = cfg.validators.validCUD(&cud, false)
-		require.ErrorIs(err, ErrUnexpectedDefKind)
-		require.ErrorContains(err, "Object")
+		require.ErrorIs(err, ErrUnexpectedTypeKind)
+		require.ErrorContains(err, objName.String())
 	})
 
 	t.Run("test storage ID allow / disable in CUD.Create", func(t *testing.T) {
 		cud := makeCUD(cfg)
-		c := cud.Create(appdef.NewQName("test", "document"))
+		c := cud.Create(docName)
 		c.PutRecordID(appdef.SystemField_ID, 100500)
 		c.PutInt32("int32Field", 7)
 		err := cud.build()
@@ -630,11 +644,11 @@ func Test_ValidCUD(t *testing.T) {
 	t.Run("must error if raw ID duplication", func(t *testing.T) {
 		cud := makeCUD(cfg)
 
-		c1 := cud.Create(appdef.NewQName("test", "document"))
+		c1 := cud.Create(docName)
 		c1.PutRecordID(appdef.SystemField_ID, 1)
 		c1.PutInt32("int32Field", 7)
 
-		c2 := cud.Create(appdef.NewQName("test", "document"))
+		c2 := cud.Create(docName)
 		c2.PutRecordID(appdef.SystemField_ID, 1)
 		c2.PutInt32("int32Field", 8)
 
@@ -646,24 +660,88 @@ func Test_ValidCUD(t *testing.T) {
 	})
 
 	t.Run("must error if invalid ID refs", func(t *testing.T) {
-		cud := makeCUD(cfg)
 
-		c1 := cud.Create(appdef.NewQName("test", "document"))
-		c1.PutRecordID(appdef.SystemField_ID, 1)
-		c1.PutInt32("int32Field", 7)
+		t.Run("must error if unknown ID refs", func(t *testing.T) {
+			cud := makeCUD(cfg)
 
-		c2 := cud.Create(appdef.NewQName("test", "record"))
-		c2.PutString(appdef.SystemField_Container, "child")
-		c2.PutRecordID(appdef.SystemField_ID, 2)
-		c2.PutRecordID(appdef.SystemField_ParentID, 7)
-		c2.PutInt32("int32Field", 8)
-		c2.PutRecordID("recIDField", 7)
+			c1 := cud.Create(docName)
+			c1.PutRecordID(appdef.SystemField_ID, 1)
+			c1.PutInt32("int32Field", 7)
 
-		err := cud.build()
-		require.NoError(err)
+			c2 := cud.Create(rec1Name)
+			c2.PutString(appdef.SystemField_Container, "child")
+			c2.PutRecordID(appdef.SystemField_ID, 2)
+			c2.PutRecordID(appdef.SystemField_ParentID, 7)
+			c2.PutInt32("int32Field", 8)
+			c2.PutRecordID("recIDField", 7)
 
-		err = cfg.validators.validCUD(&cud, false)
-		require.ErrorIs(err, ErrorRecordIDNotFound)
+			err := cud.build()
+			require.NoError(err)
+
+			err = cfg.validators.validCUD(&cud, false)
+			require.ErrorIs(err, ErrRecordIDNotFound)
+		})
+
+		t.Run("must error if ID refs to invalid QName", func(t *testing.T) {
+			cud := makeCUD(cfg)
+
+			c1 := cud.Create(docName)
+			c1.PutRecordID(appdef.SystemField_ID, 1)
+			c1.PutInt32("int32Field", 7)
+			c1.PutRecordID("recIDField", 1)
+
+			err := cud.build()
+			require.NoError(err)
+
+			err = cfg.validators.validCUD(&cud, false)
+			require.ErrorIs(err, ErrWrongRecordID)
+			require.ErrorContains(err, "unavailable target QName «test.document»")
+		})
+
+		t.Run("must error if ParentID causes invalid references", func(t *testing.T) {
+
+			t.Run("must error if container unknown for specified ParentID", func(t *testing.T) {
+				cud := makeCUD(cfg)
+
+				c1 := cud.Create(docName)
+				c1.PutRecordID(appdef.SystemField_ID, 1)
+				c1.PutInt32("int32Field", 7)
+
+				c2 := cud.Create(rec1Name)
+				c2.PutString(appdef.SystemField_Container, "childElement")
+				c2.PutRecordID(appdef.SystemField_ID, 2)
+				c2.PutRecordID(appdef.SystemField_ParentID, 1)
+				c2.PutInt32("int32Field", 7)
+
+				err := cud.build()
+				require.NoError(err)
+
+				err = cfg.validators.validCUD(&cud, false)
+				require.ErrorIs(err, ErrWrongRecordID)
+				require.ErrorContains(err, "has no container «childElement»")
+			})
+
+			t.Run("must error if specified container has another QName", func(t *testing.T) {
+				cud := makeCUD(cfg)
+
+				c1 := cud.Create(docName)
+				c1.PutRecordID(appdef.SystemField_ID, 1)
+				c1.PutInt32("int32Field", 7)
+
+				c2 := cud.Create(rec1Name)
+				c2.PutString(appdef.SystemField_Container, "childAgain")
+				c2.PutRecordID(appdef.SystemField_ID, 2)
+				c2.PutRecordID(appdef.SystemField_ParentID, 1)
+				c2.PutInt32("int32Field", 7)
+
+				err := cud.build()
+				require.NoError(err)
+
+				err = cfg.validators.validCUD(&cud, false)
+				require.ErrorIs(err, ErrWrongRecordID)
+				require.ErrorContains(err, "container «childAgain», which has another QName «test.record2»")
+			})
+		})
 	})
 }
 
@@ -674,9 +752,8 @@ func Test_VerifiedFields(t *testing.T) {
 	objName := appdef.NewQName("test", "obj")
 
 	appDef := appdef.New()
-	t.Run("must be ok to build application definition", func(t *testing.T) {
-		def := appDef.AddObject(objName)
-		def.
+	t.Run("must be ok to build application", func(t *testing.T) {
+		appDef.AddObject(objName).
 			AddField("int32", appdef.DataKind_int32, true).
 			AddStringField("email", false).
 			SetFieldVerify("email", appdef.VerificationKind_EMail).
@@ -849,9 +926,8 @@ func Test_CharsFieldRestricts(t *testing.T) {
 	objName := appdef.NewQName("test", "obj")
 
 	appDef := appdef.New()
-	t.Run("must be ok to build application definition", func(t *testing.T) {
-		def := appDef.AddObject(objName)
-		def.
+	t.Run("must be ok to build application", func(t *testing.T) {
+		appDef.AddObject(objName).
 			AddStringField("email", true, appdef.MinLen(6), appdef.MaxLen(100), appdef.Pattern(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`)).
 			AddBytesField("mime", false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`))
 	})
@@ -964,7 +1040,7 @@ func Test_ValidateErrors(t *testing.T) {
 		require.Equal(ECode_InvalidDefName, validateErr.Code())
 	})
 
-	t.Run("ECode_InvalidDefKind", func(t *testing.T) {
+	t.Run("ECode_InvalidTypeKind", func(t *testing.T) {
 		var app istructs.IAppStructs
 
 		cDocName := appdef.NewQName("test", "CDoc")
@@ -973,9 +1049,9 @@ func Test_ValidateErrors(t *testing.T) {
 		t.Run("builds application", func(t *testing.T) {
 			appDef := appdef.New()
 
-			t.Run("must be ok to build application definition", func(t *testing.T) {
-				cDocDef := appDef.AddCDoc(cDocName)
-				cDocDef.AddField("Int32", appdef.DataKind_int32, false)
+			t.Run("must be ok to build application", func(t *testing.T) {
+				appDef.AddCDoc(cDocName).
+					AddField("Int32", appdef.DataKind_int32, false)
 			})
 
 			cfgs := make(AppConfigsType, 1)
@@ -1007,10 +1083,10 @@ func Test_ValidateErrors(t *testing.T) {
 				SyncedAt: test.syncTime,
 			})
 		_, buildErr := bld.BuildRawEvent()
-		require.ErrorIs(buildErr, ErrWrongDefinition)
+		require.ErrorIs(buildErr, ErrWrongType)
 		validateErr := validateErrorf(0, "")
 		require.ErrorAs(buildErr, &validateErr)
-		require.Equal(ECode_InvalidDefKind, validateErr.Code())
+		require.Equal(ECode_InvalidTypeKind, validateErr.Code())
 	})
 
 	t.Run("ECode_EmptyFieldData", func(t *testing.T) {
@@ -1088,29 +1164,52 @@ func Test_ValidateErrors(t *testing.T) {
 	})
 
 	t.Run("ECode_InvalidRefRecordID", func(t *testing.T) {
-		bld := app.Events().GetSyncRawEventBuilder(
-			istructs.SyncRawEventBuilderParams{
-				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-					HandlingPartition: test.partition,
-					PLogOffset:        test.plogOfs,
-					Workspace:         test.workspace,
-					WLogOffset:        test.wlogOfs,
-					QName:             test.changeCmdName,
-					RegisteredAt:      test.registeredTime,
-				},
-				Device:   test.device,
-				SyncedAt: test.syncTime,
-			})
+		eventBuilder := func() istructs.IRawEventBuilder {
+			return app.Events().GetSyncRawEventBuilder(
+				istructs.SyncRawEventBuilderParams{
+					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+						HandlingPartition: test.partition,
+						PLogOffset:        test.plogOfs,
+						Workspace:         test.workspace,
+						WLogOffset:        test.wlogOfs,
+						QName:             test.changeCmdName,
+						RegisteredAt:      test.registeredTime,
+					},
+					Device:   test.device,
+					SyncedAt: test.syncTime,
+				})
+		}
+		t.Run("no record to update", func(t *testing.T) {
+			bld := eventBuilder()
+			cud := bld.CUDBuilder()
+			r := newTestCDoc(7)
+			_ = cud.Update(r)
 
-		cud := bld.CUDBuilder()
-		r := newTestCDoc(7)
-		_ = cud.Update(r)
+			_, buildErr := bld.BuildRawEvent()
+			require.ErrorIs(buildErr, ErrRecordIDNotFound)
+			validateErr := validateErrorf(0, "")
+			require.ErrorAs(buildErr, &validateErr)
+			require.Equal(ECode_InvalidRefRecordID, validateErr.Code())
+		})
+		t.Run("0 value ref field", func(t *testing.T) {
+			bld := eventBuilder()
+			icud := bld.CUDBuilder()
+			rec := icud.Create(test.tablePhotos)
+			rec.PutRecordID(appdef.SystemField_ID, test.tempPhotoID)
+			rec.PutString(test.buyerIdent, test.buyerValue)
 
-		_, buildErr := bld.BuildRawEvent()
-		require.ErrorIs(buildErr, ErrorRecordIDNotFound)
-		validateErr := validateErrorf(0, "")
-		require.ErrorAs(buildErr, &validateErr)
-		require.Equal(ECode_InvalidRefRecordID, validateErr.Code())
+			recRem := icud.Create(test.tablePhotoRems)
+			recRem.PutRecordID(appdef.SystemField_ID, test.tempRemarkID)
+			recRem.PutRecordID(appdef.SystemField_ParentID, test.tempPhotoID)
+			recRem.PutString(appdef.SystemField_Container, test.remarkIdent)
+			recRem.PutRecordID(test.photoIdent, istructs.NullRecordID) // 0 value in not null ref field here
+			recRem.PutString(test.remarkIdent, test.remarkValue)
+			_, buildErr := bld.BuildRawEvent()
+			require.ErrorIs(buildErr, ErrWrongRecordID)
+			validateErr := validateErrorf(0, "")
+			require.ErrorAs(buildErr, &validateErr)
+			require.Equal(ECode_InvalidRefRecordID, validateErr.Code())
+		})
 	})
 
 	t.Run("ECode_EEmptyCUDs", func(t *testing.T) {

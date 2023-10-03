@@ -34,14 +34,14 @@ func (r *Resource) read(resource istructs.IResource) {
 func (r *Resource) readCmd(command istructs.ICommandFunction) {
 	r.Command = new(Command)
 
-	if n := command.ParamsDef(); n != appdef.NullQName {
+	if n := command.ParamsType(); n != appdef.NullQName {
 		r.Command.Params = &n
 	}
 
-	if n := command.UnloggedParamsDef(); n != appdef.NullQName {
+	if n := command.UnloggedParamsType(); n != appdef.NullQName {
 		r.Command.Unlogged = &n
 	}
-	if n := command.ResultDef(); n != appdef.NullQName {
+	if n := command.ResultType(); n != appdef.NullQName {
 		r.Command.Result = &n
 	}
 }
@@ -49,10 +49,10 @@ func (r *Resource) readCmd(command istructs.ICommandFunction) {
 func (r *Resource) readQuery(query istructs.IQueryFunction) {
 	r.Query = new(Query)
 
-	if n := query.ParamsDef(); n != appdef.NullQName {
+	if n := query.ParamsType(); n != appdef.NullQName {
 		r.Query.Params = &n
 	}
-	if n := query.ResultDef(istructs.PrepareArgs{}); n != appdef.NullQName {
+	if n := query.ResultType(istructs.PrepareArgs{}); n != appdef.NullQName {
 		r.Query.Result = &n
 	}
 }

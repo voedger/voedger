@@ -21,18 +21,18 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 
 		appDef := appdef.New()
 
-		commonDef := func(n appdef.QName) appdef.IDef {
-			d := appDef.AddObject(n)
-			d.AddField("name", appdef.DataKind_string, false)
-			return d
+		addObject := func(n appdef.QName) appdef.IType {
+			o := appDef.AddObject(n)
+			o.AddField("name", appdef.DataKind_string, false)
+			return o
 		}
-		commonDef(appdef.NewQName("_", "root"))
-		commonDef(appdef.NewQName("f", "first_children_1"))
-		commonDef(appdef.NewQName("f", "deep_children_1"))
-		commonDef(appdef.NewQName("f", "very_deep_children_1"))
-		commonDef(appdef.NewQName("s", "first_children_2"))
-		commonDef(appdef.NewQName("s", "deep_children_1"))
-		commonDef(appdef.NewQName("s", "very_deep_children_1"))
+		addObject(appdef.NewQName("_", "root"))
+		addObject(appdef.NewQName("f", "first_children_1"))
+		addObject(appdef.NewQName("f", "deep_children_1"))
+		addObject(appdef.NewQName("f", "very_deep_children_1"))
+		addObject(appdef.NewQName("s", "first_children_2"))
+		addObject(appdef.NewQName("s", "deep_children_1"))
+		addObject(appdef.NewQName("s", "very_deep_children_1"))
 
 		commonFields := []IResultField{resultField{field: "name"}}
 
@@ -181,7 +181,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 
 		operator := &ResultFieldsOperator{
 			elements:   elements,
-			rootFields: newFieldsKinds(commonDef(appdef.NewQName("test", "root"))),
+			rootFields: newFieldsKinds(addObject(appdef.NewQName("test", "root"))),
 			fieldsDefs: newFieldsDefs(appDef),
 			metrics:    &testMetrics{},
 		}

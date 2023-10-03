@@ -63,7 +63,7 @@ func (cnt *Containers) Prepare(storage istorage.IAppStorage, versions *vers.Vers
 	return nil
 }
 
-// Retrieves and stores IDs for all known containers in application definition. Must be called then application starts
+// Retrieves and stores IDs for all known containers in application types. Must be called then application starts
 func (cnt *Containers) collectAll(appDef appdef.IAppDef) (err error) {
 
 	// system containers
@@ -71,14 +71,12 @@ func (cnt *Containers) collectAll(appDef appdef.IAppDef) (err error) {
 
 	// application containers
 	if appDef != nil {
-		appDef.Defs(
-			func(d appdef.IDef) {
-				if cont, ok := d.(appdef.IContainers); ok {
+		appDef.Types(
+			func(t appdef.IType) {
+				if cont, ok := t.(appdef.IContainers); ok {
 					cont.Containers(
 						func(c appdef.IContainer) {
-							if !c.IsSys() {
-								err = errors.Join(err, cnt.collect(c.Name()))
-							}
+							err = errors.Join(err, cnt.collect(c.Name()))
 						})
 				}
 			})
@@ -166,14 +164,12 @@ func (cnt *Containers) store(storage istorage.IAppStorage, versions *vers.Versio
 		if name == "" {
 			continue // skip NullContainerID
 		}
-		if !appdef.IsSysContainer(name) {
-			item := istorage.BatchItem{
-				PKey:  pKey,
-				CCols: []byte(name),
-				Value: utils.ToBytes(id),
-			}
-			batch = append(batch, item)
+		item := istorage.BatchItem{
+			PKey:  pKey,
+			CCols: []byte(name),
+			Value: utils.ToBytes(id),
 		}
+		batch = append(batch, item)
 	}
 
 	if err = storage.PutBatch(batch); err != nil {

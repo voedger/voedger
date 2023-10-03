@@ -38,13 +38,13 @@ func buildSchemasASTs(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPo
 			fileSchemaAST := value.(*parser.FileSchemaAST)
 			packageFilesSchemasASTs = append(packageFilesSchemasASTs, fileSchemaAST)
 		})
-		packageSchemaAST, err := parser.MergeFileSchemaASTs(qualifiedPackageName, packageFilesSchemasASTs)
+		packageSchemaAST, err := parser.BuildPackageSchema(qualifiedPackageName, packageFilesSchemasASTs)
 		if err != nil {
 			panic(err)
 		}
 		packageSchemaASTs = append(packageSchemaASTs, packageSchemaAST)
 	})
-	packageSchemas, err := parser.MergePackageSchemas(packageSchemaASTs)
+	packageSchemas, err := parser.BuildAppSchema(packageSchemaASTs)
 	if err != nil {
 		panic(err)
 	}
@@ -63,9 +63,25 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 		}
 		buildSchemasASTs(adf, appEPs)
 		vvmApps = append(vvmApps, appQName)
-		if _, err := adf.Build(); err != nil {
+		appDef, err := adf.Build()
+		if err != nil {
 			panic(err)
 		}
+		appDef.Types(func(t appdef.IType) {
+			switch t.Kind() {
+			case appdef.TypeKind_Command:
+				cmd := t.(appdef.ICommand)
+				cmdResource := cfg.Resources.QueryResource(cmd.QName()).(istructs.ICommandFunction)
+				istructsmem.ReplaceCommandDefinitions(cmdResource, cmd.Arg().QName(), cmd.UnloggedArg().QName(), cmd.Result().QName())
+			case appdef.TypeKind_Query:
+				if t.QName() == qNameQueryCollection {
+					return
+				}
+				query := t.(appdef.IQuery)
+				queryResource := cfg.Resources.QueryResource(query.QName()).(istructs.IQueryFunction)
+				istructsmem.ReplaceQueryDefinitions(queryResource, query.Arg().QName(), query.Result().QName())
+			}
+		})
 	}
 	return vvmApps
 }

@@ -42,7 +42,7 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 		appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivated"),
 		adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivatedParams")).
 			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
-			AddField(authnz.Field_WSName, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(authnz.Field_WSName, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		cmdOnWorkspaceDeactivatedExec,
@@ -53,7 +53,7 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivated"),
 		adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivatedParams")).
-			AddField(field_InvitedToWSID, appdef.DataKind_int64, true).(appdef.IDef).QName(),
+			AddField(field_InvitedToWSID, appdef.DataKind_int64, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		cmdOnJoinedWorkspaceDeactivateExec,
@@ -64,7 +64,7 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "OnChildWorkspaceDeactivated"),
 		adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnChildWorkspaceDeactivatedParams")).
-			AddField(Field_OwnerID, appdef.DataKind_int64, true).(appdef.IDef).QName(),
+			AddField(Field_OwnerID, appdef.DataKind_int64, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		cmdOnChildWorkspaceDeactivatedExec,
@@ -82,7 +82,7 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 	})
 }
 
-func cmdInitiateDeactivateWorkspaceExec(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func cmdInitiateDeactivateWorkspaceExec(args istructs.ExecCommandArgs) (err error) {
 	kb, err := args.State.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
 	if err != nil {
 		// notest
@@ -108,7 +108,7 @@ func cmdInitiateDeactivateWorkspaceExec(cf istructs.ICommandFunction, args istru
 	return nil
 }
 
-func cmdOnJoinedWorkspaceDeactivateExec(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func cmdOnJoinedWorkspaceDeactivateExec(args istructs.ExecCommandArgs) (err error) {
 	invitedToWSID := args.ArgumentObject.AsInt64(field_InvitedToWSID)
 	svCDocJoinedWorkspace, skb, ok, err := invite.GetCDocJoinedWorkspace(args.State, args.Intents, invitedToWSID)
 	if err != nil || !ok {
@@ -127,7 +127,7 @@ func cmdOnJoinedWorkspaceDeactivateExec(cf istructs.ICommandFunction, args istru
 }
 
 // app/pseudoProfileWSID, ownerApp
-func cmdOnWorkspaceDeactivatedExec(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func cmdOnWorkspaceDeactivatedExec(args istructs.ExecCommandArgs) (err error) {
 	ownerWSID := args.ArgumentObject.AsInt64(Field_OwnerWSID)
 	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
 	kb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewWorkspaceIDIdx)
@@ -174,7 +174,7 @@ func cmdOnWorkspaceDeactivatedExec(cf istructs.ICommandFunction, args istructs.E
 }
 
 // ownerApp/ownerWSID
-func cmdOnChildWorkspaceDeactivatedExec(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func cmdOnChildWorkspaceDeactivatedExec(args istructs.ExecCommandArgs) (err error) {
 	ownerID := args.ArgumentObject.AsInt64(Field_OwnerID)
 	kb, err := args.State.KeyBuilder(state.RecordsStorage, appdef.NullQName)
 	if err != nil {

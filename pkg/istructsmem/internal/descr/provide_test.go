@@ -38,6 +38,15 @@ func TestBasicUsage(t *testing.T) {
 		SetFieldVerify("phone", appdef.VerificationKind_Any...).(appdef.ICRecordBuilder).
 		SetUniqueField("phone")
 
+	viewName := appdef.NewQName("test", "view")
+	view := appDef.AddView(viewName)
+	view.Key().Partition().
+		AddField("pk_1", appdef.DataKind_int64)
+	view.Key().ClustCols().
+		AddStringField("cc_1", 100)
+	view.Value().
+		AddRefField("vv_1", true, docName)
+
 	res := &mockResources{}
 	res.
 		On("Resources", mock.AnythingOfType("func(appdef.QName)")).Run(func(args mock.Arguments) {})
@@ -67,7 +76,7 @@ func TestBasicUsage(t *testing.T) {
 		`("test\.doc")(\s*:\s*{\s*)`+
 			`("Comment")(\s*:\s*)("comment 1\\ncomment 2")(\s*,\s*)`+
 			`("Name")(\s*:\s*)("test\.doc")(\s*,\s*)`+
-			`("Kind")(\s*:\s*)("DefKind_CDoc")`,
+			`("Kind")(\s*:\s*)("TypeKind_CDoc")`,
 		string(json), "doc «test.doc» expected")
 
 	require.Regexp(

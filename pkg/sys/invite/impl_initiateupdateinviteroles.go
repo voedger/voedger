@@ -21,15 +21,15 @@ func provideCmdInitiateUpdateInviteRoles(cfg *istructsmem.AppConfigType, appDefB
 			AddField(field_InviteID, appdef.DataKind_RecordID, true).
 			AddField(Field_Roles, appdef.DataKind_string, true).
 			AddField(field_EmailTemplate, appdef.DataKind_string, true).
-			AddField(field_EmailSubject, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_EmailSubject, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdInitiateUpdateInviteRoles(timeFunc),
 	))
 }
 
-func execCmdInitiateUpdateInviteRoles(timeFunc coreutils.TimeFunc) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateUpdateInviteRoles(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
 		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
 		}

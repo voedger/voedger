@@ -5,9 +5,9 @@
 
 package appdef
 
-// Global document. DefKind() is DefKind_GDoc.
+// Global document
 type IGDoc interface {
-	IDef
+	IType
 	IComment
 	IFields
 	IContainers
@@ -24,11 +24,11 @@ type IGDocBuilder interface {
 	IWithAbstractBuilder
 }
 
-// Global document record. DefKind() is DefKind_GRecord.
+// Global document record
 //
 // Ref. to gdoc.go for implementation
 type IGRecord interface {
-	IDef
+	IType
 	IComment
 	IFields
 	IContainers
