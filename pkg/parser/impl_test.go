@@ -1361,3 +1361,52 @@ func Test_Scope(t *testing.T) {
 	require.EqualError(err, "example3.sql:4:3: p1.MyTable undefined")
 
 }
+
+func Test_Scope_TableRefs(t *testing.T) {
+	require := require.New(t)
+
+	// *****  main
+	fs, err := ParseFile("example1.sql", `
+	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg1';
+	APPLICATION test(
+		USE pkg1;
+	);
+	`)
+	require.NoError(err)
+	main, err := BuildPackageSchema("github.com/untillpro/airsbp3/main", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	// *****  pkg1
+	fs, err = ParseFile("example2.sql", `
+	TABLE PkgTable INHERITS CRecord();
+	WORKSPACE myWorkspace1 (
+		TABLE MyTable INHERITS CDoc (
+			Items TABLE MyInnerTable()
+		);
+		TABLE MyTable2 INHERITS CDoc (
+			r1 ref(MyTable),
+			r2 ref(MyTable2),
+			r3 ref(PkgTable),
+			r4 ref(MyInnerTable)
+		);
+	);
+	WORKSPACE myWorkspace2 (
+		TABLE MyTable3 INHERITS CDoc (
+			r1 ref(MyTable),
+			r2 ref(MyTable2),
+			r3 ref(PkgTable),
+			r4 ref(MyInnerTable)
+		);
+	);
+	`)
+	require.NoError(err)
+	pkg1, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg1", []*FileSchemaAST{fs})
+	require.NoError(err)
+	_, err = BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), main, pkg1})
+	require.EqualError(err, strings.Join([]string{
+		"example2.sql:16:4: MyTable undefined",
+		"example2.sql:17:4: MyTable2 undefined",
+		"example2.sql:19:4: MyInnerTable undefined",
+	}, "\n"))
+
+}
