@@ -24,6 +24,8 @@ type TypeKind uint8
 //
 // Ref to type.go for implementation
 type IType interface {
+	IComment
+
 	// Parent cache
 	App() IAppDef
 
@@ -32,4 +34,9 @@ type IType interface {
 
 	// Type kind
 	Kind() TypeKind
+}
+
+type ITypeBuilder interface {
+	IType
+	ICommentBuilder
 }

@@ -57,17 +57,15 @@ func (v *view) Validate() error {
 // # Implements:
 //   - IViewBuilder
 type viewBuilder struct {
-	view  *view
-	key   *viewKeyBuilder
-	value *viewValueBuilder
+	view *view
+	key  *viewKeyBuilder
 }
 
 func newViewBuilder(app *appDef, name QName) *viewBuilder {
 	v := newView(app, name)
 	return &viewBuilder{
-		view:  v,
-		key:   newViewKeyBuilder(v),
-		value: newViewValueBuilder(v),
+		view: v,
+		key:  newViewKeyBuilder(v),
 	}
 }
 
@@ -80,7 +78,7 @@ func (v *viewBuilder) SetComment(line ...string) {
 }
 
 func (v *viewBuilder) Value() IViewValueBuilder {
-	return v.value
+	return v.view.value
 }
 
 // View key.
@@ -307,6 +305,7 @@ func (c *viewClustColsBuilder) panicIfVarFieldDuplication(name string, kind Data
 //
 // # Implements:
 //   - IViewValue
+//   - IViewValueBuilder
 type viewValue struct {
 	view *view
 	fields
@@ -320,61 +319,49 @@ func newViewValue(v *view) *viewValue {
 	return val
 }
 
+func (v *viewValue) AddField(name string, kind DataKind, required bool, comment ...string) IFieldsBuilder {
+	v.view.AddField(name, kind, required, comment...)
+	v.AddField(name, kind, required, comment...)
+	return v
+}
+
+func (v *viewValue) AddRefField(name string, required bool, ref ...QName) IFieldsBuilder {
+	v.view.AddRefField(name, required, ref...)
+	v.AddRefField(name, required, ref...)
+	return v
+}
+
+func (v *viewValue) AddStringField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder {
+	v.view.AddStringField(name, required, restricts...)
+	v.AddStringField(name, required, restricts...)
+	return v
+}
+
+func (v *viewValue) AddBytesField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder {
+	v.view.AddBytesField(name, required, restricts...)
+	v.AddBytesField(name, required, restricts...)
+	return v
+}
+
+func (v *viewValue) AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder {
+	v.view.AddVerifiedField(name, kind, required, vk...)
+	v.AddVerifiedField(name, kind, required, vk...)
+	return v
+}
+
+func (v *viewValue) SetFieldComment(name string, comment ...string) IFieldsBuilder {
+	v.view.SetFieldComment(name, comment...)
+	v.SetFieldComment(name, comment...)
+	return v
+}
+
+func (v *viewValue) SetFieldVerify(name string, vk ...VerificationKind) IFieldsBuilder {
+	v.view.SetFieldVerify(name, vk...)
+	v.SetFieldVerify(name, vk...)
+	return v
+}
+
 // Validates view value
 func (v *viewValue) validate() error {
 	return nil
-}
-
-// View value builder
-//
-// # Implements:
-//   - IViewValueBuilder
-type viewValueBuilder struct {
-	view *view
-}
-
-func newViewValueBuilder(v *view) *viewValueBuilder {
-	return &viewValueBuilder{v}
-}
-
-func (v *viewValueBuilder) AddField(name string, kind DataKind, required bool, comment ...string) IFieldsBuilder {
-	v.view.AddField(name, kind, required, comment...)
-	v.view.value.AddField(name, kind, required, comment...)
-	return v
-}
-
-func (v *viewValueBuilder) AddRefField(name string, required bool, ref ...QName) IFieldsBuilder {
-	v.view.AddRefField(name, required, ref...)
-	v.view.value.AddRefField(name, required, ref...)
-	return v
-}
-
-func (v *viewValueBuilder) AddStringField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder {
-	v.view.AddStringField(name, required, restricts...)
-	v.view.value.AddStringField(name, required, restricts...)
-	return v
-}
-
-func (v *viewValueBuilder) AddBytesField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder {
-	v.view.AddBytesField(name, required, restricts...)
-	v.view.value.AddBytesField(name, required, restricts...)
-	return v
-}
-
-func (v *viewValueBuilder) AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder {
-	v.view.AddVerifiedField(name, kind, required, vk...)
-	v.view.value.AddVerifiedField(name, kind, required, vk...)
-	return v
-}
-
-func (v *viewValueBuilder) SetFieldComment(name string, comment ...string) IFieldsBuilder {
-	v.view.SetFieldComment(name, comment...)
-	v.view.value.SetFieldComment(name, comment...)
-	return v
-}
-
-func (v *viewValueBuilder) SetFieldVerify(name string, vk ...VerificationKind) IFieldsBuilder {
-	v.view.SetFieldVerify(name, vk...)
-	v.view.value.SetFieldVerify(name, vk...)
-	return v
 }

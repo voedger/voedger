@@ -8,24 +8,17 @@ package appdef
 // # Implements:
 //   - ICDoc, ICDocBuilder
 type cDoc struct {
-	typ
-	comment
-	fields
-	containers
-	uniques
-	withAbstract
+	doc
 	singleton bool
 }
 
+// Creates a new CDoc
 func newCDoc(app *appDef, name QName) *cDoc {
-	doc := &cDoc{
-		typ: makeType(app, name, TypeKind_CDoc),
+	d := &cDoc{
+		doc: makeDoc(app, name, TypeKind_CDoc),
 	}
-	doc.fields = makeFields(doc)
-	doc.containers = makeContainers(doc)
-	doc.uniques = makeUniques(doc)
-	app.appendType(doc)
-	return doc
+	app.appendType(d)
+	return d
 }
 
 func (d *cDoc) SetSingleton() {

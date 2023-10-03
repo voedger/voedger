@@ -18,17 +18,17 @@ func Test_def_AddUnique(t *testing.T) {
 	qName := NewQName("test", "user")
 	appDef := New()
 
-	typ := appDef.AddCDoc(qName)
-	require.NotNil(typ)
+	doc := appDef.AddCDoc(qName)
+	require.NotNil(doc)
 
-	typ.
+	doc.
 		AddField("name", DataKind_string, true).
 		AddField("surname", DataKind_string, false).
 		AddField("lastName", DataKind_string, false).
 		AddField("birthday", DataKind_int64, false).
 		AddField("sex", DataKind_bool, false).
 		AddField("eMail", DataKind_string, false)
-	typ.
+	doc.
 		AddUnique("", []string{"eMail"}).
 		AddUnique("userUniqueFullName", []string{"name", "surname", "lastName"})
 
@@ -36,21 +36,21 @@ func Test_def_AddUnique(t *testing.T) {
 		app, err := appDef.Build()
 		require.NoError(err)
 
-		typ := app.CDoc(qName)
-		require.NotEqual(TypeKind_null, typ.Kind())
+		doc := app.CDoc(qName)
+		require.NotEqual(TypeKind_null, doc.Kind())
 
-		require.Equal(2, typ.UniqueCount())
+		require.Equal(2, doc.UniqueCount())
 
-		u := typ.UniqueByName("userUniqueFullName")
-		require.Equal(typ, u.ParentType())
+		u := doc.UniqueByName("userUniqueFullName")
+		require.Equal(doc.QName(), u.ParentType().QName())
 		require.Len(u.Fields(), 3)
 		require.Equal("lastName", u.Fields()[0].Name())
 		require.Equal("name", u.Fields()[1].Name())
 		require.Equal("surname", u.Fields()[2].Name())
 
-		require.Equal(typ.UniqueCount(), func() int {
+		require.Equal(doc.UniqueCount(), func() int {
 			cnt := 0
-			typ.Uniques(func(u IUnique) {
+			doc.Uniques(func(u IUnique) {
 				cnt++
 				switch u.Name() {
 				case "userUniqueEMail":
@@ -70,22 +70,22 @@ func Test_def_AddUnique(t *testing.T) {
 
 	t.Run("test unique IDs", func(t *testing.T) {
 		id := FirstUniqueID
-		typ.Uniques(func(u IUnique) { id++; u.(interface{ SetID(UniqueID) }).SetID(id) })
+		doc.Uniques(func(u IUnique) { id++; u.(interface{ SetID(UniqueID) }).SetID(id) })
 
-		require.Nil(typ.UniqueByID(FirstUniqueID))
-		require.NotNil(typ.UniqueByID(FirstUniqueID + 1))
-		require.NotNil(typ.UniqueByID(FirstUniqueID + 2))
-		require.Nil(typ.UniqueByID(FirstUniqueID + 3))
+		require.Nil(doc.UniqueByID(FirstUniqueID))
+		require.NotNil(doc.UniqueByID(FirstUniqueID + 1))
+		require.NotNil(doc.UniqueByID(FirstUniqueID + 2))
+		require.Nil(doc.UniqueByID(FirstUniqueID + 3))
 	})
 
 	t.Run("test panics", func(t *testing.T) {
 
 		require.Panics(func() {
-			typ.AddUnique("naked-🔫", []string{"sex"})
+			doc.AddUnique("naked-🔫", []string{"sex"})
 		}, "panics if invalid unique name")
 
 		require.Panics(func() {
-			typ.AddUnique("userUniqueFullName", []string{"name", "surname", "lastName"})
+			doc.AddUnique("userUniqueFullName", []string{"name", "surname", "lastName"})
 		}, "panics unique with name is already exists")
 
 		t.Run("panics if type kind is not supports uniques", func(t *testing.T) {
@@ -97,11 +97,11 @@ func Test_def_AddUnique(t *testing.T) {
 		})
 
 		require.Panics(func() {
-			typ.AddUnique("emptyUnique", []string{})
+			doc.AddUnique("emptyUnique", []string{})
 		}, "panics if fields set is empty")
 
 		require.Panics(func() {
-			typ.AddUnique("", []string{"birthday", "birthday"})
+			doc.AddUnique("", []string{"birthday", "birthday"})
 		}, "if fields has duplicates")
 
 		t.Run("panics if too many fields", func(t *testing.T) {
@@ -116,19 +116,19 @@ func Test_def_AddUnique(t *testing.T) {
 		})
 
 		require.Panics(func() {
-			typ.AddUnique("", []string{"name", "surname", "lastName"})
+			doc.AddUnique("", []string{"name", "surname", "lastName"})
 		}, "if fields set is already exists")
 
 		require.Panics(func() {
-			typ.AddUnique("", []string{"surname"})
+			doc.AddUnique("", []string{"surname"})
 		}, "if fields set overlaps exists")
 
 		require.Panics(func() {
-			typ.AddUnique("", []string{"eMail", "birthday"})
+			doc.AddUnique("", []string{"eMail", "birthday"})
 		}, "if fields set overlapped by exists")
 
 		require.Panics(func() {
-			typ.AddUnique("", []string{"unknown"})
+			doc.AddUnique("", []string{"unknown"})
 		}, "if fields not exists")
 
 		t.Run("panics if too many uniques", func(t *testing.T) {
