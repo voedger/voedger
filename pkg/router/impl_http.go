@@ -57,7 +57,7 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 
 	port := strconv.Itoa(s.RouterParams.Port)
 
-	if s.listener, err = net.Listen("tcp", ":"+port); err != nil {
+	if s.listener, err = net.Listen("tcp", "127.0.0.1:"+port); err != nil {
 		return err
 	}
 
