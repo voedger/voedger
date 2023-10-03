@@ -16,7 +16,7 @@ import (
 )
 
 func ProvideMetricsService(vvmCtx context.Context, metricsServicePort MetricsServicePort, imetrics imetrics.IMetrics) MetricsService {
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(int(metricsServicePort)))
+	listener, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(int(metricsServicePort)))
 	if err != nil {
 		panic(err)
 	}
