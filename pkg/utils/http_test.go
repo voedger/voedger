@@ -213,7 +213,7 @@ func TestHTTP(t *testing.T) {
 	})
 
 	t.Run("cookies & headers", func(t *testing.T) {
-		handler = func(w http.ResponseWriter, r *http.Request) {
+		handler = func(_ http.ResponseWriter, r *http.Request) {
 			_, err := io.ReadAll(r.Body)
 			require.NoError(err)
 			// require.Len(r.Header, 2)
