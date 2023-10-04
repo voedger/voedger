@@ -14,9 +14,9 @@ type cDoc struct {
 
 // Creates a new CDoc
 func newCDoc(app *appDef, name QName) *cDoc {
-	d := &cDoc{
-		doc: makeDoc(app, name, TypeKind_CDoc),
-	}
+	d := &cDoc{}
+	d.doc = makeDoc(app, name, TypeKind_CDoc, d)
+	d.makeSysFields()
 	app.appendType(d)
 	return d
 }
@@ -32,21 +32,13 @@ func (d *cDoc) Singleton() bool {
 // # Implements:
 //   - ICRecord, ICRecordBuilder
 type cRecord struct {
-	typ
-	comment
-	fields
-	containers
-	uniques
-	withAbstract
+	record
 }
 
 func newCRecord(app *appDef, name QName) *cRecord {
-	rec := &cRecord{
-		typ: makeType(app, name, TypeKind_CRecord),
-	}
-	rec.fields = makeFields(rec)
-	rec.containers = makeContainers(rec)
-	rec.uniques = makeUniques(rec)
-	app.appendType(rec)
-	return rec
+	r := &cRecord{}
+	r.record = makeRecord(app, name, TypeKind_CRecord, r)
+	r.makeSysFields()
+	app.appendType(r)
+	return r
 }

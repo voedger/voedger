@@ -8,41 +8,29 @@ package appdef
 // # Implements:
 //   - IObject, IObjectBuilder
 type object struct {
-	typ
-	comment
-	fields
-	containers
-	withAbstract
+	structure
 }
 
 func newObject(app *appDef, name QName) *object {
-	obj := &object{
-		typ: makeType(app, name, TypeKind_Object),
-	}
-	obj.fields = makeFields(obj)
-	obj.containers = makeContainers(obj)
-	app.appendType(obj)
-	return obj
+	o := &object{}
+	o.structure = makeStructure(app, name, TypeKind_Object, o)
+	o.makeSysFields()
+	app.appendType(o)
+	return o
 }
 
 // # Implements:
 //   - IElement, IElementBuilder
 type element struct {
-	typ
-	comment
-	fields
-	containers
-	withAbstract
+	structure
 }
 
 func newElement(app *appDef, name QName) *element {
-	elt := &element{
-		typ: makeType(app, name, TypeKind_Element),
-	}
-	elt.fields = makeFields(elt)
-	elt.containers = makeContainers(elt)
-	app.appendType(elt)
-	return elt
+	e := &element{}
+	e.structure = makeStructure(app, name, TypeKind_Element, e)
+	e.makeSysFields()
+	app.appendType(e)
+	return e
 }
 
 type objRef struct {

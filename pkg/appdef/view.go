@@ -16,7 +16,6 @@ import (
 //   - IView
 type view struct {
 	typ
-	comment
 	fields // all fields, include key and value
 	key    *viewKey
 	value  *viewValue
@@ -30,6 +29,8 @@ func newView(app *appDef, name QName) *view {
 	v.fields = makeFields(v)
 	v.key = newViewKey(v)
 	v.value = newViewValue(v)
+
+	v.makeSysFields()
 
 	app.appendType(v)
 
@@ -95,7 +96,7 @@ type viewKey struct {
 func newViewKey(v *view) *viewKey {
 	key := &viewKey{
 		view:   v,
-		fields: makeViewKeyFields(v),
+		fields: makeFields(v),
 		pkey:   newViewPartKey(v),
 		ccols:  newViewClustCols(v),
 	}
@@ -157,7 +158,7 @@ type viewPartKey struct {
 func newViewPartKey(v *view) *viewPartKey {
 	pKey := &viewPartKey{
 		view:   v,
-		fields: makeViewKeyFields(v),
+		fields: makeFields(v),
 	}
 	return pKey
 }
@@ -219,7 +220,7 @@ type viewClustCols struct {
 func newViewClustCols(v *view) *viewClustCols {
 	cc := &viewClustCols{
 		view:   v,
-		fields: makeViewKeyFields(v),
+		fields: makeFields(v),
 	}
 	return cc
 }
@@ -316,48 +317,49 @@ func newViewValue(v *view) *viewValue {
 		view:   v,
 		fields: makeFields(v),
 	}
+	val.makeSysFields()
 	return val
 }
 
 func (v *viewValue) AddField(name string, kind DataKind, required bool, comment ...string) IFieldsBuilder {
 	v.view.AddField(name, kind, required, comment...)
-	v.AddField(name, kind, required, comment...)
+	v.fields.AddField(name, kind, required, comment...)
 	return v
 }
 
 func (v *viewValue) AddRefField(name string, required bool, ref ...QName) IFieldsBuilder {
 	v.view.AddRefField(name, required, ref...)
-	v.AddRefField(name, required, ref...)
+	v.fields.AddRefField(name, required, ref...)
 	return v
 }
 
 func (v *viewValue) AddStringField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder {
 	v.view.AddStringField(name, required, restricts...)
-	v.AddStringField(name, required, restricts...)
+	v.fields.AddStringField(name, required, restricts...)
 	return v
 }
 
 func (v *viewValue) AddBytesField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder {
 	v.view.AddBytesField(name, required, restricts...)
-	v.AddBytesField(name, required, restricts...)
+	v.fields.AddBytesField(name, required, restricts...)
 	return v
 }
 
 func (v *viewValue) AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder {
 	v.view.AddVerifiedField(name, kind, required, vk...)
-	v.AddVerifiedField(name, kind, required, vk...)
+	v.fields.AddVerifiedField(name, kind, required, vk...)
 	return v
 }
 
 func (v *viewValue) SetFieldComment(name string, comment ...string) IFieldsBuilder {
 	v.view.SetFieldComment(name, comment...)
-	v.SetFieldComment(name, comment...)
+	v.fields.SetFieldComment(name, comment...)
 	return v
 }
 
 func (v *viewValue) SetFieldVerify(name string, vk ...VerificationKind) IFieldsBuilder {
 	v.view.SetFieldVerify(name, vk...)
-	v.SetFieldVerify(name, vk...)
+	v.fields.SetFieldVerify(name, vk...)
 	return v
 }
 

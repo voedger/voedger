@@ -88,14 +88,6 @@ func Test_def_AddUnique(t *testing.T) {
 			doc.AddUnique("userUniqueFullName", []string{"name", "surname", "lastName"})
 		}, "panics unique with name is already exists")
 
-		t.Run("panics if type kind is not supports uniques", func(t *testing.T) {
-			typ := New().AddObject(NewQName("test", "obj"))
-			typ.AddField("f1", DataKind_bool, false).AddField("f2", DataKind_bool, false)
-			require.Panics(func() {
-				typ.(IUniquesBuilder).AddUnique("", []string{"f1", "f2"})
-			})
-		})
-
 		require.Panics(func() {
 			doc.AddUnique("emptyUnique", []string{})
 		}, "panics if fields set is empty")

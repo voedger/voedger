@@ -8,43 +8,27 @@ package appdef
 // # Implements:
 //   - IGDoc, IGDocBuilder
 type gDoc struct {
-	typ
-	comment
-	fields
-	containers
-	uniques
-	withAbstract
+	doc
 }
 
 func newGDoc(app *appDef, name QName) *gDoc {
-	doc := &gDoc{
-		typ: makeType(app, name, TypeKind_GDoc),
-	}
-	doc.fields = makeFields(doc)
-	doc.containers = makeContainers(doc)
-	doc.uniques = makeUniques(doc)
-	app.appendType(doc)
-	return doc
+	d := &gDoc{}
+	d.doc = makeDoc(app, name, TypeKind_GDoc, d)
+	d.makeSysFields()
+	app.appendType(d)
+	return d
 }
 
 // # Implements:
 //   - IGRecord, IGRecordBuilder
 type gRecord struct {
-	typ
-	comment
-	fields
-	containers
-	uniques
-	withAbstract
+	record
 }
 
 func newGRecord(app *appDef, name QName) *gRecord {
-	rec := &gRecord{
-		typ: makeType(app, name, TypeKind_GRecord),
-	}
-	rec.fields = makeFields(rec)
-	rec.containers = makeContainers(rec)
-	rec.uniques = makeUniques(rec)
-	app.appendType(rec)
-	return rec
+	r := &gRecord{}
+	r.record = makeRecord(app, name, TypeKind_GRecord, r)
+	r.makeSysFields()
+	app.appendType(r)
+	return r
 }

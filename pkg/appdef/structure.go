@@ -15,16 +15,18 @@ type structure struct {
 	containers
 	uniques
 	withAbstract
+	parent interface{}
 }
 
 // Makes new structure
-func makeStructure(app *appDef, name QName, kind TypeKind) structure {
+func makeStructure(app *appDef, name QName, kind TypeKind, parent interface{}) structure {
 	s := structure{
-		typ: makeType(app, name, kind),
+		typ:    makeType(app, name, kind),
+		parent: parent,
 	}
-	s.fields = makeFields(&s)
-	s.containers = makeContainers(&s)
-	s.uniques = makeUniques(&s)
+	s.fields = makeFields(parent)
+	s.containers = makeContainers(parent)
+	s.uniques = makeUniques(parent)
 	return s
 }
 
@@ -37,9 +39,9 @@ type doc struct {
 }
 
 // Makes new document
-func makeDoc(app *appDef, name QName, kind TypeKind) doc {
+func makeDoc(app *appDef, name QName, kind TypeKind, parent interface{}) doc {
 	d := doc{
-		structure: makeStructure(app, name, kind),
+		structure: makeStructure(app, name, kind, parent),
 	}
 	return d
 }
@@ -53,9 +55,9 @@ type record struct {
 }
 
 // Makes new record
-func makeRecord(app *appDef, name QName, kind TypeKind) record {
+func makeRecord(app *appDef, name QName, kind TypeKind, parent interface{}) record {
 	r := record{
-		structure: makeStructure(app, name, kind),
+		structure: makeStructure(app, name, kind, parent),
 	}
 	return r
 }

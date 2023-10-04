@@ -16,13 +16,14 @@ type oDoc struct {
 }
 
 func newODoc(app *appDef, name QName) *oDoc {
-	doc := &oDoc{
+	d := &oDoc{
 		typ: makeType(app, name, TypeKind_ODoc),
 	}
-	doc.fields = makeFields(doc)
-	doc.containers = makeContainers(doc)
-	app.appendType(doc)
-	return doc
+	d.fields = makeFields(d)
+	d.containers = makeContainers(d)
+	d.makeSysFields()
+	app.appendType(d)
+	return d
 }
 
 // # Implements:
@@ -36,11 +37,12 @@ type oRecord struct {
 }
 
 func newORecord(app *appDef, name QName) *oRecord {
-	rec := &oRecord{
+	r := &oRecord{
 		typ: makeType(app, name, TypeKind_ORecord),
 	}
-	rec.fields = makeFields(rec)
-	rec.containers = makeContainers(rec)
-	app.appendType(rec)
-	return rec
+	r.fields = makeFields(r)
+	r.containers = makeContainers(r)
+	r.makeSysFields()
+	app.appendType(r)
+	return r
 }

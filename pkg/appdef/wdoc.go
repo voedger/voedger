@@ -8,43 +8,27 @@ package appdef
 // # Implements:
 //   - IWDoc, IWDocBuilder
 type wDoc struct {
-	typ
-	comment
-	fields
-	containers
-	uniques
-	withAbstract
+	doc
 }
 
 func newWDoc(app *appDef, name QName) *wDoc {
-	doc := &wDoc{
-		typ: makeType(app, name, TypeKind_WDoc),
-	}
-	doc.fields = makeFields(doc)
-	doc.containers = makeContainers(doc)
-	doc.uniques = makeUniques(doc)
-	app.appendType(doc)
-	return doc
+	d := &wDoc{}
+	d.doc = makeDoc(app, name, TypeKind_WDoc, d)
+	d.makeSysFields()
+	app.appendType(d)
+	return d
 }
 
 // # Implements:
 //   - IWRecord, IWRecordBuilder
 type wRecord struct {
-	typ
-	comment
-	fields
-	containers
-	uniques
-	withAbstract
+	record
 }
 
 func newWRecord(app *appDef, name QName) *wRecord {
-	rec := &wRecord{
-		typ: makeType(app, name, TypeKind_WRecord),
-	}
-	rec.fields = makeFields(rec)
-	rec.containers = makeContainers(rec)
-	rec.uniques = makeUniques(rec)
-	app.appendType(rec)
-	return rec
+	r := &wRecord{}
+	r.record = makeRecord(app, name, TypeKind_WRecord, r)
+	r.makeSysFields()
+	app.appendType(r)
+	return r
 }
