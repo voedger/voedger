@@ -19,7 +19,7 @@ var ErrInvalidName = errors.New("name not valid")
 
 var ErrIDNotFound = errors.New("ID not found")
 
-var ErrorRecordIDNotFound = fmt.Errorf("recordID cannot be found: %w", ErrIDNotFound)
+var ErrRecordIDNotFound = fmt.Errorf("recordID cannot be found: %w", ErrIDNotFound)
 
 var ErrRecordNotFound = errors.New("record cannot be found")
 
@@ -41,9 +41,11 @@ var ErrWrongRecordID = errors.New("wrong record ID")
 
 var ErrUnableToUpdateSystemField = errors.New("unable to update system field")
 
-var ErrWrongDefinition = errors.New("wrong definition")
+var ErrWrongType = errors.New("wrong type")
 
-var ErrUnexpectedDefKind = errors.New("unexpected definition kind")
+var ErrAbstractType = errors.New("abstract type")
+
+var ErrUnexpectedTypeKind = errors.New("unexpected type kind")
 
 var ErrUnknownCodec = errors.New("unknown codec")
 
@@ -51,11 +53,13 @@ var ErrMaxGetBatchRecordCountExceeds = errors.New("the maximum count of records 
 
 var ErrWrongFieldType = errors.New("wrong field type")
 
-var ErrDefChanged = errors.New("definition has been changed")
+var ErrTypeChanged = errors.New("type has been changed")
 
 var ErrReferentialIntegrityViolation = errors.New("referential integrity violation")
 
-const errFieldNotFoundWrap = "%s-type field «%s» is not found in definition «%v»: %w" // int32-type field «myField» is not found …
+var ErrFieldValueRestricted = errors.New("value does not meet the restricts")
+
+const errFieldNotFoundWrap = "%s-type field «%s» is not found in type «%v»: %w" // int32-type field «myField» is not found …
 
 const errFieldValueTypeMismatchWrap = "value type «%s» is not applicable for %s-type field «%s»: %w" // value type «float64» is not applicable for int32-type field «myField»: …
 
@@ -65,9 +69,11 @@ const errFieldConvertErrorWrap = "field «%s» value type «%T» can not to be c
 
 const errCantGetFieldQNameIDWrap = "QName field «%s» can not get ID for value «%v»: %w"
 
-const errDefNotFoundWrap = "definition «%v» not found: %w"
+const errTypeNotFoundWrap = "type «%v» not found: %w"
 
 const errMustValidatedBeforeStore = "%v must be validated before store: %w"
+
+const errViewNotFoundWrap = "view «%v» not found: %w"
 
 // ValidateError: an interface for describing errors that occurred during validation
 //   - methods:

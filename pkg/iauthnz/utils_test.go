@@ -27,3 +27,13 @@ func TestRolesInheritance(t *testing.T) {
 	}
 	require.Equal(t, appdef.NullQName, QNameAncestor(appdef.NewQName("missing", "missing")))
 }
+
+func TestIsSystemPrincipal(t *testing.T) {
+	require := require.New(t)
+	require.True(IsSystemPrincipal([]Principal{{Kind: PrincipalKind_Role, WSID: 42, QName: QNameRoleSystem}}, 42))
+	require.False(IsSystemPrincipal([]Principal{{Kind: PrincipalKind_Group, WSID: 42, QName: QNameRoleSystem}}, 42))
+	require.False(IsSystemPrincipal([]Principal{{Kind: PrincipalKind_Role, WSID: 43, QName: QNameRoleSystem}}, 42))
+	require.False(IsSystemPrincipal([]Principal{{Kind: PrincipalKind_Role, WSID: 42, QName: QNameRoleSystem}}, 43))
+	require.False(IsSystemPrincipal([]Principal{{Kind: PrincipalKind_Role, WSID: 42, QName: QNameRoleWorkspaceAdmin}}, 42))
+	require.False(IsSystemPrincipal(nil, 42))
+}

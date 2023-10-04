@@ -1,17 +1,16 @@
 -- Copyright (c) 2020-present unTill Pro, Ltd.
 -- @author Denis Gribanov
-SCHEMA sys;
 
 -- many, target app, user profile
 TABLE ChildWorkspace INHERITS CDoc (
-	WSName text NOT NULL,
+	WSName varchar NOT NULL,
 	WSKind qname NOT NULL,
-	WSKindInitializationData text,
-	TemplateName text,
-	TemplateParams text,
+	WSKindInitializationData varchar(1024),
+	TemplateName varchar,
+	TemplateParams varchar(1024),
 	WSClusterID int32 NOT NULL,
 	WSID int64,  -- to be updated afterwards
-	WSError text -- to be updated afterwards
+	WSError varchar(1024) -- to be updated afterwards
 );
 
 -- target app, (target cluster, base profile WSID)
@@ -19,12 +18,12 @@ TABLE WorkspaceID INHERITS CDoc (
 	OwnerWSID int64 NOT NULL,
 	OwnerQName qname NOT NULL,
 	OwnerID int64 NOT NULL,
-	OwnerApp text NOT NULL,
-	WSName text NOT NULL,
+	OwnerApp varchar NOT NULL,
+	WSName varchar NOT NULL,
 	WSKind qname NOT NULL,
-	WSKindInitializationData text,
-	TemplateName text,
-	TemplateParams text,
+	WSKindInitializationData varchar(1024),
+	TemplateName varchar,
+	TemplateParams varchar(1024),
 	WSID int64
 );
 
@@ -33,17 +32,17 @@ TABLE WorkspaceDescriptor INHERITS Singleton (
 	OwnerWSID int64, -- owner* fields made non-required for app workspaces
 	OwnerQName qname,
 	OwnerID int64,
-	OwnerApp text, -- QName -> each target app must know the owner QName -> string
-	WSName text NOT NULL,
+	OwnerApp varchar, -- QName -> each target app must know the owner QName -> string
+	WSName varchar NOT NULL,
 	WSKind qname NOT NULL,
-	WSKindInitializationData text,
-	TemplateName text,
-	TemplateParams text,
+	WSKindInitializationData varchar(1024),
+	TemplateName varchar,
+	TemplateParams varchar(1024),
 	WSID int64,
-	CreateError text,
+	CreateError varchar(1024),
 	CreatedAtMs int64 NOT NULL,
 	InitStartedAtMs int64,
-	InitError text,
+	InitError varchar(1024),
 	InitCompletedAtMs int64,
 	Status int32
 );

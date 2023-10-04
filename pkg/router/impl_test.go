@@ -33,6 +33,7 @@ const (
 var (
 	isRouterRestartTested bool
 	router                *testRouter
+	clientDisconnections  = make(chan struct{}, 1)
 )
 
 func TestBasicUsage_SingleResponse(t *testing.T) {
@@ -188,7 +189,7 @@ func TestSimpleErrorSectionedResponse(t *testing.T) {
 	body := []byte("")
 	bodyReader := bytes.NewReader(body)
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/untill/airs-bp/%d/somefunc", router.port(), testWSID), "application/json", bodyReader)
-	require.Nil(t, err, err)
+	require.NoError(t, err)
 	defer resp.Body.Close()
 
 	expectedJSON := `{"status":500,"errorDescription":"test error"}`
@@ -221,7 +222,13 @@ func TestClientDisconnectDuringSections(t *testing.T) {
 			rs := bus.SendParallelResponse2(sender)
 			rs.StartMapSection("secMap", []string{"2"})
 			require.Nil(t, rs.SendElement("id1", elem1))
+			// sometimes Request.Body.Close() happens before checking if requestCtx.Err() nil or not after sending a section
+			// So let's wait for successful SendElelemnt(), then close the request
+			ch <- struct{}{}
 			<-ch
+			// requestCtx closes not immediately after request.Body.Close(). So let's wait for ctx close
+			for requestCtx.Err() == nil {
+			}
 			err := rs.ObjectSection("objSec", []string{"3"}, 42)
 			require.ErrorIs(t, err, context.Canceled)
 			rs.Close(nil)
@@ -240,10 +247,12 @@ func TestClientDisconnectDuringSections(t *testing.T) {
 		entireResp = append(entireResp, buf[:n]...)
 		log.Println(string(entireResp))
 	}
+	<-ch
 	resp.Request.Body.Close()
 	resp.Body.Close()
 	ch <- struct{}{}
 	<-ch
+	<-clientDisconnections
 }
 
 func TestCheck(t *testing.T) {
@@ -275,7 +284,6 @@ func Test404(t *testing.T) {
 
 func TestFailedToWriteResponse(t *testing.T) {
 	ch := make(chan struct{})
-	failToWrite := make(chan struct{})
 	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
 		go func() {
 			rs := bus.SendParallelResponse2(sender)
@@ -293,9 +301,6 @@ func TestFailedToWriteResponse(t *testing.T) {
 			ch <- struct{}{}
 		}()
 	}, 2*time.Second)
-	onRequestCtxClosed = func() {
-		failToWrite <- struct{}{}
-	}
 	defer tearDown()
 
 	body := []byte("")
@@ -313,14 +318,13 @@ func TestFailedToWriteResponse(t *testing.T) {
 				break
 			}
 		}
-		log.Println()
 	}
 	ch <- struct{}{}
 	resp.Request.Body.Close()
 	resp.Body.Close()
 
 	// wait for fail to write response
-	<-failToWrite
+	<-clientDisconnections
 
 	// wait for communication done
 	<-ch
@@ -346,6 +350,9 @@ func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus, busTimeout time.D
 	}()
 	router.cancel = cancel
 	router.httpServer = httpSrv
+	onRequestCtxClosed = func() {
+		clientDisconnections <- struct{}{}
+	}
 }
 
 func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus), busTimeout time.Duration) {
@@ -380,6 +387,11 @@ func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender int
 func tearDown() {
 	router.handler = func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
 		panic("unexpected handler call")
+	}
+	select {
+	case <-clientDisconnections:
+		panic("unhandled client disconnection")
+	default:
 	}
 	if isRouterRestartTested {
 		// let's test router shutdown once

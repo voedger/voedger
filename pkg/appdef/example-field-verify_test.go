@@ -46,7 +46,7 @@ func ExampleIFieldsBuilder_SetFieldVerify() {
 	}
 
 	// Output:
-	// doc "test.doc": DefKind_CDoc
+	// doc "test.doc": TypeKind_CDoc
 	// doc field count: 1
 	// field "pin": kind: DataKind_string, required: true, comment: Secret four digits pin code
 	// VerificationKind_EMail true

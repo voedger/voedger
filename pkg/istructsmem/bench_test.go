@@ -66,25 +66,25 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	stringFieldNames := make([]string, numOfIntFields)
 	stringFieldValues := make(map[string]string)
 
-	// application definition
+	// application
 	appDef := func() appdef.IAppDefBuilder {
-		cache := appdef.New()
+		app := appdef.New()
 
-		s := cache.AddODoc(oDocQName)
+		doc := app.AddODoc(oDocQName)
 		for i := 0; i < numOfIntFields; i++ {
 
 			intFieldName := fmt.Sprintf("i%v", i)
-			s.AddField(intFieldName, appdef.DataKind_int64, true)
+			doc.AddField(intFieldName, appdef.DataKind_int64, true)
 			intFieldNames[i] = intFieldName
 			intFieldNamesFloat64Values[intFieldName] = float64(i)
 
 			stringFieldName := fmt.Sprintf("s%v", i)
-			s.AddField(stringFieldName, appdef.DataKind_string, true)
+			doc.AddStringField(stringFieldName, true)
 			stringFieldNames[i] = stringFieldName
 			stringFieldValues[stringFieldName] = stringFieldName
 
 		}
-		return cache
+		return app
 	}
 
 	// Con

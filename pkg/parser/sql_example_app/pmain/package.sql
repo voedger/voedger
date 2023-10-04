@@ -2,17 +2,23 @@
 * Copyright (c) 2023-present unTill Pro, Ltd.
 */
 
-/* 
+/*
 * Package consists of schema and resources
 * Schema consists of few schema files
 */
-SCHEMA main;
 
 IMPORT SCHEMA 'github.com/untillpro/untill';
 IMPORT SCHEMA 'github.com/untillpro/airsbp' AS air;
 
--- Declare tag to assign it later to definition(s)
-TAG BackofficeTag;
+/*
+* APPLICATION statement defines the application.
+* Package cannot contain more than one APPLICATION statement
+* When building Application schema from packages, exactly one package must have APPLICATION statement
+*/
+APPLICATION example_app (
+    USE air; -- name or alias. This identifies package name in QNames of the app
+    USE untill;
+);
 
 /*
     Abstract tables can only be used for INHERITance by other tables.
@@ -27,7 +33,7 @@ TAG BackofficeTag;
 ABSTRACT TABLE NestedWithName INHERITS CRecord (
     /*  Field is added to any table inherited from NestedWithName
         The current comment is also added to scheme for this field  */
-    
+
     ItemName varchar(50) -- Max length is 1024
 );
 
@@ -38,6 +44,9 @@ ABSTRACT TABLE NestedWithName INHERITS CRecord (
 TABLE "NestedTable" INHERITS NestedWithName (
     ItemDescr varchar -- Default length is 255
 );
+
+-- Declare tag to assign it later to definition(s)
+TAG BackofficeTag;
 
 /*
     Any declared table must have one of the following tables as a root anchestor:
@@ -60,7 +69,7 @@ TABLE TablePlan INHERITS CDoc (
     Int1 int DEFAULT 1 CHECK(Int1 >= 1 AND Int2 < 10000),  -- Expressions evaluating to TRUE or UNKNOWN succeed.
     Text1 varchar DEFAULT 'a',
     "bytes" bytes, -- optional quotes
-    ScreenGroupRef ref(ScreenGroup), 
+    ScreenGroupRef ref(ScreenGroup),
     AnyTableRef ref,
     FewTablesRef ref(ScreenGroup, TablePlan) NOT NULL,
     CheckedField varchar(8) CHECK '^[0-9]{8}$', -- Field validated by regexp
@@ -110,7 +119,7 @@ WORKSPACE MyWorkspace (
     );
 
     -- Definitions declared in the workspace are only available in this workspace
-    TAG PosTag;  
+    TAG PosTag;
     ROLE LocationManager;
     TYPE TypeWithKind (
         Kind int
@@ -127,82 +136,83 @@ WORKSPACE MyWorkspace (
     USE WORKSPACE MyWorkspace;  -- It's now possible to create MyWorkspace in MyWorkspace hierarchy
 
     -- Declare table within workspace
-    TABLE WsTable INHERITS CDoc ( 
+    TABLE WsTable INHERITS CDoc (
         air.TypeWithName,   -- Fieldset
 
         PsName varchar(15),
         items TABLE Child (
             TypeWithKind, -- Fieldset
-            Number int				
+            Number int
         )
-    );	
+    );
 
-    -- Workspace-level extensions 
+    -- Workspace-level extensions
     EXTENSION ENGINE BUILTIN (
 
         /*
         Projector can only be declared in workspace.
-        
-        A builtin function OrdersCountProjector must exist in package resources.
+
+        A builtin function CountOrders must exist in package resources.
+            ON Orders - points to a command
             INTENTS - lists all storage keys, projector generates intents for
             STATE - lists all storage keys, projector reads state from
                 (key consist of Storage Qname, and Entity name, when required by storage)
                 (no need to specify in STATE when already listed in INTENTS)
         */
-        PROJECTOR CountOrders 
-            ON COMMAND Orders 
+        PROJECTOR CountOrders
+            ON Orders
             INTENTS(View OrdersCountView);
-        
-        -- Projector triggered by command argument SubscriptionProfile which is a Storage
+
+        -- Projector triggered by command argument SubscriptionEvent
         -- Projector uses sys.HTTPStorage
-        PROJECTOR UpdateSubscriptionProfile 
-            ON COMMAND ARGUMENT SubscriptionEvent 
+        PROJECTOR UpdateSubscriptionProfile
+            ON SubscriptionEvent
             STATE(sys.Http, AppSecret);
 
-        -- Projectors triggered by CUD operations
-        -- SYNC means that projector is synchronous 
-        SYNC PROJECTOR TablePlanThumbnailGen 
-            ON INSERT TablePlan 
+        -- Projectors triggered by CUD operation
+        -- SYNC means that projector is synchronous
+        SYNC PROJECTOR TablePlanThumbnailGen
+            AFTER INSERT ON TablePlan
             INTENTS(View TablePlanThumbnails);
 
-        -- Projector triggered by few commands
-        PROJECTOR UpdateDashboard 
-            ON COMMAND IN (Orders, Orders2) 
+        -- Projector triggered by few COMMANDs
+        PROJECTOR UpdateDashboard
+            ON (Orders, Orders2)
             INTENTS(View DashboardView);
 
         -- Projector triggered by few types of CUD operations
-        PROJECTOR UpdateActivePlans 
-            ON ACTIVATE OR DEACTIVATE TablePlan 
+        PROJECTOR UpdateActivePlans
+            AFTER ACTIVATE OR DEACTIVATE ON TablePlan
             INTENTS(View ActiveTablePlansView);
-        
+
         -- Some projector which sends E-mails and performs HTTP queries
-        PROJECTOR NotifyOnChanges 
-            ON INSERT OR UPDATE IN (TablePlan, WsTable) 
+        PROJECTOR NotifyOnChanges
+            AFTER INSERT OR UPDATE ON (TablePlan, WsTable)
             STATE(Http, AppSecret)
             INTENTS(SendMail, View NotificationsHistory);
 
 
-        /*         
+        /*
         Commands can only be declared in workspaces
         Command can have optional argument and/or unlogged argument
-        Command can return TYPE 
-        */ 
+        Command can return TYPE
+        */
         COMMAND Orders(air.Order, UNLOGGED air.TypeWithName) RETURNS air.Order;
-        
+
         -- Command can return void (in this case `RETURNS void` may be omitted)
         COMMAND Orders2(air.Order) RETURNS void;
 
         -- Command with declared Comment, Tags and Rate
-        COMMAND Orders4(UNLOGGED air.Order) WITH 
+        COMMAND Orders4(UNLOGGED air.Order) WITH
             Tags=(BackofficeTag, PosTag),
-            Rate=BackofficeFuncRate1; 
+            Rate=BackofficeFuncRate1;
 
         -- Qieries can only be declared in workspaces
         QUERY Query1 RETURNS void;
 
         -- WITH Comment... overrides this comment
         QUERY _Query1() RETURNS air.Order WITH Comment='A comment';
-        
+
         -- Query which can return any value
         QUERY Query2(air.Order) RETURNS ANY;
     );
@@ -215,22 +225,36 @@ WORKSPACE MyWorkspace (
     GRANT EXECUTE ON QUERY TransactionHistory TO LocationUser;
     GRANT EXECUTE ON ALL QUERIES WITH TAG PosTag TO LocationUser;
 
-    -- VIEWs generated by the PROJECTOR. 
+    -- VIEWs generated by the PROJECTOR.
     -- Primary Key must be declared in View.
     VIEW XZReports(
+
+        -- Report Year
         Year int32,
-        Month int32, 
-        Day int32, 
-        Kind int32, 
-        Number int32, 
+
+        -- Report Month
+        Month int32,
+
+        -- Report Day
+        Day int32,
+
+        /*
+            Field comment:
+            0=X, 1=Z
+        */
+        Kind int32,
+        Number int32,
+        Description varchar(50),
+
+        -- Reference to WDoc
         XZReportWDocID ref NOT NULL,
         PRIMARY KEY ((Year), Month, Day, Kind, Number)
     ) AS RESULT OF air.UpdateDashboard;
 
     VIEW OrdersCountView(
         Year int, -- same as int32
-        Month int32, 
-        Day int32, 
+        Month int32,
+        Day int32,
         Qnantity int32,
         SomeField int32,
         PRIMARY KEY ((Year), Month, Day)
@@ -261,26 +285,26 @@ WORKSPACE MyWorkspace (
         - Cannot be created
         - Cannot declare DESCRIPTOR
         - Cannot be USEd in other workspaces
-        - Can only be used by other workspaces for INHERITance 
+        - Can only be used by other workspaces for INHERITance
 */
 ABSTRACT WORKSPACE AWorkspace ();
 
-/* 
+/*
     INHERITS includes everything which is declared and/or USEd by other workspace.
-    Possible to inherit from multiple workspaces 
+    Possible to inherit from multiple workspaces
 */
 WORKSPACE MyWorkspace1 INHERITS AWorkspace, untill.UntillAWorkspace (
     POOL OF WORKSPACE MyPool ();
 );
 
 /*
-    Allow my statements to be used in sys.Profile. 
+    Allow my statements to be used in sys.Profile.
     sys.Profile workspace is declared as ALTERABLE, this allows other packages to extend it with ALTER WORKSPACE.
     We can also ALTER non-alterable workspaces when they are in the same package
 */
 ALTER WORKSPACE sys.Profile(
-    USE TABLE WsTable;
-    USE WORKSPACE MyWorkspace1; 
+    USE TABLE TablePlan;
+    USE WORKSPACE MyWorkspace1;
 );
 
 -- Declares ROLE

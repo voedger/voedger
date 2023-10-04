@@ -16,7 +16,7 @@ import (
 )
 
 func TestBasicUsage_ChangePassword(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	loginName := vit.NextName()
@@ -36,7 +36,7 @@ func TestBasicUsage_ChangePassword(t *testing.T) {
 }
 
 func TestChangePasswordErrors(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login") // from VIT config

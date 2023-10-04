@@ -36,7 +36,7 @@ import (
 )
 
 func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state istructs.IState, params IQueryParams,
-	resultMeta appdef.IDef, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline {
+	resultMeta appdef.IType, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline {
 	operators := make([]*pipeline.WiredOperator, 0)
 	if resultMeta.QName() == istructs.QNameJSON {
 		operators = append(operators, pipeline.WireAsyncOperator("Raw result", &RawResultOperator{
@@ -198,8 +198,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.queryFunction = qw.msg.Resource().(istructs.IQueryFunction)
-			parDef := qw.appStructs.AppDef().Def(qw.queryFunction.ParamsDef())
-			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), parDef, qw.appCfg, qw)
+			parsType := qw.appStructs.AppDef().Type(qw.queryFunction.ParamsType())
+			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), parsType, qw.appCfg, qw)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("create state", func(ctx context.Context, qw *queryWork) (err error) {
@@ -214,16 +214,16 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			qw.execQueryArgs.State = qw.state
 			return
 		}),
-		operator("validate: get result definition", func(ctx context.Context, qw *queryWork) (err error) {
-			def := qw.queryFunction.ResultDef(qw.execQueryArgs.PrepareArgs)
-			qw.resultDef = qw.appStructs.AppDef().Def(def)
-			err = errIfFalse(qw.resultDef.Kind() != appdef.DefKind_null, func() error {
-				return fmt.Errorf("result definition %s: %w", def, ErrNotFound)
+		operator("validate: get result type", func(ctx context.Context, qw *queryWork) (err error) {
+			typ := qw.queryFunction.ResultType(qw.execQueryArgs.PrepareArgs)
+			qw.resultType = qw.appStructs.AppDef().Type(typ)
+			err = errIfFalse(qw.resultType.Kind() != appdef.TypeKind_null, func() error {
+				return fmt.Errorf("result type %s: %w", typ, ErrNotFound)
 			})
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("validate: get query params", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, newFieldsKinds(qw.resultDef))
+			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, newFieldsKinds(qw.resultType))
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("authorize result", func(ctx context.Context, qw *queryWork) (err error) {
@@ -254,7 +254,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				qw.metrics.Increase(buildSeconds, time.Since(now).Seconds())
 			}()
 			qw.rowsProcessor = ProvideRowsProcessorFactory()(qw.msg.RequestCtx(), qw.appStructs.AppDef(),
-				qw.state, qw.queryParams, qw.resultDef, qw.rs, qw.metrics)
+				qw.state, qw.queryParams, qw.resultType, qw.rs, qw.metrics)
 			return nil
 		}),
 		operator("exec function", func(ctx context.Context, qw *queryWork) (err error) {
@@ -269,7 +269,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}()
 			err = qw.queryFunction.Exec(ctx, qw.execQueryArgs, func(object istructs.IObject) error {
 				pathToIdx := make(map[string]int)
-				if qw.resultDef.QName() == istructs.QNameJSON {
+				if qw.resultType.QName() == istructs.QNameJSON {
 					pathToIdx[processors.Field_JSONDef_Body] = 0
 				} else {
 					for i, element := range qw.queryParams.Elements() {
@@ -302,7 +302,7 @@ type queryWork struct {
 	queryParams       IQueryParams
 	appStructs        istructs.IAppStructs
 	queryFunction     istructs.IQueryFunction
-	resultDef         appdef.IDef
+	resultType        appdef.IType
 	execQueryArgs     istructs.ExecQueryArgs
 	maxPrepareQueries int
 	rowsProcessor     pipeline.IAsyncPipeline
@@ -324,13 +324,6 @@ func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appStructsProvide
 		metrics:            metrics,
 		secretReader:       secretReader,
 	}
-}
-
-// need for q.sys.EnrichPrincipalToken
-// failed to implement this via stroage because payloads.PrincipalPayload is too complex structrue -> need to get via .AsJSON() only
-// but it is bad idea to parse json in an extension, so just let q.sys.EnrichPrincipalToken work using this hidden func
-func (qw *queryWork) GetPrincipalPayload() payloads.PrincipalPayload {
-	return qw.principalPayload
 }
 
 // need for q.sys.EnrichPrincipalToken
@@ -420,21 +413,21 @@ func (r *outputRow) Values() []interface{}               { return r.values }
 func (r *outputRow) Value(alias string) interface{}      { return r.values[r.keyToIdx[alias]] }
 func (r *outputRow) MarshalJSON() ([]byte, error)        { return json.Marshal(r.values) }
 
-func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, argsDef appdef.IDef, appCfg *istructsmem.AppConfigType,
+func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, argsType appdef.IType, appCfg *istructsmem.AppConfigType,
 	qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
 	args, _, err := data.AsObject("args")
 	if err != nil {
 		return execQueryArgs, err
 	}
 	requestArgs := istructs.NewNullObject()
-	switch argsDef.QName() {
+	switch argsType.QName() {
 	case appdef.NullQName:
 		//Do nothing
 	case istructs.QNameJSON:
 		requestArgs, err = newJsonObject(data)
 	default:
-		requestArgsBuilder := istructsmem.NewIObjectBuilder(appCfg, argsDef.QName())
-		if err := istructsmem.FillElementFromJSON(args, argsDef, requestArgsBuilder); err != nil {
+		requestArgsBuilder := istructsmem.NewIObjectBuilder(appCfg, argsType.QName())
+		if err := istructsmem.FillElementFromJSON(args, argsType, requestArgsBuilder); err != nil {
 			return execQueryArgs, err
 		}
 		requestArgs, err = requestArgsBuilder.Build()
@@ -503,7 +496,7 @@ func (c *fieldsDefs) get(name appdef.QName) FieldsKinds {
 	defer c.lock.Unlock()
 	fd, ok := c.fields[name]
 	if !ok {
-		fd = newFieldsKinds(c.appDef.Def(name))
+		fd = newFieldsKinds(c.appDef.Type(name))
 		c.fields[name] = fd
 	}
 	return fd
@@ -553,9 +546,9 @@ func (o *jsonObject) AsString(name string) string {
 	return o.NullObject.AsString(name)
 }
 
-func newFieldsKinds(def appdef.IDef) FieldsKinds {
+func newFieldsKinds(t appdef.IType) FieldsKinds {
 	res := FieldsKinds{}
-	if fields, ok := def.(appdef.IFields); ok {
+	if fields, ok := t.(appdef.IFields); ok {
 		fields.Fields(func(f appdef.IField) {
 			res[f.Name()] = f.DataKind()
 		})

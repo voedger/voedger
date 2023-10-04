@@ -59,8 +59,8 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		On("MustExist", mock.Anything).Return(department("Sweet")).Once()
 
 	appDef := appdef.New()
-	departmentDef := appDef.AddObject(qNamePosDepartment)
-	departmentDef.AddField("name", appdef.DataKind_string, false)
+	departmentObj := appDef.AddObject(qNamePosDepartment)
+	departmentObj.AddField("name", appdef.DataKind_string, false)
 	resultMeta := appDef.AddObject(appdef.NewQName("pos", "DepartmentResult"))
 	resultMeta.
 		AddField("id", appdef.DataKind_int64, true).
@@ -174,7 +174,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 		qNameFunction,
 		qNameFindArticlesByModificationTimeStampRangeParams,
 		appdef.NewQName("bo", "Article"),
-		func(_ context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+		func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			require.Equal(int64(1257894000), args.ArgumentObject.AsInt64("from"))
 			require.Equal(int64(2257894000), args.ArgumentObject.AsInt64("till"))
 			objects := []istructs.IObject{
@@ -229,12 +229,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 
 	rawEvent, err := reb.BuildRawEvent()
 	require.NoError(err)
-	nextRecordID := istructs.FirstBaseRecordID
-	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, func(istructs.RecordID, appdef.IDef) (storage istructs.RecordID, err error) {
-		storage = nextRecordID
-		nextRecordID++
-		return
-	})
+	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
 	require.NoError(err)
 	require.NoError(as.Records().Apply(pLogEvent))
 	err = as.Events().PutWlog(pLogEvent)

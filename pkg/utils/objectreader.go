@@ -63,14 +63,14 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 	if qn == appdef.NullQName {
 		return
 	}
-	def := appDef.Def(qn)
+	t := appDef.Type(qn)
 
 	opts := &mapperOpts{}
 	for _, optFunc := range optFuncs {
 		optFunc(opts)
 	}
 
-	if fields, ok := def.(appdef.IFields); ok {
+	if fields, ok := t.(appdef.IFields); ok {
 		if opts.nonNilsOnly {
 			obj.FieldNames(func(fieldName string) {
 				kind := fields.Field(fieldName).DataKind()

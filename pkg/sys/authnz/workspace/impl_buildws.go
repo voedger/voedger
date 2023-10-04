@@ -36,7 +36,7 @@ func buildWorkspace(templateName string, ep extensionpoints.IExtensionPoint, wsK
 	// update IDs in workspace template data with new blobs IDs
 	updateBLOBsIDsMap(wsTemplateData, blobsMap)
 
-	cc := make([]cud, 0, len(wsTemplateData))
+	templateCUDs := make([]cud, 0, len(wsTemplateData))
 	for _, record := range wsTemplateData {
 		c := cud{
 			Fields: make(map[string]interface{}),
@@ -44,33 +44,17 @@ func buildWorkspace(templateName string, ep extensionpoints.IExtensionPoint, wsK
 		for field, value := range record {
 			c.Fields[field] = value
 		}
-		cc = append(cc, c)
+		templateCUDs = append(templateCUDs, c)
 	}
-	const batchSize = 50
-	batches := make([][]cud, len(cc)/batchSize+1)
-	for i := 0; i < len(batches); i++ {
-		toCopy := (i + 1) * batchSize
-		if toCopy > len(cc) {
-			toCopy = len(cc)
-		}
-		batches[i] = cc[i*batchSize : toCopy]
+	cudURL := fmt.Sprintf("api/%s/%d/c.sys.CUD", targetAppQName.String(), newWSID)
+	bb, err := json.Marshal(cuds{Cuds: templateCUDs})
+	if err != nil {
+		// validated already
+		// notest
+		return err
 	}
-
-	initCmdURL := fmt.Sprintf("api/%s/%d/c.sys.Init", targetAppQName.String(), newWSID)
-	logger.Info(fmt.Sprintf("workspace %s build starting. %d batches to send, url: %s", wsName, len(batches), initCmdURL))
-	for batchNum, batch := range batches {
-		logger.Info(fmt.Sprintf("workspace %s building: sending batch %d/%d", wsName, batchNum+1, len(batches)))
-
-		bb, err := json.Marshal(cuds{Cuds: batch})
-		if err != nil {
-			// validated already
-			// notest
-			return err
-		}
-
-		if _, err := coreutils.FederationFunc(federation.URL(), initCmdURL, string(bb), coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
-			return fmt.Errorf("c.sys.Init failed: %w", err)
-		}
+	if _, err := coreutils.FederationFunc(federation.URL(), cudURL, string(bb), coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
+		return fmt.Errorf("c.sys.CUD failed: %w", err)
 	}
 	logger.Info(fmt.Sprintf("workspace %s build completed", wsName))
 	return nil

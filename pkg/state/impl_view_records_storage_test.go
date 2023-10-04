@@ -19,10 +19,10 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		require := require.New(t)
 
 		appDef := appdef.New()
-		appDef.AddView(testViewRecordQName1).
-			AddPartField("pkk", appdef.DataKind_int64).
-			AddClustColumn("cck", appdef.DataKind_string).
-			AddValueField("vk", appdef.DataKind_string, false)
+		view := appDef.AddView(testViewRecordQName1)
+		view.Key().Partition().AddField("pkk", appdef.DataKind_int64)
+		view.Key().ClustCols().AddStringField("cck", appdef.DefaultFieldMaxLength)
+		view.Value().AddStringField("vk", false)
 
 		value := &mockValue{}
 		value.On("AsString", "vk").Return("value")
@@ -53,10 +53,11 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		require := require.New(t)
 
 		appDef := appdef.New()
-		appDef.AddView(testViewRecordQName1).
-			AddPartField("pkk", appdef.DataKind_int64).
-			AddClustColumn("cck", appdef.DataKind_string).
-			AddValueField("vk", appdef.DataKind_string, false)
+
+		view := appDef.AddView(testViewRecordQName1)
+		view.Key().Partition().AddField("pkk", appdef.DataKind_int64)
+		view.Key().ClustCols().AddStringField("cck", appdef.DefaultFieldMaxLength)
+		view.Value().AddStringField("vk", false)
 
 		viewRecords := &mockViewRecords{}
 		viewRecords.
@@ -136,10 +137,11 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 	require := require.New(t)
 
 	appDef := appdef.New()
-	appDef.AddView(testViewRecordQName1).
-		AddPartField("pkk", appdef.DataKind_int64).
-		AddClustColumn("cck", appdef.DataKind_string).
-		AddValueField("vk", appdef.DataKind_string, false)
+
+	view := appDef.AddView(testViewRecordQName1)
+	view.Key().Partition().AddField("pkk", appdef.DataKind_int64)
+	view.Key().ClustCols().AddStringField("cck", appdef.DefaultFieldMaxLength)
+	view.Value().AddStringField("vk", false)
 
 	viewRecords := &mockViewRecords{}
 	viewRecords.
@@ -169,18 +171,20 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 func TestViewRecordsStorage_toJSON(t *testing.T) {
 
 	appDef := appdef.New()
-	appDef.AddView(testViewRecordQName1).
-		AddPartField("pkFld", appdef.DataKind_int64).
-		AddClustColumn("ccFld", appdef.DataKind_string).
-		AddValueField("ID", appdef.DataKind_RecordID, false).
-		AddValueField("Name", appdef.DataKind_string, false).
-		AddValueField("Count", appdef.DataKind_int64, false)
+
+	view := appDef.AddView(testViewRecordQName1)
+	view.Key().Partition().AddField("pkFld", appdef.DataKind_int64)
+	view.Key().ClustCols().AddStringField("ccFld", appdef.DefaultFieldMaxLength)
+	view.Value().
+		AddRefField("ID", false).
+		AddStringField("Name", false).
+		AddField("Count", appdef.DataKind_int64, false)
 
 	value := &mockValue{}
 	value.
 		On("AsRecordID", "ID").Return(istructs.RecordID(42)).
 		On("AsString", "Name").Return("John").
 		On("AsInt64", "Count").Return(int64(1001)).
-		On("AsQName", mock.Anything).Return(appdef.ViewValueDefName(testViewRecordQName1))
+		On("AsQName", mock.Anything).Return(testViewRecordQName1)
 
 }

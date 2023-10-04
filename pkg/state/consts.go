@@ -11,15 +11,16 @@ import (
 )
 
 var (
-	ViewRecordsStorage = appdef.NewQName(appdef.SysPackage, "ViewRecordsStorage")
-	RecordsStorage     = appdef.NewQName(appdef.SysPackage, "RecordsStorage")
-	WLogStorage        = appdef.NewQName(appdef.SysPackage, "WLogStorage")
-	PLogStorage        = appdef.NewQName(appdef.SysPackage, "PLogStorage")
-	HTTPStorage        = appdef.NewQName(appdef.SysPackage, "HTTPStorage")
-	SendMailStorage    = appdef.NewQName(appdef.SysPackage, "SendMailStorage")
-	AppSecretsStorage  = appdef.NewQName(appdef.SysPackage, "AppSecretsStorage")
-	SubjectStorage     = appdef.NewQName(appdef.SysPackage, "SubjectStorage")
-	CmdResultStorage   = appdef.NewQName(appdef.SysPackage, "CmdResultStorage")
+	ViewRecordsStorage    = appdef.NewQName(appdef.SysPackage, "ViewRecordsStorage")
+	RecordsStorage        = appdef.NewQName(appdef.SysPackage, "RecordsStorage")
+	WLogStorage           = appdef.NewQName(appdef.SysPackage, "WLogStorage")
+	PLogStorage           = appdef.NewQName(appdef.SysPackage, "PLogStorage")
+	HTTPStorage           = appdef.NewQName(appdef.SysPackage, "HTTPStorage")
+	SendMailStorage       = appdef.NewQName(appdef.SysPackage, "SendMailStorage")
+	AppSecretsStorage     = appdef.NewQName(appdef.SysPackage, "AppSecretsStorage")
+	SubjectStorage        = appdef.NewQName(appdef.SysPackage, "SubjectStorage")
+	CmdResultStorage      = appdef.NewQName(appdef.SysPackage, "CmdResultStorage")
+	PrincipalTokenStorage = appdef.NewQName(appdef.SysPackage, "PrincipalTokenStorage")
 )
 
 const (

@@ -1,5 +1,6 @@
+-- Copyright (c) 2020-present unTill Pro, Ltd.
+
 -- note: this schema is for tests only. Voedger sys package uses copy of this schema
-SCHEMA sys;
 
 ABSTRACT TABLE CRecord();
 ABSTRACT TABLE WRecord();
@@ -13,14 +14,14 @@ ABSTRACT TABLE Singleton INHERITS CDoc();
 
 ABSTRACT WORKSPACE Workspace (
     TYPE CreateLoginParams(
-        Login                       text,
-        AppName                     text,
+        Login                       varchar,
+        AppName                     varchar,
         SubjectKind                 int32,
-        WSKindInitializationData    text,
+        WSKindInitializationData    varchar(1024),
         ProfileCluster              int32
     );
     TYPE CreateLoginUnloggedParams(
-        Password text
+        Password varchar
     );
     EXTENSION ENGINE BUILTIN (
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
@@ -33,13 +34,13 @@ ALTERABLE WORKSPACE Profile(
 
 EXTENSION ENGINE BUILTIN (
 
-    STORAGE Record( 
+    STORAGE Record(
         GET         SCOPE(COMMANDS, QUERIES, PROJECTORS),
         GETBATCH    SCOPE(COMMANDS, QUERIES, PROJECTORS),
         INSERT      SCOPE(COMMANDS),
         UPDATE      SCOPE(COMMANDS)
     ) ENTITY RECORD; -- used to validate projector state/intents declaration
-    
+
 
     STORAGE View(
         GET         SCOPE(COMMANDS, QUERIES, PROJECTORS),

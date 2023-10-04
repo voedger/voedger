@@ -5,9 +5,9 @@
     "name": "Beach",
     "num": 3,
     "preview": 536,
-    "sys.ID": 5000000000400,
+    "sys.ID": 1,
     "sys.IsActive": true,
-    "sys.QName": "simpleApp.air_table_plan",
+    "sys.QName": "app1.air_table_plan",
     "width": 879
   },
   {
@@ -16,9 +16,9 @@
     "name": "First floor",
     "num": 0,
     "preview": 541,
-    "sys.ID": 5000000000416,
+    "sys.ID": 2,
     "sys.IsActive": true,
-    "sys.QName": "simpleApp.air_table_plan",
+    "sys.QName": "app1.air_table_plan",
     "width": 882
   },
   {
@@ -46,9 +46,9 @@
     "printer_port": 9100,
     "printer_type": 0,
     "speed": 9600,
-    "sys.ID": 5000001540,
+    "sys.ID": 3,
     "sys.IsActive": true,
-    "sys.QName": "simpleApp.printers",
+    "sys.QName": "app1.printers",
     "top_lines": 0,
     "width": 42
   },
@@ -57,15 +57,14 @@
     "bmanual": 0,
     "close_manualy": 0,
     "group_vat_level": 0,
-    "id_prices": 5000000247,
     "name": "Restaurant",
     "number": 0,
     "only_reserved": 0,
     "sc": 0,
     "sccovers": 0,
-    "sys.ID": 5000000249,
+    "sys.ID": 4,
     "sys.IsActive": true,
-    "sys.QName": "simpleApp.sales_area"
+    "sys.QName": "app1.sales_area"
   },
   {
     "driver_id": "",
@@ -77,9 +76,9 @@
     "params": "",
     "paym_external_id": "",
     "psp_model": -1,
-    "sys.ID": 5000000060,
+    "sys.ID": 5,
     "sys.IsActive": true,
-    "sys.QName": "simpleApp.payments"
+    "sys.QName": "app1.payments"
   },
   {
     "block_time_break": 0,
@@ -99,9 +98,9 @@
     "personal_drawer": 0,
     "start_week_day": 0,
     "start_week_time": 28800000,
-    "sys.ID": 100000000000,
+    "sys.ID": 6,
     "sys.IsActive": true,
-    "sys.QName": "simpleApp.untill_users",
+    "sys.QName": "app1.untill_users",
     "user_clock_in": 0,
     "user_poscode": "6",
     "user_poscode_remoteterm": "",
@@ -111,14 +110,14 @@
     "void_number": 0
   },
   {
-    "sys.QName": "simpleApp.computers",
-    "sys.ID": 1000000201
+    "sys.QName": "app1.computers",
+    "sys.ID": 7
   },
   {
-    "sys.QName": "simpleApp.restaurant_computers",
-    "sys.ID": 1000000202,
-    "id_computers": 1000000201,
-    "sys.ParentID": 1000000201,
+    "sys.QName": "app1.restaurant_computers",
+    "sys.ID": 8,
+    "id_computers": 7,
+    "sys.ParentID": 7,
     "sys.Container": "restaurant_computers"
   }
 ]

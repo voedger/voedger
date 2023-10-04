@@ -18,47 +18,47 @@ func TestDynoBufSchemes(t *testing.T) {
 
 	var appDef appdef.IAppDef
 
-	t.Run("must ok to build application definition", func(t *testing.T) {
+	t.Run("must ok to build application", func(t *testing.T) {
 		appDefBuilder := appdef.New()
-		rootDef := appDefBuilder.AddObject(appdef.NewQName("test", "obj"))
-		rootDef.
+		obj := appDefBuilder.AddObject(appdef.NewQName("test", "obj"))
+		obj.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
 			AddField("float64Field", appdef.DataKind_float64, false).
-			AddField("bytesField", appdef.DataKind_bytes, false).
-			AddField("strField", appdef.DataKind_string, false).
+			AddBytesField("bytesField", false).
+			AddStringField("strField", false).
 			AddField("qnameField", appdef.DataKind_QName, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false)
-		rootDef.
+		obj.
 			AddContainer("child", appdef.NewQName("test", "el"), 1, appdef.Occurs_Unbounded)
 
-		childDef := appDefBuilder.AddElement(appdef.NewQName("test", "el"))
-		childDef.
+		el := appDefBuilder.AddElement(appdef.NewQName("test", "el"))
+		el.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
 			AddField("float64Field", appdef.DataKind_float64, false).
-			AddField("bytesField", appdef.DataKind_bytes, false).
-			AddField("strField", appdef.DataKind_string, false).
+			AddBytesField("bytesField", false).
+			AddStringField("strField", false).
 			AddField("qnameField", appdef.DataKind_QName, false).
 			AddField("boolField", appdef.DataKind_bool, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false)
-		childDef.
+		el.
 			AddContainer("grandChild", appdef.NewQName("test", "el1"), 0, 1)
 
-		grandDef := appDefBuilder.AddElement(appdef.NewQName("test", "el1"))
-		grandDef.
+		subEl := appDefBuilder.AddElement(appdef.NewQName("test", "el1"))
+		subEl.
 			AddField("recIDField", appdef.DataKind_RecordID, false)
+
+		view := appDefBuilder.AddView(appdef.NewQName("test", "view"))
+		view.Key().Partition().AddField("pk1", appdef.DataKind_int64)
+		view.Key().ClustCols().AddStringField("cc1", 100)
+		view.Value().AddRefField("val1", true)
 
 		sch, err := appDefBuilder.Build()
 		require.NoError(err)
 
-		viewDef := appDefBuilder.AddView(appdef.NewQName("test", "view"))
-		viewDef.
-			AddPartField("pk1", appdef.DataKind_int64).
-			AddClustColumn("cc1", appdef.DataKind_string).
-			AddValueField("val1", appdef.DataKind_RecordID, true)
 		appDef = sch
 	})
 
@@ -67,46 +67,37 @@ func TestDynoBufSchemes(t *testing.T) {
 
 	schemes.Prepare(appDef)
 
-	var checkScheme func(dynoScheme *dynobuffers.Scheme)
+	checkScheme := func(name appdef.QName, fields appdef.IFields, dynoScheme *dynobuffers.Scheme) {
+		require.NotNil(dynoScheme, "dynobuffer scheme for «%v» not found", name)
 
-	checkScheme = func(dynoScheme *dynobuffers.Scheme) {
-		require.NotNil(dynoScheme)
-
-		defName, err := appdef.ParseQName(dynoScheme.Name)
-		require.NoError(err)
-
-		def := appDef.DefByName(defName)
-		require.NotNil(def)
+		require.EqualValues(len(dynoScheme.FieldsMap), fields.UserFieldCount())
 
 		for _, fld := range dynoScheme.Fields {
-			if fld.Ft == dynobuffers.FieldTypeObject {
-				cont, ok := def.(appdef.IContainers)
-				require.True(ok)
-
-				c := cont.Container(fld.Name)
-				require.NotNil(c)
-
-				require.Equal(fld.IsMandatory, c.MinOccurs() > 0)
-				require.Equal(fld.IsArray, c.MaxOccurs() > 1)
-
-				require.NotNil(fld.FieldScheme)
-
-				checkScheme(fld.FieldScheme)
-
-				continue
-			}
-
-			field := def.(appdef.IFields).Field(fld.Name)
+			field := fields.Field(fld.Name)
 			require.NotNil(field)
-
 			require.Equal(DataKindToFieldType(field.DataKind()), fld.Ft)
 		}
+
+		fields.Fields(func(field appdef.IField) {
+			if !field.IsSys() {
+				fld, ok := dynoScheme.FieldsMap[field.Name()]
+				require.True(ok)
+				require.Equal(DataKindToFieldType(field.DataKind()), fld.Ft)
+			}
+		})
 	}
 
-	appDef.Defs(
-		func(s appdef.IDef) {
-			if _, ok := s.(appdef.IFields); ok {
-				checkScheme(schemes[s.QName()])
+	appDef.Types(
+		func(typ appdef.IType) {
+			name := typ.QName()
+			if view, ok := typ.(appdef.IView); ok {
+				checkScheme(name, view.Key().Partition(), schemes.ViewPartKeyScheme(name))
+				checkScheme(name, view.Key().ClustCols(), schemes.ViewClustColsScheme(name))
+				checkScheme(name, view.Value(), schemes.Scheme(name))
+				return
+			}
+			if fld, ok := typ.(appdef.IFields); ok {
+				checkScheme(name, fld, schemes.Scheme(name))
 			}
 		})
 }

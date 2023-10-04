@@ -1,7 +1,12 @@
 /*
 * Copyright (c) 2023-present unTill Pro, Ltd.
 */
-SCHEMA vrestaurant;
+
+APPLICATION vrestaurant();
+
+-- Declare tag to assign it later to definition(s)
+TAG BackofficeTag;
+TAG PosTag;
 
 -- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
 ABSTRACT TABLE BOEntity INHERITS CDoc( -- TODO: ABSTRACT
@@ -29,10 +34,6 @@ WORKSPACE Restaurant (
 
     ROLE LocationUser;
     ROLE LocationManager;
-
-    -- Declare tag to assign it later to definition(s)
-    TAG BackofficeTag;
-    TAG PosTag;
 
     -- CDOC data schemes
 
@@ -166,11 +167,11 @@ WORKSPACE Restaurant (
     EXTENSION ENGINE BUILTIN (
 	
 	    SYNC PROJECTOR UpdateTableStatus
-	        ON INSERT IN (Order, Bill)
+	        AFTER INSERT ON (Order, Bill)
 		INTENTS(View TableStatus);
 
 	    PROJECTOR UpdateSalesReport
-	        ON INSERT Bill 
+	        AFTER INSERT ON Bill 
 		INTENTS(View SalesPerDay);
 
     );

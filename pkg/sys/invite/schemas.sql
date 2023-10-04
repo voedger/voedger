@@ -1,23 +1,21 @@
 -- Copyright (c) 2020-present unTill Pro, Ltd.
 -- @author Denis Gribanov
 
-SCHEMA sys;
-
 TABLE Subject INHERITS CDoc (
-	Login text NOT NULL,
+	Login varchar NOT NULL,
 	SubjectKind int32 NOT NULL,
-	Roles text NOT NULL,
+	Roles varchar(1024) NOT NULL,
 	ProfileWSID int64 NOT NULL,
 	UNIQUEFIELD Login
 );
 
 TABLE Invite INHERITS CDoc (
 	SubjectKind int32,
-	Login text NOT NULL,
-	Email text NOT NULL,
-	Roles text,
+	Login varchar NOT NULL,
+	Email varchar NOT NULL,
+	Roles varchar(1024),
 	ExpireDatetime int64,
-	VerificationCode text,
+	VerificationCode varchar,
 	State int32 NOT NULL,
 	Created int64,
 	Updated int64 NOT NULL,
@@ -27,7 +25,7 @@ TABLE Invite INHERITS CDoc (
 );
 
 TABLE JoinedWorkspace INHERITS CDoc (
-	Roles text NOT NULL,
+	Roles varchar(1024) NOT NULL,
 	InvitingWorkspaceWSID int64 NOT NULL,
-	WSName text NOT NULL
+	WSName varchar NOT NULL
 );

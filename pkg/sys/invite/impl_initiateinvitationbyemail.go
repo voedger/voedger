@@ -22,15 +22,15 @@ func provideCmdInitiateInvitationByEMail(cfg *istructsmem.AppConfigType, appDefB
 			AddField(Field_Roles, appdef.DataKind_string, true).
 			AddField(field_ExpireDatetime, appdef.DataKind_int64, true).
 			AddField(field_EmailTemplate, appdef.DataKind_string, true).
-			AddField(field_EmailSubject, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_EmailSubject, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdInitiateInvitationByEMail(timeFunc),
 	))
 }
 
-func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
 		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
 		}
