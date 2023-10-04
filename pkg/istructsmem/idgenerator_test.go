@@ -14,27 +14,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func TestID(t *testing.T) {
-	recID := istructs.RecordID(5000000000000)
-	log.Println(recID.BaseRecordID())
-	log.Println(istructs.NewCDocCRecordID(0))
-	log.Println(istructs.NewCDocCRecordID(1))
-	log.Println(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID))
-	recID = istructs.RecordID(5000000000333)
-	log.Println(recID.BaseRecordID())
-	log.Println(istructs.NewCDocCRecordID(recID.BaseRecordID()))
-	recID = istructs.RecordID(10000008911)
-	log.Println(recID.BaseRecordID())
-	log.Println(istructs.NewCDocCRecordID(recID.BaseRecordID()))
-	recID = istructs.RecordID(9999999996)
-	log.Println(recID.BaseRecordID())
-	log.Println(istructs.NewCDocCRecordID(recID.BaseRecordID()))
-	recID = istructs.RecordID(5000000333)
-	log.Println(recID.BaseRecordID())
-	log.Println(istructs.NewCDocCRecordID(recID.BaseRecordID()))
-	log.Println(istructs.NewRecordID(istructs.NullRecordID))
-}
-
 func TestIDGenerator(t *testing.T) {
 	require := require.New(t)
 	bld := appdef.New()
