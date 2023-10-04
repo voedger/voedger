@@ -16,7 +16,6 @@ type Occurs uint16
 //	- TypeKind_ODoc and TypeKind_CRecord,
 //	- TypeKind_WDoc and TypeKind_WRecord,
 //	- TypeKind_Object and TypeKind_Element,
-//	- TypeKind_ViewRecord and TypeKind_ViewKey
 //
 // Ref. to container.go for implementation
 type IContainers interface {
@@ -67,7 +66,4 @@ type IContainer interface {
 
 	// Returns maximum occurs
 	MaxOccurs() Occurs
-
-	// Returns is container system
-	IsSys() bool
 }

@@ -65,7 +65,6 @@ func Test_KeyType(t *testing.T) {
 	require.NotNil(app)
 
 	key := newKey(appCfg, viewName)
-	require.Equal(appdef.ViewKeyDefName(viewName), key.AsQName(appdef.SystemField_QName))
 
 	t.Run("key must supports IKeyBuilder interface", func(t *testing.T) {
 		kb := istructs.IKeyBuilder(key)
@@ -122,7 +121,7 @@ func Test_KeyType(t *testing.T) {
 			view := appCfg.AppDef.View(viewName)
 			cnt := 0
 			k.FieldNames(func(n string) {
-				require.NotNil(view.Key().Field(n))
+				require.NotNil(view.Key().Field(n), "unknown field name passed in callback from IKey.FieldNames(): %q", n)
 				cnt++
 			})
 			require.Positive(cnt)

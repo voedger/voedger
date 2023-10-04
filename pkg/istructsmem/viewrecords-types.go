@@ -7,6 +7,7 @@ package istructsmem
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -29,20 +30,12 @@ func newAppViewRecords(app *appStructsType) appViewRecords {
 
 // istructs.IViewRecords.KeyBuilder
 func (vr *appViewRecords) KeyBuilder(view appdef.QName) istructs.IKeyBuilder {
-	key := newKey(vr.app.config, view)
-	if ok, err := key.validDefs(); !ok {
-		panic(err)
-	}
-	return key
+	return newKey(vr.app.config, view)
 }
 
 // istructs.IViewRecords.NewValueBuilder
 func (vr *appViewRecords) NewValueBuilder(view appdef.QName) istructs.IValueBuilder {
-	value := newValue(vr.app.config, view)
-	if ok, err := value.validDefs(); !ok {
-		panic(err)
-	}
-	return value
+	return newValue(vr.app.config, view)
 }
 
 // istructs.IViewRecords.UpdateValueBuilder
@@ -64,7 +57,7 @@ func (vr *appViewRecords) Get(workspace istructs.WSID, key istructs.IKeyBuilder)
 	if err = k.build(); err != nil {
 		return value, err
 	}
-	if err = vr.app.config.validators.validKey(k, false); err != nil {
+	if err = vr.app.config.validators.validViewKey(k, false); err != nil {
 		return value, err
 	}
 
@@ -105,7 +98,7 @@ func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRe
 		if err = k.build(); err != nil {
 			return fmt.Errorf("error building key at batch item %d: %w", i, err)
 		}
-		if err = vr.app.config.validators.validKey(k, false); err != nil {
+		if err = vr.app.config.validators.validViewKey(k, false); err != nil {
 			return fmt.Errorf("not valid key at batch item %d: %w", i, err)
 		}
 		pKey, cKey := k.storeToBytes(workspace)
@@ -164,7 +157,7 @@ func (vr *appViewRecords) Read(ctx context.Context, workspace istructs.WSID, key
 	if err = k.build(); err != nil {
 		return err
 	}
-	if err = vr.app.config.validators.validKey(k, true); err != nil {
+	if err = vr.app.config.validators.validViewKey(k, true); err != nil {
 		return err
 	}
 
@@ -188,46 +181,55 @@ func (vr *appViewRecords) Read(ctx context.Context, workspace istructs.WSID, key
 
 // keyType is complex key from two parts (partition key and clustering key)
 //
-// # Implements interfaces:
+// # Implements:
 //   - IKeyBuilder & IRowWriter
 //   - IKey & IRowReader
 type keyType struct {
 	appCfg   *AppConfigType
 	viewName appdef.QName
 	viewID   qnames.QNameID
+	view     appdef.IView
 	partRow  rowType
 	ccolsRow rowType
 }
 
+// Returns new key for specified view.
+//
+// # Panics:
+//   - if view name is empty,
+//   - if view not found
 func newKey(appCfg *AppConfigType, name appdef.QName) *keyType {
+	if name == appdef.NullQName {
+		panic(ErrNameMissed)
+	}
+	view := appCfg.AppDef.View(name)
+	if view == nil {
+		panic(fmt.Errorf(errViewNotFoundWrap, name, ErrNameNotFound))
+	}
+	id, err := appCfg.qNames.ID(name)
+	if err != nil {
+		panic(err)
+	}
+
 	key := keyType{
 		appCfg:   appCfg,
 		viewName: name,
-		partRow:  newRow(appCfg),
-		ccolsRow: newRow(appCfg),
+		viewID:   id,
+		view:     view,
+		partRow:  makeRow(appCfg),
+		ccolsRow: makeRow(appCfg),
 	}
-	key.partRow.setQName(key.pkDef())
-	key.ccolsRow.setQName(key.ccDef())
+	key.partRow.setViewPartKey(view)
+	key.ccolsRow.setViewClustCols(view)
 	return &key
 }
 
 // Builds partition and clustering columns rows and returns error if occurs
 func (key *keyType) build() (err error) {
-	if err = key.partRow.build(); err != nil {
-		return err
-	}
-	if err = key.ccolsRow.build(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Returns name of clustering columns key type
-func (key *keyType) ccDef() appdef.QName {
-	if v := key.appCfg.AppDef.View(key.viewName); v != nil {
-		return v.Key().ClustCols().QName()
-	}
-	return appdef.NullQName
+	return errors.Join(
+		key.partRow.build(),
+		key.ccolsRow.build(),
+	)
 }
 
 // Reads key from clustering columns bytes. Partition part of key must be filled (or copied) from key builder
@@ -240,41 +242,14 @@ func (key *keyType) loadFromBytes(cKey []byte) (err error) {
 	return nil
 }
 
-// Returns name of partition key type
-func (key *keyType) pkDef() appdef.QName {
-	if v := key.appCfg.AppDef.View(key.viewName); v != nil {
-		return v.Key().Partition().QName()
-	}
-
-	return appdef.NullQName
-}
-
 // Stores key to partition key bytes and to clustering columns bytes
 func (key *keyType) storeToBytes(ws istructs.WSID) (pKey, cKey []byte) {
 	return key.storeViewPartKey(ws), key.storeViewClustKey()
 }
 
-// Checks what key has correct view, partition and clustering columns names and returns error if not
-func (key *keyType) validDefs() (ok bool, err error) {
-	if key.viewName == appdef.NullQName {
-		return false, fmt.Errorf("missed view type: %w", ErrNameMissed)
-	}
-
-	if key.viewID, err = key.appCfg.qNames.ID(key.viewName); err != nil {
-		return false, err
-	}
-
-	v := key.appCfg.AppDef.View(key.viewName)
-	if v == nil {
-		return false, fmt.Errorf("unknown view «%v»: %w", key.viewName, ErrNameNotFound)
-	}
-
-	return true, nil
-}
-
 // istructs.IRowReader.AsBool
 func (key *keyType) AsBool(name string) bool {
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		return key.partRow.AsBool(name)
 	}
 	return key.ccolsRow.AsBool(name)
@@ -287,7 +262,7 @@ func (key *keyType) AsBytes(name string) []byte {
 
 // istructs.IRowReader.AsFloat32
 func (key *keyType) AsFloat32(name string) float32 {
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		return key.partRow.AsFloat32(name)
 	}
 	return key.ccolsRow.AsFloat32(name)
@@ -295,7 +270,7 @@ func (key *keyType) AsFloat32(name string) float32 {
 
 // istructs.IRowReader.AsFloat64
 func (key *keyType) AsFloat64(name string) float64 {
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		return key.partRow.AsFloat64(name)
 	}
 	return key.ccolsRow.AsFloat64(name)
@@ -303,7 +278,7 @@ func (key *keyType) AsFloat64(name string) float64 {
 
 // istructs.IRowReader.AsInt32
 func (key *keyType) AsInt32(name string) int32 {
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		return key.partRow.AsInt32(name)
 	}
 	return key.ccolsRow.AsInt32(name)
@@ -311,7 +286,7 @@ func (key *keyType) AsInt32(name string) int32 {
 
 // istructs.IRowReader.AsInt64
 func (key *keyType) AsInt64(name string) int64 {
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		return key.partRow.AsInt64(name)
 	}
 	return key.ccolsRow.AsInt64(name)
@@ -320,10 +295,10 @@ func (key *keyType) AsInt64(name string) int64 {
 // istructs.IRowReader.AsQName
 func (key *keyType) AsQName(name string) appdef.QName {
 	if name == appdef.SystemField_QName {
-		// special case: «sys.QName» field must return full key type
-		return appdef.ViewKeyDefName(key.viewName)
+		// special case: «sys.QName» field must return view name
+		return key.viewName
 	}
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		return key.partRow.AsQName(name)
 	}
 	return key.ccolsRow.AsQName(name)
@@ -331,7 +306,7 @@ func (key *keyType) AsQName(name string) appdef.QName {
 
 // istructs.IRowReader.AsRecordID
 func (key *keyType) AsRecordID(name string) istructs.RecordID {
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		return key.partRow.AsRecordID(name)
 	}
 	return key.ccolsRow.AsRecordID(name)
@@ -371,7 +346,7 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 					}
 
 					result := true
-					r1.fieldsDef().Fields(
+					r1.fields.Fields(
 						func(f appdef.IField) {
 							result = result && equalVal(r1.dyB.Get(f.Name()), r2.dyB.Get(f.Name()))
 						})
@@ -398,7 +373,7 @@ func (key *keyType) PartitionKey() istructs.IRowWriter {
 
 // istructs.IRowWriter.PutBool
 func (key *keyType) PutBool(name string, value bool) {
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutBool(name, value)
 	} else {
 		key.ccolsRow.PutBool(name, value)
@@ -417,7 +392,7 @@ func (key *keyType) PutChars(name string, value string) {
 
 // istructs.IRowWriter.PutFloat32
 func (key *keyType) PutFloat32(name string, value float32) {
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutFloat32(name, value)
 	} else {
 		key.ccolsRow.PutFloat32(name, value)
@@ -426,7 +401,7 @@ func (key *keyType) PutFloat32(name string, value float32) {
 
 // istructs.IRowWriter.PutFloat64
 func (key *keyType) PutFloat64(name string, value float64) {
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutFloat64(name, value)
 	} else {
 		key.ccolsRow.PutFloat64(name, value)
@@ -435,7 +410,7 @@ func (key *keyType) PutFloat64(name string, value float64) {
 
 // istructs.IRowWriter.PutInt32
 func (key *keyType) PutInt32(name string, value int32) {
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutInt32(name, value)
 	} else {
 		key.ccolsRow.PutInt32(name, value)
@@ -444,7 +419,7 @@ func (key *keyType) PutInt32(name string, value int32) {
 
 // istructs.IRowWriter.PutInt64
 func (key *keyType) PutInt64(name string, value int64) {
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutInt64(name, value)
 	} else {
 		key.ccolsRow.PutInt64(name, value)
@@ -453,7 +428,7 @@ func (key *keyType) PutInt64(name string, value int64) {
 
 // istructs.IRowWriter.PutNumber
 func (key *keyType) PutNumber(name string, value float64) {
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutNumber(name, value)
 	} else {
 		key.ccolsRow.PutNumber(name, value)
@@ -462,7 +437,7 @@ func (key *keyType) PutNumber(name string, value float64) {
 
 // istructs.IRowWriter.PutQName
 func (key *keyType) PutQName(name string, value appdef.QName) {
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutQName(name, value)
 	} else {
 		key.ccolsRow.PutQName(name, value)
@@ -471,7 +446,7 @@ func (key *keyType) PutQName(name string, value appdef.QName) {
 
 // istructs.IRowWriter.PutRecordID
 func (key *keyType) PutRecordID(name string, value istructs.RecordID) {
-	if key.partRow.fieldsDef().Field(name) != nil {
+	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutRecordID(name, value)
 	} else {
 		key.ccolsRow.PutRecordID(name, value)
@@ -495,27 +470,34 @@ type valueType struct {
 	viewName appdef.QName
 }
 
-func (val *valueType) Build() istructs.IValue {
-	if err := val.build(); err != nil {
-		panic(err)
-	}
-	value := newValue(val.appCfg, val.viewName)
-	value.copyFrom(&val.rowType)
-	return value
-}
-
+// Returns new value for specified view.
+//
+// # Panics:
+//   - if view name is empty,
+//   - if view not found
 func newValue(appCfg *AppConfigType, name appdef.QName) *valueType {
+	if name == appdef.NullQName {
+		panic(ErrNameMissed)
+	}
+	view := appCfg.AppDef.View(name)
+	if view == nil {
+		panic(fmt.Errorf(errViewNotFoundWrap, name, ErrNameNotFound))
+	}
+
 	value := valueType{
-		rowType:  newRow(appCfg),
+		rowType:  makeRow(appCfg),
 		viewName: name,
 	}
-	value.rowType.setQName(value.valueDef())
+	value.rowType.setType(view)
 	return &value
 }
 
 // newNullValue return new empty (null) value. Useful as result if no view record found
 func newNullValue() istructs.IValue {
-	return newValue(NullAppConfig, appdef.NullQName)
+	return &valueType{
+		rowType:  makeRow(NullAppConfig),
+		viewName: appdef.NullQName,
+	}
 }
 
 // Loads view value from bytes
@@ -538,24 +520,11 @@ func (val *valueType) loadFromBytes(in []byte) (err error) {
 	return nil
 }
 
-// valueDef returns name of view value type
-func (val *valueType) valueDef() appdef.QName {
-	if v := val.appCfg.AppDef.View(val.viewName); v != nil {
-		return v.Value().QName()
+func (val *valueType) Build() istructs.IValue {
+	if err := val.build(); err != nil {
+		panic(err)
 	}
-	return appdef.NullQName
-}
-
-// Checks what value has correct view and value types and returns error if not
-func (val *valueType) validDefs() (ok bool, err error) {
-	if val.viewName == appdef.NullQName {
-		return false, fmt.Errorf("missed view type: %w", ErrNameMissed)
-	}
-
-	v := val.appCfg.AppDef.View(val.viewName)
-	if v == nil {
-		return false, fmt.Errorf("unknown view type «%v»: %w", val.viewName, ErrNameNotFound)
-	}
-
-	return true, nil
+	value := newValue(val.appCfg, val.viewName)
+	value.copyFrom(&val.rowType)
+	return value
 }

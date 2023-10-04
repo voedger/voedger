@@ -11,12 +11,14 @@ package appdef
 type IView interface {
 	IType
 	IComment
-	IContainers
 
-	// Returns full (pk + ccols) view key type
+	// All view fields, include key and value.
+	IFields
+
+	// Returns full (pk + ccols) view key
 	Key() IViewKey
 
-	// Returns view value type
+	// Returns view value
 	Value() IViewValue
 }
 
@@ -30,20 +32,19 @@ type IViewBuilder interface {
 	Value() IViewValueBuilder
 }
 
-// View full (pk + cc) key type.
-//
-// Partition key fields is required, clustering columns is not.
+// View full (pk + cc) key.
 //
 // Ref. to view.go for implementation
 type IViewKey interface {
-	IType
+	// All key fields, include partition key and clustering columns.
+	//
+	// Partition key fields is required, clustering columns is not.
 	IFields
-	IContainers
 
-	// Returns partition key type
+	// Returns partition key
 	Partition() IViewPartKey
 
-	// Returns clustering columns type
+	// Returns clustering columns
 	ClustCols() IViewClustCols
 }
 
@@ -58,11 +59,11 @@ type IViewKeyBuilder interface {
 	ClustCols() IViewClustColsBuilder
 }
 
-// View partition key type.
+// View partition key.
 //
 // Ref. to view.go for implementation
 type IViewPartKey interface {
-	IType
+	// Partition key fields.
 	IFields
 }
 
@@ -87,11 +88,11 @@ type IViewPartKeyBuilder interface {
 	SetFieldComment(name string, comment ...string) IViewPartKeyBuilder
 }
 
-// View clustering columns type.
+// View clustering columns.
 //
 // Ref. to view.go for implementation
 type IViewClustCols interface {
-	IType
+	// Clustering columns fields.
 	IFields
 }
 
@@ -101,8 +102,11 @@ type IViewClustCols interface {
 type IViewClustColsBuilder interface {
 	// Adds clustering columns field.
 	//
+	// Only last column field can be variable length.
+	//
 	// # Panics:
-	//	- if field already exists in partition key or value fields.
+	//	- if field already exists in view;
+	//	- if already contains a variable length field.
 	AddField(name string, kind DataKind, comment ...string) IViewClustColsBuilder
 	AddRefField(name string, ref ...QName) IViewClustColsBuilder
 	AddStringField(name string, maxLen uint16) IViewClustColsBuilder
@@ -117,14 +121,17 @@ type IViewClustColsBuilder interface {
 	SetFieldComment(name string, comment ...string) IViewClustColsBuilder
 }
 
-// View value type.
+// View value.
 //
 // Ref. to view.go for implementation
 type IViewValue interface {
-	IType
+	// View value fields.
 	IFields
 }
 
+// View value builder.
+//
+// Ref. to view.go for implementation
 type IViewValueBuilder interface {
 	IFieldsBuilder
 }

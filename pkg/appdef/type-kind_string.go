@@ -18,21 +18,17 @@ func _() {
 	_ = x[TypeKind_ORecord-7]
 	_ = x[TypeKind_WRecord-8]
 	_ = x[TypeKind_ViewRecord-9]
-	_ = x[TypeKind_ViewRecord_PartitionKey-10]
-	_ = x[TypeKind_ViewRecord_ClusteringColumns-11]
-	_ = x[TypeKind_ViewRecord_Key-12]
-	_ = x[TypeKind_ViewRecord_Value-13]
-	_ = x[TypeKind_Object-14]
-	_ = x[TypeKind_Element-15]
-	_ = x[TypeKind_Query-16]
-	_ = x[TypeKind_Command-17]
-	_ = x[TypeKind_Workspace-18]
-	_ = x[TypeKind_FakeLast-19]
+	_ = x[TypeKind_Object-10]
+	_ = x[TypeKind_Element-11]
+	_ = x[TypeKind_Query-12]
+	_ = x[TypeKind_Command-13]
+	_ = x[TypeKind_Workspace-14]
+	_ = x[TypeKind_FakeLast-15]
 }
 
-const _TypeKind_name = "TypeKind_nullTypeKind_GDocTypeKind_CDocTypeKind_ODocTypeKind_WDocTypeKind_GRecordTypeKind_CRecordTypeKind_ORecordTypeKind_WRecordTypeKind_ViewRecordTypeKind_ViewRecord_PartitionKeyTypeKind_ViewRecord_ClusteringColumnsTypeKind_ViewRecord_KeyTypeKind_ViewRecord_ValueTypeKind_ObjectTypeKind_ElementTypeKind_QueryTypeKind_CommandTypeKind_WorkspaceTypeKind_FakeLast"
+const _TypeKind_name = "TypeKind_nullTypeKind_GDocTypeKind_CDocTypeKind_ODocTypeKind_WDocTypeKind_GRecordTypeKind_CRecordTypeKind_ORecordTypeKind_WRecordTypeKind_ViewRecordTypeKind_ObjectTypeKind_ElementTypeKind_QueryTypeKind_CommandTypeKind_WorkspaceTypeKind_FakeLast"
 
-var _TypeKind_index = [...]uint16{0, 13, 26, 39, 52, 65, 81, 97, 113, 129, 148, 180, 217, 240, 265, 280, 296, 310, 326, 344, 361}
+var _TypeKind_index = [...]uint8{0, 13, 26, 39, 52, 65, 81, 97, 113, 129, 148, 163, 179, 193, 209, 227, 244}
 
 func (i TypeKind) String() string {
 	if i >= TypeKind(len(_TypeKind_index)-1) {

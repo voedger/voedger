@@ -227,9 +227,9 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		row2 := newRow(nil)
 		row2.copyFrom(row1)
 
-		testRowsIsEqual(t, row1, &row2)
+		testRowsIsEqual(t, row1, row2)
 
-		testTestRow(t, &row2)
+		testTestRow(t, row2)
 	})
 
 	t.Run("As××× row methods must return default values if not calls Put×××", func(t *testing.T) {
@@ -245,14 +245,14 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		require.Equal(false, row.AsBool("bool"))
 		require.Equal(istructs.NullRecordID, row.AsRecordID("RecordID"))
 
-		val := newEmptyViewValue()
+		val := newEmptyTestViewValue()
 		require.Equal(istructs.IDbEvent(nil), val.AsEvent(test.testViewRecord.valueFields.event))
 		rec := val.AsRecord(test.testViewRecord.valueFields.record)
 		require.Equal(appdef.NullQName, rec.QName())
 	})
 
 	t.Run("PutNumber to numeric-type fields must be available (json)", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutNumber("int32", 1)
@@ -271,7 +271,7 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 	})
 
 	t.Run("PutChars to char-type fields (string, bytes and QName) must be available (json)", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutChars("string", "test 🏐 тест")
@@ -293,18 +293,18 @@ func Test_rowType_PutAs_ComplexTypes(t *testing.T) {
 	test := test()
 
 	t.Run("PutRecord and PutEvent / AsRecord and AsEvent row methods (via IValue)", func(t *testing.T) {
-		row1 := newTestViewValue()
-		testTestViewValue(t, row1)
+		v1 := newTestViewValue()
+		testTestViewValue(t, v1)
 
-		row2 := newRow(test.AppCfg)
-		row2.copyFrom(row1)
-		testTestViewValue(t, &row2)
+		v2 := newTestViewValue()
+		v2.copyFrom(&v1.rowType)
+		testTestViewValue(t, v2)
 
-		testRowsIsEqual(t, row1, &row2)
+		testRowsIsEqual(t, &v1.rowType, &v2.rowType)
 	})
 
 	t.Run("must success NullRecord value for PutRecord / AsRecord methods", func(t *testing.T) {
-		row := newEmptyViewValue()
+		row := newEmptyTestViewValue()
 		row.PutString(test.testViewRecord.valueFields.buyer, "buyer")
 		row.PutRecord(test.testViewRecord.valueFields.record, NewNullRecord(istructs.NullRecordID))
 		require.NoError(row.build())
@@ -325,7 +325,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 		testPut := func(put func(row istructs.IRowWriter)) {
 			row := newRow(test.AppCfg)
 			row.setQName(test.testRow)
-			put(&row)
+			put(row)
 			require.ErrorIs(row.build(), ErrNameNotFound)
 		}
 
@@ -349,7 +349,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 		testPut := func(put func(row istructs.IRowWriter)) {
 			row := newRow(test.AppCfg)
 			row.setQName(test.testRow)
-			put(&row)
+			put(row)
 			require.ErrorIs(row.build(), ErrWrongFieldType)
 		}
 
@@ -365,7 +365,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 	})
 
 	t.Run("PutNumber to non-numeric type field must be error", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutNumber("bytes", 29)
@@ -374,7 +374,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 	})
 
 	t.Run("PutQName with unknown QName value must be error", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutQName("QName", appdef.NewQName("unknown", "unknown"))
@@ -384,7 +384,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 	t.Run("PutChars error handling", func(t *testing.T) {
 		t.Run("PutChars to non-char type fields must be error", func(t *testing.T) {
-			row := newRow(test.AppCfg)
+			row := makeRow(test.AppCfg)
 			row.setQName(test.testRow)
 
 			row.PutChars("int32", "29")
@@ -393,7 +393,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 		})
 
 		t.Run("PutChars to QName-type fields non convertible value must be error", func(t *testing.T) {
-			row := newRow(test.AppCfg)
+			row := makeRow(test.AppCfg)
 			row.setQName(test.testRow)
 
 			row.PutChars("QName", "welcome.2.error")
@@ -402,7 +402,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 		})
 
 		t.Run("PutChars to bytes-type fields non convertible base64 value must be error", func(t *testing.T) {
-			row := newRow(test.AppCfg)
+			row := makeRow(test.AppCfg)
 			row.setQName(test.testRow)
 
 			row.PutChars("bytes", "welcome.2.error")
@@ -412,7 +412,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 	})
 
 	t.Run("Multiply Put××× errors must be concatenated in build error", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutFloat32("unknown_field", 555.5)
@@ -424,7 +424,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 	})
 
 	t.Run("Must be error to put into abstract table", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.abstractCDoc)
 
 		row.PutInt32("int32", 1)
@@ -459,7 +459,7 @@ func Test_rowType_RecordIDs(t *testing.T) {
 
 	t.Run("RecordIDs must iterate all IDs", func(t *testing.T) {
 
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutRecordID("RecordID", 1)
@@ -485,7 +485,7 @@ func Test_rowType_RecordIDs(t *testing.T) {
 	})
 
 	t.Run("RecordIDs must iterate not null IDs", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutRecordID("RecordID", 1)
@@ -534,7 +534,7 @@ func Test_rowType_FieldNames(t *testing.T) {
 	test := test()
 
 	t.Run("new [or null] row must have hot fields", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 
 		cnt := 0
 		row.FieldNames(func(fieldName string) {
@@ -544,7 +544,7 @@ func Test_rowType_FieldNames(t *testing.T) {
 	})
 
 	t.Run("new test row must have only QName field", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		cnt := 0
@@ -574,7 +574,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 	test := test()
 
 	t.Run("Put××× unknown field name must have build error", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutInt32("unknown", 1)
@@ -582,7 +582,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 	})
 
 	t.Run("Put××× invalid field value type must have build error", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutString("int32", "a")
@@ -590,7 +590,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 	})
 
 	t.Run("PutString to []byte type must collect convert error", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutString("bytes", "some string")
@@ -599,7 +599,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 	})
 
 	t.Run("PutQName invalid QName must have build error", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutString("QName", "zZz")
@@ -613,7 +613,7 @@ func Test_rowType_Nils(t *testing.T) {
 	test := test()
 
 	t.Run("must be empty nils if no nil assignment", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutInt32("int32", 8)
@@ -622,7 +622,7 @@ func Test_rowType_Nils(t *testing.T) {
 	})
 
 	t.Run("check nils", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		t.Run("check first nil", func(t *testing.T) {
@@ -666,7 +666,7 @@ func Test_rowType_Nils(t *testing.T) {
 	})
 
 	t.Run("check nil assignment", func(t *testing.T) {
-		row := newRow(test.AppCfg)
+		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 		row.PutInt32("int32", 0)
 		row.PutInt64("int64", 0)

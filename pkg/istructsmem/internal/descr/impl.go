@@ -25,6 +25,15 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 	app.AppDef().Types(func(typ appdef.IType) {
 		name := typ.QName()
 		pkg := getPkg(name, a)
+
+		if view, ok := typ.(appdef.IView); ok {
+			v := newView()
+			v.Name = name
+			pkg.Views[name.String()] = v
+			v.read(view)
+			return
+		}
+
 		t := newType()
 		t.Name = name
 		pkg.Types[name.String()] = t
@@ -66,6 +75,7 @@ func getPkg(name appdef.QName, a *Application) *Package {
 func newPackage() *Package {
 	return &Package{
 		Types:      make(map[string]*Type),
+		Views:      make(map[string]*View),
 		Resources:  make(map[string]*Resource),
 		RateLimits: make(map[string][]*RateLimit),
 	}

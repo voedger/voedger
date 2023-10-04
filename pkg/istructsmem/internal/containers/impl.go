@@ -76,9 +76,7 @@ func (cnt *Containers) collectAll(appDef appdef.IAppDef) (err error) {
 				if cont, ok := t.(appdef.IContainers); ok {
 					cont.Containers(
 						func(c appdef.IContainer) {
-							if !c.IsSys() {
-								err = errors.Join(err, cnt.collect(c.Name()))
-							}
+							err = errors.Join(err, cnt.collect(c.Name()))
 						})
 				}
 			})
@@ -166,14 +164,12 @@ func (cnt *Containers) store(storage istorage.IAppStorage, versions *vers.Versio
 		if name == "" {
 			continue // skip NullContainerID
 		}
-		if !appdef.IsSysContainer(name) {
-			item := istorage.BatchItem{
-				PKey:  pKey,
-				CCols: []byte(name),
-				Value: utils.ToBytes(id),
-			}
-			batch = append(batch, item)
+		item := istorage.BatchItem{
+			PKey:  pKey,
+			CCols: []byte(name),
+			Value: utils.ToBytes(id),
 		}
+		batch = append(batch, item)
 	}
 
 	if err = storage.PutBatch(batch); err != nil {

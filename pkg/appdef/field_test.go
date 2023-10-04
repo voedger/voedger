@@ -118,8 +118,8 @@ func Test_AddField(t *testing.T) {
 	})
 
 	t.Run("must be panic if field data kind is not allowed by type kind", func(t *testing.T) {
-		view := New().AddView(NewQName("test", "view"))
-		require.Panics(func() { view.Key().Partition().AddField("f1", DataKind_string) })
+		o := New().AddObject(NewQName("test", "object"))
+		require.Panics(func() { o.AddField("f1", DataKind_Event, false) })
 	})
 
 	t.Run("must be panic if too many fields", func(t *testing.T) {
@@ -358,4 +358,19 @@ func TestValidateRefFields(t *testing.T) {
 		require.ErrorIs(err, ErrInvalidTypeKind)
 		require.ErrorContains(err, "non referable type «test.obj»")
 	})
+}
+
+func TestNullFields(t *testing.T) {
+	require := require.New(t)
+
+	require.Nil(NullFields.Field("field"))
+	require.Zero(NullFields.FieldCount())
+	NullFields.Fields(func(IField) { require.Fail("Fields() must be empty") })
+
+	require.Nil(NullFields.RefField("field"))
+	require.Zero(NullFields.RefFieldCount())
+	NullFields.RefFields(func(IRefField) { require.Fail("RefFields() must be empty") })
+
+	require.Zero(NullFields.UserFieldCount())
+	NullFields.UserFields(func(IField) { require.Fail("UserFields() must be empty") })
 }

@@ -52,7 +52,7 @@ type AppConfigType struct {
 	// Application configuration parameters
 	Params AppConfigParams
 
-	dynoSchemes dynobuf.DynoBufSchemes
+	dynoSchemes *dynobuf.DynoBufSchemes
 	validators  *validators
 
 	storage                 istorage.IAppStorage // will be initialized on prepare()
