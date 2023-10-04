@@ -7,40 +7,22 @@ package appdef
 
 // Workflow document.
 type IWDoc interface {
-	IType
-	IComment
-	IFields
-	IContainers
-	IUniques
-	IWithAbstract
+	IDoc
 }
 
 type IWDocBuilder interface {
 	IWDoc
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IUniquesBuilder
-	IWithAbstractBuilder
+	IDocBuilder
 }
 
 // Workflow document record.
 //
 // Ref. to wdoc.go for implementation
 type IWRecord interface {
-	IType
-	IComment
-	IFields
-	IContainers
-	IUniques
-	IWithAbstract
+	IRecord
 }
 
 type IWRecordBuilder interface {
 	IWRecord
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IUniquesBuilder
-	IWithAbstractBuilder
+	IRecordBuilder
 }

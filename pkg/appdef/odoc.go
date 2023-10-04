@@ -8,20 +8,12 @@ package appdef
 // # Implements:
 //   - IODoc, IODocBuilder
 type oDoc struct {
-	typ
-	comment
-	fields
-	containers
-	withAbstract
+	doc
 }
 
 func newODoc(app *appDef, name QName) *oDoc {
-	d := &oDoc{
-		typ: makeType(app, name, TypeKind_ODoc),
-	}
-	d.fields = makeFields(d)
-	d.containers = makeContainers(d)
-	d.makeSysFields()
+	d := &oDoc{}
+	d.doc = makeDoc(app, name, TypeKind_ODoc, d)
 	app.appendType(d)
 	return d
 }
@@ -29,20 +21,12 @@ func newODoc(app *appDef, name QName) *oDoc {
 // # Implements:
 //   - IORecord, IORecordBuilder
 type oRecord struct {
-	typ
-	comment
-	fields
-	containers
-	withAbstract
+	record
 }
 
 func newORecord(app *appDef, name QName) *oRecord {
-	r := &oRecord{
-		typ: makeType(app, name, TypeKind_ORecord),
-	}
-	r.fields = makeFields(r)
-	r.containers = makeContainers(r)
-	r.makeSysFields()
+	r := &oRecord{}
+	r.record = makeRecord(app, name, TypeKind_ORecord, r)
 	app.appendType(r)
 	return r
 }

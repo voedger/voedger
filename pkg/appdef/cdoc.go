@@ -16,7 +16,6 @@ type cDoc struct {
 func newCDoc(app *appDef, name QName) *cDoc {
 	d := &cDoc{}
 	d.doc = makeDoc(app, name, TypeKind_CDoc, d)
-	d.makeSysFields()
 	app.appendType(d)
 	return d
 }
@@ -38,7 +37,6 @@ type cRecord struct {
 func newCRecord(app *appDef, name QName) *cRecord {
 	r := &cRecord{}
 	r.record = makeRecord(app, name, TypeKind_CRecord, r)
-	r.makeSysFields()
 	app.appendType(r)
 	return r
 }

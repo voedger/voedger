@@ -14,7 +14,6 @@ type object struct {
 func newObject(app *appDef, name QName) *object {
 	o := &object{}
 	o.structure = makeStructure(app, name, TypeKind_Object, o)
-	o.makeSysFields()
 	app.appendType(o)
 	return o
 }
@@ -28,7 +27,6 @@ type element struct {
 func newElement(app *appDef, name QName) *element {
 	e := &element{}
 	e.structure = makeStructure(app, name, TypeKind_Element, e)
-	e.makeSysFields()
 	app.appendType(e)
 	return e
 }

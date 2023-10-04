@@ -10,7 +10,6 @@ package appdef
 // Ref. to query.go for implementation
 type IQuery interface {
 	IType
-	IComment
 
 	// Argument. Returns nil if not assigned
 	Arg() IObject

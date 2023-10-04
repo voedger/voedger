@@ -10,7 +10,6 @@ package appdef
 // Ref to view.go for implementation
 type IView interface {
 	IType
-	IComment
 
 	// All view fields, include key and value.
 	IFields

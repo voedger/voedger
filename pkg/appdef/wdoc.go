@@ -14,7 +14,6 @@ type wDoc struct {
 func newWDoc(app *appDef, name QName) *wDoc {
 	d := &wDoc{}
 	d.doc = makeDoc(app, name, TypeKind_WDoc, d)
-	d.makeSysFields()
 	app.appendType(d)
 	return d
 }
@@ -28,7 +27,6 @@ type wRecord struct {
 func newWRecord(app *appDef, name QName) *wRecord {
 	r := &wRecord{}
 	r.record = makeRecord(app, name, TypeKind_WRecord, r)
-	r.makeSysFields()
 	app.appendType(r)
 	return r
 }

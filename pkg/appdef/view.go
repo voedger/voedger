@@ -27,10 +27,9 @@ func newView(app *appDef, name QName) *view {
 	}
 
 	v.fields = makeFields(v)
+	v.fields.makeSysFields(TypeKind_ViewRecord)
 	v.key = newViewKey(v)
 	v.value = newViewValue(v)
-
-	v.makeSysFields()
 
 	app.appendType(v)
 
@@ -317,7 +316,7 @@ func newViewValue(v *view) *viewValue {
 		view:   v,
 		fields: makeFields(v),
 	}
-	val.makeSysFields()
+	val.fields.makeSysFields(TypeKind_ViewRecord)
 	return val
 }
 

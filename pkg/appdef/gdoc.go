@@ -14,7 +14,6 @@ type gDoc struct {
 func newGDoc(app *appDef, name QName) *gDoc {
 	d := &gDoc{}
 	d.doc = makeDoc(app, name, TypeKind_GDoc, d)
-	d.makeSysFields()
 	app.appendType(d)
 	return d
 }
@@ -28,7 +27,6 @@ type gRecord struct {
 func newGRecord(app *appDef, name QName) *gRecord {
 	r := &gRecord{}
 	r.record = makeRecord(app, name, TypeKind_GRecord, r)
-	r.makeSysFields()
 	app.appendType(r)
 	return r
 }

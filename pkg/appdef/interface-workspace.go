@@ -10,7 +10,6 @@ package appdef
 // Ref. to workspace.go for implementation
 type IWorkspace interface {
 	IType
-	IComment
 	IWithAbstract
 
 	// Returns type included by workspace by name.

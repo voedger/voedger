@@ -25,6 +25,7 @@ func makeStructure(app *appDef, name QName, kind TypeKind, parent interface{}) s
 		parent: parent,
 	}
 	s.fields = makeFields(parent)
+	s.fields.makeSysFields(kind)
 	s.containers = makeContainers(parent)
 	s.uniques = makeUniques(parent)
 	return s

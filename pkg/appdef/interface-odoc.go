@@ -9,36 +9,22 @@ package appdef
 //
 // Ref. to odoc.go for implementation
 type IODoc interface {
-	IType
-	IComment
-	IFields
-	IContainers
-	IWithAbstract
+	IDoc
 }
 
 type IODocBuilder interface {
 	IODoc
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IWithAbstractBuilder
+	IDocBuilder
 }
 
 // Operation document record.
 //
 // Ref. to odoc.go for implementation
 type IORecord interface {
-	IType
-	IComment
-	IFields
-	IContainers
-	IWithAbstract
+	IRecord
 }
 
 type IORecordBuilder interface {
 	IORecord
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IWithAbstractBuilder
+	IRecordBuilder
 }

@@ -7,40 +7,22 @@ package appdef
 
 // Global document
 type IGDoc interface {
-	IType
-	IComment
-	IFields
-	IContainers
-	IUniques
-	IWithAbstract
+	IDoc
 }
 
 type IGDocBuilder interface {
 	IGDoc
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IUniquesBuilder
-	IWithAbstractBuilder
+	IDocBuilder
 }
 
 // Global document record
 //
 // Ref. to gdoc.go for implementation
 type IGRecord interface {
-	IType
-	IComment
-	IFields
-	IContainers
-	IUniques
-	IWithAbstract
+	IRecord
 }
 
 type IGRecordBuilder interface {
 	IGRecord
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IUniquesBuilder
-	IWithAbstractBuilder
+	IRecordBuilder
 }
