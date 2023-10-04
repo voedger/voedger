@@ -416,5 +416,15 @@ TABLE cdoc1 INHERITS CDoc ();
 TABLE cdoc2 INHERITS CDoc (
 	field1 ref, -- war RecordID, should be denied to create RecordID field -> ref type for now
 	field2 ref(cdoc1, department),
-	field3 ref
+	field3 ref,
+	field4 ref(odoc1)
+);
+
+TABLE odoc1 INHERITS ODoc (
+	orecord1 TABLE orecord1()
+);
+
+TABLE odoc2 INHERITS ODoc (
+	odoc1 ref(odoc1),
+	orec1 ref(orecord1)
 );

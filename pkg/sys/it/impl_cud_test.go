@@ -280,7 +280,6 @@ func TestRefIntegrity(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("CUDs", func(t *testing.T) {
-		t.Skip("wait for https://github.com/voedger/voedger/issues/566")
 		body := `{"cuds":[{"fields":{"sys.ID":2,"sys.QName":"app1.department","pc_fix_button": 1,"rm_fix_button": 1, "id_food_group": 123456}}]}`
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
 
@@ -325,6 +324,20 @@ func TestRefIntegrity(t *testing.T) {
 		// InviteID arg is recordID that references an unexisting record
 		body := `{"args":{"InviteID":1234567}}`
 		vit.PostWS(ws, "c.sys.CancelSentInvite", body, coreutils.Expect400())
+	})
+
+	t.Run("ODocs", func(t *testing.T) {
+		body := `{"cuds":[{"fields":{"sys.ID": 2, "sys.QName":"app1.odoc1","orecord1":[{"sys.ID":2,"sys.ParentID":1}]}}]}`
+		resp := vit.PostWS(ws, "c.sys.CUD", body)
+		idOdoc1 := resp.NewIDs["1"]
+		idOrec1 := resp.NewIDs["2"]
+		_ = idOdoc1
+		_ = idOrec1
+
+		t.Run("ref to an unexisting ODoc", func(t *testing.T) {
+			body := `{"cuds":[{"fields":{"sys.ID": 1, "sys.QName":"app1.odoc2","odoc1ID":42}}]}`
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
+		})
 	})
 }
 

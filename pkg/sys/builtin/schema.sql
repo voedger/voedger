@@ -12,5 +12,12 @@ ALTER WORKSPACE Workspace (
 
 	EXTENSION ENGINE BUILTIN (
 		QUERY Echo(EchoParams) RETURNS EchoResult;
-	)
+	);
+
+	VIEW ORecordsRegistry (
+		ID ref NOT NULL,
+		Dummy int32 NOT NULL,
+		WLogOffset int64 NOT NULL,
+		PRIMARY KEY ((ID), Dummy)
+	) AS RESULT OF sys.ORecordsRegistryProjector;
 );

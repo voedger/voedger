@@ -42,8 +42,8 @@ func (cfgs *AppConfigsType) GetConfig(appName istructs.AppQName) *AppConfigType 
 
 // AppConfigType: configuration for application workflow
 type AppConfigType struct {
-	Name    istructs.AppQName
-	QNameID istructs.ClusterAppID
+	Name         istructs.AppQName
+	ClusterAppID istructs.ClusterAppID
 
 	appDefBuilder appdef.IAppDefBuilder
 	AppDef        appdef.IAppDef
@@ -79,7 +79,7 @@ func newAppConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppC
 	if !ok {
 		panic(fmt.Errorf("unable construct configuration for unknown application «%v»: %w", appName, istructs.ErrAppNotFound))
 	}
-	cfg.QNameID = qNameID
+	cfg.ClusterAppID = qNameID
 
 	cfg.appDefBuilder = appDef
 	app, err := appDef.Build()

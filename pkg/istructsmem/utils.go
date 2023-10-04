@@ -7,11 +7,9 @@ package istructsmem
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 
 	"github.com/untillpro/dynobuffers"
-	"golang.org/x/exp/slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
@@ -142,41 +140,6 @@ func FillElementFromJSON(data map[string]interface{}, t appdef.IType, b istructs
 func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectBuilder {
 	obj := makeObject(cfg, qName)
 	return &obj
-}
-
-func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
-	appDef := appStructs.AppDef()
-	qName := obj.AsQName(appdef.SystemField_QName)
-	t := appDef.Type(qName)
-	if fields, ok := t.(appdef.IFields); ok {
-		fields.Fields(
-			func(f appdef.IField) {
-				if f.DataKind() != appdef.DataKind_RecordID || err != nil {
-					return
-				}
-				recID := obj.AsRecordID(f.Name())
-				if recID.IsRaw() || recID == istructs.NullRecordID {
-					return
-				}
-				if rec, readErr := appStructs.Records().Get(wsid, true, recID); readErr == nil {
-					if rec.QName() == appdef.NullQName {
-						err = errors.Join(err,
-							fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, recID, qName, f.Name()))
-					} else {
-						if refField, ok := f.(appdef.IRefField); ok {
-							if len(refField.Refs()) > 0 && !slices.Contains(refField.Refs(), rec.QName()) {
-								err = errors.Join(err,
-									fmt.Errorf("%w: record ID %d referenced by %s.%s is of QName %s whereas %v QNames are only allowed", ErrReferentialIntegrityViolation,
-										recID, qName, f.Name(), rec.QName(), refField.Refs()))
-							}
-						}
-					}
-				} else {
-					err = errors.Join(err, readErr)
-				}
-			})
-	}
-	return err
 }
 
 func NewCmdResultBuilder(appCfg *AppConfigType) istructs.IObjectBuilder {
