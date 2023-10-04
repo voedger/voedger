@@ -59,8 +59,8 @@ func collectionProjector(appDef appdef.IAppDef) func(event istructs.IPLogEvent, 
 		}
 
 		return event.CUDs(func(rec istructs.ICUDRow) (err error) {
-			kind := appDef.Def(rec.QName()).Kind()
-			if kind != appdef.DefKind_CDoc && kind != appdef.DefKind_CRecord {
+			kind := appDef.Type(rec.QName()).Kind()
+			if kind != appdef.TypeKind_CDoc && kind != appdef.TypeKind_CRecord {
 				return
 			}
 			record, err := is.findRecordByID(rec.ID())

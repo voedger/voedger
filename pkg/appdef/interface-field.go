@@ -17,13 +17,13 @@ type DataKind uint8
 // Ref. verification-king.go for constants and methods
 type VerificationKind uint8
 
-// Definitions with fields:
-//	- DefKind_GDoc and DefKind_GRecord,
-//	- DefKind_CDoc and DefKind_CRecord,
-//	- DefKind_ODoc and DefKind_CRecord,
-//	- DefKind_WDoc and DefKind_WRecord,
-//	- DefKind_Object and DefKind_Element,
-//	- DefKind_ViewRecord_PartitionKey, DefKind_ViewRecord_ClusteringColumns and DefKind_ViewRecord_Value
+// Types with fields:
+//	- TypeKind_GDoc and TypeKind_GRecord,
+//	- TypeKind_CDoc and TypeKind_CRecord,
+//	- TypeKind_ODoc and TypeKind_CRecord,
+//	- TypeKind_WDoc and TypeKind_WRecord,
+//	- TypeKind_Object and TypeKind_Element,
+//	- TypeKind_ViewRecord_PartitionKey, TypeKind_ViewRecord_ClusteringColumns and TypeKind_ViewRecord_Value
 //
 // Ref. to field.go for implementation
 type IFields interface {
@@ -63,7 +63,7 @@ type IFieldsBuilder interface {
 	//   - if name is empty,
 	//   - if name is invalid,
 	//   - if field with name is already exists,
-	//   - if specified data kind is not allowed by definition kind.
+	//   - if specified data kind is not allowed by structured type kind.
 	AddField(name string, kind DataKind, required bool, comment ...string) IFieldsBuilder
 
 	// Adds reference field specified name and target refs.
@@ -102,7 +102,7 @@ type IFieldsBuilder interface {
 	//   - if field name is empty,
 	//   - if field name is invalid,
 	//   - if field with name is already exists,
-	//   - if data kind is not allowed by definition kind,
+	//   - if data kind is not allowed by structured type kind,
 	//   - if no verification kinds are specified
 	//
 	//Deprecated: use SetVerifiedField instead

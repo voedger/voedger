@@ -24,8 +24,8 @@ func provideCmdInitiateLeaveWorkspace(cfg *istructsmem.AppConfigType, timeFunc c
 	))
 }
 
-func execCmdInitiateLeaveWorkspace(timeFunc coreutils.TimeFunc) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateLeaveWorkspace(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
 		skbPrincipal, err := args.State.KeyBuilder(state.SubjectStorage, appdef.NullQName)
 		if err != nil {
 			return

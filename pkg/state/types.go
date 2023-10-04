@@ -318,6 +318,9 @@ func (v *recordsStorageValue) AsRecordID(name string) istructs.RecordID {
 	return v.record.AsRecordID(name)
 }
 func (v *recordsStorageValue) AsRecord(string) (record istructs.IRecord) { return v.record }
+func (v *recordsStorageValue) FieldNames(cb func(fieldName string)) {
+	v.record.FieldNames(cb)
+}
 
 //func (v *recordsStorageValue) AsRecord(string) (record istructs.IRecord) { return v.record }
 

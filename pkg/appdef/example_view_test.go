@@ -69,28 +69,28 @@ func ExampleIView() {
 		}
 
 		// how to inspect view partition key
-		fmt.Printf("view partition key is %q, %d fields:\n", view.Key().Partition().QName(), view.Key().Partition().FieldCount())
+		fmt.Printf("view partition key has %d fields:\n", view.Key().Partition().FieldCount())
 		view.Key().Partition().Fields(field)
 
 		// how to inspect view clustering columns
-		fmt.Printf("view clustering columns key is %q, %d fields:\n", view.Key().ClustCols().QName(), view.Key().ClustCols().FieldCount())
+		fmt.Printf("view clustering columns key has %d fields:\n", view.Key().ClustCols().FieldCount())
 		view.Key().ClustCols().Fields(field)
 
 		// how to inspect view value
-		fmt.Printf("view value is %q, %d fields:\n", view.Value().QName(), view.Value().FieldCount())
+		fmt.Printf("view value has %d fields:\n", view.Value().FieldCount())
 		view.Value().Fields(field)
 	}
 
 	// Output:
-	// view "test.view": DefKind_ViewRecord, view comment
-	// view partition key is "test.view_PartitionKey", 2 fields:
+	// view "test.view": TypeKind_ViewRecord, view comment
+	// view partition key has 2 fields:
 	// - pk_int: int64, required
 	// - pk_ref: RecordID, required, refs: [test.doc]
-	// view clustering columns key is "test.view_ClusteringColumns", 3 fields:
+	// view clustering columns key has 3 fields:
 	// - cc_int: int64
 	// - cc_ref: RecordID, refs: [test.doc]
 	// - cc_name: string, restricts: MaxLen: 100
-	// view value is "test.view_Value", 5 fields:
+	// view value has 5 fields:
 	// - sys.QName: QName, sys, required
 	// - vv_int: int64, required
 	// - vv_ref: RecordID, required, refs: [test.doc]

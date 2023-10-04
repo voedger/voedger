@@ -219,8 +219,8 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 	return nil
 }
 
-// Returns system fields mask combination for definition kind, see sfm_××× consts
-func defKindSysFieldsMask(kind appdef.DefKind) uint16 {
+// Returns system fields mask combination for type kind, see sfm_××× consts
+func typeKindSysFieldsMask(kind appdef.TypeKind) uint16 {
 	sfm := uint16(0)
 	if kind.HasSystemField(appdef.SystemField_ID) {
 		sfm |= sfm_ID
@@ -241,7 +241,7 @@ func loadRowSysFields(row *rowType, codecVer byte, buf *bytes.Buffer) (err error
 	var sysFieldMask uint16
 
 	if codecVer == codec_RawDynoBuffer {
-		sysFieldMask = defKindSysFieldsMask(row.def.Kind())
+		sysFieldMask = typeKindSysFieldsMask(row.typ.Kind())
 	} else {
 		if sysFieldMask, err = utils.ReadUInt16(buf); err != nil {
 			return fmt.Errorf("error read system fields mask: %w", err)

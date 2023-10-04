@@ -29,7 +29,7 @@ func ExampleIWorkspace() {
 
 		appDef.AddWorkspace(wsName).
 			SetDescriptor(descName).
-			AddDef(docName)
+			AddType(docName)
 
 		if a, err := appDef.Build(); err == nil {
 			app = a
@@ -44,16 +44,16 @@ func ExampleIWorkspace() {
 		ws := app.Workspace(wsName)
 		fmt.Printf("workspace %q: %v\n", ws.QName(), ws.Kind())
 
-		// how to inspect workspace definitions names
+		// how to inspect workspace types names
 		fmt.Printf("workspace %q descriptor is %q\n", ws.QName(), ws.Descriptor())
 
-		ws.Defs(func(d appdef.IDef) {
-			fmt.Printf("- Def: %q, kind: %v\n", d.QName(), d.Kind())
+		ws.Types(func(t appdef.IType) {
+			fmt.Printf("- Type: %q, kind: %v\n", t.QName(), t.Kind())
 		})
 	}
 
 	// Output:
-	// workspace "test.ws": DefKind_Workspace
+	// workspace "test.ws": TypeKind_Workspace
 	// workspace "test.ws" descriptor is "test.desc"
-	// - Def: "test.doc", kind: DefKind_CDoc
+	// - Type: "test.doc", kind: TypeKind_CDoc
 }

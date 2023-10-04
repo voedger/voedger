@@ -32,7 +32,7 @@ func (st *Singletons) ID(qName appdef.QName) (istructs.RecordID, error) {
 	if id, ok := st.qNames[qName]; ok {
 		return id, nil
 	}
-	return istructs.NullRecordID, fmt.Errorf("unable to find singleton ID for definition «%v»: %w", qName, ErrNameNotFound)
+	return istructs.NullRecordID, fmt.Errorf("unable to find singleton ID for type «%v»: %w", qName, ErrNameNotFound)
 }
 
 // Loads all singletons IDs from storage, add all known application singletons and store if some changes.
@@ -96,9 +96,9 @@ func (st *Singletons) load01(storage istorage.IAppStorage) error {
 
 // Collect all application singleton IDs
 func (st *Singletons) collectAllSingletons(appDef appdef.IAppDef) (err error) {
-	appDef.Defs(
-		func(d appdef.IDef) {
-			if cDoc, ok := d.(appdef.ICDoc); ok {
+	appDef.Types(
+		func(t appdef.IType) {
+			if cDoc, ok := t.(appdef.ICDoc); ok {
 				if cDoc.Singleton() {
 					err = errors.Join(err,
 						st.collectSingleton(cDoc.QName()))
@@ -109,7 +109,7 @@ func (st *Singletons) collectAllSingletons(appDef appdef.IAppDef) (err error) {
 	return err
 }
 
-// collectSingleton checks is application definition singleton in cache. If not then adds it with new ID
+// collectSingleton checks is CDoc singleton in cache. If not then adds it with new ID
 func (st *Singletons) collectSingleton(qname appdef.QName) error {
 
 	if _, ok := st.qNames[qname]; ok {

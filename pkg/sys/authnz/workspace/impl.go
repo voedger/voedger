@@ -113,7 +113,7 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 // c.sys.CreateWorkspaceID
 // targetApp/appWS
 func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istructs.AppQName) istructsmem.ExecCommandClosure {
-	return func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
 		// TODO: AuthZ: System,SystemToken in header
 		ownerWSID := args.ArgumentObject.AsInt64(Field_OwnerWSID)
 		wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
@@ -236,7 +236,7 @@ func invokeCreateWorkspaceProjector(federation coreutils.IFederation, appQName i
 // c.sys.CreateWorkspace
 // должно быть вызвано в целевом приложении, т.к. профиль пользователя находится в целевом приложении на схеме!!!
 func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProvider, appQName istructs.AppQName) istructsmem.ExecCommandClosure {
-	return func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) error {
+	return func(args istructs.ExecCommandArgs) error {
 		// TODO: AuthZ: System, SystemToken in header
 		// Check that CDoc<sys.WorkspaceDescriptor> does not exist yet (IRecords.GetSingleton())
 		wsKindInitializationDataStr := args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData)
@@ -250,8 +250,8 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 			if err != nil {
 				return fmt.Errorf("failed to get appStructs for appQName %s: %w", appQName.String(), err)
 			}
-			wsKindDef := as.AppDef().Def(wsKind)
-			if wsKindDef.Kind() == appdef.DefKind_null {
+			wsKindType := as.AppDef().Type(wsKind)
+			if wsKindType.Kind() == appdef.TypeKind_null {
 				return fmt.Errorf("unknown workspace kind: %s", wsKind.String())
 			}
 			if len(wsKindInitializationDataStr) == 0 {
@@ -261,7 +261,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 			if err := json.Unmarshal([]byte(wsKindInitializationDataStr), &wsKindInitializationData); err != nil {
 				return fmt.Errorf("failed to unmarshal workspace initialization data: %w", err)
 			}
-			if err := validateWSKindInitializationData(as, wsKindInitializationData, wsKindDef); err != nil {
+			if err := validateWSKindInitializationData(as, wsKindInitializationData, wsKindType); err != nil {
 				return fmt.Errorf("failed to validate workspace initialization data: %w", err)
 			}
 			return nil

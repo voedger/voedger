@@ -27,7 +27,7 @@ func Test_Race_SUsignUpIn(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	wg := &sync.WaitGroup{}

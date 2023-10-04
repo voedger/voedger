@@ -51,7 +51,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 
 		appDef.AddObject(appdef.NewQName("test", "obj")).
-			AddContainer("unknown", appdef.NewQName("test", "unknown"), 0, 1) // <- error here: reference to unknown element definition
+			AddContainer("unknown", appdef.NewQName("test", "unknown"), 0, 1) // <- error here: reference to unknown element type
 
 		_, storageProvider := teststore.New()
 		appStructs := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
@@ -76,7 +76,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 				func() appdef.IAppDefBuilder {
 					app := appdef.New()
 					app.AddObject(appdef.NewQName("test", "obj")).
-						AddContainer("unknown", appdef.NewQName("test", "unknown"), 0, 1) // <- error here: reference to unknown element definition
+						AddContainer("unknown", appdef.NewQName("test", "unknown"), 0, 1) // <- error here: reference to unknown element type
 					return app
 				}())
 		})

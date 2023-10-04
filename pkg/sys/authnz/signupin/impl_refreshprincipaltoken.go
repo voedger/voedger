@@ -21,13 +21,13 @@ func ProvideQryRefreshPrincipalToken(cfg *istructsmem.AppConfigType, appDefBuild
 		appdef.NewQName(appdef.SysPackage, "RefreshPrincipalToken"),
 		appdef.NullQName,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "RefreshPrincipalTokenResult")).
-			AddField(field_NewPrincipalToken, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_NewPrincipalToken, appdef.DataKind_string, true).(appdef.IType).QName(),
 		provideRefreshPrincipalTokenExec(itokens),
 	))
 }
 
 func provideRefreshPrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQueryClosure {
-	return func(_ context.Context, _ istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		existingPrincipalToken, err := state.GetPrincipalTokenFromState(args.State)
 		if err != nil {
 			return err
