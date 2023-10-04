@@ -44,7 +44,7 @@ type ICommand interface {
 
 type ICommandBuilder interface {
 	ICommand
-	ICommentBuilder
+	ITypeBuilder
 
 	// Sets command argument. Must be object or NullQName
 	SetArg(QName) ICommandBuilder

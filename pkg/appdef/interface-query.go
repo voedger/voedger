@@ -25,7 +25,7 @@ type IQuery interface {
 
 type IQueryBuilder interface {
 	IQuery
-	ICommentBuilder
+	ITypeBuilder
 
 	// Sets query argument. Must be object or NullQName
 	SetArg(QName) IQueryBuilder

@@ -30,7 +30,7 @@ type IWorkspace interface {
 
 type IWorkspaceBuilder interface {
 	IWorkspace
-	ICommentBuilder
+	ITypeBuilder
 	IWithAbstractBuilder
 
 	// Adds (includes) type to workspace. Type must be defined for application before.
