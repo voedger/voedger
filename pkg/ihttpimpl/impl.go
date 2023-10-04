@@ -16,7 +16,6 @@ import (
 	"net"
 	"net/http"
 	"regexp"
-	"strconv"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/istructs"
@@ -120,7 +119,7 @@ func (r *route) Path(resource string) (*route, error) {
 }
 
 func (hs *httpProcessor) Prepare() (err error) {
-	if hs.listener, err = net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(hs.params.Port)); err == nil {
+	if hs.listener, err = net.Listen("tcp", coreutils.ServerAddress(hs.params.Port)); err == nil {
 		logger.Info("listening port:", hs.listener.Addr().(*net.TCPAddr).Port)
 	}
 	return

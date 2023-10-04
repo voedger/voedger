@@ -13,7 +13,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/pprof"
-	"strconv"
 	"strings"
 	"time"
 
@@ -55,9 +54,7 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 		return err
 	}
 
-	port := strconv.Itoa(s.RouterParams.Port)
-
-	if s.listener, err = net.Listen("tcp", "127.0.0.1:"+port); err != nil {
+	if s.listener, err = net.Listen("tcp", coreutils.ServerAddress(s.RouterParams.Port)); err != nil {
 		return err
 	}
 
@@ -66,7 +63,7 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 	}
 
 	s.server = &http.Server{
-		Addr:         "127.0.0.1:" + port,
+		Addr:         coreutils.ServerAddress(s.RouterParams.Port),
 		Handler:      s.router,
 		ReadTimeout:  time.Duration(s.RouterParams.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(s.RouterParams.WriteTimeout) * time.Second,

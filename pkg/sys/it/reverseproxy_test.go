@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -22,7 +23,7 @@ func TestBasicUsage_ReverseProxy(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	targetListener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", it.TestServicePort))
+	targetListener, err := net.Listen("tcp", coreutils.ServerAddress(it.TestServicePort))
 	require.NoError(err)
 	errs := make(chan error)
 	targetHandler := targetHandler{t, &sync.Mutex{}, "", ""}

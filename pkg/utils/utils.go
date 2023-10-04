@@ -6,6 +6,7 @@
 package coreutils
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -36,4 +37,12 @@ func IsDebug() bool {
 func IsCassandraStorage() bool {
 	_, ok := os.LookupEnv("CASSANDRA_TESTS_ENABLED")
 	return ok
+}
+
+func ServerAddress(port int) string {
+	addr := ""
+	if IsTest() {
+		addr = "127.0.0.1"
+	}
+	return fmt.Sprintf("%s:%d", addr, port)
 }
