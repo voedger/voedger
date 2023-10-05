@@ -206,12 +206,12 @@ func (cc *viewClustCols) AddStringField(name string, maxLen uint16) IViewClustCo
 }
 
 func (cc *viewClustCols) AddBytesField(name string, maxLen uint16) IViewClustColsBuilder {
-	c.panicIfVarFieldDuplication(name, DataKind_bytes)
+	cc.panicIfVarFieldDuplication(name, DataKind_bytes)
 
-	c.view.AddBytesField(name, false, MaxLen(maxLen))
-	c.view.key.AddBytesField(name, false, MaxLen(maxLen))
-	c.fields.AddBytesField(name, false, MaxLen(maxLen))
-	return c
+	cc.view.AddBytesField(name, false, MaxLen(maxLen))
+	cc.view.key.AddBytesField(name, false, MaxLen(maxLen))
+	cc.fields.AddBytesField(name, false, MaxLen(maxLen))
+	return cc
 }
 
 func (cc *viewClustCols) SetFieldComment(name string, comment ...string) IViewClustColsBuilder {
