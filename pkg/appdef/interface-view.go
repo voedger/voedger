@@ -25,10 +25,10 @@ type IViewBuilder interface {
 	ICommentBuilder
 
 	// Returns full (pk + ccols) view key builder
-	Key() IViewKeyBuilder
+	KeyBuilder() IViewKeyBuilder
 
 	// Returns view value builder
-	Value() IViewValueBuilder
+	ValueBuilder() IViewValueBuilder
 }
 
 // View full (pk + cc) key.
@@ -41,7 +41,7 @@ type IViewKey interface {
 	IFields
 
 	// Returns partition key
-	Partition() IViewPartKey
+	PartKey() IViewPartKey
 
 	// Returns clustering columns
 	ClustCols() IViewClustCols
@@ -52,10 +52,10 @@ type IViewKey interface {
 // Ref. to view.go for implementation
 type IViewKeyBuilder interface {
 	// Returns partition key type builder
-	Partition() IViewPartKeyBuilder
+	PartKeyBuilder() IViewPartKeyBuilder
 
 	// Returns clustering columns type builder
-	ClustCols() IViewClustColsBuilder
+	ClustColsBuilder() IViewClustColsBuilder
 }
 
 // View partition key.

@@ -69,7 +69,7 @@ func newViewBuilder(app *appDef, name QName) *viewBuilder {
 	}
 }
 
-func (v *viewBuilder) Key() IViewKeyBuilder {
+func (v *viewBuilder) KeyBuilder() IViewKeyBuilder {
 	return v.key
 }
 
@@ -77,7 +77,7 @@ func (v *viewBuilder) SetComment(line ...string) {
 	v.view.SetComment(line...)
 }
 
-func (v *viewBuilder) Value() IViewValueBuilder {
+func (v *viewBuilder) ValueBuilder() IViewValueBuilder {
 	return v.view.value
 }
 
@@ -103,7 +103,7 @@ func newViewKey(v *view) *viewKey {
 	return key
 }
 
-func (key *viewKey) Partition() IViewPartKey {
+func (key *viewKey) PartKey() IViewPartKey {
 	return key.pkey
 }
 
@@ -137,11 +137,11 @@ func newViewKeyBuilder(v *view) *viewKeyBuilder {
 	return k
 }
 
-func (k *viewKeyBuilder) Partition() IViewPartKeyBuilder {
+func (k *viewKeyBuilder) PartKeyBuilder() IViewPartKeyBuilder {
 	return k.pkey
 }
 
-func (k *viewKeyBuilder) ClustCols() IViewClustColsBuilder {
+func (k *viewKeyBuilder) ClustColsBuilder() IViewClustColsBuilder {
 	return k.ccols
 }
 

@@ -10,7 +10,7 @@ import (
 
 func provideViewJoinedWorkspaceIndex(app appdef.IAppDefBuilder) {
 	view := app.AddView(QNameViewJoinedWorkspaceIndex)
-	view.Key().Partition().AddField(field_Dummy, appdef.DataKind_int32)
-	view.Key().ClustCols().AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64)
-	view.Value().AddRefField(field_JoinedWorkspaceID, true)
+	view.KeyBuilder().PartKeyBuilder().AddField(field_Dummy, appdef.DataKind_int32)
+	view.KeyBuilder().ClustColsBuilder().AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64)
+	view.ValueBuilder().AddRefField(field_JoinedWorkspaceID, true)
 }

@@ -29,7 +29,7 @@ func (v *View) read(view appdef.IView) {
 }
 
 func (k *Key) read(key appdef.IViewKey) {
-	key.Partition().Fields(func(field appdef.IField) {
+	key.PartKey().Fields(func(field appdef.IField) {
 		f := newField()
 		f.read(field)
 		k.Partition = append(k.Partition, f)

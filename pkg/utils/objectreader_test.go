@@ -224,10 +224,10 @@ func TestReadValue(t *testing.T) {
 	appDefs := testAppDef()
 	viewName := appdef.NewQName("test", "view")
 	view := appDefs.AddView(viewName)
-	view.Key().Partition().AddField("pk", appdef.DataKind_int64)
-	view.Key().ClustCols().AddStringField("cc", appdef.DefaultFieldMaxLength)
+	view.KeyBuilder().PartKeyBuilder().AddField("pk", appdef.DataKind_int64)
+	view.KeyBuilder().ClustColsBuilder().AddStringField("cc", appdef.DefaultFieldMaxLength)
 	for n, k := range iValueFields {
-		view.Value().AddField(n, k, false)
+		view.ValueBuilder().AddField(n, k, false)
 	}
 
 	iValueValues := map[string]interface{}{}

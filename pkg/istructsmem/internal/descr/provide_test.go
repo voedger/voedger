@@ -40,11 +40,11 @@ func TestBasicUsage(t *testing.T) {
 
 	viewName := appdef.NewQName("test", "view")
 	view := appDef.AddView(viewName)
-	view.Key().Partition().
+	view.KeyBuilder().PartKeyBuilder().
 		AddField("pk_1", appdef.DataKind_int64)
-	view.Key().ClustCols().
+	view.KeyBuilder().ClustColsBuilder().
 		AddStringField("cc_1", 100)
-	view.Value().
+	view.ValueBuilder().
 		AddRefField("vv_1", true, docName)
 
 	res := &mockResources{}
