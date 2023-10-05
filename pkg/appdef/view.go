@@ -126,29 +126,29 @@ func newViewPartKey(v *view) *viewPartKey {
 	return pKey
 }
 
-func (k *viewPartKey) AddField(name string, kind DataKind, comment ...string) IViewPartKeyBuilder {
+func (pk *viewPartKey) AddField(name string, kind DataKind, comment ...string) IViewPartKeyBuilder {
 	if !kind.IsFixed() {
-		panic(fmt.Errorf("%v: view partition key field «%s» has variable length type «%s»: %w", k.view.QName(), name, kind.TrimString(), ErrInvalidDataKind))
+		panic(fmt.Errorf("%v: view partition key field «%s» has variable length type «%s»: %w", pk.view.QName(), name, kind.TrimString(), ErrInvalidDataKind))
 	}
 
-	k.view.AddField(name, kind, true, comment...)
-	k.view.key.AddField(name, kind, true, comment...)
-	k.fields.AddField(name, kind, true, comment...)
-	return k
+	pk.view.AddField(name, kind, true, comment...)
+	pk.view.key.AddField(name, kind, true, comment...)
+	pk.fields.AddField(name, kind, true, comment...)
+	return pk
 }
 
-func (k *viewPartKey) AddRefField(name string, ref ...QName) IViewPartKeyBuilder {
-	k.view.AddRefField(name, true, ref...)
-	k.view.key.AddRefField(name, true, ref...)
-	k.fields.AddRefField(name, true, ref...)
-	return k
+func (pk *viewPartKey) AddRefField(name string, ref ...QName) IViewPartKeyBuilder {
+	pk.view.AddRefField(name, true, ref...)
+	pk.view.key.AddRefField(name, true, ref...)
+	pk.fields.AddRefField(name, true, ref...)
+	return pk
 }
 
-func (k *viewPartKey) SetFieldComment(name string, comment ...string) IViewPartKeyBuilder {
-	k.view.SetFieldComment(name, comment...)
-	k.view.key.SetFieldComment(name, comment...)
-	k.fields.SetFieldComment(name, comment...)
-	return k
+func (pk *viewPartKey) SetFieldComment(name string, comment ...string) IViewPartKeyBuilder {
+	pk.view.SetFieldComment(name, comment...)
+	pk.view.key.SetFieldComment(name, comment...)
+	pk.fields.SetFieldComment(name, comment...)
+	return pk
 }
 
 // Validates view partition key
@@ -178,34 +178,34 @@ func newViewClustCols(v *view) *viewClustCols {
 	return cc
 }
 
-func (c *viewClustCols) AddField(name string, kind DataKind, comment ...string) IViewClustColsBuilder {
-	c.panicIfVarFieldDuplication(name, kind)
+func (cc *viewClustCols) AddField(name string, kind DataKind, comment ...string) IViewClustColsBuilder {
+	cc.panicIfVarFieldDuplication(name, kind)
 
-	c.view.AddField(name, kind, false, comment...)
-	c.view.key.AddField(name, kind, false, comment...)
-	c.fields.AddField(name, kind, false, comment...)
-	return c
+	cc.view.AddField(name, kind, false, comment...)
+	cc.view.key.AddField(name, kind, false, comment...)
+	cc.fields.AddField(name, kind, false, comment...)
+	return cc
 }
 
-func (c *viewClustCols) AddRefField(name string, ref ...QName) IViewClustColsBuilder {
-	c.panicIfVarFieldDuplication(name, DataKind_RecordID)
+func (cc *viewClustCols) AddRefField(name string, ref ...QName) IViewClustColsBuilder {
+	cc.panicIfVarFieldDuplication(name, DataKind_RecordID)
 
-	c.view.AddRefField(name, false, ref...)
-	c.view.key.AddRefField(name, false, ref...)
-	c.fields.AddRefField(name, false, ref...)
-	return c
+	cc.view.AddRefField(name, false, ref...)
+	cc.view.key.AddRefField(name, false, ref...)
+	cc.fields.AddRefField(name, false, ref...)
+	return cc
 }
 
-func (c *viewClustCols) AddStringField(name string, maxLen uint16) IViewClustColsBuilder {
-	c.panicIfVarFieldDuplication(name, DataKind_string)
+func (cc *viewClustCols) AddStringField(name string, maxLen uint16) IViewClustColsBuilder {
+	cc.panicIfVarFieldDuplication(name, DataKind_string)
 
-	c.view.AddStringField(name, false, MaxLen(maxLen))
-	c.view.key.AddStringField(name, false, MaxLen(maxLen))
-	c.fields.AddStringField(name, false, MaxLen(maxLen))
-	return c
+	cc.view.AddStringField(name, false, MaxLen(maxLen))
+	cc.view.key.AddStringField(name, false, MaxLen(maxLen))
+	cc.fields.AddStringField(name, false, MaxLen(maxLen))
+	return cc
 }
 
-func (c *viewClustCols) AddBytesField(name string, maxLen uint16) IViewClustColsBuilder {
+func (cc *viewClustCols) AddBytesField(name string, maxLen uint16) IViewClustColsBuilder {
 	c.panicIfVarFieldDuplication(name, DataKind_bytes)
 
 	c.view.AddBytesField(name, false, MaxLen(maxLen))
@@ -214,20 +214,20 @@ func (c *viewClustCols) AddBytesField(name string, maxLen uint16) IViewClustCols
 	return c
 }
 
-func (c *viewClustCols) SetFieldComment(name string, comment ...string) IViewClustColsBuilder {
-	c.view.SetFieldComment(name, comment...)
-	c.view.key.SetFieldComment(name, comment...)
-	c.fields.SetFieldComment(name, comment...)
-	return c
+func (cc *viewClustCols) SetFieldComment(name string, comment ...string) IViewClustColsBuilder {
+	cc.view.SetFieldComment(name, comment...)
+	cc.view.key.SetFieldComment(name, comment...)
+	cc.fields.SetFieldComment(name, comment...)
+	return cc
 }
 
 // Panics if variable length field already exists
-func (c *viewClustCols) panicIfVarFieldDuplication(name string, kind DataKind) {
-	if len(c.varField) > 0 {
-		panic(fmt.Errorf("%v: view clustering column already has a field of variable length «%s», you can not add a field «%s» after it: %w", c.view.QName(), c.varField, name, ErrInvalidDataKind))
+func (cc *viewClustCols) panicIfVarFieldDuplication(name string, kind DataKind) {
+	if len(cc.varField) > 0 {
+		panic(fmt.Errorf("%v: view clustering column already has a field of variable length «%s», you can not add a field «%s» after it: %w", cc.view.QName(), cc.varField, name, ErrInvalidDataKind))
 	}
 	if !kind.IsFixed() {
-		c.varField = name
+		cc.varField = name
 	}
 }
 
