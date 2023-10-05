@@ -49,15 +49,18 @@ classDiagram
     IType <|-- IStructure : inherits
     class IStructure {
         <<interface>>
+        ~Fields:\n * sys.QName
         +Abstract() bool
         +Fields() []IField
         +Containers() []IContainer
         +Uniques() []IUnique
+        +QNameField() IField
     }
 
     IDoc --|> IStructure : inherits
     class IDoc {
         <<interface>>
+        ~Fields:\n * sys.ID,\n * sys.IsActive
     }
 
     IGDoc --|> IDoc : inherits
@@ -88,6 +91,7 @@ classDiagram
     IStructure <|-- IRecord  : inherits
     class IRecord {
         <<interface>>
+        ~Fields:\n * sys.ID,\n * sys.IsActive,\n * sys.ParentID,\n * sys.Container
     }
 
     IRecord <|-- IGRecord : inherits
@@ -124,6 +128,7 @@ classDiagram
     class IElement {
         <<interface>>
         ~Kind => TypeKind_Element
+        ~Fields:\n * sys.Container
     }
 
     IType <|-- IView : inherits
