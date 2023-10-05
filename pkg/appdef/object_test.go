@@ -43,7 +43,10 @@ func Test_AppDef_AddObject(t *testing.T) {
 
 		obj := app.Object(objName)
 		require.Equal(TypeKind_Object, obj.Kind())
+		require.True(obj.IsObject())
 		require.Equal(typ.(IObject), obj)
+
+		require.NotNil(obj.Field(SystemField_QName))
 
 		require.Equal(2, obj.UserFieldCount())
 		require.Equal(DataKind_int64, obj.Field("f1").DataKind())
@@ -56,12 +59,16 @@ func Test_AppDef_AddObject(t *testing.T) {
 
 			el := app.Element(elementName)
 			require.Equal(TypeKind_Element, el.Kind())
+			require.True(el.IsElement())
 			require.Equal(typ.(IElement), el)
+
+			require.NotNil(el.Field(SystemField_QName))
+			require.NotNil(el.Field(SystemField_Container))
 
 			require.Equal(2, el.UserFieldCount())
 			require.Equal(DataKind_int64, el.Field("f1").DataKind())
 
-			require.Equal(0, el.ContainerCount())
+			require.Zero(el.ContainerCount())
 		})
 	})
 }

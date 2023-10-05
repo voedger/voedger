@@ -26,6 +26,9 @@ type ICDocBuilder interface {
 // Ref. to cdoc.go for implementation
 type ICRecord interface {
 	IRecord
+
+	// Unwanted type assertion stub
+	IsCRecord() bool
 }
 
 type ICRecordBuilder interface {

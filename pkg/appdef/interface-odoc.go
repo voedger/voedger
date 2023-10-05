@@ -10,6 +10,9 @@ package appdef
 // Ref. to odoc.go for implementation
 type IODoc interface {
 	IDoc
+
+	// Unwanted type assertion stub
+	IsODoc() bool
 }
 
 type IODocBuilder interface {
@@ -22,6 +25,9 @@ type IODocBuilder interface {
 // Ref. to odoc.go for implementation
 type IORecord interface {
 	IRecord
+
+	// Unwanted type assertion stub
+	IsORecord() bool
 }
 
 type IORecordBuilder interface {

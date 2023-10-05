@@ -18,8 +18,11 @@ func newODoc(app *appDef, name QName) *oDoc {
 	return d
 }
 
+func (d *oDoc) IsODoc() bool { return true }
+
 // # Implements:
-//   - IORecord, IORecordBuilder
+//   - IORecord
+//	-	IORecordBuilder
 type oRecord struct {
 	record
 }
@@ -30,3 +33,5 @@ func newORecord(app *appDef, name QName) *oRecord {
 	app.appendType(r)
 	return r
 }
+
+func (r oRecord) IsORecord() bool { return true }

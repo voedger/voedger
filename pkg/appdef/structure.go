@@ -39,6 +39,8 @@ type doc struct {
 	structure
 }
 
+func (d doc) IsDoc() bool { return true }
+
 // Makes new document
 func makeDoc(app *appDef, name QName, kind TypeKind, parent interface{}) doc {
 	d := doc{
@@ -62,3 +64,5 @@ func makeRecord(app *appDef, name QName, kind TypeKind, parent interface{}) reco
 	}
 	return r
 }
+
+func (r record) IsRecord() bool { return true }

@@ -76,7 +76,11 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 		doc := app.GDoc(docName)
 		require.Equal(TypeKind_GDoc, doc.Kind())
+		require.True(doc.IsDoc() && doc.IsGDoc())
 		require.Equal(d, doc)
+
+		require.NotNil(doc.Field(SystemField_QName))
+		require.NotNil(doc.Field(SystemField_ID))
 
 		require.Equal(2, doc.UserFieldCount())
 		require.Equal(DataKind_int64, doc.Field("f1").DataKind())
@@ -94,15 +98,21 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 			r, ok := typ.(IGRecord)
 			require.True(ok)
 			require.Equal(TypeKind_GRecord, r.Kind())
+			require.True(r.IsRecord() && r.IsGRecord())
 
 			rec := app.GRecord(recName)
 			require.Equal(TypeKind_GRecord, rec.Kind())
 			require.Equal(r, rec)
 
+			require.NotNil(rec.Field(SystemField_QName))
+			require.NotNil(rec.Field(SystemField_ID))
+			require.NotNil(rec.Field(SystemField_ParentID))
+			require.NotNil(rec.Field(SystemField_Container))
+
 			require.Equal(2, rec.UserFieldCount())
 			require.Equal(DataKind_int64, rec.Field("f1").DataKind())
 
-			require.Equal(0, rec.ContainerCount())
+			require.Zero(rec.ContainerCount())
 		})
 	})
 

@@ -22,7 +22,7 @@ type IView interface {
 }
 
 type IViewBuilder interface {
-	ICommentBuilder
+	ITypeBuilder
 
 	// Returns full (pk + ccols) view key builder
 	KeyBuilder() IViewKeyBuilder
@@ -64,6 +64,9 @@ type IViewKeyBuilder interface {
 type IViewPartKey interface {
 	// Partition key fields.
 	IFields
+
+	// Unwanted type assertion stub
+	IsPartKey() bool
 }
 
 // View partition key type builder.
@@ -93,6 +96,9 @@ type IViewPartKeyBuilder interface {
 type IViewClustCols interface {
 	// Clustering columns fields.
 	IFields
+
+	// Unwanted type assertion stub
+	IsClustCols() bool
 }
 
 // View clustering columns type builder.
@@ -126,6 +132,9 @@ type IViewClustColsBuilder interface {
 type IViewValue interface {
 	// View value fields.
 	IFields
+
+	// Unwanted type assertion stub
+	IsViewValue() bool
 }
 
 // View value builder.

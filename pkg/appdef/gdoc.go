@@ -18,11 +18,15 @@ func newGDoc(app *appDef, name QName) *gDoc {
 	return d
 }
 
+func (d gDoc) IsGDoc() bool { return true }
+
 // # Implements:
 //   - IGRecord, IGRecordBuilder
 type gRecord struct {
 	record
 }
+
+func (r gRecord) IsGRecord() bool { return true }
 
 func newGRecord(app *appDef, name QName) *gRecord {
 	r := &gRecord{}

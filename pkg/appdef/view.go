@@ -144,6 +144,8 @@ func (pk *viewPartKey) AddRefField(name string, ref ...QName) IViewPartKeyBuilde
 	return pk
 }
 
+func (pk *viewPartKey) IsPartKey() bool { return true }
+
 func (pk *viewPartKey) SetFieldComment(name string, comment ...string) IViewPartKeyBuilder {
 	pk.view.SetFieldComment(name, comment...)
 	pk.view.key.SetFieldComment(name, comment...)
@@ -213,6 +215,8 @@ func (cc *viewClustCols) AddBytesField(name string, maxLen uint16) IViewClustCol
 	cc.fields.AddBytesField(name, false, MaxLen(maxLen))
 	return cc
 }
+
+func (cc *viewClustCols) IsClustCols() bool { return true }
 
 func (cc *viewClustCols) SetFieldComment(name string, comment ...string) IViewClustColsBuilder {
 	cc.view.SetFieldComment(name, comment...)
@@ -288,6 +292,8 @@ func (v *viewValue) AddVerifiedField(name string, kind DataKind, required bool, 
 	v.fields.AddVerifiedField(name, kind, required, vk...)
 	return v
 }
+
+func (v *viewValue) IsViewValue() bool { return true }
 
 func (v *viewValue) SetFieldComment(name string, comment ...string) IFieldsBuilder {
 	v.view.SetFieldComment(name, comment...)

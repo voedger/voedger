@@ -18,6 +18,8 @@ func newObject(app *appDef, name QName) *object {
 	return o
 }
 
+func (o *object) IsObject() bool { return true }
+
 // # Implements:
 //   - IElement, IElementBuilder
 type element struct {
@@ -30,6 +32,8 @@ func newElement(app *appDef, name QName) *element {
 	app.appendType(e)
 	return e
 }
+
+func (e *element) IsElement() bool { return true }
 
 type objRef struct {
 	name QName

@@ -40,3 +40,5 @@ func newCRecord(app *appDef, name QName) *cRecord {
 	app.appendType(r)
 	return r
 }
+
+func (r cRecord) IsCRecord() bool { return true }

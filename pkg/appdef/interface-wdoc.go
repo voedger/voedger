@@ -8,6 +8,9 @@ package appdef
 // Workflow document.
 type IWDoc interface {
 	IDoc
+
+	// Unwanted type assertion stub
+	IsWDoc() bool
 }
 
 type IWDocBuilder interface {
@@ -20,6 +23,9 @@ type IWDocBuilder interface {
 // Ref. to wdoc.go for implementation
 type IWRecord interface {
 	IRecord
+
+	// Unwanted type assertion stub
+	IsWRecord() bool
 }
 
 type IWRecordBuilder interface {

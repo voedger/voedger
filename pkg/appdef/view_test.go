@@ -123,6 +123,7 @@ func TestAddView(t *testing.T) {
 
 		t.Run("must be ok to read view partition key", func(t *testing.T) {
 			pk := view.Key().PartKey()
+			require.True(pk.IsPartKey())
 			require.Equal(2, pk.FieldCount())
 			cnt := 0
 			pk.Fields(func(f IField) {
@@ -143,6 +144,7 @@ func TestAddView(t *testing.T) {
 
 		t.Run("must be ok to read view clustering columns", func(t *testing.T) {
 			cc := view.Key().ClustCols()
+			require.True(cc.IsClustCols())
 			require.Equal(2, cc.FieldCount())
 			cnt := 0
 			cc.Fields(func(f IField) {
@@ -163,6 +165,7 @@ func TestAddView(t *testing.T) {
 
 		t.Run("must be ok to read view value", func(t *testing.T) {
 			val := view.Value()
+			require.True(val.IsViewValue())
 			require.Equal(3, val.FieldCount())
 			cnt := 0
 			val.Fields(func(f IField) {

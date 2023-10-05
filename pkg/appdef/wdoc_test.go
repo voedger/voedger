@@ -43,6 +43,7 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 
 		doc := app.WDoc(docName)
 		require.Equal(TypeKind_WDoc, doc.Kind())
+		require.True(doc.IsWDoc())
 		require.Equal(typ.(IWDoc), doc)
 
 		require.Equal(2, doc.UserFieldCount())
@@ -56,12 +57,13 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 
 			rec := app.WRecord(recName)
 			require.Equal(TypeKind_WRecord, rec.Kind())
+			require.True(rec.IsWRecord())
 			require.Equal(typ.(IWRecord), rec)
 
 			require.Equal(2, rec.UserFieldCount())
 			require.Equal(DataKind_int64, rec.Field("f1").DataKind())
 
-			require.Equal(0, rec.ContainerCount())
+			require.Zero(rec.ContainerCount())
 		})
 	})
 }

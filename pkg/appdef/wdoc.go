@@ -18,6 +18,8 @@ func newWDoc(app *appDef, name QName) *wDoc {
 	return d
 }
 
+func (d *wDoc) IsWDoc() bool { return true }
+
 // # Implements:
 //   - IWRecord, IWRecordBuilder
 type wRecord struct {
@@ -30,3 +32,5 @@ func newWRecord(app *appDef, name QName) *wRecord {
 	app.appendType(r)
 	return r
 }
+
+func (r wRecord) IsWRecord() bool { return true }

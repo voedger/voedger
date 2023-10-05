@@ -30,6 +30,9 @@ type IStructureBuilder interface {
 // Document can contains records.
 type IDoc interface {
 	IStructure
+
+	// Unwanted type assertion stub
+	IsDoc() bool
 }
 
 type IDocBuilder interface {
@@ -42,6 +45,9 @@ type IDocBuilder interface {
 // Record can contains child records.
 type IRecord interface {
 	IStructure
+
+	// Unwanted type assertion stub
+	IsRecord() bool
 }
 
 type IRecordBuilder interface {

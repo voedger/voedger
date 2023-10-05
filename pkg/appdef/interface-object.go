@@ -10,6 +10,9 @@ package appdef
 // Ref. to object.go for implementation
 type IObject interface {
 	IStructure
+
+	// Unwanted type assertion stub
+	IsObject() bool
 }
 
 type IObjectBuilder interface {
@@ -22,6 +25,9 @@ type IObjectBuilder interface {
 // Ref. to object.go for implementation
 type IElement interface {
 	IStructure
+
+	// Unwanted type assertion stub
+	IsElement() bool
 }
 
 type IElementBuilder interface {
