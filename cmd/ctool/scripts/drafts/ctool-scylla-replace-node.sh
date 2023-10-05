@@ -28,6 +28,26 @@ SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogL
 MANAGER=$3
 REPLACED_NODE_NAME=$(getent hosts "$2" | awk '{print $2}')
 
+wait_for_scylla() {
+    local ip_address=$1
+    echo "Working with $ip_address"
+    local count=0
+
+    while [ $count -lt 100 ]; do
+        if [ "$(ssh "$SSH_OPTIONS" "$SSH_USER"@"$ip_address" docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c '^UN\s')" -eq 3 ]; then
+            echo "Scylla initialization success"
+            return 0
+        fi
+        echo "Still waiting for Scylla initialization.."
+        sleep 5
+        count=$((count+1))
+    done
+    if [ $count -eq 100 ]; then
+        echo "Scylla initialization timed out."
+        return 1
+    fi
+}
+
 ./docker-install.sh $2
 
 ./swarm-add-node.sh $MANAGER $2
@@ -45,4 +65,7 @@ cat ./docker-compose.yml | ssh $SSH_OPTIONS $SSH_USER@$2 'cat > ~/docker-compose
 ssh $SSH_OPTIONS $SSH_USER@$2 "docker stack deploy --compose-file ~/docker-compose.yml DBDockerStack"
 
 ./swarm-set-label.sh $MANAGER $2 "type" $service_label
+
+wait_for_scylla "$2"
+
 set +x
