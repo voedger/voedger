@@ -27,88 +27,85 @@ func provideRefIntegrityValidation(cfg *istructsmem.AppConfigType) {
 			Func: provideRecordsRegistryProjector(cfg),
 		}
 	})
-	// cfg.AddCUDValidators(provideRefIntegrityValidator())
-	cfg.AddEventValidators(refIntegrityValidator)
+	cfg.AddCUDValidators(provideRefIntegrityValidator())
+	// cfg.AddEventValidators(refIntegrityValidator)
 }
 
-func refIntegrityValidator(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
-	if coreutils.IsDummyWS(wsid) || rawEvent.QName() == QNameCommandInit {
-		return nil
-	}
-	appDef := appStructs.AppDef()
-	argType := appDef.Type(rawEvent.ArgumentObject().QName())
-	if argType.Kind() != appdef.TypeKind_ODoc && argType.Kind() != appdef.TypeKind_ORecord {
-		return nil
-	}
-	argODoc := argType.(appdef.IODoc)
-	argODocQName := argODoc.QName()
-	iterate.ForEachError(argODoc.RefFields, func(refField appdef.IRefField) error {
-		targetID := istructs.RecordID(0) // TODO: !!!!!!!!!!!!
-		if targetID == istructs.NullRecordID || targetID.IsRaw() {
-			return nil
-		}
-		allowedTargetQNames := refField.Refs()
-		refToRPossible := len(allowedTargetQNames) == 0
-		refToOPossible := len(allowedTargetQNames) == 0
-		for _, allowedTargetQName := range allowedTargetQNames {
-			targetType := appDef.Type(allowedTargetQName)
-			switch targetType.Kind() {
-			case appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
-				refToOPossible = true
-			default:
-				refToRPossible = true
-			}
-		}
-		if refToRPossible {
-			if err := checkTargetRecord(appStructs, wsid, targetID, allowedTargetQNames, refField, argODocQName); err != nil {
-				if !refToOPossible || !errors.Is(err, ErrReferentialIntegrityViolation) {
-					return err
-				}
-			}
-		}
-		if refToOPossible {
-			kb := appStructs.ViewRecords().KeyBuilder(QNameViewORecordsRegistry)
-			kb.PutRecordID(field_ID, targetID)
-			kb.PutInt32(field_Dummy, 1)
-			_, err := appStructs.ViewRecords().Get(wsid, kb)
-			if err == nil {
-				return nil
-			}
-			if !errors.Is(err, istructsmem.ErrRecordNotFound) {
-				// notest
-				return err
-			}
-		}
+// func refIntegrityValidator(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
+// 	if coreutils.IsDummyWS(wsid) || rawEvent.QName() == QNameCommandInit {
+// 		return nil
+// 	}
+// 	appDef := appStructs.AppDef()
+// 	argType := appDef.Type(rawEvent.ArgumentObject().QName())
+// 	if argType.Kind() != appdef.TypeKind_ODoc && argType.Kind() != appdef.TypeKind_ORecord {
+// 		return nil
+// 	}
+// 	argODoc := argType.(appdef.IODoc)
+// 	argODocQName := argODoc.QName()
+// 	iterate.ForEachError(argODoc.RefFields, func(refField appdef.IRefField) error {
+// 		targetID := istructs.RecordID(0) // TODO: !!!!!!!!!!!!
+// 		if targetID == istructs.NullRecordID || targetID.IsRaw() {
+// 			return nil
+// 		}
+// 		allowedTargetQNames := refField.Refs()
+// 		refToRPossible := len(allowedTargetQNames) == 0
+// 		refToOPossible := len(allowedTargetQNames) == 0
+// 		for _, allowedTargetQName := range allowedTargetQNames {
+// 			targetType := appDef.Type(allowedTargetQName)
+// 			switch targetType.Kind() {
+// 			case appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
+// 				refToOPossible = true
+// 			default:
+// 				refToRPossible = true
+// 			}
+// 		}
+// 		if refToRPossible {
+// 			if err := checkTargetRecord(appStructs, wsid, targetID, allowedTargetQNames, refField, argODocQName); err != nil {
+// 				if !refToOPossible || !errors.Is(err, ErrReferentialIntegrityViolation) {
+// 					return err
+// 				}
+// 			}
+// 		}
+// 		if refToOPossible {
+// 			kb := appStructs.ViewRecords().KeyBuilder(QNameViewORecordsRegistry)
+// 			kb.PutRecordID(field_ID, targetID)
+// 			kb.PutInt32(field_Dummy, 1)
+// 			_, err := appStructs.ViewRecords().Get(wsid, kb)
+// 			if err == nil {
+// 				return nil
+// 			}
+// 			if !errors.Is(err, istructsmem.ErrRecordNotFound) {
+// 				// notest
+// 				return err
+// 			}
+// 		}
 
-		return nil
-	})
-	return nil
-}
+// 		return nil
+// 	})
+// 	return nil
+// }
 
-func checkTargetRecord(appStructs istructs.IAppStructs, wsid istructs.WSID, targetID istructs.RecordID, allowedTargetQNames []appdef.QName, sourceRefField appdef.IRefField, sourceDocQName appdef.QName) error {
-	targetRec, err := appStructs.Records().Get(wsid, true, targetID)
-	if err != nil {
-		// notest
-		return err
-	}
-	if targetRec.QName() == appdef.NullQName {
-		return fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, targetID, sourceDocQName, sourceRefField.Name())
-	}
-	if len(allowedTargetQNames) > 0 && !slices.Contains(allowedTargetQNames, targetRec.QName()) {
-		return fmt.Errorf("%w: record ID %d referenced by %s.%s is of QName %s whereas %v QNames are only allowed", ErrReferentialIntegrityViolation,
-			targetID, sourceDocQName, sourceRefField.Name(), targetRec.QName(), sourceRefField.Refs())
-	}
-	return nil
-}
+// func checkTargetRecord(appStructs istructs.IAppStructs, wsid istructs.WSID, targetID istructs.RecordID, allowedTargetQNames []appdef.QName, sourceRefField appdef.IRefField, sourceDocQName appdef.QName) error {
+// 	targetRec, err := appStructs.Records().Get(wsid, true, targetID)
+// 	if err != nil {
+// 		// notest
+// 		return err
+// 	}
+// 	if targetRec.QName() == appdef.NullQName {
+// 		return fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, targetID, sourceDocQName, sourceRefField.Name())
+// 	}
+// 	if len(allowedTargetQNames) > 0 && !slices.Contains(allowedTargetQNames, targetRec.QName()) {
+// 		return fmt.Errorf("%w: record ID %d referenced by %s.%s is of QName %s whereas %v QNames are only allowed", ErrReferentialIntegrityViolation,
+// 			targetID, sourceDocQName, sourceRefField.Name(), targetRec.QName(), sourceRefField.Refs())
+// 	}
+// 	return nil
+// }
 
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
 	appDef := appStructs.AppDef()
 	qName := obj.AsQName(appdef.SystemField_QName)
 	t := appDef.Type(qName)
-	fields, ok := t.(appdef.IFields)
-	if !ok {
-		return nil
-	}
+	fields := t.(appdef.IFields)
 	return iterate.ForEachError(fields.RefFields, func(refField appdef.IRefField) error {
 		actualRefID := obj.AsRecordID(refField.Name())
 		if actualRefID == istructs.NullRecordID || actualRefID.IsRaw() {

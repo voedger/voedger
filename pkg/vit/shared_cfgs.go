@@ -31,15 +31,18 @@ const (
 	TestEmail3       = "125@125.com"
 	TestServicePort  = 10000
 	defaultMaxOccurs = 100
+	app1Name         = "app1"
 )
 
 var (
-	QNameApp1_TestWSKind               = appdef.NewQName("app1", "WSKind")
+	QNameApp1_TestWSKind               = appdef.NewQName(app1Name, "WSKind")
 	QNameTestView                      = appdef.NewQName("my", "View")
-	QNameApp1_TestEmailVerificationDoc = appdef.NewQName("app1", "Doc")
-	QNameApp1_CDocTestConstraints      = appdef.NewQName("app1", "DocConstraints")
+	QNameApp1_TestEmailVerificationDoc = appdef.NewQName(app1Name, "Doc")
+	QNameApp1_CDocTestConstraints      = appdef.NewQName(app1Name, "DocConstraints")
 	QNameCmdRated                      = appdef.NewQName(appdef.SysPackage, "RatedCmd")
 	QNameQryRated                      = appdef.NewQName(appdef.SysPackage, "RatedQry")
+	QNameODoc1                         = appdef.NewQName(app1Name, "odoc1")
+	QNameODoc2                         = appdef.NewQName(app1Name, "odoc2")
 	TestSMTPCfg                        = smtp.Cfg{
 		Username: "username@gmail.com",
 	}
@@ -197,5 +200,21 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 			}
 			return nil
 		},
+	))
+
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		appdef.NewQName(appdef.SysPackage, "CmdODocOne"),
+		QNameODoc1,
+		appdef.NullQName,
+		appdef.NullQName,
+		istructsmem.NullCommandExec,
+	))
+
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		appdef.NewQName(appdef.SysPackage, "CmdODocTwo"),
+		QNameODoc2,
+		QNameODoc2,
+		appdef.NullQName,
+		istructsmem.NullCommandExec,
 	))
 }

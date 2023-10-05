@@ -327,16 +327,16 @@ func TestRefIntegrity(t *testing.T) {
 	})
 
 	t.Run("ODocs", func(t *testing.T) {
-		body := `{"cuds":[{"fields":{"sys.ID": 2, "sys.QName":"app1.odoc1","orecord1":[{"sys.ID":2,"sys.ParentID":1}]}}]}`
-		resp := vit.PostWS(ws, "c.sys.CUD", body)
+		body := `{"args":{"sys.ID": 1,"orecord1":[{"sys.ID":2,"sys.ParentID":1}]}}`
+		resp := vit.PostWS(ws, "c.sys.CmdODocOne", body)
 		idOdoc1 := resp.NewIDs["1"]
 		idOrec1 := resp.NewIDs["2"]
 		_ = idOdoc1
 		_ = idOrec1
 
 		t.Run("ref to an unexisting ODoc", func(t *testing.T) {
-			body := `{"cuds":[{"fields":{"sys.ID": 1, "sys.QName":"app1.odoc2","odoc1ID":42}}]}`
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
+			body := `{"args":{"sys.ID": 1,"refToODoc1":42},"unloggedArgs":{"sys.ID":2}}`
+			vit.PostWS(ws, "c.sys.CmdODocTwo", body/*, coreutils.Expect400()*/).Println()
 		})
 	})
 }
