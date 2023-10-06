@@ -18,7 +18,7 @@ func newODoc(app *appDef, name QName) *oDoc {
 	return d
 }
 
-func (d *oDoc) IsODoc() bool { return true }
+func (d *oDoc) isODoc() {}
 
 // # Implements:
 //   - IORecord
@@ -34,4 +34,4 @@ func newORecord(app *appDef, name QName) *oRecord {
 	return r
 }
 
-func (r oRecord) IsORecord() bool { return true }
+func (r oRecord) isORecord() {}

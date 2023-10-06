@@ -56,7 +56,6 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 
 			rec := app.CRecord(recName)
 			require.Equal(TypeKind_CRecord, rec.Kind())
-			require.True(rec.IsCRecord())
 			require.Equal(typ.(ICRecord), rec)
 
 			require.Equal(2, rec.UserFieldCount())

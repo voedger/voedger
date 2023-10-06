@@ -18,7 +18,7 @@ func newWDoc(app *appDef, name QName) *wDoc {
 	return d
 }
 
-func (d *wDoc) IsWDoc() bool { return true }
+func (d *wDoc) isWDoc() {}
 
 // # Implements:
 //   - IWRecord, IWRecordBuilder
@@ -33,4 +33,4 @@ func newWRecord(app *appDef, name QName) *wRecord {
 	return r
 }
 
-func (r wRecord) IsWRecord() bool { return true }
+func (r wRecord) isWRecord() {}

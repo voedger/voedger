@@ -144,14 +144,14 @@ func (pk *viewPartKey) AddRefField(name string, ref ...QName) IViewPartKeyBuilde
 	return pk
 }
 
-func (pk *viewPartKey) IsPartKey() bool { return true }
-
 func (pk *viewPartKey) SetFieldComment(name string, comment ...string) IViewPartKeyBuilder {
 	pk.view.SetFieldComment(name, comment...)
 	pk.view.key.SetFieldComment(name, comment...)
 	pk.fields.SetFieldComment(name, comment...)
 	return pk
 }
+
+func (pk *viewPartKey) isPartKey() {}
 
 // Validates view partition key
 func (pk *viewPartKey) validate() error {
@@ -216,14 +216,14 @@ func (cc *viewClustCols) AddBytesField(name string, maxLen uint16) IViewClustCol
 	return cc
 }
 
-func (cc *viewClustCols) IsClustCols() bool { return true }
-
 func (cc *viewClustCols) SetFieldComment(name string, comment ...string) IViewClustColsBuilder {
 	cc.view.SetFieldComment(name, comment...)
 	cc.view.key.SetFieldComment(name, comment...)
 	cc.fields.SetFieldComment(name, comment...)
 	return cc
 }
+
+func (cc *viewClustCols) isClustCols() {}
 
 // Panics if variable length field already exists
 func (cc *viewClustCols) panicIfVarFieldDuplication(name string, kind DataKind) {
@@ -293,7 +293,7 @@ func (v *viewValue) AddVerifiedField(name string, kind DataKind, required bool, 
 	return v
 }
 
-func (v *viewValue) IsViewValue() bool { return true }
+func (v *viewValue) isViewValue() {}
 
 func (v *viewValue) SetFieldComment(name string, comment ...string) IFieldsBuilder {
 	v.view.SetFieldComment(name, comment...)

@@ -28,7 +28,7 @@ type ICRecord interface {
 	IRecord
 
 	// Unwanted type assertion stub
-	IsCRecord() bool
+	isCRecord()
 }
 
 type ICRecordBuilder interface {

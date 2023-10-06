@@ -76,7 +76,6 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 		doc := app.GDoc(docName)
 		require.Equal(TypeKind_GDoc, doc.Kind())
-		require.True(doc.IsDoc() && doc.IsGDoc())
 		require.Equal(d, doc)
 
 		require.NotNil(doc.Field(SystemField_QName))
@@ -98,7 +97,6 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 			r, ok := typ.(IGRecord)
 			require.True(ok)
 			require.Equal(TypeKind_GRecord, r.Kind())
-			require.True(r.IsRecord() && r.IsGRecord())
 
 			rec := app.GRecord(recName)
 			require.Equal(TypeKind_GRecord, rec.Kind())

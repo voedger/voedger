@@ -12,7 +12,7 @@ type IObject interface {
 	IStructure
 
 	// Unwanted type assertion stub
-	IsObject() bool
+	isObject()
 }
 
 type IObjectBuilder interface {
@@ -27,7 +27,7 @@ type IElement interface {
 	IStructure
 
 	// Unwanted type assertion stub
-	IsElement() bool
+	isElement()
 }
 
 type IElementBuilder interface {

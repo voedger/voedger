@@ -43,7 +43,6 @@ func Test_AppDef_AddODoc(t *testing.T) {
 
 		doc := app.ODoc(docName)
 		require.Equal(TypeKind_ODoc, doc.Kind())
-		require.True(doc.IsODoc())
 		require.Equal(typ.(IODoc), doc)
 
 		require.Equal(2, doc.UserFieldCount())
@@ -57,7 +56,6 @@ func Test_AppDef_AddODoc(t *testing.T) {
 
 			rec := app.ORecord(recName)
 			require.Equal(TypeKind_ORecord, rec.Kind())
-			require.True(rec.IsORecord())
 			require.Equal(typ.(IORecord), rec)
 
 			require.Equal(2, rec.UserFieldCount())

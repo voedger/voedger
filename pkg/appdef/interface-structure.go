@@ -32,7 +32,7 @@ type IDoc interface {
 	IStructure
 
 	// Unwanted type assertion stub
-	IsDoc() bool
+	isDoc()
 }
 
 type IDocBuilder interface {
@@ -47,7 +47,7 @@ type IRecord interface {
 	IStructure
 
 	// Unwanted type assertion stub
-	IsRecord() bool
+	isRecord()
 }
 
 type IRecordBuilder interface {

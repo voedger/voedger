@@ -66,7 +66,7 @@ type IViewPartKey interface {
 	IFields
 
 	// Unwanted type assertion stub
-	IsPartKey() bool
+	isPartKey()
 }
 
 // View partition key type builder.
@@ -98,7 +98,7 @@ type IViewClustCols interface {
 	IFields
 
 	// Unwanted type assertion stub
-	IsClustCols() bool
+	isClustCols()
 }
 
 // View clustering columns type builder.
@@ -134,7 +134,7 @@ type IViewValue interface {
 	IFields
 
 	// Unwanted type assertion stub
-	IsViewValue() bool
+	isViewValue()
 }
 
 // View value builder.

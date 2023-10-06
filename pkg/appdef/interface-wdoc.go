@@ -10,7 +10,7 @@ type IWDoc interface {
 	IDoc
 
 	// Unwanted type assertion stub
-	IsWDoc() bool
+	isWDoc()
 }
 
 type IWDocBuilder interface {
@@ -25,7 +25,7 @@ type IWRecord interface {
 	IRecord
 
 	// Unwanted type assertion stub
-	IsWRecord() bool
+	isWRecord()
 }
 
 type IWRecordBuilder interface {

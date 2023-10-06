@@ -41,4 +41,4 @@ func newCRecord(app *appDef, name QName) *cRecord {
 	return r
 }
 
-func (r cRecord) IsCRecord() bool { return true }
+func (r cRecord) isCRecord() {}

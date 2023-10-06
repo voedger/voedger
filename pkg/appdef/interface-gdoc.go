@@ -10,7 +10,7 @@ type IGDoc interface {
 	IDoc
 
 	// unwanted type assertion stub
-	IsGDoc() bool
+	isGDoc()
 }
 
 type IGDocBuilder interface {
@@ -25,7 +25,7 @@ type IGRecord interface {
 	IRecord
 
 	// unwanted type assertion stub
-	IsGRecord() bool
+	isGRecord()
 }
 
 type IGRecordBuilder interface {

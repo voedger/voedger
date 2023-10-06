@@ -18,7 +18,7 @@ func newObject(app *appDef, name QName) *object {
 	return o
 }
 
-func (o *object) IsObject() bool { return true }
+func (o *object) isObject() {}
 
 // # Implements:
 //   - IElement, IElementBuilder
@@ -33,7 +33,7 @@ func newElement(app *appDef, name QName) *element {
 	return e
 }
 
-func (e *element) IsElement() bool { return true }
+func (e *element) isElement() {}
 
 type objRef struct {
 	name QName
