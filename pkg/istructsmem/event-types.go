@@ -818,7 +818,7 @@ func (el *elementType) Build() (doc istructs.IObject, err error) {
 	if err = el.build(); err != nil {
 		return nil, err
 	}
-	if err = el.appCfg.validators.validObject(el); err != nil {
+	if err = el.appCfg.validators.validArgument(el); err != nil {
 		return nil, err
 	}
 
