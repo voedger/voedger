@@ -335,8 +335,8 @@ func TestRefIntegrity(t *testing.T) {
 		_ = idOrec1
 
 		t.Run("ref to an unexisting ODoc", func(t *testing.T) {
-			body := `{"args":{"sys.ID": 1,"refToODoc1":42},"unloggedArgs":{"sys.ID":2}}`
-			vit.PostWS(ws, "c.sys.CmdODocTwo", body/*, coreutils.Expect400()*/).Println()
+			body := `{"args":{"sys.ID": 1,"refToODoc1":1000000000000},"unloggedArgs":{"sys.ID":2}}`
+			vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
 		})
 	})
 }
