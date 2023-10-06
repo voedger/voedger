@@ -330,11 +330,11 @@ func TestRefIntegrity(t *testing.T) {
 		body := `{"args":{"sys.ID": 1,"orecord1":[{"sys.ID":2,"sys.ParentID":1}]}}`
 		resp := vit.PostWS(ws, "c.sys.CmdODocOne", body)
 		idOdoc1 := resp.NewIDs["1"]
-		idOrec1 := resp.NewIDs["2"]
-		_ = idOdoc1
-		_ = idOrec1
+		idOrecord1 := resp.NewIDs["2"]
+		body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.cdoc1"}}]}`
+		idCDoc := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
-		t.Run("ref to unexisting", func(t *testing.T) {
+		t.Run("ref to unexisting -> 400 bad request", func(t *testing.T) {
 			t.Run("ODoc", func(t *testing.T) {
 				body := `{"args":{"sys.ID": 1,"refToODoc1":1000000000000},"unloggedArgs":{"sys.ID":2}}`
 				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
@@ -362,8 +362,58 @@ func TestRefIntegrity(t *testing.T) {
 
 		t.Run("ref to existing", func(t *testing.T) {
 			t.Run("ODoc", func(t *testing.T) {
-				body := fmt.Sprintf(`{"args":{"sys.ID": 1,"refToODoc1":%d},"unloggedArgs":{"sys.ID":2}}`, idOdoc1)
+				t.Run("allowed QName", func(t *testing.T) {
+					body := fmt.Sprintf(`{"args":{"sys.ID": 1,"refToODoc1":%d},"unloggedArgs":{"sys.ID":2}}`, idOdoc1)
+					vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+				})
+
+				t.Run("wrong QName -> 400 bad request", func(t *testing.T) {
+					body = fmt.Sprintf(`{"args":{"sys.ID": 1,"refToODoc1":%d},"unloggedArgs":{"sys.ID":2}}`, idCDoc)
+					vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+				})
+			})
+			t.Run("ORecord", func(t *testing.T) {
+				t.Run("allowed QName", func(t *testing.T) {
+					body := fmt.Sprintf(`{"args":{"sys.ID": 1,"refToORecord1":%d},"unloggedArgs":{"sys.ID":2}}`, idOrecord1)
+					vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+				})
+
+				t.Run("wrong QName -> 400 bad request", func(t *testing.T) {
+					body := fmt.Sprintf(`{"args":{"sys.ID": 1,"refToORecord1":%d},"unloggedArgs":{"sys.ID":2}}`, idCDoc)
+					vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+				})
+			})
+			t.Run("Any", func(t *testing.T) {
+				body := fmt.Sprintf(`{"args":{"sys.ID": 1,"refToAny":%d},"unloggedArgs":{"sys.ID":2}}`, idCDoc)
 				vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+
+				body = fmt.Sprintf(`{"args":{"sys.ID": 1,"refToAny":%d},"unloggedArgs":{"sys.ID":2}}`, idOdoc1)
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+			})
+
+			t.Run("CDoc", func(t *testing.T) {
+				t.Run("allowed QName", func(t *testing.T) {
+					body := fmt.Sprintf(`{"args":{"sys.ID": 1,"refToCDoc1":%d},"unloggedArgs":{"sys.ID":2}}`, idCDoc)
+					vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+				})
+				t.Run("wrong QName -> 400 bad request", func(t *testing.T) {
+					body := fmt.Sprintf(`{"args":{"sys.ID": 1,"refToCDoc1":%d},"unloggedArgs":{"sys.ID":2}}`, idCDoc)
+					vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+				})
+			})
+
+			t.Run("CDoc or ODoc", func(t *testing.T) {
+				t.Run("allowed QName", func(t *testing.T) {
+					body := fmt.Sprintf(`{"args":{"sys.ID": 1,"refToCDoc1OrODoc1":%d},"unloggedArgs":{"sys.ID":2}}`, idCDoc)
+					vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+
+					body = fmt.Sprintf(`{"args":{"sys.ID": 1,"refToCDoc1OrODoc1":%d},"unloggedArgs":{"sys.ID":2}}`, idOdoc1)
+					vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+				})
+				t.Run("wrong QName -> 400 bad request", func(t *testing.T) {
+					body := fmt.Sprintf(`{"args":{"sys.ID": 1,"refToCDoc1OrODoc1":%d},"unloggedArgs":{"sys.ID":2}}`, idOrecord1)
+					vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+				})
 			})
 		})
 	})
