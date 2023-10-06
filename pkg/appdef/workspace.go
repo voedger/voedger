@@ -27,8 +27,8 @@ func newWorkspace(app *appDef, name QName) *workspace {
 }
 
 func (ws *workspace) AddType(name QName) IWorkspaceBuilder {
-	t, ok := ws.app.types[name]
-	if !ok {
+	t := ws.app.TypeByName(name)
+	if t == nil {
 		panic(fmt.Errorf("unable to add unknown type «%v» to workspace «%v»: %w", name, ws.QName(), ErrNameNotFound))
 	}
 

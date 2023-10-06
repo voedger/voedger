@@ -25,6 +25,8 @@ type IAppDef interface {
 	TypeCount() int
 
 	// Enumerates all application types.
+	//
+	// Types are enumerated in alphabetical order by QName
 	Types(func(IType))
 
 	// Return GDoc by name.
@@ -78,6 +80,8 @@ type IAppDef interface {
 	Element(name QName) IElement
 
 	// Enumerates all application structures
+	//
+	// Structures are enumerated in alphabetical order by QName
 	Structures(func(IStructure))
 
 	// Return View by name.

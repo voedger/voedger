@@ -13,22 +13,21 @@ import (
 func ExampleIAppDef_Structures() {
 
 	var app appdef.IAppDef
-	docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
+	objName, elName := appdef.NewQName("test", "object"), appdef.NewQName("test", "element")
 
 	// how to build AppDef with structures
 	{
 		appDef := appdef.New()
 
-		doc := appDef.AddWDoc(docName)
-		doc.SetComment("This is example doc")
-		doc.
-			AddField("f1", appdef.DataKind_int64, true, "Field may have comments too").
+		obj := appDef.AddObject(objName)
+		obj.
+			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
-		rec := appDef.AddWRecord(recName)
+		el := appDef.AddElement(elName)
 
-		doc.AddContainer("rec", recName, 0, appdef.Occurs_Unbounded)
+		obj.AddContainer("rec", elName, 0, appdef.Occurs_Unbounded)
 
-		rec.
+		el.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 
@@ -53,11 +52,11 @@ func ExampleIAppDef_Structures() {
 	}
 
 	// Output:
-	// 1. "test.doc": TypeKind_WDoc
-	// - user/overall field count: 2/5
-	// - container count: 1
-	// 2. "test.rec": TypeKind_WRecord
-	// - user/overall field count: 2/7
+	// 1. "test.element": TypeKind_Element
+	// - user/overall field count: 2/4
 	// - container count: 0
+	// 2. "test.object": TypeKind_Object
+	// - user/overall field count: 2/3
+	// - container count: 1
 	// Overall 2 structures
 }
