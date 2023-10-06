@@ -46,13 +46,15 @@ func (g *implIIDGenerator) NextID(rawID istructs.RecordID, t appdef.IType) (stor
 }
 
 func (g *implIIDGenerator) UpdateOnSync(syncID istructs.RecordID, t appdef.IType) {
+	if syncID < istructs.MinClusterRecordID {
+		// syncID<322680000000000 -> consider the syncID is from an old template.
+		// ignore IDs from external registers
+		// see https://github.com/voedger/voedger/issues/688
+		return
+	}
 	if t.Kind() == appdef.TypeKind_CDoc || t.Kind() == appdef.TypeKind_CRecord {
-		if syncID.BaseRecordID() >= g.nextCDocCRecordBaseID {
-			g.nextCDocCRecordBaseID = syncID.BaseRecordID() + 1
-		}
+		g.nextCDocCRecordBaseID = syncID.BaseRecordID() + 1
 	} else {
-		if syncID.BaseRecordID() >= g.nextBaseID {
-			g.nextBaseID = syncID.BaseRecordID() + 1
-		}
+		g.nextBaseID = syncID.BaseRecordID() + 1
 	}
 }
