@@ -7,10 +7,11 @@ package parser
 
 import (
 	"fmt"
-	fs "io/fs"
+	"io/fs"
 	"strings"
 
 	"github.com/alecthomas/participle/v2/lexer"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 

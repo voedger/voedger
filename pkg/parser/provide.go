@@ -4,7 +4,9 @@
  */
 package parser
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+)
 
 // ParseFile parses content of the single file, creates FileSchemaAST and returns pointer to it.
 // Performs syntax analysis

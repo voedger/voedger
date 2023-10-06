@@ -33,3 +33,9 @@ type IType interface {
 	// Type kind
 	Kind() TypeKind
 }
+
+// Type describes the entity with Types(func(IType)) menthod
+type IWithTypes interface {
+	// Enumerates all internal types.
+	Types(func(IType))
+}
