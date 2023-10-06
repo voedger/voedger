@@ -27,18 +27,16 @@ func provideRefIntegrityValidation(cfg *istructsmem.AppConfigType) {
 			Func: provideRecordsRegistryProjector(cfg),
 		}
 	})
-
 	cfg.AddCUDValidators(provideRefIntegrityValidator())
 }
 
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
 	appDef := appStructs.AppDef()
-	qName := obj.AsQName(appdef.SystemField_QName)
-	t := appDef.Type(qName)
-	fields := t.(appdef.IFields)
+	objQName := obj.AsQName(appdef.SystemField_QName)
+	fields := appDef.Type(objQName).(appdef.IFields)
 	return iterate.ForEachError(fields.RefFields, func(refField appdef.IRefField) error {
-		actualRefID := obj.AsRecordID(refField.Name())
-		if actualRefID == istructs.NullRecordID || actualRefID.IsRaw() {
+		targetID := obj.AsRecordID(refField.Name())
+		if targetID == istructs.NullRecordID || targetID.IsRaw() {
 			return nil
 		}
 		allowedTargetQNames := refField.Refs()
@@ -55,22 +53,22 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 			}
 		}
 		if refToRPossible {
-			actualRefRec, err := appStructs.Records().Get(wsid, true, actualRefID)
+			targetRec, err := appStructs.Records().Get(wsid, true, targetID)
 			if err != nil {
 				// notest
 				return err
 			}
-			if actualRefRec.QName() != appdef.NullQName {
-				if len(allowedTargetQNames) > 0 && !slices.Contains(allowedTargetQNames, actualRefRec.QName()) {
+			if targetRec.QName() != appdef.NullQName {
+				if len(allowedTargetQNames) > 0 && !slices.Contains(allowedTargetQNames, targetRec.QName()) {
 					return fmt.Errorf("%w: record ID %d referenced by %s.%s is of QName %s whereas %v QNames are only allowed", ErrReferentialIntegrityViolation,
-						actualRefID, qName, refField.Name(), actualRefRec.QName(), refField.Refs())
+						targetID, objQName, refField.Name(), targetRec.QName(), refField.Refs())
 				}
 				return nil
 			}
 		}
 		if refToOPossible {
 			kb := appStructs.ViewRecords().KeyBuilder(QNameViewORecordsRegistry)
-			kb.PutRecordID(field_ID, actualRefID)
+			kb.PutRecordID(field_ID, targetID)
 			kb.PutInt32(field_Dummy, 1)
 			_, err := appStructs.ViewRecords().Get(wsid, kb)
 			if err == nil {
@@ -81,7 +79,7 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 				return err
 			}
 		}
-		return fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, actualRefID, qName, refField.Name())
+		return fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, targetID, objQName, refField.Name())
 	})
 }
 
@@ -91,11 +89,11 @@ func provideRecordsRegistryProjector(cfg *istructsmem.AppConfigType) func(event 
 		if argType.Kind() != appdef.TypeKind_ODoc && argType.Kind() != appdef.TypeKind_ORecord {
 			return nil
 		}
-		return writeElementsToORegistry(event.ArgumentObject(), cfg.AppDef, st, intents, event.WLogOffset())
+		return writeObjectToORegistry(event.ArgumentObject(), cfg.AppDef, st, intents, event.WLogOffset())
 	}
 }
 
-func writeElementsToORegistry(root istructs.IElement, appDef appdef.IAppDef, st istructs.IState, intents istructs.IIntents, wLogOffsetToStore istructs.Offset) error {
+func writeObjectToORegistry(root istructs.IElement, appDef appdef.IAppDef, st istructs.IState, intents istructs.IIntents, wLogOffsetToStore istructs.Offset) error {
 	if err := writeORegistry(st, intents, root.AsRecordID(appdef.SystemField_ID), wLogOffsetToStore); err != nil {
 		// notest
 		return err
