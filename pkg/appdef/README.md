@@ -49,21 +49,18 @@ classDiagram
     IType <|-- IStructure : inherits
     class IStructure {
         <<interface>>
-        fields contains: 
-        - sys.QName
         +Abstract() bool
         +Fields() []IField
         +Containers() []IContainer
         +Uniques() []IUnique
-        +QNameField() IField
+        +SystemField_QName() IField
     }
 
     IDoc --|> IStructure : inherits
     class IDoc {
         <<interface>>
-        fields contains: 
-        - sys.ID
-        - sys.IsActive
+        +SystemField_ID() IField
+        +SystemField_IsActive() IField
     }
 
     IGDoc --|> IDoc : inherits
@@ -94,11 +91,10 @@ classDiagram
     IStructure <|-- IRecord  : inherits
     class IRecord {
         <<interface>>
-        fields contains: 
-        - sys.ID
-        - sys.IsActive
-        - sys.ParentID
-        - sys.Container
+        +SystemField_ID() IField
+        +SystemField_IsActive() IField
+        +SystemField_ParentID() IField
+        +SystemField_Container() IField
     }
 
     IRecord <|-- IGRecord : inherits
@@ -135,8 +131,7 @@ classDiagram
     class IElement {
         <<interface>>
         ~Kind => TypeKind_Element
-        fields contains: 
-        - sys.Container
+        +SystemField_Container() IField
     }
 
     IType <|-- IView : inherits
@@ -366,20 +361,18 @@ classDiagram
 
     class IStructure {
         <<interface>>
-        fields contains:
-        - sys.QName
         +Abstract() bool
         +Fields() []IField
         +Containers() []IContainer
         +Uniques() []IUnique
+        +SystemField_QName() IField
     }
 
     IDoc --|> IStructure : inherits
     class IDoc {
         <<interface>>
-        fields contains:
-        - sys.ID
-        - sys.IsActive
+        +SystemField_ID() IField
+        +SystemField_IsActive() IField
     }
 
     IGDoc --|> IDoc : inherits
@@ -410,11 +403,10 @@ classDiagram
     IStructure <|-- IRecord  : inherits
     class IRecord {
         <<interface>>
-        fields contains:
-        - sys.ID
-        - sys.IsActive
-        - sys.ParentID
-        - sys.Container
+        +SystemField_ID() IField
+        +SystemField_IsActive() IField
+        +SystemField_ParentID() IField
+        +SystemField_Container() IField
     }
 
     IRecord <|-- IGRecord : inherits
@@ -450,9 +442,8 @@ classDiagram
     IStructure <|-- IElement : inherits
     class IElement {
         <<interface>>
-        fields contains:
-        - sys.Container
         ~Kind => TypeKind_Element
+        +SystemField_Container() IField
     }
 ```
 
