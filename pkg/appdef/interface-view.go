@@ -22,6 +22,7 @@ type IView interface {
 }
 
 type IViewBuilder interface {
+	IView
 	ITypeBuilder
 
 	// Returns full (pk + ccols) view key builder
@@ -51,6 +52,8 @@ type IViewKey interface {
 //
 // Ref. to view.go for implementation
 type IViewKeyBuilder interface {
+	IViewKey
+
 	// Returns partition key type builder
 	PartKeyBuilder() IViewPartKeyBuilder
 
@@ -73,6 +76,8 @@ type IViewPartKey interface {
 //
 // Ref. to view.go for implementation
 type IViewPartKeyBuilder interface {
+	IViewPartKey
+
 	// Adds partition key field.
 	//
 	// # Panics:
@@ -105,6 +110,8 @@ type IViewClustCols interface {
 //
 // Ref. to view.go for implementation
 type IViewClustColsBuilder interface {
+	IViewClustCols
+
 	// Adds clustering columns field.
 	//
 	// Only last column field can be variable length.
@@ -141,5 +148,7 @@ type IViewValue interface {
 //
 // Ref. to view.go for implementation
 type IViewValueBuilder interface {
+	IViewValue
+
 	IFieldsBuilder
 }
