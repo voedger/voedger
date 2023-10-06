@@ -31,12 +31,20 @@ func makeStructure(app *appDef, name QName, kind TypeKind, parent interface{}) s
 	return s
 }
 
+func (s structure) SystemField_QName() IField {
+	return s.fields.Field(SystemField_QName)
+}
+
 // Document is a structure.
 //
 // # Implements:
 //	- IDoc
 type doc struct {
 	structure
+}
+
+func (d doc) SystemField_ID() IField {
+	return d.fields.Field(SystemField_ID)
 }
 
 func (d doc) isDoc() {}
@@ -63,6 +71,18 @@ func makeRecord(app *appDef, name QName, kind TypeKind, parent interface{}) reco
 		structure: makeStructure(app, name, kind, parent),
 	}
 	return r
+}
+
+func (r record) SystemField_ID() IField {
+	return r.fields.Field(SystemField_ID)
+}
+
+func (r record) SystemField_ParentID() IField {
+	return r.fields.Field(SystemField_ParentID)
+}
+
+func (r record) SystemField_Container() IField {
+	return r.fields.Field(SystemField_Container)
 }
 
 func (r record) isRecord() {}

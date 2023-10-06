@@ -14,6 +14,9 @@ type IStructure interface {
 	IContainers
 	IUniques
 	IWithAbstract
+
+	// Returns definition for «sys.QName» field
+	SystemField_QName() IField
 }
 
 type IStructureBuilder interface {
@@ -31,6 +34,9 @@ type IStructureBuilder interface {
 type IDoc interface {
 	IStructure
 
+	// Returns definition for «sys.ID» field
+	SystemField_ID() IField
+
 	// Unwanted type assertion stub
 	isDoc()
 }
@@ -45,6 +51,15 @@ type IDocBuilder interface {
 // Record can contains child records.
 type IRecord interface {
 	IStructure
+
+	// Returns definition for «sys.ID» field
+	SystemField_ID() IField
+
+	// Returns definition for «sys.ParentID» field
+	SystemField_ParentID() IField
+
+	// Returns definition for «sys.Container» field
+	SystemField_Container() IField
 
 	// Unwanted type assertion stub
 	isRecord()

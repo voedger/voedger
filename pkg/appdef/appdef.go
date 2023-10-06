@@ -118,30 +118,6 @@ func (app *appDef) CRecord(name QName) ICRecord {
 	return nil
 }
 
-func (app *appDef) Type(name QName) IType {
-	if t := app.TypeByName(name); t != nil {
-		return t
-	}
-	return NullType
-}
-
-func (app *appDef) TypeByName(name QName) IType {
-	if t, ok := app.types[name]; ok {
-		return t.(IType)
-	}
-	return nil
-}
-
-func (app *appDef) TypeCount() int {
-	return len(app.types)
-}
-
-func (app *appDef) Types(cb func(IType)) {
-	for _, t := range app.types {
-		cb(t.(IType))
-	}
-}
-
 func (app *appDef) Element(name QName) IElement {
 	if t := app.typeByKind(name, TypeKind_Element); t != nil {
 		return t.(IElement)
@@ -189,6 +165,38 @@ func (app *appDef) Query(name QName) IQuery {
 		return t.(IQuery)
 	}
 	return nil
+}
+
+func (app *appDef) Structures(cb func(s IStructure)) {
+	app.Types(func(t IType) {
+		if s, ok := t.(IStructure); ok {
+			cb(s)
+		}
+	})
+}
+
+func (app *appDef) Type(name QName) IType {
+	if t := app.TypeByName(name); t != nil {
+		return t
+	}
+	return NullType
+}
+
+func (app *appDef) TypeByName(name QName) IType {
+	if t, ok := app.types[name]; ok {
+		return t.(IType)
+	}
+	return nil
+}
+
+func (app *appDef) TypeCount() int {
+	return len(app.types)
+}
+
+func (app *appDef) Types(cb func(IType)) {
+	for _, t := range app.types {
+		cb(t.(IType))
+	}
 }
 
 func (app *appDef) View(name QName) IView {

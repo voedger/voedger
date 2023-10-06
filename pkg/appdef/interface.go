@@ -77,6 +77,9 @@ type IAppDef interface {
 	// Returns nil if not found.
 	Element(name QName) IElement
 
+	// Enumerates all application structures
+	Structures(func(IStructure))
+
 	// Return View by name.
 	//
 	// Returns nil if not found.
