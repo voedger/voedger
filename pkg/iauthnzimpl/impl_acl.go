@@ -266,6 +266,7 @@ var defaultACL = ACL{
 				qNameQryGetUPPaymentMethods,
 				qNameQryToggleUPPaymentMethod,
 				qNameQryRequestUPPaymentMethod,
+				qNameQryGetUPTransactionsOverview,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
@@ -315,9 +316,12 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
-		desc: "grant exec on c.air.UpdateUPLocationRates to role air.UntillPaymentsReseller",
+		desc: "grant exec on few funcs to role air.UntillPaymentsReseller",
 		pattern: PatternType{
-			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPLocationRates},
+			qNamesPattern: []appdef.QName{
+				qNameCmdUpdateUPLocationRates,
+				qNameQryGetUPFeesOverview,
+			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
 		},
 		policy: ACPolicy_Allow,
