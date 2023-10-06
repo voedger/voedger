@@ -303,11 +303,8 @@ var defaultACL = ACL{
 		desc: "grant exec on few funcs to role air.UntillPaymentsReseller and role air.UntillPaymentsUser",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
-				qNameQryGetDailyPayoutCfg,
-				qNameCmdUpdateScheduledPayout,
-				qNameCmdRequestOnDemandPayout,
-				qNameQryGetPayouts,
-				qNameQryGetCreditInvoice,
+				qNameQryGetUPPayouts,
+				qNameQryGetUPInvoiceParties,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				// OR

@@ -67,14 +67,11 @@ var (
 	qNameCDocUntillPayments                         = appdef.NewQName(airPackage, "UntillPayments")
 	qNameCmdInitiateDeactivateWorkspace             = appdef.NewQName(appdef.SysPackage, "InitiateDeactivateWorkspace")
 	qNameQryModules                                 = appdef.NewQName(appdef.SysPackage, "Modules")
-	qNameQryGetDailyPayoutCfg                       = appdef.NewQName(airPackage, "GetDailyPayoutCfg")
-	qNameCmdUpdateScheduledPayout                   = appdef.NewQName(airPackage, "UpdateScheduledPayout")
 	qNameCmdUpdateUPLocationRates                   = appdef.NewQName(airPackage, "UpdateUPLocationRates")
 	qNameCmdUpdateUPProfile                         = appdef.NewQName(airPackage, "UpdateUPProfile")
-	qNameCmdRequestOnDemandPayout                   = appdef.NewQName(airPackage, "RequestOnDemandPayout")
-	qNameQryGetPayouts                              = appdef.NewQName(airPackage, "GetPayouts")
-	qNameQryGetCreditInvoice                        = appdef.NewQName(airPackage, "GetCreditInvoice")
 	qNameQryGetAllUPPayouts                         = appdef.NewQName(airPackage, "GetAllUPPayouts")
+	qNameQryGetUPPayouts                            = appdef.NewQName(airPackage, "GetUPPayouts")
+	qNameQryGetUPInvoiceParties                     = appdef.NewQName(airPackage, "GetUPInvoiceParties")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
