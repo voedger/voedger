@@ -84,5 +84,3 @@ func (r record) SystemField_ParentID() IField {
 func (r record) SystemField_Container() IField {
 	return r.fields.Field(SystemField_Container)
 }
-
-func (r record) isRecord() {}

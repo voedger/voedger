@@ -60,9 +60,6 @@ type IRecord interface {
 
 	// Returns definition for «sys.Container» field
 	SystemField_Container() IField
-
-	// Unwanted type assertion stub
-	isRecord()
 }
 
 type IRecordBuilder interface {
