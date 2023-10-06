@@ -49,7 +49,8 @@ classDiagram
     IType <|-- IStructure : inherits
     class IStructure {
         <<interface>>
-        ~Fields:\n * sys.QName
+        fields contains: 
+        - sys.QName
         +Abstract() bool
         +Fields() []IField
         +Containers() []IContainer
@@ -60,7 +61,9 @@ classDiagram
     IDoc --|> IStructure : inherits
     class IDoc {
         <<interface>>
-        ~Fields:\n * sys.ID,\n * sys.IsActive
+        fields contains: 
+        - sys.ID
+        - sys.IsActive
     }
 
     IGDoc --|> IDoc : inherits
@@ -91,7 +94,11 @@ classDiagram
     IStructure <|-- IRecord  : inherits
     class IRecord {
         <<interface>>
-        ~Fields:\n * sys.ID,\n * sys.IsActive,\n * sys.ParentID,\n * sys.Container
+        fields contains: 
+        - sys.ID
+        - sys.IsActive
+        - sys.ParentID
+        - sys.Container
     }
 
     IRecord <|-- IGRecord : inherits
@@ -128,7 +135,8 @@ classDiagram
     class IElement {
         <<interface>>
         ~Kind => TypeKind_Element
-        ~Fields:\n * sys.Container
+        fields contains: 
+        - sys.Container
     }
 
     IType <|-- IView : inherits
@@ -345,105 +353,110 @@ classDiagram
 
 ```
 
-### Fields, Containers, Uniques
+### Structures
+
+Structured (documents, records, objects, elements) are those structural types that have fields and can contain containers with other structural types.
+
+The inheritance and composing diagrams given below are expanded general diagrams of the types above.
+
+### Structures inheritance
 
 ```mermaid
 classDiagram
 
-  class IField {
-    <<Interface>>
-    +Name() string
-    +DataKind() DataKind
-    +Required() bool
-    +Verified() bool
-    +VerificationKind(VerificationKind) bool
-  }
+    class IStructure {
+        <<interface>>
+        fields contains:
+        - sys.QName
+        +Abstract() bool
+        +Fields() []IField
+        +Containers() []IContainer
+        +Uniques() []IUnique
+    }
 
-  class IFields{
-    <<Interface>>
-    Field(string) IField
-    FieldCount() int
-    Fields(func(IField))
-  }
-  IFields "1" --* "0..*" IField : compose
+    IDoc --|> IStructure : inherits
+    class IDoc {
+        <<interface>>
+        fields contains:
+        - sys.ID
+        - sys.IsActive
+    }
 
-  IFieldsBuilder --|> IFields : inherits
-  class IFieldsBuilder {
-    <<Interface>>
-    AddField(…)
-    AddVerifiedField(…)
-    AddRefField(…)
-    AddStringField(…)
-  }
+    IGDoc --|> IDoc : inherits
+    class IGDoc {
+        <<interface>>
+        ~Kind => TypeKind_GDoc
+    }
 
-  IRefField --|> IField : inherits
-  class IRefField {
-    <<Interface>>
-    Refs() []QName
-  }
+    ICDoc --|> IDoc : inherits
+    class ICDoc {
+        <<interface>>
+        ~Kind => TypeKind_CDoc
+        +Singleton() bool
+    }
 
-  IStringField --|> IField : inherits
-  class IStringField {
-    <<Interface>>
-    Refs() []QName
-    Restricts() IStringFieldRestricts
-  }
+    IWDoc --|> IDoc : inherits
+    class IWDoc {
+        <<interface>>
+        ~Kind => TypeKind_WDoc
+    }
+                    
+    IODoc --|> IDoc: inherits
+    class IODoc {
+        <<interface>>
+        ~Kind => TypeKind_ODoc
+    }
 
-  IStringField "1" --o "1" IStringFieldRestricts : aggregates
-  class IStringFieldRestricts {
-    <<Interface>>
-    MinValue() uint16
-    MaxValue() uint16
-    Pattern() string
-  }
+    IStructure <|-- IRecord  : inherits
+    class IRecord {
+        <<interface>>
+        fields contains:
+        - sys.ID
+        - sys.IsActive
+        - sys.ParentID
+        - sys.Container
+    }
 
-  class IContainer {
-    <<Interface>>
-    +Name() string
-    +Def() IDef
-    +MinOccurs() int
-    +MaxOccurs() int
-  }
+    IRecord <|-- IGRecord : inherits
+    class IGRecord {
+        <<interface>>
+        ~Kind => TypeKind_GRecord
+    }
 
-  class IContainers{
-    <<Interface>>
-    Container(string) IContainer
-    ContainerCount() int
-    ContainerDef(string) IDef
-    Containers(func(IContainer))
-  }
-  IContainers "1" --* "0..*" IContainer : compose
+    IRecord <|-- ICRecord : inherits
+    class ICRecord {
+        <<interface>>
+        ~Kind => TypeKind_CRecord
+    }
 
-  IContainersBuilder --|> IContainers : inherits
-  class IContainersBuilder {
-    <<Interface>>
-    AddContainer(…) IContainer
-  }
+    IRecord <|-- IWRecord : inherits
+    class IWRecord {
+        <<interface>>
+        ~Kind => TypeKind_WRecord
+    }
 
-  class IUnique {
-    <<Interface>>
-    +Name() string
-    +ID() UniqueID
-    +Fields() []IFeld
-  }
+    IRecord <|-- IORecord : inherits
+    class IORecord {
+        <<interface>>
+        ~Kind => TypeKind_ORecord
+    }
 
-  class IUniques{
-    <<Interface>>
-    UniqueByID(UniqueID) IUnique
-    UniqueByName(string) IUnique
-    UniqueCount() int
-    Uniques(func(IUnique))
-  }
-  IUniques "1" --* "0..*" IUnique : compose
+    IObject --|> IStructure : inherits
+    class IObject {
+        <<interface>>
+        ~Kind => TypeKind_Object
+    }
 
-  IUniquesBuilder --|> IUniques : inherits
-  class IUniquesBuilder {
-    <<Interface>>
-    AddUnique(…) IUnique
-  }
+    IStructure <|-- IElement : inherits
+    class IElement {
+        <<interface>>
+        fields contains:
+        - sys.Container
+        ~Kind => TypeKind_Element
+    }
 ```
 
-### Structures
+#### Structures composing
 
 ```mermaid
 classDiagram
@@ -619,6 +632,104 @@ classDiagram
     <<Interface>>
     IFieldsBuilder
     IContainersBuilder
+  }
+```
+
+#### Fields, Containers, Uniques
+
+```mermaid
+classDiagram
+
+  class IField {
+    <<Interface>>
+    +Name() string
+    +DataKind() DataKind
+    +Required() bool
+    +Verified() bool
+    +VerificationKind(VerificationKind) bool
+  }
+
+  class IFields{
+    <<Interface>>
+    Field(string) IField
+    FieldCount() int
+    Fields(func(IField))
+  }
+  IFields "1" --* "0..*" IField : compose
+
+  IFieldsBuilder --|> IFields : inherits
+  class IFieldsBuilder {
+    <<Interface>>
+    AddField(…)
+    AddVerifiedField(…)
+    AddRefField(…)
+    AddStringField(…)
+  }
+
+  IRefField --|> IField : inherits
+  class IRefField {
+    <<Interface>>
+    Refs() []QName
+  }
+
+  IStringField --|> IField : inherits
+  class IStringField {
+    <<Interface>>
+    Refs() []QName
+    Restricts() IStringFieldRestricts
+  }
+
+  IStringField "1" --o "1" IStringFieldRestricts : aggregates
+  class IStringFieldRestricts {
+    <<Interface>>
+    MinValue() uint16
+    MaxValue() uint16
+    Pattern() string
+  }
+
+  class IContainer {
+    <<Interface>>
+    +Name() string
+    +Def() IDef
+    +MinOccurs() int
+    +MaxOccurs() int
+  }
+
+  class IContainers{
+    <<Interface>>
+    Container(string) IContainer
+    ContainerCount() int
+    ContainerDef(string) IDef
+    Containers(func(IContainer))
+  }
+  IContainers "1" --* "0..*" IContainer : compose
+
+  IContainersBuilder --|> IContainers : inherits
+  class IContainersBuilder {
+    <<Interface>>
+    AddContainer(…) IContainer
+  }
+
+  class IUnique {
+    <<Interface>>
+    +Name() string
+    +ID() UniqueID
+    +Fields() []IFeld
+  }
+
+  class IUniques{
+    <<Interface>>
+    UniqueByID(UniqueID) IUnique
+    UniqueByName(string) IUnique
+    UniqueCount() int
+    Uniques(func(IUnique))
+  }
+  IUniques "1" --* "0..*" IUnique : compose
+
+  IUniquesBuilder --|> IUniques : inherits
+  class IUniquesBuilder {
+    <<Interface>>
+    AddUnique(…) IUnique
   }
 ```
 
