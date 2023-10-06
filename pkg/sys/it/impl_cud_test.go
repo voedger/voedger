@@ -334,9 +334,37 @@ func TestRefIntegrity(t *testing.T) {
 		_ = idOdoc1
 		_ = idOrec1
 
-		t.Run("ref to an unexisting ODoc", func(t *testing.T) {
-			body := `{"args":{"sys.ID": 1,"refToODoc1":1000000000000},"unloggedArgs":{"sys.ID":2}}`
-			vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+		t.Run("ref to unexisting", func(t *testing.T) {
+			t.Run("ODoc", func(t *testing.T) {
+				body := `{"args":{"sys.ID": 1,"refToODoc1":1000000000000},"unloggedArgs":{"sys.ID":2}}`
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+			})
+
+			t.Run("ORecord", func(t *testing.T) {
+				body := `{"args":{"sys.ID": 1,"refToORecord1":1000000000000},"unloggedArgs":{"sys.ID":2}}`
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+			})
+
+			t.Run("Any", func(t *testing.T) {
+				body := `{"args":{"sys.ID": 1,"refToAny":1000000000000},"unloggedArgs":{"sys.ID":2}}`
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+			})
+
+			t.Run("CDoc", func(t *testing.T) {
+				body := `{"args":{"sys.ID": 1,"refToCDoc1":1000000000000},"unloggedArgs":{"sys.ID":2}}`
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+			})
+			t.Run("CDoc or ODoc", func(t *testing.T) {
+				body := `{"args":{"sys.ID": 1,"refToCDoc1OrODoc1":1000000000000},"unloggedArgs":{"sys.ID":2}}`
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+			})
+		})
+
+		t.Run("ref to existing", func(t *testing.T) {
+			t.Run("ODoc", func(t *testing.T) {
+				body := fmt.Sprintf(`{"args":{"sys.ID": 1,"refToODoc1":%d},"unloggedArgs":{"sys.ID":2}}`, idOdoc1)
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+			})
 		})
 	})
 }

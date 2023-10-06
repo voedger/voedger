@@ -428,5 +428,5 @@ TABLE odoc2 INHERITS ODoc (
 	refToORecord1 ref(orecord1),
 	refToAny ref,
 	refToCDoc1 ref(cdoc1),
-	reftoToCDoc1AndODoc1 ref(cdoc1, odoc1)
+	reftoToCDoc1OrODoc1 ref(cdoc1, odoc1)
 );

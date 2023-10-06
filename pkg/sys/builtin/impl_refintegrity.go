@@ -27,6 +27,7 @@ func provideRefIntegrityValidation(cfg *istructsmem.AppConfigType) {
 			Func: provideRecordsRegistryProjector(cfg),
 		}
 	})
+
 	cfg.AddCUDValidators(provideRefIntegrityValidator())
 	// cfg.AddEventValidators(refIntegrityValidator)
 }
@@ -158,34 +159,50 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 func provideRecordsRegistryProjector(cfg *istructsmem.AppConfigType) func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 		argType := cfg.AppDef.Type(event.ArgumentObject().QName())
-		if argType.Kind() != appdef.TypeKind_ODoc && argType.Kind() != appdef.TypeKind_ORecord {
+		event.ArgumentObject().
+		if !event.ArgumentObject().AsRecordID(appdef.SystemField_ID).IsRaw() || (argType.Kind() != appdef.TypeKind_ODoc && argType.Kind() != appdef.TypeKind_ORecord) {
 			return nil
 		}
-
-		return event.CUDs(func(rec istructs.ICUDRow) error {
-			if !rec.IsNew() {
-				return nil
-			}
-			recType := cfg.AppDef.Type(rec.QName())
-			if recType.Kind() != appdef.TypeKind_ODoc && recType.Kind() != appdef.TypeKind_ORecord {
-				return nil
-			}
-			kb, err := st.KeyBuilder(state.ViewRecordsStorage, QNameViewORecordsRegistry)
-			if err != nil {
-				// notest
-				return err
-			}
-			kb.PutRecordID(field_ID, rec.ID())
-			recordsRegistryRecBuilder, err := intents.NewValue(kb)
-			if err != nil {
-				// notest
-				return err
-			}
-			recordsRegistryRecBuilder.PutInt32(field_Dummy, 1)
-			recordsRegistryRecBuilder.PutInt64(field_WLogOffset, int64(event.WLogOffset()))
-			return nil
-		})
+		return writeElementsToORegistry(event.ArgumentObject(), cfg.AppDef, st, intents, event.WLogOffset())
 	}
+}
+
+func writeElementsToORegistry(root istructs.IElement, appDef appdef.IAppDef, st istructs.IState, intents istructs.IIntents, wLogOffsetToStore istructs.Offset) error {
+	if err := writeORegistry(st, intents, root.AsRecordID(appdef.SystemField_ID), wLogOffsetToStore); err != nil {
+		// notest
+		return err
+	}
+	return iterate.ForEachError(root.Containers, func(container string) (err error) {
+		root.Elements(container, func(el istructs.IElement) {
+			if err != nil {
+				// notest
+				return
+			}
+			elType := appDef.Type(el.QName())
+			if elType.Kind() != appdef.TypeKind_ODoc && elType.Kind() != appdef.TypeKind_ORecord {
+				return
+			}
+			err = writeORegistry(st, intents, el.AsRecordID(appdef.SystemField_ID), wLogOffsetToStore)
+		})
+		return err
+	})
+}
+
+func writeORegistry(st istructs.IState, intents istructs.IIntents, idToStore istructs.RecordID, wLogOffsetToStore istructs.Offset) error {
+	kb, err := st.KeyBuilder(state.ViewRecordsStorage, QNameViewORecordsRegistry)
+	if err != nil {
+		// notest
+		return err
+	}
+	kb.PutRecordID(field_ID, idToStore)
+	recordsRegistryRecBuilder, err := intents.NewValue(kb)
+	if err != nil {
+		// notest
+		return err
+	}
+	recordsRegistryRecBuilder.PutInt32(field_Dummy, 1)
+	recordsRegistryRecBuilder.PutInt64(field_WLogOffset, int64(wLogOffsetToStore))
+	return nil
 }
 
 func provideRefIntegrityValidator() istructs.CUDValidator {
