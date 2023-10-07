@@ -60,11 +60,12 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 			require.NotNil(obj)
 			require.Equal(app.Object(objName), obj)
 
-			require.Nil(ws.Type(NewQName("unknown", "type")), "must be nil if unknown type")
+			require.Equal(NullType, ws.Type(NewQName("unknown", "type")), "must be NullType if unknown type")
 		})
 
 		t.Run("must be ok to enum workspace types", func(t *testing.T) {
-			require.Equal(1, func() int {
+			require.Equal(1, ws.TypeCount())
+			require.Equal(ws.TypeCount(), func() int {
 				cnt := 0
 				ws.Types(func(typ IType) {
 					switch typ.QName() {

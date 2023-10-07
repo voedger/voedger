@@ -12,19 +12,6 @@ type IAppDef interface {
 	IComment
 	IWithTypes
 
-	// Returns type by name.
-	//
-	// If not found then empty type with TypeKind_null is returned
-	Type(name QName) IType
-
-	// Returns type by name.
-	//
-	// Returns nil if type not found.
-	TypeByName(name QName) IType
-
-	// Return count of types.
-	TypeCount() int
-
 	// Return GDoc by name.
 	//
 	// Returns nil if not found.

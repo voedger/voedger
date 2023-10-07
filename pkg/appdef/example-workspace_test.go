@@ -13,7 +13,7 @@ import (
 func ExampleIWorkspace() {
 
 	var app appdef.IAppDef
-	wsName, descName, docName := appdef.NewQName("test", "ws"), appdef.NewQName("test", "desc"), appdef.NewQName("test", "doc")
+	wsName, descName, docName, recName := appdef.NewQName("test", "ws"), appdef.NewQName("test", "desc"), appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
 
 	// how to build AppDef with workspace
 	{
@@ -23,12 +23,17 @@ func ExampleIWorkspace() {
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 
+		appDef.AddCRecord(recName).
+			AddField("r1", appdef.DataKind_int64, true).
+			AddField("r2", appdef.DataKind_string, false)
 		appDef.AddCDoc(docName).
-			AddField("f3", appdef.DataKind_int64, true).
-			AddField("f4", appdef.DataKind_string, false)
+			AddField("d1", appdef.DataKind_int64, true).
+			AddField("d2", appdef.DataKind_string, false).(appdef.ICDocBuilder).
+			AddContainer("rec", recName, 0, 100)
 
 		appDef.AddWorkspace(wsName).
 			SetDescriptor(descName).
+			AddType(recName).
 			AddType(docName)
 
 		if a, err := appDef.Build(); err == nil {
@@ -44,8 +49,9 @@ func ExampleIWorkspace() {
 		ws := app.Workspace(wsName)
 		fmt.Printf("workspace %q: %v\n", ws.QName(), ws.Kind())
 
-		// how to inspect workspace types names
+		// how to inspect workspace
 		fmt.Printf("workspace %q descriptor is %q\n", ws.QName(), ws.Descriptor())
+		fmt.Printf("types count: %d\n", ws.TypeCount())
 
 		ws.Types(func(t appdef.IType) {
 			fmt.Printf("- Type: %q, kind: %v\n", t.QName(), t.Kind())
@@ -55,5 +61,7 @@ func ExampleIWorkspace() {
 	// Output:
 	// workspace "test.ws": TypeKind_Workspace
 	// workspace "test.ws" descriptor is "test.desc"
+	// types count: 2
 	// - Type: "test.doc", kind: TypeKind_CDoc
+	// - Type: "test.rec", kind: TypeKind_CRecord
 }

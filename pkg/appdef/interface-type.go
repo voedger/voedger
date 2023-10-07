@@ -36,9 +36,24 @@ type IType interface {
 	Kind() TypeKind
 }
 
-// Type describes the entity with Types(func(IType)) menthod
+// Interface describes the entity with types.
 type IWithTypes interface {
+	// Returns type by name.
+	//
+	// If not found then empty type with TypeKind_null is returned
+	Type(name QName) IType
+
+	// Returns type by name.
+	//
+	// Returns nil if type not found.
+	TypeByName(name QName) IType
+
+	// Return count of types.
+	TypeCount() int
+
 	// Enumerates all internal types.
+	//
+	// Types are enumerated in alphabetical order of QNames.
 	Types(func(IType))
 }
 

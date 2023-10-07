@@ -5,16 +5,20 @@
 
 package appdef
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 // # Implements:
-//   - IWDoc, IWDocBuilder
+//   - IWorkspace, IWorkspaceBuilder
 type workspace struct {
 	typ
 	comment
 	withAbstract
-	types map[QName]interface{}
-	desc  ICDoc
+	types        map[QName]interface{}
+	typesOrdered []interface{}
+	desc         ICDoc
 }
 
 func newWorkspace(app *appDef, name QName) *workspace {
@@ -33,20 +37,8 @@ func (ws *workspace) AddType(name QName) IWorkspaceBuilder {
 	}
 
 	ws.types[name] = t
+	ws.typesOrdered = nil
 	return ws
-}
-
-func (ws *workspace) Type(name QName) IType {
-	if t, ok := ws.types[name]; ok {
-		return t.(IType)
-	}
-	return nil
-}
-
-func (ws *workspace) Types(cb func(IType)) {
-	for _, t := range ws.types {
-		cb(t.(IType))
-	}
 }
 
 func (ws *workspace) Descriptor() QName {
@@ -54,6 +46,39 @@ func (ws *workspace) Descriptor() QName {
 		return ws.desc.QName()
 	}
 	return NullQName
+}
+
+func (ws *workspace) Type(name QName) IType {
+	if t := ws.TypeByName(name); t != nil {
+		return t.(IType)
+	}
+	return NullType
+}
+
+func (ws *workspace) TypeByName(name QName) IType {
+	if t, ok := ws.types[name]; ok {
+		return t.(IType)
+	}
+	return nil
+}
+
+func (ws *workspace) TypeCount() int {
+	return len(ws.types)
+}
+
+func (ws *workspace) Types(cb func(IType)) {
+	if ws.typesOrdered == nil {
+		ws.typesOrdered = make([]interface{}, 0, len(ws.types))
+		for _, t := range ws.types {
+			ws.typesOrdered = append(ws.typesOrdered, t)
+		}
+		sort.Slice(ws.typesOrdered, func(i, j int) bool {
+			return ws.typesOrdered[i].(IType).QName().String() < ws.typesOrdered[j].(IType).QName().String()
+		})
+	}
+	for _, t := range ws.typesOrdered {
+		cb(t.(IType))
+	}
 }
 
 func (ws *workspace) SetDescriptor(q QName) IWorkspaceBuilder {
