@@ -11,15 +11,11 @@ package appdef
 type IWorkspace interface {
 	IType
 	IWithAbstract
-
+	IWithTypes
 	// Returns type included by workspace by name.
 	//
 	// Nil is returned if not found
 	Type(QName) IType
-
-	// Enumerates all types included by workspace
-	Types(func(IType))
-
 	// Workspace descriptor document.
 	// See [#466](https://github.com/voedger/voedger/issues/466)
 	//

@@ -10,6 +10,7 @@ package appdef
 // Ref to apdef.go for implementation
 type IAppDef interface {
 	IComment
+	IWithTypes
 
 	// Returns type by name.
 	//
@@ -23,11 +24,6 @@ type IAppDef interface {
 
 	// Return count of types.
 	TypeCount() int
-
-	// Enumerates all application types.
-	//
-	// Types are enumerated in alphabetical order by QName
-	Types(func(IType))
 
 	// Return GDoc by name.
 	//
