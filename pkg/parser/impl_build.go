@@ -264,7 +264,7 @@ func (c *buildContext) views() error {
 				for _, ref := range f.RefDocs {
 					if err := resolveInCtx(ref, ictx,
 						func(tbl *TableStmt, pkg *PackageSchemaAST) error {
-							if e := c.checkReference(ref, pkg, tbl, ictx); e != nil {
+							if e := c.checkReference(ref, pkg, tbl); e != nil {
 								return e
 							}
 							refs = append(refs, appdef.NewQName(string(pkg.Name), string(ref.Name)))
@@ -480,7 +480,7 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr, ictx *iterateCtx
 	errors := false
 	for i := range refField.RefDocs {
 		err := resolveInCtx(refField.RefDocs[i], ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
-			if e := c.checkReference(refField.RefDocs[i], pkg, tbl, ictx); e != nil {
+			if e := c.checkReference(refField.RefDocs[i], pkg, tbl); e != nil {
 				return e
 			}
 			refs = append(refs, appdef.NewQName(string(pkg.Name), string(refField.RefDocs[i].Name)))
@@ -732,7 +732,7 @@ func (c *buildContext) defCtx() *defBuildContext {
 	return &c.defs[len(c.defs)-1]
 }
 
-func (c *buildContext) checkReference(refTable DefQName, pkg *PackageSchemaAST, table *TableStmt, ictx *iterateCtx) error {
+func (c *buildContext) checkReference(refTable DefQName, pkg *PackageSchemaAST, table *TableStmt) error {
 	if refTable.Package == "" {
 		refTable.Package = Ident(pkg.Name)
 	}
