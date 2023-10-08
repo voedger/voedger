@@ -472,11 +472,11 @@ func Test_AbstractTables(t *testing.T) {
 
 			SYNC PROJECTOR proj2
             AFTER INSERT ON My1
-            INTENTS(Record AbstractTable);	-- NOT ALLOWED
+            INTENTS(Record(AbstractTable));	-- NOT ALLOWED
 
 			PROJECTOR proj3
             AFTER INSERT ON My1
-			STATE(Record AbstractTable)		-- NOT ALLOWED
+			STATE(Record(AbstractTable))		-- NOT ALLOWED
             INTENTS(SendMail);
 		);
 		TABLE My2 INHERITS CRecord(
