@@ -361,9 +361,9 @@ func (s *Statement) SetComments(comments []string) {
 	s.Comments = comments
 }
 
-type StorageKey struct {
-	Storage DefQName  `parser:"@@"`
-	Entity  *DefQName `parser:"( @@ )?"`
+type ProjectorStorage struct {
+	Storage  DefQName   `parser:"@@"`
+	Entities []DefQName `parser:"( '(' @@ (',' @@)* ')')?"`
 }
 
 /*
@@ -377,8 +377,8 @@ type ProjectorStmt struct {
 	Name      Ident               `parser:"'PROJECTOR' @Ident"`
 	CUDEvents *ProjectorCUDEvents `parser:"('AFTER' @@)?"`
 	On        []DefQName          `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!"`
-	State     []StorageKey        `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
-	Intents   []StorageKey        `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
+	State     []ProjectorStorage  `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Intents   []ProjectorStorage  `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
 	Engine    EngineType          // Initialized with 1st pass
 }
 

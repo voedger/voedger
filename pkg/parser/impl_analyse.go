@@ -261,27 +261,31 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 		}
 	}
 
-	checkEntity := func(key StorageKey, f *StorageStmt) error {
+	checkEntity := func(key ProjectorStorage, f *StorageStmt) error {
 		if f.EntityRecord {
-			if key.Entity == nil {
+			if len(key.Entities) == 0 {
 				return ErrStorageRequiresEntity(key.Storage.String())
 			}
-			resolveFunc := func(f *TableStmt, _ *PackageSchemaAST) error {
-				if f.Abstract {
-					return ErrAbstractTableNotAlowedInProjectors(key.Entity.String())
+			for _, entity := range key.Entities {
+				resolveFunc := func(f *TableStmt, _ *PackageSchemaAST) error {
+					if f.Abstract {
+						return ErrAbstractTableNotAlowedInProjectors(entity.String())
+					}
+					return nil
 				}
-				return nil
-			}
-			if err2 := resolveInCtx(*key.Entity, c, resolveFunc); err2 != nil {
-				return err2
+				if err2 := resolveInCtx(entity, c, resolveFunc); err2 != nil {
+					return err2
+				}
 			}
 		}
 		if f.EntityView {
-			if key.Entity == nil {
+			if len(key.Entities) == 0 {
 				return ErrStorageRequiresEntity(key.Storage.String())
 			}
-			if err2 := resolveInCtx(*key.Entity, c, func(*ViewStmt, *PackageSchemaAST) error { return nil }); err2 != nil {
-				return err2
+			for _, entity := range key.Entities {
+				if err2 := resolveInCtx(entity, c, func(*ViewStmt, *PackageSchemaAST) error { return nil }); err2 != nil {
+					return err2
+				}
 			}
 		}
 		return nil

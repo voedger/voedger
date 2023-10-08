@@ -168,11 +168,11 @@ WORKSPACE Restaurant (
 	
 	    SYNC PROJECTOR UpdateTableStatus
 	        AFTER INSERT ON (Order, Bill)
-		INTENTS(View TableStatus);
+		INTENTS(View(TableStatus));
 
 	    PROJECTOR UpdateSalesReport
 	        AFTER INSERT ON Bill 
-		INTENTS(View SalesPerDay);
+		INTENTS(View(SalesPerDay));
 
     );
 
