@@ -24,6 +24,8 @@ type TypeKind uint8
 //
 // Ref to type.go for implementation
 type IType interface {
+	IComment
+
 	// Parent cache
 	App() IAppDef
 
@@ -32,4 +34,30 @@ type IType interface {
 
 	// Type kind
 	Kind() TypeKind
+}
+
+// Interface describes the entity with types.
+type IWithTypes interface {
+	// Returns type by name.
+	//
+	// If not found then empty type with TypeKind_null is returned
+	Type(name QName) IType
+
+	// Returns type by name.
+	//
+	// Returns nil if type not found.
+	TypeByName(name QName) IType
+
+	// Return count of types.
+	TypeCount() int
+
+	// Enumerates all internal types.
+	//
+	// Types are enumerated in alphabetical order of QNames.
+	Types(func(IType))
+}
+
+type ITypeBuilder interface {
+	IType
+	ICommentBuilder
 }

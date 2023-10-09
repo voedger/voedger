@@ -10,7 +10,7 @@ import (
 
 func provideViewInviteIndex(app appdef.IAppDefBuilder) {
 	view := app.AddView(qNameViewInviteIndex)
-	view.Key().Partition().AddField(field_Dummy, appdef.DataKind_int32)
-	view.Key().ClustCols().AddStringField(Field_Login, appdef.DefaultFieldMaxLength)
-	view.Value().AddRefField(field_InviteID, true)
+	view.KeyBuilder().PartKeyBuilder().AddField(field_Dummy, appdef.DataKind_int32)
+	view.KeyBuilder().ClustColsBuilder().AddStringField(Field_Login, appdef.DefaultFieldMaxLength)
+	view.ValueBuilder().AddRefField(field_InviteID, true)
 }

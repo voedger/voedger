@@ -14,6 +14,8 @@ import (
 func Test_NullType(t *testing.T) {
 	require := require.New(t)
 
+	require.Empty(NullType.Comment())
+
 	require.Nil(NullType.App())
 	require.Equal(NullQName, NullType.QName())
 	require.Equal(TypeKind_null, NullType.Kind())

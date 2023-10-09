@@ -62,7 +62,7 @@ func (sch *DynoBufSchemes) add(name string, fields appdef.IFields) {
 //   - view value
 func (sch *DynoBufSchemes) addView(view appdef.IView) {
 	name := view.QName().String()
-	sch.add(name+viewPartKeySuffix, view.Key().Partition())
+	sch.add(name+viewPartKeySuffix, view.Key().PartKey())
 	sch.add(name+viewClustColsSuffix, view.Key().ClustCols())
 	sch.add(name, view.Value())
 }

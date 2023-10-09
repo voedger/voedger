@@ -10,22 +10,7 @@ package appdef
 // Ref to apdef.go for implementation
 type IAppDef interface {
 	IComment
-
-	// Returns type by name.
-	//
-	// If not found then empty type with TypeKind_null is returned
-	Type(name QName) IType
-
-	// Returns type by name.
-	//
-	// Returns nil if type not found.
-	TypeByName(name QName) IType
-
-	// Return count of types.
-	TypeCount() int
-
-	// Enumerates all application types.
-	Types(func(IType))
+	IWithTypes
 
 	// Return GDoc by name.
 	//
@@ -76,6 +61,11 @@ type IAppDef interface {
 	//
 	// Returns nil if not found.
 	Element(name QName) IElement
+
+	// Enumerates all application structures
+	//
+	// Structures are enumerated in alphabetical order by QName
+	Structures(func(IStructure))
 
 	// Return View by name.
 	//

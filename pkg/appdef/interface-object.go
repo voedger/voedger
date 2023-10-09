@@ -9,36 +9,28 @@ package appdef
 //
 // Ref. to object.go for implementation
 type IObject interface {
-	IType
-	IComment
-	IFields
-	IContainers
-	IWithAbstract
+	IStructure
+
+	// Unwanted type assertion stub
+	isObject()
 }
 
 type IObjectBuilder interface {
 	IObject
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IWithAbstractBuilder
+	IStructureBuilder
 }
 
 // Element type.
 //
 // Ref. to object.go for implementation
 type IElement interface {
-	IType
-	IComment
-	IFields
-	IContainers
-	IWithAbstract
+	IStructure
+
+	// Unwanted type assertion stub
+	isElement()
 }
 
 type IElementBuilder interface {
 	IElement
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IWithAbstractBuilder
+	IStructureBuilder
 }

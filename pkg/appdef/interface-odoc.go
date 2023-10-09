@@ -9,36 +9,28 @@ package appdef
 //
 // Ref. to odoc.go for implementation
 type IODoc interface {
-	IType
-	IComment
-	IFields
-	IContainers
-	IWithAbstract
+	IDoc
+
+	// Unwanted type assertion stub
+	isODoc()
 }
 
 type IODocBuilder interface {
 	IODoc
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IWithAbstractBuilder
+	IDocBuilder
 }
 
 // Operation document record.
 //
 // Ref. to odoc.go for implementation
 type IORecord interface {
-	IType
-	IComment
-	IFields
-	IContainers
-	IWithAbstract
+	IRecord
+
+	// Unwanted type assertion stub
+	isORecord()
 }
 
 type IORecordBuilder interface {
 	IORecord
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IWithAbstractBuilder
+	IRecordBuilder
 }

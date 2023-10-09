@@ -10,6 +10,7 @@ require (
 	github.com/emersion/go-smtp v0.15.0
 	github.com/gocql/gocql v1.3.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/google/go-cmp v0.5.8
 	github.com/google/gofuzz v1.0.0
 	github.com/google/uuid v1.3.0
 	github.com/google/wire v0.5.0

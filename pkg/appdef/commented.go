@@ -21,3 +21,7 @@ func (c *comment) Comment() string {
 func (c *comment) SetComment(v ...string) {
 	c.c = strings.Join(v, "\n")
 }
+
+type nullComment struct{}
+
+func (c *nullComment) Comment() string { return "" }

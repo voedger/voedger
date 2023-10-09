@@ -47,9 +47,9 @@ func TestBasicUsage(t *testing.T) {
 		AddField("Photo", DataKind_bytes, false)
 
 	buyerView := appDef.AddView(NewQName("test", "viewBuyerByHeight"))
-	buyerView.Key().Partition().AddField("Height", DataKind_float32)
-	buyerView.Key().ClustCols().AddStringField("Buyer", 100)
-	buyerView.Value().AddRefField("BuyerID", true, docName)
+	buyerView.KeyBuilder().PartKeyBuilder().AddField("Height", DataKind_float32)
+	buyerView.KeyBuilder().ClustColsBuilder().AddStringField("Buyer", 100)
+	buyerView.ValueBuilder().AddRefField("BuyerID", true, docName)
 
 	buyerObj := appDef.AddObject(NewQName("test", "buyer"))
 	buyerObj.

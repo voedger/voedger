@@ -161,7 +161,7 @@ WORKSPACE MyWorkspace (
         */
         PROJECTOR CountOrders
             ON Orders
-            INTENTS(View OrdersCountView);
+            INTENTS(View(OrdersCountView));
 
         -- Projector triggered by command argument SubscriptionEvent
         -- Projector uses sys.HTTPStorage
@@ -173,23 +173,23 @@ WORKSPACE MyWorkspace (
         -- SYNC means that projector is synchronous
         SYNC PROJECTOR TablePlanThumbnailGen
             AFTER INSERT ON TablePlan
-            INTENTS(View TablePlanThumbnails);
+            INTENTS(View(TablePlanThumbnails));
 
         -- Projector triggered by few COMMANDs
         PROJECTOR UpdateDashboard
             ON (Orders, Orders2)
-            INTENTS(View DashboardView);
+            INTENTS(View(DashboardView));
 
         -- Projector triggered by few types of CUD operations
         PROJECTOR UpdateActivePlans
             AFTER ACTIVATE OR DEACTIVATE ON TablePlan
-            INTENTS(View ActiveTablePlansView);
+            INTENTS(View(ActiveTablePlansView));
 
         -- Some projector which sends E-mails and performs HTTP queries
         PROJECTOR NotifyOnChanges
             AFTER INSERT OR UPDATE ON (TablePlan, WsTable)
             STATE(Http, AppSecret)
-            INTENTS(SendMail, View NotificationsHistory);
+            INTENTS(SendMail, View(NotificationsHistory));
 
 
         /*

@@ -27,9 +27,9 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 				AddField("f2", appdef.DataKind_QName, false)
 
 			v := app.AddView(viewName)
-			v.Key().Partition().AddField("pkF1", appdef.DataKind_int32)
-			v.Key().ClustCols().AddStringField("ccF1", 100)
-			v.Value().AddField("valF1", appdef.DataKind_Event, true)
+			v.KeyBuilder().PartKeyBuilder().AddField("pkF1", appdef.DataKind_int32)
+			v.KeyBuilder().ClustColsBuilder().AddStringField("ccF1", 100)
+			v.ValueBuilder().AddField("valF1", appdef.DataKind_Event, true)
 
 			a, _ := app.Build()
 			return a

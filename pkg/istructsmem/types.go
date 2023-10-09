@@ -419,7 +419,7 @@ func (row *rowType) setViewPartKey(v appdef.IView) {
 
 	row.typ = v
 	if v != nil {
-		row.fields = v.Key().Partition()
+		row.fields = v.Key().PartKey()
 		row.dyB = dynobuffers.NewBuffer(row.appCfg.dynoSchemes.ViewPartKeyScheme(v.QName()))
 	}
 }

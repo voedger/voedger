@@ -7,6 +7,7 @@ package appdef
 
 import (
 	"errors"
+	"sort"
 )
 
 // # Implements:
@@ -14,7 +15,8 @@ import (
 //   - IAppDefBuilder
 type appDef struct {
 	comment
-	types map[QName]interface{}
+	types        map[QName]interface{}
+	typesOrdered []interface{}
 }
 
 func newAppDef() *appDef {
@@ -71,7 +73,7 @@ func (app *appDef) AddQuery(name QName) IQueryBuilder {
 }
 
 func (app *appDef) AddView(name QName) IViewBuilder {
-	return newViewBuilder(app, name)
+	return newView(app, name)
 }
 
 func (app *appDef) AddWDoc(name QName) IWDocBuilder {
@@ -116,30 +118,6 @@ func (app *appDef) CRecord(name QName) ICRecord {
 		return t.(ICRecord)
 	}
 	return nil
-}
-
-func (app *appDef) Type(name QName) IType {
-	if t := app.TypeByName(name); t != nil {
-		return t
-	}
-	return NullType
-}
-
-func (app *appDef) TypeByName(name QName) IType {
-	if t, ok := app.types[name]; ok {
-		return t.(IType)
-	}
-	return nil
-}
-
-func (app *appDef) TypeCount() int {
-	return len(app.types)
-}
-
-func (app *appDef) Types(cb func(IType)) {
-	for _, t := range app.types {
-		cb(t.(IType))
-	}
 }
 
 func (app *appDef) Element(name QName) IElement {
@@ -191,6 +169,47 @@ func (app *appDef) Query(name QName) IQuery {
 	return nil
 }
 
+func (app *appDef) Structures(cb func(s IStructure)) {
+	app.Types(func(t IType) {
+		if s, ok := t.(IStructure); ok {
+			cb(s)
+		}
+	})
+}
+
+func (app *appDef) Type(name QName) IType {
+	if t := app.TypeByName(name); t != nil {
+		return t
+	}
+	return NullType
+}
+
+func (app *appDef) TypeByName(name QName) IType {
+	if t, ok := app.types[name]; ok {
+		return t.(IType)
+	}
+	return nil
+}
+
+func (app *appDef) TypeCount() int {
+	return len(app.types)
+}
+
+func (app *appDef) Types(cb func(IType)) {
+	if app.typesOrdered == nil {
+		app.typesOrdered = make([]interface{}, 0, len(app.types))
+		for _, t := range app.types {
+			app.typesOrdered = append(app.typesOrdered, t)
+		}
+		sort.Slice(app.typesOrdered, func(i, j int) bool {
+			return app.typesOrdered[i].(IType).QName().String() < app.typesOrdered[j].(IType).QName().String()
+		})
+	}
+	for _, t := range app.typesOrdered {
+		cb(t.(IType))
+	}
+}
+
 func (app *appDef) View(name QName) IView {
 	if t := app.typeByKind(name, TypeKind_ViewRecord); t != nil {
 		return t.(IView)
@@ -221,6 +240,7 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 
 func (app *appDef) appendType(t interface{}) {
 	app.types[t.(IType).QName()] = t
+	app.typesOrdered = nil
 }
 
 func (app *appDef) typeByKind(name QName, kind TypeKind) interface{} {
