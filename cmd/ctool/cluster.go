@@ -157,7 +157,7 @@ func (n *nodeType) label(key string) string {
 			return fmt.Sprintf("AppNode%d", n.idx)
 		}
 	case nrDBNode:
-		return fmt.Sprintf("scylla%d", n.idx-seNodeCount)
+		return fmt.Sprintf("DBNode%d", n.idx-seNodeCount)
 	}
 
 	return fmt.Sprintf("node%d", n.idx)
