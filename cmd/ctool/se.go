@@ -455,7 +455,7 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 	var err error
 
 	prepareScripts("ctool-scylla-replace-node.sh", "docker-install.sh", "swarm-add-node.sh",
-		"db-node-prepare.sh", "db-bootstrap-prepare.sh", "swarm-rm-node.sh",
+		"db-node-prepare.sh", "db-bootstrap-prepare.sh", "db-bootstrap-end.sh", "swarm-rm-node.sh",
 		"db-stack-update.sh", "docker-compose-template.yml", "swarm-set-label.sh", "docker-compose-prepare.sh",
 		"scylla.yaml", "swarm-get-manager-token.sh")
 
