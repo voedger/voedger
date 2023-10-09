@@ -275,7 +275,7 @@ func Test_Workspace_Defs(t *testing.T) {
 	wsProfile := builder.Workspace(appdef.NewQName("sys", "Profile"))
 
 	require.Equal(appdef.TypeKind_Workspace, wsProfile.Type(appdef.NewQName("pkg1", "MyWorkspace")).Kind())
-	require.Nil(wsProfile.Type(appdef.NewQName("pkg1", "MyWorkspace2")))
+	require.Nil(wsProfile.TypeByName(appdef.NewQName("pkg1", "MyWorkspace2")))
 }
 
 func Test_Alter_Workspace(t *testing.T) {
