@@ -58,6 +58,8 @@ wait_for_scylla() {
 ./db-bootstrap-prepare.sh "$1" "$2"
 ./swarm-rm-node.sh "$MANAGER" "$1"
 
+ssh-keygen -R "$REPLACED_NODE_NAME"
+
 seed_list() {
   local node=$1
   local operation=$2
@@ -65,7 +67,7 @@ seed_list() {
   service_label=$(./db-stack-update.sh "$node" "$operation" | tail -n 1)
   < ./docker-compose.yml ssh "$SSH_OPTIONS" "$SSH_USER"@"$node" 'cat > ~/docker-compose.yml'
   ssh "$SSH_OPTIONS" "$SSH_USER"@"$node" "docker stack deploy --compose-file ~/docker-compose.yml DBDockerStack"
-  ./swarm-set-label.sh "$MANAGER" "$node" "type" "$service_label"
+  ./swarm-set-label.sh "$MANAGER" "$node" "$service_label" "true"
 }
 
 seed_list "$REPLACED_NODE_NAME" remove
