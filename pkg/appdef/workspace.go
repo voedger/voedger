@@ -50,7 +50,7 @@ func (ws *workspace) Descriptor() QName {
 
 func (ws *workspace) Type(name QName) IType {
 	if t := ws.TypeByName(name); t != nil {
-		return t.(IType)
+		return t
 	}
 	return NullType
 }
