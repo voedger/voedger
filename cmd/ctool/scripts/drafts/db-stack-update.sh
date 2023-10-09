@@ -16,8 +16,24 @@ if [ $# -ne 2 ]; then
   exit 1
 fi
 
-#lost_node=$1
-#new_node=$2
+declare -A node_map
+
+node_map["scylla1"]="DBNode1"
+node_map["scylla2"]="DBNode2"
+node_map["scylla3"]="DBNode3"
+
+# Function to convert names
+convert_name() {
+  local input_name="$1"
+  local converted_name="${node_map[$input_name]}"
+  if [ -n "$converted_name" ]; then
+      echo "$converted_name"
+  else
+    echo "Error: Unknown name '$input_name'" >&2
+    exit 1
+  fi
+}
+
 
 function remove_seed {
 # $1 - cluster node name
@@ -96,4 +112,4 @@ export new_scy_cmd; yq eval --inplace --prettyPrint '.services."'$service_name'"
 #yq eval --inplace '.services."'$service_name'".healthcheck = {"test": ["CMD-SHELL", "nodetool status | awk '\''/^UN/ {print $$2}'\'' | grep -w '\'''$new_node''\''"], "interval": "15s", "timeout": "5s", "retries": 90}' docker-compose.yml
 
 echo "Service '$service_name' updated successfully"
-echo "$service_name"
+convert_name "$service_name"
