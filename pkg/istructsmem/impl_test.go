@@ -194,12 +194,12 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		bld := appdef.New()
 		view := bld.AddView(appdef.NewQName("test", "viewDrinks"))
-		view.Key().Partition().AddField("partitionKey1", appdef.DataKind_int64)
-		view.Key().ClustCols().
+		view.KeyBuilder().PartKeyBuilder().AddField("partitionKey1", appdef.DataKind_int64)
+		view.KeyBuilder().ClustColsBuilder().
 			AddField("clusteringColumn1", appdef.DataKind_int64).
 			AddField("clusteringColumn2", appdef.DataKind_bool).
 			AddStringField("clusteringColumn3", 100)
-		view.Value().
+		view.ValueBuilder().
 			AddField("id", appdef.DataKind_int64, true).
 			AddStringField("name", true).
 			AddField("active", appdef.DataKind_bool, true)
@@ -436,9 +436,9 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 		viewName := appdef.NewQName("types", "View")
 		view := appDef.AddView(viewName)
-		view.Key().Partition().AddField("int", appdef.DataKind_int64)
-		view.Key().ClustCols().AddStringField("str", 100)
-		view.Value().AddField("bool", appdef.DataKind_bool, false)
+		view.KeyBuilder().PartKeyBuilder().AddField("int", appdef.DataKind_int64)
+		view.KeyBuilder().ClustColsBuilder().AddStringField("str", 100)
+		view.ValueBuilder().AddField("bool", appdef.DataKind_bool, false)
 
 		arg := appDef.AddObject(appdef.NewQName("types", "Arg"))
 		arg.AddField("bool", appdef.DataKind_bool, false)

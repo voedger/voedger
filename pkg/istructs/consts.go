@@ -65,6 +65,8 @@ const (
 	ClusterAsCRecordRegisterID
 )
 
+var MinClusterRecordID = NewRecordID(NullRecordID)
+
 // *********************************************************************************************************
 //
 //				Events-related constants

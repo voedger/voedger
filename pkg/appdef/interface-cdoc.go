@@ -7,12 +7,7 @@ package appdef
 
 // Configuration document
 type ICDoc interface {
-	IType
-	IComment
-	IFields
-	IContainers
-	IUniques
-	IWithAbstract
+	IDoc
 
 	// Returns is singleton
 	Singleton() bool
@@ -20,11 +15,7 @@ type ICDoc interface {
 
 type ICDocBuilder interface {
 	ICDoc
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IUniquesBuilder
-	IWithAbstractBuilder
+	IDocBuilder
 
 	// Sets CDoc singleton
 	SetSingleton()
@@ -34,19 +25,13 @@ type ICDocBuilder interface {
 //
 // Ref. to cdoc.go for implementation
 type ICRecord interface {
-	IType
-	IComment
-	IFields
-	IContainers
-	IUniques
-	IWithAbstract
+	IRecord
+
+	// Unwanted type assertion stub
+	isCRecord()
 }
 
 type ICRecordBuilder interface {
 	ICRecord
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IUniquesBuilder
-	IWithAbstractBuilder
+	IRecordBuilder
 }

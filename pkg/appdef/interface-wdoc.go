@@ -7,40 +7,28 @@ package appdef
 
 // Workflow document.
 type IWDoc interface {
-	IType
-	IComment
-	IFields
-	IContainers
-	IUniques
-	IWithAbstract
+	IDoc
+
+	// Unwanted type assertion stub
+	isWDoc()
 }
 
 type IWDocBuilder interface {
 	IWDoc
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IUniquesBuilder
-	IWithAbstractBuilder
+	IDocBuilder
 }
 
 // Workflow document record.
 //
 // Ref. to wdoc.go for implementation
 type IWRecord interface {
-	IType
-	IComment
-	IFields
-	IContainers
-	IUniques
-	IWithAbstract
+	IRecord
+
+	// Unwanted type assertion stub
+	isWRecord()
 }
 
 type IWRecordBuilder interface {
 	IWRecord
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IUniquesBuilder
-	IWithAbstractBuilder
+	IRecordBuilder
 }

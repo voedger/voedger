@@ -264,7 +264,7 @@ func (c *buildContext) views() error {
 				for _, ref := range f.RefDocs {
 					if err := resolveInCtx(ref, ictx,
 						func(tbl *TableStmt, pkg *PackageSchemaAST) error {
-							if e := c.checkReference(ref, pkg, tbl, ictx); e != nil {
+							if e := c.checkReference(ref, pkg, tbl); e != nil {
 								return e
 							}
 							refs = append(refs, appdef.NewQName(string(pkg.Name), string(ref.Name)))
@@ -281,17 +281,17 @@ func (c *buildContext) views() error {
 			view.PartitionFields(func(f *ViewItemExpr) {
 				comment := func(n Ident, s Statement) {
 					if txt := s.GetComments(); len(txt) > 0 {
-						vb().Key().Partition().SetFieldComment(string(n), txt...)
+						vb().KeyBuilder().PartKeyBuilder().SetFieldComment(string(n), txt...)
 					}
 				}
 				if f.Field != nil {
-					vb().Key().Partition().AddField(string(f.Field.Name), dataTypeToDataKind(f.Field.Type))
+					vb().KeyBuilder().PartKeyBuilder().AddField(string(f.Field.Name), dataTypeToDataKind(f.Field.Type))
 					comment(f.Field.Name, f.Field.Statement)
 					return
 				}
 				if f.RefField != nil {
 					if refs, ok := resolveRefs(f.RefField); ok {
-						vb().Key().Partition().AddRefField(string(f.RefField.Name), refs...)
+						vb().KeyBuilder().PartKeyBuilder().AddRefField(string(f.RefField.Name), refs...)
 						comment(f.RefField.Name, f.RefField.Statement)
 					}
 				}
@@ -300,24 +300,24 @@ func (c *buildContext) views() error {
 			view.ClusteringColumns(func(f *ViewItemExpr) {
 				comment := func(n Ident, s Statement) {
 					if txt := s.GetComments(); len(txt) > 0 {
-						vb().Key().ClustCols().SetFieldComment(string(n), txt...)
+						vb().KeyBuilder().ClustColsBuilder().SetFieldComment(string(n), txt...)
 					}
 				}
 				if f.Field != nil {
 					switch k := dataTypeToDataKind(f.Field.Type); k {
 					case appdef.DataKind_bytes:
-						vb().Key().ClustCols().AddBytesField(string(f.Field.Name), resolveLen(f.Field))
+						vb().KeyBuilder().ClustColsBuilder().AddBytesField(string(f.Field.Name), resolveLen(f.Field))
 					case appdef.DataKind_string:
-						vb().Key().ClustCols().AddStringField(string(f.Field.Name), resolveLen(f.Field))
+						vb().KeyBuilder().ClustColsBuilder().AddStringField(string(f.Field.Name), resolveLen(f.Field))
 					default: // other data types
-						vb().Key().ClustCols().AddField(string(f.Field.Name), k)
+						vb().KeyBuilder().ClustColsBuilder().AddField(string(f.Field.Name), k)
 					}
 					comment(f.Field.Name, f.Field.Statement)
 					return
 				}
 				if f.RefField != nil {
 					if refs, ok := resolveRefs(f.RefField); ok {
-						vb().Key().ClustCols().AddRefField(string(f.RefField.Name), refs...)
+						vb().KeyBuilder().ClustColsBuilder().AddRefField(string(f.RefField.Name), refs...)
 						comment(f.RefField.Name, f.RefField.Statement)
 					}
 				}
@@ -326,24 +326,24 @@ func (c *buildContext) views() error {
 			view.ValueFields(func(f *ViewItemExpr) {
 				comment := func(n Ident, s Statement) {
 					if txt := s.GetComments(); len(txt) > 0 {
-						vb().Value().SetFieldComment(string(n), txt...)
+						vb().ValueBuilder().SetFieldComment(string(n), txt...)
 					}
 				}
 				if f.Field != nil {
 					switch k := dataTypeToDataKind(f.Field.Type); k {
 					case appdef.DataKind_bytes:
-						vb().Value().AddBytesField(string(f.Field.Name), f.Field.NotNull, resolveLen(f.Field))
+						vb().ValueBuilder().AddBytesField(string(f.Field.Name), f.Field.NotNull, resolveLen(f.Field))
 					case appdef.DataKind_string:
-						vb().Value().AddStringField(string(f.Field.Name), f.Field.NotNull, resolveLen(f.Field))
+						vb().ValueBuilder().AddStringField(string(f.Field.Name), f.Field.NotNull, resolveLen(f.Field))
 					default: // other data types
-						vb().Value().AddField(string(f.Field.Name), k, f.Field.NotNull)
+						vb().ValueBuilder().AddField(string(f.Field.Name), k, f.Field.NotNull)
 					}
 					comment(f.Field.Name, f.Field.Statement)
 					return
 				}
 				if f.RefField != nil {
 					if refs, ok := resolveRefs(f.RefField); ok {
-						vb().Value().AddRefField(string(f.RefField.Name), f.RefField.NotNull, refs...)
+						vb().ValueBuilder().AddRefField(string(f.RefField.Name), f.RefField.NotNull, refs...)
 						comment(f.RefField.Name, f.RefField.Statement)
 					}
 				}
@@ -480,7 +480,7 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr, ictx *iterateCtx
 	errors := false
 	for i := range refField.RefDocs {
 		err := resolveInCtx(refField.RefDocs[i], ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
-			if e := c.checkReference(refField.RefDocs[i], pkg, tbl, ictx); e != nil {
+			if e := c.checkReference(refField.RefDocs[i], pkg, tbl); e != nil {
 				return e
 			}
 			refs = append(refs, appdef.NewQName(string(pkg.Name), string(refField.RefDocs[i].Name)))
@@ -715,7 +715,7 @@ func (c *buildContext) isExists(qname appdef.QName, kind appdef.TypeKind) (exist
 	}
 }
 
-func (c *buildContext) fundSchemaByPkg(pkg string) *PackageSchemaAST {
+func (c *buildContext) findSchemaByPkg(pkg string) *PackageSchemaAST {
 	for _, ast := range c.app.Packages {
 		if ast.Name == pkg {
 			return ast
@@ -732,13 +732,21 @@ func (c *buildContext) defCtx() *defBuildContext {
 	return &c.defs[len(c.defs)-1]
 }
 
-func (c *buildContext) checkReference(refTable DefQName, pkg *PackageSchemaAST, table *TableStmt, ictx *iterateCtx) error {
+func (c *buildContext) checkReference(refTable DefQName, pkg *PackageSchemaAST, table *TableStmt) error {
 	if refTable.Package == "" {
 		refTable.Package = Ident(pkg.Name)
 	}
 	refTableType := c.builder.TypeByName(appdef.NewQName(string(refTable.Package), string(refTable.Name)))
 	if refTableType == nil {
-		c.table(c.fundSchemaByPkg(string(refTable.Package)), table, ictx)
+		tableSchema := c.findSchemaByPkg(string(refTable.Package))
+		tableCtx := &iterateCtx{
+			basicContext: &c.basicContext,
+			collection:   tableSchema.Ast,
+			pkg:          tableSchema,
+			parent:       nil,
+		}
+
+		c.table(tableSchema, table, tableCtx)
 		refTableType = c.builder.TypeByName(appdef.NewQName(string(refTable.Package), string(refTable.Name)))
 	}
 

@@ -61,7 +61,7 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 			require.Equal(2, rec.UserFieldCount())
 			require.Equal(DataKind_int64, rec.Field("f1").DataKind())
 
-			require.Equal(0, rec.ContainerCount())
+			require.Zero(rec.ContainerCount())
 		})
 	})
 }

@@ -10,7 +10,6 @@ package appdef
 // Ref to view.go for implementation
 type IView interface {
 	IType
-	IComment
 
 	// All view fields, include key and value.
 	IFields
@@ -23,13 +22,14 @@ type IView interface {
 }
 
 type IViewBuilder interface {
-	ICommentBuilder
+	IView
+	ITypeBuilder
 
 	// Returns full (pk + ccols) view key builder
-	Key() IViewKeyBuilder
+	KeyBuilder() IViewKeyBuilder
 
 	// Returns view value builder
-	Value() IViewValueBuilder
+	ValueBuilder() IViewValueBuilder
 }
 
 // View full (pk + cc) key.
@@ -42,7 +42,7 @@ type IViewKey interface {
 	IFields
 
 	// Returns partition key
-	Partition() IViewPartKey
+	PartKey() IViewPartKey
 
 	// Returns clustering columns
 	ClustCols() IViewClustCols
@@ -52,11 +52,13 @@ type IViewKey interface {
 //
 // Ref. to view.go for implementation
 type IViewKeyBuilder interface {
+	IViewKey
+
 	// Returns partition key type builder
-	Partition() IViewPartKeyBuilder
+	PartKeyBuilder() IViewPartKeyBuilder
 
 	// Returns clustering columns type builder
-	ClustCols() IViewClustColsBuilder
+	ClustColsBuilder() IViewClustColsBuilder
 }
 
 // View partition key.
@@ -65,12 +67,17 @@ type IViewKeyBuilder interface {
 type IViewPartKey interface {
 	// Partition key fields.
 	IFields
+
+	// Unwanted type assertion stub
+	isPartKey()
 }
 
 // View partition key type builder.
 //
 // Ref. to view.go for implementation
 type IViewPartKeyBuilder interface {
+	IViewPartKey
+
 	// Adds partition key field.
 	//
 	// # Panics:
@@ -94,12 +101,17 @@ type IViewPartKeyBuilder interface {
 type IViewClustCols interface {
 	// Clustering columns fields.
 	IFields
+
+	// Unwanted type assertion stub
+	isClustCols()
 }
 
 // View clustering columns type builder.
 //
 // Ref. to view.go for implementation
 type IViewClustColsBuilder interface {
+	IViewClustCols
+
 	// Adds clustering columns field.
 	//
 	// Only last column field can be variable length.
@@ -127,11 +139,16 @@ type IViewClustColsBuilder interface {
 type IViewValue interface {
 	// View value fields.
 	IFields
+
+	// Unwanted type assertion stub
+	isViewValue()
 }
 
 // View value builder.
 //
 // Ref. to view.go for implementation
 type IViewValueBuilder interface {
+	IViewValue
+
 	IFieldsBuilder
 }

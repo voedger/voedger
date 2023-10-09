@@ -12,7 +12,9 @@ import (
 
 // # Implements:
 //   - IType
+//   - ITypeBuilder
 type typ struct {
+	comment
 	app  *appDef
 	name QName
 	kind TypeKind
@@ -28,7 +30,7 @@ func makeType(app *appDef, name QName, kind TypeKind) typ {
 	if app.TypeByName(name) != nil {
 		panic(fmt.Errorf("type name «%s» already used: %w", name, ErrNameUniqueViolation))
 	}
-	return typ{app, name, kind}
+	return typ{comment{}, app, name, kind}
 }
 
 func (t *typ) App() IAppDef {
@@ -46,7 +48,7 @@ func (t *typ) QName() QName {
 // NullType is used for return then type is not founded
 var NullType = new(nullType)
 
-type nullType struct{}
+type nullType struct{ nullComment }
 
 func (t *nullType) App() IAppDef   { return nil }
 func (t *nullType) Kind() TypeKind { return TypeKind_null }

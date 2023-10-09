@@ -90,16 +90,9 @@ type fields struct {
 	fieldsOrdered []string
 }
 
-// Makes new fields instance. System fields needed for parent type are added automatically.
+// Makes new fields instance
 func makeFields(parent interface{}) fields {
 	f := fields{parent, make(map[string]interface{}), make([]string, 0)}
-	f.makeSysFields()
-	return f
-}
-
-// Makes new fields instance for view key
-func makeViewKeyFields(view interface{}) fields {
-	f := fields{view, make(map[string]interface{}), make([]string, 0)}
 	return f
 }
 
@@ -235,19 +228,20 @@ func (f *fields) checkAddField(name string, kind DataKind) {
 	if name == NullName {
 		panic(fmt.Errorf("%v: empty field name: %w", f.parentType().QName(), ErrNameMissed))
 	}
-	if !IsSysField(name) {
-		if ok, err := ValidIdent(name); !ok {
-			panic(fmt.Errorf("%v: field name «%v» is invalid: %w", f.parentType().QName(), name, err))
-		}
-	}
 	if f.Field(name) != nil {
 		panic(fmt.Errorf("%v: field «%s» is already exists: %w", f.parentType().QName(), name, ErrNameUniqueViolation))
 	}
 
+	if IsSysField(name) {
+		return
+	}
+
+	if ok, err := ValidIdent(name); !ok {
+		panic(fmt.Errorf("%v: field name «%v» is invalid: %w", f.parentType().QName(), name, err))
+	}
 	if k := f.parentType().Kind(); !k.DataKindAvailable(kind) {
 		panic(fmt.Errorf("%v: type kind «%s» does not support fields kind «%s»: %w", f.parentType().QName(), k.TrimString(), kind.TrimString(), ErrInvalidDataKind))
 	}
-
 	if len(f.fields) >= MaxTypeFieldCount {
 		panic(fmt.Errorf("%v: maximum field count (%d) exceeds: %w", f.parentType().QName(), MaxTypeFieldCount, ErrTooManyFields))
 	}
@@ -257,9 +251,8 @@ func (f *fields) parentType() IType {
 	return f.parent.(IType)
 }
 
-func (f *fields) makeSysFields() {
-	k := f.parentType().Kind()
-
+// Makes system fields. Called after making structures fields
+func (f *fields) makeSysFields(k TypeKind) {
 	if k.HasSystemField(SystemField_QName) {
 		f.AddField(SystemField_QName, DataKind_QName, true)
 	}
