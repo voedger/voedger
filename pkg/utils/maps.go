@@ -35,21 +35,6 @@ func Marshal(rw istructs.IRowWriter, data map[string]interface{}) (err error) {
 			rw.PutChars(fieldName, v)
 		case bool:
 			rw.PutBool(fieldName, v)
-		// case []interface{}:
-		// 	e, ok := rw.(istructs.IElementBuilder)
-		// 	if !ok {
-		// 		return errors.New("not IElementBuilder")
-		// 	}
-		// 	for i, val := range v {
-		// 		objContainerElem, ok := val.(map[string]interface{})
-		// 		if !ok {
-		// 			return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
-		// 		}
-		// 		containerElemBuilder := e.ElementBuilder(fieldName)
-		// 		if err := Marshal(containerElemBuilder, objContainerElem); err != nil {
-		// 			return err
-		// 		}
-		// 	}
 		default:
 			return fmt.Errorf("field %s: marshal unsupported value type %#v", fieldName, vIntf)
 		}
