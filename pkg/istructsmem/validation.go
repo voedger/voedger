@@ -33,26 +33,65 @@ func (v *validator) entName(e interface{}) string {
 
 	if row, ok := e.(istructs.IRowReader); ok {
 		if qName := row.AsQName(appdef.SystemField_QName); qName != appdef.NullQName {
-			typeName = qName
-			if (qName == v.typ.QName()) && v.typ.Kind().HasSystemField(appdef.SystemField_Container) {
-				if cont := row.AsString(appdef.SystemField_Container); cont != "" {
-					name = cont
+			if typeName != qName {
+				// The case when the entity with non-validator type passed (perhaps child entity?):
+				// query the type name and entity caption from IAppDef
+				typeName = qName
+				if typ := v.validators.appDef.TypeByName(typeName); typ != nil {
+					ent = typ.Kind().TrimString()
 				}
+			}
+			if cont := row.AsString(appdef.SystemField_Container); cont != "" {
+				name = cont
 			}
 		}
 	}
 
 	if name == "" {
-		return fmt.Sprintf("%s (%v)", ent, typeName) // short form
+		return fmt.Sprintf("%s (%s)", ent, typeName) // short form, such as "CDoc (sales.BillDocument)"
 	}
 
-	return fmt.Sprintf("%s «%s» (%v)", ent, name, typeName) // complete form
+	return fmt.Sprintf("%s «%s» (%s)", ent, name, typeName) // complete form, such as "CRecord «Price» (sales.PriceRecord)"
 }
 
 // Validate specified document
 func (v *validator) validDocument(doc *elementType) error {
-	return v.validElement(doc)
-	// TODO: check user field references to raw IDs
+	err := v.validElement(doc)
+
+	ids := make(map[istructs.RecordID]*elementType)
+
+	doc.forEach(func(e *elementType) error {
+		if id := e.ID(); id.IsRaw() {
+			if _, exists := ids[id]; exists {
+				err = errors.Join(err,
+					// event argument repeatedly uses record ID «1» inside ODoc (test.doc)
+					validateErrorf(ECode_InvalidRawRecordID, "event argument repeatedly uses record ID «%d» inside %s: %w", id, v.entName(doc), ErrRecordIDUniqueViolation))
+			}
+			ids[id] = e
+		}
+		return nil
+	})
+
+	doc.forEach(func(e *elementType) error {
+		e.fields.RefFields(func(fld appdef.IRefField) {
+			if id := e.AsRecordID(fld.Name()); id.IsRaw() {
+				target, exists := ids[id]
+				if !exists {
+					err = errors.Join(err,
+						// ORecord «Price» (sales.PriceRecord) field «Next» refers to unknown record ID «7»
+						validateErrorf(ECode_InvalidRefRecordID, "%s field «%s» refers to unknown record ID «%d»: %w", v.entName(e), fld.Name(), id, ErrRecordIDNotFound))
+				}
+				if !fld.Ref(target.QName()) {
+					err = errors.Join(err,
+						// ORecord «Price» (sales.PriceRecord) field «Next» refers to record ID «1» that has unavailable target QName «sales.Order»
+						validateErrorf(ECode_InvalidRefRecordID, "%s field «%s» refers to record ID «%d» that has unavailable target QName «%s»: %w", v.entName(e), fld.Name(), id, target.QName(), ErrWrongRecordID))
+				}
+			}
+		})
+		return nil
+	})
+
+	return err
 }
 
 // Validate specified element
