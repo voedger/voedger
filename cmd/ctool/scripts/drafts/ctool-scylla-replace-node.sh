@@ -25,12 +25,12 @@ if [[ $# -ne 3 ]]; then
 fi
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
+SSH_OPTIONS='-o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 STACK="DBDockerStack"
-
 
 MANAGER=$3
 REPLACED_NODE_NAME=$(getent hosts "$2" | awk '{print $2}')
+ssh-keyscan -H "$REPLACED_NODE_NAME" >> ~/.ssh/known_hosts
 
 wait_for_scylla() {
   local ip_address=$1
@@ -58,8 +58,6 @@ wait_for_scylla() {
 ./db-bootstrap-prepare.sh "$1" "$2"
 ./swarm-rm-node.sh "$MANAGER" "$1"
 
-ssh-keygen -R "$REPLACED_NODE_NAME"
-
 seed_list() {
   local node=$1
   local operation=$2
@@ -72,6 +70,8 @@ seed_list() {
 
 seed_list "$REPLACED_NODE_NAME" remove
   wait_for_scylla "$REPLACED_NODE_NAME"
+
+./db-bootstrap-end.sh "$2"
 
 seed_list "$REPLACED_NODE_NAME" add
   wait_for_scylla "$REPLACED_NODE_NAME"
