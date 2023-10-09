@@ -8,7 +8,7 @@ package main
 import (
 	"strconv"
 
-	ext "github.com/heeus/extensions-tinygo"
+	ext "voedger.io/extensions-tinygo"
 )
 
 const (

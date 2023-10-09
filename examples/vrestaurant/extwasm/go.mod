@@ -1,5 +1,3 @@
-module main
+module voedger.io/vrestaurant
 
-go 1.20
-
-require github.com/heeus/extensions-tinygo v0.0.0-20230216180450-aa4028b80eed
+go 1.21.2
