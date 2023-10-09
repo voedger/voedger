@@ -32,6 +32,8 @@ type IContainers interface {
 }
 
 type IContainersBuilder interface {
+	IContainers
+
 	// Adds container specified name and occurs.
 	//
 	// # Panics:

@@ -51,36 +51,28 @@ func (v *validator) entName(e interface{}) string {
 
 // Validate specified document
 func (v *validator) validDocument(doc *elementType) error {
-	// TODO: check RecordID refs available for document kind
-	return v.validElement(doc, true)
+	return v.validElement(doc)
+	// TODO: check user field references to raw IDs
 }
 
 // Validate specified element
-func (v *validator) validElement(el *elementType, storable bool) (err error) {
-	if storable {
+func (v *validator) validElement(el *elementType) (err error) {
+	if el.typ.Kind().HasSystemField(appdef.SystemField_ID) {
 		err = v.validRecord(&el.recordType, true)
 	} else {
-		if e := v.validRow(&el.recordType.rowType); e != nil {
-			err = fmt.Errorf("%s has not valid row data: %w", v.entName(el), e)
-		}
+		err = v.validRow(&el.recordType.rowType)
 	}
 
 	err = errors.Join(err,
-		v.validElementContainers(el, storable))
+		v.validContainers(el))
 
 	return err
 }
 
 // Validates element containers
-func (v *validator) validElementContainers(el *elementType, storable bool) (err error) {
-	t, ok := v.typ.(appdef.IContainers)
-	if !ok {
-		err = errors.Join(err,
-			validateErrorf(ECode_InvalidDefName, "%s has type kind «%s» without containers: %w", v.entName(el), v.typ.Kind().TrimString(), ErrUnexpectedTypeKind))
-		return err
-	}
+func (v *validator) validContainers(el *elementType) (err error) {
+	t := v.typ.(appdef.IContainers)
 
-	// validates element containers occurs
 	t.Containers(
 		func(cont appdef.IContainer) {
 			occurs := appdef.Occurs(0)
@@ -127,7 +119,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 				return
 			}
 
-			if storable {
+			if child.typ.Kind().HasSystemField(appdef.SystemField_ParentID) {
 				parID := child.Parent()
 				if parID == istructs.NullRecordID {
 					child.setParent(elID) // if child parentID omitted, then restore it
@@ -146,7 +138,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 				return
 			}
 			err = errors.Join(err,
-				childValidator.validElement(child, storable))
+				childValidator.validElement(child))
 		})
 
 	return err
@@ -193,7 +185,7 @@ func (v *validator) validRow(row *rowType) (err error) {
 
 // Validate specified object
 func (v *validator) validObject(obj *elementType) error {
-	return v.validElement(obj, false)
+	return v.validElement(obj)
 }
 
 // Application types validators
@@ -253,7 +245,7 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 				validateErrorf(ECode_InvalidTypeKind, "event command argument «%v» type can not to be «%v», expected («%v» or «%v»): %w", arg, t.Kind().TrimString(), appdef.TypeKind_ODoc.TrimString(), appdef.TypeKind_Object.TrimString(), ErrWrongType))
 		}
 		err = errors.Join(err,
-			v.validObject(&ev.argObject))
+			v.validArgument(&ev.argObject))
 	}
 
 	if ev.argUnlObj.QName() != argUnl {
@@ -261,7 +253,7 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 			validateErrorf(ECode_InvalidDefName, "event command un-logged argument «%v» uses wrong type «%v», expected «%v»: %w", ev.name, ev.argUnlObj.QName(), argUnl, ErrWrongType))
 	} else if ev.argUnlObj.QName() != appdef.NullQName {
 		err = errors.Join(err,
-			v.validObject(&ev.argUnlObj))
+			v.validArgument(&ev.argUnlObj))
 	}
 
 	return err
@@ -280,7 +272,7 @@ func (v *validators) validEventCUDs(ev *eventType) (err error) {
 }
 
 // Validates specified document or object
-func (v *validators) validObject(obj *elementType) (err error) {
+func (v *validators) validArgument(obj *elementType) (err error) {
 	if obj.QName() == appdef.NullQName {
 		return validateErrorf(ECode_EmptyDefName, "element «%s» has empty type name: %w", obj.Container(), ErrNameMissed)
 	}

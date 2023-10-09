@@ -8,24 +8,16 @@ package appdef
 // # Implements:
 //   - ICDoc, ICDocBuilder
 type cDoc struct {
-	typ
-	comment
-	fields
-	containers
-	uniques
-	withAbstract
+	doc
 	singleton bool
 }
 
+// Creates a new CDoc
 func newCDoc(app *appDef, name QName) *cDoc {
-	doc := &cDoc{
-		typ: makeType(app, name, TypeKind_CDoc),
-	}
-	doc.fields = makeFields(doc)
-	doc.containers = makeContainers(doc)
-	doc.uniques = makeUniques(doc)
-	app.appendType(doc)
-	return doc
+	d := &cDoc{}
+	d.doc = makeDoc(app, name, TypeKind_CDoc, d)
+	app.appendType(d)
+	return d
 }
 
 func (d *cDoc) SetSingleton() {
@@ -39,21 +31,14 @@ func (d *cDoc) Singleton() bool {
 // # Implements:
 //   - ICRecord, ICRecordBuilder
 type cRecord struct {
-	typ
-	comment
-	fields
-	containers
-	uniques
-	withAbstract
+	record
 }
 
 func newCRecord(app *appDef, name QName) *cRecord {
-	rec := &cRecord{
-		typ: makeType(app, name, TypeKind_CRecord),
-	}
-	rec.fields = makeFields(rec)
-	rec.containers = makeContainers(rec)
-	rec.uniques = makeUniques(rec)
-	app.appendType(rec)
-	return rec
+	r := &cRecord{}
+	r.record = makeRecord(app, name, TypeKind_CRecord, r)
+	app.appendType(r)
+	return r
 }
+
+func (r cRecord) isCRecord() {}

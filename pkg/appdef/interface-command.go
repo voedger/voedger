@@ -28,7 +28,6 @@ type IExtension interface {
 // Ref. to command.go for implementation
 type ICommand interface {
 	IType
-	IComment
 
 	// Argument. Returns nil if not assigned
 	Arg() IObject
@@ -45,7 +44,7 @@ type ICommand interface {
 
 type ICommandBuilder interface {
 	ICommand
-	ICommentBuilder
+	ITypeBuilder
 
 	// Sets command argument. Must be object or NullQName
 	SetArg(QName) ICommandBuilder

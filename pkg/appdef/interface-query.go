@@ -10,7 +10,6 @@ package appdef
 // Ref. to query.go for implementation
 type IQuery interface {
 	IType
-	IComment
 
 	// Argument. Returns nil if not assigned
 	Arg() IObject
@@ -26,7 +25,7 @@ type IQuery interface {
 
 type IQueryBuilder interface {
 	IQuery
-	ICommentBuilder
+	ITypeBuilder
 
 	// Sets query argument. Must be object or NullQName
 	SetArg(QName) IQueryBuilder

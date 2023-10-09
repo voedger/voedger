@@ -281,17 +281,17 @@ func (c *buildContext) views() error {
 			view.PartitionFields(func(f *ViewItemExpr) {
 				comment := func(n Ident, s Statement) {
 					if txt := s.GetComments(); len(txt) > 0 {
-						vb().Key().Partition().SetFieldComment(string(n), txt...)
+						vb().KeyBuilder().PartKeyBuilder().SetFieldComment(string(n), txt...)
 					}
 				}
 				if f.Field != nil {
-					vb().Key().Partition().AddField(string(f.Field.Name), dataTypeToDataKind(f.Field.Type))
+					vb().KeyBuilder().PartKeyBuilder().AddField(string(f.Field.Name), dataTypeToDataKind(f.Field.Type))
 					comment(f.Field.Name, f.Field.Statement)
 					return
 				}
 				if f.RefField != nil {
 					if refs, ok := resolveRefs(f.RefField); ok {
-						vb().Key().Partition().AddRefField(string(f.RefField.Name), refs...)
+						vb().KeyBuilder().PartKeyBuilder().AddRefField(string(f.RefField.Name), refs...)
 						comment(f.RefField.Name, f.RefField.Statement)
 					}
 				}
@@ -300,24 +300,24 @@ func (c *buildContext) views() error {
 			view.ClusteringColumns(func(f *ViewItemExpr) {
 				comment := func(n Ident, s Statement) {
 					if txt := s.GetComments(); len(txt) > 0 {
-						vb().Key().ClustCols().SetFieldComment(string(n), txt...)
+						vb().KeyBuilder().ClustColsBuilder().SetFieldComment(string(n), txt...)
 					}
 				}
 				if f.Field != nil {
 					switch k := dataTypeToDataKind(f.Field.Type); k {
 					case appdef.DataKind_bytes:
-						vb().Key().ClustCols().AddBytesField(string(f.Field.Name), resolveLen(f.Field))
+						vb().KeyBuilder().ClustColsBuilder().AddBytesField(string(f.Field.Name), resolveLen(f.Field))
 					case appdef.DataKind_string:
-						vb().Key().ClustCols().AddStringField(string(f.Field.Name), resolveLen(f.Field))
+						vb().KeyBuilder().ClustColsBuilder().AddStringField(string(f.Field.Name), resolveLen(f.Field))
 					default: // other data types
-						vb().Key().ClustCols().AddField(string(f.Field.Name), k)
+						vb().KeyBuilder().ClustColsBuilder().AddField(string(f.Field.Name), k)
 					}
 					comment(f.Field.Name, f.Field.Statement)
 					return
 				}
 				if f.RefField != nil {
 					if refs, ok := resolveRefs(f.RefField); ok {
-						vb().Key().ClustCols().AddRefField(string(f.RefField.Name), refs...)
+						vb().KeyBuilder().ClustColsBuilder().AddRefField(string(f.RefField.Name), refs...)
 						comment(f.RefField.Name, f.RefField.Statement)
 					}
 				}
@@ -326,24 +326,24 @@ func (c *buildContext) views() error {
 			view.ValueFields(func(f *ViewItemExpr) {
 				comment := func(n Ident, s Statement) {
 					if txt := s.GetComments(); len(txt) > 0 {
-						vb().Value().SetFieldComment(string(n), txt...)
+						vb().ValueBuilder().SetFieldComment(string(n), txt...)
 					}
 				}
 				if f.Field != nil {
 					switch k := dataTypeToDataKind(f.Field.Type); k {
 					case appdef.DataKind_bytes:
-						vb().Value().AddBytesField(string(f.Field.Name), f.Field.NotNull, resolveLen(f.Field))
+						vb().ValueBuilder().AddBytesField(string(f.Field.Name), f.Field.NotNull, resolveLen(f.Field))
 					case appdef.DataKind_string:
-						vb().Value().AddStringField(string(f.Field.Name), f.Field.NotNull, resolveLen(f.Field))
+						vb().ValueBuilder().AddStringField(string(f.Field.Name), f.Field.NotNull, resolveLen(f.Field))
 					default: // other data types
-						vb().Value().AddField(string(f.Field.Name), k, f.Field.NotNull)
+						vb().ValueBuilder().AddField(string(f.Field.Name), k, f.Field.NotNull)
 					}
 					comment(f.Field.Name, f.Field.Statement)
 					return
 				}
 				if f.RefField != nil {
 					if refs, ok := resolveRefs(f.RefField); ok {
-						vb().Value().AddRefField(string(f.RefField.Name), f.RefField.NotNull, refs...)
+						vb().ValueBuilder().AddRefField(string(f.RefField.Name), f.RefField.NotNull, refs...)
 						comment(f.RefField.Name, f.RefField.Statement)
 					}
 				}

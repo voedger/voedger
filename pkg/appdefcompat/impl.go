@@ -143,7 +143,7 @@ func buildClustColsFieldsNode(parentNode *CompatibilityTreeNode, item appdef.IVi
 func buildViewNode(parentNode *CompatibilityTreeNode, item appdef.IView) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, item.QName().String(), nil)
 	node.Props = append(node.Props,
-		buildPartKeyFieldsNode(node, item.Key().Partition()),
+		buildPartKeyFieldsNode(node, item.Key().PartKey()),
 		buildClustColsFieldsNode(node, item.Key().ClustCols()),
 		buildFieldsNode(node, item.(appdef.IFields)),
 	)

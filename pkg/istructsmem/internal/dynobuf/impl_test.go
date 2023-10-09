@@ -52,9 +52,9 @@ func TestDynoBufSchemes(t *testing.T) {
 			AddField("recIDField", appdef.DataKind_RecordID, false)
 
 		view := appDefBuilder.AddView(appdef.NewQName("test", "view"))
-		view.Key().Partition().AddField("pk1", appdef.DataKind_int64)
-		view.Key().ClustCols().AddStringField("cc1", 100)
-		view.Value().AddRefField("val1", true)
+		view.KeyBuilder().PartKeyBuilder().AddField("pk1", appdef.DataKind_int64)
+		view.KeyBuilder().ClustColsBuilder().AddStringField("cc1", 100)
+		view.ValueBuilder().AddRefField("val1", true)
 
 		sch, err := appDefBuilder.Build()
 		require.NoError(err)
@@ -91,7 +91,7 @@ func TestDynoBufSchemes(t *testing.T) {
 		func(typ appdef.IType) {
 			name := typ.QName()
 			if view, ok := typ.(appdef.IView); ok {
-				checkScheme(name, view.Key().Partition(), schemes.ViewPartKeyScheme(name))
+				checkScheme(name, view.Key().PartKey(), schemes.ViewPartKeyScheme(name))
 				checkScheme(name, view.Key().ClustCols(), schemes.ViewClustColsScheme(name))
 				checkScheme(name, view.Value(), schemes.Scheme(name))
 				return
