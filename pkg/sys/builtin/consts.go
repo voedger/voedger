@@ -26,4 +26,5 @@ const (
 	field_ID            = "ID"
 	field_WLogOffset    = "WLogOffset"
 	field_Dummy         = "Dummy"
+	field_QName         = "QName"
 )

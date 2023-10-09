@@ -18,6 +18,7 @@ ALTER WORKSPACE Workspace (
 		ID ref NOT NULL,
 		Dummy int32 NOT NULL,
 		WLogOffset int64 NOT NULL,
+		QName qname NOT NULL,
 		PRIMARY KEY ((ID), Dummy)
 	) AS RESULT OF sys.ORecordsRegistryProjector;
 );

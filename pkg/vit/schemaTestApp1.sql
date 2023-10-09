@@ -420,12 +420,15 @@ TABLE cdoc2 INHERITS CDoc (
 );
 
 TABLE odoc1 INHERITS ODoc (
-	orecord1 TABLE orecord1()
+	orecord1 TABLE orecord1(
+		orecord2 TABLE orecord2()
+	)
 );
 
 TABLE odoc2 INHERITS ODoc (
 	refToODoc1 ref(odoc1),
 	refToORecord1 ref(orecord1),
+	refToORecord2 ref(orecord2),
 	refToAny ref,
 	refToCDoc1 ref(cdoc1),
 	refToCDoc1OrODoc1 ref(cdoc1, odoc1)
