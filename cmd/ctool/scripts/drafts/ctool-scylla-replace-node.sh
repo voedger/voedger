@@ -38,7 +38,7 @@ wait_for_scylla() {
   local count=0
 
   while [ $count -lt 100 ]; do
-    if [ "$(ssh "$SSH_OPTIONS" "$SSH_USER"@"$ip_address" "docker exec \$(docker ps -qf name=scylla) nodetool status" | grep -c '^UN\s')" -eq 3 ]; then
+    if [ $(ssh "$SSH_OPTIONS" "$SSH_USER"@"$ip_address" "docker exec \$(docker ps -qf name=scylla) nodetool status | grep -c '^UN\s'") -eq 3 ]; then
       echo "Scylla initialization success"
       return 0
     fi
