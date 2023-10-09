@@ -367,8 +367,14 @@ func TestRefIntegrity(t *testing.T) {
 					vit.PostWS(ws, "c.sys.CmdODocTwo", body)
 				})
 
-				t.Run("wrong QName -> 400 bad request", func(t *testing.T) {
+				t.Run("wrong QName CDoc-> 400 bad request", func(t *testing.T) {
 					body = fmt.Sprintf(`{"args":{"sys.ID": 1,"refToODoc1":%d},"unloggedArgs":{"sys.ID":2}}`, idCDoc)
+					vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+				})
+
+
+				t.Run("wrong QName ORecord -> 400 bad request", func(t *testing.T) {
+					body = fmt.Sprintf(`{"args":{"sys.ID": 1,"refToODoc1":%d},"unloggedArgs":{"sys.ID":2}}`, idOrecord1)
 					vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
 				})
 			})
