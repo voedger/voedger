@@ -80,6 +80,7 @@ func (v *validator) validDocument(doc *elementType) error {
 					err = errors.Join(err,
 						// ORecord «Price» (sales.PriceRecord) field «Next» refers to unknown record ID «7»
 						validateErrorf(ECode_InvalidRefRecordID, "%s field «%s» refers to unknown record ID «%d»: %w", v.entName(e), fld.Name(), id, ErrRecordIDNotFound))
+					return
 				}
 				if !fld.Ref(target.QName()) {
 					err = errors.Join(err,
