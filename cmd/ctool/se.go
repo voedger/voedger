@@ -536,14 +536,14 @@ func replaceSeAppNode(cluster *clusterType) error {
 	}
 
 	if err = newScriptExecuter(cluster.sshKey, "localhost").
-		run("swarm-get-manager-token.sh", conf.DBNode1); err != nil {
+		run("swarm-get-manager-token.sh", conf.DBNode1Name); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
 
 	logger.Info("swarm add node on ", newAddr)
 	if err = newScriptExecuter(cluster.sshKey, newAddr).
-		run("swarm-add-node.sh", conf.DBNode1, newAddr); err != nil {
+		run("swarm-add-node.sh", conf.DBNode1Name, newAddr); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
@@ -557,28 +557,28 @@ func replaceSeAppNode(cluster *clusterType) error {
 
 	logger.Info("mon node prepare ", newAddr)
 	if err = newScriptExecuter(cluster.sshKey, newAddr).
-		run("mon-node-prepare.sh", conf.AppNode1, conf.AppNode2, conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
+		run("mon-node-prepare.sh", conf.AppNode1Name, conf.AppNode2Name, conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
 
 	logger.Info("swarm set label on", newAddr, newNode.label(swarmAppLabelKey))
 	if err = newScriptExecuter(cluster.sshKey, newAddr).
-		run("swarm-set-label.sh", conf.DBNode1, newAddr, newNode.label(swarmDbmsLabelKey), "true"); err != nil {
+		run("swarm-set-label.sh", conf.DBNode1Name, newAddr, newNode.label(swarmDbmsLabelKey), "true"); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
 
 	logger.Info("swarm set label on", newAddr, newNode.label(swarmMonLabelKey))
 	if err = newScriptExecuter(cluster.sshKey, newAddr).
-		run("swarm-set-label.sh", conf.DBNode1, newAddr, newNode.label(swarmMonLabelKey), "true"); err != nil {
+		run("swarm-set-label.sh", conf.DBNode1Name, newAddr, newNode.label(swarmMonLabelKey), "true"); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
 
 	logger.Info("swarm remove node ", oldAddr)
 	if err = newScriptExecuter(cluster.sshKey, oldAddr).
-		run("swarm-rm-node.sh", conf.DBNode1, oldAddr); err != nil {
+		run("swarm-rm-node.sh", conf.DBNode1Name, oldAddr); err != nil {
 		logger.Error(err.Error())
 		return err
 	}

@@ -81,8 +81,9 @@ seed_list "$REPLACED_NODE_NAME" add
 
 db_rolling_restart() {
   local compose_file="$1"
-  local services=()                                                   
-  mapfile -t services < <(yq r "$compose_file" services.* -j | jq -r 'keys[]')
+  local services=()      
+
+  mapfile -t services < <(yq eval '.services | keys | .[]' "$compose_file")
 
   for service in "${services[@]}"; do
     echo "Restart service: ${STACK}_${service}"
