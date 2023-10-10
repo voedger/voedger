@@ -738,6 +738,7 @@ classDiagram
   class IView {
     <<Interface>>
     ~Kind => TypeKind_View
+    IFields
     +Key() IViewKey
     +Value() IViewValue
   }
@@ -799,15 +800,15 @@ classDiagram
     class IFunc {
         <<interface>>
         +Extension() IExtension
-        +Params() IObject
-        +Results() IObject
+        +Arg() IObject
+        +Result() IObject
     }
 
     IFunc <|-- ICommand : inherits
     class ICommand {
         <<interface>>
         ~Kind => TypeKind_Command
-        +UnloggedParams() IObject
+        +UnloggedArg() IObject
         -isCommand()
     }
 
@@ -834,7 +835,7 @@ classDiagram
     }
 ```
 
-*Rem*: In the above diagram the parameters and result of the function are `IObject`, in future versions it will be changed to an array of `[]IParam`.
+*Rem*: In the above diagram the Argument and Result of the function are `IObject`, in future versions it will be changed to an array of `[]IParam` and renamed to plural (`Arguments`, `Results`).
 
 ## Restrictions
 

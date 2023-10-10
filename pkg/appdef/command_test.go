@@ -33,8 +33,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 		t.Run("must be ok to assign cmd args and result", func(t *testing.T) {
 			cmd.
-				SetArg(argName).
-				SetUnloggedArg(unlName).
+				SetArg(argName).(ICommandBuilder).SetUnloggedArg(unlName).
 				SetResult(resName).
 				SetExtension("CmdExt", ExtensionEngineKind_BuiltIn)
 		})

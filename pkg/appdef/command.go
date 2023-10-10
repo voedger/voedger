@@ -11,36 +11,17 @@ import (
 )
 
 // # Implements:
-//   - ICommand & ICommandBuilder
+//   - ICommand
+//   - ICommandBuilder
 type command struct {
-	typ
-	comment
-	arg, unl, res objRef
-	ext           extension
+	function
+	unl objRef
 }
 
 func newCommand(app *appDef, name QName) *command {
-	cmd := &command{
-		typ: makeType(app, name, TypeKind_Command),
-	}
+	cmd := &command{}
+	cmd.function = makeFunc(app, name, TypeKind_Command, cmd)
 	app.appendType(cmd)
-	return cmd
-}
-
-func (cmd *command) Arg() IObject {
-	return cmd.arg.object(cmd.app)
-}
-
-func (cmd *command) Extension() IExtension {
-	return &cmd.ext
-}
-
-func (cmd *command) Result() IObject {
-	return cmd.res.object(cmd.app)
-}
-
-func (cmd *command) SetArg(name QName) ICommandBuilder {
-	cmd.arg.setName(name)
 	return cmd
 }
 
@@ -49,53 +30,18 @@ func (cmd *command) SetUnloggedArg(name QName) ICommandBuilder {
 	return cmd
 }
 
-func (cmd *command) SetResult(name QName) ICommandBuilder {
-	cmd.res.setName(name)
-	return cmd
-}
-
-func (cmd *command) SetExtension(name string, engine ExtensionEngineKind, comment ...string) ICommandBuilder {
-	if name == "" {
-		panic(fmt.Errorf("%v: extension name is empty: %w", cmd.QName(), ErrNameMissed))
-	}
-	if ok, err := ValidIdent(name); !ok {
-		panic(fmt.Errorf("%v: extension name «%s» is not valid: %w", cmd.QName(), name, err))
-	}
-	cmd.ext.name = name
-	cmd.ext.engine = engine
-	return cmd
-}
-
 func (cmd *command) UnloggedArg() IObject {
 	return cmd.unl.object(cmd.app)
 }
 
-// validates command
+// Validates command
 func (cmd *command) Validate() (err error) {
-	if cmd.arg.name != NullQName {
-		if cmd.arg.object(cmd.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: argument type «%v» is not found: %w", cmd.QName(), cmd.arg.name, ErrNameNotFound))
-		}
-	}
+	err = cmd.function.Validate()
 
 	if cmd.unl.name != NullQName {
 		if cmd.unl.object(cmd.app) == nil {
 			err = errors.Join(err, fmt.Errorf("%v: unlogged object type «%v» is not found: %w", cmd.QName(), cmd.unl.name, ErrNameNotFound))
 		}
-	}
-
-	if cmd.res.name != NullQName {
-		if cmd.res.object(cmd.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: command result type «%v» is not found: %w", cmd.QName(), cmd.res.name, ErrNameNotFound))
-		}
-	}
-
-	if cmd.Extension().Name() == "" {
-		err = errors.Join(err, fmt.Errorf("%v: command extension name is missed: %w", cmd.QName(), ErrNameMissed))
-	}
-
-	if cmd.Extension().Engine() == ExtensionEngineKind_null {
-		err = errors.Join(err, fmt.Errorf("%v: command extension engine is missed: %w", cmd.QName(), ErrExtensionEngineKindMissed))
 	}
 
 	return err
