@@ -60,7 +60,7 @@ func (v *validator) validDocument(doc *elementType) error {
 
 	ids := make(map[istructs.RecordID]*elementType)
 
-	doc.forEach(func(e *elementType) error {
+	_ = doc.forEach(func(e *elementType) error {
 		if id := e.ID(); id.IsRaw() {
 			if _, exists := ids[id]; exists {
 				err = errors.Join(err,
@@ -72,7 +72,7 @@ func (v *validator) validDocument(doc *elementType) error {
 		return nil
 	})
 
-	doc.forEach(func(e *elementType) error {
+	_ = doc.forEach(func(e *elementType) error {
 		e.fields.RefFields(func(fld appdef.IRefField) {
 			if id := e.AsRecordID(fld.Name()); id.IsRaw() {
 				target, exists := ids[id]
