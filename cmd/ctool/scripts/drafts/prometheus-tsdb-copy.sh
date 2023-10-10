@@ -39,6 +39,10 @@ timestamp=$(date +%Y%m%d%H%M%S)
 # Generate the snapshot file name
 snapshot_file="prometheus_snapshot_$timestamp.tar.gz"
 
+dst_name=$(getent hosts "$dst_ip" | awk '{print $2}')
+
+ssh-keyscan -H "$dst_name" >> ~/.ssh/known_hosts
+
 snapshot=$(curl -X POST http://$src_ip:9090/api/v1/admin/tsdb/snapshot | jq -r '.data.name') 
 # Make the snapshot on source host
 if [ -z $snapshot ]; then
@@ -62,7 +66,7 @@ scp -3 $SSH_OPTIONS $SSH_USER@$src_ip:~/$snapshot.tar.gz $SSH_USER@$dst_ip:~
 
 ssh $SSH_OPTIONS $SSH_USER@$dst_ip "
   # Exit immediately if any command exits with a non-zero status
-  set -e
+  set -euo pipefail
 
   # Extract the snapshot on the destination host
   sudo mkdir -p $snapshot_dir && sudo tar -xzvf ~/$snapshot.tar.gz -C $snapshot_dir
