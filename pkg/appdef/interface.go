@@ -85,7 +85,7 @@ type IAppDef interface {
 	// Enumerates all application functions
 	//
 	// Functions are enumerated in alphabetical order by QName
-	Funcs(func(IFunc))
+	Functions(func(IFunction))
 
 	// Returns workspace by name.
 	//

@@ -171,7 +171,7 @@
           ]
         }
       },
-      "Funcs": {
+      "Functions": {
         "Commands": {
           "test.cmd": {
             "Name": "test.cmd",

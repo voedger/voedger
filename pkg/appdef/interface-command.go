@@ -11,7 +11,7 @@ package appdef
 //
 // Ref. to command.go for implementation
 type ICommand interface {
-	IFunc
+	IFunction
 
 	// Unlogged (secure) argument. Returns nil if not assigned
 	UnloggedArg() IObject
@@ -19,7 +19,7 @@ type ICommand interface {
 
 type ICommandBuilder interface {
 	ICommand
-	IFuncBuilder
+	IFunctionBuilder
 
 	// Sets command unlogged (secure) argument. Must be object or NullQName
 	SetUnloggedArg(QName) ICommandBuilder

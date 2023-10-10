@@ -7,12 +7,12 @@ package descr
 
 import "github.com/voedger/voedger/pkg/appdef"
 
-type Funcs struct {
-	Commands map[appdef.QName]*CommandFunc `json:",omitempty"`
-	Queries  map[appdef.QName]*QueryFunc   `json:",omitempty"`
+type Functions struct {
+	Commands map[appdef.QName]*CommandFunction `json:",omitempty"`
+	Queries  map[appdef.QName]*QueryFunction   `json:",omitempty"`
 }
 
-type Func struct {
+type Function struct {
 	Comment   string `json:",omitempty"`
 	Name      appdef.QName
 	Arg       *appdef.QName `json:",omitempty"`
@@ -25,11 +25,11 @@ type Extension struct {
 	Engine appdef.ExtensionEngineKind
 }
 
-type CommandFunc struct {
-	Func
+type CommandFunction struct {
+	Function
 	UnloggedArg *appdef.QName `json:",omitempty"`
 }
 
-type QueryFunc struct {
-	Func
+type QueryFunction struct {
+	Function
 }

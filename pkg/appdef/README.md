@@ -142,21 +142,21 @@ classDiagram
         +Value() IViewValue
     }
             
-    IType <|-- IFunc : inherits
-    class IFunc {
+    IType <|-- IFunction : inherits
+    class IFunction {
         <<interface>>
         +Params() []IParam
         +Results() []IParam
     }
 
-    IFunc <|-- ICommand : inherits
+    IFunction <|-- ICommand : inherits
     class ICommand {
         <<interface>>
         ~Kind => TypeKind_Command
         +UnloggedParams() []IParam
     }
 
-    IFunc <|-- IQuery : inherits
+    IFunction <|-- IQuery : inherits
     class IQuery {
         <<interface>>
         ~Kind => TypeKind_Query
@@ -796,15 +796,15 @@ classDiagram
         +Comment() []string
     }
 
-    IType <|-- IFunc : inherits
-    class IFunc {
+    IType <|-- IFunction : inherits
+    class IFunction {
         <<interface>>
         +Extension() IExtension
         +Arg() IObject
         +Result() IObject
     }
 
-    IFunc <|-- ICommand : inherits
+    IFunction <|-- ICommand : inherits
     class ICommand {
         <<interface>>
         ~Kind => TypeKind_Command
@@ -812,14 +812,14 @@ classDiagram
         -isCommand()
     }
 
-    IFunc <|-- IQuery : inherits
+    IFunction <|-- IQuery : inherits
     class IQuery {
         <<interface>>
         ~Kind => TypeKind_Query
         -isQuery()
     }
 
-    IFunc "1" *-- "1" IExtension : has
+    IFunction "1" *-- "1" IExtension : has
     class IExtension {
         <<interface>>
         +Name() string

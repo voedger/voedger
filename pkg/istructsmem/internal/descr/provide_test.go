@@ -56,8 +56,8 @@ func TestBasicUsage(t *testing.T) {
 	obj.AddStringField("f1", true)
 
 	appDef.AddCommand(appdef.NewQName("test", "cmd")).
-		SetArg(objName).(appdef.ICommandBuilder).
 		SetUnloggedArg(objName).
+		SetArg(objName).
 		SetExtension("cmd", appdef.ExtensionEngineKind_WASM)
 
 	appDef.AddQuery(appdef.NewQName("test", "query")).

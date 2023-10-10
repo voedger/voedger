@@ -35,7 +35,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 			cmd.
 				SetArg(argName).(ICommandBuilder).SetUnloggedArg(unlName).
 				SetResult(resName).
-				SetExtension("CmdExt", ExtensionEngineKind_BuiltIn)
+				SetExtension("CmdExt", ExtensionEngineKind_BuiltIn, "comment")
 		})
 
 		t.Run("must be ok to build", func(t *testing.T) {
@@ -72,6 +72,22 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 		require.Equal("CmdExt", cmd.Extension().Name())
 		require.Equal(ExtensionEngineKind_BuiltIn, cmd.Extension().Engine())
+		require.Equal("comment", cmd.Extension().Comment())
+	})
+
+	t.Run("must be ok to enum functions", func(t *testing.T) {
+		cnt := 0
+		app.Functions(func(f IFunction) {
+			cnt++
+			switch cnt {
+			case 1:
+				require.Equal(TypeKind_Command, f.Kind())
+				require.Equal(cmdName, f.QName())
+			default:
+				require.Failf("unexpected function", "kind: %v, name: %v", f.Kind(), f.QName())
+			}
+		})
+		require.Equal(1, cnt)
 	})
 
 	t.Run("check nil returns", func(t *testing.T) {

@@ -34,11 +34,11 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 			return
 		}
 
-		if fn, ok := typ.(appdef.IFunc); ok {
-			if pkg.Funcs == nil {
-				pkg.Funcs = newFuncs()
+		if fn, ok := typ.(appdef.IFunction); ok {
+			if pkg.Functions == nil {
+				pkg.Functions = newFunctions()
 			}
-			pkg.Funcs.read(fn)
+			pkg.Functions.read(fn)
 			return
 		}
 

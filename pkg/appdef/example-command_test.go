@@ -29,7 +29,7 @@ func ExampleIAppDefBuilder_AddCommand() {
 			SetArg(argName).(appdef.ICommandBuilder).
 			SetUnloggedArg(unlName).
 			SetResult(resName).
-			SetExtension(extName, appdef.ExtensionEngineKind_BuiltIn)
+			SetExtension(extName, appdef.ExtensionEngineKind_BuiltIn, "extension comment")
 
 		_ = appDef.AddObject(argName)
 		_ = appDef.AddObject(unlName)
@@ -49,7 +49,7 @@ func ExampleIAppDefBuilder_AddCommand() {
 		fmt.Println(" - argument :", cmd.Arg())
 		fmt.Println(" - unl.arg. :", cmd.UnloggedArg())
 		fmt.Println(" - result   :", cmd.Result())
-		fmt.Println(" - extension:", cmd.Extension())
+		fmt.Println(" - extension:", cmd.Extension(), cmd.Extension().Comment())
 	}
 
 	// Output:
@@ -57,10 +57,10 @@ func ExampleIAppDefBuilder_AddCommand() {
 	//  - argument : Object «test.arg»
 	//  - unl.arg. : Object «test.unl»
 	//  - result   : Object «test.res»
-	//  - extension: CmdExt (BuiltIn)
+	//  - extension: CmdExt (BuiltIn) extension comment
 }
 
-func ExampleIAppDef_Funcs() {
+func ExampleIAppDef_Functions() {
 
 	var app appdef.IAppDef
 
@@ -82,7 +82,7 @@ func ExampleIAppDef_Funcs() {
 		appDef.AddQuery(qrName).
 			SetArg(argName).
 			SetResult(resName).
-			SetExtension(qrExt, appdef.ExtensionEngineKind_BuiltIn)
+			SetExtension(qrExt, appdef.ExtensionEngineKind_BuiltIn, "query extension comment")
 
 		_ = appDef.AddObject(argName)
 		_ = appDef.AddObject(resName)
@@ -97,7 +97,7 @@ func ExampleIAppDef_Funcs() {
 	// how to enumerate application functions
 	{
 		cnt := 0
-		app.Funcs(func(f appdef.IFunc) {
+		app.Functions(func(f appdef.IFunction) {
 			cnt++
 			fmt.Printf("%d. %v :\n", cnt, f)
 			fmt.Println(" - argument :", f.Arg())
@@ -105,12 +105,11 @@ func ExampleIAppDef_Funcs() {
 				fmt.Println(" - unl.arg. :", c.UnloggedArg())
 			}
 			fmt.Println(" - result   :", f.Result())
-			fmt.Println(" - extension:", f.Extension())
+			fmt.Println(" - extension:", f.Extension(), f.Extension().Comment())
 		})
 		fmt.Printf("Overall %d function(s)", cnt)
 	}
 
-	// Output:
 	// 1. Command «test.cmd» :
 	//  - argument : Object «test.arg»
 	//  - unl.arg. : <nil>
@@ -119,6 +118,6 @@ func ExampleIAppDef_Funcs() {
 	// 2. Query «test.query» :
 	//  - argument : Object «test.arg»
 	//  - result   : Object «test.res»
-	//  - extension: QueryExt (BuiltIn)
+	//  - extension: QueryExt (BuiltIn) query extension comment
 	// Overall 2 function(s)
 }

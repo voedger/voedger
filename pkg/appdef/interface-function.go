@@ -29,7 +29,7 @@ type IExtension interface {
 // Function may be query or command.
 //
 // Ref. to function.go for implementation
-type IFunc interface {
+type IFunction interface {
 	IType
 
 	// Argument. Returns nil if not assigned
@@ -42,19 +42,19 @@ type IFunc interface {
 	Extension() IExtension
 }
 
-type IFuncBuilder interface {
-	IFunc
+type IFunctionBuilder interface {
+	IFunction
 	ITypeBuilder
 
 	// Sets command argument. Must be object or NullQName
-	SetArg(QName) IFuncBuilder
+	SetArg(QName) IFunctionBuilder
 
 	// Sets command result. Must be object or NullQName
-	SetResult(QName) IFuncBuilder
+	SetResult(QName) IFunctionBuilder
 
 	// Sets engine.
 	//
 	// # Panics:
 	//	- if name is empty or invalid identifier
-	SetExtension(name string, engine ExtensionEngineKind, comment ...string) IFuncBuilder
+	SetExtension(name string, engine ExtensionEngineKind, comment ...string) IFunctionBuilder
 }

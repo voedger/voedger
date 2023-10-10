@@ -13,7 +13,7 @@ import (
 // Function
 //
 // # Implements:
-//   - IFunc
+//   - IFunction
 //   - IFuncBuilder
 type function struct {
 	typ
@@ -43,17 +43,17 @@ func (f *function) Result() IObject {
 	return f.res.object(f.app)
 }
 
-func (f *function) SetArg(name QName) IFuncBuilder {
+func (f *function) SetArg(name QName) IFunctionBuilder {
 	f.arg.setName(name)
-	return f.parent.(IFuncBuilder)
+	return f.parent.(IFunctionBuilder)
 }
 
-func (f *function) SetResult(name QName) IFuncBuilder {
+func (f *function) SetResult(name QName) IFunctionBuilder {
 	f.res.setName(name)
-	return f.parent.(IFuncBuilder)
+	return f.parent.(IFunctionBuilder)
 }
 
-func (f *function) SetExtension(name string, engine ExtensionEngineKind, comment ...string) IFuncBuilder {
+func (f *function) SetExtension(name string, engine ExtensionEngineKind, comment ...string) IFunctionBuilder {
 	if name == "" {
 		panic(fmt.Errorf("%v: extension name is empty: %w", f.QName(), ErrNameMissed))
 	}

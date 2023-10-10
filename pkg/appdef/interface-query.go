@@ -9,7 +9,7 @@ package appdef
 //
 // Ref. to query.go for implementation
 type IQuery interface {
-	IFunc
+	IFunction
 
 	// Unwanted type assertion stub
 	isQuery()
@@ -17,5 +17,5 @@ type IQuery interface {
 
 type IQueryBuilder interface {
 	IQuery
-	IFuncBuilder
+	IFunctionBuilder
 }

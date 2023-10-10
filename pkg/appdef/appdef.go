@@ -127,9 +127,9 @@ func (app *appDef) Element(name QName) IElement {
 	return nil
 }
 
-func (app *appDef) Funcs(cb func(e IFunc)) {
+func (app *appDef) Functions(cb func(e IFunction)) {
 	app.Types(func(t IType) {
-		if f, ok := t.(IFunc); ok {
+		if f, ok := t.(IFunction); ok {
 			cb(f)
 		}
 	})
