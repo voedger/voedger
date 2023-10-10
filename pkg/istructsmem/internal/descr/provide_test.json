@@ -1,0 +1,201 @@
+{
+  "Name": "test1/app1",
+  "Packages": {
+    "test": {
+      "Name": "test",
+      "Types": {
+        "test.doc": {
+          "Comment": "comment 1\ncomment 2",
+          "Name": "test.doc",
+          "Kind": "TypeKind_CDoc",
+          "Fields": [
+            {
+              "Name": "sys.QName",
+              "Kind": "DataKind_QName",
+              "Required": true
+            },
+            {
+              "Name": "sys.ID",
+              "Kind": "DataKind_RecordID",
+              "Required": true
+            },
+            {
+              "Name": "sys.IsActive",
+              "Kind": "DataKind_bool"
+            },
+            {
+              "Comment": "field comment",
+              "Name": "f1",
+              "Kind": "DataKind_int64",
+              "Required": true
+            },
+            {
+              "Name": "f2",
+              "Kind": "DataKind_string",
+              "Restricts": {
+                "MinLen": 4,
+                "MaxLen": 4,
+                "Pattern": "^\\w+$"
+              }
+            },
+            {
+              "Name": "mainChild",
+              "Kind": "DataKind_RecordID",
+              "Refs": [
+                "test.rec"
+              ]
+            }
+          ],
+          "Containers": [
+            {
+              "Comment": "container comment",
+              "Name": "rec",
+              "Type": "test.rec",
+              "MinOccurs": 0,
+              "MaxOccurs": 100
+            }
+          ],
+          "Uniques": [
+            {
+              "Name": "Unique01",
+              "Fields": [
+                "f1",
+                "f2"
+              ]
+            }
+          ],
+          "Singleton": true
+        },
+        "test.obj": {
+          "Name": "test.obj",
+          "Kind": "TypeKind_Object",
+          "Fields": [
+            {
+              "Name": "sys.QName",
+              "Kind": "DataKind_QName",
+              "Required": true
+            },
+            {
+              "Name": "f1",
+              "Kind": "DataKind_string",
+              "Required": true
+            }
+          ]
+        },
+        "test.rec": {
+          "Name": "test.rec",
+          "Kind": "TypeKind_CRecord",
+          "Fields": [
+            {
+              "Name": "sys.QName",
+              "Kind": "DataKind_QName",
+              "Required": true
+            },
+            {
+              "Name": "sys.ID",
+              "Kind": "DataKind_RecordID",
+              "Required": true
+            },
+            {
+              "Name": "sys.ParentID",
+              "Kind": "DataKind_RecordID",
+              "Required": true
+            },
+            {
+              "Name": "sys.Container",
+              "Kind": "DataKind_string",
+              "Required": true
+            },
+            {
+              "Name": "sys.IsActive",
+              "Kind": "DataKind_bool"
+            },
+            {
+              "Name": "f1",
+              "Kind": "DataKind_int64",
+              "Required": true
+            },
+            {
+              "Name": "f2",
+              "Kind": "DataKind_string"
+            },
+            {
+              "Name": "phone",
+              "Kind": "DataKind_string",
+              "Required": true,
+              "Verifiable": true,
+              "Restricts": {
+                "MinLen": 1,
+                "MaxLen": 25
+              }
+            }
+          ],
+          "UniqueField": "phone"
+        }
+      },
+      "Views": {
+        "test.view": {
+          "Name": "test.view",
+          "Key": {
+            "Partition": [
+              {
+                "Name": "pk_1",
+                "Kind": "DataKind_int64",
+                "Required": true
+              }
+            ],
+            "ClustCols": [
+              {
+                "Name": "cc_1",
+                "Kind": "DataKind_string",
+                "Restricts": {
+                  "MaxLen": 100
+                }
+              }
+            ]
+          },
+          "Value": [
+            {
+              "Name": "sys.QName",
+              "Kind": "DataKind_QName",
+              "Required": true
+            },
+            {
+              "Name": "vv_1",
+              "Kind": "DataKind_RecordID",
+              "Required": true,
+              "Refs": [
+                "test.doc"
+              ]
+            }
+          ]
+        }
+      },
+      "Funcs": {
+        "Commands": {
+          "test.cmd": {
+            "Name": "test.cmd",
+            "Arg": "test.obj",
+            "Result": "test.obj",
+            "Extension": {
+              "Name": "cmd",
+              "Engine": "ExtensionEngineKind_WASM"
+            },
+            "UnloggedArg": "test.obj"
+          }
+        },
+        "Queries": {
+          "test.query": {
+            "Name": "test.query",
+            "Arg": "test.obj",
+            "Result": "test.obj",
+            "Extension": {
+              "Name": "cmd",
+              "Engine": "ExtensionEngineKind_BuiltIn"
+            }
+          }
+        }
+      }
+    }
+  }
+}

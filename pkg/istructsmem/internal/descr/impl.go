@@ -34,6 +34,14 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 			return
 		}
 
+		if fn, ok := typ.(appdef.IFunc); ok {
+			if pkg.Funcs == nil {
+				pkg.Funcs = newFuncs()
+			}
+			pkg.Funcs.read(fn)
+			return
+		}
+
 		t := newType()
 		t.Name = name
 		pkg.Types[name.String()] = t

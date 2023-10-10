@@ -32,7 +32,7 @@ func (r *Resource) read(resource istructs.IResource) {
 }
 
 func (r *Resource) readCmd(command istructs.ICommandFunction) {
-	r.Command = new(Command)
+	r.Command = new(CommandResource)
 
 	if n := command.ParamsType(); n != appdef.NullQName {
 		r.Command.Params = &n
@@ -47,7 +47,7 @@ func (r *Resource) readCmd(command istructs.ICommandFunction) {
 }
 
 func (r *Resource) readQuery(query istructs.IQueryFunction) {
-	r.Query = new(Query)
+	r.Query = new(QueryResource)
 
 	if n := query.ParamsType(); n != appdef.NullQName {
 		r.Query.Params = &n
