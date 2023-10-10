@@ -1,5 +1,3 @@
--- noinspection SqlNoDataSourceInspectionForFile
-
 -- Copyright (c) 2020-present unTill Pro, Ltd.
 
 -- note: this schema is for tests only. Voedger sys package uses copy of this schema
@@ -28,7 +26,7 @@ ABSTRACT WORKSPACE Workspace (
         Email varchar,
         Password varchar
     );
-    TABLE SomeTable INHERITS CDoc( -- NodeRemoved: removed in new.sql
+    TABLE SomeTable INHERITS CDoc(
         A varchar,
         B varchar
     );
@@ -37,29 +35,13 @@ ABSTRACT WORKSPACE Workspace (
         B varchar,
         C varchar
     );
-    TYPE SomeType(
-        A varchar,
-        B int
-    );
-    TYPE SomeType2(
-        A varchar,
-        B int,
-        C int,
-        D int
-    );
-    VIEW SomeView(
-        A int,
-        B int,
-        PRIMARY KEY ((A), B)
-    ) AS RESULT OF NewType;
     EXTENSION ENGINE BUILTIN (
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
-        COMMAND SomeCommand(SomeType, UNLOGGED SomeType) RETURNS SomeType;
     )
 );
 
 ALTERABLE WORKSPACE Profile(
-    TABLE ProfileTable INHERITS CDoc(-- NodeRemoved: removed in new.sql
+    TABLE ProfileTable INHERITS CDoc(
         A varchar
     );
 );

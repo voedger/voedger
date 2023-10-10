@@ -34,9 +34,11 @@ Why "Projector..."? To simplify definition, Projector uses System authorization 
 
 ```go
 
-func CheckBackwardCompatibility(oldAppDef, newAppDef appdef.IAppDef) (cerrs *CompatibilityErrors)
+func CheckBackwardCompatibility(oldBuilder, newBuilder appdef.IAppDefBuilder) (cerrs *CompatibilityErrors, err error)
 
-func IgnoreCompatibilityErrors(cerrs *CompatibilityErrors, pathsToIgnore [][]string) (cerrsOut *CompatibilityErrors)
+// cerrsOut: all cerrsIn that are not in toBeIgnored
+// toBeIgnored.Pos is ignored in comparison
+func IgnoreCompatibilityErrors(cerrs *CompatibilityErrors, toBeIgnored []CompatibilityError) (cerrsOut *CompatibilityErrors)
 ```
 
 ## Technical Design
@@ -59,12 +61,10 @@ type Constraint string
 type NodeType string
 
 const (
-	ConstraintEmpty         Constraint = ""
-	ConstraintValueMatch    Constraint = "ConstraintValueMatch"
-    ConstraintAppendOnly    Constraint = "ConstraintAppendOnly"
-    ConstraintInsertOnly    Constraint = "ConstraintInsertOnly"
+	ConstraintValueMatch Constraint = "ConstraintValueMatch"
+    ConstraintAppendOnly Constraint = "ConstraintAppendOnly"
+    ConstraintInsertOnly Constraint = "ConstraintInsertOnly"
     ConstraintNonModifiable Constraint = "ConstraintNonModifiable"
-	ConstraintChangeAllowed Constraint = "ConstraintChangeAllowed"
 )
 
 type CompatibilityTreeNode {
@@ -139,8 +139,7 @@ type CompatibilityError struct {
     // OrderChanged: (NonModifiable, AppendOnly): one error for the container
     // NodeInserted: (NonModifiable): one error for the container
 	// ValueChanged: one error for one node
-	// NodeModified: one error for one node
-    ErrorType ErrorType
+    ErrMessage NodeErrorString
 }
 ```
 

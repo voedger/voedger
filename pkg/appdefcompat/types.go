@@ -11,7 +11,7 @@ import (
 )
 
 type Constraint string
-type ErrorType string
+type NodeErrorString string
 
 type CompatibilityTreeNode struct {
 	Name       string
@@ -35,19 +35,19 @@ type NodeConstraint struct {
 type CompatibilityError struct {
 	Constraint  Constraint
 	OldTreePath []string
-	ErrorType   ErrorType
+	ErrMessage  NodeErrorString
 }
 
-func newCompatibilityError(constraint Constraint, oldTreePath []string, errType ErrorType) CompatibilityError {
+func newCompatibilityError(constraint Constraint, oldTreePath []string, errMsg NodeErrorString) CompatibilityError {
 	return CompatibilityError{
 		Constraint:  constraint,
 		OldTreePath: oldTreePath,
-		ErrorType:   errType,
+		ErrMessage:  errMsg,
 	}
 }
 
 func (e CompatibilityError) Error() string {
-	return fmt.Sprintf(validationErrorFmt, e.ErrorType, e.Path())
+	return fmt.Sprintf(validationErrorFmt, e.ErrMessage, e.Path())
 }
 
 func (e CompatibilityError) Path() string {
@@ -58,15 +58,12 @@ type CompatibilityErrors struct {
 	Errors []CompatibilityError
 }
 
-func (e *CompatibilityErrors) Error() (err string) {
+func (e *CompatibilityErrors) Error() string {
 	errs := make([]error, len(e.Errors))
 	for i, err := range e.Errors {
 		errs[i] = err
 	}
-	if len(errs) > 0 {
-		return errors.Join(errs...).Error()
-	}
-	return
+	return errors.Join(errs...).Error()
 }
 
 // matchNodesResult represents the result of matching nodes.

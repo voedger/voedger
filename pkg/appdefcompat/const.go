@@ -10,35 +10,15 @@ const (
 )
 
 const (
-	ConstraintEmpty         Constraint = ""
 	ConstraintValueMatch    Constraint = "ConstraintValueMatch"
 	ConstraintAppendOnly    Constraint = "ConstraintAppendOnly"
 	ConstraintInsertOnly    Constraint = "ConstraintInsertOnly"
 	ConstraintNonModifiable Constraint = "ConstraintNonModifiable"
-	ConstraintChangeAllowed Constraint = "ConstraintChangeAllowed"
 )
 
 const (
-	ErrorTypeNodeRemoved  ErrorType = "NodeRemoved"
-	ErrorTypeOrderChanged ErrorType = "OrderChanged"
-	ErrorTypeNodeInserted ErrorType = "NodeInserted"
-	ErrorTypeValueChanged ErrorType = "ValueChanged"
-	ErrorTypeNodeModified ErrorType = "NodeModified"
-)
-
-const (
-	NodeNameTypes           = "Types"
-	NodeNameFields          = "Fields"
-	NodeNameUniqueFields    = "UniqueFields"
-	NodeNameAbstract        = "Abstract"
-	NodeNameParent          = "Parent"
-	NodeNameContainers      = "Containers"
-	NodeNameAppDef          = "AppDef"
-	NodeNameDescriptor      = "Descriptor"
-	NodeNamePartKeyFields   = "PartKeyFields"
-	NodeNameClustColsFields = "ClustColsFields"
-	NodeNameArgs            = "Args"
-	NodeNameResult          = "Result"
-	NodeNameInherits        = "Inherits"
-	NodeNameUnloggedArgs    = "UnloggedArgs"
+	NodeRemoved  NodeErrorString = "NodeRemoved"
+	OrderChanged NodeErrorString = "OrderChanged"
+	NodeInserted NodeErrorString = "NodeInserted"
+	ValueChanged NodeErrorString = "ValueChanged"
 )

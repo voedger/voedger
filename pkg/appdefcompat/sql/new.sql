@@ -1,5 +1,3 @@
--- noinspection SqlNoDataSourceInspectionForFile
-
 -- Copyright (c) 2020-present unTill Pro, Ltd.
 
 -- note: this schema is for tests only. Voedger sys package uses copy of this schema
@@ -15,63 +13,27 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
-WORKSPACE Workspace ( -- ValueChanged: Abstract flag must not be changed
+ABSTRACT WORKSPACE Workspace (
     TYPE CreateLoginUnloggedParams(
         Password varchar, -- OrderChanged
         Email varchar --OrderChanged
     );
     TYPE CreateLoginParams(
-        --Login                     varchar, -- NodeRemoved
+        --Login                       varchar, -- NodeRemoved
         AppName                     varchar,
         SubjectKind                 int32,
         WSKindInitializationData    varchar(1024),
-        ProfileCluster              int64, -- ValueChanged: int32 in old version, int64 in new version
-        ProfileToken                int64, -- ValueChanged: int32 in old version, int64 in new version
-        NewField                    varchar -- appending field is allowed
+        ProfileCluster              int64, -- Mismatch: int32 in old version, int64 in new version
+        ProfileToken                int64 -- Mismatch: int32 in old version, int64 in new version
     );
     TABLE AnotherOneTable INHERITS CDoc(
         A varchar,
         B varchar,
         D varchar, -- NodeInserted
-        C int32 -- OrderChanged, ValueChanged: varchar in old version, int32 in new version, field's index is changed
+        C int32 -- Mismatch: varchar in old version, int32 in new version
     );
-    TYPE SomeType(
-        A varchar,
-        B int
-    );
-    TYPE SomeType2(
-        A varchar,
-        B int,
-        C int,
-        D int
-    );
-    VIEW SomeView(
-        A int,
-        B varchar, -- ValueChanged, ValueChanged: field B was changed as a part of ClustColsFields and as well as a part of Fields
-        C int, -- error: field is in part of primary key
-        D int, -- appending field is allowed
-        PRIMARY KEY ((A, C), B) -- NodeModified: added field C to PartKeyFields
-    ) AS RESULT OF NewType;
-    TABLE NewTable INHERITS CDoc(
-        A varchar
-    );
-    TYPE NewType(
-        A varchar
-    );
-    TYPE NewType2(
-        A varchar,
-        B int32
-    );
-    VIEW NewView(
-        A int,
-        B int,
-        PRIMARY KEY ((A), B)
-    ) AS RESULT OF NewType;
     EXTENSION ENGINE BUILTIN (
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
-        COMMAND SomeCommand(SomeType2, UNLOGGED SomeType2) RETURNS SomeType2; -- args and return type changed; unlogged flag changed, but it is ok
-        COMMAND NewCommand(NewType, UNLOGGED NewType2) RETURNS NewType;
-        QUERY NewQuery(NewType) RETURNS NewType;
     )
 );
 
