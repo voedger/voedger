@@ -7,10 +7,11 @@ package appdefcompat
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
-type NodeType string
 type Constraint string
+type NodeErrorString string
 
 type CompatibilityTreeNode struct {
 	Name       string
@@ -34,13 +35,10 @@ type NodeConstraint struct {
 type CompatibilityError struct {
 	Constraint  Constraint
 	OldTreePath []string
-	// NodeRemoved:  (NonModifiable, AppendOnly,InsertOnly) : one error per removed node
-	// OrderChanged: (NonModifiable, AppendOnly): one error for the container
-	// NodeInserted: (NonModifiable): one error for the container
-	ErrMessage string
+	ErrMessage  NodeErrorString
 }
 
-func newCompatibilityError(constraint Constraint, oldTreePath []string, errMsg string) CompatibilityError {
+func newCompatibilityError(constraint Constraint, oldTreePath []string, errMsg NodeErrorString) CompatibilityError {
 	return CompatibilityError{
 		Constraint:  constraint,
 		OldTreePath: oldTreePath,
@@ -49,7 +47,11 @@ func newCompatibilityError(constraint Constraint, oldTreePath []string, errMsg s
 }
 
 func (e CompatibilityError) Error() string {
-	return fmt.Sprintf(validationErrorFmt, string(e.Constraint), e.ErrMessage)
+	return fmt.Sprintf(validationErrorFmt, e.ErrMessage, e.Path())
+}
+
+func (e CompatibilityError) Path() string {
+	return strings.Join(e.OldTreePath, pathDelimiter)
 }
 
 type CompatibilityErrors struct {

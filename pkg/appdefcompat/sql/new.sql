@@ -14,16 +14,23 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
 ABSTRACT WORKSPACE Workspace (
+    TYPE CreateLoginUnloggedParams(
+        Password varchar, -- OrderChanged
+        Email varchar --OrderChanged
+    );
     TYPE CreateLoginParams(
         --Login                       varchar, -- NodeRemoved
         AppName                     varchar,
         SubjectKind                 int32,
         WSKindInitializationData    varchar(1024),
-        ProfileCluster              int64 -- Mismatch: int32 in old version, int64 in new version
+        ProfileCluster              int64, -- Mismatch: int32 in old version, int64 in new version
+        ProfileToken                int64 -- Mismatch: int32 in old version, int64 in new version
     );
-    TYPE CreateLoginUnloggedParams(
-        Password varchar, -- OrderChanged
-        Email varchar --OrderChanged
+    TABLE AnotherOneTable INHERITS CDoc(
+        A varchar,
+        B varchar,
+        D varchar, -- NodeInserted
+        C int32 -- Mismatch: varchar in old version, int32 in new version
     );
     EXTENSION ENGINE BUILTIN (
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
