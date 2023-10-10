@@ -33,13 +33,13 @@ var (
 	}
 )
 
-// crackID splits ID to two-parts key — partition key (hi) and clustering columns (lo)
+// сrackID splits ID to two-parts key — partition key (hi) and clustering columns (lo)
 func crackID(id uint64) (hi uint64, low uint16) {
 	return uint64(id >> partitionBits), uint16(id) & lowMask
 }
 
-// crackRecordID splits record ID to two-parts key — partition key (hi) and clustering columns (lo)
-func crackRecordID(id istructs.RecordID) (hi uint64, low uint16) {
+// СrackRecordID splits record ID to two-parts key — partition key (hi) and clustering columns (lo)
+func CrackRecordID(id istructs.RecordID) (hi uint64, low uint16) {
 	return crackID(uint64(id))
 }
 
@@ -64,7 +64,7 @@ const uint64len, uint16len = 8, 2
 
 // Returns partition key and clustering columns bytes for specified record id in specified workspace
 func recordKey(ws istructs.WSID, id istructs.RecordID) (pkey, ccols []byte) {
-	hi, lo := crackRecordID(id)
+	hi, lo := CrackRecordID(id)
 
 	pkey = make([]byte, uint16len+uint64len+uint64len)
 	binary.BigEndian.PutUint16(pkey, consts.SysView_Records)

@@ -14,11 +14,11 @@ ALTER WORKSPACE Workspace (
 		QUERY Echo(EchoParams) RETURNS EchoResult;
 	);
 
-	VIEW ORecordsRegistry (
+	VIEW RecordsRegistry (
+		IDHi int64 NOT NULL,
 		ID ref NOT NULL,
-		Dummy int32 NOT NULL,
 		WLogOffset int64 NOT NULL,
 		QName qname NOT NULL,
-		PRIMARY KEY ((ID), Dummy)
-	) AS RESULT OF sys.ORecordsRegistryProjector;
+		PRIMARY KEY ((IDHi), ID)
+	) AS RESULT OF sys.RecordsRegistryProjector;
 );

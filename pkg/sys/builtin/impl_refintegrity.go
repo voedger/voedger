@@ -23,7 +23,7 @@ import (
 func provideRefIntegrityValidation(cfg *istructsmem.AppConfigType) {
 	cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name: appdef.NewQName(appdef.SysPackage, "ORecordsRegistryProjector"),
+			Name: appdef.NewQName(appdef.SysPackage, "RecordsRegistryProjector"),
 			Func: provideRecordsRegistryProjector(cfg),
 		}
 	})
@@ -40,46 +40,20 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 			return nil
 		}
 		allowedTargetQNames := refField.Refs()
-
-		refToRPossible := len(allowedTargetQNames) == 0
-		refToOPossible := len(allowedTargetQNames) == 0
-		for _, allowedTargetQName := range allowedTargetQNames {
-			targetType := appDef.Type(allowedTargetQName)
-			switch targetType.Kind() {
-			case appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
-				refToOPossible = true
-			default:
-				refToRPossible = true
+		kb := appStructs.ViewRecords().KeyBuilder(QNameViewRecordsRegistry)
+		idHi, _ := istructsmem.CrackRecordID(targetID)
+		kb.PutInt64(field_IDHi, int64(idHi))
+		kb.PutRecordID(field_ID, targetID)
+		registryRecord, err := appStructs.ViewRecords().Get(wsid, kb)
+		if err == nil {
+			if len(allowedTargetQNames) > 0 && !slices.Contains(allowedTargetQNames, registryRecord.AsQName(field_QName)) {
+				return wrongQName(targetID, objQName, refField.Name(), registryRecord.AsQName(field_QName), refField.Refs())
 			}
+			return nil
 		}
-		if refToRPossible {
-			targetRec, err := appStructs.Records().Get(wsid, true, targetID)
-			if err != nil {
-				// notest
-				return err
-			}
-			if targetRec.QName() != appdef.NullQName {
-				if len(allowedTargetQNames) > 0 && !slices.Contains(allowedTargetQNames, targetRec.QName()) {
-					return wrongQName(targetID, objQName, refField.Name(), targetRec.QName(), refField.Refs())
-				}
-				return nil
-			}
-		}
-		if refToOPossible {
-			kb := appStructs.ViewRecords().KeyBuilder(QNameViewORecordsRegistry)
-			kb.PutRecordID(field_ID, targetID)
-			kb.PutInt32(field_Dummy, 1)
-			oRegistryRecord, err := appStructs.ViewRecords().Get(wsid, kb)
-			if err == nil {
-				if len(allowedTargetQNames) > 0 && !slices.Contains(allowedTargetQNames, oRegistryRecord.AsQName(field_QName)) {
-					return wrongQName(targetID, objQName, refField.Name(), oRegistryRecord.AsQName(field_QName), refField.Refs())
-				}
-				return nil
-			}
-			if !errors.Is(err, istructsmem.ErrRecordNotFound) {
-				// notest
-				return err
-			}
+		if !errors.Is(err, istructsmem.ErrRecordNotFound) {
+			// notest
+			return err
 		}
 		return fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, targetID, objQName, refField.Name())
 	})
@@ -93,20 +67,32 @@ func wrongQName(targetID istructs.RecordID, srcQName appdef.QName, srcField stri
 func provideRecordsRegistryProjector(cfg *istructsmem.AppConfigType) func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 		argType := cfg.AppDef.Type(event.ArgumentObject().QName())
-		if argType.Kind() != appdef.TypeKind_ODoc && argType.Kind() != appdef.TypeKind_ORecord {
-			return nil
+		if argType.Kind() == appdef.TypeKind_ODoc || argType.Kind() == appdef.TypeKind_ORecord {
+			if err := writeObjectToORegistry(event.ArgumentObject(), cfg.AppDef, st, intents, event.WLogOffset()); err != nil {
+				// notest
+				return err
+			}
 		}
-		return writeObjectToORegistry(event.ArgumentObject(), cfg.AppDef, st, intents, event.WLogOffset())
+		return event.CUDs(func(rec istructs.ICUDRow) error {
+			if !rec.IsNew() {
+				return nil
+			}
+			return writeObjectToORegistry(rec, cfg.AppDef, st, intents, event.WLogOffset())
+		})
 	}
 }
 
-func writeObjectToORegistry(root istructs.IElement, appDef appdef.IAppDef, st istructs.IState, intents istructs.IIntents, wLogOffsetToStore istructs.Offset) error {
-	if err := writeORegistry(st, intents, root.AsRecordID(appdef.SystemField_ID), wLogOffsetToStore, root.QName()); err != nil {
+func writeObjectToORegistry(root istructs.IRowReader, appDef appdef.IAppDef, st istructs.IState, intents istructs.IIntents, wLogOffsetToStore istructs.Offset) error {
+	if err := writeRegistry(st, intents, root.AsRecordID(appdef.SystemField_ID), wLogOffsetToStore, root.AsQName(appdef.SystemField_QName)); err != nil {
 		// notest
 		return err
 	}
-	return iterate.ForEachError(root.Containers, func(container string) (err error) {
-		root.Elements(container, func(el istructs.IElement) {
+	element, ok := root.(istructs.IElement)
+	if !ok {
+		return nil
+	}
+	return iterate.ForEachError(element.Containers, func(container string) (err error) {
+		element.Elements(container, func(el istructs.IElement) {
 			if err != nil {
 				// notest
 				return
@@ -121,14 +107,15 @@ func writeObjectToORegistry(root istructs.IElement, appDef appdef.IAppDef, st is
 	})
 }
 
-func writeORegistry(st istructs.IState, intents istructs.IIntents, idToStore istructs.RecordID, wLogOffsetToStore istructs.Offset, qNameToStore appdef.QName) error {
-	kb, err := st.KeyBuilder(state.ViewRecordsStorage, QNameViewORecordsRegistry)
+func writeRegistry(st istructs.IState, intents istructs.IIntents, idToStore istructs.RecordID, wLogOffsetToStore istructs.Offset, qNameToStore appdef.QName) error {
+	kb, err := st.KeyBuilder(state.ViewRecordsStorage, QNameViewRecordsRegistry)
 	if err != nil {
 		// notest
 		return err
 	}
+	idHi, _ := istructsmem.CrackRecordID(idToStore)
+	kb.PutInt64(field_IDHi, int64(idHi))
 	kb.PutRecordID(field_ID, idToStore)
-	kb.PutInt32(field_Dummy, 1)
 	recordsRegistryRecBuilder, err := intents.NewValue(kb)
 	if err != nil {
 		// notest

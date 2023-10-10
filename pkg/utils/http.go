@@ -134,9 +134,10 @@ func WithHeaders(headersPairs ...string) ReqOptFunc {
 	}
 }
 
-func WithExpectedCode(expectedHTTPCode int) ReqOptFunc {
+func WithExpectedCode(expectedHTTPCode int, expectErrorContains ...string) ReqOptFunc {
 	return func(po *reqOpts) {
 		po.expectedHTTPCodes = append(po.expectedHTTPCodes, expectedHTTPCode)
+		po.expectedErrorContains = append(po.expectedErrorContains, expectErrorContains...)
 	}
 }
 
@@ -183,8 +184,8 @@ func Expect403() ReqOptFunc {
 	return WithExpectedCode(http.StatusForbidden)
 }
 
-func Expect400() ReqOptFunc {
-	return WithExpectedCode(http.StatusBadRequest)
+func Expect400(expectErrorContains ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusBadRequest, expectErrorContains...)
 }
 
 func Expect429() ReqOptFunc {
@@ -210,10 +211,11 @@ func ExpectSysError500() ReqOptFunc {
 }
 
 type reqOpts struct {
-	method            string
-	headers           map[string]string
-	cookies           map[string]string
-	expectedHTTPCodes []int
+	method                string
+	headers               map[string]string
+	cookies               map[string]string
+	expectedHTTPCodes     []int
+	expectedErrorContains []string
 
 	// used if no errors and an expected status code is received
 	responseHandler func(httpResp *http.Response)
@@ -356,6 +358,16 @@ func Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, err
 	var statusErr error
 	if !isCodeExpected {
 		statusErr = fmt.Errorf("%w: %d, %s", ErrUnexpectedStatusCode, resp.StatusCode, respBody)
+	}
+	if resp.StatusCode != http.StatusOK && len(opts.expectedErrorContains) > 0 {
+		sysError := map[string]interface{}{}
+		if err := json.Unmarshal([]byte(respBody), &sysError); err != nil {
+			return nil, err
+		}
+		actualError := sysError["sys.Error"].(map[string]interface{})["Message"].(string)
+		if !slices.Contains(opts.expectedErrorContains, actualError) {
+			return nil, fmt.Errorf(`actual error message "%s" does not contain the expected messages %v`, actualError, opts.expectedErrorContains)
+		}
 	}
 	return httpResponse, statusErr
 }

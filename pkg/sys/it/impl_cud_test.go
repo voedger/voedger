@@ -327,7 +327,7 @@ func TestRefIntegrity(t *testing.T) {
 	t.Run("cmd args", func(t *testing.T) {
 		// InviteID arg is recordID that references an unexisting record
 		body := `{"args":{"InviteID":1234567}}`
-		vit.PostWS(ws, "c.sys.CancelSentInvite", body, coreutils.Expect400())
+		vit.PostWS(ws, "c.sys.CancelSentInvite", body, coreutils.Expect400("referential integrity violation"))
 	})
 
 	t.Run("ODocs", func(t *testing.T) {
