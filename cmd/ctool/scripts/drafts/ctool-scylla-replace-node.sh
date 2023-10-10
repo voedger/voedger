@@ -68,11 +68,14 @@ seed_list() {
   ./swarm-set-label.sh "$MANAGER" "$node" "$service_label" "true"
 }
 
+echo "Remove dead node from seed list and start db instance on new hardware."
 seed_list "$REPLACED_NODE_NAME" remove
   wait_for_scylla "$REPLACED_NODE_NAME"
 
+echo "Bootstrap complete. Cleanup scylla config..."
 ./db-bootstrap-end.sh "$2"
 
+echo "Add node to seed list and restart."
 seed_list "$REPLACED_NODE_NAME" add
   wait_for_scylla "$REPLACED_NODE_NAME"
 
@@ -87,5 +90,7 @@ db_rolling_restart() {
     wait_for_scylla "$REPLACED_NODE_NAME"
   done
 }
+echo "Rolling restart db cluster..."
+db_rolling_restart ./docker-compose.yml
 
 set +x
