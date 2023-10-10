@@ -536,7 +536,7 @@ func replaceSeAppNode(cluster *clusterType) error {
 	}
 
 	if err = newScriptExecuter(cluster.sshKey, "localhost").
-		run("swarm-get-manager-token.sh", conf.DBNode1Name); err != nil {
+		run("swarm-geyest-manager-token.sh", conf.DBNode1Name); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
