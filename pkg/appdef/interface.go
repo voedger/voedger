@@ -82,6 +82,11 @@ type IAppDef interface {
 	// Returns nil if not found.
 	Query(QName) IQuery
 
+	// Enumerates all application functions
+	//
+	// Functions are enumerated in alphabetical order by QName
+	Funcs(func(IFunc))
+
 	// Returns workspace by name.
 	//
 	// Returns nil if not found.
