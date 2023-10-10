@@ -34,12 +34,11 @@ Why "Projector..."? To simplify definition, Projector uses System authorization 
 
 ```go
 
-func CheckBackwardCompatibility(old *AppDef, new *AppDef) (cerrs CompatibilityErrors)
-
+func CheckBackwardCompatibility(oldBuilder, newBuilder appdef.IAppDefBuilder) (cerrs *CompatibilityErrors, err error)
 
 // cerrsOut: all cerrsIn that are not in toBeIgnored
 // toBeIgnored.Pos is ignored in comparison
-func IgnoreCompatibilityErrors(cerrs CompatibilityErrors, toBeIgnored []CompatibilityError) (cerrsOut CompatibilityErrors)
+func IgnoreCompatibilityErrors(cerrs *CompatibilityErrors, toBeIgnored []CompatibilityError) (cerrsOut *CompatibilityErrors)
 ```
 
 ## Technical Design
@@ -59,8 +58,10 @@ func IgnoreCompatibilityErrors(cerrs CompatibilityErrors, toBeIgnored []Compatib
 
 ```go
 type Constraint string
+type NodeType string
 
 const (
+	ConstraintValueMatch Constraint = "ConstraintValueMatch"
     ConstraintAppendOnly Constraint = "ConstraintAppendOnly"
     ConstraintInsertOnly Constraint = "ConstraintInsertOnly"
     ConstraintNonModifiable Constraint = "ConstraintNonModifiable"
@@ -137,6 +138,7 @@ type CompatibilityError struct {
     // NodeRemoved:  (NonModifiable, AppendOnly,InsertOnly) : one error per removed node
     // OrderChanged: (NonModifiable, AppendOnly): one error for the container
     // NodeInserted: (NonModifiable): one error for the container
+	// ValueChanged: one error for one node
     ErrMessage NodeErrorString
 }
 ```

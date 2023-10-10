@@ -6,18 +6,19 @@ package appdefcompat
 
 const (
 	validationErrorFmt = "%s: %s"
-	pathDelimiter      = ". "
+	pathDelimiter      = "->"
 )
 
 const (
+	ConstraintValueMatch    Constraint = "ConstraintValueMatch"
 	ConstraintAppendOnly    Constraint = "ConstraintAppendOnly"
 	ConstraintInsertOnly    Constraint = "ConstraintInsertOnly"
 	ConstraintNonModifiable Constraint = "ConstraintNonModifiable"
 )
 
 const (
-	errMsgNodeRemoved  = "NodeRemoved"
-	errMsgOrderChanged = "OrderChanged"
-	errMsgNodeInserted = "NodeInserted"
-	errMsgMismatch     = "Mismatch"
+	NodeRemoved  NodeErrorString = "NodeRemoved"
+	OrderChanged NodeErrorString = "OrderChanged"
+	NodeInserted NodeErrorString = "NodeInserted"
+	ValueChanged NodeErrorString = "ValueChanged"
 )

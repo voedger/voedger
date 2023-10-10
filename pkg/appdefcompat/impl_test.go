@@ -14,14 +14,14 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 )
 
-//go:embed sql_example_syspkg/old.sql
+//go:embed sql/old.sql
 var oldFS embed.FS
 
-//go:embed sql_example_syspkg/new.sql
+//go:embed sql/new.sql
 var newFS embed.FS
 
 func getSysPackageAST(file parser.IReadFS) *parser.PackageSchemaAST {
-	pkgSys, err := parser.ParsePackageDir(appdef.SysPackage, file, "sql_example_syspkg")
+	pkgSys, err := parser.ParsePackageDir(appdef.SysPackage, file, "sql")
 	if err != nil {
 		panic(err)
 	}
@@ -45,7 +45,54 @@ func Test_Basic(t *testing.T) {
 	newBuilder := appdef.New()
 	require.NoError(t, parser.BuildAppDefs(newPackages, newBuilder))
 
-	compatErrors := checkBackwardCompatibility(oldBuilder, newBuilder)
-	// 4 errors expected: 1 - Mismatch, 1 - NodeRemoved, 2 - OrderChanged
-	require.Greater(t, len(compatErrors.Errors), 4)
+	expectedErrors := []CompatibilityError{
+		{OldTreePath: []string{"AppDef", "Types", "sys.Profile", "Types", "sys.ProfileTable"}, ErrMessage: NodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Password"}, ErrMessage: OrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Email"}, ErrMessage: OrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "Login"}, ErrMessage: NodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileCluster"}, ErrMessage: ValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileToken"}, ErrMessage: ValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "D"}, ErrMessage: NodeInserted},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrMessage: ValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrMessage: OrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.SomeTable"}, ErrMessage: NodeRemoved},
+	}
+	compatErrors, err := CheckBackwardCompatibility(oldBuilder, newBuilder)
+	require.NoError(t, err)
+	validateCompatibilityErrors(t, expectedErrors, compatErrors)
+
+	// testing ignoring some compatibility errors
+	expectedErrors = []CompatibilityError{
+		{OldTreePath: []string{"AppDef", "Types", "sys.Profile", "Types", "sys.ProfileTable"}, ErrMessage: NodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Password"}, ErrMessage: OrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Email"}, ErrMessage: OrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "Login"}, ErrMessage: NodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileCluster"}, ErrMessage: ValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "D"}, ErrMessage: NodeInserted},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrMessage: ValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrMessage: OrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.SomeTable"}, ErrMessage: NodeRemoved},
+	}
+
+	toBeIgnored := []CompatibilityError{
+		{
+			OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileToken"},
+			ErrMessage:  ValueChanged,
+		},
+	}
+	filteredCompatErrors := IgnoreCompatibilityErrors(compatErrors, toBeIgnored)
+	validateCompatibilityErrors(t, expectedErrors, filteredCompatErrors)
+}
+
+func validateCompatibilityErrors(t *testing.T, expectedErrors []CompatibilityError, compatErrors *CompatibilityErrors) {
+	found := false
+	for _, expectedErr := range expectedErrors {
+		for _, cerr := range compatErrors.Errors {
+			if cerr.Path() == expectedErr.Path() && cerr.ErrMessage == expectedErr.ErrMessage {
+				found = true
+				break
+			}
+		}
+		require.True(t, found, expectedErr.Error())
+	}
 }

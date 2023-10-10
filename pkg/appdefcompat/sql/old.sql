@@ -19,11 +19,21 @@ ABSTRACT WORKSPACE Workspace (
         AppName                     varchar,
         SubjectKind                 int32,
         WSKindInitializationData    varchar(1024),
-        ProfileCluster              int32
+        ProfileCluster              int32,
+        ProfileToken                int32
     );
     TYPE CreateLoginUnloggedParams(
         Email varchar,
         Password varchar
+    );
+    TABLE SomeTable INHERITS CDoc(
+        A varchar,
+        B varchar
+    );
+    TABLE AnotherOneTable INHERITS CDoc(
+        A varchar,
+        B varchar,
+        C varchar
     );
     EXTENSION ENGINE BUILTIN (
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
@@ -31,7 +41,9 @@ ABSTRACT WORKSPACE Workspace (
 );
 
 ALTERABLE WORKSPACE Profile(
-
+    TABLE ProfileTable INHERITS CDoc(
+        A varchar
+    );
 );
 
 EXTENSION ENGINE BUILTIN (
