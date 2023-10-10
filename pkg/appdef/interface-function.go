@@ -23,7 +23,10 @@ type IExtension interface {
 	Engine() ExtensionEngineKind
 }
 
-// Function is abstract to inherit commands and queries
+// Function is a type of object that can be called.
+// Function may have argument and result.
+// Function may have extension.
+// Function may be query or command.
 //
 // Ref. to function.go for implementation
 type IFunc interface {

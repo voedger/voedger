@@ -10,6 +10,8 @@ import (
 	"fmt"
 )
 
+// Command
+//
 // # Implements:
 //   - ICommand
 //   - ICommandBuilder

@@ -5,7 +5,7 @@
 
 package appdef
 
-// Query is a function
+// Query is a function that returns data from system state.
 //
 // Ref. to query.go for implementation
 type IQuery interface {

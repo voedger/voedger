@@ -10,6 +10,8 @@ import (
 	"fmt"
 )
 
+// Function
+//
 // # Implements:
 //   - IFunc
 //   - IFuncBuilder
