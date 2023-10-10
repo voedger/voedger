@@ -541,6 +541,13 @@ func replaceSeAppNode(cluster *clusterType) error {
 		return err
 	}
 
+	logger.Info("swarm remove node ", oldAddr)
+	if err = newScriptExecuter(cluster.sshKey, oldAddr).
+		run("swarm-rm-node.sh", conf.DBNode1Name, oldAddr); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
 	logger.Info("swarm add node on ", newAddr)
 	if err = newScriptExecuter(cluster.sshKey, newAddr).
 		run("swarm-add-node.sh", conf.DBNode1Name, newAddr); err != nil {
@@ -572,13 +579,6 @@ func replaceSeAppNode(cluster *clusterType) error {
 	logger.Info("swarm set label on", newAddr, newNode.label(swarmMonLabelKey))
 	if err = newScriptExecuter(cluster.sshKey, newAddr).
 		run("swarm-set-label.sh", conf.DBNode1Name, newAddr, newNode.label(swarmMonLabelKey), "true"); err != nil {
-		logger.Error(err.Error())
-		return err
-	}
-
-	logger.Info("swarm remove node ", oldAddr)
-	if err = newScriptExecuter(cluster.sshKey, oldAddr).
-		run("swarm-rm-node.sh", conf.DBNode1Name, oldAddr); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
