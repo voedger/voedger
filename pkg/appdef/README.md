@@ -728,64 +728,113 @@ classDiagram
 
 ```mermaid
 classDiagram
-  direction BT
-
-  class IDef{
+  class IType{
     <<Interface>>
     +Kind() DefKind
     +QName() QName
   }
 
-  class IField {
-    <<Interface>>
-    +Name() string
-    +DataKind() DataKind
-    +Required() bool
-  }
-  note for IField "Required is always true \n for partition key fields, \n false for clustering columns \n and optional for value fields"
-
-  IView --|> IDef : inherits
+  IType <|-- IView : inherits
   class IView {
     <<Interface>>
-    IContainers
-    +PartKey() IPartKey
-    +ClustCols() IClustCols
+    ~Kind => TypeKind_View
     +Key() IViewKey
     +Value() IViewValue
   }
-  IView --o IPartKey : aggregate
-  IView --o IClustCols : aggregate
-  IView --o IViewKey : aggregate
-  IView --o IViewValue : aggregate
+  IView "1" *--> "1" IViewKey : has
+  IView "1" *--> "1" IViewValue : has
 
-  IPartKey --|> IDef : inherits
-  class IPartKey {
-    <<Interface>>
-    IFields
-  }
-  IPartKey "1" -- "1..*" IField : compose
-
-  IClustCols --|> IDef : inherits
-  class IClustCols {
-    <<Interface>>
-    IFields
-  }
-  IClustCols "1" -- "1..*" IField : compose
-
-  IViewKey --|> IDef : inherits
   class IViewKey {
     <<Interface>>
     IFields
+    +PartKey() IViewPartKey
+    +ClustCols() IViewClustCols
   }
-  IViewKey "1" -- "1..*" IField : compose
+  IViewKey "1" *--> "1..*" IField : has
+  IViewKey "1" *--> "1" IViewPartKey : has
+  IViewKey "1" *--> "1" IViewClustCols : has
 
-  IViewValue --|> IDef : inherits
+  class IViewPartKey {
+    <<Interface>>
+    IFields
+    -isPartKey()
+  }
+  IViewPartKey "1" *--> "1..*" IField : has
+
+  class IViewClustCols {
+    <<Interface>>
+    IFields
+    -isClustCols()
+  }
+  IViewClustCols "1" *--> "1..*" IField : has
+
   class IViewValue {
     <<Interface>>
     IFields
+    -isViewValue()
   }
-  IViewValue "1" -- "1..*" IField : compose
+  IViewValue "1" -- "1..*" IField : has
+
+  class IField {
+    <<interface>>
+    …
+  }
 ```
+
+### Functions, commands and queries
+
+```mermaid
+classDiagram
+    
+    direction TB
+
+    class IType {
+        <<interface>>
+        +QName() QName
+        +Kind() TypeKind
+        +Comment() []string
+    }
+
+    IType <|-- IFunc : inherits
+    class IFunc {
+        <<interface>>
+        +Extension() IExtension
+        +Params() IObject
+        +Results() IObject
+    }
+
+    IFunc <|-- ICommand : inherits
+    class ICommand {
+        <<interface>>
+        ~Kind => TypeKind_Command
+        +UnloggedParams() IObject
+        -isCommand()
+    }
+
+    IFunc <|-- IQuery : inherits
+    class IQuery {
+        <<interface>>
+        ~Kind => TypeKind_Query
+        -isQuery()
+    }
+
+    IFunc "1" *-- "1" IExtension : has
+    class IExtension {
+        <<interface>>
+        +Name() string
+        +Engine() ExtensionEngineKind
+        +Comment() []string
+    }
+
+    IExtension "1" ..> "1" ExtensionEngineKind : refs
+    class ExtensionEngineKind {
+        <<enumeration>>
+        BuiltIn
+        WASM
+    }
+```
+
+*Rem*: In the above diagram the parameters and result of the function are `IObject`, in future versions it will be changed to an array of `[]IParam`.
 
 ## Restrictions
 
