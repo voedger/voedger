@@ -142,21 +142,21 @@ classDiagram
         +Value() IViewValue
     }
             
-    IType <|-- IFunc : inherits
-    class IFunc {
+    IType <|-- IFunction : inherits
+    class IFunction {
         <<interface>>
         +Params() []IParam
         +Results() []IParam
     }
 
-    IFunc <|-- ICommand : inherits
+    IFunction <|-- ICommand : inherits
     class ICommand {
         <<interface>>
         ~Kind => TypeKind_Command
         +UnloggedParams() []IParam
     }
 
-    IFunc <|-- IQuery : inherits
+    IFunction <|-- IQuery : inherits
     class IQuery {
         <<interface>>
         ~Kind => TypeKind_Query
@@ -728,64 +728,114 @@ classDiagram
 
 ```mermaid
 classDiagram
-  direction BT
-
-  class IDef{
+  class IType{
     <<Interface>>
     +Kind() DefKind
     +QName() QName
   }
 
-  class IField {
-    <<Interface>>
-    +Name() string
-    +DataKind() DataKind
-    +Required() bool
-  }
-  note for IField "Required is always true \n for partition key fields, \n false for clustering columns \n and optional for value fields"
-
-  IView --|> IDef : inherits
+  IType <|-- IView : inherits
   class IView {
     <<Interface>>
-    IContainers
-    +PartKey() IPartKey
-    +ClustCols() IClustCols
+    ~Kind => TypeKind_View
+    IFields
     +Key() IViewKey
     +Value() IViewValue
   }
-  IView --o IPartKey : aggregate
-  IView --o IClustCols : aggregate
-  IView --o IViewKey : aggregate
-  IView --o IViewValue : aggregate
+  IView "1" *--> "1" IViewKey : has
+  IView "1" *--> "1" IViewValue : has
 
-  IPartKey --|> IDef : inherits
-  class IPartKey {
-    <<Interface>>
-    IFields
-  }
-  IPartKey "1" -- "1..*" IField : compose
-
-  IClustCols --|> IDef : inherits
-  class IClustCols {
-    <<Interface>>
-    IFields
-  }
-  IClustCols "1" -- "1..*" IField : compose
-
-  IViewKey --|> IDef : inherits
   class IViewKey {
     <<Interface>>
     IFields
+    +PartKey() IViewPartKey
+    +ClustCols() IViewClustCols
   }
-  IViewKey "1" -- "1..*" IField : compose
+  IViewKey "1" *--> "1..*" IField : has
+  IViewKey "1" *--> "1" IViewPartKey : has
+  IViewKey "1" *--> "1" IViewClustCols : has
 
-  IViewValue --|> IDef : inherits
+  class IViewPartKey {
+    <<Interface>>
+    IFields
+    -isPartKey()
+  }
+  IViewPartKey "1" *--> "1..*" IField : has
+
+  class IViewClustCols {
+    <<Interface>>
+    IFields
+    -isClustCols()
+  }
+  IViewClustCols "1" *--> "1..*" IField : has
+
   class IViewValue {
     <<Interface>>
     IFields
+    -isViewValue()
   }
-  IViewValue "1" -- "1..*" IField : compose
+  IViewValue "1" -- "1..*" IField : has
+
+  class IField {
+    <<interface>>
+    …
+  }
 ```
+
+### Functions, commands and queries
+
+```mermaid
+classDiagram
+    
+    direction TB
+
+    class IType {
+        <<interface>>
+        +QName() QName
+        +Kind() TypeKind
+        +Comment() []string
+    }
+
+    IType <|-- IFunction : inherits
+    class IFunction {
+        <<interface>>
+        +Extension() IExtension
+        +Param() IObject
+        +Result() IObject
+    }
+
+    IFunction <|-- ICommand : inherits
+    class ICommand {
+        <<interface>>
+        ~Kind => TypeKind_Command
+        +UnloggedParam() IObject
+        -isCommand()
+    }
+
+    IFunction <|-- IQuery : inherits
+    class IQuery {
+        <<interface>>
+        ~Kind => TypeKind_Query
+        -isQuery()
+    }
+
+    IFunction "1" *-- "1" IExtension : has
+    class IExtension {
+        <<interface>>
+        +Name() string
+        +Engine() ExtensionEngineKind
+        +Comment() []string
+    }
+
+    IExtension "1" ..> "1" ExtensionEngineKind : refs
+    class ExtensionEngineKind {
+        <<enumeration>>
+        BuiltIn
+        WASM
+    }
+```
+
+*Rem*: In the above diagram the Param and Result of the function are `IObject`, in future versions it will be changed to an array of `[]IParam` and renamed to plural (`Params`, `Results`).
 
 ## Restrictions
 

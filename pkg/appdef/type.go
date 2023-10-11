@@ -45,14 +45,9 @@ func (t *typ) QName() QName {
 	return t.name
 }
 
-// NullType is used for return then type is not founded
-var NullType = new(nullType)
-
-type nullType struct{ nullComment }
-
-func (t *nullType) App() IAppDef   { return nil }
-func (t *nullType) Kind() TypeKind { return TypeKind_null }
-func (t *nullType) QName() QName   { return NullQName }
+func (t *typ) String() string {
+	return fmt.Sprintf("%s «%v»", t.Kind().TrimString(), t.QName())
+}
 
 // Validate specified type.
 //
@@ -75,3 +70,15 @@ func validateType(t IType) (err error) {
 
 	return err
 }
+
+// NullType is used for return then type is not founded
+const nullTypeString = "null type"
+
+var NullType = new(nullType)
+
+type nullType struct{ nullComment }
+
+func (t *nullType) App() IAppDef   { return nil }
+func (t *nullType) Kind() TypeKind { return TypeKind_null }
+func (t *nullType) QName() QName   { return NullQName }
+func (t *nullType) String() string { return nullTypeString }
