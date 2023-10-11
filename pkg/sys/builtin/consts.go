@@ -27,4 +27,5 @@ const (
 	field_ID            = "ID"
 	field_WLogOffset    = "WLogOffset"
 	field_QName         = "QName"
+	registryViewBits    = 18
 )

@@ -41,7 +41,7 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 		}
 		allowedTargetQNames := refField.Refs()
 		kb := appStructs.ViewRecords().KeyBuilder(QNameViewRecordsRegistry)
-		idHi, _ := istructsmem.CrackRecordID(targetID)
+		idHi := crackID(targetID)
 		kb.PutInt64(field_IDHi, int64(idHi))
 		kb.PutRecordID(field_ID, targetID)
 		registryRecord, err := appStructs.ViewRecords().Get(wsid, kb)
@@ -113,7 +113,7 @@ func writeRegistry(st istructs.IState, intents istructs.IIntents, idToStore istr
 		// notest
 		return err
 	}
-	idHi, _ := istructsmem.CrackRecordID(idToStore)
+	idHi := crackID(idToStore)
 	kb.PutInt64(field_IDHi, int64(idHi))
 	kb.PutRecordID(field_ID, idToStore)
 	recordsRegistryRecBuilder, err := intents.NewValue(kb)

@@ -285,49 +285,41 @@ func TestRefIntegrity(t *testing.T) {
 
 	t.Run("CUDs", func(t *testing.T) {
 		body := `{"cuds":[{"fields":{"sys.ID":2,"sys.QName":"app1.department","pc_fix_button": 1,"rm_fix_button": 1, "id_food_group": 123456}}]}`
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_Existence())
 
-		body = `{"cuds":[{"fields":{"sys.ID": 2, "sys.QName":"app1.cdoc1"}}]}`
+		body = `{"cuds":[
+			{"fields":{"sys.ID":1,"sys.QName":"app1.cdoc1"}},
+			{"fields":{"sys.ID":2,"sys.QName":"app1.options"}},
+			{"fields":{"sys.ID":3,"sys.QName":"app1.department","pc_fix_button": 1,"rm_fix_button": 1}}
+		]}`
 		resp := vit.PostWS(ws, "c.sys.CUD", body)
-		idCdoc1 := resp.NewIDs["2"]
-
-		body = `{"cuds":[{"fields":{"sys.ID": 2, "sys.QName":"app1.options"}}]}`
-		resp = vit.PostWS(ws, "c.sys.CUD", body)
+		idCdoc1 := resp.NewIDs["1"]
 		idOption := resp.NewIDs["2"]
+		idDep := resp.NewIDs["3"]
 
-		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.department","pc_fix_button": 1,"rm_fix_button": 1}}]}`
-		resp = vit.PostWS(ws, "c.sys.CUD", body)
-		idDep := resp.NewIDs["2"]
+		t.Run("ref to unexisting -> 400 bad request", func(t *testing.T) {
+			body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field1": 123456}}]}`
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_Existence())
 
-		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2"}}]}`
-		vit.PostWS(ws, "c.sys.CUD", body)
+			body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": 123456}}]}`
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_Existence())
+		})
 
-		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field1": 123456}}]}`
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
+		t.Run("ref to existing, allowed QName", func(t *testing.T) {
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field1": %d}}]}`, idCdoc1)
+			vit.PostWS(ws, "c.sys.CUD", body)
 
-		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field1": %d}}]}`, idOption)
-		vit.PostWS(ws, "c.sys.CUD", body)
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": %d}}]}`, idCdoc1)
+			vit.PostWS(ws, "c.sys.CUD", body)
 
-		body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": 123456}}]}`
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": %d}}]}`, idDep)
+			vit.PostWS(ws, "c.sys.CUD", body)
+		})
 
-		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": %d}}]}`, idOption)
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
-
-		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": %d}}]}`, idDep)
-		vit.PostWS(ws, "c.sys.CUD", body)
-
-		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": %d}}]}`, idCdoc1)
-		vit.PostWS(ws, "c.sys.CUD", body)
-
-		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field3": %d}}]}`, idOption)
-		vit.PostWS(ws, "c.sys.CUD", body)
-	})
-
-	t.Run("cmd args", func(t *testing.T) {
-		// InviteID arg is recordID that references an unexisting record
-		body := `{"args":{"InviteID":1234567}}`
-		vit.PostWS(ws, "c.sys.CancelSentInvite", body, coreutils.Expect400("referential integrity violation"))
+		t.Run("ref to existing wrong QName -> 400 bad request", func(t *testing.T) {
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": %d}}]}`, idOption)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_QName())
+		})
 	})
 
 	t.Run("ODocs", func(t *testing.T) {
@@ -354,7 +346,7 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, appDef
 		oDoc.RefFields(func(oDoc1RefField appdef.IRefField) {
 			t.Run(oDoc1RefField.Name(), func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"%s":1000000000000`, oDoc1RefField.Name()))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_Existence()).Println()
 			})
 		})
 	})
@@ -368,12 +360,12 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, appDef
 
 			t.Run("wrong QName CDoc-> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToODoc1":%d`, idCDoc))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
 			})
 
 			t.Run("wrong QName ORecord -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToODoc1":%d`, idOrecord1))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
 			})
 		})
 		t.Run("ORecord", func(t *testing.T) {
@@ -389,17 +381,17 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, appDef
 
 			t.Run("wrong QName CDoc -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToORecord1":%d`, idCDoc))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
 			})
 
 			t.Run("wrong QName ODoc ORecord1 -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToORecord1":%d`, idOdoc1))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
 			})
 
 			t.Run("wrong QName ODoc ORecord2 -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToORecord2":%d`, idOdoc1))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400()).Println()
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
 			})
 		})
 		t.Run("Any", func(t *testing.T) {
@@ -416,8 +408,8 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, appDef
 				vit.PostWS(ws, "c.sys.CmdODocTwo", body)
 			})
 			t.Run("wrong QName -> 400 bad request", func(t *testing.T) {
-				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToCDoc1":%d`, idCDoc))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToCDoc1":%d`, idOdoc1))
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName())
 			})
 		})
 
@@ -431,7 +423,7 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, appDef
 			})
 			t.Run("wrong QName -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToCDoc1OrODoc1":%d`, idOrecord1))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400())
+				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName())
 			})
 		})
 	})

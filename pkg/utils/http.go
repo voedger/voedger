@@ -17,6 +17,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -186,6 +187,14 @@ func Expect403() ReqOptFunc {
 
 func Expect400(expectErrorContains ...string) ReqOptFunc {
 	return WithExpectedCode(http.StatusBadRequest, expectErrorContains...)
+}
+
+func Expect400RefIntegrity_Existence() ReqOptFunc {
+	return WithExpectedCode(http.StatusBadRequest, "referential integrity violation", "does not exist")
+}
+
+func Expect400RefIntegrity_QName() ReqOptFunc {
+	return WithExpectedCode(http.StatusBadRequest, "referential integrity violation", "QNames are only allowed")
 }
 
 func Expect429() ReqOptFunc {
@@ -365,11 +374,20 @@ func Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, err
 			return nil, err
 		}
 		actualError := sysError["sys.Error"].(map[string]interface{})["Message"].(string)
-		if !slices.Contains(opts.expectedErrorContains, actualError) {
+		if !containsAllMessages(opts.expectedErrorContains, actualError) {
 			return nil, fmt.Errorf(`actual error message "%s" does not contain the expected messages %v`, actualError, opts.expectedErrorContains)
 		}
 	}
 	return httpResponse, statusErr
+}
+
+func containsAllMessages(strs []string, toFind string) bool {
+	for _, str := range strs {
+		if !strings.Contains(toFind, str) {
+			return false
+		}
+	}
+	return true
 }
 
 func FederationFunc(federationUrl *url.URL, relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
