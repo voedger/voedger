@@ -69,6 +69,21 @@ func Test_AppDef_AddQuery(t *testing.T) {
 		require.Equal(ExtensionEngineKind_BuiltIn, query.Extension().Engine())
 	})
 
+	t.Run("must be ok to enum functions", func(t *testing.T) {
+		cnt := 0
+		app.Functions(func(f IFunction) {
+			cnt++
+			switch cnt {
+			case 1:
+				require.Equal(TypeKind_Query, f.Kind())
+				require.Equal(queryName, f.QName())
+			default:
+				require.Failf("unexpected function", "kind: %v, name: %v", f.Kind(), f.QName())
+			}
+		})
+		require.Equal(1, cnt)
+	})
+
 	t.Run("check nil returns", func(t *testing.T) {
 		unknown := NewQName("test", "unknown")
 		require.Nil(app.Query(unknown))
