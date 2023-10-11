@@ -27,12 +27,12 @@ func newCommand(app *appDef, name QName) *command {
 	return cmd
 }
 
-func (cmd *command) SetUnloggedArg(name QName) ICommandBuilder {
+func (cmd *command) SetUnloggedParam(name QName) ICommandBuilder {
 	cmd.unl.setName(name)
 	return cmd
 }
 
-func (cmd *command) UnloggedArg() IObject {
+func (cmd *command) UnloggedParam() IObject {
 	return cmd.unl.object(cmd.app)
 }
 

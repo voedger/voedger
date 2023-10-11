@@ -15,25 +15,25 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	require := require.New(t)
 
 	var app IAppDef
-	cmdName, argName, unlName, resName := NewQName("test", "cmd"), NewQName("test", "arg"), NewQName("test", "unl"), NewQName("test", "res")
+	cmdName, parName, unlName, resName := NewQName("test", "cmd"), NewQName("test", "par"), NewQName("test", "unl"), NewQName("test", "res")
 
 	t.Run("must be ok to add command", func(t *testing.T) {
 		appDef := New()
 
-		_ = appDef.AddObject(argName)
+		_ = appDef.AddObject(parName)
 		_ = appDef.AddObject(unlName)
 		_ = appDef.AddObject(resName)
 
 		cmd := appDef.AddCommand(cmdName)
 		require.Equal(TypeKind_Command, cmd.Kind())
 		require.Equal(cmd, appDef.Command(cmdName))
-		require.Nil(cmd.Arg())
-		require.Nil(cmd.UnloggedArg())
+		require.Nil(cmd.Param())
+		require.Nil(cmd.UnloggedParam())
 		require.Nil(cmd.Result())
 
-		t.Run("must be ok to assign cmd args and result", func(t *testing.T) {
+		t.Run("must be ok to assign cmd parameter and result", func(t *testing.T) {
 			cmd.
-				SetArg(argName).(ICommandBuilder).SetUnloggedArg(unlName).
+				SetParam(parName).(ICommandBuilder).SetUnloggedParam(unlName).
 				SetResult(resName).
 				SetExtension("CmdExt", ExtensionEngineKind_BuiltIn, "comment")
 		})
@@ -61,11 +61,11 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		require.Equal(TypeKind_Command, cmd.Kind())
 		require.Equal(c, cmd)
 
-		require.Equal(argName, cmd.Arg().QName())
-		require.Equal(TypeKind_Object, cmd.Arg().Kind())
+		require.Equal(parName, cmd.Param().QName())
+		require.Equal(TypeKind_Object, cmd.Param().Kind())
 
-		require.Equal(unlName, cmd.UnloggedArg().QName())
-		require.Equal(TypeKind_Object, cmd.UnloggedArg().Kind())
+		require.Equal(unlName, cmd.UnloggedParam().QName())
+		require.Equal(TypeKind_Object, cmd.UnloggedParam().Kind())
 
 		require.Equal(resName, cmd.Result().QName())
 		require.Equal(TypeKind_Object, cmd.Result().Kind())
@@ -142,19 +142,19 @@ func Test_CommandValidate(t *testing.T) {
 
 	cmd := appDef.AddCommand(NewQName("test", "cmd"))
 
-	t.Run("must error if argument name is unknown", func(t *testing.T) {
-		arg := NewQName("test", "arg")
-		cmd.SetArg(arg)
+	t.Run("must error if parameter name is unknown", func(t *testing.T) {
+		par := NewQName("test", "param")
+		cmd.SetParam(par)
 		_, err := appDef.Build()
 		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, arg.String())
+		require.ErrorContains(err, par.String())
 
-		_ = appDef.AddObject(arg)
+		_ = appDef.AddObject(par)
 	})
 
-	t.Run("must error if unlogged argument name is unknown", func(t *testing.T) {
-		unl := NewQName("test", "unl")
-		cmd.SetUnloggedArg(unl)
+	t.Run("must error if unlogged parameter name is unknown", func(t *testing.T) {
+		unl := NewQName("test", "secure")
+		cmd.SetUnloggedParam(unl)
 		_, err := appDef.Build()
 		require.ErrorIs(err, ErrNameNotFound)
 		require.ErrorContains(err, unl.String())

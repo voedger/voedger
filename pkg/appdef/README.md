@@ -800,7 +800,7 @@ classDiagram
     class IFunction {
         <<interface>>
         +Extension() IExtension
-        +Arg() IObject
+        +Param() IObject
         +Result() IObject
     }
 
@@ -808,7 +808,7 @@ classDiagram
     class ICommand {
         <<interface>>
         ~Kind => TypeKind_Command
-        +UnloggedArg() IObject
+        +UnloggedParam() IObject
         -isCommand()
     }
 
@@ -835,7 +835,7 @@ classDiagram
     }
 ```
 
-*Rem*: In the above diagram the Argument and Result of the function are `IObject`, in future versions it will be changed to an array of `[]IParam` and renamed to plural (`Arguments`, `Results`).
+*Rem*: In the above diagram the Param and Result of the function are `IObject`, in future versions it will be changed to an array of `[]IParam` and renamed to plural (`Params`, `Results`).
 
 ## Restrictions
 

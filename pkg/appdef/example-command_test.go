@@ -15,8 +15,8 @@ func ExampleIAppDefBuilder_AddCommand() {
 	var app appdef.IAppDef
 
 	cmdName := appdef.NewQName("test", "cmd")
-	argName := appdef.NewQName("test", "arg")
-	unlName := appdef.NewQName("test", "unl")
+	parName := appdef.NewQName("test", "param")
+	unlName := appdef.NewQName("test", "secure")
 	resName := appdef.NewQName("test", "res")
 	extName := "CmdExt"
 
@@ -26,12 +26,12 @@ func ExampleIAppDefBuilder_AddCommand() {
 
 		cmd := appDef.AddCommand(cmdName)
 		cmd.
-			SetArg(argName).(appdef.ICommandBuilder).
-			SetUnloggedArg(unlName).
+			SetParam(parName).(appdef.ICommandBuilder).
+			SetUnloggedParam(unlName).
 			SetResult(resName).
 			SetExtension(extName, appdef.ExtensionEngineKind_BuiltIn, "extension comment")
 
-		_ = appDef.AddObject(argName)
+		_ = appDef.AddObject(parName)
 		_ = appDef.AddObject(unlName)
 		_ = appDef.AddObject(resName)
 
@@ -46,16 +46,16 @@ func ExampleIAppDefBuilder_AddCommand() {
 	{
 		cmd := app.Command(cmdName)
 		fmt.Println(cmd, ":")
-		fmt.Println(" - argument :", cmd.Arg())
-		fmt.Println(" - unl.arg. :", cmd.UnloggedArg())
+		fmt.Println(" - parameter:", cmd.Param())
+		fmt.Println(" - unl.param:", cmd.UnloggedParam())
 		fmt.Println(" - result   :", cmd.Result())
 		fmt.Println(" - extension:", cmd.Extension(), cmd.Extension().Comment())
 	}
 
 	// Output:
 	// Command «test.cmd» :
-	//  - argument : Object «test.arg»
-	//  - unl.arg. : Object «test.unl»
+	//  - parameter: Object «test.param»
+	//  - unl.param: Object «test.secure»
 	//  - result   : Object «test.res»
 	//  - extension: CmdExt (BuiltIn) extension comment
 }
@@ -66,7 +66,7 @@ func ExampleIAppDef_Functions() {
 
 	cmdName := appdef.NewQName("test", "cmd")
 	qrName := appdef.NewQName("test", "query")
-	argName := appdef.NewQName("test", "arg")
+	parName := appdef.NewQName("test", "param")
 	resName := appdef.NewQName("test", "res")
 	cmdExt := "CommandExt"
 	qrExt := "QueryExt"
@@ -76,15 +76,15 @@ func ExampleIAppDef_Functions() {
 		appDef := appdef.New()
 
 		appDef.AddCommand(cmdName).
-			SetArg(argName).
+			SetParam(parName).
 			SetExtension(cmdExt, appdef.ExtensionEngineKind_WASM)
 
 		appDef.AddQuery(qrName).
-			SetArg(argName).
+			SetParam(parName).
 			SetResult(resName).
 			SetExtension(qrExt, appdef.ExtensionEngineKind_BuiltIn, "query extension comment")
 
-		_ = appDef.AddObject(argName)
+		_ = appDef.AddObject(parName)
 		_ = appDef.AddObject(resName)
 
 		if a, err := appDef.Build(); err == nil {
@@ -100,9 +100,9 @@ func ExampleIAppDef_Functions() {
 		app.Functions(func(f appdef.IFunction) {
 			cnt++
 			fmt.Printf("%d. %v :\n", cnt, f)
-			fmt.Println(" - argument :", f.Arg())
+			fmt.Println(" - parameter:", f.Param())
 			if c, ok := f.(appdef.ICommand); ok {
-				fmt.Println(" - unl.arg. :", c.UnloggedArg())
+				fmt.Println(" - unl.param:", c.UnloggedParam())
 			}
 			fmt.Println(" - result   :", f.Result())
 			fmt.Println(" - extension:", f.Extension(), f.Extension().Comment())
@@ -111,12 +111,12 @@ func ExampleIAppDef_Functions() {
 	}
 
 	// 1. Command «test.cmd» :
-	//  - argument : Object «test.arg»
-	//  - unl.arg. : <nil>
+	//  - parameter: Object «test.param»
+	//  - unl.param: <nil>
 	//  - result   : <nil>
 	//  - extension: CommandExt (WASM)
 	// 2. Query «test.query» :
-	//  - argument : Object «test.arg»
+	//  - parameter: Object «test.param»
 	//  - result   : Object «test.res»
 	//  - extension: QueryExt (BuiltIn) query extension comment
 	// Overall 2 function(s)

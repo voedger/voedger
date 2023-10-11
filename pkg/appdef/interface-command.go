@@ -6,21 +6,21 @@
 package appdef
 
 // Command is a function that changes system state.
-// Command may have unlogged argument.
-// Unlogged argument is a secure argument that is not logged.
+// Command may have unlogged parameter.
+// Unlogged parameter is a secure parameter that is not logged.
 //
 // Ref. to command.go for implementation
 type ICommand interface {
 	IFunction
 
-	// Unlogged (secure) argument. Returns nil if not assigned
-	UnloggedArg() IObject
+	// Unlogged (secure) parameter. Returns nil if not assigned
+	UnloggedParam() IObject
 }
 
 type ICommandBuilder interface {
 	ICommand
 	IFunctionBuilder
 
-	// Sets command unlogged (secure) argument. Must be object or NullQName
-	SetUnloggedArg(QName) ICommandBuilder
+	// Sets command unlogged (secure) parameter. Must be object or NullQName
+	SetUnloggedParam(QName) ICommandBuilder
 }

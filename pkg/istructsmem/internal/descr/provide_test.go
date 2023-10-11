@@ -56,12 +56,12 @@ func TestBasicUsage(t *testing.T) {
 	obj.AddStringField("f1", true)
 
 	appDef.AddCommand(appdef.NewQName("test", "cmd")).
-		SetUnloggedArg(objName).
-		SetArg(objName).
+		SetUnloggedParam(objName).
+		SetParam(objName).
 		SetExtension("cmd", appdef.ExtensionEngineKind_WASM)
 
 	appDef.AddQuery(appdef.NewQName("test", "query")).
-		SetArg(objName).
+		SetParam(objName).
 		SetResult(objName).
 		SetExtension("cmd", appdef.ExtensionEngineKind_BuiltIn)
 

@@ -31,7 +31,7 @@ func makeFunc(app *appDef, name QName, kind TypeKind, parent interface{}) functi
 	return f
 }
 
-func (f *function) Arg() IObject {
+func (f *function) Param() IObject {
 	return f.arg.object(f.app)
 }
 
@@ -43,7 +43,7 @@ func (f *function) Result() IObject {
 	return f.res.object(f.app)
 }
 
-func (f *function) SetArg(name QName) IFunctionBuilder {
+func (f *function) SetParam(name QName) IFunctionBuilder {
 	f.arg.setName(name)
 	return f.parent.(IFunctionBuilder)
 }

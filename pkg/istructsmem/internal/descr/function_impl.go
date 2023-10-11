@@ -39,12 +39,12 @@ func (ff *Functions) read(f appdef.IFunction) {
 func (f *Function) read(fn appdef.IFunction) {
 	f.Comment = fn.Comment()
 	f.Name = fn.QName()
-	if a := fn.Arg(); a != nil {
+	if a := fn.Param(); a != nil {
 		if n := a.QName(); n != appdef.NullQName {
 			f.Arg = &n
 		}
 	}
-	if r := fn.Arg(); r != nil {
+	if r := fn.Param(); r != nil {
 		if n := r.QName(); n != appdef.NullQName {
 			f.Result = &n
 		}
@@ -57,7 +57,7 @@ func (f *Function) read(fn appdef.IFunction) {
 
 func (f *CommandFunction) read(fn appdef.ICommand) {
 	f.Function.read(fn)
-	if a := fn.UnloggedArg(); a != nil {
+	if a := fn.UnloggedParam(); a != nil {
 		if n := a.QName(); n != appdef.NullQName {
 			f.UnloggedArg = &n
 		}

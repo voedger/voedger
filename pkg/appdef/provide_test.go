@@ -58,7 +58,7 @@ func TestBasicUsage(t *testing.T) {
 		AddField("isHuman", DataKind_bool, false)
 
 	newBuyerCmd := appDef.AddCommand(NewQName("test", "cmdNewBuyer"))
-	newBuyerCmd.SetArg(buyerObj.QName())
+	newBuyerCmd.SetParam(buyerObj.QName())
 	newBuyerCmd.SetExtension("newBuyer", ExtensionEngineKind_BuiltIn)
 
 	result, err := appDef.Build()

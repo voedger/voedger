@@ -24,7 +24,7 @@ type IExtension interface {
 }
 
 // Function is a type of object that can be called.
-// Function may have argument and result.
+// Function may have parameter and result.
 // Function may have extension.
 // Function may be query or command.
 //
@@ -32,8 +32,8 @@ type IExtension interface {
 type IFunction interface {
 	IType
 
-	// Argument. Returns nil if not assigned
-	Arg() IObject
+	// Parameter. Returns nil if not assigned
+	Param() IObject
 
 	// Result. Returns nil if not assigned
 	Result() IObject
@@ -46,8 +46,8 @@ type IFunctionBuilder interface {
 	IFunction
 	ITypeBuilder
 
-	// Sets command argument. Must be object or NullQName
-	SetArg(QName) IFunctionBuilder
+	// Sets command parameter. Must be object or NullQName
+	SetParam(QName) IFunctionBuilder
 
 	// Sets command result. Must be object or NullQName
 	SetResult(QName) IFunctionBuilder

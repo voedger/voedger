@@ -15,23 +15,23 @@ func Test_AppDef_AddQuery(t *testing.T) {
 	require := require.New(t)
 
 	var app IAppDef
-	queryName, argName, resName := NewQName("test", "query"), NewQName("test", "arg"), NewQName("test", "res")
+	queryName, parName, resName := NewQName("test", "query"), NewQName("test", "param"), NewQName("test", "res")
 
 	t.Run("must be ok to add query", func(t *testing.T) {
 		appDef := New()
 
-		_ = appDef.AddObject(argName)
+		_ = appDef.AddObject(parName)
 		_ = appDef.AddObject(resName)
 
 		query := appDef.AddQuery(queryName)
 		require.Equal(TypeKind_Query, query.Kind())
 		require.Equal(query, appDef.Query(queryName))
-		require.Nil(query.Arg())
+		require.Nil(query.Param())
 		require.Nil(query.Result())
 
-		t.Run("must be ok to assign query args and result", func(t *testing.T) {
+		t.Run("must be ok to assign query params and result", func(t *testing.T) {
 			query.
-				SetArg(argName).
+				SetParam(parName).
 				SetResult(resName).
 				SetExtension("QueryExt", ExtensionEngineKind_BuiltIn)
 		})
@@ -59,8 +59,8 @@ func Test_AppDef_AddQuery(t *testing.T) {
 		require.Equal(TypeKind_Query, query.Kind())
 		require.Equal(q, query)
 
-		require.Equal(argName, query.Arg().QName())
-		require.Equal(TypeKind_Object, query.Arg().Kind())
+		require.Equal(parName, query.Param().QName())
+		require.Equal(TypeKind_Object, query.Param().Kind())
 
 		require.Equal(resName, query.Result().QName())
 		require.Equal(TypeKind_Object, query.Result().Kind())
@@ -136,14 +136,14 @@ func Test_QueryValidate(t *testing.T) {
 
 	query := appDef.AddQuery(NewQName("test", "query"))
 
-	t.Run("must error if argument name is unknown", func(t *testing.T) {
-		arg := NewQName("test", "arg")
-		query.SetArg(arg)
+	t.Run("must error if parameter name is unknown", func(t *testing.T) {
+		par := NewQName("test", "param")
+		query.SetParam(par)
 		_, err := appDef.Build()
 		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, arg.String())
+		require.ErrorContains(err, par.String())
 
-		_ = appDef.AddObject(arg)
+		_ = appDef.AddObject(par)
 	})
 
 	t.Run("must error if result object name is unknown", func(t *testing.T) {

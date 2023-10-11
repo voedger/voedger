@@ -362,11 +362,11 @@ func (c *buildContext) commands() error {
 			c.addComments(cmd, b)
 			if cmd.Arg != nil && cmd.Arg.Def != nil {
 				argQname := buildQname(ictx, cmd.Arg.Def.Package, cmd.Arg.Def.Name)
-				b.SetArg(argQname)
+				b.SetParam(argQname)
 			}
 			if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
 				argQname := buildQname(ictx, cmd.UnloggedArg.Def.Package, cmd.UnloggedArg.Def.Name)
-				b.SetUnloggedArg(argQname)
+				b.SetUnloggedParam(argQname)
 			}
 			if cmd.Returns != nil && cmd.Returns.Def != nil {
 				retQname := buildQname(ictx, cmd.Returns.Def.Package, cmd.Returns.Def.Name)
@@ -390,7 +390,7 @@ func (c *buildContext) queries() error {
 			c.addComments(q, b)
 			if q.Arg != nil && q.Arg.Def != nil {
 				argQname := buildQname(ictx, q.Arg.Def.Package, q.Arg.Def.Name)
-				b.SetArg(argQname)
+				b.SetParam(argQname)
 			}
 
 			if q.Returns.Any {
