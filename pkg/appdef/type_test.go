@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -19,4 +20,6 @@ func Test_NullType(t *testing.T) {
 	require.Nil(NullType.App())
 	require.Equal(NullQName, NullType.QName())
 	require.Equal(TypeKind_null, NullType.Kind())
+
+	require.Contains(fmt.Sprint(NullType), "null type")
 }

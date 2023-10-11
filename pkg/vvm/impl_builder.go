@@ -72,14 +72,14 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 			case appdef.TypeKind_Command:
 				cmd := t.(appdef.ICommand)
 				cmdResource := cfg.Resources.QueryResource(cmd.QName()).(istructs.ICommandFunction)
-				istructsmem.ReplaceCommandDefinitions(cmdResource, cmd.Arg().QName(), cmd.UnloggedArg().QName(), cmd.Result().QName())
+				istructsmem.ReplaceCommandDefinitions(cmdResource, cmd.Param().QName(), cmd.UnloggedParam().QName(), cmd.Result().QName())
 			case appdef.TypeKind_Query:
 				if t.QName() == qNameQueryCollection {
 					return
 				}
 				query := t.(appdef.IQuery)
 				queryResource := cfg.Resources.QueryResource(query.QName()).(istructs.IQueryFunction)
-				istructsmem.ReplaceQueryDefinitions(queryResource, query.Arg().QName(), query.Result().QName())
+				istructsmem.ReplaceQueryDefinitions(queryResource, query.Param().QName(), query.Result().QName())
 			}
 		})
 	}
