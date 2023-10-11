@@ -87,6 +87,9 @@ func Example() {
 			contCnt++
 			fmt.Printf("%d. Name: %q, QName: %q, occurs: %v…%v\n", contCnt, c.Name(), c.QName(), c.MinOccurs(), c.MaxOccurs())
 		})
+
+		// what if unknown type
+		fmt.Println("unknown type:", app.Type(appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:
@@ -104,4 +107,5 @@ func Example() {
 	// doc container count: 1
 	// container "rec": QName: "test.rec", occurs: 0…unbounded
 	// 1. Name: "rec", QName: "test.rec", occurs: 0…unbounded
+	// unknown type: null type
 }

@@ -13,17 +13,17 @@ import (
 type Resource struct {
 	Kind    istructs.ResourceKindType
 	Name    appdef.QName
-	Command *Command `json:",omitempty"`
-	Query   *Query   `json:",omitempty"`
+	Command *CommandResource `json:",omitempty"`
+	Query   *QueryResource   `json:",omitempty"`
 }
 
-type Command struct {
+type CommandResource struct {
 	Params   *appdef.QName `json:",omitempty"`
 	Unlogged *appdef.QName `json:",omitempty"`
 	Result   *appdef.QName `json:",omitempty"`
 }
 
-type Query struct {
+type QueryResource struct {
 	Params *appdef.QName `json:",omitempty"`
 	Result *appdef.QName `json:",omitempty"`
 }
