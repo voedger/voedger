@@ -140,7 +140,7 @@ func TestBasicUsage(t *testing.T) {
 	// 3. make result cud
 	cud := bld.CUDBuilder()
 	rec := cud.Create(appdef.NewQName("test", "photos"))
-	rec.PutRecordID(appdef.SystemField_ID, 1)
+	rec.PutRecordID(appdef.SystemField_ID, 11)
 	rec.PutString("Buyer", "Карлсон 哇\"呀呀")
 	rec.PutInt32("Age", 33)
 	rec.PutFloat32("Height", 1.75)
@@ -148,7 +148,7 @@ func TestBasicUsage(t *testing.T) {
 
 	// 4. get raw event
 	rawEvent, buildErr := bld.BuildRawEvent()
-	require.NoError(buildErr, buildErr)
+	require.NoError(buildErr)
 
 	// Save raw event to PLog & WLog and save CUD demo
 	// 5. save to PLog

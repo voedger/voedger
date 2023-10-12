@@ -7,7 +7,6 @@ package istructsmem
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -23,37 +22,6 @@ func newValidator(validators *validators, t appdef.IType) *validator {
 	return &validator{validators, t}
 }
 
-// Return readable name of entity to validate.
-//
-// If entity has only type QName, then the result will be short like `CDoc (sales.BillDocument)`, otherwise it will be complete like `CRecord «Price» (sales.PriceRecord)`
-func (v *validator) entName(e interface{}) string {
-	ent := v.typ.Kind().TrimString()
-	name := ""
-	typeName := v.typ.QName()
-
-	if row, ok := e.(istructs.IRowReader); ok {
-		if qName := row.AsQName(appdef.SystemField_QName); qName != appdef.NullQName {
-			if typeName != qName {
-				// The case when the entity with non-validator type passed (perhaps child entity?):
-				// query the type name and entity caption from IAppDef
-				typeName = qName
-				if typ := v.validators.appDef.TypeByName(typeName); typ != nil {
-					ent = typ.Kind().TrimString()
-				}
-			}
-			if cont := row.AsString(appdef.SystemField_Container); cont != "" {
-				name = cont
-			}
-		}
-	}
-
-	if name == "" {
-		return fmt.Sprintf("%s (%s)", ent, typeName) // short form, such as "CDoc (sales.BillDocument)"
-	}
-
-	return fmt.Sprintf("%s «%s» (%s)", ent, name, typeName) // complete form, such as "CRecord «Price» (sales.PriceRecord)"
-}
-
 // Validate specified document
 func (v *validator) validDocument(doc *elementType) error {
 	err := v.validElement(doc)
@@ -65,7 +33,7 @@ func (v *validator) validDocument(doc *elementType) error {
 			if _, exists := ids[id]; exists {
 				err = errors.Join(err,
 					// event argument repeatedly uses record ID «1» inside ODoc (test.doc)
-					validateErrorf(ECode_InvalidRawRecordID, "event argument repeatedly uses record ID «%d» inside %s: %w", id, v.entName(doc), ErrRecordIDUniqueViolation))
+					validateErrorf(ECode_InvalidRawRecordID, "%v repeatedly uses raw record ID «%d»: %w", v, id, ErrRecordIDUniqueViolation))
 			}
 			ids[id] = e
 		}
@@ -79,13 +47,13 @@ func (v *validator) validDocument(doc *elementType) error {
 				if !exists {
 					err = errors.Join(err,
 						// ORecord «Price» (sales.PriceRecord) field «Next» refers to unknown record ID «7»
-						validateErrorf(ECode_InvalidRefRecordID, "%s field «%s» refers to unknown record ID «%d»: %w", v.entName(e), fld.Name(), id, ErrRecordIDNotFound))
+						validateErrorf(ECode_InvalidRefRecordID, "%v field «%s» refers to unknown raw record ID «%d»: %w", e, fld.Name(), id, ErrRecordIDNotFound))
 					return
 				}
 				if !fld.Ref(target.QName()) {
 					err = errors.Join(err,
 						// ORecord «Price» (sales.PriceRecord) field «Next» refers to record ID «1» that has unavailable target QName «sales.Order»
-						validateErrorf(ECode_InvalidRefRecordID, "%s field «%s» refers to record ID «%d» that has unavailable target QName «%s»: %w", v.entName(e), fld.Name(), id, target.QName(), ErrWrongRecordID))
+						validateErrorf(ECode_InvalidRefRecordID, "%v field «%s» refers to raw record ID «%d» that has unavailable target QName «%s»: %w", e, fld.Name(), id, target.QName(), ErrWrongRecordID))
 				}
 			}
 		})
@@ -124,11 +92,11 @@ func (v *validator) validContainers(el *elementType) (err error) {
 				})
 			if occurs < cont.MinOccurs() {
 				err = errors.Join(err,
-					validateErrorf(ECode_InvalidOccursMin, "%s container «%s» has not enough occurrences (%d, minimum %d): %w", v.entName(el), cont.Name(), occurs, cont.MinOccurs(), ErrMinOccursViolation))
+					validateErrorf(ECode_InvalidOccursMin, "%v container «%s» has not enough occurrences (%d, minimum %d): %w", el, cont.Name(), occurs, cont.MinOccurs(), ErrMinOccursViolation))
 			}
 			if occurs > cont.MaxOccurs() {
 				err = errors.Join(err,
-					validateErrorf(ECode_InvalidOccursMax, "%s container «%s» has too many occurrences (%d, maximum %d): %w", v.entName(el), cont.Name(), occurs, cont.MaxOccurs(), ErrMaxOccursViolation))
+					validateErrorf(ECode_InvalidOccursMax, "%v container «%s» has too many occurrences (%d, maximum %d): %w", el, cont.Name(), occurs, cont.MaxOccurs(), ErrMaxOccursViolation))
 			}
 		})
 
@@ -142,20 +110,20 @@ func (v *validator) validContainers(el *elementType) (err error) {
 			childName := child.Container()
 			if childName == "" {
 				err = errors.Join(err,
-					validateErrorf(ECode_EmptyElementName, "%s child[%d] has empty container name: %w", v.entName(el), idx, ErrNameMissed))
+					validateErrorf(ECode_EmptyElementName, "%v child[%d] has empty container name: %w", el, idx, ErrNameMissed))
 				return
 			}
 			cont := t.Container(childName)
 			if cont == nil {
 				err = errors.Join(err,
-					validateErrorf(ECode_InvalidElementName, "%s child[%d] has unknown container name «%s»: %w", v.entName(el), idx, childName, ErrNameNotFound))
+					validateErrorf(ECode_InvalidElementName, "%v child[%d] has unknown container name «%s»: %w", el, idx, childName, ErrNameNotFound))
 				return
 			}
 
 			childQName := child.QName()
 			if childQName != cont.QName() {
 				err = errors.Join(err,
-					validateErrorf(ECode_InvalidDefName, "%s child[%d] «%s» has wrong type name «%v», expected «%v»: %w", v.entName(el), idx, childName, childQName, cont.QName(), ErrNameNotFound))
+					validateErrorf(ECode_InvalidDefName, "%v child[%d] %v has wrong type name, expected «%v»: %w", el, idx, child, cont.QName(), ErrNameNotFound))
 				return
 			}
 
@@ -166,7 +134,7 @@ func (v *validator) validContainers(el *elementType) (err error) {
 				} else {
 					if parID != elID {
 						err = errors.Join(err,
-							validateErrorf(ECode_InvalidRefRecordID, "%s child[%d] «%s (%v)» has wrong parent id «%d», expected «%d»: %w", v.entName(el), idx, childName, childQName, elID, parID, ErrWrongRecordID))
+							validateErrorf(ECode_InvalidRefRecordID, "%v child[%d] %v has wrong parent id «%d», expected «%d»: %w", el, idx, child, parID, elID, ErrWrongRecordID))
 					}
 				}
 			}
@@ -174,7 +142,7 @@ func (v *validator) validContainers(el *elementType) (err error) {
 			childValidator := v.validators.validator(childQName)
 			if childValidator == nil {
 				err = errors.Join(err,
-					validateErrorf(ECode_InvalidDefName, "object refers to unknown type «%v»: %w", childQName, ErrNameNotFound))
+					validateErrorf(ECode_InvalidDefName, "%v refers to unknown type «%v»: %w", child, childQName, ErrNameNotFound))
 				return
 			}
 			err = errors.Join(err,
@@ -191,7 +159,7 @@ func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error)
 	if v.typ.Kind().HasSystemField(appdef.SystemField_ID) {
 		if rawIDexpected && !rec.ID().IsRaw() {
 			err = errors.Join(err,
-				validateErrorf(ECode_InvalidRawRecordID, "new %s ID «%d» is not raw: %w", v.entName(rec), rec.ID(), ErrRawRecordIDExpected))
+				validateErrorf(ECode_InvalidRawRecordID, "new %v ID «%d» is not raw: %w", rec, rec.ID(), ErrRawRecordIDExpected))
 		}
 	}
 
@@ -205,7 +173,7 @@ func (v *validator) validRow(row *rowType) (err error) {
 			if f.Required() {
 				if !row.HasValue(f.Name()) {
 					err = errors.Join(err,
-						validateErrorf(ECode_EmptyData, "%s misses field «%s» required for type «%v»: %w", v.entName(row), f.Name(), v.typ.QName(), ErrNameNotFound))
+						validateErrorf(ECode_EmptyData, "%v misses required field «%s»: %w", row, f.Name(), ErrNameNotFound))
 					return
 				}
 				if !f.IsSys() {
@@ -213,7 +181,7 @@ func (v *validator) validRow(row *rowType) (err error) {
 					case appdef.DataKind_RecordID:
 						if row.AsRecordID(f.Name()) == istructs.NullRecordID {
 							err = errors.Join(err,
-								validateErrorf(ECode_InvalidRefRecordID, "%s required ref field «%s» has NullRecordID value: %w", v.entName(row), f.Name(), ErrWrongRecordID))
+								validateErrorf(ECode_InvalidRefRecordID, "%v required ref field «%s» has NullRecordID value: %w", row, f.Name(), ErrWrongRecordID))
 						}
 					}
 				}
@@ -260,7 +228,8 @@ func (v *validators) validator(n appdef.QName) *validator {
 func (v *validators) validEvent(ev *eventType) (err error) {
 
 	err = errors.Join(
-		v.validEventObjects(ev),
+		v.validEventRawIDs(ev),
+		v.validEventArgs(ev),
 		v.validEventCUDs(ev),
 	)
 
@@ -268,7 +237,7 @@ func (v *validators) validEvent(ev *eventType) (err error) {
 }
 
 // Validate event parts: object and secure object
-func (v *validators) validEventObjects(ev *eventType) (err error) {
+func (v *validators) validEventArgs(ev *eventType) (err error) {
 	arg, argUnl, err := ev.argumentNames()
 	if err != nil {
 		return validateError(ECode_InvalidDefName, err)
@@ -309,6 +278,117 @@ func (v *validators) validEventCUDs(ev *eventType) (err error) {
 	}
 
 	return v.validCUD(&ev.cud, ev.sync)
+}
+
+// Validates raw IDs in specified event.
+//
+// Checks that raw IDs is unique.
+//
+// Checks that references to raw IDs is valid, that is target raw ID unknown and has available QName.
+//
+// For CUDs checks that raw IDs in sys.ParentID field and value in sys.Container are confirmable for target parent.
+func (v *validators) validEventRawIDs(ev *eventType) (err error) {
+	const (
+		errRepeatedRawID        = "%v repeatedly uses raw record ID «%d»: %w"
+		errUnknownRawIDRef      = "%v field «%s» refers to unknown raw record ID «%d»: %w"
+		errUnavailableTargetRef = "%v field «%s» refers to raw record ID «%d» that has unavailable target QName «%s»: %w"
+	)
+
+	ids := make(map[istructs.RecordID]appdef.QName)
+
+	_ = ev.argObject.forEach(func(e *elementType) error {
+		if id := e.ID(); id.IsRaw() {
+			if _, exists := ids[id]; exists {
+				err = errors.Join(err,
+					// ORecord «ORec: test.ORecord» repeatedly uses raw record ID «1»
+					validateErrorf(ECode_InvalidRawRecordID, errRepeatedRawID, e, id, ErrRecordIDUniqueViolation))
+			}
+			ids[id] = e.QName()
+		}
+		return nil
+	})
+
+	_ = ev.argObject.forEach(func(e *elementType) error {
+		e.fields.RefFields(func(fld appdef.IRefField) {
+			if id := e.AsRecordID(fld.Name()); id.IsRaw() {
+				target, exists := ids[id]
+				if !exists {
+					err = errors.Join(err,
+						// ORecord «ORec: test.ORecord» field «Next» refers to unknown raw record ID «7»
+						validateErrorf(ECode_InvalidRefRecordID, errUnknownRawIDRef, e, fld.Name(), id, ErrRecordIDNotFound))
+					return
+				}
+				if !fld.Ref(target) {
+					err = errors.Join(err,
+						// ORecord «ORec: sales.PriceRecord» field «Next» refers to raw record ID «1» that has unavailable target QName «test.ODocument»
+						validateErrorf(ECode_InvalidRefRecordID, errUnavailableTargetRef, e, fld.Name(), id, target, ErrWrongRecordID))
+				}
+			}
+		})
+		return nil
+	})
+
+	for _, rec := range ev.cud.creates {
+		id := rec.ID()
+		if _, exists := ids[id]; exists {
+			err = errors.Join(err,
+				// WRecord «WRec: test.WRecord» repeatedly uses record ID «1»
+				validateErrorf(ECode_InvalidRawRecordID, errRepeatedRawID, rec, id, ErrRecordIDUniqueViolation))
+		}
+		ids[id] = rec.QName()
+	}
+
+	checkRefs := func(rec *recordType) (err error) {
+		rec.RecordIDs(false,
+			func(name string, id istructs.RecordID) {
+				if id.IsRaw() {
+					target, ok := ids[id]
+					if !ok {
+						err = errors.Join(err,
+							validateErrorf(ECode_InvalidRefRecordID, errUnknownRawIDRef, rec, name, id, ErrRecordIDNotFound))
+						return
+					}
+					switch name {
+					case appdef.SystemField_ParentID:
+						if parentType, ok := v.appDef.Type(target).(appdef.IContainers); ok {
+							cont := parentType.Container(rec.Container())
+							if cont == nil {
+								err = errors.Join(err,
+									validateErrorf(ECode_InvalidRefRecordID, "%v has raw parent ID «%d» refers to «%s», which has no container «%s»: %w", rec, id, target, rec.Container(), ErrWrongRecordID))
+								return
+							}
+							if cont.QName() != rec.QName() {
+								err = errors.Join(err,
+									validateErrorf(ECode_InvalidRefRecordID, "%v has raw parent ID «%d» refers to «%s», which container «%s» has another QName «%s»: %w", rec, id, target, rec.Container(), cont.QName(), ErrWrongRecordID))
+								return
+							}
+						}
+					default:
+						fld := rec.fieldDef(name)
+						if ref, ok := fld.(appdef.IRefField); ok {
+							if !ref.Ref(target) {
+								err = errors.Join(err,
+									validateErrorf(ECode_InvalidRefRecordID, errUnavailableTargetRef, rec, name, id, target, ErrWrongRecordID))
+								return
+							}
+						}
+					}
+				}
+			})
+		return err
+	}
+
+	for _, rec := range ev.cud.creates {
+		err = errors.Join(err,
+			checkRefs(rec))
+	}
+
+	for _, rec := range ev.cud.updates {
+		err = errors.Join(err,
+			checkRefs(&rec.changes))
+	}
+
+	return err
 }
 
 // Validates specified document or object

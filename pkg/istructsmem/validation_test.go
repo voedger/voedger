@@ -528,7 +528,7 @@ func Test_ValidElement(t *testing.T) {
 			rec.PutRecordID(appdef.SystemField_ID, 1)
 			_, err := doc.Build()
 			require.ErrorIs(err, ErrRecordIDUniqueViolation)
-			require.ErrorContains(err, "repeatedly uses record ID «1»")
+			require.ErrorContains(err, "repeatedly uses raw record ID «1»")
 		})
 
 		rec.PutRecordID(appdef.SystemField_ID, 2)
@@ -550,7 +550,7 @@ func Test_ValidElement(t *testing.T) {
 			rec.PutRecordID("recIDField", 7)
 			_, err := doc.Build()
 			require.ErrorIs(err, ErrRecordIDNotFound)
-			require.ErrorContains(err, "unknown record ID «7»")
+			require.ErrorContains(err, "unknown raw record ID «7»")
 		})
 
 		t.Run("must error if raw ID refs to invalid target", func(t *testing.T) {
