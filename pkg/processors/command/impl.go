@@ -203,7 +203,7 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 	}
 	if funcQName == workspacemgmt.QNameCommandCreateWorkspace ||
 		funcQName == workspacemgmt.QNameCommandCreateWorkspaceID || // happens on creating a child of an another workspace
-		funcQName == builtin.QNameCommandInit {
+		funcQName == builtin.QNameCommandInit { //nolint
 		return nil
 	}
 	if wsDesc.QName() != appdef.NullQName {
@@ -322,7 +322,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work interface{}) 
 	}
 
 	switch cmd.cmdMes.Resource().QName() {
-	case builtin.QNameCommandInit: // kept to not to break existing events only
+	case builtin.QNameCommandInit: // nolint, kept to not to break existing events only
 		cmd.reb = cmd.appStructs.Events().GetSyncRawEventBuilder(
 			istructs.SyncRawEventBuilderParams{
 				SyncedAt:                     istructs.UnixMilli(cmdProc.now().UnixMilli()),

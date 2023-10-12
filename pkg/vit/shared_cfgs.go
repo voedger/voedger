@@ -26,12 +26,11 @@ import (
 )
 
 const (
-	TestEmail        = "123@123.com"
-	TestEmail2       = "124@124.com"
-	TestEmail3       = "125@125.com"
-	TestServicePort  = 10000
-	defaultMaxOccurs = 100
-	app1Name         = "app1"
+	TestEmail       = "123@123.com"
+	TestEmail2      = "124@124.com"
+	TestEmail3      = "125@125.com"
+	TestServicePort = 10000
+	app1Name        = "app1"
 )
 
 var (
@@ -78,7 +77,7 @@ var (
 )
 
 func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-	registryapp.Provide(smtp.Cfg{})(apis, cfg, appDefBuilder, ep)
+	registryapp.Provide(smtp.Cfg{}, false)(apis, cfg, appDefBuilder, ep)
 	apps.Parse(SchemaTestApp2, "app2", ep)
 }
 
@@ -89,7 +88,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		panic("no build info")
 	}
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
+		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider, false)
 
 	apps.Parse(SchemaTestApp1, "app1", ep)
 
