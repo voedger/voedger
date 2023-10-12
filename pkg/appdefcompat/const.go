@@ -17,8 +17,8 @@ const (
 )
 
 const (
-	NodeRemoved  NodeErrorString = "NodeRemoved"
-	OrderChanged NodeErrorString = "OrderChanged"
-	NodeInserted NodeErrorString = "NodeInserted"
-	ValueChanged NodeErrorString = "ValueChanged"
+	ErrorTypeNodeRemoved  ErrorType = "NodeRemoved"
+	ErrorTypeOrderChanged ErrorType = "OrderChanged"
+	ErrorTypeNodeInserted ErrorType = "NodeInserted"
+	ErrorTypeValueChanged ErrorType = "ValueChanged"
 )

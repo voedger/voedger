@@ -16,28 +16,18 @@ var constrains = []NodeConstraint{
 	{"Fields", ConstraintAppendOnly},
 }
 
-func checkBackwardCompatibility(oldBuilder, newBuilder appdef.IAppDefBuilder) (cerrs *CompatibilityErrors, err error) {
-	var oldAppDef, newAppDef appdef.IAppDef
-	oldAppDef, err = oldBuilder.Build()
-	if err != nil {
-		return nil, err
-	}
-	newAppDef, err = newBuilder.Build()
-	if err != nil {
-		return nil, err
-	}
-
+func checkBackwardCompatibility(old, new appdef.IAppDef) (cerrs *CompatibilityErrors) {
 	return &CompatibilityErrors{
-		Errors: compareNodes(buildTree(oldAppDef), buildTree(newAppDef), constrains),
-	}, nil
+		Errors: compareNodes(buildTree(old), buildTree(new), constrains),
+	}
 }
 
-func ignoreCompatibilityErrors(cerrs *CompatibilityErrors, toBeIgnored []CompatibilityError) (cerrsOut *CompatibilityErrors) {
+func ignoreCompatibilityErrors(cerrs *CompatibilityErrors, pathsToIgnore [][]string) (cerrsOut *CompatibilityErrors) {
 	cerrsOut = &CompatibilityErrors{}
 	for _, cerr := range cerrs.Errors {
 		found := false
-		for _, ignore := range toBeIgnored {
-			if cerr.ErrMessage == ignore.ErrMessage && slices.Equal(cerr.OldTreePath, ignore.OldTreePath) {
+		for _, pathToIgnore := range pathsToIgnore {
+			if slices.Equal(cerr.OldTreePath, pathToIgnore) {
 				found = true
 				break
 			}
@@ -177,7 +167,7 @@ func buildViewNode(parentNode *CompatibilityTreeNode, item appdef.IView) (node *
 
 func compareNodes(old, new *CompatibilityTreeNode, constrains []NodeConstraint) (cerrs []CompatibilityError) {
 	if !cmp.Equal(old.Value, new.Value) {
-		cerrs = append(cerrs, newCompatibilityError(ConstraintValueMatch, old.Path(), ValueChanged))
+		cerrs = append(cerrs, newCompatibilityError(ConstraintValueMatch, old.Path(), ErrorTypeValueChanged))
 	}
 
 	m := matchNodes(old.Props, new.Props)
@@ -193,24 +183,26 @@ func compareNodes(old, new *CompatibilityTreeNode, constrains []NodeConstraint) 
 	return
 }
 
-func checkConstraint(oldTreePath []string, m matchNodesResult, constraint Constraint) (cerrs []CompatibilityError) {
+func checkConstraint(oldTreePath []string, m *matchNodesResult, constraint Constraint) (cerrs []CompatibilityError) {
 	if constraint == ConstraintNonModifiable || constraint == ConstraintAppendOnly {
 		if m.InsertedNodeCount > 0 {
-			cerrs = append(cerrs, newCompatibilityError(constraint, oldTreePath, NodeInserted))
+			cerrs = append(cerrs, newCompatibilityError(constraint, oldTreePath, ErrorTypeNodeInserted))
 		}
 	}
 
 	if constraint == ConstraintNonModifiable || constraint == ConstraintAppendOnly || constraint == ConstraintInsertOnly {
 		for _, deletedQName := range m.DeletedNodeNames {
 			path := append(oldTreePath, deletedQName)
-			cerrs = append(cerrs, newCompatibilityError(constraint, path, NodeRemoved))
+			cerrs = append(cerrs, newCompatibilityError(constraint, path, ErrorTypeNodeRemoved))
 		}
 	}
 
 	if len(m.ReorderedNodeNames) > 0 && len(m.DeletedNodeNames) == 0 {
-		for _, reorderedQName := range m.ReorderedNodeNames {
+		for _, reorderedNodeName := range m.ReorderedNodeNames {
 			if constraint == ConstraintNonModifiable || constraint == ConstraintAppendOnly {
-				cerrs = append(cerrs, newCompatibilityError(constraint, append(oldTreePath, reorderedQName), OrderChanged))
+				newOldPath := make([]string, len(oldTreePath)+1)
+				copy(newOldPath, append(oldTreePath, reorderedNodeName))
+				cerrs = append(cerrs, newCompatibilityError(constraint, newOldPath, ErrorTypeOrderChanged))
 			}
 		}
 	}
@@ -230,8 +222,8 @@ func findNodeByName(nodes []*CompatibilityTreeNode, name string) (foundNode *Com
 }
 
 // matchNodes matches nodes in two CompatibilityTreeNode slices and categorizes them.
-func matchNodes(oldNodes, newNodes []*CompatibilityTreeNode) matchNodesResult {
-	result := matchNodesResult{
+func matchNodes(oldNodes, newNodes []*CompatibilityTreeNode) *matchNodesResult {
+	result := &matchNodesResult{
 		InsertedNodeCount:  0,
 		DeletedNodeNames:   []string{},
 		AppendedNodeCount:  0,

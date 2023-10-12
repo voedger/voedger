@@ -45,50 +45,52 @@ func Test_Basic(t *testing.T) {
 	newBuilder := appdef.New()
 	require.NoError(t, parser.BuildAppDefs(newPackages, newBuilder))
 
-	expectedErrors := []CompatibilityError{
-		{OldTreePath: []string{"AppDef", "Types", "sys.Profile", "Types", "sys.ProfileTable"}, ErrMessage: NodeRemoved},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Password"}, ErrMessage: OrderChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Email"}, ErrMessage: OrderChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "Login"}, ErrMessage: NodeRemoved},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileCluster"}, ErrMessage: ValueChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileToken"}, ErrMessage: ValueChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "D"}, ErrMessage: NodeInserted},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrMessage: ValueChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrMessage: OrderChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.SomeTable"}, ErrMessage: NodeRemoved},
-	}
-	compatErrors, err := CheckBackwardCompatibility(oldBuilder, newBuilder)
+	oldAppDef, err := oldBuilder.Build()
 	require.NoError(t, err)
+
+	newAppDef, err := newBuilder.Build()
+	require.NoError(t, err)
+
+	expectedErrors := []CompatibilityError{
+		{OldTreePath: []string{"AppDef", "Types", "sys.Profile", "Types", "sys.ProfileTable"}, ErrorType: ErrorTypeNodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Password"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Email"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "Login"}, ErrorType: ErrorTypeNodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileCluster"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileToken"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields"}, ErrorType: ErrorTypeNodeInserted},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.SomeTable"}, ErrorType: ErrorTypeNodeRemoved},
+	}
+	compatErrors := CheckBackwardCompatibility(oldAppDef, newAppDef)
 	validateCompatibilityErrors(t, expectedErrors, compatErrors)
 
 	// testing ignoring some compatibility errors
-	expectedErrors = []CompatibilityError{
-		{OldTreePath: []string{"AppDef", "Types", "sys.Profile", "Types", "sys.ProfileTable"}, ErrMessage: NodeRemoved},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Password"}, ErrMessage: OrderChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Email"}, ErrMessage: OrderChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "Login"}, ErrMessage: NodeRemoved},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileCluster"}, ErrMessage: ValueChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "D"}, ErrMessage: NodeInserted},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrMessage: ValueChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrMessage: OrderChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.SomeTable"}, ErrMessage: NodeRemoved},
+	expectedFilteredErrors := []CompatibilityError{
+		{OldTreePath: []string{"AppDef", "Types", "sys.Profile", "Types", "sys.ProfileTable"}, ErrorType: ErrorTypeNodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Password"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Email"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "Login"}, ErrorType: ErrorTypeNodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileCluster"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields"}, ErrorType: ErrorTypeNodeInserted},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.SomeTable"}, ErrorType: ErrorTypeNodeRemoved},
 	}
 
-	toBeIgnored := []CompatibilityError{
-		{
-			OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileToken"},
-			ErrMessage:  ValueChanged,
-		},
+	pathsToIgnore := [][]string{
+		{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileToken"},
 	}
-	filteredCompatErrors := IgnoreCompatibilityErrors(compatErrors, toBeIgnored)
-	validateCompatibilityErrors(t, expectedErrors, filteredCompatErrors)
+	filteredCompatErrors := IgnoreCompatibilityErrors(compatErrors, pathsToIgnore)
+	validateCompatibilityErrors(t, expectedFilteredErrors, filteredCompatErrors)
 }
 
 func validateCompatibilityErrors(t *testing.T, expectedErrors []CompatibilityError, compatErrors *CompatibilityErrors) {
-	found := false
 	for _, expectedErr := range expectedErrors {
+		found := false
 		for _, cerr := range compatErrors.Errors {
-			if cerr.Path() == expectedErr.Path() && cerr.ErrMessage == expectedErr.ErrMessage {
+			if cerr.Path() == expectedErr.Path() && cerr.ErrorType == expectedErr.ErrorType {
 				found = true
 				break
 			}
