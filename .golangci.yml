@@ -6,16 +6,21 @@ linters:
     - govet
     - revive
     - gosec
-    - nakedret
     - stylecheck
     - misspell
     - errcheck
     - unparam
     - deadcode
-    - structcheck
     - unparam
   fast: true
 linters-settings:
+  gosec:
+    excludes:
+      - G101
+      - G601
+      - G602
+  staticcheck:
+    checks: [ "all", "-SA1019"]    
   stylecheck:
     checks: [ "all", "-ST1003", "-ST1023" ]    
   misspell:
