@@ -348,64 +348,73 @@ func Test_ValidElement(t *testing.T) {
 
 	t.Run("must be ok to build test application", func(t *testing.T) {
 
-		t.Run("build object type", func(t *testing.T) {
-			obj := appDef.AddObject(appdef.NewQName("test", "object"))
-			obj.
-				AddField("int32Field", appdef.DataKind_int32, true).
-				AddField("int64Field", appdef.DataKind_int64, false).
-				AddField("float32Field", appdef.DataKind_float32, false).
-				AddField("float64Field", appdef.DataKind_float64, false).
-				AddField("bytesField", appdef.DataKind_bytes, false).
-				AddStringField("strField", false).
-				AddField("qnameField", appdef.DataKind_QName, false).
-				AddField("recIDField", appdef.DataKind_RecordID, false)
-			obj.
-				AddContainer("child", appdef.NewQName("test", "element"), 1, appdef.Occurs_Unbounded)
+		objName := appdef.NewQName("test", "object")
+		elName := appdef.NewQName("test", "element")
+		gcName := appdef.NewQName("test", "grandChild")
 
-			el := appDef.AddElement(appdef.NewQName("test", "element"))
-			el.
+		docName := appdef.NewQName("test", "document")
+		recName := appdef.NewQName("test", "record")
+
+		t.Run("build object type", func(t *testing.T) {
+			obj := appDef.AddObject(objName)
+			obj.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
 				AddField("float32Field", appdef.DataKind_float32, false).
 				AddField("float64Field", appdef.DataKind_float64, false).
-				AddField("bytesField", appdef.DataKind_bytes, false).
+				AddBytesField("bytesField", false).
 				AddStringField("strField", false).
 				AddField("qnameField", appdef.DataKind_QName, false).
 				AddField("boolField", appdef.DataKind_bool, false).
-				AddField("recIDField", appdef.DataKind_RecordID, false)
-			el.
-				AddContainer("grandChild", appdef.NewQName("test", "grandChild"), 0, 1)
+				AddRefField("recIDField", false)
+			obj.
+				AddContainer("child", elName, 1, appdef.Occurs_Unbounded)
 
-			subEl := appDef.AddElement(appdef.NewQName("test", "grandChild"))
+			el := appDef.AddElement(elName)
+			el.
+				AddField("int32Field", appdef.DataKind_int32, true).
+				AddField("int64Field", appdef.DataKind_int64, false).
+				AddField("float32Field", appdef.DataKind_float32, false).
+				AddField("float64Field", appdef.DataKind_float64, false).
+				AddBytesField("bytesField", false).
+				AddStringField("strField", false).
+				AddField("qnameField", appdef.DataKind_QName, false).
+				AddField("boolField", appdef.DataKind_bool, false).
+				AddRefField("recIDField", false)
+			el.
+				AddContainer("grandChild", gcName, 0, 1)
+
+			subEl := appDef.AddElement(gcName)
 			subEl.
-				AddField("recIDField", appdef.DataKind_RecordID, false)
+				AddRefField("recIDField", false)
 		})
 
 		t.Run("build ODoc type", func(t *testing.T) {
-			doc := appDef.AddODoc(appdef.NewQName("test", "document"))
+			doc := appDef.AddODoc(docName)
 			doc.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
 				AddField("float32Field", appdef.DataKind_float32, false).
 				AddField("float64Field", appdef.DataKind_float64, false).
-				AddField("bytesField", appdef.DataKind_bytes, false).
+				AddBytesField("bytesField", false).
 				AddStringField("strField", false).
 				AddField("qnameField", appdef.DataKind_QName, false).
-				AddField("recIDField", appdef.DataKind_RecordID, false)
+				AddField("boolField", appdef.DataKind_bool, false).
+				AddRefField("recIDField", false, recName)
 			doc.
-				AddContainer("child", appdef.NewQName("test", "record"), 1, appdef.Occurs_Unbounded)
+				AddContainer("child", recName, 1, appdef.Occurs_Unbounded)
 
-			rec := appDef.AddORecord(appdef.NewQName("test", "record"))
+			rec := appDef.AddORecord(recName)
 			rec.
 				AddField("int32Field", appdef.DataKind_int32, true).
 				AddField("int64Field", appdef.DataKind_int64, false).
 				AddField("float32Field", appdef.DataKind_float32, false).
 				AddField("float64Field", appdef.DataKind_float64, false).
-				AddField("bytesField", appdef.DataKind_bytes, false).
+				AddBytesField("bytesField", false).
 				AddStringField("strField", false).
 				AddField("qnameField", appdef.DataKind_QName, false).
 				AddField("boolField", appdef.DataKind_bool, false).
-				AddField("recIDField", appdef.DataKind_RecordID, false)
+				AddRefField("recIDField", false, recName)
 		})
 	})
 
@@ -475,6 +484,7 @@ func Test_ValidElement(t *testing.T) {
 
 		gChild := child.ElementBuilder("grandChild")
 		require.NotNil(gChild)
+
 		t.Run("must ok grand children", func(t *testing.T) {
 			_, err := obj.Build()
 			require.NoError(err)
@@ -514,6 +524,13 @@ func Test_ValidElement(t *testing.T) {
 			require.ErrorIs(err, ErrNameNotFound)
 		})
 
+		t.Run("must error if raw ID duplication", func(t *testing.T) {
+			rec.PutRecordID(appdef.SystemField_ID, 1)
+			_, err := doc.Build()
+			require.ErrorIs(err, ErrRecordIDUniqueViolation)
+			require.ErrorContains(err, "repeatedly uses record ID «1»")
+		})
+
 		rec.PutRecordID(appdef.SystemField_ID, 2)
 		rec.PutInt32("int32Field", 555)
 
@@ -523,9 +540,28 @@ func Test_ValidElement(t *testing.T) {
 			require.ErrorIs(err, ErrWrongRecordID)
 		})
 
-		t.Run("must restore parent if empty record parent", func(t *testing.T) {
+		t.Run("must automatically restore parent if empty record parent", func(t *testing.T) {
 			rec.PutRecordID(appdef.SystemField_ParentID, istructs.NullRecordID)
 			_, err := doc.Build()
+			require.NoError(err)
+		})
+
+		t.Run("must error if unknown raw ID ref", func(t *testing.T) {
+			rec.PutRecordID("recIDField", 7)
+			_, err := doc.Build()
+			require.ErrorIs(err, ErrRecordIDNotFound)
+			require.ErrorContains(err, "unknown record ID «7»")
+		})
+
+		t.Run("must error if raw ID refs to invalid target", func(t *testing.T) {
+			rec.PutRecordID("recIDField", 1)
+			_, err := doc.Build()
+			require.ErrorIs(err, ErrWrongRecordID)
+			require.ErrorContains(err, "record ID «1»")
+			require.ErrorContains(err, "unavailable target QName «test.document»")
+
+			rec.PutRecordID("recIDField", 2) // fix last error
+			_, err = doc.Build()
 			require.NoError(err)
 		})
 	})
@@ -1193,12 +1229,12 @@ func Test_ValidateErrors(t *testing.T) {
 		})
 		t.Run("0 value ref field", func(t *testing.T) {
 			bld := eventBuilder()
-			icud := bld.CUDBuilder()
-			rec := icud.Create(test.tablePhotos)
+			cud := bld.CUDBuilder()
+			rec := cud.Create(test.tablePhotos)
 			rec.PutRecordID(appdef.SystemField_ID, test.tempPhotoID)
 			rec.PutString(test.buyerIdent, test.buyerValue)
 
-			recRem := icud.Create(test.tablePhotoRems)
+			recRem := cud.Create(test.tablePhotoRems)
 			recRem.PutRecordID(appdef.SystemField_ID, test.tempRemarkID)
 			recRem.PutRecordID(appdef.SystemField_ParentID, test.tempPhotoID)
 			recRem.PutString(appdef.SystemField_Container, test.remarkIdent)
