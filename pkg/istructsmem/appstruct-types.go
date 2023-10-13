@@ -111,11 +111,16 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		return nil
 	}
 
-	sch, err := cfg.appDefBuilder.Build()
+	app, err := cfg.appDefBuilder.Build()
 	if err != nil {
 		return fmt.Errorf("%v: unable rebuild changed application: %w", cfg.Name, err)
 	}
-	cfg.AppDef = sch
+	cfg.AppDef = app
+
+	// prepare resources
+	if err := cfg.Resources.prepare(cfg.AppDef); err != nil {
+		return err
+	}
 
 	cfg.dynoSchemes.Prepare(cfg.AppDef)
 	cfg.validators.prepare(cfg.AppDef)

@@ -124,11 +124,11 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 // build build all event arguments and CUDs
 func (ev *eventType) build() (err error) {
 	if ev.name == appdef.NullQName {
-		return validateErrorf(ECode_EmptyDefName, "empty event command name: %w", ErrNameMissed)
+		return validateErrorf(ECode_EmptyTypeName, "empty event command name: %w", ErrNameMissed)
 	}
 
 	if _, err = ev.appCfg.qNames.ID(ev.name); err != nil {
-		return validateErrorf(ECode_InvalidDefName, "unknown event command name «%v»: %w", ev.name, err)
+		return validateErrorf(ECode_InvalidTypeName, "unknown event command name «%v»: %w", ev.name, err)
 	}
 
 	err = errors.Join(
@@ -241,7 +241,7 @@ func (ev *eventType) BuildRawEvent() (raw istructs.IRawEvent, err error) {
 		return ev, err
 	}
 
-	if err = ev.appCfg.validators.validEvent(ev); err != nil {
+	if err = validateEvent(ev); err != nil {
 		return ev, err
 	}
 

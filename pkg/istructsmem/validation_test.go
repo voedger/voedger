@@ -26,9 +26,10 @@ func Test_ValidEvent(t *testing.T) {
 	var (
 		app istructs.IAppStructs
 
-		cmdCreateDoc appdef.QName = appdef.NewQName("test", "CreateDoc")
-		cDocName     appdef.QName = appdef.NewQName("test", "CDoc")
+		cDocName appdef.QName = appdef.NewQName("test", "CDoc")
+
 		oDocName     appdef.QName = appdef.NewQName("test", "ODoc")
+		cmdCreateDoc appdef.QName = appdef.NewQName("test", "CreateDoc")
 
 		cmdCreateObj         appdef.QName = appdef.NewQName("test", "CreateObj")
 		cmdCreateObjUnlogged appdef.QName = appdef.NewQName("test", "CreateObjUnlogged")
@@ -59,7 +60,7 @@ func Test_ValidEvent(t *testing.T) {
 
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
-		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, appdef.NullQName, appdef.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, oDocName, appdef.NullQName, appdef.NullQName, NullCommandExec))
 		cfg.Resources.Add(NewCommandFunction(cmdCreateObj, oObjName, appdef.NullQName, appdef.NullQName, NullCommandExec))
 		cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, appdef.NullQName, oObjName, appdef.NullQName, NullCommandExec))
 		cfg.Resources.Add(NewCommandFunction(cmdCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
@@ -93,7 +94,7 @@ func Test_ValidEvent(t *testing.T) {
 		require.ErrorIs(err, ErrNameMissed)
 		validateErr := validateErrorf(0, "")
 		require.ErrorAs(err, &validateErr)
-		require.Equal(ECode_EmptyDefName, validateErr.Code())
+		require.Equal(ECode_EmptyTypeName, validateErr.Code())
 	})
 
 	t.Run("must failed build raw event if wrong event unlogged argument name", func(t *testing.T) {
@@ -120,7 +121,7 @@ func Test_ValidEvent(t *testing.T) {
 		require.ErrorIs(err, ErrWrongType)
 		validateErr := validateErrorf(0, "")
 		require.ErrorAs(err, &validateErr)
-		require.Equal(ECode_InvalidDefName, validateErr.Code())
+		require.Equal(ECode_InvalidTypeName, validateErr.Code())
 	})
 
 	t.Run("must failed build raw event if wrong filled unlogged argument name", func(t *testing.T) {
@@ -264,7 +265,7 @@ func Test_ValidEvent(t *testing.T) {
 		})
 	})
 
-	t.Run("test deprecate create command with CDoc argument, see #!17185", func(t *testing.T) {
+	t.Run("test allow to create operation document with ODoc argument, old style", func(t *testing.T) {
 		bld := app.Events().GetNewRawEventBuilder(
 			istructs.NewRawEventBuilderParams{
 				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
@@ -283,9 +284,9 @@ func Test_ValidEvent(t *testing.T) {
 		cmd.PutInt32("Int32", 29)
 		cmd.PutString("String", "string data")
 
-		t.Run("must failed build raw event", func(t *testing.T) {
+		t.Run("must ok build raw event", func(t *testing.T) {
 			rawEvent, err := bld.BuildRawEvent()
-			require.ErrorIs(err, ErrWrongType) // CDoc deprecated, ODoc or Object expected
+			require.NoError(err)
 			require.NotNil(rawEvent)
 		})
 	})
@@ -673,7 +674,7 @@ func Test_ValidCUD(t *testing.T) {
 		})
 		t.Run("must error if storage IDs is disabled", func(t *testing.T) {
 			err = cfg.validators.validCUD(&cud, false)
-			require.ErrorIs(err, ErrRawRecordIDExpected)
+			require.ErrorIs(err, ErrRawRecordIDRequired)
 		})
 	})
 
@@ -1052,7 +1053,7 @@ func Test_ValidateErrors(t *testing.T) {
 		require.ErrorIs(buildErr, ErrNameMissed)
 		validateErr := validateErrorf(0, "")
 		require.ErrorAs(buildErr, &validateErr)
-		require.Equal(ECode_EmptyDefName, validateErr.Code())
+		require.Equal(ECode_EmptyTypeName, validateErr.Code())
 	})
 
 	t.Run("ECode_InvalidDefName", func(t *testing.T) {
@@ -1073,56 +1074,7 @@ func Test_ValidateErrors(t *testing.T) {
 		require.ErrorIs(buildErr, ErrNameNotFound)
 		validateErr := validateErrorf(0, "")
 		require.ErrorAs(buildErr, &validateErr)
-		require.Equal(ECode_InvalidDefName, validateErr.Code())
-	})
-
-	t.Run("ECode_InvalidTypeKind", func(t *testing.T) {
-		var app istructs.IAppStructs
-
-		cDocName := appdef.NewQName("test", "CDoc")
-		cmdCreateDoc := appdef.NewQName("test", "CreateDoc")
-
-		t.Run("builds application", func(t *testing.T) {
-			appDef := appdef.New()
-
-			t.Run("must be ok to build application", func(t *testing.T) {
-				appDef.AddCDoc(cDocName).
-					AddField("Int32", appdef.DataKind_int32, false)
-			})
-
-			cfgs := make(AppConfigsType, 1)
-			cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
-			cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, appdef.NullQName, appdef.NullQName, NullCommandExec))
-
-			storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
-			require.NoError(err)
-			err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
-			require.NoError(err)
-
-			provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-
-			app, err = provider.AppStructs(istructs.AppQName_test1_app1)
-			require.NoError(err)
-		})
-
-		bld := app.Events().GetSyncRawEventBuilder(
-			istructs.SyncRawEventBuilderParams{
-				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-					HandlingPartition: test.partition,
-					PLogOffset:        test.plogOfs,
-					Workspace:         test.workspace,
-					WLogOffset:        test.wlogOfs,
-					QName:             cmdCreateDoc,
-					RegisteredAt:      test.registeredTime,
-				},
-				Device:   test.device,
-				SyncedAt: test.syncTime,
-			})
-		_, buildErr := bld.BuildRawEvent()
-		require.ErrorIs(buildErr, ErrWrongType)
-		validateErr := validateErrorf(0, "")
-		require.ErrorAs(buildErr, &validateErr)
-		require.Equal(ECode_InvalidTypeKind, validateErr.Code())
+		require.Equal(ECode_InvalidTypeName, validateErr.Code())
 	})
 
 	t.Run("ECode_EmptyFieldData", func(t *testing.T) {
@@ -1147,8 +1099,8 @@ func Test_ValidateErrors(t *testing.T) {
 	})
 
 	t.Run("ECode_InvalidRawRecordID", func(t *testing.T) {
-		bld := app.Events().GetSyncRawEventBuilder(
-			istructs.SyncRawEventBuilderParams{
+		bld := app.Events().GetNewRawEventBuilder(
+			istructs.NewRawEventBuilderParams{
 				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
 					HandlingPartition: test.partition,
 					PLogOffset:        test.plogOfs,
@@ -1156,19 +1108,16 @@ func Test_ValidateErrors(t *testing.T) {
 					WLogOffset:        test.wlogOfs,
 					QName:             test.saleCmdName,
 					RegisteredAt:      test.registeredTime,
-				},
-				Device:   test.device,
-				SyncedAt: test.syncTime,
-			})
+				}})
 		cmd := bld.ArgumentObjectBuilder()
 		cmd.PutRecordID(appdef.SystemField_ID, 100500100500)
 		cmd.PutString(test.buyerIdent, test.buyerValue)
 
 		_, buildErr := bld.BuildRawEvent()
-		require.ErrorIs(buildErr, ErrRawRecordIDExpected)
+		require.ErrorIs(buildErr, ErrRawRecordIDRequired)
 		validateErr := validateErrorf(0, "")
 		require.ErrorAs(buildErr, &validateErr)
-		require.Equal(ECode_InvalidRawRecordID, validateErr.Code())
+		require.Equal(ECode_InvalidRecordID, validateErr.Code())
 	})
 
 	t.Run("ECode_InvalidRecordID", func(t *testing.T) {
@@ -1189,8 +1138,8 @@ func Test_ValidateErrors(t *testing.T) {
 		cud := bld.CUDBuilder()
 		newRec := cud.Create(test.testCDoc)
 		newRec.PutRecordID(appdef.SystemField_ID, 1)
-		r := newTestCDoc(1)
-		_ = cud.Update(r)
+		newRec1 := cud.Create(test.testCDoc)
+		newRec1.PutRecordID(appdef.SystemField_ID, 1)
 
 		_, buildErr := bld.BuildRawEvent()
 		require.ErrorIs(buildErr, ErrRecordIDUniqueViolation)
@@ -1215,7 +1164,7 @@ func Test_ValidateErrors(t *testing.T) {
 					SyncedAt: test.syncTime,
 				})
 		}
-		t.Run("no record to update", func(t *testing.T) {
+		t.Run("update record with raw ID", func(t *testing.T) {
 			bld := eventBuilder()
 			cud := bld.CUDBuilder()
 			r := newTestCDoc(7)
@@ -1225,7 +1174,7 @@ func Test_ValidateErrors(t *testing.T) {
 			require.ErrorIs(buildErr, ErrRecordIDNotFound)
 			validateErr := validateErrorf(0, "")
 			require.ErrorAs(buildErr, &validateErr)
-			require.Equal(ECode_InvalidRefRecordID, validateErr.Code())
+			require.Equal(ECode_InvalidRecordID, validateErr.Code())
 		})
 		t.Run("0 value ref field", func(t *testing.T) {
 			bld := eventBuilder()
@@ -1288,13 +1237,13 @@ func Test_ValidateErrors(t *testing.T) {
 		cmd.PutString(test.buyerIdent, test.buyerValue)
 		bsk := cmd.ElementBuilder(test.basketIdent)
 		bsk.PutRecordID(appdef.SystemField_ID, 2)
-		_ = bsk.ElementBuilder("")
+		_ = bsk.ElementBuilder("unknown")
 
 		_, buildErr := bld.BuildRawEvent()
-		require.ErrorIs(buildErr, ErrNameMissed)
+		require.ErrorIs(buildErr, ErrNameNotFound)
 		validateErr := validateErrorf(0, "")
 		require.ErrorAs(buildErr, &validateErr)
-		require.Equal(ECode_EmptyElementName, validateErr.Code())
+		require.Equal(ECode_InvalidElementName, validateErr.Code())
 	})
 
 	t.Run("ECode_InvalidElementName", func(t *testing.T) {
