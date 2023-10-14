@@ -406,7 +406,7 @@ func validateEventCUD(ev *eventType, rec *recordType, part string) error {
 // # Validates specified view key.
 //
 // If partialClust specified then clustering columns row may be partially filled
-func validViewKey(key *keyType, partialClust bool) (err error) {
+func validateViewKey(key *keyType, partialClust bool) (err error) {
 	key.partRow.fields.Fields(
 		func(f appdef.IField) {
 			if !key.partRow.HasValue(f.Name()) {
@@ -429,7 +429,7 @@ func validViewKey(key *keyType, partialClust bool) (err error) {
 }
 
 // # Validates specified view value
-func validViewValue(value *valueType) (err error) {
+func validateViewValue(value *valueType) (err error) {
 	return validateRow(&value.rowType)
 }
 

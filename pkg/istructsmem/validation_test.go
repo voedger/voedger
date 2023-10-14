@@ -637,7 +637,7 @@ func Test_ValidCUD(t *testing.T) {
 		cud := makeCUD(cfg)
 		err := cud.build()
 		require.NoError(err)
-		err = cfg.validators.validCUD(&cud, false)
+		err = validateEventCUDs()
 		require.NoError(err)
 	})
 

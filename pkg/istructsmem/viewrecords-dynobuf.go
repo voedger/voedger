@@ -22,7 +22,7 @@ func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.
 	if err = k.build(); err != nil {
 		return nil, nil, nil, err
 	}
-	if err = vr.app.config.validators.validViewKey(k, false); err != nil {
+	if err = validateViewKey(k, false); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -30,7 +30,7 @@ func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.
 	if err = v.build(); err != nil {
 		return nil, nil, nil, err
 	}
-	if err = vr.app.config.validators.validViewValue(v); err != nil {
+	if err = validateViewValue(v); err != nil {
 		return nil, nil, nil, err
 	}
 
