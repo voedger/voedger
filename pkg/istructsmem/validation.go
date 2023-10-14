@@ -36,7 +36,7 @@ func validateEvent(ev *eventType) error {
 // For CUDs.Create() checks that IDs in sys.ParentID field and value in sys.Container are confirmable for target parent.
 func validateEventIDs(ev *eventType) error {
 
-	ids, err := validateEventArgsIDs(ev)
+	ids, err := validateObjectIDs(&ev.argObject, !ev.Synced())
 
 	err = errors.Join(err,
 		validateEventCUDsIDs(ev, ids))
@@ -44,42 +44,40 @@ func validateEventIDs(ev *eventType) error {
 	return err
 }
 
-// # Validates IDs in arguments of specified event.
+// # Validates IDs in specified object.
 //
 // Checks that IDs is unique.
 //
-// If event is not synced, then checks that raw IDs is only used.
+// If `rawID` specified, then checks that raw IDs is only used.
 //
 // Checks that ID references to created entities is valid, that is target ID known and has available QName.
 //
-// Returns raw IDs map and error(s) if any.
-func validateEventArgsIDs(ev *eventType) (ids map[istructs.RecordID]appdef.QName, err error) {
+// Returns IDs map and error(s) if any.
+func validateObjectIDs(obj *elementType, rawID bool) (ids map[istructs.RecordID]appdef.QName, err error) {
 	ids = make(map[istructs.RecordID]appdef.QName)
 
-	_ = ev.argObject.forEach(func(e *elementType) error {
+	_ = obj.forEach(func(e *elementType) error {
 		id := e.ID()
 		if id == istructs.NullRecordID {
-			// will be error in validateRow, if argument is ODoc or ORecord
 			return nil
 		}
 		if !id.IsRaw() {
-			if !ev.Synced() {
+			if rawID {
 				err = errors.Join(err,
-					// event «test.ODoc» should use raw record ID (not «123456789012345») in created ORecord «Rec: test.ORecord»
-					validateErrorf(ECode_InvalidRecordID, errRequiredRawID, ev.name, id, e, ErrRawRecordIDRequired))
+					// ODoc «test.ODocument» should use raw record ID (not «123456789012345») in created ORecord «Rec: test.ORecord»
+					validateErrorf(ECode_InvalidRecordID, errRequiredRawID, obj, id, e, ErrRawRecordIDRequired))
 			}
-			return nil
 		}
 		if _, exists := ids[id]; exists {
 			err = errors.Join(err,
-				// event «test.ODocument» repeatedly uses record ID «1» in ORecord «ORec: test.ORecord»
-				validateErrorf(ECode_InvalidRecordID, errRepeatedID, ev.name, id, e, ErrRecordIDUniqueViolation))
+				// ODoc «test.ODocument» repeatedly uses record ID «1» in ORecord «ORec: test.ORecord»
+				validateErrorf(ECode_InvalidRecordID, errRepeatedID, obj, id, e, ErrRecordIDUniqueViolation))
 		}
 		ids[id] = e.QName()
 		return nil
 	})
 
-	_ = ev.argObject.forEach(func(e *elementType) error {
+	_ = obj.forEach(func(e *elementType) error {
 		e.fields.RefFields(func(fld appdef.IRefField) {
 			if id := e.AsRecordID(fld.Name()); id != istructs.NullRecordID {
 				target, exists := ids[id]
@@ -130,13 +128,13 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]appdef.QName)
 			if !ev.Synced() {
 				err = errors.Join(err,
 					// event «sys.CUD» should use raw record ID (not «123456789012345») in created CRecord «Rec: test.CRecord»
-					validateErrorf(ECode_InvalidRecordID, errRequiredRawID, ev.name, id, rec, ErrRawRecordIDRequired))
+					validateErrorf(ECode_InvalidRecordID, errRequiredRawID, ev, id, rec, ErrRawRecordIDRequired))
 			}
 		}
 		if _, exists := ids[id]; exists {
 			err = errors.Join(err,
 				// event «sys.CUD» repeatedly uses record ID «1» in CRecord «CRec: test.CRecord»
-				validateErrorf(ECode_InvalidRecordID, errRepeatedID, ev.name, id, rec, ErrRecordIDUniqueViolation))
+				validateErrorf(ECode_InvalidRecordID, errRepeatedID, ev, id, rec, ErrRecordIDUniqueViolation))
 		}
 		ids[id] = rec.QName()
 
@@ -144,18 +142,25 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]appdef.QName)
 			if id, ok := st[cDoc.QName()]; ok {
 				err = errors.Join(err,
 					// event «sys.CUD» repeatedly creates then same singleton CDoc «test.CDoc» (raw record ID «1» and «2»)
-					validateErrorf(ECode_InvalidRecordID, errRepeatedSingletonCreation, ev.name, cDoc, id, rec.id, ErrRecordIDUniqueViolation))
+					validateErrorf(ECode_InvalidRecordID, errRepeatedSingletonCreation, ev, cDoc, id, rec.id, ErrRecordIDUniqueViolation))
 			}
 			st[cDoc.QName()] = rec.id
 		}
 	}
 
 	for _, rec := range ev.cud.updates {
-		if id := rec.changes.ID(); id.IsRaw() {
+		id := rec.changes.ID()
+		if id.IsRaw() {
 			err = errors.Join(err,
 				// event «sys.CUD» unexpectedly uses raw record ID «1» in updated CRRecord «CRec: test.CRecord»
-				validateErrorf(ECode_InvalidRecordID, errUnexpectedRawID, ev.name, id, rec, ErrRawRecordIDUnexpected))
+				validateErrorf(ECode_InvalidRecordID, errUnexpectedRawID, ev, id, rec, ErrRawRecordIDUnexpected))
 		}
+		if _, exists := ids[id]; exists {
+			err = errors.Join(err,
+				// event «sys.CUD» repeatedly uses record ID «1» in CRecord «CRec: test.CRecord»
+				validateErrorf(ECode_InvalidRecordID, errRepeatedID, ev, id, rec, ErrRecordIDUniqueViolation))
+		}
+		ids[id] = rec.changes.QName()
 	}
 
 	checkRefs := func(rec *recordType) (err error) {
@@ -227,7 +232,7 @@ func validateEventArgs(ev *eventType) (err error) {
 	if ev.argObject.QName() != arg {
 		err = errors.Join(err,
 			// event «test.CreateDoc» command argument uses wrong type «test.ODocument», expected «test.ODocument1»
-			validateErrorf(ECode_InvalidTypeName, errEventArgUseWrongType, ev.name, ev.argObject.QName(), arg, ErrWrongType))
+			validateErrorf(ECode_InvalidTypeName, errEventArgUseWrongType, ev, ev.argObject.QName(), arg, ErrWrongType))
 	} else {
 		if ev.argObject.QName() != appdef.NullQName {
 			err = errors.Join(err,
@@ -238,7 +243,7 @@ func validateEventArgs(ev *eventType) (err error) {
 	if ev.argUnlObj.QName() != argUnl {
 		err = errors.Join(err,
 			// event «test.CreateDoc» command unlogged argument uses wrong type «test.Object», expected «test.Object1»
-			validateErrorf(ECode_InvalidTypeName, errEventUnloggedArgUseWrongType, ev.name, ev.argUnlObj.QName(), argUnl, ErrWrongType))
+			validateErrorf(ECode_InvalidTypeName, errEventUnloggedArgUseWrongType, ev, ev.argUnlObj.QName(), argUnl, ErrWrongType))
 	} else {
 		if ev.argUnlObj.QName() != appdef.NullQName {
 			err = errors.Join(err,
@@ -367,27 +372,14 @@ func validateRow(row *rowType) (err error) {
 func validateEventCUDs(ev *eventType) (err error) {
 	if ev.cud.empty() {
 		if ev.name == istructs.QNameCommandCUD {
-			return validateErrorf(ECode_EEmptyCUDs, errCUDsMissed, ev.name, ErrCUDsMissed)
+			return validateErrorf(ECode_EEmptyCUDs, errCUDsMissed, ev, ErrCUDsMissed)
 		}
 		return nil
 	}
 
-	ids := make(map[istructs.RecordID]bool)
-
 	for _, rec := range ev.cud.creates {
 		err = errors.Join(err,
 			validateEventCUD(ev, rec, "Create"))
-		if ev.Synced() {
-			// sync event has not raw IDs in CUD.Create()
-			if id := rec.ID(); !id.IsRaw() {
-				if _, exists := ids[id]; exists {
-					err = errors.Join(err,
-						// event «sys.CUD» CUDs has multiply changes for CRecord «Rec: test.CRecord» with ID «123456789012345»
-						validateErrorf(ECode_InvalidRecordID, errRepeatedIDInCUD, ev.name, rec, id, ErrRecordIDUniqueViolation))
-				}
-				ids[id] = true
-			}
-		}
 	}
 
 	for _, rec := range ev.cud.updates {
@@ -407,7 +399,7 @@ func validateEventCUD(ev *eventType, rec *recordType, part string) error {
 		return validateRow(&rec.rowType)
 	default:
 		// event «sys.CUD» CUD.Create() [record ID «1»] ORec «test.ORecord» has invalid type kind: %w"
-		return validateErrorf(ECode_InvalidTypeKind, errInvalidTypeKindInCUD, ev.name, part, rec.ID(), rec, ErrUnexpectedTypeKind)
+		return validateErrorf(ECode_InvalidTypeKind, errInvalidTypeKindInCUD, ev, part, rec.ID(), rec, ErrUnexpectedTypeKind)
 	}
 }
 

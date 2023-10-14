@@ -298,6 +298,14 @@ func (ev *eventType) Release() {
 	ev.RefCounter.Release()
 }
 
+// # Return event name, such as `event «sys.CUD»` or `event «test.ODocument»`
+func (ev *eventType) String() string {
+	if ev.name == appdef.NullQName {
+		return "null event"
+	}
+	return fmt.Sprintf("event «%v»", ev.name)
+}
+
 // istructs.IAbstractEvent.Synced
 func (ev *eventType) Synced() bool {
 	return ev.sync
@@ -638,12 +646,14 @@ func (upd *updateRecType) release() {
 	upd.result.release()
 }
 
-// elementType implements object and element (as part of object) structure
-//   - interfaces:
-//     — istructs.IObjectBuilder
-//     — istructs.IElementBuilder
-//     — istructs.IObject,
-//     — istructs.IElement
+// # Implements object and element (as part of object) structure
+//
+// # Implements:
+//
+//   - istructs.IObjectBuilder
+//   - istructs.IElementBuilder
+//   - istructs.IObject,
+//   - istructs.IElement
 type elementType struct {
 	recordType
 	parent *elementType
@@ -813,12 +823,31 @@ func (el *elementType) Containers(cb func(container string)) {
 	}
 }
 
-// istructs.IObjectBuilder.Build()
-func (el *elementType) Build() (doc istructs.IObject, err error) {
-	if err = el.build(); err != nil {
+// # Implements istructs.IObjectBuilder.Build()
+//
+// Builds and returns object or document.
+//
+//	If builded object type is not found in appdef then returns error.
+//	If builded object type is not object or document then returns error.
+//	If builded object is not valid then returns validation error.
+func (el *elementType) Build() (istructs.IObject, error) {
+	if err := el.build(); err != nil {
 		return nil, err
 	}
-	if err = el.appCfg.validators.validArgument(el); err != nil {
+	if el.QName() == appdef.NullQName {
+		return nil, fmt.Errorf("object builder has empty type name: %w", ErrNameMissed)
+	}
+	if t := el.typ.Kind(); (t != appdef.TypeKind_Object) &&
+		(t != appdef.TypeKind_ODoc) &&
+		(t != appdef.TypeKind_GDoc) &&
+		(t != appdef.TypeKind_CDoc) &&
+		(t != appdef.TypeKind_WDoc) {
+		return nil, fmt.Errorf("object builder has type wrong (not an object or document) type %v: %w", el, ErrUnexpectedTypeKind)
+	}
+	if _, err := validateObjectIDs(el, false); err != nil {
+		return nil, err
+	}
+	if err := validateElement(el); err != nil {
 		return nil, err
 	}
 
