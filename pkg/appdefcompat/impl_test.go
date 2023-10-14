@@ -20,6 +20,9 @@ var oldFS embed.FS
 //go:embed sql/new.sql
 var newFS embed.FS
 
+//go:embed sql/new2.sql
+var newFS2 embed.FS
+
 func getSysPackageAST(file parser.IReadFS) *parser.PackageSchemaAST {
 	pkgSys, err := parser.ParsePackageDir(appdef.SysPackage, file, "sql")
 	if err != nil {
@@ -36,6 +39,64 @@ func Test_Basic(t *testing.T) {
 
 	newPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{
 		getSysPackageAST(newFS),
+	})
+	require.NoError(t, err)
+
+	oldBuilder := appdef.New()
+	require.NoError(t, parser.BuildAppDefs(oldPackages, oldBuilder))
+
+	newBuilder := appdef.New()
+	require.NoError(t, parser.BuildAppDefs(newPackages, newBuilder))
+
+	oldAppDef, err := oldBuilder.Build()
+	require.NoError(t, err)
+
+	newAppDef, err := newBuilder.Build()
+	require.NoError(t, err)
+
+	expectedErrors := []CompatibilityError{
+		{OldTreePath: []string{"AppDef", "Types", "sys.Profile", "Types", "sys.ProfileTable"}, ErrorType: ErrorTypeNodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Password"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Email"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "Login"}, ErrorType: ErrorTypeNodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileCluster"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileToken"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields"}, ErrorType: ErrorTypeNodeInserted},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.SomeTable"}, ErrorType: ErrorTypeNodeRemoved},
+	}
+	compatErrors := CheckBackwardCompatibility(oldAppDef, newAppDef)
+	validateCompatibilityErrors(t, expectedErrors, compatErrors)
+
+	// testing ignoring some compatibility errors
+	expectedFilteredErrors := []CompatibilityError{
+		{OldTreePath: []string{"AppDef", "Types", "sys.Profile", "Types", "sys.ProfileTable"}, ErrorType: ErrorTypeNodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Password"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Email"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "Login"}, ErrorType: ErrorTypeNodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileCluster"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields"}, ErrorType: ErrorTypeNodeInserted},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.SomeTable"}, ErrorType: ErrorTypeNodeRemoved},
+	}
+
+	pathsToIgnore := [][]string{
+		{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileToken"},
+	}
+	filteredCompatErrors := IgnoreCompatibilityErrors(compatErrors, pathsToIgnore)
+	validateCompatibilityErrors(t, expectedFilteredErrors, filteredCompatErrors)
+}
+
+func Test_Basic2(t *testing.T) {
+	oldPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{
+		getSysPackageAST(oldFS),
+	})
+	require.NoError(t, err)
+
+	newPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{
+		getSysPackageAST(newFS2),
 	})
 	require.NoError(t, err)
 

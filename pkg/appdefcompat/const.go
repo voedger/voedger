@@ -14,6 +14,7 @@ const (
 	ConstraintAppendOnly    Constraint = "ConstraintAppendOnly"
 	ConstraintInsertOnly    Constraint = "ConstraintInsertOnly"
 	ConstraintNonModifiable Constraint = "ConstraintNonModifiable"
+	ConstraintChangeAllowed Constraint = "ConstraintChangeAllowed"
 )
 
 const (
@@ -21,4 +22,21 @@ const (
 	ErrorTypeOrderChanged ErrorType = "OrderChanged"
 	ErrorTypeNodeInserted ErrorType = "NodeInserted"
 	ErrorTypeValueChanged ErrorType = "ValueChanged"
+)
+
+const (
+	NodeNameTypes           = "Types"
+	NodeNameFields          = "Fields"
+	NodeNameUniqueFields    = "UniqueFields"
+	NodeNameAbstract        = "Abstract"
+	NodeNameParent          = "Parent"
+	NodeNameContainers      = "Containers"
+	NodeNameAppDef          = "AppDef"
+	NodeNameDescriptor      = "Descriptor"
+	NodeNamePartKeyFields   = "PartKeyFields"
+	NodeNameClustColsFields = "ClustColsFields"
+	NodeNameArgs            = "Args"
+	NodeNameResult          = "Result"
+	NodeNameInherits        = "Inherits"
+	NodeNameUnloggedArgs    = "UnloggedArgs"
 )

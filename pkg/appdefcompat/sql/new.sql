@@ -33,6 +33,9 @@ ABSTRACT WORKSPACE Workspace (
         D varchar, -- NodeInserted
         C int32 -- ValueChanged: varchar in old version, int32 in new version
     );
+    TABLE NewTable INHERITS CDoc(
+        A varchar
+    );
     EXTENSION ENGINE BUILTIN (
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
     )
