@@ -53,7 +53,6 @@ type AppConfigType struct {
 	Params AppConfigParams
 
 	dynoSchemes *dynobuf.DynoBufSchemes
-	validators  *validators
 
 	storage                 istorage.IAppStorage // will be initialized on prepare()
 	versions                *vers.Versions
@@ -90,7 +89,6 @@ func newAppConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppC
 	cfg.Resources = newResources(&cfg)
 
 	cfg.dynoSchemes = dynobuf.New()
-	cfg.validators = newValidators()
 
 	cfg.versions = vers.New()
 	cfg.qNames = qnames.New()
@@ -123,7 +121,6 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	}
 
 	cfg.dynoSchemes.Prepare(cfg.AppDef)
-	cfg.validators.prepare(cfg.AppDef)
 
 	// prepare IAppStorage
 	cfg.storage = appStorage

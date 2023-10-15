@@ -764,48 +764,40 @@ func Test_ValidSysCudEvent(t *testing.T) {
 			require.ErrorContains(err, "refers to record ID «1» that has unavailable target QName «test.document»")
 		})
 
-		t.Run("must error if ParentID causes invalid references", func(t *testing.T) {
+		t.Run("must error if sys.Parent / sys.Container causes invalid hierarchy", func(t *testing.T) {
 
 			t.Run("must error if container unknown for specified ParentID", func(t *testing.T) {
-				cud := makeCUD(cfg)
+				e := cudRawEvent(false)
+				d := e.CUDBuilder().Create(docName)
+				d.PutRecordID(appdef.SystemField_ID, 1)
+				d.PutInt32("int32Field", 1)
 
-				c1 := cud.Create(docName)
-				c1.PutRecordID(appdef.SystemField_ID, 1)
-				c1.PutInt32("int32Field", 7)
+				c := e.CUDBuilder().Create(rec1Name)
+				c.PutRecordID(appdef.SystemField_ID, 2)
+				c.PutRecordID(appdef.SystemField_ParentID, 1)
+				c.PutInt32("int32Field", 1)
+				c.PutString(appdef.SystemField_Container, "childElement") // <- error here
 
-				c2 := cud.Create(rec1Name)
-				c2.PutString(appdef.SystemField_Container, "childElement")
-				c2.PutRecordID(appdef.SystemField_ID, 2)
-				c2.PutRecordID(appdef.SystemField_ParentID, 1)
-				c2.PutInt32("int32Field", 7)
-
-				err := cud.build()
-				require.NoError(err)
-
-				err = cfg.validators.validCUD(&cud, false)
+				_, err := e.BuildRawEvent()
 				require.ErrorIs(err, ErrWrongRecordID)
 				require.ErrorContains(err, "has no container «childElement»")
 			})
 
 			t.Run("must error if specified container has another QName", func(t *testing.T) {
-				cud := makeCUD(cfg)
+				e := cudRawEvent(false)
+				d := e.CUDBuilder().Create(docName)
+				d.PutRecordID(appdef.SystemField_ID, 1)
+				d.PutInt32("int32Field", 1)
 
-				c1 := cud.Create(docName)
-				c1.PutRecordID(appdef.SystemField_ID, 1)
-				c1.PutInt32("int32Field", 7)
+				c := e.CUDBuilder().Create(rec1Name)
+				c.PutRecordID(appdef.SystemField_ID, 2)
+				c.PutRecordID(appdef.SystemField_ParentID, 1)
+				c.PutInt32("int32Field", 1)
+				c.PutString(appdef.SystemField_Container, "childAgain") // <- error here
 
-				c2 := cud.Create(rec1Name)
-				c2.PutString(appdef.SystemField_Container, "childAgain")
-				c2.PutRecordID(appdef.SystemField_ID, 2)
-				c2.PutRecordID(appdef.SystemField_ParentID, 1)
-				c2.PutInt32("int32Field", 7)
-
-				err := cud.build()
-				require.NoError(err)
-
-				err = cfg.validators.validCUD(&cud, false)
+				_, err := e.BuildRawEvent()
 				require.ErrorIs(err, ErrWrongRecordID)
-				require.ErrorContains(err, "container «childAgain», which has another QName «test.record2»")
+				require.ErrorContains(err, "container «childAgain» has another QName «test.record2»")
 			})
 		})
 	})
