@@ -31,7 +31,7 @@ while [ $# -gt 0 ]; do
 # Get the ID of the node with the specified IP address
 node_id=$(ssh $SSH_OPTIONS $SSH_USER@$MANAGER "docker node ls --format '{{.ID}}' | while read id; do docker node inspect --format '{{.Status.Addr}} {{.ID}}' \$id; done | grep $1 | awk '{print \$2}'")
   if [[ -n "$node_id" ]]; then
-    ssh $SSH_OPTIONS $SSH_USER@$MANAGER "docker node demote $node_id && docker node rm $node_id"
+    ssh $SSH_OPTIONS $SSH_USER@$MANAGER "docker node demote $node_id && docker node rm -f $node_id"
   fi
 
 shift

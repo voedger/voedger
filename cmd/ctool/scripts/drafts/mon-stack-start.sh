@@ -10,7 +10,7 @@ set -euo pipefail
 set -x
 
 if [[ $# -ne 2 ]]; then
-  echo "Usage: $0 <AppNode1> <AppNode2>" 
+  echo "Usage: $0 <app-node-1> <app-node-2>"
   exit 1
 fi
 
@@ -21,7 +21,7 @@ AppNode1=$1
 AppNode2=$2
 
 cat ./docker-compose-mon.yml | \
-    sed "s/{{.AppNode1}}/$AppNode1/g; s/{{.AppNode2}}/$AppNode2/g" \
+    sed "s/{{.AppNode1}}/AppNode1/g; s/{{.AppNode2}}/AppNode2/g" \
     | ssh $SSH_OPTIONS $SSH_USER@$AppNode1 'cat > ~/docker-compose-mon.yml'
 
 ssh $SSH_OPTIONS $SSH_USER@$AppNode1 "docker stack deploy --compose-file ~/docker-compose-mon.yml MonDockerStack"
