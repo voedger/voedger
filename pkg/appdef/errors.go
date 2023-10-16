@@ -18,11 +18,15 @@ var ErrNameNotFound = errors.New("name not found")
 
 var ErrInvalidQNameStringRepresentation = errors.New("invalid string representation of qualified name")
 
-var ErrInvalidDefKind = errors.New("invalid definition kind")
+var ErrInvalidTypeKind = errors.New("invalid type kind")
 
 var ErrVerificationKindMissed = errors.New("verification kind is missed")
 
 var ErrTooManyFields = errors.New("too many fields")
+
+var ErrMaxFieldLengthExceeds = errors.New("too large field length")
+
+var ErrIncompatibleRestricts = errors.New("incompatible restricts")
 
 var ErrTooManyContainers = errors.New("too many containers")
 

@@ -20,15 +20,15 @@ func provideCmdInitiateJoinWorkspace(cfg *istructsmem.AppConfigType, appDefBuild
 		qNameCmdInitiateJoinWorkspace,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateJoinWorkspaceParams")).
 			AddField(field_InviteID, appdef.DataKind_RecordID, true).
-			AddField(field_VerificationCode, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_VerificationCode, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdInitiateJoinWorkspace(timeFunc),
 	))
 }
 
-func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
 		skbCDocInvite, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
 		if err != nil {
 			return

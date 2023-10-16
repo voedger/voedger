@@ -85,7 +85,8 @@ type (
 		queryPhotoFunctionParamsName appdef.QName
 
 		// tested rows
-		testRow appdef.QName
+		abstractCDoc appdef.QName
+		testRow      appdef.QName
 
 		// tested records
 		testCDoc appdef.QName
@@ -96,10 +97,10 @@ type (
 	}
 
 	testViewRecordType struct {
-		name, valueName appdef.QName
-		partFields      testViewRecordPartKeyFieldsType
-		ccolsFields     testViewRecordClustKeyFieldsType
-		valueFields     testViewRecordValueFieldsType
+		name        appdef.QName
+		partFields  testViewRecordPartKeyFieldsType
+		ccolsFields testViewRecordClustKeyFieldsType
+		valueFields testViewRecordValueFieldsType
 	}
 
 	testViewRecordPartKeyFieldsType struct {
@@ -182,9 +183,10 @@ var testData = testDataType{
 	queryPhotoFunctionName:       appdef.NewQName("test", "QueryPhoto"),
 	queryPhotoFunctionParamsName: appdef.NewQName("test", "QueryPhotoParams"),
 
-	testRow:  appdef.NewQName("test", "Row"),
-	testCDoc: appdef.NewQName("test", "CDoc"),
-	testCRec: appdef.NewQName("test", "Record"),
+	abstractCDoc: appdef.NewQName("test", "abstract"),
+	testRow:      appdef.NewQName("test", "Row"),
+	testCDoc:     appdef.NewQName("test", "CDoc"),
+	testCRec:     appdef.NewQName("test", "Record"),
 
 	testViewRecord: testViewRecordType{
 		name: appdef.NewQName("test", "ViewPhotos"),
@@ -214,65 +216,73 @@ func test() *testDataType {
 		appDef := appdef.New()
 
 		{
-			saleParamsDef := appDef.AddODoc(testData.saleCmdDocName)
-			saleParamsDef.
-				AddField(testData.buyerIdent, appdef.DataKind_string, true).
+			saleParams := appDef.AddODoc(testData.saleCmdDocName)
+			saleParams.
+				AddStringField(testData.buyerIdent, true, appdef.MinLen(1), appdef.MaxLen(50)).
 				AddField(testData.ageIdent, appdef.DataKind_int32, false).
 				AddField(testData.heightIdent, appdef.DataKind_float32, false).
 				AddField(testData.humanIdent, appdef.DataKind_bool, false).
-				AddField(testData.photoIdent, appdef.DataKind_bytes, false)
-			saleParamsDef.
+				AddBytesField(testData.photoIdent, false, appdef.MaxLen(1024))
+			saleParams.
 				AddContainer(testData.basketIdent, appdef.NewQName(testData.pkgName, testData.basketIdent), 1, 1)
 
-			basketDef := appDef.AddORecord(appdef.NewQName(testData.pkgName, testData.basketIdent))
-			basketDef.
+			basket := appDef.AddORecord(appdef.NewQName(testData.pkgName, testData.basketIdent))
+			basket.
 				AddContainer(testData.goodIdent, appdef.NewQName(testData.pkgName, testData.goodIdent), 0, appdef.Occurs_Unbounded)
 
-			goodDef := appDef.AddORecord(appdef.NewQName(testData.pkgName, testData.goodIdent))
-			goodDef.
+			good := appDef.AddORecord(appdef.NewQName(testData.pkgName, testData.goodIdent))
+			good.
 				AddField(testData.saleIdent, appdef.DataKind_RecordID, true).
-				AddField(testData.nameIdent, appdef.DataKind_string, true).
+				AddStringField(testData.nameIdent, true, appdef.MinLen(1)).
 				AddField(testData.codeIdent, appdef.DataKind_int64, true).
 				AddField(testData.weightIdent, appdef.DataKind_float64, false)
 
-			saleSecureParamsDef := appDef.AddObject(testData.saleSecureParsName)
-			saleSecureParamsDef.
-				AddField(testData.passwordIdent, appdef.DataKind_string, true)
+			saleSecureParams := appDef.AddObject(testData.saleSecureParsName)
+			saleSecureParams.
+				AddStringField(testData.passwordIdent, true)
 
-			photoParamsDef := appDef.AddObject(testData.queryPhotoFunctionParamsName)
-			photoParamsDef.
-				AddField(testData.buyerIdent, appdef.DataKind_string, true)
+			photoParams := appDef.AddObject(testData.queryPhotoFunctionParamsName)
+			photoParams.
+				AddStringField(testData.buyerIdent, true, appdef.MinLen(1), appdef.MaxLen(50))
 		}
 
 		{
-			recDef := appDef.AddCDoc(testData.tablePhotos)
-			recDef.
-				AddField(testData.buyerIdent, appdef.DataKind_string, true).
+			rec := appDef.AddCDoc(testData.tablePhotos)
+			rec.
+				AddStringField(testData.buyerIdent, true, appdef.MinLen(1), appdef.MaxLen(50)).
 				AddField(testData.ageIdent, appdef.DataKind_int32, false).
 				AddField(testData.heightIdent, appdef.DataKind_float32, false).
 				AddField(testData.humanIdent, appdef.DataKind_bool, false).
-				AddField(testData.photoIdent, appdef.DataKind_bytes, false)
-			recDef.
+				AddBytesField(testData.photoIdent, false, appdef.MaxLen(1024))
+			rec.
 				AddUnique("", []string{testData.buyerIdent})
-			recDef.
+			rec.
 				AddContainer(testData.remarkIdent, testData.tablePhotoRems, 0, appdef.Occurs_Unbounded)
 
-			recChildDef := appDef.AddCRecord(testData.tablePhotoRems)
-			recChildDef.
+			recChild := appDef.AddCRecord(testData.tablePhotoRems)
+			recChild.
 				AddField(testData.photoIdent, appdef.DataKind_RecordID, true).
-				AddField(testData.remarkIdent, appdef.DataKind_string, true).
-				AddField(testData.emptinessIdent, appdef.DataKind_string, false)
+				AddStringField(testData.remarkIdent, true, appdef.MaxLen(1024)).
+				AddStringField(testData.emptinessIdent, false)
 		}
 
 		{
-			rowDef := appDef.AddElement(testData.testRow)
-			rowDef.
+			abstractDoc := appDef.AddCDoc(testData.abstractCDoc)
+			abstractDoc.SetComment("abstract test cdoc")
+			abstractDoc.SetAbstract()
+			abstractDoc.
+				AddField("int32", appdef.DataKind_int32, false)
+		}
+
+		{
+			row := appDef.AddElement(testData.testRow)
+			row.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
 				AddField("float32", appdef.DataKind_float32, false).
 				AddField("float64", appdef.DataKind_float64, false).
-				AddField("bytes", appdef.DataKind_bytes, false).
-				AddField("string", appdef.DataKind_string, false).
+				AddBytesField("bytes", false).
+				AddStringField("string", false).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false).
@@ -280,48 +290,49 @@ func test() *testDataType {
 		}
 
 		{
-			cDocDef := appDef.AddCDoc(testData.testCDoc)
-			cDocDef.
+			cDoc := appDef.AddCDoc(testData.testCDoc)
+			cDoc.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
 				AddField("float32", appdef.DataKind_float32, false).
 				AddField("float64", appdef.DataKind_float64, false).
-				AddField("bytes", appdef.DataKind_bytes, false).
-				AddField("string", appdef.DataKind_string, false).
+				AddBytesField("bytes", false).
+				AddStringField("string", false).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false)
-			cDocDef.
+			cDoc.
 				AddContainer("record", testData.testCRec, 0, appdef.Occurs_Unbounded)
 
-			cRecDef := appDef.AddCRecord(testData.testCRec)
-			cRecDef.
+			cRec := appDef.AddCRecord(testData.testCRec)
+			cRec.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
 				AddField("float32", appdef.DataKind_float32, false).
 				AddField("float64", appdef.DataKind_float64, false).
-				AddField("bytes", appdef.DataKind_bytes, false).
-				AddField("string", appdef.DataKind_string, false).
+				AddBytesField("bytes", false).
+				AddStringField("string", false).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false)
 		}
 
 		{
-			viewDef := appDef.AddView(testData.testViewRecord.name)
-			viewDef.
-				AddPartField(testData.testViewRecord.partFields.partition, appdef.DataKind_int32).
-				AddPartField(testData.testViewRecord.partFields.workspace, appdef.DataKind_int64).
-				AddClustColumn(testData.testViewRecord.ccolsFields.device, appdef.DataKind_int32).
-				AddClustColumn(testData.testViewRecord.ccolsFields.sorter, appdef.DataKind_string).
-				AddValueField(testData.testViewRecord.valueFields.buyer, appdef.DataKind_string, true).
-				AddValueField(testData.testViewRecord.valueFields.age, appdef.DataKind_int32, false).
-				AddValueField(testData.testViewRecord.valueFields.heights, appdef.DataKind_float32, false).
-				AddValueField(testData.testViewRecord.valueFields.human, appdef.DataKind_bool, false).
-				AddValueField(testData.testViewRecord.valueFields.photo, appdef.DataKind_bytes, false).
-				AddValueField(testData.testViewRecord.valueFields.record, appdef.DataKind_Record, false).
-				AddValueField(testData.testViewRecord.valueFields.event, appdef.DataKind_Event, false)
-			testData.testViewRecord.valueName = viewDef.Value().QName()
+			view := appDef.AddView(testData.testViewRecord.name)
+			view.KeyBuilder().PartKeyBuilder().
+				AddField(testData.testViewRecord.partFields.partition, appdef.DataKind_int32).
+				AddField(testData.testViewRecord.partFields.workspace, appdef.DataKind_int64)
+			view.KeyBuilder().ClustColsBuilder().
+				AddField(testData.testViewRecord.ccolsFields.device, appdef.DataKind_int32).
+				AddStringField(testData.testViewRecord.ccolsFields.sorter, 100)
+			view.ValueBuilder().
+				AddStringField(testData.testViewRecord.valueFields.buyer, true).
+				AddField(testData.testViewRecord.valueFields.age, appdef.DataKind_int32, false).
+				AddField(testData.testViewRecord.valueFields.heights, appdef.DataKind_float32, false).
+				AddField(testData.testViewRecord.valueFields.human, appdef.DataKind_bool, false).
+				AddBytesField(testData.testViewRecord.valueFields.photo, false, appdef.MaxLen(1024)).
+				AddField(testData.testViewRecord.valueFields.record, appdef.DataKind_Record, false).
+				AddField(testData.testViewRecord.valueFields.event, appdef.DataKind_Event, false)
 		}
 
 		return appDef
@@ -357,7 +368,7 @@ func newEmptyTestRow() (row *rowType) {
 	test := test()
 	r := newRow(test.AppCfg)
 	r.setQName(test.testRow)
-	return &r
+	return r
 }
 
 func newTestRow() (row *rowType) {
@@ -365,8 +376,8 @@ func newTestRow() (row *rowType) {
 	r := newRow(test.AppCfg)
 	r.setQName(test.testRow)
 
-	fillTestRow(&r)
-	return &r
+	fillTestRow(r)
+	return r
 }
 
 func fillTestRow(row *rowType) {
@@ -469,15 +480,15 @@ func newTestCRecord(id istructs.RecordID) *recordType {
 	test := test()
 	rec := newRecord(test.AppCfg)
 	rec.setQName(test.testCRec)
-	fillTestCRecord(&rec, id)
-	return &rec
+	fillTestCRecord(rec, id)
+	return rec
 }
 
 func newEmptyTestCRecord() *recordType {
 	test := test()
 	rec := newRecord(test.AppCfg)
 	rec.setQName(test.testCRec)
-	return &rec
+	return rec
 }
 
 func fillTestCRecord(rec *recordType, id istructs.RecordID) {
@@ -496,15 +507,15 @@ func newTestCDoc(id istructs.RecordID) *recordType {
 	test := test()
 	rec := newRecord(test.AppCfg)
 	rec.setQName(test.testCDoc)
-	fillTestCDoc(&rec, id)
-	return &rec
+	fillTestCDoc(rec, id)
+	return rec
 }
 
 func newEmptyTestCDoc() *recordType {
 	test := test()
 	rec := newRecord(test.AppCfg)
 	rec.setQName(test.testCDoc)
-	return &rec
+	return rec
 }
 
 func fillTestCDoc(doc *recordType, id istructs.RecordID) {
@@ -661,7 +672,6 @@ func fillTestEvent(ev *eventType) {
 	fillTestObject(&ev.argObject)
 	fillTestSecureObject(&ev.argUnlObj)
 	fillTestCUD(&ev.cud)
-	// fill_test_CUD(&ev.resCUD) TODO:
 
 	err := ev.build()
 	if err != nil {
@@ -706,24 +716,20 @@ func newEmptyTestEvent() *eventType {
 	return ev
 }
 
-func newEmptyViewValue() (val *rowType) {
+func newEmptyTestViewValue() *valueType {
 	test := test()
-	v := newRow(test.AppCfg)
-	v.setQName(test.testViewRecord.valueName)
-	return &v
+	return newValue(test.AppCfg, test.testViewRecord.name)
 }
 
-func newTestViewValue() (val *rowType) {
-	test := test()
-	v := newRow(test.AppCfg)
+func newTestViewValue() *valueType {
+	v := newEmptyTestViewValue()
 
-	v.setQName(test.testViewRecord.valueName)
-	fillTestViewValue(&v)
+	fillTestViewValue(v)
 
-	return &v
+	return v
 }
 
-func fillTestViewValue(value *rowType) {
+func fillTestViewValue(value *valueType) {
 	test := test()
 
 	value.PutString(test.testViewRecord.valueFields.buyer, test.buyerValue)

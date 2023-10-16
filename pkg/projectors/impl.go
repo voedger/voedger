@@ -11,7 +11,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -112,7 +112,7 @@ type eventService struct {
 
 func (s *eventService) getWSID() istructs.WSID { return s.event.Workspace() }
 
-func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc ViewDefBuilder) {
+func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc ViewTypeBuilder) {
 	builder := appDef.AddView(qname)
 	if buildFunc != nil {
 		buildFunc(builder)
@@ -120,8 +120,8 @@ func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildF
 }
 
 func provideOffsetsDefImpl(appDef appdef.IAppDefBuilder) {
-	def := appDef.AddView(qnameProjectionOffsets)
-	def.AddPartField(partitionFld, appdef.DataKind_int32)
-	def.AddClustColumn(projectorNameFld, appdef.DataKind_QName)
-	def.AddValueField(offsetFld, appdef.DataKind_int64, true)
+	view := appDef.AddView(qnameProjectionOffsets)
+	view.KeyBuilder().PartKeyBuilder().AddField(partitionFld, appdef.DataKind_int32)
+	view.KeyBuilder().ClustColsBuilder().AddField(projectorNameFld, appdef.DataKind_QName)
+	view.ValueBuilder().AddField(offsetFld, appdef.DataKind_int64, true)
 }

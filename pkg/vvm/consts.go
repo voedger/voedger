@@ -7,8 +7,9 @@ package vvm
 import (
 	"time"
 
-	router "github.com/untillpro/airs-router2"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorageimpl/istoragecas"
+	"github.com/voedger/voedger/pkg/router"
 )
 
 const (
@@ -27,7 +28,6 @@ const (
 	DefaultBLOBMaxSize                   = router.BLOBMaxSizeType(20971520) // 20Mb
 	DefaultVVMPort                       = router.DefaultRouterPort
 	SecretKeyJWTName                     = "secretKeyJWT"
-	actualizerIntentsLimit               = 128
 	actualizerFlushInterval              = time.Millisecond * 500
 )
 
@@ -44,4 +44,7 @@ var (
 		Port:                    9042,
 		KeyspaceWithReplication: istoragecas.SimpleWithReplication,
 	}
+	// https://github.com/voedger/voedger/issues/673
+	// TODO: remove it after switching to func declaration in sql only
+	qNameQueryCollection = appdef.NewQName(appdef.SysPackage, "Collection")
 )

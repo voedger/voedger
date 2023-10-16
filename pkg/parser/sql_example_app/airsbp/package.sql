@@ -1,5 +1,6 @@
-SCHEMA airsbp;
-
+/*
+* Copyright (c) 2023-present unTill Pro, Ltd.
+*/
 TYPE TypeWithName (
     Name text
 );

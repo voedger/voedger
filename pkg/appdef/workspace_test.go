@@ -31,7 +31,7 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 
 		t.Run("must be ok to add some object to workspace", func(t *testing.T) {
 			_ = appDef.AddObject(objName)
-			ws.AddDef(objName)
+			ws.AddType(objName)
 		})
 
 		a, err := appDef.Build()
@@ -41,36 +41,37 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 	})
 
 	t.Run("must be ok to find workspace", func(t *testing.T) {
-		def := app.Def(wsName)
-		require.Equal(DefKind_Workspace, def.Kind())
+		typ := app.Type(wsName)
+		require.Equal(TypeKind_Workspace, typ.Kind())
 
 		ws := app.Workspace(wsName)
-		require.Equal(DefKind_Workspace, ws.Kind())
-		require.Equal(def.(IWorkspace), ws)
+		require.Equal(TypeKind_Workspace, ws.Kind())
+		require.Equal(typ.(IWorkspace), ws)
 
 		require.Equal(descName, ws.Descriptor(), "must be ok to get workspace descriptor")
 
 		t.Run("must be ok to find object in workspace", func(t *testing.T) {
-			def := ws.Def(objName)
-			require.NotNil(def)
-			require.Equal(DefKind_Object, def.Kind())
+			typ := ws.Type(objName)
+			require.NotNil(typ)
+			require.Equal(TypeKind_Object, typ.Kind())
 
-			obj, ok := def.(IObject)
+			obj, ok := typ.(IObject)
 			require.True(ok)
 			require.NotNil(obj)
 			require.Equal(app.Object(objName), obj)
 
-			require.Nil(ws.Def(NewQName("unknown", "definition")), "must be nil if unknown definition")
+			require.Equal(NullType, ws.Type(NewQName("unknown", "type")), "must be NullType if unknown type")
 		})
 
-		t.Run("must be ok to enum workspace definitions", func(t *testing.T) {
-			require.Equal(1, func() int {
+		t.Run("must be ok to enum workspace types", func(t *testing.T) {
+			require.Equal(1, ws.TypeCount())
+			require.Equal(ws.TypeCount(), func() int {
 				cnt := 0
-				ws.Defs(func(i IDef) {
-					switch i.QName() {
+				ws.Types(func(typ IType) {
+					switch typ.QName() {
 					case objName:
 					default:
-						require.Fail("unexpected definition in workspace", "unexpected definition «%v» in workspace «%v»", i.QName(), ws.QName())
+						require.Fail("unexpected type in workspace", "unexpected type «%v» in workspace «%v»", typ.QName(), ws.QName())
 					}
 					cnt++
 				})
@@ -84,13 +85,13 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 	t.Run("must be panic if unknown descriptor assigned to workspace", func(t *testing.T) {
 		appDef := New()
 		ws := appDef.AddWorkspace(wsName)
-		require.Panics(func() { ws.SetDescriptor(NewQName("unknown", "def")) })
+		require.Panics(func() { ws.SetDescriptor(NewQName("unknown", "type")) })
 	})
 
-	t.Run("must be panic if add unknown definition to workspace", func(t *testing.T) {
+	t.Run("must be panic if add unknown type to workspace", func(t *testing.T) {
 		appDef := New()
 		ws := appDef.AddWorkspace(wsName)
-		require.Panics(func() { ws.AddDef(NewQName("unknown", "def")) })
+		require.Panics(func() { ws.AddType(NewQName("unknown", "type")) })
 	})
 }
 

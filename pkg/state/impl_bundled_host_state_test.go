@@ -77,11 +77,11 @@ func mockedAppStructs() istructs.IAppStructs {
 
 	appDef := appdef.New()
 	view := appDef.AddView(testViewRecordQName1)
-	view.
-		AddPartField("pkFld", appdef.DataKind_int64).
-		AddClustColumn("ccFld", appdef.DataKind_string).
-		AddValueField("vFld", appdef.DataKind_int64, true).
-		AddValueField(ColOffset, appdef.DataKind_int64, true)
+	view.KeyBuilder().PartKeyBuilder().AddField("pkFld", appdef.DataKind_int64)
+	view.KeyBuilder().ClustColsBuilder().AddStringField("ccFld", appdef.DefaultFieldMaxLength)
+	view.ValueBuilder().
+		AddField("vFld", appdef.DataKind_int64, true).
+		AddField(ColOffset, appdef.DataKind_int64, true)
 
 	appStructs := &mockAppStructs{}
 	appStructs.

@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -151,9 +150,9 @@ var (
 )
 
 var buildProjectionView = func(view appdef.IViewBuilder) {
-	view.AddPartField("pk", appdef.DataKind_int32)
-	view.AddClustColumn("cc", appdef.DataKind_int32)
-	view.AddValueField(colValue, appdef.DataKind_int32, true)
+	view.KeyBuilder().PartKeyBuilder().AddField("pk", appdef.DataKind_int32)
+	view.KeyBuilder().ClustColsBuilder().AddField("cc", appdef.DataKind_int32)
+	view.ValueBuilder().AddField(colValue, appdef.DataKind_int32, true)
 }
 
 type (

@@ -20,8 +20,9 @@ func Example() {
 		appDef := appdef.New()
 
 		doc := appDef.AddCDoc(docName)
+		doc.SetComment("This is example doc")
 		doc.
-			AddField("f1", appdef.DataKind_int64, true).
+			AddField("f1", appdef.DataKind_int64, true, "Field may have comments too").
 			AddField("f2", appdef.DataKind_string, false)
 		rec := appDef.AddCRecord(recName)
 
@@ -38,21 +39,21 @@ func Example() {
 		}
 	}
 
-	// how to inspected builded AppDef with CDoc
+	// how to inspect builded AppDef with CDoc
 	{
-		fmt.Printf("%d definitions\n", app.DefCount())
+		fmt.Printf("%d types\n", app.TypeCount())
 
-		// how to find def by name
-		def := app.Def(docName)
-		fmt.Printf("def %q: %v\n", def.QName(), def.Kind())
+		// how to find type by name
+		t := app.Type(docName)
+		fmt.Printf("type %q: %v\n", t.QName(), t.Kind())
 
-		// how to cast def to cdoc
-		d, ok := def.(appdef.ICDoc)
-		fmt.Printf("%q is CDoc: %v\n", d.QName(), ok && (d.Kind() == appdef.DefKind_CDoc))
+		// how to cast type to cdoc
+		d, ok := t.(appdef.ICDoc)
+		fmt.Printf("%q is CDoc: %v\n", d.QName(), ok && (d.Kind() == appdef.TypeKind_CDoc))
 
 		// how to find CDoc by name
 		doc := app.CDoc(docName)
-		fmt.Printf("doc %q: %v\n", doc.QName(), doc.Kind())
+		fmt.Printf("doc %q: %v. %s\n", doc.QName(), doc.Kind(), d.Comment())
 
 		// how to inspect doc fields
 		fmt.Printf("doc field count: %v\n", doc.UserFieldCount())
@@ -68,7 +69,11 @@ func Example() {
 			} else {
 				fmt.Print(" ")
 			}
-			fmt.Printf("%d. Name: %q, kind: %v, required: %v\n", fldCnt, f.Name(), f.DataKind(), f.Required())
+			info := fmt.Sprintf("%d. Name: %q, kind: %v, required: %v", fldCnt, f.Name(), f.DataKind(), f.Required())
+			if f.Comment() != "" {
+				info += ". " + f.Comment()
+			}
+			fmt.Println(info)
 		})
 
 		// how to inspect doc containers
@@ -82,21 +87,25 @@ func Example() {
 			contCnt++
 			fmt.Printf("%d. Name: %q, QName: %q, occurs: %v…%v\n", contCnt, c.Name(), c.QName(), c.MinOccurs(), c.MaxOccurs())
 		})
+
+		// what if unknown type
+		fmt.Println("unknown type:", app.Type(appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:
-	// 2 definitions
-	// def "test.doc": DefKind_CDoc
+	// 2 types
+	// type "test.doc": TypeKind_CDoc
 	// "test.doc" is CDoc: true
-	// doc "test.doc": DefKind_CDoc
+	// doc "test.doc": TypeKind_CDoc. This is example doc
 	// doc field count: 2
 	// field "f1": kind: DataKind_int64, required: true
 	// *1. Name: "sys.QName", kind: DataKind_QName, required: true
 	// *2. Name: "sys.ID", kind: DataKind_RecordID, required: true
 	// *3. Name: "sys.IsActive", kind: DataKind_bool, required: false
-	//  4. Name: "f1", kind: DataKind_int64, required: true
+	//  4. Name: "f1", kind: DataKind_int64, required: true. Field may have comments too
 	//  5. Name: "f2", kind: DataKind_string, required: false
 	// doc container count: 1
 	// container "rec": QName: "test.rec", occurs: 0…unbounded
 	// 1. Name: "rec", QName: "test.rec", occurs: 0…unbounded
+	// unknown type: null type
 }

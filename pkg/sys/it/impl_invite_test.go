@@ -21,7 +21,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	//TODO Daniil fix it
 	t.Skip("Daniil fix it https://dev.untill.com/projects/#!639145")
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	wsName := "test_ws"
 	ws := vit.WS(istructs.AppQName_test1_app1, wsName)

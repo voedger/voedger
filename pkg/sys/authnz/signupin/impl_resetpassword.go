@@ -28,10 +28,10 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder 
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateResetPasswordByEmailParams")).
 			AddField(Field_AppName, appdef.DataKind_string, true).
 			AddField(field_Email, appdef.DataKind_string, true).
-			AddField(field_Language, appdef.DataKind_string, false).(appdef.IDef).QName(),
+			AddField(field_Language, appdef.DataKind_string, false).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateResetPasswordByEmailResult")).
 			AddField(field_VerificationToken, appdef.DataKind_string, true).
-			AddField(field_ProfileWSID, appdef.DataKind_int64, true).(appdef.IDef).QName(),
+			AddField(field_ProfileWSID, appdef.DataKind_int64, true).(appdef.IType).QName(),
 		provideQryInitiateResetPasswordByEmailExec(asp, itokens, federation),
 	))
 
@@ -43,19 +43,19 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder 
 			AddField(field_VerificationToken, appdef.DataKind_string, true).
 			AddField(field_VerificationCode, appdef.DataKind_string, true).
 			AddField(field_ProfileWSID, appdef.DataKind_int64, true).
-			AddField(Field_AppName, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(Field_AppName, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenForResetPasswordResult")).
-			AddField(field_VerifiedValueToken, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_VerifiedValueToken, appdef.DataKind_string, true).(appdef.IType).QName(),
 		provideIssueVerifiedValueTokenForResetPasswordExec(itokens, federation),
 	))
 
 	cfgRegistry.Resources.Add(istructsmem.NewCommandFunction(
 		authnz.QNameCommandResetPasswordByEmail,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "ResetPasswordByEmailParams")).
-			AddField(Field_AppName, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(Field_AppName, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(authnz.QNameCommandResetPasswordByEmailUnloggedParams).
 			AddVerifiedField(field_Email, appdef.DataKind_string, true, appdef.VerificationKind_EMail).
-			AddField(field_NewPwd, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_NewPwd, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		cmdResetPasswordByEmailExec,
 	))
@@ -64,7 +64,7 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder 
 // sys/registry/pseudoWSID
 // null auth
 func provideQryInitiateResetPasswordByEmailExec(asp istructs.IAppStructsProvider, itokens itokens.ITokens, federation coreutils.IFederation) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		loginAppStr := args.ArgumentObject.AsString(Field_AppName)
 		email := args.ArgumentObject.AsString(field_Email)
 		language := args.ArgumentObject.AsString(field_Language)
@@ -127,7 +127,7 @@ func provideQryInitiateResetPasswordByEmailExec(asp istructs.IAppStructsProvider
 // sys/registry/pseudoWSID
 // null auth
 func provideIssueVerifiedValueTokenForResetPasswordExec(itokens itokens.ITokens, federation coreutils.IFederation) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		token := args.ArgumentObject.AsString(field_VerificationToken)
 		code := args.ArgumentObject.AsString(field_VerificationCode)
 		profileWSID := args.ArgumentObject.AsInt64(field_ProfileWSID)
@@ -155,7 +155,7 @@ func provideIssueVerifiedValueTokenForResetPasswordExec(itokens itokens.ITokens,
 
 // sys/registry/pseudoWSID
 // null auth
-func cmdResetPasswordByEmailExec(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func cmdResetPasswordByEmailExec(args istructs.ExecCommandArgs) (err error) {
 	email := args.ArgumentUnloggedObject.AsString(field_Email)
 	newPwd := args.ArgumentUnloggedObject.AsString(field_NewPwd)
 	appName := args.ArgumentObject.AsString(Field_AppName)

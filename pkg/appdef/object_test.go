@@ -21,13 +21,13 @@ func Test_AppDef_AddObject(t *testing.T) {
 
 	t.Run("must be ok to add object", func(t *testing.T) {
 		appDef := New()
-		doc := appDef.AddObject(objName)
-		doc.
+		obj := appDef.AddObject(objName)
+		obj.
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_string, false)
-		doc.AddContainer("child", elementName, 0, Occurs_Unbounded)
-		rec := appDef.AddElement(elementName)
-		rec.
+		obj.AddContainer("child", elementName, 0, Occurs_Unbounded)
+		el := appDef.AddElement(elementName)
+		el.
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_string, false)
 
@@ -38,30 +38,35 @@ func Test_AppDef_AddObject(t *testing.T) {
 	})
 
 	t.Run("must be ok to find builded object", func(t *testing.T) {
-		def := app.Def(objName)
-		require.Equal(DefKind_Object, def.Kind())
+		typ := app.Type(objName)
+		require.Equal(TypeKind_Object, typ.Kind())
 
-		doc := app.Object(objName)
-		require.Equal(DefKind_Object, doc.Kind())
-		require.Equal(def.(IObject), doc)
+		obj := app.Object(objName)
+		require.Equal(TypeKind_Object, obj.Kind())
+		require.Equal(typ.(IObject), obj)
 
-		require.Equal(2, doc.UserFieldCount())
-		require.Equal(DataKind_int64, doc.Field("f1").DataKind())
+		require.NotNil(obj.Field(SystemField_QName))
 
-		require.Equal(DefKind_Element, doc.Container("child").Def().Kind())
+		require.Equal(2, obj.UserFieldCount())
+		require.Equal(DataKind_int64, obj.Field("f1").DataKind())
+
+		require.Equal(TypeKind_Element, obj.Container("child").Type().Kind())
 
 		t.Run("must be ok to find builded element", func(t *testing.T) {
-			def := app.Def(elementName)
-			require.Equal(DefKind_Element, def.Kind())
+			typ := app.Type(elementName)
+			require.Equal(TypeKind_Element, typ.Kind())
 
-			rec := app.Element(elementName)
-			require.Equal(DefKind_Element, rec.Kind())
-			require.Equal(def.(IElement), rec)
+			el := app.Element(elementName)
+			require.Equal(TypeKind_Element, el.Kind())
+			require.Equal(typ.(IElement), el)
 
-			require.Equal(2, rec.UserFieldCount())
-			require.Equal(DataKind_int64, rec.Field("f1").DataKind())
+			require.NotNil(el.Field(SystemField_QName))
+			require.NotNil(el.Field(SystemField_Container))
 
-			require.Equal(0, rec.ContainerCount())
+			require.Equal(2, el.UserFieldCount())
+			require.Equal(DataKind_int64, el.Field("f1").DataKind())
+
+			require.Zero(el.ContainerCount())
 		})
 	})
 }

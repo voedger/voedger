@@ -8,9 +8,9 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func provideViewJoinedWorkspaceIndex(appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddView(QNameViewJoinedWorkspaceIndex).
-		AddPartField(field_Dummy, appdef.DataKind_int32).
-		AddClustColumn(Field_InvitingWorkspaceWSID, appdef.DataKind_int64).
-		AddValueField(field_JoinedWorkspaceID, appdef.DataKind_RecordID, true)
+func provideViewJoinedWorkspaceIndex(app appdef.IAppDefBuilder) {
+	view := app.AddView(QNameViewJoinedWorkspaceIndex)
+	view.KeyBuilder().PartKeyBuilder().AddField(field_Dummy, appdef.DataKind_int32)
+	view.KeyBuilder().ClustColsBuilder().AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64)
+	view.ValueBuilder().AddRefField(field_JoinedWorkspaceID, true)
 }

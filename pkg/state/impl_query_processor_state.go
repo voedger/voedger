@@ -52,5 +52,9 @@ func implProvideQueryProcessorState(ctx context.Context, appStructs istructs.IAp
 		tokenFunc:      tokenFunc,
 	}, S_GET)
 
+	bs.addStorage(PrincipalTokenStorage, &principalTokenStorage{
+		tokenFunc: tokenFunc,
+	}, S_GET)
+
 	return bs
 }

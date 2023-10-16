@@ -21,7 +21,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 		appDef := New()
 
 		doc := appDef.AddGDoc(docName)
-		require.Equal(DefKind_GDoc, doc.Kind())
+		require.Equal(TypeKind_GDoc, doc.Kind())
 		require.Equal(doc, appDef.GDoc(docName))
 
 		t.Run("must be ok to add doc fields", func(t *testing.T) {
@@ -33,12 +33,12 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 		t.Run("must be ok to add child", func(t *testing.T) {
 			rec := appDef.AddGRecord(recName)
-			require.Equal(DefKind_GRecord, rec.Kind())
+			require.Equal(TypeKind_GRecord, rec.Kind())
 			require.Equal(rec, appDef.GRecord(recName))
 
 			doc.AddContainer("rec", recName, 0, Occurs_Unbounded)
 			require.Equal(1, doc.ContainerCount())
-			require.Equal(rec, doc.Container("rec").Def())
+			require.Equal(rec, doc.Container("rec").Type())
 
 			t.Run("must be ok to add rec fields", func(t *testing.T) {
 				rec.
@@ -53,7 +53,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 			require.True(doc.Abstract())
 		})
 
-		require.Equal(2, appDef.DefCount())
+		require.Equal(2, appDef.TypeCount())
 
 		t.Run("must be ok to build", func(t *testing.T) {
 			a, err := appDef.Build()
@@ -67,16 +67,21 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 	require.NotNil(app)
 
 	t.Run("must be ok to find builded doc", func(t *testing.T) {
-		def := app.Def(docName)
-		require.Equal(DefKind_GDoc, def.Kind())
+		typ := app.Type(docName)
+		require.Equal(TypeKind_GDoc, typ.Kind())
 
-		d, ok := def.(IGDoc)
+		d, ok := typ.(IGDoc)
 		require.True(ok)
-		require.Equal(DefKind_GDoc, d.Kind())
+		require.Equal(TypeKind_GDoc, d.Kind())
 
 		doc := app.GDoc(docName)
-		require.Equal(DefKind_GDoc, doc.Kind())
+		require.Equal(TypeKind_GDoc, doc.Kind())
 		require.Equal(d, doc)
+
+		require.NotNil(doc.Field(SystemField_QName))
+		require.Equal(doc.SystemField_QName(), doc.Field(SystemField_QName))
+		require.NotNil(doc.Field(SystemField_ID))
+		require.Equal(doc.SystemField_ID(), doc.Field(SystemField_ID))
 
 		require.Equal(2, doc.UserFieldCount())
 		require.Equal(DataKind_int64, doc.Field("f1").DataKind())
@@ -85,30 +90,39 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 		require.Equal(1, doc.ContainerCount())
 		require.Equal(recName, doc.Container("rec").QName())
-		require.Equal(DefKind_GRecord, doc.Container("rec").Def().Kind())
+		require.Equal(TypeKind_GRecord, doc.Container("rec").Type().Kind())
 
 		t.Run("must be ok to find builded record", func(t *testing.T) {
-			def := app.Def(recName)
-			require.Equal(DefKind_GRecord, def.Kind())
+			typ := app.Type(recName)
+			require.Equal(TypeKind_GRecord, typ.Kind())
 
-			r, ok := def.(IGRecord)
+			r, ok := typ.(IGRecord)
 			require.True(ok)
-			require.Equal(DefKind_GRecord, r.Kind())
+			require.Equal(TypeKind_GRecord, r.Kind())
 
 			rec := app.GRecord(recName)
-			require.Equal(DefKind_GRecord, rec.Kind())
+			require.Equal(TypeKind_GRecord, rec.Kind())
 			require.Equal(r, rec)
+
+			require.NotNil(rec.Field(SystemField_QName))
+			require.Equal(rec.SystemField_QName(), rec.Field(SystemField_QName))
+			require.NotNil(rec.Field(SystemField_ID))
+			require.Equal(rec.SystemField_ID(), rec.Field(SystemField_ID))
+			require.NotNil(rec.Field(SystemField_ParentID))
+			require.Equal(rec.SystemField_ParentID(), rec.Field(SystemField_ParentID))
+			require.NotNil(rec.Field(SystemField_Container))
+			require.Equal(rec.SystemField_Container(), rec.Field(SystemField_Container))
 
 			require.Equal(2, rec.UserFieldCount())
 			require.Equal(DataKind_int64, rec.Field("f1").DataKind())
 
-			require.Equal(0, rec.ContainerCount())
+			require.Zero(rec.ContainerCount())
 		})
 	})
 
 	t.Run("check nil returns", func(t *testing.T) {
 		unknown := NewQName("test", "unknown")
-		require.Equal(NullDef, app.Def(unknown))
+		require.Equal(NullType, app.Type(unknown))
 		require.Nil(app.GDoc(unknown))
 		require.Nil(app.GRecord(unknown))
 		require.Nil(app.CDoc(unknown))
@@ -135,7 +149,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 		})
 	})
 
-	t.Run("panic if definition with name already exists", func(t *testing.T) {
+	t.Run("panic if type with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "dupe")
 		apb := New()
 		apb.AddGDoc(testName)

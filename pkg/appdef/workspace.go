@@ -5,47 +5,40 @@
 
 package appdef
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 // # Implements:
-//   - IWDoc, IWDocBuilder
+//   - IWorkspace, IWorkspaceBuilder
 type workspace struct {
-	def
+	typ
+	comment
 	withAbstract
-	defs map[QName]interface{}
-	desc ICDoc
+	types        map[QName]interface{}
+	typesOrdered []interface{}
+	desc         ICDoc
 }
 
 func newWorkspace(app *appDef, name QName) *workspace {
 	ws := &workspace{
-		def:  makeDef(app, name, DefKind_Workspace),
-		defs: make(map[QName]interface{}),
+		typ:   makeType(app, name, TypeKind_Workspace),
+		types: make(map[QName]interface{}),
 	}
-	app.appendDef(ws)
+	app.appendType(ws)
 	return ws
 }
 
-func (ws *workspace) AddDef(name QName) IWorkspaceBuilder {
-	d, ok := ws.app.defs[name]
-	if !ok {
-		panic(fmt.Errorf("unable to add unknown definition «%v» to workspace «%v»: %w", name, ws.QName(), ErrNameNotFound))
+func (ws *workspace) AddType(name QName) IWorkspaceBuilder {
+	t := ws.app.TypeByName(name)
+	if t == nil {
+		panic(fmt.Errorf("unable to add unknown type «%v» to workspace «%v»: %w", name, ws.QName(), ErrNameNotFound))
 	}
 
-	ws.defs[name] = d
+	ws.types[name] = t
+	ws.typesOrdered = nil
 	return ws
-}
-
-func (ws *workspace) Def(name QName) IDef {
-	if d, ok := ws.defs[name]; ok {
-		return d.(IDef)
-	}
-	return nil
-}
-
-func (ws *workspace) Defs(cb func(IDef)) {
-	for _, d := range ws.defs {
-		cb(d.(IDef))
-	}
 }
 
 func (ws *workspace) Descriptor() QName {
@@ -55,9 +48,42 @@ func (ws *workspace) Descriptor() QName {
 	return NullQName
 }
 
+func (ws *workspace) Type(name QName) IType {
+	if t := ws.TypeByName(name); t != nil {
+		return t
+	}
+	return NullType
+}
+
+func (ws *workspace) TypeByName(name QName) IType {
+	if t, ok := ws.types[name]; ok {
+		return t.(IType)
+	}
+	return nil
+}
+
+func (ws *workspace) TypeCount() int {
+	return len(ws.types)
+}
+
+func (ws *workspace) Types(cb func(IType)) {
+	if ws.typesOrdered == nil {
+		ws.typesOrdered = make([]interface{}, 0, len(ws.types))
+		for _, t := range ws.types {
+			ws.typesOrdered = append(ws.typesOrdered, t)
+		}
+		sort.Slice(ws.typesOrdered, func(i, j int) bool {
+			return ws.typesOrdered[i].(IType).QName().String() < ws.typesOrdered[j].(IType).QName().String()
+		})
+	}
+	for _, t := range ws.typesOrdered {
+		cb(t.(IType))
+	}
+}
+
 func (ws *workspace) SetDescriptor(q QName) IWorkspaceBuilder {
 	if ws.desc = ws.app.CDoc(q); ws.desc == nil {
-		panic(fmt.Errorf("definition «%v» is unknown CDoc name to assign as descriptor for workspace «%v»: %w", q, ws.QName(), ErrNameNotFound))
+		panic(fmt.Errorf("type «%v» is unknown CDoc name to assign as descriptor for workspace «%v»: %w", q, ws.QName(), ErrNameNotFound))
 	}
 	if ws.desc.Abstract() {
 		ws.SetAbstract()

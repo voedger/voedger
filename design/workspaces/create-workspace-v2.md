@@ -5,7 +5,7 @@ Create User/Login/App Workspaces
 ## Motivation
 
 - As a system architect I want to redesign Workspaces in particular I want to get rid of "pseudo workspaces"
-  - Currently there are a lot of "pseudo workspaces" (2%^16) and this makes hard bulding list of logins
+  - Currently there are a lot of "pseudo workspaces" (2^16) and this makes hard bulding list of logins
 - launchpad: [Create Workspace](https://dev.heeus.io/launchpad/#!17898)
 - launchpad: [Create Workspaces v2](https://dev.heeus.io/launchpad/#!21010)
 
@@ -39,7 +39,7 @@ Projectors:
     - It is not possible to work with uninitialized workspaces
 - Client calls `c.sys.CreateLogin` using pseudo WS calculated as (main cluster, crc16(login))
 - If router sees that baseWSID of WSID is < MaxPseudoBaseWSID then it replaces that pseudo base WSID with app base WSID:
-  - (main cluser, (baseWSID %% appWSAmount) %+ FirstBaseAppWSID)
+  - (main cluser, (baseWSID %% appWSAmount) + FirstBaseAppWSID)
 - `crc16 = crc32.ChecksumIEEE & (MaxUint32 >> 16)`
 - `cdoc.sys.Login` stores login hash only
 
@@ -144,8 +144,8 @@ Subject:
 
 - if wsDecr.initStartedAtMs == 0
   - WS[currentWS].c.sys.CUD(wsDescr.ID, initStartedAtMs)
-  - err = bp3.BuildWorkspace() // to init data
-  - if err != nil: error = ("Workspace data initialization failed: %v", err)
+  - err = workspace.buildWorkspace() // to init data
+  - if err != nil: error = ("Workspace data initialization failed: v", err)
   - WS[currentWS].c.sys.CUD(wsDescr.ID, initError: error, initCompletedAtMs)
   - UpdateOwner(wsParams, new.WSID, error)
   - return
@@ -165,30 +165,30 @@ Subject:
 ## Related commits
 
 - https://github.com/untillpro/airs-bp3/commit/97e00bec13020357215a39d1587aa30441d6231a
-- https://github.com/untillpro/airs-router2/commit/d31bbd2c8740183a7cbf0020395e6eb9ebdad641
+- https://github.com/voedger/voedger/pkg/router/commit/d31bbd2c8740183a7cbf0020395e6eb9ebdad641
 - https://github.com/heeus/core/commit/05b23292969b0fd78e367d77ad9d8310ce01e7d7
 
 ## Notes
 
 - Unable to work at AppWS because it is located in sys/registry app whereas we are logged in a target app. "token issued for another application" error will be result
-- Workspace initialized check is made in command processor only. Query processor just returns empty result because there is no data in non%-inited workspace
-  - `c.sys.CreateWorkspace` or `c.sys.CreateWorkspaceID` or `c.sys.Init` %-> ok
-  - `cdoc.WorkspaceDescriptor` exists %->
-    - `.initCompletedAtMs` > 0 && len(`.initError`) == 0 %-> ok
-    - `c.sys.CUD` %-> will check after `parseCUDs` stage if we are updating `cdoc.WorkspaceDescriptor` or `WDoc<BLOB>` now
-      - there is update only of (`cdoc.WorkspaceDescriptor` or `WDoc<BLOB>`) only among CUDs %-> ok
-  - %-> 403 forbidden %+ `workspace is not initialized`
-- `aproj.sys.InitializeWorkspace`: `wsKind` == `sys.AppWorkspace` %-> self%-initialized already, skip further work
+- Workspace initialized check is made in command processor only. Query processor just returns empty result because there is no data in non-inited workspace
+  - `c.sys.CreateWorkspace` or `c.sys.CreateWorkspaceID` or (`c.sys.CUD` + System Principal) -> ok
+  - `cdoc.WorkspaceDescriptor` exists ->
+    - `.initCompletedAtMs` > 0 && len(`.initError`) == 0 -> ok
+    - `c.sys.CUD` -> will check after `parseCUDs` stage if we are updating `cdoc.WorkspaceDescriptor` or `WDoc<BLOB>` now
+      - there is update only of (`cdoc.WorkspaceDescriptor` or `WDoc<BLOB>`) only among CUDs -> ok
+  - -> 403 forbidden + `workspace is not initialized`
+- `aproj.sys.InitializeWorkspace`: `wsKind` == `sys.AppWorkspace` -> self-initialized already, skip further work
 - App Workspace has `cdoc.WorkspaceDescriptor` only, there is no `cdoc.$wsKind`
 - `cdoc.WorkspaceDescriptor`, `cdoc.WorkspaceID`, `c.sys.CeateWorkspace`, `c.sys.CreateWorkspaceID`:
-  - `ownerID`, `ownerQName`, `ownerWSID` fields are made non%-required becuase they are empty in App Workspace
+  - `ownerID`, `ownerQName`, `ownerWSID` fields are made non-required becuase they are empty in App Workspace
   - `ownerApp` field added to know in which app to update the owner
 - AppWorkspaces are [initialized automatically](https://github.com/untillpro/airs-bp3/blob/21010-AD-Workspace-ER/hvm/provide.go#L53) after wiring the HVM before launch
   - for each app
     - PLog and WLog offsets are starting from `istructs.FirstOffset`
     - for each App WS Number
-      - AppWSID = (mainClusterID, wsNum %+ FirstBaseAppWSID)
-      - `cdoc.WorkspaceDescriptor` exists already at AppWSID %-> skip
+      - AppWSID = (mainClusterID, wsNum + FirstBaseAppWSID)
+      - `cdoc.WorkspaceDescriptor` exists already at AppWSID -> skip
       - generate new Sync Raw Event
       - add CUD create `cdoc.WorkspaceDescriptor` to the Event
       - put PLog

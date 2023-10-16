@@ -23,14 +23,14 @@ func Test_BasicUsage(t *testing.T) {
 
 	testAppDef := func() appdef.IAppDef {
 		app := appdef.New()
-		def := app.AddCDoc(testName)
-		def.
-			AddField("name", appdef.DataKind_string, true).
-			AddField("surname", appdef.DataKind_string, false).
-			AddField("lastName", appdef.DataKind_string, false).
-			AddField("passportNumber", appdef.DataKind_string, false).
-			AddField("passportSerial", appdef.DataKind_string, false)
-		def.
+		doc := app.AddCDoc(testName)
+		doc.
+			AddStringField("name", true).
+			AddStringField("surname", false).
+			AddStringField("lastName", false).
+			AddStringField("passportNumber", false).
+			AddStringField("passportSerial", false)
+		doc.
 			AddUnique("fullNameUnique", []string{"name", "surname", "lastName"}).
 			AddUnique("passportUnique", []string{"passportSerial", "passportNumber"})
 
@@ -64,12 +64,12 @@ func Test_BasicUsage(t *testing.T) {
 	require := require.New(t)
 
 	t.Run("test results", func(t *testing.T) {
-		def := appDef.CDoc(testName)
+		doc := appDef.CDoc(testName)
 
-		require.Equal(2, def.UniqueCount())
-		require.Equal(def.UniqueCount(), func() int {
+		require.Equal(2, doc.UniqueCount())
+		require.Equal(doc.UniqueCount(), func() int {
 			cnt := 0
-			def.Uniques(func(u appdef.IUnique) {
+			doc.Uniques(func(u appdef.IUnique) {
 				cnt++
 				require.Greater(u.ID(), appdef.FirstUniqueID)
 			})

@@ -1,3 +1,5 @@
+-- Copyright (c) 2020-present unTill Pro, Ltd.
+
 SCHEMA air;
 
 IMPORT SCHEMA github.com/untillpro/airs-bp3/packages/untill
@@ -17,7 +19,7 @@ IMPORT SCHEMA github.com/untillpro/airs-bp3/packages/untill
 --  - WITH Tags=[]
 
 WORKSPACE Restaurant (
-    
+
     -------------------------------------------------------------------------------------
     -- Roles
     --
@@ -28,17 +30,17 @@ WORKSPACE Restaurant (
     -------------------------------------------------------------------------------------
     -- Checks
     --
-    FUNCTION MyTableValidator(sys.TableRow) RETURNS void ENGINE BUILTIN; 
-    FUNCTION MyFieldsValidator(fieldA text, fieldB text) RETURNS void ENGINE BUILTIN; 
+    FUNCTION MyTableValidator(sys.TableRow) RETURNS void ENGINE BUILTIN;
+    FUNCTION MyFieldsValidator(fieldA text, fieldB text) RETURNS void ENGINE BUILTIN;
     FUNCTION ApproxEqual(param1 float, param2 float) RETURNS boolean ENGINE BUILTIN;
 
     CHECK ON TABLE untill.bill IS MyTableValidator;
 
     CHECK MyBillCheck ON TABLE untill.bill(name text, pcname text) IS MyFieldsValidator; -- name is optional
-    CHECK ON TABLE untill.bill(name text, pcname text) IS (text != pcname); 
+    CHECK ON TABLE untill.bill(name text, pcname text) IS (text != pcname);
     CHECK ON FIELD name OF TABLE untill.bill IS (name != '')
     CHECK ON FIELD working_day OF TABLE untill.bill IS '^[0-9]{8}$'
-    CHECK NettoBruttoCheck ON TABLE sometable(netto float, brutto float) IS (!ApproxEqual(netto, brutto)); 
+    CHECK NettoBruttoCheck ON TABLE sometable(netto float, brutto float) IS (!ApproxEqual(netto, brutto));
     -------------------------------------------------------------------------------------
     -- Projectors
     --
@@ -46,17 +48,17 @@ WORKSPACE Restaurant (
 
     PROJECTOR ApplyUPProfile ON COMMAND IN (air.CreateUPProfile, air.UpdateUPProfile) IS FillUPProfile; -- name is optional
     PROJECTOR ON COMMAND air.CreateUPProfile IS SomeFunc;
-    PROJECTOR ON COMMAND ARGUMENT untill.QNameOrders IS SomeFunc; 
+    PROJECTOR ON COMMAND ARGUMENT untill.QNameOrders IS SomeFunc;
 
     -------------------------------------------------------------------------------------
     -- Commands
     --
-    FUNCTION OrdersFunc(untill.orders) RETURNS void ENGINE BUILTIN; 
-    FUNCTION PbillFunc(untill.pbill) RETURNS PbillResult ENGINE BUILTIN; 
+    FUNCTION OrdersFunc(untill.orders) RETURNS void ENGINE BUILTIN;
+    FUNCTION PbillFunc(untill.pbill) RETURNS PbillResult ENGINE BUILTIN;
 
     COMMAND Orders(untill.orders) IS PbillFunc;
     COMMAND Pbill(untill.pbill) IS PbillFunc;
-    
+
     -------------------------------------------------------------------------------------
     -- Comments
     --
@@ -65,10 +67,10 @@ WORKSPACE Restaurant (
     COMMENT BackofficeComment "This is a backoffice table";
 
     -- Apply comments
-    COMMENT ON QUERY TransactionHistory IS 'Transaction History'; -- Do we allow inline values?     
-    COMMENT ON QUERY IN (TransactionHistory, ...) IS 'Transaction History';  
-    COMMENT ON ALL QUERIES WITH TAG Backoffice IS BackofficeComment;  
-    
+    COMMENT ON QUERY TransactionHistory IS 'Transaction History'; -- Do we allow inline values?
+    COMMENT ON QUERY IN (TransactionHistory, ...) IS 'Transaction History';
+    COMMENT ON ALL QUERIES WITH TAG Backoffice IS BackofficeComment;
+
     TYPE QueryResellerInfoResult (
         reseller_phone text,
         reseller_company text,
@@ -79,10 +81,10 @@ WORKSPACE Restaurant (
     -------------------------------------------------------------------------------------
     -- Rates and Limits
     --
-    
+
     -- Declare rate
-    RATE BackofficeFuncLimit 100 PER MINUTE PER IP; 
-    
+    RATE BackofficeFuncLimit 100 PER MINUTE PER IP;
+
     -- Apply rate
     RATE ON QUERY TransactionHistory IS BackofficeFuncLimit;
     RATE ON QUERY TransactionHistory IS 101 PER MINUTE PER IP;  -- Do we allow inline values?
@@ -133,17 +135,17 @@ WORKSPACE Restaurant (
 
     FUNCTION MyFunc(reseller_id text) RETURNS QueryResellerInfoResult ENGINE WASM;
 
-    QUERY QueryResellerInfo(reseller_id text) RETURNS QueryResellerInfoResult IS MyFunc 
-        WITH Rate=BackofficeFuncRate    
+    QUERY QueryResellerInfo(reseller_id text) RETURNS QueryResellerInfoResult IS MyFunc
+        WITH Rate=BackofficeFuncRate
         AND Comment='Transaction History'
         AND Tags=[PosTag1, PosTag2];
 
     -------------------------------------------------------------------------------------
     -- Tables
     --
-    
+
     -- Every workspace Restaurant has all tables from schema `untill`
-    USE TABLE untill.*; 
+    USE TABLE untill.*;
 
     -- ??? Do we need to USE something else besides TABLEs?
 
@@ -194,9 +196,9 @@ WORKSPACE Restaurant (
 
     -- ??? AS or IS
     VIEW HourlySalesView(
-        yyyymmdd text, 
-        hour int, 
-        total int, 
+        yyyymmdd text,
+        hour int,
+        total int,
         count int,
         primary key((yyyymmdd, hour))
     ) AS SELECT
@@ -204,30 +206,30 @@ WORKSPACE Restaurant (
         EXTRACT(hour from ord_datetime) as hour,
         SUM(price * quantity) as total,
         SUM(quantity) as count
-        from untill.orders 
-            join order_item on order_item.id_orders=orders.id        
+        from untill.orders
+            join order_item on order_item.id_orders=orders.id
         group by working_day, hour
     WITH Comment IS PosComment;
 
     VIEW XZReports(
-        Year int32, 
-        Month int32, 
-        Day int32, 
-        Kind int32, 
-        Number int32, 
+        Year int32,
+        Month int32,
+        Day int32,
+        Kind int32,
+        Number int32,
         XZReportWDocID id,
         PRIMARY KEY((Year), Month, Day, Kind, Number)
     ) AS RESULT OF UpdateXZReportsView
 
     -- see also air-views.sql
-    
-) 
+
+)
 
 -------------------------------------------------------------------------------------
 -- Child Workspaces
 --
 WORKSPACE Resellers {
-    
+
     ROLE ResellersAdmin;
 
     -- Child workspace

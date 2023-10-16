@@ -38,14 +38,14 @@ func (e *greeterRR) AsString(name string) string {
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	cfg := it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app1, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 			cfg.Resources.Add(istructsmem.NewQueryFunction(
 				appdef.NewQName(appdef.SysPackage, "Greeter"),
 				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
-					AddField("Text", appdef.DataKind_string, true).(appdef.IDef).QName(),
+					AddField("Text", appdef.DataKind_string, true).(appdef.IType).QName(),
 				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterResult")).
-					AddField("Res", appdef.DataKind_string, true).(appdef.IDef).QName(),
-				func(_ context.Context, _ istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+					AddField("Res", appdef.DataKind_string, true).(appdef.IType).QName(),
+				func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 					text := args.ArgumentObject.AsString("Text")
 					var rr = &greeterRR{text: text}
 					return callback(rr)
@@ -54,7 +54,8 @@ func TestBasicUsage(t *testing.T) {
 
 			// need to read cdoc.sys.Subject on auth
 			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-				apis.NumCommandProcessors, nil, false, false)
+				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
+			apps.Parse(it.SchemaTestApp2, "app2", ep)
 		}),
 	)
 	vit := it.NewVIT(t, &cfg)
@@ -73,7 +74,7 @@ func TestBasicUsage(t *testing.T) {
 		]
 	  }
 	`
-	ws := vit.DummyWS(istructs.AppQName_test1_app1, 1)
+	ws := vit.DummyWS(istructs.AppQName_test1_app2, 1)
 	resp := vit.PostWSSys(ws, "q.sys.Greeter", body)
 	require.Equal(`{"sections":[{"type":"","elements":[[[["hello, world"]]]]}]}`, resp.Body)
 	resp.Println()
@@ -81,7 +82,7 @@ func TestBasicUsage(t *testing.T) {
 
 func TestAppWSAutoInitialization(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	checkCDocsWSDesc(vit.VVM, require)
@@ -107,13 +108,13 @@ func checkCDocsWSDesc(vvm *vvm.VVM, require *require.Assertions) {
 }
 
 func TestAuthorization(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	prn := ws.Owner
 
-	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"%s"}}]}`, it.QNameTestTable)
+	body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1.air_table_plan"}}]}`
 
 	t.Run("basic usage", func(t *testing.T) {
 		t.Run("Bearer scheme", func(t *testing.T) {
@@ -170,7 +171,7 @@ func TestAuthorization(t *testing.T) {
 
 func TestUtilFuncs(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	t.Run("func Echo", func(t *testing.T) {
@@ -196,7 +197,7 @@ func TestUtilFuncs(t *testing.T) {
 }
 
 func Test400BadRequests(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	var err error
 
@@ -231,7 +232,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		<-okToFinish
 		return nil
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
@@ -257,7 +258,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 
 func TestCmdResult(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")

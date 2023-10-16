@@ -15,14 +15,14 @@ func provideCmdUpdateJoinedWorkspaceRoles(cfg *istructsmem.AppConfigType, appDef
 		qNameCmdUpdateJoinedWorkspaceRoles,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "UpdateJoinedWorkspaceRolesParams")).
 			AddField(Field_Roles, appdef.DataKind_string, true).
-			AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).(appdef.IDef).QName(),
+			AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdUpdateJoinedWorkspaceRoles,
 	))
 }
 
-func execCmdUpdateJoinedWorkspaceRoles(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdUpdateJoinedWorkspaceRoles(args istructs.ExecCommandArgs) (err error) {
 	svbCDocJoinedWorkspace, err := GetCDocJoinedWorkspaceForUpdateRequired(args.State, args.Intents, args.ArgumentObject.AsInt64(Field_InvitingWorkspaceWSID))
 	if err != nil {
 		// notest
