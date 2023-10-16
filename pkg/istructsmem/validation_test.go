@@ -274,7 +274,7 @@ func Test_ValidEventArgs(t *testing.T) {
 		require.ErrorContains(err, "command function «test.object» not found")
 	})
 
-	oDocEvent := func(sync bool) *eventType {
+	oDocEvent := func(sync bool) istructs.IRawEventBuilder {
 		var b istructs.IRawEventBuilder
 		if sync {
 			b = app.Events().GetSyncRawEventBuilder(
@@ -303,7 +303,7 @@ func Test_ValidEventArgs(t *testing.T) {
 					},
 				})
 		}
-		return b.(*eventType)
+		return b
 	}
 
 	t.Run("error if empty doc", func(t *testing.T) {
@@ -499,7 +499,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
-	cudRawEvent := func(sync bool) *eventType {
+	cudRawEvent := func(sync bool) istructs.IRawEventBuilder {
 		var b istructs.IRawEventBuilder
 		if sync {
 			b = app.Events().GetSyncRawEventBuilder(
@@ -528,7 +528,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 					},
 				})
 		}
-		return b.(*eventType)
+		return b
 	}
 
 	testDocRec := func(id istructs.RecordID) istructs.IRecord {
@@ -686,6 +686,128 @@ func Test_ValidSysCudEvent(t *testing.T) {
 				require.ErrorContains(err, "container «child2» has another QName «test.record2»")
 			})
 		})
+	})
+}
+
+func Test_ValidCommandEvent(t *testing.T) {
+	require := require.New(t)
+
+	appDef := appdef.New()
+
+	cmdName := appdef.NewQName("test", "command")
+
+	oDocName := appdef.NewQName("test", "ODocument")
+
+	wDocName := appdef.NewQName("test", "WDocument")
+
+	t.Run("must be ok to build test application", func(t *testing.T) {
+		oDoc := appDef.AddODoc(oDocName)
+		oDoc.AddRefField("RefField", false)
+
+		wDoc := appDef.AddWDoc(wDocName)
+		wDoc.AddRefField("RefField", false, oDocName)
+	})
+
+	cfgs := make(AppConfigsType, 1)
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+	cfg.Resources.Add(
+		NewCommandFunction(cmdName, oDocName, appdef.NullQName, wDocName, NullCommandExec))
+
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+
+	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	require.NoError(err)
+
+	eventBuilder := func(sync bool) istructs.IRawEventBuilder {
+		var b istructs.IRawEventBuilder
+		if sync {
+			b = app.Events().GetSyncRawEventBuilder(
+				istructs.SyncRawEventBuilderParams{
+					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+						HandlingPartition: 25,
+						PLogOffset:        100500,
+						Workspace:         1,
+						WLogOffset:        1050,
+						QName:             cmdName,
+						RegisteredAt:      123456789,
+					},
+					Device:   1,
+					SyncedAt: 123456789,
+				})
+		} else {
+			b = app.Events().GetNewRawEventBuilder(
+				istructs.NewRawEventBuilderParams{
+					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+						HandlingPartition: 25,
+						PLogOffset:        100500,
+						Workspace:         1,
+						WLogOffset:        1050,
+						QName:             cmdName,
+						RegisteredAt:      123456789,
+					},
+				})
+		}
+		return b
+	}
+
+	b := eventBuilder(false)
+	require.NotNil(b)
+
+	t.Run("must be ok to ref from result to argument", func(t *testing.T) {
+		e := eventBuilder(false)
+		obj := e.ArgumentObjectBuilder()
+		obj.PutRecordID(appdef.SystemField_ID, 1)
+		res := e.CUDBuilder().Create(wDocName)
+		res.PutRecordID(appdef.SystemField_ID, 2)
+		res.PutRecordID("RefField", 1)
+
+		_, err := e.BuildRawEvent()
+		require.NoError(err)
+	})
+
+	t.Run("must error if repeatedly uses record ID", func(t *testing.T) {
+
+		t.Run("repeated raw record ID in new event", func(t *testing.T) {
+			e := eventBuilder(false)
+			obj := e.ArgumentObjectBuilder()
+			obj.PutRecordID(appdef.SystemField_ID, 1)
+			res := e.CUDBuilder().Create(wDocName)
+			res.PutRecordID(appdef.SystemField_ID, 1) // <- error here
+
+			_, err := e.BuildRawEvent()
+			require.ErrorIs(err, ErrRecordIDUniqueViolation)
+			require.ErrorContains(err, "repeatedly uses record ID «1»")
+		})
+
+		t.Run("repeated storage record ID in synced event", func(t *testing.T) {
+			e := eventBuilder(false)
+			obj := e.ArgumentObjectBuilder()
+			obj.PutRecordID(appdef.SystemField_ID, 123456789012345)
+			res := e.CUDBuilder().Create(wDocName)
+			res.PutRecordID(appdef.SystemField_ID, 123456789012345) // <- error here
+
+			_, err := e.BuildRawEvent()
+			require.ErrorIs(err, ErrRecordIDUniqueViolation)
+			require.ErrorContains(err, "repeatedly uses record ID «123456789012345»")
+		})
+	})
+
+	t.Run("must error if invalid references", func(t *testing.T) {
+
+		t.Run("must error to ref from argument to result", func(t *testing.T) {
+			e := eventBuilder(false)
+			obj := e.ArgumentObjectBuilder()
+			obj.PutRecordID(appdef.SystemField_ID, 1)
+			obj.PutRecordID("RefField", 2)
+
+			res := e.CUDBuilder().Create(wDocName)
+			res.PutRecordID(appdef.SystemField_ID, 2)
+
+			_, err := e.BuildRawEvent()
+			require.ErrorIs(err, ErrRecordIDNotFound)
+			require.ErrorContains(err, "unknown record ID «2»")
+		})
+
 	})
 }
 
