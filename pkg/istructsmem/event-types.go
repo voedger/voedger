@@ -113,6 +113,7 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 	} else {
 		// #!16208: Must be possible to use TypeKind_ODoc as Event.QName
 		if t := ev.appCfg.AppDef.TypeByName(ev.name); (t == nil) || (t.Kind() != appdef.TypeKind_ODoc) {
+			// command function «test.object» not found
 			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
 		}
 		arg = ev.name
@@ -300,9 +301,6 @@ func (ev *eventType) Release() {
 
 // # Return event name, such as `event «sys.CUD»` or `event «test.ODocument»`
 func (ev *eventType) String() string {
-	if ev.name == appdef.NullQName {
-		return "null event"
-	}
 	return fmt.Sprintf("event «%v»", ev.name)
 }
 

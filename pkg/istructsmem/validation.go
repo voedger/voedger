@@ -64,13 +64,13 @@ func validateObjectIDs(obj *elementType, rawID bool) (ids map[istructs.RecordID]
 		if !id.IsRaw() {
 			if rawID {
 				err = errors.Join(err,
-					// ODoc «test.ODocument» should use raw record ID (not «123456789012345») in created ORecord «Rec: test.ORecord»
+					// ODoc «test.document» should use raw record ID (not «123456789012345») in created ORecord «Rec: test.ORecord»
 					validateErrorf(ECode_InvalidRecordID, errRequiredRawID, obj, id, e, ErrRawRecordIDRequired))
 			}
 		}
 		if _, exists := ids[id]; exists {
 			err = errors.Join(err,
-				// ODoc «test.ODocument» repeatedly uses record ID «1» in ORecord «ORec: test.ORecord»
+				// ODoc «test.document» repeatedly uses record ID «1» in ORecord «child: test.record1»
 				validateErrorf(ECode_InvalidRecordID, errRepeatedID, obj, id, e, ErrRecordIDUniqueViolation))
 		}
 		ids[id] = e.QName()
@@ -84,14 +84,14 @@ func validateObjectIDs(obj *elementType, rawID bool) (ids map[istructs.RecordID]
 				if !exists {
 					if id.IsRaw() {
 						err = errors.Join(err,
-							// ORecord «ORec: test.ORecord» field «Ref» refers to unknown record ID «7»
+							// ODoc «test.document» field «RefField» refers to unknown record ID «7»
 							validateErrorf(ECode_InvalidRefRecordID, errUnknownIDRef, e, fld.Name(), id, ErrRecordIDNotFound))
 					}
 					return
 				}
 				if !fld.Ref(target) {
 					err = errors.Join(err,
-						// ORecord «ORec: test.ORecord» field «Ref» refers to record ID «1» that has unavailable target QName «test.ODocument»
+						// ODoc «test.document» field «RefField» refers to record ID «1» that has unavailable target QName «test.document»
 						validateErrorf(ECode_InvalidRefRecordID, errUnavailableTargetRef, e, fld.Name(), id, target, ErrWrongRecordID))
 				}
 			}
@@ -231,7 +231,7 @@ func validateEventArgs(ev *eventType) (err error) {
 
 	if ev.argObject.QName() != arg {
 		err = errors.Join(err,
-			// event «test.CreateDoc» command argument uses wrong type «test.ODocument», expected «test.ODocument1»
+			// event «test.document» argument uses wrong type «test.record1», expected «test.document»
 			validateErrorf(ECode_InvalidTypeName, errEventArgUseWrongType, ev, ev.argObject.QName(), arg, ErrWrongType))
 	} else {
 		if ev.argObject.QName() != appdef.NullQName {
@@ -242,7 +242,7 @@ func validateEventArgs(ev *eventType) (err error) {
 
 	if ev.argUnlObj.QName() != argUnl {
 		err = errors.Join(err,
-			// event «test.CreateDoc» command unlogged argument uses wrong type «test.Object», expected «test.Object1»
+			// event «test.document» unlogged argument uses wrong type «test.object», expected «.»
 			validateErrorf(ECode_InvalidTypeName, errEventUnloggedArgUseWrongType, ev, ev.argUnlObj.QName(), argUnl, ErrWrongType))
 	} else {
 		if ev.argUnlObj.QName() != appdef.NullQName {
@@ -285,7 +285,7 @@ func validateElement(el *elementType) (err error) {
 			}
 			if occurs > cont.MaxOccurs() {
 				err = errors.Join(err,
-					// ODoc «test.ODocument» container «Rec» has too many occurrences (2, maximum 1)
+					// ODoc «test.document» container «child» has too many occurrences (2, maximum 1)
 					validateErrorf(ECode_InvalidOccursMax, errContainerMaxOccursViolated, el, cont.Name(), occurs, cont.MaxOccurs(), ErrMaxOccursViolation))
 			}
 		})
@@ -300,7 +300,7 @@ func validateElement(el *elementType) (err error) {
 			cont := t.Container(child.Container())
 			if cont == nil {
 				err = errors.Join(err,
-					// ODoc «test.ODocument» child[0] has unknown container name «Record»
+					// ODoc «test.document» child[0] has unknown container name «childElement»
 					validateErrorf(ECode_InvalidElementName, errUnknownContainerName, el, idx, child.Container(), ErrNameNotFound))
 				return
 			}
@@ -308,8 +308,8 @@ func validateElement(el *elementType) (err error) {
 			childQName := child.QName()
 			if childQName != cont.QName() {
 				err = errors.Join(err,
-					// ODoc «test.ODocument» child[0] ORecord «Rec: test.ORecord» has wrong type name, expected «test.ORecord1»
-					validateErrorf(ECode_InvalidTypeName, errWrongContainerType, el, idx, child, cont.QName(), ErrNameNotFound))
+					// ODoc «test.document» child[0] ORecord «child2: test.record1» has wrong type name, expected «test.record2»
+					validateErrorf(ECode_InvalidTypeName, errWrongContainerType, el, idx, child, cont.QName(), ErrWrongType))
 				return
 			}
 
@@ -345,7 +345,7 @@ func validateRow(row *rowType) (err error) {
 			if f.Required() {
 				if !row.HasValue(f.Name()) {
 					err = errors.Join(err,
-						// ODoc «test.ODocument» misses required field «Field1»
+						// ODoc «test.document» misses required field «RequiredField»
 						validateErrorf(ECode_EmptyData, errEmptyRequiredField, row, f.Name(), ErrNameNotFound))
 					return
 				}
@@ -354,7 +354,7 @@ func validateRow(row *rowType) (err error) {
 					case appdef.DataKind_RecordID:
 						if row.AsRecordID(f.Name()) == istructs.NullRecordID {
 							err = errors.Join(err,
-								// ODoc «test.ODocument» required ref field «Ref» has NullRecordID value
+								// ORecord «child2: test.record2» required ref field «RequiredRefField» has NullRecordID value
 								validateErrorf(ECode_InvalidRefRecordID, errNullInRequiredRefField, row, f.Name(), ErrWrongRecordID))
 						}
 					}
