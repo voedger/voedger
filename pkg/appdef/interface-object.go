@@ -5,40 +5,32 @@
 
 package appdef
 
-// Object definition. DefKind() is DefKind_Object.
+// Object type.
 //
 // Ref. to object.go for implementation
 type IObject interface {
-	IDef
-	IComment
-	IFields
-	IContainers
-	IWithAbstract
+	IStructure
+
+	// Unwanted type assertion stub
+	isObject()
 }
 
 type IObjectBuilder interface {
 	IObject
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IWithAbstractBuilder
+	IStructureBuilder
 }
 
-// Element definition. DefKind() is DefKind_Element.
+// Element type.
 //
 // Ref. to object.go for implementation
 type IElement interface {
-	IDef
-	IComment
-	IFields
-	IContainers
-	IWithAbstract
+	IStructure
+
+	// Unwanted type assertion stub
+	isElement()
 }
 
 type IElementBuilder interface {
 	IElement
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IWithAbstractBuilder
+	IStructureBuilder
 }

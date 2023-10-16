@@ -16,7 +16,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func execCmdInitChildWorkspace(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
 	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
 	kb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewChildWorkspaceIdx)
 	if err != nil {
@@ -83,7 +83,7 @@ var projectorChildWorkspaceIdx = func(event istructs.IPLogEvent, s istructs.ISta
 }
 
 // targetApp/parentWSID/q.sys.QueryChildWorkspaceByName
-func qcwbnQryExec(_ context.Context, _ istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
+func qcwbnQryExec(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
 	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
 	kb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewChildWorkspaceIdx)
 	if err != nil {

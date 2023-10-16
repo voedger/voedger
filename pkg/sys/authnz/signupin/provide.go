@@ -25,9 +25,9 @@ func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDe
 
 	// istructs.Projector<S, LoginIdx>
 	projectors.ProvideViewDef(appDefBuilder, QNameViewLoginIdx, func(b appdef.IViewBuilder) {
-		b.Key().Partition().AddField(field_AppWSID, appdef.DataKind_int64)
-		b.Key().ClustCols().AddStringField(field_AppIDLoginHash, appdef.DefaultFieldMaxLength)
-		b.Value().AddField(field_CDocLoginID, appdef.DataKind_int64, true)
+		b.KeyBuilder().PartKeyBuilder().AddField(field_AppWSID, appdef.DataKind_int64)
+		b.KeyBuilder().ClustColsBuilder().AddStringField(field_AppIDLoginHash, appdef.DefaultFieldMaxLength)
+		b.ValueBuilder().AddField(field_CDocLoginID, appdef.DataKind_int64, true)
 	})
 
 	// q.sys.IssuePrincipalToken
@@ -39,8 +39,8 @@ func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDe
 		AddField(Field_AppName, appdef.DataKind_string, true)
 
 	iptResQName := appdef.NewQName(appdef.SysPackage, "IssuePrincipalTokenResult")
-	iptResDef := appDefBuilder.AddObject(iptResQName)
-	iptResDef.
+	iptRes := appDefBuilder.AddObject(iptResQName)
+	iptRes.
 		AddField(authnz.Field_PrincipalToken, appdef.DataKind_string, true).
 		AddField(authnz.Field_WSID, appdef.DataKind_int64, true).
 		AddField(authnz.Field_WSError, appdef.DataKind_string, true)
@@ -58,9 +58,9 @@ func ProvideCmdEnrichPrincipalToken(cfg *istructsmem.AppConfigType, appDefBuilde
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "EnrichPrincipalToken"),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "EnrichPrincipalTokenParams")).
-			AddField(field_Login, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_Login, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "EnrichPrincipalTokenResult")).
-			AddField(field_EnrichedToken, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_EnrichedToken, appdef.DataKind_string, true).(appdef.IType).QName(),
 		provideExecQryEnrichPrincipalToken(atf),
 	))
 }
@@ -79,9 +79,9 @@ func provideCmdCreateLogin(cfg *istructsmem.AppConfigType, appDefBuilder appdef.
 			AddField(Field_AppName, appdef.DataKind_string, true).
 			AddField(authnz.Field_SubjectKind, appdef.DataKind_int32, true).
 			AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, true).
-			AddField(authnz.Field_ProfileClusterID, appdef.DataKind_int32, true).(appdef.IDef).QName(),
+			AddField(authnz.Field_ProfileClusterID, appdef.DataKind_int32, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateLoginUnloggedParams")).
-			AddField(field_Password, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_Password, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		execCmdCreateLogin(asp),
 	))

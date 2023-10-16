@@ -13,30 +13,28 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// TODO: move to internal/validate package
-
-// Provides validation application structures by single definition
+// Provides validation application structures by single type
 type validator struct {
 	validators *validators
-	def        appdef.IDef
+	typ        appdef.IType
 }
 
-func newValidator(validators *validators, def appdef.IDef) *validator {
-	return &validator{validators, def}
+func newValidator(validators *validators, t appdef.IType) *validator {
+	return &validator{validators, t}
 }
 
 // Return readable name of entity to validate.
 //
 // If entity has only type QName, then the result will be short like `CDoc (sales.BillDocument)`, otherwise it will be complete like `CRecord «Price» (sales.PriceRecord)`
 func (v *validator) entName(e interface{}) string {
-	ent := v.def.Kind().TrimString()
+	ent := v.typ.Kind().TrimString()
 	name := ""
-	typeName := v.def.QName()
+	typeName := v.typ.QName()
 
 	if row, ok := e.(istructs.IRowReader); ok {
 		if qName := row.AsQName(appdef.SystemField_QName); qName != appdef.NullQName {
 			typeName = qName
-			if (qName == v.def.QName()) && v.def.Kind().HasSystemField(appdef.SystemField_Container) {
+			if (qName == v.typ.QName()) && v.typ.Kind().HasSystemField(appdef.SystemField_Container) {
 				if cont := row.AsString(appdef.SystemField_Container); cont != "" {
 					name = cont
 				}
@@ -53,37 +51,29 @@ func (v *validator) entName(e interface{}) string {
 
 // Validate specified document
 func (v *validator) validDocument(doc *elementType) error {
-	// TODO: check RecordID refs available for document kind
-	return v.validElement(doc, true)
+	return v.validElement(doc)
+	// TODO: check user field references to raw IDs
 }
 
 // Validate specified element
-func (v *validator) validElement(el *elementType, storable bool) (err error) {
-	if storable {
+func (v *validator) validElement(el *elementType) (err error) {
+	if el.typ.Kind().HasSystemField(appdef.SystemField_ID) {
 		err = v.validRecord(&el.recordType, true)
 	} else {
-		if e := v.validRow(&el.recordType.rowType); e != nil {
-			err = fmt.Errorf("%s has not valid row data: %w", v.entName(el), e)
-		}
+		err = v.validRow(&el.recordType.rowType)
 	}
 
 	err = errors.Join(err,
-		v.validElementContainers(el, storable))
+		v.validContainers(el))
 
 	return err
 }
 
 // Validates element containers
-func (v *validator) validElementContainers(el *elementType, storable bool) (err error) {
-	def, ok := v.def.(appdef.IContainers)
-	if !ok {
-		err = errors.Join(err,
-			validateErrorf(ECode_InvalidDefName, "%s has definition kind «%s» without containers: %w", v.entName(el), v.def.Kind().TrimString(), ErrUnexpectedDefKind))
-		return err
-	}
+func (v *validator) validContainers(el *elementType) (err error) {
+	t := v.typ.(appdef.IContainers)
 
-	// validates element containers occurs
-	def.Containers(
+	t.Containers(
 		func(cont appdef.IContainer) {
 			occurs := appdef.Occurs(0)
 			el.EnumElements(
@@ -115,7 +105,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 					validateErrorf(ECode_EmptyElementName, "%s child[%d] has empty container name: %w", v.entName(el), idx, ErrNameMissed))
 				return
 			}
-			cont := def.Container(childName)
+			cont := t.Container(childName)
 			if cont == nil {
 				err = errors.Join(err,
 					validateErrorf(ECode_InvalidElementName, "%s child[%d] has unknown container name «%s»: %w", v.entName(el), idx, childName, ErrNameNotFound))
@@ -125,11 +115,11 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 			childQName := child.QName()
 			if childQName != cont.QName() {
 				err = errors.Join(err,
-					validateErrorf(ECode_InvalidDefName, "%s child[%d] «%s» has wrong definition name «%v», expected «%v»: %w", v.entName(el), idx, childName, childQName, cont.QName(), ErrNameNotFound))
+					validateErrorf(ECode_InvalidDefName, "%s child[%d] «%s» has wrong type name «%v», expected «%v»: %w", v.entName(el), idx, childName, childQName, cont.QName(), ErrNameNotFound))
 				return
 			}
 
-			if storable {
+			if child.typ.Kind().HasSystemField(appdef.SystemField_ParentID) {
 				parID := child.Parent()
 				if parID == istructs.NullRecordID {
 					child.setParent(elID) // if child parentID omitted, then restore it
@@ -144,11 +134,11 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 			childValidator := v.validators.validator(childQName)
 			if childValidator == nil {
 				err = errors.Join(err,
-					validateErrorf(ECode_InvalidDefName, "object refers to unknown definition «%v»: %w", childQName, ErrNameNotFound))
+					validateErrorf(ECode_InvalidDefName, "object refers to unknown type «%v»: %w", childQName, ErrNameNotFound))
 				return
 			}
 			err = errors.Join(err,
-				childValidator.validElement(child, storable))
+				childValidator.validElement(child))
 		})
 
 	return err
@@ -158,7 +148,7 @@ func (v *validator) validElementContainers(el *elementType, storable bool) (err 
 func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error) {
 	err = v.validRow(&rec.rowType)
 
-	if v.def.Kind().HasSystemField(appdef.SystemField_ID) {
+	if v.typ.Kind().HasSystemField(appdef.SystemField_ID) {
 		if rawIDexpected && !rec.ID().IsRaw() {
 			err = errors.Join(err,
 				validateErrorf(ECode_InvalidRawRecordID, "new %s ID «%d» is not raw: %w", v.entName(rec), rec.ID(), ErrRawRecordIDExpected))
@@ -170,15 +160,22 @@ func (v *validator) validRecord(rec *recordType, rawIDexpected bool) (err error)
 
 // Validates specified row
 func (v *validator) validRow(row *rowType) (err error) {
-	v.def.(appdef.IFields).Fields(
+	row.fields.Fields(
 		func(f appdef.IField) {
 			if f.Required() {
 				if !row.HasValue(f.Name()) {
 					err = errors.Join(err,
-						validateErrorf(ECode_EmptyData, "%s misses field «%s» required by definition «%v»: %w", v.entName(row), f.Name(), v.def.QName(), ErrNameNotFound))
-				} else if !appdef.IsSysField(f.Name()) && (f.DataKind() == appdef.DataKind_RecordID) && (row.AsInt64(f.Name()) == int64(istructs.NullRecordID)) {
-					err = errors.Join(err,
-						validateErrorf(ECode_InvalidRefRecordID, "%s required ref field «%s» has NullRecordID value: %w", v.entName(row), f.Name(), ErrWrongRecordID))
+						validateErrorf(ECode_EmptyData, "%s misses field «%s» required for type «%v»: %w", v.entName(row), f.Name(), v.typ.QName(), ErrNameNotFound))
+					return
+				}
+				if !f.IsSys() {
+					switch f.DataKind() {
+					case appdef.DataKind_RecordID:
+						if row.AsRecordID(f.Name()) == istructs.NullRecordID {
+							err = errors.Join(err,
+								validateErrorf(ECode_InvalidRefRecordID, "%s required ref field «%s» has NullRecordID value: %w", v.entName(row), f.Name(), ErrWrongRecordID))
+						}
+					}
 				}
 			}
 		})
@@ -188,10 +185,10 @@ func (v *validator) validRow(row *rowType) (err error) {
 
 // Validate specified object
 func (v *validator) validObject(obj *elementType) error {
-	return v.validElement(obj, false)
+	return v.validElement(obj)
 }
 
-// Application definitions validators
+// Application types validators
 type validators struct {
 	appDef     appdef.IAppDef
 	validators map[appdef.QName]*validator
@@ -203,16 +200,16 @@ func newValidators() *validators {
 	}
 }
 
-// Prepares validators for specified application definition
+// Prepares validators for specified application
 func (v *validators) prepare(appDef appdef.IAppDef) {
 	v.appDef = appDef
-	v.appDef.Defs(
-		func(d appdef.IDef) {
-			v.validators[d.QName()] = newValidator(v, d)
+	v.appDef.Types(
+		func(t appdef.IType) {
+			v.validators[t.QName()] = newValidator(v, t)
 		})
 }
 
-// Returns validator for specified definition
+// Returns validator for specified type
 func (v *validators) validator(n appdef.QName) *validator {
 	return v.validators[n]
 }
@@ -239,24 +236,24 @@ func (v *validators) validEventObjects(ev *eventType) (err error) {
 
 	if ev.argObject.QName() != arg {
 		err = errors.Join(err,
-			validateErrorf(ECode_InvalidDefName, "event command argument «%v» uses wrong definition «%v», expected «%v»: %w", ev.name, ev.argObject.QName(), arg, ErrWrongDefinition))
+			validateErrorf(ECode_InvalidDefName, "event command argument «%v» uses wrong type «%v», expected «%v»: %w", ev.name, ev.argObject.QName(), arg, ErrWrongType))
 	} else if arg != appdef.NullQName {
 		// #!17185: must be ODoc or Object only
-		def := v.appDef.Def(arg)
-		if (def.Kind() != appdef.DefKind_ODoc) && (def.Kind() != appdef.DefKind_Object) {
+		t := v.appDef.Type(arg)
+		if (t.Kind() != appdef.TypeKind_ODoc) && (t.Kind() != appdef.TypeKind_Object) {
 			err = errors.Join(err,
-				validateErrorf(ECode_InvalidDefKind, "event command argument «%v» definition can not to be «%v», expected («%v» or «%v»): %w", arg, def.Kind().TrimString(), appdef.DefKind_ODoc.TrimString(), appdef.DefKind_Object.TrimString(), ErrWrongDefinition))
+				validateErrorf(ECode_InvalidTypeKind, "event command argument «%v» type can not to be «%v», expected («%v» or «%v»): %w", arg, t.Kind().TrimString(), appdef.TypeKind_ODoc.TrimString(), appdef.TypeKind_Object.TrimString(), ErrWrongType))
 		}
 		err = errors.Join(err,
-			v.validObject(&ev.argObject))
+			v.validArgument(&ev.argObject))
 	}
 
 	if ev.argUnlObj.QName() != argUnl {
 		err = errors.Join(err,
-			validateErrorf(ECode_InvalidDefName, "event command un-logged argument «%v» uses wrong definition «%v», expected «%v»: %w", ev.name, ev.argUnlObj.QName(), argUnl, ErrWrongDefinition))
+			validateErrorf(ECode_InvalidDefName, "event command un-logged argument «%v» uses wrong type «%v», expected «%v»: %w", ev.name, ev.argUnlObj.QName(), argUnl, ErrWrongType))
 	} else if ev.argUnlObj.QName() != appdef.NullQName {
 		err = errors.Join(err,
-			v.validObject(&ev.argUnlObj))
+			v.validArgument(&ev.argUnlObj))
 	}
 
 	return err
@@ -275,25 +272,25 @@ func (v *validators) validEventCUDs(ev *eventType) (err error) {
 }
 
 // Validates specified document or object
-func (v *validators) validObject(obj *elementType) (err error) {
+func (v *validators) validArgument(obj *elementType) (err error) {
 	if obj.QName() == appdef.NullQName {
-		return validateErrorf(ECode_EmptyDefName, "element «%s» has empty definition name: %w", obj.Container(), ErrNameMissed)
+		return validateErrorf(ECode_EmptyDefName, "element «%s» has empty type name: %w", obj.Container(), ErrNameMissed)
 	}
 
 	validator := v.validator(obj.QName())
 
 	if validator == nil {
-		return validateErrorf(ECode_InvalidDefName, "object refers to unknown definition «%v»: %w", obj.QName(), ErrNameNotFound)
+		return validateErrorf(ECode_InvalidDefName, "object refers to unknown type «%v»: %w", obj.QName(), ErrNameNotFound)
 	}
 
-	switch validator.def.Kind() {
-	case appdef.DefKind_GDoc, appdef.DefKind_CDoc, appdef.DefKind_ODoc, appdef.DefKind_WDoc:
+	switch validator.typ.Kind() {
+	case appdef.TypeKind_GDoc, appdef.TypeKind_CDoc, appdef.TypeKind_ODoc, appdef.TypeKind_WDoc:
 		return validator.validDocument(obj)
-	case appdef.DefKind_Object:
+	case appdef.TypeKind_Object:
 		return validator.validObject(obj)
 	}
 
-	return validateErrorf(ECode_InvalidDefKind, "object refers to invalid definition «%v» kind «%s»: %w", obj.QName(), validator.def.Kind().TrimString(), ErrUnexpectedDefKind)
+	return validateErrorf(ECode_InvalidTypeKind, "object refers to invalid type «%v» kind «%s»: %w", obj.QName(), validator.typ.Kind().TrimString(), ErrUnexpectedTypeKind)
 }
 
 // Validates specified CUD
@@ -331,7 +328,7 @@ func (v *validators) validCUDsUnique(cud *cudType) (err error) {
 		}
 		ids[id] = true
 
-		if cDoc, ok := rec.def.(appdef.ICDoc); ok && cDoc.Singleton() {
+		if cDoc, ok := rec.typ.(appdef.ICDoc); ok && cDoc.Singleton() {
 			if id, ok := singletons[cDoc.QName()]; ok {
 				err = errors.Join(err,
 					validateErrorf(ECode_InvalidRawRecordID, "cud.create repeatedly creates the same singleton «%v» (record ID «%d» and «%d»): %w ", cDoc.QName(), id, rec.id, ErrRecordIDUniqueViolation))
@@ -376,8 +373,8 @@ func (v *validators) validCUDRefRawIDs(cud *cudType) (err error) {
 					}
 					switch name {
 					case appdef.SystemField_ParentID:
-						if parentDef, ok := v.appDef.Def(target).(appdef.IContainers); ok {
-							cont := parentDef.Container(rec.Container())
+						if parentType, ok := v.appDef.Type(target).(appdef.IContainers); ok {
+							cont := parentType.Container(rec.Container())
 							if cont == nil {
 								err = errors.Join(err,
 									validateErrorf(ECode_InvalidRefRecordID, "cud.%s record «%s: %s» with raw parent ID «%d» refers to «%s», which has no container «%s»: %w", cu, rec.Container(), rec.QName(), id, target, rec.Container(), ErrWrongRecordID))
@@ -420,31 +417,21 @@ func (v *validators) validCUDRefRawIDs(cud *cudType) (err error) {
 // Validates specified view key.
 //
 // If partialClust specified then clustering columns row may be partially filled
-func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
-	pkDef := key.pkDef()
-	if key.partRow.QName() != pkDef {
-		return validateErrorf(ECode_InvalidDefName, "wrong view partition key definition «%v», for view «%v» expected «%v»: %w", key.partRow.QName(), key.viewName, pkDef, ErrWrongDefinition)
-	}
-
-	ccDef := key.ccDef()
-	if key.ccolsRow.QName() != ccDef {
-		return validateErrorf(ECode_InvalidDefName, "wrong view clustering columns definition «%v», for view «%v» expected «%v»: %w", key.ccolsRow.QName(), key.viewName, ccDef, ErrWrongDefinition)
-	}
-
-	key.partRow.fieldsDef().Fields(
+func (v *validators) validViewKey(key *keyType, partialClust bool) (err error) {
+	key.partRow.fields.Fields(
 		func(f appdef.IField) {
 			if !key.partRow.HasValue(f.Name()) {
 				err = errors.Join(err,
-					validateErrorf(ECode_EmptyData, "view «%v» partition key «%v» field «%s» is empty: %w", key.viewName, pkDef, f.Name(), ErrFieldIsEmpty))
+					validateErrorf(ECode_EmptyData, "view «%v» partition key field «%s» is empty: %w", key.viewName, f.Name(), ErrFieldIsEmpty))
 			}
 		})
 
 	if !partialClust {
-		key.ccolsRow.fieldsDef().Fields(
+		key.ccolsRow.fields.Fields(
 			func(f appdef.IField) {
 				if !key.ccolsRow.HasValue(f.Name()) {
 					err = errors.Join(err,
-						validateErrorf(ECode_EmptyData, "view «%v» clustering columns «%v» field «%s» is empty: %w", key.viewName, ccDef, f.Name(), ErrFieldIsEmpty))
+						validateErrorf(ECode_EmptyData, "view «%v» clustering columns field «%s» is empty: %w", key.viewName, f.Name(), ErrFieldIsEmpty))
 				}
 			})
 	}
@@ -454,14 +441,9 @@ func (v *validators) validKey(key *keyType, partialClust bool) (err error) {
 
 // Validates specified view value
 func (v *validators) validViewValue(value *valueType) (err error) {
-	valDef := value.valueDef()
-	if value.QName() != valDef {
-		return validateErrorf(ECode_InvalidDefName, "wrong view value definition «%v», for view «%v» expected «%v»: %w", value.QName(), value.viewName, valDef, ErrWrongDefinition)
-	}
-
-	validator := v.validator(valDef)
+	validator := v.validator(value.viewName)
 	if validator == nil {
-		return validateErrorf(ECode_InvalidDefName, "view value «%v» definition not found: %w", valDef, ErrNameNotFound)
+		return validateErrorf(ECode_InvalidDefName, "view value «%v» type not found: %w", value.viewName, ErrNameNotFound)
 	}
 
 	return validator.validRow(&value.rowType)
@@ -472,18 +454,18 @@ func (v *validators) validViewValue(value *valueType) (err error) {
 // If rawIDexpected then raw IDs is required
 func (v *validators) validCUDRecord(rec *recordType, rawIDexpected bool) (err error) {
 	if rec.QName() == appdef.NullQName {
-		return validateErrorf(ECode_EmptyDefName, "record «%s» has empty definition name: %w", rec.Container(), ErrNameMissed)
+		return validateErrorf(ECode_EmptyDefName, "record «%s» has empty type name: %w", rec.Container(), ErrNameMissed)
 	}
 
 	validator := v.validator(rec.QName())
 	if validator == nil {
-		return validateErrorf(ECode_InvalidDefName, "object refers to unknown definition «%v»: %w", rec.QName(), ErrNameNotFound)
+		return validateErrorf(ECode_InvalidDefName, "object refers to unknown type «%v»: %w", rec.QName(), ErrNameNotFound)
 	}
 
-	switch validator.def.Kind() {
-	case appdef.DefKind_GDoc, appdef.DefKind_CDoc, appdef.DefKind_WDoc, appdef.DefKind_GRecord, appdef.DefKind_CRecord, appdef.DefKind_WRecord:
+	switch validator.typ.Kind() {
+	case appdef.TypeKind_GDoc, appdef.TypeKind_CDoc, appdef.TypeKind_WDoc, appdef.TypeKind_GRecord, appdef.TypeKind_CRecord, appdef.TypeKind_WRecord:
 		return validator.validRecord(rec, rawIDexpected)
 	}
 
-	return validateErrorf(ECode_InvalidDefKind, "record «%s» refers to invalid definition «%v» kind «%s»: %w", rec.Container(), rec.QName(), validator.def.Kind().TrimString(), ErrUnexpectedDefKind)
+	return validateErrorf(ECode_InvalidTypeKind, "record «%s» refers to invalid type «%v» kind «%s»: %w", rec.Container(), rec.QName(), validator.typ.Kind().TrimString(), ErrUnexpectedTypeKind)
 }

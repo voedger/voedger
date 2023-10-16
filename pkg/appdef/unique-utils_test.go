@@ -86,7 +86,7 @@ func Test_overlaps(t *testing.T) {
 
 func Test_generateUniqueName(t *testing.T) {
 	app := newAppDef()
-	def := app.AddCDoc(NewQName("test", "user"))
+	doc := app.AddCDoc(NewQName("test", "user"))
 
 	tests := []struct {
 		name   string
@@ -98,8 +98,8 @@ func Test_generateUniqueName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := generateUniqueName(def, tt.fields); got != tt.want {
-				t.Errorf("generateUniqueName(%v, %#v) = %v, want %v", def.QName(), tt.fields, got, tt.want)
+			if got := generateUniqueName(doc, tt.fields); got != tt.want {
+				t.Errorf("generateUniqueName(%v, %#v) = %v, want %v", doc.QName(), tt.fields, got, tt.want)
 			}
 		})
 	}
@@ -108,17 +108,17 @@ func Test_generateUniqueName(t *testing.T) {
 		require := require.New(t)
 
 		appDef := New()
-		def := appDef.AddCRecord(NewQName("test", "rec"))
-		for i := 1; i < MaxDefUniqueCount; i++ {
-			def.AddField("i"+strconv.Itoa(i), DataKind_int32, false)
-			def.AddField("b"+strconv.Itoa(i), DataKind_bool, false)
+		rec := appDef.AddCRecord(NewQName("test", "rec"))
+		for i := 1; i < MaxTypeUniqueCount; i++ {
+			rec.AddField("i"+strconv.Itoa(i), DataKind_int32, false)
+			rec.AddField("b"+strconv.Itoa(i), DataKind_bool, false)
 		}
-		for i := 1; i < MaxDefUniqueCount; i++ {
-			def.AddUnique("", []string{"i" + strconv.Itoa(i), "b" + strconv.Itoa(i)})
+		for i := 1; i < MaxTypeUniqueCount; i++ {
+			rec.AddUnique("", []string{"i" + strconv.Itoa(i), "b" + strconv.Itoa(i)})
 		}
 
 		require.Panics(func() {
-			def.AddUnique("", []string{"i01", "b99"})
+			rec.AddUnique("", []string{"i01", "b99"})
 		})
 	})
 }

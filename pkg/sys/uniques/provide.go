@@ -16,12 +16,12 @@ var QNameViewUniques = appdef.NewQName(appdef.SysPackage, "Uniques")
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 
 	projectors.ProvideViewDef(appDefBuilder, QNameViewUniques, func(view appdef.IViewBuilder) {
-		view.Key().Partition().
+		view.KeyBuilder().PartKeyBuilder().
 			AddField(field_QName, appdef.DataKind_QName).
 			AddField(field_ValuesHash, appdef.DataKind_int64)
-		view.Key().ClustCols().
+		view.KeyBuilder().ClustColsBuilder().
 			AddBytesField(field_Values, appdef.DefaultFieldMaxLength)
-		view.Value().
+		view.ValueBuilder().
 			AddRefField(field_ID, false) // true -> NullRecordID in required ref field error otherwise
 	})
 	cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
@@ -29,15 +29,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			Name: QNameViewUniques,
 			Func: provideUniquesProjectorFunc(appDefBuilder),
 		}
-	})
-	cfg.AddCUDValidators(istructs.CUDValidator{
-		MatchFunc: func(qName appdef.QName) bool {
-			if uniques, ok := appDefBuilder.Def(qName).(appdef.IUniques); ok {
-				return uniques.UniqueField() != nil
-			}
-			return false
-		},
-		Validate: provideCUDUniqueUpdateDenyValidator(),
 	})
 	cfg.AddEventValidators(provideEventUniqueValidator())
 }

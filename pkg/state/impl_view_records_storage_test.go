@@ -20,9 +20,9 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 
 		appDef := appdef.New()
 		view := appDef.AddView(testViewRecordQName1)
-		view.Key().Partition().AddField("pkk", appdef.DataKind_int64)
-		view.Key().ClustCols().AddStringField("cck", appdef.DefaultFieldMaxLength)
-		view.Value().AddStringField("vk", false)
+		view.KeyBuilder().PartKeyBuilder().AddField("pkk", appdef.DataKind_int64)
+		view.KeyBuilder().ClustColsBuilder().AddStringField("cck", appdef.DefaultFieldMaxLength)
+		view.ValueBuilder().AddStringField("vk", false)
 
 		value := &mockValue{}
 		value.On("AsString", "vk").Return("value")
@@ -55,9 +55,9 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		appDef := appdef.New()
 
 		view := appDef.AddView(testViewRecordQName1)
-		view.Key().Partition().AddField("pkk", appdef.DataKind_int64)
-		view.Key().ClustCols().AddStringField("cck", appdef.DefaultFieldMaxLength)
-		view.Value().AddStringField("vk", false)
+		view.KeyBuilder().PartKeyBuilder().AddField("pkk", appdef.DataKind_int64)
+		view.KeyBuilder().ClustColsBuilder().AddStringField("cck", appdef.DefaultFieldMaxLength)
+		view.ValueBuilder().AddStringField("vk", false)
 
 		viewRecords := &mockViewRecords{}
 		viewRecords.
@@ -139,9 +139,9 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 	appDef := appdef.New()
 
 	view := appDef.AddView(testViewRecordQName1)
-	view.Key().Partition().AddField("pkk", appdef.DataKind_int64)
-	view.Key().ClustCols().AddStringField("cck", appdef.DefaultFieldMaxLength)
-	view.Value().AddStringField("vk", false)
+	view.KeyBuilder().PartKeyBuilder().AddField("pkk", appdef.DataKind_int64)
+	view.KeyBuilder().ClustColsBuilder().AddStringField("cck", appdef.DefaultFieldMaxLength)
+	view.ValueBuilder().AddStringField("vk", false)
 
 	viewRecords := &mockViewRecords{}
 	viewRecords.
@@ -173,9 +173,9 @@ func TestViewRecordsStorage_toJSON(t *testing.T) {
 	appDef := appdef.New()
 
 	view := appDef.AddView(testViewRecordQName1)
-	view.Key().Partition().AddField("pkFld", appdef.DataKind_int64)
-	view.Key().ClustCols().AddStringField("ccFld", appdef.DefaultFieldMaxLength)
-	view.Value().
+	view.KeyBuilder().PartKeyBuilder().AddField("pkFld", appdef.DataKind_int64)
+	view.KeyBuilder().ClustColsBuilder().AddStringField("ccFld", appdef.DefaultFieldMaxLength)
+	view.ValueBuilder().
 		AddRefField("ID", false).
 		AddStringField("Name", false).
 		AddField("Count", appdef.DataKind_int64, false)
@@ -185,6 +185,6 @@ func TestViewRecordsStorage_toJSON(t *testing.T) {
 		On("AsRecordID", "ID").Return(istructs.RecordID(42)).
 		On("AsString", "Name").Return("John").
 		On("AsInt64", "Count").Return(int64(1001)).
-		On("AsQName", mock.Anything).Return(appdef.ViewValueDefName(testViewRecordQName1))
+		On("AsQName", mock.Anything).Return(testViewRecordQName1)
 
 }

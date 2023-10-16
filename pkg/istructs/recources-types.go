@@ -33,19 +33,19 @@ type IResource interface {
 
 type IFunction interface {
 	IResource
-	ParamsDef() appdef.QName
+	ParamsType() appdef.QName
 }
 
 type ICommandFunction interface {
 	IFunction
-	ResultDef() appdef.QName
-	UnloggedParamsDef() appdef.QName
+	ResultType() appdef.QName
+	UnloggedParamsType() appdef.QName
 	Exec(args ExecCommandArgs) error
 }
 
 type IQueryFunction interface {
 	IFunction
-	ResultDef(args PrepareArgs) appdef.QName
+	ResultType(args PrepareArgs) appdef.QName
 	Exec(ctx context.Context, args ExecQueryArgs, callback ExecQueryCallback) error
 }
 

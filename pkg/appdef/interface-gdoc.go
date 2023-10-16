@@ -5,42 +5,30 @@
 
 package appdef
 
-// Global document. DefKind() is DefKind_GDoc.
+// Global document
 type IGDoc interface {
-	IDef
-	IComment
-	IFields
-	IContainers
-	IUniques
-	IWithAbstract
+	IDoc
+
+	// unwanted type assertion stub
+	isGDoc()
 }
 
 type IGDocBuilder interface {
 	IGDoc
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IUniquesBuilder
-	IWithAbstractBuilder
+	IDocBuilder
 }
 
-// Global document record. DefKind() is DefKind_GRecord.
+// Global document record
 //
 // Ref. to gdoc.go for implementation
 type IGRecord interface {
-	IDef
-	IComment
-	IFields
-	IContainers
-	IUniques
-	IWithAbstract
+	IRecord
+
+	// unwanted type assertion stub
+	isGRecord()
 }
 
 type IGRecordBuilder interface {
 	IGRecord
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IUniquesBuilder
-	IWithAbstractBuilder
+	IRecordBuilder
 }

@@ -28,10 +28,10 @@ var (
 	vits                      = map[*VITConfig]*VIT{}
 	DefaultTestTime           = time.UnixMilli(1649667286774) // 2022-04-11 11:54:46 +0300 MSK
 	workspaceInitAwaitTimeout = defaultWorkspaceAwaitTimeout
-	//go:embed schemasSimpleApp.sql
-	schemasSimpleApp embed.FS
-	//go:embed schemasEmptyApp.sql
-	schemasEmptyApp embed.FS
+	//go:embed schemaTestApp1.sql
+	SchemaTestApp1 embed.FS
+	//go:embed schemaTestApp2.sql
+	SchemaTestApp2 embed.FS
 )
 
 func init() {

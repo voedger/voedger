@@ -123,7 +123,7 @@ func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *vit.VIT, inviti
 }
 
 func DenyCreateCDocWSKind_Test(t *testing.T, cdocWSKinds []appdef.QName) {
-	vit := vit.NewVIT(t, &vit.SharedConfig_Simple)
+	vit := vit.NewVIT(t, &vit.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")

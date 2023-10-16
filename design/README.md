@@ -389,7 +389,8 @@ type IAppPartitions interface {
 
   %% Relationships
   Repository ||--|{ Folder : "has"
-  Folder ||--|| SchemaFile : "has" 
+  Folder ||--|{ SchemaFile : "has"
+  Folder ||..|| PackageSchema :"corresponds to exactly one"
   SchemaFile |{..|| PackageSchema : "used to build"
   PackageSchema ||--o| ApplicationStmt : "can have"
   PackageSchema |{..|| ApplicationSchema : "used to build"

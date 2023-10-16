@@ -17,14 +17,14 @@ func proivideRenameQName(cfg *istructsmem.AppConfigType, adb appdef.IAppDefBuild
 		appdef.NewQName(appdef.SysPackage, "RenameQName"),
 		adb.AddObject(appdef.NewQName(appdef.SysPackage, "RenameQNameParams")).
 			AddField(field_ExistingQName, appdef.DataKind_QName, true).
-			AddField(field_NewQName, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(field_NewQName, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		provideExecCmdRenameQName(asp, cfg)))
 }
 
 func provideExecCmdRenameQName(asp istorage.IAppStorageProvider, cfg *istructsmem.AppConfigType) istructsmem.ExecCommandClosure {
-	return func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
 		storage, err := asp.AppStorage(cfg.Name)
 		if err != nil {
 			// notest

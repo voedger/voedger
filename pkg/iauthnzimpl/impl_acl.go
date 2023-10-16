@@ -157,7 +157,7 @@ var defaultACL = ACL{
 				qNameQryCollection,
 				qNameCmdInitiateUpdateInviteRoles,
 				qNameCmdInitiateCancelAcceptedInvite,
-				qNameCmdCancelSendInvite,
+				qNameCmdCancelSentInvite,
 				qNameCDocChildWorkspace,
 				qNameCmdInitChildWorkspace,
 				qNameCmdEnrichPrincipalToken,
@@ -266,6 +266,7 @@ var defaultACL = ACL{
 				qNameQryGetUPPaymentMethods,
 				qNameQryToggleUPPaymentMethod,
 				qNameQryRequestUPPaymentMethod,
+				qNameQryGetUPTransactionsOverview,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
@@ -303,11 +304,8 @@ var defaultACL = ACL{
 		desc: "grant exec on few funcs to role air.UntillPaymentsReseller and role air.UntillPaymentsUser",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
-				qNameQryGetDailyPayoutCfg,
-				qNameCmdUpdateScheduledPayout,
-				qNameCmdRequestOnDemandPayout,
-				qNameQryGetPayouts,
-				qNameQryGetCreditInvoice,
+				qNameQryGetUPPayouts,
+				qNameQryGetUPInvoiceParties,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				// OR
@@ -318,18 +316,29 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
-		desc: "grant exec on c.air.UpdateUPLocationRates to role air.UntillPaymentsReseller",
+		desc: "grant exec on few funcs to role air.UntillPaymentsReseller",
 		pattern: PatternType{
-			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPLocationRates},
+			qNamesPattern: []appdef.QName{
+				qNameCmdUpdateUPLocationRates,
+				qNameQryGetUPFeesOverview,
+			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
 		},
 		policy: ACPolicy_Allow,
 	},
 	{
-		desc: "grant exec on c.air.UpdateUPProfile to role air.RoleUntillPaymentsUser",
+		desc: "grant exec on c.air.UpdateUPProfile to role air.UntillPaymentsUser",
 		pattern: PatternType{
 			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPProfile},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}}},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
+		desc: "grant exec on q.air.GetAllUPPayouts to role air.UntillPaymentsManager",
+		pattern: PatternType{
+			qNamesPattern:     []appdef.QName{qNameQryGetAllUPPayouts},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsManager}}},
 		},
 		policy: ACPolicy_Allow,
 	},

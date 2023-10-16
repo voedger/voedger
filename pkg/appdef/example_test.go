@@ -41,15 +41,15 @@ func Example() {
 
 	// how to inspect builded AppDef with CDoc
 	{
-		fmt.Printf("%d definitions\n", app.DefCount())
+		fmt.Printf("%d types\n", app.TypeCount())
 
-		// how to find def by name
-		def := app.Def(docName)
-		fmt.Printf("def %q: %v\n", def.QName(), def.Kind())
+		// how to find type by name
+		t := app.Type(docName)
+		fmt.Printf("type %q: %v\n", t.QName(), t.Kind())
 
-		// how to cast def to cdoc
-		d, ok := def.(appdef.ICDoc)
-		fmt.Printf("%q is CDoc: %v\n", d.QName(), ok && (d.Kind() == appdef.DefKind_CDoc))
+		// how to cast type to cdoc
+		d, ok := t.(appdef.ICDoc)
+		fmt.Printf("%q is CDoc: %v\n", d.QName(), ok && (d.Kind() == appdef.TypeKind_CDoc))
 
 		// how to find CDoc by name
 		doc := app.CDoc(docName)
@@ -87,13 +87,16 @@ func Example() {
 			contCnt++
 			fmt.Printf("%d. Name: %q, QName: %q, occurs: %v…%v\n", contCnt, c.Name(), c.QName(), c.MinOccurs(), c.MaxOccurs())
 		})
+
+		// what if unknown type
+		fmt.Println("unknown type:", app.Type(appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:
-	// 2 definitions
-	// def "test.doc": DefKind_CDoc
+	// 2 types
+	// type "test.doc": TypeKind_CDoc
 	// "test.doc" is CDoc: true
-	// doc "test.doc": DefKind_CDoc. This is example doc
+	// doc "test.doc": TypeKind_CDoc. This is example doc
 	// doc field count: 2
 	// field "f1": kind: DataKind_int64, required: true
 	// *1. Name: "sys.QName", kind: DataKind_QName, required: true
@@ -104,4 +107,5 @@ func Example() {
 	// doc container count: 1
 	// container "rec": QName: "test.rec", occurs: 0…unbounded
 	// 1. Name: "rec", QName: "test.rec", occurs: 0…unbounded
+	// unknown type: null type
 }

@@ -52,7 +52,7 @@ type AppConfigType struct {
 	// Application configuration parameters
 	Params AppConfigParams
 
-	dynoSchemes dynobuf.DynoBufSchemes
+	dynoSchemes *dynobuf.DynoBufSchemes
 	validators  *validators
 
 	storage                 istorage.IAppStorage // will be initialized on prepare()
@@ -84,7 +84,7 @@ func newAppConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppC
 	cfg.appDefBuilder = appDef
 	app, err := appDef.Build()
 	if err != nil {
-		panic(fmt.Errorf("%v: unable build application definition: %w", appName, err))
+		panic(fmt.Errorf("%v: unable build application: %w", appName, err))
 	}
 	cfg.AppDef = app
 	cfg.Resources = newResources(&cfg)
@@ -113,7 +113,7 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 
 	sch, err := cfg.appDefBuilder.Build()
 	if err != nil {
-		return fmt.Errorf("%v: unable rebuild changed application definition: %w", cfg.Name, err)
+		return fmt.Errorf("%v: unable rebuild changed application: %w", cfg.Name, err)
 	}
 	cfg.AppDef = sch
 

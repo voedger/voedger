@@ -112,7 +112,7 @@ type eventService struct {
 
 func (s *eventService) getWSID() istructs.WSID { return s.event.Workspace() }
 
-func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc ViewDefBuilder) {
+func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc ViewTypeBuilder) {
 	builder := appDef.AddView(qname)
 	if buildFunc != nil {
 		buildFunc(builder)
@@ -121,7 +121,7 @@ func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildF
 
 func provideOffsetsDefImpl(appDef appdef.IAppDefBuilder) {
 	view := appDef.AddView(qnameProjectionOffsets)
-	view.Key().Partition().AddField(partitionFld, appdef.DataKind_int32)
-	view.Key().ClustCols().AddField(projectorNameFld, appdef.DataKind_QName)
-	view.Value().AddField(offsetFld, appdef.DataKind_int64, true)
+	view.KeyBuilder().PartKeyBuilder().AddField(partitionFld, appdef.DataKind_int32)
+	view.KeyBuilder().ClustColsBuilder().AddField(projectorNameFld, appdef.DataKind_QName)
+	view.ValueBuilder().AddField(offsetFld, appdef.DataKind_int64, true)
 }

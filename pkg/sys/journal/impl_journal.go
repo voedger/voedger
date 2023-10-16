@@ -26,16 +26,16 @@ func provideQryJournal(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IApp
 			AddField(field_Till, appdef.DataKind_int64, true).
 			AddField(Field_EventTypes, appdef.DataKind_string, true).
 			AddField(field_IndexForTimestamps, appdef.DataKind_string, false).
-			AddField(field_RangeUnit, appdef.DataKind_string, false).(appdef.IDef).QName(),
+			AddField(field_RangeUnit, appdef.DataKind_string, false).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "JournalResult")).
 			AddField(Field_Offset, appdef.DataKind_int64, true).
 			AddField(Field_EventTime, appdef.DataKind_int64, true).
-			AddField(Field_Event, appdef.DataKind_string, true).(appdef.IDef).QName(),
+			AddField(Field_Event, appdef.DataKind_string, true).(appdef.IType).QName(),
 		qryJournalExec(ep, appDefBuilder),
 	))
 }
 func qryJournalExec( /*jdi vvm.IEPJournalIndices, jp vvm.IEPJournalPredicates, */ ep extensionpoints.IExtensionPoint, appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		var fo, lo int64
 		ji := ep.ExtensionPoint(EPJournalIndices)
 		jp := ep.ExtensionPoint(EPJournalPredicates)

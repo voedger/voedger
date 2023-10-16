@@ -108,11 +108,11 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 
 	cmd := ev.appCfg.Resources.CommandFunction(ev.name)
 	if cmd != nil {
-		arg = cmd.ParamsDef()
-		argUnl = cmd.UnloggedParamsDef()
+		arg = cmd.ParamsType()
+		argUnl = cmd.UnloggedParamsType()
 	} else {
-		// #!16208: Must be possible to use DefKind_ODoc as Event.QName
-		if d := ev.appCfg.AppDef.DefByName(ev.name); (d == nil) || (d.Kind() != appdef.DefKind_ODoc) {
+		// #!16208: Must be possible to use TypeKind_ODoc as Event.QName
+		if t := ev.appCfg.AppDef.TypeByName(ev.name); (t == nil) || (t.Kind() != appdef.TypeKind_ODoc) {
 			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
 		}
 		arg = ev.name
@@ -435,18 +435,18 @@ func (cud *cudType) regenerateIDsPlan(generator istructs.IIDGenerator) (newIDs n
 		id := rec.ID()
 		if !id.IsRaw() {
 			// storage IDs are allowed for sync events
-			generator.UpdateOnSync(id, rec.def)
+			generator.UpdateOnSync(id, rec.typ)
 			continue
 		}
 
 		var storeID istructs.RecordID
 
-		if cDoc, ok := rec.def.(appdef.ICDoc); ok && cDoc.Singleton() {
+		if cDoc, ok := rec.typ.(appdef.ICDoc); ok && cDoc.Singleton() {
 			if storeID, err = cud.appCfg.singletons.ID(rec.QName()); err != nil {
 				return nil, err
 			}
 		} else {
-			if storeID, err = generator.NextID(id, rec.def); err != nil {
+			if storeID, err = generator.NextID(id, rec.typ); err != nil {
 				return nil, err
 			}
 		}
@@ -696,13 +696,13 @@ func (el *elementType) forEach(cb func(e *elementType) error) (err error) {
 	return err
 }
 
-// Returns is document definition assigned to element record
+// Returns is document type assigned to element record
 func (el *elementType) isDocument() bool {
-	kind := el.def.Kind()
-	return (kind == appdef.DefKind_GDoc) ||
-		(kind == appdef.DefKind_CDoc) ||
-		(kind == appdef.DefKind_ODoc) ||
-		(kind == appdef.DefKind_WDoc)
+	kind := el.typ.Kind()
+	return (kind == appdef.TypeKind_GDoc) ||
+		(kind == appdef.TypeKind_CDoc) ||
+		(kind == appdef.TypeKind_ODoc) ||
+		(kind == appdef.TypeKind_WDoc)
 }
 
 // maskValues masks element record row values and all elements children recursive
@@ -722,7 +722,7 @@ func (el *elementType) regenerateIDs(generator istructs.IIDGenerator) (err error
 	err = el.forEach(
 		func(e *elementType) error {
 			if id := e.ID(); id.IsRaw() {
-				storeID, err := generator.NextID(id, e.def)
+				storeID, err := generator.NextID(id, e.typ)
 				if err != nil {
 					return err
 				}
@@ -771,7 +771,7 @@ func (el *elementType) ElementBuilder(containerName string) istructs.IElementBui
 	c := makeElement(el)
 	el.child = append(el.child, &c)
 	if el.QName() != appdef.NullQName {
-		if cont := el.def.(appdef.IContainers).Container(containerName); cont != nil {
+		if cont := el.typ.(appdef.IContainers).Container(containerName); cont != nil {
 			c.setQName(cont.QName())
 			if c.QName() != appdef.NullQName {
 				if el.ID() != istructs.NullRecordID {
@@ -818,7 +818,7 @@ func (el *elementType) Build() (doc istructs.IObject, err error) {
 	if err = el.build(); err != nil {
 		return nil, err
 	}
-	if err = el.appCfg.validators.validObject(el); err != nil {
+	if err = el.appCfg.validators.validArgument(el); err != nil {
 		return nil, err
 	}
 

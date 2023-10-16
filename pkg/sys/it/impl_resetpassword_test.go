@@ -18,7 +18,7 @@ import (
 )
 
 func TestBasicUsage_ResetPassword(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	loginName := vit.NextName() + "@123.com"
 	login := vit.SignUp(loginName, "1", istructs.AppQName_test1_app1)
@@ -51,7 +51,7 @@ func TestBasicUsage_ResetPassword(t *testing.T) {
 }
 
 func TestIntiateResetPasswordErrors(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 
@@ -72,7 +72,7 @@ func TestIntiateResetPasswordErrors(t *testing.T) {
 }
 
 func TestIssueResetPasswordTokenErrors(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 
@@ -99,7 +99,7 @@ func TestIssueResetPasswordTokenErrors(t *testing.T) {
 }
 
 func TestResetPasswordLimits(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 	var (

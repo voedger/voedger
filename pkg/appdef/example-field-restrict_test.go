@@ -46,7 +46,7 @@ func ExampleIFieldsBuilder_AddStringField() {
 	}
 
 	// Output:
-	// doc "test.doc": DefKind_CDoc
+	// doc "test.doc": TypeKind_CDoc
 	// doc field count: 1
 	// field "code": kind: DataKind_string, required: true, comment: Code is string containing from one to four digits
 	// MinLen: 1, MaxLen: 4, Pattern: `^\d+$`
@@ -88,7 +88,7 @@ func ExampleIFieldsBuilder_AddBytesField() {
 	}
 
 	// Output:
-	// doc "test.doc": DefKind_CDoc
+	// doc "test.doc": TypeKind_CDoc
 	// doc field count: 1
 	// field "barCode": kind: DataKind_bytes, required: false, comment: Bar code scan data, up to 1 KB
 	// MaxLen: 1024

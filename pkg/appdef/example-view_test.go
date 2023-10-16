@@ -24,14 +24,14 @@ func ExampleIView() {
 
 		view := appDef.AddView(viewName)
 		view.SetComment("view comment")
-		view.Key().Partition().
+		view.KeyBuilder().PartKeyBuilder().
 			AddField("pk_int", appdef.DataKind_int64).
 			AddRefField("pk_ref", docName)
-		view.Key().ClustCols().
+		view.KeyBuilder().ClustColsBuilder().
 			AddField("cc_int", appdef.DataKind_int64).
 			AddRefField("cc_ref", docName).
 			AddStringField("cc_name", 100)
-		view.Value().
+		view.ValueBuilder().
 			AddField("vv_int", appdef.DataKind_int64, true).
 			AddRefField("vv_ref", true, docName).
 			AddStringField("vv_code", false, appdef.MaxLen(10), appdef.Pattern(`^\w+$`)).
@@ -63,37 +63,62 @@ func ExampleIView() {
 				}
 			}
 			if s, ok := f.(appdef.IStringField); ok {
-				fmt.Printf(", restricts: %v", s.Restricts())
+				fmt.Printf(", restricts: [%v]", s.Restricts())
 			}
 			fmt.Println()
 		}
 
+		// how to inspect all view fields
+		fmt.Printf("view has %d fields:\n", view.FieldCount())
+		view.Fields(field)
+
+		// how to inspect view key fields
+		fmt.Printf("view key has %d fields:\n", view.Key().FieldCount())
+		view.Key().Fields(field)
+
 		// how to inspect view partition key
-		fmt.Printf("view partition key is %q, %d fields:\n", view.Key().Partition().QName(), view.Key().Partition().FieldCount())
-		view.Key().Partition().Fields(field)
+		fmt.Printf("view partition key has %d fields:\n", view.Key().PartKey().FieldCount())
+		view.Key().PartKey().Fields(field)
 
 		// how to inspect view clustering columns
-		fmt.Printf("view clustering columns key is %q, %d fields:\n", view.Key().ClustCols().QName(), view.Key().ClustCols().FieldCount())
+		fmt.Printf("view clustering columns key has %d fields:\n", view.Key().ClustCols().FieldCount())
 		view.Key().ClustCols().Fields(field)
 
 		// how to inspect view value
-		fmt.Printf("view value is %q, %d fields:\n", view.Value().QName(), view.Value().FieldCount())
+		fmt.Printf("view value has %d fields:\n", view.Value().FieldCount())
 		view.Value().Fields(field)
 	}
 
 	// Output:
-	// view "test.view": DefKind_ViewRecord, view comment
-	// view partition key is "test.view_PartitionKey", 2 fields:
+	// view "test.view": TypeKind_ViewRecord, view comment
+	// view has 10 fields:
+	// - sys.QName: QName, sys, required
 	// - pk_int: int64, required
 	// - pk_ref: RecordID, required, refs: [test.doc]
-	// view clustering columns key is "test.view_ClusteringColumns", 3 fields:
 	// - cc_int: int64
 	// - cc_ref: RecordID, refs: [test.doc]
-	// - cc_name: string, restricts: MaxLen: 100
-	// view value is "test.view_Value", 5 fields:
+	// - cc_name: string, restricts: [MaxLen: 100]
+	// - vv_int: int64, required
+	// - vv_ref: RecordID, required, refs: [test.doc]
+	// - vv_code: string, restricts: [MaxLen: 10, Pattern: `^\w+$`]
+	// - vv_data: bytes, restricts: [MaxLen: 1024]
+	// view key has 5 fields:
+	// - pk_int: int64, required
+	// - pk_ref: RecordID, required, refs: [test.doc]
+	// - cc_int: int64
+	// - cc_ref: RecordID, refs: [test.doc]
+	// - cc_name: string, restricts: [MaxLen: 100]
+	// view partition key has 2 fields:
+	// - pk_int: int64, required
+	// - pk_ref: RecordID, required, refs: [test.doc]
+	// view clustering columns key has 3 fields:
+	// - cc_int: int64
+	// - cc_ref: RecordID, refs: [test.doc]
+	// - cc_name: string, restricts: [MaxLen: 100]
+	// view value has 5 fields:
 	// - sys.QName: QName, sys, required
 	// - vv_int: int64, required
 	// - vv_ref: RecordID, required, refs: [test.doc]
-	// - vv_code: string, restricts: MaxLen: 10, Pattern: `^\w+$`
-	// - vv_data: bytes, restricts: MaxLen: 1024
+	// - vv_code: string, restricts: [MaxLen: 10, Pattern: `^\w+$`]
+	// - vv_data: bytes, restricts: [MaxLen: 1024]
 }
