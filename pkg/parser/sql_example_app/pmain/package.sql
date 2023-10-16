@@ -178,7 +178,7 @@ WORKSPACE MyWorkspace (
         -- Projector triggered by few COMMANDs
         PROJECTOR UpdateDashboard
             ON (Orders, Orders2)
-            INTENTS(View(DashboardView));
+            INTENTS(View(DashboardView, XZReports, NotificationsHistory, ActiveTablePlansView));
 
         -- Projector triggered by few types of CUD operations
         PROJECTOR UpdateActivePlans
@@ -249,7 +249,7 @@ WORKSPACE MyWorkspace (
         -- Reference to WDoc
         XZReportWDocID ref NOT NULL,
         PRIMARY KEY ((Year), Month, Day, Kind, Number)
-    ) AS RESULT OF air.UpdateDashboard;
+    ) AS RESULT OF UpdateDashboard;
 
     VIEW OrdersCountView(
         Year int, -- same as int32

@@ -60,7 +60,7 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 	})
 }
 
-func resolveInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt |
+func resolveInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *ProjectorStmt |
 	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt](fn DefQName, ictx *iterateCtx, cb func(f stmtType, schema *PackageSchemaAST) error) error {
 	var err error
 	var item stmtType
@@ -90,7 +90,7 @@ func lookupInSysPackage[stmtType *WorkspaceStmt](ctx *basicContext, fn DefQName)
 	return s, e
 }
 
-func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt |
+func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt | *ProjectorStmt |
 	*WorkspaceStmt | *ViewStmt | *StorageStmt](fn DefQName, ictx *iterateCtx) (stmtType, *PackageSchemaAST, error) {
 	schema, err := getTargetSchema(fn, ictx)
 	if err != nil {

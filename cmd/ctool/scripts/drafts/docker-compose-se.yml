@@ -5,6 +5,8 @@ services:
   
   voedger:
     image: voedger/voedger:0.0.1-alpha
+    volumes:
+      - /etc/hosts:/etc/hosts
     environment:
       - VOEDGER_HTTP_PORT=8888
     ports:
