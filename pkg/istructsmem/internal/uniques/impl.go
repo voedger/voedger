@@ -66,7 +66,7 @@ func (un *uniques) prepare(storage istorage.IAppStorage, versions *vers.Versions
 //
 // e.g. "0x07b5|name|surname|"
 func (un *uniques) key(u appdef.IUnique) (string, error) {
-	id, err := un.qnames.ID(u.ParentType().QName())
+	id, err := un.qnames.ID(u.ParentStructure().QName())
 	if err != nil {
 		return "", err
 	}

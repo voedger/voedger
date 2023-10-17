@@ -5,7 +5,9 @@
 
 package appdef
 
-// Application.
+// # Application definition.
+//
+// Application definition is a set of types, views, commands, queries and workspaces.
 //
 // Ref to apdef.go for implementation
 type IAppDef interface {
@@ -98,7 +100,7 @@ type IAppDef interface {
 	Workspace(QName) IWorkspace
 }
 
-// Application builder
+// # Application builder
 //
 // Ref to appdef.go for implementation
 type IAppDefBuilder interface {
@@ -225,6 +227,9 @@ type IAppDefBuilder interface {
 	//   - if type with name already exists.
 	AddWorkspace(QName) IWorkspaceBuilder
 
-	// Must be called after all types added. Validates and returns builded application type or error
+	// Builds application definition.
+	//
+	// Validates and returns builded application type or error.
+	// Must be called after all entities added.
 	Build() (IAppDef, error)
 }

@@ -5,6 +5,8 @@
 
 package appdef
 
+// # QName
+//
 // Qualified name
 //
 // <pkg>.<entity>
@@ -20,6 +22,8 @@ type QName struct {
 // Ref. type-kind.go for constants and methods
 type TypeKind uint8
 
+// # Type
+//
 // Type describes the entity, such as document, record or view.
 //
 // Ref to type.go for implementation

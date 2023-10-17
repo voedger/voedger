@@ -5,7 +5,7 @@
 
 package appdef
 
-// Workflow document.
+// # Workflow document.
 type IWDoc interface {
 	IDoc
 

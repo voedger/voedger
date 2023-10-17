@@ -5,7 +5,9 @@
 
 package appdef
 
-// Workspace
+// # Workspace
+//
+// Workspace is a set of types.
 //
 // Ref. to workspace.go for implementation
 type IWorkspace interface {
