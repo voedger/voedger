@@ -13,7 +13,7 @@ import (
 
 var wLogDatesProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	timestamp := time.UnixMilli(int64(event.RegisteredAt())).UTC()
-	kb, err := s.KeyBuilder(state.ViewRecordsStorage, QNameViewWLogDates)
+	kb, err := s.KeyBuilder(state.View, QNameViewWLogDates)
 	if err != nil {
 		return
 	}

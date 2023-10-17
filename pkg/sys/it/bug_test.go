@@ -96,7 +96,7 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 			cmd2CUDs := istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName,
 				func(args istructs.ExecCommandArgs) (err error) {
 					// 2 раза используем один и тот же rawID -> 500 internal server error
-					kb, err := args.State.KeyBuilder(state.RecordsStorage, cdocQName)
+					kb, err := args.State.KeyBuilder(state.Record, cdocQName)
 					if err != nil {
 						return
 					}
@@ -106,7 +106,7 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 					}
 					sv.PutRecordID(appdef.SystemField_ID, 1)
 
-					kb, err = args.State.KeyBuilder(state.RecordsStorage, cdocQName)
+					kb, err = args.State.KeyBuilder(state.Record, cdocQName)
 					if err != nil {
 						return
 					}

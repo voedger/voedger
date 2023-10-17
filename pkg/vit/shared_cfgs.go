@@ -175,7 +175,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 			AddField("Int", appdef.DataKind_int32, true).
 			AddField("Str", appdef.DataKind_string, false).(appdef.IType).QName(),
 		func(args istructs.ExecCommandArgs) (err error) {
-			key, err := args.State.KeyBuilder(state.CmdResultStorage, testCmdResult)
+			key, err := args.State.KeyBuilder(state.Result, testCmdResult)
 			if err != nil {
 				return err
 			}

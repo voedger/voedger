@@ -439,7 +439,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	//Notify the projectors
 	broker.Update(in10n.ProjectionKey{
 		App:        istructs.AppQName_test1_app1,
-		Projection: PlogQName,
+		Projection: PLogUpdatesQName,
 		WS:         istructs.WSID(partitionNr),
 	}, topOffset)
 

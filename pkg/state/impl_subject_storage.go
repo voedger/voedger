@@ -18,10 +18,10 @@ type subjectStorage struct {
 }
 
 func (s *subjectStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newKeyBuilder(SubjectStorage, appdef.NullQName)
+	return newKeyBuilder(RequestSubject, appdef.NullQName)
 }
 func (s *subjectStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
-	ssv := &subjectStorageValue{
+	ssv := &requestSubjectValue{
 		token:      s.tokenFunc(),
 		toJSONFunc: s.toJSON,
 	}
@@ -41,7 +41,7 @@ func (s *subjectStorage) Get(key istructs.IStateKeyBuilder) (value istructs.ISta
 }
 
 func (s *subjectStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
-	value := sv.(*subjectStorageValue)
+	value := sv.(*requestSubjectValue)
 	obj := make(map[string]interface{})
 	obj[Field_ProfileWSID] = value.profileWSID
 	obj[Field_Kind] = value.kind

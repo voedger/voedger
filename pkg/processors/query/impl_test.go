@@ -52,7 +52,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	skb.On("PutRecordID", mock.Anything, mock.Anything)
 	s := &mockState{}
 	s.
-		On("KeyBuilder", state.RecordsStorage, appdef.NullQName).Return(skb).
+		On("KeyBuilder", state.Record, appdef.NullQName).Return(skb).
 		On("MustExist", mock.Anything).Return(department("Soft drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().

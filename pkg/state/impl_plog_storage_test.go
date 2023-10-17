@@ -31,7 +31,7 @@ func TestPLogStorage_Read(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil)
-		kb, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
+		kb, err := s.KeyBuilder(PLog, appdef.NullQName)
 		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
@@ -55,7 +55,7 @@ func TestPLogStorage_Read(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil)
-		k, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
+		k, err := s.KeyBuilder(PLog, appdef.NullQName)
 		require.NoError(err)
 		k.PutInt64(Field_Offset, 1)
 		k.PutInt64(Field_Count, 1)
@@ -81,7 +81,7 @@ func TestPLogStorage_Get(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, nil, 0, nil)
-		kb, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
+		kb, err := s.KeyBuilder(PLog, appdef.NullQName)
 		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
@@ -109,11 +109,11 @@ func TestPLogStorage_Get(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, SimplePartitionIDFunc(istructs.PartitionID(1)), nil, nil, nil, nil, nil, 0, nil)
-		kb1, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
+		kb1, err := s.KeyBuilder(PLog, appdef.NullQName)
 		require.NoError(err)
 		kb1.PutInt64(Field_Offset, 1)
 		kb1.PutInt64(Field_Count, 1)
-		kb2, err := s.KeyBuilder(PLogStorage, appdef.NullQName)
+		kb2, err := s.KeyBuilder(PLog, appdef.NullQName)
 		require.NoError(err)
 		kb2.PutInt64(Field_Offset, 2)
 		kb2.PutInt64(Field_Count, 1)
@@ -145,7 +145,7 @@ func TestPLogStorage_ToJSON(t *testing.T) {
 		On("WLogOffset").Return(istructs.Offset(56)).
 		On("Error").Return(eventError)
 
-	sv := &pLogStorageValue{
+	sv := &pLogValue{
 		event:      event,
 		offset:     123,
 		toJSONFunc: s.toJSON,

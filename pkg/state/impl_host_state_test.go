@@ -24,7 +24,7 @@ func TestHostState_BasicUsage(t *testing.T) {
 	// Declare simple extension
 	extension := func(state istructs.IState) {
 		//Create key
-		key, err := state.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		key, err := state.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		key.PutInt64("pkFld", 64)
 
@@ -533,7 +533,7 @@ func TestHostState_ValidateIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}).
 			On("Validate", mock.Anything).Return(nil)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -557,7 +557,7 @@ func TestHostState_ValidateIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}).
 			On("Validate", mock.Anything).Return(errTest)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -575,7 +575,7 @@ func TestHostState_ApplyIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}).
 			On("ApplyBatch", mock.Anything).Return(nil)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -591,7 +591,7 @@ func TestHostState_ApplyIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}).
 			On("ApplyBatch", mock.Anything).Return(errTest)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)

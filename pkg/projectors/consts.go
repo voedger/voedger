@@ -29,4 +29,4 @@ const (
 	n10nChannelDuration          = 100 * 365 * 24 * time.Hour
 )
 
-var PlogQName = appdef.NewQName(appdef.SysPackage, "PLog")
+var PLogUpdatesQName = appdef.NewQName(appdef.SysPackage, "PLogUpdates")

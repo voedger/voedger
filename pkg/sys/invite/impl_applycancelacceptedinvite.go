@@ -27,7 +27,7 @@ func provideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc coreutils.Ti
 
 func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		skbCDocInvite, err := s.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
+		skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
 			return
 		}
@@ -37,7 +37,7 @@ func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils
 			return
 		}
 
-		skbCDocSubject, err := s.KeyBuilder(state.RecordsStorage, QNameCDocSubject)
+		skbCDocSubject, err := s.KeyBuilder(state.Record, QNameCDocSubject)
 		if err != nil {
 			return
 		}
