@@ -663,6 +663,11 @@ func Test_DuplicatesInViews(t *testing.T) {
 			PRIMARY KEY(field1),
 			PRIMARY KEY(field2)
 		) AS RESULT OF Proj1;
+
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			COMMAND Orders()	
+		);
 	)
 	`)
 	require.NoError(err)
@@ -672,6 +677,7 @@ func Test_DuplicatesInViews(t *testing.T) {
 
 	_, err = BuildAppSchema([]*PackageSchemaAST{
 		pkg,
+		getSysPackageAST(),
 	})
 
 	require.EqualError(err, strings.Join([]string{
@@ -701,7 +707,11 @@ func Test_Views(t *testing.T) {
 				field1 int,
 				PRIMARY KEY(field2)
 			) AS RESULT OF Proj1;
-		)
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				COMMAND Orders()	
+			);
+			)
 	`, "file2.sql:4:17: undefined field field2")
 
 	f(`APPLICATION test(); WORKSPACE Workspace (
@@ -709,7 +719,11 @@ func Test_Views(t *testing.T) {
 				field1 varchar,
 				PRIMARY KEY((field1))
 			) AS RESULT OF Proj1;
-		)
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				COMMAND Orders()	
+			);
+			)
 	`, "file2.sql:4:17: varchar field field1 not supported in partition key")
 
 	f(`APPLICATION test(); WORKSPACE Workspace (
@@ -717,6 +731,10 @@ func Test_Views(t *testing.T) {
 			field1 bytes,
 			PRIMARY KEY((field1))
 		) AS RESULT OF Proj1;
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			COMMAND Orders()	
+		);
 	)
 	`, "file2.sql:4:16: bytes field field1 not supported in partition key")
 
@@ -726,6 +744,10 @@ func Test_Views(t *testing.T) {
 			field2 int,
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			COMMAND Orders()	
+		);
 	)
 	`, "file2.sql:5:16: varchar field field1 can only be the last one in clustering key")
 
@@ -735,6 +757,10 @@ func Test_Views(t *testing.T) {
 			field2 int,
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			COMMAND Orders()	
+		);
 	)
 	`, "file2.sql:5:16: bytes field field1 can only be the last one in clustering key")
 
@@ -745,6 +771,10 @@ func Test_Views(t *testing.T) {
 			field2 ref(unexisting),
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			COMMAND Orders()	
+		);
 	)
 	`, "file2.sql:4:4: reference to abstract table abc", "file2.sql:5:4: unexisting undefined")
 }
@@ -765,6 +795,10 @@ func Test_Views2(t *testing.T) {
 				field4 ref,
 				PRIMARY KEY((field1,field4),field2)
 			) AS RESULT OF Proj1;
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				COMMAND Orders()	
+			);
 		)
 		`)
 		require.NoError(err)
@@ -795,6 +829,10 @@ func Test_Views2(t *testing.T) {
 				field4 ref,
 				PRIMARY KEY((field1),field4,field3)
 			) AS RESULT OF Proj1;
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				COMMAND Orders()	
+			);
 		)
 		`)
 		require.NoError(err)
@@ -813,6 +851,34 @@ func Test_Views2(t *testing.T) {
 
 		v := appBld.View(appdef.NewQName("test", "test"))
 		require.NotNil(v)
+
+	}
+	{
+		ast, err := ParseFile("file2.sql", `APPLICATION test(); WORKSPACE Workspace (
+			VIEW test(
+				-- comment1
+				field1 int,
+				-- comment2
+				field3 bytes(20),
+				-- comment4
+				field4 ref,
+				PRIMARY KEY((field1),field4,field3)
+			) AS RESULT OF Proj1;
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 ON (Orders);
+				COMMAND Orders()	
+			);
+		)
+		`)
+		require.NoError(err)
+		pkg, err := BuildPackageSchema("test", []*FileSchemaAST{ast})
+		require.NoError(err)
+
+		_, err = BuildAppSchema([]*PackageSchemaAST{
+			getSysPackageAST(),
+			pkg,
+		})
+		require.Error(err, "file2.sql:2:4: projector Proj1 does not declare intent for view test")
 
 	}
 

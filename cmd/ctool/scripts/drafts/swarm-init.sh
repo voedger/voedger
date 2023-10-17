@@ -18,12 +18,14 @@ if [ "$#" -lt 1 ]; then
   exit 1
 fi
 
+swarm_manager_ip=$(getent hosts "$1" | awk '{print $1}')
+
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 if [[ $(ssh $SSH_OPTIONS $SSH_USER@$1 docker info --format '{{.Swarm.LocalNodeState}}') == "inactive" ]]; then
   # Initialize Swarm with all nodes as managers and workers
-  WORKER_TOKEN=$(ssh $SSH_OPTIONS $SSH_USER@$1 docker swarm init --advertise-addr $1 --listen-addr $1:2377 | grep -oP "SWMTKN-\S+")
+  WORKER_TOKEN=$(ssh $SSH_OPTIONS $SSH_USER@$1 docker swarm init --advertise-addr $swarm_manager_ip --listen-addr $swarm_manager_ip:2377 | grep -oP "SWMTKN-\S+")
   echo $WORKER_TOKEN > worker.token
 fi
 

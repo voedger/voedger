@@ -78,6 +78,10 @@ func ErrAbstractTableNotAlowedInProjectors(tblName string) error {
 	return fmt.Errorf("projector refers to abstract table %s", tblName)
 }
 
+func ErrProjectorDoesNotDeclareViewIntent(projectorName, viewName string) error {
+	return fmt.Errorf("projector %s does not declare intent for view %s", projectorName, viewName)
+}
+
 func ErrUndefined(name string) error {
 	return fmt.Errorf("%s undefined", name)
 }
