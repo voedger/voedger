@@ -73,7 +73,7 @@ func provideRecordsRegistryProjector(cfg *istructsmem.AppConfigType) func(event 
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 		argType := cfg.AppDef.Type(event.ArgumentObject().QName())
 		if argType.Kind() == appdef.TypeKind_ODoc || argType.Kind() == appdef.TypeKind_ORecord {
-			if err := writeObjectToORegistry(event.ArgumentObject(), cfg.AppDef, st, intents, event.WLogOffset()); err != nil {
+			if err := writeObjectToRegistry(event.ArgumentObject(), cfg.AppDef, st, intents, event.WLogOffset()); err != nil {
 				// notest
 				return err
 			}
@@ -82,12 +82,12 @@ func provideRecordsRegistryProjector(cfg *istructsmem.AppConfigType) func(event 
 			if !rec.IsNew() {
 				return nil
 			}
-			return writeObjectToORegistry(rec, cfg.AppDef, st, intents, event.WLogOffset())
+			return writeObjectToRegistry(rec, cfg.AppDef, st, intents, event.WLogOffset())
 		})
 	}
 }
 
-func writeObjectToORegistry(root istructs.IRowReader, appDef appdef.IAppDef, st istructs.IState, intents istructs.IIntents, wLogOffsetToStore istructs.Offset) error {
+func writeObjectToRegistry(root istructs.IRowReader, appDef appdef.IAppDef, st istructs.IState, intents istructs.IIntents, wLogOffsetToStore istructs.Offset) error {
 	if err := writeRegistry(st, intents, root.AsRecordID(appdef.SystemField_ID), wLogOffsetToStore, root.AsQName(appdef.SystemField_QName)); err != nil {
 		// notest
 		return err
@@ -97,18 +97,13 @@ func writeObjectToORegistry(root istructs.IRowReader, appDef appdef.IAppDef, st 
 		return nil
 	}
 	return iterate.ForEachError(element.Containers, func(container string) (err error) {
-		element.Elements(container, func(el istructs.IElement) {
-			if err != nil {
-				// notest
-				return
-			}
+		return iterate.ForEachError1Arg(element.Elements, container, func(el istructs.IElement) error {
 			elType := appDef.Type(el.QName())
 			if elType.Kind() != appdef.TypeKind_ODoc && elType.Kind() != appdef.TypeKind_ORecord {
-				return
+				return nil
 			}
-			err = writeObjectToORegistry(el, appDef, st, intents, wLogOffsetToStore)
+			return writeObjectToRegistry(el, appDef, st, intents, wLogOffsetToStore)
 		})
-		return err
 	})
 }
 
@@ -140,11 +135,11 @@ func provideRefIntegrityValidator() istructs.CUDValidator {
 			if err = CheckRefIntegrity(cudRow, appStructs, wsid); err == nil {
 				return nil
 			}
+			status := http.StatusInternalServerError
 			if errors.Is(err, ErrReferentialIntegrityViolation) {
-				return coreutils.WrapSysError(err, http.StatusBadRequest)
+				status = http.StatusBadRequest
 			}
-			// notest
-			return coreutils.WrapSysError(err, http.StatusInternalServerError)
+			return coreutils.WrapSysError(err, status)
 		},
 	}
 }

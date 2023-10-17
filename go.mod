@@ -20,7 +20,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/untillpro/airs-ibus v0.0.0-20230904100809-21eaae083040
 	github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195
-	github.com/untillpro/goutils v0.0.0-20231006143014-38cd0b32a7c9
+	github.com/untillpro/goutils v0.0.0-20231016125257-c102366a9ae8
 	github.com/untillpro/ibusmem v0.0.0-20230904100952-cc8a0d2caa40
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/voedger/wazero v0.0.0-20230501104804-47700bcd4177
