@@ -716,3 +716,31 @@ func Test_rowType_Nils(t *testing.T) {
 		require.Contains(row.nils, "string")
 	})
 }
+
+func Test_rowType_String(t *testing.T) {
+	require := require.New(t)
+
+	test := test()
+
+	t.Run("must be null row", func(t *testing.T) {
+		r := newRow(test.AppCfg)
+		require.Equal("null row", r.String())
+	})
+
+	t.Run("must be complete form for record", func(t *testing.T) {
+		r := newRecord(test.AppCfg)
+		r.setQName(test.testCRec)
+		r.setContainer("child")
+		s := r.String()
+		require.Contains(s, "CRecord")
+		require.Contains(s, "«child: test.Record»")
+	})
+
+	t.Run("must be short form for document", func(t *testing.T) {
+		r := newRecord(test.AppCfg)
+		r.setQName(test.testCDoc)
+		s := r.String()
+		require.Contains(s, "CDoc")
+		require.Contains(s, "«test.CDoc»")
+	})
+}

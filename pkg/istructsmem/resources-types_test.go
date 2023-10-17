@@ -30,7 +30,7 @@ func TestResourceEnumerator(t *testing.T) {
 		app istructs.IAppStructs
 
 		cmdCreateDoc appdef.QName = appdef.NewQName("test", "CreateDoc")
-		cDocName     appdef.QName = appdef.NewQName("test", "CDoc")
+		oDocName     appdef.QName = appdef.NewQName("test", "ODoc")
 
 		cmdCreateObj         appdef.QName = appdef.NewQName("test", "CreateObj")
 		cmdCreateObjUnlogged appdef.QName = appdef.NewQName("test", "CreateObjUnlogged")
@@ -43,7 +43,7 @@ func TestResourceEnumerator(t *testing.T) {
 
 		appDef := appdef.New()
 		t.Run("must be ok to build application", func(t *testing.T) {
-			doc := appDef.AddCDoc(cDocName)
+			doc := appDef.AddODoc(oDocName)
 			doc.
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddStringField("String", false)
@@ -57,7 +57,7 @@ func TestResourceEnumerator(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 
-		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, cDocName, appdef.NullQName, appdef.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, oDocName, appdef.NullQName, appdef.NullQName, NullCommandExec))
 		cfg.Resources.Add(NewCommandFunction(cmdCreateObj, oObjName, appdef.NullQName, appdef.NullQName, NullCommandExec))
 		cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, appdef.NullQName, oObjName, appdef.NullQName, NullCommandExec))
 		cfg.Resources.Add(NewCommandFunction(cmdCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, NullCommandExec))

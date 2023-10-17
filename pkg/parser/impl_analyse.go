@@ -170,6 +170,36 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 		}
 	}
 
+	// ResultOf
+	err := resolveInCtx(view.ResultOf, c, func(f *ProjectorStmt, _ *PackageSchemaAST) error {
+		var intentForView *ProjectorStorage
+		for i := 0; i < len(f.Intents) && intentForView == nil; i++ {
+			var isView bool
+			intent := f.Intents[i]
+			if err := resolveInCtx(intent.Storage, c, func(storage *StorageStmt, _ *PackageSchemaAST) error {
+				isView = isView || storage.EntityView
+				return nil
+			}); err != nil {
+				c.stmtErr(&view.Pos, err)
+			}
+
+			if isView {
+				for _, entity := range intent.Entities {
+					if entity.Name == view.Name && (entity.Package == Ident(c.pkg.Name) || entity.Package == Ident("")) {
+						intentForView = &f.Intents[i]
+						break
+					}
+				}
+			}
+		}
+		if intentForView == nil {
+			return ErrProjectorDoesNotDeclareViewIntent(f.GetName(), view.GetName())
+		}
+		return nil
+	})
+	if err != nil {
+		c.stmtErr(&view.Pos, err)
+	}
 }
 
 func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {

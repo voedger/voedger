@@ -33,7 +33,9 @@ var ErrInvalidVerificationKind = errors.New("invalid verification kind")
 
 var ErrCUDsMissed = errors.New("CUDs are missed")
 
-var ErrRawRecordIDExpected = errors.New("raw record ID expected")
+var ErrRawRecordIDRequired = errors.New("raw record ID required")
+
+var ErrRawRecordIDUnexpected = errors.New("unexpected raw record ID")
 
 var ErrRecordIDUniqueViolation = errors.New("record ID duplicates")
 
