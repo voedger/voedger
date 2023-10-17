@@ -113,6 +113,7 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 	} else {
 		// #!16208: Must be possible to use TypeKind_ODoc as Event.QName
 		if t := ev.appCfg.AppDef.TypeByName(ev.name); (t == nil) || (t.Kind() != appdef.TypeKind_ODoc) {
+			// command function «test.object» not found
 			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
 		}
 		arg = ev.name
@@ -124,11 +125,11 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 // build build all event arguments and CUDs
 func (ev *eventType) build() (err error) {
 	if ev.name == appdef.NullQName {
-		return validateErrorf(ECode_EmptyDefName, "empty event command name: %w", ErrNameMissed)
+		return validateErrorf(ECode_EmptyTypeName, "empty event command name: %w", ErrNameMissed)
 	}
 
 	if _, err = ev.appCfg.qNames.ID(ev.name); err != nil {
-		return validateErrorf(ECode_InvalidDefName, "unknown event command name «%v»: %w", ev.name, err)
+		return validateErrorf(ECode_InvalidTypeName, "unknown event command name «%v»: %w", ev.name, err)
 	}
 
 	err = errors.Join(
@@ -241,7 +242,7 @@ func (ev *eventType) BuildRawEvent() (raw istructs.IRawEvent, err error) {
 		return ev, err
 	}
 
-	if err = ev.appCfg.validators.validEvent(ev); err != nil {
+	if err = validateEvent(ev); err != nil {
 		return ev, err
 	}
 
@@ -296,6 +297,11 @@ func (ev *eventType) RegisteredAt() istructs.UnixMilli {
 func (ev *eventType) Release() {
 	// Free() will called through a RefCounter.Release() then reference counter decrease zero
 	ev.RefCounter.Release()
+}
+
+// # Return event name, such as `event «sys.CUD»` or `event «test.ODocument»`
+func (ev *eventType) String() string {
+	return fmt.Sprintf("event «%v»", ev.name)
 }
 
 // istructs.IAbstractEvent.Synced
@@ -638,12 +644,14 @@ func (upd *updateRecType) release() {
 	upd.result.release()
 }
 
-// elementType implements object and element (as part of object) structure
-//   - interfaces:
-//     — istructs.IObjectBuilder
-//     — istructs.IElementBuilder
-//     — istructs.IObject,
-//     — istructs.IElement
+// # Implements object and element (as part of object) structure
+//
+// # Implements:
+//
+//   - istructs.IObjectBuilder
+//   - istructs.IElementBuilder
+//   - istructs.IObject,
+//   - istructs.IElement
 type elementType struct {
 	recordType
 	parent *elementType
@@ -678,9 +686,6 @@ func (el *elementType) build() (err error) {
 // Clears element record and all children recursive
 func (el *elementType) clear() {
 	el.recordType.clear()
-	for _, e := range el.child {
-		e.clear()
-	}
 	el.child = make([]*elementType, 0)
 }
 
@@ -813,12 +818,31 @@ func (el *elementType) Containers(cb func(container string)) {
 	}
 }
 
-// istructs.IObjectBuilder.Build()
-func (el *elementType) Build() (doc istructs.IObject, err error) {
-	if err = el.build(); err != nil {
+// # Implements istructs.IObjectBuilder.Build()
+//
+// Builds and returns object or document.
+//
+//	If builded object type is not found in appdef then returns error.
+//	If builded object type is not object or document then returns error.
+//	If builded object is not valid then returns validation error.
+func (el *elementType) Build() (istructs.IObject, error) {
+	if err := el.build(); err != nil {
 		return nil, err
 	}
-	if err = el.appCfg.validators.validArgument(el); err != nil {
+	if el.QName() == appdef.NullQName {
+		return nil, fmt.Errorf("object builder has empty type name: %w", ErrNameMissed)
+	}
+	if t := el.typ.Kind(); (t != appdef.TypeKind_Object) &&
+		(t != appdef.TypeKind_ODoc) &&
+		(t != appdef.TypeKind_GDoc) &&
+		(t != appdef.TypeKind_CDoc) &&
+		(t != appdef.TypeKind_WDoc) {
+		return nil, fmt.Errorf("object builder has wrong type %v (not an object or document): %w", el, ErrUnexpectedTypeKind)
+	}
+	if _, err := validateObjectIDs(el, false); err != nil {
+		return nil, err
+	}
+	if err := validateElement(el); err != nil {
 		return nil, err
 	}
 

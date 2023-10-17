@@ -12,7 +12,20 @@ if [ "$#" -lt 1 ]; then
   exit 1
 fi
 
-VERSION_STRING="5:20.10.23~3-0~ubuntu-focal"
+release=$(lsb_release -rs)
+
+if [[ $release == "20.04" ]]; then
+	echo "This is Ubuntu 20.04"
+	VERSION_STRING="5:20.10.23~3-0~ubuntu-focal"
+
+elif [[ $release == "22.04" ]]; then
+	echo "This is Ubuntu 22.04"
+	VERSION_STRING="5:20.10.23~3-0~ubuntu-jammy"
+else
+	echo "This script only supports Ubuntu 20.04 and 22.04"
+	exit 1
+fi
+
 NODE=$1
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'

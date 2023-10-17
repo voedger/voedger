@@ -15,6 +15,8 @@ if [[ $# -ne 5 ]]; then
   exit 1
 fi
 
+SSH_USER=$LOGNAME
+SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 AppNode1=$1
 AppNode2=$2
@@ -22,8 +24,52 @@ DBNode1=$3
 DBNode2=$4
 DBNode3=$5
 
-SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
+hosts=("app-node-1" "app-node-2" "db-node-1" "db-node-2" "db-node-3")
+
+# Function to update /etc/hosts on a remote host using SSH
+update_hosts_file() {
+  local host=$1
+  local ip=$2
+  local hr=$3 
+  # Check if the hostname already exists in /etc/hosts
+  if ssh $SSH_OPTIONS $SSH_USER@$ip "sudo grep -qF '$hr' /etc/hosts"; then
+      # If the hostname exists, replace the existing entry
+      ssh $SSH_OPTIONS $SSH_USER@$ip "sudo sed -i -E 's/.*\b$hr\b.*$/$hr\t$host/' /etc/hosts"
+  else
+      # If the hostname doesn't exist, add the new record
+      ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
+  fi
+
+  # SSH command to execute on the remote host
+  # ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
+}
+
+update_hosts_file_refactored() {
+  local host=$1
+  local ip=$2
+  local hr=$3
+
+  # SSH command to execute on the remote host
+  ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c '
+    if grep -qF \"$hr\" /etc/hosts; then
+      sed -i -E \"s/.*\b$hr\b.*$/$hr\t$host/\" /etc/hosts
+    else
+      echo -e \"$hr\t$host\" >> /etc/hosts
+    fi
+  '"
+}
+
+args_array=("$@")
+# Prepare for name resolving - iterate over each hostname and update /etc/hosts on each host
+#i=0
+#for host in "${hosts[@]}"; do
+#  ip=${args_array[i]}
+  # Iterate over the three IP addresses
+#  for ip_address in "$@"; do
+#      update_hosts_file $host $ip_address $ip
+#  done
+#((++i))
+#done
 
 count=0
 
@@ -47,14 +93,14 @@ EOF
       ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/provisioning/dashboards/swarmprom_dashboards.yml'
 
   cat ./grafana/provisioning/datasources/datasource.yml | \
-      sed "s/{{.AppNode}}/$1/g" \
+      sed "s/{{.AppNode}}/${hosts[$count]}/g" \
       | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/provisioning/datasources/datasource.yml'
 
   cat ./grafana/grafana.ini | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/grafana.ini'
 
 
   cat ./prometheus/prometheus.yml | \
-      sed "s/{{.DBNode1}}/$DBNode1/g; s/{{.DBNode2}}/$DBNode2/g; s/{{.DBNode3}}/$DBNode3/g; s/{{.AppNode1}}/$AppNode1/g; s/{{.AppNode2}}/$AppNode2/g; s/{{.Label}}/AppNode$((count+1))/g" \
+      sed "s/{{.DBNode1}}/${hosts[2]}/g; s/{{.DBNode2}}/${hosts[3]}/g; s/{{.DBNode3}}/${hosts[4]}/g; s/{{.AppNode1}}/${hosts[0]}/g; s/{{.AppNode2}}/${hosts[1]}/g; s/{{.Label}}/AppNode$((count+1))/g" \
       | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/prometheus/prometheus.yml'
 
   cat ./prometheus/alert.rules | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/prometheus/alert.rules'

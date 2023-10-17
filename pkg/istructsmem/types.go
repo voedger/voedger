@@ -881,3 +881,26 @@ func (row *rowType) RecordIDs(includeNulls bool, cb func(string, istructs.Record
 			}
 		})
 }
+
+// Return readable name of row.
+//
+// If row has no QName (NullQName) then returns "null row".
+//
+// If row has container name, then the result complete like `CRecord «Price: sales.PriceRecord»`.
+// Otherwise it will be short form, such as "CDoc «sales.BillDocument»".
+func (row *rowType) String() string {
+	qName := row.AsQName(appdef.SystemField_QName)
+	if qName == appdef.NullQName {
+		return "null row"
+	}
+
+	kind := row.typ.Kind().TrimString()
+
+	if n := row.Container(); n != "" {
+		// complete form, such as "CRecord «Price: sales.PriceRecord»"
+		return fmt.Sprintf("%s «%s: %s»", kind, n, qName.String())
+	}
+
+	// short form, such as "CDoc «sales.BillDocument»"
+	return fmt.Sprint(row.typ)
+}
