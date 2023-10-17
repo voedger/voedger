@@ -686,9 +686,6 @@ func (el *elementType) build() (err error) {
 // Clears element record and all children recursive
 func (el *elementType) clear() {
 	el.recordType.clear()
-	for _, e := range el.child {
-		e.clear()
-	}
 	el.child = make([]*elementType, 0)
 }
 
@@ -840,7 +837,7 @@ func (el *elementType) Build() (istructs.IObject, error) {
 		(t != appdef.TypeKind_GDoc) &&
 		(t != appdef.TypeKind_CDoc) &&
 		(t != appdef.TypeKind_WDoc) {
-		return nil, fmt.Errorf("object builder has type wrong (not an object or document) type %v: %w", el, ErrUnexpectedTypeKind)
+		return nil, fmt.Errorf("object builder has wrong type %v (not an object or document): %w", el, ErrUnexpectedTypeKind)
 	}
 	if _, err := validateObjectIDs(el, false); err != nil {
 		return nil, err

@@ -15,207 +15,9 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
-
-func Test_ValidElement(t *testing.T) {
-	require := require.New(t)
-
-	test := test()
-
-	appDef := appdef.New()
-
-	t.Run("must be ok to build test application", func(t *testing.T) {
-
-		objName := appdef.NewQName("test", "object")
-		elName := appdef.NewQName("test", "element")
-		gcName := appdef.NewQName("test", "grandChild")
-
-		docName := appdef.NewQName("test", "document")
-		recName := appdef.NewQName("test", "record")
-
-		t.Run("build object type", func(t *testing.T) {
-			obj := appDef.AddObject(objName)
-			obj.
-				AddField("RequiredField", appdef.DataKind_int32, true)
-			obj.
-				AddContainer("child", elName, 1, appdef.Occurs_Unbounded)
-
-			el := appDef.AddElement(elName)
-			el.
-				AddField("RequiredField", appdef.DataKind_int32, true)
-			el.
-				AddContainer("grandChild", gcName, 0, 1)
-
-			subEl := appDef.AddElement(gcName)
-			subEl.
-				AddRefField("recIDField", false)
-		})
-
-		t.Run("build ODoc type", func(t *testing.T) {
-			doc := appDef.AddODoc(docName)
-			doc.
-				AddField("RequiredField", appdef.DataKind_int32, true)
-			doc.
-				AddContainer("child", recName, 1, appdef.Occurs_Unbounded)
-
-			rec := appDef.AddORecord(recName)
-			rec.
-				AddField("RequiredField", appdef.DataKind_int32, true).
-				AddRefField("recIDField", false, recName)
-		})
-	})
-
-	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(test.appName, appDef)
-
-	storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
-	require.NoError(err)
-	err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
-	require.NoError(err)
-
-	t.Run("test build object", func(t *testing.T) {
-		t.Run("must error if null-name object", func(t *testing.T) {
-			obj := func() istructs.IObjectBuilder {
-				o := makeObject(cfg, appdef.NullQName)
-				return &o
-			}()
-			_, err := obj.Build()
-			require.ErrorIs(err, ErrNameMissed)
-		})
-
-		t.Run("must error if unknown-name object", func(t *testing.T) {
-			obj := func() istructs.IObjectBuilder {
-				o := makeObject(cfg, appdef.NewQName("test", "unknownDef"))
-				return &o
-			}()
-			_, err := obj.Build()
-			require.ErrorIs(err, ErrNameNotFound)
-		})
-
-		t.Run("must error if invalid type kind object", func(t *testing.T) {
-			obj := func() istructs.IObjectBuilder {
-				o := makeObject(cfg, appdef.NewQName("test", "element"))
-				return &o
-			}()
-			_, err := obj.Build()
-			require.ErrorIs(err, ErrUnexpectedTypeKind)
-		})
-
-		obj := func() istructs.IObjectBuilder {
-			o := makeObject(cfg, appdef.NewQName("test", "object"))
-			return &o
-		}()
-
-		t.Run("must error if empty object", func(t *testing.T) {
-			_, err := obj.Build()
-			require.ErrorIs(err, ErrNameNotFound)
-		})
-
-		obj.PutInt32("RequiredField", 555)
-		t.Run("must error if no nested child", func(t *testing.T) {
-			_, err := obj.Build()
-			require.ErrorIs(err, ErrMinOccursViolation)
-		})
-
-		child := obj.ElementBuilder("child")
-		t.Run("must error if nested child has no required field", func(t *testing.T) {
-			_, err := obj.Build()
-			require.ErrorIs(err, ErrNameNotFound)
-		})
-
-		child.PutInt32("RequiredField", 777)
-		t.Run("must have no error if ok", func(t *testing.T) {
-			_, err := obj.Build()
-			require.NoError(err)
-		})
-
-		gChild := child.ElementBuilder("grandChild")
-		require.NotNil(gChild)
-
-		t.Run("must ok grand children", func(t *testing.T) {
-			_, err := obj.Build()
-			require.NoError(err)
-		})
-
-		t.Run("must error if unknown child name", func(t *testing.T) {
-			gChild.PutString(appdef.SystemField_Container, "unknownName")
-			_, err := obj.Build()
-			require.ErrorIs(err, containers.ErrContainerNotFound)
-		})
-	})
-
-	t.Run("test build operation document", func(t *testing.T) {
-		doc := func() istructs.IObjectBuilder {
-			o := makeObject(cfg, appdef.NewQName("test", "document"))
-			return &o
-		}()
-		require.NotNil(doc)
-
-		t.Run("must error if empty document", func(t *testing.T) {
-			_, err := doc.Build()
-			require.ErrorIs(err, ErrNameNotFound)
-		})
-
-		doc.PutRecordID(appdef.SystemField_ID, 1)
-		doc.PutInt32("RequiredField", 555)
-		t.Run("must error if no nested document record", func(t *testing.T) {
-			_, err := doc.Build()
-			require.ErrorIs(err, ErrMinOccursViolation)
-		})
-
-		rec := doc.ElementBuilder("child")
-		require.NotNil(rec)
-
-		t.Run("must error if empty child record", func(t *testing.T) {
-			_, err := doc.Build()
-			require.ErrorIs(err, ErrNameNotFound)
-		})
-
-		t.Run("must error if raw ID duplication", func(t *testing.T) {
-			rec.PutRecordID(appdef.SystemField_ID, 1)
-			_, err := doc.Build()
-			require.ErrorIs(err, ErrRecordIDUniqueViolation)
-			require.ErrorContains(err, "repeatedly uses record ID «1»")
-		})
-
-		rec.PutRecordID(appdef.SystemField_ID, 2)
-		rec.PutInt32("RequiredField", 555)
-
-		t.Run("must error if wrong record parent", func(t *testing.T) {
-			rec.PutRecordID(appdef.SystemField_ParentID, 77)
-			_, err := doc.Build()
-			require.ErrorIs(err, ErrWrongRecordID)
-		})
-
-		t.Run("must automatically restore parent if empty record parent", func(t *testing.T) {
-			rec.PutRecordID(appdef.SystemField_ParentID, istructs.NullRecordID)
-			_, err := doc.Build()
-			require.NoError(err)
-		})
-
-		t.Run("must error if unknown raw ID ref", func(t *testing.T) {
-			rec.PutRecordID("recIDField", 7)
-			_, err := doc.Build()
-			require.ErrorIs(err, ErrRecordIDNotFound)
-			require.ErrorContains(err, "unknown record ID «7»")
-		})
-
-		t.Run("must error if raw ID refs to invalid target", func(t *testing.T) {
-			rec.PutRecordID("recIDField", 1)
-			_, err := doc.Build()
-			require.ErrorIs(err, ErrWrongRecordID)
-			require.ErrorContains(err, "record ID «1»")
-			require.ErrorContains(err, "unavailable target QName «test.document»")
-
-			rec.PutRecordID("recIDField", 2) // fix last error
-			_, err = doc.Build()
-			require.NoError(err)
-		})
-	})
-}
 
 func Test_ValidEventArgs(t *testing.T) {
 	require := require.New(t)
@@ -235,7 +37,7 @@ func Test_ValidEventArgs(t *testing.T) {
 			AddField("RequiredField", appdef.DataKind_int32, true).
 			AddRefField("RefField", false, rec1Name)
 		doc.
-			AddContainer("child", rec1Name, 0, 1).
+			AddContainer("child", rec1Name, 1, 1).
 			AddContainer("child2", rec2Name, 0, appdef.Occurs_Unbounded)
 
 		_ = appDef.AddORecord(rec1Name)
@@ -413,6 +215,17 @@ func Test_ValidEventArgs(t *testing.T) {
 
 		t.Run("error if corrupted argument container structure", func(t *testing.T) {
 
+			t.Run("error if min occurs violated", func(t *testing.T) {
+				e := oDocEvent(false)
+				doc := e.ArgumentObjectBuilder()
+				doc.PutRecordID(appdef.SystemField_ID, 1)
+				doc.PutInt32("RequiredField", 7)
+
+				_, err := e.BuildRawEvent()
+				require.ErrorIs(err, ErrMinOccursViolation)
+				require.ErrorContains(err, "ODoc «test.document» container «child» has not enough occurrences (0, minimum 1)")
+			})
+
 			t.Run("error if max occurs exceeded", func(t *testing.T) {
 				e := oDocEvent(false)
 				doc := e.ArgumentObjectBuilder()
@@ -456,6 +269,44 @@ func Test_ValidEventArgs(t *testing.T) {
 				_, err := e.BuildRawEvent()
 				require.ErrorIs(err, ErrWrongType)
 				require.ErrorContains(err, "ODoc «test.document» child[0] ORecord «child2: test.record1» has wrong type name, expected «test.record2»")
+			})
+
+			t.Run("error if wrong parent ID", func(t *testing.T) {
+				e := oDocEvent(false)
+				doc := e.ArgumentObjectBuilder()
+				doc.PutRecordID(appdef.SystemField_ID, 1)
+				doc.PutInt32("RequiredField", 7)
+
+				rec := doc.ElementBuilder("child")
+				rec.PutRecordID(appdef.SystemField_ID, 2)
+				rec.PutRecordID(appdef.SystemField_ParentID, 2) // <- error here
+				_, err := e.BuildRawEvent()
+				require.ErrorIs(err, ErrWrongRecordID)
+				require.ErrorContains(err, "ODoc «test.document» child[0] ORecord «child: test.record1» has wrong parent id «2», expected «1»")
+			})
+
+			t.Run("must ok if parent ID if omitted", func(t *testing.T) {
+				e := oDocEvent(false)
+				doc := e.ArgumentObjectBuilder()
+				doc.PutRecordID(appdef.SystemField_ID, 1)
+				doc.PutInt32("RequiredField", 7)
+
+				rec := doc.ElementBuilder("child")
+				rec.PutRecordID(appdef.SystemField_ID, 2)
+				rec.PutRecordID(appdef.SystemField_ParentID, istructs.NullRecordID) // <- to restore omitted parent ID
+				_, err := e.BuildRawEvent()
+				require.NoError(err)
+
+				t.Run("check restored parent ID", func(t *testing.T) {
+					d, err := doc.Build()
+					require.NoError(err)
+					cnt := 0
+					d.Elements("child", func(c istructs.IElement) {
+						cnt++
+						require.EqualValues(1, c.AsRecordID(appdef.SystemField_ParentID))
+					})
+					require.Equal(1, cnt)
+				})
 			})
 		})
 	})
@@ -750,9 +601,6 @@ func Test_ValidCommandEvent(t *testing.T) {
 		return b
 	}
 
-	b := eventBuilder(false)
-	require.NotNil(b)
-
 	t.Run("must be ok to ref from result to argument", func(t *testing.T) {
 		e := eventBuilder(false)
 		obj := e.ArgumentObjectBuilder()
@@ -808,6 +656,89 @@ func Test_ValidCommandEvent(t *testing.T) {
 			require.ErrorContains(err, "unknown record ID «2»")
 		})
 
+	})
+}
+
+func Test_IObjectBuilderBuild(t *testing.T) {
+	require := require.New(t)
+
+	appDef := appdef.New()
+
+	docName := appdef.NewQName("test", "document")
+	recName := appdef.NewQName("test", "record")
+
+	elName := appdef.NewQName("test", "element")
+
+	t.Run("must be ok to build test application", func(t *testing.T) {
+		oDoc := appDef.AddODoc(docName)
+		oDoc.
+			AddStringField("RequiredField", true).(appdef.IODocBuilder).
+			AddContainer("child", recName, 0, appdef.Occurs_Unbounded)
+		_ = appDef.AddORecord(recName)
+
+		_ = appDef.AddElement(elName)
+	})
+
+	cfgs := make(AppConfigsType, 1)
+	_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+
+	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	require.NoError(err)
+
+	eventBuilder := func() istructs.IRawEventBuilder {
+		return app.Events().GetSyncRawEventBuilder(
+			istructs.SyncRawEventBuilderParams{
+				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+					HandlingPartition: 25,
+					PLogOffset:        100500,
+					Workspace:         1,
+					WLogOffset:        1050,
+					QName:             docName,
+					RegisteredAt:      123456789,
+				},
+				Device:   1,
+				SyncedAt: 123456789,
+			})
+	}
+
+	t.Run("must error if required field is empty", func(t *testing.T) {
+		b := eventBuilder()
+		d := b.ArgumentObjectBuilder()
+		_, err := d.Build()
+		require.ErrorIs(err, ErrNameNotFound)
+		require.ErrorContains(err, "ODoc «test.document» misses required field «RequiredField»")
+	})
+
+	t.Run("must error if builder has empty type name", func(t *testing.T) {
+		b := eventBuilder()
+		d := b.ArgumentObjectBuilder()
+		d.(*elementType).clear()
+		_, err := d.Build()
+		require.ErrorIs(err, ErrNameMissed)
+		require.ErrorContains(err, "empty type name")
+	})
+
+	t.Run("must error if builder has wrong type name", func(t *testing.T) {
+		b := eventBuilder()
+		d := b.ArgumentObjectBuilder()
+		d.(*elementType).clear()
+		d.PutQName(appdef.SystemField_QName, elName) // <- error here
+		_, err := d.Build()
+		require.ErrorIs(err, ErrUnexpectedTypeKind)
+		require.ErrorContains(err, "wrong type Element «test.element»")
+	})
+
+	t.Run("must error if builder has errors in IDs", func(t *testing.T) {
+		b := eventBuilder()
+		d := b.ArgumentObjectBuilder()
+		d.PutRecordID(appdef.SystemField_ID, 1)
+		r := d.ElementBuilder("child")
+		r.PutRecordID(appdef.SystemField_ID, 1) // <- error here
+		_, err := d.Build()
+		require.ErrorIs(err, ErrRecordIDUniqueViolation)
+		require.ErrorContains(err, "repeatedly uses record ID «1»")
 	})
 }
 

@@ -280,7 +280,7 @@ func validateElement(el *elementType) (err error) {
 				})
 			if occurs < cont.MinOccurs() {
 				err = errors.Join(err,
-					// ODoc «test.ODocument» container «Rec» has not enough occurrences (0, minimum 1)
+					// ODoc «test.document» container «child» has not enough occurrences (0, minimum 1)
 					validateErrorf(ECode_InvalidOccursMin, errContainerMinOccursViolated, el, cont.Name(), occurs, cont.MinOccurs(), ErrMinOccursViolation))
 			}
 			if occurs > cont.MaxOccurs() {
@@ -322,7 +322,7 @@ func validateElement(el *elementType) (err error) {
 				} else {
 					if parID != elID {
 						err = errors.Join(err,
-							// ODoc «test.ODocument» child[0] ORec «Rec: test.ORecord» has wrong parent id «2», expected «1»
+							// ODoc «test.document» child[0] ORecord «child: test.record1» has wrong parent id «2», expected «1»
 							validateErrorf(ECode_InvalidRefRecordID, errWrongParentID, el, idx, child, parID, elID, ErrWrongRecordID))
 					}
 				}
