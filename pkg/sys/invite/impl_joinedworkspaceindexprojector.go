@@ -26,7 +26,7 @@ var joinedWorkspaceIndexProjector = func(event istructs.IPLogEvent, s istructs.I
 			return
 		}
 
-		skbViewJoinedWorkspaceIndex, err := s.KeyBuilder(state.ViewRecordsStorage, QNameViewJoinedWorkspaceIndex)
+		skbViewJoinedWorkspaceIndex, err := s.KeyBuilder(state.View, QNameViewJoinedWorkspaceIndex)
 		if err != nil {
 			return err
 		}

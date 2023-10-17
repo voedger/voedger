@@ -109,7 +109,7 @@ func writeObjectToRegistry(root istructs.IRowReader, appDef appdef.IAppDef, st i
 }
 
 func writeRegistry(st istructs.IState, intents istructs.IIntents, idToStore istructs.RecordID, wLogOffsetToStore istructs.Offset, qNameToStore appdef.QName) error {
-	kb, err := st.KeyBuilder(state.ViewRecordsStorage, QNameViewRecordsRegistry)
+	kb, err := st.KeyBuilder(state.View, QNameViewRecordsRegistry)
 	if err != nil {
 		// notest
 		return err

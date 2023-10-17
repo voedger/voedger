@@ -29,7 +29,7 @@ func collectionProjector(appDef appdef.IAppDef) func(event istructs.IPLogEvent, 
 		}
 
 		newKey := func(docQname appdef.QName, docID, elementID istructs.RecordID) (kb istructs.IStateKeyBuilder, err error) {
-			kb, err = s.KeyBuilder(state.ViewRecordsStorage, QNameViewCollection)
+			kb, err = s.KeyBuilder(state.View, QNameViewCollection)
 			if err != nil {
 				return
 			}
@@ -95,7 +95,7 @@ func (s *idService) findRecordByID(id istructs.RecordID) (record istructs.IRecor
 		return
 	}
 
-	kb, err := s.state.KeyBuilder(state.RecordsStorage, appdef.NullQName)
+	kb, err := s.state.KeyBuilder(state.Record, appdef.NullQName)
 	if err != nil {
 		return
 	}

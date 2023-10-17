@@ -37,7 +37,7 @@ func viewSubjectsIdxProjector(event istructs.IPLogEvent, st istructs.IState, int
 			return nil
 		}
 
-		skbViewSubjectsIdx, err := st.KeyBuilder(state.ViewRecordsStorage, QNameViewSubjectsIdx)
+		skbViewSubjectsIdx, err := st.KeyBuilder(state.View, QNameViewSubjectsIdx)
 		if err != nil {
 			// notest
 			return err

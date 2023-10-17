@@ -19,7 +19,7 @@ type appSecretsStorage struct {
 }
 
 func (s *appSecretsStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newKeyBuilder(AppSecretsStorage, appdef.NullQName)
+	return newKeyBuilder(AppSecret, appdef.NullQName)
 }
 func (s *appSecretsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	k := key.(*keyBuilder)
@@ -33,11 +33,11 @@ func (s *appSecretsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.I
 	if e != nil {
 		return nil, e
 	}
-	return &appSecretsStorageValue{
+	return &appSecretValue{
 		content:    string(bb),
 		toJSONFunc: s.toJSON,
 	}, nil
 }
 func (s *appSecretsStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
-	return fmt.Sprintf(`{"Body":"%s"}`, sv.(*appSecretsStorageValue).content), nil
+	return fmt.Sprintf(`{"Body":"%s"}`, sv.(*appSecretValue).content), nil
 }

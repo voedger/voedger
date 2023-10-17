@@ -35,7 +35,7 @@ func provideUploadBLOBHelperCmd(cfg *istructsmem.AppConfigType) {
 
 func ubhExec(args istructs.ExecCommandArgs) (err error) {
 	// write a dummy WDoc<BLOB> to book an ID and then use it as a new BLOB ID
-	kb, err := args.State.KeyBuilder(state.RecordsStorage, QNameWDocBLOB)
+	kb, err := args.State.KeyBuilder(state.Record, QNameWDocBLOB)
 	if err != nil {
 		return
 	}

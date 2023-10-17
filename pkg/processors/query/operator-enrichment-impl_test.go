@@ -222,7 +222,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 		skb.On("PutRecordID", mock.Anything, mock.Anything)
 		s := &mockState{}
 		s.
-			On("KeyBuilder", state.RecordsStorage, appdef.NullQName).Return(skb).
+			On("KeyBuilder", state.Record, appdef.NullQName).Return(skb).
 			On("MustExist", mock.Anything).Return(record("root")).Once().
 			On("MustExist", mock.Anything).Return(record("first_children_1_101")).Once().
 			On("MustExist", mock.Anything).Return(record("first_children_1_102")).Once().

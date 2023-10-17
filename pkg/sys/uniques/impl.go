@@ -54,7 +54,7 @@ func provideUniquesProjectorFunc(appDef appdef.IAppDef) func(event istructs.IPLo
 						// а если записи все-таки не было вообще? тогда ничего не делаем
 						// return update(rec, uniqueField, st, intents)
 
-						kb, err := st.KeyBuilder(state.RecordsStorage, rec.QName())
+						kb, err := st.KeyBuilder(state.Record, rec.QName())
 						if err != nil {
 							// notest
 							return err
@@ -120,7 +120,7 @@ func insert(rec istructs.ICUDRow, uf appdef.IField, state istructs.IState, inten
 
 func update(rec istructs.ICUDRow, uf appdef.IField, st istructs.IState, intents istructs.IIntents) error {
 	// read current record
-	kb, err := st.KeyBuilder(state.RecordsStorage, rec.QName())
+	kb, err := st.KeyBuilder(state.Record, rec.QName())
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func update(rec istructs.ICUDRow, uf appdef.IField, st istructs.IState, intents 
 }
 
 func getUniqueViewRecord(st istructs.IState, rec istructs.IRowReader, uf appdef.IField) (istructs.IStateValue, istructs.IStateKeyBuilder, bool, error) {
-	kb, err := st.KeyBuilder(state.ViewRecordsStorage, QNameViewUniques)
+	kb, err := st.KeyBuilder(state.View, QNameViewUniques)
 	if err != nil {
 		return nil, nil, false, err
 	}

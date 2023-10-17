@@ -21,7 +21,7 @@ func TestCmdResultStorage_InsertInValue(t *testing.T) {
 	cmdResBuilder := istructsmem.NewIObjectBuilder(&cfg, appdef.NullQName)
 	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder })
 
-	kb, err := s.KeyBuilder(CmdResultStorage, testRecordQName1)
+	kb, err := s.KeyBuilder(Result, testRecordQName1)
 	require.NoError(t, err)
 
 	vb, err := s.NewValue(kb)
@@ -43,7 +43,7 @@ func TestCmdResultStorage_InsertInKey(t *testing.T) {
 	cmdResBuilder := istructsmem.NewIObjectBuilder(&cfg, appdef.NullQName)
 	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder })
 
-	kb, err := s.KeyBuilder(CmdResultStorage, testRecordQName1)
+	kb, err := s.KeyBuilder(Result, testRecordQName1)
 	require.NoError(t, err)
 
 	fieldName := "name"

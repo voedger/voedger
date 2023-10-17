@@ -95,7 +95,7 @@ func provideQryInitiateResetPasswordByEmailExec(asp istructs.IAppStructsProvider
 		}
 
 		// check CDoc<sys.Login>.WSID != 0
-		kb, err := args.State.KeyBuilder(state.RecordsStorage, authnz.QNameCDocLogin)
+		kb, err := args.State.KeyBuilder(state.Record, authnz.QNameCDocLogin)
 		if err != nil {
 			return err
 		}

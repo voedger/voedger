@@ -104,7 +104,7 @@ var (
 		if wsid == 1099 {
 			return errors.New("test err")
 		}
-		key, err := s.KeyBuilder(state.ViewRecordsStorage, incProjectionView)
+		key, err := s.KeyBuilder(state.View, incProjectionView)
 		if err != nil {
 			return
 		}
@@ -126,7 +126,7 @@ var (
 		return
 	}
 	decrementor = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		key, err := s.KeyBuilder(state.ViewRecordsStorage, decProjectionView)
+		key, err := s.KeyBuilder(state.View, decProjectionView)
 		if err != nil {
 			return
 		}

@@ -26,7 +26,7 @@ var inviteIndexProjector = func(event istructs.IPLogEvent, s istructs.IState, in
 			return
 		}
 
-		skbViewInviteIndex, err := s.KeyBuilder(state.ViewRecordsStorage, qNameViewInviteIndex)
+		skbViewInviteIndex, err := s.KeyBuilder(state.View, qNameViewInviteIndex)
 		if err != nil {
 			return err
 		}

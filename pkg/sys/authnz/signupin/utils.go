@@ -37,7 +37,7 @@ func GetPasswordSaltedHash(pwd string) (pwdSaltedHash []byte, err error) {
 
 // istructs.NullRecordID means not found
 func GetCDocLoginID(st istructs.IState, appWSID istructs.WSID, appName string, login string) (cdocLoginID istructs.RecordID, err error) {
-	kb, err := st.KeyBuilder(state.ViewRecordsStorage, QNameViewLoginIdx)
+	kb, err := st.KeyBuilder(state.View, QNameViewLoginIdx)
 	if err != nil {
 		return istructs.NullRecordID, err
 	}
@@ -70,7 +70,7 @@ func GetCDocLogin(login string, st istructs.IState, appWSID istructs.WSID, appNa
 		return nil, doesLoginExist, err
 	}
 
-	kb, err := st.KeyBuilder(state.RecordsStorage, authnz.QNameCDocLogin)
+	kb, err := st.KeyBuilder(state.Record, authnz.QNameCDocLogin)
 	if err != nil {
 		return nil, doesLoginExist, err
 	}
@@ -92,7 +92,7 @@ func CheckPassword(cdocLogin istructs.IStateValue, pwd string) (isPasswordOK boo
 }
 
 func ChangePasswordCDocLogin(cdocLogin istructs.IStateValue, newPwd string, intents istructs.IIntents, st istructs.IState) error {
-	kb, err := st.KeyBuilder(state.RecordsStorage, appdef.NullQName)
+	kb, err := st.KeyBuilder(state.Record, appdef.NullQName)
 	if err != nil {
 		return err
 	}

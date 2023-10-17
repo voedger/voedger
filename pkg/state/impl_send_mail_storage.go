@@ -20,8 +20,8 @@ type sendMailStorage struct {
 }
 
 func (s *sendMailStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return &sendMailStorageKeyBuilder{
-		keyBuilder: newKeyBuilder(SendMailStorage, appdef.NullQName),
+	return &sendMailKeyBuilder{
+		keyBuilder: newKeyBuilder(SendMail, appdef.NullQName),
 		to:         make([]string, 0),
 		cc:         make([]string, 0),
 		bcc:        make([]string, 0),
@@ -29,7 +29,7 @@ func (s *sendMailStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder)
 }
 func (s *sendMailStorage) Validate(items []ApplyBatchItem) (err error) {
 	for _, item := range items {
-		k := item.key.(*sendMailStorageKeyBuilder)
+		k := item.key.(*sendMailKeyBuilder)
 
 		mustExist := func(field string) (err error) {
 			_, ok := k.data[field]
@@ -59,21 +59,21 @@ func (s *sendMailStorage) Validate(items []ApplyBatchItem) (err error) {
 		if err != nil {
 			return
 		}
-		if len(item.key.(*sendMailStorageKeyBuilder).to) == 0 {
+		if len(item.key.(*sendMailKeyBuilder).to) == 0 {
 			return fmt.Errorf("'%s': %w", Field_To, ErrNotFound)
 		}
 	}
 	return nil
 }
 func (s *sendMailStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
-	stringOrEmpty := func(k *sendMailStorageKeyBuilder, name string) string {
+	stringOrEmpty := func(k *sendMailKeyBuilder, name string) string {
 		if intf, ok := k.data[name]; ok {
 			return intf.(string)
 		}
 		return ""
 	}
 	for _, item := range items {
-		k := item.key.(*sendMailStorageKeyBuilder)
+		k := item.key.(*sendMailKeyBuilder)
 
 		msg := mail.NewMsg()
 		msg.Subject(stringOrEmpty(k, Field_Subject))

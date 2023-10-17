@@ -23,14 +23,14 @@ type viewRecordsStorage struct {
 }
 
 func (s *viewRecordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder) {
-	return &viewRecordsKeyBuilder{
+	return &viewKeyBuilder{
 		IKeyBuilder: s.viewRecordsFunc().KeyBuilder(entity),
 		view:        entity,
 		wsid:        s.wsidFunc(),
 	}
 }
 func (s *viewRecordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
-	k := key.(*viewRecordsKeyBuilder)
+	k := key.(*viewKeyBuilder)
 	v, err := s.viewRecordsFunc().Get(k.wsid, k.IKeyBuilder)
 	if err != nil {
 		if err == istructsmem.ErrRecordNotFound {
@@ -41,7 +41,7 @@ func (s *viewRecordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.
 	if v == nil {
 		return nil, nil
 	}
-	return &viewRecordsStorageValue{
+	return &viewValue{
 		value: v,
 	}, nil
 }
@@ -50,7 +50,7 @@ func (s *viewRecordsStorage) GetBatch(items []GetBatchItem) (err error) {
 	wsidToItemIdx := make(map[istructs.WSID][]int)
 	batches := make(map[istructs.WSID][]istructs.ViewRecordGetBatchItem)
 	for itemIdx, item := range items {
-		k := item.key.(*viewRecordsKeyBuilder)
+		k := item.key.(*viewKeyBuilder)
 		wsidToItemIdx[k.wsid] = append(wsidToItemIdx[k.wsid], itemIdx)
 		batches[k.wsid] = append(batches[k.wsid], istructs.ViewRecordGetBatchItem{Key: k.IKeyBuilder})
 	}
@@ -64,7 +64,7 @@ func (s *viewRecordsStorage) GetBatch(items []GetBatchItem) (err error) {
 			if !batchItem.Ok {
 				continue
 			}
-			items[itemIndex].value = &viewRecordsStorageValue{
+			items[itemIndex].value = &viewValue{
 				value: batchItem.Value,
 			}
 		}
@@ -73,11 +73,11 @@ func (s *viewRecordsStorage) GetBatch(items []GetBatchItem) (err error) {
 }
 func (s *viewRecordsStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	cb := func(k istructs.IKey, v istructs.IValue) (err error) {
-		return callback(k, &viewRecordsStorageValue{
+		return callback(k, &viewValue{
 			value: v,
 		})
 	}
-	vrkb := kb.(*viewRecordsKeyBuilder)
+	vrkb := kb.(*viewKeyBuilder)
 	return s.viewRecordsFunc().Read(s.ctx, vrkb.wsid, vrkb.IKeyBuilder, cb)
 }
 func (s *viewRecordsStorage) Validate([]ApplyBatchItem) (err error) { return err }
@@ -85,8 +85,8 @@ func (s *viewRecordsStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 	batches := make(map[istructs.WSID][]istructs.ViewKV)
 	nn := make(map[n10n]istructs.Offset)
 	for _, item := range items {
-		k := item.key.(*viewRecordsKeyBuilder)
-		v := item.value.(*viewRecordsValueBuilder)
+		k := item.key.(*viewKeyBuilder)
+		v := item.value.(*viewValueBuilder)
 		batches[k.wsid] = append(batches[k.wsid], istructs.ViewKV{Key: k.IKeyBuilder, Value: v.IValueBuilder})
 		if nn[n10n{wsid: k.wsid, view: k.view}] < v.offset {
 			nn[n10n{wsid: k.wsid, view: k.view}] = v.offset
@@ -104,16 +104,16 @@ func (s *viewRecordsStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 	return err
 }
 func (s *viewRecordsStorage) ProvideValueBuilder(kb istructs.IStateKeyBuilder, _ istructs.IStateValueBuilder) istructs.IStateValueBuilder {
-	return &viewRecordsValueBuilder{
-		IValueBuilder: s.viewRecordsFunc().NewValueBuilder(kb.(*viewRecordsKeyBuilder).view),
+	return &viewValueBuilder{
+		IValueBuilder: s.viewRecordsFunc().NewValueBuilder(kb.(*viewKeyBuilder).view),
 		offset:        istructs.NullOffset,
 		toJSONFunc:    s.toJSON,
 		entity:        kb.Entity(),
 	}
 }
 func (s *viewRecordsStorage) ProvideValueBuilderForUpdate(kb istructs.IStateKeyBuilder, existingValue istructs.IStateValue, _ istructs.IStateValueBuilder) istructs.IStateValueBuilder {
-	return &viewRecordsValueBuilder{
-		IValueBuilder: s.viewRecordsFunc().UpdateValueBuilder(kb.(*viewRecordsKeyBuilder).view, existingValue.(*viewRecordsStorageValue).value),
+	return &viewValueBuilder{
+		IValueBuilder: s.viewRecordsFunc().UpdateValueBuilder(kb.(*viewKeyBuilder).view, existingValue.(*viewValue).value),
 		offset:        istructs.NullOffset,
 		toJSONFunc:    s.toJSON,
 		entity:        kb.Entity(),

@@ -260,7 +260,7 @@ func (p *asyncProjector) savePosition() error {
 		p.acceptedSinceSave = false
 		p.lastSave = time.Now()
 	}()
-	key, e := p.state.KeyBuilder(state.ViewRecordsStorage, qnameProjectionOffsets)
+	key, e := p.state.KeyBuilder(state.View, qnameProjectionOffsets)
 	if e != nil {
 		return e
 	}

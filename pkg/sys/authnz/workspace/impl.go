@@ -118,7 +118,7 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istruct
 		ownerWSID := args.ArgumentObject.AsInt64(Field_OwnerWSID)
 		wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
 		// Check that ownerWSID + wsName does not exist yet: View<WorkspaceIDIdx> to deduplication
-		kb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewWorkspaceIDIdx)
+		kb, err := args.State.KeyBuilder(state.View, QNameViewWorkspaceIDIdx)
 		if err != nil {
 			return err
 		}
@@ -144,7 +144,7 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istruct
 		}
 
 		// Create CDoc<WorkspaceID>{wsParams, WSID: $NewWSID}
-		kb, err = args.State.KeyBuilder(state.RecordsStorage, QNameCDocWorkspaceID)
+		kb, err = args.State.KeyBuilder(state.Record, QNameCDocWorkspaceID)
 		if err != nil {
 			return err
 		}
@@ -176,7 +176,7 @@ func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, inten
 		if rec.QName() != QNameCDocWorkspaceID || !rec.IsNew() { // skip on update cdoc.sys.WorkspaceID on e.g. deactivate workspace
 			return nil
 		}
-		kb, err := s.KeyBuilder(state.ViewRecordsStorage, QNameViewWorkspaceIDIdx)
+		kb, err := s.KeyBuilder(state.View, QNameViewWorkspaceIDIdx)
 		if err != nil {
 			// notest
 			return nil
@@ -268,7 +268,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 		}()
 
 		// create CDoc<sys.WorkspaceDescriptor> (singleton)
-		kb, err := args.State.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
+		kb, err := args.State.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return err
 		}
@@ -294,7 +294,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 			logger.Info("c.sys.CreateWorkspace: ", e.Error())
 		} else {
 			// if no error create CDoc{$wsKind}
-			kb, err := args.State.KeyBuilder(state.RecordsStorage, wsKind)
+			kb, err := args.State.KeyBuilder(state.Record, wsKind)
 			if err != nil {
 				return err
 			}

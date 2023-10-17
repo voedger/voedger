@@ -14,7 +14,7 @@ type cmdResultStorage struct {
 }
 
 func (s *cmdResultStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newCmdResultKeyBuilder()
+	return newResultKeyBuilder()
 }
 
 func (s *cmdResultStorage) Validate([]ApplyBatchItem) (err error) {
@@ -26,5 +26,5 @@ func (s *cmdResultStorage) ApplyBatch([]ApplyBatchItem) (err error) {
 }
 
 func (s *cmdResultStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) istructs.IStateValueBuilder {
-	return &cmdResultValueBuilder{cmdResultBuilder: s.cmdResultBuilderFunc()}
+	return &resultValueBuilder{resultBuilder: s.cmdResultBuilderFunc()}
 }
