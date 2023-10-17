@@ -74,7 +74,7 @@ func TestBasicUsage(t *testing.T) {
 	require.NoError(err)
 	projectionKey := in10n.ProjectionKey{
 		App:        istructs.AppQName_untill_airs_bp,
-		Projection: projectors.PlogQName,
+		Projection: projectors.PLogUpdatesQName,
 		WS:         1,
 	}
 	go app.n10nBroker.WatchChannel(app.ctx, channelID, func(projection in10n.ProjectionKey, _ istructs.Offset) {

@@ -577,7 +577,7 @@ func (cmdProc *cmdProc) n10n(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	cmdProc.n10nBroker.Update(in10n.ProjectionKey{
 		App:        cmd.AppQName(),
-		Projection: projectors.PlogQName,
+		Projection: projectors.PLogUpdatesQName,
 		WS:         istructs.WSID(cmdProc.pNumber),
 	}, cmd.rawEvent.PLogOffset())
 	logger.Verbose("updated plog event on offset ", cmd.rawEvent.PLogOffset(), ", pnumber ", cmdProc.pNumber)

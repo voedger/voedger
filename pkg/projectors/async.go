@@ -133,7 +133,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	}
 	return a.conf.Broker.Subscribe(a.conf.channel, in10n.ProjectionKey{
 		App:        a.conf.AppQName,
-		Projection: PlogQName,
+		Projection: PLogUpdatesQName,
 		WS:         istructs.WSID(a.conf.Partition),
 	})
 }
