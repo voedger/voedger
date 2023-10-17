@@ -443,7 +443,7 @@ classDiagram
     }
 ```
 
-#### Structures composing
+### Structures composing
 
 ```mermaid
 classDiagram
@@ -511,7 +511,7 @@ classDiagram
   IElement "1" o--> "0..*" IElement : has child
 ```
 
-#### Fields, Containers, Uniques
+### Fields, Containers, Uniques
 
 ```mermaid
 classDiagram
@@ -745,14 +745,14 @@ Invalid names examples:
 
 ### Fields
 
-- Maximum fields per definition is 65536.
+- Maximum fields per structure is 65536.
 - Maximum string field length is 1024.
 
 ### Containers
 
-- Maximum containers per definition is 65536.
+- Maximum containers per structure is 65536.
 
 ### Uniques
 
 - Maximum fields per unique is 256
-- Maximum uniques per definition is 100.
+- Maximum uniques per structure is 100.
