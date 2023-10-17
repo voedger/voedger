@@ -47,8 +47,7 @@ EXTENSION ENGINE BUILTIN (
         GET SCOPE(COMMANDS, QUERIES, PROJECTORS)
     );
 
-    -- Subject conflicts with cdoc.sys.Subject
-    STORAGE SubjectStorage(
+    STORAGE RequestSubject(
         GET SCOPE(COMMANDS, QUERIES)
     );
 
@@ -60,7 +59,7 @@ EXTENSION ENGINE BUILTIN (
         INSERT SCOPE(PROJECTORS)
     );
 
-    STORAGE CmdResult(
+    STORAGE Result(
         INSERT SCOPE(COMMANDS)
     );
 
