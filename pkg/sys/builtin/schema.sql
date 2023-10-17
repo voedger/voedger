@@ -12,6 +12,9 @@ ALTER WORKSPACE Workspace (
 
 	EXTENSION ENGINE BUILTIN (
 		QUERY Echo(EchoParams) RETURNS EchoResult;
+
+		-- Login is randomly taken name because it is required to specify something in the sql. Actually the projector will start on an any document.
+		SYNC PROJECTOR RecordsRegistryProjector ON (Login) INTENTS(View(RecordsRegistry));
 	);
 
 	VIEW RecordsRegistry (
