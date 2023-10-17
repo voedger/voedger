@@ -291,10 +291,9 @@ func TestFailedToWriteResponse(t *testing.T) {
 			require.Nil(t, rs.SendElement("id1", elem1))
 
 			// now let's wait for client disconnect
-			ch <- struct{}{}
 			<-ch
 
-			// next section should be failed with ErrNoConsumer
+			// next section should be failed because the client is disconnected
 			err := rs.ObjectSection("objSec", []string{"3"}, 42)
 			require.ErrorIs(t, err, context.Canceled)
 			rs.Close(nil)
@@ -307,10 +306,23 @@ func TestFailedToWriteResponse(t *testing.T) {
 	bodyReader := bytes.NewReader(body)
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), appOwner, appName, testWSID), "application/json", bodyReader)
 	require.Nil(t, err, err)
-	<-ch
-	onAfterSectionWrite = func(w http.ResponseWriter) {
+
+	// read out the first section
+	entireResp := []byte{}
+	for string(entireResp) != `{"sections":[{"type":"secMap","path":["2"],"elements":{"id1":{"fld1":"fld1Val"}` {
+		buf := make([]byte, 512)
+		n, _ := resp.Body.Read(buf)
+		require.Nil(t, err)
+		entireResp = append(entireResp, buf[:n]...)
+		log.Println(string(entireResp))
+	}
+
+	// server waits for us to send the next section
+	// let's set a hook that will close the connection right before sending a response
+	onBeforeWriteResponse = func(w http.ResponseWriter) {
 		// disconnect the client
 		resp.Body.Close()
+
 		// wait for the write to the closed socket error. Sometimes does not appear on first write after socket close
 		for {
 			_, err := w.Write([]byte{0})
@@ -319,14 +331,14 @@ func TestFailedToWriteResponse(t *testing.T) {
 			}
 		}
 	}
+
+	// signal to the server to send the next section
 	ch <- struct{}{}
-	resp.Request.Body.Close()
-	resp.Body.Close()
 
 	// wait for fail to write response
 	<-clientDisconnections
 
-	// wait for communication done
+	// wait for errors check on server side
 	<-ch
 }
 
@@ -399,6 +411,7 @@ func tearDown() {
 		router.wg.Wait()
 		router = nil
 	}
+	onBeforeWriteResponse = nil
 }
 
 func (t testRouter) port() int {

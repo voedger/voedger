@@ -58,7 +58,7 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, 
 }
 
 func writeSectionedResponse(requestCtx context.Context, w http.ResponseWriter, sections <-chan ibus.ISection, secErr *error, onSendFailed func()) {
-	ok := true
+ok := true
 	var iSection ibus.ISection
 	defer func() {
 		if !ok {
@@ -105,10 +105,6 @@ func writeSectionedResponse(requestCtx context.Context, w http.ResponseWriter, s
 			}
 			if ok = writeSection(w, iSection, requestCtx); !ok {
 				return false
-			}
-			if onAfterSectionWrite != nil {
-				// happens in tests
-				onAfterSectionWrite(w)
 			}
 		}
 		return true
