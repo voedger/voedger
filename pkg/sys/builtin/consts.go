@@ -15,8 +15,9 @@ var (
 	// Deprecated: use c.sys.CUD instead. Kept to not to break existing events only
 	QNameCommandInit = appdef.NewQName(appdef.SysPackage, "Init")
 	//go:embed schema.sql
-	schemaBuiltinFS          embed.FS
-	QNameViewRecordsRegistry = appdef.NewQName(appdef.SysPackage, "RecordsRegistry")
+	schemaBuiltinFS               embed.FS
+	QNameViewRecordsRegistry      = appdef.NewQName(appdef.SysPackage, "RecordsRegistry")
+	qNameRecordsRegistryProjector = appdef.NewQName(appdef.SysPackage, "RecordsRegistryProjector")
 )
 
 const (
