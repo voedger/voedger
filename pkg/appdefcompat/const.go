@@ -10,6 +10,7 @@ const (
 )
 
 const (
+	ConstraintEmpty         Constraint = ""
 	ConstraintValueMatch    Constraint = "ConstraintValueMatch"
 	ConstraintAppendOnly    Constraint = "ConstraintAppendOnly"
 	ConstraintInsertOnly    Constraint = "ConstraintInsertOnly"
@@ -22,6 +23,7 @@ const (
 	ErrorTypeOrderChanged ErrorType = "OrderChanged"
 	ErrorTypeNodeInserted ErrorType = "NodeInserted"
 	ErrorTypeValueChanged ErrorType = "ValueChanged"
+	ErrorTypeNodeModified ErrorType = "NodeModified"
 )
 
 const (

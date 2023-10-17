@@ -1,3 +1,5 @@
+-- noinspection SqlNoDataSourceInspectionForFile
+
 -- Copyright (c) 2020-present unTill Pro, Ltd.
 
 -- note: this schema is for tests only. Voedger sys package uses copy of this schema
@@ -13,13 +15,13 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
-ABSTRACT WORKSPACE Workspace (
+WORKSPACE Workspace ( -- ValueChanged: Abstract flag must not be changed
     TYPE CreateLoginUnloggedParams(
         Password varchar, -- OrderChanged
         Email varchar --OrderChanged
     );
     TYPE CreateLoginParams(
-        --Login                       varchar, -- NodeRemoved
+        --Login                     varchar, -- NodeRemoved
         AppName                     varchar,
         SubjectKind                 int32,
         WSKindInitializationData    varchar(1024),
@@ -31,13 +33,45 @@ ABSTRACT WORKSPACE Workspace (
         A varchar,
         B varchar,
         D varchar, -- NodeInserted
-        C int32 -- ValueChanged: varchar in old version, int32 in new version
+        C int32 -- OrderChanged, ValueChanged: varchar in old version, int32 in new version, field's index is changed
     );
+    TYPE SomeType(
+        A varchar,
+        B int
+    );
+    TYPE SomeType2(
+        A varchar,
+        B int,
+        C int,
+        D int
+    );
+    VIEW SomeView(
+        A int,
+        B varchar, -- ValueChanged, ValueChanged: field B was changed as a part of ClustColsFields and as well as a part of Fields
+        C int, -- error: field is in part of primary key
+        D int, -- appending field is allowed
+        PRIMARY KEY ((A, C), B) -- NodeModified: added field C to PartKeyFields
+    ) AS RESULT OF NewType;
     TABLE NewTable INHERITS CDoc(
         A varchar
     );
+    TYPE NewType(
+        A varchar
+    );
+    TYPE NewType2(
+        A varchar,
+        B int32
+    );
+    VIEW NewView(
+        A int,
+        B int,
+        PRIMARY KEY ((A), B)
+    ) AS RESULT OF NewType;
     EXTENSION ENGINE BUILTIN (
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
+        COMMAND SomeCommand(SomeType2, UNLOGGED SomeType2) RETURNS SomeType2; -- args and return type changed; unlogged flag changed, but it is ok
+        COMMAND NewCommand(NewType, UNLOGGED NewType2) RETURNS NewType;
+        QUERY NewQuery(NewType) RETURNS NewType;
     )
 );
 

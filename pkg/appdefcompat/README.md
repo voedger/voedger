@@ -59,10 +59,12 @@ type Constraint string
 type NodeType string
 
 const (
-	ConstraintValueMatch Constraint = "ConstraintValueMatch"
-    ConstraintAppendOnly Constraint = "ConstraintAppendOnly"
-    ConstraintInsertOnly Constraint = "ConstraintInsertOnly"
+	ConstraintEmpty         Constraint = ""
+	ConstraintValueMatch    Constraint = "ConstraintValueMatch"
+    ConstraintAppendOnly    Constraint = "ConstraintAppendOnly"
+    ConstraintInsertOnly    Constraint = "ConstraintInsertOnly"
     ConstraintNonModifiable Constraint = "ConstraintNonModifiable"
+	ConstraintChangeAllowed Constraint = "ConstraintChangeAllowed"
 )
 
 type CompatibilityTreeNode {
@@ -137,6 +139,7 @@ type CompatibilityError struct {
     // OrderChanged: (NonModifiable, AppendOnly): one error for the container
     // NodeInserted: (NonModifiable): one error for the container
 	// ValueChanged: one error for one node
+	// NodeModified: one error for one node
     ErrorType ErrorType
 }
 ```

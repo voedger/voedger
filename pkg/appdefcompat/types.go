@@ -58,12 +58,15 @@ type CompatibilityErrors struct {
 	Errors []CompatibilityError
 }
 
-func (e *CompatibilityErrors) Error() string {
+func (e *CompatibilityErrors) Error() (err string) {
 	errs := make([]error, len(e.Errors))
 	for i, err := range e.Errors {
 		errs[i] = err
 	}
-	return errors.Join(errs...).Error()
+	if len(errs) > 0 {
+		return errors.Join(errs...).Error()
+	}
+	return
 }
 
 // matchNodesResult represents the result of matching nodes.
