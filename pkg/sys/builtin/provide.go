@@ -22,7 +22,7 @@ func Provide(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, buildInf
 	// to import via ImportBO
 	cfg.Resources.Add(istructsmem.NewCommandFunction(QNameCommandInit, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 
-	provideRefIntegrityValidation(cfg, rebuildRegistry)
+	provideRefIntegrityValidation(cfg, adf, rebuildRegistry)
 	provideQryModules(cfg, adf, buildInfo)
 
 	provideQryEcho(cfg, adf, ep)
