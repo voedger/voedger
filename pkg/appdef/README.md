@@ -56,11 +56,16 @@ classDiagram
         +SystemField_QName() IField
     }
 
-    IDoc --|> IStructure : inherits
-    class IDoc {
+    IStructure <|-- IRecord  : inherits
+    class IRecord {
         <<interface>>
         +SystemField_ID() IField
         +SystemField_IsActive() IField
+    }
+
+    IDoc --|> IRecord : inherits
+    class IDoc {
+        <<interface>>
     }
 
     IGDoc --|> IDoc : inherits
@@ -88,34 +93,32 @@ classDiagram
         ~Kind => TypeKind_ODoc
     }
 
-    IStructure <|-- IRecord  : inherits
-    class IRecord {
+    IRecord <|-- IContainedRecord  : inherits
+    class IContainedRecord {
         <<interface>>
-        +SystemField_ID() IField
-        +SystemField_IsActive() IField
         +SystemField_ParentID() IField
         +SystemField_Container() IField
     }
 
-    IRecord <|-- IGRecord : inherits
+    IContainedRecord <|-- IGRecord : inherits
     class IGRecord {
         <<interface>>
         ~Kind => TypeKind_GRecord
     }
 
-    IRecord <|-- ICRecord : inherits
+    IContainedRecord <|-- ICRecord : inherits
     class ICRecord {
         <<interface>>
         ~Kind => TypeKind_CRecord
     }
 
-    IRecord <|-- IWRecord : inherits
+    IContainedRecord <|-- IWRecord : inherits
     class IWRecord {
         <<interface>>
         ~Kind => TypeKind_WRecord
     }
 
-    IRecord <|-- IORecord : inherits
+    IContainedRecord <|-- IORecord : inherits
     class IORecord {
         <<interface>>
         ~Kind => TypeKind_ORecord
@@ -358,21 +361,29 @@ The inheritance and composing diagrams given below are expanded general diagrams
 
 ```mermaid
 classDiagram
+    direction BT
+    namespace _ {
+        class IStructure {
+            <<interface>>
+            +Abstract() bool
+            +Fields() []IField
+            +Containers() []IContainer
+            +Uniques() []IUnique
+            +SystemField_QName() IField
+        }
 
-    class IStructure {
-        <<interface>>
-        +Abstract() bool
-        +Fields() []IField
-        +Containers() []IContainer
-        +Uniques() []IUnique
-        +SystemField_QName() IField
+        class IRecord {
+            <<interface>>
+            +SystemField_ID() IField
+            +SystemField_IsActive() IField
+        }
     }
 
-    IDoc --|> IStructure : inherits
+    IRecord --|> IStructure : inherits
+
+    IDoc --|> IRecord : inherits
     class IDoc {
         <<interface>>
-        +SystemField_ID() IField
-        +SystemField_IsActive() IField
     }
 
     IGDoc --|> IDoc : inherits
@@ -400,50 +411,35 @@ classDiagram
         ~Kind => TypeKind_ODoc
     }
 
-    IStructure <|-- IRecord  : inherits
-    class IRecord {
+    IRecord <|-- IContainedRecord  : inherits
+    class IContainedRecord {
         <<interface>>
-        +SystemField_ID() IField
-        +SystemField_IsActive() IField
         +SystemField_ParentID() IField
         +SystemField_Container() IField
     }
 
-    IRecord <|-- IGRecord : inherits
+    IContainedRecord <|-- IGRecord : inherits
     class IGRecord {
         <<interface>>
         ~Kind => TypeKind_GRecord
     }
 
-    IRecord <|-- ICRecord : inherits
+    IContainedRecord <|-- ICRecord : inherits
     class ICRecord {
         <<interface>>
         ~Kind => TypeKind_CRecord
     }
 
-    IRecord <|-- IWRecord : inherits
+    IContainedRecord <|-- IWRecord : inherits
     class IWRecord {
         <<interface>>
         ~Kind => TypeKind_WRecord
     }
 
-    IRecord <|-- IORecord : inherits
+    IContainedRecord <|-- IORecord : inherits
     class IORecord {
         <<interface>>
         ~Kind => TypeKind_ORecord
-    }
-
-    IObject --|> IStructure : inherits
-    class IObject {
-        <<interface>>
-        ~Kind => TypeKind_Object
-    }
-
-    IStructure <|-- IElement : inherits
-    class IElement {
-        <<interface>>
-        ~Kind => TypeKind_Element
-        +SystemField_Container() IField
     }
 ```
 
