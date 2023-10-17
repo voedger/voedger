@@ -51,7 +51,7 @@ WORKSPACE Workspace ( -- ValueChanged: Abstract flag must not be changed
         C int, -- error: field is in part of primary key
         D int, -- appending field is allowed
         PRIMARY KEY ((A, C), B) -- NodeModified: added field C to PartKeyFields
-    ) AS RESULT OF NewType;
+    ) AS RESULT OF Proj1;
     TABLE NewTable INHERITS CDoc(
         A varchar
     );
@@ -66,8 +66,10 @@ WORKSPACE Workspace ( -- ValueChanged: Abstract flag must not be changed
         A int,
         B int,
         PRIMARY KEY ((A), B)
-    ) AS RESULT OF NewType;
+    ) AS RESULT OF Proj1;
     EXTENSION ENGINE BUILTIN (
+        PROJECTOR Proj1 ON (Orders) INTENTS (View(SomeView), View(NewView));
+        COMMAND Orders();
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
         COMMAND SomeCommand(SomeType2, UNLOGGED SomeType2) RETURNS SomeType2; -- args and return type changed; unlogged flag changed, but it is ok
         COMMAND NewCommand(NewType, UNLOGGED NewType2) RETURNS NewType;

@@ -51,8 +51,10 @@ ABSTRACT WORKSPACE Workspace (
         A int,
         B int,
         PRIMARY KEY ((A), B)
-    ) AS RESULT OF NewType;
+    ) AS RESULT OF Proj1;
     EXTENSION ENGINE BUILTIN (
+        PROJECTOR Proj1 ON (Orders) INTENTS (View(SomeView));
+        COMMAND Orders();
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
         COMMAND SomeCommand(SomeType, UNLOGGED SomeType) RETURNS SomeType;
     )
