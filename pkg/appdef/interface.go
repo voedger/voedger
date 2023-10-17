@@ -62,6 +62,11 @@ type IAppDef interface {
 	// Returns nil if not found.
 	Element(name QName) IElement
 
+	// Enumerates all application records, e.g. documents and contained records
+	//
+	// Records are enumerated in alphabetical order by QName
+	Records(func(IRecord))
+
 	// Enumerates all application structures
 	//
 	// Structures are enumerated in alphabetical order by QName

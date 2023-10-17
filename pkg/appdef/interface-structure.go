@@ -5,6 +5,8 @@
 
 package appdef
 
+// # Structure
+//
 // Structure is a type with fields, containers and uniques.
 //
 // Ref. to structure.go for implementation
@@ -28,14 +30,30 @@ type IStructureBuilder interface {
 	IWithAbstractBuilder
 }
 
-// Document is a structure.
+// # Record
 //
-// Document can contains records.
-type IDoc interface {
+// Record is a structure.
+//
+// Record has unique ID.
+type IRecord interface {
 	IStructure
 
 	// Returns definition for «sys.ID» field
 	SystemField_ID() IField
+}
+
+type IRecordBuilder interface {
+	IRecord
+	IStructureBuilder
+}
+
+// # Document
+//
+// Document is a record.
+//
+// Document can contains records.
+type IDoc interface {
+	IRecord
 
 	// Unwanted type assertion stub
 	isDoc()
@@ -43,17 +61,14 @@ type IDoc interface {
 
 type IDocBuilder interface {
 	IDoc
-	IStructureBuilder
+	IRecordBuilder
 }
 
-// Record is a structure.
+// # ContainedRecord
 //
-// Record can contains child records.
-type IRecord interface {
-	IStructure
-
-	// Returns definition for «sys.ID» field
-	SystemField_ID() IField
+// Contained record is a record that has parent.
+type IContainedRecord interface {
+	IRecord
 
 	// Returns definition for «sys.ParentID» field
 	SystemField_ParentID() IField
@@ -62,7 +77,7 @@ type IRecord interface {
 	SystemField_Container() IField
 }
 
-type IRecordBuilder interface {
-	IRecord
-	IStructureBuilder
+type IContainedRecordBuilder interface {
+	IContainedRecord
+	IRecordBuilder
 }

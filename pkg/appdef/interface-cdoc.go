@@ -25,7 +25,7 @@ type ICDocBuilder interface {
 //
 // Ref. to cdoc.go for implementation
 type ICRecord interface {
-	IRecord
+	IContainedRecord
 
 	// Unwanted type assertion stub
 	isCRecord()
@@ -33,5 +33,5 @@ type ICRecord interface {
 
 type ICRecordBuilder interface {
 	ICRecord
-	IRecordBuilder
+	IContainedRecordBuilder
 }

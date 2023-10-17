@@ -22,7 +22,7 @@ type IGDocBuilder interface {
 //
 // Ref. to gdoc.go for implementation
 type IGRecord interface {
-	IRecord
+	IContainedRecord
 
 	// unwanted type assertion stub
 	isGRecord()
@@ -30,5 +30,5 @@ type IGRecord interface {
 
 type IGRecordBuilder interface {
 	IGRecord
-	IRecordBuilder
+	IContainedRecordBuilder
 }
