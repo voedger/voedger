@@ -54,7 +54,8 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder 
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "ResetPasswordByEmailParams")).
 			AddField(Field_AppName, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(authnz.QNameCommandResetPasswordByEmailUnloggedParams).
-			AddVerifiedField(field_Email, appdef.DataKind_string, true, appdef.VerificationKind_EMail).
+			AddField(field_Email, appdef.DataKind_string, true).
+			SetFieldVerify(field_Email, appdef.VerificationKind_EMail).
 			AddField(field_NewPwd, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		cmdResetPasswordByEmailExec,

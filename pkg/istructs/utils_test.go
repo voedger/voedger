@@ -449,36 +449,37 @@ func TestValidatorMatchByQName(t *testing.T) {
 	qn1 := appdef.NewQName("test", "n1")
 	qn2 := appdef.NewQName("test", "n2")
 	qn3 := appdef.NewQName("test", "n3")
+	expectedWSID := WSID(42)
 
 	t.Run("QName only", func(t *testing.T) {
 		v := CUDValidator{
 			MatchQNames: []appdef.QName{qn1, qn2},
 		}
-		require.True(ValidatorMatchByQName(v, qn1))
-		require.True(ValidatorMatchByQName(v, qn2))
-		require.False(ValidatorMatchByQName(v, qn3))
+		require.True(ValidatorMatchByQName(v, qn1, expectedWSID, qn1))
+		require.True(ValidatorMatchByQName(v, qn2, expectedWSID, qn1))
+		require.False(ValidatorMatchByQName(v, qn3, expectedWSID, qn1))
 	})
 
 	t.Run("func(QName) only", func(t *testing.T) {
 		v := CUDValidator{
-			MatchFunc: func(qName appdef.QName) bool {
-				return qName == qn1 || qName == qn2
+			MatchFunc: func(qName appdef.QName, wsid WSID, cmdQName appdef.QName) bool {
+				return (qName == qn1 || qName == qn2) && wsid == expectedWSID && cmdQName == qn1
 			},
 		}
-		require.True(ValidatorMatchByQName(v, qn1))
-		require.True(ValidatorMatchByQName(v, qn2))
-		require.False(ValidatorMatchByQName(v, qn3))
+		require.True(ValidatorMatchByQName(v, qn1, expectedWSID, qn1))
+		require.True(ValidatorMatchByQName(v, qn2, expectedWSID, qn1))
+		require.False(ValidatorMatchByQName(v, qn3, expectedWSID, qn1))
 	})
 
 	t.Run("both func(QName) and QName", func(t *testing.T) {
 		v := CUDValidator{
-			MatchFunc: func(qName appdef.QName) bool {
-				return qName == qn1
+			MatchFunc: func(qName appdef.QName, wsid WSID, cmdQName appdef.QName) bool {
+				return qName == qn1 && wsid == expectedWSID && cmdQName == qn1
 			},
 			MatchQNames: []appdef.QName{qn2},
 		}
-		require.True(ValidatorMatchByQName(v, qn1))
-		require.True(ValidatorMatchByQName(v, qn2))
-		require.False(ValidatorMatchByQName(v, qn3))
+		require.True(ValidatorMatchByQName(v, qn1, expectedWSID, qn1))
+		require.True(ValidatorMatchByQName(v, qn2, expectedWSID, qn1))
+		require.False(ValidatorMatchByQName(v, qn3, expectedWSID, qn1))
 	})
 }

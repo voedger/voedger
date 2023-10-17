@@ -13,7 +13,7 @@ import (
 type CUDValidator struct {
 	// MatchFunc and MatchQNames are both considered
 	// MatchFunc could be nil
-	MatchFunc func(qName appdef.QName) bool
+	MatchFunc func(qName appdef.QName, wsid WSID, cmdQName appdef.QName) bool
 	// MatchQNames could be empty
 	MatchQNames []appdef.QName
 	Validate    func(ctx context.Context, appStructs IAppStructs, cudRow ICUDRow, wsid WSID, cmdQName appdef.QName) error

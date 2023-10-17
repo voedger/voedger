@@ -58,7 +58,6 @@ const (
 	field_SubjectID             = "SubjectID"
 	field_Dummy                 = "Dummy"
 	field_JoinedWorkspaceID     = "JoinedWorkspaceID"
-	ield_WSName                 = "WSName"
 	Field_SubjectKind           = "SubjectKind"
 	Field_ProfileWSID           = "ProfileWSID"
 	Field_SubjectID             = "SubjectID"

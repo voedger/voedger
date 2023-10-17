@@ -86,7 +86,7 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 
 			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
+				apis.NumCommandProcessors, nil, apis.IAppStorageProvider, false)
 			apps.Parse(it.SchemaTestApp2, "app2", ep)
 
 			cdocQName := appdef.NewQName("test", "cdoc")
