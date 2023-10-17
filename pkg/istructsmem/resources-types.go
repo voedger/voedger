@@ -7,6 +7,7 @@ package istructsmem
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -59,6 +60,51 @@ func (res *Resources) Resources(enum func(appdef.QName)) {
 	for n := range res.resources {
 		enum(n)
 	}
+}
+
+// Checks that all resources use correct QNames
+func (res *Resources) prepare(app appdef.IAppDef) (err error) {
+
+	// https://dev.heeus.io/launchpad/#!17185
+	checkParam := func(r, n appdef.QName, par string) {
+		if n != appdef.NullQName {
+			t := app.TypeByName(n)
+			if t == nil {
+				err = errors.Join(err,
+					fmt.Errorf("resource «%v» uses unknown type «%v» as %s", r, n, par))
+			}
+			if (t.Kind() != appdef.TypeKind_Object) && (t.Kind() != appdef.TypeKind_ODoc) {
+				err = errors.Join(err,
+					fmt.Errorf("resource «%v» uses non-object type %v as %s", r, t, par))
+			}
+		}
+	}
+
+	checkResult := func(r, n appdef.QName) {
+		if n != appdef.NullQName {
+			t := app.TypeByName(n)
+			if t == nil {
+				err = errors.Join(err,
+					fmt.Errorf("resource «%v» uses unknown type «%v» as result", r, n))
+			}
+		}
+	}
+
+	res.Resources(func(n appdef.QName) {
+		r := res.QueryResource(n)
+		switch r.Kind() {
+		case istructs.ResourceKind_QueryFunction:
+			q := r.(istructs.IQueryFunction)
+			checkParam(q.QName(), q.ParamsType(), "parameter")
+			checkResult(q.QName(), q.ResultType(nullPrepareArgs))
+		case istructs.ResourceKind_CommandFunction:
+			c := r.(istructs.ICommandFunction)
+			checkParam(c.QName(), c.ParamsType(), "parameter")
+			checkParam(c.QName(), c.UnloggedParamsType(), "unlogged parameter")
+			checkResult(c.QName(), c.ResultType())
+		}
+	})
+	return err
 }
 
 // Ancestor for command & query functions
