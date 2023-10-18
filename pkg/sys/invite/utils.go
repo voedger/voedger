@@ -11,7 +11,7 @@ import (
 )
 
 func GetCDocJoinedWorkspaceForUpdateRequired(st istructs.IState, intents istructs.IIntents, invitingWorkspaceWSID int64) (svbCDocJoinedWorkspace istructs.IStateValueBuilder, err error) {
-	skbViewJoinedWorkspaceIndex, err := st.KeyBuilder(state.ViewRecordsStorage, QNameViewJoinedWorkspaceIndex)
+	skbViewJoinedWorkspaceIndex, err := st.KeyBuilder(state.View, QNameViewJoinedWorkspaceIndex)
 	if err != nil {
 		// notest
 		return nil, err
@@ -22,7 +22,7 @@ func GetCDocJoinedWorkspaceForUpdateRequired(st istructs.IState, intents istruct
 	if err != nil {
 		return nil, err
 	}
-	skb, err := st.KeyBuilder(state.RecordsStorage, QNameCDocJoinedWorkspace)
+	skb, err := st.KeyBuilder(state.Record, QNameCDocJoinedWorkspace)
 	if err != nil {
 		// notest
 		return nil, err
@@ -37,7 +37,7 @@ func GetCDocJoinedWorkspaceForUpdateRequired(st istructs.IState, intents istruct
 }
 
 func GetCDocJoinedWorkspace(st istructs.IState, intents istructs.IIntents, invitingWorkspaceWSID int64) (svbCDocJoinedWorkspace istructs.IStateValue, skb istructs.IStateKeyBuilder, ok bool, err error) {
-	skbViewJoinedWorkspaceIndex, err := st.KeyBuilder(state.ViewRecordsStorage, QNameViewJoinedWorkspaceIndex)
+	skbViewJoinedWorkspaceIndex, err := st.KeyBuilder(state.View, QNameViewJoinedWorkspaceIndex)
 	if err != nil {
 		// notest
 		return nil, nil, false, err
@@ -53,7 +53,7 @@ func GetCDocJoinedWorkspace(st istructs.IState, intents istructs.IIntents, invit
 		return nil, nil, false, nil
 	}
 
-	skb, err = st.KeyBuilder(state.RecordsStorage, QNameCDocJoinedWorkspace)
+	skb, err = st.KeyBuilder(state.Record, QNameCDocJoinedWorkspace)
 	if err != nil {
 		// notest
 		return nil, nil, false, err

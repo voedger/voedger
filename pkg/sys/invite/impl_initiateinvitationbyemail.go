@@ -35,7 +35,7 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args ist
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
 		}
 
-		skbViewInviteIndex, err := args.State.KeyBuilder(state.ViewRecordsStorage, qNameViewInviteIndex)
+		skbViewInviteIndex, err := args.State.KeyBuilder(state.View, qNameViewInviteIndex)
 		if err != nil {
 			return
 		}
@@ -47,7 +47,7 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args ist
 		}
 
 		if ok {
-			skbCDocInvite, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
+			skbCDocInvite, err := args.State.KeyBuilder(state.Record, qNameCDocInvite)
 			if err != nil {
 				return err
 			}
@@ -73,7 +73,7 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args ist
 			return nil
 		}
 
-		skbCDocInvite, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
+		skbCDocInvite, err := args.State.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
 			return err
 		}

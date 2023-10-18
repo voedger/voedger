@@ -37,7 +37,7 @@ func (o *EnrichmentOperator) DoAsync(ctx context.Context, work pipeline.IWorkpie
 					return work, ctx.Err()
 				}
 
-				kb, err := o.state.KeyBuilder(state.RecordsStorage, appdef.NullQName)
+				kb, err := o.state.KeyBuilder(state.Record, appdef.NullQName)
 				if err != nil {
 					return work, err
 				}

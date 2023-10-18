@@ -26,20 +26,22 @@ import (
 )
 
 const (
-	TestEmail        = "123@123.com"
-	TestEmail2       = "124@124.com"
-	TestEmail3       = "125@125.com"
-	TestServicePort  = 10000
-	defaultMaxOccurs = 100
+	TestEmail       = "123@123.com"
+	TestEmail2      = "124@124.com"
+	TestEmail3      = "125@125.com"
+	TestServicePort = 10000
+	app1Name        = "app1"
 )
 
 var (
-	QNameApp1_TestWSKind               = appdef.NewQName("app1", "WSKind")
+	QNameApp1_TestWSKind               = appdef.NewQName(app1Name, "WSKind")
 	QNameTestView                      = appdef.NewQName("my", "View")
-	QNameApp1_TestEmailVerificationDoc = appdef.NewQName("app1", "Doc")
-	QNameApp1_CDocTestConstraints      = appdef.NewQName("app1", "DocConstraints")
+	QNameApp1_TestEmailVerificationDoc = appdef.NewQName(app1Name, "Doc")
+	QNameApp1_CDocTestConstraints      = appdef.NewQName(app1Name, "DocConstraints")
 	QNameCmdRated                      = appdef.NewQName(appdef.SysPackage, "RatedCmd")
 	QNameQryRated                      = appdef.NewQName(appdef.SysPackage, "RatedQry")
+	QNameODoc1                         = appdef.NewQName(app1Name, "odoc1")
+	QNameODoc2                         = appdef.NewQName(app1Name, "odoc2")
 	TestSMTPCfg                        = smtp.Cfg{
 		Username: "username@gmail.com",
 	}
@@ -75,7 +77,7 @@ var (
 )
 
 func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-	registryapp.Provide(smtp.Cfg{})(apis, cfg, appDefBuilder, ep)
+	registryapp.Provide(smtp.Cfg{}, false)(apis, cfg, appDefBuilder, ep)
 	apps.Parse(SchemaTestApp2, "app2", ep)
 }
 
@@ -86,7 +88,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		panic("no build info")
 	}
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
+		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider, false)
 
 	apps.Parse(SchemaTestApp1, "app1", ep)
 
@@ -173,7 +175,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 			AddField("Int", appdef.DataKind_int32, true).
 			AddField("Str", appdef.DataKind_string, false).(appdef.IType).QName(),
 		func(args istructs.ExecCommandArgs) (err error) {
-			key, err := args.State.KeyBuilder(state.CmdResultStorage, testCmdResult)
+			key, err := args.State.KeyBuilder(state.Result, testCmdResult)
 			if err != nil {
 				return err
 			}
@@ -197,5 +199,21 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 			}
 			return nil
 		},
+	))
+
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		appdef.NewQName(appdef.SysPackage, "CmdODocOne"),
+		QNameODoc1,
+		appdef.NullQName,
+		appdef.NullQName,
+		istructsmem.NullCommandExec,
+	))
+
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		appdef.NewQName(appdef.SysPackage, "CmdODocTwo"),
+		QNameODoc2,
+		QNameODoc2,
+		appdef.NullQName,
+		istructsmem.NullCommandExec,
 	))
 }

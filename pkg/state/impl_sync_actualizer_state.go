@@ -14,30 +14,30 @@ import (
 
 func implProvideSyncActualizerState(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit int) IHostState {
 	hs := newHostState("SyncActualizer", intentsLimit)
-	hs.addStorage(ViewRecordsStorage, &viewRecordsStorage{
+	hs.addStorage(View, &viewRecordsStorage{
 		ctx:             ctx,
 		viewRecordsFunc: func() istructs.IViewRecords { return appStructs.ViewRecords() },
 		appDefFunc:      func() appdef.IAppDef { return appStructs.AppDef() },
 		wsidFunc:        wsidFunc,
 		n10nFunc:        n10nFunc,
 	}, S_GET|S_GET_BATCH|S_INSERT|S_UPDATE)
-	hs.addStorage(RecordsStorage, &recordsStorage{
+	hs.addStorage(Record, &recordsStorage{
 		recordsFunc: func() istructs.IRecords { return appStructs.Records() },
 		appDefFunc:  func() appdef.IAppDef { return appStructs.AppDef() },
 		wsidFunc:    wsidFunc,
 	}, S_GET|S_GET_BATCH)
-	hs.addStorage(WLogStorage, &wLogStorage{
+	hs.addStorage(WLog, &wLogStorage{
 		ctx:        ctx,
 		eventsFunc: func() istructs.IEvents { return appStructs.Events() },
 		appDefFunc: func() appdef.IAppDef { return appStructs.AppDef() },
 		wsidFunc:   wsidFunc,
 	}, S_GET)
-	hs.addStorage(PLogStorage, &pLogStorage{
+	hs.addStorage(PLog, &pLogStorage{
 		ctx:             ctx,
 		eventsFunc:      func() istructs.IEvents { return appStructs.Events() },
 		appDefFunc:      func() appdef.IAppDef { return appStructs.AppDef() },
 		partitionIDFunc: partitionIDFunc,
 	}, S_GET)
-	hs.addStorage(AppSecretsStorage, &appSecretsStorage{secretReader: secretReader}, S_GET)
+	hs.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
 	return hs
 }

@@ -54,7 +54,8 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder 
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "ResetPasswordByEmailParams")).
 			AddField(Field_AppName, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(authnz.QNameCommandResetPasswordByEmailUnloggedParams).
-			AddVerifiedField(field_Email, appdef.DataKind_string, true, appdef.VerificationKind_EMail).
+			AddField(field_Email, appdef.DataKind_string, true).
+			SetFieldVerify(field_Email, appdef.VerificationKind_EMail).
 			AddField(field_NewPwd, appdef.DataKind_string, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		cmdResetPasswordByEmailExec,
@@ -94,7 +95,7 @@ func provideQryInitiateResetPasswordByEmailExec(asp istructs.IAppStructsProvider
 		}
 
 		// check CDoc<sys.Login>.WSID != 0
-		kb, err := args.State.KeyBuilder(state.RecordsStorage, authnz.QNameCDocLogin)
+		kb, err := args.State.KeyBuilder(state.Record, authnz.QNameCDocLogin)
 		if err != nil {
 			return err
 		}

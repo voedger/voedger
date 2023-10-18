@@ -29,7 +29,7 @@ func stateFuncExec(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		after := args.ArgumentObject.AsInt64(field_After)
 
-		kb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewCollection)
+		kb, err := args.State.KeyBuilder(state.View, QNameViewCollection)
 		if err != nil {
 			return err
 		}

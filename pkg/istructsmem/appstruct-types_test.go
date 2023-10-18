@@ -31,7 +31,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 		cfg := cfgs.AddConfig(app, appDef)
 		require.NotNil(cfg)
 		require.Equal(cfg.Name, app)
-		require.Equal(cfg.QNameID, id)
+		require.Equal(cfg.ClusterAppID, id)
 
 		_, storageProvider := teststore.New()
 		appStructs := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
@@ -94,7 +94,7 @@ func TestAppConfigsType_GetConfig(t *testing.T) {
 		cfg := cfgs.AddConfig(app, appdef.New())
 		require.NotNil(cfg)
 		require.Equal(cfg.Name, app)
-		require.Equal(cfg.QNameID, id)
+		require.Equal(cfg.ClusterAppID, id)
 	}
 
 	appStructsProvider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storages)
@@ -112,7 +112,7 @@ func TestAppConfigsType_GetConfig(t *testing.T) {
 			cfg := cfgs.GetConfig(app)
 			require.NotNil(cfg)
 			require.Equal(cfg.Name, app)
-			require.Equal(cfg.QNameID, id)
+			require.Equal(cfg.ClusterAppID, id)
 
 			storage, err := storages.AppStorage(app)
 			require.NotNil(storage)

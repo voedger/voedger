@@ -57,8 +57,6 @@ var ErrWrongFieldType = errors.New("wrong field type")
 
 var ErrTypeChanged = errors.New("type has been changed")
 
-var ErrReferentialIntegrityViolation = errors.New("referential integrity violation")
-
 var ErrFieldValueRestricted = errors.New("value does not meet the restricts")
 
 const errFieldNotFoundWrap = "%s-type field «%s» is not found in type «%v»: %w" // int32-type field «myField» is not found …

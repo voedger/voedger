@@ -75,7 +75,7 @@ func qryJournalExec( /*jdi vvm.IEPJournalIndices, jp vvm.IEPJournalPredicates, *
 			return err
 		}
 
-		kb, err := args.State.KeyBuilder(state.WLogStorage, appdef.NullQName)
+		kb, err := args.State.KeyBuilder(state.WLog, appdef.NullQName)
 		if err != nil {
 			return err
 		}

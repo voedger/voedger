@@ -37,7 +37,7 @@ func execCmdCreateJoinedWorkspace(args istructs.ExecCommandArgs) (err error) {
 
 		return nil
 	}
-	skbCDocJoinedWorkspace, err := args.State.KeyBuilder(state.RecordsStorage, QNameCDocJoinedWorkspace)
+	skbCDocJoinedWorkspace, err := args.State.KeyBuilder(state.Record, QNameCDocJoinedWorkspace)
 	if err != nil {
 		return
 	}

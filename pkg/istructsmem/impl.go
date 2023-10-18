@@ -122,7 +122,7 @@ func (app *appStructsType) Resources() istructs.IResources {
 
 // istructs.IAppStructs.ClusterAppID
 func (app *appStructsType) ClusterAppID() istructs.ClusterAppID {
-	return app.config.QNameID
+	return app.config.ClusterAppID
 }
 
 // istructs.IAppStructs.AppQName

@@ -42,7 +42,7 @@ func (s *wLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.Value
 		offs := int64(wlogOffset)
 		return callback(
 			&key{data: map[string]interface{}{Field_Offset: offs}},
-			&wLogStorageValue{
+			&wLogValue{
 				event:      event,
 				offset:     offs,
 				toJSONFunc: s.toJSON,
@@ -51,7 +51,7 @@ func (s *wLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.Value
 	return s.eventsFunc().ReadWLog(s.ctx, k.wsid, k.offset, k.count, cb)
 }
 func (s *wLogStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
-	value := sv.(*wLogStorageValue)
+	value := sv.(*wLogValue)
 	obj := make(map[string]interface{})
 	obj["QName"] = value.event.QName().String()
 	obj["ArgumentObject"] = coreutils.ObjectToMap(value.event.ArgumentObject(), s.appDefFunc())
