@@ -351,6 +351,73 @@ classDiagram
 
 ```
 
+### Data types
+
+```mermaid
+classDiagram
+    direction BT
+    class IType {
+        <<interface>>
+        +Name() QName
+        +Kind() TypeKind
+    }
+
+    IData --|> IType : inherits
+    class IData {
+        <<interface>>
+        +Name()* QName
+        +Kind()* TypeKind_Data
+        +Ancestor() IData
+        +Restricts() map[DataRestrictKind] *DataRestrict
+    }
+
+    Name "1" <--* "1" IData : has
+    class Name {
+        <<QName>>
+    }
+    note for Name "- for built-in types sys.int32, sys.float64, etc.,
+                   - for custom types — user-defined and
+                   - NullQName for anonymous types"
+
+    Kind "1" <--* "1" IData : has
+    class Kind {
+        <<DataKind>>
+    }
+    note for Kind " - null
+                    - int32
+                    - int64
+                    - float32
+                    - float64
+                    - bytes
+                    - string
+                    - QName
+                    - bool
+                    - RecordID
+                    - Record
+                    - Event"
+ 
+    Ancestor "1" <--* "1" IData : has
+    class Ancestor {
+        <<IData>>
+    }
+    note for Ancestor "  - data type from which the user data type is inherits or 
+                         - nil for built-in types"
+
+    DataRestrict "0..*" <--*  "1" IData : has
+    class DataRestrict {
+        <<interface>>
+        +Kind() DataRestrictKind
+        +Value() any
+    }
+    note for DataRestrict " - minLen() uint
+                        - maxLen() uint
+                        - Pattern() RegExp
+                        - MinInclusive() float
+                        - MinExclusive() float
+                        - MaxInclusive() float
+                        - MaxExclusive() float"
+```
+
 ### Structures
 
 Structured (documents, records, objects, elements) are those structural types that have fields and can contain containers with other structural types.
