@@ -10,12 +10,10 @@ const (
 )
 
 const (
-	ConstraintEmpty         Constraint = ""
 	ConstraintValueMatch    Constraint = "ConstraintValueMatch"
 	ConstraintAppendOnly    Constraint = "ConstraintAppendOnly"
 	ConstraintInsertOnly    Constraint = "ConstraintInsertOnly"
 	ConstraintNonModifiable Constraint = "ConstraintNonModifiable"
-	ConstraintChangeAllowed Constraint = "ConstraintChangeAllowed"
 )
 
 const (
@@ -37,8 +35,9 @@ const (
 	NodeNameDescriptor      = "Descriptor"
 	NodeNamePartKeyFields   = "PartKeyFields"
 	NodeNameClustColsFields = "ClustColsFields"
-	NodeNameArgs            = "Args"
-	NodeNameResult          = "Result"
-	NodeNameInherits        = "Inherits"
+	NodeNameCommandArgs     = "CommandArgs"
+	NodeNameCommandResult   = "CommandResult"
+	NodeNameQueryArgs       = "QueryArgs"
+	NodeNameQueryResult     = "QueryResult"
 	NodeNameUnloggedArgs    = "UnloggedArgs"
 )

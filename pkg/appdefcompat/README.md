@@ -59,12 +59,10 @@ type Constraint string
 type NodeType string
 
 const (
-	ConstraintEmpty         Constraint = ""
 	ConstraintValueMatch    Constraint = "ConstraintValueMatch"
     ConstraintAppendOnly    Constraint = "ConstraintAppendOnly"
     ConstraintInsertOnly    Constraint = "ConstraintInsertOnly"
     ConstraintNonModifiable Constraint = "ConstraintNonModifiable"
-	ConstraintChangeAllowed Constraint = "ConstraintChangeAllowed"
 )
 
 type CompatibilityTreeNode {
@@ -107,16 +105,18 @@ type NodeConstraint struct {
       - ClustColsFields // Key().ClustCols()
         - Name1 int
         - Name2 varchar
-      - Fields // FIXME ??? Value fields 
+      - Fields // Value fields 
         - ...
       // FIXME Containers ???
     - pkg3.Projector Props
       - Sync true
     -pkg3.Command Props
-      // FIXME is not implemented yet
-      - Args Props      
+      - CommandArgs Props      
       - UnloggedArgs Props
-      - Result Props
+      - CommandResult Props
+    - pkg3.Query
+      - QueryArgs Props      
+      - QueryResult Props
 
 ### Constraints
 
@@ -139,7 +139,7 @@ type CompatibilityError struct {
     // OrderChanged: (NonModifiable, AppendOnly): one error for the container
     // NodeInserted: (NonModifiable): one error for the container
 	// ValueChanged: one error for one node
-	// NodeModified: one error for one node
+	// NodeModified: one error for the container
     ErrorType ErrorType
 }
 ```

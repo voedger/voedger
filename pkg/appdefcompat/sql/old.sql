@@ -50,6 +50,8 @@ ABSTRACT WORKSPACE Workspace (
     VIEW SomeView(
         A int,
         B int,
+        D int,
+        E int,
         PRIMARY KEY ((A), B)
     ) AS RESULT OF Proj1;
     EXTENSION ENGINE BUILTIN (
@@ -57,6 +59,7 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND Orders();
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
         COMMAND SomeCommand(SomeType, UNLOGGED SomeType) RETURNS SomeType;
+        QUERY SomeQuery(SomeType) RETURNS SomeType;
     )
 );
 

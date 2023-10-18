@@ -65,29 +65,28 @@ func Test_Basic(t *testing.T) {
 		{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeValueChanged},
 		{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeOrderChanged},
 		{OldTreePath: []string{"AppDef", "Types", "sys.SomeTable"}, ErrorType: ErrorTypeNodeRemoved},
-		{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "Args"}, ErrorType: ErrorTypeNodeModified},
-		{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "Result"}, ErrorType: ErrorTypeNodeModified},
+		{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "CommandArgs"}, ErrorType: ErrorTypeNodeModified},
+		{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "CommandResult"}, ErrorType: ErrorTypeNodeModified},
 		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Abstract"}, ErrorType: ErrorTypeValueChanged},
 		{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "PartKeyFields"}, ErrorType: ErrorTypeNodeModified},
-		{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "Fields"}, ErrorType: ErrorTypeNodeInserted},
+		{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "Fields", "E"}, ErrorType: ErrorTypeValueChanged},
 		{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "ClustColsFields", "B"}, ErrorType: ErrorTypeValueChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "Fields", "B"}, ErrorType: ErrorTypeOrderChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "Fields", "B"}, ErrorType: ErrorTypeValueChanged},
 	}
 	allowedErrors := []CompatibilityError{
 		{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "UnloggedArgs"}},
 	}
-	allowedNewTypes := []string{
+	allowedTypes := []string{
 		"sys.NewTable",
 		"sys.NewType",
 		"sys.NewView",
 		"sys.NewCommand",
 		"sys.NewQuery",
+		"sys.SomeQuery",
 	}
 
 	compatErrors := CheckBackwardCompatibility(oldAppDef, newAppDef)
 	fmt.Println(compatErrors.Error())
-	validateCompatibilityErrors(t, expectedErrors, allowedErrors, allowedNewTypes, compatErrors)
+	validateCompatibilityErrors(t, expectedErrors, allowedErrors, allowedTypes, compatErrors)
 
 	// testing ignoring some compatibility errors
 	pathsToIgnore := [][]string{
@@ -97,7 +96,7 @@ func Test_Basic(t *testing.T) {
 	checkPathsToIgnore(t, pathsToIgnore, compatErrors, filteredCompatErrors)
 }
 
-func validateCompatibilityErrors(t *testing.T, expectedErrors []CompatibilityError, allowedErrors []CompatibilityError, allowedNewTypes []string, compatErrors *CompatibilityErrors) {
+func validateCompatibilityErrors(t *testing.T, expectedErrors []CompatibilityError, allowedErrors []CompatibilityError, allowedTypes []string, compatErrors *CompatibilityErrors) {
 	for _, expectedErr := range expectedErrors {
 		found := false
 		for _, cerr := range compatErrors.Errors {
@@ -108,16 +107,16 @@ func validateCompatibilityErrors(t *testing.T, expectedErrors []CompatibilityErr
 		}
 		require.True(t, found, expectedErr.Error())
 	}
-	// new types allowed
-	for _, newType := range allowedNewTypes {
+	// allowed types
+	for _, allowedType := range allowedTypes {
 		found := false
 		for _, compatErr := range compatErrors.Errors {
-			if slices.Contains(compatErr.OldTreePath, newType) {
+			if slices.Contains(compatErr.OldTreePath, allowedType) {
 				found = true
 				break
 			}
 		}
-		require.False(t, found, fmt.Sprintf("new type %s should be allowed", newType))
+		require.False(t, found, fmt.Sprintf("type %s should be allowed", allowedType))
 	}
 	// allowed errors
 	for _, allowedError := range allowedErrors {

@@ -47,22 +47,24 @@ WORKSPACE Workspace ( -- ValueChanged: Abstract flag must not be changed
     );
     VIEW SomeView(
         A int,
-        B varchar, -- ValueChanged, ValueChanged: field B was changed as a part of ClustColsFields and as well as a part of Fields
-        C int, -- error: field is in part of primary key
-        D int, -- appending field is allowed
+        B varchar, -- ValueChanged: field B was changed as a part of ClustColsFields
+        C int, -- actual error raises in primary key
+        D int, -- order of this field is not changed because it is value field
+        E varchar, -- ValueChanged: field E was changed as a part of value fields
+        F int, -- appending field is allowed to value fields
         PRIMARY KEY ((A, C), B) -- NodeModified: added field C to PartKeyFields
     ) AS RESULT OF Proj1;
     TABLE NewTable INHERITS CDoc(
         A varchar
     );
-    TYPE NewType(
+    TYPE NewType( -- new type is allowed
         A varchar
     );
-    TYPE NewType2(
+    TYPE NewType2( -- new type is allowed
         A varchar,
         B int32
     );
-    VIEW NewView(
+    VIEW NewView( -- new view is allowed
         A int,
         B int,
         PRIMARY KEY ((A), B)
@@ -73,7 +75,8 @@ WORKSPACE Workspace ( -- ValueChanged: Abstract flag must not be changed
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
         COMMAND SomeCommand(SomeType2, UNLOGGED SomeType2) RETURNS SomeType2; -- args and return type changed; unlogged flag changed, but it is ok
         COMMAND NewCommand(NewType, UNLOGGED NewType2) RETURNS NewType;
-        QUERY NewQuery(NewType) RETURNS NewType;
+        QUERY NewQuery(NewType) RETURNS NewType; -- new query is allowed
+        QUERY SomeQuery(SomeType2) RETURNS SomeType2; -- changing args and return type is allowed
     )
 );
 
