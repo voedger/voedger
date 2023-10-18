@@ -10,8 +10,6 @@ import (
 	"fmt"
 )
 
-// View
-//
 // # Implements:
 //   - IView
 //   - IViewBuilder
@@ -61,8 +59,6 @@ func (v *view) Validate() error {
 	)
 }
 
-// View key.
-//
 // # Implements:
 //   - IViewKey
 //   - IViewKeyBuilder
@@ -108,8 +104,6 @@ func (key *viewKey) validate() error {
 	)
 }
 
-// View partition key.
-//
 // # Implements:
 //   - IViewPartKey
 //   - IViewPartKeyBuilder
@@ -161,8 +155,6 @@ func (pk *viewPartKey) validate() error {
 	return nil
 }
 
-// View clustering columns
-//
 // # Implements:
 //   - IViewClustCols
 //   - IViewClustColsBuilder
@@ -244,8 +236,6 @@ func (cc *viewClustCols) validate() (err error) {
 	return nil
 }
 
-// View value
-//
 // # Implements:
 //   - IViewValue
 //   - IViewValueBuilder

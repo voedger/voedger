@@ -8,7 +8,7 @@ package appdef
 // Unique identifier type
 type UniqueID uint32
 
-// Types with uniques:
+// Final structures with uniques are:
 //	- TypeKind_GDoc and TypeKind_GRecord,
 //	- TypeKind_CDoc and TypeKind_CRecord,
 //	- TypeKind_WDoc and TypeKind_WRecord
@@ -63,14 +63,14 @@ type IUniquesBuilder interface {
 	SetUniqueField(name string) IUniquesBuilder
 }
 
-// Describe single unique for structured type.
+// Describe single unique for structure.
 //
 // Ref to unique.go for implementation
 type IUnique interface {
 	IComment
 
-	// Returns parent type
-	ParentType() IType
+	// Returns parent structure
+	ParentStructure() IStructure
 
 	// Returns name of unique.
 	//

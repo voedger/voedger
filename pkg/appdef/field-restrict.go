@@ -37,7 +37,7 @@ type fieldRestrictData struct {
 	value any
 }
 
-// Return new minimum length restriction for string or bytes field
+// Return new minimum length restriction for string or bytes field.
 //
 // # Panics:
 //   - if value is greater then MaxFieldLength (1024)
@@ -55,7 +55,7 @@ func MinLen(value uint16) IFieldRestrict {
 // Using MaxLen(), you can both limit the minimum length by a smaller value, and increase it to MaxFieldLength (1024)
 const DefaultFieldMaxLength = 255
 
-// Return new maximum length restriction for string or bytes field
+// Return new maximum length restriction for string or bytes field.
 //
 // # Panics:
 //   - if value is zero
@@ -70,7 +70,7 @@ func MaxLen(value uint16) IFieldRestrict {
 	return &fieldRestrictData{fieldRestrict_MaxLen, value}
 }
 
-// Return new pattern restriction for string field
+// Return new pattern restriction for string field.
 //
 // # Panics:
 //   - if value is not valid regular expression

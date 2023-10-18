@@ -23,12 +23,12 @@ func (d *wDoc) isWDoc() {}
 // # Implements:
 //   - IWRecord, IWRecordBuilder
 type wRecord struct {
-	record
+	containedRecord
 }
 
 func newWRecord(app *appDef, name QName) *wRecord {
 	r := &wRecord{}
-	r.record = makeRecord(app, name, TypeKind_WRecord, r)
+	r.containedRecord = makeContainedRecord(app, name, TypeKind_WRecord, r)
 	app.appendType(r)
 	return r
 }
