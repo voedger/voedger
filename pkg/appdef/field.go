@@ -340,7 +340,7 @@ func validateTypeFields(t IType) (err error) {
 					continue
 				}
 				if _, ok := refType.(IRecord); !ok {
-					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to non-record type %v: %w", t, n, refType, ErrInvalidTypeKind))
+					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to not a record type %v: %w", t, n, refType, ErrInvalidTypeKind))
 					continue
 				}
 			}
