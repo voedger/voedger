@@ -15,10 +15,10 @@ var constrains = []NodeConstraint{
 	{NodeNameTypes, ConstraintInsertOnly},
 	{NodeNameFields, ConstraintAppendOnly},
 	{NodeNameUniqueFields, ConstraintNonModifiable},
-	{NodeNameUnloggedArgs, ConstraintChangeAllowed},
 	{NodeNamePartKeyFields, ConstraintNonModifiable},
-	{NodeNameArgs, ConstraintNonModifiable},
-	{NodeNameResult, ConstraintNonModifiable},
+	{NodeNameClustColsFields, ConstraintNonModifiable},
+	{NodeNameCommandArgs, ConstraintNonModifiable},
+	{NodeNameCommandResult, ConstraintNonModifiable},
 }
 
 func checkBackwardCompatibility(old, new appdef.IAppDef) (cerrs *CompatibilityErrors) {
@@ -83,8 +83,8 @@ func newNode(parentNode *CompatibilityTreeNode, name string, value interface{}) 
 func buildQueryNode(parentNode *CompatibilityTreeNode, item appdef.IQuery) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, item.QName().String(), nil)
 	node.Props = append(node.Props,
-		buildArgsNode(node, item.Param()),
-		buildResultNode(node, item.Result()),
+		buildFieldsNode(node, item.Param(), NodeNameQueryArgs),
+		buildFieldsNode(node, item.Result(), NodeNameQueryResult),
 	)
 	return
 }
@@ -93,7 +93,7 @@ func buildTableNode(parentNode *CompatibilityTreeNode, item appdef.IDoc) (node *
 	node = newNode(parentNode, item.QName().String(), nil)
 	node.Props = append(node.Props,
 		buildUniqueFieldsNode(node, item),
-		buildFieldsNode(node, item),
+		buildFieldsNode(node, item, NodeNameFields),
 		buildContainersNode(node, item),
 		buildAbstractNode(node, item),
 		// TODO: implement buildInheritsNode(node, item)
@@ -104,28 +104,10 @@ func buildTableNode(parentNode *CompatibilityTreeNode, item appdef.IDoc) (node *
 func buildCommandNode(parentNode *CompatibilityTreeNode, item appdef.ICommand) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, item.QName().String(), nil)
 	node.Props = append(node.Props,
-		buildArgsNode(node, item.Param()),
-		buildUnloggedArgsNode(node, item.UnloggedParam()),
-		buildResultNode(node, item.Result()),
+		buildFieldsNode(node, item.Param(), NodeNameCommandArgs),
+		buildFieldsNode(node, item.UnloggedParam(), NodeNameUnloggedArgs),
+		buildFieldsNode(node, item.Result(), NodeNameCommandResult),
 	)
-	return
-}
-
-func buildArgsNode(parentNode *CompatibilityTreeNode, item appdef.IObject) (node *CompatibilityTreeNode) {
-	node = buildFieldsNode(parentNode, item)
-	node.Name = NodeNameArgs
-	return
-}
-
-func buildResultNode(parentNode *CompatibilityTreeNode, item appdef.IObject) (node *CompatibilityTreeNode) {
-	node = buildFieldsNode(parentNode, item)
-	node.Name = NodeNameResult
-	return
-}
-
-func buildUnloggedArgsNode(parentNode *CompatibilityTreeNode, item appdef.IObject) (node *CompatibilityTreeNode) {
-	node = buildFieldsNode(parentNode, item)
-	node.Name = NodeNameUnloggedArgs
 	return
 }
 
@@ -136,7 +118,7 @@ func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name s
 			node.Props = append(node.Props, buildAbstractNode(node, t))
 		}
 		if t, ok := item.(appdef.IFields); ok {
-			node.Props = append(node.Props, buildFieldsNode(node, t))
+			node.Props = append(node.Props, buildFieldsNode(node, t, NodeNameFields))
 		}
 		if t, ok := item.(appdef.IContainers); ok {
 			node.Props = append(node.Props, buildContainersNode(node, t))
@@ -166,8 +148,8 @@ func buildFieldNode(parentNode *CompatibilityTreeNode, item appdef.IField) (node
 	return
 }
 
-func buildFieldsNode(parentNode *CompatibilityTreeNode, item interface{}) (node *CompatibilityTreeNode) {
-	node = newNode(parentNode, NodeNameFields, nil)
+func buildFieldsNode(parentNode *CompatibilityTreeNode, item interface{}, nodeName string) (node *CompatibilityTreeNode) {
+	node = newNode(parentNode, nodeName, nil)
 	if item == nil {
 		return
 	}
@@ -236,24 +218,12 @@ func buildDescriptorNode(parentNode *CompatibilityTreeNode, item appdef.QName) (
 	return
 }
 
-func buildPartKeyFieldsNode(parentNode *CompatibilityTreeNode, item appdef.IViewPartKey) (node *CompatibilityTreeNode) {
-	node = buildFieldsNode(parentNode, item)
-	node.Name = NodeNamePartKeyFields
-	return
-}
-
-func buildClustColsFieldsNode(parentNode *CompatibilityTreeNode, item appdef.IViewClustCols) (node *CompatibilityTreeNode) {
-	node = buildFieldsNode(parentNode, item)
-	node.Name = NodeNameClustColsFields
-	return
-}
-
 func buildViewNode(parentNode *CompatibilityTreeNode, item appdef.IView) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, item.QName().String(), nil)
 	node.Props = append(node.Props,
-		buildPartKeyFieldsNode(node, item.Key().PartKey()),
-		buildClustColsFieldsNode(node, item.Key().ClustCols()),
-		buildFieldsNode(node, item),
+		buildFieldsNode(node, item.Key().PartKey(), NodeNamePartKeyFields),
+		buildFieldsNode(node, item.Key().ClustCols(), NodeNameClustColsFields),
+		buildFieldsNode(node, item.Value(), NodeNameFields),
 	)
 	return
 }
@@ -276,11 +246,11 @@ func findConstraint(nodeName string, constrains []NodeConstraint) (constraint Co
 			return c.Constraint
 		}
 	}
-	return ConstraintEmpty
+	return
 }
 
 func checkConstraint(oldTreePath []string, m *matchNodesResult, constraint Constraint) (cerrs []CompatibilityError) {
-	if constraint == ConstraintEmpty {
+	if len(constraint) == 0 {
 		return
 	}
 	if m.InsertedNodeCount > 0 {
@@ -375,6 +345,5 @@ func matchNodes(oldNodes, newNodes []*CompatibilityTreeNode) *matchNodesResult {
 			}
 		}
 	}
-
 	return result
 }

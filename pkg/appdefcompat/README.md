@@ -34,11 +34,9 @@ Why "Projector..."? To simplify definition, Projector uses System authorization 
 
 ```go
 
-func CheckBackwardCompatibility(oldBuilder, newBuilder appdef.IAppDefBuilder) (cerrs *CompatibilityErrors, err error)
+func CheckBackwardCompatibility(oldAppDef, newAppDef appdef.IAppDef) (cerrs *CompatibilityErrors)
 
-// cerrsOut: all cerrsIn that are not in toBeIgnored
-// toBeIgnored.Pos is ignored in comparison
-func IgnoreCompatibilityErrors(cerrs *CompatibilityErrors, toBeIgnored []CompatibilityError) (cerrsOut *CompatibilityErrors)
+func IgnoreCompatibilityErrors(cerrs *CompatibilityErrors, pathsToIgnore [][]string) (cerrsOut *CompatibilityErrors)
 ```
 
 ## Technical Design
@@ -61,9 +59,9 @@ type Constraint string
 type NodeType string
 
 const (
-	ConstraintValueMatch Constraint = "ConstraintValueMatch"
-    ConstraintAppendOnly Constraint = "ConstraintAppendOnly"
-    ConstraintInsertOnly Constraint = "ConstraintInsertOnly"
+	ConstraintValueMatch    Constraint = "ConstraintValueMatch"
+    ConstraintAppendOnly    Constraint = "ConstraintAppendOnly"
+    ConstraintInsertOnly    Constraint = "ConstraintInsertOnly"
     ConstraintNonModifiable Constraint = "ConstraintNonModifiable"
 )
 
@@ -107,16 +105,18 @@ type NodeConstraint struct {
       - ClustColsFields // Key().ClustCols()
         - Name1 int
         - Name2 varchar
-      - Fields // FIXME ??? Value fields 
+      - Fields // Value fields 
         - ...
       // FIXME Containers ???
     - pkg3.Projector Props
       - Sync true
     -pkg3.Command Props
-      // FIXME is not implemented yet
-      - Args Props      
+      - CommandArgs Props      
       - UnloggedArgs Props
-      - Result Props
+      - CommandResult Props
+    - pkg3.Query
+      - QueryArgs Props      
+      - QueryResult Props
 
 ### Constraints
 
@@ -139,7 +139,8 @@ type CompatibilityError struct {
     // OrderChanged: (NonModifiable, AppendOnly): one error for the container
     // NodeInserted: (NonModifiable): one error for the container
 	// ValueChanged: one error for one node
-    ErrMessage NodeErrorString
+	// NodeModified: one error for the container
+    ErrorType ErrorType
 }
 ```
 

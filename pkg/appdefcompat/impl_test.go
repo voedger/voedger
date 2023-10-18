@@ -6,9 +6,12 @@ package appdefcompat
 
 import (
 	"embed"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/parser"
@@ -45,54 +48,109 @@ func Test_Basic(t *testing.T) {
 	newBuilder := appdef.New()
 	require.NoError(t, parser.BuildAppDefs(newPackages, newBuilder))
 
-	expectedErrors := []CompatibilityError{
-		{OldTreePath: []string{"AppDef", "Types", "sys.Profile", "Types", "sys.ProfileTable"}, ErrMessage: NodeRemoved},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Password"}, ErrMessage: OrderChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Email"}, ErrMessage: OrderChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "Login"}, ErrMessage: NodeRemoved},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileCluster"}, ErrMessage: ValueChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileToken"}, ErrMessage: ValueChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "D"}, ErrMessage: NodeInserted},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrMessage: ValueChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrMessage: OrderChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.SomeTable"}, ErrMessage: NodeRemoved},
-	}
-	compatErrors, err := CheckBackwardCompatibility(oldBuilder, newBuilder)
+	oldAppDef, err := oldBuilder.Build()
 	require.NoError(t, err)
-	validateCompatibilityErrors(t, expectedErrors, compatErrors)
+
+	newAppDef, err := newBuilder.Build()
+	require.NoError(t, err)
+
+	expectedErrors := []CompatibilityError{
+		{OldTreePath: []string{"AppDef", "Types", "sys.Profile", "Types", "sys.ProfileTable"}, ErrorType: ErrorTypeNodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Password"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Email"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.CreateLoginParams", "Fields", "Login"}, ErrorType: ErrorTypeNodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.CreateLoginParams", "Fields", "ProfileCluster"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.CreateLoginParams", "Fields", "ProfileToken"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Fields"}, ErrorType: ErrorTypeNodeInserted},
+		{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeOrderChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.SomeTable"}, ErrorType: ErrorTypeNodeRemoved},
+		{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "CommandArgs"}, ErrorType: ErrorTypeNodeModified},
+		{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "CommandResult"}, ErrorType: ErrorTypeNodeModified},
+		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Abstract"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "PartKeyFields"}, ErrorType: ErrorTypeNodeModified},
+		{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "Fields", "E"}, ErrorType: ErrorTypeValueChanged},
+		{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "ClustColsFields", "B"}, ErrorType: ErrorTypeValueChanged},
+	}
+	allowedErrors := []CompatibilityError{
+		{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "UnloggedArgs"}},
+	}
+	allowedTypes := []string{
+		"sys.NewTable",
+		"sys.NewType",
+		"sys.NewView",
+		"sys.NewCommand",
+		"sys.NewQuery",
+		"sys.SomeQuery",
+	}
+
+	compatErrors := CheckBackwardCompatibility(oldAppDef, newAppDef)
+	fmt.Println(compatErrors.Error())
+	validateCompatibilityErrors(t, expectedErrors, allowedErrors, allowedTypes, compatErrors)
 
 	// testing ignoring some compatibility errors
-	expectedErrors = []CompatibilityError{
-		{OldTreePath: []string{"AppDef", "Types", "sys.Profile", "Types", "sys.ProfileTable"}, ErrMessage: NodeRemoved},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Password"}, ErrMessage: OrderChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Email"}, ErrMessage: OrderChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "Login"}, ErrMessage: NodeRemoved},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileCluster"}, ErrMessage: ValueChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "D"}, ErrMessage: NodeInserted},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrMessage: ValueChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrMessage: OrderChanged},
-		{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.SomeTable"}, ErrMessage: NodeRemoved},
+	pathsToIgnore := [][]string{
+		{"AppDef", "Types", "sys.CreateLoginParams", "Fields", "ProfileToken"},
 	}
-
-	toBeIgnored := []CompatibilityError{
-		{
-			OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Types", "sys.CreateLoginParams", "Fields", "ProfileToken"},
-			ErrMessage:  ValueChanged,
-		},
-	}
-	filteredCompatErrors := IgnoreCompatibilityErrors(compatErrors, toBeIgnored)
-	validateCompatibilityErrors(t, expectedErrors, filteredCompatErrors)
+	filteredCompatErrors := IgnoreCompatibilityErrors(compatErrors, pathsToIgnore)
+	checkPathsToIgnore(t, pathsToIgnore, compatErrors, filteredCompatErrors)
 }
 
-func validateCompatibilityErrors(t *testing.T, expectedErrors []CompatibilityError, compatErrors *CompatibilityErrors) {
-	found := false
+func validateCompatibilityErrors(t *testing.T, expectedErrors []CompatibilityError, allowedErrors []CompatibilityError, allowedTypes []string, compatErrors *CompatibilityErrors) {
 	for _, expectedErr := range expectedErrors {
+		found := false
 		for _, cerr := range compatErrors.Errors {
-			if cerr.Path() == expectedErr.Path() && cerr.ErrMessage == expectedErr.ErrMessage {
+			if cerr.Path() == expectedErr.Path() && cerr.ErrorType == expectedErr.ErrorType {
 				found = true
 				break
 			}
 		}
 		require.True(t, found, expectedErr.Error())
+	}
+	// allowed types
+	for _, allowedType := range allowedTypes {
+		found := false
+		for _, compatErr := range compatErrors.Errors {
+			if slices.Contains(compatErr.OldTreePath, allowedType) {
+				found = true
+				break
+			}
+		}
+		require.False(t, found, fmt.Sprintf("type %s should be allowed", allowedType))
+	}
+	// allowed errors
+	for _, allowedError := range allowedErrors {
+		found := false
+		allowedPath := allowedError.Path()
+		for _, compatErr := range compatErrors.Errors {
+			if strings.Contains(compatErr.Path(), allowedPath) {
+				found = true
+				break
+			}
+		}
+		require.False(t, found, fmt.Sprintf("path %s should be allowed", allowedPath))
+	}
+}
+
+func checkPathsToIgnore(t *testing.T, pathsToIgnore [][]string, compatErrors, filteredCompatErrors *CompatibilityErrors) {
+	for _, pathToIgnore := range pathsToIgnore {
+		found := false
+		for _, cerr := range compatErrors.Errors {
+			if cerr.Path() == strings.Join(pathToIgnore, pathDelimiter) {
+				found = true
+				break
+			}
+		}
+		require.True(t, found, fmt.Sprintf("there is no path %s in compat errors", pathToIgnore))
+	}
+	for _, pathToIgnore := range pathsToIgnore {
+		found := false
+		for _, cerr := range filteredCompatErrors.Errors {
+			if cerr.Path() == strings.Join(pathToIgnore, pathDelimiter) {
+				found = true
+				break
+			}
+		}
+		require.False(t, found, fmt.Sprintf("path %s should be ignored", pathToIgnore))
 	}
 }
