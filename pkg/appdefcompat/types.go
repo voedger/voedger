@@ -14,15 +14,22 @@ type Constraint string
 type ErrorType string
 
 type CompatibilityTreeNode struct {
-	Name       string
-	Props      []*CompatibilityTreeNode
-	Value      interface{}
-	ParentNode *CompatibilityTreeNode
+	Name            string
+	Props           []*CompatibilityTreeNode
+	Value           interface{}
+	ParentNode      *CompatibilityTreeNode
+	invisibleInPath bool
 }
 
 func (n *CompatibilityTreeNode) Path() []string {
 	if n.ParentNode == nil {
+		if n.invisibleInPath {
+			return []string{}
+		}
 		return []string{n.Name}
+	}
+	if n.invisibleInPath {
+		return n.ParentNode.Path()
 	}
 	return append(n.ParentNode.Path(), n.Name)
 }
