@@ -57,7 +57,7 @@ func buildTreeNode(parentNode *CompatibilityTreeNode, item interface{}) (node *C
 	case appdef.IView:
 		node = buildViewNode(parentNode, t)
 	case appdef.IWithTypes:
-		node = buildTypesNode(parentNode, t, false)
+		node = buildTypesNode(parentNode, t, false, false)
 	case appdef.IQuery:
 		node = buildQueryNode(parentNode, t)
 	case appdef.ICommand:
@@ -129,7 +129,8 @@ func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name s
 
 func buildAppDefNode(parentNode *CompatibilityTreeNode, item appdef.IAppDef) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameAppDef, nil)
-	node.Props = append(node.Props, buildTypesNode(node, item, false))
+	node.Props = append(node.Props, buildTypesNode(node, item, false, true))
+	node.invisibleInPath = true
 	return
 }
 
@@ -193,7 +194,7 @@ func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IContain
 func buildWorkspaceNode(parentNode *CompatibilityTreeNode, item appdef.IWorkspace) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, item.QName().String(), nil)
 	node.Props = append(node.Props,
-		buildTypesNode(node, item.(appdef.IWithTypes), true),
+		buildTypesNode(node, item.(appdef.IWithTypes), true, false),
 		buildDescriptorNode(node, item.Descriptor()),
 		buildAbstractNode(node, item.(appdef.IWithAbstract)),
 		// TODO: add buildInheritsNode with ancestors in Props
@@ -201,8 +202,9 @@ func buildWorkspaceNode(parentNode *CompatibilityTreeNode, item appdef.IWorkspac
 	return
 }
 
-func buildTypesNode(parentNode *CompatibilityTreeNode, item appdef.IWithTypes, qNamesOnly bool) (node *CompatibilityTreeNode) {
+func buildTypesNode(parentNode *CompatibilityTreeNode, item appdef.IWithTypes, qNamesOnly bool, invisibleInPath bool) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameTypes, nil)
+	node.invisibleInPath = invisibleInPath
 	item.Types(func(t appdef.IType) {
 		if qNamesOnly {
 			node.Props = append(node.Props, buildQNameNode(node, t, t.QName().String(), true))

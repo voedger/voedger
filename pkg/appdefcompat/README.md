@@ -70,6 +70,7 @@ type CompatibilityTreeNode {
     Name string
     Props []*CompatibilityTreeNode
     Value interface{}
+    invisibleInPath bool
 }
 
 type NodeConstraint struct {
@@ -143,6 +144,11 @@ type CompatibilityError struct {
     ErrorType ErrorType
 }
 ```
+OldTreePath example:
+```golang
+[]string{"pkg1.Workspace1", "Types", "pkg1.Table5", "Fields", "Name1"}
+```
+First 2 parents "AppDef" and "Types" are invisible in the path, because of redundancy 
 
 ```golang
 type CompatibilityErrors {
