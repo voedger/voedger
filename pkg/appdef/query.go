@@ -5,8 +5,6 @@
 
 package appdef
 
-// Query is a function
-//
 // # Implements:
 //   - IQuery
 //   - IQueryBuilder

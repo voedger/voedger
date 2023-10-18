@@ -5,8 +5,6 @@
 
 package appdef
 
-// # Structure
-//
 // # Implements:
 //	 - IStructure
 //	 - IStructureBuilder
@@ -34,8 +32,6 @@ func (s structure) SystemField_QName() IField {
 	return s.fields.Field(SystemField_QName)
 }
 
-// # Record
-//
 // # Implements:
 //	- IRecord
 //	- IRecordBuilder
@@ -55,8 +51,6 @@ func makeRecord(app *appDef, name QName, kind TypeKind, parent interface{}) reco
 	return r
 }
 
-// # Document
-//
 // # Implements:
 //	- IDoc
 //	- IDocBuilder
@@ -74,8 +68,6 @@ func makeDoc(app *appDef, name QName, kind TypeKind, parent interface{}) doc {
 	return d
 }
 
-// # Contained record
-//
 // # Implements:
 //	- IContainedRecord
 //	- IContainedRecordBuilder

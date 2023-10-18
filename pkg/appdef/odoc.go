@@ -21,7 +21,7 @@ func newODoc(app *appDef, name QName) *oDoc {
 func (d *oDoc) isODoc() {}
 
 // # Implements:
-//   - IORecord
+//	- IORecord
 //	-	IORecordBuilder
 type oRecord struct {
 	containedRecord

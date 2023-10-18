@@ -10,7 +10,7 @@ package appdef
 // Ref. occurs.go for constants and methods
 type Occurs uint16
 
-// Types with containers:
+// Final types with containers are:
 //	- TypeKind_GDoc and TypeKind_GRecord,
 //	- TypeKind_CDoc and TypeKind_CRecord,
 //	- TypeKind_ODoc and TypeKind_CRecord,
@@ -55,17 +55,17 @@ type IContainer interface {
 	// Returns name of container
 	Name() string
 
-	// Returns type name of container
+	// Returns type name of included in container child
 	QName() QName
 
-	// Returns container type.
+	// Returns type of included in container child.
 	//
 	// Returns nil if not found
 	Type() IType
 
-	// Returns minimum occurs
+	// Returns minimum occurs of child
 	MinOccurs() Occurs
 
-	// Returns maximum occurs
+	// Returns maximum occurs of child
 	MaxOccurs() Occurs
 }

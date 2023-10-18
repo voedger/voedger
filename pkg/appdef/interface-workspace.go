@@ -5,8 +5,6 @@
 
 package appdef
 
-// # Workspace
-//
 // Workspace is a set of types.
 //
 // Ref. to workspace.go for implementation

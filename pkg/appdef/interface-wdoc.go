@@ -5,7 +5,9 @@
 
 package appdef
 
-// # Workflow document.
+// Workflow document.
+//
+// Ref. to wdoc.go for implementation
 type IWDoc interface {
 	IDoc
 

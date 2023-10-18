@@ -5,8 +5,6 @@
 
 package appdef
 
-// # View type.
-//
 // View is a type with key and value.
 //
 // Ref to view.go for implementation
@@ -34,8 +32,6 @@ type IViewBuilder interface {
 	ValueBuilder() IViewValueBuilder
 }
 
-// # View key
-//
 // View full (pk + cc) key.
 //
 // Ref. to view.go for implementation
@@ -52,9 +48,6 @@ type IViewKey interface {
 	ClustCols() IViewClustCols
 }
 
-// View full (pk + cc) key builder.
-//
-// Ref. to view.go for implementation
 type IViewKeyBuilder interface {
 	IViewKey
 
@@ -65,8 +58,6 @@ type IViewKeyBuilder interface {
 	ClustColsBuilder() IViewClustColsBuilder
 }
 
-// # View partition key.
-//
 // View partition key contains fields for partitioning.
 // Fields for partitioning should be selected so that the size of the partition
 // does not exceed 100 MB. Perfectly if it is around 10 MB.
@@ -103,8 +94,6 @@ type IViewPartKeyBuilder interface {
 	SetFieldComment(name string, comment ...string) IViewPartKeyBuilder
 }
 
-// # View clustering columns.
-//
 // Defines fields for sorting values inside partition.
 //
 // Ref. to view.go for implementation
@@ -140,7 +129,7 @@ type IViewClustColsBuilder interface {
 	SetFieldComment(name string, comment ...string) IViewClustColsBuilder
 }
 
-// # View value.
+// View value. Like a structure, view value has fields, but has not containers and uniques.
 //
 // Ref. to view.go for implementation
 type IViewValue interface {

@@ -328,7 +328,7 @@ func (f charsField) Restricts() IStringFieldRestricts {
 //
 // # Validation:
 //   - every RefField must refer to known types,
-//   - every referenced by RefField type must have «sys.ID» system field
+//   - every referenced by RefField type must be record type
 func validateTypeFields(t IType) (err error) {
 	if fld, ok := t.(IFields); ok {
 		// resolve reference types
@@ -339,8 +339,8 @@ func validateTypeFields(t IType) (err error) {
 					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to unknown type «%v»: %w", t, rf.Name(), n, ErrNameNotFound))
 					continue
 				}
-				if !refType.Kind().HasSystemField(SystemField_ID) {
-					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to non referable type %v without «%s» field: %w", t, n, refType, SystemField_ID, ErrInvalidTypeKind))
+				if _, ok := refType.(IRecord); !ok {
+					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to non-record type %v: %w", t, n, refType, ErrInvalidTypeKind))
 					continue
 				}
 			}

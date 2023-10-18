@@ -5,7 +5,7 @@
 
 package appdef
 
-// Configuration document
+// Configuration document.
 type ICDoc interface {
 	IDoc
 

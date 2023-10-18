@@ -5,8 +5,6 @@
 
 package appdef
 
-// # Application definition.
-//
 // Application definition is a set of types, views, commands, queries and workspaces.
 //
 // Ref to apdef.go for implementation
@@ -100,9 +98,6 @@ type IAppDef interface {
 	Workspace(QName) IWorkspace
 }
 
-// # Application builder
-//
-// Ref to appdef.go for implementation
 type IAppDefBuilder interface {
 	IAppDef
 	ICommentBuilder
