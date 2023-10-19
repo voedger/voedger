@@ -34,12 +34,9 @@ Why "Projector..."? To simplify definition, Projector uses System authorization 
 
 ```go
 
-func CheckBackwardCompatibility(old *AppDef, new *AppDef) (cerrs CompatibilityErrors)
+func CheckBackwardCompatibility(oldAppDef, newAppDef appdef.IAppDef) (cerrs *CompatibilityErrors)
 
-
-// cerrsOut: all cerrsIn that are not in toBeIgnored
-// toBeIgnored.Pos is ignored in comparison
-func IgnoreCompatibilityErrors(cerrs CompatibilityErrors, toBeIgnored []CompatibilityError) (cerrsOut CompatibilityErrors)
+func IgnoreCompatibilityErrors(cerrs *CompatibilityErrors, pathsToIgnore [][]string) (cerrsOut *CompatibilityErrors)
 ```
 
 ## Technical Design
@@ -59,10 +56,12 @@ func IgnoreCompatibilityErrors(cerrs CompatibilityErrors, toBeIgnored []Compatib
 
 ```go
 type Constraint string
+type NodeType string
 
 const (
-    ConstraintAppendOnly Constraint = "ConstraintAppendOnly"
-    ConstraintInsertOnly Constraint = "ConstraintInsertOnly"
+	ConstraintValueMatch    Constraint = "ConstraintValueMatch"
+    ConstraintAppendOnly    Constraint = "ConstraintAppendOnly"
+    ConstraintInsertOnly    Constraint = "ConstraintInsertOnly"
     ConstraintNonModifiable Constraint = "ConstraintNonModifiable"
 )
 
@@ -71,6 +70,7 @@ type CompatibilityTreeNode {
     Name string
     Props []*CompatibilityTreeNode
     Value interface{}
+    invisibleInPath bool
 }
 
 type NodeConstraint struct {
@@ -91,31 +91,66 @@ type NodeConstraint struct {
         - pkg1.Workspace2
         - pkg1.Workspace3
       - Descriptor pkg1.Workspace1Descriptor
-    - pkg2.SomeQName
+    - pkg2.SomeQName // IType
       - Abstract true // IWithAbstract
       - Fields // IFields
-        - Name1 int
-        - Name2 varchar (no length here)
+        - Name1 int // IField
+        - Name2 varchar (no length here) // IField
       - Containers // IContainers
         - Name1 QName1
         - Name2 QName2
-    - pkg3.View
+    - pkg3.SomeTable // IDoc
+      - Abstract true // IWithAbstract
+      - Fields // IFields
+        - Name1 int // IField
+        - Name2 varchar (no length here) // IField
+      - Containers // IContainers
+        - Name1 QName1
+        - Name2 QName2
+      - UniqueFields // IUniques
+        - Name1 ID1 // IUnique
+          -  Fields
+            - Name1 int
+            - Name2 varchar
+          - Parent
+            - Abstract true // IWithAbstract
+            - Fields // IFields
+              - Name1 int
+              - Name2 varchar (no length here)
+            - Containers // IContainers
+              - Name1 QName1
+              - Name2 QName2
+        - Name2 ID2 // IUnique
+          -  Fields
+            - Name1 int
+            - Name2 varchar
+          - Parent
+            - Abstract true // IWithAbstract
+            - Fields // IFields
+              - Name1 int
+              - Name2 varchar (no length here)
+            - Containers // IContainers
+              - Name1 QName1
+              - Name2 QName2
+    - pkg3.View // IView
       - PartKeyFields // Key().Partition()
          - Name1 int
          - Name2 int
       - ClustColsFields // Key().ClustCols()
         - Name1 int
         - Name2 varchar
-      - Fields // FIXME ??? Value fields 
+      - Fields // Value fields 
         - ...
       // FIXME Containers ???
     - pkg3.Projector Props
       - Sync true
-    -pkg3.Command Props
-      // FIXME is not implemented yet
-      - Args Props      
+    -pkg3.Command Props // ICommand
+      - CommandArgs Props      
       - UnloggedArgs Props
-      - Result Props
+      - CommandResult Props
+    - pkg3.Query // IQuery
+      - QueryArgs Props      
+      - QueryResult Props
 
 ### Constraints
 
@@ -137,8 +172,14 @@ type CompatibilityError struct {
     // NodeRemoved:  (NonModifiable, AppendOnly,InsertOnly) : one error per removed node
     // OrderChanged: (NonModifiable, AppendOnly): one error for the container
     // NodeInserted: (NonModifiable): one error for the container
-    ErrMessage NodeErrorString
+	// ValueChanged: one error for one node
+	// NodeModified: one error for the container
+    ErrorType ErrorType
 }
+```
+OldTreePath example:
+```golang
+[]string{"AppDef", "Types", "sys.Workspace1", "Types", "sys.Table5", "Fields", "Name1"}
 ```
 
 ```golang
