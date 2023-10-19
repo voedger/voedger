@@ -23,6 +23,7 @@ func newAppDef() *appDef {
 	app := appDef{
 		types: make(map[QName]interface{}),
 	}
+	app.makeSysDataTypes()
 	return &app
 }
 
@@ -36,6 +37,10 @@ func (app *appDef) AddCommand(name QName) ICommandBuilder {
 
 func (app *appDef) AddCRecord(name QName) ICRecordBuilder {
 	return newCRecord(app, name)
+}
+
+func (app *appDef) AddData(name QName, kind DataKind, ancestor QName) IDataBuilder {
+	return newData(app, name, kind, ancestor)
 }
 
 func (app *appDef) AddElement(name QName) IElementBuilder {
@@ -120,6 +125,23 @@ func (app *appDef) CRecord(name QName) ICRecord {
 	return nil
 }
 
+func (app *appDef) Data(name QName) IData {
+	if t := app.typeByKind(name, TypeKind_Data); t != nil {
+		return t.(IData)
+	}
+	return nil
+}
+
+func (app *appDef) DataTypes(incSys bool, cb func(IData)) {
+	app.Types(func(t IType) {
+		if d, ok := t.(IData); ok {
+			if incSys || !d.System() {
+				cb(d)
+			}
+		}
+	})
+}
+
 func (app *appDef) Element(name QName) IElement {
 	if t := app.typeByKind(name, TypeKind_Element); t != nil {
 		return t.(IElement)
@@ -193,6 +215,14 @@ func (app *appDef) Structures(cb func(s IStructure)) {
 	})
 }
 
+func (app *appDef) SysData(k DataKind) IData {
+	name := sysDataTypeName(k)
+	if t := app.typeByKind(name, TypeKind_Data); t != nil {
+		return t.(IData)
+	}
+	return nil
+}
+
 func (app *appDef) Type(name QName) IType {
 	if t := app.TypeByName(name); t != nil {
 		return t
@@ -205,10 +235,6 @@ func (app *appDef) TypeByName(name QName) IType {
 		return t.(IType)
 	}
 	return nil
-}
-
-func (app *appDef) TypeCount() int {
-	return len(app.types)
 }
 
 func (app *appDef) Types(cb func(IType)) {

@@ -184,6 +184,7 @@ classDiagram
     class IData {
         <<interface>>
         +Kind()* TypeKind_Data
+        +DataKind() DataKind
         +Ancestor() IData
         +Restricts() []IDataRestrict
     }
@@ -367,6 +368,7 @@ classDiagram
         <<interface>>
         +Name()* QName
         +Kind()* TypeKind_Data
+        +DataKind() DataKind
         +Ancestor() IData
         +Restricts() map[DataRestrictKind] *DataRestrict
     }
@@ -379,22 +381,22 @@ classDiagram
                    - for custom types — user-defined and
                    - NullQName for anonymous types"
 
-    Kind "1" <--* "1" IData : has
+    DataKind "1" <--* "1" IData : has
     class Kind {
         <<DataKind>>
     }
-    note for Kind " - null
-                    - int32
-                    - int64
-                    - float32
-                    - float64
-                    - bytes
-                    - string
-                    - QName
-                    - bool
-                    - RecordID
-                    - Record
-                    - Event"
+    note for DataKind " - null
+                        - int32
+                        - int64
+                        - float32
+                        - float64
+                        - bytes
+                        - string
+                        - QName
+                        - bool
+                        - RecordID
+                        - Record
+                        - Event"
  
     Ancestor "1" <--* "1" IData : has
     class Ancestor {
@@ -410,12 +412,12 @@ classDiagram
         +Value() any
     }
     note for DataRestrict " - minLen() uint
-                        - maxLen() uint
-                        - Pattern() RegExp
-                        - MinInclusive() float
-                        - MinExclusive() float
-                        - MaxInclusive() float
-                        - MaxExclusive() float"
+                            - maxLen() uint
+                            - Pattern() RegExp
+                            - MinInclusive() float
+                            - MinExclusive() float
+                            - MaxInclusive() float
+                            - MaxExclusive() float"
 ```
 
 ### Structures
@@ -429,7 +431,7 @@ The inheritance and composing diagrams given below are expanded general diagrams
 ```mermaid
 classDiagram
     direction BT
-    namespace _ {
+%%    namespace _ {
         class IStructure {
             <<interface>>
             +Abstract() bool
@@ -444,7 +446,7 @@ classDiagram
             +SystemField_ID() IField
             +SystemField_IsActive() IField
         }
-    }
+%%    }
 
     IRecord --|> IStructure : inherits
 

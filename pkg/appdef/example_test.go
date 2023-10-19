@@ -41,8 +41,6 @@ func Example() {
 
 	// how to inspect builded AppDef with CDoc
 	{
-		fmt.Printf("%d types\n", app.TypeCount())
-
 		// how to find type by name
 		t := app.Type(docName)
 		fmt.Printf("type %q: %v\n", t.QName(), t.Kind())
@@ -93,7 +91,6 @@ func Example() {
 	}
 
 	// Output:
-	// 2 types
 	// type "test.doc": TypeKind_CDoc
 	// "test.doc" is CDoc: true
 	// doc "test.doc": TypeKind_CDoc. This is example doc

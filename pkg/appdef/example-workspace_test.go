@@ -51,17 +51,18 @@ func ExampleIWorkspace() {
 
 		// how to inspect workspace
 		fmt.Printf("workspace %q descriptor is %q\n", ws.QName(), ws.Descriptor())
-		fmt.Printf("types count: %d\n", ws.TypeCount())
-
+		cnt := 0
 		ws.Types(func(t appdef.IType) {
 			fmt.Printf("- Type: %q, kind: %v\n", t.QName(), t.Kind())
+			cnt++
 		})
+		fmt.Println("types count:", cnt)
 	}
 
 	// Output:
 	// workspace "test.ws": TypeKind_Workspace
 	// workspace "test.ws" descriptor is "test.desc"
-	// types count: 2
 	// - Type: "test.doc", kind: TypeKind_CDoc
 	// - Type: "test.rec", kind: TypeKind_CRecord
+	// types count: 2
 }
