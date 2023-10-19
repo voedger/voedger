@@ -169,7 +169,7 @@ func buildUniqueFieldNode(parentNode *CompatibilityTreeNode, item appdef.IUnique
 	}
 	node.Props = append(node.Props,
 		fieldsNode, // Fields node
-		buildQNameNode(node, item.ParentStructure(), NodeNameParent, false), // Parent node
+		buildQNameNode(node, item.ParentType(), NodeNameParent, false), // Parent node
 	)
 	return
 }

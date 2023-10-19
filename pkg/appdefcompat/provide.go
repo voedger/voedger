@@ -12,6 +12,6 @@ func CheckBackwardCompatibility(old, new appdef.IAppDef) (cerrs *CompatibilityEr
 	return checkBackwardCompatibility(old, new)
 }
 
-func IgnoreCompatibilityErrors(cerrs *CompatibilityErrors, toBeIgnored [][]string) (cerrsOut *CompatibilityErrors) {
-	return ignoreCompatibilityErrors(cerrs, toBeIgnored)
+func IgnoreCompatibilityErrors(cerrs *CompatibilityErrors, pathsToIgnore [][]string) (cerrsOut *CompatibilityErrors) {
+	return ignoreCompatibilityErrors(cerrs, pathsToIgnore)
 }
