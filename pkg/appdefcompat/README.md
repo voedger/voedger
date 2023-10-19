@@ -91,15 +91,48 @@ type NodeConstraint struct {
         - pkg1.Workspace2
         - pkg1.Workspace3
       - Descriptor pkg1.Workspace1Descriptor
-    - pkg2.SomeQName
+    - pkg2.SomeQName // IType
       - Abstract true // IWithAbstract
       - Fields // IFields
-        - Name1 int
-        - Name2 varchar (no length here)
+        - Name1 int // IField
+        - Name2 varchar (no length here) // IField
       - Containers // IContainers
         - Name1 QName1
         - Name2 QName2
-    - pkg3.View
+    - pkg3.SomeTable // IDoc
+      - Abstract true // IWithAbstract
+      - Fields // IFields
+        - Name1 int // IField
+        - Name2 varchar (no length here) // IField
+      - Containers // IContainers
+        - Name1 QName1
+        - Name2 QName2
+      - UniqueFields // IUniques
+        - Name1 ID1 // IUnique
+          -  Fields
+            - Name1 int
+            - Name2 varchar
+          - Parent
+            - Abstract true // IWithAbstract
+            - Fields // IFields
+              - Name1 int
+              - Name2 varchar (no length here)
+            - Containers // IContainers
+              - Name1 QName1
+              - Name2 QName2
+        - Name2 ID2 // IUnique
+          -  Fields
+            - Name1 int
+            - Name2 varchar
+          - Parent
+            - Abstract true // IWithAbstract
+            - Fields // IFields
+              - Name1 int
+              - Name2 varchar (no length here)
+            - Containers // IContainers
+              - Name1 QName1
+              - Name2 QName2
+    - pkg3.View // IView
       - PartKeyFields // Key().Partition()
          - Name1 int
          - Name2 int
@@ -111,11 +144,11 @@ type NodeConstraint struct {
       // FIXME Containers ???
     - pkg3.Projector Props
       - Sync true
-    -pkg3.Command Props
+    -pkg3.Command Props // ICommand
       - CommandArgs Props      
       - UnloggedArgs Props
       - CommandResult Props
-    - pkg3.Query
+    - pkg3.Query // IQuery
       - QueryArgs Props      
       - QueryResult Props
 
