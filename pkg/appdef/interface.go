@@ -120,14 +120,16 @@ type IAppDefBuilder interface {
 	ICommentBuilder
 
 	// Adds new data type with specified name and kind.
-	// If ancestor is not empty, then new data type inherits it.
+	//
+	// If ancestor is not empty, then new data type inherits from.
+	// If ancestor is empty, then new data type inherits from system data types with same data kind.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
 	//   - if type with name already exists,
 	//   - if ancestor is not found,
-	//	 - if ancestor is not data type,
+	//	 - if ancestor is not data,
 	//	 - if ancestor has different kind.
 	AddData(name QName, kind DataKind, ancestor QName) IDataBuilder
 

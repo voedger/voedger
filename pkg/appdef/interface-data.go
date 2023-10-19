@@ -19,8 +19,9 @@ type IData interface {
 	// Ref. to data-kind.go for details
 	DataKind() DataKind
 
-	// - data type from which the user data type is inherits or
-	// - nil for built-in sys types
+	// Ancestor	type.
+	//
+	// All user types should have ancestor. System types may has no ancestor.
 	Ancestor() IData
 }
 
