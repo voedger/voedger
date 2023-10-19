@@ -22,7 +22,12 @@ var expectedJson string
 func TestBasicUsage(t *testing.T) {
 	appDef := appdef.New()
 
+	intName := appdef.NewQName("test", "int")
+
 	docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
+
+	i := appDef.AddData(intName, appdef.DataKind_int64, appdef.NullQName)
+	i.SetComment("int comment")
 
 	doc := appDef.AddSingleton(docName)
 	doc.

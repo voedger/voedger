@@ -25,5 +25,6 @@ type IData interface {
 }
 
 type IDataBuilder interface {
+	ITypeBuilder
 	IData
 }

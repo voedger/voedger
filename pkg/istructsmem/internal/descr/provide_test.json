@@ -3,6 +3,14 @@
   "Packages": {
     "test": {
       "Name": "test",
+      "DataTypes": {
+        "test.int": {
+          "Name": "test.int",
+          "DataKind": "DataKind_int64",
+          "Ancestor": "sys.int64",
+          "Comment": "int comment"
+        }
+      },
       "Types": {
         "test.doc": {
           "Comment": "comment 1\ncomment 2",

@@ -480,7 +480,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 	pkgNames := app.DescribePackageNames()
 	require.NotNil(pkgNames)
-	require.EqualValues(2, len(pkgNames))
+	require.EqualValues(3, len(pkgNames)) // + sys package
 
 	for _, name := range pkgNames {
 		pkg := app.DescribePackage(name)
