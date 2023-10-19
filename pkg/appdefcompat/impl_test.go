@@ -56,25 +56,25 @@ func Test_Basic(t *testing.T) {
 
 	t.Run("CheckBackwardCompatibility", func(t *testing.T) {
 		expectedErrors := []CompatibilityError{
-			{OldTreePath: []string{"sys.Profile", "Types", "sys.ProfileTable"}, ErrorType: ErrorTypeNodeRemoved},
-			{OldTreePath: []string{"sys.CreateLoginUnloggedParams", "Fields", "Password"}, ErrorType: ErrorTypeOrderChanged},
-			{OldTreePath: []string{"sys.CreateLoginUnloggedParams", "Fields", "Email"}, ErrorType: ErrorTypeOrderChanged},
-			{OldTreePath: []string{"sys.CreateLoginParams", "Fields", "Login"}, ErrorType: ErrorTypeNodeRemoved},
-			{OldTreePath: []string{"sys.CreateLoginParams", "Fields", "ProfileCluster"}, ErrorType: ErrorTypeValueChanged},
-			{OldTreePath: []string{"sys.CreateLoginParams", "Fields", "ProfileToken"}, ErrorType: ErrorTypeValueChanged},
-			{OldTreePath: []string{"sys.AnotherOneTable", "Fields"}, ErrorType: ErrorTypeNodeInserted},
-			{OldTreePath: []string{"sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeValueChanged},
-			{OldTreePath: []string{"sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeOrderChanged},
-			{OldTreePath: []string{"sys.SomeTable"}, ErrorType: ErrorTypeNodeRemoved},
-			{OldTreePath: []string{"sys.SomeCommand", "CommandArgs"}, ErrorType: ErrorTypeNodeModified},
-			{OldTreePath: []string{"sys.SomeCommand", "CommandResult"}, ErrorType: ErrorTypeNodeModified},
-			{OldTreePath: []string{"sys.Workspace", "Abstract"}, ErrorType: ErrorTypeValueChanged},
-			{OldTreePath: []string{"sys.SomeView", "PartKeyFields"}, ErrorType: ErrorTypeNodeModified},
-			{OldTreePath: []string{"sys.SomeView", "Fields", "E"}, ErrorType: ErrorTypeValueChanged},
-			{OldTreePath: []string{"sys.SomeView", "ClustColsFields", "B"}, ErrorType: ErrorTypeValueChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.Profile", "Types", "sys.ProfileTable"}, ErrorType: ErrorTypeNodeRemoved},
+			{OldTreePath: []string{"AppDef", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Password"}, ErrorType: ErrorTypeOrderChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Email"}, ErrorType: ErrorTypeOrderChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.CreateLoginParams", "Fields", "Login"}, ErrorType: ErrorTypeNodeRemoved},
+			{OldTreePath: []string{"AppDef", "Types", "sys.CreateLoginParams", "Fields", "ProfileCluster"}, ErrorType: ErrorTypeValueChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.CreateLoginParams", "Fields", "ProfileToken"}, ErrorType: ErrorTypeValueChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Fields"}, ErrorType: ErrorTypeNodeInserted},
+			{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeValueChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeOrderChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.SomeWorkspace", "Types", "sys.SomeTable"}, ErrorType: ErrorTypeNodeRemoved},
+			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "CommandArgs"}, ErrorType: ErrorTypeNodeModified},
+			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "CommandResult"}, ErrorType: ErrorTypeNodeModified},
+			{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Abstract"}, ErrorType: ErrorTypeValueChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "PartKeyFields"}, ErrorType: ErrorTypeNodeModified},
+			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "Fields", "E"}, ErrorType: ErrorTypeValueChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "ClustColsFields", "B"}, ErrorType: ErrorTypeValueChanged},
 		}
 		allowedErrors := []CompatibilityError{
-			{OldTreePath: []string{"sys.SomeCommand", "UnloggedArgs"}},
+			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "UnloggedArgs"}},
 		}
 		allowedTypes := []string{
 			"sys.NewTable",
@@ -92,7 +92,7 @@ func Test_Basic(t *testing.T) {
 	t.Run("IgnoreCompatibilityErrors", func(t *testing.T) {
 		// testing ignoring some compatibility errors
 		pathsToIgnore := [][]string{
-			{"sys.CreateLoginParams", "Fields", "ProfileToken"},
+			{"AppDef", "Types", "sys.CreateLoginParams", "Fields", "ProfileToken"},
 		}
 		compatErrors := CheckBackwardCompatibility(oldAppDef, newAppDef)
 		fmt.Println(compatErrors.Error())

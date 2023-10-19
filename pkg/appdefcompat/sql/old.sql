@@ -16,6 +16,9 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
 ABSTRACT WORKSPACE Workspace (
+);
+
+WORKSPACE SomeWorkspace(
     TYPE CreateLoginParams(
         Login                       varchar,
         AppName                     varchar,

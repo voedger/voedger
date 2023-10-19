@@ -16,6 +16,9 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
 WORKSPACE Workspace ( -- ValueChanged: Abstract flag must not be changed
+);
+
+WORKSPACE SomeWorkspace(
     TYPE CreateLoginUnloggedParams(
         Password varchar, -- OrderChanged
         Email varchar --OrderChanged

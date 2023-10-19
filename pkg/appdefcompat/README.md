@@ -146,9 +146,8 @@ type CompatibilityError struct {
 ```
 OldTreePath example:
 ```golang
-[]string{"pkg1.Workspace1", "Types", "pkg1.Table5", "Fields", "Name1"}
+[]string{"AppDef", "Types", "sys.Workspace1", "Types", "sys.Table5", "Fields", "Name1"}
 ```
-First 2 parents "AppDef" and "Types" are invisible in the path, because of redundancy 
 
 ```golang
 type CompatibilityErrors {
