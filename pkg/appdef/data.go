@@ -7,12 +7,16 @@ package appdef
 
 import "fmt"
 
+// #Implement:
+//   - IData
+// 	 - IDataBuilder
 type data struct {
 	typ
 	dataKind DataKind
 	ancestor IData
 }
 
+// Creates and returns new data type.
 func newData(app *appDef, name QName, kind DataKind, anc QName) *data {
 	var ancestor IData
 	if anc == NullQName {
@@ -24,6 +28,9 @@ func newData(app *appDef, name QName, kind DataKind, anc QName) *data {
 		ancestor = app.Data(anc)
 		if ancestor == nil {
 			panic(fmt.Errorf("ancestor data type «%v» not found: %w", anc, ErrNameNotFound))
+		}
+		if ancestor.DataKind() != kind {
+			panic(fmt.Errorf("ancestor «%v» has wrong data type, %v expected: %w", anc, kind, ErrInvalidTypeKind))
 		}
 	}
 	d := &data{
@@ -43,10 +50,10 @@ func (d *data) DataKind() DataKind {
 	return d.dataKind
 }
 
-func (d *data) String() string {
-	return fmt.Sprintf("%s-data «%v»", d.DataKind().TrimString(), d.QName())
+func (d *data) IsSystem() bool {
+	return d.QName().Pkg() == SysPackage
 }
 
-func (d *data) System() bool {
-	return d.QName().Pkg() == SysPackage
+func (d *data) String() string {
+	return fmt.Sprintf("%s-data «%v»", d.DataKind().TrimString(), d.QName())
 }

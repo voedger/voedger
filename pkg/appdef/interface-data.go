@@ -14,7 +14,7 @@ type IData interface {
 	IType
 
 	// Returns is data type is system.
-	System() bool
+	IsSystem() bool
 
 	// Ref. to data-kind.go for details
 	DataKind() DataKind

@@ -135,7 +135,7 @@ func (app *appDef) Data(name QName) IData {
 func (app *appDef) DataTypes(incSys bool, cb func(IData)) {
 	app.Types(func(t IType) {
 		if d, ok := t.(IData); ok {
-			if incSys || !d.System() {
+			if incSys || !d.IsSystem() {
 				cb(d)
 			}
 		}
