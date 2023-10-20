@@ -34,6 +34,47 @@ ABSTRACT WORKSPACE Workspace (
 		QName qname NOT NULL,
 		PRIMARY KEY ((IDHi), ID)
 	) AS RESULT OF sys.RecordsRegistryProjector;
+
+    TABLE UserProfile INHERITS Singleton (
+        DisplayName varchar
+    );
+
+    TABLE DeviceProfile INHERITS Singleton ();
+
+    TABLE AppWorkspace INHERITS Singleton ();
+
+    TABLE BLOB INHERITS WDoc (
+        status int32 NOT NULL
+    );
+
+    TABLE Subject INHERITS CDoc (
+        Login varchar NOT NULL,
+        SubjectKind int32 NOT NULL,
+        Roles varchar(1024) NOT NULL,
+        ProfileWSID int64 NOT NULL,
+        UNIQUEFIELD Login
+    );
+
+    TABLE Invite INHERITS CDoc (
+        SubjectKind int32,
+        Login varchar NOT NULL,
+        Email varchar NOT NULL,
+        Roles varchar(1024),
+        ExpireDatetime int64,
+        VerificationCode varchar,
+        State int32 NOT NULL,
+        Created int64,
+        Updated int64 NOT NULL,
+        SubjectID ref,
+        InviteeProfileWSID int64,
+        UNIQUEFIELD Email
+    );
+
+    TABLE JoinedWorkspace INHERITS CDoc (
+        Roles varchar(1024) NOT NULL,
+        InvitingWorkspaceWSID int64 NOT NULL,
+        WSName varchar NOT NULL
+    );
     EXTENSION ENGINE BUILTIN ()
 );
 
@@ -87,43 +128,3 @@ EXTENSION ENGINE BUILTIN (
 
 )
 
-TABLE UserProfile INHERITS Singleton (
-	DisplayName varchar
-);
-
-TABLE DeviceProfile INHERITS Singleton ();
-
-TABLE AppWorkspace INHERITS Singleton ();
-
-TABLE BLOB INHERITS WDoc (
-	status int32 NOT NULL
-);
-
-TABLE Subject INHERITS CDoc (
-	Login varchar NOT NULL,
-	SubjectKind int32 NOT NULL,
-	Roles varchar(1024) NOT NULL,
-	ProfileWSID int64 NOT NULL,
-	UNIQUEFIELD Login
-);
-
-TABLE Invite INHERITS CDoc (
-	SubjectKind int32,
-	Login varchar NOT NULL,
-	Email varchar NOT NULL,
-	Roles varchar(1024),
-	ExpireDatetime int64,
-	VerificationCode varchar,
-	State int32 NOT NULL,
-	Created int64,
-	Updated int64 NOT NULL,
-	SubjectID ref,
-	InviteeProfileWSID int64,
-	UNIQUEFIELD Email
-);
-
-TABLE JoinedWorkspace INHERITS CDoc (
-	Roles varchar(1024) NOT NULL,
-	InvitingWorkspaceWSID int64 NOT NULL,
-	WSName varchar NOT NULL
-);
