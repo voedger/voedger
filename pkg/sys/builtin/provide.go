@@ -8,14 +8,12 @@ import (
 	"runtime/debug"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, buildInfo *debug.BuildInfo, asp istorage.IAppStorageProvider,
-	ep extensionpoints.IExtensionPoint, rebuildRegistry bool) {
+func Provide(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, buildInfo *debug.BuildInfo, asp istorage.IAppStorageProvider, rebuildRegistry bool) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 
 	// Deprecated: use c.sys.CUD instead. Kept for backward compatibility only
@@ -25,7 +23,7 @@ func Provide(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, buildInf
 	provideRefIntegrityValidation(cfg, adf, rebuildRegistry)
 	provideQryModules(cfg, adf, buildInfo)
 
-	provideQryEcho(cfg, adf, ep)
+	provideQryEcho(cfg, adf)
 	provideQryGRCount(cfg, adf)
 	proivideRenameQName(cfg, adf, asp)
 }
