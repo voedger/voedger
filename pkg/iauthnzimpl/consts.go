@@ -74,6 +74,7 @@ var (
 	qNameQryGetUPInvoiceParties                     = appdef.NewQName(airPackage, "GetUPInvoiceParties")
 	qNameQryGetUPFeesOverview                       = appdef.NewQName(airPackage, "GetUPFeesOverview")
 	qNameQryGetUPTransactionsOverview               = appdef.NewQName(airPackage, "GetUPTransactionsOverview")
+	qNameQryGetUPTransactionReceipts                = appdef.NewQName(airPackage, "GetUPTransactionReceipts")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
