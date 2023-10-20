@@ -7,11 +7,6 @@ package appdef
 
 import "regexp"
 
-// Data kind enumeration.
-//
-// Ref. data-kind.go for constants and methods
-type DataKind uint8
-
 // Field Verification kind.
 //
 // Ref. verification-king.go for constants and methods

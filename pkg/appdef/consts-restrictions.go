@@ -20,5 +20,10 @@ const MaxTypeUniqueFieldsCount = 256
 // Maximum uniques
 const MaxTypeUniqueCount = 100
 
-// Maximum string and bytes field length
+// Maximum string and bytes data length
 const MaxFieldLength = 1024
+
+// Default string and bytes data max length.
+//
+// Used for data types if MaxLen() constraint is not used.
+const DefaultFieldMaxLength = 255

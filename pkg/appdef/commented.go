@@ -14,6 +14,11 @@ type comment struct {
 	c string
 }
 
+// Creates and returns new comment.
+func makeComment(v ...string) comment {
+	return comment{c: strings.Join(v, "\n")}
+}
+
 func (c *comment) Comment() string {
 	return c.c
 }

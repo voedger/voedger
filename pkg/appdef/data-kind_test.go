@@ -70,7 +70,7 @@ func TestDataKindType_MarshalText(t *testing.T) {
 		})
 	}
 
-	t.Run("100% cover DataKind.String()", func(t *testing.T) {
+	t.Run("100% cover", func(t *testing.T) {
 		const tested = DataKind_FakeLast + 1
 		want := "DataKind(" + strconv.FormatInt(int64(tested), 10) + ")"
 		got := tested.String()

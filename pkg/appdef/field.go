@@ -32,8 +32,7 @@ type field struct {
 }
 
 func makeField(name string, kind DataKind, required bool, comments ...string) field {
-	f := field{comment{}, name, kind, required, false, make(map[VerificationKind]bool)}
-	f.SetComment(comments...)
+	f := field{makeComment(comments...), name, kind, required, false, make(map[VerificationKind]bool)}
 	return f
 }
 

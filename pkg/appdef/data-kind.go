@@ -52,6 +52,26 @@ func (k DataKind) IsFixed() bool {
 	return false
 }
 
+// Returns is data kind supports specified constraint kind.
+//
+// # String and bytes supports:
+//   - DataConstraintKind_MinLen
+//   - DataConstraintKind_MaxLen
+//   - DataConstraintKind_Pattern
+func (k DataKind) IsSupportedConstraint(c DataConstraintKind) bool {
+	switch k {
+	case DataKind_string, DataKind_bytes:
+		switch c {
+		case
+			DataConstraintKind_MinLen,
+			DataConstraintKind_MaxLen,
+			DataConstraintKind_Pattern:
+			return true
+		}
+	}
+	return false
+}
+
 func (k DataKind) MarshalText() ([]byte, error) {
 	var s string
 	if k < DataKind_FakeLast {

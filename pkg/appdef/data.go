@@ -12,8 +12,9 @@ import "fmt"
 // 	 - IDataBuilder
 type data struct {
 	typ
-	dataKind DataKind
-	ancestor IData
+	dataKind    DataKind
+	ancestor    IData
+	constraints dataConstraints
 }
 
 // Creates and returns new data type.
@@ -34,16 +35,31 @@ func newData(app *appDef, name QName, kind DataKind, anc QName) *data {
 		}
 	}
 	d := &data{
-		typ:      makeType(app, name, TypeKind_Data),
-		dataKind: kind,
-		ancestor: ancestor,
+		typ:         makeType(app, name, TypeKind_Data),
+		dataKind:    kind,
+		ancestor:    ancestor,
+		constraints: makeDataConstraints(),
 	}
 	app.appendType(d)
 	return d
 }
 
+func (d *data) AddConstraints(c ...IDataConstraint) IDataBuilder {
+	for _, c := range c {
+		if ok := d.DataKind().IsSupportedConstraint(c.Kind()); !ok {
+			panic(fmt.Errorf("constraint %v is not compatible with %v: %w", c, d, ErrIncompatibleRestricts))
+		}
+		d.constraints[c.Kind()] = c
+	}
+	return d
+}
+
 func (d *data) Ancestor() IData {
 	return d.ancestor
+}
+
+func (d *data) Constraints() IDataConstraints {
+	return d.constraints
 }
 
 func (d *data) DataKind() DataKind {

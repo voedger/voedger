@@ -48,14 +48,9 @@ func MinLen(value uint16) IFieldRestrict {
 	return &fieldRestrictData{fieldRestrict_MinLen, value}
 }
 
-// Default field max length.
-//
-// Used if MaxLen() restriction is not used.
+// Return new maximum length restriction for string or bytes field.
 //
 // Using MaxLen(), you can both limit the minimum length by a smaller value, and increase it to MaxFieldLength (1024)
-const DefaultFieldMaxLength = 255
-
-// Return new maximum length restriction for string or bytes field.
 //
 // # Panics:
 //   - if value is zero
