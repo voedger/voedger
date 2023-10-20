@@ -511,17 +511,17 @@ func (c *buildContext) addFieldToDef(field *FieldExpr, ictx *iterateCtx) {
 
 		if field.Type.DataType.Bytes != nil {
 			if field.Type.DataType.Bytes.MaxLen != nil {
-				bld.AddBytesField(fieldName, field.NotNull, appdef.MaxLen(*field.Type.DataType.Bytes.MaxLen))
+				bld.AddBytesField(fieldName, field.NotNull, appdef.FLD_MaxLen(*field.Type.DataType.Bytes.MaxLen))
 			} else {
 				bld.AddBytesField(fieldName, field.NotNull)
 			}
 		} else if field.Type.DataType.Varchar != nil {
 			restricts := make([]appdef.IFieldRestrict, 0)
 			if field.Type.DataType.Varchar.MaxLen != nil {
-				restricts = append(restricts, appdef.MaxLen(*field.Type.DataType.Varchar.MaxLen))
+				restricts = append(restricts, appdef.FLD_MaxLen(*field.Type.DataType.Varchar.MaxLen))
 			}
 			if field.CheckRegexp != nil {
-				restricts = append(restricts, appdef.Pattern(*field.CheckRegexp))
+				restricts = append(restricts, appdef.FLD_Pattern(*field.CheckRegexp))
 			}
 			bld.AddStringField(fieldName, field.NotNull, restricts...)
 		} else {

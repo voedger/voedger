@@ -218,11 +218,11 @@ func test() *testDataType {
 		{
 			saleParams := appDef.AddODoc(testData.saleCmdDocName)
 			saleParams.
-				AddStringField(testData.buyerIdent, true, appdef.MinLen(1), appdef.MaxLen(50)).
+				AddStringField(testData.buyerIdent, true, appdef.FLD_MinLen(1), appdef.FLD_MaxLen(50)).
 				AddField(testData.ageIdent, appdef.DataKind_int32, false).
 				AddField(testData.heightIdent, appdef.DataKind_float32, false).
 				AddField(testData.humanIdent, appdef.DataKind_bool, false).
-				AddBytesField(testData.photoIdent, false, appdef.MaxLen(1024))
+				AddBytesField(testData.photoIdent, false, appdef.FLD_MaxLen(1024))
 			saleParams.
 				AddContainer(testData.basketIdent, appdef.NewQName(testData.pkgName, testData.basketIdent), 1, 1)
 
@@ -233,7 +233,7 @@ func test() *testDataType {
 			good := appDef.AddORecord(appdef.NewQName(testData.pkgName, testData.goodIdent))
 			good.
 				AddField(testData.saleIdent, appdef.DataKind_RecordID, true).
-				AddStringField(testData.nameIdent, true, appdef.MinLen(1)).
+				AddStringField(testData.nameIdent, true, appdef.FLD_MinLen(1)).
 				AddField(testData.codeIdent, appdef.DataKind_int64, true).
 				AddField(testData.weightIdent, appdef.DataKind_float64, false)
 
@@ -243,17 +243,17 @@ func test() *testDataType {
 
 			photoParams := appDef.AddObject(testData.queryPhotoFunctionParamsName)
 			photoParams.
-				AddStringField(testData.buyerIdent, true, appdef.MinLen(1), appdef.MaxLen(50))
+				AddStringField(testData.buyerIdent, true, appdef.FLD_MinLen(1), appdef.FLD_MaxLen(50))
 		}
 
 		{
 			rec := appDef.AddCDoc(testData.tablePhotos)
 			rec.
-				AddStringField(testData.buyerIdent, true, appdef.MinLen(1), appdef.MaxLen(50)).
+				AddStringField(testData.buyerIdent, true, appdef.FLD_MinLen(1), appdef.FLD_MaxLen(50)).
 				AddField(testData.ageIdent, appdef.DataKind_int32, false).
 				AddField(testData.heightIdent, appdef.DataKind_float32, false).
 				AddField(testData.humanIdent, appdef.DataKind_bool, false).
-				AddBytesField(testData.photoIdent, false, appdef.MaxLen(1024))
+				AddBytesField(testData.photoIdent, false, appdef.FLD_MaxLen(1024))
 			rec.
 				AddUnique("", []string{testData.buyerIdent})
 			rec.
@@ -262,7 +262,7 @@ func test() *testDataType {
 			recChild := appDef.AddCRecord(testData.tablePhotoRems)
 			recChild.
 				AddField(testData.photoIdent, appdef.DataKind_RecordID, true).
-				AddStringField(testData.remarkIdent, true, appdef.MaxLen(1024)).
+				AddStringField(testData.remarkIdent, true, appdef.FLD_MaxLen(1024)).
 				AddStringField(testData.emptinessIdent, false)
 		}
 
@@ -330,7 +330,7 @@ func test() *testDataType {
 				AddField(testData.testViewRecord.valueFields.age, appdef.DataKind_int32, false).
 				AddField(testData.testViewRecord.valueFields.heights, appdef.DataKind_float32, false).
 				AddField(testData.testViewRecord.valueFields.human, appdef.DataKind_bool, false).
-				AddBytesField(testData.testViewRecord.valueFields.photo, false, appdef.MaxLen(1024)).
+				AddBytesField(testData.testViewRecord.valueFields.photo, false, appdef.FLD_MaxLen(1024)).
 				AddField(testData.testViewRecord.valueFields.record, appdef.DataKind_Record, false).
 				AddField(testData.testViewRecord.valueFields.event, appdef.DataKind_Event, false)
 		}

@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -225,7 +226,7 @@ func TestAddView(t *testing.T) {
 		vb.ValueBuilder().
 			AddRefField("valF3", false, docName).
 			AddBytesField("valF4", false, MaxLen(1024)).SetFieldComment("valF4", "test comment").
-			AddVerifiedField("valF5", DataKind_bool, false, VerificationKind_Any...).SetFieldVerify("valF5", VerificationKind_EMail)
+			AddField("valF5", DataKind_bool, false).SetFieldVerify("valF5", VerificationKind_EMail)
 
 		_, err := ab.Build()
 		require.NoError(err)
@@ -252,7 +253,7 @@ func TestAddView(t *testing.T) {
 			case "valF2":
 				require.Equal(DataKind_string, f.DataKind())
 				require.False(f.Required())
-				require.Equal(`^\d+$`, f.(IStringField).Restricts().Pattern().String())
+				require.EqualValues(`^\d+$`, f.Constraints().Constraint(ConstraintKind_Pattern).Value().(*regexp.Regexp).String())
 			case "valF3":
 				require.Equal(DataKind_RecordID, f.DataKind())
 				require.False(f.Required())
@@ -260,7 +261,7 @@ func TestAddView(t *testing.T) {
 			case "valF4":
 				require.Equal(DataKind_bytes, f.DataKind())
 				require.False(f.Required())
-				require.EqualValues(1024, f.(IBytesField).Restricts().MaxLen())
+				require.EqualValues(1024, f.Constraints().Constraint(ConstraintKind_MaxLen).Value())
 				require.Equal("test comment", f.Comment())
 			case "valF5":
 				require.Equal(DataKind_bool, f.DataKind())

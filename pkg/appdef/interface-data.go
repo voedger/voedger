@@ -30,7 +30,7 @@ type IData interface {
 	Ancestor() IData
 
 	// Constraints for data type.
-	Constraints() IDataConstraints
+	Constraints() IConstraints
 }
 
 type IDataBuilder interface {
@@ -41,35 +41,35 @@ type IDataBuilder interface {
 	//
 	// # Panics:
 	//	 - if kind is not supported for data type.
-	AddConstraints(c ...IDataConstraint) IDataBuilder
+	AddConstraints(c ...IConstraint) IDataBuilder
 }
 
 // Data constraint kind enumeration.
 //
 // Ref. data-constraint-kind.go for constants and methods.
-type DataConstraintKind uint8
+type ConstraintKind uint8
 
 // Data type constraints interface.
 //
 // Ref. data-constraint.go for implementation.
-type IDataConstraints interface {
+type IConstraints interface {
 	// Returns constraints count.
 	Count() int
 
 	// Returns constraint by kind.
 	//
 	// Returns nil if constraint is not exists.
-	Constraint(kind DataConstraintKind) IDataConstraint
+	Constraint(kind ConstraintKind) IConstraint
 }
 
 // Data constraint interface.
 //
 // Ref. data-constraint.go for constraints constructors.
-type IDataConstraint interface {
+type IConstraint interface {
 	IComment
 
 	// Returns constraint kind.
-	Kind() DataConstraintKind
+	Kind() ConstraintKind
 
 	// Returns constraint value.
 	Value() any

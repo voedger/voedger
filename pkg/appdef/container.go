@@ -14,7 +14,7 @@ import (
 //   - Container
 type container struct {
 	comment
-	str       interface{}
+	emb       interface{}
 	name      string
 	qName     QName
 	typ       IType
@@ -22,9 +22,9 @@ type container struct {
 	maxOccurs Occurs
 }
 
-func newContainer(structure interface{}, name string, typeName QName, minOccurs, maxOccurs Occurs) *container {
+func newContainer(embeds interface{}, name string, typeName QName, minOccurs, maxOccurs Occurs) *container {
 	return &container{
-		str:       structure,
+		emb:       embeds,
 		name:      name,
 		qName:     typeName,
 		minOccurs: minOccurs,
@@ -34,7 +34,7 @@ func newContainer(structure interface{}, name string, typeName QName, minOccurs,
 
 func (cont *container) Type() IType {
 	if (cont.typ == nil) || (cont.typ.QName() != cont.QName()) {
-		cont.typ = cont.structure().App().TypeByName(cont.QName())
+		cont.typ = cont.embeds().App().TypeByName(cont.QName())
 	}
 	return cont.typ
 }
@@ -47,62 +47,60 @@ func (cont *container) Name() string { return cont.name }
 
 func (cont *container) QName() QName { return cont.qName }
 
-func (cont *container) structure() IStructure {
-	return cont.str.(IStructure)
-}
+func (cont *container) embeds() IStructure { return cont.emb.(IStructure) }
 
 // # Implements:
 //   - IContainers
 //   - IContainersBuilder
 type containers struct {
-	str               interface{}
+	emb               interface{}
 	containers        map[string]*container
 	containersOrdered []string
 }
 
-func makeContainers(structure interface{}) containers {
-	c := containers{structure, make(map[string]*container), make([]string, 0)}
+func makeContainers(embeds interface{}) containers {
+	c := containers{embeds, make(map[string]*container), make([]string, 0)}
 	return c
 }
 
 func (c *containers) AddContainer(name string, contType QName, minOccurs, maxOccurs Occurs, comment ...string) IContainersBuilder {
 	if name == NullName {
-		panic(fmt.Errorf("%v: empty container name: %w", c.structure(), ErrNameMissed))
+		panic(fmt.Errorf("%v: empty container name: %w", c.embeds(), ErrNameMissed))
 	}
 	if ok, err := ValidIdent(name); !ok {
-		panic(fmt.Errorf("%v: invalid container name «%v»: %w", c.structure(), name, err))
+		panic(fmt.Errorf("%v: invalid container name «%v»: %w", c.embeds(), name, err))
 	}
 	if c.Container(name) != nil {
-		panic(fmt.Errorf("%v: container «%v» is already exists: %w", c.structure(), name, ErrNameUniqueViolation))
+		panic(fmt.Errorf("%v: container «%v» is already exists: %w", c.embeds(), name, ErrNameUniqueViolation))
 	}
 
 	if contType == NullQName {
-		panic(fmt.Errorf("%v: missed container «%v» type name: %w", c.structure(), name, ErrNameMissed))
+		panic(fmt.Errorf("%v: missed container «%v» type name: %w", c.embeds(), name, ErrNameMissed))
 	}
 
 	if maxOccurs == 0 {
-		panic(fmt.Errorf("%v: max occurs value (0) must be positive number: %w", c.structure(), ErrInvalidOccurs))
+		panic(fmt.Errorf("%v: max occurs value (0) must be positive number: %w", c.embeds(), ErrInvalidOccurs))
 	}
 	if maxOccurs < minOccurs {
-		panic(fmt.Errorf("%v: max occurs (%v) must be greater or equal to min occurs (%v): %w", c.structure(), maxOccurs, minOccurs, ErrInvalidOccurs))
+		panic(fmt.Errorf("%v: max occurs (%v) must be greater or equal to min occurs (%v): %w", c.embeds(), maxOccurs, minOccurs, ErrInvalidOccurs))
 	}
 
-	if typ := c.structure().App().TypeByName(contType); typ != nil {
-		if k := c.structure().Kind(); !k.ContainerKindAvailable(typ.Kind()) {
-			panic(fmt.Errorf("%v: type kind «%s» does not support child container kind «%s»: %w", c.structure(), k.TrimString(), typ.Kind().TrimString(), ErrInvalidTypeKind))
+	if typ := c.embeds().App().TypeByName(contType); typ != nil {
+		if k := c.embeds().Kind(); !k.ContainerKindAvailable(typ.Kind()) {
+			panic(fmt.Errorf("%v: type kind «%s» does not support child container kind «%s»: %w", c.embeds(), k.TrimString(), typ.Kind().TrimString(), ErrInvalidTypeKind))
 		}
 	}
 
 	if len(c.containers) >= MaxTypeContainerCount {
-		panic(fmt.Errorf("%v: maximum container count (%d) exceeds: %w", c.structure(), MaxTypeContainerCount, ErrTooManyContainers))
+		panic(fmt.Errorf("%v: maximum container count (%d) exceeds: %w", c.embeds(), MaxTypeContainerCount, ErrTooManyContainers))
 	}
 
-	cont := newContainer(c.str, name, contType, minOccurs, maxOccurs)
+	cont := newContainer(c.emb, name, contType, minOccurs, maxOccurs)
 	cont.SetComment(comment...)
 	c.containers[name] = cont
 	c.containersOrdered = append(c.containersOrdered, name)
 
-	return c.str.(IContainersBuilder)
+	return c.emb.(IContainersBuilder)
 }
 
 func (c *containers) Container(name string) IContainer {
@@ -122,8 +120,8 @@ func (c *containers) Containers(cb func(IContainer)) {
 	}
 }
 
-func (c *containers) structure() IStructure {
-	return c.str.(IStructure)
+func (c *containers) embeds() IStructure {
+	return c.emb.(IStructure)
 }
 
 // Validates specified containers.

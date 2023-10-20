@@ -11,22 +11,22 @@ import (
 	"strings"
 )
 
-//go:generate stringer -type=DataConstraintKind -output=data-constraint-kind_string.go
+//go:generate stringer -type=ConstraintKind -output=data-constraint-kind_string.go
 
 const (
 	// null - no-value type. Returned when the requested kind does not exist
-	DataConstraintKind_null DataConstraintKind = iota
+	ConstraintKind_null ConstraintKind = iota
 
-	DataConstraintKind_MinLen
-	DataConstraintKind_MaxLen
-	DataConstraintKind_Pattern
+	ConstraintKind_MinLen
+	ConstraintKind_MaxLen
+	ConstraintKind_Pattern
 
-	DataConstraintKind_Count
+	ConstraintKind_Count
 )
 
-func (k DataConstraintKind) MarshalText() ([]byte, error) {
+func (k ConstraintKind) MarshalText() ([]byte, error) {
 	var s string
-	if k < DataConstraintKind_Count {
+	if k < ConstraintKind_Count {
 		s = k.String()
 	} else {
 		const base = 10
@@ -37,7 +37,7 @@ func (k DataConstraintKind) MarshalText() ([]byte, error) {
 
 // Renders an DataConstraintKind in human-readable form, without "DataConstraintKind_" prefix,
 // suitable for debugging or error messages
-func (k DataConstraintKind) TrimString() string {
-	const pref = "DataConstraintKind_"
+func (k ConstraintKind) TrimString() string {
+	const pref = "ConstraintKind_"
 	return strings.TrimPrefix(k.String(), pref)
 }

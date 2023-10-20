@@ -11,59 +11,59 @@ import (
 	"testing"
 )
 
-func TestDataConstraintKind_MarshalText(t *testing.T) {
+func TestConstraintKind_MarshalText(t *testing.T) {
 	tests := []struct {
 		name string
-		k    DataConstraintKind
+		k    ConstraintKind
 		want string
 	}{
 		{
-			name: `0 —> "DataConstraintKind_null"`,
-			k:    DataConstraintKind_null,
-			want: `DataConstraintKind_null`,
+			name: `0 —> "ConstraintKind_null"`,
+			k:    ConstraintKind_null,
+			want: `ConstraintKind_null`,
 		},
 		{
-			name: `1 —> "DataConstraintKind_MinLen"`,
-			k:    DataConstraintKind_MinLen,
-			want: `DataConstraintKind_MinLen`,
+			name: `1 —> "ConstraintKind_MinLen"`,
+			k:    ConstraintKind_MinLen,
+			want: `ConstraintKind_MinLen`,
 		},
 		{
-			name: `DataConstraintKind_Count —> 4`,
-			k:    DataConstraintKind_Count,
-			want: strconv.FormatUint(uint64(DataConstraintKind_Count), 10),
+			name: `ConstraintKind_Count —> 4`,
+			k:    ConstraintKind_Count,
+			want: strconv.FormatUint(uint64(ConstraintKind_Count), 10),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.k.MarshalText()
 			if err != nil {
-				t.Errorf("DataConstraintKind.MarshalText() unexpected error %v", err)
+				t.Errorf("%T.MarshalText() unexpected error %v", tt.k, err)
 				return
 			}
 			if string(got) != tt.want {
-				t.Errorf("DataConstraintKind.MarshalText() = %v, want %v", got, tt.want)
+				t.Errorf("%T.MarshalText() = %v, want %v", tt.k, got, tt.want)
 			}
 		})
 	}
 
 	t.Run("100% cover", func(t *testing.T) {
-		const tested = DataConstraintKind_Count + 1
-		want := "DataConstraintKind(" + strconv.FormatInt(int64(tested), 10) + ")"
+		const tested = ConstraintKind_Count + 1
+		want := "ConstraintKind(" + strconv.FormatInt(int64(tested), 10) + ")"
 		got := tested.String()
 		if got != want {
-			t.Errorf("(DataConstraintKind_Count + 1).String() = %v, want %v", got, want)
+			t.Errorf("(ConstraintKind_Count + 1).String() = %v, want %v", got, want)
 		}
 	})
 }
 
-func TestDataConstraintKind_TrimString(t *testing.T) {
+func TestConstraintKind_TrimString(t *testing.T) {
 	tests := []struct {
 		name string
-		k    DataConstraintKind
+		k    ConstraintKind
 		want string
 	}{
-		{name: "basic", k: DataConstraintKind_MinLen, want: "MinLen"},
-		{name: "out of range", k: DataConstraintKind_Count + 1, want: (DataConstraintKind_Count + 1).String()},
+		{name: "basic", k: ConstraintKind_MinLen, want: "MinLen"},
+		{name: "out of range", k: ConstraintKind_Count + 1, want: (ConstraintKind_Count + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

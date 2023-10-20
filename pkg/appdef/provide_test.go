@@ -12,9 +12,9 @@ import (
 )
 
 func TestBasicUsage(t *testing.T) {
-	appDef := New()
+	adb := New()
 
-	saleParamsDoc := appDef.AddODoc(NewQName("test", "Sale"))
+	saleParamsDoc := adb.AddODoc(NewQName("test", "Sale"))
 	saleParamsDoc.
 		AddStringField("Buyer", true, MaxLen(100)).
 		AddField("Age", DataKind_int32, false).
@@ -24,21 +24,21 @@ func TestBasicUsage(t *testing.T) {
 	saleParamsDoc.
 		AddContainer("Basket", NewQName("test", "Basket"), 1, 1)
 
-	basketRec := appDef.AddORecord(NewQName("test", "Basket"))
+	basketRec := adb.AddORecord(NewQName("test", "Basket"))
 	basketRec.AddContainer("Good", NewQName("test", "Good"), 0, Occurs_Unbounded)
 
-	goodRec := appDef.AddORecord(NewQName("test", "Good"))
+	goodRec := adb.AddORecord(NewQName("test", "Good"))
 	goodRec.
 		AddField("Name", DataKind_string, true).
 		AddField("Code", DataKind_int64, true).
 		AddField("Weight", DataKind_float64, false)
 
-	saleSecureParamsObj := appDef.AddObject(NewQName("test", "saleSecureArgs"))
+	saleSecureParamsObj := adb.AddObject(NewQName("test", "saleSecureArgs"))
 	saleSecureParamsObj.
 		AddField("password", DataKind_string, true)
 
 	docName := NewQName("test", "photos")
-	photosDoc := appDef.AddCDoc(docName)
+	photosDoc := adb.AddCDoc(docName)
 	photosDoc.
 		AddStringField("Buyer", true, MaxLen(100)).
 		AddField("Age", DataKind_int32, false).
@@ -46,27 +46,27 @@ func TestBasicUsage(t *testing.T) {
 		AddField("isHuman", DataKind_bool, false).
 		AddField("Photo", DataKind_bytes, false)
 
-	buyerView := appDef.AddView(NewQName("test", "viewBuyerByHeight"))
+	buyerView := adb.AddView(NewQName("test", "viewBuyerByHeight"))
 	buyerView.KeyBuilder().PartKeyBuilder().AddField("Height", DataKind_float32)
 	buyerView.KeyBuilder().ClustColsBuilder().AddStringField("Buyer", 100)
 	buyerView.ValueBuilder().AddRefField("BuyerID", true, docName)
 
-	buyerObj := appDef.AddObject(NewQName("test", "buyer"))
+	buyerObj := adb.AddObject(NewQName("test", "buyer"))
 	buyerObj.
 		AddStringField("Name", true).
 		AddField("Age", DataKind_int32, false).
 		AddField("isHuman", DataKind_bool, false)
 
-	newBuyerCmd := appDef.AddCommand(NewQName("test", "cmdNewBuyer"))
+	newBuyerCmd := adb.AddCommand(NewQName("test", "cmdNewBuyer"))
 	newBuyerCmd.SetParam(buyerObj.QName())
 	newBuyerCmd.SetExtension("newBuyer", ExtensionEngineKind_BuiltIn)
 
-	result, err := appDef.Build()
+	appDef, err := adb.Build()
 
 	t.Run("test results", func(t *testing.T) {
 		require := require.New(t)
 		require.NoError(err)
-		require.NotNil(result)
+		require.NotNil(appDef)
 	})
 
 }

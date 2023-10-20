@@ -14,7 +14,7 @@ type data struct {
 	typ
 	dataKind    DataKind
 	ancestor    IData
-	constraints dataConstraints
+	constraints constraints
 }
 
 // Creates and returns new data type.
@@ -30,21 +30,27 @@ func newData(app *appDef, name QName, kind DataKind, anc QName) *data {
 		if ancestor == nil {
 			panic(fmt.Errorf("ancestor data type «%v» not found: %w", anc, ErrNameNotFound))
 		}
-		if ancestor.DataKind() != kind {
+		if (kind != DataKind_null) && (ancestor.DataKind() != kind) {
 			panic(fmt.Errorf("ancestor «%v» has wrong data type, %v expected: %w", anc, kind, ErrInvalidTypeKind))
 		}
 	}
 	d := &data{
 		typ:         makeType(app, name, TypeKind_Data),
-		dataKind:    kind,
+		dataKind:    ancestor.DataKind(),
 		ancestor:    ancestor,
-		constraints: makeDataConstraints(),
+		constraints: makeConstraints(),
 	}
-	app.appendType(d)
 	return d
 }
 
-func (d *data) AddConstraints(c ...IDataConstraint) IDataBuilder {
+// Creates and returns new anonymous data type with specified constraints.
+func newAnonymousData(app *appDef, kind DataKind, anc QName, constraints ...IConstraint) *data {
+	d := newData(app, NullQName, kind, anc)
+	d.AddConstraints(constraints...)
+	return d
+}
+
+func (d *data) AddConstraints(c ...IConstraint) IDataBuilder {
 	d.constraints.set(d.DataKind(), c...)
 	return d
 }
@@ -53,7 +59,7 @@ func (d *data) Ancestor() IData {
 	return d.ancestor
 }
 
-func (d *data) Constraints() IDataConstraints {
+func (d *data) Constraints() IConstraints {
 	return d.constraints
 }
 

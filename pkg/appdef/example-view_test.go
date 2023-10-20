@@ -62,8 +62,8 @@ func ExampleIView() {
 					fmt.Printf(", refs: %v", r.Refs())
 				}
 			}
-			if s, ok := f.(appdef.IStringField); ok {
-				fmt.Printf(", restricts: [%v]", s.Restricts())
+			if f.Constraints().Count() != 0 {
+				fmt.Printf(", constraints: [%v]", f.Constraints())
 			}
 			fmt.Println()
 		}
@@ -97,28 +97,28 @@ func ExampleIView() {
 	// - pk_ref: RecordID, required, refs: [test.doc]
 	// - cc_int: int64
 	// - cc_ref: RecordID, refs: [test.doc]
-	// - cc_name: string, restricts: [MaxLen: 100]
+	// - cc_name: string, constraints: [MaxLen: 100]
 	// - vv_int: int64, required
 	// - vv_ref: RecordID, required, refs: [test.doc]
-	// - vv_code: string, restricts: [MaxLen: 10, Pattern: `^\w+$`]
-	// - vv_data: bytes, restricts: [MaxLen: 1024]
+	// - vv_code: string, constraints: [MaxLen: 10, Pattern: `^\w+$`]
+	// - vv_data: bytes, constraints: [MaxLen: 1024]
 	// view key has 5 fields:
 	// - pk_int: int64, required
 	// - pk_ref: RecordID, required, refs: [test.doc]
 	// - cc_int: int64
 	// - cc_ref: RecordID, refs: [test.doc]
-	// - cc_name: string, restricts: [MaxLen: 100]
+	// - cc_name: string, constraints: [MaxLen: 100]
 	// view partition key has 2 fields:
 	// - pk_int: int64, required
 	// - pk_ref: RecordID, required, refs: [test.doc]
 	// view clustering columns key has 3 fields:
 	// - cc_int: int64
 	// - cc_ref: RecordID, refs: [test.doc]
-	// - cc_name: string, restricts: [MaxLen: 100]
+	// - cc_name: string, constraints: [MaxLen: 100]
 	// view value has 5 fields:
 	// - sys.QName: QName, sys, required
 	// - vv_int: int64, required
 	// - vv_ref: RecordID, required, refs: [test.doc]
-	// - vv_code: string, restricts: [MaxLen: 10, Pattern: `^\w+$`]
-	// - vv_data: bytes, restricts: [MaxLen: 1024]
+	// - vv_code: string, constraints: [MaxLen: 10, Pattern: `^\w+$`]
+	// - vv_data: bytes, constraints: [MaxLen: 1024]
 }

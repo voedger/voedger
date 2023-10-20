@@ -37,8 +37,8 @@ func Test_View(t *testing.T) {
 		view.ValueBuilder().
 			AddField("vv_int", appdef.DataKind_int64, true).
 			AddRefField("vv_ref", true, docName).
-			AddStringField("vv_code", false, appdef.MaxLen(10), appdef.Pattern(`^\w+$`)).
-			AddBytesField("vv_data", false, appdef.MaxLen(1024)).
+			AddStringField("vv_code", false, appdef.FLD_MaxLen(10), appdef.FLD_Pattern(`^\w+$`)).
+			AddBytesField("vv_data", false, appdef.FLD_MaxLen(1024)).
 			SetFieldComment("vv_data", "One kilobyte of data")
 		if a, err := appDef.Build(); err == nil {
 			app = a

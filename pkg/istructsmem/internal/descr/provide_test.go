@@ -33,7 +33,7 @@ func TestBasicUsage(t *testing.T) {
 	doc.
 		AddField("f1", appdef.DataKind_int64, true).
 		SetFieldComment("f1", "field comment").
-		AddStringField("f2", false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`)).
+		AddStringField("f2", false, appdef.FLD_MinLen(4), appdef.FLD_MaxLen(4), appdef.FLD_Pattern(`^\w+$`)).
 		AddRefField("mainChild", false, recName).(appdef.ICDocBuilder).
 		AddContainer("rec", recName, 0, 100, "container comment").(appdef.ICDocBuilder).
 		AddUnique("", []string{"f1", "f2"})
@@ -43,7 +43,7 @@ func TestBasicUsage(t *testing.T) {
 	rec.
 		AddField("f1", appdef.DataKind_int64, true).
 		AddStringField("f2", false).
-		AddStringField("phone", true, appdef.MinLen(1), appdef.MaxLen(25)).
+		AddStringField("phone", true, appdef.FLD_MinLen(1), appdef.FLD_MaxLen(25)).
 		SetFieldVerify("phone", appdef.VerificationKind_Any...).(appdef.ICRecordBuilder).
 		SetUniqueField("phone")
 

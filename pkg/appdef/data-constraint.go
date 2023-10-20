@@ -16,11 +16,11 @@ import (
 //
 // # Panics:
 //   - if value is greater then MaxFieldLength (1024)
-func DC_MinLen(v int, c ...string) IDataConstraint {
+func MinLen(v int, c ...string) IConstraint {
 	if v > MaxFieldLength {
 		panic(fmt.Errorf("minimum length value (%d) is too large, %d is maximum: %w", v, MaxFieldLength, ErrMaxFieldLengthExceeds))
 	}
-	return newDataConstraint(DataConstraintKind_MinLen, v, c...)
+	return newDataConstraint(ConstraintKind_MinLen, v, c...)
 }
 
 // Return new maximum length restriction for string or bytes data types.
@@ -30,59 +30,80 @@ func DC_MinLen(v int, c ...string) IDataConstraint {
 // # Panics:
 //   - if value is zero
 //   - if value is greater then MaxStringFieldLength (1024)
-func DC_MaxLen(v uint16, c ...string) IDataConstraint {
+func MaxLen(v uint16, c ...string) IConstraint {
 	if v == 0 {
 		panic(fmt.Errorf("maximum field length value is zero: %w", ErrIncompatibleRestricts))
 	}
 	if v > MaxFieldLength {
 		panic(fmt.Errorf("maximum field length value (%d) is too large, %d is maximum: %w", v, MaxFieldLength, ErrMaxFieldLengthExceeds))
 	}
-	return newDataConstraint(DataConstraintKind_MaxLen, v, c...)
+	return newDataConstraint(ConstraintKind_MaxLen, v, c...)
 }
 
 // Return new pattern restriction for string or bytes data types.
 //
 // # Panics:
 //   - if value is not valid regular expression
-func DC_Pattern(v string, c ...string) IDataConstraint {
+func Pattern(v string, c ...string) IConstraint {
 	re, err := regexp.Compile(v)
 	if err != nil {
 		panic(err)
 	}
-	return newDataConstraint(DataConstraintKind_Pattern, re, c...)
+	return newDataConstraint(ConstraintKind_Pattern, re, c...)
 }
 
 // # Implements:
 //   - IDataConstraints
-type dataConstraints struct {
-	c map[DataConstraintKind]IDataConstraint
+type constraints struct {
+	c map[ConstraintKind]IConstraint
 }
 
 // Creates and returns new data constraints.
-func makeDataConstraints() dataConstraints {
-	return dataConstraints{
-		c: make(map[DataConstraintKind]IDataConstraint),
+func makeConstraints() constraints {
+	return constraints{
+		c: make(map[ConstraintKind]IConstraint),
 	}
 }
 
-func (cc dataConstraints) Count() int {
+// Returns constraints for data type.
+//
+// Constraints are collected throughout the data types hierarchy, include all ancestors recursively.
+// If any constraint is specified by the ancestor, but redefined in the descendant,
+// then the constraint from the descendant will return as a result.
+func dataInheritanceConstraints(data IData) constraints {
+	cc := makeConstraints()
+	for d := data; d != nil; d = d.Ancestor() {
+		if d.Constraints().Count() > 0 {
+			for k := ConstraintKind(1); k < ConstraintKind_Count; k++ {
+				if _, ok := cc.c[k]; !ok {
+					if c := d.Constraints().Constraint(k); c != nil {
+						cc.c[k] = c
+					}
+				}
+			}
+		}
+	}
+	return cc
+}
+
+func (cc constraints) Count() int {
 	return len(cc.c)
 }
 
-func (cc dataConstraints) Constraint(kind DataConstraintKind) IDataConstraint {
+func (cc constraints) Constraint(kind ConstraintKind) IConstraint {
 	if c, ok := cc.c[kind]; ok {
 		return c
 	}
 	return nil
 }
 
-func (cc dataConstraints) String() string {
+func (cc constraints) String() string {
 	if len(cc.c) == 0 {
 		return ""
 	}
 
 	s := make([]string, 0, len(cc.c))
-	for i := DataConstraintKind(1); i < DataConstraintKind_Count; i++ {
+	for i := ConstraintKind(1); i < ConstraintKind_Count; i++ {
 		if c, ok := cc.c[i]; ok {
 			s = append(s, fmt.Sprint(c))
 		}
@@ -95,7 +116,7 @@ func (cc dataConstraints) String() string {
 //
 // # Panics:
 //   - if constraint is not supported by data.
-func (cc dataConstraints) set(k DataKind, c ...IDataConstraint) {
+func (cc constraints) set(k DataKind, c ...IConstraint) {
 	for _, c := range c {
 		if ok := k.IsSupportedConstraint(c.Kind()); !ok {
 			panic(fmt.Errorf("constraint %v is not compatible with %v: %w", c, k, ErrIncompatibleRestricts))
@@ -108,12 +129,12 @@ func (cc dataConstraints) set(k DataKind, c ...IDataConstraint) {
 //   - IDataConstraint
 type dataConstraint struct {
 	comment
-	kind  DataConstraintKind
+	kind  ConstraintKind
 	value any
 }
 
 // Creates and returns new data constraint.
-func newDataConstraint(k DataConstraintKind, v any, c ...string) IDataConstraint {
+func newDataConstraint(k ConstraintKind, v any, c ...string) IConstraint {
 	return &dataConstraint{
 		comment: makeComment(c...),
 		kind:    k,
@@ -121,7 +142,7 @@ func newDataConstraint(k DataConstraintKind, v any, c ...string) IDataConstraint
 	}
 }
 
-func (c dataConstraint) Kind() DataConstraintKind {
+func (c dataConstraint) Kind() ConstraintKind {
 	return c.kind
 }
 
@@ -131,7 +152,7 @@ func (c dataConstraint) Value() any {
 
 func (c dataConstraint) String() string {
 	switch c.kind {
-	case DataConstraintKind_Pattern:
+	case ConstraintKind_Pattern:
 		return fmt.Sprintf("%s: `%v`", c.kind.TrimString(), c.value)
 	default:
 		return fmt.Sprintf("%s: %v", c.kind.TrimString(), c.value)

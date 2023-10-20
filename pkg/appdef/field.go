@@ -24,32 +24,46 @@ const (
 //   - IField
 type field struct {
 	comment
-	name       string
-	kind       DataKind
-	required   bool
-	verifiable bool
-	verify     map[VerificationKind]bool
+	name        string
+	data        IData
+	required    bool
+	verifiable  bool
+	verify      map[VerificationKind]bool
+	constraints constraints
 }
 
-func makeField(name string, kind DataKind, required bool, comments ...string) field {
-	f := field{makeComment(comments...), name, kind, required, false, make(map[VerificationKind]bool)}
+func makeField(name string, data IData, required bool, comments ...string) field {
+	f := field{
+		comment:     makeComment(comments...),
+		name:        name,
+		data:        data,
+		required:    required,
+		verifiable:  false,
+		constraints: dataInheritanceConstraints(data),
+	}
 	return f
 }
 
-func newField(name string, kind DataKind, required bool, comments ...string) *field {
-	f := makeField(name, kind, required, comments...)
+func newField(name string, data IData, required bool, comments ...string) *field {
+	f := makeField(name, data, required, comments...)
 	return &f
 }
 
-func (fld *field) IsSys() bool {
-	return IsSysField(fld.Name())
+func (fld *field) Constraints() IConstraints {
+	return fld.constraints
 }
+
+func (fld *field) Data() IData { return fld.data }
+
+func (fld *field) DataKind() DataKind { return fld.Data().DataKind() }
 
 func (fld *field) IsFixedWidth() bool {
 	return fld.DataKind().IsFixed()
 }
 
-func (fld *field) DataKind() DataKind { return fld.kind }
+func (fld *field) IsSys() bool {
+	return IsSysField(fld.Name())
+}
 
 func (fld *field) Name() string { return fld.name }
 
@@ -84,71 +98,82 @@ func IsSysField(n string) bool {
 //   - IFields
 //   - IFieldsBuilder
 type fields struct {
-	par           interface{}
+	app           *appDef
+	emb           interface{}
 	fields        map[string]interface{}
 	fieldsOrdered []string
 }
 
 // Makes new fields instance
-func makeFields(parent interface{}) fields {
-	f := fields{parent, make(map[string]interface{}), make([]string, 0)}
-	return f
+func makeFields(app *appDef, embeds interface{}) fields {
+	ff := fields{
+		app:           app,
+		emb:           embeds,
+		fields:        make(map[string]interface{}),
+		fieldsOrdered: make([]string, 0)}
+	return ff
 }
 
-func (f *fields) AddBytesField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder {
-	f.checkAddField(name, DataKind_bytes)
-	f.appendField(name, newCharsField(name, DataKind_bytes, required, restricts...))
-	return f.par.(IFieldsBuilder)
+func (ff *fields) AddBytesField(name string, required bool, constraints ...IConstraint) IFieldsBuilder {
+	d := newAnonymousData(ff.app, DataKind_bytes, NullQName, constraints...)
+	f := newField(name, d, required)
+	ff.appendField(name, f)
+	return ff.emb.(IFieldsBuilder)
 }
 
-func (f *fields) AddField(name string, kind DataKind, required bool, comments ...string) IFieldsBuilder {
-	f.checkAddField(name, kind)
-	fld := newField(name, kind, required, comments...)
-	f.appendField(name, fld)
-	return f.par.(IFieldsBuilder)
-}
-
-func (f *fields) AddRefField(name string, required bool, ref ...QName) IFieldsBuilder {
-	f.checkAddField(name, DataKind_RecordID)
-	f.appendField(name, newRefField(name, required, ref...))
-	return f.par.(IFieldsBuilder)
-}
-
-func (f *fields) AddStringField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder {
-	f.checkAddField(name, DataKind_string)
-	f.appendField(name, newCharsField(name, DataKind_string, required, restricts...))
-	return f.par.(IFieldsBuilder)
-}
-
-func (f *fields) AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder {
-	f.checkAddField(name, kind)
-	if len(vk) == 0 {
-		panic(fmt.Errorf("%v: missed verification kind for field «%s»: %w", f.parent(), name, ErrVerificationKindMissed))
+func (ff *fields) AddField(name string, kind DataKind, required bool, comments ...string) IFieldsBuilder {
+	d := ff.app.SysData(kind)
+	if d == nil {
+		panic(fmt.Errorf("%v: system data type for data kind «%s» is not exists: %w", ff.embeds(), kind.TrimString(), ErrInvalidTypeKind))
 	}
-	f.appendField(name, newField(name, kind, required))
-	f.SetFieldVerify(name, vk...)
-	return f.par.(IFieldsBuilder)
+	f := newField(name, d, required, comments...)
+	ff.appendField(name, f)
+	return ff.emb.(IFieldsBuilder)
 }
 
-func (f *fields) Field(name string) IField {
-	if f, ok := f.fields[name]; ok {
-		return f.(IField)
+func (ff *fields) AddRefField(name string, required bool, ref ...QName) IFieldsBuilder {
+	d := ff.app.SysData(DataKind_RecordID)
+	f := newRefField(name, d, required, ref...)
+	ff.appendField(name, f)
+	return ff.emb.(IFieldsBuilder)
+}
+
+func (ff *fields) AddStringField(name string, required bool, constraints ...IConstraint) IFieldsBuilder {
+	d := newAnonymousData(ff.app, DataKind_string, NullQName, constraints...)
+	f := newField(name, d, required)
+	ff.appendField(name, f)
+	return ff.emb.(IFieldsBuilder)
+}
+
+func (ff *fields) AddTypedField(name string, dataType QName, required bool, comments ...string) IFieldsBuilder {
+	d := ff.app.Data(dataType)
+	if d == nil {
+		panic(fmt.Errorf("%v: data type «%v» not found: %w", ff.embeds(), dataType, ErrNameNotFound))
+	}
+	f := newField(name, d, required, comments...)
+	ff.appendField(name, f)
+	return ff.emb.(IFieldsBuilder)
+}
+
+func (ff *fields) Field(name string) IField {
+	if ff, ok := ff.fields[name]; ok {
+		return ff.(IField)
 	}
 	return nil
 }
 
-func (f *fields) FieldCount() int {
-	return len(f.fieldsOrdered)
+func (ff *fields) FieldCount() int {
+	return len(ff.fieldsOrdered)
 }
 
-func (f *fields) Fields(cb func(IField)) {
-	for _, n := range f.fieldsOrdered {
-		cb(f.Field(n))
+func (ff *fields) Fields(cb func(IField)) {
+	for _, n := range ff.fieldsOrdered {
+		cb(ff.Field(n))
 	}
 }
 
-func (f *fields) RefField(name string) (rf IRefField) {
-	if fld := f.Field(name); fld != nil {
+func (ff *fields) RefField(name string) (rf IRefField) {
+	if fld := ff.Field(name); fld != nil {
 		if fld.DataKind() == DataKind_RecordID {
 			if fld, ok := fld.(IRefField); ok {
 				rf = fld
@@ -158,8 +183,8 @@ func (f *fields) RefField(name string) (rf IRefField) {
 	return rf
 }
 
-func (f *fields) RefFields(cb func(IRefField)) {
-	f.Fields(func(fld IField) {
+func (ff *fields) RefFields(cb func(IRefField)) {
+	ff.Fields(func(fld IField) {
 		if fld.DataKind() == DataKind_RecordID {
 			if rf, ok := fld.(IRefField); ok {
 				cb(rf)
@@ -168,108 +193,97 @@ func (f *fields) RefFields(cb func(IRefField)) {
 	})
 }
 
-func (f *fields) RefFieldCount() int {
-	cnt := 0
-	f.Fields(func(fld IField) {
-		if fld.DataKind() == DataKind_RecordID {
-			if _, ok := fld.(IRefField); ok {
-				cnt++
-			}
-		}
-	})
-	return cnt
-}
-
-func (f *fields) SetFieldComment(name string, comment ...string) IFieldsBuilder {
-	fld := f.fields[name]
+func (ff *fields) SetFieldComment(name string, comment ...string) IFieldsBuilder {
+	fld := ff.fields[name]
 	if fld == nil {
-		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parent(), name, ErrNameNotFound))
+		panic(fmt.Errorf("%v: field «%s» not found: %w", ff.embeds(), name, ErrNameNotFound))
 	}
 	fld.(ICommentBuilder).SetComment(comment...)
-	return f.par.(IFieldsBuilder)
+	return ff.emb.(IFieldsBuilder)
 }
 
-func (f *fields) SetFieldVerify(name string, vk ...VerificationKind) IFieldsBuilder {
-	fld := f.fields[name]
+func (ff *fields) SetFieldVerify(name string, vk ...VerificationKind) IFieldsBuilder {
+	fld := ff.fields[name]
 	if fld == nil {
-		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parent(), name, ErrNameNotFound))
+		panic(fmt.Errorf("%v: field «%s» not found: %w", ff.embeds(), name, ErrNameNotFound))
 	}
 	vf := fld.(interface{ setVerify(k ...VerificationKind) })
 	vf.setVerify(vk...)
-	return f.par.(IFieldsBuilder)
+	return ff.emb.(IFieldsBuilder)
 }
 
-func (f *fields) UserFields(cb func(IField)) {
-	f.Fields(func(fld IField) {
+func (ff *fields) UserFields(cb func(IField)) {
+	ff.Fields(func(fld IField) {
 		if !fld.IsSys() {
 			cb(fld)
 		}
 	})
 }
 
-func (f *fields) UserFieldCount() int {
+func (ff *fields) UserFieldCount() int {
 	cnt := 0
-	f.Fields(func(fld IField) {
-		if !fld.IsSys() {
-			cnt++
-		}
-	})
+	ff.UserFields(func(IField) { cnt++ })
 	return cnt
 }
 
-func (f *fields) appendField(name string, fld interface{}) {
-	f.fields[name] = fld
-	f.fieldsOrdered = append(f.fieldsOrdered, name)
-}
-
-// Panics if invalid add field argument value
-func (f *fields) checkAddField(name string, kind DataKind) {
+// Appends specified field.
+//
+// # Panics:
+//   - if field name is empty,
+//   - if field with specified name is already exists
+//   - if user field name is invalid
+//   - if user field data kind is not allowed by structured type kind
+func (ff *fields) appendField(name string, fld interface{}) {
 	if name == NullName {
-		panic(fmt.Errorf("%v: empty field name: %w", f.parent(), ErrNameMissed))
+		panic(fmt.Errorf("%v: empty field name: %w", ff.embeds(), ErrNameMissed))
 	}
-	if f.Field(name) != nil {
-		panic(fmt.Errorf("%v: field «%s» is already exists: %w", f.parent(), name, ErrNameUniqueViolation))
+	if ff.Field(name) != nil {
+		panic(fmt.Errorf("%v: field «%s» is already exists: %w", ff.embeds(), name, ErrNameUniqueViolation))
+	}
+	if len(ff.fields) >= MaxTypeFieldCount {
+		panic(fmt.Errorf("%v: maximum field count (%d) exceeds: %w", ff.embeds(), MaxTypeFieldCount, ErrTooManyFields))
 	}
 
-	if IsSysField(name) {
-		return
+	if !IsSysField(name) {
+		if ok, err := ValidIdent(name); !ok {
+			panic(fmt.Errorf("%v: field name «%v» is invalid: %w", ff.embeds(), name, err))
+		}
+		dk := fld.(IField).DataKind()
+		tk := ff.embeds().Kind()
+		if !tk.DataKindAvailable(dk) {
+			panic(fmt.Errorf("%v: does not support %s-data fields: %w", ff.embeds(), dk.TrimString(), ErrInvalidDataKind))
+		}
 	}
 
-	if ok, err := ValidIdent(name); !ok {
-		panic(fmt.Errorf("%v: field name «%v» is invalid: %w", f.parent(), name, err))
-	}
-	if k := f.parent().Kind(); !k.DataKindAvailable(kind) {
-		panic(fmt.Errorf("%v: type kind «%s» does not support fields kind «%s»: %w", f.parent(), k.TrimString(), kind.TrimString(), ErrInvalidDataKind))
-	}
-	if len(f.fields) >= MaxTypeFieldCount {
-		panic(fmt.Errorf("%v: maximum field count (%d) exceeds: %w", f.parent(), MaxTypeFieldCount, ErrTooManyFields))
-	}
+	ff.fields[name] = fld
+	ff.fieldsOrdered = append(ff.fieldsOrdered, name)
 }
 
-func (f *fields) parent() IType {
-	return f.par.(IType)
+// Returns type that embeds fields
+func (ff *fields) embeds() IType {
+	return ff.emb.(IType)
 }
 
 // Makes system fields. Called after making structures fields
-func (f *fields) makeSysFields(k TypeKind) {
+func (ff *fields) makeSysFields(k TypeKind) {
 	if k.HasSystemField(SystemField_QName) {
-		f.AddField(SystemField_QName, DataKind_QName, true)
+		ff.AddField(SystemField_QName, DataKind_QName, true)
 	}
 
 	if k.HasSystemField(SystemField_ID) {
-		f.AddField(SystemField_ID, DataKind_RecordID, true)
+		ff.AddField(SystemField_ID, DataKind_RecordID, true)
 	}
 
 	if k.HasSystemField(SystemField_ParentID) {
-		f.AddField(SystemField_ParentID, DataKind_RecordID, true)
+		ff.AddField(SystemField_ParentID, DataKind_RecordID, true)
 	}
 
 	if k.HasSystemField(SystemField_Container) {
-		f.AddField(SystemField_Container, DataKind_string, true)
+		ff.AddField(SystemField_Container, DataKind_string, true)
 	}
 
 	if k.HasSystemField(SystemField_IsActive) {
-		f.AddField(SystemField_IsActive, DataKind_bool, false)
+		ff.AddField(SystemField_IsActive, DataKind_bool, false)
 	}
 }
 
@@ -280,9 +294,9 @@ type refField struct {
 	refs []QName
 }
 
-func newRefField(name string, required bool, ref ...QName) *refField {
+func newRefField(name string, data IData, required bool, ref ...QName) *refField {
 	f := &refField{
-		field: makeField(name, DataKind_RecordID, required),
+		field: makeField(name, data, required),
 		refs:  append([]QName{}, ref...),
 	}
 	return f
@@ -302,26 +316,6 @@ func (f refField) Ref(n QName) bool {
 }
 
 func (f refField) Refs() []QName { return f.refs }
-
-// Chars (string or bytes) field.
-//
-// # Implements:
-//   - IStringField
-//   - IBytesField
-type charsField struct {
-	field
-	restricts *fieldRestricts
-}
-
-func newCharsField(name string, kind DataKind, required bool, restricts ...IFieldRestrict) *charsField {
-	f := &charsField{field: makeField(name, kind, required)}
-	f.restricts = newFieldRestricts(&f.field, restricts...)
-	return f
-}
-
-func (f charsField) Restricts() IStringFieldRestricts {
-	return f.restricts
-}
 
 // Validates specified fields.
 //

@@ -84,6 +84,7 @@ type IViewPartKeyBuilder interface {
 	//	- if not fixed size data kind.
 	AddField(name string, kind DataKind, comment ...string) IViewPartKeyBuilder
 	AddRefField(name string, ref ...QName) IViewPartKeyBuilder
+	AddTypedField(name string, dataType QName, comment ...string) IViewPartKeyBuilder
 
 	// Sets fields comment.
 	// Useful for reference or verified fields, what Add×××Field has not comments
@@ -119,6 +120,7 @@ type IViewClustColsBuilder interface {
 	AddRefField(name string, ref ...QName) IViewClustColsBuilder
 	AddStringField(name string, maxLen uint16) IViewClustColsBuilder
 	AddBytesField(name string, maxLen uint16) IViewClustColsBuilder
+	AddTypedField(name string, dataType QName, comment ...string) IViewClustColsBuilder
 
 	// Sets fields comment.
 	// Useful for reference or verified fields, what Add×××Field has not comments

@@ -48,7 +48,7 @@ func Test_KeyType(t *testing.T) {
 				AddField("cc_number", appdef.DataKind_float64).
 				AddBytesField("cc_bytes", 64)
 			view.ValueBuilder().
-				AddStringField("val_string", false, appdef.MaxLen(1024))
+				AddStringField("val_string", false, appdef.FLD_MaxLen(1024))
 		})
 
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
@@ -806,8 +806,8 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 			AddField("vf_int64", appdef.DataKind_int64, false).
 			AddField("vf_float32", appdef.DataKind_float32, false).
 			AddField("vf_float64", appdef.DataKind_float64, false).
-			AddBytesField("vf_bytes", false, appdef.MaxLen(1024)).
-			AddStringField("vf_string", false, appdef.Pattern(`^\w+$`)).
+			AddBytesField("vf_bytes", false, appdef.FLD_MaxLen(1024)).
+			AddStringField("vf_string", false, appdef.FLD_Pattern(`^\w+$`)).
 			AddField("vf_qname", appdef.DataKind_QName, false).
 			AddField("vf_bool", appdef.DataKind_bool, false).
 			AddRefField("vf_recID", false).

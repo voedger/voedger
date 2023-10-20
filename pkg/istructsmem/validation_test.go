@@ -925,8 +925,8 @@ func Test_CharsFieldRestricts(t *testing.T) {
 	appDef := appdef.New()
 	t.Run("must be ok to build application", func(t *testing.T) {
 		appDef.AddObject(objName).
-			AddStringField("email", true, appdef.MinLen(6), appdef.MaxLen(100), appdef.Pattern(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`)).
-			AddBytesField("mime", false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`))
+			AddStringField("email", true, appdef.FLD_MinLen(6), appdef.FLD_MaxLen(100), appdef.FLD_Pattern(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`)).
+			AddBytesField("mime", false, appdef.FLD_MinLen(4), appdef.FLD_MaxLen(4), appdef.FLD_Pattern(`^\w+$`))
 	})
 
 	cfgs := make(AppConfigsType, 1)

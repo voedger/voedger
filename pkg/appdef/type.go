@@ -20,15 +20,14 @@ type typ struct {
 	kind TypeKind
 }
 
+// Creates and returns new type.
+//
+// Name can be empty (NullQName), then type is anonymous.
 func makeType(app *appDef, name QName, kind TypeKind) typ {
-	if name == NullQName {
-		panic(fmt.Errorf("type name cannot be empty: %w", ErrNameMissed))
-	}
-	if ok, err := ValidQName(name); !ok {
-		panic(fmt.Errorf("invalid type name «%v»: %w", name, err))
-	}
-	if app.TypeByName(name) != nil {
-		panic(fmt.Errorf("type name «%s» already used: %w", name, ErrNameUniqueViolation))
+	if name != NullQName {
+		if ok, err := ValidQName(name); !ok {
+			panic(fmt.Errorf("invalid type name «%v»: %w", name, err))
+		}
 	}
 	return typ{comment{}, app, name, kind}
 }

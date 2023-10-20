@@ -7,6 +7,7 @@ package appdef
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 )
 
@@ -40,7 +41,9 @@ func (app *appDef) AddCRecord(name QName) ICRecordBuilder {
 }
 
 func (app *appDef) AddData(name QName, kind DataKind, ancestor QName) IDataBuilder {
-	return newData(app, name, kind, ancestor)
+	d := newData(app, name, kind, ancestor)
+	app.appendType(d)
+	return d
 }
 
 func (app *appDef) AddElement(name QName) IElementBuilder {
@@ -281,7 +284,16 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 }
 
 func (app *appDef) appendType(t interface{}) {
-	app.types[t.(IType).QName()] = t
+	typ := t.(IType)
+	name := typ.QName()
+	if name == NullQName {
+		panic(fmt.Errorf("%s name cannot be empty: %w", typ.Kind().TrimString(), ErrNameMissed))
+	}
+	if app.TypeByName(name) != nil {
+		panic(fmt.Errorf("type name «%s» already used: %w", name, ErrNameUniqueViolation))
+	}
+
+	app.types[name] = t
 	app.typesOrdered = nil
 }
 

@@ -40,16 +40,14 @@ func ExampleIFieldsBuilder_AddStringField() {
 		f := doc.Field("code")
 		fmt.Printf("field %q: kind: %v, required: %v, comment: %s\n", f.Name(), f.DataKind(), f.Required(), f.Comment())
 
-		if f, ok := f.(appdef.IStringField); ok {
-			fmt.Println(f.Restricts())
-		}
+		fmt.Println("  - constraints:", f.Constraints())
 	}
 
 	// Output:
 	// doc "test.doc": TypeKind_CDoc
 	// doc field count: 1
 	// field "code": kind: DataKind_string, required: true, comment: Code is string containing from one to four digits
-	// MinLen: 1, MaxLen: 4, Pattern: `^\d+$`
+	//   - constraints: MinLen: 1, MaxLen: 4, Pattern: `^\d+$`
 }
 
 func ExampleIFieldsBuilder_AddBytesField() {
@@ -82,14 +80,12 @@ func ExampleIFieldsBuilder_AddBytesField() {
 		f := doc.Field("barCode")
 		fmt.Printf("field %q: kind: %v, required: %v, comment: %s\n", f.Name(), f.DataKind(), f.Required(), f.Comment())
 
-		if f, ok := f.(appdef.IBytesField); ok {
-			fmt.Println(f.Restricts())
-		}
+		fmt.Println("  - constraints:", f.Constraints())
 	}
 
 	// Output:
 	// doc "test.doc": TypeKind_CDoc
 	// doc field count: 1
 	// field "barCode": kind: DataKind_bytes, required: false, comment: Bar code scan data, up to 1 KB
-	// MaxLen: 1024
+	//   - constraints: MaxLen: 1024
 }

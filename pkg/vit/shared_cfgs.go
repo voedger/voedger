@@ -95,7 +95,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	projectors.ProvideViewDef(adf, QNameTestView, func(view appdef.IViewBuilder) {
 		view.KeyBuilder().PartKeyBuilder().AddField("ViewIntFld", appdef.DataKind_int32)
 		view.KeyBuilder().ClustColsBuilder().AddStringField("ViewStrFld", appdef.DefaultFieldMaxLength)
-		view.ValueBuilder().AddBytesField("ViewByteFld", false, appdef.MaxLen(512))
+		view.ValueBuilder().AddBytesField("ViewByteFld", false, appdef.FLD_MaxLen(512))
 	})
 
 	// for rates test

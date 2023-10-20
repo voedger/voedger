@@ -58,14 +58,14 @@ func (k DataKind) IsFixed() bool {
 //   - DataConstraintKind_MinLen
 //   - DataConstraintKind_MaxLen
 //   - DataConstraintKind_Pattern
-func (k DataKind) IsSupportedConstraint(c DataConstraintKind) bool {
+func (k DataKind) IsSupportedConstraint(c ConstraintKind) bool {
 	switch k {
 	case DataKind_string, DataKind_bytes:
 		switch c {
 		case
-			DataConstraintKind_MinLen,
-			DataConstraintKind_MaxLen,
-			DataConstraintKind_Pattern:
+			ConstraintKind_MinLen,
+			ConstraintKind_MaxLen,
+			ConstraintKind_Pattern:
 			return true
 		}
 	}
