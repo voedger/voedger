@@ -25,8 +25,12 @@ func ExampleIAppDefBuilder_AddData() {
 
 		_ = appDef.AddData(intName, appdef.DataKind_int64, appdef.NullQName)
 		_ = appDef.AddData(floatName, appdef.DataKind_float64, appdef.NullQName)
-		_ = appDef.AddData(strName, appdef.DataKind_string, appdef.NullQName)
-		_ = appDef.AddData(tokenName, appdef.DataKind_string, strName)
+
+		s := appDef.AddData(strName, appdef.DataKind_string, appdef.NullQName)
+		s.AddConstraints(appdef.DC_MinLen(1), appdef.DC_MaxLen(4))
+
+		t := appDef.AddData(tokenName, appdef.DataKind_string, strName)
+		t.AddConstraints(appdef.DC_Pattern("^[a-z]+$"))
 
 		if a, err := appDef.Build(); err == nil {
 			app = a
@@ -41,6 +45,9 @@ func ExampleIAppDefBuilder_AddData() {
 		app.DataTypes(false, func(d appdef.IData) {
 			cnt++
 			fmt.Println("-", d, "inherits from", d.Ancestor())
+			if d.Constraints().Count() > 0 {
+				fmt.Println("  constraints:", d.Constraints())
+			}
 		})
 		fmt.Println("overall data types: ", cnt)
 	}
@@ -49,6 +56,8 @@ func ExampleIAppDefBuilder_AddData() {
 	// - float64-data «test.float» inherits from float64-data «sys.float64»
 	// - int64-data «test.int» inherits from int64-data «sys.int64»
 	// - string-data «test.string» inherits from string-data «sys.string»
+	//   constraints: MinLen: 1, MaxLen: 4
 	// - string-data «test.token» inherits from string-data «test.string»
+	//   constraints: Pattern: `^[a-z]+$`
 	// overall data types:  4
 }

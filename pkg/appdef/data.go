@@ -45,12 +45,7 @@ func newData(app *appDef, name QName, kind DataKind, anc QName) *data {
 }
 
 func (d *data) AddConstraints(c ...IDataConstraint) IDataBuilder {
-	for _, c := range c {
-		if ok := d.DataKind().IsSupportedConstraint(c.Kind()); !ok {
-			panic(fmt.Errorf("constraint %v is not compatible with %v: %w", c, d, ErrIncompatibleRestricts))
-		}
-		d.constraints[c.Kind()] = c
-	}
+	d.constraints.set(d.DataKind(), c...)
 	return d
 }
 

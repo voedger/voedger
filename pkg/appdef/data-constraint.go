@@ -44,7 +44,7 @@ func DC_MaxLen(v uint16, c ...string) IDataConstraint {
 //
 // # Panics:
 //   - if value is not valid regular expression
-func DC_Pattern(v string, c ...string) IFieldRestrict {
+func DC_Pattern(v string, c ...string) IDataConstraint {
 	re, err := regexp.Compile(v)
 	if err != nil {
 		panic(err)
@@ -52,19 +52,56 @@ func DC_Pattern(v string, c ...string) IFieldRestrict {
 	return newDataConstraint(DataConstraintKind_Pattern, re, c...)
 }
 
-func (c DataTypeConstraints) String() string {
-	if len(c) == 0 {
+// # Implements:
+//   - IDataConstraints
+type dataConstraints struct {
+	c map[DataConstraintKind]IDataConstraint
+}
+
+// Creates and returns new data constraints.
+func makeDataConstraints() dataConstraints {
+	return dataConstraints{
+		c: make(map[DataConstraintKind]IDataConstraint),
+	}
+}
+
+func (cc dataConstraints) Count() int {
+	return len(cc.c)
+}
+
+func (cc dataConstraints) Constraint(kind DataConstraintKind) IDataConstraint {
+	if c, ok := cc.c[kind]; ok {
+		return c
+	}
+	return nil
+}
+
+func (cc dataConstraints) String() string {
+	if len(cc.c) == 0 {
 		return ""
 	}
 
-	s := make([]string, 0, len(c))
+	s := make([]string, 0, len(cc.c))
 	for i := DataConstraintKind(1); i < DataConstraintKind_Count; i++ {
-		if v, ok := c[i]; ok {
-			s = append(s, fmt.Sprint(v))
+		if c, ok := cc.c[i]; ok {
+			s = append(s, fmt.Sprint(c))
 		}
 	}
 
 	return strings.Join(s, ", ")
+}
+
+// Adds specified constraints. If constraint is already exists, it will be replaced.
+//
+// # Panics:
+//   - if constraint is not supported by data.
+func (cc dataConstraints) set(k DataKind, c ...IDataConstraint) {
+	for _, c := range c {
+		if ok := k.IsSupportedConstraint(c.Kind()); !ok {
+			panic(fmt.Errorf("constraint %v is not compatible with %v: %w", c, k, ErrIncompatibleRestricts))
+		}
+		cc.c[c.Kind()] = c
+	}
 }
 
 // # Implements:
@@ -84,10 +121,19 @@ func newDataConstraint(k DataConstraintKind, v any, c ...string) IDataConstraint
 	}
 }
 
-func (c *dataConstraint) Kind() DataConstraintKind {
+func (c dataConstraint) Kind() DataConstraintKind {
 	return c.kind
 }
 
-func (c *dataConstraint) Value() any {
+func (c dataConstraint) Value() any {
 	return c.value
+}
+
+func (c dataConstraint) String() string {
+	switch c.kind {
+	case DataConstraintKind_Pattern:
+		return fmt.Sprintf("%s: `%v`", c.kind.TrimString(), c.value)
+	default:
+		return fmt.Sprintf("%s: %v", c.kind.TrimString(), c.value)
+	}
 }
