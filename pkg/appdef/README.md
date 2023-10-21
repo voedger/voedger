@@ -26,14 +26,14 @@ classDiagram
     class IType {
         <<interface>>
         +QName() QName
-        +Kind() TypeKind
+        +Kind()* TypeKind
         +Comment() []string
     }
 
     IData --|> IType : inherits
     class IData {
         <<interface>>
-        ~Kind => TypeKind_Data
+        +Kind()* TypeKind_Data
         +Ancestor() IData
         +Restricts() []IDataRestrict
     }
@@ -41,7 +41,7 @@ classDiagram
     IArray --|> IType : inherits
     class IArray {
         <<interface>>
-        ~Kind => TypeKind_Array
+        +Kind()* TypeKind_Array
         +MaxLen() uint
         +Elem() IType
     }
@@ -56,88 +56,91 @@ classDiagram
         +SystemField_QName() IField
     }
 
-    IDoc --|> IStructure : inherits
-    class IDoc {
+    IStructure <|-- IRecord  : inherits
+    class IRecord {
         <<interface>>
         +SystemField_ID() IField
         +SystemField_IsActive() IField
     }
 
+    IDoc --|> IRecord : inherits
+    class IDoc {
+        <<interface>>
+    }
+
     IGDoc --|> IDoc : inherits
     class IGDoc {
         <<interface>>
-        ~Kind => TypeKind_GDoc
+        +Kind()* TypeKind_GDoc
     }
 
     ICDoc --|> IDoc : inherits
     class ICDoc {
         <<interface>>
-        ~Kind => TypeKind_CDoc
+        +Kind()* TypeKind_CDoc
         +Singleton() bool
     }
 
     IWDoc --|> IDoc : inherits
     class IWDoc {
         <<interface>>
-        ~Kind => TypeKind_WDoc
+        +Kind()* TypeKind_WDoc
     }
                     
     IODoc --|> IDoc: inherits
     class IODoc {
         <<interface>>
-        ~Kind => TypeKind_ODoc
+        +Kind()* TypeKind_ODoc
     }
 
-    IStructure <|-- IRecord  : inherits
-    class IRecord {
+    IRecord <|-- IContainedRecord  : inherits
+    class IContainedRecord {
         <<interface>>
-        +SystemField_ID() IField
-        +SystemField_IsActive() IField
         +SystemField_ParentID() IField
         +SystemField_Container() IField
     }
 
-    IRecord <|-- IGRecord : inherits
+    IContainedRecord <|-- IGRecord : inherits
     class IGRecord {
         <<interface>>
-        ~Kind => TypeKind_GRecord
+        +Kind()* TypeKind_GRecord
     }
 
-    IRecord <|-- ICRecord : inherits
+    IContainedRecord <|-- ICRecord : inherits
     class ICRecord {
         <<interface>>
-        ~Kind => TypeKind_CRecord
+        +Kind()* TypeKind_CRecord
     }
 
-    IRecord <|-- IWRecord : inherits
+    IContainedRecord <|-- IWRecord : inherits
     class IWRecord {
         <<interface>>
-        ~Kind => TypeKind_WRecord
+        +Kind()* TypeKind_WRecord
     }
 
-    IRecord <|-- IORecord : inherits
+    IContainedRecord <|-- IORecord : inherits
     class IORecord {
         <<interface>>
-        ~Kind => TypeKind_ORecord
+        +Kind()* TypeKind_ORecord
     }
 
     IObject --|> IStructure : inherits
     class IObject {
         <<interface>>
-        ~Kind => TypeKind_Object
+        +Kind()* TypeKind_Object
     }
 
     IElement --|> IStructure : inherits
     class IElement {
         <<interface>>
-        ~Kind => TypeKind_Element
+        +Kind()* TypeKind_Element
         +SystemField_Container() IField
     }
 
     IType <|-- IView : inherits
     class IView {
         <<interface>>
-        ~Kind => TypeKind_ViewRecord
+        +Kind()* TypeKind_ViewRecord
         +Key() IViewKey
         +Value() IViewValue
     }
@@ -152,21 +155,21 @@ classDiagram
     IFunction <|-- ICommand : inherits
     class ICommand {
         <<interface>>
-        ~Kind => TypeKind_Command
+        +Kind()* TypeKind_Command
         +UnloggedParams() []IParam
     }
 
     IFunction <|-- IQuery : inherits
     class IQuery {
         <<interface>>
-        ~Kind => TypeKind_Query
+        +Kind()* TypeKind_Query
     }
 
 
     IWorkspace --|> IType : inherits
     class IWorkspace {
         <<interface>>
-        ~Kind => TypeKind_Workspace
+        +Kind()* TypeKind_Workspace
         +Abstract() bool
         +Types() []IType
     }
@@ -180,7 +183,7 @@ classDiagram
 
     class IData {
         <<interface>>
-        ~Kind => TypeKind_Data
+        +Kind()* TypeKind_Data
         +Ancestor() IData
         +Restricts() []IDataRestrict
     }
@@ -188,14 +191,14 @@ classDiagram
 
     class IArray {
         <<interface>>
-        ~Kind => TypeKind_Array
+        +Kind()* TypeKind_Array
         +MaxLen() uint
         +Elem() IType
     }
 
     class IGDoc {
         <<interface>>
-        ~Kind => TypeKind_GDoc
+        +Kind()* TypeKind_GDoc
         +Abstract() bool
         +Fields() []IField
         +Containers() []IContainer
@@ -205,7 +208,7 @@ classDiagram
 
     class ICDoc {
         <<interface>>
-        ~Kind => TypeKind_CDoc
+        +Kind()* TypeKind_CDoc
         +Abstract() bool
         +Fields() []IField
         +Containers() []IContainer
@@ -216,7 +219,7 @@ classDiagram
 
     class IWDoc {
         <<interface>>
-        ~Kind => TypeKind_WDoc
+        +Kind()* TypeKind_WDoc
         +Abstract() bool
         +Fields() []IField
         +Containers() []IContainer
@@ -226,7 +229,7 @@ classDiagram
                     
     class IODoc {
         <<interface>>
-        ~Kind => TypeKind_ODoc
+        +Kind()* TypeKind_ODoc
         +Abstract() bool
         +Fields() []IField
         +Containers() []IContainer
@@ -236,7 +239,7 @@ classDiagram
 
     class IGRecord {
         <<interface>>
-        ~Kind => TypeKind_GRecord
+        +Kind()* TypeKind_GRecord
         +Abstract() bool
         +Fields() []IField
         +Containers() []IContainer
@@ -246,7 +249,7 @@ classDiagram
 
     class ICRecord {
         <<interface>>
-        ~Kind => TypeKind_CRecord
+        +Kind()* TypeKind_CRecord
         +Abstract() bool
         +Fields() []IField
         +Containers() []IContainer
@@ -256,7 +259,7 @@ classDiagram
 
     class IWRecord {
         <<interface>>
-        ~Kind => TypeKind_WRecord
+        +Kind()* TypeKind_WRecord
         +Abstract() bool
         +Fields() []IField
         +Containers() []IContainer
@@ -266,7 +269,7 @@ classDiagram
 
     class IORecord {
         <<interface>>
-        ~Kind => TypeKind_ORecord
+        +Kind()* TypeKind_ORecord
         +Abstract() bool
         +Fields() []IField
         +Containers() []IContainer
@@ -275,7 +278,7 @@ classDiagram
 
     class IObject {
         <<interface>>
-        ~Kind => TypeKind_Object
+        +Kind()* TypeKind_Object
         +Abstract() bool
         +Fields() []IField
         +Containers() []IContainer
@@ -284,7 +287,7 @@ classDiagram
 
     class IElement {
         <<interface>>
-        ~Kind => TypeKind_Element
+        +Kind()* TypeKind_Element
         +Abstract() bool
         +Fields() []IField
         +Containers() []IContainer
@@ -293,7 +296,7 @@ classDiagram
 
     class IView {
         <<interface>>
-        ~Kind => TypeKind_ViewRecord
+        +Kind()* TypeKind_ViewRecord
         +Key() IViewKey
         +Value() IViewValue
     }
@@ -326,7 +329,7 @@ classDiagram
 
     class ICommand {
         <<interface>>
-        ~Kind => TypeKind_Command
+        +Kind()* TypeKind_Command
         +Params() []IParam
         +UnloggedParams() []IParam
         +Results() []IParam
@@ -334,14 +337,14 @@ classDiagram
 
     class IQuery {
         <<interface>>
-        ~Kind => TypeKind_Query
+        +Kind()* TypeKind_Query
         +Params() []IParam
         +Results() []IParam
     }
 
     class IWorkspace {
         <<interface>>
-        ~Kind => TypeKind_Workspace
+        +Kind()* TypeKind_Workspace
         +Abstract() bool
         +Types() []IType
     }
@@ -358,275 +361,157 @@ The inheritance and composing diagrams given below are expanded general diagrams
 
 ```mermaid
 classDiagram
+    direction BT
+    namespace _ {
+        class IStructure {
+            <<interface>>
+            +Abstract() bool
+            +Fields() []IField
+            +Containers() []IContainer
+            +Uniques() []IUnique
+            +SystemField_QName() IField
+        }
 
-    class IStructure {
-        <<interface>>
-        +Abstract() bool
-        +Fields() []IField
-        +Containers() []IContainer
-        +Uniques() []IUnique
-        +SystemField_QName() IField
+        class IRecord {
+            <<interface>>
+            +SystemField_ID() IField
+            +SystemField_IsActive() IField
+        }
     }
 
-    IDoc --|> IStructure : inherits
+    IRecord --|> IStructure : inherits
+
+    IDoc --|> IRecord : inherits
     class IDoc {
         <<interface>>
-        +SystemField_ID() IField
-        +SystemField_IsActive() IField
     }
 
     IGDoc --|> IDoc : inherits
     class IGDoc {
         <<interface>>
-        ~Kind => TypeKind_GDoc
+        +Kind()* TypeKind_GDoc
     }
 
     ICDoc --|> IDoc : inherits
     class ICDoc {
         <<interface>>
-        ~Kind => TypeKind_CDoc
+        +Kind()* TypeKind_CDoc
         +Singleton() bool
     }
 
     IWDoc --|> IDoc : inherits
     class IWDoc {
         <<interface>>
-        ~Kind => TypeKind_WDoc
+        +Kind()* TypeKind_WDoc
     }
                     
     IODoc --|> IDoc: inherits
     class IODoc {
         <<interface>>
-        ~Kind => TypeKind_ODoc
+        +Kind()* TypeKind_ODoc
     }
 
-    IStructure <|-- IRecord  : inherits
-    class IRecord {
+    IRecord <|-- IContainedRecord  : inherits
+    class IContainedRecord {
         <<interface>>
-        +SystemField_ID() IField
-        +SystemField_IsActive() IField
         +SystemField_ParentID() IField
         +SystemField_Container() IField
     }
 
-    IRecord <|-- IGRecord : inherits
+    IContainedRecord <|-- IGRecord : inherits
     class IGRecord {
         <<interface>>
-        ~Kind => TypeKind_GRecord
+        +Kind()* TypeKind_GRecord
     }
 
-    IRecord <|-- ICRecord : inherits
+    IContainedRecord <|-- ICRecord : inherits
     class ICRecord {
         <<interface>>
-        ~Kind => TypeKind_CRecord
+        +Kind()* TypeKind_CRecord
     }
 
-    IRecord <|-- IWRecord : inherits
+    IContainedRecord <|-- IWRecord : inherits
     class IWRecord {
         <<interface>>
-        ~Kind => TypeKind_WRecord
+        +Kind()* TypeKind_WRecord
     }
 
-    IRecord <|-- IORecord : inherits
+    IContainedRecord <|-- IORecord : inherits
     class IORecord {
         <<interface>>
-        ~Kind => TypeKind_ORecord
-    }
-
-    IObject --|> IStructure : inherits
-    class IObject {
-        <<interface>>
-        ~Kind => TypeKind_Object
-    }
-
-    IStructure <|-- IElement : inherits
-    class IElement {
-        <<interface>>
-        ~Kind => TypeKind_Element
-        +SystemField_Container() IField
+        +Kind()* TypeKind_ORecord
     }
 ```
 
-#### Structures composing
+### Structures composing
 
 ```mermaid
 classDiagram
-  direction BT
+  direction TB
 
-  class IDef{
-    <<Interface>>
-    +Kind() DefKind
-    +QName() QName
-  }
-
-  IGDoc --|> IDef : inherits
   class IGDoc {
     <<Interface>>
-    IFields
-    IContainers
-    IUniques
+    IDoc
   }
-  IGDoc "1" --o "0..*" IGRecord : aggregate child
+  IGDoc "1" o--> "0..*" IGRecord : has child
 
-  IGDocBuilder --|> IGDoc : inherits
-  class IGDocBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-    IUniquesBuilder
-  }
-
-  IGRecord --|> IDef : inherits
   class IGRecord {
     <<Interface>>
-    IFields
-    IContainers
-    IUniques
+    IContainedRecord
   }
-  IGRecord "1" --o "0..*" IGRecord : aggregate child
+  IGRecord "1" o--> "0..*" IGRecord : has child
 
-  IGRecordBuilder --|> IGRecord : inherits
-  class IGRecordBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-    IUniquesBuilder
-  }
-
-  ICDoc --|> IDef : inherits
   class ICDoc {
     <<Interface>>
-    IFields
-    IContainers
-    IUniques
+    IDoc
     +Singleton() bool
   }
-  ICDoc "1" --o "0..*" ICRecord : aggregate child
+  ICDoc "1" o--> "0..*" ICRecord : has child
 
-  ICDocBuilder --|> ICDoc : inherits
-  class ICDocBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-    IUniquesBuilder
-    +SetSingleton()
-  }
-
-  ICRecord --|> IDef : inherits
   class ICRecord {
     <<Interface>>
-    IFields
-    IContainers
-    IUniques
+    IContainedRecord
   }
-  ICRecord "1" --o "0..*" ICRecord : aggregate child
+  ICRecord "1" o--> "0..*" ICRecord : has child
 
-  ICRecordBuilder --|> ICRecord : inherits
-  class ICRecordBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-    IUniquesBuilder
-  }
-
-  IWDoc --|> IDef : inherits
   class IWDoc {
     <<Interface>>
-    IFields
-    IContainers
-    IUniques
+    IDoc
   }
-  IWDoc "1" --o "0..*" IWRecord : aggregate child
+  IWDoc "1" o--> "0..*" IWRecord : has child
 
-  IWDocBuilder --|> IWDoc : inherits
-  class IWDocBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-    IUniquesBuilder
-  }
-
-  IWRecord --|> IDef : inherits
   class IWRecord {
     <<Interface>>
-    IFields
-    IContainers
-    IUniques
+    IContainedRecord
   }
-  IWRecord "1" --o "0..*" IWRecord : aggregate child
+  IWRecord "1" o--> "0..*" IWRecord : has child
 
-  IWRecordBuilder --|> IWRecord : inherits
-  class IWRecordBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-    IUniquesBuilder
-  }
-
-  IODoc --|> IDef : inherits
   class IODoc {
     <<Interface>>
-    IFields
-    IContainers
+    IDoc
   }
-  IODoc "1" --o "0..*" IODoc : aggregate child docs
-  IODoc "1" --o "0..*" IORecord : aggregate child recs
+  IODoc "1" o--> "0..*" IORecord : has child
 
-  IODocBuilder --|> IODoc : inherits
-  class IODocBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-  }
-
-  IORecord --|> IDef : inherits
   class IORecord {
     <<Interface>>
-    IFields
-    IContainers
+    IContainedRecord
   }
-  IORecord "1" --o "0..*" IORecord : aggregate child
-
-  IORecordBuilder --|> IORecord : inherits
-  class IORecordBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-  }
-
-  IObject --|> IDef : inherits
+  IORecord "1" o--> "0..*" IORecord : has child
 
   class IObject {
     <<Interface>>
-    IFields
-    IContainers
+    IStructure
   }
-  IObject "1" --o "0..*" IElement : aggregate child
+  IObject "1" o--> "0..*" IElement : has child
 
-  IObjectBuilder --|> IObject : inherits
-  class IObjectBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-  }
-  
-  IElement --|> IDef : inherits
   class IElement {
     <<Interface>>
-    IFields
-    IContainers
+    IStructure
   }
-  IElement "1" --o "0..*" IElement : aggregate child
-
-  IElementBuilder --|> IElement : inherits
-  class IElementBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-  }
+  IElement "1" o--> "0..*" IElement : has child
 ```
 
-#### Fields, Containers, Uniques
+### Fields, Containers, Uniques
 
 ```mermaid
 classDiagram
@@ -730,14 +615,14 @@ classDiagram
 classDiagram
   class IType{
     <<Interface>>
-    +Kind() DefKind
+    +Kind()* TypeKind
     +QName() QName
   }
 
   IType <|-- IView : inherits
   class IView {
     <<Interface>>
-    ~Kind => TypeKind_View
+    +Kind()* TypeKind_View
     IFields
     +Key() IViewKey
     +Value() IViewValue
@@ -758,23 +643,20 @@ classDiagram
   class IViewPartKey {
     <<Interface>>
     IFields
-    -isPartKey()
   }
   IViewPartKey "1" *--> "1..*" IField : has
 
   class IViewClustCols {
     <<Interface>>
     IFields
-    -isClustCols()
   }
   IViewClustCols "1" *--> "1..*" IField : has
 
   class IViewValue {
     <<Interface>>
     IFields
-    -isViewValue()
   }
-  IViewValue "1" -- "1..*" IField : has
+  IViewValue "1" *--> "1..*" IField : has
 
   class IField {
     <<interface>>
@@ -792,7 +674,7 @@ classDiagram
     class IType {
         <<interface>>
         +QName() QName
-        +Kind() TypeKind
+        +Kind()* TypeKind
         +Comment() []string
     }
 
@@ -807,16 +689,14 @@ classDiagram
     IFunction <|-- ICommand : inherits
     class ICommand {
         <<interface>>
-        ~Kind => TypeKind_Command
+        +Kind()* TypeKind_Command
         +UnloggedParam() IObject
-        -isCommand()
     }
 
     IFunction <|-- IQuery : inherits
     class IQuery {
         <<interface>>
-        ~Kind => TypeKind_Query
-        -isQuery()
+        +Kind()* TypeKind_Query
     }
 
     IFunction "1" *-- "1" IExtension : has
@@ -865,14 +745,14 @@ Invalid names examples:
 
 ### Fields
 
-- Maximum fields per definition is 65536.
+- Maximum fields per structure is 65536.
 - Maximum string field length is 1024.
 
 ### Containers
 
-- Maximum containers per definition is 65536.
+- Maximum containers per structure is 65536.
 
 ### Uniques
 
 - Maximum fields per unique is 256
-- Maximum uniques per definition is 100.
+- Maximum uniques per structure is 100.

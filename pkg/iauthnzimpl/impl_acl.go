@@ -267,6 +267,7 @@ var defaultACL = ACL{
 				qNameQryToggleUPPaymentMethod,
 				qNameQryRequestUPPaymentMethod,
 				qNameQryGetUPTransactionsOverview,
+				qNameQryGetUPTransactionReceipts,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},

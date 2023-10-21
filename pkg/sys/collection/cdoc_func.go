@@ -31,7 +31,7 @@ func provideQryCDoc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDef
 
 func execQryCDoc(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		rkb, err := args.State.KeyBuilder(state.RecordsStorage, appdef.NullQName)
+		rkb, err := args.State.KeyBuilder(state.Record, appdef.NullQName)
 		if err != nil {
 			return
 		}
@@ -41,7 +41,7 @@ func execQryCDoc(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 			return
 		}
 
-		vrkb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewCollection)
+		vrkb, err := args.State.KeyBuilder(state.View, QNameViewCollection)
 		if err != nil {
 			return
 		}
@@ -136,7 +136,7 @@ func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istr
 		if recordId == istructs.NullRecordID {
 			continue
 		}
-		rkb, err := s.KeyBuilder(state.RecordsStorage, appdef.NullQName)
+		rkb, err := s.KeyBuilder(state.Record, appdef.NullQName)
 		if err != nil {
 			return err
 		}

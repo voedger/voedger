@@ -83,7 +83,7 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 }
 
 func cmdInitiateDeactivateWorkspaceExec(args istructs.ExecCommandArgs) (err error) {
-	kb, err := args.State.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
+	kb, err := args.State.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
 	if err != nil {
 		// notest
 		return err
@@ -130,7 +130,7 @@ func cmdOnJoinedWorkspaceDeactivateExec(args istructs.ExecCommandArgs) (err erro
 func cmdOnWorkspaceDeactivatedExec(args istructs.ExecCommandArgs) (err error) {
 	ownerWSID := args.ArgumentObject.AsInt64(Field_OwnerWSID)
 	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
-	kb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewWorkspaceIDIdx)
+	kb, err := args.State.KeyBuilder(state.View, QNameViewWorkspaceIDIdx)
 	if err != nil {
 		// notest
 		return err
@@ -147,7 +147,7 @@ func cmdOnWorkspaceDeactivatedExec(args istructs.ExecCommandArgs) (err error) {
 		return
 	}
 	idOfCDocWorkspaceID := viewRec.AsRecordID(field_IDOfCDocWorkspaceID)
-	kb, err = args.State.KeyBuilder(state.RecordsStorage, QNameCDocWorkspaceID)
+	kb, err = args.State.KeyBuilder(state.Record, QNameCDocWorkspaceID)
 	if err != nil {
 		// notest
 		return err
@@ -176,7 +176,7 @@ func cmdOnWorkspaceDeactivatedExec(args istructs.ExecCommandArgs) (err error) {
 // ownerApp/ownerWSID
 func cmdOnChildWorkspaceDeactivatedExec(args istructs.ExecCommandArgs) (err error) {
 	ownerID := args.ArgumentObject.AsInt64(Field_OwnerID)
-	kb, err := args.State.KeyBuilder(state.RecordsStorage, appdef.NullQName)
+	kb, err := args.State.KeyBuilder(state.Record, appdef.NullQName)
 	if err != nil {
 		// notest
 		return err
@@ -203,7 +203,7 @@ func cmdOnChildWorkspaceDeactivatedExec(args istructs.ExecCommandArgs) (err erro
 func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens,
 	asp istructs.IAppStructsProvider) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		kb, err := s.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
+		kb, err := s.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			// notest
 			return err

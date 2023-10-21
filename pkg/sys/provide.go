@@ -18,7 +18,6 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
-	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
 	"github.com/voedger/voedger/pkg/sys/authnz/workspace"
 	"github.com/voedger/voedger/pkg/sys/blobber"
@@ -39,12 +38,12 @@ var sysFS embed.FS
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, smtpCfg smtp.Cfg,
 	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation coreutils.IFederation,
-	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount, buildInfo *debug.BuildInfo, storageProvider istorage.IAppStorageProvider) {
-	blobber.ProvideBlobberCmds(cfg, ep)
+	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount, buildInfo *debug.BuildInfo,
+	storageProvider istorage.IAppStorageProvider, rebuildRegistry bool) {
+	blobber.ProvideBlobberCmds(cfg)
 	collection.Provide(cfg, appDefBuilder)
 	journal.Provide(cfg, appDefBuilder, ep)
-	builtin.Provide(cfg, appDefBuilder, buildInfo, storageProvider, ep)
-	authnz.Provide(appDefBuilder, ep)
+	builtin.Provide(cfg, appDefBuilder, buildInfo, storageProvider, rebuildRegistry)
 	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
 	sqlquery.Provide(cfg, appDefBuilder, asp, numCommandProcessors)
 	projectors.ProvideOffsetsDef(appDefBuilder)
@@ -53,7 +52,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	signupin.ProvideQryRefreshPrincipalToken(cfg, appDefBuilder, itokens)
 	signupin.ProvideCDocLogin(appDefBuilder, ep)
 	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, atf)
-	invite.Provide(cfg, appDefBuilder, timeFunc, federation, itokens, smtpCfg, ep)
+	invite.Provide(cfg, appDefBuilder, timeFunc, federation, itokens, smtpCfg)
 	uniques.Provide(cfg, appDefBuilder)
 	describe.Provide(cfg, asp, appDefBuilder)
 

@@ -5,7 +5,9 @@
 
 package appdef
 
-// Global document
+// Global document.
+//
+// Ref. to gdoc.go for implementation
 type IGDoc interface {
 	IDoc
 
@@ -18,11 +20,11 @@ type IGDocBuilder interface {
 	IDocBuilder
 }
 
-// Global document record
+// Global document record.
 //
 // Ref. to gdoc.go for implementation
 type IGRecord interface {
-	IRecord
+	IContainedRecord
 
 	// unwanted type assertion stub
 	isGRecord()
@@ -30,5 +32,5 @@ type IGRecord interface {
 
 type IGRecordBuilder interface {
 	IGRecord
-	IRecordBuilder
+	IContainedRecordBuilder
 }

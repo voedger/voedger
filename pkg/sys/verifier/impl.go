@@ -100,7 +100,7 @@ func sendEmailVerificationCodeProjector(federation coreutils.IFederation, smtpCf
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 		lng := event.ArgumentObject().AsString(field_Language)
 
-		kb, err := st.KeyBuilder(state.SendMailStorage, appdef.NullQName)
+		kb, err := st.KeyBuilder(state.SendMail, appdef.NullQName)
 		if err != nil {
 			return
 		}
@@ -115,7 +115,7 @@ func sendEmailVerificationCodeProjector(federation coreutils.IFederation, smtpCf
 		kb.PutString(state.Field_Username, smtpCfg.Username)
 		pwd := ""
 		if !coreutils.IsTest() {
-			kbSecret, err := st.KeyBuilder(state.AppSecretsStorage, appdef.NullQName)
+			kbSecret, err := st.KeyBuilder(state.AppSecret, appdef.NullQName)
 			if err != nil {
 				return err
 			}
