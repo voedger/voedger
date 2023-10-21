@@ -26,7 +26,7 @@ var ErrTooManyFields = errors.New("too many fields")
 
 var ErrMaxFieldLengthExceeds = errors.New("too large field length")
 
-var ErrIncompatibleRestricts = errors.New("incompatible restricts")
+var ErrIncompatibleConstraints = errors.New("incompatible restricts")
 
 var ErrTooManyContainers = errors.New("too many containers")
 

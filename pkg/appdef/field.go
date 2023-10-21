@@ -29,7 +29,7 @@ type field struct {
 	required    bool
 	verifiable  bool
 	verify      map[VerificationKind]bool
-	constraints constraints
+	constraints map[ConstraintKind]IConstraint
 }
 
 func makeField(name string, data IData, required bool, comments ...string) field {
@@ -49,8 +49,12 @@ func newField(name string, data IData, required bool, comments ...string) *field
 	return &f
 }
 
-func (fld *field) Constraints() IConstraints {
-	return fld.constraints
+func (fld *field) Constraints(f func(IConstraint)) {
+	for i := ConstraintKind(1); i < ConstraintKind_Count; i++ {
+		if c, ok := fld.constraints[i]; ok {
+			f(c)
+		}
+	}
 }
 
 func (fld *field) Data() IData { return fld.data }

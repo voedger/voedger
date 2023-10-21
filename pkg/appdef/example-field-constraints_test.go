@@ -6,6 +6,7 @@ package appdef_test
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -40,14 +41,20 @@ func ExampleIFieldsBuilder_AddStringField() {
 		f := doc.Field("code")
 		fmt.Printf("field %q: kind: %v, required: %v, comment: %s\n", f.Name(), f.DataKind(), f.Required(), f.Comment())
 
-		fmt.Println("  - constraints:", f.Constraints())
+		str := []string{}
+		f.Constraints(func(c appdef.IConstraint) {
+			str = append(str, fmt.Sprint(c))
+		})
+		if len(str) > 0 {
+			fmt.Printf("  - constraints: [%v]", strings.Join(str, `, `))
+		}
 	}
 
 	// Output:
 	// doc "test.doc": TypeKind_CDoc
 	// doc field count: 1
 	// field "code": kind: DataKind_string, required: true, comment: Code is string containing from one to four digits
-	//   - constraints: MinLen: 1, MaxLen: 4, Pattern: `^\d+$`
+	//   - constraints: [MinLen: 1, MaxLen: 4, Pattern: `^\d+$`]
 }
 
 func ExampleIFieldsBuilder_AddBytesField() {
@@ -80,12 +87,18 @@ func ExampleIFieldsBuilder_AddBytesField() {
 		f := doc.Field("barCode")
 		fmt.Printf("field %q: kind: %v, required: %v, comment: %s\n", f.Name(), f.DataKind(), f.Required(), f.Comment())
 
-		fmt.Println("  - constraints:", f.Constraints())
+		str := []string{}
+		f.Constraints(func(c appdef.IConstraint) {
+			str = append(str, fmt.Sprint(c))
+		})
+		if len(str) > 0 {
+			fmt.Printf("  - constraints: [%v]", strings.Join(str, `, `))
+		}
 	}
 
 	// Output:
 	// doc "test.doc": TypeKind_CDoc
 	// doc field count: 1
 	// field "barCode": kind: DataKind_bytes, required: false, comment: Bar code scan data, up to 1 KB
-	//   - constraints: MaxLen: 1024
+	//   - constraints: [MaxLen: 1024]
 }

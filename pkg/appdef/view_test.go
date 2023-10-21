@@ -51,7 +51,7 @@ func TestAddView(t *testing.T) {
 
 		t.Run("must be ok to add value fields", func(t *testing.T) {
 			vb.ValueBuilder().AddField("valF1", DataKind_bool, true)
-			vb.ValueBuilder().AddStringField("valF2", false, Pattern(`^\d+$`))
+			vb.ValueBuilder().AddStringField("valF2", false, Pattern(`^\d+$`, "only digits allowed"))
 		})
 	})
 
@@ -253,7 +253,19 @@ func TestAddView(t *testing.T) {
 			case "valF2":
 				require.Equal(DataKind_string, f.DataKind())
 				require.False(f.Required())
-				require.EqualValues(`^\d+$`, f.Constraints().Constraint(ConstraintKind_Pattern).Value().(*regexp.Regexp).String())
+				cnt := 0
+				f.Constraints(func(c IConstraint) {
+					cnt++
+					switch cnt {
+					case 1:
+						require.Equal(ConstraintKind_Pattern, c.Kind())
+						require.EqualValues(`^\d+$`, c.Value().(*regexp.Regexp).String())
+						require.Equal("only digits allowed", c.Comment())
+					default:
+						require.Fail("unexpected constraint", "constraint: %v", c)
+					}
+				})
+				require.EqualValues(1, cnt)
 			case "valF3":
 				require.Equal(DataKind_RecordID, f.DataKind())
 				require.False(f.Required())
@@ -261,8 +273,19 @@ func TestAddView(t *testing.T) {
 			case "valF4":
 				require.Equal(DataKind_bytes, f.DataKind())
 				require.False(f.Required())
-				require.EqualValues(1024, f.Constraints().Constraint(ConstraintKind_MaxLen).Value())
 				require.Equal("test comment", f.Comment())
+				cnt := 0
+				f.Constraints(func(c IConstraint) {
+					cnt++
+					switch cnt {
+					case 1:
+						require.Equal(ConstraintKind_MaxLen, c.Kind())
+						require.EqualValues(1024, c.Value())
+					default:
+						require.Fail("unexpected constraint", "constraint: %v", c)
+					}
+				})
+				require.EqualValues(1, cnt)
 			case "valF5":
 				require.Equal(DataKind_bool, f.DataKind())
 				require.False(f.Required())

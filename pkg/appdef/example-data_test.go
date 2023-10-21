@@ -6,6 +6,7 @@ package appdef_test
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -45,8 +46,12 @@ func ExampleIAppDefBuilder_AddData() {
 		app.DataTypes(false, func(d appdef.IData) {
 			cnt++
 			fmt.Println("-", d, "inherits from", d.Ancestor())
-			if d.Constraints().Count() > 0 {
-				fmt.Println("  constraints:", d.Constraints())
+			str := []string{}
+			d.Constraints(func(c appdef.IConstraint) {
+				str = append(str, fmt.Sprint(c))
+			})
+			if len(str) > 0 {
+				fmt.Printf("  constraints: [%v]\n", strings.Join(str, `, `))
 			}
 		})
 		fmt.Println("overall data types: ", cnt)
@@ -56,8 +61,8 @@ func ExampleIAppDefBuilder_AddData() {
 	// - float64-data «test.float» inherits from float64-data «sys.float64»
 	// - int64-data «test.int» inherits from int64-data «sys.int64»
 	// - string-data «test.string» inherits from string-data «sys.string»
-	//   constraints: MinLen: 1, MaxLen: 4
+	//   constraints: [MinLen: 1, MaxLen: 4]
 	// - string-data «test.token» inherits from string-data «test.string»
-	//   constraints: Pattern: `^[a-z]+$`
+	//   constraints: [Pattern: `^[a-z]+$`]
 	// overall data types:  4
 }

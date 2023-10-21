@@ -29,8 +29,10 @@ type IData interface {
 	// All user types should have ancestor. System types may has no ancestor.
 	Ancestor() IData
 
-	// Constraints for data type.
-	Constraints() IConstraints
+	// Enumerate data type constraints.
+	//
+	// Constraints are enumerated in kind order.
+	Constraints(func(IConstraint))
 }
 
 type IDataBuilder interface {
@@ -48,22 +50,6 @@ type IDataBuilder interface {
 //
 // Ref. data-constraint-kind.go for constants and methods.
 type ConstraintKind uint8
-
-// Data type constraints interface.
-//
-// Ref. data-constraint.go for implementation.
-type IConstraints interface {
-	// Returns constraints count.
-	Count() int
-
-	// Returns constraint by kind.
-	//
-	// Returns nil if constraint is not exists.
-	Constraint(kind ConstraintKind) IConstraint
-
-	// Enum all constraints.
-	Constraints(func(IConstraint))
-}
 
 // Data constraint interface.
 //

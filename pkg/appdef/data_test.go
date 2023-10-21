@@ -59,9 +59,8 @@ func Test_AppDef_AddData(t *testing.T) {
 		require.Equal(tokenName, tk.QName())
 		require.Equal(DataKind_string, tk.DataKind())
 		require.Equal(s, tk.Ancestor())
-		require.Equal(3, tk.Constraints().Count())
 		cnt := 0
-		tk.Constraints().Constraints(func(c IConstraint) {
+		tk.Constraints(func(c IConstraint) {
 			cnt++
 			switch cnt {
 			case 1:
@@ -78,6 +77,7 @@ func Test_AppDef_AddData(t *testing.T) {
 				require.Failf("unexpected constraint", "constraint: %v", c)
 			}
 		})
+		require.Equal(3, cnt)
 	})
 
 	t.Run("must be ok to enum data types", func(t *testing.T) {

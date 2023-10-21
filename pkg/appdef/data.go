@@ -14,7 +14,7 @@ type data struct {
 	typ
 	dataKind    DataKind
 	ancestor    IData
-	constraints constraints
+	constraints map[ConstraintKind]IConstraint
 }
 
 // Creates and returns new data type.
@@ -38,7 +38,7 @@ func newData(app *appDef, name QName, kind DataKind, anc QName) *data {
 		typ:         makeType(app, name, TypeKind_Data),
 		dataKind:    ancestor.DataKind(),
 		ancestor:    ancestor,
-		constraints: makeConstraints(),
+		constraints: make(map[ConstraintKind]IConstraint),
 	}
 	return d
 }
@@ -50,8 +50,15 @@ func newAnonymousData(app *appDef, kind DataKind, anc QName, constraints ...ICon
 	return d
 }
 
-func (d *data) AddConstraints(c ...IConstraint) IDataBuilder {
-	d.constraints.set(d.DataKind(), c...)
+func (d *data) AddConstraints(cc ...IConstraint) IDataBuilder {
+	dk := d.DataKind()
+	for _, c := range cc {
+		ck := c.Kind()
+		if ok := dk.IsSupportedConstraint(ck); !ok {
+			panic(fmt.Errorf("%v is not compatible with constraint %v: %w", d, c, ErrIncompatibleConstraints))
+		}
+		d.constraints[ck] = c
+	}
 	return d
 }
 
@@ -59,8 +66,12 @@ func (d *data) Ancestor() IData {
 	return d.ancestor
 }
 
-func (d *data) Constraints() IConstraints {
-	return d.constraints
+func (d *data) Constraints(f func(IConstraint)) {
+	for i := ConstraintKind(1); i < ConstraintKind_Count; i++ {
+		if c, ok := d.constraints[i]; ok {
+			f(c)
+		}
+	}
 }
 
 func (d *data) DataKind() DataKind {

@@ -6,6 +6,7 @@ package appdef_test
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -62,8 +63,12 @@ func ExampleIView() {
 					fmt.Printf(", refs: %v", r.Refs())
 				}
 			}
-			if f.Constraints().Count() != 0 {
-				fmt.Printf(", constraints: [%v]", f.Constraints())
+			str := []string{}
+			f.Constraints(func(c appdef.IConstraint) {
+				str = append(str, fmt.Sprint(c))
+			})
+			if len(str) > 0 {
+				fmt.Printf(", constraints: [%v]", strings.Join(str, `, `))
 			}
 			fmt.Println()
 		}

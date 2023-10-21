@@ -148,12 +148,12 @@ type IField interface {
 	// Returns is field system
 	IsSys() bool
 
-	// Returns all field data constraints.
+	// Enumerates field constraints.
 	//
-	// Constraints are collected throughout the data types hierarchy, include all ancestors recursively.
+	// Enumeration throughout the data types hierarchy, include all ancestors recursively.
 	// If any constraint (for example `MinLen`) is specified by the ancestor, but redefined in the descendant,
-	// then the constraint from the descendant will return as a result.
-	Constraints() IConstraints
+	// then the constraint from the descendant only will enumerated.
+	Constraints(func(IConstraint))
 }
 
 // Reference field. Describe field with DataKind_RecordID.
