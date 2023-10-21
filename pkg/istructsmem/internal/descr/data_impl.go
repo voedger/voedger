@@ -9,17 +9,23 @@ import "github.com/voedger/voedger/pkg/appdef"
 
 func newData() *Data {
 	return &Data{
-		Name:     appdef.NullQName,
-		DataKind: appdef.DataKind_null,
-		Ancestor: appdef.NullQName,
+		Constraints: make(map[string]any, 0),
 	}
 }
 
 func (d *Data) read(data appdef.IData) {
 	d.Comment = data.Comment()
-	d.Name = data.QName()
-	d.DataKind = data.DataKind()
-	if data.Ancestor() != nil {
-		d.Ancestor = data.Ancestor().QName()
+	if q := data.QName(); q != appdef.NullQName {
+		d.Name = &q
 	}
+	if data.Ancestor() != nil {
+		q := data.Ancestor().QName()
+		d.Ancestor = &q
+	} else {
+		k := data.DataKind()
+		d.DataKind = &k
+	}
+	data.Constraints().Constraints(func(c appdef.IConstraint) {
+		d.Constraints[c.Kind().TrimString()] = c.Value()
+	})
 }

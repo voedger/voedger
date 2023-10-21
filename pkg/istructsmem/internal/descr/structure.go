@@ -9,7 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-type Type struct {
+type Structure struct {
 	Comment     string `json:",omitempty"`
 	Name        appdef.QName
 	Kind        appdef.TypeKind
@@ -23,17 +23,11 @@ type Type struct {
 type Field struct {
 	Comment    string `json:",omitempty"`
 	Name       string
-	Kind       appdef.DataKind
-	Required   bool            `json:",omitempty"`
-	Verifiable bool            `json:",omitempty"`
-	Refs       []string        `json:",omitempty"`
-	Restricts  *FieldRestricts `json:",omitempty"`
-}
-
-type FieldRestricts struct {
-	MinLen  uint16 `json:",omitempty"`
-	MaxLen  uint16 `json:",omitempty"`
-	Pattern string `json:",omitempty"`
+	DataType   *Data         `json:",omitempty"`
+	Data       *appdef.QName `json:",omitempty"`
+	Required   bool          `json:",omitempty"`
+	Verifiable bool          `json:",omitempty"`
+	Refs       []string      `json:",omitempty"`
 }
 
 type Container struct {

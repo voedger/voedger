@@ -23,17 +23,22 @@ func TestBasicUsage(t *testing.T) {
 	appDef := appdef.New()
 
 	intName := appdef.NewQName("test", "int")
+	strName := appdef.NewQName("test", "string")
 
 	docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
 
 	i := appDef.AddData(intName, appdef.DataKind_int64, appdef.NullQName)
 	i.SetComment("int comment")
 
+	s := appDef.AddData(strName, appdef.DataKind_string, appdef.NullQName)
+	s.AddConstraints(appdef.MinLen(1), appdef.MaxLen(100), appdef.Pattern(`^\w+$`, "only word characters allowed"))
+
 	doc := appDef.AddSingleton(docName)
 	doc.
 		AddField("f1", appdef.DataKind_int64, true).
 		SetFieldComment("f1", "field comment").
-		AddStringField("f2", false, appdef.FLD_MinLen(4), appdef.FLD_MaxLen(4), appdef.FLD_Pattern(`^\w+$`)).
+		AddStringField("f2", false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`)).
+		AddTypedField("intField", intName, false).
 		AddRefField("mainChild", false, recName).(appdef.ICDocBuilder).
 		AddContainer("rec", recName, 0, 100, "container comment").(appdef.ICDocBuilder).
 		AddUnique("", []string{"f1", "f2"})
@@ -43,7 +48,7 @@ func TestBasicUsage(t *testing.T) {
 	rec.
 		AddField("f1", appdef.DataKind_int64, true).
 		AddStringField("f2", false).
-		AddStringField("phone", true, appdef.FLD_MinLen(1), appdef.FLD_MaxLen(25)).
+		AddStringField("phone", true, appdef.MinLen(1), appdef.MaxLen(25)).
 		SetFieldVerify("phone", appdef.VerificationKind_Any...).(appdef.ICRecordBuilder).
 		SetUniqueField("phone")
 
@@ -54,6 +59,7 @@ func TestBasicUsage(t *testing.T) {
 	view.KeyBuilder().ClustColsBuilder().
 		AddStringField("cc_1", 100)
 	view.ValueBuilder().
+		AddTypedField("vv_code", strName, true).
 		AddRefField("vv_1", true, docName)
 
 	objName := appdef.NewQName("test", "obj")
@@ -89,6 +95,8 @@ func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	require.NoError(err)
 	require.Greater(len(json), 1)
+
+	// ioutil.WriteFile("C://temp//provide_test.json", json, 0644)
 
 	require.JSONEq(expectedJson, string(json))
 }

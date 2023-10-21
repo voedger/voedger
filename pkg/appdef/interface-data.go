@@ -60,6 +60,9 @@ type IConstraints interface {
 	//
 	// Returns nil if constraint is not exists.
 	Constraint(kind ConstraintKind) IConstraint
+
+	// Enum all constraints.
+	Constraints(func(IConstraint))
 }
 
 // Data constraint interface.

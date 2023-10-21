@@ -34,18 +34,23 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 		if data, ok := typ.(appdef.IData); ok {
 			if !data.IsSystem() {
 				d := newData()
-				d.Name = name
-				pkg.DataTypes[name.String()] = d
 				d.read(data)
+				pkg.DataTypes[name.String()] = d
 			}
+			return
+		}
+
+		if str, ok := typ.(appdef.IStructure); ok {
+			s := newStructure()
+			s.read(str)
+			pkg.Structures[name.String()] = s
 			return
 		}
 
 		if view, ok := typ.(appdef.IView); ok {
 			v := newView()
-			v.Name = name
-			pkg.Views[name.String()] = v
 			v.read(view)
+			pkg.Views[name.String()] = v
 			return
 		}
 
@@ -56,11 +61,6 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 			pkg.Functions.read(fn)
 			return
 		}
-
-		t := newType()
-		t.Name = name
-		pkg.Types[name.String()] = t
-		t.read(typ)
 	})
 
 	app.Resources().Resources(func(resName appdef.QName) {
@@ -98,7 +98,7 @@ func getPkg(name appdef.QName, a *Application) *Package {
 func newPackage() *Package {
 	return &Package{
 		DataTypes:  make(map[string]*Data),
-		Types:      make(map[string]*Type),
+		Structures: make(map[string]*Structure),
 		Views:      make(map[string]*View),
 		Resources:  make(map[string]*Resource),
 		RateLimits: make(map[string][]*RateLimit),

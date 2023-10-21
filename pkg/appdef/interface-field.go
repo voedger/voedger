@@ -98,6 +98,7 @@ type IFieldsBuilder interface {
 	//   - if field with name is already exists,
 	//   - if specified data type is not found,
 	//   - if specified data kind is not allowed by structured type kind.
+	// TODO: replace comments parament with constraints
 	AddTypedField(name string, dataType QName, required bool, comments ...string) IFieldsBuilder
 
 	// Sets fields comment.

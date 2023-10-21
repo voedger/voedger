@@ -97,17 +97,23 @@ func (cc constraints) Constraint(kind ConstraintKind) IConstraint {
 	return nil
 }
 
+func (cc constraints) Constraints(f func(IConstraint)) {
+	for i := ConstraintKind(1); i < ConstraintKind_Count; i++ {
+		if c, ok := cc.c[i]; ok {
+			f(c)
+		}
+	}
+}
+
 func (cc constraints) String() string {
 	if len(cc.c) == 0 {
 		return ""
 	}
 
 	s := make([]string, 0, len(cc.c))
-	for i := ConstraintKind(1); i < ConstraintKind_Count; i++ {
-		if c, ok := cc.c[i]; ok {
-			s = append(s, fmt.Sprint(c))
-		}
-	}
+	cc.Constraints(func(c IConstraint) {
+		s = append(s, fmt.Sprint(c))
+	})
 
 	return strings.Join(s, ", ")
 }

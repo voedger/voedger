@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,8 @@ func Test_AppDef_AddData(t *testing.T) {
 
 		_ = appDef.AddData(intName, DataKind_int64, NullQName)
 		_ = appDef.AddData(strName, DataKind_string, NullQName)
-		_ = appDef.AddData(tokenName, DataKind_string, strName)
+		token := appDef.AddData(tokenName, DataKind_string, strName)
+		token.AddConstraints(MinLen(1), MaxLen(100), Pattern(`^\w+$`, "only word characters allowed"))
 
 		t.Run("must be ok to build", func(t *testing.T) {
 			a, err := appDef.Build()
@@ -57,6 +59,25 @@ func Test_AppDef_AddData(t *testing.T) {
 		require.Equal(tokenName, tk.QName())
 		require.Equal(DataKind_string, tk.DataKind())
 		require.Equal(s, tk.Ancestor())
+		require.Equal(3, tk.Constraints().Count())
+		cnt := 0
+		tk.Constraints().Constraints(func(c IConstraint) {
+			cnt++
+			switch cnt {
+			case 1:
+				require.Equal(ConstraintKind_MinLen, c.Kind())
+				require.EqualValues(1, c.Value())
+			case 2:
+				require.Equal(ConstraintKind_MaxLen, c.Kind())
+				require.EqualValues(100, c.Value())
+			case 3:
+				require.Equal(ConstraintKind_Pattern, c.Kind())
+				require.EqualValues(`^\w+$`, c.Value().(*regexp.Regexp).String())
+				require.Equal("only word characters allowed", c.Comment())
+			default:
+				require.Failf("unexpected constraint", "constraint: %v", c)
+			}
+		})
 	})
 
 	t.Run("must be ok to enum data types", func(t *testing.T) {

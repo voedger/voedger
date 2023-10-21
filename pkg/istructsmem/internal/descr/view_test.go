@@ -37,8 +37,8 @@ func Test_View(t *testing.T) {
 		view.ValueBuilder().
 			AddField("vv_int", appdef.DataKind_int64, true).
 			AddRefField("vv_ref", true, docName).
-			AddStringField("vv_code", false, appdef.FLD_MaxLen(10), appdef.FLD_Pattern(`^\w+$`)).
-			AddBytesField("vv_data", false, appdef.FLD_MaxLen(1024)).
+			AddStringField("vv_code", false, appdef.MaxLen(10), appdef.Pattern(`^\w+$`)).
+			AddBytesField("vv_data", false, appdef.MaxLen(1024)).
 			SetFieldComment("vv_data", "One kilobyte of data")
 		if a, err := appDef.Build(); err == nil {
 			app = a
@@ -56,77 +56,91 @@ func Test_View(t *testing.T) {
 		require := require.New(t)
 		require.NoError(err)
 
+		//ioutil.WriteFile("C://temp//view_test.json", json, 0644)
+
 		const expected = `{
-	"Comment": "view comment", 
-	"Key": {
-		"ClustCols": [
-			{
-				"Kind":	"DataKind_int64", 
-				"Name":"cc_int"
-			}, 
-			{
-				"Kind": "DataKind_RecordID", 
-				"Name": "cc_ref", 
-				"Refs": ["test.doc"]
-			}, 
-			{
-				"Kind": "DataKind_string", 
-				"Name": "cc_name", 
-				"Restricts": {
-					"MaxLen":	100
+			"Comment": "view comment",
+			"Name": "test.view",
+			"Key": {
+				"Partition": [
+					{
+						"Name": "pk_int",
+						"Data": "sys.int64",
+						"Required": true
+					},
+					{
+						"Name": "pk_ref",
+						"Data": "sys.RecordID",
+						"Required": true,
+						"Refs": [
+							"test.doc"
+						]
+					}
+				],
+				"ClustCols": [
+					{
+						"Name": "cc_int",
+						"Data": "sys.int64"
+					},
+					{
+						"Name": "cc_ref",
+						"Data": "sys.RecordID",
+						"Refs": [
+							"test.doc"
+						]
+					},
+					{
+						"Name": "cc_name",
+						"DataType": {
+							"Ancestor": "sys.string",
+							"Constraints": {
+								"MaxLen": 100
+							}
+						}
+					}
+				]
+			},
+			"Value": [
+				{
+					"Name": "sys.QName",
+					"Data": "sys.QName",
+					"Required": true
+				},
+				{
+					"Name": "vv_int",
+					"Data": "sys.int64",
+					"Required": true
+				},
+				{
+					"Name": "vv_ref",
+					"Data": "sys.RecordID",
+					"Required": true,
+					"Refs": [
+						"test.doc"
+					]
+				},
+				{
+					"Name": "vv_code",
+					"DataType": {
+						"Ancestor": "sys.string",
+						"Constraints": {
+							"MaxLen": 10,
+							"Pattern": "^\\w+$"
+						}
+					}
+				},
+				{
+					"Comment": "One kilobyte of data",
+					"Name": "vv_data",
+					"DataType": {
+						"Ancestor": "sys.bytes",
+						"Constraints": {
+							"MaxLen": 1024
+						}
+					}
 				}
-			}
-		], 
-		"Partition":[
-			{
-				"Kind":	"DataKind_int64", 
-				"Name":	"pk_int", 
-				"Required":	true
-			}, 
-			{
-				"Kind":	"DataKind_RecordID", 
-				"Name":	"pk_ref", 
-				"Refs": ["test.doc"], 
-				"Required":	true
-			}
-		]
-	}, 
-	"Name"	:	"test.view", 
-	"Value":	[
-		{
-			"Kind": "DataKind_QName", 
-			"Name": "sys.QName", 
-			"Required":	true
-		}, 
-		{
-			"Kind": "DataKind_int64", 
-			"Name": "vv_int", 
-			"Required": true
-		}, 
-		{
-			"Kind": "DataKind_RecordID", 
-			"Name": "vv_ref", 
-			"Refs": ["test.doc"], 
-			"Required": true
-		}, 
-		{
-			"Kind": "DataKind_string", 
-			"Name": "vv_code", 
-			"Restricts": {
-				"MaxLen":	10, 
-				"Pattern":	"^\\w+$"
-			}
-		}, 
-		{
-			"Comment": "One kilobyte of data",
-			"Kind": "DataKind_bytes", 
-			"Name":	"vv_data", 
-			"Restricts": {
-				"MaxLen":1024
-			}
-		}
-	]
-}`
+			]
+		}`
 		require.JSONEq(expected, string(json))
 	}
 }
