@@ -54,6 +54,8 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 			analyseUseWorkspace(v, ictx)
 		case *AlterWorkspaceStmt:
 			analyseAlterWorkspace(v, ictx)
+		case *StorageStmt:
+			analyseStorage(v, ictx)
 		}
 	})
 }
@@ -93,6 +95,12 @@ func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 	err := resolveInCtx(u.Name, c, resolveFunc)
 	if err != nil {
 		c.stmtErr(&u.Pos, err)
+	}
+}
+
+func analyseStorage(u *StorageStmt, c *iterateCtx) {
+	if c.pkg.QualifiedPackageName != appdef.SysPackage {
+		c.stmtErr(&u.Pos, ErrStorageDeclaredOnlyInSys)
 	}
 }
 
