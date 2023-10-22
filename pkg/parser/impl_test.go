@@ -960,11 +960,12 @@ func Test_Projectors(t *testing.T) {
 		TABLE Order INHERITS ODoc();
 		EXTENSION ENGINE WASM (
 			COMMAND Orders();
-			PROJECTOR ImProjector1 ON test.CreateUPProfile; 		-- Undefined
-			PROJECTOR ImProjector2 ON Order; 						-- Good
-			PROJECTOR ImProjector3 AFTER UPDATE ON Order; 			-- Bad
-			PROJECTOR ImProjector4 AFTER ACTIVATE ON Order; 		-- Bad
-			PROJECTOR ImProjector5 AFTER DEACTIVATE ON Order; 		-- Bad
+			PROJECTOR ImProjector1 ON test.CreateUPProfile; 			-- Undefined
+			PROJECTOR ImProjector2 ON Order; 							-- Good
+			PROJECTOR ImProjector3 AFTER UPDATE ON Order; 				-- Bad
+			PROJECTOR ImProjector4 AFTER ACTIVATE ON Order; 			-- Bad
+			PROJECTOR ImProjector5 AFTER DEACTIVATE ON Order; 			-- Bad
+			PROJECTOR ImProjector6 AFTER INSERT ON Order OR ON Orders;	-- Good
 		)
 	)
 	`)
