@@ -1526,3 +1526,22 @@ func Test_Alter_Workspace_In_Package(t *testing.T) {
 	})
 	require.NoError(err)
 }
+
+func Test_Storages(t *testing.T) {
+	require := require.New(t)
+	fs, err := ParseFile("example2.sql", `APPLICATION test1(); 
+	EXTENSION ENGINE BUILTIN (
+		STORAGE MyStorage(
+			INSERT SCOPE(PROJECTORS)
+		);
+	)	
+	`)
+	require.NoError(err)
+	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	_, err = BuildAppSchema([]*PackageSchemaAST{
+		pkg2,
+	})
+	require.ErrorContains(err, "storages are only declared in sys package")
+}
