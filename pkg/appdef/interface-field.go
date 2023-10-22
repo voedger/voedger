@@ -17,13 +17,13 @@ type DataKind uint8
 // Ref. verification-king.go for constants and methods
 type VerificationKind uint8
 
-// Types with fields:
+// Final types with fields are:
 //	- TypeKind_GDoc and TypeKind_GRecord,
 //	- TypeKind_CDoc and TypeKind_CRecord,
 //	- TypeKind_ODoc and TypeKind_CRecord,
 //	- TypeKind_WDoc and TypeKind_WRecord,
 //	- TypeKind_Object and TypeKind_Element,
-//	- TypeKind_ViewRecord_PartitionKey, TypeKind_ViewRecord_ClusteringColumns and TypeKind_ViewRecord_Value
+//	- TypeKind_ViewRecord
 //
 // Ref. to field.go for implementation
 type IFields interface {
@@ -214,11 +214,13 @@ type IBytesField interface {
 
 type IBytesFieldRestricts = IStringFieldRestricts
 
+// FieldRestrict
+//
 // Field restrict. Describe single restrict for field.
 //
-// Interface functions to obtain new restricts:
+// Functions to obtain new restricts:
 //
-// # String fields:
+// # For string fields:
 //   - MinLen(uint16)
 //   - MaxLen(uint16)
 //   - Pattern(string)

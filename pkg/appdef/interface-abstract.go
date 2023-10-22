@@ -5,8 +5,8 @@
 
 package appdef
 
-// See [Issue #524](https://github.com/voedger/voedger/issues/524)
-// Types can be abstract:
+// See [Issue #524](https://github.com/voedger/voedger/issues/524).
+// Final types can be abstract are:
 //	- TypeKind_GDoc and TypeKind_GRecord,
 //	- TypeKind_CDoc and TypeKind_CRecord,
 //	- TypeKind_ODoc and TypeKind_CRecord,

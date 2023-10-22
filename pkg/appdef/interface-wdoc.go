@@ -6,6 +6,8 @@
 package appdef
 
 // Workflow document.
+//
+// Ref. to wdoc.go for implementation
 type IWDoc interface {
 	IDoc
 
@@ -22,7 +24,7 @@ type IWDocBuilder interface {
 //
 // Ref. to wdoc.go for implementation
 type IWRecord interface {
-	IRecord
+	IContainedRecord
 
 	// Unwanted type assertion stub
 	isWRecord()
@@ -30,5 +32,5 @@ type IWRecord interface {
 
 type IWRecordBuilder interface {
 	IWRecord
-	IRecordBuilder
+	IContainedRecordBuilder
 }

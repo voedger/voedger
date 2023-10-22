@@ -356,7 +356,7 @@ func TestValidateRefFields(t *testing.T) {
 		app.AddObject(NewQName("test", "obj"))
 		_, err := app.Build()
 		require.ErrorIs(err, ErrInvalidTypeKind)
-		require.ErrorContains(err, "non referable type «test.obj»")
+		require.ErrorContains(err, "not a record type Object «test.obj»")
 	})
 }
 

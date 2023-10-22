@@ -24,7 +24,7 @@ type IODocBuilder interface {
 //
 // Ref. to odoc.go for implementation
 type IORecord interface {
-	IRecord
+	IContainedRecord
 
 	// Unwanted type assertion stub
 	isORecord()
@@ -32,5 +32,5 @@ type IORecord interface {
 
 type IORecordBuilder interface {
 	IORecord
-	IRecordBuilder
+	IContainedRecordBuilder
 }

@@ -21,15 +21,15 @@ func newODoc(app *appDef, name QName) *oDoc {
 func (d *oDoc) isODoc() {}
 
 // # Implements:
-//   - IORecord
+//	- IORecord
 //	-	IORecordBuilder
 type oRecord struct {
-	record
+	containedRecord
 }
 
 func newORecord(app *appDef, name QName) *oRecord {
 	r := &oRecord{}
-	r.record = makeRecord(app, name, TypeKind_ORecord, r)
+	r.containedRecord = makeContainedRecord(app, name, TypeKind_ORecord, r)
 	app.appendType(r)
 	return r
 }

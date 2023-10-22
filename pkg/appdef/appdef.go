@@ -177,6 +177,14 @@ func (app *appDef) Query(name QName) IQuery {
 	return nil
 }
 
+func (app *appDef) Records(cb func(IRecord)) {
+	app.Structures(func(s IStructure) {
+		if r, ok := s.(IRecord); ok {
+			cb(r)
+		}
+	})
+}
+
 func (app *appDef) Structures(cb func(s IStructure)) {
 	app.Types(func(t IType) {
 		if s, ok := t.(IStructure); ok {

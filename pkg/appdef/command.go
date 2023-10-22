@@ -10,8 +10,6 @@ import (
 	"fmt"
 )
 
-// Command
-//
 // # Implements:
 //   - ICommand
 //   - ICommandBuilder
@@ -42,7 +40,7 @@ func (cmd *command) Validate() (err error) {
 
 	if cmd.unl.name != NullQName {
 		if cmd.unl.object(cmd.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: unlogged object type «%v» is not found: %w", cmd.QName(), cmd.unl.name, ErrNameNotFound))
+			err = errors.Join(err, fmt.Errorf("%v: unlogged object type «%v» is not found: %w", cmd, cmd.unl.name, ErrNameNotFound))
 		}
 	}
 

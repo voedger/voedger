@@ -25,7 +25,7 @@ type IExtension interface {
 
 // Function is a type of object that can be called.
 // Function may have parameter and result.
-// Function may have extension.
+// Function have extension.
 // Function may be query or command.
 //
 // Ref. to function.go for implementation

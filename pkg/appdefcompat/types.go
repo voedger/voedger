@@ -7,10 +7,11 @@ package appdefcompat
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
-type NodeType string
 type Constraint string
+type ErrorType string
 
 type CompatibilityTreeNode struct {
 	Name       string
@@ -34,34 +35,38 @@ type NodeConstraint struct {
 type CompatibilityError struct {
 	Constraint  Constraint
 	OldTreePath []string
-	// NodeRemoved:  (NonModifiable, AppendOnly,InsertOnly) : one error per removed node
-	// OrderChanged: (NonModifiable, AppendOnly): one error for the container
-	// NodeInserted: (NonModifiable): one error for the container
-	ErrMessage string
+	ErrorType   ErrorType
 }
 
-func newCompatibilityError(constraint Constraint, oldTreePath []string, errMsg string) CompatibilityError {
+func newCompatibilityError(constraint Constraint, oldTreePath []string, errType ErrorType) CompatibilityError {
 	return CompatibilityError{
 		Constraint:  constraint,
 		OldTreePath: oldTreePath,
-		ErrMessage:  errMsg,
+		ErrorType:   errType,
 	}
 }
 
 func (e CompatibilityError) Error() string {
-	return fmt.Sprintf(validationErrorFmt, string(e.Constraint), e.ErrMessage)
+	return fmt.Sprintf(validationErrorFmt, e.ErrorType, e.Path())
+}
+
+func (e CompatibilityError) Path() string {
+	return strings.Join(e.OldTreePath, pathDelimiter)
 }
 
 type CompatibilityErrors struct {
 	Errors []CompatibilityError
 }
 
-func (e *CompatibilityErrors) Error() string {
+func (e *CompatibilityErrors) Error() (err string) {
 	errs := make([]error, len(e.Errors))
 	for i, err := range e.Errors {
 		errs[i] = err
 	}
-	return errors.Join(errs...).Error()
+	if len(errs) > 0 {
+		return errors.Join(errs...).Error()
+	}
+	return
 }
 
 // matchNodesResult represents the result of matching nodes.

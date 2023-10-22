@@ -19,33 +19,33 @@ const (
 //   - IUnique
 type unique struct {
 	comment
-	parent interface{}
+	str    interface{}
 	name   string
 	fields []IField
 	id     UniqueID
 }
 
-func newUnique(parent interface{}, name string, fields []string) *unique {
+func newUnique(structure interface{}, name string, fields []string) *unique {
 	u := &unique{
-		parent: parent,
+		str:    structure,
 		name:   name,
 		fields: make([]IField, 0),
 		id:     NullUniqueID,
 	}
 	sort.Strings(fields)
-	fldType := parent.(IFields)
+	str := structure.(IStructure)
 	for _, f := range fields {
-		fld := fldType.Field(f)
+		fld := str.Field(f)
 		if fld == nil {
-			panic(fmt.Errorf("%v: can not create unique «%s»: field «%s» not found: %w", parent.(IType).QName(), name, f, ErrNameNotFound))
+			panic(fmt.Errorf("%v: can not create unique «%s»: field «%s» not found: %w", str, name, f, ErrNameNotFound))
 		}
 		u.fields = append(u.fields, fld)
 	}
 	return u
 }
 
-func (u unique) ParentType() IType {
-	return u.parent.(IType)
+func (u unique) ParentStructure() IStructure {
+	return u.str.(IStructure)
 }
 
 func (u unique) Name() string {
@@ -69,14 +69,14 @@ func (u *unique) SetID(value UniqueID) {
 //   - IUniques
 //   - IUniquesBuilder
 type uniques struct {
-	parent         interface{}
+	str            interface{}
 	uniques        map[string]*unique
 	uniquesOrdered []string
 	field          IField
 }
 
-func makeUniques(parent interface{}) uniques {
-	u := uniques{parent, make(map[string]*unique), make([]string, 0), nil}
+func makeUniques(structure interface{}) uniques {
+	u := uniques{structure, make(map[string]*unique), make([]string, 0), nil}
 	return u
 }
 
@@ -93,12 +93,12 @@ func (u *uniques) SetUniqueField(name string) IUniquesBuilder {
 		return u
 	}
 	if ok, err := ValidIdent(name); !ok {
-		panic((fmt.Errorf("%v: unique field name «%v» is invalid: %w", u.parentType().QName(), name, err)))
+		panic((fmt.Errorf("%v: unique field name «%v» is invalid: %w", u.structure(), name, err)))
 	}
 
-	fld := u.parentFields().Field(name)
+	fld := u.structure().Field(name)
 	if fld == nil {
-		panic((fmt.Errorf("%v: unique field name «%v» not found: %w", u.parentType().QName(), name, ErrNameNotFound)))
+		panic((fmt.Errorf("%v: unique field name «%v» not found: %w", u.structure(), name, ErrNameNotFound)))
 	}
 
 	u.field = fld
@@ -138,21 +138,21 @@ func (u *uniques) Uniques(enum func(IUnique)) {
 
 func (u *uniques) addUnique(name string, fields []string, comment ...string) IUniquesBuilder {
 	if ok, err := ValidIdent(name); !ok {
-		panic(fmt.Errorf("%v: unique name «%v» is invalid: %w", u.parentType().QName(), name, err))
+		panic(fmt.Errorf("%v: unique name «%v» is invalid: %w", u.structure(), name, err))
 	}
 	if u.UniqueByName(name) != nil {
-		panic(fmt.Errorf("%v: unique «%v» is already exists: %w", u.parentType().QName(), name, ErrNameUniqueViolation))
+		panic(fmt.Errorf("%v: unique «%v» is already exists: %w", u.structure(), name, ErrNameUniqueViolation))
 	}
 
 	if len(fields) == 0 {
-		panic(fmt.Errorf("%v: no fields specified for unique «%s»: %w", u.parentType().QName(), name, ErrNameMissed))
+		panic(fmt.Errorf("%v: no fields specified for unique «%s»: %w", u.structure(), name, ErrNameMissed))
 	}
 	if i, j := duplicates(fields); i >= 0 {
-		panic(fmt.Errorf("%v: unique «%s» has duplicates (fields[%d] == fields[%d] == %q): %w", u.parentType().QName(), name, i, j, fields[i], ErrNameUniqueViolation))
+		panic(fmt.Errorf("%v: unique «%s» has duplicates (fields[%d] == fields[%d] == %q): %w", u.structure(), name, i, j, fields[i], ErrNameUniqueViolation))
 	}
 
 	if len(fields) > MaxTypeUniqueFieldsCount {
-		panic(fmt.Errorf("%v: unique «%s» exceeds maximum fields (%d): %w", u.parentType().QName(), name, MaxTypeUniqueFieldsCount, ErrTooManyFields))
+		panic(fmt.Errorf("%v: unique «%s» exceeds maximum fields (%d): %w", u.structure(), name, MaxTypeUniqueFieldsCount, ErrTooManyFields))
 	}
 
 	u.Uniques(func(un IUnique) {
@@ -161,26 +161,22 @@ func (u *uniques) addUnique(name string, fields []string, comment ...string) IUn
 			ff = append(ff, f.Name())
 		}
 		if overlaps(fields, ff) {
-			panic(fmt.Errorf("%v: type already has unique «%s» which overlaps with new unique: %w", u.parentType().QName(), name, ErrUniqueOverlaps))
+			panic(fmt.Errorf("%v: type already has unique «%s» which overlaps with new unique: %w", u.structure(), name, ErrUniqueOverlaps))
 		}
 	})
 
 	if len(u.uniques) >= MaxTypeUniqueCount {
-		panic(fmt.Errorf("%v: maximum uniques (%d) is exceeded: %w", u.parentType().QName(), MaxTypeUniqueCount, ErrTooManyUniques))
+		panic(fmt.Errorf("%v: maximum uniques (%d) is exceeded: %w", u.structure(), MaxTypeUniqueCount, ErrTooManyUniques))
 	}
 
-	un := newUnique(u.parent, name, fields)
+	un := newUnique(u.str, name, fields)
 	un.SetComment(comment...)
 	u.uniques[name] = un
 	u.uniquesOrdered = append(u.uniquesOrdered, name)
 
-	return u.parent.(IUniquesBuilder)
+	return u.str.(IUniquesBuilder)
 }
 
-func (u *uniques) parentType() IType {
-	return u.parent.(IType)
-}
-
-func (u *uniques) parentFields() IFields {
-	return u.parent.(IFields)
+func (u *uniques) structure() IStructure {
+	return u.str.(IStructure)
 }
