@@ -237,56 +237,59 @@ func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 
 }
 func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
-	for _, target := range v.On {
-		if v.CUDEvents != nil {
-			resolveFunc := func(table *TableStmt, _ *PackageSchemaAST) error {
-				if table.Abstract {
-					return ErrAbstractTableNotAlowedInProjectors(target.String())
-				}
-				k, _, err := getTableTypeKind(table, c)
-				if err != nil {
-					return err
-				}
-				if k == appdef.TypeKind_ODoc || k == appdef.TypeKind_ORecord {
-					if v.CUDEvents.Activate || v.CUDEvents.Deactivate || v.CUDEvents.Update {
-						return ErrOnlyInsertForOdocOrORecord
+
+	for _, trigger := range v.Triggers {
+		for _, qname := range trigger.QNames {
+			if trigger.CUDEvents != nil {
+				resolveFunc := func(table *TableStmt, _ *PackageSchemaAST) error {
+					if table.Abstract {
+						return ErrAbstractTableNotAlowedInProjectors(qname.String())
 					}
+					k, _, err := getTableTypeKind(table, c)
+					if err != nil {
+						return err
+					}
+					if k == appdef.TypeKind_ODoc || k == appdef.TypeKind_ORecord {
+						if trigger.CUDEvents.Activate || trigger.CUDEvents.Deactivate || trigger.CUDEvents.Update {
+							return ErrOnlyInsertForOdocOrORecord
+						}
+					}
+					return nil
 				}
-				return nil
-			}
-			if err := resolveInCtx(target, c, resolveFunc); err != nil {
-				c.stmtErr(&v.Pos, err)
-			}
-		} else { // The type of ON not defined
-			// Command?
-			cmd, _, err := lookupInCtx[*CommandStmt](target, c)
-			if err != nil {
-				c.stmtErr(&v.Pos, err)
-				continue
-			}
-			if cmd != nil {
-				continue // resolved
-			}
+				if err := resolveInCtx(qname, c, resolveFunc); err != nil {
+					c.stmtErr(&v.Pos, err)
+				}
+			} else { // The type of ON not defined
+				// Command?
+				cmd, _, err := lookupInCtx[*CommandStmt](qname, c)
+				if err != nil {
+					c.stmtErr(&v.Pos, err)
+					continue
+				}
+				if cmd != nil {
+					continue // resolved
+				}
 
-			// Command Argument?
-			cmdArg, _, err := lookupInCtx[*TypeStmt](target, c)
-			if err != nil {
-				c.stmtErr(&v.Pos, err)
-				continue
-			}
-			if cmdArg != nil {
-				continue // resolved
-			}
+				// Command Argument?
+				cmdArg, _, err := lookupInCtx[*TypeStmt](qname, c)
+				if err != nil {
+					c.stmtErr(&v.Pos, err)
+					continue
+				}
+				if cmdArg != nil {
+					continue // resolved
+				}
 
-			// Table?
-			table, _, err := lookupInCtx[*TableStmt](target, c)
-			if err != nil {
-				c.stmtErr(&v.Pos, err)
-				continue
-			}
-			if table == nil {
-				c.stmtErr(&v.Pos, ErrUndefinedExpectedCommandTypeOrTable(target))
-				continue
+				// Table?
+				table, _, err := lookupInCtx[*TableStmt](qname, c)
+				if err != nil {
+					c.stmtErr(&v.Pos, err)
+					continue
+				}
+				if table == nil {
+					c.stmtErr(&v.Pos, ErrUndefinedExpectedCommandTypeOrTable(qname))
+					continue
+				}
 			}
 		}
 	}
