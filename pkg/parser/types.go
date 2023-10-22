@@ -734,3 +734,19 @@ type ViewField struct {
 	Type    DataType `parser:"@@"`
 	NotNull bool     `parser:"@(NOTNULL)?"`
 }
+
+type ExportedApp struct {
+	Ast    *AppSchemaAST
+	Ignore []string
+}
+
+type ExportedAppInfo struct {
+	Package string   `json:"package"`
+	Ignore  []string `json:"ignore"`
+}
+
+type ExportedAppsInfo struct {
+	Version int32             `json:"version"`
+	Apps    []ExportedAppInfo `json:"apps"`
+	Ignore  []string          `json:"ignore"`
+}

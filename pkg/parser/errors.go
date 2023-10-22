@@ -37,6 +37,7 @@ var ErrMaxFieldLengthTooLarge = fmt.Errorf("maximum field length is %d", appdef.
 var ErrOnlyInsertForOdocOrORecord = errors.New("only INSERT allowed for ODoc or ORecord")
 var ErrPackageWithSameNameAlreadyIncludedInApp = errors.New("package with the same name already included in application")
 var ErrStorageDeclaredOnlyInSys = errors.New("storages are only declared in sys package")
+var ErrPkgFolderNotFound = errors.New("pkg folder not found")
 
 func ErrAppDoesNotDefineUseOfPackage(name string) error {
 	return fmt.Errorf("application does not define use of package %s", name)
