@@ -5,6 +5,7 @@
 package parser
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -18,11 +19,11 @@ type iterateCtx struct {
 	parent     *iterateCtx
 }
 
-func findApplication(c *basicContext, p *PackageSchemaAST) (result *ApplicationStmt, err error) {
+func findApplication(p *PackageSchemaAST) (result *ApplicationStmt, err error) {
 	for _, stmt := range p.Ast.Statements {
 		if stmt.Application != nil {
 			if result != nil {
-				return nil, c.newStmtErr(&stmt.Application.Pos, ErrApplicationRedefined)
+				return nil, fmt.Errorf("%s: %w", stmt.Application.Pos.String(), ErrApplicationRedefined)
 			}
 			result = stmt.Application
 		}

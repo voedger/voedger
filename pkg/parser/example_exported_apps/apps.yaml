@@ -1,0 +1,8 @@
+versoin: 1
+apps:
+- package: github.com/company1/repo/folder1
+  ignore:
+  - bp3.PBillParams/Fields/Number
+- package: github.com/company2/repo
+ignore:
+- sys.CreateLoginParams/Fields/ProfileToken

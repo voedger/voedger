@@ -7,6 +7,9 @@ package parser
 
 import (
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -332,4 +335,20 @@ func contains(s []Ident, e Ident) bool {
 		}
 	}
 	return false
+}
+
+type PathReader struct {
+	rootPath string
+}
+
+func (r *PathReader) Open(name string) (fs.File, error) {
+	return os.Open(filepath.Join(r.rootPath, name))
+}
+
+func (r *PathReader) ReadDir(name string) ([]os.DirEntry, error) {
+	return os.ReadDir(filepath.Join(r.rootPath, name))
+}
+
+func (r *PathReader) ReadFile(name string) ([]byte, error) {
+	return os.ReadFile(filepath.Join(r.rootPath, name))
 }
