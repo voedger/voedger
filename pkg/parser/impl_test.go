@@ -54,7 +54,7 @@ func Test_BasicUsage(t *testing.T) {
 	// := repr.String(pkgExample, repr.Indent(" "), repr.IgnorePrivate())
 	//fmt.Println(parsedSchemaStr)
 
-	packages, err := BuildAppSchema([]*PackageSchemaAST{
+	appSchema, err := BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		mainPkgAST,
 		airPkgAST,
@@ -63,7 +63,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.NoError(err)
 
 	builder := appdef.New()
-	err = BuildAppDefs(packages, builder)
+	err = BuildAppDefs(appSchema, builder)
 	require.NoError(err)
 
 	// table
@@ -1526,4 +1526,84 @@ func Test_Alter_Workspace_In_Package(t *testing.T) {
 		pkg1,
 	})
 	require.NoError(err)
+}
+
+func Test_UseTables(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("main.sql", `
+	IMPORT SCHEMA 'org/pkg1';
+	IMPORT SCHEMA 'org/pkg2';
+	APPLICATION test(
+		USE pkg1;
+		USE pkg2;
+	);
+	TABLE TestTable1 INHERITS CDoc();
+	TABLE TestTable2 INHERITS CDoc();
+
+	WORKSPACE Ws(
+		USE TABLE *;				-- good, import all tables declared on current package level
+		USE TABLE pkg1.*;			-- good, import all tables from specified package
+		USE TABLE pkg2.Pkg2Table1;	-- good, import specified table
+		USE TABLE pkg2.Pkg2Table3;  -- bad, declared in workspace
+	)
+	`)
+	require.NoError(err)
+	pkg, err := BuildPackageSchema("test/main", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	// pkg1
+	fs1, err := ParseFile("file1.sql", `
+	TABLE Pkg1Table1 INHERITS CDoc();
+	TABLE Pkg1Table2 INHERITS CDoc();
+
+	WORKSPACE Ws(
+		TABLE Pkg1Table3 INHERITS CDoc();
+	)
+	`)
+	require.NoError(err)
+	pkg1, err := BuildPackageSchema("org/pkg1", []*FileSchemaAST{fs1})
+	require.NoError(err)
+
+	// pkg2
+	fs2, err := ParseFile("file2.sql", `
+	TABLE Pkg2Table1 INHERITS CDoc();
+	TABLE Pkg2Table2 INHERITS CDoc();
+
+	WORKSPACE Ws(
+		TABLE Pkg2Table3 INHERITS CDoc();
+	)
+	`)
+	require.NoError(err)
+	pkg2, err := BuildPackageSchema("org/pkg2", []*FileSchemaAST{fs2})
+	require.NoError(err)
+
+	schema, err := BuildAppSchema([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+		pkg1,
+		pkg2,
+	})
+
+	require.EqualError(err, strings.Join([]string{
+		"main.sql:15:3: pkg2.Pkg2Table3 undefined",
+	}, "\n"))
+
+	builder := appdef.New()
+	err = BuildAppDefs(schema, builder)
+	require.EqualError(err, strings.Join([]string{
+		"main.sql:15:3: pkg2.Pkg2Table3 undefined",
+	}, "\n"))
+
+	ws := builder.Workspace(appdef.NewQName("main", "Ws"))
+	require.NotNil(ws)
+
+	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("main", "TestTable1")).Kind())
+	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("main", "TestTable2")).Kind())
+	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg1", "Pkg1Table1")).Kind())
+	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg1", "Pkg1Table2")).Kind())
+	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg1", "Pkg1Table3")).Kind())
+	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table1")).Kind())
+	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table2")).Kind())
+	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table3")).Kind())
 }
