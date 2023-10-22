@@ -1607,3 +1607,22 @@ func Test_UseTables(t *testing.T) {
 	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table2")).Kind())
 	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table3")).Kind())
 }
+
+func Test_Storages(t *testing.T) {
+	require := require.New(t)
+	fs, err := ParseFile("example2.sql", `APPLICATION test1(); 
+	EXTENSION ENGINE BUILTIN (
+		STORAGE MyStorage(
+			INSERT SCOPE(PROJECTORS)
+		);
+	)	
+	`)
+	require.NoError(err)
+	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	_, err = BuildAppSchema([]*PackageSchemaAST{
+		pkg2,
+	})
+	require.ErrorContains(err, "storages are only declared in sys package")
+}
