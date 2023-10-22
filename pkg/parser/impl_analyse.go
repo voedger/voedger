@@ -61,14 +61,26 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 }
 
 func analyseUseTable(u *UseTableStmt, c *iterateCtx) {
-	err := resolveInCtx(u.Table, c, func(f *TableStmt, _ *PackageSchemaAST) error {
-		if f.Abstract {
-			return ErrUseOfAbstractTable(u.Table.String())
+	if u.TableName != nil {
+		n := DefQName{Package: u.Package, Name: *u.TableName}
+		err := resolveInCtx(n, c, func(f *TableStmt, _ *PackageSchemaAST) error {
+			if f.Abstract {
+				return ErrUseOfAbstractTable(n.String())
+			}
+			return nil
+		})
+		if err != nil {
+			c.stmtErr(&u.Pos, err)
 		}
-		return nil
-	})
-	if err != nil {
-		c.stmtErr(&u.Pos, err)
+	} else {
+		if u.Package != "" {
+			_, e := findPackage(u.Package, c)
+			if e != nil {
+				c.stmtErr(&u.Pos, e)
+				return
+			}
+
+		}
 	}
 }
 
