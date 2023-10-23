@@ -12,6 +12,21 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
 ABSTRACT WORKSPACE Workspace (
+
+    TYPE CreateLoginParams (
+        Login text NOT NULL,
+        AppName text NOT NULL,
+        SubkectKind int32 NOT NULL,
+        WSKindInitializationData text(1024) NOT NULL,
+        ProfileClusterID int32 NOT NULL
+    )
+
+    TYPE CreateLoginUnloggedParams (
+        Password text NOT NULL
+    )
+
+    COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
+
 	TYPE EchoParams (
 		Text text NOT NULL
 	);
