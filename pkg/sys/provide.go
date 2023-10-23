@@ -50,7 +50,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	processors.ProvideJSONFuncParamsDef(appDefBuilder)
 	verifier.Provide(cfg, appDefBuilder, itokens, federation, asp, smtpCfg)
 	signupin.ProvideQryRefreshPrincipalToken(cfg, appDefBuilder, itokens)
-	signupin.ProvideCDocLogin(appDefBuilder, ep)
 	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, atf)
 	invite.Provide(cfg, appDefBuilder, timeFunc, federation, itokens, smtpCfg)
 	uniques.Provide(cfg, appDefBuilder)
