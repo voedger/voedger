@@ -5,7 +5,6 @@
 package signupin
 
 import (
-	"embed"
 	"regexp"
 	"time"
 
@@ -48,6 +47,3 @@ const (
 	ErrMessagePasswordIsIncorrect        = "password is incorrect"
 	ErrFormatMessageLoginDoesntExist     = "login %s does not exist"
 )
-
-//go:embed schemas.sql
-var schemasFS embed.FS

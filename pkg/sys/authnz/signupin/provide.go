@@ -6,8 +6,6 @@ package signupin
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -18,10 +16,15 @@ import (
 )
 
 func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federation coreutils.IFederation,
-	asp istructs.IAppStructsProvider, ep extensionpoints.IExtensionPoint) {
+	asp istructs.IAppStructsProvider) {
 
-	// c.sys.CreateLogin
-	provideCmdCreateLogin(cfgRegistry, appDefBuilder, asp)
+	cfgRegistry.Resources.Add(istructsmem.NewCommandFunction(
+		authnz.QNameCommandCreateLogin,
+		appdef.NullQName,
+		appdef.NullQName,
+		appdef.NullQName,
+		execCmdCreateLogin(asp),
+	))
 
 	// istructs.Projector<S, LoginIdx>
 	projectors.ProvideViewDef(appDefBuilder, QNameViewLoginIdx, func(b appdef.IViewBuilder) {
@@ -62,28 +65,6 @@ func ProvideCmdEnrichPrincipalToken(cfg *istructsmem.AppConfigType, appDefBuilde
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "EnrichPrincipalTokenResult")).
 			AddField(field_EnrichedToken, appdef.DataKind_string, true).(appdef.IType).QName(),
 		provideExecQryEnrichPrincipalToken(atf),
-	))
-}
-
-// CDoc<Login> must be known in each target app. "unknown ownerQName scheme CDoc<Login>" on c.sys.CreatWorkspaceID otherwise
-// has no ownerApp field because it is sys/registry always
-func ProvideCDocLogin(appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-	apps.Parse(schemasFS, appdef.SysPackage, ep)
-}
-
-func provideCmdCreateLogin(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider) {
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		authnz.QNameCommandCreateLogin,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateLoginParams")).
-			AddField(authnz.Field_Login, appdef.DataKind_string, true).
-			AddField(Field_AppName, appdef.DataKind_string, true).
-			AddField(authnz.Field_SubjectKind, appdef.DataKind_int32, true).
-			AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, true).
-			AddField(authnz.Field_ProfileClusterID, appdef.DataKind_int32, true).(appdef.IType).QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateLoginUnloggedParams")).
-			AddField(field_Password, appdef.DataKind_string, true).(appdef.IType).QName(),
-		appdef.NullQName,
-		execCmdCreateLogin(asp),
 	))
 }
 
