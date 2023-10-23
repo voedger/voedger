@@ -23,6 +23,9 @@ const (
 
 const rootWorkspaceName = "Workspace"
 
+const ExportedAppsFile = "apps.yaml"
+const ExportedPkgFolder = "pkg"
+
 const maxNestedTableContainerOccurrences = 100 // FIXME: 100 container occurrences
 
 var canNotReferenceTo = map[appdef.TypeKind][]appdef.TypeKind{
