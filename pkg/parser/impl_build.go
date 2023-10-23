@@ -332,9 +332,9 @@ func (c *buildContext) views() error {
 				if f.Field != nil {
 					switch k := dataTypeToDataKind(f.Field.Type); k {
 					case appdef.DataKind_bytes:
-						vb().ValueBuilder().AddBytesField(string(f.Field.Name), f.Field.NotNull, resolveLen(f.Field))
+						vb().ValueBuilder().AddBytesField(string(f.Field.Name), f.Field.NotNull, appdef.MaxLen(resolveLen(f.Field)))
 					case appdef.DataKind_string:
-						vb().ValueBuilder().AddStringField(string(f.Field.Name), f.Field.NotNull, resolveLen(f.Field))
+						vb().ValueBuilder().AddStringField(string(f.Field.Name), f.Field.NotNull, appdef.MaxLen(resolveLen(f.Field)))
 					default: // other data types
 						vb().ValueBuilder().AddField(string(f.Field.Name), k, f.Field.NotNull)
 					}
@@ -511,19 +511,19 @@ func (c *buildContext) addFieldToDef(field *FieldExpr, ictx *iterateCtx) {
 
 		if field.Type.DataType.Bytes != nil {
 			if field.Type.DataType.Bytes.MaxLen != nil {
-				bld.AddBytesField(fieldName, field.NotNull, appdef.FLD_MaxLen(*field.Type.DataType.Bytes.MaxLen))
+				bld.AddBytesField(fieldName, field.NotNull, appdef.MaxLen(*field.Type.DataType.Bytes.MaxLen))
 			} else {
 				bld.AddBytesField(fieldName, field.NotNull)
 			}
 		} else if field.Type.DataType.Varchar != nil {
-			restricts := make([]appdef.IFieldRestrict, 0)
+			constraints := make([]appdef.IConstraint, 0)
 			if field.Type.DataType.Varchar.MaxLen != nil {
-				restricts = append(restricts, appdef.FLD_MaxLen(*field.Type.DataType.Varchar.MaxLen))
+				constraints = append(constraints, appdef.MaxLen(*field.Type.DataType.Varchar.MaxLen))
 			}
 			if field.CheckRegexp != nil {
-				restricts = append(restricts, appdef.FLD_Pattern(*field.CheckRegexp))
+				constraints = append(constraints, appdef.Pattern(*field.CheckRegexp))
 			}
-			bld.AddStringField(fieldName, field.NotNull, restricts...)
+			bld.AddStringField(fieldName, field.NotNull, constraints...)
 		} else {
 			bld.AddField(fieldName, sysDataKind, field.NotNull)
 		}

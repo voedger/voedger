@@ -1179,9 +1179,16 @@ func Test_1KStringField(t *testing.T) {
 	cdoc := appBld.CDoc(appdef.NewQName("test", "MyTable"))
 	require.NotNil(cdoc)
 
-	fld := cdoc.Field("KB").(appdef.IStringField)
+	fld := cdoc.Field("KB")
 	require.NotNil(fld)
-	require.EqualValues(1024, fld.Restricts().MaxLen())
+
+	cnt := 0
+	fld.Constraints(func(c appdef.IConstraint) {
+		cnt++
+		require.Equal(appdef.ConstraintKind_MaxLen, c.Kind())
+		require.EqualValues(1024, c.Value())
+	})
+	require.Equal(1, cnt)
 }
 
 func Test_ReferenceToNoTable(t *testing.T) {
