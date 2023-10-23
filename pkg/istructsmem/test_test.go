@@ -231,11 +231,11 @@ func test() *testDataType {
 
 			saleParams := appDef.AddODoc(testData.saleCmdDocName)
 			saleParams.
-				AddTypedField(testData.buyerIdent, testData.dataIdent, true).
+				AddDataField(testData.buyerIdent, testData.dataIdent, true).
 				AddField(testData.ageIdent, appdef.DataKind_int32, false).
 				AddField(testData.heightIdent, appdef.DataKind_float32, false).
 				AddField(testData.humanIdent, appdef.DataKind_bool, false).
-				AddTypedField(testData.photoIdent, testData.dataPhoto, false)
+				AddDataField(testData.photoIdent, testData.dataPhoto, false)
 			saleParams.
 				AddContainer(testData.basketIdent, appdef.NewQName(testData.pkgName, testData.basketIdent), 1, 1)
 
@@ -262,11 +262,11 @@ func test() *testDataType {
 		{
 			rec := appDef.AddCDoc(testData.tablePhotos)
 			rec.
-				AddTypedField(testData.buyerIdent, testData.dataIdent, true).
+				AddDataField(testData.buyerIdent, testData.dataIdent, true).
 				AddField(testData.ageIdent, appdef.DataKind_int32, false).
 				AddField(testData.heightIdent, appdef.DataKind_float32, false).
 				AddField(testData.humanIdent, appdef.DataKind_bool, false).
-				AddTypedField(testData.photoIdent, testData.dataPhoto, false)
+				AddDataField(testData.photoIdent, testData.dataPhoto, false)
 			rec.
 				AddUnique("", []string{testData.buyerIdent})
 			rec.
@@ -343,7 +343,7 @@ func test() *testDataType {
 				AddField(testData.testViewRecord.valueFields.age, appdef.DataKind_int32, false).
 				AddField(testData.testViewRecord.valueFields.heights, appdef.DataKind_float32, false).
 				AddField(testData.testViewRecord.valueFields.human, appdef.DataKind_bool, false).
-				AddTypedField(testData.testViewRecord.valueFields.photo, testData.dataPhoto, false).
+				AddDataField(testData.testViewRecord.valueFields.photo, testData.dataPhoto, false).
 				AddField(testData.testViewRecord.valueFields.record, appdef.DataKind_Record, false).
 				AddField(testData.testViewRecord.valueFields.event, appdef.DataKind_Event, false)
 		}

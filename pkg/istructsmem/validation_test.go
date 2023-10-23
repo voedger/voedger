@@ -938,8 +938,8 @@ func Test_CharsFieldRestricts(t *testing.T) {
 			appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`))
 
 		appDef.AddObject(objName).
-			AddTypedField("email", emailData, true).
-			AddTypedField("mime", mimeData, false)
+			AddDataField("email", emailData, true).
+			AddDataField("mime", mimeData, false)
 	})
 
 	cfgs := make(AppConfigsType, 1)

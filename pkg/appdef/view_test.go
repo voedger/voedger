@@ -15,13 +15,16 @@ import (
 func TestAddView(t *testing.T) {
 	require := require.New(t)
 
-	ab := New()
+	adb := New()
+
+	digsData := NewQName("test", "digs")
+	_ = adb.AddData(digsData, DataKind_string, NullQName, Pattern(`^\d+$`, "only digits allowed"))
 
 	docName := NewQName("test", "doc")
-	_ = ab.AddCDoc(docName)
+	_ = adb.AddCDoc(docName)
 
 	viewName := NewQName("test", "view")
-	vb := ab.AddView(viewName)
+	vb := adb.AddView(viewName)
 
 	t.Run("must be ok to build view", func(t *testing.T) {
 
@@ -50,12 +53,13 @@ func TestAddView(t *testing.T) {
 		})
 
 		t.Run("must be ok to add value fields", func(t *testing.T) {
-			vb.ValueBuilder().AddField("valF1", DataKind_bool, true)
-			vb.ValueBuilder().AddStringField("valF2", false, Pattern(`^\d+$`, "only digits allowed"))
+			vb.ValueBuilder().
+				AddField("valF1", DataKind_bool, true).
+				AddDataField("valF2", digsData, false, MaxLen(100)).SetFieldComment("valF2", "up to 100 digits")
 		})
 	})
 
-	app, err := ab.Build()
+	app, err := adb.Build()
 	require.NoError(err)
 	view := app.View(viewName)
 
@@ -63,6 +67,27 @@ func TestAddView(t *testing.T) {
 		require.Equal("test view", view.Comment())
 		require.Equal(viewName, view.QName())
 		require.Equal(TypeKind_ViewRecord, view.Kind())
+
+		checkValueValF2 := func(f IField) {
+			require.Equal("valF2", f.Name())
+			require.False(f.Required())
+			cnt := 0
+			f.Constraints(func(c IConstraint) {
+				cnt++
+				switch cnt {
+				case 1:
+					require.Equal(ConstraintKind_MaxLen, c.Kind())
+					require.EqualValues(100, c.Value())
+				case 2:
+					require.Equal(ConstraintKind_Pattern, c.Kind())
+					require.EqualValues(`^\d+$`, c.Value().(*regexp.Regexp).String())
+					require.Equal("only digits allowed", c.Comment())
+				default:
+					require.Fail("unexpected constraint", "constraint: %v", c)
+				}
+			})
+			require.Equal("up to 100 digits", f.Comment())
+		}
 
 		require.Equal(7, view.FieldCount())
 		cnt := 0
@@ -88,8 +113,7 @@ func TestAddView(t *testing.T) {
 				require.Equal("valF1", f.Name())
 				require.True(f.Required())
 			case 7:
-				require.Equal("valF2", f.Name())
-				require.False(f.Required())
+				checkValueValF2(f)
 			default:
 				require.Fail("unexpected field «%s»", f.Name())
 			}
@@ -176,8 +200,7 @@ func TestAddView(t *testing.T) {
 					require.Equal("valF1", f.Name())
 					require.True(f.Required())
 				case 3:
-					require.Equal("valF2", f.Name())
-					require.False(f.Required())
+					checkValueValF2(f)
 				default:
 					require.Fail("unexpected field «%s»", f.Name())
 				}
@@ -195,7 +218,7 @@ func TestAddView(t *testing.T) {
 			require.Equal(v, view)
 		})
 
-		require.Nil(ab.View(NewQName("test", "unknown")), "find unknown view must return nil")
+		require.Nil(adb.View(NewQName("test", "unknown")), "find unknown view must return nil")
 
 		t.Run("must be nil if not view", func(t *testing.T) {
 			require.Nil(app.View(docName))
@@ -228,7 +251,7 @@ func TestAddView(t *testing.T) {
 			AddBytesField("valF4", false, MaxLen(1024)).SetFieldComment("valF4", "test comment").
 			AddField("valF5", DataKind_bool, false).SetFieldVerify("valF5", VerificationKind_EMail)
 
-		_, err := ab.Build()
+		_, err := adb.Build()
 		require.NoError(err)
 
 		require.Equal(3, view.Key().PartKey().FieldCount())
@@ -253,22 +276,7 @@ func TestAddView(t *testing.T) {
 			case "valF2":
 				require.Equal(DataKind_string, f.DataKind())
 				require.False(f.Required())
-				cnt := 0
-				f.Constraints(func(c IConstraint) {
-					cnt++
-					switch cnt {
-					case 1:
-						require.Equal(ConstraintKind_MaxLen, c.Kind())
-						require.EqualValues(DefaultFieldMaxLength, c.Value())
-					case 2:
-						require.Equal(ConstraintKind_Pattern, c.Kind())
-						require.EqualValues(`^\d+$`, c.Value().(*regexp.Regexp).String())
-						require.Equal("only digits allowed", c.Comment())
-					default:
-						require.Fail("unexpected constraint", "constraint: %v", c)
-					}
-				})
-				require.EqualValues(2, cnt)
+				// valF2 constraints checked above
 			case "valF3":
 				require.Equal(DataKind_RecordID, f.DataKind())
 				require.False(f.Required())

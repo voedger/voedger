@@ -106,9 +106,9 @@ type IFieldsBuilder interface {
 	//   - if field name is invalid,
 	//   - if field with name is already exists,
 	//   - if specified data type is not found,
-	//   - if specified data kind is not allowed by structured type kind.
-	// FIXME: rename to AddDataField
-	AddTypedField(name string, data QName, required bool, constraints ...IConstraint) IFieldsBuilder
+	//   - if specified data kind is not allowed by structured type kind,
+	//	 - if constraints are not compatible with specified data type.
+	AddDataField(name string, data QName, required bool, constraints ...IConstraint) IFieldsBuilder
 
 	// Sets fields comment.
 	// Useful for reference or verified fields, what Add×××Field has not comments

@@ -38,7 +38,7 @@ func TestBasicUsage(t *testing.T) {
 		AddField("f1", appdef.DataKind_int64, true).
 		SetFieldComment("f1", "field comment").
 		AddStringField("f2", false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`)).
-		AddTypedField("intField", intName, false).
+		AddDataField("intField", intName, false).
 		AddRefField("mainChild", false, recName).(appdef.ICDocBuilder).
 		AddContainer("rec", recName, 0, 100, "container comment").(appdef.ICDocBuilder).
 		AddUnique("", []string{"f1", "f2"})
@@ -59,7 +59,7 @@ func TestBasicUsage(t *testing.T) {
 	view.KeyBuilder().ClustColsBuilder().
 		AddStringField("cc_1", 100)
 	view.ValueBuilder().
-		AddTypedField("vv_code", strName, true).
+		AddDataField("vv_code", strName, true).
 		AddRefField("vv_1", true, docName)
 
 	objName := appdef.NewQName("test", "obj")

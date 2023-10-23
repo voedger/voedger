@@ -129,6 +129,19 @@ func (ff *fields) AddBytesField(name string, required bool, constraints ...ICons
 	return ff.emb.(IFieldsBuilder)
 }
 
+func (ff *fields) AddDataField(name string, data QName, required bool, constraints ...IConstraint) IFieldsBuilder {
+	d := ff.app.Data(data)
+	if d == nil {
+		panic(fmt.Errorf("%v: data type «%v» not found: %w", ff.embeds(), data, ErrNameNotFound))
+	}
+	if len(constraints) > 0 {
+		d = newAnonymousData(ff.app, d.DataKind(), data, constraints...)
+	}
+	f := newField(name, d, required)
+	ff.appendField(name, f)
+	return ff.emb.(IFieldsBuilder)
+}
+
 func (ff *fields) AddField(name string, kind DataKind, required bool, comments ...string) IFieldsBuilder {
 	d := ff.app.SysData(kind)
 	if d == nil {
@@ -148,19 +161,6 @@ func (ff *fields) AddRefField(name string, required bool, ref ...QName) IFieldsB
 
 func (ff *fields) AddStringField(name string, required bool, constraints ...IConstraint) IFieldsBuilder {
 	d := newAnonymousData(ff.app, DataKind_string, NullQName, constraints...)
-	f := newField(name, d, required)
-	ff.appendField(name, f)
-	return ff.emb.(IFieldsBuilder)
-}
-
-func (ff *fields) AddTypedField(name string, data QName, required bool, constraints ...IConstraint) IFieldsBuilder {
-	d := ff.app.Data(data)
-	if d == nil {
-		panic(fmt.Errorf("%v: data type «%v» not found: %w", ff.embeds(), data, ErrNameNotFound))
-	}
-	if len(constraints) > 0 {
-		d = newAnonymousData(ff.app, d.DataKind(), data, constraints...)
-	}
 	f := newField(name, d, required)
 	ff.appendField(name, f)
 	return ff.emb.(IFieldsBuilder)
