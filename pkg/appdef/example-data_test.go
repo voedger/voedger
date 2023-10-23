@@ -27,8 +27,7 @@ func ExampleIAppDefBuilder_AddData() {
 		_ = appDef.AddData(intName, appdef.DataKind_int64, appdef.NullQName)
 		_ = appDef.AddData(floatName, appdef.DataKind_float64, appdef.NullQName)
 
-		s := appDef.AddData(strName, appdef.DataKind_string, appdef.NullQName)
-		s.AddConstraints(appdef.MinLen(1), appdef.MaxLen(4))
+		_ = appDef.AddData(strName, appdef.DataKind_string, appdef.NullQName, appdef.MinLen(1), appdef.MaxLen(4))
 
 		t := appDef.AddData(tokenName, appdef.DataKind_string, strName)
 		t.AddConstraints(appdef.Pattern("^[a-z]+$"))

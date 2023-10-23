@@ -22,6 +22,7 @@ func (d *Data) read(data appdef.IData) {
 		q := data.Ancestor().QName()
 		d.Ancestor = &q
 	} else {
+		// notest: only system data types have no ancestor
 		k := data.DataKind()
 		d.DataKind = &k
 	}

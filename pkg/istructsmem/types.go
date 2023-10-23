@@ -257,7 +257,7 @@ func (row *rowType) putValue(name string, kind dynobuffers.FieldType, value inte
 			row.collectError(err)
 			return
 		}
-		if err := checkRestricts(fld, data); err != nil {
+		if err := checkConstraints(fld, data); err != nil {
 			row.collectError(err)
 			return
 		}
@@ -272,7 +272,7 @@ func (row *rowType) putValue(name string, kind dynobuffers.FieldType, value inte
 		}
 	}
 
-	if err := checkRestricts(fld, value); err != nil {
+	if err := checkConstraints(fld, value); err != nil {
 		row.collectError(err)
 		return
 	}

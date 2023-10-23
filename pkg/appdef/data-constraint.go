@@ -15,7 +15,7 @@ import (
 //
 // # Panics:
 //   - if value is greater then MaxFieldLength (1024)
-func MinLen(v int, c ...string) IConstraint {
+func MinLen(v uint16, c ...string) IConstraint {
 	if v > MaxFieldLength {
 		panic(fmt.Errorf("minimum length value (%d) is too large, %d is maximum: %w", v, MaxFieldLength, ErrMaxFieldLengthExceeds))
 	}

@@ -130,8 +130,9 @@ type IAppDefBuilder interface {
 	//   - if type with name already exists,
 	//   - if ancestor is not found,
 	//	 - if ancestor is not data,
-	//	 - if ancestor has different kind.
-	AddData(name QName, kind DataKind, ancestor QName) IDataBuilder
+	//	 - if ancestor has different kind,
+	//	 - if constraints are not compatible with data kind.
+	AddData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder
 
 	// Adds new GDoc type with specified name.
 	//

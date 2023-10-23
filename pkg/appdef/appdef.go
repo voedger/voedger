@@ -40,8 +40,9 @@ func (app *appDef) AddCRecord(name QName) ICRecordBuilder {
 	return newCRecord(app, name)
 }
 
-func (app *appDef) AddData(name QName, kind DataKind, ancestor QName) IDataBuilder {
+func (app *appDef) AddData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder {
 	d := newData(app, name, kind, ancestor)
+	d.AddConstraints(constraints...)
 	app.appendType(d)
 	return d
 }

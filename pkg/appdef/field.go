@@ -73,6 +73,10 @@ func (fld *field) Name() string { return fld.name }
 
 func (fld *field) Required() bool { return fld.required }
 
+func (fld field) String() string {
+	return fmt.Sprintf("%s-field «%s»", fld.DataKind().TrimString(), fld.Name())
+}
+
 func (fld *field) Verifiable() bool { return fld.verifiable }
 
 func (fld *field) VerificationKind(vk VerificationKind) bool {
@@ -149,13 +153,13 @@ func (ff *fields) AddStringField(name string, required bool, constraints ...ICon
 	return ff.emb.(IFieldsBuilder)
 }
 
-func (ff *fields) AddTypedField(name string, dataType QName, required bool, constraints ...IConstraint) IFieldsBuilder {
-	d := ff.app.Data(dataType)
+func (ff *fields) AddTypedField(name string, data QName, required bool, constraints ...IConstraint) IFieldsBuilder {
+	d := ff.app.Data(data)
 	if d == nil {
-		panic(fmt.Errorf("%v: data type «%v» not found: %w", ff.embeds(), dataType, ErrNameNotFound))
+		panic(fmt.Errorf("%v: data type «%v» not found: %w", ff.embeds(), data, ErrNameNotFound))
 	}
 	if len(constraints) > 0 {
-		d = newAnonymousData(ff.app, d.DataKind(), dataType, constraints...)
+		d = newAnonymousData(ff.app, d.DataKind(), data, constraints...)
 	}
 	f := newField(name, d, required)
 	ff.appendField(name, f)

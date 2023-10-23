@@ -107,7 +107,8 @@ type IFieldsBuilder interface {
 	//   - if field with name is already exists,
 	//   - if specified data type is not found,
 	//   - if specified data kind is not allowed by structured type kind.
-	AddTypedField(name string, dataType QName, required bool, constraints ...IConstraint) IFieldsBuilder
+	// FIXME: rename to AddDataField
+	AddTypedField(name string, data QName, required bool, constraints ...IConstraint) IFieldsBuilder
 
 	// Sets fields comment.
 	// Useful for reference or verified fields, what Add×××Field has not comments

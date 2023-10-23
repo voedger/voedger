@@ -47,6 +47,10 @@ func (cont *container) Name() string { return cont.name }
 
 func (cont *container) QName() QName { return cont.qName }
 
+func (cont container) String() string {
+	return fmt.Sprintf("container «%s: %v»", cont.Name(), cont.QName())
+}
+
 func (cont *container) embeds() IStructure { return cont.emb.(IStructure) }
 
 // # Implements:
