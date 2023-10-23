@@ -32,6 +32,9 @@ type IData interface {
 	// Enumerate data type constraints.
 	//
 	// Constraints are enumerated in kind order.
+	//
+	// Only this data type constraints are enumerated. To obtain all constraints,
+	// include inherited ones, use DataConstraintsInherited().
 	Constraints(func(IConstraint))
 }
 

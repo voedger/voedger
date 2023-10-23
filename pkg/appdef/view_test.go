@@ -258,6 +258,9 @@ func TestAddView(t *testing.T) {
 					cnt++
 					switch cnt {
 					case 1:
+						require.Equal(ConstraintKind_MaxLen, c.Kind())
+						require.EqualValues(DefaultFieldMaxLength, c.Value())
+					case 2:
 						require.Equal(ConstraintKind_Pattern, c.Kind())
 						require.EqualValues(`^\d+$`, c.Value().(*regexp.Regexp).String())
 						require.Equal("only digits allowed", c.Comment())
@@ -265,7 +268,7 @@ func TestAddView(t *testing.T) {
 						require.Fail("unexpected constraint", "constraint: %v", c)
 					}
 				})
-				require.EqualValues(1, cnt)
+				require.EqualValues(2, cnt)
 			case "valF3":
 				require.Equal(DataKind_RecordID, f.DataKind())
 				require.False(f.Required())

@@ -25,7 +25,7 @@ func (d *Data) read(data appdef.IData) {
 		k := data.DataKind()
 		d.DataKind = &k
 	}
-	data.Constraints().Constraints(func(c appdef.IConstraint) {
+	data.Constraints(func(c appdef.IConstraint) {
 		d.Constraints[c.Kind().TrimString()] = c.Value()
 	})
 }

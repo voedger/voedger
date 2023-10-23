@@ -39,7 +39,7 @@ func makeField(name string, data IData, required bool, comments ...string) field
 		data:        data,
 		required:    required,
 		verifiable:  false,
-		constraints: dataInheritanceConstraints(data),
+		constraints: DataConstraintsInherited(data),
 	}
 	return f
 }
@@ -149,12 +149,15 @@ func (ff *fields) AddStringField(name string, required bool, constraints ...ICon
 	return ff.emb.(IFieldsBuilder)
 }
 
-func (ff *fields) AddTypedField(name string, dataType QName, required bool, comments ...string) IFieldsBuilder {
+func (ff *fields) AddTypedField(name string, dataType QName, required bool, constraints ...IConstraint) IFieldsBuilder {
 	d := ff.app.Data(dataType)
 	if d == nil {
 		panic(fmt.Errorf("%v: data type «%v» not found: %w", ff.embeds(), dataType, ErrNameNotFound))
 	}
-	f := newField(name, d, required, comments...)
+	if len(constraints) > 0 {
+		d = newAnonymousData(ff.app, d.DataKind(), dataType, constraints...)
+	}
+	f := newField(name, d, required)
 	ff.appendField(name, f)
 	return ff.emb.(IFieldsBuilder)
 }

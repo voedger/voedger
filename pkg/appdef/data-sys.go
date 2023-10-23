@@ -17,9 +17,15 @@ func sysDataTypeName(k DataKind) QName {
 
 // Creates and returns new system type by data kind.
 func newSysData(app *appDef, kind DataKind) *data {
-	d := &data{}
-	d.typ = makeType(app, sysDataTypeName(kind), TypeKind_Data)
-	d.dataKind = kind
+	d := &data{
+		typ:         makeType(app, sysDataTypeName(kind), TypeKind_Data),
+		dataKind:    kind,
+		constraints: make(map[ConstraintKind]IConstraint),
+	}
+	switch kind {
+	case DataKind_string, DataKind_bytes:
+		d.AddConstraints(MaxLen(DefaultFieldMaxLength))
+	}
 	app.appendType(d)
 	return d
 }

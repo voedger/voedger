@@ -49,6 +49,21 @@ func Test_appDef_makeSysDataTypes(t *testing.T) {
 			require.Equal(TypeKind_Data, d.Kind())
 			require.Equal(k, d.DataKind())
 			require.Nil(d.Ancestor())
+			switch k {
+			case DataKind_string, DataKind_bytes:
+				cnt := 0
+				d.Constraints(func(c IConstraint) {
+					cnt++
+					switch cnt {
+					case 1:
+						require.Equal(ConstraintKind_MaxLen, c.Kind())
+						require.EqualValues(DefaultFieldMaxLength, c.Value())
+					default:
+						require.Fail("unexpected constraint", "constraint: %v", c)
+					}
+				})
+				require.Equal(1, cnt)
+			}
 		}
 	})
 }

@@ -138,7 +138,7 @@ func (pk *viewPartKey) AddRefField(name string, ref ...QName) IViewPartKeyBuilde
 	return pk
 }
 
-func (pk *viewPartKey) AddTypedField(name string, dataType QName, comment ...string) IViewPartKeyBuilder {
+func (pk *viewPartKey) AddTypedField(name string, dataType QName, constraints ...IConstraint) IViewPartKeyBuilder {
 	d := pk.view.typ.app.Data(dataType)
 	if d == nil {
 		panic(fmt.Errorf("%v: view partition key field «%s» has unknown data type «%s»: %w", pk.view.QName(), name, dataType, ErrNameNotFound))
@@ -147,9 +147,9 @@ func (pk *viewPartKey) AddTypedField(name string, dataType QName, comment ...str
 		panic(fmt.Errorf("%v: view partition key field «%s» has variable length type «%s»: %w", pk.view.QName(), name, k.TrimString(), ErrInvalidDataKind))
 	}
 
-	pk.view.AddTypedField(name, dataType, true, comment...)
-	pk.view.key.AddTypedField(name, dataType, true, comment...)
-	pk.fields.AddTypedField(name, dataType, true, comment...)
+	pk.view.AddTypedField(name, dataType, true, constraints...)
+	pk.view.key.AddTypedField(name, dataType, true, constraints...)
+	pk.fields.AddTypedField(name, dataType, true, constraints...)
 	return pk
 }
 
@@ -223,12 +223,12 @@ func (cc *viewClustCols) AddStringField(name string, maxLen uint16) IViewClustCo
 	return cc
 }
 
-func (cc *viewClustCols) AddTypedField(name string, dataType QName, comment ...string) IViewClustColsBuilder {
+func (cc *viewClustCols) AddTypedField(name string, dataType QName, constraints ...IConstraint) IViewClustColsBuilder {
 	cc.panicIfVarFieldDuplication(name, DataKind_string)
 
-	cc.view.AddTypedField(name, dataType, false, comment...)
-	cc.view.key.AddTypedField(name, dataType, false, comment...)
-	cc.fields.AddTypedField(name, dataType, false, comment...)
+	cc.view.AddTypedField(name, dataType, false, constraints...)
+	cc.view.key.AddTypedField(name, dataType, false, constraints...)
+	cc.fields.AddTypedField(name, dataType, false, constraints...)
 	return cc
 }
 
@@ -301,9 +301,9 @@ func (v *viewValue) AddStringField(name string, required bool, constraints ...IC
 	return v
 }
 
-func (v *viewValue) AddTypedField(name string, dataType QName, required bool, comment ...string) IFieldsBuilder {
-	v.view.AddTypedField(name, dataType, required, comment...)
-	v.fields.AddTypedField(name, dataType, required, comment...)
+func (v *viewValue) AddTypedField(name string, dataType QName, required bool, constraints ...IConstraint) IFieldsBuilder {
+	v.view.AddTypedField(name, dataType, required, constraints...)
+	v.fields.AddTypedField(name, dataType, required, constraints...)
 	return v
 }
 

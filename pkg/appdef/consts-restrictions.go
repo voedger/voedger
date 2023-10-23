@@ -25,5 +25,5 @@ const MaxFieldLength = 1024
 
 // Default string and bytes data max length.
 //
-// Used for data types if MaxLen() constraint is not used.
+// This value is used for MaxLen() constraint in system data types `sys.string` and `sys.bytes`.
 const DefaultFieldMaxLength = 255

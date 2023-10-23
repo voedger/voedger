@@ -51,12 +51,15 @@ func Pattern(v string, c ...string) IConstraint {
 	return newDataConstraint(ConstraintKind_Pattern, re, c...)
 }
 
-// Returns constraints for data type.
+// Returns the constraints for a data type, combined
+// with those inherited from all ancestors of the type.
 //
-// Constraints are collected throughout the data types hierarchy, include all ancestors recursively.
-// If any constraint is specified by the ancestor, but redefined in the descendant,
-// then the constraint from the descendant will return as a result.
-func dataInheritanceConstraints(data IData) map[ConstraintKind]IConstraint {
+// Constraints are collected throughout the data types
+// hierarchy, include all ancestors recursively.
+// If any constraint is specified by the ancestor,
+// but redefined in the descendant, then the constraint
+// from the descendant only will included into result.
+func DataConstraintsInherited(data IData) map[ConstraintKind]IConstraint {
 	cc := make(map[ConstraintKind]IConstraint)
 	for d := data; d != nil; d = d.Ancestor() {
 		d.Constraints(func(c IConstraint) {
@@ -68,23 +71,6 @@ func dataInheritanceConstraints(data IData) map[ConstraintKind]IConstraint {
 	}
 	return cc
 }
-
-// func (cc constraints) Constraints(f func(IConstraint)) {
-// 	for i := ConstraintKind(1); i < ConstraintKind_Count; i++ {
-// 		if c, ok := cc.c[i]; ok {
-// 			f(c)
-// 		}
-// 	}
-// }
-
-// func (cc constraints) set(k DataKind, c ...IConstraint) {
-// 	for _, c := range c {
-// 		if ok := k.IsSupportedConstraint(c.Kind()); !ok {
-// 			panic(fmt.Errorf("constraint %v is not compatible with %v: %w", c, k, ErrIncompatibleRestricts))
-// 		}
-// 		cc.c[c.Kind()] = c
-// 	}
-// }
 
 // # Implements:
 //   - IDataConstraint
