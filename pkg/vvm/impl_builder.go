@@ -9,7 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 )
 
@@ -28,27 +28,15 @@ func (hap VVMAppsBuilder) PrepareAppsExtensionPoints() map[istructs.AppQName]ext
 }
 
 func buildSchemasASTs(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-	epPackageSchemasASTs := ep.ExtensionPoint(apps.EPPackageSchemasASTs)
-	packageSchemaASTs := []*parser.PackageSchemaAST{}
-	epPackageSchemasASTs.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
-		qualifiedPackageName := eKey.(string)
-		packageFilesSchemasASTsEP := value.(extensionpoints.IExtensionPoint)
-		packageFilesSchemasASTs := []*parser.FileSchemaAST{}
-		packageFilesSchemasASTsEP.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
-			fileSchemaAST := value.(*parser.FileSchemaAST)
-			packageFilesSchemasASTs = append(packageFilesSchemasASTs, fileSchemaAST)
-		})
-		packageSchemaAST, err := parser.BuildPackageSchema(qualifiedPackageName, packageFilesSchemasASTs)
-		if err != nil {
-			panic(err)
-		}
-		packageSchemaASTs = append(packageSchemaASTs, packageSchemaAST)
-	})
-	packageSchemas, err := parser.BuildAppSchema(packageSchemaASTs)
+	packageSchemaASTs, err := ReadPackageSchemaAST(ep)
 	if err != nil {
 		panic(err)
 	}
-	if err := parser.BuildAppDefs(packageSchemas, adf); err != nil {
+	appSchemaAST, err := parser.BuildAppSchema(packageSchemaASTs)
+	if err != nil {
+		panic(err)
+	}
+	if err := parser.BuildAppDefs(appSchemaAST, adf); err != nil {
 		panic(err)
 	}
 }
