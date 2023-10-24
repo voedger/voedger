@@ -35,7 +35,7 @@ classDiagram
         <<interface>>
         +Kind()* TypeKind_Data
         +Ancestor() IData
-        +Restricts() []IDataRestrict
+        +Constraints(func <-IConstraint)
     }
 
     IArray --|> IType : inherits
@@ -186,7 +186,7 @@ classDiagram
         +Kind()* TypeKind_Data
         +DataKind() DataKind
         +Ancestor() IData
-        +Restricts() []IDataRestrict
+        +Constraints(func <-IConstraint)
     }
     IData "1" ..> "0..1" IData : ancestor ref
 
@@ -370,7 +370,7 @@ classDiagram
         +Kind()* TypeKind_Data
         +DataKind() DataKind
         +Ancestor() IData
-        +Restricts() map[DataRestrictKind] *DataRestrict
+        +Constraints(func <-IConstraint)
     }
 
     Name "1" <--* "1" IData : has
@@ -382,7 +382,7 @@ classDiagram
                    - NullQName for anonymous types"
 
     DataKind "1" <--* "1" IData : has
-    class Kind {
+    class DataKind {
         <<DataKind>>
     }
     note for DataKind " - null
@@ -405,19 +405,19 @@ classDiagram
     note for Ancestor "  - data type from which the user data type is inherits or 
                          - nil for built-in types"
 
-    DataRestrict "0..*" <--*  "1" IData : has
-    class DataRestrict {
+    IConstraint "0..*" <--*  "1" IData : has
+    class IConstraint {
         <<interface>>
-        +Kind() DataRestrictKind
+        +Kind() ConstraintKind
         +Value() any
     }
-    note for DataRestrict " - minLen() uint
-                            - maxLen() uint
-                            - Pattern() RegExp
-                            - MinInclusive() float
-                            - MinExclusive() float
-                            - MaxInclusive() float
-                            - MaxExclusive() float"
+    note for IConstraint " - minLen() uint
+                           - maxLen() uint
+                           - Pattern() RegExp
+                           - MinInclusive() float
+                           - MinExclusive() float
+                           - MaxInclusive() float
+                           - MaxExclusive() float"
 ```
 
 ### Structures
@@ -592,13 +592,14 @@ classDiagram
     +Required() bool
     +Verified() bool
     +VerificationKind(VerificationKind) bool
+    +Constraints(func <-IConstraint)
   }
 
   class IFields{
     <<Interface>>
     Field(string) IField
     FieldCount() int
-    Fields(func(IField))
+    Fields(func <-IField)
   }
   IFields "1" --* "0..*" IField : compose
 
@@ -609,27 +610,13 @@ classDiagram
     AddVerifiedField(…)
     AddRefField(…)
     AddStringField(…)
+    AddConstraints(IConstraint...)
   }
 
   IRefField --|> IField : inherits
   class IRefField {
     <<Interface>>
     Refs() []QName
-  }
-
-  IStringField --|> IField : inherits
-  class IStringField {
-    <<Interface>>
-    Refs() []QName
-    Restricts() IStringFieldRestricts
-  }
-
-  IStringField "1" --o "1" IStringFieldRestricts : aggregates
-  class IStringFieldRestricts {
-    <<Interface>>
-    MinValue() uint16
-    MaxValue() uint16
-    Pattern() string
   }
 
   class IContainer {
@@ -645,7 +632,7 @@ classDiagram
     Container(string) IContainer
     ContainerCount() int
     ContainerDef(string) IDef
-    Containers(func(IContainer))
+    Containers(func <-IContainer)
   }
   IContainers "1" --* "0..*" IContainer : compose
 
@@ -667,7 +654,7 @@ classDiagram
     UniqueByID(UniqueID) IUnique
     UniqueByName(string) IUnique
     UniqueCount() int
-    Uniques(func(IUnique))
+    Uniques(func <-IUnique)
   }
   IUniques "1" --* "0..*" IUnique : compose
 
