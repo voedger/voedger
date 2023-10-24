@@ -21,8 +21,8 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		appDef := appdef.New()
 		view := appDef.AddView(testViewRecordQName1)
 		view.KeyBuilder().PartKeyBuilder().AddField("pkk", appdef.DataKind_int64)
-		view.KeyBuilder().ClustColsBuilder().AddStringField("cck", appdef.DefaultFieldMaxLength)
-		view.ValueBuilder().AddStringField("vk", false)
+		view.KeyBuilder().ClustColsBuilder().AddField("cck", appdef.DataKind_string)
+		view.ValueBuilder().AddField("vk", appdef.DataKind_string, false)
 
 		value := &mockValue{}
 		value.On("AsString", "vk").Return("value")
@@ -56,8 +56,8 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 
 		view := appDef.AddView(testViewRecordQName1)
 		view.KeyBuilder().PartKeyBuilder().AddField("pkk", appdef.DataKind_int64)
-		view.KeyBuilder().ClustColsBuilder().AddStringField("cck", appdef.DefaultFieldMaxLength)
-		view.ValueBuilder().AddStringField("vk", false)
+		view.KeyBuilder().ClustColsBuilder().AddField("cck", appdef.DataKind_string)
+		view.ValueBuilder().AddField("vk", appdef.DataKind_string, false)
 
 		viewRecords := &mockViewRecords{}
 		viewRecords.
@@ -140,8 +140,8 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 
 	view := appDef.AddView(testViewRecordQName1)
 	view.KeyBuilder().PartKeyBuilder().AddField("pkk", appdef.DataKind_int64)
-	view.KeyBuilder().ClustColsBuilder().AddStringField("cck", appdef.DefaultFieldMaxLength)
-	view.ValueBuilder().AddStringField("vk", false)
+	view.KeyBuilder().ClustColsBuilder().AddField("cck", appdef.DataKind_string)
+	view.ValueBuilder().AddField("vk", appdef.DataKind_string, false)
 
 	viewRecords := &mockViewRecords{}
 	viewRecords.
@@ -174,10 +174,10 @@ func TestViewRecordsStorage_toJSON(t *testing.T) {
 
 	view := appDef.AddView(testViewRecordQName1)
 	view.KeyBuilder().PartKeyBuilder().AddField("pkFld", appdef.DataKind_int64)
-	view.KeyBuilder().ClustColsBuilder().AddStringField("ccFld", appdef.DefaultFieldMaxLength)
+	view.KeyBuilder().ClustColsBuilder().AddField("ccFld", appdef.DataKind_string)
 	view.ValueBuilder().
 		AddRefField("ID", false).
-		AddStringField("Name", false).
+		AddField("Name", appdef.DataKind_string, false).
 		AddField("Count", appdef.DataKind_int64, false)
 
 	value := &mockValue{}

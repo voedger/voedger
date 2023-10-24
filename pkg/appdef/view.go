@@ -187,10 +187,6 @@ func newViewClustCols(v *view) *viewClustCols {
 	return cc
 }
 
-func (cc *viewClustCols) AddBytesField(name string, maxLen uint16) IViewClustColsBuilder {
-	return cc.AddField(name, DataKind_bytes, MaxLen(maxLen))
-}
-
 func (cc *viewClustCols) AddDataField(name string, dataType QName, constraints ...IConstraint) IViewClustColsBuilder {
 	d := cc.app.Data(dataType)
 	if d == nil {
@@ -221,10 +217,6 @@ func (cc *viewClustCols) AddRefField(name string, ref ...QName) IViewClustColsBu
 	cc.view.key.AddRefField(name, false, ref...)
 	cc.fields.AddRefField(name, false, ref...)
 	return cc
-}
-
-func (cc *viewClustCols) AddStringField(name string, maxLen uint16) IViewClustColsBuilder {
-	return cc.AddField(name, DataKind_string, MaxLen(maxLen))
 }
 
 func (cc *viewClustCols) SetFieldComment(name string, comment ...string) IViewClustColsBuilder {
@@ -272,10 +264,6 @@ func newViewValue(v *view) *viewValue {
 	return val
 }
 
-func (v *viewValue) AddBytesField(name string, required bool, constraints ...IConstraint) IFieldsBuilder {
-	return v.AddField(name, DataKind_bytes, required, constraints...)
-}
-
 func (v *viewValue) AddDataField(name string, dataType QName, required bool, constraints ...IConstraint) IFieldsBuilder {
 	v.view.AddDataField(name, dataType, required, constraints...)
 	v.fields.AddDataField(name, dataType, required, constraints...)
@@ -292,10 +280,6 @@ func (v *viewValue) AddRefField(name string, required bool, ref ...QName) IField
 	v.view.AddRefField(name, required, ref...)
 	v.fields.AddRefField(name, required, ref...)
 	return v
-}
-
-func (v *viewValue) AddStringField(name string, required bool, constraints ...IConstraint) IFieldsBuilder {
-	return v.AddField(name, DataKind_string, required, constraints...)
 }
 
 func (v *viewValue) isViewValue() {}

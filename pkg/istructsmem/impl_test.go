@@ -48,7 +48,7 @@ func TestBasicUsage(t *testing.T) {
 
 		saleParamsDoc := bld.AddODoc(appdef.NewQName("test", "Sale"))
 		saleParamsDoc.
-			AddStringField("Buyer", true).
+			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
 			AddField("Height", appdef.DataKind_float32, false).
 			AddField("isHuman", appdef.DataKind_bool, false).
@@ -61,17 +61,17 @@ func TestBasicUsage(t *testing.T) {
 
 		goodRec := bld.AddORecord(appdef.NewQName("test", "Good"))
 		goodRec.
-			AddStringField("Name", true).
+			AddField("Name", appdef.DataKind_string, true).
 			AddField("Code", appdef.DataKind_int64, true).
 			AddField("Weight", appdef.DataKind_float64, false)
 
 		saleSecureParamsObj := bld.AddObject(appdef.NewQName("test", "saleSecureArgs"))
 		saleSecureParamsObj.
-			AddStringField("password", true)
+			AddField("password", appdef.DataKind_string, true)
 
 		photosDoc := bld.AddCDoc(appdef.NewQName("test", "photos"))
 		photosDoc.
-			AddStringField("Buyer", true).
+			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
 			AddField("Height", appdef.DataKind_float32, false).
 			AddField("isHuman", appdef.DataKind_bool, false).
@@ -198,10 +198,10 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 		view.KeyBuilder().ClustColsBuilder().
 			AddField("clusteringColumn1", appdef.DataKind_int64).
 			AddField("clusteringColumn2", appdef.DataKind_bool).
-			AddStringField("clusteringColumn3", 100)
+			AddField("clusteringColumn3", appdef.DataKind_string, appdef.MaxLen(100))
 		view.ValueBuilder().
 			AddField("id", appdef.DataKind_int64, true).
-			AddStringField("name", true).
+			AddField("name", appdef.DataKind_string, true).
 			AddField("active", appdef.DataKind_bool, true)
 
 		cfgs := make(AppConfigsType, 1)
@@ -428,7 +428,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 		docQName := appdef.NewQName("types", "CDoc")
 		doc := appDef.AddCDoc(docQName)
-		doc.AddStringField("str", true)
+		doc.AddField("str", appdef.DataKind_string, true)
 		doc.AddField("fld", appdef.DataKind_int32, true)
 		doc.SetUniqueField("str")
 
@@ -437,7 +437,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		viewName := appdef.NewQName("types", "View")
 		view := appDef.AddView(viewName)
 		view.KeyBuilder().PartKeyBuilder().AddField("int", appdef.DataKind_int64)
-		view.KeyBuilder().ClustColsBuilder().AddStringField("str", 100)
+		view.KeyBuilder().ClustColsBuilder().AddField("str", appdef.DataKind_string, appdef.MaxLen(100))
 		view.ValueBuilder().AddField("bool", appdef.DataKind_bool, false)
 
 		arg := appDef.AddObject(appdef.NewQName("types", "Arg"))

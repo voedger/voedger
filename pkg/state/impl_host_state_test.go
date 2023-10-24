@@ -77,7 +77,7 @@ func mockedHostStateStructs() istructs.IAppStructs {
 
 	view := appDef.AddView(testViewRecordQName1)
 	view.KeyBuilder().PartKeyBuilder().AddField("pkFld", appdef.DataKind_int64)
-	view.KeyBuilder().ClustColsBuilder().AddStringField("ccFld", appdef.DefaultFieldMaxLength)
+	view.KeyBuilder().ClustColsBuilder().AddField("ccFld", appdef.DataKind_string)
 	view.ValueBuilder().
 		AddField("vFld", appdef.DataKind_int64, false).
 		AddField(ColOffset, appdef.DataKind_int64, false)

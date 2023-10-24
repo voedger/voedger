@@ -73,21 +73,6 @@ type IFieldsBuilder interface {
 	//	 - if constraints are not compatible with specified data type.
 	AddDataField(name string, data QName, required bool, constraints ...IConstraint) IFieldsBuilder
 
-	// Adds bytes field specified name and constraints.
-	//
-	// If constraints specified, then new anonymous data type inherits from `sys.bytes`
-	// type will be created and this new type will be used as field data type.
-	//
-	// If no constraints specified, then field has maximum length 255.
-	// You can use MaxLen() constraint to specify other maximum length.
-	//
-	// # Panics:
-	//   - if name is empty,
-	//   - if name is invalid,
-	//   - if field with name is already exists,
-	//   - if constraints are not bytes data compatible.
-	AddBytesField(name string, required bool, constraints ...IConstraint) IFieldsBuilder
-
 	// Adds reference field specified name and target refs.
 	//
 	// # Panics:
@@ -95,21 +80,6 @@ type IFieldsBuilder interface {
 	//   - if name is invalid,
 	//   - if field with name is already exists.
 	AddRefField(name string, required bool, ref ...QName) IFieldsBuilder
-
-	// Adds string field specified name and constraints.
-	//
-	// If constraints specified, then new anonymous data type inherits from `sys.string`
-	// type will be created and this new type will be used as field data type.
-	//
-	// If no constraints specified, then field has maximum length 255.
-	// You can use MaxLen() constraint to specify other maximum length.
-	//
-	// # Panics:
-	//   - if name is empty,
-	//   - if name is invalid,
-	//   - if field with name is already exists,
-	//   - if constraints are not string compatible.
-	AddStringField(name string, required bool, constraints ...IConstraint) IFieldsBuilder
 
 	// Sets fields comment.
 	// Useful for reference or verified fields, what Add×××Field has not comments

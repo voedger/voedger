@@ -37,7 +37,7 @@ func TestBasicUsage(t *testing.T) {
 	doc.
 		AddField("f1", appdef.DataKind_int64, true).
 		SetFieldComment("f1", "field comment").
-		AddStringField("f2", false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`)).
+		AddField("f2", appdef.DataKind_string, false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`)).
 		AddDataField("intField", intName, false).
 		AddRefField("mainChild", false, recName).(appdef.ICDocBuilder).
 		AddContainer("rec", recName, 0, 100, "container comment").(appdef.ICDocBuilder).
@@ -47,8 +47,8 @@ func TestBasicUsage(t *testing.T) {
 	rec := appDef.AddCRecord(recName)
 	rec.
 		AddField("f1", appdef.DataKind_int64, true).
-		AddStringField("f2", false).
-		AddStringField("phone", true, appdef.MinLen(1), appdef.MaxLen(25)).
+		AddField("f2", appdef.DataKind_string, false).
+		AddField("phone", appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(25)).
 		SetFieldVerify("phone", appdef.VerificationKind_Any...).(appdef.ICRecordBuilder).
 		SetUniqueField("phone")
 
@@ -57,14 +57,14 @@ func TestBasicUsage(t *testing.T) {
 	view.KeyBuilder().PartKeyBuilder().
 		AddField("pk_1", appdef.DataKind_int64)
 	view.KeyBuilder().ClustColsBuilder().
-		AddStringField("cc_1", 100)
+		AddField("cc_1", appdef.DataKind_string, appdef.MaxLen(100))
 	view.ValueBuilder().
 		AddDataField("vv_code", strName, true).
 		AddRefField("vv_1", true, docName)
 
 	objName := appdef.NewQName("test", "obj")
 	obj := appDef.AddObject(objName)
-	obj.AddStringField("f1", true)
+	obj.AddField("f1", appdef.DataKind_string, true)
 
 	appDef.AddCommand(appdef.NewQName("test", "cmd")).
 		SetUnloggedParam(objName).

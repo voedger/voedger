@@ -16,7 +16,7 @@ func TestBasicUsage(t *testing.T) {
 
 	saleParamsDoc := adb.AddODoc(NewQName("test", "Sale"))
 	saleParamsDoc.
-		AddStringField("Buyer", true, MaxLen(100)).
+		AddField("Buyer", DataKind_string, true, MaxLen(100)).
 		AddField("Age", DataKind_int32, false).
 		AddField("Height", DataKind_float32, false).
 		AddField("isHuman", DataKind_bool, false).
@@ -40,7 +40,7 @@ func TestBasicUsage(t *testing.T) {
 	docName := NewQName("test", "photos")
 	photosDoc := adb.AddCDoc(docName)
 	photosDoc.
-		AddStringField("Buyer", true, MaxLen(100)).
+		AddField("Buyer", DataKind_string, true, MaxLen(100)).
 		AddField("Age", DataKind_int32, false).
 		AddField("Height", DataKind_float32, false).
 		AddField("isHuman", DataKind_bool, false).
@@ -48,12 +48,12 @@ func TestBasicUsage(t *testing.T) {
 
 	buyerView := adb.AddView(NewQName("test", "viewBuyerByHeight"))
 	buyerView.KeyBuilder().PartKeyBuilder().AddField("Height", DataKind_float32)
-	buyerView.KeyBuilder().ClustColsBuilder().AddStringField("Buyer", 100)
+	buyerView.KeyBuilder().ClustColsBuilder().AddField("Buyer", DataKind_string, MaxLen(100))
 	buyerView.ValueBuilder().AddRefField("BuyerID", true, docName)
 
 	buyerObj := adb.AddObject(NewQName("test", "buyer"))
 	buyerObj.
-		AddStringField("Name", true).
+		AddField("Name", DataKind_string, true).
 		AddField("Age", DataKind_int32, false).
 		AddField("isHuman", DataKind_bool, false)
 

@@ -119,8 +119,6 @@ type IViewClustColsBuilder interface {
 	AddField(name string, kind DataKind, constraints ...IConstraint) IViewClustColsBuilder
 	AddDataField(name string, dataType QName, constraints ...IConstraint) IViewClustColsBuilder
 	AddRefField(name string, ref ...QName) IViewClustColsBuilder
-	AddStringField(name string, maxLen uint16) IViewClustColsBuilder
-	AddBytesField(name string, maxLen uint16) IViewClustColsBuilder
 
 	// Sets fields comment.
 	// Useful for reference or verified fields, what Add×××Field has not comments

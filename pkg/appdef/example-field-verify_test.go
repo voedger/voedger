@@ -21,7 +21,7 @@ func ExampleIFieldsBuilder_SetFieldVerify() {
 
 		doc := appDef.AddCDoc(docName)
 		doc.
-			AddStringField("pin", true, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)).
+			AddField("pin", appdef.DataKind_string, true, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)).
 			SetFieldComment("pin", "Secret four digits pin code").
 			SetFieldVerify("pin", appdef.VerificationKind_EMail, appdef.VerificationKind_Phone)
 

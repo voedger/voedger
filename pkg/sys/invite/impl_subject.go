@@ -17,7 +17,7 @@ import (
 func provideCDocSubject(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	projectors.ProvideViewDef(appDefBuilder, QNameViewSubjectsIdx, func(view appdef.IViewBuilder) {
 		view.KeyBuilder().PartKeyBuilder().AddField(Field_LoginHash, appdef.DataKind_int64)
-		view.KeyBuilder().ClustColsBuilder().AddStringField(Field_Login, appdef.DefaultFieldMaxLength)
+		view.KeyBuilder().ClustColsBuilder().AddField(Field_Login, appdef.DataKind_string)
 		view.ValueBuilder().AddRefField(Field_SubjectID, true)
 	})
 

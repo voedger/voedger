@@ -237,18 +237,18 @@ func TestAddView(t *testing.T) {
 			SetFieldComment("pkF3", "test comment")
 
 		vb.KeyBuilder().ClustColsBuilder().
-			AddBytesField("ccF3", 100).
+			AddField("ccF3", DataKind_bytes, MaxLen(100)).
 			SetFieldComment("ccF3", "test comment")
 
 		t.Run("panic if add second variable length field", func(t *testing.T) {
 			require.Panics(func() {
-				vb.KeyBuilder().ClustColsBuilder().AddBytesField("ccF3_1", 100)
+				vb.KeyBuilder().ClustColsBuilder().AddField("ccF3_1", DataKind_bytes, MaxLen(100))
 			})
 		})
 
 		vb.ValueBuilder().
 			AddRefField("valF3", false, docName).
-			AddBytesField("valF4", false, MaxLen(1024)).SetFieldComment("valF4", "test comment").
+			AddField("valF4", DataKind_bytes, false, MaxLen(1024)).SetFieldComment("valF4", "test comment").
 			AddField("valF5", DataKind_bool, false).SetFieldVerify("valF5", VerificationKind_EMail)
 
 		_, err := adb.Build()
@@ -330,7 +330,7 @@ func TestViewValidate(t *testing.T) {
 		require.ErrorIs(err, ErrFieldsMissed)
 	})
 
-	v.KeyBuilder().ClustColsBuilder().AddStringField("cc1", 100)
+	v.KeyBuilder().ClustColsBuilder().AddField("cc1", DataKind_string, MaxLen(100))
 	_, err := app.Build()
 	require.NoError(err)
 }

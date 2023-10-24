@@ -672,7 +672,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 	t.Run("must be ok to build test application", func(t *testing.T) {
 		oDoc := appDef.AddODoc(docName)
 		oDoc.
-			AddStringField("RequiredField", true).(appdef.IODocBuilder).
+			AddField("RequiredField", appdef.DataKind_string, true).(appdef.IODocBuilder).
 			AddContainer("child", recName, 0, appdef.Occurs_Unbounded)
 		_ = appDef.AddORecord(recName)
 
@@ -752,7 +752,7 @@ func Test_VerifiedFields(t *testing.T) {
 	t.Run("must be ok to build application", func(t *testing.T) {
 		appDef.AddObject(objName).
 			AddField("int32", appdef.DataKind_int32, true).
-			AddStringField("email", false).
+			AddField("email", appdef.DataKind_string, false).
 			SetFieldVerify("email", appdef.VerificationKind_EMail).
 			AddField("age", appdef.DataKind_int32, false).
 			SetFieldVerify("age", appdef.VerificationKind_Any...)

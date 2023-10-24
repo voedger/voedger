@@ -79,7 +79,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 			intFieldNamesFloat64Values[intFieldName] = float64(i)
 
 			stringFieldName := fmt.Sprintf("s%v", i)
-			doc.AddStringField(stringFieldName, true)
+			doc.AddField(stringFieldName, appdef.DataKind_string, true)
 			stringFieldNames[i] = stringFieldName
 			stringFieldValues[stringFieldName] = stringFieldName
 

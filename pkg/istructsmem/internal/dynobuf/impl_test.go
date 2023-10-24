@@ -26,8 +26,8 @@ func TestDynoBufSchemes(t *testing.T) {
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
 			AddField("float64Field", appdef.DataKind_float64, false).
-			AddBytesField("bytesField", false).
-			AddStringField("strField", false).
+			AddField("bytesField", appdef.DataKind_bytes, false).
+			AddField("strField", appdef.DataKind_string, false).
 			AddField("qnameField", appdef.DataKind_QName, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false)
 		obj.
@@ -39,8 +39,8 @@ func TestDynoBufSchemes(t *testing.T) {
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
 			AddField("float64Field", appdef.DataKind_float64, false).
-			AddBytesField("bytesField", false).
-			AddStringField("strField", false).
+			AddField("bytesField", appdef.DataKind_bytes, false).
+			AddField("strField", appdef.DataKind_string, false).
 			AddField("qnameField", appdef.DataKind_QName, false).
 			AddField("boolField", appdef.DataKind_bool, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false)
@@ -53,7 +53,7 @@ func TestDynoBufSchemes(t *testing.T) {
 
 		view := appDefBuilder.AddView(appdef.NewQName("test", "view"))
 		view.KeyBuilder().PartKeyBuilder().AddField("pk1", appdef.DataKind_int64)
-		view.KeyBuilder().ClustColsBuilder().AddStringField("cc1", 100)
+		view.KeyBuilder().ClustColsBuilder().AddField("cc1", appdef.DataKind_string, appdef.MaxLen(100))
 		view.ValueBuilder().AddRefField("val1", true)
 
 		sch, err := appDefBuilder.Build()

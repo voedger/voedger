@@ -504,9 +504,9 @@ func (c *buildContext) addFieldToDef(field *FieldExpr, ictx *iterateCtx) {
 
 		if field.Type.DataType.Bytes != nil {
 			if field.Type.DataType.Bytes.MaxLen != nil {
-				bld.AddBytesField(fieldName, field.NotNull, appdef.MaxLen(*field.Type.DataType.Bytes.MaxLen))
+				bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, appdef.MaxLen(*field.Type.DataType.Bytes.MaxLen))
 			} else {
-				bld.AddBytesField(fieldName, field.NotNull)
+				bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull)
 			}
 		} else if field.Type.DataType.Varchar != nil {
 			constraints := make([]appdef.IConstraint, 0)
@@ -516,7 +516,7 @@ func (c *buildContext) addFieldToDef(field *FieldExpr, ictx *iterateCtx) {
 			if field.CheckRegexp != nil {
 				constraints = append(constraints, appdef.Pattern(*field.CheckRegexp))
 			}
-			bld.AddStringField(fieldName, field.NotNull, constraints...)
+			bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, constraints...)
 		} else {
 			bld.AddField(fieldName, sysDataKind, field.NotNull)
 		}

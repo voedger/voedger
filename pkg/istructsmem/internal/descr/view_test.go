@@ -33,13 +33,12 @@ func Test_View(t *testing.T) {
 		view.KeyBuilder().ClustColsBuilder().
 			AddField("cc_int", appdef.DataKind_int64).
 			AddRefField("cc_ref", docName).
-			AddStringField("cc_name", 100)
+			AddField("cc_name", appdef.DataKind_string, appdef.MaxLen(100))
 		view.ValueBuilder().
 			AddField("vv_int", appdef.DataKind_int64, true).
 			AddRefField("vv_ref", true, docName).
-			AddStringField("vv_code", false, appdef.MaxLen(10), appdef.Pattern(`^\w+$`)).
-			AddBytesField("vv_data", false, appdef.MaxLen(1024)).
-			SetFieldComment("vv_data", "One kilobyte of data")
+			AddField("vv_code", appdef.DataKind_string, false, appdef.MaxLen(10), appdef.Pattern(`^\w+$`)).
+			AddField("vv_data", appdef.DataKind_bytes, false, appdef.MaxLen(1024)).SetFieldComment("vv_data", "One kilobyte of data")
 		if a, err := appDef.Build(); err == nil {
 			app = a
 		} else {

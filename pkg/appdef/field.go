@@ -122,13 +122,6 @@ func makeFields(app *appDef, embeds interface{}) fields {
 	return ff
 }
 
-func (ff *fields) AddBytesField(name string, required bool, constraints ...IConstraint) IFieldsBuilder {
-	d := newAnonymousData(ff.app, DataKind_bytes, NullQName, constraints...)
-	f := newField(name, d, required)
-	ff.appendField(name, f)
-	return ff.emb.(IFieldsBuilder)
-}
-
 func (ff *fields) AddDataField(name string, data QName, required bool, constraints ...IConstraint) IFieldsBuilder {
 	d := ff.app.Data(data)
 	if d == nil {
@@ -158,13 +151,6 @@ func (ff *fields) AddField(name string, kind DataKind, required bool, constraint
 func (ff *fields) AddRefField(name string, required bool, ref ...QName) IFieldsBuilder {
 	d := ff.app.SysData(DataKind_RecordID)
 	f := newRefField(name, d, required, ref...)
-	ff.appendField(name, f)
-	return ff.emb.(IFieldsBuilder)
-}
-
-func (ff *fields) AddStringField(name string, required bool, constraints ...IConstraint) IFieldsBuilder {
-	d := newAnonymousData(ff.app, DataKind_string, NullQName, constraints...)
-	f := newField(name, d, required)
 	ff.appendField(name, f)
 	return ff.emb.(IFieldsBuilder)
 }

@@ -26,7 +26,7 @@ func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDe
 	// istructs.Projector<S, LoginIdx>
 	projectors.ProvideViewDef(appDefBuilder, QNameViewLoginIdx, func(b appdef.IViewBuilder) {
 		b.KeyBuilder().PartKeyBuilder().AddField(field_AppWSID, appdef.DataKind_int64)
-		b.KeyBuilder().ClustColsBuilder().AddStringField(field_AppIDLoginHash, appdef.DefaultFieldMaxLength)
+		b.KeyBuilder().ClustColsBuilder().AddField(field_AppIDLoginHash, appdef.DataKind_string)
 		b.ValueBuilder().AddField(field_CDocLoginID, appdef.DataKind_int64, true)
 	})
 
