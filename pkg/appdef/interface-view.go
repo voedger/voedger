@@ -82,9 +82,9 @@ type IViewPartKeyBuilder interface {
 	// # Panics:
 	//	- if field already exists in clustering columns or value fields,
 	//	- if not fixed size data kind.
-	AddField(name string, kind DataKind, comment ...string) IViewPartKeyBuilder
-	AddRefField(name string, ref ...QName) IViewPartKeyBuilder
+	AddField(name string, kind DataKind, constraints ...IConstraint) IViewPartKeyBuilder
 	AddDataField(name string, dataType QName, constraints ...IConstraint) IViewPartKeyBuilder
+	AddRefField(name string, ref ...QName) IViewPartKeyBuilder
 
 	// Sets fields comment.
 	// Useful for reference or verified fields, what Add×××Field has not comments
@@ -116,11 +116,11 @@ type IViewClustColsBuilder interface {
 	// # Panics:
 	//	- if field already exists in view;
 	//	- if already contains a variable length field.
-	AddField(name string, kind DataKind, comment ...string) IViewClustColsBuilder
+	AddField(name string, kind DataKind, constraints ...IConstraint) IViewClustColsBuilder
+	AddDataField(name string, dataType QName, constraints ...IConstraint) IViewClustColsBuilder
 	AddRefField(name string, ref ...QName) IViewClustColsBuilder
 	AddStringField(name string, maxLen uint16) IViewClustColsBuilder
 	AddBytesField(name string, maxLen uint16) IViewClustColsBuilder
-	AddDataField(name string, dataType QName, constraints ...IConstraint) IViewClustColsBuilder
 
 	// Sets fields comment.
 	// Useful for reference or verified fields, what Add×××Field has not comments

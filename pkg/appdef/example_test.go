@@ -22,7 +22,7 @@ func Example() {
 		doc := appDef.AddCDoc(docName)
 		doc.SetComment("This is example doc")
 		doc.
-			AddField("f1", appdef.DataKind_int64, true, "Field may have comments too").
+			AddField("f1", appdef.DataKind_int64, true).SetFieldComment("f1", "Field may have comments too").
 			AddField("f2", appdef.DataKind_string, false)
 		rec := appDef.AddCRecord(recName)
 

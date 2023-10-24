@@ -55,8 +55,9 @@ type IFieldsBuilder interface {
 	//   - if name is empty,
 	//   - if name is invalid,
 	//   - if field with name is already exists,
-	//   - if specified data kind is not allowed by structured type kind.
-	AddField(name string, kind DataKind, required bool, comment ...string) IFieldsBuilder
+	//   - if specified data kind is not allowed by structured type kind,
+	//	 - if constraints are not compatible with specified data type.
+	AddField(name string, kind DataKind, required bool, constraints ...IConstraint) IFieldsBuilder
 
 	// Adds field with specified data type.
 	//

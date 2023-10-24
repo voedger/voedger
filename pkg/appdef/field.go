@@ -142,12 +142,15 @@ func (ff *fields) AddDataField(name string, data QName, required bool, constrain
 	return ff.emb.(IFieldsBuilder)
 }
 
-func (ff *fields) AddField(name string, kind DataKind, required bool, comments ...string) IFieldsBuilder {
+func (ff *fields) AddField(name string, kind DataKind, required bool, constraints ...IConstraint) IFieldsBuilder {
 	d := ff.app.SysData(kind)
 	if d == nil {
 		panic(fmt.Errorf("%v: system data type for data kind «%s» is not exists: %w", ff.embeds(), kind.TrimString(), ErrInvalidTypeKind))
 	}
-	f := newField(name, d, required, comments...)
+	if len(constraints) > 0 {
+		d = newAnonymousData(ff.app, d.DataKind(), d.QName(), constraints...)
+	}
+	f := newField(name, d, required)
 	ff.appendField(name, f)
 	return ff.emb.(IFieldsBuilder)
 }
