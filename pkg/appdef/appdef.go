@@ -220,8 +220,7 @@ func (app *appDef) Structures(cb func(s IStructure)) {
 }
 
 func (app *appDef) SysData(k DataKind) IData {
-	name := sysDataTypeName(k)
-	if t := app.typeByKind(name, TypeKind_Data); t != nil {
+	if t := app.typeByKind(SysDataName(k), TypeKind_Data); t != nil {
 		return t.(IData)
 	}
 	return nil

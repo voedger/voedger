@@ -67,9 +67,11 @@ func (d *data) Ancestor() IData {
 }
 
 func (d *data) Constraints(f func(IConstraint)) {
-	for i := ConstraintKind(1); i < ConstraintKind_Count; i++ {
-		if c, ok := d.constraints[i]; ok {
-			f(c)
+	if len(d.constraints) > 0 {
+		for i := ConstraintKind(1); i < ConstraintKind_Count; i++ {
+			if c, ok := d.constraints[i]; ok {
+				f(c)
+			}
 		}
 	}
 }

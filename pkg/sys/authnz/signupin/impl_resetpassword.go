@@ -30,7 +30,7 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder 
 			AddField(field_Email, appdef.DataKind_string, true).
 			AddField(field_Language, appdef.DataKind_string, false).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateResetPasswordByEmailResult")).
-			AddField(field_VerificationToken, appdef.DataKind_string, true).
+			AddDataField(field_VerificationToken, appdef.SysData_String, true, appdef.MaxLen(appdef.MaxFieldLength)).
 			AddField(field_ProfileWSID, appdef.DataKind_int64, true).(appdef.IType).QName(),
 		provideQryInitiateResetPasswordByEmailExec(asp, itokens, federation),
 	))
@@ -40,7 +40,7 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder 
 	cfgRegistry.Resources.Add(istructsmem.NewQueryFunction(
 		authnz.QNameQueryIssueVerifiedValueTokenForResetPassword,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenForResetPasswordParams")).
-			AddField(field_VerificationToken, appdef.DataKind_string, true).
+			AddDataField(field_VerificationToken, appdef.SysData_String, true, appdef.MaxLen(appdef.MaxFieldLength)).
 			AddField(field_VerificationCode, appdef.DataKind_string, true).
 			AddField(field_ProfileWSID, appdef.DataKind_int64, true).
 			AddField(Field_AppName, appdef.DataKind_string, true).(appdef.IType).QName(),

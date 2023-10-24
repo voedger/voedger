@@ -197,7 +197,12 @@ func (cc *viewClustCols) AddBytesField(name string, maxLen uint16) IViewClustCol
 }
 
 func (cc *viewClustCols) AddDataField(name string, dataType QName, constraints ...IConstraint) IViewClustColsBuilder {
-	cc.panicIfVarFieldDuplication(name, DataKind_string)
+	d := cc.app.Data(dataType)
+	if d == nil {
+		panic(fmt.Errorf("%v: data type «%v» not found: %w", cc.view, dataType, ErrNameNotFound))
+	}
+
+	cc.panicIfVarFieldDuplication(name, d.DataKind())
 
 	cc.view.AddDataField(name, dataType, false, constraints...)
 	cc.view.key.AddDataField(name, dataType, false, constraints...)

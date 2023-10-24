@@ -21,9 +21,9 @@ const MaxTypeUniqueFieldsCount = 256
 const MaxTypeUniqueCount = 100
 
 // Maximum string and bytes data length
-const MaxFieldLength = 1024
+const MaxFieldLength = uint16(1024)
 
 // Default string and bytes data max length.
 //
 // This value is used for MaxLen() constraint in system data types `sys.string` and `sys.bytes`.
-const DefaultFieldMaxLength = 255
+const DefaultFieldMaxLength = uint16(255)

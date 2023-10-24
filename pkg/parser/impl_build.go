@@ -248,14 +248,19 @@ func (c *buildContext) views() error {
 			}
 			c.addComments(view, vb())
 
-			resolveLen := func(f *ViewField) uint16 {
-				if (f.Type.Bytes != nil) && (f.Type.Bytes.MaxLen != nil) {
-					return *f.Type.Bytes.MaxLen
+			resolveConstraints := func(f *ViewField) []appdef.IConstraint {
+				cc := []appdef.IConstraint{}
+				switch k := dataTypeToDataKind(f.Type); k {
+				case appdef.DataKind_bytes:
+					if (f.Type.Bytes != nil) && (f.Type.Bytes.MaxLen != nil) {
+						cc = append(cc, appdef.MaxLen(*f.Type.Bytes.MaxLen))
+					}
+				case appdef.DataKind_string:
+					if (f.Type.Varchar != nil) && (f.Type.Varchar.MaxLen != nil) {
+						cc = append(cc, appdef.MaxLen(*f.Type.Varchar.MaxLen))
+					}
 				}
-				if (f.Type.Varchar != nil) && (f.Type.Varchar.MaxLen != nil) {
-					return *f.Type.Varchar.MaxLen
-				}
-				return uint16(appdef.DefaultFieldMaxLength)
+				return cc
 			}
 
 			resolveRefs := func(f *ViewRefField) (refs []appdef.QName, ok bool) {
@@ -304,14 +309,8 @@ func (c *buildContext) views() error {
 					}
 				}
 				if f.Field != nil {
-					switch k := dataTypeToDataKind(f.Field.Type); k {
-					case appdef.DataKind_bytes:
-						vb().KeyBuilder().ClustColsBuilder().AddBytesField(string(f.Field.Name), resolveLen(f.Field))
-					case appdef.DataKind_string:
-						vb().KeyBuilder().ClustColsBuilder().AddStringField(string(f.Field.Name), resolveLen(f.Field))
-					default: // other data types
-						vb().KeyBuilder().ClustColsBuilder().AddField(string(f.Field.Name), k)
-					}
+					k := dataTypeToDataKind(f.Field.Type)
+					vb().KeyBuilder().ClustColsBuilder().AddDataField(string(f.Field.Name), appdef.SysDataName(k), resolveConstraints(f.Field)...)
 					comment(f.Field.Name, f.Field.Statement)
 					return
 				}
@@ -330,14 +329,8 @@ func (c *buildContext) views() error {
 					}
 				}
 				if f.Field != nil {
-					switch k := dataTypeToDataKind(f.Field.Type); k {
-					case appdef.DataKind_bytes:
-						vb().ValueBuilder().AddBytesField(string(f.Field.Name), f.Field.NotNull, appdef.MaxLen(resolveLen(f.Field)))
-					case appdef.DataKind_string:
-						vb().ValueBuilder().AddStringField(string(f.Field.Name), f.Field.NotNull, appdef.MaxLen(resolveLen(f.Field)))
-					default: // other data types
-						vb().ValueBuilder().AddField(string(f.Field.Name), k, f.Field.NotNull)
-					}
+					k := dataTypeToDataKind(f.Field.Type)
+					vb().ValueBuilder().AddDataField(string(f.Field.Name), appdef.SysDataName(k), f.Field.NotNull, resolveConstraints(f.Field)...)
 					comment(f.Field.Name, f.Field.Statement)
 					return
 				}

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_sysDataTypeName(t *testing.T) {
+func Test_SysDataName(t *testing.T) {
 	type args struct {
 		k DataKind
 	}
@@ -28,7 +28,7 @@ func Test_sysDataTypeName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := sysDataTypeName(tt.args.k); !reflect.DeepEqual(got, tt.want) {
+			if got := SysDataName(tt.args.k); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("sysDataTypeName() = %v, want %v", got, tt.want)
 			}
 		})
@@ -45,25 +45,13 @@ func Test_appDef_makeSysDataTypes(t *testing.T) {
 		for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
 			d := app.SysData(k)
 			require.NotNil(d)
-			require.Equal(sysDataTypeName(k), d.QName())
+			require.Equal(SysDataName(k), d.QName())
 			require.Equal(TypeKind_Data, d.Kind())
 			require.Equal(k, d.DataKind())
 			require.Nil(d.Ancestor())
-			switch k {
-			case DataKind_string, DataKind_bytes:
-				cnt := 0
-				d.Constraints(func(c IConstraint) {
-					cnt++
-					switch cnt {
-					case 1:
-						require.Equal(ConstraintKind_MaxLen, c.Kind())
-						require.EqualValues(DefaultFieldMaxLength, c.Value())
-					default:
-						require.Fail("unexpected constraint", "constraint: %v", c)
-					}
-				})
-				require.Equal(1, cnt)
-			}
+			cnt := 0
+			d.Constraints(func(c IConstraint) { cnt++ })
+			require.Equal(0, cnt, "system data type %v should have no constraints", d)
 		}
 	})
 }

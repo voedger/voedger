@@ -42,25 +42,31 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 			"Name": "my",
 			"Views": map[string]interface{}{
 				"my.View": map[string]interface{}{
-					"Key": map[string]interface{}{
-						"ClustCols": []interface{}{map[string]interface{}{
-							"Kind": "DataKind_string",
-							"Name": "ViewStrFld"}},
-						"Partition": []interface{}{map[string]interface{}{
-							"Kind":     "DataKind_int32",
-							"Name":     "ViewIntFld",
-							"Required": true}}},
 					"Name": "my.View",
+					"Key": map[string]interface{}{
+						"ClustCols": []interface{}{
+							map[string]interface{}{
+								"Name": "ViewStrFld",
+								"DataType": map[string]interface{}{
+									"Ancestor": "sys.string",
+									"Constraints": map[string]interface{}{
+										"MaxLen": 255.0}}}},
+						"Partition": []interface{}{
+							map[string]interface{}{
+								"Name":     "ViewIntFld",
+								"Data":     "sys.int32",
+								"Required": true}}},
 					"Value": []interface{}{
 						map[string]interface{}{
-							"Kind":     "DataKind_QName",
 							"Name":     "sys.QName",
+							"Data":     "sys.QName",
 							"Required": true},
 						map[string]interface{}{
-							"Kind": "DataKind_bytes",
 							"Name": "ViewByteFld",
-							"Restricts": map[string]interface{}{
-								"MaxLen": 512.0}}}}}}
-		require.Equal(expected, actual)
+							"DataType": map[string]interface{}{
+								"Ancestor": "sys.bytes",
+								"Constraints": map[string]interface{}{
+									"MaxLen": 512.0}}}}}}}
+		require.EqualValues(expected, actual)
 	})
 }
