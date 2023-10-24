@@ -99,9 +99,7 @@
             },
             {
               "Name": "f1",
-              "DataType": {
-                "Ancestor": "sys.string"
-              },
+              "Data": "sys.string",
               "Required": true
             }
           ]
@@ -141,9 +139,7 @@
             },
             {
               "Name": "f2",
-              "DataType": {
-                "Ancestor": "sys.string"
-              }
+              "Data": "sys.string"
             },
             {
               "Name": "phone",
