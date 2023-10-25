@@ -1,0 +1,7 @@
+go 1.21.2
+
+use (
+	./
+	./staging/src/voedger.io/extensionstinygo 
+)
+
