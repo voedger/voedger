@@ -8,32 +8,17 @@ package apps
 import (
 	"embed"
 	"path"
+	"path/filepath"
 	"runtime"
 
 	"github.com/voedger/voedger/pkg/extensionpoints"
-	"github.com/voedger/voedger/pkg/parser"
 )
 
-func Parse(fsi embed.FS, schemaName string, ep extensionpoints.IExtensionPoint) {
-	dirEntries, err := fsi.ReadDir(".")
-	if err != nil {
-		//notest
-		panic(err)
-	}
-	for _, dirEntry := range dirEntries {
-		sqlContent, err := fsi.ReadFile(dirEntry.Name())
-		if err != nil {
-			// notest
-			panic(err)
-		}
-		_, file, _, _ := runtime.Caller(1)
-		fileSchemaAST, err := parser.ParseFile(path.Join(file, dirEntry.Name()), string(sqlContent))
-		if err != nil {
-			// notest
-			panic(err)
-		}
-		epFileSchemaASTs := ep.ExtensionPoint(EPPackageSchemasASTs)
-		epSysFileSchemaASTs := epFileSchemaASTs.ExtensionPoint(schemaName)
-		epSysFileSchemaASTs.Add(fileSchemaAST)
-	}
+func RegisterSchemaFS(fsi embed.FS, packageName string, ep extensionpoints.IExtensionPoint) {
+	_, file, _, _ := runtime.Caller(1)
+	dir := filepath.Dir(file)
+	epSqlFiles := ep.ExtensionPoint(EPSchemasFS)
+	epPackage := epSqlFiles.ExtensionPoint(packageName)
+	dirWithPackageName := path.Join(dir, packageName) // if package distributed among several directories
+	epPackage.AddNamed(dirWithPackageName, fsi)
 }
