@@ -21,6 +21,8 @@ const (
 	ConstraintKind_MaxLen
 	ConstraintKind_Pattern
 
+	ConstraintKind_MinIncl
+
 	ConstraintKind_Count
 )
 

@@ -8,6 +8,7 @@ package appdef
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 )
 
@@ -51,6 +52,39 @@ func Pattern(v string, c ...string) IConstraint {
 	return newDataConstraint(ConstraintKind_Pattern, re, c...)
 }
 
+// Return new minimum inclusive constraint for numeric data types.
+//
+// # Panics:
+//   - if value is NaN
+//   - if value is infinite
+func MinIncl(v float64, c ...string) IConstraint {
+	if math.IsNaN(v) {
+		panic(fmt.Errorf("minimum inclusive value is NaN: %w", ErrIncompatibleConstraints))
+	}
+	if math.IsInf(v, 0) {
+		panic(fmt.Errorf("minimum inclusive value is infinity: %w", ErrIncompatibleConstraints))
+	}
+	return newDataConstraint(ConstraintKind_MinIncl, v, c...)
+}
+
+// Creates and returns new constraint.
+//
+// # Panics:
+//   - if kind is unknown
+func NewConstraint(kind ConstraintKind, value any, c ...string) IConstraint {
+	switch kind {
+	case ConstraintKind_MinLen:
+		return MinLen(value.(uint16), c...)
+	case ConstraintKind_MaxLen:
+		return MaxLen(value.(uint16), c...)
+	case ConstraintKind_Pattern:
+		return Pattern(value.(string), c...)
+	case ConstraintKind_MinIncl:
+		return MinIncl(value.(float64), c...)
+	}
+	panic(fmt.Errorf("unknown constraint kind: %v", kind))
+}
+
 // Returns the constraints for a data type, combined
 // with those inherited from all ancestors of the type.
 //
@@ -59,7 +93,7 @@ func Pattern(v string, c ...string) IConstraint {
 // If any constraint is specified by the ancestor,
 // but redefined in the descendant, then the constraint
 // from the descendant only will included into result.
-func DataConstraintsInherited(data IData) map[ConstraintKind]IConstraint {
+func ConstraintsWithInherited(data IData) map[ConstraintKind]IConstraint {
 	cc := make(map[ConstraintKind]IConstraint)
 	for d := data; d != nil; d = d.Ancestor() {
 		d.Constraints(func(c IConstraint) {

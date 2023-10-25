@@ -4,10 +4,13 @@
     "test": {
       "Name": "test",
       "DataTypes": {
-        "test.int": {
-          "Comment": "int comment",
-          "Name": "test.int",
-          "Ancestor": "sys.int64"
+        "test.number": {
+          "Name": "test.number",
+          "Ancestor": "sys.int64",
+          "Comment": "natural (positive) integer",
+          "Constraints": {
+            "MinIncl": 1
+          }
         },
         "test.string": {
           "Name": "test.string",
@@ -57,8 +60,8 @@
               }
             },
             {
-              "Name": "intField",
-              "Data": "test.int"
+              "Name": "numField",
+              "Data": "test.number"
             },
             {
               "Name": "mainChild",

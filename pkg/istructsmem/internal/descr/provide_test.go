@@ -22,13 +22,13 @@ var expectedJson string
 func TestBasicUsage(t *testing.T) {
 	appDef := appdef.New()
 
-	intName := appdef.NewQName("test", "int")
+	numName := appdef.NewQName("test", "number")
 	strName := appdef.NewQName("test", "string")
 
 	docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
 
-	i := appDef.AddData(intName, appdef.DataKind_int64, appdef.NullQName)
-	i.SetComment("int comment")
+	n := appDef.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinIncl(1))
+	n.SetComment("natural (positive) integer")
 
 	s := appDef.AddData(strName, appdef.DataKind_string, appdef.NullQName)
 	s.AddConstraints(appdef.MinLen(1), appdef.MaxLen(100), appdef.Pattern(`^\w+$`, "only word characters allowed"))
@@ -38,7 +38,7 @@ func TestBasicUsage(t *testing.T) {
 		AddField("f1", appdef.DataKind_int64, true).
 		SetFieldComment("f1", "field comment").
 		AddField("f2", appdef.DataKind_string, false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`)).
-		AddDataField("intField", intName, false).
+		AddDataField("numField", numName, false).
 		AddRefField("mainChild", false, recName).(appdef.ICDocBuilder).
 		AddContainer("rec", recName, 0, 100, "container comment").(appdef.ICDocBuilder).
 		AddUnique("", []string{"f1", "f2"})

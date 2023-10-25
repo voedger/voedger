@@ -23,10 +23,15 @@ func (c *comment) Comment() string {
 	return c.c
 }
 
+func (c *comment) CommentLines() []string {
+	return strings.Split(c.c, "\n")
+}
+
 func (c *comment) SetComment(v ...string) {
 	c.c = strings.Join(v, "\n")
 }
 
 type nullComment struct{}
 
-func (c *nullComment) Comment() string { return "" }
+func (c *nullComment) Comment() string        { return "" }
+func (c *nullComment) CommentLines() []string { return []string{} }

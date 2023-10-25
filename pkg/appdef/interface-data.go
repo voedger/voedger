@@ -64,5 +64,10 @@ type IConstraint interface {
 	Kind() ConstraintKind
 
 	// Returns constraint value.
+	//
+	// # Returns:
+	//	- uint16 value for min/max length constraints,
+	// 	- *regexp.Regexp value for pattern constraint,
+	// 	- float64 value for min/max inclusive/exclusive constraints.
 	Value() any
 }

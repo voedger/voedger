@@ -13,6 +13,9 @@ package appdef
 type IComment interface {
 	// Returns comment
 	Comment() string
+
+	// Returns comment as string array
+	CommentLines() []string
 }
 
 type ICommentBuilder interface {

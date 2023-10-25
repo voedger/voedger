@@ -17,77 +17,77 @@ import (
 func checkConstraints(fld appdef.IField, value interface{}) (err error) {
 	switch fld.DataKind() {
 	case appdef.DataKind_string:
-		err = checkStringConstraints(fld, value)
+		err = checkCharsConstraints(fld, value.(string))
 	case appdef.DataKind_bytes:
-		err = checkBytesConstraints(fld, value)
+		err = checkCharsConstraints(fld, value.([]byte))
+	case appdef.DataKind_int32:
+		err = checkNumberConstraints(fld, value.(int32))
+	case appdef.DataKind_int64:
+		err = checkNumberConstraints(fld, value.(int64))
+	case appdef.DataKind_float32:
+		err = checkNumberConstraints(fld, value.(float32))
+	case appdef.DataKind_float64:
+		err = checkNumberConstraints(fld, value.(float64))
 	}
 	return err
 }
 
-// Checks value by string field constraints. Return error if constraints violated
-func checkStringConstraints(fld appdef.IField, value interface{}) (err error) {
-	min := uint16(0)
-	max := appdef.DefaultFieldMaxLength
-	var pat *regexp.Regexp
+// Checks string ot bytes value by field constraints. Return error if constraints violated
+type chars interface{ string | []byte }
+
+func checkCharsConstraints[T chars](fld appdef.IField, value T) (err error) {
+	max := false
 
 	fld.Constraints(func(c appdef.IConstraint) {
 		switch c.Kind() {
 		case appdef.ConstraintKind_MinLen:
-			min = c.Value().(uint16)
+			if len(value) < int(c.Value().(uint16)) {
+				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+			}
 		case appdef.ConstraintKind_MaxLen:
-			max = c.Value().(uint16)
+			if len(value) > int(c.Value().(uint16)) {
+				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+			}
+			max = true
 		case appdef.ConstraintKind_Pattern:
-			pat = c.Value().(*regexp.Regexp)
+			if pat := c.Value().(*regexp.Regexp); pat != nil {
+				switch fld.DataKind() {
+				case appdef.DataKind_string:
+					if !pat.MatchString(string(value)) {
+						err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+					}
+				case appdef.DataKind_bytes:
+					if !pat.Match([]byte(value)) {
+						err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+					}
+				}
+			}
 		}
 	})
 
-	v := value.(string)
-	l := len(v)
-	if l < int(min) {
-		err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, fmt.Sprintf("MinLen: %d", min), ErrDataConstraintViolation))
-	}
-
-	if l > int(max) {
-		err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, fmt.Sprintf("MaxLen: %d", max), ErrDataConstraintViolation))
-	}
-
-	if (pat != nil) && (!pat.MatchString(v)) {
-		err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, fmt.Sprintf("Pattern: %v", pat), ErrDataConstraintViolation))
+	if !max {
+		if len(value) > int(appdef.DefaultFieldMaxLength) {
+			err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, fmt.Sprintf("default MaxLen: %d", appdef.DefaultFieldMaxLength), ErrDataConstraintViolation))
+		}
 	}
 
 	return err
 }
 
-// Checks value by bytes field constraints. Return error if constraints violated
-func checkBytesConstraints(fld appdef.IField, value interface{}) (err error) {
-	min := uint16(0)
-	max := appdef.DefaultFieldMaxLength
-	var pat *regexp.Regexp
+// Checks value by number field constraints. Return error if constraints violated
+type number = interface {
+	int32 | int64 | float32 | float64
+}
 
+func checkNumberConstraints[T number](fld appdef.IField, value T) (err error) {
 	fld.Constraints(func(c appdef.IConstraint) {
 		switch c.Kind() {
-		case appdef.ConstraintKind_MinLen:
-			min = c.Value().(uint16)
-		case appdef.ConstraintKind_MaxLen:
-			max = c.Value().(uint16)
-		case appdef.ConstraintKind_Pattern:
-			pat = c.Value().(*regexp.Regexp)
+		case appdef.ConstraintKind_MinIncl:
+			if float64(value) < c.Value().(float64) {
+				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+			}
 		}
 	})
-
-	v := value.([]byte)
-	l := len(v)
-	if l < int(min) {
-		err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, fmt.Sprintf("MinLen: %d", min), ErrDataConstraintViolation))
-	}
-
-	if l > int(max) {
-		err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, fmt.Sprintf("MaxLen: %d", max), ErrDataConstraintViolation))
-	}
-
-	if (pat != nil) && (!pat.Match(v)) {
-		err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, fmt.Sprintf("Pattern: %v", pat), ErrDataConstraintViolation))
-	}
 
 	return err
 }

@@ -58,6 +58,9 @@ func (k DataKind) IsFixed() bool {
 //   - DataConstraintKind_MinLen
 //   - DataConstraintKind_MaxLen
 //   - DataConstraintKind_Pattern
+//
+// # Numeric types supports:
+//   - DataConstraintKind_MinIncl
 func (k DataKind) IsSupportedConstraint(c ConstraintKind) bool {
 	switch k {
 	case DataKind_string, DataKind_bytes:
@@ -66,6 +69,11 @@ func (k DataKind) IsSupportedConstraint(c ConstraintKind) bool {
 			ConstraintKind_MinLen,
 			ConstraintKind_MaxLen,
 			ConstraintKind_Pattern:
+			return true
+		}
+	case DataKind_int32, DataKind_int64, DataKind_float32, DataKind_float64:
+		switch c {
+		case ConstraintKind_MinIncl:
 			return true
 		}
 	}
