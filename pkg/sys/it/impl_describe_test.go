@@ -47,10 +47,7 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 						"ClustCols": []interface{}{
 							map[string]interface{}{
 								"Name": "ViewStrFld",
-								"DataType": map[string]interface{}{
-									"Ancestor": "sys.string",
-									"Constraints": map[string]interface{}{
-										"MaxLen": 255.0}}}},
+								"Data": "sys.string"}},
 						"Partition": []interface{}{
 							map[string]interface{}{
 								"Name":     "ViewIntFld",
