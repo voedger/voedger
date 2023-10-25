@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-//go:generate stringer -type=ConstraintKind -output=data-constraint-kind_string.go
+//go:generate stringer -type=ConstraintKind -output=constraint-kind_string.go
 
 const (
 	// null - no-value type. Returned when the requested kind does not exist
