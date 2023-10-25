@@ -90,6 +90,14 @@ func checkNumberConstraints[T number](fld appdef.IField, value T) (err error) {
 			if float64(value) <= c.Value().(float64) {
 				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
 			}
+		case appdef.ConstraintKind_MaxIncl:
+			if float64(value) > c.Value().(float64) {
+				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+			}
+		case appdef.ConstraintKind_MaxExcl:
+			if float64(value) >= c.Value().(float64) {
+				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+			}
 		}
 	})
 

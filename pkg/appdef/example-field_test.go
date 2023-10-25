@@ -79,16 +79,18 @@ func ExampleIFieldsBuilder_AddDataField() {
 		appDef := appdef.New()
 
 		str10 := appDef.AddData(appdef.NewQName("test", "str10"), appdef.DataKind_string, appdef.NullQName, appdef.MinLen(10), appdef.MaxLen(10))
-		str10.SetComment("string with 10 characters exact")
+		str10.SetComment("String with 10 characters exact")
 		dig10 := appDef.AddData(appdef.NewQName("test", "dig10"), appdef.DataKind_string, str10.QName(), appdef.Pattern(`^\d+$`, "only digits"))
 
-		month := appDef.AddData(appdef.NewQName("test", "month"), appdef.DataKind_int32, appdef.NullQName, appdef.MinIncl(1))
+		month := appDef.AddData(appdef.NewQName("test", "month"), appdef.DataKind_int32, appdef.NullQName, appdef.MinExcl(0), appdef.MaxIncl(12))
+		month.SetComment("Month number, left-open range (0-12]")
 
 		doc := appDef.AddCDoc(docName)
 		doc.
 			AddDataField("code", dig10.QName(), true).
 			SetFieldComment("code", "Code is string containing 10 digits").
-			AddDataField("month", month.QName(), true)
+			AddDataField("month", month.QName(), true).
+			SetFieldComment("month", "Month number natural up to 12")
 
 		if a, err := appDef.Build(); err == nil {
 			app = a
@@ -129,8 +131,8 @@ func ExampleIFieldsBuilder_AddDataField() {
 	// CDoc «test.doc», user field count: 2
 	// 1. string-field «code», required. Code is string containing 10 digits
 	//   - constraints: [MinLen: 10, MaxLen: 10, Pattern: `^\d+$`]
-	// 2. int32-field «month», required
-	//   - constraints: [MinIncl: 1]
+	// 2. int32-field «month», required. Month number natural up to 12
+	//   - constraints: [MinExcl: 0, MaxIncl: 12]
 }
 
 func ExampleIFieldsBuilder_SetFieldVerify() {

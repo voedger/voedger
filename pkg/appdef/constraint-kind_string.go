@@ -14,12 +14,14 @@ func _() {
 	_ = x[ConstraintKind_Pattern-3]
 	_ = x[ConstraintKind_MinIncl-4]
 	_ = x[ConstraintKind_MinExcl-5]
-	_ = x[ConstraintKind_Count-6]
+	_ = x[ConstraintKind_MaxIncl-6]
+	_ = x[ConstraintKind_MaxExcl-7]
+	_ = x[ConstraintKind_Count-8]
 }
 
-const _ConstraintKind_name = "ConstraintKind_nullConstraintKind_MinLenConstraintKind_MaxLenConstraintKind_PatternConstraintKind_MinInclConstraintKind_MinExclConstraintKind_Count"
+const _ConstraintKind_name = "ConstraintKind_nullConstraintKind_MinLenConstraintKind_MaxLenConstraintKind_PatternConstraintKind_MinInclConstraintKind_MinExclConstraintKind_MaxInclConstraintKind_MaxExclConstraintKind_Count"
 
-var _ConstraintKind_index = [...]uint8{0, 19, 40, 61, 83, 105, 127, 147}
+var _ConstraintKind_index = [...]uint8{0, 19, 40, 61, 83, 105, 127, 149, 171, 191}
 
 func (i ConstraintKind) String() string {
 	if i >= ConstraintKind(len(_ConstraintKind_index)-1) {

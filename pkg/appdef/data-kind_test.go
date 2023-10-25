@@ -113,36 +113,48 @@ func TestDataKind_IsSupportedConstraint(t *testing.T) {
 		{"string: Pattern", DataKind_string, args{ConstraintKind_Pattern}, true},
 		{"string: MinIncl", DataKind_string, args{ConstraintKind_MinIncl}, false},
 		{"string: MinExcl", DataKind_string, args{ConstraintKind_MinExcl}, false},
+		{"string: MaxIncl", DataKind_string, args{ConstraintKind_MaxIncl}, false},
+		{"string: MaxExcl", DataKind_string, args{ConstraintKind_MaxExcl}, false},
 		//-
 		{"bytes: MinLen", DataKind_bytes, args{ConstraintKind_MinLen}, true},
 		{"bytes: MaxLen", DataKind_bytes, args{ConstraintKind_MaxLen}, true},
 		{"bytes: Pattern", DataKind_bytes, args{ConstraintKind_Pattern}, true},
 		{"bytes: MinIncl", DataKind_bytes, args{ConstraintKind_MinIncl}, false},
 		{"bytes: MinExcl", DataKind_bytes, args{ConstraintKind_MinExcl}, false},
+		{"bytes: MaxIncl", DataKind_bytes, args{ConstraintKind_MaxIncl}, false},
+		{"bytes: MaxExcl", DataKind_bytes, args{ConstraintKind_MaxExcl}, false},
 		//-
 		{"int32: MinLen", DataKind_int32, args{ConstraintKind_MinLen}, false},
 		{"int32: MaxLen", DataKind_int32, args{ConstraintKind_MaxLen}, false},
 		{"int32: Pattern", DataKind_int32, args{ConstraintKind_Pattern}, false},
 		{"int32: MinIncl", DataKind_int32, args{ConstraintKind_MinIncl}, true},
 		{"int32: MinExcl", DataKind_int32, args{ConstraintKind_MinExcl}, true},
+		{"int32: MaxIncl", DataKind_int32, args{ConstraintKind_MaxIncl}, true},
+		{"int32: MaxExcl", DataKind_int32, args{ConstraintKind_MaxExcl}, true},
 		//-
 		{"int64: MinLen", DataKind_int64, args{ConstraintKind_MinLen}, false},
 		{"int64: MaxLen", DataKind_int64, args{ConstraintKind_MaxLen}, false},
 		{"int64: Pattern", DataKind_int64, args{ConstraintKind_Pattern}, false},
 		{"int64: MinIncl", DataKind_int64, args{ConstraintKind_MinIncl}, true},
 		{"int64: MinExcl", DataKind_int64, args{ConstraintKind_MinExcl}, true},
+		{"int64: MaxIncl", DataKind_int64, args{ConstraintKind_MaxIncl}, true},
+		{"int64: MaxExcl", DataKind_int64, args{ConstraintKind_MaxExcl}, true},
 		//-
 		{"float32: MinLen", DataKind_float32, args{ConstraintKind_MinLen}, false},
 		{"float32: MaxLen", DataKind_float32, args{ConstraintKind_MaxLen}, false},
 		{"float32: Pattern", DataKind_float32, args{ConstraintKind_Pattern}, false},
 		{"float32: MinIncl", DataKind_float32, args{ConstraintKind_MinIncl}, true},
 		{"float32: MinExcl", DataKind_float32, args{ConstraintKind_MinExcl}, true},
+		{"float32: MaxIncl", DataKind_float32, args{ConstraintKind_MaxIncl}, true},
+		{"float32: MaxExcl", DataKind_float32, args{ConstraintKind_MaxExcl}, true},
 		//-
 		{"float64: MinLen", DataKind_float64, args{ConstraintKind_MinLen}, false},
 		{"float64: MaxLen", DataKind_float64, args{ConstraintKind_MaxLen}, false},
 		{"float64: Pattern", DataKind_float64, args{ConstraintKind_Pattern}, false},
 		{"float64: MinIncl", DataKind_float64, args{ConstraintKind_MinIncl}, true},
 		{"float64: MinExcl", DataKind_float64, args{ConstraintKind_MinExcl}, true},
+		{"float64: MaxIncl", DataKind_float64, args{ConstraintKind_MaxIncl}, true},
+		{"float64: MaxExcl", DataKind_float64, args{ConstraintKind_MaxExcl}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

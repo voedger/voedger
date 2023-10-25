@@ -24,20 +24,20 @@ func Test_checkConstraints(t *testing.T) {
 		obj := adb.AddObject(name)
 		obj.
 			AddField("str", appdef.DataKind_string, false).
-			AddField("str4", appdef.DataKind_string, false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)).
-			//—
 			AddField("bytes", appdef.DataKind_bytes, false).
+			// char fields to test constraints: exactly four digits
+			AddField("str4", appdef.DataKind_string, false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)).
 			AddField("bytes4", appdef.DataKind_bytes, false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)).
-			//—
-			AddField("int32_i", appdef.DataKind_int32, false, appdef.MinIncl(1)).
-			AddField("int64_i", appdef.DataKind_int64, false, appdef.MinIncl(1)).
-			AddField("float32_i", appdef.DataKind_float32, false, appdef.MinIncl(1)).
-			AddField("float64_i", appdef.DataKind_float64, false, appdef.MinIncl(1)).
-			//—
-			AddField("int32_e", appdef.DataKind_int32, false, appdef.MinExcl(0)).
-			AddField("int64_e", appdef.DataKind_int64, false, appdef.MinExcl(0)).
-			AddField("float32_e", appdef.DataKind_float32, false, appdef.MinExcl(0)).
-			AddField("float64_e", appdef.DataKind_float64, false, appdef.MinExcl(0))
+			// numeric fields to test inclusive constraints: closed range [1, 2]
+			AddField("int32_i", appdef.DataKind_int32, false, appdef.MinIncl(1), appdef.MaxIncl(2)).
+			AddField("int64_i", appdef.DataKind_int64, false, appdef.MinIncl(1), appdef.MaxIncl(2)).
+			AddField("float32_i", appdef.DataKind_float32, false, appdef.MinIncl(1), appdef.MaxIncl(2)).
+			AddField("float64_i", appdef.DataKind_float64, false, appdef.MinIncl(1), appdef.MaxIncl(2)).
+			// numeric fields to test exclusive constraints: open range (0, 3)
+			AddField("int32_e", appdef.DataKind_int32, false, appdef.MinExcl(0), appdef.MaxExcl(3)).
+			AddField("int64_e", appdef.DataKind_int64, false, appdef.MinExcl(0), appdef.MaxExcl(3)).
+			AddField("float32_e", appdef.DataKind_float32, false, appdef.MinExcl(0), appdef.MaxExcl(3)).
+			AddField("float64_e", appdef.DataKind_float64, false, appdef.MinExcl(0), appdef.MaxExcl(3))
 
 		app, err := adb.Build()
 		require.NoError(err)
@@ -74,6 +74,16 @@ func Test_checkConstraints(t *testing.T) {
 		{"int64_e: min exclusive", args{"int64_e", int64(0)}, "int64-field «int64_e» data constraint «MinExcl: 0» violated"},
 		{"float32_e: min exclusive", args{"float32_e", float32(0)}, "float32-field «float32_e» data constraint «MinExcl: 0» violated"},
 		{"float64_e: min exclusive", args{"float64_e", float64(0)}, "float64-field «float64_e» data constraint «MinExcl: 0» violated"},
+		//-
+		{"int32_i: max inclusive", args{"int32_i", int32(3)}, "int32-field «int32_i» data constraint «MaxIncl: 2» violated"},
+		{"int64_i: max inclusive", args{"int64_i", int64(3)}, "int64-field «int64_i» data constraint «MaxIncl: 2» violated"},
+		{"float32_i: max inclusive", args{"float32_i", float32(3)}, "float32-field «float32_i» data constraint «MaxIncl: 2» violated"},
+		{"float64_i: max inclusive", args{"float64_i", float64(3)}, "float64-field «float64_i» data constraint «MaxIncl: 2» violated"},
+		//-
+		{"int32_e: max exclusive", args{"int32_e", int32(3)}, "int32-field «int32_e» data constraint «MaxExcl: 3» violated"},
+		{"int64_e: max exclusive", args{"int64_e", int64(3)}, "int64-field «int64_e» data constraint «MaxExcl: 3» violated"},
+		{"float32_e: max exclusive", args{"float32_e", float32(3)}, "float32-field «float32_e» data constraint «MaxExcl: 3» violated"},
+		{"float64_e: max exclusive", args{"float64_e", float64(3)}, "float64-field «float64_e» data constraint «MaxExcl: 3» violated"},
 	}
 
 	for _, tt := range tests {

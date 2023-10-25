@@ -23,6 +23,8 @@ const (
 
 	ConstraintKind_MinIncl
 	ConstraintKind_MinExcl
+	ConstraintKind_MaxIncl
+	ConstraintKind_MaxExcl
 
 	ConstraintKind_Count
 )
