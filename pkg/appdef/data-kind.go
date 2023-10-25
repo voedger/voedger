@@ -73,7 +73,9 @@ func (k DataKind) IsSupportedConstraint(c ConstraintKind) bool {
 		}
 	case DataKind_int32, DataKind_int64, DataKind_float32, DataKind_float64:
 		switch c {
-		case ConstraintKind_MinIncl:
+		case
+			ConstraintKind_MinIncl,
+			ConstraintKind_MinExcl:
 			return true
 		}
 	}

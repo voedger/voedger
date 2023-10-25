@@ -22,6 +22,7 @@ const (
 	ConstraintKind_Pattern
 
 	ConstraintKind_MinIncl
+	ConstraintKind_MinExcl
 
 	ConstraintKind_Count
 )

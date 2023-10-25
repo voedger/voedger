@@ -97,3 +97,58 @@ func TestDataKind_TrimString(t *testing.T) {
 		})
 	}
 }
+
+func TestDataKind_IsSupportedConstraint(t *testing.T) {
+	type args struct {
+		c ConstraintKind
+	}
+	tests := []struct {
+		name string
+		k    DataKind
+		args args
+		want bool
+	}{
+		{"string: MinLen", DataKind_string, args{ConstraintKind_MinLen}, true},
+		{"string: MaxLen", DataKind_string, args{ConstraintKind_MaxLen}, true},
+		{"string: Pattern", DataKind_string, args{ConstraintKind_Pattern}, true},
+		{"string: MinIncl", DataKind_string, args{ConstraintKind_MinIncl}, false},
+		{"string: MinExcl", DataKind_string, args{ConstraintKind_MinExcl}, false},
+		//-
+		{"bytes: MinLen", DataKind_bytes, args{ConstraintKind_MinLen}, true},
+		{"bytes: MaxLen", DataKind_bytes, args{ConstraintKind_MaxLen}, true},
+		{"bytes: Pattern", DataKind_bytes, args{ConstraintKind_Pattern}, true},
+		{"bytes: MinIncl", DataKind_bytes, args{ConstraintKind_MinIncl}, false},
+		{"bytes: MinExcl", DataKind_bytes, args{ConstraintKind_MinExcl}, false},
+		//-
+		{"int32: MinLen", DataKind_int32, args{ConstraintKind_MinLen}, false},
+		{"int32: MaxLen", DataKind_int32, args{ConstraintKind_MaxLen}, false},
+		{"int32: Pattern", DataKind_int32, args{ConstraintKind_Pattern}, false},
+		{"int32: MinIncl", DataKind_int32, args{ConstraintKind_MinIncl}, true},
+		{"int32: MinExcl", DataKind_int32, args{ConstraintKind_MinExcl}, true},
+		//-
+		{"int64: MinLen", DataKind_int64, args{ConstraintKind_MinLen}, false},
+		{"int64: MaxLen", DataKind_int64, args{ConstraintKind_MaxLen}, false},
+		{"int64: Pattern", DataKind_int64, args{ConstraintKind_Pattern}, false},
+		{"int64: MinIncl", DataKind_int64, args{ConstraintKind_MinIncl}, true},
+		{"int64: MinExcl", DataKind_int64, args{ConstraintKind_MinExcl}, true},
+		//-
+		{"float32: MinLen", DataKind_float32, args{ConstraintKind_MinLen}, false},
+		{"float32: MaxLen", DataKind_float32, args{ConstraintKind_MaxLen}, false},
+		{"float32: Pattern", DataKind_float32, args{ConstraintKind_Pattern}, false},
+		{"float32: MinIncl", DataKind_float32, args{ConstraintKind_MinIncl}, true},
+		{"float32: MinExcl", DataKind_float32, args{ConstraintKind_MinExcl}, true},
+		//-
+		{"float64: MinLen", DataKind_float64, args{ConstraintKind_MinLen}, false},
+		{"float64: MaxLen", DataKind_float64, args{ConstraintKind_MaxLen}, false},
+		{"float64: Pattern", DataKind_float64, args{ConstraintKind_Pattern}, false},
+		{"float64: MinIncl", DataKind_float64, args{ConstraintKind_MinIncl}, true},
+		{"float64: MinExcl", DataKind_float64, args{ConstraintKind_MinExcl}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.k.IsSupportedConstraint(tt.args.c); got != tt.want {
+				t.Errorf("DataKind.IsSupportedConstraint() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -29,10 +29,15 @@ func Test_checkConstraints(t *testing.T) {
 			AddField("bytes", appdef.DataKind_bytes, false).
 			AddField("bytes4", appdef.DataKind_bytes, false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)).
 			//—
-			AddField("int32", appdef.DataKind_int32, false, appdef.MinIncl(1)).
-			AddField("int64", appdef.DataKind_int64, false, appdef.MinIncl(1)).
-			AddField("float32", appdef.DataKind_float32, false, appdef.MinIncl(1)).
-			AddField("float64", appdef.DataKind_float64, false, appdef.MinIncl(1))
+			AddField("int32_i", appdef.DataKind_int32, false, appdef.MinIncl(1)).
+			AddField("int64_i", appdef.DataKind_int64, false, appdef.MinIncl(1)).
+			AddField("float32_i", appdef.DataKind_float32, false, appdef.MinIncl(1)).
+			AddField("float64_i", appdef.DataKind_float64, false, appdef.MinIncl(1)).
+			//—
+			AddField("int32_e", appdef.DataKind_int32, false, appdef.MinExcl(0)).
+			AddField("int64_e", appdef.DataKind_int64, false, appdef.MinExcl(0)).
+			AddField("float32_e", appdef.DataKind_float32, false, appdef.MinExcl(0)).
+			AddField("float64_e", appdef.DataKind_float64, false, appdef.MinExcl(0))
 
 		app, err := adb.Build()
 		require.NoError(err)
@@ -60,10 +65,15 @@ func Test_checkConstraints(t *testing.T) {
 		{"[]byte: max len", args{"bytes4", []byte("12345")}, "bytes-field «bytes4» data constraint «MaxLen: 4» violated"},
 		{"[]byte: pattern", args{"bytes4", []byte("abcd")}, "bytes-field «bytes4» data constraint «Pattern: `^\\d+$`» violated"},
 		//-
-		{"int32: min inclusive", args{"int32", int32(0)}, "int32-field «int32» data constraint «MinIncl: 1» violated"},
-		{"int64: min inclusive", args{"int64", int64(0)}, "int64-field «int64» data constraint «MinIncl: 1» violated"},
-		{"float32: min inclusive", args{"float32", float32(0)}, "float32-field «float32» data constraint «MinIncl: 1» violated"},
-		{"float64: min inclusive", args{"float64", float64(0)}, "float64-field «float64» data constraint «MinIncl: 1» violated"},
+		{"int32_i: min inclusive", args{"int32_i", int32(0)}, "int32-field «int32_i» data constraint «MinIncl: 1» violated"},
+		{"int64_i: min inclusive", args{"int64_i", int64(0)}, "int64-field «int64_i» data constraint «MinIncl: 1» violated"},
+		{"float32_i: min inclusive", args{"float32_i", float32(0)}, "float32-field «float32_i» data constraint «MinIncl: 1» violated"},
+		{"float64_i: min inclusive", args{"float64_i", float64(0)}, "float64-field «float64_i» data constraint «MinIncl: 1» violated"},
+		//-
+		{"int32_e: min exclusive", args{"int32_e", int32(0)}, "int32-field «int32_e» data constraint «MinExcl: 0» violated"},
+		{"int64_e: min exclusive", args{"int64_e", int64(0)}, "int64-field «int64_e» data constraint «MinExcl: 0» violated"},
+		{"float32_e: min exclusive", args{"float32_e", float32(0)}, "float32-field «float32_e» data constraint «MinExcl: 0» violated"},
+		{"float64_e: min exclusive", args{"float64_e", float64(0)}, "float64-field «float64_e» data constraint «MinExcl: 0» violated"},
 	}
 
 	for _, tt := range tests {

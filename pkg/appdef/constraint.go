@@ -56,15 +56,30 @@ func Pattern(v string, c ...string) IConstraint {
 //
 // # Panics:
 //   - if value is NaN
-//   - if value is infinite
+//   - if value is +infinite
 func MinIncl(v float64, c ...string) IConstraint {
 	if math.IsNaN(v) {
 		panic(fmt.Errorf("minimum inclusive value is NaN: %w", ErrIncompatibleConstraints))
 	}
-	if math.IsInf(v, 0) {
-		panic(fmt.Errorf("minimum inclusive value is infinity: %w", ErrIncompatibleConstraints))
+	if math.IsInf(v, 1) {
+		panic(fmt.Errorf("minimum inclusive value is positive infinity: %w", ErrIncompatibleConstraints))
 	}
 	return newDataConstraint(ConstraintKind_MinIncl, v, c...)
+}
+
+// Return new minimum exclusive constraint for numeric data types.
+//
+// # Panics:
+//   - if value is NaN
+//   - if value is +infinite
+func MinExcl(v float64, c ...string) IConstraint {
+	if math.IsNaN(v) {
+		panic(fmt.Errorf("minimum exclusive value is NaN: %w", ErrIncompatibleConstraints))
+	}
+	if math.IsInf(v, 1) {
+		panic(fmt.Errorf("minimum inclusive value is positive infinity: %w", ErrIncompatibleConstraints))
+	}
+	return newDataConstraint(ConstraintKind_MinExcl, v, c...)
 }
 
 // Creates and returns new constraint.
@@ -81,6 +96,8 @@ func NewConstraint(kind ConstraintKind, value any, c ...string) IConstraint {
 		return Pattern(value.(string), c...)
 	case ConstraintKind_MinIncl:
 		return MinIncl(value.(float64), c...)
+	case ConstraintKind_MinExcl:
+		return MinExcl(value.(float64), c...)
 	}
 	panic(fmt.Errorf("unknown constraint kind: %v", kind))
 }
