@@ -161,4 +161,10 @@ func Test_AppDef_AddData(t *testing.T) {
 		})
 	})
 
+	t.Run("panic if incompatible constraints", func(t *testing.T) {
+		apb := New()
+		require.Panics(func() {
+			_ = apb.AddData(strName, DataKind_string, NullQName, MinIncl(1))
+		})
+	})
 }

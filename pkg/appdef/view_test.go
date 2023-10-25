@@ -17,11 +17,17 @@ func TestAddView(t *testing.T) {
 
 	adb := New()
 
+	numName := NewQName("test", "natural")
+	_ = adb.AddData(numName, DataKind_int64, NullQName, MinExcl(0))
+
 	digsData := NewQName("test", "digs")
 	_ = adb.AddData(digsData, DataKind_string, NullQName, Pattern(`^\d+$`, "only digits allowed"))
 
 	docName := NewQName("test", "doc")
 	_ = adb.AddCDoc(docName)
+
+	kbName := NewQName("test", "KB")
+	_ = adb.AddData(kbName, DataKind_bytes, NullQName, MinLen(1), MaxLen(1024, "up to 1 KB"))
 
 	viewName := NewQName("test", "view")
 	vb := adb.AddView(viewName)
@@ -31,12 +37,27 @@ func TestAddView(t *testing.T) {
 		vb.SetComment("test view")
 
 		t.Run("must be ok to add partition key fields", func(t *testing.T) {
-			vb.KeyBuilder().PartKeyBuilder().AddField("pkF1", DataKind_int64)
+			vb.KeyBuilder().PartKeyBuilder().AddDataField("pkF1", numName)
 			vb.KeyBuilder().PartKeyBuilder().AddField("pkF2", DataKind_bool)
+
+			t.Run("panic if field already exists in view", func(t *testing.T) {
+				require.Panics(func() {
+					vb.KeyBuilder().PartKeyBuilder().AddField("pkF1", DataKind_int64)
+				})
+			})
 
 			t.Run("panic if variable length field added to pk", func(t *testing.T) {
 				require.Panics(func() {
 					vb.KeyBuilder().PartKeyBuilder().AddField("pkF3", DataKind_string)
+				})
+				require.Panics(func() {
+					vb.KeyBuilder().PartKeyBuilder().AddDataField("pkF3", digsData)
+				})
+			})
+
+			t.Run("panic if unknown data type field added to pk", func(t *testing.T) {
+				require.Panics(func() {
+					vb.KeyBuilder().PartKeyBuilder().AddDataField("pkF3", NewQName("test", "unknown"))
 				})
 			})
 		})
@@ -45,9 +66,15 @@ func TestAddView(t *testing.T) {
 			vb.KeyBuilder().ClustColsBuilder().AddField("ccF1", DataKind_int64)
 			vb.KeyBuilder().ClustColsBuilder().AddRefField("ccF2", docName)
 
-			t.Run("panic if field already exists in pk", func(t *testing.T) {
+			t.Run("panic if field already exists in view", func(t *testing.T) {
 				require.Panics(func() {
-					vb.KeyBuilder().ClustColsBuilder().AddField("pkF1", DataKind_int64)
+					vb.KeyBuilder().ClustColsBuilder().AddField("ccF1", DataKind_int64)
+				})
+			})
+
+			t.Run("panic if unknown data type field added to cc", func(t *testing.T) {
+				require.Panics(func() {
+					vb.KeyBuilder().ClustColsBuilder().AddDataField("ccF3", NewQName("test", "unknown"))
 				})
 			})
 		})
@@ -99,6 +126,7 @@ func TestAddView(t *testing.T) {
 				require.True(f.IsSys())
 			case 2:
 				require.Equal("pkF1", f.Name())
+				require.Equal(numName, f.Data().QName())
 				require.True(f.Required())
 			case 3:
 				require.Equal("pkF2", f.Name())
@@ -129,6 +157,7 @@ func TestAddView(t *testing.T) {
 				switch cnt {
 				case 1:
 					require.Equal("pkF1", f.Name())
+					require.Equal(numName, f.Data().QName())
 					require.True(f.Required())
 				case 2:
 					require.Equal("pkF2", f.Name())
@@ -155,6 +184,7 @@ func TestAddView(t *testing.T) {
 				switch cnt {
 				case 1:
 					require.Equal("pkF1", f.Name())
+					require.Equal(numName, f.Data().QName())
 					require.True(f.Required())
 				case 2:
 					require.Equal("pkF2", f.Name())
@@ -237,12 +267,14 @@ func TestAddView(t *testing.T) {
 			SetFieldComment("pkF3", "test comment")
 
 		vb.KeyBuilder().ClustColsBuilder().
-			AddField("ccF3", DataKind_bytes, MaxLen(100)).
-			SetFieldComment("ccF3", "test comment")
+			AddDataField("ccF3", kbName).SetFieldComment("ccF3", "one KB")
 
 		t.Run("panic if add second variable length field", func(t *testing.T) {
 			require.Panics(func() {
-				vb.KeyBuilder().ClustColsBuilder().AddField("ccF3_1", DataKind_bytes, MaxLen(100))
+				vb.KeyBuilder().ClustColsBuilder().AddField("ccF3_1", DataKind_bytes)
+			})
+			require.Panics(func() {
+				vb.KeyBuilder().ClustColsBuilder().AddDataField("ccF3_1", kbName)
 			})
 		})
 
@@ -261,7 +293,7 @@ func TestAddView(t *testing.T) {
 		require.Equal(view.Key().FieldCount()+view.Value().FieldCount(), view.FieldCount())
 
 		require.Equal("test comment", view.Key().Field("pkF3").Comment())
-		require.Equal("test comment", view.Key().Field("ccF3").Comment())
+		require.Equal("one KB", view.Key().Field("ccF3").Comment())
 
 		require.Equal(5, view.Value().UserFieldCount())
 

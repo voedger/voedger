@@ -129,6 +129,16 @@ func Test_AddField(t *testing.T) {
 		}
 		require.Panics(func() { o.AddField("errorField", DataKind_bool, true) })
 	})
+
+	t.Run("must be panic if unsupported field data kind", func(t *testing.T) {
+		o := New().AddObject(NewQName("test", "obj"))
+		require.Panics(func() { o.AddField("errorField", DataKind_FakeLast, false) })
+	})
+
+	t.Run("must be panic if unknown data type", func(t *testing.T) {
+		o := New().AddObject(NewQName("test", "obj"))
+		require.Panics(func() { o.AddDataField("errorField", NewQName("test", "unknown"), false) })
+	})
 }
 
 func Test_SetFieldComment(t *testing.T) {

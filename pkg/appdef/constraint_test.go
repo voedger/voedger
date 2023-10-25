@@ -45,6 +45,14 @@ func TestNewConstraint(t *testing.T) {
 			args{ConstraintKind_MinExcl, float64(1), []string{"test min exclusive"}},
 			args{ConstraintKind_MinExcl, 1, []string{"test min exclusive"}},
 		},
+		{"Max inclusive",
+			args{ConstraintKind_MaxIncl, float64(1), []string{"test max inclusive"}},
+			args{ConstraintKind_MaxIncl, 1, []string{"test max inclusive"}},
+		},
+		{"Max exclusive",
+			args{ConstraintKind_MaxExcl, float64(1), []string{"test max exclusive"}},
+			args{ConstraintKind_MaxExcl, 1, []string{"test max exclusive"}},
+		},
 	}
 	require := require.New(t)
 	for _, tt := range tests {
