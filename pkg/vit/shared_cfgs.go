@@ -78,7 +78,7 @@ var (
 
 func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	registryapp.Provide(smtp.Cfg{}, false)(apis, cfg, appDefBuilder, ep)
-	apps.Parse(SchemaTestApp2, "app2", ep)
+	apps.RegisterSchemaFS(SchemaTestApp2, "app2", ep)
 }
 
 func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
@@ -90,7 +90,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider, false)
 
-	apps.Parse(SchemaTestApp1, "app1", ep)
+	apps.RegisterSchemaFS(SchemaTestApp1, "app1", ep)
 
 	projectors.ProvideViewDef(adf, QNameTestView, func(view appdef.IViewBuilder) {
 		view.KeyBuilder().PartKeyBuilder().AddField("ViewIntFld", appdef.DataKind_int32)
