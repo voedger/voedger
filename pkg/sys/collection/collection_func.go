@@ -37,7 +37,7 @@ func collectionFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callba
 		return err
 	}
 
-	kb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewCollection)
+	kb, err := args.State.KeyBuilder(state.View, QNameViewCollection)
 	if err != nil {
 		return err
 	}

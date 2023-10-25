@@ -1,3 +1,5 @@
+-- noinspection SqlNoDataSourceInspectionForFile
+
 -- Copyright (c) 2020-present unTill Pro, Ltd.
 
 -- note: this schema is for tests only. Voedger sys package uses copy of this schema
@@ -14,24 +16,60 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
 ABSTRACT WORKSPACE Workspace (
+);
+
+WORKSPACE SomeWorkspace(
     TYPE CreateLoginParams(
         Login                       varchar,
         AppName                     varchar,
         SubjectKind                 int32,
         WSKindInitializationData    varchar(1024),
-        ProfileCluster              int32
+        ProfileCluster              int32,
+        ProfileToken                int32
     );
     TYPE CreateLoginUnloggedParams(
         Email varchar,
         Password varchar
     );
+    TABLE SomeTable INHERITS CDoc( -- NodeRemoved: removed in new.sql
+        A varchar,
+        B varchar
+    );
+    TABLE AnotherOneTable INHERITS CDoc(
+        A varchar,
+        B varchar,
+        C varchar
+    );
+    TYPE SomeType(
+        A varchar,
+        B int
+    );
+    TYPE SomeType2(
+        A varchar,
+        B int,
+        C int,
+        D int
+    );
+    VIEW SomeView(
+        A int,
+        B int,
+        D int,
+        E int,
+        PRIMARY KEY ((A), B)
+    ) AS RESULT OF Proj1;
     EXTENSION ENGINE BUILTIN (
+        PROJECTOR Proj1 ON (Orders) INTENTS (View(SomeView));
+        COMMAND Orders();
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
+        COMMAND SomeCommand(SomeType, UNLOGGED SomeType) RETURNS SomeType;
+        QUERY SomeQuery(SomeType) RETURNS SomeType;
     )
 );
 
 ALTERABLE WORKSPACE Profile(
-
+    TABLE ProfileTable INHERITS CDoc(-- NodeRemoved: removed in new.sql
+        A varchar
+    );
 );
 
 EXTENSION ENGINE BUILTIN (

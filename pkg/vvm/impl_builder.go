@@ -9,7 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 )
 
@@ -28,27 +28,15 @@ func (hap VVMAppsBuilder) PrepareAppsExtensionPoints() map[istructs.AppQName]ext
 }
 
 func buildSchemasASTs(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-	epPackageSchemasASTs := ep.ExtensionPoint(apps.EPPackageSchemasASTs)
-	packageSchemaASTs := []*parser.PackageSchemaAST{}
-	epPackageSchemasASTs.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
-		qualifiedPackageName := eKey.(string)
-		packageFilesSchemasASTsEP := value.(extensionpoints.IExtensionPoint)
-		packageFilesSchemasASTs := []*parser.FileSchemaAST{}
-		packageFilesSchemasASTsEP.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
-			fileSchemaAST := value.(*parser.FileSchemaAST)
-			packageFilesSchemasASTs = append(packageFilesSchemasASTs, fileSchemaAST)
-		})
-		packageSchemaAST, err := parser.BuildPackageSchema(qualifiedPackageName, packageFilesSchemasASTs)
-		if err != nil {
-			panic(err)
-		}
-		packageSchemaASTs = append(packageSchemaASTs, packageSchemaAST)
-	})
-	packageSchemas, err := parser.BuildAppSchema(packageSchemaASTs)
+	packageSchemaASTs, err := ReadPackageSchemaAST(ep)
 	if err != nil {
 		panic(err)
 	}
-	if err := parser.BuildAppDefs(packageSchemas, adf); err != nil {
+	appSchemaAST, err := parser.BuildAppSchema(packageSchemaASTs)
+	if err != nil {
+		panic(err)
+	}
+	if err := parser.BuildAppDefs(appSchemaAST, adf); err != nil {
 		panic(err)
 	}
 }
@@ -72,14 +60,14 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 			case appdef.TypeKind_Command:
 				cmd := t.(appdef.ICommand)
 				cmdResource := cfg.Resources.QueryResource(cmd.QName()).(istructs.ICommandFunction)
-				istructsmem.ReplaceCommandDefinitions(cmdResource, cmd.Arg().QName(), cmd.UnloggedArg().QName(), cmd.Result().QName())
+				istructsmem.ReplaceCommandDefinitions(cmdResource, cmd.Param().QName(), cmd.UnloggedParam().QName(), cmd.Result().QName())
 			case appdef.TypeKind_Query:
 				if t.QName() == qNameQueryCollection {
 					return
 				}
 				query := t.(appdef.IQuery)
 				queryResource := cfg.Resources.QueryResource(query.QName()).(istructs.IQueryFunction)
-				istructsmem.ReplaceQueryDefinitions(queryResource, query.Arg().QName(), query.Result().QName())
+				istructsmem.ReplaceQueryDefinitions(queryResource, query.Param().QName(), query.Result().QName())
 			}
 		})
 	}

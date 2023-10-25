@@ -36,6 +36,8 @@ var ErrRegexpCheckOnlyForVarcharField = errors.New("regexp CHECK only available 
 var ErrMaxFieldLengthTooLarge = fmt.Errorf("maximum field length is %d", appdef.MaxFieldLength)
 var ErrOnlyInsertForOdocOrORecord = errors.New("only INSERT allowed for ODoc or ORecord")
 var ErrPackageWithSameNameAlreadyIncludedInApp = errors.New("package with the same name already included in application")
+var ErrStorageDeclaredOnlyInSys = errors.New("storages are only declared in sys package")
+var ErrPkgFolderNotFound = errors.New("pkg folder not found")
 
 func ErrAppDoesNotDefineUseOfPackage(name string) error {
 	return fmt.Errorf("application does not define use of package %s", name)
@@ -76,6 +78,10 @@ func ErrWorkspaceIsNotAlterable(wsName string) error {
 
 func ErrAbstractTableNotAlowedInProjectors(tblName string) error {
 	return fmt.Errorf("projector refers to abstract table %s", tblName)
+}
+
+func ErrProjectorDoesNotDeclareViewIntent(projectorName, viewName string) error {
+	return fmt.Errorf("projector %s does not declare intent for view %s", projectorName, viewName)
 }
 
 func ErrUndefined(name string) error {

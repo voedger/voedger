@@ -127,6 +127,14 @@ func (app *appDef) Element(name QName) IElement {
 	return nil
 }
 
+func (app *appDef) Functions(cb func(e IFunction)) {
+	app.Types(func(t IType) {
+		if f, ok := t.(IFunction); ok {
+			cb(f)
+		}
+	})
+}
+
 func (app *appDef) GDoc(name QName) IGDoc {
 	if t := app.typeByKind(name, TypeKind_GDoc); t != nil {
 		return t.(IGDoc)
@@ -167,6 +175,14 @@ func (app *appDef) Query(name QName) IQuery {
 		return t.(IQuery)
 	}
 	return nil
+}
+
+func (app *appDef) Records(cb func(IRecord)) {
+	app.Structures(func(s IStructure) {
+		if r, ok := s.(IRecord); ok {
+			cb(r)
+		}
+	})
 }
 
 func (app *appDef) Structures(cb func(s IStructure)) {

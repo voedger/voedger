@@ -5,6 +5,7 @@
 package parser
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -18,11 +19,11 @@ type iterateCtx struct {
 	parent     *iterateCtx
 }
 
-func findApplication(c *basicContext, p *PackageSchemaAST) (result *ApplicationStmt, err error) {
+func findApplication(p *PackageSchemaAST) (result *ApplicationStmt, err error) {
 	for _, stmt := range p.Ast.Statements {
 		if stmt.Application != nil {
 			if result != nil {
-				return nil, c.newStmtErr(&stmt.Application.Pos, ErrApplicationRedefined)
+				return nil, fmt.Errorf("%s: %w", stmt.Application.Pos.String(), ErrApplicationRedefined)
 			}
 			result = stmt.Application
 		}
@@ -54,19 +55,33 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 			analyseUseWorkspace(v, ictx)
 		case *AlterWorkspaceStmt:
 			analyseAlterWorkspace(v, ictx)
+		case *StorageStmt:
+			analyseStorage(v, ictx)
 		}
 	})
 }
 
 func analyseUseTable(u *UseTableStmt, c *iterateCtx) {
-	err := resolveInCtx(u.Table, c, func(f *TableStmt, _ *PackageSchemaAST) error {
-		if f.Abstract {
-			return ErrUseOfAbstractTable(u.Table.String())
+	if u.TableName != nil {
+		n := DefQName{Package: u.Package, Name: *u.TableName}
+		err := resolveInCtx(n, c, func(f *TableStmt, _ *PackageSchemaAST) error {
+			if f.Abstract {
+				return ErrUseOfAbstractTable(n.String())
+			}
+			return nil
+		})
+		if err != nil {
+			c.stmtErr(&u.Pos, err)
 		}
-		return nil
-	})
-	if err != nil {
-		c.stmtErr(&u.Pos, err)
+	} else {
+		if u.Package != "" {
+			_, e := findPackage(u.Package, c)
+			if e != nil {
+				c.stmtErr(&u.Pos, e)
+				return
+			}
+
+		}
 	}
 }
 
@@ -93,6 +108,12 @@ func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 	err := resolveInCtx(u.Name, c, resolveFunc)
 	if err != nil {
 		c.stmtErr(&u.Pos, err)
+	}
+}
+
+func analyseStorage(u *StorageStmt, c *iterateCtx) {
+	if c.pkg.QualifiedPackageName != appdef.SysPackage {
+		c.stmtErr(&u.Pos, ErrStorageDeclaredOnlyInSys)
 	}
 }
 
@@ -170,6 +191,36 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 		}
 	}
 
+	// ResultOf
+	err := resolveInCtx(view.ResultOf, c, func(f *ProjectorStmt, _ *PackageSchemaAST) error {
+		var intentForView *ProjectorStorage
+		for i := 0; i < len(f.Intents) && intentForView == nil; i++ {
+			var isView bool
+			intent := f.Intents[i]
+			if err := resolveInCtx(intent.Storage, c, func(storage *StorageStmt, _ *PackageSchemaAST) error {
+				isView = isView || storage.EntityView
+				return nil
+			}); err != nil {
+				c.stmtErr(&view.Pos, err)
+			}
+
+			if isView {
+				for _, entity := range intent.Entities {
+					if entity.Name == view.Name && (entity.Package == Ident(c.pkg.Name) || entity.Package == Ident("")) {
+						intentForView = &f.Intents[i]
+						break
+					}
+				}
+			}
+		}
+		if intentForView == nil {
+			return ErrProjectorDoesNotDeclareViewIntent(f.GetName(), view.GetName())
+		}
+		return nil
+	})
+	if err != nil {
+		c.stmtErr(&view.Pos, err)
+	}
 }
 
 func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
@@ -207,56 +258,59 @@ func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 
 }
 func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
-	for _, target := range v.On {
-		if v.CUDEvents != nil {
-			resolveFunc := func(table *TableStmt, _ *PackageSchemaAST) error {
-				if table.Abstract {
-					return ErrAbstractTableNotAlowedInProjectors(target.String())
-				}
-				k, _, err := getTableTypeKind(table, c)
-				if err != nil {
-					return err
-				}
-				if k == appdef.TypeKind_ODoc || k == appdef.TypeKind_ORecord {
-					if v.CUDEvents.Activate || v.CUDEvents.Deactivate || v.CUDEvents.Update {
-						return ErrOnlyInsertForOdocOrORecord
+
+	for _, trigger := range v.Triggers {
+		for _, qname := range trigger.QNames {
+			if trigger.CUDEvents != nil {
+				resolveFunc := func(table *TableStmt, _ *PackageSchemaAST) error {
+					if table.Abstract {
+						return ErrAbstractTableNotAlowedInProjectors(qname.String())
 					}
+					k, _, err := getTableTypeKind(table, c)
+					if err != nil {
+						return err
+					}
+					if k == appdef.TypeKind_ODoc || k == appdef.TypeKind_ORecord {
+						if trigger.CUDEvents.Activate || trigger.CUDEvents.Deactivate || trigger.CUDEvents.Update {
+							return ErrOnlyInsertForOdocOrORecord
+						}
+					}
+					return nil
 				}
-				return nil
-			}
-			if err := resolveInCtx(target, c, resolveFunc); err != nil {
-				c.stmtErr(&v.Pos, err)
-			}
-		} else { // The type of ON not defined
-			// Command?
-			cmd, _, err := lookupInCtx[*CommandStmt](target, c)
-			if err != nil {
-				c.stmtErr(&v.Pos, err)
-				continue
-			}
-			if cmd != nil {
-				continue // resolved
-			}
+				if err := resolveInCtx(qname, c, resolveFunc); err != nil {
+					c.stmtErr(&v.Pos, err)
+				}
+			} else { // The type of ON not defined
+				// Command?
+				cmd, _, err := lookupInCtx[*CommandStmt](qname, c)
+				if err != nil {
+					c.stmtErr(&v.Pos, err)
+					continue
+				}
+				if cmd != nil {
+					continue // resolved
+				}
 
-			// Command Argument?
-			cmdArg, _, err := lookupInCtx[*TypeStmt](target, c)
-			if err != nil {
-				c.stmtErr(&v.Pos, err)
-				continue
-			}
-			if cmdArg != nil {
-				continue // resolved
-			}
+				// Command Argument?
+				cmdArg, _, err := lookupInCtx[*TypeStmt](qname, c)
+				if err != nil {
+					c.stmtErr(&v.Pos, err)
+					continue
+				}
+				if cmdArg != nil {
+					continue // resolved
+				}
 
-			// Table?
-			table, _, err := lookupInCtx[*TableStmt](target, c)
-			if err != nil {
-				c.stmtErr(&v.Pos, err)
-				continue
-			}
-			if table == nil {
-				c.stmtErr(&v.Pos, ErrUndefinedExpectedCommandTypeOrTable(target))
-				continue
+				// Table?
+				table, _, err := lookupInCtx[*TableStmt](qname, c)
+				if err != nil {
+					c.stmtErr(&v.Pos, err)
+					continue
+				}
+				if table == nil {
+					c.stmtErr(&v.Pos, ErrUndefinedExpectedCommandTypeOrTable(qname))
+					continue
+				}
 			}
 		}
 	}

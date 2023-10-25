@@ -6,18 +6,15 @@ package blobber
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
 )
 
-func ProvideBlobberCmds(cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) {
+func ProvideBlobberCmds(cfg *istructsmem.AppConfigType) {
 	provideUploadBLOBHelperCmd(cfg)
 	provideDownloadBLOBHelperCmd(cfg)
-	apps.Parse(schemasFS, appdef.SysPackage, ep)
 }
 
 func provideDownloadBLOBHelperCmd(cfg *istructsmem.AppConfigType) {
@@ -35,7 +32,7 @@ func provideUploadBLOBHelperCmd(cfg *istructsmem.AppConfigType) {
 
 func ubhExec(args istructs.ExecCommandArgs) (err error) {
 	// write a dummy WDoc<BLOB> to book an ID and then use it as a new BLOB ID
-	kb, err := args.State.KeyBuilder(state.RecordsStorage, QNameWDocBLOB)
+	kb, err := args.State.KeyBuilder(state.Record, QNameWDocBLOB)
 	if err != nil {
 		return
 	}

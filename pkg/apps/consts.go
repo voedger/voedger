@@ -8,5 +8,5 @@ package apps
 import "github.com/voedger/voedger/pkg/extensionpoints"
 
 const (
-	EPPackageSchemasASTs extensionpoints.EPKey = "PackageSchemasASTs"
+	EPSchemasFS extensionpoints.EPKey = "SchemasFS"
 )

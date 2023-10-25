@@ -6,8 +6,6 @@ package invite
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -15,7 +13,7 @@ import (
 )
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc,
-	federation coreutils.IFederation, itokens itokens.ITokens, smtpCfg smtp.Cfg, ep extensionpoints.IExtensionPoint) {
+	federation coreutils.IFederation, itokens itokens.ITokens, smtpCfg smtp.Cfg) {
 	provideCmdInitiateInvitationByEMail(cfg, appDefBuilder, timeFunc)
 	provideCmdInitiateJoinWorkspace(cfg, appDefBuilder, timeFunc)
 	provideCmdInitiateUpdateInviteRoles(cfg, appDefBuilder, timeFunc)
@@ -44,5 +42,4 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		provideSyncProjectorInviteIndexFactory(),
 		provideSyncProjectorJoinedWorkspaceIndexFactory(),
 	)
-	apps.Parse(schemasFS, appdef.SysPackage, ep)
 }

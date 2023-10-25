@@ -29,7 +29,7 @@ func provideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc coreutils.TimeFunc,
 
 func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		skbCDocInvite, err := s.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
+		skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
 			return
 		}
@@ -39,7 +39,7 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 			return
 		}
 
-		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return err
 		}
@@ -64,7 +64,7 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 		}
 
 		//Find cdoc.sys.Subject by cdoc.air.Invite
-		skbViewCollection, err := s.KeyBuilder(state.ViewRecordsStorage, collection.QNameViewCollection)
+		skbViewCollection, err := s.KeyBuilder(state.View, collection.QNameViewCollection)
 		if err != nil {
 			return
 		}

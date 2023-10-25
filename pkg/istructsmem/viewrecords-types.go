@@ -57,7 +57,7 @@ func (vr *appViewRecords) Get(workspace istructs.WSID, key istructs.IKeyBuilder)
 	if err = k.build(); err != nil {
 		return value, err
 	}
-	if err = vr.app.config.validators.validViewKey(k, false); err != nil {
+	if err = validateViewKey(k, false); err != nil {
 		return value, err
 	}
 
@@ -98,7 +98,7 @@ func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRe
 		if err = k.build(); err != nil {
 			return fmt.Errorf("error building key at batch item %d: %w", i, err)
 		}
-		if err = vr.app.config.validators.validViewKey(k, false); err != nil {
+		if err = validateViewKey(k, false); err != nil {
 			return fmt.Errorf("not valid key at batch item %d: %w", i, err)
 		}
 		pKey, cKey := k.storeToBytes(workspace)
@@ -157,7 +157,7 @@ func (vr *appViewRecords) Read(ctx context.Context, workspace istructs.WSID, key
 	if err = k.build(); err != nil {
 		return err
 	}
-	if err = vr.app.config.validators.validViewKey(k, true); err != nil {
+	if err = validateViewKey(k, true); err != nil {
 		return err
 	}
 

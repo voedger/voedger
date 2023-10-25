@@ -366,20 +366,26 @@ type ProjectorStorage struct {
 	Entities []DefQName `parser:"( '(' @@ (',' @@)* ')')?"`
 }
 
-/*
-	ProjectorStmt: asdas
+type ProjectorTrigger struct {
+	CUDEvents *ProjectorCUDEvents `parser:"('AFTER' @@)?"`
+	QNames    []DefQName          `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!"`
+}
 
-zczxczxc
-*/
+type ProjectorCudTrigger struct {
+	Insert     bool `parser:"  @(('INSERT' ('OR' 'UPDATE')?) | ('UPDATE' 'OR' 'INSERT'))"`
+	Update     bool `parser:"| @(('UPDATE' ('OR' 'INSERT')?) | ('INSERT' 'OR' 'UPDATE'))"`
+	Activate   bool `parser:"| @(('ACTIVATE' ('OR' 'DEACTIVATE')?) | ('DEACTIVATE' 'OR' 'ACTIVATE'))"`
+	Deactivate bool `parser:"| @(('DEACTIVATE' ('OR' 'ACTIVATE')?) | ('ACTIVATE' 'OR' 'DEACTIVATE'))"`
+}
+
 type ProjectorStmt struct {
 	Statement
-	Sync      bool                `parser:"@'SYNC'?"`
-	Name      Ident               `parser:"'PROJECTOR' @Ident"`
-	CUDEvents *ProjectorCUDEvents `parser:"('AFTER' @@)?"`
-	On        []DefQName          `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!"`
-	State     []ProjectorStorage  `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
-	Intents   []ProjectorStorage  `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
-	Engine    EngineType          // Initialized with 1st pass
+	Sync     bool               `parser:"@'SYNC'?"`
+	Name     Ident              `parser:"'PROJECTOR' @Ident"`
+	Triggers []ProjectorTrigger `parser:"@@ ('OR' @@)*"`
+	State    []ProjectorStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Intents  []ProjectorStorage `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
+	Engine   EngineType         // Initialized with 1st pass
 }
 
 func (s *ProjectorStmt) GetName() string            { return string(s.Name) }
@@ -391,15 +397,6 @@ type ProjectorCUDEvents struct {
 	Activate   bool `parser:"| @(('ACTIVATE' ('OR' 'DEACTIVATE')?) | ('DEACTIVATE' 'OR' 'ACTIVATE'))"`
 	Deactivate bool `parser:"| @(('DEACTIVATE' ('OR' 'ACTIVATE')?) | ('ACTIVATE' 'OR' 'DEACTIVATE'))"`
 }
-
-/*type ProjectorOn struct {
-	CommandArgument bool `parser:"@('COMMAND' 'ARGUMENT')"`
-	Command         bool `parser:"| @('COMMAND')"`
-	Insert          bool `parser:"| @(('INSERT' ('OR' 'UPDATE')?) | ('UPDATE' 'OR' 'INSERT'))"`
-	Update          bool `parser:"| @(('UPDATE' ('OR' 'INSERT')?) | ('INSERT' 'OR' 'UPDATE'))"`
-	Activate        bool `parser:"| @(('ACTIVATE' ('OR' 'DEACTIVATE')?) | ('DEACTIVATE' 'OR' 'ACTIVATE'))"`
-	Deactivate      bool `parser:"| @(('DEACTIVATE' ('OR' 'ACTIVATE')?) | ('ACTIVATE' 'OR' 'DEACTIVATE'))"`
-}*/
 
 type TemplateStmt struct {
 	Statement
@@ -424,10 +421,17 @@ type TagStmt struct {
 
 func (s TagStmt) GetName() string { return string(s.Name) }
 
+// type UseAllTables struct {
+// 	FromPackage Ident `parser:"(@Ident '.')? '*'"`
+// }
+
 type UseTableStmt struct {
 	Statement
-	Table DefQName `parser:"'USE' 'TABLE' @@"`
-	// TODO: Use all tables from package
+	Package   Ident  `parser:"'USE' 'TABLE' (@Ident '.')?"`
+	AllTables bool   `parser:"(@'*'"`
+	TableName *Ident `parser:"| @Ident)"`
+	// AllTables *UseAllTables `parser:"'USE' 'TABLE' (@@"`
+	// Table     *DefQName     `parser:"| @@)"`
 }
 
 type UseWorkspaceStmt struct {
@@ -729,4 +733,20 @@ type ViewField struct {
 	Name    Ident    `parser:"@Ident"`
 	Type    DataType `parser:"@@"`
 	NotNull bool     `parser:"@(NOTNULL)?"`
+}
+
+type ExportedApp struct {
+	Ast    *AppSchemaAST
+	Ignore []string
+}
+
+type ExportedAppInfo struct {
+	Package string   `json:"package"`
+	Ignore  []string `json:"ignore"`
+}
+
+type ExportedAppsInfo struct {
+	Version int32             `json:"version"`
+	Apps    []ExportedAppInfo `json:"apps"`
+	Ignore  []string          `json:"ignore"`
 }

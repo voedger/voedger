@@ -84,23 +84,23 @@ func Test_getStorageID(t *testing.T) {
 		}{
 			{
 				name:            "General storage key",
-				kb:              newKeyBuilder(RecordsStorage, appdef.NullQName),
-				expectedStorage: RecordsStorage,
+				kb:              newKeyBuilder(Record, appdef.NullQName),
+				expectedStorage: Record,
 			},
 			{
 				name:            "Email storage key",
-				kb:              &sendMailStorageKeyBuilder{keyBuilder: newKeyBuilder(SendMailStorage, appdef.NullQName)},
-				expectedStorage: SendMailStorage,
+				kb:              &sendMailKeyBuilder{keyBuilder: newKeyBuilder(SendMail, appdef.NullQName)},
+				expectedStorage: SendMail,
 			},
 			{
 				name:            "HTTP storage key",
-				kb:              &httpStorageKeyBuilder{keyBuilder: newKeyBuilder(HTTPStorage, appdef.NullQName)},
-				expectedStorage: HTTPStorage,
+				kb:              &httpKeyBuilder{keyBuilder: newKeyBuilder(Http, appdef.NullQName)},
+				expectedStorage: Http,
 			},
 			{
 				name:            "View storage key",
-				kb:              &viewRecordsKeyBuilder{},
-				expectedStorage: ViewRecordsStorage,
+				kb:              &viewKeyBuilder{},
+				expectedStorage: View,
 			},
 		}
 		for _, test := range tests {

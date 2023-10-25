@@ -26,7 +26,7 @@ func TestBundledHostState_BasicUsage(t *testing.T) {
 	// Declare simple extension
 	extension := func(state istructs.IState, intents istructs.IIntents) {
 		//Create key
-		kb, err := state.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		kb, err := state.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		kb.PutInt64("pkFld", int64(64))
 
@@ -133,7 +133,7 @@ func TestAsyncActualizerState_BasicUsage_Old(t *testing.T) {
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, 2, 1)
 
 	//Create key
-	kb, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+	kb, err := s.KeyBuilder(View, testViewRecordQName1)
 	require.NoError(err)
 	kb.PutInt64("pkFld", 64)
 
@@ -461,9 +461,9 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{})
 		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
-		kb1, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		kb1, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
-		kb2, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName2)
+		kb2, err := s.KeyBuilder(View, testViewRecordQName2)
 		require.NoError(err)
 
 		_, _ = s.NewValue(kb1)
@@ -498,9 +498,9 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{})
 		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
-		kb1, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		kb1, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
-		kb2, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName2)
+		kb2, err := s.KeyBuilder(View, testViewRecordQName2)
 		require.NoError(err)
 
 		_, _ = s.NewValue(kb1)

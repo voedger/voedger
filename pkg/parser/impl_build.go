@@ -85,14 +85,29 @@ func (c *buildContext) useStmtInWs(wsctx *wsBuildCtx, stmtPackage string, stmt i
 		}
 	}
 	if useTable, ok := stmt.(*UseTableStmt); ok {
-		err := resolveInCtx(useTable.Table, ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
-			wsctx.builder.AddType(pkg.NewQName(tbl.Name))
-			return nil
-		})
-		if err != nil {
-			// notest
-			c.stmtErr(&useTable.Pos, err)
-			return
+		if useTable.TableName != nil { // Use single table
+			n := DefQName{Package: useTable.Package, Name: *useTable.TableName}
+			err := resolveInCtx(n, ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
+				wsctx.builder.AddType(pkg.NewQName(tbl.Name))
+				return nil
+			})
+			if err != nil {
+				// notest
+				c.stmtErr(&useTable.Pos, err)
+				return
+			}
+		} else { // Use all tables
+			pkg, e := findPackage(useTable.Package, ictx)
+			if e != nil {
+				// notest
+				c.stmtErr(&useTable.Pos, e)
+				return
+			}
+			for _, stmt := range pkg.Ast.Statements {
+				if stmt.Table != nil {
+					wsctx.builder.AddType(pkg.NewQName(stmt.Table.Name))
+				}
+			}
 		}
 	}
 	if useWorkspace, ok := stmt.(*UseWorkspaceStmt); ok {
@@ -362,11 +377,11 @@ func (c *buildContext) commands() error {
 			c.addComments(cmd, b)
 			if cmd.Arg != nil && cmd.Arg.Def != nil {
 				argQname := buildQname(ictx, cmd.Arg.Def.Package, cmd.Arg.Def.Name)
-				b.SetArg(argQname)
+				b.SetParam(argQname)
 			}
 			if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
 				argQname := buildQname(ictx, cmd.UnloggedArg.Def.Package, cmd.UnloggedArg.Def.Name)
-				b.SetUnloggedArg(argQname)
+				b.SetUnloggedParam(argQname)
 			}
 			if cmd.Returns != nil && cmd.Returns.Def != nil {
 				retQname := buildQname(ictx, cmd.Returns.Def.Package, cmd.Returns.Def.Name)
@@ -390,7 +405,7 @@ func (c *buildContext) queries() error {
 			c.addComments(q, b)
 			if q.Arg != nil && q.Arg.Def != nil {
 				argQname := buildQname(ictx, q.Arg.Def.Package, q.Arg.Def.Name)
-				b.SetArg(argQname)
+				b.SetParam(argQname)
 			}
 
 			if q.Returns.Any {

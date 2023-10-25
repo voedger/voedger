@@ -133,7 +133,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	}
 	return a.conf.Broker.Subscribe(a.conf.channel, in10n.ProjectionKey{
 		App:        a.conf.AppQName,
-		Projection: PlogQName,
+		Projection: PLogUpdatesQName,
 		WS:         istructs.WSID(a.conf.Partition),
 	})
 }
@@ -260,7 +260,7 @@ func (p *asyncProjector) savePosition() error {
 		p.acceptedSinceSave = false
 		p.lastSave = time.Now()
 	}()
-	key, e := p.state.KeyBuilder(state.ViewRecordsStorage, qnameProjectionOffsets)
+	key, e := p.state.KeyBuilder(state.View, qnameProjectionOffsets)
 	if e != nil {
 		return e
 	}

@@ -6,7 +6,6 @@ package workspace
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -122,8 +121,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		provideSyncProjectorChildWorkspaceIdxFactory(),
 		provideAsyncProjectorWorkspaceIDIdx(),
 	)
-
-	apps.Parse(schemasFS, appdef.SysPackage, ep)
 }
 
 // proj.sys.ChildWorkspaceIdx

@@ -5,7 +5,7 @@
 
 package appdef
 
-// View type.
+// View is a type with key and value.
 //
 // Ref to view.go for implementation
 type IView interface {
@@ -48,9 +48,6 @@ type IViewKey interface {
 	ClustCols() IViewClustCols
 }
 
-// View full (pk + cc) key builder.
-//
-// Ref. to view.go for implementation
 type IViewKeyBuilder interface {
 	IViewKey
 
@@ -61,7 +58,12 @@ type IViewKeyBuilder interface {
 	ClustColsBuilder() IViewClustColsBuilder
 }
 
-// View partition key.
+// View partition key contains fields for partitioning.
+// Fields for partitioning should be selected so that the size of the partition
+// does not exceed 100 MB. Perfectly if it is around 10 MB.
+// The size of the basket (partition) can be evaluated by the formula:
+//	(ViewValue_Size + ClustCols_Size) * KeysPerPartition.
+// https://opensource.com/article/20/5/apache-cassandra#:~:text=As%20a%20rule%20of%20thumb%2C,design%20supports%20desired%20cluster%20performance
 //
 // Ref. to view.go for implementation
 type IViewPartKey interface {
@@ -72,9 +74,6 @@ type IViewPartKey interface {
 	isPartKey()
 }
 
-// View partition key type builder.
-//
-// Ref. to view.go for implementation
 type IViewPartKeyBuilder interface {
 	IViewPartKey
 
@@ -95,7 +94,7 @@ type IViewPartKeyBuilder interface {
 	SetFieldComment(name string, comment ...string) IViewPartKeyBuilder
 }
 
-// View clustering columns.
+// Defines fields for sorting values inside partition.
 //
 // Ref. to view.go for implementation
 type IViewClustCols interface {
@@ -106,9 +105,6 @@ type IViewClustCols interface {
 	isClustCols()
 }
 
-// View clustering columns type builder.
-//
-// Ref. to view.go for implementation
 type IViewClustColsBuilder interface {
 	IViewClustCols
 
@@ -133,7 +129,7 @@ type IViewClustColsBuilder interface {
 	SetFieldComment(name string, comment ...string) IViewClustColsBuilder
 }
 
-// View value.
+// View value. Like a structure, view value has fields, but has not containers and uniques.
 //
 // Ref. to view.go for implementation
 type IViewValue interface {
@@ -144,9 +140,6 @@ type IViewValue interface {
 	isViewValue()
 }
 
-// View value builder.
-//
-// Ref. to view.go for implementation
 type IViewValueBuilder interface {
 	IViewValue
 

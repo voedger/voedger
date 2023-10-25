@@ -8,15 +8,13 @@ import (
 	"context"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
 func (e *echoRR) AsString(string) string { return e.text }
 
-func provideQryEcho(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+func provideQryEcho(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Echo"),
 		appdef.NullQName,
@@ -30,5 +28,4 @@ func provideQryEcho(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDef
 			return callback(&echoRR{text: text})
 		},
 	))
-	apps.Parse(schemaBuiltinFS, appdef.SysPackage, ep)
 }

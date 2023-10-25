@@ -31,12 +31,12 @@ func (d *cDoc) Singleton() bool {
 // # Implements:
 //   - ICRecord, ICRecordBuilder
 type cRecord struct {
-	record
+	containedRecord
 }
 
 func newCRecord(app *appDef, name QName) *cRecord {
 	r := &cRecord{}
-	r.record = makeRecord(app, name, TypeKind_CRecord, r)
+	r.containedRecord = makeContainedRecord(app, name, TypeKind_CRecord, r)
 	app.appendType(r)
 	return r
 }

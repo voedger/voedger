@@ -29,7 +29,7 @@ func provideCmdInitiateJoinWorkspace(cfg *istructsmem.AppConfigType, appDefBuild
 
 func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
-		skbCDocInvite, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
+		skbCDocInvite, err := args.State.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
 			return
 		}
@@ -52,7 +52,7 @@ func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(args istruct
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteVerificationCodeInvalid)
 		}
 
-		skbPrincipal, err := args.State.KeyBuilder(state.SubjectStorage, appdef.NullQName)
+		skbPrincipal, err := args.State.KeyBuilder(state.RequestSubject, appdef.NullQName)
 		if err != nil {
 			return
 		}

@@ -5,7 +5,7 @@
 
 package appdef
 
-// Application.
+// Application definition is a set of types, views, commands, queries and workspaces.
 //
 // Ref to apdef.go for implementation
 type IAppDef interface {
@@ -62,6 +62,11 @@ type IAppDef interface {
 	// Returns nil if not found.
 	Element(name QName) IElement
 
+	// Enumerates all application records, e.g. documents and contained records
+	//
+	// Records are enumerated in alphabetical order by QName
+	Records(func(IRecord))
+
 	// Enumerates all application structures
 	//
 	// Structures are enumerated in alphabetical order by QName
@@ -82,15 +87,17 @@ type IAppDef interface {
 	// Returns nil if not found.
 	Query(QName) IQuery
 
+	// Enumerates all application functions
+	//
+	// Functions are enumerated in alphabetical order by QName
+	Functions(func(IFunction))
+
 	// Returns workspace by name.
 	//
 	// Returns nil if not found.
 	Workspace(QName) IWorkspace
 }
 
-// Application builder
-//
-// Ref to appdef.go for implementation
 type IAppDefBuilder interface {
 	IAppDef
 	ICommentBuilder
@@ -215,6 +222,9 @@ type IAppDefBuilder interface {
 	//   - if type with name already exists.
 	AddWorkspace(QName) IWorkspaceBuilder
 
-	// Must be called after all types added. Validates and returns builded application type or error
+	// Builds application definition.
+	//
+	// Validates and returns builded application type or error.
+	// Must be called after all entities added.
 	Build() (IAppDef, error)
 }

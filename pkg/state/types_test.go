@@ -15,7 +15,7 @@ import (
 
 func TestBundle(t *testing.T) {
 	newKey := func(qname appdef.QName, id istructs.RecordID) (k istructs.IStateKeyBuilder) {
-		k = &viewRecordsKeyBuilder{
+		k = &viewKeyBuilder{
 			IKeyBuilder: &keyBuilder{data: make(map[string]interface{})},
 			view:        qname,
 		}
@@ -70,9 +70,9 @@ func TestBundle(t *testing.T) {
 
 		require.Equal(5, b.size(), "initial bundle size")
 
-		require.False(b.containsKeysForSameEntity(&viewRecordsKeyBuilder{view: testRecordQName3}))
+		require.False(b.containsKeysForSameEntity(&viewKeyBuilder{view: testRecordQName3}))
 
-		k := &viewRecordsKeyBuilder{view: testRecordQName2}
+		k := &viewKeyBuilder{view: testRecordQName2}
 
 		require.True(b.containsKeysForSameEntity(k))
 		require.Equal(5, b.size(), "remain bundle size")
@@ -90,7 +90,7 @@ func TestKeyBuilder(t *testing.T) {
 }
 func TestHttpStorageKeyBuilder_headers(t *testing.T) {
 	require := require.New(t)
-	k := newHTTPStorageKeyBuilder()
+	k := newHttpKeyBuilder()
 	k.PutString(Field_Header, "key: hello:world")
 
 	headers := k.headers

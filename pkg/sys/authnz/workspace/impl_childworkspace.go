@@ -18,7 +18,7 @@ import (
 
 func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
 	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
-	kb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewChildWorkspaceIdx)
+	kb, err := args.State.KeyBuilder(state.View, QNameViewChildWorkspaceIdx)
 	if err != nil {
 		return
 	}
@@ -40,7 +40,7 @@ func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
 	templateParams := args.ArgumentObject.AsString(Field_TemplateParams)
 
 	// Create cdoc.sys.ChildWorkspace
-	kb, err = args.State.KeyBuilder(state.RecordsStorage, authnz.QNameCDocChildWorkspace)
+	kb, err = args.State.KeyBuilder(state.Record, authnz.QNameCDocChildWorkspace)
 	if err != nil {
 		return
 	}
@@ -65,7 +65,7 @@ var projectorChildWorkspaceIdx = func(event istructs.IPLogEvent, s istructs.ISta
 			return nil
 		}
 
-		kb, err := s.KeyBuilder(state.ViewRecordsStorage, QNameViewChildWorkspaceIdx)
+		kb, err := s.KeyBuilder(state.View, QNameViewChildWorkspaceIdx)
 		if err != nil {
 			return
 		}
@@ -85,7 +85,7 @@ var projectorChildWorkspaceIdx = func(event istructs.IPLogEvent, s istructs.ISta
 // targetApp/parentWSID/q.sys.QueryChildWorkspaceByName
 func qcwbnQryExec(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
 	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
-	kb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewChildWorkspaceIdx)
+	kb, err := args.State.KeyBuilder(state.View, QNameViewChildWorkspaceIdx)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func qcwbnQryExec(_ context.Context, args istructs.ExecQueryArgs, callback istru
 	if !ok {
 		return coreutils.NewHTTPErrorf(http.StatusNotFound, "child workspace ", wsName, " not found")
 	}
-	kb, err = args.State.KeyBuilder(state.RecordsStorage, appdef.NullQName)
+	kb, err = args.State.KeyBuilder(state.Record, appdef.NullQName)
 	if err != nil {
 		return err
 	}

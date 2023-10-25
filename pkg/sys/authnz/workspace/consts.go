@@ -5,7 +5,6 @@
 package workspace
 
 import (
-	"embed"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -50,6 +49,4 @@ var (
 	QNameCommandCreateWorkspaceID          = appdef.NewQName(appdef.SysPackage, "CreateWorkspaceID")
 	QNameCommandCreateWorkspace            = appdef.NewQName(appdef.SysPackage, "CreateWorkspace")
 	nextWSIDGlobalLock                     = sync.Mutex{}
-	//go:embed schemas.sql
-	schemasFS embed.FS
 )

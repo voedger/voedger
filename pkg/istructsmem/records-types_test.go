@@ -97,6 +97,7 @@ func Test_RecordsRead(t *testing.T) {
 			}
 		})
 
+		//nolint: staticcheck
 		t.Run("test batch read records from random intervals", func(t *testing.T) {
 			const maxIntervalLength = 16
 			rand.Seed(time.Now().UnixNano())

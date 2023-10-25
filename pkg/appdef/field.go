@@ -85,7 +85,7 @@ func IsSysField(n string) bool {
 //   - IFields
 //   - IFieldsBuilder
 type fields struct {
-	parent        interface{}
+	par           interface{}
 	fields        map[string]interface{}
 	fieldsOrdered []string
 }
@@ -99,36 +99,36 @@ func makeFields(parent interface{}) fields {
 func (f *fields) AddBytesField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder {
 	f.checkAddField(name, DataKind_bytes)
 	f.appendField(name, newCharsField(name, DataKind_bytes, required, restricts...))
-	return f.parent.(IFieldsBuilder)
+	return f.par.(IFieldsBuilder)
 }
 
 func (f *fields) AddField(name string, kind DataKind, required bool, comments ...string) IFieldsBuilder {
 	f.checkAddField(name, kind)
 	fld := newField(name, kind, required, comments...)
 	f.appendField(name, fld)
-	return f.parent.(IFieldsBuilder)
+	return f.par.(IFieldsBuilder)
 }
 
 func (f *fields) AddRefField(name string, required bool, ref ...QName) IFieldsBuilder {
 	f.checkAddField(name, DataKind_RecordID)
 	f.appendField(name, newRefField(name, required, ref...))
-	return f.parent.(IFieldsBuilder)
+	return f.par.(IFieldsBuilder)
 }
 
 func (f *fields) AddStringField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder {
 	f.checkAddField(name, DataKind_string)
 	f.appendField(name, newCharsField(name, DataKind_string, required, restricts...))
-	return f.parent.(IFieldsBuilder)
+	return f.par.(IFieldsBuilder)
 }
 
 func (f *fields) AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder {
 	f.checkAddField(name, kind)
 	if len(vk) == 0 {
-		panic(fmt.Errorf("%v: missed verification kind for field «%s»: %w", f.parentType().QName(), name, ErrVerificationKindMissed))
+		panic(fmt.Errorf("%v: missed verification kind for field «%s»: %w", f.parent(), name, ErrVerificationKindMissed))
 	}
 	f.appendField(name, newField(name, kind, required))
 	f.SetFieldVerify(name, vk...)
-	return f.parent.(IFieldsBuilder)
+	return f.par.(IFieldsBuilder)
 }
 
 func (f *fields) Field(name string) IField {
@@ -184,20 +184,20 @@ func (f *fields) RefFieldCount() int {
 func (f *fields) SetFieldComment(name string, comment ...string) IFieldsBuilder {
 	fld := f.fields[name]
 	if fld == nil {
-		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parentType().QName(), name, ErrNameNotFound))
+		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parent(), name, ErrNameNotFound))
 	}
 	fld.(ICommentBuilder).SetComment(comment...)
-	return f.parent.(IFieldsBuilder)
+	return f.par.(IFieldsBuilder)
 }
 
 func (f *fields) SetFieldVerify(name string, vk ...VerificationKind) IFieldsBuilder {
 	fld := f.fields[name]
 	if fld == nil {
-		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parentType().QName(), name, ErrNameNotFound))
+		panic(fmt.Errorf("%v: field «%s» not found: %w", f.parent(), name, ErrNameNotFound))
 	}
 	vf := fld.(interface{ setVerify(k ...VerificationKind) })
 	vf.setVerify(vk...)
-	return f.parent.(IFieldsBuilder)
+	return f.par.(IFieldsBuilder)
 }
 
 func (f *fields) UserFields(cb func(IField)) {
@@ -226,10 +226,10 @@ func (f *fields) appendField(name string, fld interface{}) {
 // Panics if invalid add field argument value
 func (f *fields) checkAddField(name string, kind DataKind) {
 	if name == NullName {
-		panic(fmt.Errorf("%v: empty field name: %w", f.parentType().QName(), ErrNameMissed))
+		panic(fmt.Errorf("%v: empty field name: %w", f.parent(), ErrNameMissed))
 	}
 	if f.Field(name) != nil {
-		panic(fmt.Errorf("%v: field «%s» is already exists: %w", f.parentType().QName(), name, ErrNameUniqueViolation))
+		panic(fmt.Errorf("%v: field «%s» is already exists: %w", f.parent(), name, ErrNameUniqueViolation))
 	}
 
 	if IsSysField(name) {
@@ -237,18 +237,18 @@ func (f *fields) checkAddField(name string, kind DataKind) {
 	}
 
 	if ok, err := ValidIdent(name); !ok {
-		panic(fmt.Errorf("%v: field name «%v» is invalid: %w", f.parentType().QName(), name, err))
+		panic(fmt.Errorf("%v: field name «%v» is invalid: %w", f.parent(), name, err))
 	}
-	if k := f.parentType().Kind(); !k.DataKindAvailable(kind) {
-		panic(fmt.Errorf("%v: type kind «%s» does not support fields kind «%s»: %w", f.parentType().QName(), k.TrimString(), kind.TrimString(), ErrInvalidDataKind))
+	if k := f.parent().Kind(); !k.DataKindAvailable(kind) {
+		panic(fmt.Errorf("%v: type kind «%s» does not support fields kind «%s»: %w", f.parent(), k.TrimString(), kind.TrimString(), ErrInvalidDataKind))
 	}
 	if len(f.fields) >= MaxTypeFieldCount {
-		panic(fmt.Errorf("%v: maximum field count (%d) exceeds: %w", f.parentType().QName(), MaxTypeFieldCount, ErrTooManyFields))
+		panic(fmt.Errorf("%v: maximum field count (%d) exceeds: %w", f.parent(), MaxTypeFieldCount, ErrTooManyFields))
 	}
 }
 
-func (f *fields) parentType() IType {
-	return f.parent.(IType)
+func (f *fields) parent() IType {
+	return f.par.(IType)
 }
 
 // Makes system fields. Called after making structures fields
@@ -328,7 +328,7 @@ func (f charsField) Restricts() IStringFieldRestricts {
 //
 // # Validation:
 //   - every RefField must refer to known types,
-//   - every referenced by RefField type must have «sys.ID» system field
+//   - every referenced by RefField type must be record type
 func validateTypeFields(t IType) (err error) {
 	if fld, ok := t.(IFields); ok {
 		// resolve reference types
@@ -336,11 +336,11 @@ func validateTypeFields(t IType) (err error) {
 			for _, n := range rf.Refs() {
 				refType := t.App().TypeByName(n)
 				if refType == nil {
-					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to unknown type «%v»: %w", t.QName(), rf.Name(), n, ErrNameNotFound))
+					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to unknown type «%v»: %w", t, rf.Name(), n, ErrNameNotFound))
 					continue
 				}
-				if !refType.Kind().HasSystemField(SystemField_ID) {
-					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to non referable type «%v» kind «%s» without «%s» field: %w", t.QName(), rf.Name(), n, refType.Kind().TrimString(), SystemField_ID, ErrInvalidTypeKind))
+				if _, ok := refType.(IRecord); !ok {
+					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to not a record type %v: %w", t, n, refType, ErrInvalidTypeKind))
 					continue
 				}
 			}

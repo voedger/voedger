@@ -477,3 +477,17 @@ func TestSqlQuery(t *testing.T) {
 		require.NotEqual(t, len(wsOne.Sections[0].Elements), len(wsTwo.Sections[0].Elements))
 	})
 }
+
+func TestXxx(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.category","name":"Awesome food"}}]}`
+	vit.PostWS(ws, "c.sys.CUD", body)
+
+	// body = `{"args":{"Query":"select * from app1.category where name = 'Awesome food'"}}`
+	// vit.PostWS(ws, "q.sys.SqlQuery", body).Println()
+	body = `{"args":{"Schema":"app1.category"},"elements":[{"fields":["sys.ID","name"]}],"filters":[{"expr":"eq","args":{"field":"name","value":"Awesome food"}}]}`
+	vit.PostWS(ws, "q.sys.Collection", body).Println()
+}

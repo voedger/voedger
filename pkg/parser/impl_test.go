@@ -6,6 +6,8 @@ package parser
 
 import (
 	"embed"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -54,7 +56,7 @@ func Test_BasicUsage(t *testing.T) {
 	// := repr.String(pkgExample, repr.Indent(" "), repr.IgnorePrivate())
 	//fmt.Println(parsedSchemaStr)
 
-	packages, err := BuildAppSchema([]*PackageSchemaAST{
+	appSchema, err := BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		mainPkgAST,
 		airPkgAST,
@@ -63,7 +65,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.NoError(err)
 
 	builder := appdef.New()
-	err = BuildAppDefs(packages, builder)
+	err = BuildAppDefs(appSchema, builder)
 	require.NoError(err)
 
 	// table
@@ -663,6 +665,11 @@ func Test_DuplicatesInViews(t *testing.T) {
 			PRIMARY KEY(field1),
 			PRIMARY KEY(field2)
 		) AS RESULT OF Proj1;
+
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			COMMAND Orders()	
+		);
 	)
 	`)
 	require.NoError(err)
@@ -672,6 +679,7 @@ func Test_DuplicatesInViews(t *testing.T) {
 
 	_, err = BuildAppSchema([]*PackageSchemaAST{
 		pkg,
+		getSysPackageAST(),
 	})
 
 	require.EqualError(err, strings.Join([]string{
@@ -701,7 +709,11 @@ func Test_Views(t *testing.T) {
 				field1 int,
 				PRIMARY KEY(field2)
 			) AS RESULT OF Proj1;
-		)
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				COMMAND Orders()	
+			);
+			)
 	`, "file2.sql:4:17: undefined field field2")
 
 	f(`APPLICATION test(); WORKSPACE Workspace (
@@ -709,7 +721,11 @@ func Test_Views(t *testing.T) {
 				field1 varchar,
 				PRIMARY KEY((field1))
 			) AS RESULT OF Proj1;
-		)
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				COMMAND Orders()	
+			);
+			)
 	`, "file2.sql:4:17: varchar field field1 not supported in partition key")
 
 	f(`APPLICATION test(); WORKSPACE Workspace (
@@ -717,6 +733,10 @@ func Test_Views(t *testing.T) {
 			field1 bytes,
 			PRIMARY KEY((field1))
 		) AS RESULT OF Proj1;
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			COMMAND Orders()	
+		);
 	)
 	`, "file2.sql:4:16: bytes field field1 not supported in partition key")
 
@@ -726,6 +746,10 @@ func Test_Views(t *testing.T) {
 			field2 int,
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			COMMAND Orders()	
+		);
 	)
 	`, "file2.sql:5:16: varchar field field1 can only be the last one in clustering key")
 
@@ -735,6 +759,10 @@ func Test_Views(t *testing.T) {
 			field2 int,
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			COMMAND Orders()	
+		);
 	)
 	`, "file2.sql:5:16: bytes field field1 can only be the last one in clustering key")
 
@@ -745,6 +773,10 @@ func Test_Views(t *testing.T) {
 			field2 ref(unexisting),
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			COMMAND Orders()	
+		);
 	)
 	`, "file2.sql:4:4: reference to abstract table abc", "file2.sql:5:4: unexisting undefined")
 }
@@ -765,6 +797,10 @@ func Test_Views2(t *testing.T) {
 				field4 ref,
 				PRIMARY KEY((field1,field4),field2)
 			) AS RESULT OF Proj1;
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				COMMAND Orders()	
+			);
 		)
 		`)
 		require.NoError(err)
@@ -795,6 +831,10 @@ func Test_Views2(t *testing.T) {
 				field4 ref,
 				PRIMARY KEY((field1),field4,field3)
 			) AS RESULT OF Proj1;
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				COMMAND Orders()	
+			);
 		)
 		`)
 		require.NoError(err)
@@ -813,6 +853,34 @@ func Test_Views2(t *testing.T) {
 
 		v := appBld.View(appdef.NewQName("test", "test"))
 		require.NotNil(v)
+
+	}
+	{
+		ast, err := ParseFile("file2.sql", `APPLICATION test(); WORKSPACE Workspace (
+			VIEW test(
+				-- comment1
+				field1 int,
+				-- comment2
+				field3 bytes(20),
+				-- comment4
+				field4 ref,
+				PRIMARY KEY((field1),field4,field3)
+			) AS RESULT OF Proj1;
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 ON (Orders);
+				COMMAND Orders()	
+			);
+		)
+		`)
+		require.NoError(err)
+		pkg, err := BuildPackageSchema("test", []*FileSchemaAST{ast})
+		require.NoError(err)
+
+		_, err = BuildAppSchema([]*PackageSchemaAST{
+			getSysPackageAST(),
+			pkg,
+		})
+		require.Error(err, "file2.sql:2:4: projector Proj1 does not declare intent for view test")
 
 	}
 
@@ -894,11 +962,12 @@ func Test_Projectors(t *testing.T) {
 		TABLE Order INHERITS ODoc();
 		EXTENSION ENGINE WASM (
 			COMMAND Orders();
-			PROJECTOR ImProjector1 ON test.CreateUPProfile; 		-- Undefined
-			PROJECTOR ImProjector2 ON Order; 						-- Good
-			PROJECTOR ImProjector3 AFTER UPDATE ON Order; 			-- Bad
-			PROJECTOR ImProjector4 AFTER ACTIVATE ON Order; 		-- Bad
-			PROJECTOR ImProjector5 AFTER DEACTIVATE ON Order; 		-- Bad
+			PROJECTOR ImProjector1 ON test.CreateUPProfile; 			-- Undefined
+			PROJECTOR ImProjector2 ON Order; 							-- Good
+			PROJECTOR ImProjector3 AFTER UPDATE ON Order; 				-- Bad
+			PROJECTOR ImProjector4 AFTER ACTIVATE ON Order; 			-- Bad
+			PROJECTOR ImProjector5 AFTER DEACTIVATE ON Order; 			-- Bad
+			PROJECTOR ImProjector6 AFTER INSERT ON Order OR ON Orders;	-- Good
 		)
 	)
 	`)
@@ -1459,4 +1528,126 @@ func Test_Alter_Workspace_In_Package(t *testing.T) {
 		pkg1,
 	})
 	require.NoError(err)
+}
+
+func Test_UseTables(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("main.sql", `
+	IMPORT SCHEMA 'org/pkg1';
+	IMPORT SCHEMA 'org/pkg2';
+	APPLICATION test(
+		USE pkg1;
+		USE pkg2;
+	);
+	TABLE TestTable1 INHERITS CDoc();
+	TABLE TestTable2 INHERITS CDoc();
+
+	WORKSPACE Ws(
+		USE TABLE *;				-- good, import all tables declared on current package level
+		USE TABLE pkg1.*;			-- good, import all tables from specified package
+		USE TABLE pkg2.Pkg2Table1;	-- good, import specified table
+		USE TABLE pkg2.Pkg2Table3;  -- bad, declared in workspace
+	)
+	`)
+	require.NoError(err)
+	pkg, err := BuildPackageSchema("test/main", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	// pkg1
+	fs1, err := ParseFile("file1.sql", `
+	TABLE Pkg1Table1 INHERITS CDoc();
+	TABLE Pkg1Table2 INHERITS CDoc();
+
+	WORKSPACE Ws(
+		TABLE Pkg1Table3 INHERITS CDoc();
+	)
+	`)
+	require.NoError(err)
+	pkg1, err := BuildPackageSchema("org/pkg1", []*FileSchemaAST{fs1})
+	require.NoError(err)
+
+	// pkg2
+	fs2, err := ParseFile("file2.sql", `
+	TABLE Pkg2Table1 INHERITS CDoc();
+	TABLE Pkg2Table2 INHERITS CDoc();
+
+	WORKSPACE Ws(
+		TABLE Pkg2Table3 INHERITS CDoc();
+	)
+	`)
+	require.NoError(err)
+	pkg2, err := BuildPackageSchema("org/pkg2", []*FileSchemaAST{fs2})
+	require.NoError(err)
+
+	schema, err := BuildAppSchema([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+		pkg1,
+		pkg2,
+	})
+
+	require.EqualError(err, strings.Join([]string{
+		"main.sql:15:3: pkg2.Pkg2Table3 undefined",
+	}, "\n"))
+
+	builder := appdef.New()
+	err = BuildAppDefs(schema, builder)
+	require.EqualError(err, strings.Join([]string{
+		"main.sql:15:3: pkg2.Pkg2Table3 undefined",
+	}, "\n"))
+
+	ws := builder.Workspace(appdef.NewQName("main", "Ws"))
+	require.NotNil(ws)
+
+	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("main", "TestTable1")).Kind())
+	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("main", "TestTable2")).Kind())
+	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg1", "Pkg1Table1")).Kind())
+	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg1", "Pkg1Table2")).Kind())
+	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg1", "Pkg1Table3")).Kind())
+	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table1")).Kind())
+	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table2")).Kind())
+	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table3")).Kind())
+}
+
+func Test_Storages(t *testing.T) {
+	require := require.New(t)
+	fs, err := ParseFile("example2.sql", `APPLICATION test1(); 
+	EXTENSION ENGINE BUILTIN (
+		STORAGE MyStorage(
+			INSERT SCOPE(PROJECTORS)
+		);
+	)	
+	`)
+	require.NoError(err)
+	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	_, err = BuildAppSchema([]*PackageSchemaAST{
+		pkg2,
+	})
+	require.ErrorContains(err, "storages are only declared in sys package")
+}
+
+func Test_ExportedApps(t *testing.T) {
+	require := require.New(t)
+	_, filename, _, _ := runtime.Caller(0) // read current file name
+
+	// Load exported app ASTs
+	apps, err := LoadExportedApps(filepath.Join(filepath.Dir(filename), "example_exported_apps"))
+	require.NoError(err)
+	require.Equal(2, len(apps))
+	require.Equal("app1", apps[0].Ast.Name)
+	require.Equal(2, len(apps[0].Ignore))
+	require.Equal("app2", apps[1].Ast.Name)
+	require.Equal(1, len(apps[1].Ignore))
+
+	// Build schema
+	builder := appdef.New()
+	err = BuildAppDefs(apps[0].Ast, builder)
+	require.NoError(err)
+
+	odoc := builder.ODoc(appdef.NewQName("folder2", "Order"))
+	require.NotNil(odoc)
+	require.Equal(appdef.TypeKind_ODoc, odoc.Kind())
 }

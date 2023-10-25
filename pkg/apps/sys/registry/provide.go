@@ -14,19 +14,19 @@ import (
 	"github.com/voedger/voedger/pkg/sys/smtp"
 )
 
-func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
+func Provide(smtpCfg smtp.Cfg, rebuildRegistry bool) apps.AppBuilder {
 	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 
 		// sys package
 		sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-			apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
+			apis.NumCommandProcessors, nil, apis.IAppStorageProvider, rebuildRegistry)
 
 		// sys/registry resources
 		// note: q.sys.RefreshPrincipalToken is moved to sys package because it is strange to call it in sys/registry: provided token is issued for different app (e.g. airs-bp)
-		signupin.Provide(cfg, appDefBuilder, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, ep)
+		signupin.Provide(cfg, appDefBuilder, apis.ITokens, apis.IFederation, apis.IAppStructsProvider)
 		cfg.AddSyncProjectors(
 			signupin.ProvideSyncProjectorLoginIdxFactory(),
 		)
-		apps.Parse(registrySchemaFS, appdef.SysPackage, ep)
+		apps.RegisterSchemaFS(registrySchemaFS, appdef.SysPackage, ep)
 	}
 }

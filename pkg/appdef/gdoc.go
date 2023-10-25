@@ -23,14 +23,14 @@ func (d gDoc) isGDoc() {}
 // # Implements:
 //   - IGRecord, IGRecordBuilder
 type gRecord struct {
-	record
+	containedRecord
 }
 
 func (r gRecord) isGRecord() {}
 
 func newGRecord(app *appDef, name QName) *gRecord {
 	r := &gRecord{}
-	r.record = makeRecord(app, name, TypeKind_GRecord, r)
+	r.containedRecord = makeContainedRecord(app, name, TypeKind_GRecord, r)
 	app.appendType(r)
 	return r
 }

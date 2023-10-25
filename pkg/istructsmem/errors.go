@@ -33,7 +33,9 @@ var ErrInvalidVerificationKind = errors.New("invalid verification kind")
 
 var ErrCUDsMissed = errors.New("CUDs are missed")
 
-var ErrRawRecordIDExpected = errors.New("raw record ID expected")
+var ErrRawRecordIDRequired = errors.New("raw record ID required")
+
+var ErrRawRecordIDUnexpected = errors.New("unexpected raw record ID")
 
 var ErrRecordIDUniqueViolation = errors.New("record ID duplicates")
 
@@ -54,8 +56,6 @@ var ErrMaxGetBatchRecordCountExceeds = errors.New("the maximum count of records 
 var ErrWrongFieldType = errors.New("wrong field type")
 
 var ErrTypeChanged = errors.New("type has been changed")
-
-var ErrReferentialIntegrityViolation = errors.New("referential integrity violation")
 
 var ErrFieldValueRestricted = errors.New("value does not meet the restricts")
 
