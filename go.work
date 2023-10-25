@@ -1,7 +1,0 @@
-go 1.21.2
-
-use (
-	./
-	./examples/vrestaurant/extwasm
-	./staging/src/voedger.io/extensions-tinygo
-)
