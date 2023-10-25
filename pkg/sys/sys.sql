@@ -11,32 +11,37 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
+-- created automaticaly in sys/registry app olny
+ALTERABLE WORKSPACE AppWorkspace ();
+
+-- TABLE Login INHERITS CDoc (
+--     ProfileCluster int32 NOT NULL,
+--     PwdHash bytes NOT NULL,
+--     AppName varchar NOT NULL,
+--     SubjectKind int32,
+--     LoginHash varchar NOT NULL,
+--     WSID int64,      -- to be written after workspace init
+--     WSError varchar(1024), -- to be written after workspace init
+--     WSKindInitializationData varchar(1024) NOT NULL
+-- );
+
 ABSTRACT WORKSPACE Workspace (
 
-    TYPE CreateLoginParams (
-        Login text NOT NULL,
-        AppName text NOT NULL,
-        SubkectKind int32 NOT NULL,
-        WSKindInitializationData text(1024) NOT NULL,
-        ProfileClusterID int32 NOT NULL
-    );
+    -- TYPE CreateLoginParams (
+    --     Login text NOT NULL,
+    --     AppName text NOT NULL,
+    --     SubkectKind int32 NOT NULL,
+    --     WSKindInitializationData text(1024) NOT NULL,
+    --     ProfileClusterID int32 NOT NULL
+    -- );
 
-    TYPE CreateLoginUnloggedParams (
-        Password text NOT NULL
-    );
+    -- TYPE CreateLoginUnloggedParams (
+    --     Password text NOT NULL
+    -- );
 
     -- cdoc.sys.Login must be known in each target app. "unknown ownerQName scheme cdoc.sys.Login" on c.sys.CreatWorkspaceID otherwise
     -- has no ownerApp field because it is sys/registry always
-    TABLE Login INHERITS CDoc (
-        ProfileCluster int32 NOT NULL,
-        PwdHash bytes NOT NULL,
-        AppName varchar NOT NULL,
-        SubjectKind int32,
-        LoginHash varchar NOT NULL,
-        WSID int64,      -- to be written after workspace init
-        WSError varchar(1024), -- to be written after workspace init
-        WSKindInitializationData varchar(1024) NOT NULL
-    );
+
 
     -- many, target app, user profile
     TABLE ChildWorkspace INHERITS CDoc (
@@ -93,7 +98,7 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	EXTENSION ENGINE BUILTIN (
-        COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
+        -- COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
 		QUERY Echo(EchoParams) RETURNS EchoResult;
 
 		SYNC PROJECTOR RecordsRegistryProjector ON (CDoc, WDoc, ODoc) INTENTS(View(RecordsRegistry));
@@ -113,7 +118,7 @@ ABSTRACT WORKSPACE Workspace (
 
     TABLE DeviceProfile INHERITS Singleton ();
 
-    TABLE AppWorkspace INHERITS Singleton ();
+    TABLE WSKindAppWorkspace INHERITS Singleton (); -- "WSKind" added to avoid conflict with alterable workspace AppWorkspace
 
     TABLE BLOB INHERITS WDoc (
         status int32 NOT NULL

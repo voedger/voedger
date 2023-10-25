@@ -12,11 +12,11 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/sys/authnz/workspace"
+	"github.com/voedger/voedger/pkg/sys/workspace"
 )
 
 func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
-	for _, appQName := range vvm.VVMApps {
+	for appQName := range vvm.AppConfigsType {
 		pLogOffsets := map[istructs.PartitionID]istructs.Offset{}
 		wLogOffset := istructs.FirstOffset
 		as, err := vvm.IAppStructsProvider.AppStructs(appQName)
@@ -54,7 +54,7 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 			cdocWSDesc := reb.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
 			cdocWSDesc.PutRecordID(appdef.SystemField_ID, 1)
 			cdocWSDesc.PutString(authnz.Field_WSName, "appWS"+strconv.Itoa(wsNum))
-			cdocWSDesc.PutQName(authnz.Field_WSKind, authnz.QNameCDoc_WorkspaceKind_AppWorkspace)
+			cdocWSDesc.PutQName(authnz.Field_WSKind, authnz.QNameCDoc_WorkspaceKind_WSKindAppWorkspace)
 			cdocWSDesc.PutInt64(authnz.Field_СreatedAtMs, vvmConfig.TimeFunc().UnixMilli())
 			cdocWSDesc.PutInt64(workspace.Field_InitCompletedAtMs, vvmConfig.TimeFunc().UnixMilli())
 			rawEvent, err := reb.BuildRawEvent()

@@ -37,7 +37,7 @@ Projectors:
 - AppWorkspaces are created by system when an App is deployed to a Cluster
 - Workspaces of other kinds must be explicitely created (and initialized)
     - It is not possible to work with uninitialized workspaces
-- Client calls `c.sys.CreateLogin` using pseudo WS calculated as (main cluster, crc16(login))
+- Client calls `c.registry.CreateLogin` using pseudo WS calculated as (main cluster, crc16(login))
 - If router sees that baseWSID of WSID is < MaxPseudoBaseWSID then it replaces that pseudo base WSID with app base WSID:
   - (main cluser, (baseWSID %% appWSAmount) + FirstBaseAppWSID)
 - `crc16 = crc32.ChecksumIEEE & (MaxUint32 >> 16)`
@@ -49,7 +49,7 @@ Projectors:
 
 |entity|app|ws|cluster
 |---|---|---|---|
-|c.sys.CreateLogin()|sys/registry|pseudoWS|main
+|c.registry.CreateLogin()|sys/registry|pseudoWS|main
 |cdoc.sys.Login (owner)<br/>aproj.sys.InvokeCreateWorkspaceID|sys/registry|app ws|main
 |c.sys.CreateWorkspaceID()<br/>cdoc.sys.WorkspaceID<br/>aproj.sys.InvokeCreateWorkspace()|Target App|(Target Cluster, base App WSID)|Target Cluster
 |c.sys.CreateWorkspace()<br/>cdoc.sys.WorkspaceDescriptor<br/>cdoc.sys.UserProfile/DeviceProfile<br/>aproj.sys.InitializeWorkspace()|Target App|new WSID|Target Cluster

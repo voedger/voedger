@@ -25,7 +25,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
+	"github.com/voedger/voedger/pkg/sys/registry"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -35,7 +35,7 @@ import (
 func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) error {
-			if rec.QName() != authnz.QNameCDocLogin && rec.QName() != authnz.QNameCDocChildWorkspace {
+			if rec.QName() != registry.QNameCDocLogin && rec.QName() != authnz.QNameCDocChildWorkspace {
 				return nil
 			}
 			if !rec.IsNew() {
@@ -62,7 +62,7 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 				templateParams = rec.AsString(Field_TemplateParams)
 				targetApp = ownerApp
 				wsidToCallCreateWSIDAt = coreutils.GetPseudoWSID(ownerWSID, wsName, targetClusterID)
-			case authnz.QNameCDocLogin:
+			case registry.QNameCDocLogin:
 				loginHash := rec.AsString(authnz.Field_LoginHash)
 				wsName = fmt.Sprint(crc32.ChecksumIEEE([]byte(loginHash)))
 				switch istructs.SubjectKindType(rec.AsInt32(authnz.Field_SubjectKind)) {
@@ -74,7 +74,7 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 					return fmt.Errorf("unsupported cdoc.sys.Login.subjectKind: %d", rec.AsInt32(authnz.Field_SubjectKind))
 				}
 				targetClusterID = istructs.ClusterID(rec.AsInt32(authnz.Field_ProfileClusterID))
-				targetApp = rec.AsString(signupin.Field_AppName)
+				targetApp = rec.AsString(authnz.Field_AppName)
 				wsidToCallCreateWSIDAt = istructs.NewWSID(targetClusterID, ownerBaseWSID)
 			default:
 				// notest
@@ -88,7 +88,7 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 				ownerWSID, ownerQName.String(), ownerID, ownerApp, wsName, wsKind.String(), wsKindInitializationData, templateName, templateParams)
 			targetAppQName, err := istructs.ParseAppQName(targetApp)
 			if err != nil {
-				// parsed already by c.sys.CreateLogin
+				// parsed already by c.registry.CreateLogin
 				// notest
 				return err
 			}
@@ -318,7 +318,7 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, targetAppQName ist
 			if rec.QName() != authnz.QNameCDocWorkspaceDescriptor {
 				return nil
 			}
-			if rec.AsQName(authnz.Field_WSKind) == authnz.QNameCDoc_WorkspaceKind_AppWorkspace {
+			if rec.AsQName(authnz.Field_WSKind) == authnz.QNameCDoc_WorkspaceKind_WSKindAppWorkspace {
 				// AppWS -> self-initialized already
 				return nil
 			}
@@ -360,7 +360,7 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, targetAppQName ist
 			}
 			ownerAppQName, err := istructs.ParseAppQName(ownerApp)
 			if err != nil {
-				// parsed already by c.sys.CreateLogin and InitChildWorkspace ?????????
+				// parsed already by c.registry.CreateLogin and InitChildWorkspace ?????????
 				// notest
 				return err
 			}

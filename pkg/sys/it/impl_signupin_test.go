@@ -71,7 +71,7 @@ func TestCreateLoginErrors(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Login":"login1","AppName":"test1/app1","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":1},"unloggedArgs":{"Password":"password"}}`, istructs.SubjectKind_User)
 		crc16 := coreutils.CRC16([]byte("login1")) - 1 // simulate crc16 is calculated wrong
 		pseudoWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(crc16))
-		resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "c.sys.CreateLogin", body, coreutils.Expect403())
+		resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "c.registry.CreateLogin", body, coreutils.Expect403())
 		resp.RequireError(t, "wrong url WSID: 140737488420870 expected, 140737488420869 got")
 	})
 
@@ -81,14 +81,14 @@ func TestCreateLoginErrors(t *testing.T) {
 	t.Run("unknown application", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"my/unknown","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"password"}}`,
 			login, istructs.SubjectKind_User, istructs.MainClusterID)
-		resp := vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.sys.CreateLogin", body, coreutils.Expect400())
+		resp := vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body, coreutils.Expect400())
 		resp.RequireError(t, "unknown application my/unknown")
 	})
 
 	t.Run("wrong application name", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"wrong-AppName","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":1},"unloggedArgs":{"Password":"different"}}`,
 			login, istructs.SubjectKind_User)
-		resp := vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.sys.CreateLogin", body, coreutils.Expect400())
+		resp := vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body, coreutils.Expect400())
 		resp.RequireContainsError(t, "failed to parse app qualified name")
 	})
 
@@ -119,7 +119,7 @@ func TestCreateLoginErrors(t *testing.T) {
 			pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, wrongLogin, istructs.MainClusterID)
 			body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
 				wrongLogin, istructs.AppQName_test1_app1.String(), istructs.SubjectKind_User, istructs.MainClusterID, "1")
-			resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "c.sys.CreateLogin", body, coreutils.Expect400())
+			resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "c.registry.CreateLogin", body, coreutils.Expect400())
 			resp.RequireContainsError(t, "incorrect login format")
 		}
 	})

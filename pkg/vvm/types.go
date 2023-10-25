@@ -92,7 +92,6 @@ type VVMAppsBuilder map[istructs.AppQName][]apps.AppBuilder
 type VVM struct {
 	ServicePipeline
 	apps.APIs
-	VVMApps
 	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 }

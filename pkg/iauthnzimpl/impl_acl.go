@@ -70,7 +70,7 @@ var defaultACL = ACL{
 				qNameCDocWorkspaceKindUser,
 				qNameCDocWorkspaceKindDevice,
 				qNameCDocWorkspaceKindRestaurant,
-				qNameCDocWorkspaceKindAppWorkspace,
+				qNameCDocWorkspaceKindWSKindAppWorkspace,
 				qNameCmdSendEmailVerificationCode,
 
 				qNameQryDescribePackage,
@@ -86,7 +86,7 @@ var defaultACL = ACL{
 				qNameCDocWorkspaceKindUser,
 				qNameCDocWorkspaceKindDevice,
 				qNameCDocWorkspaceKindRestaurant,
-				qNameCDocWorkspaceKindAppWorkspace,
+				qNameCDocWorkspaceKindWSKindAppWorkspace,
 			},
 			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_UPDATE},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},

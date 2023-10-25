@@ -4,12 +4,15 @@
 
 package iauthnzimpl
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/sys/registry"
+)
 
 var (
 	qNameViewDeviceProfileWSIDIdx                   = appdef.NewQName(airPackage, "DeviceProfileWSIDIdx")
 	qNameCDocWorkspaceKindRestaurant                = appdef.NewQName(airPackage, "Restaurant")
-	qNameCDocWorkspaceKindAppWorkspace              = appdef.NewQName(appdef.SysPackage, "AppWorkspace")
+	qNameCDocWorkspaceKindWSKindAppWorkspace        = appdef.NewQName(appdef.SysPackage, "WSKindAppWorkspace") // WSKind added to avoid conflict with alterable workspace AppWorkspace
 	qNameCDocSubscriptionProfile                    = appdef.NewQName(airPackage, "SubscriptionProfile")
 	qNameCDocUnTillOrders                           = appdef.NewQName(untillPackage, "orders")
 	qNameCDocUnTillPBill                            = appdef.NewQName(untillPackage, "pbill")
@@ -25,13 +28,13 @@ var (
 	qNameCmdStoreSubscriptionProfile                = appdef.NewQName(airPackage, "StoreSubscriptionProfile")
 	qNameCmdLinkDeviceToRestaurant                  = appdef.NewQName(airPackage, "LinkDeviceToRestaurant")
 	qNameQryIssuePrincipalToken                     = appdef.NewQName(appdef.SysPackage, "IssuePrincipalToken")
-	qNameCmdCreateLogin                             = appdef.NewQName(appdef.SysPackage, "CreateLogin")
+	qNameCmdCreateLogin                             = appdef.NewQName(registry.RegistryPackage, "CreateLogin")
 	qNameQryEcho                                    = appdef.NewQName(appdef.SysPackage, "Echo")
 	qNameQryGRCount                                 = appdef.NewQName(appdef.SysPackage, "GRCount")
 	qNameCmdSendEmailVerificationCode               = appdef.NewQName(appdef.SysPackage, "SendEmailVerificationCode")
-	qNameCmdResetPasswordByEmail                    = appdef.NewQName(appdef.SysPackage, "ResetPasswordByEmail")
-	qNameQryInitiateResetPasswordByEmail            = appdef.NewQName(appdef.SysPackage, "InitiateResetPasswordByEmail")
-	qNameQryIssueVerifiedValueTokenForResetPassword = appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenForResetPassword")
+	qNameCmdResetPasswordByEmail                    = appdef.NewQName(registry.RegistryPackage, "ResetPasswordByEmail")
+	qNameQryInitiateResetPasswordByEmail            = appdef.NewQName(registry.RegistryPackage, "InitiateResetPasswordByEmail")
+	qNameQryIssueVerifiedValueTokenForResetPassword = appdef.NewQName(registry.RegistryPackage, "IssueVerifiedValueTokenForResetPassword")
 	qNameQryDescribePackageNames                    = appdef.NewQName(appdef.SysPackage, "DescribePackageNames")
 	qNameQryDescribePackage                         = appdef.NewQName(appdef.SysPackage, "DescribePackage")
 	qNameCmdInitiateJoinWorkspace                   = appdef.NewQName(appdef.SysPackage, "InitiateJoinWorkspace")

@@ -20,7 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
+	"github.com/voedger/voedger/pkg/sys/registry"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -42,7 +42,7 @@ func (vit *VIT) signUp(login Login, wsKindInitData string, opts ...coreutils.Req
 	vit.T.Helper()
 	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":%q,"ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
 		login.Name, login.AppQName.String(), login.subjectKind, wsKindInitData, login.clusterID, login.Pwd)
-	vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.sys.CreateLogin", body, opts...)
+	vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.registry.CreateLogin", body, opts...)
 }
 
 func WithClusterID(clusterID istructs.ClusterID) signUpOptFunc {
@@ -89,7 +89,7 @@ func (vit *VIT) GetCDocLoginID(login Login) int64 {
 	require.NoError(vit.T, err) // notest
 	appWSID := coreutils.GetAppWSID(login.PseudoProfileWSID, as.WSAmount())
 	body := fmt.Sprintf(`{"args":{"query":"select CDocLoginID from sys.LoginIdx where AppWSID = %d and AppIDLoginHash = '%s/%s'"}, "elements":[{"fields":["Result"]}]}`,
-		appWSID, login.AppQName, signupin.GetLoginHash(login.Name))
+		appWSID, login.AppQName, registry.GetLoginHash(login.Name))
 	sys := vit.GetSystemPrincipal(istructs.AppQName_sys_registry)
 	resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sys.Token))
 	m := map[string]interface{}{}
