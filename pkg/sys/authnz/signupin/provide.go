@@ -6,8 +6,6 @@ package signupin
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -18,7 +16,7 @@ import (
 )
 
 func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federation coreutils.IFederation,
-	asp istructs.IAppStructsProvider, ep extensionpoints.IExtensionPoint) {
+	asp istructs.IAppStructsProvider) {
 
 	// c.sys.CreateLogin
 	provideCmdCreateLogin(cfgRegistry, appDefBuilder, asp)
@@ -63,12 +61,6 @@ func ProvideCmdEnrichPrincipalToken(cfg *istructsmem.AppConfigType, appDefBuilde
 			AddField(field_EnrichedToken, appdef.DataKind_string, true).(appdef.IType).QName(),
 		provideExecQryEnrichPrincipalToken(atf),
 	))
-}
-
-// CDoc<Login> must be known in each target app. "unknown ownerQName scheme CDoc<Login>" on c.sys.CreatWorkspaceID otherwise
-// has no ownerApp field because it is sys/registry always
-func ProvideCDocLogin(appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-	apps.Parse(schemasFS, appdef.SysPackage, ep)
 }
 
 func provideCmdCreateLogin(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider) {

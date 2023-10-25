@@ -85,14 +85,29 @@ func (c *buildContext) useStmtInWs(wsctx *wsBuildCtx, stmtPackage string, stmt i
 		}
 	}
 	if useTable, ok := stmt.(*UseTableStmt); ok {
-		err := resolveInCtx(useTable.Table, ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
-			wsctx.builder.AddType(pkg.NewQName(tbl.Name))
-			return nil
-		})
-		if err != nil {
-			// notest
-			c.stmtErr(&useTable.Pos, err)
-			return
+		if useTable.TableName != nil { // Use single table
+			n := DefQName{Package: useTable.Package, Name: *useTable.TableName}
+			err := resolveInCtx(n, ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
+				wsctx.builder.AddType(pkg.NewQName(tbl.Name))
+				return nil
+			})
+			if err != nil {
+				// notest
+				c.stmtErr(&useTable.Pos, err)
+				return
+			}
+		} else { // Use all tables
+			pkg, e := findPackage(useTable.Package, ictx)
+			if e != nil {
+				// notest
+				c.stmtErr(&useTable.Pos, e)
+				return
+			}
+			for _, stmt := range pkg.Ast.Statements {
+				if stmt.Table != nil {
+					wsctx.builder.AddType(pkg.NewQName(stmt.Table.Name))
+				}
+			}
 		}
 	}
 	if useWorkspace, ok := stmt.(*UseWorkspaceStmt); ok {

@@ -23,10 +23,10 @@ func Provide(smtpCfg smtp.Cfg, rebuildRegistry bool) apps.AppBuilder {
 
 		// sys/registry resources
 		// note: q.sys.RefreshPrincipalToken is moved to sys package because it is strange to call it in sys/registry: provided token is issued for different app (e.g. airs-bp)
-		signupin.Provide(cfg, appDefBuilder, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, ep)
+		signupin.Provide(cfg, appDefBuilder, apis.ITokens, apis.IFederation, apis.IAppStructsProvider)
 		cfg.AddSyncProjectors(
 			signupin.ProvideSyncProjectorLoginIdxFactory(),
 		)
-		apps.Parse(registrySchemaFS, appdef.SysPackage, ep)
+		apps.RegisterSchemaFS(registrySchemaFS, appdef.SysPackage, ep)
 	}
 }

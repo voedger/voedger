@@ -5,8 +5,6 @@
 package authnz
 
 import (
-	"embed"
-
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -45,9 +43,6 @@ var (
 	// should be here because: collection->qp(tests)->workspace(checkISWSActive)->collection(read out subjects) -> import cycle
 	//                               breaking this ^^^
 	Field_Status = "Status"
-
-	//go:embed schemas.sql
-	schemasFS embed.FS
 )
 
 const (

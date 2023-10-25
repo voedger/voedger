@@ -7,6 +7,9 @@ package parser
 
 import (
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -194,8 +197,8 @@ func iterateContext(ictx *iterateCtx, callback func(stmt interface{}, ctx *itera
 	})
 }
 
-func isInternalName(name DefQName, pkgAst *PackageSchemaAST) bool {
-	pkg := strings.TrimSpace(string(name.Package))
+func isInternalName(pkgName Ident, pkgAst *PackageSchemaAST) bool {
+	pkg := strings.TrimSpace(string(pkgName))
 	return pkg == "" || pkg == string(pkgAst.Name)
 }
 
@@ -224,14 +227,13 @@ func getQualifiedPackageName(pkgName Ident, schema *SchemaAST) string {
 	return ""
 }
 
-func getTargetSchema(n DefQName, c *iterateCtx) (*PackageSchemaAST, error) {
+func findPackage(pnkName Ident, c *iterateCtx) (*PackageSchemaAST, error) {
 	var targetPkgSch *PackageSchemaAST
-
-	if isInternalName(n, c.pkg) {
+	if isInternalName(pnkName, c.pkg) {
 		return c.pkg, nil
 	}
 
-	if n.Package == appdef.SysPackage {
+	if pnkName == appdef.SysPackage {
 		sysSchema := c.app.Packages[appdef.SysPackage]
 		if sysSchema == nil {
 			return nil, ErrCouldNotImport(appdef.SysPackage)
@@ -239,15 +241,20 @@ func getTargetSchema(n DefQName, c *iterateCtx) (*PackageSchemaAST, error) {
 		return sysSchema, nil
 	}
 
-	pkgQN := getQualifiedPackageName(n.Package, c.pkg.Ast)
+	pkgQN := getQualifiedPackageName(pnkName, c.pkg.Ast)
 	if pkgQN == "" {
-		return nil, ErrUndefined(string(n.Package))
+		return nil, ErrUndefined(string(pnkName))
 	}
 	targetPkgSch = c.app.Packages[pkgQN]
 	if targetPkgSch == nil {
 		return nil, ErrCouldNotImport(pkgQN)
 	}
 	return targetPkgSch, nil
+
+}
+
+func getTargetSchema(n DefQName, c *iterateCtx) (*PackageSchemaAST, error) {
+	return findPackage(n.Package, c)
 }
 
 func maybeSysPkg(pkg Ident) bool {
@@ -328,4 +335,20 @@ func contains(s []Ident, e Ident) bool {
 		}
 	}
 	return false
+}
+
+type PathReader struct {
+	rootPath string
+}
+
+func (r *PathReader) Open(name string) (fs.File, error) {
+	return os.Open(filepath.Join(r.rootPath, name))
+}
+
+func (r *PathReader) ReadDir(name string) ([]os.DirEntry, error) {
+	return os.ReadDir(filepath.Join(r.rootPath, name))
+}
+
+func (r *PathReader) ReadFile(name string) ([]byte, error) {
+	return os.ReadFile(filepath.Join(r.rootPath, name))
 }
