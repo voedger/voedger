@@ -112,6 +112,20 @@ func MaxExcl(v float64, c ...string) IConstraint {
 	return newDataConstraint(ConstraintKind_MaxExcl, v, c...)
 }
 
+type enumerable interface {
+	string | []byte | int32 | int64 | float32 | float64
+}
+
+// Return new enumeration constraint for char or numeric data types.
+func Enum[T enumerable](v ...T) IConstraint {
+	c := make([]T, 0, len(v))
+	for _, e := range v {
+		n := e
+		c = append(c, n)
+	}
+	return newDataConstraint(ConstraintKind_Enum, c)
+}
+
 // Creates and returns new constraint.
 //
 // # Panics:
@@ -132,6 +146,28 @@ func NewConstraint(kind ConstraintKind, value any, c ...string) IConstraint {
 		return MaxIncl(value.(float64), c...)
 	case ConstraintKind_MaxExcl:
 		return MaxExcl(value.(float64), c...)
+	case ConstraintKind_Enum:
+		var enum IConstraint
+		switch v := value.(type) {
+		case []string:
+			enum = Enum(v...)
+		case [][]byte:
+			enum = Enum(v...)
+		case []int32:
+			enum = Enum(v...)
+		case []int64:
+			enum = Enum(v...)
+		case []float32:
+			enum = Enum(v...)
+		case []float64:
+			enum = Enum(v...)
+		default:
+			panic(fmt.Errorf("unknown enumeration type: %T", value))
+		}
+		if len(c) > 0 {
+			enum.(ICommentBuilder).SetComment(c...)
+		}
+		return enum
 	}
 	panic(fmt.Errorf("unknown constraint kind: %v", kind))
 }
@@ -182,11 +218,26 @@ func (c dataConstraint) Value() any {
 	return c.value
 }
 
-func (c dataConstraint) String() string {
+func (c dataConstraint) String() (s string) {
+	const (
+		maxLen   = 64
+		ellipsis = `…`
+		stopEnum = ellipsis + `]`
+	)
+
 	switch c.kind {
 	case ConstraintKind_Pattern:
-		return fmt.Sprintf("%s: `%v`", c.kind.TrimString(), c.value)
+		s = fmt.Sprintf("%s: `%v`", c.kind.TrimString(), c.value)
+	case ConstraintKind_Enum:
+		s = fmt.Sprintf("%s: %v", c.kind.TrimString(), c.value)
+		if len(s) > maxLen {
+			s = s[:maxLen-len(stopEnum)] + stopEnum
+		}
 	default:
-		return fmt.Sprintf("%s: %v", c.kind.TrimString(), c.value)
+		s = fmt.Sprintf("%s: %v", c.kind.TrimString(), c.value)
 	}
+	if len(s) > maxLen {
+		s = s[:maxLen-len(ellipsis)] + ellipsis
+	}
+	return s
 }

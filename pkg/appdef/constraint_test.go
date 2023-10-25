@@ -53,6 +53,30 @@ func TestNewConstraint(t *testing.T) {
 			args{ConstraintKind_MaxExcl, float64(1), []string{"test max exclusive"}},
 			args{ConstraintKind_MaxExcl, 1, []string{"test max exclusive"}},
 		},
+		{"String enumeration",
+			args{ConstraintKind_Enum, []string{"a", "b", "c"}, []string{"test string enum"}},
+			args{ConstraintKind_Enum, []string{"a", "b", "c"}, []string{"test string enum"}},
+		},
+		{"Bytes enumeration",
+			args{ConstraintKind_Enum, [][]byte{{1, 2}, {3, 4}, {5, 6}}, []string{"test bytes enum"}},
+			args{ConstraintKind_Enum, [][]byte{{1, 2}, {3, 4}, {5, 6}}, []string{"test bytes enum"}},
+		},
+		{"int32 enumeration",
+			args{ConstraintKind_Enum, []int32{1, 2, 3}, []string{"test int32 enum"}},
+			args{ConstraintKind_Enum, []int32{1, 2, 3}, []string{"test int32 enum"}},
+		},
+		{"int64 enumeration",
+			args{ConstraintKind_Enum, []int64{1, 2, 3}, []string{}},
+			args{ConstraintKind_Enum, []int64{1, 2, 3}, []string{}},
+		},
+		{"float32 enumeration",
+			args{ConstraintKind_Enum, []float32{1, 2, 3}, []string{"test", "float32", "enum"}},
+			args{ConstraintKind_Enum, []float32{1, 2, 3}, []string{"test", "float32", "enum"}},
+		},
+		{"float64 enumeration",
+			args{ConstraintKind_Enum, []float64{1, 2, 3}, []string{"test float64 enum"}},
+			args{ConstraintKind_Enum, []float64{1, 2, 3}, []string{"test float64 enum"}},
+		},
 	}
 	require := require.New(t)
 	for _, tt := range tests {
@@ -61,7 +85,7 @@ func TestNewConstraint(t *testing.T) {
 			require.NotNil(c)
 			require.Equal(tt.want.kind, c.Kind())
 			require.EqualValues(tt.want.value, c.Value())
-			require.Equal(tt.want.c, c.CommentLines())
+			require.EqualValues(tt.want.c, c.CommentLines())
 		})
 	}
 }
@@ -110,6 +134,9 @@ func TestNewConstraintPanics(t *testing.T) {
 		},
 		{"MaxExcl(-∞)",
 			args{ConstraintKind_MaxExcl, float64(math.Inf(-1))},
+		},
+		{"Enum([]bool)",
+			args{ConstraintKind_Enum, []bool{true, false}},
 		},
 		{"???(0)",
 			args{ConstraintKind_Count, 0},

@@ -24,6 +24,9 @@ func (c *comment) Comment() string {
 }
 
 func (c *comment) CommentLines() []string {
+	if len(c.c) == 0 {
+		return []string{}
+	}
 	return strings.Split(c.c, "\n")
 }
 

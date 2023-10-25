@@ -55,15 +55,17 @@ func (k DataKind) IsFixed() bool {
 // Returns is data kind supports specified constraint kind.
 //
 // # String and bytes supports:
-//   - DataConstraintKind_MinLen
-//   - DataConstraintKind_MaxLen
-//   - DataConstraintKind_Pattern
+//   - ConstraintKind_MinLen
+//   - ConstraintKind_MaxLen
+//   - ConstraintKind_Pattern
+//   - ConstraintKind_Enum
 //
 // # Numeric types supports:
-//   - DataConstraintKind_MinIncl
-//   - DataConstraintKind_MinExcl
-//   - DataConstraintKind_MaxIncl
-//   - DataConstraintKind_MaxExcl
+//   - ConstraintKind_MinIncl
+//   - ConstraintKind_MinExcl
+//   - ConstraintKind_MaxIncl
+//   - ConstraintKind_MaxExcl
+//   - ConstraintKind_Enum
 func (k DataKind) IsSupportedConstraint(c ConstraintKind) bool {
 	switch k {
 	case DataKind_string, DataKind_bytes:
@@ -71,7 +73,8 @@ func (k DataKind) IsSupportedConstraint(c ConstraintKind) bool {
 		case
 			ConstraintKind_MinLen,
 			ConstraintKind_MaxLen,
-			ConstraintKind_Pattern:
+			ConstraintKind_Pattern,
+			ConstraintKind_Enum:
 			return true
 		}
 	case DataKind_int32, DataKind_int64, DataKind_float32, DataKind_float64:
@@ -80,7 +83,8 @@ func (k DataKind) IsSupportedConstraint(c ConstraintKind) bool {
 			ConstraintKind_MinIncl,
 			ConstraintKind_MinExcl,
 			ConstraintKind_MaxIncl,
-			ConstraintKind_MaxExcl:
+			ConstraintKind_MaxExcl,
+			ConstraintKind_Enum:
 			return true
 		}
 	}

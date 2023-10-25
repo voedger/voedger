@@ -26,6 +26,8 @@ const (
 	ConstraintKind_MaxIncl
 	ConstraintKind_MaxExcl
 
+	ConstraintKind_Enum
+
 	ConstraintKind_Count
 )
 
