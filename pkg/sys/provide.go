@@ -56,5 +56,5 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	describe.Provide(cfg, asp, appDefBuilder)
 
 	// add sys sql schema
-	apps.Parse(sysFS, appdef.SysPackage, ep)
+	apps.RegisterSchemaFS(sysFS, appdef.SysPackage, ep)
 }
