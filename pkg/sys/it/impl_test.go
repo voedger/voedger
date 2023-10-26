@@ -93,7 +93,7 @@ func TestAppWSAutoInitialization(t *testing.T) {
 }
 
 func checkCDocsWSDesc(vvm *vvm.VVM, require *require.Assertions) {
-	for _, appQName := range vvm.VVMApps {
+	for appQName := range vvm.AppConfigsType {
 		as, err := vvm.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		for wsNum := 0; istructs.AppWSAmount(wsNum) < as.WSAmount(); wsNum++ {
