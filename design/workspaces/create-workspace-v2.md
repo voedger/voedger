@@ -178,7 +178,7 @@ Subject:
     - `c.sys.CUD` -> will check after `parseCUDs` stage if we are updating `cdoc.WorkspaceDescriptor` or `WDoc<BLOB>` now
       - there is update only of (`cdoc.WorkspaceDescriptor` or `WDoc<BLOB>`) only among CUDs -> ok
   - -> 403 forbidden + `workspace is not initialized`
-- `aproj.sys.InitializeWorkspace`: `wsKind` == `sys.AppWorkspace` -> self-initialized already, skip further work
+- `aproj.sys.InitializeWorkspace`: `wsKind` == `registry.AppWorkspace` -> self-initialized already, skip further work
 - App Workspace has `cdoc.WorkspaceDescriptor` only, there is no `cdoc.$wsKind`
 - `cdoc.WorkspaceDescriptor`, `cdoc.WorkspaceID`, `c.sys.CeateWorkspace`, `c.sys.CreateWorkspaceID`:
   - `ownerID`, `ownerQName`, `ownerWSID` fields are made non-required becuase they are empty in App Workspace

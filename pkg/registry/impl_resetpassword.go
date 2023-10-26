@@ -35,7 +35,7 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder 
 		provideQryInitiateResetPasswordByEmailExec(asp, itokens, federation),
 	))
 
-	// sys/registry/pseudoProfileWSID/q.sys.IssueVerifiedValueTokenForResetPassword
+	// sys/registry/pseudoProfileWSID/q.registry.IssueVerifiedValueTokenForResetPassword
 	// null auth
 	cfgRegistry.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryIssueVerifiedValueTokenForResetPassword,

@@ -67,7 +67,7 @@ func provideIssuePrincipalTokenExec(asp istructs.IAppStructsProvider, itokens it
 		}
 
 		if !doesLoginExist {
-			return
+			return errLoginOrPasswordIsIncorrect
 		}
 
 		isPasswordOK, err := CheckPassword(cdocLogin, args.ArgumentObject.AsString(field_Passwrd))

@@ -39,7 +39,7 @@ var (
 	qNameQryDescribePackage                         = appdef.NewQName(appdef.SysPackage, "DescribePackage")
 	qNameCmdInitiateJoinWorkspace                   = appdef.NewQName(appdef.SysPackage, "InitiateJoinWorkspace")
 	qNameCmdInitiateLeaveWorkspace                  = appdef.NewQName(appdef.SysPackage, "InitiateLeaveWorkspace")
-	qNameCmdChangePassword                          = appdef.NewQName(appdef.SysPackage, "ChangePassword")
+	qNameCmdChangePassword                          = appdef.NewQName(registry.RegistryPackage, "ChangePassword")
 	qNameCmdInitiateInvitationByEmail               = appdef.NewQName(appdef.SysPackage, "InitiateInvitationByEMail")
 	qNameQryCollection                              = appdef.NewQName(appdef.SysPackage, "Collection")
 	qNameCmdInitiateUpdateInviteRoles               = appdef.NewQName(appdef.SysPackage, "InitiateUpdateInviteRoles")
