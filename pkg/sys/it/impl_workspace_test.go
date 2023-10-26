@@ -164,7 +164,7 @@ func TestDenyCreateCDocWSKind(t *testing.T) {
 	DenyCreateCDocWSKind_Test(t, []appdef.QName{
 		authnz.QNameCDoc_WorkspaceKind_UserProfile,
 		authnz.QNameCDoc_WorkspaceKind_DeviceProfile,
-		authnz.QNameCDoc_WorkspaceKind_WSKindAppWorkspace,
+		authnz.QNameCDoc_WorkspaceKind_AppWorkspace,
 	})
 }
 

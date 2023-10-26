@@ -54,7 +54,7 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 			cdocWSDesc := reb.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
 			cdocWSDesc.PutRecordID(appdef.SystemField_ID, 1)
 			cdocWSDesc.PutString(authnz.Field_WSName, "appWS"+strconv.Itoa(wsNum))
-			cdocWSDesc.PutQName(authnz.Field_WSKind, authnz.QNameCDoc_WorkspaceKind_WSKindAppWorkspace)
+			cdocWSDesc.PutQName(authnz.Field_WSKind, authnz.QNameCDoc_WorkspaceKind_AppWorkspace)
 			cdocWSDesc.PutInt64(authnz.Field_СreatedAtMs, vvmConfig.TimeFunc().UnixMilli())
 			cdocWSDesc.PutInt64(workspace.Field_InitCompletedAtMs, vvmConfig.TimeFunc().UnixMilli())
 			rawEvent, err := reb.BuildRawEvent()

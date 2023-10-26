@@ -31,11 +31,11 @@ const (
 )
 
 var (
-	QNameCDoc_WorkspaceKind_UserProfile        = appdef.NewQName(appdef.SysPackage, "UserProfile")
-	QNameCDoc_WorkspaceKind_DeviceProfile      = appdef.NewQName(appdef.SysPackage, "DeviceProfile")
-	QNameCDoc_WorkspaceKind_WSKindAppWorkspace = appdef.NewQName(appdef.SysPackage, "WSKindAppWorkspace") // "WSKind" added to avoid conflict with alterable workspace AppWorkspace
-	QNameCDocChildWorkspace                    = appdef.NewQName(appdef.SysPackage, "ChildWorkspace")
-	QNameCommandInitChildWorkspace             = appdef.NewQName(appdef.SysPackage, "InitChildWorkspace")
+	QNameCDoc_WorkspaceKind_UserProfile   = appdef.NewQName(appdef.SysPackage, "UserProfile")
+	QNameCDoc_WorkspaceKind_DeviceProfile = appdef.NewQName(appdef.SysPackage, "DeviceProfile")
+	QNameCDoc_WorkspaceKind_AppWorkspace  = appdef.NewQName(appdef.SysPackage, "AppWorkspace")
+	QNameCDocChildWorkspace               = appdef.NewQName(appdef.SysPackage, "ChildWorkspace")
+	QNameCommandInitChildWorkspace        = appdef.NewQName(appdef.SysPackage, "InitChildWorkspace")
 
 	// at workspace is wrong: deactivate workspace uses invite.QNameCDocSubject, invite uses cdoc.sys.WorkspaceDescriptor -> import cycle
 	QNameCDocWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")

@@ -1,5 +1,6 @@
 -- Copyright (c) 2020-present unTill Pro, Ltd.
 -- @author Denis Gribanov
+
 ABSTRACT TABLE CRecord();
 
 ABSTRACT TABLE WRecord();
@@ -14,33 +15,7 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
--- created automaticaly in sys/registry app olny
-ALTERABLE WORKSPACE AppWorkspace ();
-
--- TABLE Login INHERITS CDoc (
---     ProfileCluster int32 NOT NULL,
---     PwdHash bytes NOT NULL,
---     AppName varchar NOT NULL,
---     SubjectKind int32,
---     LoginHash varchar NOT NULL,
---     WSID int64,      -- to be written after workspace init
---     WSError varchar(1024), -- to be written after workspace init
---     WSKindInitializationData varchar(1024) NOT NULL
--- );
 ABSTRACT WORKSPACE Workspace (
-    -- TYPE CreateLoginParams (
-    --     Login text NOT NULL,
-    --     AppName text NOT NULL,
-    --     SubkectKind int32 NOT NULL,
-    --     WSKindInitializationData text(1024) NOT NULL,
-    --     ProfileClusterID int32 NOT NULL
-    -- );
-    -- TYPE CreateLoginUnloggedParams (
-    --     Password text NOT NULL
-    -- );
-    -- cdoc.registry.Login must be known in each target app. "unknown ownerQName scheme cdoc.registry.Login" on c.sys.CreatWorkspaceID otherwise
-    -- has no ownerApp field because it is sys/registry always
-    -- many, target app, user profile
     TABLE ChildWorkspace INHERITS CDoc (
         WSName varchar NOT NULL,
         WSKind qname NOT NULL,
@@ -53,56 +28,55 @@ ABSTRACT WORKSPACE Workspace (
         WSError varchar(1024) -- to be updated afterwards
     );
 
--- target app, (target cluster, base profile WSID)
-TABLE WorkspaceID INHERITS CDoc (
-    OwnerWSID int64 NOT NULL,
-    -- Deprecated: use OwnerQName2
-    OwnerQName qname,
-    OwnerID int64 NOT NULL,
-    OwnerApp varchar NOT NULL,
-    WSName varchar NOT NULL,
-    WSKind qname NOT NULL,
-    WSKindInitializationData varchar(1024),
-    TemplateName varchar,
-    TemplateParams varchar(1024),
-    WSID int64,
-    OwnerQName2 text
-);
+    -- target app, (target cluster, base profile WSID)
+    TABLE WorkspaceID INHERITS CDoc (
+        OwnerWSID int64 NOT NULL,
+        -- Deprecated: use OwnerQName2
+        OwnerQName qname,
+        OwnerID int64 NOT NULL,
+        OwnerApp varchar NOT NULL,
+        WSName varchar NOT NULL,
+        WSKind qname NOT NULL,
+        WSKindInitializationData varchar(1024),
+        TemplateName varchar,
+        TemplateParams varchar(1024),
+        WSID int64,
+        OwnerQName2 text
+    );
 
--- target app, new WSID
-TABLE WorkspaceDescriptor INHERITS Singleton (
-    OwnerWSID int64,
-    -- owner* fields made non-required for app workspaces
-    OwnerQName qname,
-    -- Deprecated: use OwnerQName2
-    OwnerID int64,
-    OwnerApp varchar,
-    -- QName -> each target app must know the owner QName -> string
-    WSName varchar NOT NULL,
-    WSKind qname NOT NULL,
-    WSKindInitializationData varchar(1024),
-    TemplateName varchar,
-    TemplateParams varchar(1024),
-    WSID int64,
-    CreateError varchar(1024),
-    CreatedAtMs int64 NOT NULL,
-    InitStartedAtMs int64,
-    InitError varchar(1024),
-    InitCompletedAtMs int64,
-    Status int32,
-    OwnerQName2 text
-);
+    -- target app, new WSID
+    TABLE WorkspaceDescriptor INHERITS Singleton (
+        OwnerWSID int64,
+        -- owner* fields made non-required for app workspaces
+        OwnerQName qname,
+        -- Deprecated: use OwnerQName2
+        OwnerID int64,
+        OwnerApp varchar,
+        -- QName -> each target app must know the owner QName -> string
+        WSName varchar NOT NULL,
+        WSKind qname NOT NULL,
+        WSKindInitializationData varchar(1024),
+        TemplateName varchar,
+        TemplateParams varchar(1024),
+        WSID int64,
+        CreateError varchar(1024),
+        CreatedAtMs int64 NOT NULL,
+        InitStartedAtMs int64,
+        InitError varchar(1024),
+        InitCompletedAtMs int64,
+        Status int32,
+        OwnerQName2 text
+    );
 
-TYPE EchoParams (Text text NOT NULL);
+    TYPE EchoParams (Text text NOT NULL);
 
-TYPE EchoResult (Res text NOT NULL);
+    TYPE EchoResult (Res text NOT NULL);
 
-EXTENSION ENGINE BUILTIN (
-    -- COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
-    QUERY Echo(EchoParams) RETURNS EchoResult;
+    EXTENSION ENGINE BUILTIN (
+        -- COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
+        QUERY Echo(EchoParams) RETURNS EchoResult;
 
-SYNC PROJECTOR RecordsRegistryProjector ON (CDoc, WDoc, ODoc) INTENTS(View(RecordsRegistry));
-
+    SYNC PROJECTOR RecordsRegistryProjector ON (CDoc, WDoc, ODoc) INTENTS(View(RecordsRegistry));
 );
 
 VIEW RecordsRegistry (
@@ -117,9 +91,8 @@ TABLE UserProfile INHERITS Singleton (DisplayName varchar);
 
 TABLE DeviceProfile INHERITS Singleton ();
 
-TABLE WSKindAppWorkspace INHERITS Singleton ();
+TABLE AppWorkspace INHERITS Singleton ();
 
--- "WSKind" added to avoid conflict with alterable workspace AppWorkspace
 TABLE BLOB INHERITS WDoc (status int32 NOT NULL);
 
 TABLE Subject INHERITS CDoc (
@@ -184,9 +157,7 @@ STORAGE PLog(
     READ SCOPE(QUERIES, PROJECTORS)
 );
 
-STORAGE AppSecret(
-    GET SCOPE(COMMANDS, QUERIES, PROJECTORS)
-);
+STORAGE AppSecret(GET SCOPE(COMMANDS, QUERIES, PROJECTORS));
 
 STORAGE RequestSubject(GET SCOPE(COMMANDS, QUERIES));
 

@@ -319,7 +319,7 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, targetAppQName ist
 			if rec.QName() != authnz.QNameCDocWorkspaceDescriptor {
 				return nil
 			}
-			if rec.AsQName(authnz.Field_WSKind) == authnz.QNameCDoc_WorkspaceKind_WSKindAppWorkspace {
+			if rec.AsQName(authnz.Field_WSKind) == authnz.QNameCDoc_WorkspaceKind_AppWorkspace {
 				// AppWS -> self-initialized already
 				return nil
 			}

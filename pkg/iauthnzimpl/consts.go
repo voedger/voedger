@@ -12,7 +12,7 @@ import (
 var (
 	qNameViewDeviceProfileWSIDIdx                   = appdef.NewQName(airPackage, "DeviceProfileWSIDIdx")
 	qNameCDocWorkspaceKindRestaurant                = appdef.NewQName(airPackage, "Restaurant")
-	qNameCDocWorkspaceKindWSKindAppWorkspace        = appdef.NewQName(appdef.SysPackage, "WSKindAppWorkspace") // WSKind added to avoid conflict with alterable workspace AppWorkspace
+	qNameCDocWorkspaceKindAppWorkspace              = appdef.NewQName(appdef.SysPackage, "AppWorkspace")
 	qNameCDocSubscriptionProfile                    = appdef.NewQName(airPackage, "SubscriptionProfile")
 	qNameCDocUnTillOrders                           = appdef.NewQName(untillPackage, "orders")
 	qNameCDocUnTillPBill                            = appdef.NewQName(untillPackage, "pbill")
