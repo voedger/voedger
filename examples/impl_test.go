@@ -45,7 +45,7 @@ func Test_BasicUsageMockWasmExt(t *testing.T) {
 	// Init mock strorage
 	mv = *mockedValue()
 
-	moduleURL := testModuleURL("./vrestaurant/extwasm/ext.wasm")
+	moduleURL := testModuleURL("./vrestaurant/extwasm/vrestaurant.wasm")
 	extEngine, err := wasm.ExtEngineWazeroFactory(ctx, moduleURL, []string{extUpdateTableStatus}, iextengine.ExtEngineConfig{})
 	require.Nil(err)
 

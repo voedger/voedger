@@ -7,6 +7,7 @@ package main
 
 import (
 	ext "voedger.io/extensions-tinygo"
+	require "voedger.io/extensions-tinygo/require"
 )
 
 type expVal struct {

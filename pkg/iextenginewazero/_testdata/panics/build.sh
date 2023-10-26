@@ -1,1 +1,1 @@
-tinygo build --no-debug --wasm-abi=generic -o pkg.wasm -scheduler=none -gc=leaking -opt=2 -target wasm .
+tinygo build --no-debug -o pkg.wasm -scheduler=none -gc=leaking -print-allocs=. -opt=2 -target=wasi .
