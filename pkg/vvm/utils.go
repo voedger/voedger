@@ -7,8 +7,11 @@ package vvm
 
 import (
 	"embed"
+	"io/fs"
 	"path"
 	"path/filepath"
+
+	"golang.org/x/exp/maps"
 
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -59,6 +62,53 @@ func ReadPackageSchemaAST(ep extensionpoints.IExtensionPoint) (packageSchemaASTs
 			panic(err)
 		}
 		packageSchemaASTs = append(packageSchemaASTs, packageSchemaAST)
+	})
+	return
+}
+
+func readEmbeddedContent(dir, subDir string, fsi embed.FS) (contentMap map[string][]byte, err error) {
+	subFS, err := fs.Sub(fsi, subDir)
+	if err != nil {
+		return
+	}
+	entries, err := fs.ReadDir(subFS, ".")
+	if err != nil {
+		return
+	}
+	contentMap = make(map[string][]byte)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		content, err := fs.ReadFile(subFS, entry.Name())
+		if err != nil {
+			return nil, err
+		}
+		fullFilePath := path.Join(dir, subDir, entry.Name())
+		contentMap[fullFilePath] = content
+	}
+	return
+}
+
+func SchemaFilesContent(ep extensionpoints.IExtensionPoint, subDir string) (mapPackageContent apps.SchemasExportedContent, err error) {
+	epSqlFiles := ep.ExtensionPoint(apps.EPSchemasFS)
+	mapPackageContent = make(apps.SchemasExportedContent)
+	epSqlFiles.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
+		contentMaps := make(map[string][]byte)
+		qualifiedPackageName, _ := eKey.(string)
+		epPackageSql := value.(extensionpoints.IExtensionPoint)
+		epPackageSql.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
+			dirAndPackageName := eKey.(string)
+			dir := filepath.Dir(dirAndPackageName)
+
+			fsi, _ := value.(embed.FS)
+			contentMap, err := readEmbeddedContent(dir, subDir, fsi)
+			if err != nil {
+				panic(err)
+			}
+			maps.Copy(contentMaps, contentMap)
+		})
+		mapPackageContent[qualifiedPackageName] = contentMaps
 	})
 	return
 }
