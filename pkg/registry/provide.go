@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-present unTill Software Development Group B.V.
+ * Copyright (c) 2021-present unTill Pro, Ltd.
  * @author Denis Gribanov
  */
 
