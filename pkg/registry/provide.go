@@ -38,7 +38,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		b.KeyBuilder().ClustColsBuilder().AddStringField(field_AppIDLoginHash, appdef.DefaultFieldMaxLength)
 		b.ValueBuilder().AddField(field_CDocLoginID, appdef.DataKind_int64, true)
 	})
-	// q.sys.IssuePrincipalToken
+	// q.registry.IssuePrincipalToken
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(RegistryPackage, "IssuePrincipalToken"),
 		appDefBuilder.AddObject(appdef.NewQName(RegistryPackage, "IssuePrincipalTokenParams")).
@@ -52,7 +52,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		provideIssuePrincipalTokenExec(asp, itokens)))
 	provideChangePassword(cfg, appDefBuilder)
 	provideResetPassword(cfg, appDefBuilder, asp, itokens, federation)
-	apps.Parse(schemasFS, "registry", ep)
+	apps.RegisterSchemaFS(schemasFS, RegistryPackage, ep)
 }
 
 func ProvideSyncProjectorLoginIdxFactory() istructs.ProjectorFactory {

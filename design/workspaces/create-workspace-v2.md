@@ -41,7 +41,7 @@ Projectors:
 - If router sees that baseWSID of WSID is < MaxPseudoBaseWSID then it replaces that pseudo base WSID with app base WSID:
   - (main cluser, (baseWSID %% appWSAmount) + FirstBaseAppWSID)
 - `crc16 = crc32.ChecksumIEEE & (MaxUint32 >> 16)`
-- `cdoc.sys.Login` stores login hash only
+- `cdoc.registry.Login` stores login hash only
 
 ## Create Login
 
@@ -50,7 +50,7 @@ Projectors:
 |entity|app|ws|cluster
 |---|---|---|---|
 |c.registry.CreateLogin()|sys/registry|pseudoWS|main
-|cdoc.sys.Login (owner)<br/>aproj.sys.InvokeCreateWorkspaceID|sys/registry|app ws|main
+|cdoc.registry.Login (owner)<br/>aproj.sys.InvokeCreateWorkspaceID|sys/registry|app ws|main
 |c.sys.CreateWorkspaceID()<br/>cdoc.sys.WorkspaceID<br/>aproj.sys.InvokeCreateWorkspace()|Target App|(Target Cluster, base App WSID)|Target Cluster
 |c.sys.CreateWorkspace()<br/>cdoc.sys.WorkspaceDescriptor<br/>cdoc.sys.UserProfile/DeviceProfile<br/>aproj.sys.InitializeWorkspace()|Target App|new WSID|Target Cluster
 

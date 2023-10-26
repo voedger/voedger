@@ -94,7 +94,7 @@ func provideQryInitiateResetPasswordByEmailExec(asp istructs.IAppStructsProvider
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "login does not exist")
 		}
 
-		// check CDoc<sys.Login>.WSID != 0
+		// check CDoc<registry.Login>.WSID != 0
 		kb, err := args.State.KeyBuilder(state.Record, QNameCDocLogin)
 		if err != nil {
 			return err

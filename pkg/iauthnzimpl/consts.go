@@ -6,7 +6,7 @@ package iauthnzimpl
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/sys/registry"
+	"github.com/voedger/voedger/pkg/registry"
 )
 
 var (
@@ -27,7 +27,7 @@ var (
 	qNameCmdUpdateSubscription                      = appdef.NewQName(airPackage, "UpdateSubscription")
 	qNameCmdStoreSubscriptionProfile                = appdef.NewQName(airPackage, "StoreSubscriptionProfile")
 	qNameCmdLinkDeviceToRestaurant                  = appdef.NewQName(airPackage, "LinkDeviceToRestaurant")
-	qNameQryIssuePrincipalToken                     = appdef.NewQName(appdef.SysPackage, "IssuePrincipalToken")
+	qNameQryIssuePrincipalToken                     = appdef.NewQName(registry.RegistryPackage, "IssuePrincipalToken")
 	qNameCmdCreateLogin                             = appdef.NewQName(registry.RegistryPackage, "CreateLogin")
 	qNameQryEcho                                    = appdef.NewQName(appdef.SysPackage, "Echo")
 	qNameQryGRCount                                 = appdef.NewQName(appdef.SysPackage, "GRCount")

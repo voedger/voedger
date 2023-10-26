@@ -18,7 +18,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-// q.sys.IssuePrincipalToken
+// q.registry.IssuePrincipalToken
 type iptRR struct {
 	istructs.NullObject
 	principalToken       string

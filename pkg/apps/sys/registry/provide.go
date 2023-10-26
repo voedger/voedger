@@ -9,8 +9,8 @@ import (
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys"
-	"github.com/voedger/voedger/pkg/sys/registry"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 )
 
@@ -24,6 +24,6 @@ func Provide(smtpCfg smtp.Cfg, rebuildRegistry bool) apps.AppBuilder {
 		// sys/registry resources
 		registry.Provide(cfg, appDefBuilder, apis.IAppStructsProvider, apis.ITokens, apis.IFederation, ep)
 		cfg.AddSyncProjectors(registry.ProvideSyncProjectorLoginIdxFactory())
-		apps.RegisterSchemaFS(registrySchemaFS, appdef.SysPackage, ep)
+		apps.RegisterSchemaFS(registrySchemaFS, registry.RegistryPackage, ep)
 	}
 }

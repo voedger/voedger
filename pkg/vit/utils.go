@@ -19,8 +19,8 @@ import (
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/sys/registry"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -233,7 +233,7 @@ func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 					}
 				]
 			}`, login.Name, login.Pwd, login.AppQName.String())
-		resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.sys.IssuePrincipalToken", body)
+		resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.registry.IssuePrincipalToken", body)
 		profileWSID := istructs.WSID(resp.SectionRow()[1].(float64))
 		wsError := resp.SectionRow()[2].(string)
 		token := resp.SectionRow()[0].(string)
