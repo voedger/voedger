@@ -2,7 +2,7 @@
  * Copyright (c) 2020-present unTill Pro, Ltd.
  */
 
-package signupin
+package authnz
 
 import (
 	"context"
