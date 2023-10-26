@@ -45,7 +45,7 @@ type IDataBuilder interface {
 	// Add data constraint.
 	//
 	// # Panics:
-	//	 - if kind is not supported for data type.
+	//	 - if constraint is not compatible with data type.
 	AddConstraints(c ...IConstraint) IDataBuilder
 }
 
@@ -56,7 +56,7 @@ type ConstraintKind uint8
 
 // Data constraint interface.
 //
-// Ref. data-constraint.go for constraints constructors.
+// Ref. data-constraint.go for constraints constructors and methods.
 type IConstraint interface {
 	IComment
 
@@ -69,5 +69,6 @@ type IConstraint interface {
 	//	- uint16 value for min/max length constraints,
 	// 	- *regexp.Regexp value for pattern constraint,
 	// 	- float64 value for min/max inclusive/exclusive constraints.
+	//	- sorted slice with values for enumeration constraint.
 	Value() any
 }

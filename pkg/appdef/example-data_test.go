@@ -72,6 +72,6 @@ func ExampleIAppDefBuilder_AddData() {
 	// - string-data «test.token» inherits from string-data «test.string»
 	//   constraints: (Pattern: `^[a-z]+$`)
 	// - string-data «test.weekDay» inherits from string-data «test.string»
-	//   constraints: (Enum: [Mon Tue Wed Thu Fri Sat Sun])
+	//   constraints: (Enum: [Fri Mon Sat Sun Thu Tue Wed])
 	// overall data types:  5
 }

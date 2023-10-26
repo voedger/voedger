@@ -57,6 +57,24 @@ func (d *data) AddConstraints(cc ...IConstraint) IDataBuilder {
 		if ok := dk.IsSupportedConstraint(ck); !ok {
 			panic(fmt.Errorf("%v is not compatible with constraint %v: %w", d, c, ErrIncompatibleConstraints))
 		}
+		if c.Kind() == ConstraintKind_Enum {
+			ok := false
+			switch dk {
+			case DataKind_int32:
+				_, ok = c.Value().([]int32)
+			case DataKind_int64:
+				_, ok = c.Value().([]int64)
+			case DataKind_float32:
+				_, ok = c.Value().([]float32)
+			case DataKind_float64:
+				_, ok = c.Value().([]float64)
+			case DataKind_string:
+				_, ok = c.Value().([]string)
+			}
+			if !ok {
+				panic(fmt.Errorf("constraint %v values type %T is not applicable to %v: %w", c, c.Value(), d, ErrIncompatibleConstraints))
+			}
+		}
 		d.constraints[ck] = c
 	}
 	return d

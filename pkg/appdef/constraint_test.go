@@ -7,8 +7,10 @@
 package appdef
 
 import (
+	"fmt"
 	"math"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -53,28 +55,24 @@ func TestNewConstraint(t *testing.T) {
 			args{ConstraintKind_MaxExcl, float64(1), []string{"test max exclusive"}},
 			args{ConstraintKind_MaxExcl, 1, []string{"test max exclusive"}},
 		},
-		{"String enumeration",
+		{"string enumeration",
+			args{ConstraintKind_Enum, []string{"c", "b", "a", "b"}, []string{"test string enum"}},
 			args{ConstraintKind_Enum, []string{"a", "b", "c"}, []string{"test string enum"}},
-			args{ConstraintKind_Enum, []string{"a", "b", "c"}, []string{"test string enum"}},
-		},
-		{"Bytes enumeration",
-			args{ConstraintKind_Enum, [][]byte{{1, 2}, {3, 4}, {5, 6}}, []string{"test bytes enum"}},
-			args{ConstraintKind_Enum, [][]byte{{1, 2}, {3, 4}, {5, 6}}, []string{"test bytes enum"}},
 		},
 		{"int32 enumeration",
-			args{ConstraintKind_Enum, []int32{1, 2, 3}, []string{"test int32 enum"}},
+			args{ConstraintKind_Enum, []int32{3, 2, 1, 3}, []string{"test int32 enum"}},
 			args{ConstraintKind_Enum, []int32{1, 2, 3}, []string{"test int32 enum"}},
 		},
 		{"int64 enumeration",
-			args{ConstraintKind_Enum, []int64{1, 2, 3}, []string{}},
+			args{ConstraintKind_Enum, []int64{3, 2, 1, 2}, []string{}},
 			args{ConstraintKind_Enum, []int64{1, 2, 3}, []string{}},
 		},
 		{"float32 enumeration",
-			args{ConstraintKind_Enum, []float32{1, 2, 3}, []string{"test", "float32", "enum"}},
+			args{ConstraintKind_Enum, []float32{1, 3, 2, 1}, []string{"test", "float32", "enum"}},
 			args{ConstraintKind_Enum, []float32{1, 2, 3}, []string{"test", "float32", "enum"}},
 		},
 		{"float64 enumeration",
-			args{ConstraintKind_Enum, []float64{1, 2, 3}, []string{"test float64 enum"}},
+			args{ConstraintKind_Enum, []float64{3, 1, 2, 2, 3}, []string{"test float64 enum"}},
 			args{ConstraintKind_Enum, []float64{1, 2, 3}, []string{"test float64 enum"}},
 		},
 	}
@@ -135,8 +133,14 @@ func TestNewConstraintPanics(t *testing.T) {
 		{"MaxExcl(-∞)",
 			args{ConstraintKind_MaxExcl, float64(math.Inf(-1))},
 		},
+		{"Enum([]string{})",
+			args{ConstraintKind_Enum, []string{}},
+		},
 		{"Enum([]bool)",
 			args{ConstraintKind_Enum, []bool{true, false}},
+		},
+		{"Enum([][]byte)",
+			args{ConstraintKind_Enum, [][]byte{{1, 2, 3}, {4, 5, 6}}},
 		},
 		{"???(0)",
 			args{ConstraintKind_Count, 0},
@@ -146,6 +150,34 @@ func TestNewConstraintPanics(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			require.Panics(func() { _ = NewConstraint(tt.args.kind, tt.args.value) })
+		})
+	}
+}
+
+func Test_dataConstraint_String(t *testing.T) {
+	tests := []struct {
+		name  string
+		c     IConstraint
+		wantS string
+	}{
+		{"MinLen", MinLen(1), "MinLen: 1"},
+		{"MaxLen", MaxLen(100), "MaxLen: 100"},
+		{"Pattern", Pattern(`^\d+$`), "Pattern: `^\\d+$`"},
+		{"MinIncl", MinIncl(1), "MinIncl: 1"},
+		{"MinExcl", MinExcl(0), "MinExcl: 0"},
+		{"MinExcl(-∞)", MinExcl(math.Inf(-1)), "MinExcl: -Inf"},
+		{"MaxIncl", MaxIncl(100), "MaxIncl: 100"},
+		{"MaxExcl", MaxExcl(100), "MaxExcl: 100"},
+		{"MaxExcl(+∞)", MaxExcl(math.Inf(+1)), "MaxExcl: +Inf"},
+		{"Enum(string)", Enum("c", "d", "a", "a", "b", "c"), "Enum: [a b c d]"},
+		{"Enum(float64)", Enum(float64(1), 2, 3, 4, math.Round(100*math.Pi)/100, math.Inf(-1)), "Enum: [-Inf 1 2 3 3.14 4]"},
+		{"Enum(long case)", Enum("b", "d", "a", strings.Repeat("c", 100)), "Enum: [a b cccccccccccccccccccccccccccccccccccccccccccccccccccc…"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotS := fmt.Sprint(tt.c); gotS != tt.wantS {
+				t.Errorf("dataConstraint.String() = %v, want %v", gotS, tt.wantS)
+			}
 		})
 	}
 }

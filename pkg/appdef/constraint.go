@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"slices"
 )
 
 // Return new minimum length constraint for string or bytes data types.
@@ -113,23 +114,43 @@ func MaxExcl(v float64, c ...string) IConstraint {
 }
 
 type enumerable interface {
-	string | []byte | int32 | int64 | float32 | float64
+	string | int32 | int64 | float32 | float64
 }
 
 // Return new enumeration constraint for char or numeric data types.
+//
+// Enumeration values must be one of the following types:
+//   - string
+//   - int32
+//   - int64
+//   - float32
+//   - float64
+//
+// Passed values will be sorted and duplicates removed before placing
+// into returning constraint.
+//
+// # Panics:
+//   - if enumeration values list is empty
 func Enum[T enumerable](v ...T) IConstraint {
-	c := make([]T, 0, len(v))
-	for _, e := range v {
-		n := e
+	l := len(v)
+	if l == 0 {
+		panic(fmt.Errorf("enumeration values slice (%T) is empty: %w", v, ErrIncompatibleConstraints))
+	}
+	c := make([]T, 0, l)
+	for i := 0; i < l; i++ {
+		n := v[i]
 		c = append(c, n)
 	}
+	slices.Sort(c)
+	c = slices.Compact(c)
 	return newDataConstraint(ConstraintKind_Enum, c)
 }
 
 // Creates and returns new constraint.
 //
 // # Panics:
-//   - if kind is unknown
+//   - if kind is unknown,
+//   - id value is not compatible with kind.
 func NewConstraint(kind ConstraintKind, value any, c ...string) IConstraint {
 	switch kind {
 	case ConstraintKind_MinLen:
@@ -151,8 +172,6 @@ func NewConstraint(kind ConstraintKind, value any, c ...string) IConstraint {
 		switch v := value.(type) {
 		case []string:
 			enum = Enum(v...)
-		case [][]byte:
-			enum = Enum(v...)
 		case []int32:
 			enum = Enum(v...)
 		case []int64:
@@ -162,7 +181,7 @@ func NewConstraint(kind ConstraintKind, value any, c ...string) IConstraint {
 		case []float64:
 			enum = Enum(v...)
 		default:
-			panic(fmt.Errorf("unknown enumeration type: %T", value))
+			panic(fmt.Errorf("unsupported enumeration type: %T", value))
 		}
 		if len(c) > 0 {
 			enum.(ICommentBuilder).SetComment(c...)
@@ -222,7 +241,6 @@ func (c dataConstraint) String() (s string) {
 	const (
 		maxLen   = 64
 		ellipsis = `…`
-		stopEnum = ellipsis + `]`
 	)
 
 	switch c.kind {
@@ -230,14 +248,11 @@ func (c dataConstraint) String() (s string) {
 		s = fmt.Sprintf("%s: `%v`", c.kind.TrimString(), c.value)
 	case ConstraintKind_Enum:
 		s = fmt.Sprintf("%s: %v", c.kind.TrimString(), c.value)
-		if len(s) > maxLen {
-			s = s[:maxLen-len(stopEnum)] + stopEnum
-		}
 	default:
 		s = fmt.Sprintf("%s: %v", c.kind.TrimString(), c.value)
 	}
 	if len(s) > maxLen {
-		s = s[:maxLen-len(ellipsis)] + ellipsis
+		s = s[:maxLen-1] + ellipsis
 	}
 	return s
 }

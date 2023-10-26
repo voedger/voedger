@@ -124,7 +124,7 @@ func TestDataKind_IsSupportedConstraint(t *testing.T) {
 		{"bytes: MinExcl", DataKind_bytes, args{ConstraintKind_MinExcl}, false},
 		{"bytes: MaxIncl", DataKind_bytes, args{ConstraintKind_MaxIncl}, false},
 		{"bytes: MaxExcl", DataKind_bytes, args{ConstraintKind_MaxExcl}, false},
-		{"bytes: Enum", DataKind_bytes, args{ConstraintKind_Enum}, true},
+		{"bytes: Enum", DataKind_bytes, args{ConstraintKind_Enum}, false},
 		//-
 		{"int32: MinLen", DataKind_int32, args{ConstraintKind_MinLen}, false},
 		{"int32: MaxLen", DataKind_int32, args{ConstraintKind_MaxLen}, false},

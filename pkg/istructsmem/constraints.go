@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -62,6 +64,14 @@ func checkCharsConstraints[T chars](fld appdef.IField, value T) (err error) {
 					}
 				}
 			}
+		case appdef.ConstraintKind_Enum:
+			if enum, ok := c.Value().([]string); ok {
+				if l := len(enum); l > 0 {
+					if _, ok := sort.Find(l, func(i int) int { return strings.Compare(string(value), enum[i]) }); !ok {
+						err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+					}
+				}
+			}
 		}
 	})
 
@@ -97,6 +107,22 @@ func checkNumberConstraints[T number](fld appdef.IField, value T) (err error) {
 		case appdef.ConstraintKind_MaxExcl:
 			if float64(value) >= c.Value().(float64) {
 				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+			}
+		case appdef.ConstraintKind_Enum:
+			if enum, ok := c.Value().([]T); ok {
+				if l := len(enum); l > 0 {
+					if _, ok := sort.Find(l, func(i int) int {
+						if value > enum[i] {
+							return 1
+						}
+						if value < enum[i] {
+							return -1
+						}
+						return 0
+					}); !ok {
+						err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+					}
+				}
 			}
 		}
 	})
