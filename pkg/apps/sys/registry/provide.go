@@ -9,8 +9,8 @@ import (
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 )
 
@@ -22,8 +22,11 @@ func Provide(smtpCfg smtp.Cfg, rebuildRegistry bool) apps.AppBuilder {
 			apis.NumCommandProcessors, nil, apis.IAppStorageProvider, rebuildRegistry)
 
 		// sys/registry resources
-		registry.Provide(cfg, appDefBuilder, apis.IAppStructsProvider, apis.ITokens, apis.IFederation, ep)
-		cfg.AddSyncProjectors(registry.ProvideSyncProjectorLoginIdxFactory())
-		apps.RegisterSchemaFS(registrySchemaFS, registry.RegistryPackage, ep)
+		// note: q.sys.RefreshPrincipalToken is moved to sys package because it is strange to call it in sys/registry: provided token is issued for different app (e.g. airs-bp)
+		signupin.Provide(cfg, appDefBuilder, apis.ITokens, apis.IFederation, apis.IAppStructsProvider)
+		cfg.AddSyncProjectors(
+			signupin.ProvideSyncProjectorLoginIdxFactory(),
+		)
+		apps.RegisterSchemaFS(registrySchemaFS, appdef.SysPackage, ep)
 	}
 }

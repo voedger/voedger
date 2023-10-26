@@ -37,11 +37,11 @@ Projectors:
 - AppWorkspaces are created by system when an App is deployed to a Cluster
 - Workspaces of other kinds must be explicitely created (and initialized)
     - It is not possible to work with uninitialized workspaces
-- Client calls `c.registry.CreateLogin` using pseudo WS calculated as (main cluster, crc16(login))
+- Client calls `c.sys.CreateLogin` using pseudo WS calculated as (main cluster, crc16(login))
 - If router sees that baseWSID of WSID is < MaxPseudoBaseWSID then it replaces that pseudo base WSID with app base WSID:
   - (main cluser, (baseWSID %% appWSAmount) + FirstBaseAppWSID)
 - `crc16 = crc32.ChecksumIEEE & (MaxUint32 >> 16)`
-- `cdoc.registry.Login` stores login hash only
+- `cdoc.sys.Login` stores login hash only
 
 ## Create Login
 
@@ -49,8 +49,8 @@ Projectors:
 
 |entity|app|ws|cluster
 |---|---|---|---|
-|c.registry.CreateLogin()|sys/registry|pseudoWS|main
-|cdoc.registry.Login (owner)<br/>aproj.sys.InvokeCreateWorkspaceID|sys/registry|app ws|main
+|c.sys.CreateLogin()|sys/registry|pseudoWS|main
+|cdoc.sys.Login (owner)<br/>aproj.sys.InvokeCreateWorkspaceID|sys/registry|app ws|main
 |c.sys.CreateWorkspaceID()<br/>cdoc.sys.WorkspaceID<br/>aproj.sys.InvokeCreateWorkspace()|Target App|(Target Cluster, base App WSID)|Target Cluster
 |c.sys.CreateWorkspace()<br/>cdoc.sys.WorkspaceDescriptor<br/>cdoc.sys.UserProfile/DeviceProfile<br/>aproj.sys.InitializeWorkspace()|Target App|new WSID|Target Cluster
 
@@ -178,7 +178,7 @@ Subject:
     - `c.sys.CUD` -> will check after `parseCUDs` stage if we are updating `cdoc.WorkspaceDescriptor` or `WDoc<BLOB>` now
       - there is update only of (`cdoc.WorkspaceDescriptor` or `WDoc<BLOB>`) only among CUDs -> ok
   - -> 403 forbidden + `workspace is not initialized`
-- `aproj.sys.InitializeWorkspace`: `wsKind` == `registry.AppWorkspace` -> self-initialized already, skip further work
+- `aproj.sys.InitializeWorkspace`: `wsKind` == `sys.AppWorkspace` -> self-initialized already, skip further work
 - App Workspace has `cdoc.WorkspaceDescriptor` only, there is no `cdoc.$wsKind`
 - `cdoc.WorkspaceDescriptor`, `cdoc.WorkspaceID`, `c.sys.CeateWorkspace`, `c.sys.CreateWorkspaceID`:
   - `ownerID`, `ownerQName`, `ownerWSID` fields are made non-required becuase they are empty in App Workspace

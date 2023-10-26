@@ -20,7 +20,7 @@
 - ChildWorkspace: `air.Restaurant` etc.
 - Workspace has the OwningDocument
 - OwningDocument: a document whose fields {WSID, wsError} will be updated when workspace will be ready
-- Currently, OwningDocument kinds: `cdoc.registry.Login`, `cdoc.sys.ChildWorkspace`
+- Currently, OwningDocument kinds: `cdoc.sys.Login`, `cdoc.sys.ChildWorkspace`
 - // TODO: Clearing the owner.error causes the workspace to be regenerated
 - OwningDocument.error must NOT be published to CUD function (only System can update)
 
