@@ -2,7 +2,7 @@
  * Copyright (c) 2020-present unTill Pro, Ltd.
  */
 
-package registry
+package signupin
 
 import "github.com/voedger/voedger/pkg/istructs"
 

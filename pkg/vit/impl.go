@@ -28,7 +28,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
-	"github.com/voedger/voedger/pkg/sys/authnz"
+	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
 )
@@ -351,7 +351,7 @@ func (vit *VIT) refreshTokens() {
 			}
 			as, err := vit.IAppStructsProvider.AppStructs(prn.AppQName)
 			require.NoError(vit.T, err) // notest
-			newToken, err := as.AppTokens().IssueToken(authnz.DefaultPrincipalTokenExpiration, &principalPayload)
+			newToken, err := as.AppTokens().IssueToken(signupin.DefaultPrincipalTokenExpiration, &principalPayload)
 			require.NoError(vit.T, err)
 			prn.Token = newToken
 		}

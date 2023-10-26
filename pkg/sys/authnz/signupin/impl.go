@@ -1,9 +1,8 @@
 /*
- * Copyright (c) 2021-present unTill Pro, Ltd.
- * @author Denis Gribanov
+ * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package registry
+package signupin
 
 import (
 	"errors"
@@ -12,7 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
+	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -23,7 +22,7 @@ import (
 func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		loginStr := args.ArgumentObject.AsString(authnz.Field_Login)
-		appName := args.ArgumentObject.AsString(authnz.Field_AppName)
+		appName := args.ArgumentObject.AsString(Field_AppName)
 
 		subjectKind := istructs.SubjectKindType(args.ArgumentObject.AsInt32(authnz.Field_SubjectKind))
 		if subjectKind >= istructs.SubjectKind_FakeLast || subjectKind <= istructs.SubjectKind_null {
@@ -69,7 +68,7 @@ func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecComman
 		}
 		profileCluster := args.ArgumentObject.AsInt32(authnz.Field_ProfileClusterID)
 
-		kb, err := args.State.KeyBuilder(state.Record, QNameCDocLogin)
+		kb, err := args.State.KeyBuilder(state.Record, authnz.QNameCDocLogin)
 		if err != nil {
 			return err
 		}
@@ -79,7 +78,7 @@ func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecComman
 		}
 		cdocLogin.PutInt32(authnz.Field_ProfileClusterID, profileCluster)
 		cdocLogin.PutBytes(field_PwdHash, pwdSaltedHash)
-		cdocLogin.PutString(authnz.Field_AppName, appName)
+		cdocLogin.PutString(Field_AppName, appName)
 		cdocLogin.PutInt32(authnz.Field_SubjectKind, args.ArgumentObject.AsInt32(authnz.Field_SubjectKind))
 		cdocLogin.PutString(authnz.Field_LoginHash, GetLoginHash(loginStr))
 		cdocLogin.PutRecordID(appdef.SystemField_ID, 1)
@@ -92,7 +91,7 @@ func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecComman
 // sys/registry, appWorkspace, triggered by CDoc<Login>
 var projectorLoginIdx = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return event.CUDs(func(rec istructs.ICUDRow) (err error) {
-		if rec.QName() != QNameCDocLogin {
+		if rec.QName() != authnz.QNameCDocLogin {
 			return nil
 		}
 		kb, err := s.KeyBuilder(state.View, QNameViewLoginIdx)
@@ -100,7 +99,7 @@ var projectorLoginIdx = func(event istructs.IPLogEvent, s istructs.IState, inten
 			return
 		}
 		kb.PutInt64(field_AppWSID, int64(event.Workspace()))
-		kb.PutString(field_AppIDLoginHash, rec.AsString(authnz.Field_AppName)+"/"+rec.AsString(authnz.Field_LoginHash))
+		kb.PutString(field_AppIDLoginHash, rec.AsString(Field_AppName)+"/"+rec.AsString(authnz.Field_LoginHash))
 
 		vb, err := intents.NewValue(kb)
 		if err != nil {

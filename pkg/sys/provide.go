@@ -18,8 +18,8 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
-	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/sys/workspace"
+	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
+	"github.com/voedger/voedger/pkg/sys/authnz/workspace"
 	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	"github.com/voedger/voedger/pkg/sys/collection"
@@ -49,7 +49,8 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	projectors.ProvideOffsetsDef(appDefBuilder)
 	processors.ProvideJSONFuncParamsDef(appDefBuilder)
 	verifier.Provide(cfg, appDefBuilder, itokens, federation, asp, smtpCfg)
-	authnz.Provide(cfg, appDefBuilder, itokens, federation, asp, atf)
+	signupin.ProvideQryRefreshPrincipalToken(cfg, appDefBuilder, itokens)
+	signupin.ProvideCmdEnrichPrincipalToken(cfg, appDefBuilder, atf)
 	invite.Provide(cfg, appDefBuilder, timeFunc, federation, itokens, smtpCfg)
 	uniques.Provide(cfg, appDefBuilder)
 	describe.Provide(cfg, asp, appDefBuilder)

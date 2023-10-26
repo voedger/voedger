@@ -23,20 +23,19 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // Projector<A, InvokeCreateWorkspaceID>
 // triggered by CDoc<ChildWorkspace> or CDoc<Login> (both not singletons)
 // wsid - pseudoProfile: crc32(wsName) or crc32(login)
-// sys/registry app
 func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) error {
-			if rec.QName() != registry.QNameCDocLogin && rec.QName() != authnz.QNameCDocChildWorkspace {
+			if rec.QName() != authnz.QNameCDocLogin && rec.QName() != authnz.QNameCDocChildWorkspace {
 				return nil
 			}
 			if !rec.IsNew() {
@@ -63,7 +62,7 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 				templateParams = rec.AsString(Field_TemplateParams)
 				targetApp = ownerApp
 				wsidToCallCreateWSIDAt = coreutils.GetPseudoWSID(ownerWSID, wsName, targetClusterID)
-			case registry.QNameCDocLogin:
+			case authnz.QNameCDocLogin:
 				loginHash := rec.AsString(authnz.Field_LoginHash)
 				wsName = fmt.Sprint(crc32.ChecksumIEEE([]byte(loginHash)))
 				switch istructs.SubjectKindType(rec.AsInt32(authnz.Field_SubjectKind)) {
@@ -72,10 +71,10 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 				case istructs.SubjectKind_User:
 					wsKind = authnz.QNameCDoc_WorkspaceKind_UserProfile
 				default:
-					return fmt.Errorf("unsupported cdoc.registry.Login.subjectKind: %d", rec.AsInt32(authnz.Field_SubjectKind))
+					return fmt.Errorf("unsupported cdoc.sys.Login.subjectKind: %d", rec.AsInt32(authnz.Field_SubjectKind))
 				}
 				targetClusterID = istructs.ClusterID(rec.AsInt32(authnz.Field_ProfileClusterID))
-				targetApp = rec.AsString(authnz.Field_AppName)
+				targetApp = rec.AsString(signupin.Field_AppName)
 				wsidToCallCreateWSIDAt = istructs.NewWSID(targetClusterID, ownerBaseWSID)
 			default:
 				// notest
@@ -85,11 +84,11 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 			// Call WS[$PseudoWSID].c.CreateWorkspaceID()
 			createWSIDCmdURL := fmt.Sprintf("api/%s/%d/c.sys.CreateWorkspaceID", targetApp, wsidToCallCreateWSIDAt)
 			logger.Info("aproj.sys.InvokeCreateWorkspaceID: request to " + createWSIDCmdURL)
-			body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":"%s","OwnerID":%d,"OwnerApp":"%s","WSName":"%s","WSKind":"%s","WSKindInitializationData":%q,"TemplateName":"%s","TemplateParams":%q}}`,
+			body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName":"%s","OwnerID":%d,"OwnerApp":"%s","WSName":"%s","WSKind":"%s","WSKindInitializationData":%q,"TemplateName":"%s","TemplateParams":%q}}`,
 				ownerWSID, ownerQName.String(), ownerID, ownerApp, wsName, wsKind.String(), wsKindInitializationData, templateName, templateParams)
 			targetAppQName, err := istructs.ParseAppQName(targetApp)
 			if err != nil {
-				// parsed already by c.registry.CreateLogin
+				// parsed already by c.sys.CreateLogin
 				// notest
 				return err
 			}
@@ -154,9 +153,9 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istruct
 			return err
 		}
 		cdocWorkspaceID.PutRecordID(appdef.SystemField_ID, 1)
-		cdocWorkspaceID.PutInt64(Field_OwnerWSID, args.ArgumentObject.AsInt64(Field_OwnerWSID))       // CDoc<Login> -> pseudo WSID, CDoc<ChildWorkspace> -> owner profile WSID
-		cdocWorkspaceID.PutString(Field_OwnerQName2, args.ArgumentObject.AsString(Field_OwnerQName2)) // registry.Login or sys.UserProfile
-		cdocWorkspaceID.PutInt64(Field_OwnerID, args.ArgumentObject.AsInt64(Field_OwnerID))           // CDoc<Login>.ID or CDoc<ChildWorkspace>.ID
+		cdocWorkspaceID.PutInt64(Field_OwnerWSID, args.ArgumentObject.AsInt64(Field_OwnerWSID))   // CDoc<Login> -> pseudo WSID, CDoc<ChildWorkspace> -> owner profile WSID
+		cdocWorkspaceID.PutQName(Field_OwnerQName, args.ArgumentObject.AsQName(Field_OwnerQName)) // sys.Login or sys.UserProfile
+		cdocWorkspaceID.PutInt64(Field_OwnerID, args.ArgumentObject.AsInt64(Field_OwnerID))       // CDoc<Login>.ID or CDoc<ChildWorkspace>.ID
 		cdocWorkspaceID.PutString(Field_OwnerApp, args.ArgumentObject.AsString(Field_OwnerApp))
 		cdocWorkspaceID.PutString(authnz.Field_WSName, args.ArgumentObject.AsString(authnz.Field_WSName)) // CDoc<Login> -> "hardcoded", CDoc<ChildWorkspace> -> wsName
 		cdocWorkspaceID.PutQName(authnz.Field_WSKind, args.ArgumentObject.AsQName(authnz.Field_WSKind))   // CDoc<Login> -> sys.DeviceProfile or sys.UserProfile, CDoc<ChildWorkspace> -> provided wsKind (e.g. air.Restaurant)
@@ -214,12 +213,12 @@ func invokeCreateWorkspaceProjector(federation coreutils.IFederation, appQName i
 			wsKindInitializationData := rec.AsString(authnz.Field_WSKindInitializationData)
 			templateName := rec.AsString(field_TemplateName)
 			ownerWSID := rec.AsInt64(Field_OwnerWSID)
-			ownerQName := rec.AsString(Field_OwnerQName2)
+			ownerQName := rec.AsQName(Field_OwnerQName)
 			ownerID := rec.AsInt64(Field_OwnerID)
 			ownerApp := rec.AsString(Field_OwnerApp)
 			templateParams := rec.AsString(Field_TemplateParams)
-			body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":"%s","OwnerID":%d,"OwnerApp":"%s","WSName":"%s","WSKind":"%s","WSKindInitializationData":%q,"TemplateName":"%s","TemplateParams":%q}}`,
-				ownerWSID, ownerQName, ownerID, ownerApp, wsName, wsKind.String(), wsKindInitializationData, templateName, templateParams)
+			body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName":"%s","OwnerID":%d,"OwnerApp":"%s","WSName":"%s","WSKind":"%s","WSKindInitializationData":%q,"TemplateName":"%s","TemplateParams":%q}}`,
+				ownerWSID, ownerQName.String(), ownerID, ownerApp, wsName, wsKind.String(), wsKindInitializationData, templateName, templateParams)
 			createWSCmdURL := fmt.Sprintf("api/%s/%d/c.sys.CreateWorkspace", appQName.String(), newWSID)
 			logger.Info("aproj.sys.InvokeCreateWorkspace: request to " + createWSCmdURL)
 			systemPrincipalToken, err := payloads.GetSystemPrincipalToken(tokensAPI, appQName)
@@ -279,7 +278,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 		}
 		cdocWSDesc.PutRecordID(appdef.SystemField_ID, 1)
 		cdocWSDesc.PutInt64(Field_OwnerWSID, args.ArgumentObject.AsInt64(Field_OwnerWSID))           // CDoc<Login> -> pseudo WSID, CDoc<ChildWorkspace> -> owner profile WSID
-		cdocWSDesc.PutString(Field_OwnerQName2, args.ArgumentObject.AsString(Field_OwnerQName2))     // registry.Login or sys.UserProfile
+		cdocWSDesc.PutQName(Field_OwnerQName, args.ArgumentObject.AsQName(Field_OwnerQName))         // sys.Login or sys.UserProfile
 		cdocWSDesc.PutInt64(Field_OwnerID, args.ArgumentObject.AsInt64(Field_OwnerID))               // CDoc<Login>.ID or CDoc<ChildWorkspace>.ID
 		cdocWSDesc.PutString(authnz.Field_WSName, args.ArgumentObject.AsString(authnz.Field_WSName)) // CDoc<Login> -> "hardcoded", CDoc<ChildWorkspace> -> wsName
 		cdocWSDesc.PutQName(authnz.Field_WSKind, wsKind)                                             // CDoc<Login> -> sys.DeviceProfile or sys.UserProfile, CDoc<ChildWorkspace> -> provided wsKind (e.g. air.Restaurant)
@@ -361,7 +360,7 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, targetAppQName ist
 			}
 			ownerAppQName, err := istructs.ParseAppQName(ownerApp)
 			if err != nil {
-				// parsed already by c.registry.CreateLogin and InitChildWorkspace ?????????
+				// parsed already by c.sys.CreateLogin and InitChildWorkspace ?????????
 				// notest
 				return err
 			}
@@ -446,8 +445,8 @@ func updateOwner(rec istructs.ICUDRow, ownerApp string, newWSID int64, err error
 	}
 
 	updateOwnerURL := fmt.Sprintf("api/%s/%d/c.sys.CUD", ownerApp, ownerWSID)
-	ownerQName := rec.AsString(Field_OwnerQName2)
-	infoLogger(fmt.Sprintf("updating owner cdoc.%s at %s/%d: NewWSID=%d, WSError='%s'", ownerQName,
+	ownerQName := rec.AsQName(Field_OwnerQName)
+	infoLogger(fmt.Sprintf("updating owner cdoc.%s at %s/%d: NewWSID=%d, WSError='%s'", ownerQName.String(),
 		ownerApp, ownerWSID, newWSID, errStr))
 	body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"%s":%d,"%s":%q}}]}`,
 		ownerID, authnz.Field_WSID, newWSID, authnz.Field_WSError, errStr)

@@ -12,11 +12,11 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/sys/workspace"
+	"github.com/voedger/voedger/pkg/sys/authnz/workspace"
 )
 
 func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
-	for appQName := range vvm.AppConfigsType {
+	for _, appQName := range vvm.VVMApps {
 		pLogOffsets := map[istructs.PartitionID]istructs.Offset{}
 		wLogOffset := istructs.FirstOffset
 		as, err := vvm.IAppStructsProvider.AppStructs(appQName)
