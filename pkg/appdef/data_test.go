@@ -168,3 +168,50 @@ func Test_AppDef_AddData(t *testing.T) {
 		})
 	})
 }
+
+func Test_data_AddConstraint(t *testing.T) {
+	type args struct {
+		da DataKind
+		ck ConstraintKind
+		cv any
+	}
+	tests := []struct {
+		name      string
+		args      args
+		wantPanic bool
+	}{
+		//- Enum
+		{"int32: enum constraint must be ok",
+			args{DataKind_int32, ConstraintKind_Enum, []int32{1, 2, 3}}, false},
+		{"int32: enum constraint must fail if wrong enum type",
+			args{DataKind_int32, ConstraintKind_Enum, []int64{1, 2, 3}}, true},
+		{"int64: enum constraint must be ok",
+			args{DataKind_int64, ConstraintKind_Enum, []int64{1, 2, 3}}, false},
+		{"int64: enum constraint must fail if wrong enum type",
+			args{DataKind_int64, ConstraintKind_Enum, []string{"1", "2", "3"}}, true},
+		{"float32: enum constraint must be ok",
+			args{DataKind_float32, ConstraintKind_Enum, []float32{1.0, 2.0, 3.0}}, false},
+		{"float32: enum constraint must fail if wrong enum type",
+			args{DataKind_float32, ConstraintKind_Enum, []float64{1.0, 2.0, 3.0}}, true},
+		{"float64: enum constraint must be ok",
+			args{DataKind_float64, ConstraintKind_Enum, []float64{1.0, 2.0, 3.0}}, false},
+		{"float64: enum constraint must fail if wrong enum type",
+			args{DataKind_float64, ConstraintKind_Enum, []int32{1, 2, 3}}, true},
+		{"string: enum constraint must be ok",
+			args{DataKind_string, ConstraintKind_Enum, []string{"a", "b", "c"}}, false},
+		{"string: enum constraint must fail if wrong enum type",
+			args{DataKind_float64, ConstraintKind_Enum, []int32{1, 2, 3}}, true},
+	}
+	require := require.New(t)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adb := New()
+			d := adb.AddData(NewQName("test", "test"), tt.args.da, NullQName)
+			if tt.wantPanic {
+				require.Panics(func() { d.AddConstraints(NewConstraint(tt.args.ck, tt.args.cv)) })
+			} else {
+				require.NotPanics(func() { d.AddConstraints(NewConstraint(tt.args.ck, tt.args.cv)) })
+			}
+		})
+	}
+}
