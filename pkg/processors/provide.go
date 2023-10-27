@@ -11,5 +11,5 @@ import (
 )
 
 func ProvideJSONFuncParamsDef(appDef appdef.IAppDefBuilder) {
-	appDef.AddObject(istructs.QNameJSON).AddField(Field_JSONDef_Body, appdef.DataKind_string, true)
+	appDef.AddObject(istructs.QNameJSON).AddField(Field_JSONDef_Body, appdef.DataKind_string, true, appdef.MaxLen(fieldBodyLen))
 }
