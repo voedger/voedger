@@ -43,7 +43,7 @@ func GetCDocLoginID(st istructs.IState, appWSID istructs.WSID, appName string, l
 		logger.Error(2, err)
 		return istructs.NullRecordID, err
 	}
-	logger.Info(3)
+	logger.Info("3")
 	if !ok {
 		return istructs.NullRecordID, nil
 	}
