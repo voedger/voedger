@@ -43,7 +43,7 @@ func GetCDocLoginID(st istructs.IState, appWSID istructs.WSID, appName string, l
 		logger.Error(2, err)
 		return istructs.NullRecordID, err
 	}
-	logger.Info(3)
+	logger.Info("3")
 	if !ok {
 		return istructs.NullRecordID, nil
 	}
@@ -67,10 +67,10 @@ func GetCDocLogin(login string, st istructs.IState, appWSID istructs.WSID, appNa
 		return nil, doesLoginExist, err
 	}
 	kb.PutRecordID(state.Field_ID, cdocLoginID)
-	logger.Info(4)
+	logger.Info("4")
 	cdocLogin, err = st.MustExist(kb)
 	if err != nil {
-		logger.Error(4, err)
+		logger.Error("4", err)
 	}
 	return
 }
