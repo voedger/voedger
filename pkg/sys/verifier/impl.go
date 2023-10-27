@@ -32,7 +32,7 @@ func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, appDefB
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryInitiateEmailVerification,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateEmailVerificationParams")).
-			AddField(field_Entity, appdef.DataKind_string, true). // must be string, not QName, because target app could not know that QName. E.g. unknown QName «sys.ResetPasswordByEmailUnloggedParams»: name not found
+			AddField(field_Entity, appdef.DataKind_string, true). // must be string, not QName, because target app could not know that QName. E.g. unknown QName «registry.ResetPasswordByEmailUnloggedParams»: name not found
 			AddField(field_Field, appdef.DataKind_string, true).
 			AddField(Field_Email, appdef.DataKind_string, true).
 			AddField(field_TargetWSID, appdef.DataKind_int64, true).

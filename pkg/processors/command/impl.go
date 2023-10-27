@@ -27,7 +27,7 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	workspacemgmt "github.com/voedger/voedger/pkg/sys/authnz/workspace"
+	workspacemgmt "github.com/voedger/voedger/pkg/sys/workspace"
 	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	coreutils "github.com/voedger/voedger/pkg/utils"
