@@ -95,7 +95,7 @@ Subject:
 
 - AuthZ: System
   - SystemToken in header
-- Params: (`wsParams`) ownerWSID, ownerQName, ownerID, wsName, wsKind, wsKindInitializationData, templateName, templateParams (JSON), wsClusterID
+- Params: (`wsParams`) ownerWSID, ownerQName2, ownerID, wsName, wsKind, wsKindInitializationData, templateName, templateParams (JSON), wsClusterID
   - ownerWSID
     - For profiles: PseudoWSID is calculated (from login) by client as NewWSID(1, ISO CRC32(login))
     - For subject workspaces: ProfileWSID
@@ -181,7 +181,7 @@ Subject:
 - `aproj.sys.InitializeWorkspace`: `wsKind` == `registry.AppWorkspace` -> self-initialized already, skip further work
 - App Workspace has `cdoc.WorkspaceDescriptor` only, there is no `cdoc.$wsKind`
 - `cdoc.WorkspaceDescriptor`, `cdoc.WorkspaceID`, `c.sys.CeateWorkspace`, `c.sys.CreateWorkspaceID`:
-  - `ownerID`, `ownerQName`, `ownerWSID` fields are made non-required becuase they are empty in App Workspace
+  - `ownerID`, `ownerQName2`, `ownerWSID` fields are made non-required becuase they are empty in App Workspace
   - `ownerApp` field added to know in which app to update the owner
 - AppWorkspaces are [initialized automatically](https://github.com/untillpro/airs-bp3/blob/21010-AD-Workspace-ER/hvm/provide.go#L53) after wiring the HVM before launch
   - for each app

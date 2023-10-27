@@ -23,16 +23,14 @@ ABSTRACT WORKSPACE Workspace (
         TemplateName varchar,
         TemplateParams varchar(1024),
         WSClusterID int32 NOT NULL,
-        WSID int64,
-        -- to be updated afterwards
+        WSID int64,           -- to be updated afterwards
         WSError varchar(1024) -- to be updated afterwards
     );
 
     -- target app, (target cluster, base profile WSID)
     TABLE WorkspaceID INHERITS CDoc (
         OwnerWSID int64 NOT NULL,
-        -- Deprecated: use OwnerQName2
-        OwnerQName qname,
+        OwnerQName qname, -- Deprecated: use OwnerQName2
         OwnerID int64 NOT NULL,
         OwnerApp varchar NOT NULL,
         WSName varchar NOT NULL,
@@ -46,13 +44,11 @@ ABSTRACT WORKSPACE Workspace (
 
     -- target app, new WSID
     TABLE WorkspaceDescriptor INHERITS Singleton (
-        OwnerWSID int64,
         -- owner* fields made non-required for app workspaces
-        OwnerQName qname,
-        -- Deprecated: use OwnerQName2
+        OwnerWSID int64,
+        OwnerQName qname, -- Deprecated: use OwnerQName2
         OwnerID int64,
-        OwnerApp varchar,
-        -- QName -> each target app must know the owner QName -> string
+        OwnerApp varchar, -- QName -> each target app must know the owner QName -> string
         WSName varchar NOT NULL,
         WSKind qname NOT NULL,
         WSKindInitializationData varchar(1024),
