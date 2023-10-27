@@ -417,7 +417,8 @@ classDiagram
                            - MinInclusive() float
                            - MinExclusive() float
                            - MaxInclusive() float
-                           - MaxExclusive() float"
+                           - MaxExclusive() float
+                           - Enum() []enumerable"
 ```
 
 ### Structures
