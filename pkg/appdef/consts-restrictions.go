@@ -21,7 +21,7 @@ const MaxTypeUniqueFieldsCount = 256
 const MaxTypeUniqueCount = 100
 
 // Maximum string and bytes data length
-const MaxFieldLength = uint16(1024)
+const MaxFieldLength = uint16(8192) // dept: temporarily set to 8192 to make e.g. q.air.UPTerminalWebhook work: its arg field Body actual len is about 2500 bytes
 
 // Default string and bytes data max length.
 //
