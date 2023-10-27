@@ -31,7 +31,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 
-	// workspacemgmt "github.com/voedger/voedger/pkg/sys/authnz/workspace"
+	// workspacemgmt "github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 

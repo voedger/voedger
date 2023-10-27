@@ -46,14 +46,15 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		QNameCommandCreateWorkspaceID,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateWorkspaceIDParams")).
 			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
-			AddField(Field_OwnerQName, appdef.DataKind_QName, true).
+			AddField(Field_OwnerQName, appdef.DataKind_QName, false). // Deprecated: use OwnerQName2
 			AddField(Field_OwnerID, appdef.DataKind_int64, true).
 			AddField(Field_OwnerApp, appdef.DataKind_string, true).
 			AddField(authnz.Field_WSName, appdef.DataKind_string, true).
 			AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
 			AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
 			AddField(field_TemplateName, appdef.DataKind_string, false).
-			AddField(Field_TemplateParams, appdef.DataKind_string, false).(appdef.IType).QName(),
+			AddField(Field_TemplateParams, appdef.DataKind_string, false).
+			AddField(Field_OwnerQName2, appdef.DataKind_string, false).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdCreateWorkspaceID(asp, cfg.Name),
@@ -73,14 +74,15 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		QNameCommandCreateWorkspace,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateWorkspaceParams")).
 			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
-			AddField(Field_OwnerQName, appdef.DataKind_QName, true).
+			AddField(Field_OwnerQName, appdef.DataKind_QName, false). // Deprecated: Use OwnerQName2
 			AddField(Field_OwnerID, appdef.DataKind_int64, true).
 			AddField(Field_OwnerApp, appdef.DataKind_string, true).
 			AddField(authnz.Field_WSName, appdef.DataKind_string, true).
 			AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
 			AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
 			AddField(field_TemplateName, appdef.DataKind_string, false).
-			AddField(Field_TemplateParams, appdef.DataKind_string, false).(appdef.IType).QName(),
+			AddField(Field_TemplateParams, appdef.DataKind_string, false).
+			AddField(Field_OwnerQName2, appdef.DataKind_string, false).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdCreateWorkspace(timeFunc, asp, cfg.Name),
