@@ -39,7 +39,7 @@ func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, appDefB
 			AddField(field_ForRegistry, appdef.DataKind_bool, false). // to issue token for sys/registry/pseudoWSID/c.sys.ResetPassword, not for the current app
 			AddField(field_Language, appdef.DataKind_string, false).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitialEmailVerificationResult")).
-			AddField(field_VerificationToken, appdef.DataKind_string, true).(appdef.IType).QName(),
+			AddDataField(field_VerificationToken, appdef.SysData_String, true, appdef.MaxLen(appdef.MaxFieldLength)).(appdef.IType).QName(),
 		provideIEVExec(cfg.Name, itokens, asp, federation),
 	))
 	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQueryInitiateEmailVerification, istructs.RateLimit{
@@ -147,7 +147,7 @@ func provideQryIssueVerifiedValueToken(cfg *istructsmem.AppConfigType, appDefBui
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryIssueVerifiedValueToken,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenParams")).
-			AddField(field_VerificationToken, appdef.DataKind_string, true).
+			AddDataField(field_VerificationToken, appdef.SysData_String, true, appdef.MaxLen(appdef.MaxFieldLength)).
 			AddField(field_VerificationCode, appdef.DataKind_string, true).
 			AddField(field_ForRegistry, appdef.DataKind_bool, false).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenResult")).

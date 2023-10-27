@@ -672,7 +672,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 	t.Run("must be ok to build test application", func(t *testing.T) {
 		oDoc := appDef.AddODoc(docName)
 		oDoc.
-			AddStringField("RequiredField", true).(appdef.IODocBuilder).
+			AddField("RequiredField", appdef.DataKind_string, true).(appdef.IODocBuilder).
 			AddContainer("child", recName, 0, appdef.Occurs_Unbounded)
 		_ = appDef.AddORecord(recName)
 
@@ -752,7 +752,7 @@ func Test_VerifiedFields(t *testing.T) {
 	t.Run("must be ok to build application", func(t *testing.T) {
 		appDef.AddObject(objName).
 			AddField("int32", appdef.DataKind_int32, true).
-			AddStringField("email", false).
+			AddField("email", appdef.DataKind_string, false).
 			SetFieldVerify("email", appdef.VerificationKind_EMail).
 			AddField("age", appdef.DataKind_int32, false).
 			SetFieldVerify("age", appdef.VerificationKind_Any...)
@@ -924,9 +924,22 @@ func Test_CharsFieldRestricts(t *testing.T) {
 
 	appDef := appdef.New()
 	t.Run("must be ok to build application", func(t *testing.T) {
+		s100Data := appdef.NewQName("test", "s100")
+		emailData := appdef.NewQName("test", "email")
+		mimeData := appdef.NewQName("test", "mime")
+
+		appDef.AddData(s100Data, appdef.DataKind_string, appdef.NullQName,
+			appdef.MinLen(1), appdef.MaxLen(100)).SetComment("string 1..100")
+
+		_ = appDef.AddData(emailData, appdef.DataKind_string, s100Data,
+			appdef.MinLen(6), appdef.Pattern(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`))
+
+		_ = appDef.AddData(mimeData, appdef.DataKind_bytes, appdef.NullQName,
+			appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`))
+
 		appDef.AddObject(objName).
-			AddStringField("email", true, appdef.MinLen(6), appdef.MaxLen(100), appdef.Pattern(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`)).
-			AddBytesField("mime", false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`))
+			AddDataField("email", emailData, true).
+			AddDataField("mime", mimeData, false)
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -940,7 +953,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 	_, err = asp.AppStructs(test.appName)
 	require.NoError(err)
 
-	t.Run("test field restricts", func(t *testing.T) {
+	t.Run("test constraints", func(t *testing.T) {
 
 		t.Run("must be ok check good value", func(t *testing.T) {
 			row := makeObject(cfg, objName)
@@ -951,26 +964,15 @@ func Test_CharsFieldRestricts(t *testing.T) {
 			require.NoError(err)
 		})
 
-		t.Run("must be error if min length restricted", func(t *testing.T) {
+		t.Run("must be error if length constraint violated", func(t *testing.T) {
 			row := makeObject(cfg, objName)
-			row.PutString("email", `t@t`)
-			row.PutBytes("mime", []byte(`abc`))
+			row.PutString("email", fmt.Sprintf("%s.com", strings.Repeat("a", 97))) // 97 + 4 = 101 : too long
+			row.PutBytes("mime", []byte(`abc`))                                    // 3 < 4 : too short
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrFieldValueRestricted)
-			require.ErrorContains(err, "field «email» is too short")
-			require.ErrorContains(err, "field «mime» is too short")
-		})
-
-		t.Run("must be error if max length restricted", func(t *testing.T) {
-			row := makeObject(cfg, objName)
-			row.PutString("email", fmt.Sprintf("%s.com", strings.Repeat("test", 100)))
-			row.PutBytes("mime", []byte(`abcde`))
-
-			_, err := row.Build()
-			require.ErrorIs(err, ErrFieldValueRestricted)
-			require.ErrorContains(err, "field «email» is too long")
-			require.ErrorContains(err, "field «mime» is too long")
+			require.ErrorIs(err, ErrDataConstraintViolation)
+			require.ErrorContains(err, "string-field «email» data constraint «MaxLen: 100»")
+			require.ErrorContains(err, "bytes-field «mime» data constraint «MinLen: 4»")
 		})
 
 		t.Run("must be error if pattern restricted", func(t *testing.T) {
@@ -979,9 +981,9 @@ func Test_CharsFieldRestricts(t *testing.T) {
 			row.PutBytes("mime", []byte(`++++`))
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrFieldValueRestricted)
-			require.ErrorContains(err, "field «email» does not match pattern")
-			require.ErrorContains(err, "field «mime» does not match pattern")
+			require.ErrorIs(err, ErrDataConstraintViolation)
+			require.ErrorContains(err, "string-field «email» data constraint «Pattern:")
+			require.ErrorContains(err, "bytes-field «mime» data constraint «Pattern:")
 		})
 	})
 }

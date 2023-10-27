@@ -129,6 +129,16 @@ func Test_AddField(t *testing.T) {
 		}
 		require.Panics(func() { o.AddField("errorField", DataKind_bool, true) })
 	})
+
+	t.Run("must be panic if unsupported field data kind", func(t *testing.T) {
+		o := New().AddObject(NewQName("test", "obj"))
+		require.Panics(func() { o.AddField("errorField", DataKind_FakeLast, false) })
+	})
+
+	t.Run("must be panic if unknown data type", func(t *testing.T) {
+		o := New().AddObject(NewQName("test", "obj"))
+		require.Panics(func() { o.AddDataField("errorField", NewQName("test", "unknown"), false) })
+	})
 }
 
 func Test_SetFieldComment(t *testing.T) {
@@ -165,8 +175,8 @@ func Test_SetFieldVerify(t *testing.T) {
 		obj.
 			AddField("f1", DataKind_int64, true).
 			SetFieldVerify("f1", VerificationKind_Phone).
-			// old style: must be deprecated…
-			AddVerifiedField("f2", DataKind_int64, true, VerificationKind_Any...)
+			AddField("f2", DataKind_int64, true).
+			SetFieldVerify("f2", VerificationKind_Any...)
 	})
 
 	t.Run("must be ok to obtain verified field", func(t *testing.T) {
@@ -186,10 +196,6 @@ func Test_SetFieldVerify(t *testing.T) {
 		require.True(f2.VerificationKind(VerificationKind_EMail))
 		require.True(f2.VerificationKind(VerificationKind_Phone))
 		require.False(f2.VerificationKind(VerificationKind_FakeLast))
-	})
-
-	t.Run("must be panic if no verification kinds", func(t *testing.T) {
-		require.Panics(func() { obj.AddVerifiedField("f3", DataKind_int64, true) })
 	})
 
 	t.Run("must be panic if unknown field name passed to verify", func(t *testing.T) {
@@ -253,24 +259,22 @@ func Test_AddRefField(t *testing.T) {
 		})
 
 		t.Run("must be ok to enumerate reference fields", func(t *testing.T) {
-			require.Equal(2, doc.RefFieldCount())
-
-			require.Equal(doc.RefFieldCount(), func() int {
+			require.Equal(2, func() int {
 				cnt := 0
 				doc.RefFields(func(rf IRefField) {
+					cnt++
 					switch cnt {
-					case 0:
+					case 1:
 						require.Equal(doc.RefField("rf1"), rf)
 						require.True(rf.Ref(docName))
 						require.True(rf.Ref(NewQName("test", "unknown")), "must be ok because any links are allowed in the field rf1")
-					case 1:
+					case 2:
 						require.Equal(docName, rf.Refs()[0])
 						require.True(rf.Ref(docName))
 						require.False(rf.Ref(NewQName("test", "unknown")))
 					default:
 						require.Failf("unexpected reference field", "field name: %s", rf.Name())
 					}
-					cnt++
 				})
 				return cnt
 			}())
@@ -297,7 +301,7 @@ func Test_UserFields(t *testing.T) {
 
 		doc.
 			AddField("f", DataKind_int64, true).
-			AddVerifiedField("vf", DataKind_string, true, VerificationKind_EMail).
+			AddField("vf", DataKind_string, true).SetFieldVerify("vf", VerificationKind_EMail).
 			AddRefField("rf", true, doc.QName())
 
 		a, err := appDef.Build()

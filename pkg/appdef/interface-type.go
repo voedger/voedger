@@ -52,9 +52,6 @@ type IWithTypes interface {
 	// Returns nil if type not found.
 	TypeByName(name QName) IType
 
-	// Return count of types.
-	TypeCount() int
-
 	// Enumerates all internal types.
 	//
 	// Types are enumerated in alphabetical order of QNames.

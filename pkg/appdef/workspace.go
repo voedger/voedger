@@ -62,10 +62,6 @@ func (ws *workspace) TypeByName(name QName) IType {
 	return nil
 }
 
-func (ws *workspace) TypeCount() int {
-	return len(ws.types)
-}
-
 func (ws *workspace) Types(cb func(IType)) {
 	if ws.typesOrdered == nil {
 		ws.typesOrdered = make([]interface{}, 0, len(ws.types))

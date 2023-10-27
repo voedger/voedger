@@ -12,6 +12,23 @@ type IAppDef interface {
 	IComment
 	IWithTypes
 
+	// Return data type by name.
+	//
+	// Returns nil if not found.
+	Data(name QName) IData
+
+	// Enumerates all application data types.
+	//
+	// If incSys specified then system data types are included into enumeration.
+	//
+	// Data types are enumerated in alphabetical order by QName.
+	DataTypes(incSys bool, cb func(IData))
+
+	// Returns system data type (sys.int32, sys.float654, etc.) by data kind.
+	//
+	// Returns nil if not found.
+	SysData(DataKind) IData
+
 	// Return GDoc by name.
 	//
 	// Returns nil if not found.
@@ -101,6 +118,21 @@ type IAppDef interface {
 type IAppDefBuilder interface {
 	IAppDef
 	ICommentBuilder
+
+	// Adds new data type with specified name and kind.
+	//
+	// If ancestor is not empty, then new data type inherits from.
+	// If ancestor is empty, then new data type inherits from system data types with same data kind.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if type with name already exists,
+	//   - if ancestor is not found,
+	//	 - if ancestor is not data,
+	//	 - if ancestor has different kind,
+	//	 - if constraints are not compatible with data kind.
+	AddData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder
 
 	// Adds new GDoc type with specified name.
 	//

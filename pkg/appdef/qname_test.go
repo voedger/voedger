@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -268,4 +269,31 @@ func Test_ValidQName(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMustParseQName(t *testing.T) {
+	type args struct {
+		val string
+	}
+	tests := []struct {
+		name string
+		args args
+		want QName
+	}{
+		{".", args{"."}, NullQName},
+		{"sys.error", args{"sys.error"}, NewQName("sys", "error")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := MustParseQName(tt.args.val); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("MustParseQName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+
+	t.Run("panic if invalid QName", func(t *testing.T) {
+		require.Panics(t, func() {
+			MustParseQName("🔫")
+		})
+	})
 }

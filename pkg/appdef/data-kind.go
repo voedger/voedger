@@ -52,6 +52,58 @@ func (k DataKind) IsFixed() bool {
 	return false
 }
 
+// Returns is data kind supports specified constraint kind.
+//
+// # String data supports:
+//   - ConstraintKind_MinLen
+//   - ConstraintKind_MaxLen
+//   - ConstraintKind_Pattern
+//   - ConstraintKind_Enum
+//
+// # Bytes data supports:
+//   - ConstraintKind_MinLen
+//   - ConstraintKind_MaxLen
+//   - ConstraintKind_Pattern
+//
+// # Numeric data supports:
+//   - ConstraintKind_MinIncl
+//   - ConstraintKind_MinExcl
+//   - ConstraintKind_MaxIncl
+//   - ConstraintKind_MaxExcl
+//   - ConstraintKind_Enum
+func (k DataKind) IsSupportedConstraint(c ConstraintKind) bool {
+	switch k {
+	case DataKind_string:
+		switch c {
+		case
+			ConstraintKind_MinLen,
+			ConstraintKind_MaxLen,
+			ConstraintKind_Pattern,
+			ConstraintKind_Enum:
+			return true
+		}
+	case DataKind_bytes:
+		switch c {
+		case
+			ConstraintKind_MinLen,
+			ConstraintKind_MaxLen,
+			ConstraintKind_Pattern:
+			return true
+		}
+	case DataKind_int32, DataKind_int64, DataKind_float32, DataKind_float64:
+		switch c {
+		case
+			ConstraintKind_MinIncl,
+			ConstraintKind_MinExcl,
+			ConstraintKind_MaxIncl,
+			ConstraintKind_MaxExcl,
+			ConstraintKind_Enum:
+			return true
+		}
+	}
+	return false
+}
+
 func (k DataKind) MarshalText() ([]byte, error) {
 	var s string
 	if k < DataKind_FakeLast {
