@@ -261,10 +261,6 @@ func maybeSysPkg(pkg Ident) bool {
 	return (pkg == "" || pkg == appdef.SysPackage)
 }
 
-func isSysDef(qn DefQName, ident Ident) bool {
-	return maybeSysPkg(qn.Package) && qn.Name == ident
-}
-
 func isPredefinedSysTable(packageName string, table *TableStmt) bool {
 	return packageName == appdef.SysPackage &&
 		(table.Name == nameCDOC || table.Name == nameWDOC || table.Name == nameODOC ||
