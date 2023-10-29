@@ -2,7 +2,6 @@ go 1.21.2
 
 use (
 	./
-	./examples/vrestaurant/extwasm 
 	./staging/src/voedger.io/extensionstinygo 
 	./pkg/iextenginewazero/_testdata
 )
