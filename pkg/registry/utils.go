@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
@@ -37,13 +36,10 @@ func GetCDocLoginID(st istructs.IState, appWSID istructs.WSID, appName string, l
 	loginHash := GetLoginHash(login)
 	kb.PutInt64(field_AppWSID, int64(appWSID))
 	kb.PutString(field_AppIDLoginHash, appName+"/"+loginHash)
-	logger.Info(2)
 	loginIdx, ok, err := st.CanExist(kb)
 	if err != nil {
-		logger.Error(2, err)
 		return istructs.NullRecordID, err
 	}
-	logger.Info("3")
 	if !ok {
 		return istructs.NullRecordID, nil
 	}
@@ -67,11 +63,7 @@ func GetCDocLogin(login string, st istructs.IState, appWSID istructs.WSID, appNa
 		return nil, doesLoginExist, err
 	}
 	kb.PutRecordID(state.Field_ID, cdocLoginID)
-	logger.Info("4", appName)
 	cdocLogin, err = st.MustExist(kb)
-	if err != nil {
-		logger.Error("4", appName, err)
-	}
 	return
 }
 

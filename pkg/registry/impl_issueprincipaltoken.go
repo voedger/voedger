@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -37,7 +36,6 @@ func (q *iptRR) AsString(name string) string {
 
 func provideIssuePrincipalTokenExec(asp istructs.IAppStructsProvider, itokens itokens.ITokens) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		logger.Info(0)
 		login := args.ArgumentObject.AsString(authnz.Field_Login)
 		appName := args.ArgumentObject.AsString(authnz.Field_AppName)
 
@@ -63,10 +61,8 @@ func provideIssuePrincipalTokenExec(asp istructs.IAppStructsProvider, itokens it
 			return err
 		}
 
-		logger.Info(1)
 		cdocLogin, doesLoginExist, err := GetCDocLogin(login, args.State, args.Workspace, appName)
 		if err != nil {
-			logger.Error(1, err)
 			return err
 		}
 

@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -160,9 +159,7 @@ func (names *QNames) load01(storage istorage.IAppStorage) error {
 		return nil
 	}
 	pKey := utils.ToBytes(consts.SysView_QNames, ver01)
-	err := storage.Read(context.Background(), pKey, nil, nil, readQName)
-	logger.Info("10", fmt.Sprintf("qnames read: %v", names))
-	return err
+	return storage.Read(context.Background(), pKey, nil, nil, readQName)
 }
 
 // Stores all known QNames to storage
