@@ -364,14 +364,14 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 
 	row.clear()
 
-	logger.Info("5", fmt.Sprintf("requested qNameID: %d", value))
+	logger.Info("5", fmt.Sprintf("requested qNameID: %d, appName %s", value, row.appCfg.Name))
 	qName, err := row.appCfg.qNames.QName(value)
 	if err != nil {
 		row.collectError(err)
 		logger.Error("6", err)
 		return err
 	}
-	logger.Info("7", fmt.Sprintf("qName got: %s", qName))
+	logger.Info("7", fmt.Sprintf("qName got: %s, appName %s", qName, row.appCfg.Name))
 
 	if qName != appdef.NullQName {
 		t := row.appCfg.AppDef.TypeByName(qName)
