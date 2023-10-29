@@ -13,7 +13,6 @@ import (
 	"fmt"
 
 	"github.com/untillpro/dynobuffers"
-	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
@@ -364,14 +363,11 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 
 	row.clear()
 
-	logger.Info("5", fmt.Sprintf("requested qNameID: %d, appName %s", value, row.appCfg.Name))
 	qName, err := row.appCfg.qNames.QName(value)
 	if err != nil {
 		row.collectError(err)
-		logger.Error("6", err)
 		return err
 	}
-	logger.Info("7", fmt.Sprintf("qName got: %s, appName %s", qName, row.appCfg.Name))
 
 	if qName != appdef.NullQName {
 		t := row.appCfg.AppDef.TypeByName(qName)
