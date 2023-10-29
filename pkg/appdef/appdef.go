@@ -295,6 +295,7 @@ func (app *appDef) appendType(t interface{}) {
 
 	app.types[name] = t
 	app.typesOrdered = nil
+	
 }
 
 func (app *appDef) typeByKind(name QName, kind TypeKind) interface{} {
