@@ -20,7 +20,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			AddField(field_QName, appdef.DataKind_QName).
 			AddField(field_ValuesHash, appdef.DataKind_int64)
 		view.KeyBuilder().ClustColsBuilder().
-			AddBytesField(field_Values, appdef.DefaultFieldMaxLength)
+			AddField(field_Values, appdef.DataKind_bytes, appdef.MaxLen(appdef.DefaultFieldMaxLength))
 		view.ValueBuilder().
 			AddRefField(field_ID, false) // true -> NullRecordID in required ref field error otherwise
 	})

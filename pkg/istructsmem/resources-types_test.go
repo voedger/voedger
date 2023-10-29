@@ -46,12 +46,12 @@ func TestResourceEnumerator(t *testing.T) {
 			doc := appDef.AddODoc(oDocName)
 			doc.
 				AddField("Int32", appdef.DataKind_int32, true).
-				AddStringField("String", false)
+				AddField("String", appdef.DataKind_string, false)
 
 			obj := appDef.AddObject(oObjName)
 			obj.
 				AddField("Int32", appdef.DataKind_int32, true).
-				AddStringField("String", false)
+				AddField("String", appdef.DataKind_string, false)
 		})
 
 		cfgs := make(AppConfigsType, 1)

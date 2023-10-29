@@ -191,6 +191,12 @@ WORKSPACE MyWorkspace (
             STATE(Http, AppSecret)
             INTENTS(SendMail, View(NotificationsHistory));
 
+        /* 
+        Projector on any CUD operation.
+        CDoc, WDoc, ODoc are the only abstract tables which are allowed to use in this case
+        */
+        PROJECTOR RecordsRegistryProjector
+            AFTER INSERT ON (CDoc, WDoc, ODoc) OR AFTER UPDATE ON (CDoc, WDoc);
 
         /*
         Commands can only be declared in workspaces

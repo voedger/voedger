@@ -22,13 +22,23 @@ var expectedJson string
 func TestBasicUsage(t *testing.T) {
 	appDef := appdef.New()
 
+	numName := appdef.NewQName("test", "number")
+	strName := appdef.NewQName("test", "string")
+
 	docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
+
+	n := appDef.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinIncl(1))
+	n.SetComment("natural (positive) integer")
+
+	s := appDef.AddData(strName, appdef.DataKind_string, appdef.NullQName)
+	s.AddConstraints(appdef.MinLen(1), appdef.MaxLen(100), appdef.Pattern(`^\w+$`, "only word characters allowed"))
 
 	doc := appDef.AddSingleton(docName)
 	doc.
 		AddField("f1", appdef.DataKind_int64, true).
 		SetFieldComment("f1", "field comment").
-		AddStringField("f2", false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`)).
+		AddField("f2", appdef.DataKind_string, false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`)).
+		AddDataField("numField", numName, false).
 		AddRefField("mainChild", false, recName).(appdef.ICDocBuilder).
 		AddContainer("rec", recName, 0, 100, "container comment").(appdef.ICDocBuilder).
 		AddUnique("", []string{"f1", "f2"})
@@ -37,8 +47,8 @@ func TestBasicUsage(t *testing.T) {
 	rec := appDef.AddCRecord(recName)
 	rec.
 		AddField("f1", appdef.DataKind_int64, true).
-		AddStringField("f2", false).
-		AddStringField("phone", true, appdef.MinLen(1), appdef.MaxLen(25)).
+		AddField("f2", appdef.DataKind_string, false).
+		AddField("phone", appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(25)).
 		SetFieldVerify("phone", appdef.VerificationKind_Any...).(appdef.ICRecordBuilder).
 		SetUniqueField("phone")
 
@@ -47,13 +57,14 @@ func TestBasicUsage(t *testing.T) {
 	view.KeyBuilder().PartKeyBuilder().
 		AddField("pk_1", appdef.DataKind_int64)
 	view.KeyBuilder().ClustColsBuilder().
-		AddStringField("cc_1", 100)
+		AddField("cc_1", appdef.DataKind_string, appdef.MaxLen(100))
 	view.ValueBuilder().
+		AddDataField("vv_code", strName, true).
 		AddRefField("vv_1", true, docName)
 
 	objName := appdef.NewQName("test", "obj")
 	obj := appDef.AddObject(objName)
-	obj.AddStringField("f1", true)
+	obj.AddField("f1", appdef.DataKind_string, true)
 
 	appDef.AddCommand(appdef.NewQName("test", "cmd")).
 		SetUnloggedParam(objName).
@@ -84,6 +95,8 @@ func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	require.NoError(err)
 	require.Greater(len(json), 1)
+
+	// ioutil.WriteFile("C://temp//provide_test.json", json, 0644)
 
 	require.JSONEq(expectedJson, string(json))
 }

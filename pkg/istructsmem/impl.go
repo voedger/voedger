@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/untillpro/goutils/logger"
 	bytespool "github.com/valyala/bytebufferpool"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -369,7 +370,9 @@ func newRecords(app *appStructsType) appRecordsType {
 // getRecord reads record from application storage through view-records methods
 func (recs *appRecordsType) getRecord(workspace istructs.WSID, id istructs.RecordID, data *[]byte) (ok bool, err error) {
 	pk, cc := recordKey(workspace, id)
-	return recs.app.config.storage.Get(pk, cc, data)
+	ok, err = recs.app.config.storage.Get(pk, cc, data)
+	logger.Info("9", fmt.Sprintf("record read: p_key = 0x%x and c_col = 0x%x: value 0x%x", pk, cc, *data))
+	return ok, err
 }
 
 // getRecordBatch reads record from application storage through view-records methods

@@ -46,9 +46,9 @@ func Test_KeyType(t *testing.T) {
 				AddField("cc_bool", appdef.DataKind_bool).
 				AddRefField("cc_recID").
 				AddField("cc_number", appdef.DataKind_float64).
-				AddBytesField("cc_bytes", 64)
+				AddField("cc_bytes", appdef.DataKind_bytes, appdef.MaxLen(64))
 			view.ValueBuilder().
-				AddStringField("val_string", false, appdef.MaxLen(1024))
+				AddField("val_string", appdef.DataKind_string, false, appdef.MaxLen(1024))
 		})
 
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
@@ -180,10 +180,10 @@ func TestCore_ViewRecords(t *testing.T) {
 			view.KeyBuilder().ClustColsBuilder().
 				AddField("clusteringColumn1", appdef.DataKind_int64).
 				AddField("clusteringColumn2", appdef.DataKind_bool).
-				AddStringField("clusteringColumn3", 64)
+				AddField("clusteringColumn3", appdef.DataKind_string, appdef.MaxLen(64))
 			view.ValueBuilder().
 				AddField("id", appdef.DataKind_int64, true).
-				AddStringField("name", true).
+				AddField("name", appdef.DataKind_string, true).
 				AddField("active", appdef.DataKind_bool, true)
 
 			otherView := appDef.AddView(appdef.NewQName("test", "otherView"))
@@ -192,7 +192,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			otherView.KeyBuilder().ClustColsBuilder().
 				AddField("clusteringColumn1", appdef.DataKind_float32).
 				AddField("clusteringColumn2", appdef.DataKind_float64).
-				AddBytesField("clusteringColumn3", 128)
+				AddField("clusteringColumn3", appdef.DataKind_bytes, appdef.MaxLen(128))
 			otherView.ValueBuilder().
 				AddField("valueField1", appdef.DataKind_int64, false)
 		})
@@ -800,14 +800,14 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 			AddField("cc_qname", appdef.DataKind_QName).
 			AddField("cc_bool", appdef.DataKind_bool).
 			AddRefField("cc_recID").
-			AddBytesField("cc_bytes", 8)
+			AddField("cc_bytes", appdef.DataKind_bytes, appdef.MaxLen(8))
 		v.ValueBuilder().
 			AddField("vf_int32", appdef.DataKind_int32, true).
 			AddField("vf_int64", appdef.DataKind_int64, false).
 			AddField("vf_float32", appdef.DataKind_float32, false).
 			AddField("vf_float64", appdef.DataKind_float64, false).
-			AddBytesField("vf_bytes", false, appdef.MaxLen(1024)).
-			AddStringField("vf_string", false, appdef.Pattern(`^\w+$`)).
+			AddField("vf_bytes", appdef.DataKind_bytes, false, appdef.MaxLen(1024)).
+			AddField("vf_string", appdef.DataKind_string, false, appdef.Pattern(`^\w+$`)).
 			AddField("vf_qname", appdef.DataKind_QName, false).
 			AddField("vf_bool", appdef.DataKind_bool, false).
 			AddRefField("vf_recID", false).
@@ -925,7 +925,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 				AddRefField("clusteringColumn2")
 			v.ValueBuilder().
 				AddField("id", appdef.DataKind_int64, true).
-				AddStringField("name", true).
+				AddField("name", appdef.DataKind_string, true).
 				AddField("active", appdef.DataKind_bool, true)
 
 			_ = appDef.AddObject(appdef.NewQName("test", "obj1"))
@@ -995,18 +995,18 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		v.KeyBuilder().PartKeyBuilder().
 			AddField("Year", appdef.DataKind_int32)
 		v.KeyBuilder().ClustColsBuilder().
-			AddStringField("Sport", 64)
+			AddField("Sport", appdef.DataKind_string, appdef.MaxLen(64))
 		v.ValueBuilder().
-			AddStringField("Country", true).
-			AddStringField("City", false)
+			AddField("Country", appdef.DataKind_string, true).
+			AddField("City", appdef.DataKind_string, false)
 
 		v = appDef.AddView(championsView)
 		v.KeyBuilder().PartKeyBuilder().
 			AddField("Year", appdef.DataKind_int32)
 		v.KeyBuilder().ClustColsBuilder().
-			AddStringField("Sport", 64)
+			AddField("Sport", appdef.DataKind_string, appdef.MaxLen(64))
 		v.ValueBuilder().
-			AddStringField("Winner", true)
+			AddField("Winner", appdef.DataKind_string, true)
 	})
 
 	storage := teststore.NewStorage()

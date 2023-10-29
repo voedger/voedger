@@ -1,21 +1,21 @@
 /*
- * Copyright (c) 2022-present unTill Pro, Ltd.
+ * Copyright (c) 2021-present unTill Pro, Ltd.
+ * @author Denis Gribanov
  */
 
-package signupin
+package registry
 
 import (
 	"crypto/sha256"
 	"fmt"
 	"net/http"
 
-	"golang.org/x/crypto/bcrypt"
-
+	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func CheckAppWSID(login string, urlWSID istructs.WSID, appWSAmount istructs.AppWSAmount) error {
@@ -28,13 +28,6 @@ func CheckAppWSID(login string, urlWSID istructs.WSID, appWSAmount istructs.AppW
 	return nil
 }
 
-func GetPasswordSaltedHash(pwd string) (pwdSaltedHash []byte, err error) {
-	if pwdSaltedHash, err = bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.MinCost); err != nil {
-		err = fmt.Errorf("password salting & hashing failed: %w", err)
-	}
-	return
-}
-
 // istructs.NullRecordID means not found
 func GetCDocLoginID(st istructs.IState, appWSID istructs.WSID, appName string, login string) (cdocLoginID istructs.RecordID, err error) {
 	kb, err := st.KeyBuilder(state.View, QNameViewLoginIdx)
@@ -44,19 +37,18 @@ func GetCDocLoginID(st istructs.IState, appWSID istructs.WSID, appName string, l
 	loginHash := GetLoginHash(login)
 	kb.PutInt64(field_AppWSID, int64(appWSID))
 	kb.PutString(field_AppIDLoginHash, appName+"/"+loginHash)
+	logger.Info(2)
 	loginIdx, ok, err := st.CanExist(kb)
 	if err != nil {
+		logger.Error(2, err)
 		return istructs.NullRecordID, err
 	}
+	logger.Info("3")
 	if !ok {
 		return istructs.NullRecordID, nil
 	}
 	return loginIdx.AsRecordID(field_CDocLoginID), nil
 
-}
-
-func GetLoginHash(login string) string {
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(login)))
 }
 
 func GetCDocLogin(login string, st istructs.IState, appWSID istructs.WSID, appName string) (cdocLogin istructs.IStateValue, doesLoginExist bool, err error) {
@@ -70,25 +62,38 @@ func GetCDocLogin(login string, st istructs.IState, appWSID istructs.WSID, appNa
 		return nil, doesLoginExist, err
 	}
 
-	kb, err := st.KeyBuilder(state.Record, authnz.QNameCDocLogin)
+	kb, err := st.KeyBuilder(state.Record, QNameCDocLogin)
 	if err != nil {
 		return nil, doesLoginExist, err
 	}
 	kb.PutRecordID(state.Field_ID, cdocLoginID)
+	logger.Info("4")
 	cdocLogin, err = st.MustExist(kb)
+	if err != nil {
+		logger.Error("4", err)
+	}
 	return
 }
 
-func CheckPassword(cdocLogin istructs.IStateValue, pwd string) (isPasswordOK bool, err error) {
-	isPasswordOK = true
-	if err := bcrypt.CompareHashAndPassword(cdocLogin.AsBytes(field_PwdHash), []byte(pwd)); err != nil {
-		if err == bcrypt.ErrMismatchedHashAndPassword {
-			isPasswordOK = false
-			return isPasswordOK, nil
-		}
-		return isPasswordOK, fmt.Errorf("failed to authenticate: %w", err)
+func GetLoginHash(login string) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(login)))
+}
+
+func ChangePassword(login string, st istructs.IState, intents istructs.IIntents, wsid istructs.WSID, appName string, newPwd string) error {
+	cdocLogin, doesLoginExist, err := GetCDocLogin(login, st, wsid, appName)
+	if err != nil {
+		return err
 	}
-	return isPasswordOK, err
+
+	if !doesLoginExist {
+		return errLoginDoesNotExist(login)
+	}
+
+	return ChangePasswordCDocLogin(cdocLogin, newPwd, intents, st)
+}
+
+func errLoginDoesNotExist(login string) error {
+	return coreutils.NewHTTPErrorf(http.StatusUnauthorized, fmt.Errorf("login %s does not exist", login))
 }
 
 func ChangePasswordCDocLogin(cdocLogin istructs.IStateValue, newPwd string, intents istructs.IIntents, st istructs.IState) error {
@@ -108,15 +113,21 @@ func ChangePasswordCDocLogin(cdocLogin istructs.IStateValue, newPwd string, inte
 	return nil
 }
 
-func ChangePassword(login string, st istructs.IState, intents istructs.IIntents, wsid istructs.WSID, appName string, newPwd string) error {
-	cdocLogin, doesLoginExist, err := GetCDocLogin(login, st, wsid, appName)
-	if err != nil {
-		return err
+func GetPasswordSaltedHash(pwd string) (pwdSaltedHash []byte, err error) {
+	if pwdSaltedHash, err = bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.MinCost); err != nil {
+		err = fmt.Errorf("password salting & hashing failed: %w", err)
 	}
+	return
+}
 
-	if !doesLoginExist {
-		return coreutils.NewHTTPErrorf(http.StatusUnauthorized, fmt.Sprintf(ErrFormatMessageLoginDoesntExist, login))
+func CheckPassword(cdocLogin istructs.IStateValue, pwd string) (isPasswordOK bool, err error) {
+	isPasswordOK = true
+	if err := bcrypt.CompareHashAndPassword(cdocLogin.AsBytes(field_PwdHash), []byte(pwd)); err != nil {
+		if err == bcrypt.ErrMismatchedHashAndPassword {
+			isPasswordOK = false
+			return isPasswordOK, nil
+		}
+		return isPasswordOK, fmt.Errorf("failed to authenticate: %w", err)
 	}
-
-	return ChangePasswordCDocLogin(cdocLogin, newPwd, intents, st)
+	return isPasswordOK, err
 }

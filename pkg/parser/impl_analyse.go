@@ -257,21 +257,22 @@ func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 	analyseWith(&query.With, query, c)
 
 }
-func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 
+func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 	for _, trigger := range v.Triggers {
 		for _, qname := range trigger.QNames {
 			if trigger.CUDEvents != nil {
-				resolveFunc := func(table *TableStmt, _ *PackageSchemaAST) error {
-					if table.Abstract {
+				resolveFunc := func(table *TableStmt, pkg *PackageSchemaAST) error {
+					sysDoc := (pkg.QualifiedPackageName == appdef.SysPackage) && (table.Name == nameCDOC || table.Name == nameODOC || table.Name == nameWDOC)
+					if table.Abstract && !sysDoc {
 						return ErrAbstractTableNotAlowedInProjectors(qname.String())
 					}
-					k, _, err := getTableTypeKind(table, c)
+					k, _, err := getTableTypeKind(table, pkg, c)
 					if err != nil {
 						return err
 					}
 					if k == appdef.TypeKind_ODoc || k == appdef.TypeKind_ORecord {
-						if trigger.CUDEvents.Activate || trigger.CUDEvents.Deactivate || trigger.CUDEvents.Update {
+						if trigger.CUDEvents.activate() || trigger.CUDEvents.deactivate() || trigger.CUDEvents.update() {
 							return ErrOnlyInsertForOdocOrORecord
 						}
 					}
@@ -428,7 +429,7 @@ func analyseTable(v *TableStmt, c *iterateCtx) {
 		return
 	}
 	var err error
-	v.tableTypeKind, v.singletone, err = getTableTypeKind(v, c)
+	v.tableTypeKind, v.singletone, err = getTableTypeKind(v, c.pkg, c)
 	if err != nil {
 		c.stmtErr(&v.Pos, err)
 		return
@@ -516,7 +517,7 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 				nestedTable.tableTypeKind = getNestedTableKind(rootTableKind)
 			} else {
 				var err error
-				nestedTable.tableTypeKind, nestedTable.singletone, err = getTableTypeKind(nestedTable, c)
+				nestedTable.tableTypeKind, nestedTable.singletone, err = getTableTypeKind(nestedTable, c.pkg, c)
 				if err != nil {
 					c.stmtErr(&nestedTable.Pos, err)
 					return
@@ -590,11 +591,16 @@ func analyseFields(items []TableItemExpr, c *iterateCtx) {
 	}
 }
 
-func getTableInheritanceChain(table *TableStmt, c *iterateCtx) (chain []DefQName, err error) {
-	chain = make([]DefQName, 0)
-	refCycle := func(qname DefQName) bool {
+type tableNode struct {
+	pkg   *PackageSchemaAST
+	table *TableStmt
+}
+
+func getTableInheritanceChain(table *TableStmt, c *iterateCtx) (chain []tableNode, err error) {
+	chain = make([]tableNode, 0)
+	refCycle := func(node tableNode) bool {
 		for i := range chain {
-			if chain[i] == qname {
+			if (chain[i].pkg == node.pkg) && (chain[i].table.Name == node.table.Name) {
 				return true
 			}
 		}
@@ -604,11 +610,12 @@ func getTableInheritanceChain(table *TableStmt, c *iterateCtx) (chain []DefQName
 	vf = func(t *TableStmt) error {
 		if t.Inherits != nil {
 			inherited := *t.Inherits
-			if err := resolveInCtx(inherited, c, func(t *TableStmt, _ *PackageSchemaAST) error {
-				if refCycle(inherited) {
+			if err := resolveInCtx(inherited, c, func(t *TableStmt, pkg *PackageSchemaAST) error {
+				node := tableNode{pkg: pkg, table: t}
+				if refCycle(node) {
 					return ErrCircularReferenceInInherits
 				}
-				chain = append(chain, inherited)
+				chain = append(chain, node)
 				return vf(t)
 			}); err != nil {
 				return err
@@ -620,24 +627,49 @@ func getTableInheritanceChain(table *TableStmt, c *iterateCtx) (chain []DefQName
 	return
 }
 
-func getTableTypeKind(table *TableStmt, c *iterateCtx) (kind appdef.TypeKind, singletone bool, err error) {
+func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (kind appdef.TypeKind, singletone bool, err error) {
+
+	kind = appdef.TypeKind_null
+	check := func(node tableNode) {
+		if node.pkg.QualifiedPackageName == appdef.SysPackage {
+			if node.table.Name == nameCDOC {
+				kind = appdef.TypeKind_CDoc
+			}
+			if node.table.Name == nameODOC {
+				kind = appdef.TypeKind_ODoc
+			}
+			if node.table.Name == nameWDOC {
+				kind = appdef.TypeKind_WDoc
+			}
+			if node.table.Name == nameCRecord {
+				kind = appdef.TypeKind_CRecord
+			}
+			if node.table.Name == nameORecord {
+				kind = appdef.TypeKind_ORecord
+			}
+			if node.table.Name == nameWRecord {
+				kind = appdef.TypeKind_WRecord
+			}
+			if node.table.Name == nameSingleton {
+				kind = appdef.TypeKind_CDoc
+				singletone = true
+			}
+		}
+	}
+
+	check(tableNode{pkg: pkg, table: table})
+	if kind != appdef.TypeKind_null {
+		return kind, singletone, nil
+	}
+
 	chain, e := getTableInheritanceChain(table, c)
 	if e != nil {
 		return appdef.TypeKind_null, false, e
 	}
 	for _, t := range chain {
-		if isSysDef(t, nameCDOC) || isSysDef(t, nameSingleton) {
-			return appdef.TypeKind_CDoc, isSysDef(t, nameSingleton), nil
-		} else if isSysDef(t, nameODOC) {
-			return appdef.TypeKind_ODoc, false, nil
-		} else if isSysDef(t, nameWDOC) {
-			return appdef.TypeKind_WDoc, false, nil
-		} else if isSysDef(t, nameCRecord) {
-			return appdef.TypeKind_CRecord, false, nil
-		} else if isSysDef(t, nameORecord) {
-			return appdef.TypeKind_ORecord, false, nil
-		} else if isSysDef(t, nameWRecord) {
-			return appdef.TypeKind_WRecord, false, nil
+		check(t)
+		if kind != appdef.TypeKind_null {
+			return kind, singletone, nil
 		}
 	}
 	return appdef.TypeKind_null, false, ErrUndefinedTableKind

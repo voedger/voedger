@@ -19,21 +19,21 @@ const (
 //   - IUnique
 type unique struct {
 	comment
-	str    interface{}
+	emb    interface{}
 	name   string
 	fields []IField
 	id     UniqueID
 }
 
-func newUnique(structure interface{}, name string, fields []string) *unique {
+func newUnique(embeds interface{}, name string, fields []string) *unique {
 	u := &unique{
-		str:    structure,
+		emb:    embeds,
 		name:   name,
 		fields: make([]IField, 0),
 		id:     NullUniqueID,
 	}
 	sort.Strings(fields)
-	str := structure.(IStructure)
+	str := embeds.(IStructure)
 	for _, f := range fields {
 		fld := str.Field(f)
 		if fld == nil {
@@ -45,7 +45,7 @@ func newUnique(structure interface{}, name string, fields []string) *unique {
 }
 
 func (u unique) ParentStructure() IStructure {
-	return u.str.(IStructure)
+	return u.emb.(IStructure)
 }
 
 func (u unique) Name() string {
@@ -69,14 +69,14 @@ func (u *unique) SetID(value UniqueID) {
 //   - IUniques
 //   - IUniquesBuilder
 type uniques struct {
-	str            interface{}
+	emb            interface{}
 	uniques        map[string]*unique
 	uniquesOrdered []string
 	field          IField
 }
 
-func makeUniques(structure interface{}) uniques {
-	u := uniques{structure, make(map[string]*unique), make([]string, 0), nil}
+func makeUniques(embeds interface{}) uniques {
+	u := uniques{embeds, make(map[string]*unique), make([]string, 0), nil}
 	return u
 }
 
@@ -93,12 +93,12 @@ func (u *uniques) SetUniqueField(name string) IUniquesBuilder {
 		return u
 	}
 	if ok, err := ValidIdent(name); !ok {
-		panic((fmt.Errorf("%v: unique field name «%v» is invalid: %w", u.structure(), name, err)))
+		panic((fmt.Errorf("%v: unique field name «%v» is invalid: %w", u.embeds(), name, err)))
 	}
 
-	fld := u.structure().Field(name)
+	fld := u.embeds().Field(name)
 	if fld == nil {
-		panic((fmt.Errorf("%v: unique field name «%v» not found: %w", u.structure(), name, ErrNameNotFound)))
+		panic((fmt.Errorf("%v: unique field name «%v» not found: %w", u.embeds(), name, ErrNameNotFound)))
 	}
 
 	u.field = fld
@@ -138,21 +138,21 @@ func (u *uniques) Uniques(enum func(IUnique)) {
 
 func (u *uniques) addUnique(name string, fields []string, comment ...string) IUniquesBuilder {
 	if ok, err := ValidIdent(name); !ok {
-		panic(fmt.Errorf("%v: unique name «%v» is invalid: %w", u.structure(), name, err))
+		panic(fmt.Errorf("%v: unique name «%v» is invalid: %w", u.embeds(), name, err))
 	}
 	if u.UniqueByName(name) != nil {
-		panic(fmt.Errorf("%v: unique «%v» is already exists: %w", u.structure(), name, ErrNameUniqueViolation))
+		panic(fmt.Errorf("%v: unique «%v» is already exists: %w", u.embeds(), name, ErrNameUniqueViolation))
 	}
 
 	if len(fields) == 0 {
-		panic(fmt.Errorf("%v: no fields specified for unique «%s»: %w", u.structure(), name, ErrNameMissed))
+		panic(fmt.Errorf("%v: no fields specified for unique «%s»: %w", u.embeds(), name, ErrNameMissed))
 	}
 	if i, j := duplicates(fields); i >= 0 {
-		panic(fmt.Errorf("%v: unique «%s» has duplicates (fields[%d] == fields[%d] == %q): %w", u.structure(), name, i, j, fields[i], ErrNameUniqueViolation))
+		panic(fmt.Errorf("%v: unique «%s» has duplicates (fields[%d] == fields[%d] == %q): %w", u.embeds(), name, i, j, fields[i], ErrNameUniqueViolation))
 	}
 
 	if len(fields) > MaxTypeUniqueFieldsCount {
-		panic(fmt.Errorf("%v: unique «%s» exceeds maximum fields (%d): %w", u.structure(), name, MaxTypeUniqueFieldsCount, ErrTooManyFields))
+		panic(fmt.Errorf("%v: unique «%s» exceeds maximum fields (%d): %w", u.embeds(), name, MaxTypeUniqueFieldsCount, ErrTooManyFields))
 	}
 
 	u.Uniques(func(un IUnique) {
@@ -161,22 +161,22 @@ func (u *uniques) addUnique(name string, fields []string, comment ...string) IUn
 			ff = append(ff, f.Name())
 		}
 		if overlaps(fields, ff) {
-			panic(fmt.Errorf("%v: type already has unique «%s» which overlaps with new unique: %w", u.structure(), name, ErrUniqueOverlaps))
+			panic(fmt.Errorf("%v: type already has unique «%s» which overlaps with new unique: %w", u.embeds(), name, ErrUniqueOverlaps))
 		}
 	})
 
 	if len(u.uniques) >= MaxTypeUniqueCount {
-		panic(fmt.Errorf("%v: maximum uniques (%d) is exceeded: %w", u.structure(), MaxTypeUniqueCount, ErrTooManyUniques))
+		panic(fmt.Errorf("%v: maximum uniques (%d) is exceeded: %w", u.embeds(), MaxTypeUniqueCount, ErrTooManyUniques))
 	}
 
-	un := newUnique(u.str, name, fields)
+	un := newUnique(u.emb, name, fields)
 	un.SetComment(comment...)
 	u.uniques[name] = un
 	u.uniquesOrdered = append(u.uniquesOrdered, name)
 
-	return u.str.(IUniquesBuilder)
+	return u.emb.(IUniquesBuilder)
 }
 
-func (u *uniques) structure() IStructure {
-	return u.str.(IStructure)
+func (u *uniques) embeds() IStructure {
+	return u.emb.(IStructure)
 }

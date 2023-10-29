@@ -36,7 +36,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	// target app, user profile
 	projectors.ProvideViewDef(appDefBuilder, QNameViewChildWorkspaceIdx, func(b appdef.IViewBuilder) {
 		b.KeyBuilder().PartKeyBuilder().AddField(field_dummy, appdef.DataKind_int32)
-		b.KeyBuilder().ClustColsBuilder().AddStringField(authnz.Field_WSName, appdef.DefaultFieldMaxLength)
+		b.KeyBuilder().ClustColsBuilder().AddField(authnz.Field_WSName, appdef.DataKind_string)
 		b.ValueBuilder().AddField(Field_ChildWorkspaceID, appdef.DataKind_int64, true)
 	})
 
@@ -46,14 +46,15 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		QNameCommandCreateWorkspaceID,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateWorkspaceIDParams")).
 			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
-			AddField(Field_OwnerQName, appdef.DataKind_QName, true).
+			AddField(Field_OwnerQName, appdef.DataKind_QName, false). // Deprecated: use OwnerQName2
 			AddField(Field_OwnerID, appdef.DataKind_int64, true).
 			AddField(Field_OwnerApp, appdef.DataKind_string, true).
 			AddField(authnz.Field_WSName, appdef.DataKind_string, true).
 			AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
 			AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
 			AddField(field_TemplateName, appdef.DataKind_string, false).
-			AddField(Field_TemplateParams, appdef.DataKind_string, false).(appdef.IType).QName(),
+			AddField(Field_TemplateParams, appdef.DataKind_string, false).
+			AddField(Field_OwnerQName2, appdef.DataKind_string, false).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdCreateWorkspaceID(asp, cfg.Name),
@@ -62,7 +63,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	// View<WorkspaceIDIdx>
 	projectors.ProvideViewDef(appDefBuilder, QNameViewWorkspaceIDIdx, func(b appdef.IViewBuilder) {
 		b.KeyBuilder().PartKeyBuilder().AddField(Field_OwnerWSID, appdef.DataKind_int64)
-		b.KeyBuilder().ClustColsBuilder().AddStringField(authnz.Field_WSName, appdef.DefaultFieldMaxLength)
+		b.KeyBuilder().ClustColsBuilder().AddField(authnz.Field_WSName, appdef.DataKind_string)
 		b.ValueBuilder().
 			AddField(authnz.Field_WSID, appdef.DataKind_int64, true).
 			AddRefField(field_IDOfCDocWorkspaceID, false) // TODO: not required for backward compatibility. Actually is required
@@ -73,14 +74,15 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		QNameCommandCreateWorkspace,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateWorkspaceParams")).
 			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
-			AddField(Field_OwnerQName, appdef.DataKind_QName, true).
+			AddField(Field_OwnerQName, appdef.DataKind_QName, false). // Deprecated: Use OwnerQName2
 			AddField(Field_OwnerID, appdef.DataKind_int64, true).
 			AddField(Field_OwnerApp, appdef.DataKind_string, true).
 			AddField(authnz.Field_WSName, appdef.DataKind_string, true).
 			AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
 			AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
 			AddField(field_TemplateName, appdef.DataKind_string, false).
-			AddField(Field_TemplateParams, appdef.DataKind_string, false).(appdef.IType).QName(),
+			AddField(Field_TemplateParams, appdef.DataKind_string, false).
+			AddField(Field_OwnerQName2, appdef.DataKind_string, false).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdCreateWorkspace(timeFunc, asp, cfg.Name),

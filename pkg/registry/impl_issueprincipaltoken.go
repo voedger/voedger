@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package signupin
+package registry
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -18,7 +19,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-// q.sys.IssuePrincipalToken
+// q.registry.IssuePrincipalToken
 type iptRR struct {
 	istructs.NullObject
 	principalToken       string
@@ -36,13 +37,14 @@ func (q *iptRR) AsString(name string) string {
 
 func provideIssuePrincipalTokenExec(asp istructs.IAppStructsProvider, itokens itokens.ITokens) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+		logger.Info(0)
 		login := args.ArgumentObject.AsString(authnz.Field_Login)
-		appName := args.ArgumentObject.AsString(Field_AppName)
+		appName := args.ArgumentObject.AsString(authnz.Field_AppName)
 
 		appQName, err := istructs.ParseAppQName(appName)
 		if err != nil {
 			// notest
-			// validated already on c.sys.CreateLogin
+			// validated already on c.registry.CreateLogin
 			return err
 		}
 		if err != nil {
@@ -61,13 +63,15 @@ func provideIssuePrincipalTokenExec(asp istructs.IAppStructsProvider, itokens it
 			return err
 		}
 
+		logger.Info(1)
 		cdocLogin, doesLoginExist, err := GetCDocLogin(login, args.State, args.Workspace, appName)
 		if err != nil {
+			logger.Error(1, err)
 			return err
 		}
 
 		if !doesLoginExist {
-			return coreutils.NewHTTPErrorf(http.StatusUnauthorized, ErrMessageLoginOrPasswordIsIncorrect)
+			return errLoginOrPasswordIsIncorrect
 		}
 
 		isPasswordOK, err := CheckPassword(cdocLogin, args.ArgumentObject.AsString(field_Passwrd))
@@ -76,7 +80,7 @@ func provideIssuePrincipalTokenExec(asp istructs.IAppStructsProvider, itokens it
 		}
 
 		if !isPasswordOK {
-			return coreutils.NewHTTPErrorf(http.StatusUnauthorized, ErrMessageLoginOrPasswordIsIncorrect)
+			return errLoginOrPasswordIsIncorrect
 		}
 
 		result := &iptRR{
@@ -93,7 +97,7 @@ func provideIssuePrincipalTokenExec(asp istructs.IAppStructsProvider, itokens it
 			SubjectKind: istructs.SubjectKindType(cdocLogin.AsInt32(authnz.Field_SubjectKind)),
 			ProfileWSID: istructs.WSID(result.profileWSID),
 		}
-		if result.principalToken, err = itokens.IssueToken(appQName, DefaultPrincipalTokenExpiration, &principalPayload); err != nil {
+		if result.principalToken, err = itokens.IssueToken(appQName, authnz.DefaultPrincipalTokenExpiration, &principalPayload); err != nil {
 			return fmt.Errorf("principal token issue failed: %w", err)
 		}
 

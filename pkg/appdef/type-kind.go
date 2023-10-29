@@ -16,6 +16,9 @@ import (
 const (
 	TypeKind_null TypeKind = iota
 
+	// Simple data types, like string, number, date, etc.
+	TypeKind_Data
+
 	// Глобальный Global configuration, WSID==0 (глобальная номенклатура): UserProfileLocation, SystemConfig
 	TypeKind_GDoc
 

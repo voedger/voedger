@@ -5,13 +5,6 @@
 
 package appdef
 
-import "regexp"
-
-// Data kind enumeration.
-//
-// Ref. data-kind.go for constants and methods
-type DataKind uint8
-
 // Field Verification kind.
 //
 // Ref. verification-king.go for constants and methods
@@ -46,9 +39,6 @@ type IFields interface {
 	// Enumerates all reference fields. System field (sys.ParentID) is also enumerated
 	RefFields(func(IRefField))
 
-	// Returns reference fields count. System field (sys.ParentID) is also counted
-	RefFieldCount() int
-
 	// Enumerates all fields except system
 	UserFields(func(IField))
 
@@ -65,8 +55,23 @@ type IFieldsBuilder interface {
 	//   - if name is empty,
 	//   - if name is invalid,
 	//   - if field with name is already exists,
-	//   - if specified data kind is not allowed by structured type kind.
-	AddField(name string, kind DataKind, required bool, comment ...string) IFieldsBuilder
+	//   - if specified data kind is not allowed by structured type kind,
+	//	 - if constraints are not compatible with specified data type.
+	AddField(name string, kind DataKind, required bool, constraints ...IConstraint) IFieldsBuilder
+
+	// Adds field with specified data type.
+	//
+	// If constraints specified, then new anonymous data type inherits from specified
+	// type will be created and this new type will be used as field data type.
+	//
+	// # Panics:
+	//   - if field name is empty,
+	//   - if field name is invalid,
+	//   - if field with name is already exists,
+	//   - if specified data type is not found,
+	//   - if specified data kind is not allowed by structured type kind,
+	//	 - if constraints are not compatible with specified data type.
+	AddDataField(name string, data QName, required bool, constraints ...IConstraint) IFieldsBuilder
 
 	// Adds reference field specified name and target refs.
 	//
@@ -75,40 +80,6 @@ type IFieldsBuilder interface {
 	//   - if name is invalid,
 	//   - if field with name is already exists.
 	AddRefField(name string, required bool, ref ...QName) IFieldsBuilder
-
-	// Adds string field specified name and restricts.
-	//
-	// If no restrictions specified, then field has maximum length 255.
-	//
-	// # Panics:
-	//   - if name is empty,
-	//   - if name is invalid,
-	//   - if field with name is already exists,
-	//   - if restricts are not compatible.
-	AddStringField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder
-
-	// Adds bytes field specified name and restricts.
-	//
-	// If no restrictions specified, then field has maximum length 255.
-	//
-	// # Panics:
-	//   - if name is empty,
-	//   - if name is invalid,
-	//   - if field with name is already exists,
-	//   - if restricts are not compatible.
-	AddBytesField(name string, required bool, restricts ...IFieldRestrict) IFieldsBuilder
-
-	// Adds verified field specified name and kind.
-	//
-	// # Panics:
-	//   - if field name is empty,
-	//   - if field name is invalid,
-	//   - if field with name is already exists,
-	//   - if data kind is not allowed by structured type kind,
-	//   - if no verification kinds are specified
-	//
-	//Deprecated: use SetVerifiedField instead
-	AddVerifiedField(name string, kind DataKind, required bool, vk ...VerificationKind) IFieldsBuilder
 
 	// Sets fields comment.
 	// Useful for reference or verified fields, what Add×××Field has not comments
@@ -136,6 +107,9 @@ type IField interface {
 	// Returns field name
 	Name() string
 
+	// Returns data type
+	Data() IData
+
 	// Returns data kind for field
 	DataKind() DataKind
 
@@ -153,6 +127,13 @@ type IField interface {
 
 	// Returns is field system
 	IsSys() bool
+
+	// Enumerates field constraints.
+	//
+	// Enumeration throughout the data types hierarchy, include all ancestors recursively.
+	// If any constraint (for example `MinLen`) is specified by the ancestor, but redefined in the descendant,
+	// then the constraint from the descendant only will enumerated.
+	Constraints(func(IConstraint))
 }
 
 // Reference field. Describe field with DataKind_RecordID.
@@ -169,61 +150,3 @@ type IRefField interface {
 	// Returns, is the link available
 	Ref(QName) bool
 }
-
-// String field. Describe field with DataKind_string.
-//
-// Use Restricts() to obtain field restricts for length, pattern.
-//
-// Ref. to fields.go for implementation
-type IStringField interface {
-	IField
-
-	// Returns restricts
-	Restricts() IStringFieldRestricts
-}
-
-// String or bytes field restricts
-type IStringFieldRestricts interface {
-	// Returns minimum length
-	//
-	// Returns 0 if not assigned
-	MinLen() uint16
-
-	// Returns maximum length
-	//
-	// Returns DefaultFieldMaxLength (255) if not assigned
-	MaxLen() uint16
-
-	// Returns pattern regular expression.
-	//
-	// Returns nil if not assigned
-	Pattern() *regexp.Regexp
-}
-
-// Bytes field. Describe field with DataKind_bytes.
-//
-// Use Restricts() to obtain field restricts for length.
-//
-// Ref. to fields.go for implementation
-type IBytesField interface {
-	IField
-
-	// Returns restricts
-	Restricts() IBytesFieldRestricts
-}
-
-type IBytesFieldRestricts = IStringFieldRestricts
-
-// FieldRestrict
-//
-// Field restrict. Describe single restrict for field.
-//
-// Functions to obtain new restricts:
-//
-// # For string fields:
-//   - MinLen(uint16)
-//   - MaxLen(uint16)
-//   - Pattern(string)
-//
-// Ref. to fields-restrict.go
-type IFieldRestrict interface{}

@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/untillpro/dynobuffers"
+	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
@@ -257,7 +258,7 @@ func (row *rowType) putValue(name string, kind dynobuffers.FieldType, value inte
 			row.collectError(err)
 			return
 		}
-		if err := checkRestricts(fld, data); err != nil {
+		if err := checkConstraints(fld, data); err != nil {
 			row.collectError(err)
 			return
 		}
@@ -272,7 +273,7 @@ func (row *rowType) putValue(name string, kind dynobuffers.FieldType, value inte
 		}
 	}
 
-	if err := checkRestricts(fld, value); err != nil {
+	if err := checkConstraints(fld, value); err != nil {
 		row.collectError(err)
 		return
 	}
@@ -363,11 +364,14 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 
 	row.clear()
 
+	logger.Info("5", fmt.Sprintf("requested qNameID: %d", value))
 	qName, err := row.appCfg.qNames.QName(value)
 	if err != nil {
 		row.collectError(err)
+		logger.Error("6", err)
 		return err
 	}
+	logger.Info("7", fmt.Sprintf("qName got: %s", qName))
 
 	if qName != appdef.NullQName {
 		t := row.appCfg.AppDef.TypeByName(qName)
@@ -417,8 +421,8 @@ func (row *rowType) setType(t appdef.IType) {
 func (row *rowType) setViewPartKey(v appdef.IView) {
 	row.clear()
 
-	row.typ = v
 	if v != nil {
+		row.typ = v
 		row.fields = v.Key().PartKey()
 		row.dyB = dynobuffers.NewBuffer(row.appCfg.dynoSchemes.ViewPartKeyScheme(v.QName()))
 	}
@@ -430,8 +434,8 @@ func (row *rowType) setViewPartKey(v appdef.IView) {
 func (row *rowType) setViewClustCols(v appdef.IView) {
 	row.clear()
 
-	row.typ = v
 	if v != nil {
+		row.typ = v
 		row.fields = v.Key().ClustCols()
 		row.dyB = dynobuffers.NewBuffer(row.appCfg.dynoSchemes.ViewClustColsScheme(v.QName()))
 	}
@@ -863,10 +867,7 @@ func (row *rowType) PutEvent(name string, event istructs.IDbEvent) {
 
 // istructs.IRecord.QName: returns row qualified name
 func (row *rowType) QName() appdef.QName {
-	if row.typ != nil {
-		return row.typ.QName()
-	}
-	return appdef.NullQName
+	return row.typ.QName()
 }
 
 // istructs.IRowReader.RecordIDs

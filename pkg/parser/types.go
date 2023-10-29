@@ -371,13 +371,6 @@ type ProjectorTrigger struct {
 	QNames    []DefQName          `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!"`
 }
 
-type ProjectorCudTrigger struct {
-	Insert     bool `parser:"  @(('INSERT' ('OR' 'UPDATE')?) | ('UPDATE' 'OR' 'INSERT'))"`
-	Update     bool `parser:"| @(('UPDATE' ('OR' 'INSERT')?) | ('INSERT' 'OR' 'UPDATE'))"`
-	Activate   bool `parser:"| @(('ACTIVATE' ('OR' 'DEACTIVATE')?) | ('DEACTIVATE' 'OR' 'ACTIVATE'))"`
-	Deactivate bool `parser:"| @(('DEACTIVATE' ('OR' 'ACTIVATE')?) | ('ACTIVATE' 'OR' 'DEACTIVATE'))"`
-}
-
 type ProjectorStmt struct {
 	Statement
 	Sync     bool               `parser:"@'SYNC'?"`
@@ -392,10 +385,43 @@ func (s *ProjectorStmt) GetName() string            { return string(s.Name) }
 func (s *ProjectorStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type ProjectorCUDEvents struct {
-	Insert     bool `parser:"  @(('INSERT' ('OR' 'UPDATE')?) | ('UPDATE' 'OR' 'INSERT'))"`
-	Update     bool `parser:"| @(('UPDATE' ('OR' 'INSERT')?) | ('INSERT' 'OR' 'UPDATE'))"`
-	Activate   bool `parser:"| @(('ACTIVATE' ('OR' 'DEACTIVATE')?) | ('DEACTIVATE' 'OR' 'ACTIVATE'))"`
-	Deactivate bool `parser:"| @(('DEACTIVATE' ('OR' 'ACTIVATE')?) | ('ACTIVATE' 'OR' 'DEACTIVATE'))"`
+	Actions []string `parser:"@('INSERT' | 'UPDATE' | 'ACTIVATE' | 'DEACTIVATE') ('OR' @('INSERT' | 'UPDATE' | 'ACTIVATE' | 'DEACTIVATE'))*"`
+}
+
+// func (t *ProjectorCUDEvents) insert() bool {
+// 	for i := 0; i < len(t.Actions); i++ {
+// 		if t.Actions[i] == "INSERT" {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
+
+func (t *ProjectorCUDEvents) update() bool {
+	for i := 0; i < len(t.Actions); i++ {
+		if t.Actions[i] == "UPDATE" {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *ProjectorCUDEvents) activate() bool {
+	for i := 0; i < len(t.Actions); i++ {
+		if t.Actions[i] == "ACTIVATE" {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *ProjectorCUDEvents) deactivate() bool {
+	for i := 0; i < len(t.Actions); i++ {
+		if t.Actions[i] == "DEACTIVATE" {
+			return true
+		}
+	}
+	return false
 }
 
 type TemplateStmt struct {

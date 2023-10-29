@@ -23,24 +23,24 @@ func ExampleIAppDef_Structures() {
 		doc := appDef.AddCDoc(docName)
 		doc.
 			AddField("f1", appdef.DataKind_int64, true).
-			AddStringField("f2", false)
+			AddField("f2", appdef.DataKind_string, false)
 		doc.AddContainer("child", recName, 0, appdef.Occurs_Unbounded)
 
 		rec := appDef.AddCRecord(recName)
 		rec.
 			AddField("f1", appdef.DataKind_int64, true).
-			AddStringField("f2", false)
+			AddField("f2", appdef.DataKind_string, false)
 
 		obj := appDef.AddObject(objName)
 		obj.
 			AddField("f1", appdef.DataKind_int64, true).
-			AddStringField("f2", false)
+			AddField("f2", appdef.DataKind_string, false)
 		obj.AddContainer("child", elName, 0, appdef.Occurs_Unbounded)
 
 		el := appDef.AddElement(elName)
 		el.
 			AddField("f1", appdef.DataKind_int64, true).
-			AddStringField("f2", false)
+			AddField("f2", appdef.DataKind_string, false)
 
 		if a, err := appDef.Build(); err == nil {
 			app = a

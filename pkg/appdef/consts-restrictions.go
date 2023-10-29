@@ -20,5 +20,10 @@ const MaxTypeUniqueFieldsCount = 256
 // Maximum uniques
 const MaxTypeUniqueCount = 100
 
-// Maximum string and bytes field length
-const MaxFieldLength = 1024
+// Maximum string and bytes data length
+const MaxFieldLength = uint16(32768) // dept: temporarily set to 32768 to make e.g. q.air.UPTerminalWebhook work
+
+// Default string and bytes data max length.
+//
+// This value is used for MaxLen() constraint in system data types `sys.string` and `sys.bytes`.
+const DefaultFieldMaxLength = uint16(255)

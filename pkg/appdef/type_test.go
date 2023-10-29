@@ -16,6 +16,7 @@ func Test_NullType(t *testing.T) {
 	require := require.New(t)
 
 	require.Empty(NullType.Comment())
+	require.Empty(NullType.CommentLines())
 
 	require.Nil(NullType.App())
 	require.Equal(NullQName, NullType.QName())

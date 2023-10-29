@@ -15,7 +15,6 @@ const (
 	field_dummy                                     = "dummy"
 	field_TemplateName                              = "TemplateName"
 	Field_OwnerWSID                                 = "OwnerWSID"
-	Field_OwnerQName                                = "OwnerQName"
 	Field_OwnerID                                   = "OwnerID"
 	Field_OwnerApp                                  = "OwnerApp"
 	Field_TemplateParams                            = "TemplateParams"
@@ -30,7 +29,11 @@ const (
 	field_IDOfCDocWorkspaceID                       = "IDOfCDocWorkspaceID"
 	Field_InitError                                 = "InitError"
 	Field_InitCompletedAtMs                         = "InitCompletedAtMs"
+	Field_OwnerQName2                               = "OwnerQName2"
 	EPWSTemplates             extensionpoints.EPKey = "WSTemplates"
+
+	//Deprecated: use Field_OwnerQName2
+	Field_OwnerQName = "OwnerQName"
 )
 
 var (
