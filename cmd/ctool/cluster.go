@@ -498,7 +498,7 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 			c.Nodes[i].ActualNodeState = newNodeState("", "")
 			c.Nodes[i].cluster = c
 		}
-
+		logger.info("Args ", len(args))
 		if len(args) == initSeWithDCArgCount {
 			c.DataCenters = append(c.DataCenters, args[seNodeCount:]...)
 		}
