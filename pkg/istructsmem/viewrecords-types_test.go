@@ -1295,10 +1295,10 @@ func Test_ViewRecordStructure(t *testing.T) {
 	k1 := newKey(cfg, viewName)
 	k1.PutInt32("ValueDateYear", 2023)
 	k1.PutInt32("ValueDateMonth", 10)
-	k1.PutInt32("ValueDateDay", 26)
+	k1.PutInt32("ValueDateDay", 27)
 	k1.PutInt32("ReportDateYear", 2023)
 	k1.PutInt32("ReportDateMonth", 10)
-	k1.PutInt32("ReportDateDay", 28)
+	k1.PutInt32("ReportDateDay", 31)
 
 	err := k1.build()
 	require.NoError(err)

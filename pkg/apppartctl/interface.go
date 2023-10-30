@@ -3,13 +3,10 @@
  * @author: Nikolay Nikitin
  */
 
-package appparts
+package apppartsctl
 
 import "github.com/voedger/voedger/pkg/iservices"
 
-type IAppPartitions interface {
+type IAppPartitionsController interface {
 	iservices.IService
-}
-
-type IAppPartitionsAPI interface {
 }
