@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/untillpro/goutils/logger"
+	"strconv"
 )
 
 func seNodeControllerFunction(n *nodeType) error {
@@ -277,6 +278,7 @@ func deploySeSwarm(cluster *clusterType) error {
 	}
 
 	for i := 0; i < len(cluster.Nodes); i++ {
+		var dc string
 
 		if cluster.Nodes[i].nodeName() /*ActualNodeState.Address*/ == manager {
 			continue
@@ -299,12 +301,19 @@ func deploySeSwarm(cluster *clusterType) error {
 				return
 			}
 
-			logger.Info("db node prepare ", n.ActualNodeState.Address)
-			if e := newScriptExecuter(cluster.sshKey, n.ActualNodeState.Address).
-				run("db-node-prepare.sh", n.nodeName() /*ActualNodeState.Address*/); e != nil {
-				logger.Error(e.Error())
-				n.Error = e.Error()
-				return
+			if n.NodeRole == nrDBNode {
+				if len(n.cluster.DataCenters) == 0 {
+					dc = "dc" + strconv.Itoa(n.idx-2)
+				} else {
+					dc = n.cluster.DataCenters[n.idx-2]
+				}
+				logger.Info("db node prepare ", n.ActualNodeState.Address)
+				if e := newScriptExecuter(cluster.sshKey, n.ActualNodeState.Address).
+					run("db-node-prepare.sh", n.nodeName(), dc /*ActualNodeState.Address*/); e != nil {
+					logger.Error(e.Error())
+					n.Error = e.Error()
+					return
+				}
 			}
 		}(&cluster.Nodes[i])
 	}
