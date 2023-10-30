@@ -17,7 +17,8 @@ import (
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunctionCustomResult(
 		qNameQueryCollection,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CollectionParams")).
+		// params kept here because Collection func is tested here its own way without schemas
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CollectionParams_internal")).
 			AddField(field_Schema, appdef.DataKind_string, true).
 			AddField(field_ID, appdef.DataKind_RecordID, false).(appdef.IType).QName(),
 		collectionResultQName,

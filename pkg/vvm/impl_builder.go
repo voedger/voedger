@@ -69,7 +69,15 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 				if cmd.Result() != nil {
 					resQName = cmd.Result().QName()
 				}
-				istructsmem.ReplaceCommandDefinitions(cmdResource, cmd.Param().QName(), cmd.UnloggedParam().QName(), resQName)
+				paramQName := appdef.NullQName
+				if cmd.Param() != nil {
+					paramQName = cmd.Param().QName()
+				}
+				unloggedParamQName := appdef.NullQName
+				if cmd.UnloggedParam() != nil {
+					unloggedParamQName = cmd.UnloggedParam().QName()
+				}
+				istructsmem.ReplaceCommandDefinitions(cmdResource, paramQName, unloggedParamQName, resQName)
 			case appdef.TypeKind_Query:
 				if t.QName() == qNameQueryCollection {
 					return

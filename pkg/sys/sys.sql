@@ -105,6 +105,7 @@ ABSTRACT WORKSPACE Workspace (
         WSName varchar NOT NULL
     );
 
+
     TYPE EchoParams (Text text NOT NULL);
 
     TYPE EchoResult (Res text NOT NULL);
@@ -121,10 +122,47 @@ ABSTRACT WORKSPACE Workspace (
         EnrichedToken text NOT NULL
     );
 
+    TYPE GRCountResult (
+        NumGoroutines int32 NOT NULL
+    );
+
+    TYPE CollectionParams (
+        Schema text NOT NULL,
+        ID int64
+    );
+
+    TYPE DescribePackageNamesResult (
+        Names text NOT NULL
+    );
+
+    TYPE DescribePackageParams (
+        PackageName text NOT NULL
+    );
+
+    TYPE DescribePackageResult (
+        PackageDesc text NOT NULL
+    );
+
+    TYPE InitiateInvitationByEMailParams (
+        Email text NOT NULL,
+        Roles text NOT NULL,
+        ExpireDatetime int64 NOT NULL,
+        EmailTemplate text NOT NULL,
+        EmailSubject text NOT NULL,
+    );
+
     EXTENSION ENGINE BUILTIN (
         QUERY Echo(EchoParams) RETURNS EchoResult;
         QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
         QUERY EnrichPrincipalToken(EnrichPrincipalTokenParams) RETURNS EnrichPrincipalTokenResult;
+        QUERY GRCount RETURNS GRCountResult;
+        -- QUERY Collection(CollectionParams) RETURNS ANY;
+        QUERY DescribePackageNames RETURNS DescribePackageNamesResult;
+        QUERY DescribePackage(DescribePackageParams) RETURNS DescribePackageResult;
+
+        COMMAND UploadBLOBHelper;
+        COMMAND DownloadBLOBHelper;
+        COMMAND InitiateInvitationByEMail(InitiateInvitationByEMailParams);
 
         SYNC PROJECTOR RecordsRegistryProjector ON (CDoc, WDoc, ODoc) INTENTS(View(RecordsRegistry));
     );
