@@ -189,7 +189,7 @@ cas_contention_timeout_in_ms: 1000
 #
 # You can use a custom Snitch by setting this to the full class name
 # of the snitch, which will be assumed to be on your classpath.
-endpoint_snitch: GossipingPropertyFileSnitch
+endpoint_snitch: SimpleSnitch
 
 # The address or interface to bind the Thrift RPC service and native transport
 # server to.

@@ -10,7 +10,7 @@ set -euo pipefail
 
 set -x
 
-if [[ $# -ne 2 ]]; then
+if [[ $# -ne 1 ]]; then
   echo "Usage: $0 <db-node> <datacenter>"
   exit 1
 fi
@@ -19,6 +19,9 @@ fi
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
+ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /var/lib/scylla && mkdir -p ~/scylla"
+
+if [ -n "$2" ]; then
 dc=$2
 rackdc="
 #
@@ -34,9 +37,10 @@ prefer_local=true
 # dc_suffix=<Data Center name suffix, used by EC2SnitchXXX snitches>
 #
 "
-
-ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /var/lib/scylla && mkdir -p ~/scylla"
-cat ./scylla.yaml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/scylla/scylla.yaml'
+sed -i 's/endpoint_snitch: SimpleSnitch/endpoint_snitch: GossipingPropertyFileSnitch/' ./scylla.yaml
 echo "$rackdc" | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/scylla/cassandra-rackdc.properties'
+fi
+
+cat ./scylla.yaml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/scylla/scylla.yaml'
 
 set +x

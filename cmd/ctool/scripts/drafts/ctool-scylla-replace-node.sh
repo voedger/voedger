@@ -20,7 +20,7 @@ set -euo pipefail
 set -x
 
 if [[ $# -ne 3 ]]; then
-  echo "Usage: $0 <lost node> <new node> <swarm manager>"
+  echo "Usage: $0 <lost node> <new node> <swarm manager> <datacenter>"
   exit 1
 fi
 
@@ -29,6 +29,7 @@ SSH_OPTIONS='-o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=n
 STACK="DBDockerStack"
 
 MANAGER=$3
+DC=$4
 REPLACED_NODE_NAME=$(getent hosts "$2" | awk '{print $2}')
 ssh-keyscan -H "$REPLACED_NODE_NAME" >> ~/.ssh/known_hosts
 
@@ -54,7 +55,7 @@ wait_for_scylla() {
 
 ./docker-install.sh "$2"
 ./swarm-add-node.sh "$MANAGER" "$2"
-./db-node-prepare.sh "$2"
+./db-node-prepare.sh "$2" "$DC"
 ./db-bootstrap-prepare.sh "$1" "$2"
 ./swarm-rm-node.sh "$MANAGER" "$1"
 

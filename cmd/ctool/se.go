@@ -255,13 +255,6 @@ func deploySeSwarm(cluster *clusterType) error {
 			return err
 		}
 
-		/*	logger.Info("db node prepare", manager)
-			if err = newScriptExecuter(cluster.sshKey, manager).
-				run("db-node-prepare.sh", manager); err != nil {
-				node.Error = err.Error()
-				return err
-			}*/
-
 		return nil
 	}()
 
@@ -478,8 +471,28 @@ func deployDocker(node *nodeType) error {
 	return err
 }
 
+func resolveDC(cluster *clusterType) (dc string, err error) {
+	n := cluster.nodeByHost(cluster.Cmd.args()[0])
+	if n == nil {
+		return "", fmt.Errorf(ErrHostNotFoundInCluster.Error(), cluster.Cmd.args()[0])
+	}
+	if len(n.cluster.DataCenters) == 0 {
+		dc = ""
+	} else {
+		dc = n.cluster.DataCenters[n.idx-2]
+	}
+	return dc, nil
+}
+
 func replaceSeScyllaNode(cluster *clusterType) error {
 	var err error
+	var dc string
+
+	if dc, err = resolveDC(cluster); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+	logger.Info("Use datacenter: ", dc)
 
 	prepareScripts("ctool-scylla-replace-node.sh", "docker-install.sh", "swarm-add-node.sh",
 		"db-node-prepare.sh", "db-bootstrap-prepare.sh", "db-bootstrap-end.sh", "swarm-rm-node.sh",
@@ -513,7 +526,7 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 	}
 
 	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s, %s", oldAddr, newAddr)).
-		run("ctool-scylla-replace-node.sh", oldAddr, newAddr, conf.AppNode1); err != nil {
+		run("ctool-scylla-replace-node.sh", oldAddr, newAddr, conf.AppNode1, dc); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
