@@ -66,8 +66,6 @@ ABSTRACT WORKSPACE Workspace (
         OwnerQName2 text
     );
 
-
-
     TABLE UserProfile INHERITS Singleton (DisplayName varchar);
 
     TABLE DeviceProfile INHERITS Singleton ();
@@ -148,7 +146,143 @@ ABSTRACT WORKSPACE Workspace (
         Roles text NOT NULL,
         ExpireDatetime int64 NOT NULL,
         EmailTemplate text NOT NULL,
-        EmailSubject text NOT NULL,
+        EmailSubject text NOT NULL
+    );
+
+    TYPE InitiateJoinWorkspaceParams (
+        InviteID ref NOT NULL,
+        VerificationCode text NOT NULL
+    );
+
+    TYPE InitiateUpdateInviteRolesParams (
+        InviteID ref NOT NULL,
+        Roles text NOT NULL,
+        EmailTemplate text NOT NULL,
+        EmailSubject text NOT NULL
+    );
+
+    TYPE InitiateCancelAcceptedInviteParams (
+        InviteID ref NOT NULL
+    );
+
+    TYPE CancelSentInviteParams (
+        InviteID ref NOT NULL
+    );
+
+    TYPE CreateJoinedWorkspaceParams (
+        Roles text NOT NULL,
+        InvitingWorkspaceWSID int64 NOT NULL,
+        WSName text NOT NULL
+    );
+
+    TYPE UpdateJoinedWorkspaceRolesParams (
+        Roles text NOT NULL,
+        InvitingWorkspaceWSID int64 NOT NULL
+    );
+
+    TYPE DeactivateJoinedWorkspaceParams (
+        InvitingWorkspaceWSID int64 NOT NULL
+    );
+
+    TYPE JournalParams (
+        From int64 NOT NULL,
+        Till int64 NOT NULL,
+        EventTypes text NOT NULL,
+        IndexForTimestamps text,
+        RangeUnit text
+    );
+
+    TYPE JournalResult (
+        Offset int64 NOT NULL,
+        EventTime int64 NOT NULL,
+        Event text NOT NULL
+    );
+
+    TYPE SqlQueryParams (
+        Query text NOT NULL
+    );
+
+    TYPE SqlQueryResult (
+        Result text NOT NULL
+    );
+
+    TYPE InitiateEmailVerificationParams (
+        Entity text NOT NULL, -- must be string, not QName, because target app could not know that QName. E.g. unknown QName «registry.ResetPasswordByEmailUnloggedParams»: name not found
+        Field text NOT NULL,
+        Email text NOT NULL,
+        TargetWSID int64 NOT NULL,
+        ForRegistry bool, -- to issue token for sys/registry/pseudoWSID/c.sys.ResetPassword, not for the current app
+        Language text
+    );
+
+    TYPE InitialEmailVerificationResult (
+        VerificationToken text(32768) NOT NULL
+    );
+
+    TYPE IssueVerifiedValueTokenParams (
+        VerificationToken text(32768) NOT NULL,
+        VerificationCode text NOT NULL,
+        ForRegistry bool
+    );
+
+    TYPE IssueVerifiedValueTokenResult (
+        VerifiedValueToken text NOT NULL
+    );
+
+    TYPE SendEmailVerificationCodeParams (
+        VerificationCode text NOT NULL,
+        Email text NOT NULL,
+        Reason text NOT NULL,
+        Language text
+    );
+
+    TYPE InitChildWorkspaceParams (
+        WSName text NOT NULL,
+        WSKind qname NOT NULL,
+        WSKindInitializationData text,
+        WSClusterID int32 NOT NULL,
+        TemplateName text,
+        TemplateParams text
+    );
+
+    TYPE CreateWorkspaceIDParams (
+        OwnerWSID int64 NOT NULL,
+        OwnerQName qname, -- Deprecated: use OwnerQName2
+        OwnerID int64 NOT NULL,
+        OwnerApp text NOT NULL,
+        WSName text NOT NULL,
+        WSKind qname NOT NULL,
+        WSKindInitializationData text,
+        TemplateName text,
+        TemplateParams text,
+        OwnerQName2 text
+    );
+
+    TYPE CreateWorkspaceParams (
+        OwnerWSID int64 NOT NULL,
+        OwnerQName qname, -- Deprecated: use OwnerQName2
+        OwnerID int64 NOT NULL,
+        OwnerApp text NOT NULL,
+        WSName text NOT NULL,
+        WSKind qname NOT NULL,
+        WSKindInitializationData text,
+        TemplateName text,
+        TemplateParams text,
+        OwnerQName2 text
+    );
+
+    TYPE QueryChildWorkspaceByNameParams (
+        WSName text NOT NULL
+    );
+
+    TYPE QueryChildWorkspaceByNameResult (
+        WSName text NOT NULL,
+        WSKind text NOT NULL,
+        WSKindInitializationData text NOT NULL,
+        TemplateName text NOT NULL,
+        TemplateParams text,
+        WSID int64,
+        WSError text
     );
 
     EXTENSION ENGINE BUILTIN (
@@ -159,10 +293,27 @@ ABSTRACT WORKSPACE Workspace (
         -- QUERY Collection(CollectionParams) RETURNS ANY;
         QUERY DescribePackageNames RETURNS DescribePackageNamesResult;
         QUERY DescribePackage(DescribePackageParams) RETURNS DescribePackageResult;
+        QUERY Journal(JournalParams) RETURNS JournalResult;
+        QUERY SqlQuery(SqlQueryParams) RETURNS SqlQueryResult;
+        QUERY InitiateEmailVerification(InitiateEmailVerificationParams) RETURNS InitialEmailVerificationResult;
+        QUERY IssueVerifiedValueToken(IssueVerifiedValueTokenParams) RETURNS IssueVerifiedValueTokenResult;
+        QUERY QueryChildWorkspaceByName(QueryChildWorkspaceByNameParams) RETURNS QueryChildWorkspaceByNameResult;
 
         COMMAND UploadBLOBHelper;
         COMMAND DownloadBLOBHelper;
         COMMAND InitiateInvitationByEMail(InitiateInvitationByEMailParams);
+        COMMAND InitiateJoinWorkspace(InitiateJoinWorkspaceParams);
+        COMMAND InitiateUpdateInviteRoles(InitiateUpdateInviteRolesParams);
+        COMMAND InitiateCancelAcceptedInvite(InitiateCancelAcceptedInviteParams);
+        COMMAND InitiateLeaveWorkspace;
+        COMMAND CancelSentInvite(CancelSentInviteParams);
+        COMMAND CreateJoinedWorkspace(CreateJoinedWorkspaceParams);
+        COMMAND UpdateJoinedWorkspaceRoles(UpdateJoinedWorkspaceRolesParams);
+        COMMAND DeactivateJoinedWorkspace(DeactivateJoinedWorkspaceParams);
+        COMMAND SendEmailVerificationCode(SendEmailVerificationCodeParams);
+        COMMAND InitChildWorkspace(InitChildWorkspaceParams);
+        COMMAND CreateWorkspaceID(CreateWorkspaceIDParams);
+        COMMAND CreateWorkspace(CreateWorkspaceParams);
 
         SYNC PROJECTOR RecordsRegistryProjector ON (CDoc, WDoc, ODoc) INTENTS(View(RecordsRegistry));
     );
