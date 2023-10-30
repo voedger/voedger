@@ -34,9 +34,9 @@ prefer_local=true
 # dc_suffix=<Data Center name suffix, used by EC2SnitchXXX snitches>
 #
 "
-echo "$rackdc" | ssh $SSH_OPTIONS $SSH_USER@$1 'sudo tee /etc/scylla/cassandra-rackdc.properties' > /dev/null
 
 ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /var/lib/scylla && mkdir -p ~/scylla"
 cat ./scylla.yaml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/scylla/scylla.yaml'
+echo "$rackdc" | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/scylla/cassandra-rackdc.properties'
 
 set +x
