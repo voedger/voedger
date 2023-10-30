@@ -472,7 +472,7 @@ func deployDocker(node *nodeType) error {
 }
 
 func resolveDC(cluster *clusterType) (dc string, err error) {
-	n := cluster.nodeByHost(cluster.Cmd.args()[0])
+	n := cluster.nodeByHost(cluster.Cmd.args()[1])
 	if n == nil {
 		return "", fmt.Errorf(ErrHostNotFoundInCluster.Error(), cluster.Cmd.args()[0])
 	}
