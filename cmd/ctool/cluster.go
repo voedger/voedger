@@ -500,7 +500,7 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 		}
 
 		if len(args) == initSeWithDCArgCount {
-			c.DataCenters = append(c.DataCenters, args[seNodeCount:]...)
+			c.DataCenters = append(c.DataCenters, args[seNodeCount+dbNodeCount:]...)
 			for _, dc := range c.DataCenters {
 				fmt.Println(dc)
 			}
