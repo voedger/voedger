@@ -297,9 +297,9 @@ func deploySeSwarm(cluster *clusterType) error {
 
 			if n.NodeRole == nrDBNode {
 				if len(n.cluster.DataCenters) == 0 {
-					dc = "dc" + strconv.Itoa(n.idx-2)
+					dc = "dc" + strconv.Itoa(n.idx-3)
 				} else {
-					dc = n.cluster.DataCenters[n.idx-2]
+					dc = n.cluster.DataCenters[n.idx-3]
 				}
 				logger.Info("db node prepare ", n.ActualNodeState.Address)
 				if e := newScriptExecuter(cluster.sshKey, n.ActualNodeState.Address).
