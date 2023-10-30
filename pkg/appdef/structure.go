@@ -17,14 +17,14 @@ type structure struct {
 }
 
 // Makes new structure
-func makeStructure(app *appDef, name QName, kind TypeKind, parent interface{}) structure {
+func makeStructure(app *appDef, name QName, kind TypeKind, embeds interface{}) structure {
 	s := structure{
 		typ: makeType(app, name, kind),
 	}
-	s.fields = makeFields(parent)
+	s.fields = makeFields(app, embeds)
 	s.fields.makeSysFields(kind)
-	s.containers = makeContainers(parent)
-	s.uniques = makeUniques(parent)
+	s.containers = makeContainers(embeds)
+	s.uniques = makeUniques(embeds)
 	return s
 }
 

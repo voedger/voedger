@@ -2,29 +2,18 @@
  * Copyright (c) 2021-present unTill Pro, Ltd.
  */
 
-package signupin
+package authnz
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 )
-
-func ProvideQryRefreshPrincipalToken(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens) {
-	cfg.Resources.Add(istructsmem.NewQueryFunction(
-		appdef.NewQName(appdef.SysPackage, "RefreshPrincipalToken"),
-		appdef.NullQName,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "RefreshPrincipalTokenResult")).
-			AddField(field_NewPrincipalToken, appdef.DataKind_string, true).(appdef.IType).QName(),
-		provideRefreshPrincipalTokenExec(itokens),
-	))
-}
 
 func provideRefreshPrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQueryClosure {
 	return func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {

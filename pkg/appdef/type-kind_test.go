@@ -20,7 +20,11 @@ func TestTypeKind_MarshalText(t *testing.T) {
 			k:    TypeKind_null,
 			want: `TypeKind_null`,
 		},
-		{name: `1 —> "TypeKind_GDoc"`,
+		{name: `1 —> "TypeKind_Data"`,
+			k:    TypeKind_Data,
+			want: `TypeKind_Data`,
+		},
+		{name: `2 —> "TypeKind_GDoc"`,
 			k:    TypeKind_GDoc,
 			want: `TypeKind_GDoc`,
 		},
@@ -58,6 +62,7 @@ func TestTypeKindTrimString(t *testing.T) {
 		k    TypeKind
 		want string
 	}{
+		{name: "null", k: TypeKind_null, want: "null"},
 		{name: "basic", k: TypeKind_CDoc, want: "CDoc"},
 		{name: "out of range", k: TypeKind_FakeLast + 1, want: (TypeKind_FakeLast + 1).String()},
 	}

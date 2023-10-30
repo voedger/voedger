@@ -6,6 +6,7 @@ package appdef_test
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -30,12 +31,12 @@ func ExampleIView() {
 		view.KeyBuilder().ClustColsBuilder().
 			AddField("cc_int", appdef.DataKind_int64).
 			AddRefField("cc_ref", docName).
-			AddStringField("cc_name", 100)
+			AddField("cc_name", appdef.DataKind_string, appdef.MaxLen(100))
 		view.ValueBuilder().
 			AddField("vv_int", appdef.DataKind_int64, true).
 			AddRefField("vv_ref", true, docName).
-			AddStringField("vv_code", false, appdef.MaxLen(10), appdef.Pattern(`^\w+$`)).
-			AddBytesField("vv_data", false, appdef.MaxLen(1024))
+			AddField("vv_code", appdef.DataKind_string, false, appdef.MaxLen(10), appdef.Pattern(`^\w+$`)).
+			AddField("vv_data", appdef.DataKind_bytes, false, appdef.MaxLen(1024))
 		if a, err := appDef.Build(); err == nil {
 			app = a
 		} else {
@@ -62,8 +63,12 @@ func ExampleIView() {
 					fmt.Printf(", refs: %v", r.Refs())
 				}
 			}
-			if s, ok := f.(appdef.IStringField); ok {
-				fmt.Printf(", restricts: [%v]", s.Restricts())
+			str := []string{}
+			f.Constraints(func(c appdef.IConstraint) {
+				str = append(str, fmt.Sprint(c))
+			})
+			if len(str) > 0 {
+				fmt.Printf(", constraints: [%v]", strings.Join(str, `, `))
 			}
 			fmt.Println()
 		}
@@ -97,28 +102,28 @@ func ExampleIView() {
 	// - pk_ref: RecordID, required, refs: [test.doc]
 	// - cc_int: int64
 	// - cc_ref: RecordID, refs: [test.doc]
-	// - cc_name: string, restricts: [MaxLen: 100]
+	// - cc_name: string, constraints: [MaxLen: 100]
 	// - vv_int: int64, required
 	// - vv_ref: RecordID, required, refs: [test.doc]
-	// - vv_code: string, restricts: [MaxLen: 10, Pattern: `^\w+$`]
-	// - vv_data: bytes, restricts: [MaxLen: 1024]
+	// - vv_code: string, constraints: [MaxLen: 10, Pattern: `^\w+$`]
+	// - vv_data: bytes, constraints: [MaxLen: 1024]
 	// view key has 5 fields:
 	// - pk_int: int64, required
 	// - pk_ref: RecordID, required, refs: [test.doc]
 	// - cc_int: int64
 	// - cc_ref: RecordID, refs: [test.doc]
-	// - cc_name: string, restricts: [MaxLen: 100]
+	// - cc_name: string, constraints: [MaxLen: 100]
 	// view partition key has 2 fields:
 	// - pk_int: int64, required
 	// - pk_ref: RecordID, required, refs: [test.doc]
 	// view clustering columns key has 3 fields:
 	// - cc_int: int64
 	// - cc_ref: RecordID, refs: [test.doc]
-	// - cc_name: string, restricts: [MaxLen: 100]
+	// - cc_name: string, constraints: [MaxLen: 100]
 	// view value has 5 fields:
 	// - sys.QName: QName, sys, required
 	// - vv_int: int64, required
 	// - vv_ref: RecordID, required, refs: [test.doc]
-	// - vv_code: string, restricts: [MaxLen: 10, Pattern: `^\w+$`]
-	// - vv_data: bytes, restricts: [MaxLen: 1024]
+	// - vv_code: string, constraints: [MaxLen: 10, Pattern: `^\w+$`]
+	// - vv_data: bytes, constraints: [MaxLen: 1024]
 }

@@ -35,6 +35,18 @@ func NewQName(pkgName, entityName string) QName {
 	return QName{pkg: pkgName, entity: entityName}
 }
 
+// Parse a qualified name from string.
+//
+// # Panics:
+//   - if string is not a valid qualified name
+func MustParseQName(val string) QName {
+	q, err := ParseQName(val)
+	if err != nil {
+		panic(err)
+	}
+	return q
+}
+
 // Parse a qualified name from string
 func ParseQName(val string) (res QName, err error) {
 	s1, s2, err := ParseQualifiedName(val, QNameQualifierChar)

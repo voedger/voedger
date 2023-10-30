@@ -53,8 +53,6 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 			require.True(doc.Abstract())
 		})
 
-		require.Equal(2, appDef.TypeCount())
-
 		t.Run("must be ok to build", func(t *testing.T) {
 			a, err := appDef.Build()
 			require.NoError(err)

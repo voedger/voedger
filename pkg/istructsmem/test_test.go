@@ -72,6 +72,10 @@ type (
 		tempBasketID istructs.RecordID
 		tempGoodsID  []istructs.RecordID
 
+		// tested data types
+		dataIdent appdef.QName
+		dataPhoto appdef.QName
+
 		// event CUDs entities
 		tablePhotos    appdef.QName
 		tempPhotoID    istructs.RecordID
@@ -173,6 +177,9 @@ var testData = testDataType{
 	tempBasketID: 556,
 	tempGoodsID:  []istructs.RecordID{557, 558},
 
+	dataIdent: appdef.NewQName("test", "identString"),
+	dataPhoto: appdef.NewQName("test", "KByte"),
+
 	tablePhotos:    appdef.NewQName("test", "photos"),
 	tempPhotoID:    1,
 	tablePhotoRems: appdef.NewQName("test", "photoRems"),
@@ -216,13 +223,19 @@ func test() *testDataType {
 		appDef := appdef.New()
 
 		{
+			identData := appDef.AddData(testData.dataIdent, appdef.DataKind_string, appdef.NullQName)
+			identData.AddConstraints(appdef.MinLen(1), appdef.MaxLen(50)).SetComment("string from 1 to 50 runes")
+
+			photoData := appDef.AddData(testData.dataPhoto, appdef.DataKind_bytes, appdef.NullQName)
+			photoData.AddConstraints(appdef.MaxLen(1024)).SetComment("up to 1Kb")
+
 			saleParams := appDef.AddODoc(testData.saleCmdDocName)
 			saleParams.
-				AddStringField(testData.buyerIdent, true, appdef.MinLen(1), appdef.MaxLen(50)).
+				AddDataField(testData.buyerIdent, testData.dataIdent, true).
 				AddField(testData.ageIdent, appdef.DataKind_int32, false).
 				AddField(testData.heightIdent, appdef.DataKind_float32, false).
 				AddField(testData.humanIdent, appdef.DataKind_bool, false).
-				AddBytesField(testData.photoIdent, false, appdef.MaxLen(1024))
+				AddDataField(testData.photoIdent, testData.dataPhoto, false)
 			saleParams.
 				AddContainer(testData.basketIdent, appdef.NewQName(testData.pkgName, testData.basketIdent), 1, 1)
 
@@ -233,27 +246,27 @@ func test() *testDataType {
 			good := appDef.AddORecord(appdef.NewQName(testData.pkgName, testData.goodIdent))
 			good.
 				AddField(testData.saleIdent, appdef.DataKind_RecordID, true).
-				AddStringField(testData.nameIdent, true, appdef.MinLen(1)).
+				AddField(testData.nameIdent, appdef.DataKind_string, true, appdef.MinLen(1)).
 				AddField(testData.codeIdent, appdef.DataKind_int64, true).
 				AddField(testData.weightIdent, appdef.DataKind_float64, false)
 
 			saleSecureParams := appDef.AddObject(testData.saleSecureParsName)
 			saleSecureParams.
-				AddStringField(testData.passwordIdent, true)
+				AddField(testData.passwordIdent, appdef.DataKind_string, true)
 
 			photoParams := appDef.AddObject(testData.queryPhotoFunctionParamsName)
 			photoParams.
-				AddStringField(testData.buyerIdent, true, appdef.MinLen(1), appdef.MaxLen(50))
+				AddField(testData.buyerIdent, appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(50))
 		}
 
 		{
 			rec := appDef.AddCDoc(testData.tablePhotos)
 			rec.
-				AddStringField(testData.buyerIdent, true, appdef.MinLen(1), appdef.MaxLen(50)).
+				AddDataField(testData.buyerIdent, testData.dataIdent, true).
 				AddField(testData.ageIdent, appdef.DataKind_int32, false).
 				AddField(testData.heightIdent, appdef.DataKind_float32, false).
 				AddField(testData.humanIdent, appdef.DataKind_bool, false).
-				AddBytesField(testData.photoIdent, false, appdef.MaxLen(1024))
+				AddDataField(testData.photoIdent, testData.dataPhoto, false)
 			rec.
 				AddUnique("", []string{testData.buyerIdent})
 			rec.
@@ -262,8 +275,8 @@ func test() *testDataType {
 			recChild := appDef.AddCRecord(testData.tablePhotoRems)
 			recChild.
 				AddField(testData.photoIdent, appdef.DataKind_RecordID, true).
-				AddStringField(testData.remarkIdent, true, appdef.MaxLen(1024)).
-				AddStringField(testData.emptinessIdent, false)
+				AddField(testData.remarkIdent, appdef.DataKind_string, true).
+				AddField(testData.emptinessIdent, appdef.DataKind_string, false)
 		}
 
 		{
@@ -281,8 +294,8 @@ func test() *testDataType {
 				AddField("int64", appdef.DataKind_int64, false).
 				AddField("float32", appdef.DataKind_float32, false).
 				AddField("float64", appdef.DataKind_float64, false).
-				AddBytesField("bytes", false).
-				AddStringField("string", false).
+				AddField("bytes", appdef.DataKind_bytes, false).
+				AddField("string", appdef.DataKind_string, false).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false).
@@ -296,8 +309,8 @@ func test() *testDataType {
 				AddField("int64", appdef.DataKind_int64, false).
 				AddField("float32", appdef.DataKind_float32, false).
 				AddField("float64", appdef.DataKind_float64, false).
-				AddBytesField("bytes", false).
-				AddStringField("string", false).
+				AddField("bytes", appdef.DataKind_bytes, false).
+				AddField("string", appdef.DataKind_string, false).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false)
@@ -310,8 +323,8 @@ func test() *testDataType {
 				AddField("int64", appdef.DataKind_int64, false).
 				AddField("float32", appdef.DataKind_float32, false).
 				AddField("float64", appdef.DataKind_float64, false).
-				AddBytesField("bytes", false).
-				AddStringField("string", false).
+				AddField("bytes", appdef.DataKind_bytes, false).
+				AddField("string", appdef.DataKind_string, false).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false)
@@ -324,13 +337,13 @@ func test() *testDataType {
 				AddField(testData.testViewRecord.partFields.workspace, appdef.DataKind_int64)
 			view.KeyBuilder().ClustColsBuilder().
 				AddField(testData.testViewRecord.ccolsFields.device, appdef.DataKind_int32).
-				AddStringField(testData.testViewRecord.ccolsFields.sorter, 100)
+				AddField(testData.testViewRecord.ccolsFields.sorter, appdef.DataKind_string, appdef.MaxLen(100))
 			view.ValueBuilder().
-				AddStringField(testData.testViewRecord.valueFields.buyer, true).
+				AddField(testData.testViewRecord.valueFields.buyer, appdef.DataKind_string, true).
 				AddField(testData.testViewRecord.valueFields.age, appdef.DataKind_int32, false).
 				AddField(testData.testViewRecord.valueFields.heights, appdef.DataKind_float32, false).
 				AddField(testData.testViewRecord.valueFields.human, appdef.DataKind_bool, false).
-				AddBytesField(testData.testViewRecord.valueFields.photo, false, appdef.MaxLen(1024)).
+				AddDataField(testData.testViewRecord.valueFields.photo, testData.dataPhoto, false).
 				AddField(testData.testViewRecord.valueFields.record, appdef.DataKind_Record, false).
 				AddField(testData.testViewRecord.valueFields.event, appdef.DataKind_Event, false)
 		}

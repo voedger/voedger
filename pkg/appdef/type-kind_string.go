@@ -9,26 +9,27 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[TypeKind_null-0]
-	_ = x[TypeKind_GDoc-1]
-	_ = x[TypeKind_CDoc-2]
-	_ = x[TypeKind_ODoc-3]
-	_ = x[TypeKind_WDoc-4]
-	_ = x[TypeKind_GRecord-5]
-	_ = x[TypeKind_CRecord-6]
-	_ = x[TypeKind_ORecord-7]
-	_ = x[TypeKind_WRecord-8]
-	_ = x[TypeKind_ViewRecord-9]
-	_ = x[TypeKind_Object-10]
-	_ = x[TypeKind_Element-11]
-	_ = x[TypeKind_Query-12]
-	_ = x[TypeKind_Command-13]
-	_ = x[TypeKind_Workspace-14]
-	_ = x[TypeKind_FakeLast-15]
+	_ = x[TypeKind_Data-1]
+	_ = x[TypeKind_GDoc-2]
+	_ = x[TypeKind_CDoc-3]
+	_ = x[TypeKind_ODoc-4]
+	_ = x[TypeKind_WDoc-5]
+	_ = x[TypeKind_GRecord-6]
+	_ = x[TypeKind_CRecord-7]
+	_ = x[TypeKind_ORecord-8]
+	_ = x[TypeKind_WRecord-9]
+	_ = x[TypeKind_ViewRecord-10]
+	_ = x[TypeKind_Object-11]
+	_ = x[TypeKind_Element-12]
+	_ = x[TypeKind_Query-13]
+	_ = x[TypeKind_Command-14]
+	_ = x[TypeKind_Workspace-15]
+	_ = x[TypeKind_FakeLast-16]
 }
 
-const _TypeKind_name = "TypeKind_nullTypeKind_GDocTypeKind_CDocTypeKind_ODocTypeKind_WDocTypeKind_GRecordTypeKind_CRecordTypeKind_ORecordTypeKind_WRecordTypeKind_ViewRecordTypeKind_ObjectTypeKind_ElementTypeKind_QueryTypeKind_CommandTypeKind_WorkspaceTypeKind_FakeLast"
+const _TypeKind_name = "TypeKind_nullTypeKind_DataTypeKind_GDocTypeKind_CDocTypeKind_ODocTypeKind_WDocTypeKind_GRecordTypeKind_CRecordTypeKind_ORecordTypeKind_WRecordTypeKind_ViewRecordTypeKind_ObjectTypeKind_ElementTypeKind_QueryTypeKind_CommandTypeKind_WorkspaceTypeKind_FakeLast"
 
-var _TypeKind_index = [...]uint8{0, 13, 26, 39, 52, 65, 81, 97, 113, 129, 148, 163, 179, 193, 209, 227, 244}
+var _TypeKind_index = [...]uint16{0, 13, 26, 39, 52, 65, 78, 94, 110, 126, 142, 161, 176, 192, 206, 222, 240, 257}
 
 func (i TypeKind) String() string {
 	if i >= TypeKind(len(_TypeKind_index)-1) {

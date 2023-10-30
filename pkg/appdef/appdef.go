@@ -7,6 +7,7 @@ package appdef
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 )
 
@@ -23,6 +24,7 @@ func newAppDef() *appDef {
 	app := appDef{
 		types: make(map[QName]interface{}),
 	}
+	app.makeSysDataTypes()
 	return &app
 }
 
@@ -36,6 +38,13 @@ func (app *appDef) AddCommand(name QName) ICommandBuilder {
 
 func (app *appDef) AddCRecord(name QName) ICRecordBuilder {
 	return newCRecord(app, name)
+}
+
+func (app *appDef) AddData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder {
+	d := newData(app, name, kind, ancestor)
+	d.AddConstraints(constraints...)
+	app.appendType(d)
+	return d
 }
 
 func (app *appDef) AddElement(name QName) IElementBuilder {
@@ -120,6 +129,23 @@ func (app *appDef) CRecord(name QName) ICRecord {
 	return nil
 }
 
+func (app *appDef) Data(name QName) IData {
+	if t := app.typeByKind(name, TypeKind_Data); t != nil {
+		return t.(IData)
+	}
+	return nil
+}
+
+func (app *appDef) DataTypes(incSys bool, cb func(IData)) {
+	app.Types(func(t IType) {
+		if d, ok := t.(IData); ok {
+			if incSys || !d.IsSystem() {
+				cb(d)
+			}
+		}
+	})
+}
+
 func (app *appDef) Element(name QName) IElement {
 	if t := app.typeByKind(name, TypeKind_Element); t != nil {
 		return t.(IElement)
@@ -193,6 +219,13 @@ func (app *appDef) Structures(cb func(s IStructure)) {
 	})
 }
 
+func (app *appDef) SysData(k DataKind) IData {
+	if t := app.typeByKind(SysDataName(k), TypeKind_Data); t != nil {
+		return t.(IData)
+	}
+	return nil
+}
+
 func (app *appDef) Type(name QName) IType {
 	if t := app.TypeByName(name); t != nil {
 		return t
@@ -205,10 +238,6 @@ func (app *appDef) TypeByName(name QName) IType {
 		return t.(IType)
 	}
 	return nil
-}
-
-func (app *appDef) TypeCount() int {
-	return len(app.types)
 }
 
 func (app *appDef) Types(cb func(IType)) {
@@ -255,7 +284,16 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 }
 
 func (app *appDef) appendType(t interface{}) {
-	app.types[t.(IType).QName()] = t
+	typ := t.(IType)
+	name := typ.QName()
+	if name == NullQName {
+		panic(fmt.Errorf("%s name cannot be empty: %w", typ.Kind().TrimString(), ErrNameMissed))
+	}
+	if app.TypeByName(name) != nil {
+		panic(fmt.Errorf("type name «%s» already used: %w", name, ErrNameUniqueViolation))
+	}
+
+	app.types[name] = t
 	app.typesOrdered = nil
 }
 

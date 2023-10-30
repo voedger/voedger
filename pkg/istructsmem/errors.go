@@ -57,7 +57,7 @@ var ErrWrongFieldType = errors.New("wrong field type")
 
 var ErrTypeChanged = errors.New("type has been changed")
 
-var ErrFieldValueRestricted = errors.New("value does not meet the restricts")
+var ErrDataConstraintViolation = errors.New("data constraint violation")
 
 const errFieldNotFoundWrap = "%s-type field «%s» is not found in type «%v»: %w" // int32-type field «myField» is not found …
 
@@ -74,6 +74,8 @@ const errTypeNotFoundWrap = "type «%v» not found: %w"
 const errMustValidatedBeforeStore = "%v must be validated before store: %w"
 
 const errViewNotFoundWrap = "view «%v» not found: %w"
+
+const errFieldDataConstraintViolatedFmt = "%v data constraint «%v» violated: %w"
 
 // ValidateError: an interface for describing errors that occurred during validation
 //   - methods:

@@ -14,7 +14,8 @@ type Application struct {
 
 type Package struct {
 	Name       string
-	Types      map[string]*Type        `json:",omitempty"`
+	DataTypes  map[string]*Data        `json:",omitempty"`
+	Structures map[string]*Structure   `json:",omitempty"`
 	Views      map[string]*View        `json:",omitempty"`
 	Functions  *Functions              `json:",omitempty"`
 	Resources  map[string]*Resource    `json:",omitempty"`
