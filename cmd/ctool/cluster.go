@@ -267,7 +267,7 @@ func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
 	}
 	logger.Info("count args: ", len(args))
 	if args[0] == clusterEditionCE && len(args) != 1+initCeArgCount ||
-		args[0] == clusterEditionSE && len(args) != 1+initSeArgCount && len(args) != initSeWithDCArgCount {
+		args[0] == clusterEditionSE && len(args) != 1+initSeArgCount && len(args) != 1+initSeWithDCArgCount {
 		return ErrInvalidNumberOfArguments
 	}
 
