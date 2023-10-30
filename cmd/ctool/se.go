@@ -479,7 +479,7 @@ func resolveDC(cluster *clusterType) (dc string, err error) {
 	if len(n.cluster.DataCenters) == 0 {
 		dc = ""
 	} else {
-		dc = n.cluster.DataCenters[n.idx-2]
+		dc = n.cluster.DataCenters[n.idx-3]
 	}
 	return dc, nil
 }
