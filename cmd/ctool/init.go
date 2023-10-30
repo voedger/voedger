@@ -17,6 +17,7 @@ import (
 var (
 	initCECmd, initSECmd *cobra.Command
 )
+var skipStacks []string
 
 func newInitCmd() *cobra.Command {
 	initCECmd = &cobra.Command{
@@ -37,6 +38,8 @@ func newInitCmd() *cobra.Command {
 		},
 		RunE: initSE,
 	}
+
+	initSECmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
 
 	initCmd := &cobra.Command{
 		Use:   "init",
@@ -126,6 +129,7 @@ func initSE(cmd *cobra.Command, args []string) error {
 	}
 
 	c := newCmd(ckInit, "SE "+strings.Join(args, " "))
+	c.SkipStacks = skipStacks
 	if err := cluster.applyCmd(c); err != nil {
 		logger.Error(err.Error())
 		return err

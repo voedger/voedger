@@ -183,6 +183,15 @@ func seClusterControllerFunction(c *clusterType) error {
 	return err
 }
 
+func isSkipStack(skipList []string, stack string) bool {
+	for _, s := range skipList {
+		if s == stack {
+			return true
+		}
+	}
+	return false
+}
+
 func initSeCluster(cluster *clusterType) error {
 	var err error
 
@@ -196,10 +205,18 @@ func initSeCluster(cluster *clusterType) error {
 		err = errors.Join(err, e)
 	}
 
-	if e := deploySeDockerStack(cluster); e != nil {
-		logger.Error(e.Error)
-		err = errors.Join(err, e)
+	if ok := isSkipStack(cluster.Cmd.SkipStacks, "app"); !ok {
+		if e := deploySeDockerStack(cluster); e != nil {
+			logger.Error(e.Error)
+			err = errors.Join(err, e)
+		}
+	} else {
+		logger.Info("skipping se stack deployment")
 	}
+	//	if e := deploySeDockerStack(cluster); e != nil {
+	//		logger.Error(e.Error)
+	//		err = errors.Join(err, e)
+	//	}
 
 	if e := deployMonDockerStack(cluster); e != nil {
 		logger.Error(e.Error)

@@ -186,8 +186,9 @@ func (n *nodesType) hosts(nodeRole string) []string {
 }
 
 type cmdType struct {
-	Kind string
-	Args string
+	Kind       string
+	Args       string
+	SkipStacks []string
 }
 
 func (c *cmdType) apply(cluster *clusterType) error {
