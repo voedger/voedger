@@ -255,12 +255,13 @@ func deploySeSwarm(cluster *clusterType) error {
 			return err
 		}
 
-		logger.Info("db node prepare", manager)
-		if err = newScriptExecuter(cluster.sshKey, manager).
-			run("db-node-prepare.sh", manager); err != nil {
-			node.Error = err.Error()
-			return err
-		}
+		/*	logger.Info("db node prepare", manager)
+			if err = newScriptExecuter(cluster.sshKey, manager).
+				run("db-node-prepare.sh", manager); err != nil {
+				node.Error = err.Error()
+				return err
+			}*/
+
 		return nil
 	}()
 
