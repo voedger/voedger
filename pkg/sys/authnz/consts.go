@@ -18,7 +18,7 @@ const (
 	Field_SubjectKind               = "SubjectKind"
 	Field_WSKindInitializationData  = "WSKindInitializationData"
 	Field_WSClusterID               = "WSClusterID"
-	Field_ProfileClusterID          = "ProfileCluster"
+	Field_ProfileCluster            = "ProfileCluster"
 	Field_LoginHash                 = "LoginHash"
 	Field_Login                     = "Login"
 	Field_СreatedAtMs               = "CreatedAtMs"

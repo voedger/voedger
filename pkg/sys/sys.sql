@@ -15,6 +15,8 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
+ALTERABLE WORKSPACE AppWorkspaceWS();
+
 ABSTRACT WORKSPACE Workspace (
     TABLE ChildWorkspace INHERITS CDoc (
         WSName varchar NOT NULL,
@@ -64,62 +66,76 @@ ABSTRACT WORKSPACE Workspace (
         OwnerQName2 text
     );
 
+
+
+    TABLE UserProfile INHERITS Singleton (DisplayName varchar);
+
+    TABLE DeviceProfile INHERITS Singleton ();
+
+    TABLE AppWorkspace INHERITS Singleton ();
+
+    TABLE BLOB INHERITS WDoc (status int32 NOT NULL);
+
+    TABLE Subject INHERITS CDoc (
+        Login varchar NOT NULL,
+        SubjectKind int32 NOT NULL,
+        Roles varchar(1024) NOT NULL,
+        ProfileWSID int64 NOT NULL,
+        UNIQUEFIELD Login
+    );
+
+    TABLE Invite INHERITS CDoc (
+        SubjectKind int32,
+        Login varchar NOT NULL,
+        Email varchar NOT NULL,
+        Roles varchar(1024),
+        ExpireDatetime int64,
+        VerificationCode varchar,
+        State int32 NOT NULL,
+        Created int64,
+        Updated int64 NOT NULL,
+        SubjectID ref,
+        InviteeProfileWSID int64,
+        UNIQUEFIELD Email
+    );
+
+    TABLE JoinedWorkspace INHERITS CDoc (
+        Roles varchar(1024) NOT NULL,
+        InvitingWorkspaceWSID int64 NOT NULL,
+        WSName varchar NOT NULL
+    );
+
     TYPE EchoParams (Text text NOT NULL);
 
     TYPE EchoResult (Res text NOT NULL);
 
+    TYPE RefreshPrincipalTokenResult (
+        NewPrincipalToken text NOT NULL
+    );
+
+    TYPE EnrichPrincipalTokenParams (
+        Login text NOT NULL
+    );
+
+    TYPE EnrichPrincipalTokenResult (
+        EnrichedToken text NOT NULL
+    );
+
     EXTENSION ENGINE BUILTIN (
-        -- COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
         QUERY Echo(EchoParams) RETURNS EchoResult;
+        QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
+        QUERY EnrichPrincipalToken(EnrichPrincipalTokenParams) RETURNS EnrichPrincipalTokenResult;
 
-    SYNC PROJECTOR RecordsRegistryProjector ON (CDoc, WDoc, ODoc) INTENTS(View(RecordsRegistry));
-);
+        SYNC PROJECTOR RecordsRegistryProjector ON (CDoc, WDoc, ODoc) INTENTS(View(RecordsRegistry));
+    );
 
-VIEW RecordsRegistry (
-    IDHi int64 NOT NULL,
-    ID ref NOT NULL,
-    WLogOffset int64 NOT NULL,
-    QName qname NOT NULL,
-    PRIMARY KEY ((IDHi), ID)
-) AS RESULT OF sys.RecordsRegistryProjector;
-
-TABLE UserProfile INHERITS Singleton (DisplayName varchar);
-
-TABLE DeviceProfile INHERITS Singleton ();
-
-TABLE AppWorkspace INHERITS Singleton ();
-
-TABLE BLOB INHERITS WDoc (status int32 NOT NULL);
-
-TABLE Subject INHERITS CDoc (
-    Login varchar NOT NULL,
-    SubjectKind int32 NOT NULL,
-    Roles varchar(1024) NOT NULL,
-    ProfileWSID int64 NOT NULL,
-    UNIQUEFIELD Login
-);
-
-TABLE Invite INHERITS CDoc (
-    SubjectKind int32,
-    Login varchar NOT NULL,
-    Email varchar NOT NULL,
-    Roles varchar(1024),
-    ExpireDatetime int64,
-    VerificationCode varchar,
-    State int32 NOT NULL,
-    Created int64,
-    Updated int64 NOT NULL,
-    SubjectID ref,
-    InviteeProfileWSID int64,
-    UNIQUEFIELD Email
-);
-
-TABLE JoinedWorkspace INHERITS CDoc (
-    Roles varchar(1024) NOT NULL,
-    InvitingWorkspaceWSID int64 NOT NULL,
-    WSName varchar NOT NULL
-);
-
+    VIEW RecordsRegistry (
+        IDHi int64 NOT NULL,
+        ID ref NOT NULL,
+        WLogOffset int64 NOT NULL,
+        QName qname NOT NULL,
+        PRIMARY KEY ((IDHi), ID)
+    ) AS RESULT OF sys.RecordsRegistryProjector;
 );
 
 EXTENSION ENGINE BUILTIN (

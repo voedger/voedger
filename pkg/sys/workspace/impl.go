@@ -74,7 +74,7 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 				default:
 					return fmt.Errorf("unsupported cdoc.registry.Login.subjectKind: %d", rec.AsInt32(authnz.Field_SubjectKind))
 				}
-				targetClusterID = istructs.ClusterID(rec.AsInt32(authnz.Field_ProfileClusterID))
+				targetClusterID = istructs.ClusterID(rec.AsInt32(authnz.Field_ProfileCluster))
 				targetApp = rec.AsString(authnz.Field_AppName)
 				wsidToCallCreateWSIDAt = istructs.NewWSID(targetClusterID, ownerBaseWSID)
 			default:

@@ -5,6 +5,8 @@
 package vvm
 
 import (
+	"log"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -60,14 +62,25 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 			case appdef.TypeKind_Command:
 				cmd := t.(appdef.ICommand)
 				cmdResource := cfg.Resources.QueryResource(cmd.QName()).(istructs.ICommandFunction)
-				istructsmem.ReplaceCommandDefinitions(cmdResource, cmd.Param().QName(), cmd.UnloggedParam().QName(), cmd.Result().QName())
+				if cmdResource.QName() == appdef.NewQName("registry", "CreateLogin") {
+					log.Println(1)
+				}
+				resQName := appdef.NullQName
+				if cmd.Result() != nil {
+					resQName = cmd.Result().QName()
+				}
+				istructsmem.ReplaceCommandDefinitions(cmdResource, cmd.Param().QName(), cmd.UnloggedParam().QName(), resQName)
 			case appdef.TypeKind_Query:
 				if t.QName() == qNameQueryCollection {
 					return
 				}
 				query := t.(appdef.IQuery)
 				queryResource := cfg.Resources.QueryResource(query.QName()).(istructs.IQueryFunction)
-				istructsmem.ReplaceQueryDefinitions(queryResource, query.Param().QName(), query.Result().QName())
+				paramQName := appdef.NullQName
+				if query.Param() != nil {
+					paramQName = query.Param().QName()
+				}
+				istructsmem.ReplaceQueryDefinitions(queryResource, paramQName, query.Result().QName())
 			}
 		})
 	}
