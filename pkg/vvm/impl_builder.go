@@ -5,8 +5,6 @@
 package vvm
 
 import (
-	"log"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -80,10 +78,6 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 					return
 				}
 				query := t.(appdef.IQuery)
-				res := cfg.Resources.QueryResource(query.QName())
-				if res.QName() == appdef.NullQName {
-					log.Println()
-				}
 				queryResource := cfg.Resources.QueryResource(query.QName()).(istructs.IQueryFunction)
 				paramQName := appdef.NullQName
 				if query.Param() != nil {

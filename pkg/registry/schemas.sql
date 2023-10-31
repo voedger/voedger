@@ -79,7 +79,7 @@ ALTER WORKSPACE AppWorkspaceWS (
 	);
 
 	EXTENSION ENGINE BUILTIN (
-        COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
+		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
 		COMMAND ChangePassword (ChangePasswordParams, UNLOGGED ChangePasswordUnloggedParams);
 		COMMAND ResetPasswordByEmail (ResetPasswordByEmailParams, UNLOGGED ResetPasswordByEmailUnloggedParams);
 		QUERY IssuePrincipalToken (IssuePrincipalTokenParams) RETURNS IssuePrincipalTokenResult;
