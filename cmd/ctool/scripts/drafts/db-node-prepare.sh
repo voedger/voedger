@@ -19,6 +19,23 @@ fi
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
+function addVolumeDC() {
+    local VOL_DC="$HOME/scylla/cassandra-rackdc.properties:/etc/scylla/cassandra-rackdc.properties"
+    local SERVICES=$(yq eval '.services | keys | map(select(test("^scylla"))) | .[]' docker-compose-template.yml)
+
+    for SERVICE in $SERVICES; do
+        local VOLUME_EXISTS=$(yq eval ".services.$SERVICE.volumes | .[] | select(. == \"$VOL_DC\")" docker-compose-template.yml)
+
+        if [ -z "$VOLUME_EXISTS" ]; then
+            yq w -i docker-compose-template.yml "services.$SERVICE.volumes[+]" "$VOL_DC"
+            echo "Add to service '$SERVICE': $VOL_DC"
+        else
+            echo "Already present in service '$SERVICE': $VOL_DC"
+        fi
+    done
+}
+
+
 ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /var/lib/scylla && mkdir -p ~/scylla"
 
 if [ -n "${2+x}" ] && [ -n "$2" ]; then
@@ -37,6 +54,7 @@ prefer_local=true
 # dc_suffix=<Data Center name suffix, used by EC2SnitchXXX snitches>
 #
 "
+addVolumeDC
 sed -i 's/endpoint_snitch: SimpleSnitch/endpoint_snitch: GossipingPropertyFileSnitch/' ./scylla.yaml
 echo "$rackdc" | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/scylla/cassandra-rackdc.properties'
 fi
