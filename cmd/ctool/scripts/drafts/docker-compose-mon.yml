@@ -1,7 +1,7 @@
 version: '3.5'
 services:
   prometheus1:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.44.0
     volumes:
       - /prometheus:/prometheus
       - ~/prometheus:/etc/prometheus
@@ -29,7 +29,7 @@ services:
         max-file: "3"
 
   grafana1:
-    image: grafana/grafana:latest
+    image: grafana/grafana:9.5.2
     volumes:
       - ~/grafana/grafana.ini:/etc/grafana/grafana.ini
       - ~/grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
@@ -55,7 +55,7 @@ services:
       - prometheus1
 
   grafana2:
-    image: grafana/grafana:latest
+    image: grafana/grafana:9.5.2
     volumes:
       - ~/grafana/grafana.ini:/etc/grafana/grafana.ini
       - ~/grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
@@ -81,7 +81,7 @@ services:
       - prometheus2
 
   cadvisor1:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: gcr.io/cadvisor/cadvisor:v0.47.1
     ports:
       - target: 8080
         published: 8080
@@ -101,7 +101,7 @@ services:
     restart: unless-stopped
 
   cadvisor2:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: gcr.io/cadvisor/cadvisor:v0.47.1
     ports:
       - target: 8080
         published: 8080
@@ -121,7 +121,7 @@ services:
     restart: unless-stopped
 
   prometheus2:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.44.0
     volumes:
       - /prometheus:/prometheus
       - ~/prometheus:/etc/prometheus
@@ -149,7 +149,7 @@ services:
         max-file: "3"
 
   alertmanager1:
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:v0.26.0
     volumes:
       - /alertmanager:/alertmanager
       - ~/alertmanager:/etc/alertmanager
@@ -177,7 +177,7 @@ services:
       replicas: 1
 
   alertmanager2:
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:v0.26.0
     volumes:
       - /alertmanager:/alertmanager
       - ~/alertmanager:/etc/alertmanager
@@ -205,7 +205,7 @@ services:
       replicas: 1
 
   node-exporter1:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.6.1
 
     deploy:
       placement:
@@ -233,7 +233,7 @@ services:
     restart: unless-stopped
 
   node-exporter2:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.6.1
 
     deploy:
       placement:
