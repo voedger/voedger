@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/router"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func NewVVMDefaultConfig() VVMConfig {
@@ -54,6 +55,9 @@ func NewVVMDefaultConfig() VVMConfig {
 			return istorage.ProvideMem(), nil
 		},
 		SecretsReader: isecretsimpl.ProvideSecretReader(),
+	}
+	if coreutils.IsTest() {
+		res.SecretsReader = ProvideTestSecretsReader(res.SecretsReader)
 	}
 	return res
 }

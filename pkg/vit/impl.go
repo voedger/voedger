@@ -78,8 +78,6 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 	emailMessagesChan := make(chan smtptest.Message, 1) // must be buffered
 	cfg.ActualizerStateOpts = append(cfg.ActualizerStateOpts, state.WithEmailMessagesChan(emailMessagesChan))
 
-	cfg.SecretsReader = vvm.ProvideTestSecretsReader(cfg.SecretsReader)
-
 	vitPreConfig := &vitPreConfig{
 		vvmCfg:  &cfg,
 		vitApps: vitApps{},
