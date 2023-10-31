@@ -266,6 +266,8 @@ func deploySeSwarm(cluster *clusterType) error {
 
 	// Add remaining nodes to swarm cluster
 
+	conf := newSeConfigType(cluster)
+
 	if err = prepareScripts("swarm-add-node.sh"); err != nil {
 		return err
 	}
@@ -299,7 +301,15 @@ func deploySeSwarm(cluster *clusterType) error {
 					logger.Error(err.Error())
 					return
 				}
+
 				logger.Info("Use datacenter: ", dc)
+
+				if e := newScriptExecuter(cluster.sshKey, "localhost").
+					run("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name); err != nil {
+					logger.Error(e.Error())
+					return
+				}
+
 				logger.Info("db node prepare ", n.ActualNodeState.Address)
 				if e := newScriptExecuter(cluster.sshKey, n.ActualNodeState.Address).
 					run("db-node-prepare.sh", n.nodeName(), dc /*ActualNodeState.Address*/); e != nil {
