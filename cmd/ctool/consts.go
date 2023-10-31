@@ -5,6 +5,7 @@
 
 package main
 
+// nolint
 const (
 	// edition types
 	clusterEditionCE = "CE"

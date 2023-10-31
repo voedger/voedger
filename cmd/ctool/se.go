@@ -8,6 +8,7 @@ package main
 import (
 	"errors"
 	"fmt"
+
 	"github.com/untillpro/goutils/logger"
 )
 
@@ -67,8 +68,10 @@ func seNodeControllerFunction(n *nodeType) error {
 func setHostname(node *nodeType) error {
 	var err error
 
+	// nolint
 	prepareScripts("node-set-hostname.sh")
 
+	// nolint
 	logger.Info(fmt.Sprintf("settting hostname to %s for a %s host...", node.nodeName(), node.DesiredNodeState.Address))
 
 	if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
@@ -128,6 +131,7 @@ func updateHosts(node *nodeType) error {
 }
 
 func seNodeValidate(n *nodeType) error {
+	// nolint
 	prepareScripts("host-validate.sh")
 
 	logger.Info(fmt.Sprintf("checking host %s requirements...", n.DesiredNodeState.Address))
@@ -317,6 +321,7 @@ func deploySeDockerStack(cluster *clusterType) error {
 
 	if err := newScriptExecuter(cluster.sshKey, conf.AppNode2).
 		//		run("swarm-set-label.sh", conf.AppNode1, conf.AppNode2, cluster.nodeByHost(conf.AppNode2).label(swarmAppLabelKey), "true"); err != nil {
+		// nolint
 		run("swarm-set-label.sh", conf.AppNode1Name, conf.AppNode2Name, cluster.nodeByHost(conf.AppNode2).label(swarmAppLabelKey), "true"); err != nil {
 
 		return err
@@ -357,9 +362,11 @@ func deployMonDockerStack(cluster *clusterType) error {
 
 	logger.Info("Starting a mon docker stack deployment.")
 
+	// nolint
 	prepareScripts("alertmanager/config.yml", "prometheus/prometheus.yml", "prometheus/alert.rules",
 		"docker-compose-mon.yml", "mon-node-prepare.sh", "mon-stack-start.sh", "swarm-set-label.sh")
 
+	// nolint
 	prepareScripts("grafana/grafana.ini",
 		"grafana/provisioning/dashboards/swarmprom_dashboards.yml",
 		"grafana/provisioning/dashboards/swarmprom-nodes-dash.json",
@@ -377,6 +384,7 @@ func deployMonDockerStack(cluster *clusterType) error {
 
 	if err := newScriptExecuter(cluster.sshKey, conf.AppNode2).
 		//run("swarm-set-label.sh", conf.AppNode1, conf.AppNode2, cluster.nodeByHost(conf.AppNode2).label(swarmMonLabelKey), "true"); err != nil {
+		// nolint
 		run("swarm-set-label.sh", conf.AppNode1Name, conf.AppNode2Name, cluster.nodeByHost(conf.AppNode2).label(swarmMonLabelKey), "true"); err != nil {
 		return err
 	}
@@ -435,6 +443,7 @@ func newSeConfigType(cluster *clusterType) *seConfigType {
 func deployDocker(node *nodeType) error {
 	var err error
 
+	// nolint
 	prepareScripts("docker-install.sh")
 
 	logger.Info(fmt.Sprintf("deploy docker on a %s host...", node.DesiredNodeState.Address))
@@ -454,6 +463,7 @@ func deployDocker(node *nodeType) error {
 func replaceSeScyllaNode(cluster *clusterType) error {
 	var err error
 
+	// nolint
 	prepareScripts("ctool-scylla-replace-node.sh", "docker-install.sh", "swarm-add-node.sh",
 		"db-node-prepare.sh", "db-bootstrap-prepare.sh", "db-bootstrap-end.sh", "swarm-rm-node.sh",
 		"db-stack-update.sh", "docker-compose-template.yml", "swarm-set-label.sh", "docker-compose-prepare.sh",
@@ -504,12 +514,15 @@ func replaceSeAppNode(cluster *clusterType) error {
 
 	var err error
 
+	// nolint
 	prepareScripts("swarm-add-node.sh", "swarm-get-manager-token.sh", "swarm-rm-node.sh", "swarm-set-label.sh",
 		"mon-node-prepare.sh", "prometheus-tsdb-copy.sh")
 
+	// nolint
 	prepareScripts("alertmanager/config.yml", "prometheus/prometheus.yml", "prometheus/alert.rules",
 		"docker-compose-mon.yml")
 
+	// nolint
 	prepareScripts("grafana/grafana.ini",
 		"grafana/provisioning/dashboards/swarmprom_dashboards.yml",
 		"grafana/provisioning/dashboards/swarmprom-nodes-dash.json",
@@ -535,6 +548,7 @@ func replaceSeAppNode(cluster *clusterType) error {
 		return fmt.Errorf(ErrHostNotFoundInCluster.Error(), newAddr)
 	}
 
+	// nolint
 	if err = newScriptExecuter(cluster.sshKey, "localhost").
 		run("swarm-get-manager-token.sh", conf.DBNode1Name); err != nil {
 		logger.Error(err.Error())
@@ -549,6 +563,7 @@ func replaceSeAppNode(cluster *clusterType) error {
 	}
 
 	logger.Info("swarm add node on ", newAddr)
+	// nolint
 	if err = newScriptExecuter(cluster.sshKey, newAddr).
 		run("swarm-add-node.sh", conf.DBNode1Name, newAddr); err != nil {
 		logger.Error(err.Error())
@@ -563,6 +578,7 @@ func replaceSeAppNode(cluster *clusterType) error {
 	}
 
 	logger.Info("mon node prepare ", newAddr)
+	// nolint
 	if err = newScriptExecuter(cluster.sshKey, newAddr).
 		run("mon-node-prepare.sh", conf.AppNode1Name, conf.AppNode2Name, conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name); err != nil {
 		logger.Error(err.Error())
