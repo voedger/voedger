@@ -41,8 +41,7 @@ ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /var/lib/scylla && mkdir -p ~/scyll
 
 if [ -n "${2+x}" ] && [ -n "$2" ]; then
 dc=$2
-rackdc="
-#
+rackdc="#
 # cassandra-rackdc.properties
 #
 # The lines may include white spaces at the beginning and the end.
