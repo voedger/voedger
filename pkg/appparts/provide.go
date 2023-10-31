@@ -6,5 +6,9 @@
 package appparts
 
 func New() (ap IAppPartitions, cleanup func(), err error) {
-	return &appPartitions{}, cleanup, err
+	return newAppPartitions()
+}
+
+func NewAPI(ap IAppPartitions) (IAppPartitionsAPI, error) {
+	return newAppPartitionsAPI(ap)
 }
