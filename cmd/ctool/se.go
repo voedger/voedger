@@ -200,9 +200,13 @@ func initSeCluster(cluster *clusterType) error {
 		return err
 	}
 
-	if e := deployDbmsDockerStack(cluster); e != nil {
-		logger.Error(e.Error)
-		err = errors.Join(err, e)
+	if ok := isSkipStack(cluster.Cmd.SkipStacks, "db"); !ok {
+		if e := deployDbmsDockerStack(cluster); e != nil {
+			logger.Error(e.Error)
+			err = errors.Join(err, e)
+		}
+	} else {
+		logger.Info("skipping db stack deployment")
 	}
 
 	if ok := isSkipStack(cluster.Cmd.SkipStacks, "app"); !ok {
@@ -213,14 +217,14 @@ func initSeCluster(cluster *clusterType) error {
 	} else {
 		logger.Info("skipping se stack deployment")
 	}
-	//	if e := deploySeDockerStack(cluster); e != nil {
-	//		logger.Error(e.Error)
-	//		err = errors.Join(err, e)
-	//	}
 
-	if e := deployMonDockerStack(cluster); e != nil {
-		logger.Error(e.Error)
-		err = errors.Join(err, e)
+	if ok := isSkipStack(cluster.Cmd.SkipStacks, "mon"); !ok {
+		if e := deployMonDockerStack(cluster); e != nil {
+			logger.Error(e.Error)
+			err = errors.Join(err, e)
+		}
+	} else {
+		logger.Info("skipping mon stack deployment")
 	}
 
 	return err
