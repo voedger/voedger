@@ -14,6 +14,7 @@ func ceNodeControllerFunction(n *nodeType) error {
 	return errors.New("ceNodeControllerFunction not implemented yet")
 }
 
+// nolint
 func deployCeCluster(cluster *clusterType) error {
 	return nil
 }

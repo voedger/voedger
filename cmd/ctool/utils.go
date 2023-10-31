@@ -117,6 +117,7 @@ func deleteScriptsTempDir() error {
 	return os.RemoveAll(scriptsTempDir)
 }
 
+// nolint
 func captureStdoutStderr(f func() error) (stdout string, stderr string, err error) {
 
 	stdoutReader, stdoutWriter, err := os.Pipe()
