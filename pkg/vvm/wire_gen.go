@@ -22,7 +22,6 @@ import (
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
-	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istoragecache"
 	"github.com/voedger/voedger/pkg/istorageimpl"
@@ -61,7 +60,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	appConfigsType := provideAppConfigs(vvmConfig)
 	timeFunc := vvmConfig.TimeFunc
 	bucketsFactoryType := provideBucketsFactory(timeFunc)
-	iSecretReader := provideSecretReader()
+	iSecretReader := vvmConfig.SecretsReader
 	secretKeyType, err := provideSecretKeyJWT(iSecretReader)
 	if err != nil {
 		return nil, nil, err
@@ -248,14 +247,6 @@ func provideBucketsFactory(timeFunc coreutils.TimeFunc) irates.BucketsFactoryTyp
 	return func() irates.IBuckets {
 		return iratesce.Provide(timeFunc)
 	}
-}
-
-func provideSecretReader() isecrets.ISecretReader {
-	sr := isecretsimpl.ProvideSecretReader()
-	if coreutils.IsTest() {
-		return &testISecretReader{realSecretReader: sr}
-	}
-	return sr
 }
 
 func provideSecretKeyJWT(sr isecrets.ISecretReader) (itokensjwt.SecretKeyType, error) {
