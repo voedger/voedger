@@ -35,8 +35,7 @@ services:
       - default
     volumes:
       - scylla1-data:/var/lib/scylla
-      - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
-      - ~/scylla/cassandra-rackdc.properties:/etc/scylla/cassandra-rackdc.properties
+      - ~/scylla:/etc/scylla
       - /etc/hosts:/etc/hosts
 
   scylla2:
@@ -69,8 +68,7 @@ services:
       - default
     volumes:
       - scylla2-data:/var/lib/scylla
-      - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
-      - ~/scylla/cassandra-rackdc.properties:/etc/scylla/cassandra-rackdc.properties
+      - ~/scylla:/etc/scylla
       - /etc/hosts:/etc/hosts
 
   scylla3:
@@ -103,8 +101,7 @@ services:
       - default
     volumes:
       - scylla3-data:/var/lib/scylla
-      - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
-      - ~/scylla/cassandra-rackdc.properties:/etc/scylla/cassandra-rackdc.properties
+      - ~/scylla:/etc/scylla
       - /etc/hosts:/etc/hosts
 
 volumes:
