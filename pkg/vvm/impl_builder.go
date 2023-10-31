@@ -62,9 +62,6 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 			case appdef.TypeKind_Command:
 				cmd := t.(appdef.ICommand)
 				cmdResource := cfg.Resources.QueryResource(cmd.QName()).(istructs.ICommandFunction)
-				if cmdResource.QName() == appdef.NewQName("registry", "CreateLogin") {
-					log.Println(1)
-				}
 				resQName := appdef.NullQName
 				if cmd.Result() != nil {
 					resQName = cmd.Result().QName()
@@ -83,6 +80,10 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 					return
 				}
 				query := t.(appdef.IQuery)
+				res := cfg.Resources.QueryResource(query.QName())
+				if res.QName() == appdef.NullQName {
+					log.Println()
+				}
 				queryResource := cfg.Resources.QueryResource(query.QName()).(istructs.IQueryFunction)
 				paramQName := appdef.NullQName
 				if query.Param() != nil {

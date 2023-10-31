@@ -36,14 +36,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		appdef.NewQName(RegistryPackage, "IssuePrincipalToken"),
 		appdef.NullQName,
 		appdef.NullQName,
-		// appDefBuilder.AddObject(appdef.NewQName(RegistryPackage, "IssuePrincipalTokenParams")).
-		// 	AddField(authnz.Field_Login, appdef.DataKind_string, true).
-		// 	AddField(field_Passwrd, appdef.DataKind_string, true).
-		// 	AddField(authnz.Field_AppName, appdef.DataKind_string, true).(appdef.IType).QName(),
-		// appDefBuilder.AddObject(appdef.NewQName(RegistryPackage, "IssuePrincipalTokenResult")).
-		// 	AddField(authnz.Field_PrincipalToken, appdef.DataKind_string, true).
-		// 	AddField(authnz.Field_WSID, appdef.DataKind_int64, true).
-		// 	AddField(authnz.Field_WSError, appdef.DataKind_string, true).(appdef.IType).QName(),
 		provideIssuePrincipalTokenExec(asp, itokens)))
 	provideChangePassword(cfg, appDefBuilder)
 	provideResetPassword(cfg, appDefBuilder, asp, itokens, federation)

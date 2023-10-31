@@ -102,10 +102,10 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQryRated,
 		appdef.NullQName,
-		adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedQryParams")).
-			AddField("Fld", appdef.DataKind_string, false).(appdef.IType).QName(),
+		appdef.NullQName,
 		istructsmem.NullQueryExec,
 	))
+	
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCmdRated,
 		adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedCmdParams")).
