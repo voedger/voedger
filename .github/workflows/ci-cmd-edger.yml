@@ -9,7 +9,7 @@ jobs:
   call-workflow-ci-cmd:
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
     with: 
-      test_folder: 'cmd/edger'
+      test_folder: 'cmd/edger/'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
       ignore_bp3: 'true'
       short_test: 'true'
