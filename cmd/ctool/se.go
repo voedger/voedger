@@ -295,7 +295,7 @@ func deploySeSwarm(cluster *clusterType) error {
 			}
 
 			if n.NodeRole == nrDBNode {
-				if dc, err = resolveDC(cluster); err != nil {
+				if dc, err = resolveDC(cluster, n.ActualNodeState.Address); err != nil {
 					logger.Error(err.Error())
 					return
 				}
@@ -470,8 +470,8 @@ func deployDocker(node *nodeType) error {
 	return err
 }
 
-func resolveDC(cluster *clusterType) (dc string, err error) {
-	n := cluster.nodeByHost(cluster.Cmd.args()[1])
+func resolveDC(cluster *clusterType, ip string) (dc string, err error) {
+	n := cluster.nodeByHost(ip)
 	if n == nil {
 		return "", fmt.Errorf(ErrHostNotFoundInCluster.Error(), cluster.Cmd.args()[0])
 	}
@@ -487,7 +487,7 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 	var err error
 	var dc string
 
-	if dc, err = resolveDC(cluster); err != nil {
+	if dc, err = resolveDC(cluster, cluster.Cmd.args()[1]); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
