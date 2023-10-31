@@ -3,13 +3,13 @@ name: CI cmd
 on:
   pull_request_target:
     paths:
-      - 'cmd/**'
+      - 'cmd/ctool/**'
 
 jobs:
   call-workflow-ci-cmd:
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@master
     with: 
-      test_folder: 'cmd'
+      test_folder: 'cmd/ctool'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
       ignore_bp3: 'true'
       short_test: 'true'
