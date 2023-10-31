@@ -287,20 +287,25 @@ ABSTRACT WORKSPACE Workspace (
 
     EXTENSION ENGINE BUILTIN (
         QUERY Echo(EchoParams) RETURNS EchoResult;
+        QUERY GRCount RETURNS GRCountResult;
+
         QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
         QUERY EnrichPrincipalToken(EnrichPrincipalTokenParams) RETURNS EnrichPrincipalTokenResult;
-        QUERY GRCount RETURNS GRCountResult;
+
         -- QUERY Collection(CollectionParams) RETURNS ANY;
+
         QUERY DescribePackageNames RETURNS DescribePackageNamesResult;
         QUERY DescribePackage(DescribePackageParams) RETURNS DescribePackageResult;
+
         QUERY Journal(JournalParams) RETURNS JournalResult;
+
         QUERY SqlQuery(SqlQueryParams) RETURNS SqlQueryResult;
-        QUERY InitiateEmailVerification(InitiateEmailVerificationParams) RETURNS InitialEmailVerificationResult;
+
         QUERY IssueVerifiedValueToken(IssueVerifiedValueTokenParams) RETURNS IssueVerifiedValueTokenResult;
-        QUERY QueryChildWorkspaceByName(QueryChildWorkspaceByNameParams) RETURNS QueryChildWorkspaceByNameResult;
 
         COMMAND UploadBLOBHelper;
         COMMAND DownloadBLOBHelper;
+
         COMMAND InitiateInvitationByEMail(InitiateInvitationByEMailParams);
         COMMAND InitiateJoinWorkspace(InitiateJoinWorkspaceParams);
         COMMAND InitiateUpdateInviteRoles(InitiateUpdateInviteRolesParams);
@@ -310,7 +315,11 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND CreateJoinedWorkspace(CreateJoinedWorkspaceParams);
         COMMAND UpdateJoinedWorkspaceRoles(UpdateJoinedWorkspaceRolesParams);
         COMMAND DeactivateJoinedWorkspace(DeactivateJoinedWorkspaceParams);
+        QUERY QueryChildWorkspaceByName(QueryChildWorkspaceByNameParams) RETURNS QueryChildWorkspaceByNameResult;
+
+        QUERY InitiateEmailVerification(InitiateEmailVerificationParams) RETURNS InitialEmailVerificationResult;
         COMMAND SendEmailVerificationCode(SendEmailVerificationCodeParams);
+
         COMMAND InitChildWorkspace(InitChildWorkspaceParams);
         COMMAND CreateWorkspaceID(CreateWorkspaceIDParams);
         COMMAND CreateWorkspace(CreateWorkspaceParams);
