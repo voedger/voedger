@@ -201,7 +201,6 @@ func (c *cmdType) apply(cluster *clusterType) error {
 
 	var err error
 
-	// nolint
 	defer cluster.saveToJSON()
 
 	if err = cluster.validate(); err != nil {
