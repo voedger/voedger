@@ -89,8 +89,14 @@ func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp ist
 	}
 }
 
-func sendEmailVerificationCodeProjector(federation coreutils.IFederation, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applySendEmailVerificationCode(federation coreutils.IFederation, smtpCfg smtp.Cfg, timeFunc coreutils.TimeFunc) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
+		eventTime := time.UnixMilli(int64(event.RegisteredAt()))
+		if eventTime.Add(threeDays).Before(timeFunc()) {
+			// skip old emails to prevent re-sending after projector rename
+			// see https://github.com/voedger/voedger/issues/275
+			return nil
+		}
 		lng := event.ArgumentObject().AsString(field_Language)
 
 		kb, err := st.KeyBuilder(state.SendMail, appdef.NullQName)

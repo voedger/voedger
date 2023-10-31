@@ -439,7 +439,45 @@ ABSTRACT WORKSPACE test_ws (
 		Fld text
 	);
 
+	TYPE RatedQryResult(
+		Fld text -- not used
+	);
+
+	TYPE RatedCmdParams (
+		Fld text
+	);
+
+	TYPE MockQryParams (
+		Input text NOT NULL
+	);
+
+	TYPE MockQryResult (
+		Res text NOT NULL
+	);
+
+	TYPE MockCmdParams(
+		Input text NOT NULL
+	);
+
+	TYPE TestCmdParams (
+		Arg1 int32 NOT NULL
+	);
+
+	TYPE TestCmdResult (
+		Int int32 NOT NULL,
+		Str text
+	);
+
 	EXTENSION ENGINE BUILTIN (
-		QUERY RatedQry(RatedQryParams) RETURNS void;
+		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult;
+		QUERY MockQry(MockQryParams) RETURNS MockQryResult;
+
+		COMMAND RatedCmd(RatedCmdParams);
+		COMMAND MockCmd(MockCmdParams);
+		COMMAND TestCmd(TestCmdParams) RETURNS TestCmdResult;
+
+		-- wait for https://github.com/voedger/voedger/issues/837
+		-- COMMAND CmdODocOne(odoc1);
+		-- COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2);
 	);
 );

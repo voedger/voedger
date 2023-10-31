@@ -48,7 +48,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	sqlquery.Provide(cfg, appDefBuilder, asp, numCommandProcessors)
 	projectors.ProvideOffsetsDef(appDefBuilder)
 	processors.ProvideJSONFuncParamsDef(appDefBuilder)
-	verifier.Provide(cfg, appDefBuilder, itokens, federation, asp, smtpCfg)
+	verifier.Provide(cfg, appDefBuilder, itokens, federation, asp, smtpCfg, timeFunc)
 	authnz.Provide(cfg, appDefBuilder, itokens, federation, asp, atf)
 	invite.Provide(cfg, appDefBuilder, timeFunc, federation, itokens, smtpCfg)
 	uniques.Provide(cfg, appDefBuilder)

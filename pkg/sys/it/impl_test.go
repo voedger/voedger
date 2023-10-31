@@ -242,7 +242,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		postDone.Add(1)
 		go func() {
 			defer postDone.Done()
-			vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.MockQry", body, coreutils.WithAuthorizeBy(sys.Token))
+			vit.PostApp(istructs.AppQName_test1_app1, 1, "q.app1.MockQry", body, coreutils.WithAuthorizeBy(sys.Token))
 		}()
 
 		<-funcStarted
@@ -266,7 +266,7 @@ func TestCmdResult(t *testing.T) {
 	t.Run("basic usage", func(t *testing.T) {
 
 		body := `{"args":{"Arg1": 1}}`
-		resp := vit.PostWS(ws, "c.sys.TestCmd", body)
+		resp := vit.PostWS(ws, "c.app1.TestCmd", body)
 		resp.Println()
 		require.Equal("Str", resp.CmdResult["Str"])
 		require.Equal(float64(42), resp.CmdResult["Int"])
@@ -275,18 +275,18 @@ func TestCmdResult(t *testing.T) {
 	// ok - just required field is filled
 	t.Run("just required fields filled", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 2)
-		resp := vit.PostWS(ws, "c.sys.TestCmd", body)
+		resp := vit.PostWS(ws, "c.app1.TestCmd", body)
 		resp.Println()
 		require.Equal(float64(42), resp.CmdResult["Int"])
 	})
 
 	t.Run("missing required fields -> 500", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 3)
-		vit.PostWS(ws, "c.sys.TestCmd", body, coreutils.Expect500()).Println()
+		vit.PostWS(ws, "c.app1.TestCmd", body, coreutils.Expect500()).Println()
 	})
 
 	t.Run("wrong types -> 500", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 4)
-		vit.PostWS(ws, "c.sys.TestCmd", body, coreutils.Expect500()).Println()
+		vit.PostWS(ws, "c.app1.TestCmd", body, coreutils.Expect500()).Println()
 	})
 }
