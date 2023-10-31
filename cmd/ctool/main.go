@@ -48,6 +48,7 @@ func execRootCmd(args []string, ver string) error {
 		"ctool",
 		"Cluster managment utility",
 		args,
+		version,
 		newVersionCmd(),
 		newInitCmd(),
 		newValidateCmd(),
