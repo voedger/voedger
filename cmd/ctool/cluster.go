@@ -327,6 +327,7 @@ type clusterType struct {
 	Cmd                   *cmdType `json:"Cmd,omitempty"`
 	DataCenters           []string `json:"DataCenters,omitempty"`
 	LastAttemptError      string   `json:"LastAttemptError,omitempty"`
+	SkipStacks            []string `json:"SkipStacks,omitempty"`
 	Nodes                 []nodeType
 	Draft                 bool `json:"Draft,omitempty"`
 }
@@ -470,6 +471,13 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 
 	defer c.updateNodeIndexes()
 	defer c.saveToJSON()
+
+	skipStacks, err := cmd.Flags().GetStringSlice("skip-stack")
+	if err != nil {
+		fmt.Println("Error getting skip-stack values:", err)
+		return err
+	}
+	c.SkipStacks = skipStacks
 
 	if cmd == initCECmd { // CE args
 		c.Edition = clusterEditionCE

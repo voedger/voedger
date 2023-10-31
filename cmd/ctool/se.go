@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/untillpro/goutils/logger"
-	"strconv"
 )
 
 func seNodeControllerFunction(n *nodeType) error {
@@ -296,11 +295,11 @@ func deploySeSwarm(cluster *clusterType) error {
 			}
 
 			if n.NodeRole == nrDBNode {
-				if len(n.cluster.DataCenters) == 0 {
-					dc = "dc" + strconv.Itoa(n.idx-3)
-				} else {
-					dc = n.cluster.DataCenters[n.idx-3]
+				if dc, err = resolveDC(cluster); err != nil {
+					logger.Error(err.Error())
+					return
 				}
+				logger.Info("Use datacenter: ", dc)
 				logger.Info("db node prepare ", n.ActualNodeState.Address)
 				if e := newScriptExecuter(cluster.sshKey, n.ActualNodeState.Address).
 					run("db-node-prepare.sh", n.nodeName(), dc /*ActualNodeState.Address*/); e != nil {
