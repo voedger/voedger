@@ -210,7 +210,7 @@ func getPackageName(pkgQN string) string {
 	return parts[len(parts)-1]
 }
 
-func getQualifiedPackageName(pkgName Ident, schema *SchemaAST) string {
+func GetQualifiedPackageName(pkgName Ident, schema *SchemaAST) string {
 	for i := 0; i < len(schema.Imports); i++ {
 		imp := schema.Imports[i]
 		if imp.Alias != nil && *imp.Alias == pkgName {
@@ -241,7 +241,7 @@ func findPackage(pnkName Ident, c *iterateCtx) (*PackageSchemaAST, error) {
 		return sysSchema, nil
 	}
 
-	pkgQN := getQualifiedPackageName(pnkName, c.pkg.Ast)
+	pkgQN := GetQualifiedPackageName(pnkName, c.pkg.Ast)
 	if pkgQN == "" {
 		return nil, ErrUndefined(string(pnkName))
 	}
