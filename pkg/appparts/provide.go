@@ -5,10 +5,8 @@
 
 package appparts
 
-func New() (ap IAppPartitions, cleanup func(), err error) {
-	return newAppPartitions()
-}
+import "github.com/voedger/voedger/pkg/istorage"
 
-func NewAPI(ap IAppPartitions) (IAppPartitionsAPI, error) {
-	return newAppPartitionsAPI(ap)
+func New(storages istorage.IAppStorageProvider) (ap IAppPartitions, cleanup func(), err error) {
+	return newAppPartitions(storages)
 }
