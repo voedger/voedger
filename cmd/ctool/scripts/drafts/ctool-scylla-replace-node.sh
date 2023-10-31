@@ -29,7 +29,12 @@ SSH_OPTIONS='-o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=n
 STACK="DBDockerStack"
 
 MANAGER=$3
-DC=$4
+if [ -n "${4+x}" ] && [ -n "$4" ]; then
+  DC=$4
+  else
+    DC=""
+fi
+
 REPLACED_NODE_NAME=$(getent hosts "$2" | awk '{print $2}')
 ssh-keyscan -H "$REPLACED_NODE_NAME" >> ~/.ssh/known_hosts
 
