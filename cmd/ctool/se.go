@@ -523,6 +523,11 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 		logger.Error(err.Error())
 		return err
 	}
+	if err = newScriptExecuter(cluster.sshKey, "localhost").
+		run("db-node-prepare.sh", newAddr, dc); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
 
 	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s, %s", oldAddr, newAddr)).
 		run("ctool-scylla-replace-node.sh", oldAddr, newAddr, conf.AppNode1, dc); err != nil {

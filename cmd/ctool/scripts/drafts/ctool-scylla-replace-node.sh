@@ -60,7 +60,7 @@ wait_for_scylla() {
 
 ./docker-install.sh "$2"
 ./swarm-add-node.sh "$MANAGER" "$2"
-./db-node-prepare.sh "$2" "$DC"
+#./db-node-prepare.sh "$2" "$DC"
 ./db-bootstrap-prepare.sh "$1" "$2"
 ./swarm-rm-node.sh "$MANAGER" "$1"
 
