@@ -21,7 +21,7 @@ SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogL
 
 ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /var/lib/scylla && mkdir -p ~/scylla"
 
-if [ -n "$2" ]; then
+if [ -n "${2+x}" ] && [ -n "$2" ]; then
 dc=$2
 rackdc="
 #
