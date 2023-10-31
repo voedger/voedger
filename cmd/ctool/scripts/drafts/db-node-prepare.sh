@@ -27,7 +27,7 @@ function addVolumeDC() {
         local VOLUME_EXISTS=$(yq eval ".services.$SERVICE.volumes | .[] | select(. == \"$VOL_DC\")" docker-compose-template.yml)
 
         if [ -z "$VOLUME_EXISTS" ]; then
-            yq w -i docker-compose-template.yml "services.$SERVICE.volumes[+]" "$VOL_DC"
+            yq --inplace docker-compose-template.yml "services.$SERVICE.volumes[+]" "$VOL_DC"
             echo "Add to service '$SERVICE': $VOL_DC"
         else
             echo "Already present in service '$SERVICE': $VOL_DC"
