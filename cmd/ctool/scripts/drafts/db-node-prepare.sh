@@ -21,14 +21,14 @@ SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogL
 
 function addVolumeDC() {
     local VOL_DC="$HOME/scylla/cassandra-rackdc.properties:/etc/scylla/cassandra-rackdc.properties"
-    local SERVICES=$(yq eval '.services | keys | map(select(test("^scylla"))) | .[]' docker-compose-template.yml)
+    local SERVICES=$(yq eval '.services | keys | map(select(test("^scylla"))) | .[]' docker-compose.yml)
 
     for SERVICE in $SERVICES; do
-        local VOLUME_EXISTS=$(yq eval ".services.$SERVICE.volumes | .[] | select(. == \"$VOL_DC\")" docker-compose-template.yml)
+        local VOLUME_EXISTS=$(yq eval ".services.$SERVICE.volumes | .[] | select(. == \"$VOL_DC\")" docker-compose.yml)
 
         if [ -z "$VOLUME_EXISTS" ]; then
 #            yq --inplace docker-compose-template.yml "services.$SERVICE.volumes[+]" "$VOL_DC"
-            yq eval --inplace ".services.$SERVICE.volumes += [\"$VOL_DC\"]" docker-compose-template.yml
+            yq eval --inplace ".services.$SERVICE.volumes += [\"$VOL_DC\"]" docker-compose.yml
             echo "Add to service '$SERVICE': $VOL_DC"
         else
             echo "Already present in service '$SERVICE': $VOL_DC"
