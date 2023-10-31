@@ -234,7 +234,7 @@ func deploySeSwarm(cluster *clusterType) error {
 	node := cluster.Nodes[idxSENode1]
 	manager := node.nodeName() //ActualNodeState.Address
 
-	if err = prepareScripts("docker-compose-template.yml", "scylla.yaml", "swarm-init.sh", "swarm-set-label.sh", "db-node-prepare.sh"); err != nil {
+	if err = prepareScripts("docker-compose-template.yml", "scylla.yaml", "swarm-init.sh", "swarm-set-label.sh", "db-node-prepare.sh", "docker-compose-prepare.sh"); err != nil {
 		return err
 	}
 
