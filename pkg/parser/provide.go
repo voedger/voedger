@@ -44,7 +44,3 @@ func BuildAppSchema(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 func BuildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) error {
 	return buildAppDefs(appSchema, builder)
 }
-
-func LoadExportedApps(folderPath string) ([]ExportedApp, error) {
-	return loadExportedApps(folderPath)
-}

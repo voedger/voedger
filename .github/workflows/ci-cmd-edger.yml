@@ -1,0 +1,29 @@
+name: CI cmd
+
+on:
+  push:
+    paths:
+      - 'cmd/edger/**'
+
+jobs:
+  call-workflow-ci-cmd:
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
+    with: 
+      test_folder: 'cmd/edger'
+      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
+      ignore_bp3: 'true'
+      short_test: 'true'
+    secrets:
+      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
+      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+      personal_token: ${{ secrets.PERSONAL_TOKEN }}
+  call-workflow-cd-voeger:
+    needs: call-workflow-ci-cmd
+    if: github.repository == 'voedger/voedger'
+    uses: voedger/voedger/.github/workflows/cd-voedger.yml@main
+    secrets:
+      dockerusername: ${{ secrets.DOCKER_USERNAME }}
+      dockerpassword: ${{ secrets.DOCKER_PASSWORD }}
+      personaltoken: ${{ secrets.PERSONAL_TOKEN }}
+      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
+
