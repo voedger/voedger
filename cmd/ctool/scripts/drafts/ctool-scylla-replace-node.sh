@@ -43,16 +43,16 @@ wait_for_scylla() {
   echo "Working with $ip_address"
   local count=0
 
-  while [ $count -lt 100 ]; do
+  while [ $count -lt 300 ]; do
     if [ $(ssh "$SSH_OPTIONS" "$SSH_USER"@"$ip_address" "docker exec \$(docker ps -qf name=scylla) nodetool status | grep -c '^UN\s'") -eq 3 ]; then
       echo "Scylla initialization success"
       return 0
     fi
     echo "Still waiting for Scylla initialization.."
-    sleep 5
+    sleep 10
     count=$((count+1))
   done
-  if [ $count -eq 100 ]; then
+  if [ $count -eq 300 ]; then
     echo "Scylla initialization timed out."
     return 1
   fi
