@@ -37,7 +37,7 @@ function addVolumeDC() {
 }
 
 
-ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /var/lib/scylla && mkdir -p ~/scylla"
+ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /var/lib/scylla && mkdir -p ~/scylla && mkdir -p ~/scylla.d"
 
 if [ -n "${2+x}" ] && [ -n "$2" ]; then
 dc=$2

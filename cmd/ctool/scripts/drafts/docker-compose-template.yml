@@ -7,7 +7,7 @@ services:
 
   scylla1:
     image: scylladb/scylla:5.1.13
-    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode1}}  --broadcast-rpc-address {{.DBNode1}} --io-setup 0 --developer-mode 0
+    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode1}}  --broadcast-rpc-address {{.DBNode1}} --developer-mode 0
     ports:
       - target: 9042
         published: 9042
@@ -36,11 +36,13 @@ services:
     volumes:
       - scylla1-data:/var/lib/scylla
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
+      - ~/scylla.d/io_properties.yaml:/etc/scylla.d/io_properties.yaml
+      - ~/scylla.d/io.conf:/etc/scylla.d/io.conf
       - /etc/hosts:/etc/hosts
 
   scylla2:
     image: scylladb/scylla:5.1.13
-    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode2}}  --broadcast-rpc-address {{.DBNode2}} --io-setup 0 --developer-mode 0
+    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode2}}  --broadcast-rpc-address {{.DBNode2}} --developer-mode 0
     ports:
       - target: 9042
         published: 9042
@@ -69,11 +71,13 @@ services:
     volumes:
       - scylla2-data:/var/lib/scylla
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
+      - ~/scylla.d/io_properties.yaml:/etc/scylla.d/io_properties.yaml
+      - ~/scylla.d/io.conf:/etc/scylla.d/io.conf
       - /etc/hosts:/etc/hosts
 
   scylla3:
     image: scylladb/scylla:5.1.13
-    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode3}}  --broadcast-rpc-address {{.DBNode3}} --io-setup 0 --developer-mode 0
+    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode3}}  --broadcast-rpc-address {{.DBNode3}} --developer-mode 0
     ports:
       - target: 9042
         published: 9042
@@ -102,6 +106,8 @@ services:
     volumes:
       - scylla3-data:/var/lib/scylla
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
+      - ~/scylla.d/io_properties.yaml:/etc/scylla.d/io_properties.yaml
+      - ~/scylla.d/io.conf:/etc/scylla.d/io.conf
       - /etc/hosts:/etc/hosts
 
 volumes:
