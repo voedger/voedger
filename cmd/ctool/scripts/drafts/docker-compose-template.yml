@@ -36,8 +36,7 @@ services:
     volumes:
       - scylla1-data:/var/lib/scylla
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
-      - ~/scylla.d/io_properties.yaml:/etc/scylla.d/io_properties.yaml
-      - ~/scylla.d/io.conf:/etc/scylla.d/io.conf
+      - ~/scylla.d:/etc/scylla.d
       - /etc/hosts:/etc/hosts
 
   scylla2:
@@ -71,8 +70,7 @@ services:
     volumes:
       - scylla2-data:/var/lib/scylla
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
-      - ~/scylla.d/io_properties.yaml:/etc/scylla.d/io_properties.yaml
-      - ~/scylla.d/io.conf:/etc/scylla.d/io.conf
+      - ~/scylla.d:/etc/scylla.d
       - /etc/hosts:/etc/hosts
 
   scylla3:
@@ -106,8 +104,7 @@ services:
     volumes:
       - scylla3-data:/var/lib/scylla
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
-      - ~/scylla.d/io_properties.yaml:/etc/scylla.d/io_properties.yaml
-      - ~/scylla.d/io.conf:/etc/scylla.d/io.conf
+      - ~/scylla.d:/etc/scylla.d
       - /etc/hosts:/etc/hosts
 
 volumes:
