@@ -33,6 +33,9 @@ const (
 	// Deploy SE args
 	initCeArgCount = 1
 
+	// DB node offset in cluster node list
+	dbNodeOffset = 3
+
 	// node Roles
 	nrCENode  = "CENode"
 	nrAppNode = "AppNode"

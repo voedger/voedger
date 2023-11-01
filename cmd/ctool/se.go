@@ -518,7 +518,7 @@ func resolveDC(cluster *clusterType, ip string) (dc string, err error) {
 	if len(n.cluster.DataCenters) == 0 {
 		dc = ""
 	} else {
-		dc = n.cluster.DataCenters[n.idx-3]
+		dc = n.cluster.DataCenters[n.idx-dbNodeOffset]
 	}
 	return dc, nil
 }

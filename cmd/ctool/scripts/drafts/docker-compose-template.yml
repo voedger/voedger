@@ -7,7 +7,7 @@ services:
 
   scylla1:
     image: scylladb/scylla:5.1.13
-    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode1}}  --broadcast-rpc-address {{.DBNode1}} --developer-mode 0
+    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode1}}  --broadcast-rpc-address {{.DBNode1}} --no-io-setup --developer-mode 0
     ports:
       - target: 9042
         published: 9042
@@ -40,7 +40,7 @@ services:
 
   scylla2:
     image: scylladb/scylla:5.1.13
-    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode2}}  --broadcast-rpc-address {{.DBNode2}} --developer-mode 0
+    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode2}}  --broadcast-rpc-address {{.DBNode2}} --no-io-setup --developer-mode 0
     ports:
       - target: 9042
         published: 9042
@@ -73,7 +73,7 @@ services:
 
   scylla3:
     image: scylladb/scylla:5.1.13
-    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode3}}  --broadcast-rpc-address {{.DBNode3}} --developer-mode 0
+    command: --seeds {{.DBNode1}},{{.DBNode2}},{{.DBNode3}} --listen-address 0.0.0.0  --broadcast-address {{.DBNode3}}  --broadcast-rpc-address {{.DBNode3}} --no-io-setup --developer-mode 0
     ports:
       - target: 9042
         published: 9042
