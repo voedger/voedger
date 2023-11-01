@@ -377,5 +377,4 @@ func Test_NoAllocs(t *testing.T) {
 	v1 := extIO.intents[1].value.(*mockValueBuilder)
 	require.Equal(int32(12346), v1.items["offs"])
 	require.Equal("sys.InvitationAccepted", v1.items["qname"])
-
 }
