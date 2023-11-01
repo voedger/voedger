@@ -197,7 +197,7 @@ func defineApp(c *basicContext) {
 	var appAst *PackageSchemaAST
 
 	for _, p := range c.app.Packages {
-		a, err := findApplication(p)
+		a, err := FindApplication(p)
 		if err != nil {
 			c.errs = append(c.errs, err)
 			return
@@ -229,7 +229,7 @@ func defineApp(c *basicContext) {
 		}
 		pkgNames[string(use.Name)] = true
 
-		pkgQN := getQualifiedPackageName(use.Name, appAst.Ast)
+		pkgQN := GetQualifiedPackageName(use.Name, appAst.Ast)
 		if pkgQN == "" {
 			c.stmtErr(use.GetPos(), ErrUndefined(string(use.Name)))
 			continue

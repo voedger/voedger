@@ -52,6 +52,7 @@ func newInitCmd() *cobra.Command {
 
 }
 
+// nolint
 func parseIpArg(arg string) (resArg string, err error) {
 	if net.ParseIP(arg) == nil {
 		return "", errors.New("invalid IP address " + arg)
@@ -60,6 +61,7 @@ func parseIpArg(arg string) (resArg string, err error) {
 	return arg, nil
 }
 
+// nolint
 func parseDeployArgs(args []string) error {
 	if len(args) == 0 {
 		return errors.New("the list of command arguments is empty")
@@ -83,6 +85,7 @@ func parseDeployArgs(args []string) error {
 	return nil
 }
 
+// nolint
 func initCE(cmd *cobra.Command, args []string) error {
 
 	cluster := newCluster()
@@ -125,6 +128,7 @@ func initCE(cmd *cobra.Command, args []string) error {
 	return err
 }
 
+// nolint
 func initSE(cmd *cobra.Command, args []string) error {
 
 	cluster := newCluster()

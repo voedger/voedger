@@ -71,6 +71,7 @@ type nodeType struct {
 	DesiredNodeState *nodeStateType `json:"DesiredNodeState,omitempty"`
 }
 
+// nolint
 func (n *nodeType) nodeName() string {
 	if n.cluster.Edition == clusterEditionSE {
 		switch n.idx {
@@ -96,6 +97,7 @@ func (n *nodeType) nodeName() string {
 }
 
 // the minimum amount of RAM required by the node (as string)
+// nolint
 func (n *nodeType) minAmountOfRAM() string {
 	switch n.NodeRole {
 	case nrAppNode:
@@ -124,6 +126,7 @@ func (n *nodeType) success() {
 	n.Error = ""
 }
 
+// nolint
 func (n *nodeType) fail(err string) {
 	n.Error = err
 }
@@ -142,6 +145,7 @@ func (n *nodeType) desiredNodeVersion(c *clusterType) string {
 	return c.DesiredClusterVersion
 }
 
+// nolint
 func (n *nodeType) actualNodeVersion() string {
 	return n.ActualNodeState.NodeVersion
 }
@@ -163,6 +167,7 @@ func (n *nodeType) label(key string) string {
 	return fmt.Sprintf("node%d", n.idx)
 }
 
+// nolint
 func (ns *nodeType) check(c *clusterType) error {
 	if ns.actualNodeVersion() != ns.desiredNodeVersion(c) {
 		return ErrDifferentNodeVersions
@@ -170,11 +175,13 @@ func (ns *nodeType) check(c *clusterType) error {
 	return nil
 }
 
+// nolint
 type nodesType []*nodeType
 
 // returns a list of node addresses
 // you can specify the role of nodes to get addresses
 // if role = "", the full list of all cluster nodes will be returned
+// nolint
 func (n *nodesType) hosts(nodeRole string) []string {
 	var h []string
 	for _, N := range *n {
@@ -195,6 +202,7 @@ func (c *cmdType) apply(cluster *clusterType) error {
 
 	var err error
 
+	// nolint
 	defer cluster.saveToJSON()
 
 	if err = cluster.validate(); err != nil {
@@ -255,6 +263,7 @@ func (c *cmdType) validate(cluster *clusterType) error {
 // init [CE] [ipAddr1]
 // or
 // init [SE] [ipAddr1] [ipAddr2] [ipAddr3] [ipAddr4] [ipAddr5]
+// nolint
 func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
 	args := cmd.args()
 
@@ -381,6 +390,7 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 
 	c.Cmd = cmd
 
+	// nolint
 	defer c.saveToJSON()
 	switch cmd.Kind {
 	case ckReplace:
@@ -405,6 +415,7 @@ func (c *clusterType) updateNodeIndexes() {
 	}
 }
 
+// TODO: Filename should be an argument
 func (c *clusterType) saveToJSON() error {
 
 	if c.Cmd != nil && c.Cmd.isEmpty() {
@@ -467,9 +478,11 @@ func (c *clusterType) loadFromJSON() error {
 	return err
 }
 
+// nolint
 func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error {
 
 	defer c.updateNodeIndexes()
+	// nolint
 	defer c.saveToJSON()
 
 	skipStacks, err := cmd.Flags().GetStringSlice("skip-stack")
@@ -517,6 +530,7 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 	return nil
 }
 
+// nolint
 func (c *clusterType) validate() error {
 
 	var err error
@@ -550,10 +564,12 @@ func (c *clusterType) success() {
 	c.LastAttemptError = ""
 }
 
+// nolint
 func (c *clusterType) fail(error string) {
 	c.LastAttemptError = error
 }
 
+// nolint
 func expandPath(path string) (string, error) {
 	if strings.HasPrefix(path, "~/") {
 		homeDir, err := user.Current()

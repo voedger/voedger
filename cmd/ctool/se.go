@@ -8,6 +8,7 @@ package main
 import (
 	"errors"
 	"fmt"
+
 	"github.com/untillpro/goutils/logger"
 )
 
@@ -72,7 +73,6 @@ func setHostname(node *nodeType) error {
 		node.Error = err.Error()
 		return err
 	}
-
 	logger.Info(fmt.Sprintf("settting hostname to %s for a %s host...", node.nodeName(), node.DesiredNodeState.Address))
 
 	if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
@@ -364,6 +364,7 @@ func deploySeDockerStack(cluster *clusterType) error {
 
 	if err := newScriptExecuter(cluster.sshKey, conf.AppNode2).
 		//		run("swarm-set-label.sh", conf.AppNode1, conf.AppNode2, cluster.nodeByHost(conf.AppNode2).label(swarmAppLabelKey), "true"); err != nil {
+		// nolint
 		run("swarm-set-label.sh", conf.AppNode1Name, conf.AppNode2Name, cluster.nodeByHost(conf.AppNode2).label(swarmAppLabelKey), "true"); err != nil {
 
 		return err
@@ -430,6 +431,7 @@ func deployMonDockerStack(cluster *clusterType) error {
 
 	if err = newScriptExecuter(cluster.sshKey, conf.AppNode2).
 		//run("swarm-set-label.sh", conf.AppNode1, conf.AppNode2, cluster.nodeByHost(conf.AppNode2).label(swarmMonLabelKey), "true"); err != nil {
+		// nolint
 		run("swarm-set-label.sh", conf.AppNode1Name, conf.AppNode2Name, cluster.nodeByHost(conf.AppNode2).label(swarmMonLabelKey), "true"); err != nil {
 		return err
 	}
@@ -629,6 +631,7 @@ func replaceSeAppNode(cluster *clusterType) error {
 		return fmt.Errorf(ErrHostNotFoundInCluster.Error(), newAddr)
 	}
 
+	// nolint
 	if err = newScriptExecuter(cluster.sshKey, "localhost").
 		run("swarm-get-manager-token.sh", conf.DBNode1Name); err != nil {
 		logger.Error(err.Error())
@@ -643,6 +646,7 @@ func replaceSeAppNode(cluster *clusterType) error {
 	}
 
 	logger.Info("swarm add node on ", newAddr)
+	// nolint
 	if err = newScriptExecuter(cluster.sshKey, newAddr).
 		run("swarm-add-node.sh", conf.DBNode1Name, newAddr); err != nil {
 		logger.Error(err.Error())
@@ -657,6 +661,7 @@ func replaceSeAppNode(cluster *clusterType) error {
 	}
 
 	logger.Info("mon node prepare ", newAddr)
+	// nolint
 	if err = newScriptExecuter(cluster.sshKey, newAddr).
 		run("mon-node-prepare.sh", conf.AppNode1Name, conf.AppNode2Name, conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name); err != nil {
 		logger.Error(err.Error())

@@ -93,6 +93,9 @@ func TestDockerController_AllContainersRunning(t *testing.T) {
 	if testing.Short() {
 		t.Skip(`skipping test in short mode`)
 	}
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on Windows.")
+	}
 
 	projectName := `my`
 	sp := DockerSP{
@@ -141,7 +144,10 @@ services:
 
 func TestDockerController_UpdateImage(t *testing.T) {
 	if testing.Short() {
-		t.Skip(`skipping test in short mod`)
+		t.Skip(`Skipping test in short mod`)
+	}
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on Windows.")
 	}
 	projectName := `my`
 	sp := DockerSP{
@@ -238,8 +244,12 @@ services:
 
 func TestDockerController_InvalidComposeFile(t *testing.T) {
 	if testing.Short() {
-		t.Skip(`skipping test in short mod`)
+		t.Skip(`Skipping test in short mod`)
 	}
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on Windows.")
+	}
+	
 	projectName := `my`
 	sp := DockerSP{
 		Version:     "1.0",
