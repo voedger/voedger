@@ -515,12 +515,10 @@ func resolveDC(cluster *clusterType, ip string) (dc string, err error) {
 	if n == nil {
 		return "", fmt.Errorf(ErrHostNotFoundInCluster.Error(), cluster.Cmd.args()[0])
 	}
-	if n.idx-dbNodeOffset == int(idxDBNode3+1) {
-		dc = "dc2"
-	} else {
-		dc = "dc1"
+	if (n.idx == 3) || (n.idx == 4) {
+		return "dc1", nil
 	}
-	return dc, nil
+	return "dc2", nil
 }
 
 func replaceSeScyllaNode(cluster *clusterType) error {

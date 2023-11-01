@@ -23,12 +23,37 @@ if [ "$4" != "1" ] && [ "$4" != "0" ]; then
   exit 1
 fi
 
+declare -A node_map
+
+node_map["scylla1"]="db-node-1"
+node_map["scylla2"]="db-node-2"
+node_map["scylla3"]="db-node-3"
+
+# Function to convert names
+convert_name() {
+  local input_name="$1"
+  local converted_name="${node_map[$input_name]}"
+  if [ -n "$converted_name" ]; then
+      echo "$converted_name"
+  else
+    echo "Error: Unknown name '$input_name'" >&2
+    exit 1
+  fi
+}
+
+
+#--io-setup 0
+# io_properties.yaml
 DEVELOPER_MODE=$4
 echo "DEVELOPER_MODE=$DEVELOPER_MODE"
 
 SERVICES=$(yq eval '.services | keys | map(select(test("^scylla"))) | .[]' docker-compose-template.yml)
   for SERVICE in $SERVICES; do
     yq eval '.services."'$SERVICE'".command |= sub("--developer-mode [0-9]+", "--developer-mode '"$DEVELOPER_MODE"'")' -i docker-compose-template.yml
+    node=$(convert_name "$SERVICE")
+      if ssh "$node" "test -s ~/scylla.d/io_properties.yaml && echo 'io_properties.yaml exist, will skip scylla_io_setup'; exit \$? || echo 'io_properties.yaml not exist, scylla_io_setup will run'; exit \$?"; then
+        yq eval '.services."'$SERVICE'".command |= sub("--io-setup [0-9]+", "--io-setup 0")' -i docker-compose-template.yml
+      fi
   done
 
 # Replace the template values in the YAML file with the arguments (scylla nodes ip addresses)
