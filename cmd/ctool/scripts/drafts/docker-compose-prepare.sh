@@ -9,21 +9,23 @@ set -euo pipefail
 
 set -x
 
-if [[ $# -ne 4 ]]; then
-  echo "Usage: $0 <scylla1> <scylla2> <scylla3> <dev mode>"
-  exit 1
-fi
-
-DEVELOPER_MODE=$4
-
-  if [ "$DEVELOPER_MODE" != "1" ] && [ "$DEVELOPER_MODE" != "0" ]; then
-    echo "Usage: $0 <scylla1> <scylla2> <scylla3> <dev mode: 1 | 0>"
-    echo "dev mode should be 0 or 1"
+  if [[ $# -ne 4 ]]; then
+    echo "Usage: $0 <scylla1> <scylla2> <scylla3> <dev mode>"
     exit 1
   fi
 
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
+
+
+if [ "$DEVELOPER_MODE" != "1" ] && [ "$DEVELOPER_MODE" != "0" ]; then
+  echo "Usage: $0 <scylla1> <scylla2> <scylla3> <dev mode: 1 | 0>"
+  echo "dev mode should be 0 or 1"
+  exit 1
+fi
+
+DEVELOPER_MODE=$4
+echo "DEVELOPER_MODE=$DEVELOPER_MODE"
 
 SERVICES=$(yq eval '.services | keys | map(select(test("^scylla"))) | .[]' docker-compose-template.yml)
   for SERVICE in $SERVICES; do
