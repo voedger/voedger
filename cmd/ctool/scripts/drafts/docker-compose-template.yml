@@ -36,7 +36,6 @@ services:
     volumes:
       - scylla1-data:/var/lib/scylla
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
-      - ~/scylla/cassandra-rackdc.properties:/etc/scylla/cassandra-rackdc.properties
       - ~/scylla.d:/etc/scylla.d
       - /etc/hosts:/etc/hosts
 
@@ -71,7 +70,6 @@ services:
     volumes:
       - scylla2-data:/var/lib/scylla
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
-      - ~/scylla/cassandra-rackdc.properties:/etc/scylla/cassandra-rackdc.properties
       - ~/scylla.d:/etc/scylla.d
       - /etc/hosts:/etc/hosts
 
@@ -106,7 +104,6 @@ services:
     volumes:
       - scylla3-data:/var/lib/scylla
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
-      - ~/scylla/cassandra-rackdc.properties:/etc/scylla/cassandra-rackdc.properties
       - ~/scylla.d:/etc/scylla.d
       - /etc/hosts:/etc/hosts
 
