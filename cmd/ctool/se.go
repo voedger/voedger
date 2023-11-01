@@ -73,7 +73,7 @@ func setHostname(node *nodeType) error {
 		node.Error = err.Error()
 		return err
 	}
-	logger.Info(fmt.Sprintf("settting hostname to %s for a %s host...", node.nodeName(), node.DesiredNodeState.Address))
+	logger.Info(fmt.Sprintf("setting hostname to %s for a %s host...", node.nodeName(), node.DesiredNodeState.Address))
 
 	if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
 		run("node-set-hostname.sh", node.DesiredNodeState.Address, node.nodeName()); err != nil {
