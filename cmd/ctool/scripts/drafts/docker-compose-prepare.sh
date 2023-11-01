@@ -50,12 +50,12 @@ echo "DEVELOPER_MODE=$DEVELOPER_MODE"
 SERVICES=$(yq eval '.services | keys | map(select(test("^scylla"))) | .[]' docker-compose-template.yml)
   for SERVICE in $SERVICES; do
     yq eval '.services."'$SERVICE'".command |= sub("--developer-mode [0-9]+", "--developer-mode '"$DEVELOPER_MODE"'")' -i docker-compose-template.yml
-    node=$(convert_name "$SERVICE")
-      if ssh "$SSH_OPTIONS" "$SSH_USER"@"$node" "test -s ~/scylla.d/io_properties.yaml && echo 'io_properties.yaml exist, will skip scylla_io_setup'; exit \$? || echo 'io_properties.yaml not exist, scylla_io_setup will run'; exit \$?"; then
-        yq eval '.services."'$SERVICE'".command = (.services."'$SERVICE'".command | sub("--io-setup 1", "--io-setup 0"))' -i docker-compose-template.yml
-      else
-        yq eval '.services."'$SERVICE'".command = (.services."'$SERVICE'".command | sub("--io-setup 0", "--io-setup 1"))' -i docker-compose-template.yml
-      fi
+    # node=$(convert_name "$SERVICE")
+      # if ssh "$SSH_OPTIONS" "$SSH_USER"@"$node" "test -s ~/scylla.d/io_properties.yaml && echo 'io_properties.yaml exist, will skip scylla_io_setup'; exit \$? || echo 'io_properties.yaml not exist, scylla_io_setup will run'; exit \$?"; then
+        # yq eval '.services."'$SERVICE'".command = (.services."'$SERVICE'".command | sub("--io-setup 1", "--io-setup 0"))' -i docker-compose-template.yml
+      # else
+        # yq eval '.services."'$SERVICE'".command = (.services."'$SERVICE'".command | sub("--io-setup 0", "--io-setup 1"))' -i docker-compose-template.yml
+      # fi
   done
 
 # Replace the template values in the YAML file with the arguments (scylla nodes ip addresses)

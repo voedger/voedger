@@ -28,6 +28,24 @@ SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 STACK="DBDockerStack"
 
+declare -A service_map
+
+service_map["db-node-1"]="scylla1"
+service_map["db-node-2"]="scylla2"
+service_map["db-node-3"]="scylla3"
+
+# Function to convert names
+convert_name() {
+  local input_name="$1"
+  local converted_name="${service_map[$input_name]}"
+  if [ -n "$converted_name" ]; then
+      echo "$converted_name"
+  else
+    echo "Error: Unknown name '$input_name'" >&2
+    exit 1
+  fi
+}
+
 MANAGER=$3
 if [ -n "${4+x}" ] && [ -n "$4" ]; then
   DC=$4
@@ -76,24 +94,28 @@ seed_list() {
 
 echo "Remove dead node from seed list and start db instance on new hardware."
 seed_list "$REPLACED_NODE_NAME" remove
-  wait_for_scylla "$REPLACED_NODE_NAME"
+wait_for_scylla "$REPLACED_NODE_NAME"
 
 echo "Bootstrap complete. Cleanup scylla config..."
 ./db-bootstrap-end.sh "$2"
 
+REPLACED_SERVICE=$(convert_name "$REPLACED_NODE_NAME")
+yq eval '.services."'$REPLACED_SERVICE'".command = (.services."'$REPLACED_SERVICE'".command | sub("--io-setup 1", "--io-setup 0"))' -i docker-compose.yml
 echo "Add node to seed list and restart."
 seed_list "$REPLACED_NODE_NAME" add
-  wait_for_scylla "$REPLACED_NODE_NAME"
+wait_for_scylla "$REPLACED_NODE_NAME"
 
 db_rolling_restart() {
   local compose_file="$1"
   local services=()      
 
-  mapfile -t services < <(yq eval '.services | keys | .[]' "$compose_file")
+  mapfile -t services < <(yq eval '.services | keys | .[]' "$compose_file" | grep -v "$REPLACED_SERVICE")
 
   for service in "${services[@]}"; do
     echo "Restart service: ${STACK}_${service}"
-    docker service update --force "$STACK"_"$service"
+    yq eval '.services."'$service'".command = (.services."'$service'".command | sub("--io-setup 1", "--io-setup 0"))' -i docker-compose.yml
+    docker stack deploy --compose-file ~/docker-compose.yml DBDockerStack
+#    docker service update --force "$STACK"_"$service"
     wait_for_scylla "$REPLACED_NODE_NAME"
   done
 }
