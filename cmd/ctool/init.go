@@ -86,7 +86,12 @@ func parseDeployArgs(args []string) error {
 func initCE(cmd *cobra.Command, args []string) error {
 
 	cluster := newCluster()
-	defer cluster.saveToJSON()
+	defer func(cluster *clusterType) {
+		err := cluster.saveToJSON()
+		if err != nil {
+			logger.Error(err.Error())
+		}
+	}(cluster)
 
 	if !cluster.Draft {
 		return ErrClusterConfAlreadyExists
@@ -135,7 +140,12 @@ func initSE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	defer cluster.saveToJSON()
+	defer func(cluster *clusterType) {
+		err := cluster.saveToJSON()
+		if err != nil {
+			logger.Error(err.Error())
+		}
+	}(cluster)
 	err := mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err

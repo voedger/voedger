@@ -67,7 +67,11 @@ func seNodeControllerFunction(n *nodeType) error {
 func setHostname(node *nodeType) error {
 	var err error
 
-	prepareScripts("node-set-hostname.sh")
+	if err = prepareScripts("node-set-hostname.sh"); err != nil {
+		logger.Error(err.Error())
+		node.Error = err.Error()
+		return err
+	}
 
 	logger.Info(fmt.Sprintf("settting hostname to %s for a %s host...", node.nodeName(), node.DesiredNodeState.Address))
 
@@ -128,8 +132,11 @@ func updateHosts(node *nodeType) error {
 }
 
 func seNodeValidate(n *nodeType) error {
-	prepareScripts("host-validate.sh")
-
+	if e := prepareScripts("host-validate.sh"); e != nil {
+		logger.Error(e.Error())
+		n.Error = e.Error()
+		return e
+	}
 	logger.Info(fmt.Sprintf("checking host %s requirements...", n.DesiredNodeState.Address))
 
 	var minRAM string
@@ -151,7 +158,6 @@ func seNodeValidate(n *nodeType) error {
 	}
 
 	return err
-
 }
 
 func seClusterControllerFunction(c *clusterType) error {
@@ -388,47 +394,53 @@ func deployDbmsDockerStack(cluster *clusterType) error {
 
 func deployMonDockerStack(cluster *clusterType) error {
 
+	var err error
+
 	logger.Info("Starting a mon docker stack deployment.")
 
-	prepareScripts("alertmanager/config.yml", "prometheus/prometheus.yml", "prometheus/alert.rules",
-		"docker-compose-mon.yml", "mon-node-prepare.sh", "mon-stack-start.sh", "swarm-set-label.sh")
+	if err = prepareScripts("alertmanager/config.yml", "prometheus/prometheus.yml", "prometheus/alert.rules",
+		"docker-compose-mon.yml", "mon-node-prepare.sh", "mon-stack-start.sh", "swarm-set-label.sh"); err != nil {
+		return err
+	}
 
-	prepareScripts("grafana/grafana.ini",
+	if err = prepareScripts("grafana/grafana.ini",
 		"grafana/provisioning/dashboards/swarmprom_dashboards.yml",
 		"grafana/provisioning/dashboards/swarmprom-nodes-dash.json",
 		"grafana/provisioning/dashboards/swarmprom-prometheus-dash.json",
 		"grafana/provisioning/dashboards/swarmprom-services-dash.json",
-		"grafana/provisioning/datasources/datasource.yml")
+		"grafana/provisioning/datasources/datasource.yml"); err != nil {
+		return err
+	}
 
 	conf := newSeConfigType(cluster)
 
-	if err := newScriptExecuter(cluster.sshKey, conf.AppNode1).
+	if err = newScriptExecuter(cluster.sshKey, conf.AppNode1).
 		//run("swarm-set-label.sh", conf.AppNode1, conf.AppNode1, cluster.nodeByHost(conf.AppNode1).label(swarmMonLabelKey), "true"); err != nil {
 		run("swarm-set-label.sh", conf.AppNode1Name, conf.AppNode1Name, cluster.nodeByHost(conf.AppNode1).label(swarmMonLabelKey), "true"); err != nil {
 		return err
 	}
 
-	if err := newScriptExecuter(cluster.sshKey, conf.AppNode2).
+	if err = newScriptExecuter(cluster.sshKey, conf.AppNode2).
 		//run("swarm-set-label.sh", conf.AppNode1, conf.AppNode2, cluster.nodeByHost(conf.AppNode2).label(swarmMonLabelKey), "true"); err != nil {
 		run("swarm-set-label.sh", conf.AppNode1Name, conf.AppNode2Name, cluster.nodeByHost(conf.AppNode2).label(swarmMonLabelKey), "true"); err != nil {
 		return err
 	}
 
-	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
+	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
 		//run("mon-node-prepare.sh", conf.AppNode1, conf.AppNode2, conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
 		run("mon-node-prepare.sh", conf.AppNode1Name, conf.AppNode2Name, conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name); err != nil {
 
 		return err
 	}
 
-	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
+	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
 		//run("mon-stack-start.sh", conf.AppNode1, conf.AppNode2); err != nil {
 		run("mon-stack-start.sh", conf.AppNode1Name, conf.AppNode2Name); err != nil {
 		return err
 	}
 
 	logger.Info("SE docker mon docker stack deployed successfully")
-	return nil
+	return err
 }
 
 type seConfigType struct {
@@ -468,7 +480,11 @@ func newSeConfigType(cluster *clusterType) *seConfigType {
 func deployDocker(node *nodeType) error {
 	var err error
 
-	prepareScripts("docker-install.sh")
+	if err = prepareScripts("docker-install.sh"); err != nil {
+		logger.Error(err.Error())
+		node.Error = err.Error()
+		return err
+	}
 
 	logger.Info(fmt.Sprintf("deploy docker on a %s host...", node.DesiredNodeState.Address))
 
@@ -507,10 +523,13 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 	}
 	logger.Info("Use datacenter: ", dc)
 
-	prepareScripts("ctool-scylla-replace-node.sh", "docker-install.sh", "swarm-add-node.sh",
+	if err = prepareScripts("ctool-scylla-replace-node.sh", "docker-install.sh", "swarm-add-node.sh",
 		"db-node-prepare.sh", "db-bootstrap-prepare.sh", "db-bootstrap-end.sh", "swarm-rm-node.sh",
 		"db-stack-update.sh", "docker-compose-template.yml", "swarm-set-label.sh", "docker-compose-prepare.sh",
-		"scylla.yaml", "swarm-get-manager-token.sh")
+		"scylla.yaml", "swarm-get-manager-token.sh"); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
 
 	conf := newSeConfigType(cluster)
 
@@ -562,18 +581,27 @@ func replaceSeAppNode(cluster *clusterType) error {
 
 	var err error
 
-	prepareScripts("swarm-add-node.sh", "swarm-get-manager-token.sh", "swarm-rm-node.sh", "swarm-set-label.sh",
-		"mon-node-prepare.sh", "prometheus-tsdb-copy.sh")
+	if err = prepareScripts("swarm-add-node.sh", "swarm-get-manager-token.sh", "swarm-rm-node.sh", "swarm-set-label.sh",
+		"mon-node-prepare.sh", "prometheus-tsdb-copy.sh"); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
 
-	prepareScripts("alertmanager/config.yml", "prometheus/prometheus.yml", "prometheus/alert.rules",
-		"docker-compose-mon.yml")
+	if err = prepareScripts("alertmanager/config.yml", "prometheus/prometheus.yml", "prometheus/alert.rules",
+		"docker-compose-mon.yml"); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
 
-	prepareScripts("grafana/grafana.ini",
+	if err = prepareScripts("grafana/grafana.ini",
 		"grafana/provisioning/dashboards/swarmprom_dashboards.yml",
 		"grafana/provisioning/dashboards/swarmprom-nodes-dash.json",
 		"grafana/provisioning/dashboards/swarmprom-prometheus-dash.json",
 		"grafana/provisioning/dashboards/swarmprom-services-dash.json",
-		"grafana/provisioning/datasources/datasource.yml")
+		"grafana/provisioning/datasources/datasource.yml"); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
 
 	conf := newSeConfigType(cluster)
 

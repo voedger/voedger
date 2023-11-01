@@ -33,7 +33,12 @@ func main() {
 	red = color.New(color.FgRed).SprintFunc()
 	green = color.New(color.FgGreen).SprintFunc()
 	logger.PrintLine = printLogLine
-	defer deleteScriptsTempDir()
+	defer func() {
+		err := deleteScriptsTempDir()
+		if err != nil {
+			logger.Error(err)
+		}
+	}()
 	err := execRootCmd(os.Args, version)
 	if err != nil {
 		os.Exit(1)
@@ -48,6 +53,7 @@ func execRootCmd(args []string, ver string) error {
 		"ctool",
 		"Cluster managment utility",
 		args,
+		version,
 		newVersionCmd(),
 		newInitCmd(),
 		newValidateCmd(),
