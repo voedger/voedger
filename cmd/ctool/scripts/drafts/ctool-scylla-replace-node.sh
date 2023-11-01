@@ -113,8 +113,8 @@ db_rolling_restart() {
 
   for service in "${services[@]}"; do
     echo "Restart service: ${STACK}_${service}"
-    yq eval '.services."'$service'".command = (.services."'$service'".command | sub("--io-setup 1", "--io-setup 0"))' -i docker-compose.yml
-    docker stack deploy --compose-file ~/docker-compose.yml DBDockerStack
+    yq eval '.services."'$service'".command = (.services."'$service'".command | sub("--io-setup 1", "--io-setup 0"))' -i "$compose_file"
+    docker stack deploy --compose-file "$compose_file" DBDockerStack
 #    docker service update --force "$STACK"_"$service"
     wait_for_scylla "$REPLACED_NODE_NAME"
   done
