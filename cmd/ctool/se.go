@@ -236,6 +236,14 @@ func initSeCluster(cluster *clusterType) error {
 	return err
 }
 
+func boolToStr(value bool) string {
+	result := "0"
+	if value {
+		result = "1"
+	}
+	return result
+}
+
 func deploySeSwarm(cluster *clusterType) error {
 
 	var err error
@@ -315,7 +323,7 @@ func deploySeSwarm(cluster *clusterType) error {
 				logger.Info("Use datacenter: ", dc)
 
 				if e := newScriptExecuter(cluster.sshKey, "localhost").
-					run("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name); err != nil {
+					run("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name, boolToStr(devMode)); err != nil {
 					logger.Error(e.Error())
 					return
 				}
@@ -552,7 +560,7 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 	//	fmt.Println("docker-compose-prepare.sh", conf.DBNode1, conf.DBNode2, conf.DBNode3)
 	fmt.Println("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name)
 	if err = newScriptExecuter(cluster.sshKey, "localhost").
-		run("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name); err != nil {
+		run("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name, boolToStr(devMode)); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
