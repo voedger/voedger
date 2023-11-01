@@ -59,6 +59,28 @@ sed -i 's/endpoint_snitch: SimpleSnitch/endpoint_snitch: GossipingPropertyFileSn
 echo "$rackdc" | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/scylla/cassandra-rackdc.properties'
 fi
 
+io_conf="# DO NO EDIT
+# This file should be automatically configure by scylla_io_setup
+#
+# SEASTAR_IO=\"--max-io-requests=1 --num-io-queues=1\""
+
+cpuset_conf="# DO NO EDIT
+# This file should be automatically configure by scylla_cpuset_setup
+#
+# CPUSET=\"--cpuset 0 --smp 1\""
+
+memory_conf="# DO NO EDIT
+# This file should be automatically configure by scylla_memory_setup
+#
+# MEM_CONF=--lock-memory=1"
+
+dev_mode_conf=""
+
 cat ./scylla.yaml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/scylla/scylla.yaml'
+
+echo "$io_conf" | ssh $SSH_OPTIONS $SSH_USER@$1 'test -e ~/scylla.d/io.conf || cat > ~/scylla.d/io.conf'
+echo "$cpuset_conf" | ssh $SSH_OPTIONS $SSH_USER@$1 'test -e ~/scylla.d/cpuset.conf || cat > ~/scylla.d/cpuset.conf'
+echo "$memory_conf" | ssh $SSH_OPTIONS $SSH_USER@$1 'test -e ~/scylla.d/memory.conf || cat > ~/scylla.d/memory.conf'
+echo "$dev_mode_conf" | ssh $SSH_OPTIONS $SSH_USER@$1 'test -e ~/scylla.d/dev-mode.conf || cat > ~/scylla.d/dev-mode.conf'
 
 set +x
