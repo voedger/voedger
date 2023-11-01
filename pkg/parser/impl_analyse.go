@@ -19,7 +19,7 @@ type iterateCtx struct {
 	parent     *iterateCtx
 }
 
-func findApplication(p *PackageSchemaAST) (result *ApplicationStmt, err error) {
+func FindApplication(p *PackageSchemaAST) (result *ApplicationStmt, err error) {
 	for _, stmt := range p.Ast.Statements {
 		if stmt.Application != nil {
 			if result != nil {

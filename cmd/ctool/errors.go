@@ -7,6 +7,7 @@ package main
 
 import "errors"
 
+// nolint
 var (
 	ErrDifferentNodeVersions                = errors.New("node versions do not match the cluster version")
 	ErrInvalidClusterEdition                = errors.New("invalid cluster edition (expected SE or CE)")

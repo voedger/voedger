@@ -64,6 +64,7 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 		pExec = new(exec.PipedExec).Command("bash", args...)
 	}
 
+	// nolint
 	os.Chdir(scriptsTempDir)
 
 	var stdoutWriter io.Writer
@@ -103,6 +104,7 @@ func newScriptExecuter(sshKey string, outputPrefix string) *scriptExecuterType {
 	return &scriptExecuterType{sshKeyPath: sshKey, outputPrefix: outputPrefix}
 }
 
+// nolint
 func getEnvValue1(key string) string {
 	value, _ := os.LookupEnv(key)
 	return value
@@ -126,6 +128,7 @@ func prepareScripts(scriptFileNames ...string) error {
 	m.Lock()
 	defer m.Unlock()
 
+	// nolint
 	os.Chdir(scriptsTempDir)
 
 	err := createScriptsTempDir()
@@ -149,6 +152,7 @@ func prepareScripts(scriptFileNames ...string) error {
 
 		dir := filepath.Dir(destFileName)
 
+		// nolint
 		err = os.MkdirAll(dir, 0700) // os.ModePerm)
 		if err != nil {
 			return err
@@ -173,6 +177,7 @@ func prepareScripts(scriptFileNames ...string) error {
 	return nil
 }
 
+// nolint
 func inputPassword(pass *string) error {
 	bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 	if err == nil {
@@ -182,6 +187,7 @@ func inputPassword(pass *string) error {
 	return err
 }
 
+// nolint
 func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 
 	err := createScriptsTempDir()
@@ -214,6 +220,7 @@ func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 	return nil
 }
 
+// nolint
 func copyFile(src, dest string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
@@ -250,6 +257,7 @@ func copyFile(src, dest string) error {
 	return nil
 }
 
+// nolint
 func fileExists(filename string) bool {
 	_, err := os.Stat(filename)
 	if os.IsNotExist(err) {

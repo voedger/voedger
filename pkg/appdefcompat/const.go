@@ -6,7 +6,7 @@ package appdefcompat
 
 const (
 	validationErrorFmt = "%s: %s"
-	pathDelimiter      = "->"
+	pathDelimiter      = "/"
 )
 
 const (

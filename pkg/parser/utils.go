@@ -7,9 +7,6 @@ package parser
 
 import (
 	"fmt"
-	"io/fs"
-	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -210,7 +207,7 @@ func getPackageName(pkgQN string) string {
 	return parts[len(parts)-1]
 }
 
-func getQualifiedPackageName(pkgName Ident, schema *SchemaAST) string {
+func GetQualifiedPackageName(pkgName Ident, schema *SchemaAST) string {
 	for i := 0; i < len(schema.Imports); i++ {
 		imp := schema.Imports[i]
 		if imp.Alias != nil && *imp.Alias == pkgName {
@@ -241,7 +238,7 @@ func findPackage(pnkName Ident, c *iterateCtx) (*PackageSchemaAST, error) {
 		return sysSchema, nil
 	}
 
-	pkgQN := getQualifiedPackageName(pnkName, c.pkg.Ast)
+	pkgQN := GetQualifiedPackageName(pnkName, c.pkg.Ast)
 	if pkgQN == "" {
 		return nil, ErrUndefined(string(pnkName))
 	}
@@ -331,20 +328,4 @@ func contains(s []Ident, e Ident) bool {
 		}
 	}
 	return false
-}
-
-type PathReader struct {
-	rootPath string
-}
-
-func (r *PathReader) Open(name string) (fs.File, error) {
-	return os.Open(filepath.Join(r.rootPath, name))
-}
-
-func (r *PathReader) ReadDir(name string) ([]os.DirEntry, error) {
-	return os.ReadDir(filepath.Join(r.rootPath, name))
-}
-
-func (r *PathReader) ReadFile(name string) ([]byte, error) {
-	return os.ReadFile(filepath.Join(r.rootPath, name))
 }

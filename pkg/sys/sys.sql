@@ -145,7 +145,7 @@ ABSTRACT WORKSPACE Workspace (
         Email text NOT NULL,
         Roles text NOT NULL,
         ExpireDatetime int64 NOT NULL,
-        EmailTemplate text NOT NULL,
+        EmailTemplate text(32768) NOT NULL,
         EmailSubject text NOT NULL
     );
 
@@ -157,7 +157,7 @@ ABSTRACT WORKSPACE Workspace (
     TYPE InitiateUpdateInviteRolesParams (
         InviteID ref NOT NULL,
         Roles text NOT NULL,
-        EmailTemplate text NOT NULL,
+        EmailTemplate text(32768) NOT NULL,
         EmailSubject text NOT NULL
     );
 

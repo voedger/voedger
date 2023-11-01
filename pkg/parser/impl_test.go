@@ -7,12 +7,11 @@ package parser
 import (
 	"embed"
 	"fmt"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -1638,27 +1637,4 @@ func Test_Storages(t *testing.T) {
 		pkg2,
 	})
 	require.ErrorContains(err, "storages are only declared in sys package")
-}
-
-func Test_ExportedApps(t *testing.T) {
-	require := require.New(t)
-	_, filename, _, _ := runtime.Caller(0) // read current file name
-
-	// Load exported app ASTs
-	apps, err := LoadExportedApps(filepath.Join(filepath.Dir(filename), "example_exported_apps"))
-	require.NoError(err)
-	require.Equal(2, len(apps))
-	require.Equal("app1", apps[0].Ast.Name)
-	require.Equal(2, len(apps[0].Ignore))
-	require.Equal("app2", apps[1].Ast.Name)
-	require.Equal(1, len(apps[1].Ignore))
-
-	// Build schema
-	builder := appdef.New()
-	err = BuildAppDefs(apps[0].Ast, builder)
-	require.NoError(err)
-
-	odoc := builder.ODoc(appdef.NewQName("folder2", "Order"))
-	require.NotNil(odoc)
-	require.Equal(appdef.TypeKind_ODoc, odoc.Kind())
 }

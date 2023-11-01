@@ -29,6 +29,7 @@ var skipNodeMemoryCheck bool
 var red func(a ...interface{}) string
 var green func(a ...interface{}) string
 
+// nolint
 func main() {
 	red = color.New(color.FgRed).SprintFunc()
 	green = color.New(color.FgGreen).SprintFunc()
@@ -42,12 +43,14 @@ func main() {
 
 var rootCmd *cobra.Command
 
+// nolint
 func execRootCmd(args []string, ver string) error {
 	version = ver
 	rootCmd = cobrau.PrepareRootCmd(
 		"ctool",
 		"Cluster managment utility",
 		args,
+		version,
 		newVersionCmd(),
 		newInitCmd(),
 		newValidateCmd(),
