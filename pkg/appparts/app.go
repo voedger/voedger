@@ -33,5 +33,17 @@ type partition struct {
 }
 
 func newPartition(app *app, id istructs.PartitionID) *partition {
-	return &partition{app: app, id: id}
+	p := &partition{app: app, id: id}
+	app.parts[id] = p
+	return p
 }
+
+func (p *partition) AppDef() appdef.IAppDef { return p.app.appDef }
+
+func (p *partition) AppName() istructs.AppQName { return p.app.name }
+
+func (p *partition) ID() istructs.PartitionID { return p.id }
+
+func (p *partition) Storage() istorage.IAppStorage { return p.app.storage }
+
+func (p *partition) prepare() error { return nil }

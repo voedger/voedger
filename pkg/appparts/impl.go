@@ -38,35 +38,20 @@ func (aps appPartitions) AddApp(name istructs.AppQName, appDef appdef.IAppDef) e
 func (aps appPartitions) AddPartition(name istructs.AppQName, id istructs.PartitionID) error {
 	a := aps.apps[name]
 	if a == nil {
-		return fmt.Errorf("app %s not found: %w", name, ErrNameNotFound)
+		return fmt.Errorf(errAppNotFound, name, ErrNameNotFound)
 	}
 	a.parts[id] = newPartition(a, id)
 	return nil
 }
 
 func (aps appPartitions) Borrow(name istructs.AppQName, id istructs.PartitionID) (IAppPartition, error) {
-	return nil, nil
-}
-
-type appPartition struct {
-	name    istructs.AppQName
-	id      istructs.PartitionID
-	appDef  appdef.IAppDef
-	storage istorage.IAppStorage
-}
-
-func newAppPartition(name istructs.AppQName, id istructs.PartitionID, ad appdef.IAppDef, s istorage.IAppStorage) *appPartition {
-	return &appPartition{name: name, id: id, appDef: ad, storage: s}
-}
-
-func (ap appPartition) AppName() istructs.AppQName { return ap.name }
-
-func (ap appPartition) Partition() istructs.PartitionID { return ap.id }
-
-func (ap appPartition) AppDef() appdef.IAppDef { return ap.appDef }
-
-func (ap appPartition) Storage() istorage.IAppStorage { return ap.storage }
-
-func (ap appPartition) prepare() error {
-	return nil
+	a, ok := aps.apps[name]
+	if !ok {
+		return nil, fmt.Errorf(errAppNotFound, name, ErrNameNotFound)
+	}
+	p, ok := a.parts[id]
+	if !ok {
+		return nil, fmt.Errorf(errPartitionNotFound, id, ErrNameNotFound)
+	}
+	return p, nil
 }

@@ -7,6 +7,7 @@ package apppartsctl
 
 import (
 	"context"
+	"errors"
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -21,14 +22,20 @@ type appPartitionsController struct {
 func newAppPartitionsController(storages istorage.IAppStorageProvider, builtIn ...IApplication) (ctl IAppPartitionsController, cleanup func(), err error) {
 	apc := appPartitionsController{storages: storages}
 
-	apc.parts, cleanup, err = appparts.New()
+	apc.parts, cleanup, err = appparts.New(storages)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	for _, app := range builtIn {
-		apc.parts.AddApp(app.AppName(), app.AppDef())
+		err = errors.Join(err,
+			apc.parts.AddApp(app.AppName(), app.AppDef()))
 		app.Partitions(func(id istructs.PartitionID) {
-			apc.parts.AddPartition(app.AppName(), id)
+			err = errors.Join(err,
+				apc.parts.AddPartition(app.AppName(), id))
 		})
 	}
+
 	return &apc, cleanup, err
 }
 

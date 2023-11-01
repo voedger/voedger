@@ -14,12 +14,13 @@ import (
 type IAppPartitions interface {
 	AddApp(istructs.AppQName, appdef.IAppDef) error
 	AddPartition(istructs.AppQName, istructs.PartitionID) error
+
 	Borrow(istructs.AppQName, istructs.PartitionID) (IAppPartition, error)
 }
 
 type IAppPartition interface {
 	AppName() istructs.AppQName
-	Partition() istructs.PartitionID
 	AppDef() appdef.IAppDef
 	Storage() istorage.IAppStorage
+	ID() istructs.PartitionID
 }

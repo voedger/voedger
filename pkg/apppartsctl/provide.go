@@ -14,13 +14,13 @@ import (
 // Returns a new instance of IApplication to pass to New() for built-in applications.
 //
 // The parts argument is a function that enumerates all partitions of the application.
-func NewApp(name istructs.AppQName, appDef appdef.IAppDef, parts func(func(istructs.PartitionID))) IApplication {
+func App(name istructs.AppQName, appDef appdef.IAppDef, parts func(func(istructs.PartitionID))) IApplication {
 	return newApplication(name, appDef, parts)
 }
 
 // Returns a new instance of IAppPartitionsController.
 //
-// Built-in applications can be passed as optional arguments.
+// Built-in applications can be constructed by calling App() and passed as optional arguments.
 func New(storages istorage.IAppStorageProvider, builtIn ...IApplication) (ctl IAppPartitionsController, cleanup func(), err error) {
 	return newAppPartitionsController(storages, builtIn...)
 }
