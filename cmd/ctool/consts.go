@@ -34,7 +34,7 @@ const (
 	initCeArgCount = 1
 
 	// DB node offset in cluster node list
-	dbNodeOffset = 3
+	dbNodeOffset = 2
 
 	// node Roles
 	nrCENode  = "CENode"
