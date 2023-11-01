@@ -50,7 +50,7 @@ rackdc="#
 #
 dc=$dc
 rack=rack1
-prefer_local=true
+# prefer_local=true
 # dc_suffix=<Data Center name suffix, used by EC2SnitchXXX snitches>
 #
 "
