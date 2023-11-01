@@ -292,7 +292,7 @@ ABSTRACT WORKSPACE Workspace (
         QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
         QUERY EnrichPrincipalToken(EnrichPrincipalTokenParams) RETURNS EnrichPrincipalTokenResult;
 
-        QUERY Collection(CollectionParams) RETURNS ANY;
+        -- QUERY Collection(CollectionParams) RETURNS ANY;
 
         QUERY DescribePackageNames RETURNS DescribePackageNamesResult;
         QUERY DescribePackage(DescribePackageParams) RETURNS DescribePackageResult;
