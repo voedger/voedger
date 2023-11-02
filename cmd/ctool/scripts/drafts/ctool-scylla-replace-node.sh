@@ -100,8 +100,7 @@ echo "Bootstrap complete. Cleanup scylla config..."
 ./db-bootstrap-end.sh "$2"
 
 REPLACED_SERVICE=$(convert_name "$REPLACED_NODE_NAME")
-# yq eval '.services."'$REPLACED_SERVICE'".command = (.services."'$REPLACED_SERVICE'".command | sub("--io-setup 1", "--io-setup 0"))' -i docker-compose.yml
-echo "Add node to seed list and restart."
+echo "Add new live node to back to seed list and restart."
 seed_list "$REPLACED_NODE_NAME" add
 
 wait_for_scylla "$REPLACED_NODE_NAME"
@@ -114,8 +113,6 @@ db_rolling_restart() {
 
   for service in "${services[@]}"; do
     echo "Restart service: ${STACK}_${service}"
-#    yq eval '.services."'$service'".command = (.services."'$service'".command | sub("--io-setup 1", "--io-setup 0"))' -i "$compose_file"
-#    docker stack deploy --compose-file "$compose_file" DBDockerStack
     docker service update --force "$STACK"_"$service"
     wait_for_scylla "$REPLACED_NODE_NAME"
   done
