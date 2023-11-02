@@ -36,12 +36,12 @@ func main() {
 	red = color.New(color.FgRed).SprintFunc()
 	green = color.New(color.FgGreen).SprintFunc()
 	logger.PrintLine = printLogLine
-	defer func() {
+	/*	defer func() {
 		err := deleteScriptsTempDir()
 		if err != nil {
 			logger.Error(err)
 		}
-	}()
+	}()*/
 	err := execRootCmd(os.Args, version)
 	if err != nil {
 		os.Exit(1)

@@ -87,19 +87,20 @@ seed_list() {
   local operation=$2
 
   service_label=$(./db-stack-update.sh "$node" "$operation" | tail -n 1)
+  cat ./docker-compose.yml > ~/docker-compose.yml."$node"_"$operation"
   < ./docker-compose.yml ssh "$SSH_OPTIONS" "$SSH_USER"@"$node" 'cat > ~/docker-compose.yml'
   ssh "$SSH_OPTIONS" "$SSH_USER"@"$node" "docker stack deploy --compose-file ~/docker-compose.yml DBDockerStack"
   sleep 5
-  ./swarm-set-label.sh "$MANAGER" "$node" "$service_label" "true"
+#  ./swarm-set-label.sh "$MANAGER" "$node" "$service_label" "true"
 }
 
 echo "Remove dead node from seed list and start db instance on new hardware."
-#-- seed_list "$REPLACED_NODE_NAME" remove
+seed_list "$REPLACED_NODE_NAME" remove
 
-#-- wait_for_scylla "$REPLACED_NODE_NAME"
+wait_for_scylla "$REPLACED_NODE_NAME"
 
 echo "Bootstrap complete. Cleanup scylla config..."
-#-- ./db-bootstrap-end.sh "$2"
+./db-bootstrap-end.sh "$2"
 
 REPLACED_SERVICE=$(convert_name "$REPLACED_NODE_NAME")
 # yq eval '.services."'$REPLACED_SERVICE'".command = (.services."'$REPLACED_SERVICE'".command | sub("--io-setup 1", "--io-setup 0"))' -i docker-compose.yml
