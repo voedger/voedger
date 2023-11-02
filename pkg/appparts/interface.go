@@ -15,7 +15,8 @@ type IAppPartitions interface {
 	AddApp(istructs.AppQName, appdef.IAppDef) error
 	AddPartition(istructs.AppQName, istructs.PartitionID) error
 
-	Borrow(istructs.AppQName, istructs.PartitionID) (IAppPartition, error)
+	// Enums all partitions.
+	Partitions(func(IAppPartition))
 }
 
 type IAppPartition interface {
@@ -23,4 +24,11 @@ type IAppPartition interface {
 	AppDef() appdef.IAppDef
 	Storage() istorage.IAppStorage
 	ID() istructs.PartitionID
+	Active() bool
+
+	// Activates partition. Initial status is Inactive, result status is Active.
+	Activate() error
+
+	// Borrows partition.
+	Borrow() error
 }
