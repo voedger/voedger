@@ -83,7 +83,11 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 				if query.Param() != nil {
 					paramQName = query.Param().QName()
 				}
-				istructsmem.ReplaceQueryDefinitions(queryResource, paramQName, query.Result().QName())
+				resQName := appdef.NullQName
+				if query.Result() != nil {
+					resQName = query.Result().QName()
+				}
+				istructsmem.ReplaceQueryDefinitions(queryResource, paramQName, resQName)
 			}
 		})
 	}

@@ -38,7 +38,10 @@ import (
 func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state istructs.IState, params IQueryParams,
 	resultMeta appdef.IType, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline {
 	operators := make([]*pipeline.WiredOperator, 0)
-	if resultMeta.QName() == istructs.QNameJSON {
+	if resultMeta == nil {
+		// happens when the query has no result, e.g. q.air.UpdateSubscriptionDetails
+		operators = append(operators, pipeline.WireAsyncOperator("noop, no result", &pipeline.AsyncNOOP{}))
+	} else if resultMeta.QName() == istructs.QNameJSON {
 		operators = append(operators, pipeline.WireAsyncOperator("Raw result", &RawResultOperator{
 			metrics: metrics,
 		}))
@@ -216,6 +219,9 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("validate: get result type", func(ctx context.Context, qw *queryWork) (err error) {
 			typ := qw.queryFunction.ResultType(qw.execQueryArgs.PrepareArgs)
+			if typ == appdef.NullQName {
+				return nil
+			}
 			qw.resultType = qw.appStructs.AppDef().Type(typ)
 			err = errIfFalse(qw.resultType.Kind() != appdef.TypeKind_null, func() error {
 				return fmt.Errorf("result type %s: %w", typ, ErrNotFound)
