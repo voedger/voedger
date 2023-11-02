@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// IApplication is an application that consists of partitions.
+// This can be passed to IAppPartitionsController fabric to describe built-in applications.
 type IApplication interface {
 	AppName() istructs.AppQName
 	AppDef() appdef.IAppDef
