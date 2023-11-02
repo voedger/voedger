@@ -45,5 +45,3 @@ func (p *partition) AppName() istructs.AppQName { return p.app.name }
 func (p *partition) ID() istructs.PartitionID { return p.id }
 
 func (p *partition) Storage() istorage.IAppStorage { return p.app.storage }
-
-func (p *partition) prepare() error { return nil }
