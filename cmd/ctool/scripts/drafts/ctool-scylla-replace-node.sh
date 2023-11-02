@@ -105,6 +105,8 @@ seed_list "$REPLACED_NODE_NAME" add
 
 wait_for_scylla "$REPLACED_NODE_NAME"
 
+ssh "$SSH_OPTIONS" "$SSH_USER"@"$REPLACED_NODE_NAME" "docker exec \$(docker ps -qf name=scylla --filter status=running) nodetool repair -full"
+
 db_rolling_restart() {
   local compose_file="$1"
   local services=()      
