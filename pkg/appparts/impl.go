@@ -26,28 +26,45 @@ func newAppPartitions(storages istorage.IAppStorageProvider) (ap IAppPartitions,
 	return a, cleanup, err
 }
 
-func (aps *appPartitions) AddApp(name istructs.AppQName, appDef appdef.IAppDef) error {
-	s, err := aps.storages.AppStorage(name)
-	if err != nil {
-		return err
-	}
-	aps.apps[name] = newApplication(name, appDef, s)
-	return nil
-}
-
-func (aps *appPartitions) AddPartition(name istructs.AppQName, id istructs.PartitionID) error {
-	a := aps.apps[name]
+func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef) {
+	a := aps.apps[appName]
 	if a == nil {
-		return fmt.Errorf(errAppNotFound, name, ErrNameNotFound)
+		s, err := aps.storages.AppStorage(appName)
+		if err != nil {
+			panic(err)
+		}
+		a = newApplication(appName, s)
+		aps.apps[appName] = a
 	}
-	a.parts[id] = newPartition(a, id)
-	return nil
+
+	p := a.parts[partID]
+	if p == nil {
+		p = newPartition(a, appDef, partID)
+		a.parts[partID] = p
+	}
 }
 
-func (aps *appPartitions) Partitions(f func(IAppPartition)) {
-	for _, a := range aps.apps {
-		for _, p := range a.parts {
-			f(p)
-		}
+func (aps *appPartitions) Borrow(appName istructs.AppQName, partID istructs.PartitionID) (IAppPartition, error) {
+	a := aps.apps[appName]
+	if a == nil {
+		return nil, fmt.Errorf(errAppNotFound, appName, ErrNameNotFound)
+	}
+
+	p := a.parts[partID]
+	if p == nil {
+		return nil, fmt.Errorf(errPartitionNotFound, appName, partID, ErrNameNotFound)
+	}
+
+	b, err := p.borrow()
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+func (aps *appPartitions) Release(p IAppPartition) {
+	if rt, ok := p.(*partitionRT); ok {
+		rt.p.release(rt)
 	}
 }

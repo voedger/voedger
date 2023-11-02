@@ -6,8 +6,6 @@
 package appparts
 
 import (
-	"fmt"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -15,53 +13,61 @@ import (
 
 type app struct {
 	name    istructs.AppQName
-	appDef  appdef.IAppDef
 	storage istorage.IAppStorage
 	parts   map[istructs.PartitionID]*partition
 }
 
-func newApplication(name istructs.AppQName, appDef appdef.IAppDef, storage istorage.IAppStorage) *app {
+func newApplication(name istructs.AppQName, storage istorage.IAppStorage) *app {
 	return &app{
 		name:    name,
-		appDef:  appDef,
 		storage: storage,
 		parts:   map[istructs.PartitionID]*partition{},
 	}
 }
 
 type partition struct {
-	app    *app
-	id     istructs.PartitionID
-	active bool
+	app      *app
+	appDef   appdef.IAppDef
+	id       istructs.PartitionID
+	borrowed map[*partitionRT]bool
 }
 
-func newPartition(app *app, id istructs.PartitionID) *partition {
-	p := &partition{app: app, id: id}
-	app.parts[id] = p
+func newPartition(app *app, appDef appdef.IAppDef, id istructs.PartitionID) *partition {
+	p := &partition{app: app, appDef: appDef, id: id, borrowed: map[*partitionRT]bool{}}
 	return p
 }
 
-func (p *partition) Activate() error {
-	if p.active {
-		return fmt.Errorf(errPartitionAlreadyActive, p.id, ErrInvalidPartitionStatus)
+func (p *partition) borrow() (*partitionRT, error) {
+	b := newPartitionRT(p)
+
+	if err := b.prepare(); err != nil {
+		return nil, err
 	}
-	p.active = true
-	return nil
+
+	p.borrowed[b] = true
+	return b, nil
 }
 
-func (p *partition) AppDef() appdef.IAppDef { return p.app.appDef }
-
-func (p *partition) AppName() istructs.AppQName { return p.app.name }
-
-func (p *partition) ID() istructs.PartitionID { return p.id }
-
-func (p *partition) Active() bool { return p.active }
-
-func (p *partition) Borrow() error {
-	if !p.active {
-		return fmt.Errorf(errPartitionIsInactive, p.id, ErrInvalidPartitionStatus)
-	}
-	return nil
+func (p *partition) release(borrowed *partitionRT) {
+	delete(p.borrowed, borrowed)
 }
 
-func (p *partition) Storage() istorage.IAppStorage { return p.app.storage }
+type (
+	partitionRT struct {
+		p      *partition
+		appDef appdef.IAppDef
+	}
+)
+
+func newPartitionRT(p *partition) *partitionRT {
+	rt := &partitionRT{p: p, appDef: p.appDef}
+	return rt
+}
+
+func (rt *partitionRT) App() istructs.AppQName        { return rt.p.app.name }
+func (rt *partitionRT) AppDef() appdef.IAppDef        { return rt.appDef }
+func (rt *partitionRT) ID() istructs.PartitionID      { return rt.p.id }
+func (rt *partitionRT) Storage() istorage.IAppStorage { return rt.p.app.storage }
+
+// Prepares partition RT structures for use
+func (rt *partitionRT) prepare() error { return nil }

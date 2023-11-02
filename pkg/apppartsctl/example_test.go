@@ -27,22 +27,27 @@ func Example() {
 		return app
 	}
 
-	ac, cleanup, err := apppartsctl.New(storage,
-		apppartsctl.App(istructs.AppQName_test1_app1, appDef("first app"), apppartsctl.PartsRange(1, 3)),
-		apppartsctl.App(istructs.AppQName_test1_app2, appDef("second app"), apppartsctl.PartsEnum(1, 2, 3)),
-	)
+	ctl, cleanup, err := apppartsctl.New(storage, []apppartsctl.BuiltInApp{
+		{Name: istructs.AppQName_test1_app1,
+			Def:      appDef("first app", "seven partitions"),
+			NumParts: 7},
+		{Name: istructs.AppQName_test1_app2,
+			Def:      appDef("second app", "ten partitions"),
+			NumParts: 10},
+	})
+
 	if err != nil {
 		panic(err)
 	}
 	defer cleanup()
 
-	err = ac.Prepare()
+	err = ctl.Prepare()
 	if err != nil {
 		panic(err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	ac.Run(ctx)
+	ctl.Run(ctx)
 
 	cancel()
 }

@@ -12,23 +12,20 @@ import (
 )
 
 type IAppPartitions interface {
-	AddApp(istructs.AppQName, appdef.IAppDef) error
-	AddPartition(istructs.AppQName, istructs.PartitionID) error
+	AddOrReplace(istructs.AppQName, istructs.PartitionID, appdef.IAppDef)
 
-	// Enums all partitions.
-	Partitions(func(IAppPartition))
+	Borrow(istructs.AppQName, istructs.PartitionID) (IAppPartition, error)
+	Release(IAppPartition)
 }
 
 type IAppPartition interface {
-	AppName() istructs.AppQName
-	AppDef() appdef.IAppDef
-	Storage() istorage.IAppStorage
+	App() istructs.AppQName
 	ID() istructs.PartitionID
-	Active() bool
+	Storage() istorage.IAppStorage
 
-	// Activates partition. Initial status is Inactive, result status is Active.
-	Activate() error
+	IAppPartRuntime
+}
 
-	// Borrows partition.
-	Borrow() error
+type IAppPartRuntime interface {
+	AppDef() appdef.IAppDef
 }
