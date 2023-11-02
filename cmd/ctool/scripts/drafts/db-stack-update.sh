@@ -76,7 +76,7 @@ echo "$updated_command"
 }
 
 # Find the service name that matches the lost_node IP address
-service_name=$(yq e '.services | to_entries | .[] | select(.value.healthcheck.test[] | contains("'$1'")) | .key' docker-compose.yml)
+service_name=$(yq e '.services | to_entries | .[] | select(.value.healthcheck.test[] | contains("'$1'")) | .key' ./docker-compose.yml)
 
 if [ -z "$service_name" ]; then
   echo "Could not find a service with IP address $1"
@@ -85,7 +85,7 @@ fi
 
 echo "Updating service $service_name"
 
-scy_cmd=$(yq eval '.services.'$service_name'.command' docker-compose.yml)
+scy_cmd=$(yq eval '.services.'$service_name'.command' ./docker-compose.yml)
 echo "Updating scylla command '$scy_cmd'"
 
 # new_scy_cmd=$(modify_clp $lost_node $new_node "$scy_cmd")
@@ -106,7 +106,7 @@ esac
 #new_scy_cmd=$(remove_seed "$1" "$scy_cmd")
 echo "With new command '$new_scy_cmd'"
 
-export new_scy_cmd; yq eval --inplace --prettyPrint '.services."'$service_name'".command = strenv(new_scy_cmd)' docker-compose.yml
+export new_scy_cmd; yq eval --inplace --prettyPrint '.services."'$service_name'".command = strenv(new_scy_cmd)' ./docker-compose.yml
 
 #echo "Update healthcheck ip address with new one"
 #yq eval --inplace '.services."'$service_name'".healthcheck = {"test": ["CMD-SHELL", "nodetool status | awk '\''/^UN/ {print $$2}'\'' | grep -w '\'''$new_node''\''"], "interval": "15s", "timeout": "5s", "retries": 90}' docker-compose.yml
