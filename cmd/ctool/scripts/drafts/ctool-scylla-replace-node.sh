@@ -60,7 +60,7 @@ wait_for_scylla() {
   local ip_address=$1
   echo "Working with $ip_address"
   local count=0
-
+  sleep 10
   while [ $count -lt 300 ]; do
     if [ $(ssh "$SSH_OPTIONS" "$SSH_USER"@"$ip_address" "docker exec \$(docker ps -qf name=scylla --filter status=running) nodetool status | grep -c '^UN\s'") -eq 3 ]; then
       echo "Scylla initialization success"
