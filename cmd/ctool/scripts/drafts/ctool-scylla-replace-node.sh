@@ -94,6 +94,10 @@ seed_list() {
 
 echo "Remove dead node from seed list and start db instance on new hardware."
 seed_list "$REPLACED_NODE_NAME" remove
+
+# wait for replace stack
+sleep 10
+
 wait_for_scylla "$REPLACED_NODE_NAME"
 
 echo "Bootstrap complete. Cleanup scylla config..."
@@ -103,6 +107,10 @@ REPLACED_SERVICE=$(convert_name "$REPLACED_NODE_NAME")
 # yq eval '.services."'$REPLACED_SERVICE'".command = (.services."'$REPLACED_SERVICE'".command | sub("--io-setup 1", "--io-setup 0"))' -i docker-compose.yml
 echo "Add node to seed list and restart."
 seed_list "$REPLACED_NODE_NAME" add
+
+# wait for replace stack
+sleep 10
+
 wait_for_scylla "$REPLACED_NODE_NAME"
 
 db_rolling_restart() {
