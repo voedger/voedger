@@ -54,6 +54,27 @@ updated_command=$(echo $2 | sed "s/\(--seeds [^ ,]*,\)\?\(,\)\?$1\(,\)\?/\1/")
 echo "$updated_command"
 }
 
+# Function to add a node based on its last digit
+sort_seed_list() {
+    local node="$1"
+    local original_string="$2"
+    local last_digit=$(echo "$node" | sed 's/[^0-9]//g' | tail -c 1)
+
+    # If the last digit is 1, add the node at the beginning of the string
+    if [ "$last_digit" = "1" ]; then
+        echo "$node, $original_string"
+    # If the last digit is 2, add the node after db-node-1
+    elif [ "$last_digit" = "2" ]; then
+        echo "${original_string/db-node-1/db-node-1, $node}"
+    # If the last digit is 3, add the node after db-node-2
+    elif [ "$last_digit" = "3" ]; then
+        echo "${original_string/db-node-2/db-node-2, $node}"
+    # If the last digit is not 1, 2, or 3, add the node at the end of the string
+    else
+        echo "$original_string, $node"
+    fi
+}
+
 function add_seed() {
 # $1 - cluster node name
 # $2 - command
@@ -66,8 +87,14 @@ local updated_seeds
 # Extract current list of seeds
 current_seeds=$(echo "$command" | grep -oP "(?<=--seeds )[^ ]*")
 
+# Call the function to add the new node
+updated_string=$(sort_seed_list "$new_seed" "$current_seeds")
+
+# Split the string into an array, sort it, and join it back into a string
+updated_seeds=$(echo "$updated_string" | tr -d ' ' | tr ',' '\n' | sort -t '-' -k 3 | tr '\n' ',' | sed 's/,$//')
+
 # Add new seed to the list
-updated_seeds="${current_seeds},${new_seed}"
+#updated_seeds="${current_seeds},${new_seed}"
 
 # replace seed list in command
 updated_command=$(echo "$command" | sed "s/\(--seeds [^ ]* \)/--seeds ${updated_seeds} /")
