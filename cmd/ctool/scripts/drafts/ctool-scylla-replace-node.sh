@@ -102,9 +102,9 @@ echo "Bootstrap complete. Cleanup scylla config..."
 REPLACED_SERVICE=$(convert_name "$REPLACED_NODE_NAME")
 # yq eval '.services."'$REPLACED_SERVICE'".command = (.services."'$REPLACED_SERVICE'".command | sub("--io-setup 1", "--io-setup 0"))' -i docker-compose.yml
 echo "Add node to seed list and restart."
-#-- seed_list "$REPLACED_NODE_NAME" add
+seed_list "$REPLACED_NODE_NAME" add
 
-#-- wait_for_scylla "$REPLACED_NODE_NAME"
+wait_for_scylla "$REPLACED_NODE_NAME"
 
 db_rolling_restart() {
   local compose_file="$1"
@@ -120,7 +120,7 @@ db_rolling_restart() {
     wait_for_scylla "$REPLACED_NODE_NAME"
   done
 }
-# echo "Rolling restart db cluster..."
-# db_rolling_restart ./docker-compose.yml
+echo "Rolling restart db cluster..."
+db_rolling_restart ./docker-compose.yml
 
 set +x
