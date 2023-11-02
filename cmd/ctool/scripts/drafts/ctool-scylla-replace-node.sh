@@ -62,7 +62,7 @@ wait_for_scylla() {
   local count=0
 
   while [ $count -lt 300 ]; do
-    if [ $(ssh "$SSH_OPTIONS" "$SSH_USER"@"$ip_address" "docker exec \$(docker ps -qf name=scylla) nodetool status | grep -c '^UN\s'") -eq 3 ]; then
+    if [ $(ssh "$SSH_OPTIONS" "$SSH_USER"@"$ip_address" "docker exec \$(docker ps -qf name=scylla --filter status=running) nodetool status | grep -c '^UN\s'") -eq 3 ]; then
       echo "Scylla initialization success"
       return 0
     fi
@@ -89,14 +89,12 @@ seed_list() {
   service_label=$(./db-stack-update.sh "$node" "$operation" | tail -n 1)
   < ./docker-compose.yml ssh "$SSH_OPTIONS" "$SSH_USER"@"$node" 'cat > ~/docker-compose.yml'
   ssh "$SSH_OPTIONS" "$SSH_USER"@"$node" "docker stack deploy --compose-file ~/docker-compose.yml DBDockerStack"
+  sleep 5
   ./swarm-set-label.sh "$MANAGER" "$node" "$service_label" "true"
 }
 
 echo "Remove dead node from seed list and start db instance on new hardware."
 seed_list "$REPLACED_NODE_NAME" remove
-
-# wait for replace stack
-sleep 10
 
 wait_for_scylla "$REPLACED_NODE_NAME"
 
@@ -107,9 +105,6 @@ REPLACED_SERVICE=$(convert_name "$REPLACED_NODE_NAME")
 # yq eval '.services."'$REPLACED_SERVICE'".command = (.services."'$REPLACED_SERVICE'".command | sub("--io-setup 1", "--io-setup 0"))' -i docker-compose.yml
 echo "Add node to seed list and restart."
 seed_list "$REPLACED_NODE_NAME" add
-
-# wait for replace stack
-sleep 10
 
 wait_for_scylla "$REPLACED_NODE_NAME"
 
