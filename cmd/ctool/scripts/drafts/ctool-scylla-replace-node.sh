@@ -122,7 +122,7 @@ db_rolling_restart() {
     wait_for_scylla "$REPLACED_NODE_NAME"
   done
 }
-echo "Rolling restart db cluster..."
-db_rolling_restart ./docker-compose.yml
+# echo "Rolling restart db cluster..."
+# db_rolling_restart ./docker-compose.yml
 
 set +x
