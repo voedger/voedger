@@ -78,7 +78,6 @@ wait_for_scylla() {
 
 ./docker-install.sh "$2"
 ./swarm-add-node.sh "$MANAGER" "$2"
-#./db-node-prepare.sh "$2" "$DC"
 ./db-bootstrap-prepare.sh "$1" "$2"
 ./swarm-rm-node.sh "$MANAGER" "$1"
 
@@ -87,11 +86,9 @@ seed_list() {
   local operation=$2
 
   service_label=$(./db-stack-update.sh "$node" "$operation" | tail -n 1)
-  cat ./docker-compose.yml > ~/docker-compose.yml."$node"_"$operation"
   < ./docker-compose.yml ssh "$SSH_OPTIONS" "$SSH_USER"@"$node" 'cat > ~/docker-compose.yml'
   ssh "$SSH_OPTIONS" "$SSH_USER"@"$node" "docker stack deploy --compose-file ~/docker-compose.yml DBDockerStack"
-  sleep 5
-#  ./swarm-set-label.sh "$MANAGER" "$node" "$service_label" "true"
+  ./swarm-set-label.sh "$MANAGER" "$node" "$service_label" "true"
 }
 
 echo "Remove dead node from seed list and start db instance on new hardware."

@@ -76,8 +76,8 @@ echo "$updated_command"
 }
 
 # Find the service name that matches the lost_node IP address
-service_name=$(yq e '.services | to_entries | .[] | select(.value.healthcheck.test[] | contains("'$1'")) | .key' ./docker-compose.yml)
-
+# -- !!! service_name=$(yq e '.services | to_entries | .[] | select(.value.healthcheck.test[] | contains("'$1'")) | .key' ./docker-compose.yml)
+service_name=scylla2
 if [ -z "$service_name" ]; then
   echo "Could not find a service with IP address $1"
   exit 1
