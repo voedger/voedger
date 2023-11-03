@@ -40,10 +40,10 @@ func Example() {
 
 	appPartsCtl, cleanupCtl, err := apppartsctl.New(appParts, []apppartsctl.BuiltInApp{
 		{Name: istructs.AppQName_test1_app1,
-			Def:      appDef("first app ver.1"),
+			Def:      appDef("app 1 ver.1"),
 			NumParts: 7},
 		{Name: istructs.AppQName_test1_app2,
-			Def:      appDef("second app ver.1"),
+			Def:      appDef("app 2 ver.1"),
 			NumParts: 10},
 	})
 
@@ -82,22 +82,22 @@ func Example() {
 	}
 
 	borrowAndRelease(istructs.AppQName_test1_app1, 1)
-	appParts.AddOrUpdate(istructs.AppQName_test1_app1, 1, appDef("first app ver.2"))
+	appParts.AddOrUpdate(istructs.AppQName_test1_app1, 1, appDef("app 1 ver.2"))
 	borrowAndRelease(istructs.AppQName_test1_app1, 1)
 
 	borrowAndRelease(istructs.AppQName_test1_app2, 2)
-	appParts.AddOrUpdate(istructs.AppQName_test1_app2, 2, appDef("second app ver.2"))
+	appParts.AddOrUpdate(istructs.AppQName_test1_app2, 2, appDef("app 2 ver.2"))
 	borrowAndRelease(istructs.AppQName_test1_app2, 2)
 
 	cancel()
 
 	// Output:
 	// test1/app1 part 1
-	// - CDoc «test.doc» first app ver.1
+	// - CDoc «test.doc» app 1 ver.1
 	// test1/app1 part 1
-	// - CDoc «test.doc» first app ver.2
+	// - CDoc «test.doc» app 1 ver.2
 	// test1/app2 part 2
-	// - CDoc «test.doc» second app ver.1
+	// - CDoc «test.doc» app 2 ver.1
 	// test1/app2 part 2
-	// - CDoc «test.doc» second app ver.2
+	// - CDoc «test.doc» app 2 ver.2
 }
