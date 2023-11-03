@@ -37,12 +37,15 @@ echo $MANAGER_TOKEN > manager.token
 
 # Get the current subnet of the ingress network
 CURRENT_SUBNET=$(ssh $SSH_OPTIONS $SSH_USER@$1 "docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' ingress")
+echo $CURRENT_SUBNET
 
 # Check if the current subnet matches the desired subnet
 if [ "$CURRENT_SUBNET" == "10.0.0.0/24" ]; then
     # Remove the existing ingress network
+  echo "Remove ingress network"
   ssh "$SSH_OPTIONS" "$SSH_USER"@"$1" "docker network rm ingress"
 
+  echo "Create ingress network"
   # Create a new ingress network with the desired subnet
   ssh "$SSH_OPTIONS" "$SSH_USER"@"$1" "docker network create \
   --driver overlay \
