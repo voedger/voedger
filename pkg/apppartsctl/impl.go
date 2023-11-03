@@ -20,7 +20,7 @@ type appPartitionsController struct {
 func newAppPartitionsController(parts appparts.IAppPartitions, apps []BuiltInApp) (ctl IAppPartitionsController, cleanup func(), err error) {
 	apc := appPartitionsController{parts: parts, apps: apps}
 
-	return &apc, cleanup, err
+	return &apc, func() {}, err
 }
 
 func (ctl *appPartitionsController) Prepare() (err error) {

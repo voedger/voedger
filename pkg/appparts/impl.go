@@ -26,7 +26,7 @@ func newAppPartitions(storages istorage.IAppStorageProvider) (ap IAppPartitions,
 		apps:     map[istructs.AppQName]*app{},
 		mx:       sync.RWMutex{},
 	}
-	return a, cleanup, err
+	return a, func() {}, err
 }
 
 func (aps *appPartitions) AddOrUpdate(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef) {
@@ -58,12 +58,12 @@ func (aps *appPartitions) Borrow(appName istructs.AppQName, partID istructs.Part
 
 	a, ok := aps.apps[appName]
 	if !ok {
-		return nil, fmt.Errorf(errAppNotFound, appName, ErrNameNotFound)
+		return nil, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
 	}
 
 	p, ok := a.parts[partID]
 	if !ok {
-		return nil, fmt.Errorf(errPartitionNotFound, appName, partID, ErrNameNotFound)
+		return nil, fmt.Errorf(errPartitionNotFound, appName, partID, ErrNotFound)
 	}
 
 	b, err := p.borrow()

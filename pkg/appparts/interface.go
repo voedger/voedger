@@ -20,7 +20,7 @@ type IAppPartitions interface {
 
 	// Borrows and returns a partition.
 	//
-	// If partition with the given app and id does not exist, returns error.
+	// If partition not exist, returns error.
 	Borrow(istructs.AppQName, istructs.PartitionID) (IAppPartition, error)
 
 	// Releases borrowed partition.

@@ -7,7 +7,7 @@ package appparts
 
 import "errors"
 
-var ErrNameNotFound = errors.New("name not found")
+var ErrNotFound = errors.New("not found")
 
 const (
 	errAppNotFound       = "application %v not found: %w"

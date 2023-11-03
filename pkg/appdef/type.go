@@ -36,6 +36,10 @@ func (t *typ) App() IAppDef {
 	return t.app
 }
 
+func (t *typ) IsSystem() bool {
+	return t.QName().Pkg() == SysPackage
+}
+
 func (t *typ) Kind() TypeKind {
 	return t.kind
 }
@@ -78,6 +82,7 @@ var NullType = new(nullType)
 type nullType struct{ nullComment }
 
 func (t *nullType) App() IAppDef   { return nil }
+func (t *nullType) IsSystem() bool { return false }
 func (t *nullType) Kind() TypeKind { return TypeKind_null }
 func (t *nullType) QName() QName   { return NullQName }
 func (t *nullType) String() string { return nullTypeString }
