@@ -7,13 +7,13 @@ package apppartsctl
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // Returns a new instance of IAppPartitionsController.
-func New(storages istorage.IAppStorageProvider, apps []BuiltInApp) (ctl IAppPartitionsController, cleanup func(), err error) {
-	return newAppPartitionsController(storages, apps)
+func New(parts appparts.IAppPartitions, apps []BuiltInApp) (ctl IAppPartitionsController, cleanup func(), err error) {
+	return newAppPartitionsController(parts, apps)
 }
 
 type BuiltInApp struct {

@@ -11,13 +11,23 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+// Application partitions manager.
 type IAppPartitions interface {
-	AddOrReplace(istructs.AppQName, istructs.PartitionID, appdef.IAppDef)
+	// Adds new partition or update existing one.
+	//
+	// If partition with the same app and id already exists, it will be updated.
+	AddOrUpdate(istructs.AppQName, istructs.PartitionID, appdef.IAppDef)
 
+	// Borrows and returns a partition.
+	//
+	// If partition with the given app and id does not exist, returns error.
 	Borrow(istructs.AppQName, istructs.PartitionID) (IAppPartition, error)
+
+	// Releases borrowed partition.
 	Release(IAppPartition)
 }
 
+// Application partition.
 type IAppPartition interface {
 	App() istructs.AppQName
 	ID() istructs.PartitionID
@@ -26,6 +36,7 @@ type IAppPartition interface {
 	IAppPartRuntime
 }
 
+// Application partition runtime.
 type IAppPartRuntime interface {
 	AppDef() appdef.IAppDef
 }

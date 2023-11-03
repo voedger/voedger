@@ -14,7 +14,8 @@ import (
 type app struct {
 	name    istructs.AppQName
 	storage istorage.IAppStorage
-	parts   map[istructs.PartitionID]*partition
+	// no locks need. Owned appPartitions structure will locks access to this structure
+	parts map[istructs.PartitionID]*partition
 }
 
 func newApplication(name istructs.AppQName, storage istorage.IAppStorage) *app {
@@ -26,38 +27,34 @@ func newApplication(name istructs.AppQName, storage istorage.IAppStorage) *app {
 }
 
 type partition struct {
-	app      *app
-	appDef   appdef.IAppDef
-	id       istructs.PartitionID
-	borrowed map[*partitionRT]bool
+	app    *app
+	appDef appdef.IAppDef
+	id     istructs.PartitionID
 }
 
 func newPartition(app *app, appDef appdef.IAppDef, id istructs.PartitionID) *partition {
-	p := &partition{app: app, appDef: appDef, id: id, borrowed: map[*partitionRT]bool{}}
+	p := &partition{app: app, appDef: appDef, id: id}
 	return p
 }
 
 func (p *partition) borrow() (*partitionRT, error) {
 	b := newPartitionRT(p)
 
-	if err := b.prepare(); err != nil {
+	if err := b.init(); err != nil {
 		return nil, err
 	}
 
-	p.borrowed[b] = true
 	return b, nil
 }
 
 func (p *partition) release(borrowed *partitionRT) {
-	delete(p.borrowed, borrowed)
+	borrowed.done()
 }
 
-type (
-	partitionRT struct {
-		p      *partition
-		appDef appdef.IAppDef
-	}
-)
+type partitionRT struct {
+	p      *partition
+	appDef appdef.IAppDef
+}
 
 func newPartitionRT(p *partition) *partitionRT {
 	rt := &partitionRT{p: p, appDef: p.appDef}
@@ -69,5 +66,8 @@ func (rt *partitionRT) AppDef() appdef.IAppDef        { return rt.appDef }
 func (rt *partitionRT) ID() istructs.PartitionID      { return rt.p.id }
 func (rt *partitionRT) Storage() istorage.IAppStorage { return rt.p.app.storage }
 
-// Prepares partition RT structures for use
-func (rt *partitionRT) prepare() error { return nil }
+// Initialize partition RT structures for use
+func (rt *partitionRT) init() error { return nil }
+
+// Finish partition RT structures usage
+func (rt *partitionRT) done() {}

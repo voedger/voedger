@@ -7,6 +7,7 @@ package appparts
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -16,19 +17,24 @@ import (
 type appPartitions struct {
 	storages istorage.IAppStorageProvider
 	apps     map[istructs.AppQName]*app
+	mx       sync.RWMutex
 }
 
 func newAppPartitions(storages istorage.IAppStorageProvider) (ap IAppPartitions, cleanup func(), err error) {
 	a := &appPartitions{
 		storages: storages,
 		apps:     map[istructs.AppQName]*app{},
+		mx:       sync.RWMutex{},
 	}
 	return a, cleanup, err
 }
 
-func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef) {
-	a := aps.apps[appName]
-	if a == nil {
+func (aps *appPartitions) AddOrUpdate(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef) {
+	aps.mx.Lock()
+	defer aps.mx.Unlock()
+
+	a, ok := aps.apps[appName]
+	if !ok {
 		s, err := aps.storages.AppStorage(appName)
 		if err != nil {
 			panic(err)
@@ -42,16 +48,21 @@ func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istruct
 		p = newPartition(a, appDef, partID)
 		a.parts[partID] = p
 	}
+
+	p.appDef = appDef
 }
 
 func (aps *appPartitions) Borrow(appName istructs.AppQName, partID istructs.PartitionID) (IAppPartition, error) {
-	a := aps.apps[appName]
-	if a == nil {
+	aps.mx.RLock()
+	defer aps.mx.RUnlock()
+
+	a, ok := aps.apps[appName]
+	if !ok {
 		return nil, fmt.Errorf(errAppNotFound, appName, ErrNameNotFound)
 	}
 
-	p := a.parts[partID]
-	if p == nil {
+	p, ok := a.parts[partID]
+	if !ok {
 		return nil, fmt.Errorf(errPartitionNotFound, appName, partID, ErrNameNotFound)
 	}
 
@@ -65,6 +76,9 @@ func (aps *appPartitions) Borrow(appName istructs.AppQName, partID istructs.Part
 
 func (aps *appPartitions) Release(p IAppPartition) {
 	if rt, ok := p.(*partitionRT); ok {
+		aps.mx.Lock()
+		defer aps.mx.Unlock()
+
 		rt.p.release(rt)
 	}
 }
