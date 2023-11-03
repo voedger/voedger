@@ -43,7 +43,7 @@ echo $CURRENT_SUBNET
 if [ "$CURRENT_SUBNET" == "10.0.0.0/24" ]; then
     # Remove the existing ingress network
   echo "Remove ingress network"
-  ssh "$SSH_OPTIONS" "$SSH_USER"@"$1" "docker network rm ingress"
+  ssh "$SSH_OPTIONS" "$SSH_USER"@"$1" "docker network rm ingress -y"
 
   echo "Create ingress network"
   # Create a new ingress network with the desired subnet
