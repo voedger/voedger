@@ -16,6 +16,7 @@ import (
 
 const (
 	RegistryPackage          = "registry"
+	RegistryPackageFQN       = "github.com/voedger/voedger/pkg/" + RegistryPackage
 	field_Password           = "Password"
 	field_AppWSID            = "AppWSID"
 	field_AppIDLoginHash     = "AppIDLoginHash"
