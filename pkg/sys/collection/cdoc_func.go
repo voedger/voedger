@@ -22,6 +22,7 @@ import (
 func provideQryCDoc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameCDocFunc,
+		// args and result are defined in sys.sql but kept here as well because q.sys.cdoc func is test here its own way
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CDocParams")).
 			AddField(field_ID, appdef.DataKind_int64, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CDocResult")).

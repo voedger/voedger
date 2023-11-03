@@ -18,6 +18,7 @@ import (
 func provideStateFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameQueryState,
+		// args and result are defined in sys.sql but kept here becayse q.sys.State is test here its own way
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateParams")).
 			AddField(field_After, appdef.DataKind_int64, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult")).
