@@ -26,18 +26,18 @@ swarm_manager_ip=$(getent hosts "$1" | awk '{print $1}')
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
-if [[ $(ssh $SSH_OPTIONS $SSH_USER@$1 docker info --format '{{.Swarm.LocalNodeState}}') == "inactive" ]]; then
+if [[ $(ssh $SSH_OPTIONS $SSH_USER@"$1" docker info --format '{{.Swarm.LocalNodeState}}') == "inactive" ]]; then
   # Initialize Swarm with all nodes as managers and workers
-  WORKER_TOKEN=$(ssh $SSH_OPTIONS $SSH_USER@$1 docker swarm init --advertise-addr $swarm_manager_ip --listen-addr $swarm_manager_ip:2377 | grep -oP "SWMTKN-\S+")
-  echo $WORKER_TOKEN > worker.token
+  WORKER_TOKEN=$(ssh $SSH_OPTIONS $SSH_USER@"$1" docker swarm init --advertise-addr "$swarm_manager_ip" --listen-addr "$swarm_manager_ip":2377 | grep -oP "SWMTKN-\S+")
+  echo "$WORKER_TOKEN" > worker.token
 fi
 
 MANAGER_TOKEN=$(ssh $SSH_OPTIONS $SSH_USER@$1 docker swarm join-token manager | grep -oP "SWMTKN-\S+")
-echo $MANAGER_TOKEN > manager.token
+echo "$MANAGER_TOKEN" > manager.token
 
 # Get the current subnet of the ingress network
 CURRENT_SUBNET=$(ssh $SSH_OPTIONS $SSH_USER@$1 "docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' ingress")
-echo $CURRENT_SUBNET
+echo "$CURRENT_SUBNET"
 
 # Check if the current subnet matches the desired subnet
 if [ "$CURRENT_SUBNET" == "10.0.0.0/24" ]; then
