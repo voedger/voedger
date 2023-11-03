@@ -9,7 +9,6 @@ import (
 	"embed"
 	"io/fs"
 	"path"
-	"path/filepath"
 
 	"golang.org/x/exp/maps"
 
@@ -62,7 +61,7 @@ func ReadPackageSchemaAST(ep extensionpoints.IExtensionPoint) (packageSchemaASTs
 	return
 }
 
-func readEmbeddedContent(dir, subDir string, fsi embed.FS) (contentMap map[string][]byte, err error) {
+func readEmbeddedContent(qualifiedPackageName, subDir string, fsi embed.FS) (contentMap map[string][]byte, err error) {
 	subFS, err := fs.Sub(fsi, subDir)
 	if err != nil {
 		return
@@ -80,7 +79,7 @@ func readEmbeddedContent(dir, subDir string, fsi embed.FS) (contentMap map[strin
 		if err != nil {
 			return nil, err
 		}
-		fullFilePath := path.Join(dir, subDir, entry.Name())
+		fullFilePath := path.Join(qualifiedPackageName, subDir, entry.Name())
 		contentMap[fullFilePath] = content
 	}
 	return
@@ -93,12 +92,12 @@ func SchemaFilesContent(ep extensionpoints.IExtensionPoint, subDir string) (mapP
 		contentMaps := make(map[string][]byte)
 		qualifiedPackageName, _ := eKey.(string)
 		epPackageSql := value.(extensionpoints.IExtensionPoint)
-		epPackageSql.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
-			dirAndPackageName := eKey.(string)
-			dir := filepath.Dir(dirAndPackageName)
+		epPackageSql.Iterate(func(_ extensionpoints.EKey, value interface{}) {
+			// dirAndPackageName := eKey.(string)
+			// dir := filepath.Dir(dirAndPackageName)
 
-			fsi, _ := value.(embed.FS)
-			contentMap, err := readEmbeddedContent(dir, subDir, fsi)
+			fs := value.(embed.FS)
+			contentMap, err := readEmbeddedContent(qualifiedPackageName, subDir, fs)
 			if err != nil {
 				panic(err)
 			}
