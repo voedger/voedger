@@ -22,14 +22,14 @@ var testContentFS embed.FS
 func TestSchemaFilesContent(t *testing.T) {
 	require := require.New(t)
 	ep := extensionpoints.NewRootExtensionPoint()
-	packageName := "packageName"
-	apps.RegisterSchemaFS(testContentFS, packageName, ep)
+	packageFullyQualifiedName := "github.com/voedger/voedger/pkg/vvm/packagename"
+	apps.RegisterSchemaFS(testContentFS, packageFullyQualifiedName, ep)
 	content, err := SchemaFilesContent(ep, "testcontent/subdir")
 	require.NoError(err)
 
 	expectedContent := []string{"hello world", "test test"}
 	actualContent := []string{}
-	for k, v := range content[packageName] {
+	for k, v := range content[packageFullyQualifiedName] {
 		fmt.Println(k)
 		actualContent = append(actualContent, string(v))
 	}

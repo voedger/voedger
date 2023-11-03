@@ -9,7 +9,6 @@ import (
 	"embed"
 	"io/fs"
 	"path"
-	"path/filepath"
 
 	"golang.org/x/exp/maps"
 
@@ -18,20 +17,19 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 )
 
-func readFileSchemaAST(dir string, fsi embed.FS) (fileSchemasAST []*parser.FileSchemaAST, err error) {
-	dirEntries, err := fsi.ReadDir(".")
+func readFileSchemaAST(packageFQN string, fs embed.FS) (fileSchemasAST []*parser.FileSchemaAST, err error) {
+	dirEntries, err := fs.ReadDir(".")
 	if err != nil {
 		return nil, err
 	}
 	for _, dirEntry := range dirEntries {
 		fileName := dirEntry.Name()
-		sqlContent, err := fsi.ReadFile(fileName)
+		sqlContent, err := fs.ReadFile(fileName)
 		if err != nil {
 			return nil, err
 		}
-		fullFilePath := path.Join(dir, fileName)
-
-		fileSchemaAST, err := parser.ParseFile(fullFilePath, string(sqlContent))
+		packageFQNAndFile := path.Join(packageFQN, fileName)
+		fileSchemaAST, err := parser.ParseFile(packageFQNAndFile, string(sqlContent))
 		if err != nil {
 			return nil, err
 		}
@@ -41,23 +39,20 @@ func readFileSchemaAST(dir string, fsi embed.FS) (fileSchemasAST []*parser.FileS
 }
 
 func ReadPackageSchemaAST(ep extensionpoints.IExtensionPoint) (packageSchemaASTs []*parser.PackageSchemaAST, err error) {
-	epSqlFiles := ep.ExtensionPoint(apps.EPSchemasFS)
-	epSqlFiles.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
+	epSchemas := ep.ExtensionPoint(apps.EPSchemasFS)
+	epSchemas.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
 		filesSchemasASTs := make([]*parser.FileSchemaAST, 0)
-		qualifiedPackageName, _ := eKey.(string)
+		packageFQN := eKey.(string)
 		epPackageSql := value.(extensionpoints.IExtensionPoint)
-		epPackageSql.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
-			dirAndPackageName := eKey.(string)
-			dir := filepath.Dir(dirAndPackageName)
-
-			fsi, _ := value.(embed.FS)
-			fileSchemaASTs, err := readFileSchemaAST(dir, fsi)
+		epPackageSql.Iterate(func(_ extensionpoints.EKey, value interface{}) {
+			fs := value.(embed.FS)
+			fileSchemaASTs, err := readFileSchemaAST(packageFQN, fs)
 			if err != nil {
 				panic(err)
 			}
 			filesSchemasASTs = append(filesSchemasASTs, fileSchemaASTs...)
 		})
-		packageSchemaAST, err := parser.BuildPackageSchema(qualifiedPackageName, filesSchemasASTs)
+		packageSchemaAST, err := parser.BuildPackageSchema(packageFQN, filesSchemasASTs)
 		if err != nil {
 			panic(err)
 		}
@@ -66,7 +61,7 @@ func ReadPackageSchemaAST(ep extensionpoints.IExtensionPoint) (packageSchemaASTs
 	return
 }
 
-func readEmbeddedContent(dir, subDir string, fsi embed.FS) (contentMap map[string][]byte, err error) {
+func readEmbeddedContent(qualifiedPackageName, subDir string, fsi embed.FS) (contentMap map[string][]byte, err error) {
 	subFS, err := fs.Sub(fsi, subDir)
 	if err != nil {
 		return
@@ -84,7 +79,7 @@ func readEmbeddedContent(dir, subDir string, fsi embed.FS) (contentMap map[strin
 		if err != nil {
 			return nil, err
 		}
-		fullFilePath := path.Join(dir, subDir, entry.Name())
+		fullFilePath := path.Join(qualifiedPackageName, subDir, entry.Name())
 		contentMap[fullFilePath] = content
 	}
 	return
@@ -97,12 +92,12 @@ func SchemaFilesContent(ep extensionpoints.IExtensionPoint, subDir string) (mapP
 		contentMaps := make(map[string][]byte)
 		qualifiedPackageName, _ := eKey.(string)
 		epPackageSql := value.(extensionpoints.IExtensionPoint)
-		epPackageSql.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
-			dirAndPackageName := eKey.(string)
-			dir := filepath.Dir(dirAndPackageName)
+		epPackageSql.Iterate(func(_ extensionpoints.EKey, value interface{}) {
+			// dirAndPackageName := eKey.(string)
+			// dir := filepath.Dir(dirAndPackageName)
 
-			fsi, _ := value.(embed.FS)
-			contentMap, err := readEmbeddedContent(dir, subDir, fsi)
+			fs := value.(embed.FS)
+			contentMap, err := readEmbeddedContent(qualifiedPackageName, subDir, fs)
 			if err != nil {
 				panic(err)
 			}
