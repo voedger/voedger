@@ -19,8 +19,8 @@ if [ "$#" -lt 1 ]; then
 fi
 
 # Define the desired subnet
-NEW_SUBNET="192.168.0.0/24"
-NEW_GATEWAY="192.168.0.1"
+NEW_SUBNET="192.168.44.0/24"
+NEW_GATEWAY="192.168.44.1"
 swarm_manager_ip=$(getent hosts "$1" | awk '{print $1}')
 
 SSH_USER=$LOGNAME
