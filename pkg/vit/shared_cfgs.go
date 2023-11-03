@@ -16,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/sys/smtp"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	registryapp "github.com/voedger/voedger/pkg/apps/sys/registry"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/projectors"
@@ -56,7 +55,7 @@ var (
 			WithUserLogin(TestEmail3, "1"),
 			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
 		),
-		WithApp(istructs.AppQName_test1_app2, ProvideApp1, WithUserLogin("login", "1")),
+		WithApp(istructs.AppQName_test1_app2, ProvideApp2, WithUserLogin("login", "1")),
 		WithVVMConfig(func(cfg *vvm.VVMConfig) {
 			// for impl_reverseproxy_test
 			cfg.Routes["/grafana"] = fmt.Sprintf("http://127.0.0.1:%d", TestServicePort)
@@ -76,8 +75,13 @@ var (
 	MockCmdExec func(input string) error
 )
 
-func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-	registryapp.Provide(smtp.Cfg{}, false)(apis, cfg, appDefBuilder, ep)
+func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		panic("no build info")
+	}
+	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider, false)
 	apps.RegisterSchemaFS(SchemaTestApp2, "app2", ep)
 }
 
