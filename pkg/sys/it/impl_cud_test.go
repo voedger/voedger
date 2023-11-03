@@ -117,7 +117,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 					}
 				]
 			}`, int64(id))
-		resp = vit.PostWS(ws, "q.sys.CDoc", body)
+		resp = vit.PostWS(ws, "q.sys.GetCDoc", body)
 		jsonBytes := []byte(resp.SectionRow()[0].(string))
 		cdoc := map[string]interface{}{}
 		require.Nil(json.Unmarshal(jsonBytes, &cdoc))
@@ -269,7 +269,7 @@ func TestUnlinkReference(t *testing.T) {
 
 	// read the root department
 	body = fmt.Sprintf(`{"args":{"ID": %d},"elements":[{"fields": ["Result"]}]}`, idDep)
-	resp = vit.PostWS(ws, "q.sys.CDoc", body)
+	resp = vit.PostWS(ws, "q.sys.GetCDoc", body)
 	m := map[string]interface{}{}
 	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
 	require.Zero(m["department_options"].([]interface{})[0].(map[string]interface{})["id_options"].(float64))

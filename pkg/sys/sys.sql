@@ -129,11 +129,11 @@ ABSTRACT WORKSPACE Workspace (
         ID int64
     );
 
-    TYPE CDocParams (
+    TYPE GetCDocParams (
         ID int64 NOT NULL
     );
 
-    TYPE CDocResult (
+    TYPE GetCDocResult (
         Result text(32768) NOT NULL
     );
 
@@ -309,7 +309,7 @@ ABSTRACT WORKSPACE Workspace (
         QUERY EnrichPrincipalToken(EnrichPrincipalTokenParams) RETURNS EnrichPrincipalTokenResult;
 
         -- QUERY Collection(CollectionParams) RETURNS ANY;
-        QUERY CDoc (CDocParams) RETURNS CDocResult;
+        QUERY GetCDoc(GetCDocParams) RETURNS GetCDocResult;
         QUERY State(StateParams) RETURNS StateResult;
 
         QUERY DescribePackageNames RETURNS DescribePackageNamesResult;

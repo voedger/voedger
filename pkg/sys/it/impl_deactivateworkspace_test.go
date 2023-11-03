@@ -127,7 +127,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &viewWorkspaceIDIdx))
 	idOfCDocWorkspaceID := int64(viewWorkspaceIDIdx["IDOfCDocWorkspaceID"].(float64))
 	body = fmt.Sprintf(`{"args":{"ID": %d},"elements":[{"fields": ["Result"]}]}`, int64(idOfCDocWorkspaceID))
-	resp = vit.PostApp(istructs.AppQName_test1_app1, wsidOfCDocWorkspaceID, "q.sys.CDoc", body, coreutils.WithAuthorizeBy(sysToken.Token))
+	resp = vit.PostApp(istructs.AppQName_test1_app1, wsidOfCDocWorkspaceID, "q.sys.GetCDoc", body, coreutils.WithAuthorizeBy(sysToken.Token))
 	jsonBytes := []byte(resp.SectionRow()[0].(string))
 	cdocWorkspaceID := map[string]interface{}{}
 	require.Nil(json.Unmarshal(jsonBytes, &cdocWorkspaceID))
