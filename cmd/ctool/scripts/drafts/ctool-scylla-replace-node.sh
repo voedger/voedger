@@ -56,6 +56,60 @@ fi
 REPLACED_NODE_NAME=$(getent hosts "$2" | awk '{print $2}')
 ssh-keyscan -H "$REPLACED_NODE_NAME" >> ~/.ssh/known_hosts
 
+# Function to check if Scylla server is up and listening
+scylla_is_listen() {
+  local SCYLLA_HOST="$1"
+  local SCYLLA_PORT="$2"
+
+  if nc -zvw3 "$SCYLLA_HOST" "$SCYLLA_PORT"; then
+    return 0  # Server is up and listening
+  else
+    return 1  # Server is not reachable
+  fi
+}
+
+# Function to wait for ready scylla cluster
+scylla_wait() {
+  local ip_address=$1
+  echo "Working with $ip_address"
+  local count=0
+  local listen_attempts=0
+  local max_attempts=300
+  local timeout=10
+
+  sleep "$timeout"
+
+  while [ $count -lt $max_attempts ]; do
+      if [ "$(ssh "$SSH_OPTIONS" "$SSH_USER"@"$ip_address" docker exec '$(docker ps -qf name=scylla --filter status=running)' nodetool status | grep -c '^UN\s')" -eq 3 ]; then
+          echo "Scylla cluster initialization success. Check scylla is listening on interface."
+
+          while [ $listen_attempts -lt $max_attempts ]; do
+              ((++listen_attempts))
+              echo "Attempt $listen_attempts: Checking Scylla server..."
+              if scylla_is_listen "$ip_address" 9042; then
+                  echo "Scylla server is up and ready."
+                  return 0
+              else
+                  echo "Scylla server is not yet ready. Retrying in $timeout seconds..."
+                  sleep "$timeout"
+              fi
+          done
+
+          if [ $listen_attempts -eq $max_attempts ]; then
+            echo "Max attempts reached. Scylla server is still not ready."
+            return 1
+          fi
+      fi
+      echo "Still waiting for Scylla initialization.."
+      sleep $timeout
+      count=$((count+1))
+  done
+  if [ $count -eq $max_attempts ]; then
+      echo "Scylla initialization timed out."
+      return 1
+  fi
+}
+
 wait_for_scylla() {
   local ip_address=$1
   echo "Working with $ip_address"
@@ -94,7 +148,7 @@ seed_list() {
 echo "Remove dead node from seed list and start db instance on new hardware."
 seed_list "$REPLACED_NODE_NAME" remove
 
-wait_for_scylla "$REPLACED_NODE_NAME"
+scylla_wait "$REPLACED_NODE_NAME"
 
 echo "Bootstrap complete. Cleanup scylla config..."
 ./db-bootstrap-end.sh "$2"
@@ -103,7 +157,7 @@ REPLACED_SERVICE=$(convert_name "$REPLACED_NODE_NAME")
 echo "Add new live node to back to seed list and restart."
 seed_list "$REPLACED_NODE_NAME" add
 
-wait_for_scylla "$REPLACED_NODE_NAME"
+scylla_wait "$REPLACED_NODE_NAME"
 
 ssh "$SSH_OPTIONS" "$SSH_USER"@"$REPLACED_NODE_NAME" "docker exec \$(docker ps -qf name=scylla --filter status=running) nodetool repair -full"
 
