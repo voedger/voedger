@@ -511,11 +511,12 @@ func deployDocker(node *nodeType) error {
 }
 
 func resolveDC(cluster *clusterType, ip string) (dc string, err error) {
+	const nodeOffset int32 = 1
 	n := cluster.nodeByHost(ip)
 	if n == nil {
 		return "", fmt.Errorf(ErrHostNotFoundInCluster.Error(), cluster.Cmd.args()[0])
 	}
-	if (n.idx == 3) || (n.idx == 4) {
+	if (n.idx == int(idxDBNode1+nodeOffset)) || (n.idx == int(idxDBNode2+nodeOffset)) {
 		return "dc1", nil
 	}
 	return "dc2", nil
@@ -557,8 +558,6 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 		conf.DBNode3 = oldAddr
 	}
 
-	//	fmt.Println("docker-compose-prepare.sh", conf.DBNode1, conf.DBNode2, conf.DBNode3)
-	fmt.Println("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name)
 	if err = newScriptExecuter(cluster.sshKey, "localhost").
 		run("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name, boolToStr(devMode)); err != nil {
 		logger.Error(err.Error())
