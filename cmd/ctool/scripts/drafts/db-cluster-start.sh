@@ -14,6 +14,8 @@ if [[ $# -ne 3 ]]; then
   exit 1
 fi
 
+source ./utils.sh
+
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
@@ -25,12 +27,12 @@ update_hosts_file() {
   local ip=$2
   local hr=$3 
   # Check if the hostname already exists in /etc/hosts
-  if ssh $SSH_OPTIONS $SSH_USER@$ip "sudo grep -qF '$hr' /etc/hosts"; then
+  if utils_ssh "$SSH_USER@$ip" "sudo grep -qF '$hr' /etc/hosts"; then
       # If the hostname exists, replace the existing entry
-      ssh $SSH_OPTIONS $SSH_USER@$ip "sudo sed -i -E 's/.*\b$hr\b.*$/$hr\t$host/' /etc/hosts"
+      utils_ssh "$SSH_USER@$ip" "sudo sed -i -E 's/.*\b$hr\b.*$/$hr\t$host/' /etc/hosts"
   else
       # If the hostname doesn't exist, add the new record
-      ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
+      utils_ssh "$SSH_USER@$ip" "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
   fi
 
   # SSH command to execute on the remote host
@@ -61,8 +63,8 @@ args_array=("$@")
 #    sed "s/{{\.$DBNode1}}/${hosts[0]}/g; s/{{\.$DBNode2}}/${hosts[1]}/g; s/{{\.$DBNode3}}/${hosts[2]}/g" \
 #    > ./docker-compose.yml
 
-cat ./docker-compose.yml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/docker-compose.yml'
+cat ./docker-compose.yml | utils_ssh "$SSH_USER@$1" 'cat > ~/docker-compose.yml'
 
-ssh $SSH_OPTIONS $SSH_USER@$1 "docker stack deploy --compose-file ~/docker-compose.yml DBDockerStack"
+utils_ssh "$SSH_USER@$1" "docker stack deploy --compose-file ~/docker-compose.yml DBDockerStack"
 
 set +x

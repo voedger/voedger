@@ -15,6 +15,8 @@ if [ "$#" -lt 2 ]; then
   exit 1
 fi
 
+source ./utils.sh
+
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 MANAGER=$1
@@ -28,12 +30,12 @@ while [ $# -gt 0 ]; do
 ip=$(getent hosts "$1" | awk '{print $1}')
 
 # Get the ID of the node with the specified IP address
-node_id=$(ssh $SSH_OPTIONS $SSH_USER@$MANAGER "docker node ls --format '{{.ID}}' | while read id; do docker node inspect --format '{{.Status.Addr}} {{.ID}}' \$id; done | grep $ip | awk '{print \$2}'")
+node_id=$(utils_ssh "$SSH_USER@$MANAGER" "docker node ls --format '{{.ID}}' | while read id; do docker node inspect --format '{{.Status.Addr}} {{.ID}}' \$id; done | grep $ip | awk '{print \$2}'")
   if [[ -n "$node_id" ]]; then
     echo "Host is already a member of Docker Swarm cluster."
   else 
     echo "Join node to Docker Swarm..."
-    ssh $SSH_OPTIONS $SSH_USER@$1 "docker swarm join --token $JOIN_TOKEN --listen-addr $ip:2377 $MANAGER:2377"
+    utils_ssh "$SSH_USER@$1" "docker swarm join --token $JOIN_TOKEN --listen-addr $ip:2377 $MANAGER:2377"
   fi
 
 shift

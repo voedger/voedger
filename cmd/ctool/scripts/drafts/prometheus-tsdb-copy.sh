@@ -23,6 +23,8 @@ if [[ "$#" -ne 2 ]]; then
   exit 1
 fi
 
+source ./utils.sh
+
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
@@ -53,7 +55,7 @@ else
 fi
 
 # Compress the snapshot on the source host
-if ssh $SSH_OPTIONS $SSH_USER@$src_ip "tar -czvf ~/$snapshot.tar.gz -C $snapshot_dir $snapshot; echo \$?"; then
+if utils_ssh "$SSH_USER@$src_ip" "tar -czvf ~/$snapshot.tar.gz -C $snapshot_dir $snapshot"; then
   echo "Success compress prometheus snapshot."
 else
   echo "Error compress prometheus snapshot."
@@ -62,9 +64,9 @@ fi
 
 
 # Copy the compressed snapshot to the destination host
-scp -3 $SSH_OPTIONS $SSH_USER@$src_ip:~/$snapshot.tar.gz $SSH_USER@$dst_ip:~
+utils_scp -3 $SSH_USER@$src_ip:~/$snapshot.tar.gz $SSH_USER@$dst_ip:~
 
-ssh $SSH_OPTIONS $SSH_USER@$dst_ip "
+utils_ssh "$SSH_USER@$dst_ip" "
   # Exit immediately if any command exits with a non-zero status
   set -euo pipefail
 
@@ -77,8 +79,8 @@ ssh $SSH_OPTIONS $SSH_USER@$dst_ip "
 "
 
 # Cleanup: remove the snapshot files from both hosts
-ssh $SSH_OPTIONS $SSH_USER@$src_ip "rm -rf ~/$snapshot.tar.gz"
-ssh $SSH_OPTIONS $SSH_USER@$dst_ip "rm -rf ~/$snapshot.tar.gz"
+utils_ssh "$SSH_USER@$src_ip" "rm -rf ~/$snapshot.tar.gz"
+utils_ssh "$SSH_USER@$dst_ip" "rm -rf ~/$snapshot.tar.gz"
 
 echo "Prometheus base copied successfully!"
 

@@ -15,9 +15,11 @@ if [ "$#" -lt 2 ]; then
   exit 1
 fi
 
+source ./utils.sh
+
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
-ssh $SSH_OPTIONS $SSH_USER@$1 sudo hostnamectl set-hostname $2
+utils_ssh $SSH_USER@$1 sudo hostnamectl set-hostname $2
 
 set +x

@@ -19,6 +19,8 @@ const (
 	clusterConfFileName  = "cluster.json"
 	scyllaConfigFileName = "scylla.yaml"
 
+	shellLib = "utils.sh"
+
 	// node fail version
 	nodeFailVersion = "fail"
 

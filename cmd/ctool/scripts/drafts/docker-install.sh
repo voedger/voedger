@@ -12,6 +12,8 @@ if [ "$#" -lt 1 ]; then
   exit 1
 fi
 
+source ./utils.sh
+
 release=$(lsb_release -rs)
 
 if [[ $release == "20.04" ]]; then
@@ -56,12 +58,12 @@ script="\
 
 # Check if docker is installed and install if not
 docker_ins=0
-ssh $SSH_OPTIONS $SSH_USER@$NODE 'command docker -v &>/dev/null' || docker_ins=1
+utils_ssh "$SSH_USER@$NODE" 'command docker -v &>/dev/null' || docker_ins=1
 if [[ $docker_ins -eq 0 ]]; then
   echo "Docker is already installed on the remote host."
 else
   echo "Docker is not installed on the host. Installing it now..."
-  ssh $SSH_OPTIONS $SSH_USER@$NODE "bash -s" << EOF
+  utils_ssh "$SSH_USER@$NODE" "bash -s" << EOF
   $script
 EOF
 fi

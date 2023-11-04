@@ -14,6 +14,8 @@ if [ "$#" -lt 3 ]; then
   exit 1
 fi
 
+source ./utils.sh
+
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
@@ -23,7 +25,7 @@ update_hosts_file() {
   local ip=$2
   local name=$3
 
-  ssh $SSH_OPTIONS $SSH_USER@$node "sudo bash -c '
+  utils_ssh "$SSH_USER@$node" "sudo bash -c '
     if grep -qF \"$name\" /etc/hosts; then
       sed -i -E \"s/.*\\b$name\\b.*\$/$ip\t$name/\" /etc/hosts
     else
@@ -32,6 +34,6 @@ update_hosts_file() {
   '"
 }
 
-update_hosts_file $@
+update_hosts_file "$@"
 
 set +x

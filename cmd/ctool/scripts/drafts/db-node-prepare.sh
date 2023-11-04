@@ -15,6 +15,7 @@ if [[ $# -lt 1 ]]; then
   exit 1
 fi
 
+source ./utils.sh
 
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
@@ -37,7 +38,7 @@ function addVolumeDC() {
 }
 
 
-ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /var/lib/scylla && mkdir -p ~/scylla && mkdir -p ~/scylla.d"
+utils_ssh "$SSH_USER@$1" "sudo mkdir -p /var/lib/scylla && mkdir -p ~/scylla && mkdir -p ~/scylla.d"
 
 if [ -n "${2+x}" ] && [ -n "$2" ]; then
 dc=$2
@@ -56,7 +57,7 @@ rack=rack1
 "
 addVolumeDC
 sed -i 's/endpoint_snitch: SimpleSnitch/endpoint_snitch: GossipingPropertyFileSnitch/' ./scylla.yaml
-echo "$rackdc" | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/scylla/cassandra-rackdc.properties'
+echo "$rackdc" | utils_ssh "$SSH_USER@$1" 'cat > ~/scylla/cassandra-rackdc.properties'
 fi
 
 io_conf="SEASTAR_IO=\"--io-properties-file=/etc/scylla.d/io_properties.yaml\""
@@ -84,12 +85,12 @@ memory_conf="# DO NO EDIT
 
 dev_mode_conf=""
 
-cat ./scylla.yaml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/scylla/scylla.yaml'
+cat ./scylla.yaml | utils_ssh "$SSH_USER@$1" 'cat > ~/scylla/scylla.yaml'
 
-echo "$io_properties" | ssh $SSH_OPTIONS $SSH_USER@$1 'test -e ~/scylla.d/io_properties.yaml || cat > ~/scylla.d/io_properties.yaml'
-echo "$io_conf" | ssh $SSH_OPTIONS $SSH_USER@$1 'test -e ~/scylla.d/io.conf || cat > ~/scylla.d/io.conf'
-echo "$cpuset_conf" | ssh $SSH_OPTIONS $SSH_USER@$1 'test -e ~/scylla.d/cpuset.conf || cat > ~/scylla.d/cpuset.conf'
-echo "$memory_conf" | ssh $SSH_OPTIONS $SSH_USER@$1 'test -e ~/scylla.d/memory.conf || cat > ~/scylla.d/memory.conf'
-echo "$dev_mode_conf" | ssh $SSH_OPTIONS $SSH_USER@$1 'test -e ~/scylla.d/dev-mode.conf || cat > ~/scylla.d/dev-mode.conf'
+echo "$io_properties" | utils_ssh "$SSH_USER@$1" 'test -e ~/scylla.d/io_properties.yaml || cat > ~/scylla.d/io_properties.yaml'
+echo "$io_conf" | utils_ssh "$SSH_USER@$1" 'test -e ~/scylla.d/io.conf || cat > ~/scylla.d/io.conf'
+echo "$cpuset_conf" | utils_ssh "$SSH_USER@$1" 'test -e ~/scylla.d/cpuset.conf || cat > ~/scylla.d/cpuset.conf'
+echo "$memory_conf" | utils_ssh "$SSH_USER@$1" 'test -e ~/scylla.d/memory.conf || cat > ~/scylla.d/memory.conf'
+echo "$dev_mode_conf" | utils_ssh "$SSH_USER@$1" 'test -e ~/scylla.d/dev-mode.conf || cat > ~/scylla.d/dev-mode.conf'
 
 set +x

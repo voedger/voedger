@@ -10,6 +10,8 @@ set -euo pipefail
 
 set +x
 
+source ./utils.sh
+
 if [ "$#" -lt 1 ]; then
   echo "Usage: $0 <ip address first swarm node>" >&2
   exit 1
@@ -18,5 +20,5 @@ fi
 SSH_USER=$LOGNAME
 SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
-MANAGER_TOKEN=$(ssh $SSH_OPTIONS $SSH_USER@$1 docker swarm join-token --rotate manager | grep -oP "SWMTKN-\S+")
-echo $MANAGER_TOKEN > manager.token
+MANAGER_TOKEN=$(utils_ssh "$SSH_USER@$1" docker swarm join-token --rotate manager | grep -oP "SWMTKN-\S+")
+echo "$MANAGER_TOKEN" > manager.token

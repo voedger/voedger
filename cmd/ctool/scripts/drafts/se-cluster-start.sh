@@ -20,6 +20,8 @@ if [[ $# -ne 2 ]]; then
   exit 1
 fi
 
+source ./utils.sh
+
 MANAGER=$1
 
 # Add remaining nodes to swarm cluster
@@ -29,9 +31,9 @@ MANAGER=$1
 # done
 
 # Start db cluster
-cat ./docker-compose-se.yml | ssh $SSH_OPTIONS $SSH_USER@$MANAGER 'cat > ~/docker-compose-se.yml'
+cat ./docker-compose-se.yml | utils_ssh "$SSH_USER@$MANAGER" 'cat > ~/docker-compose-se.yml'
 
-ssh $SSH_OPTIONS $SSH_USER@$MANAGER "docker stack deploy --compose-file ~/docker-compose-se.yml SEDockerStack"
+utils_ssh "$SSH_USER@$MANAGER" "docker stack deploy --compose-file ~/docker-compose-se.yml SEDockerStack"
 
 
 set +x
