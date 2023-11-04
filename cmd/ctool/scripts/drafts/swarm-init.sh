@@ -18,7 +18,7 @@ if [ "$#" -lt 1 ]; then
   exit 1
 fi
 
-# Define the desired subnet
+# Define the desired subnet and gateway
 NEW_SUBNET="192.168.44.0/24"
 NEW_GATEWAY="192.168.44.1"
 swarm_manager_ip=$(getent hosts "$1" | awk '{print $1}')
