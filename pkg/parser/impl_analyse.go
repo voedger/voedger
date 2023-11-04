@@ -263,7 +263,7 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 		for _, qname := range trigger.QNames {
 			if trigger.CUDEvents != nil {
 				resolveFunc := func(table *TableStmt, pkg *PackageSchemaAST) error {
-					sysDoc := (pkg.QualifiedPackageName == appdef.SysPackage) && (table.Name == nameCDOC || table.Name == nameODOC || table.Name == nameWDOC)
+					sysDoc := (pkg.QualifiedPackageName == appdef.SysPackage) && (table.Name == nameCRecord || table.Name == nameORecord || table.Name == nameWRecord)
 					if table.Abstract && !sysDoc {
 						return ErrAbstractTableNotAlowedInProjectors(qname.String())
 					}
