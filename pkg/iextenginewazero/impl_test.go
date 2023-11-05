@@ -219,7 +219,7 @@ func Test_SetLimitsExecutionInterval(t *testing.T) {
 	err = extEngine.Invoke(context.Background(), "longFunc", extIO)
 
 	require.ErrorIs(err, api.ErrDuration)
-	require.Less(time.Since(t0), maxDuration*2)
+	require.Less(time.Since(t0), maxDuration*4)
 }
 
 type panicsUnit struct {

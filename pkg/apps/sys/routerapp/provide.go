@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package blobberapp
+package routerapp
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
@@ -16,7 +16,7 @@ import (
 func Provide(smtpCfg smtp.Cfg, rebuildRegistry bool) apps.AppBuilder {
 	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 		sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-			apis.NumCommandProcessors, nil, apis.IAppStorageProvider, rebuildRegistry) // need to generate AppWorkspaces only
-		apps.RegisterSchemaFS(blobberSchemaFS, appdef.SysPackage, ep)
+			apis.NumCommandProcessors, nil, apis.IAppStorageProvider, rebuildRegistry)
+		apps.RegisterSchemaFS(routerSchemaFS, "github.com/voedger/voedger/pkg/apps/sys/routerapp", ep)
 	}
 }

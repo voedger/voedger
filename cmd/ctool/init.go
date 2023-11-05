@@ -17,6 +17,7 @@ import (
 var (
 	initCECmd, initSECmd *cobra.Command
 )
+var skipStacks []string
 
 func newInitCmd() *cobra.Command {
 	initCECmd = &cobra.Command{
@@ -37,6 +38,8 @@ func newInitCmd() *cobra.Command {
 		},
 		RunE: initSE,
 	}
+
+	initSECmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
 
 	initCmd := &cobra.Command{
 		Use:   "init",
@@ -86,7 +89,12 @@ func parseDeployArgs(args []string) error {
 func initCE(cmd *cobra.Command, args []string) error {
 
 	cluster := newCluster()
-	defer cluster.saveToJSON()
+	defer func(cluster *clusterType) {
+		err := cluster.saveToJSON()
+		if err != nil {
+			logger.Error(err.Error())
+		}
+	}(cluster)
 
 	if !cluster.Draft {
 		return ErrClusterConfAlreadyExists
@@ -130,12 +138,18 @@ func initSE(cmd *cobra.Command, args []string) error {
 	}
 
 	c := newCmd(ckInit, "SE "+strings.Join(args, " "))
+	c.SkipStacks = skipStacks
 	if err := cluster.applyCmd(c); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
 
-	defer cluster.saveToJSON()
+	defer func(cluster *clusterType) {
+		err := cluster.saveToJSON()
+		if err != nil {
+			logger.Error(err.Error())
+		}
+	}(cluster)
 	err := mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err

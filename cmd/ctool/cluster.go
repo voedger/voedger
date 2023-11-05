@@ -193,8 +193,9 @@ func (n *nodesType) hosts(nodeRole string) []string {
 }
 
 type cmdType struct {
-	Kind string
-	Args string
+	Kind       string
+	Args       string
+	SkipStacks []string
 }
 
 func (c *cmdType) apply(cluster *clusterType) error {
@@ -273,9 +274,9 @@ func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
 	if args[0] != clusterEditionCE && args[0] != clusterEditionSE {
 		return ErrInvalidClusterEdition
 	}
-
+	logger.Info("count args: ", len(args))
 	if args[0] == clusterEditionCE && len(args) != 1+initCeArgCount ||
-		args[0] == clusterEditionSE && len(args) != 1+initSeArgCount && len(args) != initSeWithDCArgCount {
+		args[0] == clusterEditionSE && len(args) != 1+initSeArgCount && len(args) != 1+initSeWithDCArgCount {
 		return ErrInvalidNumberOfArguments
 	}
 
@@ -335,6 +336,7 @@ type clusterType struct {
 	Cmd                   *cmdType `json:"Cmd,omitempty"`
 	DataCenters           []string `json:"DataCenters,omitempty"`
 	LastAttemptError      string   `json:"LastAttemptError,omitempty"`
+	SkipStacks            []string `json:"SkipStacks,omitempty"`
 	Nodes                 []nodeType
 	Draft                 bool `json:"Draft,omitempty"`
 }
@@ -483,6 +485,13 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 	// nolint
 	defer c.saveToJSON()
 
+	skipStacks, err := cmd.Flags().GetStringSlice("skip-stack")
+	if err != nil {
+		fmt.Println("Error getting skip-stack values:", err)
+		return err
+	}
+	c.SkipStacks = skipStacks
+
 	if cmd == initCECmd { // CE args
 		c.Edition = clusterEditionCE
 		c.Nodes = make([]nodeType, 1)
@@ -512,7 +521,10 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 		}
 
 		if len(args) == initSeWithDCArgCount {
-			c.DataCenters = append(c.DataCenters, args[seNodeCount:]...)
+			c.DataCenters = append(c.DataCenters, args[seNodeCount+dbNodeCount:]...)
+			for _, dc := range c.DataCenters {
+				fmt.Println(dc)
+			}
 		}
 	}
 	return nil

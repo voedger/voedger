@@ -484,13 +484,41 @@ type RateStmt struct {
 
 func (s RateStmt) GetName() string { return string(s.Name) }
 
-// TODO: better Grant syntax
+type GrantTableAction struct {
+	Select  bool     `parser:"(@'SELECT'"`
+	Insert  bool     `parser:"| @'INSERT'"`
+	Update  bool     `parser:"| @'UPDATE')"`
+	Columns []string `parser:"( '(' @Ident (',' @Ident)* ')' )?"`
+}
+
+type GrantTableAll struct {
+	AllTables bool     `parser:"@'ALL'"`
+	Columns   []string `parser:"( '(' @Ident (',' @Ident)* ')' )?"`
+}
+
+type GrantTableActions struct {
+	All   *GrantTableAll     `parser:"@@ | "`
+	Items []GrantTableAction `parser:"(@@ (',' @@)*)"`
+}
+
+type GrantTable struct {
+	Actions          GrantTableActions `parser:"@@"`
+	OneTable         bool              `parser:"'ON' (@'TABLE'"`
+	AllTablesWithTag bool              `parser:"| @('ALL' 'TABLES' 'WITH' 'TAG'))"`
+}
+
 type GrantStmt struct {
 	Statement
-	Grants []string `parser:"'GRANT' @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE') (','  @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE'))*"`
-	On     string   `parser:"'ON' @('TABLE' | ('ALL' 'TABLES' 'WITH' 'TAG') | 'COMMAND' | ('ALL' 'COMMANDS' 'WITH' 'TAG') | 'QUERY' | ('ALL' 'QUERIES' 'WITH' 'TAG'))"`
-	Target DefQName `parser:"@@"`
-	To     Ident    `parser:"'TO' @Ident"`
+	Command              bool        `parser:"'GRANT' ( @EXECUTEONCOMMAND"`
+	AllCommandsWithTag   bool        `parser:"| @EXECUTEONALLCOMMANDSWITHTAG"`
+	Query                bool        `parser:"| @EXECUTEONQUERY"`
+	AllQueriesWithTag    bool        `parser:"| @EXECUTEONALLQUERIESWITHTAG"`
+	Workspace            bool        `parser:"| @INSERTONWORKSPACE"`
+	AllWorkspacesWithTag bool        `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
+	Table                *GrantTable `parser:"| @@)"`
+
+	On DefQName `parser:"@@"`
+	To DefQName `parser:"'TO' @@"`
 }
 
 type StorageStmt struct {
