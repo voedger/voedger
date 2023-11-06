@@ -27,7 +27,6 @@ fi
 source ./utils.sh
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 STACK="DBDockerStack"
 
 declare -A service_map

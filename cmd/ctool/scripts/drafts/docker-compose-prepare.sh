@@ -17,7 +17,6 @@ set -x
 source ./utils.sh
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 if [ "$4" != "1" ] && [ "$4" != "0" ]; then
   echo "Usage: $0 <scylla1> <scylla2> <scylla3> <dev mode: 1 | 0>"

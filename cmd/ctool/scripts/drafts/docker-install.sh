@@ -30,7 +30,6 @@ fi
 
 NODE=$1
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 script="\
         sudo add-apt-repository ppa:rmescandon/yq -y;

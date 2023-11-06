@@ -17,7 +17,6 @@ fi
 source ./utils.sh
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 hosts=("db-node-1" "db-node-2" "db-node-3")
 

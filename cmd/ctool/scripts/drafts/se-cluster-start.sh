@@ -12,7 +12,6 @@ set -euo pipefail
 set -x
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 
 if [[ $# -ne 2 ]]; then

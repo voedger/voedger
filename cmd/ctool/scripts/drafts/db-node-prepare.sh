@@ -18,7 +18,6 @@ fi
 source ./utils.sh
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 function addVolumeDC() {
     local VOL_DC="$HOME/scylla/cassandra-rackdc.properties:/etc/scylla/cassandra-rackdc.properties"

@@ -19,7 +19,6 @@ fi
 source ./utils.sh
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 echo "replace_address_first_boot: $1" | utils_ssh "$SSH_USER@$2" 'cat >> ~/scylla/scylla.yaml'
 

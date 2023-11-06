@@ -18,7 +18,6 @@ if [ "$#" -lt 1 ]; then
 fi
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 MANAGER_TOKEN=$(utils_ssh "$SSH_USER@$1" docker swarm join-token --rotate manager | grep -oP "SWMTKN-\S+")
 echo "$MANAGER_TOKEN" > manager.token

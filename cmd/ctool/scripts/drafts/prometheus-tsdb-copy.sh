@@ -26,7 +26,6 @@ fi
 source ./utils.sh
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 # Assign arguments to variables
 src_ip=$1

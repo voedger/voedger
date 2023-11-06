@@ -18,7 +18,6 @@ fi
 source ./utils.sh
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 utils_ssh $SSH_USER@$1 sudo hostnamectl set-hostname $2
 

@@ -19,7 +19,6 @@ REMOTE_HOST=$1
 MIN_RAM=$2
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR -o ConnectTimeout=15'
 
 # Check if minimum RAM is set to 0
 if [ "$MIN_RAM" -eq 0 ]; then
