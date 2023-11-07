@@ -166,7 +166,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 			return nil
 		})
 		ao := event.ArgumentObject()
-		if ao.QName() != appdef.NullQName && cmd.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
+		if cmd.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
 			updateIDGeneratorFromO(ao, cmd.AppDef(), ws.idGenerator)
 		}
 		ws.NextWLogOffset = event.WLogOffset() + 1
