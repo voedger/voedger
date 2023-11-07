@@ -16,40 +16,44 @@ import (
 
 type appPartitions struct {
 	storages istorage.IAppStorageProvider
+	structs  istructs.IAppStructsProvider
 	apps     map[istructs.AppQName]*app
 	mx       sync.RWMutex
 }
 
-func newAppPartitions(storages istorage.IAppStorageProvider) (ap IAppPartitions, cleanup func(), err error) {
+func newAppPartitions(storages istorage.IAppStorageProvider, structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(), err error) {
 	a := &appPartitions{
 		storages: storages,
+		structs:  structs,
 		apps:     map[istructs.AppQName]*app{},
 		mx:       sync.RWMutex{},
 	}
 	return a, func() {}, err
 }
 
-func (aps *appPartitions) AddOrUpdate(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef) {
+func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
 	a, ok := aps.apps[appName]
 	if !ok {
-		s, err := aps.storages.AppStorage(appName)
+		storage, err := aps.storages.AppStorage(appName)
 		if err != nil {
 			panic(err)
 		}
-		a = newApplication(appName, s)
+		a = newApplication(appName, storage)
 		aps.apps[appName] = a
 	}
 
 	p := a.parts[partID]
-	if p == nil {
-		p = newPartition(a, appDef, partID)
+	if (p == nil) || (p.appDef != appDef) {
+		appStructs, err := aps.structs.AppStructs(appName)
+		if err != nil {
+			panic(err)
+		}
+		p = newPartition(a, appDef, appStructs, partID)
 		a.parts[partID] = p
 	}
-
-	p.appDef = appDef
 }
 
 func (aps *appPartitions) Borrow(appName istructs.AppQName, partID istructs.PartitionID) (IAppPartition, error) {
@@ -72,13 +76,4 @@ func (aps *appPartitions) Borrow(appName istructs.AppQName, partID istructs.Part
 	}
 
 	return b, nil
-}
-
-func (aps *appPartitions) Release(p IAppPartition) {
-	if rt, ok := p.(*partitionRT); ok {
-		aps.mx.Lock()
-		defer aps.mx.Unlock()
-
-		rt.p.release(rt)
-	}
 }

@@ -10,33 +10,45 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/itokensjwt"
 )
 
 func Example() {
-	storage := istorageimpl.Provide(istorage.ProvideMem(), "")
+	appDefBuilder := func(verInfo ...string) appdef.IAppDefBuilder {
+		adb := appdef.New()
+		adb.AddCDoc(appdef.NewQName("ver", "info")).SetComment(verInfo...)
+		return adb
+	}
 
-	appParts, cleanupParts, err := appparts.New(storage)
+	appConfigs := istructsmem.AppConfigsType{}
+	appDef_1_v1 := appDefBuilder("app-1 ver.1")
+	appDef_2_v1 := appDefBuilder("app-2 ver.1")
+	appConfigs.AddConfig(istructs.AppQName_test1_app1, appDef_1_v1)
+	appConfigs.AddConfig(istructs.AppQName_test1_app2, appDef_2_v1)
+
+	appStorages := istorageimpl.Provide(istorage.ProvideMem(), "")
+
+	appStructs := istructsmem.Provide(
+		appConfigs,
+		iratesce.TestBucketsFactory,
+		payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()),
+		appStorages)
+
+	appParts, cleanupParts, err := appparts.New(appStorages, appStructs)
 	if err != nil {
 		panic(err)
 	}
 	defer cleanupParts()
 
-	appDef := func(comment ...string) appdef.IAppDef {
-		adb := appdef.New()
-		adb.AddCDoc(appdef.NewQName("test", "doc")).SetComment(comment...)
-		app, err := adb.Build()
-		if err != nil {
-			panic(err)
-		}
-		return app
-	}
-
 	report := func(p appparts.IAppPartition) {
 		fmt.Println(p.App(), "partition", p.ID())
-		p.AppDef().Types(func(t appdef.IType) {
+		p.AppStructs().AppDef().Types(func(t appdef.IType) {
 			if !t.IsSystem() {
 				fmt.Println("-", t, t.Comment())
 			}
@@ -45,14 +57,14 @@ func Example() {
 
 	fmt.Println("*** Add ver 1 ***")
 
-	appParts.AddOrUpdate(istructs.AppQName_test1_app1, 1, appDef("app 1 ver.1"))
-	appParts.AddOrUpdate(istructs.AppQName_test1_app2, 1, appDef("app 2 ver.1"))
+	appParts.AddOrReplace(istructs.AppQName_test1_app1, 1, appDef_1_v1)
+	appParts.AddOrReplace(istructs.AppQName_test1_app2, 1, appDef_2_v1)
 
 	p1_1, err := appParts.Borrow(istructs.AppQName_test1_app1, 1)
 	if err != nil {
 		panic(err)
 	}
-	defer appParts.Release(p1_1)
+	defer p1_1.Release()
 
 	report(p1_1)
 
@@ -60,20 +72,25 @@ func Example() {
 	if err != nil {
 		panic(err)
 	}
-	defer appParts.Release(p2_1)
+	defer p2_1.Release()
 
 	report(p2_1)
 
 	fmt.Println("*** Update to ver 2 ***")
 
-	appParts.AddOrUpdate(istructs.AppQName_test1_app2, 1, appDef("app 2 ver.2"))
-	appParts.AddOrUpdate(istructs.AppQName_test1_app1, 1, appDef("app 1 ver.2"))
+	appDef_1_v2 := appDefBuilder("app-1 ver.2")
+	appDef_2_v2 := appDefBuilder("app-2 ver.2")
+	appConfigs.AddConfig(istructs.AppQName_test1_app1, appDef_1_v2)
+	appConfigs.AddConfig(istructs.AppQName_test1_app2, appDef_2_v2)
+
+	appParts.AddOrReplace(istructs.AppQName_test1_app2, 1, appDef_2_v2)
+	appParts.AddOrReplace(istructs.AppQName_test1_app1, 1, appDef_1_v2)
 
 	p2_2, err := appParts.Borrow(istructs.AppQName_test1_app2, 1)
 	if err != nil {
 		panic(err)
 	}
-	defer appParts.Release(p2_2)
+	defer p2_2.Release()
 
 	report(p2_2)
 
@@ -81,19 +98,19 @@ func Example() {
 	if err != nil {
 		panic(err)
 	}
-	defer appParts.Release(p1_2)
+	defer p2_2.Release()
 
 	report(p1_2)
 
 	// Output:
 	// *** Add ver 1 ***
 	// test1/app1 partition 1
-	// - CDoc «test.doc» app 1 ver.1
+	// - CDoc «ver.info» app-1 ver.1
 	// test1/app2 partition 1
-	// - CDoc «test.doc» app 2 ver.1
+	// - CDoc «ver.info» app-2 ver.1
 	// *** Update to ver 2 ***
 	// test1/app2 partition 1
-	// - CDoc «test.doc» app 2 ver.2
+	// - CDoc «ver.info» app-2 ver.2
 	// test1/app1 partition 1
-	// - CDoc «test.doc» app 1 ver.2
+	// - CDoc «ver.info» app-1 ver.2
 }

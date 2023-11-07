@@ -5,8 +5,11 @@
 
 package appparts
 
-import "github.com/voedger/voedger/pkg/istorage"
+import (
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istructs"
+)
 
-func New(storages istorage.IAppStorageProvider) (ap IAppPartitions, cleanup func(), err error) {
-	return newAppPartitions(storages)
+func New(storages istorage.IAppStorageProvider, structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(), err error) {
+	return newAppPartitions(storages, structs)
 }

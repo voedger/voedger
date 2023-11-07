@@ -51,7 +51,7 @@ func (provider *appStructsProviderType) AppStructs(appName istructs.AppQName) (s
 	defer provider.locker.Unlock()
 
 	app, exists := provider.structures[appName]
-	if !exists {
+	if !exists || !appCfg.Prepared() {
 		buckets := provider.bucketsFactory()
 		appTokens := provider.appTokensFactory.New(appName)
 		appStorage, err := provider.storageProvider.AppStorage(appName)

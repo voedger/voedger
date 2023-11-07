@@ -27,13 +27,14 @@ func newApplication(name istructs.AppQName, storage istorage.IAppStorage) *app {
 }
 
 type partition struct {
-	app    *app
-	appDef appdef.IAppDef
-	id     istructs.PartitionID
+	app        *app
+	appDef     appdef.IAppDef
+	appStructs istructs.IAppStructs
+	id         istructs.PartitionID
 }
 
-func newPartition(app *app, appDef appdef.IAppDef, id istructs.PartitionID) *partition {
-	p := &partition{app: app, appDef: appDef, id: id}
+func newPartition(app *app, appDef appdef.IAppDef, appStructs istructs.IAppStructs, id istructs.PartitionID) *partition {
+	p := &partition{app: app, appDef: appDef, appStructs: appStructs, id: id}
 	return p
 }
 
@@ -47,27 +48,21 @@ func (p *partition) borrow() (*partitionRT, error) {
 	return b, nil
 }
 
-func (p *partition) release(borrowed *partitionRT) {
-	borrowed.done()
-}
-
 type partitionRT struct {
-	p      *partition
-	appDef appdef.IAppDef
+	p          *partition
+	appDef     appdef.IAppDef
+	appStructs istructs.IAppStructs
 }
 
 func newPartitionRT(p *partition) *partitionRT {
-	rt := &partitionRT{p: p, appDef: p.appDef}
+	rt := &partitionRT{p: p, appDef: p.appDef, appStructs: p.appStructs}
 	return rt
 }
 
-func (rt *partitionRT) App() istructs.AppQName        { return rt.p.app.name }
-func (rt *partitionRT) AppDef() appdef.IAppDef        { return rt.appDef }
-func (rt *partitionRT) ID() istructs.PartitionID      { return rt.p.id }
-func (rt *partitionRT) Storage() istorage.IAppStorage { return rt.p.app.storage }
+func (rt *partitionRT) App() istructs.AppQName           { return rt.p.app.name }
+func (rt *partitionRT) AppStructs() istructs.IAppStructs { return rt.appStructs }
+func (rt *partitionRT) ID() istructs.PartitionID         { return rt.p.id }
+func (rt *partitionRT) Release()                         {}
 
 // Initialize partition RT structures for use
 func (rt *partitionRT) init() error { return nil }
-
-// Finish partition RT structures usage
-func (rt *partitionRT) done() {}

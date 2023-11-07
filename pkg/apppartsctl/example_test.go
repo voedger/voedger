@@ -14,37 +14,49 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
+	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/itokensjwt"
 )
 
 func Example() {
-	storage := istorageimpl.Provide(istorage.ProvideMem(), "")
+	appDefBuilder := func(verInfo ...string) appdef.IAppDefBuilder {
+		adb := appdef.New()
+		adb.AddCDoc(appdef.NewQName("ver", "info")).SetComment(verInfo...)
+		return adb
+	}
 
-	appParts, cleanupParts, err := appparts.New(storage)
+	appConfigs := istructsmem.AppConfigsType{}
+	appDef_1_v1 := appDefBuilder("app-1 ver.1")
+	appDef_2_v1 := appDefBuilder("app-2 ver.1")
+	appConfigs.AddConfig(istructs.AppQName_test1_app1, appDef_1_v1)
+	appConfigs.AddConfig(istructs.AppQName_test1_app2, appDef_2_v1)
+
+	appStorages := istorageimpl.Provide(istorage.ProvideMem(), "")
+
+	appStructs := istructsmem.Provide(
+		appConfigs,
+		iratesce.TestBucketsFactory,
+		payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()),
+		appStorages)
+
+	appParts, cleanupParts, err := appparts.New(appStorages, appStructs)
 	if err != nil {
 		panic(err)
 	}
 	defer cleanupParts()
 
-	appDef := func(comment ...string) appdef.IAppDef {
-		adb := appdef.New()
-		adb.AddCDoc(appdef.NewQName("test", "doc")).SetComment(comment...)
-		app, err := adb.Build()
-		if err != nil {
-			panic(err)
-		}
-		return app
-	}
-
 	appPartsCtl, cleanupCtl, err := apppartsctl.New(appParts, []apppartsctl.BuiltInApp{
 		{Name: istructs.AppQName_test1_app1,
-			Def:      appDef("app 1 ver.1"),
-			NumParts: 7},
+			Def:      appDef_1_v1,
+			NumParts: 2},
 		{Name: istructs.AppQName_test1_app2,
-			Def:      appDef("app 2 ver.1"),
-			NumParts: 10},
+			Def:      appDef_2_v1,
+			NumParts: 3},
 	})
 
 	if err != nil {
@@ -60,7 +72,7 @@ func Example() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go appPartsCtl.Run(ctx)
 
-	borrowAndRelease := func(appName istructs.AppQName, partID istructs.PartitionID) {
+	borrow_work_release := func(appName istructs.AppQName, partID istructs.PartitionID) {
 		part, err := appParts.Borrow(appName, partID)
 		for errors.Is(err, appparts.ErrNotFound) {
 			time.Sleep(time.Nanosecond)
@@ -70,10 +82,10 @@ func Example() {
 			panic(err)
 		}
 
-		defer appParts.Release(part)
+		defer part.Release()
 
 		fmt.Println(part.App(), "part", part.ID())
-		part.AppDef().Types(
+		part.AppStructs().AppDef().Types(
 			func(typ appdef.IType) {
 				if !typ.IsSystem() {
 					fmt.Println("-", typ, typ.Comment())
@@ -81,23 +93,14 @@ func Example() {
 			})
 	}
 
-	borrowAndRelease(istructs.AppQName_test1_app1, 1)
-	appParts.AddOrUpdate(istructs.AppQName_test1_app1, 1, appDef("app 1 ver.2"))
-	borrowAndRelease(istructs.AppQName_test1_app1, 1)
-
-	borrowAndRelease(istructs.AppQName_test1_app2, 2)
-	appParts.AddOrUpdate(istructs.AppQName_test1_app2, 2, appDef("app 2 ver.2"))
-	borrowAndRelease(istructs.AppQName_test1_app2, 2)
+	borrow_work_release(istructs.AppQName_test1_app1, 1)
+	borrow_work_release(istructs.AppQName_test1_app2, 1)
 
 	cancel()
 
 	// Output:
 	// test1/app1 part 1
-	// - CDoc «test.doc» app 1 ver.1
-	// test1/app1 part 1
-	// - CDoc «test.doc» app 1 ver.2
-	// test1/app2 part 2
-	// - CDoc «test.doc» app 2 ver.1
-	// test1/app2 part 2
-	// - CDoc «test.doc» app 2 ver.2
+	// - CDoc «ver.info» app-1 ver.1
+	// test1/app2 part 1
+	// - CDoc «ver.info» app-2 ver.1
 }
