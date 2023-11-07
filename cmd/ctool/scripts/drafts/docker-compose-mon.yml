@@ -2,6 +2,8 @@ version: '3.5'
 services:
   prometheus1:
     image: prom/prometheus:v2.44.0
+    networks:
+      - outside
     volumes:
       - /prometheus:/prometheus
       - ~/prometheus:/etc/prometheus
@@ -30,6 +32,8 @@ services:
 
   grafana1:
     image: grafana/grafana:9.5.2
+    networks:
+      - outside
     volumes:
       - ~/grafana/grafana.ini:/etc/grafana/grafana.ini
       - ~/grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
@@ -56,6 +60,8 @@ services:
 
   grafana2:
     image: grafana/grafana:9.5.2
+    networks:
+      - outside
     volumes:
       - ~/grafana/grafana.ini:/etc/grafana/grafana.ini
       - ~/grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
@@ -91,7 +97,8 @@ services:
       placement:
         constraints:
           - node.labels.AppNode1 == true
-
+    networks:
+      - outside
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:rw
@@ -111,7 +118,8 @@ services:
       placement:
         constraints:
           - node.labels.AppNode2 == true
-
+    networks:
+      - outside
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:rw
@@ -122,6 +130,8 @@ services:
 
   prometheus2:
     image: prom/prometheus:v2.44.0
+    networks:
+      - outside
     volumes:
       - /prometheus:/prometheus
       - ~/prometheus:/etc/prometheus
@@ -150,6 +160,8 @@ services:
 
   alertmanager1:
     image: prom/alertmanager:v0.26.0
+    networks:
+      - outside
     volumes:
       - /alertmanager:/alertmanager
       - ~/alertmanager:/etc/alertmanager
@@ -178,6 +190,8 @@ services:
 
   alertmanager2:
     image: prom/alertmanager:v0.26.0
+    networks:
+      - outside
     volumes:
       - /alertmanager:/alertmanager
       - ~/alertmanager:/etc/alertmanager
@@ -212,6 +226,8 @@ services:
         constraints:
           - node.labels.AppNode1 == true
       replicas: 1
+    networks:
+      - outside
     volumes:
       - /etc/hostname:/etc/nodename
       - /etc/node-exporter:/etc/node-exporter
@@ -240,6 +256,8 @@ services:
         constraints:
           - node.labels.AppNode2 == true
       replicas: 1
+    networks:
+      - outside
     volumes:
       - /etc/hostname:/etc/nodename
       - /etc/node-exporter:/etc/node-exporter
@@ -259,3 +277,8 @@ services:
         protocol: tcp
         mode: host
     restart: unless-stopped
+networks:
+  outside:
+    name: host
+    external: true
+
