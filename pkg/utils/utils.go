@@ -10,6 +10,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func IsBlank(str string) bool {
@@ -45,4 +47,8 @@ func ServerAddress(port int) string {
 		addr = "127.0.0.1"
 	}
 	return fmt.Sprintf("%s:%d", addr, port)
+}
+
+func PartitionID(wsid istructs.WSID, numCommandProcessors CommandProcessorsCount) istructs.PartitionID {
+	return istructs.PartitionID(int(wsid) % int(numCommandProcessors))
 }

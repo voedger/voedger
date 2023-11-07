@@ -13,10 +13,10 @@ import (
 	"github.com/voedger/voedger/pkg/sys/smtp"
 )
 
-func Provide(smtpCfg smtp.Cfg, rebuildRegistry bool) apps.AppBuilder {
+func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 		sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-			apis.NumCommandProcessors, nil, apis.IAppStorageProvider, rebuildRegistry) // need to generate AppWorkspaces only
+			apis.NumCommandProcessors, nil, apis.IAppStorageProvider) // need to generate AppWorkspaces only
 		apps.RegisterSchemaFS(blobberSchemaFS, "github.com/voedger/voedger/pkg/apps/sys/blobberapp", ep)
 	}
 }

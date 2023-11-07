@@ -21,7 +21,7 @@ func readPlog(ctx context.Context, WSID istructs.WSID, numCommandProcessors core
 			}
 		}
 	}
-	return appStructs.Events().ReadPLog(ctx, partitionID(WSID, numCommandProcessors), offset, count, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+	return appStructs.Events().ReadPLog(ctx, coreutils.PartitionID(WSID, numCommandProcessors), offset, count, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		data := make(map[string]interface{})
 		if f.filter("PlogOffset") {
 			data["PlogOffset"] = plogOffset
@@ -85,8 +85,4 @@ func readPlog(ctx context.Context, WSID istructs.WSID, numCommandProcessors core
 
 		return callback(&result{value: string(bb)})
 	})
-}
-
-func partitionID(wsid istructs.WSID, numCommandProcessors coreutils.CommandProcessorsCount) istructs.PartitionID {
-	return istructs.PartitionID(int(wsid) % int(numCommandProcessors))
 }

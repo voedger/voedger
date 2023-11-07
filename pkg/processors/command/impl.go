@@ -631,6 +631,9 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 		}
 		body.Truncate(body.Len() - 1)
 		body.WriteString("}")
+		if logger.IsVerbose() {
+			logger.Verbose("generated IDs:", cmd.idGenerator.generatedIDs)
+		}
 	}
 	if cmd.cmdResult != nil {
 		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.AppDef())

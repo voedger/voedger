@@ -26,6 +26,8 @@ var sshKey string
 // skip checking nodes for the presence of the minimum allowable amount of RAM
 var skipNodeMemoryCheck bool
 
+var devMode bool
+
 var red func(a ...interface{}) string
 var green func(a ...interface{}) string
 
@@ -34,7 +36,12 @@ func main() {
 	red = color.New(color.FgRed).SprintFunc()
 	green = color.New(color.FgGreen).SprintFunc()
 	logger.PrintLine = printLogLine
-	defer deleteScriptsTempDir()
+	defer func() {
+		err := deleteScriptsTempDir()
+		if err != nil {
+			logger.Error(err)
+		}
+	}()
 	err := execRootCmd(os.Args, version)
 	if err != nil {
 		os.Exit(1)
@@ -61,6 +68,7 @@ func execRootCmd(args []string, ver string) error {
 
 	rootCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
 	rootCmd.PersistentFlags().BoolVar(&skipNodeMemoryCheck, "skip-node-memory-check", false, "Skip checking nodes for the presence of the minimum allowable amount of RAM")
+	rootCmd.PersistentFlags().BoolVar(&devMode, "dev-mode", false, "Use development mode for DB stack")
 	logger.SetLogLevel(getLoggerLevel())
 
 	return cobrau.ExecCommandAndCatchInterrupt(rootCmd)
