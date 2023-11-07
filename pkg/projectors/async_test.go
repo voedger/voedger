@@ -859,7 +859,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 	t.Logf("Stopped in %s ", time.Since(t0))
 	t.Logf("RPS: %.2f", float64(totalEvents)/float64(duration.Seconds()))
 	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
-		if metric.Name() == "heeus_istoragecache_putbatch_total" {
+		if metric.Name() == "voedger_istoragecache_putbatch_total" {
 			t.Logf("PutBatch: %.0f", metricValue)
 			t.Logf("Batch Per Second: %.2f", float64(metricValue)/float64(duration.Seconds()))
 		}
@@ -1024,7 +1024,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	t.Logf("Stopped in %s ", time.Since(t0))
 	t.Logf("RPS: %.2f", float64(totalEvents)/float64(duration.Seconds()))
 	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
-		if metric.Name() == "heeus_istoragecache_putbatch_total" {
+		if metric.Name() == "voedger_istoragecache_putbatch_total" {
 			t.Logf("PutBatch: %.0f", metricValue)
 			t.Logf("Batch Per Second: %.2f", float64(metricValue)/float64(duration.Seconds()))
 		}
