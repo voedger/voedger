@@ -68,7 +68,7 @@ func seNodeControllerFunction(n *nodeType) error {
 func setHostname(node *nodeType) error {
 	var err error
 
-	if err = prepareScripts("node-set-hostname.sh"); err != nil {
+	if err = prepareScripts("node-set-hostname.sh", shellLib); err != nil {
 		logger.Error(err.Error())
 		node.Error = err.Error()
 		return err
@@ -90,7 +90,7 @@ func setHostname(node *nodeType) error {
 func updateHosts(node *nodeType) error {
 	var err error
 	aliveHosts := make(map[string]string)
-	if err = prepareScripts("node-update-hosts.sh"); err != nil {
+	if err = prepareScripts("node-update-hosts.sh", shellLib); err != nil {
 		logger.Error(err.Error())
 		node.Error = err.Error()
 		return err
@@ -132,7 +132,7 @@ func updateHosts(node *nodeType) error {
 }
 
 func seNodeValidate(n *nodeType) error {
-	if e := prepareScripts("host-validate.sh"); e != nil {
+	if e := prepareScripts("host-validate.sh", shellLib); e != nil {
 		logger.Error(e.Error())
 		n.Error = e.Error()
 		return e
@@ -252,7 +252,7 @@ func deploySeSwarm(cluster *clusterType) error {
 	node := cluster.Nodes[idxSENode1]
 	manager := node.nodeName() //ActualNodeState.Address
 
-	if err = prepareScripts("docker-compose-template.yml", "scylla.yaml", "swarm-init.sh", "swarm-set-label.sh", "db-node-prepare.sh", "docker-compose-prepare.sh"); err != nil {
+	if err = prepareScripts("docker-compose-template.yml", "scylla.yaml", "swarm-init.sh", "swarm-set-label.sh", "db-node-prepare.sh", "docker-compose-prepare.sh", shellLib); err != nil {
 		return err
 	}
 
@@ -347,7 +347,7 @@ func deploySeSwarm(cluster *clusterType) error {
 func deploySeDockerStack(cluster *clusterType) error {
 
 	logger.Info("Starting a SE docker stack deployment.")
-	if err := prepareScripts("docker-compose-template.yml", "scylla.yaml", "swarm-set-label.sh", "docker-compose-se.yml", "se-cluster-start.sh"); err != nil {
+	if err := prepareScripts("docker-compose-template.yml", "scylla.yaml", "swarm-set-label.sh", "docker-compose-se.yml", "se-cluster-start.sh", shellLib); err != nil {
 		return err
 	}
 
@@ -385,7 +385,7 @@ func deployDbmsDockerStack(cluster *clusterType) error {
 
 	logger.Info("Starting a DBMS docker stack deployment.")
 
-	if err := prepareScripts("db-cluster-start.sh"); err != nil {
+	if err := prepareScripts("db-cluster-start.sh", shellLib); err != nil {
 		return err
 	}
 
@@ -408,7 +408,7 @@ func deployMonDockerStack(cluster *clusterType) error {
 	logger.Info("Starting a mon docker stack deployment.")
 
 	if err = prepareScripts("alertmanager/config.yml", "prometheus/prometheus.yml", "prometheus/alert.rules",
-		"docker-compose-mon.yml", "mon-node-prepare.sh", "mon-stack-start.sh", "swarm-set-label.sh"); err != nil {
+		"docker-compose-mon.yml", "mon-node-prepare.sh", "mon-stack-start.sh", "swarm-set-label.sh", shellLib); err != nil {
 		return err
 	}
 
@@ -490,7 +490,7 @@ func newSeConfigType(cluster *clusterType) *seConfigType {
 func deployDocker(node *nodeType) error {
 	var err error
 
-	if err = prepareScripts("docker-install.sh"); err != nil {
+	if err = prepareScripts("docker-install.sh", shellLib); err != nil {
 		logger.Error(err.Error())
 		node.Error = err.Error()
 		return err
@@ -535,7 +535,7 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 	if err = prepareScripts("ctool-scylla-replace-node.sh", "docker-install.sh", "swarm-add-node.sh",
 		"db-node-prepare.sh", "db-bootstrap-prepare.sh", "db-bootstrap-end.sh", "swarm-rm-node.sh",
 		"db-stack-update.sh", "docker-compose-template.yml", "swarm-set-label.sh", "docker-compose-prepare.sh",
-		"scylla.yaml", "swarm-get-manager-token.sh"); err != nil {
+		"scylla.yaml", "swarm-get-manager-token.sh", shellLib); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
@@ -589,7 +589,7 @@ func replaceSeAppNode(cluster *clusterType) error {
 	var err error
 
 	if err = prepareScripts("swarm-add-node.sh", "swarm-get-manager-token.sh", "swarm-rm-node.sh", "swarm-set-label.sh",
-		"mon-node-prepare.sh", "prometheus-tsdb-copy.sh"); err != nil {
+		"mon-node-prepare.sh", "prometheus-tsdb-copy.sh", shellLib); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
