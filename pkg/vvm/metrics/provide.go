@@ -8,15 +8,15 @@ import (
 	"context"
 	"net"
 	"net/http"
-	"strconv"
 	"time"
 
-	router2 "github.com/untillpro/airs-router2"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
+	router2 "github.com/voedger/voedger/pkg/router"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func ProvideMetricsService(vvmCtx context.Context, metricsServicePort MetricsServicePort, imetrics imetrics.IMetrics) MetricsService {
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(int(metricsServicePort)))
+	listener, err := net.Listen("tcp", coreutils.ServerAddress(int(metricsServicePort)))
 	if err != nil {
 		panic(err)
 	}

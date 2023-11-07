@@ -24,6 +24,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			Name:         qNameAPSendEmailVerificationCode,
 			Func:         sendEmailVerificationCodeProjector(federation, smtpCfg),
 			EventsFilter: []appdef.QName{QNameCommandSendEmailVerificationCode},
+			NonBuffered:  true,
 		}
 	})
 }

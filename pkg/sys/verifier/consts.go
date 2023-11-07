@@ -21,6 +21,7 @@ const (
 	field_Reason             = "Reason"
 	field_TargetWSID         = "TargetWSID"
 	field_ForRegistry        = "ForRegistry"
+	field_Language           = "Language"
 
 	VerifiedValueTokenDuration              = 10 * time.Minute
 	VerificationTokenDuration               = 10 * time.Minute
@@ -29,12 +30,11 @@ const (
 	maxByte                                 = ^byte(0)
 	byteRangeToVerifcationSymbolsRangeCoeff = (float32(maxByte) + 1) / float32(len(verificationCodeSymbols))
 	EmailSubject                            = "Your verification code"
-	EmailFrom                               = "noreply@air.com"
 	InitiateEmailVerification_Period        = time.Hour
 	InitiateEmailVerification_MaxAllowed    = uint32(3)
 	IssueVerifiedValueToken_Period          = time.Hour
 	IssueVerifiedValueToken_MaxAllowed      = uint32(3)
-	verifyEmailReason                       = "confirm your E-mail"
+	verifyEmailReason                       = "to confirm your email."
 )
 
 var (

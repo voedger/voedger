@@ -13,12 +13,15 @@ import (
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
 func parseImpl(fileName string, content string) (*SchemaAST, error) {
 	var basicLexer = lexer.MustSimple([]lexer.SimpleRule{
-		{Name: "Comment", Pattern: `--.*`},
+		{Name: "PreStmtComment", Pattern: `(?:(?:[\n\r]+\s*--[^\n]*)+)|(?:[\n\r]\s*\/\*[\s\S]*?\*\/)`},
+		{Name: "MultilineComment", Pattern: `\/\*[\s\S]*?\*\/`},
+		{Name: "Comment", Pattern: `\s*--[^\r\n]*`},
 		{Name: "Array", Pattern: `\[\]`},
 		{Name: "Float", Pattern: `[-+]?\d+\.\d+`},
 		{Name: "Int", Pattern: `[-+]?\d+`},
@@ -28,15 +31,21 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
 		{Name: "UNLOGGED", Pattern: `UNLOGGED`},
 		{Name: "EXTENSIONENGINE", Pattern: `EXTENSION[ \r\n\t]+ENGINE`},
+		{Name: "EXECUTEONCOMMAND", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+COMMAND`},
+		{Name: "EXECUTEONALLCOMMANDSWITHTAG", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+COMMANDS[ \r\n\t]+WITH[ \r\n\t]+TAG`},
+		{Name: "EXECUTEONQUERY", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+QUERY`},
+		{Name: "EXECUTEONALLQUERIESWITHTAG", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+QUERIES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
+		{Name: "INSERTONWORKSPACE", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+WORKSPACE`},
+		{Name: "INSERTONALLWORKSPACESWITHTAG", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+WORKSPACES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
-		{Name: "String", Pattern: `("(\\"|[^"])*")|('(\\'|[^'])*')`},
-		{Name: "Ident", Pattern: `[a-zA-Z_]\w*`},
+		{Name: "String", Pattern: `('(\\'|[^'])*')`},
+		{Name: "Ident", Pattern: `([a-zA-Z_]\w*)|("[a-zA-Z_]\w*")`},
 		{Name: "Whitespace", Pattern: `[ \r\n\t]+`},
 	})
 
 	parser := participle.MustBuild[SchemaAST](
 		participle.Lexer(basicLexer),
-		participle.Elide("Whitespace", "Comment"),
+		participle.Elide("Whitespace", "Comment", "MultilineComment", "PreStmtComment"),
 		participle.Unquote("String"),
 	)
 	return parser.ParseString(fileName, content)
@@ -84,20 +93,18 @@ func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
 	return schemas, nil
 }
 
-func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
+func buildPackageSchemaImpl(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
+	if qualifiedPackageName == "" {
+		return nil, ErrNoQualifiedName
+	}
 	if len(asts) == 0 {
 		return nil, nil
 	}
 	headAst := asts[0].Ast
-	// TODO: do we need to check that last element in qualifiedPackageName path corresponds to f.Ast.Package?
 	for i := 1; i < len(asts); i++ {
 		f := asts[i]
-		if f.Ast.Package != headAst.Package {
-			return nil, ErrUnexpectedSchema(f.FileName, f.Ast.Package, headAst.Package)
-		}
 		mergeSchemas(f.Ast, headAst)
 	}
-
 	errs := make([]error, 0)
 	errs = checkDuplicateNames(headAst, errs)
 	cleanupComments(headAst)
@@ -115,10 +122,19 @@ func checkDuplicateNames(schema *SchemaAST, errs []error) []error {
 	var checkStatement func(stmt interface{})
 
 	checkStatement = func(stmt interface{}) {
+
+		if ws, ok := stmt.(*WorkspaceStmt); ok {
+			if ws.Descriptor != nil {
+				if ws.Descriptor.Name == "" {
+					ws.Descriptor.Name = defaultDescriptorName(ws.GetName())
+				}
+			}
+		}
+
 		if named, ok := stmt.(INamedStatement); ok {
 			name := named.GetName()
 			if _, ok := namedIndex[name]; ok {
-				errs = append(errs, errorAt(ErrRedeclared(name), named.GetPos()))
+				errs = append(errs, errorAt(ErrRedefined(name), named.GetPos()))
 			} else {
 				namedIndex[name] = stmt
 			}
@@ -140,12 +156,37 @@ func checkDuplicateNames(schema *SchemaAST, errs []error) []error {
 
 func cleanupComments(schema *SchemaAST) {
 	iterate(schema, func(stmt interface{}) {
+
 		if s, ok := stmt.(IStatement); ok {
-			comments := *s.GetComments()
-			for i := 0; i < len(comments); i++ {
-				comments[i], _ = strings.CutPrefix(comments[i], "--")
-				comments[i] = strings.TrimSpace(comments[i])
+			var rawComments string
+			var mult bool
+
+			if len(s.GetRawCommentBlocks()) < 1 {
+				return
 			}
+
+			// last block is the statement's comment
+			rawComments = s.GetRawCommentBlocks()[len(s.GetRawCommentBlocks())-1]
+			rawComments = strings.TrimSpace(rawComments)
+			rawComments, mult = strings.CutPrefix(rawComments, "/*")
+			if mult {
+				rawComments, _ = strings.CutSuffix(rawComments, "*/")
+			}
+
+			split := strings.Split(rawComments, "\n")
+			fixedComments := make([]string, 0)
+			for i := 0; i < len(split); i++ {
+				fixed := strings.TrimSpace(split[i])
+				if !mult {
+					fixed, _ = strings.CutPrefix(fixed, "--")
+					fixed = strings.TrimSpace(fixed)
+				}
+				if len(fixed) > 0 {
+					fixedComments = append(fixedComments, fixed)
+				}
+			}
+
+			s.SetComments(fixedComments)
 		}
 	})
 }
@@ -157,7 +198,72 @@ func cleanupImports(schema *SchemaAST) {
 	}
 }
 
-func mergePackageSchemasImpl(packages []*PackageSchemaAST) (map[string]*PackageSchemaAST, error) {
+func defineApp(c *basicContext) {
+	var app *ApplicationStmt
+	var appAst *PackageSchemaAST
+
+	for _, p := range c.app.Packages {
+		a, err := FindApplication(p)
+		if err != nil {
+			c.errs = append(c.errs, err)
+			return
+		}
+		if a != nil {
+			if app != nil {
+				c.stmtErr(a.GetPos(), ErrApplicationRedefined)
+				return
+			}
+			app = a
+			appAst = p
+		}
+	}
+	if app == nil {
+		c.errs = append(c.errs, ErrApplicationNotDefined)
+		return
+	}
+
+	c.app.Name = string(app.Name)
+	appAst.Name = getPackageName(appAst.QualifiedPackageName)
+	pkgNames := make(map[string]bool)
+	pkgNames[appAst.Name] = true
+
+	for _, use := range app.Uses {
+
+		if _, ok := pkgNames[string(use.Name)]; ok {
+			c.stmtErr(use.GetPos(), ErrPackageWithSameNameAlreadyIncludedInApp)
+			continue
+		}
+		pkgNames[string(use.Name)] = true
+
+		pkgQN := GetQualifiedPackageName(use.Name, appAst.Ast)
+		if pkgQN == "" {
+			c.stmtErr(use.GetPos(), ErrUndefined(string(use.Name)))
+			continue
+		}
+
+		pkg := c.app.Packages[pkgQN]
+		if pkg == nil {
+			c.stmtErr(use.GetPos(), ErrCouldNotImport(pkgQN))
+			continue
+		}
+
+		pkg.Name = string(use.Name)
+	}
+
+	for _, p := range c.app.Packages {
+		if p.QualifiedPackageName == appdef.SysPackage {
+			p.Name = appdef.SysPackage
+			continue
+		}
+
+		if p.Name == "" {
+			c.err(ErrAppDoesNotDefineUseOfPackage(p.QualifiedPackageName))
+		}
+	}
+}
+
+func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
+
 	pkgmap := make(map[string]*PackageSchemaAST)
 	for _, p := range packages {
 		if _, ok := pkgmap[p.QualifiedPackageName]; ok {
@@ -166,29 +272,44 @@ func mergePackageSchemasImpl(packages []*PackageSchemaAST) (map[string]*PackageS
 		pkgmap[p.QualifiedPackageName] = p
 	}
 
+	appSchema := &AppSchemaAST{
+		Packages: pkgmap,
+	}
+
 	c := basicContext{
-		pkg:    nil,
-		pkgmap: pkgmap,
-		errs:   make([]error, 0),
+		app:  appSchema,
+		errs: make([]error, 0),
+	}
+
+	defineApp(&c)
+	if len(c.errs) > 0 {
+		return nil, errors.Join(c.errs...)
 	}
 
 	for _, p := range packages {
 		analyse(&c, p)
 	}
-	return pkgmap, errors.Join(c.errs...)
+	return appSchema, errors.Join(c.errs...)
 }
 
 type basicContext struct {
-	pkg    *PackageSchemaAST
-	pkgmap map[string]*PackageSchemaAST
-	errs   []error
+	app  *AppSchemaAST
+	errs []error
+}
+
+func (c *basicContext) newStmtErr(pos *lexer.Position, err error) error {
+	return fmt.Errorf("%s: %w", pos.String(), err)
 }
 
 func (c *basicContext) stmtErr(pos *lexer.Position, err error) {
-	c.errs = append(c.errs, fmt.Errorf("%s: %w", pos.String(), err))
+	c.err(c.newStmtErr(pos, err))
 }
 
-func buildAppDefs(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) error {
-	ctx := newBuildContext(packages, builder)
+func (c *basicContext) err(err error) {
+	c.errs = append(c.errs, err)
+}
+
+func buildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) error {
+	ctx := newBuildContext(appSchema, builder)
 	return ctx.build()
 }

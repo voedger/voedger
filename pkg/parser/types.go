@@ -7,9 +7,11 @@ package parser
 
 import (
 	"fmt"
-	fs "io/fs"
+	"io/fs"
+	"strings"
 
 	"github.com/alecthomas/participle/v2/lexer"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -19,8 +21,17 @@ type FileSchemaAST struct {
 }
 
 type PackageSchemaAST struct {
+	Name                 string // Fill on the analysis stage, when the APPLICATION statement is found
 	QualifiedPackageName string
 	Ast                  *SchemaAST
+}
+
+type AppSchemaAST struct {
+	// Application name
+	Name string
+
+	// key = Fully Qualified Name
+	Packages map[string]*PackageSchemaAST
 }
 
 type IReadFS interface {
@@ -28,9 +39,18 @@ type IReadFS interface {
 	fs.ReadFileFS
 }
 
+type Ident string
+
+func (b *Ident) Capture(values []string) error {
+	*b = Ident(strings.Trim(values[0], "\""))
+	return nil
+}
+
 type IStatement interface {
 	GetPos() *lexer.Position
-	GetComments() *[]string
+	GetRawCommentBlocks() []string
+	SetComments(comments []string)
+	GetComments() []string
 }
 
 type INamedStatement interface {
@@ -45,9 +65,12 @@ type IExtensionStatement interface {
 }
 
 type SchemaAST struct {
-	Package    string          `parser:"'SCHEMA' @Ident ';'"`
 	Imports    []ImportStmt    `parser:"@@? (';' @@)* ';'?"`
 	Statements []RootStatement `parser:"@@? (';' @@)* ';'?"`
+}
+
+func (p *PackageSchemaAST) NewQName(name Ident) appdef.QName {
+	return appdef.NewQName(string(p.Name), string(name))
 }
 
 func (s *SchemaAST) Iterate(callback func(stmt interface{})) {
@@ -62,8 +85,8 @@ func (s *SchemaAST) Iterate(callback func(stmt interface{})) {
 
 type ImportStmt struct {
 	Pos   lexer.Position
-	Name  string  `parser:"'IMPORT' 'SCHEMA' @String"`
-	Alias *string `parser:"('AS' @Ident)?"`
+	Name  string `parser:"'IMPORT' 'SCHEMA' @String"`
+	Alias *Ident `parser:"('AS' @Ident)?"`
 }
 
 type RootStatement struct {
@@ -71,13 +94,14 @@ type RootStatement struct {
 	Template *TemplateStmt `parser:"@@"`
 
 	// Also allowed in root
-	Role      *RoleStmt          `parser:"| @@"`
-	Comment   *CommentStmt       `parser:"| @@"`
-	Tag       *TagStmt           `parser:"| @@"`
-	ExtEngine *RootExtEngineStmt `parser:"| @@"`
-	Workspace *WorkspaceStmt     `parser:"| @@"`
-	Table     *TableStmt         `parser:"| @@"`
-	Type      *TypeStmt          `parser:"| @@"`
+	Role           *RoleStmt           `parser:"| @@"`
+	Tag            *TagStmt            `parser:"| @@"`
+	ExtEngine      *RootExtEngineStmt  `parser:"| @@"`
+	Workspace      *WorkspaceStmt      `parser:"| @@"`
+	AlterWorkspace *AlterWorkspaceStmt `parser:"| @@"`
+	Table          *TableStmt          `parser:"| @@"`
+	Type           *TypeStmt           `parser:"| @@"`
+	Application    *ApplicationStmt    `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
 
 	stmt interface{}
@@ -85,13 +109,13 @@ type RootStatement struct {
 
 type WorkspaceStatement struct {
 	// Only allowed in workspace
-	Rate     *RateStmt     `parser:"@@"`
-	View     *ViewStmt     `parser:"| @@"`
-	UseTable *UseTableStmt `parser:"| @@"`
+	Rate         *RateStmt         `parser:"@@"`
+	View         *ViewStmt         `parser:"| @@"`
+	UseTable     *UseTableStmt     `parser:"| @@"`
+	UseWorkspace *UseWorkspaceStmt `parser:"| @@"`
 
 	// Also allowed in workspace
 	Role      *RoleStmt               `parser:"| @@"`
-	Comment   *CommentStmt            `parser:"| @@"`
 	Tag       *TagStmt                `parser:"| @@"`
 	ExtEngine *WorkspaceExtEngineStmt `parser:"| @@"`
 	Workspace *WorkspaceStmt          `parser:"| @@"`
@@ -153,19 +177,51 @@ func (s *RootExtEngineStmt) Iterate(callback func(stmt interface{})) {
 	}
 }
 
+type UseStmt struct {
+	Statement
+	Name Ident `parser:"'USE' @Ident"`
+}
+
+type ApplicationStmt struct {
+	Statement
+	Name Ident     `parser:"'APPLICATION' @Ident '('"`
+	Uses []UseStmt `parser:"@@? (';' @@)* ';'? ')'"`
+}
+
 type WorkspaceStmt struct {
 	Statement
-	Abstract   bool                 `parser:"@'ABSTRACT'?"`
+	Abstract   bool                 `parser:"(@'ABSTRACT' "`
+	Alterable  bool                 `parser:"| @'ALTERABLE')?"`
 	Pool       bool                 `parser:"@('POOL' 'OF')?"`
-	Name       string               `parser:"'WORKSPACE' @Ident "`
-	Of         []DefQName           `parser:"('OF' @@ (',' @@)*)?"`
+	Name       Ident                `parser:"'WORKSPACE' @Ident "`
+	Inherits   []DefQName           `parser:"('INHERITS' @@ (',' @@)* )?"`
 	A          int                  `parser:"'('"`
 	Descriptor *WsDescriptorStmt    `parser:"('DESCRIPTOR' @@)?"`
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 }
 
-func (s WorkspaceStmt) GetName() string { return s.Name }
+func (s WorkspaceStmt) GetName() string { return string(s.Name) }
 func (s *WorkspaceStmt) Iterate(callback func(stmt interface{})) {
+	if s.Descriptor != nil {
+		callback(s.Descriptor)
+	}
+	for i := 0; i < len(s.Statements); i++ {
+		raw := &s.Statements[i]
+		if raw.stmt == nil {
+			raw.stmt = extractStatement(*raw)
+		}
+		callback(raw.stmt)
+	}
+}
+
+type AlterWorkspaceStmt struct {
+	Statement
+	Name       DefQName             `parser:"'ALTER' 'WORKSPACE' @@ "`
+	A          int                  `parser:"'('"`
+	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
+}
+
+func (s *AlterWorkspaceStmt) Iterate(callback func(stmt interface{})) {
 	for i := 0; i < len(s.Statements); i++ {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
@@ -177,140 +233,241 @@ func (s *WorkspaceStmt) Iterate(callback func(stmt interface{})) {
 
 type TypeStmt struct {
 	Statement
-	Name  string          `parser:"'TYPE' @Ident "`
-	Of    []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
+	Name  Ident           `parser:"'TYPE' @Ident "`
 	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
 }
 
-func (s TypeStmt) GetName() string { return s.Name }
+func (s TypeStmt) GetName() string { return string(s.Name) }
 
 type WsDescriptorStmt struct {
 	Statement
-	Of    []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
-	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
+	Name  Ident           `parser:"@Ident?"`
+	Items []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	_     int             `parser:"';'"`
 }
 
+func (s WsDescriptorStmt) GetName() string { return string(s.Name) }
+
 type DefQName struct {
-	Package string `parser:"(@Ident '.')?"`
-	Name    string `parser:"@Ident"`
+	Package Ident `parser:"(@Ident '.')?"`
+	Name    Ident `parser:"@Ident"`
 }
 
 func (q DefQName) String() string {
 	if q.Package == "" {
-		return q.Name
+		return string(q.Name)
 	}
 	return fmt.Sprintf("%s.%s", q.Package, q.Name)
 
 }
 
-type TypeQName struct {
-	Package string `parser:"(@Ident '.')?"`
-	Name    string `parser:"@Ident"`
-	IsArray bool   `parser:"@Array?"`
+type TypeVarchar struct {
+	MaxLen *uint16 `parser:"('varchar' | 'text') ( '(' @Int ')' )?"`
 }
 
-func (q TypeQName) String() (s string) {
-	if q.Package == "" {
-		s = q.Name
-	} else {
-		s = fmt.Sprintf("%s.%s", q.Package, q.Name)
+type TypeBytes struct {
+	MaxLen *uint16 `parser:"'bytes' ( '(' @Int ')' )?"`
+}
+
+type VoidOrDataType struct {
+	Void     bool           `parser:"( @'void'"`
+	DataType *DataTypeOrDef `parser:"| @@)"`
+}
+
+type VoidOrDef struct {
+	Void bool      `parser:"( @'void'"`
+	Def  *DefQName `parser:"| @@)"`
+}
+
+type DataType struct {
+	Varchar   *TypeVarchar `parser:"( @@"`
+	Bytes     *TypeBytes   `parser:"| @@"`
+	Int32     bool         `parser:"| @('int' | 'int32')"`
+	Int64     bool         `parser:"| @'int64'"`
+	Float32   bool         `parser:"| @('float' | 'float32')"`
+	Float64   bool         `parser:"| @'float64'"`
+	QName     bool         `parser:"| @'qname'"`
+	Bool      bool         `parser:"| @'bool'"`
+	Blob      bool         `parser:"| @'blob'"`
+	Timestamp bool         `parser:"| @'timestamp'"`
+	Currency  bool         `parser:"| @'currency' )"`
+}
+
+func (q DataType) String() (s string) {
+	if q.Varchar != nil {
+		if q.Varchar.MaxLen != nil {
+			return fmt.Sprintf("varchar[%d]", *q.Varchar.MaxLen)
+		}
+		return fmt.Sprintf("varchar[%d]", appdef.DefaultFieldMaxLength)
+	} else if q.Int32 {
+		return "int32"
+	} else if q.Int64 {
+		return "int64"
+	} else if q.Float32 {
+		return "int32"
+	} else if q.Float64 {
+		return "int64"
+	} else if q.QName {
+		return "qname"
+	} else if q.Bool {
+		return "bool"
+	} else if q.Bytes != nil {
+		if q.Bytes.MaxLen != nil {
+			return fmt.Sprintf("bytes[%d]", *q.Bytes.MaxLen)
+		}
+		return fmt.Sprintf("bytes[%d]", appdef.DefaultFieldMaxLength)
+	} else if q.Blob {
+		return "blob"
+	} else if q.Timestamp {
+		return "timestamp"
+	} else if q.Currency {
+		return "currency"
 	}
 
-	if q.IsArray {
-		return fmt.Sprintf("[]%s", s)
+	return "?"
+}
+
+type DataTypeOrDef struct {
+	DataType *DataType `parser:"( @@"`
+	Def      *DefQName `parser:"| @@ )"`
+}
+
+func (q DataTypeOrDef) String() (s string) {
+	if q.DataType != nil {
+		return q.DataType.String()
 	}
-	return s
+	return q.Def.String()
 }
 
 type Statement struct {
-	Pos      lexer.Position
-	Comments []string `parser:"@Comment*"`
+	Pos              lexer.Position
+	RawCommentBlocks []string `parser:"@PreStmtComment*"`
+	Comments         []string // will be set after 1st pass
 }
 
 func (s *Statement) GetPos() *lexer.Position {
 	return &s.Pos
 }
 
-func (s *Statement) GetComments() *[]string {
-	return &s.Comments
+func (s *Statement) GetRawCommentBlocks() []string {
+	return s.RawCommentBlocks
 }
 
-type StorageKey struct {
-	Storage DefQName  `parser:"@@"`
-	Entity  *DefQName `parser:"( @@ )?"`
+func (s *Statement) GetComments() []string {
+	return s.Comments
+}
+
+func (s *Statement) SetComments(comments []string) {
+	s.Comments = comments
+}
+
+type ProjectorStorage struct {
+	Storage  DefQName   `parser:"@@"`
+	Entities []DefQName `parser:"( '(' @@ (',' @@)* ')')?"`
+}
+
+type ProjectorTrigger struct {
+	CUDEvents *ProjectorCUDEvents `parser:"('AFTER' @@)?"`
+	QNames    []DefQName          `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!"`
 }
 
 type ProjectorStmt struct {
 	Statement
-	Sync     bool         `parser:"@'SYNC'?"`
-	Name     string       `parser:"'PROJECTOR' @Ident"`
-	On       ProjectorOn  `parser:"'ON' @@"`
-	Triggers []DefQName   `parser:"(('IN' '(' @@ (',' @@)* ')') | @@)!"`
-	State    []StorageKey `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
-	Intents  []StorageKey `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
-	Engine   EngineType   // Initialized with 1st pass
+	Sync     bool               `parser:"@'SYNC'?"`
+	Name     Ident              `parser:"'PROJECTOR' @Ident"`
+	Triggers []ProjectorTrigger `parser:"@@ ('OR' @@)*"`
+	State    []ProjectorStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Intents  []ProjectorStorage `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
+	Engine   EngineType         // Initialized with 1st pass
 }
 
-func (s *ProjectorStmt) GetName() string            { return s.Name }
+func (s *ProjectorStmt) GetName() string            { return string(s.Name) }
 func (s *ProjectorStmt) SetEngineType(e EngineType) { s.Engine = e }
 
-type ProjectorOn struct {
-	CommandArgument bool `parser:"@('COMMAND' 'ARGUMENT')"`
-	Command         bool `parser:"| @('COMMAND')"`
-	Insert          bool `parser:"| @(('INSERT' ('OR' 'UPDATE')?) | ('UPDATE' 'OR' 'INSERT'))"`
-	Update          bool `parser:"| @(('UPDATE' ('OR' 'INSERT')?) | ('INSERT' 'OR' 'UPDATE'))"`
-	Activate        bool `parser:"| @(('ACTIVATE' ('OR' 'DEACTIVATE')?) | ('DEACTIVATE' 'OR' 'ACTIVATE'))"`
-	Deactivate      bool `parser:"| @(('DEACTIVATE' ('OR' 'ACTIVATE')?) | ('ACTIVATE' 'OR' 'DEACTIVATE'))"`
+type ProjectorCUDEvents struct {
+	Actions []string `parser:"@('INSERT' | 'UPDATE' | 'ACTIVATE' | 'DEACTIVATE') ('OR' @('INSERT' | 'UPDATE' | 'ACTIVATE' | 'DEACTIVATE'))*"`
+}
+
+// func (t *ProjectorCUDEvents) insert() bool {
+// 	for i := 0; i < len(t.Actions); i++ {
+// 		if t.Actions[i] == "INSERT" {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
+
+func (t *ProjectorCUDEvents) update() bool {
+	for i := 0; i < len(t.Actions); i++ {
+		if t.Actions[i] == "UPDATE" {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *ProjectorCUDEvents) activate() bool {
+	for i := 0; i < len(t.Actions); i++ {
+		if t.Actions[i] == "ACTIVATE" {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *ProjectorCUDEvents) deactivate() bool {
+	for i := 0; i < len(t.Actions); i++ {
+		if t.Actions[i] == "DEACTIVATE" {
+			return true
+		}
+	}
+	return false
 }
 
 type TemplateStmt struct {
 	Statement
-	Name      string   `parser:"'TEMPLATE' @Ident 'OF' 'WORKSPACE'" `
+	Name      Ident    `parser:"'TEMPLATE' @Ident 'OF' 'WORKSPACE'" `
 	Workspace DefQName `parser:"@@"`
-	Source    string   `parser:"'SOURCE' @Ident"`
+	Source    Ident    `parser:"'SOURCE' @Ident"`
 }
 
-func (s TemplateStmt) GetName() string { return s.Name }
+func (s TemplateStmt) GetName() string { return string(s.Name) }
 
 type RoleStmt struct {
 	Statement
-	Name string `parser:"'ROLE' @Ident"`
+	Name Ident `parser:"'ROLE' @Ident"`
 }
 
-func (s RoleStmt) GetName() string { return s.Name }
+func (s RoleStmt) GetName() string { return string(s.Name) }
 
 type TagStmt struct {
 	Statement
-	Name string `parser:"'TAG' @Ident"`
+	Name Ident `parser:"'TAG' @Ident"`
 }
 
-func (s TagStmt) GetName() string { return s.Name }
+func (s TagStmt) GetName() string { return string(s.Name) }
 
-type CommentStmt struct {
-	Statement
-	Name  string `parser:"'COMMENT' @Ident"`
-	Value string `parser:"@String"`
-}
-
-func (s CommentStmt) GetName() string { return s.Name }
+// type UseAllTables struct {
+// 	FromPackage Ident `parser:"(@Ident '.')? '*'"`
+// }
 
 type UseTableStmt struct {
 	Statement
-	Package   string `parser:"'USE' 'TABLE' (@Ident '.')?"`
-	Name      string `parser:"(@Ident "`
-	AllTables bool   `parser:"| @'*')"`
+	Package   Ident  `parser:"'USE' 'TABLE' (@Ident '.')?"`
+	AllTables bool   `parser:"(@'*'"`
+	TableName *Ident `parser:"| @Ident)"`
+	// AllTables *UseAllTables `parser:"'USE' 'TABLE' (@@"`
+	// Table     *DefQName     `parser:"| @@)"`
 }
 
-type UseTableItem struct {
-	Package   string `parser:"(@Ident '.')?"`
-	Name      string `parser:"(@Ident "`
-	AllTables bool   `parser:"| @'*')"`
+type UseWorkspaceStmt struct {
+	Statement
+	Workspace Ident `parser:"'USE' 'WORKSPACE' @Ident"`
 }
 
 /*type sequenceStmt struct {
-	Name        string `parser:"'SEQUENCE' @Ident"`
-	Type        string `parser:"@Ident"`
+	Name        Ident `parser:"'SEQUENCE' @Ident"`
+	Type        Ident `parser:"@Ident"`
 	StartWith   *int   `parser:"(('START' 'WITH' @Number)"`
 	MinValue    *int   `parser:"| ('MINVALUE' @Number)"`
 	MaxValue    *int   `parser:"| ('MAXVALUE' @Number)"`
@@ -319,31 +476,60 @@ type UseTableItem struct {
 
 type RateStmt struct {
 	Statement
-	Name   string `parser:"'RATE' @Ident"`
+	Name   Ident  `parser:"'RATE' @Ident"`
 	Amount int    `parser:"@Int"`
 	Per    string `parser:"'PER' @('SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'YEAR')"`
 	PerIP  bool   `parser:"(@('PER' 'IP'))?"`
 }
 
-func (s RateStmt) GetName() string { return s.Name }
+func (s RateStmt) GetName() string { return string(s.Name) }
+
+type GrantTableAction struct {
+	Select  bool     `parser:"(@'SELECT'"`
+	Insert  bool     `parser:"| @'INSERT'"`
+	Update  bool     `parser:"| @'UPDATE')"`
+	Columns []string `parser:"( '(' @Ident (',' @Ident)* ')' )?"`
+}
+
+type GrantTableAll struct {
+	AllTables bool     `parser:"@'ALL'"`
+	Columns   []string `parser:"( '(' @Ident (',' @Ident)* ')' )?"`
+}
+
+type GrantTableActions struct {
+	All   *GrantTableAll     `parser:"@@ | "`
+	Items []GrantTableAction `parser:"(@@ (',' @@)*)"`
+}
+
+type GrantTable struct {
+	Actions          GrantTableActions `parser:"@@"`
+	OneTable         bool              `parser:"'ON' (@'TABLE'"`
+	AllTablesWithTag bool              `parser:"| @('ALL' 'TABLES' 'WITH' 'TAG'))"`
+}
 
 type GrantStmt struct {
 	Statement
-	Grants []string `parser:"'GRANT' @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE') (','  @('ALL' | 'EXECUTE' | 'SELECT' | 'INSERT' | 'UPDATE'))*"`
-	On     string   `parser:"'ON' @('TABLE' | ('ALL' 'TABLES' 'WITH' 'TAG') | 'COMMAND' | ('ALL' 'COMMANDS' 'WITH' 'TAG') | 'QUERY' | ('ALL' 'QUERIES' 'WITH' 'TAG'))"`
-	Target DefQName `parser:"@@"`
-	To     string   `parser:"'TO' @Ident"`
+	Command              bool        `parser:"'GRANT' ( @EXECUTEONCOMMAND"`
+	AllCommandsWithTag   bool        `parser:"| @EXECUTEONALLCOMMANDSWITHTAG"`
+	Query                bool        `parser:"| @EXECUTEONQUERY"`
+	AllQueriesWithTag    bool        `parser:"| @EXECUTEONALLQUERIESWITHTAG"`
+	Workspace            bool        `parser:"| @INSERTONWORKSPACE"`
+	AllWorkspacesWithTag bool        `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
+	Table                *GrantTable `parser:"| @@)"`
+
+	On DefQName `parser:"@@"`
+	To DefQName `parser:"'TO' @@"`
 }
 
 type StorageStmt struct {
 	Statement
-	Name         string      `parser:"'STORAGE' @Ident"`
+	Name         Ident       `parser:"'STORAGE' @Ident"`
 	Ops          []StorageOp `parser:"'(' @@ (',' @@)* ')'"`
 	EntityRecord bool        `parser:"@('ENTITY' 'RECORD')?"`
 	EntityView   bool        `parser:"@('ENTITY' 'VIEW')?"`
 }
 
-func (s StorageStmt) GetName() string { return s.Name }
+func (s StorageStmt) GetName() string { return string(s.Name) }
 
 type StorageOp struct {
 	Get      bool           `parser:"( @'GET'"`
@@ -362,44 +548,50 @@ type StorageScope struct {
 
 type FunctionStmt struct {
 	Statement
-	Name    string          `parser:"'FUNCTION' @Ident"`
+	Name    Ident           `parser:"'FUNCTION' @Ident"`
 	Params  []FunctionParam `parser:"'(' @@? (',' @@)* ')'"`
-	Returns TypeQName       `parser:"'RETURNS' @@"`
+	Returns DataTypeOrDef   `parser:"'RETURNS' @@"`
 	Engine  EngineType      // Initialized with 1st pass
 }
 
-func (s *FunctionStmt) GetName() string            { return s.Name }
+func (s *FunctionStmt) GetName() string            { return string(s.Name) }
 func (s *FunctionStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type CommandStmt struct {
 	Statement
-	Name        string     `parser:"'COMMAND' @Ident"`
-	Arg         *DefQName  `parser:"('(' @@? "`
-	UnloggedArg *DefQName  `parser:"(','? UNLOGGED @@)? ')')?"`
-	Returns     *DefQName  `parser:"('RETURNS' @@)?"`
+	Name        Ident      `parser:"'COMMAND' @Ident"`
+	Arg         *VoidOrDef `parser:"('(' @@? "`
+	UnloggedArg *VoidOrDef `parser:"(','? UNLOGGED @@)? ')')?"`
+	Returns     *VoidOrDef `parser:"('RETURNS' @@)?"`
 	With        []WithItem `parser:"('WITH' @@ (',' @@)* )?"`
 	Engine      EngineType // Initialized with 1st pass
 }
 
-func (s *CommandStmt) GetName() string            { return s.Name }
+func (s *CommandStmt) GetName() string            { return string(s.Name) }
 func (s *CommandStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type WithItem struct {
-	Comment *DefQName  `parser:"('Comment' '=' @@)"`
+	Comment *string    `parser:"('Comment' '=' @String)"`
 	Tags    []DefQName `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
 	Rate    *DefQName  `parser:"| ('Rate' '=' @@)"`
 }
 
-type QueryStmt struct {
-	Statement
-	Name    string     `parser:"'QUERY' @Ident"`
-	Arg     *DefQName  `parser:"('(' @@? ')')?"`
-	Returns DefQName   `parser:"'RETURNS' @@"`
-	With    []WithItem `parser:"('WITH' @@ (',' @@)* )?"`
-	Engine  EngineType // Initialized with 1st pass
+type AnyOrVoidOrDef struct {
+	Any  bool      `parser:"@'ANY'"`
+	Void bool      `parser:"| @'void'"`
+	Def  *DefQName `parser:"| @@"`
 }
 
-func (s *QueryStmt) GetName() string            { return s.Name }
+type QueryStmt struct {
+	Statement
+	Name    Ident          `parser:"'QUERY' @Ident"`
+	Arg     *VoidOrDef     `parser:"('(' @@? ')')?"`
+	Returns AnyOrVoidOrDef `parser:"'RETURNS' @@"`
+	With    []WithItem     `parser:"('WITH' @@ (',' @@)* )?"`
+	Engine  EngineType     // Initialized with 1st pass
+}
+
+func (s *QueryStmt) GetName() string            { return string(s.Name) }
 func (s *QueryStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type EngineType struct {
@@ -408,32 +600,45 @@ type EngineType struct {
 }
 
 type FunctionParam struct {
-	NamedParam       *NamedParam `parser:"@@"`
-	UnnamedParamType *TypeQName  `parser:"| @@"`
+	NamedParam       *NamedParam    `parser:"@@"`
+	UnnamedParamType *DataTypeOrDef `parser:"| @@"`
 }
 
 type NamedParam struct {
-	Name string    `parser:"@Ident"`
-	Type TypeQName `parser:"@@"`
+	Name Ident         `parser:"@Ident"`
+	Type DataTypeOrDef `parser:"@@"`
 }
 
 type TableStmt struct {
 	Statement
-	Name         string          `parser:"'TABLE' @Ident"`
-	Inherits     *DefQName       `parser:"('INHERITS' @@)?"`
-	Of           []DefQName      `parser:"('OF' @@ (',' @@)*)?"`
-	Items        []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	With         []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
-	tableDefKind appdef.DefKind  // filled on the analysis stage
-	singletone   bool
+	Abstract      bool            `parser:"@'ABSTRACT'? 'TABLE'"`
+	Name          Ident           `parser:"@Ident"`
+	Inherits      *DefQName       `parser:"('INHERITS' @@)?"`
+	Items         []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	With          []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	tableTypeKind appdef.TypeKind // filled on the analysis stage
+	singletone    bool
 }
 
-func (s TableStmt) GetName() string { return s.Name }
+func (s *TableStmt) GetName() string { return string(s.Name) }
+func (s *TableStmt) Iterate(callback func(stmt interface{})) {
+	for i := 0; i < len(s.Items); i++ {
+		item := &s.Items[i]
+		if item.Field != nil {
+			callback(item.Field)
+		}
+	}
+}
 
 type NestedTableStmt struct {
 	Pos   lexer.Position
-	Name  string    `parser:"@Ident"`
+	Name  Ident     `parser:"@Ident"`
 	Table TableStmt `parser:"@@"`
+}
+
+type FieldSetItem struct {
+	Pos  lexer.Position
+	Type DefQName `parser:"@@"`
 }
 
 type TableItemExpr struct {
@@ -441,11 +646,12 @@ type TableItemExpr struct {
 	Constraint  *TableConstraint `parser:"| @@"`
 	RefField    *RefFieldExpr    `parser:"| @@"`
 	Field       *FieldExpr       `parser:"| @@"`
+	FieldSet    *FieldSetItem    `parser:"| @@"`
 }
 
 type TableConstraint struct {
 	Pos            lexer.Position
-	ConstraintName string           `parser:"('CONSTRAINT' @Ident)?"`
+	ConstraintName Ident            `parser:"('CONSTRAINT' @Ident)?"`
 	UniqueField    *UniqueFieldExpr `parser:"(@@"`
 	//	Unique         *UniqueExpr      `parser:"(@@"` // TODO: not supported by kernel yet
 	Check *TableCheckExpr `parser:"| @@)"`
@@ -456,69 +662,129 @@ type TableCheckExpr struct {
 }
 
 type UniqueFieldExpr struct {
-	Field string `parser:"'UNIQUEFIELD' @Ident"`
+	Field Ident `parser:"'UNIQUEFIELD' @Ident"`
 }
 
 type UniqueExpr struct {
-	Fields []string `parser:"'UNIQUE' '(' @Ident (',' @Ident)* ')'"`
+	Fields []Ident `parser:"'UNIQUE' '(' @Ident (',' @Ident)* ')'"`
 }
 
 type RefFieldExpr struct {
 	Pos     lexer.Position
-	Name    string     `parser:"@Ident"`
+	Name    Ident      `parser:"@Ident"`
 	RefDocs []DefQName `parser:"'ref' ('(' @@ (',' @@)* ')')?"`
 	NotNull bool       `parser:"@(NOTNULL)?"`
 }
 
 type FieldExpr struct {
-	Pos                lexer.Position
-	Name               string      `parser:"@Ident"`
-	Type               *TypeQName  `parser:"@@"`
-	NotNull            bool        `parser:"@(NOTNULL)?"`
-	Verifiable         bool        `parser:"@('VERIFIABLE')?"`
-	DefaultIntValue    *int        `parser:"('DEFAULT' @Int)?"`
-	DefaultStringValue *string     `parser:"('DEFAULT' @String)?"`
-	DefaultNextVal     *string     `parser:"(DEFAULTNEXTVAL  '(' @String ')')?"`
-	CheckRegexp        *string     `parser:"('CHECK' @String)?"`
-	CheckExpression    *Expression `parser:"('CHECK' '(' @@ ')')? "`
+	Statement
+	Name               Ident         `parser:"@Ident"`
+	Type               DataTypeOrDef `parser:"@@"`
+	NotNull            bool          `parser:"@(NOTNULL)?"`
+	Verifiable         bool          `parser:"@('VERIFIABLE')?"`
+	DefaultIntValue    *int          `parser:"('DEFAULT' @Int)?"`
+	DefaultStringValue *string       `parser:"('DEFAULT' @String)?"`
+	//	DefaultNextVal     *string       `parser:"(DEFAULTNEXTVAL  '(' @String ')')?"`
+	CheckRegexp     *string     `parser:"('CHECK' @String)?"`
+	CheckExpression *Expression `parser:"('CHECK' '(' @@ ')')? "`
 }
 
 type ViewStmt struct {
 	Statement
-	Name     string         `parser:"'VIEW' @Ident"`
-	Fields   []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	Name     Ident          `parser:"'VIEW' @Ident"`
+	Items    []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	ResultOf DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
 	pkRef    *PrimaryKeyExpr
+}
+
+func (s *ViewStmt) Iterate(callback func(stmt interface{})) {
+	for i := 0; i < len(s.Items); i++ {
+		item := &s.Items[i]
+		if item.Field != nil {
+			callback(item.Field)
+		} else if item.RefField != nil {
+			callback(item.RefField)
+		}
+	}
+}
+
+// Returns view item with field by field name
+func (s ViewStmt) Field(fieldName Ident) *ViewItemExpr {
+	for i := 0; i < len(s.Items); i++ {
+		item := &s.Items[i]
+		if item.FieldName() == fieldName {
+			return item
+		}
+	}
+	return nil
+}
+
+// Iterate view partition fields
+func (s ViewStmt) PartitionFields(callback func(f *ViewItemExpr)) {
+	for i := 0; i < len(s.pkRef.PartitionKeyFields); i++ {
+		if f := s.Field(s.pkRef.PartitionKeyFields[i]); f != nil {
+			callback(f)
+		}
+	}
+}
+
+// Iterate view clustering columns
+func (s ViewStmt) ClusteringColumns(callback func(f *ViewItemExpr)) {
+	for i := 0; i < len(s.pkRef.ClusteringColumnsFields); i++ {
+		if f := s.Field(s.pkRef.ClusteringColumnsFields[i]); f != nil {
+			callback(f)
+		}
+	}
+}
+
+// Iterate view value fields
+func (s ViewStmt) ValueFields(callback func(f *ViewItemExpr)) {
+	for i := 0; i < len(s.Items); i++ {
+		f := &s.Items[i]
+		if n := f.FieldName(); len(n) > 0 {
+			if !contains(s.pkRef.PartitionKeyFields, n) && !contains(s.pkRef.ClusteringColumnsFields, n) {
+				callback(f)
+			}
+		}
+	}
 }
 
 type ViewItemExpr struct {
 	Pos        lexer.Position
 	PrimaryKey *PrimaryKeyExpr `parser:"(PRIMARYKEY '(' @@ ')')"`
+	RefField   *ViewRefField   `parser:"| @@"`
 	Field      *ViewField      `parser:"| @@"`
 }
 
-type PrimaryKeyExpr struct {
-	PartitionKeyFields      []string `parser:"('(' @Ident (',' @Ident)* ')')?"`
-	ClusteringColumnsFields []string `parser:"(','? @Ident (',' @Ident)*)?"`
+// Returns field name
+func (i ViewItemExpr) FieldName() Ident {
+	if i.Field != nil {
+		return i.Field.Name
+	}
+	if i.RefField != nil {
+		return i.RefField.Name
+	}
+	return ""
 }
 
-func (s ViewStmt) GetName() string { return s.Name }
+type PrimaryKeyExpr struct {
+	Pos                     lexer.Position
+	PartitionKeyFields      []Ident `parser:"('(' @Ident (',' @Ident)* ')')?"`
+	ClusteringColumnsFields []Ident `parser:"(','? @Ident (',' @Ident)*)?"`
+}
+
+func (s ViewStmt) GetName() string { return string(s.Name) }
+
+type ViewRefField struct {
+	Statement
+	Name    Ident      `parser:"@Ident"`
+	RefDocs []DefQName `parser:"'ref' ('(' @@ (',' @@)* ')')?"`
+	NotNull bool       `parser:"@(NOTNULL)?"`
+}
 
 type ViewField struct {
-	Name    string        `parser:"@Ident"`
-	Type    ViewFieldType `parser:"@@"`
-	NotNull bool          `parser:"@(NOTNULL)?"`
-}
-
-type ViewFieldType struct {
-	Int32   bool `parser:"@(('sys' '.')? ('int'|'int32'))"`
-	Int64   bool `parser:"| @(('sys' '.')? 'int64')"`
-	Float32 bool `parser:"@(('sys' '.')? ('float'|'float32'))"`
-	Float64 bool `parser:"| @(('sys' '.')? 'float64')"`
-	Blob    bool `parser:"| @('sys.'? 'blob')"`
-	Bytes   bool `parser:"| @('sys.'? 'bytes')"`
-	Text    bool `parser:"| @('sys.'? 'text')"`
-	QName   bool `parser:"| @('sys.'? 'qname')"`
-	Bool    bool `parser:"| @('sys.'? 'bool')"`
-	Id      bool `parser:"| @(('sys' '.')? 'id')"`
+	Statement
+	Name    Ident    `parser:"@Ident"`
+	Type    DataType `parser:"@@"`
+	NotNull bool     `parser:"@(NOTNULL)?"`
 }

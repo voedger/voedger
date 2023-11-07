@@ -1,9 +1,11 @@
+-- Copyright (c) 2020-present unTill Pro, Ltd.
+
 SCHEMA air;
 
 IMPORT SCHEMA github.com/untillpro/airs-bp3/packages/untill
 
 WORKSPACE Restaurant (
-    
+
     -- Roles
     ROLE UntillPaymentsUser;
     ROLE LocationManager;
@@ -15,7 +17,7 @@ WORKSPACE Restaurant (
 
     -- Collection is applied to all tables with tag "sys.Collection"
     TAG ON TAG "Backoffice" IS "sys.Collection"
-    
+
     --SYNONIM uarticles FOR untill.articles  --later
 
 
@@ -28,40 +30,40 @@ WORKSPACE Restaurant (
     --- Remove procedure, declare arguments and results in CHECK, COMMAND and QUERY
     -- CHECKS
     VALIDATOR MyBillValidator AS ENGINE BUILTIN; -- same as MyBillValidator(sys.TableRow)
-    VALIDATOR MyFieldsValidator(fieldA text, fieldB text) AS WasmFuncName ENGINE BUILTIN; -- 
+    VALIDATOR MyFieldsValidator(fieldA text, fieldB text) AS WasmFuncName ENGINE BUILTIN; --
 
     CHECK ON TABLE untill.bill IS MyBillValidator;
     CHECK ON TABLE untill.bill(name, pcname) IS MyFieldsValidator;
-    
+
     -- PROJECTORS
 
     PROJECTOR FillUPProfile() AS ENGINE WASM; -- Same as FillUPProfile(sys.Event)
-    PROJECTOR FillUPProfile(sys.Event) AS WasmFuncName ENGINE WASM; 
+    PROJECTOR FillUPProfile(sys.Event) AS WasmFuncName ENGINE WASM;
     PROJECTOR ON EVENT WITH TAG Backoffice IS FillUPProfile;
     PROJECTOR ON EVENT air.CreateUPProfile AS WasmFuncName ENGINE WASM;
     PROJECTOR ON EVENT IN (air.CreateUPProfile, air.UpdateUPProfile) IS FillUPProfile;
 
     -- COMMANDS
-    COMMAND Orders(untill.orders) AS ENGINE BUILTIN; -- Return is optional = same as RETURNS void; 
+    COMMAND Orders(untill.orders) AS ENGINE BUILTIN; -- Return is optional = same as RETURNS void;
     COMMAND Pbill(untill.pbill) RETURNS PbillResult AS PbillImpl ENGINE BUILTIN;
     COMMAND LinkDeviceToRestaurant(LinkDeviceToRestaurantParams) RETURNS void IS somepackage.MiscFunc;
 
     -- DECLARE RATE BackofficeFuncRate AS 100 PER MINUTE PER IP;    <- rejected by NNV :)
     RATE BackofficeFuncRate AS 100 PER MINUTE PER IP;
     Comment BackofficeDescription AS "This is a backoffice table";
-    
+
     -- QUERIES
-    QUERY TransactionHistory(TransactionHistoryParams) RETURNS TransactionHistoryResult[] ENGINE WASM 
+    QUERY TransactionHistory(TransactionHistoryParams) RETURNS TransactionHistoryResult[] ENGINE WASM
         WITH Rate=BackofficeFuncRate, Comment='Transaction History'
 
-    COMMENT ON QUERY TransactionHistory IS 'Transaction History';  
-    COMMENT ON QUERY WITH TAG Backoffice IS 'Transaction History';  
-    COMMENT ON QUERY IN (TransactionHistory, ...) IS 'Transaction History';  
+    COMMENT ON QUERY TransactionHistory IS 'Transaction History';
+    COMMENT ON QUERY WITH TAG Backoffice IS 'Transaction History';
+    COMMENT ON QUERY IN (TransactionHistory, ...) IS 'Transaction History';
 
     RATE ON QUERY TransactionHistory IS BackofficeFuncRate;
     RATE ON QUERY TransactionHistory AS 101 PER MINUTE PER IP;
-  
-    
+
+
     QUERY QueryResellerInfo(reseller_id text) RETURNS QueryResellerInfoResult ENGINE WASM;
 
 
@@ -85,30 +87,30 @@ WORKSPACE Restaurant (
         Event text NOT NULL,
     )
 
-    
+
     -- dashboard: hourly sales
-    VIEW HourlySalesView(yyyymmdd, hour, total, count) AS 
-    SELECT 
+    VIEW HourlySalesView(yyyymmdd, hour, total, count) AS
+    SELECT
         working_day as yyyymmdd,
         EXTRACT(hour from ord_datetime) as hour,
         SUM(price * quantity) as total,
         SUM(quantity) as count
-        from untill.orders 
-            join order_item on order_item.id_orders=orders.id        
+        from untill.orders
+            join order_item on order_item.id_orders=orders.id
         group by working_day, hour
     WITH Key='(yyyymmdd), hour)';
 
     -- dashboard: daily categories
     VIEW DailyCategoriesView(yyyymmdd PK, id_category, total) A
-    SELECT 
+    SELECT
         working_day as yyyymmdd,
-        id_category, 
+        id_category,
         SUM(price * quantity) as total,
-        from untill.orders 
+        from untill.orders
             join order_item on order_item.id_orders = orders.id
             join articles on id_articles = articles.id
             join department on id_departments = articles.id_department
-            join food_group on id_food_group = department.id_food_group        
+            join food_group on id_food_group = department.id_food_group
         group by working_day, id_category
 
     TYPE LinkDeviceToRestaurantParams AS (
@@ -152,19 +154,19 @@ WORKSPACE Restaurant (
     VIEW TablesOverview(
         partitionKey int32, tableNumber int32, tablePart text, wDocID id,
         PRIMARY KEY((partitionKey), tableno, table_part)
-    ) as select 
-        2 as partitionKey, 
+    ) as select
+        2 as partitionKey,
         tableno as tableNumber,
         table_part as tablePart,
         sys.ID as id
     from untill.bill
 
     VIEW TransactionHistory(wDocID id, offs offset, PRIMARY KEY((id), offs)) AS
-    select id, sys.Offset from untill.bill 
+    select id, sys.Offset from untill.bill
     union all select id_bill, sys.Offset from orders
     union all select id_bill, sys.Offset from pbill ;
 
-     
+
 
 
     -- XZ Reports
@@ -175,13 +177,13 @@ WORKSPACE Restaurant (
         from int64,
         till int64
     )
-    
+
     VIEW XZReports(
-        Year int32, 
-        Month int32, 
-        Day int32, 
-        Kind int32, 
-        Number int32, 
+        Year int32,
+        Month int32,
+        Day int32,
+        Kind int32,
+        Number int32,
         XZReportWDocID id,
         PRIMARY KEY((Year), Month, Day, Kind, Number)
     ) AS RESULT OF UpdateXZReportsView
@@ -191,7 +193,7 @@ WORKSPACE Restaurant (
 ) -- WORKSPACE Restaurant
 
 WORKSPACE Resellers {
-    
+
     ROLE ResellersAdmin;
 
     WORKSPACE Reseller {
@@ -209,7 +211,7 @@ TEMPLATE resdemo OF WORKSPACE untill.Resellers WITH SOURCE wsTemplate_demo_resel
 -- provideQryIssueLinkDeviceToken
 
 
--- Subscription Query functions: 
+-- Subscription Query functions:
 -- - QueryResellerInfo
 -- - FindRestaurantSubscription
 -- - EstimatePlan

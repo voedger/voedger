@@ -22,6 +22,7 @@ func newReplaceCmd() *cobra.Command {
 func replace(cmd *cobra.Command, arg []string) error {
 
 	cluster := newCluster()
+	// nolint
 	defer cluster.saveToJSON()
 
 	c := newCmd(ckReplace, strings.Join(arg, " "))

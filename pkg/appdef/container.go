@@ -8,43 +8,36 @@ package appdef
 import (
 	"errors"
 	"fmt"
-	"strings"
 )
-
-const SystemContainer_ViewPartitionKey = SystemPackagePrefix + "pkey"
-const SystemContainer_ViewClusteringCols = SystemPackagePrefix + "ccols"
-const SystemContainer_ViewKey = SystemPackagePrefix + "key"
-const SystemContainer_ViewValue = SystemPackagePrefix + "val"
 
 // # Implements:
 //   - Container
 type container struct {
-	parent    interface{}
+	comment
+	emb       interface{}
 	name      string
 	qName     QName
-	def       IDef
+	typ       IType
 	minOccurs Occurs
 	maxOccurs Occurs
 }
 
-func newContainer(parent interface{}, name string, def QName, minOccurs, maxOccurs Occurs) *container {
+func newContainer(embeds interface{}, name string, typeName QName, minOccurs, maxOccurs Occurs) *container {
 	return &container{
-		parent:    parent,
+		emb:       embeds,
 		name:      name,
-		qName:     def,
+		qName:     typeName,
 		minOccurs: minOccurs,
 		maxOccurs: maxOccurs,
 	}
 }
 
-func (cont *container) Def() IDef {
-	if (cont.def == nil) || (cont.def.QName() != cont.QName()) {
-		cont.def = cont.parentDef().App().DefByName(cont.QName())
+func (cont *container) Type() IType {
+	if (cont.typ == nil) || (cont.typ.QName() != cont.QName()) {
+		cont.typ = cont.embeds().App().TypeByName(cont.QName())
 	}
-	return cont.def
+	return cont.typ
 }
-
-func (cont *container) IsSys() bool { return IsSysContainer(cont.name) }
 
 func (cont *container) MaxOccurs() Occurs { return cont.maxOccurs }
 
@@ -54,73 +47,64 @@ func (cont *container) Name() string { return cont.name }
 
 func (cont *container) QName() QName { return cont.qName }
 
-func (cont *container) parentDef() IDef {
-	return cont.parent.(IDef)
+func (cont container) String() string {
+	return fmt.Sprintf("container «%s: %v»", cont.Name(), cont.QName())
 }
 
-// Returns is container system
-func IsSysContainer(n string) bool {
-	return strings.HasPrefix(n, SystemPackagePrefix) && // fast check
-		// then more accuracy
-		((n == SystemContainer_ViewPartitionKey) ||
-			(n == SystemContainer_ViewClusteringCols) ||
-			(n == SystemContainer_ViewKey) ||
-			(n == SystemContainer_ViewValue))
-}
+func (cont *container) embeds() IStructure { return cont.emb.(IStructure) }
 
 // # Implements:
 //   - IContainers
 //   - IContainersBuilder
 type containers struct {
-	parent            interface{}
+	emb               interface{}
 	containers        map[string]*container
 	containersOrdered []string
 }
 
-func makeContainers(def interface{}) containers {
-	c := containers{def, make(map[string]*container), make([]string, 0)}
+func makeContainers(embeds interface{}) containers {
+	c := containers{embeds, make(map[string]*container), make([]string, 0)}
 	return c
 }
 
-func (c *containers) AddContainer(name string, contDef QName, minOccurs, maxOccurs Occurs) IContainersBuilder {
+func (c *containers) AddContainer(name string, contType QName, minOccurs, maxOccurs Occurs, comment ...string) IContainersBuilder {
 	if name == NullName {
-		panic(fmt.Errorf("%v: empty container name: %w", c.parentDef().QName(), ErrNameMissed))
+		panic(fmt.Errorf("%v: empty container name: %w", c.embeds(), ErrNameMissed))
 	}
-	if !IsSysContainer(name) {
-		if ok, err := ValidIdent(name); !ok {
-			panic(fmt.Errorf("%v: invalid container name «%v»: %w", c.parentDef().QName(), name, err))
-		}
+	if ok, err := ValidIdent(name); !ok {
+		panic(fmt.Errorf("%v: invalid container name «%v»: %w", c.embeds(), name, err))
 	}
 	if c.Container(name) != nil {
-		panic(fmt.Errorf("%v: container «%v» is already exists: %w", c.parentDef().QName(), name, ErrNameUniqueViolation))
+		panic(fmt.Errorf("%v: container «%v» is already exists: %w", c.embeds(), name, ErrNameUniqueViolation))
 	}
 
-	if contDef == NullQName {
-		panic(fmt.Errorf("%v: missed container «%v» definition name: %w", c.parentDef().QName(), name, ErrNameMissed))
+	if contType == NullQName {
+		panic(fmt.Errorf("%v: missed container «%v» type name: %w", c.embeds(), name, ErrNameMissed))
 	}
 
 	if maxOccurs == 0 {
-		panic(fmt.Errorf("%v: max occurs value (0) must be positive number: %w", c.parentDef().QName(), ErrInvalidOccurs))
+		panic(fmt.Errorf("%v: max occurs value (0) must be positive number: %w", c.embeds(), ErrInvalidOccurs))
 	}
 	if maxOccurs < minOccurs {
-		panic(fmt.Errorf("%v: max occurs (%v) must be greater or equal to min occurs (%v): %w", c.parentDef().QName(), maxOccurs, minOccurs, ErrInvalidOccurs))
+		panic(fmt.Errorf("%v: max occurs (%v) must be greater or equal to min occurs (%v): %w", c.embeds(), maxOccurs, minOccurs, ErrInvalidOccurs))
 	}
 
-	if cd := c.parentDef().App().DefByName(contDef); cd != nil {
-		if k := c.parentDef().Kind(); !k.ContainerKindAvailable(cd.Kind()) {
-			panic(fmt.Errorf("%v: definition kind «%s» does not support child container kind «%s»: %w", c.parentDef().QName(), k.TrimString(), cd.Kind().TrimString(), ErrInvalidDefKind))
+	if typ := c.embeds().App().TypeByName(contType); typ != nil {
+		if k := c.embeds().Kind(); !k.ContainerKindAvailable(typ.Kind()) {
+			panic(fmt.Errorf("%v: type kind «%s» does not support child container kind «%s»: %w", c.embeds(), k.TrimString(), typ.Kind().TrimString(), ErrInvalidTypeKind))
 		}
 	}
 
-	if len(c.containers) >= MaxDefContainerCount {
-		panic(fmt.Errorf("%v: maximum container count (%d) exceeds: %w", c.parentDef().QName(), MaxDefContainerCount, ErrTooManyContainers))
+	if len(c.containers) >= MaxTypeContainerCount {
+		panic(fmt.Errorf("%v: maximum container count (%d) exceeds: %w", c.embeds(), MaxTypeContainerCount, ErrTooManyContainers))
 	}
 
-	cont := newContainer(c.parent, name, contDef, minOccurs, maxOccurs)
+	cont := newContainer(c.emb, name, contType, minOccurs, maxOccurs)
+	cont.SetComment(comment...)
 	c.containers[name] = cont
 	c.containersOrdered = append(c.containersOrdered, name)
 
-	return c.parent.(IContainersBuilder)
+	return c.emb.(IContainersBuilder)
 }
 
 func (c *containers) Container(name string) IContainer {
@@ -140,26 +124,26 @@ func (c *containers) Containers(cb func(IContainer)) {
 	}
 }
 
-func (c *containers) parentDef() IDef {
-	return c.parent.(IDef)
+func (c *containers) embeds() IStructure {
+	return c.emb.(IStructure)
 }
 
 // Validates specified containers.
 //
 // # Validation:
-//   - every container definition must be known,
-//   - every container definition kind must be compatible with parent definition kind
-func validateDefContainers(def IDef) (err error) {
-	if cnt, ok := def.(IContainers); ok {
-		// resolve containers definitions
+//   - every container type must be known,
+//   - every container type kind must be compatible with parent type kind
+func validateTypeContainers(t IType) (err error) {
+	if cnt, ok := t.(IContainers); ok {
+		// resolve containers types
 		cnt.Containers(func(cont IContainer) {
-			contDef := cont.Def()
-			if contDef == nil {
-				err = errors.Join(err, fmt.Errorf("%v: container «%s» uses unknown definition «%v»: %w", def.QName(), cont.Name(), cont.QName(), ErrNameNotFound))
+			contType := cont.Type()
+			if contType == nil {
+				err = errors.Join(err, fmt.Errorf("%v: container «%s» uses unknown type «%v»: %w", t, cont.Name(), cont.QName(), ErrNameNotFound))
 				return
 			}
-			if !def.Kind().ContainerKindAvailable(contDef.Kind()) {
-				err = errors.Join(err, fmt.Errorf("%v: container «%s» definition «%v» is incompatible: «%s» can`t contain «%s»: %w", def.QName(), cont.Name(), cont.QName(), def.Kind().TrimString(), contDef.Kind().TrimString(), ErrInvalidDefKind))
+			if !t.Kind().ContainerKindAvailable(contType.Kind()) {
+				err = errors.Join(err, fmt.Errorf("%v: container «%s» type %v is incompatible: «%s» can`t contain «%s»: %w", t, cont.Name(), contType, t.Kind().TrimString(), contType.Kind().TrimString(), ErrInvalidTypeKind))
 			}
 		})
 	}

@@ -5,17 +5,28 @@
 
 package appdef
 
+import "fmt"
+
 // # Implements:
 //	- IExtension
 type extension struct {
+	comment
 	name   string
 	engine ExtensionEngineKind
 }
 
-func (ex *extension) Name() string {
+func newExtension() *extension {
+	return &extension{}
+}
+
+func (ex extension) Name() string {
 	return ex.name
 }
 
-func (ex *extension) Engine() ExtensionEngineKind {
+func (ex extension) Engine() ExtensionEngineKind {
 	return ex.engine
+}
+
+func (ex extension) String() string {
+	return fmt.Sprintf("%s (%s)", ex.Name(), ex.Engine().TrimString())
 }

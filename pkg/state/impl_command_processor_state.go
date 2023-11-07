@@ -17,42 +17,42 @@ func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStr
 	tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc) IHostState {
 	bs := newHostState("CommandProcessor", intentsLimit)
 
-	bs.addStorage(ViewRecordsStorage, &viewRecordsStorage{
+	bs.addStorage(View, &viewRecordsStorage{
 		ctx:             ctx,
 		viewRecordsFunc: func() istructs.IViewRecords { return appStructsFunc().ViewRecords() },
 		appDefFunc:      func() appdef.IAppDef { return appStructsFunc().AppDef() },
 		wsidFunc:        wsidFunc,
 	}, S_GET|S_GET_BATCH)
 
-	bs.addStorage(RecordsStorage, &recordsStorage{
+	bs.addStorage(Record, &recordsStorage{
 		recordsFunc: func() istructs.IRecords { return appStructsFunc().Records() },
 		cudFunc:     cudFunc,
 		appDefFunc:  func() appdef.IAppDef { return appStructsFunc().AppDef() },
 		wsidFunc:    wsidFunc,
 	}, S_GET|S_GET_BATCH|S_INSERT|S_UPDATE)
 
-	bs.addStorage(WLogStorage, &wLogStorage{
+	bs.addStorage(WLog, &wLogStorage{
 		ctx:        ctx,
 		eventsFunc: func() istructs.IEvents { return appStructsFunc().Events() },
 		appDefFunc: func() appdef.IAppDef { return appStructsFunc().AppDef() },
 		wsidFunc:   wsidFunc,
 	}, S_GET)
 
-	bs.addStorage(PLogStorage, &pLogStorage{
+	bs.addStorage(PLog, &pLogStorage{
 		ctx:             ctx,
 		eventsFunc:      func() istructs.IEvents { return appStructsFunc().Events() },
 		appDefFunc:      func() appdef.IAppDef { return appStructsFunc().AppDef() },
 		partitionIDFunc: partitionIDFunc,
 	}, S_GET)
 
-	bs.addStorage(AppSecretsStorage, &appSecretsStorage{secretReader: secretReader}, S_GET)
+	bs.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
 
-	bs.addStorage(SubjectStorage, &subjectStorage{
+	bs.addStorage(RequestSubject, &subjectStorage{
 		principalsFunc: principalsFunc,
 		tokenFunc:      tokenFunc,
 	}, S_GET)
 
-	bs.addStorage(CmdResultStorage, &cmdResultStorage{
+	bs.addStorage(Result, &cmdResultStorage{
 		cmdResultBuilderFunc: cmdResultBuilderFunc,
 	}, S_INSERT)
 

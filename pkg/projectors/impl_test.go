@@ -104,7 +104,7 @@ var (
 		if wsid == 1099 {
 			return errors.New("test err")
 		}
-		key, err := s.KeyBuilder(state.ViewRecordsStorage, incProjectionView)
+		key, err := s.KeyBuilder(state.View, incProjectionView)
 		if err != nil {
 			return
 		}
@@ -126,7 +126,7 @@ var (
 		return
 	}
 	decrementor = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		key, err := s.KeyBuilder(state.ViewRecordsStorage, decProjectionView)
+		key, err := s.KeyBuilder(state.View, decProjectionView)
 		if err != nil {
 			return
 		}
@@ -150,9 +150,9 @@ var (
 )
 
 var buildProjectionView = func(view appdef.IViewBuilder) {
-	view.AddPartField("pk", appdef.DataKind_int32)
-	view.AddClustColumn("cc", appdef.DataKind_int32)
-	view.AddValueField(colValue, appdef.DataKind_int32, true)
+	view.KeyBuilder().PartKeyBuilder().AddField("pk", appdef.DataKind_int32)
+	view.KeyBuilder().ClustColsBuilder().AddField("cc", appdef.DataKind_int32)
+	view.ValueBuilder().AddField(colValue, appdef.DataKind_int32, true)
 }
 
 type (
@@ -248,7 +248,7 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	require.NoError(processor.SendSync(&plogEvent{wsid: 1002}))
 	err := processor.SendSync(&plogEvent{wsid: 1099})
 	require.NotNil(err)
-	require.Equal("[actualizer/doSync] [ErrorHandler/doSync] [SyncActualizer/doSync] [Projector/doSync] test err", err.Error())
+	require.Equal("test err", err.Error())
 
 	// now read the projection values in workspaces
 	require.Equal(int32(2), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))

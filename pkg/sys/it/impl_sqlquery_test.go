@@ -20,10 +20,11 @@ import (
 
 func TestBasicUsage_SqlQuery(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	idUntillUsers := vit.GetAny("app1.untill_users", ws)
 
 	findPLogOffsetByWLogOffset := func(wLogOffset int64) int64 {
 		type row struct {
@@ -45,11 +46,11 @@ func TestBasicUsage_SqlQuery(t *testing.T) {
 
 	tableNum := vit.NextNumber()
 
-	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.category","name":"Awesome food"}}]}`
+	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.category","name":"Awesome food"}}]}`
 	vit.PostWS(ws, "c.sys.CUD", body)
-	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.bill","tableno":%d,"id_untill_users":100000000000,"table_part":"a","proforma":0,"working_day":"20230227"}}]}`, tableNum)
+	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":0,"working_day":"20230227"}}]}`, tableNum, idUntillUsers)
 	vit.PostWS(ws, "c.sys.CUD", body)
-	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.payments","name":"EFT","guid":"0a53b7c6-2c47-491c-ac00-307b8d5ba6f2"}}]}`
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.payments","name":"EFT","guid":"0a53b7c6-2c47-491c-ac00-307b8d5ba6f2"}}]}`
 	resp := vit.PostWS(ws, "c.sys.CUD", body)
 
 	body = fmt.Sprintf(`{"args":{"Query":"select CUDs from sys.plog where Offset>=%d"},"elements":[{"fields":["Result"]}]}`, findPLogOffsetByWLogOffset(resp.CurrentWLogOffset))
@@ -59,10 +60,11 @@ func TestBasicUsage_SqlQuery(t *testing.T) {
 }
 
 func TestSqlQuery_plog(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	idUntillUsers := vit.GetAny("app1.untill_users", ws)
 
 	pLogSize := 0
 	// it is wrong to consider last resp.CurrentWLogOffset as the pLog events amount because pLog contains events from different workspaces
@@ -100,7 +102,7 @@ func TestSqlQuery_plog(t *testing.T) {
 
 	for i := 1; i <= 101; i++ {
 		tableno := vit.NextNumber()
-		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":%d,"sys.QName":"sys.bill","tableno":%d,"id_untill_users":100000000000,"table_part":"a","proforma":0,"working_day":"20230227"}}]}`, i, tableno)
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":%d,"sys.QName":"app1.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":0,"working_day":"20230227"}}]}`, i, tableno, idUntillUsers)
 		vit.PostWS(ws, "c.sys.CUD", body)
 		pLogSize++
 	}
@@ -187,15 +189,16 @@ func TestSqlQuery_plog(t *testing.T) {
 }
 
 func TestSqlQuery_wlog(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	idUntillUsers := vit.GetAny("app1.untill_users", ws)
 
 	var lastWLogOffset int64
 	for i := 1; i <= 101; i++ {
 		tableno := vit.NextNumber()
-		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":%d,"sys.QName":"sys.bill","tableno":%d,"id_untill_users":100000000000,"table_part":"a","proforma":0,"working_day":"20230227"}}]}`, i, tableno)
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":%d,"sys.QName":"app1.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":0,"working_day":"20230227"}}]}`, i, tableno, idUntillUsers)
 		resp := vit.PostWS(ws, "c.sys.CUD", body)
 		lastWLogOffset = resp.CurrentWLogOffset
 	}
@@ -250,7 +253,7 @@ func TestSqlQuery_wlog(t *testing.T) {
 }
 
 func TestSqlQuery_readLogParams(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -300,14 +303,14 @@ func TestSqlQuery_readLogParams(t *testing.T) {
 }
 
 func TestSqlQuery_records(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.payments","name":"EFT","guid":"guidEFT"}},
-					   {"fields":{"sys.ID":2,"sys.QName":"sys.payments","name":"Cash","guid":"guidCash"}},
-					   {"fields":{"sys.ID":3,"sys.QName":"sys.pos_emails","description":"invite"}}]}`
+	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.payments","name":"EFT","guid":"guidEFT"}},
+					   {"fields":{"sys.ID":2,"sys.QName":"app1.payments","name":"Cash","guid":"guidCash"}},
+					   {"fields":{"sys.ID":3,"sys.QName":"app1.pos_emails","description":"invite"}}]}`
 	res := vit.PostWS(ws, "c.sys.CUD", body)
 
 	eftId := res.NewID()
@@ -316,11 +319,11 @@ func TestSqlQuery_records(t *testing.T) {
 
 	t.Run("Should read record with all fields by ID", func(t *testing.T) {
 		require := require.New(t)
-		body = fmt.Sprintf(`{"args":{"Query":"select * from sys.payments where id = %d"},"elements":[{"fields":["Result"]}]}`, eftId)
+		body = fmt.Sprintf(`{"args":{"Query":"select * from app1.payments where id = %d"},"elements":[{"fields":["Result"]}]}`, eftId)
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 
 		resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
-		require.Contains(resStr, `"sys.QName":"sys.payments"`)
+		require.Contains(resStr, `"sys.QName":"app1.payments"`)
 		require.Contains(resStr, fmt.Sprintf(`"sys.ID":%d`, eftId))
 		require.Contains(resStr, `"guid":"guidEFT"`)
 		require.Contains(resStr, `"name":"EFT"`)
@@ -328,129 +331,129 @@ func TestSqlQuery_records(t *testing.T) {
 	})
 	t.Run("Should read records with one field by IDs range", func(t *testing.T) {
 		require := require.New(t)
-		body = fmt.Sprintf(`{"args":{"Query":"select name, sys.IsActive from sys.payments where id in (%d,%d)"}, "elements":[{"fields":["Result"]}]}`, eftId, cashId)
+		body = fmt.Sprintf(`{"args":{"Query":"select name, sys.IsActive from app1.payments where id in (%d,%d)"}, "elements":[{"fields":["Result"]}]}`, eftId, cashId)
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 
 		require.Equal(resp.SectionRow()[0], `{"name":"EFT","sys.IsActive":true}`)
 		require.Equal(resp.SectionRow(1)[0], `{"name":"Cash","sys.IsActive":true}`)
 	})
 	t.Run("Should return error when column name not supported", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from sys.payments where something = 1"}}`
+		body = `{"args":{"Query":"select * from app1.payments where something = 1"}}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
 		resp.RequireError(t, "unsupported column name: something")
 	})
 	t.Run("Should return error when ID not parsable", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from sys.payments where id = 2.3"}}`
+		body = `{"args":{"Query":"select * from app1.payments where id = 2.3"}}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
 		resp.RequireError(t, `strconv.ParseInt: parsing "2.3": invalid syntax`)
 	})
 	t.Run("Should return error when ID from IN clause not parsable", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from sys.payments where id in (1.3)"}}`
+		body = `{"args":{"Query":"select * from app1.payments where id in (1.3)"}}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
 		resp.RequireError(t, `strconv.ParseInt: parsing "1.3": invalid syntax`)
 	})
 	t.Run("Should return error when ID operation not supported", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from sys.payments where id >= 2"}}`
+		body = `{"args":{"Query":"select * from app1.payments where id >= 2"}}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
 		resp.RequireError(t, "unsupported operation: >=")
 	})
 	t.Run("Should return error when expression not supported", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from sys.payments where id = 2 and something = 2"}}`
+		body = `{"args":{"Query":"select * from app1.payments where id = 2 and something = 2"}}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
 		resp.RequireError(t, "unsupported expression: *sqlparser.AndExpr")
 	})
 	t.Run("Should return error when ID not present", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from sys.payments"}}`
+		body = `{"args":{"Query":"select * from app1.payments"}}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, "unable to find singleton ID for definition «sys.payments»: name not found")
+		resp.RequireError(t, "unable to find singleton ID for type «app1.payments»: name not found")
 	})
 	t.Run("Should return error when requested record has mismatching QName", func(t *testing.T) {
-		body = fmt.Sprintf(`{"args":{"Query":"select * from sys.payments where id = %d"}}`, emailId)
+		body = fmt.Sprintf(`{"args":{"Query":"select * from app1.payments where id = %d"}}`, emailId)
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, fmt.Sprintf("record with ID '%d' has mismatching QName 'sys.pos_emails'", emailId))
+		resp.RequireError(t, fmt.Sprintf("record with ID '%d' has mismatching QName 'app1.pos_emails'", emailId))
 	})
 	t.Run("Should return error when record not found", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from sys.payments where id = 123456789"}}`
+		body = `{"args":{"Query":"select * from app1.payments where id = 123456789"}}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
 		resp.RequireError(t, "record with ID '123456789' not found")
 	})
 	t.Run("Should return error when field not found in def", func(t *testing.T) {
-		body = fmt.Sprintf(`{"args":{"Query":"select abracadabra from sys.pos_emails where id = %d"}}`, emailId)
+		body = fmt.Sprintf(`{"args":{"Query":"select abracadabra from app1.pos_emails where id = %d"}}`, emailId)
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
 		resp.RequireError(t, "field 'abracadabra' not found in def")
 	})
 	t.Run("Should read singleton", func(t *testing.T) {
 		require := require.New(t)
-		body = `{"args":{"Query":"select sys.QName from my.WSKind"},"elements":[{"fields":["Result"]}]}`
+		body = `{"args":{"Query":"select sys.QName from app1.WSKind"},"elements":[{"fields":["Result"]}]}`
 		restaurant := vit.PostWS(ws, "q.sys.SqlQuery", body).SectionRow(0)
 
-		require.Equal(`{"sys.QName":"my.WSKind"}`, restaurant[0])
+		require.Equal(`{"sys.QName":"app1.WSKind"}`, restaurant[0])
 	})
 }
 
 func TestSqlQuery_view_records(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.payments","name":"EFT","guid":"guidEFT"}},
-					   {"fields":{"sys.ID":2,"sys.QName":"sys.pos_emails","description":"invite"}}]}`
+	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.payments","name":"EFT","guid":"guidEFT"}},
+					   {"fields":{"sys.ID":2,"sys.QName":"app1.pos_emails","description":"invite"}}]}`
 	resp := vit.PostWS(ws, "c.sys.CUD", body)
 	paymentsID := resp.NewID()
 	lastWLogOffset := resp.CurrentWLogOffset
 
 	t.Run("Should read record with all fields", func(t *testing.T) {
 		require := require.New(t)
-		body = `{"args":{"Query":"select * from air.CollectionView where PartKey = 1 and DocQName = 'sys.payments'"}, "elements":[{"fields":["Result"]}]}`
+		body = `{"args":{"Query":"select * from sys.CollectionView where PartKey = 1 and DocQName = 'app1.payments'"}, "elements":[{"fields":["Result"]}]}`
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
 
 		respStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
 		require.Contains(respStr, fmt.Sprintf(`"DocID":%d`, paymentsID))
-		require.Contains(respStr, `"DocQName":"sys.payments"`)
+		require.Contains(respStr, `"DocQName":"app1.payments"`)
 		require.Contains(respStr, `"ElementID":0`)
 		require.Contains(respStr, fmt.Sprintf(`"offs":%d`, lastWLogOffset))
 		require.Contains(respStr, `"PartKey":1`)
 		require.Contains(respStr, `"Record":{`)
-		require.Contains(respStr, `"sys.QName":"air.CollectionView_Value"`)
+		require.Contains(respStr, `"sys.QName":"sys.CollectionView"`)
 	})
 	t.Run("Should return error when operator not supported", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from air.CollectionView where partKey > 1"}}`
+		body = `{"args":{"Query":"select * from sys.CollectionView where partKey > 1"}}`
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
 		resp.RequireError(t, "unsupported operator: >")
 	})
 	t.Run("Should return error when expression not supported", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from air.CollectionView where partKey = 1 or docQname = 'sys.payments'"}}`
+		body = `{"args":{"Query":"select * from sys.CollectionView where partKey = 1 or docQname = 'app1.payments'"}}`
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
 		resp.RequireError(t, "unsupported expression: *sqlparser.OrExpr")
 	})
 	t.Run("Should return error when field does not exist in value def", func(t *testing.T) {
-		body = `{"args":{"Query":"select abracadabra from air.CollectionView where PartKey = 1"}}`
+		body = `{"args":{"Query":"select abracadabra from sys.CollectionView where PartKey = 1"}}`
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, "field 'abracadabra' does not exist in 'air.CollectionView' value def")
+		resp.RequireError(t, "field 'abracadabra' does not exist in 'sys.CollectionView' value def")
 	})
 	t.Run("Should return error when field does not exist in key def", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from air.CollectionView where partKey = 1"}}`
+		body = `{"args":{"Query":"select * from sys.CollectionView where partKey = 1"}}`
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, "field 'partKey' does not exist in 'air.CollectionView' key def")
+		resp.RequireError(t, "field 'partKey' does not exist in 'sys.CollectionView' key def")
 	})
 }
 
 func TestSqlQuery(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -473,4 +476,18 @@ func TestSqlQuery(t *testing.T) {
 
 		require.NotEqual(t, len(wsOne.Sections[0].Elements), len(wsTwo.Sections[0].Elements))
 	})
+}
+
+func TestXxx(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.category","name":"Awesome food"}}]}`
+	vit.PostWS(ws, "c.sys.CUD", body)
+
+	// body = `{"args":{"Query":"select * from app1.category where name = 'Awesome food'"}}`
+	// vit.PostWS(ws, "q.sys.SqlQuery", body).Println()
+	body = `{"args":{"Schema":"app1.category"},"elements":[{"fields":["sys.ID","name"]}],"filters":[{"expr":"eq","args":{"field":"name","value":"Awesome food"}}]}`
+	vit.PostWS(ws, "q.sys.Collection", body).Println()
 }

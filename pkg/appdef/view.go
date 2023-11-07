@@ -14,44 +14,24 @@ import (
 //   - IView
 //   - IViewBuilder
 type view struct {
-	def
-	containers
-	key   *viewKey
-	value *viewValue
+	typ
+	fields // all fields, include key and value
+	key    *viewKey
+	value  *viewValue
 }
 
 func newView(app *appDef, name QName) *view {
-	v := &view{def: makeDef(app, name, DefKind_ViewRecord)}
-	v.containers = makeContainers(v)
+	v := &view{
+		typ: makeType(app, name, TypeKind_ViewRecord),
+	}
 
-	v.key = newViewKey(app, name)
-	v.value = newViewValue(app, name)
-	v.
-		AddContainer(SystemContainer_ViewKey, v.key.QName(), 1, 1).
-		AddContainer(SystemContainer_ViewValue, v.value.QName(), 1, 1)
+	v.fields = makeFields(app, v)
+	v.fields.makeSysFields(TypeKind_ViewRecord)
+	v.key = newViewKey(v)
+	v.value = newViewValue(v)
 
-	app.appendDef(v)
+	app.appendType(v)
 
-	return v
-}
-
-func (v *view) AddPartField(name string, kind DataKind) IViewBuilder {
-	v.panicIfFieldDuplication(name)
-	v.key.pkey.AddField(name, kind, true)
-	v.key.AddField(name, kind, true)
-	return v
-}
-
-func (v *view) AddClustColumn(name string, kind DataKind) IViewBuilder {
-	v.panicIfFieldDuplication(name)
-	v.key.ccols.AddField(name, kind, false)
-	v.key.AddField(name, kind, false)
-	return v
-}
-
-func (v *view) AddValueField(name string, kind DataKind, required bool) IViewBuilder {
-	v.panicIfFieldDuplication(name)
-	v.value.AddField(name, kind, required)
 	return v
 }
 
@@ -59,151 +39,264 @@ func (v *view) Key() IViewKey {
 	return v.key
 }
 
+func (v *view) KeyBuilder() IViewKeyBuilder {
+	return v.key
+}
+
 func (v *view) Value() IViewValue {
 	return v.value
 }
 
-func (v *view) panicIfFieldDuplication(name string) {
-	check := func(f IFields) {
-		if fld := f.Field(name); fld != nil {
-			panic(fmt.Errorf("field «%s» already exists in view «%v»: %w", name, v.QName(), ErrNameUniqueViolation))
-		}
-	}
+func (v *view) ValueBuilder() IViewValueBuilder {
+	return v.value
+}
 
-	check(v.Key())
-	check(v.Value())
+// Validates view
+func (v *view) Validate() error {
+	return errors.Join(
+		v.key.validate(),
+		v.value.validate(),
+	)
 }
 
 // # Implements:
-//   - IPartKey
-type viewPKey struct {
-	def
+//   - IViewKey
+//   - IViewKeyBuilder
+type viewKey struct {
+	view   *view
+	fields // all key fields, include partition key and clustering columns
+	pkey   *viewPartKey
+	ccols  *viewClustCols
+}
+
+func newViewKey(v *view) *viewKey {
+	key := &viewKey{
+		view:   v,
+		fields: makeFields(v.typ.app, v),
+		pkey:   newViewPartKey(v),
+		ccols:  newViewClustCols(v),
+	}
+
+	return key
+}
+
+func (key *viewKey) PartKey() IViewPartKey {
+	return key.pkey
+}
+
+func (key *viewKey) PartKeyBuilder() IViewPartKeyBuilder {
+	return key.pkey
+}
+
+func (key *viewKey) ClustCols() IViewClustCols {
+	return key.ccols
+}
+
+func (key *viewKey) ClustColsBuilder() IViewClustColsBuilder {
+	return key.ccols
+}
+
+// Validates value key
+func (key *viewKey) validate() error {
+	return errors.Join(
+		key.pkey.validate(),
+		key.ccols.validate(),
+	)
+}
+
+// # Implements:
+//   - IViewPartKey
+//   - IViewPartKeyBuilder
+type viewPartKey struct {
+	view *view
 	fields
 }
 
-func newViewPKey(app *appDef, name QName) *viewPKey {
-	pKey := &viewPKey{def: makeDef(app, name, DefKind_ViewRecord_PartitionKey)}
-	pKey.fields = makeFields(pKey)
-	app.appendDef(pKey)
+func newViewPartKey(v *view) *viewPartKey {
+	pKey := &viewPartKey{
+		view:   v,
+		fields: makeFields(v.typ.app, v),
+	}
 	return pKey
 }
 
+func (pk *viewPartKey) AddDataField(name string, dataType QName, constraints ...IConstraint) IViewPartKeyBuilder {
+	d := pk.view.typ.app.Data(dataType)
+	if d == nil {
+		panic(fmt.Errorf("%v: view partition key field «%s» has unknown data type «%s»: %w", pk.view.QName(), name, dataType, ErrNameNotFound))
+	}
+	if k := d.DataKind(); !k.IsFixed() {
+		panic(fmt.Errorf("%v: view partition key field «%s» has variable length type «%s»: %w", pk.view.QName(), name, k.TrimString(), ErrInvalidDataKind))
+	}
+
+	pk.view.AddDataField(name, dataType, true, constraints...)
+	pk.view.key.AddDataField(name, dataType, true, constraints...)
+	pk.fields.AddDataField(name, dataType, true, constraints...)
+	return pk
+}
+
+func (pk *viewPartKey) AddField(name string, kind DataKind, constraints ...IConstraint) IViewPartKeyBuilder {
+	if !kind.IsFixed() {
+		panic(fmt.Errorf("%v: view partition key field «%s» has variable length type «%s»: %w", pk.view.QName(), name, kind.TrimString(), ErrInvalidDataKind))
+	}
+
+	pk.view.AddField(name, kind, true, constraints...)
+	pk.view.key.AddField(name, kind, true, constraints...)
+	pk.fields.AddField(name, kind, true, constraints...)
+	return pk
+}
+
+func (pk *viewPartKey) AddRefField(name string, ref ...QName) IViewPartKeyBuilder {
+	pk.view.AddRefField(name, true, ref...)
+	pk.view.key.AddRefField(name, true, ref...)
+	pk.fields.AddRefField(name, true, ref...)
+	return pk
+}
+
+func (pk *viewPartKey) SetFieldComment(name string, comment ...string) IViewPartKeyBuilder {
+	pk.view.SetFieldComment(name, comment...)
+	pk.view.key.SetFieldComment(name, comment...)
+	pk.fields.SetFieldComment(name, comment...)
+	return pk
+}
+
+func (pk *viewPartKey) isPartKey() {}
+
 // Validates view partition key
-func (pk *viewPKey) Validate() error {
+func (pk *viewPartKey) validate() error {
 	if pk.FieldCount() == 0 {
-		return fmt.Errorf("%v: view partition key can not to be empty: %w", pk.QName(), ErrFieldsMissed)
+		return fmt.Errorf("%v: view partition key can not to be empty: %w", pk.view.QName(), ErrFieldsMissed)
 	}
 	return nil
 }
 
 // # Implements:
-//   - IClustCols
-type viewCCols struct {
-	def
+//   - IViewClustCols
+//   - IViewClustColsBuilder
+type viewClustCols struct {
+	view *view
 	fields
+	varField string
 }
 
-func newViewCCols(app *appDef, name QName) *viewCCols {
-	cc := &viewCCols{def: makeDef(app, name, DefKind_ViewRecord_ClusteringColumns)}
-	cc.fields = makeFields(cc)
-	app.appendDef(cc)
+func newViewClustCols(v *view) *viewClustCols {
+	cc := &viewClustCols{
+		view:   v,
+		fields: makeFields(v.typ.app, v),
+	}
 	return cc
 }
 
-// Validates view clustering columns
-func (cc *viewCCols) Validate() (err error) {
-	if cc.FieldCount() == 0 {
-		return fmt.Errorf("%v: view clustering columns can not to be empty: %w", cc.QName(), ErrFieldsMissed)
+func (cc *viewClustCols) AddDataField(name string, dataType QName, constraints ...IConstraint) IViewClustColsBuilder {
+	d := cc.app.Data(dataType)
+	if d == nil {
+		panic(fmt.Errorf("%v: data type «%v» not found: %w", cc.view, dataType, ErrNameNotFound))
 	}
 
-	idx, cnt := 0, cc.FieldCount()
-	cc.Fields(func(fld IField) {
-		idx++
-		if idx == cnt {
-			return // last field may be any kind
-		}
-		if !fld.IsFixedWidth() {
-			err = errors.Join(err,
-				fmt.Errorf("%v: only last view clustering column field can be variable length; not last field «%s» has variable length type «%s»: %w", cc.QName(), fld.Name(), fld.DataKind().TrimString(), ErrInvalidDataKind))
-		}
-	})
+	cc.panicIfVarFieldDuplication(name, d.DataKind())
 
-	return err
+	cc.view.AddDataField(name, dataType, false, constraints...)
+	cc.view.key.AddDataField(name, dataType, false, constraints...)
+	cc.fields.AddDataField(name, dataType, false, constraints...)
+	return cc
 }
 
-// # Implements:
-//   - IViewKey
-type viewKey struct {
-	def
-	fields
-	containers
-	pkey  *viewPKey
-	ccols *viewCCols
+func (cc *viewClustCols) AddField(name string, kind DataKind, constraints ...IConstraint) IViewClustColsBuilder {
+	cc.panicIfVarFieldDuplication(name, kind)
+
+	cc.view.AddField(name, kind, false, constraints...)
+	cc.view.key.AddField(name, kind, false, constraints...)
+	cc.fields.AddField(name, kind, false, constraints...)
+	return cc
 }
 
-func newViewKey(app *appDef, viewName QName) *viewKey {
-	key := &viewKey{def: makeDef(app, ViewKeyDefName(viewName), DefKind_ViewRecord_Key)}
-	key.fields = makeFields(key)
-	key.containers = makeContainers(key)
+func (cc *viewClustCols) AddRefField(name string, ref ...QName) IViewClustColsBuilder {
+	cc.panicIfVarFieldDuplication(name, DataKind_RecordID)
 
-	key.pkey = newViewPKey(app, ViewPartitionKeyDefName(viewName))
-	key.ccols = newViewCCols(app, ViewClusteringColumnsDefName(viewName))
-
-	key.
-		AddContainer(SystemContainer_ViewPartitionKey, key.pkey.QName(), 1, 1).
-		AddContainer(SystemContainer_ViewClusteringCols, key.ccols.QName(), 1, 1)
-
-	app.appendDef(key)
-	return key
+	cc.view.AddRefField(name, false, ref...)
+	cc.view.key.AddRefField(name, false, ref...)
+	cc.fields.AddRefField(name, false, ref...)
+	return cc
 }
 
-func (key *viewKey) PartKey() IPartKey {
-	return key.pkey
+func (cc *viewClustCols) SetFieldComment(name string, comment ...string) IViewClustColsBuilder {
+	cc.view.SetFieldComment(name, comment...)
+	cc.view.key.SetFieldComment(name, comment...)
+	cc.fields.SetFieldComment(name, comment...)
+	return cc
 }
 
-func (key *viewKey) ClustCols() IClustCols {
-	return key.ccols
+func (cc *viewClustCols) isClustCols() {}
+
+// Panics if variable length field already exists
+func (cc *viewClustCols) panicIfVarFieldDuplication(name string, kind DataKind) {
+	if len(cc.varField) > 0 {
+		panic(fmt.Errorf("%v: view clustering column already has a field of variable length «%s», you can not add a field «%s» after it: %w", cc.view.QName(), cc.varField, name, ErrInvalidDataKind))
+	}
+	if !kind.IsFixed() {
+		cc.varField = name
+	}
+}
+
+// Validates view clustering columns
+func (cc *viewClustCols) validate() (err error) {
+	if cc.FieldCount() == 0 {
+		return fmt.Errorf("%v: view clustering columns can not to be empty: %w", cc.view.QName(), ErrFieldsMissed)
+	}
+
+	return nil
 }
 
 // # Implements:
 //   - IViewValue
+//   - IViewValueBuilder
 type viewValue struct {
-	def
+	view *view
 	fields
 }
 
-func newViewValue(app *appDef, viewName QName) *viewValue {
-	val := &viewValue{def: makeDef(app, ViewValueDefName(viewName), DefKind_ViewRecord_Value)}
-	val.fields = makeFields(val)
-	app.appendDef(val)
+func newViewValue(v *view) *viewValue {
+	val := &viewValue{
+		view:   v,
+		fields: makeFields(v.typ.app, v),
+	}
+	val.fields.makeSysFields(TypeKind_ViewRecord)
 	return val
 }
 
-// Returns partition key definition name for specified view
-func ViewPartitionKeyDefName(viewName QName) QName {
-	const suffix = "_PartitionKey"
-	return suffixedQName(viewName, suffix)
+func (v *viewValue) AddDataField(name string, dataType QName, required bool, constraints ...IConstraint) IFieldsBuilder {
+	v.view.AddDataField(name, dataType, required, constraints...)
+	v.fields.AddDataField(name, dataType, required, constraints...)
+	return v
 }
 
-// Returns clustering columns definition name for specified view
-func ViewClusteringColumnsDefName(viewName QName) QName {
-	const suffix = "_ClusteringColumns"
-	return suffixedQName(viewName, suffix)
+func (v *viewValue) AddField(name string, kind DataKind, required bool, constraints ...IConstraint) IFieldsBuilder {
+	v.view.AddField(name, kind, required, constraints...)
+	v.fields.AddField(name, kind, required, constraints...)
+	return v
 }
 
-// Returns full key definition name for specified view
-func ViewKeyDefName(viewName QName) QName {
-	const suffix = "_FullKey"
-	return suffixedQName(viewName, suffix)
+func (v *viewValue) AddRefField(name string, required bool, ref ...QName) IFieldsBuilder {
+	v.view.AddRefField(name, required, ref...)
+	v.fields.AddRefField(name, required, ref...)
+	return v
 }
 
-// Returns value definition name for specified view
-func ViewValueDefName(viewName QName) QName {
-	const suffix = "_Value"
-	return suffixedQName(viewName, suffix)
+func (v *viewValue) isViewValue() {}
+
+func (v *viewValue) SetFieldComment(name string, comment ...string) IFieldsBuilder {
+	v.view.SetFieldComment(name, comment...)
+	v.fields.SetFieldComment(name, comment...)
+	return v
 }
 
-// Appends suffix to QName entity name and returns new QName
-func suffixedQName(name QName, suffix string) QName {
-	return NewQName(name.Pkg(), name.Entity()+suffix)
+func (v *viewValue) SetFieldVerify(name string, vk ...VerificationKind) IFieldsBuilder {
+	v.view.SetFieldVerify(name, vk...)
+	v.fields.SetFieldVerify(name, vk...)
+	return v
+}
+
+// Validates view value
+func (v *viewValue) validate() error {
+	return nil
 }

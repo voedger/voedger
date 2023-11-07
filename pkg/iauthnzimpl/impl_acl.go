@@ -19,6 +19,7 @@ func (acl ACL) IsAllowed(principals []iauthnz.Principal, req iauthnz.AuthzReques
 	for _, acElem := range acl {
 		if matchOrNotSpecified_OpKinds(acElem.pattern.opKindsPattern, req.OperationKind) &&
 			matchOrNotSpecified_QNames(acElem.pattern.qNamesPattern, req.Resource) &&
+			matchOrNotSpecified_Fields(acElem.pattern.fieldsPattern, req.Fields) &&
 			matchOrNotSpecified_Principals(acElem.pattern.principalsPattern, principals) {
 			if policy = acElem.policy; policy == ACPolicy_Deny {
 				lastDenyingACElem = acElem
@@ -156,7 +157,7 @@ var defaultACL = ACL{
 				qNameQryCollection,
 				qNameCmdInitiateUpdateInviteRoles,
 				qNameCmdInitiateCancelAcceptedInvite,
-				qNameCmdCancelSendInvite,
+				qNameCmdCancelSentInvite,
 				qNameCDocChildWorkspace,
 				qNameCmdInitChildWorkspace,
 				qNameCmdEnrichPrincipalToken,
@@ -265,6 +266,8 @@ var defaultACL = ACL{
 				qNameQryGetUPPaymentMethods,
 				qNameQryToggleUPPaymentMethod,
 				qNameQryRequestUPPaymentMethod,
+				qNameQryGetUPTransactionsOverview,
+				qNameQryGetUPTransactionReceipts,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
@@ -296,35 +299,47 @@ var defaultACL = ACL{
 	},
 	{
 		// https://github.com/voedger/voedger/issues/422
+		// https://dev.untill.com/projects/#!649352
+		// https://dev.untill.com/projects/#!650998
+		// https://dev.untill.com/projects/#!653137
+		desc: "grant exec on few funcs to role air.UntillPaymentsReseller and role air.UntillPaymentsUser",
+		pattern: PatternType{
+			qNamesPattern: []appdef.QName{
+				qNameQryGetUPPayouts,
+				qNameQryGetUPInvoiceParties,
+			},
+			principalsPattern: [][]iauthnz.Principal{
+				// OR
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
+			},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
 		desc: "grant exec on few funcs to role air.UntillPaymentsReseller",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
-				qNameQryGetDailyPayoutCfg,
-				qNameCmdUpdateScheduledPayout,
-				qNameQryGetUPTransfers,
-				qNameCmdCreateUPTransfer,
+				qNameCmdUpdateUPLocationRates,
+				qNameQryGetUPFeesOverview,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
 		},
 		policy: ACPolicy_Allow,
 	},
 	{
-		desc: "grant exec on c.air.UpdateUPLocationRates to role air.UntillPaymentsReseller",
+		desc: "grant exec on c.air.UpdateUPProfile to role air.UntillPaymentsUser",
 		pattern: PatternType{
-			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPLocationRates},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
+			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPProfile},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}}},
 		},
 		policy: ACPolicy_Allow,
 	},
 	{
-		// https://github.com/voedger/voedger/issues/430
-		desc: "allow SELECT wdoc.air.UPTransfer to air.UntillPaymentsReseller",
+		desc: "grant exec on q.air.GetAllUPPayouts to role air.UntillPaymentsManager",
 		pattern: PatternType{
-			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
-			qNamesPattern:  []appdef.QName{qNameWDocUPTransfer},
-			principalsPattern: [][]iauthnz.Principal{
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
-			},
+			qNamesPattern:     []appdef.QName{qNameQryGetAllUPPayouts},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsManager}}},
 		},
 		policy: ACPolicy_Allow,
 	},

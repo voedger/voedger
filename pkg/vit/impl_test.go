@@ -24,7 +24,7 @@ import (
 func TestBasicUsage_SharedTestConfig(t *testing.T) {
 	require := require.New(t)
 
-	vit := NewVIT(t, &SharedConfig_Simple)
+	vit := NewVIT(t, &SharedConfig_App1)
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("basic run", func(t *testing.T) {
@@ -34,12 +34,12 @@ func TestBasicUsage_SharedTestConfig(t *testing.T) {
 	})
 
 	t.Run("no Teardown() in previous test -> panic on quering VIT for the same shared config", func(t *testing.T) {
-		require.Panics(func() { NewVIT(t, &SharedConfig_Simple) })
+		require.Panics(func() { NewVIT(t, &SharedConfig_App1) })
 	})
 
 	vit.TearDown()
 	t.Run("query again the same shared config -> VIT with an existing VVM is returned", func(t *testing.T) {
-		newVit := NewVIT(t, &SharedConfig_Simple)
+		newVit := NewVIT(t, &SharedConfig_App1)
 		defer newVit.TearDown()
 		body := `{"args": {},"elements":[{"fields":["NumGoroutines"]}]}`
 		resp := newVit.PostWS(ws, "q.sys.GRCount", body)
@@ -50,7 +50,7 @@ func TestBasicUsage_SharedTestConfig(t *testing.T) {
 
 func TestBasicUsage_WorkWithFunctions(t *testing.T) {
 	require := require.New(t)
-	vit := NewVIT(t, &SharedConfig_Simple)
+	vit := NewVIT(t, &SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -68,7 +68,7 @@ func TestBasicUsage_WorkWithFunctions(t *testing.T) {
 	})
 
 	t.Run("command", func(t *testing.T) {
-		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.air_table_plan","name":"test"}}]}`
+		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.air_table_plan","name":"test"}}]}`
 		resp := vit.PostWS(ws, "c.sys.CUD", body)
 		require.Len(resp.NewIDs, 1)
 		require.True(resp.NewID() > 1)
@@ -82,7 +82,7 @@ func TestBasicUsage_WorkWithFunctions(t *testing.T) {
 
 func TestBasicUsage_Workspaces(t *testing.T) {
 	require := require.New(t)
-	vit := NewVIT(t, &SharedConfig_Simple)
+	vit := NewVIT(t, &SharedConfig_App1)
 	defer vit.TearDown()
 
 	t.Run("create workspace manually", func(t *testing.T) {
@@ -96,7 +96,7 @@ func TestBasicUsage_Workspaces(t *testing.T) {
 			Name:         "my workspace",
 			TemplateName: "test_template",  // from SharedConfig_Simple
 			InitDataJSON: `{"IntFld": 42}`, // intFld is required field, from SharedConfig_Simple
-			Kind:         QNameTestWSKind,
+			Kind:         QNameApp1_TestWSKind,
 			ClusterID:    istructs.MainClusterID,
 		}
 		newWS := vit.CreateWorkspace(wsp, ownerPrincipal)
@@ -122,8 +122,11 @@ func TestBasicUsage_Workspaces(t *testing.T) {
 }
 
 func TestBasicUsage_N10N(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	require := require.New(t)
-	vit := NewVIT(t, &SharedConfig_Simple)
+	vit := NewVIT(t, &SharedConfig_App1)
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
@@ -149,14 +152,14 @@ func TestBasicUsage_N10N(t *testing.T) {
 
 func TestBasicUsage_POST(t *testing.T) {
 	require := require.New(t)
-	vit := NewVIT(t, &SharedConfig_Simple)
+	vit := NewVIT(t, &SharedConfig_App1)
 	defer vit.TearDown()
 
 	// 200ok is expected by default
 	// unexpected result code -> test is failed
 	// response body is read out and closed
 	bodyEcho := `{"args": {"Text": "world"},"elements": [{"fields": ["Res"]}]}`
-	bodyCUD := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.air_table_plan","name":"test"}}]}`
+	bodyCUD := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.air_table_plan","name":"test"}}]}`
 	httpResp := vit.Post("api/test1/app1/1/q.sys.Echo", bodyEcho) // HTTPResponse is returned
 	require.Equal(`{"sections":[{"type":"","elements":[[[["world"]]]]}]}`, httpResp.Body)
 
@@ -205,7 +208,7 @@ func TestBasicUsage_POST(t *testing.T) {
 }
 
 func TestBasicUsage_OwnTestConfig(t *testing.T) {
-	ownCfg := NewOwnVITConfig(WithApp(istructs.AppQName_test1_app1, EmptyApp))
+	ownCfg := NewOwnVITConfig(WithApp(istructs.AppQName_test1_app1, ProvideApp1))
 
 	t.Run("basic - VIT on own config", func(t *testing.T) {
 		vit := NewVIT(t, &ownCfg)
@@ -227,13 +230,13 @@ func TestBasicUsage_OwnTestConfig(t *testing.T) {
 
 func TestEmailExpectation(t *testing.T) {
 	require := require.New(t)
-	vit := NewVIT(t, &SharedConfig_Simple)
+	vit := NewVIT(t, &SharedConfig_App1)
 	defer vit.TearDown()
 
 	// provide VIT email sending chan to the IBundledHostState, then use it to send an email
 	s := state.ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 1, 0,
-		state.WithEmailMessagesChan(vit.emailMessagesChan))
-	k, err := s.KeyBuilder(state.SendMailStorage, appdef.NullQName)
+		state.WithEmailMessagesChan(vit.emailCaptor))
+	k, err := s.KeyBuilder(state.SendMail, appdef.NullQName)
 	require.NoError(err)
 
 	// construct the email
@@ -252,20 +255,19 @@ func TestEmailExpectation(t *testing.T) {
 	k.PutString(state.Field_Body, "Hello world")
 
 	t.Run("basic usage", func(t *testing.T) {
-		emailCaptor := vit.ExpectEmail()
 		require.Nil(s.NewValue(k))
 		readyToFlush, err := s.ApplyIntents()
 		require.True(readyToFlush)
 		require.NoError(err)
 		require.NoError(s.FlushBundles())
-		email := emailCaptor.Capture()
+		email := vit.CaptureEmail()
 		log.Println(email)
 	})
 
 	t.Run("fail the test if an unexpected email is sent", func(t *testing.T) {
 		vit.TearDown()
 		newT := &testing.T{}
-		vit = NewVIT(newT, &SharedConfig_Simple)
+		vit = NewVIT(newT, &SharedConfig_App1)
 		require.Nil(s.NewValue(k))
 		readyToFlush, err := s.ApplyIntents()
 		require.True(readyToFlush)
@@ -273,7 +275,7 @@ func TestEmailExpectation(t *testing.T) {
 		require.NoError(s.FlushBundles())
 		vit.TearDown()
 		require.True(newT.Failed())
-		vit = NewVIT(t, &SharedConfig_Simple)
+		vit = NewVIT(t, &SharedConfig_App1)
 	})
 
 	vit.TearDown()

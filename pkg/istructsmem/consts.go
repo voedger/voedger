@@ -8,6 +8,14 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+// Application config
+const (
+	// events per application plog cache, see [#455](https://github.com/voedger/voedger/issues/455#:~:text=Currently%2C%2010000%20must%20be%20used)
+	DefaultPLogEventCacheSize = 10 * 1000
+)
+
+/* internal package constants */
+
 // nullResource is result then resource not found
 var nullResource istructs.IResource = newNullResource()
 
@@ -20,7 +28,7 @@ const (
 	codec_LastVersion = codec_RDB_1
 )
 
-// maskString is charaster to mask values in string cell, used for obfuscate unlogged command arguments data
+// maskString is character to mask values in string cell, used for obfuscate unlogged command arguments data
 const maskString = "*"
 
 // constants to split IDs to two-parts key — partition key and clustering columns

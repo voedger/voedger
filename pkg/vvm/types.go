@@ -10,7 +10,7 @@ import (
 	"time"
 
 	ibus "github.com/untillpro/airs-ibus"
-	router "github.com/untillpro/airs-router2"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -23,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
+	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
@@ -63,7 +64,10 @@ type ProcesorChannel struct {
 	iprocbusmem.ChannelGroup
 	ChannelType ProcessorChannelType
 }
-type RouterServices []interface{}
+type RouterServices struct {
+	router.IHTTPService
+	router.IACMEService
+}
 type MetricsServiceOperator pipeline.ISyncOperator
 type MetricsServicePortInitial int
 type VVMPortSource struct {
@@ -78,7 +82,7 @@ type PostDocFieldType struct {
 }
 
 type PostDocDesc struct {
-	Kind        appdef.DefKind
+	Kind        appdef.TypeKind
 	IsSingleton bool
 }
 
@@ -88,7 +92,6 @@ type VVMAppsBuilder map[istructs.AppQName][]apps.AppBuilder
 type VVM struct {
 	ServicePipeline
 	apps.APIs
-	VVMApps
 	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 }
@@ -124,6 +127,7 @@ type VVMConfig struct {
 	// test and FederationURL contains port -> the port will be relaced with the actual VVMPort
 	FederationURL       *url.URL
 	ActualizerStateOpts []state.ActualizerStateOptFunc
+	SecretsReader       isecrets.ISecretReader
 }
 
 type resultSenderErrorFirst struct {
@@ -137,8 +141,4 @@ type VoedgerVM struct {
 	*VVM
 	vvmCtxCancel func()
 	vvmCleanup   func()
-}
-
-type testISecretReader struct {
-	realSecretReader isecrets.ISecretReader
 }

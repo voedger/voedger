@@ -9,6 +9,7 @@ import (
 	"net"
 
 	"github.com/emersion/go-smtp"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func NewServer(opts ...Option) Server {
@@ -20,7 +21,7 @@ func NewServer(opts ...Option) Server {
 		opt(ts)
 	}
 
-	l, err := net.Listen("tcp", "localhost:0")
+	l, err := net.Listen("tcp", coreutils.ServerAddress(0))
 	if err != nil {
 		panic(err)
 	}

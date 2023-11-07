@@ -133,7 +133,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	}
 	return a.conf.Broker.Subscribe(a.conf.channel, in10n.ProjectionKey{
 		App:        a.conf.AppQName,
-		Projection: PlogQName,
+		Projection: PLogUpdatesQName,
 		WS:         istructs.WSID(a.conf.Partition),
 	})
 }
@@ -233,7 +233,7 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 	if isAcceptable(p.projector, w.event) {
 		err = p.projector.Func(w.event, p.state, p.state)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("wsid[%d] offset[%d]: %w", w.event.Workspace(), w.event.WLogOffset(), err)
 		}
 		if logger.IsVerbose() {
 			logger.Verbose(fmt.Sprintf("%s: handled %d", p.projector.Name, p.pLogOffset))
@@ -260,7 +260,7 @@ func (p *asyncProjector) savePosition() error {
 		p.acceptedSinceSave = false
 		p.lastSave = time.Now()
 	}()
-	key, e := p.state.KeyBuilder(state.ViewRecordsStorage, qnameProjectionOffsets)
+	key, e := p.state.KeyBuilder(state.View, qnameProjectionOffsets)
 	if e != nil {
 		return e
 	}

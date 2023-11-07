@@ -7,19 +7,24 @@ package appdef
 
 import (
 	"errors"
+	"fmt"
+	"sort"
 )
 
 // # Implements:
 //   - IAppDef
 //   - IAppDefBuilder
 type appDef struct {
-	defs map[QName]interface{}
+	comment
+	types        map[QName]interface{}
+	typesOrdered []interface{}
 }
 
 func newAppDef() *appDef {
 	app := appDef{
-		defs: make(map[QName]interface{}),
+		types: make(map[QName]interface{}),
 	}
+	app.makeSysDataTypes()
 	return &app
 }
 
@@ -33,6 +38,13 @@ func (app *appDef) AddCommand(name QName) ICommandBuilder {
 
 func (app *appDef) AddCRecord(name QName) ICRecordBuilder {
 	return newCRecord(app, name)
+}
+
+func (app *appDef) AddData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder {
+	d := newData(app, name, kind, ancestor)
+	d.AddConstraints(constraints...)
+	app.appendType(d)
+	return d
 }
 
 func (app *appDef) AddElement(name QName) IElementBuilder {
@@ -81,9 +93,13 @@ func (app *appDef) AddWRecord(name QName) IWRecordBuilder {
 	return newWRecord(app, name)
 }
 
+func (app *appDef) AddWorkspace(name QName) IWorkspaceBuilder {
+	return newWorkspace(app, name)
+}
+
 func (app *appDef) Build() (result IAppDef, err error) {
-	app.Defs(func(d IDef) {
-		err = errors.Join(err, validateDef(d))
+	app.Types(func(t IType) {
+		err = errors.Join(err, validateType(t))
 	})
 	if err != nil {
 		return nil, err
@@ -93,128 +109,198 @@ func (app *appDef) Build() (result IAppDef, err error) {
 }
 
 func (app *appDef) CDoc(name QName) (d ICDoc) {
-	if d := app.defByKind(name, DefKind_CDoc); d != nil {
-		return d.(ICDoc)
+	if t := app.typeByKind(name, TypeKind_CDoc); t != nil {
+		return t.(ICDoc)
 	}
 	return nil
 }
 
 func (app *appDef) Command(name QName) ICommand {
-	if d := app.defByKind(name, DefKind_Command); d != nil {
-		return d.(ICommand)
+	if t := app.typeByKind(name, TypeKind_Command); t != nil {
+		return t.(ICommand)
 	}
 	return nil
 }
 
 func (app *appDef) CRecord(name QName) ICRecord {
-	if d := app.defByKind(name, DefKind_CRecord); d != nil {
-		return d.(ICRecord)
+	if t := app.typeByKind(name, TypeKind_CRecord); t != nil {
+		return t.(ICRecord)
 	}
 	return nil
 }
 
-func (app *appDef) Def(name QName) IDef {
-	if d := app.DefByName(name); d != nil {
-		return d
-	}
-	return NullDef
-}
-
-func (app *appDef) DefByName(name QName) IDef {
-	if d, ok := app.defs[name]; ok {
-		return d.(IDef)
+func (app *appDef) Data(name QName) IData {
+	if t := app.typeByKind(name, TypeKind_Data); t != nil {
+		return t.(IData)
 	}
 	return nil
 }
 
-func (app *appDef) DefCount() int {
-	return len(app.defs)
-}
-
-func (app *appDef) Defs(cb func(IDef)) {
-	for _, d := range app.defs {
-		cb(d.(IDef))
-	}
+func (app *appDef) DataTypes(incSys bool, cb func(IData)) {
+	app.Types(func(t IType) {
+		if d, ok := t.(IData); ok {
+			if incSys || !d.IsSystem() {
+				cb(d)
+			}
+		}
+	})
 }
 
 func (app *appDef) Element(name QName) IElement {
-	if d := app.defByKind(name, DefKind_Element); d != nil {
-		return d.(IElement)
+	if t := app.typeByKind(name, TypeKind_Element); t != nil {
+		return t.(IElement)
 	}
 	return nil
 }
 
+func (app *appDef) Functions(cb func(e IFunction)) {
+	app.Types(func(t IType) {
+		if f, ok := t.(IFunction); ok {
+			cb(f)
+		}
+	})
+}
+
 func (app *appDef) GDoc(name QName) IGDoc {
-	if d := app.defByKind(name, DefKind_GDoc); d != nil {
-		return d.(IGDoc)
+	if t := app.typeByKind(name, TypeKind_GDoc); t != nil {
+		return t.(IGDoc)
 	}
 	return nil
 }
 
 func (app *appDef) GRecord(name QName) IGRecord {
-	if d := app.defByKind(name, DefKind_GRecord); d != nil {
-		return d.(IGRecord)
+	if t := app.typeByKind(name, TypeKind_GRecord); t != nil {
+		return t.(IGRecord)
 	}
 	return nil
 }
 
 func (app *appDef) Object(name QName) IObject {
-	if d := app.defByKind(name, DefKind_Object); d != nil {
-		return d.(IObject)
+	if t := app.typeByKind(name, TypeKind_Object); t != nil {
+		return t.(IObject)
 	}
 	return nil
 }
 
 func (app *appDef) ODoc(name QName) IODoc {
-	if d := app.defByKind(name, DefKind_ODoc); d != nil {
-		return d.(IODoc)
+	if t := app.typeByKind(name, TypeKind_ODoc); t != nil {
+		return t.(IODoc)
 	}
 	return nil
 }
 
 func (app *appDef) ORecord(name QName) IORecord {
-	if d := app.defByKind(name, DefKind_ORecord); d != nil {
-		return d.(IORecord)
+	if t := app.typeByKind(name, TypeKind_ORecord); t != nil {
+		return t.(IORecord)
 	}
 	return nil
 }
 
 func (app *appDef) Query(name QName) IQuery {
-	if d := app.defByKind(name, DefKind_Query); d != nil {
-		return d.(IQuery)
+	if t := app.typeByKind(name, TypeKind_Query); t != nil {
+		return t.(IQuery)
 	}
 	return nil
 }
 
+func (app *appDef) Records(cb func(IRecord)) {
+	app.Structures(func(s IStructure) {
+		if r, ok := s.(IRecord); ok {
+			cb(r)
+		}
+	})
+}
+
+func (app *appDef) Structures(cb func(s IStructure)) {
+	app.Types(func(t IType) {
+		if s, ok := t.(IStructure); ok {
+			cb(s)
+		}
+	})
+}
+
+func (app *appDef) SysData(k DataKind) IData {
+	if t := app.typeByKind(SysDataName(k), TypeKind_Data); t != nil {
+		return t.(IData)
+	}
+	return nil
+}
+
+func (app *appDef) Type(name QName) IType {
+	if t := app.TypeByName(name); t != nil {
+		return t
+	}
+	return NullType
+}
+
+func (app *appDef) TypeByName(name QName) IType {
+	if t, ok := app.types[name]; ok {
+		return t.(IType)
+	}
+	return nil
+}
+
+func (app *appDef) Types(cb func(IType)) {
+	if app.typesOrdered == nil {
+		app.typesOrdered = make([]interface{}, 0, len(app.types))
+		for _, t := range app.types {
+			app.typesOrdered = append(app.typesOrdered, t)
+		}
+		sort.Slice(app.typesOrdered, func(i, j int) bool {
+			return app.typesOrdered[i].(IType).QName().String() < app.typesOrdered[j].(IType).QName().String()
+		})
+	}
+	for _, t := range app.typesOrdered {
+		cb(t.(IType))
+	}
+}
+
 func (app *appDef) View(name QName) IView {
-	if d := app.defByKind(name, DefKind_ViewRecord); d != nil {
-		return d.(IView)
+	if t := app.typeByKind(name, TypeKind_ViewRecord); t != nil {
+		return t.(IView)
 	}
 	return nil
 }
 
 func (app *appDef) WDoc(name QName) IWDoc {
-	if d := app.defByKind(name, DefKind_WDoc); d != nil {
-		return d.(IWDoc)
+	if t := app.typeByKind(name, TypeKind_WDoc); t != nil {
+		return t.(IWDoc)
 	}
 	return nil
 }
 
 func (app *appDef) WRecord(name QName) IWRecord {
-	if d := app.defByKind(name, DefKind_WRecord); d != nil {
-		return d.(IWRecord)
+	if t := app.typeByKind(name, TypeKind_WRecord); t != nil {
+		return t.(IWRecord)
 	}
 	return nil
 }
 
-func (app *appDef) appendDef(def interface{}) {
-	app.defs[def.(IDef).QName()] = def
+func (app *appDef) Workspace(name QName) IWorkspace {
+	if t := app.typeByKind(name, TypeKind_Workspace); t != nil {
+		return t.(IWorkspace)
+	}
+	return nil
 }
 
-func (app *appDef) defByKind(name QName, kind DefKind) interface{} {
-	if d, ok := app.defs[name]; ok {
-		if d.(IDef).Kind() == kind {
-			return d
+func (app *appDef) appendType(t interface{}) {
+	typ := t.(IType)
+	name := typ.QName()
+	if name == NullQName {
+		panic(fmt.Errorf("%s name cannot be empty: %w", typ.Kind().TrimString(), ErrNameMissed))
+	}
+	if app.TypeByName(name) != nil {
+		panic(fmt.Errorf("type name «%s» already used: %w", name, ErrNameUniqueViolation))
+	}
+
+	app.types[name] = t
+	app.typesOrdered = nil
+}
+
+func (app *appDef) typeByKind(name QName, kind TypeKind) interface{} {
+	if t, ok := app.types[name]; ok {
+		if t.(IType).Kind() == kind {
+			return t
 		}
 	}
 	return nil

@@ -8,14 +8,16 @@ import (
 	"os"
 
 	ibus "github.com/untillpro/airs-ibus"
-	router "github.com/untillpro/airs-router2"
 	"github.com/untillpro/goutils/logger"
+
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
+	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/itokensjwt"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
+	"github.com/voedger/voedger/pkg/router"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func NewVVMDefaultConfig() VVMConfig {
@@ -52,15 +54,12 @@ func NewVVMDefaultConfig() VVMConfig {
 			logger.Info("using istoragemem")
 			return istorage.ProvideMem(), nil
 		},
+		SecretsReader: isecretsimpl.ProvideSecretReader(),
+	}
+	if coreutils.IsTest() {
+		res.SecretsReader = ProvideTestSecretsReader(res.SecretsReader)
 	}
 	return res
-}
-
-func (tsr *testISecretReader) ReadSecret(name string) ([]byte, error) {
-	if name == SecretKeyJWTName {
-		return itokensjwt.SecretKeyExample, nil
-	}
-	return tsr.realSecretReader.ReadSecret(name)
 }
 
 func (cfg *VVMConfig) addProcessorChannel(cg iprocbusmem.ChannelGroup, t ProcessorChannelType) {

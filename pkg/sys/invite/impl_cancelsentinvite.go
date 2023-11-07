@@ -18,16 +18,16 @@ func provideCmdCancelSentInvite(cfg *istructsmem.AppConfigType, appDefBuilder ap
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdCancelSentInvite,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CancelSentInviteParams")).
-			AddField(field_InviteID, appdef.DataKind_RecordID, true).(appdef.IDef).QName(),
+			AddField(field_InviteID, appdef.DataKind_RecordID, true).(appdef.IType).QName(),
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdCancelSentInvite(timeFunc),
 	))
 }
 
-func execCmdCancelSentInvite(timeFunc coreutils.TimeFunc) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-		skbCDocInvite, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
+func execCmdCancelSentInvite(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
+		skbCDocInvite, err := args.State.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
 			return
 		}

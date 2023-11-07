@@ -4,7 +4,10 @@
 
 package iauthnzimpl
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/registry"
+)
 
 var (
 	qNameViewDeviceProfileWSIDIdx                   = appdef.NewQName(airPackage, "DeviceProfileWSIDIdx")
@@ -16,7 +19,7 @@ var (
 	qNameTestDeniedCmd                              = appdef.NewQName(appdef.SysPackage, "TestDeniedCmd")
 	qNameTestDeniedQry                              = appdef.NewQName(appdef.SysPackage, "TestDeniedQry")
 	qNameTestDeniedCDoc                             = appdef.NewQName(appdef.SysPackage, "TestDeniedCDoc")
-	qNameCDocLogin                                  = appdef.NewQName(appdef.SysPackage, "Login")
+	qNameCDocLogin                                  = appdef.NewQName(registry.RegistryPackage, "Login")
 	qNameCDocChildWorkspace                         = appdef.NewQName(appdef.SysPackage, "ChildWorkspace")
 	qNameCDocWorkspaceKindUser                      = appdef.NewQName(appdef.SysPackage, "UserProfile")
 	qNameCDocWorkspaceKindDevice                    = appdef.NewQName(appdef.SysPackage, "DeviceProfile")
@@ -24,24 +27,24 @@ var (
 	qNameCmdUpdateSubscription                      = appdef.NewQName(airPackage, "UpdateSubscription")
 	qNameCmdStoreSubscriptionProfile                = appdef.NewQName(airPackage, "StoreSubscriptionProfile")
 	qNameCmdLinkDeviceToRestaurant                  = appdef.NewQName(airPackage, "LinkDeviceToRestaurant")
-	qNameQryIssuePrincipalToken                     = appdef.NewQName(appdef.SysPackage, "IssuePrincipalToken")
-	qNameCmdCreateLogin                             = appdef.NewQName(appdef.SysPackage, "CreateLogin")
+	qNameQryIssuePrincipalToken                     = appdef.NewQName(registry.RegistryPackage, "IssuePrincipalToken")
+	qNameCmdCreateLogin                             = appdef.NewQName(registry.RegistryPackage, "CreateLogin")
 	qNameQryEcho                                    = appdef.NewQName(appdef.SysPackage, "Echo")
 	qNameQryGRCount                                 = appdef.NewQName(appdef.SysPackage, "GRCount")
 	qNameCmdSendEmailVerificationCode               = appdef.NewQName(appdef.SysPackage, "SendEmailVerificationCode")
-	qNameCmdResetPasswordByEmail                    = appdef.NewQName(appdef.SysPackage, "ResetPasswordByEmail")
-	qNameQryInitiateResetPasswordByEmail            = appdef.NewQName(appdef.SysPackage, "InitiateResetPasswordByEmail")
-	qNameQryIssueVerifiedValueTokenForResetPassword = appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenForResetPassword")
+	qNameCmdResetPasswordByEmail                    = appdef.NewQName(registry.RegistryPackage, "ResetPasswordByEmail")
+	qNameQryInitiateResetPasswordByEmail            = appdef.NewQName(registry.RegistryPackage, "InitiateResetPasswordByEmail")
+	qNameQryIssueVerifiedValueTokenForResetPassword = appdef.NewQName(registry.RegistryPackage, "IssueVerifiedValueTokenForResetPassword")
 	qNameQryDescribePackageNames                    = appdef.NewQName(appdef.SysPackage, "DescribePackageNames")
 	qNameQryDescribePackage                         = appdef.NewQName(appdef.SysPackage, "DescribePackage")
 	qNameCmdInitiateJoinWorkspace                   = appdef.NewQName(appdef.SysPackage, "InitiateJoinWorkspace")
 	qNameCmdInitiateLeaveWorkspace                  = appdef.NewQName(appdef.SysPackage, "InitiateLeaveWorkspace")
-	qNameCmdChangePassword                          = appdef.NewQName(appdef.SysPackage, "ChangePassword")
+	qNameCmdChangePassword                          = appdef.NewQName(registry.RegistryPackage, "ChangePassword")
 	qNameCmdInitiateInvitationByEmail               = appdef.NewQName(appdef.SysPackage, "InitiateInvitationByEMail")
 	qNameQryCollection                              = appdef.NewQName(appdef.SysPackage, "Collection")
 	qNameCmdInitiateUpdateInviteRoles               = appdef.NewQName(appdef.SysPackage, "InitiateUpdateInviteRoles")
 	qNameCmdInitiateCancelAcceptedInvite            = appdef.NewQName(appdef.SysPackage, "InitiateCancelAcceptedInvite")
-	qNameCmdCancelSendInvite                        = appdef.NewQName(appdef.SysPackage, "CancelSendInvite")
+	qNameCmdCancelSentInvite                        = appdef.NewQName(appdef.SysPackage, "CancelSentInvite")
 	qNameCmdInitChildWorkspace                      = appdef.NewQName(appdef.SysPackage, "InitChildWorkspace")
 	qNameCmdEnrichPrincipalToken                    = appdef.NewQName(appdef.SysPackage, "EnrichPrincipalToken")
 	qNameCDocUPProfile                              = appdef.NewQName(airPackage, "UPProfile")
@@ -67,12 +70,14 @@ var (
 	qNameCDocUntillPayments                         = appdef.NewQName(airPackage, "UntillPayments")
 	qNameCmdInitiateDeactivateWorkspace             = appdef.NewQName(appdef.SysPackage, "InitiateDeactivateWorkspace")
 	qNameQryModules                                 = appdef.NewQName(appdef.SysPackage, "Modules")
-	qNameQryGetDailyPayoutCfg                       = appdef.NewQName(airPackage, "GetDailyPayoutCfg")
-	qNameCmdUpdateScheduledPayout                   = appdef.NewQName(airPackage, "UpdateScheduledPayout")
-	qNameQryGetUPTransfers                          = appdef.NewQName(airPackage, "GetUPTransfers")
-	qNameCmdCreateUPTransfer                        = appdef.NewQName(airPackage, "CreateUPTransfer")
 	qNameCmdUpdateUPLocationRates                   = appdef.NewQName(airPackage, "UpdateUPLocationRates")
-	qNameWDocUPTransfer                             = appdef.NewQName(airPackage, "UPTransfer")
+	qNameCmdUpdateUPProfile                         = appdef.NewQName(airPackage, "UpdateUPProfile")
+	qNameQryGetAllUPPayouts                         = appdef.NewQName(airPackage, "GetAllUPPayouts")
+	qNameQryGetUPPayouts                            = appdef.NewQName(airPackage, "GetUPPayouts")
+	qNameQryGetUPInvoiceParties                     = appdef.NewQName(airPackage, "GetUPInvoiceParties")
+	qNameQryGetUPFeesOverview                       = appdef.NewQName(airPackage, "GetUPFeesOverview")
+	qNameQryGetUPTransactionsOverview               = appdef.NewQName(airPackage, "GetUPTransactionsOverview")
+	qNameQryGetUPTransactionReceipts                = appdef.NewQName(airPackage, "GetUPTransactionReceipts")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
@@ -80,6 +85,7 @@ var (
 	qNameRoleUntillPaymentsUser     = appdef.NewQName(airPackage, "UntillPaymentsUser")
 	qNameRoleAirReseller            = appdef.NewQName(airPackage, "AirReseller")
 	qNameRoleUntillPaymentsTerminal = appdef.NewQName(airPackage, "UntillPaymentsTerminal")
+	qNameRoleUntillPaymentsManager  = appdef.NewQName(airPackage, "UntillPaymentsManager")
 )
 
 const (

@@ -54,7 +54,6 @@ const (
 	field_SubjectID             = "SubjectID"
 	field_Dummy                 = "Dummy"
 	field_JoinedWorkspaceID     = "JoinedWorkspaceID"
-	ield_WSName                 = "WSName"
 	Field_SubjectKind           = "SubjectKind"
 	Field_ProfileWSID           = "ProfileWSID"
 	Field_SubjectID             = "SubjectID"
@@ -89,7 +88,6 @@ const (
 	EmailTemplatePlaceholder_Roles            = "${Roles}"
 	EmailTemplatePlaceholder_WSName           = "${WSName}"
 	EmailTemplatePlaceholder_Email            = "${Email}"
-	EmailFrom                                 = "info@air.untill.com"
 )
 
 var inviteValidStates = map[appdef.QName]map[int32]bool{

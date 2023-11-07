@@ -57,11 +57,11 @@ func TestBasicUsage(t *testing.T) {
 	// схема unlogged-параметров тестовой команды
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
 	prepareAppDef := func(appDef appdef.IAppDefBuilder) {
-		parsDef := appDef.AddObject(testCmdQNameParams)
-		parsDef.AddField("Text", appdef.DataKind_string, true)
+		pars := appDef.AddObject(testCmdQNameParams)
+		pars.AddField("Text", appdef.DataKind_string, true)
 
-		unloggedParsDef := appDef.AddObject(testCmdQNameParamsUnlogged)
-		unloggedParsDef.AddField("Password", appdef.DataKind_string, true)
+		unloggedPars := appDef.AddObject(testCmdQNameParamsUnlogged)
+		unloggedPars.AddField("Password", appdef.DataKind_string, true)
 
 		appDef.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
 		appDef.AddCRecord(testCRecord)
@@ -74,7 +74,7 @@ func TestBasicUsage(t *testing.T) {
 	require.NoError(err)
 	projectionKey := in10n.ProjectionKey{
 		App:        istructs.AppQName_untill_airs_bp,
-		Projection: projectors.PlogQName,
+		Projection: projectors.PLogUpdatesQName,
 		WS:         1,
 	}
 	go app.n10nBroker.WatchChannel(app.ctx, channelID, func(projection in10n.ProjectionKey, _ istructs.Offset) {
@@ -86,7 +86,7 @@ func TestBasicUsage(t *testing.T) {
 
 	// сама тестовая команда
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
-	testExec := func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+	testExec := func(args istructs.ExecCommandArgs) (err error) {
 		cuds := args.Workpiece.(*cmdWorkpiece).parsedCUDs
 		if len(cuds) > 0 {
 			require.True(len(cuds) == 1)
@@ -355,7 +355,7 @@ func Test400BadRequests(t *testing.T) {
 	defer tearDown(app)
 
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
-	qryGreeter := istructsmem.NewCommandFunction(testCmdQName, testCmdQNameParams, testCmdQNameParamsUnlogged, appdef.NullQName, func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+	qryGreeter := istructsmem.NewCommandFunction(testCmdQName, testCmdQNameParams, testCmdQNameParamsUnlogged, appdef.NullQName, func(args istructs.ExecCommandArgs) (err error) {
 		_ = args.ArgumentObject.AsString("Text")
 		_ = args.ArgumentUnloggedObject.AsString("Password")
 		return nil
@@ -501,7 +501,7 @@ func TestBasicUsage_QNameJSONFunc(t *testing.T) {
 
 	ch := make(chan interface{})
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
-	testExec := func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+	testExec := func(args istructs.ExecCommandArgs) (err error) {
 		require.Equal("custom content", args.ArgumentObject.AsString(processors.Field_JSONDef_Body))
 		close(ch)
 		return
@@ -623,7 +623,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	asf := istorage.ProvideMem()
 	appStorageProvider := istorageimpl.Provide(asf)
 
-	// build application definition
+	// build application
 	appDef := appdef.New()
 	processors.ProvideJSONFuncParamsDef(appDef)
 	if prepareAppDef != nil {

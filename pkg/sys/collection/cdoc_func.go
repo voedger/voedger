@@ -23,15 +23,15 @@ func provideQryCDoc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDef
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameCDocFunc,
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CDocParams")).
-			AddField(field_ID, appdef.DataKind_int64, true).(appdef.IDef).QName(),
+			AddField(field_ID, appdef.DataKind_int64, true).(appdef.IType).QName(),
 		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CDocResult")).
-			AddField("Result", appdef.DataKind_string, false).(appdef.IDef).QName(),
+			AddField("Result", appdef.DataKind_string, false).(appdef.IType).QName(),
 		execQryCDoc(appDefBuilder)))
 }
 
 func execQryCDoc(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		rkb, err := args.State.KeyBuilder(state.RecordsStorage, appdef.NullQName)
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+		rkb, err := args.State.KeyBuilder(state.Record, appdef.NullQName)
 		if err != nil {
 			return
 		}
@@ -41,7 +41,7 @@ func execQryCDoc(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 			return
 		}
 
-		vrkb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewCollection)
+		vrkb, err := args.State.KeyBuilder(state.View, QNameViewCollection)
 		if err != nil {
 			return
 		}
@@ -136,7 +136,7 @@ func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istr
 		if recordId == istructs.NullRecordID {
 			continue
 		}
-		rkb, err := s.KeyBuilder(state.RecordsStorage, appdef.NullQName)
+		rkb, err := s.KeyBuilder(state.Record, appdef.NullQName)
 		if err != nil {
 			return err
 		}

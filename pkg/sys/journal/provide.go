@@ -31,10 +31,11 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	})
 }
 
-func provideWLogDatesView(appDefBuilder appdef.IAppDefBuilder) {
-	appDefBuilder.AddView(QNameViewWLogDates).
-		AddPartField(field_Year, appdef.DataKind_int32).
-		AddClustColumn(field_DayOfYear, appdef.DataKind_int32).
-		AddValueField(field_FirstOffset, appdef.DataKind_int64, true).
-		AddValueField(field_LastOffset, appdef.DataKind_int64, true)
+func provideWLogDatesView(app appdef.IAppDefBuilder) {
+	view := app.AddView(QNameViewWLogDates)
+	view.KeyBuilder().PartKeyBuilder().AddField(field_Year, appdef.DataKind_int32)
+	view.KeyBuilder().ClustColsBuilder().AddField(field_DayOfYear, appdef.DataKind_int32)
+	view.ValueBuilder().
+		AddField(field_FirstOffset, appdef.DataKind_int64, true).
+		AddField(field_LastOffset, appdef.DataKind_int64, true)
 }

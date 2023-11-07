@@ -33,7 +33,7 @@ func provideAsyncProjectorApplyInvitationFactory(timeFunc coreutils.TimeFunc, fe
 
 func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		skbViewInviteIndex, err := s.KeyBuilder(state.ViewRecordsStorage, qNameViewInviteIndex)
+		skbViewInviteIndex, err := s.KeyBuilder(state.View, qNameViewInviteIndex)
 		if err != nil {
 			return
 		}
@@ -47,7 +47,7 @@ func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.
 		verificationCode := fmt.Sprintf("%06d", timeFunc().UnixMilli()%time.Second.Microseconds())
 		emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 
-		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return
 		}
@@ -66,21 +66,21 @@ func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.
 		)
 
 		//Send invitation email
-		skbSendMail, err := s.KeyBuilder(state.SendMailStorage, appdef.NullQName)
+		skbSendMail, err := s.KeyBuilder(state.SendMail, appdef.NullQName)
 		if err != nil {
 			return
 		}
 		skbSendMail.PutString(state.Field_Subject, event.ArgumentObject().AsString(field_EmailSubject))
 		skbSendMail.PutString(state.Field_To, event.ArgumentObject().AsString(field_Email))
 		skbSendMail.PutString(state.Field_Body, replacer.Replace(emailTemplate))
-		skbSendMail.PutString(state.Field_From, EmailFrom)
+		skbSendMail.PutString(state.Field_From, smtpCfg.GetFrom())
 		skbSendMail.PutString(state.Field_Host, smtpCfg.Host)
 		skbSendMail.PutInt32(state.Field_Port, smtpCfg.Port)
 		skbSendMail.PutString(state.Field_Username, smtpCfg.Username)
 
 		pwd := ""
 		if !coreutils.IsTest() {
-			skbAppSecretsStorage, err := s.KeyBuilder(state.AppSecretsStorage, appdef.NullQName)
+			skbAppSecretsStorage, err := s.KeyBuilder(state.AppSecret, appdef.NullQName)
 			if err != nil {
 				return err
 			}

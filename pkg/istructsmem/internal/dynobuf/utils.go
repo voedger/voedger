@@ -19,3 +19,22 @@ func DataKindToFieldType(kind appdef.DataKind) dynobuffers.FieldType {
 func FieldTypeToString(ft dynobuffers.FieldType) string {
 	return dynobufferFieldTypeToStr[ft]
 }
+
+func NewFieldsScheme(name string, fields appdef.IFields) *dynobuffers.Scheme {
+	db := dynobuffers.NewScheme()
+
+	db.Name = name
+	fields.Fields(
+		func(f appdef.IField) {
+			if !f.IsSys() { // #18142: extract system fields from dynobuffer
+				fieldType := DataKindToFieldType(f.DataKind())
+				if fieldType == dynobuffers.FieldTypeByte {
+					db.AddArray(f.Name(), fieldType, false)
+				} else {
+					db.AddField(f.Name(), fieldType, false)
+				}
+			}
+		})
+
+	return db
+}

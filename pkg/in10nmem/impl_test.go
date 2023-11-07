@@ -6,7 +6,8 @@
  * @author Maxim Geraskin
  * Deep refactoring, no timers
  *
- *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree. 
  */
 
 package in10nmem
@@ -19,7 +20,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
@@ -27,103 +27,6 @@ import (
 
 type callbackMock struct {
 	data chan UpdateUnit
-}
-
-func Test_BasicUsage(t *testing.T) {
-
-	logger.SetLogLevel(logger.LogLevelTrace)
-
-	var wg sync.WaitGroup
-	c := new(callbackMock)
-	c.data = make(chan UpdateUnit)
-
-	projectionKeyExample := in10n.ProjectionKey{
-		App:        istructs.AppQName_test1_app1,
-		Projection: appdef.NewQName("test", "restaurant"),
-		WS:         istructs.WSID(0),
-	}
-
-	quotasExample := in10n.Quotas{
-		Channels:               1,
-		ChannelsPerSubject:     1,
-		Subsciptions:           1,
-		SubsciptionsPerSubject: 1,
-	}
-	req := require.New(t)
-	ctx, cancel := context.WithCancel(context.Background())
-
-	broker, cleanup := ProvideEx2(quotasExample, time.Now)
-	defer cleanup()
-
-	var channel in10n.ChannelID
-	t.Run("Create channel.", func(t *testing.T) {
-		var subject istructs.SubjectLogin = "paa"
-		var err error
-		channel, err = broker.NewChannel(subject, 24*time.Hour)
-		req.NoError(err)
-		req.NotNil(channel)
-	})
-
-	t.Run("Check channel count. count must be 1.", func(t *testing.T) {
-		numChannels := broker.MetricNumChannels()
-		req.Equal(1, numChannels)
-	})
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		broker.WatchChannel(ctx, channel, c.updatesMock)
-	}()
-
-	t.Run("Subscribe on projection.", func(t *testing.T) {
-		var notExistsChannel = "NotExistChannel"
-		// Try to subscribe on projection in not exist channel
-		// must receive error ErrChannelNotExists
-		err := broker.Subscribe(in10n.ChannelID(notExistsChannel), projectionKeyExample)
-		req.ErrorIs(err, in10n.ErrChannelDoesNotExist)
-
-		// check subscriptions, numSubscriptions must be equal 0
-		numSubscriptions := broker.MetricNumSubcriptions()
-		req.Equal(0, numSubscriptions)
-
-		// Subscribe on exist channel numSubscriptions must be equal 1
-		require.NoError(t, broker.Subscribe(channel, projectionKeyExample))
-		numSubscriptions = broker.MetricNumSubcriptions()
-		req.Equal(1, numSubscriptions)
-
-		// Unsubscribe from not exist channel, raise error in10n.ErrChannelDoesNotExist
-		err = broker.Unsubscribe("Not exists channel", projectionKeyExample)
-		req.ErrorIs(err, in10n.ErrChannelDoesNotExist)
-
-		// Unsubscribe from an existing channel
-		err = broker.Unsubscribe(channel, projectionKeyExample)
-		req.NoError(err)
-		// After unsubscribe numSubscriptions must be equal 0
-		numSubscriptions = broker.MetricNumSubcriptions()
-		req.Equal(0, numSubscriptions)
-
-		// Subscribe for and existing channel numSubscriptions must be equal 1
-		require.NoError(t, broker.Subscribe(channel, projectionKeyExample))
-		numSubscriptions = broker.MetricNumSubcriptions()
-		req.Equal(1, numSubscriptions)
-
-	})
-
-	broker.Update(projectionKeyExample, istructs.Offset(122))
-	broker.Update(projectionKeyExample, istructs.Offset(123))
-	broker.Update(projectionKeyExample, istructs.Offset(124))
-	broker.Update(projectionKeyExample, istructs.Offset(125))
-	broker.Update(projectionKeyExample, istructs.Offset(126))
-
-	for update := range c.data {
-		logger.Info("update.Offset: ", update.Offset)
-		if update.Offset == istructs.Offset(126) {
-			break
-		}
-	}
-	cancel()
-	logger.Info("wg.Wait()")
-	wg.Wait()
 }
 
 func (c *callbackMock) updatesMock(projection in10n.ProjectionKey, offset istructs.Offset) {

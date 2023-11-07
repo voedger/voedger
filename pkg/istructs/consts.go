@@ -34,6 +34,9 @@ var (
 
 	// QNameJSON denotes that Function argument comes as a JSON object
 	QNameJSON = appdef.NewQName(appdef.SysPackage, "JSON")
+
+	// QNameJSON denotes that a Function result can be of any value
+	QNameANY = appdef.NewQName(appdef.SysPackage, "ANY")
 )
 
 // *********************************************************************************************************
@@ -61,6 +64,8 @@ const (
 	ClusterAsRegisterID = 0xFFFF - 1000 + iota
 	ClusterAsCRecordRegisterID
 )
+
+var MinClusterRecordID = NewRecordID(NullRecordID)
 
 // *********************************************************************************************************
 //

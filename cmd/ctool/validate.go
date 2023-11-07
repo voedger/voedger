@@ -22,6 +22,7 @@ func validate(cmd *cobra.Command, arg []string) error {
 
 	cluster := newCluster()
 
+	// nolint
 	mkCommandDirAndLogFile(cmd, cluster)
 
 	if !cluster.exists {

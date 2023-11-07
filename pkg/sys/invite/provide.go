@@ -12,7 +12,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc, buildSubjectsIdx bool,
+func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc,
 	federation coreutils.IFederation, itokens itokens.ITokens, smtpCfg smtp.Cfg) {
 	provideCmdInitiateInvitationByEMail(cfg, appDefBuilder, timeFunc)
 	provideCmdInitiateJoinWorkspace(cfg, appDefBuilder, timeFunc)
@@ -23,9 +23,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	provideCmdCreateJoinedWorkspace(cfg, appDefBuilder)
 	provideCmdUpdateJoinedWorkspaceRoles(cfg, appDefBuilder)
 	provideCmdDeactivateJoinedWorkspace(cfg, appDefBuilder)
-	provideCDocSubject(cfg, appDefBuilder, buildSubjectsIdx)
-	provideCDocInvite(appDefBuilder)
-	provideCDocJoinedWorkspace(appDefBuilder)
+	provideCDocSubject(cfg, appDefBuilder)
 	provideViewInviteIndex(appDefBuilder)
 	provideViewJoinedWorkspaceIndex(appDefBuilder)
 	appDefBuilder.AddObject(qNameAPApplyCancelAcceptedInvite)

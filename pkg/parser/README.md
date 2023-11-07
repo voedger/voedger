@@ -1,4 +1,4 @@
-# TODO: Semantic analysis
+## TODO: Semantic analysis
 - table OF: 
     - type is correct
     - type is not specified twice
@@ -19,6 +19,12 @@
 - SEQUENCE:
     - ...
 
-# References
+## Detailed Design
+
+- [Compatibility](compat/README.md)
+
+
+
+## References
 - https://cgsql.dev/cql-guide/int02/
 

@@ -19,16 +19,16 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		require := require.New(t)
 
 		appDef := appdef.New()
-		appDef.AddView(testViewRecordQName1).
-			AddPartField("pkk", appdef.DataKind_int64).
-			AddClustColumn("cck", appdef.DataKind_string).
-			AddValueField("vk", appdef.DataKind_string, false)
+		view := appDef.AddView(testViewRecordQName1)
+		view.KeyBuilder().PartKeyBuilder().AddField("pkk", appdef.DataKind_int64)
+		view.KeyBuilder().ClustColsBuilder().AddField("cck", appdef.DataKind_string)
+		view.ValueBuilder().AddField("vk", appdef.DataKind_string, false)
 
 		value := &mockValue{}
 		value.On("AsString", "vk").Return("value")
 		viewRecords := &mockViewRecords{}
 		viewRecords.
-			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(ViewRecordsStorage, testViewRecordQName1)).
+			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(View, testViewRecordQName1)).
 			On("Get", istructs.WSID(1), mock.Anything).Return(value, nil)
 
 		appStructs := &mockAppStructs{}
@@ -38,7 +38,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, e := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		k, e := s.KeyBuilder(View, testViewRecordQName1)
 		require.Nil(e)
 		k.PutInt64("pkk", 64)
 		k.PutString("cck", "ccv")
@@ -53,14 +53,15 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		require := require.New(t)
 
 		appDef := appdef.New()
-		appDef.AddView(testViewRecordQName1).
-			AddPartField("pkk", appdef.DataKind_int64).
-			AddClustColumn("cck", appdef.DataKind_string).
-			AddValueField("vk", appdef.DataKind_string, false)
+
+		view := appDef.AddView(testViewRecordQName1)
+		view.KeyBuilder().PartKeyBuilder().AddField("pkk", appdef.DataKind_int64)
+		view.KeyBuilder().ClustColsBuilder().AddField("cck", appdef.DataKind_string)
+		view.ValueBuilder().AddField("vk", appdef.DataKind_string, false)
 
 		viewRecords := &mockViewRecords{}
 		viewRecords.
-			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(ViewRecordsStorage, testViewRecordQName1)).
+			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(View, testViewRecordQName1)).
 			On("Get", istructs.WSID(1), mock.Anything).Return(nil, errTest)
 		appStructs := &mockAppStructs{}
 		appStructs.
@@ -69,7 +70,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		k, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		k.PutInt64("pkk", 64)
 
@@ -85,7 +86,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 		touched := false
 		viewRecords := &mockViewRecords{}
 		viewRecords.
-			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(ViewRecordsStorage, testViewRecordQName1)).
+			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(View, testViewRecordQName1)).
 			On("Read", context.Background(), istructs.WSID(1), mock.Anything, mock.AnythingOfType("istructs.ValuesCallback")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -99,7 +100,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		k, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 
 		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error {
@@ -114,7 +115,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 		require := require.New(t)
 		viewRecords := &mockViewRecords{}
 		viewRecords.
-			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(ViewRecordsStorage, testViewRecordQName1)).
+			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(View, testViewRecordQName1)).
 			On("Read", context.Background(), istructs.WSID(1), mock.Anything, mock.Anything).
 			Return(errTest)
 		appStructs := &mockAppStructs{}
@@ -124,7 +125,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		k, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 
 		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
@@ -136,10 +137,11 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 	require := require.New(t)
 
 	appDef := appdef.New()
-	appDef.AddView(testViewRecordQName1).
-		AddPartField("pkk", appdef.DataKind_int64).
-		AddClustColumn("cck", appdef.DataKind_string).
-		AddValueField("vk", appdef.DataKind_string, false)
+
+	view := appDef.AddView(testViewRecordQName1)
+	view.KeyBuilder().PartKeyBuilder().AddField("pkk", appdef.DataKind_int64)
+	view.KeyBuilder().ClustColsBuilder().AddField("cck", appdef.DataKind_string)
+	view.ValueBuilder().AddField("vk", appdef.DataKind_string, false)
 
 	viewRecords := &mockViewRecords{}
 	viewRecords.
@@ -153,7 +155,7 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 		On("Records").Return(&nilRecords{}).
 		On("Events").Return(&nilEvents{})
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
-	kb, err := s.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+	kb, err := s.KeyBuilder(View, testViewRecordQName1)
 	require.NoError(err)
 	_, err = s.NewValue(kb)
 	require.NoError(err)
@@ -169,18 +171,20 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 func TestViewRecordsStorage_toJSON(t *testing.T) {
 
 	appDef := appdef.New()
-	appDef.AddView(testViewRecordQName1).
-		AddPartField("pkFld", appdef.DataKind_int64).
-		AddClustColumn("ccFld", appdef.DataKind_string).
-		AddValueField("ID", appdef.DataKind_RecordID, false).
-		AddValueField("Name", appdef.DataKind_string, false).
-		AddValueField("Count", appdef.DataKind_int64, false)
+
+	view := appDef.AddView(testViewRecordQName1)
+	view.KeyBuilder().PartKeyBuilder().AddField("pkFld", appdef.DataKind_int64)
+	view.KeyBuilder().ClustColsBuilder().AddField("ccFld", appdef.DataKind_string)
+	view.ValueBuilder().
+		AddRefField("ID", false).
+		AddField("Name", appdef.DataKind_string, false).
+		AddField("Count", appdef.DataKind_int64, false)
 
 	value := &mockValue{}
 	value.
 		On("AsRecordID", "ID").Return(istructs.RecordID(42)).
 		On("AsString", "Name").Return("John").
 		On("AsInt64", "Count").Return(int64(1001)).
-		On("AsQName", mock.Anything).Return(appdef.ViewValueDefName(testViewRecordQName1))
+		On("AsQName", mock.Anything).Return(testViewRecordQName1)
 
 }

@@ -4,12 +4,11 @@
 
 package blobber
 
-import "github.com/voedger/voedger/pkg/appdef"
-
-const (
-	FldBLOBID = "blobID"
-	fldStatus = "status"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
 )
+
+const fldStatus = "status"
 
 var (
 	QNameCommandUploadBLOBHelper = appdef.NewQName(appdef.SysPackage, "UploadBLOBHelper")

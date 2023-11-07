@@ -14,27 +14,14 @@ import (
 )
 
 // buildSubjectsIdx need to build view.sys.SubjectIdx on an existing storage: true -> async projector will be registered, sync otherwise
-func provideCDocSubject(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, buildSubjectsIdx bool) {
-	doc := appDefBuilder.AddCDoc(QNameCDocSubject)
-	doc.
-		AddField(Field_Login, appdef.DataKind_string, true).
-		AddField(Field_SubjectKind, appdef.DataKind_int32, true).
-		AddField(Field_Roles, appdef.DataKind_string, true).
-		AddField(Field_ProfileWSID, appdef.DataKind_int64, true)
-	doc.SetUniqueField(Field_Login)
-
-	projectors.ProvideViewDef(appDefBuilder, QNameViewSubjectsIdx, func(b appdef.IViewBuilder) {
-		b.
-			AddPartField(Field_LoginHash, appdef.DataKind_int64).
-			AddClustColumn(Field_Login, appdef.DataKind_string).
-			AddValueField(Field_SubjectID, appdef.DataKind_RecordID, true)
+func provideCDocSubject(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+	projectors.ProvideViewDef(appDefBuilder, QNameViewSubjectsIdx, func(view appdef.IViewBuilder) {
+		view.KeyBuilder().PartKeyBuilder().AddField(Field_LoginHash, appdef.DataKind_int64)
+		view.KeyBuilder().ClustColsBuilder().AddField(Field_Login, appdef.DataKind_string)
+		view.ValueBuilder().AddRefField(Field_SubjectID, true)
 	})
 
-	if buildSubjectsIdx {
-		cfg.AddAsyncProjectors(subjectIdxProjectorFactory)
-	} else {
-		cfg.AddSyncProjectors(subjectIdxProjectorFactory)
-	}
+	cfg.AddSyncProjectors(subjectIdxProjectorFactory)
 }
 
 func subjectIdxProjectorFactory(partition istructs.PartitionID) istructs.Projector {
@@ -50,7 +37,7 @@ func viewSubjectsIdxProjector(event istructs.IPLogEvent, st istructs.IState, int
 			return nil
 		}
 
-		skbViewSubjectsIdx, err := st.KeyBuilder(state.ViewRecordsStorage, QNameViewSubjectsIdx)
+		skbViewSubjectsIdx, err := st.KeyBuilder(state.View, QNameViewSubjectsIdx)
 		if err != nil {
 			// notest
 			return err

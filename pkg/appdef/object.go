@@ -8,55 +8,49 @@ package appdef
 // # Implements:
 //   - IObject, IObjectBuilder
 type object struct {
-	def
-	fields
-	containers
+	structure
 }
 
 func newObject(app *appDef, name QName) *object {
-	obj := &object{
-		def: makeDef(app, name, DefKind_Object),
-	}
-	obj.fields = makeFields(obj)
-	obj.containers = makeContainers(obj)
-	app.appendDef(obj)
-	return obj
+	o := &object{}
+	o.structure = makeStructure(app, name, TypeKind_Object, o)
+	app.appendType(o)
+	return o
 }
+
+func (o *object) isObject() {}
 
 // # Implements:
 //   - IElement, IElementBuilder
 type element struct {
-	def
-	fields
-	containers
+	structure
 }
 
 func newElement(app *appDef, name QName) *element {
-	elt := &element{
-		def: makeDef(app, name, DefKind_Element),
-	}
-	elt.fields = makeFields(elt)
-	elt.containers = makeContainers(elt)
-	app.appendDef(elt)
-	return elt
+	e := &element{}
+	e.structure = makeStructure(app, name, TypeKind_Element, e)
+	app.appendType(e)
+	return e
 }
+
+func (e *element) isElement() {}
 
 type objRef struct {
 	name QName
-	def  IObject
+	obj  IObject
 }
 
 func (o *objRef) object(app IAppDef) IObject {
 	if o.name == NullQName {
 		return nil
 	}
-	if (o.def == nil) || (o.def.QName() != o.name) {
-		o.def = app.Object(o.name)
+	if (o.obj == nil) || (o.obj.QName() != o.name) {
+		o.obj = app.Object(o.name)
 	}
-	return o.def
+	return o.obj
 }
 
 func (o *objRef) setName(n QName) {
 	o.name = n
-	o.def = nil
+	o.obj = nil
 }

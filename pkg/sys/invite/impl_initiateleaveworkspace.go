@@ -24,9 +24,9 @@ func provideCmdInitiateLeaveWorkspace(cfg *istructsmem.AppConfigType, timeFunc c
 	))
 }
 
-func execCmdInitiateLeaveWorkspace(timeFunc coreutils.TimeFunc) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-		skbPrincipal, err := args.State.KeyBuilder(state.SubjectStorage, appdef.NullQName)
+func execCmdInitiateLeaveWorkspace(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
+		skbPrincipal, err := args.State.KeyBuilder(state.RequestSubject, appdef.NullQName)
 		if err != nil {
 			return
 		}
@@ -35,7 +35,7 @@ func execCmdInitiateLeaveWorkspace(timeFunc coreutils.TimeFunc) func(_ istructs.
 			return
 		}
 
-		skbViewInviteIndex, err := args.State.KeyBuilder(state.ViewRecordsStorage, qNameViewInviteIndex)
+		skbViewInviteIndex, err := args.State.KeyBuilder(state.View, qNameViewInviteIndex)
 		if err != nil {
 			return
 		}
@@ -46,7 +46,7 @@ func execCmdInitiateLeaveWorkspace(timeFunc coreutils.TimeFunc) func(_ istructs.
 			return
 		}
 
-		skbCDocInvite, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
+		skbCDocInvite, err := args.State.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
 			return err
 		}

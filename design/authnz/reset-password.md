@@ -5,22 +5,22 @@
 - password reset operation is secured by 6-digit verification code sent to the email
 - code is correct -> it is possible to reset password for an unlimited amount of times
 - code is wrong -> tries amount is limited to 3 times per hour per profile
-- passord is reset for `CDoc<sys.Login>`, not for `CDoc<sys.UserProfile>`
-- `c.sys.ResetPasswordByEmail` has no rate limits
+- passord is reset for `CDoc<registry.Login>`, not for `CDoc<sys.UserProfile>`
+- `c.registry.ResetPasswordByEmail` has no rate limits
 
 ## Functional design
 - `sys/registry/pseudoProfileWSID/q.sys.InitiateResetPasswordByEmail`
   - null auth
   - `loginApp/profileWSID/q.sys.InitiateEmailVerification` is called under the hood with `forRegistry` mark with system auth
-- `sys/refgistry/pseudoProfileWSID/q.sys.IssueVerifiedValueTokenForResetPassword`
+- `sys/refgistry/pseudoProfileWSID/q.registry.IssueVerifiedValueTokenForResetPassword`
   - null auth
   - `loginApp/profileWSID/q.sys.IssueVerfiedValueToken` is called under the hood with `forRegistry` mark with system auth
-- `sys/registry/pseudoProfileWSID/c.sys.ResetPasswordByEmail`
+- `sys/registry/pseudoProfileWSID/c.registry.ResetPasswordByEmail`
   - null auth
 
 ## Technical design
 Notes:
-- `c.sys.ResetPasswordByEmail` called at pseudo profile because `CDoc<sys.Login>` is located there
+- `c.registry.ResetPasswordByEmail` called at pseudo profile because `CDoc<registry.Login>` is located there
 - `q.sys.InitiateEmailVerification` should be called at login's app:
   - profileWSID exists at the login's app
   - we call `sys/registry/profileWSID/q.sys.InitiateEmailVerification`
@@ -52,7 +52,7 @@ sequenceDiagram
   m--)u: Email with VCode
   deactivate m
 
-  u->>pp: q.sys.IssueVerifiedValueTokenForResetPassword(VerificationToken, VCode, profileWSID) (ACL none)
+  u->>pp: q.registry.IssueVerifiedValueTokenForResetPassword(VerificationToken, VCode, profileWSID) (ACL none)
   activate pp
     pp->>p: q.sys.IssueVerifiedValueToken(forRegistry) (with sys token)
     activate p
@@ -64,10 +64,10 @@ sequenceDiagram
     pp->>u: VerifiedValueToken for sys/registry/profileWSID
   deactivate pp
 
-	u->>pp: c.sys.ResetPasswordByEmail(verified Email, newPassword, appName) (ACL none)
+	u->>pp: c.registry.ResetPasswordByEmail(verified Email, newPassword, appName) (ACL none)
 	activate pp
-		pp->>pp: read CDoc<sys.Login>, login = Email
-		pp->>pp: update CDoc<sys.Login>.pwdHash with newPassword
+		pp->>pp: read CDoc<registry.Login>, login = Email
+		pp->>pp: update CDoc<registry.Login>.pwdHash with newPassword
     pp->>u: 200ok
 	deactivate pp
 ```

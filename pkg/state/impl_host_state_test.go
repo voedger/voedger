@@ -24,7 +24,7 @@ func TestHostState_BasicUsage(t *testing.T) {
 	// Declare simple extension
 	extension := func(state istructs.IState) {
 		//Create key
-		key, err := state.KeyBuilder(ViewRecordsStorage, testViewRecordQName1)
+		key, err := state.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		key.PutInt64("pkFld", 64)
 
@@ -76,11 +76,11 @@ func mockedHostStateStructs() istructs.IAppStructs {
 	appDef := appdef.New()
 
 	view := appDef.AddView(testViewRecordQName1)
-	view.
-		AddPartField("pkFld", appdef.DataKind_int64).
-		AddClustColumn("ccFld", appdef.DataKind_string).
-		AddValueField("vFld", appdef.DataKind_int64, false).
-		AddValueField(ColOffset, appdef.DataKind_int64, false)
+	view.KeyBuilder().PartKeyBuilder().AddField("pkFld", appdef.DataKind_int64)
+	view.KeyBuilder().ClustColsBuilder().AddField("ccFld", appdef.DataKind_string)
+	view.ValueBuilder().
+		AddField("vFld", appdef.DataKind_int64, false).
+		AddField(ColOffset, appdef.DataKind_int64, false)
 
 	appStructs := &mockAppStructs{}
 	appStructs.
@@ -533,7 +533,7 @@ func TestHostState_ValidateIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}).
 			On("Validate", mock.Anything).Return(nil)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -557,7 +557,7 @@ func TestHostState_ValidateIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}).
 			On("Validate", mock.Anything).Return(errTest)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -575,7 +575,7 @@ func TestHostState_ApplyIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}).
 			On("ApplyBatch", mock.Anything).Return(nil)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -591,7 +591,7 @@ func TestHostState_ApplyIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewRecordsValueBuilder{}).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}).
 			On("ApplyBatch", mock.Anything).Return(errTest)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)

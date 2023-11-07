@@ -28,7 +28,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
-	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
 )
@@ -53,6 +53,8 @@ func NewVIT(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	for _, opt := range opts {
 		opt(vit)
 	}
+
+	vit.emailCaptor.checkEmpty(t)
 
 	vit.T = t
 
@@ -107,8 +109,8 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 		principals:           map[istructs.AppQName]map[string]*Principal{},
 		lock:                 sync.Mutex{},
 		isOnSharedConfig:     vitCfg.isShared,
-		emailMessagesChan:    emailMessagesChan,
 		configCleanupsAmount: len(vitPreConfig.cleanups),
+		emailCaptor:          emailMessagesChan,
 	}
 
 	vit.cleanups = append(vit.cleanups, vitPreConfig.cleanups...)
@@ -219,15 +221,11 @@ func (vit *VIT) TearDown() {
 	if grNum-vit.initialGoroutinesNum > allowedGoroutinesNumDiff {
 		vit.T.Logf("!!! goroutines leak: was %d on VIT setup, now %d after teardown", vit.initialGoroutinesNum, grNum)
 	}
-	select {
-	case <-vit.emailMessagesChan:
-		vit.T.Log("unexpected email message received")
-		vit.T.Fail()
-	default:
-	}
+	vit.emailCaptor.checkEmpty(vit.T)
 	if vit.isOnSharedConfig {
 		return
 	}
+	vit.emailCaptor.shutDown()
 	vit.Shutdown()
 }
 
@@ -353,7 +351,7 @@ func (vit *VIT) refreshTokens() {
 			}
 			as, err := vit.IAppStructsProvider.AppStructs(prn.AppQName)
 			require.NoError(vit.T, err) // notest
-			newToken, err := as.AppTokens().IssueToken(signupin.DefaultPrincipalTokenExpiration, &principalPayload)
+			newToken, err := as.AppTokens().IssueToken(authnz.DefaultPrincipalTokenExpiration, &principalPayload)
 			require.NoError(vit.T, err)
 			prn.Token = newToken
 		}
@@ -386,15 +384,6 @@ func (vit *VIT) NextName() string {
 	return "name_" + strconv.Itoa(vit.NextNumber())
 }
 
-func (vit *VIT) ExpectEmail() *EmailCaptor {
-	ec := &EmailCaptor{ch: make(chan smtptest.Message, 1), vit: vit}
-	go func() {
-		m := <-vit.emailMessagesChan
-		ec.ch <- m
-	}()
-	return ec
-}
-
 // sets `bs` as state of Buckets for `rateLimitName` in `appQName`
 // will be automatically restored on vit.TearDown() to the state the Bucket was before MockBuckets() call
 func (vit *VIT) MockBuckets(appQName istructs.AppQName, rateLimitName string, bs irates.BucketState) {
@@ -410,6 +399,20 @@ func (vit *VIT) MockBuckets(appQName istructs.AppQName, rateLimitName string, bs
 		appBuckets.SetDefaultBucketState(rateLimitName, initialState)
 		appBuckets.ResetRateBuckets(rateLimitName, initialState)
 	})
+}
+
+// CaptureEmail waits for and returns the next sent email
+// no emails during testEmailsAwaitingTimeout -> test failed
+// an email was sent but CaptureEmail is not called -> test will be failed on VIT.TearDown()
+func (vit *VIT) CaptureEmail() (msg smtptest.Message) {
+	tmr := time.NewTimer(testEmailsAwaitingTimeout)
+	select {
+	case msg = <-vit.emailCaptor:
+		return msg
+	case <-tmr.C:
+		vit.T.Fatal("no email messages")
+	}
+	return
 }
 
 func (ts *timeService) now() time.Time {
@@ -444,13 +447,17 @@ func ScanSSE(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return 0, nil, nil
 }
 
-func (ec *EmailCaptor) Capture() (m smtptest.Message) {
-	tmr := time.NewTimer(testEmailsAwaitingTimeout)
+func (ec emailCaptor) checkEmpty(t *testing.T) {
 	select {
-	case m = <-ec.ch:
-		return m
-	case <-tmr.C:
+	case _, ok := <-ec:
+		if ok {
+			t.Log("unexpected email message received")
+			t.Fail()
+		}
+	default:
 	}
-	ec.vit.T.Fatal("no email messages")
-	return
+}
+
+func (ec emailCaptor) shutDown() {
+	close(ec)
 }

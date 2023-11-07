@@ -17,6 +17,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -134,9 +135,10 @@ func WithHeaders(headersPairs ...string) ReqOptFunc {
 	}
 }
 
-func WithExpectedCode(expectedHTTPCode int) ReqOptFunc {
+func WithExpectedCode(expectedHTTPCode int, expectErrorContains ...string) ReqOptFunc {
 	return func(po *reqOpts) {
 		po.expectedHTTPCodes = append(po.expectedHTTPCodes, expectedHTTPCode)
+		po.expectedErrorContains = append(po.expectedErrorContains, expectErrorContains...)
 	}
 }
 
@@ -183,8 +185,16 @@ func Expect403() ReqOptFunc {
 	return WithExpectedCode(http.StatusForbidden)
 }
 
-func Expect400() ReqOptFunc {
-	return WithExpectedCode(http.StatusBadRequest)
+func Expect400(expectErrorContains ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusBadRequest, expectErrorContains...)
+}
+
+func Expect400RefIntegrity_Existence() ReqOptFunc {
+	return WithExpectedCode(http.StatusBadRequest, "referential integrity violation", "does not exist")
+}
+
+func Expect400RefIntegrity_QName() ReqOptFunc {
+	return WithExpectedCode(http.StatusBadRequest, "referential integrity violation", "QNames are only allowed")
 }
 
 func Expect429() ReqOptFunc {
@@ -210,10 +220,11 @@ func ExpectSysError500() ReqOptFunc {
 }
 
 type reqOpts struct {
-	method            string
-	headers           map[string]string
-	cookies           map[string]string
-	expectedHTTPCodes []int
+	method                string
+	headers               map[string]string
+	cookies               map[string]string
+	expectedHTTPCodes     []int
+	expectedErrorContains []string
 
 	// used if no errors and an expected status code is received
 	responseHandler func(httpResp *http.Response)
@@ -357,7 +368,26 @@ func Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, err
 	if !isCodeExpected {
 		statusErr = fmt.Errorf("%w: %d, %s", ErrUnexpectedStatusCode, resp.StatusCode, respBody)
 	}
+	if resp.StatusCode != http.StatusOK && len(opts.expectedErrorContains) > 0 {
+		sysError := map[string]interface{}{}
+		if err := json.Unmarshal([]byte(respBody), &sysError); err != nil {
+			return nil, err
+		}
+		actualError := sysError["sys.Error"].(map[string]interface{})["Message"].(string)
+		if !containsAllMessages(opts.expectedErrorContains, actualError) {
+			return nil, fmt.Errorf(`actual error message "%s" does not contain the expected messages %v`, actualError, opts.expectedErrorContains)
+		}
+	}
 	return httpResponse, statusErr
+}
+
+func containsAllMessages(strs []string, toFind string) bool {
+	for _, str := range strs {
+		if !strings.Contains(toFind, str) {
+			return false
+		}
+	}
+	return true
 }
 
 func FederationFunc(federationUrl *url.URL, relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {

@@ -97,16 +97,16 @@ func Test_AddField(t *testing.T) {
 	})
 
 	t.Run("chain notation is ok to add fields", func(t *testing.T) {
-		d := New().AddObject(NewQName("test", "obj"))
-		n := d.AddField("f1", DataKind_int64, true).
+		o := New().AddObject(NewQName("test", "obj"))
+		n := o.AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_int32, false).
-			AddField("f3", DataKind_string, false).(IDef).QName()
-		require.Equal(d.QName(), n)
-		require.Equal(3, d.UserFieldCount())
+			AddField("f3", DataKind_string, false).(IType).QName()
+		require.Equal(o.QName(), n)
+		require.Equal(3, o.UserFieldCount())
 	})
 
 	t.Run("must be panic if empty field name", func(t *testing.T) {
-		require.Panics(func() { obj.AddVerifiedField("", DataKind_int64, true, VerificationKind_Phone) })
+		require.Panics(func() { obj.AddField("", DataKind_int64, true) })
 	})
 
 	t.Run("must be panic if invalid field name", func(t *testing.T) {
@@ -117,30 +117,69 @@ func Test_AddField(t *testing.T) {
 		require.Panics(func() { obj.AddField("f1", DataKind_int64, true) })
 	})
 
-	t.Run("must be panic if field data kind is not allowed by definition kind", func(t *testing.T) {
-		view := New().AddView(NewQName("test", "view"))
-		require.Panics(func() { view.AddPartField("f1", DataKind_string) })
+	t.Run("must be panic if field data kind is not allowed by type kind", func(t *testing.T) {
+		o := New().AddObject(NewQName("test", "object"))
+		require.Panics(func() { o.AddField("f1", DataKind_Event, false) })
 	})
 
 	t.Run("must be panic if too many fields", func(t *testing.T) {
 		o := New().AddObject(NewQName("test", "obj"))
-		for i := 0; i < MaxDefFieldCount-1; i++ { // -1 for sys.QName field
+		for i := 0; i < MaxTypeFieldCount-1; i++ { // -1 for sys.QName field
 			o.AddField(fmt.Sprintf("f_%#x", i), DataKind_bool, false)
 		}
 		require.Panics(func() { o.AddField("errorField", DataKind_bool, true) })
 	})
+
+	t.Run("must be panic if unsupported field data kind", func(t *testing.T) {
+		o := New().AddObject(NewQName("test", "obj"))
+		require.Panics(func() { o.AddField("errorField", DataKind_FakeLast, false) })
+	})
+
+	t.Run("must be panic if unknown data type", func(t *testing.T) {
+		o := New().AddObject(NewQName("test", "obj"))
+		require.Panics(func() { o.AddDataField("errorField", NewQName("test", "unknown"), false) })
+	})
 }
 
-func Test_AddVerifiedField(t *testing.T) {
+func Test_SetFieldComment(t *testing.T) {
+	require := require.New(t)
+
+	obj := New().AddObject(NewQName("test", "object"))
+	require.NotNil(obj)
+
+	t.Run("must be ok to add field comment", func(t *testing.T) {
+		obj.
+			AddField("f1", DataKind_int64, true).
+			SetFieldComment("f1", "test comment")
+	})
+
+	t.Run("must be ok to obtain field comment", func(t *testing.T) {
+		require.Equal(2, obj.FieldCount()) // + sys.QName
+		f1 := obj.Field("f1")
+		require.NotNil(f1)
+		require.Equal("test comment", f1.Comment())
+	})
+
+	t.Run("must be panic if unknown field name passed to comment", func(t *testing.T) {
+		require.Panics(func() { obj.SetFieldComment("unknownField", "error here") })
+	})
+}
+
+func Test_SetFieldVerify(t *testing.T) {
 	require := require.New(t)
 
 	obj := New().AddObject(NewQName("test", "object"))
 	require.NotNil(obj)
 
 	t.Run("must be ok to add verified field", func(t *testing.T) {
-		obj.AddVerifiedField("f1", DataKind_int64, true, VerificationKind_Phone)
-		obj.AddVerifiedField("f2", DataKind_int64, true, VerificationKind_Any...)
+		obj.
+			AddField("f1", DataKind_int64, true).
+			SetFieldVerify("f1", VerificationKind_Phone).
+			AddField("f2", DataKind_int64, true).
+			SetFieldVerify("f2", VerificationKind_Any...)
+	})
 
+	t.Run("must be ok to obtain verified field", func(t *testing.T) {
 		require.Equal(3, obj.FieldCount()) // + sys.QName
 		f1 := obj.Field("f1")
 		require.NotNil(f1)
@@ -159,8 +198,8 @@ func Test_AddVerifiedField(t *testing.T) {
 		require.False(f2.VerificationKind(VerificationKind_FakeLast))
 	})
 
-	t.Run("must be panic if no verification kinds", func(t *testing.T) {
-		require.Panics(func() { obj.AddVerifiedField("f3", DataKind_int64, true) })
+	t.Run("must be panic if unknown field name passed to verify", func(t *testing.T) {
+		require.Panics(func() { obj.SetFieldVerify("unknownField") })
 	})
 }
 
@@ -220,20 +259,22 @@ func Test_AddRefField(t *testing.T) {
 		})
 
 		t.Run("must be ok to enumerate reference fields", func(t *testing.T) {
-			require.Equal(2, doc.RefFieldCount())
-
-			require.Equal(doc.RefFieldCount(), func() int {
+			require.Equal(2, func() int {
 				cnt := 0
 				doc.RefFields(func(rf IRefField) {
+					cnt++
 					switch cnt {
-					case 0:
-						require.Equal(doc.RefField("rf1"), rf)
 					case 1:
+						require.Equal(doc.RefField("rf1"), rf)
+						require.True(rf.Ref(docName))
+						require.True(rf.Ref(NewQName("test", "unknown")), "must be ok because any links are allowed in the field rf1")
+					case 2:
 						require.Equal(docName, rf.Refs()[0])
+						require.True(rf.Ref(docName))
+						require.False(rf.Ref(NewQName("test", "unknown")))
 					default:
 						require.Failf("unexpected reference field", "field name: %s", rf.Name())
 					}
-					cnt++
 				})
 				return cnt
 			}())
@@ -260,7 +301,7 @@ func Test_UserFields(t *testing.T) {
 
 		doc.
 			AddField("f", DataKind_int64, true).
-			AddVerifiedField("vf", DataKind_string, true, VerificationKind_EMail).
+			AddField("vf", DataKind_string, true).SetFieldVerify("vf", VerificationKind_EMail).
 			AddRefField("rf", true, doc.QName())
 
 		a, err := appDef.Build()
@@ -312,13 +353,28 @@ func TestValidateRefFields(t *testing.T) {
 		rec.AddRefField("f2", true, NewQName("test", "obj"))
 		_, err := app.Build()
 		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, "unknown definition «test.obj»")
+		require.ErrorContains(err, "unknown type «test.obj»")
 	})
 
-	t.Run("must be error if reference field refs to non referable definition", func(t *testing.T) {
+	t.Run("must be error if reference field refs to non referable type", func(t *testing.T) {
 		app.AddObject(NewQName("test", "obj"))
 		_, err := app.Build()
-		require.ErrorIs(err, ErrInvalidDefKind)
-		require.ErrorContains(err, "non referable definition «test.obj»")
+		require.ErrorIs(err, ErrInvalidTypeKind)
+		require.ErrorContains(err, "not a record type Object «test.obj»")
 	})
+}
+
+func TestNullFields(t *testing.T) {
+	require := require.New(t)
+
+	require.Nil(NullFields.Field("field"))
+	require.Zero(NullFields.FieldCount())
+	NullFields.Fields(func(IField) { require.Fail("Fields() must be empty") })
+
+	require.Nil(NullFields.RefField("field"))
+	require.Zero(NullFields.RefFieldCount())
+	NullFields.RefFields(func(IRefField) { require.Fail("RefFields() must be empty") })
+
+	require.Zero(NullFields.UserFieldCount())
+	NullFields.UserFields(func(IField) { require.Fail("UserFields() must be empty") })
 }

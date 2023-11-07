@@ -81,7 +81,33 @@ type nodeType struct {
 	DesiredNodeState *nodeStateType `json:"DesiredNodeState,omitempty"`
 }
 
+// nolint
+func (n *nodeType) nodeName() string {
+	if n.cluster.Edition == clusterEditionSE {
+		switch n.idx {
+		case 1:
+			return "app-node-1"
+		case 2:
+			return "app-node-2"
+		case 3:
+			return "db-node-1"
+		case 4:
+			return "db-node-2"
+		case 5:
+			return "db-node-3"
+		default:
+			return "node"
+		}
+	} else if n.cluster.Edition == clusterEditionCE {
+		return "CENode"
+	} else {
+		return "node"
+	}
+
+}
+
 // the minimum amount of RAM required by the node (as string)
+// nolint
 func (n *nodeType) minAmountOfRAM() string {
 	switch n.NodeRole {
 	case nrAppNode:
@@ -110,6 +136,7 @@ func (n *nodeType) success() {
 	n.Error = ""
 }
 
+// nolint
 func (n *nodeType) fail(err string) {
 	n.Error = err
 }
@@ -128,6 +155,7 @@ func (n *nodeType) desiredNodeVersion(c *clusterType) string {
 	return c.DesiredClusterVersion
 }
 
+// nolint
 func (n *nodeType) actualNodeVersion() string {
 	return n.ActualNodeState.NodeVersion
 }
@@ -149,6 +177,7 @@ func (n *nodeType) label(key string) string {
 	return fmt.Sprintf("node%d", n.idx)
 }
 
+// nolint
 func (ns *nodeType) check(c *clusterType) error {
 	if ns.actualNodeVersion() != ns.desiredNodeVersion(c) {
 		return ErrDifferentNodeVersions
@@ -156,11 +185,13 @@ func (ns *nodeType) check(c *clusterType) error {
 	return nil
 }
 
+// nolint
 type nodesType []*nodeType
 
 // returns a list of node addresses
 // you can specify the role of nodes to get addresses
 // if role = "", the full list of all cluster nodes will be returned
+// nolint
 func (n *nodesType) hosts(nodeRole string) []string {
 	var h []string
 	for _, N := range *n {
@@ -172,14 +203,16 @@ func (n *nodesType) hosts(nodeRole string) []string {
 }
 
 type cmdType struct {
-	Kind string
-	Args string
+	Kind       string
+	Args       string
+	SkipStacks []string
 }
 
 func (c *cmdType) apply(cluster *clusterType) error {
 
 	var err error
 
+	// nolint
 	defer cluster.saveToJSON()
 
 	if err = cluster.validate(); err != nil {
@@ -240,6 +273,7 @@ func (c *cmdType) validate(cluster *clusterType) error {
 // init [CE] [ipAddr1]
 // or
 // init [SE] [ipAddr1] [ipAddr2] [ipAddr3] [ipAddr4] [ipAddr5]
+// nolint
 func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
 	args := cmd.args()
 
@@ -250,9 +284,9 @@ func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
 	if args[0] != clusterEditionCE && args[0] != clusterEditionSE {
 		return ErrInvalidClusterEdition
 	}
-
+	logger.Info("count args: ", len(args))
 	if args[0] == clusterEditionCE && len(args) != 1+initCeArgCount ||
-		args[0] == clusterEditionSE && len(args) != 1+initSeArgCount && len(args) != initSeWithDCArgCount {
+		args[0] == clusterEditionSE && len(args) != 1+initSeArgCount && len(args) != 1+initSeWithDCArgCount {
 		return ErrInvalidNumberOfArguments
 	}
 
@@ -312,6 +346,7 @@ type clusterType struct {
 	Cmd                   *cmdType `json:"Cmd,omitempty"`
 	DataCenters           []string `json:"DataCenters,omitempty"`
 	LastAttemptError      string   `json:"LastAttemptError,omitempty"`
+	SkipStacks            []string `json:"SkipStacks,omitempty"`
 	Nodes                 []nodeType
 	Draft                 bool `json:"Draft,omitempty"`
 }
@@ -365,6 +400,7 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 
 	c.Cmd = cmd
 
+	// nolint
 	defer c.saveToJSON()
 	switch cmd.Kind {
 	case ckReplace:
@@ -389,6 +425,7 @@ func (c *clusterType) updateNodeIndexes() {
 	}
 }
 
+// TODO: Filename should be an argument
 func (c *clusterType) saveToJSON() error {
 
 	if c.Cmd != nil && c.Cmd.isEmpty() {
@@ -451,10 +488,19 @@ func (c *clusterType) loadFromJSON() error {
 	return err
 }
 
+// nolint
 func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error {
 
 	defer c.updateNodeIndexes()
+	// nolint
 	defer c.saveToJSON()
+
+	skipStacks, err := cmd.Flags().GetStringSlice("skip-stack")
+	if err != nil {
+		fmt.Println("Error getting skip-stack values:", err)
+		return err
+	}
+	c.SkipStacks = skipStacks
 
 	if cmd == initCECmd { // CE args
 		c.Edition = clusterEditionCE
@@ -485,12 +531,16 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 		}
 
 		if len(args) == initSeWithDCArgCount {
-			c.DataCenters = append(c.DataCenters, args[seNodeCount:]...)
+			c.DataCenters = append(c.DataCenters, args[seNodeCount+dbNodeCount:]...)
+			for _, dc := range c.DataCenters {
+				fmt.Println(dc)
+			}
 		}
 	}
 	return nil
 }
 
+// nolint
 func (c *clusterType) validate() error {
 
 	var err error
@@ -524,10 +574,12 @@ func (c *clusterType) success() {
 	c.LastAttemptError = ""
 }
 
+// nolint
 func (c *clusterType) fail(error string) {
 	c.LastAttemptError = error
 }
 
+// nolint
 func expandPath(path string) (string, error) {
 	if strings.HasPrefix(path, "~/") {
 		homeDir, err := user.Current()

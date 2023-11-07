@@ -5,13 +5,11 @@
 package vvm
 
 import (
-	"fmt"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 )
 
@@ -30,60 +28,17 @@ func (hap VVMAppsBuilder) PrepareAppsExtensionPoints() map[istructs.AppQName]ext
 }
 
 func buildSchemasASTs(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-	epPackageSchemasASTs := ep.ExtensionPoint(apps.EPPackageSchemasASTs)
-	packageSchemaASTs := []*parser.PackageSchemaAST{}
-	epPackageSchemasASTs.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
-		packageName := eKey.(string)
-		fileSchemaASTs := value.(*parser.FileSchemaAST)
-		packageSchemaAST, err := parser.MergeFileSchemaASTs(packageName, []*parser.FileSchemaAST{fileSchemaASTs})
-		if err != nil {
-			panic(err)
-		}
-		packageSchemaASTs = append(packageSchemaASTs, packageSchemaAST)
-	})
-	packageSchemas, err := parser.MergePackageSchemas(packageSchemaASTs)
+	packageSchemaASTs, err := ReadPackageSchemaAST(ep)
 	if err != nil {
 		panic(err)
 	}
-	if err := parser.BuildAppDefs(packageSchemas, adf); err != nil {
+	appSchemaAST, err := parser.BuildAppSchema(packageSchemaASTs)
+	if err != nil {
 		panic(err)
 	}
-}
-
-func buildPostDocs(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-	epPostDocs := ep.ExtensionPoint(apps.EPPostDocs)
-	epPostDocs.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
-		epPostDoc := value.(extensionpoints.IExtensionPoint)
-		postDocQName := eKey.(appdef.QName)
-		postDocDesc := epPostDoc.Value().(PostDocDesc)
-
-		var doc appdef.IFieldsBuilder
-		switch postDocDesc.Kind {
-		case appdef.DefKind_GDoc:
-			doc = adf.AddGDoc(postDocQName)
-		case appdef.DefKind_CDoc:
-			if postDocDesc.IsSingleton {
-				doc = adf.AddSingleton(postDocQName)
-			} else {
-				doc = adf.AddCDoc(postDocQName)
-			}
-		case appdef.DefKind_WDoc:
-			doc = adf.AddWDoc(postDocQName)
-		case appdef.DefKind_ODoc:
-			doc = adf.AddODoc(postDocQName)
-		default:
-			panic(fmt.Errorf("document «%s» has unexpected definition kind «%v»", postDocQName, postDocDesc.Kind))
-		}
-
-		epPostDoc.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
-			postDocField := value.(PostDocFieldType)
-			if len(postDocField.VerificationKinds) > 0 {
-				doc.AddVerifiedField(eKey.(string), postDocField.Kind, postDocField.Required, postDocField.VerificationKinds...)
-			} else {
-				doc.AddField(eKey.(string), postDocField.Kind, postDocField.Required)
-			}
-		})
-	})
+	if err := parser.BuildAppDefs(appSchemaAST, adf); err != nil {
+		panic(err)
+	}
 }
 
 func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (vvmApps VVMApps) {
@@ -95,11 +50,26 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 			builder(apis, cfg, adf, appEPs)
 		}
 		buildSchemasASTs(adf, appEPs)
-		buildPostDocs(adf, appEPs)
 		vvmApps = append(vvmApps, appQName)
-		if _, err := adf.Build(); err != nil {
+		appDef, err := adf.Build()
+		if err != nil {
 			panic(err)
 		}
+		appDef.Types(func(t appdef.IType) {
+			switch t.Kind() {
+			case appdef.TypeKind_Command:
+				cmd := t.(appdef.ICommand)
+				cmdResource := cfg.Resources.QueryResource(cmd.QName()).(istructs.ICommandFunction)
+				istructsmem.ReplaceCommandDefinitions(cmdResource, cmd.Param().QName(), cmd.UnloggedParam().QName(), cmd.Result().QName())
+			case appdef.TypeKind_Query:
+				if t.QName() == qNameQueryCollection {
+					return
+				}
+				query := t.(appdef.IQuery)
+				queryResource := cfg.Resources.QueryResource(query.QName()).(istructs.IQueryFunction)
+				istructsmem.ReplaceQueryDefinitions(queryResource, query.Param().QName(), query.Result().QName())
+			}
+		})
 	}
 	return vvmApps
 }

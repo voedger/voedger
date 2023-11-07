@@ -16,14 +16,14 @@ import (
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/sys/authnz/workspace"
+	"github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
 func TestBasicUsage_Workspace(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	loginName := vit.NextName()
@@ -52,7 +52,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		{
 			"args": {
 				"WSName": "%s",
-				"WSKind": "my.WSKind",
+				"WSKind": "app1.WSKind",
 				"WSKindInitializationData": "{\"IntFld\": 10}",
 				"TemplateName": "test_template",
 				"WSClusterID": 1
@@ -63,16 +63,17 @@ func TestBasicUsage_Workspace(t *testing.T) {
 
 		require.Empty(ws.WSError)
 		require.Equal(wsName, ws.Name)
-		require.Equal(it.QNameTestWSKind, ws.Kind)
+		require.Equal(it.QNameApp1_TestWSKind, ws.Kind)
 		require.Equal(`{"IntFld": 10}`, ws.InitDataJSON)
 		require.Equal("test_template", ws.TemplateName)
 		require.Equal(istructs.ClusterID(1), ws.WSID.ClusterID())
 
 		t.Run("check the initialized workspace using collection", func(t *testing.T) {
-			body = `{"args":{"Schema":"sys.air_table_plan"},"elements":[{"fields":["sys.ID","image","preview"]}]}`
+			body = `{"args":{"Schema":"app1.air_table_plan"},"elements":[{"fields":["sys.ID","image","preview"]}]}`
 			resp := vit.PostWS(ws, "q.sys.Collection", body)
-			require.Equal(int64(5000000000400), int64(resp.SectionRow()[0].(float64)))  // from testTemplate
-			require.Equal(int64(5000000000416), int64(resp.SectionRow(1)[0].(float64))) // from testTemplate
+			require.Len(resp.Sections[0].Elements, 2) // from testTemplate
+			appEPs := vit.VVM.AppsExtensionPoints[istructs.AppQName_test1_app1]
+			checkDemoAndDemoMinBLOBs(vit, "test_template", appEPs, it.QNameApp1_TestWSKind, resp, ws.WSID, prn.Token)
 		})
 
 		var idOfCDocWSKind int64
@@ -86,14 +87,14 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		})
 
 		t.Run("reconfigure the workspace", func(t *testing.T) {
-			// CDoc<my.wsKind> is a singleton
+			// CDoc<app1.WSKind> is a singleton
 			body = fmt.Sprintf(`
 				{
 					"cuds": [
 						{
 							"sys.ID": %d,
 							"fields": {
-								"sys.QName": "my.WSKind",
+								"sys.QName": "app1.WSKind",
 								"IntFld": 42,
 								"StrFld": "str"
 							}
@@ -111,7 +112,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 	})
 
 	t.Run("create a new workspace with an existing name -> 409 conflict", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "my.WSKind","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
+		body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1.WSKind","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
 		resp := vit.PostProfile(prn, "c.sys.InitChildWorkspace", body, coreutils.Expect409())
 		resp.Println()
 	})
@@ -126,13 +127,13 @@ func TestBasicUsage_Workspace(t *testing.T) {
 }
 
 func TestWorkspaceAuthorization(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	prn := ws.Owner
 
-	body := `{"cuds": [{"sys.ID": 1,"fields": {"sys.QName": "my.WSKind"}}]}`
+	body := `{"cuds": [{"sys.ID": 1,"fields": {"sys.QName": "app1.WSKind"}}]}`
 
 	t.Run("403 forbidden", func(t *testing.T) {
 		t.Run("workspace is not initialized", func(t *testing.T) {
@@ -160,27 +161,15 @@ func TestWorkspaceAuthorization(t *testing.T) {
 }
 
 func TestDenyCreateCDocWSKind(t *testing.T) {
-	cdocWSKinds := []appdef.QName{
+	DenyCreateCDocWSKind_Test(t, []appdef.QName{
 		authnz.QNameCDoc_WorkspaceKind_UserProfile,
 		authnz.QNameCDoc_WorkspaceKind_DeviceProfile,
 		authnz.QNameCDoc_WorkspaceKind_AppWorkspace,
-	}
-
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
-	defer vit.TearDown()
-
-	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-
-	for _, cdocWSkind := range cdocWSKinds {
-		t.Run("deny to create manually cdoc.sys."+cdocWSkind.String(), func(t *testing.T) {
-			body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s"}}]}`, cdocWSkind.String())
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403()).Println()
-		})
-	}
+	})
 }
 
 func TestDenyCUDCDocOwnerModification(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -223,7 +212,7 @@ func TestWorkspaceTemplatesValidationErrors(t *testing.T) {
 	}
 
 	epWSTemplates := extensionpoints.NewRootExtensionPoint()
-	epTestWSKindTemplates := epWSTemplates.ExtensionPoint(it.QNameTestWSKind)
+	epTestWSKindTemplates := epWSTemplates.ExtensionPoint(it.QNameApp1_TestWSKind)
 	for i, c := range cases {
 		str := strconv.Itoa(i)
 		fs := fstest.MapFS{}
@@ -250,7 +239,7 @@ func TestWorkspaceTemplatesValidationErrors(t *testing.T) {
 				fs[df] = dummyFile
 			}
 			str := strconv.Itoa(i)
-			_, _, err := workspace.ValidateTemplate("test"+str, epTestWSKindTemplates, it.QNameTestWSKind)
+			_, _, err := workspace.ValidateTemplate("test"+str, epTestWSKindTemplates, it.QNameApp1_TestWSKind)
 			require.NotNil(t, err)
 			log.Println(err)
 		})
@@ -261,4 +250,42 @@ func TestWorkspaceTemplatesValidationErrors(t *testing.T) {
 		require.NotNil(t, err)
 		log.Println(err)
 	})
+}
+
+func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName,
+	resp *coreutils.FuncResponse, wsid istructs.WSID, token string) {
+	require := require.New(vit.T)
+	blobs, _, err := workspace.ValidateTemplate(templateName, ep, wsKind)
+	require.NoError(err)
+	require.Len(blobs, 4)
+	blobsMap := map[string]workspace.BLOB{}
+	for _, templateBLOB := range blobs {
+		blobsMap[string(templateBLOB.Content)] = templateBLOB
+	}
+	rowIdx := 0
+	for _, temp := range blobs {
+		switch temp.RecordID {
+		// IDs are taken from the actual templates
+		case 1:
+			rowIdx = 0
+		case 2:
+			rowIdx = 1
+		default:
+			vit.T.Fatal(temp.RecordID)
+		}
+		var fieldIdx int
+		if temp.FieldName == "image" {
+			fieldIdx = 1
+		} else {
+			fieldIdx = 2
+		}
+		blobID := int64(resp.SectionRow(rowIdx)[fieldIdx].(float64))
+		uploadedBLOB := vit.GetBLOB(istructs.AppQName_test1_app1, wsid, blobID, token)
+		templateBLOB := blobsMap[string(uploadedBLOB.Content)]
+		require.Equal(templateBLOB.Name, uploadedBLOB.Name)
+		require.Equal(templateBLOB.MimeType, uploadedBLOB.MimeType)
+		delete(blobsMap, string(uploadedBLOB.Content))
+		rowIdx++
+	}
+	require.Empty(blobsMap)
 }

@@ -42,15 +42,17 @@ func (cfgs *AppConfigsType) GetConfig(appName istructs.AppQName) *AppConfigType 
 
 // AppConfigType: configuration for application workflow
 type AppConfigType struct {
-	Name    istructs.AppQName
-	QNameID istructs.ClusterAppID
+	Name         istructs.AppQName
+	ClusterAppID istructs.ClusterAppID
 
 	appDefBuilder appdef.IAppDefBuilder
 	AppDef        appdef.IAppDef
 	Resources     Resources
 
-	dynoSchemes dynobuf.DynoBufSchemes
-	validators  *validators
+	// Application configuration parameters
+	Params AppConfigParams
+
+	dynoSchemes *dynobuf.DynoBufSchemes
 
 	storage                 istorage.IAppStorage // will be initialized on prepare()
 	versions                *vers.Versions
@@ -67,24 +69,26 @@ type AppConfigType struct {
 }
 
 func newAppConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
-	cfg := AppConfigType{Name: appName}
+	cfg := AppConfigType{
+		Name:   appName,
+		Params: makeAppConfigParams(),
+	}
 
 	qNameID, ok := istructs.ClusterApps[appName]
 	if !ok {
 		panic(fmt.Errorf("unable construct configuration for unknown application «%v»: %w", appName, istructs.ErrAppNotFound))
 	}
-	cfg.QNameID = qNameID
+	cfg.ClusterAppID = qNameID
 
 	cfg.appDefBuilder = appDef
 	app, err := appDef.Build()
 	if err != nil {
-		panic(fmt.Errorf("%v: unable build application definition: %w", appName, err))
+		panic(fmt.Errorf("%v: unable build application: %w", appName, err))
 	}
 	cfg.AppDef = app
 	cfg.Resources = newResources(&cfg)
 
 	cfg.dynoSchemes = dynobuf.New()
-	cfg.validators = newValidators()
 
 	cfg.versions = vers.New()
 	cfg.qNames = qnames.New()
@@ -105,14 +109,18 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		return nil
 	}
 
-	sch, err := cfg.appDefBuilder.Build()
+	app, err := cfg.appDefBuilder.Build()
 	if err != nil {
-		return fmt.Errorf("%v: unable rebuild changed application definition: %w", cfg.Name, err)
+		return fmt.Errorf("%v: unable rebuild changed application: %w", cfg.Name, err)
 	}
-	cfg.AppDef = sch
+	cfg.AppDef = app
+
+	// prepare resources
+	if err := cfg.Resources.prepare(cfg.AppDef); err != nil {
+		return err
+	}
 
 	cfg.dynoSchemes.Prepare(cfg.AppDef)
-	cfg.validators.prepare(cfg.AppDef)
 
 	// prepare IAppStorage
 	cfg.storage = appStorage
@@ -163,4 +171,19 @@ func (cfg *AppConfigType) AddCUDValidators(cudValidators ...istructs.CUDValidato
 
 func (cfg *AppConfigType) AddEventValidators(eventValidators ...istructs.EventValidator) {
 	cfg.eventValidators = append(cfg.eventValidators, eventValidators...)
+}
+
+// Application configuration parameters
+type AppConfigParams struct {
+	// PLog events cache size.
+	//
+	// Default value is DefaultPLogEventCacheSize (10’000 events).
+	// Zero (0) means that cache will not be used
+	PLogEventCacheSize int
+}
+
+func makeAppConfigParams() AppConfigParams {
+	return AppConfigParams{
+		PLogEventCacheSize: DefaultPLogEventCacheSize, // 10’000
+	}
 }

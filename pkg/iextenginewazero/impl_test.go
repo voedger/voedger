@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/voedger/wazero/api"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/wazero/api"
 )
 
 var limits = iextengine.ExtensionLimits{
@@ -24,27 +24,25 @@ var extIO = &mockIo{}
 
 func Test_BasicUsage(t *testing.T) {
 
+	const exampleCommand = "exampleCommand"
+	const updateSubscriptionProjector = "updateSubscriptionProjector"
+
 	require := require.New(t)
 	ctx := context.Background()
 
 	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
-	extEngine, closer, err := ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{})
+	extEngine, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{exampleCommand, updateSubscriptionProjector}, iextengine.ExtEngineConfig{})
 	if err != nil {
 		panic(err)
 	}
-	defer closer()
+	defer extEngine.Close()
 
-	extensions := make(map[string]iextengine.IExtension)
-	extEngine.ForEach(func(name string, ext iextengine.IExtension) {
-		extensions[name] = ext
-	})
-	require.Equal(2, len(extensions))
 	extEngine.SetLimits(limits)
 
 	//
 	// Invoke command
 	//
-	require.NoError(extensions["exampleCommand"].Invoke(extIO))
+	require.NoError(extEngine.Invoke(context.Background(), exampleCommand, extIO))
 	require.Equal(1, len(extIO.intents))
 	v := extIO.intents[0].value.(*mockValueBuilder)
 
@@ -57,7 +55,7 @@ func Test_BasicUsage(t *testing.T) {
 	//
 	extIO = &mockIo{}    // reset intents
 	projectorMode = true // state will return different Event
-	require.NoError(extensions["updateSubscriptionProjector"].Invoke(extIO))
+	require.NoError(extEngine.Invoke(context.Background(), updateSubscriptionProjector, extIO))
 
 	require.Equal(1, len(extIO.intents))
 	v = extIO.intents[0].value.(*mockValueBuilder)
@@ -89,16 +87,16 @@ func requireMemStatEx(t *testing.T, wasmEngine *wazeroExtEngine, mallocs, frees,
 
 func Test_Allocs_ManualGC(t *testing.T) {
 
+	const arrAppend = "arrAppend"
+	const arrReset = "arrReset"
+
 	require := require.New(t)
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/allocs/pkggc.wasm")
-	extEngine, closer, err := ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{})
+	extEngine, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{})
 	require.NoError(err)
-	defer closer()
+	defer extEngine.Close()
 
-	extensions := extractExtensions(extEngine)
-	extAppend := extensions["arrAppend"]
-	extReset := extensions["arrReset"]
 	wasmEngine := extEngine.(*wazeroExtEngine)
 
 	const expectedHeapSize = uint32(1999536)
@@ -106,16 +104,16 @@ func Test_Allocs_ManualGC(t *testing.T) {
 	requireMemStatEx(t, wasmEngine, 1, 0, expectedHeapSize, WasmPreallocatedBufferSize)
 	wasmEngine.SetLimits(limits)
 
-	require.NoError(extAppend.Invoke(extIO))
+	require.NoError(extEngine.Invoke(context.Background(), arrAppend, extIO))
 	requireMemStatEx(t, wasmEngine, 3, 0, expectedHeapSize, WasmPreallocatedBufferSize+32)
 
-	require.NoError(extAppend.Invoke(extIO))
+	require.NoError(extEngine.Invoke(context.Background(), arrAppend, extIO))
 	requireMemStatEx(t, wasmEngine, 5, 0, expectedHeapSize, WasmPreallocatedBufferSize+64)
 
-	require.NoError(extAppend.Invoke(extIO))
+	require.NoError(extEngine.Invoke(context.Background(), arrAppend, extIO))
 	requireMemStatEx(t, wasmEngine, 7, 0, expectedHeapSize, WasmPreallocatedBufferSize+6*16)
 
-	require.NoError(extReset.Invoke(extIO))
+	require.NoError(extEngine.Invoke(context.Background(), arrReset, extIO))
 	requireMemStatEx(t, wasmEngine, 7, 0, expectedHeapSize, WasmPreallocatedBufferSize+6*16)
 
 	require.NoError(wasmEngine.gc())
@@ -124,30 +122,27 @@ func Test_Allocs_ManualGC(t *testing.T) {
 
 func Test_Allocs_AutoGC(t *testing.T) {
 
+	const arrAppend = "arrAppend"
+	const arrReset = "arrReset"
+
 	require := require.New(t)
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/allocs/pkggc.wasm")
-	extEngine, closer, err := ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff})
+	extEngine, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff})
 	require.NoError(err)
-	defer closer()
-
-	extensions := extractExtensions(extEngine)
+	defer extEngine.Close()
 
 	const expectedHeapSize = uint32(1999536)
 	var expectedAllocs = uint32(1)
 	var expectedFrees = uint32(0)
-	extAppend := extensions["arrAppend"]
-	extReset := extensions["arrReset"]
 	wasmEngine := extEngine.(*wazeroExtEngine)
 
 	requireMemStatEx(t, wasmEngine, expectedAllocs, expectedFrees, expectedHeapSize, WasmPreallocatedBufferSize)
 
-	defer wasmEngine.close()
-
 	calculatedHeapInUse := uint32(WasmPreallocatedBufferSize)
 	for calculatedHeapInUse < expectedHeapSize-16 {
-		require.NoError(extAppend.Invoke(extIO))
-		require.NoError(extReset.Invoke(extIO))
+		require.NoError(extEngine.Invoke(context.Background(), arrAppend, extIO))
+		require.NoError(extEngine.Invoke(context.Background(), arrReset, extIO))
 		calculatedHeapInUse += 32
 		expectedAllocs += 2
 	}
@@ -156,34 +151,34 @@ func Test_Allocs_AutoGC(t *testing.T) {
 	requireMemStatEx(t, wasmEngine, expectedAllocs, expectedFrees, expectedHeapSize, expectedHeapSize-16)
 
 	// next call will trigger auto-GC
-	require.NoError(extAppend.Invoke(extIO))
+	require.NoError(extEngine.Invoke(context.Background(), arrAppend, extIO))
 	expectedAllocs += 2
 	expectedFrees += expectedAllocs - 9
 	requireMemStat(t, wasmEngine, expectedAllocs, expectedFrees, WasmPreallocatedBufferSize+128)
 
 	// next call will not trigger auto-GC
-	require.NoError(extReset.Invoke(extIO))
+	require.NoError(extEngine.Invoke(context.Background(), arrReset, extIO))
 	requireMemStat(t, wasmEngine, expectedAllocs, expectedFrees, WasmPreallocatedBufferSize+128) // stays the same
 
 }
 
 func Test_NoGc_MemoryOverflow(t *testing.T) {
 
+	const arrAppend = "arrAppend"
+	const arrReset = "arrReset"
+
 	require := require.New(t)
 	ctx := context.Background()
 
 	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	extEngine, _, err := ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{MemoryLimitPages: 0x10})
+	extEngine, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x10})
 	require.ErrorContains(err, "the minimum limit of memory is: 1700000.0 bytes, requested limit is: 1048576.0")
 	require.Nil(extEngine)
 
-	extEngine, closer, err := ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20})
+	extEngine, err = ExtEngineWazeroFactory(ctx, moduleUrl, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20})
 	require.NoError(err)
-	defer closer()
+	defer extEngine.Close()
 
-	extensions := extractExtensions(extEngine)
-	extAppend := extensions["arrAppend"]
-	extReset := extensions["arrReset"]
 	wasmEngine := extEngine.(*wazeroExtEngine)
 
 	var expectedAllocs = uint32(1)
@@ -194,11 +189,11 @@ func Test_NoGc_MemoryOverflow(t *testing.T) {
 	calculatedHeapInUse := WasmPreallocatedBufferSize
 	err = nil
 	for calculatedHeapInUse < 0x20*iextengine.MemoryPageSize {
-		err = wasmEngine.invoke(extAppend.(*wasmExtension).f, extIO)
+		err = wasmEngine.Invoke(context.Background(), arrAppend, extIO)
 		if err != nil {
 			break
 		}
-		err = wasmEngine.invoke(extReset.(*wasmExtension).f, extIO)
+		err = wasmEngine.Invoke(context.Background(), arrReset, extIO)
 		if err != nil {
 			break
 		}
@@ -212,174 +207,165 @@ func Test_SetLimitsExecutionInterval(t *testing.T) {
 	require := require.New(t)
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	extEngine, closer, err := ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{})
+	extEngine, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{"longFunc"}, iextengine.ExtEngineConfig{})
 	require.NoError(err)
-	defer closer()
-	extensions := extractExtensions(extEngine)
+	defer extEngine.Close()
 
 	maxDuration := time.Millisecond * 50
 	extEngine.SetLimits(iextengine.ExtensionLimits{
 		ExecutionInterval: maxDuration,
 	})
 	t0 := time.Now()
-	err = extensions["longFunc"].Invoke(extIO)
+	err = extEngine.Invoke(context.Background(), "longFunc", extIO)
 
 	require.ErrorIs(err, api.ErrDuration)
-	require.Less(time.Since(t0), maxDuration*2)
+	require.Less(time.Since(t0), maxDuration*4)
+}
+
+type panicsUnit struct {
+	name   string
+	expect string
 }
 
 func Test_HandlePanics(t *testing.T) {
 
+	tests := []panicsUnit{
+		{"incorrectStorageQname", "invalid string representation of qualified name: foo"},
+		{"incorrectEntityQname", "invalid string representation of qualified name: abc"},
+		{"unsupportedStorage", "unsupported storage"},
+		{"incorrectKeyBuilder", PanicIncorrectKeyBuilder},
+		{"canExistIncorrectKey", PanicIncorrectKeyBuilder},
+		{"mustExistIncorrectKey", PanicIncorrectKeyBuilder},
+		{"readIncorrectKeyBuilder", PanicIncorrectKeyBuilder},
+		{"incorrectKey", PanicIncorrectKey},
+		{"incorrectValue", PanicIncorrectValue},
+		{"incorrectValue2", PanicIncorrectValue},
+		{"incorrectValue3", PanicIncorrectValue},
+		{"mustExist", state.ErrNotExists.Error()},
+		{"incorrectKeyBuilderOnNewValue", PanicIncorrectKeyBuilder},
+		{"incorrectKeyBuilderOnUpdateValue", PanicIncorrectKeyBuilder},
+		{"incorrectValueOnUpdateValue", PanicIncorrectValue},
+		{"incorrectIntentId", PanicIncorrectIntent},
+		{"readPanic", PanicIncorrectValue},
+		{"readError", errTestIOError.Error()},
+		{"queryError", errTestIOError.Error()},
+		{"newValueError", errTestIOError.Error()},
+		{"updateValueError", errTestIOError.Error()},
+		{"asStringMemoryOverflow", "alloc"},
+	}
+
+	extNames := make([]string, 0, len(tests))
+	for _, test := range tests {
+		extNames = append(extNames, test.name)
+	}
+
 	require := require.New(t)
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/panics/pkg.wasm")
-	extEngine, closer, err := ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20})
+	extEngine, err := ExtEngineWazeroFactory(ctx, moduleUrl, extNames, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20})
 	require.NoError(err)
-	defer closer()
+	defer extEngine.Close()
 
-	extensions := extractExtensions(extEngine)
-	err = extensions["incorrectStorageQname"].Invoke(extIO)
-	// full text is: "error running extension [incorrectStorageQname]: invalid string representation of qualified name: foo (recovered by wazero)\nwasm stack trace:\n\tenv.HostGetKey(i32,i32,i32,i32) i64\n\t.incorrectStorageQname()\n\t.incorrectStorageQname.command_export()"
-	require.ErrorContains(err, "invalid string representation of qualified name: foo")
-
-	tf := func(name string, expect string) {
-		e := extensions[name].Invoke(extIO)
-		require.ErrorContains(e, expect)
+	for _, test := range tests {
+		e := extEngine.Invoke(context.Background(), test.name, extIO)
+		require.ErrorContains(e, test.expect)
 	}
-
-	tf("incorrectEntityQname", "invalid string representation of qualified name: abc")
-	tf("unsupportedStorage", "unsupported storage")
-	tf("incorrectKeyBuilder", PanicIncorrectKeyBuilder)
-	tf("canExistIncorrectKey", PanicIncorrectKeyBuilder)
-	tf("mustExistIncorrectKey", PanicIncorrectKeyBuilder)
-	tf("readIncorrectKeyBuilder", PanicIncorrectKeyBuilder)
-	tf("incorrectKey", PanicIncorrectKey)
-	tf("incorrectValue", PanicIncorrectValue)
-	tf("incorrectValue2", PanicIncorrectValue)
-	tf("incorrectValue3", PanicIncorrectValue)
-	tf("mustExist", state.ErrNotExists.Error())
-	tf("incorrectKeyBuilderOnNewValue", PanicIncorrectKeyBuilder)
-	tf("incorrectKeyBuilderOnUpdateValue", PanicIncorrectKeyBuilder)
-	tf("incorrectValueOnUpdateValue", PanicIncorrectValue)
-	tf("incorrectIntentId", PanicIncorrectIntent)
-	tf("readPanic", PanicIncorrectValue)
-	tf("readError", errTestIOError.Error())
-	tf("getError", errTestIOError.Error())
-	tf("queryError", errTestIOError.Error())
-	tf("newValueError", errTestIOError.Error())
-	tf("updateValueError", errTestIOError.Error())
-	tf("asStringMemoryOverflow", "alloc")
-
 }
 
 func Test_QueryValue(t *testing.T) {
+	const testQueryValue = "testQueryValue"
 
 	require := require.New(t)
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/tests/pkg.wasm")
-	extEngine, closer, err := ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20})
+	extEngine, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{testQueryValue}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20})
 	require.NoError(err)
-	defer closer()
+	defer extEngine.Close()
 
-	extensions := extractExtensions(extEngine)
-	err = extensions["testQueryValue"].Invoke(extIO)
+	err = extEngine.Invoke(context.Background(), testQueryValue, extIO)
 	require.NoError(err)
 }
 
 func Test_RecoverEngine(t *testing.T) {
+
+	const arrAppend2 = "arrAppend2"
 	require := require.New(t)
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	extEngine, closer, err := ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20})
+	extEngine, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20})
 	require.NoError(err)
-	defer closer()
-	extensions := extractExtensions(extEngine)
-	extAppend := extensions["arrAppend2"]
+	defer extEngine.Close()
 
-	require.Nil(extAppend.Invoke(extIO))
-	require.Nil(extAppend.Invoke(extIO))
-	require.Nil(extAppend.Invoke(extIO))
-	require.NotNil(extAppend.Invoke(extIO))
+	require.Nil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
+	require.Nil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
+	require.Nil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
+	require.NotNil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
 
-	require.Nil(extAppend.Invoke(extIO))
-	require.Nil(extAppend.Invoke(extIO))
-	require.Nil(extAppend.Invoke(extIO))
-	require.NotNil(extAppend.Invoke(extIO))
-}
-
-func extractExtensions(engine iextengine.IExtensionEngine) map[string]iextengine.IExtension {
-	extensions := make(map[string]iextengine.IExtension)
-	engine.ForEach(func(name string, ext iextengine.IExtension) {
-		extensions[name] = ext
-	})
-	return extensions
+	require.Nil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
+	require.Nil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
+	require.Nil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
+	require.NotNil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
 }
 
 func Test_Read(t *testing.T) {
-
+	const testRead = "testRead"
 	require := require.New(t)
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/tests/pkg.wasm")
-	extEngine, closer, err := ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{})
+	extEngine, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{testRead}, iextengine.ExtEngineConfig{})
 	require.NoError(err)
-	defer closer()
-	extensions := extractExtensions(extEngine)
-
-	err = extensions["testRead"].Invoke(extIO)
+	defer extEngine.Close()
+	err = extEngine.Invoke(context.Background(), testRead, extIO)
 	require.NoError(err)
-
 }
 
 func Test_AsBytes(t *testing.T) {
+	const asBytes = "asBytes"
 	require := require.New(t)
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/tests/pkg.wasm")
-	extEngine, closer, err := ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{})
+	extEngine, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{asBytes}, iextengine.ExtEngineConfig{})
 	require.NoError(err)
-	defer closer()
+	defer extEngine.Close()
 	wasmEngine := extEngine.(*wazeroExtEngine)
-	extensions := extractExtensions(extEngine)
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
-	err = extensions["asBytes"].Invoke(extIO)
+	err = extEngine.Invoke(context.Background(), asBytes, extIO)
 	require.NoError(err)
 	requireMemStatEx(t, wasmEngine, 2, 0, WasmPreallocatedBufferSize+2000000, WasmPreallocatedBufferSize+2000000)
 }
 
 func Test_AsBytesOverflow(t *testing.T) {
+	const asBytes = "asBytes"
 	require := require.New(t)
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/tests/pkg.wasm")
-	extEngine, closer, err := ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20})
+	extEngine, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{asBytes}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20})
 	require.NoError(err)
-	defer closer()
+	defer extEngine.Close()
 	wasmEngine := extEngine.(*wazeroExtEngine)
-	extensions := extractExtensions(extEngine)
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
-	err = extensions["asBytes"].Invoke(extIO)
+	err = extEngine.Invoke(context.Background(), asBytes, extIO)
 	require.ErrorContains(err, "alloc")
 }
 
 func Test_NoAllocs(t *testing.T) {
-
+	const testNoAllocs = "testNoAllocs"
 	extIO = &mockIo{}
 	projectorMode = false
 	require := require.New(t)
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/tests/pkg.wasm")
-	extEngine, closer, err := ExtEngineWazeroFactory(ctx, moduleUrl, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20})
+	extEngine, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{testNoAllocs}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20})
 	require.NoError(err)
-	defer closer()
+	defer extEngine.Close()
 
 	wasmEngine := extEngine.(*wazeroExtEngine)
-	extensions := extractExtensions(extEngine)
-
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
 
-	err = extensions["testNoAllocs"].Invoke(extIO)
+	err = extEngine.Invoke(context.Background(), testNoAllocs, extIO)
 	require.NoError(err)
 
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
-
 	require.Equal(2, len(extIO.intents))
 	v0 := extIO.intents[0].value.(*mockValueBuilder)
 

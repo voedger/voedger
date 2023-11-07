@@ -51,8 +51,9 @@ type wazeroExtEngine struct {
 	funcGc           api.Function
 	funcOnReadValue  api.Function
 
-	ctx context.Context
-	io  iextengine.IExtentionIO
+	ctx  context.Context
+	io   iextengine.IExtentionIO
+	exts map[string]api.Function
 }
 
 type allocatedBuf struct {
@@ -61,17 +62,7 @@ type allocatedBuf struct {
 	cap  uint32
 }
 
-type wasmExtension struct {
-	name   string
-	f      api.Function
-	engine *wazeroExtEngine
-}
-
-func (ext *wasmExtension) Invoke(io iextengine.IExtentionIO) (err error) {
-	return ext.engine.invoke(ext.f, io)
-}
-
-func ExtEngineWazeroFactory(ctx context.Context, moduleURL *url.URL, cfg iextengine.ExtEngineConfig) (e iextengine.IExtensionEngine, closer func(), err error) {
+func ExtEngineWazeroFactory(ctx context.Context, moduleURL *url.URL, extensionNames []string, cfg iextengine.ExtEngineConfig) (e iextengine.IExtensionEngine, err error) {
 
 	var wasmdata []byte
 	if moduleURL.Scheme == "file" && (moduleURL.Host == "" || strings.EqualFold("localhost", moduleURL.Scheme)) {
@@ -82,20 +73,20 @@ func ExtEngineWazeroFactory(ctx context.Context, moduleURL *url.URL, cfg iexteng
 
 		wasmdata, err = os.ReadFile(path)
 		if err != nil {
-			return nil, func() {}, err
+			return nil, err
 		}
 	} else {
-		return nil, func() {}, fmt.Errorf("unsupported URL: " + moduleURL.String())
+		return nil, fmt.Errorf("unsupported URL: " + moduleURL.String())
 	}
 
 	impl := &wazeroExtEngine{data: wasmdata}
 
-	err = impl.init(ctx, cfg)
+	err = impl.init(ctx, extensionNames, cfg)
 	if err != nil {
-		return nil, func() {}, err
+		return nil, err
 	}
 
-	return impl, impl.close, nil
+	return impl, nil
 }
 
 func (f *wazeroExtEngine) SetLimits(limits iextengine.ExtensionLimits) {
@@ -113,7 +104,7 @@ func (f *wazeroExtEngine) importFuncs(funcs map[string]*api.Function) error {
 	return nil
 }
 
-func (f *wazeroExtEngine) init(ctx context.Context, config iextengine.ExtEngineConfig) error {
+func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config iextengine.ExtEngineConfig) error {
 	var err error
 	var memPages = config.MemoryLimitPages
 	if memPages == 0 {
@@ -251,11 +242,27 @@ func (f *wazeroExtEngine) init(ctx context.Context, config iextengine.ExtEngineC
 
 	f.recoverMem = f.module.Memory().Backup()
 
+	f.exts = make(map[string]api.Function)
+
+	for _, name := range extNames {
+		if !strings.HasPrefix(name, "Wasm") && name != "alloc" && name != "free" &&
+			name != "calloc" && name != "realloc" && name != "malloc" && name != "_start" && name != "memory" {
+			expFunc := f.module.ExportedFunction(name)
+			if expFunc != nil {
+				f.exts[name] = expFunc
+			} else {
+				return missingExportedFunction(name)
+			}
+		} else {
+			return incorrectExtensionName(name)
+		}
+	}
+
 	return nil
 
 }
 
-func (f *wazeroExtEngine) close() {
+func (f *wazeroExtEngine) Close() {
 	if f.module != nil {
 		f.module.Close(f.ctx)
 	}
@@ -267,24 +274,11 @@ func (f *wazeroExtEngine) close() {
 	}
 }
 
-func (f *wazeroExtEngine) ForEach(callback func(name string, ext iextengine.IExtension)) {
-
-	exports := f.module.Exports()
-	for i := 0; i < len(*exports); i++ {
-		name := (*exports)[i]
-		if !strings.HasPrefix(name, "Wasm") && name != "alloc" && name != "free" &&
-			name != "calloc" && name != "realloc" && name != "malloc" && name != "_start" && name != "memory" {
-			callback(name, &wasmExtension{name, f.module.ExportedFunction(name), f})
-		}
-	}
-
-}
-
 func (f *wazeroExtEngine) recover() {
 	f.module.Memory().Restore(f.recoverMem)
 }
 
-func (f *wazeroExtEngine) invoke(funct api.Function, io iextengine.IExtentionIO) (err error) {
+func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName string, io iextengine.IExtentionIO) (err error) {
 
 	f.io = io
 
@@ -302,6 +296,11 @@ func (f *wazeroExtEngine) invoke(funct api.Function, io iextengine.IExtentionIO)
 	}
 	for i := range f.allocatedBufs {
 		f.allocatedBufs[i].offs = 0 // reuse pre-allocated memory
+	}
+
+	funct := f.exts[extentionName]
+	if funct == nil {
+		return invalidExtensionName(extentionName)
 	}
 	_, err = funct.CallEx(f.ctx, f.ce, &f.cep)
 

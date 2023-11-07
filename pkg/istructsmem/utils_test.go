@@ -7,7 +7,6 @@ package istructsmem
 
 import (
 	"reflect"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 )
 
 func Test_splitID(t *testing.T) {
@@ -56,7 +56,9 @@ func Test_splitID(t *testing.T) {
 	}
 }
 
-func Test_splitRecordID(t *testing.T) {
+func Test_recordKey(t *testing.T) {
+	const ws = istructs.WSID(0xa1a2a3a4a5a6a7a8)
+	pkPref := []byte{0, byte(consts.SysView_Records), 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8}
 	tests := []struct {
 		name   string
 		id     istructs.RecordID
@@ -64,25 +66,25 @@ func Test_splitRecordID(t *testing.T) {
 		wantCc []byte
 	}{
 		{
-			name:   "split null record must return {0} and {0}",
+			name:   "null record must return {0} and {0}",
 			id:     istructs.NullRecordID,
 			wantPk: []byte{0, 0, 0, 0, 0, 0, 0, 0},
 			wantCc: []byte{0, 0},
 		},
 		{
-			name:   "split 4095 must return {0} and {0x0F, 0xFF}",
+			name:   "4095 must return {0} and {0x0F, 0xFF}",
 			id:     istructs.RecordID(4095),
 			wantPk: []byte{0, 0, 0, 0, 0, 0, 0, 0},
 			wantCc: []byte{0x0F, 0xFF},
 		},
 		{
-			name:   "split 4096 must return {1} and {0}",
+			name:   "4096 must return {1} and {0}",
 			id:     istructs.RecordID(4096),
 			wantPk: []byte{0, 0, 0, 0, 0, 0, 0, 1},
 			wantCc: []byte{0, 0},
 		},
 		{
-			name:   "split 4097 must return {1} and {1}",
+			name:   "4097 must return {1} and {1}",
 			id:     istructs.RecordID(4097),
 			wantPk: []byte{0, 0, 0, 0, 0, 0, 0, 1},
 			wantCc: []byte{0, 1},
@@ -90,8 +92,9 @@ func Test_splitRecordID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotPk, gotCc := splitRecordID(tt.id)
-			if !reflect.DeepEqual(gotPk, tt.wantPk) {
+			gotPk, gotCc := recordKey(ws, tt.id)
+			wantPk := append(pkPref, tt.wantPk...)
+			if !reflect.DeepEqual(gotPk, wantPk) {
 				t.Errorf("splitRecordID() gotPk = %v, want %v", gotPk, tt.wantPk)
 			}
 			if !reflect.DeepEqual(gotCc, tt.wantCc) {
@@ -99,61 +102,6 @@ func Test_splitRecordID(t *testing.T) {
 			}
 		})
 	}
-}
-
-func Test_splitCalcLogOffset(t *testing.T) {
-	require := require.New(t)
-
-	wg := sync.WaitGroup{}
-
-	const basketCount int = 4
-	testBaskets := func(startBasket int) {
-		startOffs := istructs.Offset(startBasket * 4096)
-		for ofs := startOffs; ofs < startOffs+istructs.Offset(4096*basketCount); ofs++ {
-			pk, cc := splitLogOffset(ofs)
-			ofs1 := calcLogOffset(pk, cc)
-			require.Equal(ofs, ofs1)
-		}
-		wg.Done()
-	}
-
-	for i := 0; i < 3; i++ {
-		wg.Add(1)
-		go testBaskets(i * basketCount)
-	}
-	wg.Wait()
-}
-
-func Test_splitLogOffsetMonotonicIncrease(t *testing.T) {
-	require := require.New(t)
-
-	wg := sync.WaitGroup{}
-
-	const basketCount int = 4
-	testBaskets := func(startBasket int) {
-		startOffs := istructs.Offset(startBasket * 4096)
-		p, c := splitLogOffset(startOffs)
-		for ofs := startOffs + 1; ofs < startOffs+istructs.Offset(4096*basketCount); ofs++ {
-			pp, cc := splitLogOffset(ofs)
-			if reflect.DeepEqual(pp, p) {
-				require.Greater(string(cc), string(c))
-			} else {
-				require.Greater(string(pp), string(p))
-				require.True(reflect.DeepEqual(c, []byte{0x0F, 0xFF}))
-				require.True(reflect.DeepEqual(cc, []byte{0x00, 0x00}))
-			}
-			c = cc
-			p = pp
-		}
-
-		wg.Done()
-	}
-
-	for i := 0; i < 3; i++ {
-		wg.Add(1)
-		go testBaskets(i * basketCount)
-	}
-	wg.Wait()
 }
 
 func TestElementFillAndGet(t *testing.T) {
@@ -186,7 +134,7 @@ func TestElementFillAndGet(t *testing.T) {
 			},
 		}
 		cfg := cfgs[test.appName]
-		require.NoError(FillElementFromJSON(data, cfg.AppDef.Def(test.testCDoc), builder))
+		require.NoError(FillElementFromJSON(data, cfg.AppDef.Type(test.testCDoc), builder))
 		o, err := builder.Build()
 		require.NoError(err)
 
@@ -230,7 +178,7 @@ func TestElementFillAndGet(t *testing.T) {
 				"sys.ID": float64(1),
 				name:     val,
 			}
-			require.NoError(FillElementFromJSON(data, cfg.AppDef.Def(test.testCDoc), builder))
+			require.NoError(FillElementFromJSON(data, cfg.AppDef.Type(test.testCDoc), builder))
 			o, err := builder.Build()
 			require.ErrorIs(err, ErrWrongFieldType)
 			require.Nil(o)
@@ -252,7 +200,7 @@ func TestElementFillAndGet(t *testing.T) {
 			data := map[string]interface{}{
 				c.f: c.v,
 			}
-			err := FillElementFromJSON(data, cfg.AppDef.Def(test.testCDoc), builder)
+			err := FillElementFromJSON(data, cfg.AppDef.Type(test.testCDoc), builder)
 			require.Error(err)
 		}
 	})

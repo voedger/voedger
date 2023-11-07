@@ -11,7 +11,6 @@ import (
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -19,14 +18,12 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/processors"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type workspace struct {
-	NextWLogOffset        istructs.Offset
-	NextBaseID            istructs.RecordID
-	NextCDocCRecordBaseID istructs.RecordID
+	NextWLogOffset istructs.Offset
+	idGenerator    istructs.IIDGenerator
 }
 
 type cmdProc struct {
@@ -43,11 +40,6 @@ type cmdProc struct {
 type appPartition struct {
 	workspaces     map[istructs.WSID]*workspace
 	nextPLogOffset istructs.Offset
-}
-
-func ProvideJSONFuncParamsDef(appDef appdef.IAppDefBuilder) {
-	appDef.AddObject(istructs.QNameJSON).
-		AddField(processors.Field_JSONDef_Body, appdef.DataKind_string, true)
 }
 
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
@@ -71,8 +63,8 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("getAppStructs", getAppStructs),
 				pipeline.WireFunc("limitCallRate", limitCallRate),
 				pipeline.WireFunc("getWSDesc", getWSDesc),
-				pipeline.WireFunc("checkWSInitialized", checkWSInitialized),
 				pipeline.WireFunc("authenticate", cmdProc.authenticate),
+				pipeline.WireFunc("checkWSInitialized", checkWSInitialized),
 				pipeline.WireFunc("checkWSActive", checkWSActive),
 				pipeline.WireFunc("getAppPartition", cmdProc.getAppPartition),
 				pipeline.WireFunc("getFunction", getFunction),
@@ -85,7 +77,6 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("checkArgsRefIntegrity", checkArgsRefIntegrity),
 				pipeline.WireFunc("parseCUDs", parseCUDs),
 				pipeline.WireSyncOperator("wrongArgsCatcher", &wrongArgsCatcher{}), // any error before -> wrap error into bad request http error
-				pipeline.WireFunc("checkWSDescUpdating", checkWorkspaceDescriptorUpdating),
 				pipeline.WireFunc("authorizeCUDs", cmdProc.authorizeCUDs),
 				pipeline.WireFunc("writeCUDs", cmdProc.writeCUDs),
 				pipeline.WireFunc("getCmdResultBuilder", cmdProc.getCmdResultBuilder),
@@ -94,6 +85,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("build raw event", buildRawEvent),
 				pipeline.WireFunc("validate", cmdProc.validate),
 				pipeline.WireFunc("validateCmdResult", validateCmdResult),
+				pipeline.WireFunc("getIDGenerator", getIDGenerator),
 				pipeline.WireFunc("putPLog", cmdProc.putPLog),
 				pipeline.WireFunc("applyPLogEvent", applyPLogEvent),
 				pipeline.WireFunc("syncProjectorsStart", syncProjectorsBegin),
@@ -113,7 +105,6 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 						cmdMes:            intf.(ICommandMessage),
 						requestData:       coreutils.MapObject{},
 						asp:               asp,
-						generatedIDs:      map[istructs.RecordID]istructs.RecordID{},
 						hostStateProvider: hsp,
 					}
 					cmd.metrics = commandProcessorMetrics{

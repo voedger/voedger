@@ -21,7 +21,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	//TODO Daniil fix it
 	t.Skip("Daniil fix it https://dev.untill.com/projects/#!639145")
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	wsName := "test_ws"
 	ws := vit.WS(istructs.AppQName_test1_app1, wsName)
@@ -97,13 +97,13 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	//Check that emails were send
-	require.Equal(verificationCode, strings.Split(vit.ExpectEmail().Capture().Body, ";")[0])
-	require.Equal(verificationCode, strings.Split(vit.ExpectEmail().Capture().Body, ";")[0])
+	require.Equal(verificationCode, strings.Split(vit.CaptureEmail().Body, ";")[0])
+	require.Equal(verificationCode, strings.Split(vit.CaptureEmail().Body, ";")[0])
 
-	message := vit.ExpectEmail().Capture()
+	message := vit.CaptureEmail()
 	ss := strings.Split(message.Body, ";")
 	require.Equal(inviteEmailSubject, message.Subject)
-	require.Equal(invite.EmailFrom, message.From)
+	require.Equal(it.TestSMTPCfg.GetFrom(), message.From)
 	require.Equal([]string{it.TestEmail3}, message.To)
 	require.Equal(verificationCode, ss[0])
 	require.Equal(strconv.FormatInt(inviteID3, 10), ss[1])
@@ -125,7 +125,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	WaitForInviteState(vit, ws, invite.State_Cancelled, inviteID3)
 	InitiateInvitationByEMail(vit, ws, expireDatetime, it.TestEmail3, initialRoles, inviteEmailTemplate, inviteEmailSubject)
 	WaitForInviteState(vit, ws, invite.State_ToBeInvited, inviteID3)
-	_ = vit.ExpectEmail().Capture()
+	_ = vit.CaptureEmail()
 	WaitForInviteState(vit, ws, invite.State_Invited, inviteID3)
 
 	//Join workspaces
@@ -166,10 +166,10 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	//Check that emails were send
-	require.Equal(updatedRoles, vit.ExpectEmail().Capture().Body)
-	message = vit.ExpectEmail().Capture()
+	require.Equal(updatedRoles, vit.CaptureEmail().Body)
+	message = vit.CaptureEmail()
 	require.Equal(updateRolesEmailSubject, message.Subject)
-	require.Equal(invite.EmailFrom, message.From)
+	require.Equal(it.TestSMTPCfg.GetFrom(), message.From)
 	require.Equal([]string{it.TestEmail2}, message.To)
 	require.Equal(updatedRoles, message.Body)
 

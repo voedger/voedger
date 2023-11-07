@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
 func Test_KeyType(t *testing.T) {
@@ -27,27 +26,29 @@ func Test_KeyType(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 
 		appDef := appdef.New()
-		t.Run("must be ok to build view definition", func(t *testing.T) {
-			viewDef := appDef.AddView(viewName)
-			viewDef.
-				AddPartField("pk_int32", appdef.DataKind_int32).
-				AddPartField("pk_int64", appdef.DataKind_int64).
-				AddPartField("pk_float32", appdef.DataKind_float32).
-				AddPartField("pk_float64", appdef.DataKind_float64).
-				AddPartField("pk_qname", appdef.DataKind_QName).
-				AddPartField("pk_bool", appdef.DataKind_bool).
-				AddPartField("pk_recID", appdef.DataKind_RecordID).
-				AddPartField("pk_number", appdef.DataKind_float64).
-				AddClustColumn("cc_int32", appdef.DataKind_int32).
-				AddClustColumn("cc_int64", appdef.DataKind_int64).
-				AddClustColumn("cc_float32", appdef.DataKind_float32).
-				AddClustColumn("cc_float64", appdef.DataKind_float64).
-				AddClustColumn("cc_qname", appdef.DataKind_QName).
-				AddClustColumn("cc_bool", appdef.DataKind_bool).
-				AddClustColumn("cc_recID", appdef.DataKind_RecordID).
-				AddClustColumn("cc_number", appdef.DataKind_float64).
-				AddClustColumn("cc_bytes", appdef.DataKind_bytes).
-				AddValueField("val_string", appdef.DataKind_string, false)
+		t.Run("must be ok to build view", func(t *testing.T) {
+			view := appDef.AddView(viewName)
+			view.KeyBuilder().PartKeyBuilder().
+				AddField("pk_int32", appdef.DataKind_int32).
+				AddField("pk_int64", appdef.DataKind_int64).
+				AddField("pk_float32", appdef.DataKind_float32).
+				AddField("pk_float64", appdef.DataKind_float64).
+				AddField("pk_qname", appdef.DataKind_QName).
+				AddField("pk_bool", appdef.DataKind_bool).
+				AddRefField("pk_recID").
+				AddField("pk_number", appdef.DataKind_float64)
+			view.KeyBuilder().ClustColsBuilder().
+				AddField("cc_int32", appdef.DataKind_int32).
+				AddField("cc_int64", appdef.DataKind_int64).
+				AddField("cc_float32", appdef.DataKind_float32).
+				AddField("cc_float64", appdef.DataKind_float64).
+				AddField("cc_qname", appdef.DataKind_QName).
+				AddField("cc_bool", appdef.DataKind_bool).
+				AddRefField("cc_recID").
+				AddField("cc_number", appdef.DataKind_float64).
+				AddField("cc_bytes", appdef.DataKind_bytes, appdef.MaxLen(64))
+			view.ValueBuilder().
+				AddField("val_string", appdef.DataKind_string, false, appdef.MaxLen(1024))
 		})
 
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
@@ -64,7 +65,6 @@ func Test_KeyType(t *testing.T) {
 	require.NotNil(app)
 
 	key := newKey(appCfg, viewName)
-	require.Equal(appdef.ViewKeyDefName(viewName), key.AsQName(appdef.SystemField_QName))
 
 	t.Run("key must supports IKeyBuilder interface", func(t *testing.T) {
 		kb := istructs.IKeyBuilder(key)
@@ -121,7 +121,7 @@ func Test_KeyType(t *testing.T) {
 			view := appCfg.AppDef.View(viewName)
 			cnt := 0
 			k.FieldNames(func(n string) {
-				require.NotNil(view.Key().Field(n))
+				require.NotNil(view.Key().Field(n), "unknown field name passed in callback from IKey.FieldNames(): %q", n)
 				cnt++
 			})
 			require.Positive(cnt)
@@ -148,12 +148,13 @@ func Test_KeyType(t *testing.T) {
 	t.Run("key must supports IKey interface", func(t *testing.T) { testIKey(t, key) })
 
 	t.Run("must be ok to load/store key to bytes", func(t *testing.T) {
-		p, c := key.storeToBytes()
+		p, c := key.storeToBytes(0)
 		require.NotEmpty(p)
 		require.NotEmpty(c)
 
 		dupe := newKey(appCfg, viewName)
-		require.NoError(dupe.loadFromBytes(p, c))
+		dupe.partRow.copyFrom(&key.partRow)
+		require.NoError(dupe.loadFromBytes(c))
 
 		t.Run("key must supports IKey interface", func(t *testing.T) { testIKey(t, dupe) })
 
@@ -172,24 +173,28 @@ func TestCore_ViewRecords(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 
 		appDef := appdef.New()
-		t.Run("must be ok to build application definition", func(t *testing.T) {
-			viewDef := appDef.AddView(appdef.NewQName("test", "viewDrinks"))
-			viewDef.
-				AddPartField("partitionKey1", appdef.DataKind_int64).
-				AddClustColumn("clusteringColumn1", appdef.DataKind_int64).
-				AddClustColumn("clusteringColumn2", appdef.DataKind_bool).
-				AddClustColumn("clusteringColumn3", appdef.DataKind_string).
-				AddValueField("id", appdef.DataKind_int64, true).
-				AddValueField("name", appdef.DataKind_string, true).
-				AddValueField("active", appdef.DataKind_bool, true)
+		t.Run("must be ok to build application", func(t *testing.T) {
+			view := appDef.AddView(appdef.NewQName("test", "viewDrinks"))
+			view.KeyBuilder().PartKeyBuilder().
+				AddField("partitionKey1", appdef.DataKind_int64)
+			view.KeyBuilder().ClustColsBuilder().
+				AddField("clusteringColumn1", appdef.DataKind_int64).
+				AddField("clusteringColumn2", appdef.DataKind_bool).
+				AddField("clusteringColumn3", appdef.DataKind_string, appdef.MaxLen(64))
+			view.ValueBuilder().
+				AddField("id", appdef.DataKind_int64, true).
+				AddField("name", appdef.DataKind_string, true).
+				AddField("active", appdef.DataKind_bool, true)
 
-			otherViewDef := appDef.AddView(appdef.NewQName("test", "otherView"))
-			otherViewDef.
-				AddPartField("partitionKey1", appdef.DataKind_QName).
-				AddClustColumn("clusteringColumn1", appdef.DataKind_float32).
-				AddClustColumn("clusteringColumn2", appdef.DataKind_float64).
-				AddClustColumn("clusteringColumn3", appdef.DataKind_bytes).
-				AddValueField("valueField1", appdef.DataKind_int64, false)
+			otherView := appDef.AddView(appdef.NewQName("test", "otherView"))
+			otherView.KeyBuilder().PartKeyBuilder().
+				AddField("partitionKey1", appdef.DataKind_QName)
+			otherView.KeyBuilder().ClustColsBuilder().
+				AddField("clusteringColumn1", appdef.DataKind_float32).
+				AddField("clusteringColumn2", appdef.DataKind_float64).
+				AddField("clusteringColumn3", appdef.DataKind_bytes, appdef.MaxLen(128))
+			otherView.ValueBuilder().
+				AddField("valueField1", appdef.DataKind_int64, false)
 		})
 
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
@@ -420,30 +425,30 @@ func TestCore_ViewRecords(t *testing.T) {
 
 	t.Run("Invalid key building test", func(t *testing.T) {
 
-		t.Run("Must have panic if key definition missed", func(t *testing.T) {
+		t.Run("Must have panic if key type missed", func(t *testing.T) {
 			require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NullQName) })
 		})
 
-		t.Run("Must have panic if invalid key definition name", func(t *testing.T) {
+		t.Run("Must have panic if invalid key type name", func(t *testing.T) {
 			require.Panics(func() { _ = viewRecords.KeyBuilder(istructs.QNameForError) })
 			require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NewQName("test", "unknownDrinks")) })
 		})
 
-		t.Run("Must have panic if invalid key definition kind", func(t *testing.T) {
+		t.Run("Must have panic if invalid key type kind", func(t *testing.T) {
 			require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks_Value")) })
 		})
 
-		t.Run("Must have error if wrong partition key definition", func(t *testing.T) {
+		t.Run("Must have error if wrong partition key type", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			pk := kb.PartitionKey()
 			pk.PutQName(appdef.SystemField_QName, appdef.NewQName("test", "viewDrinks_Value"))
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
-			require.ErrorIs(err, ErrDefChanged)
+			require.ErrorIs(err, ErrTypeChanged)
 		})
 
-		t.Run("Must have error if wrong clustering columns definition", func(t *testing.T) {
+		t.Run("Must have error if wrong clustering columns type", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			pk := kb.PartitionKey()
 			pk.PutInt64("partitionKey1", 1)
@@ -452,10 +457,10 @@ func TestCore_ViewRecords(t *testing.T) {
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
-			require.ErrorIs(err, ErrDefChanged)
+			require.ErrorIs(err, ErrTypeChanged)
 		})
 
-		t.Run("Must have error if wrong value definition", func(t *testing.T) {
+		t.Run("Must have error if wrong value type", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PutInt64("partitionKey1", 1)
 			kb.PutInt64("clusteringColumn1", 100)
@@ -466,7 +471,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			vb.PutQName(appdef.SystemField_QName, appdef.NewQName("test", "viewDrinks_ClusteringColumns"))
 
 			err := viewRecords.Put(1, kb, vb)
-			require.ErrorIs(err, ErrDefChanged)
+			require.ErrorIs(err, ErrTypeChanged)
 		})
 
 		t.Run("Must have error if empty partition key", func(t *testing.T) {
@@ -552,19 +557,19 @@ func TestCore_ViewRecords(t *testing.T) {
 
 	t.Run("Invalid value building test", func(t *testing.T) {
 
-		t.Run("Must have panic if value definition missed", func(t *testing.T) {
+		t.Run("Must have panic if value type missed", func(t *testing.T) {
 			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NullQName) })
 		})
 
-		t.Run("Must have panic if unknown value definition specified", func(t *testing.T) {
+		t.Run("Must have panic if unknown value type specified", func(t *testing.T) {
 			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "unknownDrinks")) })
 		})
 
-		t.Run("Must have panic if wrong value definition specified", func(t *testing.T) {
+		t.Run("Must have panic if wrong value type specified", func(t *testing.T) {
 			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks_PartitionKey")) })
 		})
 
-		t.Run("Must have panic if wrong existing value definition specified", func(t *testing.T) {
+		t.Run("Must have panic if wrong existing value type specified", func(t *testing.T) {
 			exists := newValue(appCfg, appdef.NewQName("test", "otherView"))
 			require.Panics(func() {
 				_ = viewRecords.UpdateValueBuilder(appdef.NewQName("test", "viewDrinks"), exists)
@@ -615,7 +620,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			vb.PutBool("active", true)
 
 			err := viewRecords.Put(1, kb, vb)
-			require.ErrorIs(err, ErrWrongDefinition)
+			require.ErrorIs(err, ErrWrongType)
 			require.ErrorContains(err, "test.viewDrinks")
 		})
 
@@ -718,7 +723,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		kb.PutBool("clusteringColumn2", true)
 		kb.PutString("clusteringColumn3", "cider")
 
-		c := utils.PrefixBytes([]byte("cider"), int64(100), true)
+		_, c := kb.(*keyType).storeToBytes(2)
 
 		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, c)
 		_, err := viewRecords.Get(2, kb)
@@ -777,34 +782,37 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	viewName := appdef.NewQName("test", "view")
 
 	appDef := appdef.New()
-	t.Run("must be ok to build application definition", func(t *testing.T) {
-		appDef.AddView(viewName).
-			AddPartField("pf_int32", appdef.DataKind_int32).
-			AddPartField("pf_int64", appdef.DataKind_int64).
-			AddPartField("pf_float32", appdef.DataKind_float32).
-			AddPartField("pf_float64", appdef.DataKind_float64).
-			AddPartField("pf_qname", appdef.DataKind_QName).
-			AddPartField("pf_bool", appdef.DataKind_bool).
-			AddPartField("pf_recID", appdef.DataKind_RecordID).
-			AddClustColumn("cc_int32", appdef.DataKind_int32).
-			AddClustColumn("cc_int64", appdef.DataKind_int64).
-			AddClustColumn("cc_float32", appdef.DataKind_float32).
-			AddClustColumn("cc_float64", appdef.DataKind_float64).
-			AddClustColumn("cc_qname", appdef.DataKind_QName).
-			AddClustColumn("cc_bool", appdef.DataKind_bool).
-			AddClustColumn("cc_recID", appdef.DataKind_RecordID).
-			AddClustColumn("cc_bytes", appdef.DataKind_bytes).
-			AddValueField("vf_int32", appdef.DataKind_int32, true).
-			AddValueField("vf_int64", appdef.DataKind_int64, false).
-			AddValueField("vf_float32", appdef.DataKind_float32, false).
-			AddValueField("vf_float64", appdef.DataKind_float64, false).
-			AddValueField("vf_bytes", appdef.DataKind_bytes, false).
-			AddValueField("vf_string", appdef.DataKind_string, false).
-			AddValueField("vf_qname", appdef.DataKind_QName, false).
-			AddValueField("vf_bool", appdef.DataKind_bool, false).
-			AddValueField("vf_recID", appdef.DataKind_RecordID, false).
-			AddValueField("vf_record", appdef.DataKind_Record, false).
-			AddValueField("vf_event", appdef.DataKind_Event, false)
+	t.Run("must be ok to build application", func(t *testing.T) {
+		v := appDef.AddView(viewName)
+		v.KeyBuilder().PartKeyBuilder().
+			AddField("pf_int32", appdef.DataKind_int32).
+			AddField("pf_int64", appdef.DataKind_int64).
+			AddField("pf_float32", appdef.DataKind_float32).
+			AddField("pf_float64", appdef.DataKind_float64).
+			AddField("pf_qname", appdef.DataKind_QName).
+			AddField("pf_bool", appdef.DataKind_bool).
+			AddRefField("pf_recID")
+		v.KeyBuilder().ClustColsBuilder().
+			AddField("cc_int32", appdef.DataKind_int32).
+			AddField("cc_int64", appdef.DataKind_int64).
+			AddField("cc_float32", appdef.DataKind_float32).
+			AddField("cc_float64", appdef.DataKind_float64).
+			AddField("cc_qname", appdef.DataKind_QName).
+			AddField("cc_bool", appdef.DataKind_bool).
+			AddRefField("cc_recID").
+			AddField("cc_bytes", appdef.DataKind_bytes, appdef.MaxLen(8))
+		v.ValueBuilder().
+			AddField("vf_int32", appdef.DataKind_int32, true).
+			AddField("vf_int64", appdef.DataKind_int64, false).
+			AddField("vf_float32", appdef.DataKind_float32, false).
+			AddField("vf_float64", appdef.DataKind_float64, false).
+			AddField("vf_bytes", appdef.DataKind_bytes, false, appdef.MaxLen(1024)).
+			AddField("vf_string", appdef.DataKind_string, false, appdef.Pattern(`^\w+$`)).
+			AddField("vf_qname", appdef.DataKind_QName, false).
+			AddField("vf_bool", appdef.DataKind_bool, false).
+			AddRefField("vf_recID", false).
+			AddField("vf_record", appdef.DataKind_Record, false).
+			AddField("vf_event", appdef.DataKind_Event, false)
 	})
 
 	cfg := func() *AppConfigType {
@@ -840,13 +848,14 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	err := k1.build()
 	require.NoError(err)
 
-	p, c := k1.storeToBytes()
+	p, c := k1.storeToBytes(0)
 	require.NotNil(p)
 	require.NotNil(c)
 
 	t.Run("should be success load", func(t *testing.T) {
 		k2 := newKey(cfg, viewName)
-		err := k2.loadFromBytes(p, c)
+		k2.partRow.copyFrom(&k1.partRow)
+		err := k2.loadFromBytes(c)
 		require.NoError(err)
 
 		testRowsIsEqual(t, &k1.partRow, &k2.partRow)
@@ -859,14 +868,10 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 		require.False(k1.Equals(k2))
 	})
 
-	t.Run("should be load error if truncated key bytes", func(t *testing.T) {
+	t.Run("should be load error if truncated clustering columns bytes", func(t *testing.T) {
 		k2 := newKey(cfg, viewName)
-		for i := 0; i < len(p); i++ {
-			err := k2.loadFromBytes(p[:i], c)
-			require.Error(err, i)
-		}
-		for i := 0; i < len(p)-4; i++ { // 4 - is length of variable bytes "test" that can be truncated with impunity
-			err := k2.loadFromBytes(p, c[:i])
+		for i := 0; i < len(c)-4; i++ { // 4 - is length of variable bytes "test" that can be truncated with impunity
+			err := k2.loadFromBytes(c[:i])
 			require.Error(err, i)
 		}
 	})
@@ -893,13 +898,12 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	testRowsIsEqual(t, &v1.rowType, &v2.rowType)
 
 	t.Run("should be load error if truncated value bytes", func(t *testing.T) {
-		for i := 0; i < len(p); i++ {
+		for i := 0; i < len(v); i++ {
 			v2 := newValue(cfg, viewName)
-			err := v2.loadFromBytes(p[:i])
+			err := v2.loadFromBytes(v[:i])
 			require.Error(err, i)
 		}
 	})
-
 }
 
 // Test_ViewRecords_ClustColumnsQName: see https://dev.heeus.io/launchpad/#!16377 problem
@@ -907,19 +911,22 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	require := require.New(t)
 	ws := istructs.WSID(1234)
 
-	// App definition, same as previous but with RecordID field in the clustering key
+	// Application, same as previous but with RecordID field in the clustering key
 	//
 	appConfigs := func() AppConfigsType {
 
 		appDef := appdef.New()
-		t.Run("must be ok to build application definition", func(t *testing.T) {
-			appDef.AddView(appdef.NewQName("test", "viewDrinks")).
-				AddPartField("partitionKey1", appdef.DataKind_int64).
-				AddClustColumn("clusteringColumn1", appdef.DataKind_QName).
-				AddClustColumn("clusteringColumn2", appdef.DataKind_RecordID).
-				AddValueField("id", appdef.DataKind_int64, true).
-				AddValueField("name", appdef.DataKind_string, true).
-				AddValueField("active", appdef.DataKind_bool, true)
+		t.Run("must be ok to build application", func(t *testing.T) {
+			v := appDef.AddView(appdef.NewQName("test", "viewDrinks"))
+			v.KeyBuilder().PartKeyBuilder().
+				AddField("partitionKey1", appdef.DataKind_int64)
+			v.KeyBuilder().ClustColsBuilder().
+				AddField("clusteringColumn1", appdef.DataKind_QName).
+				AddRefField("clusteringColumn2")
+			v.ValueBuilder().
+				AddField("id", appdef.DataKind_int64, true).
+				AddField("name", appdef.DataKind_string, true).
+				AddField("active", appdef.DataKind_bool, true)
 
 			_ = appDef.AddObject(appdef.NewQName("test", "obj1"))
 		})
@@ -983,17 +990,23 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	championsView := appdef.NewQName("test", "champions")
 
 	appDef := appdef.New()
-	t.Run("must be ok to build application definition", func(t *testing.T) {
-		appDef.AddView(championshipsView).
-			AddPartField("Year", appdef.DataKind_int32).
-			AddClustColumn("Sport", appdef.DataKind_string).
-			AddValueField("Country", appdef.DataKind_string, true).
-			AddValueField("City", appdef.DataKind_string, false)
+	t.Run("must be ok to build application", func(t *testing.T) {
+		v := appDef.AddView(championshipsView)
+		v.KeyBuilder().PartKeyBuilder().
+			AddField("Year", appdef.DataKind_int32)
+		v.KeyBuilder().ClustColsBuilder().
+			AddField("Sport", appdef.DataKind_string, appdef.MaxLen(64))
+		v.ValueBuilder().
+			AddField("Country", appdef.DataKind_string, true).
+			AddField("City", appdef.DataKind_string, false)
 
-		appDef.AddView(championsView).
-			AddPartField("Year", appdef.DataKind_int32).
-			AddClustColumn("Sport", appdef.DataKind_string).
-			AddValueField("Winner", appdef.DataKind_string, true)
+		v = appDef.AddView(championsView)
+		v.KeyBuilder().PartKeyBuilder().
+			AddField("Year", appdef.DataKind_int32)
+		v.KeyBuilder().ClustColsBuilder().
+			AddField("Sport", appdef.DataKind_string, appdef.MaxLen(64))
+		v.ValueBuilder().
+			AddField("Winner", appdef.DataKind_string, true)
 	})
 
 	storage := teststore.NewStorage()

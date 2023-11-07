@@ -7,6 +7,7 @@ package istructsmem
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"sync"
 
@@ -16,9 +17,8 @@ import (
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/plogcache"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
 
@@ -122,7 +122,7 @@ func (app *appStructsType) Resources() istructs.IResources {
 
 // istructs.IAppStructs.ClusterAppID
 func (app *appStructsType) ClusterAppID() istructs.ClusterAppID {
-	return app.config.QNameID
+	return app.config.ClusterAppID
 }
 
 // istructs.IAppStructs.AppQName
@@ -209,12 +209,14 @@ func (app *appStructsType) DescribePackage(name string) interface{} {
 //   - interfaces:
 //     — istructs.IEvents
 type appEventsType struct {
-	app *appStructsType
+	app       *appStructsType
+	plogCache *plogcache.Cache
 }
 
 func newEvents(app *appStructsType) appEventsType {
 	return appEventsType{
-		app: app,
+		app:       app,
+		plogCache: plogcache.New(app.config.Params.PLogEventCacheSize),
 	}
 }
 
@@ -229,7 +231,7 @@ func (e *appEventsType) GetNewRawEventBuilder(params istructs.NewRawEventBuilder
 }
 
 // istructs.IEvents.PutPlog
-func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator istructs.IDGenerator) (event istructs.IPLogEvent, err error) {
+func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator istructs.IIDGenerator) (event istructs.IPLogEvent, err error) {
 	dbEvent := ev.(*eventType)
 
 	dbEvent.setBuildError(buildErr)
@@ -243,22 +245,24 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 		dbEvent.argUnlObj.maskValues()
 	}
 
+	p, o := ev.HandlingPartition(), ev.PLogOffset()
+	pKey, cCols := plogKey(p, o)
+
 	evData := dbEvent.storeToBytes()
-	pKey, cCols := splitLogOffset(ev.PLogOffset())
-	pKey = utils.PrefixBytes(pKey, consts.SysView_PLog, ev.HandlingPartition()) // + partition! see #18047
 
 	if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
 		event = dbEvent
 	}
+
+	e.plogCache.Put(p, o, event)
 
 	return event, err
 }
 
 // istructs.IEvents.PutWlog
 func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
+	pKey, cCols := wlogKey(ev.Workspace(), ev.WLogOffset())
 	evData := ev.(*eventType).storeToBytes()
-	pKey, cCols := splitLogOffset(ev.WLogOffset())
-	pKey = utils.PrefixBytes(pKey, consts.SysView_WLog, ev.Workspace())
 
 	return e.app.config.storage.Put(pKey, cCols, evData)
 }
@@ -269,10 +273,13 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 	switch toReadCount {
 	case 1:
 		// See [#292](https://github.com/voedger/voedger/issues/292)
-		pKey, cCol := splitLogOffset(offset)
-		pKey = utils.PrefixBytes(pKey, consts.SysView_PLog, partition) // + partition! see #18047
+		if e, ok := e.plogCache.Get(partition, offset); ok {
+			return cb(offset, e)
+		}
+
+		pKey, cCols := plogKey(partition, offset)
 		data := bytespool.Get()
-		ok, err := e.app.config.storage.Get(pKey, cCol, &data.B)
+		ok, err := e.app.config.storage.Get(pKey, cCols, &data.B)
 		if ok {
 			event := newEvent(e.app.config)
 			if err = event.loadFromBytes(data.B); err == nil {
@@ -284,12 +291,16 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 		}
 		return err
 	default:
-		return readLogParts(offset, toReadCount, func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
+		return readLogParts(offset, toReadCount, func(ofsHi uint64, ofsLo1, ofsLo2 uint16) (ok bool, err error) {
 			count := 0
-			pKey := utils.PrefixBytes(pk, consts.SysView_PLog, partition) // + partition! see #18047
-			err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, func(ccols, data []byte) error {
+			pKey, cFrom := plogKey(partition, glueLogOffset(ofsHi, ofsLo1))
+			cTo := uint16bytes(ofsLo2 + 1) // storage.Read() pass half-open interval [cFrom, cTo)
+			if ofsLo2 >= lowMask {
+				cTo = nil
+			}
+			err = e.app.config.storage.Read(ctx, pKey, cFrom, cTo, func(ccols, data []byte) error {
 				count++
-				ofs := calcLogOffset(pk, ccols)
+				ofs := glueLogOffset(ofsHi, binary.BigEndian.Uint16(ccols))
 				event := newEvent(e.app.config)
 				if err = event.loadFromBytes(data); err == nil {
 					err = cb(ofs, event)
@@ -307,10 +318,9 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 	switch toReadCount {
 	case 1:
 		// See [#292](https://github.com/voedger/voedger/issues/292)
-		pKey, cCol := splitLogOffset(offset)
-		pKey = utils.PrefixBytes(pKey, consts.SysView_WLog, workspace)
+		pKey, cCols := wlogKey(workspace, offset)
 		data := bytespool.Get()
-		ok, err := e.app.config.storage.Get(pKey, cCol, &data.B)
+		ok, err := e.app.config.storage.Get(pKey, cCols, &data.B)
 		if ok {
 			event := newEvent(e.app.config)
 			if err = event.loadFromBytes(data.B); err == nil {
@@ -322,12 +332,16 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 		}
 		return err
 	default:
-		return readLogParts(offset, toReadCount, func(pk, ccFrom, ccTo []byte) (ok bool, err error) {
+		return readLogParts(offset, toReadCount, func(ofsHi uint64, ofsLo1, ofsLo2 uint16) (ok bool, err error) {
 			count := 0
-			pKey := utils.PrefixBytes(pk, consts.SysView_WLog, workspace)
-			err = e.app.config.storage.Read(ctx, pKey, ccFrom, ccTo, func(ccols, data []byte) error {
+			pKey, cFrom := wlogKey(workspace, glueLogOffset(ofsHi, ofsLo1))
+			cTo := uint16bytes(ofsLo2 + 1) // storage.Read() pass half-open interval [cFrom, cTo)
+			if ofsLo2 >= lowMask {
+				cTo = nil
+			}
+			err = e.app.config.storage.Read(ctx, pKey, cFrom, cTo, func(ccols, data []byte) error {
 				count++
-				ofs := calcLogOffset(pk, ccols)
+				ofs := glueLogOffset(ofsHi, binary.BigEndian.Uint16(ccols))
 				event := newEvent(e.app.config)
 				if err = event.loadFromBytes(data); err == nil {
 					err = cb(ofs, event)
@@ -354,9 +368,8 @@ func newRecords(app *appStructsType) appRecordsType {
 
 // getRecord reads record from application storage through view-records methods
 func (recs *appRecordsType) getRecord(workspace istructs.WSID, id istructs.RecordID, data *[]byte) (ok bool, err error) {
-	idHi, idLow := splitRecordID(id)
-	pk := utils.PrefixBytes(idHi, consts.SysView_Records, workspace)
-	return recs.app.config.storage.Get(pk, idLow, data)
+	pk, cc := recordKey(workspace, id)
+	return recs.app.config.storage.Get(pk, cc, data)
 }
 
 // getRecordBatch reads record from application storage through view-records methods
@@ -368,18 +381,17 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 	plan := make(map[string][]istorage.GetBatchItem)
 	for i := 0; i < len(ids); i++ {
 		ids[i].Record = NewNullRecord(ids[i].ID)
-		idHi, idLow := splitRecordID(ids[i].ID)
-		batch, ok := plan[string(idHi)]
+		pk, cc := recordKey(workspace, ids[i].ID)
+		batch, ok := plan[string(pk)]
 		if !ok {
-			batch = make([]istorage.GetBatchItem, 0, len(ids)) // to prevent reallocation
+			batch = make([]istorage.GetBatchItem, 0, len(ids)-i) // to prevent reallocation
 		}
-		batch = append(batch, istorage.GetBatchItem{CCols: idLow, Data: new([]byte)})
-		plan[string(idHi)] = batch
+		batch = append(batch, istorage.GetBatchItem{CCols: cc, Data: new([]byte)})
+		plan[string(pk)] = batch
 		batches[i] = &batch[len(batch)-1]
 	}
 	for idHi, batch := range plan {
-		pk := utils.PrefixBytes([]byte(idHi), consts.SysView_Records, workspace)
-		if err = recs.app.config.storage.GetBatch(pk, batch); err != nil {
+		if err = recs.app.config.storage.GetBatch([]byte(idHi), batch); err != nil {
 			return err
 		}
 	}
@@ -390,7 +402,7 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 			if err = rec.loadFromBytes(*b.Data); err != nil {
 				return err
 			}
-			ids[i].Record = &rec
+			ids[i].Record = rec
 		}
 	}
 	return nil
@@ -398,9 +410,8 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 
 // putRecord puts record to application storage through view-records methods
 func (recs *appRecordsType) putRecord(workspace istructs.WSID, id istructs.RecordID, data []byte) (err error) {
-	idHi, idLow := splitRecordID(id)
-	pk := utils.PrefixBytes(idHi, consts.SysView_Records, workspace)
-	return recs.app.config.storage.Put(pk, idLow, data)
+	pk, cc := recordKey(workspace, id)
+	return recs.app.config.storage.Put(pk, cc, data)
 }
 
 // putRecordsBatch puts record array to application storage through view-records batch methods
@@ -412,39 +423,55 @@ type recordBatchItemType struct {
 func (recs *appRecordsType) putRecordsBatch(workspace istructs.WSID, records []recordBatchItemType) (err error) {
 	batch := make([]istorage.BatchItem, len(records))
 	for i, r := range records {
-		idHi, idLow := splitRecordID(r.id)
-		batch[i].PKey = utils.PrefixBytes(idHi, consts.SysView_Records, workspace)
-		batch[i].CCols = idLow
+		batch[i].PKey, batch[i].CCols = recordKey(workspace, r.id)
 		batch[i].Value = r.data
 	}
 	return recs.app.config.storage.PutBatch(batch)
 }
 
-// validEvent returns error if event has non-committable data, such as singleton unique violations or invalid record id references
+// validEvent returns error if event has non-committable data, such as singleton unique violations or non exists updated record id
 func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
-	existsRecord := func(id istructs.RecordID) (bool, error) {
+	load := func(id istructs.RecordID, rec *recordType) (exists bool, err error) {
 		data := make([]byte, 0)
-		ok, err := recs.getRecord(ev.ws, id, &data)
-		if err != nil {
-			return false, err
+		if exists, err = recs.getRecord(ev.ws, id, &data); exists {
+			if rec != nil {
+				err = rec.loadFromBytes(data)
+			}
 		}
-		return ok, nil
+
+		return exists, err
 	}
 
 	for _, rec := range ev.cud.creates {
-		if cDoc, ok := rec.def.(appdef.ICDoc); ok && cDoc.Singleton() {
+		if cDoc, ok := rec.typ.(appdef.ICDoc); ok && cDoc.Singleton() {
 			id, err := recs.app.config.singletons.ID(rec.QName())
 			if err != nil {
 				return err
 			}
-			isExists, err := existsRecord(id)
+			exists, err := load(id, nil)
 			if err != nil {
-				return err
+				return fmt.Errorf("error checking singleton CDoc «%v» record «%d» existence: %w", rec.QName(), id, err)
 			}
-			if isExists {
+			if exists {
 				return fmt.Errorf("can not create singleton, CDoc «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
 			}
+		}
+	}
+
+	for _, rec := range ev.cud.updates {
+		old := newRecord(recs.app.config)
+		exists, err := load(rec.originRec.ID(), old)
+		if err != nil {
+			return fmt.Errorf("error load updated «%v» record «%d»: %w", rec.originRec.QName(), rec.originRec.ID(), err)
+		}
+		if !exists {
+			return fmt.Errorf("updated «%v» record «%d» not exists: %w", rec.originRec.QName(), rec.originRec.ID(), ErrRecordIDNotFound)
+		}
+
+		// check exists record has correct QName
+		if rec.originRec.QName() != old.QName() {
+			return fmt.Errorf("updated «%v» record «%d» has unexpected QName value «%v»: %w", rec.originRec.QName(), rec.originRec.ID(), old.QName(), ErrWrongType)
 		}
 	}
 
@@ -453,7 +480,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
 // istructs.IRecords.Apply
 func (recs *appRecordsType) Apply(event istructs.IPLogEvent) (err error) {
-	return recs.Apply2(event, func(istructs.IRecord) {})
+	return recs.Apply2(event, nil)
 }
 
 // istructs.IRecords.Apply2
@@ -464,29 +491,10 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 		panic(fmt.Errorf("can not apply not valid event: %s: %w", ev.Error().ErrStr(), ErrorEventNotValid))
 	}
 
-	existsRecord := func(id istructs.RecordID) (bool, error) {
-		data := make([]byte, 0)
-		ok, err := recs.getRecord(ev.ws, id, &data)
-		if err != nil {
-			return false, err
-		}
-		return ok, nil
-	}
-
-	loadRecord := func(rec *recordType) error {
-		data := make([]byte, 0)
-		var ok bool
-		if ok, err = recs.getRecord(ev.ws, rec.ID(), &data); ok {
-			err = rec.loadFromBytes(data)
-		}
-
-		return err
-	}
-
 	records := make([]*recordType, 0)
 	batch := make([]recordBatchItemType, 0)
 
-	storeRecord := func(rec *recordType) error {
+	store := func(rec *recordType) error {
 		data := rec.storeToBytes()
 		records = append(records, rec)
 		batch = append(batch, recordBatchItemType{rec.ID(), data})
@@ -494,11 +502,25 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 		return nil
 	}
 
-	if err = ev.applyCommandRecs(existsRecord, loadRecord, storeRecord); err == nil {
+	load := func(rec *recordType) error {
+		data := make([]byte, 0)
+		exists, err := recs.getRecord(ev.ws, rec.ID(), &data)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("record «%d» not exists: %w", rec.ID(), ErrRecordIDNotFound)
+		}
+		return rec.loadFromBytes(data)
+	}
+
+	if err = ev.cud.applyRecs(load, store); err == nil {
 		if len(records) > 0 {
 			if err = recs.putRecordsBatch(ev.ws, batch); err == nil {
-				for _, rec := range records {
-					cb(rec)
+				if cb != nil {
+					for _, rec := range records {
+						cb(rec)
+					}
 				}
 			}
 		}
@@ -514,7 +536,7 @@ func (recs *appRecordsType) Get(workspace istructs.WSID, highConsistency bool, i
 	if ok, err = recs.getRecord(workspace, id, &data); ok {
 		rec := newRecord(recs.app.config)
 		if err = rec.loadFromBytes(data); err == nil {
-			return &rec, nil
+			return rec, nil
 		}
 	}
 	return NewNullRecord(id), err

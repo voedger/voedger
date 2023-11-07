@@ -12,16 +12,17 @@ if [ $# -lt 2 ]; then
   exit 1
 fi
 
+source ./utils.sh
+
 # Assign the arguments to variables
 REMOTE_HOST=$1
 MIN_RAM=$2
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR -o ConnectTimeout=15'
 
 # Check if minimum RAM is set to 0
 if [ "$MIN_RAM" -eq 0 ]; then
-  if ssh $SSH_OPTIONS $SSH_USER@$REMOTE_HOST exit; then
+  if utils_ssh "$SSH_USER@$REMOTE_HOST" exit; then
     echo "SSH connection established with host $REMOTE_HOST."
   else
     echo "Failed to establish SSH connection with host $REMOTE_HOST."
@@ -30,7 +31,7 @@ if [ "$MIN_RAM" -eq 0 ]; then
   # Check SSH connection
   echo "Skipping RAM check."
 else
-  if ram=$(ssh $SSH_OPTIONS $SSH_USER@$REMOTE_HOST free -m 2>/dev/null | awk 'NR==2{print $2}'); then
+  if ram=$(utils_ssh "$SSH_USER@$REMOTE_HOST" free -m 2>/dev/null | awk 'NR==2{print $2}'); then
     echo "SSH connection established with host $REMOTE_HOST."
     # Compare RAM size with the minimum requirement
     if [ $ram -ge $MIN_RAM ]; then
