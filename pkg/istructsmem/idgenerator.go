@@ -52,9 +52,16 @@ func (g *implIIDGenerator) UpdateOnSync(syncID istructs.RecordID, t appdef.IType
 		// see https://github.com/voedger/voedger/issues/688
 		return
 	}
-	if t.Kind() == appdef.TypeKind_CDoc || t.Kind() == appdef.TypeKind_CRecord {
+	switch t.Kind() {
+	case appdef.TypeKind_CDoc, appdef.TypeKind_CRecord:
 		g.nextCDocCRecordBaseID = syncID.BaseRecordID() + 1
-	} else {
+	case appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
+		if syncID.BaseRecordID() >= g.nextBaseID {
+			// we do not know the order the IDs were issued for ODoc with ORecords
+			// so let's bump if syncID is actually next
+			g.nextBaseID = syncID.BaseRecordID() + 1
+		}
+	default:
 		g.nextBaseID = syncID.BaseRecordID() + 1
 	}
 }
