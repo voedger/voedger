@@ -51,15 +51,15 @@ args_array=("$@")
 # ((++i))
 # done
 
-DBNode1="DBNode1"
-DBNode2="DBNode2"
-DBNode3="DBNode3"
+# DBNode1="DBNode1"
+# DBNode2="DBNode2"
+# DBNode3="DBNode3"
 
 # Replace the template values in the YAML file with the arguments (scylla nodes ip addresses)
 # and store as prod compose file for start swarm services
-cat docker-compose-template.yml | \
-    sed "s/{{\.$DBNode1}}/${hosts[0]}/g; s/{{\.$DBNode2}}/${hosts[1]}/g; s/{{\.$DBNode3}}/${hosts[2]}/g" \
-    > ./docker-compose.yml
+#cat docker-compose-template.yml | \
+#    sed "s/{{\.$DBNode1}}/${hosts[0]}/g; s/{{\.$DBNode2}}/${hosts[1]}/g; s/{{\.$DBNode3}}/${hosts[2]}/g" \
+#    > ./docker-compose.yml
 
 cat ./docker-compose.yml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/docker-compose.yml'
 
