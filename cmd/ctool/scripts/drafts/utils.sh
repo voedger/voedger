@@ -2,7 +2,6 @@
  # Copyright (c) 2023 Sigma-Soft, Ltd.
  # @author Aleksei Ponomarev
 
-
 utils_SSH_OPTS() {
   echo "-q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR"
 }
