@@ -13,6 +13,7 @@ import (
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/workspace"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
@@ -33,7 +34,7 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 				logger.Verbose("app workspace", appQName, wsNum, "(", appWSID, ") inited already")
 				continue
 			}
-			partition := istructs.PartitionID(appWSID % istructs.WSID(vvmConfig.NumCommandProcessors))
+			partition := coreutils.PartitionID(appWSID, vvmConfig.NumCommandProcessors)
 			if _, ok := pLogOffsets[partition]; !ok {
 				pLogOffsets[partition] = istructs.FirstOffset
 			}
