@@ -409,10 +409,11 @@ func (xp xPath) Error(err error) error {
 }
 
 func execCommand(_ context.Context, work interface{}) (err error) {
-	begin := time.Now()
-	defer work.(*cmdWorkpiece).metrics.increase(ExecSeconds, time.Since(begin).Seconds())
 	cmd := work.(*cmdWorkpiece)
-	return cmd.cmdFunc.Exec(cmd.eca)
+	begin := time.Now()
+	err = cmd.cmdFunc.Exec(cmd.eca)
+	work.(*cmdWorkpiece).metrics.increase(ExecSeconds, time.Since(begin).Seconds())
+	return err
 }
 
 func buildRawEvent(_ context.Context, work interface{}) (err error) {
