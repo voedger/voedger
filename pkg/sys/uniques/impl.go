@@ -55,7 +55,7 @@ func provideUniquesProjectorFunc(appDef appdef.IAppDef) func(event istructs.IPLo
 							return nil
 						}
 						if storedUniqueFieldHasValue {
-							// has record in the view and the value is not provded in the request -> probably we're updating sys.IsActive
+							// has record in the view and the value is not provided in the request -> probably we're updating sys.IsActive
 							return update(rec, uniqueField, st, intents)
 						}
 						// no unique field value in the request and was not inited -> do nothing
