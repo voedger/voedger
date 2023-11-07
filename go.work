@@ -5,4 +5,6 @@ use (
 	./cmd/voedger
 	./cmd/edger
 	./cmd/ctool
+	./staging/src/voedger.io/extensionstinygo 
+	./pkg/iextenginewazero/_testdata
 )
