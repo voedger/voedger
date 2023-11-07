@@ -39,11 +39,11 @@ var sysFS embed.FS
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, smtpCfg smtp.Cfg,
 	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation coreutils.IFederation,
 	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount, buildInfo *debug.BuildInfo,
-	storageProvider istorage.IAppStorageProvider, rebuildRegistry bool) {
+	storageProvider istorage.IAppStorageProvider) {
 	blobber.ProvideBlobberCmds(cfg)
 	collection.Provide(cfg, appDefBuilder)
 	journal.Provide(cfg, appDefBuilder, ep)
-	builtin.Provide(cfg, appDefBuilder, buildInfo, storageProvider, rebuildRegistry)
+	builtin.Provide(cfg, appDefBuilder, buildInfo, storageProvider)
 	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
 	sqlquery.Provide(cfg, appDefBuilder, asp, numCommandProcessors)
 	projectors.ProvideOffsetsDef(appDefBuilder)

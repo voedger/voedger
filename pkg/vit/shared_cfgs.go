@@ -81,7 +81,7 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		panic("no build info")
 	}
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider, false)
+		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
 	apps.RegisterSchemaFS(SchemaTestApp2, "app2", ep)
 }
 
@@ -92,7 +92,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		panic("no build info")
 	}
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider, false)
+		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
 
 	apps.RegisterSchemaFS(SchemaTestApp1, "app1", ep)
 

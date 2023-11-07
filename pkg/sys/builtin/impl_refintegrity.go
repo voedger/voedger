@@ -21,19 +21,14 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideRefIntegrityValidation(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, rebuildRegistry bool) {
+func provideRefIntegrityValidation(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	registryProjector := func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: qNameRecordsRegistryProjector,
 			Func: provideRecordsRegistryProjector(cfg),
 		}
 	}
-	if rebuildRegistry {
-		appDefBuilder.AddObject(qNameRecordsRegistryProjector)
-		cfg.AddAsyncProjectors(registryProjector)
-	} else {
-		cfg.AddSyncProjectors(registryProjector)
-	}
+	cfg.AddSyncProjectors(registryProjector)
 	cfg.AddCUDValidators(provideRefIntegrityValidator())
 }
 

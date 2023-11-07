@@ -25,9 +25,9 @@ import (
 func NewOwnVITConfig(opts ...vitConfigOptFunc) VITConfig {
 	// helper: implicitly append sys apps
 	opts = append(opts,
-		WithApp(istructs.AppQName_sys_registry, registryapp.Provide(smtp.Cfg{}, false)),
-		WithApp(istructs.AppQName_sys_blobber, blobberapp.Provide(smtp.Cfg{}, false)),
-		WithApp(istructs.AppQName_sys_router, routerapp.Provide(smtp.Cfg{}, false)),
+		WithApp(istructs.AppQName_sys_registry, registryapp.Provide(smtp.Cfg{})),
+		WithApp(istructs.AppQName_sys_blobber, blobberapp.Provide(smtp.Cfg{})),
+		WithApp(istructs.AppQName_sys_router, routerapp.Provide(smtp.Cfg{})),
 	)
 	return VITConfig{
 		opts: opts,
