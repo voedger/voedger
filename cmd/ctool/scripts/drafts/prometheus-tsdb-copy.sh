@@ -90,4 +90,5 @@ docker service update MonDockerStack_prometheus"$app_host_idx" --force --quiet
 docker service update MonDockerStack_alertmanager"$app_host_idx" --force --quiet
 docker service update MonDockerStack_cadvisor"$app_host_idx" --force --quiet
 
+
 exit 0
