@@ -67,6 +67,11 @@ func (provider *appStructsProviderType) AppStructs(appName istructs.AppQName) (s
 	return app, nil
 }
 
+// istructs.IAppStructsProvider.AppStructsByDef
+func (provider *appStructsProviderType) AppStructsByDef(aqn istructs.AppQName, appDef appdef.IAppDef) (structs istructs.IAppStructs, err error) {
+	return provider.AppStructs(aqn)
+}
+
 // appStructsType implements IAppStructs interface
 //   - interfaces:
 //     — istructs.IAppStructs

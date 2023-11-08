@@ -47,7 +47,7 @@ func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istruct
 
 	p := a.parts[partID]
 	if (p == nil) || (p.appDef != appDef) {
-		appStructs, err := aps.structs.AppStructs(appName)
+		appStructs, err := aps.structs.AppStructsByDef(appName, appDef)
 		if err != nil {
 			panic(err)
 		}
