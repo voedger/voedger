@@ -13,14 +13,14 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, buildInfo *debug.BuildInfo, asp istorage.IAppStorageProvider, rebuildRegistry bool) {
+func Provide(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, buildInfo *debug.BuildInfo, asp istorage.IAppStorageProvider) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 
 	// Deprecated: use c.sys.CUD instead. Kept for backward compatibility only
 	// to import via ImportBO
 	cfg.Resources.Add(istructsmem.NewCommandFunction(QNameCommandInit, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 
-	provideRefIntegrityValidation(cfg, adf, rebuildRegistry)
+	provideRefIntegrityValidation(cfg, adf)
 	provideQryModules(cfg, adf, buildInfo)
 
 	provideQryEcho(cfg, adf)

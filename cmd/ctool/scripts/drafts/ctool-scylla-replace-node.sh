@@ -24,8 +24,9 @@ if [[ $# -lt 3 ]]; then
   exit 1
 fi
 
+source ./utils.sh
+
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 STACK="DBDockerStack"
 
 declare -A service_map
@@ -80,7 +81,7 @@ scylla_wait() {
   sleep "$timeout"
 
   while [ $count -lt $max_attempts ]; do
-      if [ "$(ssh "$SSH_OPTIONS" "$SSH_USER"@"$ip_address" docker exec '$(docker ps -qf name=scylla --filter status=running)' nodetool status | grep -c '^UN\s')" -eq 3 ]; then
+      if [ "$(utils_ssh "$SSH_USER@$ip_address" docker exec '$(docker ps -qf name=scylla --filter status=running)' nodetool status | grep -c '^UN\s')" -eq 3 ]; then
           echo "Scylla cluster initialization success. Check scylla is listening on interface."
 
           while [ $listen_attempts -lt $max_attempts ]; do
@@ -116,7 +117,7 @@ wait_for_scylla() {
   local count=0
   sleep 10
   while [ $count -lt 300 ]; do
-    if [ $(ssh "$SSH_OPTIONS" "$SSH_USER"@"$ip_address" "docker exec \$(docker ps -qf name=scylla --filter status=running) nodetool status | grep -c '^UN\s'") -eq 3 ]; then
+    if [ $(utils_ssh "$SSH_USER@$ip_address" "docker exec \$(docker ps -qf name=scylla --filter status=running) nodetool status | grep -c '^UN\s'") -eq 3 ]; then
       echo "Scylla initialization success"
       return 0
     fi
@@ -140,8 +141,8 @@ seed_list() {
   local operation=$2
 
   service_label=$(./db-stack-update.sh "$node" "$operation" | tail -n 1)
-  < ./docker-compose.yml ssh "$SSH_OPTIONS" "$SSH_USER"@"$node" 'cat > ~/docker-compose.yml'
-  ssh "$SSH_OPTIONS" "$SSH_USER"@"$node" "docker stack deploy --compose-file ~/docker-compose.yml DBDockerStack"
+  < ./docker-compose.yml utils_ssh "$SSH_USER@$node" 'cat > ~/docker-compose.yml'
+  utils_ssh "$SSH_USER@$node" "docker stack deploy --compose-file ~/docker-compose.yml DBDockerStack"
   ./swarm-set-label.sh "$MANAGER" "$node" "$service_label" "true"
 }
 
@@ -159,7 +160,7 @@ seed_list "$REPLACED_NODE_NAME" add
 
 scylla_wait "$REPLACED_NODE_NAME"
 
-ssh "$SSH_OPTIONS" "$SSH_USER"@"$REPLACED_NODE_NAME" "docker exec \$(docker ps -qf name=scylla --filter status=running) nodetool repair -full"
+utils_ssh "$SSH_USER@$REPLACED_NODE_NAME" "docker exec \$(docker ps -qf name=scylla --filter status=running) nodetool repair -full"
 
 db_rolling_restart() {
   local compose_file="$1"

@@ -16,6 +16,8 @@ if [ $# -ne 2 ]; then
   exit 1
 fi
 
+source ./utils.sh
+
 declare -A node_map
 
 node_map["scylla1"]="DBNode1"
