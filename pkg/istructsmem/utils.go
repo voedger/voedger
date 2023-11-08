@@ -113,7 +113,7 @@ func FillElementFromJSON(data map[string]interface{}, t appdef.IType, b istructs
 		case bool:
 			b.PutBool(fieldName, fv)
 		case []interface{}:
-			// e.g. TestBasicUsage_Dashboard(), "order_item": [<2 elements>]
+			// e.g. "order_item": [<2 elements>]
 			containers, ok := t.(appdef.IContainers)
 			if !ok {
 				return fmt.Errorf("type %v has no containers", t.QName())

@@ -124,6 +124,10 @@ ABSTRACT WORKSPACE Workspace (
         NumGoroutines int32 NOT NULL
     );
 
+    TYPE ModulesResult (
+        Modules text(32768) NOT NULL
+    );
+
     TYPE CollectionParams (
         Schema text NOT NULL,
         ID int64
@@ -304,6 +308,7 @@ ABSTRACT WORKSPACE Workspace (
     EXTENSION ENGINE BUILTIN (
         QUERY Echo(EchoParams) RETURNS EchoResult;
         QUERY GRCount RETURNS GRCountResult;
+        QUERY Modules RETURNS ModulesResult;
 
         QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
         QUERY EnrichPrincipalToken(EnrichPrincipalTokenParams) RETURNS EnrichPrincipalTokenResult;
