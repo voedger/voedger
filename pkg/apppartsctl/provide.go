@@ -20,5 +20,5 @@ type BuiltInApp struct {
 	Name     istructs.AppQName
 	Def      appdef.IAppDef
 	NumParts int
-	Pools    any
+	Pools    [appparts.ProcKind_Count][]appparts.IProc
 }

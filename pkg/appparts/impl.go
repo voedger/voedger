@@ -10,38 +10,31 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type appPartitions struct {
-	storages istorage.IAppStorageProvider
-	structs  istructs.IAppStructsProvider
-	apps     map[istructs.AppQName]*app
-	mx       sync.RWMutex
+	structs istructs.IAppStructsProvider
+	apps    map[istructs.AppQName]*app
+	mx      sync.RWMutex
 }
 
-func newAppPartitions(storages istorage.IAppStorageProvider, structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(), err error) {
+func newAppPartitions(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(), err error) {
 	a := &appPartitions{
-		storages: storages,
-		structs:  structs,
-		apps:     map[istructs.AppQName]*app{},
-		mx:       sync.RWMutex{},
+		structs: structs,
+		apps:    map[istructs.AppQName]*app{},
+		mx:      sync.RWMutex{},
 	}
 	return a, func() {}, err
 }
 
-func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef, pools any) {
+func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef, processors [ProcKind_Count][]IProc) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
 	a, ok := aps.apps[appName]
 	if !ok {
-		storage, err := aps.storages.AppStorage(appName)
-		if err != nil {
-			panic(err)
-		}
-		a = newApplication(appName, storage)
+		a = newApplication(appName)
 		aps.apps[appName] = a
 	}
 
@@ -49,28 +42,28 @@ func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istruct
 	if err != nil {
 		panic(err)
 	}
-	p := newPartition(a, appDef, appStructs, partID, pools)
+	p := newPartition(a, appDef, appStructs, partID, processors)
 	a.parts[partID] = p
 }
 
-func (aps *appPartitions) Borrow(appName istructs.AppQName, partID istructs.PartitionID) (IAppPartition, error) {
+func (aps *appPartitions) Borrow(appName istructs.AppQName, partID istructs.PartitionID, proc ProcKind) (IAppPartition, IProc, error) {
 	aps.mx.RLock()
 	defer aps.mx.RUnlock()
 
-	a, ok := aps.apps[appName]
+	app, ok := aps.apps[appName]
 	if !ok {
-		return nil, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
+		return nil, nil, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
 	}
 
-	p, ok := a.parts[partID]
+	part, ok := app.parts[partID]
 	if !ok {
-		return nil, fmt.Errorf(errPartitionNotFound, appName, partID, ErrNotFound)
+		return nil, nil, fmt.Errorf(errPartitionNotFound, appName, partID, ErrNotFound)
 	}
 
-	b, err := p.borrow()
+	borrowed, processor, err := part.borrow(proc)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return b, nil
+	return borrowed, processor, nil
 }

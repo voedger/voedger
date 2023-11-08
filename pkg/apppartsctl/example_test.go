@@ -36,30 +36,27 @@ func Example() {
 	appConfigs.AddConfig(istructs.AppQName_test1_app1, appDef_1_v1)
 	appConfigs.AddConfig(istructs.AppQName_test1_app2, appDef_2_v1)
 
-	appStorages := istorageimpl.Provide(istorage.ProvideMem(), "")
-
 	appStructs := istructsmem.Provide(
 		appConfigs,
 		iratesce.TestBucketsFactory,
 		payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()),
-		appStorages)
+		istorageimpl.Provide(istorage.ProvideMem(), ""))
 
-	appParts, cleanupParts, err := appparts.New(appStorages, appStructs)
+	appParts, cleanupParts, err := appparts.New(appStructs)
 	if err != nil {
 		panic(err)
 	}
 	defer cleanupParts()
 
-	pools := struct{}{}
 	appPartsCtl, cleanupCtl, err := apppartsctl.New(appParts, []apppartsctl.BuiltInApp{
 		{Name: istructs.AppQName_test1_app1,
 			Def:      appDef_1_v1,
 			NumParts: 2,
-			Pools:    pools},
+			Pools:    MockProcessors(2, 2, 2)},
 		{Name: istructs.AppQName_test1_app2,
 			Def:      appDef_2_v1,
 			NumParts: 3,
-			Pools:    pools},
+			Pools:    MockProcessors(2, 2, 2)},
 	})
 
 	if err != nil {
@@ -75,11 +72,11 @@ func Example() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go appPartsCtl.Run(ctx)
 
-	borrow_work_release := func(appName istructs.AppQName, partID istructs.PartitionID) {
-		part, err := appParts.Borrow(appName, partID)
+	borrow_work_release := func(appName istructs.AppQName, partID istructs.PartitionID, proc appparts.ProcKind) {
+		part, processor, err := appParts.Borrow(appName, partID, proc)
 		for errors.Is(err, appparts.ErrNotFound) {
 			time.Sleep(time.Nanosecond)
-			part, err = appParts.Borrow(appName, partID) // Service lag, retry until found
+			part, processor, err = appParts.Borrow(appName, partID, proc) // Service lag, retry until found
 		}
 		if err != nil {
 			panic(err)
@@ -94,16 +91,19 @@ func Example() {
 					fmt.Println("-", typ, typ.Comment())
 				}
 			})
+		fmt.Println("- processor:", processor)
 	}
 
-	borrow_work_release(istructs.AppQName_test1_app1, 1)
-	borrow_work_release(istructs.AppQName_test1_app2, 1)
+	borrow_work_release(istructs.AppQName_test1_app1, 1, appparts.ProcKind_Command)
+	borrow_work_release(istructs.AppQName_test1_app2, 1, appparts.ProcKind_Query)
 
 	cancel()
 
 	// Output:
 	// test1/app1 part 1
 	// - CDoc «ver.info» app-1 ver.1
+	// - processor: Command
 	// test1/app2 part 1
 	// - CDoc «ver.info» app-2 ver.1
+	// - processor: Query
 }

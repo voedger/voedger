@@ -13,3 +13,5 @@ const (
 	errAppNotFound       = "application %v not found: %w"
 	errPartitionNotFound = "application %v partition %v not found: %w"
 )
+
+const errNotEnoughProcessor = "not enough %s-processor in a pool: %w"

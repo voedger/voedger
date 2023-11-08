@@ -6,23 +6,23 @@
 package appparts
 
 import (
+	"fmt"
+
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/appparts/internal/pool"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type app struct {
-	name    istructs.AppQName
-	storage istorage.IAppStorage
+	name istructs.AppQName
 	// no locks need. Owned appPartitions structure will locks access to this structure
 	parts map[istructs.PartitionID]*partition
 }
 
-func newApplication(name istructs.AppQName, storage istorage.IAppStorage) *app {
+func newApplication(name istructs.AppQName) *app {
 	return &app{
-		name:    name,
-		storage: storage,
-		parts:   map[istructs.PartitionID]*partition{},
+		name:  name,
+		parts: map[istructs.PartitionID]*partition{},
 	}
 }
 
@@ -31,39 +31,65 @@ type partition struct {
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
 	id         istructs.PartitionID
-	pools      any
+	pool       [ProcKind_Count]*pool.Pool[IProc]
 }
 
-func newPartition(app *app, appDef appdef.IAppDef, appStructs istructs.IAppStructs, id istructs.PartitionID, pools any) *partition {
-	p := &partition{app: app, appDef: appDef, appStructs: appStructs, id: id, pools: pools}
-	return p
+func newPartition(app *app, appDef appdef.IAppDef, appStructs istructs.IAppStructs, id istructs.PartitionID, processors [ProcKind_Count][]IProc) *partition {
+	part := &partition{
+		app:        app,
+		appDef:     appDef,
+		appStructs: appStructs,
+		id:         id,
+	}
+	for k, p := range processors {
+		part.pool[k] = pool.New[IProc](p)
+	}
+	return part
 }
 
-func (p *partition) borrow() (*partitionRT, error) {
-	b := newPartitionRT(p)
+func (p *partition) borrow(proc ProcKind) (*partitionRT, IProc, error) {
+	b := newPartitionRT(p, proc)
 
 	if err := b.init(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return b, nil
+	return b, b.borrowed, nil
 }
 
 type partitionRT struct {
-	p          *partition
+	part       *partition
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
+	proc       ProcKind
+	borrowed   IProc
 }
 
-func newPartitionRT(p *partition) *partitionRT {
-	rt := &partitionRT{p: p, appDef: p.appDef, appStructs: p.appStructs}
-	return rt
+func newPartitionRT(part *partition, proc ProcKind) *partitionRT {
+	return &partitionRT{
+		part:       part,
+		appDef:     part.appDef,
+		appStructs: part.appStructs,
+		proc:       proc}
 }
 
-func (rt *partitionRT) App() istructs.AppQName           { return rt.p.app.name }
+func (rt *partitionRT) App() istructs.AppQName           { return rt.part.app.name }
 func (rt *partitionRT) AppStructs() istructs.IAppStructs { return rt.appStructs }
-func (rt *partitionRT) ID() istructs.PartitionID         { return rt.p.id }
-func (rt *partitionRT) Release()                         {}
+func (rt *partitionRT) ID() istructs.PartitionID         { return rt.part.id }
+
+func (rt *partitionRT) Release() {
+	if b := rt.borrowed; b != nil {
+		rt.borrowed = nil
+		rt.part.pool[rt.proc].Release(b)
+	}
+}
 
 // Initialize partition RT structures for use
-func (rt *partitionRT) init() error { return nil }
+func (rt *partitionRT) init() error {
+	p, err := rt.part.pool[rt.proc].Borrow()
+	if err != nil {
+		return fmt.Errorf(errNotEnoughProcessor, rt.proc.TrimString(), err)
+	}
+	rt.borrowed = p
+	return nil
+}
