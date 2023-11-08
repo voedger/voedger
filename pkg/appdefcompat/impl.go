@@ -337,7 +337,7 @@ func matchNodes(oldNodes, newNodes []*CompatibilityTreeNode) *matchNodesResult {
 	for i, newNode := range newNodes {
 		oldNode, _ := findNodeByName(oldNodes, newNode.Name)
 		if oldNode == nil {
-			if i >= len(oldNodes) {
+			if i >= len(newNodes) {
 				result.AppendedNodeCount++
 			} else {
 				result.InsertedNodeCount++
