@@ -86,8 +86,8 @@ echo "Prometheus base copied successfully!"
 live_app_host=$(getent hosts "$src_ip" | awk '{print $2}')
 app_host_idx=$(echo "$live_app_host" | rev | cut -c 1)
 
-docker service update MonDockerStack_prometheus"$app_host_idx" -q
-docker service update MonDockerStack_alertmanager"$app_host_idx" -q
-docker servcei update MonDockerStack_cadvisor"$app_host_idx" -q
+docker service update MonDockerStack_prometheus"$app_host_idx" --quiet
+docker service update MonDockerStack_alertmanager"$app_host_idx" --quiet
+docker service update MonDockerStack_cadvisor"$app_host_idx" --quiet
 
 exit 0
