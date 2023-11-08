@@ -73,10 +73,10 @@ func Example() {
 	go appPartsCtl.Run(ctx)
 
 	borrow_work_release := func(appName istructs.AppQName, partID istructs.PartitionID, proc appparts.ProcKind) {
-		part, processor, err := appParts.Borrow(appName, partID, proc)
+		part, engine, err := appParts.Borrow(appName, partID, proc)
 		for errors.Is(err, appparts.ErrNotFound) {
 			time.Sleep(time.Nanosecond)
-			part, processor, err = appParts.Borrow(appName, partID, proc) // Service lag, retry until found
+			part, engine, err = appParts.Borrow(appName, partID, proc) // Service lag, retry until found
 		}
 		if err != nil {
 			panic(err)
@@ -91,7 +91,7 @@ func Example() {
 					fmt.Println("-", typ, typ.Comment())
 				}
 			})
-		fmt.Println("- processor:", processor)
+		fmt.Println("- engine:", engine)
 	}
 
 	borrow_work_release(istructs.AppQName_test1_app1, 1, appparts.ProcKind_Command)
@@ -102,8 +102,8 @@ func Example() {
 	// Output:
 	// test1/app1 part 1
 	// - CDoc «ver.info» app-1 ver.1
-	// - processor: Command
+	// - engine: Command
 	// test1/app2 part 1
 	// - CDoc «ver.info» app-2 ver.1
-	// - processor: Query
+	// - engine: Query
 }

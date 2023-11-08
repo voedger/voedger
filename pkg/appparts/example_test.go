@@ -44,14 +44,14 @@ func Example() {
 	}
 	defer cleanupParts()
 
-	report := func(part appparts.IAppPartition, proc appparts.IEngine) {
+	report := func(part appparts.IAppPartition, engine appparts.IEngine) {
 		fmt.Println(part.App(), "partition", part.ID())
 		part.AppStructs().AppDef().Types(func(t appdef.IType) {
 			if !t.IsSystem() {
 				fmt.Println("-", t, t.Comment())
 			}
 		})
-		fmt.Println("- processor:", proc)
+		fmt.Println("- engine:", engine)
 	}
 
 	fmt.Println("*** Add ver 1 ***")
@@ -105,15 +105,15 @@ func Example() {
 	// *** Add ver 1 ***
 	// test1/app1 partition 1
 	// - CDoc «ver.info» app-1 ver.1
-	// - processor: Command
+	// - engine: Command
 	// test1/app2 partition 1
 	// - CDoc «ver.info» app-2 ver.1
-	// - processor: Query
+	// - engine: Query
 	// *** Update to ver 2 ***
 	// test1/app2 partition 1
 	// - CDoc «ver.info» app-2 ver.2
-	// - processor: Projector
+	// - engine: Projector
 	// test1/app1 partition 1
 	// - CDoc «ver.info» app-1 ver.2
-	// - processor: Command
+	// - engine: Command
 }
