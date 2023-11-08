@@ -83,4 +83,11 @@ utils_ssh "$SSH_USER@$dst_ip" "rm -rf ~/$snapshot.tar.gz"
 
 echo "Prometheus base copied successfully!"
 
+live_app_host=$(getent hosts "$src_ip" | awk '{print $2}')
+app_host_idx=$(echo "$live_app_host" | rev | cut -c 1)
+
+docker service update --force MonDockerStack_prometheus"$app_host_idx"
+docker service update --force MonDockerStack_alertmanager"$app_host_idx"
+docker servcei update --force MonDockerStack_cadvisor"$app_host_idx"
+
 exit 0
