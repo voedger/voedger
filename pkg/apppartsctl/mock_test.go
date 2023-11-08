@@ -14,19 +14,16 @@ type EngineMock struct {
 func (p EngineMock) String() string { return p.k.TrimString() }
 
 func MockEngines(commands, queries, projectors int) [appparts.ProcKind_Count][]appparts.IEngine {
-	ee := [appparts.ProcKind_Count][]appparts.IEngine{
-		appparts.ProcKind_Command:   make([]appparts.IEngine, commands),
-		appparts.ProcKind_Query:     make([]appparts.IEngine, queries),
-		appparts.ProcKind_Projector: make([]appparts.IEngine, projectors),
+	get := func(k appparts.ProcKind, cnt int) []appparts.IEngine {
+		s := make([]appparts.IEngine, cnt)
+		for i := 0; i < cnt; i++ {
+			s[i] = EngineMock{k}
+		}
+		return s
 	}
-	for i := 0; i < commands; i++ {
-		ee[appparts.ProcKind_Command][i] = EngineMock{appparts.ProcKind_Command}
+	return [appparts.ProcKind_Count][]appparts.IEngine{
+		appparts.ProcKind_Command:   get(appparts.ProcKind_Command, commands),
+		appparts.ProcKind_Query:     get(appparts.ProcKind_Query, queries),
+		appparts.ProcKind_Projector: get(appparts.ProcKind_Projector, queries),
 	}
-	for i := 0; i < queries; i++ {
-		ee[appparts.ProcKind_Query][i] = EngineMock{appparts.ProcKind_Query}
-	}
-	for i := 0; i < projectors; i++ {
-		ee[appparts.ProcKind_Projector][i] = EngineMock{appparts.ProcKind_Projector}
-	}
-	return ee
 }
