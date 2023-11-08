@@ -128,6 +128,11 @@ ABSTRACT WORKSPACE Workspace (
         Modules text(32768) NOT NULL
     );
 
+    TYPE RenameQNameParams (
+        ExistingQName qname NOT NULL,
+        NewQName text NOT NULL
+    );
+
     TYPE CollectionParams (
         Schema text NOT NULL,
         ID int64
@@ -291,6 +296,19 @@ ABSTRACT WORKSPACE Workspace (
         OwnerQName2 text
     );
 
+    TYPE OnWorkspaceDeactivatedParams (
+        OwnerWSID int64 NOT NULL,
+        WSName text NOT NULL
+    );
+
+    TYPE OnJoinedWorkspaceDeactivatedParams (
+        InvitedToWSID int64 NOT NULL
+    );
+
+    TYPE OnChildWorkspaceDeactivatedParams (
+        OwnedID int64 NOT NULL
+    );
+
     TYPE QueryChildWorkspaceByNameParams (
         WSName text NOT NULL
     );
@@ -309,6 +327,7 @@ ABSTRACT WORKSPACE Workspace (
         QUERY Echo(EchoParams) RETURNS EchoResult;
         QUERY GRCount RETURNS GRCountResult;
         QUERY Modules RETURNS ModulesResult;
+        COMMAND RenameQName(RenameQNameParams);
 
         QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
         QUERY EnrichPrincipalToken(EnrichPrincipalTokenParams) RETURNS EnrichPrincipalTokenResult;
@@ -346,6 +365,9 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND InitChildWorkspace(InitChildWorkspaceParams);
         COMMAND CreateWorkspaceID(CreateWorkspaceIDParams);
         COMMAND CreateWorkspace(CreateWorkspaceParams);
+        COMMAND OnWorkspaceDeactivated(OnWorkspaceDeactivatedParams);
+        COMMAND OnJoinedWorkspaceDeactivated(OnJoinedWorkspaceDeactivatedParams);
+        COMMAND OnChildWorkspaceDeactivated(OnChildWorkspaceDeactivatedParams);
 
         SYNC PROJECTOR RecordsRegistryProjector ON (CDoc, WDoc, ODoc) INTENTS(View(RecordsRegistry));
     );
