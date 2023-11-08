@@ -15,9 +15,9 @@ func (p ProcMock) String() string { return p.k.TrimString() }
 
 func MockProcessors(commands, queries, projectors int) [appparts.ProcKind_Count][]appparts.IProc {
 	p := [appparts.ProcKind_Count][]appparts.IProc{
-		appparts.ProcKind_Command:   make([]appparts.IProc, commands, commands),
-		appparts.ProcKind_Query:     make([]appparts.IProc, queries, queries),
-		appparts.ProcKind_Projector: make([]appparts.IProc, projectors, projectors),
+		appparts.ProcKind_Command:   make([]appparts.IProc, commands),
+		appparts.ProcKind_Query:     make([]appparts.IProc, queries),
+		appparts.ProcKind_Projector: make([]appparts.IProc, projectors),
 	}
 	for i := 0; i < commands; i++ {
 		p[appparts.ProcKind_Command][i] = ProcMock{appparts.ProcKind_Command}
