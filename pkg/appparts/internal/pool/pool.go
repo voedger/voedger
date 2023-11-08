@@ -5,9 +5,7 @@
 
 package pool
 
-// Pool is a pool of reusable values.
-//
-// It is thread-safe.
+// Thread-safe pool of reusable values.
 //
 // Value is borrowed from poll by calling Borrow() method.
 // After using value, it must be returned to pool by calling Release() method.
