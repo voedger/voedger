@@ -28,7 +28,7 @@ func newAppPartitions(structs istructs.IAppStructsProvider) (ap IAppPartitions, 
 	return a, func() {}, err
 }
 
-func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef, processors [ProcKind_Count][]IProc) {
+func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef, engines [ProcKind_Count][]IEngine) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
@@ -42,11 +42,11 @@ func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istruct
 	if err != nil {
 		panic(err)
 	}
-	p := newPartition(a, appDef, appStructs, partID, processors)
+	p := newPartition(a, appDef, appStructs, partID, engines)
 	a.parts[partID] = p
 }
 
-func (aps *appPartitions) Borrow(appName istructs.AppQName, partID istructs.PartitionID, proc ProcKind) (IAppPartition, IProc, error) {
+func (aps *appPartitions) Borrow(appName istructs.AppQName, partID istructs.PartitionID, proc ProcKind) (IAppPartition, IEngine, error) {
 	aps.mx.RLock()
 	defer aps.mx.RUnlock()
 
@@ -60,10 +60,10 @@ func (aps *appPartitions) Borrow(appName istructs.AppQName, partID istructs.Part
 		return nil, nil, fmt.Errorf(errPartitionNotFound, appName, partID, ErrNotFound)
 	}
 
-	borrowed, processor, err := part.borrow(proc)
+	borrowed, engine, err := part.borrow(proc)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return borrowed, processor, nil
+	return borrowed, engine, nil
 }

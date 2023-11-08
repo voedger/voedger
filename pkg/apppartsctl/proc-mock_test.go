@@ -7,26 +7,26 @@ package apppartsctl_test
 
 import "github.com/voedger/voedger/pkg/appparts"
 
-type ProcMock struct {
+type EngineMock struct {
 	k appparts.ProcKind
 }
 
-func (p ProcMock) String() string { return p.k.TrimString() }
+func (p EngineMock) String() string { return p.k.TrimString() }
 
-func MockProcessors(commands, queries, projectors int) [appparts.ProcKind_Count][]appparts.IProc {
-	p := [appparts.ProcKind_Count][]appparts.IProc{
-		appparts.ProcKind_Command:   make([]appparts.IProc, commands),
-		appparts.ProcKind_Query:     make([]appparts.IProc, queries),
-		appparts.ProcKind_Projector: make([]appparts.IProc, projectors),
+func MockEngines(commands, queries, projectors int) [appparts.ProcKind_Count][]appparts.IEngine {
+	ee := [appparts.ProcKind_Count][]appparts.IEngine{
+		appparts.ProcKind_Command:   make([]appparts.IEngine, commands),
+		appparts.ProcKind_Query:     make([]appparts.IEngine, queries),
+		appparts.ProcKind_Projector: make([]appparts.IEngine, projectors),
 	}
 	for i := 0; i < commands; i++ {
-		p[appparts.ProcKind_Command][i] = ProcMock{appparts.ProcKind_Command}
+		ee[appparts.ProcKind_Command][i] = EngineMock{appparts.ProcKind_Command}
 	}
 	for i := 0; i < queries; i++ {
-		p[appparts.ProcKind_Query][i] = ProcMock{appparts.ProcKind_Query}
+		ee[appparts.ProcKind_Query][i] = EngineMock{appparts.ProcKind_Query}
 	}
 	for i := 0; i < projectors; i++ {
-		p[appparts.ProcKind_Projector][i] = ProcMock{appparts.ProcKind_Projector}
+		ee[appparts.ProcKind_Projector][i] = EngineMock{appparts.ProcKind_Projector}
 	}
-	return p
+	return ee
 }

@@ -44,7 +44,7 @@ func Example() {
 	}
 	defer cleanupParts()
 
-	report := func(part appparts.IAppPartition, proc appparts.IProc) {
+	report := func(part appparts.IAppPartition, proc appparts.IEngine) {
 		fmt.Println(part.App(), "partition", part.ID())
 		part.AppStructs().AppDef().Types(func(t appdef.IType) {
 			if !t.IsSystem() {
@@ -56,8 +56,8 @@ func Example() {
 
 	fmt.Println("*** Add ver 1 ***")
 
-	appParts.AddOrReplace(istructs.AppQName_test1_app1, 1, appDef_1_v1, MockProcessors(2, 2, 2))
-	appParts.AddOrReplace(istructs.AppQName_test1_app2, 1, appDef_2_v1, MockProcessors(2, 2, 2))
+	appParts.AddOrReplace(istructs.AppQName_test1_app1, 1, appDef_1_v1, MockEngines(2, 2, 2))
+	appParts.AddOrReplace(istructs.AppQName_test1_app2, 1, appDef_2_v1, MockEngines(2, 2, 2))
 
 	p1_1, cmd, err := appParts.Borrow(istructs.AppQName_test1_app1, 1, appparts.ProcKind_Command)
 	if err != nil {
@@ -82,8 +82,8 @@ func Example() {
 	appConfigs.AddConfig(istructs.AppQName_test1_app1, appDef_1_v2)
 	appConfigs.AddConfig(istructs.AppQName_test1_app2, appDef_2_v2)
 
-	appParts.AddOrReplace(istructs.AppQName_test1_app2, 1, appDef_2_v2, MockProcessors(2, 2, 2))
-	appParts.AddOrReplace(istructs.AppQName_test1_app1, 1, appDef_1_v2, MockProcessors(2, 2, 2))
+	appParts.AddOrReplace(istructs.AppQName_test1_app2, 1, appDef_2_v2, MockEngines(2, 2, 2))
+	appParts.AddOrReplace(istructs.AppQName_test1_app1, 1, appDef_1_v2, MockEngines(2, 2, 2))
 
 	p2_2, prj, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, appparts.ProcKind_Projector)
 	if err != nil {

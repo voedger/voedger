@@ -15,7 +15,7 @@ import (
 // Ref to proc-king.go for values and methods
 type ProcKind uint8
 
-type IProc interface{}
+type IEngine interface{}
 
 // Application partitions manager.
 type IAppPartitions interface {
@@ -24,14 +24,14 @@ type IAppPartitions interface {
 	// If partition with the same app and id already exists, it will be updated.
 	//
 	// @ConcurrentAccess
-	AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef, processors [ProcKind_Count][]IProc)
+	AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef, engines [ProcKind_Count][]IEngine)
 
 	// Borrows and returns a partition.
 	//
 	// If partition not exist, returns error.
 	//
 	// @ConcurrentAccess
-	Borrow(istructs.AppQName, istructs.PartitionID, ProcKind) (IAppPartition, IProc, error)
+	Borrow(istructs.AppQName, istructs.PartitionID, ProcKind) (IAppPartition, IEngine, error)
 }
 
 // Application partition.

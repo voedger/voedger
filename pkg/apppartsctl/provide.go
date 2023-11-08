@@ -16,9 +16,16 @@ func New(parts appparts.IAppPartitions, apps []BuiltInApp) (ctl IAppPartitionsCo
 	return newAppPartitionsController(parts, apps)
 }
 
+// Describes built-in application.
 type BuiltInApp struct {
-	Name     istructs.AppQName
-	Def      appdef.IAppDef
+	Name istructs.AppQName
+
+	// Application definition will use to generate AppStructs
+	Def appdef.IAppDef
+
+	// Number of partitions. Partitions IDs will be generated from 1 to NumParts
 	NumParts int
-	Pools    [appparts.ProcKind_Count][]appparts.IProc
+
+	// Engines for each processor kind
+	Engines [appparts.ProcKind_Count][]appparts.IEngine
 }

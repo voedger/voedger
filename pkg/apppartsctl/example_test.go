@@ -52,11 +52,11 @@ func Example() {
 		{Name: istructs.AppQName_test1_app1,
 			Def:      appDef_1_v1,
 			NumParts: 2,
-			Pools:    MockProcessors(2, 2, 2)},
+			Engines:  MockEngines(2, 2, 2)},
 		{Name: istructs.AppQName_test1_app2,
 			Def:      appDef_2_v1,
 			NumParts: 3,
-			Pools:    MockProcessors(2, 2, 2)},
+			Engines:  MockEngines(2, 2, 2)},
 	})
 
 	if err != nil {

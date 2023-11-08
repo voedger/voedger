@@ -31,30 +31,30 @@ type partition struct {
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
 	id         istructs.PartitionID
-	pool       [ProcKind_Count]*pool.Pool[IProc]
+	engines    [ProcKind_Count]*pool.Pool[IEngine]
 }
 
-func newPartition(app *app, appDef appdef.IAppDef, appStructs istructs.IAppStructs, id istructs.PartitionID, processors [ProcKind_Count][]IProc) *partition {
+func newPartition(app *app, appDef appdef.IAppDef, appStructs istructs.IAppStructs, id istructs.PartitionID, engines [ProcKind_Count][]IEngine) *partition {
 	part := &partition{
 		app:        app,
 		appDef:     appDef,
 		appStructs: appStructs,
 		id:         id,
 	}
-	for k, p := range processors {
-		part.pool[k] = pool.New[IProc](p)
+	for k, ee := range engines {
+		part.engines[k] = pool.New[IEngine](ee)
 	}
 	return part
 }
 
-func (p *partition) borrow(proc ProcKind) (*partitionRT, IProc, error) {
+func (p *partition) borrow(proc ProcKind) (*partitionRT, IEngine, error) {
 	b := newPartitionRT(p, proc)
 
 	if err := b.init(); err != nil {
 		return nil, nil, err
 	}
 
-	return b, b.borrowed, nil
+	return b, b.engine, nil
 }
 
 type partitionRT struct {
@@ -62,7 +62,7 @@ type partitionRT struct {
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
 	proc       ProcKind
-	borrowed   IProc
+	engine     IEngine
 }
 
 func newPartitionRT(part *partition, proc ProcKind) *partitionRT {
@@ -78,18 +78,18 @@ func (rt *partitionRT) AppStructs() istructs.IAppStructs { return rt.appStructs 
 func (rt *partitionRT) ID() istructs.PartitionID         { return rt.part.id }
 
 func (rt *partitionRT) Release() {
-	if b := rt.borrowed; b != nil {
-		rt.borrowed = nil
-		rt.part.pool[rt.proc].Release(b)
+	if e := rt.engine; e != nil {
+		rt.engine = nil
+		rt.part.engines[rt.proc].Release(e)
 	}
 }
 
 // Initialize partition RT structures for use
 func (rt *partitionRT) init() error {
-	p, err := rt.part.pool[rt.proc].Borrow()
+	engine, err := rt.part.engines[rt.proc].Borrow()
 	if err != nil {
-		return fmt.Errorf(errNotEnoughProcessor, rt.proc.TrimString(), err)
+		return fmt.Errorf(errNotEnoughEngines, rt.proc.TrimString(), err)
 	}
-	rt.borrowed = p
+	rt.engine = engine
 	return nil
 }
