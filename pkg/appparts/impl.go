@@ -31,7 +31,7 @@ func newAppPartitions(storages istorage.IAppStorageProvider, structs istructs.IA
 	return a, func() {}, err
 }
 
-func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef) {
+func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef, pools any) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
@@ -45,15 +45,12 @@ func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istruct
 		aps.apps[appName] = a
 	}
 
-	p := a.parts[partID]
-	if (p == nil) || (p.appDef != appDef) {
-		appStructs, err := aps.structs.AppStructsByDef(appName, appDef)
-		if err != nil {
-			panic(err)
-		}
-		p = newPartition(a, appDef, appStructs, partID)
-		a.parts[partID] = p
+	appStructs, err := aps.structs.AppStructsByDef(appName, appDef)
+	if err != nil {
+		panic(err)
 	}
+	p := newPartition(a, appDef, appStructs, partID, pools)
+	a.parts[partID] = p
 }
 
 func (aps *appPartitions) Borrow(appName istructs.AppQName, partID istructs.PartitionID) (IAppPartition, error) {

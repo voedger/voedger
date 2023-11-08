@@ -20,4 +20,5 @@ type BuiltInApp struct {
 	Name     istructs.AppQName
 	Def      appdef.IAppDef
 	NumParts int
+	Pools    any
 }

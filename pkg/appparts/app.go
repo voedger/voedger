@@ -31,10 +31,11 @@ type partition struct {
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
 	id         istructs.PartitionID
+	pools      any
 }
 
-func newPartition(app *app, appDef appdef.IAppDef, appStructs istructs.IAppStructs, id istructs.PartitionID) *partition {
-	p := &partition{app: app, appDef: appDef, appStructs: appStructs, id: id}
+func newPartition(app *app, appDef appdef.IAppDef, appStructs istructs.IAppStructs, id istructs.PartitionID, pools any) *partition {
+	p := &partition{app: app, appDef: appDef, appStructs: appStructs, id: id, pools: pools}
 	return p
 }
 

@@ -15,11 +15,13 @@ type IAppPartitions interface {
 	// Adds new partition or update existing one.
 	//
 	// If partition with the same app and id already exists, it will be updated.
-	AddOrReplace(istructs.AppQName, istructs.PartitionID, appdef.IAppDef)
+	// @ConcurrentAccess
+	AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef, pools any)
 
 	// Borrows and returns a partition.
 	//
 	// If partition not exist, returns error.
+	// @ConcurrentAccess
 	Borrow(istructs.AppQName, istructs.PartitionID) (IAppPartition, error)
 }
 

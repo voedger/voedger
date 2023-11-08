@@ -40,6 +40,8 @@ func Example() {
 		payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()),
 		appStorages)
 
+	pools := struct{}{}
+
 	appParts, cleanupParts, err := appparts.New(appStorages, appStructs)
 	if err != nil {
 		panic(err)
@@ -57,8 +59,8 @@ func Example() {
 
 	fmt.Println("*** Add ver 1 ***")
 
-	appParts.AddOrReplace(istructs.AppQName_test1_app1, 1, appDef_1_v1)
-	appParts.AddOrReplace(istructs.AppQName_test1_app2, 1, appDef_2_v1)
+	appParts.AddOrReplace(istructs.AppQName_test1_app1, 1, appDef_1_v1, pools)
+	appParts.AddOrReplace(istructs.AppQName_test1_app2, 1, appDef_2_v1, pools)
 
 	p1_1, err := appParts.Borrow(istructs.AppQName_test1_app1, 1)
 	if err != nil {
@@ -83,8 +85,8 @@ func Example() {
 	appConfigs.AddConfig(istructs.AppQName_test1_app1, appDef_1_v2)
 	appConfigs.AddConfig(istructs.AppQName_test1_app2, appDef_2_v2)
 
-	appParts.AddOrReplace(istructs.AppQName_test1_app2, 1, appDef_2_v2)
-	appParts.AddOrReplace(istructs.AppQName_test1_app1, 1, appDef_1_v2)
+	appParts.AddOrReplace(istructs.AppQName_test1_app2, 1, appDef_2_v2, pools)
+	appParts.AddOrReplace(istructs.AppQName_test1_app1, 1, appDef_1_v2, pools)
 
 	p2_2, err := appParts.Borrow(istructs.AppQName_test1_app2, 1)
 	if err != nil {

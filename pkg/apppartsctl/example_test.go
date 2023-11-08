@@ -50,13 +50,16 @@ func Example() {
 	}
 	defer cleanupParts()
 
+	pools := struct{}{}
 	appPartsCtl, cleanupCtl, err := apppartsctl.New(appParts, []apppartsctl.BuiltInApp{
 		{Name: istructs.AppQName_test1_app1,
 			Def:      appDef_1_v1,
-			NumParts: 2},
+			NumParts: 2,
+			Pools:    pools},
 		{Name: istructs.AppQName_test1_app2,
 			Def:      appDef_2_v1,
-			NumParts: 3},
+			NumParts: 3,
+			Pools:    pools},
 	})
 
 	if err != nil {
