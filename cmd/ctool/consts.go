@@ -5,6 +5,7 @@
 
 package main
 
+// nolint
 const (
 	// edition types
 	clusterEditionCE = "CE"
@@ -17,6 +18,8 @@ const (
 	// name of the cluster configuration file
 	clusterConfFileName  = "cluster.json"
 	scyllaConfigFileName = "scylla.yaml"
+
+	shellLib = "utils.sh"
 
 	// node fail version
 	nodeFailVersion = "fail"
@@ -31,6 +34,9 @@ const (
 
 	// Deploy SE args
 	initCeArgCount = 1
+
+	// DB node offset in cluster node list
+	dbNodeOffset = 2
 
 	// node Roles
 	nrCENode  = "CENode"

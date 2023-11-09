@@ -27,9 +27,9 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	workspacemgmt "github.com/voedger/voedger/pkg/sys/workspace"
 	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/builtin"
+	workspacemgmt "github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -138,6 +138,19 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work interface{}) (e
 	return
 }
 
+func updateIDGeneratorFromO(root istructs.IObject, appDef appdef.IAppDef, idGen istructs.IIDGenerator) {
+	// new IDs only here because update is not allowed for ODocs in Args
+	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID), appDef.Type(root.QName()))
+	root.Containers(func(container string) {
+		// order of containers here is the order in the schema
+		// but order in the request could be different
+		// that is not a problem because for ODocs/ORecords ID generator will bump next ID only if syncID is actually next
+		root.Elements(container, func(el istructs.IElement) {
+			updateIDGeneratorFromO(el, appDef, idGen)
+		})
+	})
+}
+
 func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
 	ap := &appPartition{
 		workspaces:     map[istructs.WSID]*workspace{},
@@ -152,6 +165,10 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 			}
 			return nil
 		})
+		ao := event.ArgumentObject()
+		if cmd.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
+			updateIDGeneratorFromO(ao, cmd.AppDef(), ws.idGenerator)
+		}
 		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
 		return nil
@@ -392,10 +409,11 @@ func (xp xPath) Error(err error) error {
 }
 
 func execCommand(_ context.Context, work interface{}) (err error) {
-	begin := time.Now()
-	defer work.(*cmdWorkpiece).metrics.increase(ExecSeconds, time.Since(begin).Seconds())
 	cmd := work.(*cmdWorkpiece)
-	return cmd.cmdFunc.Exec(cmd.eca)
+	begin := time.Now()
+	err = cmd.cmdFunc.Exec(cmd.eca)
+	work.(*cmdWorkpiece).metrics.increase(ExecSeconds, time.Since(begin).Seconds())
+	return err
 }
 
 func buildRawEvent(_ context.Context, work interface{}) (err error) {
@@ -631,6 +649,9 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 		}
 		body.Truncate(body.Len() - 1)
 		body.WriteString("}")
+		if logger.IsVerbose() {
+			logger.Verbose("generated IDs:", cmd.idGenerator.generatedIDs)
+		}
 	}
 	if cmd.cmdResult != nil {
 		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.AppDef())

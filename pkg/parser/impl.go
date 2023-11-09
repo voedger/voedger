@@ -31,6 +31,12 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
 		{Name: "UNLOGGED", Pattern: `UNLOGGED`},
 		{Name: "EXTENSIONENGINE", Pattern: `EXTENSION[ \r\n\t]+ENGINE`},
+		{Name: "EXECUTEONCOMMAND", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+COMMAND`},
+		{Name: "EXECUTEONALLCOMMANDSWITHTAG", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+COMMANDS[ \r\n\t]+WITH[ \r\n\t]+TAG`},
+		{Name: "EXECUTEONQUERY", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+QUERY`},
+		{Name: "EXECUTEONALLQUERIESWITHTAG", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+QUERIES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
+		{Name: "INSERTONWORKSPACE", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+WORKSPACE`},
+		{Name: "INSERTONALLWORKSPACESWITHTAG", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+WORKSPACES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
 		{Name: "String", Pattern: `('(\\'|[^'])*')`},
 		{Name: "Ident", Pattern: `([a-zA-Z_]\w*)|("[a-zA-Z_]\w*")`},
@@ -197,7 +203,7 @@ func defineApp(c *basicContext) {
 	var appAst *PackageSchemaAST
 
 	for _, p := range c.app.Packages {
-		a, err := findApplication(p)
+		a, err := FindApplication(p)
 		if err != nil {
 			c.errs = append(c.errs, err)
 			return
@@ -229,7 +235,7 @@ func defineApp(c *basicContext) {
 		}
 		pkgNames[string(use.Name)] = true
 
-		pkgQN := getQualifiedPackageName(use.Name, appAst.Ast)
+		pkgQN := GetQualifiedPackageName(use.Name, appAst.Ast)
 		if pkgQN == "" {
 			c.stmtErr(use.GetPos(), ErrUndefined(string(use.Name)))
 			continue

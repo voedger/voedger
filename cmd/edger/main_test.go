@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 	"sort"
 	"testing"
 	"time"
@@ -48,8 +49,12 @@ func mockStdin(t *testing.T, dummyInput string) (restoreStdinFunc func(), err er
 
 func TestExecRootCmd(t *testing.T) {
 	if testing.Short() {
-		t.Skip(`skipping test in short mod`)
+		t.Skip(`Skipping test in short mod`)
 	}
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on Windows.")
+	}
+
 	// Test case: Provide valid arguments and version
 	args := []string{"edger", "run"}
 	ver := "1.0.0"

@@ -52,7 +52,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		provideIssuePrincipalTokenExec(asp, itokens)))
 	provideChangePassword(cfg, appDefBuilder)
 	provideResetPassword(cfg, appDefBuilder, asp, itokens, federation)
-	apps.RegisterSchemaFS(schemasFS, RegistryPackage, ep)
+	apps.RegisterSchemaFS(schemasFS, RegistryPackageFQN, ep)
 }
 
 func ProvideSyncProjectorLoginIdxFactory() istructs.ProjectorFactory {

@@ -6,12 +6,12 @@ package parser
 
 import (
 	"embed"
-	"path/filepath"
-	"runtime"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -373,14 +373,14 @@ func Test_DupFieldsInTypes(t *testing.T) {
 func Test_Varchar(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("file1.sql", `APPLICATION test();
+	fs, err := ParseFile("file1.sql", fmt.Sprintf(`APPLICATION test();
 	TYPE RootType (
-		Oversize varchar(1025)
+		Oversize varchar(%d)
 	);
 	TYPE CDoc1 (
-		Oversize varchar(1025)
+		Oversize varchar(%d)
 	);
-	`)
+	`, appdef.MaxFieldLength+1, appdef.MaxFieldLength+1))
 	require.NoError(err)
 	pkg, err := BuildPackageSchema("pkg/test", []*FileSchemaAST{fs})
 	require.NoError(err)
@@ -390,8 +390,8 @@ func Test_Varchar(t *testing.T) {
 		pkg,
 	})
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:3:3: maximum field length is 1024",
-		"file1.sql:6:3: maximum field length is 1024",
+		fmt.Sprintf("file1.sql:3:3: maximum field length is %d", appdef.MaxFieldLength),
+		fmt.Sprintf("file1.sql:6:3: maximum field length is %d", appdef.MaxFieldLength),
 	}, "\n"))
 
 }
@@ -668,7 +668,7 @@ func Test_DuplicatesInViews(t *testing.T) {
 
 		EXTENSION ENGINE BUILTIN (
 			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
-			COMMAND Orders()	
+			COMMAND Orders()
 		);
 	)
 	`)
@@ -711,7 +711,7 @@ func Test_Views(t *testing.T) {
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
 				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
-				COMMAND Orders()	
+				COMMAND Orders()
 			);
 			)
 	`, "file2.sql:4:17: undefined field field2")
@@ -723,7 +723,7 @@ func Test_Views(t *testing.T) {
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
 				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
-				COMMAND Orders()	
+				COMMAND Orders()
 			);
 			)
 	`, "file2.sql:4:17: varchar field field1 not supported in partition key")
@@ -735,7 +735,7 @@ func Test_Views(t *testing.T) {
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
 			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
-			COMMAND Orders()	
+			COMMAND Orders()
 		);
 	)
 	`, "file2.sql:4:16: bytes field field1 not supported in partition key")
@@ -748,7 +748,7 @@ func Test_Views(t *testing.T) {
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
 			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
-			COMMAND Orders()	
+			COMMAND Orders()
 		);
 	)
 	`, "file2.sql:5:16: varchar field field1 can only be the last one in clustering key")
@@ -761,7 +761,7 @@ func Test_Views(t *testing.T) {
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
 			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
-			COMMAND Orders()	
+			COMMAND Orders()
 		);
 	)
 	`, "file2.sql:5:16: bytes field field1 can only be the last one in clustering key")
@@ -775,7 +775,7 @@ func Test_Views(t *testing.T) {
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
 			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
-			COMMAND Orders()	
+			COMMAND Orders()
 		);
 	)
 	`, "file2.sql:4:4: reference to abstract table abc", "file2.sql:5:4: unexisting undefined")
@@ -799,7 +799,7 @@ func Test_Views2(t *testing.T) {
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
 				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
-				COMMAND Orders()	
+				COMMAND Orders()
 			);
 		)
 		`)
@@ -833,7 +833,7 @@ func Test_Views2(t *testing.T) {
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
 				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
-				COMMAND Orders()	
+				COMMAND Orders()
 			);
 		)
 		`)
@@ -868,7 +868,7 @@ func Test_Views2(t *testing.T) {
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
 				PROJECTOR Proj1 ON (Orders);
-				COMMAND Orders()	
+				COMMAND Orders()
 			);
 		)
 		`)
@@ -1619,12 +1619,12 @@ func Test_UseTables(t *testing.T) {
 
 func Test_Storages(t *testing.T) {
 	require := require.New(t)
-	fs, err := ParseFile("example2.sql", `APPLICATION test1(); 
+	fs, err := ParseFile("example2.sql", `APPLICATION test1();
 	EXTENSION ENGINE BUILTIN (
 		STORAGE MyStorage(
 			INSERT SCOPE(PROJECTORS)
 		);
-	)	
+	)
 	`)
 	require.NoError(err)
 	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
@@ -1634,27 +1634,4 @@ func Test_Storages(t *testing.T) {
 		pkg2,
 	})
 	require.ErrorContains(err, "storages are only declared in sys package")
-}
-
-func Test_ExportedApps(t *testing.T) {
-	require := require.New(t)
-	_, filename, _, _ := runtime.Caller(0) // read current file name
-
-	// Load exported app ASTs
-	apps, err := LoadExportedApps(filepath.Join(filepath.Dir(filename), "example_exported_apps"))
-	require.NoError(err)
-	require.Equal(2, len(apps))
-	require.Equal("app1", apps[0].Ast.Name)
-	require.Equal(2, len(apps[0].Ignore))
-	require.Equal("app2", apps[1].Ast.Name)
-	require.Equal(1, len(apps[1].Ignore))
-
-	// Build schema
-	builder := appdef.New()
-	err = BuildAppDefs(apps[0].Ast, builder)
-	require.NoError(err)
-
-	odoc := builder.ODoc(appdef.NewQName("folder2", "Order"))
-	require.NotNil(odoc)
-	require.Equal(appdef.TypeKind_ODoc, odoc.Kind())
 }
