@@ -48,7 +48,7 @@ func collectionFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callba
 		kb.PutRecordID(field_DocID, id)
 	}
 
-	var lastDoc *collectionElement
+	var lastDoc *collectionObject
 
 	err = args.State.Read(kb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
 		rec := value.AsRecord(Field_Record)
@@ -61,8 +61,8 @@ func collectionFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callba
 				lastDoc.handleRawRecords()
 				err = callback(lastDoc)
 			}
-			cobj := newCollectionElement(rec)
-			lastDoc = &cobj
+			obj := newCollectionObject(rec)
+			lastDoc = obj
 		}
 		return
 	})

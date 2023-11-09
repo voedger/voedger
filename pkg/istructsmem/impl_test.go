@@ -119,16 +119,16 @@ func TestBasicUsage(t *testing.T) {
 	cmd.PutFloat32("Height", 1.75)
 	cmd.PutBytes("Photo", []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 4, 4, 3, 2, 1, 0})
 
-	basket := cmd.ElementBuilder("Basket")
+	basket := cmd.ChildBuilder("Basket")
 	basket.PutRecordID(appdef.SystemField_ID, 2)
 
-	good := basket.ElementBuilder("Good")
+	good := basket.ChildBuilder("Good")
 	good.PutRecordID(appdef.SystemField_ID, 3)
 	good.PutString("Name", "Biscuits")
 	good.PutInt64("Code", 7070)
 	good.PutFloat64("Weight", 1.1)
 
-	good = basket.ElementBuilder("Good")
+	good = basket.ChildBuilder("Good")
 	good.PutRecordID(appdef.SystemField_ID, 4)
 	good.PutString("Name", "Jam")
 	good.PutInt64("Code", 8080)
