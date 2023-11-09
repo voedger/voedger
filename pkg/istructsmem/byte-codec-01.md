@@ -1,9 +1,9 @@
-# Codec used to represent the structures of the ISTRUCTS in byte form
+# Codec used to represent the structures in byte form
 
 ## Introduction
 
-The structures of `istructs` (records, events, representations) in the database are stored in the form of an array of bytes.
-Codec - a set of algorithms for the presentation of stored structures in the form of bytes arrays used in a particular version of the application.
+The application structures (records, events, representations) in the database are stored in the form of an array of bytes.
+Codec — a set of algorithms for the presentation of stored structures in the form of bytes arrays used in a particular version of the application.
 
 ## Versions
 
