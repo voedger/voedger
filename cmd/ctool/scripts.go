@@ -185,7 +185,7 @@ func prepareScripts(scriptFileNames ...string) error {
 	return nil
 }
 
-// save all the embeded scripts into the temporary folder
+// save all the embedded scripts into the temporary folder
 func extractAllScripts() error {
 	return fs.WalkDir(scriptsFS, "scripts/drafts", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
