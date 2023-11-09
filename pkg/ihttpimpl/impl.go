@@ -17,21 +17,26 @@ import (
 	"net/http"
 	"regexp"
 	"sync"
+	"time"
 
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 
 	"github.com/untillpro/goutils/logger"
-	"github.com/voedger/voedger/pkg/ibus"
+
 	"github.com/voedger/voedger/pkg/ihttp"
 )
 
 type httpProcessor struct {
-	params   ihttp.CLIParams
-	router   *router
-	server   *http.Server
-	listener net.Listener
-	bus      ibus.IBus
+	params                     ihttp.CLIParams
+	router                     *router
+	server                     *http.Server
+	listener                   net.Listener
+	maxNumOfConcurrentRequests int
+	mu                         sync.RWMutex
+	readWriteTimeout           time.Duration
+	addressHandlersMap         map[addressType]*addressHandlerType
+	requestContextsPool        chan *requestContextType
 }
 
 type router struct {
@@ -148,8 +153,80 @@ func (hs *httpProcessor) Run(ctx context.Context) {
 	logger.Info("httpProcessor done")
 }
 
-type processorAPI struct {
-	senderHttp ibus.ISender
+func (hs *httpProcessor) RegisterReceiver(owner string, app string, partition int, part string, r Receiver, numOfProcessors int, bufferSize int) {
+	hs.mu.Lock()
+	defer hs.mu.Unlock()
+
+	addr := addressType{owner, app, partition, part}
+	if _, ok := hs.addressHandlersMap[addr]; ok {
+		panic(fmt.Sprintf("receivers already exists: %+v", addr))
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	ah := addressHandlerType{
+		addr:                addr,
+		httpProc:            hs,
+		processorsCtx:       ctx,
+		processorsCtxCancel: cancel,
+		wg:                  sync.WaitGroup{},
+		requestChannel:      make(requestChannelType, bufferSize),
+		numOfProcessors:     numOfProcessors,
+	}
+
+	for i := 0; i < numOfProcessors; i++ {
+		ah.wg.Add(1)
+		proc := processor{ah: &ah, processorTimer: time.NewTimer(hs.readWriteTimeout)}
+		go proc.process(r, &ah.wg, ah.requestChannel)
+	}
+
+	hs.addressHandlersMap[addr] = &ah
+	logger.Info("receiver registered:", &ah)
+
+}
+
+// ok is false if receivers were not found
+func (hs *httpProcessor) UnregisterReceiver(owner string, app string, partition int, part string) (ok bool) {
+	hs.mu.RLock()
+	addr := addressType{owner, app, partition, part}
+	pReceiver, ok := hs.addressHandlersMap[addr]
+	hs.mu.RUnlock()
+
+	if !ok {
+		logger.Info("receiver not found:", fmt.Sprintf("%+v", addr))
+		return false
+	}
+
+	pReceiver.processorsCtxCancel()
+	pReceiver.wg.Wait()
+
+	hs.mu.Lock()
+	delete(hs.addressHandlersMap, addr)
+	hs.mu.Unlock()
+	logger.Info("receiver unregistered:", pReceiver)
+
+	return true
+}
+
+// If appropriate receivers do not exist then "BadRequestSender" should be returned
+// "BadRequestSender" returns an ihttp.StatusBadRequest(400) error for every request
+func (hs *httpProcessor) QuerySender(owner string, app string, partition int, part string) (sender ihttp.ISender, ok bool) {
+	hs.mu.RLock()
+	defer hs.mu.RUnlock()
+	addr := addressType{owner, app, partition, part}
+	r, ok := hs.addressHandlersMap[addr]
+	if ok {
+		return r, ok
+	}
+
+	es := errSender{}
+	_, es.status, es.err = NewResult(nil, ErrReceiverNotFound, addr.String(), "")
+	return &es, ok
+}
+
+func (hs *httpProcessor) GetMetrics() (metrics Metrics) {
+	metrics.MaxNumOfConcurrentRequests = hs.maxNumOfConcurrentRequests
+	metrics.NumOfConcurrentRequests = hs.maxNumOfConcurrentRequests - len(hs.requestContextsPool)
+	return
 }
 
 type msgDeployApp struct {
@@ -159,8 +236,8 @@ type msgDeployApp struct {
 
 type msgDeployAppPartition struct {
 	msgDeployApp
-	commandHandler ibus.ISender
-	queryHandler   ibus.ISender
+	commandHandler ihttp.ISender
+	queryHandler   ihttp.ISender
 }
 
 type msgCreateSubRoute struct {
@@ -173,20 +250,24 @@ type msgDeployStaticContent struct {
 	fs       fs.FS
 }
 
+type processorAPI struct {
+	senderHttp ihttp.ISender
+}
+
 func (api *processorAPI) DeployStaticContent(ctx context.Context, resource string, fs fs.FS) (err error) {
 	msg := msgDeployStaticContent{
 		resource: resource,
 		fs:       fs,
 	}
-	_, _, err = api.senderHttp.Send(ctx, msg, ibus.NullHandler)
+	_, _, err = api.senderHttp.Send(ctx, msg, NullHandler)
 	return err
 }
 
-func (api *processorAPI) DeployAppPartition(ctx context.Context, app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ibus.ISender) (err error) {
+func (api *processorAPI) DeployAppPartition(ctx context.Context, app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ihttp.ISender) (err error) {
 	msg := msgDeployAppPartition{
 		msgDeployApp{app, partNo}, commandHandler, queryHandler,
 	}
-	_, _, err = api.senderHttp.Send(ctx, msg, ibus.NullHandler)
+	_, _, err = api.senderHttp.Send(ctx, msg, NullHandler)
 	return err
 }
 
@@ -195,7 +276,7 @@ func (api *processorAPI) ExportApi(resource string, subRoute string) (err error)
 		resource: resource,
 		subRoute: subRoute,
 	}
-	_, _, err = api.senderHttp.Send(context.Background(), msg, ibus.NullHandler)
+	_, _, err = api.senderHttp.Send(context.Background(), msg, NullHandler)
 	return err
 }
 
@@ -204,7 +285,7 @@ type msgListeningPort struct {
 
 func (api *processorAPI) ListeningPort(ctx context.Context) (port int, err error) {
 	msg := msgListeningPort{}
-	r, _, err := api.senderHttp.Send(context.Background(), msg, ibus.NullHandler)
+	r, _, err := api.senderHttp.Send(context.Background(), msg, NullHandler)
 	if err != nil {
 		return 0, err
 	}
@@ -251,12 +332,12 @@ func (r *router) ServeHTTP(wr http.ResponseWriter, req *http.Request) {
 	_, _ = wr.Write([]byte("404 Not Found"))
 }
 
-func handleAppPart(commandHandler, queryHandler ibus.ISender) http.HandlerFunc {
+func handleAppPart(commandHandler, queryHandler ihttp.ISender) http.HandlerFunc {
 	_ = commandHandler // under construction
 	return func(wr http.ResponseWriter, req *http.Request) {
 		// <cluster-domain>/api/<AppQName.owner>/<AppQName.name>/<wsid>/<{q,c}.funcQName>
 		// got sender
-		response, status, err := queryHandler.Send(context.Background(), "Data for Application", ibus.NullHandler)
+		response, status, err := queryHandler.Send(context.Background(), "Data for Application", NullHandler)
 		if err != nil {
 			wr.WriteHeader(status.HTTPStatus)
 			setContentType_ApplicationText(wr)
@@ -269,7 +350,7 @@ func handleAppPart(commandHandler, queryHandler ibus.ISender) http.HandlerFunc {
 	}
 }
 
-func (hs *httpProcessor) Receiver(_ context.Context, request interface{}, _ ibus.SectionsWriterType) (response interface{}, status ibus.Status, err error) {
+func (hs *httpProcessor) Receiver(_ context.Context, request interface{}, _ SectionsWriterType) (response interface{}, status ihttp.Status, err error) {
 	hs.router.Lock()
 	defer hs.router.Unlock()
 	switch v := request.(type) {
@@ -279,10 +360,10 @@ func (hs *httpProcessor) Receiver(_ context.Context, request interface{}, _ ibus
 			fmt.Sprintf("/api/%s/%s/%d/q|c\\.[a-zA-Z_.]+", v.app.Owner(), v.app.Name(), v.partNo),
 		)
 		if err != nil {
-			return ibus.NewResult(nil, err, "", "")
+			return NewResult(nil, err, "", "")
 		}
 		route.HandlerFunc(handleAppPart(v.commandHandler, v.queryHandler))
-		return ibus.NewResult(nil, nil, "", "")
+		return NewResult(nil, nil, "", "")
 
 	case msgDeployStaticContent:
 		resource := staticPath + v.resource
@@ -292,9 +373,9 @@ func (hs *httpProcessor) Receiver(_ context.Context, request interface{}, _ ibus
 		}
 		f1 := func(wr http.ResponseWriter, req *http.Request) {
 			var b []byte
-			if sender, ok := hs.bus.QuerySender("owner", "app", 0, "q"); ok {
+			if sender, ok := hs.QuerySender("owner", "app", 0, "q"); ok {
 				// got sender
-				response, status, err := sender.Send(context.Background(), "Data for Application", ibus.NullHandler)
+				response, status, err := sender.Send(context.Background(), "Data for Application", NullHandler)
 				if err != nil {
 					wr.WriteHeader(status.HTTPStatus)
 					setContentType_ApplicationText(wr)
@@ -313,25 +394,25 @@ func (hs *httpProcessor) Receiver(_ context.Context, request interface{}, _ ibus
 		}
 		route, err := hs.router.PathPrefix(resource)
 		if err != nil {
-			return ibus.NewResult(nil, err, "", "")
+			return NewResult(nil, err, "", "")
 		}
 		sub := route.subRouter()
 		if route, err = sub.Path("echo"); err != nil {
-			return ibus.NewResult(nil, err, "", "")
+			return NewResult(nil, err, "", "")
 		}
 		route.HandlerFunc(f1)
 		if route, err = sub.Path(""); err != nil {
-			return ibus.NewResult(nil, err, "", "")
+			return NewResult(nil, err, "", "")
 		}
 		route.HandlerFunc(f)
 		logger.Info("new handler added for router: url -", resource)
-		return ibus.NewResult(nil, nil, "", "")
+		return NewResult(nil, nil, "", "")
 	case msgListeningPort:
-		return ibus.NewResult(hs.listener.Addr().(*net.TCPAddr).Port, nil, "", "")
+		return NewResult(hs.listener.Addr().(*net.TCPAddr).Port, nil, "", "")
 	default:
 		err = fmt.Errorf("unknown message type %T", v)
 		logger.Error(err)
-		return ibus.NewResult(nil, err, "", "")
+		return NewResult(nil, err, "", "")
 	}
 }
 
@@ -340,11 +421,11 @@ func (hs *httpProcessor) cleanup() {
 		hs.listener.Close()
 		hs.listener = nil
 	}
-	if ok := hs.bus.UnregisterReceiver("sys", "HTTPProcessor", 0, "c"); ok {
+	if ok := hs.UnregisterReceiver("sys", "HTTPProcessor", 0, "c"); ok {
 		logger.Info("httpProcessor receiver unregistered")
 		return
 	}
-	if ok := hs.bus.UnregisterReceiver("owner", "app", 0, "q"); ok {
+	if ok := hs.UnregisterReceiver("owner", "app", 0, "q"); ok {
 		logger.Info("echo receiver unregistered")
 		return
 	}
@@ -353,4 +434,21 @@ func (hs *httpProcessor) cleanup() {
 
 func setContentType_ApplicationText(wr http.ResponseWriter) {
 	wr.Header().Set(coreutils.ContentType, "application/text")
+}
+
+func NewResult(response interface{}, err error, errMsg string, errData string) (resp interface{}, status ihttp.Status, e error) {
+	if err == nil {
+		return response, ihttp.Status{HTTPStatus: http.StatusOK}, nil
+	}
+
+	httpStatus, ok := ErrStatuses[err]
+	if !ok {
+		httpStatus = http.StatusInternalServerError
+	}
+	status = ihttp.Status{
+		HTTPStatus:   httpStatus,
+		ErrorMessage: errMsg,
+		ErrorData:    errData,
+	}
+	return response, status, err
 }
