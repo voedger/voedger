@@ -289,7 +289,7 @@ func test() *testDataType {
 		}
 
 		{
-			row := appDef.AddElement(testData.testRow)
+			row := appDef.AddObject(testData.testRow)
 			row.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).

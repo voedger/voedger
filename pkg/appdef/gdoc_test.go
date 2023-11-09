@@ -130,7 +130,6 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 		require.Nil(app.ODoc(unknown))
 		require.Nil(app.ORecord(unknown))
 		require.Nil(app.Object(unknown))
-		require.Nil(app.Element(unknown))
 	})
 
 	t.Run("panic if name is empty", func(t *testing.T) {

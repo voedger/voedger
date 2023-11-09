@@ -29,7 +29,6 @@ func Test_ValidEventArgs(t *testing.T) {
 	rec2Name := appdef.NewQName("test", "record2")
 
 	objName := appdef.NewQName("test", "object")
-	objChildName := appdef.NewQName("test", "objChild")
 
 	t.Run("must be ok to build test application", func(t *testing.T) {
 		doc := appDef.AddODoc(docName)
@@ -46,9 +45,7 @@ func Test_ValidEventArgs(t *testing.T) {
 		rec2.AddRefField("RequiredRefField", true, rec2Name)
 
 		obj := appDef.AddObject(objName)
-		obj.AddContainer("objChild", objChildName, 0, appdef.Occurs_Unbounded)
-
-		_ = appDef.AddElement(objChildName)
+		obj.AddContainer("objChild", objName, 0, appdef.Occurs_Unbounded)
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -322,7 +319,6 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	rec2Name := appdef.NewQName("test", "record2")
 
 	objName := appdef.NewQName("test", "object")
-	objChildName := appdef.NewQName("test", "objChild")
 
 	t.Run("must be ok to build test application", func(t *testing.T) {
 		doc := appDef.AddCDoc(docName)
@@ -337,9 +333,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 		_ = appDef.AddCRecord(rec2Name)
 
 		obj := appDef.AddObject(objName)
-		obj.AddContainer("objChild", objChildName, 0, appdef.Occurs_Unbounded)
-
-		_ = appDef.AddElement(objChildName)
+		obj.AddContainer("objChild", objName, 0, appdef.Occurs_Unbounded)
 	})
 
 	cfgs := make(AppConfigsType, 1)

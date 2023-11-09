@@ -308,12 +308,14 @@ func validateObject(o *objectType) (err error) {
 				return
 			}
 
-			if child.typ.Kind().HasSystemField(appdef.SystemField_ParentID) {
+			if exists, required := child.typ.Kind().HasSystemField(appdef.SystemField_ParentID); exists {
 				// ORecord, let's check parent ID
 				parID := child.Parent()
 				if parID == istructs.NullRecordID {
-					// if child parentID omitted, then restore it
-					child.setParent(objID)
+					if required {
+						// if child parentID omitted, then restore it
+						child.setParent(objID)
+					}
 				} else {
 					if parID != objID {
 						err = errors.Join(err,

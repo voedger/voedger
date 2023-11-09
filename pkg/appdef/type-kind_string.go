@@ -20,16 +20,15 @@ func _() {
 	_ = x[TypeKind_WRecord-9]
 	_ = x[TypeKind_ViewRecord-10]
 	_ = x[TypeKind_Object-11]
-	_ = x[TypeKind_Element-12]
-	_ = x[TypeKind_Query-13]
-	_ = x[TypeKind_Command-14]
-	_ = x[TypeKind_Workspace-15]
-	_ = x[TypeKind_FakeLast-16]
+	_ = x[TypeKind_Query-12]
+	_ = x[TypeKind_Command-13]
+	_ = x[TypeKind_Workspace-14]
+	_ = x[TypeKind_FakeLast-15]
 }
 
-const _TypeKind_name = "TypeKind_nullTypeKind_DataTypeKind_GDocTypeKind_CDocTypeKind_ODocTypeKind_WDocTypeKind_GRecordTypeKind_CRecordTypeKind_ORecordTypeKind_WRecordTypeKind_ViewRecordTypeKind_ObjectTypeKind_ElementTypeKind_QueryTypeKind_CommandTypeKind_WorkspaceTypeKind_FakeLast"
+const _TypeKind_name = "TypeKind_nullTypeKind_DataTypeKind_GDocTypeKind_CDocTypeKind_ODocTypeKind_WDocTypeKind_GRecordTypeKind_CRecordTypeKind_ORecordTypeKind_WRecordTypeKind_ViewRecordTypeKind_ObjectTypeKind_QueryTypeKind_CommandTypeKind_WorkspaceTypeKind_FakeLast"
 
-var _TypeKind_index = [...]uint16{0, 13, 26, 39, 52, 65, 78, 94, 110, 126, 142, 161, 176, 192, 206, 222, 240, 257}
+var _TypeKind_index = [...]uint8{0, 13, 26, 39, 52, 65, 78, 94, 110, 126, 142, 161, 176, 190, 206, 224, 241}
 
 func (i TypeKind) String() string {
 	if i >= TypeKind(len(_TypeKind_index)-1) {

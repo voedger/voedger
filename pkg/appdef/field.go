@@ -266,24 +266,24 @@ func (ff *fields) embeds() IType {
 
 // Makes system fields. Called after making structures fields
 func (ff *fields) makeSysFields(k TypeKind) {
-	if k.HasSystemField(SystemField_QName) {
-		ff.AddField(SystemField_QName, DataKind_QName, true)
+	if exists, required := k.HasSystemField(SystemField_QName); exists {
+		ff.AddField(SystemField_QName, DataKind_QName, required)
 	}
 
-	if k.HasSystemField(SystemField_ID) {
-		ff.AddField(SystemField_ID, DataKind_RecordID, true)
+	if exists, required := k.HasSystemField(SystemField_ID); exists {
+		ff.AddField(SystemField_ID, DataKind_RecordID, required)
 	}
 
-	if k.HasSystemField(SystemField_ParentID) {
-		ff.AddField(SystemField_ParentID, DataKind_RecordID, true)
+	if exists, required := k.HasSystemField(SystemField_ParentID); exists {
+		ff.AddField(SystemField_ParentID, DataKind_RecordID, required)
 	}
 
-	if k.HasSystemField(SystemField_Container) {
-		ff.AddField(SystemField_Container, DataKind_string, true)
+	if exists, required := k.HasSystemField(SystemField_Container); exists {
+		ff.AddField(SystemField_Container, DataKind_string, required)
 	}
 
-	if k.HasSystemField(SystemField_IsActive) {
-		ff.AddField(SystemField_IsActive, DataKind_bool, false)
+	if exists, required := k.HasSystemField(SystemField_IsActive); exists {
+		ff.AddField(SystemField_IsActive, DataKind_bool, required)
 	}
 }
 
