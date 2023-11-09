@@ -94,7 +94,7 @@ func writeObjectToRegistry(root istructs.IRowReader, appDef appdef.IAppDef, st i
 		return nil
 	}
 	return iterate.ForEachError(element.Containers, func(container string) (err error) {
-		return iterate.ForEachError1Arg(element.Elements, container, func(el istructs.IElement) error {
+		return iterate.ForEachError1Arg(element.Children, container, func(el istructs.IElement) error {
 			elType := appDef.Type(el.QName())
 			if elType.Kind() != appdef.TypeKind_ODoc && elType.Kind() != appdef.TypeKind_ORecord {
 				return nil

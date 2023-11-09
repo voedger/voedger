@@ -571,7 +571,7 @@ func recsIsEqual(record1, record2 istructs.IRecord) (ok bool, err error) {
 	return rowsIsEqual(&rec1.rowType, &rec2.rowType)
 }
 
-func fillTestObject(obj *elementType) {
+func fillTestObject(obj *objectType) {
 	test := test()
 	obj.PutRecordID(appdef.SystemField_ID, test.tempSaleID)
 	obj.PutString(test.buyerIdent, test.buyerValue)
@@ -580,11 +580,11 @@ func fillTestObject(obj *elementType) {
 	obj.PutBool(test.humanIdent, test.humanValue)
 	obj.PutBytes(test.photoIdent, test.photoValue)
 
-	basket := obj.ElementBuilder(test.basketIdent)
+	basket := obj.ChildBuilder(test.basketIdent)
 	basket.PutRecordID(appdef.SystemField_ID, test.tempBasketID)
 
 	for i := 0; i < test.goodCount; i++ {
-		good := basket.ElementBuilder(test.goodIdent)
+		good := basket.ChildBuilder(test.goodIdent)
 		good.PutRecordID(appdef.SystemField_ID, test.tempGoodsID[i])
 		good.PutRecordID(test.saleIdent, test.tempSaleID)
 		good.PutString(test.nameIdent, test.goodNames[i])
@@ -608,23 +608,23 @@ func testTestObject(t *testing.T, value istructs.IObject) {
 	require.Equal(test.humanValue, value.AsBool(test.humanIdent))
 	require.Equal(test.photoValue, value.AsBytes(test.photoIdent))
 
-	var basket istructs.IElement
-	value.Elements(test.basketIdent, func(el istructs.IElement) { basket = el })
+	var basket istructs.IObject
+	value.Children(test.basketIdent, func(c istructs.IObject) { basket = c })
 	require.NotNil(basket)
 
 	var cnt int
-	basket.Elements(test.goodIdent, func(el istructs.IElement) {
-		require.NotEqual(istructs.NullRecordID, el.AsRecordID(test.saleIdent))
-		require.Equal(test.goodNames[cnt], el.AsString(test.nameIdent))
-		require.Equal(test.goodCodes[cnt], el.AsInt64(test.codeIdent))
-		require.Equal(test.goodWeights[cnt], el.AsFloat64(test.weightIdent))
+	basket.Children(test.goodIdent, func(c istructs.IObject) {
+		require.NotEqual(istructs.NullRecordID, c.AsRecordID(test.saleIdent))
+		require.Equal(test.goodNames[cnt], c.AsString(test.nameIdent))
+		require.Equal(test.goodCodes[cnt], c.AsInt64(test.codeIdent))
+		require.Equal(test.goodWeights[cnt], c.AsFloat64(test.weightIdent))
 		cnt++
 	})
 
 	require.Equal(test.goodCount, cnt)
 }
 
-func fillTestSecureObject(obj *elementType) {
+func fillTestSecureObject(obj *objectType) {
 	test := test()
 	obj.PutString(test.passwordIdent, "12345")
 
@@ -634,7 +634,7 @@ func fillTestSecureObject(obj *elementType) {
 	}
 }
 
-func testTestSecureObject(t *testing.T, obj *elementType) {
+func testTestSecureObject(t *testing.T, obj *objectType) {
 	require := require.New(t)
 	test := test()
 

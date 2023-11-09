@@ -145,7 +145,7 @@ func updateIDGeneratorFromO(root istructs.IObject, appDef appdef.IAppDef, idGen 
 		// order of containers here is the order in the schema
 		// but order in the request could be different
 		// that is not a problem because for ODocs/ORecords ID generator will bump next ID only if syncID is actually next
-		root.Elements(container, func(el istructs.IElement) {
+		root.Children(container, func(el istructs.IElement) {
 			updateIDGeneratorFromO(el, appDef, idGen)
 		})
 	})
@@ -368,7 +368,7 @@ func getArgsObject(_ context.Context, work interface{}) (err error) {
 			return errors.New(`"args" field must be an object`)
 		}
 		parsType := cmd.appStructs.AppDef().Type(cmd.cmdFunc.ParamsType())
-		if err = istructsmem.FillElementFromJSON(args, parsType, aob); err != nil {
+		if err = istructsmem.FillObjectFromJSON(args, parsType, aob); err != nil {
 			return err
 		}
 	}
@@ -390,7 +390,7 @@ func getUnloggedArgsObject(_ context.Context, work interface{}) (err error) {
 			return errors.New(`"unloggedArgs" field must be an object`)
 		}
 		unloggedParsType := cmd.appStructs.AppDef().Type(cmd.cmdFunc.UnloggedParamsType())
-		if err = istructsmem.FillElementFromJSON(unloggedArgs, unloggedParsType, auob); err != nil {
+		if err = istructsmem.FillObjectFromJSON(unloggedArgs, unloggedParsType, auob); err != nil {
 			return err
 		}
 	}

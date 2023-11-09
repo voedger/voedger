@@ -53,8 +53,8 @@ func (me *collectionElement) addRawRecord(rec istructs.IRecord) {
 	}
 }
 
-// Elements in given container
-func (me *collectionElement) Elements(container string, cb func(el istructs.IElement)) {
+// Children in given container
+func (me *collectionElement) Children(container string, cb func(el istructs.IElement)) {
 	for i := range me.elements {
 		el := me.elements[i]
 		if el.Container() == container {

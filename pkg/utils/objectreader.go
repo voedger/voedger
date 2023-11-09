@@ -119,11 +119,11 @@ func ObjectToMap(obj istructs.IObject, appDef appdef.IAppDef, opts ...MapperOpt)
 	}
 	res = FieldsToMap(obj, appDef, opts...)
 	obj.Containers(func(container string) {
-		var elemMap map[string]interface{}
+		var childMap map[string]interface{}
 		cont := []map[string]interface{}{}
-		obj.Elements(container, func(el istructs.IElement) {
-			elemMap = ObjectToMap(el, appDef, opts...)
-			cont = append(cont, elemMap)
+		obj.Children(container, func(c istructs.IObject) {
+			childMap = ObjectToMap(c, appDef, opts...)
+			cont = append(cont, childMap)
 		})
 		res[container] = cont
 	})

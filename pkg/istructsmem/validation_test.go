@@ -29,7 +29,7 @@ func Test_ValidEventArgs(t *testing.T) {
 	rec2Name := appdef.NewQName("test", "record2")
 
 	objName := appdef.NewQName("test", "object")
-	elName := appdef.NewQName("test", "element")
+	objChildName := appdef.NewQName("test", "objChild")
 
 	t.Run("must be ok to build test application", func(t *testing.T) {
 		doc := appDef.AddODoc(docName)
@@ -46,9 +46,9 @@ func Test_ValidEventArgs(t *testing.T) {
 		rec2.AddRefField("RequiredRefField", true, rec2Name)
 
 		obj := appDef.AddObject(objName)
-		obj.AddContainer("childElement", elName, 0, appdef.Occurs_Unbounded)
+		obj.AddContainer("objChild", objChildName, 0, appdef.Occurs_Unbounded)
 
-		_ = appDef.AddElement(elName)
+		_ = appDef.AddElement(objChildName)
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -132,7 +132,7 @@ func Test_ValidEventArgs(t *testing.T) {
 			doc := e.ArgumentObjectBuilder()
 			doc.PutRecordID(appdef.SystemField_ID, 1)
 			doc.PutInt32("RequiredField", 7)
-			rec := doc.ElementBuilder("child")
+			rec := doc.ChildBuilder("child")
 			rec.PutRecordID(appdef.SystemField_ID, 1) // <- error here
 			_, err := e.BuildRawEvent()
 			require.ErrorIs(err, ErrRecordIDUniqueViolation)
@@ -205,7 +205,7 @@ func Test_ValidEventArgs(t *testing.T) {
 			doc := e.ArgumentObjectBuilder()
 			doc.PutRecordID(appdef.SystemField_ID, 1)
 			doc.PutInt32("RequiredField", 7)
-			rec := doc.ElementBuilder("child2")
+			rec := doc.ChildBuilder("child2")
 			rec.PutRecordID(appdef.SystemField_ID, 2)
 			rec.PutRecordID("RequiredRefField", istructs.NullRecordID) // <- error here
 			_, err := e.BuildRawEvent()
@@ -232,10 +232,10 @@ func Test_ValidEventArgs(t *testing.T) {
 				doc.PutRecordID(appdef.SystemField_ID, 1)
 				doc.PutInt32("RequiredField", 7)
 
-				doc.ElementBuilder("child").
+				doc.ChildBuilder("child").
 					PutRecordID(appdef.SystemField_ID, 2)
 
-				doc.ElementBuilder("child").
+				doc.ChildBuilder("child").
 					PutRecordID(appdef.SystemField_ID, 3) // <- error here
 
 				_, err := e.BuildRawEvent()
@@ -249,12 +249,12 @@ func Test_ValidEventArgs(t *testing.T) {
 				doc.PutRecordID(appdef.SystemField_ID, 1)
 				doc.PutInt32("RequiredField", 7)
 
-				rec := doc.ElementBuilder("child")
+				rec := doc.ChildBuilder("child")
 				rec.PutRecordID(appdef.SystemField_ID, 2)
-				rec.PutString(appdef.SystemField_Container, "childElement") // <- error here
+				rec.PutString(appdef.SystemField_Container, "objChild") // <- error here
 				_, err := e.BuildRawEvent()
 				require.ErrorIs(err, ErrNameNotFound)
-				require.ErrorContains(err, "ODoc «test.document» child[0] has unknown container name «childElement»")
+				require.ErrorContains(err, "ODoc «test.document» child[0] has unknown container name «objChild»")
 			})
 
 			t.Run("error if invalid QName used for container", func(t *testing.T) {
@@ -263,7 +263,7 @@ func Test_ValidEventArgs(t *testing.T) {
 				doc.PutRecordID(appdef.SystemField_ID, 1)
 				doc.PutInt32("RequiredField", 7)
 
-				rec := doc.ElementBuilder("child")
+				rec := doc.ChildBuilder("child")
 				rec.PutRecordID(appdef.SystemField_ID, 2)
 				rec.PutString(appdef.SystemField_Container, "child2") // <- error here
 				_, err := e.BuildRawEvent()
@@ -277,7 +277,7 @@ func Test_ValidEventArgs(t *testing.T) {
 				doc.PutRecordID(appdef.SystemField_ID, 1)
 				doc.PutInt32("RequiredField", 7)
 
-				rec := doc.ElementBuilder("child")
+				rec := doc.ChildBuilder("child")
 				rec.PutRecordID(appdef.SystemField_ID, 2)
 				rec.PutRecordID(appdef.SystemField_ParentID, 2) // <- error here
 				_, err := e.BuildRawEvent()
@@ -291,7 +291,7 @@ func Test_ValidEventArgs(t *testing.T) {
 				doc.PutRecordID(appdef.SystemField_ID, 1)
 				doc.PutInt32("RequiredField", 7)
 
-				rec := doc.ElementBuilder("child")
+				rec := doc.ChildBuilder("child")
 				rec.PutRecordID(appdef.SystemField_ID, 2)
 				rec.PutRecordID(appdef.SystemField_ParentID, istructs.NullRecordID) // <- to restore omitted parent ID
 				_, err := e.BuildRawEvent()
@@ -301,7 +301,7 @@ func Test_ValidEventArgs(t *testing.T) {
 					d, err := doc.Build()
 					require.NoError(err)
 					cnt := 0
-					d.Elements("child", func(c istructs.IElement) {
+					d.Children("child", func(c istructs.IObject) {
 						cnt++
 						require.EqualValues(1, c.AsRecordID(appdef.SystemField_ParentID))
 					})
@@ -322,7 +322,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	rec2Name := appdef.NewQName("test", "record2")
 
 	objName := appdef.NewQName("test", "object")
-	elName := appdef.NewQName("test", "element")
+	objChildName := appdef.NewQName("test", "objChild")
 
 	t.Run("must be ok to build test application", func(t *testing.T) {
 		doc := appDef.AddCDoc(docName)
@@ -337,9 +337,9 @@ func Test_ValidSysCudEvent(t *testing.T) {
 		_ = appDef.AddCRecord(rec2Name)
 
 		obj := appDef.AddObject(objName)
-		obj.AddContainer("childElement", elName, 0, appdef.Occurs_Unbounded)
+		obj.AddContainer("objChild", objChildName, 0, appdef.Occurs_Unbounded)
 
-		_ = appDef.AddElement(elName)
+		_ = appDef.AddElement(objChildName)
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -514,11 +514,11 @@ func Test_ValidSysCudEvent(t *testing.T) {
 				r := e.CUDBuilder().Create(rec1Name)
 				r.PutRecordID(appdef.SystemField_ID, 2)
 				r.PutRecordID(appdef.SystemField_ParentID, 1)
-				r.PutString(appdef.SystemField_Container, "childElement") // <- error here
+				r.PutString(appdef.SystemField_Container, "objChild") // <- error here
 
 				_, err := e.BuildRawEvent()
 				require.ErrorIs(err, ErrWrongRecordID)
-				require.ErrorContains(err, "has no container «childElement»")
+				require.ErrorContains(err, "has no container «objChild»")
 			})
 
 			t.Run("must error if specified container has another QName", func(t *testing.T) {
@@ -667,16 +667,12 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 	docName := appdef.NewQName("test", "document")
 	recName := appdef.NewQName("test", "record")
 
-	elName := appdef.NewQName("test", "element")
-
 	t.Run("must be ok to build test application", func(t *testing.T) {
 		oDoc := appDef.AddODoc(docName)
 		oDoc.
 			AddField("RequiredField", appdef.DataKind_string, true).(appdef.IODocBuilder).
 			AddContainer("child", recName, 0, appdef.Occurs_Unbounded)
 		_ = appDef.AddORecord(recName)
-
-		_ = appDef.AddElement(elName)
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -714,7 +710,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 	t.Run("must error if builder has empty type name", func(t *testing.T) {
 		b := eventBuilder()
 		d := b.ArgumentObjectBuilder()
-		d.(*elementType).clear()
+		d.(*objectType).clear()
 		_, err := d.Build()
 		require.ErrorIs(err, ErrNameMissed)
 		require.ErrorContains(err, "empty type name")
@@ -723,18 +719,18 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 	t.Run("must error if builder has wrong type name", func(t *testing.T) {
 		b := eventBuilder()
 		d := b.ArgumentObjectBuilder()
-		d.(*elementType).clear()
-		d.PutQName(appdef.SystemField_QName, elName) // <- error here
+		d.(*objectType).clear()
+		d.PutQName(appdef.SystemField_QName, recName) // <- error here
 		_, err := d.Build()
 		require.ErrorIs(err, ErrUnexpectedTypeKind)
-		require.ErrorContains(err, "wrong type Element «test.element»")
+		require.ErrorContains(err, "wrong type ORecord «test.record»")
 	})
 
 	t.Run("must error if builder has errors in IDs", func(t *testing.T) {
 		b := eventBuilder()
 		d := b.ArgumentObjectBuilder()
 		d.PutRecordID(appdef.SystemField_ID, 1)
-		r := d.ElementBuilder("child")
+		r := d.ChildBuilder("child")
 		r.PutRecordID(appdef.SystemField_ID, 1) // <- error here
 		_, err := d.Build()
 		require.ErrorIs(err, ErrRecordIDUniqueViolation)
@@ -799,7 +795,7 @@ func Test_VerifiedFields(t *testing.T) {
 				return token
 			}()
 
-			row := makeObject(cfg, objName)
+			row := makeObject(cfg, objName, nil)
 			row.PutInt32("int32", 1)
 			row.PutString("email", okEmailToken)
 			row.PutString("age", okAgeToken)
@@ -810,7 +806,7 @@ func Test_VerifiedFields(t *testing.T) {
 
 		t.Run("error if not token, but not string value", func(t *testing.T) {
 
-			row := makeObject(cfg, objName)
+			row := makeObject(cfg, objName, nil)
 			row.PutInt32("int32", 1)
 			row.PutInt32("age", 7)
 
@@ -820,7 +816,7 @@ func Test_VerifiedFields(t *testing.T) {
 
 		t.Run("error if not a token, but plain string value", func(t *testing.T) {
 
-			row := makeObject(cfg, objName)
+			row := makeObject(cfg, objName, nil)
 			row.PutInt32("int32", 1)
 			row.PutString("email", email)
 
@@ -841,7 +837,7 @@ func Test_VerifiedFields(t *testing.T) {
 				return token
 			}()
 
-			row := makeObject(cfg, objName)
+			row := makeObject(cfg, objName, nil)
 			row.PutInt32("int32", 1)
 			row.PutString("email", ukToken)
 
@@ -863,7 +859,7 @@ func Test_VerifiedFields(t *testing.T) {
 				return token
 			}()
 
-			row := makeObject(cfg, objName)
+			row := makeObject(cfg, objName, nil)
 			row.PutInt32("int32", 1)
 			row.PutString("email", weToken)
 
@@ -884,7 +880,7 @@ func Test_VerifiedFields(t *testing.T) {
 				return token
 			}()
 
-			row := makeObject(cfg, objName)
+			row := makeObject(cfg, objName, nil)
 			row.PutInt32("int32", 1)
 			row.PutString("email", wfToken)
 
@@ -905,7 +901,7 @@ func Test_VerifiedFields(t *testing.T) {
 				return token
 			}()
 
-			row := makeObject(cfg, objName)
+			row := makeObject(cfg, objName, nil)
 			row.PutInt32("int32", 1)
 			row.PutString("email", wtToken)
 
@@ -956,7 +952,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 	t.Run("test constraints", func(t *testing.T) {
 
 		t.Run("must be ok check good value", func(t *testing.T) {
-			row := makeObject(cfg, objName)
+			row := makeObject(cfg, objName, nil)
 			row.PutString("email", `test@test.io`)
 			row.PutBytes("mime", []byte(`abcd`))
 
@@ -965,7 +961,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 		})
 
 		t.Run("must be error if length constraint violated", func(t *testing.T) {
-			row := makeObject(cfg, objName)
+			row := makeObject(cfg, objName, nil)
 			row.PutString("email", fmt.Sprintf("%s.com", strings.Repeat("a", 97))) // 97 + 4 = 101 : too long
 			row.PutBytes("mime", []byte(`abc`))                                    // 3 < 4 : too short
 
@@ -976,7 +972,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 		})
 
 		t.Run("must be error if pattern restricted", func(t *testing.T) {
-			row := makeObject(cfg, objName)
+			row := makeObject(cfg, objName, nil)
 			row.PutString("email", "naked@🔫.error")
 			row.PutBytes("mime", []byte(`++++`))
 

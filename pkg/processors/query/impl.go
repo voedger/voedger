@@ -427,7 +427,7 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, argsType app
 		requestArgs, err = newJsonObject(data)
 	default:
 		requestArgsBuilder := istructsmem.NewIObjectBuilder(appCfg, argsType.QName())
-		if err := istructsmem.FillElementFromJSON(args, argsType, requestArgsBuilder); err != nil {
+		if err := istructsmem.FillObjectFromJSON(args, argsType, requestArgsBuilder); err != nil {
 			return execQueryArgs, err
 		}
 		requestArgs, err = requestArgsBuilder.Build()

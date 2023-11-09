@@ -110,7 +110,7 @@ func convert(doc istructs.IElement, appDef appdef.IAppDef, refs map[istructs.Rec
 	}))
 	doc.Containers(func(container string) {
 		list := make([]interface{}, 0)
-		doc.Elements(container, func(el istructs.IElement) {
+		doc.Children(container, func(el istructs.IElement) {
 			var elObj map[string]interface{}
 			if err == nil {
 				elObj, err = convert(el.(*collectionElement), appDef, refs, doc.AsRecord().ID())

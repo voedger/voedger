@@ -41,8 +41,7 @@ func (res *Resources) QueryResource(resource appdef.QName) (r istructs.IResource
 
 // Returns argument object builder for query function
 func (res *Resources) QueryFunctionArgsBuilder(query istructs.IQueryFunction) istructs.IObjectBuilder {
-	r := makeObject(res.cfg, query.ParamsType())
-	return &r
+	return newObject(res.cfg, query.ParamsType(), nil)
 }
 
 // Returns command function from application resource by QName or nil if not founded
