@@ -8,14 +8,16 @@ import (
 	"embed"
 	"fmt"
 	"io"
+	"io/fs"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"text/template"
 	"time"
 
 	"github.com/untillpro/goutils/exec"
+	"github.com/untillpro/goutils/logger"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -56,6 +58,9 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 
 	var pExec *exec.PipedExec
 
+	// nolint
+	os.Chdir(scriptsTempDir)
+
 	if len(se.sshKeyPath) > 0 {
 		args = append([]string{fmt.Sprintf("eval $(ssh-agent -s); ssh-add %s; ./%s", se.sshKeyPath, scriptName)}, args...)
 		pExec = new(exec.PipedExec).Command("bash", "-c", strings.Join(args, " "))
@@ -63,9 +68,6 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 		args = append([]string{scriptName}, args...)
 		pExec = new(exec.PipedExec).Command("bash", args...)
 	}
-
-	// nolint
-	os.Chdir(scriptsTempDir)
 
 	var stdoutWriter io.Writer
 	var stderrWriter io.Writer
@@ -124,10 +126,6 @@ func scriptExists(scriptFileName string) bool {
 
 func prepareScripts(scriptFileNames ...string) error {
 
-	var m sync.Mutex
-	m.Lock()
-	defer m.Unlock()
-
 	// nolint
 	os.Chdir(scriptsTempDir)
 
@@ -136,13 +134,23 @@ func prepareScripts(scriptFileNames ...string) error {
 		return err
 	}
 
+	// If scriptfilenames is empty, then we will copy all scripts from scriptsfs
+	if len(scriptFileNames) == 0 {
+		err = extractAllScripts()
+		if err != nil {
+			logger.Error(err.Error())
+			return err
+		}
+		return nil
+	}
+
 	for _, fileName := range scriptFileNames {
 
 		if scriptExists(fileName) {
 			continue
 		}
 
-		file, err := scriptsFS.Open("scripts/drafts/" + fileName)
+		file, err := scriptsFS.Open("./scripts/drafts/" + fileName)
 		if err != nil {
 			return err
 		}
@@ -177,8 +185,35 @@ func prepareScripts(scriptFileNames ...string) error {
 	return nil
 }
 
+// save all the embeded scripts into the temporary folder
+func extractAllScripts() error {
+	return fs.WalkDir(scriptsFS, "scripts/drafts", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			fmt.Println("Extracting script:", path)
+			content, err := fs.ReadFile(scriptsFS, path)
+			if err != nil {
+				return err
+			}
+			destPath := filepath.Join(scriptsTempDir, strings.TrimPrefix(path, "scripts/drafts"))
+			err = os.MkdirAll(filepath.Dir(destPath), 0700)
+			if err != nil {
+				return err
+			}
+			err = ioutil.WriteFile(destPath, content, rwxrwxrwx)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // nolint
 func inputPassword(pass *string) error {
+
 	bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 	if err == nil {
 		*pass = string(bytePassword)
