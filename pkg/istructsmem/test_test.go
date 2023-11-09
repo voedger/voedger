@@ -25,6 +25,7 @@ type (
 
 		AppConfigs AppConfigsType
 		AppCfg     *AppConfigType
+		AppDef     appdef.IAppDef
 
 		// common event entities
 		eventRawBytes      []byte
@@ -372,6 +373,7 @@ func test() *testDataType {
 		testData.AppConfigs = make(AppConfigsType, 1)
 		testData.AppCfg = testData.AppConfigs.AddConfig(testData.appName, prepareAppDef())
 		prepareConfig(testData.AppCfg)
+		testData.AppDef = testData.AppCfg.AppDef
 	}
 
 	return &testData

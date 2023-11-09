@@ -38,6 +38,9 @@ type IType interface {
 
 	// Type kind
 	Kind() TypeKind
+
+	// Returns is type from system package.
+	IsSystem() bool
 }
 
 // Interface describes the entity with types.
