@@ -128,10 +128,10 @@ type Object struct {
 	mock.Mock
 }
 
-func (o *Object) AsInt32(name string) int32                                { return o.Called(name).Get(0).(int32) }
-func (o *Object) AsInt64(name string) int64                                { return o.Called(name).Get(0).(int64) }
-func (o *Object) AsString(name string) string                              { return o.Called(name).String(0) }
-func (o *Object) Elements(container string, cb func(el istructs.IElement)) { o.Called(container, cb) }
+func (o *Object) AsInt32(name string) int32                            { return o.Called(name).Get(0).(int32) }
+func (o *Object) AsInt64(name string) int64                            { return o.Called(name).Get(0).(int64) }
+func (o *Object) AsString(name string) string                          { return o.Called(name).String(0) }
+func (o *Object) Children(container string, cb func(istructs.IObject)) { o.Called(container, cb) }
 
 type Record struct {
 	istructs.IRecord

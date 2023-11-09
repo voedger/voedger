@@ -49,14 +49,14 @@ func execQryCDoc(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 		vrkb.PutInt32(Field_PartKey, PartitionKeyCollection)
 		vrkb.PutRecordID(field_DocID, rsv.AsRecordID(appdef.SystemField_ID))
 
-		var doc *collectionElement
+		var doc *collectionObject
 
 		// build tree
 		err = args.State.Read(vrkb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
 			rec := value.AsRecord(Field_Record)
 			if doc == nil {
-				cobj := newCollectionElement(rec)
-				doc = &cobj
+				cobj := newCollectionObject(rec)
+				doc = cobj
 			} else {
 				doc.addRawRecord(rec)
 			}
@@ -90,7 +90,7 @@ func execQryCDoc(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 		return callback(&cdocObject{data: string(bytes)})
 	}
 }
-func convert(doc istructs.IElement, appDef appdef.IAppDef, refs map[istructs.RecordID]bool, parent istructs.RecordID) (obj map[string]interface{}, err error) {
+func convert(doc istructs.IObject, appDef appdef.IAppDef, refs map[istructs.RecordID]bool, parent istructs.RecordID) (obj map[string]interface{}, err error) {
 	if doc == nil {
 		return nil, nil
 	}
@@ -110,12 +110,12 @@ func convert(doc istructs.IElement, appDef appdef.IAppDef, refs map[istructs.Rec
 	}))
 	doc.Containers(func(container string) {
 		list := make([]interface{}, 0)
-		doc.Children(container, func(el istructs.IElement) {
-			var elObj map[string]interface{}
+		doc.Children(container, func(c istructs.IObject) {
+			var childObj map[string]interface{}
 			if err == nil {
-				elObj, err = convert(el.(*collectionElement), appDef, refs, doc.AsRecord().ID())
+				childObj, err = convert(c.(*collectionObject), appDef, refs, doc.AsRecord().ID())
 				if err == nil {
-					list = append(list, elObj)
+					list = append(list, childObj)
 				}
 			}
 		})
@@ -154,8 +154,8 @@ func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istr
 		}
 		recKey := strconv.FormatInt(int64(recordId), DEC)
 		if _, ok := recmap[recKey]; !ok {
-			elem := newCollectionElement(rkv.AsRecord(""))
-			obj, err := convert(&elem, appDef, nil, istructs.NullRecordID)
+			child := newCollectionObject(rkv.AsRecord(""))
+			obj, err := convert(child, appDef, nil, istructs.NullRecordID)
 			if err != nil {
 				return err
 			}

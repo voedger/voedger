@@ -145,8 +145,8 @@ func updateIDGeneratorFromO(root istructs.IObject, appDef appdef.IAppDef, idGen 
 		// order of containers here is the order in the schema
 		// but order in the request could be different
 		// that is not a problem because for ODocs/ORecords ID generator will bump next ID only if syncID is actually next
-		root.Children(container, func(el istructs.IElement) {
-			updateIDGeneratorFromO(el, appDef, idGen)
+		root.Children(container, func(c istructs.IObject) {
+			updateIDGeneratorFromO(c, appDef, idGen)
 		})
 	})
 }
