@@ -275,6 +275,7 @@ WORKSPACE MyWorkspace (
 
     VIEW DashboardView(
         Dummy int,
+        SomeRec record,
         PRIMARY KEY ((Dummy))
     ) AS RESULT OF UpdateDashboard;
     VIEW NotificationsHistory(

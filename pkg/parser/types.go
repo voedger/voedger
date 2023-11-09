@@ -290,6 +290,7 @@ type DataType struct {
 	Bool      bool         `parser:"| @'bool'"`
 	Blob      bool         `parser:"| @'blob'"`
 	Timestamp bool         `parser:"| @'timestamp'"`
+	Record    bool         `parser:"| @'record'"`
 	Currency  bool         `parser:"| @'currency' )"`
 }
 
