@@ -369,7 +369,7 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND OnJoinedWorkspaceDeactivated(OnJoinedWorkspaceDeactivatedParams);
         COMMAND OnChildWorkspaceDeactivated(OnChildWorkspaceDeactivatedParams);
 
-        SYNC PROJECTOR RecordsRegistryProjector ON (CDoc, WDoc, ODoc) INTENTS(View(RecordsRegistry));
+        SYNC PROJECTOR RecordsRegistryProjector ON (CRecord, WRecord, ORecord) INTENTS(View(RecordsRegistry));
     );
 
     VIEW RecordsRegistry (
@@ -427,5 +427,4 @@ EXTENSION ENGINE BUILTIN (
     STORAGE Result(
         INSERT SCOPE(COMMANDS)
     );
-
-)
+);
