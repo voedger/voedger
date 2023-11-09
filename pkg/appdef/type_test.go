@@ -21,6 +21,7 @@ func Test_NullType(t *testing.T) {
 	require.Nil(NullType.App())
 	require.Equal(NullQName, NullType.QName())
 	require.Equal(TypeKind_null, NullType.Kind())
+	require.False(NullType.IsSystem())
 
 	require.Contains(fmt.Sprint(NullType), "null type")
 }

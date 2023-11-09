@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -1255,4 +1256,61 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 
 		require.False(k1.Equals(k4), "KeyBuilder must not be equals if different QNames")
 	})
+}
+
+func Test_ViewRecordStructure(t *testing.T) {
+	require := require.New(t)
+
+	viewName := appdef.NewQName("test", "view")
+
+	appDef := appdef.New()
+	t.Run("must be ok to build application", func(t *testing.T) {
+		v := appDef.AddView(viewName)
+		v.KeyBuilder().PartKeyBuilder().
+			AddField("ValueDateYear", appdef.DataKind_int32)
+		v.KeyBuilder().ClustColsBuilder().
+			AddField("ValueDateMonth", appdef.DataKind_int32).
+			AddField("ValueDateDay", appdef.DataKind_int32).
+			AddField("ReportDateYear", appdef.DataKind_int32).
+			AddField("ReportDateMonth", appdef.DataKind_int32).
+			AddField("ReportDateDay", appdef.DataKind_int32)
+		v.ValueBuilder().
+			AddField("ColOffset", appdef.DataKind_int64, true)
+	})
+
+	cfg := func() *AppConfigType {
+		cfgs := make(AppConfigsType, 1)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, appDef)
+
+		storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
+		require.NoError(err)
+		err = cfg.prepare(nil, storage)
+		if err != nil {
+			panic(err)
+		}
+
+		return cfg
+	}()
+
+	k1 := newKey(cfg, viewName)
+	k1.PutInt32("ValueDateYear", 2023)
+	k1.PutInt32("ValueDateMonth", 10)
+	k1.PutInt32("ValueDateDay", 27)
+	k1.PutInt32("ReportDateYear", 2023)
+	k1.PutInt32("ReportDateMonth", 10)
+	k1.PutInt32("ReportDateDay", 31)
+
+	err := k1.build()
+	require.NoError(err)
+
+	p, c := k1.storeToBytes(0)
+	fmt.Printf("%#x\n", p)
+	fmt.Printf("%#x\n", c)
+
+	v1 := newValue(cfg, viewName)
+	v1.PutInt64("ColOffset", 509)
+	require.NoError(v1.build())
+
+	v := v1.storeToBytes()
+	fmt.Printf("%#x\n", v)
 }

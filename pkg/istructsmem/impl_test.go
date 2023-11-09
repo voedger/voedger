@@ -360,7 +360,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 	// gets AppStructProvider and AppStructs
 	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(test.appName)
+	app, err := provider.AppStructsByDef(test.appName, test.AppDef)
 	require.NoError(err)
 
 	t.Run("I. test top level type (command object)", func(t *testing.T) {
