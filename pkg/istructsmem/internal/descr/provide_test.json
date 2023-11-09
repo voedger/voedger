@@ -5,9 +5,9 @@
       "Name": "test",
       "DataTypes": {
         "test.number": {
+          "Comment": "natural (positive) integer",
           "Name": "test.number",
           "Ancestor": "sys.int64",
-          "Comment": "natural (positive) integer",
           "Constraints": {
             "MinIncl": 1
           }
@@ -99,6 +99,10 @@
               "Name": "sys.QName",
               "Data": "sys.QName",
               "Required": true
+            },
+            {
+              "Name": "sys.Container",
+              "Data": "sys.string"
             },
             {
               "Name": "f1",

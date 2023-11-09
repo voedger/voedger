@@ -103,7 +103,7 @@ func IBucketsFromIAppStructs(as istructs.IAppStructs) irates.IBuckets {
 	return as.(interface{ Buckets() irates.IBuckets }).Buckets()
 }
 
-func FillElementFromJSON(data map[string]interface{}, t appdef.IType, b istructs.IElementBuilder) error {
+func FillObjectFromJSON(data map[string]interface{}, t appdef.IType, b istructs.IObjectBuilder) error {
 	for fieldName, fieldValue := range data {
 		switch fv := fieldValue.(type) {
 		case float64:
@@ -113,7 +113,7 @@ func FillElementFromJSON(data map[string]interface{}, t appdef.IType, b istructs
 		case bool:
 			b.PutBool(fieldName, fv)
 		case []interface{}:
-			// e.g. "order_item": [<2 elements>]
+			// e.g. "order_item": [<2 children>]
 			containers, ok := t.(appdef.IContainers)
 			if !ok {
 				return fmt.Errorf("type %v has no containers", t.QName())
@@ -123,12 +123,12 @@ func FillElementFromJSON(data map[string]interface{}, t appdef.IType, b istructs
 				return fmt.Errorf("container with name %s is not found", fieldName)
 			}
 			for i, val := range fv {
-				objContainerElem, ok := val.(map[string]interface{})
+				childData, ok := val.(map[string]interface{})
 				if !ok {
-					return fmt.Errorf("element #%d of %s is not an object", i, fieldName)
+					return fmt.Errorf("child #%d of %s is not an object", i, fieldName)
 				}
-				containerElemBuilder := b.ElementBuilder(fieldName)
-				if err := FillElementFromJSON(objContainerElem, container.Type(), containerElemBuilder); err != nil {
+				childBuilder := b.ChildBuilder(fieldName)
+				if err := FillObjectFromJSON(childData, container.Type(), childBuilder); err != nil {
 					return err
 				}
 			}
@@ -138,11 +138,9 @@ func FillElementFromJSON(data map[string]interface{}, t appdef.IType, b istructs
 }
 
 func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectBuilder {
-	obj := makeObject(cfg, qName)
-	return &obj
+	return newObject(cfg, qName, nil)
 }
 
 func NewCmdResultBuilder(appCfg *AppConfigType) istructs.IObjectBuilder {
-	obj := makeObject(appCfg, appdef.NewQName(appdef.SysPackage, "TestCmd"))
-	return &obj
+	return newObject(appCfg, appdef.NewQName(appdef.SysPackage, "TestCmd"), nil)
 }
