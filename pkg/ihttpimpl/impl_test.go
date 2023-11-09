@@ -20,14 +20,10 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
-	"time"
 
-	"github.com/voedger/voedger/pkg/ibus"
-	"github.com/voedger/voedger/pkg/ibusmem"
 	"github.com/voedger/voedger/pkg/ihttp"
 
 	"github.com/stretchr/testify/require"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestBasicUsage_HTTPProcessor(t *testing.T) {
@@ -93,7 +89,6 @@ type testApp struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
 	wg            *sync.WaitGroup
-	bus           ibus.IBus
 	processor     ihttp.IHTTPProcessor
 	api           ihttp.IHTTPProcessorAPI
 	cleanups      []func()
@@ -107,19 +102,14 @@ func setUp(t *testing.T) *testApp {
 
 	// create Bus
 
-	timeout := time.Second
-	if coreutils.IsDebug() {
-		timeout = time.Hour
-	}
-	bus, cleanup := ibusmem.New(ibus.CLIParams{MaxNumOfConcurrentRequests: 10, ReadWriteTimeout: timeout})
-	cleanups := []func(){cleanup}
+	cleanups := []func(){}
 
 	// create and start HTTPProcessor
 
 	params := ihttp.CLIParams{
 		Port: 0, // listen using some free port, port value will be taken using API
 	}
-	processor, pCleanup, err := NewProcessor(params, bus)
+	processor, pCleanup, err := NewProcessor(params)
 	require.NoError(err)
 	cleanups = append(cleanups, pCleanup)
 
@@ -135,7 +125,7 @@ func setUp(t *testing.T) *testApp {
 
 	// create API
 
-	api, err := NewAPI(bus, processor)
+	api, err := NewAPI(processor)
 	require.NoError(err)
 
 	listeningPort, err := api.ListeningPort(ctx)
@@ -151,7 +141,6 @@ func setUp(t *testing.T) *testApp {
 		ctx:           ctx,
 		cancel:        cancel,
 		wg:            &wg,
-		bus:           bus,
 		processor:     processor,
 		api:           api,
 		cleanups:      cleanups,

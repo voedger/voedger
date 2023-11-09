@@ -13,3 +13,10 @@ const (
 	defaultReadHeaderTimeout = time.Second
 	staticPath               = "/static/"
 )
+
+const (
+	StatusClientClosedRequest  = 499
+	ResponseChannelBufferSize  = 1
+	MaxNumOfConcurrentRequests = 100
+	ReadWriteTimeout           = 5 * time.Second
+)
