@@ -52,6 +52,38 @@ func (t *typ) String() string {
 	return fmt.Sprintf("%s «%v»", t.Kind().TrimString(), t.QName())
 }
 
+type typeRef struct {
+	name QName
+	t    IType
+}
+
+// Returns type by reference.
+//
+// If type is not found then returns nil.
+func (r *typeRef) target(app IAppDef) IType {
+	if (r.name == NullQName) || (r.name == QNameANY) {
+		return nil
+	}
+	if (r.t == nil) || (r.t.QName() != r.name) {
+		r.t = app.TypeByName(r.name)
+	}
+	return r.t
+}
+
+// Sets reference name
+func (r *typeRef) setName(n QName) {
+	r.name = n
+	r.t = nil
+}
+
+// Returns is reference valid
+func (t *typeRef) valid(app IAppDef) (bool, error) {
+	if (t.name == NullQName) || (t.name == QNameANY) || (t.target(app) != nil) {
+		return true, nil
+	}
+	return false, fmt.Errorf("type «%v» is not found: %w", t.name, ErrNameNotFound)
+}
+
 // Validate specified type.
 //
 // # Validation:

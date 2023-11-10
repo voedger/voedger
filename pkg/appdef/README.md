@@ -717,15 +717,15 @@ classDiagram
     class IFunction {
         <<interface>>
         +Extension() IExtension
-        +Param() IObject
-        +Result() IObject
+        +Param() IType
+        +Result() IType
     }
 
     IFunction <|-- ICommand : inherits
     class ICommand {
         <<interface>>
         +Kind()* TypeKind_Command
-        +UnloggedParam() IObject
+        +UnloggedParam() IType
     }
 
     IFunction <|-- IQuery : inherits
@@ -750,7 +750,7 @@ classDiagram
     }
 ```
 
-*Rem*: In the above diagram the Param and Result of the function are `IObject`, in future versions it will be changed to an array of `[]IParam` and renamed to plural (`Params`, `Results`).
+*Rem*: In the above diagram the Param and Result of the function are `IType`, in future versions it will be changed to an array of `[]IParam` and renamed to plural (`Params`, `Results`).
 
 ## Restrictions
 

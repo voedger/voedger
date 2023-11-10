@@ -15,7 +15,7 @@ import (
 //   - ICommandBuilder
 type command struct {
 	function
-	unl objRef
+	unl typeRef
 }
 
 func newCommand(app *appDef, name QName) *command {
@@ -30,8 +30,8 @@ func (cmd *command) SetUnloggedParam(name QName) ICommandBuilder {
 	return cmd
 }
 
-func (cmd *command) UnloggedParam() IObject {
-	return cmd.unl.object(cmd.app)
+func (cmd *command) UnloggedParam() IType {
+	return cmd.unl.target(cmd.app)
 }
 
 // Validates command

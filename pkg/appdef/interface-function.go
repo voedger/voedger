@@ -33,10 +33,10 @@ type IFunction interface {
 	IType
 
 	// Parameter. Returns nil if not assigned
-	Param() IObject
+	Param() IType
 
 	// Result. Returns nil if not assigned
-	Result() IObject
+	Result() IType
 
 	// Extension
 	Extension() IExtension
@@ -46,10 +46,14 @@ type IFunctionBuilder interface {
 	IFunction
 	ITypeBuilder
 
-	// Sets command parameter. Must be object or NullQName
+	// Sets function parameter. Must be known structural or data type.
+	// If NullQName passed then it means that function has no parameter.
+	// If QNameAny passed then it means that parameter may be any.
 	SetParam(QName) IFunctionBuilder
 
-	// Sets command result. Must be object or NullQName
+	// Sets function result. Must be known structural or data type.
+	// If NullQName passed then it means that function has no result.
+	// If QNameAny passed then it means that result may be any.
 	SetResult(QName) IFunctionBuilder
 
 	// Sets engine.

@@ -16,7 +16,7 @@ import (
 type function struct {
 	typ
 	parent   interface{}
-	par, res objRef
+	par, res typeRef
 	ext      *extension
 }
 
@@ -29,16 +29,16 @@ func makeFunc(app *appDef, name QName, kind TypeKind, parent interface{}) functi
 	return f
 }
 
-func (f *function) Param() IObject {
-	return f.par.object(f.app)
+func (f *function) Param() IType {
+	return f.par.target(f.app)
 }
 
 func (f *function) Extension() IExtension {
 	return f.ext
 }
 
-func (f *function) Result() IObject {
-	return f.res.object(f.app)
+func (f *function) Result() IType {
+	return f.res.target(f.app)
 }
 
 func (f *function) SetParam(name QName) IFunctionBuilder {
