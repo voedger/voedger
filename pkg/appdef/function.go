@@ -68,10 +68,22 @@ func (f *function) SetExtension(name string, engine ExtensionEngineKind, comment
 func (f *function) Validate() (err error) {
 	if ok, e := f.par.valid(f.app); !ok {
 		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown parameter type: %w", f, e))
+	} else if typ := f.Param(); typ != nil {
+		switch typ.Kind() {
+		case TypeKind_Data, TypeKind_ODoc, TypeKind_Object: // ok
+		default:
+			err = errors.Join(err, fmt.Errorf("%v: parameter type is %v, must be ODoc, Object or Data: %w", f, typ, ErrInvalidTypeKind))
+		}
 	}
 
 	if ok, e := f.res.valid(f.app); !ok {
 		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown result type: %w", f, e))
+	} else if typ := f.Result(); typ != nil {
+		switch typ.Kind() {
+		case TypeKind_Data, TypeKind_GDoc, TypeKind_CDoc, TypeKind_WDoc, TypeKind_ODoc, TypeKind_Object: // ok
+		default:
+			err = errors.Join(err, fmt.Errorf("%v: result type is %v, must be Document, Object or Data: %w", f, typ, ErrInvalidTypeKind))
+		}
 	}
 
 	if f.Extension().Name() == "" {

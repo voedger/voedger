@@ -46,12 +46,20 @@ type IFunctionBuilder interface {
 	IFunction
 	ITypeBuilder
 
-	// Sets function parameter. Must be known structural or data type.
+	// Sets function parameter. Must be known type from next kinds:
+	//	 - Data
+	//	 - ODoc
+	//	 - Object
+	//
 	// If NullQName passed then it means that function has no parameter.
 	// If QNameAny passed then it means that parameter may be any.
 	SetParam(QName) IFunctionBuilder
 
-	// Sets function result. Must be known structural or data type.
+	// Sets function result. Must be known type from next kinds:
+	//	 - Data
+	//	 - GDoc,  CDoc, WDoc, ODoc
+	//	 - Object
+	//
 	// If NullQName passed then it means that function has no result.
 	// If QNameAny passed then it means that result may be any.
 	SetResult(QName) IFunctionBuilder
