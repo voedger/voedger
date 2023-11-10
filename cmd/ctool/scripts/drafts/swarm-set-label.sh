@@ -14,12 +14,13 @@ if [[ $# -ne 4 ]]; then
   exit 1
 fi
 
-SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
+source ./utils.sh
 
-REMOTE_HOSTNAME=$(ssh $SSH_OPTIONS $SSH_USER@$2 'hostname')
+SSH_USER=$LOGNAME
+
+REMOTE_HOSTNAME=$(utils_ssh "$SSH_USER@$2" 'hostname')
 
 # Set node label
-ssh $SSH_OPTIONS $SSH_USER@$1 "docker node update --label-add $3=$4 $REMOTE_HOSTNAME"
+utils_ssh "$SSH_USER@$1" "docker node update --label-add $3=$4 $REMOTE_HOSTNAME"
 
 set +x

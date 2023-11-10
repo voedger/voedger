@@ -21,19 +21,14 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideRefIntegrityValidation(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, rebuildRegistry bool) {
+func provideRefIntegrityValidation(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	registryProjector := func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: qNameRecordsRegistryProjector,
 			Func: provideRecordsRegistryProjector(cfg),
 		}
 	}
-	if rebuildRegistry {
-		appDefBuilder.AddObject(qNameRecordsRegistryProjector)
-		cfg.AddAsyncProjectors(registryProjector)
-	} else {
-		cfg.AddSyncProjectors(registryProjector)
-	}
+	cfg.AddSyncProjectors(registryProjector)
 	cfg.AddCUDValidators(provideRefIntegrityValidator())
 }
 
@@ -94,17 +89,17 @@ func writeObjectToRegistry(root istructs.IRowReader, appDef appdef.IAppDef, st i
 		// notest
 		return err
 	}
-	element, ok := root.(istructs.IElement)
+	object, ok := root.(istructs.IObject)
 	if !ok {
 		return nil
 	}
-	return iterate.ForEachError(element.Containers, func(container string) (err error) {
-		return iterate.ForEachError1Arg(element.Elements, container, func(el istructs.IElement) error {
-			elType := appDef.Type(el.QName())
+	return iterate.ForEachError(object.Containers, func(container string) (err error) {
+		return iterate.ForEachError1Arg(object.Children, container, func(child istructs.IObject) error {
+			elType := appDef.Type(child.QName())
 			if elType.Kind() != appdef.TypeKind_ODoc && elType.Kind() != appdef.TypeKind_ORecord {
 				return nil
 			}
-			return writeObjectToRegistry(el, appDef, st, intents, wLogOffsetToStore)
+			return writeObjectToRegistry(child, appDef, st, intents, wLogOffsetToStore)
 		})
 	})
 }

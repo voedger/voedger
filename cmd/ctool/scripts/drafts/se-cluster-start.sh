@@ -12,13 +12,14 @@ set -euo pipefail
 set -x
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 
 if [[ $# -ne 2 ]]; then
   echo "Usage: $0 <node1> <node2>"
   exit 1
 fi
+
+source ./utils.sh
 
 MANAGER=$1
 
@@ -29,9 +30,9 @@ MANAGER=$1
 # done
 
 # Start db cluster
-cat ./docker-compose-se.yml | ssh $SSH_OPTIONS $SSH_USER@$MANAGER 'cat > ~/docker-compose-se.yml'
+cat ./docker-compose-se.yml | utils_ssh "$SSH_USER@$MANAGER" 'cat > ~/docker-compose-se.yml'
 
-ssh $SSH_OPTIONS $SSH_USER@$MANAGER "docker stack deploy --compose-file ~/docker-compose-se.yml SEDockerStack"
+utils_ssh "$SSH_USER@$MANAGER" "docker stack deploy --compose-file ~/docker-compose-se.yml SEDockerStack"
 
 
 set +x

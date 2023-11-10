@@ -47,6 +47,7 @@ func Test_appDef_makeSysDataTypes(t *testing.T) {
 			require.NotNil(d)
 			require.Equal(SysDataName(k), d.QName())
 			require.Equal(TypeKind_Data, d.Kind())
+			require.True(d.IsSystem())
 			require.Equal(k, d.DataKind())
 			require.Nil(d.Ancestor())
 			cnt := 0

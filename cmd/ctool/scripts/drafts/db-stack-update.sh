@@ -16,6 +16,8 @@ if [ $# -ne 2 ]; then
   exit 1
 fi
 
+source ./utils.sh
+
 declare -A node_map
 
 node_map["scylla1"]="DBNode1"
@@ -54,6 +56,27 @@ updated_command=$(echo $2 | sed "s/\(--seeds [^ ,]*,\)\?\(,\)\?$1\(,\)\?/\1/")
 echo "$updated_command"
 }
 
+# Function to add a node based on its last digit
+sort_seed_list() {
+    local node="$1"
+    local original_string="$2"
+    local last_digit=$(echo "$node" | sed 's/[^0-9]//g' | tail -c 1)
+
+    # If the last digit is 1, add the node at the beginning of the string
+    if [ "$last_digit" = "1" ]; then
+        echo "$node, $original_string"
+    # If the last digit is 2, add the node after db-node-1
+    elif [ "$last_digit" = "2" ]; then
+        echo "${original_string/db-node-1/db-node-1, $node}"
+    # If the last digit is 3, add the node after db-node-2
+    elif [ "$last_digit" = "3" ]; then
+        echo "${original_string/db-node-2/db-node-2, $node}"
+    # If the last digit is not 1, 2, or 3, add the node at the end of the string
+    else
+        echo "$original_string, $node"
+    fi
+}
+
 function add_seed() {
 # $1 - cluster node name
 # $2 - command
@@ -66,8 +89,14 @@ local updated_seeds
 # Extract current list of seeds
 current_seeds=$(echo "$command" | grep -oP "(?<=--seeds )[^ ]*")
 
+# Call the function to add the new node
+updated_string=$(sort_seed_list "$new_seed" "$current_seeds")
+
+# Split the string into an array, sort it, and join it back into a string
+updated_seeds=$(echo "$updated_string" | tr -d ' ' | tr ',' '\n' | sort -t '-' -k 3 | tr '\n' ',' | sed 's/,$//')
+
 # Add new seed to the list
-updated_seeds="${current_seeds},${new_seed}"
+#updated_seeds="${current_seeds},${new_seed}"
 
 # replace seed list in command
 updated_command=$(echo "$command" | sed "s/\(--seeds [^ ]* \)/--seeds ${updated_seeds} /")
@@ -75,9 +104,7 @@ updated_command=$(echo "$command" | sed "s/\(--seeds [^ ]* \)/--seeds ${updated_
 echo "$updated_command"
 }
 
-# Find the service name that matches the lost_node IP address
-service_name=$(yq e '.services | to_entries | .[] | select(.value.healthcheck.test[] | contains("'$1'")) | .key' docker-compose.yml)
-
+service_name="scylla${1#"db-node-"}"
 if [ -z "$service_name" ]; then
   echo "Could not find a service with IP address $1"
   exit 1
@@ -85,7 +112,7 @@ fi
 
 echo "Updating service $service_name"
 
-scy_cmd=$(yq eval '.services.'$service_name'.command' docker-compose.yml)
+scy_cmd=$(yq eval '.services.'$service_name'.command' ./docker-compose.yml)
 echo "Updating scylla command '$scy_cmd'"
 
 # new_scy_cmd=$(modify_clp $lost_node $new_node "$scy_cmd")
@@ -106,7 +133,7 @@ esac
 #new_scy_cmd=$(remove_seed "$1" "$scy_cmd")
 echo "With new command '$new_scy_cmd'"
 
-export new_scy_cmd; yq eval --inplace --prettyPrint '.services."'$service_name'".command = strenv(new_scy_cmd)' docker-compose.yml
+export new_scy_cmd; yq eval --inplace --prettyPrint '.services."'$service_name'".command = strenv(new_scy_cmd)' ./docker-compose.yml
 
 #echo "Update healthcheck ip address with new one"
 #yq eval --inplace '.services."'$service_name'".healthcheck = {"test": ["CMD-SHELL", "nodetool status | awk '\''/^UN/ {print $$2}'\'' | grep -w '\'''$new_node''\''"], "interval": "15s", "timeout": "5s", "retries": 90}' docker-compose.yml

@@ -3,8 +3,7 @@
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
 #
-# Add node to Swarm. Find node id with dedicated ip. If node id not found - join node to swarm cluster.
-# Token, stored in 'manager.token' file used for join node.
+# Set hostname with hostnamectl
 
 set -euo pipefail
 
@@ -15,9 +14,10 @@ if [ "$#" -lt 2 ]; then
   exit 1
 fi
 
-SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
+source ./utils.sh
 
-ssh $SSH_OPTIONS $SSH_USER@$1 sudo hostnamectl set-hostname $2
+SSH_USER=$LOGNAME
+
+utils_ssh $SSH_USER@$1 sudo hostnamectl set-hostname $2
 
 set +x

@@ -18,9 +18,6 @@ type DataKind uint8
 type IData interface {
 	IType
 
-	// Returns is data type is system.
-	IsSystem() bool
-
 	// Ref. to data-kind.go for details.
 	DataKind() DataKind
 

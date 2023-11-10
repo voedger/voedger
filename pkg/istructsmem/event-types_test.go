@@ -78,10 +78,10 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			cmd.PutBool(test.humanIdent, test.humanValue)
 			cmd.PutBytes(test.photoIdent, test.photoValue)
 
-			basket := cmd.ElementBuilder(test.basketIdent)
+			basket := cmd.ChildBuilder(test.basketIdent)
 			basket.PutRecordID(appdef.SystemField_ID, test.tempBasketID)
 			for i := 0; i < test.goodCount; i++ {
-				good := basket.ElementBuilder(test.goodIdent)
+				good := basket.ChildBuilder(test.goodIdent)
 				good.PutRecordID(appdef.SystemField_ID, test.tempGoodsID[i])
 				good.PutRecordID(test.saleIdent, test.tempSaleID)
 				good.PutString(test.nameIdent, test.goodNames[i])
@@ -638,7 +638,7 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 		require.Equal(test.humanValue, cmd.AsBool(test.humanIdent))
 	})
 
-	var basket istructs.IElement
+	var basket istructs.IObject
 
 	t.Run("test basket", func(t *testing.T) {
 		var names []string
@@ -647,7 +647,7 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 		require.Equal(1, len(names))
 		require.Equal(test.basketIdent, names[0])
 
-		cmd.Elements(test.basketIdent, func(nest istructs.IElement) { basket = nest })
+		cmd.Children(test.basketIdent, func(c istructs.IObject) { basket = c })
 		require.NotNil(basket)
 
 		require.Equal(cmd.AsRecord().ID(), basket.AsRecord().Parent())
@@ -660,8 +660,8 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 		require.Equal(len(names), 1)
 		require.Equal(test.goodIdent, names[0])
 
-		var goods []istructs.IElement
-		basket.Elements(test.goodIdent, func(good istructs.IElement) { goods = append(goods, good) })
+		var goods []istructs.IObject
+		basket.Children(test.goodIdent, func(g istructs.IObject) { goods = append(goods, g) })
 		require.NotNil(goods)
 		require.Equal(test.goodCount, len(goods))
 
@@ -1218,15 +1218,15 @@ func TestEventBuild_Error(t *testing.T) {
 		require.NotNil(rawEvent)
 	})
 
-	t.Run("Error in ArgumentObject inner element", func(t *testing.T) {
+	t.Run("Error if error in nested child of ArgumentObject", func(t *testing.T) {
 		bld := eventBuilder(test.saleCmdName)
 
 		cmd := bld.ArgumentObjectBuilder()
 		cmd.PutRecordID(appdef.SystemField_ID, test.tempSaleID)
 		cmd.PutString(test.buyerIdent, test.buyerValue)
-		basket := cmd.ElementBuilder(test.basketIdent)
+		basket := cmd.ChildBuilder(test.basketIdent)
 		basket.PutRecordID(appdef.SystemField_ID, test.tempBasketID)
-		good := basket.ElementBuilder(test.goodIdent)
+		good := basket.ChildBuilder(test.goodIdent)
 		good.PutRecordID(appdef.SystemField_ID, test.tempGoodsID[0])
 		good.PutBytes("unknownField", []byte{1, 2})
 
@@ -1241,7 +1241,7 @@ func TestEventBuild_Error(t *testing.T) {
 		cmd := bld.ArgumentObjectBuilder()
 		cmd.PutRecordID(appdef.SystemField_ID, test.tempSaleID)
 		cmd.PutString(test.buyerIdent, test.buyerValue)
-		basket := cmd.ElementBuilder(test.basketIdent)
+		basket := cmd.ChildBuilder(test.basketIdent)
 		basket.PutRecordID(appdef.SystemField_ID, test.tempBasketID)
 
 		cmdSec := bld.ArgumentUnloggedObjectBuilder()
@@ -1258,7 +1258,7 @@ func TestEventBuild_Error(t *testing.T) {
 		cmd := bld.ArgumentObjectBuilder()
 		cmd.PutRecordID(appdef.SystemField_ID, test.tempSaleID)
 		cmd.PutString(test.buyerIdent, test.buyerValue)
-		basket := cmd.ElementBuilder(test.basketIdent)
+		basket := cmd.ChildBuilder(test.basketIdent)
 		basket.PutRecordID(appdef.SystemField_ID, test.tempBasketID)
 
 		cmdSec := bld.ArgumentUnloggedObjectBuilder()
@@ -1398,7 +1398,7 @@ func TestEventBuild_Error(t *testing.T) {
 			cmd := bld.ArgumentObjectBuilder()
 			cmd.PutRecordID(appdef.SystemField_ID, test.tempSaleID)
 			cmd.PutString(test.buyerIdent, test.buyerValue)
-			basket := cmd.ElementBuilder(test.basketIdent)
+			basket := cmd.ChildBuilder(test.basketIdent)
 			basket.PutRecordID(appdef.SystemField_ID, test.tempBasketID)
 
 			cmdSec := bld.ArgumentUnloggedObjectBuilder()
@@ -1663,8 +1663,8 @@ func Test_ObjectMask(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	value := makeObject(test.AppCfg, test.saleCmdDocName)
-	fillTestObject(&value)
+	value := newObject(test.AppCfg, test.saleCmdDocName, nil)
+	fillTestObject(value)
 
 	value.maskValues()
 
@@ -1674,15 +1674,15 @@ func Test_ObjectMask(t *testing.T) {
 	require.False(value.AsBool(test.humanIdent))
 	require.Equal([]byte(nil), value.AsBytes(test.photoIdent))
 
-	var basket istructs.IElement
-	value.Elements(test.basketIdent, func(el istructs.IElement) { basket = el })
+	var basket istructs.IObject
+	value.Children(test.basketIdent, func(c istructs.IObject) { basket = c })
 	require.NotNil(basket)
 
 	var cnt int
-	basket.Elements(test.goodIdent, func(el istructs.IElement) {
-		require.Equal(maskString, el.AsString(test.nameIdent))
-		require.Equal(int64(0), el.AsInt64(test.codeIdent))
-		require.Equal(float64(0), el.AsFloat64(test.weightIdent))
+	basket.Children(test.goodIdent, func(c istructs.IObject) {
+		require.Equal(maskString, c.AsString(test.nameIdent))
+		require.Equal(int64(0), c.AsInt64(test.codeIdent))
+		require.Equal(float64(0), c.AsFloat64(test.weightIdent))
 		cnt++
 	})
 

@@ -29,51 +29,36 @@ func provideUniquesProjectorFunc(appDef appdef.IAppDef) func(event istructs.IPLo
 					// update and uniqueFieldIsNotNull -> we're setting the value if the unique field for the first time. In this case let's insert.
 					// update and uniqueFieldIsNotNull and had a value already -> impossible here, denied by the validator already
 					if rec.IsNew() {
-						// check if unique field is null
-						// вставлять в любом случае плохо, т.к. вставили с пустым значением, вставили с нулем - конфликт, т.к. во view записались нули, когда вставляли пустое знаечение
-						// не будем вставлять, если поле не предоставлено
+						// insert regardless uniqueFieldIsNotNull -> insert with an empty value is the same as if value is 0
+						// so will not insert if the value is not provided
 						if uniqueFieldIsNotNull {
 							return insert(rec, uniqueField, st, intents)
 						}
 					} else {
-						// came here -> we're updating fields that are not part of an unique key
-						// because it is impossible to modify the value of an unique field according to the current design
-						// e.g. updating sys.IsActive
-						// but probably we're setting the value for the unqiue field for the first time. In this case let's insert.
+						// came here in 2 cases:
+						// - we're updating fields that are not part of an unique key (e.g. sys.IsActive)
+						// - we're setting the value for the unqiue field for the first time
 
-						// читать как-то неправильно, т.к. тут мы уже только что применили изменения
-						// если мы обновляем и есть значение, то значит мы устанавливаем его впервые, значит insert. Обновляем uniqe field, которое уже имело значение - уже запрещено валидатором
 						if uniqueFieldIsNotNull {
+							// update and the value is provided -> we're setting the value for the first time. Let's insert
+							// update the value that is already set -> denied by the validator already
 							return insert(rec, uniqueField, st, intents)
 						}
 
-						// попали сюда -> уникальное поле не имеет значения в запросе
-						// надо проверить, а было ли значение раньше
-						// если было, то надо update. А если не было - тогда мы обновляем что-то, что не относится к unqiues -> ничего не делаем
-						// тогда только update
-						// а если записи все-таки не было вообще? тогда ничего не делаем
-						// return update(rec, uniqueField, st, intents)
-
-						kb, err := st.KeyBuilder(state.Record, rec.QName())
+						// came here -> unique field has no value in the request
+						// let's check if the value is inited already
+						// inited already -> update, need to check if we're activating\deactivating
+						// not inited yet -> has no record in the view, we're updating other fields -> do nothing
+						storedUniqueFieldHasValue, err := storedUniqueFieldHasValue(st, rec, uniqueField)
 						if err != nil {
 							// notest
-							return err
+							return nil
 						}
-						kb.PutRecordID(state.Field_ID, rec.ID())
-						storageRec, err := st.MustExist(kb)
-						if err != nil {
-							// notest
-							return err
-						}
-						storedUniqueFieldHasValue, _ := iterate.FindFirst(storageRec.FieldNames, func(storedUniqueFieldNameThatHasValue string) bool {
-							return storedUniqueFieldNameThatHasValue == uniqueField.Name()
-						})
-
 						if storedUniqueFieldHasValue {
-							// нет значения и было раньше -> возможно, мы обнволяем sys.IsActive
+							// has record in the view and the value is not provided in the request -> probably we're updating sys.IsActive
 							return update(rec, uniqueField, st, intents)
 						}
-						// нет значения и не было раньше -> ничего не делаем
+						// no unique field value in the request and was not inited -> do nothing
 						return nil
 					}
 				}
@@ -81,6 +66,24 @@ func provideUniquesProjectorFunc(appDef appdef.IAppDef) func(event istructs.IPLo
 			return nil
 		})
 	}
+}
+
+func storedUniqueFieldHasValue(st istructs.IState, rec istructs.ICUDRow, uniqueField appdef.IField) (bool, error) {
+	kb, err := st.KeyBuilder(state.Record, rec.QName())
+	if err != nil {
+		// notest
+		return false, err
+	}
+	kb.PutRecordID(state.Field_ID, rec.ID())
+	storageRec, err := st.MustExist(kb)
+	if err != nil {
+		// notest
+		return false, err
+	}
+	storedUniqueFieldHasValue, _ := iterate.FindFirst(storageRec.FieldNames, func(storedUniqueFieldNameThatHasValue string) bool {
+		return storedUniqueFieldNameThatHasValue == uniqueField.Name()
+	})
+	return storedUniqueFieldHasValue, nil
 }
 
 func insert(rec istructs.ICUDRow, uf appdef.IField, state istructs.IState, intents istructs.IIntents) error {

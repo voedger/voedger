@@ -15,8 +15,9 @@ if [[ $# -ne 5 ]]; then
   exit 1
 fi
 
+source ./utils.sh
+
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 AppNode1=$1
 AppNode2=$2
@@ -32,12 +33,12 @@ update_hosts_file() {
   local ip=$2
   local hr=$3 
   # Check if the hostname already exists in /etc/hosts
-  if ssh $SSH_OPTIONS $SSH_USER@$ip "sudo grep -qF '$hr' /etc/hosts"; then
+  if utils_ssh "$SSH_USER@$ip" "sudo grep -qF '$hr' /etc/hosts"; then
       # If the hostname exists, replace the existing entry
-      ssh $SSH_OPTIONS $SSH_USER@$ip "sudo sed -i -E 's/.*\b$hr\b.*$/$hr\t$host/' /etc/hosts"
+      utils_ssh "$SSH_USER@$ip" "sudo sed -i -E 's/.*\b$hr\b.*$/$hr\t$host/' /etc/hosts"
   else
       # If the hostname doesn't exist, add the new record
-      ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
+      utils_ssh "$SSH_USER@$ip" "sudo bash -c 'echo -e \"$hr\t$host\" >> /etc/hosts'"
   fi
 
   # SSH command to execute on the remote host
@@ -50,7 +51,7 @@ update_hosts_file_refactored() {
   local hr=$3
 
   # SSH command to execute on the remote host
-  ssh $SSH_OPTIONS $SSH_USER@$ip "sudo bash -c '
+  utils_ssh "$SSH_USER@$ip" "sudo bash -c '
     if grep -qF \"$hr\" /etc/hosts; then
       sed -i -E \"s/.*\b$hr\b.*$/$hr\t$host/\" /etc/hosts
     else
@@ -75,7 +76,7 @@ count=0
 
 while [ $# -gt 0 ] && [ $count -lt 2 ]; do
   echo "Processing: $1"
-  ssh $SSH_OPTIONS $SSH_USER@$1 "bash -s" << EOF
+  utils_ssh "$SSH_USER@$1" "bash -s" << EOF
   sudo mkdir -p /prometheus && mkdir -p ~/prometheus;
   sudo mkdir -p /alertmanager && mkdir -p ~/alertmanager;
   mkdir -p ~/grafana/provisioning/dashboards;
@@ -84,37 +85,37 @@ while [ $# -gt 0 ] && [ $count -lt 2 ]; do
 EOF
 
    cat ./grafana/provisioning/dashboards/swarmprom-nodes-dash.json | \
-      ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/provisioning/dashboards/swarmprom-nodes-dash.json'
+      utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/swarmprom-nodes-dash.json'
    cat ./grafana/provisioning/dashboards/swarmprom-prometheus-dash.json | \
-      ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/provisioning/dashboards/swarmprom-prometheus-dash.json'
+      utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/swarmprom-prometheus-dash.json'
    cat ./grafana/provisioning/dashboards/swarmprom-services-dash.json | \
-      ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/provisioning/dashboards/swarmprom-services-dash.json'
+      utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/swarmprom-services-dash.json'
    cat ./grafana/provisioning/dashboards/swarmprom_dashboards.yml | \
-      ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/provisioning/dashboards/swarmprom_dashboards.yml'
+      utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/swarmprom_dashboards.yml'
 
   cat ./grafana/provisioning/datasources/datasource.yml | \
       sed "s/{{.AppNode}}/${hosts[$count]}/g" \
-      | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/provisioning/datasources/datasource.yml'
+      | utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/datasources/datasource.yml'
 
-  cat ./grafana/grafana.ini | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/grafana/grafana.ini'
+  cat ./grafana/grafana.ini | utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/grafana.ini'
 
 
   cat ./prometheus/prometheus.yml | \
       sed "s/{{.DBNode1}}/${hosts[2]}/g; s/{{.DBNode2}}/${hosts[3]}/g; s/{{.DBNode3}}/${hosts[4]}/g; s/{{.AppNode1}}/${hosts[0]}/g; s/{{.AppNode2}}/${hosts[1]}/g; s/{{.Label}}/AppNode$((count+1))/g" \
-      | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/prometheus/prometheus.yml'
+      | utils_ssh "$SSH_USER@$1" 'cat > ~/prometheus/prometheus.yml'
 
-  cat ./prometheus/alert.rules | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/prometheus/alert.rules'
-  cat ./alertmanager/config.yml | ssh $SSH_OPTIONS $SSH_USER@$1 'cat > ~/alertmanager/config.yml'
+  cat ./prometheus/alert.rules | utils_ssh "$SSH_USER@$1" 'cat > ~/prometheus/alert.rules'
+  cat ./alertmanager/config.yml | utils_ssh "$SSH_USER@$1" 'cat > ~/alertmanager/config.yml'
 
-   ssh $SSH_OPTIONS $SSH_USER@$1 "sudo mkdir -p /etc/node-exporter && sudo chown -R 65534:65534 /etc/node-exporter"
+   utils_ssh "$SSH_USER@$1" "sudo mkdir -p /etc/node-exporter && sudo chown -R 65534:65534 /etc/node-exporter"
 
-   NODE_ID=$(ssh $SSH_OPTIONS $SSH_USER@$1 "docker info --format '{{.Swarm.NodeID}}'")
-   NODE_NAME=$(ssh $SSH_OPTIONS $SSH_USER@$1 "docker node inspect --format '{{.Description.Hostname}}' $NODE_ID")
+   NODE_ID=$(utils_ssh "$SSH_USER@$1" "docker info --format '{{.Swarm.NodeID}}'")
+   NODE_NAME=$(utils_ssh "$SSH_USER@$1" "docker node inspect --format '{{.Description.Hostname}}' $NODE_ID")
 
    echo "node_meta{node_id=\"$NODE_ID\", container_label_com_docker_swarm_node_id=\"$NODE_ID\", node_name=\"$NODE_NAME\"} 1" | \
-     ssh $SSH_OPTIONS $SSH_USER@$1 "sudo sh -c 'cat > /etc/node-exporter/node-meta.prom'"
+     utils_ssh "$SSH_USER@$1" "sudo sh -c 'cat > /etc/node-exporter/node-meta.prom'"
 
-  ssh $SSH_OPTIONS $SSH_USER@$1  "bash -s" << EOF 
+  utils_ssh "$SSH_USER@$1"  "bash -s" << EOF
   sudo chown -R 65534:65534 /etc/node-exporter/node-meta.prom;
   sudo chown -R 65534:65534 /prometheus;
   sudo chown -R 65534:65534 /alertmanager;
