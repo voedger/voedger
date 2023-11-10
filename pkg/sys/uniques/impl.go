@@ -18,7 +18,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideUniquesProjectorFunc(appDef appdef.IAppDef) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func provideApplyUniques(appDef appdef.IAppDef) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) (err error) {
 			if unique, ok := appDef.Type(rec.QName()).(appdef.IUniques); ok {
@@ -168,7 +168,7 @@ func update(rec istructs.ICUDRow, uf appdef.IField, st istructs.IState, intents 
 }
 
 func getUniqueViewRecord(st istructs.IState, rec istructs.IRowReader, uf appdef.IField) (istructs.IStateValue, istructs.IStateKeyBuilder, bool, error) {
-	kb, err := st.KeyBuilder(state.View, QNameViewUniques)
+	kb, err := st.KeyBuilder(state.View, qNameViewUniques)
 	if err != nil {
 		return nil, nil, false, err
 	}

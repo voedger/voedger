@@ -16,6 +16,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/logger"
@@ -211,19 +212,19 @@ func (c *cmdType) apply(cluster *clusterType) error {
 
 	cluster.Draft = false
 
-//	var wg sync.WaitGroup
-//	wg.Add(len(cluster.Nodes))
+	var wg sync.WaitGroup
+	wg.Add(len(cluster.Nodes))
 
 	for i := 0; i < len(cluster.Nodes); i++ {
-		 func(node *nodeType) {
-//			defer wg.Done()
+		go func(node *nodeType) {
+			defer wg.Done()
 			if err := node.nodeControllerFunction(); err != nil {
 				logger.Error(err.Error)
 			}
 		}(&cluster.Nodes[i])
 	}
 
-//	wg.Wait()
+	wg.Wait()
 
 	if cluster.existsNodeError() {
 		return ErrPreparingClusterNodes
