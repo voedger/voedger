@@ -47,10 +47,6 @@ func (app *appDef) AddData(name QName, kind DataKind, ancestor QName, constraint
 	return d
 }
 
-func (app *appDef) AddElement(name QName) IElementBuilder {
-	return newElement(app, name)
-}
-
 func (app *appDef) AddGDoc(name QName) IGDocBuilder {
 	return newGDoc(app, name)
 }
@@ -144,13 +140,6 @@ func (app *appDef) DataTypes(incSys bool, cb func(IData)) {
 			}
 		}
 	})
-}
-
-func (app *appDef) Element(name QName) IElement {
-	if t := app.typeByKind(name, TypeKind_Element); t != nil {
-		return t.(IElement)
-	}
-	return nil
 }
 
 func (app *appDef) Functions(cb func(e IFunction)) {

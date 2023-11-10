@@ -143,6 +143,9 @@ func Test_BasicUsage(t *testing.T) {
 	q1 := builder.Query(appdef.NewQName("main", "_Query1"))
 	require.NotNil(q1)
 	require.Equal(appdef.TypeKind_Query, q1.Kind())
+
+	_, err = builder.Build()
+	require.NoError(err)
 }
 
 func Test_Refs_NestedTables(t *testing.T) {
@@ -179,6 +182,8 @@ func Test_Refs_NestedTables(t *testing.T) {
 	require.Len(ref1.Refs(), 1)
 	require.Equal(appdef.NewQName("pkg1", "table3"), ref1.Refs()[0])
 
+	_, err = adf.Build()
+	require.NoError(err)
 }
 
 func Test_CircularReferences(t *testing.T) {
@@ -278,6 +283,9 @@ func Test_Workspace_Defs(t *testing.T) {
 
 	require.Equal(appdef.TypeKind_Workspace, wsProfile.Type(appdef.NewQName("pkg1", "MyWorkspace")).Kind())
 	require.Nil(wsProfile.TypeByName(appdef.NewQName("pkg1", "MyWorkspace2")))
+
+	_, err = builder.Build()
+	require.NoError(err)
 }
 
 func Test_Alter_Workspace(t *testing.T) {
@@ -819,6 +827,9 @@ func Test_Views2(t *testing.T) {
 
 		v := appBld.View(appdef.NewQName("test", "test"))
 		require.NotNil(v)
+
+		_, err = appBld.Build()
+		require.NoError(err)
 	}
 	{
 		ast, err := ParseFile("file2.sql", `APPLICATION test(); WORKSPACE Workspace (
@@ -854,6 +865,8 @@ func Test_Views2(t *testing.T) {
 		v := appBld.View(appdef.NewQName("test", "test"))
 		require.NotNil(v)
 
+		_, err = appBld.Build()
+		require.NoError(err)
 	}
 	{
 		ast, err := ParseFile("file2.sql", `APPLICATION test(); WORKSPACE Workspace (
@@ -1096,6 +1109,10 @@ func Test_UniqueFields(t *testing.T) {
 	fld := cdoc.UniqueField()
 	require.NotNil(fld)
 	require.Equal("Int2", fld.Name())
+
+	_, err = appBld.Build()
+	require.NoError(err)
+
 }
 
 func Test_NestedTables(t *testing.T) {
@@ -1126,6 +1143,8 @@ func Test_NestedTables(t *testing.T) {
 
 	require.NotNil(appBld.CRecord(appdef.NewQName("test", "NestedTable")))
 	require.NotNil(appBld.CRecord(appdef.NewQName("test", "DeepNestedTable")))
+	_, err = appBld.Build()
+	require.NoError(err)
 }
 
 func Test_SemanticAnalysisForReferences(t *testing.T) {
@@ -1192,6 +1211,10 @@ func Test_1KStringField(t *testing.T) {
 		require.EqualValues(1024, c.Value())
 	})
 	require.Equal(1, cnt)
+
+	_, err = appBld.Build()
+	require.NoError(err)
+
 }
 
 func Test_ReferenceToNoTable(t *testing.T) {
@@ -1262,6 +1285,9 @@ func Test_VRestaurantBasic(t *testing.T) {
 	require.NotNil(view)
 	require.Equal(appdef.TypeKind_ViewRecord, view.Kind())
 
+	_, err = builder.Build()
+	require.NoError(err)
+
 }
 
 func Test_AppSchema(t *testing.T) {
@@ -1313,6 +1339,9 @@ func Test_AppSchema(t *testing.T) {
 	ws := builder.Workspace(appdef.NewQName("air2", "myWorkspace"))
 	require.NotNil(ws)
 	require.NotNil(ws.Type(appdef.NewQName("air1", "MyTable")))
+
+	_, err = builder.Build()
+	require.NoError(err)
 }
 
 func Test_AppSchemaErrors(t *testing.T) {
@@ -1615,6 +1644,10 @@ func Test_UseTables(t *testing.T) {
 	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table1")).Kind())
 	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table2")).Kind())
 	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table3")).Kind())
+
+	_, err = builder.Build()
+	require.NoError(err)
+
 }
 
 func Test_Storages(t *testing.T) {

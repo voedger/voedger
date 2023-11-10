@@ -270,20 +270,25 @@ WORKSPACE MyWorkspace (
 
     VIEW TablePlanThumbnails(
         Dummy int,
-        PRIMARY KEY ((Dummy))
+        Dummy2 int,
+        PRIMARY KEY ((Dummy), Dummy2)
     ) AS RESULT OF TablePlanThumbnailGen;
 
     VIEW DashboardView(
         Dummy int,
-        PRIMARY KEY ((Dummy))
+        SomeRec record,
+        Dummy2 int,
+        PRIMARY KEY ((Dummy), Dummy2)
     ) AS RESULT OF UpdateDashboard;
     VIEW NotificationsHistory(
         Dummy int,
-        PRIMARY KEY ((Dummy))
+        Dummy2 int,
+        PRIMARY KEY ((Dummy), Dummy2)
     ) AS RESULT OF UpdateDashboard;
     VIEW ActiveTablePlansView(
         Dummy int,
-        PRIMARY KEY ((Dummy))
+        Dummy2 int,
+        PRIMARY KEY ((Dummy), Dummy2)
     ) AS RESULT OF UpdateDashboard;
 
 );

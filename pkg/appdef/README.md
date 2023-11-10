@@ -130,13 +130,6 @@ classDiagram
         +Kind()* TypeKind_Object
     }
 
-    IElement --|> IStructure : inherits
-    class IElement {
-        <<interface>>
-        +Kind()* TypeKind_Element
-        +SystemField_Container() IField
-    }
-
     IType <|-- IView : inherits
     class IView {
         <<interface>>
@@ -284,16 +277,7 @@ classDiagram
         +Fields() []IField
         +Containers() []IContainer
     }
-    IObject "1" o..> "0..*" IElement : contains
-
-    class IElement {
-        <<interface>>
-        +Kind()* TypeKind_Element
-        +Abstract() bool
-        +Fields() []IField
-        +Containers() []IContainer
-    }
-    IElement "1" o..> "0..*" IElement : contains
+    IObject "1" o..> "0..*" IObject : contains
 
     class IView {
         <<interface>>
@@ -423,7 +407,7 @@ classDiagram
 
 ### Structures
 
-Structured (documents, records, objects, elements) are those structural types that have fields and can contain containers with other structural types.
+Structured (documents, records, objects) are those structural types that have fields and can contain containers with other structural types.
 
 The inheritance and composing diagrams given below are expanded general diagrams of the types above.
 
@@ -572,13 +556,7 @@ classDiagram
     <<Interface>>
     IStructure
   }
-  IObject "1" o--> "0..*" IElement : has child
-
-  class IElement {
-    <<Interface>>
-    IStructure
-  }
-  IElement "1" o--> "0..*" IElement : has child
+  IObject "1" o--> "0..*" IObject : has child
 ```
 
 ### Fields, Containers, Uniques

@@ -66,16 +66,12 @@ func (f *function) SetExtension(name string, engine ExtensionEngineKind, comment
 
 // Validates function
 func (f *function) Validate() (err error) {
-	if f.par.name != NullQName {
-		if f.par.object(f.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: argument type «%v» is not found: %w", f, f.par.name, ErrNameNotFound))
-		}
+	if ok, e := f.par.valid(f.app); !ok {
+		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown parameter type: %w", f, e))
 	}
 
-	if f.res.name != NullQName {
-		if f.res.object(f.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: command result type «%v» is not found: %w", f, f.res.name, ErrNameNotFound))
-		}
+	if ok, e := f.res.valid(f.app); !ok {
+		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown result type: %w", f, e))
 	}
 
 	if f.Extension().Name() == "" {
