@@ -324,29 +324,45 @@ ABSTRACT WORKSPACE Workspace (
     );
 
     EXTENSION ENGINE BUILTIN (
+
+        -- builtin
+
         QUERY Echo(EchoParams) RETURNS EchoResult;
         QUERY GRCount RETURNS GRCountResult;
         QUERY Modules RETURNS ModulesResult;
         COMMAND RenameQName(RenameQNameParams);
+        SYNC PROJECTOR RecordsRegistryProjector ON (CRecord, WRecord, ORecord) INTENTS(View(RecordsRegistry));
+
+        -- authnz
 
         QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
         QUERY EnrichPrincipalToken(EnrichPrincipalTokenParams) RETURNS EnrichPrincipalTokenResult;
 
-        -- QUERY Collection(CollectionParams) RETURNS ANY;
+        -- collection
+
+        QUERY Collection(CollectionParams) RETURNS ANY;
         QUERY GetCDoc(GetCDocParams) RETURNS GetCDocResult;
         QUERY State(StateParams) RETURNS StateResult;
+
+        -- describe
 
         QUERY DescribePackageNames RETURNS DescribePackageNamesResult;
         QUERY DescribePackage(DescribePackageParams) RETURNS DescribePackageResult;
 
+        -- journal
+
         QUERY Journal(JournalParams) RETURNS JournalResult;
+
+        -- sqlquery
 
         QUERY SqlQuery(SqlQueryParams) RETURNS SqlQueryResult;
 
-        QUERY IssueVerifiedValueToken(IssueVerifiedValueTokenParams) RETURNS IssueVerifiedValueTokenResult;
+        -- blobb
 
         COMMAND UploadBLOBHelper;
         COMMAND DownloadBLOBHelper;
+
+        -- invite
 
         COMMAND InitiateInvitationByEMail(InitiateInvitationByEMailParams);
         COMMAND InitiateJoinWorkspace(InitiateJoinWorkspaceParams);
@@ -359,8 +375,13 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND DeactivateJoinedWorkspace(DeactivateJoinedWorkspaceParams);
         QUERY QueryChildWorkspaceByName(QueryChildWorkspaceByNameParams) RETURNS QueryChildWorkspaceByNameResult;
 
+        -- verifier
+
         QUERY InitiateEmailVerification(InitiateEmailVerificationParams) RETURNS InitialEmailVerificationResult;
+        QUERY IssueVerifiedValueToken(IssueVerifiedValueTokenParams) RETURNS IssueVerifiedValueTokenResult;
         COMMAND SendEmailVerificationCode(SendEmailVerificationCodeParams);
+
+        -- workspace
 
         COMMAND InitChildWorkspace(InitChildWorkspaceParams);
         COMMAND CreateWorkspaceID(CreateWorkspaceIDParams);
@@ -368,8 +389,6 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND OnWorkspaceDeactivated(OnWorkspaceDeactivatedParams);
         COMMAND OnJoinedWorkspaceDeactivated(OnJoinedWorkspaceDeactivatedParams);
         COMMAND OnChildWorkspaceDeactivated(OnChildWorkspaceDeactivatedParams);
-
-        SYNC PROJECTOR RecordsRegistryProjector ON (CRecord, WRecord, ORecord) INTENTS(View(RecordsRegistry));
     );
 
     VIEW RecordsRegistry (
