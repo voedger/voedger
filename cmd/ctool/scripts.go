@@ -192,7 +192,6 @@ func extractAllScripts() error {
 			return err
 		}
 		if !d.IsDir() {
-			fmt.Println("Extracting script:", path)
 			content, err := fs.ReadFile(scriptsFS, path)
 			if err != nil {
 				return err
