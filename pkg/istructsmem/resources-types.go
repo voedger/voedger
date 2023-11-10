@@ -66,25 +66,33 @@ func (res *Resources) prepare(app appdef.IAppDef) (err error) {
 
 	// https://dev.heeus.io/launchpad/#!17185
 	checkParam := func(r, n appdef.QName, par string) {
-		if n != appdef.NullQName {
+		if (n != appdef.NullQName) && (n != appdef.QNameANY) {
 			t := app.TypeByName(n)
 			if t == nil {
 				err = errors.Join(err,
 					fmt.Errorf("resource «%v» uses unknown type «%v» as %s", r, n, par))
-			}
-			if (t.Kind() != appdef.TypeKind_Object) && (t.Kind() != appdef.TypeKind_ODoc) {
-				err = errors.Join(err,
-					fmt.Errorf("resource «%v» uses non-object type %v as %s", r, t, par))
+			} else {
+				switch t.Kind() {
+				case appdef.TypeKind_Data, appdef.TypeKind_ODoc, appdef.TypeKind_Object: // ok
+				default:
+					err = errors.Join(err, fmt.Errorf("resource «%v» uses non-object type %v as %s", r, t, par))
+				}
 			}
 		}
 	}
 
 	checkResult := func(r, n appdef.QName) {
-		if n != appdef.NullQName {
+		if (n != appdef.NullQName) && (n != appdef.QNameANY) {
 			t := app.TypeByName(n)
 			if t == nil {
 				err = errors.Join(err,
 					fmt.Errorf("resource «%v» uses unknown type «%v» as result", r, n))
+			} else {
+				switch t.Kind() {
+				case appdef.TypeKind_Data, appdef.TypeKind_GDoc, appdef.TypeKind_CDoc, appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_Object: // ok
+				default:
+					err = errors.Join(err, fmt.Errorf("resource «%v» uses non-object type %v as result", r, t))
+				}
 			}
 		}
 	}

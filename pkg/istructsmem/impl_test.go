@@ -459,7 +459,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 			NewQueryFunction(
 				qNameQry,
 				arg.QName(),
-				viewName,
+				appdef.QNameANY,
 				NullQueryExec))
 
 		cfg.FunctionRateLimits.AddAppLimit(qNameQry, istructs.RateLimit{
