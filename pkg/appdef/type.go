@@ -77,11 +77,11 @@ func (r *typeRef) setName(n QName) {
 }
 
 // Returns is reference valid
-func (t *typeRef) valid(app IAppDef) (bool, error) {
-	if (t.name == NullQName) || (t.name == QNameANY) || (t.target(app) != nil) {
+func (r *typeRef) valid(app IAppDef) (bool, error) {
+	if (r.name == NullQName) || (r.name == QNameANY) || (r.target(app) != nil) {
 		return true, nil
 	}
-	return false, fmt.Errorf("type «%v» is not found: %w", t.name, ErrNameNotFound)
+	return false, fmt.Errorf("type «%v» is not found: %w", r.name, ErrNameNotFound)
 }
 
 // Validate specified type.
