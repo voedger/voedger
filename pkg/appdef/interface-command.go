@@ -27,6 +27,6 @@ type ICommandBuilder interface {
 	//	 - Object
 	//
 	// If NullQName passed then it means that command has no unlogged parameter.
-	// If QNameAny passed then it means that command unlogged parameter may be any structure or data type.
+	// If QNameAny passed then it means that command unlogged parameter may be any.
 	SetUnloggedParam(QName) ICommandBuilder
 }
