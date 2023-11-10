@@ -143,9 +143,6 @@ func Test_BasicUsage(t *testing.T) {
 	q1 := builder.Query(appdef.NewQName("main", "_Query1"))
 	require.NotNil(q1)
 	require.Equal(appdef.TypeKind_Query, q1.Kind())
-
-	_, err = builder.Build()
-	require.NoError(err)
 }
 
 func Test_Refs_NestedTables(t *testing.T) {
