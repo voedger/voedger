@@ -5,6 +5,8 @@
 
 package appdef
 
+import "fmt"
+
 // # Implements:
 //   - IObject, IObjectBuilder
 type object struct {
@@ -25,8 +27,9 @@ type objRef struct {
 	obj  IObject
 }
 
+// Returns object by reference
 func (o *objRef) object(app IAppDef) IObject {
-	if o.name == NullQName {
+	if (o.name == NullQName) || (o.name == QNameANY) {
 		return nil
 	}
 	if (o.obj == nil) || (o.obj.QName() != o.name) {
@@ -35,7 +38,16 @@ func (o *objRef) object(app IAppDef) IObject {
 	return o.obj
 }
 
+// Sets reference name
 func (o *objRef) setName(n QName) {
 	o.name = n
 	o.obj = nil
+}
+
+// Returns is reference valid
+func (o *objRef) valid(app IAppDef) (bool, error) {
+	if (o.name == NullQName) || (o.name == QNameANY) || (o.object(app) != nil) {
+		return true, nil
+	}
+	return false, fmt.Errorf("object type «%v» is not found: %w", o.name, ErrNameNotFound)
 }
