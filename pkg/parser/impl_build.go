@@ -10,7 +10,6 @@ import (
 
 	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type buildContext struct {
@@ -402,7 +401,7 @@ func (c *buildContext) queries() error {
 			}
 
 			if q.Returns.Any {
-				b.SetResult(istructs.QNameANY)
+				b.SetResult(appdef.QNameANY)
 			} else {
 				if q.Returns.Def != nil {
 					retQname := buildQname(ictx, q.Returns.Def.Package, q.Returns.Def.Name)

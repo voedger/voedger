@@ -38,10 +38,8 @@ func (cmd *command) UnloggedParam() IObject {
 func (cmd *command) Validate() (err error) {
 	err = cmd.function.Validate()
 
-	if cmd.unl.name != NullQName {
-		if cmd.unl.object(cmd.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: unlogged object type «%v» is not found: %w", cmd, cmd.unl.name, ErrNameNotFound))
-		}
+	if ok, e := cmd.unl.valid(cmd.app); !ok {
+		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown unlogged parameter type: %w", cmd, e))
 	}
 
 	return err
