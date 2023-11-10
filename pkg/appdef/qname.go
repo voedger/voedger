@@ -30,6 +30,9 @@ var (
 	NullQName    = QNameForNull
 )
 
+// QNameANY denotes that a Function result can be of any value
+var QNameANY = NewQName(SysPackage, AnyName)
+
 // Builds a qualified name from two parts (from package name and from entity name)
 func NewQName(pkgName, entityName string) QName {
 	return QName{pkg: pkgName, entity: entityName}

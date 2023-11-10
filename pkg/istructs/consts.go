@@ -34,9 +34,6 @@ var (
 
 	// QNameJSON denotes that Function argument comes as a JSON object
 	QNameJSON = appdef.NewQName(appdef.SysPackage, "JSON")
-
-	// QNameJSON denotes that a Function result can be of any value
-	QNameANY = appdef.NewQName(appdef.SysPackage, "ANY")
 )
 
 // *********************************************************************************************************
