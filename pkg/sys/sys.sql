@@ -124,6 +124,15 @@ ABSTRACT WORKSPACE Workspace (
         NumGoroutines int32 NOT NULL
     );
 
+    TYPE ModulesResult (
+        Modules text(32768) NOT NULL
+    );
+
+    TYPE RenameQNameParams (
+        ExistingQName qname NOT NULL,
+        NewQName text NOT NULL
+    );
+
     TYPE CollectionParams (
         Schema text NOT NULL,
         ID int64
@@ -287,6 +296,19 @@ ABSTRACT WORKSPACE Workspace (
         OwnerQName2 text
     );
 
+    TYPE OnWorkspaceDeactivatedParams (
+        OwnerWSID int64 NOT NULL,
+        WSName text NOT NULL
+    );
+
+    TYPE OnJoinedWorkspaceDeactivatedParams (
+        InvitedToWSID int64 NOT NULL
+    );
+
+    TYPE OnChildWorkspaceDeactivatedParams (
+        OwnedID int64 NOT NULL
+    );
+
     TYPE QueryChildWorkspaceByNameParams (
         WSName text NOT NULL
     );
@@ -304,6 +326,8 @@ ABSTRACT WORKSPACE Workspace (
     EXTENSION ENGINE BUILTIN (
         QUERY Echo(EchoParams) RETURNS EchoResult;
         QUERY GRCount RETURNS GRCountResult;
+        QUERY Modules RETURNS ModulesResult;
+        COMMAND RenameQName(RenameQNameParams);
 
         QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
         QUERY EnrichPrincipalToken(EnrichPrincipalTokenParams) RETURNS EnrichPrincipalTokenResult;
@@ -341,8 +365,11 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND InitChildWorkspace(InitChildWorkspaceParams);
         COMMAND CreateWorkspaceID(CreateWorkspaceIDParams);
         COMMAND CreateWorkspace(CreateWorkspaceParams);
+        COMMAND OnWorkspaceDeactivated(OnWorkspaceDeactivatedParams);
+        COMMAND OnJoinedWorkspaceDeactivated(OnJoinedWorkspaceDeactivatedParams);
+        COMMAND OnChildWorkspaceDeactivated(OnChildWorkspaceDeactivatedParams);
 
-        SYNC PROJECTOR RecordsRegistryProjector ON (CDoc, WDoc, ODoc) INTENTS(View(RecordsRegistry));
+        SYNC PROJECTOR RecordsRegistryProjector ON (CRecord, WRecord, ORecord) INTENTS(View(RecordsRegistry));
     );
 
     VIEW RecordsRegistry (
@@ -400,5 +427,4 @@ EXTENSION ENGINE BUILTIN (
     STORAGE Result(
         INSERT SCOPE(COMMANDS)
     );
-
-)
+);
