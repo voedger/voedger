@@ -46,5 +46,5 @@ var (
 		Period:                IssueVerifiedValueToken_Period,
 		MaxAllowedPerDuration: IssueVerifiedValueToken_MaxAllowed,
 	}
-	ApplyqNameAPSendEmailVerificationCode = appdef.NewQName(appdef.SysPackage, "ApplySendEmailVerificationCode")
+	qNameAPApplySendEmailVerificationCode = appdef.NewQName(appdef.SysPackage, "ApplySendEmailVerificationCode")
 )
