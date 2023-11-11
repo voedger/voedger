@@ -159,7 +159,9 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 	}
 	if view.pkRef == nil {
 		c.stmtErr(&view.Pos, ErrPrimaryKeyNotDefined)
+		return
 	}
+
 	for _, pkf := range view.pkRef.PartitionKeyFields {
 		index, ok := fields[string(pkf)]
 		if !ok {

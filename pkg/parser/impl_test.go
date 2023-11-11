@@ -787,6 +787,17 @@ func Test_Views(t *testing.T) {
 		);
 	)
 	`, "file2.sql:4:4: reference to abstract table abc", "file2.sql:5:4: unexisting undefined")
+
+	f(`APPLICATION test(); WORKSPACE Workspace (
+		VIEW test(
+			fld1 int32
+		) AS RESULT OF Proj1;
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			COMMAND Orders()
+		);
+	)
+	`, "file2.sql:2:3: primary key not defined")
 }
 
 func Test_Views2(t *testing.T) {
