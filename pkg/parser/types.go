@@ -328,9 +328,16 @@ func (q DataType) String() (s string) {
 	return "?"
 }
 
+// not suppored by kernel yet:
+// type DataTypeOrDefArray struct {
+// 	Unbounded bool `parser:"@'[]' |"`
+// 	MaxOccurs int  `parser:"'[' @Int ']'"`
+// }
+
 type DataTypeOrDef struct {
 	DataType *DataType `parser:"( @@"`
 	Def      *DefQName `parser:"| @@ )"`
+	// Array    *DataTypeOrDefArray `parser:"@@?"` not suppored by kernel yet
 }
 
 func (q DataTypeOrDef) String() (s string) {

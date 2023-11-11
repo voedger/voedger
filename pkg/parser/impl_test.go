@@ -1668,3 +1668,119 @@ func Test_Storages(t *testing.T) {
 	})
 	require.ErrorContains(err, "storages are only declared in sys package")
 }
+
+func buildPackage(qn string, sql string) *PackageSchemaAST {
+	fs, err := ParseFile("source.sql", sql)
+	if err != nil {
+		panic(err)
+	}
+	pkg, err := BuildPackageSchema(qn, []*FileSchemaAST{fs})
+	if err != nil {
+		panic(err)
+	}
+	return pkg
+}
+
+/*
+func Test_OdocCmdArgs(t *testing.T) {
+	require := require.New(t)
+	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+
+	APPLICATION registry(
+	);
+
+	TABLE TableCDoc INHERITS CDoc ();
+	TABLE TableWDoc INHERITS WDoc ();
+	TABLE TableODoc INHERITS ODoc (
+		orecord1 TABLE orecord1(
+			orecord2 TABLE orecord2()
+		)
+	);
+
+	WORKSPACE Workspace1 (
+		EXTENSION ENGINE BUILTIN (
+			COMMAND CmdCDoc1(TableCDoc);
+			COMMAND CmdWDoc1(TableWDoc);
+			COMMAND CmdODoc1(TableODoc);
+		)
+	);
+
+	`)
+
+	app, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
+	require.NoError(err)
+
+	builder := appdef.New()
+	err = BuildAppDefs(app, builder)
+	require.NoError(err)
+
+	_, err = builder.Build()
+
+	cmdCdoc1 := builder.Command(appdef.NewQName("app1", "CmdCDoc1"))
+	require.NotNil(cmdCdoc1)
+	require.NotNil(cmdCdoc1.Param())
+	require.Equal(1, cmdCdoc1.Param().ContainerCount())
+
+}
+*/
+
+func Test_TypeContainers(t *testing.T) {
+	require := require.New(t)
+	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+
+APPLICATION registry(
+);
+
+TYPE Person (
+	Name 	varchar,
+	Age 	int32
+);
+
+TYPE Item (
+	Name 	varchar,
+	Price 	currency
+);
+
+TYPE Deal (
+	side1 		Person NOT NULL,	-- collection 1..1
+	side2 		Person				-- collection 0..1
+--	items 		Item[] NOT NULL,	-- (not yet supported by kernel) collection 1..* (up to maxNestedTableContainerOccurrences = 100)
+--	discounts 	Item[3]				-- (not yet supported by kernel) collection 0..3 (one-based numbering convention for arrays, similarly to PostgreSQL)
+);
+
+WORKSPACE Workspace1 (
+	EXTENSION ENGINE BUILTIN (
+		COMMAND CmdDeal(Deal) RETURNS Deal;
+	)
+);
+	`)
+
+	app, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
+	require.NoError(err)
+
+	builder := appdef.New()
+	err = BuildAppDefs(app, builder)
+	require.NoError(err)
+
+	validate := func(o appdef.IObject) {
+		require.Equal(2, o.ContainerCount())
+		require.Equal(appdef.Occurs(1), o.Container("side1").MinOccurs())
+		require.Equal(appdef.Occurs(1), o.Container("side1").MaxOccurs())
+		require.Equal(appdef.Occurs(0), o.Container("side2").MinOccurs())
+		require.Equal(appdef.Occurs(1), o.Container("side2").MaxOccurs())
+		/* TODO: uncomment when kernel supports it
+		require.Equal(appdef.Occurs(1), o.Container("items").MinOccurs())
+		require.Equal(appdef.Occurs(100), o.Container("items").MaxOccurs())
+		require.Equal(appdef.Occurs(0), o.Container("discounts").MinOccurs())
+		require.Equal(appdef.Occurs(3), o.Container("discounts").MaxOccurs())
+		*/
+	}
+
+	cmd := builder.Command(appdef.NewQName("app1", "CmdDeal"))
+	validate(cmd.Param())
+	validate(cmd.Result())
+
+	_, err = builder.Build()
+	require.NoError(err)
+
+}
