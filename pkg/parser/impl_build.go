@@ -504,95 +504,136 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr, ictx *iterateCtx
 	}
 }
 
-func (c *buildContext) addFieldToDef(field *FieldExpr, ictx *iterateCtx) {
+func (c *buildContext) addDataTypeField(field *FieldExpr, ictx *iterateCtx) {
+	if err := c.defCtx().checkName(string(field.Name)); err != nil {
+		c.stmtErr(&field.Pos, err)
+		return
+	}
 
-	if field.Type.DataType != nil { // embedded type
-		if err := c.defCtx().checkName(string(field.Name)); err != nil {
+	bld := c.defCtx().defBuilder.(appdef.IFieldsBuilder)
+	fieldName := string(field.Name)
+	sysDataKind := dataTypeToDataKind(*field.Type.DataType)
+
+	if field.Type.DataType.Bytes != nil {
+		if field.Type.DataType.Bytes.MaxLen != nil {
+			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, appdef.MaxLen(*field.Type.DataType.Bytes.MaxLen))
+		} else {
+			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull)
+		}
+	} else if field.Type.DataType.Varchar != nil {
+		constraints := make([]appdef.IConstraint, 0)
+		if field.Type.DataType.Varchar.MaxLen != nil {
+			constraints = append(constraints, appdef.MaxLen(*field.Type.DataType.Varchar.MaxLen))
+		}
+		if field.CheckRegexp != nil {
+			constraints = append(constraints, appdef.Pattern(*field.CheckRegexp))
+		}
+		bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, constraints...)
+	} else {
+		bld.AddField(fieldName, sysDataKind, field.NotNull)
+	}
+
+	if field.Verifiable {
+		bld.SetFieldVerify(fieldName, appdef.VerificationKind_EMail)
+		// TODO: Support different verification kindsbuilder, &c
+	}
+
+	comments := field.Statement.GetComments()
+	if len(comments) > 0 {
+		bld.SetFieldComment(fieldName, comments...)
+	}
+}
+
+func (c *buildContext) addObjectFieldToType(field *FieldExpr, ictx *iterateCtx) {
+	pkg := string(field.Type.Def.Package)
+	if pkg == "" {
+		pkg = ictx.pkg.Name
+	}
+	qname := appdef.NewQName(pkg, string(field.Type.Def.Name))
+
+	err := resolveInCtx(*field.Type.Def, ictx, func(tbl *TypeStmt, pkg *PackageSchemaAST) error { return nil })
+	if err != nil {
+		// notest
+		c.stmtErr(&field.Pos, err)
+		return
+	}
+
+	minOccur := 0
+	if field.NotNull {
+		minOccur = 1
+	}
+
+	maxOccur := 1
+	// not supported by kernel yet
+	// if field.Type.Array != nil {
+	// 	if field.Type.Array.Unbounded {
+	// 		maxOccur = maxNestedTableContainerOccurrences
+	// 	} else {
+	// 		maxOccur = field.Type.Array.MaxOccurs
+	// 	}
+	// }
+	c.defCtx().defBuilder.(appdef.IObjectBuilder).AddContainer(string(field.Name), qname, appdef.Occurs(minOccur), appdef.Occurs(maxOccur))
+}
+
+func (c *buildContext) addTableFieldToTable(field *FieldExpr, ictx *iterateCtx) {
+	// Record?
+	pkg := string(field.Type.Def.Package)
+	if pkg == "" {
+		pkg = ictx.pkg.Name
+	}
+	qname := appdef.NewQName(pkg, string(field.Type.Def.Name))
+	wrec := c.builder.WRecord(qname)
+	crec := c.builder.CRecord(qname)
+	orec := c.builder.ORecord(qname)
+
+	if wrec == nil && orec == nil && crec == nil { // not yet built
+		tbl, _, err := lookupInCtx[*TableStmt](DefQName{Package: Ident(qname.Pkg()), Name: Ident(qname.Entity())}, ictx)
+		if err != nil {
 			c.stmtErr(&field.Pos, err)
 			return
 		}
-
-		bld := c.defCtx().defBuilder.(appdef.IFieldsBuilder)
-		fieldName := string(field.Name)
-		sysDataKind := dataTypeToDataKind(*field.Type.DataType)
-
-		if field.Type.DataType.Bytes != nil {
-			if field.Type.DataType.Bytes.MaxLen != nil {
-				bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, appdef.MaxLen(*field.Type.DataType.Bytes.MaxLen))
-			} else {
-				bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull)
-			}
-		} else if field.Type.DataType.Varchar != nil {
-			constraints := make([]appdef.IConstraint, 0)
-			if field.Type.DataType.Varchar.MaxLen != nil {
-				constraints = append(constraints, appdef.MaxLen(*field.Type.DataType.Varchar.MaxLen))
-			}
-			if field.CheckRegexp != nil {
-				constraints = append(constraints, appdef.Pattern(*field.CheckRegexp))
-			}
-			bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, constraints...)
-		} else {
-			bld.AddField(fieldName, sysDataKind, field.NotNull)
+		if tbl == nil {
+			c.stmtErr(&field.Pos, ErrTypeNotSupported(field.Type.String()))
+			return
 		}
-
-		if field.Verifiable {
-			bld.SetFieldVerify(fieldName, appdef.VerificationKind_EMail)
-			// TODO: Support different verification kindsbuilder, &c
+		if tbl.Abstract {
+			c.stmtErr(&field.Pos, ErrNestedAbstractTable(field.Type.String()))
+			return
 		}
-
-		comments := field.Statement.GetComments()
-		if len(comments) > 0 {
-			bld.SetFieldComment(fieldName, comments...)
-		}
-
-	} else { // field.Type.Def
-		// Record?
-		pkg := string(field.Type.Def.Package)
-		if pkg == "" {
-			pkg = ictx.pkg.Name
-		}
-		qname := appdef.NewQName(pkg, string(field.Type.Def.Name))
-		wrec := c.builder.WRecord(qname)
-		crec := c.builder.CRecord(qname)
-		orec := c.builder.ORecord(qname)
-
-		if wrec == nil && orec == nil && crec == nil { // not yet built
-			tbl, _, err := lookupInCtx[*TableStmt](DefQName{Package: Ident(qname.Pkg()), Name: Ident(qname.Entity())}, ictx)
-			if err != nil {
-				c.stmtErr(&field.Pos, err)
-				return
-			}
-			if tbl == nil {
-				c.stmtErr(&field.Pos, ErrTypeNotSupported(field.Type.String()))
-				return
-			}
-			if tbl.Abstract {
-				c.stmtErr(&field.Pos, ErrNestedAbstractTable(field.Type.String()))
-				return
-			}
-			if tbl.tableTypeKind == appdef.TypeKind_CRecord || tbl.tableTypeKind == appdef.TypeKind_ORecord || tbl.tableTypeKind == appdef.TypeKind_WRecord {
-				c.table(ictx.pkg, tbl, ictx)
-				wrec = c.builder.WRecord(qname)
-				crec = c.builder.CRecord(qname)
-				orec = c.builder.ORecord(qname)
-			} else {
-				c.stmtErr(&field.Pos, ErrTypeNotSupported(field.Type.String()))
-				return
-			}
-		}
-
-		if wrec != nil || orec != nil || crec != nil {
-			//tk := getNestedTableKind(ctx.defs[0].kind)
-			tk := getNestedTableKind(c.defCtx().kind)
-			if (wrec != nil && tk != appdef.TypeKind_WRecord) ||
-				(orec != nil && tk != appdef.TypeKind_ORecord) ||
-				(crec != nil && tk != appdef.TypeKind_CRecord) {
-				c.errs = append(c.errs, ErrNestedTableIncorrectKind)
-				return
-			}
-			c.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(string(field.Name), qname, 0, maxNestedTableContainerOccurrences)
+		if tbl.tableTypeKind == appdef.TypeKind_CRecord || tbl.tableTypeKind == appdef.TypeKind_ORecord || tbl.tableTypeKind == appdef.TypeKind_WRecord {
+			c.table(ictx.pkg, tbl, ictx)
+			wrec = c.builder.WRecord(qname)
+			crec = c.builder.CRecord(qname)
+			orec = c.builder.ORecord(qname)
 		} else {
 			c.stmtErr(&field.Pos, ErrTypeNotSupported(field.Type.String()))
+			return
+		}
+	}
+
+	if wrec != nil || orec != nil || crec != nil {
+		//tk := getNestedTableKind(ctx.defs[0].kind)
+		tk := getNestedTableKind(c.defCtx().kind)
+		if (wrec != nil && tk != appdef.TypeKind_WRecord) ||
+			(orec != nil && tk != appdef.TypeKind_ORecord) ||
+			(crec != nil && tk != appdef.TypeKind_CRecord) {
+			c.errs = append(c.errs, ErrNestedTableIncorrectKind)
+			return
+		}
+		c.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(string(field.Name), qname, 0, maxNestedTableContainerOccurrences)
+	} else {
+		c.stmtErr(&field.Pos, ErrTypeNotSupported(field.Type.String()))
+	}
+}
+
+func (c *buildContext) addFieldToDef(field *FieldExpr, ictx *iterateCtx) {
+	if field.Type.DataType != nil {
+		c.addDataTypeField(field, ictx)
+	} else {
+		if c.defCtx().kind == appdef.TypeKind_Object {
+			c.addObjectFieldToType(field, ictx)
+		} else {
+			c.addTableFieldToTable(field, ictx)
 		}
 	}
 }
