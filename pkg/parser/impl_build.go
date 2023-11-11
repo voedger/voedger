@@ -628,7 +628,7 @@ func (c *buildContext) addTableFieldToTable(field *FieldExpr, ictx *iterateCtx) 
 
 func (c *buildContext) addFieldToDef(field *FieldExpr, ictx *iterateCtx) {
 	if field.Type.DataType != nil {
-		c.addDataTypeField(field, ictx)
+		c.addDataTypeField(field)
 	} else {
 		if c.defCtx().kind == appdef.TypeKind_Object {
 			c.addObjectFieldToType(field, ictx)
