@@ -6,7 +6,6 @@
 package extensions
 
 import (
-	"reflect"
 	"unsafe"
 )
 
@@ -15,45 +14,34 @@ func (v TValue) Length() uint32 {
 }
 
 func (v TValue) AsString(name string) string {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	ptr := hostValueAsString(uint64(v), uint32(nh.Data), uint32(nh.Len))
+	ptr := hostValueAsString(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 	return decodeString(ptr)
 }
 
 func (v TValue) AsBytes(name string) (ret []byte) {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	ptr := hostValueAsBytes(uint64(v), uint32(nh.Data), uint32(nh.Len))
-
-	strHdr := (*reflect.SliceHeader)(unsafe.Pointer(&ret))
-	strHdr.Data = uintptr(uint32(ptr >> 32))
-	strHdr.Len = extint(uint32(ptr))
-	return
+	ptr := hostValueAsBytes(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
+	return decodeSlice(ptr)
 }
 
 func (v TValue) AsInt32(name string) int32 {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	return int32(hostValueAsInt32(uint64(v), uint32(nh.Data), uint32(nh.Len)))
+	return int32(hostValueAsInt32(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
 func (v TValue) AsInt64(name string) int64 {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	return int64(hostValueAsInt64(uint64(v), uint32(nh.Data), uint32(nh.Len)))
+	return int64(hostValueAsInt64(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
 func (v TValue) AsFloat32(name string) float32 {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	return hostValueAsFloat32(uint64(v), uint32(nh.Data), uint32(nh.Len))
+	return hostValueAsFloat32(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 }
 
 func (v TValue) AsFloat64(name string) float64 {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	return hostValueAsFloat64(uint64(v), uint32(nh.Data), uint32(nh.Len))
+	return hostValueAsFloat64(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 }
 
 func (v TValue) AsQName(name string) QName {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	pkgPtr := hostValueAsQNamePkg(uint64(v), uint32(nh.Data), uint32(nh.Len))
-	entityPtr := hostValueAsQNameEntity(uint64(v), uint32(nh.Data), uint32(nh.Len))
+	pkgPtr := hostValueAsQNamePkg(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
+	entityPtr := hostValueAsQNameEntity(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 	return QName{
 		Pkg:    decodeString(pkgPtr),
 		Entity: decodeString(entityPtr),
@@ -61,26 +49,19 @@ func (v TValue) AsQName(name string) QName {
 }
 
 func (v TValue) AsBool(name string) bool {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	return hostValueAsBool(uint64(v), uint32(nh.Data), uint32(nh.Len)) > 0
+	return hostValueAsBool(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))) > 0
 }
 
 func (v TValue) AsValue(name string) TValue {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	return TValue(hostValueAsValue(uint64(v), uint32(nh.Data), uint32(nh.Len)))
+	return TValue(hostValueAsValue(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
 func (v TValue) GetAsBytes(index int) (ret []byte) {
-	ptr := hostValueGetAsBytes(uint64(v), uint32(index))
-	strHdr := (*reflect.SliceHeader)(unsafe.Pointer(&ret))
-	strHdr.Data = uintptr(uint32(ptr >> 32))
-	strHdr.Len = extint(uint32(ptr))
-	return
+	return decodeSlice(hostValueGetAsBytes(uint64(v), uint32(index)))
 }
 
 func (v TValue) GetAsString(index int) string {
-	ptr := hostValueGetAsString(uint64(v), uint32(index))
-	return decodeString(ptr)
+	return decodeString(hostValueGetAsString(uint64(v), uint32(index)))
 }
 
 func (v TValue) GetAsInt32(index int) int32 {
@@ -116,11 +97,16 @@ func (v TValue) GetAsBool(index int) bool {
 	return hostValueGetAsBool(uint64(v), uint32(index)) > 0
 }
 
+func decodeSlice(value uint64) []byte {
+	u := uintptr(uint32(value >> 32))
+	s := uint32(value)
+	return unsafe.Slice((*byte)(unsafe.Pointer(u)), s)
+}
+
 func decodeString(value uint64) (ret string) {
-	strHdr := (*reflect.StringHeader)(unsafe.Pointer(&ret))
-	strHdr.Data = uintptr(uint32(value >> 32))
-	strHdr.Len = extint(uint32(value))
-	return
+	u := uintptr(uint32(value >> 32))
+	s := uint32(value)
+	return unsafe.String((*byte)(unsafe.Pointer(u)), s)
 }
 
 //export hostValueLength
