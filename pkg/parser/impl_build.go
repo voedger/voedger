@@ -504,7 +504,7 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr, ictx *iterateCtx
 	}
 }
 
-func (c *buildContext) addDataTypeField(field *FieldExpr, ictx *iterateCtx) {
+func (c *buildContext) addDataTypeField(field *FieldExpr) {
 	if err := c.defCtx().checkName(string(field.Name)); err != nil {
 		c.stmtErr(&field.Pos, err)
 		return

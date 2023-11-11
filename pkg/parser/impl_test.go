@@ -1745,7 +1745,7 @@ TYPE Deal (
 	side1 		Person NOT NULL,	-- collection 1..1
 	side2 		Person				-- collection 0..1
 --	items 		Item[] NOT NULL,	-- (not yet supported by kernel) collection 1..* (up to maxNestedTableContainerOccurrences = 100)
---	discounts 	Item[3]				-- (not yet supported by kernel) collection 0..3 (one-based numbering convention for arrays, similary to PostgreSQL)
+--	discounts 	Item[3]				-- (not yet supported by kernel) collection 0..3 (one-based numbering convention for arrays, similarly to PostgreSQL)
 );
 
 WORKSPACE Workspace1 (
