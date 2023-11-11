@@ -6,7 +6,6 @@
 package extensions
 
 import (
-	"reflect"
 	"runtime"
 	"unsafe"
 )
@@ -18,8 +17,7 @@ func Assert(condition bool, msg string) {
 }
 
 func Panic(msg string) {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&msg))
-	hostPanic(uint32(nh.Data), uint32(nh.Len))
+	hostPanic(uint32(uintptr(unsafe.Pointer(unsafe.StringData(msg)))), uint32(len(msg)))
 }
 
 const maxUint = ^uint64(0)
