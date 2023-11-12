@@ -36,6 +36,7 @@ func main() {
 	red = color.New(color.FgRed).SprintFunc()
 	green = color.New(color.FgGreen).SprintFunc()
 	logger.PrintLine = printLogLine
+	prepareScripts()
 	defer func() {
 		err := deleteScriptsTempDir()
 		if err != nil {

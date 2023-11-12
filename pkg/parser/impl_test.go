@@ -143,6 +143,9 @@ func Test_BasicUsage(t *testing.T) {
 	q1 := builder.Query(appdef.NewQName("main", "_Query1"))
 	require.NotNil(q1)
 	require.Equal(appdef.TypeKind_Query, q1.Kind())
+
+	_, err = builder.Build()
+	require.NoError(err)
 }
 
 func Test_Refs_NestedTables(t *testing.T) {
@@ -179,6 +182,8 @@ func Test_Refs_NestedTables(t *testing.T) {
 	require.Len(ref1.Refs(), 1)
 	require.Equal(appdef.NewQName("pkg1", "table3"), ref1.Refs()[0])
 
+	_, err = adf.Build()
+	require.NoError(err)
 }
 
 func Test_CircularReferences(t *testing.T) {
@@ -278,6 +283,9 @@ func Test_Workspace_Defs(t *testing.T) {
 
 	require.Equal(appdef.TypeKind_Workspace, wsProfile.Type(appdef.NewQName("pkg1", "MyWorkspace")).Kind())
 	require.Nil(wsProfile.TypeByName(appdef.NewQName("pkg1", "MyWorkspace2")))
+
+	_, err = builder.Build()
+	require.NoError(err)
 }
 
 func Test_Alter_Workspace(t *testing.T) {
@@ -779,6 +787,17 @@ func Test_Views(t *testing.T) {
 		);
 	)
 	`, "file2.sql:4:4: reference to abstract table abc", "file2.sql:5:4: unexisting undefined")
+
+	f(`APPLICATION test(); WORKSPACE Workspace (
+		VIEW test(
+			fld1 int32
+		) AS RESULT OF Proj1;
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			COMMAND Orders()
+		);
+	)
+	`, "file2.sql:2:3: primary key not defined")
 }
 
 func Test_Views2(t *testing.T) {
@@ -819,6 +838,9 @@ func Test_Views2(t *testing.T) {
 
 		v := appBld.View(appdef.NewQName("test", "test"))
 		require.NotNil(v)
+
+		_, err = appBld.Build()
+		require.NoError(err)
 	}
 	{
 		ast, err := ParseFile("file2.sql", `APPLICATION test(); WORKSPACE Workspace (
@@ -854,6 +876,8 @@ func Test_Views2(t *testing.T) {
 		v := appBld.View(appdef.NewQName("test", "test"))
 		require.NotNil(v)
 
+		_, err = appBld.Build()
+		require.NoError(err)
 	}
 	{
 		ast, err := ParseFile("file2.sql", `APPLICATION test(); WORKSPACE Workspace (
@@ -1096,6 +1120,10 @@ func Test_UniqueFields(t *testing.T) {
 	fld := cdoc.UniqueField()
 	require.NotNil(fld)
 	require.Equal("Int2", fld.Name())
+
+	_, err = appBld.Build()
+	require.NoError(err)
+
 }
 
 func Test_NestedTables(t *testing.T) {
@@ -1126,6 +1154,8 @@ func Test_NestedTables(t *testing.T) {
 
 	require.NotNil(appBld.CRecord(appdef.NewQName("test", "NestedTable")))
 	require.NotNil(appBld.CRecord(appdef.NewQName("test", "DeepNestedTable")))
+	_, err = appBld.Build()
+	require.NoError(err)
 }
 
 func Test_SemanticAnalysisForReferences(t *testing.T) {
@@ -1192,6 +1222,10 @@ func Test_1KStringField(t *testing.T) {
 		require.EqualValues(1024, c.Value())
 	})
 	require.Equal(1, cnt)
+
+	_, err = appBld.Build()
+	require.NoError(err)
+
 }
 
 func Test_ReferenceToNoTable(t *testing.T) {
@@ -1262,6 +1296,9 @@ func Test_VRestaurantBasic(t *testing.T) {
 	require.NotNil(view)
 	require.Equal(appdef.TypeKind_ViewRecord, view.Kind())
 
+	_, err = builder.Build()
+	require.NoError(err)
+
 }
 
 func Test_AppSchema(t *testing.T) {
@@ -1313,6 +1350,9 @@ func Test_AppSchema(t *testing.T) {
 	ws := builder.Workspace(appdef.NewQName("air2", "myWorkspace"))
 	require.NotNil(ws)
 	require.NotNil(ws.Type(appdef.NewQName("air1", "MyTable")))
+
+	_, err = builder.Build()
+	require.NoError(err)
 }
 
 func Test_AppSchemaErrors(t *testing.T) {
@@ -1615,6 +1655,10 @@ func Test_UseTables(t *testing.T) {
 	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table1")).Kind())
 	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table2")).Kind())
 	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table3")).Kind())
+
+	_, err = builder.Build()
+	require.NoError(err)
+
 }
 
 func Test_Storages(t *testing.T) {
@@ -1634,4 +1678,120 @@ func Test_Storages(t *testing.T) {
 		pkg2,
 	})
 	require.ErrorContains(err, "storages are only declared in sys package")
+}
+
+func buildPackage(qn string, sql string) *PackageSchemaAST {
+	fs, err := ParseFile("source.sql", sql)
+	if err != nil {
+		panic(err)
+	}
+	pkg, err := BuildPackageSchema(qn, []*FileSchemaAST{fs})
+	if err != nil {
+		panic(err)
+	}
+	return pkg
+}
+
+/*
+func Test_OdocCmdArgs(t *testing.T) {
+	require := require.New(t)
+	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+
+	APPLICATION registry(
+	);
+
+	TABLE TableCDoc INHERITS CDoc ();
+	TABLE TableWDoc INHERITS WDoc ();
+	TABLE TableODoc INHERITS ODoc (
+		orecord1 TABLE orecord1(
+			orecord2 TABLE orecord2()
+		)
+	);
+
+	WORKSPACE Workspace1 (
+		EXTENSION ENGINE BUILTIN (
+			COMMAND CmdCDoc1(TableCDoc);
+			COMMAND CmdWDoc1(TableWDoc);
+			COMMAND CmdODoc1(TableODoc);
+		)
+	);
+
+	`)
+
+	app, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
+	require.NoError(err)
+
+	builder := appdef.New()
+	err = BuildAppDefs(app, builder)
+	require.NoError(err)
+
+	_, err = builder.Build()
+
+	cmdCdoc1 := builder.Command(appdef.NewQName("app1", "CmdCDoc1"))
+	require.NotNil(cmdCdoc1)
+	require.NotNil(cmdCdoc1.Param())
+	require.Equal(1, cmdCdoc1.Param().ContainerCount())
+
+}
+*/
+
+func Test_TypeContainers(t *testing.T) {
+	require := require.New(t)
+	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+
+APPLICATION registry(
+);
+
+TYPE Person (
+	Name 	varchar,
+	Age 	int32
+);
+
+TYPE Item (
+	Name 	varchar,
+	Price 	currency
+);
+
+TYPE Deal (
+	side1 		Person NOT NULL,	-- collection 1..1
+	side2 		Person				-- collection 0..1
+--	items 		Item[] NOT NULL,	-- (not yet supported by kernel) collection 1..* (up to maxNestedTableContainerOccurrences = 100)
+--	discounts 	Item[3]				-- (not yet supported by kernel) collection 0..3 (one-based numbering convention for arrays, similarly to PostgreSQL)
+);
+
+WORKSPACE Workspace1 (
+	EXTENSION ENGINE BUILTIN (
+		COMMAND CmdDeal(Deal) RETURNS Deal;
+	)
+);
+	`)
+
+	app, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
+	require.NoError(err)
+
+	builder := appdef.New()
+	err = BuildAppDefs(app, builder)
+	require.NoError(err)
+
+	validate := func(o appdef.IObject) {
+		require.Equal(2, o.ContainerCount())
+		require.Equal(appdef.Occurs(1), o.Container("side1").MinOccurs())
+		require.Equal(appdef.Occurs(1), o.Container("side1").MaxOccurs())
+		require.Equal(appdef.Occurs(0), o.Container("side2").MinOccurs())
+		require.Equal(appdef.Occurs(1), o.Container("side2").MaxOccurs())
+		/* TODO: uncomment when kernel supports it
+		require.Equal(appdef.Occurs(1), o.Container("items").MinOccurs())
+		require.Equal(appdef.Occurs(100), o.Container("items").MaxOccurs())
+		require.Equal(appdef.Occurs(0), o.Container("discounts").MinOccurs())
+		require.Equal(appdef.Occurs(3), o.Container("discounts").MaxOccurs())
+		*/
+	}
+
+	cmd := builder.Command(appdef.NewQName("app1", "CmdDeal"))
+	validate(cmd.Param())
+	validate(cmd.Result())
+
+	_, err = builder.Build()
+	require.NoError(err)
+
 }

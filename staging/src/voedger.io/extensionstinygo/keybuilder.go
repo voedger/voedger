@@ -6,55 +6,43 @@
 package extensions
 
 import (
-	"reflect"
 	"unsafe"
 )
 
 func keyBuilderImpl(storage, entity string) TKeyBuilder {
-	sh := (*reflect.StringHeader)(unsafe.Pointer(&storage))
-	eh := (*reflect.StringHeader)(unsafe.Pointer(&entity))
-	return TKeyBuilder(hostGetKey(uint32(sh.Data), uint32(sh.Len), uint32(eh.Data), uint32(eh.Len)))
+	return TKeyBuilder(hostGetKey(uint32(uintptr(unsafe.Pointer(unsafe.StringData(storage)))), uint32(len(storage)),
+		uint32(uintptr(unsafe.Pointer(unsafe.StringData(entity)))), uint32(len(entity))))
 }
 
 func (k TKeyBuilder) PutInt32(name string, value int32) {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	hostRowWriterPutInt32(uint64(k), 0, uint32(nh.Data), uint32(nh.Len), uint32(value))
+	hostRowWriterPutInt32(uint64(k), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint32(value))
 }
 
 func (i TKeyBuilder) PutInt64(name string, value int64) {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	hostRowWriterPutInt64(uint64(i), 0, uint32(nh.Data), uint32(nh.Len), uint64(value))
+	hostRowWriterPutInt64(uint64(i), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint64(value))
 }
 
 func (i TKeyBuilder) PutFloat32(name string, value float32) {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	hostRowWriterPutFloat32(uint64(i), 0, uint32(nh.Data), uint32(nh.Len), value)
+	hostRowWriterPutFloat32(uint64(i), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), value)
 }
 
 func (i TKeyBuilder) PutFloat64(name string, value float64) {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	hostRowWriterPutFloat64(uint64(i), 0, uint32(nh.Data), uint32(nh.Len), value)
+	hostRowWriterPutFloat64(uint64(i), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), value)
 }
 
 func (k TKeyBuilder) PutString(name string, value string) {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	vh := (*reflect.StringHeader)(unsafe.Pointer(&value))
-	hostRowWriterPutString(uint64(k), 0, uint32(nh.Data), uint32(nh.Len), uint32(vh.Data), uint32(vh.Len))
+	hostRowWriterPutString(uint64(k), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint32(uintptr(unsafe.Pointer(unsafe.StringData(value)))), uint32(len(value)))
 }
 
 func (i TKeyBuilder) PutBytes(name string, value []byte) {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	vh := (*reflect.SliceHeader)(unsafe.Pointer(&value))
-	hostRowWriterPutBytes(uint64(i), 0, uint32(nh.Data), uint32(nh.Len), uint32(vh.Data), uint32(vh.Len))
+	hostRowWriterPutBytes(uint64(i), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint32(uintptr(unsafe.Pointer(unsafe.SliceData(value)))), uint32(len(value)))
 }
 
 func (i TKeyBuilder) PutQName(name string, value QName) {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	pkg := value.Pkg
-	entity := value.Entity
-	pkgh := (*reflect.StringHeader)(unsafe.Pointer(&pkg))
-	eh := (*reflect.StringHeader)(unsafe.Pointer(&entity))
-	hostRowWriterPutQName(uint64(i), 0, uint32(nh.Data), uint32(nh.Len), uint32(pkgh.Data), uint32(pkgh.Len), uint32(eh.Data), uint32(eh.Len))
+	hostRowWriterPutQName(uint64(i), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)),
+		uint32(uintptr(unsafe.Pointer(unsafe.StringData(value.Pkg)))), uint32(len(value.Entity)),
+		uint32(uintptr(unsafe.Pointer(unsafe.StringData(value.Entity)))), uint32(len(value.Entity)),
+	)
 }
 
 func (i TKeyBuilder) PutBool(name string, value bool) {
@@ -62,8 +50,7 @@ func (i TKeyBuilder) PutBool(name string, value bool) {
 	if value {
 		v = 1
 	}
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	hostRowWriterPutBool(uint64(i), 0, uint32(nh.Data), uint32(nh.Len), v)
+	hostRowWriterPutBool(uint64(i), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), v)
 }
 
 //export hostGetKey
