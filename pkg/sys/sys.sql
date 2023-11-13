@@ -254,7 +254,8 @@ ABSTRACT WORKSPACE Workspace (
         VerifiedValueToken text NOT NULL
     );
 
-    TYPE SendEmailVerificationCodeParams (
+    -- not SendEmailVerificationCodeParams because already there are events in dev for c.sys.SendEmailVerificationCode with arg sys.SendEmailVerificationParams
+    TYPE SendEmailVerificationParams (
         VerificationCode text NOT NULL,
         Email text NOT NULL,
         Reason text NOT NULL,
@@ -379,7 +380,7 @@ ABSTRACT WORKSPACE Workspace (
 
         QUERY InitiateEmailVerification(InitiateEmailVerificationParams) RETURNS InitialEmailVerificationResult;
         QUERY IssueVerifiedValueToken(IssueVerifiedValueTokenParams) RETURNS IssueVerifiedValueTokenResult;
-        COMMAND SendEmailVerificationCode(SendEmailVerificationCodeParams);
+        COMMAND SendEmailVerificationCode(SendEmailVerificationParams);
 
         -- workspace
 
