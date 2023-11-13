@@ -167,11 +167,10 @@ func (n *nodeType) label(key string) string {
 	case nrCENode:
 		return "ce"
 	case nrAppNode:
-		if key == swarmAppLabelKey {
-			return "AppNode"
-		} else {
+		if key != swarmAppLabelKey {
 			return fmt.Sprintf("AppNode%d", n.idx)
 		}
+		return "AppNode"
 	case nrDBNode:
 		return fmt.Sprintf("DBNode%d", n.idx-seNodeCount)
 	}

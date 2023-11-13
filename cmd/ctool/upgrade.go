@@ -57,10 +57,6 @@ func parseVersionComponent(component string) int {
 	return version
 }
 
-func needUpgrade(cluster *clusterType) bool {
-	return cluster.ActualClusterVersion != "" && compareVersions(version, cluster.ActualClusterVersion) == 1
-}
-
 func upgrade(cmd *cobra.Command, arg []string) error {
 
 	cluster, err := newCluster()
