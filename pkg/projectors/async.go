@@ -38,6 +38,7 @@ type asyncActualizer struct {
 	offset   istructs.Offset
 	name     string
 	readCtx  *asyncActualizerContextState
+	inError  bool
 }
 
 func (a *asyncActualizer) Prepare(interface{}) error {
@@ -74,6 +75,13 @@ func (a *asyncActualizer) Run(ctx context.Context) {
 		}
 		a.finit() // even execute if a.init has failed
 		if ctx.Err() == nil && err != nil {
+			if !a.in81Error {
+				a.inError = true
+				// increase projectors_in_error  metric
+				if a.conf.Metrics != nil {
+					a.conf.Metrics.IncreaseApp(ProjectorsInError, a.conf.VvmName, a.conf.AppQName, 1)
+				}
+			}
 			a.conf.LogError(a.name, err)
 			select {
 			case <-ctx.Done():
@@ -94,7 +102,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	a.readCtx.ctx, a.readCtx.cancel = context.WithCancel(ctx)
 
-	p := &asyncProjector{partition: a.conf.Partition, metrics: a.conf.Metrics, flushPositionInterval: a.conf.FlushPositionInverval, lastSave: time.Now()}
+	p := &asyncProjector{partition: a.conf.Partition, metrics: a.conf.AAMetrics, flushPositionInterval: a.conf.FlushPositionInverval, lastSave: time.Now()}
 	p.projector = a.factory(a.conf.Partition)
 
 	err = a.readOffset(p.projector.Name)

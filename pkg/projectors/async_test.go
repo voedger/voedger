@@ -546,7 +546,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 		Partition:  partitionNr,
 		AppStructs: func() istructs.IAppStructs { return app },
 		Broker:     broker,
-		Metrics:    &metrics,
+		AAMetrics:  &metrics,
 	}
 	actualizer, err := actualizerFactory(conf, incrementorFactory)
 	require.NoError(err)
@@ -646,7 +646,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 		BundlesLimit:  10,
 		FlushInterval: 2 * time.Second,
 		Broker:        broker,
-		Metrics:       &metrics,
+		AAMetrics:     &metrics,
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	projectorFactory := func(partition istructs.PartitionID) istructs.Projector {
@@ -778,7 +778,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 					BundlesLimit:  10,
 					FlushInterval: 2 * time.Second,
 					Broker:        broker,
-					Metrics:       &metrics,
+					AAMetrics:     &metrics,
 					LogError:      func(args ...interface{}) {},
 				}
 
@@ -943,7 +943,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 					BundlesLimit:          10,
 					FlushInterval:         1000 * time.Millisecond,
 					Broker:                broker,
-					Metrics:               &metrics,
+					AAMetrics:             &metrics,
 					LogError:              func(args ...interface{}) {},
 					FlushPositionInverval: 10 * time.Second,
 				}
