@@ -12,16 +12,15 @@ import (
 )
 
 const (
-	Field_Email              = "Email"
-	field_Entity             = "Entity"
-	field_Field              = "Field"
-	field_VerificationToken  = "VerificationToken"
-	field_VerificationCode   = "VerificationCode"
-	field_VerifiedValueToken = "VerifiedValueToken"
-	field_Reason             = "Reason"
-	field_TargetWSID         = "TargetWSID"
-	field_ForRegistry        = "ForRegistry"
-	field_Language           = "Language"
+	Field_Email             = "Email"
+	field_Entity            = "Entity"
+	field_Field             = "Field"
+	field_VerificationToken = "VerificationToken"
+	field_VerificationCode  = "VerificationCode"
+	field_Reason            = "Reason"
+	field_TargetWSID        = "TargetWSID"
+	field_ForRegistry       = "ForRegistry"
+	field_Language          = "Language"
 
 	VerifiedValueTokenDuration              = 10 * time.Minute
 	VerificationTokenDuration               = 10 * time.Minute

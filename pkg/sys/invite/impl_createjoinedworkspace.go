@@ -12,7 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-func provideCmdCreateJoinedWorkspace(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func provideCmdCreateJoinedWorkspace(cfg *istructsmem.AppConfigType) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdCreateJoinedWorkspace,
 		appdef.NullQName,
