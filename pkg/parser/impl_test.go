@@ -1773,12 +1773,15 @@ WORKSPACE Workspace1 (
 	err = BuildAppDefs(app, builder)
 	require.NoError(err)
 
-	validate := func(o appdef.IObject) {
+	validate := func(par appdef.IType) {
+		o, ok := par.(appdef.IObject)
+		require.True(ok, "expected %v supports IObject", par)
 		require.Equal(2, o.ContainerCount())
 		require.Equal(appdef.Occurs(1), o.Container("side1").MinOccurs())
 		require.Equal(appdef.Occurs(1), o.Container("side1").MaxOccurs())
 		require.Equal(appdef.Occurs(0), o.Container("side2").MinOccurs())
 		require.Equal(appdef.Occurs(1), o.Container("side2").MaxOccurs())
+
 		/* TODO: uncomment when kernel supports it
 		require.Equal(appdef.Occurs(1), o.Container("items").MinOccurs())
 		require.Equal(appdef.Occurs(100), o.Container("items").MaxOccurs())
