@@ -57,7 +57,7 @@ func TestCommandProcessorMetrics(t *testing.T) {
 	require := require.New(t)
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
+	body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
 	vit.PostWS(ws, "c.sys.CUD", body)
 
 	metrics := vit.MetricsRequest()

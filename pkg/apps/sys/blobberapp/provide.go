@@ -17,6 +17,6 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 		sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 			apis.NumCommandProcessors, nil, apis.IAppStorageProvider) // need to generate AppWorkspaces only
-		apps.RegisterSchemaFS(blobberSchemaFS, "github.com/voedger/voedger/pkg/apps/sys/blobberapp", ep)
+		apps.RegisterSchemaFS(blobberSchemaFS, BlobberAppFQN, ep)
 	}
 }

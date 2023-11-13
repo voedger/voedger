@@ -52,7 +52,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		{
 			"args": {
 				"WSName": "%s",
-				"WSKind": "app1.WSKind",
+				"WSKind": "app1pkg.WSKind",
 				"WSKindInitializationData": "{\"IntFld\": 10}",
 				"TemplateName": "test_template",
 				"WSClusterID": 1
@@ -69,7 +69,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		require.Equal(istructs.ClusterID(1), ws.WSID.ClusterID())
 
 		t.Run("check the initialized workspace using collection", func(t *testing.T) {
-			body = `{"args":{"Schema":"app1.air_table_plan"},"elements":[{"fields":["sys.ID","image","preview"]}]}`
+			body = `{"args":{"Schema":"app1pkg.air_table_plan"},"elements":[{"fields":["sys.ID","image","preview"]}]}`
 			resp := vit.PostWS(ws, "q.sys.Collection", body)
 			require.Len(resp.Sections[0].Elements, 2) // from testTemplate
 			appEPs := vit.VVM.AppsExtensionPoints[istructs.AppQName_test1_app1]
@@ -94,7 +94,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 						{
 							"sys.ID": %d,
 							"fields": {
-								"sys.QName": "app1.WSKind",
+								"sys.QName": "app1pkg.WSKind",
 								"IntFld": 42,
 								"StrFld": "str"
 							}
@@ -112,7 +112,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 	})
 
 	t.Run("create a new workspace with an existing name -> 409 conflict", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1.WSKind","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
+		body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1pkg.WSKind","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
 		resp := vit.PostProfile(prn, "c.sys.InitChildWorkspace", body, coreutils.Expect409())
 		resp.Println()
 	})
@@ -133,7 +133,7 @@ func TestWorkspaceAuthorization(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	prn := ws.Owner
 
-	body := `{"cuds": [{"sys.ID": 1,"fields": {"sys.QName": "app1.WSKind"}}]}`
+	body := `{"cuds": [{"sys.ID": 1,"fields": {"sys.QName": "app1pkg.WSKind"}}]}`
 
 	t.Run("403 forbidden", func(t *testing.T) {
 		t.Run("workspace is not initialized", func(t *testing.T) {

@@ -20,10 +20,8 @@ import (
 func provideQrySqlQuery(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, numCommandProcessors coreutils.CommandProcessorsCount) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "SqlQuery"),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SqlQueryParams")).
-			AddField(field_Query, appdef.DataKind_string, true).(appdef.IType).QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SqlQueryResult")).
-			AddField(field_Result, appdef.DataKind_string, true).(appdef.IType).QName(),
+		appdef.NullQName,
+		appdef.NullQName,
 		execQrySqlQuery(asp, cfg.Name, numCommandProcessors),
 	))
 }

@@ -23,8 +23,7 @@ func provideQryGRCount(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IApp
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "GRCount"),
 		appdef.NullQName,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GRCountResult")).
-			AddField("NumGoroutines", appdef.DataKind_int32, true).(appdef.IType).QName(),
+		appdef.NullQName,
 		func(_ context.Context, _ istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			return callback(&grcountRR{})
 		},

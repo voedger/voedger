@@ -61,7 +61,7 @@ func newTSIdsGenerator() *TSidsGeneratorType {
 
 func Test_Race_SimpleInsertOne(t *testing.T) {
 	req := require.New(t)
-	appConfigs, asp := appConfigs()
+	appConfigs, asp := appConfigs(t)
 	provider := istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
 	app, err := provider.AppStructs(test.appQName)
@@ -83,7 +83,7 @@ func Test_Race_SimpleInsertOne(t *testing.T) {
 
 func Test_Race_SimpleInsertMany(t *testing.T) {
 	req := require.New(t)
-	appConfigs, asp := appConfigs()
+	appConfigs, asp := appConfigs(t)
 	provider := istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
 	app, err := provider.AppStructs(test.appQName)

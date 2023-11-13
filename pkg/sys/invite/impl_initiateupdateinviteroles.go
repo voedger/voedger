@@ -17,11 +17,7 @@ import (
 func provideCmdInitiateUpdateInviteRoles(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdInitiateUpdateInviteRoles,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateUpdateInviteRolesParams")).
-			AddField(field_InviteID, appdef.DataKind_RecordID, true).
-			AddField(Field_Roles, appdef.DataKind_string, true).
-			AddField(field_EmailTemplate, appdef.DataKind_string, true, appdef.MaxLen(appdef.MaxFieldLength)).
-			AddField(field_EmailSubject, appdef.DataKind_string, true).(appdef.IType).QName(),
+		appdef.NullQName,
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdInitiateUpdateInviteRoles(timeFunc),

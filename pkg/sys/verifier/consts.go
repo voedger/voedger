@@ -35,6 +35,7 @@ const (
 	IssueVerifiedValueToken_Period          = time.Hour
 	IssueVerifiedValueToken_MaxAllowed      = uint32(3)
 	verifyEmailReason                       = "to confirm your email."
+	threeDays                               = 72 * time.Hour
 )
 
 var (
@@ -45,5 +46,5 @@ var (
 		Period:                IssueVerifiedValueToken_Period,
 		MaxAllowedPerDuration: IssueVerifiedValueToken_MaxAllowed,
 	}
-	qNameAPSendEmailVerificationCode = appdef.NewQName(appdef.SysPackage, "SendEmailVerificationCode")
+	qNameAPApplySendEmailVerificationCode = appdef.NewQName(appdef.SysPackage, "ApplySendEmailVerificationCode")
 )
