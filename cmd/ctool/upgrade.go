@@ -63,14 +63,17 @@ func needUpgrade(cluster *clusterType) bool {
 
 func upgrade(cmd *cobra.Command, arg []string) error {
 
-	cluster := newCluster()
+	cluster, err := newCluster()
+	if err != nil {
+		return err
+	}
 
 	if cluster.ActualClusterVersion == cluster.DesiredClusterVersion {
 		fmt.Println("no update required")
 		return nil
 	}
 
-	err := mkCommandDirAndLogFile(cmd, cluster)
+	err = mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}

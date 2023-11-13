@@ -35,16 +35,18 @@ func newCluster() (*clusterType, error) {
 	cluster.configFileName = filepath.Join(dir, clusterConfFileName)
 	cluster.exists = cluster.loadFromJSON() == nil
 
-	vr := compareVersions(version, cluster.ActualClusterVersion)
-
-	if cluster.ActualClusterVersion == "" || cluster.ActualClusterVersion == version{
+	if cluster.ActualClusterVersion == "" {
 		return &cluster, nil
 	}
 
-    vr := compareVersions(version, cluster.ActualClusterVersion)
-	if vr
+	vr := compareVersions(version, cluster.ActualClusterVersion)
+	if vr == 1 {
+		return &cluster, fmt.Errorf(errCtoolVersionNewerThanClusterVersion, version, cluster.ActualClusterVersion, ErrBadVersion)
+	} else if vr == -1 {
+		return &cluster, fmt.Errorf(errClusterVersionNewerThanCtoolVersion, cluster.ActualClusterVersion, version, ErrBadVersion)
+	}
 
-	return &cluster
+	return &cluster, nil
 }
 
 func newCmd(cmdKind, cmdArgs string) *cmdType {
@@ -167,7 +169,7 @@ func (n *nodeType) label(key string) string {
 	case nrAppNode:
 		if key == swarmAppLabelKey {
 			return "AppNode"
-		} else if key == swarmMonLabelKey {
+		} else {
 			return fmt.Sprintf("AppNode%d", n.idx)
 		}
 	case nrDBNode:
@@ -180,7 +182,7 @@ func (n *nodeType) label(key string) string {
 // nolint
 func (ns *nodeType) check(c *clusterType) error {
 	if ns.actualNodeVersion() != ns.desiredNodeVersion(c) {
-		return ErrDifferentNodeVersions
+		return fmt.Errorf(errDifferentNodeVersion, ns.actualNodeVersion(), ns.desiredNodeVersion(c), ErrBadVersion)
 	}
 	return nil
 }
