@@ -3,7 +3,9 @@
 
 APPLICATION app2();
 
-TABLE WSKind INHERITS Singleton (
-	IntFld int32 NOT NULL,
-	StrFld varchar
+ABSTRACT WORKSPACE test_ws (
+	TABLE WSKind INHERITS Singleton (
+		IntFld int32 NOT NULL,
+		StrFld varchar
+	);
 );

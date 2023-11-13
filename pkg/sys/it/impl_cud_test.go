@@ -31,7 +31,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 					{
 						"fields": {
 							"sys.ID": 1,
-							"sys.QName": "app1.articles",
+							"sys.QName": "app1pkg.articles",
 							"name": "cola",
 							"article_manual": 1,
 							"article_hash": 2,
@@ -50,7 +50,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 		body := `
 		{
 			"args":{
-				"Schema":"app1.articles"
+				"Schema":"app1pkg.articles"
 			},
 			"elements":[
 				{
@@ -89,7 +89,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 		body = `
 		{
 			"args":{
-				"Schema":"app1.articles"
+				"Schema":"app1pkg.articles"
 			},
 			"elements":[
 				{
@@ -117,7 +117,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 					}
 				]
 			}`, int64(id))
-		resp = vit.PostWS(ws, "q.sys.CDoc", body)
+		resp = vit.PostWS(ws, "q.sys.GetCDoc", body)
 		jsonBytes := []byte(resp.SectionRow()[0].(string))
 		cdoc := map[string]interface{}{}
 		require.Nil(json.Unmarshal(jsonBytes, &cdoc))
@@ -153,7 +153,7 @@ func TestBasicUsage_Init(t *testing.T) {
 				{
 					"fields": {
 						"sys.ID": 100000,
-						"sys.QName": "app1.articles",
+						"sys.QName": "app1pkg.articles",
 						"name": "cola",
 						"article_manual": 11,
 						"article_hash": 21,
@@ -169,7 +169,7 @@ func TestBasicUsage_Init(t *testing.T) {
 	body = `
 		{
 			"args":{
-				"Schema":"app1.articles"
+				"Schema":"app1pkg.articles"
 			},
 			"elements":[
 				{
@@ -198,7 +198,7 @@ func TestBasicUsage_Singletons(t *testing.T) {
 				{
 					"fields": {
 						"sys.ID": 1,
-						"sys.QName": "app1.Config",
+						"sys.QName": "app1pkg.Config",
 						"Fld1": "42"
 					}
 				}
@@ -213,7 +213,7 @@ func TestBasicUsage_Singletons(t *testing.T) {
 
 	// запросим ID через collection
 	body = `{
-		"args":{ "Schema":"app1.Config" },
+		"args":{ "Schema":"app1pkg.Config" },
 		"elements":[{ "fields": ["sys.ID"] }]
 	}`
 	resp = vit.PostProfile(prn, "q.sys.Collection", body)
@@ -235,13 +235,13 @@ func TestUnlinkReference(t *testing.T) {
 				{
 					"fields": {
 						"sys.ID": 1,
-						"sys.QName": "app1.options"
+						"sys.QName": "app1pkg.options"
 					}
 				},
 				{
 					"fields": {
 						"sys.ID": 2,
-						"sys.QName": "app1.department",
+						"sys.QName": "app1pkg.department",
 						"pc_fix_button": 1,
 						"rm_fix_button": 1
 					}
@@ -249,7 +249,7 @@ func TestUnlinkReference(t *testing.T) {
 				{
 					"fields": {
 						"sys.ID": 3,
-						"sys.QName": "app1.department_options",
+						"sys.QName": "app1pkg.department_options",
 						"id_options": 1,
 						"id_department": 2,
 						"sys.ParentID": 2,
@@ -269,7 +269,7 @@ func TestUnlinkReference(t *testing.T) {
 
 	// read the root department
 	body = fmt.Sprintf(`{"args":{"ID": %d},"elements":[{"fields": ["Result"]}]}`, idDep)
-	resp = vit.PostWS(ws, "q.sys.CDoc", body)
+	resp = vit.PostWS(ws, "q.sys.GetCDoc", body)
 	m := map[string]interface{}{}
 	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
 	require.Zero(m["department_options"].([]interface{})[0].(map[string]interface{})["id_options"].(float64))
@@ -284,13 +284,13 @@ func TestRefIntegrity(t *testing.T) {
 	appDef := appStructs.AppDef()
 
 	t.Run("CUDs", func(t *testing.T) {
-		body := `{"cuds":[{"fields":{"sys.ID":2,"sys.QName":"app1.department","pc_fix_button": 1,"rm_fix_button": 1, "id_food_group": 123456}}]}`
+		body := `{"cuds":[{"fields":{"sys.ID":2,"sys.QName":"app1pkg.department","pc_fix_button": 1,"rm_fix_button": 1, "id_food_group": 123456}}]}`
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_Existence())
 
 		body = `{"cuds":[
-			{"fields":{"sys.ID":1,"sys.QName":"app1.cdoc1"}},
-			{"fields":{"sys.ID":2,"sys.QName":"app1.options"}},
-			{"fields":{"sys.ID":3,"sys.QName":"app1.department","pc_fix_button": 1,"rm_fix_button": 1}}
+			{"fields":{"sys.ID":1,"sys.QName":"app1pkg.cdoc1"}},
+			{"fields":{"sys.ID":2,"sys.QName":"app1pkg.options"}},
+			{"fields":{"sys.ID":3,"sys.QName":"app1pkg.department","pc_fix_button": 1,"rm_fix_button": 1}}
 		]}`
 		resp := vit.PostWS(ws, "c.sys.CUD", body)
 		idCdoc1 := resp.NewIDs["1"]
@@ -298,26 +298,26 @@ func TestRefIntegrity(t *testing.T) {
 		idDep := resp.NewIDs["3"]
 
 		t.Run("ref to unexisting -> 400 bad request", func(t *testing.T) {
-			body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field1": 123456}}]}`
+			body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field1": 123456}}]}`
 			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_Existence())
 
-			body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": 123456}}]}`
+			body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field2": 123456}}]}`
 			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_Existence())
 		})
 
 		t.Run("ref to existing, allowed QName", func(t *testing.T) {
-			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field1": %d}}]}`, idCdoc1)
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field1": %d}}]}`, idCdoc1)
 			vit.PostWS(ws, "c.sys.CUD", body)
 
-			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": %d}}]}`, idCdoc1)
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field2": %d}}]}`, idCdoc1)
 			vit.PostWS(ws, "c.sys.CUD", body)
 
-			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": %d}}]}`, idDep)
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field2": %d}}]}`, idDep)
 			vit.PostWS(ws, "c.sys.CUD", body)
 		})
 
 		t.Run("ref to existing wrong QName -> 400 bad request", func(t *testing.T) {
-			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1.cdoc2","field2": %d}}]}`, idOption)
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field2": %d}}]}`, idOption)
 			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_QName())
 		})
 	})
@@ -335,18 +335,18 @@ func TestRefIntegrity(t *testing.T) {
 
 func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, appDef appdef.IAppDef, urlTemplate string) {
 	body := `{"args":{"sys.ID": 1,"orecord1":[{"sys.ID":2,"sys.ParentID":1,"orecord2":[{"sys.ID":3,"sys.ParentID":2}]}]}}`
-	resp := vit.PostWS(ws, "c.sys.CmdODocOne", body)
+	resp := vit.PostWS(ws, "c.app1pkg.CmdODocOne", body)
 	idOdoc1 := resp.NewIDs["1"]
 	idOrecord1 := resp.NewIDs["2"]
 	idOrecord2 := resp.NewIDs["3"]
-	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1.cdoc1"}}]}`
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.cdoc1"}}]}`
 	idCDoc := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 	t.Run("ref to unexisting -> 400 bad request", func(t *testing.T) {
 		oDoc := appDef.ODoc(it.QNameODoc2)
 		oDoc.RefFields(func(oDoc1RefField appdef.IRefField) {
 			t.Run(oDoc1RefField.Name(), func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"%s":1000000000000`, oDoc1RefField.Name()))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_Existence()).Println()
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_Existence()).Println()
 			})
 		})
 	})
@@ -355,75 +355,75 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, appDef
 		t.Run("ODoc", func(t *testing.T) {
 			t.Run("allowed QName", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToODoc1":%d`, idOdoc1))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body)
 			})
 
 			t.Run("wrong QName CDoc-> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToODoc1":%d`, idCDoc))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
 			})
 
 			t.Run("wrong QName ORecord -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToODoc1":%d`, idOrecord1))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
 			})
 		})
 		t.Run("ORecord", func(t *testing.T) {
 			t.Run("allowed QName ORecord1", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToORecord1":%d`, idOrecord1))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body)
 			})
 
 			t.Run("allowed QName ORecord2", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToORecord2":%d`, idOrecord2))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body)
 			})
 
 			t.Run("wrong QName CDoc -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToORecord1":%d`, idCDoc))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
 			})
 
 			t.Run("wrong QName ODoc ORecord1 -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToORecord1":%d`, idOdoc1))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
 			})
 
 			t.Run("wrong QName ODoc ORecord2 -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToORecord2":%d`, idOdoc1))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
 			})
 		})
 		t.Run("Any", func(t *testing.T) {
 			body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToAny":%d`, idCDoc))
-			vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+			vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body)
 
 			body = fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToAny":%d`, idOdoc1))
-			vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+			vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body)
 		})
 
 		t.Run("CDoc", func(t *testing.T) {
 			t.Run("allowed QName", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToCDoc1":%d`, idCDoc))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body)
 			})
 			t.Run("wrong QName -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToCDoc1":%d`, idOdoc1))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName())
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName())
 			})
 		})
 
 		t.Run("CDoc or ODoc", func(t *testing.T) {
 			t.Run("allowed QName", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToCDoc1OrODoc1":%d`, idCDoc))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body)
 
 				body = fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToCDoc1OrODoc1":%d`, idOdoc1))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body)
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body)
 			})
 			t.Run("wrong QName -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToCDoc1OrODoc1":%d`, idOrecord1))
-				vit.PostWS(ws, "c.sys.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName())
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName())
 			})
 		})
 	})
@@ -435,12 +435,12 @@ func TestEraseString(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	idAnyAirTablePlan := vit.GetAny("app1.air_table_plan", ws)
+	idAnyAirTablePlan := vit.GetAny("app1pkg.air_table_plan", ws)
 
 	body := fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"name":""}}]}`, idAnyAirTablePlan)
 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	body = fmt.Sprintf(`{"args":{"Schema":"app1.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, idAnyAirTablePlan)
+	body = fmt.Sprintf(`{"args":{"Schema":"app1pkg.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, idAnyAirTablePlan)
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
 	require.Equal(t, "", resp.SectionRow()[0].(string))
@@ -451,13 +451,13 @@ func TestEraseString1(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
+	body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
 	id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	body = fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"name":""}}]}`, id)
 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	body = fmt.Sprintf(`{"args":{"Schema":"app1.articles"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, id)
+	body = fmt.Sprintf(`{"args":{"Schema":"app1pkg.articles"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, id)
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
 	require.Equal(t, "", resp.SectionRow()[0].(string))
@@ -468,6 +468,6 @@ func TestDenyCreateNonRawIDs(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	body := `{"cuds": [{"fields": {"sys.ID": 1000000000,"sys.QName": "app1.options"}}]}`
+	body := `{"cuds": [{"fields": {"sys.ID": 1000000000,"sys.QName": "app1pkg.options"}}]}`
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
 }

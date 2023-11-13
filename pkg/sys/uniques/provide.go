@@ -11,11 +11,9 @@ import (
 	"github.com/voedger/voedger/pkg/projectors"
 )
 
-var QNameViewUniques = appdef.NewQName(appdef.SysPackage, "Uniques")
-
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 
-	projectors.ProvideViewDef(appDefBuilder, QNameViewUniques, func(view appdef.IViewBuilder) {
+	projectors.ProvideViewDef(appDefBuilder, qNameViewUniques, func(view appdef.IViewBuilder) {
 		view.KeyBuilder().PartKeyBuilder().
 			AddField(field_QName, appdef.DataKind_QName).
 			AddField(field_ValuesHash, appdef.DataKind_int64)
@@ -26,8 +24,8 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	})
 	cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name: QNameViewUniques,
-			Func: provideUniquesProjectorFunc(appDefBuilder),
+			Name: qNameApplyUniques,
+			Func: provideApplyUniques(appDefBuilder),
 		}
 	})
 	cfg.AddEventValidators(provideEventUniqueValidator())

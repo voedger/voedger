@@ -290,6 +290,7 @@ type DataType struct {
 	Bool      bool         `parser:"| @'bool'"`
 	Blob      bool         `parser:"| @'blob'"`
 	Timestamp bool         `parser:"| @'timestamp'"`
+	Record    bool         `parser:"| @'record'"`
 	Currency  bool         `parser:"| @'currency' )"`
 }
 
@@ -327,9 +328,16 @@ func (q DataType) String() (s string) {
 	return "?"
 }
 
+// not suppored by kernel yet:
+// type DataTypeOrDefArray struct {
+// 	Unbounded bool `parser:"@'[]' |"`
+// 	MaxOccurs int  `parser:"'[' @Int ']'"`
+// }
+
 type DataTypeOrDef struct {
 	DataType *DataType `parser:"( @@"`
 	Def      *DefQName `parser:"| @@ )"`
+	// Array    *DataTypeOrDefArray `parser:"@@?"` not suppored by kernel yet
 }
 
 func (q DataTypeOrDef) String() (s string) {

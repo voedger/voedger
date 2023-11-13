@@ -139,37 +139,66 @@ func Test_CommandValidate(t *testing.T) {
 	require := require.New(t)
 
 	appDef := New()
+	obj := NewQName("test", "obj")
+	_ = appDef.AddObject(obj)
+	bad := NewQName("test", "workspace")
+	_ = appDef.AddWorkspace(bad)
+	unknown := NewQName("test", "unknown")
 
 	cmd := appDef.AddCommand(NewQName("test", "cmd"))
 
-	t.Run("must error if parameter name is unknown", func(t *testing.T) {
-		par := NewQName("test", "param")
-		cmd.SetParam(par)
-		_, err := appDef.Build()
-		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, par.String())
+	t.Run("errors in parameter", func(t *testing.T) {
+		t.Run("must error if parameter name is unknown", func(t *testing.T) {
+			cmd.SetParam(unknown)
+			_, err := appDef.Build()
+			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorContains(err, unknown.String())
+		})
 
-		_ = appDef.AddObject(par)
+		t.Run("must error if deprecated parameter type", func(t *testing.T) {
+			cmd.SetParam(bad)
+			_, err := appDef.Build()
+			require.ErrorIs(err, ErrInvalidTypeKind)
+			require.ErrorContains(err, bad.String())
+		})
+
+		cmd.SetParam(obj)
 	})
 
-	t.Run("must error if unlogged parameter name is unknown", func(t *testing.T) {
-		unl := NewQName("test", "secure")
-		cmd.SetUnloggedParam(unl)
-		_, err := appDef.Build()
-		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, unl.String())
+	t.Run("errors in unlogged parameter", func(t *testing.T) {
+		t.Run("must error if unlogged parameter name is unknown", func(t *testing.T) {
+			cmd.SetUnloggedParam(unknown)
+			_, err := appDef.Build()
+			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorContains(err, unknown.String())
+		})
 
-		_ = appDef.AddObject(unl)
+		t.Run("must error if deprecated unlogged parameter type", func(t *testing.T) {
+			cmd.SetUnloggedParam(bad)
+			_, err := appDef.Build()
+			require.ErrorIs(err, ErrInvalidTypeKind)
+			require.ErrorContains(err, bad.String())
+		})
+
+		cmd.SetUnloggedParam(obj)
 	})
 
-	t.Run("must error if result object name is unknown", func(t *testing.T) {
-		res := NewQName("test", "res")
-		cmd.SetResult(res)
-		_, err := appDef.Build()
-		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, res.String())
+	t.Run("errors in result", func(t *testing.T) {
+		t.Run("must error if result object name is unknown", func(t *testing.T) {
+			cmd.SetResult(unknown)
+			_, err := appDef.Build()
+			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorContains(err, unknown.String())
+		})
 
-		_ = appDef.AddObject(res)
+		t.Run("must error if deprecated unlogged parameter type", func(t *testing.T) {
+			cmd.SetResult(bad)
+			_, err := appDef.Build()
+			require.ErrorIs(err, ErrInvalidTypeKind)
+			require.ErrorContains(err, bad.String())
+		})
+
+		cmd.SetResult(obj)
 	})
 
 	t.Run("must error if extension name or engine is missed", func(t *testing.T) {

@@ -81,7 +81,7 @@ func Test_AddField(t *testing.T) {
 		obj.AddField("f1", DataKind_int64, true)
 
 		require.Equal(1, obj.UserFieldCount())
-		require.Equal(obj.UserFieldCount()+1, obj.FieldCount()) // + sys.QName
+		require.Equal(obj.UserFieldCount()+2, obj.FieldCount()) // + sys.QName + sys.Container
 
 		f := obj.Field("f1")
 		require.NotNil(f)
@@ -124,7 +124,7 @@ func Test_AddField(t *testing.T) {
 
 	t.Run("must be panic if too many fields", func(t *testing.T) {
 		o := New().AddObject(NewQName("test", "obj"))
-		for i := 0; i < MaxTypeFieldCount-1; i++ { // -1 for sys.QName field
+		for i := 0; o.FieldCount() < MaxTypeFieldCount; i++ {
 			o.AddField(fmt.Sprintf("f_%#x", i), DataKind_bool, false)
 		}
 		require.Panics(func() { o.AddField("errorField", DataKind_bool, true) })
@@ -154,7 +154,7 @@ func Test_SetFieldComment(t *testing.T) {
 	})
 
 	t.Run("must be ok to obtain field comment", func(t *testing.T) {
-		require.Equal(2, obj.FieldCount()) // + sys.QName
+		require.Equal(1, obj.UserFieldCount())
 		f1 := obj.Field("f1")
 		require.NotNil(f1)
 		require.Equal("test comment", f1.Comment())
@@ -180,7 +180,7 @@ func Test_SetFieldVerify(t *testing.T) {
 	})
 
 	t.Run("must be ok to obtain verified field", func(t *testing.T) {
-		require.Equal(3, obj.FieldCount()) // + sys.QName
+		require.Equal(2, obj.UserFieldCount())
 		f1 := obj.Field("f1")
 		require.NotNil(f1)
 

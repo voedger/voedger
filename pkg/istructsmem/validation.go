@@ -53,10 +53,10 @@ func validateEventIDs(ev *eventType) error {
 // Checks that ID references to created entities is valid, that is target ID known and has available QName.
 //
 // Returns IDs map and error(s) if any.
-func validateObjectIDs(obj *elementType, rawID bool) (ids map[istructs.RecordID]appdef.QName, err error) {
+func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]appdef.QName, err error) {
 	ids = make(map[istructs.RecordID]appdef.QName)
 
-	_ = obj.forEach(func(e *elementType) error {
+	_ = obj.forEach(func(e *objectType) error {
 		id := e.ID()
 		if id == istructs.NullRecordID {
 			return nil
@@ -77,7 +77,7 @@ func validateObjectIDs(obj *elementType, rawID bool) (ids map[istructs.RecordID]
 		return nil
 	})
 
-	_ = obj.forEach(func(e *elementType) error {
+	_ = obj.forEach(func(e *objectType) error {
 		e.fields.RefFields(func(fld appdef.IRefField) {
 			if id := e.AsRecordID(fld.Name()); id != istructs.NullRecordID {
 				target, exists := ids[id]
@@ -236,7 +236,7 @@ func validateEventArgs(ev *eventType) (err error) {
 	} else {
 		if ev.argObject.QName() != appdef.NullQName {
 			err = errors.Join(err,
-				validateElement(&ev.argObject))
+				validateObject(&ev.argObject))
 		}
 	}
 
@@ -247,61 +247,56 @@ func validateEventArgs(ev *eventType) (err error) {
 	} else {
 		if ev.argUnlObj.QName() != appdef.NullQName {
 			err = errors.Join(err,
-				validateElement(&ev.argUnlObj))
+				validateObject(&ev.argUnlObj))
 		}
 	}
 
 	return err
 }
 
-// Validates element with children in containers.
+// Validates object with children in containers.
 //
-// Checks that all element required fields is filled.
+// Checks that all required fields is filled.
 //
-// Checks that min and max occurrences of element containers is not violated.
+// Checks that min and max occurrences of containers is not violated.
 //
-// Checks that parent ID and container name is correct for element children.
+// Checks that parent ID and container name is correct for children.
 //
-// Recursively validates element children.
-func validateElement(el *elementType) (err error) {
-	err = validateRow(&el.rowType)
+// Recursively validates children.
+func validateObject(o *objectType) (err error) {
+	err = validateRow(&o.rowType)
 
-	t := el.typ.(appdef.IContainers)
+	t := o.typ.(appdef.IContainers)
 
 	// validate occurrences
 	t.Containers(
 		func(cont appdef.IContainer) {
 			occurs := appdef.Occurs(0)
-			el.EnumElements(
-				func(child *elementType) {
-					if child.Container() == cont.Name() {
-						occurs++
-					}
-				})
+			o.Children(cont.Name(), func(istructs.IObject) { occurs++ })
 			if occurs < cont.MinOccurs() {
 				err = errors.Join(err,
 					// ODoc «test.document» container «child» has not enough occurrences (0, minimum 1)
-					validateErrorf(ECode_InvalidOccursMin, errContainerMinOccursViolated, el, cont.Name(), occurs, cont.MinOccurs(), ErrMinOccursViolation))
+					validateErrorf(ECode_InvalidOccursMin, errContainerMinOccursViolated, o, cont.Name(), occurs, cont.MinOccurs(), ErrMinOccursViolation))
 			}
 			if occurs > cont.MaxOccurs() {
 				err = errors.Join(err,
 					// ODoc «test.document» container «child» has too many occurrences (2, maximum 1)
-					validateErrorf(ECode_InvalidOccursMax, errContainerMaxOccursViolated, el, cont.Name(), occurs, cont.MaxOccurs(), ErrMaxOccursViolation))
+					validateErrorf(ECode_InvalidOccursMax, errContainerMaxOccursViolated, o, cont.Name(), occurs, cont.MaxOccurs(), ErrMaxOccursViolation))
 			}
 		})
 
-	// validate element children
-	elID := el.ID()
+	// validate children
+	objID := o.ID()
 
 	idx := -1
-	el.EnumElements(
-		func(child *elementType) {
+	o.allChildren(
+		func(child *objectType) {
 			idx++
 			cont := t.Container(child.Container())
 			if cont == nil {
 				err = errors.Join(err,
-					// ODoc «test.document» child[0] has unknown container name «childElement»
-					validateErrorf(ECode_InvalidElementName, errUnknownContainerName, el, idx, child.Container(), ErrNameNotFound))
+					// ODoc «test.document» child[0] has unknown container name «child»
+					validateErrorf(ECode_InvalidChildName, errUnknownContainerName, o, idx, child.Container(), ErrNameNotFound))
 				return
 			}
 
@@ -309,27 +304,29 @@ func validateElement(el *elementType) (err error) {
 			if childQName != cont.QName() {
 				err = errors.Join(err,
 					// ODoc «test.document» child[0] ORecord «child2: test.record1» has wrong type name, expected «test.record2»
-					validateErrorf(ECode_InvalidTypeName, errWrongContainerType, el, idx, child, cont.QName(), ErrWrongType))
+					validateErrorf(ECode_InvalidTypeName, errWrongContainerType, o, idx, child, cont.QName(), ErrWrongType))
 				return
 			}
 
-			if child.typ.Kind().HasSystemField(appdef.SystemField_ParentID) {
+			if exists, required := child.typ.Kind().HasSystemField(appdef.SystemField_ParentID); exists {
 				// ORecord, let's check parent ID
 				parID := child.Parent()
 				if parID == istructs.NullRecordID {
-					// if child parentID omitted, then restore it
-					child.setParent(elID)
+					if required {
+						// if child parentID omitted, then restore it
+						child.setParent(objID)
+					}
 				} else {
-					if parID != elID {
+					if parID != objID {
 						err = errors.Join(err,
 							// ODoc «test.document» child[0] ORecord «child: test.record1» has wrong parent id «2», expected «1»
-							validateErrorf(ECode_InvalidRefRecordID, errWrongParentID, el, idx, child, parID, elID, ErrWrongRecordID))
+							validateErrorf(ECode_InvalidRefRecordID, errWrongParentID, o, idx, child, parID, objID, ErrWrongRecordID))
 					}
 				}
 			}
 
 			err = errors.Join(err,
-				validateElement(child)) // recursive call
+				validateObject(child)) // recursive call
 		})
 
 	return err

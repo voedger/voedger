@@ -14,13 +14,19 @@ type ICommand interface {
 	IFunction
 
 	// Unlogged (secure) parameter. Returns nil if not assigned
-	UnloggedParam() IObject
+	UnloggedParam() IType
 }
 
 type ICommandBuilder interface {
 	ICommand
 	IFunctionBuilder
 
-	// Sets command unlogged (secure) parameter. Must be object or NullQName
+	// Sets command unlogged (secure) parameter. Must be known type from next kinds:
+	//	 - Data
+	//	 - ODoc
+	//	 - Object
+	//
+	// If NullQName passed then it means that command has no unlogged parameter.
+	// If QNameAny passed then it means that command unlogged parameter may be any.
 	SetUnloggedParam(QName) ICommandBuilder
 }

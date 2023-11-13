@@ -27,8 +27,8 @@ func Test_BasicUsage(t *testing.T) {
 
 	testName := "test"
 	appDefBuilder := appdef.New()
-	appDefBuilder.AddElement(appdef.NewQName("test", "el")).
-		AddContainer(testName, appdef.NewQName("test", "el"), 0, appdef.Occurs_Unbounded)
+	appDefBuilder.AddObject(appdef.NewQName("test", "obj")).
+		AddContainer(testName, appdef.NewQName("test", "obj"), 0, appdef.Occurs_Unbounded)
 	appDef, err := appDefBuilder.Build()
 	if err != nil {
 		panic(err)

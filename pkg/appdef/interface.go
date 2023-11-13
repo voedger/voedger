@@ -74,11 +74,6 @@ type IAppDef interface {
 	// Returns nil if not found.
 	Object(name QName) IObject
 
-	// Return Element by name.
-	//
-	// Returns nil if not found.
-	Element(name QName) IElement
-
 	// Enumerates all application records, e.g. documents and contained records
 	//
 	// Records are enumerated in alphabetical order by QName
@@ -213,14 +208,6 @@ type IAppDefBuilder interface {
 	//   - if name is invalid,
 	//   - if type with name already exists.
 	AddObject(name QName) IObjectBuilder
-
-	// Adds new Element type with specified name.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddElement(name QName) IElementBuilder
 
 	// Adds new types for view.
 	//

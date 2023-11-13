@@ -40,9 +40,7 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 	// owner app, owner WSID
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivated"),
-		adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivatedParams")).
-			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
-			AddField(authnz.Field_WSName, appdef.DataKind_string, true).(appdef.IType).QName(),
+		appdef.NullQName,
 		appdef.NullQName,
 		appdef.NullQName,
 		cmdOnWorkspaceDeactivatedExec,
@@ -52,8 +50,7 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 	// target app, profile WSID
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivated"),
-		adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivatedParams")).
-			AddField(field_InvitedToWSID, appdef.DataKind_int64, true).(appdef.IType).QName(),
+		appdef.NullQName,
 		appdef.NullQName,
 		appdef.NullQName,
 		cmdOnJoinedWorkspaceDeactivateExec,
@@ -63,8 +60,7 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 	// ownerApp/ownerWSID
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "OnChildWorkspaceDeactivated"),
-		adf.AddObject(appdef.NewQName(appdef.SysPackage, "OnChildWorkspaceDeactivatedParams")).
-			AddField(Field_OwnerID, appdef.DataKind_int64, true).(appdef.IType).QName(),
+		appdef.NullQName,
 		appdef.NullQName,
 		appdef.NullQName,
 		cmdOnChildWorkspaceDeactivatedExec,

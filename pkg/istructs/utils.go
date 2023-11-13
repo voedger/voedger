@@ -124,14 +124,14 @@ type NullObject struct{ NullRowReader }
 
 func NewNullObject() IObject { return &NullObject{} }
 
-func (*NullObject) QName() appdef.QName                             { return appdef.NullQName }
-func (*NullObject) Elements(container string, cb func(el IElement)) {}
-func (*NullObject) Containers(cb func(container string))            {}
-func (no *NullObject) AsRecord() IRecord                            { return no }
-func (no *NullObject) FieldNames(cb func(fieldName string))         {}
-func (no *NullObject) Container() string                            { return "" }
-func (no *NullObject) ID() RecordID                                 { return NullRecordID }
-func (no *NullObject) Parent() RecordID                             { return NullRecordID }
+func (*NullObject) QName() appdef.QName                         { return appdef.NullQName }
+func (*NullObject) Children(container string, cb func(IObject)) {}
+func (*NullObject) Containers(func(string))                     {}
+func (no *NullObject) AsRecord() IRecord                        { return no }
+func (no *NullObject) FieldNames(func(string))                  {}
+func (no *NullObject) Container() string                        { return "" }
+func (no *NullObject) ID() RecordID                             { return NullRecordID }
+func (no *NullObject) Parent() RecordID                         { return NullRecordID }
 
 // *********************************************************************************************************
 //

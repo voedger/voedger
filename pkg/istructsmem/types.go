@@ -659,7 +659,7 @@ func (row *rowType) FieldNames(cb func(fieldName string)) {
 	if row.container != "" {
 		cb(appdef.SystemField_Container)
 	}
-	if row.typ.Kind().HasSystemField(appdef.SystemField_IsActive) {
+	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
 		cb(appdef.SystemField_IsActive)
 	}
 
@@ -689,8 +689,9 @@ func (row *rowType) HasValue(name string) (value bool) {
 		return row.container != ""
 	}
 	if name == appdef.SystemField_IsActive {
-		// special case: sys.IsActive is presents if required by type kind
-		return row.typ.Kind().HasSystemField(appdef.SystemField_IsActive)
+		// special case: sys.IsActive is presents if exists for type kind
+		exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive)
+		return exists
 	}
 	return row.dyB.HasValue(name)
 }

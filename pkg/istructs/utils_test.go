@@ -339,7 +339,7 @@ func TestNullObject(t *testing.T) {
 	// Should not be called
 	{
 		null.Containers(nil)
-		null.Elements(appdef.NullName, nil)
+		null.Children(appdef.NullName, nil)
 		null.RecordIDs(true, nil)
 		null.FieldNames(nil)
 	}
