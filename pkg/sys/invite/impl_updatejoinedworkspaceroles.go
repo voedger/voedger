@@ -10,7 +10,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func provideCmdUpdateJoinedWorkspaceRoles(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func provideCmdUpdateJoinedWorkspaceRoles(cfg *istructsmem.AppConfigType) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdUpdateJoinedWorkspaceRoles,
 		appdef.NullQName,

@@ -13,18 +13,9 @@ import (
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideQrySqlQuery(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, numCommandProcessors coreutils.CommandProcessorsCount) {
-	cfg.Resources.Add(istructsmem.NewQueryFunction(
-		appdef.NewQName(appdef.SysPackage, "SqlQuery"),
-		appdef.NullQName,
-		appdef.NullQName,
-		execQrySqlQuery(asp, cfg.Name, numCommandProcessors),
-	))
-}
 func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQName, numCommandProcessors coreutils.CommandProcessorsCount) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		wsid := args.Workspace

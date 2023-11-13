@@ -180,9 +180,8 @@ func nearlyEqual(a, b, epsilon float64) bool {
 		return true
 	} else if a == 0 || b == 0 || diff < minNormalFloat64 {
 		return diff < (epsilon * minNormalFloat64)
-	} else {
-		return diff/(absA+absB) < epsilon
 	}
+	return diff/(absA+absB) < epsilon
 }
 
 //TODO (FILTER0002) dynamic prepare and validation?

@@ -19,7 +19,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, itokens itokens.ITokens, federation coreutils.IFederation) {
+func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, itokens itokens.ITokens, federation coreutils.IFederation) {
 
 	// sys/registry/pseudoProfileWSID/q.sys.InitiateResetPasswordByEmail
 	// null auth

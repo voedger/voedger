@@ -37,8 +37,8 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		appdef.NullQName,
 		appdef.NullQName,
 		provideIssuePrincipalTokenExec(asp, itokens)))
-	provideChangePassword(cfg, appDefBuilder)
-	provideResetPassword(cfg, appDefBuilder, asp, itokens, federation)
+	provideChangePassword(cfg)
+	provideResetPassword(cfg, asp, itokens, federation)
 	apps.RegisterSchemaFS(schemasFS, RegistryPackageFQN, ep)
 }
 

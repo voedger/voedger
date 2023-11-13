@@ -25,8 +25,6 @@ const (
 	Field_WSName                    = "WSName"
 	Field_WSKind                    = "WSKind"
 	Field_AppName                   = "AppName"
-	field_NewPrincipalToken         = "NewPrincipalToken"
-	field_EnrichedToken             = "EnrichedToken"
 	DefaultPrincipalTokenExpiration = 24 * time.Hour
 )
 

@@ -14,7 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-func provideChangePassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func provideChangePassword(cfgRegistry *istructsmem.AppConfigType) {
 	cfgRegistry.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdChangePassword,
 		appdef.NullQName,
