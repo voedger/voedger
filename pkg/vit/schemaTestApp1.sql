@@ -476,8 +476,7 @@ ABSTRACT WORKSPACE test_ws (
 		COMMAND MockCmd(MockCmdParams);
 		COMMAND TestCmd(TestCmdParams) RETURNS TestCmdResult;
 
-		-- wait for https://github.com/voedger/voedger/issues/837
-		-- COMMAND CmdODocOne(odoc1);
-		-- COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2);
+		COMMAND CmdODocOne(odoc1);
+		COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2);
 	);
 );

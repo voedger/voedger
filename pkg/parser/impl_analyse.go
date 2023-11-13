@@ -235,9 +235,15 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 		}
 	}
 	if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
-		if err := resolveInCtx(*cmd.UnloggedArg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&cmd.Pos, err)
+		err := resolveInCtx(*cmd.UnloggedArg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil })
+		if err != nil {
+			if err = resolveInCtx(*cmd.UnloggedArg.Def, c, func(*TableStmt, *PackageSchemaAST) error { return nil }); err != nil {
+				c.stmtErr(&cmd.Pos, err)
+			}
 		}
+		// if err := resolveInCtx(*cmd.UnloggedArg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
+		// 	c.stmtErr(&cmd.Pos, err)
+		// }
 	}
 	if cmd.Returns != nil && cmd.Returns.Def != nil {
 		if err := resolveInCtx(*cmd.Returns.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
