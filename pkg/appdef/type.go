@@ -61,8 +61,11 @@ type typeRef struct {
 //
 // If type is not found then returns nil.
 func (r *typeRef) target(app IAppDef) IType {
-	if (r.name == NullQName) || (r.name == QNameANY) {
+	if r.name == NullQName {
 		return nil
+	}
+	if r.name == QNameANY {
+		return app.SysAny()
 	}
 	if (r.t == nil) || (r.t.QName() != r.name) {
 		r.t = app.TypeByName(r.name)
@@ -118,3 +121,17 @@ func (t *nullType) IsSystem() bool { return false }
 func (t *nullType) Kind() TypeKind { return TypeKind_null }
 func (t *nullType) QName() QName   { return NullQName }
 func (t *nullType) String() string { return nullTypeString }
+
+// AnyType is used for return then type is any
+const anyTypeString = "any type"
+
+type anyType struct {
+	nullComment
+	app IAppDef
+}
+
+func (t *anyType) App() IAppDef   { return t.app }
+func (t *anyType) IsSystem() bool { return true }
+func (t *anyType) Kind() TypeKind { return TypeKind_Any }
+func (t *anyType) QName() QName   { return QNameANY }
+func (t *anyType) String() string { return anyTypeString }

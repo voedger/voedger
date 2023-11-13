@@ -24,7 +24,7 @@ func newAppDef() *appDef {
 	app := appDef{
 		types: make(map[QName]interface{}),
 	}
-	app.makeSysDataTypes()
+	app.makeSysPackage()
 	return &app
 }
 
@@ -215,6 +215,10 @@ func (app *appDef) SysData(k DataKind) IData {
 	return nil
 }
 
+func (app *appDef) SysAny() IType {
+	return app.typeByKind(QNameANY, TypeKind_Any).(IType)
+}
+
 func (app *appDef) Type(name QName) IType {
 	if t := app.TypeByName(name); t != nil {
 		return t
@@ -286,6 +290,27 @@ func (app *appDef) appendType(t interface{}) {
 	app.typesOrdered = nil
 }
 
+// Makes system package.
+//
+// Should be called after appDef is created.
+func (app *appDef) makeSysPackage() {
+	app.makeSysDataTypes()
+	app.makeSysTypes()
+}
+
+// Makes system data types.
+func (app *appDef) makeSysDataTypes() {
+	for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
+		_ = newSysData(app, k)
+	}
+}
+
+// Makes system types.
+func (app *appDef) makeSysTypes() {
+	app.appendType(&anyType{app: app})
+}
+
+// Returns type by name and kind. If type is not found then returns nil.
 func (app *appDef) typeByKind(name QName, kind TypeKind) interface{} {
 	if t, ok := app.types[name]; ok {
 		if t.(IType).Kind() == kind {

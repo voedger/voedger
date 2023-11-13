@@ -168,3 +168,35 @@ func Test_QueryValidate(t *testing.T) {
 	_, err := appDef.Build()
 	require.NoError(err)
 }
+
+func Test_AppDef_AddQueryWithAnyResult(t *testing.T) {
+	require := require.New(t)
+
+	var app IAppDef
+	queryName := NewQName("test", "query")
+
+	t.Run("must be ok to add query with any result", func(t *testing.T) {
+		appDef := New()
+
+		query := appDef.AddQuery(queryName)
+		query.
+			SetResult(QNameANY).
+			SetExtension("QueryExt", ExtensionEngineKind_BuiltIn)
+
+		a, err := appDef.Build()
+		require.NoError(err)
+		require.NotNil(a)
+
+		app = a
+	})
+
+	require.NotNil(app)
+
+	t.Run("must be ok to find builded query", func(t *testing.T) {
+		query := app.Query(queryName)
+
+		require.Equal(app.SysAny(), query.Result())
+		require.Equal(QNameANY, query.Result().QName())
+		require.Equal(TypeKind_Any, query.Result().Kind())
+	})
+}

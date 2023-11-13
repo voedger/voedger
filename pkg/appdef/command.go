@@ -42,6 +42,7 @@ func (cmd *command) Validate() (err error) {
 		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown unlogged parameter type: %w", cmd, e))
 	} else if typ := cmd.UnloggedParam(); typ != nil {
 		switch typ.Kind() {
+		case TypeKind_Any: // ok
 		case TypeKind_Data, TypeKind_ODoc, TypeKind_Object: // ok
 		default:
 			err = errors.Join(err, fmt.Errorf("%v: unlogged parameter type is %v, must be ODoc, Object or Data: %w", cmd, typ, ErrInvalidTypeKind))
