@@ -15,7 +15,7 @@ import (
 //   - ICommandBuilder
 type command struct {
 	function
-	unl objRef
+	unl typeRef
 }
 
 func newCommand(app *appDef, name QName) *command {
@@ -30,17 +30,21 @@ func (cmd *command) SetUnloggedParam(name QName) ICommandBuilder {
 	return cmd
 }
 
-func (cmd *command) UnloggedParam() IObject {
-	return cmd.unl.object(cmd.app)
+func (cmd *command) UnloggedParam() IType {
+	return cmd.unl.target(cmd.app)
 }
 
 // Validates command
 func (cmd *command) Validate() (err error) {
 	err = cmd.function.Validate()
 
-	if cmd.unl.name != NullQName {
-		if cmd.unl.object(cmd.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: unlogged object type «%v» is not found: %w", cmd, cmd.unl.name, ErrNameNotFound))
+	if ok, e := cmd.unl.valid(cmd.app); !ok {
+		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown unlogged parameter type: %w", cmd, e))
+	} else if typ := cmd.UnloggedParam(); typ != nil {
+		switch typ.Kind() {
+		case TypeKind_Data, TypeKind_ODoc, TypeKind_Object: // ok
+		default:
+			err = errors.Join(err, fmt.Errorf("%v: unlogged parameter type is %v, must be ODoc, Object or Data: %w", cmd, typ, ErrInvalidTypeKind))
 		}
 	}
 

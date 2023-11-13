@@ -18,6 +18,8 @@ type IAppStructsProvider interface {
 	// ErrAppNotFound can be returned
 	// @ConcurrentAccess
 	AppStructs(aqn AppQName) (structs IAppStructs, err error)
+
+	AppStructsByDef(aqn AppQName, appDef appdef.IAppDef) (structs IAppStructs, err error)
 }
 
 type IAppStructs interface {

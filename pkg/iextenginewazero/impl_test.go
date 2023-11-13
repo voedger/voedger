@@ -99,7 +99,7 @@ func Test_Allocs_ManualGC(t *testing.T) {
 
 	wasmEngine := extEngine.(*wazeroExtEngine)
 
-	const expectedHeapSize = uint32(1999536)
+	const expectedHeapSize = uint32(1999568)
 
 	requireMemStatEx(t, wasmEngine, 1, 0, expectedHeapSize, WasmPreallocatedBufferSize)
 	wasmEngine.SetLimits(limits)
@@ -132,7 +132,7 @@ func Test_Allocs_AutoGC(t *testing.T) {
 	require.NoError(err)
 	defer extEngine.Close()
 
-	const expectedHeapSize = uint32(1999536)
+	const expectedHeapSize = uint32(1999568)
 	var expectedAllocs = uint32(1)
 	var expectedFrees = uint32(0)
 	wasmEngine := extEngine.(*wazeroExtEngine)
@@ -153,12 +153,12 @@ func Test_Allocs_AutoGC(t *testing.T) {
 	// next call will trigger auto-GC
 	require.NoError(extEngine.Invoke(context.Background(), arrAppend, extIO))
 	expectedAllocs += 2
-	expectedFrees += expectedAllocs - 9
-	requireMemStat(t, wasmEngine, expectedAllocs, expectedFrees, WasmPreallocatedBufferSize+128)
+	expectedFrees += expectedAllocs - 7
+	requireMemStat(t, wasmEngine, expectedAllocs, expectedFrees, WasmPreallocatedBufferSize+96)
 
 	// next call will not trigger auto-GC
 	require.NoError(extEngine.Invoke(context.Background(), arrReset, extIO))
-	requireMemStat(t, wasmEngine, expectedAllocs, expectedFrees, WasmPreallocatedBufferSize+128) // stays the same
+	requireMemStat(t, wasmEngine, expectedAllocs, expectedFrees, WasmPreallocatedBufferSize+96) // stays the same
 
 }
 
@@ -377,5 +377,4 @@ func Test_NoAllocs(t *testing.T) {
 	v1 := extIO.intents[1].value.(*mockValueBuilder)
 	require.Equal(int32(12346), v1.items["offs"])
 	require.Equal("sys.InvitationAccepted", v1.items["qname"])
-
 }

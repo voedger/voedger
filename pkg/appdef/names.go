@@ -12,6 +12,9 @@ import (
 // Empty name
 const NullName = ""
 
+// Any name
+const AnyName = "ANY"
+
 // Returns is string is valid identifier and error if not
 func ValidIdent(ident string) (bool, error) {
 	if len(ident) < 1 {

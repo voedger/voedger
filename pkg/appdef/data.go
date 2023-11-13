@@ -98,10 +98,6 @@ func (d *data) DataKind() DataKind {
 	return d.dataKind
 }
 
-func (d *data) IsSystem() bool {
-	return d.QName().Pkg() == SysPackage
-}
-
 func (d *data) String() string {
 	return fmt.Sprintf("%s-data «%v»", d.DataKind().TrimString(), d.QName())
 }

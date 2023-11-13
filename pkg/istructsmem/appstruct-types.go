@@ -23,7 +23,7 @@ import (
 // AppConfigsType: map of applications configurators
 type AppConfigsType map[istructs.AppQName]*AppConfigType
 
-// AddConfig: adds new config for specified application
+// AddConfig: adds new config for specified application or replaces if exists
 func (cfgs *AppConfigsType) AddConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
 	c := newAppConfig(appName, appDef)
 
@@ -171,6 +171,11 @@ func (cfg *AppConfigType) AddCUDValidators(cudValidators ...istructs.CUDValidato
 
 func (cfg *AppConfigType) AddEventValidators(eventValidators ...istructs.EventValidator) {
 	cfg.eventValidators = append(cfg.eventValidators, eventValidators...)
+}
+
+// Returns is application configuration prepared
+func (cfg *AppConfigType) Prepared() bool {
+	return cfg.prepared
 }
 
 // Application configuration parameters

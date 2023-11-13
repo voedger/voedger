@@ -247,13 +247,19 @@ func TestReadValue(t *testing.T) {
 	t.Run("FieldsToMap", func(t *testing.T) {
 		m := FieldsToMap(iValue, appDefs)
 		testBasic(viewName, m, require)
-		require.Equal(map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"}, m["record"])
+		require.Equal(
+			map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple", appdef.SystemField_Container: ""},
+			m["record"],
+		)
 	})
 
 	t.Run("FieldsToMap non-nils only", func(t *testing.T) {
 		m := FieldsToMap(iValue, appDefs, WithNonNilsOnly())
 		testBasic(viewName, m, require)
-		require.Equal(map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"}, m["record"])
+		require.Equal(
+			map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"},
+			m["record"],
+		)
 	})
 
 	t.Run("panic if an object contains DataKind_Record field but is not IValue", func(t *testing.T) {

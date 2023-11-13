@@ -228,17 +228,17 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			if row.QName() == appdef.NullQName {
 				return buf.Bytes()
 			}
-			if row.typ.Kind().HasSystemField(appdef.SystemField_ID) {
+			if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_ID); exists {
 				require.NoError(binary.Write(buf, binary.BigEndian, uint64(row.ID())))
 			}
-			if row.typ.Kind().HasSystemField(appdef.SystemField_ParentID) {
+			if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_ParentID); exists {
 				require.NoError(binary.Write(buf, binary.BigEndian, uint64(row.parentID)))
 			}
-			if row.typ.Kind().HasSystemField(appdef.SystemField_Container) {
+			if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_Container); exists {
 				id, _ := row.containerID()
 				require.NoError(binary.Write(buf, binary.BigEndian, int16(id)))
 			}
-			if row.typ.Kind().HasSystemField(appdef.SystemField_IsActive) {
+			if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
 				require.NoError(binary.Write(buf, binary.BigEndian, row.isActive))
 			}
 			b, err := row.dyB.ToBytes()

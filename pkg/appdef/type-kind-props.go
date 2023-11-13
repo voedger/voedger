@@ -31,7 +31,7 @@ var typeKindProps = map[TypeKind]struct {
 		systemFields: map[string]bool{
 			SystemField_ID:       true,
 			SystemField_QName:    true,
-			SystemField_IsActive: true,
+			SystemField_IsActive: false, // exists, but not required
 		},
 		containerKinds: map[TypeKind]bool{
 			TypeKind_GRecord: true,
@@ -52,7 +52,7 @@ var typeKindProps = map[TypeKind]struct {
 		systemFields: map[string]bool{
 			SystemField_ID:       true,
 			SystemField_QName:    true,
-			SystemField_IsActive: true,
+			SystemField_IsActive: false,
 		},
 		containerKinds: map[TypeKind]bool{
 			TypeKind_CRecord: true,
@@ -94,7 +94,7 @@ var typeKindProps = map[TypeKind]struct {
 		systemFields: map[string]bool{
 			SystemField_ID:       true,
 			SystemField_QName:    true,
-			SystemField_IsActive: true,
+			SystemField_IsActive: false,
 		},
 		containerKinds: map[TypeKind]bool{
 			TypeKind_WRecord: true,
@@ -117,7 +117,7 @@ var typeKindProps = map[TypeKind]struct {
 			SystemField_QName:     true,
 			SystemField_ParentID:  true,
 			SystemField_Container: true,
-			SystemField_IsActive:  true,
+			SystemField_IsActive:  false,
 		},
 		containerKinds: map[TypeKind]bool{
 			TypeKind_GRecord: true,
@@ -140,7 +140,7 @@ var typeKindProps = map[TypeKind]struct {
 			SystemField_QName:     true,
 			SystemField_ParentID:  true,
 			SystemField_Container: true,
-			SystemField_IsActive:  true,
+			SystemField_IsActive:  false,
 		},
 		containerKinds: map[TypeKind]bool{
 			TypeKind_CRecord: true,
@@ -185,7 +185,7 @@ var typeKindProps = map[TypeKind]struct {
 			SystemField_QName:     true,
 			SystemField_ParentID:  true,
 			SystemField_Container: true,
-			SystemField_IsActive:  true,
+			SystemField_IsActive:  false,
 		},
 		containerKinds: map[TypeKind]bool{
 			TypeKind_WRecord: true,
@@ -223,30 +223,11 @@ var typeKindProps = map[TypeKind]struct {
 			DataKind_RecordID: true,
 		},
 		systemFields: map[string]bool{
-			SystemField_QName: true,
-		},
-		containerKinds: map[TypeKind]bool{
-			TypeKind_Element: true,
-		},
-	},
-	TypeKind_Element: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_bytes:    true,
-			DataKind_string:   true,
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
-		},
-		systemFields: map[string]bool{
 			SystemField_QName:     true,
-			SystemField_Container: true,
+			SystemField_Container: false, // exists, but required for nested (child) objects only
 		},
 		containerKinds: map[TypeKind]bool{
-			TypeKind_Element: true,
+			TypeKind_Object: true,
 		},
 	},
 	TypeKind_Query: {

@@ -84,7 +84,7 @@ func (m *MockObject) AsRecordID(name string) istructs.RecordID {
 func (m *MockObject) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {
 	m.Called(includeNulls, cb)
 }
-func (m *MockObject) Elements(container string, cb func(el istructs.IElement)) {
+func (m *MockObject) Children(container string, cb func(istructs.IObject)) {
 	m.Called(container, cb)
 }
 

@@ -36,6 +36,10 @@ func (t *typ) App() IAppDef {
 	return t.app
 }
 
+func (t *typ) IsSystem() bool {
+	return t.QName().Pkg() == SysPackage
+}
+
 func (t *typ) Kind() TypeKind {
 	return t.kind
 }
@@ -46,6 +50,38 @@ func (t *typ) QName() QName {
 
 func (t *typ) String() string {
 	return fmt.Sprintf("%s «%v»", t.Kind().TrimString(), t.QName())
+}
+
+type typeRef struct {
+	name QName
+	t    IType
+}
+
+// Returns type by reference.
+//
+// If type is not found then returns nil.
+func (r *typeRef) target(app IAppDef) IType {
+	if (r.name == NullQName) || (r.name == QNameANY) {
+		return nil
+	}
+	if (r.t == nil) || (r.t.QName() != r.name) {
+		r.t = app.TypeByName(r.name)
+	}
+	return r.t
+}
+
+// Sets reference name
+func (r *typeRef) setName(n QName) {
+	r.name = n
+	r.t = nil
+}
+
+// Returns is reference valid
+func (r *typeRef) valid(app IAppDef) (bool, error) {
+	if (r.name == NullQName) || (r.name == QNameANY) || (r.target(app) != nil) {
+		return true, nil
+	}
+	return false, fmt.Errorf("type «%v» is not found: %w", r.name, ErrNameNotFound)
 }
 
 // Validate specified type.
@@ -78,6 +114,7 @@ var NullType = new(nullType)
 type nullType struct{ nullComment }
 
 func (t *nullType) App() IAppDef   { return nil }
+func (t *nullType) IsSystem() bool { return false }
 func (t *nullType) Kind() TypeKind { return TypeKind_null }
 func (t *nullType) QName() QName   { return NullQName }
 func (t *nullType) String() string { return nullTypeString }
