@@ -361,23 +361,29 @@ func (c *buildContext) views() error {
 	return nil
 }
 
+func setParam(ictx *iterateCtx, v *AnyOrVoidOrDef, cb func(qn appdef.QName)) {
+	if v.Def != nil {
+		argQname := buildQname(ictx, v.Def.Package, v.Def.Name)
+		cb(argQname)
+	} else if v.Any {
+		cb(appdef.QNameANY)
+	}
+}
+
 func (c *buildContext) commands() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(cmd *CommandStmt, ictx *iterateCtx) {
 			qname := schema.NewQName(cmd.Name)
 			b := c.builder.AddCommand(qname)
 			c.addComments(cmd, b)
-			if cmd.Arg != nil && cmd.Arg.Def != nil {
-				argQname := buildQname(ictx, cmd.Arg.Def.Package, cmd.Arg.Def.Name)
-				b.SetParam(argQname)
+			if cmd.Arg != nil {
+				setParam(ictx, cmd.Arg, func(qn appdef.QName) { b.SetParam(qn) })
 			}
-			if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
-				argQname := buildQname(ictx, cmd.UnloggedArg.Def.Package, cmd.UnloggedArg.Def.Name)
-				b.SetUnloggedParam(argQname)
+			if cmd.UnloggedArg != nil {
+				setParam(ictx, cmd.UnloggedArg, func(qn appdef.QName) { b.SetUnloggedParam(qn) })
 			}
-			if cmd.Returns != nil && cmd.Returns.Def != nil {
-				retQname := buildQname(ictx, cmd.Returns.Def.Package, cmd.Returns.Def.Name)
-				b.SetResult(retQname)
+			if cmd.Returns != nil {
+				setParam(ictx, cmd.Returns, func(qn appdef.QName) { b.SetResult(qn) })
 			}
 			if cmd.Engine.WASM {
 				b.SetExtension(cmd.GetName(), appdef.ExtensionEngineKind_WASM)
@@ -395,19 +401,11 @@ func (c *buildContext) queries() error {
 			qname := schema.NewQName(q.Name)
 			b := c.builder.AddQuery(qname)
 			c.addComments(q, b)
-			if q.Arg != nil && q.Arg.Def != nil {
-				argQname := buildQname(ictx, q.Arg.Def.Package, q.Arg.Def.Name)
-				b.SetParam(argQname)
+			if q.Arg != nil {
+				setParam(ictx, q.Arg, func(qn appdef.QName) { b.SetParam(qn) })
 			}
 
-			if q.Returns.Any {
-				b.SetResult(appdef.QNameANY)
-			} else {
-				if q.Returns.Def != nil {
-					retQname := buildQname(ictx, q.Returns.Def.Package, q.Returns.Def.Name)
-					b.SetResult(retQname)
-				}
-			}
+			setParam(ictx, &q.Returns, func(qn appdef.QName) { b.SetResult(qn) })
 
 			if q.Engine.WASM {
 				b.SetExtension(string(q.Name), appdef.ExtensionEngineKind_WASM)
