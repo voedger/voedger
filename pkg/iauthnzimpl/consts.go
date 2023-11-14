@@ -79,6 +79,7 @@ var (
 	qNameQryGetUPTransactionsOverview               = appdef.NewQName(airPackage, "GetUPTransactionsOverview")
 	qNameQryGetUPTransactionReceipts                = appdef.NewQName(airPackage, "GetUPTransactionReceipts")
 	qNameQryGetUPTransferInstrument                 = appdef.NewQName(airPackage, "GetUPTransferInstrument")
+	qNameCmdRetryTransferUPPayout                   = appdef.NewQName(airPackage, "RetryTransferUPPayout")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
