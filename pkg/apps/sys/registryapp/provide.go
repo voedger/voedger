@@ -24,6 +24,6 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 		// sys/registry resources
 		registry.Provide(cfg, appDefBuilder, apis.IAppStructsProvider, apis.ITokens, apis.IFederation, ep)
 		cfg.AddSyncProjectors(registry.ProvideSyncProjectorLoginIdxFactory())
-		apps.RegisterSchemaFS(registrySchemaFS, "github.com/voedger/voedger/pkg/apps/sys/registryapp", ep)
+		apps.RegisterSchemaFS(registrySchemaFS, RegistryAppFQN, ep)
 	}
 }

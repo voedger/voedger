@@ -39,21 +39,22 @@ var testCfgs istructsmem.AppConfigsType
 
 const maxPrepareQueries = 10
 
-func appConfigs() (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
+func appConfigs(t *testing.T) (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
+	require := require.New(t)
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	asf := istorage.ProvideMem()
 	appStorageProvider := istorageimpl.Provide(asf)
 	// конфиг приложения airs-bp
-	adf := appdef.New()
-	cfg := cfgs.AddConfig(test.appQName, adf)
+	adb := appdef.New()
+	cfg := cfgs.AddConfig(test.appQName, adb)
 	{
-		Provide(cfg, adf)
+		Provide(cfg, adb)
 	}
 	{ // "modify" function
 		cfg.Resources.Add(istructsmem.NewCommandFunction(test.modifyCmdName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 	}
 	{ // CDoc: articles
-		articles := adf.AddCDoc(test.tableArticles)
+		articles := adb.AddCDoc(test.tableArticles)
 		articles.
 			AddField(test.articleNameIdent, appdef.DataKind_string, true).
 			AddField(test.articleNumberIdent, appdef.DataKind_int32, false).
@@ -62,26 +63,26 @@ func appConfigs() (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
 			AddContainer(test.tableArticlePrices.Entity(), test.tableArticlePrices, appdef.Occurs(0), appdef.Occurs(100))
 	}
 	{ // CDoc: departments
-		departments := adf.AddCDoc(test.tableDepartments)
+		departments := adb.AddCDoc(test.tableDepartments)
 		departments.
 			AddField(test.depNameIdent, appdef.DataKind_string, true).
 			AddField(test.depNumberIdent, appdef.DataKind_int32, false)
 	}
 	{ // CDoc: periods
-		periods := adf.AddCDoc(test.tablePeriods)
+		periods := adb.AddCDoc(test.tablePeriods)
 		periods.
 			AddField(test.periodNameIdent, appdef.DataKind_string, true).
 			AddField(test.periodNumberIdent, appdef.DataKind_int32, false)
 	}
 	{ // CDoc: prices
-		prices := adf.AddCDoc(test.tablePrices)
+		prices := adb.AddCDoc(test.tablePrices)
 		prices.
 			AddField(test.priceNameIdent, appdef.DataKind_string, true).
 			AddField(test.priceNumberIdent, appdef.DataKind_int32, false)
 	}
 
 	{ // CDoc: article prices
-		articlesPrices := adf.AddCRecord(test.tableArticlePrices)
+		articlesPrices := adb.AddCRecord(test.tableArticlePrices)
 		articlesPrices.
 			AddField(test.articlePricesPriceIdIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePricesPriceIdent, appdef.DataKind_float32, true)
@@ -90,19 +91,18 @@ func appConfigs() (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
 	}
 
 	{ // CDoc: article price exceptions
-		articlesPricesExceptions := adf.AddCRecord(test.tableArticlePriceExceptions)
+		articlesPricesExceptions := adb.AddCRecord(test.tableArticlePriceExceptions)
 		articlesPricesExceptions.
 			AddField(test.articlePriceExceptionsPeriodIdIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePriceExceptionsPriceIdent, appdef.DataKind_float32, true)
 	}
 
 	// TODO: remove it after https://github.com/voedger/voedger/issues/56
-	if _, err := adf.Build(); err != nil {
-		panic(err)
-	}
+	_, err := adb.Build()
+	require.NoError(err)
 
 	collectionFuncResource = cfg.Resources.QueryResource(qNameQueryCollection)
-	cdocFuncResource = cfg.Resources.QueryResource(qNameCDocFunc)
+	cdocFuncResource = cfg.Resources.QueryResource(qNameGetCDocFunc)
 	stateFuncResource = cfg.Resources.QueryResource(qNameQueryState)
 
 	testCfgs = cfgs
@@ -118,7 +118,7 @@ func appConfigs() (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
 
 func TestBasicUsage_Collection(t *testing.T) {
 	require := require.New(t)
-	appConfigs, asp := appConfigs()
+	appConfigs, asp := appConfigs(t)
 	provider := istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
 	as, err := provider.AppStructs(test.appQName)
@@ -185,7 +185,7 @@ func TestBasicUsage_Collection(t *testing.T) {
 
 func Test_updateChildRecord(t *testing.T) {
 	require := require.New(t)
-	appConfigs, asp := appConfigs()
+	appConfigs, asp := appConfigs(t)
 	provider := istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
 	as, err := provider.AppStructs(test.appQName)
@@ -245,7 +245,7 @@ func Test_Collection_3levels(t *testing.T) {
 	var err error
 	require := require.New(t)
 
-	appConfigs, asp := appConfigs()
+	appConfigs, asp := appConfigs(t)
 	provider = istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
 	as, err := provider.AppStructs(test.appQName)
@@ -612,7 +612,8 @@ func TestBasicUsage_State(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(`{"args":{"After":0},"elements":[{"fields":["State"]}]}`), stateFuncResource, "", sysToken)
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(`{"args":{"After":0},"elements":[{"fields":["State"]}]}`),
+		stateFuncResource, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -963,7 +964,7 @@ func newModify(app istructs.IAppStructs, gen *idsGeneratorType, cb eventCallback
 
 func Test_Idempotency(t *testing.T) {
 	require := require.New(t)
-	appConfigs, asp := appConfigs()
+	appConfigs, asp := appConfigs(t)
 	provider := istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
 	as, err := provider.AppStructs(test.appQName)

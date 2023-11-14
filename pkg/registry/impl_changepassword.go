@@ -14,15 +14,11 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-func provideChangePassword(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func provideChangePassword(cfgRegistry *istructsmem.AppConfigType) {
 	cfgRegistry.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdChangePassword,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "ChangePasswordParams")).
-			AddField(authnz.Field_Login, appdef.DataKind_string, true).
-			AddField(authnz.Field_AppName, appdef.DataKind_string, true).(appdef.IType).QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "ChangePasswordUnloggedParams")).
-			AddField(field_OldPassword, appdef.DataKind_string, true).
-			AddField(field_NewPassword, appdef.DataKind_string, true).(appdef.IType).QName(),
+		appdef.NullQName,
+		appdef.NullQName,
 		appdef.NullQName,
 		cmdChangePasswordExec,
 	))

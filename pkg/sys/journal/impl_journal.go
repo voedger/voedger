@@ -21,16 +21,8 @@ import (
 func provideQryJournal(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Journal"),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "JournalParams")).
-			AddField(field_From, appdef.DataKind_int64, true).
-			AddField(field_Till, appdef.DataKind_int64, true).
-			AddField(Field_EventTypes, appdef.DataKind_string, true).
-			AddField(field_IndexForTimestamps, appdef.DataKind_string, false).
-			AddField(field_RangeUnit, appdef.DataKind_string, false).(appdef.IType).QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "JournalResult")).
-			AddField(Field_Offset, appdef.DataKind_int64, true).
-			AddField(Field_EventTime, appdef.DataKind_int64, true).
-			AddField(Field_Event, appdef.DataKind_string, true).(appdef.IType).QName(),
+		appdef.NullQName,
+		appdef.NullQName,
 		qryJournalExec(ep, appDefBuilder),
 	))
 }

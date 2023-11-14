@@ -12,16 +12,15 @@ import (
 )
 
 const (
-	Field_Email              = "Email"
-	field_Entity             = "Entity"
-	field_Field              = "Field"
-	field_VerificationToken  = "VerificationToken"
-	field_VerificationCode   = "VerificationCode"
-	field_VerifiedValueToken = "VerifiedValueToken"
-	field_Reason             = "Reason"
-	field_TargetWSID         = "TargetWSID"
-	field_ForRegistry        = "ForRegistry"
-	field_Language           = "Language"
+	Field_Email             = "Email"
+	field_Entity            = "Entity"
+	field_Field             = "Field"
+	field_VerificationToken = "VerificationToken"
+	field_VerificationCode  = "VerificationCode"
+	field_Reason            = "Reason"
+	field_TargetWSID        = "TargetWSID"
+	field_ForRegistry       = "ForRegistry"
+	field_Language          = "Language"
 
 	VerifiedValueTokenDuration              = 10 * time.Minute
 	VerificationTokenDuration               = 10 * time.Minute
@@ -35,6 +34,7 @@ const (
 	IssueVerifiedValueToken_Period          = time.Hour
 	IssueVerifiedValueToken_MaxAllowed      = uint32(3)
 	verifyEmailReason                       = "to confirm your email."
+	threeDays                               = 72 * time.Hour
 )
 
 var (
@@ -45,5 +45,5 @@ var (
 		Period:                IssueVerifiedValueToken_Period,
 		MaxAllowedPerDuration: IssueVerifiedValueToken_MaxAllowed,
 	}
-	qNameAPSendEmailVerificationCode = appdef.NewQName(appdef.SysPackage, "SendEmailVerificationCode")
+	qNameAPApplySendEmailVerificationCode = appdef.NewQName(appdef.SysPackage, "ApplySendEmailVerificationCode")
 )
