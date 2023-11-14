@@ -22,7 +22,7 @@ jobs:
     uses: voedger/voedger/.github/workflows/ci-vulncheck.yml@main
   call-workflow-cd-voeger:
     needs: call-workflow-vulncheck
-    if: ${{ (contains(github.repository, 'voedger/voedger' )
+    if: ${{ (contains(github.repository, 'voedger/voedger' ) }}
     uses: voedger/voedger/.github/workflows/cd-voedger.yml@main
     secrets:
       dockerusername: ${{ secrets.DOCKER_USERNAME }}
