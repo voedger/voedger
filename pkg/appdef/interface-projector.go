@@ -54,14 +54,23 @@ type IProjectorBuilder interface {
 
 	// Sets engine.
 	//
+	// If name is empty then default is projector type name (entity part only without package).
+	//
 	// # Panics:
-	//	- if name is empty or invalid identifier
+	//	- if name is invalid identifier
 	SetExtension(name string, engine ExtensionEngineKind, comment ...string) IProjectorBuilder
 
 	// Adds event to trigger the projector.
+	//
+	// Record can be some record type or QNameANY.
+	//
+	// If event kind is missed then default is ProjectorEventKind_Any.
+	//
+	// # Panics:
+	//	- if record is empty (NullQName) or unknown record type.
 	AddEvent(record QName, event ...ProjectorEventKind) IProjectorBuilder
 
-	// Sets event comment
+	// Sets event comment.
 	//
 	// # Panics:
 	//	- if event for record is not added
