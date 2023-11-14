@@ -20,7 +20,10 @@ func newValidateCmd() *cobra.Command {
 
 func validate(cmd *cobra.Command, arg []string) error {
 
-	cluster := newCluster()
+	cluster, err := newCluster()
+	if err != nil {
+		return err
+	}
 
 	// nolint
 	mkCommandDirAndLogFile(cmd, cluster)
@@ -30,7 +33,7 @@ func validate(cmd *cobra.Command, arg []string) error {
 		return ErrClusterConfNotFound
 	}
 
-	err := cluster.validate()
+	err = cluster.validate()
 	if err == nil {
 		logger.Info(green("cluster configuration is ok"))
 	}

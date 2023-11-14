@@ -88,7 +88,11 @@ func parseDeployArgs(args []string) error {
 // nolint
 func initCE(cmd *cobra.Command, args []string) error {
 
-	cluster := newCluster()
+	cluster, err := newCluster()
+	if err != nil {
+		return err
+	}
+
 	defer func(cluster *clusterType) {
 		err := cluster.saveToJSON()
 		if err != nil {
@@ -101,12 +105,12 @@ func initCE(cmd *cobra.Command, args []string) error {
 	}
 
 	c := newCmd(ckInit, "CE "+strings.Join(args, " "))
-	if err := cluster.applyCmd(c); err != nil {
+	if err = cluster.applyCmd(c); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
 
-	err := mkCommandDirAndLogFile(cmd, cluster)
+	err = mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}
@@ -131,7 +135,10 @@ func initCE(cmd *cobra.Command, args []string) error {
 // nolint
 func initSE(cmd *cobra.Command, args []string) error {
 
-	cluster := newCluster()
+	cluster, err := newCluster()
+	if err != nil {
+		return err
+	}
 
 	if !cluster.Draft {
 		return ErrClusterConfAlreadyExists
@@ -150,7 +157,7 @@ func initSE(cmd *cobra.Command, args []string) error {
 			logger.Error(err.Error())
 		}
 	}(cluster)
-	err := mkCommandDirAndLogFile(cmd, cluster)
+	err = mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}
