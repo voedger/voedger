@@ -73,8 +73,8 @@ func TestBasicUsage(t *testing.T) {
 
 	appDef.AddQuery(appdef.NewQName("test", "query")).
 		SetParam(objName).
-		SetResult(objName).
-		SetExtension("cmd", appdef.ExtensionEngineKind_BuiltIn)
+		SetResult(appdef.QNameANY).
+		SetExtension("query", appdef.ExtensionEngineKind_BuiltIn)
 
 	res := &mockResources{}
 	res.

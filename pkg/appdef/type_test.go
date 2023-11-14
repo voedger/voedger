@@ -25,3 +25,17 @@ func Test_NullType(t *testing.T) {
 
 	require.Contains(fmt.Sprint(NullType), "null type")
 }
+
+func Test_AnyType(t *testing.T) {
+	require := require.New(t)
+
+	require.Empty(AnyType.Comment())
+	require.Empty(AnyType.CommentLines())
+
+	require.Nil(AnyType.App())
+	require.Equal(QNameANY, AnyType.QName())
+	require.Equal(TypeKind_Any, AnyType.Kind())
+	require.False(AnyType.IsSystem())
+
+	require.Contains(fmt.Sprint(AnyType), "any type")
+}
