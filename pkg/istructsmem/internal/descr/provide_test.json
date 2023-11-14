@@ -214,7 +214,6 @@
           "test.cmd": {
             "Name": "test.cmd",
             "Arg": "test.obj",
-            "Result": "test.obj",
             "Extension": {
               "Name": "cmd",
               "Engine": "ExtensionEngineKind_WASM"
@@ -226,9 +225,9 @@
           "test.query": {
             "Name": "test.query",
             "Arg": "test.obj",
-            "Result": "test.obj",
+            "Result": "sys.ANY",
             "Extension": {
-              "Name": "cmd",
+              "Name": "query",
               "Engine": "ExtensionEngineKind_BuiltIn"
             }
           }
