@@ -84,11 +84,6 @@ type IAppDef interface {
 	// Structures are enumerated in alphabetical order by QName
 	Structures(func(IStructure))
 
-	// Returns any type substitute from system package.
-	//
-	// This may successfully compared with functions params or result return.
-	SysAny() IType
-
 	// Return View by name.
 	//
 	// Returns nil if not found.

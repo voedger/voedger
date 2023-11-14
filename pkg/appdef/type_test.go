@@ -29,17 +29,13 @@ func Test_NullType(t *testing.T) {
 func Test_AnyType(t *testing.T) {
 	require := require.New(t)
 
-	app := New()
+	require.Empty(AnyType.Comment())
+	require.Empty(AnyType.CommentLines())
 
-	var any IType = &anyType{app: app}
+	require.Nil(AnyType.App())
+	require.Equal(QNameANY, AnyType.QName())
+	require.Equal(TypeKind_Any, AnyType.Kind())
+	require.False(AnyType.IsSystem())
 
-	require.Empty(any.Comment())
-	require.Empty(any.CommentLines())
-
-	require.Equal(app, any.App())
-	require.Equal(QNameANY, any.QName())
-	require.Equal(TypeKind_Any, any.Kind())
-	require.True(any.IsSystem())
-
-	require.Contains(fmt.Sprint(any), "any type")
+	require.Contains(fmt.Sprint(AnyType), "any type")
 }

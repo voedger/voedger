@@ -65,7 +65,7 @@ func (r *typeRef) target(app IAppDef) IType {
 		return nil
 	}
 	if r.name == QNameANY {
-		return app.SysAny()
+		return AnyType
 	}
 	if (r.t == nil) || (r.t.QName() != r.name) {
 		r.t = app.TypeByName(r.name)
@@ -110,9 +110,9 @@ func validateType(t IType) (err error) {
 }
 
 // NullType is used for return then type is not founded
-const nullTypeString = "null type"
-
 var NullType = new(nullType)
+
+const nullTypeString = "null type"
 
 type nullType struct{ nullComment }
 
@@ -123,6 +123,8 @@ func (t *nullType) QName() QName   { return NullQName }
 func (t *nullType) String() string { return nullTypeString }
 
 // AnyType is used for return then type is any
+var AnyType = new(anyType)
+
 const anyTypeString = "any type"
 
 type anyType struct {
@@ -130,8 +132,8 @@ type anyType struct {
 	app IAppDef
 }
 
-func (t *anyType) App() IAppDef   { return t.app }
-func (t *anyType) IsSystem() bool { return true }
+func (t *anyType) App() IAppDef   { return nil }
+func (t *anyType) IsSystem() bool { return false }
 func (t *anyType) Kind() TypeKind { return TypeKind_Any }
 func (t *anyType) QName() QName   { return QNameANY }
 func (t *anyType) String() string { return anyTypeString }

@@ -195,7 +195,7 @@ func Test_AppDef_AddQueryWithAnyResult(t *testing.T) {
 	t.Run("must be ok to find builded query", func(t *testing.T) {
 		query := app.Query(queryName)
 
-		require.Equal(app.SysAny(), query.Result())
+		require.Equal(AnyType, query.Result())
 		require.Equal(QNameANY, query.Result().QName())
 		require.Equal(TypeKind_Any, query.Result().Kind())
 	})
