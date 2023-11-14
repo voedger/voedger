@@ -12,11 +12,12 @@ func _() {
 	_ = x[ProjectorEventKind_Update-2]
 	_ = x[ProjectorEventKind_Activate-3]
 	_ = x[ProjectorEventKind_Deactivate-4]
+	_ = x[ProjectorEventKind_Count-5]
 }
 
-const _ProjectorEventKind_name = "ProjectorEventKind_InsertProjectorEventKind_UpdateProjectorEventKind_ActivateProjectorEventKind_Deactivate"
+const _ProjectorEventKind_name = "ProjectorEventKind_InsertProjectorEventKind_UpdateProjectorEventKind_ActivateProjectorEventKind_DeactivateProjectorEventKind_Count"
 
-var _ProjectorEventKind_index = [...]uint8{0, 25, 50, 77, 106}
+var _ProjectorEventKind_index = [...]uint8{0, 25, 50, 77, 106, 130}
 
 func (i ProjectorEventKind) String() string {
 	i -= 1

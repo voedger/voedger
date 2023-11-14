@@ -21,12 +21,12 @@ type IProjector interface {
 	// Returns projector states.
 	//
 	// State is a storage to get data.
-	States() []QName
+	States() QNames
 
 	// Returns projector intents.
 	//
 	// Intent is a storage to put data.
-	Intents() []QName
+	Intents() QNames
 }
 
 // Describe event to trigger the projector.
@@ -77,8 +77,8 @@ type IProjectorBuilder interface {
 	SetEventComment(record QName, comment ...string) IProjectorBuilder
 
 	// Adds state to the projector.
-	AddState(state ...QName) IProjectorBuilder
+	AddState(...QName) IProjectorBuilder
 
 	// Adds intent to the projector.
-	AddIntent(intent ...QName) IProjectorBuilder
+	AddIntent(...QName) IProjectorBuilder
 }

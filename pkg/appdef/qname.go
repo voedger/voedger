@@ -9,6 +9,7 @@ package appdef
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -34,6 +35,14 @@ var (
 //
 // See #858 (Support QNameAny as function result)
 var QNameANY = NewQName(SysPackage, AnyName)
+
+// Compare two qualified names
+func CompareQName(a, b QName) int {
+	if a.pkg != b.pkg {
+		return strings.Compare(a.pkg, b.pkg)
+	}
+	return strings.Compare(a.entity, b.entity)
+}
 
 // Builds a qualified name from two parts (from package name and from entity name)
 func NewQName(pkgName, entityName string) QName {
@@ -125,4 +134,32 @@ func ValidQName(qName QName) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+// Slice of QNames.
+//
+// Slice is sorted and has no duplicates.
+//
+// Use Append() to add QNames to slice.
+// Use Contains() and Find() to search for QName in slice.
+type QNames []QName
+
+// Appends QNames to slice. Duplicate values are ignored. Result slice is sorted.
+func (qns *QNames) Append(n ...QName) {
+	for _, q := range n {
+		if i, ok := qns.Find(q); !ok {
+			*qns = slices.Insert(*qns, i, q)
+		}
+	}
+}
+
+// Returns true if slice contains specified QName
+func (qns QNames) Contains(n QName) bool {
+	_, ok := qns.Find(n)
+	return ok
+}
+
+// Returns index of QName in slice and true if found.
+func (qns QNames) Find(n QName) (int, bool) {
+	return slices.BinarySearchFunc(qns, n, CompareQName)
 }
