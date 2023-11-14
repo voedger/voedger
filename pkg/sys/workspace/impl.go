@@ -27,6 +27,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
+
+
 // Projector<A, InvokeCreateWorkspaceID>
 // triggered by CDoc<ChildWorkspace> or CDoc<Login> (both not singletons)
 // wsid - pseudoProfile: crc32(wsName) or crc32(login)
@@ -83,6 +85,7 @@ func ProjectInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName i
 		return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %w. Body:\n%s", err, body)
 	}
 	return nil
+}
 
 // c.sys.CreateWorkspaceID
 // targetApp/appWS
