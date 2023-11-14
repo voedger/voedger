@@ -14,15 +14,15 @@ import (
 )
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federation coreutils.IFederation, asp istructs.IAppStructsProvider,
-	smtpCfg smtp.Cfg) {
-	provideQryInitiateEmailVerification(cfg, appDefBuilder, itokens, asp, federation)
-	provideQryIssueVerifiedValueToken(cfg, appDefBuilder, itokens, asp)
-	provideCmdSendEmailVerificationCode(cfg, appDefBuilder)
-	appDefBuilder.AddObject(qNameAPSendEmailVerificationCode)
+	smtpCfg smtp.Cfg, timeFunc coreutils.TimeFunc) {
+	provideQryInitiateEmailVerification(cfg, itokens, asp, federation)
+	provideQryIssueVerifiedValueToken(cfg, itokens, asp)
+	provideCmdSendEmailVerificationCode(cfg)
+	appDefBuilder.AddObject(qNameAPApplySendEmailVerificationCode)
 	cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         qNameAPSendEmailVerificationCode,
-			Func:         sendEmailVerificationCodeProjector(federation, smtpCfg),
+			Name:         qNameAPApplySendEmailVerificationCode,
+			Func:         applySendEmailVerificationCode(federation, smtpCfg, timeFunc),
 			EventsFilter: []appdef.QName{QNameCommandSendEmailVerificationCode},
 			NonBuffered:  true,
 		}

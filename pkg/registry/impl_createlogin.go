@@ -67,7 +67,7 @@ func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecComman
 		if err != nil {
 			return err
 		}
-		profileCluster := args.ArgumentObject.AsInt32(authnz.Field_ProfileClusterID)
+		profileCluster := args.ArgumentObject.AsInt32(authnz.Field_ProfileCluster)
 
 		kb, err := args.State.KeyBuilder(state.Record, QNameCDocLogin)
 		if err != nil {
@@ -77,7 +77,7 @@ func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecComman
 		if err != nil {
 			return err
 		}
-		cdocLogin.PutInt32(authnz.Field_ProfileClusterID, profileCluster)
+		cdocLogin.PutInt32(authnz.Field_ProfileCluster, profileCluster)
 		cdocLogin.PutBytes(field_PwdHash, pwdSaltedHash)
 		cdocLogin.PutString(authnz.Field_AppName, appName)
 		cdocLogin.PutInt32(authnz.Field_SubjectKind, args.ArgumentObject.AsInt32(authnz.Field_SubjectKind))

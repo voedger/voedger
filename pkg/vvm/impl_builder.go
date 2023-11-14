@@ -60,14 +60,34 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 			case appdef.TypeKind_Command:
 				cmd := t.(appdef.ICommand)
 				cmdResource := cfg.Resources.QueryResource(cmd.QName()).(istructs.ICommandFunction)
-				istructsmem.ReplaceCommandDefinitions(cmdResource, cmd.Param().QName(), cmd.UnloggedParam().QName(), cmd.Result().QName())
+				resQName := appdef.NullQName
+				if cmd.Result() != nil {
+					resQName = cmd.Result().QName()
+				}
+				paramQName := appdef.NullQName
+				if cmd.Param() != nil {
+					paramQName = cmd.Param().QName()
+				}
+				unloggedParamQName := appdef.NullQName
+				if cmd.UnloggedParam() != nil {
+					unloggedParamQName = cmd.UnloggedParam().QName()
+				}
+				istructsmem.ReplaceCommandDefinitions(cmdResource, paramQName, unloggedParamQName, resQName)
 			case appdef.TypeKind_Query:
 				if t.QName() == qNameQueryCollection {
 					return
 				}
 				query := t.(appdef.IQuery)
 				queryResource := cfg.Resources.QueryResource(query.QName()).(istructs.IQueryFunction)
-				istructsmem.ReplaceQueryDefinitions(queryResource, query.Param().QName(), query.Result().QName())
+				paramQName := appdef.NullQName
+				if query.Param() != nil {
+					paramQName = query.Param().QName()
+				}
+				resQName := appdef.NullQName
+				if query.Result() != nil {
+					resQName = query.Result().QName()
+				}
+				istructsmem.ReplaceQueryDefinitions(queryResource, paramQName, resQName)
 			}
 		})
 	}

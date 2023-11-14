@@ -18,16 +18,13 @@ func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDe
 	cfgRegistry.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "RefreshPrincipalToken"),
 		appdef.NullQName,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "RefreshPrincipalTokenResult")).
-			AddField(field_NewPrincipalToken, appdef.DataKind_string, true).(appdef.IType).QName(),
+		appdef.NullQName,
 		provideRefreshPrincipalTokenExec(itokens),
 	))
 	cfgRegistry.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "EnrichPrincipalToken"),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "EnrichPrincipalTokenParams")).
-			AddField(Field_Login, appdef.DataKind_string, true).(appdef.IType).QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "EnrichPrincipalTokenResult")).
-			AddField(field_EnrichedToken, appdef.DataKind_string, true).(appdef.IType).QName(),
+		appdef.NullQName,
+		appdef.NullQName,
 		provideExecQryEnrichPrincipalToken(atf),
 	))
 }

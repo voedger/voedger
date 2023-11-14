@@ -52,7 +52,7 @@ func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 			{
 				"args": {
 					"WSName": "%s",
-					"WSKind": "app1.WSKind",
+					"WSKind": "app1pkg.WSKind",
 					"WSKindInitializationData": "{\"IntFld\": 10}",
 					"TemplateName": "test_template",
 					"WSClusterID": 1
@@ -70,7 +70,7 @@ func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 		require.Equal(istructs.ClusterID(1), childWS.WSID.ClusterID())
 
 		t.Run("create a new workspace with an existing name -> 409 conflict", func(t *testing.T) {
-			body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1.WSKind","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
+			body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1pkg.WSKind","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
 			resp := vit.PostWS(parentWS, "c.sys.InitChildWorkspace", body, coreutils.Expect409())
 			resp.Println()
 		})
@@ -99,7 +99,7 @@ func TestForeignAuthorization(t *testing.T) {
 	wsName := vit.NextName()
 
 	// init child workspace
-	body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1.WSKind","WSKindInitializationData": "{\"IntFld\": 10}","TemplateName": "test_template","WSClusterID": 42}}`, wsName)
+	body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1pkg.WSKind","WSKindInitializationData": "{\"IntFld\": 10}","TemplateName": "test_template","WSClusterID": 42}}`, wsName)
 	vit.PostWS(parentWS, "c.sys.InitChildWorkspace", body)
 
 	// wait for finish
@@ -107,7 +107,7 @@ func TestForeignAuthorization(t *testing.T) {
 
 	t.Run("subjects", func(t *testing.T) {
 		// try to execute an operation by the foreign login, expect 403
-		cudBody := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
+		cudBody := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
 		vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.Expect403(), coreutils.WithAuthorizeBy(newPrn.Token))
 
 		// make this new foreign login a subject in the existing workspace
@@ -121,7 +121,7 @@ func TestForeignAuthorization(t *testing.T) {
 
 	t.Run("enrich principal token", func(t *testing.T) {
 		// 403 forbidden on try to execute a stricted operation in the child workspace using the non-enriched token
-		body = `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
+		body = `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
 		vit.PostWS(childWS, "c.sys.CUD", body, coreutils.Expect403())
 
 		// create cdoc.sys.Subject with a role the custom func execution could be authorized with
@@ -137,13 +137,13 @@ func TestForeignAuthorization(t *testing.T) {
 
 		// ok to execute a stricted operation in the child workspace using the enriched token
 		// expect no errors
-		body = `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
+		body = `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
 		vit.PostWS(childWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(enrichedToken))
 	})
 
 	t.Run("API token", func(t *testing.T) {
 		// 403 forbidden on try to execute a stricted operation in the child workspace
-		body = `{"args":{"Schema":"app1.articles"},"elements":[{"fields":["sys.ID"]}]}`
+		body = `{"args":{"Schema":"app1pkg.articles"},"elements":[{"fields":["sys.ID"]}]}`
 		vit.PostWS(childWS, "q.sys.Collection", body, coreutils.Expect403())
 
 		// issue an API token

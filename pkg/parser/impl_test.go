@@ -1692,7 +1692,6 @@ func buildPackage(qn string, sql string) *PackageSchemaAST {
 	return pkg
 }
 
-/*
 func Test_OdocCmdArgs(t *testing.T) {
 	require := require.New(t)
 	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
@@ -1700,8 +1699,6 @@ func Test_OdocCmdArgs(t *testing.T) {
 	APPLICATION registry(
 	);
 
-	TABLE TableCDoc INHERITS CDoc ();
-	TABLE TableWDoc INHERITS WDoc ();
 	TABLE TableODoc INHERITS ODoc (
 		orecord1 TABLE orecord1(
 			orecord2 TABLE orecord2()
@@ -1710,9 +1707,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 
 	WORKSPACE Workspace1 (
 		EXTENSION ENGINE BUILTIN (
-			COMMAND CmdCDoc1(TableCDoc);
-			COMMAND CmdWDoc1(TableWDoc);
-			COMMAND CmdODoc1(TableODoc);
+			COMMAND CmdODoc1(TableODoc) RETURNS TableODoc;
 		)
 	);
 
@@ -1726,14 +1721,25 @@ func Test_OdocCmdArgs(t *testing.T) {
 	require.NoError(err)
 
 	_, err = builder.Build()
+	require.NoError(err)
 
-	cmdCdoc1 := builder.Command(appdef.NewQName("app1", "CmdCDoc1"))
-	require.NotNil(cmdCdoc1)
-	require.NotNil(cmdCdoc1.Param())
-	require.Equal(1, cmdCdoc1.Param().ContainerCount())
+	cmdOdoc := builder.Command(appdef.NewQName("app1", "CmdODoc1"))
+	require.NotNil(cmdOdoc)
+	require.NotNil(cmdOdoc.Param())
+
+	odoc := cmdOdoc.Param().(appdef.IContainers)
+	require.Equal(1, odoc.ContainerCount())
+	require.Equal("orecord1", odoc.Container("orecord1").Name())
+	container := odoc.Container("orecord1")
+	require.Equal(appdef.Occurs(0), container.MinOccurs())
+	require.Equal(appdef.Occurs(100), container.MaxOccurs())
+
+	orec := builder.ORecord(appdef.NewQName("app1", "orecord1"))
+	require.NotNil(orec)
+	require.Equal(1, orec.ContainerCount())
+	require.Equal("orecord2", orec.Container("orecord2").Name())
 
 }
-*/
 
 func Test_TypeContainers(t *testing.T) {
 	require := require.New(t)

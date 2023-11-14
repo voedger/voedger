@@ -29,18 +29,18 @@ const (
 	TestEmail2      = "124@124.com"
 	TestEmail3      = "125@125.com"
 	TestServicePort = 10000
-	app1Name        = "app1"
+	app1PkgName     = "app1pkg"
 )
 
 var (
-	QNameApp1_TestWSKind               = appdef.NewQName(app1Name, "WSKind")
+	QNameApp1_TestWSKind               = appdef.NewQName(app1PkgName, "WSKind")
 	QNameTestView                      = appdef.NewQName("my", "View")
-	QNameApp1_TestEmailVerificationDoc = appdef.NewQName(app1Name, "Doc")
-	QNameApp1_CDocTestConstraints      = appdef.NewQName(app1Name, "DocConstraints")
-	QNameCmdRated                      = appdef.NewQName(appdef.SysPackage, "RatedCmd")
-	QNameQryRated                      = appdef.NewQName(appdef.SysPackage, "RatedQry")
-	QNameODoc1                         = appdef.NewQName(app1Name, "odoc1")
-	QNameODoc2                         = appdef.NewQName(app1Name, "odoc2")
+	QNameApp1_TestEmailVerificationDoc = appdef.NewQName(app1PkgName, "Doc")
+	QNameApp1_CDocTestConstraints      = appdef.NewQName(app1PkgName, "DocConstraints")
+	QNameCmdRated                      = appdef.NewQName(app1PkgName, "RatedCmd")
+	QNameQryRated                      = appdef.NewQName(app1PkgName, "RatedQry")
+	QNameODoc1                         = appdef.NewQName(app1PkgName, "odoc1")
+	QNameODoc2                         = appdef.NewQName(app1PkgName, "odoc2")
 	TestSMTPCfg                        = smtp.Cfg{
 		Username: "username@gmail.com",
 	}
@@ -82,7 +82,7 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	}
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
-	apps.RegisterSchemaFS(SchemaTestApp2, "app2", ep)
+	apps.RegisterSchemaFS(SchemaTestApp2, "github.com/voedger/voedger/pkg/vit/app2pkg", ep)
 }
 
 func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
@@ -94,7 +94,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
 
-	apps.RegisterSchemaFS(SchemaTestApp1, "app1", ep)
+	apps.RegisterSchemaFS(SchemaTestApp1, "github.com/voedger/voedger/pkg/vit/app1pkg", ep)
 
 	projectors.ProvideViewDef(adf, QNameTestView, func(view appdef.IViewBuilder) {
 		view.KeyBuilder().PartKeyBuilder().AddField("ViewIntFld", appdef.DataKind_int32)
@@ -106,14 +106,13 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQryRated,
 		appdef.NullQName,
-		adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedQryParams")).
-			AddField("Fld", appdef.DataKind_string, false).(appdef.IType).QName(),
+		appdef.NullQName,
 		istructsmem.NullQueryExec,
 	))
+
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCmdRated,
-		adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedCmdParams")).
-			AddField("Fld", appdef.DataKind_string, false).(appdef.IType).QName(),
+		appdef.NullQName,
 		appdef.NullQName,
 		appdef.NullQName,
 		istructsmem.NullCommandExec,
@@ -139,45 +138,33 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		MaxAllowedPerDuration: 4,
 	})
 
-	mockQryQName := appdef.NewQName(appdef.SysPackage, "MockQry")
-	mockQryParamsQName := appdef.NewQName(appdef.SysPackage, "MockQryParams")
-	adf.AddObject(mockQryParamsQName).
-		AddField(field_Input, appdef.DataKind_string, true)
-
-	mockQryResQName := appdef.NewQName(appdef.SysPackage, "MockQryResult")
-	mockQryResScheme := adf.AddObject(mockQryResQName)
-	mockQryResScheme.AddField("Res", appdef.DataKind_string, true)
-
-	mockQry := istructsmem.NewQueryFunction(mockQryQName, mockQryParamsQName, mockQryResQName,
+	cfg.Resources.Add(istructsmem.NewQueryFunction(
+		appdef.NewQName(app1PkgName, "MockQry"),
+		appdef.NullQName,
+		appdef.NullQName,
 		func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			input := args.ArgumentObject.AsString(field_Input)
 			return MockQryExec(input, callback)
 		},
-	)
-	cfg.Resources.Add(mockQry)
+	))
 
-	mockCmdQName := appdef.NewQName(appdef.SysPackage, "MockCmd")
-	mockCmdParamsQName := appdef.NewQName(appdef.SysPackage, "MockCmdParams")
-	adf.AddObject(mockCmdParamsQName).
-		AddField(field_Input, appdef.DataKind_string, true)
-
-	execCmdMockCmd := func(args istructs.ExecCommandArgs) (err error) {
-		input := args.ArgumentObject.AsString(field_Input)
-		return MockCmdExec(input)
-	}
-	mockCmd := istructsmem.NewCommandFunction(mockCmdQName, mockCmdParamsQName, appdef.NullQName, appdef.NullQName, execCmdMockCmd)
-	cfg.Resources.Add(mockCmd)
-
-	testCmdResult := appdef.NewQName(appdef.SysPackage, "TestCmdResult")
-	testCmdParams := appdef.NewQName(appdef.SysPackage, "TestCmdParams")
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		appdef.NewQName(appdef.SysPackage, "TestCmd"),
-		adf.AddObject(testCmdParams).
-			AddField("Arg1", appdef.DataKind_int32, true).(appdef.IType).QName(),
+		appdef.NewQName(app1PkgName, "MockCmd"),
 		appdef.NullQName,
-		adf.AddObject(testCmdResult).
-			AddField("Int", appdef.DataKind_int32, true).
-			AddField("Str", appdef.DataKind_string, false).(appdef.IType).QName(),
+		appdef.NullQName,
+		appdef.NullQName,
+		func(args istructs.ExecCommandArgs) (err error) {
+			input := args.ArgumentObject.AsString(field_Input)
+			return MockCmdExec(input)
+		},
+	))
+
+	testCmdResult := appdef.NewQName(app1PkgName, "TestCmdResult")
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		appdef.NewQName(app1PkgName, "TestCmd"),
+		appdef.NullQName,
+		appdef.NullQName,
+		appdef.NullQName,
 		func(args istructs.ExecCommandArgs) (err error) {
 			key, err := args.State.KeyBuilder(state.Result, testCmdResult)
 			if err != nil {
@@ -206,17 +193,17 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	))
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		appdef.NewQName(appdef.SysPackage, "CmdODocOne"),
-		QNameODoc1,
+		appdef.NewQName(app1PkgName, "CmdODocOne"),
+		appdef.NullQName,
 		appdef.NullQName,
 		appdef.NullQName,
 		istructsmem.NullCommandExec,
 	))
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		appdef.NewQName(appdef.SysPackage, "CmdODocTwo"),
-		QNameODoc2,
-		QNameODoc2,
+		appdef.NewQName(app1PkgName, "CmdODocTwo"),
+		appdef.NullQName,
+		appdef.NullQName,
 		appdef.NullQName,
 		istructsmem.NullCommandExec,
 	))
