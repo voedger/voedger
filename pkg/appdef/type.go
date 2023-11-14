@@ -127,10 +127,7 @@ var AnyType = new(anyType)
 
 const anyTypeString = "any type"
 
-type anyType struct {
-	nullComment
-	app IAppDef
-}
+type anyType struct{ nullComment }
 
 func (t *anyType) App() IAppDef   { return nil }
 func (t *anyType) IsSystem() bool { return false }
