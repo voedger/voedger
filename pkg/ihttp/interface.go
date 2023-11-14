@@ -8,6 +8,7 @@ package ihttp
 import (
 	"context"
 	"io/fs"
+	"net/http"
 
 	"github.com/voedger/voedger/pkg/iservices"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -20,11 +21,10 @@ type CLIParams struct {
 }
 
 // Proposed factory signature
-type NewType func(params CLIParams) (intf IHTTPProcessor, cleanup func(), err error)
-
 type IHTTPProcessor interface {
 	iservices.IService
-	QuerySender(owner string, app string, partition int, part string) (sender ISender, ok bool)
+	ListeningPort() int
+	HandlerFunc(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request))
 }
 
 type IHTTPProcessorAPI interface {
