@@ -25,6 +25,9 @@ type IProjector interface {
 	// State is a storage to get data.
 	States() QNames
 
+	//TODO
+	// States(func(storage QName, names QNames))
+
 	// Returns projector intents.
 	//
 	// Intent is a storage to put data.
@@ -83,6 +86,9 @@ type IProjectorBuilder interface {
 
 	// Adds state to the projector.
 	AddState(...QName) IProjectorBuilder
+
+	//TODO
+	//AddState(storage QName, names ...QName) IProjectorBuilder
 
 	// Adds intent to the projector.
 	AddIntent(...QName) IProjectorBuilder
