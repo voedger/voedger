@@ -475,6 +475,7 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND OnWorkspaceDeactivated(OnWorkspaceDeactivatedParams);
         COMMAND OnJoinedWorkspaceDeactivated(OnJoinedWorkspaceDeactivatedParams);
         COMMAND OnChildWorkspaceDeactivated(OnChildWorkspaceDeactivatedParams);
+        COMMAND InitiateDeactivateWorkspace();
         PROJECTOR ApplyDeactivateWorkspace ON (InitiateDeactivateWorkspace);
         PROJECTOR InvokeCreateWorkspace AFTER INSERT ON (WorkspaceID);
         PROJECTOR InvokeCreateWorkspaceID AFTER INSERT ON(Login, ChildWorkspace);
