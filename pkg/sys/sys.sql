@@ -399,6 +399,8 @@ ABSTRACT WORKSPACE Workspace (
 
         -- builtin
 
+        COMMAND CUD();
+        COMMAND Init(); -- Deprecated: use c.sys.CUD instead. Kept for backward compatibility only
         QUERY Echo(EchoParams) RETURNS EchoResult;
         QUERY GRCount RETURNS GRCountResult;
         QUERY Modules RETURNS ModulesResult;
