@@ -44,7 +44,7 @@ func (f *Function) read(fn appdef.IFunction) {
 			f.Arg = &n
 		}
 	}
-	if r := fn.Param(); r != nil {
+	if r := fn.Result(); r != nil {
 		if n := r.QName(); n != appdef.NullQName {
 			f.Result = &n
 		}

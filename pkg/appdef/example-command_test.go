@@ -77,11 +77,12 @@ func ExampleIAppDef_Functions() {
 
 		appDef.AddCommand(cmdName).
 			SetParam(parName).
+			SetResult(resName).
 			SetExtension(cmdExt, appdef.ExtensionEngineKind_WASM)
 
 		appDef.AddQuery(qrName).
 			SetParam(parName).
-			SetResult(resName).
+			SetResult(appdef.QNameANY).
 			SetExtension(qrExt, appdef.ExtensionEngineKind_BuiltIn, "query extension comment")
 
 		_ = appDef.AddObject(parName)
@@ -113,11 +114,11 @@ func ExampleIAppDef_Functions() {
 	// 1. Command «test.cmd» :
 	//  - parameter: Object «test.param»
 	//  - unl.param: <nil>
-	//  - result   : <nil>
+	//  - result   : Object «test.res»
 	//  - extension: CommandExt (WASM)
 	// 2. Query «test.query» :
 	//  - parameter: Object «test.param»
-	//  - result   : Object «test.res»
+	//  - result   : any type
 	//  - extension: QueryExt (BuiltIn) query extension comment
 	// Overall 2 function(s)
 }

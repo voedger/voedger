@@ -30,7 +30,7 @@ var (
 	NullQName    = QNameForNull
 )
 
-// QNameANY denotes that a Function result can be of any value
+// QNameANY denotes that a Function param or result can be any type
 //
 // See #858 (Support QNameAny as function result)
 var QNameANY = NewQName(SysPackage, AnyName)

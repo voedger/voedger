@@ -39,7 +39,18 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		provideIssuePrincipalTokenExec(asp, itokens)))
 	provideChangePassword(cfg)
 	provideResetPassword(cfg, asp, itokens, federation)
+	appDefBuilder.AddObject(qNameProjectorInvokeCreateWorkspaceID_registry)
+	cfg.AddAsyncProjectors(provideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation, cfg.Name, itokens))
 	apps.RegisterSchemaFS(schemasFS, RegistryPackageFQN, ep)
+}
+
+func provideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
+	return func(partition istructs.PartitionID) istructs.Projector {
+		return istructs.Projector{
+			Name: qNameProjectorInvokeCreateWorkspaceID_registry,
+			Func: invokeCreateWorkspaceIDProjector(federation, appQName, tokensAPI),
+		}
+	}
 }
 
 func ProvideSyncProjectorLoginIdxFactory() istructs.ProjectorFactory {

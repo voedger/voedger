@@ -9,7 +9,6 @@ import "errors"
 
 // nolint
 var (
-	ErrDifferentNodeVersions                = errors.New("node versions do not match the cluster version")
 	ErrInvalidClusterEdition                = errors.New("invalid cluster edition (expected SE or CE)")
 	ErrInvalidNumberOfDataCenters           = errors.New("invalid number of data centers")
 	ErrClusterConfNotFound                  = errors.New("cluster configuration not found\nuse the init command")
@@ -27,4 +26,12 @@ var (
 	ErrClusterControllerFunctionNotAssigned = errors.New("cluster controller function not assigned")
 	ErrPreparingClusterNodes                = errors.New("error preparing cluster nodes, command is aborted")
 	ErrManagerTokenNotExists                = errors.New("manager token not exists")
+)
+
+var ErrBadVersion = errors.New("bad version")
+
+const (
+	errCtoolVersionNewerThanClusterVersion = "ctool version %s is newer than cluster version %s: %w"
+	errClusterVersionNewerThanCtoolVersion = "cluster version %s is newer than ctool version %s: %w"
+	errDifferentNodeVersion                = "node version %s do not match the cluster version %s: %w"
 )
