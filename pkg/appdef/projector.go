@@ -35,10 +35,6 @@ func newProjector(app *appDef, name QName) *projector {
 }
 
 func (prj *projector) AddEvent(record QName, event ...ProjectorEventKind) IProjectorBuilder {
-	if record == NullQName {
-		panic(fmt.Errorf("%v: can not add event because record name is empty: %w", prj, ErrNameMissed))
-	}
-
 	rec := func() (rec IType) {
 		switch record {
 		case NullQName:
