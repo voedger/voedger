@@ -390,6 +390,7 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND OnWorkspaceDeactivated(OnWorkspaceDeactivatedParams);
         COMMAND OnJoinedWorkspaceDeactivated(OnJoinedWorkspaceDeactivatedParams);
         COMMAND OnChildWorkspaceDeactivated(OnChildWorkspaceDeactivatedParams);
+        COMMAND InitiateDeactivateWorkspace();
     );
 
     VIEW RecordsRegistry (
