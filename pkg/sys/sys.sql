@@ -387,15 +387,12 @@ ABSTRACT WORKSPACE Workspace (
         PRIMARY KEY ((OwnerWSID), WSName)
     ) AS RESULT OF ProjectorWorkspaceIDIdx;
 
-
-    -- VIEW NextBaseWSID (
-    --     dummy1 int32 NOT NULL,
-    --     dummy2 int32 NOT NULL,
-    --     NextBaseWSID int64 NOT NULL,
-    --     PRIMARY KEY ((dummy1), dummy2)
-    -- ) AS RESULT OF CreateWorkspaceID;
-
     EXTENSION ENGINE BUILTIN (
+
+        -- blobber
+
+        COMMAND UploadBLOBHelper;
+        COMMAND DownloadBLOBHelper;
 
         -- builtin
 
@@ -424,20 +421,6 @@ ABSTRACT WORKSPACE Workspace (
         QUERY DescribePackageNames RETURNS DescribePackageNamesResult;
         QUERY DescribePackage(DescribePackageParams) RETURNS DescribePackageResult;
 
-        -- journal
-
-        QUERY Journal(JournalParams) RETURNS JournalResult;
-        PROJECTOR ProjectorWLogDates ON (CRecord, WRecord, ORecord) INTENTS(View(WLogDates));
-
-        -- sqlquery
-
-        QUERY SqlQuery(SqlQueryParams) RETURNS SqlQueryResult;
-
-        -- blobb
-
-        COMMAND UploadBLOBHelper;
-        COMMAND DownloadBLOBHelper;
-
         -- invite
 
         COMMAND InitiateInvitationByEMail(InitiateInvitationByEMailParams);
@@ -458,9 +441,18 @@ ABSTRACT WORKSPACE Workspace (
         SYNC PROJECTOR ProjectorInviteIndex ON (InitiateInvitationByEMail) INTENTS(View(InviteIndexView));
         SYNC PROJECTOR ProjectorJoinedWorkspaceIndex ON (CreateJoinedWorkspace) INTENTS(View(JoinedWorkspaceIndexView));
 
-         -- uniques
+        -- journal
 
-        SYNC PROJECTOR ApplyUniques ON (CRecord, ORecord, WRecord) INTENTS(View(Uniques));
+        QUERY Journal(JournalParams) RETURNS JournalResult;
+        PROJECTOR ProjectorWLogDates ON (CRecord, WRecord, ORecord) INTENTS(View(WLogDates));
+
+        -- sqlquery
+
+        QUERY SqlQuery(SqlQueryParams) RETURNS SqlQueryResult;
+
+        -- uniques
+
+        SYNC PROJECTOR ApplyUniques ON (CRecord, WRecord, ORecord) INTENTS(View(Uniques));
 
         -- verifier
 
@@ -480,12 +472,11 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND InitiateDeactivateWorkspace();
         PROJECTOR ApplyDeactivateWorkspace ON (InitiateDeactivateWorkspace);
         PROJECTOR InvokeCreateWorkspace AFTER INSERT ON (WorkspaceID);
-        PROJECTOR InvokeCreateWorkspaceID AFTER INSERT ON(Login, ChildWorkspace);
+        PROJECTOR InvokeCreateWorkspaceID AFTER INSERT ON(ChildWorkspace);
         PROJECTOR InitializeWorkspace AFTER INSERT ON(WorkspaceDescriptor);
         SYNC PROJECTOR ProjectorChildWorkspaceIdx AFTER INSERT ON (ChildWorkspace) INTENTS(View(ChildWorkspaceIdx));
         SYNC PROJECTOR ProjectorWorkspaceIDIdx AFTER INSERT ON (WorkspaceID) INTENTS(View(WorkspaceIDIdx));
     );
-
 );
 
 EXTENSION ENGINE BUILTIN (

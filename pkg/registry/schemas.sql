@@ -93,5 +93,6 @@ ALTER WORKSPACE AppWorkspaceWS (
 		QUERY InitiateResetPasswordByEmail (InitiateResetPasswordByEmailParams) RETURNS InitiateResetPasswordByEmailResult;
 		QUERY IssueVerifiedValueTokenForResetPassword (IssueVerifiedValueTokenForResetPasswordParams) RETURNS IssueVerifiedValueTokenForResetPasswordResult;
 		SYNC PROJECTOR ProjectorLoginIdx AFTER INSERT ON Login INTENTS(View(LoginIdx));
+		PROJECTOR InvokeCreateWorkspaceID_registry AFTER INSERT ON(Login);
 	);
 );

@@ -3,7 +3,7 @@
 
 APPLICATION app1();
 
-ABSTRACT WORKSPACE test_ws (
+ALTERABLE WORKSPACE test_ws (
 	TABLE articles INHERITS CDoc (
 		name varchar,
 		article_manual int32 NOT NULL,

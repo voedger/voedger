@@ -81,7 +81,7 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	}
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
-	apps.RegisterSchemaFS(SchemaTestApp2, "github.com/voedger/voedger/pkg/vit/app2pkg", ep)
+	apps.RegisterSchemaFS(SchemaTestApp2FS, "github.com/voedger/voedger/pkg/vit/app2pkg", ep)
 }
 
 func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
@@ -93,8 +93,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
 
-	apps.RegisterSchemaFS(SchemaTestApp1, "github.com/voedger/voedger/pkg/vit/app1pkg", ep)
-
+	apps.RegisterSchemaFS(SchemaTestApp1FS, "github.com/voedger/voedger/pkg/vit/app1pkg", ep)
 
 	// for rates test
 	cfg.Resources.Add(istructsmem.NewQueryFunction(

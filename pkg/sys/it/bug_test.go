@@ -87,7 +87,7 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 
 			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
-			apps.RegisterSchemaFS(it.SchemaTestApp2, "app2", ep)
+			apps.RegisterSchemaFS(it.SchemaTestApp2FS, "app2", ep)
 
 			cdocQName := appdef.NewQName("test", "cdoc")
 			appDefBuilder.AddCDoc(cdocQName)
