@@ -252,6 +252,11 @@ func deploySeSwarm(cluster *clusterType) error {
 			node.Error = err.Error()
 			return err
 		}
+		if err = newScriptExecuter(cluster.sshKey, manager).
+			run("swarm-set-label.sh", manager, manager, node.label(swarmAppLabelKey), "true"); err != nil {
+			node.Error = err.Error()
+			return err
+		}
 
 		return nil
 	}()
@@ -289,6 +294,15 @@ func deploySeSwarm(cluster *clusterType) error {
 				logger.Error(e.Error())
 				n.Error = e.Error()
 				return
+			}
+
+			if n.NodeRole == nrAppNode {
+				if e := newScriptExecuter(cluster.sshKey, n.ActualNodeState.Address).
+					run("swarm-set-label.sh", manager, n.nodeName(), n.label(swarmAppLabelKey), "true"); e != nil {
+					logger.Error(e.Error())
+					n.Error = e.Error()
+					return
+				}
 			}
 
 			if n.NodeRole == nrDBNode {
@@ -586,6 +600,13 @@ func replaceSeAppNode(cluster *clusterType) error {
 	logger.Info("swarm set label on", newAddr, newNode.label(swarmMonLabelKey))
 	if err = newScriptExecuter(cluster.sshKey, newAddr).
 		run("swarm-set-label.sh", conf.DBNode1Name, newAddr, newNode.label(swarmMonLabelKey), "true"); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
+	logger.Info("swarm set label on", newAddr, newNode.label(swarmAppLabelKey))
+	if err = newScriptExecuter(cluster.sshKey, newAddr).
+		run("swarm-set-label.sh", conf.DBNode1Name, newAddr, newNode.label(swarmAppLabelKey), "true"); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
