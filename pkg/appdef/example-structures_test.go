@@ -73,6 +73,8 @@ func ExampleIAppDef_Structures() {
 		})
 
 		fmt.Printf("Overall %d records\n", cnt)
+
+		fmt.Println(app.Record(recName), app.Record(appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:
@@ -96,4 +98,5 @@ func ExampleIAppDef_Structures() {
 	// - user/overall field count: 2/7
 	// - container count: 0
 	// Overall 2 records
+	// CRecord «test.record» <nil>
 }

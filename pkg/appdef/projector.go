@@ -7,15 +7,16 @@ package appdef
 
 import (
 	"fmt"
+	"strings"
 )
 
 // # Implements:
 //   - IProjector & IProjectorBuilder
 type projector struct {
 	typ
-	sync bool
-	ext  *extension
-	//events    []*projectorEvent
+	sync    bool
+	ext     *extension
+	events  map[QName]*projectorEvent
 	states  QNames
 	intents QNames
 }
@@ -23,9 +24,9 @@ type projector struct {
 // Returns new projector.
 func newProjector(app *appDef, name QName) *projector {
 	prj := &projector{
-		typ: makeType(app, name, TypeKind_Projector),
-		ext: newExtension(),
-		//events: make([]*projectorEvent, 0),
+		typ:     makeType(app, name, TypeKind_Projector),
+		ext:     newExtension(),
+		events:  make(map[QName]*projectorEvent),
 		states:  QNames{},
 		intents: QNames{},
 	}
@@ -34,11 +35,30 @@ func newProjector(app *appDef, name QName) *projector {
 }
 
 func (prj *projector) AddEvent(record QName, event ...ProjectorEventKind) IProjectorBuilder {
-	// if e := prj.Event(record); e != nil {
-	// 	e.addKind(event...)
-	// } else {
-	// 	prj.events = append(prj.events, newProjectorEvent(record, event...))
-	// }
+	if record == NullQName {
+		panic(fmt.Errorf("%v: can not add event because record name is empty: %w", prj, ErrNameMissed))
+	}
+
+	rec := func() (rec IType) {
+		switch record {
+		case NullQName:
+			panic(fmt.Errorf("%v: can not add event because record name is empty: %w", prj, ErrNameMissed))
+		case QNameANY:
+			rec = AnyType
+		default:
+			rec = prj.app.Record(record)
+			if rec == nil {
+				panic(fmt.Errorf("%v: record type «%v» not found: %w", prj, record, ErrNameNotFound))
+			}
+		}
+		return rec
+	}()
+
+	if e, ok := prj.events[record]; ok {
+		e.addKind(event...)
+	} else {
+		prj.events[record] = newProjectorEvent(rec, event...)
+	}
 	return prj
 }
 
@@ -54,19 +74,24 @@ func (prj *projector) AddIntent(intents ...QName) IProjectorBuilder {
 
 func (prj *projector) Extension() IExtension { return prj.ext }
 
-func (prj *projector) Events(func(IProjectorEvent)) {
-	// for _, e := range prj.events {
-	// 	fn(e)
-	// }
+func (prj *projector) Events(cb func(IProjectorEvent)) {
+	ord := QNames{}
+	for n := range prj.events {
+		ord.Append(n)
+	}
+	for _, n := range ord {
+		cb(prj.events[n])
+	}
 }
 
 func (prj *projector) Intents() QNames { return prj.intents }
 
 func (prj *projector) SetEventComment(record QName, comment ...string) IProjectorBuilder {
-	// e := prj.Event(record)
-	// if e == nil {
-	// 		panic(fmt.Errorf("%v: %v not found: %w", prj, record, ErrNameNotFound))
-	// }
+	e, ok := prj.events[record]
+	if !ok {
+		panic(fmt.Errorf("%v: %v not found: %w", prj, record, ErrNameNotFound))
+	}
+	e.SetComment(comment...)
 	return prj
 }
 
@@ -92,3 +117,42 @@ func (prj *projector) SetSync(sync bool) IProjectorBuilder {
 func (prj *projector) Sync() bool { return prj.sync }
 
 func (prj *projector) States() QNames { return prj.states }
+
+type projectorEvent struct {
+	comment
+	record IType
+	kinds  uint64 // bitmap[ProjectorEventKind]
+}
+
+func newProjectorEvent(record IType, kind ...ProjectorEventKind) *projectorEvent {
+	p := &projectorEvent{record: record}
+	p.addKind(kind...)
+	return p
+}
+
+func (e *projectorEvent) Kind() (kinds []ProjectorEventKind) {
+	for k := ProjectorEventKind(1); k < ProjectorEventKind_Count; k++ {
+		if e.kinds&(1<<k) != 0 {
+			kinds = append(kinds, k)
+		}
+	}
+	return kinds
+}
+
+func (e *projectorEvent) On() IType {
+	return e.record
+}
+
+func (e projectorEvent) String() string {
+	s := []string{}
+	for _, k := range e.Kind() {
+		s = append(s, k.TrimString())
+	}
+	return fmt.Sprintf("%v [%s]", e.On(), strings.Join(s, " "))
+}
+
+func (e *projectorEvent) addKind(kind ...ProjectorEventKind) {
+	for _, k := range kind {
+		e.kinds |= 1 << k
+	}
+}

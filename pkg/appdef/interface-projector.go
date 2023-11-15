@@ -16,6 +16,8 @@ type IProjector interface {
 	Extension() IExtension
 
 	// Enumerate events to trigger the projector.
+	//
+	// Events enumerated in alphabetical QNames order.
 	Events(func(IProjectorEvent))
 
 	// Returns projector states.
@@ -33,11 +35,13 @@ type IProjector interface {
 type IProjectorEvent interface {
 	IComment
 
-	// Returns set of event kind to trigger.
+	// Returns set (sorted slice) of event kind to trigger.
 	Kind() []ProjectorEventKind
 
 	// Returns record type to trigger projector.
-	On() IRecord
+	//
+	// If projector will be triggered for any record type then On() returns AnyType.
+	On() IType
 }
 
 // Events enumeration to trigger the projector.
@@ -63,6 +67,7 @@ type IProjectorBuilder interface {
 	// Adds event to trigger the projector.
 	//
 	// Record can be some record type or QNameANY.
+	// If record is QNameANY then projector will be triggered for any record type.
 	//
 	// If event kind is missed then default is ProjectorEventKind_Any.
 	//
