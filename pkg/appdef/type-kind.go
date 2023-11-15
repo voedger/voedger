@@ -16,6 +16,11 @@ import (
 const (
 	TypeKind_null TypeKind = iota
 
+	// Any type.
+	//
+	// Used as result types kind for functions that has parameter or result of any type.
+	TypeKind_Any
+
 	// Simple data types, like string, number, date, etc.
 	TypeKind_Data
 
@@ -48,8 +53,6 @@ const (
 
 	// Function params, results, Event.command (this is command function params)
 	TypeKind_Object
-	// Elements of objects
-	TypeKind_Element
 
 	// Params and Result are Objects
 	TypeKind_Query
@@ -68,9 +71,10 @@ func (k TypeKind) DataKindAvailable(d DataKind) bool {
 	return typeKindProps[k].fieldKinds[d]
 }
 
-// Is specified system field used.
-func (k TypeKind) HasSystemField(f string) bool {
-	return typeKindProps[k].systemFields[f]
+// Is specified system field exists and required.
+func (k TypeKind) HasSystemField(f string) (exists, required bool) {
+	required, exists = typeKindProps[k].systemFields[f]
+	return exists, required
 }
 
 // Is specified type kind may be used in child containers.

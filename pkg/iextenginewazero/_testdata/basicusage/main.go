@@ -6,7 +6,7 @@
 package main
 
 import (
-	ext "github.com/heeus/extensions-tinygo"
+	ext "voedger.io/extensions-tinygo"
 )
 
 // Handle argument

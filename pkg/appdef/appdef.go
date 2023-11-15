@@ -24,7 +24,7 @@ func newAppDef() *appDef {
 	app := appDef{
 		types: make(map[QName]interface{}),
 	}
-	app.makeSysDataTypes()
+	app.makeSysPackage()
 	return &app
 }
 
@@ -45,10 +45,6 @@ func (app *appDef) AddData(name QName, kind DataKind, ancestor QName, constraint
 	d.AddConstraints(constraints...)
 	app.appendType(d)
 	return d
-}
-
-func (app *appDef) AddElement(name QName) IElementBuilder {
-	return newElement(app, name)
 }
 
 func (app *appDef) AddGDoc(name QName) IGDocBuilder {
@@ -144,13 +140,6 @@ func (app *appDef) DataTypes(incSys bool, cb func(IData)) {
 			}
 		}
 	})
-}
-
-func (app *appDef) Element(name QName) IElement {
-	if t := app.typeByKind(name, TypeKind_Element); t != nil {
-		return t.(IElement)
-	}
-	return nil
 }
 
 func (app *appDef) Functions(cb func(e IFunction)) {
@@ -297,6 +286,21 @@ func (app *appDef) appendType(t interface{}) {
 	app.typesOrdered = nil
 }
 
+// Makes system package.
+//
+// Should be called after appDef is created.
+func (app *appDef) makeSysPackage() {
+	app.makeSysDataTypes()
+}
+
+// Makes system data types.
+func (app *appDef) makeSysDataTypes() {
+	for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
+		_ = newSysData(app, k)
+	}
+}
+
+// Returns type by name and kind. If type is not found then returns nil.
 func (app *appDef) typeByKind(name QName, kind TypeKind) interface{} {
 	if t, ok := app.types[name]; ok {
 		if t.(IType).Kind() == kind {

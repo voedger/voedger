@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash/crc32"
 	"io/fs"
 	"net/http"
 	"path/filepath"
@@ -23,11 +22,12 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
+
+
 
 // Projector<A, InvokeCreateWorkspaceID>
 // triggered by CDoc<ChildWorkspace> or CDoc<Login> (both not singletons)
@@ -36,79 +36,55 @@ import (
 func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) error {
-			if rec.QName() != registry.QNameCDocLogin && rec.QName() != authnz.QNameCDocChildWorkspace {
+			if rec.QName() != authnz.QNameCDocChildWorkspace || !rec.IsNew() {
 				return nil
 			}
-			if !rec.IsNew() {
-				return nil // update by c.sys.CUD below
-			}
-			var wsName string
-			var wsKind appdef.QName
-			var templateName string
-			var templateParams string
-			var targetClusterID istructs.ClusterID
-			var wsidToCallCreateWSIDAt istructs.WSID
 			ownerWSID := event.Workspace()
-			ownerBaseWSID := ownerWSID.BaseWSID()
-			targetApp := ""
-			ownerApp := appQName.String()
-			ownerQName := rec.QName()
-			ownerID := rec.ID()
-			wsKindInitializationData := rec.AsString(authnz.Field_WSKindInitializationData)
-			switch ownerQName {
-			case authnz.QNameCDocChildWorkspace:
-				wsName = rec.AsString(authnz.Field_WSName)
-				wsKind = rec.AsQName(authnz.Field_WSKind)
-				templateName = rec.AsString(field_TemplateName)
-				templateParams = rec.AsString(Field_TemplateParams)
-				targetApp = ownerApp
-				wsidToCallCreateWSIDAt = coreutils.GetPseudoWSID(ownerWSID, wsName, targetClusterID)
-			case registry.QNameCDocLogin:
-				loginHash := rec.AsString(authnz.Field_LoginHash)
-				wsName = fmt.Sprint(crc32.ChecksumIEEE([]byte(loginHash)))
-				switch istructs.SubjectKindType(rec.AsInt32(authnz.Field_SubjectKind)) {
-				case istructs.SubjectKind_Device:
-					wsKind = authnz.QNameCDoc_WorkspaceKind_DeviceProfile
-				case istructs.SubjectKind_User:
-					wsKind = authnz.QNameCDoc_WorkspaceKind_UserProfile
-				default:
-					return fmt.Errorf("unsupported cdoc.registry.Login.subjectKind: %d", rec.AsInt32(authnz.Field_SubjectKind))
-				}
-				targetClusterID = istructs.ClusterID(rec.AsInt32(authnz.Field_ProfileClusterID))
-				targetApp = rec.AsString(authnz.Field_AppName)
-				wsidToCallCreateWSIDAt = istructs.NewWSID(targetClusterID, ownerBaseWSID)
-			default:
-				// notest
-				panic("")
-			}
-
-			// Call WS[$PseudoWSID].c.CreateWorkspaceID()
-			createWSIDCmdURL := fmt.Sprintf("api/%s/%d/c.sys.CreateWorkspaceID", targetApp, wsidToCallCreateWSIDAt)
-			logger.Info("aproj.sys.InvokeCreateWorkspaceID: request to " + createWSIDCmdURL)
-			body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":"%s","OwnerID":%d,"OwnerApp":"%s","WSName":"%s","WSKind":"%s","WSKindInitializationData":%q,"TemplateName":"%s","TemplateParams":%q}}`,
-				ownerWSID, ownerQName.String(), ownerID, ownerApp, wsName, wsKind.String(), wsKindInitializationData, templateName, templateParams)
-			targetAppQName, err := istructs.ParseAppQName(targetApp)
-			if err != nil {
-				// parsed already by c.registry.CreateLogin
-				// notest
-				return err
-			}
-			systemPrincipalToken, err := payloads.GetSystemPrincipalToken(tokensAPI, targetAppQName)
-			if err != nil {
-				return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: %w", err)
-			}
-
-			if _, err = coreutils.FederationFunc(federation.URL(), createWSIDCmdURL, body,
-				coreutils.WithAuthorizeBy(systemPrincipalToken),
-				coreutils.WithDiscardResponse(),
-				coreutils.WithExpectedCode(http.StatusOK),
-				coreutils.WithExpectedCode(http.StatusConflict),
-			); err != nil {
-				return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %w. Body:\n%s", err, body)
-			}
-			return nil
+			wsName := rec.AsString(authnz.Field_WSName)
+			wsKind := rec.AsQName(authnz.Field_WSKind)
+			templateName := rec.AsString(field_TemplateName)
+			templateParams := rec.AsString(Field_TemplateParams)
+			targetApp := appQName.String()
+			var targetClusterID istructs.ClusterID
+			wsidToCallCreateWSIDAt := coreutils.GetPseudoWSID(ownerWSID, wsName, targetClusterID)
+			return ProjectInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, targetClusterID, wsidToCallCreateWSIDAt, targetApp,
+				templateName, templateParams, rec, ownerWSID)
 		})
 	}
+}
+
+func ProjectInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens,
+	wsName string, wsKind appdef.QName, targetClusterID istructs.ClusterID,
+	wsidToCallCreateWSIDAt istructs.WSID, targetApp string, templateName string, templateParams string, ownerDoc istructs.ICUDRow, ownerWSID istructs.WSID) error {
+	// Call WS[$PseudoWSID].c.CreateWorkspaceID()
+	ownerApp := appQName.String()
+	ownerQName := ownerDoc.QName()
+	ownerID := ownerDoc.ID()
+	wsKindInitializationData := ownerDoc.AsString(authnz.Field_WSKindInitializationData)
+	createWSIDCmdURL := fmt.Sprintf("api/%s/%d/c.sys.CreateWorkspaceID", targetApp, wsidToCallCreateWSIDAt)
+	logger.Info("aproj.sys.InvokeCreateWorkspaceID: request to " + createWSIDCmdURL)
+	body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":"%s","OwnerID":%d,"OwnerApp":"%s","WSName":"%s","WSKind":"%s","WSKindInitializationData":%q,"TemplateName":"%s","TemplateParams":%q}}`,
+		ownerWSID, ownerQName.String(), ownerID, ownerApp, wsName, wsKind.String(), wsKindInitializationData, templateName, templateParams)
+	targetAppQName, err := istructs.ParseAppQName(targetApp)
+	if err != nil {
+		// parsed already by c.registry.CreateLogin
+		// notest
+		return err
+	}
+	systemPrincipalToken, err := payloads.GetSystemPrincipalToken(tokensAPI, targetAppQName)
+	if err != nil {
+		return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: %w", err)
+	}
+
+	if _, err = coreutils.FederationFunc(federation.URL(), createWSIDCmdURL, body,
+		coreutils.WithAuthorizeBy(systemPrincipalToken),
+		coreutils.WithDiscardResponse(),
+		coreutils.WithExpectedCode(http.StatusOK),
+		coreutils.WithExpectedCode(http.StatusConflict),
+	); err != nil {
+		return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %w. Body:\n%s", err, body)
+	}
+	return nil
 }
 
 // c.sys.CreateWorkspaceID

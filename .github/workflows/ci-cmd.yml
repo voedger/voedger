@@ -35,7 +35,7 @@ jobs:
     with: 
       test_folder: 'cmd/voedger/'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      ignore_bp3: 'true'
+      ignore_bp3: 'false'
       short_test: 'true'
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}

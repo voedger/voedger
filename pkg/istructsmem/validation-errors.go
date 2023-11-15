@@ -22,8 +22,7 @@ const (
 
 	ECode_EEmptyCUDs
 
-	ECode_EmptyElementName
-	ECode_InvalidElementName
+	ECode_InvalidChildName
 	ECode_InvalidOccursMin
 	ECode_InvalidOccursMax
 )

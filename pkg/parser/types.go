@@ -290,6 +290,7 @@ type DataType struct {
 	Bool      bool         `parser:"| @'bool'"`
 	Blob      bool         `parser:"| @'blob'"`
 	Timestamp bool         `parser:"| @'timestamp'"`
+	Record    bool         `parser:"| @'record'"`
 	Currency  bool         `parser:"| @'currency' )"`
 }
 
@@ -327,9 +328,16 @@ func (q DataType) String() (s string) {
 	return "?"
 }
 
+// not suppored by kernel yet:
+// type DataTypeOrDefArray struct {
+// 	Unbounded bool `parser:"@'[]' |"`
+// 	MaxOccurs int  `parser:"'[' @Int ']'"`
+// }
+
 type DataTypeOrDef struct {
 	DataType *DataType `parser:"( @@"`
 	Def      *DefQName `parser:"| @@ )"`
+	// Array    *DataTypeOrDefArray `parser:"@@?"` not suppored by kernel yet
 }
 
 func (q DataTypeOrDef) String() (s string) {
@@ -559,12 +567,12 @@ func (s *FunctionStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type CommandStmt struct {
 	Statement
-	Name        Ident      `parser:"'COMMAND' @Ident"`
-	Arg         *VoidOrDef `parser:"('(' @@? "`
-	UnloggedArg *VoidOrDef `parser:"(','? UNLOGGED @@)? ')')?"`
-	Returns     *VoidOrDef `parser:"('RETURNS' @@)?"`
-	With        []WithItem `parser:"('WITH' @@ (',' @@)* )?"`
-	Engine      EngineType // Initialized with 1st pass
+	Name        Ident           `parser:"'COMMAND' @Ident"`
+	Arg         *AnyOrVoidOrDef `parser:"('(' @@? "`
+	UnloggedArg *AnyOrVoidOrDef `parser:"(','? UNLOGGED @@)? ')')?"`
+	Returns     *AnyOrVoidOrDef `parser:"('RETURNS' @@)?"`
+	With        []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Engine      EngineType      // Initialized with 1st pass
 }
 
 func (s *CommandStmt) GetName() string            { return string(s.Name) }
@@ -584,11 +592,11 @@ type AnyOrVoidOrDef struct {
 
 type QueryStmt struct {
 	Statement
-	Name    Ident          `parser:"'QUERY' @Ident"`
-	Arg     *VoidOrDef     `parser:"('(' @@? ')')?"`
-	Returns AnyOrVoidOrDef `parser:"'RETURNS' @@"`
-	With    []WithItem     `parser:"('WITH' @@ (',' @@)* )?"`
-	Engine  EngineType     // Initialized with 1st pass
+	Name    Ident           `parser:"'QUERY' @Ident"`
+	Arg     *AnyOrVoidOrDef `parser:"('(' @@? ')')?"`
+	Returns AnyOrVoidOrDef  `parser:"'RETURNS' @@"`
+	With    []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Engine  EngineType      // Initialized with 1st pass
 }
 
 func (s *QueryStmt) GetName() string            { return string(s.Name) }

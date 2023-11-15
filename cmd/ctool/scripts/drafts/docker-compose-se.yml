@@ -5,6 +5,8 @@ services:
   
   voedger:
     image: voedger/voedger:0.0.1-alpha
+    networks:
+      - outside
     volumes:
       - /etc/hosts:/etc/hosts
     environment:
@@ -18,3 +20,8 @@ services:
           - node.labels.AppNode == true
 
     restart: unless-stopped
+
+networks:
+  outside:
+    name: host
+    external: true

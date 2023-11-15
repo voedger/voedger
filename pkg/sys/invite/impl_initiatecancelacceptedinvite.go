@@ -14,11 +14,10 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateCancelAcceptedInvite(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc) {
+func provideCmdInitiateCancelAcceptedInvite(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdInitiateCancelAcceptedInvite,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateCancelAcceptedInviteParams")).
-			AddField(field_InviteID, appdef.DataKind_RecordID, true).(appdef.IType).QName(),
+		appdef.NullQName,
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdInitiateCancelAcceptedInvite(timeFunc),
