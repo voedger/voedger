@@ -28,6 +28,7 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
+	"github.com/voedger/voedger/pkg/projectors"
 )
 
 var provider istructs.IAppStructsProvider
@@ -1008,4 +1009,16 @@ func Test_Idempotency(t *testing.T) {
 		requireArticle(require, "Coca-cola", test.cocaColaNumber2, as, cocaColaDocID)
 	}
 
+}
+
+// should be used in tests only. Sync Actualizer per app will be wired in production
+func provideSyncActualizer(ctx context.Context, as istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
+	actualizerConfig := projectors.SyncActualizerConf{
+		Ctx:        ctx,
+		AppStructs: func() istructs.IAppStructs { return as },
+		Partition:  partitionID,
+		N10nFunc:   func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {},
+	}
+	actualizerFactory := projectors.ProvideSyncActualizerFactory()
+	return actualizerFactory(actualizerConfig, collectionProjectorFactory(as.AppDef()))
 }

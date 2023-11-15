@@ -468,6 +468,13 @@ ABSTRACT WORKSPACE test_ws (
 		Str text
 	);
 
+	VIEW View (
+		ViewIntFld int32 NOT NULL,
+		ViewStrFld text NOT NULL,
+		ViewByteFld bytes(512),
+		PRIMARY KEY ((ViewIntFld), ViewStrFld)
+	) AS RESULT OF ProjDummy;
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult;
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult;
@@ -478,5 +485,6 @@ ABSTRACT WORKSPACE test_ws (
 
 		COMMAND CmdODocOne(odoc1);
 		COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2);
+		PROJECTOR ProjDummy ON(ORecord) INTENTS(View(View)); -- does nothing, only to define view.app1pkg.View
 	);
 );

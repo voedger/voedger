@@ -31,8 +31,8 @@ func validateWSKindInitializationData(as istructs.IAppStructs, data map[string]i
 	return
 }
 
-func ProvideViewNextWSID(appDefBuilder appdef.IAppDefBuilder) {
-	projectors.ProvideViewDef(appDefBuilder, ViewQNameNextBaseWSID, func(b appdef.IViewBuilder) {
+func provideViewNextWSID(appDefBuilder appdef.IAppDefBuilder) {
+	projectors.ProvideViewDef(appDefBuilder, QNameViewNextBaseWSID, func(b appdef.IViewBuilder) {
 		b.KeyBuilder().PartKeyBuilder().AddField(fldDummy1, appdef.DataKind_int32)
 		b.KeyBuilder().ClustColsBuilder().AddField(fldDummy2, appdef.DataKind_int32)
 		b.ValueBuilder().AddField(fldNextBaseWSID, appdef.DataKind_int64, true)
@@ -42,7 +42,7 @@ func ProvideViewNextWSID(appDefBuilder appdef.IAppDefBuilder) {
 // TODO: works correct in Community Edition only. Have >1 VVM -> need to lock in a different way
 func GetNextWSID(ctx context.Context, appStructs istructs.IAppStructs, clusterID istructs.ClusterID) (istructs.WSID, error) {
 	vr := appStructs.ViewRecords()
-	kb := vr.KeyBuilder(ViewQNameNextBaseWSID)
+	kb := vr.KeyBuilder(QNameViewNextBaseWSID)
 	kb.PartitionKey().PutInt32(fldDummy1, 1)
 	kb.ClusteringColumns().PutInt32(fldDummy2, 1) // no clustering columns -> storage driver behaviour is unknown
 	nextBaseWSID := istructs.FirstBaseUserWSID
@@ -58,7 +58,7 @@ func GetNextWSID(ctx context.Context, appStructs istructs.IAppStructs, clusterID
 	if err != nil {
 		return 0, err
 	}
-	vb := vr.NewValueBuilder(ViewQNameNextBaseWSID)
+	vb := vr.NewValueBuilder(QNameViewNextBaseWSID)
 	vb.PutInt64(fldNextBaseWSID, int64(nextBaseWSID+1))
 	if err := vr.Put(istructs.NullWSID, kb, vb); err != nil {
 		return 0, err

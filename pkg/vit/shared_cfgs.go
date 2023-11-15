@@ -18,7 +18,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys"
 	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
 	"github.com/voedger/voedger/pkg/vvm"
@@ -34,7 +33,7 @@ const (
 
 var (
 	QNameApp1_TestWSKind               = appdef.NewQName(app1PkgName, "WSKind")
-	QNameTestView                      = appdef.NewQName("my", "View")
+	QNameTestView                      = appdef.NewQName(app1PkgName, "View")
 	QNameApp1_TestEmailVerificationDoc = appdef.NewQName(app1PkgName, "Doc")
 	QNameApp1_CDocTestConstraints      = appdef.NewQName(app1PkgName, "DocConstraints")
 	QNameCmdRated                      = appdef.NewQName(app1PkgName, "RatedCmd")
@@ -96,11 +95,6 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 
 	apps.RegisterSchemaFS(SchemaTestApp1, "github.com/voedger/voedger/pkg/vit/app1pkg", ep)
 
-	projectors.ProvideViewDef(adf, QNameTestView, func(view appdef.IViewBuilder) {
-		view.KeyBuilder().PartKeyBuilder().AddField("ViewIntFld", appdef.DataKind_int32)
-		view.KeyBuilder().ClustColsBuilder().AddField("ViewStrFld", appdef.DataKind_string)
-		view.ValueBuilder().AddField("ViewByteFld", appdef.DataKind_bytes, false, appdef.MaxLen(512))
-	})
 
 	// for rates test
 	cfg.Resources.Add(istructsmem.NewQueryFunction(

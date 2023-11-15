@@ -41,7 +41,7 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 		expected := map[string]interface{}{
 			"Name": "my",
 			"Views": map[string]interface{}{
-				"my.View": map[string]interface{}{
+				"app1.View": map[string]interface{}{
 					"Name": "my.View",
 					"Key": map[string]interface{}{
 						"ClustCols": []interface{}{

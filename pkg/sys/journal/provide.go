@@ -12,7 +12,6 @@ import (
 )
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-	provideWLogDatesView(appDefBuilder)
 	provideQryJournal(cfg, appDefBuilder, ep)
 	ji := ep.ExtensionPoint(EPJournalIndices)
 	ji.AddNamed(QNameViewWLogDates.String(), QNameViewWLogDates)
@@ -29,13 +28,4 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			HandleErrors: true,
 		}
 	})
-}
-
-func provideWLogDatesView(app appdef.IAppDefBuilder) {
-	view := app.AddView(QNameViewWLogDates)
-	view.KeyBuilder().PartKeyBuilder().AddField(field_Year, appdef.DataKind_int32)
-	view.KeyBuilder().ClustColsBuilder().AddField(field_DayOfYear, appdef.DataKind_int32)
-	view.ValueBuilder().
-		AddField(field_FirstOffset, appdef.DataKind_int64, true).
-		AddField(field_LastOffset, appdef.DataKind_int64, true)
 }

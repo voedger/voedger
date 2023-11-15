@@ -12,7 +12,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
-	"github.com/voedger/voedger/pkg/projectors"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -25,13 +24,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		appdef.NullQName,
 		execCmdCreateLogin(asp),
 	))
-	// istructs.Projector<S, LoginIdx>
-	projectors.ProvideViewDef(appDefBuilder, QNameViewLoginIdx, func(b appdef.IViewBuilder) {
-		b.KeyBuilder().PartKeyBuilder().AddField(field_AppWSID, appdef.DataKind_int64)
-		b.KeyBuilder().ClustColsBuilder().AddField(field_AppIDLoginHash, appdef.DataKind_string)
-		b.ValueBuilder().AddField(field_CDocLoginID, appdef.DataKind_int64, true)
-	})
-	// q.registry.IssuePrincipalToken
+
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(RegistryPackage, "IssuePrincipalToken"),
 		appdef.NullQName,

@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	QNameViewCollection      = appdef.NewQName("sys", "CollectionView")
+	QNameCollectionView      = appdef.NewQName("sys", "CollectionView")
 	QNameProjectorCollection = appdef.NewQName("sys", "ProjectorCollection")
 )
 

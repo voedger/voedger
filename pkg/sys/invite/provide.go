@@ -24,8 +24,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	provideCmdUpdateJoinedWorkspaceRoles(cfg)
 	provideCmdDeactivateJoinedWorkspace(cfg)
 	provideCDocSubject(cfg, appDefBuilder)
-	provideViewInviteIndex(appDefBuilder)
-	provideViewJoinedWorkspaceIndex(appDefBuilder)
 	appDefBuilder.AddObject(qNameAPApplyCancelAcceptedInvite)
 	appDefBuilder.AddObject(qNameAPApplyInvitation)
 	appDefBuilder.AddObject(qNameAPApplyJoinWorkspace)
