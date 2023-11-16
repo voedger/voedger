@@ -99,6 +99,9 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 			Run(stdoutWriter, stderrWriter)
 	}
 
+	if err != nil {
+		logger.Error(fmt.Errorf("the error of the script %s: %w", scriptName, err).Error())
+	}
 	return err
 }
 
