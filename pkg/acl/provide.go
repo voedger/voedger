@@ -5,6 +5,6 @@
 
 package acl
 
-func NewACLBuilder[QName comparable]() IACLBuilder[QName] {
-	return &aclBuilder[QName]{}
-}
+// func NewACLBuilder[QName comparable]() IACLBuilder[QName] {
+// 	return &aclBuilder[QName]{}
+// }

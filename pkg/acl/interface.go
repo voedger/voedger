@@ -5,27 +5,23 @@
 
 package acl
 
-type IACL[QName comparable] interface {
+type IACL[Resource, Operation any, Role comparable] interface {
 
-	// Returs true if access is granted, false otherwise
-	CheckTableAccess(op string, fields []string, table QName, roles []QName) bool
-
-	// Returs true if access is granted, false otherwise
-	CheckExecAccess(resource QName, roles []QName) bool
+	// HasPermission checks if the specified operation, resource, and role combination
+	// matches any of the permissions granted via IACLBuilder.Grant() calls.
+	// Implementations should ideally index by Role to enhance performance.
+	HasPermission(o Operation, r Resource, role Role) bool
 }
 
-type IACLBuilder[QName comparable] interface {
-	TagTable(tag QName, table QName) IACLBuilder[QName]
+type IACLBuilder[Resource, ResourcePattern, Operation, OperationPattern any, Role comparable] interface {
+	Grant(op OperationPattern, rp ResourcePattern, role Role)
+	Build(rm IResourceMatcher[Resource, ResourcePattern], om IOperationMatcher[Operation, OperationPattern]) IACL[Resource, Operation, Role]
+}
 
-	// If empty op is used for a given table, all ops will be granted for this table and subsequent grants will be ignored
-	// If empty fields is used for a given table, op will be granted for all fields subsequent grants will be ignored
-	GrantOpOnTable(op string, fields []string, table QName, role QName) IACLBuilder[QName]
+type IResourceMatcher[Resource, ResourcePattern any] interface {
+	Match(r Resource, rp ResourcePattern) bool
+}
 
-	// Same rules as for GrantOpOnTable, but grants are applied to all tables with given tag, see TagTable method
-	GrantOpOnTableByTag(op string, fields []string, tag QName, role QName) IACLBuilder[QName]
-
-	GrantExec(resource QName, role QName) IACLBuilder[QName]
-
-	// Must be the last method to call
-	Build() IACL[QName]
+type IOperationMatcher[Operation, OperationPattern any] interface {
+	Match(o Operation, op OperationPattern) bool
 }

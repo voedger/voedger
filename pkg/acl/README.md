@@ -28,7 +28,11 @@
     GRANT INSERT ON WORKSPACE Workspace1 TO Role1;
 ```
 
+## Context
+
+- “Principal P from Workspace W is [Allowed/Denied] Operation O on Resources matching ResourcePattern RP” [design/authnz](../../design/authnz/README.md)
+
 ## Functional Design
 
-1. For each new AppDef get an `IACLBuilder` using `NewACLBuilder()` and build `IACL`
-2. Use `IACL``
+1. For each new AppDef for every Workspace type get an `IACLBuilder` using `NewACLBuilder()` and build `IACL`
+2. Use `IACL`: get a request, determine Workspace type, find `IACL` for this Workspace type, check if request is allowed
