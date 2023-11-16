@@ -54,12 +54,10 @@ const (
 	// Function params, results, Event.command (this is command function params)
 	TypeKind_Object
 
-	// Params and Result are Objects
+	// Functions
 	TypeKind_Query
-
-	// Params are always Objects.
-	// Commands may haven't explicit result
 	TypeKind_Command
+	TypeKind_Projector
 
 	TypeKind_Workspace
 

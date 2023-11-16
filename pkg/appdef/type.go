@@ -60,7 +60,7 @@ type typeRef struct {
 // Returns type by reference.
 //
 // If type is not found then returns nil.
-func (r *typeRef) target(app IAppDef) IType {
+func (r *typeRef) target(tt IWithTypes) IType {
 	if r.name == NullQName {
 		return nil
 	}
@@ -68,7 +68,7 @@ func (r *typeRef) target(app IAppDef) IType {
 		return AnyType
 	}
 	if (r.t == nil) || (r.t.QName() != r.name) {
-		r.t = app.TypeByName(r.name)
+		r.t = tt.TypeByName(r.name)
 	}
 	return r.t
 }
@@ -80,8 +80,8 @@ func (r *typeRef) setName(n QName) {
 }
 
 // Returns is reference valid
-func (r *typeRef) valid(app IAppDef) (bool, error) {
-	if (r.name == NullQName) || (r.name == QNameANY) || (r.target(app) != nil) {
+func (r *typeRef) valid(tt IWithTypes) (bool, error) {
+	if (r.name == NullQName) || (r.name == QNameANY) || (r.target(tt) != nil) {
 		return true, nil
 	}
 	return false, fmt.Errorf("type «%v» is not found: %w", r.name, ErrNameNotFound)

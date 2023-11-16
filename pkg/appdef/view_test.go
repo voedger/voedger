@@ -312,7 +312,7 @@ func TestAddView(t *testing.T) {
 			case "valF3":
 				require.Equal(DataKind_RecordID, f.DataKind())
 				require.False(f.Required())
-				require.Equal([]QName{docName}, f.(IRefField).Refs())
+				require.EqualValues(QNames{docName}, f.(IRefField).Refs())
 			case "valF4":
 				require.Equal(DataKind_bytes, f.DataKind())
 				require.False(f.Required())

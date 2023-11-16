@@ -12,7 +12,6 @@ import (
 	"net/http"
 
 	"github.com/untillpro/goutils/iterate"
-	"golang.org/x/exp/slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -48,8 +47,8 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 		kb.PutRecordID(field_ID, targetID)
 		registryRecord, err := appStructs.ViewRecords().Get(wsid, kb)
 		if err == nil {
-			if len(allowedTargetQNames) > 0 && !slices.Contains(allowedTargetQNames, registryRecord.AsQName(field_QName)) {
-				return wrongQName(targetID, objQName, refField.Name(), registryRecord.AsQName(field_QName), refField.Refs())
+			if len(allowedTargetQNames) > 0 && !allowedTargetQNames.Contains(registryRecord.AsQName(field_QName)) {
+				return wrongQName(targetID, objQName, refField.Name(), registryRecord.AsQName(field_QName), allowedTargetQNames)
 			}
 			return nil
 		}
@@ -61,7 +60,7 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 	})
 }
 
-func wrongQName(targetID istructs.RecordID, srcQName appdef.QName, srcField string, actualQName appdef.QName, allowedQNames []appdef.QName) error {
+func wrongQName(targetID istructs.RecordID, srcQName appdef.QName, srcField string, actualQName appdef.QName, allowedQNames appdef.QNames) error {
 	return fmt.Errorf("%w: record ID %d referenced by %s.%s is of QName %s whereas %v QNames are only allowed", ErrReferentialIntegrityViolation,
 		targetID, srcQName, srcField, actualQName, allowedQNames)
 }
