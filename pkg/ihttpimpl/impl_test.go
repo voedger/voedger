@@ -14,20 +14,15 @@ import (
 	"io"
 	"io/fs"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
-	"time"
 
-	"github.com/voedger/voedger/pkg/ibus"
-	"github.com/voedger/voedger/pkg/ibusmem"
 	"github.com/voedger/voedger/pkg/ihttp"
 
 	"github.com/stretchr/testify/require"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestBasicUsage_HTTPProcessor(t *testing.T) {
@@ -90,15 +85,13 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 var testContentFS embed.FS
 
 type testApp struct {
-	ctx           context.Context
-	cancel        context.CancelFunc
-	wg            *sync.WaitGroup
-	bus           ibus.IBus
-	processor     ihttp.IHTTPProcessor
-	api           ihttp.IHTTPProcessorAPI
-	cleanups      []func()
-	listeningPort int
-	t             *testing.T
+	ctx       context.Context
+	cancel    context.CancelFunc
+	wg        *sync.WaitGroup
+	processor ihttp.IHTTPProcessor
+	api       ihttp.IHTTPProcessorAPI
+	cleanups  []func()
+	t         *testing.T
 }
 
 func setUp(t *testing.T) *testApp {
@@ -107,19 +100,14 @@ func setUp(t *testing.T) *testApp {
 
 	// create Bus
 
-	timeout := time.Second
-	if coreutils.IsDebug() {
-		timeout = time.Hour
-	}
-	bus, cleanup := ibusmem.New(ibus.CLIParams{MaxNumOfConcurrentRequests: 10, ReadWriteTimeout: timeout})
-	cleanups := []func(){cleanup}
+	cleanups := []func(){}
 
 	// create and start HTTPProcessor
 
 	params := ihttp.CLIParams{
 		Port: 0, // listen using some free port, port value will be taken using API
 	}
-	processor, pCleanup, err := NewProcessor(params, bus)
+	processor, pCleanup, err := NewProcessor(params)
 	require.NoError(err)
 	cleanups = append(cleanups, pCleanup)
 
@@ -135,12 +123,8 @@ func setUp(t *testing.T) *testApp {
 
 	// create API
 
-	api, err := NewAPI(bus, processor)
+	api, err := NewAPI(processor)
 	require.NoError(err)
-
-	listeningPort, err := api.ListeningPort(ctx)
-	require.NoError(err)
-	require.Equal(processor.(*httpProcessor).listener.Addr().(*net.TCPAddr).Port, listeningPort)
 
 	// reverse cleanups
 	for i, j := 0, len(cleanups)-1; i < j; i, j = i+1, j-1 {
@@ -148,15 +132,13 @@ func setUp(t *testing.T) *testApp {
 	}
 
 	return &testApp{
-		ctx:           ctx,
-		cancel:        cancel,
-		wg:            &wg,
-		bus:           bus,
-		processor:     processor,
-		api:           api,
-		cleanups:      cleanups,
-		listeningPort: listeningPort,
-		t:             t,
+		ctx:       ctx,
+		cancel:    cancel,
+		wg:        &wg,
+		processor: processor,
+		api:       api,
+		cleanups:  cleanups,
+		t:         t,
 	}
 }
 
@@ -172,7 +154,7 @@ func (ta *testApp) get(resource string, expectedCodes ...int) []byte {
 	require := require.New(ta.t)
 	ta.t.Helper()
 
-	url := fmt.Sprintf("http://localhost:%d%s", ta.listeningPort, resource)
+	url := fmt.Sprintf("http://localhost:%d%s", ta.processor.ListeningPort(), resource)
 
 	res, err := http.Get(url)
 	require.NoError(err)
