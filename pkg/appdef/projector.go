@@ -16,17 +16,16 @@ type projector struct {
 	typ
 	sync    bool
 	ext     *extension
-	events  map[QName]*projectorEvent
+	events  projectorEvents
 	states  storages
 	intents storages
 }
 
-// Returns new projector.
 func newProjector(app *appDef, name QName) *projector {
 	prj := &projector{
 		typ:     makeType(app, name, TypeKind_Projector),
 		ext:     newExtension(),
-		events:  make(map[QName]*projectorEvent),
+		events:  make(projectorEvents),
 		states:  make(storages),
 		intents: make(storages),
 	}
@@ -55,6 +54,7 @@ func (prj *projector) AddEvent(record QName, event ...ProjectorEventKind) IProje
 	} else {
 		prj.events[record] = newProjectorEvent(rec, event...)
 	}
+
 	return prj
 }
 
@@ -115,11 +115,16 @@ func (prj *projector) States(cb func(storage QName, names QNames)) {
 	prj.states.enum(cb)
 }
 
-type projectorEvent struct {
-	comment
-	record IType
-	kinds  uint64 // bitmap[ProjectorEventKind]
-}
+type (
+	// # Implements:
+	//	 - IProjectorEvent
+	projectorEvent struct {
+		comment
+		record IType
+		kinds  uint64 // bitmap[ProjectorEventKind]
+	}
+	projectorEvents map[QName]*projectorEvent
+)
 
 func newProjectorEvent(record IType, kind ...ProjectorEventKind) *projectorEvent {
 	p := &projectorEvent{record: record}
