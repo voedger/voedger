@@ -105,10 +105,6 @@ func (api *processorAPI) DeployAppPartition(_ context.Context, app istructs.AppQ
 	return
 }
 
-func (api *processorAPI) ListeningPort(_ context.Context) (port int, err error) {
-	return api.processor.ListeningPort(), nil
-}
-
 func handleAppPart() http.HandlerFunc {
 	return func(wr http.ResponseWriter, req *http.Request) {
 		// <cluster-domain>/api/<AppQName.owner>/<AppQName.name>/<wsid>/<{q,c}.funcQName>

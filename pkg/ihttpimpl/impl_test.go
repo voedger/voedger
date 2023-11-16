@@ -14,7 +14,6 @@ import (
 	"io"
 	"io/fs"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -86,14 +85,13 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 var testContentFS embed.FS
 
 type testApp struct {
-	ctx           context.Context
-	cancel        context.CancelFunc
-	wg            *sync.WaitGroup
-	processor     ihttp.IHTTPProcessor
-	api           ihttp.IHTTPProcessorAPI
-	cleanups      []func()
-	listeningPort int
-	t             *testing.T
+	ctx       context.Context
+	cancel    context.CancelFunc
+	wg        *sync.WaitGroup
+	processor ihttp.IHTTPProcessor
+	api       ihttp.IHTTPProcessorAPI
+	cleanups  []func()
+	t         *testing.T
 }
 
 func setUp(t *testing.T) *testApp {
@@ -128,24 +126,19 @@ func setUp(t *testing.T) *testApp {
 	api, err := NewAPI(processor)
 	require.NoError(err)
 
-	listeningPort, err := api.ListeningPort(ctx)
-	require.NoError(err)
-	require.Equal(processor.(*httpProcessor).listener.Addr().(*net.TCPAddr).Port, listeningPort)
-
 	// reverse cleanups
 	for i, j := 0, len(cleanups)-1; i < j; i, j = i+1, j-1 {
 		cleanups[i], cleanups[j] = cleanups[j], cleanups[i]
 	}
 
 	return &testApp{
-		ctx:           ctx,
-		cancel:        cancel,
-		wg:            &wg,
-		processor:     processor,
-		api:           api,
-		cleanups:      cleanups,
-		listeningPort: listeningPort,
-		t:             t,
+		ctx:       ctx,
+		cancel:    cancel,
+		wg:        &wg,
+		processor: processor,
+		api:       api,
+		cleanups:  cleanups,
+		t:         t,
 	}
 }
 
@@ -161,7 +154,7 @@ func (ta *testApp) get(resource string, expectedCodes ...int) []byte {
 	require := require.New(ta.t)
 	ta.t.Helper()
 
-	url := fmt.Sprintf("http://localhost:%d%s", ta.listeningPort, resource)
+	url := fmt.Sprintf("http://localhost:%d%s", ta.processor.ListeningPort(), resource)
 
 	res, err := http.Get(url)
 	require.NoError(err)

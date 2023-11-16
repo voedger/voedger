@@ -43,8 +43,6 @@ type IHTTPProcessorAPI interface {
 
 	DeployStaticContent(ctx context.Context, path string, fs fs.FS) (err error)
 
-	ListeningPort(ctx context.Context) (port int, err error)
-
 	/*
 		App Partitions
 
