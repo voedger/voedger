@@ -17,8 +17,8 @@ type projector struct {
 	sync    bool
 	ext     *extension
 	events  map[QName]*projectorEvent
-	states  QNames
-	intents QNames
+	states  storages
+	intents storages
 }
 
 // Returns new projector.
@@ -27,8 +27,8 @@ func newProjector(app *appDef, name QName) *projector {
 		typ:     makeType(app, name, TypeKind_Projector),
 		ext:     newExtension(),
 		events:  make(map[QName]*projectorEvent),
-		states:  QNames{},
-		intents: QNames{},
+		states:  make(storages),
+		intents: make(storages),
 	}
 	app.appendType(prj)
 	return prj
@@ -58,29 +58,28 @@ func (prj *projector) AddEvent(record QName, event ...ProjectorEventKind) IProje
 	return prj
 }
 
-func (prj *projector) AddState(states ...QName) IProjectorBuilder {
-	prj.states.Append(states...)
+func (prj *projector) AddState(storage QName, names ...QName) IProjectorBuilder {
+	prj.states.add(storage, names...)
 	return prj
 }
 
-func (prj *projector) AddIntent(intents ...QName) IProjectorBuilder {
-	prj.intents.Append(intents...)
+func (prj *projector) AddIntent(storage QName, names ...QName) IProjectorBuilder {
+	prj.intents.add(storage, names...)
 	return prj
 }
 
 func (prj *projector) Extension() IExtension { return prj.ext }
 
 func (prj *projector) Events(cb func(IProjectorEvent)) {
-	ord := QNames{}
-	for n := range prj.events {
-		ord.Append(n)
-	}
+	ord := QNamesFromMap(prj.events)
 	for _, n := range ord {
 		cb(prj.events[n])
 	}
 }
 
-func (prj *projector) Intents() QNames { return prj.intents }
+func (prj *projector) Intents(cb func(storage QName, names QNames)) {
+	prj.intents.enum(cb)
+}
 
 func (prj *projector) SetEventComment(record QName, comment ...string) IProjectorBuilder {
 	e, ok := prj.events[record]
@@ -112,7 +111,9 @@ func (prj *projector) SetSync(sync bool) IProjectorBuilder {
 
 func (prj *projector) Sync() bool { return prj.sync }
 
-func (prj *projector) States() QNames { return prj.states }
+func (prj *projector) States(cb func(storage QName, names QNames)) {
+	prj.states.enum(cb)
+}
 
 type projectorEvent struct {
 	comment
@@ -150,5 +151,23 @@ func (e projectorEvent) String() string {
 func (e *projectorEvent) addKind(kind ...ProjectorEventKind) {
 	for _, k := range kind {
 		e.kinds |= 1 << k
+	}
+}
+
+type storages map[QName]QNames
+
+func (ss storages) add(name QName, names ...QName) {
+	q, ok := ss[name]
+	if !ok {
+		q = QNames{}
+	}
+	q.Add(names...)
+	ss[name] = q
+}
+
+func (ss storages) enum(cb func(storage QName, names QNames)) {
+	ord := QNamesFromMap(ss)
+	for _, n := range ord {
+		cb(n, ss[n])
 	}
 }

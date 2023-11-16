@@ -299,7 +299,7 @@ func newRefField(name string, data IData, required bool, ref ...QName) *refField
 		field: makeField(name, data, required),
 		refs:  QNames{},
 	}
-	f.refs.Append(ref...)
+	f.refs.Add(ref...)
 	return f
 }
 

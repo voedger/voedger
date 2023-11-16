@@ -14,6 +14,8 @@ func ExampleIAppDefBuilder_AddProjector() {
 
 	var app appdef.IAppDef
 
+	sysRecords, sysViews := appdef.NewQName(appdef.SysPackage, "records"), appdef.NewQName(appdef.SysPackage, "views")
+
 	prjName := appdef.NewQName("test", "projector")
 	recName := appdef.NewQName("test", "record")
 	docName := appdef.NewQName("test", "doc")
@@ -37,8 +39,8 @@ func ExampleIAppDefBuilder_AddProjector() {
 			SetExtension("", appdef.ExtensionEngineKind_BuiltIn).
 			AddEvent(recName, appdef.ProjectorEventKind_Any...).
 			SetEventComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName)).
-			AddState(docName).
-			AddIntent(viewName)
+			AddState(sysRecords, docName).
+			AddIntent(sysViews, viewName)
 
 		if a, err := appDef.Build(); err == nil {
 			app = a
@@ -55,8 +57,12 @@ func ExampleIAppDefBuilder_AddProjector() {
 		prj.Events(func(e appdef.IProjectorEvent) {
 			fmt.Println(" - event:", e, e.Comment())
 		})
-		fmt.Println(" - states:", prj.States())
-		fmt.Println(" - intents:", prj.Intents())
+		prj.States(func(s appdef.QName, names appdef.QNames) {
+			fmt.Println(" - state:", s, names)
+		})
+		prj.Intents(func(s appdef.QName, names appdef.QNames) {
+			fmt.Println(" - intent:", s, names)
+		})
 
 		fmt.Println(app.Projector(appdef.NewQName("test", "unknown")))
 	}
@@ -74,8 +80,8 @@ func ExampleIAppDefBuilder_AddProjector() {
 	// Projector «test.projector» :
 	//  - extension: projector (BuiltIn)
 	//  - event: CRecord «test.record» [Insert Update Activate Deactivate] run projector every time when test.record is changed
-	//  - states: [test.doc]
-	//  - intents: [test.view]
+	//  - state: sys.records [test.doc]
+	//  - intent: sys.views [test.view]
 	// <nil>
 	// 1 Projector «test.projector»
 }

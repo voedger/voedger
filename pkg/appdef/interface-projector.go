@@ -23,15 +23,18 @@ type IProjector interface {
 	// Returns projector states.
 	//
 	// State is a storage to get data.
-	States() QNames
-
-	//TODO
-	// States(func(storage QName, names QNames))
+	//
+	// States storages enumerated in alphabetical QNames order.
+	// Names slice in every intent storage is sorted and deduplicated.
+	States(func(storage QName, names QNames))
 
 	// Returns projector intents.
 	//
 	// Intent is a storage to put data.
-	Intents() QNames
+	//
+	// Intents storages enumerated in alphabetical QNames order.
+	// Names slice in every intent storage is sorted and deduplicated.
+	Intents(func(storage QName, names QNames))
 }
 
 // Describe event to trigger the projector.
@@ -85,11 +88,12 @@ type IProjectorBuilder interface {
 	SetEventComment(record QName, comment ...string) IProjectorBuilder
 
 	// Adds state to the projector.
-	AddState(...QName) IProjectorBuilder
-
-	//TODO
-	//AddState(storage QName, names ...QName) IProjectorBuilder
+	//
+	// If storage with name is already exists in states then names will be added to existing storage.
+	AddState(storage QName, names ...QName) IProjectorBuilder
 
 	// Adds intent to the projector.
-	AddIntent(...QName) IProjectorBuilder
+	//
+	// If storage with name is already exists in intents then names will be added to existing storage.
+	AddIntent(storage QName, names ...QName) IProjectorBuilder
 }

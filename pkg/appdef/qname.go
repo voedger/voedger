@@ -140,12 +140,33 @@ func ValidQName(qName QName) (bool, error) {
 //
 // Slice is sorted and has no duplicates.
 //
-// Use Append() to add QNames to slice.
+// Use QNamesFrom() to create QNames slice from variadic arguments.
+// Use Add() to add QNames to slice.
 // Use Contains() and Find() to search for QName in slice.
 type QNames []QName
 
-// Appends QNames to slice. Duplicate values are ignored. Result slice is sorted.
-func (qns *QNames) Append(n ...QName) {
+// Returns slice of QNames from variadic arguments.
+//
+// Result slice is sorted and has no duplicates.
+func QNamesFrom(n ...QName) QNames {
+	qq := QNames{}
+	qq.Add(n...)
+	return qq
+}
+
+// Returns slice of QNames from map keys.
+//
+// Result slice is sorted and has no duplicates.
+func QNamesFromMap[V any, M ~map[QName]V](m M) QNames {
+	qq := QNames{}
+	for k := range m {
+		qq.Add(k)
+	}
+	return qq
+}
+
+// Adds QNames to slice. Duplicate values are ignored. Result slice is sorted.
+func (qns *QNames) Add(n ...QName) {
 	for _, q := range n {
 		if i, ok := qns.Find(q); !ok {
 			*qns = slices.Insert(*qns, i, q)

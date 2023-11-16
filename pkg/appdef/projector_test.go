@@ -16,6 +16,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 	require := require.New(t)
 
 	var app IAppDef
+	sysRecords, sysViews, sysWLog := NewQName(SysPackage, "records"), NewQName(SysPackage, "views"), NewQName(SysPackage, "WLog")
 	prjName, recName, docName, viewName := NewQName("test", "projector"), NewQName("test", "record"), NewQName("test", "document"), NewQName("test", "view")
 
 	t.Run("must be ok to add projector", func(t *testing.T) {
@@ -36,8 +37,6 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Equal(TypeKind_Projector, prj.Kind())
 			require.Equal(prjName, prj.QName())
 			require.False(prj.Sync())
-			require.Len(prj.States(), 0)
-			require.Len(prj.Intents(), 0)
 		})
 
 		prj.
@@ -48,8 +47,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			AddEvent(QNameANY, ProjectorEventKind_Deactivate).
 			AddEvent(QNameANY, ProjectorEventKind_Activate). // it is ok to add kinds for same record
 			SetEventComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName)).
-			AddState(docName).
-			AddIntent(viewName)
+			AddState(sysRecords, docName, recName).AddState(sysWLog).
+			AddIntent(sysViews, viewName)
 
 		// and it is ok to add event for any record
 
@@ -80,25 +79,57 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		require.Equal(ExtensionEngineKind_BuiltIn, prj.Extension().Engine())
 		require.Equal("projector code comment", prj.Extension().Comment())
 
-		cnt := 0
-		prj.Events(func(e IProjectorEvent) {
-			cnt++
-			switch cnt {
-			case 1:
-				require.Equal(AnyType, e.On())
-				require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Activate, ProjectorEventKind_Deactivate}, e.Kind())
-			case 2:
-				require.Equal(recName, e.On().QName())
-				require.Equal(TypeKind_CRecord, e.On().Kind())
-				require.EqualValues(ProjectorEventKind_Any, e.Kind())
-			default:
-				require.Failf("unexpected event", "event: %v", e)
-			}
+		t.Run("must be ok enum events", func(t *testing.T) {
+			cnt := 0
+			prj.Events(func(e IProjectorEvent) {
+				cnt++
+				switch cnt {
+				case 1:
+					require.Equal(AnyType, e.On())
+					require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Activate, ProjectorEventKind_Deactivate}, e.Kind())
+				case 2:
+					require.Equal(recName, e.On().QName())
+					require.Equal(TypeKind_CRecord, e.On().Kind())
+					require.EqualValues(ProjectorEventKind_Any, e.Kind())
+				default:
+					require.Failf("unexpected event", "event: %v", e)
+				}
+			})
+			require.Equal(2, cnt)
 		})
-		require.Equal(2, cnt)
 
-		require.EqualValues(QNames{docName}, prj.States())
-		require.EqualValues(QNames{viewName}, prj.Intents())
+		t.Run("must be ok enum states", func(t *testing.T) {
+			cnt := 0
+			prj.States(func(s QName, names QNames) {
+				cnt++
+				switch cnt {
+				case 1:
+					require.Equal(sysWLog, s)
+					require.Empty(names)
+				case 2:
+					require.Equal(sysRecords, s)
+					require.EqualValues(QNames{docName, recName}, names)
+				default:
+					require.Failf("unexpected state", "state: %v, names: %v", s, names)
+				}
+			})
+			require.Equal(2, cnt)
+		})
+
+		t.Run("must be ok enum intents", func(t *testing.T) {
+			cnt := 0
+			prj.Intents(func(s QName, names QNames) {
+				cnt++
+				switch cnt {
+				case 1:
+					require.Equal(sysViews, s)
+					require.EqualValues(QNames{viewName}, names)
+				default:
+					require.Failf("unexpected intent", "intent: %v, names: %v", s, names)
+				}
+			})
+			require.Equal(1, cnt)
+		})
 	})
 
 	t.Run("must be ok to enum projectors", func(t *testing.T) {

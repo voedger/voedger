@@ -20,7 +20,7 @@ func ExampleQNames() {
 
 	// Add some QNames
 
-	qnames.Append(product, order, customer, product)
+	qnames.Add(product, order, customer, product)
 
 	// Iterate over QNames
 
@@ -28,7 +28,7 @@ func ExampleQNames() {
 		fmt.Println(qname)
 	}
 
-	// Check if QNames contains some QName
+	// Check is QNames contains some QName
 
 	fmt.Println(qnames.Contains(product))
 	fmt.Println(qnames.Contains(appdef.NewQName("test", "unknown")))

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -153,6 +154,14 @@ func TestQName_Compare(t *testing.T) {
 	q4 := NewQName("pkg_1", "entity")
 	require.NotEqual(q2, q4)
 	require.False(q2 == q4)
+
+	t.Run("test CompareQName()", func(t *testing.T) {
+		require.Equal(0, CompareQName(q1, q2))
+		require.Equal(-1, CompareQName(q1, q3))
+		require.Equal(1, CompareQName(q3, q1))
+		require.Equal(-1, CompareQName(q2, q4))
+		require.Equal(1, CompareQName(q4, q2))
+	})
 }
 
 func Test_NullQName(t *testing.T) {
@@ -210,7 +219,7 @@ func TestQName_UnmarshalInvalidString(t *testing.T) {
 	})
 }
 
-func Test_ValidQName(t *testing.T) {
+func TestValidQName(t *testing.T) {
 	type args struct {
 		qName QName
 	}
@@ -296,4 +305,54 @@ func TestMustParseQName(t *testing.T) {
 			MustParseQName("🔫")
 		})
 	})
+}
+
+func TestQNamesFrom(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"empty", []string{}, `[]`},
+		{"NullQName", []string{"."}, `[.]`},
+		{"sys.error", []string{"sys.error"}, `[sys.error]`},
+		{"deduplicate", []string{"a.a", "a.a"}, `[a.a]`},
+		{"sort by package", []string{"c.c", "b.b", "a.a"}, `[a.a b.b c.c]`},
+		{"sort by entity", []string{"a.b", "a.c", "a.x", "a.a"}, `[a.a a.b a.c a.x]`},
+		{"sort and deduplicate", []string{"b.b", "z.z", "b.b", "a.a", "z.b"}, `[a.a b.b z.b z.z]`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			names := make([]QName, len(tt.args))
+			for i, arg := range tt.args {
+				names[i] = MustParseQName(arg)
+			}
+
+			q := QNamesFrom(names...)
+			if got := fmt.Sprint(q); got != tt.want {
+				t.Errorf("QNamesFrom(%v) = %v, want %v", tt.args, got, tt.want)
+			}
+
+			if !slices.IsSortedFunc(q, CompareQName) {
+				t.Errorf("QNamesFrom(%v) is not sorted", tt.args)
+			}
+
+			for _, n := range names {
+				if !q.Contains(n) {
+					t.Errorf("QNamesFrom(%v).Contains(%v) returns false", tt.args, n)
+				}
+				i, ok := q.Find(n)
+				if !ok {
+					t.Errorf("QNamesFrom(%v).Find(%v) returns false", tt.args, n)
+				}
+				if q[i] != n {
+					t.Errorf("QNamesFrom(%v).Find(%v) returns wrong index %v", tt.args, n, i)
+				}
+				if q.Contains(MustParseQName("test.unknown")) {
+					t.Errorf("QNamesFrom(%v).Contains(test.unknown) returns true", tt.args)
+				}
+			}
+		})
+	}
 }
