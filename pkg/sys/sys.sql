@@ -387,6 +387,13 @@ ABSTRACT WORKSPACE Workspace (
         PRIMARY KEY ((OwnerWSID), WSName)
     ) AS RESULT OF ProjectorWorkspaceIDIdx;
 
+    VIEW ViewSubjectsIdx (
+        LoginHash int64 NOT NULL,
+        Login text NOT NULL,
+        SubjectID ref NOT NULL,
+        PRIMARY KEY ((LoginHash), Login)
+    ) AS RESULT OF ApplyViewSubjectsIdx;
+
     EXTENSION ENGINE BUILTIN (
 
         -- blobber
@@ -440,6 +447,7 @@ ABSTRACT WORKSPACE Workspace (
         PROJECTOR ApplyUpdateInviteRoles ON (InitiateUpdateInviteRoles);
         SYNC PROJECTOR ProjectorInviteIndex ON (InitiateInvitationByEMail) INTENTS(View(InviteIndexView));
         SYNC PROJECTOR ProjectorJoinedWorkspaceIndex ON (CreateJoinedWorkspace) INTENTS(View(JoinedWorkspaceIndexView));
+        SYNC PROJECTOR ApplyViewSubjectsIdx AFTER INSERT ON (Subject) INTENTS(View(ViewSubjectsIdx));
 
         -- journal
 

@@ -35,6 +35,7 @@ var (
 	QNameCDocJoinedWorkspace             = appdef.NewQName(appdef.SysPackage, "JoinedWorkspace")
 	QNameCDocSubject                     = appdef.NewQName(appdef.SysPackage, "Subject")
 	QNameViewSubjectsIdx                 = appdef.NewQName(appdef.SysPackage, "ViewSubjectsIdx")
+	QNameApplyViewSubjectsIdx            = appdef.NewQName(appdef.SysPackage, "ApplyViewSubjectsIdx")
 )
 
 const (
