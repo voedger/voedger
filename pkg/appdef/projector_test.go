@@ -42,7 +42,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		prj.
 			SetSync(true).
 			SetExtension("", ExtensionEngineKind_BuiltIn, "projector code comment").
-			AddEvent(recName, ProjectorEventKind_Any...).
+			AddEvent(recName, ProjectorEventKind_AnyChanges...).
 			SetEventComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName)).
 			AddEvent(QNameANY, ProjectorEventKind_Deactivate).
 			AddEvent(QNameANY, ProjectorEventKind_Activate). // it is ok to add kinds for same record
@@ -90,7 +90,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 				case 2:
 					require.Equal(recName, e.On().QName())
 					require.Equal(TypeKind_CRecord, e.On().Kind())
-					require.EqualValues(ProjectorEventKind_Any, e.Kind())
+					require.EqualValues(ProjectorEventKind_AnyChanges, e.Kind())
 				default:
 					require.Failf("unexpected event", "event: %v", e)
 				}
@@ -189,7 +189,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		apb := New()
 		prj := apb.AddProjector(NewQName("test", "projector"))
 		require.Panics(func() {
-			prj.AddEvent(NullQName, ProjectorEventKind_Any...)
+			prj.AddEvent(NullQName, ProjectorEventKind_AnyChanges...)
 		})
 	})
 
@@ -197,10 +197,10 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		apb := New()
 		prj := apb.AddProjector(NewQName("test", "projector"))
 		require.Panics(func() {
-			prj.AddEvent(NewQName("test", "unknown"), ProjectorEventKind_Any...)
+			prj.AddEvent(NewQName("test", "unknown"), ProjectorEventKind_AnyChanges...)
 		})
 		require.NotPanics(func() {
-			prj.AddEvent(QNameANY, ProjectorEventKind_Any...)
+			prj.AddEvent(QNameANY, ProjectorEventKind_AnyChanges...)
 		}, "but ok if event is any record")
 	})
 

@@ -33,28 +33,29 @@ func newProjector(app *appDef, name QName) *projector {
 	return prj
 }
 
-func (prj *projector) AddEvent(record QName, event ...ProjectorEventKind) IProjectorBuilder {
-	rec := func() (rec IType) {
-		switch record {
-		case NullQName:
-			panic(fmt.Errorf("%v: can not add event because record name is empty: %w", prj, ErrNameMissed))
-		case QNameANY:
-			rec = AnyType
-		default:
-			rec = prj.app.Record(record)
-			if rec == nil {
-				panic(fmt.Errorf("%v: record type «%v» not found: %w", prj, record, ErrNameNotFound))
-			}
-		}
-		return rec
-	}()
-
-	if e, ok := prj.events[record]; ok {
-		e.addKind(event...)
-	} else {
-		prj.events[record] = newProjectorEvent(rec, event...)
+func (prj *projector) AddEvent(on QName, event ...ProjectorEventKind) IProjectorBuilder {
+	if on == NullQName {
+		panic(fmt.Errorf("%v: type name for trigger is empty: %w", prj, ErrNameMissed))
 	}
 
+	t := prj.app.Type(on)
+	if t == nil {
+		panic(fmt.Errorf("%v: type «%v» not found: %w", prj, on, ErrNameNotFound))
+	}
+	switch t.Kind() {
+	case TypeKind_GDoc, TypeKind_GRecord,
+		TypeKind_CDoc, TypeKind_CRecord,
+		TypeKind_WDoc, TypeKind_WRecord,
+		TypeKind_ODoc, TypeKind_ORecord,
+		TypeKind_Command:
+		if e, ok := prj.events[on]; ok {
+			e.addKind(event...)
+		} else {
+			prj.events[on] = newProjectorEvent(t, ProjectorEventKind_Execute)
+		}
+	default:
+		panic(fmt.Errorf("%v: %v is not applicable for trigger: %w", prj, t, ErrInvalidProjectorEventKind))
+	}
 	return prj
 }
 
@@ -120,14 +121,14 @@ type (
 	//	 - IProjectorEvent
 	projectorEvent struct {
 		comment
-		record IType
-		kinds  uint64 // bitmap[ProjectorEventKind]
+		on    IType
+		kinds uint64 // bitmap[ProjectorEventKind]
 	}
 	projectorEvents map[QName]*projectorEvent
 )
 
-func newProjectorEvent(record IType, kind ...ProjectorEventKind) *projectorEvent {
-	p := &projectorEvent{record: record}
+func newProjectorEvent(on IType, kind ...ProjectorEventKind) *projectorEvent {
+	p := &projectorEvent{on: on}
 	p.addKind(kind...)
 	return p
 }
@@ -142,7 +143,7 @@ func (e *projectorEvent) Kind() (kinds []ProjectorEventKind) {
 }
 
 func (e *projectorEvent) On() IType {
-	return e.record
+	return e.on
 }
 
 func (e projectorEvent) String() string {
@@ -153,8 +154,15 @@ func (e projectorEvent) String() string {
 	return fmt.Sprintf("%v [%s]", e.On(), strings.Join(s, " "))
 }
 
+// Adds specified events to projector event.
+//
+// # Panics:
+//   - if event kind is not compatible with type.
 func (e *projectorEvent) addKind(kind ...ProjectorEventKind) {
 	for _, k := range kind {
+		if !k.typeCompatible(e.on.Kind()) {
+			panic(fmt.Errorf("%s event is not applicable with %v: %w", k.TrimString(), e.on, ErrInvalidProjectorEventKind))
+		}
 		e.kinds |= 1 << k
 	}
 }

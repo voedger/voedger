@@ -41,13 +41,13 @@ type IProjector interface {
 type IProjectorEvent interface {
 	IComment
 
+	// Returns type to trigger projector.
+	//
+	// This can be a record or command.
+	On() IType
+
 	// Returns set (sorted slice) of event kind to trigger.
 	Kind() []ProjectorEventKind
-
-	// Returns record type to trigger projector.
-	//
-	// If projector will be triggered for any record type then On() returns AnyType.
-	On() IType
 }
 
 // Events enumeration to trigger the projector.
@@ -72,20 +72,21 @@ type IProjectorBuilder interface {
 
 	// Adds event to trigger the projector.
 	//
-	// Record can be some record type or QNameANY.
-	// If record is QNameANY then projector will be triggered for any record type.
+	// QName can be some record type or command.
 	//
-	// If event kind is missed then default is ProjectorEventKind_Any.
+	// If event kind is missed then default is ProjectorEventKind_Any for records and ProjectorEventKind_Execute for commands.
 	//
 	// # Panics:
-	//	- if record is empty (NullQName) or unknown record type.
-	AddEvent(record QName, event ...ProjectorEventKind) IProjectorBuilder
+	//	- if QName is empty (NullQName)
+	//	- if QName type is not a record and not a command
+	//	- if event kind is not applicable for QName type.
+	AddEvent(on QName, event ...ProjectorEventKind) IProjectorBuilder
 
 	// Sets event comment.
 	//
 	// # Panics:
-	//	- if event for record is not added
-	SetEventComment(record QName, comment ...string) IProjectorBuilder
+	//	- if event for QName is not added
+	SetEventComment(on QName, comment ...string) IProjectorBuilder
 
 	// Adds state to the projector.
 	//

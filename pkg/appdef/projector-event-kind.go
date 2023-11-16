@@ -18,11 +18,13 @@ const (
 	ProjectorEventKind_Update
 	ProjectorEventKind_Activate
 	ProjectorEventKind_Deactivate
+	ProjectorEventKind_Execute
 
 	ProjectorEventKind_Count
 )
 
-var ProjectorEventKind_Any = []ProjectorEventKind{
+// Events for record any change.
+var ProjectorEventKind_AnyChanges = []ProjectorEventKind{
 	ProjectorEventKind_Insert,
 	ProjectorEventKind_Update,
 	ProjectorEventKind_Activate,
@@ -45,4 +47,28 @@ func (i ProjectorEventKind) MarshalText() ([]byte, error) {
 func (i ProjectorEventKind) TrimString() string {
 	const pref = "ProjectorEventKind_"
 	return strings.TrimPrefix(i.String(), pref)
+}
+
+// Returns is event kind compatible with type kind.
+//
+// # Compatibles:
+//
+//   - Any document or record can be inserted.
+//   - Any document or record, except ODoc and ORecord, can be updated, activated or deactivated.
+//   - Only command can be executed.
+func (i ProjectorEventKind) typeCompatible(kind TypeKind) bool {
+	switch i {
+	case ProjectorEventKind_Insert:
+		return kind == TypeKind_GDoc || kind == TypeKind_GRecord ||
+			kind == TypeKind_CDoc || kind == TypeKind_CRecord ||
+			kind == TypeKind_WDoc || kind == TypeKind_WRecord ||
+			kind == TypeKind_ODoc || kind == TypeKind_ORecord
+	case ProjectorEventKind_Update, ProjectorEventKind_Activate, ProjectorEventKind_Deactivate:
+		return kind == TypeKind_GDoc || kind == TypeKind_GRecord ||
+			kind == TypeKind_CDoc || kind == TypeKind_CRecord ||
+			kind == TypeKind_WDoc || kind == TypeKind_WRecord
+	case ProjectorEventKind_Execute:
+		return kind == TypeKind_Command
+	}
+	return false
 }

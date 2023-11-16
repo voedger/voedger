@@ -37,7 +37,7 @@ func ExampleIAppDefBuilder_AddProjector() {
 		prj := appDef.AddProjector(prjName)
 		prj.
 			SetExtension("", appdef.ExtensionEngineKind_BuiltIn).
-			AddEvent(recName, appdef.ProjectorEventKind_Any...).
+			AddEvent(recName, appdef.ProjectorEventKind_AnyChanges...).
 			SetEventComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName)).
 			AddState(sysRecords, docName).
 			AddIntent(sysViews, viewName)
