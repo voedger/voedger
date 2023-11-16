@@ -18,6 +18,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 	var app IAppDef
 	sysRecords, sysViews, sysWLog := NewQName(SysPackage, "records"), NewQName(SysPackage, "views"), NewQName(SysPackage, "WLog")
 	prjName, recName, docName, viewName := NewQName("test", "projector"), NewQName("test", "record"), NewQName("test", "document"), NewQName("test", "view")
+	cmdName := NewQName("test", "command")
 
 	t.Run("must be ok to add projector", func(t *testing.T) {
 		appDef := New()
@@ -31,6 +32,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		v.ValueBuilder().AddDataField("data", SysData_bytes, false, MaxLen(1024))
 		v.SetComment("view is intent for projector")
 
+		_ = appDef.AddCommand(cmdName).SetExtension("command", ExtensionEngineKind_BuiltIn)
+
 		prj := appDef.AddProjector(prjName)
 
 		t.Run("test newly created projector", func(t *testing.T) {
@@ -43,14 +46,11 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			SetSync(true).
 			SetExtension("", ExtensionEngineKind_BuiltIn, "projector code comment").
 			AddEvent(recName, ProjectorEventKind_AnyChanges...).
-			SetEventComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName)).
-			AddEvent(QNameANY, ProjectorEventKind_Deactivate).
-			AddEvent(QNameANY, ProjectorEventKind_Activate). // it is ok to add kinds for same record
-			SetEventComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName)).
+			SetEventComment(recName, fmt.Sprintf("run projector after change %v", recName)).
+			AddEvent(cmdName).
+			SetEventComment(cmdName, fmt.Sprintf("run projector after execute %v", cmdName)).
 			AddState(sysRecords, docName, recName).AddState(sysWLog).
 			AddIntent(sysViews, viewName)
-
-		// and it is ok to add event for any record
 
 		t.Run("must be ok to build", func(t *testing.T) {
 			a, err := appDef.Build()
@@ -85,12 +85,15 @@ func Test_AppDef_AddProjector(t *testing.T) {
 				cnt++
 				switch cnt {
 				case 1:
-					require.Equal(AnyType, e.On())
-					require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Activate, ProjectorEventKind_Deactivate}, e.Kind())
+					require.Equal(cmdName, e.On().QName())
+					require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Execute}, e.Kind())
+					require.Contains(e.Comment(), "run projector after execute")
+					require.Contains(e.Comment(), cmdName.String())
 				case 2:
 					require.Equal(recName, e.On().QName())
-					require.Equal(TypeKind_CRecord, e.On().Kind())
 					require.EqualValues(ProjectorEventKind_AnyChanges, e.Kind())
+					require.Contains(e.Comment(), "run projector after change")
+					require.Contains(e.Comment(), recName.String())
 				default:
 					require.Failf("unexpected event", "event: %v", e)
 				}
@@ -151,6 +154,41 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		require.Nil(app.Projector(NewQName("test", "unknown")))
 	})
 
+	t.Run("more add project checks", func(t *testing.T) {
+		apb := New()
+		_ = apb.AddCRecord(recName)
+		prj := apb.AddProjector(prjName)
+		prj.
+			SetExtension("customExtensionName", ExtensionEngineKind_WASM, "custom extension name is available").
+			AddEvent(recName, ProjectorEventKind_Insert, ProjectorEventKind_Update).
+			AddEvent(recName, ProjectorEventKind_Activate, ProjectorEventKind_Deactivate).
+			SetEventComment(recName, "event can be added twice")
+		app, err := apb.Build()
+		require.NoError(err)
+
+		p := app.Projector(prjName)
+
+		require.Equal("customExtensionName", p.Extension().Name())
+		require.Equal(ExtensionEngineKind_WASM, p.Extension().Engine())
+		require.Equal("custom extension name is available", p.Extension().Comment())
+
+		t.Run("must be ok enum events", func(t *testing.T) {
+			cnt := 0
+			p.Events(func(e IProjectorEvent) {
+				cnt++
+				switch cnt {
+				case 1:
+					require.Equal(recName, e.On().QName())
+					require.EqualValues(ProjectorEventKind_AnyChanges, e.Kind())
+					require.Equal("event can be added twice", e.Comment())
+				default:
+					require.Failf("unexpected event", "event: %v", e)
+				}
+			})
+			require.Equal(1, cnt)
+		})
+	})
+
 	t.Run("panic if name is empty", func(t *testing.T) {
 		apb := New()
 		require.Panics(func() {
@@ -199,9 +237,23 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		require.Panics(func() {
 			prj.AddEvent(NewQName("test", "unknown"), ProjectorEventKind_AnyChanges...)
 		})
-		require.NotPanics(func() {
-			prj.AddEvent(QNameANY, ProjectorEventKind_AnyChanges...)
-		}, "but ok if event is any record")
+	})
+
+	t.Run("panic if event type is not record or command", func(t *testing.T) {
+		apb := New()
+		prj := apb.AddProjector(NewQName("test", "projector"))
+		require.Panics(func() {
+			prj.AddEvent(QNameANY, ProjectorEventKind_Execute)
+		})
+	})
+
+	t.Run("panic if event is incompatible with type", func(t *testing.T) {
+		apb := New()
+		_ = apb.AddCRecord(recName)
+		prj := apb.AddProjector(NewQName("test", "projector"))
+		require.Panics(func() {
+			prj.AddEvent(recName, ProjectorEventKind_Execute)
+		})
 	})
 
 	t.Run("panic if comment unknown event", func(t *testing.T) {

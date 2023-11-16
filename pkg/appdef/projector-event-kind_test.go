@@ -70,3 +70,44 @@ func TestProjectorEventKindTrimString(t *testing.T) {
 		})
 	}
 }
+
+func TestProjectorEventKind_typeCompatible(t *testing.T) {
+	type args struct {
+		kind TypeKind
+	}
+	tests := []struct {
+		name string
+		i    ProjectorEventKind
+		args args
+		want bool
+	}{
+		{"ok Insert CDoc", ProjectorEventKind_Insert, args{TypeKind_CDoc}, true},
+		{"ok Update CDoc", ProjectorEventKind_Update, args{TypeKind_CDoc}, true},
+		{"ok Deactivate CDoc", ProjectorEventKind_Deactivate, args{TypeKind_CDoc}, true},
+
+		{"ok Insert WDoc", ProjectorEventKind_Insert, args{TypeKind_WDoc}, true},
+		{"ok Update WDoc", ProjectorEventKind_Update, args{TypeKind_WDoc}, true},
+		{"ok Deactivate WDoc", ProjectorEventKind_Deactivate, args{TypeKind_WDoc}, true},
+
+		{"ok Insert ODoc", ProjectorEventKind_Insert, args{TypeKind_ODoc}, true},
+		{"fail Update ODoc", ProjectorEventKind_Update, args{TypeKind_ODoc}, false},
+		{"fail Deactivate ODoc", ProjectorEventKind_Deactivate, args{TypeKind_ODoc}, false},
+
+		{"ok Execute Command", ProjectorEventKind_Execute, args{TypeKind_Command}, true},
+		{"fail Execute GRecord", ProjectorEventKind_Execute, args{TypeKind_GRecord}, false},
+
+		{"fail Insert Command", ProjectorEventKind_Insert, args{TypeKind_Command}, false},
+
+		{"fail Insert Query", ProjectorEventKind_Insert, args{TypeKind_Query}, false},
+		{"fail Execute View", ProjectorEventKind_Execute, args{TypeKind_ViewRecord}, false},
+
+		{"fail out of bounds event", ProjectorEventKind_Count + 1, args{TypeKind_CDoc}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.i.typeCompatible(tt.args.kind); got != tt.want {
+				t.Errorf("%v.typeCompatible(%v) = %v, want %v", tt.i, tt.args.kind, got, tt.want)
+			}
+		})
+	}
+}

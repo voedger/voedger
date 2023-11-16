@@ -35,10 +35,10 @@ func newProjector(app *appDef, name QName) *projector {
 
 func (prj *projector) AddEvent(on QName, event ...ProjectorEventKind) IProjectorBuilder {
 	if on == NullQName {
-		panic(fmt.Errorf("%v: type name for trigger is empty: %w", prj, ErrNameMissed))
+		panic(fmt.Errorf("%v: type name is empty: %w", prj, ErrNameMissed))
 	}
 
-	t := prj.app.Type(on)
+	t := prj.app.TypeByName(on)
 	if t == nil {
 		panic(fmt.Errorf("%v: type «%v» not found: %w", prj, on, ErrNameNotFound))
 	}
@@ -51,10 +51,10 @@ func (prj *projector) AddEvent(on QName, event ...ProjectorEventKind) IProjector
 		if e, ok := prj.events[on]; ok {
 			e.addKind(event...)
 		} else {
-			prj.events[on] = newProjectorEvent(t, ProjectorEventKind_Execute)
+			prj.events[on] = newProjectorEvent(t, event...)
 		}
 	default:
-		panic(fmt.Errorf("%v: %v is not applicable for trigger: %w", prj, t, ErrInvalidProjectorEventKind))
+		panic(fmt.Errorf("%v: %v is not applicable for projector event: %w", prj, t, ErrInvalidProjectorEventKind))
 	}
 	return prj
 }
@@ -129,6 +129,10 @@ type (
 
 func newProjectorEvent(on IType, kind ...ProjectorEventKind) *projectorEvent {
 	p := &projectorEvent{on: on}
+	switch on.Kind() {
+	case TypeKind_Command:
+		p.addKind(ProjectorEventKind_Execute)
+	}
 	p.addKind(kind...)
 	return p
 }
