@@ -404,17 +404,6 @@ func deployMonDockerStack(cluster *clusterType) error {
 
 	conf := newSeConfigType(cluster)
 
-	if err = newScriptExecuter(cluster.sshKey, conf.AppNode1).
-		run("swarm-set-label.sh", conf.AppNode1Name, conf.AppNode1Name, cluster.nodeByHost(conf.AppNode1).label(swarmMonLabelKey), "true"); err != nil {
-		return err
-	}
-
-	if err = newScriptExecuter(cluster.sshKey, conf.AppNode2).
-		// nolint
-		run("swarm-set-label.sh", conf.AppNode1Name, conf.AppNode2Name, cluster.nodeByHost(conf.AppNode2).label(swarmMonLabelKey), "true"); err != nil {
-		return err
-	}
-
 	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
 		run("mon-node-prepare.sh", conf.AppNode1Name, conf.AppNode2Name, conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name); err != nil {
 
@@ -538,15 +527,18 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 		conf.DBNode3 = oldAddr
 	}
 
+	// nolint
 	if err = newScriptExecuter(cluster.sshKey, "localhost").
 		run("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name, boolToStr(devMode)); err != nil {
 		return err
 	}
+	// nolint
 	if err = newScriptExecuter(cluster.sshKey, "localhost").
 		run("db-node-prepare.sh", newAddr, dc); err != nil {
 		return err
 	}
 
+	// nolint
 	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s, %s", oldAddr, newAddr)).
 		run("ctool-scylla-replace-node.sh", oldAddr, newAddr, conf.AppNode1, dc); err != nil {
 		return err
@@ -589,6 +581,7 @@ func replaceSeAppNode(cluster *clusterType) error {
 	}
 
 	logger.Info("swarm remove node ", oldAddr)
+	// nolint
 	if err = newScriptExecuter(cluster.sshKey, oldAddr).
 		run("swarm-rm-node.sh", conf.DBNode1Name, oldAddr); err != nil {
 		return err
@@ -606,6 +599,7 @@ func replaceSeAppNode(cluster *clusterType) error {
 	}
 
 	logger.Info("copy prometheus data base from", liveOldAddr, "to", newAddr)
+	// nolint
 	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s, %s", liveOldAddr, newAddr)).
 		run("prometheus-tsdb-copy.sh", liveOldAddr, newAddr); err != nil {
 		return err
