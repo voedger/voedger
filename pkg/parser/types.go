@@ -374,9 +374,21 @@ type ProjectorStorage struct {
 	Entities []DefQName `parser:"( '(' @@ (',' @@)* ')')?"`
 }
 
+type ProjectionTableAction struct {
+	Insert     bool `parser:"@'INSERT'"`
+	Update     bool `parser:"| @'UPDATE'"`
+	Activate   bool `parser:"| @'ACTIVATE'"`
+	Deactivate bool `parser:"| @'DEACTIVATE'"`
+}
+
+type ProjectorCommandAction struct {
+	Execute bool `parser:"@'EXECUTE'"`
+}
+
 type ProjectorTrigger struct {
-	CUDEvents *ProjectorCUDEvents `parser:"('AFTER' @@)?"`
-	QNames    []DefQName          `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!"`
+	ExecuteAction *ProjectorCommandAction `parser:"'AFTER' (@@"`
+	TableActions  []ProjectionTableAction `parser:"| (@@ ('OR' @@)* ))"`
+	QNames        []DefQName              `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!"`
 }
 
 type ProjectorStmt struct {
@@ -392,10 +404,6 @@ type ProjectorStmt struct {
 func (s *ProjectorStmt) GetName() string            { return string(s.Name) }
 func (s *ProjectorStmt) SetEngineType(e EngineType) { s.Engine = e }
 
-type ProjectorCUDEvents struct {
-	Actions []string `parser:"@('INSERT' | 'UPDATE' | 'ACTIVATE' | 'DEACTIVATE') ('OR' @('INSERT' | 'UPDATE' | 'ACTIVATE' | 'DEACTIVATE'))*"`
-}
-
 // func (t *ProjectorCUDEvents) insert() bool {
 // 	for i := 0; i < len(t.Actions); i++ {
 // 		if t.Actions[i] == "INSERT" {
@@ -405,27 +413,27 @@ type ProjectorCUDEvents struct {
 // 	return false
 // }
 
-func (t *ProjectorCUDEvents) update() bool {
-	for i := 0; i < len(t.Actions); i++ {
-		if t.Actions[i] == "UPDATE" {
+func (t *ProjectorTrigger) update() bool {
+	for i := 0; i < len(t.TableActions); i++ {
+		if t.TableActions[i].Update {
 			return true
 		}
 	}
 	return false
 }
 
-func (t *ProjectorCUDEvents) activate() bool {
-	for i := 0; i < len(t.Actions); i++ {
-		if t.Actions[i] == "ACTIVATE" {
+func (t *ProjectorTrigger) activate() bool {
+	for i := 0; i < len(t.TableActions); i++ {
+		if t.TableActions[i].Activate {
 			return true
 		}
 	}
 	return false
 }
 
-func (t *ProjectorCUDEvents) deactivate() bool {
-	for i := 0; i < len(t.Actions); i++ {
-		if t.Actions[i] == "DEACTIVATE" {
+func (t *ProjectorTrigger) deactivate() bool {
+	for i := 0; i < len(t.TableActions); i++ {
+		if t.TableActions[i].Deactivate {
 			return true
 		}
 	}
@@ -567,12 +575,12 @@ func (s *FunctionStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type CommandStmt struct {
 	Statement
-	Name        Ident      `parser:"'COMMAND' @Ident"`
-	Arg         *VoidOrDef `parser:"('(' @@? "`
-	UnloggedArg *VoidOrDef `parser:"(','? UNLOGGED @@)? ')')?"`
-	Returns     *VoidOrDef `parser:"('RETURNS' @@)?"`
-	With        []WithItem `parser:"('WITH' @@ (',' @@)* )?"`
-	Engine      EngineType // Initialized with 1st pass
+	Name        Ident           `parser:"'COMMAND' @Ident"`
+	Arg         *AnyOrVoidOrDef `parser:"('(' @@? "`
+	UnloggedArg *AnyOrVoidOrDef `parser:"(','? UNLOGGED @@)? ')')?"`
+	Returns     *AnyOrVoidOrDef `parser:"('RETURNS' @@)?"`
+	With        []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Engine      EngineType      // Initialized with 1st pass
 }
 
 func (s *CommandStmt) GetName() string            { return string(s.Name) }
@@ -592,11 +600,11 @@ type AnyOrVoidOrDef struct {
 
 type QueryStmt struct {
 	Statement
-	Name    Ident          `parser:"'QUERY' @Ident"`
-	Arg     *VoidOrDef     `parser:"('(' @@? ')')?"`
-	Returns AnyOrVoidOrDef `parser:"'RETURNS' @@"`
-	With    []WithItem     `parser:"('WITH' @@ (',' @@)* )?"`
-	Engine  EngineType     // Initialized with 1st pass
+	Name    Ident           `parser:"'QUERY' @Ident"`
+	Arg     *AnyOrVoidOrDef `parser:"('(' @@? ')')?"`
+	Returns AnyOrVoidOrDef  `parser:"'RETURNS' @@"`
+	With    []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Engine  EngineType      // Initialized with 1st pass
 }
 
 func (s *QueryStmt) GetName() string            { return string(s.Name) }

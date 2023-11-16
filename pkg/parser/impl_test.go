@@ -674,7 +674,7 @@ func Test_DuplicatesInViews(t *testing.T) {
 		) AS RESULT OF Proj1;
 
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -717,7 +717,7 @@ func Test_Views(t *testing.T) {
 				PRIMARY KEY(field2)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 				COMMAND Orders()
 			);
 			)
@@ -729,7 +729,7 @@ func Test_Views(t *testing.T) {
 				PRIMARY KEY((field1))
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 				COMMAND Orders()
 			);
 			)
@@ -741,7 +741,7 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY((field1))
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -754,7 +754,7 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -767,7 +767,7 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -781,7 +781,7 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -792,7 +792,7 @@ func Test_Views(t *testing.T) {
 			fld1 int32
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -816,7 +816,7 @@ func Test_Views2(t *testing.T) {
 				PRIMARY KEY((field1,field4),field2)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 				COMMAND Orders()
 			);
 		)
@@ -853,7 +853,7 @@ func Test_Views2(t *testing.T) {
 				PRIMARY KEY((field1),field4,field3)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 				COMMAND Orders()
 			);
 		)
@@ -890,7 +890,7 @@ func Test_Views2(t *testing.T) {
 				PRIMARY KEY((field1),field4,field3)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders);
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders);
 				COMMAND Orders()
 			);
 		)
@@ -951,7 +951,7 @@ func Test_Undefined(t *testing.T) {
 		EXTENSION ENGINE WASM (
 			COMMAND Orders() WITH Tags=(UndefinedTag);
 			QUERY Query1 RETURNS void WITH Rate=UndefinedRate;
-			PROJECTOR ImProjector ON xyz.CreateUPProfile;
+			PROJECTOR ImProjector AFTER EXECUTE ON xyz.CreateUPProfile;
 			COMMAND CmdFakeReturn() RETURNS text;
 			COMMAND CmdNoReturn() RETURNS void;
 			COMMAND CmdFakeArg(text);
@@ -985,12 +985,12 @@ func Test_Projectors(t *testing.T) {
 		TABLE Order INHERITS ODoc();
 		EXTENSION ENGINE WASM (
 			COMMAND Orders();
-			PROJECTOR ImProjector1 ON test.CreateUPProfile; 			-- Undefined
-			PROJECTOR ImProjector2 ON Order; 							-- Good
+			PROJECTOR ImProjector1 AFTER EXECUTE ON test.CreateUPProfile; 			-- Undefined
+			PROJECTOR ImProjector2 AFTER EXECUTE ON Order; 							-- Bad: Order is not a type or command
 			PROJECTOR ImProjector3 AFTER UPDATE ON Order; 				-- Bad
 			PROJECTOR ImProjector4 AFTER ACTIVATE ON Order; 			-- Bad
 			PROJECTOR ImProjector5 AFTER DEACTIVATE ON Order; 			-- Bad
-			PROJECTOR ImProjector6 AFTER INSERT ON Order OR ON Orders;	-- Good
+			PROJECTOR ImProjector6 AFTER INSERT ON Order OR AFTER EXECUTE ON Orders;	-- Good
 		)
 	)
 	`)
@@ -1002,7 +1002,8 @@ func Test_Projectors(t *testing.T) {
 	_, err = BuildAppSchema([]*PackageSchemaAST{pkg, getSysPackageAST()})
 
 	require.EqualError(err, strings.Join([]string{
-		"example.sql:6:4: test.CreateUPProfile undefined, expected command, type or table",
+		"example.sql:6:4: undefined command or type: test.CreateUPProfile",
+		"example.sql:7:4: undefined command or type: Order",
 		"example.sql:8:4: only INSERT allowed for ODoc or ORecord",
 		"example.sql:9:4: only INSERT allowed for ODoc or ORecord",
 		"example.sql:10:4: only INSERT allowed for ODoc or ORecord",
@@ -1024,7 +1025,7 @@ func Test_Imports(t *testing.T) {
     		COMMAND Orders WITH Tags=(pkg2.SomeTag);
     		QUERY Query2 RETURNS void WITH Tags=(air.SomePkg3Tag);
     		QUERY Query3 RETURNS void WITH Tags=(air.UnknownTag); -- air.UnknownTag undefined
-    		PROJECTOR ImProjector ON Air.CreateUPProfil; -- Air undefined
+    		PROJECTOR ImProjector AFTER EXECUTE ON Air.CreateUPProfil; -- Air undefined
 		)
 	)
 	`)

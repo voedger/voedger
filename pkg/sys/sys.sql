@@ -328,11 +328,13 @@ ABSTRACT WORKSPACE Workspace (
 
         -- builtin
 
+        COMMAND CUD();
+        COMMAND Init(); -- Deprecated: use c.sys.CUD instead. Kept for backward compatibility only
         QUERY Echo(EchoParams) RETURNS EchoResult;
         QUERY GRCount RETURNS GRCountResult;
         QUERY Modules RETURNS ModulesResult;
         COMMAND RenameQName(RenameQNameParams);
-        SYNC PROJECTOR RecordsRegistryProjector ON (CRecord, WRecord, ORecord) INTENTS(View(RecordsRegistry));
+        SYNC PROJECTOR RecordsRegistryProjector AFTER INSERT ON (CRecord, WRecord, ORecord) OR AFTER UPDATE ON (CRecord, WRecord) INTENTS(View(RecordsRegistry));
 
         -- authnz
 
@@ -390,6 +392,7 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND OnWorkspaceDeactivated(OnWorkspaceDeactivatedParams);
         COMMAND OnJoinedWorkspaceDeactivated(OnJoinedWorkspaceDeactivatedParams);
         COMMAND OnChildWorkspaceDeactivated(OnChildWorkspaceDeactivatedParams);
+        COMMAND InitiateDeactivateWorkspace();
     );
 
     VIEW RecordsRegistry (

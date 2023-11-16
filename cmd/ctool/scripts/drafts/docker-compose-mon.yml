@@ -12,6 +12,8 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--web.enable-admin-api'
       - '--web.enable-lifecycle'
+      - '--web.route-prefix=/'
+      - '--web.external-url=http://localhost:9090/prometheus/'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
     restart: unless-stopped
@@ -32,7 +34,7 @@ services:
         max-file: "3"
 
   grafana1:
-    image: grafana/grafana:9.5.2
+    image: grafana/grafana:8.3.4
     networks:
       - outside
     volumes:
@@ -60,7 +62,7 @@ services:
       - prometheus1
 
   grafana2:
-    image: grafana/grafana:9.5.2
+    image: grafana/grafana:8.3.4
     networks:
       - outside
     volumes:
@@ -141,6 +143,8 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--web.enable-admin-api'
       - '--web.enable-lifecycle'
+      - '--web.route-prefix=/'
+      - '--web.external-url=http://localhost:9090/prometheus/'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
     restart: unless-stopped
