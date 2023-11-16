@@ -5,72 +5,63 @@
 
 package acl
 
-type ACL[QName comparable] struct {
-    // Define the necessary fields to store your ACL rules
-    // For example, a map to store table access rules and exec access rules
-    tableAccessRules map[QName]map[string]map[string][]QName // table -> op -> fields -> roles
-    execAccessRules  map[QName][]QName                       // resource -> roles
+// acl is a struct that implements the IACL interface
+type acl[QName comparable] struct {
+    // internal fields to store ACL data
+    // (e.g., rules, permissions, etc.)
 }
 
-func NewACL[QName comparable]() *ACL[QName] {
-    return &ACL[QName]{
-        tableAccessRules: make(map[QName]map[string]map[string][]QName),
-        execAccessRules:  make(map[QName][]QName),
-    }
-}
-
-func (acl *ACL[QName]) CheckTableAccess(op string, fields []string, table QName, roles []QName) bool {
+// CheckTableAccess checks if access is granted for a table operation
+func (a *acl[QName]) CheckTableAccess(op string, fields []string, table QName, roles []QName) bool {
     // Implement the logic to check table access
-    // This would typically involve looking up the table, op, and fields in the acl.tableAccessRules
-    // and then checking if any of the provided roles are allowed
+    // This is just a placeholder implementation
+    return true
 }
 
-func (acl *ACL[QName]) CheckExecAccess(resource QName, roles []QName) bool {
-    // Implement the logic to check exec access
-    // This would involve looking up the resource in the acl.execAccessRules
-    // and then checking if any of the provided roles are allowed
+// CheckExecAccess checks if execute access is granted for a resource
+func (a *acl[QName]) CheckExecAccess(resource QName, roles []QName) bool {
+    // Implement the logic to check execute access
+    // This is just a placeholder implementation
+    return true
 }
 
-// aclBuilder is a mock implementation of the IACLBuilder interface
+// aclBuilder is a struct that implements the IACLBuilder interface
 type aclBuilder[QName comparable] struct {
-	acl *ACL[QName]
+    // internal fields to build the ACL
+    // (e.g., rules being constructed, tags, etc.)
 }
 
-// newACLBuilder creates a new instance of MockACLBuilder
-func newACLBuilder[QName comparable]() *aclBuilder[QName] {
-	return &aclBuilder[QName]{}
+// TagTable associates a tag with a table
+func (b *aclBuilder[QName]) TagTable(tag QName, table QName) IACLBuilder[QName] {
+    // Implement the logic to tag a table
+    // This is just a placeholder implementation
+    return b
 }
 
-// Role implements the Role method of the IACLBuilder interface
-func (m *aclBuilder[QName]) Role(name QName) IACLBuilder[QName] {
-	// Mock implementation
-	return m
+// GrantOpOnTable grants an operation on a table for a role
+func (b *aclBuilder[QName]) GrantOpOnTable(op string, fields []string, table QName, role QName) IACLBuilder[QName] {
+    // Implement the logic to grant an operation on a table
+    // This is just a placeholder implementation
+    return b
 }
 
-// GrantOpOnTable implements the GrantOpOnTable method of the IACLBuilder interface
-func (m *aclBuilder[QName]) GrantOpOnTable(op string, fields []string, table QName, role QName) IACLBuilder[QName] {
-	// Mock implementation
-	return m
+// GrantOpOnTableByTag grants an operation on tables with a specific tag
+func (b *aclBuilder[QName]) GrantOpOnTableByTag(op string, fields []string, tag QName, role QName) IACLBuilder[QName] {
+    // Implement the logic to grant an operation on tables by tag
+    // This is just a placeholder implementation
+    return b
 }
 
-// GrantOpOnTableByTag implements the GrantOpOnTableByTag method of the IACLBuilder interface
-func (m *aclBuilder[QName]) GrantOpOnTableByTag(op string, fields []string, tag QName, role QName) IACLBuilder[QName] {
-	// Mock implementation
-	return m
+// GrantExec grants execute permission on a resource
+func (b *aclBuilder[QName]) GrantExec(resource QName, role QName) IACLBuilder[QName] {
+    // Implement the logic to grant execute permission
+    // This is just a placeholder implementation
+    return b
 }
 
-// GrantExec implements the GrantExec method of the IACLBuilder interface
-func (m *aclBuilder[QName]) GrantExec(resource QName, role QName) IACLBuilder[QName] {
-	// Mock implementation
-	return m
+// Build finalizes the ACL and returns an instance of IACL
+func (b *aclBuilder[QName]) Build() IACL[QName] {
+    // Implement the logic to build and return an ACL
+    // This is just a placeholder implementation
+    return &acl[QName]{}
 }
-
-// Build implements the Build method of the IACLBuilder interface
-func (m *aclBuilder[QName]) Build() IACL[QName] {
-	// Mock implementation
-	// Return a mock IACL instance or nil, depending on your testing needs
-	return nil
-}
-
-// Ensure MockACLBuilder implements IACLBuilder
-var _ IACLBuilder[string] = (*aclBuilder[string])(nil)
