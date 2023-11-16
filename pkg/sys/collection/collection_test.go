@@ -29,6 +29,7 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/projectors"
+	"github.com/voedger/voedger/pkg/state"
 )
 
 var provider istructs.IAppStructsProvider
@@ -101,6 +102,18 @@ func appConfigs(t *testing.T) (istructsmem.AppConfigsType, istorage.IAppStorageP
 	// TODO: remove it after https://github.com/voedger/voedger/issues/56
 	_, err := adb.Build()
 	require.NoError(err)
+
+	// kept here to keep local tests working without sql
+	projectors.ProvideViewDef(adb, QNameCollectionView, func(b appdef.IViewBuilder) {
+		b.KeyBuilder().PartKeyBuilder().AddField(Field_PartKey, appdef.DataKind_int32)
+		b.KeyBuilder().ClustColsBuilder().
+			AddField(Field_DocQName, appdef.DataKind_QName).
+			AddRefField(field_DocID).
+			AddRefField(field_ElementID)
+		b.ValueBuilder().
+			AddField(Field_Record, appdef.DataKind_Record, true).
+			AddField(state.ColOffset, appdef.DataKind_int64, true)
+	})
 
 	collectionFuncResource = cfg.Resources.QueryResource(qNameQueryCollection)
 	cdocFuncResource = cfg.Resources.QueryResource(qNameGetCDocFunc)
