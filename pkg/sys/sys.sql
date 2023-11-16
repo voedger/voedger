@@ -421,7 +421,7 @@ ABSTRACT WORKSPACE Workspace (
         QUERY Collection(CollectionParams) RETURNS ANY;
         QUERY GetCDoc(GetCDocParams) RETURNS GetCDocResult;
         QUERY State(StateParams) RETURNS StateResult;
-        SYNC PROJECTOR ProjectorCollection ON (CDoc, CRecord) INTENTS(View(CollectionView));
+        SYNC PROJECTOR ProjectorCollection AFTER INSERT OR UPDATE ON (CRecord) INTENTS(View(CollectionView));
 
         -- describe
 
@@ -440,19 +440,19 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND UpdateJoinedWorkspaceRoles(UpdateJoinedWorkspaceRolesParams);
         COMMAND DeactivateJoinedWorkspace(DeactivateJoinedWorkspaceParams);
         QUERY QueryChildWorkspaceByName(QueryChildWorkspaceByNameParams) RETURNS QueryChildWorkspaceByNameResult;
-        PROJECTOR ApplyInvitation ON (InitiateInvitationByEMail);
-        PROJECTOR ApplyCancelAcceptedInvite ON (InitiateCancelAcceptedInvite);
-        PROJECTOR ApplyJoinWorkspace ON (InitiateJoinWorkspace);
-        PROJECTOR ApplyLeaveWorkspace ON (InitiateLeaveWorkspace);
-        PROJECTOR ApplyUpdateInviteRoles ON (InitiateUpdateInviteRoles);
-        SYNC PROJECTOR ProjectorInviteIndex ON (InitiateInvitationByEMail) INTENTS(View(InviteIndexView));
-        SYNC PROJECTOR ProjectorJoinedWorkspaceIndex ON (CreateJoinedWorkspace) INTENTS(View(JoinedWorkspaceIndexView));
+        PROJECTOR ApplyInvitation AFTER EXECUTE ON (InitiateInvitationByEMail);
+        PROJECTOR ApplyCancelAcceptedInvite AFTER EXECUTE ON (InitiateCancelAcceptedInvite);
+        PROJECTOR ApplyJoinWorkspace AFTER EXECUTE ON (InitiateJoinWorkspace);
+        PROJECTOR ApplyLeaveWorkspace AFTER EXECUTE ON (InitiateLeaveWorkspace);
+        PROJECTOR ApplyUpdateInviteRoles AFTER EXECUTE ON (InitiateUpdateInviteRoles);
+        SYNC PROJECTOR ProjectorInviteIndex AFTER EXECUTE ON (InitiateInvitationByEMail) INTENTS(View(InviteIndexView));
+        SYNC PROJECTOR ProjectorJoinedWorkspaceIndex AFTER EXECUTE ON (CreateJoinedWorkspace) INTENTS(View(JoinedWorkspaceIndexView));
         SYNC PROJECTOR ApplyViewSubjectsIdx AFTER INSERT ON (Subject) INTENTS(View(ViewSubjectsIdx));
 
         -- journal
 
         QUERY Journal(JournalParams) RETURNS JournalResult;
-        PROJECTOR ProjectorWLogDates ON (CRecord, WRecord, ORecord) INTENTS(View(WLogDates));
+        PROJECTOR ProjectorWLogDates AFTER INSERT ON (CRecord, WRecord, ORecord) OR AFTER UPDATE ON (CRecord, WRecord) INTENTS(View(WLogDates));
 
         -- sqlquery
 
@@ -460,14 +460,14 @@ ABSTRACT WORKSPACE Workspace (
 
         -- uniques
 
-        SYNC PROJECTOR ApplyUniques ON (CRecord, WRecord, ORecord) INTENTS(View(Uniques));
+        SYNC PROJECTOR ApplyUniques AFTER INSERT ON (CRecord, WRecord, ORecord) OR AFTER UPDATE ON (CRecord, WRecord) INTENTS(View(Uniques));
 
         -- verifier
 
         QUERY InitiateEmailVerification(InitiateEmailVerificationParams) RETURNS InitialEmailVerificationResult;
         QUERY IssueVerifiedValueToken(IssueVerifiedValueTokenParams) RETURNS IssueVerifiedValueTokenResult;
         COMMAND SendEmailVerificationCode(SendEmailVerificationParams);
-        PROJECTOR ApplySendEmailVerificationCode ON (SendEmailVerificationCode) INTENTS(SendMail);
+        PROJECTOR ApplySendEmailVerificationCode AFTER EXECUTE ON (SendEmailVerificationCode) INTENTS(SendMail);
 
         -- workspace
 
@@ -478,7 +478,7 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND OnJoinedWorkspaceDeactivated(OnJoinedWorkspaceDeactivatedParams);
         COMMAND OnChildWorkspaceDeactivated(OnChildWorkspaceDeactivatedParams);
         COMMAND InitiateDeactivateWorkspace();
-        PROJECTOR ApplyDeactivateWorkspace ON (InitiateDeactivateWorkspace);
+        PROJECTOR ApplyDeactivateWorkspace AFTER EXECUTE ON (InitiateDeactivateWorkspace);
         PROJECTOR InvokeCreateWorkspace AFTER INSERT ON (WorkspaceID);
         PROJECTOR InvokeCreateWorkspaceID AFTER INSERT ON(ChildWorkspace);
         PROJECTOR InitializeWorkspace AFTER INSERT ON(WorkspaceDescriptor);
