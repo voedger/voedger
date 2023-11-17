@@ -64,7 +64,7 @@ func ReadPackageSchemaAST(ep extensionpoints.IExtensionPoint) (packageSchemaASTs
 		packageSchemaASTs = append(packageSchemaASTs, packageSchemaAST)
 		return nil
 	})
-	return packageSchemaASTs, nil
+	return packageSchemaASTs, err
 }
 
 func readEmbeddedContent(qualifiedPackageName, subDir string, fsi embed.FS) (contentMap map[string][]byte, err error) {
