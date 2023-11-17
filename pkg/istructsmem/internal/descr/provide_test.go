@@ -73,8 +73,8 @@ func TestBasicUsage(t *testing.T) {
 
 	appDef.AddQuery(appdef.NewQName("test", "query")).
 		SetParam(objName).
-		SetResult(objName).
-		SetExtension("cmd", appdef.ExtensionEngineKind_BuiltIn)
+		SetResult(appdef.QNameANY).
+		SetExtension("query", appdef.ExtensionEngineKind_BuiltIn)
 
 	res := &mockResources{}
 	res.
@@ -96,7 +96,7 @@ func TestBasicUsage(t *testing.T) {
 	require.NoError(err)
 	require.Greater(len(json), 1)
 
-	// ioutil.WriteFile("C://temp//provide_test.json", json, 0644)
+	//ioutil.WriteFile("C://temp//provide_test.json", json, 0644)
 
 	require.JSONEq(expectedJson, string(json))
 }

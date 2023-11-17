@@ -14,7 +14,7 @@ func ExampleIAppDef_Structures() {
 
 	var app appdef.IAppDef
 	docName, recName := appdef.NewQName("test", "document"), appdef.NewQName("test", "record")
-	objName, elName := appdef.NewQName("test", "object"), appdef.NewQName("test", "element")
+	objName, childName := appdef.NewQName("test", "object"), appdef.NewQName("test", "child")
 
 	// how to build AppDef with structures
 	{
@@ -24,7 +24,7 @@ func ExampleIAppDef_Structures() {
 		doc.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
-		doc.AddContainer("child", recName, 0, appdef.Occurs_Unbounded)
+		doc.AddContainer("rec", recName, 0, appdef.Occurs_Unbounded)
 
 		rec := appDef.AddCRecord(recName)
 		rec.
@@ -35,10 +35,10 @@ func ExampleIAppDef_Structures() {
 		obj.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
-		obj.AddContainer("child", elName, 0, appdef.Occurs_Unbounded)
+		obj.AddContainer("child", childName, 0, appdef.Occurs_Unbounded)
 
-		el := appDef.AddElement(elName)
-		el.
+		child := appDef.AddObject(childName)
+		child.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 
@@ -73,17 +73,19 @@ func ExampleIAppDef_Structures() {
 		})
 
 		fmt.Printf("Overall %d records\n", cnt)
+
+		fmt.Println(app.Record(recName), app.Record(appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:
-	// 1. CDoc «test.document»
-	// - user/overall field count: 2/5
-	// - container count: 1
-	// 2. Element «test.element»
+	// 1. Object «test.child»
 	// - user/overall field count: 2/4
 	// - container count: 0
+	// 2. CDoc «test.document»
+	// - user/overall field count: 2/5
+	// - container count: 1
 	// 3. Object «test.object»
-	// - user/overall field count: 2/3
+	// - user/overall field count: 2/4
 	// - container count: 1
 	// 4. CRecord «test.record»
 	// - user/overall field count: 2/7
@@ -96,4 +98,5 @@ func ExampleIAppDef_Structures() {
 	// - user/overall field count: 2/7
 	// - container count: 0
 	// Overall 2 records
+	// CRecord «test.record» <nil>
 }

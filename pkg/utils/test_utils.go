@@ -107,10 +107,20 @@ func (o *TestObject) AsRecordID(name string) istructs.RecordID {
 	}
 	return istructs.NullRecordID
 }
-func (o *TestObject) Elements(container string, cb func(el istructs.IElement)) {
-	if objects, ok := o.Containers_[container]; ok {
-		for _, object := range objects {
-			cb(object)
+func (o *TestObject) Children(container string, cb func(istructs.IObject)) {
+	iterate := func(cc []*TestObject) {
+		for _, c := range cc {
+			cb(c)
+		}
+	}
+
+	if container == "" {
+		for _, cc := range o.Containers_ {
+			iterate(cc)
+		}
+	} else {
+		if cc, ok := o.Containers_[container]; ok {
+			iterate(cc)
 		}
 	}
 }

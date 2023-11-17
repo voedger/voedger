@@ -9,6 +9,7 @@ package appdef
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -29,6 +30,19 @@ var (
 	QNameForNull = NewQName(NullName, NullName)
 	NullQName    = QNameForNull
 )
+
+// QNameANY denotes that a Function param or result can be any type
+//
+// See #858 (Support QNameAny as function result)
+var QNameANY = NewQName(SysPackage, AnyName)
+
+// Compare two qualified names
+func CompareQName(a, b QName) int {
+	if a.pkg != b.pkg {
+		return strings.Compare(a.pkg, b.pkg)
+	}
+	return strings.Compare(a.entity, b.entity)
+}
 
 // Builds a qualified name from two parts (from package name and from entity name)
 func NewQName(pkgName, entityName string) QName {
@@ -120,4 +134,53 @@ func ValidQName(qName QName) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+// Slice of QNames.
+//
+// Slice is sorted and has no duplicates.
+//
+// Use QNamesFrom() to create QNames slice from variadic arguments.
+// Use Add() to add QNames to slice.
+// Use Contains() and Find() to search for QName in slice.
+type QNames []QName
+
+// Returns slice of QNames from variadic arguments.
+//
+// Result slice is sorted and has no duplicates.
+func QNamesFrom(n ...QName) QNames {
+	qq := QNames{}
+	qq.Add(n...)
+	return qq
+}
+
+// Returns slice of QNames from map keys.
+//
+// Result slice is sorted and has no duplicates.
+func QNamesFromMap[V any, M ~map[QName]V](m M) QNames {
+	qq := QNames{}
+	for k := range m {
+		qq.Add(k)
+	}
+	return qq
+}
+
+// Adds QNames to slice. Duplicate values are ignored. Result slice is sorted.
+func (qns *QNames) Add(n ...QName) {
+	for _, q := range n {
+		if i, ok := qns.Find(q); !ok {
+			*qns = slices.Insert(*qns, i, q)
+		}
+	}
+}
+
+// Returns true if slice contains specified QName
+func (qns QNames) Contains(n QName) bool {
+	_, ok := qns.Find(n)
+	return ok
+}
+
+// Returns index of QName in slice and true if found.
+func (qns QNames) Find(n QName) (int, bool) {
+	return slices.BinarySearchFunc(qns, n, CompareQName)
 }

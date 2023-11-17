@@ -16,7 +16,7 @@ import (
 type function struct {
 	typ
 	parent   interface{}
-	par, res objRef
+	par, res typeRef
 	ext      *extension
 }
 
@@ -29,16 +29,16 @@ func makeFunc(app *appDef, name QName, kind TypeKind, parent interface{}) functi
 	return f
 }
 
-func (f *function) Param() IObject {
-	return f.par.object(f.app)
+func (f *function) Param() IType {
+	return f.par.target(f.app)
 }
 
 func (f *function) Extension() IExtension {
 	return f.ext
 }
 
-func (f *function) Result() IObject {
-	return f.res.object(f.app)
+func (f *function) Result() IType {
+	return f.res.target(f.app)
 }
 
 func (f *function) SetParam(name QName) IFunctionBuilder {
@@ -66,15 +66,25 @@ func (f *function) SetExtension(name string, engine ExtensionEngineKind, comment
 
 // Validates function
 func (f *function) Validate() (err error) {
-	if f.par.name != NullQName {
-		if f.par.object(f.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: argument type «%v» is not found: %w", f, f.par.name, ErrNameNotFound))
+	if ok, e := f.par.valid(f.app); !ok {
+		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown parameter type: %w", f, e))
+	} else if typ := f.Param(); typ != nil {
+		switch typ.Kind() {
+		case TypeKind_Any: // ok
+		case TypeKind_Data, TypeKind_ODoc, TypeKind_Object: // ok
+		default:
+			err = errors.Join(err, fmt.Errorf("%v: parameter type is %v, must be ODoc, Object or Data: %w", f, typ, ErrInvalidTypeKind))
 		}
 	}
 
-	if f.res.name != NullQName {
-		if f.res.object(f.app) == nil {
-			err = errors.Join(err, fmt.Errorf("%v: command result type «%v» is not found: %w", f, f.res.name, ErrNameNotFound))
+	if ok, e := f.res.valid(f.app); !ok {
+		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown result type: %w", f, e))
+	} else if typ := f.Result(); typ != nil {
+		switch typ.Kind() {
+		case TypeKind_Any: // ok
+		case TypeKind_Data, TypeKind_GDoc, TypeKind_CDoc, TypeKind_WDoc, TypeKind_ODoc, TypeKind_Object: // ok
+		default:
+			err = errors.Join(err, fmt.Errorf("%v: result type is %v, must be Document, Object or Data: %w", f, typ, ErrInvalidTypeKind))
 		}
 	}
 

@@ -143,6 +143,9 @@ func Test_BasicUsage(t *testing.T) {
 	q1 := builder.Query(appdef.NewQName("main", "_Query1"))
 	require.NotNil(q1)
 	require.Equal(appdef.TypeKind_Query, q1.Kind())
+
+	_, err = builder.Build()
+	require.NoError(err)
 }
 
 func Test_Refs_NestedTables(t *testing.T) {
@@ -176,9 +179,10 @@ func Test_Refs_NestedTables(t *testing.T) {
 	require.NoError(BuildAppDefs(packages, adf))
 	inner1 := adf.Type(appdef.NewQName("pkg1", "inner1"))
 	ref1 := inner1.(appdef.IFields).RefField("ref1")
-	require.Len(ref1.Refs(), 1)
-	require.Equal(appdef.NewQName("pkg1", "table3"), ref1.Refs()[0])
+	require.EqualValues(appdef.QNames{appdef.NewQName("pkg1", "table3")}, ref1.Refs())
 
+	_, err = adf.Build()
+	require.NoError(err)
 }
 
 func Test_CircularReferences(t *testing.T) {
@@ -278,6 +282,9 @@ func Test_Workspace_Defs(t *testing.T) {
 
 	require.Equal(appdef.TypeKind_Workspace, wsProfile.Type(appdef.NewQName("pkg1", "MyWorkspace")).Kind())
 	require.Nil(wsProfile.TypeByName(appdef.NewQName("pkg1", "MyWorkspace2")))
+
+	_, err = builder.Build()
+	require.NoError(err)
 }
 
 func Test_Alter_Workspace(t *testing.T) {
@@ -667,7 +674,7 @@ func Test_DuplicatesInViews(t *testing.T) {
 		) AS RESULT OF Proj1;
 
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -710,7 +717,7 @@ func Test_Views(t *testing.T) {
 				PRIMARY KEY(field2)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 				COMMAND Orders()
 			);
 			)
@@ -722,7 +729,7 @@ func Test_Views(t *testing.T) {
 				PRIMARY KEY((field1))
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 				COMMAND Orders()
 			);
 			)
@@ -734,7 +741,7 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY((field1))
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -747,7 +754,7 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -760,7 +767,7 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -774,11 +781,22 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
 	`, "file2.sql:4:4: reference to abstract table abc", "file2.sql:5:4: unexisting undefined")
+
+	f(`APPLICATION test(); WORKSPACE Workspace (
+		VIEW test(
+			fld1 int32
+		) AS RESULT OF Proj1;
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+			COMMAND Orders()
+		);
+	)
+	`, "file2.sql:2:3: primary key not defined")
 }
 
 func Test_Views2(t *testing.T) {
@@ -798,41 +816,7 @@ func Test_Views2(t *testing.T) {
 				PRIMARY KEY((field1,field4),field2)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
-				COMMAND Orders()
-			);
-		)
-		`)
-		require.NoError(err)
-		pkg, err := BuildPackageSchema("test", []*FileSchemaAST{ast})
-		require.NoError(err)
-
-		packages, err := BuildAppSchema([]*PackageSchemaAST{
-			getSysPackageAST(),
-			pkg,
-		})
-		require.NoError(err)
-
-		appBld := appdef.New()
-		err = BuildAppDefs(packages, appBld)
-		require.NoError(err)
-
-		v := appBld.View(appdef.NewQName("test", "test"))
-		require.NotNil(v)
-	}
-	{
-		ast, err := ParseFile("file2.sql", `APPLICATION test(); WORKSPACE Workspace (
-			VIEW test(
-				-- comment1
-				field1 int,
-				-- comment2
-				field3 bytes(20),
-				-- comment4
-				field4 ref,
-				PRIMARY KEY((field1),field4,field3)
-			) AS RESULT OF Proj1;
-			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 				COMMAND Orders()
 			);
 		)
@@ -854,6 +838,8 @@ func Test_Views2(t *testing.T) {
 		v := appBld.View(appdef.NewQName("test", "test"))
 		require.NotNil(v)
 
+		_, err = appBld.Build()
+		require.NoError(err)
 	}
 	{
 		ast, err := ParseFile("file2.sql", `APPLICATION test(); WORKSPACE Workspace (
@@ -867,7 +853,44 @@ func Test_Views2(t *testing.T) {
 				PRIMARY KEY((field1),field4,field3)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders);
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+				COMMAND Orders()
+			);
+		)
+		`)
+		require.NoError(err)
+		pkg, err := BuildPackageSchema("test", []*FileSchemaAST{ast})
+		require.NoError(err)
+
+		packages, err := BuildAppSchema([]*PackageSchemaAST{
+			getSysPackageAST(),
+			pkg,
+		})
+		require.NoError(err)
+
+		appBld := appdef.New()
+		err = BuildAppDefs(packages, appBld)
+		require.NoError(err)
+
+		v := appBld.View(appdef.NewQName("test", "test"))
+		require.NotNil(v)
+
+		_, err = appBld.Build()
+		require.NoError(err)
+	}
+	{
+		ast, err := ParseFile("file2.sql", `APPLICATION test(); WORKSPACE Workspace (
+			VIEW test(
+				-- comment1
+				field1 int,
+				-- comment2
+				field3 bytes(20),
+				-- comment4
+				field4 ref,
+				PRIMARY KEY((field1),field4,field3)
+			) AS RESULT OF Proj1;
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders);
 				COMMAND Orders()
 			);
 		)
@@ -928,7 +951,7 @@ func Test_Undefined(t *testing.T) {
 		EXTENSION ENGINE WASM (
 			COMMAND Orders() WITH Tags=(UndefinedTag);
 			QUERY Query1 RETURNS void WITH Rate=UndefinedRate;
-			PROJECTOR ImProjector ON xyz.CreateUPProfile;
+			PROJECTOR ImProjector AFTER EXECUTE ON xyz.CreateUPProfile;
 			COMMAND CmdFakeReturn() RETURNS text;
 			COMMAND CmdNoReturn() RETURNS void;
 			COMMAND CmdFakeArg(text);
@@ -962,12 +985,12 @@ func Test_Projectors(t *testing.T) {
 		TABLE Order INHERITS ODoc();
 		EXTENSION ENGINE WASM (
 			COMMAND Orders();
-			PROJECTOR ImProjector1 ON test.CreateUPProfile; 			-- Undefined
-			PROJECTOR ImProjector2 ON Order; 							-- Good
+			PROJECTOR ImProjector1 AFTER EXECUTE ON test.CreateUPProfile; 			-- Undefined
+			PROJECTOR ImProjector2 AFTER EXECUTE ON Order; 							-- Bad: Order is not a type or command
 			PROJECTOR ImProjector3 AFTER UPDATE ON Order; 				-- Bad
 			PROJECTOR ImProjector4 AFTER ACTIVATE ON Order; 			-- Bad
 			PROJECTOR ImProjector5 AFTER DEACTIVATE ON Order; 			-- Bad
-			PROJECTOR ImProjector6 AFTER INSERT ON Order OR ON Orders;	-- Good
+			PROJECTOR ImProjector6 AFTER INSERT ON Order OR AFTER EXECUTE ON Orders;	-- Good
 		)
 	)
 	`)
@@ -979,7 +1002,8 @@ func Test_Projectors(t *testing.T) {
 	_, err = BuildAppSchema([]*PackageSchemaAST{pkg, getSysPackageAST()})
 
 	require.EqualError(err, strings.Join([]string{
-		"example.sql:6:4: test.CreateUPProfile undefined, expected command, type or table",
+		"example.sql:6:4: undefined command or type: test.CreateUPProfile",
+		"example.sql:7:4: undefined command or type: Order",
 		"example.sql:8:4: only INSERT allowed for ODoc or ORecord",
 		"example.sql:9:4: only INSERT allowed for ODoc or ORecord",
 		"example.sql:10:4: only INSERT allowed for ODoc or ORecord",
@@ -1001,7 +1025,7 @@ func Test_Imports(t *testing.T) {
     		COMMAND Orders WITH Tags=(pkg2.SomeTag);
     		QUERY Query2 RETURNS void WITH Tags=(air.SomePkg3Tag);
     		QUERY Query3 RETURNS void WITH Tags=(air.UnknownTag); -- air.UnknownTag undefined
-    		PROJECTOR ImProjector ON Air.CreateUPProfil; -- Air undefined
+    		PROJECTOR ImProjector AFTER EXECUTE ON Air.CreateUPProfil; -- Air undefined
 		)
 	)
 	`)
@@ -1096,6 +1120,10 @@ func Test_UniqueFields(t *testing.T) {
 	fld := cdoc.UniqueField()
 	require.NotNil(fld)
 	require.Equal("Int2", fld.Name())
+
+	_, err = appBld.Build()
+	require.NoError(err)
+
 }
 
 func Test_NestedTables(t *testing.T) {
@@ -1126,6 +1154,8 @@ func Test_NestedTables(t *testing.T) {
 
 	require.NotNil(appBld.CRecord(appdef.NewQName("test", "NestedTable")))
 	require.NotNil(appBld.CRecord(appdef.NewQName("test", "DeepNestedTable")))
+	_, err = appBld.Build()
+	require.NoError(err)
 }
 
 func Test_SemanticAnalysisForReferences(t *testing.T) {
@@ -1192,6 +1222,10 @@ func Test_1KStringField(t *testing.T) {
 		require.EqualValues(1024, c.Value())
 	})
 	require.Equal(1, cnt)
+
+	_, err = appBld.Build()
+	require.NoError(err)
+
 }
 
 func Test_ReferenceToNoTable(t *testing.T) {
@@ -1262,6 +1296,9 @@ func Test_VRestaurantBasic(t *testing.T) {
 	require.NotNil(view)
 	require.Equal(appdef.TypeKind_ViewRecord, view.Kind())
 
+	_, err = builder.Build()
+	require.NoError(err)
+
 }
 
 func Test_AppSchema(t *testing.T) {
@@ -1313,6 +1350,9 @@ func Test_AppSchema(t *testing.T) {
 	ws := builder.Workspace(appdef.NewQName("air2", "myWorkspace"))
 	require.NotNil(ws)
 	require.NotNil(ws.Type(appdef.NewQName("air1", "MyTable")))
+
+	_, err = builder.Build()
+	require.NoError(err)
 }
 
 func Test_AppSchemaErrors(t *testing.T) {
@@ -1615,6 +1655,10 @@ func Test_UseTables(t *testing.T) {
 	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table1")).Kind())
 	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table2")).Kind())
 	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table3")).Kind())
+
+	_, err = builder.Build()
+	require.NoError(err)
+
 }
 
 func Test_Storages(t *testing.T) {
@@ -1634,4 +1678,129 @@ func Test_Storages(t *testing.T) {
 		pkg2,
 	})
 	require.ErrorContains(err, "storages are only declared in sys package")
+}
+
+func buildPackage(qn string, sql string) *PackageSchemaAST {
+	fs, err := ParseFile("source.sql", sql)
+	if err != nil {
+		panic(err)
+	}
+	pkg, err := BuildPackageSchema(qn, []*FileSchemaAST{fs})
+	if err != nil {
+		panic(err)
+	}
+	return pkg
+}
+
+func Test_OdocCmdArgs(t *testing.T) {
+	require := require.New(t)
+	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+
+	APPLICATION registry(
+	);
+
+	TABLE TableODoc INHERITS ODoc (
+		orecord1 TABLE orecord1(
+			orecord2 TABLE orecord2()
+		)
+	);
+
+	WORKSPACE Workspace1 (
+		EXTENSION ENGINE BUILTIN (
+			COMMAND CmdODoc1(TableODoc) RETURNS TableODoc;
+		)
+	);
+
+	`)
+
+	app, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
+	require.NoError(err)
+
+	builder := appdef.New()
+	err = BuildAppDefs(app, builder)
+	require.NoError(err)
+
+	_, err = builder.Build()
+	require.NoError(err)
+
+	cmdOdoc := builder.Command(appdef.NewQName("app1", "CmdODoc1"))
+	require.NotNil(cmdOdoc)
+	require.NotNil(cmdOdoc.Param())
+
+	odoc := cmdOdoc.Param().(appdef.IContainers)
+	require.Equal(1, odoc.ContainerCount())
+	require.Equal("orecord1", odoc.Container("orecord1").Name())
+	container := odoc.Container("orecord1")
+	require.Equal(appdef.Occurs(0), container.MinOccurs())
+	require.Equal(appdef.Occurs(100), container.MaxOccurs())
+
+	orec := builder.ORecord(appdef.NewQName("app1", "orecord1"))
+	require.NotNil(orec)
+	require.Equal(1, orec.ContainerCount())
+	require.Equal("orecord2", orec.Container("orecord2").Name())
+
+}
+
+func Test_TypeContainers(t *testing.T) {
+	require := require.New(t)
+	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+
+APPLICATION registry(
+);
+
+TYPE Person (
+	Name 	varchar,
+	Age 	int32
+);
+
+TYPE Item (
+	Name 	varchar,
+	Price 	currency
+);
+
+TYPE Deal (
+	side1 		Person NOT NULL,	-- collection 1..1
+	side2 		Person				-- collection 0..1
+--	items 		Item[] NOT NULL,	-- (not yet supported by kernel) collection 1..* (up to maxNestedTableContainerOccurrences = 100)
+--	discounts 	Item[3]				-- (not yet supported by kernel) collection 0..3 (one-based numbering convention for arrays, similarly to PostgreSQL)
+);
+
+WORKSPACE Workspace1 (
+	EXTENSION ENGINE BUILTIN (
+		COMMAND CmdDeal(Deal) RETURNS Deal;
+	)
+);
+	`)
+
+	app, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
+	require.NoError(err)
+
+	builder := appdef.New()
+	err = BuildAppDefs(app, builder)
+	require.NoError(err)
+
+	validate := func(par appdef.IType) {
+		o, ok := par.(appdef.IObject)
+		require.True(ok, "expected %v supports IObject", par)
+		require.Equal(2, o.ContainerCount())
+		require.Equal(appdef.Occurs(1), o.Container("side1").MinOccurs())
+		require.Equal(appdef.Occurs(1), o.Container("side1").MaxOccurs())
+		require.Equal(appdef.Occurs(0), o.Container("side2").MinOccurs())
+		require.Equal(appdef.Occurs(1), o.Container("side2").MaxOccurs())
+
+		/* TODO: uncomment when kernel supports it
+		require.Equal(appdef.Occurs(1), o.Container("items").MinOccurs())
+		require.Equal(appdef.Occurs(100), o.Container("items").MaxOccurs())
+		require.Equal(appdef.Occurs(0), o.Container("discounts").MinOccurs())
+		require.Equal(appdef.Occurs(3), o.Container("discounts").MaxOccurs())
+		*/
+	}
+
+	cmd := builder.Command(appdef.NewQName("app1", "CmdDeal"))
+	validate(cmd.Param())
+	validate(cmd.Result())
+
+	_, err = builder.Build()
+	require.NoError(err)
+
 }

@@ -71,8 +71,8 @@ func storeEventBuildError(ev *eventType, buf *bytes.Buffer) {
 }
 
 func storeEventArguments(ev *eventType, buf *bytes.Buffer) {
-	storeElement(&ev.argObject, buf)
-	storeElement(&ev.argUnlObj, buf)
+	storeObject(&ev.argObject, buf)
+	storeObject(&ev.argUnlObj, buf)
 }
 
 func storeEventCUDs(ev *eventType, buf *bytes.Buffer) {
@@ -89,18 +89,18 @@ func storeEventCUDs(ev *eventType, buf *bytes.Buffer) {
 	}
 }
 
-func storeElement(el *elementType, buf *bytes.Buffer) {
+func storeObject(o *objectType, buf *bytes.Buffer) {
 
-	storeRow(&el.rowType, buf)
+	storeRow(&o.rowType, buf)
 
-	if el.QName() == appdef.NullQName {
+	if o.QName() == appdef.NullQName {
 		return
 	}
 
-	childCount := uint16(len(el.child))
+	childCount := uint16(len(o.child))
 	utils.WriteUint16(buf, childCount)
-	for _, c := range el.child {
-		storeElement(c, buf)
+	for _, c := range o.child {
+		storeObject(c, buf)
 	}
 }
 
@@ -231,11 +231,11 @@ func loadEventBuildError(ev *eventType, buf *bytes.Buffer) (err error) {
 }
 
 func loadEventArguments(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) {
-	if err := loadElement(&ev.argObject, codecVer, buf); err != nil {
+	if err := loadObject(&ev.argObject, codecVer, buf); err != nil {
 		return fmt.Errorf("can not load event command «%v» argument: %w", ev.name, err)
 	}
 
-	if err := loadElement(&ev.argUnlObj, codecVer, buf); err != nil {
+	if err := loadObject(&ev.argUnlObj, codecVer, buf); err != nil {
 		return fmt.Errorf("can not load event command «%v» un-logged argument: %w", ev.name, err)
 	}
 
@@ -278,13 +278,13 @@ func loadEventCUDs(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) 
 	return nil
 }
 
-func loadElement(el *elementType, codecVer byte, buf *bytes.Buffer) (err error) {
+func loadObject(o *objectType, codecVer byte, buf *bytes.Buffer) (err error) {
 
-	if err := loadRow(&el.rowType, codecVer, buf); err != nil {
+	if err := loadRow(&o.rowType, codecVer, buf); err != nil {
 		return err
 	}
 
-	if el.QName() == appdef.NullQName {
+	if o.QName() == appdef.NullQName {
 		return nil
 	}
 
@@ -293,11 +293,11 @@ func loadElement(el *elementType, codecVer byte, buf *bytes.Buffer) (err error) 
 		return err
 	}
 	for ; count > 0; count-- {
-		child := makeElement(el)
-		if err := loadElement(&child, codecVer, buf); err != nil {
+		child := newObject(o.appCfg, appdef.NullQName, o)
+		if err := loadObject(child, codecVer, buf); err != nil {
 			return err
 		}
-		el.child = append(el.child, &child)
+		o.child = append(o.child, child)
 	}
 
 	return nil

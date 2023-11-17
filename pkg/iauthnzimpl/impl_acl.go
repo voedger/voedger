@@ -268,6 +268,8 @@ var defaultACL = ACL{
 				qNameQryRequestUPPaymentMethod,
 				qNameQryGetUPTransactionsOverview,
 				qNameQryGetUPTransactionReceipts,
+				// https://dev.untill.com/projects/#!663035
+				qNameCmdRetryTransferUPPayout,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
@@ -302,11 +304,13 @@ var defaultACL = ACL{
 		// https://dev.untill.com/projects/#!649352
 		// https://dev.untill.com/projects/#!650998
 		// https://dev.untill.com/projects/#!653137
+		// https://dev.untill.com/projects/#!665805
 		desc: "grant exec on few funcs to role air.UntillPaymentsReseller and role air.UntillPaymentsUser",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
 				qNameQryGetUPPayouts,
 				qNameQryGetUPInvoiceParties,
+				qNameQryGetUPTransferInstrument,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				// OR

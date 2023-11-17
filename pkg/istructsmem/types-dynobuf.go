@@ -222,16 +222,16 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 // Returns system fields mask combination for type kind, see sfm_××× consts
 func typeKindSysFieldsMask(kind appdef.TypeKind) uint16 {
 	sfm := uint16(0)
-	if kind.HasSystemField(appdef.SystemField_ID) {
+	if exists, _ := kind.HasSystemField(appdef.SystemField_ID); exists {
 		sfm |= sfm_ID
 	}
-	if kind.HasSystemField(appdef.SystemField_ParentID) {
+	if exists, _ := kind.HasSystemField(appdef.SystemField_ParentID); exists {
 		sfm |= sfm_ParentID
 	}
-	if kind.HasSystemField(appdef.SystemField_Container) {
+	if exists, _ := kind.HasSystemField(appdef.SystemField_Container); exists {
 		sfm |= sfm_Container
 	}
-	if kind.HasSystemField(appdef.SystemField_IsActive) {
+	if exists, _ := kind.HasSystemField(appdef.SystemField_IsActive); exists {
 		sfm |= sfm_IsActive
 	}
 	return sfm

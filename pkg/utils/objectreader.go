@@ -70,46 +70,35 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 		optFunc(opts)
 	}
 
+	proceedField := func(fieldName string, kind appdef.DataKind) {
+		if opts.filter != nil {
+			if !opts.filter(fieldName, kind) {
+				return
+			}
+		}
+		if kind == appdef.DataKind_Record {
+			if v, ok := obj.(istructs.IValue); ok {
+				res[fieldName] = FieldsToMap(v.AsRecord(fieldName), appDef, optFuncs...)
+			} else {
+				panic("DataKind_Record field met -> IValue must be provided")
+			}
+		} else {
+			res[fieldName] = ReadByKind(fieldName, kind, obj)
+		}
+	}
+
 	if fields, ok := t.(appdef.IFields); ok {
 		if opts.nonNilsOnly {
 			obj.FieldNames(func(fieldName string) {
-				kind := fields.Field(fieldName).DataKind()
-				if opts.filter != nil {
-					if !opts.filter(fieldName, kind) {
-						return
-					}
-				}
-				if kind == appdef.DataKind_Record {
-					if v, ok := obj.(istructs.IValue); ok {
-						res[fieldName] = FieldsToMap(v.AsRecord(fieldName), appDef, optFuncs...)
-					} else {
-						panic("DataKind_Record field met -> IValue must be provided")
-					}
-				} else {
-					res[fieldName] = ReadByKind(fieldName, kind, obj)
-				}
+				proceedField(fieldName, fields.Field(fieldName).DataKind())
 			})
 		} else {
-			fields.Fields(
-				func(f appdef.IField) {
-					fieldName, kind := f.Name(), f.DataKind()
-					if opts.filter != nil {
-						if !opts.filter(fieldName, kind) {
-							return
-						}
-					}
-					if kind == appdef.DataKind_Record {
-						if v, ok := obj.(istructs.IValue); ok {
-							res[fieldName] = FieldsToMap(v.AsRecord(fieldName), appDef, optFuncs...)
-						} else {
-							panic("DataKind_Record field met -> IValue must be provided")
-						}
-					} else {
-						res[fieldName] = ReadByKind(fieldName, kind, obj)
-					}
-				})
+			fields.Fields(func(f appdef.IField) {
+				proceedField(f.Name(), f.DataKind())
+			})
 		}
 	}
+
 	return res
 }
 
@@ -119,11 +108,11 @@ func ObjectToMap(obj istructs.IObject, appDef appdef.IAppDef, opts ...MapperOpt)
 	}
 	res = FieldsToMap(obj, appDef, opts...)
 	obj.Containers(func(container string) {
-		var elemMap map[string]interface{}
+		var childMap map[string]interface{}
 		cont := []map[string]interface{}{}
-		obj.Elements(container, func(el istructs.IElement) {
-			elemMap = ObjectToMap(el, appDef, opts...)
-			cont = append(cont, elemMap)
+		obj.Children(container, func(c istructs.IObject) {
+			childMap = ObjectToMap(c, appDef, opts...)
+			cont = append(cont, childMap)
 		})
 		res[container] = cont
 	})

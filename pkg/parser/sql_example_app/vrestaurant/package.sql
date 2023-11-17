@@ -186,10 +186,11 @@ WORKSPACE Restaurant (
 
     -- VIEW TableStatus     : keeps actual status of table(free/occupied)
     VIEW TableStatus (
+        Dummy int,
         TableNumber int,
         --  status of table(free/occupied)
         Status int,
-        PRIMARY KEY (TableNumber)
+        PRIMARY KEY ((Dummy), TableNumber)
     ) AS RESULT OF UpdateTableStatus;
 
     -- VIEW SalesPerDay     : sales report per day
@@ -205,7 +206,7 @@ WORKSPACE Restaurant (
         Vat int32, --!!! Must be float32
         VatPercent int32, --!!! Must be Currency
         PaymentTypeID ref(PaymentType) NOT NULL,
-        PRIMARY KEY (Year, Month, Day, Number)
+        PRIMARY KEY ((Year, Month, Day), Number)
     ) AS RESULT OF UpdateSalesReport;
 );    
 

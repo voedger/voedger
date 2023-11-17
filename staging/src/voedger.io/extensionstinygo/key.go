@@ -6,52 +6,38 @@
 package extensions
 
 import (
-	"reflect"
 	"unsafe"
 )
 
 type TKey uint64
 
 func (v TKey) AsString(name string) string {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	ptr := hostKeyAsString(uint64(v), uint32(nh.Data), uint32(nh.Len))
-	return decodeString(ptr)
+	return decodeString(hostKeyAsString(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
 func (v TKey) AsInt32(name string) int32 {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	return int32(hostKeyAsInt32(uint64(v), uint32(nh.Data), uint32(nh.Len)))
+	return int32(hostKeyAsInt32(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
 func (v TKey) AsInt64(name string) int64 {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	return int64(hostKeyAsInt64(uint64(v), uint32(nh.Data), uint32(nh.Len)))
+	return int64(hostKeyAsInt64(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
 func (v TKey) AsFloat32(name string) float32 {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	return float32(hostKeyAsFloat32(uint64(v), uint32(nh.Data), uint32(nh.Len)))
+	return float32(hostKeyAsFloat32(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
 func (v TKey) AsFloat64(name string) float64 {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	return float64(hostKeyAsFloat64(uint64(v), uint32(nh.Data), uint32(nh.Len)))
+	return float64(hostKeyAsFloat64(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
 func (v TKey) AsBytes(name string) (ret []byte) {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	ptr := hostKeyAsBytes(uint64(v), uint32(nh.Data), uint32(nh.Len))
-
-	strHdr := (*reflect.SliceHeader)(unsafe.Pointer(&ret))
-	strHdr.Data = uintptr(uint32(ptr >> 32))
-	strHdr.Len = extint(uint32(ptr))
-	return
+	return decodeSlice(hostKeyAsBytes(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
 func (v TKey) AsQName(name string) QName {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	pkgPtr := hostKeyAsQNamePkg(uint64(v), uint32(nh.Data), uint32(nh.Len))
-	entityPtr := hostKeyAsQNameEntity(uint64(v), uint32(nh.Data), uint32(nh.Len))
+	pkgPtr := hostKeyAsQNamePkg(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
+	entityPtr := hostKeyAsQNameEntity(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 	return QName{
 		Pkg:    decodeString(pkgPtr),
 		Entity: decodeString(entityPtr),
@@ -59,8 +45,7 @@ func (v TKey) AsQName(name string) QName {
 }
 
 func (v TKey) AsBool(name string) bool {
-	nh := (*reflect.StringHeader)(unsafe.Pointer(&name))
-	ret := hostKeyAsBool(uint64(v), uint32(nh.Data), uint32(nh.Len))
+	ret := hostKeyAsBool(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 	return ret > 0
 }
 

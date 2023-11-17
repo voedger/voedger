@@ -5,9 +5,9 @@
       "Name": "test",
       "DataTypes": {
         "test.number": {
+          "Comment": "natural (positive) integer",
           "Name": "test.number",
           "Ancestor": "sys.int64",
-          "Comment": "natural (positive) integer",
           "Constraints": {
             "MinIncl": 1
           }
@@ -99,6 +99,10 @@
               "Name": "sys.QName",
               "Data": "sys.QName",
               "Required": true
+            },
+            {
+              "Name": "sys.Container",
+              "Data": "sys.string"
             },
             {
               "Name": "f1",
@@ -210,7 +214,6 @@
           "test.cmd": {
             "Name": "test.cmd",
             "Arg": "test.obj",
-            "Result": "test.obj",
             "Extension": {
               "Name": "cmd",
               "Engine": "ExtensionEngineKind_WASM"
@@ -222,9 +225,9 @@
           "test.query": {
             "Name": "test.query",
             "Arg": "test.obj",
-            "Result": "test.obj",
+            "Result": "sys.ANY",
             "Extension": {
-              "Name": "cmd",
+              "Name": "query",
               "Engine": "ExtensionEngineKind_BuiltIn"
             }
           }

@@ -123,7 +123,7 @@ func (s *httpService) registerHandlers(busTimeout time.Duration, appsWSAmount ma
 			Methods("POST", "GET", "OPTIONS").
 			Name("blob read")
 	}
-	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z_/.]+}", appOwner, appName,
+	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}", appOwner, appName,
 		wsid, resourceName), corsHandler(requestHandler(s.bus, busTimeout, appsWSAmount))).
 		Methods("POST", "PATCH", "OPTIONS").Name("api")
 

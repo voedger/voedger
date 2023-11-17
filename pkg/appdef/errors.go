@@ -20,8 +20,6 @@ var ErrInvalidQNameStringRepresentation = errors.New("invalid string representat
 
 var ErrInvalidTypeKind = errors.New("invalid type kind")
 
-var ErrVerificationKindMissed = errors.New("verification kind is missed")
-
 var ErrTooManyFields = errors.New("too many fields")
 
 var ErrMaxFieldLengthExceeds = errors.New("too large field length")
@@ -43,3 +41,5 @@ var ErrUniqueOverlaps = errors.New("unique fields overlaps")
 var ErrExtensionEngineKindMissed = errors.New("extension engine kind is missed")
 
 var ErrWorkspaceShouldBeAbstract = errors.New("workspace should be abstract")
+
+var ErrInvalidProjectorEventKind = errors.New("invalid projector event kind")

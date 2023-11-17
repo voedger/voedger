@@ -20,13 +20,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	// c.sys.InitChildWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		authnz.QNameCommandInitChildWorkspace,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitChildWorkspaceParams")).
-			AddField(authnz.Field_WSName, appdef.DataKind_string, true).
-			AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
-			AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
-			AddField(authnz.Field_WSClusterID, appdef.DataKind_int32, true).
-			AddField(field_TemplateName, appdef.DataKind_string, false).
-			AddField(Field_TemplateParams, appdef.DataKind_string, false).(appdef.IType).QName(),
+		appdef.NullQName,
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdInitChildWorkspace,
@@ -44,17 +38,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	// target app, (target cluster, base profile WSID)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandCreateWorkspaceID,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateWorkspaceIDParams")).
-			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
-			AddField(Field_OwnerQName, appdef.DataKind_QName, false). // Deprecated: use OwnerQName2
-			AddField(Field_OwnerID, appdef.DataKind_int64, true).
-			AddField(Field_OwnerApp, appdef.DataKind_string, true).
-			AddField(authnz.Field_WSName, appdef.DataKind_string, true).
-			AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
-			AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
-			AddField(field_TemplateName, appdef.DataKind_string, false).
-			AddField(Field_TemplateParams, appdef.DataKind_string, false).
-			AddField(Field_OwnerQName2, appdef.DataKind_string, false).(appdef.IType).QName(),
+		appdef.NullQName,
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdCreateWorkspaceID(asp, cfg.Name),
@@ -72,17 +56,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	// c.sys.CreateWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandCreateWorkspace,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateWorkspaceParams")).
-			AddField(Field_OwnerWSID, appdef.DataKind_int64, true).
-			AddField(Field_OwnerQName, appdef.DataKind_QName, false). // Deprecated: Use OwnerQName2
-			AddField(Field_OwnerID, appdef.DataKind_int64, true).
-			AddField(Field_OwnerApp, appdef.DataKind_string, true).
-			AddField(authnz.Field_WSName, appdef.DataKind_string, true).
-			AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
-			AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, false).
-			AddField(field_TemplateName, appdef.DataKind_string, false).
-			AddField(Field_TemplateParams, appdef.DataKind_string, false).
-			AddField(Field_OwnerQName2, appdef.DataKind_string, false).(appdef.IType).QName(),
+		appdef.NullQName,
 		appdef.NullQName,
 		appdef.NullQName,
 		execCmdCreateWorkspace(timeFunc, asp, cfg.Name),
@@ -91,17 +65,8 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	// q.sys.QueryChildWorkspaceByName
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryChildWorkspaceByName,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "QueryChildWorkspaceByNameParams")).
-			AddField(authnz.Field_WSName, appdef.DataKind_string, true).(appdef.IType).QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "QueryChildWorkspaceByNameResult")).
-			AddField(authnz.Field_WSName, appdef.DataKind_string, true).
-			AddField(authnz.Field_WSKind, appdef.DataKind_string, true).
-			AddField(authnz.Field_WSKindInitializationData, appdef.DataKind_string, true).
-			AddField(field_TemplateName, appdef.DataKind_string, true).
-			AddField(Field_TemplateParams, appdef.DataKind_string, false).
-			AddField(authnz.Field_WSID, appdef.DataKind_int64, false).
-			AddField(authnz.Field_WSError, appdef.DataKind_string, false).
-			AddField(appdef.SystemField_IsActive, appdef.DataKind_bool, true).(appdef.IType).QName(),
+		appdef.NullQName,
+		appdef.NullQName,
 		qcwbnQryExec,
 	))
 

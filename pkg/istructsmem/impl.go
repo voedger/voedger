@@ -51,7 +51,7 @@ func (provider *appStructsProviderType) AppStructs(appName istructs.AppQName) (s
 	defer provider.locker.Unlock()
 
 	app, exists := provider.structures[appName]
-	if !exists {
+	if !exists || !appCfg.Prepared() {
 		buckets := provider.bucketsFactory()
 		appTokens := provider.appTokensFactory.New(appName)
 		appStorage, err := provider.storageProvider.AppStorage(appName)
@@ -65,6 +65,11 @@ func (provider *appStructsProviderType) AppStructs(appName istructs.AppQName) (s
 		provider.structures[appName] = app
 	}
 	return app, nil
+}
+
+// istructs.IAppStructsProvider.AppStructsByDef
+func (provider *appStructsProviderType) AppStructsByDef(aqn istructs.AppQName, appDef appdef.IAppDef) (structs istructs.IAppStructs, err error) {
+	return provider.AppStructs(aqn)
 }
 
 // appStructsType implements IAppStructs interface

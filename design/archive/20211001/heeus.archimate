@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:archimate="http://www.archimatetool.com/archimate" name="heeus-20211001" id="b59c02dd-7750-41d8-8563-0721b32859ad" version="4.9.0">
+<archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:archimate="http://www.archimatetool.com/archimate" name="heeus-20211001" id="b59c02dd-7750-41d8-8563-0721b32859ad" version="4.9.0">
   <folder name="Strategy" id="2e590c3b-aa39-4717-81fa-45b4762a6988" type="strategy"/>
   <folder name="Business" id="94b081bc-d4d4-4b09-b1af-89e962903fb9" type="business">
     <element xsi:type="archimate:Product" name="Generic Heeus Product" id="id-d0d7b9a1b5fe4e50a7c8d26d9420b5fb"/>
@@ -37,7 +38,7 @@
   - An Ingress controller is responsible for fulfilling the Ingress, usually with a load balancer, though it may also configure your edge router or additional frontends to help handle the traffic.&#xD;
 - [Представляем Contour: направляем трафик к приложениям в Kubernetes](https://habr.com/ru/company/southbridge/blog/515170/)&#xD;
 &#xD;
-</documentation>
+        </documentation>
       </element>
       <element xsi:type="archimate:ApplicationService" name="Orchestration" id="b9d5ecb9-b53b-46d9-a40a-181cddacc64c"/>
       <element xsi:type="archimate:ApplicationService" name="Service Mesh" id="b615ed43-4d17-4303-9d32-b8aca32356a7">
@@ -47,7 +48,7 @@
   - !!! https://habr.com/ru/company/flant/blog/478306/#comment_21004820&#xD;
 &#xD;
 &#xD;
-</documentation>
+        </documentation>
       </element>
       <element xsi:type="archimate:ApplicationService" name="Deployment" id="7c2f3add-e6b0-4b65-9e9a-9eb6d9a8e340"/>
       <element xsi:type="archimate:ApplicationService" name="Monitoring" id="bec17d06-311a-4345-9ae6-4abdd5bfe7eb">
@@ -129,13 +130,13 @@
       <element xsi:type="archimate:TechnologyProcess" name="&lt;&lt;task>> service=app1.main, #2" id="e0ed9c64-f7b1-4842-a925-3bd81d748c1a"/>
       <element xsi:type="archimate:TechnologyProcess" name="&lt;&lt;task>> service=app2.main" id="a6450334-2bc5-4ca3-99b7-792d8501328a"/>
       <element xsi:type="archimate:TechnologyProcess" name="&lt;&lt;task>> service=app2.reports" id="c9dcb066-fa62-411e-b901-65a1a6ab0d0e"/>
-      <element xsi:type="archimate:Artifact" name="app1.main.module1.wasm.v1" id="c7adc26c-f929-43e8-98d4-9fc312fff531"/>
-      <element xsi:type="archimate:Artifact" name="app1.main.module1.wasm.v2" id="81411feb-6329-4b64-98d4-0b3a14d3b894"/>
-      <element xsi:type="archimate:Artifact" name="app1.main.module2.wasm.v1" id="fc2ed4f0-1c1f-42c9-bb83-bfd537aa9ed6"/>
-      <element xsi:type="archimate:Artifact" name="app1.main.module2.wasm.v2" id="5c1f26ed-ea07-46ab-8054-9607e0bad049"/>
-      <element xsi:type="archimate:Artifact" name="app1.main.module3.wasm.v1" id="e6fd7ca7-3b83-47dd-bbd6-311cc2f16dde"/>
-      <element xsi:type="archimate:Artifact" name="app1.main.module3.wasm.v2" id="e0f1a586-1ed9-4ae7-84d3-6d665adce79a"/>
-      <element xsi:type="archimate:Artifact" name="app1.main.module4.wasm.v1" id="6bc7f1d4-1751-41b0-81e7-eea5eb3c3bff"/>
+      <element xsi:type="archimate:Artifact" name="app1pkg.main.module1.wasm.v1" id="c7adc26c-f929-43e8-98d4-9fc312fff531"/>
+      <element xsi:type="archimate:Artifact" name="app1pkg.main.module1.wasm.v2" id="81411feb-6329-4b64-98d4-0b3a14d3b894"/>
+      <element xsi:type="archimate:Artifact" name="app1pkg.main.module2.wasm.v1" id="fc2ed4f0-1c1f-42c9-bb83-bfd537aa9ed6"/>
+      <element xsi:type="archimate:Artifact" name="app1pkg.main.module2.wasm.v2" id="5c1f26ed-ea07-46ab-8054-9607e0bad049"/>
+      <element xsi:type="archimate:Artifact" name="app1pkg.main.module3.wasm.v1" id="e6fd7ca7-3b83-47dd-bbd6-311cc2f16dde"/>
+      <element xsi:type="archimate:Artifact" name="app1pkg.main.module3.wasm.v2" id="e0f1a586-1ed9-4ae7-84d3-6d665adce79a"/>
+      <element xsi:type="archimate:Artifact" name="app1pkg.main.module4.wasm.v1" id="6bc7f1d4-1751-41b0-81e7-eea5eb3c3bff"/>
       <element xsi:type="archimate:TechnologyProcess" name="Move Partitions" id="4f56bd9a-826a-4f42-b266-90c6952b5202"/>
       <element xsi:type="archimate:Node" name="Node1" id="bbf5814f-2d40-4dbb-9198-13aa52a6e39b"/>
       <element xsi:type="archimate:Facility" name="Partition1" id="b7e2401b-825b-4541-b7ca-4da5aa371a1a"/>
@@ -159,7 +160,7 @@
         <element xsi:type="archimate:TechnologyProcess" name="Save Deployment projection record" id="id-82e5d415af0341c4bebd39cc76e5382b"/>
         <element xsi:type="archimate:Artifact" name="Deployment" id="id-5b0ce63d2066472a997236f15e7163c5">
           <documentation>&#xD;
-</documentation>
+          </documentation>
           <property key="type" value="Projection"/>
         </element>
         <element xsi:type="archimate:TechnologyEvent" name="Deployment projection changed" id="id-47e49c48a04e42a9965689746f62cfb0"/>
@@ -168,7 +169,7 @@
         <element xsi:type="archimate:TechnologyProcess" name="Bind Services to Nodes" id="id-305e07d487814d7aa86b09f464b5ea60"/>
         <element xsi:type="archimate:Artifact" name="Binding" id="id-b672c3d389e548abaf059c34487e68c4">
           <documentation>&#xD;
-</documentation>
+          </documentation>
           <property key="type" value="Projection"/>
         </element>
         <element xsi:type="archimate:TechnologyEvent" name="Binding projection changed" id="id-f7cc81fcfd0747ef9d066f2a99fb5ce2"/>
@@ -237,7 +238,7 @@ A resilient app is one that continues to function despite failures of system com
 &#xD;
 !!! https://insights.sei.cmu.edu/blog/system-resilience-what-exactly-is-it/&#xD;
 &#xD;
-</documentation>
+          </documentation>
         </element>
         <element xsi:type="archimate:Requirement" name="Rate limiting" id="id-195fc802fa29412d9ce0c8e8eb291ccb"/>
         <element xsi:type="archimate:Requirement" name="A.Database Explorer" id="id-6b7f7dd4730747c1a550f7091c757800"/>
@@ -276,7 +277,7 @@ A resilient app is one that continues to function despite failures of system com
       <element xsi:type="archimate:Requirement" name="Cache Function Calls" id="9b93d5a8-9b63-4f0c-911e-3aeacd156f01"/>
       <element xsi:type="archimate:Requirement" name="Gas Limit" id="id-0ad7e5f2f63c43c6bbe39215ec5a76ea">
         <documentation>https://ewasm.readthedocs.io/en/mkdocs/determining_wasm_gas_costs/&#xD;
-</documentation>
+        </documentation>
       </element>
       <element xsi:type="archimate:Requirement" name="WASM Modules" id="id-b38610d02ba34db999a65f32ec6d7ba0"/>
       <element xsi:type="archimate:Requirement" name="CLI for Https API" id="id-8ad2cb132b8c46f9bb5685b040b0ff9c"/>

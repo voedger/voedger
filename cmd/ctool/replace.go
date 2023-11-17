@@ -21,7 +21,11 @@ func newReplaceCmd() *cobra.Command {
 
 func replace(cmd *cobra.Command, arg []string) error {
 
-	cluster := newCluster()
+	cluster, err := newCluster()
+	if err != nil {
+		return err
+	}
+
 	// nolint
 	defer cluster.saveToJSON()
 
@@ -31,7 +35,7 @@ func replace(cmd *cobra.Command, arg []string) error {
 		return err
 	}
 
-	err := mkCommandDirAndLogFile(cmd, cluster)
+	err = mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}

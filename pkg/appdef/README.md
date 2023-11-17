@@ -19,6 +19,7 @@ classDiagram
         +View(QName) IView
         +Command(QName) ICommand
         +Query(QName) IQuery
+        +Projector(QName) IProjector
         +Workspace(QName) IWorkspace
     }
     IAppDef "1" *--> "0..*" IType : compose
@@ -35,7 +36,7 @@ classDiagram
         <<interface>>
         +Kind()* TypeKind_Data
         +Ancestor() IData
-        +Constraints(func <-IConstraint)
+        +Constraints() []IConstraint
     }
 
     IArray --|> IType : inherits
@@ -130,13 +131,6 @@ classDiagram
         +Kind()* TypeKind_Object
     }
 
-    IElement --|> IStructure : inherits
-    class IElement {
-        <<interface>>
-        +Kind()* TypeKind_Element
-        +SystemField_Container() IField
-    }
-
     IType <|-- IView : inherits
     class IView {
         <<interface>>
@@ -148,6 +142,7 @@ classDiagram
     IType <|-- IFunction : inherits
     class IFunction {
         <<interface>>
+        +Engine() IEngine
         +Params() []IParam
         +Results() []IParam
     }
@@ -165,6 +160,16 @@ classDiagram
         +Kind()* TypeKind_Query
     }
 
+    IType <|-- IProjector : inherits
+    class IProjector {
+        <<interface>>
+        +Kind()* TypeKind_Projector
+        +Extension() IExtension
+        +Events() []IProjectorEvent
+        +States() [QName]QNames
+        +Intents() [QName]QNames
+    }
+
 
     IWorkspace --|> IType : inherits
     class IWorkspace {
@@ -173,183 +178,6 @@ classDiagram
         +Abstract() bool
         +Types() []IType
     }
-```
-
-### Types composing
-
-```mermaid
-classDiagram
-
-
-    class IData {
-        <<interface>>
-        +Kind()* TypeKind_Data
-        +DataKind() DataKind
-        +Ancestor() IData
-        +Constraints(func <-IConstraint)
-    }
-    IData "1" ..> "0..1" IData : ancestor ref
-
-    class IArray {
-        <<interface>>
-        +Kind()* TypeKind_Array
-        +MaxLen() uint
-        +Elem() IType
-    }
-
-    class IGDoc {
-        <<interface>>
-        +Kind()* TypeKind_GDoc
-        +Abstract() bool
-        +Fields() []IField
-        +Containers() []IContainer
-        +Uniques() []IUnique
-    }
-    IGDoc "1" o..> "0..*" IGRecord : contains
-
-    class ICDoc {
-        <<interface>>
-        +Kind()* TypeKind_CDoc
-        +Abstract() bool
-        +Fields() []IField
-        +Containers() []IContainer
-        +Uniques() []IUnique
-        +Singleton() bool
-    }
-    ICDoc "1" o..> "0..*" ICRecord : contains
-
-    class IWDoc {
-        <<interface>>
-        +Kind()* TypeKind_WDoc
-        +Abstract() bool
-        +Fields() []IField
-        +Containers() []IContainer
-        +Uniques() []IUnique
-    }
-    IWDoc "1" o..> "0..*" IWRecord : contains
-                    
-    class IODoc {
-        <<interface>>
-        +Kind()* TypeKind_ODoc
-        +Abstract() bool
-        +Fields() []IField
-        +Containers() []IContainer
-    }
-    IODoc "1" o..> "0..*" IODoc : contains
-    IODoc "1" o..> "0..*" IORecord : contains
-
-    class IGRecord {
-        <<interface>>
-        +Kind()* TypeKind_GRecord
-        +Abstract() bool
-        +Fields() []IField
-        +Containers() []IContainer
-        +Uniques() []IUnique
-    }
-    IGRecord "1" o..> "0..*" IGRecord : contains
-
-    class ICRecord {
-        <<interface>>
-        +Kind()* TypeKind_CRecord
-        +Abstract() bool
-        +Fields() []IField
-        +Containers() []IContainer
-        +Uniques() []IUnique
-    }
-    ICRecord "1" o..> "0..*" ICRecord : contains
-
-    class IWRecord {
-        <<interface>>
-        +Kind()* TypeKind_WRecord
-        +Abstract() bool
-        +Fields() []IField
-        +Containers() []IContainer
-        +Uniques() []IUnique
-    }
-    IWRecord "1" o..> "0..*" IWRecord : contains
-
-    class IORecord {
-        <<interface>>
-        +Kind()* TypeKind_ORecord
-        +Abstract() bool
-        +Fields() []IField
-        +Containers() []IContainer
-    }
-    IORecord "1" o..> "0..*" IORecord : contains
-
-    class IObject {
-        <<interface>>
-        +Kind()* TypeKind_Object
-        +Abstract() bool
-        +Fields() []IField
-        +Containers() []IContainer
-    }
-    IObject "1" o..> "0..*" IElement : contains
-
-    class IElement {
-        <<interface>>
-        +Kind()* TypeKind_Element
-        +Abstract() bool
-        +Fields() []IField
-        +Containers() []IContainer
-    }
-    IElement "1" o..> "0..*" IElement : contains
-
-    class IView {
-        <<interface>>
-        +Kind()* TypeKind_ViewRecord
-        +Key() IViewKey
-        +Value() IViewValue
-    }
-    IView "1" *--> "1" IViewKey : compose
-    IView "1" *--> "1" IViewValue : compose
-            
-    class IViewKey {
-        <<interface>>
-        +Fields() []IField
-        +PartKey() IViewPartKey
-        +ClustCols() IViewClustCols
-    }
-    IViewKey "1" *--> "1" IViewPartKey : compose
-    IViewKey "1" *--> "1" IViewClustCols : compose
-
-    class IViewPartKey {
-        <<interface>>
-        +Fields() []IField
-    }
-
-    class IViewClustCols {
-        <<interface>>
-        +Fields() []IField
-    }
-
-    class IViewValue {
-        <<interface>>
-        +Fields() []IField
-    }
-
-    class ICommand {
-        <<interface>>
-        +Kind()* TypeKind_Command
-        +Params() []IParam
-        +UnloggedParams() []IParam
-        +Results() []IParam
-    }
-
-    class IQuery {
-        <<interface>>
-        +Kind()* TypeKind_Query
-        +Params() []IParam
-        +Results() []IParam
-    }
-
-    class IWorkspace {
-        <<interface>>
-        +Kind()* TypeKind_Workspace
-        +Abstract() bool
-        +Types() []IType
-    }
-
 ```
 
 ### Data types
@@ -370,10 +198,10 @@ classDiagram
         +Kind()* TypeKind_Data
         +DataKind() DataKind
         +Ancestor() IData
-        +Constraints(func <-IConstraint)
+        +Constraints() []IConstraint
     }
 
-    Name "1" <--* "1" IData : has
+    Name "1" <--* "1" IData : Name
     class Name {
         <<QName>>
     }
@@ -381,7 +209,7 @@ classDiagram
                    - for custom types — user-defined and
                    - NullQName for anonymous types"
 
-    DataKind "1" <--* "1" IData : has
+    DataKind "1" <--* "1" IData : Kind
     class DataKind {
         <<DataKind>>
     }
@@ -398,14 +226,14 @@ classDiagram
                         - Record
                         - Event"
  
-    Ancestor "1" <--* "1" IData : has
+    Ancestor "1" <--* "1" IData : Ancestor
     class Ancestor {
         <<IData>>
     }
     note for Ancestor "  - data type from which the user data type is inherits or 
                          - nil for built-in types"
 
-    IConstraint "0..*" <--*  "1" IData : has
+    IConstraint "0..*" <--*  "1" IData : Constraints
     class IConstraint {
         <<interface>>
         +Kind() ConstraintKind
@@ -423,7 +251,7 @@ classDiagram
 
 ### Structures
 
-Structured (documents, records, objects, elements) are those structural types that have fields and can contain containers with other structural types.
+Structured (documents, records, objects) are those structural types that have fields and can contain containers with other structural types.
 
 The inheritance and composing diagrams given below are expanded general diagrams of the types above.
 
@@ -523,62 +351,56 @@ classDiagram
     <<Interface>>
     IDoc
   }
-  IGDoc "1" o--> "0..*" IGRecord : has child
+  IGDoc "1" o--> "0..*" IGRecord : children
 
   class IGRecord {
     <<Interface>>
     IContainedRecord
   }
-  IGRecord "1" o--> "0..*" IGRecord : has child
+  IGRecord "1" o--> "0..*" IGRecord : children
 
   class ICDoc {
     <<Interface>>
     IDoc
     +Singleton() bool
   }
-  ICDoc "1" o--> "0..*" ICRecord : has child
+  ICDoc "1" o--> "0..*" ICRecord : children
 
   class ICRecord {
     <<Interface>>
     IContainedRecord
   }
-  ICRecord "1" o--> "0..*" ICRecord : has child
+  ICRecord "1" o--> "0..*" ICRecord : children
 
   class IWDoc {
     <<Interface>>
     IDoc
   }
-  IWDoc "1" o--> "0..*" IWRecord : has child
+  IWDoc "1" o--> "0..*" IWRecord : children
 
   class IWRecord {
     <<Interface>>
     IContainedRecord
   }
-  IWRecord "1" o--> "0..*" IWRecord : has child
+  IWRecord "1" o--> "0..*" IWRecord : children
 
   class IODoc {
     <<Interface>>
     IDoc
   }
-  IODoc "1" o--> "0..*" IORecord : has child
+  IODoc "1" o--> "0..*" IORecord : children
 
   class IORecord {
     <<Interface>>
     IContainedRecord
   }
-  IORecord "1" o--> "0..*" IORecord : has child
+  IORecord "1" o--> "0..*" IORecord : children
 
   class IObject {
     <<Interface>>
     IStructure
   }
-  IObject "1" o--> "0..*" IElement : has child
-
-  class IElement {
-    <<Interface>>
-    IStructure
-  }
-  IElement "1" o--> "0..*" IElement : has child
+  IObject "1" o--> "0..*" IObject : children
 ```
 
 ### Fields, Containers, Uniques
@@ -592,15 +414,15 @@ classDiagram
     +DataKind() DataKind
     +Required() bool
     +Verified() bool
-    +VerificationKind(VerificationKind) bool
-    +Constraints(func <-IConstraint)
+    +VerificationKind() []VerificationKind
+    +Constraints() []IConstraint
   }
 
   class IFields{
     <<Interface>>
     Field(string) IField
     FieldCount() int
-    Fields(func <-IField)
+    Fields() []IField
   }
   IFields "1" --* "0..*" IField : compose
 
@@ -632,8 +454,8 @@ classDiagram
     <<Interface>>
     Container(string) IContainer
     ContainerCount() int
-    ContainerDef(string) IDef
-    Containers(func <-IContainer)
+    ContainerDef() [string]IType
+    Containers() []IContainer
   }
   IContainers "1" --* "0..*" IContainer : compose
 
@@ -655,7 +477,7 @@ classDiagram
     UniqueByID(UniqueID) IUnique
     UniqueByName(string) IUnique
     UniqueCount() int
-    Uniques(func <-IUnique)
+    Uniques() []IUnique
   }
   IUniques "1" --* "0..*" IUnique : compose
 
@@ -684,8 +506,8 @@ classDiagram
     +Key() IViewKey
     +Value() IViewValue
   }
-  IView "1" *--> "1" IViewKey : has
-  IView "1" *--> "1" IViewValue : has
+  IView "1" *--> "1" IViewKey : Key
+  IView "1" *--> "1" IViewValue : Value
 
   class IViewKey {
     <<Interface>>
@@ -693,27 +515,27 @@ classDiagram
     +PartKey() IViewPartKey
     +ClustCols() IViewClustCols
   }
-  IViewKey "1" *--> "1..*" IField : has
-  IViewKey "1" *--> "1" IViewPartKey : has
-  IViewKey "1" *--> "1" IViewClustCols : has
+  IViewKey "1" *--> "1..*" IField : fields
+  IViewKey "1" *--> "1" IViewPartKey : PartKey
+  IViewKey "1" *--> "1" IViewClustCols : ClustCols
 
   class IViewPartKey {
     <<Interface>>
     IFields
   }
-  IViewPartKey "1" *--> "1..*" IField : has
+  IViewPartKey "1" *--> "1..*" IField : fields
 
   class IViewClustCols {
     <<Interface>>
     IFields
   }
-  IViewClustCols "1" *--> "1..*" IField : has
+  IViewClustCols "1" *--> "1..*" IField : fields
 
   class IViewValue {
     <<Interface>>
     IFields
   }
-  IViewValue "1" *--> "1..*" IField : has
+  IViewValue "1" *--> "1..*" IField : fields
 
   class IField {
     <<interface>>
@@ -721,7 +543,7 @@ classDiagram
   }
 ```
 
-### Functions, commands and queries
+### Functions, commands, queries and projectors
 
 ```mermaid
 classDiagram
@@ -739,15 +561,15 @@ classDiagram
     class IFunction {
         <<interface>>
         +Extension() IExtension
-        +Param() IObject
-        +Result() IObject
+        +Param() IType
+        +Result() IType
     }
 
     IFunction <|-- ICommand : inherits
     class ICommand {
         <<interface>>
         +Kind()* TypeKind_Command
-        +UnloggedParam() IObject
+        +UnloggedParam() IType
     }
 
     IFunction <|-- IQuery : inherits
@@ -756,7 +578,7 @@ classDiagram
         +Kind()* TypeKind_Query
     }
 
-    IFunction "1" *-- "1" IExtension : has
+    IFunction "1" *--> "1" IExtension : Extension
     class IExtension {
         <<interface>>
         +Name() string
@@ -764,15 +586,52 @@ classDiagram
         +Comment() []string
     }
 
-    IExtension "1" ..> "1" ExtensionEngineKind : refs
+    IExtension "1" ..> "1" ExtensionEngineKind : Engine
     class ExtensionEngineKind {
         <<enumeration>>
         BuiltIn
         WASM
     }
+
+    IType <|-- IProjector : inherits
+    class IProjector {
+        <<interface>>
+        +Kind()* TypeKind_Projector
+        +Extension() IExtension
+        +Events() []IProjectorEvent
+        +States() [QName]QNames
+        +Intents() [QName]QNames
+    }
+    IProjector "1" *--> "1" IExtension : Extension
+
+    IProjector "1" *--> "1..*" IProjectorEvent : Events
+    class IProjectorEvent {
+        <<interface>>
+        +Comment() []string
+        +On() IType
+        +Kind() []ProjectorEventKind
+    }
+
+    IProjectorEvent "1" ..> "1..*" ProjectorEventKind : Kind
+    class ProjectorEventKind {
+        <<enumeration>>
+        Insert
+        Update
+        Activate
+        Deactivate
+        Execute*
+    }
+
+    IProjector "1" *--> "0..*" storage : States
+    IProjector "1" *--> "0..*" storage : Intents
+    class storage {
+        QName
+        +QNames() []QName
+    }
+
 ```
 
-*Rem*: In the above diagram the Param and Result of the function are `IObject`, in future versions it will be changed to an array of `[]IParam` and renamed to plural (`Params`, `Results`).
+*Rem*: In the above diagram the Param and Result of the function are `IType`, in future versions it will be changed to an array of `[]IParam` and renamed to plural (`Params`, `Results`).
 
 ## Restrictions
 

@@ -26,7 +26,7 @@ func GetUniqueID(appStructs istructs.IAppStructs, doc istructs.IRowReader, wsid 
 }
 
 func getUniqueIDByValues(appStructs istructs.IAppStructs, wsid istructs.WSID, qName appdef.QName, uniqueKeyValues []byte) (istructs.RecordID, bool, error) {
-	kb := appStructs.ViewRecords().KeyBuilder(QNameViewUniques)
+	kb := appStructs.ViewRecords().KeyBuilder(qNameViewUniques)
 	if err := buildUniqueViewKeyByValues(kb, qName, uniqueKeyValues); err != nil {
 		// notest
 		return istructs.NullRecordID, false, err

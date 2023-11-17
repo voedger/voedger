@@ -17,6 +17,6 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 		sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 			apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
-		apps.RegisterSchemaFS(routerSchemaFS, "github.com/voedger/voedger/pkg/apps/sys/routerapp", ep)
+		apps.RegisterSchemaFS(routerSchemaFS, RouterAppFQN, ep)
 	}
 }

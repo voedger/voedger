@@ -159,7 +159,9 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 	}
 	if view.pkRef == nil {
 		c.stmtErr(&view.Pos, ErrPrimaryKeyNotDefined)
+		return
 	}
+
 	for _, pkf := range view.pkRef.PartitionKeyFields {
 		index, ok := fields[string(pkf)]
 		if !ok {
@@ -224,20 +226,24 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 }
 
 func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
-	if cmd.Arg != nil && cmd.Arg.Def != nil {
-		if err := resolveInCtx(*cmd.Arg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&cmd.Pos, err)
+
+	resolve := func(qn DefQName) {
+		err := resolveInCtx(qn, c, func(*TypeStmt, *PackageSchemaAST) error { return nil })
+		if err != nil {
+			if err = resolveInCtx(qn, c, func(*TableStmt, *PackageSchemaAST) error { return nil }); err != nil {
+				c.stmtErr(&cmd.Pos, err)
+			}
 		}
+	}
+
+	if cmd.Arg != nil && cmd.Arg.Def != nil {
+		resolve(*cmd.Arg.Def)
 	}
 	if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
-		if err := resolveInCtx(*cmd.UnloggedArg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&cmd.Pos, err)
-		}
+		resolve(*cmd.UnloggedArg.Def)
 	}
 	if cmd.Returns != nil && cmd.Returns.Def != nil {
-		if err := resolveInCtx(*cmd.Returns.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&cmd.Pos, err)
-		}
+		resolve(*cmd.Returns.Def)
 	}
 	analyseWith(&cmd.With, cmd, c)
 }
@@ -261,7 +267,7 @@ func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 	for _, trigger := range v.Triggers {
 		for _, qname := range trigger.QNames {
-			if trigger.CUDEvents != nil {
+			if len(trigger.TableActions) > 0 {
 				resolveFunc := func(table *TableStmt, pkg *PackageSchemaAST) error {
 					sysDoc := (pkg.QualifiedPackageName == appdef.SysPackage) && (table.Name == nameCRecord || table.Name == nameORecord || table.Name == nameWRecord)
 					if table.Abstract && !sysDoc {
@@ -272,7 +278,7 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 						return err
 					}
 					if k == appdef.TypeKind_ODoc || k == appdef.TypeKind_ORecord {
-						if trigger.CUDEvents.activate() || trigger.CUDEvents.deactivate() || trigger.CUDEvents.update() {
+						if trigger.activate() || trigger.deactivate() || trigger.update() {
 							return ErrOnlyInsertForOdocOrORecord
 						}
 					}
@@ -281,7 +287,7 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 				if err := resolveInCtx(qname, c, resolveFunc); err != nil {
 					c.stmtErr(&v.Pos, err)
 				}
-			} else { // The type of ON not defined
+			} else { // CommandAction
 				// Command?
 				cmd, _, err := lookupInCtx[*CommandStmt](qname, c)
 				if err != nil {
@@ -302,14 +308,8 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 					continue // resolved
 				}
 
-				// Table?
-				table, _, err := lookupInCtx[*TableStmt](qname, c)
-				if err != nil {
-					c.stmtErr(&v.Pos, err)
-					continue
-				}
-				if table == nil {
-					c.stmtErr(&v.Pos, ErrUndefinedExpectedCommandTypeOrTable(qname))
+				if cmdArg == nil {
+					c.stmtErr(&v.Pos, ErrUndefinedExpectedCommandOrType(qname))
 					continue
 				}
 			}

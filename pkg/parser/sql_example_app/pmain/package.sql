@@ -160,13 +160,13 @@ WORKSPACE MyWorkspace (
                 (no need to specify in STATE when already listed in INTENTS)
         */
         PROJECTOR CountOrders
-            ON Orders
+            AFTER EXECUTE ON Orders
             INTENTS(View(OrdersCountView));
 
         -- Projector triggered by command argument SubscriptionEvent
         -- Projector uses sys.HTTPStorage
         PROJECTOR UpdateSubscriptionProfile
-            ON SubscriptionEvent
+            AFTER EXECUTE ON SubscriptionEvent
             STATE(sys.Http, AppSecret);
 
         -- Projectors triggered by CUD operation
@@ -177,7 +177,7 @@ WORKSPACE MyWorkspace (
 
         -- Projector triggered by few COMMANDs
         PROJECTOR UpdateDashboard
-            ON (Orders, Orders2)
+            AFTER EXECUTE ON (Orders, Orders2)
             INTENTS(View(DashboardView, XZReports, NotificationsHistory, ActiveTablePlansView));
 
         -- Projector triggered by few types of CUD operations
@@ -270,20 +270,25 @@ WORKSPACE MyWorkspace (
 
     VIEW TablePlanThumbnails(
         Dummy int,
-        PRIMARY KEY ((Dummy))
+        Dummy2 int,
+        PRIMARY KEY ((Dummy), Dummy2)
     ) AS RESULT OF TablePlanThumbnailGen;
 
     VIEW DashboardView(
         Dummy int,
-        PRIMARY KEY ((Dummy))
+        SomeRec record,
+        Dummy2 int,
+        PRIMARY KEY ((Dummy), Dummy2)
     ) AS RESULT OF UpdateDashboard;
     VIEW NotificationsHistory(
         Dummy int,
-        PRIMARY KEY ((Dummy))
+        Dummy2 int,
+        PRIMARY KEY ((Dummy), Dummy2)
     ) AS RESULT OF UpdateDashboard;
     VIEW ActiveTablePlansView(
         Dummy int,
-        PRIMARY KEY ((Dummy))
+        Dummy2 int,
+        PRIMARY KEY ((Dummy), Dummy2)
     ) AS RESULT OF UpdateDashboard;
 
 );
