@@ -18,14 +18,17 @@ func Example() {
 	type Resource string
 
 	const (
-		Admin    Role      = "Admin"
-		User     Role      = "User"
-		Read     Operation = "Read"
-		Shutdown Operation = "Shutdown"
-		Write    Operation = "Write"
-		File1    Resource  = "File1"
-		File2    Resource  = "File2"
-		Server   Resource  = "Server"
+		Admin Role = "Admin"
+		User  Role = "User"
+
+		Read      Operation = "Read"
+		Shutdown  Operation = "Shutdown"
+		Write     Operation = "Write"
+		UnknownOp Operation = "UnknownOp"
+
+		File1  Resource = "File1"
+		File2  Resource = "File2"
+		Server Resource = "Server"
 	)
 
 	// Create a new ACL builder
@@ -48,10 +51,13 @@ func Example() {
 	fmt.Println("User can read Server:", myACL.HasPermission(User, Read, Server))           // false
 	fmt.Println("User can write File2:", myACL.HasPermission(User, Write, File2))           // true
 
+	fmt.Println("Admin can UnknownOp File1:", myACL.HasPermission(Admin, UnknownOp, File1)) // false
+
 	// Output:
 	// Admin can read File1: true
 	// User can write File1: false
 	// Admin can shutdown Server: true
 	// User can read Server: false
 	// User can write File2: true
+	// Admin can UnknownOp File1: false
 }

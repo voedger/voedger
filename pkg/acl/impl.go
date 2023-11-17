@@ -27,10 +27,6 @@ type aclBuilder[Role, Operation, Resource comparable] struct {
 
 // Grant adds a permission to the aclBuilder.
 func (b *aclBuilder[Role, Operation, Resource]) Grant(role Role, op Operation, res Resource) {
-	if b.permissions == nil {
-		b.permissions = make(map[Role]map[Operation]map[Resource]bool)
-	}
-
 	if _, ok := b.permissions[role]; !ok {
 		b.permissions[role] = make(map[Operation]map[Resource]bool)
 	}
