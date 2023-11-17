@@ -6,7 +6,9 @@
 package istructsmem
 
 import (
+	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -88,6 +90,8 @@ type (
 
 		queryPhotoFunctionName       appdef.QName
 		queryPhotoFunctionParamsName appdef.QName
+		photoRawIdent                string
+		photoRawValue                []byte
 
 		// tested rows
 		abstractCDoc appdef.QName
@@ -190,6 +194,8 @@ var testData = testDataType{
 
 	queryPhotoFunctionName:       appdef.NewQName("test", "QueryPhoto"),
 	queryPhotoFunctionParamsName: appdef.NewQName("test", "QueryPhotoParams"),
+	photoRawIdent:                "rawPhoto",
+	photoRawValue:                bytes.Repeat([]byte{1, 2, 3, 4}, 1024), // 4Kb
 
 	abstractCDoc: appdef.NewQName("test", "abstract"),
 	testRow:      appdef.NewQName("test", "Row"),
@@ -257,7 +263,8 @@ func test() *testDataType {
 
 			photoParams := appDef.AddObject(testData.queryPhotoFunctionParamsName)
 			photoParams.
-				AddField(testData.buyerIdent, appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(50))
+				AddField(testData.buyerIdent, appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(50)).
+				AddField(testData.photoRawIdent, appdef.DataKind_raw, false, appdef.MaxLen(4*1024))
 		}
 
 		{
@@ -297,6 +304,7 @@ func test() *testDataType {
 				AddField("float64", appdef.DataKind_float64, false).
 				AddField("bytes", appdef.DataKind_bytes, false).
 				AddField("string", appdef.DataKind_string, false).
+				AddField("raw", appdef.DataKind_raw, false, appdef.MaxLen(16*1024)).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false).
@@ -404,6 +412,11 @@ func fillTestRow(row *rowType) {
 	row.PutFloat64("float64", 4)
 	row.PutBytes("bytes", []byte{1, 2, 3, 4, 5})
 	row.PutString("string", "Строка") // for unicode test
+
+	if row.fieldDef("raw") != nil {
+		row.PutString("raw", strings.Repeat("raw 📷", 10))
+	}
+
 	row.PutQName("QName", test.tablePhotos)
 	row.PutBool("bool", true)
 	row.PutRecordID("RecordID", 7777777)
@@ -486,6 +499,13 @@ func testTestRow(t *testing.T, row istructs.IRowReader) {
 	require.Equal(float64(4), row.AsFloat64("float64"))
 	require.Equal([]byte{1, 2, 3, 4, 5}, row.AsBytes("bytes"))
 	require.Equal("Строка", row.AsString("string"))
+
+	if r, ok := row.(interface{ fieldDef(string) appdef.IField }); ok {
+		if r.fieldDef("raw") != nil {
+			require.Equal(strings.Repeat("raw 📷", 10), row.AsString("raw"))
+		}
+	}
+
 	require.Equal(test.tablePhotos, row.AsQName("QName"))
 	require.Equal(true, row.AsBool("bool"))
 	require.Equal(istructs.RecordID(7777777), row.AsRecordID("RecordID"))
