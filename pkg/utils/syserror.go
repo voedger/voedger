@@ -36,7 +36,7 @@ func WrapSysError(err error, defaultStatusCode int) error {
 }
 
 func (he SysError) Error() string {
-	if len(he.Message) == 0 {
+	if len(he.Message) == 0 && he.HTTPStatus > 0 {
 		return fmt.Sprintf("%d %s", he.HTTPStatus, http.StatusText(he.HTTPStatus))
 	}
 	return he.Message
