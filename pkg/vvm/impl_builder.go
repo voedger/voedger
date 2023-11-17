@@ -5,6 +5,9 @@
 package vvm
 
 import (
+	"fmt"
+
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -55,11 +58,18 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 		if err != nil {
 			return nil, err
 		}
-		appDef.Types(func(t appdef.IType) {
+		err = iterate.ForEachError(appDef.Types, func(t appdef.IType) error {
+			if t.Kind() != appdef.TypeKind_Command && t.Kind() != appdef.TypeKind_Query {
+				return nil
+			}
+			resource := cfg.Resources.QueryResource(t.QName())
+			if resource.QName() == appdef.NullQName {
+				return fmt.Errorf("func %s not found in resources", t.QName())
+			}
 			switch t.Kind() {
 			case appdef.TypeKind_Command:
 				cmd := t.(appdef.ICommand)
-				cmdResource := cfg.Resources.QueryResource(cmd.QName()).(istructs.ICommandFunction)
+				cmdResource := resource.(istructs.ICommandFunction)
 				resQName := appdef.NullQName
 				if cmd.Result() != nil {
 					resQName = cmd.Result().QName()
@@ -75,10 +85,10 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 				istructsmem.ReplaceCommandDefinitions(cmdResource, paramQName, unloggedParamQName, resQName)
 			case appdef.TypeKind_Query:
 				if t.QName() == qNameQueryCollection {
-					return
+					return nil
 				}
 				query := t.(appdef.IQuery)
-				queryResource := cfg.Resources.QueryResource(query.QName()).(istructs.IQueryFunction)
+				queryResource := resource.(istructs.IQueryFunction)
 				paramQName := appdef.NullQName
 				if query.Param() != nil {
 					paramQName = query.Param().QName()
@@ -89,7 +99,11 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 				}
 				istructsmem.ReplaceQueryDefinitions(queryResource, paramQName, resQName)
 			}
+			return nil
 		})
+		if err != nil {
+			return nil, err
+		}
 	}
 	return vvmApps, nil
 }
