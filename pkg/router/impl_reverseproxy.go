@@ -69,7 +69,7 @@ func (s *httpService) getRedirectMatcher() (redirectMatcher mux.MatcherFunc, err
 			if err != nil {
 				panic(err)
 			}
-			targetDomain.Host = strings.Replace(req.Host, hostNoPort, targetDomain.Host, 1)
+			targetDomain.Host = strings.Replace(hostNoPort, hostNoPort, targetDomain.Host, 1)
 
 			// route domain matched -> ignore the rest
 			redirect(req, req.URL.Path, targetDomain)

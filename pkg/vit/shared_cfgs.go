@@ -60,7 +60,7 @@ var (
 			cfg.Routes["/grafana"] = fmt.Sprintf("http://127.0.0.1:%d", TestServicePort)
 			cfg.RoutesRewrite["/grafana-rewrite"] = fmt.Sprintf("http://127.0.0.1:%d/rewritten", TestServicePort)
 			cfg.RouteDefault = fmt.Sprintf("http://127.0.0.1:%d/not-found", TestServicePort)
-			cfg.RouteDomains["localhost"] = "http://127.0.0.1"
+			cfg.RouteDomains["localhost"] = fmt.Sprintf("http://127.0.0.1:%d", TestServicePort)
 
 			const app1_BLOBMaxSize = 5
 			cfg.BLOBMaxSize = app1_BLOBMaxSize
