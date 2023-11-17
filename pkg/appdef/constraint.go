@@ -18,9 +18,9 @@ func MinLen(v uint16, c ...string) IConstraint {
 	return newDataConstraint(ConstraintKind_MinLen, v, c...)
 }
 
-// Return new maximum length restriction for string bytes or raw data types.
+// Return new maximum length restriction for string, bytes or raw data types.
 //
-// Using MaxLen(), you can both limit the minimum length by a smaller value,
+// Using MaxLen(), you can both limit the maximum length by a smaller value,
 // and increase it to MaxFieldLength (1024) for string and bytes fields
 // and to MaxRawFieldLength (65535) for raw data fields.
 //
