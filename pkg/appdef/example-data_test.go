@@ -20,6 +20,7 @@ func ExampleIAppDefBuilder_AddData() {
 	strName := appdef.NewQName("test", "string")
 	tokenName := appdef.NewQName("test", "token")
 	weekDayName := appdef.NewQName("test", "weekDay")
+	jsonName := appdef.NewQName("test", "json")
 
 	// how to build AppDef with data types
 	{
@@ -34,6 +35,9 @@ func ExampleIAppDefBuilder_AddData() {
 		_ = appDef.AddData(tokenName, appdef.DataKind_string, strName, appdef.Pattern("^[a-z]+$"))
 
 		_ = appDef.AddData(weekDayName, appdef.DataKind_string, strName, appdef.Enum("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+
+		appDef.AddData(jsonName, appdef.DataKind_raw, appdef.NullQName,
+			appdef.MaxLen(appdef.MaxRawFieldLength)).SetComment("JSON data up to 64K")
 
 		if a, err := appDef.Build(); err == nil {
 			app = a
@@ -64,6 +68,9 @@ func ExampleIAppDefBuilder_AddData() {
 
 	// Output:
 	// - float64-data «test.float» inherits from float64-data «sys.float64»
+	// - raw-data «test.json» inherits from raw-data «sys.raw»
+	//   JSON data up to 64K
+	//   constraints: (MaxLen: 65535)
 	// - int64-data «test.num» inherits from int64-data «sys.int64»
 	//   Natural number
 	//   constraints: (MinExcl: 0)
@@ -73,5 +80,5 @@ func ExampleIAppDefBuilder_AddData() {
 	//   constraints: (Pattern: `^[a-z]+$`)
 	// - string-data «test.weekDay» inherits from string-data «test.string»
 	//   constraints: (Enum: [Fri Mon Sat Sun Thu Tue Wed])
-	// overall data types:  5
+	// overall data types:  6
 }

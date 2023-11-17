@@ -13,30 +13,22 @@ import (
 	"slices"
 )
 
-// Return new minimum length constraint for string or bytes data types.
-//
-// # Panics:
-//   - if value is greater then MaxFieldLength (1024)
+// Return new minimum length constraint for string, bytes or raw data types.
 func MinLen(v uint16, c ...string) IConstraint {
-	if v > MaxFieldLength {
-		panic(fmt.Errorf("minimum length value (%d) is too large, %d is maximum: %w", v, MaxFieldLength, ErrMaxFieldLengthExceeds))
-	}
 	return newDataConstraint(ConstraintKind_MinLen, v, c...)
 }
 
-// Return new maximum length restriction for string or bytes data types.
+// Return new maximum length restriction for string bytes or raw data types.
 //
-// Using MaxLen(), you can both limit the minimum length by a smaller value, and increase it to MaxFieldLength (1024)
+// Using MaxLen(), you can both limit the minimum length by a smaller value,
+// and increase it to MaxFieldLength (1024) for string and bytes fields
+// and to MaxRawFieldLength (65535) for raw data fields.
 //
 // # Panics:
 //   - if value is zero
-//   - if value is greater then MaxStringFieldLength (1024)
 func MaxLen(v uint16, c ...string) IConstraint {
 	if v == 0 {
 		panic(fmt.Errorf("maximum field length value is zero: %w", ErrIncompatibleConstraints))
-	}
-	if v > MaxFieldLength {
-		panic(fmt.Errorf("maximum field length value (%d) is too large, %d is maximum: %w", v, MaxFieldLength, ErrMaxFieldLengthExceeds))
 	}
 	return newDataConstraint(ConstraintKind_MaxLen, v, c...)
 }
