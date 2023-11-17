@@ -5,23 +5,13 @@
 
 package acl
 
-type IACL[Resource, Operation any, Role comparable] interface {
+type IACL[Role, Operation, Resource comparable] interface {
 
-	// HasPermission checks if the specified operation, resource, and role combination
-	// matches any of the permissions granted via IACLBuilder.Grant() calls.
-	// Implementations should ideally index by Role to enhance performance.
-	HasPermission(o Operation, r Resource, role Role) bool
+	// HasPermission checks if the specified combination was granted via IACLBuilder.Grant() call.
+	HasPermission(role Role, o Operation, r Resource) bool
 }
 
-type IACLBuilder[Resource, ResourcePattern, Operation, OperationPattern any, Role comparable] interface {
-	Grant(op OperationPattern, rp ResourcePattern, role Role)
-	Build(rm IResourceMatcher[Resource, ResourcePattern], om IOperationMatcher[Operation, OperationPattern]) IACL[Resource, Operation, Role]
-}
-
-type IResourceMatcher[Resource, ResourcePattern any] interface {
-	Match(r Resource, rp ResourcePattern) bool
-}
-
-type IOperationMatcher[Operation, OperationPattern any] interface {
-	Match(o Operation, op OperationPattern) bool
+type IACLBuilder[Role, Operation, Resource comparable] interface {
+	Grant(role Role, op Operation, rp Resource)
+	Build() IACL[Role, Operation, Resource]
 }

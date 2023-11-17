@@ -1,6 +1,6 @@
 # acl
 
-- Simple ACL
+- Access Control List implementation
 - @author Maxim Geraskin
 
 ## Motivation
@@ -25,30 +25,14 @@
     GRANT EXECUTE ON QUERY Query1 TO LocationUser;
     GRANT EXECUTE ON ALL QUERIES WITH TAG PosTag TO LocationUser;
 
+    GRANT INSERT ON WORKSPACE Workspace1 TO Role1;
 ```
 
 ## Context
 
 - “Principal P from Workspace W is [Allowed/Denied] Operation O on Resources matching ResourcePattern RP” [design/authnz](../../design/authnz/README.md)
 
-## Principles
-
-acl is a simple, base implementation of the above context. 
-
-- It does not support tags
-- It does not support resource inheritance (like granting access to a table gives same access to all columns - no, it is not supported)
-- It does not distinct between operations
-
-All these things should be implemented in a separate package, which will use acl as a base.
-
 ## Functional Design
 
-1. Build IACL
-  - For each new AppDef for every Workspace type get an `IACLBuilder` using `NewACLBuilder()` and build `IACL`
-2. Use `IACL`
-  - Get a Request
-  - Determine Workspace type and Principals
-  - Determine all Principal's Roles, including inherited Roles (if any)
-  - Determine all Resources (e.g. each table field is a separate resource)
-  - Query `IACL` for each (Principal, Resource, Operation) triplet
-    - To check access to a table query Table resource first, if it is not ok query each Field resource
+1. For each new AppDef for every Workspace type get an `IACLBuilder` using `NewACLBuilder()` and build `IACL`
+2. Use `IACL`: get a request, determine Workspace type, find `IACL` for this Workspace type, check if request is allowed
