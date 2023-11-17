@@ -12,6 +12,7 @@ import (
 
 	"golang.org/x/exp/maps"
 
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/parser"
@@ -40,25 +41,30 @@ func readFileSchemaAST(packageFQN string, fs embed.FS) (fileSchemasAST []*parser
 
 func ReadPackageSchemaAST(ep extensionpoints.IExtensionPoint) (packageSchemaASTs []*parser.PackageSchemaAST, err error) {
 	epSchemas := ep.ExtensionPoint(apps.EPSchemasFS)
-	epSchemas.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
+	err = iterate.ForEachError2Values(epSchemas.Iterate, func(eKey extensionpoints.EKey, value interface{}) error {
 		filesSchemasASTs := make([]*parser.FileSchemaAST, 0)
 		packageFQN := eKey.(string)
 		epPackageSql := value.(extensionpoints.IExtensionPoint)
-		epPackageSql.Iterate(func(_ extensionpoints.EKey, value interface{}) {
+		err = iterate.ForEachError2Values(epPackageSql.Iterate, (func(_ extensionpoints.EKey, value interface{}) error {
 			fs := value.(embed.FS)
 			fileSchemaASTs, err := readFileSchemaAST(packageFQN, fs)
 			if err != nil {
-				panic(err)
+				return err
 			}
 			filesSchemasASTs = append(filesSchemasASTs, fileSchemaASTs...)
-		})
+			return nil
+		}))
+		if err != nil {
+			return err
+		}
 		packageSchemaAST, err := parser.BuildPackageSchema(packageFQN, filesSchemasASTs)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		packageSchemaASTs = append(packageSchemaASTs, packageSchemaAST)
+		return nil
 	})
-	return
+	return packageSchemaASTs, err
 }
 
 func readEmbeddedContent(qualifiedPackageName, subDir string, fsi embed.FS) (contentMap map[string][]byte, err error) {

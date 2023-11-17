@@ -43,8 +43,8 @@ func ErrAppDoesNotDefineUseOfPackage(name string) error {
 	return fmt.Errorf("application does not define use of package %s", name)
 }
 
-func ErrUndefinedExpectedCommandTypeOrTable(name DefQName) error {
-	return fmt.Errorf("%s undefined, expected command, type or table", name.String())
+func ErrUndefinedExpectedCommandOrType(name DefQName) error {
+	return fmt.Errorf("undefined command or type: %s", name.String())
 }
 
 func ErrCheckRegexpErr(e error) error {

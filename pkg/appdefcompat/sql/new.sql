@@ -73,7 +73,7 @@ WORKSPACE SomeWorkspace(
         PRIMARY KEY ((A), B)
     ) AS RESULT OF Proj1;
     EXTENSION ENGINE BUILTIN (
-        PROJECTOR Proj1 ON (Orders) INTENTS (View(SomeView), View(NewView));
+        PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(SomeView), View(NewView));
         COMMAND Orders();
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
         COMMAND SomeCommand(SomeType2, UNLOGGED SomeType2) RETURNS SomeType2; -- args and return type changed; unlogged flag changed, but it is ok
