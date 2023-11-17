@@ -324,7 +324,82 @@ ABSTRACT WORKSPACE Workspace (
         WSError text
     );
 
+    VIEW RecordsRegistry (
+        IDHi int64 NOT NULL,
+        ID ref NOT NULL,
+        WLogOffset int64 NOT NULL,
+        QName qname NOT NULL,
+        PRIMARY KEY ((IDHi), ID)
+    ) AS RESULT OF RecordsRegistryProjector;
+
+    VIEW InviteIndexView (
+        Dummy int32 NOT NULL,
+        Login text NOT NULL,
+        InviteID ref NOT NULL,
+        PRIMARY KEY ((Dummy), Login)
+    ) AS RESULT OF ProjectorInviteIndex;
+
+    VIEW JoinedWorkspaceIndexView (
+        Dummy int32 NOT NULL,
+        InvitingWorkspaceWSID int64 NOT NULL,
+        JoinedWorkspaceID ref NOT NULL,
+        PRIMARY KEY ((Dummy), InvitingWorkspaceWSID)
+    ) AS RESULT OF ProjectorJoinedWorkspaceIndex;
+
+    VIEW WLogDates (
+        Year int32 NOT NULL,
+        DayOfYear int32 NOT NULL,
+        FirstOffset int64 NOT NULL,
+        LastOffset int64 NOT NULL,
+        PRIMARY KEY((Year), DayOfYear)
+    ) AS RESULT OF ProjectorWLogDates;
+
+    VIEW CollectionView (
+        PartKey int32 NOT NULL,
+        DocQName qname NOT NULL,
+        DocID ref NOT NULL,
+        ElementID ref NOT NULL,
+        Record  record NOT NULL,
+        offs int64 NOT NULL,
+        PRIMARY KEY ((PartKey), DocQName, DocID, ElementID)
+    ) AS RESULT OF ProjectorCollection;
+
+    VIEW Uniques (
+        QName qname NOT NULL,
+        ValuesHash int64 NOT NULL,
+        Values bytes(32768) NOT NULL,
+        ID ref,
+        PRIMARY KEY ((QName, ValuesHash) Values)
+    ) AS RESULT OF ApplyUniques;
+
+    VIEW ChildWorkspaceIdx (
+        dummy int32 NOT NULL,
+        WSName text NOT NULL,
+        ChildWorkspaceID int64 NOT NULL,
+        PRIMARY KEY ((dummy), WSName)
+    ) AS RESULT OF ProjectorChildWorkspaceIdx;
+
+    VIEW WorkspaceIDIdx (
+        OwnerWSID int64 NOT NULL,
+        WSName text NOT NULL,
+        WSID int64 NOT NULL,
+        IDOfCDocWorkspaceID ref(WorkspaceID), -- TODO: not required for backward compatibility. Actually is required
+        PRIMARY KEY ((OwnerWSID), WSName)
+    ) AS RESULT OF ProjectorWorkspaceIDIdx;
+
+    VIEW ViewSubjectsIdx (
+        LoginHash int64 NOT NULL,
+        Login text NOT NULL,
+        SubjectID ref NOT NULL,
+        PRIMARY KEY ((LoginHash), Login)
+    ) AS RESULT OF ApplyViewSubjectsIdx;
+
     EXTENSION ENGINE BUILTIN (
+
+        -- blobber
+
+        COMMAND UploadBLOBHelper;
+        COMMAND DownloadBLOBHelper;
 
         -- builtin
 
@@ -346,24 +421,12 @@ ABSTRACT WORKSPACE Workspace (
         QUERY Collection(CollectionParams) RETURNS ANY;
         QUERY GetCDoc(GetCDocParams) RETURNS GetCDocResult;
         QUERY State(StateParams) RETURNS StateResult;
+        SYNC PROJECTOR ProjectorCollection AFTER INSERT OR UPDATE ON (CRecord) INTENTS(View(CollectionView));
 
         -- describe
 
         QUERY DescribePackageNames RETURNS DescribePackageNamesResult;
         QUERY DescribePackage(DescribePackageParams) RETURNS DescribePackageResult;
-
-        -- journal
-
-        QUERY Journal(JournalParams) RETURNS JournalResult;
-
-        -- sqlquery
-
-        QUERY SqlQuery(SqlQueryParams) RETURNS SqlQueryResult;
-
-        -- blobb
-
-        COMMAND UploadBLOBHelper;
-        COMMAND DownloadBLOBHelper;
 
         -- invite
 
@@ -377,12 +440,34 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND UpdateJoinedWorkspaceRoles(UpdateJoinedWorkspaceRolesParams);
         COMMAND DeactivateJoinedWorkspace(DeactivateJoinedWorkspaceParams);
         QUERY QueryChildWorkspaceByName(QueryChildWorkspaceByNameParams) RETURNS QueryChildWorkspaceByNameResult;
+        PROJECTOR ApplyInvitation AFTER EXECUTE ON (InitiateInvitationByEMail);
+        PROJECTOR ApplyCancelAcceptedInvite AFTER EXECUTE ON (InitiateCancelAcceptedInvite);
+        PROJECTOR ApplyJoinWorkspace AFTER EXECUTE ON (InitiateJoinWorkspace);
+        PROJECTOR ApplyLeaveWorkspace AFTER EXECUTE ON (InitiateLeaveWorkspace);
+        PROJECTOR ApplyUpdateInviteRoles AFTER EXECUTE ON (InitiateUpdateInviteRoles);
+        SYNC PROJECTOR ProjectorInviteIndex AFTER EXECUTE ON (InitiateInvitationByEMail) INTENTS(View(InviteIndexView));
+        SYNC PROJECTOR ProjectorJoinedWorkspaceIndex AFTER EXECUTE ON (CreateJoinedWorkspace) INTENTS(View(JoinedWorkspaceIndexView));
+        SYNC PROJECTOR ApplyViewSubjectsIdx AFTER INSERT ON (Subject) INTENTS(View(ViewSubjectsIdx));
+
+        -- journal
+
+        QUERY Journal(JournalParams) RETURNS JournalResult;
+        PROJECTOR ProjectorWLogDates AFTER INSERT ON (CRecord, WRecord, ORecord) OR AFTER UPDATE ON (CRecord, WRecord) INTENTS(View(WLogDates));
+
+        -- sqlquery
+
+        QUERY SqlQuery(SqlQueryParams) RETURNS SqlQueryResult;
+
+        -- uniques
+
+        SYNC PROJECTOR ApplyUniques AFTER INSERT ON (CRecord, WRecord, ORecord) OR AFTER UPDATE ON (CRecord, WRecord) INTENTS(View(Uniques));
 
         -- verifier
 
         QUERY InitiateEmailVerification(InitiateEmailVerificationParams) RETURNS InitialEmailVerificationResult;
         QUERY IssueVerifiedValueToken(IssueVerifiedValueTokenParams) RETURNS IssueVerifiedValueTokenResult;
         COMMAND SendEmailVerificationCode(SendEmailVerificationParams);
+        PROJECTOR ApplySendEmailVerificationCode AFTER EXECUTE ON (SendEmailVerificationCode) INTENTS(SendMail);
 
         -- workspace
 
@@ -393,15 +478,13 @@ ABSTRACT WORKSPACE Workspace (
         COMMAND OnJoinedWorkspaceDeactivated(OnJoinedWorkspaceDeactivatedParams);
         COMMAND OnChildWorkspaceDeactivated(OnChildWorkspaceDeactivatedParams);
         COMMAND InitiateDeactivateWorkspace();
+        PROJECTOR ApplyDeactivateWorkspace AFTER EXECUTE ON (InitiateDeactivateWorkspace);
+        PROJECTOR InvokeCreateWorkspace AFTER INSERT ON (WorkspaceID);
+        PROJECTOR InvokeCreateWorkspaceID AFTER INSERT ON(ChildWorkspace);
+        PROJECTOR InitializeWorkspace AFTER INSERT ON(WorkspaceDescriptor);
+        SYNC PROJECTOR ProjectorChildWorkspaceIdx AFTER INSERT ON (ChildWorkspace) INTENTS(View(ChildWorkspaceIdx));
+        SYNC PROJECTOR ProjectorWorkspaceIDIdx AFTER INSERT ON (WorkspaceID) INTENTS(View(WorkspaceIDIdx));
     );
-
-    VIEW RecordsRegistry (
-        IDHi int64 NOT NULL,
-        ID ref NOT NULL,
-        WLogOffset int64 NOT NULL,
-        QName qname NOT NULL,
-        PRIMARY KEY ((IDHi), ID)
-    ) AS RESULT OF sys.RecordsRegistryProjector;
 );
 
 EXTENSION ENGINE BUILTIN (

@@ -23,9 +23,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	provideCmdCreateJoinedWorkspace(cfg)
 	provideCmdUpdateJoinedWorkspaceRoles(cfg)
 	provideCmdDeactivateJoinedWorkspace(cfg)
-	provideCDocSubject(cfg, appDefBuilder)
-	provideViewInviteIndex(appDefBuilder)
-	provideViewJoinedWorkspaceIndex(appDefBuilder)
 	appDefBuilder.AddObject(qNameAPApplyCancelAcceptedInvite)
 	appDefBuilder.AddObject(qNameAPApplyInvitation)
 	appDefBuilder.AddObject(qNameAPApplyJoinWorkspace)
@@ -41,5 +38,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	cfg.AddSyncProjectors(
 		provideSyncProjectorInviteIndexFactory(),
 		provideSyncProjectorJoinedWorkspaceIndexFactory(),
+		applyViewSubjectsIdx,
 	)
 }
