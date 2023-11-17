@@ -10,7 +10,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
-	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -26,14 +25,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		execCmdInitChildWorkspace,
 	))
 
-	// View<ChildWorkspaceIdx>
-	// target app, user profile
-	projectors.ProvideViewDef(appDefBuilder, QNameViewChildWorkspaceIdx, func(b appdef.IViewBuilder) {
-		b.KeyBuilder().PartKeyBuilder().AddField(field_dummy, appdef.DataKind_int32)
-		b.KeyBuilder().ClustColsBuilder().AddField(authnz.Field_WSName, appdef.DataKind_string)
-		b.ValueBuilder().AddField(Field_ChildWorkspaceID, appdef.DataKind_int64, true)
-	})
-
 	// c.sys.CreateWorkspaceID
 	// target app, (target cluster, base profile WSID)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
@@ -43,15 +34,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		appdef.NullQName,
 		execCmdCreateWorkspaceID(asp, cfg.Name),
 	))
-
-	// View<WorkspaceIDIdx>
-	projectors.ProvideViewDef(appDefBuilder, QNameViewWorkspaceIDIdx, func(b appdef.IViewBuilder) {
-		b.KeyBuilder().PartKeyBuilder().AddField(Field_OwnerWSID, appdef.DataKind_int64)
-		b.KeyBuilder().ClustColsBuilder().AddField(authnz.Field_WSName, appdef.DataKind_string)
-		b.ValueBuilder().
-			AddField(authnz.Field_WSID, appdef.DataKind_int64, true).
-			AddRefField(field_IDOfCDocWorkspaceID, false) // TODO: not required for backward compatibility. Actually is required
-	})
 
 	// c.sys.CreateWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
@@ -70,7 +52,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		qcwbnQryExec,
 	))
 
-	ProvideViewNextWSID(appDefBuilder)
+	provideViewNextWSID(appDefBuilder)
 
 	// deactivate workspace
 	provideDeactivateWorkspace(cfg, appDefBuilder, tokensAPI, federation, asp)

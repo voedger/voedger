@@ -28,6 +28,8 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
+	"github.com/voedger/voedger/pkg/projectors"
+	"github.com/voedger/voedger/pkg/state"
 )
 
 var provider istructs.IAppStructsProvider
@@ -100,6 +102,18 @@ func appConfigs(t *testing.T) (istructsmem.AppConfigsType, istorage.IAppStorageP
 	// TODO: remove it after https://github.com/voedger/voedger/issues/56
 	_, err := adb.Build()
 	require.NoError(err)
+
+	// kept here to keep local tests working without sql
+	projectors.ProvideViewDef(adb, QNameCollectionView, func(b appdef.IViewBuilder) {
+		b.KeyBuilder().PartKeyBuilder().AddField(Field_PartKey, appdef.DataKind_int32)
+		b.KeyBuilder().ClustColsBuilder().
+			AddField(Field_DocQName, appdef.DataKind_QName).
+			AddRefField(field_DocID).
+			AddRefField(field_ElementID)
+		b.ValueBuilder().
+			AddField(Field_Record, appdef.DataKind_Record, true).
+			AddField(state.ColOffset, appdef.DataKind_int64, true)
+	})
 
 	collectionFuncResource = cfg.Resources.QueryResource(qNameQueryCollection)
 	cdocFuncResource = cfg.Resources.QueryResource(qNameGetCDocFunc)
@@ -1008,4 +1022,16 @@ func Test_Idempotency(t *testing.T) {
 		requireArticle(require, "Coca-cola", test.cocaColaNumber2, as, cocaColaDocID)
 	}
 
+}
+
+// should be used in tests only. Sync Actualizer per app will be wired in production
+func provideSyncActualizer(ctx context.Context, as istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
+	actualizerConfig := projectors.SyncActualizerConf{
+		Ctx:        ctx,
+		AppStructs: func() istructs.IAppStructs { return as },
+		Partition:  partitionID,
+		N10nFunc:   func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {},
+	}
+	actualizerFactory := projectors.ProvideSyncActualizerFactory()
+	return actualizerFactory(actualizerConfig, collectionProjectorFactory(as.AppDef()))
 }

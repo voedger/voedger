@@ -5,28 +5,14 @@
 package invite
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-// buildSubjectsIdx need to build view.sys.SubjectIdx on an existing storage: true -> async projector will be registered, sync otherwise
-func provideCDocSubject(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
-	projectors.ProvideViewDef(appDefBuilder, QNameViewSubjectsIdx, func(view appdef.IViewBuilder) {
-		view.KeyBuilder().PartKeyBuilder().AddField(Field_LoginHash, appdef.DataKind_int64)
-		view.KeyBuilder().ClustColsBuilder().AddField(Field_Login, appdef.DataKind_string)
-		view.ValueBuilder().AddRefField(Field_SubjectID, true)
-	})
-
-	cfg.AddSyncProjectors(subjectIdxProjectorFactory)
-}
-
-func subjectIdxProjectorFactory(partition istructs.PartitionID) istructs.Projector {
+func applyViewSubjectsIdx(partition istructs.PartitionID) istructs.Projector {
 	return istructs.Projector{
-		Name: QNameViewSubjectsIdx,
+		Name: QNameApplyViewSubjectsIdx,
 		Func: viewSubjectsIdxProjector,
 	}
 }

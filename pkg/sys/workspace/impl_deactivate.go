@@ -226,7 +226,7 @@ func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, appQNam
 			// notest
 			return err
 		}
-		subjectsKB := as.ViewRecords().KeyBuilder(collection.QNameViewCollection)
+		subjectsKB := as.ViewRecords().KeyBuilder(collection.QNameCollectionView)
 		subjectsKB.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
 		subjectsKB.PutQName(collection.Field_DocQName, invite.QNameCDocSubject)
 		err = as.ViewRecords().Read(context.Background(), event.Workspace(), subjectsKB, func(_ istructs.IKey, value istructs.IValue) (err error) {
