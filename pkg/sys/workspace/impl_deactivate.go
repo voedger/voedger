@@ -23,7 +23,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, tokensAPI itokens.ITokens, federation coreutils.IFederation,
+func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, tokensAPI itokens.ITokens, federation coreutils.IFederation,
 	asp istructs.IAppStructsProvider) {
 
 	// c.sys.DeactivateWorkspace
