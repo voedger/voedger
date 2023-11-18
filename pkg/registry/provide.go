@@ -32,7 +32,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		provideIssuePrincipalTokenExec(asp, itokens)))
 	provideChangePassword(cfg)
 	provideResetPassword(cfg, asp, itokens, federation)
-	appDefBuilder.AddObject(qNameProjectorInvokeCreateWorkspaceID_registry)
 	cfg.AddAsyncProjectors(provideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation, cfg.Name, itokens))
 	apps.RegisterSchemaFS(schemasFS, RegistryPackageFQN, ep)
 }

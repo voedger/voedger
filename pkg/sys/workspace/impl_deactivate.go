@@ -66,8 +66,6 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 		cmdOnChildWorkspaceDeactivatedExec,
 	))
 
-	adf.AddObject(qNameProjectorApplyDeactivateWorkspace)
-
 	// target app, target WSID
 	cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{

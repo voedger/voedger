@@ -58,9 +58,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	provideDeactivateWorkspace(cfg, appDefBuilder, tokensAPI, federation, asp)
 
 	// projectors
-	appDefBuilder.AddObject(qNameAPInvokeCreateWorkspace)
-	appDefBuilder.AddObject(qNameAPInvokeCreateWorkspaceID)
-	appDefBuilder.AddObject(qNameAPInitializeWorkspace)
 	cfg.AddAsyncProjectors(
 		provideAsyncProjectorFactoryInvokeCreateWorkspace(federation, cfg.Name, itokens),
 		provideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation, cfg.Name, itokens),
