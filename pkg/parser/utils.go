@@ -171,7 +171,7 @@ func iteratePackage(pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt
 }
 
 func iteratePackageStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt |
-	*WorkspaceStmt | *AlterWorkspaceStmt](pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt stmtType, ctx *iterateCtx)) {
+	*WorkspaceStmt | *AlterWorkspaceStmt | *ProjectorStmt](pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt stmtType, ctx *iterateCtx)) {
 	iteratePackage(pkg, ctx, func(stmt interface{}, ctx *iterateCtx) {
 		if s, ok := stmt.(stmtType); ok {
 			callback(s, ctx)
@@ -256,12 +256,6 @@ func getTargetSchema(n DefQName, c *iterateCtx) (*PackageSchemaAST, error) {
 
 func maybeSysPkg(pkg Ident) bool {
 	return (pkg == "" || pkg == appdef.SysPackage)
-}
-
-func isPredefinedSysTable(packageName string, table *TableStmt) bool {
-	return packageName == appdef.SysPackage &&
-		(table.Name == nameCDOC || table.Name == nameWDOC || table.Name == nameODOC ||
-			table.Name == nameCRecord || table.Name == nameWRecord || table.Name == nameORecord)
 }
 
 func getNestedTableKind(rootTableKind appdef.TypeKind) appdef.TypeKind {

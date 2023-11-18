@@ -422,6 +422,15 @@ func (t *ProjectorTrigger) update() bool {
 	return false
 }
 
+func (t *ProjectorTrigger) insert() bool {
+	for i := 0; i < len(t.TableActions); i++ {
+		if t.TableActions[i].Insert {
+			return true
+		}
+	}
+	return false
+}
+
 func (t *ProjectorTrigger) activate() bool {
 	for i := 0; i < len(t.TableActions); i++ {
 		if t.TableActions[i].Activate {

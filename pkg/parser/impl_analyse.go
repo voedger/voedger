@@ -292,29 +292,14 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 				if err := resolveInCtx(qname, c, resolveFunc); err != nil {
 					c.stmtErr(&v.Pos, err)
 				}
-			} else { // CommandAction
-				// Command?
+			} else { // Command
 				cmd, _, err := lookupInCtx[*CommandStmt](qname, c)
 				if err != nil {
 					c.stmtErr(&v.Pos, err)
 					continue
 				}
-				if cmd != nil {
-					continue // resolved
-				}
-
-				// Command Argument?
-				cmdArg, _, err := lookupInCtx[*TypeStmt](qname, c)
-				if err != nil {
-					c.stmtErr(&v.Pos, err)
-					continue
-				}
-				if cmdArg != nil {
-					continue // resolved
-				}
-
-				if cmdArg == nil {
-					c.stmtErr(&v.Pos, ErrUndefinedExpectedCommandOrType(qname))
+				if cmd == nil {
+					c.stmtErr(&v.Pos, ErrUndefinedCommand(qname))
 					continue
 				}
 			}
@@ -430,9 +415,6 @@ func analyseWith(with *[]WithItem, statement IStatement, c *iterateCtx) {
 }
 
 func analyseTable(v *TableStmt, c *iterateCtx) {
-	if isPredefinedSysTable(c.pkg.QualifiedPackageName, v) {
-		return
-	}
 	var err error
 	v.tableTypeKind, v.singletone, err = getTableTypeKind(v, c.pkg, c)
 	if err != nil {
