@@ -23,11 +23,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	provideCmdCreateJoinedWorkspace(cfg)
 	provideCmdUpdateJoinedWorkspaceRoles(cfg)
 	provideCmdDeactivateJoinedWorkspace(cfg)
-	appDefBuilder.AddObject(qNameAPApplyCancelAcceptedInvite)
-	appDefBuilder.AddObject(qNameAPApplyInvitation)
-	appDefBuilder.AddObject(qNameAPApplyJoinWorkspace)
-	appDefBuilder.AddObject(qNameAPApplyLeaveWorkspace)
-	appDefBuilder.AddObject(qNameAPApplyUpdateInviteRoles)
 	cfg.AddAsyncProjectors(
 		provideAsyncProjectorApplyInvitationFactory(timeFunc, federation, cfg.Name, itokens, smtpCfg),
 		provideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc, federation, cfg.Name, itokens),
