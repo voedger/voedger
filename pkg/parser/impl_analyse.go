@@ -562,6 +562,12 @@ func analyseFields(items []TableItemExpr, c *iterateCtx) {
 					c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
 				}
 			}
+			if field.Type.DataType != nil && field.Type.DataType.Raw != nil && field.Type.DataType.Raw.MaxLen != nil {
+				if *field.Type.DataType.Raw.MaxLen > appdef.MaxRawFieldLength {
+					//notest: MaxRawFieldLength now is 65535 == math.MaxUint16
+					c.stmtErr(&field.Pos, ErrMaxRawFieldLengthTooLarge)
+				}
+			}
 		}
 		if item.RefField != nil {
 			rf := item.RefField
