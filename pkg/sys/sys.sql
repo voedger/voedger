@@ -367,7 +367,7 @@ ABSTRACT WORKSPACE Workspace (
 	VIEW Uniques (
 		QName qname NOT NULL,
 		ValuesHash int64 NOT NULL,
-		Values bytes(32768) NOT NULL,
+		Values bytes(1024) NOT NULL,
 		ID ref,
 		PRIMARY KEY ((QName, ValuesHash) Values)
 	) AS RESULT OF ApplyUniques;
