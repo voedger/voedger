@@ -37,7 +37,7 @@ func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istr
 		rw.PutFloat64(fieldName, rr.AsFloat64(fieldName))
 	case appdef.DataKind_bytes:
 		rw.PutBytes(fieldName, rr.AsBytes(fieldName))
-	case appdef.DataKind_string:
+	case appdef.DataKind_string, appdef.DataKind_raw:
 		rw.PutString(fieldName, rr.AsString(fieldName))
 	case appdef.DataKind_QName:
 		rw.PutQName(fieldName, rr.AsQName(fieldName))

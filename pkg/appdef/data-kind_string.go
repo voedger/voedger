@@ -15,17 +15,18 @@ func _() {
 	_ = x[DataKind_float64-4]
 	_ = x[DataKind_bytes-5]
 	_ = x[DataKind_string-6]
-	_ = x[DataKind_QName-7]
-	_ = x[DataKind_bool-8]
-	_ = x[DataKind_RecordID-9]
-	_ = x[DataKind_Record-10]
-	_ = x[DataKind_Event-11]
-	_ = x[DataKind_FakeLast-12]
+	_ = x[DataKind_raw-7]
+	_ = x[DataKind_QName-8]
+	_ = x[DataKind_bool-9]
+	_ = x[DataKind_RecordID-10]
+	_ = x[DataKind_Record-11]
+	_ = x[DataKind_Event-12]
+	_ = x[DataKind_FakeLast-13]
 }
 
-const _DataKind_name = "DataKind_nullDataKind_int32DataKind_int64DataKind_float32DataKind_float64DataKind_bytesDataKind_stringDataKind_QNameDataKind_boolDataKind_RecordIDDataKind_RecordDataKind_EventDataKind_FakeLast"
+const _DataKind_name = "DataKind_nullDataKind_int32DataKind_int64DataKind_float32DataKind_float64DataKind_bytesDataKind_stringDataKind_rawDataKind_QNameDataKind_boolDataKind_RecordIDDataKind_RecordDataKind_EventDataKind_FakeLast"
 
-var _DataKind_index = [...]uint8{0, 13, 27, 41, 57, 73, 87, 102, 116, 129, 146, 161, 175, 192}
+var _DataKind_index = [...]uint8{0, 13, 27, 41, 57, 73, 87, 102, 114, 128, 141, 158, 173, 187, 204}
 
 func (i DataKind) String() string {
 	if i >= DataKind(len(_DataKind_index)-1) {

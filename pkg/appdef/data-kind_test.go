@@ -126,6 +126,15 @@ func TestDataKind_IsSupportedConstraint(t *testing.T) {
 		{"bytes: MaxExcl", DataKind_bytes, args{ConstraintKind_MaxExcl}, false},
 		{"bytes: Enum", DataKind_bytes, args{ConstraintKind_Enum}, false},
 		//-
+		{"raw: MinLen", DataKind_raw, args{ConstraintKind_MinLen}, true},
+		{"raw: MaxLen", DataKind_raw, args{ConstraintKind_MaxLen}, true},
+		{"raw: Pattern", DataKind_raw, args{ConstraintKind_Pattern}, false},
+		{"raw: MinIncl", DataKind_raw, args{ConstraintKind_MinIncl}, false},
+		{"raw: MinExcl", DataKind_raw, args{ConstraintKind_MinExcl}, false},
+		{"raw: MaxIncl", DataKind_raw, args{ConstraintKind_MaxIncl}, false},
+		{"raw: MaxExcl", DataKind_raw, args{ConstraintKind_MaxExcl}, false},
+		{"raw: Enum", DataKind_raw, args{ConstraintKind_Enum}, false},
+		//-
 		{"int32: MinLen", DataKind_int32, args{ConstraintKind_MinLen}, false},
 		{"int32: MaxLen", DataKind_int32, args{ConstraintKind_MaxLen}, false},
 		{"int32: Pattern", DataKind_int32, args{ConstraintKind_Pattern}, false},
@@ -165,7 +174,7 @@ func TestDataKind_IsSupportedConstraint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.k.IsSupportedConstraint(tt.args.c); got != tt.want {
-				t.Errorf("DataKind.IsSupportedConstraint() = %v, want %v", got, tt.want)
+				t.Errorf("%v.IsSupportedConstraint(%v) = %v, want %v", tt.k.TrimString(), tt.args.c.TrimString(), got, tt.want)
 			}
 		})
 	}

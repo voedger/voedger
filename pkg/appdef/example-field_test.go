@@ -20,12 +20,12 @@ func ExampleIFieldsBuilder_AddField() {
 	{
 		appDef := appdef.New()
 
-		doc := appDef.AddCDoc(docName)
+		doc := appDef.AddODoc(docName)
 		doc.
 			AddField("code", appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)).
 			SetFieldComment("code", "Code is string containing from one to four digits").
-			AddField("barCode", appdef.DataKind_bytes, false, appdef.MaxLen(1024)).
-			SetFieldComment("barCode", "Bar code scan data, up to 1 KB")
+			AddField("barCode", appdef.DataKind_raw, false, appdef.MaxLen(4096)).
+			SetFieldComment("barCode", "Bar code scan data, up to 4 KB")
 
 		if a, err := appDef.Build(); err == nil {
 			app = a
@@ -36,7 +36,7 @@ func ExampleIFieldsBuilder_AddField() {
 
 	// how to inspect fields
 	{
-		doc := app.CDoc(docName)
+		doc := app.ODoc(docName)
 		fmt.Printf("%v, user field count: %v\n", doc, doc.UserFieldCount())
 
 		cnt := 0
@@ -62,11 +62,11 @@ func ExampleIFieldsBuilder_AddField() {
 	}
 
 	// Output:
-	// CDoc «test.doc», user field count: 2
+	// ODoc «test.doc», user field count: 2
 	// 1. string-field «code», required. Code is string containing from one to four digits
 	//   - constraints: [MinLen: 1, MaxLen: 4, Pattern: `^\d+$`]
-	// 2. bytes-field «barCode». Bar code scan data, up to 1 KB
-	//   - constraints: [MaxLen: 1024]
+	// 2. raw-field «barCode». Bar code scan data, up to 4 KB
+	//   - constraints: [MaxLen: 4096]
 }
 
 func ExampleIFieldsBuilder_AddDataField() {

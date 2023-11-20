@@ -163,7 +163,7 @@ func loadClustFieldFromBuffer_00(key *keyType, field appdef.IField, buf *bytes.B
 		}
 	case appdef.DataKind_bytes:
 		key.ccolsRow.PutBytes(field.Name(), buf.Bytes())
-	case appdef.DataKind_string:
+	case appdef.DataKind_string, appdef.DataKind_raw:
 		key.ccolsRow.PutString(field.Name(), buf.String())
 	default:
 		//no test

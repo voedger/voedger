@@ -220,6 +220,7 @@ classDiagram
                         - float64
                         - bytes
                         - string
+                        - raw
                         - QName
                         - bool
                         - RecordID
@@ -662,7 +663,8 @@ Invalid names examples:
 ### Fields
 
 - Maximum fields per structure is 65536.
-- Maximum string field length is 1024.
+- Maximum string and bytes field length is 1024.
+- Maximum raw data field length is 65535.
 
 ### Containers
 

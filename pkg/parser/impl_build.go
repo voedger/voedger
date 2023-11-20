@@ -379,6 +379,10 @@ func (c *buildContext) views() error {
 					if (f.Type.Varchar != nil) && (f.Type.Varchar.MaxLen != nil) {
 						cc = append(cc, appdef.MaxLen(*f.Type.Varchar.MaxLen))
 					}
+				case appdef.DataKind_raw:
+					if (f.Type.Raw != nil) && (f.Type.Raw.MaxLen != nil) {
+						cc = append(cc, appdef.MaxLen(*f.Type.Raw.MaxLen))
+					}
 				}
 				return cc
 			}
@@ -629,6 +633,12 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 			constraints = append(constraints, appdef.Pattern(*field.CheckRegexp))
 		}
 		bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, constraints...)
+	} else if field.Type.DataType.Raw != nil {
+		if field.Type.DataType.Raw.MaxLen != nil {
+			bld.AddField(fieldName, appdef.DataKind_raw, field.NotNull, appdef.MaxLen(*field.Type.DataType.Raw.MaxLen))
+		} else {
+			bld.AddField(fieldName, appdef.DataKind_raw, field.NotNull)
+		}
 	} else {
 		bld.AddField(fieldName, sysDataKind, field.NotNull)
 	}
