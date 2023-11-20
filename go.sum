@@ -177,8 +177,8 @@ github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195 h1:nq0/Di+aB
 github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195/go.mod h1:+q8szMmVnNfUqqieAtVi96uYPBrdy+BhZoHBzxgdCUM=
 github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c h1:1oN5J8ueU7ai8rVENgfjVK9vmjEBTRqsvHe6o2p3xU8=
 github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c/go.mod h1:wHiWFBGIA2fG/tCRDfHII3S8LW1+DB1SEx4UinSXwdM=
-github.com/untillpro/goutils v0.0.0-20231016125257-c102366a9ae8 h1:+CXePAaTee8syaGTlJNJQtNUaxoEJTsVsXyRVRevSwg=
-github.com/untillpro/goutils v0.0.0-20231016125257-c102366a9ae8/go.mod h1:2LZFgxFhN1MJelDYJC8sj3OyR/05dqq3W0ADhBRZblY=
+github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171 h1:XjKi6kNRWFy2AQ/NOcXPkAMgpNPnXNVrj0k7BHPIppA=
+github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171/go.mod h1:D7adcEUMVzLXEjHhqZX5ss22BXJyXP3RLhJO99r8dII=
 github.com/untillpro/ibusmem v0.0.0-20230904100952-cc8a0d2caa40 h1:rrJmRAVXaxwQExZCxBHhyJoYAJ3Q1bTquHVrRpvwgB0=
 github.com/untillpro/ibusmem v0.0.0-20230904100952-cc8a0d2caa40/go.mod h1:hOihIs7DYQIrop/ds9Beqh/hDHbrDrjWY9SVA//RCY4=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=

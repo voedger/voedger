@@ -64,7 +64,7 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 		}
 
 		//Find cdoc.sys.Subject by cdoc.air.Invite
-		skbViewCollection, err := s.KeyBuilder(state.View, collection.QNameViewCollection)
+		skbViewCollection, err := s.KeyBuilder(state.View, collection.QNameCollectionView)
 		if err != nil {
 			return
 		}

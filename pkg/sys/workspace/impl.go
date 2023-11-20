@@ -27,8 +27,6 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-
-
 // Projector<A, InvokeCreateWorkspaceID>
 // triggered by CDoc<ChildWorkspace> or CDoc<Login> (both not singletons)
 // wsid - pseudoProfile: crc32(wsName) or crc32(login)

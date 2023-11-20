@@ -291,14 +291,15 @@ func (ff *fields) makeSysFields(k TypeKind) {
 //   - IRefField
 type refField struct {
 	field
-	refs []QName
+	refs QNames
 }
 
 func newRefField(name string, data IData, required bool, ref ...QName) *refField {
 	f := &refField{
 		field: makeField(name, data, required),
-		refs:  append([]QName{}, ref...),
+		refs:  QNames{},
 	}
+	f.refs.Add(ref...)
 	return f
 }
 
@@ -307,15 +308,10 @@ func (f refField) Ref(n QName) bool {
 	if l == 0 {
 		return true // any ref available
 	}
-	for i := 0; i < l; i++ {
-		if f.refs[i] == n {
-			return true
-		}
-	}
-	return false
+	return f.refs.Contains(n)
 }
 
-func (f refField) Refs() []QName { return f.refs }
+func (f refField) Refs() QNames { return f.refs }
 
 // Validates specified fields.
 //

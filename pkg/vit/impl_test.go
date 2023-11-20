@@ -136,7 +136,7 @@ func TestBasicUsage_N10N(t *testing.T) {
 	body := fmt.Sprintf(`
  		{
  			"App": "%s",
- 			"Projection": "my.View",
+ 			"Projection": "app1pkg.View",
  			"WS": %d
  		}`, istructs.AppQName_test1_app1.String(), ws.WSID)
 	vit.Post("n10n/update/13", body)

@@ -29,9 +29,9 @@ var (
 	DefaultTestTime           = time.UnixMilli(1649667286774) // 2022-04-11 11:54:46 +0300 MSK
 	workspaceInitAwaitTimeout = defaultWorkspaceAwaitTimeout
 	//go:embed schemaTestApp1.sql
-	SchemaTestApp1 embed.FS
+	SchemaTestApp1FS embed.FS
 	//go:embed schemaTestApp2.sql
-	SchemaTestApp2 embed.FS
+	SchemaTestApp2FS embed.FS
 )
 
 func init() {
