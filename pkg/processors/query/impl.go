@@ -275,7 +275,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			err = qw.queryFunction.Exec(ctx, qw.execQueryArgs, func(object istructs.IObject) error {
 				pathToIdx := make(map[string]int)
 				if qw.resultType.QName() == istructs.QNameRaw {
-					pathToIdx[processors.Field_RawDef_Body] = 0
+					pathToIdx[processors.Field_RawObject_Body] = 0
 				} else {
 					for i, element := range qw.queryParams.Elements() {
 						pathToIdx[element.Path().Name()] = i
@@ -545,7 +545,7 @@ func newJsonObject(data coreutils.MapObject) (object istructs.IObject, err error
 }
 
 func (o *jsonObject) AsString(name string) string {
-	if name == processors.Field_RawDef_Body {
+	if name == processors.Field_RawObject_Body {
 		return string(o.body)
 	}
 	return o.NullObject.AsString(name)

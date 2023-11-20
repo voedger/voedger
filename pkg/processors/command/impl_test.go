@@ -502,7 +502,7 @@ func TestBasicUsage_QNameJSONFunc(t *testing.T) {
 	ch := make(chan interface{})
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
 	testExec := func(args istructs.ExecCommandArgs) (err error) {
-		require.Equal("custom content", args.ArgumentObject.AsString(processors.Field_RawDef_Body))
+		require.Equal("custom content", args.ArgumentObject.AsString(processors.Field_RawObject_Body))
 		close(ch)
 		return
 	}
