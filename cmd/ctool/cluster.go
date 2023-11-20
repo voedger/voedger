@@ -83,6 +83,18 @@ type nodeType struct {
 	DesiredNodeState *nodeStateType `json:"DesiredNodeState,omitempty"`
 }
 
+func (n *nodeType) address() string {
+	if len(n.ActualNodeState.Address) > 0 {
+		return n.ActualNodeState.Address
+	} else if len(n.DesiredNodeState.Address) > 0 {
+		return n.DesiredNodeState.Address
+	}
+
+	err := fmt.Errorf(errEmptyNodeAddress, n.nodeName(), ErrEmptyNodeAddress)
+	logger.Error(err.Error)
+	panic(err)
+}
+
 // nolint
 func (n *nodeType) nodeName() string {
 	if n.cluster.Edition == clusterEditionSE {
@@ -175,7 +187,9 @@ func (n *nodeType) label(key string) string {
 		return fmt.Sprintf("DBNode%d", n.idx-seNodeCount)
 	}
 
-	return fmt.Sprintf("node%d", n.idx)
+	err := fmt.Errorf(errInvalidNodeRole, n.address(), ErrInvalidNodeRole)
+	logger.Error(err.Error)
+	panic(err)
 }
 
 // nolint
