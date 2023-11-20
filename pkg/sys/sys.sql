@@ -125,7 +125,7 @@ ABSTRACT WORKSPACE Workspace (
     );
 
     TYPE ModulesResult (
-        Modules text(32768) NOT NULL
+        Modules raw(32768) NOT NULL
     );
 
     TYPE RenameQNameParams (
@@ -143,7 +143,7 @@ ABSTRACT WORKSPACE Workspace (
     );
 
     TYPE GetCDocResult (
-        Result text(32768) NOT NULL
+        Result raw(32768) NOT NULL
     );
 
     TYPE StateParams (
@@ -151,7 +151,7 @@ ABSTRACT WORKSPACE Workspace (
     );
 
     TYPE StateResult (
-        State text(32768) NOT NULL
+        State raw(32768) NOT NULL
     );
 
     TYPE DescribePackageNamesResult (
@@ -170,7 +170,7 @@ ABSTRACT WORKSPACE Workspace (
         Email text NOT NULL,
         Roles text NOT NULL,
         ExpireDatetime int64 NOT NULL,
-        EmailTemplate text(32768) NOT NULL,
+        EmailTemplate raw(32768) NOT NULL,
         EmailSubject text NOT NULL
     );
 
@@ -182,7 +182,7 @@ ABSTRACT WORKSPACE Workspace (
     TYPE InitiateUpdateInviteRolesParams (
         InviteID ref NOT NULL,
         Roles text NOT NULL,
-        EmailTemplate text(32768) NOT NULL,
+        EmailTemplate raw(32768) NOT NULL,
         EmailSubject text NOT NULL
     );
 
@@ -241,11 +241,11 @@ ABSTRACT WORKSPACE Workspace (
     );
 
     TYPE InitialEmailVerificationResult (
-        VerificationToken text(32768) NOT NULL
+        VerificationToken raw(32768) NOT NULL
     );
 
     TYPE IssueVerifiedValueTokenParams (
-        VerificationToken text(32768) NOT NULL,
+        VerificationToken raw(32768) NOT NULL,
         VerificationCode text NOT NULL,
         ForRegistry bool
     );

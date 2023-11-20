@@ -614,7 +614,7 @@ func (row *rowType) AsRecordID(name string) istructs.RecordID {
 		return row.parentID
 	}
 
-	_ = row.fieldMustExists(name, appdef.DataKind_RecordID)
+	_ = row.fieldMustExists(name, appdef.DataKind_RecordID, appdef.DataKind_int64)
 
 	if value, ok := row.dyB.GetInt64(name); ok {
 		return istructs.RecordID(value)
