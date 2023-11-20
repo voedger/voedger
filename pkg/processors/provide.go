@@ -11,5 +11,5 @@ import (
 )
 
 func ProvideRawObject(appDef appdef.IAppDefBuilder) {
-	appDef.AddObject(istructs.QNameRaw).AddField(Field_RawObject_Body, appdef.DataKind_raw, true)
+	appDef.AddObject(istructs.QNameRaw).AddField(Field_RawObject_Body, appdef.DataKind_raw, true, appdef.MaxLen(appdef.MaxRawFieldLength))
 }
