@@ -163,12 +163,6 @@ WORKSPACE MyWorkspace (
             AFTER EXECUTE ON Orders
             INTENTS(View(OrdersCountView));
 
-        -- Projector triggered by command argument SubscriptionEvent
-        -- Projector uses sys.HTTPStorage
-        PROJECTOR UpdateSubscriptionProfile
-            AFTER EXECUTE ON SubscriptionEvent
-            STATE(sys.Http, AppSecret);
-
         -- Projectors triggered by CUD operation
         -- SYNC means that projector is synchronous
         SYNC PROJECTOR TablePlanThumbnailGen
@@ -178,6 +172,7 @@ WORKSPACE MyWorkspace (
         -- Projector triggered by few COMMANDs
         PROJECTOR UpdateDashboard
             AFTER EXECUTE ON (Orders, Orders2)
+            STATE (Http, AppSecret)
             INTENTS(View(DashboardView, XZReports, NotificationsHistory, ActiveTablePlansView));
 
         -- Projector triggered by few types of CUD operations

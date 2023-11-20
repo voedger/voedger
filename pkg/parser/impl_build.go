@@ -39,6 +39,7 @@ func (c *buildContext) build() error {
 		c.tables,
 		c.views,
 		c.commands,
+		c.projectors,
 		c.queries,
 		c.workspaces,
 		c.alterWorkspaces,
@@ -69,9 +70,6 @@ func supported(stmt interface{}) bool {
 		return false
 	}
 	if _, ok := stmt.(*RateStmt); ok {
-		return false
-	}
-	if _, ok := stmt.(*ProjectorStmt); ok {
 		return false
 	}
 	return true
@@ -248,6 +246,114 @@ func (c *buildContext) types() error {
 			c.addComments(typ, c.defCtx().defBuilder.(appdef.ICommentBuilder))
 			c.addTableItems(typ.Items, ictx)
 			c.popDef()
+		})
+	}
+	return nil
+}
+
+func (c *buildContext) projectors() error {
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(proj *ProjectorStmt, ictx *iterateCtx) {
+			pQname := schema.NewQName(proj.Name)
+			builder := c.builder.AddProjector(pQname)
+			// Triggers
+			for _, trigger := range proj.Triggers {
+				evKinds := make([]appdef.ProjectorEventKind, 0)
+				if trigger.ExecuteAction != nil {
+					evKinds = append(evKinds, appdef.ProjectorEventKind_Execute)
+				} else {
+					if trigger.insert() {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Insert)
+					}
+					if trigger.update() {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Update)
+					}
+					if trigger.activate() {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Activate)
+					}
+					if trigger.deactivate() {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Deactivate)
+					}
+				}
+				for _, qn := range trigger.QNames {
+					if len(trigger.TableActions) > 0 {
+						if err := resolveInCtx(qn, ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
+							evQname := pkg.NewQName(tbl.Name)
+							builder.AddEvent(evQname, evKinds...)
+							return nil
+						}); err != nil {
+							// notest
+							c.stmtErr(&proj.Pos, err)
+						}
+					} else { // Command
+						if err := resolveInCtx(qn, ictx, func(cmd *CommandStmt, pkg *PackageSchemaAST) error {
+							evQname := pkg.NewQName(cmd.Name)
+							builder.AddEvent(evQname, evKinds...)
+							return nil
+						}); err != nil {
+							// notest
+							c.stmtErr(&proj.Pos, err)
+						}
+					}
+				}
+			}
+			// Common for State and Intents
+			handleStorage := func(p *ProjectorStorage, cb func(storage appdef.QName, entities ...appdef.QName)) {
+				var storage *StorageStmt
+				var storagePkg *PackageSchemaAST
+				if err := resolveInCtx(p.Storage, ictx, func(s *StorageStmt, pkg *PackageSchemaAST) error {
+					storage = s
+					storagePkg = pkg
+					return nil
+				}); err != nil {
+					// notest
+					c.stmtErr(&proj.Pos, err)
+					return // do not continue with this projector
+				}
+
+				entities := make([]appdef.QName, len(p.Entities))
+				for i, qn := range p.Entities {
+					var resolveErr error
+					if storage.EntityRecord { // resolve table
+						resolveErr = resolveInCtx(qn, ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
+							entities[i] = pkg.NewQName(tbl.Name)
+							return nil
+						})
+					} else if storage.EntityView { // resolve view
+						resolveErr = resolveInCtx(qn, ictx, func(tbl *ViewStmt, pkg *PackageSchemaAST) error {
+							entities[i] = pkg.NewQName(tbl.Name)
+							return nil
+						})
+					}
+					if resolveErr != nil {
+						// notest
+						c.stmtErr(&proj.Pos, resolveErr)
+						return // do not continue with this projector
+					}
+				}
+				cb(storagePkg.NewQName(storage.Name), entities...)
+			}
+
+			// Intents
+			for _, intent := range proj.Intents {
+				handleStorage(&intent, func(storage appdef.QName, entities ...appdef.QName) {
+					builder.AddIntent(storage, entities...)
+				})
+			}
+			// State
+			for _, state := range proj.State {
+				handleStorage(&state, func(storage appdef.QName, entities ...appdef.QName) {
+					builder.AddState(storage, entities...)
+				})
+			}
+
+			c.addComments(proj, builder)
+			if proj.Engine.WASM {
+				builder.SetExtension(proj.GetName(), appdef.ExtensionEngineKind_WASM)
+			} else {
+				builder.SetExtension(proj.GetName(), appdef.ExtensionEngineKind_BuiltIn)
+			}
+			builder.SetSync(proj.Sync)
 		})
 	}
 	return nil
@@ -460,10 +566,6 @@ func (c *buildContext) workspaceDescriptor(w *WorkspaceStmt, ictx *iterateCtx) {
 }
 
 func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt, ictx *iterateCtx) {
-	if isPredefinedSysTable(ictx.pkg.QualifiedPackageName, table) {
-		return
-	}
-
 	qname := schema.NewQName(table.Name)
 	if c.isExists(qname, table.tableTypeKind) {
 		return

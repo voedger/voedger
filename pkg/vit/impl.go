@@ -116,7 +116,7 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 	vit.cleanups = append(vit.cleanups, vitPreConfig.cleanups...)
 
 	// запустим сервер
-	require.Nil(t, vit.Launch())
+	require.NoError(t, vit.Launch())
 
 	for _, app := range vitPreConfig.vitApps {
 		// создадим логины и рабочие области

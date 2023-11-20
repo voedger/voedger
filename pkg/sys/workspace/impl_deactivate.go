@@ -23,7 +23,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, tokensAPI itokens.ITokens, federation coreutils.IFederation,
+func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, tokensAPI itokens.ITokens, federation coreutils.IFederation,
 	asp istructs.IAppStructsProvider) {
 
 	// c.sys.DeactivateWorkspace
@@ -65,8 +65,6 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, adf appdef.IAppD
 		appdef.NullQName,
 		cmdOnChildWorkspaceDeactivatedExec,
 	))
-
-	adf.AddObject(qNameProjectorApplyDeactivateWorkspace)
 
 	// target app, target WSID
 	cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
@@ -226,7 +224,7 @@ func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, appQNam
 			// notest
 			return err
 		}
-		subjectsKB := as.ViewRecords().KeyBuilder(collection.QNameViewCollection)
+		subjectsKB := as.ViewRecords().KeyBuilder(collection.QNameCollectionView)
 		subjectsKB.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
 		subjectsKB.PutQName(collection.Field_DocQName, invite.QNameCDocSubject)
 		err = as.ViewRecords().Read(context.Background(), event.Workspace(), subjectsKB, func(_ istructs.IKey, value istructs.IValue) (err error) {

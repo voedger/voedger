@@ -61,4 +61,14 @@ func TestBasicUsage_SysError(t *testing.T) {
 		require.Empty(sysErr.Message)
 		require.Equal(appdef.NullQName, sysErr.QName)
 	})
+
+	t.Run("emit status code with desc if message is empty but code > 0", func(t *testing.T) {
+		sysErr := NewSysError(http.StatusContinue).(SysError)
+		require.Equal("100 Continue", sysErr.Error())
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		sysErr := SysError{}
+		require.Empty(sysErr.Error())
+	})
 }

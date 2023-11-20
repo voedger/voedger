@@ -144,8 +144,77 @@ func Test_BasicUsage(t *testing.T) {
 	require.NotNil(q1)
 	require.Equal(appdef.TypeKind_Query, q1.Kind())
 
+	// CUD Projector
+	proj := builder.Projector(appdef.NewQName("main", "RecordsRegistryProjector"))
+	require.NotNil(proj)
+	eventsCount := 0
+	proj.Events(func(ie appdef.IProjectorEvent) {
+		eventsCount++
+		if eventsCount == 1 {
+			require.Equal(2, len(ie.Kind()))
+			require.Equal(appdef.ProjectorEventKind_Insert, ie.Kind()[0])
+			require.Equal(appdef.ProjectorEventKind_Update, ie.Kind()[1])
+			require.Equal(appdef.NewQName("sys", "CRecord"), ie.On().QName())
+		} else if eventsCount == 2 {
+			require.Equal(1, len(ie.Kind()))
+			require.Equal(appdef.ProjectorEventKind_Insert, ie.Kind()[0])
+			require.Equal(appdef.NewQName("sys", "ORecord"), ie.On().QName())
+		} else if eventsCount == 3 {
+			require.Equal(2, len(ie.Kind()))
+			require.Equal(appdef.ProjectorEventKind_Insert, ie.Kind()[0])
+			require.Equal(appdef.ProjectorEventKind_Update, ie.Kind()[1])
+			require.Equal(appdef.NewQName("sys", "WRecord"), ie.On().QName())
+		}
+	})
+	require.Equal(3, eventsCount)
+
+	// Execute Projector
+	proj = builder.Projector(appdef.NewQName("main", "UpdateDashboard"))
+	require.NotNil(proj)
+	eventsCount = 0
+	proj.Events(func(ie appdef.IProjectorEvent) {
+		eventsCount++
+		if eventsCount == 1 {
+			require.Equal(1, len(ie.Kind()))
+			require.Equal(appdef.ProjectorEventKind_Execute, ie.Kind()[0])
+			require.Equal(appdef.NewQName("main", "Orders"), ie.On().QName())
+		} else if eventsCount == 2 {
+			require.Equal(1, len(ie.Kind()))
+			require.Equal(appdef.ProjectorEventKind_Execute, ie.Kind()[0])
+			require.Equal(appdef.NewQName("main", "Orders2"), ie.On().QName())
+		}
+	})
+
+	stateCount := 0
+	proj.States(func(storage appdef.QName, names appdef.QNames) {
+		stateCount++
+		if stateCount == 1 {
+			require.Equal(appdef.NewQName("sys", "AppSecret"), storage)
+			require.Equal(0, len(names))
+		} else if stateCount == 2 {
+			require.Equal(appdef.NewQName("sys", "Http"), storage)
+			require.Equal(0, len(names))
+		}
+	})
+	require.Equal(2, stateCount)
+
+	intentsCount := 0
+	proj.Intents(func(storage appdef.QName, names appdef.QNames) {
+		intentsCount++
+		if intentsCount == 1 {
+			require.Equal(appdef.NewQName("sys", "View"), storage)
+			require.Equal(4, len(names))
+			require.Equal(appdef.NewQName("main", "ActiveTablePlansView"), names[0])
+			require.Equal(appdef.NewQName("main", "DashboardView"), names[1])
+			require.Equal(appdef.NewQName("main", "NotificationsHistory"), names[2])
+			require.Equal(appdef.NewQName("main", "XZReports"), names[3])
+		}
+	})
+	require.Equal(1, intentsCount)
+
 	_, err = builder.Build()
 	require.NoError(err)
+
 }
 
 func Test_Refs_NestedTables(t *testing.T) {
@@ -1002,8 +1071,8 @@ func Test_Projectors(t *testing.T) {
 	_, err = BuildAppSchema([]*PackageSchemaAST{pkg, getSysPackageAST()})
 
 	require.EqualError(err, strings.Join([]string{
-		"example.sql:6:4: undefined command or type: test.CreateUPProfile",
-		"example.sql:7:4: undefined command or type: Order",
+		"example.sql:6:4: undefined command: test.CreateUPProfile",
+		"example.sql:7:4: undefined command: Order",
 		"example.sql:8:4: only INSERT allowed for ODoc or ORecord",
 		"example.sql:9:4: only INSERT allowed for ODoc or ORecord",
 		"example.sql:10:4: only INSERT allowed for ODoc or ORecord",

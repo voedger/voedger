@@ -69,7 +69,7 @@ func (s *httpService) getRedirectMatcher() (redirectMatcher mux.MatcherFunc, err
 			if err != nil {
 				panic(err)
 			}
-			targetDomain.Host = strings.Replace(req.Host, hostNoPort, targetDomain.Host, 1)
+			targetDomain.Host = strings.Replace(hostNoPort, hostNoPort, targetDomain.Host, 1)
 
 			// route domain matched -> ignore the rest
 			redirect(req, req.URL.Path, targetDomain)
@@ -113,9 +113,8 @@ func parseURL(urlStr string) (url *url.URL, err error) {
 }
 
 func redirect(req *http.Request, targetPath string, targetURL *url.URL) {
-	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("reverse proxy: incoming %s %s%s, redirecting to %s%s", req.Method, req.Host, req.URL, targetURL.Host, targetPath))
-	}
+	srcURL := req.URL.String()
+	srcHost := req.Host
 	req.URL.Path = targetPath
 	req.Host = targetURL.Host
 	req.URL.Scheme = targetURL.Scheme
@@ -125,5 +124,8 @@ func redirect(req *http.Request, targetPath string, targetURL *url.URL) {
 		req.URL.RawQuery = targetQuery + req.URL.RawQuery
 	} else {
 		req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
+	}
+	if logger.IsVerbose() {
+		logger.Verbose(fmt.Sprintf("reverse proxy: incoming %s %s%s, redirecting to %s", req.Method, srcHost, srcURL, req.URL))
 	}
 }
