@@ -52,7 +52,7 @@ type IFunctionBuilder interface {
 	//	 - Object
 	//
 	// If NullQName passed then it means that function has no parameter.
-	// If QNameAny passed then it means that parameter may be any.
+	// If QNameANY passed then it means that parameter may be any.
 	SetParam(QName) IFunctionBuilder
 
 	// Sets function result. Must be known type from next kinds:
@@ -61,7 +61,7 @@ type IFunctionBuilder interface {
 	//	 - Object
 	//
 	// If NullQName passed then it means that function has no result.
-	// If QNameAny passed then it means that result may be any.
+	// If QNameANY passed then it means that result may be any.
 	SetResult(QName) IFunctionBuilder
 
 	// Sets engine.

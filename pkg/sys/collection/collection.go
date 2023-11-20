@@ -29,7 +29,7 @@ func collectionProjector(appDef appdef.IAppDef) func(event istructs.IPLogEvent, 
 		}
 
 		newKey := func(docQname appdef.QName, docID, elementID istructs.RecordID) (kb istructs.IStateKeyBuilder, err error) {
-			kb, err = s.KeyBuilder(state.View, QNameViewCollection)
+			kb, err = s.KeyBuilder(state.View, QNameCollectionView)
 			if err != nil {
 				return
 			}
@@ -119,15 +119,4 @@ func (s *idService) findRootByID(id istructs.RecordID) (record istructs.IRecord,
 		return
 	}
 	return s.findRootByID(record.Parent())
-}
-
-var CollectionViewBuilderFunc = func(view appdef.IViewBuilder) {
-	view.KeyBuilder().PartKeyBuilder().AddField(Field_PartKey, appdef.DataKind_int32)
-	view.KeyBuilder().ClustColsBuilder().
-		AddField(Field_DocQName, appdef.DataKind_QName).
-		AddRefField(field_DocID).
-		AddRefField(field_ElementID)
-	view.ValueBuilder().
-		AddField(Field_Record, appdef.DataKind_Record, true).
-		AddField(state.ColOffset, appdef.DataKind_int64, true)
 }

@@ -95,7 +95,10 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		NumCommandProcessors: commandProcessorsCount,
 	}
 	v2 := provideAppsExtensionPoints(vvmConfig)
-	vvmApps := provideVVMApps(vvmConfig, appConfigsType, apIs, v2)
+	vvmApps, err := provideVVMApps(vvmConfig, appConfigsType, apIs, v2)
+	if err != nil {
+		return nil, nil, err
+	}
 	iBus := provideIBus(iAppStructsProvider, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
 	quotas := vvmConfig.Quotas
 	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, timeFunc)
@@ -331,7 +334,7 @@ func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[istructs.AppQName]exte
 	return vvmConfig.VVMAppsBuilder.PrepareAppsExtensionPoints()
 }
 
-func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) VVMApps {
+func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (VVMApps, error) {
 	return vvmConfig.VVMAppsBuilder.Build(cfgs, apis, appsEPs)
 }
 

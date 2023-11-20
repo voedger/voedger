@@ -15,7 +15,6 @@ var (
 	ErrClusterConfAlreadyExists             = errors.New("the cluster configuration already exists")
 	ErrInvalidNumberOfArguments             = errors.New("invalid number of arguments")
 	ErrInvalidIpAddress                     = errors.New("invalid IP-address")
-	ErrInvalidNodeRole                      = errors.New("invalid node role")
 	ErrUnknownCommand                       = errors.New("unknown command")
 	ErrMissingCommandArguments              = errors.New("missing command arguments")
 	ErrNoUpdgradeRequired                   = errors.New("no upgrade required")
@@ -35,3 +34,11 @@ const (
 	errClusterVersionNewerThanCtoolVersion = "cluster version %s is newer than ctool version %s: %w"
 	errDifferentNodeVersion                = "node version %s do not match the cluster version %s: %w"
 )
+
+var ErrInvalidNodeRole = errors.New("invalid node role")
+
+const errInvalidNodeRole = "node %s: %w"
+
+var ErrEmptyNodeAddress = errors.New("empty IP-address")
+
+const errEmptyNodeAddress = "node %s: %w"

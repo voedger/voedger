@@ -78,6 +78,13 @@ ALTER WORKSPACE AppWorkspaceWS (
 		NewPwd text NOT NULL
 	);
 
+	VIEW LoginIdx (
+		AppWSID int64 NOT NULL,
+		AppIDLoginHash text NOT NULL,
+		CDocLoginID ref(Login) NOT NULL,
+		PRIMARY KEY((AppWSID), AppIDLoginHash)
+	) AS RESULT OF ProjectorLoginIdx;
+
 	EXTENSION ENGINE BUILTIN (
 		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
 		COMMAND ChangePassword (ChangePasswordParams, UNLOGGED ChangePasswordUnloggedParams);
@@ -85,5 +92,7 @@ ALTER WORKSPACE AppWorkspaceWS (
 		QUERY IssuePrincipalToken (IssuePrincipalTokenParams) RETURNS IssuePrincipalTokenResult;
 		QUERY InitiateResetPasswordByEmail (InitiateResetPasswordByEmailParams) RETURNS InitiateResetPasswordByEmailResult;
 		QUERY IssueVerifiedValueTokenForResetPassword (IssueVerifiedValueTokenForResetPasswordParams) RETURNS IssueVerifiedValueTokenForResetPasswordResult;
+		SYNC PROJECTOR ProjectorLoginIdx AFTER INSERT ON Login INTENTS(View(LoginIdx));
+		PROJECTOR InvokeCreateWorkspaceID_registry AFTER INSERT ON(Login);
 	);
 );

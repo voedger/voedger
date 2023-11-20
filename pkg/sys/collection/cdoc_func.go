@@ -43,7 +43,7 @@ func execQryCDoc(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 			return
 		}
 
-		vrkb, err := args.State.KeyBuilder(state.View, QNameViewCollection)
+		vrkb, err := args.State.KeyBuilder(state.View, QNameCollectionView)
 		if err != nil {
 			return
 		}

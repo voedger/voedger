@@ -74,6 +74,11 @@ type IAppDef interface {
 	// Returns nil if not found.
 	Object(name QName) IObject
 
+	// Return record by name.
+	//
+	// Returns nil if not found.
+	Record(QName) IRecord
+
 	// Enumerates all application records, e.g. documents and contained records
 	//
 	// Records are enumerated in alphabetical order by QName
@@ -103,6 +108,16 @@ type IAppDef interface {
 	//
 	// Functions are enumerated in alphabetical order by QName
 	Functions(func(IFunction))
+
+	// Return projector by name.
+	//
+	// Returns nil if not found.
+	Projector(QName) IProjector
+
+	// Enumerates all application projectors.
+	//
+	// Projectors are enumerated in alphabetical order by QName.
+	Projectors(func(IProjector))
 
 	// Returns workspace by name.
 	//
@@ -232,6 +247,14 @@ type IAppDefBuilder interface {
 	//   - if name is invalid,
 	//   - if type with name already exists.
 	AddQuery(QName) IQueryBuilder
+
+	// Adds new projector.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if type with name already exists.
+	AddProjector(QName) IProjectorBuilder
 
 	// Adds new workspace.
 	//

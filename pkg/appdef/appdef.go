@@ -67,14 +67,18 @@ func (app *appDef) AddORecord(name QName) IORecordBuilder {
 	return newORecord(app, name)
 }
 
-func (app *appDef) AddSingleton(name QName) ICDocBuilder {
-	doc := newCDoc(app, name)
-	doc.SetSingleton()
-	return doc
+func (app *appDef) AddProjector(name QName) IProjectorBuilder {
+	return newProjector(app, name)
 }
 
 func (app *appDef) AddQuery(name QName) IQueryBuilder {
 	return newQuery(app, name)
+}
+
+func (app *appDef) AddSingleton(name QName) ICDocBuilder {
+	doc := newCDoc(app, name)
+	doc.SetSingleton()
+	return doc
 }
 
 func (app *appDef) AddView(name QName) IViewBuilder {
@@ -185,9 +189,33 @@ func (app *appDef) ORecord(name QName) IORecord {
 	return nil
 }
 
+func (app *appDef) Projector(name QName) IProjector {
+	if t := app.typeByKind(name, TypeKind_Projector); t != nil {
+		return t.(IProjector)
+	}
+	return nil
+}
+
+func (app *appDef) Projectors(cb func(IProjector)) {
+	app.Types(func(t IType) {
+		if p, ok := t.(IProjector); ok {
+			cb(p)
+		}
+	})
+}
+
 func (app *appDef) Query(name QName) IQuery {
 	if t := app.typeByKind(name, TypeKind_Query); t != nil {
 		return t.(IQuery)
+	}
+	return nil
+}
+
+func (app *appDef) Record(name QName) IRecord {
+	if t := app.TypeByName(name); t != nil {
+		if r, ok := t.(IRecord); ok {
+			return r
+		}
 	}
 	return nil
 }
@@ -223,8 +251,15 @@ func (app *appDef) Type(name QName) IType {
 }
 
 func (app *appDef) TypeByName(name QName) IType {
-	if t, ok := app.types[name]; ok {
-		return t.(IType)
+	switch name {
+	case NullQName:
+		return NullType
+	case QNameANY:
+		return AnyType
+	default:
+		if t, ok := app.types[name]; ok {
+			return t.(IType)
+		}
 	}
 	return nil
 }

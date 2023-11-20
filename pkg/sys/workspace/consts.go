@@ -46,7 +46,7 @@ var (
 	qNameAPInitializeWorkspace             = appdef.NewQName(appdef.SysPackage, "InitializeWorkspace")
 	qNameAPInvokeCreateWorkspaceID         = appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspaceID")
 	qNameAPInvokeCreateWorkspace           = appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspace")
-	ViewQNameNextBaseWSID                  = appdef.NewQName(appdef.SysPackage, "NextBaseWSID")
+	QNameViewNextBaseWSID                  = appdef.NewQName(appdef.SysPackage, "NextBaseWSID")
 	qNameCmdInitiateDeactivateWorkspace    = appdef.NewQName(appdef.SysPackage, "InitiateDeactivateWorkspace")
 	qNameProjectorApplyDeactivateWorkspace = appdef.NewQName(appdef.SysPackage, "ApplyDeactivateWorkspace")
 	QNameCommandCreateWorkspaceID          = appdef.NewQName(appdef.SysPackage, "CreateWorkspaceID")

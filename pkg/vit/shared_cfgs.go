@@ -18,7 +18,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys"
 	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
 	"github.com/voedger/voedger/pkg/vvm"
@@ -34,7 +33,7 @@ const (
 
 var (
 	QNameApp1_TestWSKind               = appdef.NewQName(app1PkgName, "WSKind")
-	QNameTestView                      = appdef.NewQName("my", "View")
+	QNameTestView                      = appdef.NewQName(app1PkgName, "View")
 	QNameApp1_TestEmailVerificationDoc = appdef.NewQName(app1PkgName, "Doc")
 	QNameApp1_CDocTestConstraints      = appdef.NewQName(app1PkgName, "DocConstraints")
 	QNameCmdRated                      = appdef.NewQName(app1PkgName, "RatedCmd")
@@ -61,7 +60,7 @@ var (
 			cfg.Routes["/grafana"] = fmt.Sprintf("http://127.0.0.1:%d", TestServicePort)
 			cfg.RoutesRewrite["/grafana-rewrite"] = fmt.Sprintf("http://127.0.0.1:%d/rewritten", TestServicePort)
 			cfg.RouteDefault = fmt.Sprintf("http://127.0.0.1:%d/not-found", TestServicePort)
-			cfg.RouteDomains["localhost"] = "http://127.0.0.1"
+			cfg.RouteDomains["localhost"] = fmt.Sprintf("http://127.0.0.1:%d", TestServicePort)
 
 			const app1_BLOBMaxSize = 5
 			cfg.BLOBMaxSize = app1_BLOBMaxSize
@@ -82,7 +81,7 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	}
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
-	apps.RegisterSchemaFS(SchemaTestApp2, "github.com/voedger/voedger/pkg/vit/app2pkg", ep)
+	apps.RegisterSchemaFS(SchemaTestApp2FS, "github.com/voedger/voedger/pkg/vit/app2pkg", ep)
 }
 
 func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
@@ -94,13 +93,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
 
-	apps.RegisterSchemaFS(SchemaTestApp1, "github.com/voedger/voedger/pkg/vit/app1pkg", ep)
-
-	projectors.ProvideViewDef(adf, QNameTestView, func(view appdef.IViewBuilder) {
-		view.KeyBuilder().PartKeyBuilder().AddField("ViewIntFld", appdef.DataKind_int32)
-		view.KeyBuilder().ClustColsBuilder().AddField("ViewStrFld", appdef.DataKind_string)
-		view.ValueBuilder().AddField("ViewByteFld", appdef.DataKind_bytes, false, appdef.MaxLen(512))
-	})
+	apps.RegisterSchemaFS(SchemaTestApp1FS, "github.com/voedger/voedger/pkg/vit/app1pkg", ep)
 
 	// for rates test
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
