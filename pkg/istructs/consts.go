@@ -32,8 +32,8 @@ var (
 
 	QNameCommandCUD = appdef.NewQName(appdef.SysPackage, "CUD")
 
-	// QNameJSON denotes that Function argument comes as a JSON object
-	QNameJSON = appdef.NewQName(appdef.SysPackage, "JSON")
+	// QNameRaw denotes that Function argument comes as a JSON object
+	QNameRaw = appdef.NewQName(appdef.SysPackage, "Raw")
 )
 
 // *********************************************************************************************************

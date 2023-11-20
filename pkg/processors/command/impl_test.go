@@ -502,11 +502,11 @@ func TestBasicUsage_QNameJSONFunc(t *testing.T) {
 	ch := make(chan interface{})
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
 	testExec := func(args istructs.ExecCommandArgs) (err error) {
-		require.Equal("custom content", args.ArgumentObject.AsString(processors.Field_JSONDef_Body))
+		require.Equal("custom content", args.ArgumentObject.AsString(processors.Field_RawDef_Body))
 		close(ch)
 		return
 	}
-	testCmd := istructsmem.NewCommandFunction(testCmdQName, istructs.QNameJSON, appdef.NullQName, appdef.NullQName, testExec)
+	testCmd := istructsmem.NewCommandFunction(testCmdQName, istructs.QNameRaw, appdef.NullQName, appdef.NullQName, testExec)
 
 	app.cfg.Resources.Add(testCmd)
 
@@ -625,7 +625,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 
 	// build application
 	appDef := appdef.New()
-	processors.ProvideJSONFuncParamsDef(appDef)
+	processors.ProvideRawObject(appDef)
 	if prepareAppDef != nil {
 		prepareAppDef(appDef)
 	}

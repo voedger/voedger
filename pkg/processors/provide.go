@@ -10,6 +10,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func ProvideJSONFuncParamsDef(appDef appdef.IAppDefBuilder) {
-	appDef.AddObject(istructs.QNameJSON).AddField(Field_JSONDef_Body, appdef.DataKind_string, true, appdef.MaxLen(fieldBodyLen))
+func ProvideRawObject(appDef appdef.IAppDefBuilder) {
+	appDef.AddObject(istructs.QNameRaw).AddField(Field_RawDef_Body, appdef.DataKind_raw, true)
 }

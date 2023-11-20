@@ -40,7 +40,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 	if resultMeta == nil {
 		// happens when the query has no result, e.g. q.air.UpdateSubscriptionDetails
 		operators = append(operators, pipeline.WireAsyncOperator("noop, no result", &pipeline.AsyncNOOP{}))
-	} else if resultMeta.QName() == istructs.QNameJSON {
+	} else if resultMeta.QName() == istructs.QNameRaw {
 		operators = append(operators, pipeline.WireAsyncOperator("Raw result", &RawResultOperator{
 			metrics: metrics,
 		}))
@@ -274,8 +274,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}()
 			err = qw.queryFunction.Exec(ctx, qw.execQueryArgs, func(object istructs.IObject) error {
 				pathToIdx := make(map[string]int)
-				if qw.resultType.QName() == istructs.QNameJSON {
-					pathToIdx[processors.Field_JSONDef_Body] = 0
+				if qw.resultType.QName() == istructs.QNameRaw {
+					pathToIdx[processors.Field_RawDef_Body] = 0
 				} else {
 					for i, element := range qw.queryParams.Elements() {
 						pathToIdx[element.Path().Name()] = i
@@ -428,7 +428,7 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, argsType app
 	switch argsType.QName() {
 	case appdef.NullQName:
 		//Do nothing
-	case istructs.QNameJSON:
+	case istructs.QNameRaw:
 		requestArgs, err = newJsonObject(data)
 	default:
 		requestArgsBuilder := istructsmem.NewIObjectBuilder(appCfg, argsType.QName())
@@ -545,7 +545,7 @@ func newJsonObject(data coreutils.MapObject) (object istructs.IObject, err error
 }
 
 func (o *jsonObject) AsString(name string) string {
-	if name == processors.Field_JSONDef_Body {
+	if name == processors.Field_RawDef_Body {
 		return string(o.body)
 	}
 	return o.NullObject.AsString(name)

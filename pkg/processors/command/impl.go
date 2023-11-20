@@ -311,9 +311,9 @@ func getFunction(_ context.Context, work interface{}) (err error) {
 
 func unmarshalRequestBody(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdFunc.ParamsType() == istructs.QNameJSON {
+	if cmd.cmdFunc.ParamsType() == istructs.QNameRaw {
 		cmd.requestData["args"] = map[string]interface{}{
-			processors.Field_JSONDef_Body: string(cmd.cmdMes.Body()),
+			processors.Field_RawDef_Body: string(cmd.cmdMes.Body()),
 		}
 	} else if err = json.Unmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
 		err = fmt.Errorf("failed to unmarshal request body: %w", err)
