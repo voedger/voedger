@@ -625,7 +625,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 
 	// build application
 	appDef := appdef.New()
-	processors.ProvideRawObject(appDef)
+	appDef.AddObject(istructs.QNameRaw).AddField(processors.Field_RawObject_Body, appdef.DataKind_raw, true, appdef.MaxLen(appdef.MaxRawFieldLength))
 	if prepareAppDef != nil {
 		prepareAppDef(appDef)
 	}

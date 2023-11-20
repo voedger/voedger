@@ -18,6 +18,10 @@ ABSTRACT TABLE Singleton INHERITS CDoc();
 ALTERABLE WORKSPACE AppWorkspaceWS();
 
 ABSTRACT WORKSPACE Workspace (
+	TYPE Raw (
+		Body raw(65535) NOT NULL
+	);
+
 	TABLE ChildWorkspace INHERITS CDoc (
 		WSName varchar NOT NULL,
 		WSKind qname NOT NULL,
