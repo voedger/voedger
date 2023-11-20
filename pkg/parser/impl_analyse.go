@@ -174,6 +174,9 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 			if view.Items[index].Field.Type.Bytes != nil {
 				c.stmtErr(&view.pkRef.Pos, ErrViewFieldBytes(string(pkf)))
 			}
+			if view.Items[index].Field.Type.Raw != nil {
+				c.stmtErr(&view.pkRef.Pos, ErrViewFieldRaw(string(pkf)))
+			}
 		}
 	}
 
@@ -189,6 +192,9 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 			}
 			if view.Items[fieldIndex].Field.Type.Bytes != nil && !last {
 				c.stmtErr(&view.pkRef.Pos, ErrBytesFieldInCC(string(ccf)))
+			}
+			if view.Items[fieldIndex].Field.Type.Raw != nil && !last {
+				c.stmtErr(&view.pkRef.Pos, ErrRawFieldInCC(string(ccf)))
 			}
 		}
 	}

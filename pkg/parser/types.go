@@ -269,6 +269,10 @@ type TypeBytes struct {
 	MaxLen *uint16 `parser:"'bytes' ( '(' @Int ')' )?"`
 }
 
+type TypeRaw struct {
+	MaxLen *uint16 `parser:"'raw' ( '(' @Int ')' )?"`
+}
+
 type VoidOrDataType struct {
 	Void     bool           `parser:"( @'void'"`
 	DataType *DataTypeOrDef `parser:"| @@)"`
@@ -282,6 +286,7 @@ type VoidOrDef struct {
 type DataType struct {
 	Varchar   *TypeVarchar `parser:"( @@"`
 	Bytes     *TypeBytes   `parser:"| @@"`
+	Raw       *TypeRaw     `parser:"| @@"`
 	Int32     bool         `parser:"| @('int' | 'int32')"`
 	Int64     bool         `parser:"| @'int64'"`
 	Float32   bool         `parser:"| @('float' | 'float32')"`
@@ -300,6 +305,11 @@ func (q DataType) String() (s string) {
 			return fmt.Sprintf("varchar[%d]", *q.Varchar.MaxLen)
 		}
 		return fmt.Sprintf("varchar[%d]", appdef.DefaultFieldMaxLength)
+	} else if q.Raw != nil {
+		if q.Raw.MaxLen != nil {
+			return fmt.Sprintf("raw[%d]", *q.Raw.MaxLen)
+		}
+		return fmt.Sprintf("raw[%d]", appdef.DefaultFieldMaxLength)
 	} else if q.Int32 {
 		return "int32"
 	} else if q.Int64 {

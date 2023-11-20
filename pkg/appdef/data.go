@@ -59,11 +59,8 @@ func (d *data) AddConstraints(cc ...IConstraint) IDataBuilder {
 		}
 		switch c.Kind() {
 		case ConstraintKind_MaxLen:
-			max := MaxFieldLength
-			switch dk {
-			case DataKind_bytes, DataKind_string:
-				max = MaxFieldLength
-			case DataKind_raw:
+			max := MaxFieldLength // string or []byte
+			if dk == DataKind_raw {
 				max = MaxRawFieldLength
 			}
 			if c.Value().(uint16) > max {

@@ -308,6 +308,9 @@ func dataTypeToDataKind(t DataType) appdef.DataKind {
 	if t.Varchar != nil {
 		return appdef.DataKind_string
 	}
+	if t.Raw != nil {
+		return appdef.DataKind_raw
+	}
 	if t.Timestamp {
 		return appdef.DataKind_int64
 	}
