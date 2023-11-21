@@ -2,7 +2,6 @@
   "Name": "test1/app1",
   "Packages": {
     "test": {
-      "Name": "test",
       "DataTypes": {
         "test.number": {
           "Comment": "natural (positive) integer",
@@ -23,7 +22,7 @@
       "Structures": {
         "test.doc": {
           "Comment": "comment 1\ncomment 2",
-          "Kind": "TypeKind_CDoc",
+          "Kind": "CDoc",
           "Fields": [
             {
               "Name": "sys.QName",
@@ -89,7 +88,7 @@
           "Singleton": true
         },
         "test.obj": {
-          "Kind": "TypeKind_Object",
+          "Kind": "Object",
           "Fields": [
             {
               "Name": "sys.QName",
@@ -108,7 +107,7 @@
           ]
         },
         "test.rec": {
-          "Kind": "TypeKind_CRecord",
+          "Kind": "CRecord",
           "Fields": [
             {
               "Name": "sys.QName",
@@ -207,7 +206,7 @@
         "Commands": {
           "test.cmd": {
             "Name": "cmd",
-            "Engine": "ExtensionEngineKind_WASM",
+            "Engine": "WASM",
             "Arg": "test.obj",
             "UnloggedArg": "test.obj"
           }
@@ -215,7 +214,7 @@
         "Queries": {
           "test.query": {
             "Name": "query",
-            "Engine": "ExtensionEngineKind_BuiltIn",
+            "Engine": "BuiltIn",
             "Arg": "test.obj",
             "Result": "sys.ANY"
           }

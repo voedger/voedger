@@ -13,10 +13,9 @@ type Extensions struct {
 }
 
 type Extension struct {
-	Comment string       `json:",omitempty"`
-	QName   appdef.QName `json:"-"`
-	Name    string
-	Engine  appdef.ExtensionEngineKind
+	Type
+	Name   string
+	Engine string
 }
 
 type Function struct {
@@ -32,4 +31,8 @@ type CommandFunction struct {
 
 type QueryFunction struct {
 	Function
+}
+
+type Projector struct {
+	Extension
 }

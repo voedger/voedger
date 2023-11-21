@@ -13,7 +13,7 @@ type Application struct {
 }
 
 type Package struct {
-	Name       string
+	Name       string                  `json:"-"`
 	DataTypes  map[string]*Data        `json:",omitempty"`
 	Structures map[string]*Structure   `json:",omitempty"`
 	Views      map[string]*View        `json:",omitempty"`

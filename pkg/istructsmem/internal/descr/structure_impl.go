@@ -17,36 +17,35 @@ func newStructure() *Structure {
 	}
 }
 
-func (t *Structure) read(str appdef.IStructure) {
-	t.Comment = readComment(str)
+func (s *Structure) read(str appdef.IStructure) {
+	s.Type.read(str)
 
-	t.QName = str.QName()
-	t.Kind = str.Kind()
+	s.Kind = str.Kind().TrimString()
 
 	str.Fields(func(field appdef.IField) {
 		f := newField()
 		f.read(field)
-		t.Fields = append(t.Fields, f)
+		s.Fields = append(s.Fields, f)
 	})
 
 	str.Containers(func(cont appdef.IContainer) {
 		c := newContainer()
 		c.read(cont)
-		t.Containers = append(t.Containers, c)
+		s.Containers = append(s.Containers, c)
 	})
 
 	str.Uniques(func(unique appdef.IUnique) {
 		u := newUnique()
 		u.read(unique)
-		t.Uniques = append(t.Uniques, u)
+		s.Uniques = append(s.Uniques, u)
 	})
 	if uf := str.UniqueField(); uf != nil {
-		t.UniqueField = uf.Name()
+		s.UniqueField = uf.Name()
 	}
 
 	if cDoc, ok := str.(appdef.ICDoc); ok {
 		if cDoc.Singleton() {
-			t.Singleton = true
+			s.Singleton = true
 		}
 	}
 }

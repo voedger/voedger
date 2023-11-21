@@ -15,9 +15,7 @@ func newView() *View {
 }
 
 func (v *View) read(view appdef.IView) {
-	v.Comment = readComment(view)
-
-	v.QName = view.QName()
+	v.Type.read(view)
 
 	v.Key.read(view.Key())
 

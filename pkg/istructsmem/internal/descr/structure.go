@@ -10,9 +10,8 @@ import (
 )
 
 type Structure struct {
-	Comment     string       `json:",omitempty"`
-	QName       appdef.QName `json:"-"`
-	Kind        appdef.TypeKind
+	Type
+	Kind        string
 	Fields      []*Field     `json:",omitempty"`
 	Containers  []*Container `json:",omitempty"`
 	Uniques     []*Unique    `json:",omitempty"`

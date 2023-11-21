@@ -40,11 +40,10 @@ func (ff *Extensions) read(f appdef.IExtension) {
 	panic(fmt.Errorf("unknown func type %v", f))
 }
 
-func (ex *Extension) read(fn appdef.IExtension) {
-	ex.Comment = fn.Comment()
-	ex.QName = fn.QName()
-	ex.Name = fn.Name()
-	ex.Engine = fn.Engine()
+func (e *Extension) read(ex appdef.IExtension) {
+	e.Type.read(ex)
+	e.Name = ex.Name()
+	e.Engine = ex.Engine().TrimString()
 }
 
 func (f *Function) read(fn appdef.IFunction) {
