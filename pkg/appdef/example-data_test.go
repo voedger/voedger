@@ -36,8 +36,8 @@ func ExampleIAppDefBuilder_AddData() {
 
 		_ = appDef.AddData(weekDayName, appdef.DataKind_string, strName, appdef.Enum("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
 
-		appDef.AddData(jsonName, appdef.DataKind_raw, appdef.NullQName,
-			appdef.MaxLen(appdef.MaxRawFieldLength)).SetComment("JSON data up to 64K")
+		appDef.AddData(jsonName, appdef.DataKind_string, appdef.NullQName,
+			appdef.MaxLen(appdef.MaxFieldLength)).SetComment("JSON string up to 64K")
 
 		if a, err := appDef.Build(); err == nil {
 			app = a
@@ -68,8 +68,8 @@ func ExampleIAppDefBuilder_AddData() {
 
 	// Output:
 	// - float64-data «test.float» inherits from float64-data «sys.float64»
-	// - raw-data «test.json» inherits from raw-data «sys.raw»
-	//   JSON data up to 64K
+	// - string-data «test.json» inherits from string-data «sys.string»
+	//   JSON string up to 64K
 	//   constraints: (MaxLen: 65535)
 	// - int64-data «test.num» inherits from int64-data «sys.int64»
 	//   Natural number

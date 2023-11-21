@@ -22,8 +22,6 @@ var ErrInvalidTypeKind = errors.New("invalid type kind")
 
 var ErrTooManyFields = errors.New("too many fields")
 
-var ErrMaxFieldLengthExceeds = errors.New("too large field length")
-
 var ErrIncompatibleConstraints = errors.New("incompatible constraints")
 
 var ErrTooManyContainers = errors.New("too many containers")
