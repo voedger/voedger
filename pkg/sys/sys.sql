@@ -17,7 +17,12 @@ ABSTRACT TABLE Singleton INHERITS CDoc();
 
 ALTERABLE WORKSPACE AppWorkspaceWS();
 
+TYPE Raw (
+	Body raw(65535) NOT NULL
+);
+
 ABSTRACT WORKSPACE Workspace (
+
 	TABLE ChildWorkspace INHERITS CDoc (
 		WSName varchar NOT NULL,
 		WSKind qname NOT NULL,
@@ -124,9 +129,9 @@ ABSTRACT WORKSPACE Workspace (
 		NumGoroutines int32 NOT NULL
 	);
 
-	TYPE ModulesResult (
-		Modules text(32768) NOT NULL
-	);
+    TYPE ModulesResult (
+        Modules raw(32768) NOT NULL
+    );
 
 	TYPE RenameQNameParams (
 		ExistingQName qname NOT NULL,
@@ -142,17 +147,17 @@ ABSTRACT WORKSPACE Workspace (
 		ID int64 NOT NULL
 	);
 
-	TYPE GetCDocResult (
-		Result text(32768) NOT NULL
-	);
+    TYPE GetCDocResult (
+        Result raw(32768) NOT NULL
+    );
 
 	TYPE StateParams (
 		After int64 NOT NULL
 	);
 
-	TYPE StateResult (
-		State text(32768) NOT NULL
-	);
+    TYPE StateResult (
+        State raw(32768) NOT NULL
+    );
 
 	TYPE DescribePackageNamesResult (
 		Names text NOT NULL
@@ -166,25 +171,25 @@ ABSTRACT WORKSPACE Workspace (
 		PackageDesc text NOT NULL
 	);
 
-	TYPE InitiateInvitationByEMailParams (
-		Email text NOT NULL,
-		Roles text NOT NULL,
-		ExpireDatetime int64 NOT NULL,
-		EmailTemplate text(32768) NOT NULL,
-		EmailSubject text NOT NULL
-	);
+    TYPE InitiateInvitationByEMailParams (
+        Email text NOT NULL,
+        Roles text NOT NULL,
+        ExpireDatetime int64 NOT NULL,
+        EmailTemplate raw(32768) NOT NULL,
+        EmailSubject text NOT NULL
+    );
 
 	TYPE InitiateJoinWorkspaceParams (
 		InviteID ref NOT NULL,
 		VerificationCode text NOT NULL
 	);
 
-	TYPE InitiateUpdateInviteRolesParams (
-		InviteID ref NOT NULL,
-		Roles text NOT NULL,
-		EmailTemplate text(32768) NOT NULL,
-		EmailSubject text NOT NULL
-	);
+    TYPE InitiateUpdateInviteRolesParams (
+        InviteID ref NOT NULL,
+        Roles text NOT NULL,
+        EmailTemplate raw(32768) NOT NULL,
+        EmailSubject text NOT NULL
+    );
 
 	TYPE InitiateCancelAcceptedInviteParams (
 		InviteID ref NOT NULL
@@ -240,15 +245,15 @@ ABSTRACT WORKSPACE Workspace (
 		Language text
 	);
 
-	TYPE InitialEmailVerificationResult (
-		VerificationToken text(32768) NOT NULL
-	);
+    TYPE InitialEmailVerificationResult (
+        VerificationToken raw(32768) NOT NULL
+    );
 
-	TYPE IssueVerifiedValueTokenParams (
-		VerificationToken text(32768) NOT NULL,
-		VerificationCode text NOT NULL,
-		ForRegistry bool
-	);
+    TYPE IssueVerifiedValueTokenParams (
+        VerificationToken raw(32768) NOT NULL,
+        VerificationCode text NOT NULL,
+        ForRegistry bool
+    );
 
 	TYPE IssueVerifiedValueTokenResult (
 		VerifiedValueToken text NOT NULL
@@ -367,7 +372,7 @@ ABSTRACT WORKSPACE Workspace (
 	VIEW Uniques (
 		QName qname NOT NULL,
 		ValuesHash int64 NOT NULL,
-		Values bytes(32768) NOT NULL,
+		Values bytes(1024) NOT NULL,
 		ID ref,
 		PRIMARY KEY ((QName, ValuesHash) Values)
 	) AS RESULT OF ApplyUniques;

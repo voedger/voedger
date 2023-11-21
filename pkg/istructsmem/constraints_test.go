@@ -26,6 +26,7 @@ func Test_checkConstraints(t *testing.T) {
 		obj.
 			AddField("str", appdef.DataKind_string, false).
 			AddField("bytes", appdef.DataKind_bytes, false).
+			AddField("raw", appdef.DataKind_raw, false).
 			// char fields to test constraints: exactly four digits
 			AddField("str4", appdef.DataKind_string, false,
 				appdef.MinLen(4),
@@ -36,6 +37,9 @@ func Test_checkConstraints(t *testing.T) {
 				appdef.MinLen(4),
 				appdef.MaxLen(4),
 				appdef.Pattern(`^\d+$`)).
+			AddField("raw4444", appdef.DataKind_raw, false,
+				appdef.MinLen(4444),
+				appdef.MaxLen(4444)).
 			// numeric fields to test inclusive constraints: closed range [1, 8]
 			AddField("int32_i", appdef.DataKind_int32, false,
 				appdef.MinIncl(1),
@@ -95,6 +99,11 @@ func Test_checkConstraints(t *testing.T) {
 		{"[]byte: max len", args{"bytes4", []byte("12345")}, "bytes-field «bytes4» data constraint «MaxLen: 4» violated"},
 		{"[]byte: pattern", args{"bytes4", []byte("abcd")}, "bytes-field «bytes4» data constraint «Pattern: `^\\d+$`» violated"},
 		{"[]byte: ok", args{"bytes4", []byte("1234")}, ""},
+		//-
+		{"raw: default max len", args{"raw", strings.Repeat("#", int(appdef.DefaultFieldMaxLength)+1)}, "raw-field «raw» data constraint «default MaxLen:"},
+		{"raw: min len", args{"raw4444", "#"}, "raw-field «raw4444» data constraint «MinLen: 4444» violated"},
+		{"raw: max len", args{"raw4444", strings.Repeat("#", 4445)}, "raw-field «raw4444» data constraint «MaxLen: 4444» violated"},
+		{"raw: ok", args{"raw4444", strings.Repeat("#", 4444)}, ""},
 		//-
 		{"int32_i: min inclusive", args{"int32_i", int32(0)}, "int32-field «int32_i» data constraint «MinIncl: 1» violated"},
 		{"int32_i: max inclusive", args{"int32_i", int32(9)}, "int32-field «int32_i» data constraint «MaxIncl: 8» violated"},

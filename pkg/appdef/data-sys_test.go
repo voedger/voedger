@@ -24,6 +24,7 @@ func Test_SysDataName(t *testing.T) {
 		{"null", args{k: DataKind_null}, NullQName},
 		{"int32", args{k: DataKind_int32}, MustParseQName("sys.int32")},
 		{"string", args{k: DataKind_string}, MustParseQName("sys.string")},
+		{"raw", args{k: DataKind_raw}, MustParseQName("sys.raw")},
 		{"out of bounds", args{k: DataKind_FakeLast}, NullQName},
 	}
 	for _, tt := range tests {

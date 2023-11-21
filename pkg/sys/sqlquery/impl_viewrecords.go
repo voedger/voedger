@@ -98,9 +98,7 @@ func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName ap
 				return e
 			}
 			kb.PutNumber(k.name, v)
-		case appdef.DataKind_bytes:
-			fallthrough
-		case appdef.DataKind_string:
+		case appdef.DataKind_bytes, appdef.DataKind_string, appdef.DataKind_raw:
 			fallthrough
 		case appdef.DataKind_QName:
 			kb.PutChars(k.name, string(k.value))

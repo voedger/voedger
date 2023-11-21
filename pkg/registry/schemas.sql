@@ -59,7 +59,7 @@ ALTER WORKSPACE AppWorkspaceWS (
 	);
 
 	TYPE IssueVerifiedValueTokenForResetPasswordParams (
-		VerificationToken text(32768) NOT NULL,
+		VerificationToken raw(32768) NOT NULL,
 		VerificationCode text NOT NULL,
 		ProfileWSID int64 NOT NULL,
 		AppName text NOT NULL

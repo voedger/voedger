@@ -26,7 +26,7 @@ func (f NotEqualsFilter) IsMatch(fk FieldsKinds, outputRow IOutputRow) (bool, er
 		return !nearlyEqual(f.value.(float64), float64(outputRow.Value(f.field).(float32)), f.epsilon), nil
 	case appdef.DataKind_float64:
 		return !nearlyEqual(f.value.(float64), outputRow.Value(f.field).(float64), f.epsilon), nil
-	case appdef.DataKind_string:
+	case appdef.DataKind_string, appdef.DataKind_raw:
 		return outputRow.Value(f.field).(string) != f.value.(string), nil
 	case appdef.DataKind_bool:
 		return outputRow.Value(f.field).(bool) != f.value.(bool), nil

@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"math"
 	"regexp"
 	"testing"
 
@@ -163,9 +164,9 @@ func Test_AppDef_AddData(t *testing.T) {
 
 	t.Run("panic if incompatible constraints", func(t *testing.T) {
 		apb := New()
-		require.Panics(func() {
-			_ = apb.AddData(strName, DataKind_string, NullQName, MinIncl(1))
-		})
+		require.Panics(func() { _ = apb.AddData(strName, DataKind_string, NullQName, MinIncl(1)) })
+		require.Panics(func() { _ = apb.AddData(intName, DataKind_float64, NullQName, MaxLen(100)) })
+		require.Panics(func() { _ = apb.AddData(NewQName("test", "raw"), DataKind_raw, NullQName, Pattern(`^\w+$`)) })
 	})
 }
 
@@ -180,6 +181,19 @@ func Test_data_AddConstraint(t *testing.T) {
 		args      args
 		wantPanic bool
 	}{
+		//- MaxLen
+		{"string: max length constraint must be ok",
+			args{DataKind_string, ConstraintKind_MaxLen, uint16(100)}, false},
+		{"string: max length constraint must fail if exceeds 1024",
+			args{DataKind_string, ConstraintKind_MaxLen, MaxFieldLength + 1}, true},
+		{"bytes: max length constraint must be ok",
+			args{DataKind_bytes, ConstraintKind_MaxLen, uint16(1024)}, false},
+		{"bytes: max length constraint must fail if exceeds 1024",
+			args{DataKind_bytes, ConstraintKind_MaxLen, MaxFieldLength + 1}, true},
+		{"raw: max length constraint must be ok",
+			args{DataKind_raw, ConstraintKind_MaxLen, uint16(100)}, false},
+		{"raw: max length constraint must be ok up to 64K",
+			args{DataKind_raw, ConstraintKind_MaxLen, uint16(math.MaxUint16)}, false},
 		//- Enum
 		{"int32: enum constraint must be ok",
 			args{DataKind_int32, ConstraintKind_Enum, []int32{1, 2, 3}}, false},

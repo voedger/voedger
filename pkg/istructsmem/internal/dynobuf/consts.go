@@ -18,6 +18,7 @@ var dataKindToDynoFieldType = map[appdef.DataKind]dynobuffers.FieldType{
 	appdef.DataKind_float64:  dynobuffers.FieldTypeFloat64,
 	appdef.DataKind_bytes:    dynobuffers.FieldTypeByte,
 	appdef.DataKind_string:   dynobuffers.FieldTypeString,
+	appdef.DataKind_raw:      dynobuffers.FieldTypeString,
 	appdef.DataKind_QName:    dynobuffers.FieldTypeByte, // two fixed bytes LittleEndian
 	appdef.DataKind_bool:     dynobuffers.FieldTypeBool,
 	appdef.DataKind_RecordID: dynobuffers.FieldTypeInt64,

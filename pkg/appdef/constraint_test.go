@@ -97,14 +97,8 @@ func TestNewConstraintPanics(t *testing.T) {
 		name string
 		args args
 	}{
-		{"MinLen(MaxFieldLength+1)",
-			args{ConstraintKind_MinLen, uint16(MaxFieldLength + 1)},
-		},
 		{"MaxLen(0)",
 			args{ConstraintKind_MaxLen, uint16(0)},
-		},
-		{"MaxLen(MaxFieldLength+1)",
-			args{ConstraintKind_MaxLen, uint16(MaxFieldLength + 1)},
 		},
 		{"Pattern(`^[error$`)",
 			args{ConstraintKind_Pattern, `^[error$`},

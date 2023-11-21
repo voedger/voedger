@@ -58,8 +58,13 @@ type IRowReader interface {
 	AsInt64(name string) int64
 	AsFloat32(name string) float32
 	AsFloat64(name string) float64
+
+	// Returns bytes or raw field value
 	AsBytes(name string) []byte
+
+	// Returns string or raw field value
 	AsString(name string) string
+
 	AsQName(name string) appdef.QName
 	AsBool(name string) bool
 	AsRecordID(name string) RecordID
@@ -77,14 +82,24 @@ type IRowWriter interface {
 	PutInt64(name string, value int64)
 	PutFloat32(name string, value float32)
 	PutFloat64(name string, value float64)
+
+	// Puts value into bytes or raw data field.
 	PutBytes(name string, value []byte)
+
+	// Puts value into string or raw data field.
 	PutString(name, value string)
+
 	PutQName(name string, value appdef.QName)
 	PutBool(name string, value bool)
 	PutRecordID(name string, value RecordID)
 
+	// Puts value into int23, int64, float32, float64 or RecordID data type fields.
+	//
 	// Tries to make conversion from value to a name type
 	PutNumber(name string, value float64)
+
+	// Puts value into string, bytes, raw or QName data type field.
+	//
 	// Tries to make conversion from value to a name type
 	PutChars(name string, value string)
 }
