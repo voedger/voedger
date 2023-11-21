@@ -75,6 +75,13 @@ func TestBasicUsage(t *testing.T) {
 		SetParam(objName).
 		SetResult(appdef.QNameANY)
 
+	appDef.AddProjector(appdef.NewQName("test", "projector")).
+		AddEvent(appdef.NewQName("test", "cmd"), appdef.ProjectorEventKind_Execute).
+		AddEvent(recName, appdef.ProjectorEventKind_AnyChanges...).
+		AddState(appdef.NewQName("sys", "records"), docName, recName).
+		AddIntent(appdef.NewQName("sys", "views"), viewName).
+		SetEngine(appdef.ExtensionEngineKind_WASM)
+
 	res := &mockResources{}
 	res.
 		On("Resources", mock.AnythingOfType("func(appdef.QName)")).Run(func(args mock.Arguments) {})

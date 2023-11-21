@@ -54,11 +54,11 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 			return
 		}
 
-		if fn, ok := typ.(appdef.IFunction); ok {
+		if ext, ok := typ.(appdef.IExtension); ok {
 			if pkg.Extensions == nil {
 				pkg.Extensions = newExtensions()
 			}
-			pkg.Extensions.read(fn)
+			pkg.Extensions.read(ext)
 			return
 		}
 	})

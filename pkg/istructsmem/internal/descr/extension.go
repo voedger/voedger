@@ -8,8 +8,9 @@ package descr
 import "github.com/voedger/voedger/pkg/appdef"
 
 type Extensions struct {
-	Commands map[appdef.QName]*CommandFunction `json:",omitempty"`
-	Queries  map[appdef.QName]*QueryFunction   `json:",omitempty"`
+	Commands   map[appdef.QName]*CommandFunction `json:",omitempty"`
+	Queries    map[appdef.QName]*QueryFunction   `json:",omitempty"`
+	Projectors map[appdef.QName]*Projector       `json:",omitempty"`
 }
 
 type Extension struct {
@@ -35,4 +36,12 @@ type QueryFunction struct {
 
 type Projector struct {
 	Extension
+	Events  map[appdef.QName]ProjectorEvent `json:",omitempty"`
+	States  map[appdef.QName]appdef.QNames  `json:",omitempty"`
+	Intents map[appdef.QName]appdef.QNames  `json:",omitempty"`
+}
+
+type ProjectorEvent struct {
+	On   appdef.QName `json:"-"`
+	Kind []string     `json:",omitempty"`
 }

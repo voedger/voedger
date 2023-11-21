@@ -218,6 +218,26 @@
             "Arg": "test.obj",
             "Result": "sys.ANY"
           }
+        },
+        "Projectors": {
+          "test.projector": {
+            "Name": "projector",
+            "Engine": "WASM",
+            "Events": {
+              "test.cmd": {
+                "Kind": ["Execute"]
+              },
+              "test.rec": {
+                "Kind": ["Insert", "Update", "Activate", "Deactivate"]
+              }
+            },
+            "States": {
+              "sys.records": ["test.doc", "test.rec"]
+            },
+            "Intents": {
+              "sys.views": ["test.view"]
+            }
+          }
         }
       }
     }

@@ -13,31 +13,34 @@ import (
 
 func newExtensions() *Extensions {
 	return &Extensions{
-		Commands: make(map[appdef.QName]*CommandFunction),
-		Queries:  make(map[appdef.QName]*QueryFunction),
+		Commands:   make(map[appdef.QName]*CommandFunction),
+		Queries:    make(map[appdef.QName]*QueryFunction),
+		Projectors: make(map[appdef.QName]*Projector),
 	}
 }
 
-func (ff *Extensions) read(f appdef.IExtension) {
-	if cmd, ok := f.(appdef.ICommand); ok {
-		cf := &CommandFunction{}
-		cf.read(cmd)
-		ff.Commands[cf.QName] = cf
+func (ff *Extensions) read(ext appdef.IExtension) {
+	if cmd, ok := ext.(appdef.ICommand); ok {
+		c := &CommandFunction{}
+		c.read(cmd)
+		ff.Commands[c.QName] = c
 		return
 	}
-	if qry, ok := f.(appdef.IQuery); ok {
-		qf := &QueryFunction{}
-		qf.read(qry)
-		ff.Queries[qf.QName] = qf
+	if qry, ok := ext.(appdef.IQuery); ok {
+		q := &QueryFunction{}
+		q.read(qry)
+		ff.Queries[q.QName] = q
 		return
 	}
-	if _, ok := f.(appdef.IProjector); ok {
-		//TODO: implement projector
+	if prj, ok := ext.(appdef.IProjector); ok {
+		p := newProjector()
+		p.read(prj)
+		ff.Projectors[p.QName] = p
 		return
 	}
 
 	//notest: This panic will only work when new appdef.IFunction interface descendants appear
-	panic(fmt.Errorf("unknown func type %v", f))
+	panic(fmt.Errorf("unknown func type %v", ext))
 }
 
 func (e *Extension) read(ex appdef.IExtension) {
@@ -66,5 +69,35 @@ func (f *CommandFunction) read(fn appdef.ICommand) {
 		if n := a.QName(); n != appdef.NullQName {
 			f.UnloggedArg = &n
 		}
+	}
+}
+
+func newProjector() *Projector {
+	return &Projector{
+		Events:  make(map[appdef.QName]ProjectorEvent),
+		States:  make(map[appdef.QName]appdef.QNames),
+		Intents: make(map[appdef.QName]appdef.QNames),
+	}
+}
+
+func (p *Projector) read(prj appdef.IProjector) {
+	p.Extension.read(prj)
+	prj.Events(func(ev appdef.IProjectorEvent) {
+		e := ProjectorEvent{}
+		e.read(ev)
+		p.Events[e.On] = e
+	})
+	prj.States(func(storage appdef.QName, names appdef.QNames) {
+		p.States[storage] = appdef.QNamesFrom(names...)
+	})
+	prj.Intents(func(storage appdef.QName, names appdef.QNames) {
+		p.Intents[storage] = appdef.QNamesFrom(names...)
+	})
+}
+
+func (e *ProjectorEvent) read(ev appdef.IProjectorEvent) {
+	e.On = ev.On().QName()
+	for _, k := range ev.Kind() {
+		e.Kind = append(e.Kind, k.TrimString())
 	}
 }
