@@ -6,14 +6,12 @@
       "DataTypes": {
         "test.number": {
           "Comment": "natural (positive) integer",
-          "Name": "test.number",
           "Ancestor": "sys.int64",
           "Constraints": {
             "MinIncl": 1
           }
         },
         "test.string": {
-          "Name": "test.string",
           "Ancestor": "sys.string",
           "Constraints": {
             "MaxLen": 100,
@@ -25,7 +23,6 @@
       "Structures": {
         "test.doc": {
           "Comment": "comment 1\ncomment 2",
-          "Name": "test.doc",
           "Kind": "TypeKind_CDoc",
           "Fields": [
             {
@@ -92,7 +89,6 @@
           "Singleton": true
         },
         "test.obj": {
-          "Name": "test.obj",
           "Kind": "TypeKind_Object",
           "Fields": [
             {
@@ -112,7 +108,6 @@
           ]
         },
         "test.rec": {
-          "Name": "test.rec",
           "Kind": "TypeKind_CRecord",
           "Fields": [
             {
@@ -166,7 +161,6 @@
       },
       "Views": {
         "test.view": {
-          "Name": "test.view",
           "Key": {
             "Partition": [
               {
@@ -212,7 +206,6 @@
       "Extensions": {
         "Commands": {
           "test.cmd": {
-            "QName": "test.cmd",
             "Name": "cmd",
             "Engine": "ExtensionEngineKind_WASM",
             "Arg": "test.obj",
@@ -221,7 +214,6 @@
         },
         "Queries": {
           "test.query": {
-            "QName": "test.query",
             "Name": "query",
             "Engine": "ExtensionEngineKind_BuiltIn",
             "Arg": "test.obj",

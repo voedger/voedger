@@ -20,7 +20,7 @@ func newStructure() *Structure {
 func (t *Structure) read(str appdef.IStructure) {
 	t.Comment = readComment(str)
 
-	t.Name = str.QName()
+	t.QName = str.QName()
 	t.Kind = str.Kind()
 
 	str.Fields(func(field appdef.IField) {

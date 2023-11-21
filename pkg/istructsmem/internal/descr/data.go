@@ -9,7 +9,7 @@ import "github.com/voedger/voedger/pkg/appdef"
 
 type Data struct {
 	Comment     string           `json:",omitempty"`
-	Name        *appdef.QName    `json:",omitempty"`
+	QName       *appdef.QName    `json:"-"`
 	DataKind    *appdef.DataKind `json:",omitempty"`
 	Ancestor    *appdef.QName    `json:",omitempty"`
 	Constraints map[string]any   `json:",omitempty"`

@@ -13,8 +13,8 @@ type Extensions struct {
 }
 
 type Extension struct {
-	Comment string `json:",omitempty"`
-	QName   appdef.QName
+	Comment string       `json:",omitempty"`
+	QName   appdef.QName `json:"-"`
 	Name    string
 	Engine  appdef.ExtensionEngineKind
 }

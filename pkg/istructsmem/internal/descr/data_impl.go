@@ -16,7 +16,7 @@ func newData() *Data {
 func (d *Data) read(data appdef.IData) {
 	d.Comment = data.Comment()
 	if q := data.QName(); q != appdef.NullQName {
-		d.Name = &q
+		d.QName = &q
 	}
 	if data.Ancestor() != nil {
 		q := data.Ancestor().QName()
