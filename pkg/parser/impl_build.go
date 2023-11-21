@@ -348,10 +348,11 @@ func (c *buildContext) projectors() error {
 			}
 
 			c.addComments(proj, builder)
+			builder.SetName(proj.GetName())
 			if proj.Engine.WASM {
-				builder.SetExtension(proj.GetName(), appdef.ExtensionEngineKind_WASM)
+				builder.SetEngine(appdef.ExtensionEngineKind_WASM)
 			} else {
-				builder.SetExtension(proj.GetName(), appdef.ExtensionEngineKind_BuiltIn)
+				builder.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
 			builder.SetSync(proj.Sync)
 		})
@@ -495,10 +496,11 @@ func (c *buildContext) commands() error {
 			if cmd.Returns != nil {
 				setParam(ictx, cmd.Returns, func(qn appdef.QName) { b.SetResult(qn) })
 			}
+			b.SetName(cmd.GetName())
 			if cmd.Engine.WASM {
-				b.SetExtension(cmd.GetName(), appdef.ExtensionEngineKind_WASM)
+				b.SetEngine(appdef.ExtensionEngineKind_WASM)
 			} else {
-				b.SetExtension(cmd.GetName(), appdef.ExtensionEngineKind_BuiltIn)
+				b.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
 		})
 	}
@@ -517,10 +519,11 @@ func (c *buildContext) queries() error {
 
 			setParam(ictx, &q.Returns, func(qn appdef.QName) { b.SetResult(qn) })
 
+			b.SetName(q.GetName())
 			if q.Engine.WASM {
-				b.SetExtension(string(q.Name), appdef.ExtensionEngineKind_WASM)
+				b.SetEngine(appdef.ExtensionEngineKind_WASM)
 			} else {
-				b.SetExtension(string(q.Name), appdef.ExtensionEngineKind_BuiltIn)
+				b.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
 		})
 	}
