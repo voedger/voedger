@@ -174,9 +174,6 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 			if view.Items[index].Field.Type.Bytes != nil {
 				c.stmtErr(&view.pkRef.Pos, ErrViewFieldBytes(string(pkf)))
 			}
-			if view.Items[index].Field.Type.Raw != nil {
-				c.stmtErr(&view.pkRef.Pos, ErrViewFieldRaw(string(pkf)))
-			}
 		}
 	}
 
@@ -192,9 +189,6 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 			}
 			if view.Items[fieldIndex].Field.Type.Bytes != nil && !last {
 				c.stmtErr(&view.pkRef.Pos, ErrBytesFieldInCC(string(ccf)))
-			}
-			if view.Items[fieldIndex].Field.Type.Raw != nil && !last {
-				c.stmtErr(&view.pkRef.Pos, ErrRawFieldInCC(string(ccf)))
 			}
 		}
 	}
@@ -557,15 +551,16 @@ func analyseFields(items []TableItemExpr, c *iterateCtx) {
 					c.stmtErr(&field.Pos, ErrRegexpCheckOnlyForVarcharField)
 				}
 			}
-			if field.Type.DataType != nil && field.Type.DataType.Varchar != nil && field.Type.DataType.Varchar.MaxLen != nil {
-				if *field.Type.DataType.Varchar.MaxLen > appdef.MaxFieldLength {
-					c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+			if field.Type.DataType != nil {
+				if field.Type.DataType.Varchar != nil && field.Type.DataType.Varchar.MaxLen != nil {
+					if *field.Type.DataType.Varchar.MaxLen > uint64(appdef.MaxFieldLength) {
+						c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+					}
 				}
-			}
-			if field.Type.DataType != nil && field.Type.DataType.Raw != nil && field.Type.DataType.Raw.MaxLen != nil {
-				if *field.Type.DataType.Raw.MaxLen > appdef.MaxRawFieldLength {
-					//notest: MaxRawFieldLength now is 65535 == math.MaxUint16
-					c.stmtErr(&field.Pos, ErrMaxRawFieldLengthTooLarge)
+				if field.Type.DataType.Bytes != nil && field.Type.DataType.Bytes.MaxLen != nil {
+					if *field.Type.DataType.Bytes.MaxLen > uint64(appdef.MaxFieldLength) {
+						c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+					}
 				}
 			}
 		}
