@@ -11,24 +11,28 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func newFunctions() *Functions {
-	return &Functions{
+func newExtensions() *Extensions {
+	return &Extensions{
 		Commands: make(map[appdef.QName]*CommandFunction),
 		Queries:  make(map[appdef.QName]*QueryFunction),
 	}
 }
 
-func (ff *Functions) read(f appdef.IFunction) {
+func (ff *Extensions) read(f appdef.IExtension) {
 	if cmd, ok := f.(appdef.ICommand); ok {
 		cf := &CommandFunction{}
 		cf.read(cmd)
-		ff.Commands[cf.Name] = cf
+		ff.Commands[cf.QName] = cf
 		return
 	}
 	if qry, ok := f.(appdef.IQuery); ok {
 		qf := &QueryFunction{}
 		qf.read(qry)
-		ff.Queries[qf.Name] = qf
+		ff.Queries[qf.QName] = qf
+		return
+	}
+	if _, ok := f.(appdef.IProjector); ok {
+		//TODO: implement projector
 		return
 	}
 
@@ -36,9 +40,15 @@ func (ff *Functions) read(f appdef.IFunction) {
 	panic(fmt.Errorf("unknown func type %v", f))
 }
 
+func (ex *Extension) read(fn appdef.IExtension) {
+	ex.Comment = fn.Comment()
+	ex.QName = fn.QName()
+	ex.Name = fn.Name()
+	ex.Engine = fn.Engine()
+}
+
 func (f *Function) read(fn appdef.IFunction) {
-	f.Comment = fn.Comment()
-	f.Name = fn.QName()
+	f.Extension.read(fn)
 	if a := fn.Param(); a != nil {
 		if n := a.QName(); n != appdef.NullQName {
 			f.Arg = &n
@@ -48,10 +58,6 @@ func (f *Function) read(fn appdef.IFunction) {
 		if n := r.QName(); n != appdef.NullQName {
 			f.Result = &n
 		}
-	}
-	f.Extension = Extension{
-		Name:   fn.Extension().Name(),
-		Engine: fn.Extension().Engine(),
 	}
 }
 

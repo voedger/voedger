@@ -17,7 +17,7 @@ type Package struct {
 	DataTypes  map[string]*Data        `json:",omitempty"`
 	Structures map[string]*Structure   `json:",omitempty"`
 	Views      map[string]*View        `json:",omitempty"`
-	Functions  *Functions              `json:",omitempty"`
+	Extensions *Extensions             `json:",omitempty"`
 	Resources  map[string]*Resource    `json:",omitempty"`
 	RateLimits map[string][]*RateLimit `json:",omitempty"`
 }

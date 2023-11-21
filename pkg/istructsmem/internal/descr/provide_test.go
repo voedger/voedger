@@ -69,12 +69,11 @@ func TestBasicUsage(t *testing.T) {
 	appDef.AddCommand(appdef.NewQName("test", "cmd")).
 		SetUnloggedParam(objName).
 		SetParam(objName).
-		SetExtension("cmd", appdef.ExtensionEngineKind_WASM)
+		SetEngine(appdef.ExtensionEngineKind_WASM)
 
 	appDef.AddQuery(appdef.NewQName("test", "query")).
 		SetParam(objName).
-		SetResult(appdef.QNameANY).
-		SetExtension("query", appdef.ExtensionEngineKind_BuiltIn)
+		SetResult(appdef.QNameANY)
 
 	res := &mockResources{}
 	res.

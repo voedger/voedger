@@ -209,27 +209,23 @@
           ]
         }
       },
-      "Functions": {
+      "Extensions": {
         "Commands": {
           "test.cmd": {
-            "Name": "test.cmd",
+            "QName": "test.cmd",
+            "Name": "cmd",
+            "Engine": "ExtensionEngineKind_WASM",
             "Arg": "test.obj",
-            "Extension": {
-              "Name": "cmd",
-              "Engine": "ExtensionEngineKind_WASM"
-            },
             "UnloggedArg": "test.obj"
           }
         },
         "Queries": {
           "test.query": {
-            "Name": "test.query",
+            "QName": "test.query",
+            "Name": "query",
+            "Engine": "ExtensionEngineKind_BuiltIn",
             "Arg": "test.obj",
-            "Result": "sys.ANY",
-            "Extension": {
-              "Name": "query",
-              "Engine": "ExtensionEngineKind_BuiltIn"
-            }
+            "Result": "sys.ANY"
           }
         }
       }
