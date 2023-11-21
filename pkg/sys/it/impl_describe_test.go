@@ -39,7 +39,6 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 		require.NoError(json.Unmarshal([]byte(desc), &actual))
 
 		expected := map[string]interface{}{
-			"Name": "app2pkg",
 			"Structures": map[string]interface{}{
 				"app2pkg.WSKind": map[string]interface{}{
 					"Fields": []interface{}{
@@ -63,8 +62,7 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 							"Name": "StrFld",
 						},
 					},
-					"Kind":      "TypeKind_CDoc",
-					"Name":      "app2pkg.WSKind",
+					"Kind":      "CDoc",
 					"Singleton": true,
 				},
 			},
