@@ -13,9 +13,8 @@ import (
 // # Implements:
 //   - IProjector & IProjectorBuilder
 type projector struct {
-	typ
+	extension
 	sync    bool
-	ext     *extension
 	events  projectorEvents
 	states  storages
 	intents storages
@@ -23,12 +22,11 @@ type projector struct {
 
 func newProjector(app *appDef, name QName) *projector {
 	prj := &projector{
-		typ:     makeType(app, name, TypeKind_Projector),
-		ext:     newExtension(),
 		events:  make(projectorEvents),
 		states:  make(storages),
 		intents: make(storages),
 	}
+	prj.extension = makeExtension(app, name, TypeKind_Projector, prj)
 	app.appendType(prj)
 	return prj
 }
@@ -69,8 +67,6 @@ func (prj *projector) AddIntent(storage QName, names ...QName) IProjectorBuilder
 	return prj
 }
 
-func (prj *projector) Extension() IExtension { return prj.ext }
-
 func (prj *projector) Events(cb func(IProjectorEvent)) {
 	ord := QNamesFromMap(prj.events)
 	for _, n := range ord {
@@ -88,20 +84,6 @@ func (prj *projector) SetEventComment(record QName, comment ...string) IProjecto
 		panic(fmt.Errorf("%v: %v not found: %w", prj, record, ErrNameNotFound))
 	}
 	e.SetComment(comment...)
-	return prj
-}
-
-func (prj *projector) SetExtension(name string, engine ExtensionEngineKind, comment ...string) IProjectorBuilder {
-	if name == "" {
-		name = prj.QName().Entity()
-	}
-	if ok, err := ValidIdent(name); !ok {
-		panic(fmt.Errorf("%v: extension name «%s» is not valid: %w", prj, name, err))
-	}
-	prj.ext.name = name
-	prj.ext.engine = engine
-	prj.ext.SetComment(comment...)
-
 	return prj
 }
 

@@ -146,10 +146,10 @@ func (app *appDef) DataTypes(incSys bool, cb func(IData)) {
 	})
 }
 
-func (app *appDef) Functions(cb func(e IFunction)) {
+func (app *appDef) Extensions(cb func(e IExtension)) {
 	app.Types(func(t IType) {
-		if f, ok := t.(IFunction); ok {
-			cb(f)
+		if ex, ok := t.(IExtension); ok {
+			cb(ex)
 		}
 	})
 }

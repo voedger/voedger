@@ -69,12 +69,18 @@ func TestBasicUsage(t *testing.T) {
 	appDef.AddCommand(appdef.NewQName("test", "cmd")).
 		SetUnloggedParam(objName).
 		SetParam(objName).
-		SetExtension("cmd", appdef.ExtensionEngineKind_WASM)
+		SetEngine(appdef.ExtensionEngineKind_WASM)
 
 	appDef.AddQuery(appdef.NewQName("test", "query")).
 		SetParam(objName).
-		SetResult(appdef.QNameANY).
-		SetExtension("query", appdef.ExtensionEngineKind_BuiltIn)
+		SetResult(appdef.QNameANY)
+
+	appDef.AddProjector(appdef.NewQName("test", "projector")).
+		AddEvent(appdef.NewQName("test", "cmd"), appdef.ProjectorEventKind_Execute).
+		AddEvent(recName, appdef.ProjectorEventKind_AnyChanges...).
+		AddState(appdef.NewQName("sys", "records"), docName, recName).
+		AddIntent(appdef.NewQName("sys", "views"), viewName).
+		SetEngine(appdef.ExtensionEngineKind_WASM)
 
 	res := &mockResources{}
 	res.

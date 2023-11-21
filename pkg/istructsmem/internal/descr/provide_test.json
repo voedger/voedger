@@ -2,18 +2,15 @@
   "Name": "test1/app1",
   "Packages": {
     "test": {
-      "Name": "test",
       "DataTypes": {
         "test.number": {
           "Comment": "natural (positive) integer",
-          "Name": "test.number",
           "Ancestor": "sys.int64",
           "Constraints": {
             "MinIncl": 1
           }
         },
         "test.string": {
-          "Name": "test.string",
           "Ancestor": "sys.string",
           "Constraints": {
             "MaxLen": 100,
@@ -25,8 +22,7 @@
       "Structures": {
         "test.doc": {
           "Comment": "comment 1\ncomment 2",
-          "Name": "test.doc",
-          "Kind": "TypeKind_CDoc",
+          "Kind": "CDoc",
           "Fields": [
             {
               "Name": "sys.QName",
@@ -92,8 +88,7 @@
           "Singleton": true
         },
         "test.obj": {
-          "Name": "test.obj",
-          "Kind": "TypeKind_Object",
+          "Kind": "Object",
           "Fields": [
             {
               "Name": "sys.QName",
@@ -112,8 +107,7 @@
           ]
         },
         "test.rec": {
-          "Name": "test.rec",
-          "Kind": "TypeKind_CRecord",
+          "Kind": "CRecord",
           "Fields": [
             {
               "Name": "sys.QName",
@@ -166,7 +160,6 @@
       },
       "Views": {
         "test.view": {
-          "Name": "test.view",
           "Key": {
             "Partition": [
               {
@@ -209,26 +202,40 @@
           ]
         }
       },
-      "Functions": {
+      "Extensions": {
         "Commands": {
           "test.cmd": {
-            "Name": "test.cmd",
+            "Name": "cmd",
+            "Engine": "WASM",
             "Arg": "test.obj",
-            "Extension": {
-              "Name": "cmd",
-              "Engine": "ExtensionEngineKind_WASM"
-            },
             "UnloggedArg": "test.obj"
           }
         },
         "Queries": {
           "test.query": {
-            "Name": "test.query",
+            "Name": "query",
+            "Engine": "BuiltIn",
             "Arg": "test.obj",
-            "Result": "sys.ANY",
-            "Extension": {
-              "Name": "query",
-              "Engine": "ExtensionEngineKind_BuiltIn"
+            "Result": "sys.ANY"
+          }
+        },
+        "Projectors": {
+          "test.projector": {
+            "Name": "projector",
+            "Engine": "WASM",
+            "Events": {
+              "test.cmd": {
+                "Kind": ["Execute"]
+              },
+              "test.rec": {
+                "Kind": ["Insert", "Update", "Activate", "Deactivate"]
+              }
+            },
+            "States": {
+              "sys.records": ["test.doc", "test.rec"]
+            },
+            "Intents": {
+              "sys.views": ["test.view"]
             }
           }
         }
