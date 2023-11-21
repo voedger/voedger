@@ -11,18 +11,23 @@ import (
 	"github.com/voedger/voedger/pkg/ihttp"
 )
 
-func NewHTTPProcessorController(api ihttp.IHTTPProcessorAPI, staticResources []StaticResourcesType) (IHTTPProcessorController, error) {
+func NewHTTPProcessorController(api ihttp.IHTTPProcessorAPI, staticResources []StaticResourcesType, redirections RedirectRoutes, defaultRedirection DefaultRedirectRoute) (IHTTPProcessorController, error) {
 	srs := StaticResourcesType{}
 	for _, sr := range staticResources {
 		for url, fs := range sr {
 			if _, exists := srs[url]; exists {
-				return nil, fmt.Errorf("static resource with duplicate url %s", url) // TODO: panic
+				panic(fmt.Sprintf("static resource with duplicate url %s", url))
 			}
 			srs[url] = fs
 		}
 	}
+	if len(defaultRedirection) > 1 {
+		panic("default redirection should be single record")
+	}
 	return &httpProcessorController{
-		api:             api,
-		staticResources: srs,
+		api:                api,
+		staticResources:    srs,
+		redirections:       redirections,
+		defaultRedirection: defaultRedirection,
 	}, nil
 }
