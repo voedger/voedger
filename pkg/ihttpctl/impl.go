@@ -39,5 +39,21 @@ func (hc *httpProcessorController) Run(ctx context.Context) {
 		hc.api.AddReverseProxyRouteDefault(src, dst)
 		logger.Info("default redirection", src, arrow, dst, "added")
 	}
+	for src, dst := range hc.redirections {
+		for ctx.Err() == nil {
+			logger.Info("adding redirection", src, "->", dst, "...")
+			hc.api.AddReverseProxyRoute(src, dst)
+			logger.Info("redirection", src, "->", dst, "added")
+			break
+		}
+	}
+	for src, dst := range hc.defaultRedirection {
+		for ctx.Err() == nil {
+			logger.Info("adding default redirection", src, "->", dst, "...")
+			hc.api.AddReverseProxyRouteDefault(src, dst)
+			logger.Info("default redirection", src, "->", dst, "added")
+			break
+		}
+	}
 	<-ctx.Done()
 }
