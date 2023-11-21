@@ -139,19 +139,25 @@ classDiagram
         +Value() IViewValue
     }
             
-    IType <|-- IFunction : inherits
+    IType <|-- IExtension : inherits
+    class IExtension {
+        <<interface>>
+        +EntryPoint() string
+        +Engine() ExtensionEngineKind
+    }
+
+    IExtension <|-- IFunction : inherits
     class IFunction {
         <<interface>>
-        +Engine() IEngine
-        +Params() []IParam
-        +Results() []IParam
+        +Param() IType
+        +Result() IType
     }
 
     IFunction <|-- ICommand : inherits
     class ICommand {
         <<interface>>
         +Kind()* TypeKind_Command
-        +UnloggedParams() []IParam
+        +UnloggedParam() IType
     }
 
     IFunction <|-- IQuery : inherits
@@ -160,7 +166,7 @@ classDiagram
         +Kind()* TypeKind_Query
     }
 
-    IType <|-- IProjector : inherits
+    IExtension <|-- IProjector : inherits
     class IProjector {
         <<interface>>
         +Kind()* TypeKind_Projector
@@ -169,7 +175,6 @@ classDiagram
         +States() [QName]QNames
         +Intents() [QName]QNames
     }
-
 
     IWorkspace --|> IType : inherits
     class IWorkspace {
@@ -547,21 +552,24 @@ classDiagram
 ### Functions, commands, queries and projectors
 
 ```mermaid
-classDiagram
-    
-    direction TB
-
-    class IType {
+    classDiagram
+    IType <|-- IExtension : inherits
+    class IExtension {
         <<interface>>
-        +QName() QName
-        +Kind()* TypeKind
-        +Comment() []string
+        +EntryPoint() string
+        +Engine() ExtensionEngineKind
     }
 
-    IType <|-- IFunction : inherits
+    IExtension "1" ..> "1" ExtensionEngineKind : Engine
+    class ExtensionEngineKind {
+        <<enumeration>>
+        BuiltIn
+        WASM
+    }
+
+    IExtension <|-- IFunction : inherits
     class IFunction {
         <<interface>>
-        +Extension() IExtension
         +Param() IType
         +Result() IType
     }
@@ -579,22 +587,7 @@ classDiagram
         +Kind()* TypeKind_Query
     }
 
-    IFunction "1" *--> "1" IExtension : Extension
-    class IExtension {
-        <<interface>>
-        +Name() string
-        +Engine() ExtensionEngineKind
-        +Comment() []string
-    }
-
-    IExtension "1" ..> "1" ExtensionEngineKind : Engine
-    class ExtensionEngineKind {
-        <<enumeration>>
-        BuiltIn
-        WASM
-    }
-
-    IType <|-- IProjector : inherits
+    IExtension <|-- IProjector : inherits
     class IProjector {
         <<interface>>
         +Kind()* TypeKind_Projector
@@ -603,7 +596,6 @@ classDiagram
         +States() [QName]QNames
         +Intents() [QName]QNames
     }
-    IProjector "1" *--> "1" IExtension : Extension
 
     IProjector "1" *--> "1..*" IProjectorEvent : Events
     class IProjectorEvent {
@@ -629,7 +621,6 @@ classDiagram
         QName
         +QNames() []QName
     }
-
 ```
 
 *Rem*: In the above diagram the Param and Result of the function are `IType`, in future versions it will be changed to an array of `[]IParam` and renamed to plural (`Params`, `Results`).
