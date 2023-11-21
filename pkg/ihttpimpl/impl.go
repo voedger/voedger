@@ -114,21 +114,19 @@ type processorAPI struct {
 	processor ihttp.IHTTPProcessor
 }
 
-func (api *processorAPI) DeployStaticContent(_ context.Context, resource string, fs fs.FS) (err error) {
+func (api *processorAPI) DeployStaticContent(resource string, fs fs.FS) {
 	resource = staticPath + resource
 	f := func(wr http.ResponseWriter, req *http.Request) {
 		fsHandler := http.FileServer(http.FS(fs))
 		http.StripPrefix(resource, fsHandler).ServeHTTP(wr, req)
 	}
 	api.processor.HandlePath(resource, true, f)
-	return
 }
 
-func (api *processorAPI) DeployAppPartition(_ context.Context, app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ihttp.ISender) (err error) {
+func (api *processorAPI) DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ihttp.ISender) {
 	// <cluster-domain>/api/<AppQName.owner>/<AppQName.name>/<wsid>/<{q,c}.funcQName>
 	path := fmt.Sprintf("/api/%s/%s/%d/q|c\\.[a-zA-Z_.]+", app.Owner(), app.Name(), partNo)
 	api.processor.HandlePath(path, false, handleAppPart())
-	return
 }
 
 func (api *processorAPI) AddReverseProxyRoute(srcRegExp, dstRegExp string) {

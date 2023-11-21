@@ -14,3 +14,16 @@ func NewStaticEmbeddedResources() []ihttpctl.StaticResourcesType {
 		sysmonitor.New(),
 	}
 }
+
+func NewRedirectionRoutes() ihttpctl.RedirectRoutes {
+	return ihttpctl.RedirectRoutes{
+		"(https?://[^/]*/)grafana/(.*)":    "http://127.0.0.1:3000/$2",
+		"(https?://[^/]*/)grafana$":        "http://127.0.0.1:3000",
+		"(https?://[^/]*/)prometheus/(.*)": "http://127.0.0.1:9090/$2",
+		"(https?://[^/]*/)prometheus$":     "http://127.0.0.1:9090",
+	}
+}
+
+func NewDefaultRedirectionRoute() ihttpctl.DefaultRedirectRoute {
+	return nil
+}

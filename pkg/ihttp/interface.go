@@ -43,7 +43,7 @@ type IHTTPProcessorAPI interface {
 		- Same resource can be deployed multiple times
 	*/
 
-	DeployStaticContent(ctx context.Context, path string, fs fs.FS) (err error)
+	DeployStaticContent(path string, fs fs.FS)
 
 	/*
 		App Partitions
@@ -55,7 +55,7 @@ type IHTTPProcessorAPI interface {
 	//--	SetAppPartitionsNumber(app istructs.AppQName, partNo istructs.PartitionID, numPartitions istructs.PartitionID) (err error)
 
 	// ErrUnknownApplication
-	DeployAppPartition(ctx context.Context, app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ISender) (err error)
+	DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ISender)
 
 	// ErrUnknownAppPartition
 	//--	UndeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID) (err error)
