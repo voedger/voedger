@@ -3,6 +3,7 @@
  * @author Aleksei Ponomarev
  * Copyright (c) 2022-present unTill Pro, Ltd.
  * @author Maxim Geraskin (refactoring)
+ * @author Alisher Nurmanov
  */
 
 package ihttpimpl
@@ -14,13 +15,18 @@ import (
 	"io"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 
+	"golang.org/x/exp/maps"
+
 	"github.com/voedger/voedger/pkg/ihttp"
+	coreutils "github.com/voedger/voedger/pkg/utils"
+	it "github.com/voedger/voedger/pkg/vit"
 
 	"github.com/stretchr/testify/require"
 )
@@ -79,6 +85,47 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestReverseProxy(t *testing.T) {
+	require := require.New(t)
+	testApp := setUp(t)
+	defer tearDown(testApp)
+
+	targetListener, err := net.Listen("tcp", coreutils.ServerAddress(it.TestServicePort))
+	require.NoError(err)
+
+	errs := make(chan error)
+	defer close(errs)
+
+	targetHandler := targetHandler{
+		t,
+		map[string]string{
+			"/static/embedded/test.txt": "/static/embedded/test.txt",
+			"/grafana/report":           "/report",
+			"/some_unregistered_path":   "/unknown/some_unregistered_path",
+		},
+	}
+	targetServer := http.Server{
+		Handler: &targetHandler,
+	}
+	// target server's goroutine
+	go func() {
+		errs <- targetServer.Serve(targetListener)
+	}()
+
+	testContentSubFs, err := fs.Sub(testContentFS, "testcontent")
+	require.NoError(err)
+
+	testApp.api.AddReverseProxyRouteDefault("^(https?)://([^/]+)/([^?]+)?(\\?(.+))?$", fmt.Sprintf("http://127.0.0.1:%d/unknown/$3", it.TestServicePort))
+	testApp.api.AddReverseProxyRoute("(.*)/grafana/(.*)", fmt.Sprintf("http://127.0.0.1:%d/$2", it.TestServicePort))
+
+	err = testApp.api.DeployStaticContent(testApp.ctx, "embedded", testContentSubFs)
+	require.NoError(err)
+
+	for requestedPath, _ := range targetHandler.expectedURLPath {
+		testApp.get(requestedPath)
+	}
 }
 
 //go:embed testcontent/*
@@ -180,4 +227,18 @@ func makeTmpContent(require *require.Assertions, pattern string) (dir string, fi
 	require.NoError(err)
 
 	return dir, fileName
+}
+
+type targetHandler struct {
+	t               *testing.T
+	expectedURLPath map[string]string
+}
+
+func (h *targetHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	rw.WriteHeader(http.StatusOK)
+	_, err := io.ReadAll(req.Body)
+	require.NoError(h.t, err)
+	req.Close = true
+	req.Body.Close()
+	require.Contains(h.t, maps.Values(h.expectedURLPath), req.URL.Path)
 }

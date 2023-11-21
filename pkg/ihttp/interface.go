@@ -24,7 +24,9 @@ type CLIParams struct {
 type IHTTPProcessor interface {
 	iservices.IService
 	ListeningPort() int
-	HandlerFunc(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request))
+	HandlePath(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request))
+	AddReverseProxyRoute(srcRegExp, dstRegExp string)
+	AddReverseProxyRouteDefault(srcRegExp, dstRegExp string)
 }
 
 type IHTTPProcessorAPI interface {
@@ -80,6 +82,8 @@ type IHTTPProcessorAPI interface {
 
 	// ErrUnknownDynamicSubresource
 	//--	UndeployDynamicSubresource(app istructs.AppQName, path string) (err error)
+	AddReverseProxyRoute(srcRegExp, dstRegExp string)
+	AddReverseProxyRouteDefault(srcRegExp, dstRegExp string)
 }
 
 type ISender interface {

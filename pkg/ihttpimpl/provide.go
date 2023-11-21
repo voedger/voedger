@@ -9,14 +9,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gorilla/mux"
-
 	"github.com/voedger/voedger/pkg/ihttp"
 )
 
 func NewProcessor(params ihttp.CLIParams) (server ihttp.IHTTPProcessor, cleanup func(), err error) {
 	port := strconv.Itoa(params.Port)
-	r := mux.NewRouter()
+	r := newRouter()
 	httpProcessor := httpProcessor{
 		params: params,
 		router: r,
