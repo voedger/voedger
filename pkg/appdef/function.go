@@ -14,17 +14,15 @@ import (
 //   - IFunction
 //   - IFuncBuilder
 type function struct {
-	typ
-	parent   interface{}
+	extension
+	embeds   interface{}
 	par, res typeRef
-	ext      *extension
 }
 
-func makeFunc(app *appDef, name QName, kind TypeKind, parent interface{}) function {
+func makeFunc(app *appDef, name QName, kind TypeKind, embeds interface{}) function {
 	f := function{
-		typ:    makeType(app, name, kind),
-		parent: parent,
-		ext:    newExtension(),
+		extension: makeExtension(app, name, kind, embeds),
+		embeds:    embeds,
 	}
 	return f
 }
@@ -33,35 +31,18 @@ func (f *function) Param() IType {
 	return f.par.target(f.app)
 }
 
-func (f *function) Extension() IExtension {
-	return f.ext
-}
-
 func (f *function) Result() IType {
 	return f.res.target(f.app)
 }
 
 func (f *function) SetParam(name QName) IFunctionBuilder {
 	f.par.setName(name)
-	return f.parent.(IFunctionBuilder)
+	return f.embeds.(IFunctionBuilder)
 }
 
 func (f *function) SetResult(name QName) IFunctionBuilder {
 	f.res.setName(name)
-	return f.parent.(IFunctionBuilder)
-}
-
-func (f *function) SetExtension(name string, engine ExtensionEngineKind, comment ...string) IFunctionBuilder {
-	if name == "" {
-		panic(fmt.Errorf("%v: extension name is empty: %w", f, ErrNameMissed))
-	}
-	if ok, err := ValidIdent(name); !ok {
-		panic(fmt.Errorf("%v: extension name «%s» is not valid: %w", f, name, err))
-	}
-	f.ext.name = name
-	f.ext.engine = engine
-	f.ext.SetComment(comment...)
-	return f
+	return f.embeds.(IFunctionBuilder)
 }
 
 // Validates function
@@ -86,14 +67,6 @@ func (f *function) Validate() (err error) {
 		default:
 			err = errors.Join(err, fmt.Errorf("%v: result type is %v, must be Document, Object or Data: %w", f, typ, ErrInvalidTypeKind))
 		}
-	}
-
-	if f.Extension().Name() == "" {
-		err = errors.Join(err, fmt.Errorf("%v: command extension name is missed: %w", f, ErrNameMissed))
-	}
-
-	if f.Extension().Engine() == ExtensionEngineKind_null {
-		err = errors.Join(err, fmt.Errorf("%v: command extension engine is missed: %w", f, ErrExtensionEngineKindMissed))
 	}
 
 	return err

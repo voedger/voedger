@@ -142,7 +142,7 @@ classDiagram
     IType <|-- IExtension : inherits
     class IExtension {
         <<interface>>
-        +EntryPoint() string
+        +Name() string
         +Engine() ExtensionEngineKind
     }
 
@@ -556,7 +556,7 @@ classDiagram
     IType <|-- IExtension : inherits
     class IExtension {
         <<interface>>
-        +EntryPoint() string
+        +Name() string
         +Engine() ExtensionEngineKind
     }
 

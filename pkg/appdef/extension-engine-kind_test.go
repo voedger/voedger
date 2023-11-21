@@ -24,9 +24,9 @@ func TestExtensionEngineKind_MarshalText(t *testing.T) {
 			k:    ExtensionEngineKind_BuiltIn,
 			want: `ExtensionEngineKind_BuiltIn`,
 		},
-		{name: `ExtensionEngineKind_FakeLast —> <number>`,
-			k:    ExtensionEngineKind_FakeLast,
-			want: strconv.FormatUint(uint64(ExtensionEngineKind_FakeLast), 10),
+		{name: `ExtensionEngineKind_Count —> <number>`,
+			k:    ExtensionEngineKind_Count,
+			want: strconv.FormatUint(uint64(ExtensionEngineKind_Count), 10),
 		},
 	}
 	for _, tt := range tests {
@@ -43,11 +43,11 @@ func TestExtensionEngineKind_MarshalText(t *testing.T) {
 	}
 
 	t.Run("100% cover ExtensionEngineKind.String()", func(t *testing.T) {
-		const tested = ExtensionEngineKind_FakeLast + 1
+		const tested = ExtensionEngineKind_Count + 1
 		want := "ExtensionEngineKind(" + strconv.FormatInt(int64(tested), 10) + ")"
 		got := tested.String()
 		if got != want {
-			t.Errorf("(ExtensionEngineKind_FakeLast + 1).String() = %v, want %v", got, want)
+			t.Errorf("(ExtensionEngineKind_Count + 1).String() = %v, want %v", got, want)
 		}
 	})
 }
@@ -59,7 +59,7 @@ func TestExtensionEngineKindTrimString(t *testing.T) {
 		want string
 	}{
 		{name: "basic", k: ExtensionEngineKind_BuiltIn, want: "BuiltIn"},
-		{name: "out of range", k: ExtensionEngineKind_FakeLast + 1, want: (ExtensionEngineKind_FakeLast + 1).String()},
+		{name: "out of range", k: ExtensionEngineKind_Count + 1, want: (ExtensionEngineKind_Count + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

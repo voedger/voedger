@@ -32,7 +32,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		v.ValueBuilder().AddDataField("data", SysData_bytes, false, MaxLen(1024))
 		v.SetComment("view is intent for projector")
 
-		_ = appDef.AddCommand(cmdName).SetExtension("command", ExtensionEngineKind_BuiltIn)
+		_ = appDef.AddCommand(cmdName)
 
 		prj := appDef.AddProjector(prjName)
 
@@ -44,7 +44,6 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 		prj.
 			SetSync(true).
-			SetExtension("", ExtensionEngineKind_BuiltIn, "projector code comment").
 			AddEvent(recName, ProjectorEventKind_AnyChanges...).
 			SetEventComment(recName, fmt.Sprintf("run projector after change %v", recName)).
 			AddEvent(cmdName).
@@ -75,9 +74,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		require.Equal(TypeKind_Projector, prj.Kind())
 		require.Equal(p, prj)
 
-		require.Equal(prjName.Entity(), prj.Extension().Name())
-		require.Equal(ExtensionEngineKind_BuiltIn, prj.Extension().Engine())
-		require.Equal("projector code comment", prj.Extension().Comment())
+		require.Equal(prjName.Entity(), prj.Name())
+		require.Equal(ExtensionEngineKind_BuiltIn, prj.Engine())
 
 		t.Run("must be ok enum events", func(t *testing.T) {
 			cnt := 0
@@ -159,7 +157,9 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		_ = apb.AddCRecord(recName)
 		prj := apb.AddProjector(prjName)
 		prj.
-			SetExtension("customExtensionName", ExtensionEngineKind_WASM, "custom extension name is available").
+			SetEngine(ExtensionEngineKind_WASM).
+			SetName("customExtensionName")
+		prj.
 			AddEvent(recName, ProjectorEventKind_Insert, ProjectorEventKind_Update).
 			AddEvent(recName, ProjectorEventKind_Activate, ProjectorEventKind_Deactivate).
 			SetEventComment(recName, "event can be added twice")
@@ -168,9 +168,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 		p := app.Projector(prjName)
 
-		require.Equal("customExtensionName", p.Extension().Name())
-		require.Equal(ExtensionEngineKind_WASM, p.Extension().Engine())
-		require.Equal("custom extension name is available", p.Extension().Comment())
+		require.Equal("customExtensionName", p.Name())
+		require.Equal(ExtensionEngineKind_WASM, p.Engine())
 
 		t.Run("must be ok enum events", func(t *testing.T) {
 			cnt := 0
@@ -216,11 +215,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		apb := New()
 		prj := apb.AddProjector(NewQName("test", "projector"))
 		require.Panics(func() {
-			prj.SetExtension("naked 🔫", ExtensionEngineKind_BuiltIn)
+			prj.SetName("naked 🔫")
 		})
-		require.NotPanics(func() {
-			prj.SetExtension("customName", ExtensionEngineKind_BuiltIn)
-		}, "but no panic if name is valid identifier")
 	})
 
 	t.Run("panic if event type is empty", func(t *testing.T) {

@@ -32,10 +32,11 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		require.Nil(cmd.Result())
 
 		t.Run("must be ok to assign cmd parameter and result", func(t *testing.T) {
+			cmd.SetEngine(ExtensionEngineKind_BuiltIn)
 			cmd.
-				SetParam(parName).(ICommandBuilder).SetUnloggedParam(unlName).
-				SetResult(resName).
-				SetExtension("CmdExt", ExtensionEngineKind_BuiltIn, "comment")
+				SetParam(parName).(ICommandBuilder).
+				SetUnloggedParam(unlName).
+				SetResult(resName)
 		})
 
 		t.Run("must be ok to build", func(t *testing.T) {
@@ -59,7 +60,10 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 		cmd := app.Command(cmdName)
 		require.Equal(TypeKind_Command, cmd.Kind())
+		require.Equal(cmdName.Entity(), cmd.Name())
 		require.Equal(c, cmd)
+
+		require.Equal(ExtensionEngineKind_BuiltIn, cmd.Engine())
 
 		require.Equal(parName, cmd.Param().QName())
 		require.Equal(TypeKind_Object, cmd.Param().Kind())
@@ -69,22 +73,20 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 		require.Equal(resName, cmd.Result().QName())
 		require.Equal(TypeKind_Object, cmd.Result().Kind())
-
-		require.Equal("CmdExt", cmd.Extension().Name())
-		require.Equal(ExtensionEngineKind_BuiltIn, cmd.Extension().Engine())
-		require.Equal("comment", cmd.Extension().Comment())
 	})
 
-	t.Run("must be ok to enum functions", func(t *testing.T) {
+	t.Run("must be ok to enum commands", func(t *testing.T) {
 		cnt := 0
-		app.Functions(func(f IFunction) {
+		app.Extensions(func(ex IExtension) {
 			cnt++
 			switch cnt {
 			case 1:
-				require.Equal(TypeKind_Command, f.Kind())
-				require.Equal(cmdName, f.QName())
+				cmd, ok := ex.(ICommand)
+				require.True(ok)
+				require.Equal(TypeKind_Command, cmd.Kind())
+				require.Equal(cmdName, cmd.QName())
 			default:
-				require.Failf("unexpected function", "kind: %v, name: %v", f.Kind(), f.QName())
+				require.Failf("unexpected extension", "extension: %v", ex)
 			}
 		})
 		require.Equal(1, cnt)
@@ -122,7 +124,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		apb := New()
 		cmd := apb.AddCommand(NewQName("test", "cmd"))
 		require.Panics(func() {
-			cmd.SetExtension("", ExtensionEngineKind_BuiltIn)
+			cmd.SetName("")
 		})
 	})
 
@@ -130,8 +132,15 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		apb := New()
 		cmd := apb.AddCommand(NewQName("test", "cmd"))
 		require.Panics(func() {
-			cmd.SetExtension("naked 🔫", ExtensionEngineKind_BuiltIn)
+			cmd.SetName("naked 🔫")
 		})
+	})
+
+	t.Run("panic if extension kind is invalid", func(t *testing.T) {
+		apb := New()
+		cmd := apb.AddCommand(NewQName("test", "cmd"))
+		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_null) })
+		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_Count) })
 	})
 }
 
@@ -201,15 +210,6 @@ func Test_CommandValidate(t *testing.T) {
 		cmd.SetResult(obj)
 	})
 
-	t.Run("must error if extension name or engine is missed", func(t *testing.T) {
-		_, err := appDef.Build()
-		require.ErrorIs(err, ErrNameMissed)
-		require.ErrorContains(err, "extension name")
-
-		require.ErrorIs(err, ErrExtensionEngineKindMissed)
-	})
-
-	cmd.SetExtension("CmdExt", ExtensionEngineKind_BuiltIn)
 	_, err := appDef.Build()
 	require.NoError(err)
 }

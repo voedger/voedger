@@ -40,6 +40,8 @@ var ErrUniqueOverlaps = errors.New("unique fields overlaps")
 
 var ErrExtensionEngineKindMissed = errors.New("extension engine kind is missed")
 
+var ErrInvalidExtensionEngineKind = errors.New("extension engine kind is not valid")
+
 var ErrWorkspaceShouldBeAbstract = errors.New("workspace should be abstract")
 
 var ErrInvalidProjectorEventKind = errors.New("invalid projector event kind")
