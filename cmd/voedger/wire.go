@@ -24,6 +24,8 @@ func wireServer(ihttp.CLIParams) (WiredServer, func(), error) {
 			ihttpimpl.NewAPI,
 			ihttpctl.NewHTTPProcessorController,
 			apps.NewStaticEmbeddedResources,
+			apps.NewRedirectionRoutes,
+			apps.NewDefaultRedirectionRoute,
 			wire.Struct(new(WiredServer), "*"),
 		),
 	)
