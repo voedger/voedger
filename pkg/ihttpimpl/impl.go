@@ -154,8 +154,7 @@ func newRouter() *router {
 }
 
 func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	reqPath := req.URL.Path
-	reqPath = req.URL.EscapedPath()
+	reqPath := req.URL.EscapedPath()
 	// Clean path to canonical form and redirect.
 	if p := cleanPath(reqPath); p != reqPath {
 		reqURL := *req.URL
@@ -247,6 +246,7 @@ func getFullRequestedURL(r *http.Request) string {
 
 // cleanPath returns the canonical path for p, eliminating . and .. elements.
 // Borrowed from the net/http package.
+// nolint
 func cleanPath(p string) string {
 	if p == "" {
 		return "/"
