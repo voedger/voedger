@@ -28,7 +28,7 @@ func (o RawResultOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece) 
 		keyToIdx: map[string]int{processors.Field_RawObject_Body: 0},
 		values:   make([]interface{}, 1),
 	}
-	row.Set(processors.Field_RawObject_Body, object.AsString(processors.Field_RawObject_Body))
+	row.Set(processors.Field_RawObject_Body, object.AsBytes(processors.Field_RawObject_Body))
 	topOutputRow.Set(rootDocument, []IOutputRow{row})
 	return work, err
 }
