@@ -18,7 +18,7 @@ import (
 // Checks value by field constraints. Return error if constraints violated
 func checkConstraints(fld appdef.IField, value interface{}) (err error) {
 	switch fld.DataKind() {
-	case appdef.DataKind_string, appdef.DataKind_raw:
+	case appdef.DataKind_string:
 		err = checkCharsConstraints(fld, value.(string))
 	case appdef.DataKind_bytes:
 		err = checkCharsConstraints(fld, value.([]byte))
@@ -54,7 +54,7 @@ func checkCharsConstraints[T chars](fld appdef.IField, value T) (err error) {
 		case appdef.ConstraintKind_Pattern:
 			if pat := c.Value().(*regexp.Regexp); pat != nil {
 				switch fld.DataKind() {
-				case appdef.DataKind_string, appdef.DataKind_raw:
+				case appdef.DataKind_string:
 					if !pat.MatchString(string(value)) {
 						err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
 					}

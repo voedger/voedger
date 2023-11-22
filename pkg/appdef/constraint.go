@@ -13,16 +13,15 @@ import (
 	"slices"
 )
 
-// Return new minimum length constraint for string, bytes or raw data types.
+// Return new minimum length constraint for string or bytes data types.
 func MinLen(v uint16, c ...string) IConstraint {
 	return newDataConstraint(ConstraintKind_MinLen, v, c...)
 }
 
-// Return new maximum length restriction for string, bytes or raw data types.
+// Return new maximum length restriction for string or bytes data types.
 //
 // Using MaxLen(), you can both limit the maximum length by a smaller value,
-// and increase it to MaxFieldLength (1024) for string and bytes fields
-// and to MaxRawFieldLength (65535) for raw data fields.
+// and increase it to MaxFieldLength (65535).
 //
 // # Panics:
 //   - if value is zero

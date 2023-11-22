@@ -6,6 +6,7 @@ package commandprocessor
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -502,7 +503,7 @@ func TestBasicUsage_QNameJSONFunc(t *testing.T) {
 	ch := make(chan interface{})
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
 	testExec := func(args istructs.ExecCommandArgs) (err error) {
-		require.Equal("custom content", args.ArgumentObject.AsString(processors.Field_RawObject_Body))
+		require.EqualValues("custom content", args.ArgumentObject.AsBytes(processors.Field_RawObject_Body))
 		close(ch)
 		return
 	}
@@ -511,7 +512,7 @@ func TestBasicUsage_QNameJSONFunc(t *testing.T) {
 	app.cfg.Resources.Add(testCmd)
 
 	request := ibus.Request{
-		Body:     []byte(`custom content`),
+		Body:     []byte(base64.StdEncoding.EncodeToString([]byte(`custom content`))),
 		AppQName: istructs.AppQName_untill_airs_bp.String(),
 		WSID:     1,
 		Resource: "c.sys.Test",
@@ -625,7 +626,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 
 	// build application
 	appDef := appdef.New()
-	appDef.AddObject(istructs.QNameRaw).AddField(processors.Field_RawObject_Body, appdef.DataKind_raw, true, appdef.MaxLen(appdef.MaxRawFieldLength))
+	appDef.AddObject(istructs.QNameRaw).AddField(processors.Field_RawObject_Body, appdef.DataKind_bytes, true, appdef.MaxLen(appdef.MaxFieldLength))
 	if prepareAppDef != nil {
 		prepareAppDef(appDef)
 	}

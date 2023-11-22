@@ -456,7 +456,7 @@ func Test_Varchar(t *testing.T) {
 	TYPE CDoc1 (
 		Oversize varchar(%d)
 	);
-	`, appdef.MaxFieldLength+1, appdef.MaxFieldLength+1))
+	`, uint32(appdef.MaxFieldLength)+1, uint32(appdef.MaxFieldLength)+1))
 	require.NoError(err)
 	pkg, err := BuildPackageSchema("pkg/test", []*FileSchemaAST{fs})
 	require.NoError(err)

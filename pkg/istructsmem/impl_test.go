@@ -353,7 +353,7 @@ func TestBasicUsage_Resources(t *testing.T) {
 
 		require.Equal(test.buyerValue, doc.AsString(test.buyerIdent))
 		require.Equal(test.photoRawValue, doc.AsBytes(test.photoRawIdent))
-		require.Equal(string(test.photoRawValue), doc.AsString(test.photoRawIdent))
+		require.Equal(test.photoRawValue, doc.AsBytes(test.photoRawIdent))
 	})
 }
 

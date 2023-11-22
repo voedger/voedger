@@ -529,26 +529,34 @@ func (row *rowType) AsFloat32(name string) (value float32) {
 
 // istructs.IRowReader.AsFloat64
 func (row *rowType) AsFloat64(name string) (value float64) {
-	_ = row.fieldMustExists(name, appdef.DataKind_float64,
+	fld := row.fieldMustExists(name, appdef.DataKind_float64,
 		appdef.DataKind_int32, appdef.DataKind_int64, appdef.DataKind_float32, appdef.DataKind_RecordID)
-	if value, ok := row.dyB.GetFloat64(name); ok {
-		return value
+	switch fld.DataKind() {
+	case appdef.DataKind_int32:
+		if value, ok := row.dyB.GetInt32(name); ok {
+			return float64(value)
+		}
+	case appdef.DataKind_int64, appdef.DataKind_RecordID:
+		if value, ok := row.dyB.GetInt64(name); ok {
+			return float64(value)
+		}
+	case appdef.DataKind_float32:
+		if value, ok := row.dyB.GetFloat32(name); ok {
+			return float64(value)
+		}
+	case appdef.DataKind_float64:
+		if value, ok := row.dyB.GetFloat64(name); ok {
+			return value
+		}
 	}
 	return 0
 }
 
 // istructs.IRowReader.AsBytes
 func (row *rowType) AsBytes(name string) (value []byte) {
-	fld := row.fieldMustExists(name, appdef.DataKind_bytes, appdef.DataKind_raw)
-	switch fld.DataKind() {
-	case appdef.DataKind_bytes:
-		if bytes := row.dyB.GetByteArray(name); bytes != nil {
-			return bytes.Bytes()
-		}
-	case appdef.DataKind_raw:
-		if value, ok := row.dyB.GetString(name); ok {
-			return []byte(value)
-		}
+	_ = row.fieldMustExists(name, appdef.DataKind_bytes)
+	if bytes := row.dyB.GetByteArray(name); bytes != nil {
+		return bytes.Bytes()
 	}
 
 	return nil
@@ -560,7 +568,7 @@ func (row *rowType) AsString(name string) (value string) {
 		return row.container
 	}
 
-	_ = row.fieldMustExists(name, appdef.DataKind_string, appdef.DataKind_raw)
+	_ = row.fieldMustExists(name, appdef.DataKind_string)
 
 	if value, ok := row.dyB.GetString(name); ok {
 		return value
@@ -771,20 +779,7 @@ func (row *rowType) PutNumber(name string, value float64) {
 
 // istructs.IRowWriter.PutBytes
 func (row *rowType) PutBytes(name string, value []byte) {
-	fld := row.fieldDef(name)
-	if fld == nil {
-		row.collectErrorf(errFieldNotFoundWrap, appdef.DataKind_bytes.TrimString(), name, row.QName(), ErrNameNotFound)
-		return
-	}
-
-	switch fld.DataKind() {
-	case appdef.DataKind_bytes:
-		row.putValue(name, dynobuffers.FieldTypeByte, value)
-	case appdef.DataKind_raw:
-		row.putValue(name, dynobuffers.FieldTypeString, string(value))
-	default:
-		row.collectErrorf(errFieldValueTypeMismatchWrap, appdef.DataKind_bytes.TrimString(), fld, ErrWrongFieldType)
-	}
+	row.putValue(name, dynobuffers.FieldTypeByte, value)
 }
 
 // istructs.IRowWriter.PutString
@@ -836,8 +831,6 @@ func (row *rowType) PutChars(name string, value string) {
 		}
 		row.PutBytes(name, bytes)
 	case appdef.DataKind_string:
-		row.PutString(name, value)
-	case appdef.DataKind_raw:
 		row.PutString(name, value)
 	case appdef.DataKind_QName:
 		qName, err := appdef.ParseQName(value)
