@@ -25,7 +25,6 @@ func (hc *httpProcessorController) Prepare() (err error) {
 	return nil
 }
 
-// nolint
 func (hc *httpProcessorController) Run(ctx context.Context) {
 	for path, fs := range hc.staticResources {
 		hc.api.DeployStaticContent(path, fs)
