@@ -25,8 +25,8 @@ ABSTRACT WORKSPACE Workspace (
     );
     EXTENSION ENGINE BUILTIN (
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
-        COMMAND UpdateSubscription(ANY) RETURNS ANY;
-        QUERY UPTerminalWebhook(ANY) RETURNS ANY;
+        COMMAND UpdateSubscription(any) RETURNS any;
+        QUERY UPTerminalWebhook(any) RETURNS any;
     )
 );
 

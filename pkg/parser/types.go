@@ -602,7 +602,7 @@ type WithItem struct {
 }
 
 type AnyOrVoidOrDef struct {
-	Any  bool      `parser:"@'ANY'"`
+	Any  bool      `parser:"@'any'"`
 	Void bool      `parser:"| @'void'"`
 	Def  *DefQName `parser:"| @@"`
 }

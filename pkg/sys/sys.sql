@@ -424,7 +424,7 @@ ABSTRACT WORKSPACE Workspace (
 
 		-- collection
 
-		QUERY Collection(CollectionParams) RETURNS ANY;
+		QUERY Collection(CollectionParams) RETURNS any;
 		QUERY GetCDoc(GetCDocParams) RETURNS GetCDocResult;
 		QUERY State(StateParams) RETURNS StateResult;
 		SYNC PROJECTOR ProjectorCollection AFTER INSERT OR UPDATE ON (CRecord) INTENTS(View(CollectionView));
