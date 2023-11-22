@@ -6,8 +6,9 @@
 package istructsmem
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/binary"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -115,20 +116,6 @@ func Test_dynoBufValue(t *testing.T) {
 		require.Equal("test 🎄 tree", v)
 
 		v, err = row.dynoBufValue(7, appdef.DataKind_string)
-		require.ErrorIs(err, ErrWrongFieldType)
-		require.Nil(v)
-	})
-
-	t.Run("test raw data", func(t *testing.T) {
-		v, err := row.dynoBufValue("raw 📷", appdef.DataKind_raw)
-		require.NoError(err)
-		require.Equal("raw 📷", v)
-
-		v, err = row.dynoBufValue([]byte{1, 2, 3}, appdef.DataKind_raw)
-		require.NoError(err)
-		require.Equal(string([]byte{1, 2, 3}), v)
-
-		v, err = row.dynoBufValue(7, appdef.DataKind_raw)
 		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
@@ -267,7 +254,6 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		require.Equal([]byte(nil), row.AsBytes("bytes"))
 		require.Equal("", row.AsString("string"))
 
-		require.Equal("", row.AsString("raw"))
 		require.EqualValues([]byte(nil), row.AsBytes("raw"))
 
 		require.Equal(appdef.NullQName, row.AsQName("QName"))
@@ -297,6 +283,17 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		require.Equal(float32(3), row.AsFloat32("float32"))
 		require.Equal(float64(4), row.AsFloat64("float64"))
 		require.Equal(istructs.RecordID(5), row.AsRecordID("RecordID"))
+
+		t.Run("Should be OK to As××× with type casts", func(t *testing.T) {
+			require.EqualValues(1, row.AsFloat64("int32"))
+			require.EqualValues(2, row.AsFloat64("int64"))
+			require.EqualValues(3, row.AsFloat64("float32"))
+			require.EqualValues(5, row.AsFloat64("RecordID"))
+
+			require.EqualValues(5, row.AsInt64("RecordID"))
+
+			require.EqualValues(2, row.AsRecordID("int64"))
+		})
 	})
 
 	t.Run("PutChars to char-type fields (string, bytes, raw and QName) must be available (json)", func(t *testing.T) {
@@ -310,14 +307,15 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		row.PutChars("bytes", "AQIDBA==")
 		// cspell:enable
 
-		row.PutChars("raw", strings.Repeat("test 📷 raw", 1024))
+		rawValue := bytes.Repeat([]byte{1, 2, 3, 4}, 1024)
+		row.PutChars("raw", base64.StdEncoding.EncodeToString(rawValue))
 
 		require.NoError(row.build())
 
 		require.Equal("test 🏐 тест", row.AsString("string"))
 		require.Equal(test.saleCmdName, row.AsQName("QName"))
 		require.Equal([]byte{1, 2, 3, 4}, row.AsBytes("bytes"))
-		require.Equal(strings.Repeat("test 📷 raw", 1024), row.AsString("raw"))
+		require.Equal(rawValue, row.AsBytes("raw"))
 	})
 }
 
@@ -575,7 +573,7 @@ func Test_rowType_maskValues(t *testing.T) {
 		require.Equal(float64(0), row.AsFloat64("float64"))
 		require.Nil(row.AsBytes("bytes"))
 		require.Equal("*", row.AsString("string"))
-		require.Equal("*", row.AsString("raw"))
+		require.Nil(row.AsBytes("raw"))
 		require.Equal(appdef.NullQName, row.AsQName("QName"))
 		require.Equal(false, row.AsBool("bool"))
 		require.Equal(istructs.NullRecordID, row.AsRecordID("RecordID"))
@@ -619,6 +617,36 @@ func Test_rowType_FieldNames(t *testing.T) {
 			cnt++
 		})
 		require.Equal(11, cnt) // QName + ten user fields for simple types
+	})
+
+	t.Run("should be ok iterate with filled system fields", func(t *testing.T) {
+		rec := newTestCRecord(7)
+		rec.PutRecordID(appdef.SystemField_ParentID, 5)
+		rec.PutString(appdef.SystemField_Container, "rec")
+
+		sys := make(map[string]interface{})
+		rec.FieldNames(func(fieldName string) {
+			if appdef.IsSysField(fieldName) {
+				switch rec.fieldDef(fieldName).DataKind() {
+				case appdef.DataKind_QName:
+					sys[fieldName] = rec.AsQName(fieldName)
+				case appdef.DataKind_RecordID:
+					sys[fieldName] = rec.AsRecordID(fieldName)
+				case appdef.DataKind_string:
+					sys[fieldName] = rec.AsString(fieldName)
+				case appdef.DataKind_bool:
+					sys[fieldName] = rec.AsBool(fieldName)
+				default:
+					require.Fail("unexpected system field", "field name: «%s»", fieldName)
+				}
+			}
+		})
+		require.Len(sys, 5)
+		require.EqualValues(test.testCRec, sys[appdef.SystemField_QName])
+		require.EqualValues(7, sys[appdef.SystemField_ID])
+		require.EqualValues(5, sys[appdef.SystemField_ParentID])
+		require.EqualValues("rec", sys[appdef.SystemField_Container])
+		require.True(sys[appdef.SystemField_IsActive].(bool))
 	})
 }
 
@@ -744,7 +772,7 @@ func Test_rowType_Nils(t *testing.T) {
 		row.PutFloat64("float64", 0)
 		row.PutBytes("bytes", []byte{})
 		row.PutString("string", "")
-		row.PutString("raw", "")
+		row.PutBytes("raw", []byte{})
 		row.PutQName("QName", appdef.NullQName)
 		row.PutBool("bool", false)
 		row.PutRecordID("RecordID", istructs.NullRecordID)
