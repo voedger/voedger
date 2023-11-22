@@ -494,7 +494,7 @@ func getAuthHeader(token string) map[string][]string {
 	}
 }
 
-func TestBasicUsage_QNameJSONFunc(t *testing.T) {
+func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 	require := require.New(t)
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {})
 	defer tearDown(app)
