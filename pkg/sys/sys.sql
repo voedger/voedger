@@ -18,6 +18,7 @@ ABSTRACT TABLE Singleton INHERITS CDoc();
 ALTERABLE WORKSPACE AppWorkspaceWS();
 
 TYPE Raw (
+	-- must not be bytes because the engine will expect urlBase64-encoded string as the value to put into this field
 	Body varchar(65535) NOT NULL
 );
 
