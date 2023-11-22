@@ -17,8 +17,8 @@ func NewStaticEmbeddedResources() []ihttpctl.StaticResourcesType {
 
 func NewRedirectionRoutes() ihttpctl.RedirectRoutes {
 	return ihttpctl.RedirectRoutes{
-		"(https?://[^/]*/)(grafana/(.*)|grafana$)":       "http://127.0.0.1:3000/$3",
-		"(https?://[^/]*/)(prometheus/(.*)|prometheus$)": "http://127.0.0.1:9090/$3",
+		"(https?://[^/]*)/grafana($|/.*)":    "http://127.0.0.1:3000/$3",
+		"(https?://[^/]*)/prometheus($|/.*)": "http://127.0.0.1:9090/$3",
 	}
 }
 
