@@ -5,7 +5,10 @@
 package apps
 
 import (
+	"fmt"
+
 	sysmonitor "github.com/voedger/voedger/pkg/apps/sys.monitor"
+	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 )
 
@@ -15,10 +18,10 @@ func NewStaticEmbeddedResources() []ihttpctl.StaticResourcesType {
 	}
 }
 
-func NewRedirectionRoutes() ihttpctl.RedirectRoutes {
+func NewRedirectionRoutes(grafanaPort ihttp.GrafanaPort, prometheusPort ihttp.PrometheusPort) ihttpctl.RedirectRoutes {
 	return ihttpctl.RedirectRoutes{
-		"(https?://[^/]*)/grafana($|/.*)":    "http://127.0.0.1:3000/$3",
-		"(https?://[^/]*)/prometheus($|/.*)": "http://127.0.0.1:9090/$3",
+		"(https?://[^/]*)/grafana($|/.*)":    fmt.Sprintf("http://127.0.0.1:%d$2", grafanaPort),
+		"(https?://[^/]*)/prometheus($|/.*)": fmt.Sprintf("http://127.0.0.1:%d$2", prometheusPort),
 	}
 }
 

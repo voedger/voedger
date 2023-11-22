@@ -17,7 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/ihttpimpl"
 )
 
-func wireServer(ihttp.CLIParams) (WiredServer, func(), error) {
+func wireServer(ihttp.CLIParams, ihttp.GrafanaPort, ihttp.PrometheusPort) (WiredServer, func(), error) {
 	panic(
 		wire.Build(
 			ihttpimpl.NewProcessor,

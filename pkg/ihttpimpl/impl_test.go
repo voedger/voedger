@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/ihttp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -88,17 +89,18 @@ func TestReverseProxy(t *testing.T) {
 	defer tearDown(testApp)
 
 	testAppPort := testApp.processor.ListeningPort()
-	targetListenerPort := 10000
-	targetListener, err := net.Listen("tcp", coreutils.ServerAddress(targetListenerPort))
+	targetListener, err := net.Listen("tcp", coreutils.ServerAddress(0))
 	require.NoError(err)
+	targetListenerPort := targetListener.Addr().(*net.TCPAddr).Port
 
 	errs := make(chan error)
 	defer close(errs)
 
 	paths := map[string]string{
 		"/static/embedded/test.txt": fmt.Sprintf("http://127.0.0.1:%d/static/embedded/test.txt", testAppPort),
-		"/grafana/report":           fmt.Sprintf("http://127.0.0.1:%d/report", targetListenerPort),
 		"/grafana":                  fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
+		"/grafana/":                 fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
+		"/grafana/report":           fmt.Sprintf("http://127.0.0.1:%d/report", targetListenerPort),
 		"/grafanawhatever":          fmt.Sprintf("http://127.0.0.1:%d/unknown/grafanawhatever", targetListenerPort),
 		"/a/grafana":                fmt.Sprintf("http://127.0.0.1:%d/unknown/a/grafana", targetListenerPort),
 		"/a/b/grafana/whatever":     fmt.Sprintf("http://127.0.0.1:%d/unknown/a/b/grafana/whatever", targetListenerPort),
@@ -117,7 +119,9 @@ func TestReverseProxy(t *testing.T) {
 	testContentSubFs, err := fs.Sub(testContentFS, "testcontent")
 	require.NoError(err)
 
-	testApp.api.AddReverseProxyRoute("(https?://[^/]*)/grafana($|/.*)", fmt.Sprintf("http://127.0.0.1:%d$2", targetListenerPort))
+	for srcRegExp, dstRegExp := range apps.NewRedirectionRoutes(ihttp.GrafanaPort(targetListenerPort), ihttp.PrometheusPort(targetListenerPort)) {
+		testApp.api.AddReverseProxyRoute(srcRegExp, dstRegExp)
+	}
 	testApp.api.AddReverseProxyRouteDefault("^(https?)://([^/]+)/([^?]+)?(\\?(.+))?$", fmt.Sprintf("http://127.0.0.1:%d/unknown/$3", targetListenerPort))
 	testApp.api.DeployStaticContent("embedded", testContentSubFs)
 	for requestedPath, expectedPath := range paths {
