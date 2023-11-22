@@ -123,7 +123,7 @@ func TestReverseProxy(t *testing.T) {
 	err = testApp.api.DeployStaticContent(testApp.ctx, "embedded", testContentSubFs)
 	require.NoError(err)
 
-	for requestedPath, _ := range targetHandler.expectedURLPath {
+	for requestedPath := range targetHandler.expectedURLPath {
 		testApp.get(requestedPath)
 	}
 }
