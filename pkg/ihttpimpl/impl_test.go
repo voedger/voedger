@@ -22,8 +22,6 @@ import (
 	"sync"
 	"testing"
 
-	"golang.org/x/exp/maps"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/ihttp"
@@ -97,18 +95,17 @@ func TestReverseProxy(t *testing.T) {
 	errs := make(chan error)
 	defer close(errs)
 
-	targetHandler := targetHandler{
-		t,
-		map[string]string{
-			"/static/embedded/test.txt": fmt.Sprintf("http://127.0.0.1:%d/static/embedded/test.txt", testAppPort),
-			"/grafana/report":           fmt.Sprintf("http://127.0.0.1:%d/report", targetListenerPort),
-			"/grafana":                  fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
-			"/grafanawhatever":          fmt.Sprintf("http://127.0.0.1:%d/unknown/grafanawhatever", targetListenerPort),
-			"/a/grafana":                fmt.Sprintf("http://127.0.0.1:%d/unknown/a/grafana", targetListenerPort),
-			"/a/b/grafana/whatever":     fmt.Sprintf("http://127.0.0.1:%d/unknown/a/b/grafana/whatever", targetListenerPort),
-			"/some_unregistered_path":   fmt.Sprintf("http://127.0.0.1:%d/unknown/some_unregistered_path", targetListenerPort),
-		},
+	paths := map[string]string{
+		"/static/embedded/test.txt": fmt.Sprintf("http://127.0.0.1:%d/static/embedded/test.txt", testAppPort),
+		"/grafana/report":           fmt.Sprintf("http://127.0.0.1:%d/report", targetListenerPort),
+		"/grafana":                  fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
+		"/grafanawhatever":          fmt.Sprintf("http://127.0.0.1:%d/unknown/grafanawhatever", targetListenerPort),
+		"/a/grafana":                fmt.Sprintf("http://127.0.0.1:%d/unknown/a/grafana", targetListenerPort),
+		"/a/b/grafana/whatever":     fmt.Sprintf("http://127.0.0.1:%d/unknown/a/b/grafana/whatever", targetListenerPort),
+		"/some_unregistered_path":   fmt.Sprintf("http://127.0.0.1:%d/unknown/some_unregistered_path", targetListenerPort),
 	}
+
+	targetHandler := targetHandler{t: t}
 	targetServer := http.Server{
 		Handler: &targetHandler,
 	}
@@ -120,10 +117,11 @@ func TestReverseProxy(t *testing.T) {
 	testContentSubFs, err := fs.Sub(testContentFS, "testcontent")
 	require.NoError(err)
 
-	testApp.api.AddReverseProxyRoute("(https?://[^/]*/)(grafana/(.*)|grafana$)", fmt.Sprintf("http://127.0.0.1:%d/$3", targetListenerPort))
+	testApp.api.AddReverseProxyRoute("(https?://[^/]*)/grafana($|/.*)", fmt.Sprintf("http://127.0.0.1:%d$2", targetListenerPort))
 	testApp.api.AddReverseProxyRouteDefault("^(https?)://([^/]+)/([^?]+)?(\\?(.+))?$", fmt.Sprintf("http://127.0.0.1:%d/unknown/$3", targetListenerPort))
 	testApp.api.DeployStaticContent("embedded", testContentSubFs)
-	for requestedPath := range targetHandler.expectedURLPath {
+	for requestedPath, expectedPath := range paths {
+		targetHandler.expectedURLPath = expectedPath
 		testApp.get(requestedPath)
 	}
 }
@@ -231,7 +229,7 @@ func makeTmpContent(require *require.Assertions, pattern string) (dir string, fi
 
 type targetHandler struct {
 	t               *testing.T
-	expectedURLPath map[string]string
+	expectedURLPath string
 }
 
 func (h *targetHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -240,5 +238,5 @@ func (h *targetHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	require.NoError(h.t, err)
 	req.Close = true
 	req.Body.Close()
-	require.Contains(h.t, maps.Values(h.expectedURLPath), getFullRequestedURL(req))
+	require.Equal(h.t, h.expectedURLPath, getFullRequestedURL(req))
 }
