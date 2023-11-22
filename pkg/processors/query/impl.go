@@ -194,7 +194,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			parsType := qw.appStructs.AppDef().Type(qw.queryFunction.ParamsType())
 			if parsType.QName() == istructs.QNameRaw {
 				qw.requestData["args"] = map[string]interface{}{
-					processors.Field_RawObject_Body: qw.msg.Body(),
+					processors.Field_RawObject_Body: string(qw.msg.Body()),
 				}
 				return nil
 			}
