@@ -483,11 +483,11 @@ func (c *buildContext) commands() error {
 			qname := schema.NewQName(cmd.Name)
 			b := c.builder.AddCommand(qname)
 			c.addComments(cmd, b)
-			if cmd.Arg != nil {
-				setParam(ictx, cmd.Arg, func(qn appdef.QName) { b.SetParam(qn) })
+			if cmd.Param != nil {
+				setParam(ictx, cmd.Param, func(qn appdef.QName) { b.SetParam(qn) })
 			}
-			if cmd.UnloggedArg != nil {
-				setParam(ictx, cmd.UnloggedArg, func(qn appdef.QName) { b.SetUnloggedParam(qn) })
+			if cmd.UnloggedParam != nil {
+				setParam(ictx, cmd.UnloggedParam, func(qn appdef.QName) { b.SetUnloggedParam(qn) })
 			}
 			if cmd.Returns != nil {
 				setParam(ictx, cmd.Returns, func(qn appdef.QName) { b.SetResult(qn) })
@@ -509,8 +509,8 @@ func (c *buildContext) queries() error {
 			qname := schema.NewQName(q.Name)
 			b := c.builder.AddQuery(qname)
 			c.addComments(q, b)
-			if q.Arg != nil {
-				setParam(ictx, q.Arg, func(qn appdef.QName) { b.SetParam(qn) })
+			if q.Param != nil {
+				setParam(ictx, q.Param, func(qn appdef.QName) { b.SetParam(qn) })
 			}
 
 			setParam(ictx, &q.Returns, func(qn appdef.QName) { b.SetResult(qn) })

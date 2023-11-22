@@ -236,13 +236,13 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 		}
 	}
 
-	if cmd.Arg != nil && cmd.Arg.Def != nil {
-		resolve(*cmd.Arg.Def)
+	if cmd.Param != nil && cmd.Param.Def != nil {
+		resolve(*cmd.Param.Def)
 	}
-	if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
-		err := resolveInCtx(*cmd.UnloggedArg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil })
+	if cmd.UnloggedParam != nil && cmd.UnloggedParam.Def != nil {
+		err := resolveInCtx(*cmd.UnloggedParam.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil })
 		if err != nil {
-			if err = resolveInCtx(*cmd.UnloggedArg.Def, c, func(*TableStmt, *PackageSchemaAST) error { return nil }); err != nil {
+			if err = resolveInCtx(*cmd.UnloggedParam.Def, c, func(*TableStmt, *PackageSchemaAST) error { return nil }); err != nil {
 				c.stmtErr(&cmd.Pos, err)
 			}
 		}
@@ -254,8 +254,8 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 }
 
 func analyzeQuery(query *QueryStmt, c *iterateCtx) {
-	if query.Arg != nil && query.Arg.Def != nil {
-		if err := resolveInCtx(*query.Arg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
+	if query.Param != nil && query.Param.Def != nil {
+		if err := resolveInCtx(*query.Param.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
 			c.stmtErr(&query.Pos, err)
 		}
 
