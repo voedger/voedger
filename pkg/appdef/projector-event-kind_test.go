@@ -96,10 +96,14 @@ func TestProjectorEventKind_typeCompatible(t *testing.T) {
 		{"ok Execute Command", ProjectorEventKind_Execute, args{TypeKind_Command}, true},
 		{"fail Execute GRecord", ProjectorEventKind_Execute, args{TypeKind_GRecord}, false},
 
+		{"ok Execute with Object", ProjectorEventKind_ExecuteWithParam, args{TypeKind_Object}, true},
+		{"fail Execute with GRecord", ProjectorEventKind_ExecuteWithParam, args{TypeKind_GRecord}, false},
+
 		{"fail Insert Command", ProjectorEventKind_Insert, args{TypeKind_Command}, false},
 
 		{"fail Insert Query", ProjectorEventKind_Insert, args{TypeKind_Query}, false},
 		{"fail Execute View", ProjectorEventKind_Execute, args{TypeKind_ViewRecord}, false},
+		{"fail Execute with View", ProjectorEventKind_ExecuteWithParam, args{TypeKind_ViewRecord}, false},
 
 		{"fail out of bounds event", ProjectorEventKind_Count + 1, args{TypeKind_CDoc}, false},
 	}
