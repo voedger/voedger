@@ -1873,3 +1873,28 @@ WORKSPACE Workspace1 (
 	require.NoError(err)
 
 }
+
+func Test_EmptyType(t *testing.T) {
+	require := require.New(t)
+	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+
+APPLICATION registry(
+);
+
+TYPE EmptyType (
+);
+	`)
+
+	app, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
+	require.NoError(err)
+
+	builder := appdef.New()
+	err = BuildAppDefs(app, builder)
+	require.NoError(err)
+
+	cdoc := builder.Object(appdef.NewQName("app1", "EmptyType"))
+	require.NotNil(cdoc)
+
+	_, err = builder.Build()
+	require.NoError(err)
+}

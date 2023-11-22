@@ -234,7 +234,7 @@ func (s *AlterWorkspaceStmt) Iterate(callback func(stmt interface{})) {
 type TypeStmt struct {
 	Statement
 	Name  Ident           `parser:"'TYPE' @Ident "`
-	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
+	Items []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 }
 
 func (s TypeStmt) GetName() string { return string(s.Name) }
