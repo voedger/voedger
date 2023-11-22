@@ -21,7 +21,7 @@ func newServerCmd() *cobra.Command {
 		Use:   "server",
 		Short: "Start server",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			wired, cleanup, err := wireServer(httpCLIParams)
+			wired, cleanup, err := wireServer(httpCLIParams, ihttp.GrafanaPort(3000), ihttp.PrometheusPort(9090))
 			if err != nil {
 				return fmt.Errorf("services not wired: %w", err)
 			}
