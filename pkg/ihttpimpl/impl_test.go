@@ -101,9 +101,14 @@ func TestReverseProxy(t *testing.T) {
 		"/grafana":                  fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
 		"/grafana/":                 fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
 		"/grafana/report":           fmt.Sprintf("http://127.0.0.1:%d/report", targetListenerPort),
+		"/prometheus":               fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
+		"/prometheus/":              fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
+		"/prometheus/report":        fmt.Sprintf("http://127.0.0.1:%d/report", targetListenerPort),
 		"/grafanawhatever":          fmt.Sprintf("http://127.0.0.1:%d/unknown/grafanawhatever", targetListenerPort),
 		"/a/grafana":                fmt.Sprintf("http://127.0.0.1:%d/unknown/a/grafana", targetListenerPort),
 		"/a/b/grafana/whatever":     fmt.Sprintf("http://127.0.0.1:%d/unknown/a/b/grafana/whatever", targetListenerPort),
+		"/z/prometheus":             fmt.Sprintf("http://127.0.0.1:%d/unknown/z/prometheus", targetListenerPort),
+		"/z/v/prometheus/whatever":  fmt.Sprintf("http://127.0.0.1:%d/unknown/z/v/prometheus/whatever", targetListenerPort),
 		"/some_unregistered_path":   fmt.Sprintf("http://127.0.0.1:%d/unknown/some_unregistered_path", targetListenerPort),
 	}
 
