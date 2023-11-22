@@ -59,12 +59,7 @@ func (i ProjectorEventKind) TrimString() string {
 //   - Only command can be executed.
 func (i ProjectorEventKind) typeCompatible(kind TypeKind) bool {
 	switch i {
-	case ProjectorEventKind_Insert:
-		return kind == TypeKind_GDoc || kind == TypeKind_GRecord ||
-			kind == TypeKind_CDoc || kind == TypeKind_CRecord ||
-			kind == TypeKind_WDoc || kind == TypeKind_WRecord ||
-			kind == TypeKind_ODoc || kind == TypeKind_ORecord
-	case ProjectorEventKind_Update, ProjectorEventKind_Activate, ProjectorEventKind_Deactivate:
+	case ProjectorEventKind_Insert, ProjectorEventKind_Update, ProjectorEventKind_Activate, ProjectorEventKind_Deactivate:
 		return kind == TypeKind_GDoc || kind == TypeKind_GRecord ||
 			kind == TypeKind_CDoc || kind == TypeKind_CRecord ||
 			kind == TypeKind_WDoc || kind == TypeKind_WRecord

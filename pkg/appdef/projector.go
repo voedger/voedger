@@ -41,11 +41,9 @@ func (prj *projector) AddEvent(on QName, event ...ProjectorEventKind) IProjector
 		panic(fmt.Errorf("%v: type «%v» not found: %w", prj, on, ErrNameNotFound))
 	}
 	switch t.Kind() {
-	case TypeKind_GDoc, TypeKind_GRecord,
-		TypeKind_CDoc, TypeKind_CRecord,
-		TypeKind_WDoc, TypeKind_WRecord,
-		TypeKind_ODoc, TypeKind_ORecord,
-		TypeKind_Command:
+	case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord,
+		TypeKind_Command,
+		TypeKind_ODoc, TypeKind_Object:
 		if e, ok := prj.events[on]; ok {
 			e.addKind(event...)
 		} else {
@@ -111,11 +109,21 @@ type (
 
 func newProjectorEvent(on IType, kind ...ProjectorEventKind) *projectorEvent {
 	p := &projectorEvent{on: on}
-	switch on.Kind() {
-	case TypeKind_Command:
-		p.addKind(ProjectorEventKind_Execute)
+
+	if len(kind) > 0 {
+		p.addKind(kind...)
+	} else {
+		// missed kind, make defaults
+		switch on.Kind() {
+		case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord:
+			p.addKind(ProjectorEventKind_AnyChanges...)
+		case TypeKind_Command:
+			p.addKind(ProjectorEventKind_Execute)
+		case TypeKind_Object, TypeKind_ODoc:
+			p.addKind(ProjectorEventKind_ExecuteWithParam)
+		}
 	}
-	p.addKind(kind...)
+
 	return p
 }
 

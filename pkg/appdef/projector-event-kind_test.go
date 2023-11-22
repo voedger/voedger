@@ -81,29 +81,29 @@ func TestProjectorEventKind_typeCompatible(t *testing.T) {
 		args args
 		want bool
 	}{
+		// insert, update, deactivate
 		{"ok Insert CDoc", ProjectorEventKind_Insert, args{TypeKind_CDoc}, true},
-		{"ok Update CDoc", ProjectorEventKind_Update, args{TypeKind_CDoc}, true},
-		{"ok Deactivate CDoc", ProjectorEventKind_Deactivate, args{TypeKind_CDoc}, true},
-
-		{"ok Insert WDoc", ProjectorEventKind_Insert, args{TypeKind_WDoc}, true},
 		{"ok Update WDoc", ProjectorEventKind_Update, args{TypeKind_WDoc}, true},
-		{"ok Deactivate WDoc", ProjectorEventKind_Deactivate, args{TypeKind_WDoc}, true},
+		{"ok Deactivate GDoc", ProjectorEventKind_Deactivate, args{TypeKind_GDoc}, true},
 
-		{"ok Insert ODoc", ProjectorEventKind_Insert, args{TypeKind_ODoc}, true},
-		{"fail Update ODoc", ProjectorEventKind_Update, args{TypeKind_ODoc}, false},
-		{"fail Deactivate ODoc", ProjectorEventKind_Deactivate, args{TypeKind_ODoc}, false},
+		{"fail Insert ODoc", ProjectorEventKind_Insert, args{TypeKind_ODoc}, false},
+		{"fail Update ORecord", ProjectorEventKind_Update, args{TypeKind_ORecord}, false},
+		{"fail Deactivate Object", ProjectorEventKind_Deactivate, args{TypeKind_Object}, false},
 
+		// execute
 		{"ok Execute Command", ProjectorEventKind_Execute, args{TypeKind_Command}, true},
-		{"fail Execute GRecord", ProjectorEventKind_Execute, args{TypeKind_GRecord}, false},
+		{"fail Execute CRecord", ProjectorEventKind_Execute, args{TypeKind_CRecord}, false},
+		{"fail Execute Object", ProjectorEventKind_Execute, args{TypeKind_Object}, false},
 
+		// execute with param
 		{"ok Execute with Object", ProjectorEventKind_ExecuteWithParam, args{TypeKind_Object}, true},
-		{"fail Execute with GRecord", ProjectorEventKind_ExecuteWithParam, args{TypeKind_GRecord}, false},
+		{"ok Execute with ODoc", ProjectorEventKind_ExecuteWithParam, args{TypeKind_ODoc}, true},
+		{"fail Execute with WRecord", ProjectorEventKind_ExecuteWithParam, args{TypeKind_WRecord}, false},
 
-		{"fail Insert Command", ProjectorEventKind_Insert, args{TypeKind_Command}, false},
-
+		// absurds
 		{"fail Insert Query", ProjectorEventKind_Insert, args{TypeKind_Query}, false},
 		{"fail Execute View", ProjectorEventKind_Execute, args{TypeKind_ViewRecord}, false},
-		{"fail Execute with View", ProjectorEventKind_ExecuteWithParam, args{TypeKind_ViewRecord}, false},
+		{"fail Execute with Workspace", ProjectorEventKind_ExecuteWithParam, args{TypeKind_Workspace}, false},
 
 		{"fail out of bounds event", ProjectorEventKind_Count + 1, args{TypeKind_CDoc}, false},
 	}

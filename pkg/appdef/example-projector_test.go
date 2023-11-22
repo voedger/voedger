@@ -21,7 +21,7 @@ func ExampleIAppDefBuilder_AddProjector() {
 	docName := appdef.NewQName("test", "doc")
 	viewName := appdef.NewQName("test", "view")
 
-	// how to build AppDef with projector
+	// how to build AppDef with projectors
 	{
 		appDef := appdef.New()
 
@@ -35,7 +35,6 @@ func ExampleIAppDefBuilder_AddProjector() {
 		v.SetComment("view is intent for projector")
 
 		prj := appDef.AddProjector(prjName)
-		prj.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 		prj.
 			AddEvent(recName, appdef.ProjectorEventKind_AnyChanges...).
 			SetEventComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName)).
