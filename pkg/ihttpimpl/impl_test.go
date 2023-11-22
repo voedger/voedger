@@ -103,7 +103,9 @@ func TestReverseProxy(t *testing.T) {
 			"/static/embedded/test.txt": fmt.Sprintf("http://127.0.0.1:%d/static/embedded/test.txt", testAppPort),
 			"/grafana/report":           fmt.Sprintf("http://127.0.0.1:%d/report", targetListenerPort),
 			"/grafana":                  fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
-			"/grafanawerwereport":       fmt.Sprintf("http://127.0.0.1:%d/unknown/grafanawerwereport", targetListenerPort),
+			"/grafanawhatever":          fmt.Sprintf("http://127.0.0.1:%d/unknown/grafanawhatever", targetListenerPort),
+			"/a/grafana":                fmt.Sprintf("http://127.0.0.1:%d/unknown/a/grafana", targetListenerPort),
+			"/a/b/grafana/whatever":     fmt.Sprintf("http://127.0.0.1:%d/unknown/a/b/grafana/whatever", targetListenerPort),
 			"/some_unregistered_path":   fmt.Sprintf("http://127.0.0.1:%d/unknown/some_unregistered_path", targetListenerPort),
 		},
 	}
@@ -118,8 +120,7 @@ func TestReverseProxy(t *testing.T) {
 	testContentSubFs, err := fs.Sub(testContentFS, "testcontent")
 	require.NoError(err)
 
-	testApp.api.AddReverseProxyRoute("(https?://[^/]*/)grafana/(.*)", fmt.Sprintf("http://127.0.0.1:%d/$2", targetListenerPort))
-	testApp.api.AddReverseProxyRoute("(https?://[^/]*/)grafana$", fmt.Sprintf("http://127.0.0.1:%d", targetListenerPort))
+	testApp.api.AddReverseProxyRoute("(https?://[^/]*/)(grafana/(.*)|grafana$)", fmt.Sprintf("http://127.0.0.1:%d/$3", targetListenerPort))
 	testApp.api.AddReverseProxyRouteDefault("^(https?)://([^/]+)/([^?]+)?(\\?(.+))?$", fmt.Sprintf("http://127.0.0.1:%d/unknown/$3", targetListenerPort))
 	testApp.api.DeployStaticContent("embedded", testContentSubFs)
 	for requestedPath := range targetHandler.expectedURLPath {
