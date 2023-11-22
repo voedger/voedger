@@ -19,6 +19,7 @@ const (
 	ProjectorEventKind_Activate
 	ProjectorEventKind_Deactivate
 	ProjectorEventKind_Execute
+	ProjectorEventKind_ExecuteWithParam
 
 	ProjectorEventKind_Count
 )
@@ -69,6 +70,8 @@ func (i ProjectorEventKind) typeCompatible(kind TypeKind) bool {
 			kind == TypeKind_WDoc || kind == TypeKind_WRecord
 	case ProjectorEventKind_Execute:
 		return kind == TypeKind_Command
+	case ProjectorEventKind_ExecuteWithParam:
+		return kind == TypeKind_Object || kind == TypeKind_ODoc
 	}
 	return false
 }

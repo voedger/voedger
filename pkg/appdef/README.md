@@ -611,7 +611,8 @@ classDiagram
         Update
         Activate
         Deactivate
-        Execute*
+        Execute
+        ExecuteWithParam
     }
 
     IProjector "1" *--> "0..*" storage : States
