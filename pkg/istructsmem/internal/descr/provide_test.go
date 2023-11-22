@@ -66,7 +66,8 @@ func TestBasicUsage(t *testing.T) {
 	obj := appDef.AddObject(objName)
 	obj.AddField("f1", appdef.DataKind_string, true)
 
-	appDef.AddCommand(appdef.NewQName("test", "cmd")).
+	cmdName := appdef.NewQName("test", "cmd")
+	appDef.AddCommand(cmdName).
 		SetUnloggedParam(objName).
 		SetParam(objName).
 		SetEngine(appdef.ExtensionEngineKind_WASM)
@@ -76,8 +77,9 @@ func TestBasicUsage(t *testing.T) {
 		SetResult(appdef.QNameANY)
 
 	appDef.AddProjector(appdef.NewQName("test", "projector")).
-		AddEvent(appdef.NewQName("test", "cmd"), appdef.ProjectorEventKind_Execute).
-		AddEvent(recName, appdef.ProjectorEventKind_AnyChanges...).
+		AddEvent(recName, appdef.ProjectorEventKind_AnyChanges...).SetEventComment(recName, "run projector every time when «test.rec» is changed").
+		AddEvent(cmdName).SetEventComment(cmdName, "run projector every time when «test.cmd» command is executed").
+		AddEvent(objName).SetEventComment(objName, "run projector every time when any command with «test.obj» argument is executed").
 		AddState(appdef.NewQName("sys", "records"), docName, recName).
 		AddIntent(appdef.NewQName("sys", "views"), viewName).
 		SetEngine(appdef.ExtensionEngineKind_WASM)

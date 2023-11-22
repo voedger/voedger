@@ -42,6 +42,7 @@ type Projector struct {
 }
 
 type ProjectorEvent struct {
-	On   appdef.QName `json:"-"`
-	Kind []string     `json:",omitempty"`
+	Comment string       `json:",omitempty"`
+	On      appdef.QName `json:"-"`
+	Kind    []string     `json:",omitempty"`
 }

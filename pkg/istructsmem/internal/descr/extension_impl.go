@@ -96,6 +96,7 @@ func (p *Projector) read(prj appdef.IProjector) {
 }
 
 func (e *ProjectorEvent) read(ev appdef.IProjectorEvent) {
+	e.Comment = ev.Comment()
 	e.On = ev.On().QName()
 	for _, k := range ev.Kind() {
 		e.Kind = append(e.Kind, k.TrimString())

@@ -225,9 +225,15 @@
             "Engine": "WASM",
             "Events": {
               "test.cmd": {
+                "Comment": "run projector every time when «test.cmd» command is executed",
                 "Kind": ["Execute"]
               },
+              "test.obj":{
+                "Comment": "run projector every time when any command with «test.obj» argument is executed",
+                "Kind": ["ExecuteWithParam"]
+              },
               "test.rec": {
+                "Comment": "run projector every time when «test.rec» is changed",
                 "Kind": ["Insert", "Update", "Activate", "Deactivate"]
               }
             },
