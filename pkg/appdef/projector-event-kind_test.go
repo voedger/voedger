@@ -85,8 +85,8 @@ func TestProjectorEventKind_typeCompatible(t *testing.T) {
 		{"ok Insert CDoc", ProjectorEventKind_Insert, args{TypeKind_CDoc}, true},
 		{"ok Update WDoc", ProjectorEventKind_Update, args{TypeKind_WDoc}, true},
 		{"ok Deactivate GDoc", ProjectorEventKind_Deactivate, args{TypeKind_GDoc}, true},
+		{"ok Insert ODoc", ProjectorEventKind_Insert, args{TypeKind_ODoc}, true},
 
-		{"fail Insert ODoc", ProjectorEventKind_Insert, args{TypeKind_ODoc}, false},
 		{"fail Update ORecord", ProjectorEventKind_Update, args{TypeKind_ORecord}, false},
 		{"fail Deactivate Object", ProjectorEventKind_Deactivate, args{TypeKind_Object}, false},
 

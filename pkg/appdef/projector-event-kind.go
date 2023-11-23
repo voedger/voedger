@@ -57,9 +57,15 @@ func (i ProjectorEventKind) TrimString() string {
 //   - Any document or record can be inserted.
 //   - Any document or record, except ODoc and ORecord, can be updated, activated or deactivated.
 //   - Only command can be executed.
+//   - Only object, ODoc or ORecord can be parameter for command execute with.
 func (i ProjectorEventKind) typeCompatible(kind TypeKind) bool {
 	switch i {
-	case ProjectorEventKind_Insert, ProjectorEventKind_Update, ProjectorEventKind_Activate, ProjectorEventKind_Deactivate:
+	case ProjectorEventKind_Insert:
+		return kind == TypeKind_GDoc || kind == TypeKind_GRecord ||
+			kind == TypeKind_CDoc || kind == TypeKind_CRecord ||
+			kind == TypeKind_WDoc || kind == TypeKind_WRecord ||
+			kind == TypeKind_ODoc || kind == TypeKind_ORecord
+	case ProjectorEventKind_Update, ProjectorEventKind_Activate, ProjectorEventKind_Deactivate:
 		return kind == TypeKind_GDoc || kind == TypeKind_GRecord ||
 			kind == TypeKind_CDoc || kind == TypeKind_CRecord ||
 			kind == TypeKind_WDoc || kind == TypeKind_WRecord
