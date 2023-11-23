@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -13,9 +14,8 @@ import (
 // # Implements:
 //   - IProjector & IProjectorBuilder
 type projector struct {
-	typ
+	extension
 	sync    bool
-	ext     *extension
 	events  projectorEvents
 	states  storages
 	intents storages
@@ -23,12 +23,11 @@ type projector struct {
 
 func newProjector(app *appDef, name QName) *projector {
 	prj := &projector{
-		typ:     makeType(app, name, TypeKind_Projector),
-		ext:     newExtension(),
 		events:  make(projectorEvents),
 		states:  make(storages),
 		intents: make(storages),
 	}
+	prj.extension = makeExtension(app, name, TypeKind_Projector, prj)
 	app.appendType(prj)
 	return prj
 }
@@ -43,11 +42,9 @@ func (prj *projector) AddEvent(on QName, event ...ProjectorEventKind) IProjector
 		panic(fmt.Errorf("%v: type «%v» not found: %w", prj, on, ErrNameNotFound))
 	}
 	switch t.Kind() {
-	case TypeKind_GDoc, TypeKind_GRecord,
-		TypeKind_CDoc, TypeKind_CRecord,
-		TypeKind_WDoc, TypeKind_WRecord,
-		TypeKind_ODoc, TypeKind_ORecord,
-		TypeKind_Command:
+	case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord, // CUD
+		TypeKind_Command,               // Execute
+		TypeKind_ODoc, TypeKind_Object: // Execute with
 		if e, ok := prj.events[on]; ok {
 			e.addKind(event...)
 		} else {
@@ -69,8 +66,6 @@ func (prj *projector) AddIntent(storage QName, names ...QName) IProjectorBuilder
 	return prj
 }
 
-func (prj *projector) Extension() IExtension { return prj.ext }
-
 func (prj *projector) Events(cb func(IProjectorEvent)) {
 	ord := QNamesFromMap(prj.events)
 	for _, n := range ord {
@@ -91,20 +86,6 @@ func (prj *projector) SetEventComment(record QName, comment ...string) IProjecto
 	return prj
 }
 
-func (prj *projector) SetExtension(name string, engine ExtensionEngineKind, comment ...string) IProjectorBuilder {
-	if name == "" {
-		name = prj.QName().Entity()
-	}
-	if ok, err := ValidIdent(name); !ok {
-		panic(fmt.Errorf("%v: extension name «%s» is not valid: %w", prj, name, err))
-	}
-	prj.ext.name = name
-	prj.ext.engine = engine
-	prj.ext.SetComment(comment...)
-
-	return prj
-}
-
 func (prj *projector) SetSync(sync bool) IProjectorBuilder {
 	prj.sync = sync
 	return prj
@@ -114,6 +95,18 @@ func (prj *projector) Sync() bool { return prj.sync }
 
 func (prj *projector) States(cb func(storage QName, names QNames)) {
 	prj.states.enum(cb)
+}
+
+// Validates projector
+//
+// # Returns error:
+//   - if events set is empty
+func (prj *projector) Validate() (err error) {
+	if len(prj.events) == 0 {
+		err = errors.Join(err,
+			fmt.Errorf("%v: events set is empty: %w", prj, ErrEmptyProjectorEvents))
+	}
+	return err
 }
 
 type (
@@ -129,11 +122,21 @@ type (
 
 func newProjectorEvent(on IType, kind ...ProjectorEventKind) *projectorEvent {
 	p := &projectorEvent{on: on}
-	switch on.Kind() {
-	case TypeKind_Command:
-		p.addKind(ProjectorEventKind_Execute)
+
+	if len(kind) > 0 {
+		p.addKind(kind...)
+	} else {
+		// missed kind, make defaults
+		switch on.Kind() {
+		case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord:
+			p.addKind(ProjectorEventKind_AnyChanges...)
+		case TypeKind_Command:
+			p.addKind(ProjectorEventKind_Execute)
+		case TypeKind_Object, TypeKind_ODoc:
+			p.addKind(ProjectorEventKind_ExecuteWithParam)
+		}
 	}
-	p.addKind(kind...)
+
 	return p
 }
 

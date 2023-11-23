@@ -166,12 +166,17 @@ WORKSPACE Restaurant (
 
     EXTENSION ENGINE BUILTIN (
 	
+
 	    SYNC PROJECTOR UpdateTableStatus
-	        AFTER INSERT ON (Order, Bill)
+            AFTER INSERT ON (Transaction)
+-- TODO uncomment then parser will support the «Execute with» statement
+--	        AFTER EXECUTE WITH (Order, Bill)
 		INTENTS(View(TableStatus));
 
 	    PROJECTOR UpdateSalesReport
-	        AFTER INSERT ON Bill 
+            AFTER INSERT ON (Transaction)
+-- TODO uncomment then parser will support the «Execute with» statement
+--	        AFTER EXECUTE WITH (Bill)
 		INTENTS(View(SalesPerDay));
 
     );

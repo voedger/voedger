@@ -26,8 +26,6 @@ func ReadByKind(name string, kind appdef.DataKind, rr istructs.IRowReader) inter
 		return rr.AsBytes(name)
 	case appdef.DataKind_string:
 		return rr.AsString(name)
-	case appdef.DataKind_raw:
-		return rr.AsString(name)
 	case appdef.DataKind_RecordID:
 		return rr.AsRecordID(name)
 	case appdef.DataKind_QName:

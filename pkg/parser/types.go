@@ -234,7 +234,7 @@ func (s *AlterWorkspaceStmt) Iterate(callback func(stmt interface{})) {
 type TypeStmt struct {
 	Statement
 	Name  Ident           `parser:"'TYPE' @Ident "`
-	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
+	Items []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 }
 
 func (s TypeStmt) GetName() string { return string(s.Name) }
@@ -262,15 +262,11 @@ func (q DefQName) String() string {
 }
 
 type TypeVarchar struct {
-	MaxLen *uint16 `parser:"('varchar' | 'text') ( '(' @Int ')' )?"`
+	MaxLen *uint64 `parser:"('varchar' | 'text') ( '(' @Int ')' )?"`
 }
 
 type TypeBytes struct {
-	MaxLen *uint16 `parser:"'bytes' ( '(' @Int ')' )?"`
-}
-
-type TypeRaw struct {
-	MaxLen *uint16 `parser:"'raw' ( '(' @Int ')' )?"`
+	MaxLen *uint64 `parser:"'bytes' ( '(' @Int ')' )?"`
 }
 
 type VoidOrDataType struct {
@@ -286,7 +282,6 @@ type VoidOrDef struct {
 type DataType struct {
 	Varchar   *TypeVarchar `parser:"( @@"`
 	Bytes     *TypeBytes   `parser:"| @@"`
-	Raw       *TypeRaw     `parser:"| @@"`
 	Int32     bool         `parser:"| @('int' | 'int32')"`
 	Int64     bool         `parser:"| @'int64'"`
 	Float32   bool         `parser:"| @('float' | 'float32')"`
@@ -305,11 +300,6 @@ func (q DataType) String() (s string) {
 			return fmt.Sprintf("varchar[%d]", *q.Varchar.MaxLen)
 		}
 		return fmt.Sprintf("varchar[%d]", appdef.DefaultFieldMaxLength)
-	} else if q.Raw != nil {
-		if q.Raw.MaxLen != nil {
-			return fmt.Sprintf("raw[%d]", *q.Raw.MaxLen)
-		}
-		return fmt.Sprintf("raw[%d]", appdef.DefaultFieldMaxLength)
 	} else if q.Int32 {
 		return "int32"
 	} else if q.Int64 {
@@ -594,12 +584,12 @@ func (s *FunctionStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type CommandStmt struct {
 	Statement
-	Name        Ident           `parser:"'COMMAND' @Ident"`
-	Arg         *AnyOrVoidOrDef `parser:"('(' @@? "`
-	UnloggedArg *AnyOrVoidOrDef `parser:"(','? UNLOGGED @@)? ')')?"`
-	Returns     *AnyOrVoidOrDef `parser:"('RETURNS' @@)?"`
-	With        []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
-	Engine      EngineType      // Initialized with 1st pass
+	Name          Ident           `parser:"'COMMAND' @Ident"`
+	Param         *AnyOrVoidOrDef `parser:"('(' @@? "`
+	UnloggedParam *AnyOrVoidOrDef `parser:"(','? UNLOGGED @@)? ')')?"`
+	Returns       *AnyOrVoidOrDef `parser:"('RETURNS' @@)?"`
+	With          []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Engine        EngineType      // Initialized with 1st pass
 }
 
 func (s *CommandStmt) GetName() string            { return string(s.Name) }
@@ -612,7 +602,7 @@ type WithItem struct {
 }
 
 type AnyOrVoidOrDef struct {
-	Any  bool      `parser:"@'ANY'"`
+	Any  bool      `parser:"@'any'"`
 	Void bool      `parser:"| @'void'"`
 	Def  *DefQName `parser:"| @@"`
 }
@@ -620,7 +610,7 @@ type AnyOrVoidOrDef struct {
 type QueryStmt struct {
 	Statement
 	Name    Ident           `parser:"'QUERY' @Ident"`
-	Arg     *AnyOrVoidOrDef `parser:"('(' @@? ')')?"`
+	Param   *AnyOrVoidOrDef `parser:"('(' @@? ')')?"`
 	Returns AnyOrVoidOrDef  `parser:"'RETURNS' @@"`
 	With    []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 	Engine  EngineType      // Initialized with 1st pass

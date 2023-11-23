@@ -174,9 +174,6 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 			if view.Items[index].Field.Type.Bytes != nil {
 				c.stmtErr(&view.pkRef.Pos, ErrViewFieldBytes(string(pkf)))
 			}
-			if view.Items[index].Field.Type.Raw != nil {
-				c.stmtErr(&view.pkRef.Pos, ErrViewFieldRaw(string(pkf)))
-			}
 		}
 	}
 
@@ -192,9 +189,6 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 			}
 			if view.Items[fieldIndex].Field.Type.Bytes != nil && !last {
 				c.stmtErr(&view.pkRef.Pos, ErrBytesFieldInCC(string(ccf)))
-			}
-			if view.Items[fieldIndex].Field.Type.Raw != nil && !last {
-				c.stmtErr(&view.pkRef.Pos, ErrRawFieldInCC(string(ccf)))
 			}
 		}
 	}
@@ -242,13 +236,13 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 		}
 	}
 
-	if cmd.Arg != nil && cmd.Arg.Def != nil {
-		resolve(*cmd.Arg.Def)
+	if cmd.Param != nil && cmd.Param.Def != nil {
+		resolve(*cmd.Param.Def)
 	}
-	if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
-		err := resolveInCtx(*cmd.UnloggedArg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil })
+	if cmd.UnloggedParam != nil && cmd.UnloggedParam.Def != nil {
+		err := resolveInCtx(*cmd.UnloggedParam.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil })
 		if err != nil {
-			if err = resolveInCtx(*cmd.UnloggedArg.Def, c, func(*TableStmt, *PackageSchemaAST) error { return nil }); err != nil {
+			if err = resolveInCtx(*cmd.UnloggedParam.Def, c, func(*TableStmt, *PackageSchemaAST) error { return nil }); err != nil {
 				c.stmtErr(&cmd.Pos, err)
 			}
 		}
@@ -260,8 +254,8 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 }
 
 func analyzeQuery(query *QueryStmt, c *iterateCtx) {
-	if query.Arg != nil && query.Arg.Def != nil {
-		if err := resolveInCtx(*query.Arg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
+	if query.Param != nil && query.Param.Def != nil {
+		if err := resolveInCtx(*query.Param.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
 			c.stmtErr(&query.Pos, err)
 		}
 
@@ -557,15 +551,16 @@ func analyseFields(items []TableItemExpr, c *iterateCtx) {
 					c.stmtErr(&field.Pos, ErrRegexpCheckOnlyForVarcharField)
 				}
 			}
-			if field.Type.DataType != nil && field.Type.DataType.Varchar != nil && field.Type.DataType.Varchar.MaxLen != nil {
-				if *field.Type.DataType.Varchar.MaxLen > appdef.MaxFieldLength {
-					c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+			if field.Type.DataType != nil {
+				if field.Type.DataType.Varchar != nil && field.Type.DataType.Varchar.MaxLen != nil {
+					if *field.Type.DataType.Varchar.MaxLen > uint64(appdef.MaxFieldLength) {
+						c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+					}
 				}
-			}
-			if field.Type.DataType != nil && field.Type.DataType.Raw != nil && field.Type.DataType.Raw.MaxLen != nil {
-				if *field.Type.DataType.Raw.MaxLen > appdef.MaxRawFieldLength {
-					//notest: MaxRawFieldLength now is 65535 == math.MaxUint16
-					c.stmtErr(&field.Pos, ErrMaxRawFieldLengthTooLarge)
+				if field.Type.DataType.Bytes != nil && field.Type.DataType.Bytes.MaxLen != nil {
+					if *field.Type.DataType.Bytes.MaxLen > uint64(appdef.MaxFieldLength) {
+						c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+					}
 				}
 			}
 		}

@@ -348,10 +348,11 @@ func (c *buildContext) projectors() error {
 			}
 
 			c.addComments(proj, builder)
+			builder.SetName(proj.GetName())
 			if proj.Engine.WASM {
-				builder.SetExtension(proj.GetName(), appdef.ExtensionEngineKind_WASM)
+				builder.SetEngine(appdef.ExtensionEngineKind_WASM)
 			} else {
-				builder.SetExtension(proj.GetName(), appdef.ExtensionEngineKind_BuiltIn)
+				builder.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
 			builder.SetSync(proj.Sync)
 		})
@@ -373,15 +374,11 @@ func (c *buildContext) views() error {
 				switch k := dataTypeToDataKind(f.Type); k {
 				case appdef.DataKind_bytes:
 					if (f.Type.Bytes != nil) && (f.Type.Bytes.MaxLen != nil) {
-						cc = append(cc, appdef.MaxLen(*f.Type.Bytes.MaxLen))
+						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Bytes.MaxLen)))
 					}
 				case appdef.DataKind_string:
 					if (f.Type.Varchar != nil) && (f.Type.Varchar.MaxLen != nil) {
-						cc = append(cc, appdef.MaxLen(*f.Type.Varchar.MaxLen))
-					}
-				case appdef.DataKind_raw:
-					if (f.Type.Raw != nil) && (f.Type.Raw.MaxLen != nil) {
-						cc = append(cc, appdef.MaxLen(*f.Type.Raw.MaxLen))
+						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Varchar.MaxLen)))
 					}
 				}
 				return cc
@@ -486,19 +483,20 @@ func (c *buildContext) commands() error {
 			qname := schema.NewQName(cmd.Name)
 			b := c.builder.AddCommand(qname)
 			c.addComments(cmd, b)
-			if cmd.Arg != nil {
-				setParam(ictx, cmd.Arg, func(qn appdef.QName) { b.SetParam(qn) })
+			if cmd.Param != nil {
+				setParam(ictx, cmd.Param, func(qn appdef.QName) { b.SetParam(qn) })
 			}
-			if cmd.UnloggedArg != nil {
-				setParam(ictx, cmd.UnloggedArg, func(qn appdef.QName) { b.SetUnloggedParam(qn) })
+			if cmd.UnloggedParam != nil {
+				setParam(ictx, cmd.UnloggedParam, func(qn appdef.QName) { b.SetUnloggedParam(qn) })
 			}
 			if cmd.Returns != nil {
 				setParam(ictx, cmd.Returns, func(qn appdef.QName) { b.SetResult(qn) })
 			}
+			b.SetName(cmd.GetName())
 			if cmd.Engine.WASM {
-				b.SetExtension(cmd.GetName(), appdef.ExtensionEngineKind_WASM)
+				b.SetEngine(appdef.ExtensionEngineKind_WASM)
 			} else {
-				b.SetExtension(cmd.GetName(), appdef.ExtensionEngineKind_BuiltIn)
+				b.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
 		})
 	}
@@ -511,16 +509,17 @@ func (c *buildContext) queries() error {
 			qname := schema.NewQName(q.Name)
 			b := c.builder.AddQuery(qname)
 			c.addComments(q, b)
-			if q.Arg != nil {
-				setParam(ictx, q.Arg, func(qn appdef.QName) { b.SetParam(qn) })
+			if q.Param != nil {
+				setParam(ictx, q.Param, func(qn appdef.QName) { b.SetParam(qn) })
 			}
 
 			setParam(ictx, &q.Returns, func(qn appdef.QName) { b.SetResult(qn) })
 
+			b.SetName(q.GetName())
 			if q.Engine.WASM {
-				b.SetExtension(string(q.Name), appdef.ExtensionEngineKind_WASM)
+				b.SetEngine(appdef.ExtensionEngineKind_WASM)
 			} else {
-				b.SetExtension(string(q.Name), appdef.ExtensionEngineKind_BuiltIn)
+				b.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
 		})
 	}
@@ -620,25 +619,19 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 
 	if field.Type.DataType.Bytes != nil {
 		if field.Type.DataType.Bytes.MaxLen != nil {
-			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, appdef.MaxLen(*field.Type.DataType.Bytes.MaxLen))
+			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, appdef.MaxLen(uint16(*field.Type.DataType.Bytes.MaxLen)))
 		} else {
 			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull)
 		}
 	} else if field.Type.DataType.Varchar != nil {
 		constraints := make([]appdef.IConstraint, 0)
 		if field.Type.DataType.Varchar.MaxLen != nil {
-			constraints = append(constraints, appdef.MaxLen(*field.Type.DataType.Varchar.MaxLen))
+			constraints = append(constraints, appdef.MaxLen(uint16(*field.Type.DataType.Varchar.MaxLen)))
 		}
 		if field.CheckRegexp != nil {
 			constraints = append(constraints, appdef.Pattern(*field.CheckRegexp))
 		}
 		bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, constraints...)
-	} else if field.Type.DataType.Raw != nil {
-		if field.Type.DataType.Raw.MaxLen != nil {
-			bld.AddField(fieldName, appdef.DataKind_raw, field.NotNull, appdef.MaxLen(*field.Type.DataType.Raw.MaxLen))
-		} else {
-			bld.AddField(fieldName, appdef.DataKind_raw, field.NotNull)
-		}
 	} else {
 		bld.AddField(fieldName, sysDataKind, field.NotNull)
 	}

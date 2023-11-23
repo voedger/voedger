@@ -5,15 +5,12 @@
 
 package appdef
 
-// Projector is a type of object that executes every time when some event is triggered and data need to be updated.
+// Projector is a extension that executes every time when some event is triggered and data need to be updated.
 type IProjector interface {
-	IType
+	IExtension
 
 	// Returns is synchronous projector.
 	Sync() bool
-
-	// Returns extension for projector.
-	Extension() IExtension
 
 	// Enumerate events to trigger the projector.
 	//
@@ -57,24 +54,19 @@ type ProjectorEventKind uint8
 
 type IProjectorBuilder interface {
 	IProjector
-	ITypeBuilder
+	IExtensionBuilder
 
 	// Sets is synchronous projector.
 	SetSync(bool) IProjectorBuilder
-
-	// Sets engine.
-	//
-	// If name is empty then default is projector type name (entity part only without package).
-	//
-	// # Panics:
-	//	- if name is invalid identifier
-	SetExtension(name string, engine ExtensionEngineKind, comment ...string) IProjectorBuilder
 
 	// Adds event to trigger the projector.
 	//
 	// QName can be some record type or command.
 	//
-	// If event kind is missed then default is ProjectorEventKind_Any for records and ProjectorEventKind_Execute for commands.
+	// If event kind is missed then default is:
+	//   - ProjectorEventKind_Any for GDoc/GRecords, CDoc/CRecords and WDoc/WRecords
+	//	 - ProjectorEventKind_Execute for Commands
+	//	 - ProjectorEventKind_ExecuteWith for Objects and ODocs
 	//
 	// # Panics:
 	//	- if QName is empty (NullQName)

@@ -120,7 +120,7 @@ func Test_newRecord(t *testing.T) {
 				})
 
 			require.Equal(3, sysCnt) // sys.QName, sys.ID and sys.IsActive
-			require.Equal(sysCnt+9, cnt)
+			require.Equal(sysCnt+10, cnt)
 			require.Equal(doc.fields.FieldCount(), cnt)
 		})
 
@@ -179,7 +179,7 @@ func Test_newRecord(t *testing.T) {
 					})
 
 				require.Equal(5, sysCnt) // sys.QName, sys.ID sys.ParentID, sys.Container and sys.IsActive
-				require.Equal(sysCnt+9, cnt)
+				require.Equal(sysCnt+10, cnt)
 				require.Equal(rec.fields.FieldCount(), cnt)
 			})
 		})
@@ -360,18 +360,19 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 		b := rec1.storeToBytes()
 
+		newFieldName := func(old string) string { return old + "_1" }
+		oldFieldName := func(new string) string { return new[:len(new)-2] }
+
 		appDef := appdef.New()
 		t.Run("must be ok to build application", func(t *testing.T) {
-			appDef.AddCDoc(test.testCDoc).
-				AddField("int32_1", appdef.DataKind_int32, false).
-				AddField("int64_1", appdef.DataKind_int64, false).
-				AddField("float32_1", appdef.DataKind_float32, false).
-				AddField("float64_1", appdef.DataKind_float64, false).
-				AddField("bytes_1", appdef.DataKind_bytes, false).
-				AddField("string_1", appdef.DataKind_string, false).
-				AddField("QName_1", appdef.DataKind_QName, false).
-				AddField("bool_1", appdef.DataKind_bool, false).
-				AddField("RecordID_1", appdef.DataKind_RecordID, false)
+			newCDoc := appDef.AddCDoc(test.testCDoc)
+
+			oldCDoc := rec1.appCfg.AppDef.CDoc(test.testCDoc)
+			oldCDoc.Fields(func(f appdef.IField) {
+				if !f.IsSys() {
+					newCDoc.AddField(newFieldName(f.Name()), f.DataKind(), f.Required())
+				}
+			})
 			appDef.AddObject(test.tablePhotos) // for reading QName_1 field value
 		})
 
@@ -386,14 +387,20 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 		require.Equal(rec1.QName(), rec2.QName())
 		rec1.dyB.IterateFields(nil, func(name string, val1 interface{}) bool {
-			newName := name + "_1"
+			newName := name
+			if !appdef.IsSysField(name) {
+				newName = newFieldName(name)
+			}
 			require.True(rec2.HasValue(newName), newName)
 			val2 := rec2.dyB.Get(newName)
 			require.Equal(val1, val2)
 			return true
 		})
 		rec2.dyB.IterateFields(nil, func(name string, val2 interface{}) bool {
-			oldName := name[:len(name)-2]
+			oldName := name
+			if !appdef.IsSysField(name) {
+				oldName = oldFieldName(name)
+			}
 			require.True(rec1.HasValue(oldName), oldName)
 			return true
 		})

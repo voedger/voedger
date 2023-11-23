@@ -185,7 +185,7 @@ func getUniqueKeyValues(rec istructs.IRowReader, uf appdef.IField) (res []byte, 
 
 	val := coreutils.ReadByKind(uf.Name(), uf.DataKind(), rec)
 	switch uf.DataKind() {
-	case appdef.DataKind_string, appdef.DataKind_raw:
+	case appdef.DataKind_string:
 		_, err = buf.WriteString(val.(string))
 	case appdef.DataKind_bytes:
 		_, err = buf.Write(val.([]byte))

@@ -18,7 +18,8 @@ ABSTRACT TABLE Singleton INHERITS CDoc();
 ALTERABLE WORKSPACE AppWorkspaceWS();
 
 TYPE Raw (
-	Body raw(65535) NOT NULL
+	-- must not be bytes because the engine will expect urlBase64-encoded string as the value to put into this field
+	Body varchar(65535) NOT NULL
 );
 
 ABSTRACT WORKSPACE Workspace (
@@ -129,9 +130,9 @@ ABSTRACT WORKSPACE Workspace (
 		NumGoroutines int32 NOT NULL
 	);
 
-    TYPE ModulesResult (
-        Modules raw(32768) NOT NULL
-    );
+	TYPE ModulesResult (
+			Modules varchar(32768) NOT NULL
+	);
 
 	TYPE RenameQNameParams (
 		ExistingQName qname NOT NULL,
@@ -147,17 +148,17 @@ ABSTRACT WORKSPACE Workspace (
 		ID int64 NOT NULL
 	);
 
-    TYPE GetCDocResult (
-        Result raw(32768) NOT NULL
-    );
+	TYPE GetCDocResult (
+			Result varchar(32768) NOT NULL
+	);
 
 	TYPE StateParams (
 		After int64 NOT NULL
 	);
 
-    TYPE StateResult (
-        State raw(32768) NOT NULL
-    );
+	TYPE StateResult (
+			State varchar(32768) NOT NULL
+	);
 
 	TYPE DescribePackageNamesResult (
 		Names text NOT NULL
@@ -171,25 +172,25 @@ ABSTRACT WORKSPACE Workspace (
 		PackageDesc text NOT NULL
 	);
 
-    TYPE InitiateInvitationByEMailParams (
-        Email text NOT NULL,
-        Roles text NOT NULL,
-        ExpireDatetime int64 NOT NULL,
-        EmailTemplate raw(32768) NOT NULL,
-        EmailSubject text NOT NULL
-    );
+	TYPE InitiateInvitationByEMailParams (
+			Email text NOT NULL,
+			Roles text NOT NULL,
+			ExpireDatetime int64 NOT NULL,
+			EmailTemplate varchar(32768) NOT NULL,
+			EmailSubject text NOT NULL
+	);
 
 	TYPE InitiateJoinWorkspaceParams (
 		InviteID ref NOT NULL,
 		VerificationCode text NOT NULL
 	);
 
-    TYPE InitiateUpdateInviteRolesParams (
-        InviteID ref NOT NULL,
-        Roles text NOT NULL,
-        EmailTemplate raw(32768) NOT NULL,
-        EmailSubject text NOT NULL
-    );
+	TYPE InitiateUpdateInviteRolesParams (
+			InviteID ref NOT NULL,
+			Roles text NOT NULL,
+			EmailTemplate varchar(32768) NOT NULL,
+			EmailSubject text NOT NULL
+	);
 
 	TYPE InitiateCancelAcceptedInviteParams (
 		InviteID ref NOT NULL
@@ -245,15 +246,15 @@ ABSTRACT WORKSPACE Workspace (
 		Language text
 	);
 
-    TYPE InitialEmailVerificationResult (
-        VerificationToken raw(32768) NOT NULL
-    );
+	TYPE InitialEmailVerificationResult (
+			VerificationToken varchar(32768) NOT NULL
+	);
 
-    TYPE IssueVerifiedValueTokenParams (
-        VerificationToken raw(32768) NOT NULL,
-        VerificationCode text NOT NULL,
-        ForRegistry bool
-    );
+	TYPE IssueVerifiedValueTokenParams (
+			VerificationToken varchar(32768) NOT NULL,
+			VerificationCode text NOT NULL,
+			ForRegistry bool
+	);
 
 	TYPE IssueVerifiedValueTokenResult (
 		VerifiedValueToken text NOT NULL
@@ -372,7 +373,7 @@ ABSTRACT WORKSPACE Workspace (
 	VIEW Uniques (
 		QName qname NOT NULL,
 		ValuesHash int64 NOT NULL,
-		Values bytes(1024) NOT NULL,
+		Values bytes(32768) NOT NULL,
 		ID ref,
 		PRIMARY KEY ((QName, ValuesHash) Values)
 	) AS RESULT OF ApplyUniques;
@@ -414,7 +415,11 @@ ABSTRACT WORKSPACE Workspace (
 		QUERY GRCount RETURNS GRCountResult;
 		QUERY Modules RETURNS ModulesResult;
 		COMMAND RenameQName(RenameQNameParams);
-		SYNC PROJECTOR RecordsRegistryProjector AFTER INSERT ON (CRecord, WRecord, ORecord) OR AFTER UPDATE ON (CRecord, WRecord) INTENTS(View(RecordsRegistry));
+		SYNC PROJECTOR RecordsRegistryProjector 
+			AFTER INSERT OR ACTIVATE OR DEACTIVATE ON (CRecord, WRecord) 
+			-- TODO uncomment then parser will support the «Execute with» statement
+			-- AFTER EXECUTE WITH (ODoc)
+			INTENTS(View(RecordsRegistry));
 
 		-- authnz
 
@@ -423,7 +428,7 @@ ABSTRACT WORKSPACE Workspace (
 
 		-- collection
 
-		QUERY Collection(CollectionParams) RETURNS ANY;
+		QUERY Collection(CollectionParams) RETURNS any;
 		QUERY GetCDoc(GetCDocParams) RETURNS GetCDocResult;
 		QUERY State(StateParams) RETURNS StateResult;
 		SYNC PROJECTOR ProjectorCollection AFTER INSERT OR UPDATE ON (CRecord) INTENTS(View(CollectionView));
@@ -457,7 +462,11 @@ ABSTRACT WORKSPACE Workspace (
 		-- journal
 
 		QUERY Journal(JournalParams) RETURNS JournalResult;
-		PROJECTOR ProjectorWLogDates AFTER INSERT ON (CRecord, WRecord, ORecord) OR AFTER UPDATE ON (CRecord, WRecord) INTENTS(View(WLogDates));
+		PROJECTOR ProjectorWLogDates 
+			AFTER INSERT OR UPDATE ON (CRecord, WRecord) 
+			-- TODO uncomment then parser will support the «Execute with» statement
+			-- OR AFTER EXECUTE WITH (ODoc)
+			INTENTS(View(WLogDates));
 
 		-- sqlquery
 
@@ -465,7 +474,11 @@ ABSTRACT WORKSPACE Workspace (
 
 		-- uniques
 
-		SYNC PROJECTOR ApplyUniques AFTER INSERT ON (CRecord, WRecord, ORecord) OR AFTER UPDATE ON (CRecord, WRecord) INTENTS(View(Uniques));
+		SYNC PROJECTOR ApplyUniques 
+			AFTER INSERT OR ACTIVATE OR DEACTIVATE ON (CRecord, WRecord) 
+			-- TODO uncomment then parser will support the «Execute with» statement
+			-- OR AFTER EXECUTE WITH (ODoc) 
+			INTENTS(View(Uniques));
 
 		-- verifier
 

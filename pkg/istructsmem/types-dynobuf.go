@@ -71,13 +71,6 @@ func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (inter
 		case string:
 			return v, nil
 		}
-	case appdef.DataKind_raw:
-		switch v := value.(type) {
-		case string:
-			return v, nil
-		case []byte:
-			return string(v), nil
-		}
 	case appdef.DataKind_QName:
 		switch v := value.(type) {
 		case string:

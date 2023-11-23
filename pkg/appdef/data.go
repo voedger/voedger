@@ -58,14 +58,10 @@ func (d *data) AddConstraints(cc ...IConstraint) IDataBuilder {
 			panic(fmt.Errorf("%v is not compatible with constraint %v: %w", d, c, ErrIncompatibleConstraints))
 		}
 		switch c.Kind() {
+		case ConstraintKind_MinLen:
+			// no errors expected
 		case ConstraintKind_MaxLen:
-			max := MaxFieldLength // string or []byte
-			if dk == DataKind_raw {
-				max = MaxRawFieldLength
-			}
-			if c.Value().(uint16) > max {
-				panic(fmt.Errorf("constraint %v value %v exceeds maximum (%v): %w", c, c.Value(), max, ErrMaxFieldLengthExceeds))
-			}
+			// no errors expected
 		case ConstraintKind_Enum:
 			ok := false
 			switch dk {

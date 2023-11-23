@@ -26,7 +26,7 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 				AddField("f1", appdef.DataKind_int32, true).
 				AddField("f2", appdef.DataKind_QName, false).
 				AddField("f3", appdef.DataKind_string, false).
-				AddField("f4", appdef.DataKind_raw, false)
+				AddField("f4", appdef.DataKind_bytes, false)
 
 			v := app.AddView(viewName)
 			v.KeyBuilder().PartKeyBuilder().AddField("pkF1", appdef.DataKind_int32)
@@ -57,7 +57,8 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 			require.Equal(dynobuffers.FieldTypeString, scheme.Fields[2].Ft)
 
 			require.Equal("f4", scheme.Fields[3].Name)
-			require.Equal(dynobuffers.FieldTypeString, scheme.Fields[3].Ft)
+			require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[3].Ft)
+			require.True(scheme.Fields[1].IsArray)
 		})
 
 		t.Run("view scheme", func(t *testing.T) {

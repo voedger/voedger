@@ -24,7 +24,9 @@ type CLIParams struct {
 type IHTTPProcessor interface {
 	iservices.IService
 	ListeningPort() int
-	HandlerFunc(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request))
+	HandlePath(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request))
+	AddReverseProxyRoute(srcRegExp, dstRegExp string)
+	AddReverseProxyRouteDefault(srcRegExp, dstRegExp string)
 }
 
 type IHTTPProcessorAPI interface {
@@ -41,7 +43,7 @@ type IHTTPProcessorAPI interface {
 		- Same resource can be deployed multiple times
 	*/
 
-	DeployStaticContent(ctx context.Context, path string, fs fs.FS) (err error)
+	DeployStaticContent(path string, fs fs.FS)
 
 	/*
 		App Partitions
@@ -53,7 +55,7 @@ type IHTTPProcessorAPI interface {
 	//--	SetAppPartitionsNumber(app istructs.AppQName, partNo istructs.PartitionID, numPartitions istructs.PartitionID) (err error)
 
 	// ErrUnknownApplication
-	DeployAppPartition(ctx context.Context, app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ISender) (err error)
+	DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ISender)
 
 	// ErrUnknownAppPartition
 	//--	UndeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID) (err error)
@@ -80,6 +82,8 @@ type IHTTPProcessorAPI interface {
 
 	// ErrUnknownDynamicSubresource
 	//--	UndeployDynamicSubresource(app istructs.AppQName, path string) (err error)
+	AddReverseProxyRoute(srcRegExp, dstRegExp string)
+	AddReverseProxyRouteDefault(srcRegExp, dstRegExp string)
 }
 
 type ISender interface {

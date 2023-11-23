@@ -23,10 +23,7 @@ const MaxTypeUniqueFieldsCount = 256
 const MaxTypeUniqueCount = 100
 
 // Maximum string and bytes data length
-const MaxFieldLength = uint16(1024)
-
-// Maximum raw data length.
-const MaxRawFieldLength = uint16(math.MaxUint16)
+const MaxFieldLength = uint16(math.MaxUint16)
 
 // Default string and bytes data max length.
 //

@@ -18,6 +18,7 @@ jobs:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-ci-cmd-ctool:
+    needs: call-workflow-ci-pkg
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@master
     with: 
       test_folder: 'cmd/ctool/'

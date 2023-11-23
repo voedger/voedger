@@ -7,3 +7,5 @@ package ihttpctl
 import "io/fs"
 
 type StaticResourcesType map[string]fs.FS
+type RedirectRoutes map[string]string
+type DefaultRedirectRoute map[string]string // single record only

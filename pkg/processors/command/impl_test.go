@@ -494,7 +494,7 @@ func getAuthHeader(token string) map[string][]string {
 	}
 }
 
-func TestBasicUsage_QNameJSONFunc(t *testing.T) {
+func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 	require := require.New(t)
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {})
 	defer tearDown(app)
@@ -502,7 +502,7 @@ func TestBasicUsage_QNameJSONFunc(t *testing.T) {
 	ch := make(chan interface{})
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
 	testExec := func(args istructs.ExecCommandArgs) (err error) {
-		require.Equal("custom content", args.ArgumentObject.AsString(processors.Field_RawObject_Body))
+		require.EqualValues("custom content", args.ArgumentObject.AsString(processors.Field_RawObject_Body))
 		close(ch)
 		return
 	}
@@ -625,7 +625,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 
 	// build application
 	appDef := appdef.New()
-	appDef.AddObject(istructs.QNameRaw).AddField(processors.Field_RawObject_Body, appdef.DataKind_raw, true, appdef.MaxLen(appdef.MaxRawFieldLength))
+	appDef.AddObject(istructs.QNameRaw).AddField(processors.Field_RawObject_Body, appdef.DataKind_string, true, appdef.MaxLen(appdef.MaxFieldLength))
 	if prepareAppDef != nil {
 		prepareAppDef(appDef)
 	}

@@ -8,9 +8,9 @@ ALTER WORKSPACE AppWorkspaceWS (
 		AppName varchar NOT NULL,
 		SubjectKind int32,
 		LoginHash varchar NOT NULL,
-		WSID int64,
+		WSID int64,                                     -- to be written after workspace init
 		WSError varchar(1024),                          -- to be written after workspace init
-		WSKindInitializationData varchar(1024) NOT NULL -- to be written after workspace init
+		WSKindInitializationData varchar(1024) NOT NULL
 	);
 
 	TYPE CreateLoginParams (
@@ -59,7 +59,7 @@ ALTER WORKSPACE AppWorkspaceWS (
 	);
 
 	TYPE IssueVerifiedValueTokenForResetPasswordParams (
-		VerificationToken raw(32768) NOT NULL,
+		VerificationToken varchar(32768) NOT NULL,
 		VerificationCode text NOT NULL,
 		ProfileWSID int64 NOT NULL,
 		AppName text NOT NULL

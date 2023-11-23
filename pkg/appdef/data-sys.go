@@ -23,7 +23,6 @@ var (
 	SysData_float64  QName = SysDataName(DataKind_float64)
 	SysData_bytes    QName = SysDataName(DataKind_bytes)
 	SysData_String   QName = SysDataName(DataKind_string)
-	SysData_raw      QName = SysDataName(DataKind_raw)
 	SysData_QName    QName = SysDataName(DataKind_QName)
 	SysData_bool     QName = SysDataName(DataKind_bool)
 	SysData_RecordID QName = SysDataName(DataKind_RecordID)

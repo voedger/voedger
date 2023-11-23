@@ -23,7 +23,6 @@ const (
 	DataKind_float64
 	DataKind_bytes
 	DataKind_string
-	DataKind_raw
 	DataKind_QName
 	DataKind_bool
 
@@ -66,10 +65,6 @@ func (k DataKind) IsFixed() bool {
 //   - ConstraintKind_Pattern
 //   - ConstraintKind_Enum
 //
-// # Raw data supports:
-//   - ConstraintKind_MinLen
-//   - ConstraintKind_MaxLen
-//
 // # Numeric data supports:
 //   - ConstraintKind_MinIncl
 //   - ConstraintKind_MinExcl
@@ -78,13 +73,6 @@ func (k DataKind) IsFixed() bool {
 //   - ConstraintKind_Enum
 func (k DataKind) IsSupportedConstraint(c ConstraintKind) bool {
 	switch k {
-	case DataKind_raw:
-		switch c {
-		case
-			ConstraintKind_MinLen,
-			ConstraintKind_MaxLen:
-			return true
-		}
 	case DataKind_bytes:
 		switch c {
 		case

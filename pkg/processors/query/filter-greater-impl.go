@@ -25,7 +25,7 @@ func (f GreaterFilter) IsMatch(fk FieldsKinds, outputRow IOutputRow) (bool, erro
 		return outputRow.Value(f.field).(float32) > float32(f.value.(float64)), nil
 	case appdef.DataKind_float64:
 		return outputRow.Value(f.field).(float64) > f.value.(float64), nil
-	case appdef.DataKind_string, appdef.DataKind_raw:
+	case appdef.DataKind_string:
 		return outputRow.Value(f.field).(string) > f.value.(string), nil
 	case appdef.DataKind_null:
 		return false, nil
