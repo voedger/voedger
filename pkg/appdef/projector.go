@@ -43,7 +43,7 @@ func (prj *projector) AddEvent(on QName, event ...ProjectorEventKind) IProjector
 	switch t.Kind() {
 	case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord,
 		TypeKind_Command,
-		TypeKind_ODoc, TypeKind_Object:
+		TypeKind_ODoc, TypeKind_ORecord, TypeKind_Object:
 		if e, ok := prj.events[on]; ok {
 			e.addKind(event...)
 		} else {
