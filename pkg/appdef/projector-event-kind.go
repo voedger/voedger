@@ -66,7 +66,7 @@ func (i ProjectorEventKind) typeCompatible(kind TypeKind) bool {
 	case ProjectorEventKind_Execute:
 		return kind == TypeKind_Command
 	case ProjectorEventKind_ExecuteWithParam:
-		return kind == TypeKind_Object || kind == TypeKind_ODoc
+		return kind == TypeKind_Object || kind == TypeKind_ODoc || kind == TypeKind_ORecord
 	}
 	return false
 }

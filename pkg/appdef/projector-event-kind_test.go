@@ -98,6 +98,7 @@ func TestProjectorEventKind_typeCompatible(t *testing.T) {
 		// execute with param
 		{"ok Execute with Object", ProjectorEventKind_ExecuteWithParam, args{TypeKind_Object}, true},
 		{"ok Execute with ODoc", ProjectorEventKind_ExecuteWithParam, args{TypeKind_ODoc}, true},
+		{"ok Execute with ORecord", ProjectorEventKind_ExecuteWithParam, args{TypeKind_ORecord}, true},
 		{"fail Execute with WRecord", ProjectorEventKind_ExecuteWithParam, args{TypeKind_WRecord}, false},
 
 		// absurds
