@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -94,6 +95,18 @@ func (prj *projector) Sync() bool { return prj.sync }
 
 func (prj *projector) States(cb func(storage QName, names QNames)) {
 	prj.states.enum(cb)
+}
+
+// Validates projector
+//
+// # Returns error:
+//   - if events set is empty
+func (prj *projector) Validate() (err error) {
+	if len(prj.events) == 0 {
+		err = errors.Join(err,
+			fmt.Errorf("%v: events set is empty: %w", prj, ErrEmptyProjectorEvents))
+	}
+	return err
 }
 
 type (

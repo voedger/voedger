@@ -207,6 +207,16 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		})
 	})
 
+	t.Run("projector validation errors", func(t *testing.T) {
+		t.Run(" should error if empty events", func(t *testing.T) {
+			apb := New()
+			prj := apb.AddProjector(prjName)
+			_, err := apb.Build()
+			require.ErrorIs(err, ErrEmptyProjectorEvents)
+			require.Contains(err.Error(), fmt.Sprint(prj))
+		})
+	})
+
 	t.Run("panic if name is empty", func(t *testing.T) {
 		apb := New()
 		require.Panics(func() {
