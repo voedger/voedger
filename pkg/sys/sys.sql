@@ -18,7 +18,8 @@ ABSTRACT TABLE Singleton INHERITS CDoc();
 ALTERABLE WORKSPACE AppWorkspaceWS();
 
 TYPE Raw (
-	Body bytes(65535) NOT NULL
+	-- must not be bytes because the engine will expect urlBase64-encoded string as the value to put into this field
+	Body varchar(65535) NOT NULL
 );
 
 ABSTRACT WORKSPACE Workspace (
@@ -423,7 +424,7 @@ ABSTRACT WORKSPACE Workspace (
 
 		-- collection
 
-		QUERY Collection(CollectionParams) RETURNS ANY;
+		QUERY Collection(CollectionParams) RETURNS any;
 		QUERY GetCDoc(GetCDocParams) RETURNS GetCDocResult;
 		QUERY State(StateParams) RETURNS StateResult;
 		SYNC PROJECTOR ProjectorCollection AFTER INSERT OR UPDATE ON (CRecord) INTENTS(View(CollectionView));

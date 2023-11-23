@@ -19,3 +19,5 @@ type Status struct {
 	ErrorMessage string
 	ErrorData    string
 }
+type GrafanaPort int
+type PrometheusPort int

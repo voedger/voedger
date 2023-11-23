@@ -215,7 +215,7 @@ WORKSPACE MyWorkspace (
         QUERY _Query1() RETURNS air.Order WITH Comment='A comment';
 
         -- Query which can return any value
-        QUERY Query2(air.Order) RETURNS ANY;
+        QUERY Query2(air.Order) RETURNS any;
     );
 
     -- ACLs
