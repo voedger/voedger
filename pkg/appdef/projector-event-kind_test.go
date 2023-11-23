@@ -85,8 +85,8 @@ func TestProjectorEventKind_typeCompatible(t *testing.T) {
 		{"ok Insert CDoc", ProjectorEventKind_Insert, args{TypeKind_CDoc}, true},
 		{"ok Update WDoc", ProjectorEventKind_Update, args{TypeKind_WDoc}, true},
 		{"ok Deactivate GDoc", ProjectorEventKind_Deactivate, args{TypeKind_GDoc}, true},
-		{"ok Insert ODoc", ProjectorEventKind_Insert, args{TypeKind_ODoc}, true},
 
+		{"fail Insert ODoc", ProjectorEventKind_Insert, args{TypeKind_ODoc}, false},
 		{"fail Update ORecord", ProjectorEventKind_Update, args{TypeKind_ORecord}, false},
 		{"fail Deactivate Object", ProjectorEventKind_Deactivate, args{TypeKind_Object}, false},
 
@@ -98,7 +98,7 @@ func TestProjectorEventKind_typeCompatible(t *testing.T) {
 		// execute with param
 		{"ok Execute with Object", ProjectorEventKind_ExecuteWithParam, args{TypeKind_Object}, true},
 		{"ok Execute with ODoc", ProjectorEventKind_ExecuteWithParam, args{TypeKind_ODoc}, true},
-		{"ok Execute with ORecord", ProjectorEventKind_ExecuteWithParam, args{TypeKind_ORecord}, true},
+		{"fail Execute with ORecord", ProjectorEventKind_ExecuteWithParam, args{TypeKind_ORecord}, false},
 		{"fail Execute with WRecord", ProjectorEventKind_ExecuteWithParam, args{TypeKind_WRecord}, false},
 
 		// absurds

@@ -150,23 +150,19 @@ func Test_BasicUsage(t *testing.T) {
 	eventsCount := 0
 	proj.Events(func(ie appdef.IProjectorEvent) {
 		eventsCount++
-		if eventsCount == 1 {
-			require.Equal(2, len(ie.Kind()))
-			require.Equal(appdef.ProjectorEventKind_Insert, ie.Kind()[0])
-			require.Equal(appdef.ProjectorEventKind_Update, ie.Kind()[1])
-			require.Equal(appdef.NewQName("sys", "CRecord"), ie.On().QName())
-		} else if eventsCount == 2 {
-			require.Equal(1, len(ie.Kind()))
-			require.Equal(appdef.ProjectorEventKind_Insert, ie.Kind()[0])
-			require.Equal(appdef.NewQName("sys", "ORecord"), ie.On().QName())
-		} else if eventsCount == 3 {
-			require.Equal(2, len(ie.Kind()))
-			require.Equal(appdef.ProjectorEventKind_Insert, ie.Kind()[0])
-			require.Equal(appdef.ProjectorEventKind_Update, ie.Kind()[1])
-			require.Equal(appdef.NewQName("sys", "WRecord"), ie.On().QName())
+		k, on := ie.Kind(), ie.On().QName()
+		require.Len(k, 3)
+		require.Contains(k, appdef.ProjectorEventKind_Insert)
+		require.Contains(k, appdef.ProjectorEventKind_Activate)
+		require.Contains(k, appdef.ProjectorEventKind_Deactivate)
+		switch eventsCount {
+		case 1:
+			require.Equal(appdef.NewQName("sys", "CRecord"), on)
+		case 2:
+			require.Equal(appdef.NewQName("sys", "WRecord"), on)
 		}
 	})
-	require.Equal(3, eventsCount)
+	require.Equal(2, eventsCount)
 
 	// Execute Projector
 	proj = builder.Projector(appdef.NewQName("main", "UpdateDashboard"))

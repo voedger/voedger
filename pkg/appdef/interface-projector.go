@@ -64,9 +64,9 @@ type IProjectorBuilder interface {
 	// QName can be some record type or command.
 	//
 	// If event kind is missed then default is:
-	//   - ProjectorEventKind_Any for Records
+	//   - ProjectorEventKind_Any for GDoc/GRecords, CDoc/CRecords and WDoc/WRecords
 	//	 - ProjectorEventKind_Execute for Commands
-	//	 - ProjectorEventKind_ExecuteWith for Objects and ODocs (with ORecords)
+	//	 - ProjectorEventKind_ExecuteWith for Objects and ODocs
 	//
 	// # Panics:
 	//	- if QName is empty (NullQName)

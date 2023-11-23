@@ -42,9 +42,9 @@ func (prj *projector) AddEvent(on QName, event ...ProjectorEventKind) IProjector
 		panic(fmt.Errorf("%v: type «%v» not found: %w", prj, on, ErrNameNotFound))
 	}
 	switch t.Kind() {
-	case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord,
-		TypeKind_Command,
-		TypeKind_ODoc, TypeKind_ORecord, TypeKind_Object:
+	case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord, // CUD
+		TypeKind_Command,               // Execute
+		TypeKind_ODoc, TypeKind_Object: // Execute with
 		if e, ok := prj.events[on]; ok {
 			e.addKind(event...)
 		} else {
