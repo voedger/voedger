@@ -17,3 +17,8 @@ The Voedger Package Manager (VPM) functions similarly to Go/NPM but is specifica
 ## Commands
 
 - [`compile`](./README-compile.md): For detailed instructions and information on the compile command.
+
+## Technical Design
+
+- Integrated tests are the first (`execRootCmd()` function is used)
+
