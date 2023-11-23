@@ -16,9 +16,20 @@ func Test_AppDef_AddProjector(t *testing.T) {
 	require := require.New(t)
 
 	var app IAppDef
+
+	// storages
 	sysRecords, sysViews, sysWLog := NewQName(SysPackage, "records"), NewQName(SysPackage, "views"), NewQName(SysPackage, "WLog")
-	prjName, recName, docName, viewName := NewQName("test", "projector"), NewQName("test", "record"), NewQName("test", "document"), NewQName("test", "view")
-	cmdName := NewQName("test", "command")
+
+	// state and intent
+	docName, viewName := NewQName("test", "document"), NewQName("test", "view")
+
+	// record to trigger
+	recName := NewQName("test", "record")
+
+	// command with params to trigger
+	cmdName, objName := NewQName("test", "command"), NewQName("test", "object")
+
+	prjName := NewQName("test", "projector")
 
 	t.Run("must be ok to add projector", func(t *testing.T) {
 		appDef := New()
@@ -32,7 +43,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		v.ValueBuilder().AddDataField("data", SysData_bytes, false, MaxLen(1024))
 		v.SetComment("view is intent for projector")
 
-		_ = appDef.AddCommand(cmdName)
+		_ = appDef.AddObject(objName)
+		appDef.AddCommand(cmdName).SetParam(objName)
 
 		prj := appDef.AddProjector(prjName)
 
@@ -44,10 +56,12 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 		prj.
 			SetSync(true).
-			AddEvent(recName, ProjectorEventKind_AnyChanges...).
+			AddEvent(recName).
 			SetEventComment(recName, fmt.Sprintf("run projector after change %v", recName)).
 			AddEvent(cmdName).
 			SetEventComment(cmdName, fmt.Sprintf("run projector after execute %v", cmdName)).
+			AddEvent(objName).
+			SetEventComment(objName, fmt.Sprintf("run projector after execute any command with parameter %v", objName)).
 			AddState(sysRecords, docName, recName).AddState(sysWLog).
 			AddIntent(sysViews, viewName)
 
@@ -85,18 +99,23 @@ func Test_AppDef_AddProjector(t *testing.T) {
 				case 1:
 					require.Equal(cmdName, e.On().QName())
 					require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Execute}, e.Kind())
-					require.Contains(e.Comment(), "run projector after execute")
+					require.Contains(e.Comment(), "after execute")
 					require.Contains(e.Comment(), cmdName.String())
 				case 2:
+					require.Equal(objName, e.On().QName())
+					require.EqualValues([]ProjectorEventKind{ProjectorEventKind_ExecuteWithParam}, e.Kind())
+					require.Contains(e.Comment(), "with parameter")
+					require.Contains(e.Comment(), objName.String())
+				case 3:
 					require.Equal(recName, e.On().QName())
 					require.EqualValues(ProjectorEventKind_AnyChanges, e.Kind())
-					require.Contains(e.Comment(), "run projector after change")
+					require.Contains(e.Comment(), "after change")
 					require.Contains(e.Comment(), recName.String())
 				default:
 					require.Failf("unexpected event", "event: %v", e)
 				}
 			})
-			require.Equal(2, cnt)
+			require.Equal(3, cnt)
 		})
 
 		t.Run("must be ok enum states", func(t *testing.T) {
@@ -188,6 +207,16 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		})
 	})
 
+	t.Run("projector validation errors", func(t *testing.T) {
+		t.Run(" should error if empty events", func(t *testing.T) {
+			apb := New()
+			prj := apb.AddProjector(prjName)
+			_, err := apb.Build()
+			require.ErrorIs(err, ErrEmptyProjectorEvents)
+			require.Contains(err.Error(), fmt.Sprint(prj))
+		})
+	})
+
 	t.Run("panic if name is empty", func(t *testing.T) {
 		apb := New()
 		require.Panics(func() {
@@ -235,21 +264,21 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		})
 	})
 
-	t.Run("panic if event type is not record or command", func(t *testing.T) {
+	t.Run("panic if event type is not record, command or command parameter", func(t *testing.T) {
 		apb := New()
 		prj := apb.AddProjector(NewQName("test", "projector"))
-		require.Panics(func() {
-			prj.AddEvent(QNameANY, ProjectorEventKind_Execute)
-		})
+		require.Panics(func() { prj.AddEvent(QNameANY) })
 	})
 
 	t.Run("panic if event is incompatible with type", func(t *testing.T) {
 		apb := New()
 		_ = apb.AddCRecord(recName)
+		_ = apb.AddObject(objName)
+		_ = apb.AddCommand(cmdName).SetParam(objName)
 		prj := apb.AddProjector(NewQName("test", "projector"))
-		require.Panics(func() {
-			prj.AddEvent(recName, ProjectorEventKind_Execute)
-		})
+		require.Panics(func() { prj.AddEvent(recName, ProjectorEventKind_Execute) })
+		require.Panics(func() { prj.AddEvent(objName, ProjectorEventKind_Update) })
+		require.Panics(func() { prj.AddEvent(cmdName, ProjectorEventKind_ExecuteWithParam) })
 	})
 
 	t.Run("panic if comment unknown event", func(t *testing.T) {

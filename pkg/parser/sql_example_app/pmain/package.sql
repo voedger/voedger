@@ -191,7 +191,7 @@ WORKSPACE MyWorkspace (
         CDoc, WDoc, ODoc are the only abstract tables which are allowed to use in this case
         */
         PROJECTOR RecordsRegistryProjector
-            AFTER INSERT ON (CRecord, WRecord, ORecord) OR AFTER UPDATE ON (CRecord, WRecord);
+            AFTER INSERT OR ACTIVATE OR DEACTIVATE ON (CRecord, WRecord);
 
         /*
         Commands can only be declared in workspaces

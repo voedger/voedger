@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -41,11 +42,9 @@ func (prj *projector) AddEvent(on QName, event ...ProjectorEventKind) IProjector
 		panic(fmt.Errorf("%v: type «%v» not found: %w", prj, on, ErrNameNotFound))
 	}
 	switch t.Kind() {
-	case TypeKind_GDoc, TypeKind_GRecord,
-		TypeKind_CDoc, TypeKind_CRecord,
-		TypeKind_WDoc, TypeKind_WRecord,
-		TypeKind_ODoc, TypeKind_ORecord,
-		TypeKind_Command:
+	case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord, // CUD
+		TypeKind_Command,               // Execute
+		TypeKind_ODoc, TypeKind_Object: // Execute with
 		if e, ok := prj.events[on]; ok {
 			e.addKind(event...)
 		} else {
@@ -98,6 +97,18 @@ func (prj *projector) States(cb func(storage QName, names QNames)) {
 	prj.states.enum(cb)
 }
 
+// Validates projector
+//
+// # Returns error:
+//   - if events set is empty
+func (prj *projector) Validate() (err error) {
+	if len(prj.events) == 0 {
+		err = errors.Join(err,
+			fmt.Errorf("%v: events set is empty: %w", prj, ErrEmptyProjectorEvents))
+	}
+	return err
+}
+
 type (
 	// # Implements:
 	//	 - IProjectorEvent
@@ -111,11 +122,21 @@ type (
 
 func newProjectorEvent(on IType, kind ...ProjectorEventKind) *projectorEvent {
 	p := &projectorEvent{on: on}
-	switch on.Kind() {
-	case TypeKind_Command:
-		p.addKind(ProjectorEventKind_Execute)
+
+	if len(kind) > 0 {
+		p.addKind(kind...)
+	} else {
+		// missed kind, make defaults
+		switch on.Kind() {
+		case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord:
+			p.addKind(ProjectorEventKind_AnyChanges...)
+		case TypeKind_Command:
+			p.addKind(ProjectorEventKind_Execute)
+		case TypeKind_Object, TypeKind_ODoc:
+			p.addKind(ProjectorEventKind_ExecuteWithParam)
+		}
 	}
-	p.addKind(kind...)
+
 	return p
 }
 

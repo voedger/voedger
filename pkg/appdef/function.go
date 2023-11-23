@@ -46,6 +46,10 @@ func (f *function) SetResult(name QName) IFunctionBuilder {
 }
 
 // Validates function
+//
+// # Returns error:
+//   - if parameter type is unknown or not a Data, ODoc or Object,
+//   - if result type is unknown or not a Data, Doc or Object,
 func (f *function) Validate() (err error) {
 	if ok, e := f.par.valid(f.app); !ok {
 		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown parameter type: %w", f, e))

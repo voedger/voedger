@@ -43,3 +43,5 @@ var ErrInvalidExtensionEngineKind = errors.New("extension engine kind is not val
 var ErrWorkspaceShouldBeAbstract = errors.New("workspace should be abstract")
 
 var ErrInvalidProjectorEventKind = errors.New("invalid projector event kind")
+
+var ErrEmptyProjectorEvents = errors.New("empty projector events")
