@@ -47,6 +47,10 @@ func ErrUndefinedCommand(name DefQName) error {
 	return fmt.Errorf("undefined command: %s", name.String())
 }
 
+func ErrUndefinedType(name DefQName) error {
+	return fmt.Errorf("undefined type: %s", name.String())
+}
+
 func ErrCheckRegexpErr(e error) error {
 	return fmt.Errorf("CHECK regexp error:  %w", e)
 }

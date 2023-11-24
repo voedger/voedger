@@ -382,7 +382,8 @@ type ProjectionTableAction struct {
 }
 
 type ProjectorCommandAction struct {
-	Execute bool `parser:"@'EXECUTE'"`
+	Execute   bool `parser:"@'EXECUTE'"`
+	WithParam bool `parser:"@('WITH' 'PARAM')?"`
 }
 
 type ProjectorTrigger struct {

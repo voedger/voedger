@@ -293,14 +293,27 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 					c.stmtErr(&v.Pos, err)
 				}
 			} else { // Command
-				cmd, _, err := lookupInCtx[*CommandStmt](qname, c)
-				if err != nil {
-					c.stmtErr(&v.Pos, err)
-					continue
-				}
-				if cmd == nil {
-					c.stmtErr(&v.Pos, ErrUndefinedCommand(qname))
-					continue
+				if trigger.ExecuteAction.WithParam {
+					cmd, _, err := lookupInCtx[*TypeStmt](qname, c)
+					if err != nil {
+						c.stmtErr(&v.Pos, err)
+						continue
+					}
+					if cmd == nil {
+						c.stmtErr(&v.Pos, ErrUndefinedType(qname))
+						continue
+					}
+
+				} else {
+					cmd, _, err := lookupInCtx[*CommandStmt](qname, c)
+					if err != nil {
+						c.stmtErr(&v.Pos, err)
+						continue
+					}
+					if cmd == nil {
+						c.stmtErr(&v.Pos, ErrUndefinedCommand(qname))
+						continue
+					}
 				}
 			}
 		}
