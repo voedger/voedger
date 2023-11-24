@@ -416,7 +416,7 @@ ABSTRACT WORKSPACE Workspace (
 		QUERY Modules RETURNS ModulesResult;
 		COMMAND RenameQName(RenameQNameParams);
 		SYNC PROJECTOR RecordsRegistryProjector
-			AFTER INSERT (CRecord, WRecord) OR
+			AFTER INSERT ON (CRecord, WRecord) OR
 			AFTER EXECUTE WITH PARAM ON ODoc
 			INTENTS(View(RecordsRegistry));
 
