@@ -1073,7 +1073,7 @@ func Test_Projectors(t *testing.T) {
 		"example.sql:8:4: only INSERT allowed for ODoc or ORecord",
 		"example.sql:9:4: only INSERT allowed for ODoc or ORecord",
 		"example.sql:10:4: only INSERT allowed for ODoc or ORecord",
-		"example.sql:12:4: undefined type: Bill",
+		"example.sql:12:4: undefined type or ODoc: Bill",
 	}, "\n"))
 }
 
