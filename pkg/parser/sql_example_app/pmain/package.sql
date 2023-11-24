@@ -169,6 +169,12 @@ WORKSPACE MyWorkspace (
             AFTER INSERT ON TablePlan
             INTENTS(View(TablePlanThumbnails));
 
+        -- Projector triggered by command argument SubscriptionEvent
+        -- Projector uses sys.HTTPStorage
+        PROJECTOR UpdateSubscriptionProfile
+            AFTER EXECUTE WITH PARAM ON SubscriptionEvent
+            STATE(sys.Http, AppSecret);            
+
         -- Projector triggered by few COMMANDs
         PROJECTOR UpdateDashboard
             AFTER EXECUTE ON (Orders, Orders2)
