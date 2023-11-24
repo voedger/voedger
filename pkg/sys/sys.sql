@@ -415,8 +415,8 @@ ABSTRACT WORKSPACE Workspace (
 		QUERY GRCount RETURNS GRCountResult;
 		QUERY Modules RETURNS ModulesResult;
 		COMMAND RenameQName(RenameQNameParams);
-		SYNC PROJECTOR RecordsRegistryProjector 
-			AFTER INSERT OR ACTIVATE OR DEACTIVATE ON (CRecord, WRecord) OR
+		SYNC PROJECTOR RecordsRegistryProjector
+			AFTER INSERT ON (CRecord, WRecord) OR
 			AFTER EXECUTE WITH PARAM ON ODoc
 			INTENTS(View(RecordsRegistry));
 
@@ -461,7 +461,7 @@ ABSTRACT WORKSPACE Workspace (
 		-- journal
 
 		QUERY Journal(JournalParams) RETURNS JournalResult;
-		PROJECTOR ProjectorWLogDates 
+		PROJECTOR ProjectorWLogDates
 			AFTER INSERT OR UPDATE ON (CRecord, WRecord) OR
 			AFTER EXECUTE WITH PARAM ON ODoc
 			INTENTS(View(WLogDates));
@@ -472,8 +472,8 @@ ABSTRACT WORKSPACE Workspace (
 
 		-- uniques
 
-		SYNC PROJECTOR ApplyUniques 
-			AFTER INSERT OR ACTIVATE OR DEACTIVATE ON (CRecord, WRecord) OR
+		SYNC PROJECTOR ApplyUniques
+			AFTER INSERT OR UPDATE ON (CRecord, WRecord) OR
 			AFTER EXECUTE WITH PARAM ON ODoc
 			INTENTS(View(Uniques));
 
