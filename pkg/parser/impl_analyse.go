@@ -295,15 +295,21 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 			} else { // Command
 				if trigger.ExecuteAction.WithParam {
 					cmd, _, err := lookupInCtx[*TypeStmt](qname, c)
-					if err != nil {
+					if err != nil { // type?
 						c.stmtErr(&v.Pos, err)
 						continue
 					}
-					if cmd == nil {
-						c.stmtErr(&v.Pos, ErrUndefinedType(qname))
-						continue
+					if cmd == nil { // ODoc?
+						odoc, _, err := lookupInCtx[*TableStmt](qname, c)
+						if err != nil {
+							c.stmtErr(&v.Pos, err)
+							continue
+						}
+						if odoc == nil || odoc.tableTypeKind != appdef.TypeKind_ODoc {
+							c.stmtErr(&v.Pos, ErrUndefinedTypeOrOdoc(qname))
+							continue
+						}
 					}
-
 				} else {
 					cmd, _, err := lookupInCtx[*CommandStmt](qname, c)
 					if err != nil {

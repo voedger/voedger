@@ -291,14 +291,35 @@ func (c *buildContext) projectors() error {
 						}
 					} else { // Command
 						if trigger.ExecuteAction.WithParam {
-							if err := resolveInCtx(qn, ictx, func(cmd *TypeStmt, pkg *PackageSchemaAST) error {
-								evQname := pkg.NewQName(cmd.Name)
-								builder.AddEvent(evQname, evKinds...)
-								return nil
-							}); err != nil {
+							var pkg *PackageSchemaAST
+							var err error
+							var typ *TypeStmt
+							var odoc *TableStmt
+							var name Ident
+							typ, pkg, err = lookupInCtx[*TypeStmt](qn, ictx)
+							if err != nil {
 								// notest
 								c.stmtErr(&proj.Pos, err)
+								return
 							}
+							if typ == nil { // ODoc
+								odoc, pkg, err = lookupInCtx[*TableStmt](qn, ictx)
+								if err != nil {
+									// notest
+									c.stmtErr(&proj.Pos, err)
+									return
+								}
+								if odoc == nil {
+									// notest
+									c.stmtErr(&proj.Pos, ErrUndefinedTypeOrOdoc(qn))
+									return
+								}
+								name = odoc.Name
+							} else {
+								name = typ.Name
+							}
+							evQname := pkg.NewQName(name)
+							builder.AddEvent(evQname, evKinds...)
 						} else {
 							if err := resolveInCtx(qn, ictx, func(cmd *CommandStmt, pkg *PackageSchemaAST) error {
 								evQname := pkg.NewQName(cmd.Name)
