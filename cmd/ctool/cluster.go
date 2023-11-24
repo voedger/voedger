@@ -30,6 +30,8 @@ func newCluster() (*clusterType, error) {
 		Draft:                 true,
 		sshKey:                sshKey,
 		Cmd:                   newCmd("", ""),
+		SkipStacks:            make([]string, 0),
+		ReplacedAddresses:     make([]string, 0),
 	}
 	dir, _ := os.Getwd()
 	cluster.configFileName = filepath.Join(dir, clusterConfFileName)
@@ -300,8 +302,7 @@ func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
 		return ErrInvalidClusterEdition
 	}
 	logger.Info("count args: ", len(args))
-	if args[0] == clusterEditionCE && len(args) != 1+initCeArgCount ||
-		args[0] == clusterEditionSE && len(args) != 1+initSeArgCount && len(args) != 1+initSeWithDCArgCount {
+	if args[0] == clusterEditionCE && len(args) != 1+initCeArgCount {
 		return ErrInvalidNumberOfArguments
 	}
 
@@ -359,11 +360,11 @@ type clusterType struct {
 	ActualClusterVersion  string
 	DesiredClusterVersion string   `json:"DesiredClusterVersion,omitempty"`
 	Cmd                   *cmdType `json:"Cmd,omitempty"`
-	DataCenters           []string `json:"DataCenters,omitempty"`
 	LastAttemptError      string   `json:"LastAttemptError,omitempty"`
 	SkipStacks            []string `json:"SkipStacks,omitempty"`
 	Nodes                 []nodeType
-	Draft                 bool `json:"Draft,omitempty"`
+	ReplacedAddresses     []string `json:"ReplacedAddresses,omitempty"`
+	Draft                 bool     `json:"Draft,omitempty"`
 }
 
 func (c *clusterType) clusterControllerFunction() error {
@@ -395,9 +396,9 @@ func equalIPs(ip1, ip2 string) bool {
 	return netIP1.Equal(netIP2)
 }
 
-func (c *clusterType) nodeByHost(address string) *nodeType {
+func (c *clusterType) nodeByHost(addrOrHostName string) *nodeType {
 	for i, n := range c.Nodes {
-		if equalIPs(n.ActualNodeState.Address, address) {
+		if addrOrHostName == n.nodeName() || equalIPs(n.ActualNodeState.Address, addrOrHostName) {
 			return &c.Nodes[i]
 		}
 	}
@@ -413,15 +414,30 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 		return ErrUncompletedCommandFound
 	}
 
-	c.Cmd = cmd
-
 	// nolint
 	defer c.saveToJSON()
 	switch cmd.Kind {
 	case ckReplace:
 		oldAddr := cmd.args()[0]
 		newAddr := cmd.args()[1]
+
+		if c.addressInReplacedList(newAddr) {
+			return fmt.Errorf(errAddressInReplacedList, newAddr, ErrAddressCannotBeUsed)
+		}
+
 		node := c.nodeByHost(oldAddr)
+		if oldAddr == node.nodeName() {
+			oldAddr = node.ActualNodeState.Address
+			cmd.Args = strings.Replace(cmd.Args, node.nodeName(), oldAddr, 1)
+		}
+
+		if err := nodeIsLive(node); err == nil {
+			return fmt.Errorf(errCannotReplaceALiveNode, oldAddr, ErrCommandCannotBeExecuted)
+		}
+
+		if err := hostIsAvailable(c, newAddr); err != nil {
+			return fmt.Errorf(errHostIsNotAvailable, newAddr, ErrHostIsNotAvailable)
+		}
 
 		node.DesiredNodeState = newNodeState(newAddr, node.desiredNodeVersion(c))
 
@@ -430,6 +446,8 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 		}
 
 	}
+
+	c.Cmd = cmd
 
 	return nil
 }
@@ -464,6 +482,16 @@ func (c *clusterType) saveToJSON() error {
 		err = ioutil.WriteFile(c.configFileName, b, rwxrwxrwx)
 	}
 	return err
+}
+
+// The address was replaced in the cluster
+func (c *clusterType) addressInReplacedList(address string) bool {
+	for _, value := range c.ReplacedAddresses {
+		if value == address {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *clusterType) loadFromJSON() error {
@@ -532,7 +560,6 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 	} else { // SE args
 		c.Edition = clusterEditionSE
 		c.Nodes = make([]nodeType, 5)
-		c.DataCenters = make([]string, 0)
 
 		for i := 0; i < initSeArgCount; i++ {
 			if i < seNodeCount {
@@ -545,12 +572,6 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 			c.Nodes[i].cluster = c
 		}
 
-		if len(args) == initSeWithDCArgCount {
-			c.DataCenters = append(c.DataCenters, args[seNodeCount+dbNodeCount:]...)
-			for _, dc := range c.DataCenters {
-				fmt.Println(dc)
-			}
-		}
 	}
 	return nil
 }
@@ -571,10 +592,6 @@ func (c *clusterType) validate() error {
 
 	if c.Edition != clusterEditionCE && c.Edition != clusterEditionSE {
 		err = errors.Join(err, ErrInvalidClusterEdition)
-	}
-
-	if len(c.DataCenters) > 0 && len(c.DataCenters) != 3 {
-		err = errors.Join(err, ErrInvalidNumberOfDataCenters)
 	}
 
 	return err
