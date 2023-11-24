@@ -18,9 +18,6 @@ func successSECluster() clusterType {
 		Edition:               clusterEditionSE,
 		DesiredClusterVersion: version,
 		ActualClusterVersion:  version,
-		DataCenters: []string{
-			"dc1", "dc2", "dc3",
-		},
 		Nodes: []nodeType{
 			{
 				NodeRole: "SENode",
@@ -67,9 +64,6 @@ func failSECluster() clusterType {
 		ActualClusterVersion:  "",
 		DesiredClusterVersion: version,
 		LastAttemptError:      "some error",
-		DataCenters: []string{
-			"dc1", "dc2", "dc3",
-		},
 		Nodes: []nodeType{
 			{
 				NodeRole: "SENode",
