@@ -312,6 +312,18 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	}, time.Now)
 	defer cleanup()
 
+	metrics := imetrics.Provide()
+	getProjectorsInError := func() float64 {
+		var projInErrors float64
+		metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
+			if metric.App() == istructs.AppQName_test1_app1 && metric.Vvm() == "test" && metric.Name() == ProjectorsInError {
+				projInErrors = metricValue
+			}
+			return nil
+		})
+		return projInErrors
+	}
+
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
 		Ctx:        withCancel,
@@ -328,7 +340,10 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		LogError: func(args ...interface{}) {
 			errors <- fmt.Sprint("error: ", args)
 		},
-		Broker: broker,
+		Broker:   broker,
+		Metrics:  metrics,
+		VvmName:  "test",
+		AppQName: istructs.AppQName_test1_app1,
 	}
 	attempts := 0
 
@@ -359,6 +374,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		time.Sleep(time.Microsecond)
 	}
 	require.Equal(1, attempts)
+	require.Equal(1.0, getProjectorsInError())
 
 	// tick after-error interval ("30 second delay")
 	chanAfterError <- time.Now()
@@ -367,6 +383,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	for getActualizerOffset(require, app, partitionNr, name) < topOffset {
 		time.Sleep(time.Microsecond)
 	}
+	require.Equal(0.0, getProjectorsInError())
 
 	// stop services
 	cancelCtx()
