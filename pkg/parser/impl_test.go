@@ -144,8 +144,73 @@ func Test_BasicUsage(t *testing.T) {
 	require.NotNil(q1)
 	require.Equal(appdef.TypeKind_Query, q1.Kind())
 
+	// CUD Projector
+	proj := builder.Projector(appdef.NewQName("main", "RecordsRegistryProjector"))
+	require.NotNil(proj)
+	eventsCount := 0
+	proj.Events(func(ie appdef.IProjectorEvent) {
+		eventsCount++
+		k, on := ie.Kind(), ie.On().QName()
+		require.Len(k, 3)
+		require.Contains(k, appdef.ProjectorEventKind_Insert)
+		require.Contains(k, appdef.ProjectorEventKind_Activate)
+		require.Contains(k, appdef.ProjectorEventKind_Deactivate)
+		switch eventsCount {
+		case 1:
+			require.Equal(appdef.NewQName("sys", "CRecord"), on)
+		case 2:
+			require.Equal(appdef.NewQName("sys", "WRecord"), on)
+		}
+	})
+	require.Equal(2, eventsCount)
+
+	// Execute Projector
+	proj = builder.Projector(appdef.NewQName("main", "UpdateDashboard"))
+	require.NotNil(proj)
+	eventsCount = 0
+	proj.Events(func(ie appdef.IProjectorEvent) {
+		eventsCount++
+		if eventsCount == 1 {
+			require.Equal(1, len(ie.Kind()))
+			require.Equal(appdef.ProjectorEventKind_Execute, ie.Kind()[0])
+			require.Equal(appdef.NewQName("main", "Orders"), ie.On().QName())
+		} else if eventsCount == 2 {
+			require.Equal(1, len(ie.Kind()))
+			require.Equal(appdef.ProjectorEventKind_Execute, ie.Kind()[0])
+			require.Equal(appdef.NewQName("main", "Orders2"), ie.On().QName())
+		}
+	})
+
+	stateCount := 0
+	proj.States(func(storage appdef.QName, names appdef.QNames) {
+		stateCount++
+		if stateCount == 1 {
+			require.Equal(appdef.NewQName("sys", "AppSecret"), storage)
+			require.Equal(0, len(names))
+		} else if stateCount == 2 {
+			require.Equal(appdef.NewQName("sys", "Http"), storage)
+			require.Equal(0, len(names))
+		}
+	})
+	require.Equal(2, stateCount)
+
+	intentsCount := 0
+	proj.Intents(func(storage appdef.QName, names appdef.QNames) {
+		intentsCount++
+		if intentsCount == 1 {
+			require.Equal(appdef.NewQName("sys", "View"), storage)
+			require.Equal(4, len(names))
+			require.Equal(appdef.NewQName("main", "ActiveTablePlansView"), names[0])
+			require.Equal(appdef.NewQName("main", "DashboardView"), names[1])
+			require.Equal(appdef.NewQName("main", "NotificationsHistory"), names[2])
+			require.Equal(appdef.NewQName("main", "XZReports"), names[3])
+		}
+	})
+	require.Equal(1, intentsCount)
+
 	_, err = builder.Build()
 	require.NoError(err)
+
 }
 
 func Test_Refs_NestedTables(t *testing.T) {
@@ -179,8 +244,7 @@ func Test_Refs_NestedTables(t *testing.T) {
 	require.NoError(BuildAppDefs(packages, adf))
 	inner1 := adf.Type(appdef.NewQName("pkg1", "inner1"))
 	ref1 := inner1.(appdef.IFields).RefField("ref1")
-	require.Len(ref1.Refs(), 1)
-	require.Equal(appdef.NewQName("pkg1", "table3"), ref1.Refs()[0])
+	require.EqualValues(appdef.QNames{appdef.NewQName("pkg1", "table3")}, ref1.Refs())
 
 	_, err = adf.Build()
 	require.NoError(err)
@@ -388,7 +452,7 @@ func Test_Varchar(t *testing.T) {
 	TYPE CDoc1 (
 		Oversize varchar(%d)
 	);
-	`, appdef.MaxFieldLength+1, appdef.MaxFieldLength+1))
+	`, uint32(appdef.MaxFieldLength)+1, uint32(appdef.MaxFieldLength)+1))
 	require.NoError(err)
 	pkg, err := BuildPackageSchema("pkg/test", []*FileSchemaAST{fs})
 	require.NoError(err)
@@ -675,7 +739,7 @@ func Test_DuplicatesInViews(t *testing.T) {
 		) AS RESULT OF Proj1;
 
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -718,7 +782,7 @@ func Test_Views(t *testing.T) {
 				PRIMARY KEY(field2)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 				COMMAND Orders()
 			);
 			)
@@ -730,7 +794,7 @@ func Test_Views(t *testing.T) {
 				PRIMARY KEY((field1))
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 				COMMAND Orders()
 			);
 			)
@@ -742,7 +806,7 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY((field1))
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -755,7 +819,7 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -768,7 +832,7 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -782,7 +846,7 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -793,7 +857,7 @@ func Test_Views(t *testing.T) {
 			fld1 int32
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 			COMMAND Orders()
 		);
 	)
@@ -817,7 +881,7 @@ func Test_Views2(t *testing.T) {
 				PRIMARY KEY((field1,field4),field2)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 				COMMAND Orders()
 			);
 		)
@@ -854,7 +918,7 @@ func Test_Views2(t *testing.T) {
 				PRIMARY KEY((field1),field4,field3)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
 				COMMAND Orders()
 			);
 		)
@@ -891,7 +955,7 @@ func Test_Views2(t *testing.T) {
 				PRIMARY KEY((field1),field4,field3)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 ON (Orders);
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders);
 				COMMAND Orders()
 			);
 		)
@@ -952,7 +1016,7 @@ func Test_Undefined(t *testing.T) {
 		EXTENSION ENGINE WASM (
 			COMMAND Orders() WITH Tags=(UndefinedTag);
 			QUERY Query1 RETURNS void WITH Rate=UndefinedRate;
-			PROJECTOR ImProjector ON xyz.CreateUPProfile;
+			PROJECTOR ImProjector AFTER EXECUTE ON xyz.CreateUPProfile;
 			COMMAND CmdFakeReturn() RETURNS text;
 			COMMAND CmdNoReturn() RETURNS void;
 			COMMAND CmdFakeArg(text);
@@ -986,13 +1050,14 @@ func Test_Projectors(t *testing.T) {
 		TABLE Order INHERITS ODoc();
 		EXTENSION ENGINE WASM (
 			COMMAND Orders();
-			PROJECTOR ImProjector1 ON test.CreateUPProfile; 			-- Undefined
-			PROJECTOR ImProjector2 ON Order; 							-- Good
+			PROJECTOR ImProjector1 AFTER EXECUTE ON test.CreateUPProfile; 			-- Undefined
+			PROJECTOR ImProjector2 AFTER EXECUTE ON Order; 							-- Bad: Order is not a type or command
 			PROJECTOR ImProjector3 AFTER UPDATE ON Order; 				-- Bad
 			PROJECTOR ImProjector4 AFTER ACTIVATE ON Order; 			-- Bad
 			PROJECTOR ImProjector5 AFTER DEACTIVATE ON Order; 			-- Bad
-			PROJECTOR ImProjector6 AFTER INSERT ON Order OR ON Orders;	-- Good
-		)
+			PROJECTOR ImProjector6 AFTER INSERT ON Order OR AFTER EXECUTE ON Orders;	-- Good
+			PROJECTOR ImProjector7 AFTER EXECUTE WITH PARAM ON Bill;	-- Bad: Type undefined
+		);
 	)
 	`)
 	require.Nil(err)
@@ -1003,10 +1068,12 @@ func Test_Projectors(t *testing.T) {
 	_, err = BuildAppSchema([]*PackageSchemaAST{pkg, getSysPackageAST()})
 
 	require.EqualError(err, strings.Join([]string{
-		"example.sql:6:4: test.CreateUPProfile undefined, expected command, type or table",
+		"example.sql:6:4: undefined command: test.CreateUPProfile",
+		"example.sql:7:4: undefined command: Order",
 		"example.sql:8:4: only INSERT allowed for ODoc or ORecord",
 		"example.sql:9:4: only INSERT allowed for ODoc or ORecord",
 		"example.sql:10:4: only INSERT allowed for ODoc or ORecord",
+		"example.sql:12:4: undefined type or ODoc: Bill",
 	}, "\n"))
 }
 
@@ -1025,7 +1092,7 @@ func Test_Imports(t *testing.T) {
     		COMMAND Orders WITH Tags=(pkg2.SomeTag);
     		QUERY Query2 RETURNS void WITH Tags=(air.SomePkg3Tag);
     		QUERY Query3 RETURNS void WITH Tags=(air.UnknownTag); -- air.UnknownTag undefined
-    		PROJECTOR ImProjector ON Air.CreateUPProfil; -- Air undefined
+    		PROJECTOR ImProjector AFTER EXECUTE ON Air.CreateUPProfil; -- Air undefined
 		)
 	)
 	`)
@@ -1692,7 +1759,6 @@ func buildPackage(qn string, sql string) *PackageSchemaAST {
 	return pkg
 }
 
-/*
 func Test_OdocCmdArgs(t *testing.T) {
 	require := require.New(t)
 	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
@@ -1700,8 +1766,6 @@ func Test_OdocCmdArgs(t *testing.T) {
 	APPLICATION registry(
 	);
 
-	TABLE TableCDoc INHERITS CDoc ();
-	TABLE TableWDoc INHERITS WDoc ();
 	TABLE TableODoc INHERITS ODoc (
 		orecord1 TABLE orecord1(
 			orecord2 TABLE orecord2()
@@ -1710,9 +1774,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 
 	WORKSPACE Workspace1 (
 		EXTENSION ENGINE BUILTIN (
-			COMMAND CmdCDoc1(TableCDoc);
-			COMMAND CmdWDoc1(TableWDoc);
-			COMMAND CmdODoc1(TableODoc);
+			COMMAND CmdODoc1(TableODoc) RETURNS TableODoc;
 		)
 	);
 
@@ -1726,14 +1788,25 @@ func Test_OdocCmdArgs(t *testing.T) {
 	require.NoError(err)
 
 	_, err = builder.Build()
+	require.NoError(err)
 
-	cmdCdoc1 := builder.Command(appdef.NewQName("app1", "CmdCDoc1"))
-	require.NotNil(cmdCdoc1)
-	require.NotNil(cmdCdoc1.Param())
-	require.Equal(1, cmdCdoc1.Param().ContainerCount())
+	cmdOdoc := builder.Command(appdef.NewQName("app1", "CmdODoc1"))
+	require.NotNil(cmdOdoc)
+	require.NotNil(cmdOdoc.Param())
+
+	odoc := cmdOdoc.Param().(appdef.IContainers)
+	require.Equal(1, odoc.ContainerCount())
+	require.Equal("orecord1", odoc.Container("orecord1").Name())
+	container := odoc.Container("orecord1")
+	require.Equal(appdef.Occurs(0), container.MinOccurs())
+	require.Equal(appdef.Occurs(100), container.MaxOccurs())
+
+	orec := builder.ORecord(appdef.NewQName("app1", "orecord1"))
+	require.NotNil(orec)
+	require.Equal(1, orec.ContainerCount())
+	require.Equal("orecord2", orec.Container("orecord2").Name())
 
 }
-*/
 
 func Test_TypeContainers(t *testing.T) {
 	require := require.New(t)
@@ -1773,12 +1846,15 @@ WORKSPACE Workspace1 (
 	err = BuildAppDefs(app, builder)
 	require.NoError(err)
 
-	validate := func(o appdef.IObject) {
+	validate := func(par appdef.IType) {
+		o, ok := par.(appdef.IObject)
+		require.True(ok, "expected %v supports IObject", par)
 		require.Equal(2, o.ContainerCount())
 		require.Equal(appdef.Occurs(1), o.Container("side1").MinOccurs())
 		require.Equal(appdef.Occurs(1), o.Container("side1").MaxOccurs())
 		require.Equal(appdef.Occurs(0), o.Container("side2").MinOccurs())
 		require.Equal(appdef.Occurs(1), o.Container("side2").MaxOccurs())
+
 		/* TODO: uncomment when kernel supports it
 		require.Equal(appdef.Occurs(1), o.Container("items").MinOccurs())
 		require.Equal(appdef.Occurs(100), o.Container("items").MaxOccurs())
@@ -1794,4 +1870,29 @@ WORKSPACE Workspace1 (
 	_, err = builder.Build()
 	require.NoError(err)
 
+}
+
+func Test_EmptyType(t *testing.T) {
+	require := require.New(t)
+	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+
+APPLICATION registry(
+);
+
+TYPE EmptyType (
+);
+	`)
+
+	app, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
+	require.NoError(err)
+
+	builder := appdef.New()
+	err = BuildAppDefs(app, builder)
+	require.NoError(err)
+
+	cdoc := builder.Object(appdef.NewQName("app1", "EmptyType"))
+	require.NotNil(cdoc)
+
+	_, err = builder.Build()
+	require.NoError(err)
 }

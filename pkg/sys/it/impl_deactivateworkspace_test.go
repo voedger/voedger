@@ -43,7 +43,7 @@ func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
 	waitForDeactivate(vit, ws)
 
 	// 410 Gone on work in an inactive workspace
-	bodyCmd := `{"cuds":[{"fields":{"sys.QName":"app1.computers","sys.ID":1}}]}`
+	bodyCmd := `{"cuds":[{"fields":{"sys.QName":"app1pkg.computers","sys.ID":1}}]}`
 	vit.PostWS(ws, "c.sys.CUD", bodyCmd, coreutils.Expect410()).Println()
 	bodyQry := `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`
 	vit.PostWS(ws, "q.sys.Collection", bodyQry, coreutils.Expect410()).Println()
@@ -89,7 +89,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	newWS := vit.CreateWorkspace(wsp, prn1)
 
 	// check prn2 could not work in ws1
-	body := `{"cuds":[{"fields":{"sys.QName":"app1.computers","sys.ID":1}}]}`
+	body := `{"cuds":[{"fields":{"sys.QName":"app1pkg.computers","sys.ID":1}}]}`
 	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn2.Token), coreutils.Expect403())
 
 	// join login TestEmail2 to ws1
@@ -106,7 +106,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	WaitForInviteState(vit, newWS, invite.State_Joined, inviteID)
 
 	// check prn2 could work in ws1
-	body = `{"cuds":[{"fields":{"sys.QName":"app1.computers","sys.ID":1}}]}`
+	body = `{"cuds":[{"fields":{"sys.QName":"app1pkg.computers","sys.ID":1}}]}`
 	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn2.Token))
 
 	// deactivate
@@ -127,7 +127,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &viewWorkspaceIDIdx))
 	idOfCDocWorkspaceID := int64(viewWorkspaceIDIdx["IDOfCDocWorkspaceID"].(float64))
 	body = fmt.Sprintf(`{"args":{"ID": %d},"elements":[{"fields": ["Result"]}]}`, int64(idOfCDocWorkspaceID))
-	resp = vit.PostApp(istructs.AppQName_test1_app1, wsidOfCDocWorkspaceID, "q.sys.CDoc", body, coreutils.WithAuthorizeBy(sysToken.Token))
+	resp = vit.PostApp(istructs.AppQName_test1_app1, wsidOfCDocWorkspaceID, "q.sys.GetCDoc", body, coreutils.WithAuthorizeBy(sysToken.Token))
 	jsonBytes := []byte(resp.SectionRow()[0].(string))
 	cdocWorkspaceID := map[string]interface{}{}
 	require.Nil(json.Unmarshal(jsonBytes, &cdocWorkspaceID))

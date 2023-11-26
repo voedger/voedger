@@ -6,6 +6,8 @@
 package istructsmem
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/binary"
 	"testing"
 
@@ -104,6 +106,16 @@ func Test_dynoBufValue(t *testing.T) {
 		require.Nil(v)
 
 		v, err = row.dynoBufValue(7, appdef.DataKind_bytes)
+		require.ErrorIs(err, ErrWrongFieldType)
+		require.Nil(v)
+	})
+
+	t.Run("test string", func(t *testing.T) {
+		v, err := row.dynoBufValue("test 🎄 tree", appdef.DataKind_string)
+		require.NoError(err)
+		require.Equal("test 🎄 tree", v)
+
+		v, err = row.dynoBufValue(7, appdef.DataKind_string)
 		require.ErrorIs(err, ErrWrongFieldType)
 		require.Nil(v)
 	})
@@ -241,6 +253,9 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		require.Equal(float64(0), row.AsFloat64("float64"))
 		require.Equal([]byte(nil), row.AsBytes("bytes"))
 		require.Equal("", row.AsString("string"))
+
+		require.EqualValues([]byte(nil), row.AsBytes("raw"))
+
 		require.Equal(appdef.NullQName, row.AsQName("QName"))
 		require.Equal(false, row.AsBool("bool"))
 		require.Equal(istructs.NullRecordID, row.AsRecordID("RecordID"))
@@ -268,23 +283,39 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		require.Equal(float32(3), row.AsFloat32("float32"))
 		require.Equal(float64(4), row.AsFloat64("float64"))
 		require.Equal(istructs.RecordID(5), row.AsRecordID("RecordID"))
+
+		t.Run("Should be OK to As××× with type casts", func(t *testing.T) {
+			require.EqualValues(1, row.AsFloat64("int32"))
+			require.EqualValues(2, row.AsFloat64("int64"))
+			require.EqualValues(3, row.AsFloat64("float32"))
+			require.EqualValues(5, row.AsFloat64("RecordID"))
+
+			require.EqualValues(5, row.AsInt64("RecordID"))
+
+			require.EqualValues(2, row.AsRecordID("int64"))
+		})
 	})
 
-	t.Run("PutChars to char-type fields (string, bytes and QName) must be available (json)", func(t *testing.T) {
+	t.Run("PutChars to char-type fields (string, bytes, raw and QName) must be available (json)", func(t *testing.T) {
 		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutChars("string", "test 🏐 тест")
 		row.PutChars("QName", test.saleCmdName.String())
+
 		// cspell:disable
 		row.PutChars("bytes", "AQIDBA==")
 		// cspell:enable
+
+		rawValue := bytes.Repeat([]byte{1, 2, 3, 4}, 1024)
+		row.PutChars("raw", base64.StdEncoding.EncodeToString(rawValue))
 
 		require.NoError(row.build())
 
 		require.Equal("test 🏐 тест", row.AsString("string"))
 		require.Equal(test.saleCmdName, row.AsQName("QName"))
 		require.Equal([]byte{1, 2, 3, 4}, row.AsBytes("bytes"))
+		require.Equal(rawValue, row.AsBytes("raw"))
 	})
 }
 
@@ -357,6 +388,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 		testPut(func(row istructs.IRowWriter) { row.PutInt64("float32", 2) })
 		testPut(func(row istructs.IRowWriter) { row.PutFloat32("int32", 3) })
 		testPut(func(row istructs.IRowWriter) { row.PutFloat64("string", 4) })
+		testPut(func(row istructs.IRowWriter) { row.PutRecordID("raw", 4) })
 		testPut(func(row istructs.IRowWriter) { row.PutBytes("float64", []byte{1, 2, 3}) })
 		testPut(func(row istructs.IRowWriter) { row.PutString("bytes", "abc") })
 		testPut(func(row istructs.IRowWriter) { row.PutQName("RecordID", istructs.QNameForError) })
@@ -369,6 +401,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 		row.setQName(test.testRow)
 
 		row.PutNumber("bytes", 29)
+		row.PutNumber("raw", 3.141592653589793238)
 
 		require.ErrorIs(row.build(), ErrWrongFieldType)
 	})
@@ -451,6 +484,23 @@ func Test_rowType_AsPanics(t *testing.T) {
 		require.Panics(func() { row.AsRecord("unknownField") })
 		require.Panics(func() { row.AsEvent("unknownField") })
 	})
+
+	t.Run("As××× from fields with invalid type cast must panic", func(t *testing.T) {
+		require := require.New(t)
+		row := newTestRow()
+
+		require.Panics(func() { row.AsInt32("raw") })
+		require.Panics(func() { row.AsInt64("string") })
+		require.Panics(func() { row.AsFloat32("bytes") })
+		require.Panics(func() { row.AsFloat64("bool") })
+		require.Panics(func() { row.AsBytes("QName") })
+		require.Panics(func() { row.AsString("RecordID") })
+		require.Panics(func() { row.AsQName("int32") })
+		require.Panics(func() { row.AsBool("int64") })
+		require.Panics(func() { row.AsRecordID("float32") })
+		require.Panics(func() { row.AsRecord("float64") })
+		require.Panics(func() { row.AsEvent("bool") })
+	})
 }
 
 func Test_rowType_RecordIDs(t *testing.T) {
@@ -523,6 +573,7 @@ func Test_rowType_maskValues(t *testing.T) {
 		require.Equal(float64(0), row.AsFloat64("float64"))
 		require.Nil(row.AsBytes("bytes"))
 		require.Equal("*", row.AsString("string"))
+		require.Nil(row.AsBytes("raw"))
 		require.Equal(appdef.NullQName, row.AsQName("QName"))
 		require.Equal(false, row.AsBool("bool"))
 		require.Equal(istructs.NullRecordID, row.AsRecordID("RecordID"))
@@ -565,7 +616,37 @@ func Test_rowType_FieldNames(t *testing.T) {
 			names[fieldName] = true
 			cnt++
 		})
-		require.Equal(10, cnt) // QName + nine user fields for simple types
+		require.Equal(11, cnt) // QName + ten user fields for simple types
+	})
+
+	t.Run("should be ok iterate with filled system fields", func(t *testing.T) {
+		rec := newTestCRecord(7)
+		rec.PutRecordID(appdef.SystemField_ParentID, 5)
+		rec.PutString(appdef.SystemField_Container, "rec")
+
+		sys := make(map[string]interface{})
+		rec.FieldNames(func(fieldName string) {
+			if appdef.IsSysField(fieldName) {
+				switch rec.fieldDef(fieldName).DataKind() {
+				case appdef.DataKind_QName:
+					sys[fieldName] = rec.AsQName(fieldName)
+				case appdef.DataKind_RecordID:
+					sys[fieldName] = rec.AsRecordID(fieldName)
+				case appdef.DataKind_string:
+					sys[fieldName] = rec.AsString(fieldName)
+				case appdef.DataKind_bool:
+					sys[fieldName] = rec.AsBool(fieldName)
+				default:
+					require.Fail("unexpected system field", "field name: «%s»", fieldName)
+				}
+			}
+		})
+		require.Len(sys, 5)
+		require.EqualValues(test.testCRec, sys[appdef.SystemField_QName])
+		require.EqualValues(7, sys[appdef.SystemField_ID])
+		require.EqualValues(5, sys[appdef.SystemField_ParentID])
+		require.EqualValues("rec", sys[appdef.SystemField_Container])
+		require.True(sys[appdef.SystemField_IsActive].(bool))
 	})
 }
 
@@ -641,24 +722,41 @@ func Test_rowType_Nils(t *testing.T) {
 			require.Contains(row.nils, "string")
 		})
 
+		t.Run("check third nil", func(t *testing.T) {
+			row.PutChars("raw", "")
+			require.NoError(row.build())
+			require.Len(row.nils, 3)
+			require.Contains(row.nils, "bytes")
+			require.Contains(row.nils, "string")
+			require.Contains(row.nils, "raw")
+		})
+
 		t.Run("check repeat nil", func(t *testing.T) {
 			row.PutChars("bytes", "")
 			require.NoError(row.build())
-			require.Len(row.nils, 2)
+			require.Len(row.nils, 3)
 			require.Contains(row.nils, "bytes")
 			require.Contains(row.nils, "string")
+			require.Contains(row.nils, "raw")
 		})
 
 		t.Run("check nils are kept", func(t *testing.T) {
 			row.PutInt32("int32", 888)
 			require.NoError(row.build())
-			require.Len(row.nils, 2)
+			require.Len(row.nils, 3)
 			require.Contains(row.nils, "bytes")
 			require.Contains(row.nils, "string")
+			require.Contains(row.nils, "raw")
 		})
 
 		t.Run("check nil can be reassigned", func(t *testing.T) {
 			row.PutBytes("bytes", []byte{0})
+			require.NoError(row.build())
+			require.Len(row.nils, 2)
+			require.Contains(row.nils, "string")
+			require.Contains(row.nils, "raw")
+
+			row.PutBytes("raw", []byte("📷"))
 			require.NoError(row.build())
 			require.Len(row.nils, 1)
 			require.Contains(row.nils, "string")
@@ -674,6 +772,7 @@ func Test_rowType_Nils(t *testing.T) {
 		row.PutFloat64("float64", 0)
 		row.PutBytes("bytes", []byte{})
 		row.PutString("string", "")
+		row.PutBytes("raw", []byte{})
 		row.PutQName("QName", appdef.NullQName)
 		row.PutBool("bool", false)
 		row.PutRecordID("RecordID", istructs.NullRecordID)
@@ -686,6 +785,7 @@ func Test_rowType_Nils(t *testing.T) {
 		require.True(row.HasValue("float64"))
 		require.False(row.HasValue("bytes"))
 		require.False(row.HasValue("string"))
+		require.False(row.HasValue("raw"))
 		require.True(row.HasValue("QName"))
 		require.True(row.HasValue("bool"))
 		require.True(row.HasValue("RecordID"))
@@ -711,9 +811,10 @@ func Test_rowType_Nils(t *testing.T) {
 
 		require.Equal(7, cnt)
 
-		require.Len(row.nils, 2)
+		require.Len(row.nils, 3)
 		require.Contains(row.nils, "bytes")
 		require.Contains(row.nils, "string")
+		require.Contains(row.nils, "raw")
 	})
 }
 

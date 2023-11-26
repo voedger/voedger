@@ -52,6 +52,41 @@ func (t *typ) String() string {
 	return fmt.Sprintf("%s «%v»", t.Kind().TrimString(), t.QName())
 }
 
+type typeRef struct {
+	name QName
+	t    IType
+}
+
+// Returns type by reference.
+//
+// If type is not found then returns nil.
+func (r *typeRef) target(tt IWithTypes) IType {
+	if r.name == NullQName {
+		return nil
+	}
+	if r.name == QNameANY {
+		return AnyType
+	}
+	if (r.t == nil) || (r.t.QName() != r.name) {
+		r.t = tt.TypeByName(r.name)
+	}
+	return r.t
+}
+
+// Sets reference name
+func (r *typeRef) setName(n QName) {
+	r.name = n
+	r.t = nil
+}
+
+// Returns is reference valid
+func (r *typeRef) valid(tt IWithTypes) (bool, error) {
+	if (r.name == NullQName) || (r.name == QNameANY) || (r.target(tt) != nil) {
+		return true, nil
+	}
+	return false, fmt.Errorf("type «%v» is not found: %w", r.name, ErrNameNotFound)
+}
+
 // Validate specified type.
 //
 // # Validation:
@@ -75,9 +110,9 @@ func validateType(t IType) (err error) {
 }
 
 // NullType is used for return then type is not founded
-const nullTypeString = "null type"
-
 var NullType = new(nullType)
+
+const nullTypeString = "null type"
 
 type nullType struct{ nullComment }
 
@@ -86,3 +121,16 @@ func (t *nullType) IsSystem() bool { return false }
 func (t *nullType) Kind() TypeKind { return TypeKind_null }
 func (t *nullType) QName() QName   { return NullQName }
 func (t *nullType) String() string { return nullTypeString }
+
+// AnyType is used for return then type is any
+var AnyType = new(anyType)
+
+const anyTypeString = "any type"
+
+type anyType struct{ nullComment }
+
+func (t *anyType) App() IAppDef   { return nil }
+func (t *anyType) IsSystem() bool { return false }
+func (t *anyType) Kind() TypeKind { return TypeKind_Any }
+func (t *anyType) QName() QName   { return QNameANY }
+func (t *anyType) String() string { return anyTypeString }

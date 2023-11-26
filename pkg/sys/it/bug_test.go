@@ -57,7 +57,7 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 	// отправим POST-запрос
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 	ws := vit.DummyWS(istructs.AppQName_test1_app1)
-	vit.PostWSSys(ws, "q.sys.MockQry", body, coreutils.WithResponseHandler(func(httpResp *http.Response) {
+	vit.PostWSSys(ws, "q.app1pkg.MockQry", body, coreutils.WithResponseHandler(func(httpResp *http.Response) {
 		// прочтем первую часть ответа (сервер не отдаст вторую, пока в goOn не запишем чего-нибудь)
 		entireResp := []byte{}
 		var err error
@@ -87,7 +87,7 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 
 			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
-			apps.RegisterSchemaFS(it.SchemaTestApp2, "app2", ep)
+			apps.RegisterSchemaFS(it.SchemaTestApp2FS, "app2", ep)
 
 			cdocQName := appdef.NewQName("test", "cdoc")
 			appDefBuilder.AddCDoc(cdocQName)

@@ -31,14 +31,16 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 
-	// workspacemgmt "github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state istructs.IState, params IQueryParams,
 	resultMeta appdef.IType, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline {
 	operators := make([]*pipeline.WiredOperator, 0)
-	if resultMeta.QName() == istructs.QNameJSON {
+	if resultMeta == nil {
+		// happens when the query has no result, e.g. q.air.UpdateSubscriptionDetails
+		operators = append(operators, pipeline.WireAsyncOperator("noop, no result", &pipeline.AsyncNOOP{}))
+	} else if resultMeta.QName() == istructs.QNameRaw {
 		operators = append(operators, pipeline.WireAsyncOperator("Raw result", &RawResultOperator{
 			metrics: metrics,
 		}))
@@ -184,7 +186,18 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
-		operator("unmarshal JSON", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("get queryFunction", func(ctx context.Context, qw *queryWork) (err error) {
+			qw.queryFunction = qw.msg.Resource().(istructs.IQueryFunction)
+			return nil
+		}),
+		operator("unmarshal request", func(ctx context.Context, qw *queryWork) (err error) {
+			parsType := qw.appStructs.AppDef().Type(qw.queryFunction.ParamsType())
+			if parsType.QName() == istructs.QNameRaw {
+				qw.requestData["args"] = map[string]interface{}{
+					processors.Field_RawObject_Body: string(qw.msg.Body()),
+				}
+				return nil
+			}
 			err = json.Unmarshal(qw.msg.Body(), &qw.requestData)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
@@ -197,9 +210,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.queryFunction = qw.msg.Resource().(istructs.IQueryFunction)
-			parsType := qw.appStructs.AppDef().Type(qw.queryFunction.ParamsType())
-			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), parsType, qw.appCfg, qw)
+			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), qw.appCfg, qw)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("create state", func(ctx context.Context, qw *queryWork) (err error) {
@@ -216,6 +227,9 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("validate: get result type", func(ctx context.Context, qw *queryWork) (err error) {
 			typ := qw.queryFunction.ResultType(qw.execQueryArgs.PrepareArgs)
+			if typ == appdef.NullQName {
+				return nil
+			}
 			qw.resultType = qw.appStructs.AppDef().Type(typ)
 			err = errIfFalse(qw.resultType.Kind() != appdef.TypeKind_null, func() error {
 				return fmt.Errorf("result type %s: %w", typ, ErrNotFound)
@@ -269,8 +283,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}()
 			err = qw.queryFunction.Exec(ctx, qw.execQueryArgs, func(object istructs.IObject) error {
 				pathToIdx := make(map[string]int)
-				if qw.resultType.QName() == istructs.QNameJSON {
-					pathToIdx[processors.Field_JSONDef_Body] = 0
+				if qw.resultType.QName() == istructs.QNameRaw {
+					pathToIdx[processors.Field_RawObject_Body] = 0
 				} else {
 					for i, element := range qw.queryParams.Elements() {
 						pathToIdx[element.Path().Name()] = i
@@ -413,18 +427,17 @@ func (r *outputRow) Values() []interface{}               { return r.values }
 func (r *outputRow) Value(alias string) interface{}      { return r.values[r.keyToIdx[alias]] }
 func (r *outputRow) MarshalJSON() ([]byte, error)        { return json.Marshal(r.values) }
 
-func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, argsType appdef.IType, appCfg *istructsmem.AppConfigType,
+func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, appCfg *istructsmem.AppConfigType,
 	qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
 	args, _, err := data.AsObject("args")
 	if err != nil {
 		return execQueryArgs, err
 	}
 	requestArgs := istructs.NewNullObject()
+	argsType := qw.appStructs.AppDef().Type(qw.queryFunction.ParamsType())
 	switch argsType.QName() {
 	case appdef.NullQName:
 		//Do nothing
-	case istructs.QNameJSON:
-		requestArgs, err = newJsonObject(data)
 	default:
 		requestArgsBuilder := istructsmem.NewIObjectBuilder(appCfg, argsType.QName())
 		if err := istructsmem.FillObjectFromJSON(args, argsType, requestArgsBuilder); err != nil {
@@ -526,24 +539,6 @@ func (m *queryProcessorMetrics) Increase(metricName string, valueDelta float64) 
 // need or q.sys.EnrichPrincipalToken
 func (qw *queryWork) AppQName() istructs.AppQName {
 	return qw.msg.AppQName()
-}
-
-type jsonObject struct {
-	istructs.NullObject
-	body []byte
-}
-
-func newJsonObject(data coreutils.MapObject) (object istructs.IObject, err error) {
-	jo := &jsonObject{}
-	jo.body, err = json.Marshal(data)
-	return jo, err
-}
-
-func (o *jsonObject) AsString(name string) string {
-	if name == processors.Field_JSONDef_Body {
-		return string(o.body)
-	}
-	return o.NullObject.AsString(name)
 }
 
 func newFieldsKinds(t appdef.IType) FieldsKinds {

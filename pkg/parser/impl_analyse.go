@@ -226,30 +226,36 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 }
 
 func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
-	if cmd.Arg != nil && cmd.Arg.Def != nil {
-		err := resolveInCtx(*cmd.Arg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil })
+
+	resolve := func(qn DefQName) {
+		err := resolveInCtx(qn, c, func(*TypeStmt, *PackageSchemaAST) error { return nil })
 		if err != nil {
-			if err = resolveInCtx(*cmd.Arg.Def, c, func(*TableStmt, *PackageSchemaAST) error { return nil }); err != nil {
+			if err = resolveInCtx(qn, c, func(*TableStmt, *PackageSchemaAST) error { return nil }); err != nil {
 				c.stmtErr(&cmd.Pos, err)
 			}
 		}
 	}
-	if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
-		if err := resolveInCtx(*cmd.UnloggedArg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&cmd.Pos, err)
+
+	if cmd.Param != nil && cmd.Param.Def != nil {
+		resolve(*cmd.Param.Def)
+	}
+	if cmd.UnloggedParam != nil && cmd.UnloggedParam.Def != nil {
+		err := resolveInCtx(*cmd.UnloggedParam.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil })
+		if err != nil {
+			if err = resolveInCtx(*cmd.UnloggedParam.Def, c, func(*TableStmt, *PackageSchemaAST) error { return nil }); err != nil {
+				c.stmtErr(&cmd.Pos, err)
+			}
 		}
 	}
 	if cmd.Returns != nil && cmd.Returns.Def != nil {
-		if err := resolveInCtx(*cmd.Returns.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&cmd.Pos, err)
-		}
+		resolve(*cmd.Returns.Def)
 	}
 	analyseWith(&cmd.With, cmd, c)
 }
 
 func analyzeQuery(query *QueryStmt, c *iterateCtx) {
-	if query.Arg != nil && query.Arg.Def != nil {
-		if err := resolveInCtx(*query.Arg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
+	if query.Param != nil && query.Param.Def != nil {
+		if err := resolveInCtx(*query.Param.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
 			c.stmtErr(&query.Pos, err)
 		}
 
@@ -266,7 +272,7 @@ func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 	for _, trigger := range v.Triggers {
 		for _, qname := range trigger.QNames {
-			if trigger.CUDEvents != nil {
+			if len(trigger.TableActions) > 0 {
 				resolveFunc := func(table *TableStmt, pkg *PackageSchemaAST) error {
 					sysDoc := (pkg.QualifiedPackageName == appdef.SysPackage) && (table.Name == nameCRecord || table.Name == nameORecord || table.Name == nameWRecord)
 					if table.Abstract && !sysDoc {
@@ -277,7 +283,7 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 						return err
 					}
 					if k == appdef.TypeKind_ODoc || k == appdef.TypeKind_ORecord {
-						if trigger.CUDEvents.activate() || trigger.CUDEvents.deactivate() || trigger.CUDEvents.update() {
+						if trigger.activate() || trigger.deactivate() || trigger.update() {
 							return ErrOnlyInsertForOdocOrORecord
 						}
 					}
@@ -286,36 +292,34 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 				if err := resolveInCtx(qname, c, resolveFunc); err != nil {
 					c.stmtErr(&v.Pos, err)
 				}
-			} else { // The type of ON not defined
-				// Command?
-				cmd, _, err := lookupInCtx[*CommandStmt](qname, c)
-				if err != nil {
-					c.stmtErr(&v.Pos, err)
-					continue
-				}
-				if cmd != nil {
-					continue // resolved
-				}
-
-				// Command Argument?
-				cmdArg, _, err := lookupInCtx[*TypeStmt](qname, c)
-				if err != nil {
-					c.stmtErr(&v.Pos, err)
-					continue
-				}
-				if cmdArg != nil {
-					continue // resolved
-				}
-
-				// Table?
-				table, _, err := lookupInCtx[*TableStmt](qname, c)
-				if err != nil {
-					c.stmtErr(&v.Pos, err)
-					continue
-				}
-				if table == nil {
-					c.stmtErr(&v.Pos, ErrUndefinedExpectedCommandTypeOrTable(qname))
-					continue
+			} else { // Command
+				if trigger.ExecuteAction.WithParam {
+					cmd, _, err := lookupInCtx[*TypeStmt](qname, c)
+					if err != nil { // type?
+						c.stmtErr(&v.Pos, err)
+						continue
+					}
+					if cmd == nil { // ODoc?
+						odoc, _, err := lookupInCtx[*TableStmt](qname, c)
+						if err != nil {
+							c.stmtErr(&v.Pos, err)
+							continue
+						}
+						if odoc == nil || odoc.tableTypeKind != appdef.TypeKind_ODoc {
+							c.stmtErr(&v.Pos, ErrUndefinedTypeOrOdoc(qname))
+							continue
+						}
+					}
+				} else {
+					cmd, _, err := lookupInCtx[*CommandStmt](qname, c)
+					if err != nil {
+						c.stmtErr(&v.Pos, err)
+						continue
+					}
+					if cmd == nil {
+						c.stmtErr(&v.Pos, ErrUndefinedCommand(qname))
+						continue
+					}
 				}
 			}
 		}
@@ -430,9 +434,6 @@ func analyseWith(with *[]WithItem, statement IStatement, c *iterateCtx) {
 }
 
 func analyseTable(v *TableStmt, c *iterateCtx) {
-	if isPredefinedSysTable(c.pkg.QualifiedPackageName, v) {
-		return
-	}
 	var err error
 	v.tableTypeKind, v.singletone, err = getTableTypeKind(v, c.pkg, c)
 	if err != nil {
@@ -569,9 +570,16 @@ func analyseFields(items []TableItemExpr, c *iterateCtx) {
 					c.stmtErr(&field.Pos, ErrRegexpCheckOnlyForVarcharField)
 				}
 			}
-			if field.Type.DataType != nil && field.Type.DataType.Varchar != nil && field.Type.DataType.Varchar.MaxLen != nil {
-				if *field.Type.DataType.Varchar.MaxLen > appdef.MaxFieldLength {
-					c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+			if field.Type.DataType != nil {
+				if field.Type.DataType.Varchar != nil && field.Type.DataType.Varchar.MaxLen != nil {
+					if *field.Type.DataType.Varchar.MaxLen > uint64(appdef.MaxFieldLength) {
+						c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+					}
+				}
+				if field.Type.DataType.Bytes != nil && field.Type.DataType.Bytes.MaxLen != nil {
+					if *field.Type.DataType.Bytes.MaxLen > uint64(appdef.MaxFieldLength) {
+						c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+					}
 				}
 			}
 		}

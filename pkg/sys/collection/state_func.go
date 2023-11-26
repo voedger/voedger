@@ -18,9 +18,11 @@ import (
 func provideStateFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameQueryState,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateParams")).
+		// local tests -> params and result will be used as declared here
+		// runtime -> params and result will be replaced with ones from sql
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateParams_local")).
 			AddField(field_After, appdef.DataKind_int64, true).(appdef.IType).QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult")).
+		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult_local")).
 			AddField(field_State, appdef.DataKind_string, true).(appdef.IType).QName(),
 		stateFuncExec(appDefBuilder)))
 }
@@ -29,7 +31,7 @@ func stateFuncExec(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		after := args.ArgumentObject.AsInt64(field_After)
 
-		kb, err := args.State.KeyBuilder(state.View, QNameViewCollection)
+		kb, err := args.State.KeyBuilder(state.View, QNameCollectionView)
 		if err != nil {
 			return err
 		}

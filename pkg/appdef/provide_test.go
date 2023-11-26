@@ -59,7 +59,6 @@ func TestBasicUsage(t *testing.T) {
 
 	newBuyerCmd := adb.AddCommand(NewQName("test", "cmdNewBuyer"))
 	newBuyerCmd.SetParam(buyerObj.QName())
-	newBuyerCmd.SetExtension("newBuyer", ExtensionEngineKind_BuiltIn)
 
 	appDef, err := adb.Build()
 

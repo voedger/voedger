@@ -5,6 +5,9 @@
 package vvm
 
 import (
+	"fmt"
+
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -27,21 +30,19 @@ func (hap VVMAppsBuilder) PrepareAppsExtensionPoints() map[istructs.AppQName]ext
 	return seps
 }
 
-func buildSchemasASTs(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+func buildSchemasASTs(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) error {
 	packageSchemaASTs, err := ReadPackageSchemaAST(ep)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	appSchemaAST, err := parser.BuildAppSchema(packageSchemaASTs)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	if err := parser.BuildAppDefs(appSchemaAST, adf); err != nil {
-		panic(err)
-	}
+	return parser.BuildAppDefs(appSchemaAST, adf)
 }
 
-func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (vvmApps VVMApps) {
+func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (vvmApps VVMApps, err error) {
 	for appQName, appBuilders := range hap {
 		adf := appdef.New()
 		appEPs := appsEPs[appQName]
@@ -49,27 +50,60 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 		for _, builder := range appBuilders {
 			builder(apis, cfg, adf, appEPs)
 		}
-		buildSchemasASTs(adf, appEPs)
+		if err := buildSchemasASTs(adf, appEPs); err != nil {
+			return nil, err
+		}
 		vvmApps = append(vvmApps, appQName)
 		appDef, err := adf.Build()
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		appDef.Types(func(t appdef.IType) {
+		err = iterate.ForEachError(appDef.Types, func(t appdef.IType) error {
+			if t.Kind() != appdef.TypeKind_Command && t.Kind() != appdef.TypeKind_Query {
+				return nil
+			}
+			resource := cfg.Resources.QueryResource(t.QName())
+			if resource.QName() == appdef.NullQName {
+				return fmt.Errorf("func %s not found in resources", t.QName())
+			}
 			switch t.Kind() {
 			case appdef.TypeKind_Command:
 				cmd := t.(appdef.ICommand)
-				cmdResource := cfg.Resources.QueryResource(cmd.QName()).(istructs.ICommandFunction)
-				istructsmem.ReplaceCommandDefinitions(cmdResource, cmd.Param().QName(), cmd.UnloggedParam().QName(), cmd.Result().QName())
+				cmdResource := resource.(istructs.ICommandFunction)
+				resQName := appdef.NullQName
+				if cmd.Result() != nil {
+					resQName = cmd.Result().QName()
+				}
+				paramQName := appdef.NullQName
+				if cmd.Param() != nil {
+					paramQName = cmd.Param().QName()
+				}
+				unloggedParamQName := appdef.NullQName
+				if cmd.UnloggedParam() != nil {
+					unloggedParamQName = cmd.UnloggedParam().QName()
+				}
+				istructsmem.ReplaceCommandDefinitions(cmdResource, paramQName, unloggedParamQName, resQName)
 			case appdef.TypeKind_Query:
 				if t.QName() == qNameQueryCollection {
-					return
+					return nil
 				}
 				query := t.(appdef.IQuery)
-				queryResource := cfg.Resources.QueryResource(query.QName()).(istructs.IQueryFunction)
-				istructsmem.ReplaceQueryDefinitions(queryResource, query.Param().QName(), query.Result().QName())
+				queryResource := resource.(istructs.IQueryFunction)
+				paramQName := appdef.NullQName
+				if query.Param() != nil {
+					paramQName = query.Param().QName()
+				}
+				resQName := appdef.NullQName
+				if query.Result() != nil {
+					resQName = query.Result().QName()
+				}
+				istructsmem.ReplaceQueryDefinitions(queryResource, paramQName, resQName)
 			}
+			return nil
 		})
+		if err != nil {
+			return nil, err
+		}
 	}
-	return vvmApps
+	return vvmApps, nil
 }

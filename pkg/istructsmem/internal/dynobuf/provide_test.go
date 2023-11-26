@@ -14,7 +14,7 @@ import (
 )
 
 func TestDynoBufSchemesBasicUsage(t *testing.T) {
-	docName := appdef.NewQName("test", "cdoc")
+	docName := appdef.NewQName("test", "doc")
 	viewName := appdef.NewQName("test", "view")
 
 	schemes := New()
@@ -22,9 +22,11 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 	schemes.Prepare(
 		func() appdef.IAppDef {
 			app := appdef.New()
-			app.AddCDoc(docName).
+			app.AddODoc(docName).
 				AddField("f1", appdef.DataKind_int32, true).
-				AddField("f2", appdef.DataKind_QName, false)
+				AddField("f2", appdef.DataKind_QName, false).
+				AddField("f3", appdef.DataKind_string, false).
+				AddField("f4", appdef.DataKind_bytes, false)
 
 			v := app.AddView(viewName)
 			v.KeyBuilder().PartKeyBuilder().AddField("pkF1", appdef.DataKind_int32)
@@ -42,13 +44,20 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 			scheme := schemes.Scheme(docName)
 			require.NotNil(scheme, "schemes.Scheme returns nil", "docName: %q", docName)
 
-			require.Len(scheme.Fields, 2)
+			require.Len(scheme.Fields, 4)
 
 			require.Equal("f1", scheme.Fields[0].Name)
 			require.Equal(dynobuffers.FieldTypeInt32, scheme.Fields[0].Ft)
 
 			require.Equal("f2", scheme.Fields[1].Name)
 			require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[1].Ft)
+			require.True(scheme.Fields[1].IsArray)
+
+			require.Equal("f3", scheme.Fields[2].Name)
+			require.Equal(dynobuffers.FieldTypeString, scheme.Fields[2].Ft)
+
+			require.Equal("f4", scheme.Fields[3].Name)
+			require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[3].Ft)
 			require.True(scheme.Fields[1].IsArray)
 		})
 

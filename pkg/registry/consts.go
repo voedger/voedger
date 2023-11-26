@@ -17,7 +17,6 @@ import (
 const (
 	RegistryPackage          = "registry"
 	RegistryPackageFQN       = "github.com/voedger/voedger/pkg/" + RegistryPackage
-	field_Password           = "Password"
 	field_AppWSID            = "AppWSID"
 	field_AppIDLoginHash     = "AppIDLoginHash"
 	field_CDocLoginID        = "CDocLoginID"
@@ -29,7 +28,6 @@ const (
 	field_Language           = "Language"
 	field_VerificationToken  = "VerificationToken"
 	field_VerificationCode   = "VerificationCode"
-	field_VerifiedValueToken = "VerifiedValueToken"
 	field_ProfileWSID        = "ProfileWSID"
 	field_NewPwd             = "NewPwd"
 )
@@ -45,6 +43,7 @@ var (
 	QNameQueryInitiateResetPasswordByEmail            = appdef.NewQName(RegistryPackage, "InitiateResetPasswordByEmail")
 	QNameQueryIssueVerifiedValueTokenForResetPassword = appdef.NewQName(RegistryPackage, "IssueVerifiedValueTokenForResetPassword")
 	QNameCDocLogin                                    = appdef.NewQName(RegistryPackage, "Login")
+	qNameProjectorInvokeCreateWorkspaceID_registry    = appdef.NewQName(RegistryPackage, "InvokeCreateWorkspaceID_registry")
 	errPasswordIsIncorrect                            = coreutils.NewHTTPErrorf(http.StatusUnauthorized, "password is incorrect")
 	errLoginOrPasswordIsIncorrect                     = coreutils.NewHTTPErrorf(http.StatusUnauthorized, "login or password is incorrect")
 

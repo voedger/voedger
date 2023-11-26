@@ -346,9 +346,14 @@ func TestBasicUsage_Resources(t *testing.T) {
 		bld := app.Resources().QueryFunctionArgsBuilder(r.(istructs.IQueryFunction))
 		require.NotNil(bld)
 		bld.PutString(test.buyerIdent, test.buyerValue)
+		bld.PutBytes(test.photoRawIdent, test.photoRawValue)
 		doc, err := bld.Build()
 		require.NoError(err)
 		require.NotNil(doc)
+
+		require.Equal(test.buyerValue, doc.AsString(test.buyerIdent))
+		require.Equal(test.photoRawValue, doc.AsBytes(test.photoRawIdent))
+		require.Equal(test.photoRawValue, doc.AsBytes(test.photoRawIdent))
 	})
 }
 
@@ -459,7 +464,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 			NewQueryFunction(
 				qNameQry,
 				arg.QName(),
-				viewName,
+				appdef.QNameANY,
 				NullQueryExec))
 
 		cfg.FunctionRateLimits.AddAppLimit(qNameQry, istructs.RateLimit{

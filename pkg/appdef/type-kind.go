@@ -16,6 +16,11 @@ import (
 const (
 	TypeKind_null TypeKind = iota
 
+	// Any type.
+	//
+	// Used as result types kind for functions that has parameter or result of any type.
+	TypeKind_Any
+
 	// Simple data types, like string, number, date, etc.
 	TypeKind_Data
 
@@ -49,12 +54,10 @@ const (
 	// Function params, results, Event.command (this is command function params)
 	TypeKind_Object
 
-	// Params and Result are Objects
+	// Functions
 	TypeKind_Query
-
-	// Params are always Objects.
-	// Commands may haven't explicit result
 	TypeKind_Command
+	TypeKind_Projector
 
 	TypeKind_Workspace
 

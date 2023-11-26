@@ -249,8 +249,7 @@ func Test_AddRefField(t *testing.T) {
 			require.Equal(DataKind_RecordID, rf2.DataKind())
 			require.False(rf2.Required())
 
-			require.Len(rf2.Refs(), 1)
-			require.Equal(rf2.Refs()[0], docName)
+			require.EqualValues(QNames{docName}, rf2.Refs())
 		})
 
 		t.Run("must be nil if unknown reference field", func(t *testing.T) {
@@ -269,7 +268,7 @@ func Test_AddRefField(t *testing.T) {
 						require.True(rf.Ref(docName))
 						require.True(rf.Ref(NewQName("test", "unknown")), "must be ok because any links are allowed in the field rf1")
 					case 2:
-						require.Equal(docName, rf.Refs()[0])
+						require.EqualValues(QNames{docName}, rf.Refs())
 						require.True(rf.Ref(docName))
 						require.False(rf.Ref(NewQName("test", "unknown")))
 					default:
@@ -323,7 +322,7 @@ func Test_UserFields(t *testing.T) {
 				case 1:
 					require.True(f.VerificationKind(VerificationKind_EMail))
 				case 2:
-					require.Equal(docName, f.(IRefField).Refs()[0])
+					require.EqualValues(QNames{docName}, f.(IRefField).Refs())
 				default:
 					require.Failf("unexpected reference field", "field name: %s", f.Name())
 				}

@@ -9,3 +9,15 @@ type Alias struct {
 	Domain string
 	Path   string
 }
+
+type SectionsHandlerType func(section interface{})
+type Status struct {
+	// Ref. https://go.dev/src/net/http/status.go
+	// StatusBadRequest(400) if server got the request but could not process it
+	// StatusGatewayTimeout(504) if timeout expired
+	HTTPStatus   int
+	ErrorMessage string
+	ErrorData    string
+}
+type GrafanaPort int
+type PrometheusPort int

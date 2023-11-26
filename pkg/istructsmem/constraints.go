@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
-	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -34,11 +34,11 @@ func checkConstraints(fld appdef.IField, value interface{}) (err error) {
 	return err
 }
 
-// Checks string ot bytes value by field constraints. Return error if constraints violated
+// Checks string, bytes or raw value by field constraints. Return error if constraints violated
 type chars interface{ string | []byte }
 
 func checkCharsConstraints[T chars](fld appdef.IField, value T) (err error) {
-	max := false
+	maxLenChecked := false
 
 	fld.Constraints(func(c appdef.IConstraint) {
 		switch c.Kind() {
@@ -50,7 +50,7 @@ func checkCharsConstraints[T chars](fld appdef.IField, value T) (err error) {
 			if len(value) > int(c.Value().(uint16)) {
 				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
 			}
-			max = true
+			maxLenChecked = true
 		case appdef.ConstraintKind_Pattern:
 			if pat := c.Value().(*regexp.Regexp); pat != nil {
 				switch fld.DataKind() {
@@ -67,7 +67,7 @@ func checkCharsConstraints[T chars](fld appdef.IField, value T) (err error) {
 		case appdef.ConstraintKind_Enum:
 			if enum, ok := c.Value().([]string); ok {
 				if l := len(enum); l > 0 {
-					if _, ok := sort.Find(l, func(i int) int { return strings.Compare(string(value), enum[i]) }); !ok {
+					if _, ok := slices.BinarySearch(enum, string(value)); !ok {
 						err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
 					}
 				}
@@ -75,7 +75,7 @@ func checkCharsConstraints[T chars](fld appdef.IField, value T) (err error) {
 		}
 	})
 
-	if !max {
+	if !maxLenChecked {
 		if len(value) > int(appdef.DefaultFieldMaxLength) {
 			err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, fmt.Sprintf("default MaxLen: %d", appdef.DefaultFieldMaxLength), ErrDataConstraintViolation))
 		}

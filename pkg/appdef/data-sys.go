@@ -37,12 +37,3 @@ func newSysData(app *appDef, kind DataKind) *data {
 	app.appendType(d)
 	return d
 }
-
-// Makes system data types for all data kinds.
-//
-// Should be called after appDef is created.
-func (app *appDef) makeSysDataTypes() {
-	for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
-		_ = newSysData(app, k)
-	}
-}

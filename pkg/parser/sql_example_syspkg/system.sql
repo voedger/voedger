@@ -25,11 +25,22 @@ ABSTRACT WORKSPACE Workspace (
     );
     EXTENSION ENGINE BUILTIN (
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
+        COMMAND UpdateSubscription(any) RETURNS any;
+        QUERY UPTerminalWebhook(any) RETURNS any;
     )
 );
 
 ALTERABLE WORKSPACE Profile(
 
+);
+
+/*
+    Specify sys.Raw as a command/function parameter to pass raw data to the command/function. 
+    The data isn't valudated by the core.
+    An extension accesses the data by reading the "Body" field from the argument.
+*/
+TYPE Raw(
+    Body   varchar(65535)
 );
 
 EXTENSION ENGINE BUILTIN (

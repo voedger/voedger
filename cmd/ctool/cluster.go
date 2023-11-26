@@ -22,7 +22,7 @@ import (
 	"github.com/untillpro/goutils/logger"
 )
 
-func newCluster() *clusterType {
+func newCluster() (*clusterType, error) {
 	var cluster = clusterType{
 		DesiredClusterVersion: version,
 		ActualClusterVersion:  "",
@@ -34,7 +34,19 @@ func newCluster() *clusterType {
 	dir, _ := os.Getwd()
 	cluster.configFileName = filepath.Join(dir, clusterConfFileName)
 	cluster.exists = cluster.loadFromJSON() == nil
-	return &cluster
+
+	if cluster.ActualClusterVersion == "" {
+		return &cluster, nil
+	}
+
+	vr := compareVersions(version, cluster.ActualClusterVersion)
+	if vr == 1 {
+		return &cluster, fmt.Errorf(errCtoolVersionNewerThanClusterVersion, version, cluster.ActualClusterVersion, ErrBadVersion)
+	} else if vr == -1 {
+		return &cluster, fmt.Errorf(errClusterVersionNewerThanCtoolVersion, cluster.ActualClusterVersion, version, ErrBadVersion)
+	}
+
+	return &cluster, nil
 }
 
 func newCmd(cmdKind, cmdArgs string) *cmdType {
@@ -69,6 +81,18 @@ type nodeType struct {
 	Error            string         `json:"Error,omitempty"`
 	ActualNodeState  *nodeStateType `json:"ActualNodeState,omitempty"`
 	DesiredNodeState *nodeStateType `json:"DesiredNodeState,omitempty"`
+}
+
+func (n *nodeType) address() string {
+	if len(n.ActualNodeState.Address) > 0 {
+		return n.ActualNodeState.Address
+	} else if len(n.DesiredNodeState.Address) > 0 {
+		return n.DesiredNodeState.Address
+	}
+
+	err := fmt.Errorf(errEmptyNodeAddress, n.nodeName(), ErrEmptyNodeAddress)
+	logger.Error(err.Error)
+	panic(err)
 }
 
 // nolint
@@ -155,22 +179,23 @@ func (n *nodeType) label(key string) string {
 	case nrCENode:
 		return "ce"
 	case nrAppNode:
-		if key == swarmAppLabelKey {
-			return "AppNode"
-		} else if key == swarmMonLabelKey {
+		if key != swarmAppLabelKey {
 			return fmt.Sprintf("AppNode%d", n.idx)
 		}
+		return "AppNode"
 	case nrDBNode:
 		return fmt.Sprintf("DBNode%d", n.idx-seNodeCount)
 	}
 
-	return fmt.Sprintf("node%d", n.idx)
+	err := fmt.Errorf(errInvalidNodeRole, n.address(), ErrInvalidNodeRole)
+	logger.Error(err.Error)
+	panic(err)
 }
 
 // nolint
 func (ns *nodeType) check(c *clusterType) error {
 	if ns.actualNodeVersion() != ns.desiredNodeVersion(c) {
-		return ErrDifferentNodeVersions
+		return fmt.Errorf(errDifferentNodeVersion, ns.actualNodeVersion(), ns.desiredNodeVersion(c), ErrBadVersion)
 	}
 	return nil
 }

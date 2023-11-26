@@ -14,72 +14,63 @@ import (
 //   - IFunction
 //   - IFuncBuilder
 type function struct {
-	typ
-	parent   interface{}
-	par, res objRef
-	ext      *extension
+	extension
+	embeds   interface{}
+	par, res typeRef
 }
 
-func makeFunc(app *appDef, name QName, kind TypeKind, parent interface{}) function {
+func makeFunc(app *appDef, name QName, kind TypeKind, embeds interface{}) function {
 	f := function{
-		typ:    makeType(app, name, kind),
-		parent: parent,
-		ext:    newExtension(),
+		extension: makeExtension(app, name, kind, embeds),
+		embeds:    embeds,
 	}
 	return f
 }
 
-func (f *function) Param() IObject {
-	return f.par.object(f.app)
+func (f *function) Param() IType {
+	return f.par.target(f.app)
 }
 
-func (f *function) Extension() IExtension {
-	return f.ext
-}
-
-func (f *function) Result() IObject {
-	return f.res.object(f.app)
+func (f *function) Result() IType {
+	return f.res.target(f.app)
 }
 
 func (f *function) SetParam(name QName) IFunctionBuilder {
 	f.par.setName(name)
-	return f.parent.(IFunctionBuilder)
+	return f.embeds.(IFunctionBuilder)
 }
 
 func (f *function) SetResult(name QName) IFunctionBuilder {
 	f.res.setName(name)
-	return f.parent.(IFunctionBuilder)
-}
-
-func (f *function) SetExtension(name string, engine ExtensionEngineKind, comment ...string) IFunctionBuilder {
-	if name == "" {
-		panic(fmt.Errorf("%v: extension name is empty: %w", f, ErrNameMissed))
-	}
-	if ok, err := ValidIdent(name); !ok {
-		panic(fmt.Errorf("%v: extension name «%s» is not valid: %w", f, name, err))
-	}
-	f.ext.name = name
-	f.ext.engine = engine
-	f.ext.SetComment(comment...)
-	return f
+	return f.embeds.(IFunctionBuilder)
 }
 
 // Validates function
+//
+// # Returns error:
+//   - if parameter type is unknown or not a Data, ODoc or Object,
+//   - if result type is unknown or not a Data, Doc or Object,
 func (f *function) Validate() (err error) {
 	if ok, e := f.par.valid(f.app); !ok {
 		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown parameter type: %w", f, e))
+	} else if typ := f.Param(); typ != nil {
+		switch typ.Kind() {
+		case TypeKind_Any: // ok
+		case TypeKind_Data, TypeKind_ODoc, TypeKind_Object: // ok
+		default:
+			err = errors.Join(err, fmt.Errorf("%v: parameter type is %v, must be ODoc, Object or Data: %w", f, typ, ErrInvalidTypeKind))
+		}
 	}
 
 	if ok, e := f.res.valid(f.app); !ok {
 		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown result type: %w", f, e))
-	}
-
-	if f.Extension().Name() == "" {
-		err = errors.Join(err, fmt.Errorf("%v: command extension name is missed: %w", f, ErrNameMissed))
-	}
-
-	if f.Extension().Engine() == ExtensionEngineKind_null {
-		err = errors.Join(err, fmt.Errorf("%v: command extension engine is missed: %w", f, ErrExtensionEngineKindMissed))
+	} else if typ := f.Result(); typ != nil {
+		switch typ.Kind() {
+		case TypeKind_Any: // ok
+		case TypeKind_Data, TypeKind_GDoc, TypeKind_CDoc, TypeKind_WDoc, TypeKind_ODoc, TypeKind_Object: // ok
+		default:
+			err = errors.Join(err, fmt.Errorf("%v: result type is %v, must be Document, Object or Data: %w", f, typ, ErrInvalidTypeKind))
+		}
 	}
 
 	return err

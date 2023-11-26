@@ -166,12 +166,15 @@ WORKSPACE Restaurant (
 
     EXTENSION ENGINE BUILTIN (
 	
+
 	    SYNC PROJECTOR UpdateTableStatus
-	        AFTER INSERT ON (Order, Bill)
+            AFTER INSERT ON Transaction OR
+	        AFTER EXECUTE WITH PARAM ON (Order, Bill)
 		INTENTS(View(TableStatus));
 
 	    PROJECTOR UpdateSalesReport
-	        AFTER INSERT ON Bill 
+            AFTER INSERT ON Transaction OR 
+	        AFTER EXECUTE WITH PARAM ON Bill
 		INTENTS(View(SalesPerDay));
 
     );

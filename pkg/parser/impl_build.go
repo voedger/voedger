@@ -39,6 +39,7 @@ func (c *buildContext) build() error {
 		c.tables,
 		c.views,
 		c.commands,
+		c.projectors,
 		c.queries,
 		c.workspaces,
 		c.alterWorkspaces,
@@ -69,9 +70,6 @@ func supported(stmt interface{}) bool {
 		return false
 	}
 	if _, ok := stmt.(*RateStmt); ok {
-		return false
-	}
-	if _, ok := stmt.(*ProjectorStmt); ok {
 		return false
 	}
 	return true
@@ -253,6 +251,151 @@ func (c *buildContext) types() error {
 	return nil
 }
 
+func (c *buildContext) projectors() error {
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(proj *ProjectorStmt, ictx *iterateCtx) {
+			pQname := schema.NewQName(proj.Name)
+			builder := c.builder.AddProjector(pQname)
+			// Triggers
+			for _, trigger := range proj.Triggers {
+				evKinds := make([]appdef.ProjectorEventKind, 0)
+				if trigger.ExecuteAction != nil {
+					if trigger.ExecuteAction.WithParam {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_ExecuteWithParam)
+					} else {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Execute)
+					}
+				} else {
+					if trigger.insert() {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Insert)
+					}
+					if trigger.update() {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Update)
+					}
+					if trigger.activate() {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Activate)
+					}
+					if trigger.deactivate() {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Deactivate)
+					}
+				}
+				for _, qn := range trigger.QNames {
+					if len(trigger.TableActions) > 0 {
+						if err := resolveInCtx(qn, ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
+							evQname := pkg.NewQName(tbl.Name)
+							builder.AddEvent(evQname, evKinds...)
+							return nil
+						}); err != nil {
+							// notest
+							c.stmtErr(&proj.Pos, err)
+						}
+					} else { // Command
+						if trigger.ExecuteAction.WithParam {
+							var pkg *PackageSchemaAST
+							var err error
+							var typ *TypeStmt
+							var odoc *TableStmt
+							var name Ident
+							typ, pkg, err = lookupInCtx[*TypeStmt](qn, ictx)
+							if err != nil {
+								// notest
+								c.stmtErr(&proj.Pos, err)
+								return
+							}
+							if typ == nil { // ODoc
+								odoc, pkg, err = lookupInCtx[*TableStmt](qn, ictx)
+								if err != nil {
+									// notest
+									c.stmtErr(&proj.Pos, err)
+									return
+								}
+								if odoc == nil {
+									// notest
+									c.stmtErr(&proj.Pos, ErrUndefinedTypeOrOdoc(qn))
+									return
+								}
+								name = odoc.Name
+							} else {
+								name = typ.Name
+							}
+							evQname := pkg.NewQName(name)
+							builder.AddEvent(evQname, evKinds...)
+						} else {
+							if err := resolveInCtx(qn, ictx, func(cmd *CommandStmt, pkg *PackageSchemaAST) error {
+								evQname := pkg.NewQName(cmd.Name)
+								builder.AddEvent(evQname, evKinds...)
+								return nil
+							}); err != nil {
+								// notest
+								c.stmtErr(&proj.Pos, err)
+							}
+						}
+					}
+				}
+			}
+			// Common for State and Intents
+			handleStorage := func(p *ProjectorStorage, cb func(storage appdef.QName, entities ...appdef.QName)) {
+				var storage *StorageStmt
+				var storagePkg *PackageSchemaAST
+				if err := resolveInCtx(p.Storage, ictx, func(s *StorageStmt, pkg *PackageSchemaAST) error {
+					storage = s
+					storagePkg = pkg
+					return nil
+				}); err != nil {
+					// notest
+					c.stmtErr(&proj.Pos, err)
+					return // do not continue with this projector
+				}
+
+				entities := make([]appdef.QName, len(p.Entities))
+				for i, qn := range p.Entities {
+					var resolveErr error
+					if storage.EntityRecord { // resolve table
+						resolveErr = resolveInCtx(qn, ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
+							entities[i] = pkg.NewQName(tbl.Name)
+							return nil
+						})
+					} else if storage.EntityView { // resolve view
+						resolveErr = resolveInCtx(qn, ictx, func(tbl *ViewStmt, pkg *PackageSchemaAST) error {
+							entities[i] = pkg.NewQName(tbl.Name)
+							return nil
+						})
+					}
+					if resolveErr != nil {
+						// notest
+						c.stmtErr(&proj.Pos, resolveErr)
+						return // do not continue with this projector
+					}
+				}
+				cb(storagePkg.NewQName(storage.Name), entities...)
+			}
+
+			// Intents
+			for _, intent := range proj.Intents {
+				handleStorage(&intent, func(storage appdef.QName, entities ...appdef.QName) {
+					builder.AddIntent(storage, entities...)
+				})
+			}
+			// State
+			for _, state := range proj.State {
+				handleStorage(&state, func(storage appdef.QName, entities ...appdef.QName) {
+					builder.AddState(storage, entities...)
+				})
+			}
+
+			c.addComments(proj, builder)
+			builder.SetName(proj.GetName())
+			if proj.Engine.WASM {
+				builder.SetEngine(appdef.ExtensionEngineKind_WASM)
+			} else {
+				builder.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
+			}
+			builder.SetSync(proj.Sync)
+		})
+	}
+	return nil
+}
+
 func (c *buildContext) views() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(view *ViewStmt, ictx *iterateCtx) {
@@ -267,11 +410,11 @@ func (c *buildContext) views() error {
 				switch k := dataTypeToDataKind(f.Type); k {
 				case appdef.DataKind_bytes:
 					if (f.Type.Bytes != nil) && (f.Type.Bytes.MaxLen != nil) {
-						cc = append(cc, appdef.MaxLen(*f.Type.Bytes.MaxLen))
+						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Bytes.MaxLen)))
 					}
 				case appdef.DataKind_string:
 					if (f.Type.Varchar != nil) && (f.Type.Varchar.MaxLen != nil) {
-						cc = append(cc, appdef.MaxLen(*f.Type.Varchar.MaxLen))
+						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Varchar.MaxLen)))
 					}
 				}
 				return cc
@@ -361,28 +504,35 @@ func (c *buildContext) views() error {
 	return nil
 }
 
+func setParam(ictx *iterateCtx, v *AnyOrVoidOrDef, cb func(qn appdef.QName)) {
+	if v.Def != nil {
+		argQname := buildQname(ictx, v.Def.Package, v.Def.Name)
+		cb(argQname)
+	} else if v.Any {
+		cb(appdef.QNameANY)
+	}
+}
+
 func (c *buildContext) commands() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(cmd *CommandStmt, ictx *iterateCtx) {
 			qname := schema.NewQName(cmd.Name)
 			b := c.builder.AddCommand(qname)
 			c.addComments(cmd, b)
-			if cmd.Arg != nil && cmd.Arg.Def != nil {
-				argQname := buildQname(ictx, cmd.Arg.Def.Package, cmd.Arg.Def.Name)
-				b.SetParam(argQname)
+			if cmd.Param != nil {
+				setParam(ictx, cmd.Param, func(qn appdef.QName) { b.SetParam(qn) })
 			}
-			if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
-				argQname := buildQname(ictx, cmd.UnloggedArg.Def.Package, cmd.UnloggedArg.Def.Name)
-				b.SetUnloggedParam(argQname)
+			if cmd.UnloggedParam != nil {
+				setParam(ictx, cmd.UnloggedParam, func(qn appdef.QName) { b.SetUnloggedParam(qn) })
 			}
-			if cmd.Returns != nil && cmd.Returns.Def != nil {
-				retQname := buildQname(ictx, cmd.Returns.Def.Package, cmd.Returns.Def.Name)
-				b.SetResult(retQname)
+			if cmd.Returns != nil {
+				setParam(ictx, cmd.Returns, func(qn appdef.QName) { b.SetResult(qn) })
 			}
+			b.SetName(cmd.GetName())
 			if cmd.Engine.WASM {
-				b.SetExtension(cmd.GetName(), appdef.ExtensionEngineKind_WASM)
+				b.SetEngine(appdef.ExtensionEngineKind_WASM)
 			} else {
-				b.SetExtension(cmd.GetName(), appdef.ExtensionEngineKind_BuiltIn)
+				b.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
 		})
 	}
@@ -395,24 +545,17 @@ func (c *buildContext) queries() error {
 			qname := schema.NewQName(q.Name)
 			b := c.builder.AddQuery(qname)
 			c.addComments(q, b)
-			if q.Arg != nil && q.Arg.Def != nil {
-				argQname := buildQname(ictx, q.Arg.Def.Package, q.Arg.Def.Name)
-				b.SetParam(argQname)
+			if q.Param != nil {
+				setParam(ictx, q.Param, func(qn appdef.QName) { b.SetParam(qn) })
 			}
 
-			if q.Returns.Any {
-				b.SetResult(appdef.QNameANY)
-			} else {
-				if q.Returns.Def != nil {
-					retQname := buildQname(ictx, q.Returns.Def.Package, q.Returns.Def.Name)
-					b.SetResult(retQname)
-				}
-			}
+			setParam(ictx, &q.Returns, func(qn appdef.QName) { b.SetResult(qn) })
 
+			b.SetName(q.GetName())
 			if q.Engine.WASM {
-				b.SetExtension(string(q.Name), appdef.ExtensionEngineKind_WASM)
+				b.SetEngine(appdef.ExtensionEngineKind_WASM)
 			} else {
-				b.SetExtension(string(q.Name), appdef.ExtensionEngineKind_BuiltIn)
+				b.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
 		})
 	}
@@ -458,10 +601,6 @@ func (c *buildContext) workspaceDescriptor(w *WorkspaceStmt, ictx *iterateCtx) {
 }
 
 func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt, ictx *iterateCtx) {
-	if isPredefinedSysTable(ictx.pkg.QualifiedPackageName, table) {
-		return
-	}
-
 	qname := schema.NewQName(table.Name)
 	if c.isExists(qname, table.tableTypeKind) {
 		return
@@ -516,14 +655,14 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 
 	if field.Type.DataType.Bytes != nil {
 		if field.Type.DataType.Bytes.MaxLen != nil {
-			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, appdef.MaxLen(*field.Type.DataType.Bytes.MaxLen))
+			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, appdef.MaxLen(uint16(*field.Type.DataType.Bytes.MaxLen)))
 		} else {
 			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull)
 		}
 	} else if field.Type.DataType.Varchar != nil {
 		constraints := make([]appdef.IConstraint, 0)
 		if field.Type.DataType.Varchar.MaxLen != nil {
-			constraints = append(constraints, appdef.MaxLen(*field.Type.DataType.Varchar.MaxLen))
+			constraints = append(constraints, appdef.MaxLen(uint16(*field.Type.DataType.Varchar.MaxLen)))
 		}
 		if field.CheckRegexp != nil {
 			constraints = append(constraints, appdef.Pattern(*field.CheckRegexp))

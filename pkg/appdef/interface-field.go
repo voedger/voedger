@@ -145,7 +145,7 @@ type IRefField interface {
 	IField
 
 	// Returns list of target references
-	Refs() []QName
+	Refs() QNames
 
 	// Returns, is the link available
 	Ref(QName) bool

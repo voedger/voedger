@@ -8,21 +8,25 @@
 package ihttpimpl
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/fs"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"path"
 	"regexp"
 	"sync"
+
+	"github.com/gorilla/mux"
+	"golang.org/x/exp/slices"
 
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 
 	"github.com/untillpro/goutils/logger"
-	"github.com/voedger/voedger/pkg/ibus"
+
 	"github.com/voedger/voedger/pkg/ihttp"
 )
 
@@ -31,116 +35,36 @@ type httpProcessor struct {
 	router   *router
 	server   *http.Server
 	listener net.Listener
-	bus      ibus.IBus
 }
 
-type router struct {
-	sync.RWMutex
-	routes []*route
+type redirectionRoute struct {
+	srcRegExp        *regexp.Regexp // if srcRegExp is null, then it is a default route
+	dstRegExpPattern string
 }
 
-type route struct {
-	handler  http.HandlerFunc
-	matchers []matcher
-}
-
-type matcher interface {
-	match(*http.Request, *RouteMatch) bool
-}
-
-type RouteMatch struct {
-	route   *route
-	handler http.Handler
-}
-
-type routeRegExp regexp.Regexp
-
-func newRRegExp(exp string) (*routeRegExp, error) {
-	reg, err := regexp.Compile(exp)
-	if err != nil {
-		return nil, err
-	}
-	return (*routeRegExp)(reg), err
-}
-
-func (r *routeRegExp) match(req *http.Request, match *RouteMatch) bool {
-	ok := (*regexp.Regexp)(r).MatchString(req.URL.Path)
-	return ok
-}
-
-func (r *route) match(req *http.Request, match *RouteMatch) bool {
-	for _, m := range r.matchers {
-		if matched := m.match(req, match); !matched {
-			return false
-		}
-	}
-	if match.route == nil {
-		match.route = r
-	}
-	if match.handler == nil {
-		match.handler = r.handler
-	}
-	return true
-}
-
-func (r *route) HandlerFunc(f func(http.ResponseWriter, *http.Request)) *route {
-	r.handler = f
-	return r
-}
-
-func (r *router) PathPrefix(resource string) (*route, error) {
-	return r.NewRoute().PathPrefix(resource)
-}
-
-func (r *route) PathPrefix(resource string) (*route, error) {
-	pattern := bytes.NewBufferString("")
-	pattern.WriteString("^(" + resource + ")")
-	matcher, err := newRRegExp(pattern.String())
-	if err != nil {
-		return nil, err
-	}
-	r.matchers = append(r.matchers, matcher)
-	return r, nil
-}
-
-func (r *router) Path(resource string) (*route, error) {
-	return r.NewRoute().Path(resource)
-}
-
-func (r *route) Path(resource string) (*route, error) {
-	pattern := bytes.NewBufferString("")
-	pattern.WriteString("(.+/)?" + resource + "$")
-	matcher, err := newRRegExp(pattern.String())
-	if err != nil {
-		return nil, err
-	}
-	r.matchers = append(r.matchers, matcher)
-	return r, nil
-}
-
-func (hs *httpProcessor) Prepare() (err error) {
-	if hs.listener, err = net.Listen("tcp", coreutils.ServerAddress(hs.params.Port)); err == nil {
-		logger.Info("listening port:", hs.listener.Addr().(*net.TCPAddr).Port)
+func (p *httpProcessor) Prepare() (err error) {
+	if p.listener, err = net.Listen("tcp", coreutils.ServerAddress(p.params.Port)); err == nil {
+		logger.Info("listening port:", p.listener.Addr().(*net.TCPAddr).Port)
 	}
 	return
 }
 
-func (hs *httpProcessor) Run(ctx context.Context) {
+func (p *httpProcessor) Run(ctx context.Context) {
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		logger.Info("httpProcessor started:", fmt.Sprintf("%#v", hs.params))
-		err := hs.server.Serve(hs.listener)
+		logger.Info("httpProcessor started:", fmt.Sprintf("%#v", p.params))
+		err := p.server.Serve(p.listener)
 		logger.Info("httpProcessor stopped, result:", err)
 	}()
 
 	<-ctx.Done()
-	if err := hs.server.Shutdown(context.Background()); err != nil {
+	if err := p.server.Shutdown(context.Background()); err != nil {
 		logger.Error("server shutdown failed", err)
-		hs.listener.Close()
-		hs.server.Close()
+		p.listener.Close()
+		p.server.Close()
 	}
 
 	logger.Info("waiting for the httpProcessor...")
@@ -148,209 +72,222 @@ func (hs *httpProcessor) Run(ctx context.Context) {
 	logger.Info("httpProcessor done")
 }
 
+func (p *httpProcessor) AddReverseProxyRoute(srcRegExp, dstRegExp string) {
+	// TODO: concurrency safety can be added via sync.RWMutex
+	p.router.redirections = slices.Insert(p.router.redirections, len(p.router.redirections)-1, &redirectionRoute{
+		srcRegExp:        regexp.MustCompile(srcRegExp),
+		dstRegExpPattern: dstRegExp,
+	})
+}
+
+func (p *httpProcessor) AddReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
+	// TODO: concurrency safety can be added via sync.RWMutex
+	p.router.redirections[len(p.router.redirections)-1] = &redirectionRoute{
+		srcRegExp:        regexp.MustCompile(srcRegExp),
+		dstRegExpPattern: dstRegExp,
+	}
+}
+
+func (p *httpProcessor) HandlePath(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request)) {
+	// TODO: concurrency safety can be added via sync.RWMutex
+	var r *mux.Route
+	if prefix {
+		r = p.router.contentRouter.PathPrefix(resource)
+	} else {
+		r = p.router.contentRouter.Path(resource)
+	}
+	r.HandlerFunc(handlerFunc)
+}
+
+func (p *httpProcessor) ListeningPort() int {
+	return p.listener.Addr().(*net.TCPAddr).Port
+}
+
+func (p *httpProcessor) cleanup() {
+	if nil != p.listener {
+		p.listener.Close()
+		p.listener = nil
+	}
+}
+
 type processorAPI struct {
-	senderHttp ibus.ISender
+	processor ihttp.IHTTPProcessor
 }
 
-type msgDeployApp struct {
-	app    istructs.AppQName
-	partNo istructs.PartitionID
-}
-
-type msgDeployAppPartition struct {
-	msgDeployApp
-	commandHandler ibus.ISender
-	queryHandler   ibus.ISender
-}
-
-type msgCreateSubRoute struct {
-	resource string
-	subRoute string
-}
-
-type msgDeployStaticContent struct {
-	resource string
-	fs       fs.FS
-}
-
-func (api *processorAPI) DeployStaticContent(ctx context.Context, resource string, fs fs.FS) (err error) {
-	msg := msgDeployStaticContent{
-		resource: resource,
-		fs:       fs,
+func (api *processorAPI) DeployStaticContent(resource string, fs fs.FS) {
+	resource = staticPath + resource
+	f := func(wr http.ResponseWriter, req *http.Request) {
+		fsHandler := http.FileServer(http.FS(fs))
+		http.StripPrefix(resource, fsHandler).ServeHTTP(wr, req)
 	}
-	_, _, err = api.senderHttp.Send(ctx, msg, ibus.NullHandler)
-	return err
+	api.processor.HandlePath(resource, true, f)
 }
 
-func (api *processorAPI) DeployAppPartition(ctx context.Context, app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ibus.ISender) (err error) {
-	msg := msgDeployAppPartition{
-		msgDeployApp{app, partNo}, commandHandler, queryHandler,
+func (api *processorAPI) DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ihttp.ISender) {
+	// <cluster-domain>/api/<AppQName.owner>/<AppQName.name>/<wsid>/<{q,c}.funcQName>
+	path := fmt.Sprintf("/api/%s/%s/%d/q|c\\.[a-zA-Z_.]+", app.Owner(), app.Name(), partNo)
+	api.processor.HandlePath(path, false, handleAppPart())
+}
+
+func (api *processorAPI) AddReverseProxyRoute(srcRegExp, dstRegExp string) {
+	api.processor.AddReverseProxyRoute(srcRegExp, dstRegExp)
+}
+
+func (api *processorAPI) AddReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
+	api.processor.AddReverseProxyRouteDefault(srcRegExp, dstRegExp)
+}
+
+type router struct {
+	contentRouter *mux.Router
+	reverseProxy  *httputil.ReverseProxy
+	redirections  []*redirectionRoute // last item is always exist and if it is non-null, then it is a default route
+}
+
+func newRouter() *router {
+	return &router{
+		contentRouter: mux.NewRouter(),
+		reverseProxy:  &httputil.ReverseProxy{Director: func(r *http.Request) {}},
+		redirections:  make([]*redirectionRoute, 1),
 	}
-	_, _, err = api.senderHttp.Send(ctx, msg, ibus.NullHandler)
-	return err
 }
 
-func (api *processorAPI) ExportApi(resource string, subRoute string) (err error) {
-	msg := msgCreateSubRoute{
-		resource: resource,
-		subRoute: subRoute,
+func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	reqPath := req.URL.EscapedPath()
+	// Clean path to canonical form and redirect.
+	if p := cleanPath(reqPath); p != reqPath {
+		reqURL := *req.URL
+		reqURL.Path = p
+		p = reqURL.String()
+
+		w.Header().Set("Location", p)
+		w.WriteHeader(http.StatusMovedPermanently)
+		return
 	}
-	_, _, err = api.senderHttp.Send(context.Background(), msg, ibus.NullHandler)
-	return err
-}
-
-type msgListeningPort struct {
-}
-
-func (api *processorAPI) ListeningPort(ctx context.Context) (port int, err error) {
-	msg := msgListeningPort{}
-	r, _, err := api.senderHttp.Send(context.Background(), msg, ibus.NullHandler)
-	if err != nil {
-		return 0, err
+	var match mux.RouteMatch
+	var handler http.Handler
+	if r.Match(req, &match) {
+		handler = match.Handler
+		req = requestWithVars(req, match.Vars)
+		req = requestWithRoute(req, match.Route)
 	}
-	return r.(int), nil
-}
 
-func (r *router) NewRoute() *route {
-	route := &route{}
-	r.routes = append(r.routes, route)
-	return route
-}
-
-func (r *router) HandleFunc(path string, f func(http.ResponseWriter, *http.Request)) (*route, error) {
-	route, err := r.NewRoute().Path(path)
-	if err != nil {
-		return nil, err
+	if handler == nil && match.MatchErr == mux.ErrMethodMismatch {
+		handler = methodNotAllowedHandler()
 	}
-	return route.HandlerFunc(f), nil
+
+	if handler == nil {
+		handler = http.NotFoundHandler()
+	}
+
+	handler.ServeHTTP(w, req)
 }
 
-func (r *router) match(req *http.Request, match *RouteMatch) bool {
-	for _, route := range r.routes {
-		if route.match(req, match) {
+func (r *router) Match(req *http.Request, rm *mux.RouteMatch) bool {
+	// TODO: concurrency safety can be added via sync.RWMutex
+	return r.contentRouter.Match(req, rm) || r.matchRedirections(req, rm)
+}
+
+func (r *router) matchRedirections(req *http.Request, rm *mux.RouteMatch) (matched bool) {
+	for _, redirection := range r.redirections {
+		if checkRedirection(redirection, r.reverseProxy, req, rm) {
 			return true
 		}
+	}
+	return
+}
+
+func checkRedirection(redirection *redirectionRoute, reverseProxy *httputil.ReverseProxy, req *http.Request, rm *mux.RouteMatch) bool {
+	if redirection == nil {
+		return false
+	}
+	requestedURL := getFullRequestedURL(req)
+	if redirection.srcRegExp.MatchString(requestedURL) {
+		redirectRequest(redirection, req, requestedURL)
+		rm.Handler = reverseProxy
+		return true
 	}
 	return false
 }
 
-func (r *route) subRouter() *router {
-	router := &router{}
-	r.matchers = append(r.matchers, router)
-	return router
-}
-
-func (r *router) ServeHTTP(wr http.ResponseWriter, req *http.Request) {
-	var match RouteMatch
-	if r.match(req, &match) {
-		match.handler.ServeHTTP(wr, req)
-		return
+func redirectRequest(redirection *redirectionRoute, req *http.Request, requestedURL string) {
+	target := redirection.srcRegExp.ReplaceAllString(requestedURL, redirection.dstRegExpPattern)
+	targetURL, err := url.Parse(target)
+	if err != nil {
+		panic(err)
 	}
-	wr.WriteHeader(http.StatusNotFound)
-	setContentType_ApplicationText(wr)
-	_, _ = wr.Write([]byte("404 Not Found"))
+	if logger.IsVerbose() {
+		logger.Verbose(fmt.Sprintf("reverse proxy: incoming %s %s%s, redirecting to %s%s", req.Method, req.Host, req.URL, targetURL.Host, targetURL.Path))
+	}
+	req.URL.Path = targetURL.Path
+	req.Host = targetURL.Host
+	req.URL.Scheme = targetURL.Scheme
+	req.URL.Host = targetURL.Host
+	targetQuery := targetURL.RawQuery
+	if targetQuery == "" || req.URL.RawQuery == "" {
+		req.URL.RawQuery = targetQuery + req.URL.RawQuery
+	} else {
+		req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
+	}
 }
 
-func handleAppPart(commandHandler, queryHandler ibus.ISender) http.HandlerFunc {
-	_ = commandHandler // under construction
+func getFullRequestedURL(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	fullURL := fmt.Sprintf("%s://%s%s", scheme, r.Host, r.URL.Path)
+	if r.URL.RawQuery != "" {
+		fullURL += "?" + r.URL.RawQuery
+	}
+	return fullURL
+}
+
+// cleanPath returns the canonical path for p, eliminating . and .. elements.
+// Borrowed from the net/http package.
+// nolint
+func cleanPath(p string) string {
+	if p == "" {
+		return "/"
+	}
+	if p[0] != '/' {
+		p = "/" + p
+	}
+	np := path.Clean(p)
+	// path.Clean removes trailing slash except for root;
+	// put the trailing slash back if necessary.
+	if p[len(p)-1] == '/' && np != "/" {
+		np += "/"
+	}
+	return np
+}
+
+// Borrowed from the mux package.
+func requestWithVars(r *http.Request, vars map[string]string) *http.Request {
+	ctx := context.WithValue(r.Context(), varsKey, vars)
+	return r.WithContext(ctx)
+}
+
+// Borrowed from the mux package.
+func requestWithRoute(r *http.Request, route *mux.Route) *http.Request {
+	ctx := context.WithValue(r.Context(), routeKey, route)
+	return r.WithContext(ctx)
+}
+
+// methodNotAllowed replies to the request with an HTTP status code 405.
+// Borrowed from the mux package.
+func methodNotAllowed(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusMethodNotAllowed)
+}
+
+// methodNotAllowedHandler returns a simple request handler
+// that replies to each request with a status code 405.
+// Borrowed from the mux package.
+func methodNotAllowedHandler() http.Handler { return http.HandlerFunc(methodNotAllowed) }
+
+func handleAppPart() http.HandlerFunc {
 	return func(wr http.ResponseWriter, req *http.Request) {
 		// <cluster-domain>/api/<AppQName.owner>/<AppQName.name>/<wsid>/<{q,c}.funcQName>
 		// got sender
-		response, status, err := queryHandler.Send(context.Background(), "Data for Application", ibus.NullHandler)
-		if err != nil {
-			wr.WriteHeader(status.HTTPStatus)
-			setContentType_ApplicationText(wr)
-			_, _ = wr.Write([]byte(status.ErrorMessage))
-
-		}
-		if b, err := json.Marshal(response); err == nil {
-			_, _ = wr.Write(b)
-		}
+		_, _ = wr.Write([]byte("under construction"))
 	}
-}
-
-func (hs *httpProcessor) Receiver(_ context.Context, request interface{}, _ ibus.SectionsWriterType) (response interface{}, status ibus.Status, err error) {
-	hs.router.Lock()
-	defer hs.router.Unlock()
-	switch v := request.(type) {
-	case msgDeployAppPartition:
-		// <cluster-domain>/api/<AppQName.owner>/<AppQName.name>/<wsid>/<{q,c}.funcQName>
-		route, err := hs.router.Path(
-			fmt.Sprintf("/api/%s/%s/%d/q|c\\.[a-zA-Z_.]+", v.app.Owner(), v.app.Name(), v.partNo),
-		)
-		if err != nil {
-			return ibus.NewResult(nil, err, "", "")
-		}
-		route.HandlerFunc(handleAppPart(v.commandHandler, v.queryHandler))
-		return ibus.NewResult(nil, nil, "", "")
-
-	case msgDeployStaticContent:
-		resource := staticPath + v.resource
-		f := func(wr http.ResponseWriter, req *http.Request) {
-			fs := http.FileServer(http.FS(v.fs))
-			http.StripPrefix(resource, fs).ServeHTTP(wr, req)
-		}
-		f1 := func(wr http.ResponseWriter, req *http.Request) {
-			var b []byte
-			if sender, ok := hs.bus.QuerySender("owner", "app", 0, "q"); ok {
-				// got sender
-				response, status, err := sender.Send(context.Background(), "Data for Application", ibus.NullHandler)
-				if err != nil {
-					wr.WriteHeader(status.HTTPStatus)
-					setContentType_ApplicationText(wr)
-					_, _ = wr.Write([]byte(status.ErrorMessage))
-
-				}
-				b, err = json.Marshal(response)
-				if err == nil {
-					_, _ = wr.Write(b)
-				}
-				return
-			}
-			wr.WriteHeader(http.StatusNotFound)
-			setContentType_ApplicationText(wr)
-			_, _ = wr.Write([]byte("Not found needed query sender."))
-		}
-		route, err := hs.router.PathPrefix(resource)
-		if err != nil {
-			return ibus.NewResult(nil, err, "", "")
-		}
-		sub := route.subRouter()
-		if route, err = sub.Path("echo"); err != nil {
-			return ibus.NewResult(nil, err, "", "")
-		}
-		route.HandlerFunc(f1)
-		if route, err = sub.Path(""); err != nil {
-			return ibus.NewResult(nil, err, "", "")
-		}
-		route.HandlerFunc(f)
-		logger.Info("new handler added for router: url -", resource)
-		return ibus.NewResult(nil, nil, "", "")
-	case msgListeningPort:
-		return ibus.NewResult(hs.listener.Addr().(*net.TCPAddr).Port, nil, "", "")
-	default:
-		err = fmt.Errorf("unknown message type %T", v)
-		logger.Error(err)
-		return ibus.NewResult(nil, err, "", "")
-	}
-}
-
-func (hs *httpProcessor) cleanup() {
-	if nil != hs.listener {
-		hs.listener.Close()
-		hs.listener = nil
-	}
-	if ok := hs.bus.UnregisterReceiver("sys", "HTTPProcessor", 0, "c"); ok {
-		logger.Info("httpProcessor receiver unregistered")
-		return
-	}
-	if ok := hs.bus.UnregisterReceiver("owner", "app", 0, "q"); ok {
-		logger.Info("echo receiver unregistered")
-		return
-	}
-	logger.Error("httpProcessor receiver could not be unregistered")
-}
-
-func setContentType_ApplicationText(wr http.ResponseWriter) {
-	wr.Header().Set(coreutils.ContentType, "application/text")
 }
