@@ -391,6 +391,11 @@ func (c *buildContext) projectors() error {
 				builder.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
 			builder.SetSync(proj.Sync)
+			/* TODO:
+			if proj.IncludingErrors {
+				builder.SetIncludingErrors()
+			}
+			*/
 		})
 	}
 	return nil

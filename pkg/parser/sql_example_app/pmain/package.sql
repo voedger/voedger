@@ -186,11 +186,15 @@ WORKSPACE MyWorkspace (
             AFTER ACTIVATE OR DEACTIVATE ON TablePlan
             INTENTS(View(ActiveTablePlansView));
 
-        -- Some projector which sends E-mails and performs HTTP queries
+        /* 
+            Some projector which sends E-mails and performs HTTP queries. 
+            This one also triggered on events with errors
+        */
         PROJECTOR NotifyOnChanges
             AFTER INSERT OR UPDATE ON (TablePlan, WsTable)
             STATE(Http, AppSecret)
-            INTENTS(SendMail, View(NotificationsHistory));
+            INTENTS(SendMail, View(NotificationsHistory))
+            INCLUDING ERRORS;
 
         /* 
         Projector on any CUD operation.
