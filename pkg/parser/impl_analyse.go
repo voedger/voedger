@@ -31,8 +31,16 @@ func FindApplication(p *PackageSchemaAST) (result *ApplicationStmt, err error) {
 	return result, nil
 }
 
-func analyse(c *basicContext, p *PackageSchemaAST) {
+func preAnalyse(c *basicContext, p *PackageSchemaAST) {
+	iteratePackage(p, c, func(stmt interface{}, ictx *iterateCtx) {
+		switch v := stmt.(type) {
+		case *TableStmt:
+			preAnalyseTable(v, ictx)
+		}
+	})
+}
 
+func analyse(c *basicContext, p *PackageSchemaAST) {
 	iteratePackage(p, c, func(stmt interface{}, ictx *iterateCtx) {
 		switch v := stmt.(type) {
 		case *CommandStmt:
@@ -274,7 +282,7 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 		for _, qname := range trigger.QNames {
 			if len(trigger.TableActions) > 0 {
 				resolveFunc := func(table *TableStmt, pkg *PackageSchemaAST) error {
-					sysDoc := (pkg.QualifiedPackageName == appdef.SysPackage) && (table.Name == nameCRecord || table.Name == nameORecord || table.Name == nameWRecord)
+					sysDoc := (pkg.QualifiedPackageName == appdef.SysPackage) && (table.Name == nameCRecord || table.Name == nameWRecord)
 					if table.Abstract && !sysDoc {
 						return ErrAbstractTableNotAlowedInProjectors(qname.String())
 					}
@@ -282,7 +290,7 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 					if err != nil {
 						return err
 					}
-					if k == appdef.TypeKind_ODoc || k == appdef.TypeKind_ORecord {
+					if k == appdef.TypeKind_ODoc {
 						if trigger.activate() || trigger.deactivate() || trigger.update() {
 							return ErrOnlyInsertForOdocOrORecord
 						}
@@ -433,13 +441,16 @@ func analyseWith(with *[]WithItem, statement IStatement, c *iterateCtx) {
 	}
 }
 
-func analyseTable(v *TableStmt, c *iterateCtx) {
+func preAnalyseTable(v *TableStmt, c *iterateCtx) {
 	var err error
 	v.tableTypeKind, v.singletone, err = getTableTypeKind(v, c.pkg, c)
 	if err != nil {
 		c.stmtErr(&v.Pos, err)
 		return
 	}
+}
+
+func analyseTable(v *TableStmt, c *iterateCtx) {
 	analyseWith(&v.With, v, c)
 	analyseNestedTables(v.Items, v.tableTypeKind, c)
 	analyseFieldSets(v.Items, c)
