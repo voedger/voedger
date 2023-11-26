@@ -394,12 +394,13 @@ type ProjectorTrigger struct {
 
 type ProjectorStmt struct {
 	Statement
-	Sync     bool               `parser:"@'SYNC'?"`
-	Name     Ident              `parser:"'PROJECTOR' @Ident"`
-	Triggers []ProjectorTrigger `parser:"@@ ('OR' @@)*"`
-	State    []ProjectorStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
-	Intents  []ProjectorStorage `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
-	Engine   EngineType         // Initialized with 1st pass
+	Sync            bool               `parser:"@'SYNC'?"`
+	Name            Ident              `parser:"'PROJECTOR' @Ident"`
+	Triggers        []ProjectorTrigger `parser:"@@ ('OR' @@)*"`
+	State           []ProjectorStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Intents         []ProjectorStorage `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
+	IncludingErrors bool               `parser:"('INCLUDING' 'ERRORS')?"`
+	Engine          EngineType         // Initialized with 1st pass
 }
 
 func (s *ProjectorStmt) GetName() string            { return string(s.Name) }
