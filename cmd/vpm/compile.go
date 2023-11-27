@@ -60,11 +60,11 @@ func compileSQLFiles(depMan dm.IDependencyManager, wd string) error {
 }
 
 func compileSys() (*parser.PackageSchemaAST, error) {
-	sysContent, err := sys.SysFS.ReadFile("sys.sql")
+	sysContent, err := sys.SysFS.ReadFile(sysSchemaSqlFileName)
 	if err != nil {
 		return nil, err
 	}
-	fileAst, err := parser.ParseFile("sys.sql", string(sysContent))
+	fileAst, err := parser.ParseFile(sysSchemaSqlFileName, string(sysContent))
 	if err != nil {
 		return nil, err
 	}
