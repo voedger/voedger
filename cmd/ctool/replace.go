@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -48,6 +49,7 @@ func replace(cmd *cobra.Command, arg []string) error {
 		}
 	}
 
+	fmt.Println("Replaced address:", replacedAddress)
 	cluster.ReplacedAddresses = append(cluster.ReplacedAddresses, replacedAddress)
 	return nil
 }

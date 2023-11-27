@@ -22,6 +22,8 @@ import (
 	"github.com/untillpro/goutils/logger"
 )
 
+var testMode bool
+
 func newCluster() (*clusterType, error) {
 	var cluster = clusterType{
 		DesiredClusterVersion: version,
@@ -136,6 +138,13 @@ func (n *nodeType) minAmountOfRAM() string {
 }
 
 func (n *nodeType) nodeControllerFunction() error {
+	if testMode {
+		if n.DesiredNodeState != nil {
+			n.success()
+			return nil
+		}
+	}
+
 	switch n.NodeRole {
 	case nrDBNode, nrAppNode:
 		return seNodeControllerFunction(n)
@@ -368,6 +377,11 @@ type clusterType struct {
 }
 
 func (c *clusterType) clusterControllerFunction() error {
+	if testMode {
+		c.success()
+		return nil
+	}
+
 	switch c.Edition {
 	case clusterEditionCE:
 		return ceClusterControllerFunction(c)
@@ -416,6 +430,7 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 
 	// nolint
 	defer c.saveToJSON()
+
 	switch cmd.Kind {
 	case ckReplace:
 		oldAddr := cmd.args()[0]
@@ -426,17 +441,23 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 		}
 
 		node := c.nodeByHost(oldAddr)
+		if node == nil {
+			return fmt.Errorf(errHostNotFoundInCluster, oldAddr, ErrHostNotFoundInCluster)
+		}
+
 		if oldAddr == node.nodeName() {
 			oldAddr = node.ActualNodeState.Address
 			cmd.Args = strings.Replace(cmd.Args, node.nodeName(), oldAddr, 1)
 		}
 
-		if err := nodeIsLive(node); err == nil {
-			return fmt.Errorf(errCannotReplaceALiveNode, oldAddr, ErrCommandCannotBeExecuted)
-		}
+		if !testMode {
+			if err := nodeIsLive(node); err == nil {
+				return fmt.Errorf(errCannotReplaceALiveNode, oldAddr, ErrCommandCannotBeExecuted)
+			}
 
-		if err := hostIsAvailable(c, newAddr); err != nil {
-			return fmt.Errorf(errHostIsNotAvailable, newAddr, ErrHostIsNotAvailable)
+			if err := hostIsAvailable(c, newAddr); err != nil {
+				return fmt.Errorf(errHostIsNotAvailable, newAddr, ErrHostIsNotAvailable)
+			}
 		}
 
 		node.DesiredNodeState = newNodeState(newAddr, node.desiredNodeVersion(c))
