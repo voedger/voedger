@@ -80,8 +80,7 @@ func compileDir(depMan dm.IDependencyManager, dir, qpn string, importedStmts map
 	if err != nil {
 		return nil, err
 	}
-	packages = append([]*parser.PackageSchemaAST{packageAst}, importedPackages...)
-	return
+	return append([]*parser.PackageSchemaAST{packageAst}, importedPackages...), nil
 }
 
 func compileDependencies(depMan dm.IDependencyManager, imports []parser.ImportStmt, importedStmts map[string]struct{}) (packages []*parser.PackageSchemaAST, err error) {
