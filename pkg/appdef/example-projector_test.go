@@ -21,7 +21,7 @@ func ExampleIAppDefBuilder_AddProjector() {
 	docName := appdef.NewQName("test", "doc")
 	viewName := appdef.NewQName("test", "view")
 
-	// how to build AppDef with projector
+	// how to build AppDef with projectors
 	{
 		appDef := appdef.New()
 
@@ -36,7 +36,6 @@ func ExampleIAppDefBuilder_AddProjector() {
 
 		prj := appDef.AddProjector(prjName)
 		prj.
-			SetExtension("", appdef.ExtensionEngineKind_BuiltIn).
 			AddEvent(recName, appdef.ProjectorEventKind_AnyChanges...).
 			SetEventComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName)).
 			AddState(sysRecords, docName).
@@ -53,7 +52,6 @@ func ExampleIAppDefBuilder_AddProjector() {
 	{
 		prj := app.Projector(prjName)
 		fmt.Println(prj, ":")
-		fmt.Println(" - extension:", prj.Extension())
 		prj.Events(func(e appdef.IProjectorEvent) {
 			fmt.Println(" - event:", e, e.Comment())
 		})
@@ -77,11 +75,10 @@ func ExampleIAppDefBuilder_AddProjector() {
 	}
 
 	// Output:
-	// Projector «test.projector» :
-	//  - extension: projector (BuiltIn)
+	// BuiltIn-Projector «test.projector» :
 	//  - event: CRecord «test.record» [Insert Update Activate Deactivate] run projector every time when test.record is changed
 	//  - state: sys.records [test.doc]
 	//  - intent: sys.views [test.view]
 	// <nil>
-	// 1 Projector «test.projector»
+	// 1 BuiltIn-Projector «test.projector»
 }

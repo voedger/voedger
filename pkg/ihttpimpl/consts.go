@@ -11,3 +11,10 @@ const (
 	defaultReadHeaderTimeout = time.Second
 	staticPath               = "/static/"
 )
+
+type contextKey int
+
+const (
+	varsKey contextKey = iota
+	routeKey
+)

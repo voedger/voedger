@@ -57,7 +57,12 @@ func (d *data) AddConstraints(cc ...IConstraint) IDataBuilder {
 		if ok := dk.IsSupportedConstraint(ck); !ok {
 			panic(fmt.Errorf("%v is not compatible with constraint %v: %w", d, c, ErrIncompatibleConstraints))
 		}
-		if c.Kind() == ConstraintKind_Enum {
+		switch c.Kind() {
+		case ConstraintKind_MinLen:
+			// no errors expected
+		case ConstraintKind_MaxLen:
+			// no errors expected
+		case ConstraintKind_Enum:
 			ok := false
 			switch dk {
 			case DataKind_int32:

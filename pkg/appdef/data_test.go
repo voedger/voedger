@@ -163,9 +163,8 @@ func Test_AppDef_AddData(t *testing.T) {
 
 	t.Run("panic if incompatible constraints", func(t *testing.T) {
 		apb := New()
-		require.Panics(func() {
-			_ = apb.AddData(strName, DataKind_string, NullQName, MinIncl(1))
-		})
+		require.Panics(func() { _ = apb.AddData(strName, DataKind_string, NullQName, MinIncl(1)) })
+		require.Panics(func() { _ = apb.AddData(intName, DataKind_float64, NullQName, MaxLen(100)) })
 	})
 }
 
@@ -180,6 +179,11 @@ func Test_data_AddConstraint(t *testing.T) {
 		args      args
 		wantPanic bool
 	}{
+		//- MaxLen
+		{"string: max length constraint must be ok",
+			args{DataKind_string, ConstraintKind_MaxLen, uint16(100)}, false},
+		{"bytes: max length constraint must be ok",
+			args{DataKind_bytes, ConstraintKind_MaxLen, uint16(1024)}, false},
 		//- Enum
 		{"int32: enum constraint must be ok",
 			args{DataKind_int32, ConstraintKind_Enum, []int32{1, 2, 3}}, false},

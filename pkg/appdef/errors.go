@@ -22,8 +22,6 @@ var ErrInvalidTypeKind = errors.New("invalid type kind")
 
 var ErrTooManyFields = errors.New("too many fields")
 
-var ErrMaxFieldLengthExceeds = errors.New("too large field length")
-
 var ErrIncompatibleConstraints = errors.New("incompatible constraints")
 
 var ErrTooManyContainers = errors.New("too many containers")
@@ -40,6 +38,10 @@ var ErrUniqueOverlaps = errors.New("unique fields overlaps")
 
 var ErrExtensionEngineKindMissed = errors.New("extension engine kind is missed")
 
+var ErrInvalidExtensionEngineKind = errors.New("extension engine kind is not valid")
+
 var ErrWorkspaceShouldBeAbstract = errors.New("workspace should be abstract")
 
 var ErrInvalidProjectorEventKind = errors.New("invalid projector event kind")
+
+var ErrEmptyProjectorEvents = errors.New("empty projector events")

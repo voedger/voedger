@@ -59,7 +59,6 @@ func Test_View(t *testing.T) {
 
 		const expected = `{
 			"Comment": "view comment",
-			"Name": "test.view",
 			"Key": {
 				"Partition": [
 					{

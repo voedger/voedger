@@ -234,7 +234,7 @@ func (s *AlterWorkspaceStmt) Iterate(callback func(stmt interface{})) {
 type TypeStmt struct {
 	Statement
 	Name  Ident           `parser:"'TYPE' @Ident "`
-	Items []TableItemExpr `parser:"'(' @@ (',' @@)* ')'"`
+	Items []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 }
 
 func (s TypeStmt) GetName() string { return string(s.Name) }
@@ -262,11 +262,11 @@ func (q DefQName) String() string {
 }
 
 type TypeVarchar struct {
-	MaxLen *uint16 `parser:"('varchar' | 'text') ( '(' @Int ')' )?"`
+	MaxLen *uint64 `parser:"('varchar' | 'text') ( '(' @Int ')' )?"`
 }
 
 type TypeBytes struct {
-	MaxLen *uint16 `parser:"'bytes' ( '(' @Int ')' )?"`
+	MaxLen *uint64 `parser:"'bytes' ( '(' @Int ')' )?"`
 }
 
 type VoidOrDataType struct {
@@ -382,7 +382,8 @@ type ProjectionTableAction struct {
 }
 
 type ProjectorCommandAction struct {
-	Execute bool `parser:"@'EXECUTE'"`
+	Execute   bool `parser:"@'EXECUTE'"`
+	WithParam bool `parser:"@('WITH' 'PARAM')?"`
 }
 
 type ProjectorTrigger struct {
@@ -393,12 +394,13 @@ type ProjectorTrigger struct {
 
 type ProjectorStmt struct {
 	Statement
-	Sync     bool               `parser:"@'SYNC'?"`
-	Name     Ident              `parser:"'PROJECTOR' @Ident"`
-	Triggers []ProjectorTrigger `parser:"@@ ('OR' @@)*"`
-	State    []ProjectorStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
-	Intents  []ProjectorStorage `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
-	Engine   EngineType         // Initialized with 1st pass
+	Sync            bool               `parser:"@'SYNC'?"`
+	Name            Ident              `parser:"'PROJECTOR' @Ident"`
+	Triggers        []ProjectorTrigger `parser:"@@ ('OR' @@)*"`
+	State           []ProjectorStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Intents         []ProjectorStorage `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
+	IncludingErrors bool               `parser:"('INCLUDING' 'ERRORS')?"`
+	Engine          EngineType         // Initialized with 1st pass
 }
 
 func (s *ProjectorStmt) GetName() string            { return string(s.Name) }
@@ -584,12 +586,12 @@ func (s *FunctionStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type CommandStmt struct {
 	Statement
-	Name        Ident           `parser:"'COMMAND' @Ident"`
-	Arg         *AnyOrVoidOrDef `parser:"('(' @@? "`
-	UnloggedArg *AnyOrVoidOrDef `parser:"(','? UNLOGGED @@)? ')')?"`
-	Returns     *AnyOrVoidOrDef `parser:"('RETURNS' @@)?"`
-	With        []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
-	Engine      EngineType      // Initialized with 1st pass
+	Name          Ident           `parser:"'COMMAND' @Ident"`
+	Param         *AnyOrVoidOrDef `parser:"('(' @@? "`
+	UnloggedParam *AnyOrVoidOrDef `parser:"(','? UNLOGGED @@)? ')')?"`
+	Returns       *AnyOrVoidOrDef `parser:"('RETURNS' @@)?"`
+	With          []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Engine        EngineType      // Initialized with 1st pass
 }
 
 func (s *CommandStmt) GetName() string            { return string(s.Name) }
@@ -602,7 +604,7 @@ type WithItem struct {
 }
 
 type AnyOrVoidOrDef struct {
-	Any  bool      `parser:"@'ANY'"`
+	Any  bool      `parser:"@'any'"`
 	Void bool      `parser:"| @'void'"`
 	Def  *DefQName `parser:"| @@"`
 }
@@ -610,7 +612,7 @@ type AnyOrVoidOrDef struct {
 type QueryStmt struct {
 	Statement
 	Name    Ident           `parser:"'QUERY' @Ident"`
-	Arg     *AnyOrVoidOrDef `parser:"('(' @@? ')')?"`
+	Param   *AnyOrVoidOrDef `parser:"('(' @@? ')')?"`
 	Returns AnyOrVoidOrDef  `parser:"'RETURNS' @@"`
 	With    []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 	Engine  EngineType      // Initialized with 1st pass

@@ -318,7 +318,7 @@ func TestRawMode(t *testing.T) {
 	require := require.New(t)
 
 	appDef := appdef.New()
-	resultMeta := appDef.AddObject(istructs.QNameJSON)
+	resultMeta := appDef.AddObject(istructs.QNameRaw)
 
 	result := ""
 	rs := testResultSenderClosable{
@@ -334,7 +334,7 @@ func TestRawMode(t *testing.T) {
 
 	require.NoError(processor.SendAsync(workpiece{
 		object: &coreutils.TestObject{
-			Data: map[string]interface{}{processors.Field_JSONDef_Body: `[accepted]`},
+			Data: map[string]interface{}{processors.Field_RawObject_Body: `[accepted]`},
 		},
 		outputRow: &outputRow{
 			keyToIdx: map[string]int{rootDocument: 0},

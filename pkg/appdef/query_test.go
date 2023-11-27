@@ -32,8 +32,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 		t.Run("must be ok to assign query params and result", func(t *testing.T) {
 			query.
 				SetParam(parName).
-				SetResult(resName).
-				SetExtension("QueryExt", ExtensionEngineKind_BuiltIn)
+				SetResult(resName)
 		})
 
 		t.Run("must be ok to build", func(t *testing.T) {
@@ -59,26 +58,28 @@ func Test_AppDef_AddQuery(t *testing.T) {
 		require.Equal(TypeKind_Query, query.Kind())
 		require.Equal(q, query)
 
+		require.Equal(queryName.Entity(), query.Name())
+		require.Equal(ExtensionEngineKind_BuiltIn, query.Engine())
+
 		require.Equal(parName, query.Param().QName())
 		require.Equal(TypeKind_Object, query.Param().Kind())
 
 		require.Equal(resName, query.Result().QName())
 		require.Equal(TypeKind_Object, query.Result().Kind())
-
-		require.Equal("QueryExt", query.Extension().Name())
-		require.Equal(ExtensionEngineKind_BuiltIn, query.Extension().Engine())
 	})
 
-	t.Run("must be ok to enum functions", func(t *testing.T) {
+	t.Run("must be ok to enum queries", func(t *testing.T) {
 		cnt := 0
-		app.Functions(func(f IFunction) {
+		app.Extensions(func(ex IExtension) {
 			cnt++
 			switch cnt {
 			case 1:
-				require.Equal(TypeKind_Query, f.Kind())
-				require.Equal(queryName, f.QName())
+				cmd, ok := ex.(IQuery)
+				require.True(ok)
+				require.Equal(TypeKind_Query, cmd.Kind())
+				require.Equal(queryName, cmd.QName())
 			default:
-				require.Failf("unexpected function", "kind: %v, name: %v", f.Kind(), f.QName())
+				require.Failf("unexpected extension", "extension: %v", ex)
 			}
 		})
 		require.Equal(1, cnt)
@@ -116,7 +117,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 		apb := New()
 		query := apb.AddQuery(NewQName("test", "query"))
 		require.Panics(func() {
-			query.SetExtension("", ExtensionEngineKind_BuiltIn)
+			query.SetName("")
 		})
 	})
 
@@ -124,7 +125,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 		apb := New()
 		query := apb.AddQuery(NewQName("test", "query"))
 		require.Panics(func() {
-			query.SetExtension("naked 🔫", ExtensionEngineKind_BuiltIn)
+			query.SetName("naked 🔫")
 		})
 	})
 }
@@ -156,15 +157,6 @@ func Test_QueryValidate(t *testing.T) {
 		_ = appDef.AddObject(res)
 	})
 
-	t.Run("must error if extension name or engine is missed", func(t *testing.T) {
-		_, err := appDef.Build()
-		require.ErrorIs(err, ErrNameMissed)
-		require.ErrorContains(err, "extension name")
-
-		require.ErrorIs(err, ErrExtensionEngineKindMissed)
-	})
-
-	query.SetExtension("QueryExt", ExtensionEngineKind_BuiltIn)
 	_, err := appDef.Build()
 	require.NoError(err)
 }
@@ -180,8 +172,7 @@ func Test_AppDef_AddQueryWithAnyResult(t *testing.T) {
 
 		query := appDef.AddQuery(queryName)
 		query.
-			SetResult(QNameANY).
-			SetExtension("QueryExt", ExtensionEngineKind_BuiltIn)
+			SetResult(QNameANY)
 
 		a, err := appDef.Build()
 		require.NoError(err)

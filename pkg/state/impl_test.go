@@ -6,6 +6,7 @@ package state
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -69,9 +70,9 @@ func Test_put(t *testing.T) {
 		mrr.AssertExpectations(t)
 	})
 	t.Run("Should panic when data kind not supported", func(t *testing.T) {
-		require.PanicsWithError(t, "illegal state: field - 'notSupported', kind - '12': not supported", func() {
-			put("notSupported", appdef.DataKind_FakeLast, nil, nil)
-		})
+		require.PanicsWithError(t,
+			fmt.Sprintf("illegal state: field - 'notSupported', kind - '%d': not supported", appdef.DataKind_FakeLast),
+			func() { put("notSupported", appdef.DataKind_FakeLast, nil, nil) })
 	})
 }
 

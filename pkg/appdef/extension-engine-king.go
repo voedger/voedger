@@ -17,12 +17,12 @@ const (
 	ExtensionEngineKind_BuiltIn
 	ExtensionEngineKind_WASM
 
-	ExtensionEngineKind_FakeLast
+	ExtensionEngineKind_Count
 )
 
 func (k ExtensionEngineKind) MarshalText() ([]byte, error) {
 	var s string
-	if k < ExtensionEngineKind_FakeLast {
+	if k < ExtensionEngineKind_Count {
 		s = k.String()
 	} else {
 		const base = 10

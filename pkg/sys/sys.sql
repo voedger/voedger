@@ -17,7 +17,13 @@ ABSTRACT TABLE Singleton INHERITS CDoc();
 
 ALTERABLE WORKSPACE AppWorkspaceWS();
 
+TYPE Raw (
+	-- must not be bytes because the engine will expect urlBase64-encoded string as the value to put into this field
+	Body varchar(65535) NOT NULL
+);
+
 ABSTRACT WORKSPACE Workspace (
+
 	TABLE ChildWorkspace INHERITS CDoc (
 		WSName varchar NOT NULL,
 		WSKind qname NOT NULL,
@@ -125,7 +131,7 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE ModulesResult (
-		Modules text(32768) NOT NULL
+			Modules varchar(32768) NOT NULL
 	);
 
 	TYPE RenameQNameParams (
@@ -143,7 +149,7 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE GetCDocResult (
-		Result text(32768) NOT NULL
+			Result varchar(32768) NOT NULL
 	);
 
 	TYPE StateParams (
@@ -151,7 +157,7 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE StateResult (
-		State text(32768) NOT NULL
+			State varchar(32768) NOT NULL
 	);
 
 	TYPE DescribePackageNamesResult (
@@ -167,11 +173,11 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE InitiateInvitationByEMailParams (
-		Email text NOT NULL,
-		Roles text NOT NULL,
-		ExpireDatetime int64 NOT NULL,
-		EmailTemplate text(32768) NOT NULL,
-		EmailSubject text NOT NULL
+			Email text NOT NULL,
+			Roles text NOT NULL,
+			ExpireDatetime int64 NOT NULL,
+			EmailTemplate varchar(32768) NOT NULL,
+			EmailSubject text NOT NULL
 	);
 
 	TYPE InitiateJoinWorkspaceParams (
@@ -180,10 +186,10 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE InitiateUpdateInviteRolesParams (
-		InviteID ref NOT NULL,
-		Roles text NOT NULL,
-		EmailTemplate text(32768) NOT NULL,
-		EmailSubject text NOT NULL
+			InviteID ref NOT NULL,
+			Roles text NOT NULL,
+			EmailTemplate varchar(32768) NOT NULL,
+			EmailSubject text NOT NULL
 	);
 
 	TYPE InitiateCancelAcceptedInviteParams (
@@ -241,13 +247,13 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE InitialEmailVerificationResult (
-		VerificationToken text(32768) NOT NULL
+			VerificationToken varchar(32768) NOT NULL
 	);
 
 	TYPE IssueVerifiedValueTokenParams (
-		VerificationToken text(32768) NOT NULL,
-		VerificationCode text NOT NULL,
-		ForRegistry bool
+			VerificationToken varchar(32768) NOT NULL,
+			VerificationCode text NOT NULL,
+			ForRegistry bool
 	);
 
 	TYPE IssueVerifiedValueTokenResult (
@@ -409,7 +415,10 @@ ABSTRACT WORKSPACE Workspace (
 		QUERY GRCount RETURNS GRCountResult;
 		QUERY Modules RETURNS ModulesResult;
 		COMMAND RenameQName(RenameQNameParams);
-		SYNC PROJECTOR RecordsRegistryProjector AFTER INSERT ON (CRecord, WRecord, ORecord) OR AFTER UPDATE ON (CRecord, WRecord) INTENTS(View(RecordsRegistry));
+		SYNC PROJECTOR RecordsRegistryProjector
+			AFTER INSERT ON (CRecord, WRecord) OR
+			AFTER EXECUTE WITH PARAM ON ODoc
+			INTENTS(View(RecordsRegistry));
 
 		-- authnz
 
@@ -418,7 +427,7 @@ ABSTRACT WORKSPACE Workspace (
 
 		-- collection
 
-		QUERY Collection(CollectionParams) RETURNS ANY;
+		QUERY Collection(CollectionParams) RETURNS any;
 		QUERY GetCDoc(GetCDocParams) RETURNS GetCDocResult;
 		QUERY State(StateParams) RETURNS StateResult;
 		SYNC PROJECTOR ProjectorCollection AFTER INSERT OR UPDATE ON (CRecord) INTENTS(View(CollectionView));
@@ -452,7 +461,10 @@ ABSTRACT WORKSPACE Workspace (
 		-- journal
 
 		QUERY Journal(JournalParams) RETURNS JournalResult;
-		PROJECTOR ProjectorWLogDates AFTER INSERT ON (CRecord, WRecord, ORecord) OR AFTER UPDATE ON (CRecord, WRecord) INTENTS(View(WLogDates));
+		PROJECTOR ProjectorWLogDates
+			AFTER INSERT OR UPDATE ON (CRecord, WRecord) OR
+			AFTER EXECUTE WITH PARAM ON ODoc
+			INTENTS(View(WLogDates));
 
 		-- sqlquery
 
@@ -460,7 +472,10 @@ ABSTRACT WORKSPACE Workspace (
 
 		-- uniques
 
-		SYNC PROJECTOR ApplyUniques AFTER INSERT ON (CRecord, WRecord, ORecord) OR AFTER UPDATE ON (CRecord, WRecord) INTENTS(View(Uniques));
+		SYNC PROJECTOR ApplyUniques
+			AFTER INSERT OR UPDATE ON (CRecord, WRecord) OR
+			AFTER EXECUTE WITH PARAM ON ODoc
+			INTENTS(View(Uniques));
 
 		-- verifier
 

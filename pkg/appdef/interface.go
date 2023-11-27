@@ -104,11 +104,6 @@ type IAppDef interface {
 	// Returns nil if not found.
 	Query(QName) IQuery
 
-	// Enumerates all application functions
-	//
-	// Functions are enumerated in alphabetical order by QName
-	Functions(func(IFunction))
-
 	// Return projector by name.
 	//
 	// Returns nil if not found.
@@ -118,6 +113,11 @@ type IAppDef interface {
 	//
 	// Projectors are enumerated in alphabetical order by QName.
 	Projectors(func(IProjector))
+
+	// Enumerates all application extensions (commands, queries and extensions)
+	//
+	// Extensions are enumerated in alphabetical order by QName
+	Extensions(func(IExtension))
 
 	// Returns workspace by name.
 	//

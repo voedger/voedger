@@ -100,7 +100,7 @@ func Test_KeyType(t *testing.T) {
 		require.NotNil(k)
 
 		require.EqualValues(1111111, k.AsInt32("pk_int32"))
-		require.EqualValues(222222222222, k.AsInt32("pk_int64"))
+		require.EqualValues(222222222222, k.AsInt64("pk_int64"))
 		require.EqualValues(3.333e3, k.AsFloat32("pk_float32"))
 		require.EqualValues(-4.4444e-44, k.AsFloat64("pk_float64"))
 		require.EqualValues(istructs.QNameForError, k.AsQName("pk_qname"))

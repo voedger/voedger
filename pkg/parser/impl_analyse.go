@@ -31,8 +31,16 @@ func FindApplication(p *PackageSchemaAST) (result *ApplicationStmt, err error) {
 	return result, nil
 }
 
-func analyse(c *basicContext, p *PackageSchemaAST) {
+func preAnalyse(c *basicContext, p *PackageSchemaAST) {
+	iteratePackage(p, c, func(stmt interface{}, ictx *iterateCtx) {
+		switch v := stmt.(type) {
+		case *TableStmt:
+			preAnalyseTable(v, ictx)
+		}
+	})
+}
 
+func analyse(c *basicContext, p *PackageSchemaAST) {
 	iteratePackage(p, c, func(stmt interface{}, ictx *iterateCtx) {
 		switch v := stmt.(type) {
 		case *CommandStmt:
@@ -236,13 +244,13 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 		}
 	}
 
-	if cmd.Arg != nil && cmd.Arg.Def != nil {
-		resolve(*cmd.Arg.Def)
+	if cmd.Param != nil && cmd.Param.Def != nil {
+		resolve(*cmd.Param.Def)
 	}
-	if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
-		err := resolveInCtx(*cmd.UnloggedArg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil })
+	if cmd.UnloggedParam != nil && cmd.UnloggedParam.Def != nil {
+		err := resolveInCtx(*cmd.UnloggedParam.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil })
 		if err != nil {
-			if err = resolveInCtx(*cmd.UnloggedArg.Def, c, func(*TableStmt, *PackageSchemaAST) error { return nil }); err != nil {
+			if err = resolveInCtx(*cmd.UnloggedParam.Def, c, func(*TableStmt, *PackageSchemaAST) error { return nil }); err != nil {
 				c.stmtErr(&cmd.Pos, err)
 			}
 		}
@@ -254,8 +262,8 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 }
 
 func analyzeQuery(query *QueryStmt, c *iterateCtx) {
-	if query.Arg != nil && query.Arg.Def != nil {
-		if err := resolveInCtx(*query.Arg.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
+	if query.Param != nil && query.Param.Def != nil {
+		if err := resolveInCtx(*query.Param.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
 			c.stmtErr(&query.Pos, err)
 		}
 
@@ -274,7 +282,7 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 		for _, qname := range trigger.QNames {
 			if len(trigger.TableActions) > 0 {
 				resolveFunc := func(table *TableStmt, pkg *PackageSchemaAST) error {
-					sysDoc := (pkg.QualifiedPackageName == appdef.SysPackage) && (table.Name == nameCRecord || table.Name == nameORecord || table.Name == nameWRecord)
+					sysDoc := (pkg.QualifiedPackageName == appdef.SysPackage) && (table.Name == nameCRecord || table.Name == nameWRecord)
 					if table.Abstract && !sysDoc {
 						return ErrAbstractTableNotAlowedInProjectors(qname.String())
 					}
@@ -282,7 +290,7 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 					if err != nil {
 						return err
 					}
-					if k == appdef.TypeKind_ODoc || k == appdef.TypeKind_ORecord {
+					if k == appdef.TypeKind_ODoc {
 						if trigger.activate() || trigger.deactivate() || trigger.update() {
 							return ErrOnlyInsertForOdocOrORecord
 						}
@@ -293,14 +301,33 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 					c.stmtErr(&v.Pos, err)
 				}
 			} else { // Command
-				cmd, _, err := lookupInCtx[*CommandStmt](qname, c)
-				if err != nil {
-					c.stmtErr(&v.Pos, err)
-					continue
-				}
-				if cmd == nil {
-					c.stmtErr(&v.Pos, ErrUndefinedCommand(qname))
-					continue
+				if trigger.ExecuteAction.WithParam {
+					cmd, _, err := lookupInCtx[*TypeStmt](qname, c)
+					if err != nil { // type?
+						c.stmtErr(&v.Pos, err)
+						continue
+					}
+					if cmd == nil { // ODoc?
+						odoc, _, err := lookupInCtx[*TableStmt](qname, c)
+						if err != nil {
+							c.stmtErr(&v.Pos, err)
+							continue
+						}
+						if odoc == nil || odoc.tableTypeKind != appdef.TypeKind_ODoc {
+							c.stmtErr(&v.Pos, ErrUndefinedTypeOrOdoc(qname))
+							continue
+						}
+					}
+				} else {
+					cmd, _, err := lookupInCtx[*CommandStmt](qname, c)
+					if err != nil {
+						c.stmtErr(&v.Pos, err)
+						continue
+					}
+					if cmd == nil {
+						c.stmtErr(&v.Pos, ErrUndefinedCommand(qname))
+						continue
+					}
 				}
 			}
 		}
@@ -414,13 +441,16 @@ func analyseWith(with *[]WithItem, statement IStatement, c *iterateCtx) {
 	}
 }
 
-func analyseTable(v *TableStmt, c *iterateCtx) {
+func preAnalyseTable(v *TableStmt, c *iterateCtx) {
 	var err error
 	v.tableTypeKind, v.singletone, err = getTableTypeKind(v, c.pkg, c)
 	if err != nil {
 		c.stmtErr(&v.Pos, err)
 		return
 	}
+}
+
+func analyseTable(v *TableStmt, c *iterateCtx) {
 	analyseWith(&v.With, v, c)
 	analyseNestedTables(v.Items, v.tableTypeKind, c)
 	analyseFieldSets(v.Items, c)
@@ -551,9 +581,16 @@ func analyseFields(items []TableItemExpr, c *iterateCtx) {
 					c.stmtErr(&field.Pos, ErrRegexpCheckOnlyForVarcharField)
 				}
 			}
-			if field.Type.DataType != nil && field.Type.DataType.Varchar != nil && field.Type.DataType.Varchar.MaxLen != nil {
-				if *field.Type.DataType.Varchar.MaxLen > appdef.MaxFieldLength {
-					c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+			if field.Type.DataType != nil {
+				if field.Type.DataType.Varchar != nil && field.Type.DataType.Varchar.MaxLen != nil {
+					if *field.Type.DataType.Varchar.MaxLen > uint64(appdef.MaxFieldLength) {
+						c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+					}
+				}
+				if field.Type.DataType.Bytes != nil && field.Type.DataType.Bytes.MaxLen != nil {
+					if *field.Type.DataType.Bytes.MaxLen > uint64(appdef.MaxFieldLength) {
+						c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+					}
 				}
 			}
 		}

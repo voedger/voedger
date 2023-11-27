@@ -150,23 +150,19 @@ func Test_BasicUsage(t *testing.T) {
 	eventsCount := 0
 	proj.Events(func(ie appdef.IProjectorEvent) {
 		eventsCount++
-		if eventsCount == 1 {
-			require.Equal(2, len(ie.Kind()))
-			require.Equal(appdef.ProjectorEventKind_Insert, ie.Kind()[0])
-			require.Equal(appdef.ProjectorEventKind_Update, ie.Kind()[1])
-			require.Equal(appdef.NewQName("sys", "CRecord"), ie.On().QName())
-		} else if eventsCount == 2 {
-			require.Equal(1, len(ie.Kind()))
-			require.Equal(appdef.ProjectorEventKind_Insert, ie.Kind()[0])
-			require.Equal(appdef.NewQName("sys", "ORecord"), ie.On().QName())
-		} else if eventsCount == 3 {
-			require.Equal(2, len(ie.Kind()))
-			require.Equal(appdef.ProjectorEventKind_Insert, ie.Kind()[0])
-			require.Equal(appdef.ProjectorEventKind_Update, ie.Kind()[1])
-			require.Equal(appdef.NewQName("sys", "WRecord"), ie.On().QName())
+		k, on := ie.Kind(), ie.On().QName()
+		require.Len(k, 3)
+		require.Contains(k, appdef.ProjectorEventKind_Insert)
+		require.Contains(k, appdef.ProjectorEventKind_Activate)
+		require.Contains(k, appdef.ProjectorEventKind_Deactivate)
+		switch eventsCount {
+		case 1:
+			require.Equal(appdef.NewQName("sys", "CRecord"), on)
+		case 2:
+			require.Equal(appdef.NewQName("sys", "WRecord"), on)
 		}
 	})
-	require.Equal(3, eventsCount)
+	require.Equal(2, eventsCount)
 
 	// Execute Projector
 	proj = builder.Projector(appdef.NewQName("main", "UpdateDashboard"))
@@ -456,7 +452,7 @@ func Test_Varchar(t *testing.T) {
 	TYPE CDoc1 (
 		Oversize varchar(%d)
 	);
-	`, appdef.MaxFieldLength+1, appdef.MaxFieldLength+1))
+	`, uint32(appdef.MaxFieldLength)+1, uint32(appdef.MaxFieldLength)+1))
 	require.NoError(err)
 	pkg, err := BuildPackageSchema("pkg/test", []*FileSchemaAST{fs})
 	require.NoError(err)
@@ -1060,7 +1056,10 @@ func Test_Projectors(t *testing.T) {
 			PROJECTOR ImProjector4 AFTER ACTIVATE ON Order; 			-- Bad
 			PROJECTOR ImProjector5 AFTER DEACTIVATE ON Order; 			-- Bad
 			PROJECTOR ImProjector6 AFTER INSERT ON Order OR AFTER EXECUTE ON Orders;	-- Good
-		)
+			PROJECTOR ImProjector7 AFTER EXECUTE WITH PARAM ON Bill;	-- Bad: Type undefined
+			PROJECTOR ImProjector8 AFTER EXECUTE WITH PARAM ON ODoc;	-- Good
+			PROJECTOR ImProjector9 AFTER EXECUTE WITH PARAM ON ORecord;	-- Bad
+		);
 	)
 	`)
 	require.Nil(err)
@@ -1076,6 +1075,8 @@ func Test_Projectors(t *testing.T) {
 		"example.sql:8:4: only INSERT allowed for ODoc or ORecord",
 		"example.sql:9:4: only INSERT allowed for ODoc or ORecord",
 		"example.sql:10:4: only INSERT allowed for ODoc or ORecord",
+		"example.sql:12:4: undefined type or ODoc: Bill",
+		"example.sql:14:4: undefined type or ODoc: ORecord",
 	}, "\n"))
 }
 
@@ -1872,4 +1873,29 @@ WORKSPACE Workspace1 (
 	_, err = builder.Build()
 	require.NoError(err)
 
+}
+
+func Test_EmptyType(t *testing.T) {
+	require := require.New(t)
+	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+
+APPLICATION registry(
+);
+
+TYPE EmptyType (
+);
+	`)
+
+	app, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
+	require.NoError(err)
+
+	builder := appdef.New()
+	err = BuildAppDefs(app, builder)
+	require.NoError(err)
+
+	cdoc := builder.Object(appdef.NewQName("app1", "EmptyType"))
+	require.NotNil(cdoc)
+
+	_, err = builder.Build()
+	require.NoError(err)
 }
