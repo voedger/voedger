@@ -17,6 +17,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
+// sys/registry app, triggered by cdoc.registry.Login
+// at pseudoWSID translated to AppWSID
 func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return event.CUDs(func(rec istructs.ICUDRow) error {
@@ -37,11 +39,10 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 			targetClusterID := istructs.ClusterID(rec.AsInt32(authnz.Field_ProfileCluster))
 			targetApp := rec.AsString(authnz.Field_AppName)
 			ownerWSID := event.Workspace()
-			ownerBaseWSID := ownerWSID.BaseWSID()
-			wsidToCallCreateWSIDAt := istructs.NewWSID(targetClusterID, ownerBaseWSID)
+			wsidToCallCreateWSIDAt := istructs.NewWSID(targetClusterID, ownerWSID.BaseWSID())
 			templateName := ""
 			templateParams := ""
-			return workspace.ProjectInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, targetClusterID, wsidToCallCreateWSIDAt,
+			return workspace.ApplyInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, targetClusterID, wsidToCallCreateWSIDAt,
 				targetApp, templateName, templateParams, rec, ownerWSID)
 		})
 	}
