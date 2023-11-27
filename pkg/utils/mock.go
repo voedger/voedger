@@ -358,3 +358,52 @@ func (m *MockRawEvent) ArgumentUnloggedObject() istructs.IObject {
 func (m *MockRawEvent) HandlingPartition() istructs.PartitionID {
 	return m.Called().Get(0).(istructs.PartitionID)
 }
+
+type MockKey struct {
+	mock.Mock
+}
+
+func (m *MockKey) AsInt32(name string) int32            { return m.Called(name).Get(0).(int32) }
+func (m *MockKey) AsInt64(name string) int64            { return m.Called(name).Get(0).(int64) }
+func (m *MockKey) AsFloat32(name string) float32        { return m.Called(name).Get(0).(float32) }
+func (m *MockKey) AsFloat64(name string) float64        { return m.Called(name).Get(0).(float64) }
+func (m *MockKey) AsBytes(name string) []byte           { return m.Called(name).Get(0).([]byte) }
+func (m *MockKey) AsString(name string) string          { return m.Called(name).Get(0).(string) }
+func (m *MockKey) AsQName(name string) appdef.QName     { return m.Called(name).Get(0).(appdef.QName) }
+func (m *MockKey) AsBool(name string) bool              { return m.Called(name).Get(0).(bool) }
+func (m *MockKey) FieldNames(cb func(fieldName string)) { m.Called(cb) }
+func (m *MockKey) AsRecordID(name string) istructs.RecordID {
+	return m.Called(name).Get(0).(istructs.RecordID)
+}
+func (m *MockKey) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {
+	m.Called(includeNulls, cb)
+}
+
+type MockValue struct {
+	mock.Mock
+}
+
+func (m *MockValue) AsInt32(name string) int32        { return m.Called(name).Get(0).(int32) }
+func (m *MockValue) AsInt64(name string) int64        { return m.Called(name).Get(0).(int64) }
+func (m *MockValue) AsFloat32(name string) float32    { return m.Called(name).Get(0).(float32) }
+func (m *MockValue) AsFloat64(name string) float64    { return m.Called(name).Get(0).(float64) }
+func (m *MockValue) AsBytes(name string) []byte       { return m.Called(name).Get(0).([]byte) }
+func (m *MockValue) AsString(name string) string      { return m.Called(name).Get(0).(string) }
+func (m *MockValue) AsQName(name string) appdef.QName { return m.Called(name).Get(0).(appdef.QName) }
+func (m *MockValue) AsBool(name string) bool          { return m.Called(name).Get(0).(bool) }
+func (m *MockValue) AsRecordID(name string) istructs.RecordID {
+	return m.Called(name).Get(0).(istructs.RecordID)
+}
+func (m *MockValue) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {
+	m.Called(includeNulls, cb)
+}
+
+func (m *MockValue) FieldNames(cb func(fieldName string)) {
+	m.Called(cb)
+}
+func (m *MockValue) AsRecord(name string) istructs.IRecord {
+	return m.Called(name).Get(0).(istructs.IRecord)
+}
+func (m *MockValue) AsEvent(name string) istructs.IDbEvent {
+	return m.Called(name).Get(0).(istructs.IDbEvent)
+}
