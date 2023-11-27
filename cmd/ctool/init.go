@@ -28,10 +28,10 @@ func newInitCmd() *cobra.Command {
 	}
 
 	initSECmd = &cobra.Command{
-		Use:   "SE [<ipaddr>...] [<data-centers>...]",
+		Use:   "SE [<ipaddr>...]",
 		Short: "Creates the file cluster.json for the SE edition cluster",
 		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != initSeArgCount && len(args) != initSeWithDCArgCount {
+			if len(args) != initSeArgCount {
 				return ErrInvalidNumberOfArguments
 			}
 			return nil
@@ -70,7 +70,7 @@ func parseDeployArgs(args []string) error {
 	var err error
 
 	if args[0] == "SE" {
-		if len(args) != initSeArgCount && len(args) != initSeWithDCArgCount {
+		if len(args) != initSeArgCount {
 			return errors.New("invalid number of arguments")
 		}
 

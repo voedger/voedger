@@ -615,3 +615,24 @@ func replaceSeAppNode(cluster *clusterType) error {
 	logger.Info(fmt.Sprintf("node %s [%s -> %s] replaced successfully", newNode.nodeName(), oldAddr, newAddr))
 	return nil
 }
+
+// check host Available
+// pinging the address of the host
+func hostIsAvailable(cluster *clusterType, host string) error {
+	if err := newScriptExecuter(cluster.sshKey, host).
+		run("host-check.sh", host, "only-ping"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// node is live
+// pinging the address of the node
+// checks that the node is alive in the Swarm cluster
+func nodeIsLive(node *nodeType) error {
+	if err := newScriptExecuter(node.cluster.sshKey, node.nodeName()).
+		run("host-check.sh", node.nodeName()); err != nil {
+		return err
+	}
+	return nil
+}
