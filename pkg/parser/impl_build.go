@@ -335,7 +335,7 @@ func (c *buildContext) projectors() error {
 			}
 
 			if proj.IncludingErrors {
-				builder.SetWantErrors(true)
+				builder.SetWantErrors()
 			}
 
 			// Common for State and Intents
