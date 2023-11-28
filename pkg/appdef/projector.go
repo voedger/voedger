@@ -92,14 +92,14 @@ func (prj *projector) SetSync(sync bool) IProjectorBuilder {
 	return prj
 }
 
-func (prj *projector) SetSysErrors(want bool) IProjectorBuilder {
+func (prj *projector) SetWantErrors(want bool) IProjectorBuilder {
 	prj.sysErrors = want
 	return prj
 }
 
 func (prj *projector) Sync() bool { return prj.sync }
 
-func (prj *projector) SysErrors() bool { return prj.sysErrors }
+func (prj *projector) WantErrors() bool { return prj.sysErrors }
 
 func (prj *projector) States(cb func(storage QName, names QNames)) {
 	prj.states.enum(cb)

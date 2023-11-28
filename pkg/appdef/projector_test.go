@@ -62,7 +62,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			SetEventComment(cmdName, fmt.Sprintf("run projector after execute %v", cmdName)).
 			AddEvent(objName).
 			SetEventComment(objName, fmt.Sprintf("run projector after execute any command with parameter %v", objName)).
-			SetSysErrors(true).
+			SetWantErrors(true).
 			AddState(sysRecords, docName, recName).AddState(sysWLog).
 			AddIntent(sysViews, viewName)
 
@@ -119,7 +119,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Equal(3, cnt)
 		})
 
-		require.True(prj.SysErrors())
+		require.True(prj.WantErrors())
 
 		t.Run("must be ok enum states", func(t *testing.T) {
 			cnt := 0
@@ -209,7 +209,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Equal(1, cnt)
 		})
 
-		require.False(p.SysErrors())
+		require.False(p.WantErrors())
 	})
 
 	t.Run("projector validation errors", func(t *testing.T) {

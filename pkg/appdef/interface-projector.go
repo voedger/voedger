@@ -19,7 +19,7 @@ type IProjector interface {
 
 	// Returns is projector is able to handle `sys.Error` events.
 	// False by default.
-	SysErrors() bool
+	WantErrors() bool
 
 	// Returns projector states.
 	//
@@ -85,7 +85,7 @@ type IProjectorBuilder interface {
 	SetEventComment(on QName, comment ...string) IProjectorBuilder
 
 	// Sets is projector is able to handle `sys.Error` events
-	SetSysErrors(bool) IProjectorBuilder
+	SetWantErrors(bool) IProjectorBuilder
 
 	// Adds state to the projector.
 	//
