@@ -27,10 +27,8 @@ const (
 	// Deploy SE args
 	deploySeFirstNodeArgIdx = 1
 	initSeArgCount          = 5
-	initSeWithDCArgCount    = 8
 	seNodeCount             = 2
 	dbNodeCount             = 3
-	seDcCount               = 3
 
 	// Deploy SE args
 	initCeArgCount = 1

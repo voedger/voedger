@@ -168,15 +168,13 @@ WORKSPACE Restaurant (
 	
 
 	    SYNC PROJECTOR UpdateTableStatus
-            AFTER INSERT ON (Transaction)
--- TODO uncomment then parser will support the «Execute with» statement
---	        AFTER EXECUTE WITH (Order, Bill)
+            AFTER INSERT ON Transaction OR
+	        AFTER EXECUTE WITH PARAM ON (Order, Bill)
 		INTENTS(View(TableStatus));
 
 	    PROJECTOR UpdateSalesReport
-            AFTER INSERT ON (Transaction)
--- TODO uncomment then parser will support the «Execute with» statement
---	        AFTER EXECUTE WITH (Bill)
+            AFTER INSERT ON Transaction OR 
+	        AFTER EXECUTE WITH PARAM ON Bill
 		INTENTS(View(SalesPerDay));
 
     );

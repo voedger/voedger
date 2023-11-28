@@ -382,7 +382,8 @@ type ProjectionTableAction struct {
 }
 
 type ProjectorCommandAction struct {
-	Execute bool `parser:"@'EXECUTE'"`
+	Execute   bool `parser:"@'EXECUTE'"`
+	WithParam bool `parser:"@('WITH' 'PARAM')?"`
 }
 
 type ProjectorTrigger struct {
@@ -393,12 +394,13 @@ type ProjectorTrigger struct {
 
 type ProjectorStmt struct {
 	Statement
-	Sync     bool               `parser:"@'SYNC'?"`
-	Name     Ident              `parser:"'PROJECTOR' @Ident"`
-	Triggers []ProjectorTrigger `parser:"@@ ('OR' @@)*"`
-	State    []ProjectorStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
-	Intents  []ProjectorStorage `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
-	Engine   EngineType         // Initialized with 1st pass
+	Sync            bool               `parser:"@'SYNC'?"`
+	Name            Ident              `parser:"'PROJECTOR' @Ident"`
+	Triggers        []ProjectorTrigger `parser:"@@ ('OR' @@)*"`
+	State           []ProjectorStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Intents         []ProjectorStorage `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
+	IncludingErrors bool               `parser:"('INCLUDING' 'ERRORS')?"`
+	Engine          EngineType         // Initialized with 1st pass
 }
 
 func (s *ProjectorStmt) GetName() string            { return string(s.Name) }

@@ -18,7 +18,6 @@ var (
 	ErrUnknownCommand                       = errors.New("unknown command")
 	ErrMissingCommandArguments              = errors.New("missing command arguments")
 	ErrNoUpdgradeRequired                   = errors.New("no upgrade required")
-	ErrHostNotFoundInCluster                = errors.New("host %s not found in cluster")
 	ErrHostAlreadyExistsInCluster           = errors.New("host %s already exists in cluster")
 	ErrUncompletedCommandFound              = errors.New("uncompleted command found")
 	ErrNodeControllerFunctionNotAssigned    = errors.New("node controller function not assigned")
@@ -42,3 +41,21 @@ const errInvalidNodeRole = "node %s: %w"
 var ErrEmptyNodeAddress = errors.New("empty IP-address")
 
 const errEmptyNodeAddress = "node %s: %w"
+
+// The commander cannot be executed
+var ErrCommandCannotBeExecuted = errors.New("command cannot be executed")
+
+const errCannotReplaceALiveNode = "cannot replace a live node %s: %w"
+
+// host is not available
+var ErrHostIsNotAvailable = errors.New("host is not available")
+
+const errHostIsNotAvailable = "host %s is not available: %w"
+
+var ErrAddressCannotBeUsed = errors.New("address cannot be used")
+
+const errAddressInReplacedList = "address %s is in replaced list: %w"
+
+var ErrHostNotFoundInCluster = errors.New("host %s not found in cluster")
+
+const errHostNotFoundInCluster = "host %s not found in cluster: %w"

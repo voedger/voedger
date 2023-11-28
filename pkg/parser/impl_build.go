@@ -260,7 +260,11 @@ func (c *buildContext) projectors() error {
 			for _, trigger := range proj.Triggers {
 				evKinds := make([]appdef.ProjectorEventKind, 0)
 				if trigger.ExecuteAction != nil {
-					evKinds = append(evKinds, appdef.ProjectorEventKind_Execute)
+					if trigger.ExecuteAction.WithParam {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_ExecuteWithParam)
+					} else {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Execute)
+					}
 				} else {
 					if trigger.insert() {
 						evKinds = append(evKinds, appdef.ProjectorEventKind_Insert)
@@ -286,13 +290,45 @@ func (c *buildContext) projectors() error {
 							c.stmtErr(&proj.Pos, err)
 						}
 					} else { // Command
-						if err := resolveInCtx(qn, ictx, func(cmd *CommandStmt, pkg *PackageSchemaAST) error {
-							evQname := pkg.NewQName(cmd.Name)
+						if trigger.ExecuteAction.WithParam {
+							var pkg *PackageSchemaAST
+							var err error
+							var typ *TypeStmt
+							var odoc *TableStmt
+							var name Ident
+							typ, pkg, err = lookupInCtx[*TypeStmt](qn, ictx)
+							if err != nil {
+								// notest
+								c.stmtErr(&proj.Pos, err)
+								return
+							}
+							if typ == nil { // ODoc
+								odoc, pkg, err = lookupInCtx[*TableStmt](qn, ictx)
+								if err != nil {
+									// notest
+									c.stmtErr(&proj.Pos, err)
+									return
+								}
+								if odoc == nil {
+									// notest
+									c.stmtErr(&proj.Pos, ErrUndefinedTypeOrOdoc(qn))
+									return
+								}
+								name = odoc.Name
+							} else {
+								name = typ.Name
+							}
+							evQname := pkg.NewQName(name)
 							builder.AddEvent(evQname, evKinds...)
-							return nil
-						}); err != nil {
-							// notest
-							c.stmtErr(&proj.Pos, err)
+						} else {
+							if err := resolveInCtx(qn, ictx, func(cmd *CommandStmt, pkg *PackageSchemaAST) error {
+								evQname := pkg.NewQName(cmd.Name)
+								builder.AddEvent(evQname, evKinds...)
+								return nil
+							}); err != nil {
+								// notest
+								c.stmtErr(&proj.Pos, err)
+							}
 						}
 					}
 				}
@@ -355,6 +391,11 @@ func (c *buildContext) projectors() error {
 				builder.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
 			builder.SetSync(proj.Sync)
+			/* TODO:
+			if proj.IncludingErrors {
+				builder.SetIncludingErrors()
+			}
+			*/
 		})
 	}
 	return nil

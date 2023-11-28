@@ -415,10 +415,9 @@ ABSTRACT WORKSPACE Workspace (
 		QUERY GRCount RETURNS GRCountResult;
 		QUERY Modules RETURNS ModulesResult;
 		COMMAND RenameQName(RenameQNameParams);
-		SYNC PROJECTOR RecordsRegistryProjector 
-			AFTER INSERT OR ACTIVATE OR DEACTIVATE ON (CRecord, WRecord) 
-			-- TODO uncomment then parser will support the «Execute with» statement
-			-- AFTER EXECUTE WITH (ODoc)
+		SYNC PROJECTOR RecordsRegistryProjector
+			AFTER INSERT ON (CRecord, WRecord) OR
+			AFTER EXECUTE WITH PARAM ON ODoc
 			INTENTS(View(RecordsRegistry));
 
 		-- authnz
@@ -462,10 +461,9 @@ ABSTRACT WORKSPACE Workspace (
 		-- journal
 
 		QUERY Journal(JournalParams) RETURNS JournalResult;
-		PROJECTOR ProjectorWLogDates 
-			AFTER INSERT OR UPDATE ON (CRecord, WRecord) 
-			-- TODO uncomment then parser will support the «Execute with» statement
-			-- OR AFTER EXECUTE WITH (ODoc)
+		PROJECTOR ProjectorWLogDates
+			AFTER INSERT OR UPDATE ON (CRecord, WRecord) OR
+			AFTER EXECUTE WITH PARAM ON ODoc
 			INTENTS(View(WLogDates));
 
 		-- sqlquery
@@ -474,10 +472,9 @@ ABSTRACT WORKSPACE Workspace (
 
 		-- uniques
 
-		SYNC PROJECTOR ApplyUniques 
-			AFTER INSERT OR ACTIVATE OR DEACTIVATE ON (CRecord, WRecord) 
-			-- TODO uncomment then parser will support the «Execute with» statement
-			-- OR AFTER EXECUTE WITH (ODoc) 
+		SYNC PROJECTOR ApplyUniques
+			AFTER INSERT OR UPDATE ON (CRecord, WRecord) OR
+			AFTER EXECUTE WITH PARAM ON ODoc
 			INTENTS(View(Uniques));
 
 		-- verifier
