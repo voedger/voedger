@@ -333,6 +333,11 @@ func (c *buildContext) projectors() error {
 					}
 				}
 			}
+
+			if proj.IncludingErrors {
+				builder.SetWantErrors(true)
+			}
+
 			// Common for State and Intents
 			handleStorage := func(p *ProjectorStorage, cb func(storage appdef.QName, entities ...appdef.QName)) {
 				var storage *StorageStmt
@@ -391,11 +396,6 @@ func (c *buildContext) projectors() error {
 				builder.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
 			builder.SetSync(proj.Sync)
-			/* TODO:
-			if proj.IncludingErrors {
-				builder.SetIncludingErrors()
-			}
-			*/
 		})
 	}
 	return nil
