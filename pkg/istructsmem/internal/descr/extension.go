@@ -36,9 +36,10 @@ type QueryFunction struct {
 
 type Projector struct {
 	Extension
-	Events  map[appdef.QName]ProjectorEvent `json:",omitempty"`
-	States  map[appdef.QName]appdef.QNames  `json:",omitempty"`
-	Intents map[appdef.QName]appdef.QNames  `json:",omitempty"`
+	Events     map[appdef.QName]ProjectorEvent `json:",omitempty"`
+	WantErrors bool                            `json:",omitempty"`
+	States     map[appdef.QName]appdef.QNames  `json:",omitempty"`
+	Intents    map[appdef.QName]appdef.QNames  `json:",omitempty"`
 }
 
 type ProjectorEvent struct {

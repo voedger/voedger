@@ -17,6 +17,10 @@ type IProjector interface {
 	// Events enumerated in alphabetical QNames order.
 	Events(func(IProjectorEvent))
 
+	// Returns is projector is able to handle `sys.Error` events.
+	// False by default.
+	WantErrors() bool
+
 	// Returns projector states.
 	//
 	// State is a storage to get data.
@@ -79,6 +83,9 @@ type IProjectorBuilder interface {
 	// # Panics:
 	//	- if event for QName is not added
 	SetEventComment(on QName, comment ...string) IProjectorBuilder
+
+	// Sets is projector is able to handle `sys.Error` events
+	SetWantErrors() IProjectorBuilder
 
 	// Adds state to the projector.
 	//

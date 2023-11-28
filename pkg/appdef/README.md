@@ -172,6 +172,7 @@ classDiagram
         +Kind()* TypeKind_Projector
         +Extension() IExtension
         +Events() []IProjectorEvent
+        +WantErrors() bool
         +States() [QName]QNames
         +Intents() [QName]QNames
     }
@@ -592,6 +593,7 @@ classDiagram
         +Kind()* TypeKind_Projector
         +Extension() IExtension
         +Events() []IProjectorEvent
+        +WantErrors() bool
         +States() [QName]QNames
         +Intents() [QName]QNames
     }
