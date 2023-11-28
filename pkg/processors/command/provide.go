@@ -67,6 +67,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("checkWSInitialized", checkWSInitialized),
 				pipeline.WireFunc("checkWSActive", checkWSActive),
 				pipeline.WireFunc("getAppPartition", cmdProc.getAppPartition),
+				pipeline.WireFunc("getResources", getResources),
 				pipeline.WireFunc("getFunction", getFunction),
 				pipeline.WireFunc("authorizeRequest", cmdProc.authorizeRequest),
 				pipeline.WireFunc("unmarshalRequestBody", unmarshalRequestBody),

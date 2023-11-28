@@ -18,12 +18,14 @@ import (
 func provideStateFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameQueryState,
+		appdef.NullQName,
+		appdef.NullQName,
 		// local tests -> params and result will be used as declared here
 		// runtime -> params and result will be replaced with ones from sql
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateParams_local")).
-			AddField(field_After, appdef.DataKind_int64, true).(appdef.IType).QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult_local")).
-			AddField(field_State, appdef.DataKind_string, true).(appdef.IType).QName(),
+		// appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateParams_local")).
+		// 	AddField(field_After, appdef.DataKind_int64, true).(appdef.IType).QName(),
+		// appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult_local")).
+		// 	AddField(field_State, appdef.DataKind_string, true).(appdef.IType).QName(),
 		stateFuncExec(appDefBuilder)))
 }
 

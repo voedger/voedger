@@ -52,6 +52,7 @@ func TestBasicUsage(t *testing.T) {
 	check := make(chan interface{}, 1)
 	cudsCheck := make(chan interface{})
 
+	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
 	// схема параметров тестовой команды
 	testCmdQNameParams := appdef.NewQName(appdef.SysPackage, "TestParams")
 	// схема unlogged-параметров тестовой команды
@@ -65,6 +66,7 @@ func TestBasicUsage(t *testing.T) {
 
 		appDef.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
 		appDef.AddCRecord(testCRecord)
+		appDef.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
 	}
 
 	app := setUp(t, prepareAppDef)
@@ -85,7 +87,6 @@ func TestBasicUsage(t *testing.T) {
 	defer app.n10nBroker.Unsubscribe(channelID, projectionKey)
 
 	// сама тестовая команда
-	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
 	testExec := func(args istructs.ExecCommandArgs) (err error) {
 		cuds := args.Workpiece.(*cmdWorkpiece).parsedCUDs
 		if len(cuds) > 0 {
@@ -109,7 +110,7 @@ func TestBasicUsage(t *testing.T) {
 		check <- 1 // сигнал: проверки случились
 		return
 	}
-	testCmd := istructsmem.NewCommandFunction(testCmdQName, testCmdQNameParams, testCmdQNameParamsUnlogged, appdef.NullQName, testExec)
+	testCmd := istructsmem.NewCommandFunction(testCmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, testExec)
 	app.cfg.Resources.Add(testCmd)
 
 	t.Run("basic usage", func(t *testing.T) {
@@ -183,14 +184,15 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp) map[string]interface
 func TestRecovery(t *testing.T) {
 	require := require.New(t)
 
+	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
 		_ = appDef.AddCRecord(testCRecord)
 		_ = appDef.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
 		_ = appDef.AddWDoc(testWDoc)
+		_ = appDef.AddCommand(cudQName)
 	})
 	defer tearDown(app)
 
-	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 	cmdCUD := istructsmem.NewCommandFunction(cudQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec)
 	app.cfg.Resources.Add(cmdCUD)
 
@@ -241,12 +243,13 @@ func TestCUDUpdate(t *testing.T) {
 
 	testQName := appdef.NewQName("test", "test")
 
+	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
 		_ = appDef.AddCDoc(testQName).AddField("IntFld", appdef.DataKind_int32, false)
+		_ = appDef.AddCommand(cudQName)
 	})
 	defer tearDown(app)
 
-	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 	cmdCUD := istructsmem.NewCommandFunction(cudQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec)
 	app.cfg.Resources.Add(cmdCUD)
 
@@ -294,12 +297,13 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 
 	testQName := appdef.NewQName("test", "test")
 
+	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
 		_ = appDef.AddCDoc(testQName)
+		_ = appDef.AddCommand(cudQName)
 	})
 	defer tearDown(app)
 
-	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 	cmdCUD := istructsmem.NewCommandFunction(cudQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec)
 	app.cfg.Resources.Add(cmdCUD)
 
@@ -345,22 +349,24 @@ func Test400BadRequests(t *testing.T) {
 	testCmdQNameParams := appdef.NewQName(appdef.SysPackage, "TestParams")
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
 
+	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
 		appDef.AddObject(testCmdQNameParams).
 			AddField("Text", appdef.DataKind_string, true)
 
 		appDef.AddObject(testCmdQNameParamsUnlogged).
 			AddField("Password", appdef.DataKind_string, true)
+
+		appDef.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
 	})
 	defer tearDown(app)
 
-	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
-	qryGreeter := istructsmem.NewCommandFunction(testCmdQName, testCmdQNameParams, testCmdQNameParamsUnlogged, appdef.NullQName, func(args istructs.ExecCommandArgs) (err error) {
+	testCmd := istructsmem.NewCommandFunction(testCmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, func(args istructs.ExecCommandArgs) (err error) {
 		_ = args.ArgumentObject.AsString("Text")
 		_ = args.ArgumentUnloggedObject.AsString("Password")
 		return nil
 	})
-	app.cfg.Resources.Add(qryGreeter)
+	app.cfg.Resources.Add(testCmd)
 
 	baseReq := ibus.Request{
 		WSID:     1,
@@ -419,13 +425,15 @@ func TestAuthnz(t *testing.T) {
 
 	qNameTestDeniedCDoc := appdef.NewQName(appdef.SysPackage, "TestDeniedCDoc") // the same in core/iauthnzimpl
 
+	qNameAllowedCmd := appdef.NewQName(appdef.SysPackage, "TestAllowedCmd")
+	qNameDeniedCmd := appdef.NewQName(appdef.SysPackage, "TestDeniedCmd") // the same in core/iauthnzimpl
 	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
 		appDef.AddCDoc(qNameTestDeniedCDoc)
+		appDef.AddCommand(qNameAllowedCmd)
+		appDef.AddCommand(qNameDeniedCmd)
 	})
 	defer tearDown(app)
 
-	qNameAllowedCmd := appdef.NewQName(appdef.SysPackage, "TestAllowedCmd")
-	qNameDeniedCmd := appdef.NewQName(appdef.SysPackage, "TestDeniedCmd") // the same in core/iauthnzimpl
 	app.cfg.Resources.Add(istructsmem.NewCommandFunction(qNameDeniedCmd, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 	app.cfg.Resources.Add(istructsmem.NewCommandFunction(qNameAllowedCmd, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
 
@@ -496,17 +504,19 @@ func getAuthHeader(token string) map[string][]string {
 
 func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 	require := require.New(t)
-	app := setUp(t, func(appDef appdef.IAppDefBuilder) {})
+	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
+	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
+		appDef.AddCommand(testCmdQName).SetParam(istructs.QNameRaw)
+	})
 	defer tearDown(app)
 
 	ch := make(chan interface{})
-	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
 	testExec := func(args istructs.ExecCommandArgs) (err error) {
 		require.EqualValues("custom content", args.ArgumentObject.AsString(processors.Field_RawObject_Body))
 		close(ch)
 		return
 	}
-	testCmd := istructsmem.NewCommandFunction(testCmdQName, istructs.QNameRaw, appdef.NullQName, appdef.NullQName, testExec)
+	testCmd := istructsmem.NewCommandFunction(testCmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, testExec)
 
 	app.cfg.Resources.Add(testCmd)
 
@@ -535,11 +545,12 @@ func TestRateLimit(t *testing.T) {
 	app := setUp(t,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddObject(parsQName)
+			appDef.AddCommand(qName).SetParam(parsQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(
 				qName,
-				parsQName,
+				appdef.NullQName,
 				appdef.NullQName,
 				appdef.NullQName,
 				istructsmem.NullCommandExec,
@@ -647,13 +658,8 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 		require.NoError(t, err)
 		appQName, err := istructs.ParseAppQName(request.AppQName)
 		require.NoError(t, err)
-		as, err := appStructsProvider.AppStructs(appQName)
-		if err != nil {
-			replyBadRequest(bus, sender, err.Error())
-			return
-		}
-		resource := as.Resources().QueryResource(cmdQName)
-		if resource.Kind() == istructs.ResourceKind_null {
+		tp := appDef.Type(cmdQName)
+		if tp.Kind() == appdef.TypeKind_null {
 			replyBadRequest(bus, sender, "unknown function")
 			return
 		}
@@ -661,7 +667,8 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 		if authHeaders, ok := request.Header[coreutils.Authorization]; ok {
 			token = strings.TrimPrefix(authHeaders[0], "Bearer ")
 		}
-		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, 1, resource, token, "")
+		command := appDef.Command(cmdQName)
+		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, 1, command, token, "")
 		serviceChannel <- icm
 	})
 	n10nBroker, n10nBrokerCleanup := in10nmem.ProvideEx2(in10n.Quotas{

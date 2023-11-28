@@ -45,11 +45,11 @@ func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 			// FIXME: eliminate this. Unlogged params are logged
 			logger.Verbose("request body:\n", string(request.Body))
 		}
-		funcKindMark := request.Resource[:1]
-		if funcKindMark != "c" && funcKindMark != "q" {
-			coreutils.ReplyBadRequest(bus, sender, "unknown command kind: "+request.Resource)
-			return
-		}
+
+		// if funcKindMark != "c" && funcKindMark != "q" {
+		// 	coreutils.ReplyBadRequest(bus, sender, "unknown command kind: "+request.Resource)
+		// 	return
+		// }
 		appQName, err := istructs.ParseAppQName(request.AppQName)
 		if err != nil {
 			// protected by router already
@@ -65,7 +65,8 @@ func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 			coreutils.ReplyInternalServerError(bus, sender, "failed to get appStructs", err)
 			return
 		}
-		resource, isHandled := getResource(as, qName, bus, sender, funcKindMark)
+		funcKindMark := request.Resource[:1]
+		funcType, isHandled := getFuncType(as, qName, bus, sender, funcKindMark)
 		if isHandled {
 			return
 		}
@@ -76,43 +77,47 @@ func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 			return
 		}
 
-		deliverToProcessors(request, requestCtx, appQName, sender, resource, procbus, bus, token, cpchIdx, qpcgIdx, cpAmount)
+		deliverToProcessors(request, requestCtx, appQName, sender, funcType, procbus, bus, token, cpchIdx, qpcgIdx, cpAmount)
 	})
 	return bus
 }
 
-func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName istructs.AppQName, sender interface{}, resource istructs.IResource,
+func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName istructs.AppQName, sender interface{}, funcType appdef.IType,
 	procbus iprocbus.IProcBus, bus ibus.IBus, token string, cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
 	cpAmount coreutils.CommandProcessorsCount) {
 	switch request.Resource[:1] {
 	case "q":
-		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, istructs.WSID(request.WSID), sender, request.Body, resource, request.Host, token)
+		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, istructs.WSID(request.WSID), sender, request.Body, funcType.(appdef.IQuery), request.Host, token)
 		if !procbus.Submit(int(qpcgIdx), 0, iqm) {
 			coreutils.ReplyErrf(bus, sender, http.StatusServiceUnavailable, "no query processors available")
 		}
 	case "c":
 		channelIdx := request.WSID % int64(cpAmount)
 		partitionID := istructs.PartitionID(channelIdx)
-		icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, istructs.WSID(request.WSID), sender, partitionID, resource, token, request.Host)
+		icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, istructs.WSID(request.WSID), sender, partitionID, funcType.(appdef.ICommand), token, request.Host)
 		if !procbus.Submit(int(cpchIdx), int(channelIdx), icm) {
 			coreutils.ReplyErrf(bus, sender, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
 		}
 	}
 }
 
-func getResource(as istructs.IAppStructs, qName appdef.QName, bus ibus.IBus, sender interface{}, funcKindMark string) (istructs.IResource, bool) {
-	resource := as.Resources().QueryResource(qName)
-	if resource.Kind() == istructs.ResourceKind_null {
+func getFuncType(as istructs.IAppStructs, qName appdef.QName, bus ibus.IBus, sender interface{}, funcKindMark string) (appdef.IType, bool) {
+	tp := as.AppDef().Type(qName)
+	switch tp.Kind() {
+	case appdef.TypeKind_null:
 		coreutils.ReplyBadRequest(bus, sender, "unknown function "+qName.String())
 		return nil, true
+	case appdef.TypeKind_Query:
+		if funcKindMark == "q" {
+			return tp, false
+		}
+	case appdef.TypeKind_Command:
+		if funcKindMark == "c" {
+			return tp, false
+		}
 	}
-	if _, ok := resource.(istructs.IFunction); !ok ||
-		(funcKindMark == "q" && resource.Kind() != istructs.ResourceKind_QueryFunction) ||
-		(funcKindMark == "c" && resource.Kind() != istructs.ResourceKind_CommandFunction) {
-		coreutils.ReplyBadRequest(bus, sender, fmt.Sprintf(`wrong function kind "%s" for function %s`, funcKindMark, qName.String()))
-		return nil, true
-	}
-	return resource, false
+	coreutils.ReplyBadRequest(bus, sender, fmt.Sprintf(`wrong function kind "%s" for function %s`, funcKindMark, qName))
+	return nil, true
 }
 
 func getPrincipalToken(request ibus.Request) (token string, err error) {
