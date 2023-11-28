@@ -311,7 +311,7 @@ func getResources(_ context.Context, work interface{}) (err error) {
 
 func getFunction(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmd.cmdFunc = cmd.resources.QueryResource(cmd.cmdMes.Command().QName()).(istructs.ICommandFunction) // existance is checked already
+	cmd.cmdFunc = cmd.resources.QueryResource(cmd.cmdMes.Command().QName()).(istructs.ICommandFunction) // existence is checked already
 	return nil
 }
 

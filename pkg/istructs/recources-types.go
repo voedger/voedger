@@ -42,7 +42,7 @@ type ICommandFunction interface {
 
 type IQueryFunction interface {
 	IFunction
-	// panics if created by not NewQueryFunctionCustomResult(). Actualy needed for q.sys.Collection only
+	// panics if created by not NewQueryFunctionCustomResult(). Actually needed for q.sys.Collection only
 	ResultType(args PrepareArgs) appdef.QName
 	Exec(ctx context.Context, args ExecQueryArgs, callback ExecQueryCallback) error
 }

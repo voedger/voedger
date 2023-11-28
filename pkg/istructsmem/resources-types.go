@@ -38,16 +38,6 @@ func (res *Resources) QueryResource(resource appdef.QName) (r istructs.IResource
 	return r
 }
 
-// Returns command function from application resource by QName or nil if not founded
-func (res *Resources) CommandFunction(name appdef.QName) (cmd istructs.ICommandFunction) {
-	r := res.QueryResource(name)
-	if r.Kind() == istructs.ResourceKind_CommandFunction {
-		cmd := r.(istructs.ICommandFunction)
-		return cmd
-	}
-	return nil
-}
-
 // Enumerates all application resources
 func (res *Resources) Resources(enum func(appdef.QName)) {
 	for n := range res.resources {
@@ -135,8 +125,7 @@ type (
 	// Implements istructs.ICommandFunction
 	commandFunction struct {
 		abstractFunction
-		unlPars appdef.QName
-		exec    ExecCommandClosure
+		exec ExecCommandClosure
 	}
 )
 

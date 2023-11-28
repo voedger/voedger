@@ -46,10 +46,6 @@ func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 			logger.Verbose("request body:\n", string(request.Body))
 		}
 
-		// if funcKindMark != "c" && funcKindMark != "q" {
-		// 	coreutils.ReplyBadRequest(bus, sender, "unknown command kind: "+request.Resource)
-		// 	return
-		// }
 		appQName, err := istructs.ParseAppQName(request.AppQName)
 		if err != nil {
 			// protected by router already

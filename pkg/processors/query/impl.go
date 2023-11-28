@@ -437,7 +437,6 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, appCfg *istr
 	if err != nil {
 		return execQueryArgs, err
 	}
-	requestArgs := istructs.NewNullObject()
 	argsType := qw.msg.Query().Param()
 	if argsType == nil {
 		return
@@ -446,7 +445,7 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, appCfg *istr
 	if err := istructsmem.FillObjectFromJSON(args, argsType, requestArgsBuilder); err != nil {
 		return execQueryArgs, err
 	}
-	requestArgs, err = requestArgsBuilder.Build()
+	requestArgs, err := requestArgsBuilder.Build()
 	if err != nil {
 		return execQueryArgs, err
 	}
