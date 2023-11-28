@@ -160,7 +160,7 @@ type IResources interface {
 	// Currently resources are ICommandFunction and IQueryFunction
 	QueryResource(resource appdef.QName) (r IResource)
 
-	QueryFunctionArgsBuilder(query IQueryFunction) IObjectBuilder
+	// QueryFunctionArgsBuilder(query IQueryFunction) IObjectBuilder
 
 	// Enumerates all application resources
 	Resources(func(resName appdef.QName))

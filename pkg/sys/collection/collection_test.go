@@ -77,7 +77,7 @@ func appConfigs(t *testing.T) (istructsmem.AppConfigsType, istorage.IAppStorageP
 	}
 	{ // "modify" function
 		adb.AddCommand(test.modifyCmdName)
-		cfg.Resources.Add(istructsmem.NewCommandFunction(test.modifyCmdName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+		cfg.Resources.Add(istructsmem.NewCommandFunction(test.modifyCmdName, istructsmem.NullCommandExec))
 	}
 	{ // CDoc: articles
 		articles := adb.AddCDoc(test.tableArticles)

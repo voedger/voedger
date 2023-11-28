@@ -17,9 +17,6 @@ import (
 func provideCmdInitiateLeaveWorkspace(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdInitiateLeaveWorkspace,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		execCmdInitiateLeaveWorkspace(timeFunc),
 	))
 }

@@ -31,8 +31,6 @@ func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, itokens
 	asp istructs.IAppStructsProvider, federation coreutils.IFederation) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryInitiateEmailVerification,
-		appdef.NullQName,
-		appdef.NullQName,
 		provideIEVExec(cfg.Name, itokens, asp, federation),
 	))
 	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQueryInitiateEmailVerification, istructs.RateLimit{
@@ -145,8 +143,6 @@ func (r ivvtResult) AsString(string) string {
 func provideQryIssueVerifiedValueToken(cfg *istructsmem.AppConfigType, itokens itokens.ITokens, asp istructs.IAppStructsProvider) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryIssueVerifiedValueToken,
-		appdef.NullQName,
-		appdef.NullQName,
 		provideIVVTExec(itokens, cfg.Name, asp),
 	))
 
@@ -199,9 +195,6 @@ func provideIVVTExec(itokens itokens.ITokens, appQName istructs.AppQName, asp is
 func provideCmdSendEmailVerificationCode(cfg *istructsmem.AppConfigType) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandSendEmailVerificationCode,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		istructsmem.NullCommandExec,
 	))
 }

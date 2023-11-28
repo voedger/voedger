@@ -8,7 +8,6 @@ package registry
 import (
 	"time"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -17,9 +16,6 @@ import (
 func provideChangePassword(cfgRegistry *istructsmem.AppConfigType) {
 	cfgRegistry.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdChangePassword,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		cmdChangePasswordExec,
 	))
 

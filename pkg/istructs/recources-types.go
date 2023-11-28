@@ -33,18 +33,16 @@ type IResource interface {
 
 type IFunction interface {
 	IResource
-	ParamsType() appdef.QName
 }
 
 type ICommandFunction interface {
 	IFunction
-	ResultType() appdef.QName
-	UnloggedParamsType() appdef.QName
 	Exec(args ExecCommandArgs) error
 }
 
 type IQueryFunction interface {
 	IFunction
+	// panics if created by not NewQueryFunctionCustomResult(). Actualy needed for q.sys.Collection only
 	ResultType(args PrepareArgs) appdef.QName
 	Exec(ctx context.Context, args ExecQueryArgs, callback ExecQueryCallback) error
 }

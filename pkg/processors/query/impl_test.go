@@ -175,8 +175,6 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 	}
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameFunction,
-		appdef.NullQName,
-		appdef.NullQName,
 		func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			require.Equal(int64(1257894000), args.ArgumentObject.AsInt64("from"))
 			require.Equal(int64(2257894000), args.ArgumentObject.AsInt64("till"))
@@ -195,8 +193,8 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 			return err
 		},
 	))
-	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
-	cfg.Resources.Add(istructsmem.NewQueryFunction(qNameQryDenied, appdef.NullQName, appdef.NullQName, istructsmem.NullQueryExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewQueryFunction(qNameQryDenied, istructsmem.NullQueryExec))
 
 	for _, f := range cfgFunc {
 		f(cfg)
@@ -1008,12 +1006,7 @@ func TestRateLimiter(t *testing.T) {
 			appDef.AddQuery(qName).SetParam(qNameMyFuncParams).SetResult(qNameMyFuncResults)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			myFunc := istructsmem.NewQueryFunction(
-				qName,
-				appdef.NullQName,
-				appdef.NullQName,
-				istructsmem.NullQueryExec,
-			)
+			myFunc := istructsmem.NewQueryFunction(qName, istructsmem.NullQueryExec)
 			// declare a test func
 
 			cfg.Resources.Add(myFunc)

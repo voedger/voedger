@@ -15,9 +15,6 @@ import (
 func provideCmdCreateJoinedWorkspace(cfg *istructsmem.AppConfigType) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdCreateJoinedWorkspace,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		execCmdCreateJoinedWorkspace,
 	))
 }

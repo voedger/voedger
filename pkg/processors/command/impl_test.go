@@ -110,7 +110,7 @@ func TestBasicUsage(t *testing.T) {
 		check <- 1 // сигнал: проверки случились
 		return
 	}
-	testCmd := istructsmem.NewCommandFunction(testCmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, testExec)
+	testCmd := istructsmem.NewCommandFunction(testCmdQName, testExec)
 	app.cfg.Resources.Add(testCmd)
 
 	t.Run("basic usage", func(t *testing.T) {
@@ -193,7 +193,7 @@ func TestRecovery(t *testing.T) {
 	})
 	defer tearDown(app)
 
-	cmdCUD := istructsmem.NewCommandFunction(cudQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec)
+	cmdCUD := istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec)
 	app.cfg.Resources.Add(cmdCUD)
 
 	respData := sendCUD(t, 1, app)
@@ -250,7 +250,7 @@ func TestCUDUpdate(t *testing.T) {
 	})
 	defer tearDown(app)
 
-	cmdCUD := istructsmem.NewCommandFunction(cudQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec)
+	cmdCUD := istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec)
 	app.cfg.Resources.Add(cmdCUD)
 
 	// insert
@@ -304,7 +304,7 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 	})
 	defer tearDown(app)
 
-	cmdCUD := istructsmem.NewCommandFunction(cudQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec)
+	cmdCUD := istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec)
 	app.cfg.Resources.Add(cmdCUD)
 
 	cases := []struct {
@@ -361,7 +361,7 @@ func Test400BadRequests(t *testing.T) {
 	})
 	defer tearDown(app)
 
-	testCmd := istructsmem.NewCommandFunction(testCmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, func(args istructs.ExecCommandArgs) (err error) {
+	testCmd := istructsmem.NewCommandFunction(testCmdQName, func(args istructs.ExecCommandArgs) (err error) {
 		_ = args.ArgumentObject.AsString("Text")
 		_ = args.ArgumentUnloggedObject.AsString("Password")
 		return nil
@@ -434,8 +434,8 @@ func TestAuthnz(t *testing.T) {
 	})
 	defer tearDown(app)
 
-	app.cfg.Resources.Add(istructsmem.NewCommandFunction(qNameDeniedCmd, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
-	app.cfg.Resources.Add(istructsmem.NewCommandFunction(qNameAllowedCmd, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+	app.cfg.Resources.Add(istructsmem.NewCommandFunction(qNameDeniedCmd, istructsmem.NullCommandExec))
+	app.cfg.Resources.Add(istructsmem.NewCommandFunction(qNameAllowedCmd, istructsmem.NullCommandExec))
 
 	pp := payloads.PrincipalPayload{
 		Login:       "testlogin",
@@ -516,7 +516,7 @@ func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 		close(ch)
 		return
 	}
-	testCmd := istructsmem.NewCommandFunction(testCmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, testExec)
+	testCmd := istructsmem.NewCommandFunction(testCmdQName, testExec)
 
 	app.cfg.Resources.Add(testCmd)
 
@@ -548,13 +548,7 @@ func TestRateLimit(t *testing.T) {
 			appDef.AddCommand(qName).SetParam(parsQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(
-				qName,
-				appdef.NullQName,
-				appdef.NullQName,
-				appdef.NullQName,
-				istructsmem.NullCommandExec,
-			))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(qName, istructsmem.NullCommandExec))
 
 			cfg.FunctionRateLimits.AddWorkspaceLimit(qName, istructs.RateLimit{
 				Period:                time.Minute,

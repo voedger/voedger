@@ -21,8 +21,6 @@ import (
 func provideQryJournal(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Journal"),
-		appdef.NullQName,
-		appdef.NullQName,
 		qryJournalExec(ep, appDefBuilder),
 	))
 }

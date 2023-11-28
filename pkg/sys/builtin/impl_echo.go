@@ -17,8 +17,6 @@ func (e *echoRR) AsString(string) string { return e.text }
 func provideQryEcho(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Echo"),
-		appdef.NullQName,
-		appdef.NullQName,
 		func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			text := args.ArgumentObject.AsString("Text")
 			return callback(&echoRR{text: text})

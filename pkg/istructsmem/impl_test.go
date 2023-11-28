@@ -46,7 +46,7 @@ func TestBasicUsage(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		bld := appdef.New()
 
-		saleParamsDoc := bld.AddODoc(appdef.NewQName("test", "Sale"))
+		saleParamsDoc := bld.AddODoc(appdef.NewQName("test", "SaleParams"))
 		saleParamsDoc.
 			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
@@ -77,13 +77,12 @@ func TestBasicUsage(t *testing.T) {
 			AddField("isHuman", appdef.DataKind_bool, false).
 			AddField("Photo", appdef.DataKind_bytes, false)
 
+		qNameCmdTestSale := appdef.NewQName("test", "Sale")
+		bld.AddCommand(qNameCmdTestSale).SetUnloggedParam(saleSecureParamsObj.QName()).SetParam(saleParamsDoc.QName())
+
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
-
-		cfg.Resources.Add(
-			NewCommandFunction(appdef.NewQName("test", "Sale"),
-				appdef.NewQName("test", "Sale"), appdef.NewQName("test", "saleSecureArgs"), appdef.NullQName,
-				NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(qNameCmdTestSale, NullCommandExec))
 
 		return cfgs
 	}()
@@ -286,24 +285,13 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 // TestBasicUsage_Resources: Demonstrates basic usage resources
 func TestBasicUsage_Resources(t *testing.T) {
 	require := require.New(t)
-	test := test()
-
-	// gets AppStructProvider and AppStructs
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-
-	app, err := provider.AppStructs(test.appName)
-	require.NoError(err)
 
 	t.Run("Basic usage NewCommandFunction", func(t *testing.T) {
 		funcQName := appdef.NewQName("test", "cmd")
-		paramsName := appdef.NewQName("test", "cmdParams")
 
-		f := NewCommandFunction(funcQName, paramsName, appdef.NullQName, appdef.NullQName, NullCommandExec)
+		f := NewCommandFunction(funcQName, NullCommandExec)
 		require.Equal(funcQName, f.QName())
 		require.Equal(istructs.ResourceKind_CommandFunction, f.Kind())
-		require.Equal(paramsName, f.ParamsType())
-		require.Equal(appdef.NullQName, f.UnloggedParamsType())
-		require.Equal(appdef.NullQName, f.ResultType())
 
 		// Calls have no effect since we use Null* closures
 
@@ -323,37 +311,17 @@ func TestBasicUsage_Resources(t *testing.T) {
 		}
 
 		funcQName := appdef.NewQName("test", "query")
-		parQName := appdef.NewQName("test", "queryParams")
-		resQName := appdef.NullQName
 
-		f := NewQueryFunction(funcQName, parQName, resQName, myExecQuery)
+		f := NewQueryFunction(funcQName, myExecQuery)
 		require.Equal(funcQName, f.QName())
 		require.Equal(istructs.ResourceKind_QueryFunction, f.Kind())
-		require.Equal(parQName, f.ParamsType())
-		require.Equal(resQName, f.ResultType(istructs.PrepareArgs{})) // ???
+		require.Panics(func() { f.ResultType(istructs.PrepareArgs{}) })
 
 		// Depends on myExecQuery
 		f.Exec(context.Background(), istructs.ExecQueryArgs{}, func(istructs.IObject) error { return nil })
 
 		// Test String()
 		log.Println(f)
-	})
-
-	t.Run("test app.Resources()", func(t *testing.T) {
-		r := app.Resources().QueryResource(test.queryPhotoFunctionName)
-		require.NotNil(r)
-
-		bld := app.Resources().QueryFunctionArgsBuilder(r.(istructs.IQueryFunction))
-		require.NotNil(bld)
-		bld.PutString(test.buyerIdent, test.buyerValue)
-		bld.PutBytes(test.photoRawIdent, test.photoRawValue)
-		doc, err := bld.Build()
-		require.NoError(err)
-		require.NotNil(doc)
-
-		require.Equal(test.buyerValue, doc.AsString(test.buyerIdent))
-		require.Equal(test.photoRawValue, doc.AsBytes(test.photoRawIdent))
-		require.Equal(test.photoRawValue, doc.AsBytes(test.photoRawIdent))
 	})
 }
 
@@ -448,24 +416,16 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		arg := appDef.AddObject(appdef.NewQName("types", "Arg"))
 		arg.AddField("bool", appdef.DataKind_bool, false)
 
+		qNameCmd := appdef.NewQName("commands", "cmd")
+		qNameQry := appdef.NewQName("commands", "query")
+		appDef.AddCommand(qNameCmd).SetParam(arg.QName()).SetResult(doc.QName())
+		appDef.AddQuery(qNameQry).SetParam(arg.QName()).SetResult(appdef.QNameANY)
+
 		cfgs := make(AppConfigsType)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 
-		cfg.Resources.Add(
-			NewCommandFunction(
-				appdef.NewQName("commands", "cmd"),
-				arg.QName(),
-				appdef.NullQName,
-				doc.QName(),
-				NullCommandExec))
-
-		qNameQry := appdef.NewQName("commands", "query")
-		cfg.Resources.Add(
-			NewQueryFunction(
-				qNameQry,
-				arg.QName(),
-				appdef.QNameANY,
-				NullQueryExec))
+		cfg.Resources.Add(NewCommandFunction(qNameCmd, NullCommandExec))
+		cfg.Resources.Add(NewQueryFunction(qNameQry, NullQueryExec))
 
 		cfg.FunctionRateLimits.AddAppLimit(qNameQry, istructs.RateLimit{
 			Period:                1,

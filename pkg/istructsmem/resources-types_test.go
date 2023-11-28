@@ -52,15 +52,20 @@ func TestResourceEnumerator(t *testing.T) {
 			obj.
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)
+
+			appDef.AddCommand(cmdCreateDoc).SetParam(oDocName)
+			appDef.AddCommand(cmdCreateObj).SetParam(oObjName)
+			appDef.AddCommand(cmdCreateObjUnlogged).SetUnloggedParam(oObjName)
+			appDef.AddCommand(cmdCUD)
 		})
 
 		cfgs := make(AppConfigsType, 1)
 		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 
-		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, oDocName, appdef.NullQName, appdef.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewCommandFunction(cmdCreateObj, oObjName, appdef.NullQName, appdef.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, appdef.NullQName, oObjName, appdef.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewCommandFunction(cmdCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateObj, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdCUD, NullCommandExec))
 
 		storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)

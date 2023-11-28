@@ -21,12 +21,12 @@ func provideDownloadBLOBHelperCmd(cfg *istructsmem.AppConfigType) {
 	dbhQName := appdef.NewQName(appdef.SysPackage, "DownloadBLOBHelper")
 
 	// this command does nothing. It is called to check Authorization token provided in header only
-	downloadBLOBHelperCmd := istructsmem.NewCommandFunction(dbhQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec)
+	downloadBLOBHelperCmd := istructsmem.NewCommandFunction(dbhQName, istructsmem.NullCommandExec)
 	cfg.Resources.Add(downloadBLOBHelperCmd)
 }
 
 func provideUploadBLOBHelperCmd(cfg *istructsmem.AppConfigType) {
-	uploadBLOBHelperCmd := istructsmem.NewCommandFunction(QNameCommandUploadBLOBHelper, appdef.NullQName, appdef.NullQName, appdef.NullQName, ubhExec)
+	uploadBLOBHelperCmd := istructsmem.NewCommandFunction(QNameCommandUploadBLOBHelper, ubhExec)
 	cfg.Resources.Add(uploadBLOBHelperCmd)
 }
 

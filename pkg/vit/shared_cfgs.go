@@ -98,16 +98,11 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	// for rates test
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQryRated,
-		appdef.NullQName,
-		appdef.NullQName,
 		istructsmem.NullQueryExec,
 	))
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCmdRated,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		istructsmem.NullCommandExec,
 	))
 
@@ -133,8 +128,6 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(app1PkgName, "MockQry"),
-		appdef.NullQName,
-		appdef.NullQName,
 		func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			input := args.ArgumentObject.AsString(field_Input)
 			return MockQryExec(input, callback)
@@ -143,9 +136,6 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(app1PkgName, "MockCmd"),
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		func(args istructs.ExecCommandArgs) (err error) {
 			input := args.ArgumentObject.AsString(field_Input)
 			return MockCmdExec(input)
@@ -155,9 +145,6 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	testCmdResult := appdef.NewQName(app1PkgName, "TestCmdResult")
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(app1PkgName, "TestCmd"),
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		func(args istructs.ExecCommandArgs) (err error) {
 			key, err := args.State.KeyBuilder(state.Result, testCmdResult)
 			if err != nil {
@@ -187,17 +174,11 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(app1PkgName, "CmdODocOne"),
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		istructsmem.NullCommandExec,
 	))
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(app1PkgName, "CmdODocTwo"),
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		istructsmem.NullCommandExec,
 	))
 }

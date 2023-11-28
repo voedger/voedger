@@ -7,7 +7,6 @@ package istructsmem
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -39,11 +38,6 @@ func (res *Resources) QueryResource(resource appdef.QName) (r istructs.IResource
 	return r
 }
 
-// Returns argument object builder for query function
-func (res *Resources) QueryFunctionArgsBuilder(query istructs.IQueryFunction) istructs.IObjectBuilder {
-	return newObject(res.cfg, query.ParamsType(), nil)
-}
-
 // Returns command function from application resource by QName or nil if not founded
 func (res *Resources) CommandFunction(name appdef.QName) (cmd istructs.ICommandFunction) {
 	r := res.QueryResource(name)
@@ -61,73 +55,20 @@ func (res *Resources) Resources(enum func(appdef.QName)) {
 	}
 }
 
-// Checks that all resources use correct QNames
-func (res *Resources) prepare(app appdef.IAppDef) (err error) {
-
-	// https://dev.heeus.io/launchpad/#!17185
-	checkParam := func(r, n appdef.QName, par string) {
-		if (n != appdef.NullQName) && (n != appdef.QNameANY) {
-			t := app.TypeByName(n)
-			if t == nil {
-				err = errors.Join(err,
-					fmt.Errorf("resource «%v» uses unknown type «%v» as %s", r, n, par))
-			} else {
-				switch t.Kind() {
-				case appdef.TypeKind_Data, appdef.TypeKind_ODoc, appdef.TypeKind_Object: // ok
-				default:
-					err = errors.Join(err, fmt.Errorf("resource «%v» uses non-object type %v as %s", r, t, par))
-				}
-			}
-		}
-	}
-
-	checkResult := func(r, n appdef.QName) {
-		if (n != appdef.NullQName) && (n != appdef.QNameANY) {
-			t := app.TypeByName(n)
-			if t == nil {
-				err = errors.Join(err,
-					fmt.Errorf("resource «%v» uses unknown type «%v» as result", r, n))
-			} else {
-				switch t.Kind() {
-				case appdef.TypeKind_Data, appdef.TypeKind_GDoc, appdef.TypeKind_CDoc, appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_Object: // ok
-				default:
-					err = errors.Join(err, fmt.Errorf("resource «%v» uses non-object type %v as result", r, t))
-				}
-			}
-		}
-	}
-
-	res.Resources(func(n appdef.QName) {
-		r := res.QueryResource(n)
-		switch r.Kind() {
-		case istructs.ResourceKind_QueryFunction:
-			q := r.(istructs.IQueryFunction)
-			checkParam(q.QName(), q.ParamsType(), "parameter")
-			checkResult(q.QName(), q.ResultType(nullPrepareArgs))
-		case istructs.ResourceKind_CommandFunction:
-			c := r.(istructs.ICommandFunction)
-			checkParam(c.QName(), c.ParamsType(), "parameter")
-			checkParam(c.QName(), c.UnloggedParamsType(), "unlogged parameter")
-			checkResult(c.QName(), c.ResultType())
-		}
-	})
-	return err
-}
-
 // Ancestor for command & query functions
 type abstractFunction struct {
-	name, pars appdef.QName
-	res        func(istructs.PrepareArgs) appdef.QName
+	name appdef.QName
+	res  func(istructs.PrepareArgs) appdef.QName
 }
 
 // istructs.IResource
 func (af *abstractFunction) QName() appdef.QName { return af.name }
 
 // istructs.IFunction
-func (af *abstractFunction) ParamsType() appdef.QName { return af.pars }
-
-// istructs.IFunction
 func (af *abstractFunction) ResultType(args istructs.PrepareArgs) appdef.QName {
+	if af.res == nil {
+		panic("ResultType() must not be called if created by not NewQueryFunctionCustomResult()")
+	}
 	return af.res(args)
 }
 
@@ -148,15 +89,14 @@ type (
 )
 
 // Creates and returns new query function
-func NewQueryFunction(name, pars, result appdef.QName, exec ExecQueryClosure) istructs.IQueryFunction {
-	return NewQueryFunctionCustomResult(name, pars, func(istructs.PrepareArgs) appdef.QName { return result }, exec)
+func NewQueryFunction(name appdef.QName, exec ExecQueryClosure) istructs.IQueryFunction {
+	return NewQueryFunctionCustomResult(name, nil, exec)
 }
 
-func NewQueryFunctionCustomResult(name, pars appdef.QName, resultFunc func(istructs.PrepareArgs) appdef.QName, exec ExecQueryClosure) istructs.IQueryFunction {
+func NewQueryFunctionCustomResult(name appdef.QName, resultFunc func(istructs.PrepareArgs) appdef.QName, exec ExecQueryClosure) istructs.IQueryFunction {
 	return &queryFunction{
 		abstractFunction: abstractFunction{
 			name: name,
-			pars: pars,
 			res:  resultFunc,
 		},
 		exec: exec,
@@ -201,15 +141,12 @@ type (
 )
 
 // NewCommandFunction creates and returns new command function
-func NewCommandFunction(name, params, unlogged, result appdef.QName, exec ExecCommandClosure) istructs.ICommandFunction {
+func NewCommandFunction(name appdef.QName, exec ExecCommandClosure) istructs.ICommandFunction {
 	return &commandFunction{
 		abstractFunction: abstractFunction{
 			name: name,
-			pars: params,
-			res:  func(pa istructs.PrepareArgs) appdef.QName { return result },
 		},
-		unlPars: unlogged,
-		exec:    exec,
+		exec: exec,
 	}
 }
 
@@ -228,18 +165,9 @@ func (cf *commandFunction) Kind() istructs.ResourceKindType {
 	return istructs.ResourceKind_CommandFunction
 }
 
-// istructs.ICommandFunction
-func (cf *commandFunction) ResultType() appdef.QName {
-	return cf.abstractFunction.ResultType(nullPrepareArgs)
-}
-
 // for debug and logging purposes
 func (cf *commandFunction) String() string {
 	return fmt.Sprintf("c:%v", cf.abstractFunction.String())
-}
-
-func (cf *commandFunction) UnloggedParamsType() appdef.QName {
-	return cf.unlPars
 }
 
 // nullResourceType type to return then resource is not founded

@@ -84,6 +84,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 			stringFieldValues[stringFieldName] = stringFieldName
 
 		}
+		app.AddCommand(cmdQName).SetParam(oDocQName)
 		return app
 	}
 
@@ -94,7 +95,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 	// Register command
 	{
-		cfg.Resources.Add(NewCommandFunction(cmdQName, oDocQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdQName, NullCommandExec))
 	}
 
 	provider := Provide(configs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())

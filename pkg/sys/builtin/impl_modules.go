@@ -19,8 +19,6 @@ import (
 func provideQryModules(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, buildInfo *debug.BuildInfo) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Modules"),
-		appdef.NullQName,
-		appdef.NullQName,
 		provideQryModulesExec(buildInfo),
 	))
 }

@@ -14,11 +14,11 @@ import (
 )
 
 func Provide(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, buildInfo *debug.BuildInfo, asp istorage.IAppStorageProvider) {
-	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, istructsmem.NullCommandExec))
 
 	// Deprecated: use c.sys.CUD instead. Kept for backward compatibility only
 	// to import via ImportBO
-	cfg.Resources.Add(istructsmem.NewCommandFunction(QNameCommandInit, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(QNameCommandInit, istructsmem.NullCommandExec))
 
 	provideRefIntegrityValidation(cfg, adf)
 	provideQryModules(cfg, adf, buildInfo)
