@@ -58,8 +58,7 @@ func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
 }
 
 func waitForDeactivate(vit *it.VIT, ws *it.AppWorkspace) {
-	const fiveSeconds = 5 * time.Second
-	deadline := time.Now().Add(fiveSeconds)
+	deadline := time.Now().Add(5 * time.Second)
 	if coreutils.IsDebug() {
 		deadline = deadline.Add(time.Hour)
 	}
