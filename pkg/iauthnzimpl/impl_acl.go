@@ -268,6 +268,8 @@ var defaultACL = ACL{
 				qNameQryRequestUPPaymentMethod,
 				qNameQryGetUPTransactionsOverview,
 				qNameQryGetUPTransactionReceipts,
+				// https://dev.untill.com/projects/#!664899
+				qNameQryGetUPLocationSubjects,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
