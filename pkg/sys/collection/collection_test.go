@@ -34,9 +34,9 @@ import (
 
 var provider istructs.IAppStructsProvider
 var cocaColaDocID istructs.RecordID
-var collectionFuncResource istructs.IResource
-var cdocFuncResource istructs.IResource
-var stateFuncResource istructs.IResource
+var collectionQuery appdef.IQuery
+var getCDocQuery appdef.IQuery
+var stateQuery appdef.IQuery
 var testCfgs istructsmem.AppConfigsType
 
 const maxPrepareQueries = 10
@@ -52,8 +52,32 @@ func appConfigs(t *testing.T) (istructsmem.AppConfigsType, istorage.IAppStorageP
 	{
 		Provide(cfg, adb)
 	}
+	{
+		// fill IAppDef with funcs. That is done here manually because we o not use sys.sql here
+		qNameCollectionParams := appdef.NewQName(appdef.SysPackage, "CollectionParams")
+
+		// will add func definitions to AppDef manually because local test does not use sql. In runtime these definitions will come from sys.sql
+		adb.AddQuery(qNameQueryCollection).
+			SetParam(adb.AddObject(qNameCollectionParams).
+				AddField(field_Schema, appdef.DataKind_string, true).
+				AddField(field_ID, appdef.DataKind_RecordID, false).(appdef.IType).QName()).
+			SetResult(appdef.QNameANY)
+
+		adb.AddQuery(qNameQueryGetCDoc).
+			SetParam(adb.AddObject(appdef.NewQName(appdef.SysPackage, "GetCDocParams")).
+				AddField(field_ID, appdef.DataKind_int64, true).(appdef.IType).QName()).
+			SetResult(adb.AddObject(appdef.NewQName(appdef.SysPackage, "GetCDocResult")).
+				AddField("Result", appdef.DataKind_string, true).(appdef.IType).QName())
+
+		adb.AddQuery(qNameQueryState).
+			SetParam(adb.AddObject(appdef.NewQName(appdef.SysPackage, "StateParams")).
+				AddField(field_After, appdef.DataKind_int64, true).(appdef.IType).QName()).
+			SetResult(adb.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult")).
+				AddField(field_State, appdef.DataKind_string, true).(appdef.IType).QName())
+	}
 	{ // "modify" function
-		cfg.Resources.Add(istructsmem.NewCommandFunction(test.modifyCmdName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+		adb.AddCommand(test.modifyCmdName)
+		cfg.Resources.Add(istructsmem.NewCommandFunction(test.modifyCmdName, istructsmem.NullCommandExec))
 	}
 	{ // CDoc: articles
 		articles := adb.AddCDoc(test.tableArticles)
@@ -100,7 +124,7 @@ func appConfigs(t *testing.T) (istructsmem.AppConfigsType, istorage.IAppStorageP
 	}
 
 	// TODO: remove it after https://github.com/voedger/voedger/issues/56
-	_, err := adb.Build()
+	appDef, err := adb.Build()
 	require.NoError(err)
 
 	// kept here to keep local tests working without sql
@@ -115,9 +139,9 @@ func appConfigs(t *testing.T) (istructsmem.AppConfigsType, istorage.IAppStorageP
 			AddField(state.ColOffset, appdef.DataKind_int64, true)
 	})
 
-	collectionFuncResource = cfg.Resources.QueryResource(qNameQueryCollection)
-	cdocFuncResource = cfg.Resources.QueryResource(qNameGetCDocFunc)
-	stateFuncResource = cfg.Resources.QueryResource(qNameQueryState)
+	collectionQuery = appDef.Query(qNameQueryCollection)
+	getCDocQuery = appDef.Query(qNameQueryGetCDoc)
+	stateQuery = appDef.Query(qNameQueryState)
 
 	testCfgs = cfgs
 	return cfgs, appStorageProvider
@@ -394,12 +418,12 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
-	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable { return out }, provider, maxPrepareQueries, imetrics.Provide(), "vvm",
-		authn, authz, testCfgs)
+	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable { return out },
+		provider, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, testCfgs)
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, request, collectionFuncResource, "", sysToken)
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, request, collectionQuery, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -511,7 +535,7 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(request), cdocFuncResource, "", sysToken)
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(request), getCDocQuery, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -627,7 +651,7 @@ func TestBasicUsage_State(t *testing.T) {
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
 	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(`{"args":{"After":0},"elements":[{"fields":["State"]}]}`),
-		stateFuncResource, "", sysToken)
+		stateQuery, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -791,7 +815,8 @@ func TestState_withAfterArgument(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(`{"args":{"After":5},"elements":[{"fields":["State"]}]}`), stateFuncResource, "", sysToken)
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(`{"args":{"After":5},"elements":[{"fields":["State"]}]}`),
+		stateQuery, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)

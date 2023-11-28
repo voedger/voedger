@@ -18,9 +18,6 @@ import (
 func provideCmdInitiateJoinWorkspace(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdInitiateJoinWorkspace,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		execCmdInitiateJoinWorkspace(timeFunc),
 	))
 }

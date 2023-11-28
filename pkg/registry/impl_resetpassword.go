@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -25,8 +24,6 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, asp istructs.I
 	// null auth
 	cfgRegistry.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryInitiateResetPasswordByEmail,
-		appdef.NullQName,
-		appdef.NullQName,
 		provideQryInitiateResetPasswordByEmailExec(asp, itokens, federation),
 	))
 
@@ -34,16 +31,11 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, asp istructs.I
 	// null auth
 	cfgRegistry.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryIssueVerifiedValueTokenForResetPassword,
-		appdef.NullQName,
-		appdef.NullQName,
 		provideIssueVerifiedValueTokenForResetPasswordExec(itokens, federation),
 	))
 
 	cfgRegistry.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandResetPasswordByEmail,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		cmdResetPasswordByEmailExec,
 	))
 }

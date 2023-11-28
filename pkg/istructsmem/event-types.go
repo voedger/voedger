@@ -106,10 +106,14 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 		return arg, argUnl, nil // #17664 — «sys.CUD» command has no arguments objects, only CUDs
 	}
 
-	cmd := ev.appCfg.Resources.CommandFunction(ev.name)
+	cmd := ev.appCfg.AppDef.Command(ev.name)
 	if cmd != nil {
-		arg = cmd.ParamsType()
-		argUnl = cmd.UnloggedParamsType()
+		if cmd.Param() != nil {
+			arg = cmd.Param().QName()
+		}
+		if cmd.UnloggedParam() != nil {
+			argUnl = cmd.UnloggedParam().QName()
+		}
 	} else {
 		// #!16208: Must be possible to use TypeKind_ODoc as Event.QName
 		if t := ev.appCfg.AppDef.TypeByName(ev.name); (t == nil) || (t.Kind() != appdef.TypeKind_ODoc) {

@@ -13,9 +13,6 @@ import (
 func provideCmdDeactivateJoinedWorkspace(cfg *istructsmem.AppConfigType) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdDeactivateJoinedWorkspace,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		execCmdDeactivateJoinedWorkspace,
 	))
 }

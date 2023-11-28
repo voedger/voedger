@@ -15,9 +15,6 @@ import (
 func proivideRenameQName(cfg *istructsmem.AppConfigType, adb appdef.IAppDefBuilder, asp istorage.IAppStorageProvider) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "RenameQName"),
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		provideExecCmdRenameQName(asp, cfg)))
 }
 

@@ -87,16 +87,16 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 
 			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
-			apps.RegisterSchemaFS(it.SchemaTestApp2FS, "app2", ep)
+			apps.RegisterSchemaFS(it.SchemaTestApp2FS, "github.com/voedger/voedger/pkg/vit/app2pkg", ep)
 
-			cdocQName := appdef.NewQName("test", "cdoc")
-			appDefBuilder.AddCDoc(cdocQName)
+			qNameDoc1 := appdef.NewQName("app2pkg", "doc1")
+			// appDefBuilder.AddCDoc(cdocQName)
 
-			cmdQName := appdef.NewQName(appdef.SysPackage, "testCmd")
-			cmd2CUDs := istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName,
+			cmdQName := appdef.NewQName("app2pkg", "testCmd")
+			cmd2CUDs := istructsmem.NewCommandFunction(cmdQName,
 				func(args istructs.ExecCommandArgs) (err error) {
 					// 2 раза используем один и тот же rawID -> 500 internal server error
-					kb, err := args.State.KeyBuilder(state.Record, cdocQName)
+					kb, err := args.State.KeyBuilder(state.Record, qNameDoc1)
 					if err != nil {
 						return
 					}
@@ -106,7 +106,7 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 					}
 					sv.PutRecordID(appdef.SystemField_ID, 1)
 
-					kb, err = args.State.KeyBuilder(state.Record, cdocQName)
+					kb, err = args.State.KeyBuilder(state.Record, qNameDoc1)
 					if err != nil {
 						return
 					}
@@ -125,6 +125,6 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 	defer vit.TearDown()
 
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
-	resp := vit.PostProfile(prn, "c.sys.testCmd", "{}", coreutils.Expect409())
+	resp := vit.PostProfile(prn, "c.app2pkg.testCmd", "{}", coreutils.Expect409())
 	resp.Println()
 }

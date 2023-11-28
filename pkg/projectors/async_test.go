@@ -52,9 +52,10 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			ProvideOffsetsDef(appDef)
+			appDef.AddCommand(cmdQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -140,9 +141,10 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			ProvideOffsetsDef(appDef)
+			appDef.AddCommand(cmdQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(2) // test within partition 2
 
@@ -215,9 +217,10 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			ProvideOffsetsDef(appDef)
+			appDef.AddCommand(cmdQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -284,9 +287,10 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			ProvideOffsetsDef(appDef)
 			appDef.AddObject(name)
+			appDef.AddCommand(cmdQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -401,9 +405,10 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			ProvideOffsetsDef(appDef)
+			appDef.AddCommand(cmdQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -524,9 +529,10 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			ProvideOffsetsDef(appDef)
+			appDef.AddCommand(cmdQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -627,9 +633,10 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			ProvideOffsetsDef(appDef)
+			appDef.AddCommand(cmdQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(2) // test within partition 2
 
@@ -745,7 +752,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 			ProvideOffsetsDef(appDef)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitions := make([]*testPartition, totalPartitions)
 
@@ -910,7 +917,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 			ProvideOffsetsDef(appDef)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitions := make([]*testPartition, totalPartitions)
 

@@ -65,6 +65,31 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 					"Kind":      "CDoc",
 					"Singleton": true,
 				},
+				"app2pkg.doc1": map[string]interface{}{
+					"Fields": []interface{}{
+						map[string]interface{}{
+							"Data":     "sys.QName",
+							"Name":     "sys.QName",
+							"Required": true,
+						}, map[string]interface{}{
+							"Data":     "sys.RecordID",
+							"Name":     "sys.ID",
+							"Required": true,
+						}, map[string]interface{}{
+							"Data": "sys.bool",
+							"Name": "sys.IsActive",
+						},
+					},
+					"Kind": "CDoc",
+				},
+			},
+			"Extensions": map[string]interface{}{
+				"Commands": map[string]interface{}{
+					"app2pkg.testCmd": map[string]interface{}{
+						"Engine": "BuiltIn",
+						"Name":   "testCmd",
+					},
+				},
 			},
 		}
 		require.EqualValues(expected, actual)

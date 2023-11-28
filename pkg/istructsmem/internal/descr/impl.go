@@ -63,15 +63,6 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 		}
 	})
 
-	app.Resources().Resources(func(resName appdef.QName) {
-		pkg := getPkg(resName, a)
-		resource := newResource()
-		resource.Name = resName
-		pkg.Resources[resName.String()] = resource
-
-		resource.read(app.Resources().QueryResource(resName))
-	})
-
 	for qName, qNameRateLimit := range rateLimits {
 		pkg := getPkg(qName, a)
 		for rlKind, rl := range qNameRateLimit {

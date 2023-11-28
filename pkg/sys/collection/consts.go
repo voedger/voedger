@@ -55,7 +55,7 @@ const (
 )
 
 var (
-	qNameGetCDocFunc = appdef.NewQName(appdef.SysPackage, "GetCDoc")
+	qNameQueryGetCDoc = appdef.NewQName(appdef.SysPackage, "GetCDoc")
 )
 
 const DEC = 10

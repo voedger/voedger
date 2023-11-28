@@ -551,12 +551,13 @@ func Test_ValidCommandEvent(t *testing.T) {
 
 		wDoc := appDef.AddWDoc(wDocName)
 		wDoc.AddRefField("RefField", false, oDocName)
+
+		appDef.AddCommand(cmdName).SetParam(oDocName).SetResult(wDocName)
 	})
 
 	cfgs := make(AppConfigsType, 1)
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
-	cfg.Resources.Add(
-		NewCommandFunction(cmdName, oDocName, appdef.NullQName, wDocName, NullCommandExec))
+	cfg.Resources.Add(NewCommandFunction(cmdName, NullCommandExec))
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 

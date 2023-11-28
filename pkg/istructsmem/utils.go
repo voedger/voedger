@@ -140,7 +140,3 @@ func FillObjectFromJSON(data map[string]interface{}, t appdef.IType, b istructs.
 func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectBuilder {
 	return newObject(cfg, qName, nil)
 }
-
-func NewCmdResultBuilder(appCfg *AppConfigType) istructs.IObjectBuilder {
-	return newObject(appCfg, appdef.NewQName(appdef.SysPackage, "TestCmd"), nil)
-}
