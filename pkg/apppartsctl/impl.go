@@ -31,7 +31,7 @@ func (ctl *appPartitionsController) Run(ctx context.Context) {
 
 	for _, app := range ctl.apps {
 		for id := 1; id < app.NumParts; id++ {
-			ctl.parts.AddOrReplace(app.Name, istructs.PartitionID(id), app.Def, app.Engines)
+			ctl.parts.Deploy(app.Name, istructs.PartitionID(id), app.Def, app.Engines)
 		}
 	}
 

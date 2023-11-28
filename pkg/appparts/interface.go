@@ -24,7 +24,7 @@ type IAppPartitions interface {
 	// If partition with the same app and id already exists, it will be updated.
 	//
 	// @ConcurrentAccess
-	AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef, engines [ProcKind_Count][]IEngine)
+	Deploy(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef, engines [ProcKind_Count][]IEngine)
 
 	// Borrows and returns a partition.
 	//

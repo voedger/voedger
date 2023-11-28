@@ -28,7 +28,7 @@ func newAppPartitions(structs istructs.IAppStructsProvider) (ap IAppPartitions, 
 	return a, func() {}, err
 }
 
-func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef, engines [ProcKind_Count][]IEngine) {
+func (aps *appPartitions) Deploy(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef, engines [ProcKind_Count][]IEngine) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
