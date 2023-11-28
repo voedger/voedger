@@ -19,12 +19,12 @@ type IEngine interface{}
 
 // Application partitions manager.
 type IAppPartitions interface {
-	// Adds new partition or update existing one.
+	// Adds new partitions or update existing.
 	//
 	// If partition with the same app and id already exists, it will be updated.
 	//
 	// @ConcurrentAccess
-	Deploy(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef, engines [ProcKind_Count][]IEngine)
+	Deploy(appName istructs.AppQName, partID []istructs.PartitionID, appDef appdef.IAppDef, engines [ProcKind_Count][]IEngine)
 
 	// Borrows and returns a partition.
 	//
