@@ -92,8 +92,8 @@ func (prj *projector) SetSync(sync bool) IProjectorBuilder {
 	return prj
 }
 
-func (prj *projector) SetWantErrors(want bool) IProjectorBuilder {
-	prj.sysErrors = want
+func (prj *projector) SetWantErrors() IProjectorBuilder {
+	prj.sysErrors = true
 	return prj
 }
 

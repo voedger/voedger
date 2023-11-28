@@ -85,7 +85,7 @@ type IProjectorBuilder interface {
 	SetEventComment(on QName, comment ...string) IProjectorBuilder
 
 	// Sets is projector is able to handle `sys.Error` events
-	SetWantErrors(bool) IProjectorBuilder
+	SetWantErrors() IProjectorBuilder
 
 	// Adds state to the projector.
 	//

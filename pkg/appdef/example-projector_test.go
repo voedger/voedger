@@ -38,7 +38,7 @@ func ExampleIAppDefBuilder_AddProjector() {
 		prj.
 			AddEvent(recName, appdef.ProjectorEventKind_AnyChanges...).
 			SetEventComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName)).
-			SetWantErrors(true).
+			SetWantErrors().
 			AddState(sysRecords, docName).
 			AddIntent(sysViews, viewName)
 

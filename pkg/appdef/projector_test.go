@@ -62,7 +62,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			SetEventComment(cmdName, fmt.Sprintf("run projector after execute %v", cmdName)).
 			AddEvent(objName).
 			SetEventComment(objName, fmt.Sprintf("run projector after execute any command with parameter %v", objName)).
-			SetWantErrors(true).
+			SetWantErrors().
 			AddState(sysRecords, docName, recName).AddState(sysWLog).
 			AddIntent(sysViews, viewName)
 
