@@ -438,16 +438,16 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, appCfg *istr
 		return execQueryArgs, err
 	}
 	argsType := qw.msg.Query().Param()
-	if argsType == nil {
-		return
-	}
-	requestArgsBuilder := istructsmem.NewIObjectBuilder(appCfg, argsType.QName())
-	if err := istructsmem.FillObjectFromJSON(args, argsType, requestArgsBuilder); err != nil {
-		return execQueryArgs, err
-	}
-	requestArgs, err := requestArgsBuilder.Build()
-	if err != nil {
-		return execQueryArgs, err
+	requestArgs := istructs.NewNullObject()
+	if argsType != nil {
+		requestArgsBuilder := istructsmem.NewIObjectBuilder(appCfg, argsType.QName())
+		if err := istructsmem.FillObjectFromJSON(args, argsType, requestArgsBuilder); err != nil {
+			return execQueryArgs, err
+		}
+		requestArgs, err = requestArgsBuilder.Build()
+		if err != nil {
+			return execQueryArgs, err
+		}
 	}
 	return istructs.ExecQueryArgs{
 		PrepareArgs: istructs.PrepareArgs{
