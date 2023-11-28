@@ -80,6 +80,7 @@ func TestBasicUsage(t *testing.T) {
 		AddEvent(recName, appdef.ProjectorEventKind_AnyChanges...).SetEventComment(recName, "run projector every time when «test.rec» is changed").
 		AddEvent(cmdName).SetEventComment(cmdName, "run projector every time when «test.cmd» command is executed").
 		AddEvent(objName).SetEventComment(objName, "run projector every time when any command with «test.obj» argument is executed").
+		SetWantErrors().
 		AddState(appdef.NewQName("sys", "records"), docName, recName).
 		AddIntent(appdef.NewQName("sys", "views"), viewName).
 		SetEngine(appdef.ExtensionEngineKind_WASM)

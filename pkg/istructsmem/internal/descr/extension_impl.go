@@ -87,6 +87,7 @@ func (p *Projector) read(prj appdef.IProjector) {
 		e.read(ev)
 		p.Events[e.On] = e
 	})
+	p.WantErrors = prj.WantErrors()
 	prj.States(func(storage appdef.QName, names appdef.QNames) {
 		p.States[storage] = appdef.QNamesFrom(names...)
 	})
