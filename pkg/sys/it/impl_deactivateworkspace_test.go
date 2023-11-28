@@ -58,17 +58,18 @@ func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
 }
 
 func waitForDeactivate(vit *it.VIT, ws *it.AppWorkspace) {
-	deadline := time.Now().Add(time.Second)
+	deadline := time.Now().Add(5 * time.Second)
 	if coreutils.IsDebug() {
 		deadline = deadline.Add(time.Hour)
 	}
 	for time.Now().Before(deadline) {
 		resp := vit.PostWSSys(ws, "q.sys.Collection", `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`)
 		if int32(resp.SectionRow()[0].(float64)) == int32(authnz.WorkspaceStatus_Inactive) {
-			break
+			return
 		}
 		time.Sleep(awaitTime)
 	}
+	vit.T.Fatal("workspace", ws.Name, "is not deactivated in an acceptable time")
 }
 
 func TestDeactivateJoinedWorkspace(t *testing.T) {

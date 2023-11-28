@@ -237,6 +237,7 @@
                 "Kind": ["Insert", "Update", "Activate", "Deactivate"]
               }
             },
+            "WantErrors": true,
             "States": {
               "sys.records": ["test.doc", "test.rec"]
             },

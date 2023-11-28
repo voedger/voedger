@@ -28,7 +28,7 @@ func newAppPartitions(structs istructs.IAppStructsProvider) (ap IAppPartitions, 
 	return a, func() {}, err
 }
 
-func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istructs.PartitionID, appDef appdef.IAppDef, engines [ProcKind_Count][]IEngine) {
+func (aps *appPartitions) Deploy(appName istructs.AppQName, partID []istructs.PartitionID, appDef appdef.IAppDef, engines [ProcKind_Count][]IEngine) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
@@ -42,8 +42,10 @@ func (aps *appPartitions) AddOrReplace(appName istructs.AppQName, partID istruct
 	if err != nil {
 		panic(err)
 	}
-	p := newPartition(a, appDef, appStructs, partID, engines)
-	a.parts[partID] = p
+	for _, id := range partID {
+		p := newPartition(a, appDef, appStructs, id, engines)
+		a.parts[id] = p
+	}
 }
 
 func (aps *appPartitions) Borrow(appName istructs.AppQName, partID istructs.PartitionID, proc ProcKind) (IAppPartition, IEngine, error) {

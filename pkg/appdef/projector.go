@@ -15,10 +15,11 @@ import (
 //   - IProjector & IProjectorBuilder
 type projector struct {
 	extension
-	sync    bool
-	events  projectorEvents
-	states  storages
-	intents storages
+	sync      bool
+	events    projectorEvents
+	sysErrors bool
+	states    storages
+	intents   storages
 }
 
 func newProjector(app *appDef, name QName) *projector {
@@ -91,7 +92,14 @@ func (prj *projector) SetSync(sync bool) IProjectorBuilder {
 	return prj
 }
 
+func (prj *projector) SetWantErrors() IProjectorBuilder {
+	prj.sysErrors = true
+	return prj
+}
+
 func (prj *projector) Sync() bool { return prj.sync }
+
+func (prj *projector) WantErrors() bool { return prj.sysErrors }
 
 func (prj *projector) States(cb func(storage QName, names QNames)) {
 	prj.states.enum(cb)
