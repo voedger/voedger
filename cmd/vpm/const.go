@@ -6,6 +6,9 @@
 package main
 
 const (
-	testAQN              = "github.com/untillpro/vpm/test"
+	testQPN              = "github.com/voedger/voedger/cmd/vpm/test"
+	testAppName          = "testapp"
+	sysQPN               = "github.com/voedger/voedger/pkg/sys"
+	sysPackage           = "sys"
 	sysSchemaSqlFileName = "sys.sql"
 )
