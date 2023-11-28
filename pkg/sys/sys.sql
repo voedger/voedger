@@ -313,7 +313,7 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE OnChildWorkspaceDeactivatedParams (
-		OwnedID int64 NOT NULL
+		OwnerID int64 NOT NULL
 	);
 
 	TYPE QueryChildWorkspaceByNameParams (
