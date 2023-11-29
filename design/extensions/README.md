@@ -2,49 +2,55 @@
 ```mermaid
 erDiagram
 Processor ||..|| IAppPartition: "borrows"
-Processor ||..|| IEngine: "borrows"
+IAppPartition ||..|{ IStateStorage: "to get list of" 
+IStateStorage ||..|| IExtensionIO: "to construct"
+
+IAppPartition ||..|{ Extension: "to invoke"
+Extension ||--|| Module: "instantiated by"
+Extension ||--|| IExtensionIO: "using"
+
+IAppPartition ||--|{ IEngine: "has a pool of"
+
 IEngine ||--|{ Module: "instantiate, one per package"
-IEngine ||--|| Invoke: "provides method"
-Module ||--|{ Extension: "has"
+
 Module ||--|| Memory: "has"
 
-IAppPartition ||..|| IExtensionIO: "used to construct"
-Invoke ||..|{ Extension: "invokes"
-IExtensionIO ||..|| Invoke: "used by"
+IExtensionIO ||--|| IState: "includes"
+IExtensionIO ||--|| IIntents: "includes"
 ```
+
+## Functional Design
+
+### 1.1. Engine Factories (one per engine kind)
+
+```go
+func EngineFactory func() IEngine
+
+func BuiltinEngineFactory(Funcs map[QName]BuiltinExtFunc) EngineFactory
+type BuiltinExtFunc func(io ExtensionIO) error
+
+type IEngine interface {
+    Invoke(Name QName, Io ExtensionIO) (err error)
+}
+```
+
+BuiltinEngineFactory is provided as a param to apppartsctl.New()
+
+### 1.2. IAppPartition interface
+
+```go
+type StorageOperations int32 // bit mask: GET, GETBATCH, READ, INSERT, UPDATE
+type IAppPartition interface {
+    ...
+    InvokeExtension(name QName, io ExtensionIO) (err error)
+    GetStorages(ProcessorKind int) map[QName]StorageOperations
+}
+```
+
 
 ## IEngine interface
 - Invoke(Name QName, Io ExtensionIO) (err error)
 
-## Technical Issues
-It seems `IAppPartition` and `IEngine` must be borrowed separately, because they have different lifetime in the Async Actualizer:
-- `IExtensionIO` which is constructed from `IAppPartition` kept alive for multiple `Invoke` calls of the projector, until the Intents buffer is flushed.
 
-
-```mermaid
-sequenceDiagram
-    participant IAppPartition
-    participant IExtensionIO
-    participant Actualizer
-    participant IEngine
-    IAppPartition-->>Actualizer: Borrow 
-    activate IAppPartition
-    Actualizer->>IExtensionIO: Construct
-    
-    IEngine-->>Actualizer: Borrow
-    activate IEngine
-    Actualizer->>IEngine: Invoke projector
-    Actualizer-->>IEngine: Release
-    deactivate IEngine
-
-    IEngine-->>Actualizer: Borrow
-    activate IEngine
-    Actualizer->>IEngine: Invoke projector
-    Actualizer-->>IEngine: Release
-    deactivate IEngine
-
-    Actualizer->>IExtensionIO: Flush
-
-    Actualizer-->>IAppPartition: Release
-    deactivate IAppPartition
-```
+## Questions
+1. Engine parameters and limitations
