@@ -27,7 +27,7 @@ IExtensionIO ||--|| IIntents: "includes"
 func EngineFactory func() IEngine
 
 func BuiltinEngineFactory(Funcs map[QName]BuiltinExtFunc) EngineFactory
-func WasmEngineFactory(ModuleURLs map[QName]string) EngineFactory
+func WasmEngineFactory(ModuleURLs map[string]string) EngineFactory
 
 type BuiltinExtFunc func(io ExtensionIO) error
 
