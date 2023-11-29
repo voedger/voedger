@@ -464,7 +464,8 @@ ABSTRACT WORKSPACE Workspace (
 		PROJECTOR ProjectorWLogDates
 			AFTER INSERT OR UPDATE ON (CRecord, WRecord) OR
 			AFTER EXECUTE WITH PARAM ON ODoc
-			INTENTS(View(WLogDates));
+			INTENTS(View(WLogDates))
+			INCLUDING ERRORS;
 
 		-- sqlquery
 

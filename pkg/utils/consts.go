@@ -19,6 +19,6 @@ const (
 	longRetryDelay               = time.Second
 	shortRetriesAmount           = 10
 	CRC16Mask                    = uint32(math.MaxUint32 >> 16)
-	emailTemplatePrefix_Text     = "text:"
+	EmailTemplatePrefix_Text     = "text:"
 	emailTemplatePrefix_Resource = "resource:"
 )
