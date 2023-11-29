@@ -8,7 +8,9 @@ package vvm
 
 import (
 	"context"
+	"fmt"
 	"github.com/untillpro/airs-ibus"
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -43,6 +45,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/metrics"
 	"golang.org/x/crypto/acme/autocert"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -390,7 +393,48 @@ func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IApp
 			if err != nil {
 				panic(err)
 			}
-			if len(appStructs.SyncProjectors()) == 0 {
+			appDefSyncProjectorFactories := []istructs.ProjectorFactory{}
+			err = iterate.ForEachError(appStructs.AppDef().Projectors, func(p appdef.IProjector) error {
+				if !p.Sync() {
+					return nil
+				}
+				appCfgProjectorFactory := appStructs.SyncProjectorFactory(p.QName())
+				if appCfgProjectorFactory == nil {
+					return fmt.Errorf("projector %s defined in AppDef but is not defined in AppConfig. Unable to get its func", p.QName())
+				}
+				hasIntentsExceptViewAndRecords, _, _ := iterate.FindFirstMap(p.Intents, func(storage appdef.QName, _ appdef.QNames) bool {
+					return storage != state.View && storage != state.Record
+				})
+
+				nonBuffered := !hasIntentsExceptViewAndRecords
+				eventsFilter := []appdef.QName{}
+				eventsArgsFilter := []appdef.QName{}
+				p.Events(func(pe appdef.IProjectorEvent) {
+					if slices.Contains(pe.Kind(), appdef.ProjectorEventKind_ExecuteWithParam) {
+						eventsArgsFilter = append(eventsArgsFilter, pe.On().QName())
+						if len(pe.Kind()) == 1 {
+
+							return
+						}
+					}
+					eventsFilter = append(eventsFilter, pe.On().QName())
+				})
+				appDefSyncProjectorFactories = append(appDefSyncProjectorFactories, func(partition istructs.PartitionID) istructs.Projector {
+					return istructs.Projector{
+						Name:             p.QName(),
+						Func:             appCfgProjectorFactory(partition).Func,
+						NonBuffered:      nonBuffered,
+						EventsFilter:     eventsFilter,
+						EventsArgsFilter: eventsArgsFilter,
+						HandleErrors:     p.WantErrors(),
+					}
+				})
+				return nil
+			})
+			if err != nil {
+				panic(err)
+			}
+			if len(appDefSyncProjectorFactories) == 0 {
 				actualizers = append(actualizers, pipeline.SwitchBranch(appQName.String(), &pipeline.NOOP{}))
 				continue
 			}
@@ -412,7 +456,7 @@ func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IApp
 				},
 				IntentsLimit: builtin.MaxCUDs,
 			}
-			actualizer := actualizerFactory(conf, appStructs.SyncProjectors()[0], appStructs.SyncProjectors()[1:]...)
+			actualizer := actualizerFactory(conf, appDefSyncProjectorFactories[0], appDefSyncProjectorFactories[1:]...)
 			actualizers = append(actualizers, pipeline.SwitchBranch(appQName.String(), actualizer))
 		}
 		return pipeline.SwitchOperator(&switchByAppName{}, actualizers[0], actualizers[1:]...)
