@@ -44,6 +44,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
 	"golang.org/x/crypto/acme/autocert"
+	"log"
 	"net/url"
 	"slices"
 	"strconv"
@@ -398,6 +399,9 @@ func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IApp
 				if !p.Sync() {
 					return nil
 				}
+				if p.QName() == appdef.NewQName("registry", "ProjectorLoginIdx") && partitionID == 1 {
+					log.Println()
+				}
 				appCfgProjectorFactory := appStructs.SyncProjectorFactory(p.QName())
 				if appCfgProjectorFactory == nil {
 					return fmt.Errorf("projector %s defined in AppDef but is not defined in AppConfig. Unable to get its func", p.QName())
@@ -405,8 +409,10 @@ func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IApp
 				hasIntentsExceptViewAndRecords, _, _ := iterate.FindFirstMap(p.Intents, func(storage appdef.QName, _ appdef.QNames) bool {
 					return storage != state.View && storage != state.Record
 				})
+				hasViewOrRecordsIntentsOnly := !hasIntentsExceptViewAndRecords
 
-				nonBuffered := !hasIntentsExceptViewAndRecords
+				buffered := hasViewOrRecordsIntentsOnly
+				nonBuffered := !buffered
 				eventsFilter := []appdef.QName{}
 				eventsArgsFilter := []appdef.QName{}
 				p.Events(func(pe appdef.IProjectorEvent) {
@@ -419,16 +425,20 @@ func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IApp
 					}
 					eventsFilter = append(eventsFilter, pe.On().QName())
 				})
-				appDefSyncProjectorFactories = append(appDefSyncProjectorFactories, func(partition istructs.PartitionID) istructs.Projector {
-					return istructs.Projector{
-						Name:             p.QName(),
-						Func:             appCfgProjectorFactory(partition).Func,
-						NonBuffered:      nonBuffered,
-						EventsFilter:     eventsFilter,
-						EventsArgsFilter: eventsArgsFilter,
-						HandleErrors:     p.WantErrors(),
+				factory := func(localProjector appdef.IProjector, appCfgProjectorFactory func(partitionID istructs.PartitionID) istructs.Projector, nonBuffered bool,
+					eventsFilter []appdef.QName, eventsArgsFilter []appdef.QName) func(partition istructs.PartitionID) istructs.Projector {
+					return func(partition istructs.PartitionID) istructs.Projector {
+						return istructs.Projector{
+							Name:             localProjector.QName(),
+							Func:             appCfgProjectorFactory(partition).Func,
+							NonBuffered:      nonBuffered,
+							EventsFilter:     eventsFilter,
+							EventsArgsFilter: eventsArgsFilter,
+							HandleErrors:     localProjector.WantErrors(),
+						}
 					}
-				})
+				}
+				appDefSyncProjectorFactories = append(appDefSyncProjectorFactories, factory(p, appCfgProjectorFactory, nonBuffered, eventsFilter, eventsArgsFilter))
 				return nil
 			})
 			if err != nil {

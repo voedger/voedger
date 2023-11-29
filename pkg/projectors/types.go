@@ -8,8 +8,10 @@ package projectors
 
 import (
 	"context"
+	"log"
 	"sync"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -35,6 +37,9 @@ func (s *asyncActualizerContextState) error() error {
 }
 
 func isAcceptable(p istructs.Projector, event istructs.IPLogEvent) bool {
+	if p.Name == appdef.NewQName("registry", "ProjectorLoginIdx") {
+		log.Println()
+	}
 	if event.QName() == istructs.QNameForError {
 		return p.HandleErrors
 	}
