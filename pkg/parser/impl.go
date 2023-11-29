@@ -60,6 +60,7 @@ func mergeSchemas(mergeFrom, mergeTo *SchemaAST) {
 }
 
 func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
+	var errs []error
 	entries, err := fs.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -75,11 +76,12 @@ func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
 			}
 			bytes, err := fs.ReadFile(fpath)
 			if err != nil {
-				return nil, err
+				errs = append(errs, err)
+				continue
 			}
 			schema, err := parseImpl(entry.Name(), string(bytes))
 			if err != nil {
-				return nil, err
+				errs = append(errs, err)
 			}
 			schemas = append(schemas, &FileSchemaAST{
 				FileName: entry.Name(),
@@ -90,7 +92,7 @@ func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
 	if len(schemas) == 0 {
 		return nil, ErrDirContainsNoSchemaFiles
 	}
-	return schemas, nil
+	return schemas, errors.Join(errs...)
 }
 
 func buildPackageSchemaImpl(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
