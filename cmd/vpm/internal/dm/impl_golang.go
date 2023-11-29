@@ -25,11 +25,11 @@ type goImpl struct {
 
 func (g *goImpl) LocalPath(depURL string) (localDepPath string, err error) {
 	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("locating dependency %s", depURL))
+		logger.Verbose(fmt.Sprintf("resolving dependency %s ...", depURL))
 	}
 	pkgURL, subDir, version, ok := g.parseDepURL(depURL)
 	if !ok {
-		return "", fmt.Errorf("unknown dependency %s", depURL)
+		return "", fmt.Errorf("cannot find module for path %s", depURL)
 	}
 	if version == "" {
 		localDepPath = path.Join(path.Dir(g.goModFilePath), subDir)
@@ -68,17 +68,17 @@ func (g *goImpl) parseDepURL(depURL string) (pkgURL, subDir, version string, ok 
 
 func parseGoModFile(goModPath string) (*modfile.File, error) {
 	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("parsing %s", goModPath))
+		logger.Verbose(fmt.Sprintf("parsing %s ...", goModPath))
 	}
 	// TODO: checkout behaviour of modfile if we got replace in go.mod
 	content, err := os.ReadFile(goModPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read %s file - %v", goModFile, err)
+		return nil, fmt.Errorf("reading %s: %v", goModPath, err)
 	}
 
 	modFile, err := modfile.ParseLax(goModPath, content, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse %s file - %v", goModFile, err)
+		return nil, fmt.Errorf("errors parsing %s: %v", goModFile, err)
 	}
 	return modFile, nil
 }
@@ -98,53 +98,29 @@ func matchDepPath(depURL, depPath string) (subDir string, ok bool) {
 
 func downloadDependencies(goModFilePath string) error {
 	if logger.IsVerbose() {
-		logger.Verbose("downloading dependencies")
+		logger.Verbose("downloading dependencies...")
 	}
 	wd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if logger.IsVerbose() {
-			logger.Verbose(fmt.Sprintf("changing working directory back to %s", wd))
-		}
 		_ = os.Chdir(wd)
 	}()
-	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("working directory is %s", wd))
-	}
 
 	if err := os.Chdir(path.Dir(goModFilePath)); err != nil {
 		return err
-	}
-	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("changing working directory to %s", path.Dir(goModFilePath)))
 	}
 	return execGoCmd("mod", "download").Run()
 }
 
 func checkGoInstalled() error {
 	if logger.IsVerbose() {
-		logger.Verbose("checking out for installed go")
+		logger.Verbose("checking out go environment...")
 	}
 	// Check if the "go" executable is in the PATH
 	if _, err := exec.LookPath("go"); err != nil {
-		// Provide a more informative error message
-		return fmt.Errorf("go is not installed or not in the PATH. please install Go https://golang.org/doc/install. Error - %w", err)
-	}
-
-	// Optionally, you can check the Go version to ensure it meets your application's requirements
-	goVersionOutput, versionErr := execGoCmd("version").Output()
-	if versionErr != nil {
-		return fmt.Errorf("unable to determine Go version. Error - %v", versionErr)
-	}
-
-	// Extract the version information from the output
-	versionLine := strings.Split(string(goVersionOutput), " ")[2] // Assuming the version is the third element
-	goVersion := strings.TrimSpace(strings.TrimSuffix(versionLine, "\n"))
-	goVersion = strings.TrimPrefix(goVersion, "go")
-	if goVersion == "" {
-		return fmt.Errorf("failed to extract go version from 'go version' output")
+		return fmt.Errorf("go is required for this application but is not found. Please install Go from https://golang.org/doc/install")
 	}
 	return nil
 }
@@ -155,7 +131,7 @@ func getCachePath() (string, error) {
 	}
 	goPath, ok := os.LookupEnv("GOPATH")
 	if !ok {
-		return "", fmt.Errorf("GOPATH env var is not defined")
+		return "", fmt.Errorf("GOPATH environment variable is not defined")
 	}
 	return path.Join(goPath, "pkg", "mod"), nil
 }
@@ -184,12 +160,12 @@ func getGoModFile() (*modfile.File, string, error) {
 		previousDir = currentDir
 		currentDir = filepath.Dir(currentDir)
 	}
-	return nil, "", fmt.Errorf("dependency file %s not found", goModFile)
+	return nil, "", fmt.Errorf("%s not found", goModFile)
 }
 
 func execGoCmd(args ...string) *exec.Cmd {
 	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("running: go %s", strings.Join(args, " ")))
+		logger.Verbose(fmt.Sprintf("go %s", strings.Join(args, " ")))
 	}
 	return exec.Command("go", args...)
 }

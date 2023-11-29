@@ -6,6 +6,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -27,7 +28,7 @@ func newCompileCmd() *cobra.Command {
 		Short: "compile voedger application",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				params.WorkingDir = strings.TrimPrefix(strings.TrimSpace(args[0]), "--C=")
+				params.WorkingDir = strings.TrimPrefix(strings.TrimSpace(args[0]), "-C ")
 			}
 			depMan, err := dm.NewGoBasedDependencyManager()
 			if err != nil {
@@ -44,53 +45,48 @@ func newCompileCmd() *cobra.Command {
 		},
 	}
 	compileCmd.SilenceErrors = true
-	compileCmd.Flags().StringVar(&params.WorkingDir, "C", "", "Change to dir before running the command.")
+	compileCmd.Flags().StringVarP(&params.WorkingDir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
 	return compileCmd
 }
 
 func compile(depMan dm.IDependencyManager, dir string) error {
-	if logger.IsVerbose() {
-		logger.Verbose("compilation started!")
-	}
-	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("working dir is %s", dir))
-	}
+	var errs []error
 	importedStmts := make(map[string]parser.ImportStmt)
 
-	packages, err := compileDir(depMan, dir, testQPN, importedStmts)
-	if err != nil {
-		return err
-	}
+	packages, compileDirErrs := compileDir(depMan, dir, testQPN, importedStmts)
+	errs = append(errs, compileDirErrs...)
 
 	if !hasAppSchema(packages) {
 		appPackageAst, err := compileTestAppSchema(maps.Values(importedStmts))
 		if err != nil {
-			return err
+			errs = append(errs, err)
 		}
 		packages = append(packages, appPackageAst)
 		addMissingUses(appPackageAst, getUseStmts(maps.Values(importedStmts)))
 	}
 
-	sysPackageAst, err := compileSys(depMan, importedStmts)
-	if err != nil {
-		return err
-	}
+	sysPackageAst, compileSysErrs := compileSys(depMan, importedStmts)
 	packages = append(packages, sysPackageAst...)
+	errs = append(errs, compileSysErrs...)
 
-	if _, err := parser.BuildAppSchema(packages); err != nil {
-		return err
+	if len(errs) == 0 {
+		if _, err := parser.BuildAppSchema(packages); err != nil {
+			return err
+		}
 	}
 	if logger.IsVerbose() {
-		logger.Verbose("compilation finished!")
+		logger.Verbose("compilation successful")
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func hasAppSchema(packages []*parser.PackageSchemaAST) bool {
 	for _, p := range packages {
-		for _, f := range p.Ast.Statements {
-			if f.Application != nil {
-				return true
+		if p != nil {
+			for _, f := range p.Ast.Statements {
+				if f.Application != nil {
+					return true
+				}
 			}
 		}
 	}
@@ -147,7 +143,7 @@ func addMissingUses(appPackage *parser.PackageSchemaAST, uses []parser.UseStmt) 
 	}
 }
 
-func compileSys(depMan dm.IDependencyManager, importedStmts map[string]parser.ImportStmt) ([]*parser.PackageSchemaAST, error) {
+func compileSys(depMan dm.IDependencyManager, importedStmts map[string]parser.ImportStmt) ([]*parser.PackageSchemaAST, []error) {
 	return compileDependency(depMan, sysPackage, importedStmts)
 }
 
@@ -168,36 +164,37 @@ func checkImportedStmts(qpn string, importedStmts map[string]parser.ImportStmt) 
 	return
 }
 
-func compileDir(depMan dm.IDependencyManager, dir, qpn string, importedStmts map[string]parser.ImportStmt) (packages []*parser.PackageSchemaAST, err error) {
+func compileDir(depMan dm.IDependencyManager, dir, qpn string, importedStmts map[string]parser.ImportStmt) (packages []*parser.PackageSchemaAST, errs []error) {
 	if ok := checkImportedStmts(qpn, importedStmts); !ok {
 		return
 	}
 	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("compilation of the dir %s", dir))
+		logger.Verbose(fmt.Sprintf("compiling %s", dir))
 	}
 	packageAst, err := parser.ParsePackageDir(qpn, coreutils.NewPathReader(dir), "")
 	if err != nil {
-		return nil, err
+		errs = append(errs, splitErrors(err)...)
 	}
-	importedPackages, err := compileDependencies(depMan, packageAst.Ast.Imports, importedStmts)
-	if err != nil {
-		return nil, err
+	var compileDepErrs []error
+	var importedPackages []*parser.PackageSchemaAST
+	if packageAst != nil {
+		importedPackages, compileDepErrs = compileDependencies(depMan, packageAst.Ast.Imports, importedStmts)
+		errs = append(errs, compileDepErrs...)
 	}
-	return append([]*parser.PackageSchemaAST{packageAst}, importedPackages...), nil
+	packages = append([]*parser.PackageSchemaAST{packageAst}, importedPackages...)
+	return
 }
 
-func compileDependencies(depMan dm.IDependencyManager, imports []parser.ImportStmt, importedStmts map[string]parser.ImportStmt) (packages []*parser.PackageSchemaAST, err error) {
+func compileDependencies(depMan dm.IDependencyManager, imports []parser.ImportStmt, importedStmts map[string]parser.ImportStmt) (packages []*parser.PackageSchemaAST, errs []error) {
 	for _, imp := range imports {
-		dependentPackages, err := compileDependency(depMan, imp.Name, importedStmts)
-		if err != nil {
-			return nil, err
-		}
+		dependentPackages, compileDepErrs := compileDependency(depMan, imp.Name, importedStmts)
+		errs = append(errs, compileDepErrs...)
 		packages = append(packages, dependentPackages...)
 	}
-	return packages, nil
+	return
 }
 
-func compileDependency(depMan dm.IDependencyManager, depURL string, importedStmts map[string]parser.ImportStmt) (packages []*parser.PackageSchemaAST, err error) {
+func compileDependency(depMan dm.IDependencyManager, depURL string, importedStmts map[string]parser.ImportStmt) (packages []*parser.PackageSchemaAST, errs []error) {
 	// workaround for sys package
 	depURLToFind := depURL
 	if depURL == sysPackage {
@@ -205,28 +202,38 @@ func compileDependency(depMan dm.IDependencyManager, depURL string, importedStmt
 	}
 	localPath, err := depMan.LocalPath(depURLToFind)
 	if err != nil {
-		return nil, err
+		errs = append(errs, err)
 	}
 	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("dependency %s is located at %s", depURL, localPath))
+		logger.Verbose(fmt.Sprintf("dependency: %s\nlocation: %s\n", depURL, localPath))
 	}
-	return compileDir(depMan, localPath, depURL, importedStmts)
+	var compileDirErrs []error
+	packages, compileDirErrs = compileDir(depMan, localPath, depURL, importedStmts)
+	errs = append(errs, compileDirErrs...)
+	return
 }
 
 func currentWorkingDir(params compileParams) (string, error) {
 	if params.WorkingDir == "" {
 		wd, err := os.Getwd()
 		if err != nil {
-			return "", fmt.Errorf("unable to get current working directory. error - %w", err)
+			return "", fmt.Errorf("failed to get working directory: %v", err)
 		}
 		return wd, nil
 	}
 	if _, err := os.Stat(params.WorkingDir); os.IsNotExist(err) {
-		return "", fmt.Errorf("directory %s does not exist", params.WorkingDir)
+		return "", fmt.Errorf("failed to open %s", params.WorkingDir)
 	}
 	return params.WorkingDir, nil
 }
 
 type compileParams struct {
 	WorkingDir string
+}
+
+func splitErrors(joinedError error) (errs []error) {
+	if e, ok := joinedError.(interface{ Unwrap() []error }); ok {
+		return e.Unwrap()
+	}
+	return
 }
