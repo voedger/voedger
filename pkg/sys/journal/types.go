@@ -69,9 +69,9 @@ func NewEventObject(event istructs.IWLogEvent, appDef appdef.IAppDef, f Filter, 
 		noArgs = false
 	}
 	cuds := make([]map[string]interface{}, 0)
-	err = event.CUDs(func(rec istructs.ICUDRow) error {
+	event.CUDs(func(rec istructs.ICUDRow) {
 		if !f.isMatch(rec.QName()) {
-			return err
+			return
 		}
 		cud := make(map[string]interface{})
 		cud["sys.ID"] = rec.ID()
@@ -79,12 +79,7 @@ func NewEventObject(event istructs.IWLogEvent, appDef appdef.IAppDef, f Filter, 
 		cud["IsNew"] = rec.IsNew()
 		cud["fields"] = coreutils.FieldsToMap(rec, appDef, opts...)
 		cuds = append(cuds, cud)
-		return nil
 	})
-	if err != nil {
-		// notest
-		return nil, err
-	}
 	data["cuds"] = cuds
 	bb, err = json.Marshal(&data)
 	eo := &EventObject{

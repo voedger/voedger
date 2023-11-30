@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -91,20 +92,20 @@ func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecComman
 
 // sys/registry, appWorkspace, triggered by CDoc<Login>
 var projectorLoginIdx = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return event.CUDs(func(rec istructs.ICUDRow) (err error) {
+	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 		if rec.QName() != QNameCDocLogin {
 			return nil
 		}
 		kb, err := s.KeyBuilder(state.View, QNameViewLoginIdx)
 		if err != nil {
-			return
+			return err
 		}
 		kb.PutInt64(field_AppWSID, int64(event.Workspace()))
 		kb.PutString(field_AppIDLoginHash, rec.AsString(authnz.Field_AppName)+"/"+rec.AsString(authnz.Field_LoginHash))
 
 		vb, err := intents.NewValue(kb)
 		if err != nil {
-			return
+			return err
 		}
 		vb.PutInt64(field_CDocLoginID, int64(rec.AsRecordID(appdef.SystemField_ID)))
 		return nil

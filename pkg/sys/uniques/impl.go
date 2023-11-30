@@ -20,7 +20,7 @@ import (
 
 func provideApplyUniques(appDef appdef.IAppDef) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
-		return event.CUDs(func(rec istructs.ICUDRow) (err error) {
+		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			if unique, ok := appDef.Type(rec.QName()).(appdef.IUniques); ok {
 				if uniqueField := unique.UniqueField(); uniqueField != nil {
 					uniqueFieldIsNotNull, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(s string, _ interface{}) bool {
@@ -223,7 +223,7 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 	return func(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
 		//                                      key         uvrID
 		uniquesState := map[appdef.QName]map[string]*uniqueViewRecord{}
-		err := rawEvent.CUDs(func(cudRec istructs.ICUDRow) (err error) {
+		err := iterate.ForEachError(rawEvent.CUDs, func(cudRec istructs.ICUDRow) (err error) {
 			qName := cudRec.QName()
 			if uniques, ok := appStructs.AppDef().Type(qName).(appdef.IUniques); ok {
 				if uniqueField := uniques.UniqueField(); uniqueField != nil {

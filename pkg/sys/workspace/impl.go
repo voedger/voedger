@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/untillpro/goutils/iterate"
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -32,7 +33,7 @@ import (
 // targetApp/userProfileWSID
 func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		return event.CUDs(func(rec istructs.ICUDRow) error {
+		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			if rec.QName() != authnz.QNameCDocChildWorkspace || !rec.IsNew() {
 				return nil
 			}
@@ -151,7 +152,7 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istruct
 // triggered by cdoc.sys.WorkspaceID
 // targetApp/appWS
 func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return event.CUDs(func(rec istructs.ICUDRow) error {
+	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 		if rec.QName() != QNameCDocWorkspaceID || !rec.IsNew() { // skip on update cdoc.sys.WorkspaceID on e.g. deactivate workspace
 			return nil
 		}
@@ -181,7 +182,7 @@ func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, inten
 // targetApp/appWS
 func invokeCreateWorkspaceProjector(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		return event.CUDs(func(rec istructs.ICUDRow) error {
+		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			if rec.QName() != QNameCDocWorkspaceID || !rec.IsNew() { // skip on update cdoc.sys.WorkspaceID on e.g. deactivate workspace
 				return nil
 			}
@@ -293,7 +294,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, targetAppQName istructs.AppQName, federation coreutils.IFederation, ep extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		return event.CUDs(func(rec istructs.ICUDRow) error {
+		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			if rec.QName() != authnz.QNameCDocWorkspaceDescriptor {
 				return nil
 			}
