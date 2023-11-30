@@ -78,12 +78,7 @@ func newSyncBranch(conf SyncActualizerConf, projectorFactory istructs.ProjectorF
 	})
 	fn = pipeline.ForkBranch(pipeline.NewSyncPipeline(conf.Ctx, pipelineName,
 		pipeline.WireFunc("Projector", func(_ context.Context, _ interface{}) (err error) {
-			ok, err :=isAcceptable(projector, service.event, iProjector, triggeringQNames)
-			if err != nil {
-				// nolint
-				return err
-			}
-			if !ok {
+			if !isAcceptable(service.event, iProjector.WantErrors(), triggeringQNames) {
 				return nil
 			}
 			return projector.Func(service.event, s, s)

@@ -8,7 +8,6 @@ package projectors
 
 import (
 	"context"
-	"log"
 	"slices"
 	"sync"
 
@@ -38,78 +37,59 @@ func (s *asyncActualizerContextState) error() error {
 	return s.err
 }
 
-func isAcceptable(p istructs.Projector, event istructs.IPLogEvent, iprojector appdef.IProjector, triggeringQNames map[appdef.QName][]appdef.ProjectorEventKind) (bool, error) {
-	if p.Name == appdef.NewQName("registry", "ProjectorLoginIdx") {
-		log.Println()
-	}
+func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames map[appdef.QName][]appdef.ProjectorEventKind) bool {
 	if event.QName() == istructs.QNameForError {
-		return iprojector.WantErrors(), nil
+		return wantErrors
 	}
 
 	if triggeringKinds, ok := triggeringQNames[event.QName()]; ok {
 		if slices.Contains(triggeringKinds, appdef.ProjectorEventKind_Execute) {
-			return true, nil
+			return true
 		}
 	}
 
-	triggered := false
-	event.CUDs(func(rec istructs.ICUDRow) error {
-		if triggered {
-			return nil
+	if triggeringKinds, ok := triggeringQNames[event.ArgumentObject().QName()]; ok {
+		if slices.Contains(triggeringKinds, appdef.ProjectorEventKind_ExecuteWithParam) {
+			return true
 		}
+	}
+
+	triggered, _ := iterate.FindFirst(event.CUDs, func(rec istructs.ICUDRow) bool {
 		triggeringKinds, ok := triggeringQNames[rec.QName()]
 		if !ok {
-			return nil
+			return false
 		}
 		for _, triggerkingKind := range triggeringKinds {
 			switch triggerkingKind {
 			case appdef.ProjectorEventKind_Insert:
 				if rec.IsNew() {
-					triggered = true
-					return nil
+					return true
 				}
 			case appdef.ProjectorEventKind_Update:
 				if !rec.IsNew() {
-					triggered = 
+					return true
+				}
+			case appdef.ProjectorEventKind_Activate:
+				if !rec.IsNew() {
+					activated, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(fieldName string, newValue interface{}) bool {
+						return fieldName == appdef.SystemField_IsActive && newValue.(bool)
+					})
+					if activated {
+						return true
+					}
+				}
+			case appdef.ProjectorEventKind_Deactivate:
+				if !rec.IsNew() {
+					deactivated, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(fieldName string, newValue interface{}) bool {
+						return fieldName == appdef.SystemField_IsActive && !newValue.(bool)
+					})
+					if deactivated {
+						return true
+					}
 				}
 			}
 		}
-	})
-
-
-	iterate.FindFirst(iprojector.Events, func(pe appdef.IProjectorEvent) bool {
-		// event's QName
-		if event.QName() == pe.On().QName() {
-			return true
-		}
-
-		// AFTER INSERT\UPDATE\ACTIVATE\DEACTIVATE
-		err := event.CUDs(func(rec istructs.ICUDRow) error {
-			pe.Kind()
-		})
-		if err != nil {
-			// nolint
-			return false, err
-		}
-
-
-	})
-
-	if len(p.EventsFilter) != 0 {
-		for _, name := range p.EventsFilter {
-			if name == event.QName() {
-				return true
-			}
-		}
 		return false
-	}
-	if len(p.EventsArgsFilter) != 0 {
-		for _, name := range p.EventsArgsFilter {
-			if name == event.ArgumentObject().QName() {
-				return true
-			}
-		}
-		return false
-	}
-	return true
+	})
+	return triggered
 }
