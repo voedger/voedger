@@ -19,9 +19,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	// c.sys.InitChildWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		authnz.QNameCommandInitChildWorkspace,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		execCmdInitChildWorkspace,
 	))
 
@@ -29,26 +26,18 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	// target app, (target cluster, base profile WSID)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandCreateWorkspaceID,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		execCmdCreateWorkspaceID(asp, cfg.Name),
 	))
 
 	// c.sys.CreateWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandCreateWorkspace,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		execCmdCreateWorkspace(timeFunc, asp, cfg.Name),
 	))
 
 	// q.sys.QueryChildWorkspaceByName
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryChildWorkspaceByName,
-		appdef.NullQName,
-		appdef.NullQName,
 		qcwbnQryExec,
 	))
 

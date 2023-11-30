@@ -358,6 +358,12 @@ func test() *testDataType {
 				AddField(testData.testViewRecord.valueFields.event, appdef.DataKind_Event, false)
 		}
 
+		{
+			appDef.AddCommand(testData.saleCmdName).SetUnloggedParam(testData.saleSecureParsName).SetParam(testData.saleCmdDocName)
+			appDef.AddCommand(testData.changeCmdName)
+			appDef.AddQuery(testData.queryPhotoFunctionName).SetParam(testData.queryPhotoFunctionParamsName)
+		}
+
 		return appDef
 	}
 
@@ -369,9 +375,9 @@ func test() *testDataType {
 			panic(err)
 		}
 
-		cfg.Resources.Add(NewCommandFunction(testData.saleCmdName, testData.saleCmdDocName, testData.saleSecureParsName, appdef.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewCommandFunction(testData.changeCmdName, appdef.NullQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
-		cfg.Resources.Add(NewQueryFunction(testData.queryPhotoFunctionName, testData.queryPhotoFunctionParamsName, appdef.NullQName, NullQueryExec))
+		cfg.Resources.Add(NewCommandFunction(testData.saleCmdName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(testData.changeCmdName, NullCommandExec))
+		cfg.Resources.Add(NewQueryFunction(testData.queryPhotoFunctionName, NullQueryExec))
 
 		if err := cfg.prepare(iratesce.TestBucketsFactory(), storage); err != nil {
 			panic(err)
@@ -721,7 +727,7 @@ func testTestEvent(t *testing.T, value istructs.IDbEvent, pLogOffs, wLogOffs ist
 	}
 
 	var cnt int
-	value.CUDs(func(rec istructs.ICUDRow) error {
+	value.CUDs(func(rec istructs.ICUDRow) {
 		require.True(rec.IsNew())
 		if rec.QName() == test.tablePhotos {
 			testPhotoRow(t, rec)
@@ -731,7 +737,6 @@ func testTestEvent(t *testing.T, value istructs.IDbEvent, pLogOffs, wLogOffs ist
 			require.Equal(test.remarkValue, rec.AsString(test.remarkIdent))
 		}
 		cnt++
-		return nil
 	})
 	require.Equal(2, cnt)
 }

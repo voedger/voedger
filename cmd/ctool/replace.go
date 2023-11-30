@@ -5,10 +5,10 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/untillpro/goutils/logger"
 )
 
 func newReplaceCmd() *cobra.Command {
@@ -31,7 +31,6 @@ func replace(cmd *cobra.Command, arg []string) error {
 
 	c := newCmd(ckReplace, strings.Join(arg, " "))
 	if err := cluster.applyCmd(c); err != nil {
-		logger.Error(err.Error())
 		return err
 	}
 
@@ -40,13 +39,17 @@ func replace(cmd *cobra.Command, arg []string) error {
 		return err
 	}
 
+	replacedAddress := cluster.Cmd.args()[0]
+
 	err = cluster.validate()
 	if err == nil {
 		println("cluster configuration is ok")
 		if err = cluster.Cmd.apply(cluster); err != nil {
-			logger.Error(err)
+			return err
 		}
 	}
 
-	return err
+	fmt.Println("Replaced address:", replacedAddress)
+	cluster.ReplacedAddresses = append(cluster.ReplacedAddresses, replacedAddress)
+	return nil
 }

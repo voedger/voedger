@@ -36,7 +36,7 @@ type ICommandMessage interface {
 	Sender() interface{}
 	PartitionID() istructs.PartitionID
 	RequestCtx() context.Context
-	Resource() istructs.IResource
+	Command() appdef.ICommand
 	Token() string
 	Host() string
 }
@@ -58,7 +58,6 @@ type cmdWorkpiece struct {
 	appStructs          istructs.IAppStructs
 	requestData         coreutils.MapObject
 	cmdMes              ICommandMessage
-	cmdFunc             istructs.ICommandFunction
 	argsObject          istructs.IObject
 	unloggedArgsObject  istructs.IObject
 	reb                 istructs.IRawEventBuilder
@@ -78,6 +77,8 @@ type cmdWorkpiece struct {
 	wsInitialized       bool
 	cmdResultBuilder    istructs.IObjectBuilder
 	cmdResult           istructs.IObject
+	resources           istructs.IResources
+	cmdFunc         istructs.ICommandFunction
 }
 
 type implIDGenerator struct {
@@ -101,7 +102,7 @@ type implICommandMessage struct {
 	sender      interface{}
 	partitionID istructs.PartitionID
 	requestCtx  context.Context
-	resource    istructs.IResource
+	command     appdef.ICommand
 	token       string
 	host        string
 }

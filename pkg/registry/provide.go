@@ -19,16 +19,11 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	federation coreutils.IFederation, ep extensionpoints.IExtensionPoint) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandCreateLogin,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		execCmdCreateLogin(asp),
 	))
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(RegistryPackage, "IssuePrincipalToken"),
-		appdef.NullQName,
-		appdef.NullQName,
 		provideIssuePrincipalTokenExec(asp, itokens)))
 	provideChangePassword(cfg)
 	provideResetPassword(cfg, asp, itokens, federation)

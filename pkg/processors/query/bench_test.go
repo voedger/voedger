@@ -56,7 +56,7 @@ func Benchmark_pipelineIService_Sequential(b *testing.B) {
 	go queryProcessor.Run(context.Background())
 	as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
-	funcResource := as.Resources().QueryResource(qNameFunction)
+	query := as.AppDef().Query(qNameFunction)
 	start := time.Now()
 	sysToken := getSystemToken(appTokens)
 
@@ -64,7 +64,7 @@ func Benchmark_pipelineIService_Sequential(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 
-		serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, funcResource, "", sysToken)
+		serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "", sysToken)
 		<-res
 	}
 
@@ -118,13 +118,13 @@ func Benchmark_pipelineIService_Parallel(b *testing.B) {
 		go queryProcessor.Run(context.Background())
 		as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
-		funcResource := as.Resources().QueryResource(qNameFunction)
+		query := as.AppDef().Query(qNameFunction)
 		sysToken := getSystemToken(appTokens)
 
 		b.ResetTimer()
 
 		for pb.Next() {
-			serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, funcResource, "", sysToken)
+			serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "", sysToken)
 			<-res
 		}
 	})

@@ -49,8 +49,6 @@ const (
 	sfm_IsActive  = uint16(1 << 3)
 )
 
-var nullPrepareArgs = istructs.PrepareArgs{}
-
 // rate limits function name formats, see GetFunctionRateLimitName
 var funcRateLimitNameFmt = [istructs.RateLimitKind_FakeLast]string{
 	"func_%s_byApp",

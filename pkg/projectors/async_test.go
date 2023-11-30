@@ -52,9 +52,10 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			ProvideOffsetsDef(appDef)
+			appDef.AddCommand(cmdQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -140,9 +141,10 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			ProvideOffsetsDef(appDef)
+			appDef.AddCommand(cmdQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(2) // test within partition 2
 
@@ -215,9 +217,10 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			ProvideOffsetsDef(appDef)
+			appDef.AddCommand(cmdQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -284,9 +287,10 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			ProvideOffsetsDef(appDef)
 			appDef.AddObject(name)
+			appDef.AddCommand(cmdQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -312,6 +316,18 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	}, time.Now)
 	defer cleanup()
 
+	metrics := imetrics.Provide()
+	getProjectorsInError := func() float64 {
+		var projInErrors float64
+		metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
+			if metric.App() == istructs.AppQName_test1_app1 && metric.Vvm() == "test" && metric.Name() == ProjectorsInError {
+				projInErrors = metricValue
+			}
+			return nil
+		})
+		return projInErrors
+	}
+
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
 		Ctx:        withCancel,
@@ -328,7 +344,10 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		LogError: func(args ...interface{}) {
 			errors <- fmt.Sprint("error: ", args)
 		},
-		Broker: broker,
+		Broker:   broker,
+		Metrics:  metrics,
+		VvmName:  "test",
+		AppQName: istructs.AppQName_test1_app1,
 	}
 	attempts := 0
 
@@ -359,6 +378,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		time.Sleep(time.Microsecond)
 	}
 	require.Equal(1, attempts)
+	require.Equal(1.0, getProjectorsInError())
 
 	// tick after-error interval ("30 second delay")
 	chanAfterError <- time.Now()
@@ -367,6 +387,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	for getActualizerOffset(require, app, partitionNr, name) < topOffset {
 		time.Sleep(time.Microsecond)
 	}
+	require.Equal(0.0, getProjectorsInError())
 
 	// stop services
 	cancelCtx()
@@ -384,9 +405,10 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			ProvideOffsetsDef(appDef)
+			appDef.AddCommand(cmdQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -507,9 +529,10 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			ProvideOffsetsDef(appDef)
+			appDef.AddCommand(cmdQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -546,7 +569,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 		Partition:  partitionNr,
 		AppStructs: func() istructs.IAppStructs { return app },
 		Broker:     broker,
-		Metrics:    &metrics,
+		AAMetrics:  &metrics,
 	}
 	actualizer, err := actualizerFactory(conf, incrementorFactory)
 	require.NoError(err)
@@ -610,9 +633,10 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			ProvideOffsetsDef(appDef)
+			appDef.AddCommand(cmdQName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(2) // test within partition 2
 
@@ -646,7 +670,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 		BundlesLimit:  10,
 		FlushInterval: 2 * time.Second,
 		Broker:        broker,
-		Metrics:       &metrics,
+		AAMetrics:     &metrics,
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	projectorFactory := func(partition istructs.PartitionID) istructs.Projector {
@@ -728,7 +752,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 			ProvideOffsetsDef(appDef)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitions := make([]*testPartition, totalPartitions)
 
@@ -778,7 +802,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 					BundlesLimit:  10,
 					FlushInterval: 2 * time.Second,
 					Broker:        broker,
-					Metrics:       &metrics,
+					AAMetrics:     &metrics,
 					LogError:      func(args ...interface{}) {},
 				}
 
@@ -893,7 +917,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 			ProvideOffsetsDef(appDef)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
 		})
 	partitions := make([]*testPartition, totalPartitions)
 
@@ -943,7 +967,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 					BundlesLimit:          10,
 					FlushInterval:         1000 * time.Millisecond,
 					Broker:                broker,
-					Metrics:               &metrics,
+					AAMetrics:             &metrics,
 					LogError:              func(args ...interface{}) {},
 					FlushPositionInverval: 10 * time.Second,
 				}

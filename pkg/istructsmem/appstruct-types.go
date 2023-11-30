@@ -115,11 +115,6 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	}
 	cfg.AppDef = app
 
-	// prepare resources
-	if err := cfg.Resources.prepare(cfg.AppDef); err != nil {
-		return err
-	}
-
 	cfg.dynoSchemes.Prepare(cfg.AppDef)
 
 	// prepare IAppStorage

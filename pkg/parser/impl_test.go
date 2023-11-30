@@ -1056,7 +1056,10 @@ func Test_Projectors(t *testing.T) {
 			PROJECTOR ImProjector4 AFTER ACTIVATE ON Order; 			-- Bad
 			PROJECTOR ImProjector5 AFTER DEACTIVATE ON Order; 			-- Bad
 			PROJECTOR ImProjector6 AFTER INSERT ON Order OR AFTER EXECUTE ON Orders;	-- Good
-		)
+			PROJECTOR ImProjector7 AFTER EXECUTE WITH PARAM ON Bill;	-- Bad: Type undefined
+			PROJECTOR ImProjector8 AFTER EXECUTE WITH PARAM ON ODoc;	-- Good
+			PROJECTOR ImProjector9 AFTER EXECUTE WITH PARAM ON ORecord;	-- Bad
+		);
 	)
 	`)
 	require.Nil(err)
@@ -1072,6 +1075,8 @@ func Test_Projectors(t *testing.T) {
 		"example.sql:8:4: only INSERT allowed for ODoc or ORecord",
 		"example.sql:9:4: only INSERT allowed for ODoc or ORecord",
 		"example.sql:10:4: only INSERT allowed for ODoc or ORecord",
+		"example.sql:12:4: undefined type or ODoc: Bill",
+		"example.sql:14:4: undefined type or ODoc: ORecord",
 	}, "\n"))
 }
 

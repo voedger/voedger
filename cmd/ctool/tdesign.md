@@ -4,6 +4,61 @@
 
 - cluster.json/version must be equal to ctool version, except `upgrade` command 
 
+## Generalized example сluster.json
+
+```javascript
+{
+// Edition (type of editorial office)
+  "EditionType": "SE", 
+
+  // Current version of CTool
+  "ActualClusterVersion": "0.0.2",
+
+  // The desired version of CTool (used for the UPGRADE command)
+  "DesiredClusterVersion": "0.0.3",
+
+  // The team that needs to be performed
+  "Cmd": {
+    "Kind": "command kind (name)",
+    "Args": "command arguments separated by a space"
+  },
+
+  // Error of the last attempt (present only if the command is unsuccessful)
+  "LastAttemptError": "some error",
+
+  // List of cluster components
+  "Nodes": [
+    {
+      // The role of the node
+      "NodeRole": "SENode",
+
+     // Information about the last attempt (transmitted if it is empty)
+      "Info": "some info",
+
+      // Actual state of the node
+      "ActualNodeState": {
+        "Address": "5.255.255.55",
+        "NodeVersion": "0.0.2"
+      },
+
+      // Error of the last attempt (transmitted if it is empty)
+      "Error": "some error",
+
+     // desired state of the node
+      "DesiredNodeState": {
+        "Address": "5.255.255.55",
+        "NodeVersion": "0.0.2"
+      }
+    },
+  ],
+
+  // List of replaced addresses (present only when replacing nodes)
+  "ReplacedAddresses": [
+    "10.0.0.28",
+    "10.0.0.29"
+  ]
+}
+```
 
 ## cluster.json: Successful deployment SE
 
@@ -11,21 +66,13 @@ Example of the fragment `cluster.json` with comments.
 
 In the full version of `cluster.json` array `Nodes` contains 5 elements.
 
-```txt
+```javascript
 {
   // Edition
   "EditionType": "SE", 
   
   // ctool version
   "ActualClusterVersion": "0.0.2",
-
-  // List of data centers
-  // Exists only for multi-dc deployment
-  "DataCenters": [ 
-    "dc1", // relates to Nodes[2]
-    "dc2", // relates to Nodes[3]
-    "dc3"  // relates to Nodes[4]
-  ],
 
   "Nodes": [
     {
@@ -53,7 +100,7 @@ Example of the fragment `cluster.json` with comments.
 
 In the full version of `cluster.json` array `Nodes` contains 5 elements.
 
-```txt
+```javascript
 {
   // Edition
   "EditionType": "SE", 
@@ -108,9 +155,11 @@ In the full version of `cluster.json` array `Nodes` contains 5 elements.
 Example of the fragment `cluster.json` with comments.
 Replace DBNode from 10.0.0.21 to 10.0.0.22
 
+In case of successful completion of the `Replace` command, the replaced address is added to the Replacedaddresses list and stored in` Cluster.json`.Re -use in the address of the address from the list `Replacedaddresses` is unacceptable.
+
 In the full version of `cluster.json` array `Nodes` contains 5 elements.
 
-```txt
+```javascript
 {
   // Edition
   "EditionType": "SE", 
@@ -123,14 +172,6 @@ In the full version of `cluster.json` array `Nodes` contains 5 elements.
     "Kind": "replace",
     "Args": "10.0.0.21 10.0.0.22"
   },
-
-  // List of data centers
-  // Exists only for multi-dc deployment
-  "DataCenters": [ 
-    "dc1", // relates to Nodes[2]
-    "dc2", // relates to Nodes[3]
-    "dc3"  // relates to Nodes[4]
-  ],
 
   "Nodes": [
     {
@@ -147,6 +188,10 @@ In the full version of `cluster.json` array `Nodes` contains 5 elements.
       }
 
     },
+  ],
+  "ReplacedAddresses": [
+    "10.0.0.28",
+    "10.0.0.29"
   ]
 }
 ```
@@ -185,7 +230,7 @@ Example of the fragment `cluster.json` with `upgrade` command.
 
 In the full version of `cluster.json` array `Nodes` contains 5 elements.
 
-```txt
+```javascript
 {
   // Edition
   "EditionType": "SE", 

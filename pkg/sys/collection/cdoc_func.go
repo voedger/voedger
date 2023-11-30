@@ -21,13 +21,7 @@ import (
 
 func provideQryCDoc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
-		qNameGetCDocFunc,
-		// local tests -> params and result will be used as declared here
-		// runtime -> params and result will be replaced with ones from sql
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GetCDocParams_local")).
-			AddField(field_ID, appdef.DataKind_int64, true).(appdef.IType).QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GetCDocResult_local")).
-			AddField("Result", appdef.DataKind_string, false).(appdef.IType).QName(),
+		qNameQueryGetCDoc,
 		execQryCDoc(appDefBuilder)))
 }
 

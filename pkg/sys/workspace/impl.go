@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/untillpro/goutils/iterate"
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -28,12 +29,11 @@ import (
 )
 
 // Projector<A, InvokeCreateWorkspaceID>
-// triggered by CDoc<ChildWorkspace> or CDoc<Login> (both not singletons)
-// wsid - pseudoProfile: crc32(wsName) or crc32(login)
-// sys/registry app
+// triggered by CDoc<ChildWorkspace> (not a singleton)
+// targetApp/userProfileWSID
 func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		return event.CUDs(func(rec istructs.ICUDRow) error {
+		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			if rec.QName() != authnz.QNameCDocChildWorkspace || !rec.IsNew() {
 				return nil
 			}
@@ -45,13 +45,16 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 			targetApp := appQName.String()
 			var targetClusterID istructs.ClusterID
 			wsidToCallCreateWSIDAt := coreutils.GetPseudoWSID(ownerWSID, wsName, targetClusterID)
-			return ProjectInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, targetClusterID, wsidToCallCreateWSIDAt, targetApp,
+			return ApplyInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, targetClusterID, wsidToCallCreateWSIDAt, targetApp,
 				templateName, templateParams, rec, ownerWSID)
 		})
 	}
 }
 
-func ProjectInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens,
+// triggered by cdoc.registry.Login or by cdoc.sys.ChildWorkspace
+// wsid - pseudoProfile: crc32(wsName) or crc32(login)
+// sys/registry app
+func ApplyInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens,
 	wsName string, wsKind appdef.QName, targetClusterID istructs.ClusterID,
 	wsidToCallCreateWSIDAt istructs.WSID, targetApp string, templateName string, templateParams string, ownerDoc istructs.ICUDRow, ownerWSID istructs.WSID) error {
 	// Call WS[$PseudoWSID].c.CreateWorkspaceID()
@@ -86,7 +89,9 @@ func ProjectInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName i
 }
 
 // c.sys.CreateWorkspaceID
-// targetApp/appWS
+// ChildWorkspace -> pseudoWSID(profileWSID+"/"+wsName, targetCluster) translated to AppWSID
+// Login -> ((PseudoWSID->AppWSID).Base, targetCluster)
+// targetApp
 func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istructs.AppQName) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		// TODO: AuthZ: System,SystemToken in header
@@ -128,11 +133,11 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istruct
 			return err
 		}
 		cdocWorkspaceID.PutRecordID(appdef.SystemField_ID, 1)
-		cdocWorkspaceID.PutInt64(Field_OwnerWSID, args.ArgumentObject.AsInt64(Field_OwnerWSID))       // CDoc<Login> -> pseudo WSID, CDoc<ChildWorkspace> -> owner profile WSID
+		cdocWorkspaceID.PutInt64(Field_OwnerWSID, args.ArgumentObject.AsInt64(Field_OwnerWSID))       // CDoc<Login> -> pseudoWSID->AppWSID, CDoc<ChildWorkspace> -> owner profile WSID
 		cdocWorkspaceID.PutString(Field_OwnerQName2, args.ArgumentObject.AsString(Field_OwnerQName2)) // registry.Login or sys.UserProfile
 		cdocWorkspaceID.PutInt64(Field_OwnerID, args.ArgumentObject.AsInt64(Field_OwnerID))           // CDoc<Login>.ID or CDoc<ChildWorkspace>.ID
 		cdocWorkspaceID.PutString(Field_OwnerApp, args.ArgumentObject.AsString(Field_OwnerApp))
-		cdocWorkspaceID.PutString(authnz.Field_WSName, args.ArgumentObject.AsString(authnz.Field_WSName)) // CDoc<Login> -> "hardcoded", CDoc<ChildWorkspace> -> wsName
+		cdocWorkspaceID.PutString(authnz.Field_WSName, args.ArgumentObject.AsString(authnz.Field_WSName)) // CDoc<Login> -> crc32(loginHash), CDoc<ChildWorkspace> -> wsName
 		cdocWorkspaceID.PutQName(authnz.Field_WSKind, args.ArgumentObject.AsQName(authnz.Field_WSKind))   // CDoc<Login> -> sys.DeviceProfile or sys.UserProfile, CDoc<ChildWorkspace> -> provided wsKind (e.g. air.Restaurant)
 		cdocWorkspaceID.PutString(authnz.Field_WSKindInitializationData, args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData))
 		cdocWorkspaceID.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
@@ -147,7 +152,7 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istruct
 // triggered by cdoc.sys.WorkspaceID
 // targetApp/appWS
 func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return event.CUDs(func(rec istructs.ICUDRow) error {
+	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 		if rec.QName() != QNameCDocWorkspaceID || !rec.IsNew() { // skip on update cdoc.sys.WorkspaceID on e.g. deactivate workspace
 			return nil
 		}
@@ -177,7 +182,7 @@ func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, inten
 // targetApp/appWS
 func invokeCreateWorkspaceProjector(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		return event.CUDs(func(rec istructs.ICUDRow) error {
+		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			if rec.QName() != QNameCDocWorkspaceID || !rec.IsNew() { // skip on update cdoc.sys.WorkspaceID on e.g. deactivate workspace
 				return nil
 			}
@@ -289,7 +294,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, targetAppQName istructs.AppQName, federation coreutils.IFederation, ep extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		return event.CUDs(func(rec istructs.ICUDRow) error {
+		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			if rec.QName() != authnz.QNameCDocWorkspaceDescriptor {
 				return nil
 			}

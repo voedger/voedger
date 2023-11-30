@@ -39,12 +39,15 @@ func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	cfg := it.NewOwnVITConfig(
 		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+			qNameCmdGreeter := appdef.NewQName(appdef.SysPackage, "Greeter")
+			appDefBuilder.AddQuery(qNameCmdGreeter).
+				SetParam(appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
+					AddField("Text", appdef.DataKind_string, true).(appdef.IType).QName()).
+				SetResult(appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterResult")).
+					AddField("Res", appdef.DataKind_string, true).(appdef.IType).QName())
+
 			cfg.Resources.Add(istructsmem.NewQueryFunction(
-				appdef.NewQName(appdef.SysPackage, "Greeter"),
-				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
-					AddField("Text", appdef.DataKind_string, true).(appdef.IType).QName(),
-				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterResult")).
-					AddField("Res", appdef.DataKind_string, true).(appdef.IType).QName(),
+				qNameCmdGreeter,
 				func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 					text := args.ArgumentObject.AsString("Text")
 					var rr = &greeterRR{text: text}

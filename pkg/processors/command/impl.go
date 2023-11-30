@@ -15,6 +15,7 @@ import (
 	"time"
 
 	ibus "github.com/untillpro/airs-ibus"
+	"github.com/untillpro/goutils/iterate"
 	"github.com/untillpro/goutils/logger"
 	"golang.org/x/exp/maps"
 
@@ -39,12 +40,12 @@ func (cm *implICommandMessage) WSID() istructs.WSID               { return cm.ws
 func (cm *implICommandMessage) Sender() interface{}               { return cm.sender }
 func (cm *implICommandMessage) PartitionID() istructs.PartitionID { return cm.partitionID }
 func (cm *implICommandMessage) RequestCtx() context.Context       { return cm.requestCtx }
-func (cm *implICommandMessage) Resource() istructs.IResource      { return cm.resource }
+func (cm *implICommandMessage) Command() appdef.ICommand          { return cm.command }
 func (cm *implICommandMessage) Token() string                     { return cm.token }
 func (cm *implICommandMessage) Host() string                      { return cm.host }
 
 func NewCommandMessage(requestCtx context.Context, body []byte, appQName istructs.AppQName, wsid istructs.WSID, sender interface{},
-	partitionID istructs.PartitionID, resource istructs.IResource, token string, host string) ICommandMessage {
+	partitionID istructs.PartitionID, command appdef.ICommand, token string, host string) ICommandMessage {
 	return &implICommandMessage{
 		body:        body,
 		appQName:    appQName,
@@ -52,7 +53,7 @@ func NewCommandMessage(requestCtx context.Context, body []byte, appQName istruct
 		sender:      sender,
 		partitionID: partitionID,
 		requestCtx:  requestCtx,
-		resource:    resource,
+		command:     command,
 		token:       token,
 		host:        host,
 	}
@@ -111,10 +112,10 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (
 
 func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	res := cmd.cmdFunc.ResultType()
-	if res != appdef.NullQName {
+	res := cmd.cmdMes.Command().Result()
+	if res != nil {
 		cfg := cmdProc.cfgs[cmd.cmdMes.AppQName()]
-		cmd.cmdResultBuilder = istructsmem.NewIObjectBuilder(cfg, res)
+		cmd.cmdResultBuilder = istructsmem.NewIObjectBuilder(cfg, res.QName())
 	}
 	return nil
 }
@@ -158,12 +159,11 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 	}
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		ws := ap.getWorkspace(event.Workspace())
-		_ = event.CUDs(func(rec istructs.ICUDRow) error { // no errors to return
+		event.CUDs(func(rec istructs.ICUDRow) {
 			if rec.IsNew() {
 				t := cmd.AppDef().Type(rec.QName())
 				ws.idGenerator.UpdateOnSync(rec.ID(), t)
 			}
-			return nil
 		})
 		ao := event.ArgumentObject()
 		if cmd.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
@@ -214,24 +214,24 @@ func getWSDesc(_ context.Context, work interface{}) (err error) {
 func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	wsDesc := work.(*cmdWorkpiece).wsDesc
-	funcQName := cmd.cmdMes.Resource().(istructs.ICommandFunction).QName()
+	cmdQName := cmd.cmdMes.Command().QName()
 	if coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
 		return nil
 	}
-	if funcQName == workspacemgmt.QNameCommandCreateWorkspace ||
-		funcQName == workspacemgmt.QNameCommandCreateWorkspaceID || // happens on creating a child of an another workspace
-		funcQName == builtin.QNameCommandInit { //nolint
+	if cmdQName == workspacemgmt.QNameCommandCreateWorkspace ||
+		cmdQName == workspacemgmt.QNameCommandCreateWorkspaceID || // happens on creating a child of an another workspace
+		cmdQName == builtin.QNameCommandInit { //nolint
 		return nil
 	}
 	if wsDesc.QName() != appdef.NullQName {
-		if funcQName == blobber.QNameCommandUploadBLOBHelper {
+		if cmdQName == blobber.QNameCommandUploadBLOBHelper {
 			return nil
 		}
 		if wsDesc.AsInt64(workspacemgmt.Field_InitCompletedAtMs) > 0 && len(wsDesc.AsString(workspacemgmt.Field_InitError)) == 0 {
 			cmd.wsInitialized = true
 			return nil
 		}
-		if funcQName == istructs.QNameCommandCUD {
+		if cmdQName == istructs.QNameCommandCUD {
 			if iauthnz.IsSystemPrincipal(cmd.principals, cmd.cmdMes.WSID()) {
 				// system -> allow any CUD to upload template, see https://github.com/voedger/voedger/issues/648
 				return nil
@@ -267,7 +267,7 @@ func getAppStructs(_ context.Context, work interface{}) (err error) {
 
 func limitCallRate(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.appStructs.IsFunctionRateLimitsExceeded(cmd.cmdMes.Resource().QName(), cmd.cmdMes.WSID()) {
+	if cmd.appStructs.IsFunctionRateLimitsExceeded(cmd.cmdMes.Command().QName(), cmd.cmdMes.WSID()) {
 		return coreutils.NewHTTPErrorf(http.StatusTooManyRequests)
 	}
 	return nil
@@ -291,7 +291,7 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work interface{}) (e
 	cmd := work.(*cmdWorkpiece)
 	req := iauthnz.AuthzRequest{
 		OperationKind: iauthnz.OperationKind_EXECUTE,
-		Resource:      cmd.cmdMes.Resource().QName(),
+		Resource:      cmd.cmdMes.Command().QName(),
 	}
 	ok, err := cmdProc.authorizer.Authorize(cmd.appStructs, cmd.principals, req)
 	if err != nil {
@@ -303,15 +303,21 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work interface{}) (e
 	return nil
 }
 
+func getResources(_ context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	cmd.resources = cmd.appStructs.Resources()
+	return nil
+}
+
 func getFunction(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmd.cmdFunc = cmd.cmdMes.Resource().(istructs.ICommandFunction)
-	return
+	cmd.cmdFunc = cmd.resources.QueryResource(cmd.cmdMes.Command().QName()).(istructs.ICommandFunction) // existence is checked already
+	return nil
 }
 
 func unmarshalRequestBody(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdFunc.ParamsType() == istructs.QNameRaw {
+	if cmd.cmdMes.Command().Param() != nil && cmd.cmdMes.Command().Param().QName() == istructs.QNameRaw {
 		cmd.requestData["args"] = map[string]interface{}{
 			processors.Field_RawObject_Body: string(cmd.cmdMes.Body()),
 		}
@@ -332,13 +338,13 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work interface{}) 
 	grebp := istructs.GenericRawEventBuilderParams{
 		HandlingPartition: cmd.cmdMes.PartitionID(),
 		Workspace:         cmd.cmdMes.WSID(),
-		QName:             cmd.cmdFunc.QName(),
+		QName:             cmd.cmdMes.Command().QName(),
 		RegisteredAt:      istructs.UnixMilli(cmdProc.now().UnixMilli()),
 		PLogOffset:        cmdProc.appPartition.nextPLogOffset,
 		WLogOffset:        cmd.workspace.NextWLogOffset,
 	}
 
-	switch cmd.cmdMes.Resource().QName() {
+	switch cmd.cmdMes.Command().QName() {
 	case builtin.QNameCommandInit: // nolint, kept to not to break existing events only
 		cmd.reb = cmd.appStructs.Events().GetSyncRawEventBuilder(
 			istructs.SyncRawEventBuilderParams{
@@ -358,7 +364,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work interface{}) 
 
 func getArgsObject(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdFunc.ParamsType() == appdef.NullQName {
+	if cmd.cmdMes.Command().Param() == nil {
 		return nil
 	}
 	aob := cmd.reb.ArgumentObjectBuilder()
@@ -367,8 +373,7 @@ func getArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"args" field must be an object`)
 		}
-		parsType := cmd.appStructs.AppDef().Type(cmd.cmdFunc.ParamsType())
-		if err = istructsmem.FillObjectFromJSON(args, parsType, aob); err != nil {
+		if err = istructsmem.FillObjectFromJSON(args, cmd.cmdMes.Command().Param(), aob); err != nil {
 			return err
 		}
 	}
@@ -380,7 +385,7 @@ func getArgsObject(_ context.Context, work interface{}) (err error) {
 
 func getUnloggedArgsObject(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdFunc.UnloggedParamsType() == appdef.NullQName {
+	if cmd.cmdMes.Command().UnloggedParam() == nil {
 		return nil
 	}
 	auob := cmd.reb.ArgumentUnloggedObjectBuilder()
@@ -389,8 +394,7 @@ func getUnloggedArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"unloggedArgs" field must be an object`)
 		}
-		unloggedParsType := cmd.appStructs.AppDef().Type(cmd.cmdFunc.UnloggedParamsType())
-		if err = istructsmem.FillObjectFromJSON(unloggedArgs, unloggedParsType, auob); err != nil {
+		if err = istructsmem.FillObjectFromJSON(unloggedArgs, cmd.cmdMes.Command().UnloggedParam(), auob); err != nil {
 			return err
 		}
 	}
@@ -450,9 +454,9 @@ func (cmdProc *cmdProc) validate(ctx context.Context, work interface{}) (err err
 		}
 	}
 	for _, appCUDValidator := range cmd.appStructs.CUDValidators() {
-		err = cmd.rawEvent.CUDs(func(rec istructs.ICUDRow) error {
-			if istructs.ValidatorMatchByQName(appCUDValidator, rec.QName(), cmd.cmdMes.WSID(), cmd.cmdFunc.QName()) {
-				if err := appCUDValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.cmdFunc.QName()); err != nil {
+		err = iterate.ForEachError(cmd.rawEvent.CUDs, func(rec istructs.ICUDRow) error {
+			if istructs.ValidatorMatchByQName(appCUDValidator, rec.QName(), cmd.cmdMes.WSID(), cmd.cmdMes.Command().QName()) {
+				if err := appCUDValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.cmdMes.Command().QName()); err != nil {
 					return err
 				}
 			}

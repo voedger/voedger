@@ -7,7 +7,6 @@ package invite
 import (
 	"net/http"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
@@ -17,9 +16,6 @@ import (
 func provideCmdCancelSentInvite(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdCancelSentInvite,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		execCmdCancelSentInvite(timeFunc),
 	))
 }

@@ -17,9 +17,6 @@ import (
 func provideCmdInitiateInvitationByEMail(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdInitiateInvitationByEMail,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		execCmdInitiateInvitationByEMail(timeFunc),
 	))
 }

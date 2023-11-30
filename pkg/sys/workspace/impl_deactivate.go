@@ -30,9 +30,6 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, tokensAPI itoken
 	// target app, target WSID
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdInitiateDeactivateWorkspace,
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		cmdInitiateDeactivateWorkspaceExec,
 	))
 
@@ -40,9 +37,6 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, tokensAPI itoken
 	// owner app, owner WSID
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivated"),
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		cmdOnWorkspaceDeactivatedExec,
 	))
 
@@ -50,9 +44,6 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, tokensAPI itoken
 	// target app, profile WSID
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivated"),
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		cmdOnJoinedWorkspaceDeactivateExec,
 	))
 
@@ -60,9 +51,6 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, tokensAPI itoken
 	// ownerApp/ownerWSID
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "OnChildWorkspaceDeactivated"),
-		appdef.NullQName,
-		appdef.NullQName,
-		appdef.NullQName,
 		cmdOnChildWorkspaceDeactivatedExec,
 	))
 
