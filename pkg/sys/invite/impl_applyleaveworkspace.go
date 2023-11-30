@@ -86,7 +86,7 @@ func applyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFede
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, rec.ID(), State_Left, timeFunc().UnixMilli()),
 				coreutils.WithAuthorizeBy(token))
 
-			return nil
+			return err
 		})
 	}
 }
