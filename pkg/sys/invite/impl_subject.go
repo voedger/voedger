@@ -5,6 +5,7 @@
 package invite
 
 import (
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -18,7 +19,7 @@ func applyViewSubjectsIdx(partition istructs.PartitionID) istructs.Projector {
 }
 
 func viewSubjectsIdxProjector(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
-	return event.CUDs(func(cdocSubject istructs.ICUDRow) error {
+	return iterate.ForEachError(event.CUDs, func(cdocSubject istructs.ICUDRow) error {
 		if cdocSubject.QName() != QNameCDocSubject || !cdocSubject.IsNew() {
 			return nil
 		}

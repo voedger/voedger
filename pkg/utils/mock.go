@@ -45,8 +45,8 @@ type MockPLogEvent struct {
 func (m *MockPLogEvent) ArgumentObject() istructs.IObject {
 	return m.Called().Get(0).(istructs.IObject)
 }
-func (m *MockPLogEvent) CUDs(cb func(rec istructs.ICUDRow) error) (err error) {
-	return m.Called(cb).Error(0)
+func (m *MockPLogEvent) CUDs(cb func(rec istructs.ICUDRow)) {
+	m.Called(cb)
 }
 func (m *MockPLogEvent) RegisteredAt() istructs.UnixMilli {
 	return m.Called().Get(0).(istructs.UnixMilli)
@@ -338,14 +338,14 @@ type MockRawEvent struct {
 	mock.Mock
 }
 
-func (m *MockRawEvent) QName() appdef.QName                            { return m.Called().Get(0).(appdef.QName) }
-func (m *MockRawEvent) ArgumentObject() istructs.IObject               { return m.Called().Get(0).(istructs.IObject) }
-func (m *MockRawEvent) CUDs(cb func(rec istructs.ICUDRow) error) error { return m.Called(cb).Error(0) }
-func (m *MockRawEvent) SyncedAt() istructs.UnixMilli                   { return m.Called().Get(0).(istructs.UnixMilli) }
-func (m *MockRawEvent) Synced() bool                                   { return m.Called().Bool(0) }
-func (m *MockRawEvent) PLogOffset() istructs.Offset                    { return m.Called().Get(0).(istructs.Offset) }
-func (m *MockRawEvent) Workspace() istructs.WSID                       { return m.Called().Get(0).(istructs.WSID) }
-func (m *MockRawEvent) WLogOffset() istructs.Offset                    { return m.Called().Get(0).(istructs.Offset) }
+func (m *MockRawEvent) QName() appdef.QName                { return m.Called().Get(0).(appdef.QName) }
+func (m *MockRawEvent) ArgumentObject() istructs.IObject   { return m.Called().Get(0).(istructs.IObject) }
+func (m *MockRawEvent) CUDs(cb func(rec istructs.ICUDRow)) { m.Called(cb) }
+func (m *MockRawEvent) SyncedAt() istructs.UnixMilli       { return m.Called().Get(0).(istructs.UnixMilli) }
+func (m *MockRawEvent) Synced() bool                       { return m.Called().Bool(0) }
+func (m *MockRawEvent) PLogOffset() istructs.Offset        { return m.Called().Get(0).(istructs.Offset) }
+func (m *MockRawEvent) Workspace() istructs.WSID           { return m.Called().Get(0).(istructs.WSID) }
+func (m *MockRawEvent) WLogOffset() istructs.Offset        { return m.Called().Get(0).(istructs.Offset) }
 func (m *MockRawEvent) RegisteredAt() istructs.UnixMilli {
 	return m.Called().Get(0).(istructs.UnixMilli)
 }

@@ -56,16 +56,10 @@ func (s *wLogStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string,
 	obj["QName"] = value.event.QName().String()
 	obj["ArgumentObject"] = coreutils.ObjectToMap(value.event.ArgumentObject(), s.appDefFunc())
 	cc := make([]map[string]interface{}, 0)
-	err := value.event.CUDs(func(rec istructs.ICUDRow) (err error) {
+	value.event.CUDs(func(rec istructs.ICUDRow) {
 		cudRowMap := cudRowToMap(rec, s.appDefFunc)
 		cc = append(cc, cudRowMap)
-		return
 	})
-	if err != nil {
-		//no error returns
-		// notest
-		return "", err
-	}
 	obj["CUDs"] = cc
 	obj[Field_RegisteredAt] = value.event.RegisteredAt()
 	obj["Synced"] = value.event.Synced()
