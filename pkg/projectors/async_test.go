@@ -352,7 +352,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	attempts := 0
 
 	factory := func(partition istructs.PartitionID) istructs.Projector {
-		return istructs.Projector{Name: name, NonBuffered: true, Func: func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+		return istructs.Projector{Name: name /*NonBuffered: true, */, Func: func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 			if event.Workspace() == 1002 {
 				if attempts == 0 {
 					attempts++
@@ -674,7 +674,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	projectorFactory := func(partition istructs.PartitionID) istructs.Projector {
-		return istructs.Projector{Name: incrementorName, NonBuffered: true, Func: incrementor}
+		return istructs.Projector{Name: incrementorName,/* NonBuffered: true,*/ Func: incrementor}
 	}
 	actualizer, err := actualizerFactory(conf, projectorFactory)
 	require.NoError(err)
@@ -742,7 +742,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 	require := require.New(t)
 
 	cmdQName := appdef.NewQName("pkg", "test")
-	projectorFilter := appdef.NewQName("pkg", "fake")
+	// projectorFilter := appdef.NewQName("pkg", "fake")
 	const totalPartitions = 40
 	const projectorsPerPartition = 5
 	const eventsPerPartition = 10000
@@ -809,9 +809,9 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 				projectorFactory := func(partition istructs.PartitionID) istructs.Projector {
 					return istructs.Projector{
 						Name:         incrementorName,
-						NonBuffered:  true,
+						// NonBuffered:  true,
 						Func:         incrementor,
-						EventsFilter: []appdef.QName{projectorFilter},
+						// EventsFilter: []appdef.QName{projectorFilter},
 					}
 				}
 				actualizer, err := actualizerFactory(conf, projectorFactory)
@@ -907,7 +907,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	require := require.New(t)
 
 	cmdQName := appdef.NewQName("pkg", "test")
-	projectorFilter := appdef.NewQName("pkg", "fake")
+	// projectorFilter := appdef.NewQName("pkg", "fake")
 	const totalPartitions = 40
 	const projectorsPerPartition = 5
 	const eventsPerPartition = 20000
@@ -915,6 +915,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	app := appStructsCached(
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideOffsetsDef(appDef)
+			appDef.AddProjector(incrementorName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
@@ -976,7 +977,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 					return istructs.Projector{
 						Name:         incrementorName,
 						Func:         incrementor,
-						EventsFilter: []appdef.QName{projectorFilter},
+						// EventsFilter: []appdef.QName{projectorFilter},
 					}
 				}
 				actualizer, err := actualizerFactory(conf, projectorFactory)

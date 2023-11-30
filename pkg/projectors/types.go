@@ -42,6 +42,10 @@ func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames m
 		return wantErrors
 	}
 
+	if len(triggeringQNames) == 0 {
+		return true
+	}
+
 	if triggeringKinds, ok := triggeringQNames[event.QName()]; ok {
 		if slices.Contains(triggeringKinds, appdef.ProjectorEventKind_Execute) {
 			return true

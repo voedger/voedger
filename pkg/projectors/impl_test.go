@@ -24,6 +24,7 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // Design: Projection Actualizers
@@ -45,10 +46,14 @@ import (
 func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
+	cmdQName := appdef.NewQName("test", "test")
 	app := appStructs(
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
+			appDef.AddCommand(cmdQName)
+			appDef.AddProjector(incrementorName).AddEvent(cmdQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(decrementorName).AddEvent(cmdQName, appdef.ProjectorEventKind_Execute)
 		},
 		nil)
 	actualizerFactory := ProvideSyncActualizerFactory()
@@ -162,8 +167,8 @@ type (
 
 func appStructs(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	appDef := appdef.New()
-	appDef.AddObject(incrementorName)
-	appDef.AddObject(decrementorName)
+	// appDef.AddObject(incrementorName)
+	// appDef.AddObject(decrementorName)
 	if prepareAppDef != nil {
 		prepareAppDef(appDef)
 	}
