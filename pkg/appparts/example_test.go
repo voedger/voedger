@@ -44,36 +44,38 @@ func Example() {
 	}
 	defer cleanupParts()
 
-	report := func(part appparts.IAppPartition, engine appparts.IEngine) {
+	report := func(part appparts.IAppPartition) {
 		fmt.Println(part.App(), "partition", part.ID())
 		part.AppStructs().AppDef().Types(func(t appdef.IType) {
 			if !t.IsSystem() {
 				fmt.Println("-", t, t.Comment())
 			}
 		})
-		fmt.Println("- engine:", engine)
 	}
 
 	fmt.Println("*** Add ver 1 ***")
 
-	appParts.DeployApp(istructs.AppQName_test1_app1, []istructs.PartitionID{1}, appDef_1_v1, MockEngines(2, 2, 2))
-	appParts.DeployApp(istructs.AppQName_test1_app2, []istructs.PartitionID{1}, appDef_2_v1, MockEngines(2, 2, 2))
+	appParts.DeployApp(istructs.AppQName_test1_app1, appDef_1_v1, MockEngines(2, 2, 2))
+	appParts.DeployApp(istructs.AppQName_test1_app2, appDef_2_v1, MockEngines(2, 2, 2))
 
-	p1_1, cmd, err := appParts.Borrow(istructs.AppQName_test1_app1, 1, appparts.ProcKind_Command)
+	appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1})
+	appParts.DeployAppPartitions(istructs.AppQName_test1_app2, []istructs.PartitionID{1})
+
+	a1_v1_p1, err := appParts.Borrow(istructs.AppQName_test1_app1, 1, appparts.ProcKind_Command)
 	if err != nil {
 		panic(err)
 	}
-	defer p1_1.Release()
+	defer a1_v1_p1.Release()
 
-	report(p1_1, cmd)
+	report(a1_v1_p1)
 
-	p2_1, qry, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, appparts.ProcKind_Query)
+	a2_v1_p1, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, appparts.ProcKind_Query)
 	if err != nil {
 		panic(err)
 	}
-	defer p2_1.Release()
+	defer a2_v1_p1.Release()
 
-	report(p2_1, qry)
+	report(a2_v1_p1)
 
 	fmt.Println("*** Update to ver 2 ***")
 
@@ -82,38 +84,34 @@ func Example() {
 	appConfigs.AddConfig(istructs.AppQName_test1_app1, appDef_1_v2)
 	appConfigs.AddConfig(istructs.AppQName_test1_app2, appDef_2_v2)
 
-	appParts.DeployApp(istructs.AppQName_test1_app2, []istructs.PartitionID{1}, appDef_2_v2, MockEngines(2, 2, 2))
-	appParts.DeployApp(istructs.AppQName_test1_app1, []istructs.PartitionID{1}, appDef_1_v2, MockEngines(2, 2, 2))
+	appParts.DeployApp(istructs.AppQName_test1_app2, appDef_2_v2, MockEngines(2, 2, 2))
+	appParts.DeployApp(istructs.AppQName_test1_app1, appDef_1_v2, MockEngines(2, 2, 2))
 
-	p2_2, prj, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, appparts.ProcKind_Projector)
+	a2_v2_p1, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, appparts.ProcKind_Projector)
 	if err != nil {
 		panic(err)
 	}
-	defer p2_2.Release()
+	defer a2_v2_p1.Release()
 
-	report(p2_2, prj)
+	report(a2_v2_p1)
 
-	p1_2, cmd, err := appParts.Borrow(istructs.AppQName_test1_app1, 1, appparts.ProcKind_Command)
+	a1_v2_p1, err := appParts.Borrow(istructs.AppQName_test1_app1, 1, appparts.ProcKind_Command)
 	if err != nil {
 		panic(err)
 	}
-	defer p2_2.Release()
+	defer a2_v2_p1.Release()
 
-	report(p1_2, cmd)
+	report(a1_v2_p1)
 
 	// Output:
 	// *** Add ver 1 ***
 	// test1/app1 partition 1
 	// - CDoc «ver.info» app-1 ver.1
-	// - engine: Command
 	// test1/app2 partition 1
 	// - CDoc «ver.info» app-2 ver.1
-	// - engine: Query
 	// *** Update to ver 2 ***
 	// test1/app2 partition 1
 	// - CDoc «ver.info» app-2 ver.2
-	// - engine: Projector
 	// test1/app1 partition 1
 	// - CDoc «ver.info» app-1 ver.2
-	// - engine: Command
 }

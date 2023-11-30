@@ -13,14 +13,14 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type appPartitions struct {
+type apps struct {
 	structs istructs.IAppStructsProvider
 	apps    map[istructs.AppQName]*app
 	mx      sync.RWMutex
 }
 
 func newAppPartitions(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(), err error) {
-	a := &appPartitions{
+	a := &apps{
 		structs: structs,
 		apps:    map[istructs.AppQName]*app{},
 		mx:      sync.RWMutex{},
@@ -28,7 +28,7 @@ func newAppPartitions(structs istructs.IAppStructsProvider) (ap IAppPartitions, 
 	return a, func() {}, err
 }
 
-func (aps *appPartitions) DeployApp(appName istructs.AppQName, partID []istructs.PartitionID, appDef appdef.IAppDef, engines [ProcKind_Count][]IEngine) {
+func (aps *apps) DeployApp(appName istructs.AppQName, appDef appdef.IAppDef, engines [ProcKind_Count][]IEngine) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
@@ -42,30 +42,46 @@ func (aps *appPartitions) DeployApp(appName istructs.AppQName, partID []istructs
 	if err != nil {
 		panic(err)
 	}
-	for _, id := range partID {
-		p := newPartition(a, appDef, appStructs, id, engines)
+
+	if err := a.deploy(appDef, appStructs, engines); err != nil {
+		//notest: deploy now has no errors
+		panic(err)
+	}
+}
+
+func (aps *apps) DeployAppPartitions(appName istructs.AppQName, partIDs []istructs.PartitionID) {
+	aps.mx.Lock()
+	defer aps.mx.Unlock()
+
+	a, ok := aps.apps[appName]
+	if !ok {
+		panic(fmt.Errorf(errAppNotFound, appName, ErrNotFound))
+	}
+
+	for _, id := range partIDs {
+		p := newPartition(a, id)
 		a.parts[id] = p
 	}
 }
 
-func (aps *appPartitions) Borrow(appName istructs.AppQName, partID istructs.PartitionID, proc ProcKind) (IAppPartition, IEngine, error) {
+func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, proc ProcKind) (IAppPartition, error) {
 	aps.mx.RLock()
 	defer aps.mx.RUnlock()
 
 	app, ok := aps.apps[appName]
 	if !ok {
-		return nil, nil, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
+		return nil, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
 	}
 
 	part, ok := app.parts[partID]
 	if !ok {
-		return nil, nil, fmt.Errorf(errPartitionNotFound, appName, partID, ErrNotFound)
+		return nil, fmt.Errorf(errPartitionNotFound, appName, partID, ErrNotFound)
 	}
 
-	borrowed, engine, err := part.borrow(proc)
+	borrowed, err := part.borrow(proc)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return borrowed, engine, nil
+	return borrowed, nil
 }
