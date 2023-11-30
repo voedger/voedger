@@ -34,7 +34,7 @@ func (ctl *appPartitionsController) Run(ctx context.Context) {
 		for id := 0; id < app.NumParts; id++ {
 			ids[id] = istructs.PartitionID(id + 1)
 		}
-		ctl.parts.Deploy(app.Name, ids, app.Def, app.Engines)
+		ctl.parts.DeployApp(app.Name, ids, app.Def, app.Engines)
 	}
 
 	<-ctx.Done()
