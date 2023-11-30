@@ -393,12 +393,10 @@ func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IApp
 				p.Events(func(pe appdef.IProjectorEvent) {
 					if slices.Contains(pe.Kind(), appdef.ProjectorEventKind_ExecuteWithParam) {
 						eventsArgsFilter = append(eventsArgsFilter, pe.On().QName())
-						if len(pe.Kind()) == 1 {
-							// ExecuteWithParam only -> do not add to eventsFilter
-							return
-						}
 					}
-					eventsFilter = append(eventsFilter, pe.On().QName())
+					if slices.Contains(pe.Kind(), appdef.ProjectorEventKind_Execute) {
+						eventsFilter = append(eventsFilter, pe.On().QName())
+					}
 				})
 				factory := func(localProjector appdef.IProjector, appCfgProjectorFactory func(partitionID istructs.PartitionID) istructs.Projector, nonBuffered bool,
 					eventsFilter []appdef.QName, eventsArgsFilter []appdef.QName) func(partition istructs.PartitionID) istructs.Projector {
@@ -414,6 +412,16 @@ func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IApp
 					}
 				}
 				appDefSyncProjectorFactories = append(appDefSyncProjectorFactories, factory(p, appCfgProjectorFactory, nonBuffered, eventsFilter, eventsArgsFilter))
+				// appDefSyncProjectorFactories = append(appDefSyncProjectorFactories, func(partition istructs.PartitionID) istructs.Projector {
+				// 	return istructs.Projector{
+				// 		Name:             p.QName(),
+				// 		Func:             appCfgProjectorFactory(partition).Func,
+				// 		NonBuffered:      nonBuffered,
+				// 		EventsFilter:     eventsFilter,
+				// 		EventsArgsFilter: eventsArgsFilter,
+				// 		HandleErrors:     p.WantErrors(),
+				// 	}
+				// })
 				return nil
 			})
 			if err != nil {

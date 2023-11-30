@@ -60,8 +60,8 @@ func syncActualizerFactory(conf SyncActualizerConf, projection istructs.Projecto
 		pipeline.WireSyncOperator("ErrorHandler", h))
 }
 
-func newSyncBranch(conf SyncActualizerConf, projectorFactoy istructs.ProjectorFactory, service *eventService) (fn pipeline.ForkOperatorOptionFunc, s state.IHostState) {
-	projector := projectorFactoy(conf.Partition)
+func newSyncBranch(conf SyncActualizerConf, projectorFactory istructs.ProjectorFactory, service *eventService) (fn pipeline.ForkOperatorOptionFunc, s state.IHostState) {
+	projector := projectorFactory(conf.Partition)
 	pipelineName := fmt.Sprintf("[%d] %s", conf.Partition, projector.Name)
 	s = state.ProvideSyncActualizerStateFactory()(
 		conf.Ctx,
@@ -71,10 +71,20 @@ func newSyncBranch(conf SyncActualizerConf, projectorFactoy istructs.ProjectorFa
 		conf.N10nFunc,
 		conf.SecretReader,
 		conf.IntentsLimit)
+	iProjector := conf.AppStructs().AppDef().Projector(projector.Name)
+	triggeringQNames := map[appdef.QName][]appdef.ProjectorEventKind{}
+	iProjector.Events(func(pe appdef.IProjectorEvent) {
+		triggeringQNames[pe.On().QName()] = append(triggeringQNames[pe.On().QName()], pe.Kind()...)
+	})
 	fn = pipeline.ForkBranch(pipeline.NewSyncPipeline(conf.Ctx, pipelineName,
 		pipeline.WireFunc("Projector", func(_ context.Context, _ interface{}) (err error) {
-			if !isAcceptable(projector, service.event) {
+			ok, err :=isAcceptable(projector, service.event, iProjector, triggeringQNames)
+			if err != nil {
+				// nolint
 				return err
+			}
+			if !ok {
+				return nil
 			}
 			return projector.Func(service.event, s, s)
 		}),
