@@ -15,6 +15,7 @@ import (
 	"time"
 
 	ibus "github.com/untillpro/airs-ibus"
+	"github.com/untillpro/goutils/iterate"
 	"github.com/untillpro/goutils/logger"
 	"golang.org/x/exp/maps"
 
@@ -158,12 +159,11 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 	}
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		ws := ap.getWorkspace(event.Workspace())
-		_ = event.CUDs(func(rec istructs.ICUDRow) error { // no errors to return
+		event.CUDs(func(rec istructs.ICUDRow) {
 			if rec.IsNew() {
 				t := cmd.AppDef().Type(rec.QName())
 				ws.idGenerator.UpdateOnSync(rec.ID(), t)
 			}
-			return nil
 		})
 		ao := event.ArgumentObject()
 		if cmd.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
@@ -454,7 +454,7 @@ func (cmdProc *cmdProc) validate(ctx context.Context, work interface{}) (err err
 		}
 	}
 	for _, appCUDValidator := range cmd.appStructs.CUDValidators() {
-		err = cmd.rawEvent.CUDs(func(rec istructs.ICUDRow) error {
+		err = iterate.ForEachError(cmd.rawEvent.CUDs, func(rec istructs.ICUDRow) error {
 			if istructs.ValidatorMatchByQName(appCUDValidator, rec.QName(), cmd.cmdMes.WSID(), cmd.cmdMes.Command().QName()) {
 				if err := appCUDValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.cmdMes.Command().QName()); err != nil {
 					return err

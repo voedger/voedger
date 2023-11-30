@@ -74,7 +74,7 @@ func provideRecordsRegistryProjector(cfg *istructsmem.AppConfigType) func(event 
 				return err
 			}
 		}
-		return event.CUDs(func(rec istructs.ICUDRow) error {
+		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			if !rec.IsNew() {
 				return nil
 			}

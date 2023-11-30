@@ -35,19 +35,14 @@ func readWlog(ctx context.Context, WSID istructs.WSID, offset istructs.Offset, c
 		}
 		if f.filter("CUDs") {
 			cuds := make([]map[string]interface{}, 0)
-			err = event.CUDs(func(rec istructs.ICUDRow) error {
+			event.CUDs(func(rec istructs.ICUDRow) {
 				cudData := make(map[string]interface{})
 				cudData["sys.ID"] = rec.ID()
 				cudData["sys.QName"] = rec.QName().String()
 				cudData["IsNew"] = rec.IsNew()
 				cudData["fields"] = coreutils.FieldsToMap(rec, appStructs.AppDef())
 				cuds = append(cuds, cudData)
-				return nil
 			})
-			if err != nil {
-				// notest
-				return err
-			}
 			data["CUDs"] = cuds
 		}
 		if f.filter("RegisteredAt") {

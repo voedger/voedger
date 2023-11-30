@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
@@ -60,14 +61,14 @@ func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
 }
 
 var projectorChildWorkspaceIdx = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return event.CUDs(func(rec istructs.ICUDRow) (err error) {
+	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 		if rec.QName() != authnz.QNameCDocChildWorkspace || !rec.IsNew() {
 			return nil
 		}
 
 		kb, err := s.KeyBuilder(state.View, QNameViewChildWorkspaceIdx)
 		if err != nil {
-			return
+			return err
 		}
 		kb.PutInt32(field_dummy, 1)
 		wsName := rec.AsString(authnz.Field_WSName)
@@ -75,10 +76,10 @@ var projectorChildWorkspaceIdx = func(event istructs.IPLogEvent, s istructs.ISta
 
 		vb, err := intents.NewValue(kb)
 		if err != nil {
-			return
+			return err
 		}
 		vb.PutInt64(Field_ChildWorkspaceID, int64(rec.ID()))
-		return
+		return nil
 	})
 }
 
