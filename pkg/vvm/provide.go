@@ -10,8 +10,6 @@ package vvm
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -19,7 +17,6 @@ import (
 
 	"github.com/google/wire"
 	ibus "github.com/untillpro/airs-ibus"
-	"github.com/untillpro/goutils/iterate"
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/voedger/voedger/pkg/router"
@@ -363,29 +360,59 @@ func (s *switchByAppName) Switch(work interface{}) (branchName string, err error
 func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, mpq MaxPrepareQueriesType, actualizerFactory projectors.SyncActualizerFactory, secretReader isecrets.ISecretReader) commandprocessor.SyncActualizerFactory {
 	return func(vvmCtx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 		actualizers := []pipeline.SwitchOperatorOptionFunc{}
+		// for _, appQName := range vvmApps {
+		// 	appStructs, err := structsProvider.AppStructs(appQName)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
+		// 	appDefSyncProjectorFactories := []istructs.ProjectorFactory{}
+		// 	err = iterate.ForEachError(appStructs.AppDef().Projectors, func(p appdef.IProjector) error {
+		// 		if !p.Sync() {
+		// 			return nil
+		// 		}
+		// 		if p.QName() == appdef.NewQName("registry", "ProjectorLoginIdx") && partitionID == 1 {
+		// 			log.Println()
+		// 		}
+		// 		appCfgProjectorFactory := appStructs.SyncProjectorFactory(p.QName())
+		// 		if appCfgProjectorFactory == nil {
+		// 			return fmt.Errorf("projector %s defined in AppDef but is not defined in AppConfig. Unable to get its func", p.QName())
+		// 		}
+		// 		return nil
+		// 	})
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
+		// 	if len(appDefSyncProjectorFactories) == 0 {
+		// 		actualizers = append(actualizers, pipeline.SwitchBranch(appQName.String(), &pipeline.NOOP{}))
+		// 		continue
+		// 	}
+		// 	conf := projectors.SyncActualizerConf{
+		// 		Ctx: vvmCtx,
+		// 		//TODO это правильно, что постоянную appStrcuts возвращаем? Каждый раз не надо запрашивать у appStructsProvider?
+		// 		AppStructs:   func() istructs.IAppStructs { return appStructs },
+		// 		SecretReader: secretReader,
+		// 		Partition:    partitionID,
+		// 		WorkToEvent: func(work interface{}) istructs.IPLogEvent {
+		// 			return work.(interface{ Event() istructs.IPLogEvent }).Event()
+		// 		},
+		// 		N10nFunc: func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {
+		// 			n10nBroker.Update(in10n.ProjectionKey{
+		// 				App:        appStructs.AppQName(),
+		// 				Projection: view,
+		// 				WS:         wsid,
+		// 			}, offset)
+		// 		},
+		// 		IntentsLimit: builtin.MaxCUDs,
+		// 	}
+		// 	actualizer := actualizerFactory(conf, appDefSyncProjectorFactories[0], appDefSyncProjectorFactories[1:]...)
+		// 	actualizers = append(actualizers, pipeline.SwitchBranch(appQName.String(), actualizer))
+		// }
 		for _, appQName := range vvmApps {
 			appStructs, err := structsProvider.AppStructs(appQName)
 			if err != nil {
 				panic(err)
 			}
-			appDefSyncProjectorFactories := []istructs.ProjectorFactory{}
-			err = iterate.ForEachError(appStructs.AppDef().Projectors, func(p appdef.IProjector) error {
-				if !p.Sync() {
-					return nil
-				}
-				if p.QName() == appdef.NewQName("registry", "ProjectorLoginIdx") && partitionID == 1 {
-					log.Println()
-				}
-				appCfgProjectorFactory := appStructs.SyncProjectorFactory(p.QName())
-				if appCfgProjectorFactory == nil {
-					return fmt.Errorf("projector %s defined in AppDef but is not defined in AppConfig. Unable to get its func", p.QName())
-				}
-				return nil
-			})
-			if err != nil {
-				panic(err)
-			}
-			if len(appDefSyncProjectorFactories) == 0 {
+			if len(appStructs.SyncProjectors()) == 0 {
 				actualizers = append(actualizers, pipeline.SwitchBranch(appQName.String(), &pipeline.NOOP{}))
 				continue
 			}
@@ -407,7 +434,7 @@ func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IApp
 				},
 				IntentsLimit: builtin.MaxCUDs,
 			}
-			actualizer := actualizerFactory(conf, appDefSyncProjectorFactories[0], appDefSyncProjectorFactories[1:]...)
+			actualizer := actualizerFactory(conf, appStructs.SyncProjectors()[0], appStructs.SyncProjectors()[1:]...)
 			actualizers = append(actualizers, pipeline.SwitchBranch(appQName.String(), actualizer))
 		}
 		return pipeline.SwitchOperator(&switchByAppName{}, actualizers[0], actualizers[1:]...)

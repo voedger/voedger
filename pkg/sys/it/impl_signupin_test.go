@@ -23,6 +23,7 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 	loginName1 := vit.NextName()
 	loginName2 := vit.NextName()
 
+	time.Sleep(10 * time.Second)
 	login1 := vit.SignUp(loginName1, "pwd1", istructs.AppQName_test1_app1)
 	login2 := vit.SignUp(loginName2, "pwd2", istructs.AppQName_test1_app1, it.WithClusterID(42))
 
@@ -48,7 +49,7 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 	// читать CDoc<Login> не надо. И вообще, в AppWS делать нечего
 
 	var idOfCDocUserProfile int64
-	t.Run("check CDoc<sys.UserProfile> at profileWSID at target ap at target cluster", func(t *testing.T) {
+	t.Run("check CDoc<sys.UserProfile> at profileWSID at target app at target cluster", func(t *testing.T) {
 		body := `{"args":{"Schema":"sys.UserProfile"},"elements":[{"fields":["sys.ID", "DisplayName"]}]}`
 		resp := vit.PostProfile(prn1, "q.sys.Collection", body)
 		require.Equal("User Name", resp.SectionRow()[1])

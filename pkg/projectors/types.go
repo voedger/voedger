@@ -37,7 +37,7 @@ func (s *asyncActualizerContextState) error() error {
 	return s.err
 }
 
-func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames map[appdef.QName][]appdef.ProjectorEventKind) bool {
+func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames map[appdef.QName][]appdef.ProjectorEventKind, appDef appdef.IAppDef) bool {
 	if event.QName() == istructs.QNameForError {
 		return wantErrors
 	}
@@ -61,7 +61,8 @@ func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames m
 	triggered, _ := iterate.FindFirst(event.CUDs, func(rec istructs.ICUDRow) bool {
 		triggeringKinds, ok := triggeringQNames[rec.QName()]
 		if !ok {
-			return false
+			recType := appDef.Type(rec.QName())
+			triggeringKinds = triggeringQNames[typeKindToGlobalDocQName[recType.Kind()]]
 		}
 		for _, triggerkingKind := range triggeringKinds {
 			switch triggerkingKind {

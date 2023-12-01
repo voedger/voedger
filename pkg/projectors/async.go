@@ -267,7 +267,7 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 	}
 
 	triggeringQNames := triggeringQNames(p.iProjector)
-	if isAcceptable(w.event, p.iProjector.WantErrors(), triggeringQNames) {
+	if isAcceptable(w.event, p.iProjector.WantErrors(), triggeringQNames, p.iProjector.App()) {
 		err = p.projector.Func(w.event, p.state, p.state)
 		if err != nil {
 			return nil, fmt.Errorf("wsid[%d] offset[%d]: %w", w.event.Workspace(), w.event.WLogOffset(), err)

@@ -1045,13 +1045,11 @@ func (as *implIAppStructs) IsFunctionRateLimitsExceeded(appdef.QName, istructs.W
 func (as *implIAppStructs) DescribePackageNames() []string               { panic("") }
 func (as *implIAppStructs) DescribePackage(string) interface{}           { panic("") }
 func (as *implIAppStructs) AsyncProjectors() []istructs.ProjectorFactory { panic("") }
+func (as *implIAppStructs) SyncProjectors() []istructs.ProjectorFactory  { panic("") }
 func (as *implIAppStructs) CUDValidators() []istructs.CUDValidator       { panic("") }
 func (as *implIAppStructs) EventValidators() []istructs.EventValidator   { panic("") }
 func (as *implIAppStructs) WSAmount() istructs.AppWSAmount               { panic("") }
 func (as *implIAppStructs) AppTokens() istructs.IAppTokens               { panic("") }
-func (as *implIAppStructs) SyncProjectorFactory(projectorQName appdef.QName) istructs.ProjectorFactory {
-	panic("")
-}
 
 type implIRecords struct {
 	data map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}

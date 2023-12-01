@@ -58,6 +58,7 @@ type IAppStructs interface {
 	DescribePackage(pkgName string) interface{}
 
 	AsyncProjectors() []ProjectorFactory
+	SyncProjectors() []ProjectorFactory
 
 	CUDValidators() []CUDValidator
 	EventValidators() []EventValidator
@@ -65,9 +66,6 @@ type IAppStructs interface {
 	WSAmount() AppWSAmount
 
 	AppTokens() IAppTokens
-
-	// returns nil if not found
-	SyncProjectorFactory(projectorQName appdef.QName) ProjectorFactory
 }
 
 type IEvents interface {
