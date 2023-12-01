@@ -69,23 +69,6 @@ func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames m
 		}
 	}
 
-
-	// // check for EXECUTE WITH PARAM (some doc of ODoc kind)
-	// if triggeringKinds, ok := triggeringQNames[event.ArgumentObject().QName()]; ok {
-	// 	if slices.Contains(triggeringKinds, appdef.ProjectorEventKind_ExecuteWithParam) {
-	// 		return true
-	// 	}
-	// } else {
-	// 	// check for EXECUTE WITH PARAM (ODoc)
-	// 	argumentTypeKind := appDef.Type(event.ArgumentObject().QName()).Kind()
-	// 	globalQNames := typeKindToGlobalDocQNames[argumentTypeKind]
-	// 	for _, globalQName := range globalQNames {
-	// 		if triggeringKinds, ok := triggeringQNames[globalQName]; ok {
-
-	// 		}
-	// 	}
-	// }
-
 	triggered, _ := iterate.FindFirst(event.CUDs, func(rec istructs.ICUDRow) bool {
 		triggeringKinds, ok := triggeringQNames[rec.QName()]
 		if !ok {

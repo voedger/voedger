@@ -367,43 +367,63 @@ func TestProjector_isAcceptableGlobalDocs(t *testing.T) {
 
 	// triggering global QName -> cud QNames from event -> should trigger or not
 	tests := map[appdef.QName][]map[appdef.QName]bool{
-		// istructs.QNameCDoc: {
-		// 	{
-		// 		qNameCDoc:    true,
-		// 		qNameWDoc:    false,
-		// 		qNameODoc:    false,
-		// 		qNameCRecord: false,
-		// 		qNameWRecord: false,
-		// 		qNameORecord: false,
-		// 	},
-		// },
-		// istructs.QNameWDoc: {
-		// 	{
-		// 		qNameCDoc:    false,
-		// 		qNameWDoc:    true,
-		// 		qNameODoc:    false,
-		// 		qNameCRecord: false,
-		// 		qNameWRecord: false,
-		// 		qNameORecord: false,
-		// 	},
-		// },
-		// istructs.QNameODoc: {
-		// 	{
-		// 		qNameCDoc:    false,
-		// 		qNameWDoc:    false,
-		// 		qNameODoc:    true,
-		// 		qNameCRecord: false,
-		// 		qNameWRecord: false,
-		// 		qNameORecord: false,
-		// 	},
-		// },
-		istructs.QNameCRecord:{
+		istructs.QNameCDoc: {
+			{
+				qNameCDoc:    true,
+				qNameWDoc:    false,
+				qNameODoc:    false,
+				qNameCRecord: false,
+				qNameWRecord: false,
+				qNameORecord: false,
+			},
+		},
+		istructs.QNameWDoc: {
+			{
+				qNameCDoc:    false,
+				qNameWDoc:    true,
+				qNameODoc:    false,
+				qNameCRecord: false,
+				qNameWRecord: false,
+				qNameORecord: false,
+			},
+		},
+		istructs.QNameODoc: {
+			{
+				qNameCDoc:    false,
+				qNameWDoc:    false,
+				qNameODoc:    true,
+				qNameCRecord: false,
+				qNameWRecord: false,
+				qNameORecord: false,
+			},
+		},
+		istructs.QNameCRecord: {
 			{
 				qNameCDoc:    true,
 				qNameWDoc:    false,
 				qNameODoc:    false,
 				qNameCRecord: true,
 				qNameWRecord: false,
+				qNameORecord: false,
+			},
+		},
+		istructs.QNameORecord: {
+			{
+				qNameCDoc:    false,
+				qNameWDoc:    false,
+				qNameODoc:    true,
+				qNameCRecord: false,
+				qNameWRecord: false,
+				qNameORecord: true,
+			},
+		},
+		istructs.QNameWRecord: {
+			{
+				qNameCDoc:    false,
+				qNameWDoc:    true,
+				qNameODoc:    false,
+				qNameCRecord: false,
+				qNameWRecord: true,
 				qNameORecord: false,
 			},
 		},
@@ -421,12 +441,4 @@ func TestProjector_isAcceptableGlobalDocs(t *testing.T) {
 			}
 		}
 	}
-
-	// for _, test := range tests {
-	// 	t.Run(test.name, func(t *testing.T) {
-	// 		for _, event := range test.events {
-	// 			require.Equal(test.want, isAcceptable(event, false, test.triggeringQNames, appDef))
-	// 		}
-	// 	})
-	// }
 }
