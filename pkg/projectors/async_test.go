@@ -22,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/state"
 )
 
 // Design: Projection Actualizers
@@ -283,7 +284,8 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(name).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			// add not-View and not-Record intent to make the projector NonBuffered
+			appDef.AddProjector(name).AddEvent(testQName, appdef.ProjectorEventKind_Execute).AddIntent(state.Http)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
