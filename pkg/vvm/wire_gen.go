@@ -46,7 +46,6 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 	"log"
 	"net/url"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -406,38 +405,6 @@ func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IApp
 				if appCfgProjectorFactory == nil {
 					return fmt.Errorf("projector %s defined in AppDef but is not defined in AppConfig. Unable to get its func", p.QName())
 				}
-				hasIntentsExceptViewAndRecords, _, _ := iterate.FindFirstMap(p.Intents, func(storage appdef.QName, _ appdef.QNames) bool {
-					return storage != state.View && storage != state.Record
-				})
-				hasViewOrRecordsIntentsOnly := !hasIntentsExceptViewAndRecords
-
-				buffered := hasViewOrRecordsIntentsOnly
-				nonBuffered := !buffered
-				eventsFilter := []appdef.QName{}
-				eventsArgsFilter := []appdef.QName{}
-				p.Events(func(pe appdef.IProjectorEvent) {
-					if slices.Contains(pe.Kind(), appdef.ProjectorEventKind_ExecuteWithParam) {
-						eventsArgsFilter = append(eventsArgsFilter, pe.On().QName())
-					}
-					if slices.Contains(pe.Kind(), appdef.ProjectorEventKind_Execute) {
-						eventsFilter = append(eventsFilter, pe.On().QName())
-					}
-				})
-				factory := func(localProjector appdef.IProjector, appCfgProjectorFactory func(partitionID istructs.PartitionID) istructs.Projector, nonBuffered bool,
-					eventsFilter []appdef.QName, eventsArgsFilter []appdef.QName) func(partition istructs.PartitionID) istructs.Projector {
-					return func(partition istructs.PartitionID) istructs.Projector {
-						return istructs.Projector{
-							Name:             localProjector.QName(),
-							Func:             appCfgProjectorFactory(partition).Func,
-							NonBuffered:      nonBuffered,
-							EventsFilter:     eventsFilter,
-							EventsArgsFilter: eventsArgsFilter,
-							HandleErrors:     localProjector.WantErrors(),
-						}
-					}
-				}
-				appDefSyncProjectorFactories = append(appDefSyncProjectorFactories, factory(p, appCfgProjectorFactory, nonBuffered, eventsFilter, eventsArgsFilter))
-
 				return nil
 			})
 			if err != nil {

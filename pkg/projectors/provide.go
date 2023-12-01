@@ -16,9 +16,9 @@ func ProvideSyncActualizerFactory() SyncActualizerFactory {
 	return syncActualizerFactory
 }
 
-// func ProvideOffsetsDef(appDef appdef.IAppDefBuilder) {
-// 	provideOffsetsDefImpl(appDef)
-// }
+func ProvideOffsetsDef(appDef appdef.IAppDefBuilder) {
+	provideOffsetsDefImpl(appDef)
+}
 
 func ProvideViewDef(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc ViewTypeBuilder) {
 	provideViewDefImpl(appDef, qname, buildFunc)

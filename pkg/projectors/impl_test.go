@@ -163,14 +163,6 @@ type (
 	appCfgCallback func(cfg *istructsmem.AppConfigType)
 )
 
-// must be used in tests only. This view is defined in sql in runtime
-func provideOffsetsDefImpl(adb appdef.IAppDefBuilder) {
-	view := adb.AddView(qnameProjectionOffsets)
-	view.KeyBuilder().PartKeyBuilder().AddField(partitionFld, appdef.DataKind_int32)
-	view.KeyBuilder().ClustColsBuilder().AddField(projectorNameFld, appdef.DataKind_QName)
-	view.ValueBuilder().AddField(offsetFld, appdef.DataKind_int64, true)
-}
-
 func appStructs(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	appDef := appdef.New()
 	if prepareAppDef != nil {
