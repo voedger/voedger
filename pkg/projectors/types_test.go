@@ -5,6 +5,7 @@
 package projectors
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -20,6 +21,7 @@ type cud struct {
 }
 
 func TestProjector_isAcceptable(t *testing.T) {
+	require := require.New(t)
 	newEvent := func(eventQName, eventArgsQName appdef.QName, cuds map[appdef.QName]cud) istructs.IPLogEvent {
 		event := &coreutils.MockPLogEvent{}
 		event.On("QName").Return(eventQName)
@@ -39,6 +41,11 @@ func TestProjector_isAcceptable(t *testing.T) {
 	}
 	qNameDoc1 := appdef.NewQName("my", "doc1")
 	qNameDoc2 := appdef.NewQName("my", "doc2")
+	adb := appdef.New()
+	qNameODoc := appdef.NewQName(appdef.SysPackage, "oDoc")
+	adb.AddODoc(qNameODoc)
+	appDef, err := adb.Build()
+	require.NoError(err)
 	tests := []struct {
 		name             string
 		triggeringQNames map[appdef.QName][]appdef.ProjectorEventKind
@@ -82,11 +89,19 @@ func TestProjector_isAcceptable(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "Should accept event args",
+			name: "Should accept event args, doc of kind ODoc",
 			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				istructs.QNameCommand: {appdef.ProjectorEventKind_ExecuteWithParam},
+				qNameODoc: {appdef.ProjectorEventKind_ExecuteWithParam},
 			},
-			events: []istructs.IPLogEvent{newEvent(appdef.NullQName, istructs.QNameCommand, nil)},
+			events: []istructs.IPLogEvent{newEvent(appdef.NullQName, qNameODoc, nil)},
+			want:   true,
+		},
+		{
+			name: "Should accept event args, ODoc",
+			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
+				istructs.QNameODoc: {appdef.ProjectorEventKind_ExecuteWithParam},
+			},
+			events: []istructs.IPLogEvent{newEvent(appdef.NullQName, qNameODoc, nil)},
 			want:   true,
 		},
 		{
@@ -309,8 +324,109 @@ func TestProjector_isAcceptable(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			for _, event := range test.events {
-				require.Equal(t, test.want, isAcceptable(event, test.wantErrors, test.triggeringQNames))
+				require.Equal(test.want, isAcceptable(event, test.wantErrors, test.triggeringQNames, appDef))
 			}
 		})
 	}
+}
+
+func TestProjector_isAcceptableGlobalDocs(t *testing.T) {
+	require := require.New(t)
+	newEvent := func(eventQName, eventArgsQName appdef.QName, cuds map[appdef.QName]cud) istructs.IPLogEvent {
+		event := &coreutils.MockPLogEvent{}
+		event.On("QName").Return(eventQName)
+		event.On("ArgumentObject").Return(&coreutils.TestObject{Name: eventArgsQName})
+		event.On("CUDs", mock.Anything).Run(func(args mock.Arguments) {
+			cb := args.Get(0).(func(cb istructs.ICUDRow))
+			for cudQName, cud := range cuds {
+				cudRow := &coreutils.TestObject{
+					Name:   cudQName,
+					Data:   cud.data,
+					IsNew_: cud.isNew,
+				}
+				cb(cudRow)
+			}
+		})
+		return event
+	}
+	adb := appdef.New()
+	qNameCDoc := appdef.NewQName(appdef.SysPackage, "cDoc")
+	qNameWDoc := appdef.NewQName(appdef.SysPackage, "wDoc")
+	qNameODoc := appdef.NewQName(appdef.SysPackage, "oDoc")
+	qNameCRecord := appdef.NewQName(appdef.SysPackage, "cRecord")
+	qNameWRecord := appdef.NewQName(appdef.SysPackage, "wRecord")
+	qNameORecord := appdef.NewQName(appdef.SysPackage, "oRecord")
+	adb.AddCDoc(qNameCDoc)
+	adb.AddWDoc(qNameWDoc)
+	adb.AddODoc(qNameODoc)
+	adb.AddCRecord(qNameCRecord)
+	adb.AddWRecord(qNameWRecord)
+	adb.AddORecord(qNameORecord)
+	appDef, err := adb.Build()
+	require.NoError(err)
+
+	// triggering global QName -> cud QNames from event -> should trigger or not
+	tests := map[appdef.QName][]map[appdef.QName]bool{
+		// istructs.QNameCDoc: {
+		// 	{
+		// 		qNameCDoc:    true,
+		// 		qNameWDoc:    false,
+		// 		qNameODoc:    false,
+		// 		qNameCRecord: false,
+		// 		qNameWRecord: false,
+		// 		qNameORecord: false,
+		// 	},
+		// },
+		// istructs.QNameWDoc: {
+		// 	{
+		// 		qNameCDoc:    false,
+		// 		qNameWDoc:    true,
+		// 		qNameODoc:    false,
+		// 		qNameCRecord: false,
+		// 		qNameWRecord: false,
+		// 		qNameORecord: false,
+		// 	},
+		// },
+		// istructs.QNameODoc: {
+		// 	{
+		// 		qNameCDoc:    false,
+		// 		qNameWDoc:    false,
+		// 		qNameODoc:    true,
+		// 		qNameCRecord: false,
+		// 		qNameWRecord: false,
+		// 		qNameORecord: false,
+		// 	},
+		// },
+		istructs.QNameCRecord:{
+			{
+				qNameCDoc:    true,
+				qNameWDoc:    false,
+				qNameODoc:    false,
+				qNameCRecord: true,
+				qNameWRecord: false,
+				qNameORecord: false,
+			},
+		},
+	}
+
+	for globalQName, eventCUDQNamesAndWant := range tests {
+		for _, eventCUDQNameAndWant := range eventCUDQNamesAndWant {
+			for eventCUDQName, want := range eventCUDQNameAndWant {
+				event := newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+					eventCUDQName: {isNew: true},
+				})
+				require.Equal(want, isAcceptable(event, false, map[appdef.QName][]appdef.ProjectorEventKind{
+					globalQName: {appdef.ProjectorEventKind_Insert},
+				}, appDef), fmt.Sprintf("global %s, cud %s", globalQName, eventCUDQName))
+			}
+		}
+	}
+
+	// for _, test := range tests {
+	// 	t.Run(test.name, func(t *testing.T) {
+	// 		for _, event := range test.events {
+	// 			require.Equal(test.want, isAcceptable(event, false, test.triggeringQNames, appDef))
+	// 		}
+	// 	})
+	// }
 }

@@ -53,16 +53,49 @@ func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames m
 	}
 
 	if triggeringKinds, ok := triggeringQNames[event.ArgumentObject().QName()]; ok {
+		// ON (some doc of kind ODoc)
 		if slices.Contains(triggeringKinds, appdef.ProjectorEventKind_ExecuteWithParam) {
 			return true
 		}
+	} else {
+		// ON (ODoc)
+		argumentTypeKind := appDef.Type(event.ArgumentObject().QName()).Kind()
+		if argumentTypeKind == appdef.TypeKind_ODoc {
+			if triggeringKinds, ok := triggeringQNames[istructs.QNameODoc]; ok {
+				if slices.Contains(triggeringKinds, appdef.ProjectorEventKind_ExecuteWithParam) {
+					return true
+				}
+			}
+		}
 	}
+
+
+	// // check for EXECUTE WITH PARAM (some doc of ODoc kind)
+	// if triggeringKinds, ok := triggeringQNames[event.ArgumentObject().QName()]; ok {
+	// 	if slices.Contains(triggeringKinds, appdef.ProjectorEventKind_ExecuteWithParam) {
+	// 		return true
+	// 	}
+	// } else {
+	// 	// check for EXECUTE WITH PARAM (ODoc)
+	// 	argumentTypeKind := appDef.Type(event.ArgumentObject().QName()).Kind()
+	// 	globalQNames := typeKindToGlobalDocQNames[argumentTypeKind]
+	// 	for _, globalQName := range globalQNames {
+	// 		if triggeringKinds, ok := triggeringQNames[globalQName]; ok {
+
+	// 		}
+	// 	}
+	// }
 
 	triggered, _ := iterate.FindFirst(event.CUDs, func(rec istructs.ICUDRow) bool {
 		triggeringKinds, ok := triggeringQNames[rec.QName()]
 		if !ok {
 			recType := appDef.Type(rec.QName())
-			triggeringKinds = triggeringQNames[typeKindToGlobalDocQName[recType.Kind()]]
+			globalQNames := typeKindToGlobalDocQNames[recType.Kind()]
+			for _, globalQName := range globalQNames {
+				if triggeringKinds, ok = triggeringQNames[globalQName]; ok {
+					break
+				}
+			}
 		}
 		for _, triggerkingKind := range triggeringKinds {
 			switch triggerkingKind {
