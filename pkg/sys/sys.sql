@@ -449,11 +449,11 @@ ABSTRACT WORKSPACE Workspace (
 		COMMAND UpdateJoinedWorkspaceRoles(UpdateJoinedWorkspaceRolesParams);
 		COMMAND DeactivateJoinedWorkspace(DeactivateJoinedWorkspaceParams);
 		QUERY QueryChildWorkspaceByName(QueryChildWorkspaceByNameParams) RETURNS QueryChildWorkspaceByNameResult;
-		PROJECTOR ApplyInvitation AFTER EXECUTE ON (InitiateInvitationByEMail);
+		PROJECTOR ApplyInvitation AFTER EXECUTE ON (InitiateInvitationByEMail) INTENTS(SendMail);
 		PROJECTOR ApplyCancelAcceptedInvite AFTER EXECUTE ON (InitiateCancelAcceptedInvite);
 		PROJECTOR ApplyJoinWorkspace AFTER EXECUTE ON (InitiateJoinWorkspace);
 		PROJECTOR ApplyLeaveWorkspace AFTER EXECUTE ON (InitiateLeaveWorkspace);
-		PROJECTOR ApplyUpdateInviteRoles AFTER EXECUTE ON (InitiateUpdateInviteRoles);
+		PROJECTOR ApplyUpdateInviteRoles AFTER EXECUTE ON (InitiateUpdateInviteRoles) INTENTS(SendMail);
 		SYNC PROJECTOR ProjectorInviteIndex AFTER EXECUTE ON (InitiateInvitationByEMail) INTENTS(View(InviteIndexView));
 		SYNC PROJECTOR ProjectorJoinedWorkspaceIndex AFTER EXECUTE ON (CreateJoinedWorkspace) INTENTS(View(JoinedWorkspaceIndexView));
 		SYNC PROJECTOR ApplyViewSubjectsIdx AFTER INSERT ON (Subject) INTENTS(View(ViewSubjectsIdx));
