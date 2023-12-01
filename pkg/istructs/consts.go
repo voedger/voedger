@@ -40,7 +40,7 @@ var (
 	QNameODoc    = appdef.NewQName(appdef.SysPackage, "ODoc")
 	QNameCRecord = appdef.NewQName(appdef.SysPackage, "CRecord")
 	QNameWRecord = appdef.NewQName(appdef.SysPackage, "WRecord")
-	QNameORecord = appdef.NewQName(appdef.SysPackage, "OCRecord")
+	QNameORecord = appdef.NewQName(appdef.SysPackage, "ORecord")
 )
 
 // *********************************************************************************************************

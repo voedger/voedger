@@ -73,7 +73,7 @@ func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames m
 		triggeringKinds, ok := triggeringQNames[rec.QName()]
 		if !ok {
 			recType := appDef.Type(rec.QName())
-			globalQNames := typeKindToGlobalDocQNames[recType.Kind()]
+			globalQNames := cudTypeKindToGlobalDocQNames[recType.Kind()]
 			for _, globalQName := range globalQNames {
 				if triggeringKinds, ok = triggeringQNames[globalQName]; ok {
 					break

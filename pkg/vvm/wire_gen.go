@@ -385,7 +385,6 @@ func (s *switchByAppName) Switch(work interface{}) (branchName string, err error
 func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, mpq MaxPrepareQueriesType, actualizerFactory projectors.SyncActualizerFactory, secretReader isecrets.ISecretReader) commandprocessor.SyncActualizerFactory {
 	return func(vvmCtx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 		actualizers := []pipeline.SwitchOperatorOptionFunc{}
-
 		for _, appQName := range vvmApps {
 			appStructs, err := structsProvider.AppStructs(appQName)
 			if err != nil {

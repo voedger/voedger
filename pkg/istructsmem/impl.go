@@ -141,12 +141,12 @@ func (app *appStructsType) Buckets() irates.IBuckets {
 	return app.buckets
 }
 
-func (app *appStructsType) AsyncProjectors() []istructs.ProjectorFactory {
-	return app.config.asyncProjectorFactories
-}
-
 func (app *appStructsType) SyncProjectors() []istructs.ProjectorFactory {
 	return app.config.syncProjectorFactories
+}
+
+func (app *appStructsType) AsyncProjectors() []istructs.ProjectorFactory {
+	return app.config.asyncProjectorFactories
 }
 
 func (app *appStructsType) CUDValidators() []istructs.CUDValidator {
@@ -163,10 +163,6 @@ func (app *appStructsType) WSAmount() istructs.AppWSAmount {
 
 func (app *appStructsType) AppTokens() istructs.IAppTokens {
 	return app.appTokens
-}
-
-func (app *appStructsType) SyncProjectorFactory(projectorQName appdef.QName) istructs.ProjectorFactory {
-	return app.config.SyncProjectorFactory(projectorQName)
 }
 
 func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid istructs.WSID) bool {

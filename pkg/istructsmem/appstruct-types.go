@@ -156,17 +156,6 @@ func (cfg *AppConfigType) AddSyncProjectors(sp ...istructs.ProjectorFactory) {
 	cfg.syncProjectorFactories = append(cfg.syncProjectorFactories, sp...)
 }
 
-func (cfg *AppConfigType) SyncProjectorFactory(projectorQName appdef.QName) istructs.ProjectorFactory {
-	// TODO: not omptimized. The better way to get the func by QName will be implemented later
-	for _, f := range cfg.syncProjectorFactories {
-		p :=  f(0)
-		if p.Name == projectorQName {
-			return f
-		}
-	}
-	return nil
-}
-
 func (cfg *AppConfigType) AddAsyncProjectors(ap ...istructs.ProjectorFactory) {
 	cfg.asyncProjectorFactories = append(cfg.asyncProjectorFactories, ap...)
 }

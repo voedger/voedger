@@ -57,8 +57,8 @@ type IAppStructs interface {
 	// Describe package content
 	DescribePackage(pkgName string) interface{}
 
-	AsyncProjectors() []ProjectorFactory
 	SyncProjectors() []ProjectorFactory
+	AsyncProjectors() []ProjectorFactory
 
 	CUDValidators() []CUDValidator
 	EventValidators() []EventValidator

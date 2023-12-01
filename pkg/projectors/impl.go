@@ -9,7 +9,6 @@ package projectors
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -76,9 +75,6 @@ func newSyncBranch(conf SyncActualizerConf, projectorFactory istructs.ProjectorF
 	triggeringQNames := triggeringQNames(iProjector)
 	fn = pipeline.ForkBranch(pipeline.NewSyncPipeline(conf.Ctx, pipelineName,
 		pipeline.WireFunc("Projector", func(_ context.Context, _ interface{}) (err error) {
-			if projector.Name == appdef.NewQName(appdef.SysPackage, "ProjectorCollection") {
-				log.Println()
-			}
 			if !isAcceptable(service.event, iProjector.WantErrors(), triggeringQNames, conf.AppStructs().AppDef()) {
 				return nil
 			}

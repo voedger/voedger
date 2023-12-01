@@ -1044,8 +1044,8 @@ func (as *implIAppStructs) IsFunctionRateLimitsExceeded(appdef.QName, istructs.W
 }
 func (as *implIAppStructs) DescribePackageNames() []string               { panic("") }
 func (as *implIAppStructs) DescribePackage(string) interface{}           { panic("") }
-func (as *implIAppStructs) AsyncProjectors() []istructs.ProjectorFactory { panic("") }
 func (as *implIAppStructs) SyncProjectors() []istructs.ProjectorFactory  { panic("") }
+func (as *implIAppStructs) AsyncProjectors() []istructs.ProjectorFactory { panic("") }
 func (as *implIAppStructs) CUDValidators() []istructs.CUDValidator       { panic("") }
 func (as *implIAppStructs) EventValidators() []istructs.EventValidator   { panic("") }
 func (as *implIAppStructs) WSAmount() istructs.AppWSAmount               { panic("") }
