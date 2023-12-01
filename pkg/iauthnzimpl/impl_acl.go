@@ -328,6 +328,8 @@ var defaultACL = ACL{
 			qNamesPattern: []appdef.QName{
 				qNameCmdUpdateUPLocationRates,
 				qNameQryGetUPFeesOverview,
+				// https://dev.untill.com/projects/#!664876
+				qNameQryIsDirectLocation,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
 		},
