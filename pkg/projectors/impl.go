@@ -129,9 +129,6 @@ func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildF
 	}
 }
 
-func provideOffsetsDefImpl(appDef appdef.IAppDefBuilder) {
-	view := appDef.AddView(qnameProjectionOffsets)
-	view.KeyBuilder().PartKeyBuilder().AddField(partitionFld, appdef.DataKind_int32)
-	view.KeyBuilder().ClustColsBuilder().AddField(projectorNameFld, appdef.DataKind_QName)
-	view.ValueBuilder().AddField(offsetFld, appdef.DataKind_int64, true)
-}
+// func provideOffsetsDefImpl(appDef appdef.IAppDefBuilder) {
+
+// }

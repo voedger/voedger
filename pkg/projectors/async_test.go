@@ -50,7 +50,6 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
-			ProvideOffsetsDef(appDef)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
 			appDef.AddProjector(decrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
@@ -140,7 +139,6 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
-			ProvideOffsetsDef(appDef)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
 		},
@@ -216,7 +214,6 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
-			ProvideOffsetsDef(appDef)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
 		},
@@ -281,13 +278,10 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	require := require.New(t)
 
 	name := appdef.NewQName("test", "failing_projector")
-	docQName := appdef.NewQName("test", "doc")
 	app := appStructs(
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
-			ProvideOffsetsDef(appDef)
-			appDef.AddCDoc(docQName)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(name).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
 		},
@@ -405,7 +399,6 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
-			ProvideOffsetsDef(appDef)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
 		},
@@ -529,7 +522,6 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
-			ProvideOffsetsDef(appDef)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
 		},
@@ -633,7 +625,6 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
-			ProvideOffsetsDef(appDef)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
 		},
@@ -750,7 +741,6 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 
 	app := appStructsCached(
 		func(appDef appdef.IAppDefBuilder) {
-			ProvideOffsetsDef(appDef)
 			appDef.AddCommand(projectorFilter)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).AddEvent(projectorFilter, appdef.ProjectorEventKind_Execute)
@@ -915,7 +905,6 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 
 	app := appStructsCached(
 		func(appDef appdef.IAppDefBuilder) {
-			ProvideOffsetsDef(appDef)
 			appDef.AddCommand(projectorFilter)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).AddEvent(projectorFilter, appdef.ProjectorEventKind_Execute)
