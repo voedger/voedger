@@ -17,12 +17,9 @@ import (
 func TestIDGenerator(t *testing.T) {
 	require := require.New(t)
 	bld := appdef.New()
-	qNameCDoc := appdef.NewQName(appdef.SysPackage, "cdoc")
-	qNameCRecord := appdef.NewQName(appdef.SysPackage, "crecord")
-	qNameWDoc := appdef.NewQName(appdef.SysPackage, "wdoc")
-	bld.AddCDoc(qNameCDoc)
-	bld.AddCRecord(qNameCRecord)
-	bld.AddWDoc(qNameWDoc)
+	bld.AddCDoc(istructs.QNameCDoc)
+	bld.AddCRecord(istructs.QNameCRecord)
+	bld.AddWDoc(istructs.QNameWDoc)
 	appDef, err := bld.Build()
 	require.NoError(err)
 
@@ -31,33 +28,33 @@ func TestIDGenerator(t *testing.T) {
 
 		expectedCRecordID := istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)
 
-		storageID, err := idGen.NextID(1, appDef.Type(qNameCDoc))
+		storageID, err := idGen.NextID(1, appDef.Type(istructs.QNameCDoc))
 		require.NoError(err)
 		require.Equal(expectedCRecordID, storageID)
 
 		expectedCRecordID++
-		storageID, err = idGen.NextID(1, appDef.Type(qNameCDoc))
+		storageID, err = idGen.NextID(1, appDef.Type(istructs.QNameCDoc))
 		require.NoError(err)
 		require.Equal(expectedCRecordID, storageID)
 
 		expectedCRecordID++
-		storageID, err = idGen.NextID(1, appDef.Type(qNameCRecord))
+		storageID, err = idGen.NextID(1, appDef.Type(istructs.QNameCRecord))
 		require.NoError(err)
 		require.Equal(expectedCRecordID, storageID)
 
 		expectedRecordID := istructs.NewRecordID(istructs.FirstBaseRecordID)
-		storageID, err = idGen.NextID(1, appDef.Type(qNameWDoc))
+		storageID, err = idGen.NextID(1, appDef.Type(istructs.QNameWDoc))
 		require.NoError(err)
 		require.Equal(expectedRecordID, storageID)
 
 		expectedRecordID++
-		storageID, err = idGen.NextID(1, appDef.Type(qNameWDoc))
+		storageID, err = idGen.NextID(1, appDef.Type(istructs.QNameWDoc))
 		require.NoError(err)
 		require.Equal(expectedRecordID, storageID)
 	})
 
 	t.Run("UpdateOnSync", func(t *testing.T) {
-		qNames := []appdef.QName{qNameCDoc, qNameWDoc}
+		qNames := []appdef.QName{istructs.QNameCDoc, istructs.QNameWDoc}
 		for _, qName := range qNames {
 			storageID, err := idGen.NextID(1, appDef.Type(qName))
 			require.NoError(err)
@@ -81,12 +78,11 @@ func TestIDGenCollision(t *testing.T) {
 	t.Skip("fixed already. The test is kept as the problem description. The test is actual for commit e.g. https://github.com/voedger/voedger/commit/cbf1fec92fe1ec25fa17b9897261835c7aa6c017")
 	require := require.New(t)
 	idGen := NewIDGenerator()
-	qNameCDoc := appdef.NewQName(appdef.SysPackage, "cdoc")
 	bld := appdef.New()
-	bld.AddCDoc(qNameCDoc)
+	bld.AddCDoc(istructs.QNameCDoc)
 	appDef, err := bld.Build()
 	require.NoError(err)
-	tp := appDef.Type(qNameCDoc)
+	tp := appDef.Type(istructs.QNameCDoc)
 
 	// server starts, 9999999999 record is met
 	storedRecID := istructs.RecordID(9999999999)
