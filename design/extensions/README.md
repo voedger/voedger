@@ -24,15 +24,15 @@ IExtensionIO ||--|| IIntents: "includes"
 ### 1.1. Engine Factories (one per engine kind)
 
 ```go
-func EngineFactory func() IEngine
-
-func BuiltinEngineFactory(Funcs map[QName]BuiltinExtFunc) EngineFactory
-func WasmEngineFactory(ModuleURLs map[string]string) EngineFactory
 
 type BuiltinExtFunc func(io ExtensionIO) error
+type BuiltInFuncs map[QName]BuiltinExtFunc
+
+func BuiltinEngineFactory(funcs BuiltInFuncs, num int) []IEngine
+func WasmEngineFactory(packageNameToPath map[string]string, num int) []IEngine
 
 type IEngine interface {
-    Invoke(Name QName, Io ExtensionIO) (err error)
+    Invoke(Name QName, io ExtensionIO) (err error)
 }
 ```
 
