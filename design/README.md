@@ -139,6 +139,10 @@ flowchart TD
     Command {
         Type   appdef_ICommand
     }   
+    Extension {
+      QName QName
+      Engine ExtensionEngineKind
+    }
     IAppPartition {
         Release() method
     }       
@@ -156,9 +160,12 @@ flowchart TD
     CommandProcessor ||..|| Command: "executes"
     QueryProcessor ||..|| Query: "executes"
 
-    Command ||..|| IAppPartition: "taken from"
-    Query ||..|| IAppPartition: "taken from"
-    Projector ||..|| IAppPartition: "taken from"
+    Projector ||..|| Extension: "is"
+    Command ||..|| Extension: "is"
+    Query ||..|| Extension: "is"
+
+    Extension ||..|| IAppPartition: "taken from"
+
 
     IAppPartition ||..|| IAppPartitions: "borrowed from"
 ```
@@ -217,14 +224,15 @@ type BuiltInExtFuncs map[QName]BuiltInExtFunc
 func WasmEngineFactory(packageNameToPath map[string]string, num int) []IEngine
 
 type IEngine interface {
-    Invoke(Name QName, Io ExtensionIO) (err error)
+    Invoke(ExtName QName, Io IExtensionIO) (err error)
 }
 ```
 
 #### Execute Extentions
 ```go
 type IAppPartition interface {
-    Invoke(extensionName QName, io ExtensionIO) (err error)
+    // Processor constructs and provides ExtensionIO
+    Invoke(extensionName QName, io IExtensionIO) (err error)
 }
 ```
 
