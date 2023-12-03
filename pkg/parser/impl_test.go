@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 //go:embed sql_example_app/pmain/*.sql
@@ -158,9 +157,9 @@ func Test_BasicUsage(t *testing.T) {
 		require.Contains(k, appdef.ProjectorEventKind_Deactivate)
 		switch eventsCount {
 		case 1:
-			require.Equal(istructs.QNameCRecord, on)
+			require.Equal(appdef.NewQName("sys", "CRecord"), on)
 		case 2:
-			require.Equal(istructs.QNameWRecord, on)
+			require.Equal(appdef.NewQName("sys", "WRecord"), on)
 		}
 	})
 	require.Equal(2, eventsCount)

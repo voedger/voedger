@@ -23,8 +23,10 @@ import (
 func provideAsyncProjectorApplyInvitationFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name: qNameAPApplyInvitation,
-			Func: applyInvitationProjector(timeFunc, federation, appQName, tokens, smtpCfg),
+			Name:         qNameAPApplyInvitation,
+			EventsFilter: []appdef.QName{qNameCmdInitiateInvitationByEMail},
+			Func:         applyInvitationProjector(timeFunc, federation, appQName, tokens, smtpCfg),
+			NonBuffered:  true,
 		}
 	}
 }

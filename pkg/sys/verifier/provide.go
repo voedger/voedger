@@ -20,8 +20,10 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	provideCmdSendEmailVerificationCode(cfg)
 	cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name: qNameAPApplySendEmailVerificationCode,
-			Func: applySendEmailVerificationCode(federation, smtpCfg, timeFunc),
+			Name:         qNameAPApplySendEmailVerificationCode,
+			Func:         applySendEmailVerificationCode(federation, smtpCfg, timeFunc),
+			EventsFilter: []appdef.QName{QNameCommandSendEmailVerificationCode},
+			NonBuffered:  true,
 		}
 	})
 }

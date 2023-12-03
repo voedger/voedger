@@ -22,9 +22,7 @@ type plogEvent struct {
 	wsid       istructs.WSID
 }
 
-var testQName = appdef.NewQName(appdef.SysPackage, "abc")
-
-func (e *plogEvent) ArgumentObject() istructs.IObject     { return istructs.NewNullObject() }
+func (e *plogEvent) ArgumentObject() istructs.IObject     { return nil }
 func (e *plogEvent) Command() istructs.IObject            { return nil }
 func (e *plogEvent) Workspace() istructs.WSID             { return e.wsid }
 func (e *plogEvent) WLogOffset() istructs.Offset          { return e.wlogOffset }
@@ -32,7 +30,7 @@ func (e *plogEvent) SaveWLog() (err error)                { return nil }
 func (e *plogEvent) SaveCUDs() (err error)                { return nil }
 func (e *plogEvent) Release()                             {}
 func (e *plogEvent) Error() istructs.IEventError          { return nil }
-func (e *plogEvent) QName() appdef.QName                  { return testQName }
+func (e *plogEvent) QName() appdef.QName                  { return appdef.NewQName(appdef.SysPackage, "abc") }
 func (e *plogEvent) CUDs(func(rec istructs.ICUDRow))      {}
 func (e *plogEvent) RegisteredAt() istructs.UnixMilli     { return 0 }
 func (e *plogEvent) Synced() bool                         { return false }

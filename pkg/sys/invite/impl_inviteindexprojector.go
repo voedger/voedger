@@ -6,6 +6,7 @@ package invite
 
 import (
 	"github.com/untillpro/goutils/iterate"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -13,8 +14,9 @@ import (
 func provideSyncProjectorInviteIndexFactory() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name: qNameProjectorInviteIndex,
-			Func: inviteIndexProjector,
+			Name:         qNameProjectorInviteIndex,
+			EventsFilter: []appdef.QName{qNameCmdInitiateInvitationByEMail},
+			Func:         inviteIndexProjector,
 		}
 	}
 }

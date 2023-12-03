@@ -19,8 +19,9 @@ import (
 func provideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name: qNameAPApplyLeaveWorkspace,
-			Func: applyLeaveWorkspace(timeFunc, federation, appQName, tokens),
+			Name:         qNameAPApplyLeaveWorkspace,
+			EventsFilter: []appdef.QName{qNameCmdInitiateLeaveWorkspace},
+			Func:         applyLeaveWorkspace(timeFunc, federation, appQName, tokens),
 		}
 	}
 }
