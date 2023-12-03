@@ -181,33 +181,51 @@ type IAppPartitions interface {
 
     appRT ||--|{ appPartitionRT : "has"
 
-    appPartitionRT ||--|| latestVersion : "has"
+    appRT ||--|| latestVersion : "has"
     appPartitionRT ||--|| permanent : "has"
 
     latestVersion ||--|| AppDef : "has"
-    latestVersion  ||--|{ commandsExEnginePool : "has"
-    latestVersion  ||--|{ queryExEnginePool : "has"
-    latestVersion  ||--|{ projectionExEnginePool : "has"
+    latestVersion  ||--|{ commandsExEnginePool : "has one per EngineKind"
+    latestVersion  ||--|{ queryExEnginePool : "has one per EngineKind"
+    latestVersion  ||--|{ projectionExEnginePool : "has one per EngineKind"
     permanent  ||--|| partitionCache: "has"
 
 
     AppDef ||--|{ appdef_IPackage : "has"
-    appdef_IPackage ||--|{ appdef_IEngine : "has one per EngineKind"
+    appdef_IPackage ||..|{ appdef_IEngine: "extensions instantiated by"
 
     appdef_IEngine ||..|| "IAppPartitions_Borrow()": "copied by ref by"
     
-    commandsExEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
-    queryExEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
-    projectionExEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
+    commandsExEnginePool ||..|{ "appdef_IEngine": "provides pool of"
+    queryExEnginePool ||..|{ "appdef_IEngine": "provides pool of"
+    projectionExEnginePool ||..|{ "appdef_IEngine": "provides pool of"
     partitionCache ||..|| "IAppPartitions_Borrow()": "copied by ref by"
 
     "IAppPartitions_Borrow()" ||..|| "IAppPartition": "returns"
 
-    IAppPartition ||--|{ package : "has"
-    package ||--|{ ExtensionEngine : "has one per kind"
-    IAppPartition ||--|{ "Invoke()" : "has something like"
+    IAppPartition ||--|{ "Invoke()" : "may invoke extensions with method"
+```
 
-    "Invoke()" ||..|| ExtensionEngine : "uses"
+#### Construct Pools of Extension Engines
+```go
+// Builtin engines factory
+func BuiltInEngineFactory(funcs BuiltInExtFuncs, num int) []IEngine
+type BuiltInExtFunc func(io ExtensionIO) error
+type BuiltInExtFuncs map[QName]BuiltInExtFunc
+
+// WASM engines factory
+func WasmEngineFactory(packageNameToPath map[string]string, num int) []IEngine
+
+type IEngine interface {
+    Invoke(Name QName, Io ExtensionIO) (err error)
+}
+```
+
+#### Execute Extentions
+```go
+type IAppPartition interface {
+    Invoke(extensionName QName, io ExtensionIO) (err error)
+}
 ```
 
 ### Event Sourcing & CQRS
