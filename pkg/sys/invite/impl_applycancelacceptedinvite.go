@@ -18,8 +18,9 @@ import (
 func provideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name: qNameAPApplyCancelAcceptedInvite,
-			Func: applyCancelAcceptedInvite(timeFunc, federation, appQName, tokens),
+			Name:         qNameAPApplyCancelAcceptedInvite,
+			EventsFilter: []appdef.QName{qNameCmdInitiateCancelAcceptedInvite},
+			Func:         applyCancelAcceptedInvite(timeFunc, federation, appQName, tokens),
 		}
 	}
 }

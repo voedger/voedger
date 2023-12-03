@@ -54,7 +54,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	)
 	cfg.AddSyncProjectors(
 		provideSyncProjectorChildWorkspaceIdxFactory(),
-		provideSyncProjectorWorkspaceIDIdx(),
+		provideAsyncProjectorWorkspaceIDIdx(),
 	)
 }
 
@@ -100,7 +100,7 @@ func provideAsyncProjectorFactoryInvokeCreateWorkspace(federation coreutils.IFed
 }
 
 // sp.sys.WorkspaceIDIdx
-func provideSyncProjectorWorkspaceIDIdx() istructs.ProjectorFactory {
+func provideAsyncProjectorWorkspaceIDIdx() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: QNameProjectorViewWorkspaceIDIdx,

@@ -34,13 +34,6 @@ var (
 
 	// QNameRaw denotes that Function argument comes as a JSON object
 	QNameRaw = appdef.NewQName(appdef.SysPackage, "Raw")
-
-	QNameCDoc    = appdef.NewQName(appdef.SysPackage, "CDoc")
-	QNameWDoc    = appdef.NewQName(appdef.SysPackage, "WDoc")
-	QNameODoc    = appdef.NewQName(appdef.SysPackage, "ODoc")
-	QNameCRecord = appdef.NewQName(appdef.SysPackage, "CRecord")
-	QNameWRecord = appdef.NewQName(appdef.SysPackage, "WRecord")
-	QNameORecord = appdef.NewQName(appdef.SysPackage, "ORecord")
 )
 
 // *********************************************************************************************************

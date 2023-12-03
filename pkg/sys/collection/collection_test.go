@@ -51,17 +51,6 @@ func appConfigs(t *testing.T) (istructsmem.AppConfigsType, istorage.IAppStorageP
 	cfg := cfgs.AddConfig(test.appQName, adb)
 	{
 		Provide(cfg, adb)
-
-		// this should be done in tests only. Runtime -> the projector is defined in sys.sql already
-		adb.AddCDoc(istructs.QNameCDoc)
-		adb.AddODoc(istructs.QNameODoc)
-		adb.AddWDoc(istructs.QNameWDoc)
-		adb.AddCRecord(istructs.QNameCRecord)
-		adb.AddORecord(istructs.QNameORecord)
-		adb.AddWRecord(istructs.QNameWRecord)
-		adb.AddProjector(QNameProjectorCollection).
-			AddEvent(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update).
-			AddIntent(state.View, QNameCollectionView)
 	}
 	{
 		// fill IAppDef with funcs. That is done here manually because we o not use sys.sql here
@@ -164,6 +153,7 @@ func appConfigs(t *testing.T) (istructsmem.AppConfigsType, istorage.IAppStorageP
 // - insert fanta with 2 prices
 // ...then launches Collection actualizer and waits until it reads all the log.
 // Then projection values checked.
+
 func TestBasicUsage_Collection(t *testing.T) {
 	require := require.New(t)
 	appConfigs, asp := appConfigs(t)

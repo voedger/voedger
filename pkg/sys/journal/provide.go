@@ -21,8 +21,9 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 
 	cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name: QNameProjectorWLogDates,
-			Func: wLogDatesProjector,
+			Name:         QNameProjectorWLogDates,
+			Func:         wLogDatesProjector,
+			HandleErrors: true,
 		}
 	})
 }

@@ -60,8 +60,8 @@ func syncActualizerFactory(conf SyncActualizerConf, projection istructs.Projecto
 		pipeline.WireSyncOperator("ErrorHandler", h))
 }
 
-func newSyncBranch(conf SyncActualizerConf, projectorFactory istructs.ProjectorFactory, service *eventService) (fn pipeline.ForkOperatorOptionFunc, s state.IHostState) {
-	projector := projectorFactory(conf.Partition)
+func newSyncBranch(conf SyncActualizerConf, projectorFactoy istructs.ProjectorFactory, service *eventService) (fn pipeline.ForkOperatorOptionFunc, s state.IHostState) {
+	projector := projectorFactoy(conf.Partition)
 	pipelineName := fmt.Sprintf("[%d] %s", conf.Partition, projector.Name)
 	s = state.ProvideSyncActualizerStateFactory()(
 		conf.Ctx,
@@ -71,12 +71,10 @@ func newSyncBranch(conf SyncActualizerConf, projectorFactory istructs.ProjectorF
 		conf.N10nFunc,
 		conf.SecretReader,
 		conf.IntentsLimit)
-	iProjector := conf.AppStructs().AppDef().Projector(projector.Name)
-	triggeringQNames := triggeringQNames(iProjector)
 	fn = pipeline.ForkBranch(pipeline.NewSyncPipeline(conf.Ctx, pipelineName,
 		pipeline.WireFunc("Projector", func(_ context.Context, _ interface{}) (err error) {
-			if !isAcceptable(service.event, iProjector.WantErrors(), triggeringQNames, conf.AppStructs().AppDef()) {
-				return nil
+			if !isAcceptable(projector, service.event) {
+				return err
 			}
 			return projector.Func(service.event, s, s)
 		}),
@@ -84,14 +82,6 @@ func newSyncBranch(conf SyncActualizerConf, projectorFactory istructs.ProjectorF
 			return s.ValidateIntents()
 		})))
 	return
-}
-
-func triggeringQNames(iProjector appdef.IProjector) map[appdef.QName][]appdef.ProjectorEventKind {
-	triggeringQNames := map[appdef.QName][]appdef.ProjectorEventKind{}
-	iProjector.Events(func(pe appdef.IProjectorEvent) {
-		triggeringQNames[pe.On().QName()] = append(triggeringQNames[pe.On().QName()], pe.Kind()...)
-	})
-	return triggeringQNames
 }
 
 type syncErrorHandler struct {
@@ -129,8 +119,8 @@ func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildF
 	}
 }
 
-func provideOffsetsDefImpl(adb appdef.IAppDefBuilder) {
-	view := adb.AddView(qnameProjectionOffsets)
+func provideOffsetsDefImpl(appDef appdef.IAppDefBuilder) {
+	view := appDef.AddView(qnameProjectionOffsets)
 	view.KeyBuilder().PartKeyBuilder().AddField(partitionFld, appdef.DataKind_int32)
 	view.KeyBuilder().ClustColsBuilder().AddField(projectorNameFld, appdef.DataKind_QName)
 	view.ValueBuilder().AddField(offsetFld, appdef.DataKind_int64, true)
