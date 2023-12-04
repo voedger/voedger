@@ -31,6 +31,7 @@ func newCluster() (*clusterType, error) {
 		exists:                false,
 		Draft:                 true,
 		sshKey:                sshKey,
+		SshPort:               sshPort,
 		Cmd:                   newCmd("", ""),
 		SkipStacks:            make([]string, 0),
 		ReplacedAddresses:     make([]string, 0),
@@ -368,6 +369,7 @@ type clusterType struct {
 	Edition               string
 	ActualClusterVersion  string
 	DesiredClusterVersion string   `json:"DesiredClusterVersion,omitempty"`
+	SshPort               string   `json:"SSHPort,omitempty"`
 	Cmd                   *cmdType `json:"Cmd,omitempty"`
 	LastAttemptError      string   `json:"LastAttemptError,omitempty"`
 	SkipStacks            []string `json:"SkipStacks,omitempty"`
@@ -549,6 +551,9 @@ func (c *clusterType) loadFromJSON() error {
 		c.Nodes[i].cluster = c
 	}
 
+	if err == nil {
+		os.Setenv("VOEDGER_NODE_SSH_PORT", c.SshPort)
+	}
 	return err
 }
 
