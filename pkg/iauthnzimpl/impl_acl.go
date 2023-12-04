@@ -350,6 +350,7 @@ var defaultACL = ACL{
 				qNameCmdEnrichPrincipalToken,
 				qNameQryGetAllUPPayouts,
 				qNameQryGetUPInvoiceParties,
+				qNameQryCollection,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsManager}}},
 		},
