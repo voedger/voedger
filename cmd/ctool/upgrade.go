@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/untillpro/goutils/logger"
 )
 
 func newUpgradeCmd() *cobra.Command {
@@ -20,9 +21,10 @@ func newUpgradeCmd() *cobra.Command {
 	}
 
 	upgradeCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	upgradeCmd.MarkPersistentFlagRequired("ssh-key")
-
-	upgradeCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
+	if err := upgradeCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
 
 	return upgradeCmd
 

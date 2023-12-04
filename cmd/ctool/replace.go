@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/untillpro/goutils/logger"
 )
 
 func newReplaceCmd() *cobra.Command {
@@ -18,9 +19,10 @@ func newReplaceCmd() *cobra.Command {
 		RunE:  replace,
 	}
 	replaceCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	replaceCmd.MarkPersistentFlagRequired("ssh-key")
-
-	replaceCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
+	if err := replaceCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
 
 	return replaceCmd
 
