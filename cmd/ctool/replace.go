@@ -12,11 +12,18 @@ import (
 )
 
 func newReplaceCmd() *cobra.Command {
-	return &cobra.Command{
+	replaceCmd := &cobra.Command{
 		Use:   "replace",
 		Short: "Replaces the cluster node",
 		RunE:  replace,
 	}
+	replaceCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+	replaceCmd.MarkPersistentFlagRequired("ssh-key")
+
+	replaceCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
+
+	return replaceCmd
+
 }
 
 func replace(cmd *cobra.Command, arg []string) error {

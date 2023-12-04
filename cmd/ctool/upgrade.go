@@ -13,11 +13,19 @@ import (
 )
 
 func newUpgradeCmd() *cobra.Command {
-	return &cobra.Command{
+	upgradeCmd := &cobra.Command{
 		Use:   "upgrade",
 		Short: "Update the cluster version to the current one",
 		RunE:  upgrade,
 	}
+
+	upgradeCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+	upgradeCmd.MarkPersistentFlagRequired("ssh-key")
+
+	upgradeCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
+
+	return upgradeCmd
+
 }
 
 // versions compare (version format: 0.0.1 or 0.0.1-alfa)

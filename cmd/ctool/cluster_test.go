@@ -191,7 +191,7 @@ func TestCtoolCommands(t *testing.T) {
 	err := deleteClusterJson()
 	require.NoError(err, err)
 
-	// execute the Init command
+	// execute the init command
 	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--test-mode"}, version)
 	require.NoError(err, err)
 
@@ -199,7 +199,7 @@ func TestCtoolCommands(t *testing.T) {
 	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--test-mode"}, version)
 	require.Error(err, err)
 
-	// execute the Replace command
+	// execute the replace command
 	err = execRootCmd([]string{"./ctool", "replace", "db-node-1", "10.0.0.28", "--test-mode"}, version)
 	require.NoError(err, err)
 

@@ -45,6 +45,10 @@ func newInitCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Creates the file cluster.json for cluster",
 	}
+	initCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+	initCmd.MarkPersistentFlagRequired("ssh-key")
+
+	initCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
 
 	initCmd.AddCommand(initCECmd, initSECmd)
 
