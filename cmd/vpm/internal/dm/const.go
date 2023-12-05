@@ -6,5 +6,6 @@
 package dm
 
 const (
-	goModFile = "go.mod"
+	goModFile    = "go.mod"
+	goPathPrefix = "GOPATH="
 )
