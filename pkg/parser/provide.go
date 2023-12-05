@@ -5,7 +5,10 @@
 package parser
 
 import (
+	"errors"
+
 	"github.com/voedger/voedger/pkg/appdef"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // ParseFile parses content of the single file, creates FileSchemaAST and returns pointer to it.
@@ -29,11 +32,12 @@ func BuildPackageSchema(qualifiedPackageName string, asts []*FileSchemaAST) (*Pa
 
 // ParsePackageDir is a helper which parses all SQL schemas from specified FS and returns Package Schema.
 func ParsePackageDir(qualifiedPackageName string, fs IReadFS, subDir string) (*PackageSchemaAST, error) {
-	asts, err := parseFSImpl(fs, subDir)
-	if err != nil {
-		return nil, err
+	asts, errs := parseFSImpl(fs, subDir)
+	packageAst, packageBuildErr := BuildPackageSchema(qualifiedPackageName, asts)
+	if packageBuildErr != nil {
+		errs = append(errs, coreutils.SplitErrors(packageBuildErr)...)
 	}
-	return BuildPackageSchema(qualifiedPackageName, asts)
+	return packageAst, errors.Join(errs...)
 }
 
 // Application-level semantic analysis (e.g. cross-package references)

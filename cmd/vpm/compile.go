@@ -17,6 +17,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/voedger/voedger/cmd/vpm/internal/dm"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/parser"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -69,13 +70,25 @@ func compile(depMan dm.IDependencyManager, dir string) error {
 	packages = append(packages, sysPackageAst...)
 	errs = append(errs, compileSysErrs...)
 
-	if len(errs) == 0 {
-		if _, err := parser.BuildAppSchema(packages); err != nil {
-			return err
+	nonNilPackages := make([]*parser.PackageSchemaAST, 0, len(packages))
+	for _, p := range packages {
+		if p != nil {
+			nonNilPackages = append(nonNilPackages, p)
 		}
 	}
-	if logger.IsVerbose() {
-		logger.Verbose("compilation successful")
+	appAst, err := parser.BuildAppSchema(nonNilPackages)
+	if err != nil {
+		errs = append(errs, coreutils.SplitErrors(err)...)
+	}
+	if appAst != nil {
+		if err := parser.BuildAppDefs(appAst, appdef.New()); err != nil {
+			errs = append(errs, coreutils.SplitErrors(err)...)
+		}
+	}
+	if len(errs) == 0 {
+		if logger.IsVerbose() {
+			logger.Verbose("compiling succeeded")
+		}
 	}
 	return errors.Join(errs...)
 }
@@ -173,7 +186,7 @@ func compileDir(depMan dm.IDependencyManager, dir, qpn string, importedStmts map
 	}
 	packageAst, err := parser.ParsePackageDir(qpn, coreutils.NewPathReader(dir), "")
 	if err != nil {
-		errs = append(errs, splitErrors(err)...)
+		errs = append(errs, coreutils.SplitErrors(err)...)
 	}
 	var compileDepErrs []error
 	var importedPackages []*parser.PackageSchemaAST
@@ -228,11 +241,4 @@ func currentWorkingDir(params compileParams) (string, error) {
 
 type compileParams struct {
 	WorkingDir string
-}
-
-func splitErrors(joinedError error) (errs []error) {
-	if e, ok := joinedError.(interface{ Unwrap() []error }); ok {
-		return e.Unwrap()
-	}
-	return
 }
