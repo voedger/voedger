@@ -144,6 +144,7 @@ func (app *appStructsType) Buckets() irates.IBuckets {
 func (app *appStructsType) SyncProjectors() []istructs.ProjectorFactory {
 	return app.config.syncProjectorFactories
 }
+
 func (app *appStructsType) AsyncProjectors() []istructs.ProjectorFactory {
 	return app.config.asyncProjectorFactories
 }

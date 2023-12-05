@@ -20,10 +20,8 @@ import (
 func provideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         qNameAPApplyUpdateInviteRoles,
-			EventsFilter: []appdef.QName{qNameCmdInitiateUpdateInviteRoles},
-			Func:         applyUpdateInviteRolesProjector(timeFunc, federation, appQName, tokens, smtpCfg),
-			NonBuffered:  true,
+			Name: qNameAPApplyUpdateInviteRoles,
+			Func: applyUpdateInviteRolesProjector(timeFunc, federation, appQName, tokens, smtpCfg),
 		}
 	}
 }
