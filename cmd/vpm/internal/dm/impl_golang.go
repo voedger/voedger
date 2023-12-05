@@ -7,6 +7,7 @@ package dm
 
 import (
 	"fmt"
+	"go/build"
 	"os"
 	osexec "os/exec"
 	"path"
@@ -134,16 +135,9 @@ func getCachePath() (string, error) {
 	if logger.IsVerbose() {
 		logger.Verbose("searching for cache of the packages")
 	}
-	stdOut, _, err := new(exec.PipedExec).Command("go", "env").RunToStrings()
-	if err != nil {
-		return "", err
-	}
-	goEnvs := strings.Split(stdOut, "\n")
-	for _, env := range goEnvs {
-		if strings.HasPrefix(env, goPathPrefix) {
-			goPath := strings.ReplaceAll(strings.TrimPrefix(env, goPathPrefix), "'", "")
-			return path.Join(goPath, "pkg", "mod"), nil
-		}
+	goPath := build.Default.GOPATH
+	if goPath != "" {
+		return path.Join(goPath, "pkg", "mod"), nil
 	}
 	return "", fmt.Errorf("GOPATH environment variable is not defined")
 }
