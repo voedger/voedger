@@ -36,7 +36,10 @@ func newCluster() (*clusterType, error) {
 		SkipStacks:            make([]string, 0),
 		ReplacedAddresses:     make([]string, 0),
 	}
-	cluster.setEnv()
+	if err := cluster.setEnv(); err != nil {
+		return nil, err
+	}
+
 	dir, _ := os.Getwd()
 	cluster.configFileName = filepath.Join(dir, clusterConfFileName)
 	cluster.exists = cluster.loadFromJSON() == nil
