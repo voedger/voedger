@@ -87,16 +87,24 @@ func TestErrorsInCompile(t *testing.T) {
 	require.NoError(err)
 
 	testCases := []struct {
-		name string
-		dir  string
+		name                 string
+		dir                  string
+		expectedErrPositions []string
 	}{
 		{
 			name: "package schema - syntax errors",
 			dir:  fmt.Sprintf("%s/test/myapperr/mypkgerr", tempDir),
+			expectedErrPositions: []string{
+				"schema1.sql:4:33",
+			},
 		},
 		{
 			name: "application schema - syntax errors",
 			dir:  fmt.Sprintf("%s/test/myapperr", tempDir),
+			expectedErrPositions: []string{
+				"schema1.sql:4:33",
+				"schema2.sql:4:5",
+			},
 		},
 	}
 
@@ -107,6 +115,10 @@ func TestErrorsInCompile(t *testing.T) {
 
 			err = execRootCmd([]string{"vpm", "compile", fmt.Sprintf(" -C %s", tc.dir)}, "1.0.0")
 			require.Error(err)
+			errMsg := err.Error()
+			for _, expectedErrPosition := range tc.expectedErrPositions {
+				require.Contains(errMsg, expectedErrPosition)
+			}
 			fmt.Println(err.Error())
 		})
 	}
