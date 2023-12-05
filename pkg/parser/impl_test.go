@@ -577,8 +577,9 @@ func Test_AbstractTables(t *testing.T) {
 		"file1.sql:18:4: projector refers to abstract table AbstractTable",
 		"file1.sql:22:4: projector refers to abstract table AbstractTable",
 		"file1.sql:26:4: projector refers to abstract table AbstractTable",
+		"file1.sql:32:4: nested abstract table AbstractTable",
 		"file1.sql:34:3: use of abstract table AbstractTable",
-		"file1.sql:37:10: nested abstract table Nested",
+		"file1.sql:37:4: nested abstract table Nested",
 	}, "\n"))
 
 }
@@ -600,13 +601,10 @@ func Test_AbstractTables2(t *testing.T) {
 	pkg, err := BuildPackageSchema("test/pkg", []*FileSchemaAST{fs})
 	require.NoError(err)
 
-	packages, err := BuildAppSchema([]*PackageSchemaAST{
+	_, err = BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		pkg,
 	})
-	require.NoError(err)
-
-	err = BuildAppDefs(packages, appdef.New())
 	require.EqualError(err, strings.Join([]string{
 		"file1.sql:7:4: nested abstract table AbstractTable",
 	}, "\n"))
@@ -652,15 +650,12 @@ func Test_PanicUnknownFieldType(t *testing.T) {
 	pkg, err := BuildPackageSchema("test/pkg", []*FileSchemaAST{fs})
 	require.NoError(err)
 
-	packages, err := BuildAppSchema([]*PackageSchemaAST{
+	_, err = BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		pkg,
 	})
-	require.NoError(err)
-
-	err = BuildAppDefs(packages, appdef.New())
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:3:3: asdasd type not supported",
+		"file1.sql:3:3: undefined table: asdasd",
 	}, "\n"))
 
 }
@@ -1898,4 +1893,28 @@ TYPE EmptyType (
 
 	_, err = builder.Build()
 	require.NoError(err)
+}
+
+func Test_EmptyType1(t *testing.T) {
+	require := require.New(t)
+	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+
+APPLICATION registry(
+);
+
+TYPE SomeType (
+	t int321
+);
+
+TABLE SomeTable INHERITS CDoc (
+	t int321
+)
+	`)
+
+	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
+	require.EqualError(err, strings.Join([]string{
+		"source.sql:7:2: undefined type: int321",
+		"source.sql:11:2: undefined table: int321",
+	}, "\n"))
+
 }
