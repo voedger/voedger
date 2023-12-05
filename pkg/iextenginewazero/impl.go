@@ -52,7 +52,7 @@ type wazeroExtEngine struct {
 	funcOnReadValue  api.Function
 
 	ctx  context.Context
-	io   iextengine.IExtentionIO
+	io   iextengine.IExtensionIO
 	exts map[string]api.Function
 }
 
@@ -278,7 +278,7 @@ func (f *wazeroExtEngine) recover() {
 	f.module.Memory().Restore(f.recoverMem)
 }
 
-func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName string, io iextengine.IExtentionIO) (err error) {
+func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName string, io iextengine.IExtensionIO) (err error) {
 
 	f.io = io
 
