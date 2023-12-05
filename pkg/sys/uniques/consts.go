@@ -11,6 +11,7 @@ const (
 	field_ValuesHash = "ValuesHash"
 	field_QName      = "QName"
 	field_Values     = "Values"
+	zeroByte         = byte(0)
 )
 
 var (

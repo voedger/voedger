@@ -197,11 +197,10 @@ func getUniqueKeyValues(rec istructs.IRowReader, uf appdef.IField) (res []byte, 
 }
 
 // notest err
-func buildUniqueViewKeyByValues(kb istructs.IKeyBuilder, qName appdef.QName, uniqueKeyValues []byte) error {
-	kb.PutQName(field_QName, qName)
+func buildUniqueViewKeyByValues(kb istructs.IKeyBuilder, docQName appdef.QName, uniqueKeyValues []byte) {
+	kb.PutQName(field_QName, docQName)
 	kb.PutInt64(field_ValuesHash, coreutils.HashBytes(uniqueKeyValues))
 	kb.PutBytes(field_Values, uniqueKeyValues)
-	return nil
 }
 
 // notest err
@@ -211,7 +210,8 @@ func buildUniqueViewKey(kb istructs.IKeyBuilder, rec istructs.IRowReader, uf app
 		// notest
 		return err
 	}
-	return buildUniqueViewKeyByValues(kb, rec.AsQName(appdef.SystemField_QName), uniqueKeyValues)
+	buildUniqueViewKeyByValues(kb, rec.AsQName(appdef.SystemField_QName), uniqueKeyValues)
+	return nil
 }
 
 type uniqueViewRecord struct {

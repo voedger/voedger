@@ -371,11 +371,11 @@ ABSTRACT WORKSPACE Workspace (
 	) AS RESULT OF ProjectorCollection;
 
 	VIEW Uniques (
-		QName qname NOT NULL,
+		QName qname NOT NULL, -- Doc QName
 		ValuesHash int64 NOT NULL,
-		Values bytes(32768) NOT NULL,
+		Values bytes(65535) NOT NULL,
 		ID ref,
-		PRIMARY KEY ((QName, ValuesHash) Values)
+		PRIMARY KEY ((QName, ValuesHash), Values) -- keep this, no better solution
 	) AS RESULT OF ApplyUniques;
 
 	VIEW ChildWorkspaceIdx (
