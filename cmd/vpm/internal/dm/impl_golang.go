@@ -131,15 +131,11 @@ func checkGoInstalled() error {
 	return nil
 }
 
-func getCachePath() (string, error) {
+func getCachePath() string {
 	if logger.IsVerbose() {
 		logger.Verbose("searching for cache of the packages")
 	}
-	goPath := build.Default.GOPATH
-	if goPath != "" {
-		return path.Join(goPath, "pkg", "mod"), nil
-	}
-	return "", fmt.Errorf("GOPATH environment variable is not defined")
+	return path.Join(build.Default.GOPATH, "pkg", "mod")
 }
 
 func getGoModFile() (*modfile.File, string, error) {
