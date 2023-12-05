@@ -51,6 +51,14 @@ func ErrUndefinedTypeOrOdoc(name DefQName) error {
 	return fmt.Errorf("undefined type or ODoc: %s", name.String())
 }
 
+func ErrUndefinedType(name DefQName) error {
+	return fmt.Errorf("undefined type: %s", name.String())
+}
+
+func ErrUndefinedTable(name DefQName) error {
+	return fmt.Errorf("undefined table: %s", name.String())
+}
+
 func ErrCheckRegexpErr(e error) error {
 	return fmt.Errorf("CHECK regexp error:  %w", e)
 }
