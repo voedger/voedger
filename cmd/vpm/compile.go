@@ -194,7 +194,8 @@ func compileDir(depMan dm.IDependencyManager, dir, qpn string, importedStmts map
 		importedPackages, compileDepErrs = compileDependencies(depMan, packageAst.Ast.Imports, importedStmts)
 		errs = append(errs, compileDepErrs...)
 	}
-	return append([]*parser.PackageSchemaAST{packageAst}, importedPackages...), nil
+	packages = append([]*parser.PackageSchemaAST{packageAst}, importedPackages...)
+	return
 }
 
 func compileDependencies(depMan dm.IDependencyManager, imports []parser.ImportStmt, importedStmts map[string]parser.ImportStmt) (packages []*parser.PackageSchemaAST, errs []error) {
