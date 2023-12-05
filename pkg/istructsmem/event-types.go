@@ -263,8 +263,8 @@ func (ev *eventType) ArgumentObject() istructs.IObject {
 }
 
 // istructs.IAbstractEvent.CUDs
-func (ev *eventType) CUDs(cb func(rec istructs.ICUDRow) error) (err error) {
-	return ev.cud.enumRecs(cb)
+func (ev *eventType) CUDs(cb func(rec istructs.ICUDRow)) {
+	ev.cud.enumRecs(cb)
 }
 
 // istructs.IDbEvent.Error
@@ -419,20 +419,14 @@ func (cud *cudType) empty() bool {
 }
 
 // enumRecs: enumerates changes as IRecords
-func (cud *cudType) enumRecs(cb func(rec istructs.ICUDRow) error) (err error) {
+func (cud *cudType) enumRecs(cb func(rec istructs.ICUDRow)) {
 	for _, rec := range cud.creates {
-		if err = cb(rec); err != nil {
-			return err
-		}
+		cb(rec)
 	}
 
 	for _, rec := range cud.updates {
-		if err = cb(&rec.changes); err != nil { // changed fields only
-			return err
-		}
+		cb(&rec.changes)
 	}
-
-	return nil
 }
 
 // newIDsPlanType is type for ID regeneration plan. Key is raw ID, value is storage ID

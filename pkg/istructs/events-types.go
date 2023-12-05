@@ -50,7 +50,7 @@ type IAbstractEvent interface {
 
 	ArgumentObject() IObject
 
-	CUDs(cb func(rec ICUDRow) error) (err error)
+	CUDs(cb func(rec ICUDRow))
 
 	RegisteredAt() UnixMilli
 	Synced() bool

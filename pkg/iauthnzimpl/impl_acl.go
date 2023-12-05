@@ -328,6 +328,8 @@ var defaultACL = ACL{
 			qNamesPattern: []appdef.QName{
 				qNameCmdUpdateUPLocationRates,
 				qNameQryGetUPFeesOverview,
+				// https://dev.untill.com/projects/#!664876
+				qNameQryIsDirectReseller,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
 		},
@@ -342,9 +344,14 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
-		desc: "grant exec on q.air.GetAllUPPayouts to role air.UntillPaymentsManager",
+		desc: "grant exec on few funcs to role air.UntillPaymentsManager",
 		pattern: PatternType{
-			qNamesPattern:     []appdef.QName{qNameQryGetAllUPPayouts},
+			qNamesPattern: []appdef.QName{
+				qNameCmdEnrichPrincipalToken,
+				qNameQryGetAllUPPayouts,
+				qNameQryGetUPInvoiceParties,
+				qNameQryCollection,
+			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsManager}}},
 		},
 		policy: ACPolicy_Allow,

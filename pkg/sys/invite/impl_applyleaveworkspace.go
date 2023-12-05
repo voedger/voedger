@@ -7,6 +7,7 @@ package invite
 import (
 	"fmt"
 
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -27,35 +28,35 @@ func provideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc coreutils.TimeFunc
 
 func applyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		return event.CUDs(func(rec istructs.ICUDRow) (err error) {
+		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			//TODO additional check that CUD only once?
 			if rec.QName() != qNameCDocInvite {
-				return
+				return nil
 			}
 
 			skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)
 			if err != nil {
-				return
+				return err
 			}
 			skbCDocInvite.PutRecordID(state.Field_ID, rec.ID())
 			svCDocInvite, err := s.MustExist(skbCDocInvite)
 			if err != nil {
-				return
+				return err
 			}
 
 			skbCDocSubject, err := s.KeyBuilder(state.Record, QNameCDocSubject)
 			if err != nil {
-				return
+				return err
 			}
 			skbCDocSubject.PutRecordID(state.Field_ID, svCDocInvite.AsRecordID(field_SubjectID))
 			svCDocSubject, err := s.MustExist(skbCDocSubject)
 			if err != nil {
-				return
+				return err
 			}
 
 			token, err := payloads.GetSystemPrincipalToken(tokens, appQName)
 			if err != nil {
-				return
+				return err
 			}
 
 			//Update subject
@@ -65,7 +66,7 @@ func applyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFede
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID)),
 				coreutils.WithAuthorizeBy(token))
 			if err != nil {
-				return
+				return err
 			}
 
 			//Deactivate joined workspace
@@ -75,7 +76,7 @@ func applyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFede
 				fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
 				coreutils.WithAuthorizeBy(token))
 			if err != nil {
-				return
+				return err
 			}
 
 			//Update invite
@@ -85,7 +86,7 @@ func applyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFede
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, rec.ID(), State_Left, timeFunc().UnixMilli()),
 				coreutils.WithAuthorizeBy(token))
 
-			return
+			return err
 		})
 	}
 }

@@ -69,8 +69,8 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		require := require.New(t)
 		event := new(mockWLogEvent)
 		event.On("CUDs", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(rec istructs.ICUDRow) error)
-			require.NoError(cb(new(mockCUDRow)))
+			cb := args.Get(0).(func(rec istructs.ICUDRow))
+			cb(new(mockCUDRow))
 		})
 		events := &mockEvents{}
 		events.On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).

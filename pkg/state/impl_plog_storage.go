@@ -56,10 +56,9 @@ func (s *pLogStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string,
 	obj["QName"] = value.event.QName().String()
 	obj["ArgumentObject"] = coreutils.ObjectToMap(value.event.ArgumentObject(), s.appDefFunc())
 	cc := make([]map[string]interface{}, 0)
-	_ = value.event.CUDs(func(rec istructs.ICUDRow) (err error) { //no error returns
+	value.event.CUDs(func(rec istructs.ICUDRow) {
 		cudRowMap := cudRowToMap(rec, s.appDefFunc)
 		cc = append(cc, cudRowMap)
-		return
 	})
 	obj["CUDs"] = cc
 	obj[Field_RegisteredAt] = value.event.RegisteredAt()

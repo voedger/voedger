@@ -431,7 +431,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 			t.Run("test PLog event CUDs", func(t *testing.T) {
 				cudCount := 0
-				event.CUDs(func(rec istructs.ICUDRow) error {
+				event.CUDs(func(rec istructs.ICUDRow) {
 					if rec.QName() == test.tablePhotos {
 						require.False(rec.IsNew())
 						require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
@@ -442,17 +442,8 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 						require.Equal(changedRems, rec.AsString(test.remarkIdent))
 					}
 					cudCount++
-					return nil
 				})
 				require.Equal(2, cudCount)
-
-				t.Run("test event CUDs (update) breakable by error", func(t *testing.T) {
-					testError := errors.New("test error")
-					err := event.CUDs(func(rec istructs.ICUDRow) error {
-						return testError
-					})
-					require.ErrorIs(err, testError)
-				})
 			})
 		}
 
@@ -575,14 +566,13 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			defer pLogEvent.Release()
 
 			checked := false
-			pLogEvent.CUDs(func(rec istructs.ICUDRow) error {
+			pLogEvent.CUDs(func(rec istructs.ICUDRow) {
 				if rec.QName() == test.tablePhotos {
 					require.False(rec.IsNew())
 					require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
 					require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 					checked = true
 				}
-				return nil
 			})
 
 			require.True(checked)
@@ -718,29 +708,19 @@ func testDbEvent(t *testing.T, event istructs.IDbEvent) {
 	t.Run("test DBEvent CUDs", func(t *testing.T) {
 		var cuds []istructs.IRowReader
 		cnt := 0
-		err := event.CUDs(func(row istructs.ICUDRow) error {
+		event.CUDs(func(row istructs.ICUDRow) {
 			cuds = append(cuds, row)
 			if cnt == 0 {
 				require.True(row.IsNew())
 				require.Equal(test.tablePhotos, row.QName())
 			}
 			cnt++
-			return nil
 		})
-		require.NoError(err)
 		require.Equal(2, cnt)
 		require.Equal(2, len(cuds))
 		testPhotoRow(t, cuds[0])
 		require.Equal(cuds[0].AsRecordID(appdef.SystemField_ID), cuds[1].AsRecordID(test.photoIdent))
 		require.Equal(test.remarkValue, cuds[1].AsString(test.remarkIdent))
-
-		t.Run("test event CUDs (create) breakable by error", func(t *testing.T) {
-			testErr := errors.New("test error")
-			err := event.CUDs(func(rec istructs.ICUDRow) error {
-				return testErr
-			})
-			require.ErrorIs(err, testErr)
-		})
 	})
 }
 
@@ -993,13 +973,12 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 		t.Run("newly created singleton CDoc must be ok", func(t *testing.T) {
 			recCnt := 0
-			pLogEvent.CUDs(func(rec istructs.ICUDRow) error {
+			pLogEvent.CUDs(func(rec istructs.ICUDRow) {
 				require.Equal(docName, rec.QName())
 				require.Equal(docID, rec.ID())
 				require.True(rec.IsNew())
 				require.Equal(int64(8), rec.AsInt64("option"))
 				recCnt++
-				return nil
 			})
 			require.Equal(1, recCnt)
 		})
@@ -1125,13 +1104,12 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 		t.Run("updated singleton CDoc must be ok", func(t *testing.T) {
 			recCnt := 0
-			pLogEvent.CUDs(func(rec istructs.ICUDRow) error {
+			pLogEvent.CUDs(func(rec istructs.ICUDRow) {
 				require.Equal(docName, rec.QName())
 				require.Equal(docID, rec.ID())
 				require.False(rec.IsNew())
 				require.Equal(int64(888), rec.AsInt64("option"))
 				recCnt++
-				return nil
 			})
 			require.Equal(1, recCnt)
 		})

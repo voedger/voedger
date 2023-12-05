@@ -9,14 +9,23 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/untillpro/goutils/logger"
 )
 
 func newReplaceCmd() *cobra.Command {
-	return &cobra.Command{
+	replaceCmd := &cobra.Command{
 		Use:   "replace",
 		Short: "Replaces the cluster node",
 		RunE:  replace,
 	}
+	replaceCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+	if err := replaceCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
+
+	return replaceCmd
+
 }
 
 func replace(cmd *cobra.Command, arg []string) error {

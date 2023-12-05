@@ -7,6 +7,7 @@
 package collection
 
 import (
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
@@ -58,18 +59,18 @@ func collectionProjector(appDef appdef.IAppDef) func(event istructs.IPLogEvent, 
 			return
 		}
 
-		return event.CUDs(func(rec istructs.ICUDRow) (err error) {
+		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			kind := appDef.Type(rec.QName()).Kind()
 			if kind != appdef.TypeKind_CDoc && kind != appdef.TypeKind_CRecord {
-				return
+				return nil
 			}
 			record, err := is.findRecordByID(rec.ID())
 			if err != nil {
-				return
+				return err
 			}
 			root, err := is.findRootByID(rec.ID())
 			if err != nil {
-				return
+				return err
 			}
 			elementID := record.ID()
 			if record.ID() == root.ID() {
@@ -77,7 +78,7 @@ func collectionProjector(appDef appdef.IAppDef) func(event istructs.IPLogEvent, 
 			}
 			kb, err := newKey(root.QName(), root.ID(), elementID)
 			if err != nil {
-				return
+				return err
 			}
 			return apply(kb, record)
 		})

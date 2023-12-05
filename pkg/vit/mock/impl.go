@@ -25,9 +25,9 @@ type PLogEvent struct {
 	mock.Mock
 }
 
-func (e *PLogEvent) ArgumentObject() istructs.IObject           { return e.Called().Get(0).(istructs.IObject) }
-func (e *PLogEvent) CUDs(cb func(istructs.ICUDRow) error) error { return e.Called(cb).Error(0) }
-func (e *PLogEvent) Workspace() istructs.WSID                   { return e.Called().Get(0).(istructs.WSID) }
+func (e *PLogEvent) ArgumentObject() istructs.IObject { return e.Called().Get(0).(istructs.IObject) }
+func (e *PLogEvent) CUDs(cb func(istructs.ICUDRow))   { e.Called(cb) }
+func (e *PLogEvent) Workspace() istructs.WSID         { return e.Called().Get(0).(istructs.WSID) }
 
 type State struct {
 	istructs.IState

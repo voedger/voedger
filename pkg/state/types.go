@@ -356,9 +356,8 @@ func (v *pLogValue) AsValue(name string) istructs.IStateValue {
 		panic(ErrNotSupported)
 	}
 	sv := &cudsValue{}
-	_ = v.event.CUDs(func(rec istructs.ICUDRow) error {
+	v.event.CUDs(func(rec istructs.ICUDRow) {
 		sv.cuds = append(sv.cuds, rec)
-		return nil
 	})
 	return sv
 }
@@ -400,9 +399,8 @@ func (v *wLogValue) AsValue(name string) istructs.IStateValue {
 		panic(ErrNotSupported)
 	}
 	sv := &cudsValue{}
-	_ = v.event.CUDs(func(rec istructs.ICUDRow) error {
+	v.event.CUDs(func(rec istructs.ICUDRow) {
 		sv.cuds = append(sv.cuds, rec)
-		return nil
 	})
 	return sv
 }
