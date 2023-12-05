@@ -52,3 +52,10 @@ func ServerAddress(port int) string {
 func PartitionID(wsid istructs.WSID, numCommandProcessors CommandProcessorsCount) istructs.PartitionID {
 	return istructs.PartitionID(int(wsid) % int(numCommandProcessors))
 }
+
+func SplitErrors(joinedError error) (errs []error) {
+	if e, ok := joinedError.(interface{ Unwrap() []error }); ok {
+		return e.Unwrap()
+	}
+	return
+}
