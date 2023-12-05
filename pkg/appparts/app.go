@@ -29,13 +29,12 @@ func newApplication(name istructs.AppQName) *app {
 	}
 }
 
-func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, engines [ProcKind_Count][]IEngine) error {
+func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, engines [ProcKind_Count][]IEngine) {
 	a.def = def
 	a.structs = structs
 	for k, ee := range engines {
 		a.engines[k] = pool.New[IEngine](ee)
 	}
-	return nil
 }
 
 type partition struct {
@@ -52,7 +51,7 @@ func newPartition(app *app, id istructs.PartitionID) *partition {
 }
 
 func (p *partition) borrow(proc ProcKind) (*partitionRT, error) {
-	b := newPartitionRT(p, proc)
+	b := newPartitionRT(p)
 
 	if err := b.init(proc); err != nil {
 		return nil, err
@@ -71,7 +70,7 @@ type partitionRT struct {
 	}
 }
 
-func newPartitionRT(part *partition, proc ProcKind) *partitionRT {
+func newPartitionRT(part *partition) *partitionRT {
 	rt := &partitionRT{
 		part:       part,
 		appDef:     part.app.def,

@@ -43,10 +43,7 @@ func (aps *apps) DeployApp(appName istructs.AppQName, appDef appdef.IAppDef, eng
 		panic(err)
 	}
 
-	if err := a.deploy(appDef, appStructs, engines); err != nil {
-		//notest: deploy now has no errors
-		panic(err)
-	}
+	a.deploy(appDef, appStructs, engines)
 }
 
 func (aps *apps) DeployAppPartitions(appName istructs.AppQName, partIDs []istructs.PartitionID) {
