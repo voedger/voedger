@@ -30,11 +30,12 @@ func (ctl *appPartitionsController) Prepare() (err error) {
 func (ctl *appPartitionsController) Run(ctx context.Context) {
 
 	for _, app := range ctl.apps {
+		ctl.parts.DeployApp(app.Name, app.Def, app.Engines)
 		ids := make([]istructs.PartitionID, app.NumParts)
 		for id := 0; id < app.NumParts; id++ {
 			ids[id] = istructs.PartitionID(id + 1)
 		}
-		ctl.parts.Deploy(app.Name, ids, app.Def, app.Engines)
+		ctl.parts.DeployAppPartitions(app.Name, ids)
 	}
 
 	<-ctx.Done()

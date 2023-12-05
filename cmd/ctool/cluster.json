@@ -1,0 +1,45 @@
+{
+  "Edition": "SE",
+  "ActualClusterVersion": "0.0.1-alpha",
+  "DesiredClusterVersion": "0.0.1-alpha",
+  "Nodes": [
+    {
+      "NodeRole": "AppNode",
+      "ActualNodeState": {
+        "Address": "10.0.0.21",
+        "NodeVersion": "0.0.1-alpha"
+      }
+    },
+    {
+      "NodeRole": "AppNode",
+      "ActualNodeState": {
+        "Address": "10.0.0.22",
+        "NodeVersion": "0.0.1-alpha"
+      }
+    },
+    {
+      "NodeRole": "DBNode",
+      "ActualNodeState": {
+        "Address": "10.0.0.28",
+        "NodeVersion": "0.0.1-alpha"
+      }
+    },
+    {
+      "NodeRole": "DBNode",
+      "ActualNodeState": {
+        "Address": "10.0.0.24",
+        "NodeVersion": "0.0.1-alpha"
+      }
+    },
+    {
+      "NodeRole": "DBNode",
+      "ActualNodeState": {
+        "Address": "10.0.0.25",
+        "NodeVersion": "0.0.1-alpha"
+      }
+    }
+  ],
+  "ReplacedAddresses": [
+    "10.0.0.23"
+  ]
+}
