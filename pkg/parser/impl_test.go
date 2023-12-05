@@ -1745,12 +1745,12 @@ func Test_Storages(t *testing.T) {
 	require.ErrorContains(err, "storages are only declared in sys package")
 }
 
-func buildPackage(qn string, sql string) *PackageSchemaAST {
+func buildPackage(sql string) *PackageSchemaAST {
 	fs, err := ParseFile("source.sql", sql)
 	if err != nil {
 		panic(err)
 	}
-	pkg, err := BuildPackageSchema(qn, []*FileSchemaAST{fs})
+	pkg, err := BuildPackageSchema("github.com/voedger/voedger/app1", []*FileSchemaAST{fs})
 	if err != nil {
 		panic(err)
 	}
@@ -1759,7 +1759,7 @@ func buildPackage(qn string, sql string) *PackageSchemaAST {
 
 func Test_OdocCmdArgs(t *testing.T) {
 	require := require.New(t)
-	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+	pkgApp1 := buildPackage(`
 
 	APPLICATION registry(
 	);
@@ -1808,7 +1808,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 
 func Test_TypeContainers(t *testing.T) {
 	require := require.New(t)
-	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+	pkgApp1 := buildPackage(`
 
 APPLICATION registry(
 );
@@ -1872,7 +1872,7 @@ WORKSPACE Workspace1 (
 
 func Test_EmptyType(t *testing.T) {
 	require := require.New(t)
-	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+	pkgApp1 := buildPackage(`
 
 APPLICATION registry(
 );
@@ -1897,7 +1897,7 @@ TYPE EmptyType (
 
 func Test_EmptyType1(t *testing.T) {
 	require := require.New(t)
-	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+	pkgApp1 := buildPackage(`
 
 APPLICATION registry(
 );
