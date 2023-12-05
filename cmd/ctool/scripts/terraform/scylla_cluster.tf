@@ -115,7 +115,7 @@ resource "aws_instance" "node_00" {
     inline = [
     "echo '${var.ssh_private_key}' > /tmp/amazonKey.pem",
     "chmod 755 /tmp/amazonKey.pem",
-    "curl -L https://git.io/vQhTU | bash -s -- --version 1.20",
+    "curl -L https://git.io/vQhTU | bash -s -- --version 1.21.4",
     "git clone https://github.com/voedger/voedger",
     "export GOROOT=$HOME/.go",
     "export PATH=$GOROOT/bin:$PATH",
