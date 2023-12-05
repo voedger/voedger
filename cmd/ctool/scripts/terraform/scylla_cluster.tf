@@ -70,12 +70,21 @@ resource "aws_network_interface" "node_04" {
   }
 }
 
-resource "aws_network_interface" "node_instead" {
+resource "aws_network_interface" "node_instead_00" {
   subnet_id   = aws_subnet.scylla_subnet.id
   private_ips = ["10.0.0.16"]
   security_groups = [aws_security_group.scylla_hosts.id]
   tags = {
-    Name = "node_instead_interface"
+    Name = "node_instead_00_interface"
+  }
+}
+
+resource "aws_network_interface" "node_instead_01" {
+  subnet_id   = aws_subnet.scylla_subnet.id
+  private_ips = ["10.0.0.17"]
+  security_groups = [aws_security_group.scylla_hosts.id]
+  tags = {
+    Name = "node_instead_01_interface"
   }
 }
 
@@ -205,7 +214,7 @@ output "public_ip_node_04" {
   value = aws_instance.node_04.public_ip
 }
 
-resource "aws_instance" "node_instead" {
+resource "aws_instance" "node_instead_00" {
   ami = "ami-0568936c8d2b91c4e"
   instance_type = "i3.large"
   root_block_device {
@@ -214,14 +223,33 @@ resource "aws_instance" "node_instead" {
   }
   placement_group = aws_placement_group.scylla_placement_group.id
   network_interface {
-    network_interface_id = aws_network_interface.node_instead.id
+    network_interface_id = aws_network_interface.node_instead_00.id
     device_index         = 0
   }
   key_name = "amazonKey"
 }
 
-output "public_ip_node_instead" {
-  value = aws_instance.node_instead.public_ip
+output "public_ip_node_instead_00" {
+  value = aws_instance.node_instead_00.public_ip
+}
+
+resource "aws_instance" "node_instead_01" {
+  ami = "ami-0568936c8d2b91c4e"
+  instance_type = "i3.large"
+  root_block_device {
+    volume_size = "30"
+    volume_type = "gp2"
+  }
+  placement_group = aws_placement_group.scylla_placement_group.id
+  network_interface {
+    network_interface_id = aws_network_interface.node_instead_01.id
+    device_index         = 0
+  }
+  key_name = "amazonKey"
+}
+
+output "public_ip_node_instead_01" {
+  value = aws_instance.node_instead_01.public_ip
 }
 
 
