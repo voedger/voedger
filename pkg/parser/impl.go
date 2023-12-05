@@ -59,13 +59,12 @@ func mergeSchemas(mergeFrom, mergeTo *SchemaAST) {
 	mergeTo.Statements = append(mergeTo.Statements, mergeFrom.Statements...)
 }
 
-func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
-	var errs []error
+func parseFSImpl(fs IReadFS, dir string) (schemas []*FileSchemaAST, errs []error) {
 	entries, err := fs.ReadDir(dir)
 	if err != nil {
-		return nil, err
+		return nil, []error{err}
 	}
-	schemas := make([]*FileSchemaAST, 0)
+	//schemas := make([]*FileSchemaAST, 0)
 	for _, entry := range entries {
 		if strings.ToLower(filepath.Ext(entry.Name())) == ".sql" {
 			var fpath string
@@ -90,9 +89,9 @@ func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
 		}
 	}
 	if len(schemas) == 0 {
-		return nil, ErrDirContainsNoSchemaFiles
+		return nil, []error{ErrDirContainsNoSchemaFiles}
 	}
-	return schemas, errors.Join(errs...)
+	return schemas, errs
 }
 
 func buildPackageSchemaImpl(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
@@ -284,15 +283,9 @@ func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 	}
 
 	defineApp(&c)
-	if len(c.errs) > 0 {
-		return nil, errors.Join(c.errs...)
-	}
 
 	for _, p := range packages {
 		preAnalyse(&c, p)
-	}
-	if len(c.errs) > 0 {
-		return nil, errors.Join(c.errs...)
 	}
 
 	for _, p := range packages {

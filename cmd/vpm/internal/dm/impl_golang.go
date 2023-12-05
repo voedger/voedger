@@ -8,11 +8,12 @@ package dm
 import (
 	"fmt"
 	"os"
-	"os/exec"
+	osexec "os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/untillpro/goutils/exec"
 	"github.com/untillpro/goutils/logger"
 	"golang.org/x/mod/modfile"
 )
@@ -45,6 +46,10 @@ func (g *goImpl) LocalPath(depURL string) (localDepPath string, err error) {
 		return "", err
 	}
 	return localDepPath, nil
+}
+
+func (g *goImpl) CachePath() string {
+	return g.cachePath
 }
 
 // parseDepURL slices depURL into pkgURL, subDir and version.
@@ -96,7 +101,7 @@ func matchDepPath(depURL, depPath string) (subDir string, ok bool) {
 	return
 }
 
-func downloadDependencies(goModFilePath string) error {
+func downloadDependencies(goModFilePath string) (err error) {
 	if logger.IsVerbose() {
 		logger.Verbose("downloading dependencies...")
 	}
@@ -111,7 +116,7 @@ func downloadDependencies(goModFilePath string) error {
 	if err := os.Chdir(path.Dir(goModFilePath)); err != nil {
 		return err
 	}
-	return execGoCmd("mod", "download").Run()
+	return new(exec.PipedExec).Command("go", "mod", "download").Run(nil, nil)
 }
 
 func checkGoInstalled() error {
@@ -119,7 +124,7 @@ func checkGoInstalled() error {
 		logger.Verbose("checking out go environment...")
 	}
 	// Check if the "go" executable is in the PATH
-	if _, err := exec.LookPath("go"); err != nil {
+	if _, err := osexec.LookPath("go"); err != nil {
 		return fmt.Errorf("go is required for this application but is not found. Please install Go from https://golang.org/doc/install")
 	}
 	return nil
@@ -129,11 +134,18 @@ func getCachePath() (string, error) {
 	if logger.IsVerbose() {
 		logger.Verbose("searching for cache of the packages")
 	}
-	goPath, ok := os.LookupEnv("GOPATH")
-	if !ok {
-		return "", fmt.Errorf("GOPATH environment variable is not defined")
+	stdOut, _, err := new(exec.PipedExec).Command("go", "env").RunToStrings()
+	if err != nil {
+		return "", err
 	}
-	return path.Join(goPath, "pkg", "mod"), nil
+	goEnvs := strings.Split(stdOut, "\n")
+	for _, env := range goEnvs {
+		if strings.HasPrefix(env, "GOPATH=") {
+			goPath := strings.ReplaceAll(strings.TrimPrefix(env, "GOPATH="), "'", "")
+			return path.Join(goPath, "pkg", "mod"), nil
+		}
+	}
+	return "", fmt.Errorf("GOPATH environment variable is not defined")
 }
 
 func getGoModFile() (*modfile.File, string, error) {
@@ -161,11 +173,4 @@ func getGoModFile() (*modfile.File, string, error) {
 		currentDir = filepath.Dir(currentDir)
 	}
 	return nil, "", fmt.Errorf("%s not found", goModFile)
-}
-
-func execGoCmd(args ...string) *exec.Cmd {
-	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("go %s", strings.Join(args, " ")))
-	}
-	return exec.Command("go", args...)
 }
