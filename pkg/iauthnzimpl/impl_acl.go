@@ -347,10 +347,8 @@ var defaultACL = ACL{
 		desc: "grant exec on few funcs to role air.UntillPaymentsManager",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
-				qNameCmdEnrichPrincipalToken,
 				qNameQryGetAllUPPayouts,
-				qNameQryGetUPInvoiceParties,
-				qNameQryCollection,
+				qNameQryGetUPLocationInvoiceParties,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsManager}}},
 		},

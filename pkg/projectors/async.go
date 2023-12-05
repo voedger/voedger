@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/untillpro/goutils/iterate"
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -97,6 +98,14 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	a.readCtx.ctx, a.readCtx.cancel = context.WithCancel(ctx)
 
+	projector := a.factory(a.conf.Partition)
+	iProjector := a.structs.AppDef().Projector(projector.Name)
+
+	// https://github.com/voedger/voedger/issues/1048
+	hasIntentsExceptViewAndRecord, _, _ := iterate.FindFirstMap(iProjector.Intents, func(storage appdef.QName, _ appdef.QNames) bool {
+		return storage != state.View && storage != state.Record
+	})
+	nonBuffered := hasIntentsExceptViewAndRecord
 	p := &asyncProjector{
 		partition:             a.conf.Partition,
 		aametrics:             a.conf.AAMetrics,
@@ -106,8 +115,10 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		metrics:               a.conf.Metrics,
 		vvmName:               a.conf.VvmName,
 		appQName:              a.conf.AppQName,
+		projector:             projector,
+		iProjector:            iProjector,
+		nonBuffered:           nonBuffered,
 	}
-	p.projector = a.factory(a.conf.Partition)
 
 	err = a.readOffset(p.projector.Name)
 	if err != nil {
@@ -241,6 +252,8 @@ type asyncProjector struct {
 	projErrState          *int32
 	vvmName               string
 	appQName              istructs.AppQName
+	iProjector            appdef.IProjector
+	nonBuffered           bool
 }
 
 func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
@@ -253,7 +266,8 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 		p.aametrics.Set(aaCurrentOffset, p.partition, p.projector.Name, float64(w.pLogOffset))
 	}
 
-	if isAcceptable(p.projector, w.event) {
+	triggeringQNames := triggeringQNames(p.iProjector)
+	if isAcceptable(w.event, p.iProjector.WantErrors(), triggeringQNames, p.iProjector.App()) {
 		err = p.projector.Func(w.event, p.state, p.state)
 		if err != nil {
 			return nil, fmt.Errorf("wsid[%d] offset[%d]: %w", w.event.Workspace(), w.event.WLogOffset(), err)
@@ -269,7 +283,7 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 			return nil, err
 		}
 
-		if readyToFlushBundle || p.projector.NonBuffered {
+		if readyToFlushBundle || p.nonBuffered {
 			return nil, p.flush()
 		}
 	}
