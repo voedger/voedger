@@ -140,8 +140,8 @@ func getCachePath() (string, error) {
 	}
 	goEnvs := strings.Split(stdOut, "\n")
 	for _, env := range goEnvs {
-		if strings.HasPrefix(env, "GOPATH=") {
-			goPath := strings.ReplaceAll(strings.TrimPrefix(env, "GOPATH="), "'", "")
+		if strings.HasPrefix(env, goPathPrefix) {
+			goPath := strings.ReplaceAll(strings.TrimPrefix(env, goPathPrefix), "'", "")
 			return path.Join(goPath, "pkg", "mod"), nil
 		}
 	}
