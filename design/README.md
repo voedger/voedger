@@ -130,23 +130,6 @@ flowchart TD
     
     %% Entities
 
-    Projector{
-        Type   appdef_IProjector
-    }
-    Query{
-        Type   appdef_IQuery
-    }
-    Command {
-        Type   appdef_ICommand
-    }   
-    Extension {
-      QName QName
-      Engine ExtensionEngineKind
-    }
-    IAppPartition {
-        Release() method
-    }       
-
     %% Relations
 
     VVM ||--|{ Processor : "has"
@@ -155,16 +138,11 @@ flowchart TD
     Processor ||--|| QueryProcessor : "can be"
     Processor ||--|| Actualizer : "can be"   
 
+    CommandProcessor ||..|| "Invoke(extName, extIO)": "executes Extension using"
+    QueryProcessor ||..|| "Invoke(extName, extIO)": "executes Extension using"
+    Actualizer ||..|| "Invoke(extName, extIO)": "executes Extension using"
 
-    Actualizer ||..|| Projector: executes
-    CommandProcessor ||..|| Command: "executes"
-    QueryProcessor ||..|| Query: "executes"
-
-    Projector ||..|| Extension: "is"
-    Command ||..|| Extension: "is"
-    Query ||..|| Extension: "is"
-
-    Extension ||..|| IAppPartition: "taken from"
+    "Invoke(extName, extIO)" ||..|| IAppPartition: "method of"
 
 
     IAppPartition ||..|| IAppPartitions: "borrowed from"
@@ -189,13 +167,12 @@ type IAppPartitions interface {
     appRT ||--|{ appPartitionRT : "has"
 
     appRT ||--|| latestVersion : "has"
-    appPartitionRT ||--|| permanent : "has"
+    appPartitionRT ||--|| partitionCache : "has"
 
     latestVersion ||--|| AppDef : "has"
     latestVersion  ||--|{ commandsExEnginePool : "has one per EngineKind"
     latestVersion  ||--|{ queryExEnginePool : "has one per EngineKind"
     latestVersion  ||--|{ projectionExEnginePool : "has one per EngineKind"
-    permanent  ||--|| partitionCache: "has"
 
 
     AppDef ||--|{ appdef_IPackage : "has"
@@ -214,18 +191,37 @@ type IAppPartitions interface {
 ```
 
 #### Construct Pools of Extension Engines
+interfaces:
 ```go
 // Builtin engines factory
-func BuiltInEngineFactory(funcs BuiltInExtFuncs, num int) []IEngine
-type BuiltInExtFunc func(io ExtensionIO) error
-type BuiltInExtFuncs map[QName]BuiltInExtFunc
-
-// WASM engines factory
-func WasmEngineFactory(packageNameToPath map[string]string, num int) []IEngine
-
-type IEngine interface {
-    Invoke(ExtName QName, Io IExtensionIO) (err error)
+type IExtensionEngineFactories interface {
+  QueryFactory(appdef.ExtensionEngineKind) IExtensionEngineFactory
 }
+
+IExtensionEngineFactory {
+  // LocalPath is a path package data can be got from
+  // packageNameToLocalPath is not used for ExtensionEngineKind_BuiltIn
+  New(packageNameToLocalPath map[string]string, numEngines int) []IExtensionEngine
+}
+
+type IExtensionEngine interface {
+    Invoke(extName QName, io IExtensionIO) (err error)
+}
+
+type ExtQName struct {
+    PackageName string // Fully qualified package name
+    ExtName string
+}
+
+type BuiltInExtFunc func(io ExtensionIO) error
+type BuiltInExtFuncs map[ExtQName]BuiltInExtFunc // Provided to construct factory of engines
+```
+
+
+provide:
+```go
+// an instance of IExtensionEngineFactories is provided to apppartsctl.New()
+func ProvideExtensionEngineFactories(funcs BuiltInExtFuncs) IExtensionEngineFactories;
 ```
 
 #### Execute Extentions

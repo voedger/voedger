@@ -1,3 +1,6 @@
+# Declaration of extensions in vSQL.
+This is a draft of vSQL syntax. Current version of the syntax can be found [here](../../pkg/parser/sql_example_app/pmain/package.sql)
+
 ## Declaration in PackageSchema
 ### Projector
 ```sql
