@@ -11,13 +11,19 @@ import (
 )
 
 func newRepeatCmd() *cobra.Command {
-	cmd := &cobra.Command{
+	repeatCmd := &cobra.Command{
 		Use:   "repeat",
 		Short: "executing the last incomplete command",
 		RunE:  repeat,
 	}
 
-	return cmd
+	repeatCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+	if err := repeatCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
+
+	return repeatCmd
 }
 
 func repeat(cmd *cobra.Command, arg []string) error {

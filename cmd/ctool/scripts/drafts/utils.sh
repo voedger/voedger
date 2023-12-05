@@ -3,7 +3,14 @@
  # @author Aleksei Ponomarev
 
 utils_SSH_OPTS() {
-  echo "-q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR"
+
+    opts="-q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR"
+
+    if [ -n "${VOEDGER_NODE_SSH_PORT:-}" ]; then
+        opts+=" -p ${VOEDGER_NODE_SSH_PORT}"
+    fi
+
+echo "$opts"
 }
 
 utils_ssh() {

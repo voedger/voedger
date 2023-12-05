@@ -34,7 +34,7 @@ type ExtEngineConfig struct {
 	MemoryLimitPages uint
 }
 
-type IExtentionIO interface {
+type IExtensionIO interface {
 	istructs.IState
 	istructs.IIntents
 }
@@ -44,7 +44,7 @@ type IExtentionIO interface {
 // Extension engine is not thread safe
 type IExtensionEngine interface {
 	SetLimits(limits ExtensionLimits)
-	Invoke(ctx context.Context, extentionName string, io IExtentionIO) (err error)
+	Invoke(ctx context.Context, extentionName string, io IExtensionIO) (err error)
 	Close()
 }
 

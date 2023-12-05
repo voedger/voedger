@@ -1,3 +1,10 @@
+Cleaned. We do not use it yet, also there is a problem. ref https://github.com/voedger/voedger/issues/740
+
+It existed at:
+
+- https://github.com/voedger/voedger/tree/73c8437bf07f7f2a7a87ea403ed79f08115ecf6e/pkg/ibus
+- https://github.com/voedger/voedger/tree/73c8437bf07f7f2a7a87ea403ed79f08115ecf6e/pkg/ibusmem
+
 ### Bus
 
 - Bus connects system services

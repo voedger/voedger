@@ -10,14 +10,24 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/untillpro/goutils/logger"
 )
 
 func newUpgradeCmd() *cobra.Command {
-	return &cobra.Command{
+	upgradeCmd := &cobra.Command{
 		Use:   "upgrade",
 		Short: "Update the cluster version to the current one",
 		RunE:  upgrade,
 	}
+
+	upgradeCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+	if err := upgradeCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
+
+	return upgradeCmd
+
 }
 
 // versions compare (version format: 0.0.1 or 0.0.1-alfa)
