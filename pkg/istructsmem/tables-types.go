@@ -6,6 +6,7 @@
 package istructsmem
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -60,4 +61,7 @@ func (row *rowType) ModifiedFields(cb func(fieldName string, newValue interface{
 		cb(name, value)
 		return true
 	})
+	if row.isActiveModified {
+		cb(appdef.SystemField_IsActive, row.isActive)
+	}
 }
