@@ -57,9 +57,8 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, tokensAPI itoken
 	// target app, target WSID
 	cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         qNameProjectorApplyDeactivateWorkspace,
-			EventsFilter: []appdef.QName{qNameCmdInitiateDeactivateWorkspace},
-			Func:         projectorApplyDeactivateWorkspace(federation, cfg.Name, tokensAPI, asp),
+			Name: qNameProjectorApplyDeactivateWorkspace,
+			Func: projectorApplyDeactivateWorkspace(federation, cfg.Name, tokensAPI, asp),
 		}
 	})
 }

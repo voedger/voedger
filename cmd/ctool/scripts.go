@@ -50,6 +50,9 @@ func showProgress(done chan bool) {
 }
 
 func verbose() bool {
+	if testMode {
+		return true
+	}
 	b, err := rootCmd.Flags().GetBool("verbose")
 	return err == nil && b
 }

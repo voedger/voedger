@@ -344,9 +344,12 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
-		desc: "grant exec on q.air.GetAllUPPayouts to role air.UntillPaymentsManager",
+		desc: "grant exec on few funcs to role air.UntillPaymentsManager",
 		pattern: PatternType{
-			qNamesPattern:     []appdef.QName{qNameQryGetAllUPPayouts},
+			qNamesPattern: []appdef.QName{
+				qNameQryGetAllUPPayouts,
+				qNameQryGetUPLocationInvoiceParties,
+			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsManager}}},
 		},
 		policy: ACPolicy_Allow,

@@ -167,7 +167,7 @@ jobs:
 
     - name: Smoke test - replace scylla node to new hardware
       run: | 
-        if ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace 10.0.0.13 10.0.0.16 -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+        if ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace db-node-1 10.0.0.16 -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
           echo "Replace node success"
         else 
           echo "Failed to replace scylla node in cluster"
@@ -200,17 +200,9 @@ jobs:
         TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
         TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
 
-    - name: Smoke test - Create new hadware for AppNode.
-      run: terraform -chdir=cmd/ctool/scripts/terraform/ apply -target=aws_instance.node_02 -auto-approve
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
-        TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
-
     - name: Smoke test - replace AppNode to new hardware
       run: | 
-        if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace 10.0.0.12 10.0.0.13 -v --trace --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+        if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace app-node-02 10.0.0.17 -v --trace --ssh-key /tmp/amazonKey.pem; exit \$?"; then
           echo "Replace AppNode success"
         else 
 
@@ -233,7 +225,7 @@ jobs:
 
     - name: Smoke test - check Prometheus and Alertmanager is up after replace node
       run: |
-        IP_ADDRESS="10.0.0.13"
+        IP_ADDRESS="10.0.0.17"
         retries=5
         while [[ $retries -gt 0 ]]; do
           success=true
