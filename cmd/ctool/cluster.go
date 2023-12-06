@@ -36,6 +36,10 @@ func newCluster() (*clusterType, error) {
 		SkipStacks:            make([]string, 0),
 		ReplacedAddresses:     make([]string, 0),
 	}
+	if err := cluster.setEnv(); err != nil {
+		return nil, err
+	}
+
 	dir, _ := os.Getwd()
 	cluster.configFileName = filepath.Join(dir, clusterConfFileName)
 	cluster.exists = cluster.loadFromJSON() == nil
@@ -552,9 +556,15 @@ func (c *clusterType) loadFromJSON() error {
 	}
 
 	if err == nil {
-		os.Setenv("VOEDGER_NODE_SSH_PORT", c.SshPort)
+		err = c.setEnv()
 	}
+
 	return err
+}
+
+// Installation of the necessary variables of the environment
+func (c *clusterType) setEnv() error {
+	return os.Setenv("VOEDGER_NODE_SSH_PORT", c.SshPort)
 }
 
 // nolint
