@@ -93,16 +93,15 @@ func TestErrorsInCompile(t *testing.T) {
 	}{
 		{
 			name: "package schema - syntax errors",
-			dir:  fmt.Sprintf("%s/test/myapperr/mypkgerr", tempDir),
+			dir:  fmt.Sprintf("%s/test/myapperr/mypkg1", tempDir),
 			expectedErrPositions: []string{
 				"schema1.sql:4:33",
 			},
 		},
 		{
 			name: "application schema - syntax errors",
-			dir:  fmt.Sprintf("%s/test/myapperr", tempDir),
+			dir:  fmt.Sprintf("%s/test/myapperr/mypkg2", tempDir),
 			expectedErrPositions: []string{
-				"schema1.sql:4:33",
 				"schema2.sql:4:5",
 			},
 		},
@@ -137,60 +136,73 @@ func TestMissedDependency(t *testing.T) {
 	}()
 
 	tempDir := t.TempDir()
-
 	err = copyContents(testMyAppFS, tempDir)
 	require.NoError(err)
-
 	testDir := fmt.Sprintf("%s/test/myapp", tempDir)
-	err = os.Chdir(tempDir)
-	require.NoError(err)
 
-	t.Run("run normal", func(t *testing.T) {
-		err := os.Chdir(testDir)
-		require.NoError(err)
+	testSteps := []struct {
+		name string
+		step func(t *testing.T)
+	}{
+		{
+			name: "compile",
+			step: func(t *testing.T) {
+				err := os.Chdir(testDir)
+				require.NoError(err)
 
-		err = execRootCmd([]string{"vpm", "compile", fmt.Sprintf(" -C %s", testDir)}, "1.0.0")
-		require.NoError(err)
-	})
+				err = execRootCmd([]string{"vpm", "compile", fmt.Sprintf(" -C %s", testDir)}, "1.0.0")
+				require.NoError(err)
+			},
+		},
+		{
+			name: "clean dependency cache",
+			step: func(t *testing.T) {
+				err := os.Chdir(testDir)
+				require.NoError(err)
 
-	t.Run("clean dependency cache", func(t *testing.T) {
-		err := os.Chdir(testDir)
-		require.NoError(err)
+				goCacheCleanCmd := new(exec.PipedExec).Command("go", "clean", "-modcache")
+				err = goCacheCleanCmd.Run(nil, nil)
+				require.NoError(err)
 
-		goCacheCleanCmd := new(exec.PipedExec).Command("go", "clean", "-modcache")
-		err = goCacheCleanCmd.Run(nil, nil)
-		require.NoError(err)
+				goDM, err := dm.NewGoBasedDependencyManager()
+				require.NoError(err)
 
-		goDM, err := dm.NewGoBasedDependencyManager()
-		require.NoError(err)
+				localPath := path.Join(goDM.CachePath(), sysQPN)
 
-		localPath := path.Join(goDM.CachePath(), "github.com/voedger/voedger/pkg/sys")
+				_, err = os.Stat(localPath)
+				require.True(os.IsNotExist(err))
+			},
+		},
+		{
+			name: "check dependency integrity after",
+			step: func(t *testing.T) {
+				err := os.Chdir(testDir)
+				require.NoError(err)
 
-		_, err = os.Stat(localPath)
-		require.True(os.IsNotExist(err))
-	})
+				goDM, err := dm.NewGoBasedDependencyManager()
+				require.NoError(err)
 
-	t.Run("rerun normal", func(t *testing.T) {
-		err := os.Chdir(testDir)
-		require.NoError(err)
+				localPath, err := goDM.LocalPath(sysQPN)
+				require.NoError(err)
 
-		err = execRootCmd([]string{"vpm", "compile", fmt.Sprintf(" -C %s", testDir)}, "1.0.0")
-		require.NoError(err)
-	})
+				_, err = os.Stat(localPath)
+				require.False(os.IsNotExist(err))
+			},
+		},
+		{
+			name: "compile again",
+			step: func(t *testing.T) {
+				err := os.Chdir(testDir)
+				require.NoError(err)
 
-	t.Run("check dependency integrity after", func(t *testing.T) {
-		err := os.Chdir(testDir)
-		require.NoError(err)
-
-		goDM, err := dm.NewGoBasedDependencyManager()
-		require.NoError(err)
-
-		localPath, err := goDM.LocalPath("github.com/voedger/voedger/pkg/sys")
-		require.NoError(err)
-
-		_, err = os.Stat(localPath)
-		require.False(os.IsNotExist(err))
-	})
+				err = execRootCmd([]string{"vpm", "compile", fmt.Sprintf(" -C %s", testDir)}, "1.0.0")
+				require.NoError(err)
+			},
+		},
+	}
+	for _, testStep := range testSteps {
+		t.Run(testStep.name, testStep.step)
+	}
 }
 
 func copyContents(src embed.FS, dest string) error {
