@@ -17,7 +17,7 @@ const (
 	DefaultQuotasChannelsFactor          = 100 // Quotas.Channels will be NumCommandProcessors * DefaultQuotasFactor
 	DefaultQuotasChannelsPerSubject      = 10
 	DefaultQuotasSubscriptionsFactor     = 1000 // Quotas.Subscriptions will be NumCommandProcessors * DefaultQuotasSubscriptionsFactor
-	DefaultQuotasSubscriptionsPerSubject = 20
+	DefaultQuotasSubscriptionsPerSubject = 100
 	DefaultMetricsServicePort            = 8000
 	DefaultCacheSize                     = 1024 * 1024 * 1024 // 1Gb
 	ShortestPossibleFunctionNameLen      = len("q.a.a")
