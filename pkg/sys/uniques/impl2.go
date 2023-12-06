@@ -26,26 +26,26 @@ func provideApplyUniques2(appDef appdef.IAppDef) func(event istructs.IPLogEvent,
 			err := iterate.ForEachError(iUniques.Uniques, func(unique appdef.IUnique) error {
 				recType := appDef.Type(rec.QName())
 				recSchemaFields := recType.(appdef.IFields)
-				uniqueFields := sortedUniqueFields{}
+				orderedUniqueFields := orderedUniqueFields{}
 				recSchemaFields.Fields(func(schemaField appdef.IField) {
 					for _, uniqueFieldDesc := range unique.Fields() {
 						if uniqueFieldDesc.Name() == schemaField.Name() {
-							uniqueFields = append(uniqueFields, schemaField.Name())
+							orderedUniqueFields = append(orderedUniqueFields, schemaField)
 						}
 					}
 				})
 
 				if rec.IsNew() {
-					return insert2(st, rec, intents, unique.Fields())
+					return insert2(st, rec, intents, orderedUniqueFields)
 				}
-				return update2()
+				return update2(st, rec, orderedUniqueFields)
 			})
 			return err
 		})
 	}
 }
 
-func update2(st istructs.IState, rec istructs.ICUDRow, uniqueFields []appdef.IField) error {
+func update2(st istructs.IState, rec istructs.ICUDRow, orderedUniqueFields orderedUniqueFields) error {
 	// check modified fields
 	// case when we're updating unique fields is already dropped by the validator
 	// so came here - we 're updating anything but unique fields
@@ -63,12 +63,12 @@ func update2(st istructs.IState, rec istructs.ICUDRow, uniqueFields []appdef.IFi
 
 	// unique view record
 	// we're updating -> unique view record exists
-	uniqueViewRecord, uniqueViewKB, _, err := getUniqueViewRecord2(st, currentRecord, uniqueFields)
+	uniqueViewRecord, uniqueViewKB, _, err := getUniqueViewRecord2(st, currentRecord, orderedUniqueFields)
 	if err != nil {
 		return err
 	}
 	if uniqueViewRecord.AsRecordID(field_ID) == istructs.NullRecordID && rec.AsBool(appdef.SystemField_IsActive) {
-			// activate a deactivated combination
+		// activate a deactivated combination
 		uniqueViewKB.PutRecordID(field_ID, rec.ID())
 	} else if uniqueViewRecord.AsRecordID(field_ID) != istructs.NullRecordID && !rec.AsBool(appdef.SystemField_IsActive) {
 		// deactivate an active combination
@@ -77,8 +77,8 @@ func update2(st istructs.IState, rec istructs.ICUDRow, uniqueFields []appdef.IFi
 	return nil
 }
 
-func insert2(state istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents, uniqueFields []appdef.IField) error {
-	uniqueViewRecord, uniqueViewKB, uniqueViewRecordExists, err := getUniqueViewRecord2(state, rec, uniqueFields)
+func insert2(state istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents, orderedUniqueFields orderedUniqueFields) error {
+	uniqueViewRecord, uniqueViewKB, uniqueViewRecordExists, err := getUniqueViewRecord2(state, rec, orderedUniqueFields)
 	if err != nil {
 		return err
 	}
@@ -98,26 +98,26 @@ func insert2(state istructs.IState, rec istructs.ICUDRow, intents istructs.IInte
 	return err
 }
 
-func getUniqueViewRecord2(st istructs.IState, rec istructs.IRowReader, uniqueFields []appdef.IField) (istructs.IStateValue, istructs.IStateKeyBuilder, bool, error) {
+func getUniqueViewRecord2(st istructs.IState, rec istructs.IRowReader, orderedUniqueFields orderedUniqueFields) (istructs.IStateValue, istructs.IStateKeyBuilder, bool, error) {
 	uniqueViewRecordBuilder, err := st.KeyBuilder(state.View, qNameViewUniques)
 	if err != nil {
 		// notest
 		return nil, nil, false, err
 	}
-	buildUniqueViewKey2(uniqueViewRecordBuilder, rec, uniqueFields)
+	buildUniqueViewKey2(uniqueViewRecordBuilder, rec, orderedUniqueFields)
 	sv, ok, err := st.CanExist(uniqueViewRecordBuilder)
 	return sv, uniqueViewRecordBuilder, ok, err
 }
 
 // notest err
-func buildUniqueViewKey2(kb istructs.IKeyBuilder, rec istructs.IRowReader, uf []appdef.IField) {
-	uniqueKeyValues := getUniqueKeyValues2(rec, uf)
+func buildUniqueViewKey2(kb istructs.IKeyBuilder, rec istructs.IRowReader, orderedUniqueFields orderedUniqueFields) {
+	uniqueKeyValues := getUniqueKeyValues2(rec, orderedUniqueFields)
 	buildUniqueViewKeyByValues(kb, rec.AsQName(appdef.SystemField_QName), uniqueKeyValues)
 }
 
-func getUniqueKeyValues2(rec istructs.IRowReader, ufs []appdef.IField) (res []byte) {
+func getUniqueKeyValues2(rec istructs.IRowReader, orderedUniqueFields orderedUniqueFields) (res []byte) {
 	buf := bytes.NewBuffer(nil)
-	for _, uniqueField := range ufs {
+	for _, uniqueField := range orderedUniqueFields {
 		val := coreutils.ReadByKind(uniqueField.Name(), uniqueField.DataKind(), rec)
 		switch uniqueField.DataKind() {
 		case appdef.DataKind_string:
