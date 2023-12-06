@@ -34,7 +34,7 @@ func (g *goImpl) LocalPath(depURL string) (localDepPath string, err error) {
 		return "", fmt.Errorf("cannot find module for path %s", depURL)
 	}
 	if version == "" {
-		localDepPath = path.Join(path.Dir(g.goModFilePath), subDir)
+		localDepPath = path.Join(filepath.Dir(g.goModFilePath), subDir)
 		return
 	}
 	localDepPath = path.Join(g.cachePath, fmt.Sprintf("%s@%s", pkgURL, version), subDir)
