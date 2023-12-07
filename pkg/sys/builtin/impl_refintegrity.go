@@ -124,7 +124,7 @@ func writeRegistry(st istructs.IState, intents istructs.IIntents, idToStore istr
 
 func provideRefIntegrityValidator() istructs.CUDValidator {
 	return istructs.CUDValidator{
-		MatchFunc: func(qName appdef.QName, wsid istructs.WSID, cmdQName appdef.QName) bool {
+		Match: func(cud istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) bool {
 			return !coreutils.IsDummyWS(wsid) && cmdQName != QNameCommandInit
 		},
 		Validate: func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) (err error) {

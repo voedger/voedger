@@ -257,7 +257,7 @@ func Test_CircularReferences(t *testing.T) {
 
 	// Tables
 	fs, err := ParseFile("file1.sql", `APPLICATION test();
-	TABLE table2 INHERITS table2 ();
+	ABSTRACT TABLE table2 INHERITS table2 ();
 	ABSTRACT TABLE table3 INHERITS table3 ();
 	ABSTRACT TABLE table4 INHERITS table5 ();
 	ABSTRACT TABLE table5 INHERITS table6 ();
