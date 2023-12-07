@@ -1,4 +1,4 @@
--- Copyright (c) 2021-present unTill Pro, Ltd.
+-- Copyright (c) 2023-present unTill Pro, Ltd.
 -- @author Alisher Nurmanov
 
 IMPORT SCHEMA 'server.com/account/repo/mypkg1';

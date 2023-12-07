@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-present unTill Pro, Ltd.
+ * Copyright (c) 2023-present unTill Pro, Ltd.
  * @author Alisher Nurmanov
  */
 
@@ -51,6 +51,10 @@ func (g *goImpl) LocalPath(depURL string) (localDepPath string, err error) {
 
 func (g *goImpl) CachePath() string {
 	return g.cachePath
+}
+
+func (g *goImpl) ModulePath() string {
+	return g.modFile.Module.Mod.Path
 }
 
 // parseDepURL slices depURL into pkgURL, subDir and version.
