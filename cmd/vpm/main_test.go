@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-present unTill Pro, Ltd.
+ * Copyright (c) 2023-present unTill Pro, Ltd.
  * @author Alisher Nurmanov
  */
 
@@ -100,14 +100,14 @@ func TestErrorsInCompile(t *testing.T) {
 			name: "package schema - syntax errors",
 			dir:  fmt.Sprintf("%s/test/myapperr/mypkg1", tempDir),
 			expectedErrPositions: []string{
-				"schema1.sql:4:33",
+				"schema1.sql:7:33",
 			},
 		},
 		{
 			name: "application schema - syntax errors",
 			dir:  fmt.Sprintf("%s/test/myapperr/mypkg2", tempDir),
 			expectedErrPositions: []string{
-				"schema2.sql:4:5",
+				"schema2.sql:7:5",
 			},
 		},
 	}

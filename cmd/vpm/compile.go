@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-present unTill Pro, Ltd.
+ * Copyright (c) 2023-present unTill Pro, Ltd.
  * @author Alisher Nurmanov
  */
 
@@ -54,11 +54,12 @@ func compile(depMan dm.IDependencyManager, dir string) error {
 	var errs []error
 	importedStmts := make(map[string]parser.ImportStmt)
 
-	packages, compileDirErrs := compileDir(depMan, dir, testQPN, importedStmts)
+	modulePath := fmt.Sprintf("%s/%s", depMan.ModulePath(), path.Base(dir))
+	packages, compileDirErrs := compileDir(depMan, dir, modulePath, importedStmts)
 	errs = append(errs, compileDirErrs...)
 
 	if !hasAppSchema(packages) {
-		appPackageAst, err := compileTestAppSchema(maps.Values(importedStmts))
+		appPackageAst, err := getDummyAppPackageAst(maps.Values(importedStmts))
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -106,7 +107,7 @@ func hasAppSchema(packages []*parser.PackageSchemaAST) bool {
 	return false
 }
 
-func compileTestAppSchema(imports []parser.ImportStmt) (*parser.PackageSchemaAST, error) {
+func getDummyAppPackageAst(imports []parser.ImportStmt) (*parser.PackageSchemaAST, error) {
 	fileAst := &parser.FileSchemaAST{
 		FileName: sysSchemaSqlFileName,
 		Ast: &parser.SchemaAST{
@@ -114,13 +115,13 @@ func compileTestAppSchema(imports []parser.ImportStmt) (*parser.PackageSchemaAST
 			Statements: []parser.RootStatement{
 				{
 					Application: &parser.ApplicationStmt{
-						Name: testAppName,
+						Name: dummyAppName,
 					},
 				},
 			},
 		},
 	}
-	return parser.BuildPackageSchema(testAppName, []*parser.FileSchemaAST{fileAst})
+	return parser.BuildPackageSchema(dummyAppName, []*parser.FileSchemaAST{fileAst})
 }
 
 func getUseStmts(imports []parser.ImportStmt) []parser.UseStmt {
@@ -157,7 +158,7 @@ func addMissingUses(appPackage *parser.PackageSchemaAST, uses []parser.UseStmt) 
 }
 
 func compileSys(depMan dm.IDependencyManager, importedStmts map[string]parser.ImportStmt) ([]*parser.PackageSchemaAST, []error) {
-	return compileDependency(depMan, sysPackage, importedStmts)
+	return compileDependency(depMan, appdef.SysPackage, importedStmts)
 }
 
 // checkImportedStmts checks if qpn is already imported. If not, it adds it to importedStmts
@@ -169,7 +170,7 @@ func checkImportedStmts(qpn string, importedStmts map[string]parser.ImportStmt) 
 	importStmt := parser.ImportStmt{
 		Name: qpn,
 	}
-	if qpn == sysPackage {
+	if qpn == appdef.SysPackage {
 		alias := parser.Ident(qpn)
 		importStmt.Alias = &alias
 	}
@@ -210,7 +211,7 @@ func compileDependencies(depMan dm.IDependencyManager, imports []parser.ImportSt
 func compileDependency(depMan dm.IDependencyManager, depURL string, importedStmts map[string]parser.ImportStmt) (packages []*parser.PackageSchemaAST, errs []error) {
 	// workaround for sys package
 	depURLToFind := depURL
-	if depURL == sysPackage {
+	if depURL == appdef.SysPackage {
 		depURLToFind = sysQPN
 	}
 	localPath, err := depMan.LocalPath(depURLToFind)

@@ -1,14 +1,12 @@
 /*
- * Copyright (c) 2020-present unTill Pro, Ltd.
+ * Copyright (c) 2023-present unTill Pro, Ltd.
  * @author Alisher Nurmanov
  */
 
 package main
 
 const (
-	testQPN              = "github.com/voedger/voedger/cmd/vpm/test"
-	testAppName          = "testapp"
+	dummyAppName         = "dummyApp"
 	sysQPN               = "github.com/voedger/voedger/pkg/sys"
-	sysPackage           = "sys"
 	sysSchemaSqlFileName = "sys.sql"
 )
