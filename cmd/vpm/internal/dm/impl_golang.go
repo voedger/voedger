@@ -57,6 +57,10 @@ func (g *goImpl) ModulePath() string {
 	return g.modFile.Module.Mod.Path
 }
 
+func (g *goImpl) DependencyFilePath() string {
+	return g.goModFilePath
+}
+
 // parseDepURL slices depURL into pkgURL, subDir and version.
 // Empty version means depURL belongs to local project
 func (g *goImpl) parseDepURL(depURL string) (pkgURL, subDir, version string, ok bool) {
@@ -142,12 +146,9 @@ func getCachePath() string {
 	return path.Join(build.Default.GOPATH, "pkg", "mod")
 }
 
-func getGoModFile() (*modfile.File, string, error) {
-	currentDir, err := os.Getwd()
-	if err != nil {
-		return nil, "", err
-	}
+func getGoModFile(workingDir string) (*modfile.File, string, error) {
 	var previousDir string
+	currentDir := workingDir
 	for currentDir != previousDir {
 		if logger.IsVerbose() {
 			logger.Verbose(fmt.Sprintf("searching for %s in %s", goModFile, currentDir))
