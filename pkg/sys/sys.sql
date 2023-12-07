@@ -131,7 +131,7 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE ModulesResult (
-			Modules varchar(32768) NOT NULL
+		Modules varchar(32768) NOT NULL
 	);
 
 	TYPE RenameQNameParams (
@@ -149,7 +149,7 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE GetCDocResult (
-			Result varchar(32768) NOT NULL
+		Result varchar(32768) NOT NULL
 	);
 
 	TYPE StateParams (
@@ -157,7 +157,7 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE StateResult (
-			State varchar(32768) NOT NULL
+		State varchar(32768) NOT NULL
 	);
 
 	TYPE DescribePackageNamesResult (
@@ -173,11 +173,11 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE InitiateInvitationByEMailParams (
-			Email text NOT NULL,
-			Roles text NOT NULL,
-			ExpireDatetime int64 NOT NULL,
-			EmailTemplate varchar(32768) NOT NULL,
-			EmailSubject text NOT NULL
+		Email text NOT NULL,
+		Roles text NOT NULL,
+		ExpireDatetime int64 NOT NULL,
+		EmailTemplate varchar(32768) NOT NULL,
+		EmailSubject text NOT NULL
 	);
 
 	TYPE InitiateJoinWorkspaceParams (
@@ -186,10 +186,10 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE InitiateUpdateInviteRolesParams (
-			InviteID ref NOT NULL,
-			Roles text NOT NULL,
-			EmailTemplate varchar(32768) NOT NULL,
-			EmailSubject text NOT NULL
+		InviteID ref NOT NULL,
+		Roles text NOT NULL,
+		EmailTemplate varchar(32768) NOT NULL,
+		EmailSubject text NOT NULL
 	);
 
 	TYPE InitiateCancelAcceptedInviteParams (
@@ -247,13 +247,13 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE InitialEmailVerificationResult (
-			VerificationToken varchar(32768) NOT NULL
+		VerificationToken varchar(32768) NOT NULL
 	);
 
 	TYPE IssueVerifiedValueTokenParams (
-			VerificationToken varchar(32768) NOT NULL,
-			VerificationCode text NOT NULL,
-			ForRegistry bool
+		VerificationToken varchar(32768) NOT NULL,
+		VerificationCode text NOT NULL,
+		ForRegistry bool
 	);
 
 	TYPE IssueVerifiedValueTokenResult (

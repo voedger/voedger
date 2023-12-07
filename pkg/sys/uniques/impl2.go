@@ -7,6 +7,7 @@ package uniques
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 
 	"github.com/untillpro/goutils/iterate"
@@ -131,4 +132,17 @@ func getUniqueKeyValues2(rec istructs.IRowReader, orderedUniqueFields orderedUni
 		}
 	}
 	return buf.Bytes()
+}
+
+func provideEventUniqueValidator2() func(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
+	return func(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
+		uniquesState := map[appdef.QName]map[string]*uniqueViewRecord{}
+		err := iterate.ForEachError(rawEvent.CUDs, func(cudRec istructs.ICUDRow) (err error) {
+			cudQName := cudRec.QName()
+			if cudUniques, ok := appStructs.AppDef().Type(cudQName).(appdef.IUniques); ok {
+				cudUniques.Uniques(func(unique appdef.IUnique) {
+				})
+			}
+		})
+	}
 }

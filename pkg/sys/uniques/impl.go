@@ -224,8 +224,8 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 		//                                      key         uvrID
 		uniquesState := map[appdef.QName]map[string]*uniqueViewRecord{}
 		err := iterate.ForEachError(rawEvent.CUDs, func(cudRec istructs.ICUDRow) (err error) {
-			qName := cudRec.QName()
-			if uniques, ok := appStructs.AppDef().Type(qName).(appdef.IUniques); ok {
+			cudQName := cudRec.QName()
+			if uniques, ok := appStructs.AppDef().Type(cudQName).(appdef.IUniques); ok {
 				if uniqueField := uniques.UniqueField(); uniqueField != nil {
 					cudUniqueFieldHasValue, _ := iterate.FindFirst(cudRec.FieldNames, func(fieldNameThatHasValue string) bool {
 						return fieldNameThatHasValue == uniqueField.Name()
@@ -261,7 +261,7 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 						return err
 					}
 
-					currentUniqueRecord, err := getCurrentUniqueViewRecord(uniquesState, qName, uniqueKeyValues, appStructs, wsid)
+					currentUniqueRecord, err := getCurrentUniqueViewRecord(uniquesState, cudQName, uniqueKeyValues, appStructs, wsid)
 					if err != nil {
 						// notest
 						return err
@@ -275,7 +275,7 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 								currentUniqueRecord.exists = true // avoid: 1st CUD insert a unique record, 2nd modify the unique value
 							} else {
 								// inserting a new active record, unique is active -> deny
-								return conflict(qName, currentUniqueRecord.refRecordID)
+								return conflict(cudQName, currentUniqueRecord.refRecordID)
 							}
 						} else {
 							if cudUniqueFieldHasValue {
@@ -288,7 +288,7 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 						cudRecIsActive := cudRec.AsBool(appdef.SystemField_IsActive)
 						if currentUniqueRecord.exists {
 							if cudUniqueFieldHasValue && (currentUniqueRecord.refRecordID == cudRec.ID() || currentUniqueRecord.refRecordID == istructs.NullRecordID) {
-								return fmt.Errorf("%v: unique field «%s» can not be changed: %w", qName, uniqueField.Name(), ErrUniqueFieldUpdateDeny)
+								return fmt.Errorf("%v: unique field «%s» can not be changed: %w", cudQName, uniqueField.Name(), ErrUniqueFieldUpdateDeny)
 							}
 							if currentUniqueRecord.refRecordID == istructs.NullRecordID {
 								if cudRecIsActive {
@@ -301,7 +301,7 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 									}
 								} else {
 									if cudRecIsActive {
-										return conflict(qName, currentUniqueRecord.refRecordID)
+										return conflict(cudQName, currentUniqueRecord.refRecordID)
 									}
 								}
 							}
