@@ -33,7 +33,7 @@ import (
 )
 
 //go:embed sys.sql
-var sysFS embed.FS
+var SysFS embed.FS
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, smtpCfg smtp.Cfg,
 	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation coreutils.IFederation,
@@ -53,5 +53,5 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	describe.Provide(cfg, asp, appDefBuilder)
 
 	// add sys sql schema
-	apps.RegisterSchemaFS(sysFS, appdef.SysPackage, ep)
+	apps.RegisterSchemaFS(SysFS, appdef.SysPackage, ep)
 }
