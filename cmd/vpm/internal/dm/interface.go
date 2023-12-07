@@ -15,4 +15,6 @@ type IDependencyManager interface {
 	LocalPath(depURL string) (localDepPath string, err error)
 	// CachePath returns path to dependency cache
 	CachePath() string
+	// DependencyFilePath returns path to dependency file (e.g. ../../go.mod)
+	DependencyFilePath() string
 }

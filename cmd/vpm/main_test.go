@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,7 +27,7 @@ var testMyAppFS embed.FS
 //go:embed test/myapperr/*
 var testMyAppErrFS embed.FS
 
-func TestBasicUsage(t *testing.T) {
+func TestCompileBasicUsage(t *testing.T) {
 	require := require.New(t)
 
 	wd, err := os.Getwd()
@@ -48,19 +49,19 @@ func TestBasicUsage(t *testing.T) {
 	}{
 		{
 			name: "simple schema with no imports",
-			dir:  fmt.Sprintf("%s/test/myapp/mypkg1", tempDir),
+			dir:  path.Join(tempDir, "test/myapp/mypkg1"),
 		},
 		{
 			name: "schema importing a local package",
-			dir:  fmt.Sprintf("%s/test/myapp/mypkg2", tempDir),
+			dir:  path.Join(tempDir, "test/myapp/mypkg2"),
 		},
 		{
 			name: "schema importing voedger package",
-			dir:  fmt.Sprintf("%s/test/myapp/mypkg3", tempDir),
+			dir:  path.Join(tempDir, "test/myapp/mypkg3"),
 		},
 		{
 			name: "application schema using both local package and voedger",
-			dir:  fmt.Sprintf("%s/test/myapp", tempDir),
+			dir:  path.Join(tempDir, "test/myapp"),
 		},
 	}
 
@@ -71,6 +72,103 @@ func TestBasicUsage(t *testing.T) {
 
 			err = execRootCmd([]string{"vpm", "compile", fmt.Sprintf(" -C %s", tc.dir)}, "1.0.0")
 			require.NoError(err)
+		})
+	}
+}
+
+func TestBaselineBasicUsage(t *testing.T) {
+	require := require.New(t)
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+	defer func() {
+		_ = os.Chdir(wd)
+	}()
+
+	tempTargetDir := t.TempDir()
+	tempDir := t.TempDir()
+	err = copyContents(testMyAppFS, tempDir)
+	require.NoError(err)
+
+	err = os.Chdir(tempDir)
+	require.NoError(err)
+
+	testCases := []struct {
+		name                  string
+		workingDir            string
+		expectedBaselineFiles []string
+	}{
+		{
+			name:       "simple schema with no imports",
+			workingDir: path.Join(tempDir, "test/myapp/mypkg1"),
+			expectedBaselineFiles: []string{
+				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
+				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg1/schema1.sql", baselineDirName, pkgDirName)),
+				path.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
+			},
+		},
+		{
+			name:       "schema importing a local package",
+			workingDir: path.Join(tempDir, "test/myapp/mypkg2"),
+			expectedBaselineFiles: []string{
+				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
+				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg1/schema1.sql", baselineDirName, pkgDirName)),
+				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg2/schema2.sql", baselineDirName, pkgDirName)),
+				path.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
+			},
+		},
+		{
+			name:       "schema importing voedger package",
+			workingDir: path.Join(tempDir, "test/myapp/mypkg3"),
+			expectedBaselineFiles: []string{
+				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
+				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg3/schema3.sql", baselineDirName, pkgDirName)),
+				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/github.com/voedger/voedger/pkg/registry/schemas.sql", baselineDirName, pkgDirName)),
+				path.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
+			},
+		},
+		{
+			name:       "application schema using both local package and voedger",
+			workingDir: path.Join(tempDir, "test/myapp"),
+			expectedBaselineFiles: []string{
+				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
+				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/github.com/voedger/voedger/pkg/registry/schemas.sql", baselineDirName, pkgDirName)),
+				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg1/schema1.sql", baselineDirName, pkgDirName)),
+				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg2/schema2.sql", baselineDirName, pkgDirName)),
+				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg3/schema3.sql", baselineDirName, pkgDirName)),
+				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/myapp.sql", baselineDirName, pkgDirName)),
+				path.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := os.Chdir(tc.workingDir)
+			require.NoError(err)
+
+			err = os.RemoveAll(path.Join(tempTargetDir, baselineDirName))
+			require.NoError(err)
+
+			err = execRootCmd([]string{"vpm", "baseline", fmt.Sprintf(" -C %s", tc.workingDir), tempTargetDir}, "1.0.0")
+			require.NoError(err)
+
+			var actualFilePaths []string
+			err = filepath.Walk(tempTargetDir, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return nil
+				}
+				if !info.IsDir() {
+					actualFilePaths = append(actualFilePaths, path)
+				}
+				return nil
+			})
+			require.NoError(err)
+
+			require.Equal(len(tc.expectedBaselineFiles), len(actualFilePaths))
+			for _, actualFilePath := range actualFilePaths {
+				require.Contains(tc.expectedBaselineFiles, actualFilePath)
+			}
 		})
 	}
 }
@@ -98,14 +196,14 @@ func TestErrorsInCompile(t *testing.T) {
 	}{
 		{
 			name: "package schema - syntax errors",
-			dir:  fmt.Sprintf("%s/test/myapperr/mypkg1", tempDir),
+			dir:  path.Join(tempDir, "test/myapperr/mypkg1"),
 			expectedErrPositions: []string{
 				"schema1.sql:7:33",
 			},
 		},
 		{
 			name: "application schema - syntax errors",
-			dir:  fmt.Sprintf("%s/test/myapperr/mypkg2", tempDir),
+			dir:  path.Join(tempDir, "test/myapperr/mypkg2"),
 			expectedErrPositions: []string{
 				"schema2.sql:7:5",
 			},
@@ -143,7 +241,7 @@ func TestMissedDependency(t *testing.T) {
 	tempDir := t.TempDir()
 	err = copyContents(testMyAppFS, tempDir)
 	require.NoError(err)
-	testDir := fmt.Sprintf("%s/test/myapp", tempDir)
+	testDir := path.Join(tempDir, "test/myapp")
 
 	testSteps := []struct {
 		name string
@@ -169,7 +267,7 @@ func TestMissedDependency(t *testing.T) {
 				err = goCacheCleanCmd.Run(nil, nil)
 				require.NoError(err)
 
-				goDM, err := dm.NewGoBasedDependencyManager()
+				goDM, err := dm.NewGoBasedDependencyManager(testDir)
 				require.NoError(err)
 
 				localPath := path.Join(goDM.CachePath(), sysQPN)
@@ -184,7 +282,7 @@ func TestMissedDependency(t *testing.T) {
 				err := os.Chdir(testDir)
 				require.NoError(err)
 
-				goDM, err := dm.NewGoBasedDependencyManager()
+				goDM, err := dm.NewGoBasedDependencyManager(testDir)
 				require.NoError(err)
 
 				localPath, err := goDM.LocalPath(sysQPN)
