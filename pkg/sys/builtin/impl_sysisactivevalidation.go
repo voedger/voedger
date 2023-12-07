@@ -45,3 +45,4 @@ var denyIsActiveAndOtherFieldsMixing = istructs.CUDValidator{
 		return nil
 	},
 }
+
