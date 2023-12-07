@@ -15,7 +15,7 @@ const (
 	DefaultNumCommandProcessors          = 10
 	DefaultNumQueryProcessors            = 10  // <=0 -> 1 query processor will exist anyway
 	DefaultQuotasChannelsFactor          = 100 // Quotas.Channels will be NumCommandProcessors * DefaultQuotasFactor
-	DefaultQuotasChannelsPerSubject      = 10
+	DefaultQuotasChannelsPerSubject      = 50
 	DefaultQuotasSubscriptionsFactor     = 1000 // Quotas.Subscriptions will be NumCommandProcessors * DefaultQuotasSubscriptionsFactor
 	DefaultQuotasSubscriptionsPerSubject = 100
 	DefaultMetricsServicePort            = 8000
