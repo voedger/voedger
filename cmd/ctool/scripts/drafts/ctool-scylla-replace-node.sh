@@ -55,7 +55,7 @@ if [ -n "${4+x}" ] && [ -n "$4" ]; then
 fi
 
 REPLACED_NODE_NAME=$(getent hosts "$2" | awk '{print $2}')
-ssh-keyscan -H "$REPLACED_NODE_NAME" >> ~/.ssh/known_hosts
+ssh-keyscan -p "$(utils_SSH_PORT)" -H "$REPLACED_NODE_NAME" >> ~/.ssh/known_hosts
 
 # Function to check if Scylla server is up and listening
 scylla_is_listen() {
