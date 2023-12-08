@@ -15,10 +15,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 //go:embed test/myapp/*
 var testMyAppFS embed.FS
+
+//go:embed test/myapp_incompatible/*
+var testMyAppIncompatibleFS embed.FS
 
 //go:embed test/myapperr/*
 var testMyAppErrFS embed.FS
@@ -169,7 +174,78 @@ func TestBaselineBasicUsage(t *testing.T) {
 	}
 }
 
-func TestErrorsInCompile(t *testing.T) {
+func TestCompatBasicUsage(t *testing.T) {
+	require := require.New(t)
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+	defer func() {
+		_ = os.Chdir(wd)
+	}()
+
+	tempDir := t.TempDir()
+	err = copyContents(testMyAppFS, tempDir)
+	require.NoError(err)
+
+	err = copyContents(testMyAppIncompatibleFS, tempDir)
+	require.NoError(err)
+
+	err = os.Chdir(tempDir)
+	require.NoError(err)
+
+	workDir := filepath.Join(tempDir, "test/myapp")
+	baselineDir := filepath.Join(tempDir, "test/baseline_myapp")
+	err = execRootCmd([]string{"vpm", "baseline", fmt.Sprintf(" -C %s", workDir), baselineDir}, "1.0.0")
+	require.NoError(err)
+
+	baselinePkgDir := filepath.Join(tempDir, fmt.Sprintf("test/myapp_baseline/%s/%s", baselineDirName, pkgDirName))
+	err = execRootCmd([]string{"vpm", "compat", fmt.Sprintf(" -C %s", workDir), baselinePkgDir}, "1.0.0")
+	require.NoError(err)
+}
+
+func TestCompatErrors(t *testing.T) {
+	require := require.New(t)
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+	defer func() {
+		_ = os.Chdir(wd)
+	}()
+
+	tempDir := t.TempDir()
+	err = copyContents(testMyAppFS, tempDir)
+	require.NoError(err)
+
+	err = copyContents(testMyAppIncompatibleFS, tempDir)
+	require.NoError(err)
+
+	err = os.Chdir(tempDir)
+	require.NoError(err)
+
+	workDir := filepath.Join(tempDir, "test/myapp")
+	baselineDir := filepath.Join(tempDir, "test/baseline_myapp")
+	err = execRootCmd([]string{"vpm", "baseline", fmt.Sprintf(" -C %s", workDir), baselineDir}, "1.0.0")
+	require.NoError(err)
+
+	workDir = filepath.Join(tempDir, "test/myapp_incompatible")
+	baselinePkgDir := filepath.Join(tempDir, fmt.Sprintf("test/baseline_myapp/%s/%s", baselineDirName, pkgDirName))
+	err = execRootCmd([]string{"vpm", "compat", fmt.Sprintf(" -C %s", workDir), fmt.Sprintf(" --ignore %s", filepath.Join(workDir, "ignores.yml")), baselinePkgDir}, "1.0.0")
+	require.Error(err)
+	errs := coreutils.SplitErrors(err)
+
+	expectedErrs := []string{
+		"OrderChanged: AppDef/Types/mypkg2.MyTable/Fields/myfield3",
+		"OrderChanged: AppDef/Types/mypkg2.MyTable/Fields/myfield2",
+		"NodeRemoved: AppDef/Types/mypkg3.MyTable3/Fields/MyField",
+	}
+	require.Equal(len(expectedErrs), len(errs))
+
+	for _, err := range errs {
+		require.Contains(expectedErrs, err.Error())
+	}
+}
+
+func TestCompileErrors(t *testing.T) {
 	require := require.New(t)
 
 	wd, err := os.Getwd()

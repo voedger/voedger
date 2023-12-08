@@ -1,0 +1,5 @@
+# Copyright (c) 2023-present unTill Pro, Ltd.
+# @author Alisher Nurmanov
+
+Ignore:
+  - "AppDef/Types/mypkg1.MyTable1/Fields/myfield1"

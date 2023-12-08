@@ -31,6 +31,7 @@ func execRootCmd(args []string, ver string) error {
 		ver,
 		newCompileCmd(),
 		newBaselineCmd(),
+		newCompatCmd(),
 	)
 
 	return cobrau.ExecCommandAndCatchInterrupt(rootCmd)

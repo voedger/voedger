@@ -122,7 +122,7 @@ func downloadDependencies(goModFilePath string) (err error) {
 		_ = os.Chdir(wd)
 	}()
 
-	if err := os.Chdir(path.Dir(goModFilePath)); err != nil {
+	if err := os.Chdir(filepath.Dir(goModFilePath)); err != nil {
 		return err
 	}
 	return new(exec.PipedExec).Command("go", "mod", "download").Run(nil, nil)
