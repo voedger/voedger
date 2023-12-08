@@ -443,4 +443,3 @@ func TestRateLimitKind_MarshalText(t *testing.T) {
 		}
 	}
 }
-
