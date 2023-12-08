@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestMatchQNames(t *testing.T) {
@@ -18,25 +19,24 @@ func TestMatchQNames(t *testing.T) {
 	myQName3 := appdef.NewQName("sys", "myQName3")
 	matcherFunc := MatchQName(myQName, myQName2)
 	tests := []struct {
-		cudQNames []appdef.QName
-		expected  bool
+		qName    appdef.QName
+		expected bool
 	}{
 		{
-			cudQNames: []appdef.QName{myQName},
-			expected:  true,
+			qName:    myQName,
+			expected: true,
 		},
 		{
-			cudQNames: []appdef.QName{myQName2},
-			expected:  true,
+			qName:    myQName2,
+			expected: true,
 		},
 		{
-			cudQNames: []appdef.QName{myQName3},
-			expected:  false,
+			qName:    myQName3,
+			expected: false,
 		},
 	}
 	for _, ts := range tests {
-		require.Equal(t, ts.expected, TestMatchQNameFunc(matcherFunc, ts.cudQNames...))
+		cudRow := &TestObject{Name: ts.qName}
+		require.Equal(t, ts.expected, matcherFunc(cudRow, istructs.NullWSID, appdef.NullQName))
 	}
-
-	require.False(t, TestMatchQNameFunc(matcherFunc))
 }
