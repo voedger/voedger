@@ -64,8 +64,9 @@ func baseline(compileRes *compileResult, targetDir string) error {
 
 func saveBaselineInfo(compileRes *compileResult, baselineDir string) error {
 	var gitCommitHash string
-	if stdoutRes, _, err := new(exec.PipedExec).Command("git", "rev-parse", "HEAD").RunToStrings(); err == nil {
-		gitCommitHash = strings.TrimSpace(stdoutRes)
+	sb := new(strings.Builder)
+	if err := new(exec.PipedExec).Command("git", "rev-parse", "HEAD").Run(sb, nil); err == nil {
+		gitCommitHash = strings.TrimSpace(sb.String())
 	}
 
 	baselineInfoObj := baselineInfo{
