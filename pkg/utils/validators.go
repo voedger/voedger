@@ -16,3 +16,13 @@ func MatchQName(qNames ...appdef.QName) func(cud istructs.ICUDRow, wsid istructs
 		return slices.Contains(qNames, cud.QName())
 	}
 }
+
+func TestMatchQNameFunc(matchFunc istructs.ValidatorMatchFunc, qNames ...appdef.QName) bool {
+	for _, qName := range qNames {
+		cudRow := &TestObject{Name: qName}
+		if !matchFunc(cudRow, istructs.NullWSID, appdef.NullQName) {
+			return false
+		}
+	}
+	return len(qNames) > 0
+}

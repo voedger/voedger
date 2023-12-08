@@ -11,8 +11,10 @@ import (
 )
 
 type CUDValidator struct {
-	Match    func(cud ICUDRow, wsid WSID, cmdQName appdef.QName) bool
+	Match    ValidatorMatchFunc
 	Validate func(ctx context.Context, appStructs IAppStructs, cudRow ICUDRow, wsid WSID, cmdQName appdef.QName) error
 }
 
 type EventValidator func(ctx context.Context, rawEvent IRawEvent, appStructs IAppStructs, wsid WSID) error
+
+type ValidatorMatchFunc func(cud ICUDRow, wsid WSID, cmdQName appdef.QName) bool
