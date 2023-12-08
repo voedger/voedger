@@ -66,7 +66,7 @@ func TestBasicUsage(t *testing.T) {
 			err := os.Chdir(tc.dir)
 			require.NoError(err)
 
-			err = execRootCmd([]string{"vpm", "compile", fmt.Sprintf(" -C %s", tc.dir)}, "1.0.0")
+			err = execRootCmd([]string{"vpm", "compile", "-C", tc.dir}, "1.0.0")
 			require.NoError(err)
 		})
 	}
@@ -114,7 +114,7 @@ func TestErrorsInCompile(t *testing.T) {
 			err := os.Chdir(tc.dir)
 			require.NoError(err)
 
-			err = execRootCmd([]string{"vpm", "compile", fmt.Sprintf(" -C %s", tc.dir)}, "1.0.0")
+			err = execRootCmd([]string{"vpm", "compile", "-C", tc.dir}, "1.0.0")
 			require.Error(err)
 			errMsg := err.Error()
 			for _, expectedErrPosition := range tc.expectedErrPositions {
