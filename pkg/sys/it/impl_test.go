@@ -306,4 +306,9 @@ func TestIsActiveValidation(t *testing.T) {
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false,"name":"newName"}}]}`, id)
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403()).Println()
 	})
+
+	t.Run("deny insert a deactivated record", func(t *testing.T) {
+		body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.air_table_plan","sys.IsActive":false}}]}`
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403()).Println()
+	})
 }

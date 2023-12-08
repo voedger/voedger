@@ -16,7 +16,7 @@ import (
 )
 
 func provideSysIsActiveValidation(cfg *istructsmem.AppConfigType) {
-	cfg.AddCUDValidators(denyIsActiveAndOtherFieldsMixing)
+	cfg.AddCUDValidators(denyIsActiveAndOtherFieldsMixing, denyInsertDeactivatedRecord)
 }
 
 var denyIsActiveAndOtherFieldsMixing = istructs.CUDValidator{
@@ -41,6 +41,18 @@ var denyIsActiveAndOtherFieldsMixing = istructs.CUDValidator{
 		})
 		if isActiveAndOtherFieldsMixedOnUpdate {
 			return errors.New("updating other fields is not allowed if sys.IsActive is updating")
+		}
+		return nil
+	},
+}
+
+var denyInsertDeactivatedRecord = istructs.CUDValidator{
+	Match: func(cud istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) bool {
+		return cud.IsNew()
+	},
+	Validate: func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) error {
+		if !cudRow.AsBool(appdef.SystemField_IsActive) {
+			return errors.New("inserting a deactivated record is not allowed")
 		}
 		return nil
 	},
