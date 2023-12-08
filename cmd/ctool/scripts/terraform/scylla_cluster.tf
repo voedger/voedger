@@ -104,33 +104,45 @@ resource "aws_instance" "node_00" {
 
   key_name = "amazonKey"
 
-  connection {
-    type        = "ssh"
-    user        = "ubuntu"
-    private_key = "${var.ssh_private_key}"
-    host        = "${aws_instance.node_00.public_ip}"
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-    "echo '${var.ssh_private_key}' > /tmp/amazonKey.pem",
-    "chmod 755 /tmp/amazonKey.pem",
-    "curl -L https://git.io/vQhTU | bash -s -- --version 1.21.4",
-    "git clone https://github.com/voedger/voedger",
-    "export GOROOT=$HOME/.go",
-    "export PATH=$GOROOT/bin:$PATH",
-    "echo $GOROOT",
-    "echo $PATH", 
-    "cd $HOME/voedger/cmd/ctool && go build -o ctool"
-    ]
-  }
-
-
   tags = {
     Name = "node_00"
   }
-
 }
+
+module "instance_sshd_provisioners" {
+  source           = "./modules/provision-sshd"
+
+  ssh_private_key  = var.ssh_private_key
+  ssh_private_ips  = [
+      aws_instance.node_00.public_ip,
+      aws_instance.node_01.public_ip,
+      aws_instance.node_02.public_ip,
+      aws_instance.node_03.public_ip,
+      aws_instance.node_04.public_ip,
+      aws_instance.node_instead_00.public_ip,
+      aws_instance.node_instead_01.public_ip,
+    ]
+
+  depends_on = [
+      aws_instance.node_00,
+      aws_instance.node_01,
+      aws_instance.node_02,
+      aws_instance.node_03,
+      aws_instance.node_04,
+      aws_instance.node_instead_00,
+      aws_instance.node_instead_01,
+    ]
+}
+
+module "instance_ctool_provision" {
+  source           = "./modules/provision-ctool"
+
+  ssh_private_key  = var.ssh_private_key
+  ctool_node = aws_instance.node_00.public_ip
+
+  depends_on = [ module.instance_sshd_provisioners ]
+}
+
 
 output "public_ip_node_00" {
   value = aws_instance.node_00.public_ip
