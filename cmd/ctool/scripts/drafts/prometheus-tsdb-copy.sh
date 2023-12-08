@@ -42,7 +42,7 @@ snapshot_file="prometheus_snapshot_$timestamp.tar.gz"
 
 dst_name=$(getent hosts "$dst_ip" | awk '{print $2}')
 
-ssh-keyscan -H "$dst_name" >> ~/.ssh/known_hosts
+ssh-keyscan -p "$(utils_SSH_PORT)" -H "$dst_name" >> ~/.ssh/known_hosts
 
 snapshot=$(curl -X POST http://$src_ip:9090/api/v1/admin/tsdb/snapshot | jq -r '.data.name') 
 # Make the snapshot on source host
