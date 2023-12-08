@@ -209,7 +209,7 @@ jobs:
 
     - name: Smoke test - replace AppNode to new hardware
       run: | 
-        if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace app-node-02 10.0.0.17 -v --trace --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+        if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace app-node-2 10.0.0.17 -v --trace --ssh-key /tmp/amazonKey.pem; exit \$?"; then
           echo "Replace AppNode success"
         else 
 
