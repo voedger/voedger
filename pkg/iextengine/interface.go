@@ -7,9 +7,9 @@ package iextengine
 
 import (
 	"context"
-	"net/url"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -48,4 +48,13 @@ type IExtensionEngine interface {
 	Close()
 }
 
-type ExtensionEngineFactory = func(context context.Context, moduleURL *url.URL, extensionNames []string, config ExtEngineConfig) (e IExtensionEngine, err error)
+type IExtensionEngineFactories interface {
+	QueryFactory(appdef.ExtensionEngineKind) IExtensionEngineFactory
+}
+
+type IExtensionEngineFactory interface {
+	// LocalPath is a path package data can be got from
+	// - packageNameToLocalPath is not used for ExtensionEngineKind_BuiltIn
+	// - config is not used for ExtensionEngineKind_BuiltIn
+	New(packageNameToLocalPath map[string]string, config ExtEngineConfig, numEngines int) []IExtensionEngine
+}
