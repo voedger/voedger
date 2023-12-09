@@ -1919,3 +1919,18 @@ TABLE SomeTable INHERITS CDoc (
 	}, "\n"))
 
 }
+
+func Test_ODocUnknown(t *testing.T) {
+	require := require.New(t)
+	pkgApp1 := buildPackage(`APPLICATION registry();
+TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL ); 
+`)
+
+	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
+	require.EqualError(err, strings.Join([]string{
+		"source.sql:2:1: undefined table kind",
+		"source.sql:2:39: registry undefined",
+		"source.sql:2:1: ODocUnknown undefined",
+	}, "\n"))
+
+}

@@ -667,15 +667,17 @@ func getTableInheritanceChain(table *TableStmt, c *iterateCtx) (chain []tableNod
 	vf = func(t *TableStmt) error {
 		if t.Inherits != nil {
 			inherited := *t.Inherits
-			if err := resolveInCtx(inherited, c, func(t *TableStmt, pkg *PackageSchemaAST) error {
+			t, pkg, err := lookupInCtx[*TableStmt](inherited, c)
+			if err != nil {
+				return err
+			}
+			if t != nil {
 				node := tableNode{pkg: pkg, table: t}
 				if refCycle(node) {
 					return ErrCircularReferenceInInherits
 				}
 				chain = append(chain, node)
 				return vf(t)
-			}); err != nil {
-				return err
 			}
 		}
 		return nil
