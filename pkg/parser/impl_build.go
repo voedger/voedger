@@ -73,6 +73,9 @@ func supported(stmt interface{}) bool {
 	if _, ok := stmt.(*RateStmt); ok {
 		return false
 	}
+	if _, ok := stmt.(*LimitStmt); ok {
+		return false
+	}
 	return true
 }
 

@@ -66,6 +66,8 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 			analyseAlterWorkspace(v, ictx)
 		case *StorageStmt:
 			analyseStorage(v, ictx)
+		case *LimitStmt:
+			analyseLimit(v, ictx)
 		}
 	})
 }
@@ -124,6 +126,31 @@ func analyseStorage(u *StorageStmt, c *iterateCtx) {
 	if c.pkg.QualifiedPackageName != appdef.SysPackage {
 		c.stmtErr(&u.Pos, ErrStorageDeclaredOnlyInSys)
 	}
+}
+
+func analyseLimit(u *LimitStmt, c *iterateCtx) {
+	err := resolveInCtx(u.RateName, c, func(l *RateStmt, schema *PackageSchemaAST) error { return nil })
+	if err != nil {
+		c.stmtErr(&u.Pos, err)
+	}
+
+	if u.Action.AllCommandsWithTag != nil {
+		err = resolveInCtx(*u.Action.AllCommandsWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil })
+	} else if u.Action.AllQueriesWithTag != nil {
+		err = resolveInCtx(*u.Action.AllQueriesWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil })
+	} else if u.Action.AllWorkspacesWithTag != nil {
+		err = resolveInCtx(*u.Action.AllWorkspacesWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil })
+	} else if u.Action.Command != nil {
+		err = resolveInCtx(*u.Action.Command, c, func(t *CommandStmt, schema *PackageSchemaAST) error { return nil })
+	} else if u.Action.Query != nil {
+		err = resolveInCtx(*u.Action.Query, c, func(t *QueryStmt, schema *PackageSchemaAST) error { return nil })
+	} else if u.Action.Workspace != nil {
+		err = resolveInCtx(*u.Action.Workspace, c, func(t *WorkspaceStmt, schema *PackageSchemaAST) error { return nil })
+	}
+	if err != nil {
+		c.stmtErr(&u.Pos, err)
+	}
+
 }
 
 func analyseView(view *ViewStmt, c *iterateCtx) {

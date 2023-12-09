@@ -108,7 +108,7 @@ func Test_BasicUsage(t *testing.T) {
 	singleton := builder.CDoc(appdef.NewQName("main", "SubscriptionProfile"))
 	require.Equal("Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC\nThese comments are included in the statement definition, but may be overridden with `WITH Comment=...`", singleton.Comment())
 
-	cmd := builder.Command(appdef.NewQName("main", "Orders"))
+	cmd := builder.Command(appdef.NewQName("main", "NewOrder"))
 	require.Equal("Commands can only be declared in workspaces\nCommand can have optional argument and/or unlogged argument\nCommand can return TYPE", cmd.Comment())
 
 	// type
@@ -174,11 +174,11 @@ func Test_BasicUsage(t *testing.T) {
 		if eventsCount == 1 {
 			require.Equal(1, len(ie.Kind()))
 			require.Equal(appdef.ProjectorEventKind_Execute, ie.Kind()[0])
-			require.Equal(appdef.NewQName("main", "Orders"), ie.On().QName())
+			require.Equal(appdef.NewQName("main", "NewOrder"), ie.On().QName())
 		} else if eventsCount == 2 {
 			require.Equal(1, len(ie.Kind()))
 			require.Equal(appdef.ProjectorEventKind_Execute, ie.Kind()[0])
-			require.Equal(appdef.NewQName("main", "Orders2"), ie.On().QName())
+			require.Equal(appdef.NewQName("main", "NewOrder2"), ie.On().QName())
 		}
 	})
 
