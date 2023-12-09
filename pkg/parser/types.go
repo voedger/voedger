@@ -95,6 +95,8 @@ type RootStatement struct {
 
 	// Also allowed in root
 	Role           *RoleStmt           `parser:"| @@"`
+	Rate           *RateStmt           `parser:"| @@"`
+	Limit          *LimitStmt          `parser:"| @@"`
 	Tag            *TagStmt            `parser:"| @@"`
 	ExtEngine      *RootExtEngineStmt  `parser:"| @@"`
 	Workspace      *WorkspaceStmt      `parser:"| @@"`
@@ -121,6 +123,7 @@ type WorkspaceStatement struct {
 	Workspace *WorkspaceStmt          `parser:"| @@"`
 	Table     *TableStmt              `parser:"| @@"`
 	Type      *TypeStmt               `parser:"| @@"`
+	Limit     *LimitStmt              `parser:"| @@"`
 	//Sequence  *sequenceStmt  `parser:"| @@"`
 	Grant *GrantStmt `parser:"| @@"`
 
@@ -501,15 +504,59 @@ type UseWorkspaceStmt struct {
 	IncrementBy *int   `parser:"| ('INCREMENT' 'BY' @Number) )*"`
 }*/
 
+type RateValueTimeUnit struct {
+	Second bool `parser:"@('SECOND' | 'SECONDS')"`
+	Minute bool `parser:"| @('MINUTE' | 'MINUTES')"`
+	Hour   bool `parser:"| @('HOUR' | 'HOURS')"`
+	Day    bool `parser:"| @('DAY' | 'DAYS')"`
+	Year   bool `parser:"| @('YEAR' | 'YEARS')"`
+}
+
+type RateValue struct {
+	Count           int               `parser:"@Int 'PER'"`
+	TimeUnitAmounts *int              `parser:"@Int?"`
+	TimeUnit        RateValueTimeUnit `parser:"@@"`
+}
+
+type RateObjectScope struct {
+	PerAppPartition bool `parser:"  @('PER' 'APP' 'PARTITION')"`
+	PerWorkspace    bool `parser:" | @('PER' 'WORKSPACE')"`
+}
+
+type RateSubjectScope struct {
+	PerUser bool `parser:"@('PER' 'USER')"`
+	PerIp   bool `parser:" | @('PER' 'IP')"`
+}
+
 type RateStmt struct {
 	Statement
-	Name   Ident  `parser:"'RATE' @Ident"`
-	Amount int    `parser:"@Int"`
-	Per    string `parser:"'PER' @('SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'YEAR')"`
-	PerIP  bool   `parser:"(@('PER' 'IP'))?"`
+	Name         Ident             `parser:"'RATE' @Ident"`
+	Value        RateValue         `parser:"@@"`
+	ObjectScope  *RateObjectScope  `parser:"@@?"`
+	SubjectScope *RateSubjectScope `parser:"@@?"`
 }
 
 func (s RateStmt) GetName() string { return string(s.Name) }
+
+type LimitAction struct {
+	Command              *DefQName `parser:"(EXECUTEONCOMMAND @@)"`
+	AllCommandsWithTag   *DefQName `parser:"| (EXECUTEONALLCOMMANDSWITHTAG @@)"`
+	AllCommands          bool      `parser:"| @EXECUTEONALLCOMMANDS"`
+	Query                *DefQName `parser:"| (EXECUTEONQUERY @@)"`
+	AllQueriesWithTag    *DefQName `parser:"| (EXECUTEONALLQUERIESWITHTAG @@)"`
+	AllQueries           bool      `parser:"| @EXECUTEONALLQUERIES"`
+	Workspace            *DefQName `parser:"| (INSERTONWORKSPACE @@)"`
+	AllWorkspacesWithTag *DefQName `parser:"| (INSERTONALLWORKSPACESWITHTAG @@)"`
+}
+
+type LimitStmt struct {
+	Statement
+	Name     Ident       `parser:"'LIMIT' @Ident"`
+	Action   LimitAction `parser:"@@"`
+	RateName DefQName    `parser:"'WITH' 'RATE' @@"`
+}
+
+func (s LimitStmt) GetName() string { return string(s.Name) }
 
 type GrantTableAction struct {
 	Select  bool     `parser:"(@'SELECT'"`
