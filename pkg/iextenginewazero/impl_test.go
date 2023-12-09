@@ -42,7 +42,7 @@ func Test_BasicUsage(t *testing.T) {
 	//
 	// Invoke command
 	//
-	require.NoError(extEngine.Invoke(context.Background(), exampleCommand, extIO))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", exampleCommand), extIO))
 	require.Equal(1, len(extIO.intents))
 	v := extIO.intents[0].value.(*mockValueBuilder)
 
@@ -55,7 +55,7 @@ func Test_BasicUsage(t *testing.T) {
 	//
 	extIO = &mockIo{}    // reset intents
 	projectorMode = true // state will return different Event
-	require.NoError(extEngine.Invoke(context.Background(), updateSubscriptionProjector, extIO))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", updateSubscriptionProjector), extIO))
 
 	require.Equal(1, len(extIO.intents))
 	v = extIO.intents[0].value.(*mockValueBuilder)
@@ -104,16 +104,16 @@ func Test_Allocs_ManualGC(t *testing.T) {
 	requireMemStatEx(t, wasmEngine, 1, 0, expectedHeapSize, WasmPreallocatedBufferSize)
 	wasmEngine.SetLimits(limits)
 
-	require.NoError(extEngine.Invoke(context.Background(), arrAppend, extIO))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend), extIO))
 	requireMemStatEx(t, wasmEngine, 3, 0, expectedHeapSize, WasmPreallocatedBufferSize+32)
 
-	require.NoError(extEngine.Invoke(context.Background(), arrAppend, extIO))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend), extIO))
 	requireMemStatEx(t, wasmEngine, 5, 0, expectedHeapSize, WasmPreallocatedBufferSize+64)
 
-	require.NoError(extEngine.Invoke(context.Background(), arrAppend, extIO))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend), extIO))
 	requireMemStatEx(t, wasmEngine, 7, 0, expectedHeapSize, WasmPreallocatedBufferSize+6*16)
 
-	require.NoError(extEngine.Invoke(context.Background(), arrReset, extIO))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrReset), extIO))
 	requireMemStatEx(t, wasmEngine, 7, 0, expectedHeapSize, WasmPreallocatedBufferSize+6*16)
 
 	require.NoError(wasmEngine.gc())
@@ -141,8 +141,8 @@ func Test_Allocs_AutoGC(t *testing.T) {
 
 	calculatedHeapInUse := uint32(WasmPreallocatedBufferSize)
 	for calculatedHeapInUse < expectedHeapSize-16 {
-		require.NoError(extEngine.Invoke(context.Background(), arrAppend, extIO))
-		require.NoError(extEngine.Invoke(context.Background(), arrReset, extIO))
+		require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend), extIO))
+		require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrReset), extIO))
 		calculatedHeapInUse += 32
 		expectedAllocs += 2
 	}
@@ -151,13 +151,13 @@ func Test_Allocs_AutoGC(t *testing.T) {
 	requireMemStatEx(t, wasmEngine, expectedAllocs, expectedFrees, expectedHeapSize, expectedHeapSize-16)
 
 	// next call will trigger auto-GC
-	require.NoError(extEngine.Invoke(context.Background(), arrAppend, extIO))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend), extIO))
 	expectedAllocs += 2
 	expectedFrees += expectedAllocs - 7
 	requireMemStat(t, wasmEngine, expectedAllocs, expectedFrees, WasmPreallocatedBufferSize+96)
 
 	// next call will not trigger auto-GC
-	require.NoError(extEngine.Invoke(context.Background(), arrReset, extIO))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrReset), extIO))
 	requireMemStat(t, wasmEngine, expectedAllocs, expectedFrees, WasmPreallocatedBufferSize+96) // stays the same
 
 }
@@ -189,11 +189,11 @@ func Test_NoGc_MemoryOverflow(t *testing.T) {
 	calculatedHeapInUse := WasmPreallocatedBufferSize
 	err = nil
 	for calculatedHeapInUse < 0x20*iextengine.MemoryPageSize {
-		err = wasmEngine.Invoke(context.Background(), arrAppend, extIO)
+		err = wasmEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend), extIO)
 		if err != nil {
 			break
 		}
-		err = wasmEngine.Invoke(context.Background(), arrReset, extIO)
+		err = wasmEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrReset), extIO)
 		if err != nil {
 			break
 		}
@@ -216,7 +216,7 @@ func Test_SetLimitsExecutionInterval(t *testing.T) {
 		ExecutionInterval: maxDuration,
 	})
 	t0 := time.Now()
-	err = extEngine.Invoke(context.Background(), "longFunc", extIO)
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName("", "longFunc"), extIO)
 
 	require.ErrorIs(err, api.ErrDuration)
 	require.Less(time.Since(t0), maxDuration*4)
@@ -267,7 +267,7 @@ func Test_HandlePanics(t *testing.T) {
 	defer extEngine.Close()
 
 	for _, test := range tests {
-		e := extEngine.Invoke(context.Background(), test.name, extIO)
+		e := extEngine.Invoke(context.Background(), iextengine.NewExtQName("", test.name), extIO)
 		require.ErrorContains(e, test.expect)
 	}
 }
@@ -282,7 +282,7 @@ func Test_QueryValue(t *testing.T) {
 	require.NoError(err)
 	defer extEngine.Close()
 
-	err = extEngine.Invoke(context.Background(), testQueryValue, extIO)
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName("", testQueryValue), extIO)
 	require.NoError(err)
 }
 
@@ -296,15 +296,15 @@ func Test_RecoverEngine(t *testing.T) {
 	require.NoError(err)
 	defer extEngine.Close()
 
-	require.Nil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
-	require.Nil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
-	require.Nil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
-	require.NotNil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
+	require.Nil(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend2), extIO))
+	require.Nil(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend2), extIO))
+	require.Nil(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend2), extIO))
+	require.NotNil(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend2), extIO))
 
-	require.Nil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
-	require.Nil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
-	require.Nil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
-	require.NotNil(extEngine.Invoke(context.Background(), arrAppend2, extIO))
+	require.Nil(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend2), extIO))
+	require.Nil(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend2), extIO))
+	require.Nil(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend2), extIO))
+	require.NotNil(extEngine.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend2), extIO))
 }
 
 func Test_Read(t *testing.T) {
@@ -315,7 +315,7 @@ func Test_Read(t *testing.T) {
 	extEngine, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{testRead}, iextengine.ExtEngineConfig{})
 	require.NoError(err)
 	defer extEngine.Close()
-	err = extEngine.Invoke(context.Background(), testRead, extIO)
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName("", testRead), extIO)
 	require.NoError(err)
 }
 
@@ -329,7 +329,7 @@ func Test_AsBytes(t *testing.T) {
 	defer extEngine.Close()
 	wasmEngine := extEngine.(*wazeroExtEngine)
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
-	err = extEngine.Invoke(context.Background(), asBytes, extIO)
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName("", asBytes), extIO)
 	require.NoError(err)
 	requireMemStatEx(t, wasmEngine, 2, 0, WasmPreallocatedBufferSize+2000000, WasmPreallocatedBufferSize+2000000)
 }
@@ -344,7 +344,7 @@ func Test_AsBytesOverflow(t *testing.T) {
 	defer extEngine.Close()
 	wasmEngine := extEngine.(*wazeroExtEngine)
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
-	err = extEngine.Invoke(context.Background(), asBytes, extIO)
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName("", asBytes), extIO)
 	require.ErrorContains(err, "alloc")
 }
 
@@ -362,7 +362,7 @@ func Test_NoAllocs(t *testing.T) {
 	wasmEngine := extEngine.(*wazeroExtEngine)
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
 
-	err = extEngine.Invoke(context.Background(), testNoAllocs, extIO)
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName("", testNoAllocs), extIO)
 	require.NoError(err)
 
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
