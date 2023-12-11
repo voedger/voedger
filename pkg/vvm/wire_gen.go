@@ -168,8 +168,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	iAppPartsCtlService := provideAppPartsCtlPipelineService(iAppPartitionsController)
-	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, routerServiceOperator, metricsServiceOperator, iAppPartsCtlService)
+	iAppPartsCtlPipelineService := provideAppPartsCtlPipelineService(iAppPartitionsController)
+	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, routerServiceOperator, metricsServiceOperator, iAppPartsCtlPipelineService)
 	v7 := provideMetricsServicePortGetter(metricsService)
 	vvm := &VVM{
 		ServicePipeline:     servicePipeline,
@@ -224,7 +224,7 @@ func (vvm *VoedgerVM) Launch() error {
 	return vvm.ServicePipeline.SendSync(ignition)
 }
 
-func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController) IAppPartsCtlService {
+func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController) IAppPartsCtlPipelineService {
 	return &AppPartsCtlPipelineService{IAppPartitionsController: ctl}
 }
 
@@ -606,7 +606,7 @@ func provideOperatorAppServices(apf AppServiceFactory, vvmApps VVMApps, asp istr
 }
 
 func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
-	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlService) ServicePipeline {
+	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService) ServicePipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp),
 	)),
 	)
