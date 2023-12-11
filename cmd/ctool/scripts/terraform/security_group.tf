@@ -9,6 +9,14 @@ resource "aws_security_group" "scylla_hosts" {
     protocol = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  ingress {
+    from_port = 2214
+    to_port = 2214
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   ingress {
     from_port = 0
     to_port = 0
@@ -29,18 +37,21 @@ resource "aws_security_group" "scylla_hosts" {
     protocol = "icmp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
   ingress {
     from_port = 0
     to_port = 0
     protocol = "-1"
     cidr_blocks = [aws_vpc.scylla_cluster_vpc.cidr_block]
   }
+
   egress {
     from_port = 0
     to_port = 0
     protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
   tags = {
     Name        = "Internal"
     Description = "Rules for nodes in scylla cluster"

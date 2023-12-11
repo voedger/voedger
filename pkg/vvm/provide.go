@@ -19,6 +19,8 @@ import (
 	ibus "github.com/untillpro/airs-ibus"
 	"golang.org/x/crypto/acme/autocert"
 
+	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/router"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -157,6 +159,9 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideSubjectGetterFunc,
 		provideStorageFactory,
 		provideIAppStorageUncachingProviderFactory,
+		provideAppPartsCtlPipelineService,
+		apppartsctl.New,
+		appparts.New,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -173,8 +178,13 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"MetricsServicePort",
 			"ActualizerStateOpts",
 			"SecretsReader",
+			"BuiltInApps",
 		),
 	))
+}
+
+func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController) IAppPartsCtlPipelineService {
+	return &AppPartsCtlPipelineService{IAppPartitionsController: ctl}
 }
 
 func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory) IAppStorageUncachingProviderFactory {
@@ -557,7 +567,7 @@ func provideOperatorAppServices(apf AppServiceFactory, vvmApps VVMApps, asp istr
 }
 
 func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
-	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator) ServicePipeline {
+	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService) ServicePipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline",
 		pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame,
 
@@ -566,6 +576,7 @@ func provideServicePipeline(vvmCtx context.Context, opCommandProcessors Operator
 				pipeline.ForkBranch(opQueryProcessors),
 				pipeline.ForkBranch(opCommandProcessors),
 				pipeline.ForkBranch(opAppServices(vvmCtx)), // vvmCtx here is for AsyncActualizerConf at AsyncActualizerFactory only
+				pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)),
 			)),
 
 			// Router

@@ -5,11 +5,11 @@
 
 package dm
 
-func NewGoBasedDependencyManager() (IDependencyManager, error) {
+func NewGoBasedDependencyManager(workingDir string) (IDependencyManager, error) {
 	if err := checkGoInstalled(); err != nil {
 		return nil, err
 	}
-	modFile, goModFilePath, err := getGoModFile()
+	modFile, goModFilePath, err := getGoModFile(workingDir)
 	if err != nil {
 		return nil, err
 	}

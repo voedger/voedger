@@ -293,3 +293,22 @@ func TestCmdResult(t *testing.T) {
 		vit.PostWS(ws, "c.app1pkg.TestCmd", body, coreutils.Expect500()).Println()
 	})
 }
+
+func TestIsActiveValidation(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("deny update sys.IsActive and other fields", func(t *testing.T) {
+		body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.air_table_plan"}}]}`
+		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false,"name":"newName"}}]}`, id)
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403()).Println()
+	})
+
+	t.Run("deny insert a deactivated record", func(t *testing.T) {
+		body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.air_table_plan","sys.IsActive":false}}]}`
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403()).Println()
+	})
+}

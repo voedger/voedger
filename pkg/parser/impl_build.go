@@ -73,6 +73,9 @@ func supported(stmt interface{}) bool {
 	if _, ok := stmt.(*RateStmt); ok {
 		return false
 	}
+	if _, ok := stmt.(*LimitStmt); ok {
+		return false
+	}
 	return true
 }
 
@@ -904,7 +907,7 @@ func (c *buildContext) isExists(qname appdef.QName, kind appdef.TypeKind) (exist
 	case appdef.TypeKind_Object:
 		return c.builder.Object(qname) != nil
 	default:
-		panic(fmt.Sprintf("unsupported def kind %d", kind))
+		panic(fmt.Sprintf("unsupported def kind %d of %s", kind, qname))
 	}
 }
 

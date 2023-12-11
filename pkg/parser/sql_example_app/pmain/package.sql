@@ -108,6 +108,9 @@ EXTENSION ENGINE WASM (
 
 );
 
+--  Default object scope is PER APP PARTITION and no subject scope
+RATE AppDefaultRate 1000 PER HOUR;
+
 -- WORKSPACE statement declares the Workspace, descriptor and definitions, allowed in this workspace
 WORKSPACE MyWorkspace (
     DESCRIPTOR(                     -- Workspace descriptor is always SINGLETON
@@ -128,8 +131,9 @@ WORKSPACE MyWorkspace (
         Origin varchar(20),
         Data varchar(20)
     );
-    RATE BackofficeFuncRate1 1000 PER HOUR;
-    RATE BackofficeFuncRate2 100 PER MINUTE PER IP;
+    TYPE RestorePasswordParam (
+        Email varchar(50)
+    );
 
     -- To include table or workspace declared in different place of the schema, they must be USEd:
 	USE TABLE SubscriptionProfile;
@@ -160,7 +164,7 @@ WORKSPACE MyWorkspace (
                 (no need to specify in STATE when already listed in INTENTS)
         */
         PROJECTOR CountOrders
-            AFTER EXECUTE ON Orders
+            AFTER EXECUTE ON NewOrder
             INTENTS(View(OrdersCountView));
 
         -- Projectors triggered by CUD operation
@@ -177,7 +181,7 @@ WORKSPACE MyWorkspace (
 
         -- Projector triggered by few COMMANDs
         PROJECTOR UpdateDashboard
-            AFTER EXECUTE ON (Orders, Orders2)
+            AFTER EXECUTE ON (NewOrder, NewOrder2)
             STATE (Http, AppSecret)
             INTENTS(View(DashboardView, XZReports, NotificationsHistory, ActiveTablePlansView));
 
@@ -208,15 +212,16 @@ WORKSPACE MyWorkspace (
         Command can have optional argument and/or unlogged argument
         Command can return TYPE
         */
-        COMMAND Orders(air.Order, UNLOGGED air.TypeWithName) RETURNS air.Order;
+        COMMAND NewOrder(air.Order, UNLOGGED air.TypeWithName) RETURNS air.Order;
 
         -- Command can return void (in this case `RETURNS void` may be omitted)
-        COMMAND Orders2(air.Order) RETURNS void;
+        COMMAND NewOrder2(air.Order) RETURNS void;
 
-        -- Command with declared Comment, Tags and Rate
-        COMMAND Orders4(UNLOGGED air.Order) WITH
-            Tags=(BackofficeTag, PosTag),
-            Rate=BackofficeFuncRate1;
+        COMMAND RestorePassword(RestorePasswordParam) RETURNS void;
+
+        -- Command with declared Comment, Tags
+        COMMAND NewOrder4(UNLOGGED air.Order) WITH
+            Tags=(BackofficeTag, PosTag);
 
         -- Qieries can only be declared in workspaces
         QUERY Query1 RETURNS void;
@@ -228,12 +233,26 @@ WORKSPACE MyWorkspace (
         QUERY Query2(air.Order) RETURNS any;
     );
 
+    --  Object scope is PER APP PARTITION PER IP
+    RATE PosSalesRate 1000 PER HOUR PER USER;
+    RATE NewOrderRate 500 PER HOUR PER USER;
+    --  Custom scopes
+    RATE RestorePasswordRate1 3 PER 5 MINUTES PER APP PARTITION PER IP;    
+    RATE RestorePasswordRate2 10 PER DAY PER APP PARTITION PER IP;    
+
+    LIMIT AllCommandsLimit EXECUTE ON ALL COMMANDS WITH RATE PosSalesRate;
+    LIMIT NewOrderLimit EXECUTE ON COMMAND NewOrder WITH RATE NewOrderRate;
+    LIMIT AllQueriesLimit EXECUTE ON ALL QUERIES WITH TAG PosTag WITH RATE AppDefaultRate;
+    -- Combination of two rates
+    LIMIT RestorePasswordLimit1 EXECUTE ON COMMAND RestorePassword WITH RATE RestorePasswordRate1; 
+    LIMIT RestorePasswordLimit2 EXECUTE ON COMMAND RestorePassword WITH RATE RestorePasswordRate2;
+
     -- ACLs
     GRANT ALL ON ALL TABLES WITH TAG BackofficeTag TO LocationManager;
     GRANT INSERT,UPDATE(name, number) ON ALL TABLES WITH TAG sys.ODoc TO LocationUser;
     GRANT SELECT ON TABLE Orders TO LocationUser;
     GRANT SELECT(name) ON TABLE Orders TO LocationUser;
-    GRANT EXECUTE ON COMMAND Orders TO LocationUser;
+    GRANT EXECUTE ON COMMAND NewOrder TO LocationUser;
     GRANT EXECUTE ON QUERY TransactionHistory TO LocationUser;
     GRANT EXECUTE ON ALL QUERIES WITH TAG PosTag TO main.LocationUser;
     GRANT INSERT ON WORKSPACE MyWorkspace TO LocationUser;
@@ -297,6 +316,8 @@ WORKSPACE MyWorkspace (
     ) AS RESULT OF UpdateDashboard;
 
 );
+
+LIMIT MyWorkspaceInsertLimit INSERT ON WORKSPACE MyWorkspace WITH RATE AppDefaultRate;        
 
 /*
     Abstract workspaces:

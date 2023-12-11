@@ -8,8 +8,9 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -23,39 +24,47 @@ import (
 )
 
 func newCompileCmd() *cobra.Command {
-	params := compileParams{}
-	compileCmd := &cobra.Command{
+	params := vpmParams{}
+	cmd := &cobra.Command{
 		Use:   "compile",
 		Short: "compile voedger application",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				params.WorkingDir = strings.TrimPrefix(strings.TrimSpace(args[0]), "-C ")
-			}
-			depMan, err := dm.NewGoBasedDependencyManager()
+			newParams, err := setUpParams(params, args)
 			if err != nil {
 				return err
 			}
-			wd, err := currentWorkingDir(params)
-			if err != nil {
-				return err
-			}
-			if err := compile(depMan, wd); err != nil {
+			if _, err := compile(newParams.WorkingDir); err != nil {
 				return err
 			}
 			return nil
 		},
 	}
-	compileCmd.SilenceErrors = true
-	compileCmd.Flags().StringVarP(&params.WorkingDir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
-	return compileCmd
+	initGlobalFlags(cmd, &params)
+	return cmd
 }
 
-func compile(depMan dm.IDependencyManager, dir string) error {
+// compile compiles schemas in working dir and returns compile result
+func compile(workingDir string) (*compileResult, error) {
+	depMan, err := dm.NewGoBasedDependencyManager(workingDir)
+	if err != nil {
+		return nil, err
+	}
 	var errs []error
-	importedStmts := make(map[string]parser.ImportStmt)
 
-	modulePath := fmt.Sprintf("%s/%s", depMan.ModulePath(), path.Base(dir))
-	packages, compileDirErrs := compileDir(depMan, dir, modulePath, importedStmts)
+	importedStmts := make(map[string]parser.ImportStmt)
+	pkgFiles := make(packageFiles)
+	goModFileDir := filepath.Dir(depMan.DependencyFilePath())
+	relativeWorkingDir, err := filepath.Rel(goModFileDir, workingDir)
+	if err != nil {
+		return nil, err
+	}
+	modulePath, err := url.JoinPath(depMan.ModulePath(), relativeWorkingDir)
+	if err != nil {
+		return nil, err
+	}
+	// modulePath := filepath.Join(depMan.ModuleName(), strings.TrimPrefix(workingDir, goModFileDir))
+
+	packages, compileDirErrs := compileDir(depMan, workingDir, modulePath, importedStmts, pkgFiles)
 	errs = append(errs, compileDirErrs...)
 
 	if !hasAppSchema(packages) {
@@ -67,7 +76,7 @@ func compile(depMan dm.IDependencyManager, dir string) error {
 		addMissingUses(appPackageAst, getUseStmts(maps.Values(importedStmts)))
 	}
 
-	sysPackageAst, compileSysErrs := compileSys(depMan, importedStmts)
+	sysPackageAst, compileSysErrs := compileSys(depMan, importedStmts, pkgFiles)
 	packages = append(packages, sysPackageAst...)
 	errs = append(errs, compileSysErrs...)
 
@@ -77,6 +86,7 @@ func compile(depMan dm.IDependencyManager, dir string) error {
 			nonNilPackages = append(nonNilPackages, p)
 		}
 	}
+
 	appAst, err := parser.BuildAppSchema(nonNilPackages)
 	if err != nil {
 		errs = append(errs, coreutils.SplitErrors(err)...)
@@ -86,12 +96,17 @@ func compile(depMan dm.IDependencyManager, dir string) error {
 			errs = append(errs, coreutils.SplitErrors(err)...)
 		}
 	}
+
 	if len(errs) == 0 {
 		if logger.IsVerbose() {
 			logger.Verbose("compiling succeeded")
 		}
 	}
-	return errors.Join(errs...)
+	return &compileResult{
+		modulePath:   modulePath,
+		pkgFiles:     pkgFiles,
+		appSchemaAST: appAst,
+	}, errors.Join(errs...)
 }
 
 func hasAppSchema(packages []*parser.PackageSchemaAST) bool {
@@ -127,7 +142,7 @@ func getDummyAppPackageAst(imports []parser.ImportStmt) (*parser.PackageSchemaAS
 func getUseStmts(imports []parser.ImportStmt) []parser.UseStmt {
 	uses := make([]parser.UseStmt, len(imports))
 	for i, imp := range imports {
-		use := parser.Ident(path.Base(imp.Name))
+		use := parser.Ident(filepath.Base(imp.Name))
 		if imp.Alias != nil {
 			use = *imp.Alias
 		}
@@ -157,8 +172,8 @@ func addMissingUses(appPackage *parser.PackageSchemaAST, uses []parser.UseStmt) 
 	}
 }
 
-func compileSys(depMan dm.IDependencyManager, importedStmts map[string]parser.ImportStmt) ([]*parser.PackageSchemaAST, []error) {
-	return compileDependency(depMan, appdef.SysPackage, importedStmts)
+func compileSys(depMan dm.IDependencyManager, importedStmts map[string]parser.ImportStmt, pkgFiles packageFiles) ([]*parser.PackageSchemaAST, []error) {
+	return compileDependency(depMan, appdef.SysPackage, importedStmts, pkgFiles)
 }
 
 // checkImportedStmts checks if qpn is already imported. If not, it adds it to importedStmts
@@ -178,37 +193,43 @@ func checkImportedStmts(qpn string, importedStmts map[string]parser.ImportStmt) 
 	return
 }
 
-func compileDir(depMan dm.IDependencyManager, dir, qpn string, importedStmts map[string]parser.ImportStmt) (packages []*parser.PackageSchemaAST, errs []error) {
+func compileDir(depMan dm.IDependencyManager, dir, qpn string, importedStmts map[string]parser.ImportStmt, pkgFiles packageFiles) (packages []*parser.PackageSchemaAST, errs []error) {
 	if ok := checkImportedStmts(qpn, importedStmts); !ok {
 		return
 	}
 	if logger.IsVerbose() {
 		logger.Verbose(fmt.Sprintf("compiling %s", dir))
 	}
-	packageAst, err := parser.ParsePackageDir(qpn, coreutils.NewPathReader(dir), "")
+
+	packageAst, fileNames, err := parser.ParsePackageDirCollectingFiles(qpn, coreutils.NewPathReader(dir), "")
 	if err != nil {
 		errs = append(errs, coreutils.SplitErrors(err)...)
 	}
+	// collect all the files that belong to the package
+	for _, f := range fileNames {
+		pkgFiles[qpn] = append(pkgFiles[qpn], filepath.Join(dir, f))
+	}
+	// iterate over all imports and compile them as well
 	var compileDepErrs []error
 	var importedPackages []*parser.PackageSchemaAST
 	if packageAst != nil {
-		importedPackages, compileDepErrs = compileDependencies(depMan, packageAst.Ast.Imports, importedStmts)
+		importedPackages, compileDepErrs = compileDependencies(depMan, packageAst.Ast.Imports, importedStmts, pkgFiles)
 		errs = append(errs, compileDepErrs...)
 	}
 	packages = append([]*parser.PackageSchemaAST{packageAst}, importedPackages...)
 	return
 }
 
-func compileDependencies(depMan dm.IDependencyManager, imports []parser.ImportStmt, importedStmts map[string]parser.ImportStmt) (packages []*parser.PackageSchemaAST, errs []error) {
+func compileDependencies(depMan dm.IDependencyManager, imports []parser.ImportStmt, importedStmts map[string]parser.ImportStmt, pkgFiles packageFiles) (packages []*parser.PackageSchemaAST, errs []error) {
 	for _, imp := range imports {
-		dependentPackages, compileDepErrs := compileDependency(depMan, imp.Name, importedStmts)
+		dependentPackages, compileDepErrs := compileDependency(depMan, imp.Name, importedStmts, pkgFiles)
 		errs = append(errs, compileDepErrs...)
 		packages = append(packages, dependentPackages...)
 	}
 	return
 }
 
-func compileDependency(depMan dm.IDependencyManager, depURL string, importedStmts map[string]parser.ImportStmt) (packages []*parser.PackageSchemaAST, errs []error) {
+func compileDependency(depMan dm.IDependencyManager, depURL string, importedStmts map[string]parser.ImportStmt, pkgFiles packageFiles) (packages []*parser.PackageSchemaAST, errs []error) {
 	// workaround for sys package
 	depURLToFind := depURL
 	if depURL == appdef.SysPackage {
@@ -222,12 +243,13 @@ func compileDependency(depMan dm.IDependencyManager, depURL string, importedStmt
 		logger.Verbose(fmt.Sprintf("dependency: %s\nlocation: %s\n", depURL, localPath))
 	}
 	var compileDirErrs []error
-	packages, compileDirErrs = compileDir(depMan, localPath, depURL, importedStmts)
+	packages, compileDirErrs = compileDir(depMan, localPath, depURL, importedStmts, pkgFiles)
 	errs = append(errs, compileDirErrs...)
 	return
 }
 
-func currentWorkingDir(params compileParams) (string, error) {
+// checkWorkingDir checks if working dir is valid and returns it
+func checkWorkingDir(params vpmParams) (string, error) {
 	if params.WorkingDir == "" {
 		wd, err := os.Getwd()
 		if err != nil {
@@ -241,6 +263,34 @@ func currentWorkingDir(params compileParams) (string, error) {
 	return params.WorkingDir, nil
 }
 
-type compileParams struct {
-	WorkingDir string
+func initGlobalFlags(cmd *cobra.Command, params *vpmParams) {
+	cmd.SilenceErrors = true
+	cmd.Flags().StringVarP(&params.WorkingDir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
+}
+
+// setUpParams sets up command line params
+// returns params and error
+func setUpParams(params vpmParams, args []string) (newParams vpmParams, err error) {
+	newParams.WorkingDir, err = checkWorkingDir(params)
+	if err != nil {
+		return
+	}
+	if len(args) > 0 {
+		for _, arg := range args {
+			arg = strings.TrimSpace(arg)
+			if strings.HasPrefix(arg, "-C ") {
+				newParams.WorkingDir = strings.TrimPrefix(arg, "-C ")
+				continue
+			}
+			if strings.HasPrefix(arg, "-C=") {
+				newParams.WorkingDir = strings.TrimPrefix(arg, "-C=")
+				continue
+			}
+			newParams.TargetDir = strings.TrimSpace(arg)
+		}
+	}
+	if newParams.TargetDir == "" {
+		newParams.TargetDir = newParams.WorkingDir
+	}
+	return
 }
