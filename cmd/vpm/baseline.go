@@ -8,7 +8,6 @@ package main
 import (
 	"encoding/json"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -51,7 +50,7 @@ func baseline(compileRes *compileResult, targetDir string) error {
 		return err
 	}
 
-	pkgDir := path.Join(baselineDir, pkgDirName)
+	pkgDir := filepath.Join(baselineDir, pkgDirName)
 	if err := saveBaselineSchemas(compileRes.pkgFiles, pkgDir); err != nil {
 		return err
 	}
@@ -80,7 +79,7 @@ func saveBaselineInfo(compileRes *compileResult, baselineDir string) error {
 		return err
 	}
 
-	baselineInfoFilePath := path.Join(baselineDir, baselineInfoFileName)
+	baselineInfoFilePath := filepath.Join(baselineDir, baselineInfoFileName)
 	if err := os.WriteFile(baselineInfoFilePath, content, defaultPermissions); err != nil {
 		return err
 	}
@@ -92,12 +91,12 @@ func saveBaselineInfo(compileRes *compileResult, baselineDir string) error {
 
 func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 	for qpn, files := range pkgFiles {
-		packageDir := path.Join(baselineDir, qpn)
+		packageDir := filepath.Join(baselineDir, qpn)
 		if err := os.MkdirAll(packageDir, defaultPermissions); err != nil {
 			return err
 		}
 		for _, file := range files {
-			filePath := path.Join(packageDir, filepath.Base(file))
+			filePath := filepath.Join(packageDir, filepath.Base(file))
 			fileContent, err := os.ReadFile(file)
 			if err != nil {
 				return err
@@ -114,8 +113,8 @@ func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 }
 
 func createBaselineDir(dir string) (baselineDir string, err error) {
-	baselineDir = path.Join(dir, baselineDirName)
-	pkgDir := path.Join(baselineDir, pkgDirName)
+	baselineDir = filepath.Join(dir, baselineDirName)
+	pkgDir := filepath.Join(baselineDir, pkgDirName)
 	err = os.MkdirAll(pkgDir, defaultPermissions)
 	return
 }

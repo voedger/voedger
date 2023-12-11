@@ -8,8 +8,9 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -52,8 +53,16 @@ func compile(workingDir string) (*compileResult, error) {
 
 	importedStmts := make(map[string]parser.ImportStmt)
 	pkgFiles := make(packageFiles)
-	depFileDir := path.Dir(depMan.DependencyFilePath())
-	modulePath := path.Join(depMan.ModulePath(), strings.TrimPrefix(workingDir, depFileDir))
+	goModFileDir := filepath.Dir(depMan.DependencyFilePath())
+	relativeWorkingDir, err := filepath.Rel(goModFileDir, workingDir)
+	if err != nil {
+		return nil, err
+	}
+	modulePath, err := url.JoinPath(depMan.ModulePath(), relativeWorkingDir)
+	if err != nil {
+		return nil, err
+	}
+	// modulePath := filepath.Join(depMan.ModuleName(), strings.TrimPrefix(workingDir, goModFileDir))
 
 	packages, compileDirErrs := compileDir(depMan, workingDir, modulePath, importedStmts, pkgFiles)
 	errs = append(errs, compileDirErrs...)
@@ -133,7 +142,7 @@ func getDummyAppPackageAst(imports []parser.ImportStmt) (*parser.PackageSchemaAS
 func getUseStmts(imports []parser.ImportStmt) []parser.UseStmt {
 	uses := make([]parser.UseStmt, len(imports))
 	for i, imp := range imports {
-		use := parser.Ident(path.Base(imp.Name))
+		use := parser.Ident(filepath.Base(imp.Name))
 		if imp.Alias != nil {
 			use = *imp.Alias
 		}
@@ -198,7 +207,7 @@ func compileDir(depMan dm.IDependencyManager, dir, qpn string, importedStmts map
 	}
 	// collect all the files that belong to the package
 	for _, f := range fileNames {
-		pkgFiles[qpn] = append(pkgFiles[qpn], path.Join(dir, f))
+		pkgFiles[qpn] = append(pkgFiles[qpn], filepath.Join(dir, f))
 	}
 	// iterate over all imports and compile them as well
 	var compileDepErrs []error
