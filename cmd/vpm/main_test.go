@@ -11,7 +11,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 
@@ -46,19 +45,19 @@ func TestCompileBasicUsage(t *testing.T) {
 	}{
 		{
 			name: "simple schema with no imports",
-			dir:  path.Join(tempDir, "test/myapp/mypkg1"),
+			dir:  filepath.Join(tempDir, "test/myapp/mypkg1"),
 		},
 		{
 			name: "schema importing a local package",
-			dir:  path.Join(tempDir, "test/myapp/mypkg2"),
+			dir:  filepath.Join(tempDir, "test/myapp/mypkg2"),
 		},
 		{
 			name: "schema importing voedger package",
-			dir:  path.Join(tempDir, "test/myapp/mypkg3"),
+			dir:  filepath.Join(tempDir, "test/myapp/mypkg3"),
 		},
 		{
 			name: "application schema using both local package and voedger",
-			dir:  path.Join(tempDir, "test/myapp"),
+			dir:  filepath.Join(tempDir, "test/myapp"),
 		},
 	}
 
@@ -97,44 +96,44 @@ func TestBaselineBasicUsage(t *testing.T) {
 	}{
 		{
 			name:       "simple schema with no imports",
-			workingDir: path.Join(tempDir, "test/myapp/mypkg1"),
+			workingDir: filepath.Join(tempDir, "test/myapp/mypkg1"),
 			expectedBaselineFiles: []string{
-				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
-				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg1/schema1.sql", baselineDirName, pkgDirName)),
-				path.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
+				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg1/schema1.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
 		{
 			name:       "schema importing a local package",
-			workingDir: path.Join(tempDir, "test/myapp/mypkg2"),
+			workingDir: filepath.Join(tempDir, "test/myapp/mypkg2"),
 			expectedBaselineFiles: []string{
-				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
-				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg1/schema1.sql", baselineDirName, pkgDirName)),
-				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg2/schema2.sql", baselineDirName, pkgDirName)),
-				path.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
+				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg1/schema1.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg2/schema2.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
 		{
 			name:       "schema importing voedger package",
-			workingDir: path.Join(tempDir, "test/myapp/mypkg3"),
+			workingDir: filepath.Join(tempDir, "test/myapp/mypkg3"),
 			expectedBaselineFiles: []string{
-				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
-				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg3/schema3.sql", baselineDirName, pkgDirName)),
-				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/github.com/voedger/voedger/pkg/registry/schemas.sql", baselineDirName, pkgDirName)),
-				path.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
+				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg3/schema3.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/github.com/voedger/voedger/pkg/registry/schemas.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
 		{
 			name:       "application schema using both local package and voedger",
-			workingDir: path.Join(tempDir, "test/myapp"),
+			workingDir: filepath.Join(tempDir, "test/myapp"),
 			expectedBaselineFiles: []string{
-				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
-				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/github.com/voedger/voedger/pkg/registry/schemas.sql", baselineDirName, pkgDirName)),
-				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg1/schema1.sql", baselineDirName, pkgDirName)),
-				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg2/schema2.sql", baselineDirName, pkgDirName)),
-				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg3/schema3.sql", baselineDirName, pkgDirName)),
-				path.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/myapp.sql", baselineDirName, pkgDirName)),
-				path.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
+				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/github.com/voedger/voedger/pkg/registry/schemas.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg1/schema1.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg2/schema2.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg3/schema3.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/myapp.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
 	}
@@ -144,7 +143,7 @@ func TestBaselineBasicUsage(t *testing.T) {
 			err := os.Chdir(tc.workingDir)
 			require.NoError(err)
 
-			err = os.RemoveAll(path.Join(tempTargetDir, baselineDirName))
+			err = os.RemoveAll(filepath.Join(tempTargetDir, baselineDirName))
 			require.NoError(err)
 
 			err = execRootCmd([]string{"vpm", "baseline", fmt.Sprintf(" -C %s", tc.workingDir), tempTargetDir}, "1.0.0")
@@ -193,14 +192,14 @@ func TestErrorsInCompile(t *testing.T) {
 	}{
 		{
 			name: "package schema - syntax errors",
-			dir:  path.Join(tempDir, "test/myapperr/mypkg1"),
+			dir:  filepath.Join(tempDir, "test/myapperr/mypkg1"),
 			expectedErrPositions: []string{
 				"schema1.sql:7:33",
 			},
 		},
 		{
 			name: "application schema - syntax errors",
-			dir:  path.Join(tempDir, "test/myapperr/mypkg2"),
+			dir:  filepath.Join(tempDir, "test/myapperr/mypkg2"),
 			expectedErrPositions: []string{
 				"schema2.sql:7:5",
 			},
@@ -234,17 +233,17 @@ func copyContents(src embed.FS, dest string) error {
 		}
 
 		// Calculate the destination path
-		destPath := path.Join(dest, entryPath)
+		destPath := filepath.Join(dest, entryPath)
 
 		if d.IsDir() {
 			return os.MkdirAll(destPath, 0755)
 		}
 
-		fileName := path.Base(entryPath)
+		fileName := filepath.Base(entryPath)
 		// we can't have embed.FS of the dir with go.mod file inside,
 		// that's why we name it test.go.mod and rename it back
 		if fileName == "test.go.mod" {
-			destPath = path.Join(path.Dir(destPath), "go.mod")
+			destPath = filepath.Join(filepath.Dir(destPath), "go.mod")
 		}
 		srcFile, err := src.Open(entryPath)
 		if err != nil {
