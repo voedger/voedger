@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tetratelabs/wazero/sys"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/wazero/api"
 )
 
 var extIO = &mockIo{}
@@ -210,7 +210,7 @@ func Test_SetLimitsExecutionInterval(t *testing.T) {
 	t0 := time.Now()
 	err = extEngine.Invoke(ctxTimeout, iextengine.NewExtQName("", "longFunc"), extIO)
 
-	require.ErrorIs(err, api.ErrDuration)
+	require.ErrorIs(err, sys.NewExitError(sys.ExitCodeDeadlineExceeded))
 	require.Less(time.Since(t0), maxDuration*4)
 }
 

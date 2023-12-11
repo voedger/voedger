@@ -27,7 +27,7 @@ func (e extensionEngine) Invoke(ctx context.Context, extName iextengine.ExtQName
 	return undefinedExtension(extName.String())
 }
 
-func (e extensionEngine) Close() {}
+func (e extensionEngine) Close(ctx context.Context) {}
 
 func (f extensionEngineFactory) New(packageNameToLocalPath map[string]string, config *iextengine.ExtEngineConfig, numEngines int) (result []iextengine.IExtensionEngine) {
 	result = make([]iextengine.IExtensionEngine, numEngines)
